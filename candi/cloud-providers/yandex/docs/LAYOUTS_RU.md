@@ -35,7 +35,7 @@ provider:
     "private_key": "-----BEGIN PRIVATE KEY-----\nMIIE....1ZPJeBLt+\n-----END PRIVATE KEY-----\n"
     }
 masterNodeGroup:
-  replicas: 1
+  replicas: 2
   zones:
   - ru-central1-a
   - ru-central1-b
@@ -46,23 +46,28 @@ masterNodeGroup:
     externalIPAddresses:
     - "198.51.100.5"
     - "Auto"
-    externalSubnetID: <EXTERNAL_SUBNET_ID>
+    externalSubnetIDs:
+    - <ZONE_A_SUBNET_ID>
+    - <ZONE_B_SUBNET_ID>
     additionalLabels:
       takes: priority
 nodeGroups:
 - name: worker
-  replicas: 1
+  replicas: 2
   zones:
   - ru-central1-a
+  - ru-central1-b
   instanceClass:
     cores: 4
     memory: 8192
     imageID: testtest
     coreFraction: 50
     externalIPAddresses:
-    - "198.51.100.5"
+    - "198.51.100.6"
     - "Auto"
-    externalSubnetID: <EXTERNAL_SUBNET_ID>
+    externalSubnetIDs:
+    - <ZONE_A_SUBNET_ID>
+    - <ZONE_B_SUBNET_ID>
     additionalLabels:
       toy: example
 labels:
@@ -101,7 +106,7 @@ provider:
     "private_key": "-----BEGIN PRIVATE KEY-----\nMIIE....1ZPJeBLt+\n-----END PRIVATE KEY-----\n"
     }    
 masterNodeGroup:
-  replicas: 1
+  replicas: 2
   instanceClass:
     cores: 4
     memory: 8192
@@ -109,13 +114,15 @@ masterNodeGroup:
     externalIPAddresses:
     - "198.51.100.5"
     - "Auto"
-    externalSubnetID: <EXTERNAL_SUBNET_ID>
+    externalSubnetIDs:
+    - <ZONE_A_SUBNET_ID>
+    - <ZONE_B_SUBNET_ID>
     zones:
     - ru-central1-a
     - ru-central1-b
 nodeGroups:
 - name: worker
-  replicas: 1
+  replicas: 2
   instanceClass:
     cores: 4
     memory: 8192
@@ -124,9 +131,12 @@ nodeGroups:
     externalIPAddresses:
     - "198.51.100.5"
     - "Auto"
-    externalSubnetID: <EXTERNAL_SUBNET_ID>
+    externalSubnetIDs:
+    - <ZONE_A_SUBNET_ID>
+    - <ZONE_B_SUBNET_ID>
     zones:
     - ru-central1-a
+    - ru-central1-b
 sshPublicKey: "<SSH_PUBLIC_KEY>"
 nodeNetworkCIDR: 192.168.12.13/24
 existingNetworkID: <EXISTING_NETWORK_ID>
