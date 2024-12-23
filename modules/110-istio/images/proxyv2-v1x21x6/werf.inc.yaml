@@ -1,0 +1,50 @@
+---
+{{- $istioProxyVersion := "1.21.6" }}
+---
+# Based on https://github.com/istio/istio/blob/1.21.6/docker/Dockerfile.base
+#      and https://github.com/istio/istio/blob/1.21.6/pilot/docker/Dockerfile.proxyv2
+image: {{ .ModuleName }}/{{ .ImageName }}
+fromImage: common/distroless
+import:
+- image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
+  add: /tmp/istio/out/pilot-agent
+  to: /usr/local/bin/pilot-agent
+  after: setup
+- image: {{ .ModuleName }}/{{ .ImageName }}-binary-artifact
+  add: /var/lib/istio/envoy/envoy_bootstrap_tmpl.json
+  to: /var/lib/istio/envoy/envoy_bootstrap_tmpl.json
+  after: setup
+- image: {{ .ModuleName }}/{{ .ImageName }}-binary-artifact
+  add: /var/lib/istio/envoy/gcp_envoy_bootstrap_tmpl.json
+  to: /var/lib/istio/envoy/gcp_envoy_bootstrap_tmpl.json
+  after: setup
+- image: {{ .ModuleName }}/{{ .ImageName }}-binary-artifact
+  add: /usr/local/bin/envoy
+  to: /usr/local/bin/envoy
+  after: setup
+docker:
+  ENV:
+    ISTIO_META_ISTIO_PROXY_SHA: "istio-proxy:78bd2d9b284978e170a49cd13decd5f952544489"
+    ISTIO_META_ISTIO_VERSION: "1.21.6"
+  WORKDIR: "/"
+  USER: 1337
+  ENTRYPOINT: ["/usr/local/bin/pilot-agent"]
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-binary-artifact
+final: false
+from: docker.io/istio/proxyv2:1.21.6@sha256:a0afbbc8488060f8059e7fa04576edde01915d40576132dae83479b3abe5ce15
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
+final: false
+from: {{ .Images.BASE_GOLANG_23_ALPINE_DEV }}
+mount:
+- fromPath: ~/go-pkg-cache
+  to: /go/pkg
+shell:
+  install:
+  - git clone --depth 1 --branch {{ $istioProxyVersion }} https://github.com/istio/istio.git /tmp/istio/
+  - cd /tmp/istio/
+  - echo {{ $istioProxyVersion }} > version
+  - export GOPROXY={{ $.GOPROXY }}
+  - GOOS=linux GOARCH=amd64 LDFLAGS='-extldflags -static -s -w' common/scripts/gobuild.sh /tmp/istio/out/ -tags=agent,disable_pgv /tmp/istio/pilot/cmd/pilot-agent/
+  - chown 0700 /tmp/istio/out/pilot-agent
