@@ -811,6 +811,7 @@ jobs:
           fi
 
 
+
           # Save 'tests' image name to pass it as output for 'tests' jobs.
           TESTS_IMAGE_NAME="$(jq -r '.Images."tests".DockerImageName' images_tags_werf.json)"
           # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.

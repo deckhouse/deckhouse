@@ -710,6 +710,7 @@ jobs:
             RELEASE_CHANNEL_IMAGE=${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/release-channel:${IMAGE_TAG}
             pull_push_rmi 'release-channel-version' ${RELEASE_CHANNEL_IMAGE_SRC} ${RELEASE_CHANNEL_IMAGE}
           fi
+
           # Save 'tests' image name to pass it as output for 'tests' jobs.
           TESTS_IMAGE_NAME="$(jq -r '.Images."tests".DockerImageName' images_tags_werf.json)"
           # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
@@ -1070,6 +1071,7 @@ jobs:
             RELEASE_CHANNEL_IMAGE=${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/release-channel:${IMAGE_TAG}
             pull_push_rmi 'release-channel-version' ${RELEASE_CHANNEL_IMAGE_SRC} ${RELEASE_CHANNEL_IMAGE}
           fi
+
           # Save 'tests' image name to pass it as output for 'tests' jobs.
           TESTS_IMAGE_NAME="$(jq -r '.Images."tests".DockerImageName' images_tags_werf.json)"
           # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
@@ -1430,6 +1432,7 @@ jobs:
             RELEASE_CHANNEL_IMAGE=${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/release-channel:${IMAGE_TAG}
             pull_push_rmi 'release-channel-version' ${RELEASE_CHANNEL_IMAGE_SRC} ${RELEASE_CHANNEL_IMAGE}
           fi
+
           # Save 'tests' image name to pass it as output for 'tests' jobs.
           TESTS_IMAGE_NAME="$(jq -r '.Images."tests".DockerImageName' images_tags_werf.json)"
           # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
@@ -1790,6 +1793,7 @@ jobs:
             RELEASE_CHANNEL_IMAGE=${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/release-channel:${IMAGE_TAG}
             pull_push_rmi 'release-channel-version' ${RELEASE_CHANNEL_IMAGE_SRC} ${RELEASE_CHANNEL_IMAGE}
           fi
+
           # Save 'tests' image name to pass it as output for 'tests' jobs.
           TESTS_IMAGE_NAME="$(jq -r '.Images."tests".DockerImageName' images_tags_werf.json)"
           # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
@@ -2150,6 +2154,7 @@ jobs:
             RELEASE_CHANNEL_IMAGE=${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/release-channel:${IMAGE_TAG}
             pull_push_rmi 'release-channel-version' ${RELEASE_CHANNEL_IMAGE_SRC} ${RELEASE_CHANNEL_IMAGE}
           fi
+
           # Save 'tests' image name to pass it as output for 'tests' jobs.
           TESTS_IMAGE_NAME="$(jq -r '.Images."tests".DockerImageName' images_tags_werf.json)"
           # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
@@ -2510,6 +2515,7 @@ jobs:
             RELEASE_CHANNEL_IMAGE=${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/release-channel:${IMAGE_TAG}
             pull_push_rmi 'release-channel-version' ${RELEASE_CHANNEL_IMAGE_SRC} ${RELEASE_CHANNEL_IMAGE}
           fi
+
           # Save 'tests' image name to pass it as output for 'tests' jobs.
           TESTS_IMAGE_NAME="$(jq -r '.Images."tests".DockerImageName' images_tags_werf.json)"
           # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
