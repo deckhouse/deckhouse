@@ -26,7 +26,7 @@ shell:
   install:
   - git clone --depth 1 --branch {{ $value.csi.provisioner }} {{ $.SOURCE_REPO }}/kubernetes-csi/external-provisioner.git /src
   - cd /src
-  - git apply /patches/*.patch --verbose
+  - ls /patches/*.patch && git apply /patches/*.patch --verbose
   - rm -r vendor
   - rm -r .git
 ---
