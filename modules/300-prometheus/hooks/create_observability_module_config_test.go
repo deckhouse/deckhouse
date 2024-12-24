@@ -43,7 +43,7 @@ var _ = Describe("Modules :: prometheus :: hooks :: create_observability_module_
 
 		It("Must not create observability module config", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.KubernetesResource("ModuleConfig", "", "observability").Exists()).Should(BeFalse())
+			Expect(f.KubernetesResource("ModuleConfig", "", "observability")).Should(BeNil())
 		})
 	})
 
