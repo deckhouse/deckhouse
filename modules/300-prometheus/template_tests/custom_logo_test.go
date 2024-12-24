@@ -96,7 +96,7 @@ internal:
 		It("Deployment must have volume and volumeMount", func() {
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 
-			resource := f.KubernetesResource("Deployment", "d8-monitoring", "grafan-v10")
+			resource := f.KubernetesResource("Deployment", "d8-monitoring", "grafana-v10")
 			Expect(resource.Exists()).To(BeTrue())
 
 			// Check volume exists
