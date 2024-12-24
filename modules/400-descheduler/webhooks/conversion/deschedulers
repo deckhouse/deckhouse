@@ -43,7 +43,7 @@ function __on_conversion::alpha1_to_alpha2() {
        del(.spec.deschedulerPolicy.strategies.removePodsViolatingNodeTaints) |
        del(.spec.deschedulerPolicy.strategies.removePodsViolatingTopologySpreadConstraint) |
        if .spec.deschedulerPolicy.strategies.removeDuplicates.enabled then .spec.strategies.removeDuplicates.enabled = .spec.deschedulerPolicy.strategies.removeDuplicates.enabled end |
-       if .spec.deschedulerPolicy.strategies.removePodsViolatingNodeAffinity.enabled then .spec.strategies.removePodsViolatingNodeAffinity.enabled = .spec.deschedulerPolicy.strategies.removePodsViolatingNodeAffinity.enabled | .spec.strategies.removePodsViolatingNodeAffinity.nodeAffinityType = "requiredDuringSchedulingIgnoredDuringExecution" end |
+       if .spec.deschedulerPolicy.strategies.removePodsViolatingNodeAffinity.enabled then .spec.strategies.removePodsViolatingNodeAffinity.enabled = .spec.deschedulerPolicy.strategies.removePodsViolatingNodeAffinity.enabled | .spec.strategies.removePodsViolatingNodeAffinity.nodeAffinityType = ["requiredDuringSchedulingIgnoredDuringExecution"] end |
        if .spec.deschedulerPolicy.strategies.removePodsViolatingInterPodAntiAffinity.enabled then .spec.strategies.removePodsViolatingInterPodAntiAffinity.enabled = .spec.deschedulerPolicy.strategies.removePodsViolatingInterPodAntiAffinity.enabled end |
        if .spec.deschedulerPolicy.strategies.highNodeUtilization.enabled then .spec.strategies.highNodeUtilization.enabled = .spec.deschedulerPolicy.strategies.highNodeUtilization.enabled end |
        if .spec.deschedulerPolicy.strategies.lowNodeUtilization.enabled then .spec.strategies.lowNodeUtilization.enabled = .spec.deschedulerPolicy.strategies.lowNodeUtilization.enabled end |
