@@ -38,13 +38,11 @@ import (
 	"helm.sh/helm/v3/pkg/releaseutil"
 	"helm.sh/helm/v3/pkg/storage/driver"
 
-	"k8s.io/cli-runtime/pkg/genericclioptions"
-	"k8s.io/client-go/rest"
-	"k8s.io/klog/v2"
-
 	"controller/pkg/apis/deckhouse.io/v1alpha1"
 	"controller/pkg/apis/deckhouse.io/v1alpha2"
 	"controller/pkg/validate"
+	"k8s.io/cli-runtime/pkg/genericclioptions"
+	"k8s.io/client-go/rest"
 )
 
 const helmDriver = "secret"
@@ -53,7 +51,7 @@ type Client struct {
 	conf      *action.Configuration
 	templates map[string][]byte
 	opts      *options
-	log       logr.Logger
+	logger    logr.Logger
 }
 
 type options struct {
@@ -71,11 +69,11 @@ func New(namespace, templatesPath string, log logr.Logger) (*Client, error) {
 		conf: &action.Configuration{
 			Capabilities: chartutil.DefaultCapabilities,
 		},
-		log:       log.WithName("helm"),
+		logger:    log.WithName("helm"),
 		templates: make(map[string][]byte),
 	}
 
-	c.log.Info("initializing action config")
+	c.logger.Info("initializing action config")
 	if err := c.initActionConfig(namespace); err != nil {
 		return nil, fmt.Errorf("initialize action config: %w", err)
 	}
@@ -86,7 +84,7 @@ func New(namespace, templatesPath string, log logr.Logger) (*Client, error) {
 		return nil, fmt.Errorf("parse helm templates: %w", err)
 	}
 
-	c.log.Info("client initialized")
+	c.logger.Info("client initialized")
 	return c, nil
 }
 
@@ -123,7 +121,11 @@ func (c *Client) initActionConfig(namespace string) error {
 	kubeConfig.CAFile = &config.CAFile
 	kubeConfig.Namespace = &namespace
 
-	return c.conf.Init(kubeConfig, namespace, helmDriver, klog.Infof)
+	return c.conf.Init(kubeConfig, namespace, helmDriver, c.DebugLog)
+}
+
+func (c *Client) DebugLog(format string, args ...interface{}) {
+	c.logger.Info(fmt.Sprintf(format, args...))
 }
 
 // Upgrade upgrades resources
@@ -135,12 +137,12 @@ func (c *Client) Upgrade(ctx context.Context, project *v1alpha2.Project, templat
 
 	values := buildValues(project, template)
 	hash := hashMD5(c.templates, values)
-	post := newPostRenderer(project.Name, template.Name, c.log)
+	post := newPostRenderer(project.Name, template.Name, c.logger)
 
 	releases, err := action.NewHistory(c.conf).Run(project.Name)
 	if err != nil {
 		if errors.Is(err, driver.ErrReleaseNotFound) {
-			c.log.Info("the release not found, installing it", "release", project.Name, "namespace", project.Name)
+			c.logger.Info("the release not found, installing it", "release", project.Name, "namespace", project.Name)
 			install := action.NewInstall(c.conf)
 			install.ReleaseName = project.Name
 			install.Timeout = c.opts.Timeout
@@ -152,7 +154,7 @@ func (c *Client) Upgrade(ctx context.Context, project *v1alpha2.Project, templat
 			if _, err = install.RunWithContext(ctx, ch, values); err != nil {
 				return fmt.Errorf("install the release: %w", err)
 			}
-			c.log.Info("the release installed", "release", project.Name, "namespace", project.Name)
+			c.logger.Info("the release installed", "release", project.Name, "namespace", project.Name)
 			return nil
 		}
 		return fmt.Errorf("retrieve history for the release: %w", err)
@@ -161,7 +163,7 @@ func (c *Client) Upgrade(ctx context.Context, project *v1alpha2.Project, templat
 	releaseutil.Reverse(releases, releaseutil.SortByRevision)
 	if releaseHash, ok := releases[0].Labels[v1alpha2.ReleaseLabelHashsum]; ok {
 		if releaseHash == hash && releases[0].Info.Status == release.StatusDeployed {
-			c.log.Info("the release is up to date", "release", project.Name, "namespace", project.Name)
+			c.logger.Info("the release is up to date", "release", project.Name, "namespace", project.Name)
 			return nil
 		}
 	}
@@ -185,7 +187,7 @@ func (c *Client) Upgrade(ctx context.Context, project *v1alpha2.Project, templat
 		return fmt.Errorf("upgrade the release: %s", err)
 	}
 
-	c.log.Info("the release upgraded", "release", project.Name, "namespace", project.Name)
+	c.logger.Info("the release upgraded", "release", project.Name, "namespace", project.Name)
 	return nil
 }
 
@@ -297,7 +299,7 @@ func (c *Client) Delete(_ context.Context, releaseName string) error {
 		return fmt.Errorf("uninstall the '%s' release: %v", releaseName, err)
 	}
 
-	c.log.Info("the release deleted", "release", releaseName)
+	c.logger.Info("the release deleted", "release", releaseName)
 	return nil
 }
 
@@ -326,7 +328,7 @@ func (c *Client) ValidateRender(project *v1alpha2.Project, template *v1alpha1.Pr
 		buf.WriteString(file)
 	}
 
-	if _, err = newPostRenderer(project.Name, template.Name, c.log).Run(buf); err != nil {
+	if _, err = newPostRenderer(project.Name, template.Name, c.logger).Run(buf); err != nil {
 		return fmt.Errorf("post render: %w", err)
 	}
 
