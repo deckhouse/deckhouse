@@ -170,8 +170,8 @@ func (l *Loader) restoreAbsentModulesFromReleases(ctx context.Context) error {
 		return fmt.Errorf("list releases: %w", err)
 	}
 
+	// sorting releases by version (to check previous deployed)
 	releases := releaseList.Items
-
 	slices.SortFunc(releases, func(a, b v1alpha1.ModuleRelease) int {
 		return a.GetVersion().Compare(b.GetVersion())
 	})
@@ -185,7 +185,7 @@ func (l *Loader) restoreAbsentModulesFromReleases(ctx context.Context) error {
 			continue
 		}
 
-		dRelease, ok := deployedReleases[release.GetName()]
+		dRelease, ok := deployedReleases[release.Spec.ModuleName]
 		if ok {
 			newRelease := dRelease.DeepCopy()
 			newRelease.Status.Phase = v1alpha1.ModuleReleasePhaseSuperseded
@@ -194,11 +194,11 @@ func (l *Loader) restoreAbsentModulesFromReleases(ctx context.Context) error {
 
 			err := l.client.Status().Patch(ctx, newRelease, client.MergeFrom(&dRelease))
 			if err != nil {
-				l.log.Error("patch previous deployed release", slog.String("module_name", release.GetName()), log.Err(err))
+				l.log.Error("patch previous deployed module release", slog.String("name", release.GetName()), log.Err(err))
 			}
 		}
 
-		deployedReleases[release.GetName()] = release
+		deployedReleases[release.Spec.ModuleName] = release
 
 		moduleVersion := "v" + release.Spec.Version.String()
 
