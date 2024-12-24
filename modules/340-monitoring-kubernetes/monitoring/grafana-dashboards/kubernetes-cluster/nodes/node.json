@@ -1914,7 +1914,7 @@
             "axisBorderShow": false,
             "axisCenteredZero": false,
             "axisColorMode": "text",
-            "axisLabel": "bits/sec(SI)",
+            "axisLabel": "bits/sec",
             "axisPlacement": "auto",
             "barAlignment": 0,
             "drawStyle": "line",
