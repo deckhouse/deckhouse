@@ -1,6 +1,7 @@
 ---
 title: "Модуль priority-class"
 ---
+test-not-merge
 
 Модуль создает в кластере набор классов приоритета ([PriorityClass](https://kubernetes.io/docs/concepts/configuration/pod-priority-preemption/#priorityclass)) и назначает их компонентам, установленным Deckhouse, и приложениям в кластере.
 
