@@ -10,14 +10,15 @@ git:
     setup:
     - '**/*'
 import:
-  - artifact: {{ .ModuleName }}/{{ .ImageName }}-artifact
+  - image: {{ .ModuleName }}/{{ .ImageName }}-artifact
     add: /app
     to: /app
     before: setup
 docker:
   ENTRYPOINT: [ "/opt/nginx-static/sbin/nginx", "-g", "daemon off;" ]
 ---
-artifact: {{ .ModuleName }}/{{ .ImageName }}-artifact
+image: {{ .ModuleName }}/{{ .ImageName }}-artifact
+final: false
 from: {{ .Images.BASE_GOLANG_23_BULLSEYE }}
 fromCacheVersion: {{ .CandiVersionMap.d8.d8CliVersion }}
 git:
@@ -27,7 +28,7 @@ git:
       setup:
         - '**/*'
 import:
-  - artifact: {{ .ModuleName }}/{{ .ImageName }}-frontend-artifact
+  - image: {{ .ModuleName }}/{{ .ImageName }}-frontend-artifact
     add: /app/dist
     to: /app
     before: setup
@@ -52,7 +53,8 @@ shell:
     - mv /static/robots.txt /app
     - rm ~/.gitconfig # Prevent PRIVATE_REPO_TOKEN from leaking into the image layer
 ---
-artifact: {{ .ModuleName }}/{{ .ImageName }}-frontend-artifact
+image: {{ .ModuleName }}/{{ .ImageName }}-frontend-artifact
+final: false
 from: {{ .Images.BASE_NODE_20_ALPINE_DEV }}
 git:
   - add: /{{ $.ModulePath }}modules/800-{{ $.ModuleName }}/images/{{ $.ImageName }}/frontend
