@@ -36,7 +36,7 @@ spec:
 
                     Using this option, you can create several controllers to use with a single ingress
 
-                    > **Caution!** If you set it to "nginx", then Ingress resources lacking the `kubernetes.io/ingress.class` annotation or `spec.ingressClassName` field will also be handled.
+                    > **Caution.** If you set it to "nginx", then Ingress resources lacking the `kubernetes.io/ingress.class` annotation or `spec.ingressClassName` field will also be handled.
                   x-doc-examples: ['nginx']
                   default: 'nginx'
                   pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
@@ -53,14 +53,14 @@ spec:
 
                       Settings are required in [spec.HostPortWithProxyProtocol](#ingressnginxcontroller-v1-spec-hostportwithproxyprotocol).
 
-                      > **Caution!** Make sure that requests to the Ingress are sent from trusted sources when using this inlet. The [acceptRequestsFrom](cr.html#ingressnginxcontroller-v1-spec-acceptrequestsfrom) parameter can help you with defining trusted sources.
+                      > **Caution.** Make sure that requests to the Ingress are sent from trusted sources when using this inlet. The [acceptRequestsFrom](cr.html#ingressnginxcontroller-v1-spec-acceptrequestsfrom) parameter can help you with defining trusted sources.
                     * `HostWithFailover` — installs two ingress controllers, the primary and the backup one. The primary controller runs in a hostNetwork. If the pods of the primary controller are not available, the traffic is routed to the backup one;
 
-                      > **Caution!** There can be only one controller with this inlet type on a host.
+                      > **Caution.** There can be only one controller with this inlet type on a host.
 
-                      > **Caution!** The following ports must be available on the node: 80, 81, 443, 444, 4207, 4208.
+                      > **Caution.** The following ports must be available on the node: 80, 81, 443, 444, 4207, 4208.
 
-                      > **Caution!** To change inlet, remove the iptables rules and restart the `kube-proxy` pods or reboot the nodes hosting Ingress controllers.
+                      > **Caution.** To change inlet, remove the iptables rules and restart the `kube-proxy` pods or reboot the nodes hosting Ingress controllers.
                   enum: ["LoadBalancer","LoadBalancerWithProxyProtocol","HostPort","HostPortWithProxyProtocol", "HostWithFailover"]
                 controllerVersion:
                   type: string
@@ -152,7 +152,7 @@ spec:
                       description: |
                         IP ranges (CIDR) that are allowed to access the load balancer.
 
-                        > **Caution!** The cloud provider may not support this option or ignore it.
+                        > **Caution.** The cloud provider may not support this option or ignore it.
                         > Providers supporting the option: _AWS_, _GCP_, _Azure_.
                         > Providers ignoring the option: _YandexCloud_.
                         > For other cloud providers, the behavior may depend on the specifics of the cloud implementation. Testing is recommended before use of the option in production.
@@ -165,7 +165,7 @@ spec:
                       description: |
                         Annotations to assign to the service for flexible configuration of the load balancer.
 
-                        > **Caution!** The module does not take into account the specifics of setting annotations in different clouds.
+                        > **Caution.** The module does not take into account the specifics of setting annotations in different clouds.
                         Note that you will need to recreate `IngressNginxController` (or create a new controller and then delete the old one) if annotations to provision a load balancer are only used when creating the service.
                       additionalProperties:
                         type: string
@@ -178,7 +178,7 @@ spec:
                       description: |
                         Accepts all the incoming `X-Forwarded-*` headers and passes them to upstreams.
 
-                        > **Caution!** Make sure that requests to the Ingress controller are sent from trusted sources when using this option.
+                        > **Caution.** Make sure that requests to the Ingress controller are sent from trusted sources when using this option.
                     realIPHeader:
                       type: string
                       description: |
@@ -198,7 +198,7 @@ spec:
                       description: |
                         IP ranges (CIDR) that are allowed to access the load balancer.
 
-                        > **Caution!** The cloud provider may not support this option or ignore it.
+                        > **Caution.** The cloud provider may not support this option or ignore it.
                         > Providers supporting the option: _AWS_, _GCP_, _Azure_.
                         > Providers ignoring the option: _YandexCloud_.
                         > For other cloud providers, the behavior may depend on the specifics of the cloud implementation. Testing is recommended before use of the option in production.
@@ -210,7 +210,7 @@ spec:
                       description: |
                         Annotations that will be passed to service with type load balancer to configure it.
 
-                        > **Caution!** The module does not take into account the specifics of setting annotations in different clouds.
+                        > **Caution.** The module does not take into account the specifics of setting annotations in different clouds.
                         Note that you will need to recreate `IngressNginxController` (or create a new controller and then delete the old one) if annotations to provision a load balancer are only used when creating the service.
                       additionalProperties:
                         type: string
@@ -253,7 +253,7 @@ spec:
                       description: |
                         Accepts all the incoming X-Forwarded-* headers and passes them to upstreams.
 
-                        > **Caution!** Make sure that requests to the ingress are sent from trusted sources when using this option. The `acceptRequestsFrom` parameter can help you with defining trusted sources.
+                        > **Caution.** Make sure that requests to the ingress are sent from trusted sources when using this option. The `acceptRequestsFrom` parameter can help you with defining trusted sources.
                     realIPHeader:
                       type: string
                       description: |
@@ -378,9 +378,9 @@ spec:
 
                     You can specify [any supported parameter](https://kubernetes.github.io/ingress-nginx/user-guide/nginx-configuration/configmap/) in it in the `key: value (string)` format.
 
-                    > **Caution!** An erroneous option may lead to the failure of the ingress controller;
+                    > **Caution.** An erroneous option may lead to the failure of the ingress controller;
 
-                    > **Caution!** The usage of this parameter is not recommended; the backward compatibility or operability of the ingress controller that uses this option is not guaranteed
+                    > **Caution.** The usage of this parameter is not recommended; the backward compatibility or operability of the ingress controller that uses this option is not guaranteed
                 additionalHeaders:
                   type: object
                   description: |
@@ -516,7 +516,7 @@ spec:
 
                     By default, a self-signed certificate is used.
 
-                    > **Caution!** This parameter does not affect certificates used in the Ingress resources of the Deckhouse modules. You can specify the certificate to be used in the Ingress resources of the Deckhouse modules with the [modules.https.customCertificate](../../deckhouse-configure-global.html#parameters-modules-https-customcertificate) global parameter.
+                    > **Caution.** This parameter does not affect certificates used in the Ingress resources of the Deckhouse modules. You can specify the certificate to be used in the Ingress resources of the Deckhouse modules with the [modules.https.customCertificate](../../deckhouse-configure-global.html#parameters-modules-https-customcertificate) global parameter.
                   type: object
                   properties:
                     secretRef:
@@ -609,7 +609,7 @@ spec:
 
                     Using this option, you can create several controllers to use with a single ingress
 
-                    > **Caution!** If you set it to "nginx", then Ingress resources lacking the `kubernetes.io/ingress.class` annotation or `spec.ingressClassName` field will also be handled.
+                    > **Caution.** If you set it to "nginx", then Ingress resources lacking the `kubernetes.io/ingress.class` annotation or `spec.ingressClassName` field will also be handled.
                   x-doc-examples: ['nginx']
                   default: 'nginx'
                   pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
@@ -621,20 +621,20 @@ spec:
                     * `LoadBalancerWithProxyProtocol` — The Ingress controller is deployed, and a `LoadBalancer`-type service is provisioned. The Ingress controller uses the proxy-protocol to get a real IP address of the client.
                     * `LoadBalancerWithSSLPassthrough` — The Ingress controller is deployed, and a `LoadBalancer`-type service is provisioned. This option enables the SSL Passthrough feature, allowing backends to be configured to accept SSL traffic directly without termination at the Ingress controller.
 
-                      > **Caution!** The SSL Passthrough feature is implemented by intercepting all traffic on the configured HTTPS port (default: 443) and routing it to a local TCP proxy. This implementation bypasses NGINX completely and introduces a significant performance penalty.
+                      > **Caution.** The SSL Passthrough feature is implemented by intercepting all traffic on the configured HTTPS port (default: 443) and routing it to a local TCP proxy. This implementation bypasses NGINX completely and introduces a significant performance penalty.
 
                       The SSL Passthrough protocol leverages SNI and reads the virtual domain data from the TLS handshake protocol, which requires a compatible client.
 
                       If the host name doesn't match the requested host name, the request is forwarded to NGINX on the configured SSL Passthrough proxy port (default: 442), which proxies the request to the default backend.
 
-                      > **Caution!** Unlike HTTP backends, traffic to SSL Passthrough backends is routed to the ClusterIP of the backing service instead of individual endpoints.
+                      > **Caution.** Unlike HTTP backends, traffic to SSL Passthrough backends is routed to the ClusterIP of the backing service instead of individual endpoints.
                       >
                       > Since SSL Passthrough works at layer 4 of the OSI model (TCP) and not layer 7 (HTTP), using SSLPassthrough makes it impossible to use other annotations configured on an Ingress object.
 
                     * `HostPort` — The Ingress controller is deployed and made available on node ports via `hostPort`.
                     * `HostPortWithProxyProtocol` — The Ingress controller is deployed and made available on node ports via `hostPort`. The Ingress controller uses the proxy-protocol to get a real IP address of the client.
 
-                      > **Caution!** When using this inlet, ensure that requests to the Ingress come from trusted sources only. One way to enforce this is by using the `acceptRequestsFrom` parameter.
+                      > **Caution.** When using this inlet, ensure that requests to the Ingress come from trusted sources only. One way to enforce this is by using the `acceptRequestsFrom` parameter.
                     * `HostPortWithSSLPassthrough` - The Ingress controller is deployed and made available on node ports via `hostPort`. This option enables the SSL Passthrough feature, allowing backends to be configured to accept SSL traffic directly without termination at the Ingress controller.
 
                       Add settings to the [`spec.HostPortWithSSLPassthrough`](#ingressnginxcontroller-v1-spec-hostportwithsslpassthrough) parameter section.
@@ -643,14 +643,14 @@ spec:
 
                       If the host name doesn't match the requested host name, the request is forwarded to NGINX on the configured SSL Passthrough proxy port (default: 442), which proxies the request to the default backend.
 
-                      > **Caution!** The SSL Passthrough feature is implemented by intercepting all traffic on the configured HTTPS port (default: 443) and routing it to a local TCP proxy. This implementation bypasses NGINX completely and introduces a significant performance penalty.
+                      > **Caution.** The SSL Passthrough feature is implemented by intercepting all traffic on the configured HTTPS port (default: 443) and routing it to a local TCP proxy. This implementation bypasses NGINX completely and introduces a significant performance penalty.
                       >
                       > Unlike HTTP backends, traffic to SSL Passthrough backends is routed to the ClusterIP of the backing service instead of individual endpoints.
                       >
                       > Since SSL Passthrough works at layer 4 of the OSI model (TCP) and not layer 7 (HTTP), using SSLPassthrough makes it impossible to use other annotations configured on an Ingress object.
                     * `HostWithFailover` — Two Ingress controllers are deployed: a primary and a backup. The primary controller runs in a hostNetwork. If the primary controller pods are unavailable, traffic is routed to the backup controller.
 
-                      > **Caution!** There can be only one controller with this inlet type on a single host.
+                      > **Caution.** There can be only one controller with this inlet type on a single host.
                       >
                       > Ensure the following ports are available on the node: 80, 81, 443, 444, 4207, 4208.
                   enum: ["LoadBalancer","LoadBalancerWithSSLPassthrough","LoadBalancerWithProxyProtocol","HostPort","HostPortWithSSLPassthrough","HostPortWithProxyProtocol", "HostWithFailover"]
@@ -742,7 +742,7 @@ spec:
                       description: |
                         IP ranges (CIDR) that are allowed to access the load balancer.
 
-                        > **Caution!** The cloud provider may not support this option or ignore it.
+                        > **Caution.** The cloud provider may not support this option or ignore it.
                         > Providers supporting the option: _AWS_, _GCP_, _Azure_.
                         > Providers ignoring the option: _YandexCloud_.
                         > For other cloud providers, the behavior may depend on the specifics of the cloud implementation. Testing is recommended before use of the option in production.
@@ -755,7 +755,7 @@ spec:
                       description: |
                         Annotations to assign to the service for flexible configuration of the load balancer.
 
-                        > **Caution!** The module does not take into account the specifics of setting annotations in different clouds.
+                        > **Caution.** The module does not take into account the specifics of setting annotations in different clouds.
                         Note that you will need to recreate `IngressNginxController` (or create a new controller and then delete the old one) if annotations to provision a load balancer are only used when creating the service.
                       additionalProperties:
                         type: string
@@ -768,7 +768,7 @@ spec:
                       description: |
                         Accepts all the incoming `X-Forwarded-*` headers and passes them to upstreams.
 
-                        > **Caution!** Make sure that requests to the Ingress are sent from trusted sources when using this option.
+                        > **Caution.** Make sure that requests to the Ingress are sent from trusted sources when using this option.
                     realIPHeader:
                       type: string
                       description: |
@@ -788,7 +788,7 @@ spec:
                       description: |
                         IP ranges (CIDR) that are allowed to access the load balancer.
 
-                        > **Caution!** The cloud provider may not support this option or ignore it.
+                        > **Caution.** The cloud provider may not support this option or ignore it.
                         > Providers supporting the option: _AWS_, _GCP_, _Azure_.
                         > Providers ignoring the option: _YandexCloud_.
                         > For other cloud providers, the behavior may depend on the specifics of the cloud implementation. Testing is recommended before use of the option in production.
@@ -800,7 +800,7 @@ spec:
                       description: |
                         Annotations that will be passed to service with type load balancer to configure it.
 
-                        > **Caution!** The module does not take into account the specifics of setting annotations in different clouds.
+                        > **Caution.** The module does not take into account the specifics of setting annotations in different clouds.
                         > Note that you will need to recreate `IngressNginxController` (or create a new controller and then delete the old one) if annotations to provision a load balancer are only used when creating the service.
                       additionalProperties:
                         type: string
@@ -820,7 +820,7 @@ spec:
                       description: |
                         IP ranges (CIDR) that are allowed to access the load balancer.
 
-                        > **Caution!** The cloud provider may not support this option or ignore it.
+                        > **Caution.** The cloud provider may not support this option or ignore it.
                         > Providers supporting the option: _AWS_, _GCP_, _Azure_.
                         > Providers ignoring the option: _Yandex Cloud_.
                         > For other cloud providers, the behavior may depend on the specifics of the cloud implementation. Testing is recommended before use of the option in production.
@@ -832,7 +832,7 @@ spec:
                       description: |
                         Annotations that will be passed to service with type load balancer to configure it.
 
-                        > **Caution!** The module does not take into account the specifics of setting annotations in different clouds.
+                        > **Caution.** The module does not take into account the specifics of setting annotations in different clouds.
                         > Note that you will need to recreate `IngressNginxController` (or create a new controller and then delete the old one) if annotations to provision a load balancer are only used when creating the service.
                       additionalProperties:
                         type: string
@@ -875,7 +875,7 @@ spec:
                       description: |
                         Accepts all the incoming X-Forwarded-* headers and passes them to upstreams.
 
-                        > **Caution!** Make sure that requests to the ingress are sent from trusted sources when using this option. The `acceptRequestsFrom` parameter can help you with defining trusted sources.
+                        > **Caution.** Make sure that requests to the ingress are sent from trusted sources when using this option. The `acceptRequestsFrom` parameter can help you with defining trusted sources.
                     realIPHeader:
                       type: string
                       description: |
@@ -1036,9 +1036,9 @@ spec:
 
                     You can specify [any supported parameter](https://kubernetes.github.io/ingress-nginx/user-guide/nginx-configuration/configmap/) in it in the `key: value (string)` format.
 
-                    > **Caution!** An erroneous option may lead to the failure of the ingress controller;
+                    > **Caution.** An erroneous option may lead to the failure of the ingress controller;
 
-                    > **Caution!** The usage of this parameter is not recommended; the backward compatibility or operability of the ingress controller that uses this option is not guaranteed
+                    > **Caution.** The usage of this parameter is not recommended; the backward compatibility or operability of the ingress controller that uses this option is not guaranteed
                 additionalHeaders:
                   type: object
                   description: |
@@ -1174,7 +1174,7 @@ spec:
 
                     By default, a self-signed certificate is used.
 
-                    > **Caution!** This parameter does not affect certificates used in the Ingress resources of the Deckhouse modules. You can specify the certificate to be used in the Ingress resources of the Deckhouse modules with the [modules.https.customCertificate](../../deckhouse-configure-global.html#parameters-modules-https-customcertificate) global parameter.
+                    > **Caution.** This parameter does not affect certificates used in the Ingress resources of the Deckhouse modules. You can specify the certificate to be used in the Ingress resources of the Deckhouse modules with the [modules.https.customCertificate](../../deckhouse-configure-global.html#parameters-modules-https-customcertificate) global parameter.
                   type: object
                   properties:
                     secretRef:
