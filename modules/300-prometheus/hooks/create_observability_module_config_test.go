@@ -37,7 +37,10 @@ var _ = Describe("Modules :: prometheus :: hooks :: create_observability_module_
 	f.RegisterCRD("deckhouse.io", "v1alpha1", "ModuleConfig", false)
 
 	Context("Without enabled observability module", func() {
-		f.RunHook()
+		BeforeEach(func() {
+			f.RunHook()
+		})
+
 		It("Must not create observability module config", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			observabilityModuleConfig := f.KubernetesResource("ModuleConfig", "", "observability")
@@ -46,8 +49,11 @@ var _ = Describe("Modules :: prometheus :: hooks :: create_observability_module_
 	})
 
 	Context("With enabled observability module", func() {
-		f.ValuesSet("global.enabledModules", []string{"observability"})
-		f.RunHook()
+		BeforeEach(func() {
+			f.ValuesSet("global.enabledModules", []string{"observability"})
+			f.RunHook()
+		})
+
 		It("Must create observability module config", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			observabilityModuleConfig := f.KubernetesResource("ModuleConfig", "", "observability")
@@ -57,8 +63,11 @@ var _ = Describe("Modules :: prometheus :: hooks :: create_observability_module_
 	})
 
 	Context("Observability module is turned off", func() {
-		f.BindingContexts.Set(f.KubeStateSet(observabilityMCTestManifest))
-		f.RunHook()
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(observabilityMCTestManifest))
+			f.RunHook()
+		})
+
 		It("Must do nothing", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			observabilityModuleConfig := f.KubernetesResource("ModuleConfig", "", "observability")
