@@ -69,7 +69,8 @@ func (in *DeckhouseRelease) GetChangelogLink() string {
 	return in.Spec.ChangelogLink
 }
 
-func (in *DeckhouseRelease) GetCooldownUntil() (cooldown *time.Time) {
+func (in *DeckhouseRelease) GetCooldownUntil() *time.Time {
+	cooldown := new(time.Time)
 	if v, ok := in.Annotations["release.deckhouse.io/cooldown"]; ok {
 		cd, err := time.Parse(time.RFC3339, v)
 		if err == nil {

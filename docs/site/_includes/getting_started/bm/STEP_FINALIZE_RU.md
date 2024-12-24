@@ -52,7 +52,8 @@ EOF
 </p>
 {% snippetcut %}
 ```shell
-sudo -i d8 k annotate sc localpath storageclass.kubernetes.io/is-default-class='true'
+sudo -i d8 k patch mc global --type merge \
+  -p "{\"spec\": {\"settings\":{\"defaultClusterStorageClass\":\"localpath\"}}}"
 ```
 {% endsnippetcut %}
   </li>
@@ -86,7 +87,8 @@ EOF
 <p>Укажите, что созданный StorageClass должен использоваться как StorageClass по умолчанию. Для этого выполните на <strong>master-узле</strong> следующую команду, чтобы добавить на StorageClass аннотацию <code>storageclass.kubernetes.io/is-default-class='true'</code>:</p>
 {% snippetcut %}
 ```shell
-sudo -i d8 k annotate sc localpath storageclass.kubernetes.io/is-default-class='true'
+sudo -i d8 k patch mc global --type merge \
+  -p "{\"spec\": {\"settings\":{\"defaultClusterStorageClass\":\"localpath\"}}}"
 ```
 {% endsnippetcut %}
   </li>

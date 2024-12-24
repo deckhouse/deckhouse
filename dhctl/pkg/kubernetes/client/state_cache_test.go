@@ -27,7 +27,7 @@ import (
 )
 
 func TestDeckhouseInstall(t *testing.T) {
-	log.InitLogger("simple")
+	log.InitLogger("json")
 
 	t.Run("creates secret when initialize", func(t *testing.T) {
 		fakeClient := NewFakeKubernetesClient()

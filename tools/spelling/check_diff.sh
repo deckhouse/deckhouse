@@ -35,7 +35,11 @@ function check() {
   local file_changes=$2
 
   if [[ -n "${file_name}" ]] && [[ -n "${file_changes}" ]]; then
-    local result=$(file_diff_check_spell ${file_name} "${file_changes}")
+    # There are two options for checking:
+    # 1. Checking PR diff - function file_diff_check_spell
+    # 2. Checking the entire file - function file_check_spell
+    # local result=$(file_diff_check_spell ${file_name} "${file_changes}")
+    local result=$(file_check_spell ${file_name})
     if [ -n "${result}" ]; then
       print_message_about_typos_in_a_file "${file_name}"
       echo "${result}" | sed 's/\s\+/\n/g' | sort -u

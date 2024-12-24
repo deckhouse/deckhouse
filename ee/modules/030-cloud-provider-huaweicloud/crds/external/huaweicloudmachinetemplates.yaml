@@ -22,8 +22,8 @@ spec:
     - name: v1alpha1
       schema:
         openAPIV3Schema:
-          description: HuaweiCloudMachineTemplate is the Schema for the huaweicloudmachinetemplates
-            API
+          description: HuaweiCloudMachineTemplate is the schema for the huaweicloudmachinetemplates
+            API.
           properties:
             apiVersion:
               description: |-
@@ -44,7 +44,7 @@ spec:
               type: object
             spec:
               description: HuaweiCloudMachineTemplateSpec defines the desired state
-                of HuaweiCloudMachineTemplate
+                of HuaweiCloudMachineTemplate.
               properties:
                 template:
                   properties:
@@ -53,9 +53,9 @@ spec:
                         ObjectMeta is metadata that all persisted resources must have, which includes all objects
                         users must create. This is a copy of customizable fields from metav1.ObjectMeta.
 
-                        ObjectMeta is embedded in `Machine.Spec`, `MachineDeployment.Template` and `MachineSet.Template`,
+                        ObjectMeta is embedded in `Machine.Spec`, `MachineDeployment.Template`, and `MachineSet.Template`,
                         which are not top-level Kubernetes objects. Given that metav1.ObjectMeta has lots of special cases
-                        and read-only fields which end up in the generated CRD validation, having it as a subset simplifies
+                        and read-only fields, which end up in the generated CRD validation, having it as a subset simplifies
                         the API and some issues that can impact user experience.
 
                         During the [upgrade to controller-tools@v2](https://github.com/kubernetes-sigs/cluster-api/pull/1054)
@@ -107,7 +107,7 @@ spec:
                           type: string
                         rootDiskSize:
                           default: 30
-                          description: RootDiskSize size of the bootable disk in GiB.
+                          description: RootDiskSize is the size of the bootable disk in GiB.
                           format: int32
                           type: integer
                         rootDiskType:
@@ -122,13 +122,13 @@ spec:
                             - ESSD2
                           type: string
                         securityGroups:
-                          description: The UUID's of the security groups to assign to
-                            the instance
+                          description: The UUIDs of the security groups to assign to
+                            the instance.
                           items:
                             type: string
                           type: array
                         serverGroupID:
-                          description: The server group to assign the machine to
+                          description: The server group to assign the machine to.
                           type: string
                         subnets:
                           description: Specifies an array of one or more subnets to

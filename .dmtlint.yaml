@@ -1,0 +1,389 @@
+linters-settings:
+  probes:
+    probes-excludes:
+      d8-istio:
+        - kube-rbac-proxy
+        - operator
+        - istio-proxy
+        - metadata-discovery
+      d8-chrony:
+        - chrony
+      d8-admission-policy-engine:
+        - constraint-exporter
+        - kube-rbac-proxy
+      d8-cert-manager:
+        - kube-rbac-proxy
+        - cainjector
+        - cert-manager
+      d8-cni-cilium:
+        - frontend
+        - backend
+        - kube-rbac-proxy
+        - pause-check-linux-kernel
+        - pause-cilium
+        - pause-kube-rbac-proxy
+        - operator
+      d8-cni-flannel:
+        - kube-flannel
+        - wait-memcached
+      d8-cloud-provider-aws:
+        - node-termination-handler
+        - kube-rbac-proxy
+      d8-cloud-provider-azure:
+        - kube-rbac-proxy
+      d8-cloud-provider-gcp:
+        - kube-rbac-proxy
+      d8-cloud-provider-yandex:
+        - kube-rbac-proxy
+      d8-cni-simple-bridge:
+        - simple-bridge
+      kube-system:
+        - kube-rbac-proxy
+        - image-holder-etcd
+        - image-holder-kube-apiserver-healthcheck
+        - image-holder-kube-apiserver129
+        - image-holder-kube-controller-manager129
+        - image-holder-kube-scheduler129
+        - coredns
+        - deckhouse
+        - handler
+        - iptables-loop
+        - admission-controller
+        - recommender
+        - updater
+        - kube-proxy
+        - backup
+      d8-system:
+        - kube-rbac-proxy
+        - web
+        - kube-router
+        - deckhouse
+        - handler
+      d8-ingress-nginx:
+        - kruise
+      d8-l2-load-balancer:
+        - controller
+        - kube-rbac-proxy
+      d8-metallb:
+        - kube-rbac-proxy
+        - controller
+      d8-monitoring:
+        - kube-rbac-proxy
+        - kubelet-eviction-thresholds-exporter
+        - node-exporter
+        - monitoring-ping
+        - prometheus-metrics-adapter
+        - image-availability-exporter
+        - dashboard-provisioner
+        - grafana
+        - exporter
+      d8-network-gateway:
+        - snat
+        - dhcp
+      d8-operator-prometheus:
+        - kube-rbac-proxy
+        - prometheus-operator
+      d8-operator-trivy:
+        - kube-rbac-proxy
+        - report-updater
+      d8-pod-reloader:
+        - kube-rbac-proxy
+      d8-runtime-audit-engine:
+        - rules-loader
+      d8-snapshot-controller:
+        - kube-rbac-proxy
+        - snapshot-controller
+        - snapshot-validation
+      d8-static-routing-manager:
+        - agent
+      d8-upmeter:
+        - agent
+        - kube-rbac-proxy
+        - smoke-mini-a
+        - smoke-mini-b
+        - smoke-mini-c
+        - smoke-mini-d
+        - smoke-mini-e
+        - smoke-mini
+      dex-authenticator-namespace:
+        - redis
+      test-namespace:
+        - redis
+      d8-okmeter:
+        - okagent
+      d8-openvpn:
+        - kube-rbac-proxy
+        - openvpn-tcp
+        - ovpn-admin
+      d8-dashboard:
+        - dashboard
+        - metrics-scraper
+        - api
+        - auth
+        - web
+      d8-service-with-healthchecks:
+        - agent
+        - controller
+        - kube-rbac-proxy
+      d8-user-authz:
+        - user-authz-webhook
+        - webhook
+      d8-cloud-provider-dynamix:
+        - kube-rbac-proxy
+      d8-cloud-provider-huaweicloud:
+        - kube-rbac-proxy
+      d8-cloud-provider-openstack:
+        - kube-rbac-proxy
+      d8-cloud-provider-vcd:
+        - kube-rbac-proxy
+      d8-cloud-provider-zvirt:
+        - kube-rbac-proxy
+      d8-cloud-instance-manager:
+        - controller
+        - reserve-resources
+  openapi:
+    enum-file-excludes:
+      - prometheus:/openapi/values.yaml:
+          - "properties.internal.properties.grafana.properties.alertsChannelsConfig.properties.notifiers.items.properties.type"
+      - admission-policy-engine:/openapi/values.yaml:
+          - "properties.internal.properties.podSecurityStandards.properties.enforcementActions.items"
+      - ceph-csi:/openapi/values.yaml:
+          - "properties.internal.properties.crs.items.properties.spec.properties.rbd.properties.storageClasses.items.properties.defaultFSType"
+      - cloud-provider-aws:/openapi/config-values.yaml:
+          - "properties.storageClass.properties.provision.items.properties.type"
+          - "properties.storageClass.properties.provision.items.oneOf[*].properties.type"
+      - cloud-provider-aws:/openapi/values.yaml:
+          - "properties.internal.properties.storageClasses.items.oneOf[*].properties.type"
+      - cloud-provider-azure:/openapi/config-values.yaml:
+          - "properties.storageClass.properties.provision.items.properties.type"
+      - cni-flannel:/openapi/values.yaml:
+          - "properties.internal.properties.podNetworkMode"
+      - metallb:/openapi/config-values.yaml:
+          - "properties.addressPools.items.properties.protocol"
+      - node-manager:/openapi/config-values.yaml:
+          - "properties.allowedBundles.items"
+      - kube-dns:/openapi/values.yaml:
+          - "properties.internal.properties.specificNodeType"
+      - descheduler:/openapi/values.yaml:
+          - "properties.internal.properties.deschedulers.items.properties.strategies.properties.removePodsViolatingNodeAffinity.properties.nodeAffinityType.items"
+      - cloud-provider-dynamix:/openapi/values.yaml:
+          - "properties.internal.properties.providerClusterConfiguration.properties.apiVersion"
+          - "properties.internal.properties.providerDiscoveryData.properties.apiVersion"
+      - cloud-provider-huaweicloud:/openapi/values.yaml:
+          - "properties.internal.properties.providerClusterConfiguration.properties.apiVersion"
+          - "properties.internal.properties.providerDiscoveryData.properties.apiVersion"
+      - cloud-provider-openstack:/openapi/values.yaml:
+          - "properties.internal.properties.discoveryData.properties.apiVersion"
+      - cloud-provider-vcd:/openapi/values.yaml:
+          - "properties.internal.properties.discoveryData.properties.apiVersion"
+          - "properties.internal.properties.providerDiscoveryData.properties.apiVersion"
+          - "properties.internal.properties.providerClusterConfiguration.properties.apiVersion"
+      - cloud-provider-zvirt:/openapi/values.yaml:
+          - "properties.internal.properties.providerClusterConfiguration.properties.apiVersion"
+          - "properties.internal.properties.providerDiscoveryData.properties.apiVersion"
+    ha-absolute-keys-excludes:
+      - "user-authn:/openapi/config-values.yaml": "properties.publishAPI.properties.https"
+  nocyrillic:
+    no-cyrillic-file-excludes:
+      - user-authz:/rbac.yaml
+      - documentation:/images/web/site/_data/topnav.yml
+      - documentation:/images/docs-builder/modules-docs/hugo.yaml
+  license:
+    copyright-excludes:
+      - upmeter:/images/upmeter/stress.sh
+      - cni-simple-bridge:/images/simple-bridge/rootfs/bin/simple-bridge
+      - monitoring-applications:/applications/consul/placeholder
+      - monitoring-applications:/applications/fluentd/placeholder
+      - monitoring-applications:/applications/grafana/placeholder
+      - monitoring-applications:/applications/minio/placeholder
+      - monitoring-applications:/applications/nginx/placeholder
+      - monitoring-applications:/applications/trickster/placeholder
+    skip-oss-checks:
+      - basic-auth
+      - cloud-provider-aws
+      - cloud-provider-azure
+      - cloud-provider-gcp
+      - cloud-provider-yandex
+      - deckhouse-tools
+      - documentation
+      - flow-schema
+      - kube-proxy
+      - monitoring-applications
+      - monitoring-custom
+      - monitoring-ping
+      - multitenancy-manager
+      - network-gateway
+      - node-local-dns
+      - okmeter
+      - registry-packages-proxy
+      - secret-copier
+      - static-routing-manager
+      - upmeter
+      - user-authz
+      - cni-simple-bridge
+      - extended-monitoring
+      - namespace-configurator
+      - service-with-healthchecks
+      - cloud-provider-dynamix
+      - cloud-provider-huaweicloud
+      - cloud-provider-openstack
+      - cloud-provider-vcd
+      - cloud-provider-zvirt
+  rbac:
+    skip-check-wildcards:
+      - "admission-policy-engine/templates/rbac-for-us.yaml":
+          - "d8:admission-policy-engine:gatekeeper"
+      - "deckhouse/templates/webhook-handler/rbac-for-us.yaml":
+          - "d8:deckhouse:webhook-handler"
+      - "okmeter/templates/rbac-for-us.yaml":
+          - "d8:okmeter"
+      - "operator-prometheus/templates/rbac-for-us.yaml":
+          - "d8:operator-prometheus"
+      - "prometheus-metrics-adapter/templates/rbac-for-us.yaml":
+          - "d8:prometheus-metrics-adapter:horizontal-pod-autoscaler-external-metrics"
+      - "upmeter/templates/upmeter-agent/rbac-for-us.yaml":
+          - "d8:upmeter:upmeter-agent"
+          - "upmeter-agent"
+      - "upmeter/templates/upmeter/rbac-for-us.yaml":
+          - "d8:upmeter:upmeter"
+      - "vertical-pod-autoscaler/templates/rbac-for-us.yaml":
+          - "d8:vertical-pod-autoscaler:controllers-reader"
+      - "istio/templates/multicluster/api-proxy/rbac-for-us.yaml":
+          - "d8:istio:multicluster:api-proxy"
+    skip-object-check-binding:
+      - ceph-csi
+      - cert-manager
+      - cilium-hubble
+      - cloud-provider-aws
+      - cloud-provider-azure
+      - cloud-provider-gcp
+      - cloud-provider-yandex
+      - deckhouse
+      - ingress-nginx
+      - istio
+      - l2-load-balancer
+      - metallb
+      - monitoring-kubernetes
+      - multitenancy-manager
+      - node-manager
+      - operator-trivy
+      - runtime-audit-engine
+      - snapshot-controller
+      - static-routing-manager
+      - terraform-manager
+      - upmeter
+      - user-authn
+      - vertical-pod-autoscaler
+      - cni-cilium
+      - openvpn
+      - extended-monitoring
+      - prometheus
+      - dashboard
+      - service-with-healthchecks
+      - user-authz
+      - cloud-provider-dynamix
+      - cloud-provider-huaweicloud
+      - cloud-provider-openstack
+      - cloud-provider-vcd
+      - cloud-provider-zvirt
+  helm:
+    skip-module-image-name:
+      - "021-cni-cilium/images/cilium/Dockerfile"
+      - "021-cni-cilium/images/virt-cilium/Dockerfile"
+    skip-distroless-image-check:
+      - "base-cilium-dev/werf.inc.yaml"
+      - "cilium-envoy/werf.inc.yaml"
+      - "drbd-reactor/Dockerfile"
+      - "linstor-affinity-controller/Dockerfile"
+      - "linstor-csi/Dockerfile"
+      - "linstor-drbd-wait/Dockerfile"
+      - "linstor-pools-importer/Dockerfile"
+      - "linstor-scheduler-admission/Dockerfile"
+      - "linstor-scheduler-extender/Dockerfile"
+      - "linstor-server/Dockerfile"
+      - "piraeus-operator/Dockerfile"
+      - "spaas/Dockerfile"
+      - "snapshot-controller/Dockerfile"
+      - "snapshot-validation-webhook/Dockerfile"
+      - "api-proxy/Dockerfile"
+      - "kiali/Dockerfile"
+      - "metadata-discovery/Dockerfile"
+      - "metadata-exporter/Dockerfile"
+      - "operator-v1x12x6/Dockerfile"
+      - "operator-v1x13x7/Dockerfile"
+      - "operator-v1x16x2/Dockerfile"
+      - "operator-v1x19x7/Dockerfile"
+      - "pilot-v1x12x6/Dockerfile"
+      - "pilot-v1x13x7/Dockerfile"
+      - "pilot-v1x16x2/Dockerfile"
+      - "pilot-v1x19x7/Dockerfile"
+      - "proxyv2-v1x12x6/Dockerfile"
+      - "proxyv2-v1x13x7/Dockerfile"
+      - "proxyv2-v1x16x2/Dockerfile"
+      - "proxyv2-v1x19x7/Dockerfile"
+      - "cni-v1x12x6/Dockerfile"
+      - "cni-v1x13x7/Dockerfile"
+      - "cni-v1x16x2/Dockerfile"
+      - "cni-v1x19x7/Dockerfile"
+      - "ebpf-exporter/Dockerfile"
+      - "controller-1-1/Dockerfile"
+      - "easyrsa-migrator/Dockerfile"
+      - "pmacct/Dockerfile"
+      - "argocd/Dockerfile"
+      - "argocd-image-updater/Dockerfile"
+      - "werf-argocd-cmp-sidecar/Dockerfile"
+    skip-helm-ignore-check:
+      - "namespace-configurator"
+      - "dashboard"
+    skip-namespace-check:
+      - "namespace-configurator"
+      - "dashboard"
+  container:
+    skip-containers:
+      - "okmeter:okagent"
+      - "d8-control-plane-manager:*image-holder*"
+      - "d8-system:init-downloaded-modules"
+      - "node-local-dns:coredns"
+      - "deckhouse:init-downloaded-modules"
+      - "documentation:builder"
+      - "kiali:kiali"
+      - "aggregating-proxy:wait-memcached"
+      - "upmeter-agent:chown-volume-data"
+      - "d8-kube-dns-sts-pods-hosts-appender-webhook:webhook"
+      - "caps-controller-manager:caps-controller-manager"
+      - "standby-holder-name:reserve-resources"
+  monitoring:
+    skip-module-checks:
+      - "extended-monitoring"
+      - "cloud-provider-yandex"
+  k8s_resources:
+    skip-container-checks:
+      - "cloud-controller-manager"
+      - "istiod"
+      - "kiali"
+      - "node-local-dns"
+      - "dashboard"
+      - "dashboard-metrics-scraper"
+      - "metrics-scraper"
+      - "api"
+      - "api-proxy"
+      - "auth"
+      - "d8-control-plane-apiserver"
+      - "d8-kube-dns-sts-pods-hosts-appender-webhook"
+      - "ingressgateway"
+      - "smoke-mini-a"
+      - "smoke-mini-b"
+      - "smoke-mini-c"
+      - "smoke-mini-d"
+      - "smoke-mini-e"
+      - "web"
+      - "metadata-exporter"
+      - "prometheus-pp"
+      - "standby-holder-name"
+      - "machine-controller-manager"
+    skip-vpa-checks:
+      - "d8-system:deckhouse"
+      - "d8-cloud-instance-manager:node-manager"
+      - "d8-okmeter:okmeter"
+    skip-pdb-checks:
+      - "d8-cloud-instance-manager:node-manager"

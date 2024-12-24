@@ -92,7 +92,27 @@ entries:
         - title:
             en: Security software settings
             ru: Настройка ПО безопасности
-          url: /security_software_setup.html
+          folders:
+            - title:
+                en: SIEM
+                ru: SIEM
+              folders:
+                - title:
+                    en: KUMA
+                    ru: KUMA
+                  url: /security/kuma.html
+            - title:
+                en: Security scanners
+                ru: Сканеры безопасности
+              folders:
+                - title:
+                    en: Common settings
+                    ru: Общие настройки
+                  url: /security_software_setup.html
+                - title:
+                    en: KESL
+                    ru: KESL
+                  url: /security/kesl.html
         - title:
             en: Alerts
             ru: Алерты
@@ -846,7 +866,7 @@ entries:
             - title:
                 en: Description
                 ru: Описание
-              url: /modules/610-service-with-healthchecks/
+              url: /modules/service-with-healthchecks/
             - title:
                 en: Reference
                 ru: Справка
@@ -854,15 +874,15 @@ entries:
                 - title:
                     en: Configuration
                     ru: Настройки
-                  url: /modules/610-service-with-healthchecks/configuration.html
+                  url: /modules/service-with-healthchecks/configuration.html
                 - title:
                     en: Custom Resources
                     ru: Custom Resources
-                  url: /modules/610-service-with-healthchecks/cr.html
+                  url: /modules/service-with-healthchecks/cr.html
             - title:
                 en: Examples
                 ru: Примеры
-              url: /modules/610-service-with-healthchecks/examples.html
+              url: /modules/service-with-healthchecks/examples.html
     - title:
         en: Monitoring
         ru: Мониторинг

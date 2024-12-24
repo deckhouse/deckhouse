@@ -505,6 +505,57 @@ alerts:
         Cluster-autoscaler issues too many errors.
       severity: "8"
       markupFormat: markdown
+    - name: D8CNIEnabledMoreThanOne
+      sourceFile: modules/340-monitoring-deckhouse/monitoring/prometheus-rules/cni-checks.yaml
+      moduleUrl: 340-monitoring-deckhouse
+      module: monitoring-deckhouse
+      edition: ce
+      description: |
+        Several CNIs are enabled in the cluster:
+        For the cluster to work correctly, only one CNI must be enabled.
+      summary: |
+        More than one CNI is enabled in the cluster.
+      severity: "2"
+      markupFormat: markdown
+    - name: D8CNIMisconfigured
+      sourceFile: modules/021-cni-cilium/monitoring/prometheus-rules/cni-checks.yaml
+      moduleUrl: 021-cni-cilium
+      module: cni-cilium
+      edition: ce
+      description: |
+        It is necessary to correct the settings in the CNI {{ $labels.cni }} ModuleConfig.
+        You can find the desired settings in the `d8-system/desired-cni-moduleconfig` configmap.
+        To do this, please run the following command: `kubectl -n d8-system get configmap desired-cni-moduleconfig -o yaml`.
+      summary: |
+        The settings from the secret d8-cni-configuration and the ModuleConfig contradict each other.
+      severity: "3"
+      markupFormat: markdown
+    - name: D8CNIMisconfigured
+      sourceFile: modules/035-cni-flannel/monitoring/prometheus-rules/cni-checks.yaml
+      moduleUrl: 035-cni-flannel
+      module: cni-flannel
+      edition: ce
+      description: |
+        It is necessary to correct the settings in the CNI {{ $labels.cni }} ModuleConfig.
+        You can find the desired settings in the `d8-system/desired-cni-moduleconfig` configmap.
+        To do this, please run the following command: `kubectl -n d8-system get configmap desired-cni-moduleconfig -o yaml`.
+      summary: |
+        The settings from the secret d8-cni-configuration and the ModuleConfig contradict each other.
+      severity: "3"
+      markupFormat: markdown
+    - name: D8CNIMisconfigured
+      sourceFile: modules/035-cni-simple-bridge/monitoring/prometheus-rules/cni-checks.yaml
+      moduleUrl: 035-cni-simple-bridge
+      module: cni-simple-bridge
+      edition: ce
+      description: |
+        It is necessary to correct the settings in the CNI {{ $labels.cni }} ModuleConfig.
+        You can find the desired settings in the `d8-system/desired-cni-moduleconfig` configmap.
+        To do this, please run the following command: `kubectl -n d8-system get configmap desired-cni-moduleconfig -o yaml`.
+      summary: |
+        The settings from the secret d8-cni-configuration and the ModuleConfig contradict each other.
+      severity: "3"
+      markupFormat: markdown
     - name: D8ControlPlaneManagerPodNotRunning
       sourceFile: modules/040-control-plane-manager/monitoring/prometheus-rules/control-plane-manager.yaml
       moduleUrl: 040-control-plane-manager
@@ -844,9 +895,9 @@ alerts:
 
         The Deployment is in the MinimumReplicasUnavailable state.
 
-        Run the following command to check the status of the Deployment: `kubectl -n d8-monitoring get deployment grafana -o json | jq .status`.
+        Run the following command to check the status of the Deployment: `kubectl -n d8-monitoring get deployment grafana-v10 -o json | jq .status`.
 
-        Run the following command to check the status of the Pods: `kubectl -n d8-monitoring get pods -l app=grafana -o json | jq '.items[] | {(.metadata.name):.status}'`.
+        Run the following command to check the status of the Pods: `kubectl -n d8-monitoring get pods -l app=grafana-v10 -o json | jq '.items[] | {(.metadata.name):.status}'`.
       summary: |
         One or more Grafana Pods are NOT Running.
       severity: "6"
@@ -885,7 +936,7 @@ alerts:
 
         Excessive Grafana restarts indicate that something is wrong. Normally, Grafana should be up and running all the time.
 
-        Please, refer to the corresponding logs: `kubectl -n d8-monitoring logs -f -l app=grafana -c grafana`.
+        Please, refer to the corresponding logs: `kubectl -n d8-monitoring logs -f -l app=grafana-v10 -c grafana`.
       summary: |
         Excessive Grafana restarts are detected.
       severity: "9"
@@ -901,9 +952,9 @@ alerts:
         Grafana unavailability can negatively impact users who actively use it in their work.
 
         The recommended course of action:
-        1. Check the availability and status of Grafana Pods: `kubectl -n d8-monitoring get pods -l app=grafana`;
-        2. Check the availability of the Grafana Deployment: `kubectl -n d8-monitoring get deployment grafana`;
-        3. Examine the status of the Grafana Deployment: `kubectl -n d8-monitoring describe deployment grafana`.
+        1. Check the availability and status of Grafana Pods: `kubectl -n d8-monitoring get pods -l app=grafana-v10`;
+        2. Check the availability of the Grafana Deployment: `kubectl -n d8-monitoring get deployment grafana-v10`;
+        3. Examine the status of the Grafana Deployment: `kubectl -n d8-monitoring describe deployment grafana-v10`.
       summary: |
         There is no Grafana target in Prometheus.
       severity: "6"
@@ -4687,6 +4738,8 @@ modules-having-alerts:
     - chrony
     - cloud-provider-yandex
     - cni-cilium
+    - cni-flannel
+    - cni-simple-bridge
     - control-plane-manager
     - documentation
     - extended-monitoring

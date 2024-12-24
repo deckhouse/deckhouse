@@ -15,12 +15,6 @@ from: {{ $.Images.BASE_GOLANG_20_ALPINE }}
 mount:
   - fromPath: ~/go-pkg-cache
     to: /go/pkg
-git:
-  - add: /{{ $.ModulePath }}modules/040-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
-    to: /patches
-    stageDependencies:
-      install:
-        - '**/*'
 shell:
   beforeInstall:
   - apk add --no-cache make patch git bash openssh-client
@@ -30,6 +24,5 @@ shell:
     - export GOPROXY={{ $.GOPROXY }}
     - git clone --depth 1 --branch v{{ .TF.vcd.version }} {{ $.SOURCE_REPO }}/vmware/terraform-provider-vcd.git /src
     - cd /src
-    - git apply /patches/*.patch --verbose
     - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 make build LDFLAGS="-s -w -extldflags \"-static\""
     - mv /go/bin/terraform-provider-vcd /terraform-provider-vcd

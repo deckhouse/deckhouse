@@ -353,8 +353,8 @@ func (r registryPackagesProxyLogger) Debugf(format string, args ...interface{}) 
 	log.DebugF(format+"\n", args...)
 }
 
-func (r registryPackagesProxyLogger) Error(args ...interface{}) {
-	log.ErrorLn(args...)
+func (r registryPackagesProxyLogger) Error(msg string, args ...interface{}) {
+	log.ErrorLn(msg, args)
 }
 
 func generateTLSCertificate(clusterDomain string) (*tls.Certificate, error) {
@@ -721,31 +721,9 @@ func InstallDeckhouse(kubeCl *client.KubernetesClient, config *config.DeckhouseI
 }
 
 func BootstrapTerraNodes(kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig, terraNodeGroups []config.TerraNodeGroupSpec, terraformContext *terraform.TerraformContext) error {
-	for _, ng := range terraNodeGroups {
-		err := log.Process("bootstrap", fmt.Sprintf("Create %s NodeGroup", ng.Name), func() error {
-			err := converge.CreateNodeGroup(kubeCl, ng.Name, metaConfig.NodeGroupManifest(ng))
-			if err != nil {
-				return err
-			}
-
-			cloudConfig, err := converge.GetCloudConfig(kubeCl, ng.Name, converge.ShowDeckhouseLogs)
-			if err != nil {
-				return err
-			}
-
-			for i := 0; i < ng.Replicas; i++ {
-				err = converge.BootstrapAdditionalNode(kubeCl, metaConfig, i, "static-node", ng.Name, cloudConfig, false, terraformContext)
-				if err != nil {
-					return err
-				}
-			}
-			return nil
-		})
-		if err != nil {
-			return err
-		}
-	}
-	return nil
+	return log.Process("bootstrap", "Create CloudPermanent NG", func() error {
+		return converge.ParallelCreateNodeGroup(kubeCl, metaConfig, terraNodeGroups, terraformContext)
+	})
 }
 
 func SaveMasterHostsToCache(hosts map[string]string) {
@@ -801,7 +779,7 @@ func BootstrapAdditionalMasterNodes(kubeCl *client.KubernetesClient, metaConfig 
 	}
 
 	return log.Process("bootstrap", "Bootstrap additional master nodes", func() error {
-		masterCloudConfig, err := converge.GetCloudConfig(kubeCl, converge.MasterNodeGroupName, converge.ShowDeckhouseLogs)
+		masterCloudConfig, err := converge.GetCloudConfig(kubeCl, converge.MasterNodeGroupName, converge.ShowDeckhouseLogs, log.GetDefaultLogger())
 		if err != nil {
 			return err
 		}
