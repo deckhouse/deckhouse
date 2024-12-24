@@ -52,16 +52,26 @@ import:
   add: /src/falcoctl
   to: /src
   before: install
+git:
+- add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/patches/falcoctl
+  to: /patches
+  includePaths:
+  - '**/*.patch'
+  stageDependencies:
+    install:
+    - '**/*.patch'
 mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
 shell:
   beforeInstall:
   {{- include "alpine packages proxy" . | nindent 2 }}
-  - apk add --no-cache make bash
+  - apk add --no-cache make bash git
   install:
   - cd /src
   - export GOPROXY={{ .GOPROXY }} GOOS=linux GOARCH=amd64 CGO_ENABLED=0
+  - git apply /patches/*.patch --verbose
+  - go mod tidy
   - make falcoctl
   - chown 64535:64535 falcoctl
   - chmod 0755 falcoctl

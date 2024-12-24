@@ -29,23 +29,19 @@ import:
   to: /sbin/tini
   before: install
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-binary-artifact
-  add: /usr/bin
+  add: /opt/python-static/bin
   to: /usr/bin
   before: install
   includePaths:
+  - python3.11
   - python3
-  - python3.12
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-binary-artifact
-  add: /usr/lib/python3
+  add: /opt/python-static/lib/python3.11
+  to: /usr/lib/python3.11
+  before: install
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-binary-artifact
+  add: /opt/python-static/lib/python3.11
   to: /usr/lib/python3
-  before: install
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-binary-artifact
-  add: /usr/lib64/python3
-  to: /usr/lib64/python3
-  before: install
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-binary-artifact
-  add: /usr/lib64/python3.12
-  to: /usr/lib64/python3.12
   before: install
 - image: {{ $.ModuleName }}/falco-artifact
   add: /falco-package
@@ -77,8 +73,11 @@ git:
   stageDependencies:
     install:
     - '**/*'
+import:
+- artifact: common/python-static
+  add: /opt/python-static
+  to: /opt/python-static
+  before: install
 shell:
   install:
-  - apt-get update
-  - apt-get install -y python3 python3-module-pip-run
-  - pip3 install -r /requirements.txt
+  - /opt/python-static/bin/pip3 install -r requirements.txt
