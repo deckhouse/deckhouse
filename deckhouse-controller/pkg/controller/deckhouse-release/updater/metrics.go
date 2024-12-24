@@ -24,7 +24,7 @@ import (
 
 const d8ReleaseBlockedMetricName = "d8_release_info"
 
-func newMetricsUpdater(metricStorage *metricstorage.MetricStorage) *metricsUpdater {
+func NewMetricsUpdater(metricStorage *metricstorage.MetricStorage) *metricsUpdater {
 	return &metricsUpdater{
 		metricStorage: metricStorage,
 	}
