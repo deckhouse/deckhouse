@@ -18,8 +18,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -30,6 +32,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/downloader"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 // restoreAbsentModulesFromOverrides checks ModulePullOverrides and restore modules on the FS
@@ -162,17 +165,40 @@ func (l *Loader) restoreAbsentModulesFromOverrides(ctx context.Context) error {
 
 // restoreAbsentModulesFromReleases checks ModuleReleases with Deployed status and restore them on the FS
 func (l *Loader) restoreAbsentModulesFromReleases(ctx context.Context) error {
-	releases := new(v1alpha1.ModuleReleaseList)
-	if err := l.client.List(ctx, releases); err != nil {
+	releaseList := new(v1alpha1.ModuleReleaseList)
+	if err := l.client.List(ctx, releaseList); err != nil {
 		return fmt.Errorf("list releases: %w", err)
 	}
 
+	releases := releaseList.Items
+
+	slices.SortFunc(releases, func(a, b v1alpha1.ModuleRelease) int {
+		return a.GetVersion().Compare(b.GetVersion())
+	})
+
+	deployedReleases := make(map[string]v1alpha1.ModuleRelease)
+
 	// TODO: add labels to list only Deployed releases
-	for _, release := range releases.Items {
+	for _, release := range releases {
 		// ignore deleted release and not deployed
 		if release.Status.Phase != v1alpha1.ModuleReleasePhaseDeployed || !release.ObjectMeta.DeletionTimestamp.IsZero() {
 			continue
 		}
+
+		dRelease, ok := deployedReleases[release.GetName()]
+		if ok {
+			newRelease := dRelease.DeepCopy()
+			newRelease.Status.Phase = v1alpha1.ModuleReleasePhaseSuperseded
+			newRelease.Status.Message = ""
+			newRelease.Status.TransitionTime = metav1.NewTime(l.dependencyContainer.GetClock().Now().UTC())
+
+			err := l.client.Status().Patch(ctx, newRelease, client.MergeFrom(&dRelease))
+			if err != nil {
+				l.log.Error("patch previous deployed release", slog.String("module_name", release.GetName()), log.Err(err))
+			}
+		}
+
+		deployedReleases[release.GetName()] = release
 
 		moduleVersion := "v" + release.Spec.Version.String()
 
