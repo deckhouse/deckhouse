@@ -43,7 +43,7 @@ properties:
     deckhouse: '> v1.63.0'
     kubernetes: '> v1.25.0'
   source: losev-test
-  weight: 910
+  weight: 900
 status:
   conditions:
     - lastProbeTime: "2024-12-03T15:57:20Z"
@@ -86,4 +86,4 @@ status:
   imageDigest: sha256:379b341598e85104ffe01643af6eeff5e1022ca60b4cc90be639b8ec59c61a47
   message: ""
   updatedAt: "2024-05-22T10:05:45Z"
-  weight: 910
+  weight: 900

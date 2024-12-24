@@ -1,29 +1,34 @@
+---
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleSource
 metadata:
   annotations:
-    modules.deckhouse.io/registry-spec-checksum: dbc8d54ec27b3bb6ad2a1f02210e0489
-  creationTimestamp: "2024-01-25T08:24:23Z"
+    modules.deckhouse.io/registry-spec-checksum: 38557e472e4e2bd8695fc58a255ec3dd
   finalizers:
-  - modules.deckhouse.io/release-exists
-  generation: 73
-  name: losev-test
-  resourceVersion: "359254028"
-  uid: d4b66e73-a936-4ef0-9325-e940ec37af06
+    - modules.deckhouse.io/release-exists
+  name: example
 spec:
   registry:
     ca: ""
     dockerCfg: YXNiCg==
     repo: dev-registry.deckhouse.io/deckhouse/losev/external-modules
     scheme: HTTP
-  releaseChannel: alpha
 status:
-  message: ""
+  message: Ready
   modules:
-  - name: echo
-    overridden: true
-  modulesCount: 1
-  syncTime: "2024-05-22T10:08:46Z"
+    - name: alpha
+      policy: example
+  modulesCount: 2
+  syncTime: "2024-05-03T21:05:05Z"
+---
+apiVersion: deckhouse.io/v1alpha2
+kind: ModuleUpdatePolicy
+metadata:
+  name: example
+spec:
+  releaseChannel: Alpha
+  update:
+    mode: Auto
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: Module
@@ -43,7 +48,7 @@ properties:
     deckhouse: '> v1.63.0'
     kubernetes: '> v1.25.0'
   source: losev-test
-  weight: 910
+  weight: 900
 status:
   conditions:
     - lastProbeTime: "2024-12-03T15:57:20Z"
@@ -65,28 +70,29 @@ status:
   hooksState: 'v0.7.24/hooks/moduleVersion.py: ok'
   phase: Ready
 ---
-apiVersion: deckhouse.io/v1alpha2
-kind: ModulePullOverride
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleRelease
 metadata:
-  annotations:
-    modules.deckhouse.io/deployed-on: dev-master-0
-  creationTimestamp: "2024-05-22T10:05:44Z"
-  deletionTimestamp: "2024-05-22T10:05:44Z"
-  finalizers:
-  - kubernetes
-  generation: 1
   labels:
     module: echo
-    source: losev-test
-  name: echo
-  resourceVersion: "359251643"
-  uid: b4b7a3d8-3d3a-42b6-b40e-f628d9ff7f39
+    modules.deckhouse.io/update-policy: example
+    release-checksum: 98d00f741c99e06e6c6c4d18b763c550
+    source: example
+  name: echo-v1.0.0
+  ownerReferences:
+    - apiVersion: deckhouse.io/v1alpha1
+      controller: true
+      kind: ModuleSource
+      name: example
+      uid: 71d2300f-700b-452a-896a-6a3805f9cef7
 spec:
-  imageTag: v0.4.52
-  scanInterval: "15s"
-  source: losev-test
+  moduleName: echo
+  version: 1.0.0
+  weight: 900
 status:
-  imageDigest: sha256:379b341598e85104ffe01643af6eeff5e1022ca60b4cc90be639b8ec59c61a47
+  approved: false
   message: ""
-  updatedAt: "2024-05-22T10:05:45Z"
-  weight: 910
+  phase: Deployed
+  pullDuration: 0s
+  size: 0
+  transitionTime: "2024-05-03T20:55:49Z"
