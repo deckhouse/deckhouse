@@ -31,7 +31,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
 )
 
-func DefineTerraformConvergeExporterCommand(parent *kingpin.CmdClause, cmd *kingpin.CmdClause) *kingpin.CmdClause {
+func DefineTerraformConvergeExporterCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 	app.DefineKubeFlags(cmd)
 	app.DefineConvergeExporterFlags(cmd)
 	app.DefineSSHFlags(cmd, config.ConnectionConfigParser{})
@@ -45,7 +45,7 @@ func DefineTerraformConvergeExporterCommand(parent *kingpin.CmdClause, cmd *king
 	return cmd
 }
 
-func DefineTerraformCheckCommand(parent *kingpin.CmdClause, cmd *kingpin.CmdClause) *kingpin.CmdClause {
+func DefineTerraformCheckCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 	app.DefineKubeFlags(cmd)
 	app.DefineOutputFlag(cmd)
 	app.DefineSSHFlags(cmd, config.ConnectionConfigParser{})

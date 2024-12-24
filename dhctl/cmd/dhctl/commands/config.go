@@ -33,7 +33,7 @@ var (
 	kubeadmTemplateOpenAPI = deckhouseDir + "/candi/control-plane-kubeadm/openapi.yaml"
 )
 
-func DefineRenderBashibleBundle(parent *kingpin.CmdClause, cmd *kingpin.CmdClause) *kingpin.CmdClause {
+func DefineRenderBashibleBundle(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 	app.DefineConfigFlags(cmd)
 	app.DefineRenderConfigFlags(cmd)
 	app.DefineRenderBundleFlags(cmd)
@@ -68,7 +68,7 @@ func DefineRenderBashibleBundle(parent *kingpin.CmdClause, cmd *kingpin.CmdClaus
 	return cmd
 }
 
-func DefineRenderMasterBootstrap(parent *kingpin.CmdClause, cmd *kingpin.CmdClause) *kingpin.CmdClause {
+func DefineRenderMasterBootstrap(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 	app.DefineConfigFlags(cmd)
 	app.DefineRenderConfigFlags(cmd)
 	app.DefineRenderBundleFlags(cmd)
@@ -92,7 +92,7 @@ func DefineRenderMasterBootstrap(parent *kingpin.CmdClause, cmd *kingpin.CmdClau
 	return cmd
 }
 
-func DefineRenderKubeadmConfig(parent *kingpin.CmdClause, cmd *kingpin.CmdClause) *kingpin.CmdClause {
+func DefineRenderKubeadmConfig(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 	app.DefineConfigFlags(cmd)
 	app.DefineRenderConfigFlags(cmd)
 
@@ -115,7 +115,7 @@ func DefineRenderKubeadmConfig(parent *kingpin.CmdClause, cmd *kingpin.CmdClause
 	return cmd
 }
 
-func DefineCommandParseClusterConfiguration(kpApp *kingpin.Application, parentCmd *kingpin.CmdClause, cmd *kingpin.CmdClause) *kingpin.CmdClause {
+func DefineCommandParseClusterConfiguration(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 	app.DefineInputOutputRenderFlags(cmd)
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
@@ -157,7 +157,7 @@ func DefineCommandParseClusterConfiguration(kpApp *kingpin.Application, parentCm
 	return cmd
 }
 
-func DefineCommandParseCloudDiscoveryData(kpApp *kingpin.Application, parentCmd *kingpin.CmdClause, cmd *kingpin.CmdClause) *kingpin.CmdClause {
+func DefineCommandParseCloudDiscoveryData(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 	app.DefineInputOutputRenderFlags(cmd)
 
 	cmd.Action(func(c *kingpin.ParseContext) error {

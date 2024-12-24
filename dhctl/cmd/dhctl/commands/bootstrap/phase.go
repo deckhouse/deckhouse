@@ -26,7 +26,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
 )
 
-func DefineBootstrapInstallDeckhouseCommand(parent *kingpin.CmdClause, cmd *kingpin.CmdClause) *kingpin.CmdClause {
+func DefineBootstrapInstallDeckhouseCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 	app.DefineSSHFlags(cmd, config.ConnectionConfigParser{})
 	app.DefineConfigFlags(cmd)
 	app.DefineBecomeFlags(cmd)
@@ -51,7 +51,7 @@ func DefineBootstrapInstallDeckhouseCommand(parent *kingpin.CmdClause, cmd *king
 	return cmd
 }
 
-func DefineBootstrapExecuteBashibleCommand(parent *kingpin.CmdClause, cmd *kingpin.CmdClause) *kingpin.CmdClause {
+func DefineBootstrapExecuteBashibleCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 	app.DefineSSHFlags(cmd, config.ConnectionConfigParser{})
 	app.DefineConfigFlags(cmd)
 	app.DefineBecomeFlags(cmd)
@@ -73,7 +73,7 @@ func DefineBootstrapExecuteBashibleCommand(parent *kingpin.CmdClause, cmd *kingp
 	return cmd
 }
 
-func DefineCreateResourcesCommand(parent *kingpin.CmdClause, cmd *kingpin.CmdClause) *kingpin.CmdClause {
+func DefineCreateResourcesCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 	app.DefineSSHFlags(cmd, config.ConnectionConfigParser{})
 	app.DefineBecomeFlags(cmd)
 	app.DefineConfigsForResourcesPhaseFlags(cmd)
@@ -96,7 +96,7 @@ func DefineCreateResourcesCommand(parent *kingpin.CmdClause, cmd *kingpin.CmdCla
 	return cmd
 }
 
-func DefineBootstrapAbortCommand(parent *kingpin.CmdClause, cmd *kingpin.CmdClause) *kingpin.CmdClause {
+func DefineBootstrapAbortCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 	app.DefineSSHFlags(cmd, config.ConnectionConfigParser{})
 	app.DefineBecomeFlags(cmd)
 	app.DefineConfigFlags(cmd)
@@ -116,7 +116,7 @@ func DefineBootstrapAbortCommand(parent *kingpin.CmdClause, cmd *kingpin.CmdClau
 	return cmd
 }
 
-func DefineBaseInfrastructureCommand(parent *kingpin.CmdClause, cmd *kingpin.CmdClause) *kingpin.CmdClause {
+func DefineBaseInfrastructureCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 	app.DefineConfigFlags(cmd)
 	app.DefineCacheFlags(cmd)
 	app.DefineDropCacheFlags(cmd)
@@ -131,7 +131,7 @@ func DefineBaseInfrastructureCommand(parent *kingpin.CmdClause, cmd *kingpin.Cmd
 	return cmd
 }
 
-func DefineExecPostBootstrapScript(parent *kingpin.CmdClause, cmd *kingpin.CmdClause) *kingpin.CmdClause {
+func DefineExecPostBootstrapScript(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 	app.DefineSSHFlags(cmd, config.ConnectionConfigParser{})
 	app.DefineBecomeFlags(cmd)
 	app.DefinePostBootstrapScriptFlags(cmd)

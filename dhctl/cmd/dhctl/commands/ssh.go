@@ -29,7 +29,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
 )
 
-func DefineTestSSHConnectionCommand(parent *kingpin.CmdClause, cmd *kingpin.CmdClause) *kingpin.CmdClause {
+func DefineTestSSHConnectionCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 	app.DefineSSHFlags(cmd, config.ConnectionConfigParser{})
 	app.DefineBecomeFlags(cmd)
 
@@ -56,7 +56,7 @@ func DefineTestSSHConnectionCommand(parent *kingpin.CmdClause, cmd *kingpin.CmdC
 	return cmd
 }
 
-func DefineTestSCPCommand(parent *kingpin.CmdClause, cmd *kingpin.CmdClause) *kingpin.CmdClause {
+func DefineTestSCPCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 	var SrcPath string
 	var DstPath string
 	var Data string
@@ -124,9 +124,10 @@ func DefineTestSCPCommand(parent *kingpin.CmdClause, cmd *kingpin.CmdClause) *ki
 	return cmd
 }
 
-func DefineTestUploadExecCommand(parent *kingpin.CmdClause, cmd *kingpin.CmdClause) *kingpin.CmdClause {
+func DefineTestUploadExecCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 	var ScriptPath string
 	var Sudo bool
+
 	app.DefineSSHFlags(cmd, config.ConnectionConfigParser{})
 	app.DefineBecomeFlags(cmd)
 	cmd.Flag("script", "source path").
@@ -161,7 +162,7 @@ func DefineTestUploadExecCommand(parent *kingpin.CmdClause, cmd *kingpin.CmdClau
 	return cmd
 }
 
-func DefineTestBundle(parent *kingpin.CmdClause, cmd *kingpin.CmdClause) *kingpin.CmdClause {
+func DefineTestBundle(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 	var ScriptName string
 	var BundleDir string
 
