@@ -186,14 +186,14 @@ func (l *Loader) restoreAbsentModulesFromReleases(ctx context.Context) error {
 		}
 
 		// if we already have deployed release - make it superseded
-		dRelease, ok := deployedReleases[release.Spec.ModuleName]
+		deployedRelease, ok := deployedReleases[release.Spec.ModuleName]
 		if ok {
-			newRelease := dRelease.DeepCopy()
-			newRelease.Status.Phase = v1alpha1.ModuleReleasePhaseSuperseded
-			newRelease.Status.Message = ""
-			newRelease.Status.TransitionTime = metav1.NewTime(l.dependencyContainer.GetClock().Now().UTC())
+			updatedDeployedRelease := deployedRelease.DeepCopy()
+			updatedDeployedRelease.Status.Phase = v1alpha1.ModuleReleasePhaseSuperseded
+			updatedDeployedRelease.Status.Message = ""
+			updatedDeployedRelease.Status.TransitionTime = metav1.NewTime(l.dependencyContainer.GetClock().Now().UTC())
 
-			err := l.client.Status().Patch(ctx, newRelease, client.MergeFrom(&dRelease))
+			err := l.client.Status().Patch(ctx, updatedDeployedRelease, client.MergeFrom(&deployedRelease))
 			if err != nil {
 				l.log.Error("patch previous deployed module release", slog.String("name", release.GetName()), log.Err(err))
 			}
