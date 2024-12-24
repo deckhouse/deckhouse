@@ -7,16 +7,17 @@ image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
-  add: /tmp/istio/out/pilot-agent
-  to: /usr/local/bin/pilot-agent
+  add: /tmp/istio/out/
+  to: /usr/local/bin/
+  includePaths:
+  - pilot-agent
   after: setup
 - image: {{ .ModuleName }}/{{ .ImageName }}-binary-artifact
-  add: /var/lib/istio/envoy/envoy_bootstrap_tmpl.json
-  to: /var/lib/istio/envoy/envoy_bootstrap_tmpl.json
-  after: setup
-- image: {{ .ModuleName }}/{{ .ImageName }}-binary-artifact
-  add: /var/lib/istio/envoy/gcp_envoy_bootstrap_tmpl.json
-  to: /var/lib/istio/envoy/gcp_envoy_bootstrap_tmpl.json
+  add: /var/lib/istio/envoy/
+  to: /var/lib/istio/envoy/
+  includePaths:
+  - envoy_bootstrap_tmpl.json
+  - gcp_envoy_bootstrap_tmpl.json
   after: setup
 - image: {{ .ModuleName }}/{{ .ImageName }}-binary-artifact
   add: /usr/local/bin
