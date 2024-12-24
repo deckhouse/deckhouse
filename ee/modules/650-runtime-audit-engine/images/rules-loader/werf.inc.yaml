@@ -1,53 +1,49 @@
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
-from: {{ $.Images.BASE_ALT_P11 }}
+fromImage: common/alt-p11
 import:
-- artifact: common/shell-operator-artifact
+- image: common/shell-operator-artifact
   add: /shell-operator/shell-operator
   to: /shell-operator
   before: setup
-- artifact: common/shell-operator-artifact
+- image: common/shell-operator-artifact
   add: /shell-operator/shell_lib.sh
   to: /shell_lib.sh
   before: setup
-- artifact: common/shell-operator-artifact
+- image: common/shell-operator-artifact
   add: /shell-operator/frameworks
   to: /frameworks
   before: setup
-- artifact: common/shell-operator-artifact
+- image: common/shell-operator-artifact
   add: /jq/jq
   to: /usr/local/bin/jq
   before: setup
 {{- $k8sVersion := "1.27" }}
 {{- $image_version := printf "%s.%d" $k8sVersion (index $.CandiVersionMap "k8s" $k8sVersion "patch") | replace "." "-" }}
-- artifact: common/kubernetes-artifact-{{ $image_version }}
+- image: common/kubernetes-artifact-{{ $image_version }}
   add: /src/_output/bin/kubectl
   to: /usr/local/bin/kubectl
   before: setup
-- artifact: tini-artifact
+- image: common/tini-artifact
   add: /tini/tini-static
   to: /sbin/tini
   before: install
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binary-artifact
-  add: /usr/bin
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-binary-artifact
+  add: /opt/python-static/bin
   to: /usr/bin
   before: install
   includePaths:
+  - python3.11
   - python3
-  - python3.12
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binary-artifact
-  add: /usr/lib/python3
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-binary-artifact
+  add: /opt/python-static/lib/python3.11
+  to: /usr/lib/python3.11
+  before: install
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-binary-artifact
+  add: /opt/python-static/lib/python3.11
   to: /usr/lib/python3
   before: install
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binary-artifact
-  add: /usr/lib64/python3
-  to: /usr/lib64/python3
-  before: install
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binary-artifact
-  add: /usr/lib64/python3.12
-  to: /usr/lib64/python3.12
-  before: install
-- artifact: {{ $.ModuleName }}/falco-artifact
+- image: {{ $.ModuleName }}/falco-artifact
   add: /falco-package
   to: /
   includePaths:
@@ -68,16 +64,20 @@ docker:
   ENTRYPOINT: ["tini", "--", "/shell-operator"]
   CMD: ["start"]
 ---
-artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binary-artifact
-from: {{ $.Images.BASE_ALT_P11 }}
+image: {{ $.ModuleName }}/{{ $.ImageName }}-binary-artifact
+fromImage: common/alt-p11-artifact
+final: false
 git:
 - add: /{{ $.ModulePath }}modules/650-{{ $.ModuleName }}/images/{{ $.ImageName }}/requirements.txt
   to: /requirements.txt
   stageDependencies:
     install:
     - '**/*'
+import:
+- artifact: common/python-static
+  add: /opt/python-static
+  to: /opt/python-static
+  before: install
 shell:
   install:
-  - apt-get update
-  - apt-get install -y python3 python3-module-pip-run
-  - pip3 install -r /requirements.txt
+  - /opt/python-static/bin/pip3 install -r requirements.txt

@@ -1,16 +1,25 @@
-{{- $falcoVersion := "0.38.1" }}
+{{- $falcoVersion := "0.38.2" }}
+{{- $falcoctlVersion := "0.10.0" }}
 {{- $pluginsVersion := "plugins/k8smeta/v0.2.0" }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
-from: {{ $.Images.BASE_ALT_P11 }}
+fromImage: common/alt-p11
 import:
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
   add: /falco-package
   to: /
   includePaths:
   - usr/bin/
   - usr/share/
   - etc/
+  before: install
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-falcoctl-artifact
+  add: /src/falcoctl
+  to: /usr/bin/falcoctl
+  before: install
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-plugins-artifact
+  add: /plugins
+  to: /usr/share/falco/plugins
   before: install
 shell:
   beforeInstall:
@@ -21,33 +30,139 @@ shell:
 docker:
   CMD: ["/usr/bin/falco"]
 ---
-artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
-from: {{ $.Images.BASE_ALT_P11 }}
+image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+fromImage: common/src-artifact
+final: false
 shell:
   install:
-  - apt-get update
+  - git clone --branch {{ $falcoVersion }} --depth 1 {{ .SOURCE_REPO }}/falcosecurity/falco.git /src/falco
+  - git clone --branch {{ $pluginsVersion }} --depth 1 {{ .SOURCE_REPO }}/falcosecurity/plugins.git /src/plugins
+  - git clone --branch v{{ $falcoctlVersion }} --depth 1 {{ .SOURCE_REPO }}/falcosecurity/falcoctl.git /src/falcoctl
+  - cd /src/plugins
+  - rm -rf shared plugins/cloudtrail plugins/dummy* plugins/gcpaudit plugins/github plugins/k8saudit-* plugins/kafka plugins/okta build docs
+  - rm -rf /src/falco/.git
+  - rm -rf /src/plugins/.git
+  - rm -rf /src/falcoctl/.git
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-falcoctl-artifact
+from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
+final: false
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+  add: /src/falcoctl
+  to: /src
+  before: install
+git:
+- add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/patches/falcoctl
+  to: /patches
+  includePaths:
+  - '**/*.patch'
+  stageDependencies:
+    install:
+    - '**/*.patch'
+mount:
+- fromPath: ~/go-pkg-cache
+  to: /go/pkg
+shell:
+  beforeInstall:
+  {{- include "alpine packages proxy" . | nindent 2 }}
+  - apk add --no-cache make bash git
+  install:
+  - cd /src
+  - export GOPROXY={{ .GOPROXY }} GOOS=linux GOARCH=amd64 CGO_ENABLED=0
+  - git apply /patches/*.patch --verbose
+  - go mod tidy
+  - make falcoctl
+  - chown 64535:64535 falcoctl
+  - chmod 0755 falcoctl
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-plugins-artifact
+fromImage: common/alt-p11-artifact
+final: false
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+  add: /src/plugins
+  to: /src
+  before: install
+mount:
+- fromPath: ~/go-pkg-cache
+  to: /go/pkg
+shell:
+  beforeInstall:
+  {{- include "alt packages proxy" . | nindent 2 }}
+  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
   - apt-get install -y git openssl-devel wget clang cmake libelf-devel libbpf-devel bpftool perl-IPC-Cmd gcc12 gcc12-c++ build-essential golang
   - git config --global url."{{ .SOURCE_REPO }}".insteadOf https://github.com
-  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
-  - git clone --branch {{ $falcoVersion }} --depth 1 {{ .SOURCE_REPO }}/falcosecurity/falco.git
   - rm -f /usr/bin/clang
   - ln -s /usr/bin/clang-18 /usr/bin/clang
   - rm -f /usr/bin/x86_64-alt-linux-gcc /usr/bin/x86_64-alt-linux-g++
   - ln -s x86_64-alt-linux-gcc-12 /usr/bin/x86_64-alt-linux-gcc
   - ln -s x86_64-alt-linux-g++-12 /usr/bin/x86_64-alt-linux-g++
-  - mkdir -p /falco/build
-  - cd /falco/build
-  - cmake -DCMAKE_BUILD_TYPE=release -DCMAKE_INSTALL_PREFIX=/usr -DBUILD_DRIVER=OFF -DCPACK_GENERATOR=TGZ -DBUILD_BPF=OFF -DBUILD_FALCO_MODERN_BPF=ON -DBUILD_WARNINGS_AS_ERRORS=OFF -DFALCO_VERSION=0.38.1 -DUSE_BUNDLED_DEPS=ON /falco
+  install:
+  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
+  - mkdir -p /plugins
+  # build plugins
+  - export GOPROXY={{ .GOPROXY }} GOOS=linux GOARCH=amd64 CGO_ENABLED=1
+  - cd /src/plugins/json
+  - make
+  - cd /src/plugins/k8saudit
+  - make
+  - cd /src/plugins/k8smeta
+  {{- if $.DistroPackagesProxy }}
+  # build in the closed env
+  - sed -i "s|https://raw.githubusercontent.com|http://{{ $.DistroPackagesProxy }}/repository/githubusercontent|g" test/CMakeLists.txt
+  {{- end }}
+  - make
+  - cp /src/plugins/json/libjson.so /src/plugins/k8saudit/libk8saudit.so /src/plugins/k8smeta/libk8smeta.so /plugins
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+fromImage: common/alt-p11-artifact
+final: false
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+  add: /src
+  to: /src
+  before: install
+mount:
+- fromPath: ~/go-pkg-cache
+  to: /go/pkg
+shell:
+  beforeInstall:
+  {{- include "alt packages proxy" . | nindent 2 }}
+  - apt-get install -y git openssl-devel wget clang cmake libelf-devel libbpf-devel bpftool perl-IPC-Cmd gcc12 gcc12-c++ build-essential golang
+  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
+  - git config --global url."{{ .SOURCE_REPO }}".insteadOf https://github.com
+  - rm -f /usr/bin/clang
+  - ln -s /usr/bin/clang-18 /usr/bin/clang
+  - rm -f /usr/bin/x86_64-alt-linux-gcc /usr/bin/x86_64-alt-linux-g++
+  - ln -s x86_64-alt-linux-gcc-12 /usr/bin/x86_64-alt-linux-gcc
+  - ln -s x86_64-alt-linux-g++-12 /usr/bin/x86_64-alt-linux-g++
+  install:
+  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
+  - cd /src/falco
+  {{- if $.DistroPackagesProxy }}
+  # build in the closed env
+  - sed -i "s|https://github.com|http://{{ $.DistroPackagesProxy }}/repository/github-com|g" cmake/modules/falcosecurity-libs-repo/CMakeLists.txt
+  - sed -i "s|https://github.com|http://{{ $.DistroPackagesProxy }}/repository/github-com|g" cmake/modules/cxxopts.cmake
+  - sed -i "s|https://github.com|http://{{ $.DistroPackagesProxy }}/repository/github-com|g" cmake/modules/njson.cmake
+  - sed -i "s|https://github.com|http://{{ $.DistroPackagesProxy }}/repository/github-com|g" cmake/modules/driver-repo/CMakeLists.txt
+  - sed -i "s|https://github.com|http://{{ $.DistroPackagesProxy }}/repository/github-com|g" cmake/modules/yaml-cpp.cmake
+  - sed -i "s|https://github.com|http://{{ $.DistroPackagesProxy }}/repository/github-com|g" cmake/modules/cpp-httplib.cmake
+  - sed -i "s|https://github.com|http://{{ $.DistroPackagesProxy }}/repository/github-com|g" cmake/modules/falcoctl.cmake
+  - sed -i "s|https://download.falco.org|http://{{ $.DistroPackagesProxy }}/repository/download-falco-org|g" cmake/modules/rules.cmake
+  {{- end }}
+  - mkdir -p /src/falco/build
+  - cd /src/falco/build
+  - cmake -DCMAKE_BUILD_TYPE=release -DCMAKE_INSTALL_PREFIX=/usr -DBUILD_DRIVER=OFF -DCPACK_GENERATOR=TGZ -DBUILD_BPF=OFF -DBUILD_FALCO_MODERN_BPF=ON -DBUILD_WARNINGS_AS_ERRORS=OFF -DFALCO_VERSION={{ $falcoVersion }} -DUSE_BUNDLED_DEPS=ON /src/falco
+  {{- if $.DistroPackagesProxy }}
+  # build in the closed env
+  - |
+    for f in `grep -lari 'URL "https://github.com'`; do
+      sed -i "s|https://github.com|http://{{ $.DistroPackagesProxy }}/repository/github-com|g" $f
+    done
+  {{- end }}
   - make package -j4
   - mkdir -p /falco-package
-  - tar -zxvf falco-{{ $falcoVersion }}-x86_64.tar.gz --strip-components 1 -C /falco-package
-  # build plugins
-  - cd /
-  - git clone --branch {{ $pluginsVersion }} --depth 1 {{ .SOURCE_REPO }}/falcosecurity/plugins.git
-  - cd /plugins/plugins/json
-  - make
-  - cd /plugins/plugins/k8saudit
-  - make
-  - cd /plugins/plugins/k8smeta
-  - make
-  - cp /plugins/plugins/json/libjson.so /plugins/plugins/k8saudit/libk8saudit.so /plugins/plugins/k8smeta/libk8smeta.so /falco-package/usr/share/falco/plugins
+  - tar -zxvf falco-*-x86_64.tar.gz --strip-components 1 -C /falco-package
+  # cleanup to reduce artifact size
+  - make clean
