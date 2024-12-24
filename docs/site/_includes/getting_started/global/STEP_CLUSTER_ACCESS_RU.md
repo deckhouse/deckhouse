@@ -22,7 +22,7 @@ sudo -i d8 k get nodes
 
 {% offtopic title="Пример вывода..." %}
 ```
-sudo -i d8 k get nodes
+$ sudo -i d8 k get nodes
 NAME                                     STATUS   ROLES                  AGE   VERSION
 cloud-demo-master-0                      Ready    control-plane,master   12h   v1.23.9
 cloud-demo-worker-01a5df48-84549-jwxwm   Ready    worker                 12h   v1.23.9
@@ -41,7 +41,7 @@ sudo -i d8 k -n d8-ingress-nginx get po
 
 {% offtopic title="Пример вывода..." %}
 ```
-sudo -i d8 k -n d8-ingress-nginx get po
+$ sudo -i d8 k -n d8-ingress-nginx get po
 NAME                                       READY   STATUS    RESTARTS   AGE
 controller-nginx-r6hxc                     3/3     Running   0          16h
 kruise-controller-manager-78786f57-82wph   3/3     Running   0          16h
@@ -60,7 +60,7 @@ sudo -i d8 k -n d8-ingress-nginx get svc nginx-load-balancer
 
 {% offtopic title="Пример вывода..." %}
 ```
-sudo -i d8 k -n d8-ingress-nginx get svc nginx-load-balancer
+$ sudo -i d8 k -n d8-ingress-nginx get svc nginx-load-balancer
 NAME                  TYPE           CLUSTER-IP      EXTERNAL-IP     PORT(S)                      AGE
 nginx-load-balancer   LoadBalancer   10.222.91.204   1.2.3.4         80:30493/TCP,443:30618/TCP   1m
 ```

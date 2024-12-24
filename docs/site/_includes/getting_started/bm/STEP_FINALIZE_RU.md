@@ -199,7 +199,7 @@ sudo -i d8 k get no
 
 {% offtopic title="Пример вывода..." %}
 ```
-sudo -i d8 k get no
+$ sudo -i d8 k get no
 NAME               STATUS   ROLES                  AGE    VERSION
 d8cluster          Ready    control-plane,master   30m   v1.23.17
 d8cluster-worker   Ready    worker                 10m   v1.23.17
@@ -223,7 +223,7 @@ sudo -i d8 k -n d8-ingress-nginx get po -l app=kruise
 
 {% offtopic title="Пример вывода..." %}
 ```
-sudo -i d8 k -n d8-ingress-nginx get po -l app=kruise
+$ sudo -i d8 k -n d8-ingress-nginx get po -l app=kruise
 NAME                                         READY   STATUS    RESTARTS    AGE
 kruise-controller-manager-7dfcbdc549-b4wk7   3/3     Running   0           15m
 ```
@@ -256,7 +256,7 @@ sudo -i d8 k -n d8-ingress-nginx get po -l app=controller
 
 {% offtopic title="Пример вывода..." %}
 ```
-sudo -i d8 k -n d8-ingress-nginx get po -l app=controller
+$ sudo -i d8 k -n d8-ingress-nginx get po -l app=controller
 NAME                                       READY   STATUS    RESTARTS   AGE
 controller-nginx-r6hxc                     3/3     Running   0          5m
 ```

@@ -89,7 +89,7 @@ pdpl-user -i 63 caps
   {% snippetcut %}
   ```shell
 export NODE=<NODE-IP-ADDRESS> # Укажите IP-адрес узла, который необходимо подключить к кластеру.
-sudo -i d8 k create -f - <<EOF
+  sudo -i d8 k create -f - <<EOF
   apiVersion: deckhouse.io/v1alpha1
   kind: StaticInstance
   metadata:
