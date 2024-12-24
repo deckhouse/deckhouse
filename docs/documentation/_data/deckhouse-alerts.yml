@@ -1435,10 +1435,10 @@ alerts:
       severity: "8"
       markupFormat: markdown
     - name: D8MetalLBBGPSessionDown
-      sourceFile: ee/modules/380-metallb/monitoring/prometheus-rules/metallb.yaml
+      sourceFile: ee/se/modules/380-metallb/monitoring/prometheus-rules/metallb.yaml
       moduleUrl: 380-metallb
       module: metallb
-      edition: ee
+      edition: se
       description: |
         {{ $labels.job }} — MetalLB {{ $labels.container }} on {{ $labels.pod}} has BGP session {{ $labels.peer }} down.
         Details are in logs:
@@ -1450,10 +1450,10 @@ alerts:
       severity: "4"
       markupFormat: markdown
     - name: D8MetalLBConfigNotLoaded
-      sourceFile: ee/modules/380-metallb/monitoring/prometheus-rules/metallb.yaml
+      sourceFile: ee/se/modules/380-metallb/monitoring/prometheus-rules/metallb.yaml
       moduleUrl: 380-metallb
       module: metallb
-      edition: ee
+      edition: se
       description: |
         {{ $labels.job }} — MetalLB {{ $labels.container }} on {{ $labels.pod}} has not loaded.
         To figure out the problem, check controller logs:
@@ -1465,10 +1465,10 @@ alerts:
       severity: "4"
       markupFormat: markdown
     - name: D8MetalLBConfigStale
-      sourceFile: ee/modules/380-metallb/monitoring/prometheus-rules/metallb.yaml
+      sourceFile: ee/se/modules/380-metallb/monitoring/prometheus-rules/metallb.yaml
       moduleUrl: 380-metallb
       module: metallb
-      edition: ee
+      edition: se
       description: |
         {{ $labels.job }} — MetalLB {{ $labels.container }} on {{ $labels.pod}} has run on a stale configuration, because the latest config failed to load.
         To figure out the problem, check controller logs:

@@ -110,10 +110,6 @@ spec:
     speaker:
       nodeSelector:
         node-role.deckhouse.io/metallb: ""
-      tolerations:
-      - effect: NoExecute
-        key: dedicated.deckhouse.io
-        operator: Equal
   version: 2
 ```
 
