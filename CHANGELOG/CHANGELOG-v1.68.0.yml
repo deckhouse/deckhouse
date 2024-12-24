@@ -1,0 +1,58 @@
+candi:
+  features:
+    - summary: >-
+        Added a way to control node labels from files, stored in local directory and it
+        subdirectories.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/10905
+ci:
+  fixes:
+    - summary: Fixed 'trdl' startup in older versions of 'make'.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/11097
+dhctl:
+  features:
+    - summary: Parallel bootstrap cloud permanent node groups.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/11031
+docs:
+  fixes:
+    - summary: Fixed broken links at Getting Started.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/11181
+    - summary: The command on the fifth step page has been fixed.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/11156
+    - summary: Added information about SIEM.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/11064
+extended-monitoring:
+  features:
+    - summary: Added IAM authentication support for ECR in image-availability-exporter.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/10893
+log-shipper:
+  features:
+    - summary: >-
+        Add keepDeletedFilesOpenedFor option. Now it is possible to configure how long Vector keeps
+        deleted file in case of unavailability of a log storage (when Vector cannot send logs to a
+        storage and the internal buffer is already filled). Before the change, Vector used to hold
+        log files opened indefinitely, which can cause a node outage by flooding the disk space. The
+        option makes this behaviour configurable.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/10641
+okmeter:
+  fixes:
+    - summary: Remove RBAC from the okmeter module
+      pull_request: https://github.com/deckhouse/deckhouse/pull/10323
+      impact: okmeter agents are no longer able to access the Kubernetes API
+prometheus:
+  fixes:
+    - summary: Fix links to modules documentation
+      pull_request: https://github.com/deckhouse/deckhouse/pull/10748
+upmeter:
+  features:
+    - summary: Added `backup.deckhouse.io/cluster-config` label to relevant module CRDs.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/10568
+user-authn:
+  features:
+    - summary: Add HA option to DexAuthenticator CRD.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/11049
+      impact: >-
+        All authenticators deployed by deckhouse will inherit the highAvailable option from the
+        module instead of using the highAvailable option value of the user-authn. It means that if,
+        e.g., the prometheus module is running in non HA mode, the DexAuthenticator instance will
+        also be deployed without HA.
+
