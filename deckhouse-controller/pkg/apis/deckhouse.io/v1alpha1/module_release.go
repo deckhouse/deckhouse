@@ -28,8 +28,9 @@ import (
 )
 
 const (
-	ModuleReleaseResource        = "modulereleases"
-	ModuleReleaseKind            = "ModuleRelease"
+	ModuleReleaseResource = "modulereleases"
+	ModuleReleaseKind     = "ModuleRelease"
+
 	ModuleReleasePhasePending    = "Pending"
 	ModuleReleasePhaseDeployed   = "Deployed"
 	ModuleReleasePhaseSuperseded = "Superseded"
