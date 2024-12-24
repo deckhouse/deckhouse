@@ -26,6 +26,7 @@ shell:
   install:
   - cd /src
   - git clone --depth 1 --branch {{ $value.csi.resizer }} {{ $.SOURCE_REPO }}/kubernetes-csi/external-resizer.git .
+  - ls /patches/*.patch && git apply /patches/*.patch --verbose
   - rm -rf vendor
   - rm -rf .git
 ---
