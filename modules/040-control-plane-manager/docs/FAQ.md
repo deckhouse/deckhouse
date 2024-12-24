@@ -930,6 +930,6 @@ The kubelet uses a client TLS certificate (`/var/lib/kubelet/pki/kubelet-client-
 
 When there is 5-10% (random value from the range) of time left before the certificate expires, kubelet requests a new certificate from kube-apiserver. For a description of the algorithm, see the official [Kubernetes](https://kubernetes.io/docs/reference/access-authn-authz/kubelet-tls-bootstrapping/#bootstrap-initialization) documentation.
 
-To ensure that kubelet has time to install the certificate before it expires, we recommend setting the certificate lifetime to more than 1 hour. The time is set using the `--cluster-signing-duration` cli argument in the `/etc/kubernetes/manifests/kube-controller-manager.yaml` manifest. By default, this value is 1 year (8760 hours).
+To ensure that kubelet has time to install the certificate before it expires, we recommend setting the certificate lifetime to more than 1 hour. The time is set using the `--cluster-signing-duration` argument in the `/etc/kubernetes/manifests/kube-controller-manager.yaml` manifest. By default, this value is 1 year (8760 hours).
 
 If the client certificate lifetime has expired, kubelet will not be able to make requests to kube-apiserver and will not be able to renew certificates. In this case, the node will be marked as `NotReady` and recreated.
