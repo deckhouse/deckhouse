@@ -65,7 +65,7 @@ func LoadConfigFromFile(paths []string, opts ...ValidateOption) (*MetaConfig, er
 		return nil, err
 	}
 
-	if metaConfig.Registry.Mode != "" && metaConfig.Registry.Mode != "Direct" {
+	if !metaConfig.Registry.IsDirect() {
 		if metaConfig.Images["systemRegistry"] == nil {
 			return nil, fmt.Errorf("RegistryMode allowed only in Enterprise / Standard editions.\n" +
 				"Please remove mode from InitConfiguration, or set it to 'Direct'.")

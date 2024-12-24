@@ -25,6 +25,13 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+const (
+	RegistryModeDirect   = "Direct"
+	RegistryModeInDirect = "InDirect"
+	RegistryModeProxy    = "Proxy"
+	RegistryModeDetached = "Detached"
+)
+
 type SystemRegistryConfig struct {
 	Enable bool
 }

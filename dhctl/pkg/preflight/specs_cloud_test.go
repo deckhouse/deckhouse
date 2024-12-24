@@ -72,7 +72,7 @@ func TestCloudMasterNodeSystemRequirementsCheck(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			pc := &Checker{
 				installConfig: tt.fields.installConfig,
-				metaConfig:    &config.MetaConfig{Registry: config.Registry{Mode: "Proxy"}},
+				metaConfig:    &config.MetaConfig{Registry: config.Registry{ModeSpecificFields: config.ProxyModeRegistryData{}}},
 			}
 			tt.wantErr(t, pc.CheckCloudMasterNodeSystemRequirements(), fmt.Sprintf("CheckCloudMasterNodeSystemRequirements()"))
 		})

@@ -239,7 +239,6 @@ func TestPrepareRegistry(t *testing.T) {
 					CA:        "",
 					DockerCfg: "eyJhdXRocyI6eyJyLmV4YW1wbGUuY29tIjp7ImF1dGgiOiJZVHBpIn19fQ==",
 				},
-				Mode: "Direct",
 			}
 
 			require.Equal(t, cfg.Registry, expectedRegistry)
@@ -258,7 +257,6 @@ func TestPrepareRegistry(t *testing.T) {
 					CA:        "",
 					DockerCfg: "eyJhdXRocyI6IHsgInJlZ2lzdHJ5LmRlY2tob3VzZS5pbyI6IHt9fX0=",
 				},
-				Mode: "Direct",
 			}
 
 			require.Equal(t, cfg.Registry, expectedRegistry)

@@ -12,11 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-{{- if and .registry.registryMode (ne .registry.registryMode "Direct") }}
+{{- if and .registry.embeddedRegistryModuleMode (ne .registry.embeddedRegistryModuleMode "Direct") }}
 {{- if eq .registry.registryStorageMode "S3" }}
 
-# Prepare UPSTREAM_REGISTRY vars for registryMode == Proxy
-{{- if eq .registry.registryMode "Proxy" }}
+# Prepare UPSTREAM_REGISTRY vars for embeddedRegistryModuleMode == Proxy
+{{- if eq .registry.embeddedRegistryModuleMode "Proxy" }}
 UPSTREAM_REGISTRY_AUTH="$(base64 -d <<< "{{ .registry.upstreamRegistry.auth | default "" }}")"
 if [[ "$UPSTREAM_REGISTRY_AUTH" == *":"* ]]; then
     export UPSTREAM_REGISTRY_LOGIN="$(echo "$UPSTREAM_REGISTRY_AUTH" | cut -d':' -f1)"
@@ -51,7 +51,7 @@ bb-sync-file "$registry_pki_path/ca.key" - << EOF
 {{ .registry.internalRegistryAccess.ca.key }}
 EOF
 
-{{- if eq .registry.registryMode "Proxy" }}
+{{- if eq .registry.embeddedRegistryModuleMode "Proxy" }}
 bb-sync-file "$registry_pki_path/upstream-registry-ca.crt" - << EOF
 {{ .registry.upstreamRegistry.ca }}
 EOF
@@ -234,7 +234,7 @@ http:
   tls:
     certificate: /system_registry_pki/distribution.crt
     key: /system_registry_pki/distribution.key
-{{- if eq .registry.registryMode "Proxy" -}}
+{{- if eq .registry.embeddedRegistryModuleMode "Proxy" -}}
 {{- $scheme := .registry.upstreamRegistry.scheme | trimSuffix "/" | trimPrefix "/" -}}
 {{- $address := .registry.upstreamRegistry.address | trimSuffix "/" | trimPrefix "/" }}
 proxy:
@@ -274,7 +274,7 @@ spec:
     args:
       - serve
       - /config/config.yaml
-    {{- if and (.proxy) (eq .registry.registryMode "Proxy") }}
+    {{- if and (.proxy) (eq .registry.embeddedRegistryModuleMode "Proxy") }}
     env:
     - name: HTTP_PROXY
       value: "${HTTP_PROXY}"

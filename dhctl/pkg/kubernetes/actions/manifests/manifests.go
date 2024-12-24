@@ -527,7 +527,7 @@ func DeckhouseRegistrySecret(registry config.Registry) *apiv1.Secret {
 			apiv1.DockerConfigJsonKey: data,
 			"address":                 []byte(registry.Data.Address),
 			"scheme":                  []byte(registry.Data.Scheme),
-			"registryMode":            []byte(registry.Mode),
+			"registryMode":            []byte(registry.Mode()),
 		},
 	}
 

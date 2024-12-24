@@ -283,13 +283,6 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 	var resourcesTemplateData map[string]interface{}
 
 	if metaConfig.ClusterType == config.CloudClusterType {
-		// if metaConfig.Registry.Mode != "Direct" {
-		// 	return fmt.Errorf(
-		// 		"Registry mode '%s' is supported only by a static cluster. Use the 'Direct' registry mode for the cluster in cloud providers",
-		// 		metaConfig.Registry.Mode,
-		// 	)
-		// }
-
 		err = preflightChecker.Cloud()
 		if err != nil {
 			return err

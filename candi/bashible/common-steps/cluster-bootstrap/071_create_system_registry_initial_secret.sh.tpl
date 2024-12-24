@@ -15,7 +15,7 @@
 # Upload pki for system-registry
 
 
-{{- if and .registry.registryMode (ne .registry.registryMode "Direct") }}
+{{- if and .registry.embeddedRegistryModuleMode (ne .registry.embeddedRegistryModuleMode "Direct") }}
 
 # Prepare vars
 registry_pki_path="/etc/kubernetes/system-registry/pki"

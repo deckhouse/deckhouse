@@ -836,16 +836,9 @@ func RunBashiblePipeline(nodeInterface node.Interface, cfg *config.MetaConfig, n
 				return err
 			}
 
-			if cfg.Registry.Mode == "Detached" {
+			detachedModeRegistryData, isDetachedRegistryMode := cfg.Registry.IsDetached()
+			if isDetachedRegistryMode {
 				// Run Docker pusher
-				registryData, ok := cfg.Registry.ModeSpecificFields.(config.DetachedModeRegistryData)
-				if !ok {
-					return fmt.Errorf(
-						"%w, incorrect registry extra data, expected detached data type",
-						errorRegistryConfigError,
-					)
-				}
-
 				log.DebugLn("Cleaning previous image push lock file if needed")
 				if cleanLockFileErr := removeSystemRegistryLockFile(ctx, nodeInterface); cleanLockFileErr != nil {
 					return fmt.Errorf("cannot clean images push lock file: %+v", cleanLockFileErr)
@@ -872,7 +865,7 @@ func RunBashiblePipeline(nodeInterface node.Interface, cfg *config.MetaConfig, n
 						// Cancel context in case of error to stop bashible bundle execution
 						ctxCancel(fmt.Errorf("cannot push to system registry: %w", err))
 					}
-				}(ctx, nodeInterface, &registryData)
+				}(ctx, nodeInterface, detachedModeRegistryData)
 			}
 
 			if err = context.Cause(ctx); err != nil {

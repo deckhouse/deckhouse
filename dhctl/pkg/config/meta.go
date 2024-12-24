@@ -63,7 +63,6 @@ type MetaConfig struct {
 type imagesDigests map[string]map[string]interface{}
 
 type Registry struct {
-	Mode               string       `json:"-"`
 	Data               RegistryData `json:"-"`
 	ModeSpecificFields interface{}  `json:"-"`
 }
@@ -185,7 +184,7 @@ func (m *MetaConfig) PrepareAfterGlobalCacheInit() error {
 	}
 
 	if len(m.InitClusterConfig) > 0 {
-		if m.Registry.Mode != "" && m.Registry.Mode != "Direct" {
+		if !m.Registry.IsDirect() {
 			internalRegistryAccessData, err := getRegistryAccessData()
 			if err != nil {
 				return fmt.Errorf("unable to get internal registry access data: %v", err)
@@ -244,7 +243,7 @@ func (m *MetaConfig) prepareDataFromInitClusterConfig() error {
 			return fmt.Errorf("unable to unmarshal deckhouse configuration: %v", err)
 		} else {
 			m.RegistryConfig = RegistryClusterConfig{
-				Mode: "Direct",
+				Mode: RegistryModeDirect,
 				DirectModeProperties: &RegistryDirectModeProperties{
 					ImagesRepo: deckhouseCfgOld.ImagesRepo,
 					DockerCfg:  deckhouseCfgOld.RegistryDockerCfg,
@@ -271,7 +270,7 @@ func (m *MetaConfig) prepareDataFromInitClusterConfig() error {
 
 	embeddedRegistryPath := "/system/deckhouse"
 	switch m.RegistryConfig.Mode {
-	case "Direct":
+	case RegistryModeDirect:
 		properties := m.RegistryConfig.DirectModeProperties
 		if properties == nil {
 			return fmt.Errorf("unable to get the properties of the direct registry mode")
@@ -281,7 +280,6 @@ func (m *MetaConfig) prepareDataFromInitClusterConfig() error {
 			return err
 		}
 		m.Registry = Registry{
-			Mode: m.RegistryConfig.Mode,
 			Data: RegistryData{
 				Address:   address,
 				Path:      path,
@@ -290,7 +288,7 @@ func (m *MetaConfig) prepareDataFromInitClusterConfig() error {
 				DockerCfg: properties.DockerCfg,
 			},
 		}
-	case "Proxy":
+	case RegistryModeProxy:
 		m.SystemRegistryConfig.Enable = true
 		properties := m.RegistryConfig.ProxyModeProperties
 		if properties == nil {
@@ -302,7 +300,6 @@ func (m *MetaConfig) prepareDataFromInitClusterConfig() error {
 		}
 
 		m.Registry = Registry{
-			Mode: m.RegistryConfig.Mode,
 			Data: RegistryData{
 				Address: "embedded-registry.d8-system.svc:5001",
 				Path:    embeddedRegistryPath,
@@ -323,7 +320,7 @@ func (m *MetaConfig) prepareDataFromInitClusterConfig() error {
 				TTL:                 properties.TTL,
 			},
 		}
-	case "Detached":
+	case RegistryModeDetached:
 		m.SystemRegistryConfig.Enable = true
 		properties := m.RegistryConfig.DetachedModeProperties
 		if properties == nil {
@@ -331,7 +328,6 @@ func (m *MetaConfig) prepareDataFromInitClusterConfig() error {
 		}
 
 		m.Registry = Registry{
-			Mode: m.RegistryConfig.Mode,
 			Data: RegistryData{
 				Address: "embedded-registry.d8-system.svc:5001",
 				Path:    embeddedRegistryPath,
@@ -927,6 +923,47 @@ func (r *RegistryData) GetUserNameAndPasswordFromAuth() (string, string, error) 
 	return username, password, nil
 }
 
+func (r *Registry) EmbeddedRegistryModuleMode() string {
+	switch r.ModeSpecificFields.(type) {
+	case ProxyModeRegistryData:
+		return RegistryModeProxy
+	case DetachedModeRegistryData:
+		return RegistryModeDetached
+	}
+	return RegistryModeDirect
+}
+
+func (r *Registry) IsDirect() bool {
+	mode := r.EmbeddedRegistryModuleMode()
+	if mode == "" || mode == RegistryModeDirect {
+		return true
+	}
+	return false
+}
+
+func (r *Registry) IsProxy() (*ProxyModeRegistryData, bool) {
+	data, ok := r.ModeSpecificFields.(ProxyModeRegistryData)
+	if ok {
+		return &data, true
+	}
+	return nil, false
+}
+
+func (r *Registry) IsDetached() (*DetachedModeRegistryData, bool) {
+	data, ok := r.ModeSpecificFields.(DetachedModeRegistryData)
+	if ok {
+		return &data, true
+	}
+	return nil, false
+}
+
+func (r *Registry) Mode() string {
+	if r.IsDirect() {
+		return RegistryModeDirect
+	}
+	return RegistryModeInDirect
+}
+
 func (r Registry) DeepCopy() Registry {
 	var modeSpecificFieldsCopy interface{}
 	switch r.ModeSpecificFields.(type) {
@@ -938,7 +975,6 @@ func (r Registry) DeepCopy() Registry {
 		modeSpecificFieldsCopy = modeSpecificFields.DeepCopy()
 	}
 	return Registry{
-		Mode:               r.Mode,
 		Data:               r.Data,
 		ModeSpecificFields: modeSpecificFieldsCopy,
 	}
@@ -951,7 +987,8 @@ func (r Registry) ConvertToMap() (map[string]interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
-	mapData["registryMode"] = r.Mode
+	mapData["registryMode"] = r.Mode()
+	mapData["embeddedRegistryModuleMode"] = r.EmbeddedRegistryModuleMode()
 
 	switch r.ModeSpecificFields.(type) {
 	case ProxyModeRegistryData:

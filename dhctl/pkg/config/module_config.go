@@ -121,7 +121,7 @@ func CheckOrSetupSystemRegistryModuleConfig(cfg *DeckhouseInstaller) error {
 			return err
 		}
 		systemRegistryMC.Spec.Settings = SettingsValues{
-			"mode": "Proxy",
+			"mode": RegistryModeProxy,
 			"proxy": SettingsValues{
 				"storageMode": modeSpecificFields.RegistryStorageMode,
 				"scheme":      strings.ToLower(modeSpecificFields.UpstreamRegistryData.Scheme),
@@ -136,7 +136,7 @@ func CheckOrSetupSystemRegistryModuleConfig(cfg *DeckhouseInstaller) error {
 	case DetachedModeRegistryData:
 		modeSpecificFields := cfg.Registry.ModeSpecificFields.(DetachedModeRegistryData)
 		systemRegistryMC.Spec.Settings = SettingsValues{
-			"mode": "Detached",
+			"mode": RegistryModeDetached,
 			"detached": SettingsValues{
 				"storageMode": modeSpecificFields.RegistryStorageMode,
 			},
@@ -149,7 +149,7 @@ func CheckOrSetupSystemRegistryModuleConfig(cfg *DeckhouseInstaller) error {
 				log.InfoF(
 					"Found enabled ModuleConfig for '%s', skipping creation, because registry mode is '%s'.\n",
 					systemRegistryModuleName,
-					cfg.Registry.Mode,
+					cfg.Registry.EmbeddedRegistryModuleMode(),
 				)
 				cfg.ModuleConfigs = append(cfg.ModuleConfigs[:i], cfg.ModuleConfigs[i+1:]...)
 				return nil
