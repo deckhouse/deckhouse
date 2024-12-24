@@ -77,6 +77,7 @@ function __on_conversion::alpha2_to_alpha1() {
      if .apiVersion ==  "deckhouse.io/v1alpha2" then
        .apiVersion = "deckhouse.io/v1alpha1" |
        if .spec.nodeLabelSelector then .spec.deschedulerPolicy.globalParameters.nodeSelector = .spec.nodeLabelSelector end |
+       del(.spec.nodeLabelSelector) |
        del(.spec.strategies.removePodsViolatingNodeAffinity.nodeAffinityType) |
        del(.spec.strategies.lowNodeUtilization.thresholds) |
        del(.spec.strategies.lowNodeUtilization.targetThresholds) |
