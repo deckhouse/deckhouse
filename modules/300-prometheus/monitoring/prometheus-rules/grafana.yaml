@@ -3,7 +3,7 @@
   - alert: D8GrafanaPodIsNotReady
     expr: |
       min by (pod) (
-        kube_controller_pod{namespace="d8-monitoring", controller_type="Deployment", controller_name="grafana"}
+        kube_controller_pod{namespace="d8-monitoring", controller_type="Deployment", controller_name="grafana-v10"}
         * on (pod) group_right() kube_pod_status_ready{condition="true", namespace="d8-monitoring"}
       ) != 1
     for: 5m
@@ -24,11 +24,11 @@
     expr: |
       absent(
         max by (namespace) (
-          kube_controller_replicas{controller_name="grafana",controller_type="Deployment"}
+          kube_controller_replicas{controller_name="grafana-v10",controller_type="Deployment"}
         )
         <=
         count by (namespace) (
-          kube_controller_pod{controller_name="grafana",controller_type="Deployment"}
+          kube_controller_pod{controller_name="grafana-v10",controller_type="Deployment"}
           * on(pod) group_right() kube_pod_status_phase{namespace="d8-monitoring", phase="Running"} == 1
         )
       ) == 1
@@ -55,7 +55,7 @@
         Run the following command to check the status of the Pods: `kubectl -n d8-monitoring get pods -l app=grafana -o json | jq '.items[] | {(.metadata.name):.status}'`.
 
   - alert: D8GrafanaTargetDown
-    expr: max by (job) (up{job="grafana", namespace="d8-monitoring"} == 0)
+    expr: max by (job) (up{job="grafana-v10", namespace="d8-monitoring"} == 0)
     for: 5m
     labels:
       severity_level: "6"
@@ -72,7 +72,7 @@
       summary: Prometheus is unable to scrape Grafana metrics.
 
   - alert: D8GrafanaTargetAbsent
-    expr: absent(up{job="grafana", namespace="d8-monitoring"} == 1)
+    expr: absent(up{job="grafana-v10", namespace="d8-monitoring"} == 1)
     for: 5m
     labels:
       severity_level: "6"
@@ -100,10 +100,10 @@
   - alert: D8GrafanaPodIsRestartingTooOften
     expr: |
       max by (pod) (
-        kube_controller_pod{namespace="d8-monitoring", controller_type="Deployment", controller_name="grafana"}
+        kube_controller_pod{namespace="d8-monitoring", controller_type="Deployment", controller_name="grafana-v10"}
         * on (pod) group_right() increase(kube_pod_container_status_restarts_total{namespace="d8-monitoring"}[1h])
         and
-        kube_controller_pod{namespace="d8-monitoring", controller_type="Deployment", controller_name="grafana"}
+        kube_controller_pod{namespace="d8-monitoring", controller_type="Deployment", controller_name="grafana-v10"}
         * on (pod) group_right() kube_pod_container_status_restarts_total{namespace="d8-monitoring"}
       ) > 5
     labels:
