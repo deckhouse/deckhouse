@@ -106,6 +106,8 @@ cleanup:
 {{- end }}
 
 {{- $_ := set . "CandiVersionMap" $versionMap }}
+
+{{- $_ := set . "kubectlForBaseComponents" (list "1.27" "1.30") }}
 ---
 # Terraform Versions
 {{- $_ := set . "TF" (.Files.Get "candi/terraform_versions.yml" | fromYaml) }}
@@ -130,128 +132,6 @@ cleanup:
 {{ range $path, $content := .Files.Glob ".werf/werf-**.yaml" }}
 {{ tpl $content $ }}
 {{ end }}
----
-{{- define "base components imports" }}
-- image: common/tini-artifact
-  add: /tini/tini-static
-  to: /usr/bin/tini
-  before: setup
-- image: common/semver-artifact
-  add: /usr/local/bin/semver
-  to: /usr/local/bin/semver
-  before: setup
-  {{- range $k8sVersion := tuple "1.27" "1.30"}}
-    {{- $image_version := printf "%s.%d" $k8sVersion (index $.CandiVersionMap "k8s" $k8sVersion "patch") | replace "." "-" }}
-- artifact: common/kubernetes-artifact-{{ $image_version }}
-  add: /src/_output/bin/kubectl
-  to: /usr/local/bin/kubectl-{{ $k8sVersion }}
-  before: setup
-  {{- end }}
-{{- end }}
-
-{{- define "base components" }}
-- |
-  # Install kubectl wrapper
-  cat <<"EOD" > /usr/local/bin/kubectl
-  {{- .Files.Get "deckhouse-controller/files/kubectl_wrapper.sh" | nindent 2 }}
-  EOD
-  chmod +x /usr/local/bin/kubectl
-  # Shell comfort: inputrc
-  cat <<"EOD" > /etc/inputrc
-  {{- .Files.Get "deckhouse-controller/files/inputrc" | nindent 2 }}
-  EOD
-  # Shell comfort: bashrc
-  cat <<"EOD" > /etc/bashrc
-  {{- .Files.Get "deckhouse-controller/files/bashrc" | nindent 2 }}
-  EOD
-  # Shell comfort: add bashrc for root
-  rm -f /root/.bashrc
-  ln -s /etc/bashrc /root/.bashrc
-  # Shell comfort: add bashrc for nobody
-  rm -f /.bashrc
-  ln -s /etc/bashrc /.bashrc
-  # Shell comfort: create /etc/vim
-  mkdir -p /etc/vim/
-  # Shell comfort: vimrc.local
-  cat <<"EOD" > /etc/vim/vimrc.local
-  {{- .Files.Get "deckhouse-controller/files/vimrc.local" | nindent 2 }}
-  EOD
-{{- end }}
-
-image: common-base
-from: {{ .Images.BASE_ALT }}
-import:
-- image: dev-alt-artifact
-  add: /
-  to: /
-  before: setup
-  includePaths:
-  - lib64/libz.so*
-  - lib64/libexpat.so*
-  - lib64/libssl.so.*
-  - lib64/libcrypto.so.*
-  - etc/pki
-  - usr/share/ca-certificates/ca-bundle.crt
-  - usr/bin/python3
-  - usr/bin/python3.9
-  - usr/lib/python3
-  - usr/lib64/python3
-  - usr/lib64/python3.9
-  - usr/lib64/libffi.so*
-  - usr/share/vim
-  - etc/vim
-  - etc/bash_completion.d
-  - etc/bashrc.d/bash_completion.sh
-  - usr/share/bash-completion
-  - usr/bin/vim-console
-
-  {{- include "base components imports" . }}
-
-- image: common/distroless
-  add: /etc/ssl
-  to: /etc/ssl
-  before: setup
-
-- image: registrypackages/d8-curl-artifact-8-9-1
-  add: /d8-curl
-  to: /usr/bin/curl
-  before: setup
-
-shell:
-  beforeInstall:
-  {{- include "base components" . | nindent 2 }}
-
----
-image: base-for-go
-from: {{ .Images.BASE_ALT_DEV }}
-import:
-  {{- include "base components imports" . }}
-shell:
-  beforeInstall:
-{{/*  TODO: Move it to the dev image */}}
-  - rm -rf /usr/local/go
-  - curl -sSfL https://go.dev/dl/go1.23.1.linux-amd64.tar.gz -o - | tar -C /usr/local -zxvf -
-  {{- include "base components" . | nindent 2 }}
-
----
-{{- define "exclude_modules_dir_from_images" }}
-- docs
-- modules/*/docs
-- modules/*/README.md
-- modules/*/images
-- modules/*/hooks/**/*.go
-- modules/*/template_tests
-- modules/*/.namespace
-- modules/*/values_matrix_test.yaml
-- modules/*/apis/**/*.go
-- modules/*/requirements/**/*.go
-- modules/*/settings-conversion/**/*.go
-- modules/*/hack/**/*.go
-- global-hooks/**/*.go
-- candi/cloud-providers/*/layouts
-- candi/cloud-providers/*/terraform-modules
-- '**/testdata'
-{{- end}}
 
 ---
 {{ include "dev_alt_artifact" (dict "Images" .Images )}}

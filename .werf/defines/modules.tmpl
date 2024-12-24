@@ -124,3 +124,23 @@ shell:
       )
     ' > /images_digests.json
 {{- end }}
+
+
+{{- define "exclude_modules_dir_from_images" }}
+- docs
+- modules/*/docs
+- modules/*/README.md
+- modules/*/images
+- modules/*/hooks/**/*.go
+- modules/*/template_tests
+- modules/*/.namespace
+- modules/*/values_matrix_test.yaml
+- modules/*/apis/**/*.go
+- modules/*/requirements/**/*.go
+- modules/*/settings-conversion/**/*.go
+- modules/*/hack/**/*.go
+- global-hooks/**/*.go
+- candi/cloud-providers/*/layouts
+- candi/cloud-providers/*/terraform-modules
+- '**/testdata'
+{{- end}}

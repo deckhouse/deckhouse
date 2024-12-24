@@ -1,0 +1,55 @@
+---
+image: common-base
+from: {{ .Images.BASE_ALT }}
+import:
+- image: dev-alt-artifact
+  add: /
+  to: /
+  before: setup
+  includePaths:
+  - lib64/libz.so*
+  - lib64/libexpat.so*
+  - lib64/libssl.so.*
+  - lib64/libcrypto.so.*
+  - etc/pki
+  - usr/share/ca-certificates/ca-bundle.crt
+  - usr/bin/python3
+  - usr/bin/python3.9
+  - usr/lib/python3
+  - usr/lib64/python3
+  - usr/lib64/python3.9
+  - usr/lib64/libffi.so*
+  - usr/share/vim
+  - etc/vim
+  - etc/bash_completion.d
+  - etc/bashrc.d/bash_completion.sh
+  - usr/share/bash-completion
+  - usr/bin/vim-console
+{{ include "base components imports" (dict "k8sVersions" .kubectlForBaseComponents "CandiVersionMap" $.CandiVersionMap ) }}
+
+- image: common/distroless
+  add: /etc/ssl
+  to: /etc/ssl
+  before: setup
+
+- image: registrypackages/d8-curl-artifact-8-9-1
+  add: /d8-curl
+  to: /usr/bin/curl
+  before: setup
+
+shell:
+  beforeInstall:
+  {{- include "base components" (list . "") | nindent 2 }}
+
+---
+image: base-for-go
+from: {{ .Images.BASE_ALT_DEV }}
+import:
+{{ include "base components imports" (dict "k8sVersions" .kubectlForBaseComponents "CandiVersionMap" $.CandiVersionMap ) }}
+shell:
+  beforeInstall:
+{{/*  TODO: Move it to the dev image */}}
+  - rm -rf /usr/local/go
+  - curl -sSfL https://go.dev/dl/go1.23.1.linux-amd64.tar.gz -o - | tar -C /usr/local -zxvf -
+  {{- include "base components" (list . "") | nindent 2 }}
+---
