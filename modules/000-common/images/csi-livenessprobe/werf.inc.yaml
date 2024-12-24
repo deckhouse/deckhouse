@@ -6,24 +6,35 @@
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $version | replace "." "-" }}
 fromImage: common/distroless
 import:
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
   add: /livenessprobe
   to: /livenessprobe
   before: setup
 docker:
   ENTRYPOINT: ["/livenessprobe"]
 ---
-artifact: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $version | replace "." "-" }}
+image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $version | replace "." "-" }}
 fromImage: common/src-artifact
+final: false
+git:
+- add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches/{{ $version }}
+  to: /patches
+  stageDependencies:
+    install:
+    - '**/*'
 shell:
   install:
-  - git clone --depth 1 --branch {{ $value.csi.livenessprobe }} {{ $.SOURCE_REPO }}/kubernetes-csi/livenessprobe.git /src
-  - rm -r /src/.git
+  - cd /src
+  - git clone --depth 1 --branch {{ $value.csi.livenessprobe }} {{ $.SOURCE_REPO }}/kubernetes-csi/livenessprobe.git .
+  - ls /patches/*.patch && git apply /patches/*.patch --verbose
+  - rm -rf vendor
+  - rm -rf .git
 ---
-artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
+image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
 from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
+final: false
 import:
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $version | replace "." "-" }}
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $version | replace "." "-" }}
   add: /src
   to: /src
   before: install
@@ -34,6 +45,7 @@ shell:
   install:
   - export GO_VERSION=${GOLANG_VERSION} GOPROXY={{ $.GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64
   - cd /src
+  - go mod download
   - make build
   - cp bin/livenessprobe /livenessprobe
   - chown 64535:64535 /livenessprobe
