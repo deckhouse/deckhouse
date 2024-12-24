@@ -13,6 +13,10 @@ import:
     - etcd
     - etcdctl
     before: setup
+  - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+    add: /scripts
+    to: /
+    before: setup
 docker:
   ENTRYPOINT: ["/usr/bin/etcd"]
 ---
@@ -24,6 +28,11 @@ mount:
 git:
 - add: /{{ $.ModulePath }}/modules/040-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
   to: /patches
+  stageDependencies:
+    install:
+    - '**/*'
+- add: /{{ $.ModulePath }}/modules/040-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
+  to: /scripts
   stageDependencies:
     install:
     - '**/*'
