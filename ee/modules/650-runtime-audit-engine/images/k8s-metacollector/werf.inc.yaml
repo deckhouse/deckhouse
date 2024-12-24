@@ -7,16 +7,30 @@ import:
   to: /manager
   before: setup
 ---
-artifact: {{ .ModuleName }}/{{ .ImageName }}-artifact
-from: {{ $.Images.BASE_GOLANG_22_ALPINE_DEV }}
+image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+fromImage: common/src-artifact
+final: false
+shell:
+  setup:
+  - git clone --depth 1 --branch v0.1.1 {{ .SOURCE_REPO }}/falcosecurity/k8s-metacollector.git /src
+  - rm -rf /src/.git
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-artifact
+from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
+final: false
 mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
+import:
+- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+  add: /src
+  to: /src
+  before: install
 shell:
   beforeInstall:
-  - apk add --no-cache openssh-client
+  {{- include "alpine packages proxy" . | nindent 2 }}
+  - apk add --no-cache openssh-client make bash
   - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
-  - git clone --depth 1 --branch v0.1.1 {{ .SOURCE_REPO }}/falcosecurity/k8s-metacollector.git /src
   install:
   - cd /src
   - export GOPROXY={{ .GOPROXY }} GOOS=linux GOARCH=amd64 CGO_ENABLED=0
