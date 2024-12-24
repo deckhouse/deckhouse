@@ -8,12 +8,12 @@ lang: ru
 
 Дополнительная настройка containerd возможна через создание конфигурационных файлов с помощью ресурса NodeGroupConfiguration.
 
-За настройки containerd отвечает встроенный скрипт [`032_configure_containerd.sh`](https://github.com/deckhouse/deckhouse/blob/main/candi/bashible/common-steps/node-group/032_configure_containerd.sh.tpl) — он производит объединение всех конфигурационных файлов сервиса `containerd` расположенных по пути `/etc/containerd/conf.d/*.toml`, а также перезапуск сервиса.
+За настройки containerd отвечает встроенный скрипт [`032_configure_containerd.sh`](https://github.com/deckhouse/deckhouse/blob/main/candi/bashible/common-steps/all/032_configure_containerd.sh.tpl) — он производит объединение всех конфигурационных файлов сервиса `containerd` расположенных по пути `/etc/containerd/conf.d/*.toml`, а также перезапуск сервиса.
 
-При разработке `NodeGroupConfiguration` следует учитывать следующее:
+При разработке NodeGroupConfiguration следует учитывать следующее:
 
-1. Директория `/etc/containerd/conf.d/` не создается автоматически;
-1. Создавать файлы в данной директории следует до запуска `032_configure_containerd.sh`, т.е. с приоритетом менее `32`.
+- Директория `/etc/containerd/conf.d/` не создается автоматически;
+- Создавать файлы в данной директории следует до запуска `032_configure_containerd.sh`, т.е. с приоритетом менее `32`.
 
 ## Дополнительные настройки containerd
 
@@ -25,17 +25,18 @@ lang: ru
 Вы можете переопределять значения параметров, которые заданы в файле `/etc/containerd/deckhouse.toml`, но при этом ответственность за их корректную работу ляжет на вас. Рекомендуется избегать внесения изменений, которые могут повлиять на master-узлы.
 {% endalert %}
 
-## Включение метрик для containerd
+### Включение метрик для containerd
 
 Простейший пример добавления настроек `containerd` — включение метрик.
 
 Обратите внимание:
+
 1. Скрипт создаёт директорию с конфигурационными файлами.
 2. Скрипт создаёт файл в директории `/etc/containerd/conf.d`.
 3. Скрипт имеет приоритет 31 (`weight: 31`).
 4. Конфигурация на мастер-узлах не изменяется, только на узлах группы `worker`.
 5. Сбор метрик нужно будет конфигурировать отдельно, это только их включение.
-6. Скрипт использует конструкцию bashbooster [bb-sync-file](http://www.bashbooster.net/#sync) для синхронизации содержимого файла.
+6. Скрипт использует конструкцию Bash Booster [`bb-sync-file`](http://www.bashbooster.net/#sync) для синхронизации содержимого файла.
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -57,11 +58,11 @@ spec:
   weight: 31
 ```
 
-## Добавление приватного registry с авторизацией
+### Добавление приватного registry с авторизацией
 
-Для запуска собственных приложений может потребоваться приватный registry, доступ к которому может быть закрыт авторизацией. `containerd` позволяет задать настройки registry через  параметр `plugins."io.containerd.grpc.v1.cri".registry`.
+Для запуска собственных приложений может потребоваться приватный registry, доступ к которому может быть закрыт авторизацией. `containerd` позволяет задать настройки registry через параметр `plugins."io.containerd.grpc.v1.cri".registry`.
 
-Данные для авторизации указываются в параметре `auth` в формате docker registry auth виде base64 строки. Строку можно получить такой командой:
+Данные для авторизации указываются в параметре `auth` в формате `docker registry auth` в виде Base64-строки. Строку можно получить такой командой:
 
 ```shell
 d8 k create secret docker-registry my-secret --dry-run=client --docker-username=User --docker-password=password --docker-server=private.registry.example -o jsonpath="{ .data['\.dockerconfigjson'] }"
@@ -96,22 +97,23 @@ spec:
   weight: 31
 ```
 
-## Добавление сертификата для дополнительного registry
+### Добавление сертификата для дополнительного registry
 
 <span id="ca-сертификат-для-дополнительного-registry"></span>
 
-Приватный registry может требовать корневого сертификата, его нужно добавить в директорию `/var/lib/containerd/certs` и указать в параметре tls в настройках containerd.
+Для приватного registry может потребоваться корневой сертификат.
+Сертификат нужно добавить в директорию `/var/lib/containerd/certs` и указать в параметре `tls` в настройках containerd.
 
-За основу такого скрипта можно взять [инструкцию](os.hmtl#добавление-ca-сертификата) по добавлению корневого сертификата в ОС. Обратите внимание на отличия:
+За основу такого скрипта можно взять [инструкцию](os.html#добавление-ca-сертификата) по добавлению корневого сертификата в ОС. Обратите внимание на отличия:
 
-1. Значение приоритета 31;
+1. Значение приоритета `31`;
 2. Корневой сертификат добавляется в директорию `/var/lib/containerd/certs`;
 3. Путь к сертификату добавляется в секцию настроек `plugins."io.containerd.grpc.v1.cri".registry.configs."${REGISTRY_URL}".tls`.
 
-Скрипт использует конструкции bashbooster:
+Скрипт использует следующие конструкции Bash Booster:
 
-- [bb-sync-file](http://www.bashbooster.net/#sync) для синхронизации содержимого файла.
-- [bb-tmp-file](http://www.bashbooster.net/#tmp) для создания временных файлов и их удаления после выполнения скрипта.
+- [`bb-sync-file`](http://www.bashbooster.net/#sync) для синхронизации содержимого файла.
+- [`bb-tmp-file`](http://www.bashbooster.net/#tmp) для создания временных файлов и их удаления после выполнения скрипта.
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
