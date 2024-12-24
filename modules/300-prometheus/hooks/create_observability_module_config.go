@@ -17,8 +17,8 @@ limitations under the License.
 package hooks
 
 import (
-	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
+	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
@@ -51,7 +51,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	},
 }, observabilityMCHookHandler)
 
-func applyObservabilityMCFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+func applyObservabilityMCFilter(_ *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	return true, nil
 }
 
