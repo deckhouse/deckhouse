@@ -24,6 +24,7 @@
   "editable": false,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 1,
+  "id": 23,
   "links": [],
   "liveNow": false,
   "panels": [
@@ -606,7 +607,6 @@
         "y": 0
       },
       "id": 4,
-      "links": [],
       "maxPerRow": 6,
       "options": {
         "cellHeight": "sm",
@@ -621,7 +621,7 @@
         "showHeader": true,
         "sortBy": []
       },
-      "pluginVersion": "10.2.2",
+      "pluginVersion": "10.4.5",
       "repeatDirection": "h",
       "targets": [
         {
@@ -994,7 +994,6 @@
         "y": 8
       },
       "id": 223,
-      "links": [],
       "options": {
         "alignValue": "left",
         "legend": {
@@ -1160,7 +1159,6 @@
         "y": 16
       },
       "id": 794,
-      "links": [],
       "options": {
         "legend": {
           "calcs": [],
@@ -1298,7 +1296,6 @@
         "y": 16
       },
       "id": 661,
-      "links": [],
       "options": {
         "legend": {
           "calcs": [],
@@ -1451,7 +1448,6 @@
         "y": 21
       },
       "id": 6,
-      "links": [],
       "options": {
         "legend": {
           "calcs": [
@@ -1622,7 +1618,6 @@
         "y": 21
       },
       "id": 10,
-      "links": [],
       "options": {
         "legend": {
           "calcs": [
@@ -1774,7 +1769,6 @@
         "y": 30
       },
       "id": 404,
-      "links": [],
       "options": {
         "legend": {
           "calcs": [
@@ -1915,7 +1909,6 @@
         "y": 30
       },
       "id": 538,
-      "links": [],
       "options": {
         "legend": {
           "calcs": [
@@ -2057,7 +2050,6 @@
         "y": 39
       },
       "id": 262,
-      "links": [],
       "options": {
         "legend": {
           "calcs": [
@@ -2158,8 +2150,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -2355,8 +2346,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   }
                 ]
               },
@@ -2602,7 +2592,6 @@
         "y": 49
       },
       "id": 40,
-      "links": [],
       "options": {
         "legend": {
           "calcs": [],
@@ -2783,7 +2772,6 @@
         "y": 49
       },
       "id": 41,
-      "links": [],
       "options": {
         "legend": {
           "calcs": [],
@@ -2935,7 +2923,6 @@
         "y": 58
       },
       "id": 489,
-      "links": [],
       "options": {
         "legend": {
           "calcs": [],
@@ -3071,7 +3058,6 @@
         "y": 58
       },
       "id": 575,
-      "links": [],
       "options": {
         "legend": {
           "calcs": [],
@@ -3169,8 +3155,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -3505,7 +3490,7 @@
             "axisBorderShow": false,
             "axisCenteredZero": false,
             "axisColorMode": "text",
-            "axisLabel": "",
+            "axisLabel": "bits/sec",
             "axisPlacement": "auto",
             "barAlignment": 0,
             "drawStyle": "line",
@@ -3548,7 +3533,7 @@
               }
             ]
           },
-          "unit": "Bps"
+          "unit": "bps"
         },
         "overrides": [
           {
@@ -3590,7 +3575,6 @@
         "y": 68
       },
       "id": 79,
-      "links": [],
       "options": {
         "legend": {
           "calcs": [
@@ -3615,7 +3599,7 @@
             "uid": "$ds_prometheus"
           },
           "editorMode": "code",
-          "expr": "# Data rate for the controller is a sum of data rates of its Pods.\nsum by (controller) (\n  # Select Pods by controller_type and controller.\n  kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller_type=~\"$controller_type\", controller=~\"$controller\"}\n  * on (pod)\n  group_left() # Preserve controller label from the 'kube_controller_pod' metric.\n  (\n    # Select Pods with hostNetwork: false.\n    max(kube_pod_info{host_network=\"false\",namespace=\"$namespace\"}) by(pod)\n    * on(pod)\n    # Sum data rate for all interfaces in the Pod. \n    sum by (pod) (rate(container_network_receive_bytes_total{node=~\"$node\", namespace=\"$namespace\"}[$__rate_interval]))\n  )\n)",
+          "expr": "# Data rate for the controller is a sum of data rates of its Pods.\nsum by (controller) (\n  # Select Pods by controller_type and controller.\n  kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller_type=~\"$controller_type\", controller=~\"$controller\"}\n  * on (pod)\n  group_left() # Preserve controller label from the 'kube_controller_pod' metric.\n  (\n    # Select Pods with hostNetwork: false.\n    max(kube_pod_info{host_network=\"false\",namespace=\"$namespace\"}) by(pod)\n    * on(pod)\n    # Sum data rate for all interfaces in the Pod. \n    sum by (pod) (rate(container_network_receive_bytes_total{node=~\"$node\", namespace=\"$namespace\"}[$__rate_interval]) * 8)\n  )\n)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{ controller }}",
@@ -3647,7 +3631,7 @@
             "axisBorderShow": false,
             "axisCenteredZero": false,
             "axisColorMode": "text",
-            "axisLabel": "",
+            "axisLabel": "bits/sec",
             "axisPlacement": "auto",
             "barAlignment": 0,
             "drawStyle": "line",
@@ -3690,7 +3674,7 @@
               }
             ]
           },
-          "unit": "Bps"
+          "unit": "bps"
         },
         "overrides": [
           {
@@ -3732,7 +3716,6 @@
         "y": 68
       },
       "id": 240,
-      "links": [],
       "options": {
         "legend": {
           "calcs": [
@@ -3757,7 +3740,7 @@
             "uid": "$ds_prometheus"
           },
           "editorMode": "code",
-          "expr": "# Data rate for the controller is a sum of data rates of its Pods.\nsum by (controller) (\n  # Select Pods by controller_type and controller.\n  kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller_type=~\"$controller_type\", controller=~\"$controller\"} \n  * on (pod)\n  group_left() # Preserve controller label from the 'kube_controller_pod' metric.\n  (\n    # Select Pods with hostNetwork: false.\n    max(kube_pod_info{host_network=\"false\",namespace=\"$namespace\"}) by(pod)\n    * on(pod)\n    # Sum data rate for all interfaces in the Pod. \n    sum by (pod) (rate(container_network_transmit_bytes_total{node=~\"$node\", namespace=\"$namespace\"}[$__rate_interval]))\n  )\n)",
+          "expr": "# Data rate for the controller is a sum of data rates of its Pods.\nsum by (controller) (\n  # Select Pods by controller_type and controller.\n  kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller_type=~\"$controller_type\", controller=~\"$controller\"} \n  * on (pod)\n  group_left() # Preserve controller label from the 'kube_controller_pod' metric.\n  (\n    # Select Pods with hostNetwork: false.\n    max(kube_pod_info{host_network=\"false\",namespace=\"$namespace\"}) by(pod)\n    * on(pod)\n    # Sum data rate for all interfaces in the Pod. \n    sum by (pod) (rate(container_network_transmit_bytes_total{node=~\"$node\", namespace=\"$namespace\"}[$__rate_interval]) * 8)\n  )\n)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{ controller }}",
@@ -3886,7 +3869,6 @@
         "y": 77
       },
       "id": 156,
-      "links": [],
       "options": {
         "legend": {
           "calcs": [
@@ -4025,7 +4007,6 @@
         "y": 77
       },
       "id": 241,
-      "links": [],
       "options": {
         "legend": {
           "calcs": [
@@ -4178,7 +4159,6 @@
         "y": 85
       },
       "id": 598,
-      "links": [],
       "options": {
         "legend": {
           "calcs": [
@@ -4325,7 +4305,6 @@
         "y": 85
       },
       "id": 596,
-      "links": [],
       "options": {
         "legend": {
           "calcs": [
@@ -4429,7 +4408,6 @@
         "y": 92
       },
       "id": 597,
-      "links": [],
       "options": {
         "legend": {
           "calcs": [
@@ -4496,8 +4474,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -4931,8 +4908,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   }
                 ]
               },
@@ -5015,7 +4991,7 @@
     }
   ],
   "refresh": false,
-  "schemaVersion": 38,
+  "schemaVersion": 39,
   "tags": [
     "main"
   ],
