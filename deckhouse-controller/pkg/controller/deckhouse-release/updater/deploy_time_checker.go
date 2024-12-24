@@ -366,7 +366,7 @@ func (c *DeployTimeChecker) postponeDeploy(release *v1alpha1.DeckhouseRelease, r
 		return fmt.Errorf("update release %s status: %w", release.GetName(), err)
 	}
 
-	return updater.NewNotReadyForDeployError(statusMessage, retryDelay)
+	return updater.NewNotReadyForDeployError(statusMessage)
 }
 
 func (c *DeployTimeChecker) isDeckhousePodReady(ctx context.Context) bool {

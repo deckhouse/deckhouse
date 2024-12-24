@@ -586,10 +586,10 @@ func (r *deckhouseReleaseReconciler) ApplyPredictedRelease(ctx context.Context, 
 }
 
 // 1) bump deckhouse deployment (retry if error)
-// 2) make previous deployment superseded (retry if error)
+// 2) bump previous deployment status superseded (retry if error)
 // 3) bump release annotations (retry if error)
-// 3) bump release status (retry if error)
-func (r *deckhouseReleaseReconciler) runReleaseDeploy(ctx context.Context, dr *v1alpha1.DeckhouseRelease, deployedRI *d8updater.ReleaseInfo) error {
+// 3) bump release status to deployed (retry if error)
+func (r *deckhouseReleaseReconciler) runReleaseDeploy(ctx context.Context, dr *v1alpha1.DeckhouseRelease, deployedReleaseInfo *d8updater.ReleaseInfo) error {
 	r.logger.Infof("Applying release %s", dr.GetName())
 
 	err := r.bumpDeckhouseDeployment(ctx, dr)
@@ -597,13 +597,13 @@ func (r *deckhouseReleaseReconciler) runReleaseDeploy(ctx context.Context, dr *v
 		return fmt.Errorf("deploy release: %w", err)
 	}
 
-	if deployedRI != nil {
-		err := r.updateReleaseStatus(ctx, newDeckhouseReleaseWithName(deployedRI.Name), &v1alpha1.DeckhouseReleaseStatus{
+	if deployedReleaseInfo != nil {
+		err := r.updateReleaseStatus(ctx, newDeckhouseReleaseWithName(deployedReleaseInfo.Name), &v1alpha1.DeckhouseReleaseStatus{
 			Phase:   v1alpha1.DeckhouseReleasePhaseSuperseded,
 			Message: "",
 		})
 		if err != nil {
-			r.logger.Error("update status", slog.String("release", deployedRI.Name), log.Err(err))
+			r.logger.Error("update status", slog.String("release", deployedReleaseInfo.Name), log.Err(err))
 		}
 	}
 

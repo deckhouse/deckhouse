@@ -817,17 +817,13 @@ func (u *Updater[R]) postponeDeploy(release R, reason deployDelayReason, applyTi
 
 	var (
 		zeroTime      time.Time
-		retryDelay    time.Duration
 		statusMessage string
 	)
-
-	if !applyTime.IsZero() {
-		retryDelay = applyTime.Sub(u.now)
-	}
 
 	if applyTime == u.now {
 		applyTime = zeroTime
 	}
+
 	statusMessage = reason.Message(release, applyTime)
 
 	err := u.updateStatus(release, statusMessage, PhasePending)
@@ -835,5 +831,5 @@ func (u *Updater[R]) postponeDeploy(release R, reason deployDelayReason, applyTi
 		return fmt.Errorf("update release %s status: %w", release.GetName(), err)
 	}
 
-	return NewNotReadyForDeployError(statusMessage, retryDelay)
+	return NewNotReadyForDeployError(statusMessage)
 }
