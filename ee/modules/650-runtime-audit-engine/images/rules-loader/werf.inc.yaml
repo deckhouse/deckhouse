@@ -77,8 +77,11 @@ git:
   stageDependencies:
     install:
     - '**/*'
+import:
+- artifact: common/python-static
+  add: /opt/python-static
+  to: /opt/python-static
+  before: install
 shell:
   install:
-  - apt-get update
-  - apt-get install -y python3 python3-module-pip-run
-  - pip3 install -r /requirements.txt
+  - /opt/python-static/bin/pip3 install -r requirements.txt
