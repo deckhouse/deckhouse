@@ -58,7 +58,7 @@ func applyObservabilityMCFilter(obj *unstructured.Unstructured) (go_hook.FilterR
 func observabilityMCHookHandler(input *go_hook.HookInput) error {
 	observabilityMCSnapshots := input.Snapshots[observabilityMCSnapshotName]
 
-	if len(observabilityMCSnapshots) < 0 {
+	if len(observabilityMCSnapshots) == 0 {
 		input.PatchCollector.Create(&unstructured.Unstructured{
 			Object: observabilityMCManifest,
 		})
