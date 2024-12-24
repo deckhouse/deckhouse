@@ -410,20 +410,8 @@ shell:
     - cd /dhctl && D8_VERSION={{- env "CI_COMMIT_TAG" | default "dev" }} make build
 
 ---
-artifact: ssh-static
-from: {{ .Images.BASE_ALPINE_DEV }}
-shell:
-  beforeInstall:
-  - apk add --no-cache git openssh-client
-  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
-  install:
-  - mkdir /src
-  - cd /src
-  - git clone -b V_9_7_P1 --single-branch --depth=1 {{ $.SOURCE_REPO }}/openssh/openssh-portable .
-  - autoreconf
-  - ./configure LDFLAGS="-static $(LDFLAGS)" --prefix /ssh
-  - make install
-
+# render ssh-static
+{{ include "ssh_static_artifact" (dict "Images" .Images "SOURCE_REPO" .SOURCE_REPO) }}
 ---
 image: release-channel-version-prebuild
 from: {{ .Images.BASE_ALPINE_DEV }}

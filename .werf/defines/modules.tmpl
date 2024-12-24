@@ -77,6 +77,9 @@ dependencies:
 {{- end }}
 
 # render images digests image with /images_digests.json file
+# . is dict with next params
+#   ModulesImagesDigestList - digest getting after rendering images
+#   Images - map from images_versions.yml
 {{- define "images_digest_image" }}
 {{- $context := . -}}
 
