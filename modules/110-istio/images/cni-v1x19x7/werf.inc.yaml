@@ -1,0 +1,36 @@
+---
+{{- $istioCniVersion := "1.19.7" }}
+---
+# Based on https://github.com/istio/istio/blob/1.19.7/cni/deployments/kubernetes/Dockerfile.install-cni
+image: {{ .ModuleName }}/{{ .ImageName }}
+fromImage: common/distroless
+import:
+- image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
+  add: /tmp/istio/out/istio-cni
+  to: /opt/cni/bin/istio-cni
+  after: setup
+- image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
+  add: /tmp/istio/out/install-cni
+  to: /usr/local/bin/install-cni
+  after: setup
+docker:
+  ENV:
+    PATH: "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/opt/cni/bin"
+  WORKDIR: "/opt/cni/bin"
+  ENTRYPOINT: ["/usr/local/bin/install-cni"]
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
+final: false
+from: {{ .Images.BASE_GOLANG_23_ALPINE_DEV }}
+mount:
+- fromPath: ~/go-pkg-cache
+  to: /go/pkg
+shell:
+  install:
+  - git clone --depth 1 --branch {{ $istioCniVersion }} https://github.com/istio/istio.git /tmp/istio/
+  - cd /tmp/istio/
+  - echo {{ $istioCniVersion }} > version
+  - export GOPROXY={{ $.GOPROXY }}
+  - GOOS=linux GOARCH=amd64 LDFLAGS='-extldflags -static -s -w' common/scripts/gobuild.sh /tmp/istio/out/ -tags=agent,disable_pgv /tmp/istio/cni/cmd/install-cni/
+  - GOOS=linux GOARCH=amd64 LDFLAGS='-extldflags -static -s -w' common/scripts/gobuild.sh /tmp/istio/out/ -tags=agent,disable_pgv /tmp/istio/cni/cmd/istio-cni/
+  - chown 0700 /tmp/istio/out/install-cni /tmp/istio/out/istio-cni
