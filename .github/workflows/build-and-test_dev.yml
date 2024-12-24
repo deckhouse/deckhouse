@@ -1065,6 +1065,37 @@ jobs:
           make tests-webhooks
     # </template: tests_webhooks_template>
 
+  tests_dmt_lint:
+    if: ${{ needs.pull_request_info.outputs.changes_not_markdown == 'true' }}
+    name: Tests DMT lint
+    needs:
+    - git_info
+    - pull_request_info
+
+    # <template: tests_dmt_lint>
+    runs-on: [self-hosted, regular]
+    steps:
+
+      # <template: started_at_output>
+      - name: Job started timestamp
+        id: started_at
+        run: |
+          unixTimestamp=$(date +%s)
+          echo "started_at=${unixTimestamp}" >> $GITHUB_OUTPUT
+      # </template: started_at_output>
+
+      # <template: checkout_full_step>
+      - name: Checkout sources
+        uses: actions/checkout@v3.5.2
+        with:
+          fetch-depth: 0
+          ref: ${{ needs.pull_request_info.outputs.ref }}
+      # </template: checkout_full_step>
+      - name: DMT lint
+        run: |
+          make dmt-lint
+    # </template: tests_dmt_lint>
+
   matrix_tests:
     if: ${{ needs.pull_request_info.outputs.changes_not_markdown == 'true' }}
     name: Matrix tests
