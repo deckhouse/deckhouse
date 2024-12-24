@@ -8,7 +8,7 @@ fromImage: common/distroless
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
   add: /tmp/istio/out/
-  to: /usr/local/bin/
+  to: /
   includePaths:
   - pilot-agent
   after: setup
@@ -30,9 +30,9 @@ docker:
     ISTIO_META_ISTIO_PROXY_SHA: "istio-proxy:78bd2d9b284978e170a49cd13decd5f952544489"
     ISTIO_META_ISTIO_VERSION: "1.21.6"
     PATH: "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
-  WORKDIR: "/"
+  WORKDIR: "/usr/local/bin/"
   USER: 1337
-  ENTRYPOINT: ["/usr/local/bin/pilot-agent"]
+  ENTRYPOINT: ["/pilot-agent"]
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-binary-artifact
 final: false
