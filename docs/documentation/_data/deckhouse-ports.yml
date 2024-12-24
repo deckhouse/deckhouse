@@ -110,8 +110,8 @@ groups:
   - ports: "4205"
     protocol: TCP
     description:
-      en: "*ebpf-exporter* metrics"
-      ru: "Метрики модуля *ebpf-exporter*"
+      en: "*oom-kills-exporter* metrics"
+      ru: "Метрики модуля *oom-kills-exporter*"
   - ports: "4206"
     protocol: TCP
     description:
