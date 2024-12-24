@@ -1,0 +1,84 @@
+diff --git a/public/app/plugins/datasource/prometheus/datasource.tsx b/public/app/plugins/datasource/prometheus/datasource.tsx
+index b0a9b91..0ef0450 100644
+--- a/public/app/plugins/datasource/prometheus/datasource.tsx
++++ b/public/app/plugins/datasource/prometheus/datasource.tsx
+@@ -518,6 +518,24 @@ export class PrometheusDatasource
+         ...this.getRangeScopedVars(options.range),
+       });
+     }
++    // Flant custom variables: adjusted intervals.
++    const intervalScrapeX3ForOverTimeVectors = Math.max(rangeUtil.intervalToSeconds(this.interval) * 3, interval);
++    const intervalScrapeX4ForRangeVectors = Math.max(rangeUtil.intervalToSeconds(this.interval) * 4, interval);
++    const intervalForRangeVectors = Math.max(rangeUtil.intervalToSeconds(this.interval) * 2, interval);
++    scopedVars = Object.assign({}, scopedVars, {
++      __interval_rv: {
++        text: intervalForRangeVectors + 's',
++        value: intervalForRangeVectors + 's',
++      },
++      __interval_sx3: {
++        text: intervalScrapeX3ForOverTimeVectors + 's',
++        value: intervalScrapeX3ForOverTimeVectors + 's',
++      },
++      __interval_sx4: {
++        text: intervalScrapeX4ForRangeVectors + 's',
++        value: intervalScrapeX4ForRangeVectors + 's',
++      },
++    });
+     query.step = interval;
+
+     let expr = target.expr;
+diff --git a/public/app/plugins/datasource/prometheus/promql.ts b/public/app/plugins/datasource/prometheus/promql.ts
+index 7d0f213..865ece5 100644
+--- a/public/app/plugins/datasource/prometheus/promql.ts
++++ b/public/app/plugins/datasource/prometheus/promql.ts
+@@ -6,6 +6,8 @@ import { CompletionItem } from '@grafana/ui';
+ // @see public/app/plugins/datasource/loki/language_provider.ts
+ export const RATE_RANGES: CompletionItem[] = [
+   { label: '$__interval', sortValue: '$__interval' },
++  { label: '$__interval_sx3', sortText: '$__interval_sx3' },
++  { label: '$__interval_sx4', sortText: '$__interval_sx4' },
+   { label: '$__rate_interval', sortValue: '$__rate_interval' },
+   { label: '$__range', sortValue: '$__range' },
+   { label: '1m', sortValue: '00:01:00' },
+diff --git a/pkg/tsdb/prometheus/time_series_query.go b/pkg/tsdb/prometheus/time_series_query.go
+index d768738..f00b4d5 100644
+--- a/pkg/tsdb/prometheus/time_series_query.go
++++ b/pkg/tsdb/prometheus/time_series_query.go
+@@ -289,6 +289,19 @@ func calculateRateInterval(interval time.Duration, scrapeInterval string, interv
+ 	return rateInterval
+ }
+
++func scrapeInterval(scrapeInterval string) time.Duration {
++	scrape := scrapeInterval
++	if scrape == "" {
++		scrape = "15s"
++	}
++
++	scrapeIntervalDuration, err := intervalv2.ParseIntervalStringToTimeDuration(scrape)
++	if err != nil {
++		return time.Duration(0)
++	}
++	return scrapeIntervalDuration
++}
++
+ func interpolateVariables(model *QueryModel, interval time.Duration, timeRange time.Duration, intervalCalculator intervalv2.Calculator, timeInterval string) string {
+ 	expr := model.Expr
+ 	rangeMs := timeRange.Milliseconds()
+@@ -301,6 +314,17 @@ func interpolateVariables(model *QueryModel, interval time.Duration, timeRange t
+ 		rateInterval = calculateRateInterval(interval, timeInterval, intervalCalculator)
+ 	}
+
++	// Flant custom variables.
++	scrapeX3ForOverTimeVectors := time.Duration(math.Max(float64(scrapeInterval(timeInterval))*3, float64(interval)))
++	scrapeX4ForRangeVectors := time.Duration(math.Max(float64(scrapeInterval(timeInterval))*4, float64(interval)))
++	intervalForRangeVectors := time.Duration(math.Max(float64(scrapeInterval(timeInterval))*2, float64(interval)))
++	expr = strings.ReplaceAll(expr, "$__interval_rv", intervalv2.FormatDuration(intervalForRangeVectors))
++	expr = strings.ReplaceAll(expr, "${__interval_rv}", intervalv2.FormatDuration(intervalForRangeVectors))
++	expr = strings.ReplaceAll(expr, "$__interval_sx3", intervalv2.FormatDuration(scrapeX3ForOverTimeVectors))
++	expr = strings.ReplaceAll(expr, "${__interval_sx3}", intervalv2.FormatDuration(scrapeX3ForOverTimeVectors))
++	expr = strings.ReplaceAll(expr, "$__interval_sx4", intervalv2.FormatDuration(scrapeX4ForRangeVectors))
++	expr = strings.ReplaceAll(expr, "${__interval_sx4}", intervalv2.FormatDuration(scrapeX4ForRangeVectors))
++
+ 	expr = strings.ReplaceAll(expr, varIntervalMs, strconv.FormatInt(int64(interval/time.Millisecond), 10))
+ 	expr = strings.ReplaceAll(expr, varInterval, intervalv2.FormatDuration(interval))
+ 	expr = strings.ReplaceAll(expr, varRangeMs, strconv.FormatInt(rangeMs, 10))

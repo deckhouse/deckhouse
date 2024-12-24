@@ -1,0 +1,36 @@
+diff --git a/packaging/docker/run.sh b/packaging/docker/run.sh
+index 30a7075961..59764dcd52 100755
+--- a/packaging/docker/run.sh
++++ b/packaging/docker/run.sh
+@@ -1,5 +1,31 @@
+ #!/bin/bash -e
+
++# Copy bundled plugins into $GF_INSTALL_PLUGINS if:
++# - GF_INSTALL_PLUGINS is set
++# - or BUNDLED_PLUGINS_PATH is not equal to GF_PATHS_PLUGINS.
++# Check that GF_PATHS_PLUGINS exists and is writable before copying.
++COPY_BUNDLED_PLUGINS=0
++if [ ! -z "${BUNDLED_PLUGINS_PATH}" ]; then
++  if [ ! -z "${GF_INSTALL_PLUGINS}" ]; then
++    COPY_BUNDLED_PLUGINS=1
++  fi
++  if [ "${GF_PATHS_PLUGINS}" != "${BUNDLED_PLUGINS_PATH}" ]; then
++    COPY_BUNDLED_PLUGINS=1
++  fi
++fi
++if [ $COPY_BUNDLED_PLUGINS -eq 1 ]; then
++  if [ ! -d "$GF_PATHS_PLUGINS" ]; then
++    mkdir "$GF_PATHS_PLUGINS"
++  fi
++  if [ ! -w "$GF_PATHS_PLUGINS" ]; then
++    echo "GF_PATHS_PLUGINS='$GF_PATHS_PLUGINS' is not writable."
++    exit 1
++  fi
++  if [ -d "$BUNDLED_PLUGINS_PATH" ]; then
++    cp -TR "$BUNDLED_PLUGINS_PATH" "$GF_PATHS_PLUGINS"
++  fi
++fi
++
+ PERMISSIONS_OK=0
+
+ if [ ! -r "$GF_PATHS_CONFIG" ]; then

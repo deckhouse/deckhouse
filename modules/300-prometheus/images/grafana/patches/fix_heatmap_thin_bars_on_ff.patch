@@ -1,0 +1,68 @@
+diff --git a/public/app/core/time_series2.ts b/public/app/core/time_series2.ts
+index e2c301d..8335348 100644
+--- a/public/app/core/time_series2.ts
++++ b/public/app/core/time_series2.ts
+@@ -223,6 +223,7 @@ export default class TimeSeries {
+     let previousTime;
+     let previousValue = 0;
+     let previousDeltaUp = true;
++    let previousTimeStep;
+
+     for (let i = 0; i < this.datapoints.length; i++) {
+       currentValue = this.datapoints[i][0];
+@@ -232,8 +233,15 @@ export default class TimeSeries {
+       // so we have to find the minimum one (could occur with aggregators such as ZimSum)
+       if (previousTime !== undefined) {
+         const timeStep = currentTime - previousTime;
+-        if (timeStep < this.stats.timeStep) {
++        // Ignore single smallest timeStep to be compatible with fast forward feature.
++        if (previousTimeStep === undefined) {
++          previousTimeStep = timeStep;
+           this.stats.timeStep = timeStep;
++        } else {
++          if (timeStep <= previousTimeStep) {
++            this.stats.timeStep = previousTimeStep;
++            previousTimeStep = timeStep;
++          }
+         }
+       }
+       previousTime = currentTime;
+diff --git a/public/app/plugins/panel/heatmap/heatmap_data_converter.ts b/public/app/plugins/panel/heatmap/heatmap_data_converter.ts
+index 95183a6..186d0aa 100644
+--- a/public/app/plugins/panel/heatmap/heatmap_data_converter.ts
++++ b/public/app/plugins/panel/heatmap/heatmap_data_converter.ts
+@@ -1,4 +1,4 @@
+-import { concat, forEach, isEmpty, isEqual, isNumber, sortBy } from 'lodash';
++import { concat, forEach, isEmpty, isEqual, isNumber, sortBy, toNumber } from 'lodash';
+
+ import { TimeSeries } from 'app/core/core';
+
+@@ -401,10 +401,28 @@ function calculateBucketSize(bounds: number[], logBase = 1): number {
+     return bounds[0];
+   } else {
+     bounds = sortBy(bounds);
++    let bucketDistances: any = { 0: 0 };
+     for (let i = 1; i < bounds.length; i++) {
+       const distance = getDistance(bounds[i], bounds[i - 1], logBase);
++      // Store distances count.
++      if (bucketDistances[distance]) {
++        bucketDistances[distance]++;
++      } else {
++        bucketDistances[distance] = 1;
++      }
+       bucketSize = distance < bucketSize ? distance : bucketSize;
+     }
++    // Ignore distances that occur only once.
++    let newBucketSize = Infinity;
++    forEach(bucketDistances, function(v, k) {
++      if (v > 1) {
++        let size = toNumber(k);
++        newBucketSize = size < newBucketSize ? size : newBucketSize;
++      }
++    });
++    if (newBucketSize < Infinity) {
++      bucketSize = newBucketSize;
++    }
+   }
+
+   return bucketSize;
