@@ -1,0 +1,60 @@
+# base components imports
+# . is dict have keys:
+#   k8sVersions - list versions k8s to kubectl import
+#   CandiVersionMap - dict CandiVersionMap from werf.yaml
+{{- define "base components imports" }}
+{{- $context := . -}}
+
+- image: common/tini-artifact
+  add: /tini/tini-static
+  to: /usr/bin/tini
+  before: setup
+- image: common/semver-artifact
+  add: /usr/local/bin/semver
+  to: /usr/local/bin/semver
+  before: setup
+  {{- range $k8sVersion := $context.k8sVersions }}
+    {{- $image_version := printf "%s.%d" $k8sVersion (index $context.CandiVersionMap "k8s" $k8sVersion "patch") | replace "." "-" }}
+- artifact: common/kubernetes-artifact-{{ $image_version }}
+  add: /src/_output/bin/kubectl
+  to: /usr/local/bin/kubectl-{{ $k8sVersion }}
+  before: setup
+  {{- end }}
+{{- end }}
+
+# base components
+# . is list with indexes:
+#   0 - parent context
+#   1 - Files.Get prefix
+#   CandiVersionMap - dict CandiVersionMap from werf.yaml
+{{- define "base components" }}
+{{- $context := index . 0 -}}
+{{- $prefix := index . 1 -}}
+
+- |
+  # Install kubectl wrapper
+  cat <<"EOD" > /usr/local/bin/kubectl
+  {{- $context.Files.Get (printf "%sdeckhouse-controller/files/kubectl_wrapper.sh" $prefix) | nindent 2 }}
+  EOD
+  chmod +x /usr/local/bin/kubectl
+  # Shell comfort: inputrc
+  cat <<"EOD" > /etc/inputrc
+  {{- $context.Files.Get (printf "%sdeckhouse-controller/files/inputrc" $prefix) | nindent 2 }}
+  EOD
+  # Shell comfort: bashrc
+  cat <<"EOD" > /etc/bashrc
+  {{- $context.Files.Get (printf "%sdeckhouse-controller/files/bashrc" $prefix) | nindent 2 }}
+  EOD
+  # Shell comfort: add bashrc for root
+  rm -f /root/.bashrc
+  ln -s /etc/bashrc /root/.bashrc
+  # Shell comfort: add bashrc for nobody
+  rm -f /.bashrc
+  ln -s /etc/bashrc /.bashrc
+  # Shell comfort: create /etc/vim
+  mkdir -p /etc/vim/
+  # Shell comfort: vimrc.local
+  cat <<"EOD" > /etc/vim/vimrc.local
+  {{- $context.Files.Get (printf "%sdeckhouse-controller/files/vimrc.local" $prefix) | nindent 2 }}
+  EOD
+{{- end }}
