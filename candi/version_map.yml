@@ -67,7 +67,7 @@ k8s:
       zvirt: release-4.17
       vsphere: v3.0.3
       openstack: v1.28.0
-      provisioner: v3.6.0
+      provisioner: v3.6.4
       attacher: v4.4.0
       resizer: v1.9.0
       registrar: v2.9.0
