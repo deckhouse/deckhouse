@@ -1,7 +1,7 @@
 {{- $MimirVersion := "2.14.2" }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
-fromImage: common/src-artifact
+from: common/src-artifact
 shell:
   install:
     - git clone --depth 1 --branch mimir-{{ $MimirVersion }} {{ .SOURCE_REPO }}/grafana/mimir.git /src
@@ -9,7 +9,7 @@ shell:
     - rm -r .git
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
-fromImage: {{ .Images.BASE_GOLANG_23_ALPINE_DEV }}
+from: {{ .Images.BASE_GOLANG_23_ALPINE_DEV }}
 import:
   - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
     add: /src
@@ -27,7 +27,7 @@ shell:
     - chmod 0700 /src/mimir
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
-fromImage: common/distroless
+from: common/distroless
 import:
   - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
     add: /src/mimir
