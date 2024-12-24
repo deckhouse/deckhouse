@@ -1,4 +1,1 @@
-openapi/*
-templates/prometheus/pp
-images/*
-hooks/*
+templates/prometheus/prometheus.yaml
