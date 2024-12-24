@@ -90,6 +90,12 @@ resource "yandex_compute_disk" "kubernetes_data" {
   type        = local.disk_type
 
   labels = local.additional_labels
+
+  timeouts {
+    create = var.resourceManagementTimeout
+    delete = var.resourceManagementTimeout
+    update = var.resourceManagementTimeout
+  }
 }
 
 resource "yandex_compute_instance" "master" {
@@ -144,6 +150,12 @@ resource "yandex_compute_instance" "master" {
       metadata,
       secondary_disk,
     ]
+  }
+
+  timeouts {
+    create = var.resourceManagementTimeout
+    delete = var.resourceManagementTimeout
+    update = var.resourceManagementTimeout
   }
 
   metadata = {

@@ -34,6 +34,11 @@ variable "clusterUUID" {
   type = string
 }
 
+variable "resourceManagementTimeout" {
+  type = string
+  default = "20m"
+}
+
 locals {
   with_nat                 = lookup(var.providerClusterConfiguration, "withNAT", {})
   bastion_instance         = lookup(local.with_nat, "bastionInstance", {})
