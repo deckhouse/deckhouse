@@ -20,6 +20,10 @@
     enabled: false
     waves: 5
     interval: "5m"
+  "lts":
+    enabled: true
+    waves: 5
+    interval: "30m"
 
 # release requirements, don't forget to register check function in a file requirements.go
 requirements:
