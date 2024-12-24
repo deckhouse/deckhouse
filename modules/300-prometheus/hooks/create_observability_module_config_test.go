@@ -43,8 +43,7 @@ var _ = Describe("Modules :: prometheus :: hooks :: create_observability_module_
 
 		It("Must not create observability module config", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			observabilityModuleConfig := f.KubernetesResource("ModuleConfig", "", "observability")
-			Expect(observabilityModuleConfig).Should(BeNil())
+			Expect(f.KubernetesResource("ModuleConfig", "", "observability").Exists()).Should(BeFalse())
 		})
 	})
 
@@ -56,9 +55,8 @@ var _ = Describe("Modules :: prometheus :: hooks :: create_observability_module_
 
 		It("Must create observability module config", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			observabilityModuleConfig := f.KubernetesResource("ModuleConfig", "", "observability")
-			Expect(observabilityModuleConfig).ShouldNot(BeNil())
-			Expect(observabilityModuleConfig.Field("spec.enabled").Bool()).Should(Equal(true))
+			Expect(f.KubernetesResource("ModuleConfig", "", "observability").Exists()).Should(BeTrue())
+			Expect(f.KubernetesResource("ModuleConfig", "", "observability").Field("spec.enabled").Bool()).Should(BeTrue())
 		})
 	})
 
@@ -70,9 +68,8 @@ var _ = Describe("Modules :: prometheus :: hooks :: create_observability_module_
 
 		It("Must do nothing", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			observabilityModuleConfig := f.KubernetesResource("ModuleConfig", "", "observability")
-			Expect(observabilityModuleConfig).ShouldNot(BeNil())
-			Expect(observabilityModuleConfig.Field("spec.enabled").Bool()).Should(Equal(false))
+			Expect(f.KubernetesResource("ModuleConfig", "", "observability").Exists()).Should(BeTrue())
+			Expect(f.KubernetesResource("ModuleConfig", "", "observability").Field("spec.enabled").Bool()).Should(BeFalse())
 		})
 	})
 })
