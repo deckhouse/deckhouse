@@ -17,7 +17,7 @@ image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $version | replace "
 fromImage: common/src-artifact
 final: false
 git:
-- add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches/{{ $version }}
+- add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches/{{ $value.csi.attacher }}
   to: /patches
   stageDependencies:
     install:
