@@ -185,6 +185,7 @@ func (l *Loader) restoreAbsentModulesFromReleases(ctx context.Context) error {
 			continue
 		}
 
+		// if we already have deployed release - make it superseded
 		dRelease, ok := deployedReleases[release.Spec.ModuleName]
 		if ok {
 			newRelease := dRelease.DeepCopy()
