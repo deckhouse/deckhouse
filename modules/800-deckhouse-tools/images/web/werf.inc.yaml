@@ -33,7 +33,6 @@ git:
     - '**/*'
 shell:
   install:
-  - git config --global url."https://gitlab-ci-token:${PRIVATE_REPO_TOKEN}@${PRIVATE_REPO}/".insteadOf https://${PRIVATE_REPO}/
   - git clone --depth 1 --branch {{ .CandiVersionMap.d8.d8CliVersion }} {{ $.SOURCE_REPO }}/deckhouse/deckhouse-cli.git /src/deckhouse-cli
 #  - rm -rf /src/deckhouse-cli/.git # https://github.com/deckhouse/deckhouse-cli/blob/main/Taskfile.yml#L9
 ---
@@ -63,6 +62,7 @@ shell:
     - export GOPRIVATE={{ $.DECKHOUSE_PRIVATE_REPO }}
     - apt-get install -y libbtrfs-dev jq
     - go install github.com/go-task/task/v3/cmd/task@latest
+    - git config --global url."https://gitlab-ci-token:${PRIVATE_REPO_TOKEN}@${PRIVATE_REPO}/".insteadOf https://${PRIVATE_REPO}/
     - cd /deckhouse-cli
     - task build:dist:all
     - mkdir -p /app/files/d8-cli
