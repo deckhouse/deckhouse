@@ -1,6 +1,6 @@
 At this step, the cluster is deployed in a minimal configuration. Configure the storage that will be used to create storage for metrics of the cluster components and virtual machine disks.
 
-Enable `sds-replicated-volume` module — a module for the software-defined storage:
+Enable `sds-replicated-volume` module — a module for the software-defined storage. Run the following commands on the **master node**:
 
 {% snippetcut %}
 ```shell
@@ -37,7 +37,7 @@ Combine the available block devices on the nodes into LVM volume groups. To obta
 
 {% snippetcut %}
 ```shell
-sudo d8 k get blockdevices.storage.deckhouse.io
+sudo -i d8 k get blockdevices.storage.deckhouse.io
 ```
 {% endsnippetcut %}
 
@@ -46,7 +46,7 @@ To create the LVMVolumeGroup resource on the node, run the following command, re
 
 {% snippetcut %}
 ```shell
-sudo d8 k apply -f - <<EOF
+sudo -i d8 k apply -f - <<EOF
 apiVersion: storage.deckhouse.io/v1alpha1
 kind: LVMVolumeGroup
 metadata:
@@ -77,7 +77,7 @@ Wait for the created LVMVolumeGroup resource to enter the `Operational` state:
 
 {% snippetcut %}
 ```shell
-sudo d8 k get lvg vg-on-worker-0 -w
+sudo -i d8 k get lvg vg-on-worker-0 -w
 ```
 {% endsnippetcut %}
 
@@ -92,7 +92,7 @@ Create an LVM volume pool:
 
 {% snippetcut %}
 ```bash
-sudo d8 k apply -f - <<EOF
+sudo -i d8 k apply -f - <<EOF
  apiVersion: storage.deckhouse.io/v1alpha1
  kind: ReplicatedStoragePool
  metadata:
@@ -109,7 +109,7 @@ Wait for the created resource ReplicatedStoragePool to enter the `Completed` sta
 
 {% snippetcut %}
 ```shell
-sudo d8 k get rsp data -w
+sudo -i d8 k get rsp data -w
 ```
 {% endsnippetcut %}
 
@@ -124,7 +124,7 @@ Create a StorageClass:
 
 {% snippetcut %}
 ```bash
-sudo d8 k apply -f - <<EOF
+sudo -i d8 k apply -f - <<EOF
  ---
  apiVersion: storage.deckhouse.io/v1alpha1
  kind: ReplicatedStorageClass
@@ -143,7 +143,7 @@ Check that the StorageClasses have been created:
 
 {% snippetcut %}
 ```bash
-sudo d8 k get storageclass
+sudo -i d8 k get storageclass
 ```
 {% endsnippetcut %}
 
@@ -152,6 +152,6 @@ Set the StorageClass as the default StorageClass (specify the name of the Storag
 {% snippetcut %}
 ```shell
 DEFAULT_STORAGE_CLASS=replicated-storage-class
-sudo d8 k patch mc global --type='json' -p='[{"op": "replace", "path": "/spec/settings/defaultClusterStorageClass", "value": "'"$DEFAULT_STORAGE_CLASS"'"}]'
+sudo -i d8 k patch mc global --type='json' -p='[{"op": "replace", "path": "/spec/settings/defaultClusterStorageClass", "value": "'"$DEFAULT_STORAGE_CLASS"'"}]'
 ```
 {% endsnippetcut %}
