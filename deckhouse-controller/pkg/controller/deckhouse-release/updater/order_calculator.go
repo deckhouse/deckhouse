@@ -95,7 +95,7 @@ func (p *OrderCalculator) CalculatePendingReleaseOrder(ctx context.Context, dr *
 
 	// if we have a deployed a release
 	if deployedReleaseInfo != nil {
-		// if deployed version is greater than the pending one, this pending release should be superseded
+		// if deployed version is greater than the pending one, this pending release should be skipped
 		if deployedReleaseInfo.Version.GreaterThan(dr.GetVersion()) {
 			return &CalculatingResult{
 				Order: Skip,
@@ -103,16 +103,16 @@ func (p *OrderCalculator) CalculatePendingReleaseOrder(ctx context.Context, dr *
 		}
 	}
 
-	relIdx, _ := slices.BinarySearchFunc(releases, dr.GetVersion(), func(a v1alpha1.DeckhouseRelease, b *semver.Version) int {
+	releaseIdx, _ := slices.BinarySearchFunc(releases, dr.GetVersion(), func(a v1alpha1.DeckhouseRelease, b *semver.Version) int {
 		return a.GetVersion().Compare(b)
 	})
 
-	isLatestRelease := relIdx == len(releases)-1
+	isLatestRelease := releaseIdx == len(releases)-1
 
 	// check previous release
 	// only for awaiting purpose
-	if relIdx > 0 {
-		prevRelease := releases[relIdx-1]
+	if releaseIdx > 0 {
+		prevRelease := releases[releaseIdx-1]
 
 		// if release version is greater in major or minor version than previous release
 		// it must await for release Deployed state
@@ -133,8 +133,8 @@ func (p *OrderCalculator) CalculatePendingReleaseOrder(ctx context.Context, dr *
 
 	// check next release
 	// patch calculate logic
-	if len(releases)-1 > relIdx {
-		nextRelease := releases[relIdx+1]
+	if len(releases)-1 > releaseIdx {
+		nextRelease := releases[releaseIdx+1]
 
 		// if nextRelease version is greater in major or minor version
 		// current release is definitely greatest at patch version

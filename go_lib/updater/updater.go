@@ -63,7 +63,7 @@ type Updater[R v1alpha1.Release] struct {
 
 	logger            *log.Logger
 	kubeAPI           KubeAPI[R]
-	metricsUpdater    MetricsUpdater[R]
+	metricsUpdater    MetricsUpdater
 	webhookDataSource WebhookDataSource[R]
 
 	// don't modify releases order, logic is based on this sorted slice
@@ -88,7 +88,7 @@ func NewUpdater[R v1alpha1.Release](
 	data DeckhouseReleaseData,
 	podIsReady, isBootstrapping bool,
 	kubeAPI KubeAPI[R],
-	metricsUpdater MetricsUpdater[R],
+	metricsUpdater MetricsUpdater,
 	webhookDataSource WebhookDataSource[R],
 	enabledModules []string,
 ) *Updater[R] {

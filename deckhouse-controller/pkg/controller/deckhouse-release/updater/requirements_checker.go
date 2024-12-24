@@ -72,7 +72,7 @@ func (c *Checker[T]) MetRequirements(v *T) []NotMetReason {
 	return reasons
 }
 
-func NewDeckhouseReleaseChecker(k8sclient client.Client, enabledModules []string, logger *log.Logger) (*Checker[v1alpha1.DeckhouseRelease], error) {
+func NewRequirementsChecker(k8sclient client.Client, enabledModules []string, logger *log.Logger) (*Checker[v1alpha1.DeckhouseRelease], error) {
 	k8sCheck, err := newKubernetesVersionCheck(k8sclient, enabledModules)
 	if err != nil {
 		return nil, err

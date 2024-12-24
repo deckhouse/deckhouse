@@ -67,7 +67,7 @@ func NewDeckhouseUpdater(
 		// whats purpose of image registry here?
 		// maybe we want to get it when create instance?
 		NewKubeAPI(client, dc, imagesRegistry),
-		newMetricsUpdater(metricStorage),
+		NewMetricsUpdater(metricStorage),
 		newWebhookDataSource(logger),
 		enabledModules,
 	)

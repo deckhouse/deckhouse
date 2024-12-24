@@ -84,6 +84,7 @@ type deckhouseReleaseReconciler struct {
 
 	imageRegistry            string
 	deckhouseIsBootstrapping bool
+	metricsUpdater           updater.MetricsUpdater
 }
 
 func NewDeckhouseReleaseController(ctx context.Context, mgr manager.Manager, dc dependency.Container,
@@ -98,6 +99,8 @@ func NewDeckhouseReleaseController(ctx context.Context, mgr manager.Manager, dc 
 		updateSettings:     updateSettings,
 		metricStorage:      metricStorage,
 		preflightCountDown: preflightCountDown,
+
+		metricsUpdater: d8updater.NewMetricsUpdater(metricStorage),
 	}
 
 	// Add Preflight Check
@@ -397,7 +400,7 @@ func (r *deckhouseReleaseReconciler) pendingReleaseReconcile(ctx context.Context
 	}
 
 	// add to reconciler???
-	checker, err := d8updater.NewDeckhouseReleaseChecker(r.client, r.moduleManager.GetEnabledModuleNames(), r.logger)
+	checker, err := d8updater.NewRequirementsChecker(r.client, r.moduleManager.GetEnabledModuleNames(), r.logger)
 	if err != nil {
 		updateErr := r.updateReleaseStatus(ctx, dr, &v1alpha1.DeckhouseReleaseStatus{
 			Phase:   v1alpha1.DeckhouseReleasePhasePending,
@@ -555,24 +558,26 @@ func (r *deckhouseReleaseReconciler) ApplyPredictedRelease(ctx context.Context, 
 		return nil
 	}
 
-	// metricLabels := NewReleaseMetricLabels(predictedRelease)
+	metricLabels := updater.NewReleaseMetricLabels(dr)
 
+	var err error
 	// if order.IsPatch {
-	// 	err = r.checkPatchReleaseConditions(predictedRelease, metricLabels)
+	// 	err = r.checkPatchReleaseConditions(ctx, dr, metricLabels)
 	// } else {
 	// 	err = r.checkMinorReleaseConditions(predictedRelease, metricLabels)
 	// }
 
+	// // TODO: purpose of this???
 	// r.setReleaseQueueDepthLabel(metricLabels)
 
-	// // if the predicted release has an index less than the number of awaiting releases
-	// // calculate and set releaseDepthQueue label
-	// r.metricsUpdater.UpdateReleaseMetric(predictedRelease.GetName(), metricLabels)
-	// if err != nil {
-	// 	return fmt.Errorf("check release %s conditions: %w", predictedRelease.GetName(), err)
-	// }
+	// if the predicted release has an index less than the number of awaiting releases
+	// calculate and set releaseDepthQueue label
+	r.metricsUpdater.UpdateReleaseMetric(dr.GetName(), metricLabels)
+	if err != nil {
+		return fmt.Errorf("check release %s conditions: %w", dr.GetName(), err)
+	}
 
-	err := r.runReleaseDeploy(ctx, dr, order.DeployedReleaseInfo)
+	err = r.runReleaseDeploy(ctx, dr, order.DeployedReleaseInfo)
 	if err != nil {
 		return fmt.Errorf("run release deploy: %w", err)
 	}
