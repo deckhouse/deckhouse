@@ -22,7 +22,7 @@ spec:
         openAPIV3Schema:
           type: object
           description: |
-            Module representation.
+            Describes the module's status in the cluster. The `Module` object is created automatically after configuring the [ModuleSource](#modulesource) and successfully completing synchronization.
 
           properties:
             properties:
@@ -62,7 +62,7 @@ spec:
                 requirements:
                   type: object
                   x-kubernetes-preserve-unknown-fields: true
-                  description: Module requirements.
+                  description: Module dependencies, a set of requirements that must be met for Deckhouse Kubernetes Platform (DKP) to run the module.
                   properties:
                     deckhouse:
                       type: string
@@ -72,10 +72,10 @@ spec:
                       description: Required Kubernetes version.
                     bootstrapped:
                       type: string
-                      description: Required cluster bootstrapping status.
+                      description: Required cluster installation status (for built-in DKP modules only).
                     modules:
                       type: object
-                      description: Other modules required.
+                      description: A list of other modules required for the module. Ensure the modules are enabled.
                       additionalProperties:
                         type: string
             status:

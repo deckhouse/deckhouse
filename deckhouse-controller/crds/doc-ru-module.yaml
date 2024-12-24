@@ -4,7 +4,7 @@ spec:
       schema:
         openAPIV3Schema:
           description: |
-            Репрезентация модуля.
+            Описывает состояние модуля в кластере. Объект `Module` будет создан автоматически после настройки источника модулей ([ModuleSource](#modulesource)) и успешной синхронизации.
 
           properties:
             properties:
@@ -25,15 +25,15 @@ spec:
                 version:
                   description: Версия модуля.
                 requirements:
-                  description: Необходимые требования для включения модуля.
+                  description: Зависимости модуля — набор условий, которые должны выполняться чтобы Deckhouse Kubernetes Platform (DKP) мог запустить модуль.
                   properties:
                     deckhouse:
                       description: Требование к версии Deckhouse.
                     kubernetes:
                       description: Требование к версии Kubernetes.
                     bootstrapped:
-                      description: Требование к bootstrap-статусу кластера.
+                      description: Требование к статусу установки кластера (только для встроенных модулей DKP).
                     modules:
-                      description: Требования к наличию других модулей.
+                      description: Список других модулей, которые необходимы для работы модуля (должны быть включены).
                 description:
                   description: Описание модуля.
