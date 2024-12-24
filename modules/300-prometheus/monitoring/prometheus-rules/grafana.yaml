@@ -50,9 +50,9 @@
 
         The Deployment is in the MinimumReplicasUnavailable state.
 
-        Run the following command to check the status of the Deployment: `kubectl -n d8-monitoring get deployment grafana -o json | jq .status`.
+        Run the following command to check the status of the Deployment: `kubectl -n d8-monitoring get deployment grafana-v10 -o json | jq .status`.
 
-        Run the following command to check the status of the Pods: `kubectl -n d8-monitoring get pods -l app=grafana -o json | jq '.items[] | {(.metadata.name):.status}'`.
+        Run the following command to check the status of the Pods: `kubectl -n d8-monitoring get pods -l app=grafana-v10 -o json | jq '.items[] | {(.metadata.name):.status}'`.
 
   - alert: D8GrafanaTargetDown
     expr: max by (job) (up{job="grafana-v10", namespace="d8-monitoring"} == 0)
@@ -91,9 +91,9 @@
         Grafana unavailability can negatively impact users who actively use it in their work.
 
         The recommended course of action:
-        1. Check the availability and status of Grafana Pods: `kubectl -n d8-monitoring get pods -l app=grafana`;
-        2. Check the availability of the Grafana Deployment: `kubectl -n d8-monitoring get deployment grafana`;
-        3. Examine the status of the Grafana Deployment: `kubectl -n d8-monitoring describe deployment grafana`.
+        1. Check the availability and status of Grafana Pods: `kubectl -n d8-monitoring get pods -l app=grafana-v10`;
+        2. Check the availability of the Grafana Deployment: `kubectl -n d8-monitoring get deployment grafana-v10`;
+        3. Examine the status of the Grafana Deployment: `kubectl -n d8-monitoring describe deployment grafana-v10`.
 
 - name: d8.grafana.malfunctioning
   rules:
@@ -123,7 +123,7 @@
 
         Excessive Grafana restarts indicate that something is wrong. Normally, Grafana should be up and running all the time.
 
-        Please, refer to the corresponding logs: `kubectl -n d8-monitoring logs -f -l app=grafana -c grafana`.
+        Please, refer to the corresponding logs: `kubectl -n d8-monitoring logs -f -l app=grafana-v10 -c grafana`.
 
   - alert: D8GrafanaDeprecatedCustomDashboardDefinition
     expr: |
