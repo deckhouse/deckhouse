@@ -268,12 +268,12 @@ func lintOneDockerfileOrWerfYAML(name, filePath, imagesPath string) errors.LintR
 	return errors.EmptyRuleError
 }
 
-func isWerfInstructionUnacceptable(from string) (bool, string) {
-	if !checkDistrolessPrefix(from, distrolessImagesPrefix["werf"]) {
-		return true, "`from:` parameter for `image:` should be one of our BASE_DISTROLESS images"
-	}
-	return false, ""
-}
+// func isWerfInstructionUnacceptable(from string) (bool, string) {
+// 	if !checkDistrolessPrefix(from, distrolessImagesPrefix["werf"]) {
+// 		return true, "`from:` parameter for `image:` should be one of our BASE_DISTROLESS images"
+// 	}
+// 	return false, ""
+// }
 
 func isDockerfileInstructionUnacceptable(from string, final bool) (bool, string) {
 	if from == "scratch" {
