@@ -32,7 +32,7 @@ docker:
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-binary-artifact
 final: false
-from: docker.io/istio/proxyv2:1.21.6@sha256:a0afbbc8488060f8059e7fa04576edde01915d40576132dae83479b3abe5ce15
+from: istio/proxyv2:1.21.6@sha256:a0afbbc8488060f8059e7fa04576edde01915d40576132dae83479b3abe5ce15
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
 final: false
