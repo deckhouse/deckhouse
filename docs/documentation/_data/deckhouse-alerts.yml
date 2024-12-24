@@ -523,7 +523,7 @@ alerts:
       module: cni-cilium
       edition: ce
       description: |
-        It is necessary to correct the settings in the CNI {{ $labels.cni }} moduleConfig.
+        It is necessary to correct the settings in the CNI {{ $labels.cni }} ModuleConfig.
         You can find the desired settings in the `d8-system/desired-cni-moduleconfig` configmap.
         To do this, please run the following command: `kubectl -n d8-system get configmap desired-cni-moduleconfig -o yaml`.
       summary: |
@@ -536,7 +536,7 @@ alerts:
       module: cni-flannel
       edition: ce
       description: |
-        It is necessary to correct the settings in the CNI {{ $labels.cni }} moduleConfig.
+        It is necessary to correct the settings in the CNI {{ $labels.cni }} ModuleConfig.
         You can find the desired settings in the `d8-system/desired-cni-moduleconfig` configmap.
         To do this, please run the following command: `kubectl -n d8-system get configmap desired-cni-moduleconfig -o yaml`.
       summary: |
@@ -549,7 +549,7 @@ alerts:
       module: cni-simple-bridge
       edition: ce
       description: |
-        It is necessary to correct the settings in the CNI {{ $labels.cni }} moduleConfig.
+        It is necessary to correct the settings in the CNI {{ $labels.cni }} ModuleConfig.
         You can find the desired settings in the `d8-system/desired-cni-moduleconfig` configmap.
         To do this, please run the following command: `kubectl -n d8-system get configmap desired-cni-moduleconfig -o yaml`.
       summary: |
