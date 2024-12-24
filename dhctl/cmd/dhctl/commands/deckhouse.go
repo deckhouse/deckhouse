@@ -28,7 +28,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
 )
 
-func DefineDeckhouseRemoveDeployment(parent *kingpin.CmdClause, cmd *kingpin.CmdClause) *kingpin.CmdClause {
+func DefineDeckhouseRemoveDeployment(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 	app.DefineSSHFlags(cmd, config.ConnectionConfigParser{})
 	app.DefineBecomeFlags(cmd)
 	app.DefineKubeFlags(cmd)
@@ -63,7 +63,7 @@ func DefineDeckhouseRemoveDeployment(parent *kingpin.CmdClause, cmd *kingpin.Cmd
 	return cmd
 }
 
-func DefineDeckhouseCreateDeployment(parent *kingpin.CmdClause, cmd *kingpin.CmdClause) *kingpin.CmdClause {
+func DefineDeckhouseCreateDeployment(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 	app.DefineSSHFlags(cmd, config.ConnectionConfigParser{})
 	app.DefineBecomeFlags(cmd)
 	app.DefineConfigFlags(cmd)

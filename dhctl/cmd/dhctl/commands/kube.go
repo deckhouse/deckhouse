@@ -31,7 +31,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/tomb"
 )
 
-func DefineTestKubernetesAPIConnectionCommand(parent *kingpin.CmdClause, cmd *kingpin.CmdClause) *kingpin.CmdClause {
+func DefineTestKubernetesAPIConnectionCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 	app.DefineSSHFlags(cmd, config.ConnectionConfigParser{})
 	app.DefineBecomeFlags(cmd)
 	app.DefineKubeFlags(cmd)
@@ -73,7 +73,7 @@ func DefineTestKubernetesAPIConnectionCommand(parent *kingpin.CmdClause, cmd *ki
 	return cmd
 }
 
-func DefineWaitDeploymentReadyCommand(parent *kingpin.CmdClause, cmd *kingpin.CmdClause) *kingpin.CmdClause {
+func DefineWaitDeploymentReadyCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 	app.DefineSSHFlags(cmd, config.ConnectionConfigParser{})
 	app.DefineBecomeFlags(cmd)
 	app.DefineKubeFlags(cmd)

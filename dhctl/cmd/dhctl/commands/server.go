@@ -22,7 +22,8 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/server/singlethreaded"
 )
 
-func DefineServerCommand(parent *kingpin.Application, cmd *kingpin.CmdClause) *kingpin.CmdClause {
+func DefineServerCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
+	// cmd = parent.Command(cmd.Model().Name, cmd.Model().Help)
 	app.DefineServerFlags(cmd)
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
@@ -31,7 +32,8 @@ func DefineServerCommand(parent *kingpin.Application, cmd *kingpin.CmdClause) *k
 	return cmd
 }
 
-func DefineSingleThreadedServerCommand(parent *kingpin.Application, cmd *kingpin.CmdClause) *kingpin.CmdClause {
+func DefineSingleThreadedServerCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
+	// cmd = parent.Command(cmd.Model().Name, cmd.Model().Help)
 	app.DefineServerFlags(cmd)
 
 	cmd.Action(func(c *kingpin.ParseContext) error {

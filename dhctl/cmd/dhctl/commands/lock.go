@@ -36,7 +36,7 @@ Lock info:
 %s
 `
 
-func DefineReleaseConvergeLockCommand(parent *kingpin.CmdClause, cmd *kingpin.CmdClause) *kingpin.CmdClause {
+func DefineReleaseConvergeLockCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 	app.DefineSanityFlags(cmd)
 	app.DefineSSHFlags(cmd, config.ConnectionConfigParser{})
 	app.DefineBecomeFlags(cmd)
