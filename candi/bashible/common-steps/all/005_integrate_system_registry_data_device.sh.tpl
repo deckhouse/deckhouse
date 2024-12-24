@@ -95,7 +95,7 @@ function check_if_symlink_and_return_target() {
     local input_data="$1"
     
     if [[ -L "$input_data" ]]; then
-        echo "$(readlink "$input_data")"
+        echo "$(readlink -f "$input_data")"
     else 
         echo "$input_data"
     fi
