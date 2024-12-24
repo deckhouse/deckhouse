@@ -75,7 +75,7 @@ spec:
                       description: Required cluster installation status (for built-in DKP modules only).
                     modules:
                       type: object
-                      description: A list of other modules required for the module. Ensure the modules are enabled.
+                      description: A list of other enabled modules required for the module.
                       additionalProperties:
                         type: string
             status:
