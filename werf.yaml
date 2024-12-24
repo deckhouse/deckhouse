@@ -181,7 +181,7 @@ cleanup:
 image: common-base
 from: {{ .Images.BASE_ALT }}
 import:
-- artifact: dev-alt-artifact
+- image: dev-alt-artifact
   add: /
   to: /
   before: setup
@@ -254,12 +254,7 @@ shell:
 {{- end}}
 
 ---
-artifact: dev-alt-artifact
-from: {{ .Images.BASE_ALT_DEV }}
-shell:
-  install:
-  - /binary_replace.sh -i "/usr/bin/envsubst" -o /relocate
-
+{{ include "dev_alt_artifact" (dict "Images" .Images )}}
 ---
 artifact: golangci-lint-artifact
 from: {{ $.Images.BASE_GOLANG_23_ALPINE }}

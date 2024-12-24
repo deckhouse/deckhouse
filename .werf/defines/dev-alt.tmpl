@@ -1,0 +1,14 @@
+# render dev alt artifact for getting binaries and libraries for install and controller image
+# . is dict with next params
+#   Images - map from images_versions.yml
+{{- define "dev_alt_artifact" }}
+{{- $context := . -}}
+
+image: dev-alt-artifact
+final: false
+from: {{ $context.Images.BASE_ALT_DEV }}
+shell:
+  install:
+  - /binary_replace.sh -i "/usr/bin/envsubst" -o /relocate
+
+{{- end }}
