@@ -55,6 +55,8 @@ func DefineHelperCommands(kpApp *kingpin.Application, logger *log.Logger) {
 	}
 
 	// dhctl parser for ClusterConfiguration and <Provider-name>ClusterConfiguration secrets
-	dhctlapp.DefineCommandParseClusterConfiguration(kpApp, helpersCommand, kingpin.Command("cluster-configuration", "Parse configuration and print it."))
-	dhctlapp.DefineCommandParseCloudDiscoveryData(kpApp, helpersCommand, kingpin.Command("cloud-discovery-data", "Parse cloud discovery data and print it."))
+	cmd := kpApp.Command("cluster-configuration", "Parse configuration and print it.")
+	dhctlapp.DefineCommandParseClusterConfiguration(cmd)
+	cmd = kpApp.Command("cloud-discovery-data", "Parse cloud discovery data and print it.")
+	dhctlapp.DefineCommandParseCloudDiscoveryData(cmd)
 }

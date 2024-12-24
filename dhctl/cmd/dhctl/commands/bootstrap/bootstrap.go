@@ -23,8 +23,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
 )
 
-func DefineBootstrapCommand(kpApp *kingpin.Application, cmd *kingpin.CmdClause) *kingpin.CmdClause {
-	// cmd := kpApp.Command(command, "Bootstrap cluster.")
+func DefineBootstrapCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 	app.DefineSSHFlags(cmd, config.ConnectionConfigParser{})
 	app.DefineConfigFlags(cmd)
 	app.DefineBecomeFlags(cmd)
