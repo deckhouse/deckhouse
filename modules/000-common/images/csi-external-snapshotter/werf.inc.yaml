@@ -16,6 +16,12 @@ docker:
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $version | replace "." "-" }}
 fromImage: common/src-artifact
 final: false
+git:
+- add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches/{{ $version }}
+  to: /patches
+  stageDependencies:
+    install:
+    - '**/*'
 shell:
   install:
   - cd /src
