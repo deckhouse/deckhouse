@@ -1,0 +1,13 @@
+diff --git a/Taskfile.yml b/Taskfile.yml
+index ed9b2bc..37b8f56 100644
+--- a/Taskfile.yml
++++ b/Taskfile.yml
+@@ -6,7 +6,7 @@ vars:
+   buildDate:
+     sh: date -u +'%Y-%m-%dT%H:%M:%SZ'
+   version:
+-    sh: git describe --tags
++    sh: v0.8.0
+   kubectlVersion: v1.29.3
+   kubectlLDFlags:
+     sh: |
