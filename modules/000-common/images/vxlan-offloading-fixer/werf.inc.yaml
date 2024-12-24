@@ -2,7 +2,7 @@
 {{- $image_version := $version | replace "." "-" }}
 ---
 artifact: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
-fromArtifact: common/src-artifact
+fromImage: common/src-artifact
 shell:
   install:
   - cd /src
@@ -44,7 +44,7 @@ shell:
 artifact: {{ $.ModuleName }}/vxlan-offloading-fixer-artifact
 from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
 git:
-  - add: /{{ $.ModulePath }}modules/000-{{ $.ModuleName }}/images/{{ $.ImageName }}
+  - add: /{{ $.ModulePath }}modules/{{ .ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}
     to: /src
     stageDependencies:
       install:

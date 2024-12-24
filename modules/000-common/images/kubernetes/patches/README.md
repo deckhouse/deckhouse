@@ -1,4 +1,12 @@
-### 07-local-init-configuration.patch
+## Patches
+
+### pdb-daemonset.patch
+
+Supports DaemonSets in disruption controller by adding /scale subresource to daemonsets API. It allows to control the eviction rate of DaemonSet pods.
+
+> Upstream PR https://github.com/kubernetes/kubernetes/pull/98307.
+
+### local-init-configuration.patch
 
 We want to include in join data the following:
 ```yaml

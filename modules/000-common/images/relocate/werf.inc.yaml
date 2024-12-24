@@ -4,7 +4,7 @@ image: {{ .ModuleName }}/{{ .ImageName }}-artifact
 fromImage: {{ .ModuleName }}/alt-p11-artifact
 final: false
 git:
-- add: /{{ $.ModulePath }}modules/000-{{ $.ModuleName }}/images/{{ $.ImageName }}/binary_replace.sh
+- add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/binary_replace.sh
   to: /binary_replace.sh
   stageDependencies:
     install:
