@@ -27,7 +27,6 @@ git:
 shell:
   install:
   - git clone --depth 1 --branch v0.43.1 {{ .SOURCE_REPO }}/vectordotdev/vector.git /src/vector
-  # trivy fs . --scanners vuln
   - rm -rf /src/vector/website /src/vector/scripts/integration
   - rm -rf /src/vector/.git
 ---
@@ -52,7 +51,6 @@ shell:
   - echo '[registries.crates-io-mirror]' >> .cargo/config.toml
   - echo 'index = "sparse+http://{{ $.CargoProxy }}/index/"' >> .cargo/config.toml
 {{- end }}
-#  - sed -i "s|https://github.com|{{ $.SOURCE_REPO }}|g" Cargo.toml
   - git config --global url."{{ $.SOURCE_REPO }}".insteadOf https://github.com
   - |
     cargo build \
