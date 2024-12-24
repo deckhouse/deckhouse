@@ -18,6 +18,7 @@ package d8updater
 
 import (
 	"bytes"
+	"context"
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
@@ -46,7 +47,7 @@ type WebhookData struct {
 	Message   string `json:"message"`
 }
 
-func (u *ReleaseNotifier) sendReleaseNotification(dr *v1alpha1.DeckhouseRelease, applyTime time.Time) error {
+func (u *ReleaseNotifier) sendReleaseNotification(ctx context.Context, dr *v1alpha1.DeckhouseRelease, applyTime time.Time) error {
 	// // check it before calling sendReleaseNotification
 	// if u.releaseData.Notified {
 	// 	return nil
@@ -65,7 +66,7 @@ func (u *ReleaseNotifier) sendReleaseNotification(dr *v1alpha1.DeckhouseRelease,
 		Message:       fmt.Sprintf("New Deckhouse Release %s is available. Release will be applied at: %s", dr.GetVersion().String(), applyTime.Format(time.RFC850)),
 	}
 
-	err := sendWebhookNotification(u.settings.NotificationConfig, data)
+	err := sendWebhookNotification(ctx, u.settings.NotificationConfig, data)
 	if err != nil {
 		return fmt.Errorf("send release notification failed: %w", err)
 	}
@@ -79,7 +80,7 @@ func (u *ReleaseNotifier) sendReleaseNotification(dr *v1alpha1.DeckhouseRelease,
 	return nil
 }
 
-func sendWebhookNotification(config updater.NotificationConfig, data *WebhookData) error {
+func sendWebhookNotification(ctx context.Context, config updater.NotificationConfig, data *WebhookData) error {
 	client := &http.Client{
 		Transport: &http.Transport{
 			TLSClientConfig: &tls.Config{InsecureSkipVerify: config.SkipTLSVerify},
@@ -87,41 +88,48 @@ func sendWebhookNotification(config updater.NotificationConfig, data *WebhookDat
 		Timeout: 10 * time.Second,
 	}
 
-	var err error
-	retry(5, 2*time.Second, func() (*http.Response, error) {
-		// We can only read the buffer once, so for each attempt we need to create a new one
-		buf := bytes.NewBuffer(nil)
-		_ = json.NewEncoder(buf).Encode(data)
+	buf := bytes.NewBuffer(nil)
 
-		var req *http.Request
-		req, err = http.NewRequest(http.MethodPost, config.WebhookURL, buf)
+	_, err := retry(5, 2*time.Second, func() (*http.Response, error) {
+		defer buf.Reset()
+
+		err := json.NewEncoder(buf).Encode(data)
 		if err != nil {
 			return nil, err
 		}
+
+		var req *http.Request
+		req, err = http.NewRequestWithContext(ctx, http.MethodPost, config.WebhookURL, buf)
+		if err != nil {
+			return nil, err
+		}
+
 		req.Header.Add("Content-Type", "application/json")
 		config.Auth.Fill(req)
 
 		resp, err := client.Do(req)
-		if err == nil {
-			return resp, nil
+		if err != nil {
+			return nil, err
 		}
-		time.Sleep(3 * time.Second)
+
+		return resp, nil
 	})
 
 	return err
 }
 
-func retry[T any](attempts int, sleep time.Duration, f func() (T, error)) (result T, err error) {
-	for i := 0; i < attempts; i++ {
-		if i > 0 {
-			time.Sleep(sleep)
-			sleep *= 2
-		}
+func retry[T any](attempts int, sleep time.Duration, f func() (T, error)) (T, error) {
+	var err error
+	var result T
 
+	for i := 0; i < attempts; i++ {
 		result, err = f()
 		if err == nil {
 			return result, nil
 		}
+
+		time.Sleep(sleep)
+		sleep *= 2
 	}
 
 	return result, fmt.Errorf("after %d attempts, last error: %s", attempts, err)

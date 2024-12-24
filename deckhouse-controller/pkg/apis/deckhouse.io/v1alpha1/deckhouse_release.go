@@ -126,6 +126,16 @@ func (in *DeckhouseRelease) GetApplyNow() bool {
 	return ok && v == "true"
 }
 
+func (in *DeckhouseRelease) GetIsUpdating() bool {
+	v, ok := in.Annotations[DeckhouseReleaseAnnotationIsUpdating]
+	return ok && v == "true"
+}
+
+func (in *DeckhouseRelease) GetNotified() bool {
+	v, ok := in.Annotations[DeckhouseReleaseAnnotationNotified]
+	return ok && v == "true"
+}
+
 func (in *DeckhouseRelease) GetApprovedStatus() bool {
 	return in.Status.Approved
 }
