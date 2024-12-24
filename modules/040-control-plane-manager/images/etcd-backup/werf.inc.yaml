@@ -9,7 +9,7 @@ git:
     setup:
     - '**/*'
 import:
-- artifact: {{ .ModuleName }}/etcd-artifact
+- image: {{ .ModuleName }}/etcd-artifact
   add: /etcdctl
   to: /bin/etcdctl
   before: setup
