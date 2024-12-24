@@ -45,6 +45,7 @@ shell:
   install:
   - export GO_VERSION=${GOLANG_VERSION} GOPROXY={{ $.GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64
   - cd /src
+  - go mod download
   - make build
   - cp bin/csi-provisioner /csi-provisioner
   - chown 64535:64535 /csi-provisioner
