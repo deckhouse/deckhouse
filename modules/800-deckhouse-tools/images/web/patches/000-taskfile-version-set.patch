@@ -1,13 +1,14 @@
 diff --git a/Taskfile.yml b/Taskfile.yml
-index ed9b2bc..37b8f56 100644
+index ed9b2bc..213ee3f 100644
 --- a/Taskfile.yml
 +++ b/Taskfile.yml
-@@ -6,7 +6,7 @@ vars:
+@@ -5,8 +5,7 @@ vars:
+   arch: '{{ ternary "arm64" ARCH (eq ARCH "arm") }}'
    buildDate:
      sh: date -u +'%Y-%m-%dT%H:%M:%SZ'
-   version:
+-  version:
 -    sh: git describe --tags
-+    sh: v0.8.0
++  version: v0.8.0
    kubectlVersion: v1.29.3
    kubectlLDFlags:
      sh: |
