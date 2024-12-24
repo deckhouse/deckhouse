@@ -44,8 +44,8 @@ github.com/evanphx/json-patch v4.12.0+incompatible h1:4onqiflcdA9EOZ4RxV643DvftH
 github.com/evanphx/json-patch v4.12.0+incompatible/go.mod h1:50XU6AFN0ol/bzJsmQLiYLvXMP4fmwYFNcr97nuDLSk=
 github.com/felixge/httpsnoop v1.0.3 h1:s/nj+GCswXYzN5v2DpNMuMQYe+0DDwt5WVCU6CWBdXk=
 github.com/felixge/httpsnoop v1.0.3/go.mod h1:m8KPJKqk1gH5J9DgRY2ASl2lWCfGKXixSwevea8zH2U=
-github.com/flant/go-ovirt-client/v3 v3.2.0-flant h1:LpX1XTvdK9f7m18Dqpw2H2n3zqOiaH1tUdhxGnBcOGc=
-github.com/flant/go-ovirt-client/v3 v3.2.0-flant/go.mod h1:2QkYFK7OTrtM/kOQCmX5V/RRBGVt4Ro4tsxoU68my+0=
+github.com/flant/go-ovirt-client/v3 v3.2.0-flant-1 h1:H4fak/42BjtvGaMTwJ/qZVqrjF3RGxBP17CJ9ZDsGWY=
+github.com/flant/go-ovirt-client/v3 v3.2.0-flant-1/go.mod h1:EhTzJm+T2zvQTwtK3IT5v77d70/I6A9zAG1OOlQqTUI=
 github.com/fsnotify/fsnotify v1.7.0 h1:8JEhPFa5W2WU7YfeZzPNqzMP6Lwt7L2715Ggo0nosvA=
 github.com/fsnotify/fsnotify v1.7.0/go.mod h1:40Bi/Hjc2AVfZrqy+aj+yEI+/bRxZnMJyTJwOpGvigM=
 github.com/go-logr/logr v1.2.2/go.mod h1:jdQByPbusPIv2/zmleS9BjJVeZ6kBagPoEUsqbVz/1A=
