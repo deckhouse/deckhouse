@@ -52,17 +52,18 @@ function __on_conversion::alpha1_to_alpha2() {
      else . end
   )')
   then
-    data=""
-    for obj in $(jq -c './/[] | .[]' <<< ${converted}); do
-      node_selector="$(jq -cr '.spec.nodeLabelSelector//""' <<< ${obj})"
-      if [ -n "${node_selector}" ]; then
-        new_node_selector="$(echo "${node_selector}" | label-converter --to-set | sed 's|"|\"|g')"
-        obj="$(sed "s|\"${node_selector}\"|${new_node_selector}|g" <<< ${obj})"
-      fi
-      data="${data}${obj},"
+    items_count="$(jq -c 'length' <<< ${converted})"
+    for ((i=0; i<${items_count}; i++)); do
+     node_selector="$(jq -rc --argjson item_number "$i" '.[$item_number].spec.nodeLabelSelector//""' <<< ${converted})"
+     echo $node_selector
+     if [ -n "${node_selector}" ]; then
+
+       new_node_selector="$(label-converter --to-equality <<< "${node_selector}"| sed 's|"|\"|g')"
+       converted="$(jq -c --argjson new_node_selector "${new_node_selector}" --argjson item_number "${i}" '.[$item_number].spec.nodeLabelSelector = $new_node_selector' <<< ${converted})"
+     fi
     done
     cat <<EOF >"$CONVERSION_RESPONSE_PATH"
-{"convertedObjects": [${data%?}]}
+{"convertedObjects": $converted}
 EOF
   else
     cat <<EOF >"$CONVERSION_RESPONSE_PATH"
@@ -88,21 +89,22 @@ function __on_conversion::alpha2_to_alpha1() {
      else . end
   )')
   then
-    data=""
-    for obj in $(jq -c './/[] | .[]' <<< ${converted}); do
-      node_selector="$(jq -cr '.spec.deschedulerPolicy.globalParameters.nodeSelector//""' <<< ${obj})"
-      if [ -n "${node_selector}" ]; then
-        new_node_selector="$(echo "${node_selector}" | label-converter --to-equality | sed 's|"|\"|g')"
-        obj="$(sed "s|${node_selector}|\"${new_node_selector}\"|g" <<< ${obj})"
-      fi
-      data="${data}${obj},"
+    items_count="$(jq -c 'length' <<< ${converted})"
+    for ((i=0; i<${items_count}; i++)); do
+     node_selector="$(jq -rc --argjson item_number "$i" '.[$item_number].spec.deschedulerPolicy.globalParameters.nodeSelector//""' <<< ${converted})"
+     echo $node_selector
+     if [ -n "${node_selector}" ]; then
+
+       new_node_selector="$(label-converter --to-set <<< "${node_selector}"| sed 's|"|\"|g')"
+       converted="$(jq -c --argjson new_node_selector "${new_node_selector}" --argjson item_number "${i}" '.[$item_number].spec.deschedulerPolicy.globalParameters.nodeSelector = $new_node_selector' <<< ${converted})"
+     fi
     done
     cat <<EOF >"$CONVERSION_RESPONSE_PATH"
-{"convertedObjects": [${data%?}]}
+{"convertedObjects": $converted }
 EOF
   else
     cat <<EOF >"$CONVERSION_RESPONSE_PATH"
-{"failedMessage":"Conversion of nodegroups.deckhouse.io failed"}
+{"failedMessage":"Conversion of deschedulers.deckhouse.io failed"}
 EOF
   fi
 }
