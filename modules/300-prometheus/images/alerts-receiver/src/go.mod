@@ -1,6 +1,6 @@
 module alerts-receiver
 
-go 1.20
+go 1.23
 
 require (
 	github.com/prometheus/alertmanager v0.25.1
