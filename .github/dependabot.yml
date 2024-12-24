@@ -349,7 +349,7 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "gomod"
-  directory: "/modules/036-kube-proxy/images/init-container/entrypoint"
+  directory: "/modules/036-kube-proxy/images/init-container/src"
   labels:
   - "type/dependencies"
   - "status/ok-to-test"
