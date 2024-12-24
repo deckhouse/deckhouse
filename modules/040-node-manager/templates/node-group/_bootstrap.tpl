@@ -40,22 +40,77 @@ import sys
 import json
 import ssl
 
-try:
-    from urllib.request import urlopen, Request, HTTPError
-except ImportError as e:
-    from urllib2 import urlopen, Request, HTTPError
+urllib_version=-1
+while True:
+    try:
+        import urllib3
+        urllib_version = 3
+        break
+    except ImportError as e:
+        urllib_version = -1
 
-ssl.match_hostname = lambda cert, hostname: True
-request = Request(sys.argv[1], headers={'Authorization': 'Bearer ' + sys.argv[2]})
-try:
-    response = urlopen(request, cafile='/var/lib/bashible/ca.crt')
-except HTTPError as e:
-    if e.getcode() == 401:
-        sys.stderr.write("Bootstrap-token compiled in this bootstrap.sh script is expired. Looks like more than 4 hours passed from the time it's been issued.\n")
-        sys.exit(2)
-    print("Access to {} return HTTP Error {}: {}".format(sys.argv[2], e.getcode(), e.read()[:255]))
-    sys.exit(1)
-data = json.loads(response.read())
+    try:
+        from urllib2 import urlopen, Request
+        urllib_version = 2
+        break
+    except ImportError as e:
+        urllib_version = -1
+
+    try:
+        from urllib.request import urlopen, Request
+        urllib_version = 1
+        break
+    except ImportError as e:
+        urllib_version = -1
+
+    print("cannot import urllib3/urllib2/urllib");
+    sys.exit(-1);
+
+def ssl_request(a_args):
+    ssl.match_hostname = lambda cert, hostname: True
+    request = Request(a_args['url'], headers=a_args['headers'])
+    response = urlopen(request, cafile=a_args['cafile'])
+    data = json.loads(response.read())
+    return data
+
+def ssl_request_urllib_3(a_args):
+    CA_CERTS = (a_args['cafile'])
+    http     = urllib3.PoolManager(cert_reqs='REQUIRED', ca_certs=CA_CERTS)
+    response = http.request(
+        "GET",
+        a_args['url'],
+        headers=a_args['headers'],
+        assert_same_host=False
+    )
+    return response
+
+def ssl_request_urllib_12(a_args):
+    ssl.match_hostname = lambda cert, hostname: True
+    request  = Request(sys.argv[1], headers={'Authorization': 'Bearer ' + sys.argv[2]})
+    response = urlopen(request, capath='/var/lib/bashible/ca.crt')
+    return response
+
+def ssl_request(a_args):
+    match urllib_version:
+        case 1, 2:
+            response = ssl_request_urllib_12(a_args)
+
+        case 3:
+            response = ssl_request_urllib_3(a_args)
+
+        case _:
+            print("unsupported urllib version: %d" % (urllib_version))
+
+    return response
+}
+
+response = ssl_request({
+    "url":      sys.argv[1],
+    "headers":  {'Authorization': 'Bearer ' + sys.argv[2]},
+    "cafile":   '/var/lib/bashible/ca.crt'
+});
+
+data = json.loads(response.data)
 sys.stdout.write(data["bootstrap"])
 EOF
 }
