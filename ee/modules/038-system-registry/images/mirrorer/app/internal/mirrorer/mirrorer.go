@@ -9,9 +9,9 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	"mirrorer/pkg/config"
-	"mirrorer/pkg/syncer"
-	"mirrorer/pkg/transport"
+	"mirrorer/internal/config"
+	"mirrorer/internal/syncer"
+	"mirrorer/internal/transport"
 	"time"
 
 	"github.com/deckhouse/deckhouse/pkg/log"
