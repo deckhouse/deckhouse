@@ -17,7 +17,7 @@ image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $version | replace "
 fromImage: common/src-artifact
 final: false
 git:
-- add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
+- add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches/{{ $version }}
   to: /patches
   stageDependencies:
     install:
@@ -26,7 +26,7 @@ shell:
   install:
   - git clone --depth 1 --branch {{ $value.csi.provisioner }} {{ $.SOURCE_REPO }}/kubernetes-csi/external-provisioner.git /src
   - cd /src
-  - test -d "/patches/{{ $value.csi.provisioner }}" && git apply /patches/{{ $value.csi.provisioner }}/*.patch --verbose
+  - git apply /patches/*.patch --verbose
   - rm -r vendor
   - rm -r .git
 ---
