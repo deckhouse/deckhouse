@@ -19,32 +19,15 @@ approved: false
 kind: DeckhouseRelease
 metadata:
   annotations:
+    release.deckhouse.io/cooldown: "0001-01-01T00:00:00Z"
     release.deckhouse.io/isUpdating: "false"
     release.deckhouse.io/notified: "false"
   creationTimestamp: null
-  name: v1.32.3
+  name: v1.31.1
   resourceVersion: "1"
 spec:
-  changelogLink: https://github.com/deckhouse/deckhouse/releases/tag/v1.32.3
-  version: v1.32.3
-status:
-  approved: false
-  message: ""
-  transitionTime: null
----
-apiVersion: deckhouse.io/v1alpha1
-approved: false
-kind: DeckhouseRelease
-metadata:
-  annotations:
-    release.deckhouse.io/isUpdating: "false"
-    release.deckhouse.io/notified: "false"
-  creationTimestamp: null
-  name: v1.33.1
-  resourceVersion: "1"
-spec:
-  changelogLink: https://github.com/deckhouse/deckhouse/releases/tag/v1.33.1
-  version: v1.33.1
+  changelogLink: https://github.com/deckhouse/deckhouse/releases/tag/v1.31.1
+  version: v1.31.1
 status:
   approved: false
   message: ""
