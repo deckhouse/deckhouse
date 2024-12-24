@@ -2,13 +2,16 @@
 image: {{ .ModuleName }}/{{ .ImageName }}
 from: {{ .Images.BASE_SCRATCH }}
 import:
-  - artifact: {{ .ModuleName }}/{{ .ImageName }}-artifact
+  - image: {{ .ModuleName }}/{{ .ImageName }}-artifact
     add: /relocate
     to: /
     before: setup
+docker:
+  USER: 64535
 ---
-artifact: {{ .ModuleName }}/{{ .ImageName }}-artifact
+image: {{ .ModuleName }}/{{ .ImageName }}-artifact
 from: {{ .Images.BASE_ALPINE }}
+final: false
 shell:
   beforeInstall:
   - apk add --no-cache ca-certificates tzdata
