@@ -9,7 +9,7 @@ shell:
     - rm -r .git
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
-fromImage: {{ $.Images.BASE_GOLANG_22_ALPINE }}
+fromImage: {{ $.Images.BASE_GOLANG_23_ALPINE }}
 import:
   - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
     add: /src
