@@ -48,8 +48,7 @@ EOF
 {% endsnippetcut %}
   </li>
   <li>
-<p>Укажите, что созданный StorageClass должен использоваться как StorageClass по умолчанию. Для этого выполните на <strong>master-узле</strong> следующую команду, чтобы добавить на StorageClass аннотацию <code>storageclass.kubernetes.io/is-default-class='true'</code>:
-</p>
+<p>Укажите, что созданный StorageClass должен использоваться как StorageClass по умолчанию. Для этого выполните на <strong>master-узле</strong> следующую команду:</p>
 {% snippetcut %}
 ```shell
 sudo -i d8 k patch mc global --type merge \
@@ -84,7 +83,7 @@ EOF
 {% endsnippetcut %}
   </li>
   <li>
-<p>Укажите, что созданный StorageClass должен использоваться как StorageClass по умолчанию. Для этого выполните на <strong>master-узле</strong> следующую команду, чтобы добавить на StorageClass аннотацию <code>storageclass.kubernetes.io/is-default-class='true'</code>:</p>
+<p>Укажите, что созданный StorageClass должен использоваться как StorageClass по умолчанию. Для этого выполните на <strong>master-узле</strong> следующую команду:</p>
 {% snippetcut %}
 ```shell
 sudo -i d8 k patch mc global --type merge \
