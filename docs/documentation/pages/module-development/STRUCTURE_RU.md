@@ -4,12 +4,29 @@ permalink: ru/module-development/structure/
 lang: ru
 ---
 
-{% raw %}
-Исходный код модуля и правила его сборки должны находиться в директории с определенной структурой. Ближайший аналог — Helm chart. На этой странице вы найдете описание директорий и файлов структуры модуля.
+Исходный код модуля и правила его сборки должны находиться в директории с определенной структурой. Ближайший аналог — Helm chart.
+
+Не все папки и файлы модуля обязательны. Кратко, можно руководствоваться следующим:
+- Создайте файл [module.yaml](#moduleyaml), в котором опишите метаданные модуля.
+- В папке [templates](#templates) разместите шаблоны Helm, которые будут применяться в кластере.
+
+  Если необходимо чтобы объекты, создаваемые модулем, меняли свое поведение в зависимости от каких-либо параметров модуля, определите необходимые параметры [в спецификации](#config-valuesyaml) и используйте их в шаблонах.
+- В папке [images](#images) разместите инструкции по сборке образов контейнеров, используемых модулем.
+
+  Если в шаблонах используются только адреса *внешних* образов, папку можно не создавать.
+- Если модуль должен реагировать на события или взаимодействовать с Kubernetes API, то необходимо создать хуки, которые разместить в папке [hooks](#hooks).
+- Разместите документацию к модулю в папке [docs](#docs). Если документация модуля отсутствует, то модуль не появится в списке модулей в веб-интерфейсе документации в кластере.
+- Если у модуля есть вспомогательные чарты Helm, разместите их в папке [charts](#charts).
+- Если модуль должен создавать кастомные ресурсы (CRD), разместите их спецификации в папке [crds](#crds).
 
 Мы подготовили репозиторий [шаблона модуля](https://github.com/deckhouse/modules-template/), содержащий структуру файлов и директорий, с которой мы рекомендуем начинать разработку модуля.
 
-Пример структуры папки модуля, созданного из _шаблона_, содержащий правила сборки и публикации с помощью GitHub Actions:  
+Далее на этой странице вы найдете более подробное описание структуры директорий и файлов модуля.
+
+<details markdown="0"><summary>Пример структуры папки модуля...</summary>
+<div markdown="1">
+
+Пример структуры папки модуля, содержащий правила сборки и публикации с помощью GitHub Actions:  
 
 ```tree
 📁 my-module/
@@ -79,6 +96,9 @@ lang: ru
 └─ 📝 werf-giterminism.yaml
 ```
 
+</div>
+</details>
+
 ## charts
 
 В папке `/charts` находятся вспомогательные чарты Helm, которые используются при рендере шаблонов.
@@ -87,14 +107,12 @@ lang: ru
 
 ## crds
 
-В этой директории лежат [_CustomResourceDefinition_](https://kubernetes.io/docs/tasks/extend-kubernetes/custom-resources/custom-resource-definitions/) (CRD), которые используются компонентами модуля. CRD обновляются каждый раз, когда запускается модуль, если есть обновления.
-{% endraw %}
+В этой директории лежат [*CustomResourceDefinition*](https://kubernetes.io/docs/tasks/extend-kubernetes/custom-resources/custom-resource-definitions/) (CRD), которые используются компонентами модуля. CRD обновляются каждый раз, когда запускается модуль, если есть обновления.
 
 {% alert level="warning" %}
-Для того чтобы CRD из директории `/crds` модуля начали применяться в кластере, нужно добавить хук [hello.py](https://github.com/deckhouse/modules-template/blob/main/hooks/hello.py) из _шаблона модуля_. Подробнее о хуках в разделе [`hooks`](#hooks).
+Для того чтобы CRD из директории `/crds` модуля начали применяться в кластере, нужно добавить хук [hello.py](https://github.com/deckhouse/modules-template/blob/main/hooks/hello.py) из *шаблона модуля*. Подробнее о хуках в разделе [`hooks`](#hooks).
 {% endalert %}
 
-{% raw -%}
 Чтобы отобразить CRD из директории `/crds` в документации на сайте или модуле documentation в кластере, выполните следующие шаги:
 * создайте файл перевода со структурой аналогичной исходному файлу ресурса:
   - оставьте только параметры `description`, в которых укажите текст перевода;
@@ -116,7 +134,7 @@ lang: ru
   - `moduleStatus` — **(опционально)** `experimental`. Статус модуля. Если модуль помечен как `experimental`, то на его страницах отображается предупреждение о том, что код нестабилен, а также отображается специальная плашка в меню.  
 
   <div markdown="0">
-  <details><summary>Пример метаданных</summary>
+  <details><summary>Пример метаданных...</summary>
   <pre class="highlight">
   <code>---
   title: "Веб-консоль администратора Deckhouse"
@@ -135,7 +153,7 @@ lang: ru
   - `linkTitle` – **(опционально)** Отдельный заголовок для навигации, если, например, `title` очень длинный. Если отсутствует, то используется `title`.  
 
   <div markdown="0">
-  <details><summary>Пример метаданных</summary>
+  <details><summary>Пример метаданных...</summary>
   <pre class="highlight">
   <code>---
   title: "Примеры"
@@ -153,7 +171,7 @@ lang: ru
   - `linkTitle` – **(опционально)** Отдельный заголовок для навигации, если, например, `title` очень длинный. Если отсутствует, то используется `title`.  
 
   <div markdown="0">
-  <details><summary>Пример метаданных</summary>
+  <details><summary>Пример метаданных...</summary>
   <pre class="highlight">
   <code>---
   title: "Часто задаваемые вопросы"
@@ -171,7 +189,7 @@ lang: ru
   - `linkTitle` – **(опционально)** Отдельный заголовок для навигации, если, например, `title` очень длинный. Если отсутствует, то используется `title`.  
 
   <div markdown="0">
-  <details><summary>Пример метаданных</summary>
+  <details><summary>Пример метаданных...</summary>
   <pre class="highlight">
   <code>---
   title: "Отладка модуля"
@@ -184,7 +202,7 @@ lang: ru
 * `CR.md` и `CR.ru.md` – файл для генерации ресурсов из папки `/crds/` добавьте вручную.  
 
   <div markdown="0">
-  <details><summary>Пример метаданных</summary>
+  <details><summary>Пример метаданных...</summary>
   <pre class="highlight">
   <code>---
   title: "Кастомные ресурсы"
@@ -196,7 +214,7 @@ lang: ru
 * `CONFIGURATION.md` – файл для создания ресурсов из `/openapi/config-values.yaml` и `/openapi/doc-<LANG>-config-values.yaml` добавьте вручную.  
 
   <div markdown="0">
-  <details><summary>Пример метаданных</summary>
+  <details><summary>Пример метаданных...</summary>
   <pre class="highlight">
   <code>---
   title: "Настройки модуля"
@@ -214,7 +232,6 @@ lang: ru
 ## hooks
 
 В директории `/hooks` находятся хуки модуля. Хук — это исполняемый файл, выполняемый при реакции на событие. Хуки используются модулем также для динамического взаимодействия с API Kubernetes. Например, они могут быть использованы для обработки событий, связанных с созданием или удалением объектов в кластере.
-{% endraw %}
 
 [Познакомьтесь](../#прежде-чем-начать) с концепцией хуков, прежде чем начать разрабатывать свой собственный хук. Для ускорения разработки хуков можно воспользоваться [Python-библиотекой](https://github.com/deckhouse/lib-python) от команды Deckhouse.
 
@@ -305,7 +322,7 @@ if __name__ == "__main__":
 1. [Dockerfile](https://docs.docker.com/engine/reference/builder/) — файл, который содержит команды для быстрой сборки образов. Если необходимо собрать приложение из исходного кода, поместите его рядом с Dockerfile и включите его в образ с помощью команды `COPY`.
 2. Файл `werf.inc.yaml`, который является аналогом [секции описания образа из `werf.yaml`](https://werf.io/documentation/v1.2/reference/werf_yaml.html#L33).
 
-Имя образа совпадает с именем директории для этого модуля, записанным в нотации _camelCase_ с маленькой буквы. Например, директории `/images/echo-server` соответствует имя образа `echoServer`.
+Имя образа совпадает с именем директории для этого модуля, записанным в нотации *camelCase* с маленькой буквы. Например, директории `/images/echo-server` соответствует имя образа `echoServer`.
 
 Собранные образы имеют content-based теги, которые можно использовать в сборке других образов. Чтобы использовать content-based теги образов, [подключите библиотеку lib-helm](#charts). Вы также можете воспользоваться другими функциями [библиотеки helm_lib](https://github.com/deckhouse/lib-helm/tree/main/charts/helm_lib) Deckhouse Kubernetes Platform.
 
@@ -347,34 +364,6 @@ conversions:
 - путь до ожидаемого файла конфигурации (версия после конвертации).
 
 [Пример](https://github.com/deckhouse/deckhouse/blob/main/modules/300-prometheus/openapi/conversions/conversions_test.go) теста конверсии.
-
-## templates
-
-В директории `/templates` находятся [шаблоны Helm](https://helm.sh/docs/chart_template_guide/getting_started/).
-
-* Для доступа к настройкам модуля в шаблонах используйте путь `.Values.<имяМодуля>`, а для глобальных настроек `.Values.global`. Имя модуля конвертируется в нотации _camelCase_.
-
-* Для упрощения работы с шаблонами используйте [lib-helm](https://github.com/deckhouse/lib-helm) – это набор дополнительных функций, которые облегчают работу с глобальными и модульными значениями.
-
-* Доступы в registry из ресурса ModuleSource доступны по пути `.Values.<имяМодуля>.registry.dockercfg`.
-
-* Чтобы использовать эти функции для пула образов в контроллерах, создайте секрет и добавьте его в соответствующий параметр: `"imagePullSecrets": [{"name":"registry-creds"}]`.
-
-  ```yaml
-  apiVersion: v1
-  kind: Secret
-  metadata:
-    name: registry-creds
-  type: kubernetes.io/dockerconfigjson
-  data:
-    .dockerconfigjson: {{ .Values.<имяМодуля>.registry.dockercfg }}
-  ```
-
-Модуль может иметь параметры, с помощью которых может менять свое поведение. Параметры модуля и схема их валидации описываются в OpenAPI-схемах в директории `/openapi`.
-
-Настройки лежат в двух файлах: [`config-values.yaml`](#config-valuesyaml) и [`values.yaml`](#valuesyaml).
-
-Пример OpenAPI-схемы можно найти в [шаблоне модуля](https://github.com/deckhouse/modules-template/blob/main/openapi/config-values.yaml).
 
 ### config-values.yaml
 
@@ -426,13 +415,42 @@ properties:
     default: {}
 ```
 
+## templates
+
+В директории `/templates` находятся [шаблоны Helm](https://helm.sh/docs/chart_template_guide/getting_started/).
+
+* Для доступа к настройкам модуля в шаблонах используйте путь `.Values.<имяМодуля>`, а для глобальных настроек `.Values.global`. Имя модуля конвертируется в нотации *camelCase*.
+
+* Для упрощения работы с шаблонами используйте [lib-helm](https://github.com/deckhouse/lib-helm) – это набор дополнительных функций, которые облегчают работу с глобальными и модульными значениями.
+
+* Доступы в registry из ресурса ModuleSource доступны по пути `.Values.<имяМодуля>.registry.dockercfg`.
+
+* Чтобы использовать эти функции для пула образов в контроллерах, создайте секрет и добавьте его в соответствующий параметр: `"imagePullSecrets": [{"name":"registry-creds"}]`.
+
+  ```yaml
+  apiVersion: v1
+  kind: Secret
+  metadata:
+    name: registry-creds
+  type: kubernetes.io/dockerconfigjson
+  data:
+    .dockerconfigjson: {{ .Values.<имяМодуля>.registry.dockercfg }}
+  ```
+
+Модуль может иметь параметры, с помощью которых может менять свое поведение. Параметры модуля и схема их валидации описываются в OpenAPI-схемах в директории `/openapi`.
+
+Настройки лежат в двух файлах: [`config-values.yaml`](#config-valuesyaml) и [`values.yaml`](#valuesyaml).
+
+Пример OpenAPI-схемы можно найти в [шаблоне модуля](https://github.com/deckhouse/modules-template/blob/main/openapi/config-values.yaml).
+
 ## .helmignore
 
 Исключите файлы из Helm-релиза с помощью `.helmignore`. В случае модулей DKP директории `/crds`, `/images`, `/hooks`, `/openapi` обязательно добавляйте в `.helmignore`, чтобы избежать превышения лимита размера Helm-релиза в 1 Мб.
 
 ## Chart.yaml
 
-Обязательный файл для чарта, аналогичный [`Chart.yaml`](https://helm.sh/docs/topics/charts/#the-chartyaml-file) из Helm. Должен содержать, как минимум, параметр `name` с именем модуля и параметр `version` с версией.
+Файл для чарта, аналогичный [`Chart.yaml`](https://helm.sh/docs/topics/charts/#the-chartyaml-file) из Helm. Должен содержать, как минимум, параметр `name` с именем модуля и параметр `version` с версией.
+Вы можете не создавать данный файл, Deckhouse создаст его автоматически.
 
 Пример:
 
@@ -441,61 +459,49 @@ name: echoserver
 version: 0.0.1
 dependencies:
 - name: deckhouse_lib_helm
-  version: 1.5.0
+  version: 1.38.0
   repository: https://deckhouse.github.io/lib-helm
 ```
 
 ## module.yaml
 
-В данном файле настройте следующие опции модуля:
+Файл `module.yaml` в корне папки модуля содержит метаданные модуля.
 
-- `tags: string` — дополнительные теги для модуля, которые преобразуются в лейблы модуля: `module.deckhouse.io/$tag=""`.
-- `weight: integer` — вес модуля. Вес по-умолчанию: 900, можно задать собственный вес в диапазоне 900 – 999.
-- `stage: string` — [cтадия жизненного цикла модуля](../versioning/#стадия-жизненного-цикла-модуля). Может быть `Sandbox`, `Incubating`, `Graduated` или `Deprecated`.
-- `description: string` — описание модуля.
+Файл может отсутствовать, но рекомендуется его заполнить. Большинство метаданных будут доступны в объекте [Module](../../cr.html#module) в кластере. Объект Module будет создан автоматически после настройки источника модулей (ресурс [ModuleSource](../../cr.html#modulesource)) и успешной синхронизации.
 
-Например:
+Параметры, которые можно использовать в `module.yaml`:
+- `name` — *Строка, обязательный параметр.* Имя модуля в Kebab Case. Например, `echo-server`.
+- `tags` — *Массив строк.* Список дополнительных тегов модуля. Теги преобразуются в лейблы объекта [Module](../../cr.html#module) в соответствии с шаблоном `module.deckhouse.io/<TAG>=""` (где `<TAG>` — название тега).
+
+  Например, если указать `tags: ["test", "myTag"]`, то на соответствующий объект Module в кластере будут назначены лейблы `module.deckhouse.io/test=""` и `module.deckhouse.io/myTag=""`.
+- `weight` — *Число.* Вес модуля. Используется для управления очередностью запуска модуля по сравнению с другими модулями. Чем меньше вес, тем раньше будет запущен модуль. По умолчанию: 900.
+
+  На очередность запуска модуля может также влиять список [зависимостей модуля](../dependencies/).
+- `stage` — *Строка.* [Стадия жизненного цикла модуля](../versioning/#как-понять-насколько-модуль-стабилен). Допустимые значения: `Sandbox`, `Incubating`, `Graduated` или `Deprecated`.
+- `description` — *Строка.* Произвольное текстовое описание назначения модуля. Будет отображаться в документации.
+- `requirements` — *Объект.* [Зависимости](../dependencies/) модуля.
+  - `deckhouse` — *Строка.* Зависимость [от версии Deckhouse Kubernetes Platform](../dependencies/#зависимость-от-версии-deckhouse-kubernetes-platform), с которой совместим модуль.
+  - `kubernetes` — *Строка.* Зависимость [от версии Kubernetes](../dependencies/#зависимость-от-версии-kubernetes), с которой совместим модуль.
+  - `bootstrapped` — *Булевый.* Зависимость [от статуса установки кластера](../dependencies/#зависимость-от-статуса-установки-кластера) (только для встроенных модулей DKP).
+- `disable` — *Объект.* Параметры, связанные с поведением при отключении модуля.
+  - `confirmation` — *Булевый.* Требовать подтверждение при отключении модуля.
+  - `message` — *Строка.* Сообщение с информацией о том, что произойдет при отключении модуля.
+
+Пример описания метаданных модуля `hello-world`:
 
 ```yaml
+name: hello-world
 tags: ["test", "myTag"]
 weight: 960
 stage: "Sandbox"
-description: "my awesome module"
-```
-
-Будет создан модуль (`deckhouse.io/v1alpha/Module`) с лейблами: `module.deckhouse.io/test=""` и `module.deckhouse.io/myTag=""`, весом `960` и описанием `my awesome module`.
-
-Таким образом можно управлять очередностью модулей, а также задавать дополнительную метаинформацию для них.
-
-Пример настройки зависимости от версии Deckhouse Kubernetes Platform:
-
-```yaml
-name: test
-weight: 901
+description: "The module to say hello to the world."
 requirements:
     deckhouse: ">= 1.61"
-```
-
-Пример настройки зависимости от версии Kubernetes:
-
-```yaml
-name: test
-weight: 901
-requirements:
     kubernetes: ">= 1.27"
-```
-
-Пример настройки зависимости от статуса установки кластера (bootstrapped):
-
-```yaml
-name: ingress-nginx
-weight: 402
-description: |
-    Ingress controller for nginx
-    https://kubernetes.github.io/ingress-nginx
-
-requirements:
     bootstrapped: true
+disable:
+  confirmation: true
+  message: "Disabling this module will delete all resources, created by the module."
 ```
 
 {% endraw %}
