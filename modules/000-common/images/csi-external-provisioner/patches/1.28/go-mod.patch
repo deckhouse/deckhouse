@@ -1,5 +1,5 @@
 diff --git a/go.mod b/go.mod
-index 9c7fa9b57..618541160 100644
+index 9c7fa9b57..b40d2c220 100644
 --- a/go.mod
 +++ b/go.mod
 @@ -33,7 +33,7 @@ require (
@@ -7,13 +7,16 @@ index 9c7fa9b57..618541160 100644
  	github.com/onsi/ginkgo/v2 v2.12.0
  	github.com/onsi/gomega v1.27.10
 -	k8s.io/kubernetes v1.28.0
-+	k8s.io/kubernetes v1.28.1
++	k8s.io/kubernetes v1.28.12
  )
  
  require (
-@@ -66,7 +66,7 @@ require (
+@@ -64,9 +64,9 @@ require (
+ 	github.com/gogo/protobuf v1.3.2 // indirect
+ 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
  	github.com/golang/protobuf v1.5.4 // indirect
- 	github.com/google/cel-go v0.16.0 // indirect
+-	github.com/google/cel-go v0.16.0 // indirect
++	github.com/google/cel-go v0.16.1 // indirect
  	github.com/google/gnostic-models v0.6.8 // indirect
 -	github.com/google/go-cmp v0.5.9 // indirect
 +	github.com/google/go-cmp v0.6.0 // indirect
@@ -47,9 +50,20 @@ index 9c7fa9b57..618541160 100644
  	google.golang.org/genproto v0.0.0-20230822172742-b8732ec3820d // indirect
  	google.golang.org/genproto/googleapis/api v0.0.0-20230822172742-b8732ec3820d // indirect
 diff --git a/go.sum b/go.sum
-index a596018d8..b008a9d45 100644
+index a596018d8..257a79d49 100644
 --- a/go.sum
 +++ b/go.sum
+@@ -119,8 +119,8 @@ github.com/golang/protobuf v1.5.2/go.mod h1:XVQd3VNwM+JqD3oG2Ue2ip4fOMUkwXdXDdiu
+ github.com/golang/protobuf v1.5.4 h1:i7eJL8qZTpSEXOPTxNKhASYpMn+8e5Q6AdndVa1dWek=
+ github.com/golang/protobuf v1.5.4/go.mod h1:lnTiLA8Wa4RWRcIUkrtSVa5nRhsEGBg48fD6rSs7xps=
+ github.com/google/btree v1.0.1 h1:gK4Kx5IaGY9CD5sPJ36FHiBJ6ZXl0kilRiiCj+jdYp4=
+-github.com/google/cel-go v0.16.0 h1:DG9YQ8nFCFXAs/FDDwBxmL1tpKNrdlGUM9U3537bX/Y=
+-github.com/google/cel-go v0.16.0/go.mod h1:HXZKzB0LXqer5lHHgfWAnlYwJaQBDKMjxjulNQzhwhY=
++github.com/google/cel-go v0.16.1 h1:3hZfSNiAU3KOiNtxuFXVp5WFy4hf/Ly3Sa4/7F8SXNo=
++github.com/google/cel-go v0.16.1/go.mod h1:HXZKzB0LXqer5lHHgfWAnlYwJaQBDKMjxjulNQzhwhY=
+ github.com/google/gnostic-models v0.6.8 h1:yo/ABAfM5IMRsS1VnXjTBvUb61tFIHozhlYvRgGre9I=
+ github.com/google/gnostic-models v0.6.8/go.mod h1:5n7qKqH0f5wFt+aWF8CW6pZLLNOfYuF5OpfBSENuI8U=
+ github.com/google/go-cmp v0.2.0/go.mod h1:oXzfMopK8JAjlY9xF4vHSVASa0yLyX7SntLO5aqRK0M=
 @@ -131,8 +131,9 @@ github.com/google/go-cmp v0.5.0/go.mod h1:v8dTdLbMG2kIc/vJvl+f65V22dbkXbowE6jgT/
  github.com/google/go-cmp v0.5.5/go.mod h1:v8dTdLbMG2kIc/vJvl+f65V22dbkXbowE6jgT/gNBxE=
  github.com/google/go-cmp v0.5.6/go.mod h1:v8dTdLbMG2kIc/vJvl+f65V22dbkXbowE6jgT/gNBxE=
@@ -148,8 +162,8 @@ index a596018d8..b008a9d45 100644
  k8s.io/kubelet v0.28.0/go.mod h1:i8jUg4ltbRusT3ExOhSAeqETuHdoHTZcTT2cPr9RTgc=
 -k8s.io/kubernetes v1.28.0 h1:p8qq/VoNHnBWinLEi5LO2IvCfzFouN7Jhdz8+L++V+U=
 -k8s.io/kubernetes v1.28.0/go.mod h1:rBQpjGYlLBV0KuOLw8EG45N5EBCskWiPpi0xy5liHMI=
-+k8s.io/kubernetes v1.28.1 h1:ZQuukGbpVjSbMypkjNErpbsSHni6RPgoqz+2zDBsuMY=
-+k8s.io/kubernetes v1.28.1/go.mod h1:rBQpjGYlLBV0KuOLw8EG45N5EBCskWiPpi0xy5liHMI=
++k8s.io/kubernetes v1.28.12 h1:DtWB8ZjoYiN/PXD4qDXFppf9IouVUavn6r3S+3NMUkU=
++k8s.io/kubernetes v1.28.12/go.mod h1:chlmcCDBnOA/y+572cw8dO0Rci1wiA8bm5+zhPdFLCk=
  k8s.io/mount-utils v0.28.0 h1:BGYxriZPWTJFCEWDtXsdC1ZPFvI6HbfXCWpjJ42mIw4=
  k8s.io/mount-utils v0.28.0/go.mod h1:AyP8LmZSLgpGdFQr+vzHTerlPiGvXUdP99n98Er47jw=
  k8s.io/pod-security-admission v0.28.0 h1:Vz8XTjMAKHQFZv9Q4GdmO59CUtelkPPDRJTy/WTTc3g=
