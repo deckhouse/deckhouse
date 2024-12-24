@@ -25,6 +25,10 @@ import:
   add: /iptables-wrapper
   to: /sbin/iptables-wrapper
   before: setup
+- artifact: {{ .ModuleName }}/cni-wrapper-artifact
+  add: /cni-wrapper
+  to: /cni-wrapper
+  before: setup
 docker:
   ENTRYPOINT: ["/sbin/iptables-wrapper"]
 ---
@@ -46,3 +50,17 @@ shell:
         rm -f "/relocate/sbin/${cmd}"
         ln -s /sbin/iptables-wrapper "/relocate/sbin/${cmd}"
       done
+---
+artifact: {{ .ModuleName }}/cni-wrapper-artifact
+from: {{ $.Images.BASE_GOLANG_23_ALPINE_DEV }}
+git:
+- add: /{{ .ModulePath }}modules/035-{{ $.ModuleName }}/images/{{ $.ImageName }}/cni-wrapper
+  to: /src
+  stageDependencies:
+    install:
+      - '**/*'
+shell:
+  install:
+    - export GOPROXY={{ $.GOPROXY }}
+    - cd /src
+    - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o /cni-wrapper main.go
