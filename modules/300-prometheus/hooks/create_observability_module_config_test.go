@@ -33,7 +33,7 @@ spec:
 `
 
 var _ = Describe("Modules :: prometheus :: hooks :: create_observability_module_config ::", func() {
-	f := HookExecutionConfigInit(`{"global":{"enabledModules":[]}}`, ``)
+	f := HookExecutionConfigInit(`{"global":{"enabledModules":["prometheus"]}}`, ``)
 	f.RegisterCRD("deckhouse.io", "v1alpha1", "ModuleConfig", false)
 
 	Context("Without enabled observability module", func() {
@@ -51,7 +51,7 @@ var _ = Describe("Modules :: prometheus :: hooks :: create_observability_module_
 	Context("With enabled observability module", func() {
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(""))
-			f.ValuesSet("global.enabledModules", []string{"observability"})
+			f.ValuesSet("global.enabledModules", []string{"prometheus", "observability"})
 			f.RunHook()
 		})
 
