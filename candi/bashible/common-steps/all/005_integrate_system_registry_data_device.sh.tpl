@@ -58,7 +58,7 @@ function setup_registry_data_device() {
     if [[ -e "$symlink_target" ]]
     then
       # Check if symlink_target is a symlink and points to mount_point
-      if [[ -L "$symlink_target" && $(readlink "$symlink_target") == "$mount_point" ]]; then
+      if [[ -L "$symlink_target" && $(readlink -f "$symlink_target") == "$mount_point" ]]; then
         echo "symlink is correct, nothing to do"
       else
         rm -rf "$symlink_target"
