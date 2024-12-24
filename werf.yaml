@@ -359,7 +359,8 @@ shell:
   - D8_VERSION=${CI_COMMIT_TAG} ./go-build.sh
   - mv deckhouse-controller /out
 ---
-artifact: dhctl
+image: dhctl
+final: false
 fromImage: base-for-go
 git:
 - add: /dhctl

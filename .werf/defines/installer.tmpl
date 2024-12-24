@@ -4,7 +4,7 @@
 {{- define "installer_and_installer_standalone_generic_imports" }}
 {{- $context := . -}}
 
-- artifact: dhctl
+- image: dhctl
   add: /dhctl/bin/dhctl
   to: /image/dhctl
   before: setup
