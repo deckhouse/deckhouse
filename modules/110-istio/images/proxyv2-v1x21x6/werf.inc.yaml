@@ -19,15 +19,17 @@ import:
   to: /var/lib/istio/envoy/gcp_envoy_bootstrap_tmpl.json
   after: setup
 - image: {{ .ModuleName }}/{{ .ImageName }}-binary-artifact
-  add: /usr/local/bin/envoy
-  to: /usr/local/bin/envoy
+  add: /usr/local/bin
+  to: /usr/local/bin
+  includePaths:
+  - envoy
   after: setup
 docker:
   ENV:
     ISTIO_META_ISTIO_PROXY_SHA: "istio-proxy:78bd2d9b284978e170a49cd13decd5f952544489"
     ISTIO_META_ISTIO_VERSION: "1.21.6"
-    PATH: "/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
-  # WORKDIR: "/"
+    PATH: "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+  WORKDIR: "/"
   USER: 1337
   ENTRYPOINT: ["/usr/local/bin/pilot-agent"]
 ---
