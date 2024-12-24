@@ -31,7 +31,7 @@ git:
   stageDependencies:
     install:
     - '**/*'
-    {{ end }}
+    {{- end }}
 shell:
   install:
   - cd /src
