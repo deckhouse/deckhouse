@@ -35,7 +35,8 @@
 
 {{- define "normalize" }}
   {{- $newName := lower . }}
-  {{- $newName = regexReplaceAll "\\W+" $newName "-" }}
+  {{- $newName = regexReplaceAll "[^a-z0-9.-]+" $newName "-" }}
   {{- $newName = regexReplaceAll "(^-+|-+$)" $newName "" }}
+  {{- $newName = regexReplaceAll "(^\\.|\\.$)" $newName "" }}
   {{- print $newName }}
 {{- end }}
