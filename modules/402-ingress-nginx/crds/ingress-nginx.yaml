@@ -616,43 +616,43 @@ spec:
                 inlet:
                   type: string
                   description: |
-                    The way traffic goes to cluster from the outer network.
-                    * `LoadBalancer` — Ingress controller is deployed and the service of `LoadBalancer` type is provisioned.
-                    * `LoadBalancerWithProxyProtocol` — Ingress controller is deployed and the service of `LoadBalancer` type is provisioned. Ingress controller uses proxy-protocol to get a real IP of the client.
-                    * `LoadBalancerWithSSLPasstrough` — Ingress controller is deployed and the service of `LoadBalancer` type is provisioned. It enables SSL Passthrough feature, allowing backends to be configured to accept SSL traffic directly, without terminating it at the Ingress controller.
+                    The way how external traffic enters the cluster.
+                    * `LoadBalancer` — The Ingress controller is deployed, and a `LoadBalancer`-type service is provisioned.
+                    * `LoadBalancerWithProxyProtocol` — The Ingress controller is deployed, and a `LoadBalancer`-type service is provisioned. The Ingress controller uses the proxy-protocol to get a real IP address of the client.
+                    * `LoadBalancerWithSSLPassthrough` — The Ingress controller is deployed, and a `LoadBalancer`-type service is provisioned. This option enables the SSL Passthrough feature, allowing backends to be configured to accept SSL traffic directly without termination at the Ingress controller.
 
-                      > **Caution!** SSL Passthrough feature is implemented by intercepting all traffic on the configured HTTPS port (default: 443) and handing it over to a local TCP proxy. This bypasses NGINX completely and introduces a non-negligible performance penalty.
+                      > **Caution!** The SSL Passthrough feature is implemented by intercepting all traffic on the configured HTTPS port (default: 443) and routing it to a local TCP proxy. This implementation bypasses NGINX completely and introduces a significant performance penalty.
 
-                      SSL Passthrough leverages SNI and reads the virtual domain from the TLS negotiation, which requires compatible clients. After a connection has been accepted by the TLS listener, it is handled by the controller itself and piped back and forth between the backend and the client.
+                      The SSL Passthrough protocol leverages SNI and reads the virtual domain data from the TLS handshake protocol, which requires a compatible client.
 
-                      If there is no hostname matching the requested host name, the request is handed over to NGINX on the configured SSL Passthrough proxy port (default: 442), which proxies the request to the default backend.
+                      If the host name doesn't match the requested host name, the request is forwarded to NGINX on the configured SSL Passthrough proxy port (default: 442), which proxies the request to the default backend.
 
-                      > **Caution!** Unlike HTTP backends, traffic to SSL Passthrough backends is sent to the ClusterIP of the backing Service instead of individual Endpoints.
+                      > **Caution!** Unlike HTTP backends, traffic to SSL Passthrough backends is routed to the ClusterIP of the backing service instead of individual endpoints.
                       >
-                      > **Caution!** Because SSL Passthrough works on layer 4 of the OSI model (TCP) and not on the layer 7 (HTTP), using SSL Passthrough invalidates all the other annotations set on an Ingress object.
-                    * `HostPort` — Ingress controller is deployed and available through nodes' ports via `hostPort`.
-                    * `HostPortWithProxyProtocol` — Ingress controller is deployed and available through nodes' ports via `hostPort, it uses proxy-protocol to get a real IP of the client.
+                      > Since SSL Passthrough works at layer 4 of the OSI model (TCP) and not layer 7 (HTTP), using SSLPassthrough makes it impossible to use other annotations configured on an Ingress object.
 
-                      > **Caution!** Make sure that requests to the Ingress are sent from trusted sources when using this inlet. The `acceptRequestsFrom` parameter can help you with defining trusted sources.
-                    * `HostPortWithSSLPassthrough` - Ingress controller is deployed and available through nodes' ports via `hostPort.  It enables SSL Passthrough feature, allowing backends to be configured to accept SSL traffic directly, without terminating it at the Ingress controller.
+                    * `HostPort` — The Ingress controller is deployed and made available on node ports via `hostPort`.
+                    * `HostPortWithProxyProtocol` — The Ingress controller is deployed and made available on node ports via `hostPort`. The Ingress controller uses the proxy-protocol to get a real IP address of the client.
 
-                      Settings are required in [spec.HostPortWithSSLPassthrough](#ingressnginxcontroller-v1-spec-hostportwithsslpassthrough).
+                      > **Caution!** When using this inlet, ensure that requests to the Ingress come from trusted sources only. One way to enforce this is by using the `acceptRequestsFrom` parameter.
+                    * `HostPortWithSSLPassthrough` - The Ingress controller is deployed and made available on node ports via `hostPort`. This option enables the SSL Passthrough feature, allowing backends to be configured to accept SSL traffic directly without termination at the Ingress controller.
 
-                      SSL Passthrough leverages SNI and reads the virtual domain from the TLS negotiation, which requires compatible clients. After a connection has been accepted by the TLS listener, it is handled by the controller itself and piped back and forth between the backend and the client.
+                      Add settings to the [`spec.HostPortWithSSLPassthrough`](#ingressnginxcontroller-v1-spec-hostportwithsslpassthrough) parameter section.
 
-                      If there is no hostname matching the requested host name, the request is handed over to NGINX on the configured passthrough proxy port (default: 442),
-                      which proxies the request to the default backend.
+                      The SSL Passthrough protocol leverages SNI and reads the virtual domain data from the TLS handshake protocol, which requires a compatible client.
 
-                      > **Caution!** SSL Passthrough feature is implemented by intercepting all traffic on the configured HTTPS port (default: 443) and handing it over to a local TCP proxy. This bypasses NGINX completely and introduces a non-negligible performance penalty.
+                      If the host name doesn't match the requested host name, the request is forwarded to NGINX on the configured SSL Passthrough proxy port (default: 442), which proxies the request to the default backend.
+
+                      > **Caution!** The SSL Passthrough feature is implemented by intercepting all traffic on the configured HTTPS port (default: 443) and routing it to a local TCP proxy. This implementation bypasses NGINX completely and introduces a significant performance penalty.
                       >
-                      > **Caution!** Unlike HTTP backends, traffic to SSL Passthrough backends is sent to the ClusterIP of the backing Service instead of individual Endpoints.
+                      > Unlike HTTP backends, traffic to SSL Passthrough backends is routed to the ClusterIP of the backing service instead of individual endpoints.
                       >
-                      > **Caution!** Because SSL Passthrough works on layer 4 of the OSI model (TCP) and not on the layer 7 (HTTP), using SSL Passthrough invalidates all the other annotations set on an Ingress object.
-                    * `HostWithFailover` — installs two ingress controllers, the primary and the backup one. The primary controller runs in a hostNetwork. If the pods of the primary controller are not available, the traffic is routed to the backup one;
+                      > Since SSL Passthrough works at layer 4 of the OSI model (TCP) and not layer 7 (HTTP), using SSLPassthrough makes it impossible to use other annotations configured on an Ingress object.
+                    * `HostWithFailover` — Two Ingress controllers are deployed: a primary and a backup. The primary controller runs in a hostNetwork. If the primary controller pods are unavailable, traffic is routed to the backup controller.
 
-                      > **Caution!** There can be only one controller with this inlet type on a host.
-
-                      > **Caution!** The following ports must be available on the node: 80, 81, 443, 444, 4207, 4208.
+                      > **Caution!** There can be only one controller with this inlet type on a single host.
+                      >
+                      > Ensure the following ports are available on the node: 80, 81, 443, 444, 4207, 4208.
                   enum: ["LoadBalancer","LoadBalancerWithSSLPassthrough","LoadBalancerWithProxyProtocol","HostPort","HostPortWithSSLPassthrough","HostPortWithProxyProtocol", "HostWithFailover"]
                 controllerVersion:
                   type: string
