@@ -362,8 +362,17 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 
 	suite.Run("Few patch releases", func() {
 		suite.setupController("few-patch-releases.yaml", initValues, embeddedMUP)
-		dr := suite.getDeckhouseRelease("v1.32.0")
+		dr := suite.getDeckhouseRelease("v1.31.1")
 		_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
+		require.NoError(suite.T(), err)
+		dr = suite.getDeckhouseRelease("v1.31.2")
+		_, err = suite.ctr.createOrUpdateReconcile(ctx, dr)
+		require.NoError(suite.T(), err)
+		dr = suite.getDeckhouseRelease("v1.31.3")
+		_, err = suite.ctr.createOrUpdateReconcile(ctx, dr)
+		require.NoError(suite.T(), err)
+		dr = suite.getDeckhouseRelease("v1.32.0")
+		_, err = suite.ctr.createOrUpdateReconcile(ctx, dr)
 		require.NoError(suite.T(), err)
 	})
 
