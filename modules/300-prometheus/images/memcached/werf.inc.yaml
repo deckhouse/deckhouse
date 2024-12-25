@@ -1,4 +1,4 @@
-{{ $memcachedExporterVersion := "0.15.0" }}
+{{ $memcachedExporterVersion := "0.14.1" }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-exporter
 from: {{ $.Images.BASE_GOLANG_23_ALPINE_DEV }}
