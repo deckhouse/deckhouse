@@ -17,6 +17,7 @@ package confighandler
 import (
 	"context"
 	"errors"
+	"sync"
 
 	"github.com/flant/addon-operator/pkg/kube_config_manager/backend"
 	"github.com/flant/addon-operator/pkg/kube_config_manager/config"
@@ -39,7 +40,9 @@ type Handler struct {
 	client            client.Client
 	log               *log.Logger
 	deckhouseConfigCh chan<- utils.Values
-	configEventCh     chan<- config.Event
+
+	l             sync.Mutex
+	configEventCh chan<- config.Event
 }
 
 func New(client client.Client, deckhouseConfigCh chan<- utils.Values, logger *log.Logger) *Handler {
@@ -51,6 +54,8 @@ func New(client client.Client, deckhouseConfigCh chan<- utils.Values, logger *lo
 }
 
 func (h *Handler) ModuleConfigChannelIsSet() bool {
+	h.l.Lock()
+	defer h.l.Unlock()
 	return h.configEventCh != nil
 }
 
@@ -88,7 +93,9 @@ func (h *Handler) HandleEvent(moduleConfig *v1alpha1.ModuleConfig, op config.Op)
 
 // StartInformer does not start informer, it just registers channels, this name used just to implement interface
 func (h *Handler) StartInformer(_ context.Context, eventCh chan config.Event) {
+	h.l.Lock()
 	h.configEventCh = eventCh
+	h.l.Unlock()
 }
 
 // LoadConfig loads initial modules config before starting
