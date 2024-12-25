@@ -86,6 +86,7 @@
  - **[prometheus]** Fixes for D8CNIMisconfigured alerts — renamed group and typos fixed. [#11259](https://github.com/deckhouse/deckhouse/pull/11259)
  - **[prometheus]** Rename targets for alerts and docs fixes. [#11243](https://github.com/deckhouse/deckhouse/pull/11243)
  - **[runtime-audit-engine]** Fix k8s labels collection from containers in syscall event source. [#10639](https://github.com/deckhouse/deckhouse/pull/10639)
+ - **[user-authn]** Fix error in dexClient internal openapi spec. [#11285](https://github.com/deckhouse/deckhouse/pull/11285)
  - **[user-authn]** Add profile scope to OIDC auth requests. [#11083](https://github.com/deckhouse/deckhouse/pull/11083)
  - **[user-authn]** Extend list annotations helm.sh/ to delete from secret. [#10918](https://github.com/deckhouse/deckhouse/pull/10918)
 
