@@ -31,10 +31,17 @@ git:
   stageDependencies:
     setup:
     - '**/*'
+- add: /{{ $.ModulePath }}modules/800-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
+  to: /src/patches
+  stageDependencies:
+    setup:
+    - '**/*'
 shell:
   install:
   - git clone --depth 1 --branch {{ .CandiVersionMap.d8.d8CliVersion }} {{ $.SOURCE_REPO }}/deckhouse/deckhouse-cli.git /src/deckhouse-cli
-#  - rm -rf /src/deckhouse-cli/.git # https://github.com/deckhouse/deckhouse-cli/blob/main/Taskfile.yml#L9
+  - cd /src/deckhouse-cli
+  - git apply /src/patches/*.patch --verbose
+  - rm -rf /src/deckhouse-cli/.git
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
 final: false
@@ -73,7 +80,7 @@ shell:
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-frontend-artifact
 final: false
-from: {{ .Images.BASE_NODE_20_ALPINE_DEV }}
+from: {{ .Images.BASE_NODE_20_ALPINE }}
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
   add: /src/src
