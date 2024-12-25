@@ -190,11 +190,12 @@ spec:
         image: "{{ $.Values.global.modulesImages.registry.base }}@{{ $imageDigest }}"
         command:
         - /pause
-  {{- if not ( $.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
         resources:
           requests:
+            {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
+          {{- if not ( $.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
             {{- include "image_holder_resources" $ | nindent 12 }}
-  {{- end }}
+          {{- end }}
 {{- end }}
       priorityClassName: system-cluster-critical
       volumes:

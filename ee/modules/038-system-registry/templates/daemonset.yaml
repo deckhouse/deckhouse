@@ -70,14 +70,14 @@ spec:
         app: system-registry-manager
     spec:
       {{- include "helm_lib_node_selector" (tuple . "master") | nindent 6 }}
-      {{- include "helm_lib_module_pod_security_context_run_as_user_root" . | nindent 6 }}
+      {{- include "helm_lib_module_pod_security_context_run_as_user_nobody" . | nindent 6 }}
       {{- include "helm_lib_tolerations" (tuple . "any-node" "uninitialized") | nindent 6 }}
       imagePullSecrets:
       - name: deckhouse-registry
       serviceAccountName: {{ .Chart.Name }}
       containers:
       - name: system-registry-manager
-        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all_and_add" (list . (list "SYS_CHROOT")) | nindent 8 }}
+        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" | nindent 8 }}
         {{- if and (hasKey $.Values.systemRegistry "imagesOverride") (hasKey $.Values.systemRegistry.imagesOverride "registryManager") (ne $.Values.systemRegistry.imagesOverride.registryManager "") }}
         image: {{ $.Values.systemRegistry.imagesOverride.registryManager }}
         imagePullPolicy: IfNotPresent
@@ -134,11 +134,12 @@ spec:
         image: "{{ $.Values.global.modulesImages.registry.base }}@{{ $imageDigest }}"
         command:
         - /pause
-  {{- if not ( $.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
         resources:
           requests:
+            {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
+          {{- if not ( $.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
             {{- include "image_holder_resources" $ | nindent 12 }}
-  {{- end }}
+          {{- end }}
 {{- end }}
       - name: kube-rbac-proxy
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
