@@ -240,8 +240,11 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 		mup.Update.Windows = update.Windows{{From: "8:00", To: "8:01"}}
 
 		suite.setupController("patch-out-of-update-window.yaml", initValues, mup)
-		dr := suite.getDeckhouseRelease("v1.25.1")
+		dr := suite.getDeckhouseRelease("v1.26.0")
 		_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
+		require.NoError(suite.T(), err)
+		dr = suite.getDeckhouseRelease("v1.25.1")
+		_, err = suite.ctr.createOrUpdateReconcile(ctx, dr)
 		require.NoError(suite.T(), err)
 	})
 
