@@ -126,15 +126,14 @@ cleanup:
 {{- $_ := set . "STRONGHOLD_PULL_TOKEN" (env "STRONGHOLD_PULL_TOKEN") }}
 {{- $_ := set . "DECKHOUSE_PRIVATE_REPO" (env "DECKHOUSE_PRIVATE_REPO") }}
 
+{{- $_ := set . "CI_COMMIT_TAG" (env "CI_COMMIT_TAG") }}
+
 # goproxy  settings
 {{- $_ := set . "GOPROXY" (env "GOPROXY") }}
 ---
 {{ range $path, $content := .Files.Glob ".werf/werf-**.yaml" }}
 {{ tpl $content $ }}
 {{ end }}
-
----
-{{ include "dev_alt_artifact" (dict "Images" .Images )}}
 ---
 artifact: golangci-lint-artifact
 from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
@@ -156,49 +155,13 @@ git:
 - add: /
   to: /deckhouse
   includePaths:
-    - dhctl
-    - deckhouse-controller
-    - global-hooks/**/*.go
-    - modules/**/*.go
-    - ee/se-plus/modules/021-cni-cilium/images/egress-gateway-agent/**/*.go
-    - ee/se-plus/modules/021-cni-cilium/images/egress-gateway-agent/go.mod
-    - ee/se-plus/modules/021-cni-cilium/images/egress-gateway-agent/go.sum
-    - go_lib/**/*.go
-    - go_lib/**/go.mod
-    - go_lib/**/go.sum
-    - pkg/**/*.go
-    - pkg/**/go.mod
-    - pkg/**/go.sum
-    - go.mod
-    - go.sum
-    - tools
-    - editions.yaml
+    {{ include "controller_src_git_imports_include_paths" . | nindent 4}}
   excludePaths:
     {{ .Files.Get (printf "tools/build_includes/modules-excluded-%s.yaml" .Env) | nindent 4}}
-    - global-hooks/**/*_test.go
-    - modules/**/*_test.go
-    - modules/*/images
-    - dhctl/development
-    - deckhouse-controller/development
-    - deckhouse-controller/cmd/deckhouse-controller/register-go-hooks.go
+    {{ include "controller_src_git_imports_exclude_paths" . | nindent 4}}
   stageDependencies:
     setup:
-      - dhctl/go.mod
-      - dhctl/go.sum
-      - go.mod
-      - go.sum
-      - dhctl/**/*.go
-      - deckhouse-controller/**/*.go
-      - deckhouse-controller/go-build.sh
-      - global-hooks/**/*.go
-      - go_lib/**/*.go
-      - go_lib/**/go.mod
-      - go_lib/**/go.sum
-      - pkg/**/*.go
-      - pkg/**/go.mod
-      - pkg/**/go.sum
-      - modules/**/*.go
-      - editions.yaml
+      {{ include "controller_src_git_imports_stage_deps" . | nindent 6}}
 {{ .Files.Get (printf "tools/build_includes/modules-with-dependencies-%s.yaml" .Env) }}
 {{ .Files.Get (printf "tools/build_includes/candi-%s.yaml" .Env) }}
 mount:
@@ -239,55 +202,16 @@ shell:
   - D8_VERSION=${CI_COMMIT_TAG} ./go-build.sh
   - mv deckhouse-controller /out
 ---
-image: dhctl
-final: false
-fromImage: base-for-go
-git:
-- add: /dhctl
-  to: /dhctl
-  stageDependencies:
-    install:
-    - go.mod
-    - go.sum
-    setup:
-    - "**/*.go"
-    - Makefile
-- add: /go_lib/registry-packages-proxy
-  to: /go_lib/registry-packages-proxy
-  stageDependencies:
-    install:
-      - go.mod
-      - go.sum
-    setup:
-      - "**/*.go"
-- add: /go_lib/dependency/k8s/drain
-  to: /go_lib/dependency/k8s/drain
-  stageDependencies:
-    install:
-      - go.mod
-      - go.sum
-    setup:
-      - "**/*.go"
-- add: /pkg/log
-  to: /pkg/log
-  stageDependencies:
-    install:
-      - go.mod
-      - go.sum
-    setup:
-      - "**/*.go"
-mount:
-- fromPath: ~/go-pkg-cache
-  to: /go/pkg
-shell:
-  install:
-    - cd /dhctl && go mod download
-  setup:
-    - cd /dhctl && D8_VERSION={{- env "CI_COMMIT_TAG" | default "dev" }} make build
-
----
 # render ssh-static
 {{ include "ssh_static_artifact" (dict "Images" .Images "SOURCE_REPO" .SOURCE_REPO) }}
+---
+{{ include "common_base_image" (dict "rootContext" . "k8sVersions" .kubectlForBaseComponents "CandiVersionMap" $.CandiVersionMap "prefix" "") }}
+---
+{{ include "base_for_go_image" (dict "rootContext" . "k8sVersions" .kubectlForBaseComponents "CandiVersionMap" $.CandiVersionMap "prefix" "") }}
+---
+{{ include "dhctl_src_artifact" (dict "gitPrefix" "") }}
+---
+{{ include "dhctl_artifact" (dict "GOPROXY" .GOPROXY "CI_COMMIT_TAG" (env "CI_COMMIT_TAG" | default "dev") ) }}
 ---
 image: release-channel-version-prebuild
 from: {{ .Images.BASE_ALPINE_DEV }}

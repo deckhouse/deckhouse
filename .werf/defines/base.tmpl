@@ -20,13 +20,14 @@
   to: /usr/local/bin/kubectl-{{ $k8sVersion }}
   before: setup
   {{- end }}
+
 {{- end }}
+
 
 # base components
 # . is list with indexes:
 #   0 - parent context
 #   1 - Files.Get prefix
-#   CandiVersionMap - dict CandiVersionMap from werf.yaml
 {{- define "base components" }}
 {{- $context := index . 0 -}}
 {{- $prefix := index . 1 -}}
@@ -57,4 +58,81 @@
   cat <<"EOD" > /etc/vim/vimrc.local
   {{- $context.Files.Get (printf "%sdeckhouse-controller/files/vimrc.local" $prefix) | nindent 2 }}
   EOD
+
+{{- end }}
+
+
+# common-base image
+# . is dict have keys:
+#   rootContext - root context contains .Files
+#   prefix - Files.Get prefix
+#   k8sVersions - list versions k8s to kubectl import
+#   CandiVersionMap - dict CandiVersionMap from werf.yaml
+#    - dict CandiVersionMap from werf.yaml
+{{- define "common_base_image" }}
+{{- $context := . -}}
+
+image: common-base
+fromImage: common/alt-p11-artifact
+import:
+- image: dev-alt-artifact
+  add: /
+  to: /
+  before: setup
+  includePaths:
+  - lib64/libz.so*
+  - lib64/libexpat.so*
+  - lib64/libssl.so.*
+  - lib64/libcrypto.so.*
+  - etc/pki
+  - usr/share/ca-certificates/ca-bundle.crt
+  - usr/bin/python3
+  - usr/bin/python3.12
+  - usr/lib/python3
+  - usr/lib64/python3
+  - usr/lib64/python3.12
+  - usr/lib64/libffi.so*
+  - usr/share/vim
+  - etc/vim
+  - etc/bash_completion.d
+  - etc/bashrc.d/bash_completion.sh
+  - usr/share/bash-completion
+  - usr/bin/vim-console
+{{ include "base components imports" (dict "k8sVersions" $context.k8sVersions "CandiVersionMap" $context.CandiVersionMap ) }}
+
+- image: common/distroless
+  add: /etc/ssl
+  to: /etc/ssl
+  before: setup
+
+- image: registrypackages/d8-curl-artifact-8-9-1
+  add: /d8-curl
+  to: /usr/bin/curl
+  before: setup
+
+shell:
+  beforeInstall:
+  {{- include "base components" (list $context.rootContext $context.prefix) | nindent 2 }}
+
+{{- end }}
+
+
+# base-for-go image
+# . is dict have keys:
+#   rootContext - root context contains .Files
+#   prefix - Files.Get prefix
+#   k8sVersions - list versions k8s to kubectl import
+#   CandiVersionMap - dict CandiVersionMap from werf.yaml
+{{- define "base_for_go_image" }}
+{{- $context := . -}}
+
+image: base-for-go
+fromImage: common/alt-p11-artifact
+import:
+{{ include "base components imports" (dict "k8sVersions" $context.k8sVersions "CandiVersionMap" $context.CandiVersionMap ) }}
+shell:
+  beforeInstall:
+  - apt-get install -y golang make git gcc
+  {{- include "base components" (list $context.rootContext $context.prefix) | nindent 2 }}
+
 {{- end }}

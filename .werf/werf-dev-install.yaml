@@ -10,40 +10,8 @@ git:
 import:
 {{ include "installer_and_installer_standalone_generic_imports" (dict "Env" $.Env) }}
 {{ include "installer_and_installer_standalone_terraform_imports" (dict "Env" $.Env "TF" $.TF "Editions" $.Editions) }}
-{{ include "installer_and_installer_standalone_libraries_and_binaries_imports" (dict) }}
-docker:
-  ENV:
-    EDITOR: vim
-shell:
-  beforeInstall:
-  - |
-    apt-get update && apt-get install -y locale && apt-get clean
-    find /var/lib/apt/ /var/cache/apt/ -type f -delete
-  setup:
-  - |
-    ln -fs /dhctl /usr/bin/dhctl
-    cat <<"EOD" > /etc/inputrc
-    {{- .Files.Get "deckhouse-controller/files/inputrc" | nindent 4 }}
-    EOD
+{{ include "installer_and_installer_standalone_libraries_and_binaries_imports" . }}
 
-    cat <<"EOD" > /etc/bashrc
-    PS1='\[\033[01;30m\][deckhouse]\[\033[00m\] \[\033[01;33m\]\u@\h\[\033[01;34m\] \w \$\[\033[00m\] '
+{{ include "installer_docker_properties" . }}
 
-    source /etc/bashrc.d/bash_completion.sh
-    EOD
-
-    rm -f /root/.bashrc
-    ln -s /etc/bashrc /root/.bashrc
-    rm -f  /.bashrc
-    ln -s /etc/bashrc /.bashrc
-
-    ln -fs /usr/bin/vim-console /usr/bin/vim
-    ln -fs /usr/bin/vim-console /usr/bin/vi
-
-    mkdir -p /etc/vim
-    cat <<"EOD" > /etc/vim/vimrc.local
-    {{- .Files.Get "deckhouse-controller/files/vimrc.local" | nindent 4 }}
-    EOD
-
-    echo 'eval "$(dhctl --completion-script-bash)"' >> /etc/bashrc
-    echo '{{- env "CI_COMMIT_TAG" | default "dev" }}' > /deckhouse/version
+{{ include "installer_prepare_with_shell" (list . "" .CI_COMMIT_REF) }}

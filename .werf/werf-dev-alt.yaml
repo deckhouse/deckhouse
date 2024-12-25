@@ -1,0 +1,8 @@
+---
+image: dev-alt-artifact
+final: false
+from: {{ .Images.BASE_ALT_DEV }}
+shell:
+  install:
+    - /binary_replace.sh -i "/usr/bin/envsubst" -o /relocate
+---

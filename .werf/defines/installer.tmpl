@@ -53,7 +53,9 @@
   - etc/bashrc.d/bash_completion.sh
   - usr/share/bash-completion
   - usr/bin/vim-console
+
 {{- end }}
+
 
 # render terraform imports for install and install standalone images
 # . is dict with next params
@@ -62,6 +64,7 @@
 #   Editions - Editions from werf.yaml
 {{- define "installer_and_installer_standalone_terraform_imports" }}
 {{- $context := . -}}
+
 - artifact: terraform # from modules/040-terraform-manager/images/terraform-manager-base/werf.inc.yaml
   add: /terraform/terraform
   to: /bin/terraform
@@ -80,4 +83,60 @@
     {{- break -}}
   {{- end }}
 {{- end }}
+
+{{- end }}
+
+
+# render shell scripts for preparing installer image
+# . is list with indexes:
+#   0 - parent context
+#   1 - Files.Get prefix
+#   2 - CI_COMMIT_TAG env
+{{- define "installer_prepare_with_shell" }}
+{{- $context := index . 0 -}}
+{{- $prefix := index . 1 -}}
+{{- $CI_COMMIT_TAG := index . 2 -}}
+
+shell:
+  beforeInstall:
+  - |
+    apt-get update && apt-get install -y locale && apt-get clean
+    find /var/lib/apt/ /var/cache/apt/ -type f -delete
+  setup:
+  - |
+    ln -fs /dhctl /usr/bin/dhctl
+    cat <<"EOD" > /etc/inputrc
+    {{- $context.Files.Get (printf "%sdeckhouse-controller/files/inputrc" $prefix) | nindent 4 }}
+    EOD
+
+    cat <<"EOD" > /etc/bashrc
+    PS1='\[\033[01;30m\][deckhouse]\[\033[00m\] \[\033[01;33m\]\u@\h\[\033[01;34m\] \w \$\[\033[00m\] '
+
+    source /etc/bashrc.d/bash_completion.sh
+    EOD
+
+    rm -f /root/.bashrc
+    ln -s /etc/bashrc /root/.bashrc
+    rm -f  /.bashrc
+    ln -s /etc/bashrc /.bashrc
+
+    ln -fs /usr/bin/vim-console /usr/bin/vim
+    ln -fs /usr/bin/vim-console /usr/bin/vi
+
+    mkdir -p /etc/vim
+    cat <<"EOD" > /etc/vim/vimrc.local
+    {{- $context.Files.Get (printf "%sdeckhouse-controller/files/vimrc.local" $prefix) | nindent 4 }}
+    EOD
+
+    echo 'eval "$(dhctl --completion-script-bash)"' >> /etc/bashrc
+    echo '{{- $CI_COMMIT_TAG }}' > /deckhouse/version
+
+{{- end }}
+
+
+# render docker parameters for installer image
+{{- define "installer_docker_properties" }}
+docker:
+  ENV:
+    EDITOR: vim
 {{- end }}
