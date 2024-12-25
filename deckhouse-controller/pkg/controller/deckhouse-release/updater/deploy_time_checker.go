@@ -126,7 +126,14 @@ func (c *DeployTimeChecker) checkNotify(dtr *DeployTimeResult, dr *v1alpha1.Deck
 	}
 }
 
-func (c *DeployTimeChecker) checkWindow(dtr *DeployTimeResult, dr *v1alpha1.DeckhouseRelease, metricLabels updater.MetricLabels) {
+func (c *DeployTimeChecker) checkWindowModeAuto(dtr *DeployTimeResult, dr *v1alpha1.DeckhouseRelease, metricLabels updater.MetricLabels) {
+	if c.settings.Mode == updater.ModeAuto && !c.settings.Windows.IsAllowed(dtr.ReleaseApplyTime) {
+		dtr.ReleaseApplyTime = c.settings.Windows.NextAllowedTime(dtr.ReleaseApplyTime)
+		dtr.Reason = dtr.Reason.add(outOfWindowReason)
+	}
+}
+
+func (c *DeployTimeChecker) checkWindowModeAutoPatch(dtr *DeployTimeResult, dr *v1alpha1.DeckhouseRelease, metricLabels updater.MetricLabels) {
 	if c.settings.Mode == updater.ModeAutoPatch && !c.settings.Windows.IsAllowed(dtr.ReleaseApplyTime) {
 		dtr.ReleaseApplyTime = c.settings.Windows.NextAllowedTime(dtr.ReleaseApplyTime)
 		dtr.Reason = dtr.Reason.add(outOfWindowReason)
@@ -169,7 +176,7 @@ func (c *DeployTimeChecker) calculatePatchDeployTime(dr *v1alpha1.DeckhouseRelea
 
 	c.checkCanary(result, dr, metricLabels)
 	c.checkNotify(result, dr, metricLabels)
-	c.checkWindow(result, dr, metricLabels)
+	c.checkWindowModeAutoPatch(result, dr, metricLabels)
 	c.checkManualApproved(result, dr, metricLabels)
 
 	if !result.ReleaseApplyAfterTime.IsZero() {
@@ -265,7 +272,7 @@ func (c *DeployTimeChecker) calculateMinorDeployTime(dr *v1alpha1.DeckhouseRelea
 	c.checkCooldown(result, dr, metricLabels)
 	c.checkCanary(result, dr, metricLabels)
 	c.checkNotify(result, dr, metricLabels)
-	c.checkWindow(result, dr, metricLabels)
+	c.checkWindowModeAuto(result, dr, metricLabels)
 	c.checkManualApproved(result, dr, metricLabels)
 
 	if !result.ReleaseApplyAfterTime.IsZero() {
