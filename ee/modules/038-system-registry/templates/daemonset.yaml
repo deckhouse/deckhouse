@@ -84,9 +84,6 @@ spec:
         {{- else }}
         image: {{ include "helm_lib_module_image" (list . "systemRegistryManager") }}
         {{- end }}
-        volumeMounts:
-        - mountPath: /tmp
-          name: tmp
         env:
         - name: HOST_IP
           valueFrom:
@@ -177,6 +174,3 @@ spec:
             {{- include "helm_lib_container_kube_rbac_proxy_resources" . | nindent 12 }}
           {{- end }}
       priorityClassName: system-cluster-critical
-      volumes:
-      - name: tmp
-        emptyDir: {}
