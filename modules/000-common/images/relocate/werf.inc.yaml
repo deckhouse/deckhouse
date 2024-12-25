@@ -1,7 +1,7 @@
 ---
 # base artifact to do relocate
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
-fromImage: {{ .ModuleName }}/alt-p11-artifact
+fromImage: common/alt-p11-artifact
 final: false
 git:
 - add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/binary_replace.sh
