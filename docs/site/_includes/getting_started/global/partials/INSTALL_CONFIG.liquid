@@ -1,8 +1,8 @@
 {% assign revision=include.revision %}
 
-{% if revision == 'ee' %}
-{% include getting_started/global/EE_ACCESS.md %}
-<div class="dimmer-block-content{% if page.ee_only %} TODOdisabled{% endif %}">
+{% if revision != "ce" %}
+{% include getting_started/global/EE_ACCESS.md revision=revision %}
+<div class="dimmer-block-content{% if page.ee_only %} disabled{% endif %}">
 {% endif %}
 
 <div markdown="1">
@@ -21,7 +21,7 @@
 {%- endif %}
 
 Create the `config.yml` file.
-{% capture includePath %}_includes/getting_started/{{ page.platform_code }}/partials/config.yml{% if include.layout.size > 0 %}.{{ include.layout }}{% endif %}.{{ revision }}.inc{% endcapture %}
+{% capture includePath %}_includes/getting_started/{{ page.platform_code }}/partials/config.yml{% if include.layout.size > 0 %}.{{ include.layout }}{% endif %}.{% if revision != "ce" %}{{ "other" }}{% else %}{{ revision }}{% endif %}.inc{% endcapture %}
 {% snippetcut name="config.yml" selector="config-yml" %}
 {% include_file "{{ includePath }}" syntax="yaml" %}
 {% endsnippetcut %}
@@ -64,6 +64,14 @@ Also, you can list the necessary cluster node taints in ModuleConfig `global` in
 {% endif %}
 </div>
 
-{% if revision == 'ee' %}
+<script>
+  $(document).ready(function() {
+    document.getElementById('block_layout_{{ revision }}').querySelectorAll('span').forEach(element => {
+      element.textContent = element.textContent.replace('<REVISION>', '{{ revision }}');
+    })
+  });
+</script>
+
+{% if revision != "ce" %}
 </div>
 {% endif %}
