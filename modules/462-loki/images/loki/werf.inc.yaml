@@ -1,49 +1,47 @@
+{{- $LokiVersion := "v2.9.10" }}
 ---
-image: {{ .ModuleName }}/{{ .ImageName }}
-fromImage: common/distroless
-import:
-- image: {{ .ModuleName }}/{{ .ImageName }}-artifact
-  add: /src/loki
-  to: /usr/bin/loki
-  before: setup
-docker:
-  ENTRYPOINT: [ "/usr/bin/loki" ]
----
-image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 fromImage: common/src-artifact
-final: false
 git:
-- add: /{{ .ModulePath }}modules/462-{{ .ModuleName }}/images/{{ .ImageName }}/patches
-  to: /patches
-  stageDependencies:
-    install:
-    - '**/*'
+  - add: /modules/462-loki/images/{{ $.ImageName }}
+    to: /
+    stageDependencies:
+      setup:
+        - "**/*"
+    includePaths:
+      - patches
 shell:
   install:
-  - cd /src
-  - git clone --depth 1 --branch v2.9.10 {{ .SOURCE_REPO }}/grafana/loki.git . && rm -rf /src/.git
-  - git apply /patches/*.patch --verbose
-  - rm -rf tools/lambda-promtail operator
+    - git clone --depth 1 --branch {{ $LokiVersion }} {{ .SOURCE_REPO }}/grafana/loki.git /src
+    - cd /src
+    - rm -r .git
 ---
-image: {{ .ModuleName }}/{{ .ImageName }}-artifact
-from: {{ .Images.BASE_GOLANG_23_ALPINE }}
+image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
 final: false
 import:
-- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
-  add: /src
-  to: /src
-  before: install
+  - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+    add: /src
+    before: install
 mount:
   - fromPath: ~/go-pkg-cache
     to: /go/pkg
 shell:
   install:
-  - cd /src
-  - export GOPROXY={{ .GOPROXY }}
-  - go mod download
-  - go mod vendor
-  setup:
-  - cd /src
-  - go build -ldflags="-s -w" -o loki cmd/loki/main.go
-  - chown 64535:64535 /src/
-  - chmod 0700 /src/loki
+    - cd /src
+    - export GOPROXY={{ $.GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64
+    - go mod download -x
+    - go mod vendor
+    - go build -o loki ./cmd/loki
+    - chown -R 64535:64535 /src/loki
+    - chmod 0700 /src/loki
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}
+fromImage: common/distroless
+import:
+  - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+    add: /src/loki
+    to: /app/loki
+    after: setup
+docker:
+  ENTRYPOINT: ["/app/loki"]
