@@ -30,46 +30,48 @@ import (
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
-type OrderCalculator struct {
+type TaskCalculator struct {
 	k8sclient client.Client
 
 	log *log.Logger
 }
 
-func NewOrderCalculator(k8sclient client.Client, logger *log.Logger) *OrderCalculator {
-	return &OrderCalculator{
+func NewTaskCalculator(k8sclient client.Client, logger *log.Logger) *TaskCalculator {
+	return &TaskCalculator{
 		k8sclient: k8sclient,
 		log:       logger,
 	}
 }
 
-type Order int
+type TaskType int
 
 const (
-	Skip Order = iota
+	Skip TaskType = iota
 	Process
 	Await
 )
 
-type CalculatingResult struct {
-	Order   Order
-	Message string
+type Task struct {
+	TaskType TaskType
+	Message  string
 
 	IsPatch  bool
 	IsSingle bool
 	IsLatest bool
 
 	DeployedReleaseInfo *ReleaseInfo
+	QueueDepth          int
 }
 
 type ReleaseInfo struct {
-	Name    string
-	Version *semver.Version
+	Name       string
+	Version    *semver.Version
+	QueueDepth uint64
 }
 
 var ErrReleasePhaseIsNotPending = errors.New("release phase is not pending")
 
-func (p *OrderCalculator) CalculatePendingReleaseOrder(ctx context.Context, dr *v1alpha1.DeckhouseRelease) (*CalculatingResult, error) {
+func (p *TaskCalculator) CalculatePendingReleaseOrder(ctx context.Context, dr *v1alpha1.DeckhouseRelease) (*Task, error) {
 	if dr.GetPhase() != v1alpha1.DeckhouseReleasePhasePending {
 		return nil, ErrReleasePhaseIsNotPending
 	}
@@ -80,8 +82,8 @@ func (p *OrderCalculator) CalculatePendingReleaseOrder(ctx context.Context, dr *
 	}
 
 	if len(releases) == 1 {
-		return &CalculatingResult{
-			Order:    Process,
+		return &Task{
+			TaskType: Process,
 			IsSingle: true,
 			IsLatest: true,
 		}, nil
@@ -97,8 +99,8 @@ func (p *OrderCalculator) CalculatePendingReleaseOrder(ctx context.Context, dr *
 	if deployedReleaseInfo != nil {
 		// if deployed version is greater than the pending one, this pending release should be skipped
 		if deployedReleaseInfo.Version.GreaterThan(dr.GetVersion()) {
-			return &CalculatingResult{
-				Order: Skip,
+			return &Task{
+				TaskType: Skip,
 			}, nil
 		}
 	}
@@ -107,7 +109,8 @@ func (p *OrderCalculator) CalculatePendingReleaseOrder(ctx context.Context, dr *
 		return a.GetVersion().Compare(b)
 	})
 
-	isLatestRelease := releaseIdx == len(releases)-1
+	releaseQueueDepth := len(releases) - 1 - releaseIdx
+	isLatestRelease := releaseQueueDepth == 0
 
 	// check previous release
 	// only for awaiting purpose
@@ -124,9 +127,9 @@ func (p *OrderCalculator) CalculatePendingReleaseOrder(ctx context.Context, dr *
 				msg = fmt.Sprintf("Awaiting for %s release to be deployed", prevRelease.GetVersion().String())
 			}
 
-			return &CalculatingResult{
-				Order:   Await,
-				Message: msg,
+			return &Task{
+				TaskType: Await,
+				Message:  msg,
 			}, nil
 		}
 	}
@@ -140,30 +143,32 @@ func (p *OrderCalculator) CalculatePendingReleaseOrder(ctx context.Context, dr *
 		// current release is definitely greatest at patch version
 		if dr.GetVersion().Major() < nextRelease.GetVersion().Major() ||
 			dr.GetVersion().Minor() < nextRelease.GetVersion().Minor() {
-			return &CalculatingResult{
-				Order:               Process,
+			return &Task{
+				TaskType:            Process,
 				IsPatch:             true,
 				IsLatest:            isLatestRelease,
 				DeployedReleaseInfo: deployedReleaseInfo,
+				QueueDepth:          releaseQueueDepth,
 			}, nil
 		}
 
-		return &CalculatingResult{
-			Order:   Skip,
-			IsPatch: true,
+		return &Task{
+			TaskType: Skip,
+			IsPatch:  true,
 		}, nil
 	}
 
 	// neighbours checks passed
 	// only minor/major releases must be here
-	return &CalculatingResult{
-		Order:               Process,
+	return &Task{
+		TaskType:            Process,
 		IsLatest:            isLatestRelease,
 		DeployedReleaseInfo: deployedReleaseInfo,
+		QueueDepth:          releaseQueueDepth,
 	}, nil
 }
 
-func (p *OrderCalculator) listReleases(ctx context.Context) ([]v1alpha1.DeckhouseRelease, error) {
+func (p *TaskCalculator) listReleases(ctx context.Context) ([]v1alpha1.DeckhouseRelease, error) {
 	var releases v1alpha1.DeckhouseReleaseList
 	err := p.k8sclient.List(ctx, &releases)
 	if err != nil {
@@ -173,7 +178,7 @@ func (p *OrderCalculator) listReleases(ctx context.Context) ([]v1alpha1.Deckhous
 	return releases.Items, nil
 }
 
-func (p *OrderCalculator) getDeployedReleaseInfo(releases []v1alpha1.DeckhouseRelease) *ReleaseInfo {
+func (p *TaskCalculator) getDeployedReleaseInfo(releases []v1alpha1.DeckhouseRelease) *ReleaseInfo {
 	deployedIdx := slices.IndexFunc(releases, func(a v1alpha1.DeckhouseRelease) bool {
 		return a.Status.Phase == v1alpha1.DeckhouseReleasePhaseDeployed
 	})

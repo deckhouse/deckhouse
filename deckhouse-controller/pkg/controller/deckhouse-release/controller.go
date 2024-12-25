@@ -313,7 +313,7 @@ func (r *deckhouseReleaseReconciler) pendingReleaseReconcile(ctx context.Context
 
 	// TODO: ready check service?
 	// note: in module release we have pod ready by default
-	podReady := r.isDeckhousePodReady()
+	podReady := r.isDeckhousePodReady(ctx)
 
 	us := r.updateSettings.Get()
 
@@ -367,19 +367,19 @@ func (r *deckhouseReleaseReconciler) pendingReleaseReconcile(ctx context.Context
 	// 2.1) if not met any requirements - update phase to Pending with all requirements errors and requeue
 	// 3) Apply if force with force logic ???
 	// 4) Apply ussually release
-	oCalc := d8updater.NewOrderCalculator(r.client, r.logger)
-	order, err := oCalc.CalculatePendingReleaseOrder(ctx, dr)
+	oCalc := d8updater.NewTaskCalculator(r.client, r.logger)
+	task, err := oCalc.CalculatePendingReleaseOrder(ctx, dr)
 	if err != nil {
 		return res, err
 	}
 
-	switch order.Order {
+	switch task.TaskType {
 	case d8updater.Process:
 		// pass
 	case d8updater.Skip:
 		err := r.updateReleaseStatus(ctx, dr, &v1alpha1.DeckhouseReleaseStatus{
 			Phase:   v1alpha1.DeckhouseReleasePhaseSkipped,
-			Message: order.Message,
+			Message: task.Message,
 		})
 		if err != nil {
 			r.logger.Warn("skip order status update ", slog.String("name", dr.GetName()), log.Err(err))
@@ -390,7 +390,7 @@ func (r *deckhouseReleaseReconciler) pendingReleaseReconcile(ctx context.Context
 	case d8updater.Await:
 		err := r.updateReleaseStatus(ctx, dr, &v1alpha1.DeckhouseReleaseStatus{
 			Phase:   v1alpha1.DeckhouseReleasePhasePending,
-			Message: order.Message,
+			Message: task.Message,
 		})
 		if err != nil {
 			r.logger.Warn("await order status update ", slog.String("name", dr.GetName()), log.Err(err))
@@ -432,7 +432,7 @@ func (r *deckhouseReleaseReconciler) pendingReleaseReconcile(ctx context.Context
 	}
 
 	if dr.GetForce() {
-		err := r.ApplyForcedRelease(ctx, dr, order)
+		err := r.ApplyForcedRelease(ctx, dr, task)
 		if err != nil {
 			return res, fmt.Errorf("apply forced release: %w", err)
 		}
@@ -442,13 +442,58 @@ func (r *deckhouseReleaseReconciler) pendingReleaseReconcile(ctx context.Context
 		return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
 	}
 
-	err = r.ApplyPredictedRelease(ctx, dr, order)
-	if err != nil {
-		// TODO: check what is it???
-		return r.wrapApplyReleaseError(err)
+	// if deckhouse pod has bootstrap image -> apply first release
+	// doesn't matter which is update mode
+	if r.deckhouseIsBootstrapping && task.IsSingle {
+		err := r.runReleaseDeploy(ctx, dr, task.DeployedReleaseInfo)
+		if err != nil {
+			return res, fmt.Errorf("run single bootstrapping release deploy: %w", err)
+		}
+
+		return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
 	}
 
-	// return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
+	metricLabels := updater.NewReleaseMetricLabels(dr)
+
+	var dtr *d8updater.DeployTimeReason
+	timeChecker := d8updater.NewDeployTimeChecker(r.dc, r.metricsUpdater, dus, r.isDeckhousePodReady, r.logger)
+	if task.IsPatch {
+		dtr = timeChecker.CheckPatchReleaseConditions(ctx, dr, metricLabels)
+	} else {
+		dtr = timeChecker.CheckMinorReleaseConditions(ctx, dr, metricLabels)
+	}
+
+	if dtr != nil {
+		err := r.updateReleaseStatus(ctx, dr, &v1alpha1.DeckhouseReleaseStatus{
+			Phase:   v1alpha1.DeckhouseReleasePhasePending,
+			Message: dtr.Message,
+		})
+		if err != nil {
+			r.logger.Warn("met release conditions status update ", slog.String("name", dr.GetName()), log.Err(err))
+		}
+
+		err = ctrlutils.UpdateWithRetry(ctx, r.client, dr, func() error {
+			if !dtr.ReleaseApplyAfterTime.IsZero() {
+				dr.Spec.ApplyAfter = &metav1.Time{Time: dtr.ReleaseApplyAfterTime.UTC()}
+			}
+
+			dr.Annotations[v1alpha1.DeckhouseReleaseAnnotationNotificationTimeShift] = "true"
+
+			return nil
+		})
+		if err != nil {
+			r.logger.Warn("met release conditions resource update ", slog.String("name", dr.GetName()), log.Err(err))
+		}
+
+		return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
+	}
+
+	err = r.ApplyPredictedRelease(ctx, dr, task, metricLabels)
+	if err != nil {
+		return res, fmt.Errorf("apply predicted release: %w", err)
+	}
+
+	return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
 
 	////////////////////////////////////////////////////
 	// New Logic End
@@ -517,7 +562,7 @@ func (r *deckhouseReleaseReconciler) pendingReleaseReconcile(ctx context.Context
 }
 
 // ApplyForcedRelease deploys forced release without any checks (windows, requirements, approvals and so on)
-func (r *deckhouseReleaseReconciler) ApplyForcedRelease(ctx context.Context, dr *v1alpha1.DeckhouseRelease, order *d8updater.CalculatingResult) error {
+func (r *deckhouseReleaseReconciler) ApplyForcedRelease(ctx context.Context, dr *v1alpha1.DeckhouseRelease, order *d8updater.Task) error {
 	r.logger.Warn("forcing release", slog.String("release", dr.GetName()))
 
 	err := r.runReleaseDeploy(ctx, dr, order.DeployedReleaseInfo)
@@ -546,29 +591,11 @@ func (r *deckhouseReleaseReconciler) ApplyForcedRelease(ctx context.Context, dr 
 //   - Release requirements
 //
 // In addition to the regular error, ErrDeployConditionsNotMet or NotReadyForDeployError is returned as appropriate.
-func (r *deckhouseReleaseReconciler) ApplyPredictedRelease(ctx context.Context, dr *v1alpha1.DeckhouseRelease, order *d8updater.CalculatingResult) error {
-	// if deckhouse pod has bootstrap image -> apply first release
-	// doesn't matter which is update mode
-	if r.deckhouseIsBootstrapping && order.IsSingle {
-		err := r.runReleaseDeploy(ctx, dr, order.DeployedReleaseInfo)
-		if err != nil {
-			return fmt.Errorf("run single bootstrapping release deploy: %w", err)
-		}
-
-		return nil
-	}
-
-	metricLabels := updater.NewReleaseMetricLabels(dr)
-
+func (r *deckhouseReleaseReconciler) ApplyPredictedRelease(ctx context.Context, dr *v1alpha1.DeckhouseRelease, order *d8updater.Task, metricLabels updater.MetricLabels) error {
 	var err error
-	// if order.IsPatch {
-	// 	err = r.checkPatchReleaseConditions(ctx, dr, metricLabels)
-	// } else {
-	// 	err = r.checkMinorReleaseConditions(predictedRelease, metricLabels)
-	// }
-
-	// // TODO: purpose of this???
-	// r.setReleaseQueueDepthLabel(metricLabels)
+	if metricLabels[updater.ManualApprovalRequired] == "true" {
+		metricLabels[updater.ReleaseQueueDepth] = strconv.Itoa(order.QueueDepth)
+	}
 
 	// if the predicted release has an index less than the number of awaiting releases
 	// calculate and set releaseDepthQueue label
@@ -897,11 +924,11 @@ func (r *deckhouseReleaseReconciler) getRegistrySecret(ctx context.Context) (*ut
 	return regSecret, nil
 }
 
-func (r *deckhouseReleaseReconciler) isDeckhousePodReady() bool {
+func (r *deckhouseReleaseReconciler) isDeckhousePodReady(ctx context.Context) bool {
 	deckhousePodIP := aoapp.ListenAddress
 
 	url := fmt.Sprintf("http://%s:4222/readyz", deckhousePodIP)
-	req, err := http.NewRequest(http.MethodGet, url, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		r.logger.Errorf("error getting deckhouse pod readyz status: %s", err)
 	}
@@ -942,7 +969,7 @@ func (r *deckhouseReleaseReconciler) updateByImageHashLoop(ctx context.Context) 
 func (r *deckhouseReleaseReconciler) reconcileDeployedRelease(ctx context.Context, dr *v1alpha1.DeckhouseRelease) (ctrl.Result, error) {
 	var res ctrl.Result
 
-	if r.isDeckhousePodReady() {
+	if r.isDeckhousePodReady(ctx) {
 		data := getReleaseData(dr)
 		data.IsUpdating = false
 		err := r.newUpdaterKubeAPI().SaveReleaseData(ctx, dr, data)

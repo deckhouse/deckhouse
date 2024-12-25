@@ -20,7 +20,6 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	"net/http"
 	"time"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
@@ -28,79 +27,67 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/dependency/requirements"
 	"github.com/deckhouse/deckhouse/go_lib/updater"
 	"github.com/deckhouse/deckhouse/pkg/log"
-	aoapp "github.com/flant/addon-operator/pkg/app"
 )
 
 type DeployTimeChecker struct {
-	dc              dependency.Container
 	releaseNotifier *ReleaseNotifier
 	metricsUpdater  updater.MetricsUpdater
 
 	settings *updater.Settings
 
-	now            time.Time
-	deckhousePodIP string
+	now                   time.Time
+	deckhousePodReadyFunc func(ctx context.Context) bool
 
 	logger *log.Logger
 }
 
-func NewDeployTimeChecker(dc dependency.Container, releaseNotifier *ReleaseNotifier, metricsUpdater updater.MetricsUpdater, settings *updater.Settings, logger *log.Logger) *DeployTimeChecker {
+func NewDeployTimeChecker(dc dependency.Container, metricsUpdater updater.MetricsUpdater, settings *updater.Settings, deckhousePodReadyFunc func(ctx context.Context) bool, logger *log.Logger) *DeployTimeChecker {
 	return &DeployTimeChecker{
-		dc:              dc,
-		releaseNotifier: releaseNotifier,
-		metricsUpdater:  metricsUpdater,
+		metricsUpdater: metricsUpdater,
 
 		settings: settings,
 
-		now: dc.GetClock().Now().UTC(),
+		now:                   dc.GetClock().Now().UTC(),
+		deckhousePodReadyFunc: deckhousePodReadyFunc,
 
 		logger: logger,
 	}
 }
 
-func (c *DeployTimeChecker) CheckRelease() error {
-	return nil
+type DeployTimeReason struct {
+	Reason                deployDelayReason
+	Message               string
+	ReleaseApplyAfterTime time.Time
 }
 
 // for patch, we check fewer conditions, then for minor release
 // - Canary settings
-func (c *DeployTimeChecker) checkPatchReleaseConditions(ctx context.Context, dr *v1alpha1.DeckhouseRelease, metricLabels updater.MetricLabels) error {
-	dtResult, err := c.calculatePatchDeployTime(dr, metricLabels)
-	if err != nil {
-		return fmt.Errorf("calculate patch result deploy time: %w", err)
-	}
-
-	// TODO: return info about DeployTimeAfter to update annotation
-	// err := c.kubeAPI.PatchReleaseApplyAfter(dr, newApplyAfter)
-	// if err != nil {
-	// 	return nil, fmt.Errorf("patch release %s apply after: %w", dr.GetName(), err)
-	// }
+func (c *DeployTimeChecker) CheckPatchReleaseConditions(ctx context.Context, dr *v1alpha1.DeckhouseRelease, metricLabels updater.MetricLabels) *DeployTimeReason {
+	resultDeployTime := c.calculatePatchDeployTime(dr, metricLabels)
 
 	// check: Notification
 	if !c.settings.NotificationConfig.IsEmpty() && c.settings.NotificationConfig.ReleaseType == updater.ReleaseTypeAll {
 		metricLabels.SetFalse(updater.NotificationNotSent)
 
-		err = c.releaseNotifier.sendReleaseNotification(ctx, dr, dtResult.ReleaseApplyTime)
+		err := c.releaseNotifier.sendReleaseNotification(ctx, dr, resultDeployTime.ReleaseApplyTime)
 		if err != nil {
 			metricLabels.SetTrue(updater.NotificationNotSent)
 
-			err := c.updateReleaseStatus(ctx, dr, &v1alpha1.DeckhouseReleaseStatus{
-				Phase:   v1alpha1.DeckhouseReleasePhasePending,
-				Message: "release blocked: failed to send release notification",
-			})
-			if err != nil {
-				c.logger.Warn("met requirements status update ", slog.String("name", dr.GetName()), log.Err(err))
+			return &DeployTimeReason{
+				Message:               "release blocked, failed to send release notification",
+				ReleaseApplyAfterTime: resultDeployTime.ReleaseApplyAfterTime,
 			}
-
-			return fmt.Errorf("send release notification: %w", err)
 		}
 	}
 
-	if dr.GetApplyNow() {
+	if dr.GetApplyNow() || resultDeployTime.Reason.IsNoDelay() {
 		return nil
 	}
 
-	return c.postponeDeploy(dr, dtResult.Reason, dtResult.ReleaseApplyTime)
+	return &DeployTimeReason{
+		Message:               resultDeployTime.Reason.Message(dr, resultDeployTime.ReleaseApplyTime),
+		ReleaseApplyAfterTime: resultDeployTime.ReleaseApplyAfterTime,
+	}
 }
 
 type DeployTimeResult struct {
@@ -109,72 +96,88 @@ type DeployTimeResult struct {
 	Reason                deployDelayReason
 }
 
-func (c *DeployTimeChecker) calculatePatchDeployTime(dr *v1alpha1.DeckhouseRelease, metricLabels updater.MetricLabels) (*DeployTimeResult, error) {
-	result := &DeployTimeResult{
-		ReleaseApplyTime: c.now,
-		Reason:           noDelay,
-	}
-
-	if dr.GetApplyNow() {
-		return result, nil
-	}
-
-	// check: canary settings
+func (c *DeployTimeChecker) checkCanary(dtr *DeployTimeResult, dr *v1alpha1.DeckhouseRelease, metricLabels updater.MetricLabels) {
 	if dr.GetApplyAfter() != nil {
 		applyAfter := *dr.GetApplyAfter()
 
 		if c.now.Before(applyAfter) {
 			c.logger.Warn("release is postponed by canary process, waiting", slog.String("name", dr.GetName()))
 
-			result = &DeployTimeResult{
-				ReleaseApplyTime: applyAfter,
-				Reason:           result.Reason.add(canaryDelayReason),
-			}
+			dtr.ReleaseApplyTime = applyAfter
+			dtr.Reason = dtr.Reason.add(canaryDelayReason)
 		}
 	}
+}
 
+func (c *DeployTimeChecker) checkNotify(dtr *DeployTimeResult, dr *v1alpha1.DeckhouseRelease, metricLabels updater.MetricLabels) {
 	if !dr.GetNotified() &&
 		c.settings.NotificationConfig.MinimalNotificationTime.Duration > 0 {
 		minApplyTime := c.now.Add(c.settings.NotificationConfig.MinimalNotificationTime.Duration)
 
-		if minApplyTime.Before(result.ReleaseApplyTime) {
+		if minApplyTime.Before(dtr.ReleaseApplyTime) {
 			// TODO: purpose???
-			minApplyTime = result.ReleaseApplyTime
+			minApplyTime = dtr.ReleaseApplyTime
 		} else {
-			result = &DeployTimeResult{
-				ReleaseApplyTime:      minApplyTime,
-				ReleaseApplyAfterTime: minApplyTime,
-				Reason:                result.Reason.add(notificationDelayReason),
-			}
+			dtr.ReleaseApplyTime = minApplyTime
+			dtr.ReleaseApplyAfterTime = minApplyTime
+			dtr.Reason = dtr.Reason.add(notificationDelayReason)
 		}
 	}
+}
 
-	if c.settings.Mode == updater.ModeAutoPatch && !c.settings.Windows.IsAllowed(result.ReleaseApplyTime) {
-		result = &DeployTimeResult{
-			ReleaseApplyTime: c.settings.Windows.NextAllowedTime(result.ReleaseApplyTime),
-			Reason:           result.Reason.add(outOfWindowReason),
-		}
+func (c *DeployTimeChecker) checkWindow(dtr *DeployTimeResult, dr *v1alpha1.DeckhouseRelease, metricLabels updater.MetricLabels) {
+	if c.settings.Mode == updater.ModeAutoPatch && !c.settings.Windows.IsAllowed(dtr.ReleaseApplyTime) {
+		dtr.ReleaseApplyTime = c.settings.Windows.NextAllowedTime(dtr.ReleaseApplyTime)
+		dtr.Reason = dtr.Reason.add(outOfWindowReason)
 	}
+}
 
+func (c *DeployTimeChecker) checkManualApproved(dtr *DeployTimeResult, dr *v1alpha1.DeckhouseRelease, metricLabels updater.MetricLabels) {
 	// check: release is approved in Manual mode
 	if c.settings.Mode == updater.ModeManual && !dr.GetManuallyApproved() {
 		c.logger.Info("release is waiting for manual approval", slog.String("name", dr.GetName()))
 
 		metricLabels.SetTrue(updater.ManualApprovalRequired)
 
-		result = &DeployTimeResult{
-			ReleaseApplyTime: c.now,
-			Reason:           manualApprovalRequiredReason,
+		dtr.ReleaseApplyTime = time.Time{}
+		dtr.Reason = manualApprovalRequiredReason
+	}
+}
+
+func (c *DeployTimeChecker) checkCooldown(dtr *DeployTimeResult, dr *v1alpha1.DeckhouseRelease, metricLabels updater.MetricLabels) {
+	// check: release cooldown
+	if dr.GetCooldownUntil() != nil {
+		cooldownUntil := *dr.GetCooldownUntil()
+		if c.now.Before(cooldownUntil) {
+			c.logger.Warn("release in cooldown", slog.String("name", dr.GetName()))
+
+			dtr.ReleaseApplyTime = *dr.GetCooldownUntil()
+			dtr.Reason = dtr.Reason.add(cooldownDelayReason)
 		}
 	}
+}
+
+func (c *DeployTimeChecker) calculatePatchDeployTime(dr *v1alpha1.DeckhouseRelease, metricLabels updater.MetricLabels) *DeployTimeResult {
+	result := &DeployTimeResult{
+		Reason: noDelay,
+	}
+
+	if dr.GetApplyNow() {
+		return result
+	}
+
+	c.checkCanary(result, dr, metricLabels)
+	c.checkNotify(result, dr, metricLabels)
+	c.checkWindow(result, dr, metricLabels)
+	c.checkManualApproved(result, dr, metricLabels)
 
 	if !result.ReleaseApplyAfterTime.IsZero() {
 		result.Reason = notificationDelayReason
 
-		return result, nil
+		return result
 	}
 
-	return result, nil
+	return result
 }
 
 // for minor release (version change) we check more conditions
@@ -185,213 +188,90 @@ func (c *DeployTimeChecker) calculatePatchDeployTime(dr *v1alpha1.DeckhouseRelea
 // - Canary settings
 // - Update windows or manual approval
 // - Deckhouse pod is ready
-func (c *DeployTimeChecker) checkMinorReleaseConditions(ctx context.Context, dr *v1alpha1.DeckhouseRelease, metricLabels updater.MetricLabels) error {
+func (c *DeployTimeChecker) CheckMinorReleaseConditions(ctx context.Context, dr *v1alpha1.DeckhouseRelease, metricLabels updater.MetricLabels) *DeployTimeReason {
 	// check: release disruptions (hard lock)
-	passed := c.checkReleaseDisruptions(dr)
-	if !passed {
+	err := c.checkReleaseDisruptions(dr)
+	if err != nil {
 		metricLabels.SetTrue(updater.DisruptionApprovalRequired)
 
-		return fmt.Errorf("release %s disruption approval required: %w", dr.GetName(), updater.ErrDeployConditionsNotMet)
+		return &DeployTimeReason{
+			Message: fmt.Sprintf("release blocked, disruption approval required: %v", err),
+		}
 	}
 
-	resultDeployTime, err := c.calculateMinorDeployTime(dr, metricLabels)
-	if err != nil {
-		return fmt.Errorf("calculate minor result deploy time: %w", err)
-	}
-
-	// TODO: return info about DeployTimeAfter to update annotation
-	// err := c.kubeAPI.PatchReleaseApplyAfter(dr, newApplyAfter)
-	// if err != nil {
-	// 	return nil, fmt.Errorf("patch release %s apply after: %w", dr.GetName(), err)
-	// }
+	resultDeployTime := c.calculateMinorDeployTime(dr, metricLabels)
 
 	// check: Notification
 	if !c.settings.NotificationConfig.IsEmpty() {
 		metricLabels.SetFalse(updater.NotificationNotSent)
 
-		err = c.releaseNotifier.sendReleaseNotification(ctx, dr, resultDeployTime.ReleaseApplyTime)
+		err := c.releaseNotifier.sendReleaseNotification(ctx, dr, resultDeployTime.ReleaseApplyTime)
 		if err != nil {
 			metricLabels.SetTrue(updater.NotificationNotSent)
 
-			if err := c.updateStatus(dr, "Release blocked: failed to send release notification", v1alpha1.DeckhouseReleasePhasePending); err != nil {
-				return fmt.Errorf("update status: %w", err)
+			return &DeployTimeReason{
+				Message:               "release blocked, failed to send release notification",
+				ReleaseApplyAfterTime: resultDeployTime.ReleaseApplyAfterTime,
 			}
-
-			return fmt.Errorf("send release notification: %w", err)
 		}
 	}
 
 	// check: Deckhouse pod is ready
-	if !c.isDeckhousePodReady(ctx) {
+	if !c.deckhousePodReadyFunc(ctx) {
 		c.logger.Info("Deckhouse is not ready. Skipping upgrade")
 
-		if err := c.updateStatus(dr, "Awaiting for Deckhouse pod to be ready", v1alpha1.DeckhouseReleasePhasePending); err != nil {
-			return fmt.Errorf("update status: %w", err)
+		return &DeployTimeReason{
+			Message:               "awaiting for Deckhouse pod to be ready",
+			ReleaseApplyAfterTime: resultDeployTime.ReleaseApplyAfterTime,
 		}
-
-		return updater.ErrDeployConditionsNotMet
 	}
 
-	if dr.GetApplyNow() {
+	if dr.GetApplyNow() || resultDeployTime.Reason.IsNoDelay() {
 		return nil
 	}
 
-	return c.postponeDeploy(dr, resultDeployTime.Reason, resultDeployTime.ReleaseApplyTime)
+	return &DeployTimeReason{
+		Message:               resultDeployTime.Reason.Message(dr, resultDeployTime.ReleaseApplyTime),
+		ReleaseApplyAfterTime: resultDeployTime.ReleaseApplyAfterTime,
+	}
 }
 
-func (c *DeployTimeChecker) checkReleaseDisruptions(rl *v1alpha1.DeckhouseRelease) bool {
+func (c *DeployTimeChecker) checkReleaseDisruptions(dr *v1alpha1.DeckhouseRelease) error {
 	if !c.settings.InDisruptionApprovalMode() {
-		return true
+		return nil
 	}
 
-	for _, key := range rl.GetDisruptions() {
+	// TODO: we save only last disruption condition
+	for _, key := range dr.GetDisruptions() {
 		hasDisruptionUpdate, reason := requirements.HasDisruption(key)
-		if hasDisruptionUpdate && !rl.GetDisruptionApproved() {
-			msg := fmt.Sprintf("Release requires disruption approval (`kubectl annotate DeckhouseRelease %s release.deckhouse.io/disruption-approved=true`): %s", rl.GetName(), reason)
-
-			err := c.updateStatus(rl, msg, v1alpha1.DeckhouseReleasePhasePending)
-			if err != nil {
-				c.logger.Error("update status", log.Err(err))
-			}
-
-			return false
+		if hasDisruptionUpdate && !dr.GetDisruptionApproved() {
+			return fmt.Errorf("(`kubectl annotate DeckhouseRelease %s release.deckhouse.io/disruption-approved=true`): %s", dr.GetName(), reason)
 		}
 	}
 
-	return true
+	return nil
 }
 
-func (c *DeployTimeChecker) calculateMinorDeployTime(dr *v1alpha1.DeckhouseRelease, metricLabels updater.MetricLabels) (*DeployTimeResult, error) {
+func (c *DeployTimeChecker) calculateMinorDeployTime(dr *v1alpha1.DeckhouseRelease, metricLabels updater.MetricLabels) *DeployTimeResult {
 	result := &DeployTimeResult{
-		ReleaseApplyTime: c.now,
-		Reason:           noDelay,
+		Reason: noDelay,
 	}
 
 	if dr.GetApplyNow() {
-		return result, nil
+		return result
 	}
 
-	// check: release cooldown
-	if dr.GetCooldownUntil() != nil {
-		cooldownUntil := *dr.GetCooldownUntil()
-		if c.now.Before(cooldownUntil) {
-			c.logger.Warn("release in cooldown", slog.String("name", dr.GetName()))
-
-			result = &DeployTimeResult{
-				ReleaseApplyTime: *dr.GetCooldownUntil(),
-				Reason:           result.Reason.add(cooldownDelayReason),
-			}
-		}
-	}
-
-	// check: canary settings
-	if dr.GetApplyAfter() != nil && !c.settings.InManualMode() {
-		applyAfter := *dr.GetApplyAfter()
-		if c.now.Before(applyAfter) {
-			c.logger.Warn("release is postponed by canary process, waiting", slog.String("name", dr.GetName()))
-
-			result = &DeployTimeResult{
-				ReleaseApplyTime: applyAfter,
-				Reason:           result.Reason.add(canaryDelayReason),
-			}
-		}
-	}
-
-	if !dr.GetNotified() &&
-		c.settings.NotificationConfig.MinimalNotificationTime.Duration > 0 {
-		minApplyTime := c.now.Add(c.settings.NotificationConfig.MinimalNotificationTime.Duration)
-
-		if minApplyTime.Before(result.ReleaseApplyTime) {
-			minApplyTime = result.ReleaseApplyTime
-		} else {
-			result = &DeployTimeResult{
-				ReleaseApplyTime:      minApplyTime,
-				ReleaseApplyAfterTime: minApplyTime,
-				Reason:                result.Reason.add(notificationDelayReason),
-			}
-		}
-	}
-
-	if c.settings.Mode == updater.ModeAuto && !c.settings.Windows.IsAllowed(result.ReleaseApplyTime) {
-		result = &DeployTimeResult{
-			ReleaseApplyTime: c.settings.Windows.NextAllowedTime(result.ReleaseApplyTime),
-			Reason:           result.Reason.add(outOfWindowReason),
-		}
-	}
-
-	// check: release is approved in Manual mode
-	if c.settings.Mode != updater.ModeAuto && !dr.GetManuallyApproved() {
-		c.logger.Info("release is waiting for manual approval", slog.String("name", dr.GetName()))
-
-		metricLabels[updater.ManualApprovalRequired] = "true"
-
-		result = &DeployTimeResult{
-			ReleaseApplyTime: c.now,
-			Reason:           manualApprovalRequiredReason,
-		}
-	}
+	c.checkCooldown(result, dr, metricLabels)
+	c.checkCanary(result, dr, metricLabels)
+	c.checkNotify(result, dr, metricLabels)
+	c.checkWindow(result, dr, metricLabels)
+	c.checkManualApproved(result, dr, metricLabels)
 
 	if !result.ReleaseApplyAfterTime.IsZero() {
 		result.Reason = notificationDelayReason
-		return result, nil
+
+		return result
 	}
 
-	return result, nil
-}
-
-// postponeDeploy update release status and returns new NotReadyForDeployError if reason not equal to noDelay and nil otherwise.
-func (c *DeployTimeChecker) postponeDeploy(release *v1alpha1.DeckhouseRelease, reason deployDelayReason, applyTime time.Time) error {
-	if reason == noDelay {
-		return nil
-	}
-
-	var (
-		zeroTime      time.Time
-		retryDelay    time.Duration
-		statusMessage string
-	)
-
-	if !applyTime.IsZero() {
-		retryDelay = applyTime.Sub(c.now)
-	}
-
-	if applyTime == c.now {
-		applyTime = zeroTime
-	}
-
-	statusMessage = reason.Message(release, applyTime)
-
-	err := c.updateStatus(release, statusMessage, v1alpha1.DeckhouseReleasePhasePending)
-	if err != nil {
-		return fmt.Errorf("update release %s status: %w", release.GetName(), err)
-	}
-
-	return updater.NewNotReadyForDeployError(statusMessage)
-}
-
-func (c *DeployTimeChecker) isDeckhousePodReady(ctx context.Context) bool {
-	deckhousePodIP := aoapp.ListenAddress
-
-	url := fmt.Sprintf("http://%s:4222/readyz", deckhousePodIP)
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
-	if err != nil {
-		c.logger.Error("deckhouse pod readyz create request", log.Err(err))
-
-		return false
-	}
-
-	resp, err := c.dc.GetHTTPClient().Do(req)
-	if err != nil {
-		c.logger.Error("deckhouse pod readyz do request", log.Err(err))
-
-		return false
-	}
-
-	if resp.StatusCode != http.StatusOK {
-		c.logger.Error("deckhouse pod readyz", slog.Int("status_code", resp.StatusCode), log.Err(err))
-
-		return false
-	}
-
-	return true
+	return result
 }
