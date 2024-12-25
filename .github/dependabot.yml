@@ -430,7 +430,7 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "gomod"
-  directory: "/modules/042-kube-dns/images/sts-pods-hosts-appender-init-container"
+  directory: "/modules/042-kube-dns/images/sts-pods-hosts-appender-init-container/src"
   labels:
   - "type/dependencies"
   - "status/ok-to-test"
@@ -439,7 +439,7 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "gomod"
-  directory: "/modules/042-kube-dns/images/sts-pods-hosts-appender-webhook"
+  directory: "/modules/042-kube-dns/images/sts-pods-hosts-appender-webhook/src"
   labels:
   - "type/dependencies"
   - "status/ok-to-test"
