@@ -35,7 +35,6 @@ fromImage: common/alt-p11-artifact
 final: false
 shell:
   beforeInstall:
-  {{- include "alt packages proxy" . | nindent 2 }}
   - apt-get install -y pip
   install:
   {{- include "pypi proxy" . | nindent 2 }}
