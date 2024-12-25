@@ -46,7 +46,6 @@ import:
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-exporter
 fromImage: common/distroless
-final: false
 import:
   - image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-exporter
     add: /src/memcached_exporter
