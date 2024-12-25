@@ -4,7 +4,7 @@
 # Based on https://github.com/istio/istio/blob/1.21.6/docker/Dockerfile.base
 #      and https://github.com/istio/istio/blob/1.21.6/pilot/docker/Dockerfile.proxyv2
 image: {{ .ModuleName }}/{{ .ImageName }}
-fromImage: common/alt-p11-artifact
+fromImage: {{ .Images.BASE_ALT_P11}}
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
   add: /tmp/istio/out/pilot-agent
