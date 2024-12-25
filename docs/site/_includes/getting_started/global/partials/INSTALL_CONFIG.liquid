@@ -1,6 +1,6 @@
 {% assign revision=include.revision %}
 
-{% if revision == 'be' or revision == 'se' or revision == 'ee'%}
+{% if revision != "ce" %}
 {% include getting_started/global/EE_ACCESS.md revision=revision %}
 <div class="dimmer-block-content{% if page.ee_only %} disabled{% endif %}">
 {% endif %}
@@ -72,6 +72,6 @@ Also, you can list the necessary cluster node taints in ModuleConfig `global` in
   });
 </script>
 
-{% if revision == 'be' or revision == 'se' or revision == 'ee'%}
+{% if revision != "ce" %}
 </div>
 {% endif %}

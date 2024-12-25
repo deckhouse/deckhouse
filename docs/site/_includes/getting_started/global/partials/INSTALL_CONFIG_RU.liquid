@@ -1,6 +1,6 @@
 {% assign revision=include.revision %}
 
-{% if revision == 'be' or revision == 'se' or revision == 'ee'%}
+{% if revision != "ce" %}
 {% include getting_started/global/EE_ACCESS_RU.md revision=revision %}
 <div class="dimmer-block-content{% if page.ee_only %} disabled{% endif %}">
 {% endif %}
@@ -73,6 +73,6 @@
   });
 </script>
 
-{% if revision == 'be' or revision == 'se' or revision == 'ee'%}
+{% if revision != "ce" %}
 </div>
 {% endif %}
