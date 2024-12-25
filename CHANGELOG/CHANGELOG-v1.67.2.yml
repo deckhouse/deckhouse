@@ -1,3 +1,7 @@
+candi:
+  fixes:
+    - summary: Bump runc version to 1.2.3 and add patch to revert tun/tap to default device rules.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/11280
 cni-cilium:
   fixes:
     - summary: Fixed tunnelMode setting for Static clusters.
