@@ -527,11 +527,13 @@ func DeckhouseRegistrySecret(registry config.RegistryData) *apiv1.Secret {
 			apiv1.DockerConfigJsonKey: data,
 			"address":                 []byte(registry.Address),
 			"scheme":                  []byte(registry.Scheme),
+			"imagesRegistry":          []byte(registry.Address),
 		},
 	}
 
 	if registry.Path != "" {
 		ret.Data["path"] = []byte(registry.Path)
+		ret.Data["imagesRegistry"] = []byte(registry.Address + registry.Path)
 	}
 
 	if registry.CA != "" {
