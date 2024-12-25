@@ -173,6 +173,7 @@ var DefaultImagesDigests = map[string]interface{}{
 	"common": map[string]interface{}{
 		"alpine":                    "imageHash-common-alpine",
 		"checkKernelVersion":        "imageHash-common-checkKernelVersion",
+		"coredns":                   "imageHash-common-coredns",
 		"csiExternalAttacher127":    "imageHash-common-csiExternalAttacher127",
 		"csiExternalAttacher128":    "imageHash-common-csiExternalAttacher128",
 		"csiExternalAttacher129":    "imageHash-common-csiExternalAttacher129",
@@ -299,7 +300,6 @@ var DefaultImagesDigests = map[string]interface{}{
 		"keepalived": "imageHash-keepalived-keepalived",
 	},
 	"kubeDns": map[string]interface{}{
-		"coredns":                           "imageHash-kubeDns-coredns",
 		"resolvWatcher":                     "imageHash-kubeDns-resolvWatcher",
 		"stsPodsHostsAppenderInitContainer": "imageHash-kubeDns-stsPodsHostsAppenderInitContainer",
 		"stsPodsHostsAppenderWebhook":       "imageHash-kubeDns-stsPodsHostsAppenderWebhook",
