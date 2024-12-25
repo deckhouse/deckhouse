@@ -1497,7 +1497,7 @@ spec:
                   type: integer
                   description: |
                     Maximum drain time of Node
-                    This parameter specifies the maximum time the controller will attempt to migrate pods to a new node during a machine rollout. If this time expires, the machine will be forcibly deleted.
+                    This parameter sets the maximum time the controller will attempt to reschedule pods to a new machine during the node draining process.
                 cri:
                   type: object
                   description: |

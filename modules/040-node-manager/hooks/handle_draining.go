@@ -127,7 +127,7 @@ func handleDraining(input *go_hook.HookInput, dc dependency.Container) error {
 	if err != nil {
 		return err
 	}
-
+	drainTimeoutCache := make(map[string]time.Duration)
 	wg := &sync.WaitGroup{}
 	drainingNodesC := make(chan drainedNodeRes, 1)
 
@@ -137,7 +137,13 @@ func handleDraining(input *go_hook.HookInput, dc dependency.Container) error {
 			continue
 		}
 		dNode := s.(drainingNode)
-		drainTimeout := getDrainTimeout(input, k8sCli, dNode.NodeGroupName)
+
+		drainTimeout, exists := drainTimeoutCache[dNode.NodeGroupName]
+		if !exists {
+			drainTimeout = getDrainTimeout(input, k8sCli, dNode.NodeGroupName)
+			drainTimeoutCache[dNode.NodeGroupName] = drainTimeout
+		}
+
 		drainHelper := drain.NewDrainer(drain.HelperConfig{Client: k8sCli, Timeout: &drainTimeout})
 		drainHelper.Ctx = context.Background()
 		if !dNode.isDraining() {
