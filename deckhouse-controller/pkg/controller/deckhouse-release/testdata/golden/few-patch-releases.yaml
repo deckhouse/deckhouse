@@ -5,7 +5,7 @@ kind: DeckhouseRelease
 metadata:
   creationTimestamp: null
   name: v1.31.0
-  resourceVersion: "999"
+  resourceVersion: "1000"
 spec:
   version: v1.31.0
 status:
