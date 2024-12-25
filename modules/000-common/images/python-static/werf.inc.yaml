@@ -1,4 +1,4 @@
-{{- $PythonVersion := "v3.11.10" }}
+{{- $PythonVersion := "v3.11.11" }}
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
 fromImage: common/src-artifact
