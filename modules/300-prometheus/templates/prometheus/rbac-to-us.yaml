@@ -49,3 +49,8 @@ subjects:
   name: pricing
   namespace: d8-flant-integration
 {{- end }}
+{{- if (.Values.global.enabledModules | has "observability") }}
+- kind: ServiceAccount
+  name: observability
+  namespace: d8-observability
+{{- end }}
