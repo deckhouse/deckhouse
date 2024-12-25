@@ -13,24 +13,37 @@
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $version | replace "." "-" }}
 fromImage: common/distroless
 import:
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
   add: /src/vsphere-syncer
   to: /bin/vsphere-syncer
   before: setup
 docker:
   ENTRYPOINT: ["/bin/vsphere-syncer"]
 ---
-artifact: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $version | replace "." "-" }}
+image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $version | replace "." "-" }}
 fromImage: common/src-artifact
+final: false
+    {{- if $patch }}
+git:
+- add: {{ $patches }}/patches/{{ $src_version }}
+  to: /patches
+  stageDependencies:
+    install:
+    - '**/*'
+    {{- end }}
 shell:
   install:
-  - git clone --depth 1 --branch {{ $value.csi.vsphere }} {{ $.SOURCE_REPO }}/kubernetes-sigs/vsphere-csi-driver.git /src
-  - rm -r /src/.git
+  - cd /src
+  - git clone --depth 1 --branch {{ $src_version }} {{ $.SOURCE_REPO }}/kubernetes-sigs/vsphere-csi-driver.git  .
+  - ls /patches/*.patch && git apply /patches/*.patch --verbose
+  - rm -rf vendor
+  - rm -rf .git
 ---
-artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
+image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
 from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
+final: false
 import:
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $version | replace "." "-" }}
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $version | replace "." "-" }}
   add: /src
   to: /src
   before: install
@@ -38,13 +51,10 @@ mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
 shell:
-  beforeInstall:
-  - apk add --no-cache openssh-client
-  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
   install:
-  - export GO_VERSION=${GOLANG_VERSION}
-  - export GOPROXY={{ $.GOPROXY }}
+  - export GO_VERSION=${GOLANG_VERSION} GOPROXY={{ $.GOPROXY }}
   - cd /src
+  - go mod download
   - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -a -ldflags="-w -s -extldflags=static -X sigs.k8s.io/vsphere-csi-driver/v3/pkg/syncer.Version={{ $version }}" -o vsphere-syncer ./cmd/syncer
   {{- end }}
 {{- end }}
