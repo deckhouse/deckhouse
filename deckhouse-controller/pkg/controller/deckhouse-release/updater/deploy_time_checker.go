@@ -114,6 +114,19 @@ func (c *DeployTimeChecker) checkCanary(dtr *DeployTimeResult, dr *v1alpha1.Deck
 	}
 }
 
+func (c *DeployTimeChecker) checkCanaryNotInManualMode(dtr *DeployTimeResult, dr *v1alpha1.DeckhouseRelease, metricLabels updater.MetricLabels) {
+	if dr.GetApplyAfter() != nil && !c.settings.InManualMode() {
+		applyAfter := *dr.GetApplyAfter()
+
+		if c.now.Before(applyAfter) {
+			c.logger.Warn("release is postponed by canary process, waiting", slog.String("name", dr.GetName()))
+
+			dtr.ReleaseApplyTime = applyAfter
+			dtr.Reason = dtr.Reason.add(canaryDelayReason)
+		}
+	}
+}
+
 func (c *DeployTimeChecker) checkNotify(dtr *DeployTimeResult, dr *v1alpha1.DeckhouseRelease, metricLabels updater.MetricLabels) {
 	if !dr.GetNotified() &&
 		c.settings.NotificationConfig.MinimalNotificationTime.Duration > 0 {
@@ -156,7 +169,7 @@ func (c *DeployTimeChecker) checkWindowModeAuto(dtr *DeployTimeResult, dr *v1alp
 	}
 }
 
-func (c *DeployTimeChecker) checkManualApprovedModeAuto(dtr *DeployTimeResult, dr *v1alpha1.DeckhouseRelease, metricLabels updater.MetricLabels) {
+func (c *DeployTimeChecker) checkManualApprovedNotModeAuto(dtr *DeployTimeResult, dr *v1alpha1.DeckhouseRelease, metricLabels updater.MetricLabels) {
 	// check: release is approved in Manual mode
 	if c.settings.Mode != updater.ModeAuto && !dr.GetManuallyApproved() {
 		c.logger.Info("release is waiting for manual approval", slog.String("name", dr.GetName()))
@@ -292,10 +305,10 @@ func (c *DeployTimeChecker) calculateMinorDeployTime(dr *v1alpha1.DeckhouseRelea
 	}
 
 	c.checkCooldown(result, dr, metricLabels)
-	c.checkCanary(result, dr, metricLabels)
+	c.checkCanaryNotInManualMode(result, dr, metricLabels)
 	c.checkNotify(result, dr, metricLabels)
 	c.checkWindowModeAuto(result, dr, metricLabels)
-	c.checkManualApprovedModeAuto(result, dr, metricLabels)
+	c.checkManualApprovedNotModeAuto(result, dr, metricLabels)
 
 	if !result.ReleaseApplyAfterTime.IsZero() {
 		result.Reason = notificationDelayReason
