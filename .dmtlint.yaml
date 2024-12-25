@@ -37,6 +37,8 @@ linters-settings:
         - kube-rbac-proxy
       d8-cloud-provider-yandex:
         - kube-rbac-proxy
+      d8-cloud-provider-vsphere:
+        - kube-rbac-proxy
       d8-cni-simple-bridge:
         - simple-bridge
       kube-system:
@@ -183,6 +185,12 @@ linters-settings:
       - cloud-provider-zvirt:/openapi/values.yaml:
           - "properties.internal.properties.providerClusterConfiguration.properties.apiVersion"
           - "properties.internal.properties.providerDiscoveryData.properties.apiVersion"
+      - cloud-provider-vsphere:/openapi/config-values.yaml:
+#        Have to be fixed in https://github.com/deckhouse/deckhouse/issues/11294
+        - "properties.storageClass.properties.compatibilityFlag"
+      - cloud-provider-vsphere:/openapi/values.yaml:
+        - "properties.internal.properties.providerClusterConfiguration.properties.apiVersion"
+        - "properties.internal.properties.providerDiscoveryData.properties.apiVersion"
     ha-absolute-keys-excludes:
       - "user-authn:/openapi/config-values.yaml": "properties.publishAPI.properties.https"
   nocyrillic:
@@ -231,6 +239,7 @@ linters-settings:
       - cloud-provider-openstack
       - cloud-provider-vcd
       - cloud-provider-zvirt
+      - cloud-provider-vsphere
   rbac:
     skip-check-wildcards:
       - "admission-policy-engine/templates/rbac-for-us.yaml":
