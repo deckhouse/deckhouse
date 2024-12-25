@@ -7,10 +7,8 @@ image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
-  add: /tmp/istio/out/
-  to: /
-  includePaths:
-  - pilot-agent
+  add: /tmp/istio/out/pilot-agent
+  to: /usr/local/bin/pilot-agent
   after: setup
 - image: {{ .ModuleName }}/{{ .ImageName }}-binary-artifact
   add: /var/lib/istio/envoy/
@@ -20,10 +18,8 @@ import:
   - gcp_envoy_bootstrap_tmpl.json
   after: setup
 - image: {{ .ModuleName }}/{{ .ImageName }}-binary-artifact
-  add: /usr/local/bin
-  to: /usr/local/bin
-  includePaths:
-  - envoy
+  add: /usr/local/bin/envoy
+  to: /usr/local/bin/envoy
   after: setup
 docker:
   ENV:
@@ -32,7 +28,7 @@ docker:
     PATH: "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
   WORKDIR: "/"
   USER: 1337
-  ENTRYPOINT: ["pilot-agent"]
+  ENTRYPOINT: ["/usr/local/bin/pilot-agent"]
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-binary-artifact
 final: false
