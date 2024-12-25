@@ -416,8 +416,11 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 
 	suite.Run("Suspend release", func() {
 		suite.setupController("suspend-release.yaml", initValues, embeddedMUP)
-		dr := suite.getDeckhouseRelease("v1.25.2")
+		dr := suite.getDeckhouseRelease("v1.25.1")
 		_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
+		require.NoError(suite.T(), err)
+		dr = suite.getDeckhouseRelease("v1.25.2")
+		_, err = suite.ctr.createOrUpdateReconcile(ctx, dr)
 		require.NoError(suite.T(), err)
 	})
 

@@ -113,7 +113,7 @@ func NewDeckhouseReleaseController(ctx context.Context, mgr manager.Manager, dc 
 	// wait for cache sync
 	go func() {
 		if ok := mgr.GetCache().WaitForCacheSync(ctx); !ok {
-			r.logger.Fatalf("Sync cache failed")
+			r.logger.Fatal("Sync cache failed")
 		}
 		go r.updateByImageHashLoop(ctx)
 		go r.checkDeckhouseReleaseLoop(ctx)
@@ -141,8 +141,10 @@ func NewDeckhouseReleaseController(ctx context.Context, mgr manager.Manager, dc 
 func (r *deckhouseReleaseReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	var res ctrl.Result
 
-	r.logger.Debugf("%s release processing started", req.Name)
-	defer func() { r.logger.Debugf("%s release processing complete: %+v", req.Name, res) }()
+	r.logger.Debug("release processing started", slog.String("resource_name", req.Name))
+	defer func() {
+		r.logger.Debug("release processing complete", slog.String("resource_name", req.Name), slog.Any("reconcile_result", res))
+	}()
 
 	if r.updateSettings.Get().ReleaseChannel == "" {
 		r.logger.Debug("release channel not set")
@@ -160,13 +162,13 @@ func (r *deckhouseReleaseReconciler) Reconcile(ctx context.Context, req ctrl.Req
 			return res, nil
 		}
 
-		r.logger.Debugf("get release: %s", err.Error())
+		r.logger.Debug("get release", log.Err(err))
 
 		return res, err
 	}
 
 	if !release.DeletionTimestamp.IsZero() {
-		r.logger.Debugf("release deletion timestamp: %s", release.DeletionTimestamp.String())
+		r.logger.Debug("release deletion", slog.String("deletion_timestamp", release.DeletionTimestamp.String()))
 		return res, nil
 	}
 
@@ -185,7 +187,9 @@ func (r *deckhouseReleaseReconciler) getClusterUUID(ctx context.Context) string 
 	key := types.NamespacedName{Namespace: "d8-system", Name: "deckhouse-discovery"}
 	err := r.client.Get(ctx, key, &secret)
 	if err != nil {
-		r.logger.Warnf("Read clusterUUID from secret %s failed: %v. Generating random uuid", key, err)
+		r.logger.Warn("read clusterUUID from secret", slog.Any("namespaced_name", key), log.Err(err))
+		r.logger.Warn("generating random uuid")
+
 		return uuid.Must(uuid.NewV4()).String()
 	}
 
@@ -219,7 +223,7 @@ func (r *deckhouseReleaseReconciler) createOrUpdateReconcile(ctx context.Context
 		return ctrl.Result{Requeue: true}, nil // process to the next phase
 
 	case v1alpha1.ModuleReleasePhaseSkipped, v1alpha1.ModuleReleasePhaseSuperseded, v1alpha1.ModuleReleasePhaseSuspended:
-		r.logger.Debugf("release phase: %s", dr.Status.Phase)
+		r.logger.Debug("release phase", slog.String("phase", dr.Status.Phase))
 		return res, nil
 
 	case v1alpha1.ModuleReleasePhaseDeployed:
@@ -944,7 +948,7 @@ func (r *deckhouseReleaseReconciler) isDeckhousePodReady(ctx context.Context) bo
 	url := fmt.Sprintf("http://%s:4222/readyz", deckhousePodIP)
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
-		r.logger.Errorf("error getting deckhouse pod readyz status: %s", err)
+		r.logger.Error("error getting deckhouse pod readyz", log.Err(err))
 	}
 
 	resp, err := r.dc.GetHTTPClient().Do(req)
@@ -964,18 +968,18 @@ func (r *deckhouseReleaseReconciler) updateByImageHashLoop(ctx context.Context) 
 
 		deckhouseLeaderPod, err := r.getDeckhouseLatestPod(ctx)
 		if err != nil {
-			r.logger.Warnf("Error getting deckhouse pods: %s", err)
+			r.logger.Warn("getting deckhouse pods", log.Err(err))
 			return
 		}
 
 		if deckhouseLeaderPod == nil {
-			r.logger.Debug("Deckhouse pods not found. Skipping update")
+			r.logger.Debug("deckhouse pods not found. Skipping update")
 			return
 		}
 
 		err = r.tagUpdate(ctx, deckhouseLeaderPod)
 		if err != nil {
-			r.logger.Errorf("deckhouse image tag update failed: %s", err)
+			r.logger.Error("deckhouse image tag update", log.Err(err))
 		}
 	}, 15*time.Second)
 }
