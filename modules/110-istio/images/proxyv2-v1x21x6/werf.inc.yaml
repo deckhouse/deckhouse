@@ -19,7 +19,7 @@ import:
   after: setup
 - image: {{ .ModuleName }}/{{ .ImageName }}-binary-artifact
   add: /usr/local/bin/envoy
-  to: /usr/local/bin/envoy
+  to: /envoy
   owner: 1337
   group: 1337
   after: setup
@@ -27,6 +27,7 @@ docker:
   ENV:
     ISTIO_META_ISTIO_PROXY_SHA: "istio-proxy:78bd2d9b284978e170a49cd13decd5f952544489"
     ISTIO_META_ISTIO_VERSION: "1.21.6"
+    ENVOY_PATH: "/envoy"
     PATH: "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
   WORKDIR: "/"
   USER: 1337
