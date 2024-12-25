@@ -47,13 +47,14 @@ function send_post() {
   curl -f -L -X POST "${server_url}/api/v4/posts" \
     -H "Content-Type: application/json" \
     -H "Authorization: Bearer ${token}" \
-    --data "{\"channel_id\": \"${channel_id}\",\"message\": \"${message}\",\"file_ids\": [\"${base_report_id}\", \"${deckhouse_report_id}\"]}"
+    --data "{\"channel_id\": \"${channel_id}\",\"message\": \"${message}\",\"file_ids\": [\"${base_non_root_report_id}\", \"${base_report_id}\", \"${deckhouse_report_id}\"]}"
 }
 
 if [ "$failure" = true ]; then
   message=${fail_message}
 else
   base_report_id=$(upload_file ./out/base-images.html)
+  base_non_root_report_id=$(upload_file out/non-root-images.html)
   deckhouse_report_id=$(upload_file ./out/d8-images.html)
 fi
 

@@ -111,7 +111,6 @@ function trivyGetHTMLReportPartForImage() (
   bin/trivy i --severity=$SEVERITY --ignorefile "$IGNORE" --format template --template "@tools/cve/html/body-part.tpl" --quiet "$IMAGE_ARGS"
   echo -n "    <br/>"
 )
-
 function htmlReportFooter() (
   cat tools/cve/html/footer.tpl
 )
