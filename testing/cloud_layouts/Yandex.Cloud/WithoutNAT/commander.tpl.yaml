@@ -1,0 +1,44 @@
+templateName: "Yandex Cloud"
+clusterName: "Yandex Cloud / altlinux / k8s ${KUBERNETES_VERSION} / ea"
+values:
+  cloudID: '${CLOUD_ID}'
+  folderID: '${FOLDER_ID}'
+  serviceAccountJSON: '${SERVICE_ACCOUNT_JSON}'
+  imagesRepo: dev-registry.deckhouse.io/sys/deckhouse-oss
+  registryScheme: HTTPS
+  publicDomainTemplate: "%s.k8s.smoke.flant.com"
+  prefix: 'a${PREFIX}'
+  releaseChannel: EarlyAccess # TODO: dev
+  kubernetesVersion: '${KUBERNETES_VERSION}'
+  image:
+    imageID: fd8i8fljrbbcclckhlm9 # ALT 10
+    sshPort: 22
+    sshUser: altlinux
+  masterNodeSize:
+    cores: 4
+    memory: 8192
+  masterZones:
+  - ru-central1-a
+  masterCount: "${MASTERS_COUNT}"
+  frontendNodeSize:
+    cores: 2
+    memory: 4096
+  frontendZones:
+  - ru-central1-a
+  frontendCount: 1
+  systemNodeSize:
+    cores: 2
+    memory: 8192
+  systemZones:
+  - ru-central1-a
+  systemCount: 1
+  workerNodeSize:
+    cores: 2
+    memory: 4096
+  workerZones:
+  - ru-central1-a
+  workerMinPerZone: 0
+  workerMaxPerZone: 0
+  deckhouseUserEmail: smoke@deckhouse.io
+  deckhouseUserPassword: deckhouse
+clusterChanges: []

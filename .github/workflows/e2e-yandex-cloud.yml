@@ -182,6 +182,7 @@ jobs:
       run_containerd_automatic: ${{ steps.check.outputs.run_containerd_automatic }}
       edition: ${{ steps.check.outputs.edition }}
       multimaster: ${{ steps.check.outputs.multimaster }}
+      commander_mode: ${{ steps.check.outputs.commander_mode }}
     steps:
 
       # <template: checkout_step>
@@ -450,6 +451,7 @@ jobs:
           TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
           PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
           MASTERS_COUNT: ${{ steps.setup.outputs.masters-count}}
+          COMMANDER_MODE: ${{ needs.check_e2e_labels.outputs.commander_mode }}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
@@ -474,6 +476,7 @@ jobs:
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
+            COMMANDER_MODE=${COMMANDER_MODE}
           "
 
           ls -lh $(pwd)/testing
@@ -502,29 +505,39 @@ jobs:
           $(pwd)/testing/cloud_layouts/wait-master-ssh-and-update-comment.sh "$dhctl_log_file" "$comment_url" "$ssh_connect_str_file" "$bastion_ip_file" > "${dhctl_log_file}-wait-log" 2>&1 &
 
 
-          docker run --rm \
-            -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
-            -e PREFIX=${PREFIX} \
-            -e MASTERS_COUNT=${MASTERS_COUNT} \
-            -e DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG} \
-            -e INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG} \
-            -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
-            -e CRI=${CRI} \
-            -e PROVIDER=${PROVIDER:-not_provided} \
-            -e MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-} \
-            -e LAYOUT=${LAYOUT:-not_provided} \
-            -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
-            -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
-            -e LAYOUT_YANDEX_CLOUD_ID=${LAYOUT_YANDEX_CLOUD_ID:-not_provided} \
-            -e LAYOUT_YANDEX_FOLDER_ID=${LAYOUT_YANDEX_FOLDER_ID:-not_provided} \
-            -e LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON=${LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON:-not_provided} \
-            -e USER_RUNNER_ID=${user_runner_id} \
-            -v $(pwd)/testing:/deckhouse/testing \
-            -v $(pwd)/release.yaml:/deckhouse/release.yaml \
-            -v ${TMP_DIR_PATH}:/tmp \
-            -w /deckhouse \
-          ${INSTALL_IMAGE_NAME} \
-          bash /deckhouse/testing/cloud_layouts/script.sh run-test
+          if [ "${COMMANDER_MODE}" == true ] ; then
+            echo "Run commander mode"
+            env CLOUD_ID="$(base64 -d <<< "$LAYOUT_YANDEX_CLOUD_ID")" FOLDER_ID="$(base64 -d <<< "$LAYOUT_YANDEX_FOLDER_ID")" \
+              SERVICE_ACCOUNT_JSON="$(base64 -d <<< "$LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON")" \
+              KUBERNETES_VERSION="$KUBERNETES_VERSION" CRI="$CRI" DEV_BRANCH="$DEV_BRANCH" PREFIX="$PREFIX" DECKHOUSE_DOCKERCFG="$DECKHOUSE_DOCKERCFG" MASTERS_COUNT="$MASTERS_COUNT" \
+              envsubst '${DECKHOUSE_DOCKERCFG} ${PREFIX} ${DEV_BRANCH} ${KUBERNETES_VERSION} ${CRI} ${CLOUD_ID} ${FOLDER_ID} ${SERVICE_ACCOUNT_JSON} ${MASTERS_COUNT}' \
+              <"$(pwd)/testing/commander.tpl.yaml" >"$(pwd)/testing/commander.yaml"
+            docker run --rm ${BRANCH_REGISTRY_PATH}/modules/commander:tester-master
+          else
+            docker run --rm \
+              -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
+              -e PREFIX=${PREFIX} \
+              -e MASTERS_COUNT=${MASTERS_COUNT} \
+              -e DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG} \
+              -e INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG} \
+              -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
+              -e CRI=${CRI} \
+              -e PROVIDER=${PROVIDER:-not_provided} \
+              -e MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-} \
+              -e LAYOUT=${LAYOUT:-not_provided} \
+              -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
+              -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
+              -e LAYOUT_YANDEX_CLOUD_ID=${LAYOUT_YANDEX_CLOUD_ID:-not_provided} \
+              -e LAYOUT_YANDEX_FOLDER_ID=${LAYOUT_YANDEX_FOLDER_ID:-not_provided} \
+              -e LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON=${LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON:-not_provided} \
+              -e USER_RUNNER_ID=${user_runner_id} \
+              -v $(pwd)/testing:/deckhouse/testing \
+              -v $(pwd)/release.yaml:/deckhouse/release.yaml \
+              -v ${TMP_DIR_PATH}:/tmp \
+              -w /deckhouse \
+            ${INSTALL_IMAGE_NAME} \
+            bash /deckhouse/testing/cloud_layouts/script.sh run-test
+          fi
 
         # </template: e2e_run_template>
       - name: Read connection string
@@ -562,6 +575,7 @@ jobs:
           TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
           PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
           MASTERS_COUNT: ${{ steps.setup.outputs.masters-count }}
+          COMMANDER_MODE: ${{ needs.check_e2e_labels.outputs.commander_mode }}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
         # <template: e2e_run_template>
@@ -585,6 +599,7 @@ jobs:
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
+            COMMANDER_MODE=${COMMANDER_MODE}
           "
 
           ls -lh $(pwd)/testing
@@ -595,29 +610,33 @@ jobs:
           user_runner_id=$(id -u):$(id -g)
           echo "user_runner_id $user_runner_id"
 
-          docker run --rm \
-            -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
-            -e PREFIX=${PREFIX} \
-            -e MASTERS_COUNT=${MASTERS_COUNT} \
-            -e DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG} \
-            -e INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG} \
-            -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
-            -e CRI=${CRI} \
-            -e PROVIDER=${PROVIDER:-not_provided} \
-            -e MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-} \
-            -e LAYOUT=${LAYOUT:-not_provided} \
-            -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
-            -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
-            -e LAYOUT_YANDEX_CLOUD_ID=${LAYOUT_YANDEX_CLOUD_ID:-not_provided} \
-            -e LAYOUT_YANDEX_FOLDER_ID=${LAYOUT_YANDEX_FOLDER_ID:-not_provided} \
-            -e LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON=${LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON:-not_provided} \
-            -e USER_RUNNER_ID=${user_runner_id} \
-            -v $(pwd)/testing:/deckhouse/testing \
-            -v $(pwd)/release.yaml:/deckhouse/release.yaml \
-            -v ${TMP_DIR_PATH}:/tmp \
-            -w /deckhouse \
-          ${INSTALL_IMAGE_NAME} \
-          bash /deckhouse/testing/cloud_layouts/script.sh cleanup
+          if [ "${COMMANDER_MODE}" == true ] ; then
+            echo "Run commander cleanup"
+          else
+            docker run --rm \
+              -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
+              -e PREFIX=${PREFIX} \
+              -e MASTERS_COUNT=${MASTERS_COUNT} \
+              -e DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG} \
+              -e INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG} \
+              -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
+              -e CRI=${CRI} \
+              -e PROVIDER=${PROVIDER:-not_provided} \
+              -e MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-} \
+              -e LAYOUT=${LAYOUT:-not_provided} \
+              -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
+              -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
+              -e LAYOUT_YANDEX_CLOUD_ID=${LAYOUT_YANDEX_CLOUD_ID:-not_provided} \
+              -e LAYOUT_YANDEX_FOLDER_ID=${LAYOUT_YANDEX_FOLDER_ID:-not_provided} \
+              -e LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON=${LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON:-not_provided} \
+              -e USER_RUNNER_ID=${user_runner_id} \
+              -v $(pwd)/testing:/deckhouse/testing \
+              -v $(pwd)/release.yaml:/deckhouse/release.yaml \
+              -v ${TMP_DIR_PATH}:/tmp \
+              -w /deckhouse \
+            ${INSTALL_IMAGE_NAME} \
+            bash /deckhouse/testing/cloud_layouts/script.sh cleanup
+          fi
 
         # </template: e2e_run_template>
 
@@ -915,11 +934,22 @@ jobs:
           fi
           echo "Multimaster set ${MULTIMASTER}, MASTERS_COUNT set ${MASTERS_COUNT}"
 
-          # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
-          echo "⚓️ [$(date -u)] Pull 'dev/install' image '${SAFE_IMAGE_NAME}'."
-          docker pull "${INSTALL_IMAGE_NAME}"
+          if [ "${COMMANDER_MODE}" == true ] ; then
+            INSTALL_IMAGE_NAME=${BRANCH_REGISTRY_PATH}/modules/commander:tester-master
+          else
+            # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
+            echo "⚓️ [$(date -u)] Pull 'dev/install' image '${SAFE_IMAGE_NAME}'."
+            docker pull "${INSTALL_IMAGE_NAME}"
+          fi
 
           IMAGE_INSTALL_PATH="/${INSTALL_IMAGE_NAME#*/}"
+
+          if [ "${COMMANDER_MODE}" == true ] ; then
+            COMMANDER_TESTER_IMAGE_NAME=${BRANCH_REGISTRY_PATH}/modules/commander:tester-master
+            SAFE_TESTER_IMAGE_NAME=$(echo ${COMMANDER_TESTER_IMAGE_NAME} | tr '[:lower:]' '[:upper:]')
+            echo "⚓️ [$(date -u)] Pull 'commander/tester' image '${SAFE_TESTER_IMAGE_NAME}'."
+            docker pull "${COMMANDER_TESTER_IMAGE_NAME}"
+          fi
 
           echo '::echo::on'
           echo "tmp-dir-path=${TMP_DIR_PATH}" >> $GITHUB_OUTPUT
@@ -930,6 +960,7 @@ jobs:
           echo "initial-image-tag=${INITIAL_IMAGE_TAG}" >> $GITHUB_OUTPUT
           echo "install-image-path=${IMAGE_INSTALL_PATH}" >> $GITHUB_OUTPUT
           echo "masters-count=${MASTERS_COUNT}" >> $GITHUB_OUTPUT
+          echo "commander-tester-image-name=${COMMANDER_TESTER_IMAGE_NAME}" >> $GITHUB_OUTPUT
 
           echo '::echo::off'
 
@@ -958,6 +989,10 @@ jobs:
           REPOSITORY: ${{ github.repository }}
           DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
           GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+          COMMANDER_MODE: ${{ needs.check_e2e_labels.outputs.commander_mode }}
+          COMMANDER_URL: ${{ secrets.COMMANDER_URL }}
+          COMMANDER_API_TOKEN: ${{ secrets.COMMANDER_API_TOKEN }}
+          COMMANDER_TESTER_IMAGE_NAME: ${{ steps.setup.outputs.commander-tester-image-name }}
         run: |
           echo "Execute 'script.sh run-test' via 'docker run', using environment:
             INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
@@ -970,6 +1005,8 @@ jobs:
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
+            COMMANDER_MODE=${COMMANDER_MODE}
+            COMMANDER_TESTER_IMAGE_NAME=${COMMANDER_TESTER_IMAGE_NAME}
           "
 
           ls -lh $(pwd)/testing
@@ -997,8 +1034,16 @@ jobs:
 
           $(pwd)/testing/cloud_layouts/wait-master-ssh-and-update-comment.sh "$dhctl_log_file" "$comment_url" "$ssh_connect_str_file" "$bastion_ip_file" > "${dhctl_log_file}-wait-log" 2>&1 &
 
+          IMAGE_NAME="${INSTALL_IMAGE_NAME}"
+          if [ "${COMMANDER_MODE}" == true ] ; then
+            echo "Run commander mode"
+            IMAGE_NAME="${COMMANDER_TESTER_IMAGE_NAME}"
+          fi
 
           docker run --rm \
+            -e COMMANDER_MODE=${COMMANDER_MODE} \
+            -e COMMANDER_URL=${COMMANDER_URL} \
+            -e COMMANDER_API_TOKEN=${COMMANDER_API_TOKEN} \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
             -e PREFIX=${PREFIX} \
             -e MASTERS_COUNT=${MASTERS_COUNT} \
@@ -1019,7 +1064,7 @@ jobs:
             -v $(pwd)/release.yaml:/deckhouse/release.yaml \
             -v ${TMP_DIR_PATH}:/tmp \
             -w /deckhouse \
-          ${INSTALL_IMAGE_NAME} \
+          ${IMAGE_NAME} \
           bash /deckhouse/testing/cloud_layouts/script.sh run-test
 
         # </template: e2e_run_template>
@@ -1058,6 +1103,7 @@ jobs:
           TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
           PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
           MASTERS_COUNT: ${{ steps.setup.outputs.masters-count }}
+          COMMANDER_MODE: ${{ needs.check_e2e_labels.outputs.commander_mode }}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
         # <template: e2e_run_template>
@@ -1318,6 +1364,7 @@ jobs:
           INITIAL_REF_SLUG: ${{ github.event.inputs.initial_ref_slug }}
           MANUAL_RUN: "true"
           MULTIMASTER: ${{ needs.check_e2e_labels.outputs.multimaster }}
+          COMMANDER_MODE: ${{ needs.check_e2e_labels.outputs.commander_mode }}
         run: |
           # Calculate unique prefix for e2e test.
           # GITHUB_RUN_ID is a unique number for each workflow run.
@@ -1426,6 +1473,7 @@ jobs:
           echo "initial-image-tag=${INITIAL_IMAGE_TAG}" >> $GITHUB_OUTPUT
           echo "install-image-path=${IMAGE_INSTALL_PATH}" >> $GITHUB_OUTPUT
           echo "masters-count=${MASTERS_COUNT}" >> $GITHUB_OUTPUT
+          echo "commander-mode=${COMMANDER_MODE}" >> $GITHUB_OUTPUT
 
           echo '::echo::off'
 
@@ -1554,6 +1602,7 @@ jobs:
           TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
           PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
           MASTERS_COUNT: ${{ steps.setup.outputs.masters-count }}
+          COMMANDER_MODE: ${{ needs.check_e2e_labels.outputs.commander_mode }}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
         # <template: e2e_run_template>
@@ -1814,6 +1863,7 @@ jobs:
           INITIAL_REF_SLUG: ${{ github.event.inputs.initial_ref_slug }}
           MANUAL_RUN: "true"
           MULTIMASTER: ${{ needs.check_e2e_labels.outputs.multimaster }}
+          COMMANDER_MODE: ${{ needs.check_e2e_labels.outputs.commander_mode }}
         run: |
           # Calculate unique prefix for e2e test.
           # GITHUB_RUN_ID is a unique number for each workflow run.
@@ -2050,6 +2100,7 @@ jobs:
           TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
           PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
           MASTERS_COUNT: ${{ steps.setup.outputs.masters-count }}
+          COMMANDER_MODE: ${{ needs.check_e2e_labels.outputs.commander_mode }}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
         # <template: e2e_run_template>
@@ -2310,6 +2361,7 @@ jobs:
           INITIAL_REF_SLUG: ${{ github.event.inputs.initial_ref_slug }}
           MANUAL_RUN: "true"
           MULTIMASTER: ${{ needs.check_e2e_labels.outputs.multimaster }}
+          COMMANDER_MODE: ${{ needs.check_e2e_labels.outputs.commander_mode }}
         run: |
           # Calculate unique prefix for e2e test.
           # GITHUB_RUN_ID is a unique number for each workflow run.
@@ -2546,6 +2598,7 @@ jobs:
           TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
           PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
           MASTERS_COUNT: ${{ steps.setup.outputs.masters-count }}
+          COMMANDER_MODE: ${{ needs.check_e2e_labels.outputs.commander_mode }}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
         # <template: e2e_run_template>
@@ -2806,6 +2859,7 @@ jobs:
           INITIAL_REF_SLUG: ${{ github.event.inputs.initial_ref_slug }}
           MANUAL_RUN: "true"
           MULTIMASTER: ${{ needs.check_e2e_labels.outputs.multimaster }}
+          COMMANDER_MODE: ${{ needs.check_e2e_labels.outputs.commander_mode }}
         run: |
           # Calculate unique prefix for e2e test.
           # GITHUB_RUN_ID is a unique number for each workflow run.
@@ -2930,6 +2984,7 @@ jobs:
           TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
           PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
           MASTERS_COUNT: ${{ steps.setup.outputs.masters-count}}
+          COMMANDER_MODE: ${{ needs.check_e2e_labels.outputs.commander_mode }}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
@@ -3042,6 +3097,7 @@ jobs:
           TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
           PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
           MASTERS_COUNT: ${{ steps.setup.outputs.masters-count }}
+          COMMANDER_MODE: ${{ needs.check_e2e_labels.outputs.commander_mode }}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
         # <template: e2e_run_template>
@@ -3302,6 +3358,7 @@ jobs:
           INITIAL_REF_SLUG: ${{ github.event.inputs.initial_ref_slug }}
           MANUAL_RUN: "true"
           MULTIMASTER: ${{ needs.check_e2e_labels.outputs.multimaster }}
+          COMMANDER_MODE: ${{ needs.check_e2e_labels.outputs.commander_mode }}
         run: |
           # Calculate unique prefix for e2e test.
           # GITHUB_RUN_ID is a unique number for each workflow run.
@@ -3426,6 +3483,7 @@ jobs:
           TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
           PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
           MASTERS_COUNT: ${{ steps.setup.outputs.masters-count}}
+          COMMANDER_MODE: ${{ needs.check_e2e_labels.outputs.commander_mode }}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
@@ -3538,6 +3596,7 @@ jobs:
           TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
           PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
           MASTERS_COUNT: ${{ steps.setup.outputs.masters-count }}
+          COMMANDER_MODE: ${{ needs.check_e2e_labels.outputs.commander_mode }}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
         # <template: e2e_run_template>
