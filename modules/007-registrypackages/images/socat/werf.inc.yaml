@@ -37,7 +37,7 @@ image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
 final: false
 fromImage: common/alt-p11-artifact
 import:
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
   add: /src
   to: /src
   before: install
