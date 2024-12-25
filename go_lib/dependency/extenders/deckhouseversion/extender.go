@@ -32,8 +32,7 @@ import (
 )
 
 const (
-	Name              extenders.ExtenderName = "DeckhouseVersion"
-	RequirementsField string                 = "deckhouse"
+	Name extenders.ExtenderName = "DeckhouseVersion"
 )
 
 var (
