@@ -51,6 +51,6 @@ subjects:
 {{- end }}
 {{- if (.Values.global.enabledModules | has "observability") }}
 - kind: ServiceAccount
-  name: observability
+  name: label-proxy
   namespace: d8-observability
 {{- end }}
