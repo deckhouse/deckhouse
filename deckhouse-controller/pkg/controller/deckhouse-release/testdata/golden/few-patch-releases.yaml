@@ -11,7 +11,7 @@ spec:
 status:
   approved: false
   message: ""
-  phase: Deployed
+  phase: Superseded
   transitionTime: null
 ---
 apiVersion: deckhouse.io/v1alpha1

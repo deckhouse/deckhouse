@@ -619,7 +619,7 @@ func (r *deckhouseReleaseReconciler) ApplyPredictedRelease(ctx context.Context, 
 // 3) bump release annotations (retry if error)
 // 3) bump release status to deployed (retry if error)
 func (r *deckhouseReleaseReconciler) runReleaseDeploy(ctx context.Context, dr *v1alpha1.DeckhouseRelease, deployedReleaseInfo *d8updater.ReleaseInfo) error {
-	r.logger.Infof("Applying release %s", dr.GetName())
+	r.logger.Info("applying release", slog.String("name", dr.GetName()))
 
 	err := r.bumpDeckhouseDeployment(ctx, dr)
 	if err != nil {
@@ -997,7 +997,7 @@ func (r *deckhouseReleaseReconciler) newUpdaterKubeAPI() *d8updater.KubeAPI {
 }
 
 func (r *deckhouseReleaseReconciler) updateReleaseStatus(ctx context.Context, dr *v1alpha1.DeckhouseRelease, status *v1alpha1.DeckhouseReleaseStatus) error {
-	r.logger.Debugf("refresh the %q release status", dr.GetName())
+	r.logger.Debug("refresh release status", slog.String("name", dr.GetName()))
 
 	return ctrlutils.UpdateStatusWithRetry(ctx, r.client, dr, func() error {
 		if dr.Status.Phase != status.Phase {
