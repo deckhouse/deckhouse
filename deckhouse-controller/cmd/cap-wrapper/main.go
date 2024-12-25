@@ -61,8 +61,7 @@ func main() {
 			log.Fatal(err)
 		}
 
-		//err = syscall.Exec("/usr/bin/tini", []string{"tini", "--", "/deckhouse/deckhouse-controller/entrypoint.sh"}, os.Environ())
-		err = syscall.Exec("/bin/bash", []string{"/bin/bash"}, os.Environ())
+		err = syscall.Exec("/usr/bin/tini", []string{"tini", "--", "/deckhouse/deckhouse-controller/entrypoint.sh"}, os.Environ())
 		if err != nil {
 			log.Fatal(err)
 		}
