@@ -1,6 +1,6 @@
 ---
 image: dev/install
-from: {{ .Images.BASE_ALT }}
+fromImage: common/alt-p11
 git:
 - add: /
   to: /deckhouse

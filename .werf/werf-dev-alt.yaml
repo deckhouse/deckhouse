@@ -1,8 +1,10 @@
 ---
 image: dev-alt-artifact
 final: false
-from: {{ .Images.BASE_ALT_DEV }}
+fromImage: common/alt-p11-artifact
 shell:
+  beforeInstall:
+    - apt-get install -y ca-certificates openssl vim-console bash-completion python3 pip python3-module-chardet gettext libexpat libcrypto3 glibc-pthread
   install:
     - /binary_replace.sh -i "/usr/bin/envsubst" -o /relocate
 ---
