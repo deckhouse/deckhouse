@@ -655,6 +655,10 @@ func (r *deckhouseReleaseReconciler) runReleaseDeploy(ctx context.Context, dr *v
 			delete(dr.Annotations, v1alpha1.DeckhouseReleaseAnnotationForce)
 		}
 
+		if dr.GetForce() {
+			delete(dr.Annotations, v1alpha1.DeckhouseReleaseAnnotationForce)
+		}
+
 		return nil
 	})
 	if err != nil {
