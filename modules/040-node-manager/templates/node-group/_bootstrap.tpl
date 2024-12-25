@@ -102,7 +102,6 @@ def ssl_request(a_args):
             print("unsupported urllib version: %d" % (urllib_version))
 
     return response
-}
 
 response = ssl_request({
     "url":      sys.argv[1],
