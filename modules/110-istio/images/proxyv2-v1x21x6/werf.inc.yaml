@@ -32,6 +32,9 @@ docker:
 image: {{ .ModuleName }}/{{ .ImageName }}-binary-artifact
 final: false
 from: istio/proxyv2:1.21.6@sha256:a0afbbc8488060f8059e7fa04576edde01915d40576132dae83479b3abe5ce15
+shell:
+  install:
+  - chown 0700 /usr/local/bin/envoy
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
 final: false
