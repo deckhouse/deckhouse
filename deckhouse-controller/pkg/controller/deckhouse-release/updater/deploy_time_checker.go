@@ -85,6 +85,10 @@ func (c *DeployTimeChecker) CheckPatchReleaseConditions(ctx context.Context, dr 
 		return nil
 	}
 
+	if resultDeployTime.ReleaseApplyTime == c.now {
+		resultDeployTime.ReleaseApplyTime = time.Time{}
+	}
+
 	return &DeployTimeReason{
 		Message:               resultDeployTime.Reason.Message(dr, resultDeployTime.ReleaseApplyTime),
 		ReleaseApplyAfterTime: resultDeployTime.ReleaseApplyAfterTime,
@@ -167,7 +171,8 @@ func (c *DeployTimeChecker) checkCooldown(dtr *DeployTimeResult, dr *v1alpha1.De
 
 func (c *DeployTimeChecker) calculatePatchDeployTime(dr *v1alpha1.DeckhouseRelease, metricLabels updater.MetricLabels) *DeployTimeResult {
 	result := &DeployTimeResult{
-		Reason: noDelay,
+		Reason:           noDelay,
+		ReleaseApplyTime: c.now,
 	}
 
 	if dr.GetApplyNow() {
@@ -238,6 +243,10 @@ func (c *DeployTimeChecker) CheckMinorReleaseConditions(ctx context.Context, dr 
 		return nil
 	}
 
+	if resultDeployTime.ReleaseApplyTime == c.now {
+		resultDeployTime.ReleaseApplyTime = time.Time{}
+	}
+
 	return &DeployTimeReason{
 		Message:               resultDeployTime.Reason.Message(dr, resultDeployTime.ReleaseApplyTime),
 		ReleaseApplyAfterTime: resultDeployTime.ReleaseApplyAfterTime,
@@ -262,7 +271,8 @@ func (c *DeployTimeChecker) checkReleaseDisruptions(dr *v1alpha1.DeckhouseReleas
 
 func (c *DeployTimeChecker) calculateMinorDeployTime(dr *v1alpha1.DeckhouseRelease, metricLabels updater.MetricLabels) *DeployTimeResult {
 	result := &DeployTimeResult{
-		Reason: noDelay,
+		Reason:           noDelay,
+		ReleaseApplyTime: c.now,
 	}
 
 	if dr.GetApplyNow() {
