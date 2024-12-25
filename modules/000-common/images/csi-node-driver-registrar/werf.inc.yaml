@@ -34,8 +34,11 @@ git:
     {{- end }}
 shell:
   install:
-  - git clone --depth 1 --branch {{ $src_version }} {{ $.SOURCE_REPO }}/kubernetes-csi/node-driver-registrar.git /src
-  - rm -r /src/.git
+  - cd /src
+  - git clone --depth 1 --branch {{ $src_version }} {{ $.SOURCE_REPO }}/kubernetes-csi/node-driver-registrar.git  .
+  - ls /patches/*.patch && git apply /patches/*.patch --verbose
+  - rm -rf vendor
+  - rm -rf .git
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
 from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
@@ -52,6 +55,7 @@ shell:
   install:
   - export GO_VERSION=${GOLANG_VERSION} GOPROXY={{ $.GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64
   - cd /src
+  - go mod download
   - make build
   - cp bin/csi-node-driver-registrar /csi-node-driver-registrar
   - chown 64535:64535 /csi-node-driver-registrar
