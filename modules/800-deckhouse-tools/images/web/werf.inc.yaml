@@ -18,6 +18,7 @@ docker:
   ENTRYPOINT: [ "/opt/nginx-static/sbin/nginx", "-g", "daemon off;" ]
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+fromCacheVersion: "2024-11-21.0"
 final: false
 fromImage: common/src-artifact
 git:
