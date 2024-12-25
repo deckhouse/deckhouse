@@ -108,7 +108,7 @@ metadata:
   creationTimestamp: null
   name: deckhouse
   namespace: d8-system
-  resourceVersion: "999"
+  resourceVersion: "1000"
 spec:
   selector: null
   strategy: {}
@@ -117,7 +117,7 @@ spec:
       creationTimestamp: null
     spec:
       containers:
-      - image: my.registry.com/deckhouse:v1.25.0
+      - image: my.registry.com/deckhouse:v1.31.3
         name: deckhouse
         resources: {}
 status: {}
