@@ -130,13 +130,6 @@ func (c *DeployTimeChecker) checkNotify(dtr *DeployTimeResult, dr *v1alpha1.Deck
 	}
 }
 
-func (c *DeployTimeChecker) checkWindowModeAuto(dtr *DeployTimeResult, dr *v1alpha1.DeckhouseRelease, metricLabels updater.MetricLabels) {
-	if c.settings.Mode == updater.ModeAuto && !c.settings.Windows.IsAllowed(dtr.ReleaseApplyTime) {
-		dtr.ReleaseApplyTime = c.settings.Windows.NextAllowedTime(dtr.ReleaseApplyTime)
-		dtr.Reason = dtr.Reason.add(outOfWindowReason)
-	}
-}
-
 func (c *DeployTimeChecker) checkWindowModeAutoPatch(dtr *DeployTimeResult, dr *v1alpha1.DeckhouseRelease, metricLabels updater.MetricLabels) {
 	if c.settings.Mode == updater.ModeAutoPatch && !c.settings.Windows.IsAllowed(dtr.ReleaseApplyTime) {
 		dtr.ReleaseApplyTime = c.settings.Windows.NextAllowedTime(dtr.ReleaseApplyTime)
@@ -156,9 +149,16 @@ func (c *DeployTimeChecker) checkManualApproved(dtr *DeployTimeResult, dr *v1alp
 	}
 }
 
+func (c *DeployTimeChecker) checkWindowModeAuto(dtr *DeployTimeResult, dr *v1alpha1.DeckhouseRelease, metricLabels updater.MetricLabels) {
+	if c.settings.Mode == updater.ModeAuto && !c.settings.Windows.IsAllowed(dtr.ReleaseApplyTime) {
+		dtr.ReleaseApplyTime = c.settings.Windows.NextAllowedTime(dtr.ReleaseApplyTime)
+		dtr.Reason = dtr.Reason.add(outOfWindowReason)
+	}
+}
+
 func (c *DeployTimeChecker) checkManualApprovedModeAuto(dtr *DeployTimeResult, dr *v1alpha1.DeckhouseRelease, metricLabels updater.MetricLabels) {
 	// check: release is approved in Manual mode
-	if c.settings.Mode == updater.ModeAuto && !dr.GetManuallyApproved() {
+	if c.settings.Mode != updater.ModeAuto && !dr.GetManuallyApproved() {
 		c.logger.Info("release is waiting for manual approval", slog.String("name", dr.GetName()))
 
 		metricLabels.SetTrue(updater.ManualApprovalRequired)
