@@ -1,5 +1,5 @@
 ---
-artifact: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 fromImage: common/src-artifact
 final: false
 shell:
@@ -8,11 +8,11 @@ shell:
   - rm -r /src/utils
   - rm -r /src/.git
 ---
-artifact: {{ .ModuleName }}/{{ .ImageName }}-artifact
+image: {{ .ModuleName }}/{{ .ImageName }}-artifact
 from: {{ .Images.BASE_ALPINE }}
 final: false
 import:
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
   add: /src
   to: /src
   before: install
@@ -35,7 +35,7 @@ shell:
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: common/distroless
 import:
-- artifact: {{ $.ModuleName }}/{{ .ImageName }}-artifact
+- image: {{ $.ModuleName }}/{{ .ImageName }}-artifact
   add: /src/src/redis-server
   to: /redis-server
   before: setup
