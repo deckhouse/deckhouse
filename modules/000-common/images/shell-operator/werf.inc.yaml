@@ -1,7 +1,7 @@
 {{- $shellOperatorVersion := "v1.5.1"}}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
-fromImage: common/alt-p11
+fromImage: common/alt-p11-artifact
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
   add: /shell-operator/shell-operator
