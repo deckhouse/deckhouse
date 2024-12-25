@@ -261,43 +261,10 @@ linters-settings:
           - "d8:vertical-pod-autoscaler:controllers-reader"
       - "istio/templates/multicluster/api-proxy/rbac-for-us.yaml":
           - "d8:istio:multicluster:api-proxy"
-#  TODO: do we need this
-#    skip-object-check-binding:
-#      - ceph-csi
-#      - cert-manager
-#      - cilium-hubble
-#      - cloud-provider-aws
-#      - cloud-provider-azure
-#      - cloud-provider-gcp
-#      - cloud-provider-yandex
-#      - deckhouse
-#      - ingress-nginx
-#      - istio
-#      - l2-load-balancer
-#      - metallb
-#      - monitoring-kubernetes
-#      - multitenancy-manager
-#      - node-manager
-#      - operator-trivy
-#      - runtime-audit-engine
-#      - snapshot-controller
-#      - static-routing-manager
-#      - terraform-manager
-#      - upmeter
-#      - user-authn
-#      - vertical-pod-autoscaler
-#      - cni-cilium
-#      - openvpn
-#      - extended-monitoring
-#      - prometheus
-#      - dashboard
-#      - service-with-healthchecks
-#      - user-authz
-#      - cloud-provider-dynamix
-#      - cloud-provider-huaweicloud
-#      - cloud-provider-openstack
-#      - cloud-provider-vcd
-#      - cloud-provider-zvirt
+    skip-object-check-binding:
+      - deckhouse
+      - node-manager
+      - user-authz
   container:
     skip-containers:
       - "okmeter:okagent"
