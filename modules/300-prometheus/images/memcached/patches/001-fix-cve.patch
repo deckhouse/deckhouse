@@ -1,5 +1,5 @@
 diff --git a/go.mod b/go.mod
-index d492b55..d266f53 100644
+index d492b55..223fa8f 100644
 --- a/go.mod
 +++ b/go.mod
 @@ -24,8 +24,8 @@ require (
@@ -8,7 +8,7 @@ index d492b55..d266f53 100644
  	github.com/xhit/go-str2duration/v2 v2.1.0 // indirect
 -	golang.org/x/crypto v0.28.0 // indirect
 -	golang.org/x/net v0.29.0 // indirect
-+	golang.org/x/crypto v0.31.0 // indirect
++	golang.org/x/crypto v0.31.0  // indirect
 +	golang.org/x/net v0.33.0 // indirect
  	golang.org/x/oauth2 v0.23.0 // indirect
  	golang.org/x/sync v0.8.0 // indirect
