@@ -59,7 +59,10 @@ linters-settings:
         - kube-router
         - deckhouse
         - handler
-        - system-registry-manager
+        - image-holder-docker-auth
+        - image-holder-docker-distribution
+        - image-holder-mirrorer
+        - image-holder-seaweedfs
       d8-ingress-nginx:
         - kruise
       d8-l2-load-balancer:
