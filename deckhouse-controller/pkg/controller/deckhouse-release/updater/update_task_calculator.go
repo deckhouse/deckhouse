@@ -123,8 +123,8 @@ func (p *TaskCalculator) CalculatePendingReleaseOrder(ctx context.Context, dr *v
 			dr.GetVersion().Minor() > prevRelease.GetVersion().Minor()) &&
 			prevRelease.GetPhase() != v1alpha1.DeckhouseReleasePhaseDeployed {
 			msg := prevRelease.Status.Message
-			if !strings.Contains(msg, "Awaiting") {
-				msg = fmt.Sprintf("Awaiting for %s release to be deployed", prevRelease.GetVersion().String())
+			if !strings.Contains(msg, "awaiting") {
+				msg = fmt.Sprintf("awaiting for v%s release to be deployed", prevRelease.GetVersion().String())
 			}
 
 			return &Task{
