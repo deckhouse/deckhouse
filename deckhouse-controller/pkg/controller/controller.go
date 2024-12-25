@@ -69,6 +69,8 @@ const (
 	kubernetesNamespace = "kube-system"
 )
 
+var commonDirsToMount = []string{"/usr/bin/", "/bin", "/usr/lib", "/usr/lib64"}
+
 type DeckhouseController struct {
 	runtimeManager     manager.Manager
 	preflightCountDown *sync.WaitGroup
@@ -181,6 +183,7 @@ func NewDeckhouseController(ctx context.Context, version string, operator *addon
 
 	moduleEventCh := make(chan events.ModuleEvent, 350)
 	operator.ModuleManager.SetModuleEventsChannel(moduleEventCh)
+	operator.ModuleManager.SetRequiredMounts(commonDirsToMount...)
 
 	// instantiate ModuleDependency extender
 	moduledependency.Instance().SetModulesVersionHelper(func(moduleName string) (string, error) {
