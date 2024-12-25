@@ -35,7 +35,7 @@ git:
 shell:
   install:
   - cd /src
-  - git clone --depth 1 --branch {{ $value.csi.attacher }} {{ $.SOURCE_REPO }}/kubernetes-csi/external-attacher.git .
+  - git clone --depth 1 --branch {{ $src_version }} {{ $.SOURCE_REPO }}/kubernetes-csi/external-attacher.git .
   - ls /patches/*.patch && git apply /patches/*.patch --verbose
   - rm -r vendor
   - rm -rf .git

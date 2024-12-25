@@ -35,7 +35,7 @@ git:
 shell:
   install:
   - cd /src
-  - git clone --depth 1 --branch {{ $value.csi.livenessprobe }} {{ $.SOURCE_REPO }}/kubernetes-csi/livenessprobe.git .
+  - git clone --depth 1 --branch {{ $src_version }} {{ $.SOURCE_REPO }}/kubernetes-csi/livenessprobe.git .
   - ls /patches/*.patch && git apply /patches/*.patch --verbose
   - rm -rf vendor
   - rm -rf .git
