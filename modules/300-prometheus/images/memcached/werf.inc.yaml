@@ -1,17 +1,21 @@
-{{ $memcachedExporterVersion := "0.14.1" }}
+{{ $memcachedExporterVersion := "0.15.0" }}
 ---
-artifact: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-exporter
+image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-exporter
 from: {{ $.Images.BASE_GOLANG_23_ALPINE_DEV }}
+final: false
 shell:
-  install:
-  - apk update && apk add --no-cache openssh-client
+  beforeInstall:
+  - apk add --no-cache git openssh-client
+  - apk add --upgrade curl=8.11.1-r0 libcrypto3=3.3.2-r1 libssl3=3.3.2-r1 expat=2.6.4-r0
   - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
+  install:
   - git clone --depth 1 --branch v{{ $memcachedExporterVersion }} {{ $.SOURCE_REPO }}/prometheus/memcached_exporter.git /src
 ---
-artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-exporter
+image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-exporter
 from: {{ $.Images.BASE_GOLANG_23_ALPINE_DEV }}
+final: false
 import:
-- artifact: {{ .ModuleName }}/{{ $.ImageName }}-src-artifact-exporter
+- image: {{ .ModuleName }}/{{ $.ImageName }}-src-artifact-exporter
   add: /src
   to: /src
   before: install
@@ -24,8 +28,9 @@ shell:
   - cd /src
   - make build
 ---
-artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
 from: {{ $.Images.BASE_ALT_DEV }}
+final: false
 shell:
   install:
     - apt-get install memcached
@@ -34,15 +39,16 @@ shell:
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: common/distroless
 import:
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
   add: /relocate
   to: /
   before: setup
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-exporter
 fromImage: common/distroless
+final: false
 import:
-  - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-exporter
+  - image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-exporter
     add: /src/memcached_exporter
     to: /usr/bin/memcached_exporter
     before: install
