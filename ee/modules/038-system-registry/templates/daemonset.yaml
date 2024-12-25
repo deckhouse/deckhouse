@@ -77,7 +77,7 @@ spec:
       serviceAccountName: {{ .Chart.Name }}
       containers:
       - name: system-registry-manager
-        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" | nindent 8 }}
+        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
         {{- if and (hasKey $.Values.systemRegistry "imagesOverride") (hasKey $.Values.systemRegistry.imagesOverride "registryManager") (ne $.Values.systemRegistry.imagesOverride.registryManager "") }}
         image: {{ $.Values.systemRegistry.imagesOverride.registryManager }}
         imagePullPolicy: IfNotPresent
