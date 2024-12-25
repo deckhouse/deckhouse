@@ -356,6 +356,8 @@ func (rid *registryInputData) FromMap(m map[string][]byte) {
 
 	if v, ok := m["registryMode"]; ok {
 		rid.RegistryMode = string(v)
+	} else {
+		rid.RegistryMode = "Direct"
 	}
 }
 
