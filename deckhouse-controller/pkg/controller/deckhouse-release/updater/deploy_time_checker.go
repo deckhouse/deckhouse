@@ -151,7 +151,19 @@ func (c *DeployTimeChecker) checkManualApproved(dtr *DeployTimeResult, dr *v1alp
 
 		metricLabels.SetTrue(updater.ManualApprovalRequired)
 
-		dtr.ReleaseApplyTime = time.Time{}
+		dtr.ReleaseApplyTime = c.now
+		dtr.Reason = manualApprovalRequiredReason
+	}
+}
+
+func (c *DeployTimeChecker) checkManualApprovedModeAuto(dtr *DeployTimeResult, dr *v1alpha1.DeckhouseRelease, metricLabels updater.MetricLabels) {
+	// check: release is approved in Manual mode
+	if c.settings.Mode == updater.ModeAuto && !dr.GetManuallyApproved() {
+		c.logger.Info("release is waiting for manual approval", slog.String("name", dr.GetName()))
+
+		metricLabels.SetTrue(updater.ManualApprovalRequired)
+
+		dtr.ReleaseApplyTime = c.now
 		dtr.Reason = manualApprovalRequiredReason
 	}
 }
@@ -283,7 +295,7 @@ func (c *DeployTimeChecker) calculateMinorDeployTime(dr *v1alpha1.DeckhouseRelea
 	c.checkCanary(result, dr, metricLabels)
 	c.checkNotify(result, dr, metricLabels)
 	c.checkWindowModeAuto(result, dr, metricLabels)
-	c.checkManualApproved(result, dr, metricLabels)
+	c.checkManualApprovedModeAuto(result, dr, metricLabels)
 
 	if !result.ReleaseApplyAfterTime.IsZero() {
 		result.Reason = notificationDelayReason
