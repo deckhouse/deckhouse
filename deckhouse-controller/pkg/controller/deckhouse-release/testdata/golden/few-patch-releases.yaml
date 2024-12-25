@@ -12,7 +12,7 @@ status:
   approved: false
   message: ""
   phase: Superseded
-  transitionTime: null
+  transitionTime: "2019-10-17T15:33:00Z"
 ---
 apiVersion: deckhouse.io/v1alpha1
 approved: false
