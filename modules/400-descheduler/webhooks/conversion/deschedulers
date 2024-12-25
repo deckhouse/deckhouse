@@ -43,7 +43,7 @@ function __on_conversion::alpha1_to_alpha2() {
        del(.spec.deschedulerPolicy.strategies.removePodsViolatingNodeTaints) |
        del(.spec.deschedulerPolicy.strategies.removePodsViolatingTopologySpreadConstraint) |
        if .spec.deschedulerPolicy.strategies.removeDuplicates.enabled then .spec.strategies.removeDuplicates.enabled = .spec.deschedulerPolicy.strategies.removeDuplicates.enabled end |
-       if .spec.deschedulerPolicy.strategies.removePodsViolatingNodeAffinity.enabled then .spec.strategies.removePodsViolatingNodeAffinity.enabled = .spec.deschedulerPolicy.strategies.removePodsViolatingNodeAffinity.enabled end |
+       if .spec.deschedulerPolicy.strategies.removePodsViolatingNodeAffinity.enabled then .spec.strategies.removePodsViolatingNodeAffinity.enabled = .spec.deschedulerPolicy.strategies.removePodsViolatingNodeAffinity.enabled | .spec.strategies.removePodsViolatingNodeAffinity.nodeAffinityType = ["requiredDuringSchedulingIgnoredDuringExecution"] end |
        if .spec.deschedulerPolicy.strategies.removePodsViolatingInterPodAntiAffinity.enabled then .spec.strategies.removePodsViolatingInterPodAntiAffinity.enabled = .spec.deschedulerPolicy.strategies.removePodsViolatingInterPodAntiAffinity.enabled end |
        if .spec.deschedulerPolicy.strategies.highNodeUtilization.enabled then .spec.strategies.highNodeUtilization.enabled = .spec.deschedulerPolicy.strategies.highNodeUtilization.enabled end |
        if .spec.deschedulerPolicy.strategies.lowNodeUtilization.enabled then .spec.strategies.lowNodeUtilization.enabled = .spec.deschedulerPolicy.strategies.lowNodeUtilization.enabled end |
@@ -52,17 +52,16 @@ function __on_conversion::alpha1_to_alpha2() {
      else . end
   )')
   then
-    data=""
-    for obj in $(jq -c './/[] | .[]' <<< ${converted}); do
-      node_selector="$(jq -cr '.spec.nodeLabelSelector//""' <<< ${obj})"
-      if [ -n "${node_selector}" ]; then
-        new_node_selector="$(echo "${node_selector}" | label-converter --to-set | sed 's|"|\"|g')"
-        obj="$(sed "s|\"${node_selector}\"|${new_node_selector}|g" <<< ${obj})"
-      fi
-      data="${data}${obj},"
+    items_count="$(jq -c 'length' <<< ${converted})"
+    for ((i=0; i<${items_count}; i++)); do
+     node_selector="$(jq -rc --argjson item_number "$i" '.[$item_number].spec.nodeLabelSelector//""' <<< ${converted})"
+     if [ -n "${node_selector}" ]; then
+       new_node_selector="$(label-converter --to-equality <<< "${node_selector}"| sed 's|"|\"|g')"
+       converted="$(jq -c --argjson new_node_selector "${new_node_selector}" --argjson item_number "${i}" '.[$item_number].spec.nodeLabelSelector = $new_node_selector' <<< ${converted})"
+     fi
     done
     cat <<EOF >"$CONVERSION_RESPONSE_PATH"
-{"convertedObjects": [${data%?}]}
+{"convertedObjects": $converted}
 EOF
   else
     cat <<EOF >"$CONVERSION_RESPONSE_PATH"
@@ -76,6 +75,7 @@ function __on_conversion::alpha2_to_alpha1() {
      if .apiVersion ==  "deckhouse.io/v1alpha2" then
        .apiVersion = "deckhouse.io/v1alpha1" |
        if .spec.nodeLabelSelector then .spec.deschedulerPolicy.globalParameters.nodeSelector = .spec.nodeLabelSelector end |
+       del(.spec.nodeLabelSelector) |
        del(.spec.strategies.removePodsViolatingNodeAffinity.nodeAffinityType) |
        del(.spec.strategies.lowNodeUtilization.thresholds) |
        del(.spec.strategies.lowNodeUtilization.targetThresholds) |
@@ -88,21 +88,20 @@ function __on_conversion::alpha2_to_alpha1() {
      else . end
   )')
   then
-    data=""
-    for obj in $(jq -c './/[] | .[]' <<< ${converted}); do
-      node_selector="$(jq -cr '.spec.deschedulerPolicy.globalParameters.nodeSelector//""' <<< ${obj})"
-      if [ -n "${node_selector}" ]; then
-        new_node_selector="$(echo "${node_selector}" | label-converter --to-equality | sed 's|"|\"|g')"
-        obj="$(sed "s|${node_selector}|\"${new_node_selector}\"|g" <<< ${obj})"
-      fi
-      data="${data}${obj},"
+    items_count="$(jq -c 'length' <<< ${converted})"
+    for ((i=0; i<${items_count}; i++)); do
+     node_selector="$(jq -rc --argjson item_number "$i" '.[$item_number].spec.deschedulerPolicy.globalParameters.nodeSelector//""' <<< ${converted})"
+     if [ -n "${node_selector}" ]; then
+       new_node_selector="$(label-converter --to-set <<< "${node_selector}"| sed 's|"|\"|g')"
+       converted="$(jq -c --argjson new_node_selector "${new_node_selector}" --argjson item_number "${i}" '.[$item_number].spec.deschedulerPolicy.globalParameters.nodeSelector = $new_node_selector' <<< ${converted})"
+     fi
     done
     cat <<EOF >"$CONVERSION_RESPONSE_PATH"
-{"convertedObjects": [${data%?}]}
+{"convertedObjects": $converted }
 EOF
   else
     cat <<EOF >"$CONVERSION_RESPONSE_PATH"
-{"failedMessage":"Conversion of nodegroups.deckhouse.io failed"}
+{"failedMessage":"Conversion of deschedulers.deckhouse.io failed"}
 EOF
   fi
 }

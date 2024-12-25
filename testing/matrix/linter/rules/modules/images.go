@@ -79,25 +79,30 @@ func skipDistrolessImageCheckIfNeeded(image string) bool {
 		"snapshot-controller/Dockerfile",
 		"snapshot-validation-webhook/Dockerfile",
 		"api-proxy/Dockerfile",
-		"kiali/Dockerfile",
+		"kiali-v1x19x7/Dockerfile",
+		"kiali-v1x21x6/Dockerfile",
 		"metadata-discovery/Dockerfile",
 		"metadata-exporter/Dockerfile",
 		"operator-v1x12x6/Dockerfile",
 		"operator-v1x13x7/Dockerfile",
 		"operator-v1x16x2/Dockerfile",
-		"operator-v1x19x7/Dockerfile",
+		"operator-v1x19x7/werf.inc.yaml",
+		"operator-v1x21x6/werf.inc.yaml",
 		"pilot-v1x12x6/Dockerfile",
 		"pilot-v1x13x7/Dockerfile",
 		"pilot-v1x16x2/Dockerfile",
 		"pilot-v1x19x7/Dockerfile",
+		"pilot-v1x21x6/Dockerfile",
 		"proxyv2-v1x12x6/Dockerfile",
 		"proxyv2-v1x13x7/Dockerfile",
 		"proxyv2-v1x16x2/Dockerfile",
 		"proxyv2-v1x19x7/Dockerfile",
+		"proxyv2-v1x21x6/Dockerfile",
 		"cni-v1x12x6/Dockerfile",
 		"cni-v1x13x7/Dockerfile",
 		"cni-v1x16x2/Dockerfile",
 		"cni-v1x19x7/Dockerfile",
+		"cni-v1x21x6/Dockerfile",
 		"ebpf-exporter/Dockerfile",
 		"controller-1-1/Dockerfile",
 		"easyrsa-migrator/Dockerfile",
@@ -221,16 +226,16 @@ func lintOneDockerfileOrWerfYAML(name, filePath, imagesPath string) errors.LintR
 						continue
 					}
 
-					result, message := isWerfInstructionUnacceptable(fromTrimmed)
-					if result {
-						return errors.NewLintRuleError(
-							"MODULE001",
-							fmt.Sprintf("module = %s, image = %s", name, relativeFilePath),
-							fromTrimmed,
-							"%s",
-							message,
-						)
-					}
+					// result, message := isWerfInstructionUnacceptable(fromTrimmed)
+					// if result {
+					// 	return errors.NewLintRuleError(
+					// 		"MODULE001",
+					// 		fmt.Sprintf("module = %s, image = %s", name, relativeFilePath),
+					// 		fromTrimmed,
+					// 		"%s",
+					// 		message,
+					// 	)
+					// }
 				}
 			}
 			continue

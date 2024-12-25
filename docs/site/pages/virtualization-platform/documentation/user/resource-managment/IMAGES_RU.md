@@ -59,7 +59,8 @@ EOF
 
 ```bash
 d8 k get virtualimage ubuntu-22.04
-# или более короткий вариант
+
+# Укороченный вариант команды
 d8 k get vi ubuntu-22.04
 ```
 

@@ -252,7 +252,6 @@ spec:
     zones:
     - xxx
 `
-
 		stateNGSimple = `
 ---
 apiVersion: deckhouse.io/v1
@@ -266,25 +265,6 @@ spec:
       kind: D8TestInstanceClass
       name: proper1
 `
-
-		stateNGDockerUnmanaged = `
----
-apiVersion: deckhouse.io/v1
-kind: NodeGroup
-metadata:
-  name: proper1
-spec:
-  cri:
-    type: Docker
-    docker:
-      manage: false
-  nodeType: CloudEphemeral
-  cloudInstances:
-    classReference:
-      kind: D8TestInstanceClass
-      name: proper1
-`
-
 		stateICProper = `
 ---
 apiVersion: deckhouse.io/v1alpha1
@@ -347,7 +327,7 @@ metadata:
 	// Set Kind for "ics" binding.
 	getCRDsHookConfig.Kubernetes[0].Kind = "D8TestInstanceClass"
 	getCRDsHookConfig.Kubernetes[0].ApiVersion = "deckhouse.io/v1alpha1"
-	detectInstanceClassKind = func(_ *go_hook.HookInput, _ *go_hook.HookConfig) (inUse string, fromSecret string) {
+	detectInstanceClassKind = func(_ *go_hook.HookInput, _ *go_hook.HookConfig) (string, string) {
 		return "D8TestInstanceClass", "D8TestInstanceClass"
 	}
 
@@ -1407,20 +1387,6 @@ spec:
 		})
 	})
 
-	Context("Cluster with proper NG, global cri is set to docker", func() {
-		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(stateNGSimple + stateICProper))
-			setK8sVersionAsClusterConfig(f, "1.27")
-			f.ValuesSet("global.clusterConfiguration.defaultCRI", "Docker")
-			f.RunHook()
-		})
-
-		It("Hook must not fail; cri must be correct", func() {
-			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("nodeManager.internal.nodeGroups.0.cri.type").String()).To(Equal("Docker"))
-		})
-	})
-
 	Context("Cluster with proper NG, global cri is set to containerd", func() {
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(stateNGSimple + stateICProper))
@@ -1434,18 +1400,6 @@ spec:
 		It("Hook must not fail; cri must be correct", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet("nodeManager.internal.nodeGroups.0.cri.type").String()).To(Equal("Containerd"))
-		})
-	})
-
-	Context("Cluster with proper NG, docker is not managed", func() {
-		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(stateNGDockerUnmanaged + stateICProper))
-			f.RunHook()
-		})
-
-		It("Hook must not fail; zones must be correct", func() {
-			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("nodeManager.internal.nodeGroups.0.cri.type").String()).To(Equal("NotManaged"))
 		})
 	})
 

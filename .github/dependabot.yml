@@ -430,7 +430,7 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "gomod"
-  directory: "/modules/042-kube-dns/images/resolv-watcher"
+  directory: "/modules/042-kube-dns/images/sts-pods-hosts-appender-init-container/src"
   labels:
   - "type/dependencies"
   - "status/ok-to-test"
@@ -439,16 +439,7 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "gomod"
-  directory: "/modules/042-kube-dns/images/sts-pods-hosts-appender-init-container"
-  labels:
-  - "type/dependencies"
-  - "status/ok-to-test"
-  schedule:
-    interval: "daily"
-  open-pull-requests-limit: 0
-
-- package-ecosystem: "gomod"
-  directory: "/modules/042-kube-dns/images/sts-pods-hosts-appender-webhook"
+  directory: "/modules/042-kube-dns/images/sts-pods-hosts-appender-webhook/src"
   labels:
   - "type/dependencies"
   - "status/ok-to-test"
@@ -494,15 +485,6 @@ updates:
 
 - package-ecosystem: "gomod"
   directory: "/modules/300-prometheus/images/alerts-receiver/src"
-  labels:
-  - "type/dependencies"
-  - "status/ok-to-test"
-  schedule:
-    interval: "daily"
-  open-pull-requests-limit: 0
-
-- package-ecosystem: "gomod"
-  directory: "/modules/300-prometheus/images/grafana/entrypoint"
   labels:
   - "type/dependencies"
   - "status/ok-to-test"

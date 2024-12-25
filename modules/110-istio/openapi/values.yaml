@@ -10,19 +10,19 @@ properties:
         type: object
         default: {}
         x-examples:
-          - {"1.19": { "fullVersion": "1.19.7", "revision": "1x19", "imageSuffix": "V1x19x7", "isReady": false } } # must be real
+          - {"1.21": { "fullVersion": "1.21.6", "revision": "1x21", "imageSuffix": "V1x21x6", "isReady": false } } # must be real
         additionalProperties:
           type: object
           properties:
             fullVersion:
               type: string
-              x-examples: ["1.19.7"]
+              x-examples: ["1.21.6"]
             revision:
               type: string
-              x-examples: ["v1x19"]
+              x-examples: ["v1x21"]
             imageSuffix:
               type: string
-              x-examples: ["V1x19x7"]
+              x-examples: ["V1x21x6"]
             isReady:
               type: boolean
               x-examples: [false]
@@ -33,8 +33,8 @@ properties:
       istioToK8sCompatibilityMap:
         type: object
         default:
-          "1.16": ["1.22", "1.23", "1.24", "1.25"]
-          "1.19": [ "1.26", "1.27", "1.28", "1.29", "1.30", "1.31"]
+          "1.19": ["1.26", "1.27", "1.28", "1.29", "1.30", "1.31"]
+          "1.21": ["1.26", "1.27", "1.28", "1.29", "1.30", "1.31"]
         additionalProperties:
           type: array
           items:
@@ -67,7 +67,7 @@ properties:
         type: array
         default: []
         x-examples:
-        - [{"name": "aaa", "spiffeEndpoint": "ccc", "enableIngressGateway": true, "apiHost": "aaa.sss.ddd", "networkName": "a-b-c-1-2-3", "apiJWT": "aAaA.bBbB.CcCc", "ingressGateways": [{"address": "1.2.3.4", "port": 1234}]}]
+        - [{"name": "aaa", "spiffeEndpoint": "ccc", "ca": "---CERT---asdasda314g---ENDCERT", "insecureSkipVerify": true, "enableIngressGateway": true, "apiHost": "aaa.sss.ddd", "networkName": "a-b-c-1-2-3", "apiJWT": "aAaA.bBbB.CcCc", "ingressGateways": [{"address": "1.2.3.4", "port": 1234}]}]
       remotePublicMetadata:
         type: object
         default: {}
@@ -131,11 +131,11 @@ properties:
               minimum: 1
               maximum: 9
         default:
-          - version: "1.16"
+          - version: "1.19"
             alertSeverity: 4
       globalVersion:
         type: string
-        x-examples: ["1.19"] # must be real
+        x-examples: ["1.21"] # must be real
       isGlobalVersionIstiodReady:
         type: boolean
         default: false
@@ -146,14 +146,14 @@ properties:
           type: string
         default: []
         x-examples:
-        - ["1.19"] # must be real
+        - ["1.21"] # must be real
       operatorVersionsToInstall:
         type: array
         items:
           type: string
         default: []
         x-examples:
-        - ["1.19"] # must be real
+        - ["1.21"] # must be real
       applicationNamespaces:
         type: array
         items:

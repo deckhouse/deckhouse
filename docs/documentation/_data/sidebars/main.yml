@@ -5,7 +5,9 @@ entries:
         en: Overview
         ru: Введение в документацию
       url: /deckhouse-overview.html
-    - title: Deckhouse Kubernetes Platform
+    - title:
+        en: Deckhouse Kubernetes Platform
+        ru: Deckhouse Kubernetes Platform
       folders:
         - title:
             en: Platform installation
@@ -90,7 +92,27 @@ entries:
         - title:
             en: Security software settings
             ru: Настройка ПО безопасности
-          url: /security_software_setup.html
+          folders:
+            - title:
+                en: SIEM
+                ru: SIEM
+              folders:
+                - title:
+                    en: KUMA
+                    ru: KUMA
+                  url: /security/kuma.html
+            - title:
+                en: Security scanners
+                ru: Сканеры безопасности
+              folders:
+                - title:
+                    en: Common settings
+                    ru: Общие настройки
+                  url: /security_software_setup.html
+                - title:
+                    en: KESL
+                    ru: KESL
+                  url: /security/kesl.html
         - title:
             en: Alerts
             ru: Алерты
@@ -268,8 +290,8 @@ entries:
                         ru: Настройка провайдера
                       url: /modules/cloud-provider-azure/cluster_configuration.html
                 - title:
-                    ru: Справка
                     en: Reference
+                    ru: Справка
                   folders:
                     - title:
                         en: Configuration
@@ -620,12 +642,12 @@ entries:
                 ru: cni-cilium
               folders:
                 - title:
-                    ru: Описание
                     en: Description
+                    ru: Описание
                   url: /modules/cni-cilium/
                 - title:
-                    ru: Настройки
                     en: Configuration
+                    ru: Настройки
                   url: /modules/cni-cilium/configuration.html
                 - title:
                     en: Custom Resources
@@ -844,7 +866,7 @@ entries:
             - title:
                 en: Description
                 ru: Описание
-              url: /modules/610-service-with-healthchecks/
+              url: /modules/service-with-healthchecks/
             - title:
                 en: Reference
                 ru: Справка
@@ -852,15 +874,15 @@ entries:
                 - title:
                     en: Configuration
                     ru: Настройки
-                  url: /modules/610-service-with-healthchecks/configuration.html
+                  url: /modules/service-with-healthchecks/configuration.html
                 - title:
                     en: Custom Resources
                     ru: Custom Resources
-                  url: /modules/610-service-with-healthchecks/cr.html
+                  url: /modules/service-with-healthchecks/cr.html
             - title:
                 en: Examples
                 ru: Примеры
-              url: /modules/610-service-with-healthchecks/examples.html
+              url: /modules/service-with-healthchecks/examples.html
     - title:
         en: Monitoring
         ru: Мониторинг
@@ -923,8 +945,8 @@ entries:
                 ru: Примеры
               url: /modules/monitoring-ping/usage.html
         - title:
-            ru: Мониторинг кластера
             en: Cluster monitoring
+            ru: Мониторинг кластера
           folders:
             - title:
                 en: Description
@@ -947,8 +969,8 @@ entries:
                 ru: Настройки
               url: /modules/monitoring-kubernetes-control-plane/configuration.html
         - title:
-            ru: Расширенный мониторинг
             en: Extended monitoring
+            ru: Расширенный мониторинг
           folders:
             - title:
                 en: Description
@@ -1312,12 +1334,12 @@ entries:
                 ru: Описание
               url: /modules/admission-policy-engine/
             - title:
-                ru: Справка
                 en: Reference
+                ru: Справка
               folders:
                 - title:
-                    ru: Настройки
                     en: Configuration
+                    ru: Настройки
                   url: /modules/admission-policy-engine/configuration.html
                 - title:
                     en: Custom Resources
@@ -1339,12 +1361,12 @@ entries:
                 ru: Описание
               url: /modules/runtime-audit-engine/
             - title:
-                ru: Справка
                 en: Reference
+                ru: Справка
               folders:
                 - title:
-                    ru: Настройки
                     en: Configuration
+                    ru: Настройки
                   url: /modules/runtime-audit-engine/configuration.html
                 - title:
                     en: Custom Resources
@@ -1438,20 +1460,20 @@ entries:
           featureStatus: deprecated
           folders:
             - title:
-                ru: Описание
                 en: Description
+                ru: Описание
               url: /modules/ceph-csi/
             - title:
-                ru: Примеры
                 en: Examples
+                ru: Примеры
               url: /modules/ceph-csi/examples.html
             - title:
-                ru: Справка
                 en: Reference
+                ru: Справка
               folders:
                 - title:
-                    ru: Настройки
                     en: Configuration
+                    ru: Настройки
                   url: /modules/ceph-csi/configuration.html
                 - title:
                     en: Custom Resources

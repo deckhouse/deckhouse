@@ -142,14 +142,14 @@ bin/gator: bin/gator-${GATOR_VERSION}/gator
 bin/yq: bin ## Install yq deps for update-patchversion script.
 	curl -sSfL https://github.com/mikefarah/yq/releases/download/v4.25.3/yq_$(YQ_PLATFORM)_$(YQ_ARCH) -o bin/yq && chmod +x bin/yq
 
-.PHONY: tests-modules tests-matrix tests-openapi tests-controller tests-webhooks
+.PHONY: tests-modules dmt-lint tests-openapi tests-controller tests-webhooks
 tests-modules: ## Run unit tests for modules hooks and templates.
   ##~ Options: FOCUS=module-name
 	go test -timeout=${TESTS_TIMEOUT} -vet=off ${TESTS_PATH}
 
-tests-matrix: bin/promtool bin/gator ## Test how helm templates are rendered with different input values generated from values examples.
-  ##~ Options: FOCUS=module-name
-	go test -timeout=${TESTS_TIMEOUT} ./testing/matrix/ -v
+dmt-lint:
+	docker run --rm -v ${PWD}:/deckhouse-src --user $(id -u):$(id -g) ubuntu /deckhouse-src/tools/dmt-lint.sh
+
 
 tests-openapi: ## Run tests against modules openapi values schemas.
 	go test -vet=off ./testing/openapi_cases/
@@ -301,7 +301,7 @@ bin/trdl: bin
 	chmod +x bin/trdl
 
 bin/werf: bin bin/trdl ## Install werf for images-digests generator.
-	trdl --home-dir bin/.trdl add werf https://tuf.werf.io 1 b7ff6bcbe598e072a86d595a3621924c8612c7e6dc6a82e919abe89707d7e3f468e616b5635630680dd1e98fc362ae5051728406700e6274c5ed1ad92bea52a2
+	@bash -c 'trdl --home-dir bin/.trdl add werf https://tuf.werf.io 1 b7ff6bcbe598e072a86d595a3621924c8612c7e6dc6a82e919abe89707d7e3f468e616b5635630680dd1e98fc362ae5051728406700e6274c5ed1ad92bea52a2'
 	@if command -v bin/werf >/dev/null 2>&1; then \
 		trdl --home-dir bin/.trdl --no-self-update=true update --in-background werf 1.2 stable; \
 	else \

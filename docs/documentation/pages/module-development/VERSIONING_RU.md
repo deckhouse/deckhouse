@@ -119,7 +119,7 @@ lang: ru
 Для автоматической конвертации параметров модуля из одной версии в другую включите в модуль соответствующие [конверсии](../structure/#conversions).
 Это может понадобиться, например, при переименовании или перемещении параметра в новой версии OpenAPI-спецификации.
 
-При выходе новой версии *CustomResourceDefinition* (CRD) используйте следующие рекомендации:
+При выходе новой версии CustomResourceDefinition (CRD) используйте следующие рекомендации:
 
 - Установите предыдущим версиям CRD параметр `deprecated: true`. Подробнее в документации [Kubernetes](https://kubernetes.io/docs/tasks/extend-kubernetes/custom-resources/custom-resource-definition-versioning/#version-deprecation).
 - Версию, в которой данные хранятся внутри etcd ([storage-версия](https://kubernetes.io/docs/tasks/extend-kubernetes/custom-resources/custom-resource-definition-versioning/#upgrade-existing-objects-to-a-new-stored-version)), меняйте не ранее чем через два месяца после выхода новой версии.

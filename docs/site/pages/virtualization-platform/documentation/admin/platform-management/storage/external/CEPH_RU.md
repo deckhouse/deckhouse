@@ -106,24 +106,32 @@ spec:
 EOF
 ```
 
-Проверьте, что созданные ресурсы `CephStorageClass` перешли в состояние `Created` и соответствующие объекты StorageClass создались:
+Проверьте, что созданные ресурсы `CephStorageClass` перешли в состояние `Created`, выполнив следующую команду:
 
 ```shell
 d8 k get cephstorageclass
-
-# NAME          PHASE     AGE
-# ceph-rbd-sc   Created   1h
-# ceph-fs-sc    Created   1h
 ```
 
-Созданный StorageClass можно проверить с помощью команды:
+В результате будет выведена информация о созданных ресурсах `CephStorageClass`:
+
+```console
+NAME          PHASE     AGE
+ceph-rbd-sc   Created   1h
+ceph-fs-sc    Created   1h
+```
+
+Проверьте созданный StorageClass с помощью следующей команды:
 
 ```shell
 d8 k get sc
+```
 
-# NAME          PROVISIONER        RECLAIMPOLICY   VOLUMEBINDINGMODE      ALLOWVOLUMEEXPANSION   AGE
-# ceph-rbd-sc   rbd.csi.ceph.com   Delete          WaitForFirstConsumer   true                   15s
-# ceph-fs-sc    rbd.csi.ceph.com   Delete          WaitForFirstConsumer   true                   15s
+В результате будет выведена информация о созданном StorageClass:
+
+```console
+NAME          PROVISIONER        RECLAIMPOLICY   VOLUMEBINDINGMODE      ALLOWVOLUMEEXPANSION   AGE
+ceph-rbd-sc   rbd.csi.ceph.com   Delete          WaitForFirstConsumer   true                   15s
+ceph-fs-sc    rbd.csi.ceph.com   Delete          WaitForFirstConsumer   true                   15s
 ```
 
 Если объекты StorageClass появились, значит настройка модуля csi-ceph завершена.
