@@ -35,7 +35,6 @@ shell:
     KUBE_GIT_TREE_STATE='archive'
     EOF
   - ls /patches/*.patch && git apply /patches/*.patch --verbose
-  - rm -rf vendor
   - rm -r .git
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $full_version | replace "." "-" }}
@@ -65,5 +64,6 @@ shell:
   - export GO_VERSION=${GOLANG_VERSION} GOPROXY={{ $.GOPROXY }} GOWORK=off
   - cd /src
   - export KUBE_GIT_VERSION_FILE=.kube-version
+  - go mod vendor
   - make all WHAT=cmd/kube-apiserver kube-controller-manager kube-scheduler kube-proxy kubelet kubectl kubeadm GOLDFLAGS="-s -w -extldflags \"-static\"" KUBE_STATIC_OVERRIDES="kubelet"
 {{- end }}
