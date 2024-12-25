@@ -1,6 +1,6 @@
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
-fromImage: alt-p11-artifact
+fromImage: common/alt-p11
 import:
   - image: {{ $.ModuleName }}/{{ $.ImageName }}-reloader-artifact
     add: /reloader
@@ -14,7 +14,7 @@ docker:
   ENTRYPOINT: ["/usr/bin/vector"]
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
-fromImage: src-artifact
+fromImage: common/src-artifact
 final: false
 git:
 - add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/reloader
@@ -31,7 +31,7 @@ shell:
   - rm -rf /src/vector/.git
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
-fromImage: alt-p11-artifact
+fromImage: common/alt-p11-artifact
 final: false
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
