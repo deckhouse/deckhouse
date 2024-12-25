@@ -29,6 +29,10 @@ git:
 {{ .Files.Get (printf "tools/build_includes/candi-%s.yaml" .Env) }}
 import:
 - artifact: deckhouse-controller
+  add: /out/cap-wrapper
+  to: /usr/bin/cap-wrapper
+  after: install
+- artifact: deckhouse-controller
   add: /out/deckhouse-controller
   to: /usr/bin/deckhouse-controller
   after: setup
@@ -82,6 +86,8 @@ shell:
     # Create symlink to vim-console
     ln -fs /usr/bin/vim-console /usr/bin/vim
     ln -fs /usr/bin/vim-console /usr/bin/vi
+    # Set capabilities to the cap-wrapper binary
+    setcap "cap_sys_chroot=p cap_sys_admin=p" /usr/bin/cap-wrapper
 docker:
   ENV:
     MODULES_DIR: /deckhouse/modules
