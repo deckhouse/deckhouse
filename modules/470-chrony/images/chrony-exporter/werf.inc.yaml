@@ -2,10 +2,12 @@
 {{- $promuVersion := "0.14.0"}}
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-promu
-fromArtifact: common/src-artifact
+from: {{ $.Images.BASE_GOLANG_23_ALPINE_DEV }}
 shell:
   install:
-  - git clone --depth 1 --branch v{{ $.promuVersion }} {{ $.SOURCE_REPO }}/prometheus/promu.git /promu
+  - apk update && apk add --no-cache openssh-client
+  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
+  - git clone --depth 1 --branch v0.14.0 {{ $.SOURCE_REPO }}/prometheus/promu.git /promu
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-promu
 from: {{ $.Images.BASE_GOLANG_23_ALPINE_DEV }}
@@ -24,9 +26,11 @@ shell:
   - go build -ldflags="-s -w" -o promu ./main.go
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
-fromArtifact: common/src-artifact
+from: {{ $.Images.BASE_GOLANG_23_ALPINE_DEV }}
 shell:
   install:
+  - apk update && apk add --no-cache openssh-client
+  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
   - git clone -b v{{ $.chronyExproterVersion }} --single-branch {{ $.SOURCE_REPO }}/chrony/chrony_exporter.git /src
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
