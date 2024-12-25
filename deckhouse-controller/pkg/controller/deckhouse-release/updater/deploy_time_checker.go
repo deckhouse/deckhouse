@@ -43,7 +43,8 @@ type DeployTimeChecker struct {
 
 func NewDeployTimeChecker(dc dependency.Container, metricsUpdater updater.MetricsUpdater, settings *updater.Settings, deckhousePodReadyFunc func(ctx context.Context) bool, logger *log.Logger) *DeployTimeChecker {
 	return &DeployTimeChecker{
-		metricsUpdater: metricsUpdater,
+		releaseNotifier: NewReleaseNotifier(settings),
+		metricsUpdater:  metricsUpdater,
 
 		settings: settings,
 

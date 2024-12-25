@@ -33,8 +33,10 @@ type ReleaseNotifier struct {
 	settings *updater.Settings
 }
 
-func NewReleaseNotifier() *ReleaseNotifier {
-	return &ReleaseNotifier{}
+func NewReleaseNotifier(settings *updater.Settings) *ReleaseNotifier {
+	return &ReleaseNotifier{
+		settings: settings,
+	}
 }
 
 type WebhookData struct {
