@@ -289,8 +289,11 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 		mup.Update.Mode = updater.ModeManual.String()
 
 		suite.setupController("auto-deploy-patch-release-in-manual-mode.yaml", initValues, mup)
-		dr := suite.getDeckhouseRelease("v1.25.1")
+		dr := suite.getDeckhouseRelease("v1.26.0")
 		_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
+		require.NoError(suite.T(), err)
+		dr = suite.getDeckhouseRelease("v1.25.1")
+		_, err = suite.ctr.createOrUpdateReconcile(ctx, dr)
 		require.NoError(suite.T(), err)
 	})
 
