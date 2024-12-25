@@ -16,6 +16,7 @@ shell:
   - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
   install:
   - git clone --depth 1 --branch v{{ $memcachedExporterVersion }} {{ $.SOURCE_REPO }}/prometheus/memcached_exporter.git /src
+  - cd /src
   - git apply /patches/*.patch --verbose
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-exporter
