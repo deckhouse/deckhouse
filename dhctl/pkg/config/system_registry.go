@@ -27,7 +27,7 @@ import (
 
 const (
 	RegistryModeDirect   = "Direct"
-	RegistryModeInDirect = "InDirect"
+	RegistryModeIndirect = "Indirect"
 	RegistryModeProxy    = "Proxy"
 	RegistryModeDetached = "Detached"
 )

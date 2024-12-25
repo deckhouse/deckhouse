@@ -961,7 +961,7 @@ func (r *Registry) Mode() string {
 	if r.IsDirect() {
 		return RegistryModeDirect
 	}
-	return RegistryModeInDirect
+	return RegistryModeIndirect
 }
 
 func (r Registry) DeepCopy() Registry {
