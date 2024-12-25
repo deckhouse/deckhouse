@@ -36,6 +36,7 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/k8s"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/k8s/drain"
+	ngv1 "github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/v1"
 )
 
 const (
@@ -210,40 +211,29 @@ func handleDraining(input *go_hook.HookInput, dc dependency.Container) error {
 
 func getDrainTimeout(input *go_hook.HookInput, client k8s.Client, ngName string) time.Duration {
 	nodeGroups, err := client.Dynamic().Resource(nodeGroupResource).Namespace("").List(context.TODO(), v1.ListOptions{})
+	nodeGroup := new(ngv1.NodeGroup)
+
 	if err != nil {
 		input.Logger.Error("Failed to list node groups")
 		return defaultDrainTimeout
 	}
 
 	for _, group := range nodeGroups.Items {
-		groupName := group.GetName()
+		err := sdk.FromUnstructured(&group, nodeGroup)
+		if err != nil {
+			input.Logger.Error("Error marshling NodeGroup", "ngName", ngName, "error", err)
+			return defaultDrainTimeout
+		}
+		groupName := nodeGroup.Name
 		if groupName != ngName {
 			continue
 		}
 
-		spec, found, err := unstructured.NestedMap(group.Object, "spec")
-		if err != nil || !found {
-			input.Logger.Error("Error extracting 'spec' from node group", "ngName", groupName, "error", err)
-			input.Logger.Debug("NodeGroup object", "object", group.Object)
-			return defaultDrainTimeout
+		timeoutValue := nodeGroup.Spec.NodeDrainTimeout
+		if timeoutValue != nil {
+			drainTimeout := time.Duration(*timeoutValue) * time.Second
+			return drainTimeout
 		}
-
-		timeoutValue, found, err := unstructured.NestedFieldCopy(spec, "nodeDrainTimeout")
-		if err != nil || !found {
-			input.Logger.Error("Error extracting 'nodeDrainTimeout' from 'spec'", "ngName", groupName, "error", err)
-			input.Logger.Debug("Spec object", "spec", spec)
-			return defaultDrainTimeout
-		}
-
-		if intVal, ok := timeoutValue.(int64); ok {
-			return time.Duration(intVal) * time.Second
-		}
-		if floatVal, ok := timeoutValue.(float64); ok {
-			return time.Duration(int64(floatVal)) * time.Second
-		}
-
-		input.Logger.Error("nodeDrainTimeout is not an integer as expected", "ngName", groupName, "value", timeoutValue)
-		return defaultDrainTimeout
 	}
 
 	input.Logger.Info("Node group not found, use defaultDrainTimeout", "ngName", ngName)

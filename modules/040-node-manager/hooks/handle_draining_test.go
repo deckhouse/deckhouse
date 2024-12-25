@@ -184,7 +184,7 @@ data:
 			f.RegisterCRD("deckhouse.io", "v1", "NodeGroup", false)
 		})
 
-		Context("NodeGroup exists with nodeDrainTimeout set", func() {
+		Context("NodeGroup exists with nodeDrainTimeoutSecond set", func() {
 			BeforeEach(func() {
 				nodeGroupYAML := `
 ---
@@ -194,7 +194,7 @@ metadata:
   name: worker-group
 spec:
   nodeType: Static
-  nodeDrainTimeout: 300
+  nodeDrainTimeoutSecond: 300
 status:
   desired: 1
   ready: 1
@@ -212,7 +212,7 @@ status:
 			})
 		})
 
-		Context("NodeGroup exists without nodeDrainTimeout", func() {
+		Context("NodeGroup exists without nodeDrainTimeoutSecond", func() {
 			BeforeEach(func() {
 				nodeGroupYAML := `
 ---
@@ -222,7 +222,7 @@ metadata:
   name: worker-group
 spec:
   nodeType: Static
-  nodeDrainTimeout: 300
+  nodeDrainTimeoutSecond: 300
 status:
   desired: 1
   ready: 1

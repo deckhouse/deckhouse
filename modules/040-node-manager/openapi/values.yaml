@@ -341,7 +341,7 @@ properties:
               # This is a copy from NodeGroup object. We trust that hook will not change it.
               type: object
               additionalProperties: true
-            nodeDrainTimeout:
+            nodeDrainTimeoutSecond:
               type: [integer]
               additionalProperties: true
             fencing:

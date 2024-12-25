@@ -1493,7 +1493,7 @@ spec:
                     - CloudPermanent
                     - CloudStatic
                     - Static
-                nodeDrainTimeout:
+                nodeDrainTimeoutSecond:
                   type: integer
                   description: |
                     Maximum drain time of Node

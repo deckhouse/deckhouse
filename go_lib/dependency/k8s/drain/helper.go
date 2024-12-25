@@ -30,8 +30,6 @@ type HelperConfig struct {
 	DeleteEmptyDirData  *bool
 	GracePeriodSeconds  *int
 	Timeout             *time.Duration
-	Out                 io.Writer
-	ErrOut              io.Writer
 }
 
 func NewDrainer(config HelperConfig) *Helper {
@@ -61,12 +59,6 @@ func NewDrainer(config HelperConfig) *Helper {
 	}
 	if config.Timeout != nil {
 		drainer.Timeout = *config.Timeout
-	}
-	if config.Out != nil {
-		drainer.Out = config.Out
-	}
-	if config.ErrOut != nil {
-		drainer.ErrOut = config.ErrOut
 	}
 
 	return drainer
