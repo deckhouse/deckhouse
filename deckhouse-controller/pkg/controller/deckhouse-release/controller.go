@@ -463,6 +463,14 @@ func (r *deckhouseReleaseReconciler) pendingReleaseReconcile(ctx context.Context
 		dtr = timeChecker.CheckMinorReleaseConditions(ctx, dr, metricLabels)
 	}
 
+	if metricLabels[updater.ManualApprovalRequired] == "true" {
+		metricLabels[updater.ReleaseQueueDepth] = strconv.Itoa(task.QueueDepth)
+	}
+
+	// if the predicted release has an index less than the number of awaiting releases
+	// calculate and set releaseDepthQueue label
+	r.metricsUpdater.UpdateReleaseMetric(dr.GetName(), metricLabels)
+
 	if dtr != nil {
 		err := r.updateReleaseStatus(ctx, dr, &v1alpha1.DeckhouseReleaseStatus{
 			Phase:   v1alpha1.DeckhouseReleasePhasePending,
@@ -595,20 +603,8 @@ func (r *deckhouseReleaseReconciler) ApplyForcedRelease(ctx context.Context, dr 
 //   - Release requirements
 //
 // In addition to the regular error, ErrDeployConditionsNotMet or NotReadyForDeployError is returned as appropriate.
-func (r *deckhouseReleaseReconciler) ApplyPredictedRelease(ctx context.Context, dr *v1alpha1.DeckhouseRelease, order *d8updater.Task, metricLabels updater.MetricLabels) error {
-	var err error
-	if metricLabels[updater.ManualApprovalRequired] == "true" {
-		metricLabels[updater.ReleaseQueueDepth] = strconv.Itoa(order.QueueDepth)
-	}
-
-	// if the predicted release has an index less than the number of awaiting releases
-	// calculate and set releaseDepthQueue label
-	r.metricsUpdater.UpdateReleaseMetric(dr.GetName(), metricLabels)
-	if err != nil {
-		return fmt.Errorf("check release %s conditions: %w", dr.GetName(), err)
-	}
-
-	err = r.runReleaseDeploy(ctx, dr, order.DeployedReleaseInfo)
+func (r *deckhouseReleaseReconciler) ApplyPredictedRelease(ctx context.Context, dr *v1alpha1.DeckhouseRelease, task *d8updater.Task, metricLabels updater.MetricLabels) error {
+	err := r.runReleaseDeploy(ctx, dr, task.DeployedReleaseInfo)
 	if err != nil {
 		return fmt.Errorf("run release deploy: %w", err)
 	}
