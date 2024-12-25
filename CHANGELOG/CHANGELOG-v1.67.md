@@ -52,6 +52,7 @@
 ## Fixes
 
 
+ - **[candi]** Bump runc version to 1.2.3 and add patch to revert tun/tap to default device rules. [#11280](https://github.com/deckhouse/deckhouse/pull/11280)
  - **[candi]** Fix converge of Azure cluster without nameservers in config. [#10931](https://github.com/deckhouse/deckhouse/pull/10931)
  - **[candi]** Fixed double default-unreachable-toleration-seconds in kubeadm ClusterConfiguration. [#10828](https://github.com/deckhouse/deckhouse/pull/10828)
  - **[candi]** no_proxy/http_proxy tuning, `bb-set-proxy/bb-unset-proxy` functions. [#10676](https://github.com/deckhouse/deckhouse/pull/10676)
