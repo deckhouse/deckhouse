@@ -59,6 +59,7 @@ linters-settings:
         - kube-router
         - deckhouse
         - handler
+        - system-registry-manager
       d8-ingress-nginx:
         - kruise
       d8-l2-load-balancer:
