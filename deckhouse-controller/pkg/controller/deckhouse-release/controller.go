@@ -481,9 +481,11 @@ func (r *deckhouseReleaseReconciler) pendingReleaseReconcile(ctx context.Context
 		}
 
 		err = ctrlutils.UpdateWithRetry(ctx, r.client, dr, func() error {
-			if !dtr.ReleaseApplyAfterTime.IsZero() {
-				dr.Spec.ApplyAfter = &metav1.Time{Time: dtr.ReleaseApplyAfterTime.UTC()}
+			if dtr.ReleaseApplyAfterTime.IsZero() {
+				return nil
 			}
+
+			dr.Spec.ApplyAfter = &metav1.Time{Time: dtr.ReleaseApplyAfterTime.UTC()}
 
 			if dr.Annotations == nil {
 				dr.Annotations = make(map[string]string, 1)
