@@ -3,6 +3,12 @@
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-exporter
 from: {{ $.Images.BASE_GOLANG_23_ALPINE_DEV }}
 final: false
+git:
+- add: /{{ $.ModulePath }}modules/300-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
+  to: /patches
+  stageDependencies:
+    install:
+      - '**/*'
 shell:
   beforeInstall:
   - apk add --no-cache git openssh-client
@@ -10,6 +16,7 @@ shell:
   - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
   install:
   - git clone --depth 1 --branch v{{ $memcachedExporterVersion }} {{ $.SOURCE_REPO }}/prometheus/memcached_exporter.git /src
+  - git apply /patches/*.patch --verbose
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-exporter
 from: {{ $.Images.BASE_GOLANG_23_ALPINE_DEV }}
