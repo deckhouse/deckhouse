@@ -127,9 +127,6 @@ spec:
       containers:
         - name: deckhouse
           {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_with_selinux" . | nindent 10 }}
-            capabilities:
-              add:
-              - SYS_ADMIN
           command:
             - /deckhouse/deckhouse
           image: "{{ .Values.deckhouse.internal.currentReleaseImageName }}"
