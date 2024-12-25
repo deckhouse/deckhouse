@@ -384,5 +384,6 @@ linters-settings:
     skip-vpa-checks:
       - "d8-system:deckhouse"
       - "d8-cloud-instance-manager:node-manager"
+      - "d8-okmeter:okmeter"
     skip-pdb-checks:
       - "d8-cloud-instance-manager:node-manager"

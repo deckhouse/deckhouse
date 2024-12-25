@@ -27,7 +27,7 @@
 
 {% snippetcut %}
 ```bash
-sudo /opt/deckhouse/bin/kubectl patch nodegroup master --type json -p '[{"op": "remove", "path": "/spec/nodeTemplate/taints"}]'
+sudo -i d8 k patch nodegroup master --type json -p '[{"op": "remove", "path": "/spec/nodeTemplate/taints"}]'
 ```
 {% endsnippetcut %}
   </li>
@@ -35,7 +35,7 @@ sudo /opt/deckhouse/bin/kubectl patch nodegroup master --type json -p '[{"op": "
 <p>Настройте StorageClass <a href="/products/kubernetes-platform/documentation/v1/modules/031-local-path-provisioner/cr.html#localpathprovisioner">локального хранилища</a>, выполнив на <strong>master-узле</strong> следующую команду:</p>
 {% snippetcut %}
 ```shell
-sudo /opt/deckhouse/bin/kubectl create -f - << EOF
+sudo -i d8 k create -f - << EOF
 apiVersion: deckhouse.io/v1alpha1
 kind: LocalPathProvisioner
 metadata:
@@ -48,12 +48,12 @@ EOF
 {% endsnippetcut %}
   </li>
   <li>
-<p>Укажите, что созданный StorageClass должен использоваться как StorageClass по умолчанию. Для этого выполните на <strong>master-узле</strong> следующую команду, чтобы добавить на StorageClass аннотацию <code>storageclass.kubernetes.io/is-default-class='true'</code>:
-</p>
+<p>Укажите, что созданный StorageClass должен использоваться как StorageClass по умолчанию. Для этого выполните на <strong>master-узле</strong> следующую команду:</p>
 {% snippetcut %}
 ```shell
-sudo /opt/deckhouse/bin/kubectl patch mc global --type merge \
-  -p "{\"spec\": {\"settings\":{\"defaultClusterStorageClass\":\"localpath\"}}}"```
+sudo -i d8 k patch mc global --type merge \
+  -p "{\"spec\": {\"settings\":{\"defaultClusterStorageClass\":\"localpath\"}}}"
+```
 {% endsnippetcut %}
   </li>
 </ul>
@@ -70,7 +70,7 @@ sudo /opt/deckhouse/bin/kubectl patch mc global --type merge \
 <p>Настройте StorageClass <a href="/products/kubernetes-platform/documentation/v1/modules/031-local-path-provisioner/cr.html#localpathprovisioner">локального хранилища</a>, выполнив на <strong>master-узле</strong> следующую команду:</p>
 {% snippetcut %}
 ```shell
-sudo /opt/deckhouse/bin/kubectl create -f - << EOF
+sudo -i d8 k create -f - << EOF
 apiVersion: deckhouse.io/v1alpha1
 kind: LocalPathProvisioner
 metadata:
@@ -83,10 +83,10 @@ EOF
 {% endsnippetcut %}
   </li>
   <li>
-<p>Укажите, что созданный StorageClass должен использоваться как StorageClass по умолчанию. Для этого выполните на <strong>master-узле</strong> следующую команду, чтобы добавить на StorageClass аннотацию <code>storageclass.kubernetes.io/is-default-class='true'</code>:</p>
+<p>Укажите, что созданный StorageClass должен использоваться как StorageClass по умолчанию. Для этого выполните на <strong>master-узле</strong> следующую команду:</p>
 {% snippetcut %}
 ```shell
-sudo /opt/deckhouse/bin/kubectl patch mc global --type merge \
+sudo -i d8 k patch mc global --type merge \
   -p "{\"spec\": {\"settings\":{\"defaultClusterStorageClass\":\"localpath\"}}}"
 ```
 {% endsnippetcut %}
@@ -95,7 +95,7 @@ sudo /opt/deckhouse/bin/kubectl patch mc global --type merge \
     <p>Создайте <a href="/products/kubernetes-platform/documentation/v1/modules/040-node-manager/cr.html#nodegroup">NodeGroup</a> <code>worker</code>. Для этого выполните на <strong>master-узле</strong> следующую команду:</p>
 {% snippetcut %}
 ```bash
-sudo /opt/deckhouse/bin/kubectl create -f - << EOF
+sudo -i d8 k create -f - << EOF
 apiVersion: deckhouse.io/v1
 kind: NodeGroup
 metadata:
@@ -123,7 +123,7 @@ ssh-keygen -t rsa -f /dev/shm/caps-id -C "" -N ""
     <p>Создайте в кластере ресурс <a href="/products/kubernetes-platform/documentation/v1/modules/040-node-manager/cr.html#sshcredentials">SSHCredentials</a>. Для этого выполните на <strong>master-узле</strong> следующую команду:</p>
 {% snippetcut %}
 ```bash
-kubectl create -f - <<EOF
+sudo -i d8 k -f - <<EOF
 apiVersion: deckhouse.io/v1alpha1
 kind: SSHCredentials
 metadata:
@@ -174,7 +174,7 @@ pdpl-user -i 63 caps
 ```bash
 # Укажите IP-адрес узла, который необходимо подключить к кластеру.
 export NODE=<NODE-IP-ADDRESS>
-kubectl create -f - <<EOF
+sudo -i d8 k -f - <<EOF
 apiVersion: deckhouse.io/v1alpha1
 kind: StaticInstance
 metadata:
@@ -194,13 +194,13 @@ EOF
 <p>Выполните на <strong>master-узле</strong> следующую команду, чтобы получить список узлов кластера:</p>
 {% snippetcut %}
 ```shell
-sudo /opt/deckhouse/bin/kubectl get no
+sudo -i d8 k get no
 ```
 {% endsnippetcut %}
 
 {% offtopic title="Пример вывода..." %}
 ```
-$ sudo /opt/deckhouse/bin/kubectl get no
+$ sudo -i d8 k get no
 NAME               STATUS   ROLES                  AGE    VERSION
 d8cluster          Ready    control-plane,master   30m   v1.23.17
 d8cluster-worker   Ready    worker                 10m   v1.23.17
@@ -218,13 +218,13 @@ d8cluster-worker   Ready    worker                 10m   v1.23.17
 
 {% snippetcut %}
 ```shell
-sudo /opt/deckhouse/bin/kubectl -n d8-ingress-nginx get po -l app=kruise
+sudo -i d8 k -n d8-ingress-nginx get po -l app=kruise
 ```
 {% endsnippetcut %}
 
 {% offtopic title="Пример вывода..." %}
 ```
-$ sudo /opt/deckhouse/bin/kubectl -n d8-ingress-nginx get po -l app=kruise
+$ sudo -i d8 k -n d8-ingress-nginx get po -l app=kruise
 NAME                                         READY   STATUS    RESTARTS    AGE
 kruise-controller-manager-7dfcbdc549-b4wk7   3/3     Running   0           15m
 ```
@@ -241,7 +241,7 @@ kruise-controller-manager-7dfcbdc549-b4wk7   3/3     Running   0           15m
 <p>Примените его, выполнив на <strong>master-узле</strong> следующую команду:</p>
 {% snippetcut %}
 ```shell
-sudo /opt/deckhouse/bin/kubectl create -f ingress-nginx-controller.yml
+sudo -i d8 k create -f ingress-nginx-controller.yml
 ```
 {% endsnippetcut %}
 
@@ -249,7 +249,7 @@ sudo /opt/deckhouse/bin/kubectl create -f ingress-nginx-controller.yml
 
 {% snippetcut %}
 ```shell
-sudo /opt/deckhouse/bin/kubectl -n d8-ingress-nginx get po -l app=controller
+sudo -i d8 k -n d8-ingress-nginx get po -l app=controller
 ```
 {% endsnippetcut %}
 
@@ -257,7 +257,7 @@ sudo /opt/deckhouse/bin/kubectl -n d8-ingress-nginx get po -l app=controller
 
 {% offtopic title="Пример вывода..." %}
 ```
-$ sudo /opt/deckhouse/bin/kubectl -n d8-ingress-nginx get po -l app=controller
+$ sudo -i d8 k -n d8-ingress-nginx get po -l app=controller
 NAME                                       READY   STATUS    RESTARTS   AGE
 controller-nginx-r6hxc                     3/3     Running   0          5m
 ```
@@ -271,7 +271,7 @@ controller-nginx-r6hxc                     3/3     Running   0          5m
 <p>Примените его, выполнив на <strong>master-узле</strong> следующую команду:</p>
 {% snippetcut %}
 ```shell
-sudo /opt/deckhouse/bin/kubectl create -f user.yml
+sudo -i d8 k create -f user.yml
 ```
 {% endsnippetcut %}
 </li>
