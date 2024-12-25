@@ -3,6 +3,7 @@
   {{- if $.DistroPackagesProxy }}
 - sed -i "s|ftp.altlinux.org/pub/distributions/ALTLinux|{{ $.DistroPackagesProxy }}/repository/ALT-Linux-APT-Repository|g" /etc/apt/sources.list.d/alt.list
   {{- end }}
+- export DEBIAN_FRONTEND=noninteractive
 - apt-get update
 {{- end }}
 
