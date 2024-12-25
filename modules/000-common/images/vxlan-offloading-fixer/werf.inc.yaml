@@ -72,7 +72,7 @@ shell:
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
 import:
-- image: {{ .ModuleName }}/ethtool-artifact
+- image: {{ .ModuleName }}/{{ .ImageName }}-ethtool-artifact
   add: /ethtool
   to: /ethtool
   before: setup
