@@ -31,7 +31,7 @@ shell:
   install:
   - apk update && apk add --no-cache openssh-client
   - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
-  - git clone -b v{{ $.chronyExproterVersion }} --single-branch {{ $.SOURCE_REPO }}/chrony/chrony_exporter.git /src
+  - git clone -b v{{ $.chronyExproterVersion }} --single-branch {{ $.SOURCE_REPO }}/chrony/chrony_exporter /src
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
 from: {{ $.Images.BASE_GOLANG_23_ALPINE_DEV }}
