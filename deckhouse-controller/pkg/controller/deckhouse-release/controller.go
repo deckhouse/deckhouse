@@ -477,6 +477,10 @@ func (r *deckhouseReleaseReconciler) pendingReleaseReconcile(ctx context.Context
 				dr.Spec.ApplyAfter = &metav1.Time{Time: dtr.ReleaseApplyAfterTime.UTC()}
 			}
 
+			if dr.Annotations == nil {
+				dr.Annotations = make(map[string]string, 1)
+			}
+
 			dr.Annotations[v1alpha1.DeckhouseReleaseAnnotationNotificationTimeShift] = "true"
 
 			return nil
@@ -640,6 +644,10 @@ func (r *deckhouseReleaseReconciler) runReleaseDeploy(ctx context.Context, dr *v
 			v1alpha1.DeckhouseReleaseAnnotationNotified:   strconv.FormatBool(false),
 		}
 
+		if dr.Annotations == nil {
+			dr.Annotations = make(map[string]string, 2)
+		}
+
 		for k, v := range annotations {
 			dr.Annotations[k] = v
 		}
@@ -723,6 +731,10 @@ func (r *deckhouseReleaseReconciler) bumpDeckhouseDeployment(ctx context.Context
 
 				// update releases to trigger their requeue
 				err := ctrlutils.UpdateWithRetry(ctxwt, r.client, release, func() error {
+					if release.Annotations == nil {
+						release.Annotations = make(map[string]string, 1)
+					}
+
 					release.Annotations[deckhouseReleaseAnnotationTriggeredByDryrun] = dr.GetName()
 
 					return nil
