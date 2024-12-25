@@ -1,3 +1,5 @@
+warnings-only:
+  - images
 linters-settings:
   probes:
     probes-excludes:
@@ -34,6 +36,8 @@ linters-settings:
       d8-cloud-provider-gcp:
         - kube-rbac-proxy
       d8-cloud-provider-yandex:
+        - kube-rbac-proxy
+      d8-cloud-provider-vsphere:
         - kube-rbac-proxy
       d8-cni-simple-bridge:
         - simple-bridge
@@ -181,6 +185,12 @@ linters-settings:
       - cloud-provider-zvirt:/openapi/values.yaml:
           - "properties.internal.properties.providerClusterConfiguration.properties.apiVersion"
           - "properties.internal.properties.providerDiscoveryData.properties.apiVersion"
+      - cloud-provider-vsphere:/openapi/config-values.yaml:
+#        Have to be fixed in https://github.com/deckhouse/deckhouse/issues/11294
+        - "properties.storageClass.properties.compatibilityFlag"
+      - cloud-provider-vsphere:/openapi/values.yaml:
+        - "properties.internal.properties.providerClusterConfiguration.properties.apiVersion"
+        - "properties.internal.properties.providerDiscoveryData.properties.apiVersion"
     ha-absolute-keys-excludes:
       - "user-authn:/openapi/config-values.yaml": "properties.publishAPI.properties.https"
   nocyrillic:
@@ -229,6 +239,7 @@ linters-settings:
       - cloud-provider-openstack
       - cloud-provider-vcd
       - cloud-provider-zvirt
+      - cloud-provider-vsphere
   rbac:
     skip-check-wildcards:
       - "admission-policy-engine/templates/rbac-for-us.yaml":
@@ -251,93 +262,9 @@ linters-settings:
       - "istio/templates/multicluster/api-proxy/rbac-for-us.yaml":
           - "d8:istio:multicluster:api-proxy"
     skip-object-check-binding:
-      - ceph-csi
-      - cert-manager
-      - cilium-hubble
-      - cloud-provider-aws
-      - cloud-provider-azure
-      - cloud-provider-gcp
-      - cloud-provider-yandex
       - deckhouse
-      - ingress-nginx
-      - istio
-      - l2-load-balancer
-      - metallb
-      - monitoring-kubernetes
-      - multitenancy-manager
       - node-manager
-      - operator-trivy
-      - runtime-audit-engine
-      - snapshot-controller
-      - static-routing-manager
-      - terraform-manager
-      - upmeter
-      - user-authn
-      - vertical-pod-autoscaler
-      - cni-cilium
-      - openvpn
-      - extended-monitoring
-      - prometheus
-      - dashboard
-      - service-with-healthchecks
       - user-authz
-      - cloud-provider-dynamix
-      - cloud-provider-huaweicloud
-      - cloud-provider-openstack
-      - cloud-provider-vcd
-      - cloud-provider-zvirt
-  helm:
-    skip-module-image-name:
-      - "021-cni-cilium/images/cilium/Dockerfile"
-      - "021-cni-cilium/images/virt-cilium/Dockerfile"
-    skip-distroless-image-check:
-      - "base-cilium-dev/werf.inc.yaml"
-      - "cilium-envoy/werf.inc.yaml"
-      - "drbd-reactor/Dockerfile"
-      - "linstor-affinity-controller/Dockerfile"
-      - "linstor-csi/Dockerfile"
-      - "linstor-drbd-wait/Dockerfile"
-      - "linstor-pools-importer/Dockerfile"
-      - "linstor-scheduler-admission/Dockerfile"
-      - "linstor-scheduler-extender/Dockerfile"
-      - "linstor-server/Dockerfile"
-      - "piraeus-operator/Dockerfile"
-      - "spaas/Dockerfile"
-      - "snapshot-controller/Dockerfile"
-      - "snapshot-validation-webhook/Dockerfile"
-      - "api-proxy/Dockerfile"
-      - "kiali/Dockerfile"
-      - "metadata-discovery/Dockerfile"
-      - "metadata-exporter/Dockerfile"
-      - "operator-v1x12x6/Dockerfile"
-      - "operator-v1x13x7/Dockerfile"
-      - "operator-v1x16x2/Dockerfile"
-      - "operator-v1x19x7/Dockerfile"
-      - "pilot-v1x12x6/Dockerfile"
-      - "pilot-v1x13x7/Dockerfile"
-      - "pilot-v1x16x2/Dockerfile"
-      - "pilot-v1x19x7/Dockerfile"
-      - "proxyv2-v1x12x6/Dockerfile"
-      - "proxyv2-v1x13x7/Dockerfile"
-      - "proxyv2-v1x16x2/Dockerfile"
-      - "proxyv2-v1x19x7/Dockerfile"
-      - "cni-v1x12x6/Dockerfile"
-      - "cni-v1x13x7/Dockerfile"
-      - "cni-v1x16x2/Dockerfile"
-      - "cni-v1x19x7/Dockerfile"
-      - "ebpf-exporter/Dockerfile"
-      - "controller-1-1/Dockerfile"
-      - "easyrsa-migrator/Dockerfile"
-      - "pmacct/Dockerfile"
-      - "argocd/Dockerfile"
-      - "argocd-image-updater/Dockerfile"
-      - "werf-argocd-cmp-sidecar/Dockerfile"
-    skip-helm-ignore-check:
-      - "namespace-configurator"
-      - "dashboard"
-    skip-namespace-check:
-      - "namespace-configurator"
-      - "dashboard"
   container:
     skip-containers:
       - "okmeter:okagent"

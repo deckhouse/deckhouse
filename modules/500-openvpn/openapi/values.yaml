@@ -33,6 +33,8 @@ properties:
             x-examples: ["p4ssw0rd"]
       pushToClientRoutes:
         type: array
+        x-examples:
+          - ["172.25.176.0/24"]
         items:
           type: string
       pushToClientSearchDomains:
