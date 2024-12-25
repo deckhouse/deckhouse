@@ -159,6 +159,8 @@ properties:
               default: {}
               additionalProperties:
                 type: string
+            allowAccessToKubernetes:
+              type: boolean
             spec:
               # clients spec is copied from custom resources as is and validated by its spec
               type: object
