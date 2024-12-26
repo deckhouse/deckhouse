@@ -13,6 +13,7 @@ shell:
   beforeInstall:
   {{- include "alpine packages proxy" . | nindent 2 }}
   - apk add --no-cache git openssh-client
+  - apk add --upgrade curl=8.11.1-r0 libcrypto3=3.3.2-r1 libssl3=3.3.2-r1 expat=2.6.4-r0
   - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
   install:
   - git clone --depth 1 --branch v{{ $imageAvailabilityExporterVersion }} {{ $.SOURCE_REPO }}/deckhouse/k8s-image-availability-exporter.git /src
