@@ -40,7 +40,7 @@ shell:
   install:
   - chmod 0500 /usr/local/bin/envoy
   - chown 1337:1337 /usr/local/bin/envoy
-  - curl --output /busybox https://github.com/EXALAB/Busybox-static/raw/refs/heads/main/busybox_amd64
+  - curl --output /busybox https://raw.githubusercontent.com/EXALAB/Busybox-static/refs/heads/main/busybox_amd64
   - chmod +x /busybox
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
