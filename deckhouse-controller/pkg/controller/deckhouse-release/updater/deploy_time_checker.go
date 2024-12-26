@@ -68,6 +68,7 @@ func (c *DeployTimeChecker) CheckPatchReleaseConditions(ctx context.Context, dr 
 	resultDeployTime := c.calculatePatchDeployTime(dr, metricLabels)
 
 	// check: Notification
+	var notified bool
 	if !c.settings.NotificationConfig.IsEmpty() && c.settings.NotificationConfig.ReleaseType == updater.ReleaseTypeAll {
 		metricLabels.SetFalse(updater.NotificationNotSent)
 
@@ -80,6 +81,8 @@ func (c *DeployTimeChecker) CheckPatchReleaseConditions(ctx context.Context, dr 
 				ReleaseApplyAfterTime: resultDeployTime.ReleaseApplyAfterTime,
 			}
 		}
+
+		notified = true
 	}
 
 	if dr.GetApplyNow() || resultDeployTime.Reason.IsNoDelay() {
@@ -93,7 +96,7 @@ func (c *DeployTimeChecker) CheckPatchReleaseConditions(ctx context.Context, dr 
 	return &DeployTimeReason{
 		Message:               resultDeployTime.Reason.Message(dr, resultDeployTime.ReleaseApplyTime),
 		ReleaseApplyAfterTime: resultDeployTime.ReleaseApplyAfterTime,
-		Notified:              true,
+		Notified:              notified,
 	}
 }
 
@@ -242,6 +245,7 @@ func (c *DeployTimeChecker) CheckMinorReleaseConditions(ctx context.Context, dr 
 	resultDeployTime := c.calculateMinorDeployTime(dr, metricLabels)
 
 	// check: Notification
+	var notified bool
 	if !c.settings.NotificationConfig.IsEmpty() {
 		metricLabels.SetFalse(updater.NotificationNotSent)
 
@@ -254,6 +258,8 @@ func (c *DeployTimeChecker) CheckMinorReleaseConditions(ctx context.Context, dr 
 				ReleaseApplyAfterTime: resultDeployTime.ReleaseApplyAfterTime,
 			}
 		}
+
+		notified = true
 	}
 
 	// check: Deckhouse pod is ready
@@ -263,7 +269,7 @@ func (c *DeployTimeChecker) CheckMinorReleaseConditions(ctx context.Context, dr 
 		return &DeployTimeReason{
 			Message:               "awaiting for Deckhouse pod to be ready",
 			ReleaseApplyAfterTime: resultDeployTime.ReleaseApplyAfterTime,
-			Notified:              true,
+			Notified:              notified,
 		}
 	}
 
@@ -278,7 +284,7 @@ func (c *DeployTimeChecker) CheckMinorReleaseConditions(ctx context.Context, dr 
 	return &DeployTimeReason{
 		Message:               resultDeployTime.Reason.Message(dr, resultDeployTime.ReleaseApplyTime),
 		ReleaseApplyAfterTime: resultDeployTime.ReleaseApplyAfterTime,
-		Notified:              true,
+		Notified:              notified,
 	}
 }
 
