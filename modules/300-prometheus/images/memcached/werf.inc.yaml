@@ -42,6 +42,7 @@ fromImage: common/relocate-artifact
 final: false
 shell:
   beforeInstall:
+  - apt-get update -y
   - apt-get install -y memcached
   install:
   - /binary_replace.sh -i "/usr/bin/memcached" -o /relocate
