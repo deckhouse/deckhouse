@@ -100,7 +100,6 @@ lang: ru
         <b>Минимальные</b><br><br>
         <i>Работа кластера на узлах с минимальными требованиями сильно зависит от набора включённых модулей DKP.<br>
         При большом количестве включённых модулей ресурсы узлов лучше увеличить.<br><br>
-        * – характеристики для системных узлов в случае отсутствия в кластере выделенных узлов мониторинга.
         </i>
       </td>
       <td>Master-узел</td>
@@ -127,12 +126,13 @@ lang: ru
       <td style="text-align: center;">50</td>
     </tr>
     <tr>
-      <td rowspan="2">Системный узел*</td>
+      <td>Системный узел</td>
       <td style="text-align: center;">2</td>
       <td style="text-align: center;">4</td>
       <td style="text-align: center;">50</td>
     </tr>
     <tr>
+      <td>Системный узел <i>(если нет выделенных узлов мониторинга</i>)</td>
       <td style="text-align: center;">2</td>
       <td style="text-align: center;">8</td>
       <td style="text-align: center;">60</td>
@@ -140,7 +140,6 @@ lang: ru
     <tr>
       <td rowspan="6" style="width: 45%;">
         <b>Production</b><br><br>
-        <i>* – характеристики для системных узлов в случае отсутствия в кластере выделенных узлов мониторинга.</i>
       </td>
       <td>Master-узел</td>
       <td style="text-align: center;">8</td>
@@ -166,12 +165,13 @@ lang: ru
       <td style="text-align: center;">50</td>
     </tr>
     <tr>
-      <td rowspan="2">Системный узел*</td>
+      <td>Системный узел</td>
       <td style="text-align: center;">6</td>
       <td style="text-align: center;">12</td>
       <td style="text-align: center;">50</td>
     </tr>
     <tr>
+      <td>Системный узел <i>(если нет выделенных узлов мониторинга</i>)</td>
       <td style="text-align: center;">8</td>
       <td style="text-align: center;">16</td>
       <td style="text-align: center;">60</td>
