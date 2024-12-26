@@ -41,29 +41,29 @@ const (
 )
 
 var cloudProviderToProviderKind = map[string]string{
-	"OpenStack": "OpenStackClusterConfiguration",
-	"AWS":       "AWSClusterConfiguration",
-	"GCP":       "GCPClusterConfiguration",
-	"Yandex":    "YandexClusterConfiguration",
-	"vSphere":   "VsphereClusterConfiguration",
-	"Azure":     "AzureClusterConfiguration",
-	"VCD":       "VCDClusterConfiguration",
-	"Zvirt":     "ZvirtClusterConfiguration",
-	"Huaweicloud":	"HuaweiCloudClusterConfiguration",
-	"Dynamix":	"DynamixClusterConfiguration",
+	"OpenStack":   "OpenStackClusterConfiguration",
+	"AWS":         "AWSClusterConfiguration",
+	"GCP":         "GCPClusterConfiguration",
+	"Yandex":      "YandexClusterConfiguration",
+	"vSphere":     "VsphereClusterConfiguration",
+	"Azure":       "AzureClusterConfiguration",
+	"VCD":         "VCDClusterConfiguration",
+	"Zvirt":       "ZvirtClusterConfiguration",
+	"Huaweicloud": "HuaweiCloudClusterConfiguration",
+	"Dynamix":     "DynamixClusterConfiguration",
 }
 
 var cloudProviderSpecificClusterPrefix = map[string]interface{}{
-	"OpenStack": regexp.MustCompile(".+"),
-	"AWS":       regexp.MustCompile(".+"),
-	"GCP":       regexp.MustCompile(".+"),
-	"Yandex":    regexp.MustCompile("^([a-z]([-a-z0-9]{0,61}[a-z0-9])?)$"),
-	"vSphere":   regexp.MustCompile(".+"),
-	"Azure":     regexp.MustCompile(".+"),
-	"VCD":       regexp.MustCompile(".+"),
-	"Zvirt":     regexp.MustCompile(".+"),
-	"Huaweicloud":	regexp.MustCompile(".+"),
-	"Dynamix":	regexp.MustCompile(".+"),
+	"OpenStack":   regexp.MustCompile(".+"),
+	"AWS":         regexp.MustCompile(".+"),
+	"GCP":         regexp.MustCompile(".+"),
+	"Yandex":      regexp.MustCompile("^([a-z]([-a-z0-9]{0,61}[a-z0-9])?)$"),
+	"vSphere":     regexp.MustCompile(".+"),
+	"Azure":       regexp.MustCompile(".+"),
+	"VCD":         regexp.MustCompile(".+"),
+	"Zvirt":       regexp.MustCompile(".+"),
+	"Huaweicloud": regexp.MustCompile(".+"),
+	"Dynamix":     regexp.MustCompile(".+"),
 }
 
 type ClusterConfig struct {
@@ -300,6 +300,8 @@ func ValidateClusterConfiguration(
 // "AzureClusterConfiguration",
 // "VCDClusterConfiguration",
 // "ZvirtClusterConfiguration",
+// "HuaweiCloudClusterConfiguration",
+// "DynamixClusterConfiguration",
 // ]
 func ValidateProviderSpecificClusterConfiguration(
 	providerSpecificClusterConfiguration string,
