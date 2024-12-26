@@ -92,13 +92,14 @@
 
 
 # render shell scripts for preparing installer image
-# . is list with indexes:
-#   0 - parent context
-#   1 - Files.Get prefix
-#   2 - CI_COMMIT_TAG env
+# . is dict with keys:
+#   rootContext - context with .Files
+#   prefix - Files.Get prefix
+#   CI_COMMIT_TAG - CI_COMMIT_TAG env
 {{- define "installer_prepare_with_shell" }}
-{{- $context := index . 0 -}}
-{{- $prefix := index . 1 -}}
+{{- $context := . -}}
+{{- $rootContext := $context.rootContext -}}
+{{- $prefix := $context.prefix -}}
 {{- $CI_COMMIT_TAG := index . 2 -}}
 
 shell:
@@ -110,7 +111,7 @@ shell:
   - |
     ln -fs /dhctl /usr/bin/dhctl
     cat <<"EOD" > /etc/inputrc
-    {{- $context.Files.Get (printf "%sdeckhouse-controller/files/inputrc" $prefix) | nindent 4 }}
+    {{- $rootContext.Files.Get (printf "%sdeckhouse-controller/files/inputrc" $prefix) | nindent 4 }}
     EOD
 
     cat <<"EOD" > /etc/bashrc
@@ -129,11 +130,11 @@ shell:
 
     mkdir -p /etc/vim
     cat <<"EOD" > /etc/vim/vimrc.local
-    {{- $context.Files.Get (printf "%sdeckhouse-controller/files/vimrc.local" $prefix) | nindent 4 }}
+    {{- $rootContext.Files.Get (printf "%sdeckhouse-controller/files/vimrc.local" $prefix) | nindent 4 }}
     EOD
 
     echo 'eval "$(dhctl --completion-script-bash)"' >> /etc/bashrc
-    echo '{{- $CI_COMMIT_TAG }}' > /deckhouse/version
+    echo '{{- $context.CI_COMMIT_TAG }}' > /deckhouse/version
 
 {{- end }}
 
