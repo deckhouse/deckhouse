@@ -26,7 +26,10 @@
 #   Env - werf env
 {{- define "dev_prebuild_images_imports" }}
 {{- $context := . -}}
-
+- image: deckhouse-controller-artifact
+  add: /out/cap-wrapper
+  to: /usr/bin/cap-wrapper
+  after: install
 - image: deckhouse-controller-artifact
   add: /out/deckhouse-controller
   to: /usr/bin/deckhouse-controller
@@ -75,7 +78,8 @@ chown deckhouse:deckhouse -R /deckhouse
 # Create symlink to vim-console
 ln -fs /usr/bin/vim-console /usr/bin/vim
 ln -fs /usr/bin/vim-console /usr/bin/vi
-
+# Set capabilities to the cap-wrapper binary
+setcap "cap_sys_chroot=p cap_sys_admin=p" /usr/bin/cap-wrapper
 {{- end }}
 
 # render docker parameters for installer image

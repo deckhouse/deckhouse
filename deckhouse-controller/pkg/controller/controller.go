@@ -21,10 +21,12 @@ import (
 	"fmt"
 	"os"
 	"sync"
+	"syscall"
 	"time"
 
 	addonoperator "github.com/flant/addon-operator/pkg/addon-operator"
 	"github.com/flant/addon-operator/pkg/module_manager/models/modules/events"
+	mountmgr "github.com/flant/addon-operator/pkg/module_manager/mount_manager"
 	"github.com/flant/addon-operator/pkg/utils"
 	"github.com/go-logr/logr"
 	appsv1 "k8s.io/api/apps/v1"
@@ -68,8 +70,6 @@ const (
 	deckhouseNamespace  = "d8-system"
 	kubernetesNamespace = "kube-system"
 )
-
-var commonDirsToMount = []string{"/usr/bin/", "/bin", "/usr/lib", "/usr/lib64"}
 
 type DeckhouseController struct {
 	runtimeManager     manager.Manager
@@ -183,7 +183,58 @@ func NewDeckhouseController(ctx context.Context, version string, operator *addon
 
 	moduleEventCh := make(chan events.ModuleEvent, 350)
 	operator.ModuleManager.SetModuleEventsChannel(moduleEventCh)
-	operator.ModuleManager.SetRequiredMounts(commonDirsToMount...)
+	// set chrooted environment
+	operator.ModuleManager.SetRequiredMounts([]mountmgr.MountDescriptor{
+		{
+			Source: "/usr/bin",
+			Flags:  syscall.MS_BIND | syscall.MS_RDONLY,
+		},
+		{
+			Source: "/bin",
+			Flags:  syscall.MS_BIND | syscall.MS_RDONLY,
+		},
+		{
+			Source: "/usr/local/bin",
+			Flags:  syscall.MS_BIND | syscall.MS_RDONLY,
+		},
+		{
+			Source: "/lib",
+			Flags:  syscall.MS_BIND | syscall.MS_RDONLY,
+		},
+		{
+			Source: "/lib64",
+			Flags:  syscall.MS_BIND | syscall.MS_RDONLY,
+		},
+		{
+			Source: "/deckhouse/shell_lib",
+			Flags:  syscall.MS_BIND | syscall.MS_RDONLY,
+		},
+		{
+			Source: "/deckhouse/shell-operator",
+			Flags:  syscall.MS_BIND | syscall.MS_RDONLY,
+		},
+		{
+			Source: "/deckhouse/candi",
+			Flags:  syscall.MS_BIND | syscall.MS_RDONLY,
+		},
+		{
+			Source: "/deckhouse/helm_lib",
+			Flags:  syscall.MS_BIND | syscall.MS_RDONLY,
+		},
+		{
+			Source:   "/proc/sys/kernel/cap_last_cap",
+			TypeFile: true,
+		},
+		{
+			Source:   "/deckhouse/shell_lib.sh",
+			TypeFile: true,
+		},
+		{
+			Source: "/chroot/tmp",
+			Target: "/tmp",
+			Flags:  syscall.MS_BIND,
+		},
+	}...)
 
 	// instantiate ModuleDependency extender
 	moduledependency.Instance().SetModulesVersionHelper(func(moduleName string) (string, error) {

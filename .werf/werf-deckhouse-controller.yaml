@@ -63,4 +63,5 @@ shell:
   - cd /deckhouse/deckhouse-controller
   - D8_VERSION=${CI_COMMIT_TAG} ./go-build.sh
   - mv deckhouse-controller /out
+  - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o /out/cap-wrapper /deckhouse/deckhouse-controller/cmd/cap-wrapper/main.go
 ---

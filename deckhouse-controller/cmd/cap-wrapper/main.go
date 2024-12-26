@@ -16,7 +16,7 @@ package main
 
 import (
 	"flag"
-	"log"
+	"fmt"
 	"os"
 	"syscall"
 
@@ -25,18 +25,22 @@ import (
 
 var runDeckhouseController bool
 
-func getCaps() (capability.Capabilities, error) {
+func newCaps() (capability.Capabilities, error) {
 	caps, err := capability.NewPid2(0)
 	if err != nil {
 		return nil, err
 	}
 
-	err = caps.Load()
-	if err != nil {
+	if err := caps.Load(); err != nil {
 		return nil, err
 	}
 
 	return caps, nil
+}
+
+func returnError(msg string) {
+	fmt.Println(msg)
+	os.Exit(1)
 }
 
 func main() {
@@ -44,42 +48,42 @@ func main() {
 	flag.Parse()
 
 	if runDeckhouseController {
-		caps, err := getCaps()
+		caps, err := newCaps()
 		if err != nil {
-			log.Fatal(err)
+			returnError(fmt.Sprintf("creating pid capabilities: %s", err))
 		}
 
 		caps.Set(capability.INHERITABLE|capability.AMBIENT, capability.CAP_SYS_CHROOT, capability.CAP_SYS_ADMIN)
 
 		err = caps.Apply(capability.CAPS | capability.AMBS)
 		if err != nil {
-			log.Fatal(err)
+			returnError(fmt.Sprintf("setting ambient capabilities: %s", err))
 		}
 
 		err = syscall.Exec("/usr/bin/tini", []string{"tini", "--", "/deckhouse/deckhouse-controller/entrypoint.sh"}, os.Environ())
 		if err != nil {
-			log.Fatal(err)
+			returnError(fmt.Sprintf("startind deckhouse-controller: %s", err))
 		}
 
 		return
 	}
 
 	if len(os.Args) > 1 {
-		caps, err := getCaps()
+		caps, err := capability.NewPid2(0)
 		if err != nil {
-			log.Fatalf("getting capabilities: %s", err)
+			returnError(fmt.Sprintf("creating pid capabilities: %s", err))
 		}
 
 		caps.Clear(capability.CAPS)
 
 		err = caps.Apply(capability.CAPS)
 		if err != nil {
-			log.Fatalf("clearing capabilities: %s", err)
+			returnError(fmt.Sprintf("clearing ambient capabilities: %s", err))
 		}
 
 		err = syscall.Exec(os.Args[1], os.Args[1:], os.Environ())
 		if err != nil {
-			log.Fatalf("executing the %q command: %s", os.Args[1:], err)
+			returnError(fmt.Sprintf("executing the %q command: %s", os.Args[1:], err))
 		}
 	}
 }
