@@ -267,7 +267,6 @@ shell:
   install:
   - curl -sL https://github.com/golangci/golangci-lint/releases/download/v1.60.1/golangci-lint-1.60.1-linux-amd64.tar.gz | tar -zx --strip-components 1 -C /tmp
   - mv /tmp/golangci-lint /usr/local/bin/golangci-lint
-
 ---
 artifact: deckhouse-controller
 fromImage: base-for-go
@@ -357,6 +356,7 @@ shell:
   - cd /deckhouse/deckhouse-controller
   - D8_VERSION=${CI_COMMIT_TAG} ./go-build.sh
   - mv deckhouse-controller /out
+  - go build -ldflags '-s -w -extldflags "-static"' -o /out/cap-wrapper ./cmd/cap-wrapper/main.go
 ---
 artifact: dhctl
 fromImage: base-for-go
