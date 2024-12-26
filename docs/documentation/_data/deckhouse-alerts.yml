@@ -225,7 +225,14 @@ alerts:
       moduleUrl: 340-extended-monitoring
       module: extended-monitoring
       edition: ce
-      description: ""
+      description: |
+        Check what's going on: `kubectl -n {{$labels.namespace}} describe job {{$labels.job_name}}`
+
+        You can check the status of the Job:
+        `kubectl -n {{$labels.namespace}} get job {{$labels.job_name}}`
+
+        You can check the status of pods created by Job:
+        `kubectl -n {{$labels.namespace}} get pods -l job-name={{$labels.job_name}}`
       summary: |
         Job {{$labels.namespace}}/{{$labels.job_name}} failed in CronJob {{$labels.namespace}}/{{$labels.owner_name}}.
       severity: "5"
@@ -246,7 +253,14 @@ alerts:
       moduleUrl: 340-extended-monitoring
       module: extended-monitoring
       edition: ce
-      description: ""
+      description: |
+        Check what's going on: `kubectl -n {{$labels.namespace}} describe job {{$labels.job_name}}`
+
+        You can check the status of the Job:
+        `kubectl -n {{$labels.namespace}} get job {{$labels.job_name}}`
+
+        You can check the status of pods created by Job:
+        `kubectl -n {{$labels.namespace}} get pods -l job-name={{$labels.job_name}}`
       summary: |
         CronJob {{$labels.namespace}}/{{$labels.job_name}} pods still not created.
       severity: "5"
