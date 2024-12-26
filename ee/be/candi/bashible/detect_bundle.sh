@@ -21,7 +21,7 @@ fi
 
 . /etc/os-release
 case "$ID" in
-  centos|rocky|almalinux|rhel)
+  centos|fedora|rocky|almalinux|rhel)
     case "$VERSION_ID" in 7|7.*|8|8.*|9|9.*)
       echo "centos" && exit 0 ;;
     esac
@@ -84,7 +84,7 @@ esac
 # try to determine os by ID_LIKE
 for ID in $ID_LIKE; do
   case "$ID" in
-    centos|rhel)
+    centos|fedora|rhel)
       try_bundle "centos"
     ;;
     debian)
