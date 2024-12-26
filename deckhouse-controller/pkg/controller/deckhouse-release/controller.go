@@ -485,6 +485,9 @@ func (r *deckhouseReleaseReconciler) pendingReleaseReconcile(ctx context.Context
 		}
 
 		err = ctrlutils.UpdateWithRetry(ctx, r.client, dr, func() error {
+			dr.Annotations[v1alpha1.DeckhouseReleaseAnnotationIsUpdating] = "false"
+			dr.Annotations[v1alpha1.DeckhouseReleaseAnnotationNotified] = strconv.FormatBool(dtr.Notified)
+
 			if dtr.ReleaseApplyAfterTime.IsZero() {
 				return nil
 			}
@@ -495,10 +498,7 @@ func (r *deckhouseReleaseReconciler) pendingReleaseReconcile(ctx context.Context
 				dr.Annotations = make(map[string]string, 2)
 			}
 
-			dr.Annotations[v1alpha1.DeckhouseReleaseAnnotationIsUpdating] = "false"
 			dr.Annotations[v1alpha1.DeckhouseReleaseAnnotationNotificationTimeShift] = "true"
-
-			dr.Annotations[v1alpha1.DeckhouseReleaseAnnotationNotified] = strconv.FormatBool(dtr.Notified)
 
 			return nil
 		})
