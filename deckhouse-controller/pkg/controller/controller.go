@@ -195,11 +195,11 @@ func NewDeckhouseController(ctx context.Context, version string, operator *addon
 			Flags:  syscall.MS_BIND | syscall.MS_RDONLY,
 		},
 		{
-			Source: "/usr/lib",
+			Source: "/lib",
 			Flags:  syscall.MS_BIND | syscall.MS_RDONLY,
 		},
 		{
-			Source: "/usr/lib64",
+			Source: "/lib64",
 			Flags:  syscall.MS_BIND | syscall.MS_RDONLY,
 		},
 		{
