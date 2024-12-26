@@ -96,7 +96,7 @@ type deckhouseVersionCheck struct {
 
 func newDeckhouseVersionCheck(enabledModules []string) *deckhouseVersionCheck {
 	return &deckhouseVersionCheck{
-		name:           "Deckhouse Version Check",
+		name:           "deckhouse version check",
 		enabledModules: set.New(enabledModules...),
 	}
 }
@@ -128,7 +128,7 @@ type kubernetesVersionCheck struct {
 
 func newKubernetesVersionCheck(k8sclient client.Client, enabledModules []string) (*kubernetesVersionCheck, error) {
 	c := &kubernetesVersionCheck{
-		name:           "Kubernetes Version Check",
+		name:           "kubernetes version check",
 		enabledModules: set.New(enabledModules...),
 		k8sclient:      k8sclient,
 	}
@@ -196,7 +196,7 @@ type deckhouseRequirementsCheck struct {
 
 func newDeckhouseRequirementsCheck(enabledModules []string) *deckhouseRequirementsCheck {
 	return &deckhouseRequirementsCheck{
-		name:           "Deckhouse Requirements Check",
+		name:           "deckhouse requirements check",
 		enabledModules: set.New(enabledModules...),
 	}
 }

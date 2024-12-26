@@ -421,7 +421,7 @@ func (r *deckhouseReleaseReconciler) pendingReleaseReconcile(ctx context.Context
 	if len(reasons) > 0 {
 		msgs := make([]string, 0, len(reasons))
 		for _, reason := range reasons {
-			msgs = append(msgs, fmt.Sprintf("reason: %s, requirement: %s", reason.Reason, reason.Message))
+			msgs = append(msgs, reason.Message)
 		}
 
 		err := r.updateReleaseStatus(ctx, dr, &v1alpha1.DeckhouseReleaseStatus{
