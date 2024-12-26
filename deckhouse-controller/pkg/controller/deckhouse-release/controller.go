@@ -485,20 +485,18 @@ func (r *deckhouseReleaseReconciler) pendingReleaseReconcile(ctx context.Context
 		}
 
 		err = ctrlutils.UpdateWithRetry(ctx, r.client, dr, func() error {
-			dr.Annotations[v1alpha1.DeckhouseReleaseAnnotationIsUpdating] = "false"
-			dr.Annotations[v1alpha1.DeckhouseReleaseAnnotationNotified] = strconv.FormatBool(dtr.Notified)
-
-			if dtr.ReleaseApplyAfterTime.IsZero() {
-				return nil
-			}
-
-			dr.Spec.ApplyAfter = &metav1.Time{Time: dtr.ReleaseApplyAfterTime.UTC()}
-
 			if dr.Annotations == nil {
 				dr.Annotations = make(map[string]string, 2)
 			}
 
-			dr.Annotations[v1alpha1.DeckhouseReleaseAnnotationNotificationTimeShift] = "true"
+			dr.Annotations[v1alpha1.DeckhouseReleaseAnnotationIsUpdating] = "false"
+			dr.Annotations[v1alpha1.DeckhouseReleaseAnnotationNotified] = strconv.FormatBool(dtr.Notified)
+
+			if !dtr.ReleaseApplyAfterTime.IsZero() {
+				dr.Spec.ApplyAfter = &metav1.Time{Time: dtr.ReleaseApplyAfterTime.UTC()}
+
+				dr.Annotations[v1alpha1.DeckhouseReleaseAnnotationNotificationTimeShift] = "true"
+			}
 
 			return nil
 		})
