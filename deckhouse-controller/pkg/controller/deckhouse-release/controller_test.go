@@ -508,11 +508,8 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 		ds.Update.NotificationConfig.MinimalNotificationTime = libapi.Duration{Duration: time.Hour}
 
 		suite.setupControllerSettings("release-with-notification-settings.yaml", initValues, ds)
-		dr := suite.getDeckhouseRelease("v1.25.0")
+		dr := suite.getDeckhouseRelease("v1.26.0")
 		_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
-		require.NoError(suite.T(), err)
-		dr = suite.getDeckhouseRelease("v1.26.0")
-		_, err = suite.ctr.createOrUpdateReconcile(ctx, dr)
 		require.NoError(suite.T(), err)
 
 		require.Contains(suite.T(), httpBody, "New Deckhouse Release 1.26.0 is available. Release will be applied at: Thursday, 17-Oct-19 16:33:00 UTC")
