@@ -49,6 +49,8 @@ var cloudProviderToProviderKind = map[string]string{
 	"Azure":     "AzureClusterConfiguration",
 	"VCD":       "VCDClusterConfiguration",
 	"Zvirt":     "ZvirtClusterConfiguration",
+	"Huaweicloud":	"HuaweiCloudClusterConfiguration",
+	"Dynamix":	"DynamixClusterConfiguration",
 }
 
 var cloudProviderSpecificClusterPrefix = map[string]interface{}{
@@ -60,6 +62,8 @@ var cloudProviderSpecificClusterPrefix = map[string]interface{}{
 	"Azure":     regexp.MustCompile(".+"),
 	"VCD":       regexp.MustCompile(".+"),
 	"Zvirt":     regexp.MustCompile(".+"),
+	"Huaweicloud":	regexp.MustCompile(".+"),
+	"Dynamix":	regexp.MustCompile(".+"),
 }
 
 type ClusterConfig struct {
