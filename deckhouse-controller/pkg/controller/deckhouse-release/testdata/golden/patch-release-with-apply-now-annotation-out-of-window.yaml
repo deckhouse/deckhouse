@@ -23,7 +23,7 @@ metadata:
     release.deckhouse.io/notified: "false"
   creationTimestamp: null
   name: v1.25.1
-  resourceVersion: "1002"
+  resourceVersion: "1001"
 spec:
   version: v1.25.1
 status:
