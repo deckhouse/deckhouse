@@ -203,8 +203,27 @@ func NewDeckhouseController(ctx context.Context, version string, operator *addon
 			Flags:  syscall.MS_BIND | syscall.MS_RDONLY,
 		},
 		{
-			Source: "/proc/sys/kernel/cap_last_cap",
+			Source: "/deckhouse/shell_lib",
 			Flags:  syscall.MS_BIND | syscall.MS_RDONLY,
+		},
+		{
+			Source: "/deckhouse/shell-operator",
+			Flags:  syscall.MS_BIND | syscall.MS_RDONLY,
+		},
+		{
+			Source: "/deckhouse/candi",
+			Flags:  syscall.MS_BIND | syscall.MS_RDONLY,
+		},
+		{
+			Source: "/deckhouse/helm_lib",
+			Flags:  syscall.MS_BIND | syscall.MS_RDONLY,
+		},
+		{
+			Source:   "/proc/sys/kernel/cap_last_cap",
+			TypeFile: true,
+		},
+		{
+			Source:   "/deckhouse/shell_lib.sh",
 			TypeFile: true,
 		},
 		{
