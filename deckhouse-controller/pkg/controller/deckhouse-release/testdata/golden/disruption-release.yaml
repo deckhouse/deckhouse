@@ -12,7 +12,7 @@ spec:
   version: v1.36.0
 status:
   approved: false
-  message: 'release requires disruption approval (`kubectl annotate DeckhouseRelease
+  message: 'release blocked, disruption approval required: (`kubectl annotate DeckhouseRelease
     v1.36.0 release.deckhouse.io/disruption-approved=true`): some test reason'
   phase: Pending
   transitionTime: null
