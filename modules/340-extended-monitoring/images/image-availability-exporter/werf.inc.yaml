@@ -11,7 +11,7 @@ git:
       - '**/*'
 shell:
   beforeInstall:
-  {{- include "alt packages proxy" . | nindent 2 }}
+  {{- include "alpine packages proxy" . | nindent 2 }}
   - apk add --no-cache git openssh-client
   - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
   install:
