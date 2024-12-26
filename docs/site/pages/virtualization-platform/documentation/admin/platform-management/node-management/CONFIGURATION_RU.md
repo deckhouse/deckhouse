@@ -124,7 +124,7 @@ nodeGroup:
 ```shell
 {{- range .nodeUsers }}
 echo 'Tuning environment for user {{ .name }}'
-# Код настройки пользовательского окружения
+# Код настройки пользовательского окружения.
 {{- end }}
 ```
 

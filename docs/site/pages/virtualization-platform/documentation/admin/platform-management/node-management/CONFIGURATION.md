@@ -134,7 +134,7 @@ Example of using variables in a template:
 ```shell
 {{- range .nodeUsers }}
 echo 'Tuning environment for user {{ .name }}'
-# Some code for tuning user environment
+# Some code for tuning user environment.
 {{- end }}
 ```
 
