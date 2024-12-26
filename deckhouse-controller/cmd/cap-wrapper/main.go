@@ -31,6 +31,10 @@ func newCaps() (capability.Capabilities, error) {
 		return nil, err
 	}
 
+	if err := caps.Load(); err != nil {
+		return nil, err
+	}
+
 	return caps, nil
 }
 
@@ -60,7 +64,7 @@ func main() {
 	}
 
 	if len(os.Args) > 1 {
-		caps, err := newCaps()
+		caps, err := capability.NewPid2(0)
 		if err != nil {
 			log.Fatalf("creating pid capabilities: %s", err)
 		}
