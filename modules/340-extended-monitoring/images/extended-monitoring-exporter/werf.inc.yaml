@@ -32,18 +32,18 @@ import:
     add: /relocate
     to: /
     before: install
-  - image: {{ $.ModuleName }}/{{ $.ImageName }}-binary-artifact
+  - image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
     add: /opt/python-static/bin
     to: /usr/bin
     before: install
     includePaths:
     - python3.11
     - python3
-  - image: {{ $.ModuleName }}/{{ $.ImageName }}-binary-artifact
+  - image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
     add: /opt/python-static/lib/python3.11
     to: /usr/lib/python3.11
     before: install
-  - image: {{ $.ModuleName }}/{{ $.ImageName }}-binary-artifact
+  - image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
     add: /opt/python-static/lib/python3.11
     to: /usr/lib/python3
     before: install
