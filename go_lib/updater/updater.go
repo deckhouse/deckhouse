@@ -429,7 +429,7 @@ func (u *Updater[R]) checkReleaseDisruptions(rl R) bool {
 		hasDisruptionUpdate, reason := requirements.HasDisruption(key)
 		if hasDisruptionUpdate {
 			if !rl.GetDisruptionApproved() {
-				msg := fmt.Sprintf("Release requires disruption approval (`kubectl annotate DeckhouseRelease %s release.deckhouse.io/disruption-approved=true`): %s", rl.GetName(), reason)
+				msg := fmt.Sprintf("release requires disruption approval (`kubectl annotate DeckhouseRelease %s release.deckhouse.io/disruption-approved=true`): %s", rl.GetName(), reason)
 				err := u.updateStatus(rl, msg, PhasePending)
 				if err != nil {
 					u.logger.Error("update status", log.Err(err))
