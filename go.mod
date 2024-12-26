@@ -62,7 +62,7 @@ require (
 	github.com/deckhouse/deckhouse/pkg/log v0.0.0-20241219045931-ca7514dfb873
 	github.com/ettle/strcase v0.2.0
 	github.com/evanphx/json-patch v5.7.0+incompatible
-	github.com/flant/addon-operator v0.0.0-20241226124144-4cbf2083cd9d
+	github.com/flant/addon-operator v0.0.0-20241226132227-31c5b0bace33
 	github.com/fsnotify/fsnotify v1.7.0
 	github.com/go-logr/logr v1.4.2
 	github.com/go-openapi/errors v0.19.7

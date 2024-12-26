@@ -180,7 +180,7 @@ func NewDeckhouseController(ctx context.Context, version string, operator *addon
 
 	moduleEventCh := make(chan events.ModuleEvent, 350)
 	operator.ModuleManager.SetModuleEventsChannel(moduleEventCh)
-	// set chrooted enviroment
+	// set chrooted environment
 	operator.ModuleManager.SetRequiredMounts([]mountmgr.MountDescriptor{
 		{
 			Source: "/usr/bin",
