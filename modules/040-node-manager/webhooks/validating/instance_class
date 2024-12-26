@@ -1,0 +1,67 @@
+#!/usr/bin/env bash
+
+# Copyright 2023 Flant JSC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+source /shell_lib.sh
+
+function __config__(){
+  cat <<EOF
+configVersion: v1
+kubernetes:
+  - name: nodegroups
+    apiVersion: deckhouse.io/v1
+    kind: NodeGroup
+    queue: "nodegroups"
+    group: main
+    executeHookOnEvent: []
+    executeHookOnSynchronization: false
+    keepFullObjectsInMemory: false
+    jqFilter: |
+      {
+        "name": .metadata.name,
+        "classReference": .spec.cloudInstances.classReference
+      }
+kubernetesValidating:
+- name: instanceclass-in-nodegroups.deckhouse.io
+  group: main
+  rules:
+  - apiGroups:   ["deckhouse.io"]
+    apiVersions: ["*"]
+    operations:  ["DELETE"]
+    resources:   ["yandexinstanceclasses", "awsinstanceclasses", "openstackinstanceclasses", "vsphereclasses", "gcloudinstanceclasses", "azureinstanceclasses"]
+    scope:       "Cluster"
+EOF
+}
+
+function __main__() {
+    # Получаем имя и тип InstanceClass, который пытаются удалить
+    classToDelete=$(context::jq -r '.review.request.name')
+    classKind=$(context::jq -r '.review.request.kind')
+
+    # Проверяем, используется ли этот класс в каких-либо NodeGroup
+    if usedInNodeGroup=$(context::jq -er --arg class "$classToDelete" --arg kind "$classKind" '.snapshots.nodegroups[].filterResult | select(.classReference.kind == $kind and .classReference.name == $class) | .name' 2>/dev/null); then
+        cat <<EOF > "$VALIDATING_RESPONSE_PATH"
+{"allowed":false, "message":"$classKind \"$classToDelete\" cannot be deleted because it is being used by NodeGroup \"$usedInNodeGroup\""}
+EOF
+        return 0
+    fi
+
+    # Если класс не используется, разрешаем удаление
+    cat <<EOF > "$VALIDATING_RESPONSE_PATH"
+{"allowed":true}
+EOF
+}
+
+hook::run "$@" 
