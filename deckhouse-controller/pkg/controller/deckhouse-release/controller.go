@@ -605,26 +605,41 @@ func (r *deckhouseReleaseReconciler) DeployTimeCalculate(ctx context.Context, dr
 
 	if task.IsPatch {
 		deployTimeResult = timeChecker.CalculatePatchDeployTime(dr, metricLabels)
-	} else {
-		checker := d8updater.NewPreApplyChecker(dus, r.logger)
-		reasons := checker.MetRequirements(dr)
-		if len(reasons) > 0 {
-			metricLabels.SetTrue(updater.DisruptionApprovalRequired)
 
-			msgs := make([]string, 0, len(reasons))
-			for _, reason := range reasons {
-				msgs = append(msgs, reason.Message)
-			}
-
+		notifyErr := releaseNotifier.SendPatchReleaseNotification(ctx, dr, deployTimeResult.ReleaseApplyAfterTime, metricLabels)
+		if notifyErr != nil {
 			return &d8updater.DeployTimeReason{
-				Message: fmt.Sprintf("release blocked, disruption approval required: %s", strings.Join(msgs, ", ")),
+				Message:               notifyErr.Error(),
+				ReleaseApplyAfterTime: deployTimeResult.ReleaseApplyAfterTime,
 			}
 		}
 
-		deployTimeResult = timeChecker.CalculateMinorDeployTime(dr, metricLabels)
+		dtr := timeChecker.ProcessPatchReleaseDeployTime(dr, deployTimeResult)
+		if dtr != nil {
+			dtr.Notified = true
+		}
+
+		return dtr
 	}
 
-	notifyErr := releaseNotifier.SendReleaseNotification(ctx, dr, deployTimeResult.ReleaseApplyAfterTime, metricLabels)
+	checker := d8updater.NewPreApplyChecker(dus, r.logger)
+	reasons := checker.MetRequirements(dr)
+	if len(reasons) > 0 {
+		metricLabels.SetTrue(updater.DisruptionApprovalRequired)
+
+		msgs := make([]string, 0, len(reasons))
+		for _, reason := range reasons {
+			msgs = append(msgs, reason.Message)
+		}
+
+		return &d8updater.DeployTimeReason{
+			Message: fmt.Sprintf("release blocked, disruption approval required: %s", strings.Join(msgs, ", ")),
+		}
+	}
+
+	deployTimeResult = timeChecker.CalculateMinorDeployTime(dr, metricLabels)
+
+	notifyErr := releaseNotifier.SendMinorReleaseNotification(ctx, dr, deployTimeResult.ReleaseApplyAfterTime, metricLabels)
 	if notifyErr != nil {
 		return &d8updater.DeployTimeReason{
 			Message:               notifyErr.Error(),
@@ -632,21 +647,12 @@ func (r *deckhouseReleaseReconciler) DeployTimeCalculate(ctx context.Context, dr
 		}
 	}
 
-	if task.IsPatch {
-		dtr := timeChecker.ProcessPatchReleaseDeployTime(dr, deployTimeResult)
-		if dtr != nil {
-			dtr.Notified = true
-		}
-
-		return dtr
-	} else {
-		dtr := timeChecker.ProcessMinorReleaseDeployTime(ctx, dr, deployTimeResult)
-		if dtr != nil {
-			dtr.Notified = true
-		}
-
-		return dtr
+	dtr := timeChecker.ProcessMinorReleaseDeployTime(ctx, dr, deployTimeResult)
+	if dtr != nil {
+		dtr.Notified = true
 	}
+
+	return dtr
 }
 
 // ApplyForcedRelease deploys forced release without any checks (windows, requirements, approvals and so on)

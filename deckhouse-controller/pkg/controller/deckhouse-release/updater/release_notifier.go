@@ -52,7 +52,7 @@ type WebhookData struct {
 
 var ErrFailedToSendReleaseNotification = errors.New("release blocked, failed to send release notification")
 
-func (u *ReleaseNotifier) SendReleaseNotification(ctx context.Context, dr *v1alpha1.DeckhouseRelease, applyTime time.Time, metricLabels updater.MetricLabels) error {
+func (u *ReleaseNotifier) SendPatchReleaseNotification(ctx context.Context, dr *v1alpha1.DeckhouseRelease, applyTime time.Time, metricLabels updater.MetricLabels) error {
 	// check it before calling sendReleaseNotification
 	// TODO: if we already notify - ??? it will get from annotation
 	if dr.GetNotified() {
@@ -60,6 +60,27 @@ func (u *ReleaseNotifier) SendReleaseNotification(ctx context.Context, dr *v1alp
 	}
 
 	if !u.settings.NotificationConfig.IsEmpty() && u.settings.NotificationConfig.ReleaseType == updater.ReleaseTypeAll {
+		metricLabels.SetFalse(updater.NotificationNotSent)
+
+		err := u.sendReleaseNotification(ctx, dr, applyTime)
+		if err != nil {
+			metricLabels.SetTrue(updater.NotificationNotSent)
+
+			return ErrFailedToSendReleaseNotification
+		}
+	}
+
+	return nil
+}
+
+func (u *ReleaseNotifier) SendMinorReleaseNotification(ctx context.Context, dr *v1alpha1.DeckhouseRelease, applyTime time.Time, metricLabels updater.MetricLabels) error {
+	// check it before calling sendReleaseNotification
+	// TODO: if we already notify - ??? it will get from annotation
+	if dr.GetNotified() {
+		return nil
+	}
+
+	if !u.settings.NotificationConfig.IsEmpty() {
 		metricLabels.SetFalse(updater.NotificationNotSent)
 
 		err := u.sendReleaseNotification(ctx, dr, applyTime)
