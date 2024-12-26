@@ -768,8 +768,11 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 			}, nil)
 
 		suite.setupController("auto-patch-mode.yaml", initValues, mup)
-		dr := suite.getDeckhouseRelease("v1.26.3")
+		dr := suite.getDeckhouseRelease("v1.26.2")
 		_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
+		require.NoError(suite.T(), err)
+		dr = suite.getDeckhouseRelease("v1.26.3")
+		_, err = suite.ctr.createOrUpdateReconcile(ctx, dr)
 		require.NoError(suite.T(), err)
 	})
 
