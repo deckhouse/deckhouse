@@ -37,7 +37,7 @@ docker:
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
 final: false
-from: {{ $.Images.BASE_ALPINE_DEV }}
+from: {{ $.Images.BASE_ALPINE }}
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
   add: /src
