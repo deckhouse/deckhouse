@@ -15,7 +15,7 @@ fromImage: common/src-artifact
 final: false
 shell:
   setup:
-  - git clone --depth 1 --branch v0.0.4 {{ $.SOURCE_REPO }}/deckhouse/k8s-image-availability-exporter.git /src
+  - git clone --depth 1 --branch v0.10.0 {{ $.SOURCE_REPO }}/deckhouse/k8s-image-availability-exporter.git /src
   - cd /src
   - git apply /patches/*.patch --verbose
   - rm -rf /src/.git

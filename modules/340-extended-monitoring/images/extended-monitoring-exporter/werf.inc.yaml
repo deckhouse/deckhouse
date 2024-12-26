@@ -1,7 +1,7 @@
 {{- $binaries := "/usr/bin/python3 /lib64/libz.so* /lib64/libexpat.so* /usr/lib64/libffi.so* /lib64/libcrypto.so* /lib64/libssl.so*" }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
-from: common/alt-p11-artifact
+fromImage: common/alt-p11-artifact
 final: false
 git:
   - add: /{{ $.ModulePath }}modules/340-{{ $.ModuleName }}/images/{{ $.ImageName }}/src/requirements.txt
@@ -10,17 +10,27 @@ git:
       install:
         - '**/*'
 import:
-  - artifact: common/python-static
+  - image: common/python-static
     add: /opt/python-static
     to: /opt/python-static
     before: install
+  - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+    add: /wheels
+    to: /wheels
+    before: install
 shell:
   install:
+    - /opt/python-static/bin/pip3 install -f file:///wheels --no-index -r /requirements.txt
+    - /binary_replace.sh -i "{{ $binaries }}" -o /relocate
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+fromImage: common/src-artifact
+final: false
+shell:
+  setup:
     - export SOURCE_REPO={{ .SOURCE_REPO }}
     - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
     - git clone --depth 1 {{ $.SOURCE_REPO }}/python-modules/wheels /wheels
-    - /opt/python-static/bin/pip3 install -f file:///wheels --no-index -r /requirements.txt
-    - /binary_replace.sh -i "{{ $binaries }}" -o /relocate
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless

@@ -1,6 +1,6 @@
 ## Patches
 
-### 0001-fix-gomod.patch
+### Fix go.mod
 
 Bump libraries versions to resolve CVE
 

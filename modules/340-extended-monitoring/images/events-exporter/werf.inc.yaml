@@ -41,7 +41,7 @@ import:
   before: install
 shell:
   beforeInstall:
-  - apk add --no-cache openssh-client
+  - apk add --no-cache openssh-client make bash
   - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
   install:
     - export GO_VERSION=${GOLANG_VERSION}
