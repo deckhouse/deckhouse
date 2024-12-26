@@ -38,11 +38,10 @@ shell:
   - make build
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
-from: {{ $.Images.BASE_ALT }}
+fromImage: common/relocate-artifact
 final: false
 shell:
   beforeInstall:
-  {{- include "alt packages proxy" . | nindent 2 }}
   - apt-get install -y memcached
   install:
   - /binary_replace.sh -i "/usr/bin/memcached" -o /relocate
