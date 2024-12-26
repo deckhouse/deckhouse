@@ -50,7 +50,7 @@ Depending on the stage of the module lifecycle and the release channel from whic
     </thead>
     <tbody>
         <tr>
-            <td><strong>Sandbox</strong></td>
+            <td><strong>Experimental</strong></td>
             <td>Experiments</td>
             <td>Experiments</td>
             <td>Experiments</td>
@@ -58,7 +58,7 @@ Depending on the stage of the module lifecycle and the release channel from whic
             <td>Beta testing</td>
         </tr>
         <tr>
-            <td><strong>Incubating</strong></td>
+            <td><strong>Preview</strong></td>
             <td>Experiments</td>
             <td>Limited use</td>
             <td>Limited use</td>
@@ -66,7 +66,7 @@ Depending on the stage of the module lifecycle and the release channel from whic
             <td>Production use</td>
         </tr>
         <tr>
-            <td><strong>Graduated</strong></td>
+            <td><strong>General Availability</strong></td>
             <td>Experiments</td>
             <td>Limited use</td>
             <td>Limited use</td>
@@ -93,9 +93,9 @@ Depending on the stage of the module lifecycle and the release channel from whic
 
 Highlights:
 
-- A module in `Sandbox` stage on the `Stable` channel is recommended to be used in production environments only with limitations.
-- A module in `Graduated` stage on the `Alpha` channel is also not recommended for use in production environments.
-- Only `Graduated` modules installed from `Early Access`, `Stable`, or `Rock Solid` channels are suitable for production environments.
+- A module in `Experimental` status on the `Stable` channel is recommended to be used in production environments only with limitations.
+- A module in `General Availability` status on the `Alpha` channel is also not recommended for use in production environments.
+- Only `GA` modules installed from `Early Access`, `Stable`, or `Rock Solid` channels are suitable for production environments.
 - `Deprecated` modules are recommended to be replaced.
 
 <!--
