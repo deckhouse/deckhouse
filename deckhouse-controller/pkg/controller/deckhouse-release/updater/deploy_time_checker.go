@@ -31,7 +31,6 @@ import (
 
 type DeployTimeChecker struct {
 	releaseNotifier *ReleaseNotifier
-	metricsUpdater  updater.MetricsUpdater
 
 	settings *updater.Settings
 
@@ -41,10 +40,9 @@ type DeployTimeChecker struct {
 	logger *log.Logger
 }
 
-func NewDeployTimeChecker(dc dependency.Container, metricsUpdater updater.MetricsUpdater, settings *updater.Settings, deckhousePodReadyFunc func(ctx context.Context) bool, logger *log.Logger) *DeployTimeChecker {
+func NewDeployTimeChecker(dc dependency.Container, settings *updater.Settings, deckhousePodReadyFunc func(ctx context.Context) bool, logger *log.Logger) *DeployTimeChecker {
 	return &DeployTimeChecker{
 		releaseNotifier: NewReleaseNotifier(settings),
-		metricsUpdater:  metricsUpdater,
 
 		settings: settings,
 
@@ -64,12 +62,47 @@ type DeployTimeReason struct {
 
 // for patch, we check fewer conditions, then for minor release
 // - Canary settings
-func (c *DeployTimeChecker) CheckPatchReleaseConditions(ctx context.Context, dr *v1alpha1.DeckhouseRelease, metricLabels updater.MetricLabels) *DeployTimeReason {
-	resultDeployTime := c.calculatePatchDeployTime(dr, metricLabels)
+func (c *DeployTimeChecker) ProcessPatchReleaseDeployTime(dr *v1alpha1.DeckhouseRelease, res *DeployTimeResult) *DeployTimeReason {
+	if dr.GetApplyNow() || res.Reason.IsNoDelay() {
+		return nil
+	}
+
+	if res.ReleaseApplyTime == c.now {
+		res.ReleaseApplyTime = time.Time{}
+	}
+
+	return &DeployTimeReason{
+		Message:               res.Reason.Message(dr, res.ReleaseApplyTime),
+		ReleaseApplyAfterTime: res.ReleaseApplyAfterTime,
+	}
+}
+
+// check: release disruptions (hard lock)
+func (c *DeployTimeChecker) CheckReleaseDisruptions(dr *v1alpha1.DeckhouseRelease, metricLabels updater.MetricLabels) error {
+	err := c.checkReleaseDisruptions(dr)
+	if err != nil {
+		metricLabels.SetTrue(updater.DisruptionApprovalRequired)
+
+		return fmt.Errorf("release blocked, disruption approval required: %w", err)
+	}
+
+	return nil
+}
+
+// for minor release (version change) we check more conditions
+// - Release requirements
+// - Disruptions
+// - Notification
+// - Cooldown
+// - Canary settings
+// - Update windows or manual approval
+// - Deckhouse pod is ready
+func (c *DeployTimeChecker) CheckMinorReleaseConditions(ctx context.Context, dr *v1alpha1.DeckhouseRelease, metricLabels updater.MetricLabels) *DeployTimeReason {
+	resultDeployTime := c.CalculateMinorDeployTime(dr, metricLabels)
 
 	// check: Notification
 	var notified bool
-	if !c.settings.NotificationConfig.IsEmpty() && c.settings.NotificationConfig.ReleaseType == updater.ReleaseTypeAll {
+	if !c.settings.NotificationConfig.IsEmpty() {
 		metricLabels.SetFalse(updater.NotificationNotSent)
 
 		err := c.releaseNotifier.sendReleaseNotification(ctx, dr, resultDeployTime.ReleaseApplyTime)
@@ -85,6 +118,17 @@ func (c *DeployTimeChecker) CheckPatchReleaseConditions(ctx context.Context, dr 
 		notified = true
 	}
 
+	// check: Deckhouse pod is ready
+	if !c.deckhousePodReadyFunc(ctx) {
+		c.logger.Info("Deckhouse is not ready. Skipping upgrade")
+
+		return &DeployTimeReason{
+			Message:               "awaiting for Deckhouse pod to be ready",
+			ReleaseApplyAfterTime: resultDeployTime.ReleaseApplyAfterTime,
+			Notified:              notified,
+		}
+	}
+
 	if dr.GetApplyNow() || resultDeployTime.Reason.IsNoDelay() {
 		return nil
 	}
@@ -97,6 +141,31 @@ func (c *DeployTimeChecker) CheckPatchReleaseConditions(ctx context.Context, dr 
 		Message:               resultDeployTime.Reason.Message(dr, resultDeployTime.ReleaseApplyTime),
 		ReleaseApplyAfterTime: resultDeployTime.ReleaseApplyAfterTime,
 		Notified:              notified,
+	}
+}
+
+func (c *DeployTimeChecker) ProcessMinorReleaseDeployTime(ctx context.Context, dr *v1alpha1.DeckhouseRelease, res *DeployTimeResult) *DeployTimeReason {
+	// check: Deckhouse pod is ready
+	if !c.deckhousePodReadyFunc(ctx) {
+		c.logger.Info("Deckhouse is not ready. Skipping upgrade")
+
+		return &DeployTimeReason{
+			Message:               "awaiting for Deckhouse pod to be ready",
+			ReleaseApplyAfterTime: res.ReleaseApplyAfterTime,
+		}
+	}
+
+	if dr.GetApplyNow() || res.Reason.IsNoDelay() {
+		return nil
+	}
+
+	if res.ReleaseApplyTime == c.now {
+		res.ReleaseApplyTime = time.Time{}
+	}
+
+	return &DeployTimeReason{
+		Message:               res.Reason.Message(dr, res.ReleaseApplyTime),
+		ReleaseApplyAfterTime: res.ReleaseApplyAfterTime,
 	}
 }
 
@@ -199,7 +268,7 @@ func (c *DeployTimeChecker) checkCooldown(dtr *DeployTimeResult, dr *v1alpha1.De
 	}
 }
 
-func (c *DeployTimeChecker) calculatePatchDeployTime(dr *v1alpha1.DeckhouseRelease, metricLabels updater.MetricLabels) *DeployTimeResult {
+func (c *DeployTimeChecker) CalculatePatchDeployTime(dr *v1alpha1.DeckhouseRelease, metricLabels updater.MetricLabels) *DeployTimeResult {
 	result := &DeployTimeResult{
 		Reason:           noDelay,
 		ReleaseApplyTime: c.now,
@@ -223,88 +292,7 @@ func (c *DeployTimeChecker) calculatePatchDeployTime(dr *v1alpha1.DeckhouseRelea
 	return result
 }
 
-// for minor release (version change) we check more conditions
-// - Release requirements
-// - Disruptions
-// - Notification
-// - Cooldown
-// - Canary settings
-// - Update windows or manual approval
-// - Deckhouse pod is ready
-func (c *DeployTimeChecker) CheckMinorReleaseConditions(ctx context.Context, dr *v1alpha1.DeckhouseRelease, metricLabels updater.MetricLabels) *DeployTimeReason {
-	// check: release disruptions (hard lock)
-	err := c.checkReleaseDisruptions(dr)
-	if err != nil {
-		metricLabels.SetTrue(updater.DisruptionApprovalRequired)
-
-		return &DeployTimeReason{
-			Message: fmt.Sprintf("release blocked, disruption approval required: %v", err),
-		}
-	}
-
-	resultDeployTime := c.calculateMinorDeployTime(dr, metricLabels)
-
-	// check: Notification
-	var notified bool
-	if !c.settings.NotificationConfig.IsEmpty() {
-		metricLabels.SetFalse(updater.NotificationNotSent)
-
-		err := c.releaseNotifier.sendReleaseNotification(ctx, dr, resultDeployTime.ReleaseApplyTime)
-		if err != nil {
-			metricLabels.SetTrue(updater.NotificationNotSent)
-
-			return &DeployTimeReason{
-				Message:               "release blocked, failed to send release notification",
-				ReleaseApplyAfterTime: resultDeployTime.ReleaseApplyAfterTime,
-			}
-		}
-
-		notified = true
-	}
-
-	// check: Deckhouse pod is ready
-	if !c.deckhousePodReadyFunc(ctx) {
-		c.logger.Info("Deckhouse is not ready. Skipping upgrade")
-
-		return &DeployTimeReason{
-			Message:               "awaiting for Deckhouse pod to be ready",
-			ReleaseApplyAfterTime: resultDeployTime.ReleaseApplyAfterTime,
-			Notified:              notified,
-		}
-	}
-
-	if dr.GetApplyNow() || resultDeployTime.Reason.IsNoDelay() {
-		return nil
-	}
-
-	if resultDeployTime.ReleaseApplyTime == c.now {
-		resultDeployTime.ReleaseApplyTime = time.Time{}
-	}
-
-	return &DeployTimeReason{
-		Message:               resultDeployTime.Reason.Message(dr, resultDeployTime.ReleaseApplyTime),
-		ReleaseApplyAfterTime: resultDeployTime.ReleaseApplyAfterTime,
-		Notified:              notified,
-	}
-}
-
-func (c *DeployTimeChecker) checkReleaseDisruptions(dr *v1alpha1.DeckhouseRelease) error {
-	if !c.settings.InDisruptionApprovalMode() {
-		return nil
-	}
-
-	// TODO: we save only last disruption condition
-	for _, key := range dr.GetDisruptions() {
-		hasDisruptionUpdate, reason := requirements.HasDisruption(key)
-		if hasDisruptionUpdate && !dr.GetDisruptionApproved() {
-			return fmt.Errorf("(`kubectl annotate DeckhouseRelease %s release.deckhouse.io/disruption-approved=true`): %s", dr.GetName(), reason)
-		}
-	}
-
-	return nil
-}
-
-func (c *DeployTimeChecker) calculateMinorDeployTime(dr *v1alpha1.DeckhouseRelease, metricLabels updater.MetricLabels) *DeployTimeResult {
+func (c *DeployTimeChecker) CalculateMinorDeployTime(dr *v1alpha1.DeckhouseRelease, metricLabels updater.MetricLabels) *DeployTimeResult {
 	result := &DeployTimeResult{
 		Reason:           noDelay,
 		ReleaseApplyTime: c.now,
@@ -327,4 +315,20 @@ func (c *DeployTimeChecker) calculateMinorDeployTime(dr *v1alpha1.DeckhouseRelea
 	}
 
 	return result
+}
+
+func (c *DeployTimeChecker) checkReleaseDisruptions(dr *v1alpha1.DeckhouseRelease) error {
+	if !c.settings.InDisruptionApprovalMode() {
+		return nil
+	}
+
+	// TODO: we save only last disruption condition
+	for _, key := range dr.GetDisruptions() {
+		hasDisruptionUpdate, reason := requirements.HasDisruption(key)
+		if hasDisruptionUpdate && !dr.GetDisruptionApproved() {
+			return fmt.Errorf("(`kubectl annotate DeckhouseRelease %s release.deckhouse.io/disruption-approved=true`): %s", dr.GetName(), reason)
+		}
+	}
+
+	return nil
 }

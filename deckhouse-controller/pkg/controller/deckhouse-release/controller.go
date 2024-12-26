@@ -291,6 +291,7 @@ func (r *deckhouseReleaseReconciler) pendingReleaseReconcile(ctx context.Context
 	var imagesRegistry string
 	// TODO: make registry service to check secrets in it
 	// TODO: incapsulate to kubernetes service
+	// TODO: check errors for empty image registry
 	registrySecret, err := r.getRegistrySecret(ctx)
 	if apierrors.IsNotFound(err) {
 		err = nil
@@ -459,12 +460,32 @@ func (r *deckhouseReleaseReconciler) pendingReleaseReconcile(ctx context.Context
 
 	metricLabels := updater.NewReleaseMetricLabels(dr)
 
+	releaseNotifier := d8updater.NewReleaseNotifier(dus)
 	var dtr *d8updater.DeployTimeReason
-	timeChecker := d8updater.NewDeployTimeChecker(r.dc, r.metricsUpdater, dus, r.isDeckhousePodReady, r.logger)
+	timeChecker := d8updater.NewDeployTimeChecker(r.dc, dus, r.isDeckhousePodReady, r.logger)
 	if task.IsPatch {
-		dtr = timeChecker.CheckPatchReleaseConditions(ctx, dr, metricLabels)
+		deployTimeResult := timeChecker.CalculatePatchDeployTime(dr, metricLabels)
+		err := releaseNotifier.SendReleaseNotification(ctx, dr, deployTimeResult.ReleaseApplyAfterTime, metricLabels)
+		if err != nil {
+			dtr.Message = err.Error()
+			dtr.ReleaseApplyAfterTime = deployTimeResult.ReleaseApplyAfterTime
+		}
+		dtr = timeChecker.ProcessPatchReleaseDeployTime(dr, deployTimeResult)
+		dtr.Notified = err == nil
 	} else {
-		dtr = timeChecker.CheckMinorReleaseConditions(ctx, dr, metricLabels)
+		err := timeChecker.CheckReleaseDisruptions(dr, metricLabels)
+		if err == nil {
+			deployTimeResult := timeChecker.CalculateMinorDeployTime(dr, metricLabels)
+			err = releaseNotifier.SendReleaseNotification(ctx, dr, deployTimeResult.ReleaseApplyAfterTime, metricLabels)
+			if err != nil {
+				dtr.Message = err.Error()
+				dtr.ReleaseApplyAfterTime = deployTimeResult.ReleaseApplyAfterTime
+			}
+			dtr = timeChecker.ProcessMinorReleaseDeployTime(ctx, dr, deployTimeResult)
+			dtr.Notified = err == nil
+		} else {
+			dtr.Message = err.Error()
+		}
 	}
 
 	if metricLabels[updater.ManualApprovalRequired] == "true" {

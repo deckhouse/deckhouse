@@ -64,9 +64,8 @@ type Task struct {
 }
 
 type ReleaseInfo struct {
-	Name       string
-	Version    *semver.Version
-	QueueDepth uint64
+	Name    string
+	Version *semver.Version
 }
 
 var ErrReleasePhaseIsNotPending = errors.New("release phase is not pending")

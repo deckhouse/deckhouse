@@ -21,6 +21,7 @@ import (
 	"context"
 	"crypto/tls"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"time"
@@ -49,12 +50,30 @@ type WebhookData struct {
 	Message   string `json:"message"`
 }
 
-func (u *ReleaseNotifier) sendReleaseNotification(ctx context.Context, dr *v1alpha1.DeckhouseRelease, applyTime time.Time) error {
-	// // check it before calling sendReleaseNotification
-	// if u.releaseData.Notified {
-	// 	return nil
-	// }
+var ErrFailedToSendReleaseNotification = errors.New("release blocked, failed to send release notification")
 
+func (u *ReleaseNotifier) SendReleaseNotification(ctx context.Context, dr *v1alpha1.DeckhouseRelease, applyTime time.Time, metricLabels updater.MetricLabels) error {
+	// check it before calling sendReleaseNotification
+	// TODO: if we already notify - ??? it will get from annotation
+	if dr.GetNotified() {
+		return nil
+	}
+
+	if !u.settings.NotificationConfig.IsEmpty() && u.settings.NotificationConfig.ReleaseType == updater.ReleaseTypeAll {
+		metricLabels.SetFalse(updater.NotificationNotSent)
+
+		err := u.sendReleaseNotification(ctx, dr, applyTime)
+		if err != nil {
+			metricLabels.SetTrue(updater.NotificationNotSent)
+
+			return ErrFailedToSendReleaseNotification
+		}
+	}
+
+	return nil
+}
+
+func (u *ReleaseNotifier) sendReleaseNotification(ctx context.Context, dr *v1alpha1.DeckhouseRelease, applyTime time.Time) error {
 	if u.settings.NotificationConfig.WebhookURL == "" {
 		return nil
 	}
@@ -72,12 +91,6 @@ func (u *ReleaseNotifier) sendReleaseNotification(ctx context.Context, dr *v1alp
 	if err != nil {
 		return fmt.Errorf("send release notification failed: %w", err)
 	}
-
-	// // set it after calling sendReleaseNotification
-	// err := u.changeNotifiedFlag(true)
-	// if err != nil {
-	// 	return fmt.Errorf("change notified flag: %w", err)
-	// }
 
 	return nil
 }
