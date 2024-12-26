@@ -8,7 +8,7 @@
 
 - image: dhctl
   add: /dhctl/bin/dhctl
-  to: (printf "%s/dhctl" $prefix)
+  to: {{ $prefix }}/dhctl
   before: setup
 - image: dev-prebuild
   add: /deckhouse
@@ -19,11 +19,11 @@
   after: setup
 - image: images-digests
   add: /images_digests.json
-  to: (printf "%s/deckhouse/candi/images_digests.json" $prefix)
+  to: {{ $prefix }}/deckhouse/candi/images_digests.json
   before: setup
 - artifact: version-map-artifact
   add: /version_map_{{ $context.Env }}.yml
-  to: (printf "%s/deckhouse/candi/version_map.yml" $prefix)
+  to: {{ $prefix }}/deckhouse/candi/version_map.yml
   before: setup
 - artifact: ssh-static
   add: /ssh/bin
@@ -71,7 +71,7 @@
 
 - artifact: terraform # from modules/040-terraform-manager/images/terraform-manager-base/werf.inc.yaml
   add: /terraform/terraform
-  to: (printf "%s/bin/terraform" $prefix)
+  to: {{ $prefix }}/bin/terraform
   before: setup
 {{- range $_, $edition := $context.Editions }}
   {{- if $edition.terraformProviders }}
