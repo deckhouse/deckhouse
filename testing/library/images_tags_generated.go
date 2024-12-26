@@ -300,7 +300,6 @@ var DefaultImagesDigests = map[string]interface{}{
 		"keepalived": "imageHash-keepalived-keepalived",
 	},
 	"kubeDns": map[string]interface{}{
-		"resolvWatcher":                     "imageHash-kubeDns-resolvWatcher",
 		"stsPodsHostsAppenderInitContainer": "imageHash-kubeDns-stsPodsHostsAppenderInitContainer",
 		"stsPodsHostsAppenderWebhook":       "imageHash-kubeDns-stsPodsHostsAppenderWebhook",
 	},
