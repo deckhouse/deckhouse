@@ -1,0 +1,37 @@
+---
+image: {{ .ModuleName }}/{{ $.ImageName }}-src-artifact
+fromImage: common/src-artifact
+final: false
+git:
+- add: {{ $.ModulePath }}/modules/042-kube-dns/images/{{ $.ImageName }}/src/
+  to: /src
+  stageDependencies:
+    install:
+    - '**/*'
+---
+image: {{ .ModuleName }}/{{ $.ImageName }}-artifact
+from: {{ .Images.BASE_GOLANG_23_ALPINE }}
+final: false
+import:
+  - image: {{ .ModuleName }}/{{ $.ImageName }}-src-artifact
+    add: /src
+    to: /src
+    before: install
+shell:
+  install:
+    - export GO_VERSION=${GOLANG_VERSION} GOPROXY={{ $.GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64
+    - cd src/
+    - go build -ldflags="-s -w" -o resolv-watcher main.go
+    - chown 64535:64535 /src/{{ $.ImageName }}
+    - chmod 0700 /src/{{ $.ImageName }}
+---
+image: {{ .ModuleName }}/{{ .ImageName }}
+fromImage: common/distroless
+import:
+  - image: {{ .ModuleName }}/{{ $.ImageName }}-artifact
+    add: /src/resolv-watcher
+    to: /resolv-watcher
+    before: setup
+docker:
+  USER: 64535
+  ENTRYPOINT: ["/resolv-watcher"]

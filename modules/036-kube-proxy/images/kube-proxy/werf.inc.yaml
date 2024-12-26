@@ -2,9 +2,12 @@
 {{- $iptables_image_version := $iptables_version | replace "." "-" }}
 {{- $binaries := "/usr/sbin/conntrack /usr/lib64/libnetfilter_conntrack.so*" }}
 ---
-artifact: {{ .ModuleName }}/{{ $.ImageName }}-artifact
-from: {{ $.Images.BASE_ALT_DEV }}
+image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+fromImage: common/relocate-artifact
+final: false
 shell:
+  beforeInstall:
+    - apt-get install conntrack-tools -y
   install:
     - /binary_replace.sh -i "{{ $binaries }}" -o /relocate
     - mkdir -p /relocate/sbin
@@ -31,11 +34,11 @@ shell:
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $version | replace "." "-" }}
 fromImage: common/distroless
 import:
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
   add: /relocate
   to: /
   before: setup
-- artifact: registrypackages/iptables-artifact-{{ $iptables_image_version }}
+- image: registrypackages/iptables-artifact-{{ $iptables_image_version }}
   add: /
   to: /sbin
   includePaths:
@@ -46,7 +49,7 @@ import:
   add: /iptables-wrapper
   to: /sbin/iptables-wrapper
   before: setup
-- artifact: common/kubernetes-artifact-{{ $image_version }}
+- image: common/kubernetes-artifact-{{ $image_version }}
   add: /src/_output/bin/kube-proxy
   to: /usr/local/bin/kube-proxy
   before: setup

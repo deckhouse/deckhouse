@@ -82,14 +82,14 @@ func initExtensions(access kubernetes.Access, preflight checker.Doer) []runnerCo
 			},
 		}, {
 			group:  groupExtensions,
-			probe:  "grafana",
+			probe:  "grafana-v10",
 			check:  "pod",
 			period: 10 * time.Second,
 			config: checker.AtLeastOnePodReady{
 				Access:           access,
 				Timeout:          5 * time.Second,
 				Namespace:        "d8-monitoring",
-				LabelSelector:    "app=grafana",
+				LabelSelector:    "app=grafana-v10",
 				PreflightChecker: controlPlanePinger,
 			},
 		}, {

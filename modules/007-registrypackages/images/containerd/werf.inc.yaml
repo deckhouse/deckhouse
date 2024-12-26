@@ -1,6 +1,6 @@
 {{- $containerd_version := "1.7.24" }}
 {{- $image_version := $containerd_version | replace "." "-" }}
-{{- $runc_version := "1.2.2" }}
+{{- $runc_version := "1.2.3" }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
 from: {{ $.Images.BASE_SCRATCH }}
@@ -35,6 +35,11 @@ git:
   stageDependencies:
     install:
       - '**/*'
+- add: /{{ $.ModulePath }}modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
+  to: /patches
+  stageDependencies:
+    install:
+      - '**/*'
 shell:
   install:
   - git clone --depth=1 --branch v{{ $containerd_version }} {{ $.SOURCE_REPO }}/containerd/containerd.git /src/containerd
@@ -43,6 +48,7 @@ shell:
   - git describe --match 'v[0-9]*' --dirty='.m' --always > VERSION
   - git rev-parse HEAD > REVISION
   - cd /src/runc
+  - git apply /patches/runc/*.patch --verbose 
   - git describe --dirty --long --always > COMMIT
   - rm -rf /src/containerd/.git
   - rm -rf /src/runc/.git

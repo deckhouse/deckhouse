@@ -1,6 +1,7 @@
 ---
-artifact: {{ $.ModuleName }}/{{ $.ImageName }}-build-artifact
-from: {{ $.Images.BASE_GOLANG_21_ALPINE }}
+image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+fromImage: common/src-artifact
+final: false
 git:
 - add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}
   to: /src
@@ -13,6 +14,15 @@ git:
     - go.sum
     setup:
     - "**/*.go"
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-build-artifact
+from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
+final: false
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+  add: /src
+  to: /src
+  before: install
 mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
@@ -26,6 +36,8 @@ shell:
   - cd /src
   - go build -ldflags="-s -w" -o stale-dns-connections-cleaner .
   - chmod +x /src/stale-dns-connections-cleaner
+  - chmod -R 0700 /src/stale-dns-connections-cleaner
+  - chown -R 64535:64535 /src/stale-dns-connections-cleaner
 ---
 image: {{ $.ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
