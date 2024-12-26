@@ -26,6 +26,8 @@ properties:
       kubeconfigEncodedNames:
         type: array
         default: []
+        x-examples:
+        - ["nn2wezldn5xgm2lhfvtwk3tfojqxi33sfuymx4u44scceizf"]
         items:
           type: string
       discoveredDexClusterIP:
@@ -160,6 +162,8 @@ properties:
               default: {}
               additionalProperties:
                 type: string
+            allowAccessToKubernetes:
+              type: boolean
             spec:
               # clients spec is copied from custom resources as is and validated by its spec
               type: object

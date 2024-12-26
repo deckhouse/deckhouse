@@ -92,12 +92,6 @@ jobs:
     - git_info
 {!{ tmpl.Exec "tests_dmt_lint" (slice $ctx) | strings.Indent 4 }!}
 
-  matrix_tests:
-    name: Matrix tests
-    needs:
-      - git_info
-{!{ tmpl.Exec "tests_before_build_template" (slice $ctx "matrix") | strings.Indent 4 }!}
-
   dhctl_tests:
     name: Dhctl Tests
     needs:

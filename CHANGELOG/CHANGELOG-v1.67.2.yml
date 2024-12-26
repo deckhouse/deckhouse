@@ -1,0 +1,37 @@
+candi:
+  fixes:
+    - summary: Bump runc version to 1.2.3 and add patch to revert tun/tap to default device rules.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/11280
+cni-cilium:
+  fixes:
+    - summary: Fixed tunnelMode setting for Static clusters.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/11233
+deckhouse:
+  fixes:
+    - summary: Fix several deployed module releases.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/11245
+deckhouse-controller:
+  fixes:
+    - summary: check spec object in validations
+      pull_request: https://github.com/deckhouse/deckhouse/pull/11216
+descheduler:
+  fixes:
+    - summary: >-
+        Fix conversation from v1alpha1 to v1alpha2 (add nodeAffinityType default for
+        removePodsViolatingNodeAffinity strategy).
+      pull_request: https://github.com/deckhouse/deckhouse/pull/11223
+metallb:
+  fixes:
+    - summary: Fixed MetalLB migration issues and improved stability.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/11224
+prometheus:
+  fixes:
+    - summary: Fixes for D8CNIMisconfigured alerts — renamed group and typos fixed.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/11259
+    - summary: Rename targets for alerts and docs fixes.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/11243
+user-authn:
+  features:
+    - summary: Add dexclient with the specific annotation to kubernetes client trustedPeers.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/11193
+

@@ -163,14 +163,6 @@ jobs:
     - pull_request_info
 {!{ tmpl.Exec "tests_dmt_lint" (slice $ctx) | strings.Indent 4 }!}
 
-  matrix_tests:
-    if: ${{ needs.pull_request_info.outputs.changes_not_markdown == 'true' }}
-    name: Matrix tests
-    needs:
-      - git_info
-      - pull_request_info
-{!{ tmpl.Exec "tests_before_build_template" (slice $ctx "matrix") | strings.Indent 4 }!}
-
   dhctl_tests:
     if: ${{ needs.pull_request_info.outputs.changes_not_markdown == 'true' }}
     name: Dhctl Tests
@@ -230,7 +222,6 @@ jobs:
       - openapi_test_cases
       - golangci_lint
       - dhctl_tests
-      - matrix_tests
       - tests
     runs-on: [ self-hosted, regular ]
     steps:

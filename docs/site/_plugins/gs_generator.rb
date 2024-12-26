@@ -84,8 +84,10 @@ class DKP_GSPage < Jekyll::Page
       self.data['nextStepName'] = @installData['steps']["step#{(@stepNumber + 1).to_s}"]['name'][lang]
     end
 
+    # TODO Refactor this weird logic
     self.data['ee_only'] = true if @installData['ee_only']
     self.data['ce_only'] = true if @installData['ce_only']
+    self.data['se_support'] = true if @installData['se_support']
 
     self.content = "{% include #{globalData['step']['header']} %}\n\n"
 

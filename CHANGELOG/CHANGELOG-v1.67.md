@@ -44,6 +44,7 @@
     Once `disableSBOMGeneration` set to true, ALL current SBOM reports are deleted (one-time operation).
  - **[registrypackages]** Update containerd to v1.7.24. [#10966](https://github.com/deckhouse/deckhouse/pull/10966)
  - **[service-with-healthchecks]** A new module has been added that performs additional checks. Based on the results of these checks, traffic can be directed to different internal processes internally independently and only if they are ready. [#9371](https://github.com/deckhouse/deckhouse/pull/9371)
+ - **[user-authn]** Add dexclient with the specific annotation to kubernetes client trustedPeers. [#11193](https://github.com/deckhouse/deckhouse/pull/11193)
  - **[user-authz]** New use subroles for DKP, and DVP aggregation. [#10936](https://github.com/deckhouse/deckhouse/pull/10936)
  - **[user-authz]** Replace use admin roles with use user roles for manage manager roles. [#10681](https://github.com/deckhouse/deckhouse/pull/10681)
     Reducing rights for manage manager roles.
@@ -51,14 +52,19 @@
 ## Fixes
 
 
+ - **[candi]** Bump runc version to 1.2.3 and add patch to revert tun/tap to default device rules. [#11280](https://github.com/deckhouse/deckhouse/pull/11280)
  - **[candi]** Fix converge of Azure cluster without nameservers in config. [#10931](https://github.com/deckhouse/deckhouse/pull/10931)
  - **[candi]** Fixed double default-unreachable-toleration-seconds in kubeadm ClusterConfiguration. [#10828](https://github.com/deckhouse/deckhouse/pull/10828)
  - **[candi]** no_proxy/http_proxy tuning, `bb-set-proxy/bb-unset-proxy` functions. [#10676](https://github.com/deckhouse/deckhouse/pull/10676)
  - **[cert-manager]** Bump cert-manager version. [#10525](https://github.com/deckhouse/deckhouse/pull/10525)
+ - **[cni-cilium]** Fixed tunnelMode setting for Static clusters. [#11233](https://github.com/deckhouse/deckhouse/pull/11233)
  - **[cni-cilium]** Fixed package dropping issues with VXLAN and VMWare-hosted nodes. [#10087](https://github.com/deckhouse/deckhouse/pull/10087)
  - **[cni-flannel]** Fixed package dropping issues with VXLAN and VMWare-hosted nodes. [#10087](https://github.com/deckhouse/deckhouse/pull/10087)
+ - **[deckhouse]** Fix several deployed module releases. [#11245](https://github.com/deckhouse/deckhouse/pull/11245)
  - **[deckhouse]** Fix source deletion error. [#10750](https://github.com/deckhouse/deckhouse/pull/10750)
+ - **[deckhouse-controller]** check spec object in validations [#11216](https://github.com/deckhouse/deckhouse/pull/11216)
  - **[deckhouse-controller]** Rollout restart for Deckhouse workloads (heritage=deckhouse) is forbidden. [#10844](https://github.com/deckhouse/deckhouse/pull/10844)
+ - **[descheduler]** Fix conversation from v1alpha1 to v1alpha2 (add nodeAffinityType default for removePodsViolatingNodeAffinity strategy). [#11223](https://github.com/deckhouse/deckhouse/pull/11223)
  - **[descheduler]** Fix and update descheduler. [#10361](https://github.com/deckhouse/deckhouse/pull/10361)
     descheduler pod will be restarted.
  - **[dhctl]** Resource readiness fix. [#11018](https://github.com/deckhouse/deckhouse/pull/11018)
@@ -73,10 +79,14 @@
  - **[helm_lib]** Updated helm_lib to 1.37.1, which should fix issue [#10950](https://github.com/deckhouse/deckhouse/pull/10950)
  - **[istio]** Fixes for Federation/Multicluster metadata-exporter and for istio-operator. [#11150](https://github.com/deckhouse/deckhouse/pull/11150)
  - **[istio]** Fixed `IngressIstioController` CRD docs rendering. [#10581](https://github.com/deckhouse/deckhouse/pull/10581)
+ - **[metallb]** Fixed MetalLB migration issues and improved stability. [#11224](https://github.com/deckhouse/deckhouse/pull/11224)
  - **[multitenancy-manager]** Fix the 'secure' and 'secure_with_dedicated_nodes' project templates and add supporting default values. [#11096](https://github.com/deckhouse/deckhouse/pull/11096)
  - **[node-manager]** Fix the key usage with cert-authority. [#10718](https://github.com/deckhouse/deckhouse/pull/10718)
  - **[node-manager]** no_proxy/http_proxy tuning, `bb-set-proxy/bb-unset-proxy` functions. [#10676](https://github.com/deckhouse/deckhouse/pull/10676)
+ - **[prometheus]** Fixes for D8CNIMisconfigured alerts — renamed group and typos fixed. [#11259](https://github.com/deckhouse/deckhouse/pull/11259)
+ - **[prometheus]** Rename targets for alerts and docs fixes. [#11243](https://github.com/deckhouse/deckhouse/pull/11243)
  - **[runtime-audit-engine]** Fix k8s labels collection from containers in syscall event source. [#10639](https://github.com/deckhouse/deckhouse/pull/10639)
+ - **[user-authn]** Fix error in dexClient internal openapi spec. [#11285](https://github.com/deckhouse/deckhouse/pull/11285)
  - **[user-authn]** Add profile scope to OIDC auth requests. [#11083](https://github.com/deckhouse/deckhouse/pull/11083)
  - **[user-authn]** Extend list annotations helm.sh/ to delete from secret. [#10918](https://github.com/deckhouse/deckhouse/pull/10918)
 

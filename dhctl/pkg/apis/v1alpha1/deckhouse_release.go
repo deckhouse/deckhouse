@@ -35,8 +35,6 @@ const (
 	PhaseSuperseded = "Superseded"
 	PhaseSuspended  = "Suspended"
 	PhaseSkipped    = "Skipped"
-	// TODO: deprecated: remove after release 1.46
-	PhaseOutdated = "Outdated"
 )
 
 var (

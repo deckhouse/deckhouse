@@ -657,7 +657,8 @@ func (u *Updater[R]) checkReleaseRequirements(rl R) bool {
 	switch any(rl).(type) {
 	case *v1alpha1.ModuleRelease:
 		u.logger.Debugf("checking requirements of '%s' for module '%s' by extenders", rl.GetName(), rl.GetModuleName())
-		if err := extenders.CheckModuleReleaseRequirements(rl.GetName(), rl.GetRequirements()); err != nil {
+		moduleRelease := any(rl).(*v1alpha1.ModuleRelease)
+		if err := extenders.CheckModuleReleaseRequirements(moduleRelease.GetModuleName(), moduleRelease.GetName(), moduleRelease.GetVersion(), moduleRelease.GetModuleReleaseRequirements()); err != nil {
 			err = u.updateStatus(rl, err.Error(), PhasePending)
 			if err != nil {
 				u.logger.Error("update status", log.Err(err))

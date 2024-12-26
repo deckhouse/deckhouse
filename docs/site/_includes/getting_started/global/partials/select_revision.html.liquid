@@ -21,18 +21,38 @@
         <a id='tab_layout_{{ revision }}' href="javascript:void(0)" class="tabs__btn tabs__btn_revision{% if revision == 'ce' %} active{% endif %}"
         onclick="openTabAndSaveStatus(event, 'tabs__btn_revision', 'tabs__content_revision', 'block_layout_{{ revision }}', 'dhctl-revision', '{{ revision }}');
                  openTabAndSaveStatus(event, 'tabs__btn_revision', 'tabs__content_other', 'block_other_{{ revision }}');
-                 toggleDisabled('tab_layout_{{ revision }}', '[license-token]');" >
+                 toggleDisabled('tab_layout_{{ revision }}', '[license-token-{{ revision }}]');" >
         {{ site.data.i18n[revision] }}
         </a>
     {%- endfor %}
 </div>
 {%- endunless %}
+{%- if page.ee_only == true and page.se_support == true %}
+  <div class="tabs">
+    {%- for revision in site.data.getting_started.dkp_data.global.revisions %}
+      {%  if revision == "se" or revision == "ee" %}
+      <a id='tab_layout_{{ revision }}' href="javascript:void(0)" class="tabs__btn tabs__btn_revision{% if revision == 'se' %} active{% endif %}"
+         onclick="openTabAndSaveStatus(event, 'tabs__btn_revision', 'tabs__content_revision', 'block_layout_{{ revision }}', 'dhctl-revision', '{{ revision }}');
+           openTabAndSaveStatus(event, 'tabs__btn_revision', 'tabs__content_other', 'block_other_{{ revision }}');
+           toggleDisabled('tab_layout_{{ revision }}', '[license-token-{{ revision }}]');" >
+        {{ site.data.i18n[revision] }}
+      </a>
+      {% endif %}
+    {%- endfor %}
+  </div>
+{% endif %}
 
 {%- for revision in site.data.getting_started.dkp_data.global.revisions %}
 {%- if page.ee_only == true and revision == 'ce' %}{% continue %}{% endif %}
+{%- if page.ee_only == true and revision == 'be' %}{% continue %}{% endif %}
+{%- if page.ee_only == true and revision == 'se' %}{% if page.se_support != true %}{% continue %}{% endif %}{% endif %}
 {%- if page.ce_only == true and revision == 'ee' %}{% continue %}{% endif %}
 {% assign layoutCode = '' | append: layout.code %}
-<div id='block_layout_{{ revision }}' class="tabs__content tabs__content_revision{% if revision == 'ce' or page.ee_only == true %} active{% endif %}" markdown="1">
+<div id='block_layout_{{ revision }}' class="tabs__content tabs__content_revision
+{% if revision == 'ce' %} active{% endif %}
+{% if page.ee_only == true and page.se_support != true %} active{% endif %}
+{% if revision == 'se' and page.se_support == true %} active{% endif %}
+" markdown="1">
     {% if page.lang == 'ru' %}
     {% include getting_started/global/partials/INSTALL_CONFIG_RU.liquid revision=revision layout=layoutCode %}
     {% else %}
@@ -74,19 +94,26 @@ Create the `resources.yml` file.
 
 {%- for revision in site.data.getting_started.dkp_data.global.revisions %}
 {%- if revision =='ce' and page.ee_only == true %}{% continue %}{% endif %}
+{%- if revision =='be' and page.ee_only == true %}{% continue %}{% endif %}
+{%- if revision =='se' and page.ee_only == true %}{% if page.se_support != true %}{% continue %}{% endif %}{% endif %}
 
-{% if revision == 'ee' %}
+
+  {% if revision == 'ee' or revision == 'be' or revision == 'se' %}
 <div class="dimmer-block-content">
 {% endif %}
 
-<div id='block_other_{{ revision }}' class="tabs__content tabs__content_other{% if revision == 'ce' or page.ee_only == true %} active{% endif %}" markdown="1">
+<div id='block_other_{{ revision }}' class="tabs__content tabs__content_other
+{% if revision == 'ce' %} active{% endif %}
+{% if page.ee_only == true and page.se_support != true %} active{% endif %}
+{% if revision == 'se' and page.se_support == true %} active{% endif %}
+" markdown="1">
 {% if page.lang == 'ru' %}
 {% include getting_started/global/partials/INSTALL_OTHER_RU.liquid revision=revision %}
 {% else %}
 {% include getting_started/global/partials/INSTALL_OTHER.liquid revision=revision %}
 {% endif %}
 </div>
-{% if revision == 'ee' %}
+{% if revision == 'ee' or revision == 'be' or revision == 'se' %}
 </div>
 {% endif %}
 
@@ -95,21 +122,25 @@ Create the `resources.yml` file.
 <script>
 $(document).ready(function() {
   $.cookie('lang', '{{ page.lang }}');
-  $('#enter-license-key').click((e)=> {
+  {%- for revision in site.data.getting_started.dkp_data.global.revisions %}
+  {% if revision != "ce" %}
+  $('#enter-license-key-{{ revision }}').click((e)=> {
     e.preventDefault();
-    let licenseToken = $('[license-token]').val().trim();
-    getLicenseToken(licenseToken)
+    let licenseToken = $('[license-token-{{ revision }}]').val().trim();
+    getLicenseToken(licenseToken, '{{ revision }}')
   });
 
-  $('[license-token]').keypress((e) => {
+  $('[license-token-{{ revision }}]').keypress((e) => {
       const keycode = (event.keyCode ? event.keyCode : event.which);
-      let licenseToken = $('[license-token]').val().trim();
+      let licenseToken = $('[license-token-{{ revision }}]').val().trim();
       if (keycode == '13') {
-        getLicenseToken(licenseToken)
+        getLicenseToken(licenseToken, '{{ revision }}')
       }
   });
+  {% endif %}
+  {% endfor %}
 
-  triggerBlockOnItemContent('[license-token]', '.dimmer-block-content', {% if page.ee_only != true %}true{% endif %});
+  triggerBlockOnItemContent('[license-token-{{ revision }}]', '.dimmer-block-content', {% if page.ee_only != true %}true{% endif %});
 
   generate_password(true);
   replace_snippet_password();

@@ -80,11 +80,6 @@ spec:
 			Expect(eps.Field("endpoints.0.targetRef.name").String()).To(Equal("deckhouse-test-1"))
 			Expect(len(eps.Field("ports").Array())).To(Equal(3))
 		})
-
-		It("Should remove old endpointslices", func() {
-			Expect(f.KubernetesResource("EndpointSlice", d8Namespace, "deckhouse-old").Exists()).To(BeFalse())
-			Expect(f.KubernetesResource("Service", d8Namespace, d8Name).Field("spec.selector").Exists()).To(BeFalse())
-		})
 	})
 })
 

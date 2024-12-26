@@ -3,10 +3,32 @@
 
 {{- $image_version := $docker_version | replace "." "-" }}
 ---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
+final: false
+fromImage: common/src-artifact
+git:
+- add: /{{ $.ModulePath }}/modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
+  to: /patches
+  stageDependencies:
+    install:
+    - '**/*'
+- add: /{{ $.ModulePath }}/modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
+  to: /src/scripts
+  stageDependencies:
+    install:
+    - '**/*'
+shell:
+  install:
+  - git clone --depth 1 --branch {{ $docker_auth_version }} {{ $.SOURCE_REPO }}/cesanta/docker_auth.git /src/docker_auth
+  - git clone --depth 1 --branch v{{ $docker_version }} {{ $.SOURCE_REPO }}/distribution/distribution.git /src/distribution
+  - cd /src/docker_auth
+  - git apply /patches/docker_auth/*.patch --verbose
+  - rm -rf .git
+---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
 from: {{ $.Images.BASE_SCRATCH }}
 import:
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
   add: /
   to: /
   includePaths:
@@ -21,28 +43,35 @@ docker:
     version: all
     docker: {{ $docker_version }}
     cesanta_auth: {{ $docker_auth_version }}
+  USER: 64535
 ---
-artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
-from: {{ $.Images.BASE_GOLANG_22_ALPINE_DEV }}
+image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
+final: false
+from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
+  add: /src
+  to: /src
+  before: install
 git:
-  - add: /{{ $.ModulePath }}modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
-    to: /
-    stageDependencies:
-      setup:
-      - '**/*'
+- add: /{{ $.ModulePath }}modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
+  to: /
+  stageDependencies:
+    setup:
+    - '**/*'
 shell:
   beforeInstall:
-  - apk add --no-cache openssh-client
+  {{- include "alpine packages proxy" . | nindent 2 }}
+  - apk add --no-cache make git
   setup:
   - export GOPROXY={{ $.GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GO111MODULE=auto
-  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
-  - git clone --depth 1 --branch {{ $docker_auth_version }} {{ $.SOURCE_REPO }}/cesanta/docker_auth.git
-  - cd /docker_auth/auth_server
+  - cd /src/docker_auth/auth_server
   - make build
   - mv ./auth_server /auth_server
-  - mkdir -p /go/src/github.com/docker/distribution
+  - mkdir -p /go/src/github.com/docker/
+  - mv /src/distribution /go/src/github.com/docker/
   - cd /go/src/github.com/docker/distribution
-  - git clone --depth 1 --branch v{{ $docker_version }} {{ $.SOURCE_REPO }}/distribution/distribution.git .
   - make
-  - cp bin/registry /
+  - mv bin/registry /
+  - mv /src/scripts/* /
   - chmod +x /auth_server /registry /install /uninstall
