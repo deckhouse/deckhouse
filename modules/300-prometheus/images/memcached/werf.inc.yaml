@@ -21,7 +21,7 @@ shell:
   - git apply /patches/*.patch --verbose
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-exporter-artifact
-from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
+from: {{ $.Images.BASE_GOLANG_23_ALPINE_DEV }}
 final: false
 import:
 - image: {{ .ModuleName }}/{{ $.ImageName }}-exporter-src-artifact
@@ -32,9 +32,6 @@ mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
 shell:
-  beforeInstall:
-  {{- include "alpine packages proxy" . | nindent 2 }}
-  - apk add --no-cache make
   install:
   - export GOPROXY={{ $.GOPROXY }} CGO_ENABLED=1 GOOS=linux GOARCH=amd64 CC=/usr/bin/musl-gcc
   - cd /src
