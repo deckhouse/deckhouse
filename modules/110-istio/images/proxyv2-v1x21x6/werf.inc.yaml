@@ -23,7 +23,7 @@ import:
   after: setup
 - image: {{ .ModuleName }}/{{ .ImageName }}-binary-artifact
   add: /busybox
-  to: /bin/busybox
+  to: /bin/sh
   after: setup
 docker:
   ENV:
@@ -41,6 +41,7 @@ shell:
   - chmod 0500 /usr/local/bin/envoy
   - chown 1337:1337 /usr/local/bin/envoy
   - curl --output /busybox https://github.com/EXALAB/Busybox-static/raw/refs/heads/main/busybox_amd64
+  - chmod +x /busybox
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
 final: false
