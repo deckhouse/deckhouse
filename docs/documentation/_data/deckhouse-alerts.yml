@@ -983,7 +983,7 @@ alerts:
 
         Removing a module from a cluster can lead to a number of irreparable consequences.
 
-        Please run `kubectl annotate moduleconfig {{ $labels.module }} modules.deckhouse.io/allow-disable-` to stop this alert.
+        Please run `kubectl annotate moduleconfig {{ $labels.module }} modules.deckhouse.io/allow-disabling-` to stop this alert.
       summary: |
         ModuleConfig annotation for allow to disable is setted.
       severity: "4"
