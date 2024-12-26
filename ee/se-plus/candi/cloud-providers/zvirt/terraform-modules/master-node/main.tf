@@ -103,4 +103,3 @@ resource "ovirt_vm_start" "master_vm" {
     ovirt_disk_resize.master_boot_disk_resize,
   ]
 }
-

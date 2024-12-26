@@ -9,11 +9,10 @@ require (
 	github.com/clarketm/json v1.15.7
 	github.com/cloudflare/cfssl v1.6.5
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc
-	github.com/fatih/color v1.16.0
+	github.com/fatih/color v1.16.0 // indirect
+	github.com/flant/addon-operator v0.0.0-20241213133444-cc7128a26f51
 	github.com/flant/kube-client v1.2.2
 	github.com/flant/shell-operator v1.5.3-0.20241209162655-7e40c61f7666
-	github.com/gammazero/deque v0.2.1
-	github.com/ghodss/yaml v1.0.1-0.20190212211648-25d852aebe32
 	github.com/go-openapi/spec v0.21.0
 	github.com/gojuno/minimock/v3 v3.4.3
 	github.com/golang/protobuf v1.5.4
@@ -23,10 +22,7 @@ require (
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/iancoleman/strcase v0.3.0
 	github.com/imdario/mergo v0.3.16
-	github.com/kyokomi/emoji v2.1.0+incompatible
-	github.com/mitchellh/hashstructure/v2 v2.0.2
 	github.com/mitchellh/mapstructure v1.5.0 // indirect
-	github.com/mohae/deepcopy v0.0.0-20170929034955-c48cc78d4826
 	github.com/onsi/ginkgo v1.16.5
 	github.com/onsi/gomega v1.35.1
 	github.com/otiai10/copy v1.14.0
@@ -62,7 +58,6 @@ require (
 	github.com/deckhouse/deckhouse/pkg/log v0.0.0-20241219045931-ca7514dfb873
 	github.com/ettle/strcase v0.2.0
 	github.com/evanphx/json-patch v5.8.0+incompatible
-	github.com/flant/addon-operator v1.5.4-0.20241211151735-95c8f23c5091
 	github.com/fsnotify/fsnotify v1.7.0
 	github.com/go-logr/logr v1.4.2
 	github.com/go-openapi/errors v0.22.0

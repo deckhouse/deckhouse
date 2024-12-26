@@ -43,6 +43,8 @@ type Release interface {
 	GetMessage() string
 }
 
+type Changelog map[string]any
+
 func GetReleaseApprovalAnnotation(release Release) string {
 	switch release.(type) {
 	case *DeckhouseRelease:

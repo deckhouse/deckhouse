@@ -46,7 +46,7 @@ type ObjectMeta struct {
 	Annotations map[string]string `json:"annotations,omitempty"`
 }
 
-const disableReasonSuffix = "Please annotate ModuleConfig with `modules.deckhouse.io/allow-disable=true` if you're sure that you want to disable the module."
+const disableReasonSuffix = "Please annotate ModuleConfig with `modules.deckhouse.io/allow-disabling=true` if you're sure that you want to disable the module."
 
 // moduleConfigValidationHandler validations for ModuleConfig creation
 func moduleConfigValidationHandler(cli client.Client, moduleStorage moduleStorage, metricStorage *metricstorage.MetricStorage, configValidator *configtools.Validator) http.Handler {
