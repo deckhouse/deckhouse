@@ -75,7 +75,7 @@ apiVersions:
       bashible: &bashible
         type: object
         patternProperties:
-          "ubuntu-lts|centos|debian":
+          "ubuntu-lts|centos|fedora|debian":
             type: object
             patternProperties:
               '^[0-9.]+$':
