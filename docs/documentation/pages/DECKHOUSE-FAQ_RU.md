@@ -1696,7 +1696,7 @@ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-con
 
 Для переключения кластера Deckhouse Enterprise Edition на Certified Security Edition выполните следующие действия (все команды выполняются на master-узле кластера от имени пользователя с настроенным контекстом `kubectl` или от имени суперпользователя):
 
-1. Настройте кластер на использование kuberntes версии `1.27`. Для этого 
+1. Настройте кластер на использование kuberntes версии `1.27`. Для этого
     1. Выполните команду:
 
       ```shell
@@ -1811,14 +1811,17 @@ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-con
    echo $MODULES_WILL_DISABLE | 
      tr ' ' '\n' | awk {'print "kubectl -n d8-system exec  deploy/deckhouse -- deckhouse-controller module disable",$1'} | bash
    ```
-   Также на данный момент редакция 1.58 CSE не поддерживает компонент earlyOOM. Отключите его с помощью [настройки](modules/node-manager/configuration.html#parameters-earlyoomenabled). 
 
-   Дождитесь перехода пода Deckhouse в статус `Ready` и выполнения всех задач в очереди. 
+   Также на данный момент редакция 1.58 CSE не поддерживает компонент earlyOOM. Отключите его с помощью [настройки](modules/node-manager/configuration.html#parameters-earlyoomenabled).
+
+   Дождитесь перехода пода Deckhouse в статус `Ready` и выполнения всех задач в очереди.
+
    ```shell
    kubectl -n d8-system exec -it svc/deckhouse-leader -c deckhouse -- deckhouse-controller queue list
    ```
 
-   Также дополнительно проверьте, что отключенные модули перешли в состояние `Disabled`. 
+   Также дополнительно проверьте, что отключенные модули перешли в состояние `Disabled`.
+
    ```shell
    kubectl get modules
    ```
