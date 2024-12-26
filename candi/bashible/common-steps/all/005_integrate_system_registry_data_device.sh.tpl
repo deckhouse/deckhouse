@@ -266,6 +266,11 @@ if check_annotation "embedded-registry.deckhouse.io/lock-data-device-mount"; the
     exit 0
 fi
 
+# If it does not override
+if [ ! -f /var/lib/bashible/system_registry_data_device_path ]; then
+  echo "$(bb-get-registry-data-device-from-terraform-output)" > "/var/lib/bashible/system_registry_data_device_path"
+fi
+
 # Check if the registry data device is already mounted
 if is_registry_data_device_mounted; then
   # If mounted, create the installed file marker
@@ -315,6 +320,8 @@ else
     remove_registry_data_device_installed_file
   fi
 fi
+
+rm -f /var/lib/bashible/system_registry_data_device_path
 
   {{- end  }}
 {{- end  }}

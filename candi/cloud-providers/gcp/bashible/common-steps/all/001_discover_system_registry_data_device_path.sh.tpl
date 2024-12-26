@@ -41,16 +41,13 @@ function discover_device_path() {
   echo "$device_path"
 }
 
-# The system registry file is always created in step 000_create_system_registry_data_device_path.sh.tpl
-system_registry_file="/var/lib/bashible/system_registry_data_device_path"
-
 # Get system registry data device
-CLOUD_DISK_NAME_OR_DATA_DEVICE=$(cat "$system_registry_file")
+CLOUD_DISK_NAME_OR_DATA_DEVICE="$(bb-get-registry-data-device-from-terraform-output)"
 
 if [ -n "$CLOUD_DISK_NAME_OR_DATA_DEVICE" ] && [[ "$CLOUD_DISK_NAME_OR_DATA_DEVICE" != /dev/* ]]; then
   DATA_DEVICE=$(discover_device_path "$CLOUD_DISK_NAME_OR_DATA_DEVICE")
   echo "system-registry-data device: $DATA_DEVICE"
-  echo "$DATA_DEVICE" > "$system_registry_file"
+  echo "$DATA_DEVICE" > "/var/lib/bashible/system_registry_data_device_path"
 fi
 
   {{- end  }}
