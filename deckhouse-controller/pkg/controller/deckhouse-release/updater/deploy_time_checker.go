@@ -59,6 +59,7 @@ type DeployTimeReason struct {
 	Reason                deployDelayReason
 	Message               string
 	ReleaseApplyAfterTime time.Time
+	Notified              bool
 }
 
 // for patch, we check fewer conditions, then for minor release
@@ -92,6 +93,7 @@ func (c *DeployTimeChecker) CheckPatchReleaseConditions(ctx context.Context, dr 
 	return &DeployTimeReason{
 		Message:               resultDeployTime.Reason.Message(dr, resultDeployTime.ReleaseApplyTime),
 		ReleaseApplyAfterTime: resultDeployTime.ReleaseApplyAfterTime,
+		Notified:              true,
 	}
 }
 
@@ -261,6 +263,7 @@ func (c *DeployTimeChecker) CheckMinorReleaseConditions(ctx context.Context, dr 
 		return &DeployTimeReason{
 			Message:               "awaiting for Deckhouse pod to be ready",
 			ReleaseApplyAfterTime: resultDeployTime.ReleaseApplyAfterTime,
+			Notified:              true,
 		}
 	}
 
@@ -275,6 +278,7 @@ func (c *DeployTimeChecker) CheckMinorReleaseConditions(ctx context.Context, dr 
 	return &DeployTimeReason{
 		Message:               resultDeployTime.Reason.Message(dr, resultDeployTime.ReleaseApplyTime),
 		ReleaseApplyAfterTime: resultDeployTime.ReleaseApplyAfterTime,
+		Notified:              true,
 	}
 }
 
