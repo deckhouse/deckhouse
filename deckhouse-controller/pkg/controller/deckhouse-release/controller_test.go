@@ -361,6 +361,12 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 	})
 
 	suite.Run("Few patch releases", func() {
+		dependency.TestDC.HTTPClient.DoMock.
+			Expect(&http.Request{}).
+			Return(&http.Response{
+				StatusCode: http.StatusInternalServerError,
+			}, errors.New("some internal error"))
+
 		suite.setupController("few-patch-releases.yaml", initValues, embeddedMUP)
 		dr := suite.getDeckhouseRelease("v1.31.1")
 		_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
