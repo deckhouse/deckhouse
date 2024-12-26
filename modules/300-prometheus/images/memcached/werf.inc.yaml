@@ -1,6 +1,6 @@
 {{ $memcachedExporterVersion := "0.15.0" }}
 ---
-image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-exporter
+image: {{ $.ModuleName }}/{{ $.ImageName }}-exporter-src-artifact
 from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
 final: false
 git:
@@ -20,11 +20,11 @@ shell:
   - cd /src
   - git apply /patches/*.patch --verbose
 ---
-image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-exporter
+image: {{ $.ModuleName }}/{{ $.ImageName }}-exporter-artifact
 from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
 final: false
 import:
-- image: {{ .ModuleName }}/{{ $.ImageName }}-src-artifact-exporter
+- image: {{ .ModuleName }}/{{ $.ImageName }}-exporter-src-artifact
   add: /src
   to: /src
   before: install
@@ -32,6 +32,9 @@ mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
 shell:
+  beforeInstall:
+  {{- include "alpine packages proxy" . | nindent 2 }}
+  - apk add --no-cache make
   install:
   - export GOPROXY={{ $.GOPROXY }} CGO_ENABLED=1 GOOS=linux GOARCH=amd64 CC=/usr/bin/musl-gcc
   - cd /src
@@ -58,7 +61,7 @@ import:
 image: {{ $.ModuleName }}/{{ $.ImageName }}-exporter
 fromImage: common/distroless
 import:
-  - image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-exporter
+  - image: {{ $.ModuleName }}/{{ $.ImageName }}-exporter-artifact
     add: /src/memcached_exporter
     to: /usr/bin/memcached_exporter
     before: install
