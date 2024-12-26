@@ -52,11 +52,11 @@
 
 # Add version info
 cat <<"EOD" > /deckhouse/version
-{{- $context.CI_COMMIT_TAG  | default "dev"}}
+{{ $context.CI_COMMIT_TAG  | default "dev"}}
 EOD
 # Add edition info
 cat <<"EOD" > /deckhouse/edition
-{{- $context.Env | default "unknown"}}
+{{ $context.Env | default "unknown"}}
 EOD
 # Override deckhouse entrypoint to use tini as supervisor
 cat <<"EOD" > /deckhouse/deckhouse
