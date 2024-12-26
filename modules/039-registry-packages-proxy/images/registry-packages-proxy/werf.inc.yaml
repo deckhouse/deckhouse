@@ -40,7 +40,12 @@ final: false
 from: {{ .Images.BASE_GOLANG_23_ALPINE }}
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
-  add: /registry-packages-proxy
+  add: /src
+  to: /registry-packages-proxy
+  before: install
+- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+  add: /go_lib/registry-packages-proxy
+  to: /go_lib/registry-packages-proxy
   before: install
 shell:
   install:
