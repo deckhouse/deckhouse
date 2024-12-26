@@ -180,28 +180,29 @@ func NewDeckhouseController(ctx context.Context, version string, operator *addon
 
 	moduleEventCh := make(chan events.ModuleEvent, 350)
 	operator.ModuleManager.SetModuleEventsChannel(moduleEventCh)
+	// set chrooted enviroment
 	operator.ModuleManager.SetRequiredMounts([]mountmgr.MountDescriptor{
-		mountmgr.MountDescriptor{
+		{
 			Source: "/usr/bin",
 			Flags:  syscall.MS_BIND | syscall.MS_RDONLY,
 		},
-		mountmgr.MountDescriptor{
+		{
 			Source: "/bin",
 			Flags:  syscall.MS_BIND | syscall.MS_RDONLY,
 		},
-		mountmgr.MountDescriptor{
+		{
 			Source: "/usr/local/bin",
 			Flags:  syscall.MS_BIND | syscall.MS_RDONLY,
 		},
-		mountmgr.MountDescriptor{
+		{
 			Source: "/usr/lib",
 			Flags:  syscall.MS_BIND | syscall.MS_RDONLY,
 		},
-		mountmgr.MountDescriptor{
+		{
 			Source: "/usr/lib64",
 			Flags:  syscall.MS_BIND | syscall.MS_RDONLY,
 		},
-		mountmgr.MountDescriptor{
+		{
 			Source: "/chroot/tmp",
 			Target: "/tmp",
 			Flags:  syscall.MS_BIND,
