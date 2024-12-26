@@ -43,7 +43,7 @@ final: false
 shell:
   beforeInstall:
   {{- include "alt packages proxy" . | nindent 2 }}
-  - apt-get install memcached
+  - apt-get install -y memcached
   install:
   - /binary_replace.sh -i "/usr/bin/memcached" -o /relocate
 ---
