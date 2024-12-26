@@ -7,7 +7,9 @@ fromImage: common/relocate-artifact
 final: false
 shell:
   beforeInstall:
+    - apt-get update
     - apt-get install conntrack-tools -y
+    - rm -rf /var/lib/apt/lists/* /var/cache/apt/* && mkdir -p /var/lib/apt/lists/partial /var/cache/apt/archives/partial
   install:
     - /binary_replace.sh -i "{{ $binaries }}" -o /relocate
     - mkdir -p /relocate/sbin
