@@ -458,80 +458,13 @@ func (r *deckhouseReleaseReconciler) pendingReleaseReconcile(ctx context.Context
 		return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
 	}
 
-	metricLabels := updater.NewReleaseMetricLabels(dr)
-
-	releaseNotifier := d8updater.NewReleaseNotifier(dus)
-	var dtr *d8updater.DeployTimeReason
-	var notified bool
-	timeChecker := d8updater.NewDeployTimeChecker(r.dc, dus, r.isDeckhousePodReady, r.logger)
-	if task.IsPatch {
-		deployTimeResult := timeChecker.CalculatePatchDeployTime(dr, metricLabels)
-		err := releaseNotifier.SendReleaseNotification(ctx, dr, deployTimeResult.ReleaseApplyAfterTime, metricLabels)
-		if err != nil {
-			dtr.Message = err.Error()
-			dtr.ReleaseApplyAfterTime = deployTimeResult.ReleaseApplyAfterTime
-		} else {
-			dtr = timeChecker.ProcessPatchReleaseDeployTime(dr, deployTimeResult)
-		}
-		notified = err == nil
-	} else {
-		err := timeChecker.CheckReleaseDisruptions(dr, metricLabels)
-		if err == nil {
-			deployTimeResult := timeChecker.CalculateMinorDeployTime(dr, metricLabels)
-			err = releaseNotifier.SendReleaseNotification(ctx, dr, deployTimeResult.ReleaseApplyAfterTime, metricLabels)
-			if err != nil {
-				dtr.Message = err.Error()
-				dtr.ReleaseApplyAfterTime = deployTimeResult.ReleaseApplyAfterTime
-			} else {
-				dtr = timeChecker.ProcessMinorReleaseDeployTime(ctx, dr, deployTimeResult)
-			}
-			notified = err == nil
-		} else {
-			dtr.Message = err.Error()
-		}
-	}
-
-	if metricLabels[updater.ManualApprovalRequired] == "true" {
-		metricLabels[updater.ReleaseQueueDepth] = strconv.Itoa(task.QueueDepth)
-	}
-
-	// if the predicted release has an index less than the number of awaiting releases
-	// calculate and set releaseDepthQueue label
-	r.metricsUpdater.UpdateReleaseMetric(dr.GetName(), metricLabels)
-
-	if dtr != nil {
-		err := r.updateReleaseStatus(ctx, dr, &v1alpha1.DeckhouseReleaseStatus{
-			Phase:   v1alpha1.DeckhouseReleasePhasePending,
-			Message: dtr.Message,
-		})
-		if err != nil {
-			r.logger.Warn("met release conditions status update ", slog.String("name", dr.GetName()), log.Err(err))
-		}
-
-		err = ctrlutils.UpdateWithRetry(ctx, r.client, dr, func() error {
-			if dr.Annotations == nil {
-				dr.Annotations = make(map[string]string, 2)
-			}
-
-			dr.Annotations[v1alpha1.DeckhouseReleaseAnnotationIsUpdating] = "false"
-			dr.Annotations[v1alpha1.DeckhouseReleaseAnnotationNotified] = strconv.FormatBool(notified)
-
-			if !dtr.ReleaseApplyAfterTime.IsZero() {
-				dr.Spec.ApplyAfter = &metav1.Time{Time: dtr.ReleaseApplyAfterTime.UTC()}
-
-				dr.Annotations[v1alpha1.DeckhouseReleaseAnnotationNotificationTimeShift] = "true"
-			}
-
-			return nil
-		})
-		if err != nil {
-			r.logger.Warn("met release conditions resource update ", slog.String("name", dr.GetName()), log.Err(err))
-		}
-
+	err = r.PreApplyReleaseCheck(ctx, dr, task)
+	if err != nil {
+		// ignore this err, just requeue because of check failed
 		return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
 	}
 
-	err = r.ApplyPredictedRelease(ctx, dr, task, metricLabels)
+	err = r.ApplyPredictedRelease(ctx, dr, task)
 	if err != nil {
 		return res, fmt.Errorf("apply predicted release: %w", err)
 	}
@@ -604,11 +537,119 @@ func (r *deckhouseReleaseReconciler) pendingReleaseReconcile(ctx context.Context
 	return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
 }
 
+var ErrPreApplyCheckIsFailed = errors.New("pre apply check is failed")
+
+func (r *deckhouseReleaseReconciler) PreApplyReleaseCheck(ctx context.Context, dr *v1alpha1.DeckhouseRelease, task *d8updater.Task) error {
+	metricLabels := updater.NewReleaseMetricLabels(dr)
+
+	dtr := r.DeployTimeCalculate(ctx, dr, task, metricLabels)
+
+	if metricLabels[updater.ManualApprovalRequired] == "true" {
+		metricLabels[updater.ReleaseQueueDepth] = strconv.Itoa(task.QueueDepth)
+	}
+
+	// if the predicted release has an index less than the number of awaiting releases
+	// calculate and set releaseDepthQueue label
+	r.metricsUpdater.UpdateReleaseMetric(dr.GetName(), metricLabels)
+
+	if dtr != nil {
+		err := r.updateReleaseStatus(ctx, dr, &v1alpha1.DeckhouseReleaseStatus{
+			Phase:   v1alpha1.DeckhouseReleasePhasePending,
+			Message: dtr.Message,
+		})
+		if err != nil {
+			r.logger.Warn("met release conditions status update ", slog.String("name", dr.GetName()), log.Err(err))
+		}
+
+		err = ctrlutils.UpdateWithRetry(ctx, r.client, dr, func() error {
+			if dr.Annotations == nil {
+				dr.Annotations = make(map[string]string, 2)
+			}
+
+			dr.Annotations[v1alpha1.DeckhouseReleaseAnnotationIsUpdating] = "false"
+			dr.Annotations[v1alpha1.DeckhouseReleaseAnnotationNotified] = strconv.FormatBool(dtr.Notified)
+
+			if !dtr.ReleaseApplyAfterTime.IsZero() {
+				dr.Spec.ApplyAfter = &metav1.Time{Time: dtr.ReleaseApplyAfterTime.UTC()}
+
+				dr.Annotations[v1alpha1.DeckhouseReleaseAnnotationNotificationTimeShift] = "true"
+			}
+
+			return nil
+		})
+		if err != nil {
+			r.logger.Warn("met release conditions resource update ", slog.String("name", dr.GetName()), log.Err(err))
+		}
+
+		return ErrPreApplyCheckIsFailed
+	}
+
+	return nil
+}
+
+func (r *deckhouseReleaseReconciler) DeployTimeCalculate(ctx context.Context, dr *v1alpha1.DeckhouseRelease, task *d8updater.Task, metricLabels updater.MetricLabels) *d8updater.DeployTimeReason {
+	us := r.updateSettings.Get()
+
+	dus := &updater.Settings{
+		NotificationConfig:     us.Update.NotificationConfig,
+		DisruptionApprovalMode: us.Update.DisruptionApprovalMode,
+		// if we have whrong mode - autopatch
+		Mode:    updater.ParseUpdateMode(us.Update.Mode),
+		Windows: us.Update.Windows,
+	}
+
+	releaseNotifier := d8updater.NewReleaseNotifier(dus)
+	timeChecker := d8updater.NewDeployTimeChecker(r.dc, dus, r.isDeckhousePodReady, r.logger)
+
+	if task.IsPatch {
+		deployTimeResult := timeChecker.CalculatePatchDeployTime(dr, metricLabels)
+
+		err := releaseNotifier.SendReleaseNotification(ctx, dr, deployTimeResult.ReleaseApplyAfterTime, metricLabels)
+		if err != nil {
+			return &d8updater.DeployTimeReason{
+				Message:               err.Error(),
+				ReleaseApplyAfterTime: deployTimeResult.ReleaseApplyAfterTime,
+			}
+		}
+
+		dtr := timeChecker.ProcessPatchReleaseDeployTime(dr, deployTimeResult)
+		if dtr != nil {
+			dtr.Notified = err == nil
+		}
+
+		return dtr
+	}
+
+	err := timeChecker.CheckReleaseDisruptions(dr, metricLabels)
+	if err != nil {
+		return &d8updater.DeployTimeReason{
+			Message: err.Error(),
+		}
+	}
+
+	deployTimeResult := timeChecker.CalculateMinorDeployTime(dr, metricLabels)
+
+	err = releaseNotifier.SendReleaseNotification(ctx, dr, deployTimeResult.ReleaseApplyAfterTime, metricLabels)
+	if err != nil {
+		return &d8updater.DeployTimeReason{
+			Message:               err.Error(),
+			ReleaseApplyAfterTime: deployTimeResult.ReleaseApplyAfterTime,
+		}
+	}
+
+	dtr := timeChecker.ProcessMinorReleaseDeployTime(ctx, dr, deployTimeResult)
+	if dtr != nil {
+		dtr.Notified = err == nil
+	}
+
+	return dtr
+}
+
 // ApplyForcedRelease deploys forced release without any checks (windows, requirements, approvals and so on)
-func (r *deckhouseReleaseReconciler) ApplyForcedRelease(ctx context.Context, dr *v1alpha1.DeckhouseRelease, order *d8updater.Task) error {
+func (r *deckhouseReleaseReconciler) ApplyForcedRelease(ctx context.Context, dr *v1alpha1.DeckhouseRelease, task *d8updater.Task) error {
 	r.logger.Warn("forcing release", slog.String("release", dr.GetName()))
 
-	err := r.runReleaseDeploy(ctx, dr, order.DeployedReleaseInfo)
+	err := r.runReleaseDeploy(ctx, dr, task.DeployedReleaseInfo)
 	if err != nil {
 		return fmt.Errorf("run release deploy: %w", err)
 	}
@@ -634,7 +675,7 @@ func (r *deckhouseReleaseReconciler) ApplyForcedRelease(ctx context.Context, dr 
 //   - Release requirements
 //
 // In addition to the regular error, ErrDeployConditionsNotMet or NotReadyForDeployError is returned as appropriate.
-func (r *deckhouseReleaseReconciler) ApplyPredictedRelease(ctx context.Context, dr *v1alpha1.DeckhouseRelease, task *d8updater.Task, metricLabels updater.MetricLabels) error {
+func (r *deckhouseReleaseReconciler) ApplyPredictedRelease(ctx context.Context, dr *v1alpha1.DeckhouseRelease, task *d8updater.Task) error {
 	err := r.runReleaseDeploy(ctx, dr, task.DeployedReleaseInfo)
 	if err != nil {
 		return fmt.Errorf("run release deploy: %w", err)

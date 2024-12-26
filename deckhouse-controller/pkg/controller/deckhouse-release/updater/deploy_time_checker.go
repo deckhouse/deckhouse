@@ -57,6 +57,7 @@ type DeployTimeReason struct {
 	Reason                deployDelayReason
 	Message               string
 	ReleaseApplyAfterTime time.Time
+	Notified              bool
 }
 
 // for patch, we check fewer conditions, then for minor release
