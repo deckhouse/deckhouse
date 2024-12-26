@@ -38,6 +38,10 @@ function get_bundle() {
   done
 }
 
+# avoid 'unbound variable' error
+ID=
+ID_LIKE=
+
 set -Eeuo pipefail
 shopt -s failglob
 
