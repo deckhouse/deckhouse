@@ -40,9 +40,11 @@ image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
 from: {{ $.Images.BASE_ALT }}
 final: false
 shell:
+  beforeInstall:
+  {{- include "alt packages proxy" . | nindent 2 }}
+  - apt-get install memcached
   install:
-    - apt-get install memcached
-    - /binary_replace.sh -i "/usr/bin/memcached" -o /relocate
+  - /binary_replace.sh -i "/usr/bin/memcached" -o /relocate
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: common/distroless
