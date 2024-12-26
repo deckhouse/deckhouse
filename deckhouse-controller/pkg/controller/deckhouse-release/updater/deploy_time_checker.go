@@ -77,18 +77,6 @@ func (c *DeployTimeChecker) ProcessPatchReleaseDeployTime(dr *v1alpha1.Deckhouse
 	}
 }
 
-// check: release disruptions (hard lock)
-func (c *DeployTimeChecker) CheckReleaseDisruptions(dr *v1alpha1.DeckhouseRelease, metricLabels updater.MetricLabels) error {
-	err := c.checkReleaseDisruptions(dr)
-	if err != nil {
-		metricLabels.SetTrue(updater.DisruptionApprovalRequired)
-
-		return fmt.Errorf("release blocked, disruption approval required: %w", err)
-	}
-
-	return nil
-}
-
 // for minor release (version change) we check more conditions
 // - Release requirements
 // - Disruptions

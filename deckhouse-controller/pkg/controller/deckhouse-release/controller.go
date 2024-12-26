@@ -601,48 +601,47 @@ func (r *deckhouseReleaseReconciler) DeployTimeCalculate(ctx context.Context, dr
 	releaseNotifier := d8updater.NewReleaseNotifier(dus)
 	timeChecker := d8updater.NewDeployTimeChecker(r.dc, dus, r.isDeckhousePodReady, r.logger)
 
-	if task.IsPatch {
-		deployTimeResult := timeChecker.CalculatePatchDeployTime(dr, metricLabels)
+	var deployTimeResult *d8updater.DeployTimeResult
 
-		err := releaseNotifier.SendReleaseNotification(ctx, dr, deployTimeResult.ReleaseApplyAfterTime, metricLabels)
+	if task.IsPatch {
+		deployTimeResult = timeChecker.CalculatePatchDeployTime(dr, metricLabels)
+	} else {
+		checker := d8updater.NewPreApplyChecker(dus, r.logger)
+		err := checker.MetRequirements(dr)
 		if err != nil {
+			metricLabels.SetTrue(updater.DisruptionApprovalRequired)
+
 			return &d8updater.DeployTimeReason{
-				Message:               err.Error(),
-				ReleaseApplyAfterTime: deployTimeResult.ReleaseApplyAfterTime,
+				Message: fmt.Sprintf("release blocked, disruption approval required: %v", err),
 			}
 		}
 
-		dtr := timeChecker.ProcessPatchReleaseDeployTime(dr, deployTimeResult)
-		if dtr != nil {
-			dtr.Notified = err == nil
-		}
-
-		return dtr
+		deployTimeResult = timeChecker.CalculateMinorDeployTime(dr, metricLabels)
 	}
 
-	err := timeChecker.CheckReleaseDisruptions(dr, metricLabels)
-	if err != nil {
+	notifyErr := releaseNotifier.SendReleaseNotification(ctx, dr, deployTimeResult.ReleaseApplyAfterTime, metricLabels)
+	if notifyErr != nil {
 		return &d8updater.DeployTimeReason{
-			Message: err.Error(),
-		}
-	}
-
-	deployTimeResult := timeChecker.CalculateMinorDeployTime(dr, metricLabels)
-
-	err = releaseNotifier.SendReleaseNotification(ctx, dr, deployTimeResult.ReleaseApplyAfterTime, metricLabels)
-	if err != nil {
-		return &d8updater.DeployTimeReason{
-			Message:               err.Error(),
+			Message:               notifyErr.Error(),
 			ReleaseApplyAfterTime: deployTimeResult.ReleaseApplyAfterTime,
 		}
 	}
 
-	dtr := timeChecker.ProcessMinorReleaseDeployTime(ctx, dr, deployTimeResult)
-	if dtr != nil {
-		dtr.Notified = err == nil
-	}
+	if task.IsPatch {
+		dtr := timeChecker.ProcessPatchReleaseDeployTime(dr, deployTimeResult)
+		if dtr != nil {
+			dtr.Notified = true
+		}
 
-	return dtr
+		return dtr
+	} else {
+		dtr := timeChecker.ProcessMinorReleaseDeployTime(ctx, dr, deployTimeResult)
+		if dtr != nil {
+			dtr.Notified = true
+		}
+
+		return dtr
+	}
 }
 
 // ApplyForcedRelease deploys forced release without any checks (windows, requirements, approvals and so on)

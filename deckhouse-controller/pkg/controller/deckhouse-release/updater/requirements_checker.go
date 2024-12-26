@@ -31,6 +31,7 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders/kubernetesversion"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/requirements"
 	"github.com/deckhouse/deckhouse/go_lib/set"
+	"github.com/deckhouse/deckhouse/go_lib/updater"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
@@ -105,8 +106,8 @@ func (c *deckhouseVersionCheck) GetName() string {
 	return c.name
 }
 
-func (c *deckhouseVersionCheck) Verify(rl *v1alpha1.DeckhouseRelease) error {
-	releaseName, err := deckhouseversion.Instance().ValidateBaseVersion(rl.GetVersion().String())
+func (c *deckhouseVersionCheck) Verify(dr *v1alpha1.DeckhouseRelease) error {
+	releaseName, err := deckhouseversion.Instance().ValidateBaseVersion(dr.GetVersion().String())
 	if err != nil {
 		// invalid deckhouse version in deckhouse release or an enabled module has requirements that prevent deckhouse release from becoming predicted
 		if releaseName == "" || c.enabledModules.Has(releaseName) {
@@ -146,9 +147,9 @@ func (c *kubernetesVersionCheck) GetName() string {
 	return c.name
 }
 
-func (c *kubernetesVersionCheck) Verify(rl *v1alpha1.DeckhouseRelease) error {
-	if c.isKubernetesVersionAutomatic() && len(rl.GetRequirements()["autoK8sVersion"]) > 0 {
-		if moduleName, err := kubernetesversion.Instance().ValidateBaseVersion(rl.GetRequirements()["autoK8sVersion"]); err != nil {
+func (c *kubernetesVersionCheck) Verify(dr *v1alpha1.DeckhouseRelease) error {
+	if c.isKubernetesVersionAutomatic() && len(dr.GetRequirements()["autoK8sVersion"]) > 0 {
+		if moduleName, err := kubernetesversion.Instance().ValidateBaseVersion(dr.GetRequirements()["autoK8sVersion"]); err != nil {
 			// invalid auto kubernetes version in deckhouse release or an enabled module has requirements that prevent deckhouse release from becoming predicted
 			if moduleName == "" || c.enabledModules.Has(moduleName) {
 				return err
@@ -205,8 +206,8 @@ func (c *deckhouseRequirementsCheck) GetName() string {
 	return c.name
 }
 
-func (c *deckhouseRequirementsCheck) Verify(rl *v1alpha1.DeckhouseRelease) error {
-	for key, value := range rl.GetRequirements() {
+func (c *deckhouseRequirementsCheck) Verify(dr *v1alpha1.DeckhouseRelease) error {
+	for key, value := range dr.GetRequirements() {
 		// these fields are checked by extenders in module release controller
 		if extenders.IsExtendersField(key) {
 			continue
@@ -214,12 +215,54 @@ func (c *deckhouseRequirementsCheck) Verify(rl *v1alpha1.DeckhouseRelease) error
 
 		passed, err := requirements.CheckRequirement(key, value, c.enabledModules)
 		if !passed {
-			msg := fmt.Sprintf("%q requirement for DeckhouseRelease %q not met: %s", key, rl.GetVersion(), err)
+			msg := fmt.Sprintf("%q requirement for DeckhouseRelease %q not met: %s", key, dr.GetVersion(), err)
 			if errors.Is(err, requirements.ErrNotRegistered) {
 				msg = fmt.Sprintf("%q requirement is not registered", key)
 			}
 
 			return errors.New(msg)
+		}
+	}
+
+	return nil
+}
+
+func NewPreApplyChecker(settings *updater.Settings, logger *log.Logger) *Checker[v1alpha1.DeckhouseRelease] {
+	return &Checker[v1alpha1.DeckhouseRelease]{
+		fns: []Check[v1alpha1.DeckhouseRelease]{
+			newDisruptionCheck(settings),
+		},
+		logger: logger,
+	}
+}
+
+type disruptionCheck struct {
+	name     string
+	settings *updater.Settings
+}
+
+// check: release disruptions (hard lock)
+func newDisruptionCheck(settings *updater.Settings) *disruptionCheck {
+	return &disruptionCheck{
+		name:     "release disruption check",
+		settings: settings,
+	}
+}
+
+func (c *disruptionCheck) GetName() string {
+	return c.name
+}
+
+func (c *disruptionCheck) Verify(dr *v1alpha1.DeckhouseRelease) error {
+	if !c.settings.InDisruptionApprovalMode() {
+		return nil
+	}
+
+	// TODO: we save only last disruption condition
+	for _, key := range dr.GetDisruptions() {
+		hasDisruptionUpdate, reason := requirements.HasDisruption(key)
+		if hasDisruptionUpdate && !dr.GetDisruptionApproved() {
+			return fmt.Errorf("(`kubectl annotate DeckhouseRelease %s release.deckhouse.io/disruption-approved=true`): %s", dr.GetName(), reason)
 		}
 	}
 
