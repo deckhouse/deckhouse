@@ -462,6 +462,7 @@ func (r *deckhouseReleaseReconciler) pendingReleaseReconcile(ctx context.Context
 
 	releaseNotifier := d8updater.NewReleaseNotifier(dus)
 	var dtr *d8updater.DeployTimeReason
+	var notified bool
 	timeChecker := d8updater.NewDeployTimeChecker(r.dc, dus, r.isDeckhousePodReady, r.logger)
 	if task.IsPatch {
 		deployTimeResult := timeChecker.CalculatePatchDeployTime(dr, metricLabels)
@@ -469,9 +470,10 @@ func (r *deckhouseReleaseReconciler) pendingReleaseReconcile(ctx context.Context
 		if err != nil {
 			dtr.Message = err.Error()
 			dtr.ReleaseApplyAfterTime = deployTimeResult.ReleaseApplyAfterTime
+		} else {
+			dtr = timeChecker.ProcessPatchReleaseDeployTime(dr, deployTimeResult)
 		}
-		dtr = timeChecker.ProcessPatchReleaseDeployTime(dr, deployTimeResult)
-		dtr.Notified = err == nil
+		notified = err == nil
 	} else {
 		err := timeChecker.CheckReleaseDisruptions(dr, metricLabels)
 		if err == nil {
@@ -480,9 +482,10 @@ func (r *deckhouseReleaseReconciler) pendingReleaseReconcile(ctx context.Context
 			if err != nil {
 				dtr.Message = err.Error()
 				dtr.ReleaseApplyAfterTime = deployTimeResult.ReleaseApplyAfterTime
+			} else {
+				dtr = timeChecker.ProcessMinorReleaseDeployTime(ctx, dr, deployTimeResult)
 			}
-			dtr = timeChecker.ProcessMinorReleaseDeployTime(ctx, dr, deployTimeResult)
-			dtr.Notified = err == nil
+			notified = err == nil
 		} else {
 			dtr.Message = err.Error()
 		}
@@ -511,7 +514,7 @@ func (r *deckhouseReleaseReconciler) pendingReleaseReconcile(ctx context.Context
 			}
 
 			dr.Annotations[v1alpha1.DeckhouseReleaseAnnotationIsUpdating] = "false"
-			dr.Annotations[v1alpha1.DeckhouseReleaseAnnotationNotified] = strconv.FormatBool(dtr.Notified)
+			dr.Annotations[v1alpha1.DeckhouseReleaseAnnotationNotified] = strconv.FormatBool(notified)
 
 			if !dtr.ReleaseApplyAfterTime.IsZero() {
 				dr.Spec.ApplyAfter = &metav1.Time{Time: dtr.ReleaseApplyAfterTime.UTC()}

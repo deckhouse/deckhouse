@@ -57,7 +57,6 @@ type DeployTimeReason struct {
 	Reason                deployDelayReason
 	Message               string
 	ReleaseApplyAfterTime time.Time
-	Notified              bool
 }
 
 // for patch, we check fewer conditions, then for minor release
@@ -97,53 +96,6 @@ func (c *DeployTimeChecker) CheckReleaseDisruptions(dr *v1alpha1.DeckhouseReleas
 // - Canary settings
 // - Update windows or manual approval
 // - Deckhouse pod is ready
-func (c *DeployTimeChecker) CheckMinorReleaseConditions(ctx context.Context, dr *v1alpha1.DeckhouseRelease, metricLabels updater.MetricLabels) *DeployTimeReason {
-	resultDeployTime := c.CalculateMinorDeployTime(dr, metricLabels)
-
-	// check: Notification
-	var notified bool
-	if !c.settings.NotificationConfig.IsEmpty() {
-		metricLabels.SetFalse(updater.NotificationNotSent)
-
-		err := c.releaseNotifier.sendReleaseNotification(ctx, dr, resultDeployTime.ReleaseApplyTime)
-		if err != nil {
-			metricLabels.SetTrue(updater.NotificationNotSent)
-
-			return &DeployTimeReason{
-				Message:               "release blocked, failed to send release notification",
-				ReleaseApplyAfterTime: resultDeployTime.ReleaseApplyAfterTime,
-			}
-		}
-
-		notified = true
-	}
-
-	// check: Deckhouse pod is ready
-	if !c.deckhousePodReadyFunc(ctx) {
-		c.logger.Info("Deckhouse is not ready. Skipping upgrade")
-
-		return &DeployTimeReason{
-			Message:               "awaiting for Deckhouse pod to be ready",
-			ReleaseApplyAfterTime: resultDeployTime.ReleaseApplyAfterTime,
-			Notified:              notified,
-		}
-	}
-
-	if dr.GetApplyNow() || resultDeployTime.Reason.IsNoDelay() {
-		return nil
-	}
-
-	if resultDeployTime.ReleaseApplyTime == c.now {
-		resultDeployTime.ReleaseApplyTime = time.Time{}
-	}
-
-	return &DeployTimeReason{
-		Message:               resultDeployTime.Reason.Message(dr, resultDeployTime.ReleaseApplyTime),
-		ReleaseApplyAfterTime: resultDeployTime.ReleaseApplyAfterTime,
-		Notified:              notified,
-	}
-}
-
 func (c *DeployTimeChecker) ProcessMinorReleaseDeployTime(ctx context.Context, dr *v1alpha1.DeckhouseRelease, res *DeployTimeResult) *DeployTimeReason {
 	// check: Deckhouse pod is ready
 	if !c.deckhousePodReadyFunc(ctx) {
