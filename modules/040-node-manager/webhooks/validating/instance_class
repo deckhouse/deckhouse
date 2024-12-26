@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-# Copyright 2023 Flant JSC
+# Copyright 2024 Flant JSC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -46,11 +46,9 @@ EOF
 }
 
 function __main__() {
-    # Получаем имя и тип InstanceClass, который пытаются удалить
     classToDelete=$(context::jq -r '.review.request.name')
     classKind=$(context::jq -r '.review.request.kind')
 
-    # Проверяем, используется ли этот класс в каких-либо NodeGroup
     if usedInNodeGroup=$(context::jq -er --arg class "$classToDelete" --arg kind "$classKind" '.snapshots.nodegroups[].filterResult | select(.classReference.kind == $kind and .classReference.name == $class) | .name' 2>/dev/null); then
         cat <<EOF > "$VALIDATING_RESPONSE_PATH"
 {"allowed":false, "message":"$classKind \"$classToDelete\" cannot be deleted because it is being used by NodeGroup \"$usedInNodeGroup\""}
@@ -58,7 +56,6 @@ EOF
         return 0
     fi
 
-    # Если класс не используется, разрешаем удаление
     cat <<EOF > "$VALIDATING_RESPONSE_PATH"
 {"allowed":true}
 EOF
