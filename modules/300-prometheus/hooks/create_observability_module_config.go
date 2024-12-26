@@ -56,6 +56,10 @@ func applyObservabilityMCFilter(_ *unstructured.Unstructured) (go_hook.FilterRes
 }
 
 func observabilityMCHookHandler(input *go_hook.HookInput) error {
+	if input.Values.Get("global.modulesImages.digests.observability").Value() == nil {
+		return nil
+	}
+
 	observabilityMCSnapshots := input.Snapshots[observabilityMCSnapshotName]
 
 	if len(observabilityMCSnapshots) == 0 {
