@@ -417,13 +417,3 @@ To do that, follow these steps:
    run the command you got (`nc 192.168.199.178 8000` according to the example above).
 
    The logs of the initial node configuration are located at `/var/log/cloud-init-output.log`.
-
-### When is a node reboot required?
-
-While you are configuring a node, some modifications may require a reboot.
-
-For example, in the Astra Linux distribution (a Russian Linux-based OS),
-it may be required after modifying the `kernel.yama.ptrace_scope` parameter of sysctl
-using the `astra-ptrace-lock enable/disable` command.
-
-The reboot mode is defined by the `disruptions` field in the [`disruptions` parameter section](../../../../reference/cr/nodegroup.html#nodegroup-v1-spec-disruptions) of a NodeGroup resource.

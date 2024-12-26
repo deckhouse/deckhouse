@@ -399,11 +399,3 @@ d8 k label node <node_name> node-role.kubernetes.io/<old_node_group_name>-
 1. Выполните полученную команду (в примере выше — `nc 192.168.199.178 8000`), чтобы получить логи `cloud-init` для последующей диагностики.
 
    Логи первоначальной настройки узла находятся в `/var/log/cloud-init-output.log`.
-
-### Когда требуется перезагрузка узлов?
-
-В процессе настройки узла некоторые операции по изменению конфигурации могут потребовать перезагрузки.
-
-Например, перезагрузка узла требуется в Astra Linux при изменении параметра sysctl: `kernel.yama.ptrace_scope` (результат работы команды `astra-ptrace-lock enable/disable`).
-
-Режим перезагрузки определяется полем `disruptions` [в секции параметров `disruptions`](../../../../reference/cr/nodegroup.html#nodegroup-v1-spec-disruptions) ресурса NodeGroup.
