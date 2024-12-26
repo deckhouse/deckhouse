@@ -31,11 +31,6 @@ func getCaps() (capability.Capabilities, error) {
 		return nil, err
 	}
 
-	err = caps.Load()
-	if err != nil {
-		return nil, err
-	}
-
 	return caps, nil
 }
 
