@@ -313,10 +313,6 @@ func (r *reconciler) deleteModuleConfig(ctx context.Context, moduleConfig *v1alp
 	if err := r.client.Get(ctx, client.ObjectKey{Name: moduleConfig.Name}, module); err != nil {
 		if apierrors.IsNotFound(err) {
 			r.log.Warnf("the module '%s' not found", moduleConfig.Name)
-			if err = r.removeFinalizer(ctx, moduleConfig); err != nil {
-				r.log.Errorf("failed to remove finalizer for the '%s' module config: %v", moduleConfig.Name, err)
-				return ctrl.Result{Requeue: true}, nil
-			}
 			return ctrl.Result{}, nil
 		}
 		r.log.Errorf("failed to get the '%s' module: %v", moduleConfig.Name, err)
