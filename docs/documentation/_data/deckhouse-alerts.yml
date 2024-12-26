@@ -3729,7 +3729,10 @@ alerts:
       moduleUrl: 340-monitoring-deckhouse
       module: monitoring-deckhouse
       edition: ce
-      description: "The '{{ $labels.moduleName }}' module has a deprecated module update policy, the policy selector does not work, and the module will use deckhouse update policy. \n\nPlease specify the proper update policy in the module configuration to continue get updates.\n"
+      description: |
+        The '{{ $labels.moduleName }}' module has a deprecated module update policy, the policy selector does not work, and the module will use deckhouse update policy.
+
+        Please specify the proper update policy in the module configuration to continue get updates.
       summary: |
         The '{{ $labels.moduleName }}' module has a deprecated module update policy.
       severity: "4"
