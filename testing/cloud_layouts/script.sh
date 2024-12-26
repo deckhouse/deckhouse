@@ -1089,6 +1089,7 @@ function chmod_dirs_for_cleanup() {
 
 function main() {
   >&2 echo "Start cloud test script"
+  id
   # switch to the / folder to dhctl proper work
   cd /
 
