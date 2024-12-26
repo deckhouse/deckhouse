@@ -59,7 +59,7 @@ shell:
   - cd /app
   - GOPROXY={{ .GOPROXY }} GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o entrypoint
   - chown -R 64535:64535 /app/
-  - chmod 0700 /app/alerts-receiver
+  - chmod 0700 /app/entrypoint
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: common/distroless
