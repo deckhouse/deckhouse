@@ -31,11 +31,6 @@ git:
   stageDependencies:
     setup:
     - '**/*'
-- add: /{{ $.ModulePath }}modules/800-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
-  to: /src/patches
-  stageDependencies:
-    setup:
-    - '**/*'
 shell:
   install:
   - git clone --depth 1 --branch {{ .CandiVersionMap.d8.d8CliVersion }} {{ $.SOURCE_REPO }}/deckhouse/deckhouse-cli.git /src/deckhouse-cli
