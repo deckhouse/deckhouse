@@ -1,12 +1,14 @@
 # render imports for install and install standalone images
 # . is dict with next params
 #   Env - werf env
+#   prefix - target files add prefix
 {{- define "installer_and_installer_standalone_generic_imports" }}
 {{- $context := . -}}
+{{- $prefix := $context.prefix -}}
 
 - image: dhctl
   add: /dhctl/bin/dhctl
-  to: /image/dhctl
+  to: (printf "%s/dhctl" $prefix)
   before: setup
 - image: dev-prebuild
   add: /deckhouse
@@ -17,11 +19,11 @@
   after: setup
 - image: images-digests
   add: /images_digests.json
-  to: /image/deckhouse/candi/images_digests.json
+  to: (printf "%s/deckhouse/candi/images_digests.json" $prefix)
   before: setup
 - artifact: version-map-artifact
   add: /version_map_{{ $context.Env }}.yml
-  to: /image/deckhouse/candi/version_map.yml
+  to: (printf "%s/deckhouse/candi/version_map.yml" $prefix)
   before: setup
 - artifact: ssh-static
   add: /ssh/bin
@@ -62,12 +64,14 @@
 #   Env - werf env
 #   TF - TF from werf.yaml
 #   Editions - Editions from werf.yaml
+#   prefix - target files add prefix
 {{- define "installer_and_installer_standalone_terraform_imports" }}
 {{- $context := . -}}
+{{- $prefix := $context.prefix -}}
 
 - artifact: terraform # from modules/040-terraform-manager/images/terraform-manager-base/werf.inc.yaml
   add: /terraform/terraform
-  to: /bin/terraform
+  to: (printf "%s/bin/terraform" $prefix)
   before: setup
 {{- range $_, $edition := $context.Editions }}
   {{- if $edition.terraformProviders }}
@@ -75,7 +79,7 @@
       {{- $tf := index $context.TF $tfProvider }}
 - artifact: {{ $tf.artifact }} # from modules/040-terraform-manager/images/terraform-manager-{PROVIDER}/werf.inc.yaml
   add: /{{ $tf.artifactBinary }}
-  to: /plugins/registry.terraform.io/{{ $tf.namespace }}/{{ $tf.type }}/{{ $tf.version }}/linux_amd64/{{ $tf.destinationBinary }}
+  to: {{ $prefix }}/plugins/registry.terraform.io/{{ $tf.namespace }}/{{ $tf.type }}/{{ $tf.version }}/linux_amd64/{{ $tf.destinationBinary }}
   before: setup
     {{- end }}
   {{- end }}
@@ -137,6 +141,8 @@ shell:
 # render docker parameters for installer image
 {{- define "installer_docker_properties" }}
 docker:
+  # we need root permission for installer image
+  USER: 0
   ENV:
     EDITOR: vim
 {{- end }}

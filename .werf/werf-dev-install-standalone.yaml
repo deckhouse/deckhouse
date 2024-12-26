@@ -9,8 +9,8 @@ git:
   - candi
   {{ .Files.Get (printf "tools/build_includes/candi-%s.yaml" .Env) }}
 import:
-{{ include "installer_and_installer_standalone_generic_imports" (dict "Env" $.Env) }}
-{{ include "installer_and_installer_standalone_terraform_imports" (dict "Env" $.Env "TF" $.TF "Editions" $.Editions) }}
+{{ include "installer_and_installer_standalone_generic_imports" (dict "Env" $.Env "prefix" "/image") }}
+{{ include "installer_and_installer_standalone_terraform_imports" (dict "Env" $.Env "TF" $.TF "Editions" $.Editions "prefix" "/image") }}
 shell:
   setup:
   {{ include "installer_standalone_setup_script" (dict "CI_COMMIT_TAG" .CI_COMMIT_TAG) | nindent 2 }}

@@ -8,8 +8,8 @@ git:
   - candi
 {{ .Files.Get (printf "tools/build_includes/candi-%s.yaml" .Env) }}
 import:
-{{ include "installer_and_installer_standalone_generic_imports" (dict "Env" $.Env) }}
-{{ include "installer_and_installer_standalone_terraform_imports" (dict "Env" $.Env "TF" $.TF "Editions" $.Editions) }}
+{{ include "installer_and_installer_standalone_generic_imports" (dict "Env" $.Env "prefix" "") }}
+{{ include "installer_and_installer_standalone_terraform_imports" (dict "Env" $.Env "TF" $.TF "Editions" $.Editions "prefix" "") }}
 {{ include "installer_and_installer_standalone_libraries_and_binaries_imports" . }}
 
 {{ include "installer_docker_properties" . }}
