@@ -37,7 +37,7 @@ lang: ru
 
 Ресурс NodeGroupConfiguration позволяет указывать [приоритет](../../../../reference/cr/nodegroup.html#nodegroupconfiguration-v1alpha1-spec-weight) выполняемым скриптам, ограничивать их выполнение определенными [группами узлов](../../../../reference/cr/nodegroup.html#nodegroupconfiguration-v1alpha1-spec-nodegroups) и [типами ОС](../../../../reference/cr/nodegroup.html#nodegroupconfiguration-v1alpha1-spec-bundles).
 
-Код скрипта указывается в параметре [`content`](../../../../reference/cr/nodegroup.html#nodegroupconfiguration-v1alpha1-spec-content) ресурса. При создании скрипта на узле содержимое параметра `content` проходит через шаблонизатор [Go Template](https://pkg.go.dev/text/template), который позволят встроить дополнительный уровень логики при генерации скрипта. При прохождении через шаблонизатор становится доступным контекст с набором динамических переменных.
+Код скрипта указывается в параметре [`content`](../../../../reference/cr/nodegroup.html#nodegroupconfiguration-v1alpha1-spec-content) ресурса. При создании скрипта на узле содержимое параметра `content` проходит через шаблонизатор [Go Template](https://pkg.go.dev/text/template), который позволяет встроить дополнительный уровень логики при генерации скрипта. При прохождении через шаблонизатор становится доступным контекст с набором динамических переменных.
 
 Переменные, которые доступны для использования в шаблонизаторе:
 
@@ -124,7 +124,7 @@ nodeGroup:
 ```shell
 {{- range .nodeUsers }}
 echo 'Tuning environment for user {{ .name }}'
-# Some code for tuning user environment
+# Код настройки пользовательского окружения
 {{- end }}
 ```
 

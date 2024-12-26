@@ -66,7 +66,7 @@ so the following are the examples for Debian and CentOS.
 
 Both examples use the `bb-deckhouse-get-disruptive-update-approval` function
 as an extended set of Bash Booster commands from the Deckhouse team.
-This function prevents a node from rebooting when the reboot must be confirmed by adding an annotation to the node.
+This function prevents a node from rebooting if it must be confirmed by adding an annotation to the node.
 
 Other Bash Booster functions used:
 

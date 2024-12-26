@@ -6,9 +6,9 @@ lang: en
 
 ## Restoring a master node when kubelet can't load control plane components
 
-This situation may occur if the control plane component images are deleted
+This situation may occur if the control plane component images were deleted
 in a cluster with a single master node (for example, the `/var/lib/containerd` directory was deleted).
-In this case, kubelet can't pull the control plane component images during a restart
+In this case, kubelet can't pull the control plane component images during a restart,
 since the master node lacks authorization parameters required for accessing `registry.deckhouse.io`.
 
 ### containerd
@@ -103,11 +103,11 @@ Alternatively, you can change the CRI for the cluster using the following patch:
   ```
 
 If you need to keep a NodeGroup on a different CRI,
-before changing `defaultCRI`, set the CRI for this NodeGroup following the guidelines on [changing the CRI for a NodeGroup](#changing-cri-for-a-nodegroup).
+before changing `defaultCRI`, set the CRI for this NodeGroup following the [corresponding procedure](#changing-cri-for-a-nodegroup).
 
 {% alert level="danger" %}
 Changing `defaultCRI` will cause the CRI changing on all nodes, including master nodes.
-If there's only one master node, this operation is dangerous and can lead to a complete failure of the cluster!
+If there's only one master node, this operation is dangerous and can lead to a complete failure of the cluster.
 The preferred option is to make a multi-master and change the CRI type.
 {% endalert %}
 
@@ -390,7 +390,7 @@ The following is an example using Ansible.
    d8 k -n default get ep kubernetes -o json | jq '.subsets[0].addresses[0].ip + ":" + (.subsets[0].ports[0].port | tostring)' -r
    ```
 
-   Check the Kubernetes version. If the version is 1.25 or newer, create the `node-group` token:
+   Check the Kubernetes version. If the version is higher than 1.25, create the `node-group` token:
 
    ```shell
    d8 k create token node-group --namespace d8-cloud-instance-manager --duration 1h

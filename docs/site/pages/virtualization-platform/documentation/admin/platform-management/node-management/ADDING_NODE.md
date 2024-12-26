@@ -167,7 +167,7 @@ To add a static node to a cluster (bare metal server or virtual machine), follow
    d8 k get ng worker
    ```
 
-   In the output, you should see 1 node under READY:
+   In the NodeGroup state, 1 node should appear in the `READY` column:
 
    ```console
    NAME     TYPE     READY   NODES   UPTODATE   INSTANCES   DESIRED   MIN   MAX   STANDBY   STATUS   AGE    SYNCED
@@ -283,7 +283,7 @@ If a node in a NodeGroup isn't updated
 or you assume there are other problems that may be related to the `node-manager` module,
 check the logs of the `bashible` service. The `bashible` service runs on each node managed by the `node-manager` module.
 
-To view the logs of the `bashible` service, run the following command:
+To view the logs of the `bashible` service, run the following command on the node:
 
 ```shell
 journalctl -fu bashible
@@ -314,13 +314,13 @@ bash /var/lib/bashible/cleanup_static_node.sh --yes-i-am-sane-and-i-understand-w
 ### How do I clean up a node for adding to another cluster?
 
 {% alert level="warning" %}
-This procedure is required only when you need to move a static node from one cluster to another.
+This is only necessary if you need to move a static node from one cluster to another.
 Note that these operations result in removing data from the local storage.
 If you only need to change a NodeGroup, follow the [NodeGroup changing procedure](#how-do-i-change-the-nodegroup-of-a-static-node) instead.
 
 If the node you are cleaning up has the LINSTOR/DRBD storage pools,
 to evict resources from the node and remove the LINSTOR/DRBD node,
-use the [DRBD resource eviction procedure](https://deckhouse.io/products/kubernetes-platform/modules/sds-replicated-volume/stable/faq.html#how-do-i-evict-drbd-resources-from-a-node) for the `sds-replicated-volume` module.
+use the [corresponding procedure](https://deckhouse.io/products/kubernetes-platform/modules/sds-replicated-volume/stable/faq.html#how-do-i-evict-drbd-resources-from-a-node) for the `sds-replicated-volume` module.
 {% endalert %}
 
 To clean up a node for adding to another cluster, follow these steps:
@@ -413,7 +413,7 @@ To do that, follow these steps:
      logsEndpoint: 192.168.199.178:8000
    ```
 
-1. To see the `cloud-init` logs and determine the cause of the problem,
+1. To view the `cloud-init` logs for diagnostics,
    run the command you got (`nc 192.168.199.178 8000` according to the example above).
 
    The logs of the initial node configuration are located at `/var/log/cloud-init-output.log`.
@@ -422,7 +422,8 @@ To do that, follow these steps:
 
 While you are configuring a node, some modifications may require a reboot.
 
-For example, it may be required after modifying the `kernel.yama.ptrace_scope` parameter of sysctl
-using the `astra-ptrace-lock enable/disable` command in the Astra Linux distribution.
+For example, in the Astra Linux distribution (a Russian Linux-based OS),
+it may be required after modifying the `kernel.yama.ptrace_scope` parameter of sysctl
+using the `astra-ptrace-lock enable/disable` command.
 
 The reboot mode is defined by the `disruptions` field in the [`disruptions` parameter section](../../../../reference/cr/nodegroup.html#nodegroup-v1-spec-disruptions) of a NodeGroup resource.

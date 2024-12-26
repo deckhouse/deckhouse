@@ -107,7 +107,7 @@ You can use pre-made scripts to configure or clear up a node and connect or disc
 
 To configure a server (VM) and add a node to the cluster, download and run a special bootstrap script.
 This script is generated for each static node group (each NodeGroup resource) and located in the `d8-cloud-instance-manager/manual-bootstrap-for-<NODEGROUP-NAME>` secret.
-For an example of adding a static node to a cluster, refer to [Adding a static node manually](adding-node.html#adding-a-static-node-manually).
+For an example of adding a static node to a cluster, refer to the [corresponding section](adding-node.html#adding-a-static-node-manually).
 
 To disconnect a cluster node and clean up the server (VM), run the `/var/lib/bashible/cleanup_static_node.sh` script,
 which comes with each static node.
@@ -127,7 +127,7 @@ CAPS connects to the cluster node, clears it, and disconnects it from the cluste
 ### Managing an existing node automatically
 
 {% alert level="info" %}
-This feature is supported in Deckhouse 1.63 or newer.
+This feature is supported in Deckhouse 1.63 or higher.
 {% endalert %}
 
 To transfer an existing cluster node under CAPS management,
@@ -353,7 +353,7 @@ You can't use the `deckhouse.io` domain in `labels` and `taints` keys of the Nod
 Use the `dedicated` or `dedicated.client.com` keys.
 {% endalert %}
 
-There are two ways to solve this problem:
+There are two ways to accomplish this task:
 
 1. You can set labels to `spec.nodeTemplate.labels` in NodeGroup to use them in the [`spec.nodeSelector`](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/) or [`spec.affinity.nodeAffinity`](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#node-affinity) parameters.
    In this case, you select nodes that the scheduler will use for running the target application.

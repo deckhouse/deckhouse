@@ -71,8 +71,8 @@ entries:
                     ru: Группы узлов
                   url: /virtualization-platform/documentation/admin/platform-management/node-management/node-group.html
                 - title:
-                    en: Adding a node
-                    ru: Добавление узла
+                    en: Adding and removing a node
+                    ru: Добавление и удаление узла
                   url: /virtualization-platform/documentation/admin/platform-management/node-management/adding-node.html
                 - title:
                     en: Node сonfiguration

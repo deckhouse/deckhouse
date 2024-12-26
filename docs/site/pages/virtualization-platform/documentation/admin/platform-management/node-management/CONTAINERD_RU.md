@@ -8,7 +8,7 @@ lang: ru
 
 Дополнительная настройка containerd возможна через создание конфигурационных файлов с помощью ресурса NodeGroupConfiguration.
 
-За настройки containerd отвечает встроенный скрипт [`032_configure_containerd.sh`](https://github.com/deckhouse/deckhouse/blob/main/candi/bashible/common-steps/all/032_configure_containerd.sh.tpl) — он производит объединение всех конфигурационных файлов сервиса `containerd` расположенных по пути `/etc/containerd/conf.d/*.toml`, а также перезапуск сервиса.
+За настройки containerd отвечает встроенный скрипт [`032_configure_containerd.sh`](https://github.com/deckhouse/deckhouse/blob/main/candi/bashible/common-steps/all/032_configure_containerd.sh.tpl) — он производит объединение всех конфигурационных файлов сервиса `containerd`, расположенных по пути `/etc/containerd/conf.d/*.toml`, а также перезапуск сервиса.
 
 При разработке NodeGroupConfiguration следует учитывать следующее:
 

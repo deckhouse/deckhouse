@@ -5,7 +5,7 @@ permalink: en/virtualization-platform/documentation/admin/platform-management/no
 
 ## General information
 
-You can configure containerd by creating configuration files using a NodeGroupConfiguration resource.
+You can set up containerd by creating configuration files using a NodeGroupConfiguration resource.
 
 containerd is configured using the built-in script [`032_configure_containerd.sh`](https://github.com/deckhouse/deckhouse/blob/main/candi/bashible/common-steps/all/032_configure_containerd.sh.tpl).
 This script combines all configuration files of the `containerd` service at `/etc/containerd/conf.d/*.toml`
