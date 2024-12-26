@@ -26,8 +26,6 @@ import (
 	discv1 "k8s.io/api/discovery/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
-
-	"github.com/deckhouse/deckhouse/go_lib/dependency"
 )
 
 // We will create the EndpointSlice manually, because Deckhouse only goes to the Ready state after the 'first converge' of modules.
@@ -42,9 +40,9 @@ const (
 // should run before all hooks
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	OnStartup: &go_hook.OrderedConfig{Order: 1},
-}, dependency.WithExternalDependencies(generateDeckhouseEndpoints))
+}, generateDeckhouseEndpoints)
 
-func generateDeckhouseEndpoints(input *go_hook.HookInput, dc dependency.Container) error {
+func generateDeckhouseEndpoints(input *go_hook.HookInput) error {
 	// hostname := os.Getenv("HOSTNAME")
 	// At this moment we don't use Hostname because of 2 reasons:
 	// 1. According to the endpoint controller, it should be set only when:
