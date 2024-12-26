@@ -33,8 +33,19 @@ spec:
   enabled: false
 `
 
+const hookExecutionConfig = `{
+  "global": {
+    "enabledModules": ["prometheus"],
+	"modulesImages": {
+	  "digests": {
+	    "observability": {"a": "b", "c": "d", "e": "f"}
+	  }
+	}
+  }
+}`
+
 var _ = Describe("Modules :: prometheus :: hooks :: create_observability_module_config ::", func() {
-	f := HookExecutionConfigInit(`{"global":{"enabledModules":["prometheus"]}}`, ``)
+	f := HookExecutionConfigInit(hookExecutionConfig, "")
 	f.RegisterCRD("deckhouse.io", "v1alpha1", "ModuleConfig", false)
 
 	Context("Without observability module config", func() {
