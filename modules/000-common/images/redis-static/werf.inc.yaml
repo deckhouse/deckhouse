@@ -1,16 +1,18 @@
 ---
-artifact: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
-fromArtifact: common/src-artifact
+image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+fromImage: common/src-artifact
+final: false
 shell:
   install:
   - git clone --branch 7.4.0 --depth 1 {{ $.SOURCE_REPO }}/redis/redis.git /src
   - rm -r /src/utils
   - rm -r /src/.git
 ---
-artifact: {{ .ModuleName }}/build-redis-static-artifact
+image: {{ .ModuleName }}/{{ .ImageName }}-artifact
 from: {{ .Images.BASE_ALPINE }}
+final: false
 import:
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
   add: /src
   to: /src
   before: install
@@ -33,7 +35,7 @@ shell:
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: common/distroless
 import:
-- artifact: {{ $.ModuleName }}/build-redis-static-artifact
+- image: {{ $.ModuleName }}/{{ .ImageName }}-artifact
   add: /src/src/redis-server
   to: /redis-server
   before: setup

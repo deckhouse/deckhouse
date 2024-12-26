@@ -21,4 +21,8 @@ shell:
   install:
   - export GOPROXY={{ .GOPROXY }}
   - cd /src
+<<<<<<< HEAD
+=======
+  - go mod download
+>>>>>>> 2e4daaf60d ([common] cve update)
   - CGO_ENABLED=0 GOOS=linux go build -ldflags '-s -w -extldflags "-static"' -o /usr/local/bin/yq
