@@ -249,9 +249,21 @@ function disable_registry_data_device_label() {
   echo "Successful label node $node with labels $label"
 }
 
+function check_annotation(){
+    local annotation="$1"
+    local node="$D8_NODE_HOSTNAME"
+    local node_annotations=$(bb-kubectl --request-timeout=60s --kubeconfig=/etc/kubernetes/kubelet.conf get node $node -o json | jq '.metadata.annotations')
+
+    if echo "$node_annotations" | jq 'has("'$annotation'")' | grep -q 'true'; then
+        return 0
+    fi
+    return 1
+}
+
+
 # Skip for
-if [ -f /var/lib/bashible/lock_mount_registry_data_device ]; then
-  exit 0
+if check_annotation "embedded-registry.deckhouse.io/lock-data-device-mount"; then
+    exit 0
 fi
 
 # Check if the registry data device is already mounted

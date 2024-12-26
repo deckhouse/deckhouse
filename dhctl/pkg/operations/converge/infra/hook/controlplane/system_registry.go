@@ -37,12 +37,12 @@ import (
 )
 
 const (
-	registryDataDeviceMountLockFile = "/var/lib/bashible/lock_mount_registry_data_device"
-	registryDataDeviceMountPoint    = "/mnt/system-registry-data"
-	registryDataDeviceNodeLabel     = "node.deckhouse.io/registry-data-device-ready"
-	registryTerraformEnableFlagVar  = "systemRegistryEnable"
-	registryPodsNamespace           = "d8-system"
-	registryModuleName              = "system-registry"
+	registryDataDeviceMountLockAnnotation = "embedded-registry.deckhouse.io/lock-data-device-mount"
+	registryDataDeviceMountPoint          = "/mnt/system-registry-data"
+	registryDataDeviceNodeLabel           = "node.deckhouse.io/registry-data-device-ready"
+	registryTerraformEnableFlagVar        = "systemRegistryEnable"
+	registryPodsNamespace                 = "d8-system"
+	registryModuleName                    = "system-registry"
 )
 
 type MountPointInfo struct {
@@ -119,7 +119,7 @@ func attemptUnmountRegistryData(kubeClient *client.KubernetesClient, nodeName st
 			return fmt.Errorf("failed to create SSH client: %s", err)
 		}
 
-		err = unsetRegistryDataDeviceNodeLabel(kubeClient, nodeName)
+		err = unsetLabels(kubeClient, nodeName, []string{registryDataDeviceNodeLabel})
 		if err != nil {
 			return err
 		}
@@ -140,11 +140,7 @@ func tryLockRegistryDataDeviceMount(kubeClient *client.KubernetesClient, nodeNam
 		fmt.Sprintf("Attempting to lock mount actions for registry data device on node '%s'", nodeName),
 		45, 10*time.Second,
 	).Run(func() error {
-		sshClient, err := createNodeSshClient(kubeClient, nodeName)
-		if err != nil {
-			return fmt.Errorf("failed to create SSH client: %v", err)
-		}
-		return createLockFile(sshClient, registryDataDeviceMountLockFile)
+		return setAnnotations(kubeClient, nodeName, map[string]string{registryDataDeviceMountLockAnnotation: ""})
 	})
 }
 
@@ -153,11 +149,7 @@ func tryUnlockRegistryDataDeviceMount(kubeClient *client.KubernetesClient, nodeN
 		fmt.Sprintf("Attempting to unlock registry data device on node '%s'", nodeName),
 		45, 10*time.Second,
 	).Run(func() error {
-		sshClient, err := createNodeSshClient(kubeClient, nodeName)
-		if err != nil {
-			return fmt.Errorf("failed to create SSH client: %v", err)
-		}
-		return removeLockFile(sshClient, registryDataDeviceMountLockFile)
+		return unsetAnnotations(kubeClient, nodeName, []string{registryDataDeviceMountLockAnnotation})
 	})
 }
 
@@ -200,7 +192,7 @@ func umountPath(mountPoint string, sshClient *ssh.Client) error {
 }
 
 func checkRegistryPodsExistence(kubeClient *client.KubernetesClient, nodeName, podNamespace, podName string, podLabels map[string]string) error {
-	staticPods, err := kubeClient.CoreV1().Pods(podNamespace).List(context.TODO(), metav1.ListOptions{
+	staticPods, err := kubeClient.CoreV1().Pods(podNamespace).List(context.Background(), metav1.ListOptions{
 		LabelSelector: labels.Set(podLabels).String(),
 		FieldSelector: fmt.Sprintf("spec.nodeName=%s", nodeName),
 	})
@@ -226,31 +218,118 @@ func checkRegistryPodsExistence(kubeClient *client.KubernetesClient, nodeName, p
 	return nil
 }
 
-func unsetRegistryDataDeviceNodeLabel(kubeClient *client.KubernetesClient, nodeName string) error {
-	node, err := kubeClient.CoreV1().Nodes().Get(context.Background(), nodeName, metav1.GetOptions{})
+func setAnnotations(kubeClient *client.KubernetesClient, nodeName string, annotations map[string]string) error {
+	nodeObj, err := kubeClient.CoreV1().Nodes().Get(context.Background(), nodeName, metav1.GetOptions{})
 	if err != nil {
 		return fmt.Errorf("failed to get the node %s: %w", nodeName, err)
 	}
 
-	if _, ok := node.ObjectMeta.Labels[registryDataDeviceNodeLabel]; !ok {
-		return nil
-	}
+	nodeAnnotations := nodeObj.GetAnnotations()
 
 	patchData := &corev1.Node{
 		ObjectMeta: metav1.ObjectMeta{
-			Labels: map[string]string{
-				registryDataDeviceNodeLabel: "",
-			},
+			Annotations: map[string]string{},
 		},
 	}
-	patchBytes, err := json.Marshal(patchData)
-	if err != nil {
-		return fmt.Errorf("failed to marshal patch data: %w", err)
+
+	for expectedValue, annotation := range annotations {
+		// Check if the annotation exists
+		if currentValue, ok := nodeAnnotations[annotation]; ok && expectedValue == currentValue {
+			continue
+		}
+		patchData.ObjectMeta.Annotations[annotation] = expectedValue
 	}
 
-	_, err = kubeClient.CoreV1().Nodes().Patch(context.Background(), nodeName, types.MergePatchType, patchBytes, metav1.PatchOptions{})
+	if len(patchData.ObjectMeta.Annotations) == 0 {
+		return nil
+	}
+
+	patch, err := json.Marshal(patchData)
 	if err != nil {
-		return fmt.Errorf("failed to delete the label from the node: %w", err)
+		return fmt.Errorf("failed to marshal patch: %w", err)
+	}
+
+	_, err = kubeClient.CoreV1().Nodes().Patch(context.Background(), nodeName, types.MergePatchType, patch, metav1.PatchOptions{})
+	if err != nil {
+		return fmt.Errorf("failed to set annotations for the node: %w", err)
+	}
+	return nil
+}
+
+func unsetAnnotations(kubeClient *client.KubernetesClient, nodeName string, annotations []string) error {
+	nodeObj, err := kubeClient.CoreV1().Nodes().Get(context.Background(), nodeName, metav1.GetOptions{})
+	if err != nil {
+		return fmt.Errorf("failed to get the node %s: %w", nodeName, err)
+	}
+
+	nodeAnnotations := nodeObj.GetAnnotations()
+
+	patchOperations := make([]map[string]interface{}, 0, len(annotations))
+
+	for _, annotation := range annotations {
+		// Check if the annotation exists
+		if _, ok := nodeAnnotations[annotation]; !ok {
+			continue
+		}
+
+		patchOperations = append(patchOperations, map[string]interface{}{
+			"op": "remove",
+			// JSON patch requires slashes to be escaped with ~1
+			"path": fmt.Sprintf("/metadata/annotations/%s", strings.ReplaceAll(annotation, "/", "~1")),
+		})
+	}
+
+	if len(patchOperations) == 0 {
+		return nil
+	}
+
+	patch, err := json.Marshal(patchOperations)
+	if err != nil {
+		return fmt.Errorf("failed to marshal patch: %w", err)
+	}
+
+	_, err = kubeClient.CoreV1().Nodes().Patch(context.Background(), nodeName, types.JSONPatchType, patch, metav1.PatchOptions{})
+	if err != nil {
+		return fmt.Errorf("failed to unset annotations for the node: %w", err)
+	}
+	return nil
+}
+
+func unsetLabels(kubeClient *client.KubernetesClient, nodeName string, labels []string) error {
+	nodeObj, err := kubeClient.CoreV1().Nodes().Get(context.Background(), nodeName, metav1.GetOptions{})
+	if err != nil {
+		return fmt.Errorf("failed to get the node %s: %w", nodeName, err)
+	}
+
+	nodeLabels := nodeObj.GetLabels()
+
+	patchOperations := make([]map[string]interface{}, 0, len(labels))
+
+	for _, label := range labels {
+		// Check if the label exists
+		if _, ok := nodeLabels[label]; !ok {
+			continue
+		}
+
+		patchOperations = append(patchOperations, map[string]interface{}{
+			"op": "remove",
+			// JSON patch requires slashes to be escaped with ~1
+			"path": fmt.Sprintf("/metadata/labels/%s", strings.ReplaceAll(label, "/", "~1")),
+		})
+	}
+
+	if len(patchOperations) == 0 {
+		return nil
+	}
+
+	patch, err := json.Marshal(patchOperations)
+	if err != nil {
+		return fmt.Errorf("failed to marshal patch: %w", err)
+	}
+
+	_, err = kubeClient.CoreV1().Nodes().Patch(context.Background(), nodeName, types.JSONPatchType, patch, metav1.PatchOptions{})
+	if err != nil {
+		return fmt.Errorf("failed to unset labels for the node: %w", err)
 	}
 	time.Sleep(5 * time.Second)
 	return nil
@@ -273,42 +352,4 @@ func createNodeSshClient(kubeClient *client.KubernetesClient, nodeName string) (
 	settings := sshClient.Settings.Copy()
 	settings.SetAvailableHosts([]session.Host{{Host: host, Name: nodeName}})
 	return ssh.NewClient(settings, sshClient.PrivateKeys), nil
-}
-func createLockFile(sshClient *ssh.Client, lockFilePath string) error {
-	isExist, err := isLockFileExists(sshClient, lockFilePath)
-	if err != nil {
-		return fmt.Errorf("error checking lock file '%s': %v", lockFilePath, err)
-	}
-	if isExist {
-		return nil
-	}
-	cmd := sshClient.Command("touch", lockFilePath)
-	cmd.Sudo()
-	return cmd.Run()
-}
-
-func removeLockFile(sshClient *ssh.Client, lockFilePath string) error {
-	isExist, err := isLockFileExists(sshClient, lockFilePath)
-	if err != nil {
-		return fmt.Errorf("error checking lock file '%s': %v", lockFilePath, err)
-	}
-	if !isExist {
-		return nil
-	}
-	cmd := sshClient.Command("rm", "-f", lockFilePath)
-	cmd.Sudo()
-	return cmd.Run()
-}
-
-func isLockFileExists(sshClient *ssh.Client, lockFilePath string) (bool, error) {
-	checkLockFileStdout := ""
-	checkLockFileStdoutHandler := func(l string) { checkLockFileStdout += l }
-	cmd := sshClient.Command("test", "-e", lockFilePath, "&&", "echo", "true", "||", "echo", "false")
-	cmd.Sudo()
-	cmd.WithStdoutHandler(checkLockFileStdoutHandler)
-	err := cmd.Run()
-	if err != nil {
-		return false, err
-	}
-	return strings.TrimSpace(checkLockFileStdout) == "true", nil
 }
