@@ -203,6 +203,10 @@ func NewDeckhouseController(ctx context.Context, version string, operator *addon
 			Flags:  syscall.MS_BIND | syscall.MS_RDONLY,
 		},
 		{
+			Source: "/proc/sys/kernel/cap",
+			Flags:  syscall.MS_BIND | syscall.MS_RDONLY,
+		},
+		{
 			Source: "/chroot/tmp",
 			Target: "/tmp",
 			Flags:  syscall.MS_BIND,
