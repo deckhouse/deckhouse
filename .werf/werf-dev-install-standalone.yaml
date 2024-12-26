@@ -13,15 +13,8 @@ import:
 {{ include "installer_and_installer_standalone_terraform_imports" (dict "Env" $.Env "TF" $.TF "Editions" $.Editions) }}
 shell:
   setup:
-  - echo '{{- env "CI_COMMIT_TAG" | default "dev" }}' > /image/deckhouse/version
-  - cd /image
-  - tar -czf /dhctl-{{- env "CI_COMMIT_TAG" | default "dev" }}.x86_64.tar.gz *
+  {{ include "installer_standalone_setup_script" (dict "CI_COMMIT_TAG" .CI_COMMIT_TAG) | nindent 2 }}
 
 ---
-image: dev/install-standalone
-from: {{ .Images.BASE_SCRATCH }}
-import:
-- image: install-standalone-builder
-  add: /dhctl-{{- env "CI_COMMIT_TAG" | default "dev" }}.x86_64.tar.gz
-  to: /
-  before: setup
+{{ include "installer_standalone_image" (dict "CI_COMMIT_TAG" .CI_COMMIT_TAG "Images" .Images )}}
+---

@@ -1,0 +1,105 @@
+# render git imports include paths
+{{- define "dev_prebuild_git_imports_include_paths" }}
+- candi
+- modules
+- global-hooks
+- shell_lib.sh
+- shell_lib
+- deckhouse-controller/entrypoint.sh
+- deckhouse-controller/crds/*.yaml
+- jq_lib
+- helm_lib
+- python_lib
+{{- end }}
+
+
+#  render shell operator import
+{{- define "dev_prebuild_git_shell_operator" }}
+- url: {{ .SOURCE_REPO }}/flant/shell-operator
+  tag: v1.4.10
+  add: /frameworks/shell
+  to: /deckhouse/shell-operator/frameworks/shell
+{{- end }}
+
+# render imports from images
+# . is dict with keys:
+#   Env - werf env
+{{- define "dev_prebuild_images_imports" }}
+{{- $context := . -}}
+
+- image: deckhouse-controller-artifact
+  add: /out/deckhouse-controller
+  to: /usr/bin/deckhouse-controller
+  after: setup
+- image: common/jq-artifact
+  add: /usr/bin/jq
+  to: /usr/bin/jq
+  after: setup
+- artifact: version-map-artifact
+  add: /version_map_{{ $context.Env }}.yml
+  to: /deckhouse/candi/version_map.yml
+  after: setup
+
+{{- end }}
+
+
+#  render general part of setup script
+# . is dict with keys:
+#   Env - werf env
+#   CI_COMMIT_TAG - CI_COMMIT_TAG env
+{{- define "dev_prebuild_setup_script_general_part" }}
+{{- $context := . -}}
+
+# Add version info
+cat <<"EOD" > /deckhouse/version
+{{- $context.CI_COMMIT_TAG  | default "dev" | nindent 4 }}
+EOD
+# Add edition info
+cat <<"EOD" > /deckhouse/edition
+{{- $context.Env | default "unknown" | nindent 4 }}
+EOD
+# Override deckhouse entrypoint to use tini as supervisor
+cat <<"EOD" > /deckhouse/deckhouse
+#!/bin/bash
+exec tini -- /deckhouse/deckhouse-controller/entrypoint.sh
+EOD
+chmod +x /deckhouse/deckhouse
+# Create symlink to grant entrypoint.sh write permission
+ln -fs /tmp/values.yaml /deckhouse/modules/values.yaml
+# Create deckhouse group
+groupadd -g 64535 deckhouse
+# Create deckhouse user
+useradd -d / -u 64535 -g deckhouse -s /sbin/nologin deckhouse
+# Run deckhouse from dedicated user
+chown deckhouse:deckhouse -R /deckhouse
+# Create symlink to vim-console
+ln -fs /usr/bin/vim-console /usr/bin/vim
+ln -fs /usr/bin/vim-console /usr/bin/vi
+
+{{- end }}
+
+# render docker parameters for installer image
+{{- define "dev_prebuild_docker_properties" }}
+docker:
+  ENV:
+    MODULES_DIR: /deckhouse/modules
+    GLOBAL_HOOKS_DIR: /deckhouse/global-hooks
+    PYTHONPATH: /deckhouse/python_lib
+    LC_ALL: C
+{{- end }}
+
+
+# render deckhouse controller image
+{{- define "dev_image" }}
+image: dev
+fromImage: dev-prebuild
+import:
+- image: images-digests
+  add: /images_digests.json
+  to: /deckhouse/modules/images_digests.json
+  after: setup
+- image: images-digests
+  add: /images_digests.json
+  to: /deckhouse/modules/040-node-manager/images_digests.json
+  after: setup
+{{- end }}

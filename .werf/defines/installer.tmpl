@@ -140,3 +140,34 @@ docker:
   ENV:
     EDITOR: vim
 {{- end }}
+
+
+# render installer standalone setup script
+# . is dict with next params
+#   CI_COMMIT_TAG - CI_COMMIT_TAG env
+{{- define "installer_standalone_setup_script" }}
+{{- $context := . -}}
+
+- echo '{{- $context.CI_COMMIT_TAG | default "dev" }}' > /image/deckhouse/version
+- cd /image
+- tar -czf /dhctl-{{- $context.CI_COMMIT_TAG | default "dev" }}.x86_64.tar.gz *
+
+{{- end }}
+
+
+# render installer standalone setup script
+# . is dict with next params
+#   CI_COMMIT_TAG - CI_COMMIT_TAG env
+#   Images - base images dict
+{{- define "installer_standalone_image" }}
+{{- $context := . -}}
+
+image: dev/install-standalone
+from: {{ $context.Images.BASE_SCRATCH }}
+import:
+- image: install-standalone-builder
+  add: /dhctl-{{- $context.CI_COMMIT_TAG | default "dev" }}.x86_64.tar.gz
+  to: /
+  before: setup
+
+{{- end }}
