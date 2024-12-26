@@ -34,7 +34,8 @@ final: false
 from: istio/proxyv2:1.21.6@sha256:a0afbbc8488060f8059e7fa04576edde01915d40576132dae83479b3abe5ce15
 shell:
   install:
-  - chmod 0700 /usr/local/bin/envoy
+  - chmod 0500 /usr/local/bin/envoy
+  - chown 1337:1337 /usr/local/bin/envoy
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
 final: false
@@ -49,4 +50,5 @@ shell:
   - echo {{ $istioProxyVersion }} > version
   - export GOPROXY={{ $.GOPROXY }}
   - GOOS=linux GOARCH=amd64 LDFLAGS='-extldflags -static -s -w' common/scripts/gobuild.sh /tmp/istio/out/ -tags=agent,disable_pgv /tmp/istio/pilot/cmd/pilot-agent/
-  - chmod 0700 /tmp/istio/out/pilot-agent
+  - chmod 0500 /tmp/istio/out/pilot-agent
+  - chown 1337:1337 /tmp/istio/out/pilot-agent
