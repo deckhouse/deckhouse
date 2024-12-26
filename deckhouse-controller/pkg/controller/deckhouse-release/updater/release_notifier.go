@@ -50,6 +50,7 @@ type WebhookData struct {
 	Message   string `json:"message"`
 }
 
+var ErrNotificationIsNotSent = errors.New("")
 var ErrFailedToSendReleaseNotification = errors.New("release blocked, failed to send release notification")
 
 func (u *ReleaseNotifier) SendPatchReleaseNotification(ctx context.Context, dr *v1alpha1.DeckhouseRelease, applyTime time.Time, metricLabels updater.MetricLabels) error {

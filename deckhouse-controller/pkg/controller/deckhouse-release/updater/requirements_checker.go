@@ -258,7 +258,6 @@ func (c *disruptionCheck) Verify(dr *v1alpha1.DeckhouseRelease) error {
 		return nil
 	}
 
-	// TODO: we save only first disruption condition
 	for _, key := range dr.GetDisruptions() {
 		hasDisruptionUpdate, reason := requirements.HasDisruption(key)
 		if hasDisruptionUpdate && !dr.GetDisruptionApproved() {

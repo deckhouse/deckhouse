@@ -255,13 +255,7 @@ func (r *deckhouseReleaseReconciler) patchManualRelease(dr *v1alpha1.DeckhouseRe
 		return nil
 	}
 
-	if !dr.GetManuallyApproved() {
-		dr.SetApprovedStatus(false)
-		// TODO: don't know yet how to count manual releases
-		// du.totalPendingManualReleases++
-	} else {
-		dr.SetApprovedStatus(true)
-	}
+	dr.SetApprovedStatus(dr.GetManuallyApproved())
 
 	return r.client.Status().Update(context.Background(), dr)
 }
@@ -271,6 +265,7 @@ func (r *deckhouseReleaseReconciler) patchSuspendAnnotation(dr *v1alpha1.Deckhou
 		return nil
 	}
 
+	// TODO: set phase suspended
 	ctx := context.Background()
 	patch, _ := json.Marshal(map[string]any{
 		"metadata": map[string]any{
@@ -289,9 +284,9 @@ func (r *deckhouseReleaseReconciler) pendingReleaseReconcile(ctx context.Context
 
 	clusterBootstrapping := true
 	var imagesRegistry string
-	// TODO: make registry service to check secrets in it
+	// TODO: make registry service to check secrets in it (make issue)
 	// TODO: incapsulate to kubernetes service
-	// TODO: check errors for empty image registry
+	// TODO: read once
 	registrySecret, err := r.getRegistrySecret(ctx)
 	if apierrors.IsNotFound(err) {
 		err = nil
@@ -316,7 +311,6 @@ func (r *deckhouseReleaseReconciler) pendingReleaseReconcile(ctx context.Context
 		}()
 	}
 
-	// TODO: ready check service?
 	// note: in module release we have pod ready by default
 	podReady := r.isDeckhousePodReady(ctx)
 
@@ -371,7 +365,20 @@ func (r *deckhouseReleaseReconciler) pendingReleaseReconcile(ctx context.Context
 	// 2) Check requirements
 	// 2.1) if not met any requirements - update phase to Pending with all requirements errors and requeue
 	// 3) Apply if force with force logic ???
-	// 4) Apply ussually release
+	// 4) Check deploy time and notify
+	// 5) Apply ussually release
+
+	// TODO: check for force annotation and make all previous pending in skipped phase
+	if dr.GetForce() {
+		err := r.ApplyForcedRelease(ctx, dr, nil)
+		if err != nil {
+			return res, fmt.Errorf("apply forced release: %w", err)
+		}
+
+		// stop requeue because we restart deckhous (deployment)
+		return ctrl.Result{}, nil
+	}
+
 	oCalc := d8updater.NewTaskCalculator(r.client, r.logger)
 	task, err := oCalc.CalculatePendingReleaseOrder(ctx, dr)
 	if err != nil {
@@ -404,7 +411,6 @@ func (r *deckhouseReleaseReconciler) pendingReleaseReconcile(ctx context.Context
 		return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
 	}
 
-	// add to reconciler???
 	checker, err := d8updater.NewRequirementsChecker(r.client, r.moduleManager.GetEnabledModuleNames(), r.logger)
 	if err != nil {
 		updateErr := r.updateReleaseStatus(ctx, dr, &v1alpha1.DeckhouseReleaseStatus{
@@ -436,26 +442,17 @@ func (r *deckhouseReleaseReconciler) pendingReleaseReconcile(ctx context.Context
 		return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
 	}
 
-	if dr.GetForce() {
-		err := r.ApplyForcedRelease(ctx, dr, task)
-		if err != nil {
-			return res, fmt.Errorf("apply forced release: %w", err)
-		}
-
-		// TODO: in original code we return empty result (reconcile was ended)
-		// is it correct???
-		return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
-	}
-
 	// if deckhouse pod has bootstrap image -> apply first release
-	// doesn't matter which is update mode
-	if r.deckhouseIsBootstrapping && task.IsSingle {
+	// doesn't matter which update mode is
+	if (r.deckhouseIsBootstrapping && task.IsSingle) || dr.GetApplyNow() {
 		err := r.runReleaseDeploy(ctx, dr, task.DeployedReleaseInfo)
 		if err != nil {
+			// TODO: deal with error
 			return res, fmt.Errorf("run single bootstrapping release deploy: %w", err)
 		}
 
-		return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
+		// stop requeue because we restart deckhous (deployment)
+		return ctrl.Result{}, nil
 	}
 
 	err = r.PreApplyReleaseCheck(ctx, dr, task)
@@ -552,39 +549,39 @@ func (r *deckhouseReleaseReconciler) PreApplyReleaseCheck(ctx context.Context, d
 	// calculate and set releaseDepthQueue label
 	r.metricsUpdater.UpdateReleaseMetric(dr.GetName(), metricLabels)
 
-	if dtr != nil {
-		err := r.updateReleaseStatus(ctx, dr, &v1alpha1.DeckhouseReleaseStatus{
-			Phase:   v1alpha1.DeckhouseReleasePhasePending,
-			Message: dtr.Message,
-		})
-		if err != nil {
-			r.logger.Warn("met release conditions status update ", slog.String("name", dr.GetName()), log.Err(err))
-		}
-
-		err = ctrlutils.UpdateWithRetry(ctx, r.client, dr, func() error {
-			if dr.Annotations == nil {
-				dr.Annotations = make(map[string]string, 2)
-			}
-
-			dr.Annotations[v1alpha1.DeckhouseReleaseAnnotationIsUpdating] = "false"
-			dr.Annotations[v1alpha1.DeckhouseReleaseAnnotationNotified] = strconv.FormatBool(dtr.Notified)
-
-			if !dtr.ReleaseApplyAfterTime.IsZero() {
-				dr.Spec.ApplyAfter = &metav1.Time{Time: dtr.ReleaseApplyAfterTime.UTC()}
-
-				dr.Annotations[v1alpha1.DeckhouseReleaseAnnotationNotificationTimeShift] = "true"
-			}
-
-			return nil
-		})
-		if err != nil {
-			r.logger.Warn("met release conditions resource update ", slog.String("name", dr.GetName()), log.Err(err))
-		}
-
-		return ErrPreApplyCheckIsFailed
+	if dtr == nil {
+		return nil
 	}
 
-	return nil
+	err := r.updateReleaseStatus(ctx, dr, &v1alpha1.DeckhouseReleaseStatus{
+		Phase:   v1alpha1.DeckhouseReleasePhasePending,
+		Message: dtr.Message,
+	})
+	if err != nil {
+		r.logger.Warn("met release conditions status update ", slog.String("name", dr.GetName()), log.Err(err))
+	}
+
+	err = ctrlutils.UpdateWithRetry(ctx, r.client, dr, func() error {
+		if dr.Annotations == nil {
+			dr.Annotations = make(map[string]string, 2)
+		}
+
+		dr.Annotations[v1alpha1.DeckhouseReleaseAnnotationIsUpdating] = "false"
+		dr.Annotations[v1alpha1.DeckhouseReleaseAnnotationNotified] = strconv.FormatBool(dtr.Notified)
+
+		if !dtr.ReleaseApplyAfterTime.IsZero() {
+			dr.Spec.ApplyAfter = &metav1.Time{Time: dtr.ReleaseApplyAfterTime.UTC()}
+
+			dr.Annotations[v1alpha1.DeckhouseReleaseAnnotationNotificationTimeShift] = "true"
+		}
+
+		return nil
+	})
+	if err != nil {
+		r.logger.Warn("met release conditions resource update ", slog.String("name", dr.GetName()), log.Err(err))
+	}
+
+	return ErrPreApplyCheckIsFailed
 }
 
 func (r *deckhouseReleaseReconciler) DeployTimeCalculate(ctx context.Context, dr *v1alpha1.DeckhouseRelease, task *d8updater.Task, metricLabels updater.MetricLabels) *d8updater.DeployTimeReason {
@@ -606,6 +603,7 @@ func (r *deckhouseReleaseReconciler) DeployTimeCalculate(ctx context.Context, dr
 	if task.IsPatch {
 		deployTimeResult = timeChecker.CalculatePatchDeployTime(dr, metricLabels)
 
+		// TODO: set notified if not notified???
 		notifyErr := releaseNotifier.SendPatchReleaseNotification(ctx, dr, deployTimeResult.ReleaseApplyAfterTime, metricLabels)
 		if notifyErr != nil {
 			return &d8updater.DeployTimeReason{
@@ -718,8 +716,8 @@ func (r *deckhouseReleaseReconciler) runReleaseDeploy(ctx context.Context, dr *v
 
 	err = ctrlutils.UpdateWithRetry(ctx, r.client, dr, func() error {
 		annotations := map[string]string{
-			v1alpha1.DeckhouseReleaseAnnotationIsUpdating: strconv.FormatBool(true),
-			v1alpha1.DeckhouseReleaseAnnotationNotified:   strconv.FormatBool(false),
+			v1alpha1.DeckhouseReleaseAnnotationIsUpdating: "true",
+			v1alpha1.DeckhouseReleaseAnnotationNotified:   "false",
 		}
 
 		if dr.Annotations == nil {
@@ -750,18 +748,6 @@ func (r *deckhouseReleaseReconciler) runReleaseDeploy(ctx context.Context, dr *v
 	if err != nil {
 		return fmt.Errorf("update status with retry: %w", err)
 	}
-
-	// TODO: make it after all deployed instructions???
-	// if currentRelease != nil {
-	// 	// skip last deployed release
-	// 	err = r.updateStatus(*currentRelease, "", PhaseSuperseded)
-	// 	if err != nil {
-	// 		return fmt.Errorf("update status to superseded: %w", err)
-	// 	}
-	// }
-
-	// TODO: purpose???
-	// return r.CommitSkippedReleases()
 
 	return nil
 }
@@ -1012,7 +998,10 @@ func (r *deckhouseReleaseReconciler) getRegistrySecret(ctx context.Context) (*ut
 		return nil, fmt.Errorf("get secret %s: %w", key, err)
 	}
 
-	regSecret, _ := utils.ParseDeckhouseRegistrySecret(secret.Data)
+	regSecret, err := utils.ParseDeckhouseRegistrySecret(secret.Data)
+	if errors.Is(err, utils.ErrImageRegistryFieldIsNotFound) {
+		regSecret.ImageRegistry = regSecret.Address + regSecret.Path
+	}
 
 	return regSecret, nil
 }

@@ -97,6 +97,7 @@ type DeckhouseRegistrySecret struct {
 }
 
 var ErrCAFieldIsNotFound = errors.New("secret has no ca field")
+var ErrImageRegistryFieldIsNotFound = errors.New("secret has no imagesRegistry field")
 
 func ParseDeckhouseRegistrySecret(data map[string][]byte) (*DeckhouseRegistrySecret, error) {
 	var err error

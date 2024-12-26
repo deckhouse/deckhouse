@@ -155,11 +155,7 @@ func (in *DeckhouseRelease) GetManuallyApproved() bool {
 	}
 
 	v, ok := in.Annotations[DeckhouseReleaseApprovalAnnotation]
-	if ok {
-		return v == "true"
-	}
-
-	return in.Approved
+	return ok && v == "true"
 }
 
 func (in *DeckhouseRelease) GetMessage() string {

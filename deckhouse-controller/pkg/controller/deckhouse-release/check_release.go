@@ -150,7 +150,7 @@ func (r *deckhouseReleaseReconciler) checkDeckhouseRelease(ctx context.Context) 
 		// GT
 		case release.GetVersion().GreaterThan(newSemver):
 			// cleanup versions which are older than current version in a specified channel and are in a Pending state
-			if release.Status.Phase == v1alpha1.ModuleReleasePhasePending {
+			if release.Status.Phase == v1alpha1.DeckhouseReleasePhasePending {
 				err = r.client.Delete(ctx, release, client.PropagationPolicy(metav1.DeletePropagationBackground))
 				if err != nil {
 					return fmt.Errorf("delete old release: %w", err)
@@ -161,7 +161,7 @@ func (r *deckhouseReleaseReconciler) checkDeckhouseRelease(ctx context.Context) 
 		case release.GetVersion().Equal(newSemver):
 			r.logger.Debugf("Release with version %s already exists", release.GetVersion())
 			switch release.Status.Phase {
-			case v1alpha1.ModuleReleasePhasePending, "":
+			case v1alpha1.DeckhouseReleasePhasePending, "":
 				if releaseChecker.releaseMetadata.Suspend {
 					patch := client.RawPatch(types.MergePatchType, buildSuspendAnnotation(releaseChecker.releaseMetadata.Suspend))
 					err := r.client.Patch(ctx, release, patch)
@@ -175,7 +175,7 @@ func (r *deckhouseReleaseReconciler) checkDeckhouseRelease(ctx context.Context) 
 					}
 				}
 
-			case v1alpha1.ModuleReleasePhaseSuspended:
+			case v1alpha1.DeckhouseReleasePhaseSuspended:
 				if !releaseChecker.releaseMetadata.Suspend {
 					patch := client.RawPatch(types.MergePatchType, buildSuspendAnnotation(releaseChecker.releaseMetadata.Suspend))
 					err := r.client.Patch(ctx, release, patch)

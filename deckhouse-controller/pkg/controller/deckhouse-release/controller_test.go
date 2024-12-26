@@ -368,11 +368,10 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 		dr = suite.getDeckhouseRelease("v1.31.2")
 		_, err = suite.ctr.createOrUpdateReconcile(ctx, dr)
 		require.NoError(suite.T(), err)
-		// awaiting for v1.31.3 release to be deployed
-		dr = suite.getDeckhouseRelease("v1.32.0")
+		dr = suite.getDeckhouseRelease("v1.31.3")
 		_, err = suite.ctr.createOrUpdateReconcile(ctx, dr)
 		require.NoError(suite.T(), err)
-		dr = suite.getDeckhouseRelease("v1.31.3")
+		dr = suite.getDeckhouseRelease("v1.32.0")
 		_, err = suite.ctr.createOrUpdateReconcile(ctx, dr)
 		require.NoError(suite.T(), err)
 	})
