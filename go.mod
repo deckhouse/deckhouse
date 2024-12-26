@@ -11,7 +11,7 @@ require (
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc
 	github.com/fatih/color v1.13.0
 	github.com/flant/kube-client v1.2.2
-	github.com/flant/shell-operator v0.0.0-20241226064644-82c605caf9ba
+	github.com/flant/shell-operator v0.0.0-20241226140026-9dbca314a409
 	github.com/gammazero/deque v0.0.0-20190521012701-46e4ffb7a622
 	github.com/ghodss/yaml v1.0.0
 	github.com/go-openapi/spec v0.19.8
@@ -62,7 +62,7 @@ require (
 	github.com/deckhouse/deckhouse/pkg/log v0.0.0-20241219045931-ca7514dfb873
 	github.com/ettle/strcase v0.2.0
 	github.com/evanphx/json-patch v5.7.0+incompatible
-	github.com/flant/addon-operator v0.0.0-20241226132227-31c5b0bace33
+	github.com/flant/addon-operator v0.0.0-20241226140130-b4cd47a9a184
 	github.com/fsnotify/fsnotify v1.7.0
 	github.com/go-logr/logr v1.4.2
 	github.com/go-openapi/errors v0.19.7
