@@ -21,10 +21,10 @@ import:
   add: /usr/local/bin/envoy
   to: /usr/local/bin/envoy
   after: setup
-# - image: {{ .ModuleName }}/{{ .ImageName }}-binary-artifact
-#   add: /busybox
-#   to: /bin/sh
-#   after: setup
+- image: {{ .ModuleName }}/{{ .ImageName }}-binary-artifact
+  add: /busybox
+  to: /bin/sh
+  after: setup
 docker:
   ENV:
     ISTIO_META_ISTIO_PROXY_SHA: "istio-proxy:78bd2d9b284978e170a49cd13decd5f952544489"
@@ -39,9 +39,9 @@ from: istio/proxyv2:1.21.6@sha256:a0afbbc8488060f8059e7fa04576edde01915d40576132
 shell:
   install:
   - chmod 0500 /usr/local/bin/envoy
-  # - chown 1337:1337 /usr/local/bin/envoy
-  # - curl --output /busybox https://raw.githubusercontent.com/EXALAB/Busybox-static/refs/heads/main/busybox_amd64
-  # - chmod +x /busybox
+  - chown 1337:1337 /usr/local/bin/envoy
+  - curl --output /busybox https://raw.githubusercontent.com/EXALAB/Busybox-static/refs/heads/main/busybox_amd64
+  - chmod 0777 /busybox
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
 final: false
@@ -57,4 +57,4 @@ shell:
   - export GOPROXY={{ $.GOPROXY }}
   - GOOS=linux GOARCH=amd64 LDFLAGS='-extldflags -static -s -w' common/scripts/gobuild.sh /tmp/istio/out/ -tags=agent,disable_pgv /tmp/istio/pilot/cmd/pilot-agent/
   - chmod 0500 /tmp/istio/out/pilot-agent
-  # - chown 1337:1337 /tmp/istio/out/pilot-agent
+  - chown 1337:1337 /tmp/istio/out/pilot-agent
