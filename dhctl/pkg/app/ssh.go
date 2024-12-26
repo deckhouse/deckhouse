@@ -160,6 +160,7 @@ func DefineBecomeFlags(cmd *kingpin.CmdClause) {
 		_ = fmt.Errorf("flag --ssh-become-pass cannot be set for --ssh-user=root")
 		os.Exit(1)
 	}
+
 }
 
 func processConnectionConfigFile(sshFlagSetByUser bool, parser connectionConfigParser) error {
