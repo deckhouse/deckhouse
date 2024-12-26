@@ -21,10 +21,12 @@ import (
 	"fmt"
 	"os"
 	"sync"
+	"syscall"
 	"time"
 
 	addonoperator "github.com/flant/addon-operator/pkg/addon-operator"
 	"github.com/flant/addon-operator/pkg/module_manager/models/modules/events"
+	mountmgr "github.com/flant/addon-operator/pkg/module_manager/mount_manager"
 	"github.com/flant/addon-operator/pkg/utils"
 	"github.com/go-logr/logr"
 	appsv1 "k8s.io/api/apps/v1"
@@ -65,8 +67,6 @@ const (
 	deckhouseNamespace  = "d8-system"
 	kubernetesNamespace = "kube-system"
 )
-
-var commonDirsToMount = []string{"/usr/bin/", "/bin", "/usr/lib", "/usr/lib64"}
 
 type DeckhouseController struct {
 	runtimeManager     manager.Manager
@@ -180,7 +180,33 @@ func NewDeckhouseController(ctx context.Context, version string, operator *addon
 
 	moduleEventCh := make(chan events.ModuleEvent, 350)
 	operator.ModuleManager.SetModuleEventsChannel(moduleEventCh)
-	operator.ModuleManager.SetRequiredMounts(commonDirsToMount...)
+	operator.ModuleManager.SetRequiredMounts([]mountmgr.MountDescriptor{
+		mountmgr.MountDescriptor{
+			Source: "/usr/bin",
+			Flags:  syscall.MS_BIND | syscall.MS_RDONLY,
+		},
+		mountmgr.MountDescriptor{
+			Source: "/bin",
+			Flags:  syscall.MS_BIND | syscall.MS_RDONLY,
+		},
+		mountmgr.MountDescriptor{
+			Source: "/usr/local/bin",
+			Flags:  syscall.MS_BIND | syscall.MS_RDONLY,
+		},
+		mountmgr.MountDescriptor{
+			Source: "/usr/lib",
+			Flags:  syscall.MS_BIND | syscall.MS_RDONLY,
+		},
+		mountmgr.MountDescriptor{
+			Source: "/usr/lib64",
+			Flags:  syscall.MS_BIND | syscall.MS_RDONLY,
+		},
+		mountmgr.MountDescriptor{
+			Source: "/chroot/tmp",
+			Target: "/tmp",
+			Flags:  syscall.MS_BIND,
+		},
+	}...)
 
 	// register extenders
 	for _, extender := range extenders.Extenders() {
