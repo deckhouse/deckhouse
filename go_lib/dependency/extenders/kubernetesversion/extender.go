@@ -33,8 +33,7 @@ import (
 )
 
 const (
-	Name              extenders.ExtenderName = "KubernetesVersion"
-	RequirementsField string                 = "kubernetes"
+	Name extenders.ExtenderName = "KubernetesVersion"
 )
 
 var (

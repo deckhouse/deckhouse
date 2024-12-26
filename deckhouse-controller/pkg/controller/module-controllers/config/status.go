@@ -38,6 +38,7 @@ import (
 	bootstrappedextender "github.com/deckhouse/deckhouse/go_lib/dependency/extenders/bootstrapped"
 	d7sversionextender "github.com/deckhouse/deckhouse/go_lib/dependency/extenders/deckhouseversion"
 	k8sversionextender "github.com/deckhouse/deckhouse/go_lib/dependency/extenders/kubernetesversion"
+	moduledependencyextender "github.com/deckhouse/deckhouse/go_lib/dependency/extenders/moduledependency"
 )
 
 // refreshModule refreshes module in cluster
@@ -227,6 +228,14 @@ func (r *reconciler) refreshModuleStatus(module *v1alpha1.Module) {
 	case bootstrappedextender.Name:
 		reason = v1alpha1.ModuleReasonClusterBootstrappedExtender
 		message = v1alpha1.ModuleMessageClusterBootstrappedExtender
+
+	case moduledependencyextender.Name:
+		reason = v1alpha1.ModuleReasonModuleDependencyExtender
+		_, errMsg := moduledependencyextender.Instance().Filter(module.Name, map[string]string{})
+		message = v1alpha1.ModuleMessageModuleDependencyExtender
+		if errMsg != nil {
+			message += ": " + errMsg.Error()
+		}
 	}
 
 	// do not change phase of not installed module
