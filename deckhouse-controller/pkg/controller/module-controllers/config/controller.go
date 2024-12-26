@@ -185,19 +185,7 @@ func (r *reconciler) processModule(ctx context.Context, moduleConfig *v1alpha1.M
 	if !moduleConfig.IsEnabled() {
 		// disable module
 		if enabled {
-			r.log.Debugf("disable the '%s' module", moduleConfig.Name)
-			err := utils.UpdateStatus[*v1alpha1.Module](ctx, r.client, module, func(module *v1alpha1.Module) bool {
-				// modules in Conflict and DownloadingError should not be installed, and they cannot receive events, so set Available phase manually
-				if module.Status.Phase == v1alpha1.ModulePhaseConflict || module.Status.Phase == v1alpha1.ModulePhaseDownloadingError {
-					module.Status.Phase = v1alpha1.ModulePhaseAvailable
-					module.SetConditionFalse(v1alpha1.ModuleConditionEnabledByModuleManager, "", "")
-					module.SetConditionFalse(v1alpha1.ModuleConditionIsReady, v1alpha1.ModuleReasonNotInstalled, v1alpha1.ModuleMessageNotInstalled)
-				}
-				module.SetConditionFalse(v1alpha1.ModuleConditionEnabledByModuleConfig, v1alpha1.ModuleReasonDisabled, v1alpha1.ModuleMessageDisabled)
-				module.SetConditionFalse(v1alpha1.ModuleConditionIsReady, v1alpha1.ModuleReasonDisabled, v1alpha1.ModuleMessageDisabled)
-				return true
-			})
-			if err != nil {
+			if err := r.disableModule(ctx, module); err != nil {
 				r.log.Errorf("failed to disable the '%s' module: %v", module.Name, err)
 				return ctrl.Result{Requeue: true}, nil
 			}
@@ -327,6 +315,10 @@ func (r *reconciler) deleteModuleConfig(ctx context.Context, moduleConfig *v1alp
 	if err := r.client.Get(ctx, client.ObjectKey{Name: moduleConfig.Name}, module); err != nil {
 		if apierrors.IsNotFound(err) {
 			r.log.Warnf("the module '%s' not found", moduleConfig.Name)
+			if err = r.removeFinalizer(ctx, moduleConfig); err != nil {
+				r.log.Errorf("failed to remove finalizer for the '%s' module config: %v", moduleConfig.Name, err)
+				return ctrl.Result{Requeue: true}, nil
+			}
 			return ctrl.Result{}, nil
 		}
 		r.log.Errorf("failed to get the '%s' module: %v", moduleConfig.Name, err)
@@ -336,6 +328,10 @@ func (r *reconciler) deleteModuleConfig(ctx context.Context, moduleConfig *v1alp
 	// skip embedded modules
 	if module.IsEmbedded() {
 		r.log.Debugf("skip the '%s' embedded module", module.Name)
+		if err := r.removeFinalizer(ctx, moduleConfig); err != nil {
+			r.log.Errorf("failed to remove finalizer for the '%s' module config: %v", moduleConfig.Name, err)
+			return ctrl.Result{Requeue: true}, nil
+		}
 		return ctrl.Result{}, nil
 	}
 
@@ -349,12 +345,7 @@ func (r *reconciler) deleteModuleConfig(ctx context.Context, moduleConfig *v1alp
 
 	// disable module
 	if enabled {
-		err := utils.UpdateStatus[*v1alpha1.Module](ctx, r.client, module, func(module *v1alpha1.Module) bool {
-			module.SetConditionFalse(v1alpha1.ModuleConditionEnabledByModuleConfig, v1alpha1.ModuleReasonDisabled, v1alpha1.ModuleMessageDisabled)
-			module.SetConditionFalse(v1alpha1.ModuleConditionIsReady, v1alpha1.ModuleReasonDisabled, v1alpha1.ModuleMessageDisabled)
-			return true
-		})
-		if err != nil {
+		if err := r.disableModule(ctx, module); err != nil {
 			r.log.Errorf("failed to disable the '%s' module: %v", module.Name, err)
 			return ctrl.Result{Requeue: true}, nil
 		}
@@ -370,20 +361,8 @@ func (r *reconciler) deleteModuleConfig(ctx context.Context, moduleConfig *v1alp
 		return ctrl.Result{Requeue: true}, nil
 	}
 
-	err = utils.Update[*v1alpha1.ModuleConfig](ctx, r.client, moduleConfig, func(moduleConfig *v1alpha1.ModuleConfig) bool {
-		var needsUpdate bool
-		if controllerutil.ContainsFinalizer(moduleConfig, v1alpha1.ModuleConfigFinalizer) {
-			controllerutil.RemoveFinalizer(moduleConfig, v1alpha1.ModuleConfigFinalizer)
-			needsUpdate = true
-		}
-		if _, ok := moduleConfig.ObjectMeta.Annotations[v1alpha1.ModuleConfigAnnotationAllowDisable]; ok {
-			delete(moduleConfig.ObjectMeta.Annotations, v1alpha1.ModuleConfigAnnotationAllowDisable)
-			needsUpdate = true
-		}
-		return needsUpdate
-	})
-	if err != nil {
-		r.log.Errorf("failed to remove finalizer from the '%s' module config: %v", moduleConfig.Name, err)
+	if err = r.removeFinalizer(ctx, moduleConfig); err != nil {
+		r.log.Errorf("failed to remove finalizer for the '%s' module config: %v", moduleConfig.Name, err)
 		return ctrl.Result{Requeue: true}, nil
 	}
 
@@ -401,4 +380,34 @@ func (r *reconciler) changeModuleSource(ctx context.Context, module *v1alpha1.Mo
 		return fmt.Errorf("update the '%s' module: %w", module.Name, err)
 	}
 	return nil
+}
+
+func (r *reconciler) removeFinalizer(ctx context.Context, config *v1alpha1.ModuleConfig) error {
+	return utils.Update[*v1alpha1.ModuleConfig](ctx, r.client, config, func(moduleConfig *v1alpha1.ModuleConfig) bool {
+		var needsUpdate bool
+		if controllerutil.ContainsFinalizer(moduleConfig, v1alpha1.ModuleConfigFinalizer) {
+			controllerutil.RemoveFinalizer(moduleConfig, v1alpha1.ModuleConfigFinalizer)
+			needsUpdate = true
+		}
+		if _, ok := moduleConfig.ObjectMeta.Annotations[v1alpha1.ModuleConfigAnnotationAllowDisable]; ok {
+			delete(moduleConfig.ObjectMeta.Annotations, v1alpha1.ModuleConfigAnnotationAllowDisable)
+			needsUpdate = true
+		}
+		return needsUpdate
+	})
+}
+
+func (r *reconciler) disableModule(ctx context.Context, module *v1alpha1.Module) error {
+	r.log.Debugf("disable the '%s' module", module.Name)
+	return utils.UpdateStatus[*v1alpha1.Module](ctx, r.client, module, func(module *v1alpha1.Module) bool {
+		// modules in Conflict should not be installed, and they cannot receive events, so set Available phase manually
+		if module.Status.Phase == v1alpha1.ModulePhaseConflict || module.Status.Phase == v1alpha1.ModulePhaseDownloadingError {
+			module.Status.Phase = v1alpha1.ModulePhaseAvailable
+			module.SetConditionFalse(v1alpha1.ModuleConditionEnabledByModuleManager, "", "")
+			module.SetConditionFalse(v1alpha1.ModuleConditionIsReady, v1alpha1.ModuleReasonNotInstalled, v1alpha1.ModuleMessageNotInstalled)
+		}
+		module.SetConditionFalse(v1alpha1.ModuleConditionEnabledByModuleConfig, v1alpha1.ModuleReasonDisabled, v1alpha1.ModuleMessageDisabled)
+		module.SetConditionFalse(v1alpha1.ModuleConditionIsReady, v1alpha1.ModuleReasonDisabled, v1alpha1.ModuleMessageDisabled)
+		return true
+	})
 }
