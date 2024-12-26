@@ -35,7 +35,7 @@ shell:
   - cd /src
   - go build -a -ldflags '-s -w -extldflags "-static"' -o k8s-image-availability-exporter main.go
   - chown -R 64535:64535 /src/
-  - chmod 0700 /app/k8s-image-availability-exporter
+  - chmod 0700 /src/k8s-image-availability-exporter
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: common/distroless
