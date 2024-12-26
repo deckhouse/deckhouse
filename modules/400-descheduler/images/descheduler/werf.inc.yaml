@@ -1,7 +1,7 @@
 {{- $version := "ef0c2c1c47c6aa6afb0d08f4a2488d7df004c2f7" }}
 ---
 artifact: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
-fromImage: common/src-artifact
+fromArtifact: common/src-artifact
 git:
 - add: /{{ $.ModulePath }}modules/400-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
   to: /patches

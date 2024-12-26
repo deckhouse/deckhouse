@@ -1,5 +1,5 @@
 artifact: {{ .ModuleName }}/{{ $.ImageName }}-src-artifact
-fromImage: common/src-artifact
+fromArtifact: common/src-artifact
 git:
 - add: /{{ $.ModulePath }}/modules/302-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
   to: /patches
