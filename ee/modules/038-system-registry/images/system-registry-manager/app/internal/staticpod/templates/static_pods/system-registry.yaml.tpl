@@ -24,6 +24,12 @@ metadata:
   name: system-registry
   namespace: d8-system
 spec:
+  securityContext:
+    runAsGroup: 0
+    runAsNonRoot: false
+    runAsUser: 0
+    seccompProfile:
+      type: RuntimeDefault
   dnsPolicy: ClusterFirst
   hostNetwork: true
   containers:
