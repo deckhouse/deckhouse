@@ -180,11 +180,9 @@ func (r *reconciler) processModule(ctx context.Context, moduleConfig *v1alpha1.M
 	metricGroup := fmt.Sprintf("module_%s_at_conflict", module.Name)
 	r.metricStorage.Grouped().ExpireGroupMetrics(metricGroup)
 
-	enabled := module.ConditionStatus(v1alpha1.ModuleConditionEnabledByModuleConfig)
-
 	if !moduleConfig.IsEnabled() {
 		// disable module
-		if enabled {
+		if module.ConditionStatus(v1alpha1.ModuleConditionEnabledByModuleConfig) {
 			if err := r.disableModule(ctx, module); err != nil {
 				r.log.Errorf("failed to disable the '%s' module: %v", module.Name, err)
 				return ctrl.Result{Requeue: true}, nil
@@ -210,7 +208,7 @@ func (r *reconciler) processModule(ctx context.Context, moduleConfig *v1alpha1.M
 
 	if moduleConfig.IsEnabled() {
 		// enable module
-		if !enabled {
+		if !module.ConditionStatus(v1alpha1.ModuleConditionEnabledByModuleConfig) {
 			r.log.Debugf("enable the '%s' module", moduleConfig.Name)
 			err := utils.UpdateStatus[*v1alpha1.Module](ctx, r.client, module, func(module *v1alpha1.Module) bool {
 				module.SetConditionTrue(v1alpha1.ModuleConditionEnabledByModuleConfig)
@@ -341,10 +339,8 @@ func (r *reconciler) deleteModuleConfig(ctx context.Context, moduleConfig *v1alp
 		return ctrl.Result{}, nil
 	}
 
-	enabled := module.ConditionStatus(v1alpha1.ModuleConditionEnabledByModuleConfig)
-
 	// disable module
-	if enabled {
+	if module.ConditionStatus(v1alpha1.ModuleConditionEnabledByModuleConfig) {
 		if err := r.disableModule(ctx, module); err != nil {
 			r.log.Errorf("failed to disable the '%s' module: %v", module.Name, err)
 			return ctrl.Result{Requeue: true}, nil
