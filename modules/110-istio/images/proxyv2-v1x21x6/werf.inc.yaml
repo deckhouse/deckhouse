@@ -21,6 +21,10 @@ import:
   add: /usr/local/bin/envoy
   to: /usr/local/bin/envoy
   after: setup
+- image: {{ .ModuleName }}/{{ .ImageName }}-binary-artifact
+  add: /busybox
+  to: /bin/busybox
+  after: setup
 docker:
   ENV:
     ISTIO_META_ISTIO_PROXY_SHA: "istio-proxy:78bd2d9b284978e170a49cd13decd5f952544489"
@@ -36,6 +40,7 @@ shell:
   install:
   - chmod 0500 /usr/local/bin/envoy
   - chown 1337:1337 /usr/local/bin/envoy
+  - wget -o /busybox https://github.com/EXALAB/Busybox-static/raw/refs/heads/main/busybox_amd64
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
 final: false
