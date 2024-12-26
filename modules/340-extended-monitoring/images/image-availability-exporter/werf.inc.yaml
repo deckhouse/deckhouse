@@ -1,7 +1,7 @@
 {{ $imageAvailabilityExporterVersion := "0.10.0" }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
-from: {{ $.Images.BASE_GOLANG_23_ALPINE_DEV }}
+from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
 final: false
 git:
 - add: /{{ $.ModulePath }}modules/340-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
@@ -11,6 +11,7 @@ git:
       - '**/*'
 shell:
   beforeInstall:
+  {{- include "alt packages proxy" . | nindent 2 }}
   - apk add --no-cache git openssh-client
   - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
   install:
@@ -19,7 +20,7 @@ shell:
   - git apply /patches/*.patch --verbose
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
-from: {{ $.Images.BASE_GOLANG_23_ALPINE_DEV }}
+from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
 final: false
 import:
 - image: {{ .ModuleName }}/{{ $.ImageName }}-src-artifact
