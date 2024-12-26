@@ -1,4 +1,4 @@
-warnings-only:
+warnings-only: 
   - images
 linters-settings:
   probes:
