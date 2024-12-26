@@ -607,12 +607,17 @@ func (r *deckhouseReleaseReconciler) DeployTimeCalculate(ctx context.Context, dr
 		deployTimeResult = timeChecker.CalculatePatchDeployTime(dr, metricLabels)
 	} else {
 		checker := d8updater.NewPreApplyChecker(dus, r.logger)
-		err := checker.MetRequirements(dr)
-		if err != nil {
+		reasons := checker.MetRequirements(dr)
+		if len(reasons) > 0 {
 			metricLabels.SetTrue(updater.DisruptionApprovalRequired)
 
+			msgs := make([]string, 0, len(reasons))
+			for _, reason := range reasons {
+				msgs = append(msgs, reason.Message)
+			}
+
 			return &d8updater.DeployTimeReason{
-				Message: fmt.Sprintf("release blocked, disruption approval required: %v", err),
+				Message: fmt.Sprintf("release blocked, disruption approval required: %s", strings.Join(msgs, ", ")),
 			}
 		}
 
