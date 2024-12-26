@@ -492,9 +492,10 @@ func (r *deckhouseReleaseReconciler) pendingReleaseReconcile(ctx context.Context
 			dr.Spec.ApplyAfter = &metav1.Time{Time: dtr.ReleaseApplyAfterTime.UTC()}
 
 			if dr.Annotations == nil {
-				dr.Annotations = make(map[string]string, 1)
+				dr.Annotations = make(map[string]string, 2)
 			}
 
+			dr.Annotations[v1alpha1.DeckhouseReleaseAnnotationIsUpdating] = "false"
 			dr.Annotations[v1alpha1.DeckhouseReleaseAnnotationNotificationTimeShift] = "true"
 
 			return nil
@@ -656,7 +657,6 @@ func (r *deckhouseReleaseReconciler) runReleaseDeploy(ctx context.Context, dr *v
 
 		if dr.GetApplyNow() {
 			delete(dr.Annotations, v1alpha1.DeckhouseReleaseAnnotationApplyNow)
-			delete(dr.Annotations, v1alpha1.DeckhouseReleaseAnnotationForce)
 		}
 
 		if dr.GetForce() {
