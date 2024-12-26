@@ -8,7 +8,7 @@ git:
     setup:
       - '**/*'
   includePaths:
-    {{ include "controller_src_git_imports_include_paths" . | nindent 4}}
+    {{ include "dev_prebuild_git_imports_include_paths" . | nindent 4}}
   excludePaths:
 {{- include "exclude_modules_dir_from_images" .  | nindent 2}}
 {{ .Files.Get (printf "tools/build_includes/modules-excluded-%s.yaml" .Env) | nindent 2}}
