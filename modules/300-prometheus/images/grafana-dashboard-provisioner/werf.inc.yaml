@@ -20,8 +20,8 @@ git:
 
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+fromImage: common/alt-p11-artifact
 final: false
-from: {{ $.Images.BASE_ALT_P11 }}
 import:
 - image: common/shell-operator-artifact
   add: /
