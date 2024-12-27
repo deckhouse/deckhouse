@@ -1,0 +1,179 @@
+# render imports for install and install standalone images
+# . is dict with next params
+#   Env - werf env
+#   prefix - target files add prefix
+{{- define "installer_and_installer_standalone_generic_imports" }}
+{{- $context := . -}}
+{{- $prefix := $context.prefix -}}
+
+- image: dhctl
+  add: /dhctl/bin/dhctl
+  to: {{ $prefix }}/dhctl
+  before: setup
+- image: dev-prebuild
+  add: /deckhouse
+  to: /deckhouse
+  includePaths:
+  - modules/*/openapi/config-values.yaml
+  - global-hooks/openapi/config-values.yaml
+  after: setup
+- image: images-digests
+  add: /images_digests.json
+  to: {{ $prefix }}/deckhouse/candi/images_digests.json
+  before: setup
+- artifact: version-map-artifact
+  add: /version_map_{{ $context.Env }}.yml
+  to: {{ $prefix }}/deckhouse/candi/version_map.yml
+  before: setup
+- artifact: ssh-static
+  add: /ssh/bin
+  to: /bin
+  before: setup
+  includePaths:
+  - ssh
+  - ssh-add
+  - ssh-agent
+  - scp
+{{- end }}
+
+# render imports for install images for relocate binaries and libraries
+{{- define "installer_and_installer_standalone_libraries_and_binaries_imports" }}
+- image: dev-alt-artifact
+  add: /relocate
+  to: /
+  before: setup
+- image: dev-alt-artifact
+  add: /
+  to: /
+  before: setup
+  includePaths:
+  - etc/pki
+  - usr/share/ca-certificates/ca-bundle.crt
+  - usr/share/vim
+  - etc/vim
+  - etc/bash_completion.d
+  - etc/bashrc.d/bash_completion.sh
+  - usr/share/bash-completion
+  - usr/bin/vim-console
+
+{{- end }}
+
+
+# render terraform imports for install and install standalone images
+# . is dict with next params
+#   Env - werf env
+#   TF - TF from werf.yaml
+#   Editions - Editions from werf.yaml
+#   prefix - target files add prefix
+{{- define "installer_and_installer_standalone_terraform_imports" }}
+{{- $context := . -}}
+{{- $prefix := $context.prefix -}}
+
+- image: terraform # from modules/040-terraform-manager/images/terraform-manager-base/werf.inc.yaml
+  add: /terraform/terraform
+  to: {{ $prefix }}/bin/terraform
+  before: setup
+{{- range $_, $edition := $context.Editions }}
+  {{- if $edition.terraformProviders }}
+    {{- range $_, $tfProvider := $edition.terraformProviders }}
+      {{- $tf := index $context.TF $tfProvider }}
+- image: {{ $tf.artifact }} # from modules/040-terraform-manager/images/terraform-manager-{PROVIDER}/werf.inc.yaml
+  add: /{{ $tf.artifactBinary }}
+  to: {{ $prefix }}/plugins/registry.terraform.io/{{ $tf.namespace }}/{{ $tf.type }}/{{ $tf.version }}/linux_amd64/{{ $tf.destinationBinary }}
+  before: setup
+    {{- end }}
+  {{- end }}
+  {{- if eq $.Env $edition.name }}
+    {{- break -}}
+  {{- end }}
+{{- end }}
+
+{{- end }}
+
+
+# render shell scripts for preparing installer image
+# . is dict with keys:
+#   rootContext - context with .Files
+#   prefix - Files.Get prefix
+#   CI_COMMIT_TAG - CI_COMMIT_TAG env
+{{- define "installer_prepare_with_shell" }}
+{{- $context := . -}}
+{{- $rootContext := $context.rootContext -}}
+{{- $prefix := $context.prefix -}}
+
+shell:
+  beforeInstall:
+  - |
+    apt-get update && apt-get install -y locale && apt-get clean
+    find /var/lib/apt/ /var/cache/apt/ -type f -delete
+  setup:
+  - |
+    ln -fs /dhctl /usr/bin/dhctl
+    cat <<"EOD" > /etc/inputrc
+    {{- $rootContext.Files.Get (printf "%sdeckhouse-controller/files/inputrc" $prefix) | nindent 4 }}
+    EOD
+
+    cat <<"EOD" > /etc/bashrc
+    PS1='\[\033[01;30m\][deckhouse]\[\033[00m\] \[\033[01;33m\]\u@\h\[\033[01;34m\] \w \$\[\033[00m\] '
+
+    source /etc/bashrc.d/bash_completion.sh
+    EOD
+
+    rm -f /root/.bashrc
+    ln -s /etc/bashrc /root/.bashrc
+    rm -f  /.bashrc
+    ln -s /etc/bashrc /.bashrc
+
+    ln -fs /usr/bin/vim-console /usr/bin/vim
+    ln -fs /usr/bin/vim-console /usr/bin/vi
+
+    mkdir -p /etc/vim
+    cat <<"EOD" > /etc/vim/vimrc.local
+    {{- $rootContext.Files.Get (printf "%sdeckhouse-controller/files/vimrc.local" $prefix) | nindent 4 }}
+    EOD
+
+    echo 'eval "$(dhctl --completion-script-bash)"' >> /etc/bashrc
+    echo '{{- $context.CI_COMMIT_TAG }}' > /deckhouse/version
+
+{{- end }}
+
+
+# render docker parameters for installer image
+{{- define "installer_docker_properties" }}
+docker:
+  # we need root permission for installer image
+  USER: 0
+  ENV:
+    EDITOR: vim
+{{- end }}
+
+
+# render installer standalone setup script
+# . is dict with next params
+#   CI_COMMIT_TAG - CI_COMMIT_TAG env
+{{- define "installer_standalone_setup_script" }}
+{{- $context := . -}}
+
+- echo '{{- $context.CI_COMMIT_TAG }}' > /image/deckhouse/version
+- cd /image
+- tar -czf /dhctl-{{- $context.CI_COMMIT_TAG }}.x86_64.tar.gz *
+
+{{- end }}
+
+
+# render installer standalone setup script
+# . is dict with next params
+#   CI_COMMIT_TAG - CI_COMMIT_TAG env
+#   Images - base images dict
+{{- define "installer_standalone_image" }}
+{{- $context := . -}}
+
+image: dev/install-standalone
+from: {{ $context.Images.BASE_SCRATCH }}
+import:
+- image: install-standalone-builder
+  add: /dhctl-{{- $context.CI_COMMIT_TAG }}.x86_64.tar.gz
+  to: /
+  before: setup
+
+{{- end }}
