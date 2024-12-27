@@ -45,6 +45,24 @@ function discover_device_path() {
   echo "$device_path"
 }
 
+function check_annotation(){
+    local annotation="$1"
+    local node="$D8_NODE_HOSTNAME"
+    local node_annotations=$(bb-kubectl --request-timeout=60s --kubeconfig=/etc/kubernetes/kubelet.conf get node $node -o json | jq '.metadata.annotations')
+
+    if echo "$node_annotations" | jq 'has("'$annotation'")' | grep -q 'true'; then
+        return 0
+    fi
+    return 1
+}
+
+
+# Skip for
+if check_annotation "embedded-registry.deckhouse.io/lock-data-device-mount"; then
+  echo "" > "/var/lib/bashible/system_registry_data_device_path"
+  exit 0
+fi
+
 # Get system registry data device
 DATA_DEVICE="$(bb-get-registry-data-device-from-terraform-output)"
 

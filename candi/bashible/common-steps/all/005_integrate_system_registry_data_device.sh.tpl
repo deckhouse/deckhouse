@@ -244,20 +244,17 @@ if check_annotation "embedded-registry.deckhouse.io/lock-data-device-mount"; the
     exit 0
 fi
 
-# If it does not override
-if [ ! -f /var/lib/bashible/system_registry_data_device_path ]; then
-  echo "$(bb-get-registry-data-device-from-terraform-output)" > "/var/lib/bashible/system_registry_data_device_path"
-fi
-
 # Check if the registry data device is already mounted
 if is_registry_data_device_mounted; then
   # If mounted, create the installed file marker
   create_registry_data_device_installed_file
   enable_registry_data_device_label
 else
-  # Read the device path from the system registry file
-  # The file always exists (created in step 000_create_system_registry_data_device_path.sh.tpl)
-  dataDevice=$(cat "/var/lib/bashible/system_registry_data_device_path")
+  dataDevice="$(bb-get-registry-data-device-from-terraform-output)"
+  # Read the device path from the file if override exist
+  if [  -f /var/lib/bashible/system_registry_data_device_path ]; then
+    dataDevice=$(cat "/var/lib/bashible/system_registry_data_device_path")
+  fi
   
   # If dataDevice is non-empty
   if [ -n "$dataDevice" ]; then
