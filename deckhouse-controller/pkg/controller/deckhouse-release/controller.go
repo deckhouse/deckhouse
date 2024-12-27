@@ -232,17 +232,13 @@ func (r *deckhouseReleaseReconciler) createOrUpdateReconcile(ctx context.Context
 		return r.reconcileDeployedRelease(ctx, dr)
 	}
 
-	// TODO: getting check out?
-	//
 	// update pending release with suspend annotation
-	err := r.patchSuspendAnnotation(dr)
+	err := r.patchSuspendAnnotation(ctx, dr)
 	if err != nil {
 		return res, err
 	}
 
-	// TODO: getting check out?
-	//
-	err = r.patchManualRelease(dr)
+	err = r.patchManualRelease(ctx, dr)
 	if err != nil {
 		return res, err
 	}
@@ -250,33 +246,45 @@ func (r *deckhouseReleaseReconciler) createOrUpdateReconcile(ctx context.Context
 	return r.pendingReleaseReconcile(ctx, dr)
 }
 
-func (r *deckhouseReleaseReconciler) patchManualRelease(dr *v1alpha1.DeckhouseRelease) error {
+func (r *deckhouseReleaseReconciler) patchManualRelease(ctx context.Context, dr *v1alpha1.DeckhouseRelease) error {
 	if r.updateSettings.Get().Update.Mode != updater.ModeManual.String() {
 		return nil
 	}
 
-	dr.SetApprovedStatus(dr.GetManuallyApproved())
+	drCopy := dr.DeepCopy()
 
-	return r.client.Status().Update(context.Background(), dr)
+	drCopy.SetApprovedStatus(drCopy.GetManuallyApproved())
+
+	err := r.client.Status().Patch(ctx, drCopy, client.MergeFrom(dr))
+	if err != nil {
+		return fmt.Errorf("patch approved status: %w", err)
+	}
+
+	return nil
 }
 
-func (r *deckhouseReleaseReconciler) patchSuspendAnnotation(dr *v1alpha1.DeckhouseRelease) error {
+func (r *deckhouseReleaseReconciler) patchSuspendAnnotation(ctx context.Context, dr *v1alpha1.DeckhouseRelease) error {
 	if !dr.GetSuspend() {
 		return nil
 	}
 
-	// TODO: set phase suspended
-	ctx := context.Background()
-	patch, _ := json.Marshal(map[string]any{
-		"metadata": map[string]any{
-			"annotations": map[string]any{
-				v1alpha1.DeckhouseReleaseAnnotationSuspended: nil,
-			},
-		},
-	})
+	drCopy := dr.DeepCopy()
 
-	p := client.RawPatch(types.MergePatchType, patch)
-	return r.client.Patch(ctx, dr, p)
+	drCopy.Status.Phase = v1alpha1.DeckhouseReleasePhaseSuspended
+
+	delete(drCopy.Annotations, v1alpha1.DeckhouseReleaseAnnotationSuspended)
+
+	err := r.client.Patch(ctx, drCopy, client.MergeFrom(dr))
+	if err != nil {
+		return fmt.Errorf("patch suspend annotation: %w", err)
+	}
+
+	err = r.client.Status().Patch(ctx, drCopy, client.MergeFrom(dr))
+	if err != nil {
+		return fmt.Errorf("patch suspend phase: %w", err)
+	}
+
+	return nil
 }
 
 func (r *deckhouseReleaseReconciler) pendingReleaseReconcile(ctx context.Context, dr *v1alpha1.DeckhouseRelease) (ctrl.Result, error) {
