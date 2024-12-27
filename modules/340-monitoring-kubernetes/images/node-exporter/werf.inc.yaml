@@ -2,24 +2,26 @@
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
 import:
-- artifact: {{ .ModuleName }}/{{ .ImageName }}-artifact
+- image: {{ .ModuleName }}/{{ .ImageName }}-artifact
   add: /src/node_exporter
   to: /bin/node_exporter
   before: setup
 docker:
   ENTRYPOINT: ["/bin/node_exporter"]
 ---
-artifact: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
 fromArtifact: src-artifact
+final: false
 shell:
   install:
   - cd /src
   - git clone --depth 1 --branch v1.8.2 {{ .SOURCE_REPO }}/prometheus/node_exporter.git .
 ---
-artifact: {{ .ModuleName }}/{{ .ImageName }}-artifact
+image: {{ .ModuleName }}/{{ .ImageName }}-artifact
 from: {{ .Images.BASE_GOLANG_23_ALPINE }}
+final: false
 import:
-- artifact: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
   add: /src
   to: /src
   before: install

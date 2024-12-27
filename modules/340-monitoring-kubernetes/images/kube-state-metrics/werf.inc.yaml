@@ -11,6 +11,7 @@ docker:
 ---
 artifact: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
 fromArtifact: src-artifact
+final: false
 git:
 - add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/patches
   to: /patches
@@ -20,11 +21,12 @@ git:
 shell:
   install:
   - cd /src
-  - git clone --depth 1 --branch v2.7.0 {{ .SOURCE_REPO }}/kubernetes/kube-state-metrics/ .
+  - git clone --depth 1 --branch v2.13.0 {{ .SOURCE_REPO }}/kubernetes/kube-state-metrics/ .
   - git apply /patches/*.patch --verbose
 ---
 artifact: {{ .ModuleName }}/{{ .ImageName }}-artifact
 from: {{ .Images.BASE_GOLANG_23_ALPINE }}
+final: false
 import:
 - artifact: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
   add: /src
