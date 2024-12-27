@@ -2,7 +2,7 @@
 {{- $promuVersion := "0.14.0"}}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-promu
-fromArtifact: common/src-artifact
+fromImage: common/src-artifact
 final: false
 shell:
   install:
