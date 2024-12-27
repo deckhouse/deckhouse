@@ -4,10 +4,10 @@ fromImage: common/distroless
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-artifact
   add: /src/loop
-  to: /loop
+  to: /bin/loop
   before: setup
 docker:
-  ENTRYPOINT: ["/loop"]
+  ENTRYPOINT: ["/bin/loop"]
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
 fromArtifact: common/src-artifact
