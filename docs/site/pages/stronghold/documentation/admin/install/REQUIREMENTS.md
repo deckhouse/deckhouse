@@ -5,9 +5,8 @@ permalink: en/stronghold/documentation/admin/install/requirements.html
 
 ## Preparing the infrastructure
 
-- Minimum requirements: 4 CPUs, 8GB RAM, 60GB disk space on fast disk (400+ IOPS)
+- Minimum requirements: 8 CPUs, 16GB RAM, 60GB disk space on fast disk (400+ IOPS)
 - Linux kernel version >= 5.7
-- x86_64 c CPU with Intel-VT (vmx) or AMD-V (svm) instruction support
 
 ## Supported OS
 

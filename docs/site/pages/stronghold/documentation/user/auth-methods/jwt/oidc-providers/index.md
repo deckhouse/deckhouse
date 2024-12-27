@@ -1,0 +1,25 @@
+---
+sidebar_label: Overview
+description: OIDC provider configuration quick starts
+---
+
+# OIDC provider configuration
+
+This page collects high-level setup steps on how to configure an OIDC
+application for various providers. For more general usage and operation
+information, see the [Stronghold JWT/OIDC method documentation](/docs/auth/jwt).
+
+OIDC providers are often highly configurable, and you should become familiar with
+their recommended settings and best practices. The guides listed below are
+largely community-driven and intended to help you get started.
+
+- [Auth0](/docs/auth/jwt/oidc-providers/auth0)
+- [Azure AD](/docs/auth/jwt/oidc-providers/azuread)
+- [ForgeRock](/docs/auth/jwt/oidc-providers/forgerock)
+- [Gitlab](/docs/auth/jwt/oidc-providers/gitlab)
+- [Google](/docs/auth/jwt/oidc-providers/google)
+- [Keycloak](/docs/auth/jwt/oidc-providers/keycloak)
+- [Kubernetes](/docs/auth/jwt/oidc-providers/kubernetes)
+- [Okta](/docs/auth/jwt/oidc-providers/okta)
+- [SecureAuth](/docs/auth/jwt/oidc-providers/secureauth)
+- [IBMISAM](/docs/auth/jwt/oidc-providers/ibmisam)

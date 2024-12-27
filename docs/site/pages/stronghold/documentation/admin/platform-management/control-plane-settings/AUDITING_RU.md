@@ -94,7 +94,7 @@ d8 k patch mc control-plane-manager --type=strategic -p '{"settings":{"apiserver
 - [Нашей статье на Habr](https://habr.com/ru/company/flant/blog/468679/).
 - [Коде скрипта-генератора, используемого в GCE](https://github.com/kubernetes/kubernetes/blob/0ef45b4fcf7697ea94b96d1a2fe1d9bffb692f3a/cluster/gce/gci/configure-helper.sh#L722-L862).
 
-{% alert level="danger" %}
+{% alert level="critical" %}
 В текущей реализации не валидируется содержимое дополнительных политик.
 
 Если в `audit-policy.yaml` в политике будут указаны неподдерживаемые опции или будет допущена опечатка, то `apiserver` не запустится, что приведёт к недоступности управляющего слоя.

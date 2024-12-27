@@ -17,7 +17,7 @@ lang: ru
 
 ## Дополнительные настройки containerd
 
-{% alert level="danger" %}
+{% alert level="critical" %}
 Добавление кастомных настроек вызывает перезапуск сервиса `containerd`.
 {% endalert %}
 
@@ -164,15 +164,15 @@ spec:
 
 
     CERT_TMP_FILE="$( bb-tmp-file )"
-    echo -e "${CERT_CONTENT}" > "${CERT_TMP_FILE}"  
-    
+    echo -e "${CERT_CONTENT}" > "${CERT_TMP_FILE}"
+
     CONFIG_TMP_FILE="$( bb-tmp-file )"
-    echo -e "${CONFIG_CONTENT}" > "${CONFIG_TMP_FILE}"  
+    echo -e "${CONFIG_CONTENT}" > "${CONFIG_TMP_FILE}"
 
     # Ensure CA certificate file in the CERTS_FOLDER.
     bb-sync-file \
       "${CERTS_FOLDER}/${CERT_FILE_NAME}.crt" \
-      ${CERT_TMP_FILE} 
+      ${CERT_TMP_FILE}
 
     # Ensure additional containerd configuration file.
     bb-sync-file \
