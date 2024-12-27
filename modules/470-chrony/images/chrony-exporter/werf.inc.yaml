@@ -26,7 +26,7 @@ shell:
   - go build -ldflags="-s -w" -o promu ./main.go
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
-fromArtifact: common/src-artifact
+fromImage: common/src-artifact
 final: false
 shell:
   install:
