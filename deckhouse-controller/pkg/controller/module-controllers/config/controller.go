@@ -17,6 +17,7 @@ package config
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"sync"
 	"time"
 
@@ -323,7 +324,7 @@ func (r *reconciler) deleteModuleConfig(ctx context.Context, moduleConfig *v1alp
 			return true
 		})
 		if err != nil {
-			r.log.Errorf("failed to update the '%s' module: %v", module.Name, err)
+			r.log.Error("failed to update the module", slog.String("module", module.Name), log.Err(err))
 			return ctrl.Result{Requeue: true}, nil
 		}
 	}
