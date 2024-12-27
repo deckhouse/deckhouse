@@ -48,7 +48,6 @@ docker:
   ENTRYPOINT: ["/usr/local/bin/pilot-agent"]
 ---
 artifact: {{ .ModuleName }}/{{ .ImageName }}-binary-artifact
-final: false
 from: istio/proxyv2:1.21.6@sha256:a0afbbc8488060f8059e7fa04576edde01915d40576132dae83479b3abe5ce15
 shell:
   install:
@@ -65,7 +64,6 @@ shell:
   - chown 1337:1337 /busybox/strace
 ---
 artifact: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
-final: false
 from: {{ .Images.BASE_GOLANG_23_ALPINE_DEV }}
 mount:
 - fromPath: ~/go-pkg-cache
