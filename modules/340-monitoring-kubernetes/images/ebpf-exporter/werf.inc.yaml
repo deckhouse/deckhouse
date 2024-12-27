@@ -16,11 +16,11 @@ git:
 shell:
   install:
   - cd /src
-  - git clone --branch=v2.3.0 --depth=1 {{ .SOURCE_REPO }}/cloudflare/ebpf_exporter.git ebpf-exporter
+  - git clone --branch=v2.4.2 --depth=1 {{ .SOURCE_REPO }}/cloudflare/ebpf_exporter.git ebpf-exporter
   - cd ebpf-exporter
-  - rm -rf libbpf .git
-  - git clone --branch v1.2.2 --depth=1 {{ .SOURCE_REPO }}/libbpf/libbpf.git libbpf
-  - rm -rf libbpf/.git
+  - mkdir -p libbpf
+  - git clone --branch v1.4.2 --depth=1 {{ .SOURCE_REPO }}/libbpf/libbpf.git libbpf
+  - rm -rf libbpf/.git .git
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}/entrypoint-artifact
 from: {{ .Images.BASE_GOLANG_23_ALPINE }}
@@ -41,8 +41,9 @@ shell:
   - chown -R 64535:64535 /entrypoint/
   - chmod 0700 /entrypoint/entrypoint
 ---
-image: {{ .ModuleName }}/build-artifact
-from: {{ .Images.BASE_GOLANG_23_ALPINE }}
+image: {{ .ModuleName }}/{{ .ImageName }}-artifact
+from: {{ .Images.BASE_GOLANG_23_BOOKWORM }}
+# from: {{ .Images.BASE_GOLANG_23_ALPINE }}
 final: false
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
@@ -54,17 +55,16 @@ mount:
   to: /go/pkg
 shell:
   beforeInstall:
-  {{- include "alpine packages proxy" . | nindent 2 }}
-  - apk add --no-cache make
+  {{- include "ubuntu packages proxy" . | nindent 2 }}
+  - apt-get install -y build-essential clang libelf-dev
   install:
   - export BUILD_DIR="/build/ebpf-exporter"
   - cd ${BUILD_DIR}
-  - make -C ${BUILD_DIR}/libbpf/src LIBSUBDIR=lib DESTDIR=../dest install install_uapi_headers
+  - make -C ./libbpf/src LIBSUBDIR=lib DESTDIR=../dest install install_uapi_headers
   - export CGO_LDFLAGS="-L${BUILD_DIR}/libbpf/dest/usr/lib -l bpf"
   - export CGO_CFLAGS="-I${BUILD_DIR}/libbpf/dest/usr/include"
-  - |
-    GOPROXY={{ .GOPROXY }} CGO_ENABLED=1 GOOS=linux GOARCH=amd64 go build -o ./ebpf_exporter -v -ldflags=" -extldflags "-static"" ./cmd/ebpf_exporter
-  - mkdir -p ${BUILD_DIR}/metrics
+  - GOPROXY={{ .GOPROXY }} CGO_ENABLED=1 GOOS=linux GOARCH=amd64 go build -o ./ebpf_exporter -v -ldflags=" -extldflags "-static"" ./cmd/ebpf_exporter
+  - mkdir -p metrics
   - cp /build/metrics/* ${BUILD_DIR}/metrics
   - make -C metrics clean build
 ---
@@ -90,11 +90,11 @@ import:
   before: install
   includePaths:
   - '**/*'
-- image: {{ .ModuleName }}/build-artifact
+- image: {{ .ModuleName }}/{{ .ImageName }}-artifact
   add: /build/ebpf-exporter/ebpf_exporter
   to: /usr/local/bin/ebpf_exporter
   before: setup
-- image: {{ .ModuleName }}/build-artifact
+- image: {{ .ModuleName }}/{{ .ImageName }}-artifact
   add: /build/ebpf-exporter/metrics
   to: /metrics
   before: setup
