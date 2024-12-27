@@ -21,7 +21,7 @@ git:
 shell:
   install:
   - cd /src
-  - git clone --depth 1 --branch v2.13.0 {{ .SOURCE_REPO }}/kubernetes/kube-state-metrics/ .
+  - git clone --depth 1 --branch v2.14.0 {{ .SOURCE_REPO }}/kubernetes/kube-state-metrics.git .
   - git apply /patches/*.patch --verbose
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
