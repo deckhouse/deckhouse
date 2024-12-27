@@ -19,20 +19,6 @@ source /shell_lib.sh
 function __config__(){
   cat <<EOF
 configVersion: v1
-kubernetes:
-  - name: nodegroups
-    apiVersion: deckhouse.io/v1
-    kind: NodeGroup
-    queue: "nodegroups"
-    group: main
-    executeHookOnEvent: []
-    executeHookOnSynchronization: false
-    keepFullObjectsInMemory: false
-    jqFilter: |
-      {
-        "name": .metadata.name,
-        "classReference": .spec.cloudInstances.classReference
-      }
 kubernetesValidating:
 - name: instanceclass-in-nodegroups.deckhouse.io
   group: main
@@ -40,18 +26,18 @@ kubernetesValidating:
   - apiGroups:   ["deckhouse.io"]
     apiVersions: ["*"]
     operations:  ["DELETE"]
-    resources:   ["yandexinstanceclasses", "awsinstanceclasses", "openstackinstanceclasses", "vsphereclasses", "gcloudinstanceclasses", "azureinstanceclasses"]
+    resources:   ["yandexinstanceclasses", "awsinstanceclasses", "openstackinstanceclasses", "vsphereinstanceclasses", "gcpinstanceclasses", "azureinstanceclasses", "dynamixinstanceclasses", "zvirtclusterinstanceclasses", "vcdinstanceclasses"]
     scope:       "Cluster"
 EOF
 }
 
 function __main__() {
     classToDelete=$(context::jq -r '.review.request.name')
-    classKind=$(context::jq -r '.review.request.kind')
+    classKind=$(context::jq -r '.review.request.requestKind.kind')
 
-    if usedInNodeGroup=$(context::jq -er --arg class "$classToDelete" --arg kind "$classKind" '.snapshots.nodegroups[].filterResult | select(.classReference.kind == $kind and .classReference.name == $class) | .name' 2>/dev/null); then
+    if context::jq -e '.review.request.oldObject.status.nodeGroupConsumers | length > 0' >/dev/null; then
         cat <<EOF > "$VALIDATING_RESPONSE_PATH"
-{"allowed":false, "message":"$classKind \"$classToDelete\" cannot be deleted because it is being used by NodeGroup \"$usedInNodeGroup\""}
+{"allowed":false, "message":"$classKind \"$classToDelete\" cannot be deleted because it is being used by NodeGroup"}
 EOF
         return 0
     fi
