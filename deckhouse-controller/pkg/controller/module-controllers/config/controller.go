@@ -338,7 +338,7 @@ func (r *reconciler) deleteModuleConfig(ctx context.Context, moduleConfig *v1alp
 }
 
 func (r *reconciler) changeModuleSource(ctx context.Context, module *v1alpha1.Module, source, updatePolicy string) error {
-	r.log.Debugf("set new '%s' source to the '%s' module", source, module.Name)
+	r.log.Debug("set new source to the module", slog.String("moduleSource", source), slog.String("module", module.Name))
 	err := utils.Update[*v1alpha1.Module](ctx, r.client, module, func(module *v1alpha1.Module) bool {
 		module.Properties.Source = source
 		module.Properties.UpdatePolicy = updatePolicy
