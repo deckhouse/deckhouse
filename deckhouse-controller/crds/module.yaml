@@ -22,7 +22,7 @@ spec:
         openAPIV3Schema:
           type: object
           description: |
-            The module representation.
+            Describes the module's status in the cluster. The `Module` object is created automatically after configuring the [ModuleSource](#modulesource) and successfully completing synchronization.
 
           properties:
             properties:
@@ -30,49 +30,59 @@ spec:
               properties:
                 availableSources:
                   type: array
-                  description: The module available sources.
+                  description: Available sources for downloading the module.
                   items:
                     type: string
                 weight:
                   type: integer
-                  description: The module weight (priority).
+                  description: Module _weight_ (priority).
                 source:
                   type: string
-                  description: The source that the module uses.
+                  description: Source the module was downloaded from (otherwise will be blank).
                 stage:
                   type: string
-                  description: The current stage of the module lifecycle.
-                  enum:
-                    - Sandbox
-                    - Incubating
-                    - Graduated
-                    - Deprecated
+                  description: Current stage of the module lifecycle.
                 version:
                   type: string
-                  description: The module version.
+                  description: Module version.
                 releaseChannel:
                   type: string
-                  description: The module release channel.
+                  description: Module release channel.
                 updatePolicy:
                   type: string
-                  description: The module update policy.
+                  description: Module update policy.
                 description:
                   type: string
-                  description: The module description.
+                  description: Module description.
                 requirements:
                   type: object
-                  additionalProperties:
-                    type: string
-                  description: The module requirements.
+                  x-kubernetes-preserve-unknown-fields: true
+                  description: Module dependencies, a set of requirements that must be met for Deckhouse Kubernetes Platform (DKP) to run the module.
+                  properties:
+                    deckhouse:
+                      type: string
+                      description: Required Deckhouse version.
+                    kubernetes:
+                      type: string
+                      description: Required Kubernetes version.
+                    bootstrapped:
+                      type: string
+                      description: Required cluster installation status (for built-in DKP modules only).
+                    modules:
+                      type: object
+                      description: A list of other enabled modules required for the module.
+                      additionalProperties:
+                        type: string
             status:
               type: object
               properties:
                 phase:
                   type: string
-                  description: The module phase.
+                  description: Module phase.
                   enum:
                     - Available
                     - Downloading
+                    - DownloadingError
                     - Reconciling
                     - Installing
                     - HooksDisabled
@@ -87,7 +97,7 @@ spec:
                     - NotInstalled
                 hooksState:
                   type: string
-                  description: The hooks status report.
+                  description: Hooks status report.
                 conditions:
                   x-kubernetes-patch-strategy: merge
                   x-kubernetes-patch-merge-key: type
@@ -115,35 +125,35 @@ spec:
         - name: Weight
           jsonPath: .properties.weight
           type: integer
-          description: The module weight (priority).
+          description: Module _weight_ (priority).
         - name: Release channel
           jsonPath: .properties.releaseChannel
-          description: The release channel of the module.
+          description: Release channel of the module.
           type: string
           priority: 1
         - name: Source
           jsonPath: .properties.source
           type: string
-          description: The source of the module it provided by one.
+          description: Source of the module it provided by one.
         - name: Version
           jsonPath: .properties.version
           type: string
-          description: The module`s version.
+          description: Module version.
           priority: 1
         - name: Phase
           jsonPath: .status.phase
           type: string
-          description: The module phase.
+          description: Module phase.
         - name: Enabled
           jsonPath: .status.conditions[?(@.type=='EnabledByModuleManager')].status
-          description: The module`s enabled status
+          description: Module`s enabled status.
           type: string
         - name: Disabled Message
           jsonPath: .status.conditions[?(@.type=='EnabledByModuleManager')].message
-          description: The modules` enabled information.
+          description: Module`s enabled information.
           type: string
           priority: 1
         - name: Ready
           jsonPath: .status.conditions[?(@.type=='IsReady')].status
-          description: The module`s ready status.
+          description: Module`s ready status.
           type: string

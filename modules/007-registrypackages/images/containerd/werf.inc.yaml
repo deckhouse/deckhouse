@@ -48,7 +48,7 @@ shell:
   - git describe --match 'v[0-9]*' --dirty='.m' --always > VERSION
   - git rev-parse HEAD > REVISION
   - cd /src/runc
-  - git apply /patches/runc/*.patch --verbose 
+  - git apply /patches/runc/*.patch --verbose
   - git describe --dirty --long --always > COMMIT
   - rm -rf /src/containerd/.git
   - rm -rf /src/runc/.git

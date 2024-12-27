@@ -32,8 +32,7 @@ import (
 )
 
 const (
-	Name              extenders.ExtenderName = "DeckhouseVersion"
-	RequirementsField string                 = "deckhouse"
+	Name extenders.ExtenderName = "DeckhouseVersion"
 )
 
 var (
@@ -115,7 +114,7 @@ func (e *Extender) Filter(name string, _ map[string]string) (*bool, error) {
 		return nil, nil
 	}
 	if e.err != nil {
-		return nil, &scherror.PermanentError{Err: fmt.Errorf("parse deckhouse version failed: %s", e.err)}
+		return nil, &scherror.PermanentError{Err: fmt.Errorf("	parse deckhouse version failed: %s", e.err)}
 	}
 	if err := e.versionMatcher.Validate(name); err != nil {
 		e.logger.Debugf("requirements of the '%s' module are not satisfied: current deckhouse version is not suitable: %s", name, err.Error())

@@ -58,3 +58,14 @@ metadata:
   namespace: kube-system
 spec:
   dnsPolicy: ClusterFirstWithHostNet
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: etcd
+  namespace: kube-system
+spec:
+  securityContext:
+    runAsNonRoot: false
+    runAsUser: 0
+    runAsGroup: 0
