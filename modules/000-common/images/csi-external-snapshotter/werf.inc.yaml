@@ -39,7 +39,7 @@ shell:
   - git apply /patches/*.patch --verbose
   - rm -rf /src/.git
 git:
-  - add: /modules/{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
+  - add: /modules/000-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
     to: /patches
     stageDependencies:
       setup:
