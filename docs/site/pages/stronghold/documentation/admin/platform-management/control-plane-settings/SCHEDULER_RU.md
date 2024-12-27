@@ -59,7 +59,7 @@ Node 1, Node 5, Node 2, Node 6, Node 3, Node 4
 
 Подключить такой вебхук extender можно при помощи ресурса [KubeSchedulerWebhookConfiguration](../../../../reference/cr/kubeschedulerwebhookconfiguration.html).
 
-{% alert level="danger" %}
+{% alert level="critical" %}
 При использовании опции `failurePolicy: Fail`, ошибка в работе вебхука приводит к остановке работы планировщика и новые поды не смогут запуститься.
 {% endalert %}
 

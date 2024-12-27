@@ -123,10 +123,6 @@ entries:
                 ru: Управление сетью
               folders:
                 - title:
-                    en: VM Networks
-                    ru: Сети виртуальных машин
-                  url: /stronghold/documentation/admin/platform-management/network/vm-network.html
-                - title:
                     en: Ingress
                     ru: Управление входящим трафиком
                   url: /stronghold/documentation/admin/platform-management/network/ingress.html
@@ -146,61 +142,6 @@ entries:
                     en: NTP settings
                     ru: Настройка NTP
                   url: /stronghold/documentation/admin/platform-management/network/ntp.html
-            - title:
-                en: Storage management
-                ru: Управление хранилищами
-              folders:
-                - title:
-                    en: Storage settings
-                    ru: Настройка хранилищ
-                  url: /stronghold/documentation/admin/platform-management/storage/supported-storage.html
-                - title:
-                    en: Supported storages
-                    ru: Поддерживаемые хранилища
-                  folders:
-                    - title:
-                        en: SDS
-                        ru: Программно определяемые
-                      folders:
-                        - title:
-                            en: Local storage based on LVM
-                            ru: Локальные на основе LVM
-                          url: /stronghold/documentation/admin/platform-management/storage/sds/lvm-local.html
-                        - title:
-                            en: Replicated storage based on LVM
-                            ru: Реплицируемые на основе LVM
-                          url: /stronghold/documentation/admin/platform-management/storage/sds/lvm-replicated.html
-                    - title:
-                        en: External
-                        ru: Внешние
-                      folders:
-                        - title:
-                            ru: Yadro
-                          url: /stronghold/documentation/admin/platform-management/storage/hardware/yadro.html
-                        - title:
-                            en: NFS storage
-                            ru: NFS-хранилище
-                          url: /stronghold/documentation/admin/platform-management/storage/sds/nfs.html
-                        - title:
-                            en: CEPH storage
-                            ru: CEPH-хранилище
-                          url: /stronghold/documentation/admin/platform-management/storage/sds/ceph.html
-            - title:
-                en: Virtualization
-                ru: Виртуализация
-              folders:
-                - title:
-                    en: Reliability
-                    ru: Механизмы обеспечения надежности
-                  url: /stronghold/documentation/admin/platform-management/virtualization/reliability.html
-                - title:
-                    en: Virtual Machine Classes
-                    ru: Классы виртуальных машин
-                  url: /stronghold/documentation/admin/platform-management/virtualization/virtual-machine-classes.html
-                - title:
-                    en: Cluster Images
-                    ru: Кластерные образы
-                  url: /stronghold/documentation/admin/platform-management/virtualization/cluster-images.html
             - title:
                 en: Monitoring
                 ru: Мониторинг
@@ -252,39 +193,191 @@ entries:
         - title:
             en: Configuring access to the project
             ru: Настройка доступа к проекту
-          url: /stronghold/documentation/user/project-access.html
+          url: /stronghold/documentation/user/access.html
         - title:
-            en: Resource management
-            ru: Управление ресурсами
+            en: Concepts
+            ru: Основные понятия
           folders:
             - title:
-                en: Images
-                ru: Образы
-              url: /stronghold/documentation/user/resource-management/images.html
+                en: Аутентификация
+                ru: Аутентификация
+              url: /stronghold/documentation/user/concepts/auth.html
             - title:
-                en: Disks
-                ru: Диски
-              url: /stronghold/documentation/user/resource-management/disks.html
+                en: Identity
+                ru: Сущности
+              url: /stronghold/documentation/user/concepts/identity.html
             - title:
-                en: Virtual machines
-                ru: Виртуальные машины
-              url: /stronghold/documentation/user/resource-management/virtual-machines.html
+                en: Leases
+                ru: Аренда
+              url: /stronghold/documentation/user/concepts/lease.html
             - title:
-                en: Snapshots
-                ru: Снимки
-              url: /stronghold/documentation/user/resource-management/snapshots.html
+                en: Policy
+                ru: Политики
+              url: /stronghold/documentation/user/concepts/policy.html
+            - title:
+                en: Token
+                ru: Токен
+              url: /stronghold/documentation/user/concepts/tokens.html
         - title:
-            en: Network
-            ru: Сеть
+            en: Auth methods
+            ru: Методы аутентификации
           folders:
             - title:
-                en: Network Policies
-                ru: Сетевые политики
-              url: /stronghold/documentation/user/network/network-policies.html
+                en: OIDC providers
+                ru: Провайдеры OIDC
+              folders:
+              - title:
+                  en: Overview
+                  ru: Обзор
+                url: /stronghold/documentation/user/auth-methods/jwt/oidc-providers/overview.html
+              - title:
+                  en: Gitlab
+                  ru: Gitlab
+                url: /stronghold/documentation/user/auth-methods/jwt/oidc-providers/gitlab.html
+              - title:
+                  en: Keycloak
+                  ru: Keycloak
+                url: /stronghold/documentation/user/auth-methods/jwt/oidc-providers/keycloak.html
+              - title:
+                  en: Kubernetes
+                  ru: Kubernetes
+                url: /stronghold/documentation/user/auth-methods/jwt/oidc-providers/kubernetes.html
             - title:
-                en: Public Access to a VM
-                ru: Публичный доступ к ВМ
-              url: /stronghold/documentation/user/network/vm-publishing.html
+                en: OIDC
+                ru: OIDC
+              url: /stronghold/documentation/user/auth-methods/oidc.html
+            - title:
+                en: JWT
+                ru: JWT
+              url: /stronghold/documentation/user/auth-methods/jwt.html
+            - title:
+                en: Approle
+                ru: Approle
+              url: /stronghold/documentation/user/auth-methods/approle.html
+            - title:
+                en: Userpass
+                ru: Userpass
+              url: /stronghold/documentation/user/auth-methods/userpass.html
+            - title:
+                en: Token
+                ru: Токен
+              url: /stronghold/documentation/user/auth-methods/token.html
+            - title:
+                en: LDAP
+                ru: LDAP
+              url: /stronghold/documentation/user/auth-methods/ldap.html
+            - title:
+                en: Kubernetes
+                ru: Kubernetes
+              url: /stronghold/documentation/user/auth-methods/kubernetes.html
+        - title:
+            en: Secrets engines
+            ru: Механизмы секретов
+          folders:
+            - title:
+                en: KV Secrets engine
+                ru: Механизм секретов KV
+              folders:
+                - title:
+                    en: Overview
+                    ru: Обзор
+                  url: /stronghold/documentation/user/secrets-engines/kv/overview.html
+                - title:
+                    en: KV/v1
+                    ru: KV/v1
+                  url: /stronghold/documentation/user/secrets-engines/kv/kv-v1.html
+                - title:
+                    en: KV/v2
+                    ru: KV/v2
+                  url: /stronghold/documentation/user/secrets-engines/kv/kv-v2.html
+            - title:
+                en: PKI Secrets engine
+                ru: Механизм секретов PKI
+              folders:
+                - title:
+                    en: Overview
+                    ru: Обзор
+                  url: /stronghold/documentation/user/secrets-engines/pki/overview.html
+                - title:
+                    en: Setup and usage
+                    ru: Настройка и использование
+                  url: /stronghold/documentation/user/secrets-engines/pki/setup.html
+            - title:
+                en: Cubbyhole Secrets engine
+                ru: Механизм секретов Cubbyhole
+              url: /stronghold/documentation/user/secrets-engines/cubbyhole.html
+            - title:
+                en: Identity Secrets engine
+                ru: Механизм секретов Identity
+              folders:
+                - title:
+                    en: Overview
+                    ru: Обзор
+                  url: /stronghold/documentation/user/secrets-engines/identity.html
+                - title:
+                    en: OIDC identity provider
+                    ru: OIDC identity provider
+                  url: /stronghold/documentation/user/secrets-engines/identity-oidc-provider.html
+                - title:
+                    en: OIDC identity tokens
+                    ru: OIDC identity tokens
+                  url: /stronghold/documentation/user/secrets-engines/identity-token.html
+            - title:
+                en: SSH Secrets engine
+                ru: Механизм секретов SSH
+              folders:
+                - title:
+                    en: Overview
+                    ru: Обзор
+                  url: /stronghold/documentation/user/secrets-engines/ssh/overview.html
+                - title:
+                    en: One-Time SSH passwords
+                    ru: Одноразовые пароли SSH
+                  url: /stronghold/documentation/user/secrets-engines/ssh/one-time-ssh-passwords.html
+                - title:
+                    en: Signed Certificate
+                    ru: Вход по сертификатам
+                  url: /stronghold/documentation/user/secrets-engines/ssh/signed-ssh-certificates.html
+            - title:
+                en: Transit Secrets engine
+                ru: Механизм секретов Transit
+              folders:
+                - title:
+                    en: Overview
+                    ru: Обзор
+                  url: /stronghold/documentation/user/secrets-engines/transit/overview.html
+                - title:
+                    en: Import Key Wrapping
+                    ru: Обертрывание импортируемых ключей
+                  url: /stronghold/documentation/user/secrets-engines/transit/key-wrapping-guide.html
+            - title:
+                en: Databases Secrets engine
+                ru: Механизм секретов баз данных
+              folders:
+                - title:
+                    en: Overview
+                    ru: Обзор
+                  url: /stronghold/documentation/user/secrets-engines/databases/overview.html
+                - title:
+                    en: PostgreSQL
+                    ru: PostgreSQL
+                  url: /stronghold/documentation/user/secrets-engines/databases/postgresql.html
+                - title:
+                    en: MySQL
+                    ru: MySQL
+                  url: /stronghold/documentation/user/secrets-engines/databases/mysql.html
+        # - title:
+        #     en: Network
+        #     ru: Сеть
+        #   folders:
+        #     - title:
+        #         en: Network Policies
+        #         ru: Сетевые политики
+        #       url: /stronghold/documentation/user/network/network-policies.html
+        #     - title:
+        #         en: Public Access to a VM
+        #         ru: Публичный доступ к ВМ
+        #       url: /stronghold/documentation/user/network/vm-publishing.html
     #- title:
     #    en: Architecture
     #    ru: Архитектура

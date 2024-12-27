@@ -157,7 +157,7 @@ rm -r ./kubernetes ./etcd-backup.snapshot
 - Подготовьте файл `etcd.pod.yaml` с манифестом пода:
 
     ```shell
-    cat <<EOF >etcd.pod.yaml 
+    cat <<EOF >etcd.pod.yaml
     apiVersion: v1
     kind: Pod
     metadata:
@@ -295,7 +295,7 @@ $(echo -n $ENDPOINTS_STRING) endpoint status -w table
 1. На оставшемся узле в манифесте `/etc/kubernetes/manifests/etcd.yaml` добавьте аргумент `--force-new-cluster` в поле `spec.containers.command`.
 1. После успешного запуска кластера удалите параметр `--force-new-cluster`.
 
-{% alert level="danger" %}
+{% alert level="critical" %}
 Операция деструктивна, она полностью уничтожает консенсус и запускает etcd-кластер с состояния, которое сохранилось на выбранном узле. Любые pending-записи пропадут.
 {% endalert %}
 
