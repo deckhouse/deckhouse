@@ -211,7 +211,7 @@ func (r *reconciler) processModule(ctx context.Context, moduleConfig *v1alpha1.M
 	}
 
 	if err := r.addFinalizer(ctx, moduleConfig); err != nil {
-		r.log.Errorf("failed to add finalizer to the '%s' module: %v", module.Name, err)
+		r.log.Error("failed to add finalizer", slog.String("module", module.Name), log.Err(err))
 		return ctrl.Result{Requeue: true}, nil
 	}
 
