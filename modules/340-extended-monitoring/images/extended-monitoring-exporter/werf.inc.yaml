@@ -15,7 +15,7 @@ import:
     to: /opt/python-static
     before: install
   - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
-    add: /wheels
+    add: /src
     to: /wheels
     before: install
 shell:
@@ -30,7 +30,8 @@ shell:
   setup:
     - export SOURCE_REPO={{ .SOURCE_REPO }}
     - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
-    - git clone --depth 1 {{ $.SOURCE_REPO }}/python-modules/wheels /wheels
+    - git clone --depth 1 {{ $.SOURCE_REPO }}/python-modules/wheels /src
+    - rm -rf /src/.git
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
