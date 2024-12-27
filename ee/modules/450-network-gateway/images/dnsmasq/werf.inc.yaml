@@ -2,7 +2,7 @@
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
 final: false
-from: {{ .Images.BASE_ALT }}
+fromImage: common/relocate-artifact
 import:
 - image: common/python-static-artifact
   add: /
