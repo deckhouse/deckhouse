@@ -3,7 +3,7 @@ image: deckhouse-controller-src-artifact
 final: false
 fromImage: common/src-artifact
 git:
-- add: /deckhouse
+- add: /
   to: /deckhouse
   includePaths:
     {{ include "controller_src_git_imports_include_paths" . | nindent 4}}
