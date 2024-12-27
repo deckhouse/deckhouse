@@ -381,6 +381,8 @@ set-build-envs:
 	export WERF_REPO=$(DEV_REGISTRY_PATH)
 	export REGISTRY_SUFFIX=$(shell echo $(WERF_ENV) | tr '[:upper:]' '[:lower:]')
 	export SECONDARY_REPO=--secondary-repo $(DECKHOUSE_REGISTRY_HOST)/deckhouse/$(REGISTRY_SUFFIX)
+	export DECKHOUSE_PRIVATE_REPO=$(SECONDARY_REPO)
+	export STRONGHOLD_PULL_TOKEN=$(GITHUB_TOKEN)
 
 build: set-build-envs ## Build Deckhouse images.
 	##~ Options: FOCUS=image-name
