@@ -33,7 +33,6 @@ shell:
     - export GOPROXY={{ $.GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64
     - go mod download -x
     - go mod vendor
-    - echo "test"
     - go build -o mimir ./cmd/mimir
     - chown -R 64535:64535 /src/mimir
     - chmod 0700 /src/mimir
