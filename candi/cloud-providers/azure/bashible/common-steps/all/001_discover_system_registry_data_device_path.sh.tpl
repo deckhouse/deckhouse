@@ -57,7 +57,7 @@ function check_annotation(){
 }
 
 
-# Skip for
+# Set empty string to escape mount by 005_integrate_system_registry_data_device.sh
 if check_annotation "embedded-registry.deckhouse.io/lock-data-device-mount"; then
   echo "" > "/var/lib/bashible/system_registry_data_device_path"
   exit 0

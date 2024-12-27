@@ -16,6 +16,17 @@
 {{- if has .nodeGroup.nodeType $nodeTypeList }}
   {{- if eq .nodeGroup.name "master" }}
 
+function check_annotation(){
+    local annotation="$1"
+    local node="$D8_NODE_HOSTNAME"
+    local node_annotations=$(bb-kubectl --request-timeout=60s --kubeconfig=/etc/kubernetes/kubelet.conf get node $node -o json | jq '.metadata.annotations')
+
+    if echo "$node_annotations" | jq 'has("'$annotation'")' | grep -q 'true'; then
+        return 0
+    fi
+    return 1
+}
+
 # Find and delete broken symbolic links in the /dev directory
 find /dev -xtype l -delete -print
 
@@ -51,6 +62,11 @@ if [ ! -z "${volume_names}" ]; then
             echo "Symlink ${symlink} already exists"
         fi
     done
+fi
+
+# Set empty string to escape mount by 005_integrate_system_registry_data_device.sh
+if check_annotation "embedded-registry.deckhouse.io/lock-data-device-mount"; then
+  echo "" > "/var/lib/bashible/system_registry_data_device_path"
 fi
 
   {{- end  }}
