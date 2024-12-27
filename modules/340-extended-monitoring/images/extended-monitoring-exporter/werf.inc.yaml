@@ -21,7 +21,6 @@ import:
 shell:
   install:
     - /opt/python-static/bin/pip3 install -f file:///wheels --no-index -r /requirements.txt
-    - /binary_replace.sh -i "{{ $binaries }}" -o /relocate
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 fromImage: common/src-artifact
@@ -39,10 +38,6 @@ git:
   - add: /{{ $.ModulePath }}modules/340-{{ $.ModuleName }}/images/{{ $.ImageName }}/src/extended-monitoring.py
     to: /app/extended-monitoring.py
 import:
-  - image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
-    add: /relocate
-    to: /
-    before: install
   - image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
     add: /opt/python-static/bin
     to: /usr/bin
