@@ -294,7 +294,7 @@ func (r *reconciler) deleteModuleConfig(ctx context.Context, moduleConfig *v1alp
 		if apierrors.IsNotFound(err) {
 			r.log.Warnf("the module '%s' not found", moduleConfig.Name)
 			if err = r.removeFinalizer(ctx, moduleConfig); err != nil {
-				r.log.Errorf("failed to remove finalizer for the '%s' module config: %v", moduleConfig.Name, err)
+				r.log.Error("failed to remove finalizer", slog.String("module", moduleConfig.Name), log.Err(err))
 				return ctrl.Result{Requeue: true}, nil
 			}
 			return ctrl.Result{}, nil
