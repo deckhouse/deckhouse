@@ -35,7 +35,9 @@ shell:
   install:
   - cd /src
   - git clone --depth 1 --branch {{ $src_version }} {{ $.SOURCE_REPO }}/kubernetes-sigs/vsphere-csi-driver.git  .
-  - ls /patches/*.patch && git apply /patches/*.patch --verbose
+  {{- if $patch }}
+  - git apply /patches/*.patch --verbose
+  {{- end }}
   - rm -rf vendor
   - rm -rf .git
 ---
