@@ -54,7 +54,7 @@ shell:
   install:
   - export GOPROXY={{ $.GOPROXY }} CGO_ENABLED=1 GOOS=linux GOARCH=amd64
   - cd /src
-  - /bin/promu build
+  - /bin/promu build --prefix /src/chrony_exporter
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: common/distroless
