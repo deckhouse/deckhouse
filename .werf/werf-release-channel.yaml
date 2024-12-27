@@ -1,6 +1,7 @@
 ---
 image: release-channel-version-prebuild
 from: {{ .Images.BASE_ALPINE_DEV }}
+final: false
 dependencies:
 - image: dev
   before: setup

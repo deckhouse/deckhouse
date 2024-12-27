@@ -1,5 +1,6 @@
 ---
-artifact: version-map-artifact
+image: version-map-artifact
+final: false
 from: {{ .Images.BASE_ALPINE }}
 import:
 - image: common/yq4-artifact
