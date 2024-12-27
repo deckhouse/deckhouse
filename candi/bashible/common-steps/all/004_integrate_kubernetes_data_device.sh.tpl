@@ -43,7 +43,12 @@ function find_path_by_data_device_label() {
 
 function find_first_unmounted_data_device() {
   local all_unmounted_data_devices="$(find_all_unmounted_data_devices)"
-  echo "$all_unmounted_data_devices" | jq '. | first'
+  local first_unmounted_data_device=$(echo "$all_unmounted_data_devices" | jq '. | first')
+  if [ "$first_unmounted_data_device" != "null" ] && [ -n "$first_unmounted_data_device" ]; then
+    echo "$first_unmounted_data_device"
+  else
+    echo ""
+  fi
 }
 
 {{- /*
