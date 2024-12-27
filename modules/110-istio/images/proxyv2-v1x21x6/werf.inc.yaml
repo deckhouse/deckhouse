@@ -42,6 +42,7 @@ shell:
   - chown 1337:1337 /usr/local/bin/envoy
   - curl --output /usr/local/bin/busybox https://raw.githubusercontent.com/EXALAB/Busybox-static/refs/heads/main/busybox_amd64
   # - chmod 0500 /busybox
+  - chmod 755 /usr/local/bin/busybox
   - mkdir /busybox
   - ./usr/local/bin/busybox --install /busybox
   - chmod 0500 /busybox/ls
