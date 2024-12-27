@@ -47,7 +47,7 @@ variable "network_types" {
 
 variable "resourceManagementTimeout" {
   type = string
-  default = "20m"
+  default = "10m"
 }
 
 locals {

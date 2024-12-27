@@ -41,7 +41,7 @@ variable "clusterUUID" {
 
 variable "resourceManagementTimeout" {
   type = string
-  default = "20m"
+  default = "10m"
 }
 
 locals {
