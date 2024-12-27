@@ -65,7 +65,7 @@ if [ ! -z "${volume_names}" ]; then
 fi
 
 # Set empty string to escape mount by 005_integrate_system_registry_data_device.sh
-if check_annotation "embedded-registry.deckhouse.io/lock-data-device-mount"; then
+if check_annotation "embedded-registry.deckhouse.io/data-device-mount-lock"; then
   echo "" > "/var/lib/bashible/system_registry_data_device_path"
 fi
 

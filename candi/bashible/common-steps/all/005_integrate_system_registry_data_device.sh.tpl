@@ -246,7 +246,7 @@ function check_annotation(){
 
 
 # Skip for
-if check_annotation "embedded-registry.deckhouse.io/lock-data-device-mount"; then
+if check_annotation "embedded-registry.deckhouse.io/data-device-mount-lock"; then
     exit 0
 fi
 
