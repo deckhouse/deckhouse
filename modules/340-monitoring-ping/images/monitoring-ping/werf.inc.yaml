@@ -37,6 +37,9 @@ shell:
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/python-static
+mount:
+- from: tmp_dir
+  to: /root/.cache/pip
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
   add: /src/monitoring-ping
