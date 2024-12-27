@@ -21,15 +21,15 @@ shell:
   install:
     - export GO_VERSION=${GOLANG_VERSION} GOPROXY={{ $.GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64
     - cd src/
-    - go build -ldflags="-s -w" -o {{ $.ImageName }} main.go
+    - go build -ldflags="-s -w" -o render-etc-hosts-with-cluster-domain-aliases main.go
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
 import:
   - image: {{ .ModuleName }}/{{ $.ImageName }}-artifact
-    add: /src/sts-pods-hosts-appender-init-container
-    to: /sts-pods-hosts-appender-init-container
+    add: /src/render-etc-hosts-with-cluster-domain-aliases
+    to: /render-etc-hosts-with-cluster-domain-aliases
     before: setup
 docker:
   USER: 64535
-  ENTRYPOINT: ["/sts-pods-hosts-appender-init-container"]
+  ENTRYPOINT: ["/render-etc-hosts-with-cluster-domain-aliases"]
