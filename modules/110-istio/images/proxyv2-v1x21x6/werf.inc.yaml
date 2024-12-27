@@ -34,6 +34,12 @@ import:
   group: 1337
   after: setup
 - artifact: {{ .ModuleName }}/{{ .ImageName }}-binary-artifact
+  add: /busybox/id
+  to: /bin/id
+  owner: 1337
+  group: 1337
+  after: setup
+- artifact: {{ .ModuleName }}/{{ .ImageName }}-binary-artifact
   add: /busybox/strace
   to: /bin/strace
   owner: 1337
@@ -48,7 +54,7 @@ docker:
     ISTIO_META_ISTIO_PROXY_SHA: "istio-proxy:78bd2d9b284978e170a49cd13decd5f952544489"
     ISTIO_META_ISTIO_VERSION: "1.21.6"
   WORKDIR: "/"
-  # USER: 1337
+  USER: 1337
   ENTRYPOINT: ["/usr/local/bin/pilot-agent"]
 ---
 artifact: {{ .ModuleName }}/{{ .ImageName }}-binary-artifact
@@ -58,11 +64,11 @@ shell:
   - chmod 0500 /usr/local/bin/envoy
   - chown 1337:1337 /usr/local/bin/envoy
   - curl --output /usr/local/bin/busybox https://raw.githubusercontent.com/EXALAB/Busybox-static/refs/heads/main/busybox_amd64
-  # - chmod 0500 /busybox
   - chmod 755 /usr/local/bin/busybox
   - mkdir /busybox
   - ./usr/local/bin/busybox --install /busybox
   - chmod 0500 /busybox/ls
+  - chmod 0500 /busybox/id
   - curl --output /busybox/strace https://raw.githubusercontent.com/yunchih/static-binaries/master/strace
   - chmod 0755 /busybox/strace
   - chown 1337:1337 /busybox/strace
