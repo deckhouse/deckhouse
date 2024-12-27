@@ -42,11 +42,11 @@ func getFirstDefined(values go_hook.PatchableValuesCollector, keys ...string) (g
 	return v, ok
 }
 
-func GetValuesFirstDefined(input *go_hook.HookInput, keys ...string) (v gjson.Result, ok bool) {
+func GetValuesFirstDefined(input *go_hook.HookInput, keys ...string) (gjson.Result, bool) {
 	return getFirstDefined(input.Values, keys...)
 }
 
-func GetConfigValuesFirstDefined(input *go_hook.HookInput, keys ...string) (v gjson.Result, ok bool) {
+func GetConfigValuesFirstDefined(input *go_hook.HookInput, keys ...string) (gjson.Result, bool) {
 	return getFirstDefined(input.ConfigValues, keys...)
 }
 

@@ -212,7 +212,7 @@ import:
   to: /etc/ssl
   before: setup
 
-- artifact: registrypackages/d8-curl-artifact-8-2-1
+- image: registrypackages/d8-curl-artifact-8-9-1
   add: /d8-curl
   to: /usr/bin/curl
   before: setup
@@ -262,17 +262,11 @@ shell:
 
 ---
 artifact: golangci-lint-artifact
-from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
+fromImage: common-base
 shell:
-  beforeInstall:
-  - apk add --no-cache git openssh-client
-  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
   install:
-  # Use v1.60.1 for go1.23 - https://github.com/golangci/golangci-lint/issues/4837
-  - export GOPROXY={{ .GOPROXY }}
-  - git clone --depth 1 {{ .SOURCE_REPO }}/golangci/golangci-lint --branch v1.60.1
-  - cd golangci-lint/
-  - CGO_ENABLED=0 GOOS=linux go build -ldflags '-s -w -extldflags "-static"' -o /usr/local/bin/golangci-lint cmd/golangci-lint/main.go
+  - curl -sL https://github.com/golangci/golangci-lint/releases/download/v1.60.1/golangci-lint-1.60.1-linux-amd64.tar.gz | tar -zx --strip-components 1 -C /tmp
+  - mv /tmp/golangci-lint /usr/local/bin/golangci-lint
 
 ---
 artifact: deckhouse-controller

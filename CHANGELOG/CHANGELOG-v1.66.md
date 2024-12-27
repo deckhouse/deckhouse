@@ -46,6 +46,8 @@
  - **[candi]** Fix LC_MESSAGES unknown locale. [#10440](https://github.com/deckhouse/deckhouse/pull/10440)
  - **[candi]** Change permissions for containerd dir. [#10133](https://github.com/deckhouse/deckhouse/pull/10133)
  - **[control-plane-manager]** Label `heritage: deckhouse` in namespace kube-system. [#10224](https://github.com/deckhouse/deckhouse/pull/10224)
+ - **[dhctl]** Fix panic during commander masters converge. [#11053](https://github.com/deckhouse/deckhouse/pull/11053)
+ - **[dhctl]** Fix converge through bastion. [#10278](https://github.com/deckhouse/deckhouse/pull/10278)
  - **[dhctl]** Add human readable error on dhctl converge except [#10589](https://github.com/deckhouse/deckhouse/pull/10589)
  - **[docs]** Update docs about module creation, fix bugs [#10476](https://github.com/deckhouse/deckhouse/pull/10476)
  - **[monitoring-kubernetes]** Minor `Nodes` dashboard improvements. [#10339](https://github.com/deckhouse/deckhouse/pull/10339)

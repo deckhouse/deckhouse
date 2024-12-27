@@ -20,12 +20,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/require"
-
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/cache"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
+	"github.com/stretchr/testify/require"
 )
 
 func newTestRunner() *Runner {
@@ -173,17 +173,18 @@ func TestCheckRunnerHandleChanges(t *testing.T) {
 
 type sleepExecutor struct {
 	cancelCh chan struct{}
+	logger   log.Logger
 }
 
 func (s *sleepExecutor) Output(_ ...string) ([]byte, error) {
 	return nil, nil
 }
 
-func (s *sleepExecutor) GetStdout() []string {
-	return nil
+func (s *sleepExecutor) SetExecutorLogger(logger log.Logger) {
+	s.logger = logger
 }
 
-func (s *sleepExecutor) Exec(_ bool, _ ...string) (int, error) {
+func (s *sleepExecutor) Exec(_ ...string) (int, error) {
 	ticker := time.NewTicker(time.Second)
 loop:
 	for {

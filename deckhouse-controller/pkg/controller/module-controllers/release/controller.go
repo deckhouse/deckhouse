@@ -272,7 +272,7 @@ func (r *reconciler) handleRelease(ctx context.Context, release *v1alpha1.Module
 	return r.handlePendingRelease(ctx, release)
 }
 
-// handleRelease handles deployed releases
+// handleDeployedRelease handles deployed releases
 func (r *reconciler) handleDeployedRelease(ctx context.Context, release *v1alpha1.ModuleRelease) (ctrl.Result, error) {
 	var needsUpdate bool
 
@@ -364,7 +364,7 @@ func (r *reconciler) handleDeployedRelease(ctx context.Context, release *v1alpha
 	return r.deleteOutdatedModuleReleases(ctx, release.GetModuleSource(), release.GetModuleName())
 }
 
-// handleRelease handles pending releases
+// handlePendingRelease handles pending releases
 func (r *reconciler) handlePendingRelease(ctx context.Context, release *v1alpha1.ModuleRelease) (ctrl.Result, error) {
 	var modulesChangedReason string
 	defer func() {

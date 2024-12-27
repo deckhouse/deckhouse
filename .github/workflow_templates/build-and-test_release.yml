@@ -234,13 +234,13 @@ jobs:
 {!{ tmpl.Exec "tests_webhooks_template" (slice $ctx) | strings.Indent 4 }!}
 {!{ tmpl.Exec "update_comment_on_finish" (slice "job,one-line" $jobNames.tests_python_webhooks) | strings.Indent 6 }!}
 
-{!{ $jobNames = coll.Merge $jobNames (dict "matrix_tests" "Matrix tests") }!}
-  matrix_tests:
-    name: {!{ $jobNames.matrix_tests }!}
+{!{ $jobNames = coll.Merge $jobNames (dict "tests_dmt_lint" "DMT lint") }!}
+  tests_dmt_lint:
+    name: {!{ $jobNames.tests_dmt_lint }!}
     needs:
-      - git_info
-{!{ tmpl.Exec "tests_before_build_template" (slice $ctx "matrix") | strings.Indent 4 }!}
-{!{ tmpl.Exec "update_comment_on_finish" (slice "job,one-line" $jobNames.matrix_tests) | strings.Indent 6 }!}
+    - git_info
+{!{ tmpl.Exec "tests_dmt_lint" (slice $ctx) | strings.Indent 4 }!}
+{!{ tmpl.Exec "update_comment_on_finish" (slice "job,one-line" $jobNames.tests_dmt_lint) | strings.Indent 6 }!}
 
 {!{ $jobNames = coll.Merge $jobNames (dict "dhctl_tests" "Dhctl Tests") }!}
   dhctl_tests:
@@ -343,7 +343,6 @@ jobs:
       - deploy_latest_web_site_prod_sel
       - deploy_latest_web_doc_prod_sel
       - tests
-      - matrix_tests
       - dhctl_tests
       - golangci_lint
       - openapi_test_cases

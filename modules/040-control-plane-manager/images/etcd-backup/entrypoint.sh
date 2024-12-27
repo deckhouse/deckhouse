@@ -25,11 +25,11 @@ etcdctl \
     --key=/etc/kubernetes/pki/etcd/healthcheck-client.key \
     snapshot save "${etcd}"
 tar -czvf "${archive}" "${etcd}"
-# Check that there will be 25% free space left after adding the file
-if [ $(df /var/lib/etcd/ | tail -1 | awk '{printf "%.0f\n", $4 - ($2 * 0.25)}') -ge $(du -k "${archive}" | awk '{print $1}') ]; then
+# Check that there is enough free space
+if [ $(df -B1 /var/lib/etcd/ | tail -1 | awk -v ETCDQUOTA="${ETCDQUOTA}" '{printf "%.0f\n", $4 - (ETCDQUOTA * 2)}') -ge 0 ]; then
     chmod 0600 "${archive}"
     mv "${archive}" "/var/lib/etcd/${archive}"
 else
-    echo "Free space in /var/lib/etcd/ is too small for backup should be more than 25%"
+    echo "Free space in /var/lib/etcd/ is too small for backup should be more than double size ETCDQUOTA (${ETCDQUOTA} bytes)"
     exit 1
 fi

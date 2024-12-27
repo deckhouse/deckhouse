@@ -2,7 +2,7 @@ Enable the virtualization module. In the parameter [.spec.settings.virtualMachin
 
 {% snippetcut %}
 ```shell
-d8 k create -f - <<EOF
+sudo -i d8 k create -f - <<EOF
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:

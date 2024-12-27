@@ -18,6 +18,7 @@ package source
 
 import (
 	"strings"
+	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -53,6 +54,8 @@ type Kubernetes struct {
 	annotationFields     KubernetesAnnotationFields
 	nodeAnnotationFields NodeAnnotationFields
 	globCooldownMs       int
+
+	keepDeletedFilesOpenedFor time.Duration
 }
 
 // KubernetesAnnotationFields are supported fields for the following vector options
@@ -84,6 +87,8 @@ type rawKubernetesLogs struct {
 	NodeAnnotationFields NodeAnnotationFields       `json:"node_annotation_fields,omitempty"`
 	GlobCooldownMs       int                        `json:"glob_minimum_cooldown_ms,omitempty"`
 	UserAPIServerCache   bool                       `json:"use_apiserver_cache,omitempty"`
+	RotateWaitSecs       int                        `json:"rotate_wait_secs,omitempty"`
+	DelayDeletionMS      int                        `json:"delay_deletion_ms,omitempty"`
 }
 
 func (k *rawKubernetesLogs) BuildSources() []apis.LogSource {
@@ -149,7 +154,8 @@ func NewKubernetes(name string, spec v1alpha1.KubernetesPodsSpec, namespaced boo
 		nodeAnnotationFields: NodeAnnotationFields{
 			NodeLabels: "node_labels",
 		},
-		globCooldownMs: defaultGlobCooldownMs,
+		globCooldownMs:            defaultGlobCooldownMs,
+		keepDeletedFilesOpenedFor: spec.KeepDeletedFilesOpenedFor.Duration,
 	}
 }
 
@@ -166,6 +172,9 @@ func (k *Kubernetes) newRawSource(name string, fields []string) *rawKubernetesLo
 		NodeAnnotationFields: k.nodeAnnotationFields,
 		GlobCooldownMs:       k.globCooldownMs,
 		UserAPIServerCache:   true,
+		// rough approximation is ok because it is expected to be a large value, e.g., hours
+		RotateWaitSecs:  int(k.keepDeletedFilesOpenedFor.Seconds()),
+		DelayDeletionMS: int(k.keepDeletedFilesOpenedFor.Milliseconds()),
 	}
 }
 

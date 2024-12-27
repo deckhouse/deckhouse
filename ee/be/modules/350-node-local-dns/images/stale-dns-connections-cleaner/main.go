@@ -10,6 +10,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"log/slog"
 	"net"
 	"net/http"
 	"os"
@@ -25,7 +26,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 
-	log "github.com/sirupsen/logrus"
+	"github.com/deckhouse/deckhouse/pkg/log"
 	"github.com/vishvananda/netlink"
 )
 
@@ -145,7 +146,7 @@ func main() {
 
 	err = httpServer.ListenAndServe()
 	if !errors.Is(err, http.ErrServerClosed) {
-		log.Fatal(err)
+		log.Fatal("httpServer", slog.String("error", err.Error()))
 	}
 }
 
