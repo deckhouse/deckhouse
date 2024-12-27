@@ -22,8 +22,8 @@ import:
   to: /usr/local/bin/envoy
   after: setup
 - image: {{ .ModuleName }}/{{ .ImageName }}-binary-artifact
-  add: /busybox
-  to: /bin/sh
+  add: /busybox/ls
+  to: /bin/ls
   after: setup
 docker:
   ENV:
@@ -40,9 +40,11 @@ shell:
   install:
   - chmod 0500 /usr/local/bin/envoy
   - chown 1337:1337 /usr/local/bin/envoy
-  - curl --output /busybox https://raw.githubusercontent.com/EXALAB/Busybox-static/refs/heads/main/busybox_amd64
-  - chmod 0500 /busybox
-  - chown 1337:1337 /busybox
+  - curl --output /usr/local/bin/busybox https://raw.githubusercontent.com/EXALAB/Busybox-static/refs/heads/main/busybox_amd64
+  # - chmod 0500 /busybox
+  - mkdir /busybox
+  - ./usr/local/bin/busybox --install /busybox
+  - chmod 0500 /busybox/ls
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
 final: false
