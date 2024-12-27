@@ -10,6 +10,12 @@ shell:
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
 from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
 final: false
+git:
+- add: /{{ $.ModulePath }}modules/300-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
+  to: /patches
+  stageDependencies:
+    install:
+      - '**/*'
 import:
 - image: {{ .ModuleName }}/{{ $.ImageName }}-src-artifact
   add: /src
@@ -18,12 +24,13 @@ import:
 shell:
   beforeInstall:
   {{- include "alpine packages proxy" $ | nindent 2 }}
-  - apk add --no-cache make 
+  - apk add --no-cache make git
   install:
   - export GOPROXY={{ $.GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64
   - cd /src
   - go mod edit -go 1.23
   - go mod tidy && go mod vendor
+  - git apply /patches/*.patch --verbose
   - make build
   - chown -R 64535:64535 /src/
   - chmod 0700 "/src/OPATH/trickster"
