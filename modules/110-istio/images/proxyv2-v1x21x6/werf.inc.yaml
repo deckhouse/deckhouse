@@ -51,7 +51,7 @@ shell:
   - ./usr/local/bin/busybox --install /busybox
   - chmod 0500 /busybox/ls
   - curl --output /busybox/strace https://raw.githubusercontent.com/yunchih/static-binaries/master/strace
-  - chmod 0500 /busybox/strace
+  - chmod 0755 /busybox/strace
   - chown 1337:1337 /busybox/strace
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
