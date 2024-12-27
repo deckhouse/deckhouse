@@ -3,7 +3,7 @@ cpu: 10m
 memory: 25Mi
 {{- end }}
 
-{{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+{{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
 ---
 apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
@@ -63,187 +63,10 @@ spec:
         - "--port=8081"
         - "--telemetry-host=127.0.0.1"
         - "--telemetry-port=8082"
-        - "--resources=certificatesigningrequests,configmaps,cronjobs,daemonsets,deployments,endpoints,horizontalpodautoscalers,ingresses,jobs,limitranges,namespaces,nodes,persistentvolumeclaims,persistentvolumes,poddisruptionbudgets,pods,replicasets,replicationcontrollers,resourcequotas,secrets,services,statefulsets,storageclasses"
+        - "--resources=certificatesigningrequests,configmaps,cronjobs,daemonsets,deployments,endpoints,horizontalpodautoscalers,ingresses,jobs,limitranges,namespaces,nodes,persistentvolumeclaims,persistentvolumes,poddisruptionbudgets,pods,replicasets,replicationcontrollers,resourcequotas,secrets,services,statefulsets,storageclasses,verticalpodautoscalers"
         - "--metric-labels-allowlist=configmaps=[*],cronjobs=[*],deployments=[*],daemonsets=[*],ingresses=[*],jobs=[*],namespaces=[*],nodes=[*],pods=[*],persistentvolumes=[*],secrets=[*],services=[*],statefulsets=[*],storageclasses=[*]" # TODO(nabokihms): try =*=[*] https://github.com/kubernetes/kube-state-metrics/pull/1823
         - "--metric-denylist=^.*_annotations" # reduce metrics quantity because we do not provide allowed annotations list
         - "--use-apiserver-cache"
-        - --custom-resource-state-config
-        -  |
-            spec:
-              resources:
-                - groupVersionKind:
-                    group: autoscaling.k8s.io
-                    kind: VerticalPodAutoscaler
-                    version: v1
-                  labelsFromPath:
-                    verticalpodautoscaler: [metadata, name]
-                    namespace: [metadata, namespace]
-                    target_api_version: [spec, targetRef, apiVersion]
-                    target_kind: [spec, targetRef, kind]
-                    target_name: [spec, targetRef, name]
-                  metricNamePrefix: kube_verticalpodautoscaler
-                  metrics:
-                    - name: "labels_info"
-                      help: "VPA container recommendations. Kubernetes labels converted to Prometheus labels"
-                      each:
-                        type: Info
-                        info:
-                          labelsFromPath:
-                            name: [metadata, name]
-                    - name: "spec_resourcepolicy_container_policies_minallowed"
-                      help: "VPA container minimal allowed memory according to VPA rules"
-                      each:
-                        type: Gauge
-                        gauge:
-                          path: [spec, resourcePolicy, containerPolicies]
-                          labelsFromPath:
-                            container: [containerName]
-                          valueFrom: [minAllowed, memory]
-                      commonLabels:
-                        resource: "memory"
-                        unit: "byte"
-                    - name: "spec_resourcepolicy_container_policies_minallowed"
-                      help: "VPA container minimal allowed cpu according to VPA rules"
-                      each:
-                        type: Gauge
-                        gauge:
-                          path: [spec, resourcePolicy, containerPolicies]
-                          labelsFromPath:
-                            container: [containerName]
-                          valueFrom: [minAllowed, cpu]
-                      commonLabels:
-                        resource: "cpu"
-                        unit: "core"
-                    - name: "spec_resourcepolicy_container_policies_maxallowed"
-                      help: "VPA container maximum allowed memory according to VPA rules"
-                      each:
-                        type: Gauge
-                        gauge:
-                          path: [spec, resourcePolicy, containerPolicies]
-                          labelsFromPath:
-                            container: [containerName]
-                          valueFrom: [maxAllowed, memory]
-                      commonLabels:
-                        resource: "memory"
-                        unit: "byte"
-                    - name: "spec_resourcepolicy_container_policies_maxallowed"
-                      help: "VPA container maximum allowed cpu according to VPA rules"
-                      each:
-                        type: Gauge
-                        gauge:
-                          path: [spec, resourcePolicy, containerPolicies]
-                          labelsFromPath:
-                            container: [containerName]
-                          valueFrom: [maxAllowed, cpu]   
-                      commonLabels:
-                        resource: "cpu"
-                        unit: "core"
-                    # Memory Information
-                    - name: "status_recommendation_containerrecommendations_target"
-                      help: "VPA container recommendations for memory. Target resources the VerticalPodAutoscaler recommends for the container."
-                      each:
-                        type: Gauge
-                        gauge:
-                          path: [status, recommendation, containerRecommendations]
-                          valueFrom: [target, memory]
-                          labelsFromPath:
-                            container: [containerName]
-                      commonLabels:
-                        resource: "memory"
-                        unit: "byte"
-                    - name: "status_recommendation_containerrecommendations_lowerbound"
-                      help: "VPA container recommendations for memory. Minimum resources the container can use before the VerticalPodAutoscaler updater evicts it"
-                      each:
-                        type: Gauge
-                        gauge:
-                          path: [status, recommendation, containerRecommendations]
-                          valueFrom: [lowerBound, memory]
-                          labelsFromPath:
-                            container: [containerName]
-                      commonLabels:
-                        resource: "memory"
-                        unit: "byte"
-                    - name: "status_recommendation_containerrecommendations_upperbound"
-                      help: "VPA container recommendations for memory. Maximum resources the container can use before the VerticalPodAutoscaler updater evicts it"
-                      each:
-                        type: Gauge
-                        gauge:
-                          path: [status, recommendation, containerRecommendations]
-                          valueFrom: [upperBound, memory]
-                          labelsFromPath:
-                            container: [containerName]
-                      commonLabels:
-                        resource: "memory"
-                        unit: "byte"
-                    - name: "status_recommendation_containerrecommendations_uncappedtarget"
-                      help: "VPA container recommendations for memory. Target resources the VerticalPodAutoscaler recommends for the container ignoring bounds"
-                      each:
-                        type: Gauge
-                        gauge:
-                          path: [status, recommendation, containerRecommendations]
-                          valueFrom: [uncappedTarget, memory]
-                          labelsFromPath:
-                            container: [containerName]
-                      commonLabels:
-                        resource: "memory"
-                        unit: "byte"
-                    # CPU Information
-                    - name: "status_recommendation_containerrecommendations_target"
-                      help: "VPA container recommendations for cpu. Target resources the VerticalPodAutoscaler recommends for the container."
-                      each:
-                        type: Gauge
-                        gauge:
-                          path: [status, recommendation, containerRecommendations]
-                          valueFrom: [target, cpu]
-                          labelsFromPath:
-                            container: [containerName]
-                      commonLabels:
-                        resource: "cpu"
-                        unit: "core"
-                    - name: "status_recommendation_containerrecommendations_lowerbound"
-                      help: "VPA container recommendations for cpu. Minimum resources the container can use before the VerticalPodAutoscaler updater evicts it"
-                      each:
-                        type: Gauge
-                        gauge:
-                          path: [status, recommendation, containerRecommendations]
-                          valueFrom: [lowerBound, cpu]
-                          labelsFromPath:
-                            container: [containerName]
-                      commonLabels:
-                        resource: "cpu"
-                        unit: "core"
-                    - name: "status_recommendation_containerrecommendations_upperbound"
-                      help: "VPA container recommendations for cpu. Maximum resources the container can use before the VerticalPodAutoscaler updater evicts it"
-                      each:
-                        type: Gauge
-                        gauge:
-                          path: [status, recommendation, containerRecommendations]
-                          valueFrom: [upperBound, cpu]
-                          labelsFromPath:
-                            container: [containerName]
-                      commonLabels:
-                        resource: "cpu"
-                        unit: "core"
-                    - name: "status_recommendation_containerrecommendations_uncappedtarget"
-                      help: "VPA container recommendations for cpu. Target resources the VerticalPodAutoscaler recommends for the container ignoring bounds"
-                      each:
-                        type: Gauge
-                        gauge:
-                          path: [status, recommendation, containerRecommendations]
-                          valueFrom: [uncappedTarget, cpu]
-                          labelsFromPath:
-                            container: [containerName]
-                      commonLabels:
-                        resource: "cpu"
-                        unit: "core"
-                    - name: "spec_updatepolicy_updatemode"
-                      help: "VPA update policy accordingto configuration"
-                      each:
-                        type: StateSet
-                        stateSet:
-                          labelName: update_mode
-                          path: [spec, updatePolicy, updateMode]
-                          list: [Auto, Initial, Off, Recreate]
         livenessProbe:
           httpGet:
             path: /main/healthz
@@ -257,7 +80,7 @@ spec:
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
-{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
             {{- include "kube_state_metrics_resources" . | nindent 12 }}
 {{- end }}
       - name: kube-rbac-proxy
@@ -304,7 +127,7 @@ spec:
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
-{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
             {{- include "helm_lib_container_kube_rbac_proxy_resources" . | nindent 12 }}
 {{- end }}
 

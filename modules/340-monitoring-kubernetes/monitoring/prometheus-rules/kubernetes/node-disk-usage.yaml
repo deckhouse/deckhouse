@@ -77,7 +77,6 @@
           ) == 0
         )
         * (max by (node, mountpoint) ({__name__=~"kubelet_eviction_nodefs_inodes"}))
-        and (max by (node, mountpoint) (node_filesystem_files) != 0)
       labels:
         severity_level: "5"
         tier: cluster
@@ -164,7 +163,6 @@
           ) == 0
         )
         * (max by (node, mountpoint) ({__name__=~"kubelet_eviction_imagefs_inodes"}))
-        and (max by (node, mountpoint) (node_filesystem_files) != 0)
       labels:
         severity_level: "5"
         tier: cluster

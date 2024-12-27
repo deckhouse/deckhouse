@@ -20,7 +20,7 @@ import (
 	"github.com/flant/shell-operator/pkg/metric_storage/operation"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"k8s.io/utils/ptr"
+	"k8s.io/utils/pointer"
 
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
@@ -200,7 +200,7 @@ provisioner: yandex.csi.flant.com
 			Expect(ops[1]).To(BeEquivalentTo(operation.MetricOperation{
 				Action: "set",
 				Name:   "storage_class_cloud_manual",
-				Value:  ptr.To(1.0),
+				Value:  pointer.Float64(1.0),
 				Labels: map[string]string{
 					"name": "aws-improper",
 				},
@@ -208,7 +208,7 @@ provisioner: yandex.csi.flant.com
 			Expect(ops[2]).To(BeEquivalentTo(operation.MetricOperation{
 				Action: "set",
 				Name:   "storage_class_cloud_manual",
-				Value:  ptr.To(1.0),
+				Value:  pointer.Float64(1.0),
 				Labels: map[string]string{
 					"name": "azure-improper",
 				},
@@ -216,7 +216,7 @@ provisioner: yandex.csi.flant.com
 			Expect(ops[3]).To(BeEquivalentTo(operation.MetricOperation{
 				Action: "set",
 				Name:   "storage_class_cloud_manual",
-				Value:  ptr.To(1.0),
+				Value:  pointer.Float64(1.0),
 				Labels: map[string]string{
 					"name": "gcp-improper",
 				},
@@ -224,7 +224,7 @@ provisioner: yandex.csi.flant.com
 			Expect(ops[4]).To(BeEquivalentTo(operation.MetricOperation{
 				Action: "set",
 				Name:   "storage_class_cloud_manual",
-				Value:  ptr.To(1.0),
+				Value:  pointer.Float64(1.0),
 				Labels: map[string]string{
 					"name": "openstack-improper",
 				},
@@ -232,7 +232,7 @@ provisioner: yandex.csi.flant.com
 			Expect(ops[5]).To(BeEquivalentTo(operation.MetricOperation{
 				Action: "set",
 				Name:   "storage_class_cloud_manual",
-				Value:  ptr.To(1.0),
+				Value:  pointer.Float64(1.0),
 				Labels: map[string]string{
 					"name": "vsphere-improper",
 				},
@@ -240,7 +240,7 @@ provisioner: yandex.csi.flant.com
 			Expect(ops[6]).To(BeEquivalentTo(operation.MetricOperation{
 				Action: "set",
 				Name:   "storage_class_cloud_manual",
-				Value:  ptr.To(1.0),
+				Value:  pointer.Float64(1.0),
 				Labels: map[string]string{
 					"name": "yandex-improper",
 				},
