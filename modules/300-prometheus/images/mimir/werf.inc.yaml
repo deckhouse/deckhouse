@@ -31,6 +31,7 @@ shell:
   install:
     - cd /src
     - export GOPROXY={{ $.GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64
+    - go mod download -x
     - go mod vendor
     - echo "test"
     - go build -o mimir ./cmd/mimir
