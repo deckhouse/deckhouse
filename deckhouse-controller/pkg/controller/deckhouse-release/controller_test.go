@@ -360,6 +360,8 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 		require.NoError(suite.T(), err)
 	})
 
+	// TODO: make another test with awaiting pending release
+	// TODO: remake test for forced release
 	suite.Run("Few patch releases", func() {
 		dependency.TestDC.HTTPClient.DoMock.
 			Expect(&http.Request{}).
