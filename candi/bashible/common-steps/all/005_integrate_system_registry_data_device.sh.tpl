@@ -69,28 +69,6 @@ function setup_registry_data_device() {
     fi
 }
 
-function teardown_registry_data_device() {
-    local mount_point="/mnt/system-registry-data"
-    local fstab_file="/etc/fstab"
-    local link_target="/opt/deckhouse/system-registry"
-    local label="registry-data"
-  
-    # Remove the symbolic link if it exists
-    if [[ -L "$link_target" ]]; then
-        rm -f "$link_target"
-    fi
-    
-    # Remove the entry from /etc/fstab
-    if grep -q "$label" "$fstab_file"; then
-        sed -i "/^LABEL=${label}.*/d" "$fstab_file"
-    fi
-
-    # Remove the mount point if it exists
-    if [[ -e "$mount_point" ]]; then
-        rm -rf "$mount_point"
-    fi
-}
-
 function check_if_symlink_and_return_target() {
     local input_data="$1"
     
@@ -313,9 +291,6 @@ else
   else
     # Disable label before teardown
     disable_registry_data_device_label
-    sleep 5
-    # If dataDevice is empty, teardown the registry data device
-    teardown_registry_data_device
     # Remove the installed file marker
     remove_registry_data_device_installed_file
   fi
