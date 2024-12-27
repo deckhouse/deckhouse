@@ -70,6 +70,9 @@
     document.getElementById('block_layout_{{ revision }}').querySelectorAll('span').forEach(element => {
       element.textContent = element.textContent.replace('<REVISION>', '{{ revision }}');
     })
+    document.getElementById('block_layout_{{ revision }}').querySelectorAll('.dimmer-block-content div .snippetcut .snippetcut__raw').forEach(element => {
+      element.textContent = element.textContent.replace('<REVISION>', '{{ revision }}');
+    })
   });
 </script>
 
