@@ -1,4 +1,4 @@
-{{ $imageAvailabilityExporterVersion := "0.10.0" }}
+{{ $imageAvailabilityExporterVersion := "0.11.0" }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
