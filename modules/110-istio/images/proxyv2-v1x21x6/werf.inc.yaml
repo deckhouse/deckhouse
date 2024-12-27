@@ -41,8 +41,7 @@ import:
   after: setup
 shell:
   install:
-  - useradd -m --uid 1337 istio-proxy
-  - echo "istio-proxy ALL=NOPASSWD: ALL" >> /etc/sudoers
+  - useradd -m --uid 1337 istio-proxy && echo "istio-proxy ALL=NOPASSWD: ALL" >> /etc/sudoers
 docker:
   ENV:
     ISTIO_META_ISTIO_PROXY_SHA: "istio-proxy:78bd2d9b284978e170a49cd13decd5f952544489"
