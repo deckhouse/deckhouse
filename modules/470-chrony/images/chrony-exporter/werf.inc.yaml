@@ -45,7 +45,7 @@ import:
   before: install
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
   add: /src
-  to: /src
+  to: /chrony_exporter
   before: install
 shell:
   beforeInstall:
@@ -53,14 +53,14 @@ shell:
   - apk update && apk add --no-cache gcc g++
   install:
   - export GOPROXY={{ $.GOPROXY }} CGO_ENABLED=1 GOOS=linux GOARCH=amd64
-  - cd /src
-  - /bin/promu build --prefix /src/chrony_exporter
+  - cd /chrony_exporter
+  - /bin/promu build
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: common/distroless
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
-  add: /src/chrony_exporter
+  add: /chrony_exporter/chrony_exporter
   to: /usr/bin/chrony_exporter
   before: install
 docker:
