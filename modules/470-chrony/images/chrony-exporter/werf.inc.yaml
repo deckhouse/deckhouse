@@ -2,16 +2,14 @@
 {{- $promuVersion := "0.14.0"}}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-promu
-from: {{ $.Images.BASE_GOLANG_23_ALPINE_DEV }}
+fromArtifact: common/src-artifact
 final: false
 shell:
   install:
-  - apk update && apk add --no-cache openssh-client
-  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
   - git clone --depth 1 --branch v{{$promuVersion}} {{ $.SOURCE_REPO }}/prometheus/promu.git /promu
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-promu
-from: {{ $.Images.BASE_GOLANG_23_ALPINE_DEV }}
+from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
 final: false
 import:
 - image: {{ .ModuleName }}/{{ $.ImageName }}-src-artifact-promu
@@ -28,16 +26,14 @@ shell:
   - go build -ldflags="-s -w" -o promu ./main.go
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
-from: {{ $.Images.BASE_GOLANG_23_ALPINE_DEV }}
+fromArtifact: common/src-artifact
 final: false
 shell:
   install:
-  - apk update && apk add --no-cache openssh-client
-  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
   - git clone -b v{{$chronyExproterVersion}} --single-branch {{ $.SOURCE_REPO }}/chrony/chrony_exporter /src
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
-from: {{ $.Images.BASE_GOLANG_23_ALPINE_DEV }}
+from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
 final: false
 mount:
 - fromPath: ~/go-pkg-cache
@@ -52,8 +48,10 @@ import:
   to: /src
   before: install
 shell:
-  install:
+  beforeInstall:
+  {{- include "alpine packages proxy" . | nindent 2 }}
   - apk update && apk add --no-cache gcc g++
+  install:
   - export GOPROXY={{ $.GOPROXY }} CGO_ENABLED=1 GOOS=linux GOARCH=amd64
   - cd /src
   - /bin/promu build
