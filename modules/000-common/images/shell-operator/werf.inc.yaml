@@ -67,6 +67,14 @@ mount:
 - from: tmp_dir
   to: /root/.cache/go-build
 import:
+- image: common/python-static-artifact
+  add: /
+  to: /
+  before: setup
+  includePaths:
+  - opt/python-static
+  - usr/bin/pip3
+  - usr/bin/python3
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
   add: /src
   to: /src
