@@ -236,12 +236,12 @@ spec:
         livenessProbe:
           httpGet:
             path: /livez
-            port: 4211
+            port: 4228
             scheme: HTTPS
         readinessProbe:
           httpGet:
             path: /livez
-            port: 4211
+            port: 4228
             scheme: HTTPS
         resources:
           requests:
@@ -420,12 +420,12 @@ spec:
         livenessProbe:
           httpGet:
             path: /livez
-            port: 4211
+            port: 4228
             scheme: HTTPS
         readinessProbe:
           httpGet:
             path: /livez
-            port: 4211
+            port: 4228
             scheme: HTTPS
         resources:
           requests:
