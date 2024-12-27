@@ -36,7 +36,7 @@ docker:
   WORKDIR: "/"
   USER: 1337
   # ENTRYPOINT: ["/usr/local/bin/pilot-agent"]
-  CMD: ["/bin/ls", "-ld", "/bin/strace", "&&","/bin/strace", "/usr/local/bin/pilot-agent"]
+  CMD: ["/bin/strace", "/usr/local/bin/pilot-agent"]
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-binary-artifact
 final: false
