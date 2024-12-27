@@ -110,8 +110,38 @@ func gracefulUnmountRegistryData(kubeClient *client.KubernetesClient, nodeName s
 	if err := waitForRegistryPodsDeletion(kubeClient, nodeName); err != nil {
 		return fmt.Errorf("failed to wait for removing registry pods on node '%s': %v", nodeName, err)
 	}
-	if err := attemptUnmountRegistryData(kubeClient, nodeName); err != nil {
-		return fmt.Errorf("failed to unmount registry data device on node '%s': %v", nodeName, err)
+
+	isLabelExist, err := isExistRegistryDataDeviceNodeLabel(kubeClient, nodeName)
+	if err != nil {
+		return err
+	}
+	if isLabelExist {
+		if err := unsetRegistryDataDeviceUnmountAnnotations(kubeClient, nodeName); err != nil {
+			return err
+		}
+		if err := setRegistryDataDeviceUnmountAnnotations(kubeClient, nodeName); err != nil {
+			return err
+		}
+		if err := createOrUpdateNGCUmountTask(kubeClient, nodeName); err != nil {
+			return err
+		}
+		isAnnotationExist, err := isExistRegistryDataDeviceUnmountDoneAnnotation(kubeClient, nodeName)
+		if err != nil {
+			return err
+		}
+		if !isAnnotationExist{
+			return fmt.Errorf("Failed to wait...")
+		}
+	}
+
+	if err := unsetRegistryDataDeviceUnmountAnnotations(kubeClient, nodeName); err != nil {
+		return err
+	}
+	if err := removeNGCUmountTask(kubeClient); err != nil {
+		return err
+	}
+	if err := unsetRegistryDataDeviceNodeLabel(kubeClient, nodeName); err != nil {
+		return err
 	}
 	return nil
 }
