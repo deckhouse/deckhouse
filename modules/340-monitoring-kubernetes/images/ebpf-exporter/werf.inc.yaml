@@ -23,7 +23,7 @@ shell:
   - rm -rf libbpf/.git
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}/entrypoint-artifact
-from: {{ .Images.BASE_GOLANG_21_BULLSEYE }}
+from: {{ .Images.BASE_GOLANG_23_ALPINE }}
 final: false
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
@@ -42,7 +42,7 @@ shell:
   - chmod 0700 /entrypoint/entrypoint
 ---
 image: {{ .ModuleName }}/build-artifact
-from: {{ .Images.BASE_GOLANG_21_BULLSEYE_DEV }}
+from: {{ .Images.BASE_GOLANG_23_ALPINE }}
 final: false
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
