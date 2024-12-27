@@ -1,79 +1,80 @@
-{{ $tricksterVersion := "1.1.5" }}
 ---
-image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
-fromImage: common/src-artifact
-final: false
-shell:
-  install:
-  - git clone --depth 1 --branch v{{ $tricksterVersion }} {{ $.SOURCE_REPO }}/trickstercache/trickster.git /src
+image: {{ .ModuleName }}/{{ .ImageName }}
+fromImage: common/distroless
+import:
+- artifact: {{ .ModuleName }}/{{ .ImageName }}-entrypoint-artifact
+  add: /src/entrypoint
+  to: /entrypoint
+  before: setup
+- artifact: {{ .ModuleName }}/{{ .ImageName }}-artifact
+  add: /src/OPATH/trickster
+  to: /trickster
+  before: setup
+docker:
+  ENTRYPOINT: ["/entrypoint"]
 ---
-image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
-from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
-final: false
+artifact: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+fromArtifact: common/src-artifact
 git:
-- add: /{{ $.ModulePath }}modules/300-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
+- add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/entrypoint
+  to: /src/entrypoint
+  includePaths:
+  - '**/*.go'
+  - '**/*.mod'
+  - '**/*.sum'
+  stageDependencies:
+    install:
+    - '**/*.go'
+    - 'go.mod'
+    - 'go.sum'
+- add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/patches
   to: /patches
   stageDependencies:
     install:
       - '**/*'
+shell:
+  install:
+  - git clone --depth 1 --branch v1.1.5 {{ .SOURCE_REPO }}/trickstercache/trickster.git /src/trickster
+  - cd /src/trickster
+  - git apply /patches/*.patch --verbose
+  - rm -r vendor
+---
+artifact: {{ .ModuleName }}/{{ .ImageName }}-artifact
+from: {{ .Images.BASE_GOLANG_23_ALPINE }}
 import:
-- image: {{ .ModuleName }}/{{ $.ImageName }}-src-artifact
-  add: /src
+- artifact: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+  add: /src/trickster
   to: /src
   before: install
+mount:
+- fromPath: ~/go-pkg-cache
+  to: /go/pkg
 shell:
   beforeInstall:
-  {{- include "alpine packages proxy" $ | nindent 2 }}
-  - apk add --no-cache make git
+  {{- include "alpine packages proxy" . | nindent 2 }}
+  - apk add --no-cache make
   install:
-  - export GOPROXY={{ $.GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64
   - cd /src
-  - go mod edit -go 1.23
-  - go mod tidy && go mod vendor
-  - git apply /patches/*.patch --verbose
+  - export GOPROXY={{ .GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64
   - make build
-  - chown -R 64535:64535 /src/
-  - chmod 0700 "/src/OPATH/trickster"
+  - chown -R 64535:64535 /src
+  - chmod 0700 /src/OPATH/trickster
 ---
-image: {{ $.ModuleName }}/{{ $.ImageName }}-entrypoint-src-artifact
-fromImage: common/src-artifact
-final: false
-git:
-- add: /{{ $.ModulePath }}modules/300-{{ $.ModuleName }}/images/{{ $.ImageName }}/entrypoint
-  to: /src
-  stageDependencies:
-    install:
-    - '**/*'
----
-image: {{ $.ModuleName }}/{{ $.ImageName }}-entrypoint-artifact
-from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
-final: false
+artifact: {{ .ModuleName }}/{{ .ImageName }}-entrypoint-artifact
+from: {{ .Images.BASE_GOLANG_23_ALPINE }}
 import:
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-entrypoint-src-artifact
-  add: /src
-  to: /app
+- artifact: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+  add: /src/entrypoint
+  to: /src
   before: install
 mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
 shell:
   install:
-  - cd /app
-  - GOPROXY={{ .GOPROXY }} GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o entrypoint
-  - chown -R 64535:64535 /app/
-  - chmod 0700 /app/entrypoint
----
-image: {{ $.ModuleName }}/{{ $.ImageName }}
-fromImage: common/distroless
-import:
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
-  add: /src/OPATH/trickster
-  to: /usr/local/bin/trickster
-  before: setup
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-entrypoint-artifact
-  add: /app/entrypoint
-  to: /usr/local/bin/entrypoint
-  before: setup
-docker:
-  ENTRYPOINT:
-    - "entrypoint"
+  - cd /src
+  - export GOPROXY={{ .GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64
+  - go mod tidy
+  - go build -ldflags="-s -w" -o entrypoint
+  - chown -R 64535:64535 /src
+  - chmod 0700 /src/entrypoint
