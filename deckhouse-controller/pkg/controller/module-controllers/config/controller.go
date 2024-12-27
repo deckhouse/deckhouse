@@ -182,7 +182,7 @@ func (r *reconciler) processModule(ctx context.Context, moduleConfig *v1alpha1.M
 
 	if !moduleConfig.IsEnabled() {
 		if err := r.disableModule(ctx, module); err != nil {
-			r.log.Errorf("failed to disable the '%s' module: %v", module.Name, err)
+			r.log.Error("failed to disable the module", slog.String("module", module.Name), log.Err(err))
 			return ctrl.Result{Requeue: true}, nil
 		}
 
