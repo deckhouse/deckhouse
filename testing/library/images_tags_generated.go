@@ -409,6 +409,7 @@ var DefaultImagesDigests = map[string]interface{}{
 	},
 	"registrypackages": map[string]interface{}{
 		"amazonEc2Utils220":         "imageHash-registrypackages-amazonEc2Utils220",
+		"cfssl165":                  "imageHash-registrypackages-cfssl165",
 		"containerd1724":            "imageHash-registrypackages-containerd1724",
 		"crictl127":                 "imageHash-registrypackages-crictl127",
 		"crictl128":                 "imageHash-registrypackages-crictl128",
@@ -470,6 +471,13 @@ var DefaultImagesDigests = map[string]interface{}{
 	},
 	"staticRoutingManager": map[string]interface{}{
 		"agent": "imageHash-staticRoutingManager-agent",
+	},
+	"systemRegistry": map[string]interface{}{
+		"dockerAuth":            "imageHash-systemRegistry-dockerAuth",
+		"dockerDistribution":    "imageHash-systemRegistry-dockerDistribution",
+		"mirrorer":              "imageHash-systemRegistry-mirrorer",
+		"seaweedfs":             "imageHash-systemRegistry-seaweedfs",
+		"systemRegistryManager": "imageHash-systemRegistry-systemRegistryManager",
 	},
 	"terraformManager": map[string]interface{}{
 		"baseTerraformManager":        "imageHash-terraformManager-baseTerraformManager",

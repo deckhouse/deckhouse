@@ -507,8 +507,8 @@ func DeckhouseAdminClusterRoleBinding() *rbacv1.ClusterRoleBinding {
 	}
 }
 
-func DeckhouseRegistrySecret(registry config.RegistryData) *apiv1.Secret {
-	data, _ := base64.StdEncoding.DecodeString(registry.DockerCfg)
+func DeckhouseRegistrySecret(registry config.Registry) *apiv1.Secret {
+	data, _ := base64.StdEncoding.DecodeString(registry.Data.DockerCfg)
 	ret := &apiv1.Secret{
 		Type: apiv1.SecretTypeDockerConfigJson,
 		ObjectMeta: metav1.ObjectMeta{
@@ -525,19 +525,20 @@ func DeckhouseRegistrySecret(registry config.RegistryData) *apiv1.Secret {
 		},
 		Data: map[string][]byte{
 			apiv1.DockerConfigJsonKey: data,
-			"address":                 []byte(registry.Address),
-			"scheme":                  []byte(registry.Scheme),
-			"imagesRegistry":          []byte(registry.Address),
+			"address":                 []byte(registry.Data.Address),
+			"scheme":                  []byte(registry.Data.Scheme),
+			"imagesRegistry":          []byte(registry.Data.Address),
+			"registryMode":            []byte(registry.Mode()),
 		},
 	}
 
-	if registry.Path != "" {
-		ret.Data["path"] = []byte(registry.Path)
-		ret.Data["imagesRegistry"] = []byte(registry.Address + registry.Path)
+	if registry.Data.Path != "" {
+		ret.Data["path"] = []byte(registry.Data.Path)
+		ret.Data["imagesRegistry"] = []byte(registry.Data.Address + registry.Data.Path)
 	}
 
-	if registry.CA != "" {
-		ret.Data["ca"] = []byte(registry.CA)
+	if registry.Data.CA != "" {
+		ret.Data["ca"] = []byte(registry.Data.CA)
 	}
 
 	return ret
@@ -590,7 +591,7 @@ func SecretWithClusterConfig(data []byte) *apiv1.Secret {
 	)
 }
 
-func SecretWithProviderClusterConfig(configData, discoveryData []byte) *apiv1.Secret {
+func SecretWithProviderClusterConfig(configData, discoveryData, systemRegistryData []byte) *apiv1.Secret {
 	data := make(map[string][]byte)
 	if configData != nil {
 		data["cloud-provider-cluster-configuration.yaml"] = configData
@@ -598,6 +599,10 @@ func SecretWithProviderClusterConfig(configData, discoveryData []byte) *apiv1.Se
 
 	if discoveryData != nil {
 		data["cloud-provider-discovery-data.json"] = discoveryData
+	}
+
+	if systemRegistryData != nil {
+		data["system-registry-configuration.yaml"] = systemRegistryData
 	}
 
 	return generateSecret(
@@ -651,7 +656,7 @@ func PatchWithNodeTerraformState(stateData []byte) interface{} {
 	}
 }
 
-func SecretMasterDevicePath(nodeName string, devicePath []byte) *apiv1.Secret {
+func SecretMasterKubernetesDataDevicePath(nodeName string, devicePath []byte) *apiv1.Secret {
 	return generateSecret(
 		"d8-masters-kubernetes-data-device-path",
 		"d8-system",
@@ -670,6 +675,17 @@ func SecretConvergeState(state []byte) *apiv1.Secret {
 		"d8-system",
 		map[string][]byte{
 			"state.json": state,
+		},
+		map[string]string{},
+	)
+}
+
+func SecretMasterSystemRegistryDataDevicePath(nodeName string, devicePath []byte) *apiv1.Secret {
+	return generateSecret(
+		"d8-masters-system-registry-data-device-path",
+		"d8-system",
+		map[string][]byte{
+			nodeName: devicePath,
 		},
 		map[string]string{},
 	)

@@ -92,6 +92,7 @@ rules:
 - apiGroups: [""]
   resourceNames:
   - d8-masters-kubernetes-data-device-path
+  - d8-masters-system-registry-data-device-path
   resources:
   - secrets
   verbs:
@@ -219,6 +220,9 @@ roleRef:
 subjects:
 - kind: Group
   name: system:bootstrappers:d8-node-manager
+  apiGroup: rbac.authorization.k8s.io
+- kind: Group
+  name: system:nodes
   apiGroup: rbac.authorization.k8s.io
 
 ---

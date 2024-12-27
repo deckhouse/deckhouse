@@ -39,6 +39,7 @@ type Command struct {
 	sudo    bool
 	env     map[string]string
 	timeout time.Duration
+	ctx     context.Context
 
 	onStart           func()
 	stdoutLineHandler func(line string)
@@ -179,10 +180,16 @@ func (c *Command) prepareCmd() (*exec.Cmd, context.CancelFunc) {
 		args = []string{"-c", strings.Join(append([]string{c.program}, c.args...), " ")}
 	}
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx := c.ctx
+	if ctx == nil {
+		ctx = context.Background()
+	}
+
+	var cancel context.CancelFunc
 	if c.timeout > 0 {
-		cancel()
-		ctx, cancel = context.WithTimeout(context.Background(), c.timeout)
+		ctx, cancel = context.WithTimeout(ctx, c.timeout)
+	} else {
+		ctx, cancel = context.WithCancel(ctx)
 	}
 
 	cmd := exec.CommandContext(ctx, program, args...)
@@ -204,6 +211,10 @@ func (c *Command) Sudo() {
 
 func (c *Command) WithTimeout(t time.Duration) {
 	c.timeout = t
+}
+
+func (c *Command) WithContext(ctx context.Context) {
+	c.ctx = ctx
 }
 
 func (c *Command) WithEnv(env map[string]string) {
