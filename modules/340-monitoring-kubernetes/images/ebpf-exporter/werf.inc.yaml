@@ -13,11 +13,17 @@ git:
   stageDependencies:
     install:
     - '**/*'
+- add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/patches
+  to: /patches
+  stageDependencies:
+    install:
+    - '**/*'
 shell:
   install:
   - cd /src
   - git clone --branch=v2.4.2 --depth=1 {{ .SOURCE_REPO }}/cloudflare/ebpf_exporter.git ebpf-exporter
   - cd ebpf-exporter
+  - git apply /patches/*.patch --verbose
   - mkdir -p libbpf
   - git clone --branch v1.4.2 --depth=1 {{ .SOURCE_REPO }}/libbpf/libbpf.git libbpf
   - rm -rf libbpf/.git .git
