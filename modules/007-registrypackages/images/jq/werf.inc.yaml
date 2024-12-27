@@ -1,9 +1,9 @@
-{{- $version := "1.6" }}
+{{- $version := .CandiVersionMap.jq.version }}
 {{- $image_version := $version | replace "." "-" }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
 from: {{ $.Images.BASE_SCRATCH }}
-git:
+fromCacheVersion: 20241223 # rm if update version
 import:
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
   add: /
@@ -31,7 +31,7 @@ git:
     setup:
     - '**/*'
 import:
-- artifact: jq
+- image: common/jq-artifact
   add: /usr/bin/jq
   to: /jq
   before: setup
