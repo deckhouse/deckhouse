@@ -35,7 +35,8 @@ function __main__() {
     classToDelete=$(context::jq -r '.review.request.name')
     classKind=$(context::jq -r '.review.request.requestKind.kind')
 
-    if nodeGroups=$(context::jq -r '.review.request.oldObject.status.nodeGroupConsumers | join(", ")' 2>/dev/null); then
+    if context::jq -e '.review.request.oldObject.status.nodeGroupConsumers | length > 0' >/dev/null; then
+        nodeGroups=$(context::jq -r '.review.request.oldObject.status.nodeGroupConsumers | join(", ")')
         cat <<EOF > "$VALIDATING_RESPONSE_PATH"
 {"allowed":false, "message":"$classKind \"$classToDelete\" cannot be deleted because it is being used by NodeGroup: $nodeGroups"}
 EOF
