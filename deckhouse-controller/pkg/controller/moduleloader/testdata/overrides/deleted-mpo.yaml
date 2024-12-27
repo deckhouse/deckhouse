@@ -43,7 +43,7 @@ properties:
     deckhouse: '> v1.63.0'
     kubernetes: '> v1.25.0'
   source: losev-test
-  weight: 910
+  weight: 900
 status:
   conditions:
     - lastProbeTime: "2024-12-03T15:57:20Z"
@@ -68,7 +68,12 @@ status:
 apiVersion: deckhouse.io/v1alpha2
 kind: ModulePullOverride
 metadata:
+  annotations:
+    modules.deckhouse.io/deployed-on: dev-master-0
   creationTimestamp: "2024-05-22T10:05:44Z"
+  deletionTimestamp: "2024-05-22T10:05:44Z"
+  finalizers:
+  - kubernetes
   generation: 1
   labels:
     module: echo
