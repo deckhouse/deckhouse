@@ -39,19 +39,17 @@ shell:
   - git apply /patches/*.patch --verbose
   - rm -rf /src/.git
 git:
-  - add: /modules/{{ $.ModuleName }}/images/{{ $.ImageName }}
-    to: /
+  - add: /modules/{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
+    to: /patches
     stageDependencies:
       setup:
         - "**/*"
-    includePaths:
-      - patches
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
 from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
 final: false
 import:
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $version | replace "." "-" }}
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $version | replace "." "-" }}
   add: /src
   to: /src
   before: install
