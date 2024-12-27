@@ -1,23 +1,14 @@
 {{ $tricksterVersion := "1.1.5" }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
-from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
+fromImage: common/src-artifact
 final: false
 shell:
-  beforeInstall:
-  {{- include "alpine packages proxy" . | nindent 2 }}
-  - apk add --no-cache git openssh-client
-  - apk add --upgrade curl=8.11.1-r0 libcrypto3=3.3.2-r1 libssl3=3.3.2-r1 expat=2.6.4-r0
-  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
   install:
   - git clone --depth 1 --branch v{{ $tricksterVersion }} {{ $.SOURCE_REPO }}/trickstercache/trickster.git /src
-  - cd /src
-  - go mod edit -go 1.20
-  - go get golang.org/x/net@v0.17.0 github.com/prometheus/client_golang@v1.17.0
-  - go mod tidy
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
-from: {{ $.Images.BASE_GOLANG_23_ALPINE_DEV }}
+from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
 final: false
 import:
 - image: {{ .ModuleName }}/{{ $.ImageName }}-src-artifact
@@ -28,6 +19,8 @@ shell:
   install:
   - export GOPROXY={{ $.GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64
   - cd /src
+  - go mod edit -go 1.23
+  - go mod tidy && go mod vendor
   - make build
   - chown -R 64535:64535 /src/
   - chmod 0700 "/src/OPATH/trickster"
@@ -64,7 +57,7 @@ image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: common/distroless
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
-  add: /trickster/OPATH/trickster
+  add: /src/OPATH/trickster
   to: /usr/local/bin/trickster
   before: setup
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-entrypoint-artifact
