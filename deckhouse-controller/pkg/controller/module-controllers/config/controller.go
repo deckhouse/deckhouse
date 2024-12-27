@@ -376,7 +376,7 @@ func (r *reconciler) removeFinalizer(ctx context.Context, config *v1alpha1.Modul
 }
 
 func (r *reconciler) disableModule(ctx context.Context, module *v1alpha1.Module) error {
-	r.log.Debugf("disable the '%s' module", module.Name)
+	r.log.Debug("disable the module", slog.String("module", module.Name))
 	return utils.UpdateStatus[*v1alpha1.Module](ctx, r.client, module, func(module *v1alpha1.Module) bool {
 		if !module.ConditionStatus(v1alpha1.ModuleConditionEnabledByModuleConfig) {
 			return false
