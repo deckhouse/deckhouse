@@ -7,6 +7,7 @@ import:
   to: /loop
   before: setup
 docker:
+  USER: 64535
   ENTRYPOINT: ["/loop"]
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
