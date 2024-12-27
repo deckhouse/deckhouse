@@ -35,7 +35,8 @@ docker:
     ISTIO_META_ISTIO_VERSION: "1.21.6"
   WORKDIR: "/"
   USER: 1337
-  ENTRYPOINT: ["/usr/local/bin/pilot-agent"]
+  # ENTRYPOINT: ["/usr/local/bin/pilot-agent"]
+  CMD: ["/bin/ls", "-ld", "/bin/strace", "&&","/bin/strace", "/usr/local/bin/pilot-agent"]
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-binary-artifact
 final: false
