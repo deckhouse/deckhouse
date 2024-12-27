@@ -1,0 +1,37 @@
+---
+image: {{ .ModuleName }}/{{ .ImageName }}
+fromImage: common/distroless
+import:
+  - image: {{ $.ModuleName }}/{{ $.ImageName }}-self-signed-generator-artifact
+    add: /src/self-signed-generator
+    to: /self-signed-generator
+    before: setup
+docker:
+  ENTRYPOINT: [ "/self-signed-generator" ]
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-self-signed-generator-src-artifact
+fromImage: common/src-artifact
+final: false
+git:
+  - add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/src
+    to: /src
+shell:
+  install:
+    - cd /src
+    - rm -rf .git
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-self-signed-generator-artifact
+from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
+final: false
+import:
+  - image: {{ $.ModuleName }}/{{ $.ImageName }}-self-signed-generator-src-artifact
+    add: /src
+    to: /src
+    before: install
+shell:
+  install:
+    - export GOPROXY={{ $.GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64
+    - cd /src
+    - go build -ldflags="-w -s" -o self-signed-generator main.go
+    - chown 64535:64535 self-signed-generator
+    - chmod 0700 self-signed-generator
