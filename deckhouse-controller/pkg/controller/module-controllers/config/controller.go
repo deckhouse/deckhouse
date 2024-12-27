@@ -187,8 +187,8 @@ func (r *reconciler) processModule(ctx context.Context, moduleConfig *v1alpha1.M
 		if enabled {
 			r.log.Debugf("disable the '%s' module", moduleConfig.Name)
 			err := utils.UpdateStatus[*v1alpha1.Module](ctx, r.client, module, func(module *v1alpha1.Module) bool {
-				// modules in Conflict should not be installed, and they cannot receive events, so set Available phase manually
-				if module.Status.Phase == v1alpha1.ModulePhaseConflict {
+				// modules in Conflict and DownloadingError should not be installed, and they cannot receive events, so set Available phase manually
+				if module.Status.Phase == v1alpha1.ModulePhaseConflict || module.Status.Phase == v1alpha1.ModulePhaseDownloadingError {
 					module.Status.Phase = v1alpha1.ModulePhaseAvailable
 					module.SetConditionFalse(v1alpha1.ModuleConditionEnabledByModuleManager, "", "")
 					module.SetConditionFalse(v1alpha1.ModuleConditionIsReady, v1alpha1.ModuleReasonNotInstalled, v1alpha1.ModuleMessageNotInstalled)
