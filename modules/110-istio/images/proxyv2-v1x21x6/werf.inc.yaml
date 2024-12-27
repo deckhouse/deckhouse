@@ -35,7 +35,7 @@ docker:
     ISTIO_META_ISTIO_VERSION: "1.21.6"
   WORKDIR: "/"
   USER: 1337
-  ENTRYPOINT: ["/bin/strace"]
+  ENTRYPOINT: ["/usr/local/bin/pilot-agent"]
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-binary-artifact
 final: false
@@ -52,6 +52,7 @@ shell:
   - chmod 0500 /busybox/ls
   - curl --output /busybox/strace https://raw.githubusercontent.com/yunchih/static-binaries/master/strace
   - chmod 0500 /busybox/strace
+  - chown 1337:1337 /busybox/strace
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
 final: false
