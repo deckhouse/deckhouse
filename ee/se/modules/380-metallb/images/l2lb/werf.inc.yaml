@@ -3,11 +3,11 @@ image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
 fromImage: common/src-artifact
 final: false
 git:
-  - add: /{{ .ModulePath }}modules/380-{{ .ModuleName }}/images/{{ .ImageName }}/patches
-    to: /patches
-    stageDependencies:
-      install:
-        - '**/*'
+- add: /{{ .ModulePath }}modules/380-{{ .ModuleName }}/images/{{ .ImageName }}/patches
+  to: /patches
+  stageDependencies:
+    install:
+    - '**/*'
 shell:
   install:
   - cd /src
@@ -27,34 +27,34 @@ mount:
   to: /go/pkg
 shell:
   install:
-    - cd /src
-    - export GO_VERSION=${GOLANG_VERSION}
-    - export GOPROXY={{ $.GOPROXY }} GOOS=linux GOARCH=amd64 CGO_ENABLED=0
-    - cd controller
-    - go build -ldflags="-s -w" -o /controller
-    - chown 64535:64535 /controller
-    - chmod 0700 /controller
-    - cd ../speaker
-    - go build -ldflags="-s -w" -o /speaker
-    - chown 64535:64535 /speaker
-    - chmod 0755 /speaker
+  - cd /src
+  - export GO_VERSION=${GOLANG_VERSION}
+  - export GOPROXY={{ $.GOPROXY }} GOOS=linux GOARCH=amd64 CGO_ENABLED=0
+  - cd controller
+  - go build -ldflags="-s -w" -o /controller
+  - chown 64535:64535 /controller
+  - chmod 0700 /controller
+  - cd ../speaker
+  - go build -ldflags="-s -w" -o /speaker
+  - chown 64535:64535 /speaker
+  - chmod 0755 /speaker
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-controller
 fromImage: common/distroless
 import:
-  - artifact: {{ .ModuleName }}/{{ .ImageName }}-artifact
-    add: /controller
-    to: /controller
-    before: setup
+- image: {{ .ModuleName }}/{{ .ImageName }}-artifact
+  add: /controller
+  to: /controller
+  before: setup
 docker:
   ENTRYPOINT: ["/controller"]
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-speaker
 fromImage: common/distroless
 import:
-  - artifact: {{ .ModuleName }}/{{ .ImageName }}-artifact
-    add: /speaker
-    to: /speaker
-    before: setup
+- image: {{ .ModuleName }}/{{ .ImageName }}-artifact
+  add: /speaker
+  to: /speaker
+  before: setup
 docker:
   ENTRYPOINT: ["/speaker"]
