@@ -10,18 +10,11 @@ docker:
   ENTRYPOINT: ["/discoverer"]
   USER: deckhouse:deckhouse
 ---
-<<<<<<< HEAD
-{{ $discovererAbsPath := "/deckhouse/ee/modules/030-cloud-provider-zvirt/images/cloud-data-discoverer" }}
-{{ $discovererRelPath := printf "%smodules/030-cloud-provider-zvirt/images/cloud-data-discoverer" .ModulePath }}
-artifact: {{ .ModuleName }}/{{ .ImageName }}-artifact
-from: {{ .Images.BASE_GOLANG_20_ALPINE }}
-=======
 {{ $discovererAbsPath := "/deckhouse/ee/se-plus/modules/030-cloud-provider-zvirt/images/cloud-data-discoverer" }}
-{{ $discovererRelPath := printf "%s/modules/030-cloud-provider-zvirt/images/cloud-data-discoverer" $.ModulePath }}
+{{ $discovererRelPath := printf "%smodules/030-cloud-provider-zvirt/images/cloud-data-discoverer" $.ModulePath }}
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
 final: false
 from: {{ $.Images.BASE_GOLANG_21_ALPINE }}
->>>>>>> main
 shell:
   install:
     - cd {{ $discovererAbsPath }}
