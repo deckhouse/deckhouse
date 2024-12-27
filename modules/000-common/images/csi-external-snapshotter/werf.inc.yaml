@@ -34,13 +34,10 @@ git:
     {{- end }}
 shell:
   install:
+  - git clone --depth 1 --branch {{ $value.csi.snapshotter }} {{ $.SOURCE_REPO }}/kubernetes-csi/external-snapshotter.git /src
   - cd /src
-  - git clone --depth 1 --branch {{ $src_version }} {{ $.SOURCE_REPO }}/kubernetes-csi/external-snapshotter.git .
-  {{- if $patch }}
   - git apply /patches/*.patch --verbose
-  {{- end }}
-  - rm -rf vendor
-  - rm -rf .git
+  - rm -rf /src/.git
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
 from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
