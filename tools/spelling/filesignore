@@ -9,6 +9,7 @@ site/_layouts/.+$
 /images/.+\.ya?ml$
 /templates/.+\.ya?ml$
 openapi/values\.ya?ml$
+^.werf/.+$
 ^.github/.+$
 ^go_lib/.+$
 ^helm_lib/.+$
