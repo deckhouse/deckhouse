@@ -1,0 +1,46 @@
+---
+image: {{ .ModuleName }}/{{ .ImageName }}
+fromImage: common/distroless
+import:
+  - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-basic-auth-proxy-artifact
+    add: /src/basic-auth-proxy
+    to: /basic-auth-proxy
+    before: setup
+docker:
+  ENTRYPOINT: [ "/basic-auth-proxy" ]
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-basic-auth-proxy-src-artifact
+fromImage: common/src-artifact
+final: false
+git:
+- add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/app
+  to: /src
+  includePaths:
+  - '**/*.go'
+  - '**/go.mod'
+  - '**/go.sum'
+  stageDependencies:
+    install:
+    - '**/*.go'
+    - '**/go.mod'
+    - '**/go.sum'
+shell:
+  install:
+    - cd /src
+    - rm -rf .git
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-basic-auth-proxy-artifact
+from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
+final: false
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-basic-auth-proxy-src-artifact
+  add: /src
+  to: /src
+  before: install
+shell:
+  install:
+    - export GOPROXY={{ .GOPROXY }}
+    - cd /src
+    - CGO_ENABLED=0 GOOS=linux go build -ldflags '-s -w' -o basic-auth-proxy ./cmd/main.go
+    - chown 64535:64535 basic-auth-proxy
+    - chmod 0700 basic-auth-proxy

@@ -1,25 +1,25 @@
-diff --git a/pkg/sessions/persistence/manager.go b/pkg/sessions/persistence/manager.go
-index 3215b25..a8491cf 100644
---- a/pkg/sessions/persistence/manager.go
-+++ b/pkg/sessions/persistence/manager.go
-@@ -3,6 +3,7 @@ package persistence
- import (
+diff --git i/pkg/sessions/persistence/manager.go w/pkg/sessions/persistence/manager.go
+index 9652f015..5da80170 100644
+--- i/pkg/sessions/persistence/manager.go
++++ w/pkg/sessions/persistence/manager.go
+@@ -4,6 +4,7 @@ import (
+ 	"context"
  	"fmt"
  	"net/http"
 +	"strings"
  	"time"
-
+ 
  	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
-@@ -33,7 +34,7 @@ func (m *Manager) Save(rw http.ResponseWriter, req *http.Request, s *sessions.Se
+@@ -34,7 +35,7 @@ func (m *Manager) Save(rw http.ResponseWriter, req *http.Request, s *sessions.Se
  		s.CreatedAtNow()
  	}
-
+ 
 -	tckt, err := decodeTicketFromRequest(req, m.Options)
 +	tckt, _, err := decodeTicketFromRequest(req, m.Options)
  	if err != nil {
  		tckt, err = newTicket(m.Options)
  		if err != nil {
-@@ -54,23 +55,36 @@ func (m *Manager) Save(rw http.ResponseWriter, req *http.Request, s *sessions.Se
+@@ -55,23 +56,36 @@ func (m *Manager) Save(rw http.ResponseWriter, req *http.Request, s *sessions.Se
  // Load reads sessions.SessionState information from a session store. It will
  // use the session ticket from the http.Request's cookie.
  func (m *Manager) Load(req *http.Request) (*sessions.SessionState, error) {
@@ -28,7 +28,7 @@ index 3215b25..a8491cf 100644
  	if err != nil {
  		return nil, err
  	}
-
+ 
 -	return tckt.loadSession(
 +	state, err := tckt.loadSession(
  		func(key string) ([]byte, error) {
@@ -50,7 +50,7 @@ index 3215b25..a8491cf 100644
 +	state.RefreshToken = refreshToken
 +	return state, err
  }
-
+ 
  // Clear clears any saved session information for a given ticket cookie.
  // Then it clears all session data for that ticket in the Store.
  func (m *Manager) Clear(rw http.ResponseWriter, req *http.Request) error {
@@ -59,10 +59,10 @@ index 3215b25..a8491cf 100644
  	if err != nil {
  		// Always clear the cookie, even when we can't load a cookie from
  		// the request
-diff --git a/pkg/sessions/persistence/ticket.go b/pkg/sessions/persistence/ticket.go
-index 70bb58a..9ccd847 100644
---- a/pkg/sessions/persistence/ticket.go
-+++ b/pkg/sessions/persistence/ticket.go
+diff --git i/pkg/sessions/persistence/ticket.go w/pkg/sessions/persistence/ticket.go
+index 70bb58a0..9ccd847d 100644
+--- i/pkg/sessions/persistence/ticket.go
++++ w/pkg/sessions/persistence/ticket.go
 @@ -5,6 +5,7 @@ import (
  	"crypto/rand"
  	"encoding/base64"
@@ -74,7 +74,7 @@ index 70bb58a..9ccd847 100644
 @@ -43,6 +44,11 @@ type ticket struct {
  	options *options.Cookie
  }
-
+ 
 +type cookieRefreshToken struct {
 +	Ticket       string `json:"Ticket"`
 +	RefreshToken string `json:"RefreshToken"`
@@ -85,7 +85,7 @@ index 70bb58a..9ccd847 100644
  func newTicket(cookieOpts *options.Cookie) (*ticket, error) {
 @@ -71,38 +77,45 @@ func (t *ticket) encodeTicket() string {
  }
-
+ 
  // decodeTicket decodes an encoded ticket string
 -func decodeTicket(encTicket string, cookieOpts *options.Cookie) (*ticket, error) {
 -	ticketParts := strings.Split(encTicket, ".")
@@ -103,13 +103,13 @@ index 70bb58a..9ccd847 100644
  	}
 +
  	ticketID, secretBase64 := ticketParts[0], ticketParts[1]
-
+ 
  	secret, err := base64.RawURLEncoding.DecodeString(secretBase64)
  	if err != nil {
 -		return nil, fmt.Errorf("failed to decode encryption secret: %v", err)
 +		return nil, "", fmt.Errorf("failed to decode encryption secret: %v", err)
  	}
-
+ 
  	return &ticket{
  		id:      ticketID,
  		secret:  secret,
@@ -117,7 +117,7 @@ index 70bb58a..9ccd847 100644
 -	}, nil
 +	}, value.RefreshToken, nil
  }
-
+ 
  // decodeTicketFromRequest retrieves a potential ticket cookie from a request
  // and decodes it to a ticket.
 -func decodeTicketFromRequest(req *http.Request, cookieOpts *options.Cookie) (*ticket, error) {
@@ -128,14 +128,14 @@ index 70bb58a..9ccd847 100644
 -		return nil, err
 +		return nil, "", err
  	}
-
+ 
  	// An existing cookie exists, try to retrieve the ticket
  	val, _, ok := encryption.Validate(requestCookie, cookieOpts.Secret, cookieOpts.Expire)
  	if !ok {
 -		return nil, fmt.Errorf("session ticket cookie failed validation: %v", err)
 +		return nil, "", fmt.Errorf("session ticket cookie failed validation: %v", err)
  	}
-
+ 
  	// Valid cookie, decode the ticket
 @@ -130,7 +143,7 @@ func (t *ticket) saveSession(s *sessions.SessionState, saver saveFunc) error {
  func (t *ticket) loadSession(loader loadFunc, initLock initLockFunc) (*sessions.SessionState, error) {
@@ -147,7 +147,7 @@ index 70bb58a..9ccd847 100644
  	c, err := t.makeCipher()
  	if err != nil {
 @@ -154,9 +167,19 @@ func (t *ticket) clearSession(clearer clearFunc) error {
-
+ 
  // setCookie sets the encoded ticket as a cookie
  func (t *ticket) setCookie(rw http.ResponseWriter, req *http.Request, s *sessions.SessionState) error {
 +	value := cookieRefreshToken{
