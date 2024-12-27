@@ -68,7 +68,6 @@ git:
 docker:
   ENV:
     PYTHONPATH: /frameworks/python
-  USER: deckhouse:deckhouse
   ENTRYPOINT: ["/entrypoint.sh"]
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-label-converter-src-artifact
