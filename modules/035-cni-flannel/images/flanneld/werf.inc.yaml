@@ -1,28 +1,29 @@
 {{- $iptables_version := "1.8.9" }}
 {{- $iptables_image_version := $iptables_version | replace "." "-" }}
 ---
-artifact: {{ .ModuleName }}/{{ .ImageName }}-binaries-artifact
-from: {{ .Images.BASE_ALT_DEV }}
+image: {{ .ModuleName }}/{{ .ImageName }}-binaries-artifact
+fromImage: common/relocate-artifact
+final: false
 shell:
   install:
-    - mkdir -p /relocate/sbin
-    - |
-      for cmd in iptables iptables-save iptables-restore ip6tables ip6tables-save ip6tables-restore; do
-        ln -f -s /sbin/iptables-wrapper "/relocate/sbin/${cmd}"
-      done
-      # broken symlinks are not imported from the artifact
-      touch /sbin/iptables-wrapper
-    - |
-      for mode in legacy nft; do
-        for basecmd in iptables ip6tables; do
-          for cmd in ${basecmd}-${mode} ${basecmd}-${mode}-save ${basecmd}-${mode}-restore; do
-            ln -sf /sbin/xtables-${mode}-multi "/relocate/sbin/${cmd}"
-          done
+  - mkdir -p /relocate/sbin
+  - |
+    for cmd in iptables iptables-save iptables-restore ip6tables ip6tables-save ip6tables-restore; do
+      ln -f -s /sbin/iptables-wrapper "/relocate/sbin/${cmd}"
+    done
+    # broken symlinks are not imported from the artifact
+    touch /sbin/iptables-wrapper
+  - |
+    for mode in legacy nft; do
+      for basecmd in iptables ip6tables; do
+        for cmd in ${basecmd}-${mode} ${basecmd}-${mode}-save ${basecmd}-${mode}-restore; do
+          ln -sf /sbin/xtables-${mode}-multi "/relocate/sbin/${cmd}"
         done
       done
+    done
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-entrypoint-artifact
-from: {{ .Images.BASE_GOLANG_23_ALPINE_DEV }}
+from: {{ .Images.BASE_GOLANG_23_ALPINE }}
 final: false
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
@@ -34,12 +35,12 @@ mount:
   to: /go/pkg
 shell:
   install:
-    - export GOPROXY={{ $.GOPROXY }} GOOS=linux GOARCH=amd64 CGO_ENABLED=0
-    - cd /src
-    - go build -ldflags="-s -w" -o /entrypoint main.go
+  - export GOPROXY={{ $.GOPROXY }} GOOS=linux GOARCH=amd64 CGO_ENABLED=0
+  - cd /src
+  - go build -ldflags="-s -w" -o /entrypoint main.go
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
-from: {{ .Images.BASE_GOLANG_23_ALPINE_DEV }}
+from: {{ .Images.BASE_GOLANG_23_ALPINE }}
 final: false
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
@@ -50,12 +51,14 @@ mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
 shell:
+  beforeInstall:
+  {{- include "alpine packages proxy" . | nindent 2 }}
+  - apk add --no-cache linux-headers build-base
   install:
-    - apk add --no-cache linux-headers
-    - export GO_VERSION=${GOLANG_VERSION}
-    - export GOPROXY={{ $.GOPROXY }}
-    - cd /src
-    - make dist/flanneld
+  - export GO_VERSION=${GOLANG_VERSION}
+  - export GOPROXY={{ $.GOPROXY }}
+  - cd /src
+  - make dist/flanneld
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
 fromImage: common/src-artifact
@@ -65,12 +68,12 @@ git:
   to: /src/entrypoint
   stageDependencies:
     install:
-      - '**/*'
+    - '**/*'
 - add: /{{ .ModulePath }}modules/035-{{ .ModuleName }}/images/flanneld/patches
   to: /patches
   stageDependencies:
     install:
-      - '**/*'
+    - '**/*'
 shell:
   install:
   - mkdir -p /src/flannel
@@ -81,11 +84,11 @@ shell:
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
 import:
-- artifact: {{ .ModuleName }}/{{ .ImageName }}-binaries-artifact
+- image: {{ .ModuleName }}/{{ .ImageName }}-binaries-artifact
   add: /relocate
   to: /
   before: setup
-- artifact: registrypackages/iptables-artifact-{{ $iptables_image_version }}
+- image: registrypackages/iptables-artifact-{{ $iptables_image_version }}
   add: /
   to: /sbin
   includePaths:
@@ -96,11 +99,11 @@ import:
   add: /iptables-wrapper
   to: /sbin/iptables-wrapper
   before: setup
-- artifact: {{ .ModuleName }}/{{ .ImageName }}-artifact
+- image: {{ .ModuleName }}/{{ .ImageName }}-artifact
   add: /src/dist/flanneld
   to: /opt/bin/flanneld
   before: setup
-- artifact: {{ .ModuleName }}/{{ .ImageName }}-entrypoint-artifact
+- image: {{ .ModuleName }}/{{ .ImageName }}-entrypoint-artifact
   add: /entrypoint
   to: /entrypoint
   before: setup
