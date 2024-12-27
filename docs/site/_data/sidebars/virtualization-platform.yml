@@ -6,13 +6,9 @@ entries:
         ru: Введение
       url: /virtualization-platform/documentation/
     - title:
-        en: Administration guide
-        ru: Руководство администратора
+        en: Administration
+        ru: Администрирование
       folders:
-        - title:
-            en: Overview
-            ru: Введение
-          url: /virtualization-platform/documentation/admin/overview.html
         - title:
             en: Platform editions
             ru: Редакции платформы
@@ -20,36 +16,48 @@ entries:
         - title:
             en: Update channels
             ru: Каналы обновлений
-          url: /virtualization-platform/documentation/admin/update-channels.html
-        - title:
-            en: Install
-            ru: Установка платформы
-          url: /virtualization-platform/documentation/admin/install/steps/install.html
+          url: /virtualization-platform/documentation/admin/release-channels.html
           folders:
-            - title:
-                en: Requirements
-                ru: Требования
-              url: /virtualization-platform/documentation/admin/install/requirements.html
+        - title:
+            en: Requirements
+            ru: Требования
+          url: /virtualization-platform/documentation/admin/install/requirements.html
             # - title:
             #     en: Setup scenarios
             #     ru: Сценарии установки
             #   url: /virtualization-platform/documentation/admin/install/scenarios.html
-            - title:
-                en: Installation steps
-                ru: Порядок установки
-              folders:
+        - title:
+            en: Installation steps
+            ru: Порядок установки
+          folders:
                 - title:
-                    en: Prepare the environment
-                    ru: Подготовка окружения
+                    en: Installation overview
+                    ru: Обзор установки
+                  url: /virtualization-platform/documentation/admin/install/steps/overview.html
+                - title:
+                    en: Planning and preparing
+                    ru: Планирование и подготовка
                   url: /virtualization-platform/documentation/admin/install/steps/prepare.html
                 - title:
-                    en: Platform installation
-                    ru: Установка платформы
-                  url: /virtualization-platform/documentation/admin/install/steps/install.html
+                    en: Install
+                    ru: Установка базовой платформы
+                  url: /virtualization-platform/documentation/admin/install/steps/base-cluster.html
                 - title:
                     en: Initial access configuration
                     ru: Первичная настройка доступа
                   url: /virtualization-platform/documentation/admin/install/steps/access.html
+                - title:
+                    en: Adding nodes
+                    ru: Добавление узлов
+                  url: /virtualization-platform/documentation/admin/install/steps/nodes.html
+                - title:
+                    en: Setup storage
+                    ru: Настройка хранилища
+                  url: /virtualization-platform/documentation/admin/install/steps/storage.html
+                - title:
+                    en: Setup virtualization
+                    ru: Настройка виртуализации
+                  url: /virtualization-platform/documentation/admin/install/steps/virtualization.html
         - title:
             en: Platform configuration
             ru: Настройка платформы
@@ -123,8 +131,8 @@ entries:
                     ru: Сети виртуальных машин
                   url: /virtualization-platform/documentation/admin/platform-management/network/vm-network.html
                 - title:
-                    en: Ingress
-                    ru: Управление входящим трафиком
+                    en: Setup Ingress
+                    ru: Настройка Ingress
                   url: /virtualization-platform/documentation/admin/platform-management/network/ingress.html
                 - title:
                     en: Egress
@@ -146,10 +154,6 @@ entries:
                 en: Storage management
                 ru: Управление хранилищами
               folders:
-                - title:
-                    en: Storage settings
-                    ru: Настройка хранилищ
-                  url: /virtualization-platform/documentation/admin/platform-management/storage/supported-storage.html
                 - title:
                     en: Supported storages
                     ru: Поддерживаемые хранилища
@@ -239,8 +243,8 @@ entries:
             ru: Удаление платформы
           url: /virtualization-platform/documentation/admin/removing/removing.html
     - title:
-        en: User guide
-        ru: Руководство пользователя
+        en: Using
+        ru: Использование
       folders:
         - title:
             en: Overview

@@ -8,31 +8,87 @@ lang: ru
 
 При разработке модулей может возникнуть необходимость загрузить и развернуть модуль в обход каналов обновления. Для этого используется ресурс [ModulePullOverride](../../cr.html#modulepulloverride).
 
-Пример:
+Пример ModulePullOverride:
 
 ```yaml
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1alpha2
 kind: ModulePullOverride
 metadata:
   name: <module-name>
 spec:
   imageTag: <tag of the module image>
   scanInterval: <image digest check interval. Default: 15s>
-  source: <ModuleSource ref>
 ```
 
 Требования к параметрам ресурса:
-* Имя модуля **metadata.name** должно соответствовать имени модуля в *ModuleSource* (параметр `.status.modules.[].name`).
+* Имя модуля (`metadata.name`) должно соответствовать имени модуля в ModuleSource (`.status.modules.[].name`).
 
-* Тег образа контейнера **spec.imageTag** может быть любым. Например, ~pr333~, ~my-branch~.
+* Тег образа контейнера (`spec.imageTag`) может быть любым. Например, `pr333`, `my-branch`.
 
-* Параметр *ModuleSource* **spec.source** выдает данные для авторизации в registry.
+Необязательный интервал времени `spec.scanInterval` устанавливает интервал для проверки образов в registry. По умолчанию задан интервал в 15 секунд. Для принудительного обновления можно изменить интервал, либо установить на ModulePullOverride аннотацию `renew=""`.
 
-Необязательный интервал времени **spec.scanInterval** устанавливает интервал для проверки образов в registry. По умолчанию задан интервал в 15 секунд.
+Результат применения ModulePullOverride можно увидеть в сообщении (колонка `MESSAGE`) при получении информации об ModulePullOverride. Значение `Ready` означает применение параметров ModulePullOverride. Любое другое значение означает конфликт.
 
-Для принудительного обновления можно задать больший интервал, а также использовать аннотацию `renew=""`.
+Пример отсутствия конфликтов при применении ModulePullOverride:
 
-Пример команды:
+```console
+$ kubectl get modulepulloverrides.deckhouse.io 
+NAME      UPDATED   MESSAGE
+example1  10s       Ready
+```
+
+Требования к модулю:
+* Модуль должен существовать, иначе сообщение у ModulePullOverride будет *The module not found*.
+
+  Пример:
+
+  ```console
+  $ kubectl get modulepulloverrides.deckhouse.io 
+  NAME      UPDATED   MESSAGE
+  example1  10s       The module not found
+  ```
+
+* Модуль не должен быть встроенным модулем Deckhouse, иначе сообщение у ModulePullOverride будет *The module is embedded*.
+
+  Пример:
+
+  ```console
+  $ kubectl get modulepulloverrides.deckhouse.io 
+  NAME           UPDATED  MESSAGE
+  ingress-nginx  10s      The module is embedded
+  ```
+
+* Модуль должен быть включен, иначе сообщение у ModulePullOverride будет *The module disabled*.
+
+  Пример:
+
+  ```console
+  $ kubectl get modulepulloverrides.deckhouse.io 
+  NAME     UPDATED   MESSAGE
+  example  7s        The module disabled
+  ```
+
+* Модуль должен иметь источник, иначе сообщение у ModulePullOverride будет *The module does not have an active source*.
+  
+  Пример:
+
+  ```console
+  $ kubectl get modulepulloverrides.deckhouse.io 
+  NAME       UPDATED   MESSAGE
+  example    12s       The module does not have an active source
+  ```
+
+* Источник модуля должен существовать, иначе сообщение у ModulePullOverride будет *The source not found*.
+
+  Пример:
+
+  ```console
+  $ kubectl get modulepulloverrides.deckhouse.io 
+  NAME       UPDATED   MESSAGE
+  example    12s       The source not found
+  ```
+
+Чтобы обновить модуль не дожидаясь начала следующего цикла обновления, можно выполнить следующую команду:
 
 ```sh
 kubectl annotate mpo <name> renew=""
@@ -40,12 +96,53 @@ kubectl annotate mpo <name> renew=""
 
 ## Принцип действия
 
-При разработке этого ресурса указанный модуль не будет учитывать *ModuleUpdatePolicy*, а также не будет загружать и создавать объекты *ModuleRelease*.
+После создания ModulePullOverride, соответствующий модуль не будет учитывать ModuleUpdatePolicy, а также не будет загружать и создавать объекты ModuleRelease. Модуль будет загружаться при каждом изменении параметра `imageDigest`, после чего будет применяться в кластере. В статусе ModuleSource модуль получит признак `overridden: true`, который указывает на то, что используется ModulePullOverride, а не ModuleUpdatePolicy. Также, соответствующий объект Module будет иметь в своем статусе поле `IsOverridden` и версию модуля из `imageTag`.
 
-Вместо этого модуль будет загружаться при каждом изменении параметра `imageDigest` и будет применяться в кластере.
-При этом в статусе ресурса [ModuleSource](../../cr.html#modulesource) этот модуль получит признак `overridden: true`, который укажет на то, что используется ресурс [ModulePullOverride](../../cr.html#modulepulloverride).
+Пример:
 
-После удаления *ModulePullOverride* модуль продолжит функционировать, но если для него применена политика [ModuleUpdatePolicy](../../cr.html#moduleupdatepolicy), то при наличии загрузятся новые релизы, которые заменят текущую "версию разработчика".
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: Module
+metadata:
+  creationTimestamp: "2024-11-18T15:34:15Z"
+  generation: 16
+  labels:
+    deckhouse.io/epoch: "1326105356"
+  name: example
+  resourceVersion: "230347744"
+  uid: 7111cee7-50cd-4ecf-ba20-d691b13b0f59
+properties:
+  availableSources:
+  - example
+  releaseChannel: Stable
+  requirements:
+    deckhouse: '> v1.63.0'
+    kubernets: '> v1.30.0'
+  source: example
+  version: mpo-tag
+  weight: 910
+status:
+  conditions:
+  - lastProbeTime: "2024-12-03T15:57:20Z"
+    lastTransitionTime: "2024-12-03T15:57:20Z"
+    status: "True"
+    type: EnabledByModuleConfig
+  - lastProbeTime: "2024-12-03T15:59:58Z"
+    lastTransitionTime: "2024-12-03T15:57:26Z"
+    status: "True"
+    type: EnabledByModuleManager
+  - lastProbeTime: "2024-12-03T15:59:58Z"
+    lastTransitionTime: "2024-12-03T15:56:23Z"
+    status: "True"
+    type: IsReady
+  - lastProbeTime: "2024-12-03T15:59:48Z"
+    lastTransitionTime: "2024-12-03T15:56:47Z"
+    status: "True"
+    type: IsOverridden
+  phase: Ready
+```
+
+После удаления ModulePullOverride модуль продолжит работать. Но, если для модуля существует [ModuleUpdatePolicy](../../cr.html#moduleupdatepolicy), то загрузятся новые релизы модуля (ModuleRelease), которые заменят текущую "версию разработчика".
 
 ### Пример
 
@@ -71,42 +168,40 @@ kubectl annotate mpo <name> renew=""
      modulesCount: 2
    ```
 
-1. Создайте ресурс [ModulePullOverride](../../cr.html#modulepulloverride) для модуля `echo`:
+1. Включите модуль и создайте [ModulePullOverride](../../cr.html#modulepulloverride) для модуля `echo`:
 
    ```yaml
-   apiVersion: deckhouse.io/v1alpha1
+   apiVersion: deckhouse.io/v1alpha2
    kind: ModulePullOverride
    metadata:
      name: echo
    spec:
      imageTag: main-patch-03354
-     source: test
    ```
 
-   Этот ресурс будет проверять тег образа `registry.example.com/deckhouse/modules/echo:main-patch-03354` (`ms:spec.registry.repo/mpo:metadata.name:mpo:spec.imageTag`).
+   После создания ModulePullOverride, для модуля будет использоваться тег образа `registry.example.com/deckhouse/modules/echo:main-patch-03354` (`ms:spec.registry.repo/mpo:metadata.name:mpo:spec.imageTag`).
 
-1. При каждом обновлении статус этого ресурса будет меняться:
+1. Данные ModulePullOverride будут меняться при каждом обновлении модуля:
 
    ```yaml
-   apiVersion: deckhouse.io/v1alpha1
+   apiVersion: deckhouse.io/v1alpha2
    kind: ModulePullOverride
    metadata:
      name: echo
    spec:
      imageTag: main-patch-03354
      scanInterval: 15s
-     source: test
    status:
      imageDigest: sha256:ed958cc2156e3cc363f1932ca6ca2c7f8ae1b09ffc1ce1eb4f12478aed1befbc
-     message: ""
+     message: "Ready"
      updatedAt: "2023-12-07T08:41:21Z"
    ```
 
    где:
-   - **imageDigest** — уникальный идентификатор образа контейнера, который был загружен.
-   - **lastUpdated** — время последней загрузки образа.
+   - `imageDigest` — уникальный идентификатор образа контейнера, который был загружен.
+   - `lastUpdated` — время последней загрузки образа.
 
-1. При этом *ModuleSource* приобретет вид:
+1. При этом ModuleSource приобретет вид:
 
    ```yaml
    apiVersion: deckhouse.io/v1alpha1

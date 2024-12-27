@@ -80,7 +80,7 @@ After a successful start, the virtual machine should change to the `Running` sta
 Example of the output:
 
 ```console
-# kubectl get vm -o wide
+$ kubectl get vm -o wide
 NAME   PHASE     CORES   COREFRACTION   MEMORY   NEED RESTART   AGENT   MIGRATABLE   NODE           IPADDRESS     AGE
 vm     Running   1       100%           1Gi      False          False   True         virtlab-pt-1   10.66.10.19   6m18s
 ```

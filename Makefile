@@ -104,7 +104,7 @@ help:
 
 
 GOLANGCI_VERSION = 1.54.2
-TRIVY_VERSION= 0.38.3
+TRIVY_VERSION= 0.55.0
 PROMTOOL_VERSION = 2.37.0
 GATOR_VERSION = 3.9.0
 GH_VERSION = 2.52.0
@@ -142,14 +142,14 @@ bin/gator: bin/gator-${GATOR_VERSION}/gator
 bin/yq: bin ## Install yq deps for update-patchversion script.
 	curl -sSfL https://github.com/mikefarah/yq/releases/download/v4.25.3/yq_$(YQ_PLATFORM)_$(YQ_ARCH) -o bin/yq && chmod +x bin/yq
 
-.PHONY: tests-modules tests-matrix tests-openapi tests-controller tests-webhooks
+.PHONY: tests-modules dmt-lint tests-openapi tests-controller tests-webhooks
 tests-modules: ## Run unit tests for modules hooks and templates.
   ##~ Options: FOCUS=module-name
 	go test -timeout=${TESTS_TIMEOUT} -vet=off ${TESTS_PATH}
 
-tests-matrix: bin/promtool bin/gator ## Test how helm templates are rendered with different input values generated from values examples.
-  ##~ Options: FOCUS=module-name
-	go test -timeout=${TESTS_TIMEOUT} ./testing/matrix/ -v
+dmt-lint:
+	docker run --rm -v ${PWD}:/deckhouse-src --user $(id -u):$(id -g) ubuntu /deckhouse-src/tools/dmt-lint.sh
+
 
 tests-openapi: ## Run tests against modules openapi values schemas.
 	go test -vet=off ./testing/openapi_cases/
@@ -214,12 +214,14 @@ bin/regcopy: bin ## App to copy docker images to the Deckhouse registry
 
 bin/trivy-${TRIVY_VERSION}/trivy:
 	mkdir -p bin/trivy-${TRIVY_VERSION}
-	curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b ./bin/trivy-${TRIVY_VERSION} v${TRIVY_VERSION}
+	# curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b ./bin/trivy-${TRIVY_VERSION} v${TRIVY_VERSION}
+	curl --header "PRIVATE-TOKEN: ${TRIVY_TOKEN}" https://${DECKHOUSE_PRIVATE_REPO}/api/v4/projects/${TRIVY_PROJECT_ID}/packages/generic/deckhouse-trivy/v${TRIVY_VERSION}/trivy -o bin/trivy-${TRIVY_VERSION}/trivy
 
 .PHONY: trivy
 bin/trivy: bin bin/trivy-${TRIVY_VERSION}/trivy
-	rm -f bin/trivy
-	ln -s trivy-${TRIVY_VERSION}/trivy bin/trivy
+	rm -rf bin/trivy
+	chmod u+x bin/trivy-${TRIVY_VERSION}/trivy
+	ln -s ${PWD}/bin/trivy-${TRIVY_VERSION}/trivy bin/trivy
 
 .PHONY: cve-report cve-base-images
 cve-report: bin/trivy bin/jq ## Generate CVE report for a Deckhouse release.
@@ -301,7 +303,7 @@ bin/trdl: bin
 	chmod +x bin/trdl
 
 bin/werf: bin bin/trdl ## Install werf for images-digests generator.
-	trdl --home-dir bin/.trdl add werf https://tuf.werf.io 1 b7ff6bcbe598e072a86d595a3621924c8612c7e6dc6a82e919abe89707d7e3f468e616b5635630680dd1e98fc362ae5051728406700e6274c5ed1ad92bea52a2
+	@bash -c 'trdl --home-dir bin/.trdl add werf https://tuf.werf.io 1 b7ff6bcbe598e072a86d595a3621924c8612c7e6dc6a82e919abe89707d7e3f468e616b5635630680dd1e98fc362ae5051728406700e6274c5ed1ad92bea52a2'
 	@if command -v bin/werf >/dev/null 2>&1; then \
 		trdl --home-dir bin/.trdl --no-self-update=true update --in-background werf 1.2 stable; \
 	else \
@@ -339,6 +341,9 @@ set-build-envs:
   ifeq ($(SOURCE_REPO),)
  		export SOURCE_REPO=https://github.com
   endif
+  ifeq ($(CLOUD_PROVIDERS_SOURCE_REPO),)
+ 		export CLOUD_PROVIDERS_SOURCE_REPO=https://github.com
+  endif
   ifeq ($(GOPROXY),)
  		export GOPROXY=https://proxy.golang.org/
   endif
@@ -366,6 +371,13 @@ set-build-envs:
   ifeq ($(OBSERVABILITY_SOURCE_REPO),)
   	export OBSERVABILITY_SOURCE_REPO=https://example.com
   endif
+  ifeq ($(DECKHOUSE_PRIVATE_REPO),)
+  	export DECKHOUSE_PRIVATE_REPO=https://github.com
+  endif
+  ifeq ($(STRONGHOLD_PULL_TOKEN=),)
+  	export STRONGHOLD_PULL_TOKEN="token"
+  endif
+
 	export WERF_REPO=$(DEV_REGISTRY_PATH)
 	export REGISTRY_SUFFIX=$(shell echo $(WERF_ENV) | tr '[:upper:]' '[:lower:]')
 	export SECONDARY_REPO=--secondary-repo $(DECKHOUSE_REGISTRY_HOST)/deckhouse/$(REGISTRY_SUFFIX)
@@ -412,4 +424,4 @@ build: set-build-envs ## Build Deckhouse images.
   endif
 
 build-render: set-build-envs ## render werf.yaml for build Deckhouse images.
-	werf config render
+	werf config render --dev

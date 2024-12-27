@@ -9,7 +9,7 @@ properties:
     deprecated: true
     x-doc-deprecated: true
     description: |
-      > **DEPRECATED**. Moved to [global.modules.storageClass](#parameters-modules-storageclass).
+      > **Deprecated**. Use [settings.modules.storageClass](#parameters-modules-storageclass) instead.
 
       The StorageClass to use with all Deckhouse Kubernetes Platform components (Prometheus, Grafana, OpenVPN, etc.).
 

@@ -125,14 +125,14 @@
       ]
     },
     {
-      "title": "Delivery",
-      "url": "/products/delivery/",
+      "title": "Delivery Kit",
+      "url": "/products/delivery-kit/",
       "target": "",
       "rel": "",
       "items": [
         {
           "title": "О продукте",
-          "url": "/products/delivery/",
+          "url": "/products/delivery-kit/",
           "target": "",
           "rel": ""
         },

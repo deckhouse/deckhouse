@@ -11,6 +11,7 @@ spec:
   clusterIP: None
   ports:
   - port: 5555
+    targetPort: http
     name: http
   selector:
     app: kubeconfig-generator

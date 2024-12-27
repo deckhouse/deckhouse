@@ -384,7 +384,7 @@ Where:
 ![Diagram of pre-installation checks execution](../images/installing/preflight-checks.png)
 {% endofftopic %}
 
-### List of checks performed by the installer before starting Deckhouse installation:
+List of checks performed by the installer before starting Deckhouse installation:
 
 1. General checks:
    - The values of the parameters [PublicDomainTemplate](../deckhouse-configure-global.html#parameters-modules-publicdomaintemplate) and [clusterDomain](configuration.html#clusterconfiguration-clusterdomain) do not match.

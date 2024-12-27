@@ -71,6 +71,9 @@ func moduleFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) 
 	if module.Properties.UpdatePolicy != "" {
 		return nil, nil
 	}
+	if !module.ConditionStatus(v1alpha1.ModuleConditionEnabledByModuleConfig) {
+		return nil, nil
+	}
 	return &filteredModule{Name: module.Name, Source: module.Properties.Source}, nil
 }
 

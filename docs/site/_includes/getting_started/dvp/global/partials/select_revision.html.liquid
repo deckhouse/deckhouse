@@ -17,18 +17,18 @@
 #### Select the Deckhouse Virtualization Platform revision
 {% endif %}
 <div class="tabs">
-    {%- for revision in site.data.getting_started.dkp_data.global.revisions %}
+    {%- for revision in site.data.getting_started.dvp_data.global.revisions %}
         <a id='tab_layout_{{ revision }}' href="javascript:void(0)" class="tabs__btn tabs__btn_revision{% if revision == 'ce' %} active{% endif %}"
         onclick="openTabAndSaveStatus(event, 'tabs__btn_revision', 'tabs__content_revision', 'block_layout_{{ revision }}', 'dhctl-revision', '{{ revision }}');
                  openTabAndSaveStatus(event, 'tabs__btn_revision', 'tabs__content_other', 'block_other_{{ revision }}');
-                 toggleDisabled('tab_layout_{{ revision }}', '[license-token]');" >
+                 toggleDisabled('tab_layout_{{ revision }}', '[license-token-ee]');" >
         {{ site.data.i18n[revision] }}
         </a>
     {%- endfor %}
 </div>
 {%- endunless %}
 
-{%- for revision in site.data.getting_started.dkp_data.global.revisions %}
+{%- for revision in site.data.getting_started.dvp_data.global.revisions %}
 {%- if page.ee_only == true and revision == 'ce' %}{% continue %}{% endif %}
 {%- if page.ce_only == true and revision == 'ee' %}{% continue %}{% endif %}
 {% assign layoutCode = '' | append: layout.code %}
@@ -60,7 +60,7 @@
 
 </div>
 
-{%- for revision in site.data.getting_started.dkp_data.global.revisions %}
+{%- for revision in site.data.getting_started.dvp_data.global.revisions %}
 {%- if revision =='ce' and page.ee_only == true %}{% continue %}{% endif %}
 
 {% if revision == 'ee' %}
@@ -83,21 +83,21 @@
 <script>
 $(document).ready(function() {
   $.cookie('lang', '{{ page.lang }}');
-  $('#enter-license-key').click((e)=> {
+  $('#enter-license-key-ee').click((e)=> {
     e.preventDefault();
-    let licenseToken = $('[license-token]').val().trim();
-    getLicenseToken(licenseToken)
+    let licenseToken = $('[license-token-ee]').val().trim();
+    getLicenseToken(licenseToken, 'ee')
   });
 
-  $('[license-token]').keypress((e) => {
+  $('[license-token-ee]').keypress((e) => {
       const keycode = (event.keyCode ? event.keyCode : event.which);
-      let licenseToken = $('[license-token]').val().trim();
+      let licenseToken = $('[license-token-ee]').val().trim();
       if (keycode == '13') {
-        getLicenseToken(licenseToken)
+        getLicenseToken(licenseToken, 'ee')
       }
   });
 
-  triggerBlockOnItemContent('[license-token]', '.dimmer-block-content', {% if page.ee_only != true %}true{% endif %});
+  triggerBlockOnItemContent('[license-token-ee]', '.dimmer-block-content', {% if page.ee_only != true %}true{% endif %});
 
   generate_password(true);
   replace_snippet_password();

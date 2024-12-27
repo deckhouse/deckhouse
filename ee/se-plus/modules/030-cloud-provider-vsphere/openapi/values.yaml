@@ -47,6 +47,10 @@ properties:
               insecure: true
             zones: ["aaa", "bbb"]
             vmFolderPath: dev/test
+            nsxt:
+              loadBalancerClass:
+                - name: class1
+                  ipPoolName: pool2
             masterNodeGroup:
               instanceClass:
                 datastore: dev/lun_1
