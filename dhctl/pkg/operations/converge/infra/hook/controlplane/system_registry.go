@@ -232,7 +232,7 @@ func setAnnotations(kubeClient *client.KubernetesClient, nodeName string, annota
 		},
 	}
 
-	for expectedValue, annotation := range annotations {
+	for annotation, expectedValue := range annotations {
 		// Check if the annotation exists
 		if currentValue, ok := nodeAnnotations[annotation]; ok && expectedValue == currentValue {
 			continue
