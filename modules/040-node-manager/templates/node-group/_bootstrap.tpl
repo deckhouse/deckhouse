@@ -103,12 +103,25 @@ def ssl_request(a_args):
 
     return response
 
-response = ssl_request({
-    "url":      sys.argv[1],
-    "headers":  {'Authorization': 'Bearer ' + sys.argv[2]},
-    "cafile":   '/var/lib/bashible/ca.crt'
-});
-
+try:
+    response = ssl_request({
+        "url":      sys.argv[1],
+        "headers":  {'Authorization': 'Bearer ' + sys.argv[2]},
+        "cafile":   '/var/lib/bashible/ca.crt'
+    });
+except HTTPError as e:
+    if e.getcode() == 401:
+        sys.stderr.write(
+            "Bootstrap-token compiled in this bootstrap.sh script is expired."
+            " Looks like more than 4 hours passed from the time it's been issued.\n"
+        )
+        sys.exit(2)
+    sys.stderr.write(
+        "Access to {} return HTTP Error {}: {}".format(
+            sys.argv[2], e.getcode(), e.read()[:255]
+        )
+    )
+    sys.exit(1)
 data = json.loads(response.data)
 sys.stdout.write(data["bootstrap"])
 EOF
