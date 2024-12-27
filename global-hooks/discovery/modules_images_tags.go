@@ -29,7 +29,7 @@ import (
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
-var re = regexp.MustCompile(`^([0-9]+)-([a-zA-Z-]+)$`)
+var re = regexp.MustCompile(`^([0-9]+)-([0-9a-zA-Z-]+)$`)
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	OnStartup: &go_hook.OrderedConfig{Order: 10},

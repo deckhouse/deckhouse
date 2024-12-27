@@ -1,12 +1,12 @@
 {% assign revision=include.revision %}
 
-{% if revision == 'ee' %}
-{% include getting_started/global/EE_ACCESS_RU.md %}
-<div class="dimmer-block-content{% if page.ee_only %} TODOdisabled{% endif %}">
+{% if revision != "ce" %}
+{% include getting_started/global/EE_ACCESS_RU.md revision=revision %}
+<div class="dimmer-block-content{% if page.ee_only %} disabled{% endif %}">
 {% endif %}
 
 <div markdown="1">
-Ниже сгенерированы рекомендованные настройки для установки Deckhouse Kubernetes Platform {% if revision == 'ee' %}Enterprise Edition{% else %}Community Edition{% endif %}:
+Ниже сгенерированы рекомендованные настройки для установки Deckhouse Kubernetes Platform {{ site.data.i18n[revision] }}:
 - `config.yml` — файл первичной конфигурации кластера. Содержит параметры инсталлятора{% if page.platform_type == 'cloud' %}, параметры доступа облачного провайдера{% endif %} и начальные параметры кластера.
 {% if page.platform_type == 'cloud' %}- `resources.yml` — описание ресурсов для создания после установки (настройки узлов и Ingress-контроллера).{% endif %}
 
@@ -22,7 +22,7 @@
 {%- endif %}
 
 Создайте файл `config.yml`.
-{% capture includePath %}_includes/getting_started/{{ page.platform_code }}/partials/config.ru.yml{% if include.layout.size > 0 %}.{{ include.layout }}{% endif %}.{{ revision }}.inc{% endcapture %}
+{% capture includePath %}_includes/getting_started/{{ page.platform_code }}/partials/config.ru.yml{% if include.layout.size > 0 %}.{{ include.layout }}{% endif %}.{% if revision != "ce" %}{{ "other" }}{% else %}{{ revision }}{% endif %}.inc{% endcapture %}
 {% snippetcut name="config.yml" selector="config-yml" %}
 {% include_file "{{ includePath }}" syntax="yaml" %}
 {% endsnippetcut %}
@@ -65,6 +65,17 @@
 {% endif %}
 </div>
 
-{% if revision == 'ee' %}
+<script>
+  $(document).ready(function() {
+    document.getElementById('block_layout_{{ revision }}').querySelectorAll('span').forEach(element => {
+      element.textContent = element.textContent.replace('<REVISION>', '{{ revision }}');
+    })
+    document.getElementById('block_layout_{{ revision }}').querySelectorAll('.dimmer-block-content div .snippetcut .snippetcut__raw').forEach(element => {
+      element.textContent = element.textContent.replace('<REVISION>', '{{ revision }}');
+    })
+  });
+</script>
+
+{% if revision != "ce" %}
 </div>
 {% endif %}

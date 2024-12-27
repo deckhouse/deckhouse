@@ -387,7 +387,6 @@ var DefaultImagesDigests = map[string]interface{}{
 	"prometheus": map[string]interface{}{
 		"alertmanager":                "imageHash-prometheus-alertmanager",
 		"alertsReceiver":              "imageHash-prometheus-alertsReceiver",
-		"grafana":                     "imageHash-prometheus-grafana",
 		"grafanaDashboardProvisioner": "imageHash-prometheus-grafanaDashboardProvisioner",
 		"grafanaV10":                  "imageHash-prometheus-grafanaV10",
 		"memcached":                   "imageHash-prometheus-memcached",
@@ -418,7 +417,7 @@ var DefaultImagesDigests = map[string]interface{}{
 		"crictl131":                 "imageHash-registrypackages-crictl131",
 		"d8":                        "imageHash-registrypackages-d8",
 		"d8CaUpdater060824":         "imageHash-registrypackages-d8CaUpdater060824",
-		"d8Curl821":                 "imageHash-registrypackages-d8Curl821",
+		"d8Curl891":                 "imageHash-registrypackages-d8Curl891",
 		"dockerRegistry283":         "imageHash-registrypackages-dockerRegistry283",
 		"drbd":                      "imageHash-registrypackages-drbd",
 		"e2fsprogs1470":             "imageHash-registrypackages-e2fsprogs1470",
