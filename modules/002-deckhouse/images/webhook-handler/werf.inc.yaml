@@ -2,11 +2,11 @@
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/shell-operator
 import:
-- artifact: yq4-artifact
+- image: common/yq4-artifact
   add: /usr/local/bin/yq
   to: /usr/local/bin/yq
   before: install
-- artifact: semver-artifact
+- image: common/semver-artifact
   add: /usr/local/bin/semver
   to: /usr/local/bin/semver
   before: setup
