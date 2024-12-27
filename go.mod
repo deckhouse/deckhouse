@@ -9,12 +9,10 @@ require (
 	github.com/clarketm/json v1.15.7
 	github.com/cloudflare/cfssl v1.5.0
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc
-	github.com/fatih/color v1.13.0
+	github.com/fatih/color v1.13.0 // indirect
 	github.com/flant/addon-operator v0.0.0-20241213133444-cc7128a26f51
 	github.com/flant/kube-client v1.2.2
 	github.com/flant/shell-operator v1.5.3-0.20241209162655-7e40c61f7666
-	github.com/gammazero/deque v0.0.0-20190521012701-46e4ffb7a622
-	github.com/ghodss/yaml v1.0.0
 	github.com/go-openapi/spec v0.19.8
 	github.com/gojuno/minimock/v3 v3.4.3
 	github.com/golang/protobuf v1.5.4
@@ -24,10 +22,7 @@ require (
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/iancoleman/strcase v0.0.0-20191112232945-16388991a334
 	github.com/imdario/mergo v0.3.15
-	github.com/kyokomi/emoji v2.1.0+incompatible
-	github.com/mitchellh/hashstructure/v2 v2.0.2
 	github.com/mitchellh/mapstructure v1.5.0 // indirect
-	github.com/mohae/deepcopy v0.0.0-20170929034955-c48cc78d4826
 	github.com/onsi/ginkgo v1.16.5
 	github.com/onsi/gomega v1.35.1
 	github.com/otiai10/copy v1.14.0
