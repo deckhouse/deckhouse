@@ -1,6 +1,6 @@
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
-fromArtifact: src-artifact
+fromArtifact: common/src-artifact
 final: false
 git:
 - add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/entrypoint
@@ -26,7 +26,7 @@ image: {{ .ModuleName }}/{{ .ImageName }}/entrypoint-artifact
 from: {{ .Images.BASE_GOLANG_21_BULLSEYE }}
 final: false
 import:
-- artifact: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
   add: /src/entrypoint
   to: /entrypoint
   before: install
@@ -45,7 +45,7 @@ image: {{ .ModuleName }}/build-artifact
 from: {{ .Images.BASE_GOLANG_21_BULLSEYE_DEV }}
 final: false
 import:
-- artifact: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
   add: /src
   to: /build
   before: install
@@ -68,7 +68,7 @@ shell:
 {{ $copyFiles := "/sbin/setcap" }}
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-binaries-artifact
-fromFrom: {{ common/relocate-artifact }}
+fromImage: common/relocate-artifact
 final: false
 shell:
   install:

@@ -10,7 +10,7 @@ docker:
   ENTRYPOINT: ["/bin/node_exporter"]
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
-fromArtifact: src-artifact
+fromArtifact: common/src-artifact
 final: false
 shell:
   install:
