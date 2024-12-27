@@ -40,6 +40,12 @@ import:
   group: 1337
   after: setup
 - artifact: {{ .ModuleName }}/{{ .ImageName }}-binary-artifact
+  add: /busybox/su
+  to: /bin/su
+  owner: 1337
+  group: 1337
+  after: setup
+- artifact: {{ .ModuleName }}/{{ .ImageName }}-binary-artifact
   add: /busybox/strace
   to: /bin/strace
   owner: 1337
@@ -69,6 +75,7 @@ shell:
   - ./usr/local/bin/busybox --install /busybox
   - chmod 0500 /busybox/ls
   - chmod 0500 /busybox/id
+  - chmod 0500 /busybox/su
   - curl --output /busybox/strace https://raw.githubusercontent.com/yunchih/static-binaries/master/strace
   - chmod 0755 /busybox/strace
   - chown 1337:1337 /busybox/strace
