@@ -1,16 +1,33 @@
 ---
-artifact: {{ .ModuleName }}/build-fping-static-artifact
-from: {{ .Images.BASE_UBUNTU }}
+image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+fromArtifact: common/src-artifact
+final: false
+git:
+- add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/src
+  to: /src/monitoring-ping
+  stageDependencies:
+    install:
+    - '**/*'
+shell:
+  install:
+  - cd /src
+  - git clone -b v5.2 --depth=1 {{ .SOURCE_REPO }}/schweikert/fping.git ./fping
+  - rm -rf fping/.git
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-fping-artifact
+from: {{ .Images.BASE_GOLANG_23_BOOKWORM }}
+final: false
+import:
+- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+  add: /src/fping
+  to: /src
+  before: install
 shell:
   beforeInstall:
-  - apt-get update
-  - DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends openssh-client
-  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
-  install:
-  - mkdir build && cd build
+  {{- include "debian packages proxy" . | nindent 2 }}
   - apt update && apt install -y --no-install-recommends git build-essential ca-certificates autoconf autotools-dev automake
-  - git clone -b v5.1 --single-branch --depth=1 {{ $.SOURCE_REPO }}/schweikert/fping.git ./src
-  - cd ./src
+  install:
+  - cd src
   - autoreconf -i
   - ./configure LDFLAGS="-static" --prefix=/opt/fping-static
   - make
@@ -20,14 +37,15 @@ shell:
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/python-static
-git:
-- add: /{{ $.ModulePath }}modules/340-{{ $.ModuleName }}/images/{{ $.ImageName }}/
-  to: /src
-  stageDependencies:
-    install:
-    - '**/*'
+mount:
+- from: tmp_dir
+  to: /root/.cache/pip
 import:
-- artifact: {{ $.ModuleName }}/build-fping-static-artifact
+- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+  add: /src/monitoring-ping
+  to: /src
+  before: install
+- image: {{ .ModuleName }}/{{ .ImageName }}-fping-artifact
   add: /opt/fping-static/sbin/fping
   to: /usr/sbin/fping
   before: setup
