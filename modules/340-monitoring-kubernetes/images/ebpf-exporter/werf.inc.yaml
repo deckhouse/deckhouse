@@ -60,7 +60,7 @@ mount:
   to: /go/pkg
 shell:
   beforeInstall:
-  {{- include "ubuntu packages proxy" . | nindent 2 }}
+  {{- include "debian packages proxy" . | nindent 2 }}
   - apt-get install -y build-essential clang libelf-dev
   install:
   - export BUILD_DIR="/build/ebpf-exporter"
