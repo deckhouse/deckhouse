@@ -53,6 +53,9 @@ mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
 shell:
+  beforeInstall:
+  {{- include "alpine packages proxy" . | nindent 2 }}
+  - apk add --no-cache make
   install:
   - export BUILD_DIR="/build/ebpf-exporter"
   - cd ${BUILD_DIR}
