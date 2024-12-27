@@ -46,7 +46,8 @@ function setup_registry_data_device() {
 
     # Add an entry to /etc/fstab if it does not already exist
     if ! grep -q "$label" "$fstab_file"; then
-      echo "LABEL=$label $mount_point ext4 defaults,discard,x-systemd.automount 0 0" >> "$fstab_file"
+      # x-systemd.automount is not used to enable disk unmounting
+      echo "LABEL=$label $mount_point ext4 defaults,discard 0 0" >> "$fstab_file"
     fi
 
     # Mount the device if it is not already mounted
