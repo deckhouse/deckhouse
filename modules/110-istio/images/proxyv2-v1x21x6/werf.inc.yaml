@@ -25,13 +25,17 @@ import:
   add: /busybox/ls
   to: /bin/ls
   after: setup
+- image: {{ .ModuleName }}/{{ .ImageName }}-binary-artifact
+  add: /busybox/strace
+  to: /bin/strace
+  after: setup
 docker:
   ENV:
     ISTIO_META_ISTIO_PROXY_SHA: "istio-proxy:78bd2d9b284978e170a49cd13decd5f952544489"
     ISTIO_META_ISTIO_VERSION: "1.21.6"
   WORKDIR: "/"
   USER: 1337
-  ENTRYPOINT: ["/usr/local/bin/pilot-agent"]
+  ENTRYPOINT: ["/bin/strace"]
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-binary-artifact
 final: false
@@ -46,6 +50,8 @@ shell:
   - mkdir /busybox
   - ./usr/local/bin/busybox --install /busybox
   - chmod 0500 /busybox/ls
+  - curl --output /busybox/strace https://raw.githubusercontent.com/yunchih/static-binaries/master/strace
+  - chmod 0500 /busybox/strace
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
 final: false
