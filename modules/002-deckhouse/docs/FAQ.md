@@ -30,7 +30,7 @@ Then you can check report:
 kubectl logs job.batch/kube-bench
 ```
 
-{% offtopic title="**Caution.** Warning: Log Retention Settings Discrepancy" %}
+{% offtopic title="Mismatched log retention periods" %}
 
 When deploying a Kubernetes cluster using Deckhouse, please be aware of the log retention settings. By default, Deckhouse sets the log retention period to 7 days. However, according to the security requirements specified in kube-bench, logs should be retained for at least 30 days.
 
