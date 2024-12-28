@@ -24,7 +24,7 @@ import:
   add: /src/_output/bin/kubectl
   to: /usr/local/bin/kubectl
   before: setup
-- artifact: tini-artifact
+- image: common/tini-artifact
   add: /tini/tini-static
   to: /sbin/tini
   before: install

@@ -17,6 +17,7 @@ package config
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"sync"
 	"time"
 
@@ -180,27 +181,10 @@ func (r *reconciler) processModule(ctx context.Context, moduleConfig *v1alpha1.M
 	metricGroup := fmt.Sprintf("module_%s_at_conflict", module.Name)
 	r.metricStorage.Grouped().ExpireGroupMetrics(metricGroup)
 
-	enabled := module.ConditionStatus(v1alpha1.ModuleConditionEnabledByModuleConfig)
-
 	if !moduleConfig.IsEnabled() {
-		// disable module
-		if enabled {
-			r.log.Debugf("disable the '%s' module", moduleConfig.Name)
-			err := utils.UpdateStatus[*v1alpha1.Module](ctx, r.client, module, func(module *v1alpha1.Module) bool {
-				// modules in Conflict and DownloadingError should not be installed, and they cannot receive events, so set Available phase manually
-				if module.Status.Phase == v1alpha1.ModulePhaseConflict || module.Status.Phase == v1alpha1.ModulePhaseDownloadingError {
-					module.Status.Phase = v1alpha1.ModulePhaseAvailable
-					module.SetConditionFalse(v1alpha1.ModuleConditionEnabledByModuleManager, "", "")
-					module.SetConditionFalse(v1alpha1.ModuleConditionIsReady, v1alpha1.ModuleReasonNotInstalled, v1alpha1.ModuleMessageNotInstalled)
-				}
-				module.SetConditionFalse(v1alpha1.ModuleConditionEnabledByModuleConfig, v1alpha1.ModuleReasonDisabled, v1alpha1.ModuleMessageDisabled)
-				module.SetConditionFalse(v1alpha1.ModuleConditionIsReady, v1alpha1.ModuleReasonDisabled, v1alpha1.ModuleMessageDisabled)
-				return true
-			})
-			if err != nil {
-				r.log.Errorf("failed to disable the '%s' module: %v", module.Name, err)
-				return ctrl.Result{Requeue: true}, nil
-			}
+		if err := r.disableModule(ctx, module); err != nil {
+			r.log.Error("failed to disable the module", slog.String("module", module.Name), log.Err(err))
+			return ctrl.Result{Requeue: true}, nil
 		}
 
 		err := utils.Update[*v1alpha1.ModuleConfig](ctx, r.client, moduleConfig, func(moduleConfig *v1alpha1.ModuleConfig) bool {
@@ -221,31 +205,14 @@ func (r *reconciler) processModule(ctx context.Context, moduleConfig *v1alpha1.M
 	}
 
 	if moduleConfig.IsEnabled() {
-		// enable module
-		if !enabled {
-			r.log.Debugf("enable the '%s' module", moduleConfig.Name)
-			err := utils.UpdateStatus[*v1alpha1.Module](ctx, r.client, module, func(module *v1alpha1.Module) bool {
-				module.SetConditionTrue(v1alpha1.ModuleConditionEnabledByModuleConfig)
-				return true
-			})
-			if err != nil {
-				r.log.Errorf("failed to enable the '%s' module: %v", module.Name, err)
-				return ctrl.Result{Requeue: true}, nil
-			}
+		if err := r.enableModule(ctx, module); err != nil {
+			r.log.Error("failed to enable the module", slog.String("module", module.Name), log.Err(err))
+			return ctrl.Result{Requeue: true}, nil
 		}
 	}
 
-	// set finalizer
-	err := utils.Update[*v1alpha1.ModuleConfig](ctx, r.client, moduleConfig, func(moduleConfig *v1alpha1.ModuleConfig) bool {
-		// to handle delete event
-		if !controllerutil.ContainsFinalizer(moduleConfig, v1alpha1.ModuleConfigFinalizer) {
-			controllerutil.AddFinalizer(moduleConfig, v1alpha1.ModuleConfigFinalizer)
-			return true
-		}
-		return false
-	})
-	if err != nil {
-		r.log.Errorf("failed to set finalizer the '%s' module config: %v", moduleConfig.Name, err)
+	if err := r.addFinalizer(ctx, moduleConfig); err != nil {
+		r.log.Error("failed to add finalizer", slog.String("module", module.Name), log.Err(err))
 		return ctrl.Result{Requeue: true}, nil
 	}
 
@@ -269,7 +236,7 @@ func (r *reconciler) processModule(ctx context.Context, moduleConfig *v1alpha1.M
 
 	// change source by module config
 	if moduleConfig.Spec.Source != "" && module.Properties.Source != moduleConfig.Spec.Source {
-		if err = r.changeModuleSource(ctx, module, moduleConfig.Spec.Source, updatePolicy); err != nil {
+		if err := r.changeModuleSource(ctx, module, moduleConfig.Spec.Source, updatePolicy); err != nil {
 			r.log.Debugf("failed to change source for the '%s' module: %v", module.Name, err)
 			return ctrl.Result{Requeue: true}, nil
 		}
@@ -278,7 +245,7 @@ func (r *reconciler) processModule(ctx context.Context, moduleConfig *v1alpha1.M
 	if module.Properties.Source == "" {
 		// change source by available source
 		if len(module.Properties.AvailableSources) == 1 {
-			if err = r.changeModuleSource(ctx, module, module.Properties.AvailableSources[0], updatePolicy); err != nil {
+			if err := r.changeModuleSource(ctx, module, module.Properties.AvailableSources[0], updatePolicy); err != nil {
 				r.log.Debugf("failed to change source for the '%s' module: %v", module.Name, err)
 				return ctrl.Result{Requeue: true}, nil
 			}
@@ -286,7 +253,7 @@ func (r *reconciler) processModule(ctx context.Context, moduleConfig *v1alpha1.M
 
 		if len(module.Properties.AvailableSources) > 1 {
 			// set conflict if there are several available sources
-			err = utils.UpdateStatus[*v1alpha1.Module](ctx, r.client, module, func(module *v1alpha1.Module) bool {
+			err := utils.UpdateStatus[*v1alpha1.Module](ctx, r.client, module, func(module *v1alpha1.Module) bool {
 				module.Status.Phase = v1alpha1.ModulePhaseConflict
 				module.SetConditionFalse(v1alpha1.ModuleConditionEnabledByModuleManager, v1alpha1.ModuleReasonConflict, v1alpha1.ModuleMessageConflict)
 				module.SetConditionFalse(v1alpha1.ModuleConditionIsReady, v1alpha1.ModuleReasonConflict, v1alpha1.ModuleMessageConflict)
@@ -304,7 +271,7 @@ func (r *reconciler) processModule(ctx context.Context, moduleConfig *v1alpha1.M
 	}
 
 	// update only the update policy if nothing else has changed
-	err = utils.Update[*v1alpha1.Module](ctx, r.client, module, func(module *v1alpha1.Module) bool {
+	err := utils.Update[*v1alpha1.Module](ctx, r.client, module, func(module *v1alpha1.Module) bool {
 		if module.Properties.UpdatePolicy != updatePolicy {
 			module.Properties.UpdatePolicy = updatePolicy
 			return true
@@ -327,16 +294,14 @@ func (r *reconciler) deleteModuleConfig(ctx context.Context, moduleConfig *v1alp
 	if err := r.client.Get(ctx, client.ObjectKey{Name: moduleConfig.Name}, module); err != nil {
 		if apierrors.IsNotFound(err) {
 			r.log.Warnf("the module '%s' not found", moduleConfig.Name)
+			if err = r.removeFinalizer(ctx, moduleConfig); err != nil {
+				r.log.Error("failed to remove finalizer", slog.String("module", moduleConfig.Name), log.Err(err))
+				return ctrl.Result{Requeue: true}, nil
+			}
 			return ctrl.Result{}, nil
 		}
 		r.log.Errorf("failed to get the '%s' module: %v", moduleConfig.Name, err)
 		return ctrl.Result{Requeue: true}, nil
-	}
-
-	// skip embedded modules
-	if module.IsEmbedded() {
-		r.log.Debugf("skip the '%s' embedded module", module.Name)
-		return ctrl.Result{}, nil
 	}
 
 	// skip system modules
@@ -345,32 +310,59 @@ func (r *reconciler) deleteModuleConfig(ctx context.Context, moduleConfig *v1alp
 		return ctrl.Result{}, nil
 	}
 
-	enabled := module.ConditionStatus(v1alpha1.ModuleConditionEnabledByModuleConfig)
-
 	// disable module
-	if enabled {
-		err := utils.UpdateStatus[*v1alpha1.Module](ctx, r.client, module, func(module *v1alpha1.Module) bool {
-			module.SetConditionFalse(v1alpha1.ModuleConditionEnabledByModuleConfig, v1alpha1.ModuleReasonDisabled, v1alpha1.ModuleMessageDisabled)
-			module.SetConditionFalse(v1alpha1.ModuleConditionIsReady, v1alpha1.ModuleReasonDisabled, v1alpha1.ModuleMessageDisabled)
+	if err := r.disableModule(ctx, module); err != nil {
+		r.log.Error("failed to disable the module", slog.String("module", module.Name), log.Err(err))
+		return ctrl.Result{Requeue: true}, nil
+	}
+
+	// clear downloaded module
+	if !module.IsEmbedded() {
+		err := utils.Update[*v1alpha1.Module](ctx, r.client, module, func(module *v1alpha1.Module) bool {
+			module.Properties.UpdatePolicy = ""
+			module.Properties.Source = ""
 			return true
 		})
 		if err != nil {
-			r.log.Errorf("failed to disable the '%s' module: %v", module.Name, err)
+			r.log.Error("failed to update the module", slog.String("module", module.Name), log.Err(err))
 			return ctrl.Result{Requeue: true}, nil
 		}
 	}
 
-	err := utils.Update[*v1alpha1.Module](ctx, r.client, module, func(module *v1alpha1.Module) bool {
-		module.Properties.UpdatePolicy = ""
-		module.Properties.Source = ""
-		return true
-	})
-	if err != nil {
-		r.log.Errorf("failed to update the '%s' module: %v", module.Name, err)
+	if err := r.removeFinalizer(ctx, moduleConfig); err != nil {
+		r.log.Error("failed to remove finalizer from ModuleConfig", slog.String("module", moduleConfig.Name), log.Err(err))
 		return ctrl.Result{Requeue: true}, nil
 	}
 
-	err = utils.Update[*v1alpha1.ModuleConfig](ctx, r.client, moduleConfig, func(moduleConfig *v1alpha1.ModuleConfig) bool {
+	return ctrl.Result{}, nil
+}
+
+func (r *reconciler) changeModuleSource(ctx context.Context, module *v1alpha1.Module, source, updatePolicy string) error {
+	r.log.Debug("set new source to the module", slog.String("moduleSource", source), slog.String("module", module.Name))
+	err := utils.Update[*v1alpha1.Module](ctx, r.client, module, func(module *v1alpha1.Module) bool {
+		module.Properties.Source = source
+		module.Properties.UpdatePolicy = updatePolicy
+		return true
+	})
+	if err != nil {
+		return fmt.Errorf("update the '%s' module: %w", module.Name, err)
+	}
+	return nil
+}
+
+func (r *reconciler) addFinalizer(ctx context.Context, config *v1alpha1.ModuleConfig) error {
+	return utils.Update[*v1alpha1.ModuleConfig](ctx, r.client, config, func(config *v1alpha1.ModuleConfig) bool {
+		// to handle delete event
+		if !controllerutil.ContainsFinalizer(config, v1alpha1.ModuleConfigFinalizer) {
+			controllerutil.AddFinalizer(config, v1alpha1.ModuleConfigFinalizer)
+			return true
+		}
+		return false
+	})
+}
+
+func (r *reconciler) removeFinalizer(ctx context.Context, config *v1alpha1.ModuleConfig) error {
+	return utils.Update[*v1alpha1.ModuleConfig](ctx, r.client, config, func(moduleConfig *v1alpha1.ModuleConfig) bool {
 		var needsUpdate bool
 		if controllerutil.ContainsFinalizer(moduleConfig, v1alpha1.ModuleConfigFinalizer) {
 			controllerutil.RemoveFinalizer(moduleConfig, v1alpha1.ModuleConfigFinalizer)
@@ -382,23 +374,33 @@ func (r *reconciler) deleteModuleConfig(ctx context.Context, moduleConfig *v1alp
 		}
 		return needsUpdate
 	})
-	if err != nil {
-		r.log.Errorf("failed to remove finalizer from the '%s' module config: %v", moduleConfig.Name, err)
-		return ctrl.Result{Requeue: true}, nil
-	}
-
-	return ctrl.Result{}, nil
 }
 
-func (r *reconciler) changeModuleSource(ctx context.Context, module *v1alpha1.Module, source, updatePolicy string) error {
-	r.log.Debugf("set new '%s' source to the '%s' module", source, module.Name)
-	err := utils.Update[*v1alpha1.Module](ctx, r.client, module, func(module *v1alpha1.Module) bool {
-		module.Properties.Source = source
-		module.Properties.UpdatePolicy = updatePolicy
+func (r *reconciler) disableModule(ctx context.Context, module *v1alpha1.Module) error {
+	r.log.Debug("disable the module", slog.String("module", module.Name))
+	return utils.UpdateStatus[*v1alpha1.Module](ctx, r.client, module, func(module *v1alpha1.Module) bool {
+		if !module.ConditionStatus(v1alpha1.ModuleConditionEnabledByModuleConfig) {
+			return false
+		}
+		// modules in Conflict should not be installed, and they cannot receive events, so set Available phase manually
+		if module.Status.Phase == v1alpha1.ModulePhaseConflict || module.Status.Phase == v1alpha1.ModulePhaseDownloadingError {
+			module.Status.Phase = v1alpha1.ModulePhaseAvailable
+			module.SetConditionFalse(v1alpha1.ModuleConditionEnabledByModuleManager, "", "")
+			module.SetConditionFalse(v1alpha1.ModuleConditionIsReady, v1alpha1.ModuleReasonNotInstalled, v1alpha1.ModuleMessageNotInstalled)
+		}
+		module.SetConditionFalse(v1alpha1.ModuleConditionEnabledByModuleConfig, v1alpha1.ModuleReasonDisabled, v1alpha1.ModuleMessageDisabled)
+		module.SetConditionFalse(v1alpha1.ModuleConditionIsReady, v1alpha1.ModuleReasonDisabled, v1alpha1.ModuleMessageDisabled)
 		return true
 	})
-	if err != nil {
-		return fmt.Errorf("update the '%s' module: %w", module.Name, err)
-	}
-	return nil
+}
+
+func (r *reconciler) enableModule(ctx context.Context, module *v1alpha1.Module) error {
+	r.log.Debug("enable the module", slog.String("module", module.Name))
+	return utils.UpdateStatus[*v1alpha1.Module](ctx, r.client, module, func(module *v1alpha1.Module) bool {
+		if module.ConditionStatus(v1alpha1.ModuleConditionEnabledByModuleConfig) {
+			return false
+		}
+		module.SetConditionTrue(v1alpha1.ModuleConditionEnabledByModuleConfig)
+		return true
+	})
 }

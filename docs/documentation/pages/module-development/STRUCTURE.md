@@ -4,12 +4,29 @@ permalink: en/module-development/structure/
 lang: en
 ---
 
-{% raw %}
-The source code of the module and its assembly rules must be located in a directory with a certain structure. The best analog is a Helm chart. This page describes the structure of module directories and files.
+The source code of the module and its assembly rules must be located in a directory with a certain structure. The best analog is a Helm chart.
+
+Not all module folders and files are required. In short, you can use the following guidelines:
+- Create a [module.yaml](#moduleyaml) file to describe the module metadata.
+- In the [templates](#templates) folder, place the Helm templates that will be used in the cluster.
+
+If you want the objects created by the module to change their behavior depending on any module parameters, define the necessary parameters [in the specification](#config-valuesyaml) and use them in the templates.
+- In the [images](#images) folder, place instructions for building container images used by the module.
+
+If the templates only use addresses of *external* images, you don`t need to create a folder.
+- If the module should respond to events or interact with the Kubernetes API, you need to create hooks that should be placed in the [hooks](#hooks) folder.
+- Place the module documentation in the [docs](#docs) folder. If the module documentation is missing, the module will not appear in the list of modules in the documentation web interface in the cluster.
+- If the module has auxiliary Helm charts, place them in the [charts](#charts) folder.
+- If the module needs to create custom resources (CRD), place their specifications in the [crds](#crds) folder.
 
 There is a repository containing the sample [module template](https://github.com/deckhouse/modules-template/). We recommend you start your module development with it.
 
-Below is an example of the directory structure of a module created from a _template_, containing the rules for building and publishing using GitHub Actions:  
+Further down this page you will find a more detailed description of the module directory and file structure.
+
+<details markdown="0"><summary>Example module folder structure...</summary>
+<div markdown="1">
+
+Example module folder structure containing build and publish rules using GitHub Actions:  
 
 ```tree
 📁 my-module/
@@ -48,7 +65,6 @@ Below is an example of the directory structure of a module created from a _templ
 │  ├─ 📝 ADVANCED_USAGE.md
 │  └─ 📝 ADVANCED_USAGE.ru.md
 ├─ 📁 hooks/
-│  ├─ 📝 ensure_crds.py
 │  ├─ 📝 hook1.py
 │  └─ 📝 hook2.py
 ├─ 📁 images/
@@ -79,6 +95,9 @@ Below is an example of the directory structure of a module created from a _templ
 └─ 📝 werf-giterminism.yaml
 ```
 
+</div>
+</details>
+
 ## charts
 
 The `/charts` directory contains Helm helper charts used when rendering templates.
@@ -87,14 +106,8 @@ Deckhouse Kubernetes Platform (DKP) has its own library for working with templat
 
 ## crds
 
-This directory contains [_CustomResourceDefinitions_](https://kubernetes.io/docs/tasks/extend-kubernetes/custom-resources/custom-resource-definitions/) (CRDs) used by the module components. CRDs are updated every time the module is started, if there are updates.
-{% endraw %}
+This directory contains [*CustomResourceDefinitions*](https://kubernetes.io/docs/tasks/extend-kubernetes/custom-resources/custom-resource-definitions/) (CRDs) used by the module components. CRDs are updated every time the module is started, if there are updates.
 
-{% alert level="warning" %}
-For CRDs from the module's `/crds` directory to be applied in the cluster, the [hello.py](https://github.com/deckhouse/modules-template/blob/main/hooks/hello.py) hook must be added from the _module template_. See [`hooks`](#hooks) for more information.
-{% endalert %}
-
-{% raw -%}
 To render CRDs from the `/crds` directory in the site documentation or documentation module in the cluster, follow these steps:
 * create a translation file with a structure identical to the original resource file:
   - in it, keep only the `description` parameters containing the translation text;
@@ -116,7 +129,7 @@ The `/docs` directory contains the module documentation:
   - `moduleStatus` — **(optional)** `experimental`. The status of the module. If a module is labeled as `experimental`, a warning that the code is unstable is displayed on its pages. Also, a special bar in the menu is displayed.
 
   <div markdown="0">
-  <details><summary>Metadata example</summary>
+  <details><summary>Metadata example...</summary>
   <pre class="highlight">
   <code>---
   title: "Deckhouse administrator web console"
@@ -135,7 +148,7 @@ The `/docs` directory contains the module documentation:
   - `linkTitle` – **(optional)** Alternative title for navigation if, for example, the `title` is very long. If not set, the `title` parameter is used.  
 
   <div markdown="0">
-  <details><summary>Metadata example</summary>
+  <details><summary>Metadata example...</summary>
   <pre class="highlight">
   <code>---
   title: "Examples"
@@ -153,7 +166,7 @@ The `/docs` directory contains the module documentation:
   - `linkTitle` – **(optional)** Alternative title for navigation if, for example, the `title` is very long. If not set, the `title` parameter is used.  
 
   <div markdown="0">
-  <details><summary>Metadata example</summary>
+  <details><summary>Metadata example...</summary>
   <pre class="highlight">
   <code>---
   title: "FAQs"
@@ -171,7 +184,7 @@ The `/docs` directory contains the module documentation:
   - `linkTitle` – **(optional)** Alternative title for navigation if, for example, the `title` is very long. If not set, the `title` parameter is used.  
 
   <div markdown="0">
-  <details><summary>Metadata example</summary>
+  <details><summary>Metadata example...</summary>
   <pre class="highlight">
   <code>---
   title: "Module debugging"
@@ -184,7 +197,7 @@ The `/docs` directory contains the module documentation:
 * Manually add `CR.md` and `CR.ru.md`, the files for generating resources from the `/crds/` directory.  
 
   <div markdown="0">
-  <details><summary>Metadata example</summary>
+  <details><summary>Metadata example...</summary>
   <pre class="highlight">
   <code>---
   title: "Custom resources"
@@ -196,7 +209,7 @@ The `/docs` directory contains the module documentation:
 * Manually add `CONFIGURATION.md`, the file to create resources from `/openapi/config-values.yaml` and `/openapi/doc-<LANG>-config-values.yaml`.
 
   <div markdown="0">
-  <details><summary>Metadata example</summary>
+  <details><summary>Metadata example...</summary>
   <pre class="highlight">
   <code>---
   title: "Module settings"
@@ -214,7 +227,6 @@ You need a file with the appropriate suffix for each language, e.g. `image1.jpg`
 ## hooks
 
 The `/hooks` directory contains the module's hooks. A hook is an executable file executed in response to an event. Hooks are also used by the module for dynamic interaction with Kubernetes API. For example, they can be used to handle events related to the creation or deletion of objects in a cluster.
-{% endraw %}
 
 [Get to know](../#before-you-start) the concept of hooks before you start developing your own hook. You can use the [Python library](https://github.com/deckhouse/lib-python) by the Deckhouse team to speed up the development of hooks.
 
@@ -226,75 +238,7 @@ Hook requirements:
 
 The hook files must be executable. Add the appropriate permissions using the `chmod +x <path to the hook file>` command.
 
-You can find example hooks in the [module template](https://github.com/deckhouse/modules-template/) repository.
-
-Below is an example of a hook that enables CRDs (from the [/crds](#crds) directory of the module):
-
-```python
-import os
-
-import yaml
-from deckhouse import hook
-
-# We expect structure with possible subdirectories like this:
-#
-#   my-module/
-#       crds/
-#           crd1.yaml
-#           crd2.yaml
-#           subdir/
-#               crd3.yaml
-#       hooks/
-#           ensure_crds.py # this file
-
-config = """
-configVersion: v1
-onStartup: 5
-"""
-
-
-def main(ctx: hook.Context):
-    for crd in iter_manifests(find_crds_root(__file__)):
-        ctx.kubernetes.create_or_update(crd)
-
-
-def iter_manifests(root_path: str):
-    if not os.path.exists(root_path):
-        return
-
-    for dirpath, dirnames, filenames in os.walk(top=root_path):
-        for filename in filenames:
-            if not filename.endswith(".yaml"):
-                # Seek only manifests.
-                continue
-            if filename.startswith("doc-"):
-                # Skip YAML files for module documentation.
-                continue
-
-        crd_path = os.path.join(dirpath, filename)
-        with open(crd_path, "r", encoding="utf-8") as f:
-            for manifest in yaml.safe_load_all(f):
-                if manifest is None:
-                    continue
-                yield manifest
-
-    for dirname in dirnames:
-        subroot = os.path.join(dirpath, dirname)
-        for manifest in iter_manifests(subroot):
-            yield manifest
-
-
-def find_crds_root(hookpath):
-    hooks_root = os.path.dirname(hookpath)
-    module_root = os.path.dirname(hooks_root)
-    crds_root = os.path.join(module_root, "crds")
-    return crds_root
-
-
-if __name__ == "__main__":
-    hook.run(main, config=config)
-
-```
+You can find Python hook examples in the [module template](https://github.com/deckhouse/modules-template/) repository. Go hook examples can be found in the [SDK](https://github.com/deckhouse/module-sdk/tree/main/examples).
 
 ## images
 
@@ -305,7 +249,7 @@ There are two ways to define a container image:
 1. [Dockerfile](https://docs.docker.com/engine/reference/builder/) — this file contains commands for building images. To build an application from source code, copy it next to the Dockerfile and include it in the image using the `COPY` command.
 2. The `werf.inc.yaml` file, which is the same as the [image definition section in `werf.yaml`](https://werf.io/documentation/v1.2/reference/werf_yaml.html#L33).
 
-The image name matches the directory name for this module, written in _camelCase_ notation starting with a small letter. For example, the directory `/images/echo-server` corresponds to the image name `echoServer`.
+The image name matches the directory name for this module, written in *camelCase* notation starting with a small letter. For example, the directory `/images/echo-server` corresponds to the image name `echoServer`.
 
 The built images have content-based tags that can be used when building other images. To use content-based image tags, [enable the lib-helm](#charts) library. You can also use other features of the [helm_lib library](https://github.com/deckhouse/lib-helm/tree/main/charts/helm_lib) of Deckhouse Kubernetes Platform.
 
@@ -348,34 +292,6 @@ You can use the `conversion.TestConvert` function to write conversion tests. It 
 
 An [example](https://github.com/deckhouse/deckhouse/blob/main/modules/300-prometheus/openapi/conversions/conversions_test.go) of a conversion test.
 
-## templates
-
-The `/templates` directory contains [Helm templates](https://helm.sh/docs/chart_template_guide/getting_started/).
-
-* Use the path `.Values.<moduleName>` to access module settings in templates, and `.Values.global` for global settings. The module name is converted to _camelCase_ notation.
-
-* To facilitate working with templates, use [lib-helm](https://github.com/deckhouse/lib-helm), which is a set of extra functions that make it easier to work with global and module values.
-
-* Accesses to the registry from the ModuleSource resource are available at the `.Values.<moduleName>.registry.dockercfg` path.
-
-* To use these functions to pull image pools in controllers, create a secret and add it to the corresponding parameter: `"imagePullSecrets": [{"name":"registry-creds"}]`.
-
-  ```yaml
-  apiVersion: v1
-  kind: Secret
-  metadata:
-    name: registry-creds
-  type: kubernetes.io/dockerconfigjson
-  data:
-    .dockerconfigjson: {{ .Values.<moduleName>.registry.dockercfg }}
-  ```
-
-A module can have parameters with which it can alter its behavior. Module parameters and their validation scheme are described in OpenAPI-schemes in `/openapi` directory.
-
-The settings are stored in two files: [`config-values.yaml`](#config-valuesyaml) and [`values.yaml`](#valuesyaml).
-
-You can find an example of an OpenAPI schema in [module template](https://github.com/deckhouse/modules-template/blob/main/openapi/config-values.yaml).
-
 ### config-values.yaml
 
 This file is required to validate the module parameters that the user can configure via [ModuleConfig](../../cr.html#moduleconfig).
@@ -400,13 +316,13 @@ properties:
       [automatically](https://deckhouse.io/products/kubernetes-platform/documentation/v1/#advanced-scheduling).</code>
 ```
 
-An example of the `/openapi/doc-ru-config-values.yaml` file for the Russian translation of the schema:
+An example of the `/openapi/doc-ru-config-values.yaml` file:
 
 ```yaml
 properties:
   nodeSelector:
     description: |
-      Russian description. Markdown markup.</code>
+      English description. Markdown markup.</code>
 ```
 
 ### values.yaml
@@ -426,13 +342,42 @@ properties:
     default: {}
 ```
 
+## templates
+
+The `/templates` directory contains [Helm templates](https://helm.sh/docs/chart_template_guide/getting_started/).
+
+* Use the path `.Values.<moduleName>` to access module settings in templates, and `.Values.global` for global settings. The module name is converted to *camelCase* notation.
+
+* To facilitate working with templates, use [lib-helm](https://github.com/deckhouse/lib-helm), which is a set of extra functions that make it easier to work with global and module values.
+
+* Accesses to the registry from the ModuleSource resource are available at the `.Values.<moduleName>.registry.dockercfg` path.
+
+* To use these functions to pull image pools in controllers, create a secret and add it to the corresponding parameter: `"imagePullSecrets": [{"name":"registry-creds"}]`.
+
+  ```yaml
+  apiVersion: v1
+  kind: Secret
+  metadata:
+    name: registry-creds
+  type: kubernetes.io/dockerconfigjson
+  data:
+    .dockerconfigjson: {{ .Values.<moduleName>.registry.dockercfg }}
+  ```
+
+A module can have parameters with which it can alter its behavior. Module parameters and their validation scheme are described in OpenAPI-schemes in `/openapi` directory.
+
+The settings are stored in two files: [`config-values.yaml`](#config-valuesyaml) and [`values.yaml`](#valuesyaml).
+
+You can find an example of an OpenAPI schema in [module template](https://github.com/deckhouse/modules-template/blob/main/openapi/config-values.yaml).
+
 ## .helmignore
 
 `.helmignore` allows you to exclude files from the Helm release. In case of DKP modules, directories `/crds`, `/images`, `/hooks`, `/openapi` must be added to `.helmignore` to avoid exceeding 1 Mb limit of Helm release size.
 
 ## Chart.yaml
 
-This is a mandatory file for a chart, similar to [`Chart.yaml`](https://helm.sh/docs/topics/charts/#the-chartyaml-file) in Helm. It must contain at least a `name` parameter with the module name and a `version` parameter with the version.
+This is a file for a chart, similar to [`Chart.yaml`](https://helm.sh/docs/topics/charts/#the-chartyaml-file) in Helm. It must contain at least a `name` parameter with the module name and a `version` parameter with the version.
+You don't need to create this file, Deckhouse will create it automatically.
 
 An example:
 
@@ -441,61 +386,52 @@ name: echoserver
 version: 0.0.1
 dependencies:
 - name: deckhouse_lib_helm
-  version: 1.5.0
+  version: 1.38.0
   repository: https://deckhouse.github.io/lib-helm
 ```
 
 ## module.yaml
 
-This file stores the following module settings:
+The `module.yaml` file in the root of the module folder contains the module's metadata.
 
-- `tags: string` — the additional module tags, which are converted to module labels: `module.deckhouse.io/$tag=""`.
-- `weight: integer` — the module weight. The default weight is 900, you can set your own weight between 900 and 999.
-- `stage: string` — [module lifecycle stage](../versioning/#module-lifecycle). Can be `Sandbox`, `Incubating`, `Graduated`, or `Deprecated`.
-- `description: string` — the module description.
+The file might not be present, but it is recommended to fill it in. Most of the metadata will be available in the [Module](../../cr.html#module) object in the cluster. The Module object will be created automatically after the module source (resource [ModuleSource](../../cr.html#modulesource)) is configured and synchronization is successful.
 
-An example:
+Parameters that can be used in `module.yaml`:
+- `description` — *String.* Arbitrary text description of the module's purpose. Will be displayed in the documentation.
+- `disable` — *Object.* Parameters related to the behavior when disabling a module.
+- `confirmation` — *Boolean.* Require confirmation when disabling a module.
+- `message` — *String.* Message with information about what will happen when disabling a module.
+
+If confirmation is required to disable a module (the `confirmation` parameter is set to `true`), then disabling the module will only be possible if the `modules.deckhouse.io/allow-disabling=true` label is set on the corresponding ModuleConfig object. If such a label is not present, then a warning will be displayed when attempting to disable the module, with the message from the `message` parameter added.
+- `name` — *String, mandatory parameter.* The name of the module in Kebab Case. For example, `echo-server`.
+- `requirements` — *Object.* [Dependencies](../dependencies/) of a pod — a set of conditions that must be met for Deckhouse Kubernetes Platform (DKP) to be able to start the pod.
+- `bootstrapped` — *Boolean.* Pod dependency [on cluster installation status](../dependencies/#cluster-installation-status-dependency) (for built-in DKP pods only).
+- `deckhouse` — *String.* Pod dependency [on Deckhouse Kubernetes Platform version](../dependencies/#deckhouse-kubernetes-platform-version-dependency) that the pod is compatible with.
+- `kubernetes` — *String.* Pod dependency [on Kubernetes version](../dependencies/#kubernetes-version-dependency) that the pod is compatible with.
+- `modules` — *Object.* Module dependency [on the version of other modules](../dependencies/#dependency-on-the-version-of-other-modules).
+- `stage` — *String.* [Module lifecycle stage](../versioning/#how-to-know-how-stable-a-module-is). Possible values: `Sandbox`, `Incubating`, `Graduated`, or `Deprecated`.
+- `tags` — *Array of strings.* List of additional module tags. Tags are converted to [Module](../../cr.html#module) object labels according to the template `module.deckhouse.io/<TAG>=""` (where `<TAG>` is the tag name).
+
+For example, if you specify `tags: ["test", "myTag"]`, then the corresponding Module object in the cluster will be assigned the labels `module.deckhouse.io/test=""` and `module.deckhouse.io/myTag=""`.
+- `weight` — *Number.* The weight of the module. Used to control the order in which the module is launched compared to other modules. The lower the weight, the earlier the module will be launched. Default: 900.
+
+  The order in which a module is launched can also be influenced by the list of [module dependencies](../dependencies/).  
+
+Example of metadata description for the `hello-world` module:
 
 ```yaml
+name: hello-world
 tags: ["test", "myTag"]
 weight: 960
 stage: "Sandbox"
-description: "my awesome module"
-```
-
-Applying this file will create a module (`deckhouse.io/v1alpha/Module`) with the labels `module.deckhouse.io/test=""` and `module.deckhouse.io/myTag=""`, weight `960`, and the description `my awesome module`.
-
-This way you can control the module sequence as well as specify additional meta-information for the modules.
-
-Here is how you can set the Deckhouse Kubernetes Platform version dependency:
-
-```yaml
-name: test
-weight: 901
+description: "The module to say hello to the world."
 requirements:
     deckhouse: ">= 1.61"
-```
-
-Here is how you can set the Kubernetes version dependency
-
-```yaml
-name: test
-weight: 901
-requirements:
     kubernetes: ">= 1.27"
-```
-
-Here is how you can set the cluster installation status dependency (bootstrapped):
-
-```yaml
-name: ingress-nginx
-weight: 402
-description: |
-    Ingress controller for nginx
-    https://kubernetes.github.io/ingress-nginx
-
-requirements:
     bootstrapped: true
+disable:
+  confirmation: true
+  message: "Disabling this module will delete all resources, created by the module."
 ```
 
 {% endraw %}

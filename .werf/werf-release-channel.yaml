@@ -1,0 +1,44 @@
+---
+image: release-channel-version-prebuild
+from: {{ .Images.BASE_ALPINE }}
+dependencies:
+- image: dev
+  before: setup
+  imports:
+  - type: ImageDigest
+    targetEnv: deckhouseImageDigest
+import:
+- image: common/yq4-artifact
+  add: /usr/local/bin/yq
+  to: /usr/local/bin/yq
+  before: install
+shell:
+  install:
+  - |
+    export version="{{ env "CI_COMMIT_REF_NAME" }}"
+    yq eval '.version = env(version)' /deckhouse/release.yaml | yq eval -j > version.json
+    # changelog exists only for tags, we have to skip it for branches
+    {{- $changelog := index (.Files.Glob "CHANGELOG/CHANGELOG-*") (printf "CHANGELOG/CHANGELOG-%s.yml" (env "CI_COMMIT_REF_NAME")) }}
+    {{ if $changelog }}
+    cat <<"EOF" > /changelog.yaml
+    {{ $changelog | nindent 6 }}
+    EOF
+    {{ end }}
+git:
+- add: /
+  to: /deckhouse
+  includePaths:
+  - release.yaml
+
+---
+image: release-channel-version
+from: {{ .Images.BASE_SCRATCH }}
+import:
+- image: release-channel-version-prebuild
+  add: /
+  to: /
+  after: install
+  includePaths:
+  - version.json
+  - changelog.yaml
+---

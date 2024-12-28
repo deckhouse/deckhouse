@@ -29,5 +29,5 @@ set -Eeo pipefail
 {{- end }}
 
 {{ with .images.registrypackages }}
-bb-package-install "jq:{{ .jq16 }}" "curl:{{ .d8Curl891 }}" "netcat:{{ .netcat110481 }}"
+bb-package-install "jq:{{ .jq171 }}" "curl:{{ .d8Curl891 }}" "netcat:{{ .netcat110481 }}"
 {{- end }}
