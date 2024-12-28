@@ -12,24 +12,46 @@
 # and https://github.com/cilium/image-tools/blob/063fa0d879d9560b85b6134c48ece08e672fa057/images/compilers/install-deps.sh
 # #####################################################################
 ---
-artifact: {{ $.ModuleName }}/llvm-artifact
-fromImage: {{ $.ModuleName }}/base-cilium-dev
+image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+fromImage: common/src-artifact
+final: false
 shell:
-  beforeInstall:
-  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
+  install:
   - git clone --branch "{{ $llvmRev }}" {{ $.SOURCE_REPO }}/llvm/llvm-project.git /src/llvm
   - cd /src/llvm
   - git config --global user.email "builder@deckhouse.io"
   - git cherry-pick 29bc5dd19407c4d7cad1c059dea26ee216ddc7ca
   - git cherry-pick 13f6c81c5d9a7a34a684363bcaad8eb7c65356fd
   - git cherry-pick ea72b0319d7b0f0c2fcf41d121afa5d031b319d5
-  - cd -
+  # CSE
+  - rm -rf clang-tools-extra/clangd/clients/clangd-vscode
+  - rm -rf /src/llvm/.git
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-ccache-artifact
+fromImage: common/src-artifact
+final: false
+shell:
+  install:
+  - mkdir -p /tmp/ccache-dir
+  - git clone --depth 1 --branch {{ $llvmCacheRev }} {{ $.SOURCE_REPO }}/llvm/llvm-build-cache.git /tmp/ccache-dir && rm -rf /tmp/ccache-dir/.git
+---
+image: {{ .ModuleName }}/llvm-artifact
+fromImage: {{ .ModuleName }}/base-cilium-dev
+final: false
+import:
+- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+  add: /src
+  to: /src
+  before: install
+- image: {{ .ModuleName }}/{{ .ImageName }}-ccache-artifact
+  add: /tmp/ccache-dir
+  to: /tmp/ccache-dir
+  before: install
+shell:
   install:
   - update-alternatives --install /usr/bin/python python /usr/bin/python2 1
   - update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-13 2
   setup:
-  - mkdir -p /tmp/ccache-dir
-  - git clone --depth 1 --branch {{ $llvmCacheRev }} {{ $.SOURCE_REPO }}/llvm/llvm-build-cache.git /tmp/ccache-dir
   - sed -i '/\#include <string>/a \#include <cstdint>' /src/llvm/llvm/include/llvm/Support/Signals.h
   - export CCACHE_DIR="/tmp/ccache-dir"
   - mkdir -p /src/llvm/llvm/build-native
