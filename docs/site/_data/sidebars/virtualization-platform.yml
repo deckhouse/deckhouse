@@ -45,19 +45,19 @@ entries:
                 - title:
                     en: Initial access configuration
                     ru: Первичная настройка доступа
-                  url: /virtualization-platform/documentation/admin/install/steps/access.html   
+                  url: /virtualization-platform/documentation/admin/install/steps/access.html
                 - title:
                     en: Adding nodes
                     ru: Добавление узлов
-                  url: /virtualization-platform/documentation/admin/install/steps/nodes.html 
+                  url: /virtualization-platform/documentation/admin/install/steps/nodes.html
                 - title:
                     en: Setup storage
                     ru: Настройка хранилища
-                  url: /virtualization-platform/documentation/admin/install/steps/storage.html      
+                  url: /virtualization-platform/documentation/admin/install/steps/storage.html
                 - title:
                     en: Setup virtualization
                     ru: Настройка виртуализации
-                  url: /virtualization-platform/documentation/admin/install/steps/virtualization.html     
+                  url: /virtualization-platform/documentation/admin/install/steps/virtualization.html
         - title:
             en: Platform configuration
             ru: Настройка платформы
@@ -103,7 +103,7 @@ entries:
                         ru: Описание
                       url: /virtualization-platform/documentation/admin/platform-management/control-plane-settings/control-plane-components.html
                     - title:
-                        en: Etcd operations
+                        en: Working with etcd
                         ru: Работа с etcd
                       url: /virtualization-platform/documentation/admin/platform-management/control-plane-settings/etcd.html
                     - title:
@@ -116,7 +116,7 @@ entries:
                       url: /virtualization-platform/documentation/admin/platform-management/control-plane-settings/audit.html
                 - title:
                     en: Master nodes
-                    ru: Мастер узлы
+                    ru: Master-узлы
                   url: /virtualization-platform/documentation/admin/platform-management/control-plane-settings/masters.html
                 - title:
                     en: Components placement

@@ -1,5 +1,5 @@
 ---
-title: "Мастер узлы"
+title: "Master-узлы"
 permalink: ru/virtualization-platform/documentation/admin/platform-management/control-plane-settings/masters.html
 lang: "ru"
 ---
@@ -22,10 +22,22 @@ master-2   Ready    control-plane,master   247d   v1.28.15
 
 ## Удаление роли master-узла с сохранением узла в кластере
 
-1. Сделайте [резервную копию etcd](faq.html#резервное-копирование-и-восстановление-etcd) и директории `/etc/kubernetes`.
+1. Сделайте [резервную копию etcd](https://deckhouse.ru/products/virtualization-platform/documentation/admin/platform-management/control-plane-settings/etcd.html#%D1%80%D0%B5%D0%B7%D0%B5%D1%80%D0%B2%D0%BD%D0%BE%D0%B5-%D0%BA%D0%BE%D0%BF%D0%B8%D1%80%D0%BE%D0%B2%D0%B0%D0%BD%D0%B8%D0%B5-etcd) и директории `/etc/kubernetes`.
 1. Скопируйте полученный архив за пределы кластера (например, на локальную машину).
-1. Убедитесь, что в кластере нет [алертов](../300-prometheus/faq.html#как-получить-информацию-об-алертах-в-кластере), которые могут помешать обновлению master-узлов.
-1. Убедитесь, что [очередь Deckhouse пуста](../../deckhouse-faq.html#как-проверить-очередь-заданий-в-deckhouse).
+1. Убедитесь, что в кластере нет алертов, которые могут помешать обновлению master-узлов.
+   Список всех алертов можно посмотреть с помощью команды:
+
+   ```shell
+   kubectl get clusteralerts
+   ```
+
+1. Убедитесь, что очередь Deckhouse пуста.
+   Для просмотра состояния всех очередей заданий Deckhouse, выполните следующую команду:
+
+   ```shell
+   kubectl -n d8-system exec -it svc/deckhouse-leader -c deckhouse -- deckhouse-controller queue list
+   ```
+
 1. Снимите с узла метки `node.deckhouse.io/group: master` и `node-role.kubernetes.io/control-plane: ""`.
 1. Убедитесь, что узел пропал из списка узлов кластера etcd:
 
