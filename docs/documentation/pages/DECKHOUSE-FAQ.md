@@ -1402,6 +1402,316 @@ To switch Deckhouse Community Edition to Enterprise Edition, follow these steps:
    kubectl  delete ngc del-temp-config.sh
    ```
 
+### How to Switch Deckhouse EE to SE?
+
+You will need a valid license key. You can [request a trial license key](https://deckhouse.io/products/kubernetes-platform) if necessary.
+
+{% alert level="info" %}
+- The instruction implies using the public address of the container registry: `registry.deckhouse.io`. If you use a different container registry address, change the commands or use [the instruction](#how-do-i-configure-deckhouse-to-use-a-third-party-registry) for switching Deckhouse to using a third-party registry.
+- The Deckhouse SE edition does not support certain cloud providers `dynamix`, `openstack`, `VCD`, `VSphere` and a number of modules.
+  {% endalert %}
+
+To switch Deckhouse Enterprise Edition to Standard Edition, follow these steps:
+
+{% alert level="warning" %}
+All commands should be executed on a master node of the existing cluster.
+{% endalert %}
+
+1. Set up environment variables with your license token:
+
+   ```shell
+   LICENSE_TOKEN=<PUT_YOUR_LICENSE_TOKEN_HERE>
+   AUTH_STRING="$(echo -n license-token:${LICENSE_TOKEN} | base64 )"
+   ```
+
+1. Create a NodeGroupConfiguration resource for transitional authorization in `registry.deckhouse.io`:
+
+   ```shell
+   sudo /opt/deckhouse/bin/kubectl apply -f - <<EOF
+   apiVersion: deckhouse.io/v1alpha1
+   kind: NodeGroupConfiguration
+   metadata:
+     name: containerd-se-config.sh
+   spec:
+     nodeGroups:
+     - '*'
+     bundles:
+     - '*'
+     weight: 30
+     content: |
+       _on_containerd_config_changed() {
+         bb-flag-set containerd-need-restart
+       }
+       bb-event-on 'containerd-config-file-changed' '_on_containerd_config_changed'
+
+       mkdir -p /etc/containerd/conf.d
+       bb-sync-file /etc/containerd/conf.d/se-registry.toml - containerd-config-file-changed << "EOF_TOML"
+       [plugins]
+         [plugins."io.containerd.grpc.v1.cri"]
+           [plugins."io.containerd.grpc.v1.cri".registry.configs]
+             [plugins."io.containerd.grpc.v1.cri".registry.configs."registry.deckhouse.io".auth]
+               auth = "$AUTH_STRING"
+       EOF_TOML
+
+   EOF
+   ```
+
+   Wait for the `/etc/containerd/conf.d/se-registry.toml` file to propagate to the nodes and for bashible synchronization to complete. You can track the synchronization status via the  `UPTODATE` value (the displayed number of nodes having this status must match the total number of nodes (`NODES`) in the group):
+
+   ```console
+   $ sudo /opt/deckhouse/bin/kubectl  get ng  -o custom-columns=NAME:.metadata.name,NODES:.status.nodes,READY:.status.ready,UPTODATE:.status.upToDate -w
+   NAME     NODES   READY   UPTODATE
+   master   1       1       1
+   worker   2       2       2
+   ```
+
+   Also, the `Configuration is in sync, nothing to do` message must show up in the bashible systemd service log, e.g.:
+
+   ```console
+   $ journalctl -u bashible -n 5
+   Aug 21 11:04:28 master-ee-to-se-0 bashible.sh[53407]: Configuration is in sync, nothing to do.
+   Aug 21 11:04:28 master-ee-to-se-0 bashible.sh[53407]: Annotate node master-ee-to-se-0 with annotation node.deckhouse.io/   configuration-checksum=9cbe6db6c91574b8b732108a654c99423733b20f04848d0b4e1e2dadb231206a
+   Aug 21 11:04:29 master ee-to-se-0 bashible.sh[53407]: Succesful annotate node master-ee-to-se-0 with annotation node.deckhouse.io/   configuration-checksum=9cbe6db6c91574b8b732108a654c99423733b20f04848d0b4e1e2dadb231206a
+   Aug 21 11:04:29 master-ee-to-se-0 systemd[1]: bashible.service: Deactivated successfully.
+   ```
+
+1. Run a temporary Deckhouse SE pod, to retrieve up-to-date digests and module lists. Enter the latest version of Deckhouse into the <DECKHOUSE_VERSION> variable:
+
+   ```shell
+   sudo /opt/deckhouse/bin/kubectl run se-image --image=registry.deckhouse.io/deckhouse/se/install:<DECKHOUSE_VERSION> --command sleep -- infinity
+   ```
+
+   > To find the latest Deckhouse version, you can run:
+   >
+   >  ```shell
+   >  sudo /opt/deckhouse/bin/kubectl get deckhousereleases
+   >  ```
+
+1. Wait for the pod to become `Running` and then run the following commands:
+
+   * Retrieve the value of `SE_SANDBOX_IMAGE`:
+
+     ```shell
+     SE_SANDBOX_IMAGE=$(sudo /opt/deckhouse/bin/kubectl exec se-image -- cat deckhouse/candi/images_digests.json | grep  pause | grep -oE 'sha256:\w*')
+     ```
+
+     Check the result of the command to make sure it was successful:
+
+     ```console
+     $ echo $SE_SANDBOX_IMAGE
+     sha256:2a909cb9df4d0207f1fe5bd9660a0529991ba18ce6ce7b389dc008c05d9022d1
+     ```
+
+   * Retrieve the value of `SE_K8S_API_PROXY`:
+
+     ```shell
+     SE_K8S_API_PROXY=$(sudo /opt/deckhouse/bin/kubectl exec se-image -- cat deckhouse/candi/images_digests.json | grep kubernetesApiProxy | grep -oE 'sha256:\w*')
+     ```
+
+    Check the result of the command to make sure it was successful:
+
+    ```console
+    $ echo $SE_K8S_API_PROXY
+    sha256:af92506a36f4bd032a6459295069f9478021ccf67d37557a664878bc467dd9fd
+    ```
+
+   * Retrieve the value of `SE_REGISTRY_PACKAGE_PROXY`:
+
+     ```shell
+     SE_REGISTRY_PACKAGE_PROXY=$(sudo /opt/deckhouse/bin/kubectl exec se-image -- cat deckhouse/candi/images_digests.json | grep registryPackagesProxy | grep -oE 'sha256:\w*')
+     ```
+
+     Run the command:
+
+     ```shell
+     sudo /opt/deckhouse/bin/crictl pull  registry.deckhouse.io/deckhouse/se@$SE_REGISTRY_PACKAGE_PROXY
+     ```
+
+     An example:
+
+     ```console
+     $ sudo /opt/deckhouse/bin/crictl pull registry.deckhouse.io/deckhouse/se@$SE_REGISTRY_PACKAGE_PROXY
+     Image is up to date for sha256:7e9908d47580ed8a9de481f579299ccb7040d5c7fade4689cb1bff1be74a95de
+     ```
+
+   * Retrieve the value of `SE_MODULES`:
+
+     ```shell
+     SE_MODULES=$(sudo /opt/deckhouse/bin/kubectl exec se-image -- ls -l deckhouse/modules/ | grep -oE "\d.*-\w*"  | awk {'print $9'} | cut -c5-)
+     ```
+
+     An example:
+
+     ```console
+     $ echo $SE_MODULES
+     common priority-class deckhouse external-module-manager ...
+     ```
+
+   * Retrieve the value of `USED_MODULES`:
+
+     ```shell
+     USED_MODULES=$(sudo /opt/deckhouse/bin/kubectl get modules | grep -v 'snapshot-controller-crd' | grep Enabled |awk {'print $1'})
+     ```
+
+     An example:
+
+     ```console
+     $ echo $USED_MODULES
+     admission-policy-engine cert-manager chrony cloud-data-crd ...
+     ```
+
+   * Form the list of modules that must be disabled:
+
+     ```shell
+     MODULES_WILL_DISABLE=$(echo $USED_MODULES | tr ' ' '\n' | grep -Fxv -f <(echo $SE_MODULES | tr ' ' '\n'))
+     ```
+
+1. Verify that the modules in use are supported by the SE edition.
+   Run the following command to display modules that are not supported by SE and will be disabled:
+
+   ```shell
+   echo $MODULES_WILL_DISABLE
+   ```
+
+   > Check the list and make sure the functionality of these modules is not required in your cluster or that you are prepared to disable them.
+
+   Disable the unsupported modules:
+
+   ```shell
+   echo $MODULES_WILL_DISABLE | 
+     tr ' ' '\n' | awk {'print "sudo /opt/deckhouse/bin/kubectl -n d8-system exec  deploy/deckhouse -- deckhouse-controller module disable",$1'} | bash
+   ```
+
+   Wait until the Deckhouse pod is in the `Ready` state and [all tasks in the queue are completed](#how-to-check-the-job-queue-in-deckhouse).
+
+1. Create a NodeGroupConfiguration resource:
+
+   ```shell
+   sudo /opt/deckhouse/bin/kubectl apply -f - <<EOF
+   apiVersion: deckhouse.io/v1alpha1
+   kind: NodeGroupConfiguration
+   metadata:
+     name: se-set-sha-images.sh
+   spec:
+     nodeGroups:
+     - '*'
+     bundles:
+     - '*'
+     weight: 30
+     content: |
+       _on_containerd_config_changed() {
+         bb-flag-set containerd-need-restart
+       }
+       bb-event-on 'containerd-config-file-changed' '_on_containerd_config_changed'
+
+       bb-sync-file /etc/containerd/conf.d/se-sandbox.toml - containerd-config-file-changed << "EOF_TOML"
+       [plugins]
+         [plugins."io.containerd.grpc.v1.cri"]
+           sandbox_image = "registry.deckhouse.io/deckhouse/se@$SE_SANDBOX_IMAGE"
+       EOF_TOML
+
+       sed -i 's|image: .*|image: registry.deckhouse.io/deckhouse/se@$SE_K8S_API_PROXY|' /var/lib/bashible/bundle_steps/051_pull_and_configure_kubernetes_api_proxy.sh
+       sed -i 's|crictl pull .*|crictl pull registry.deckhouse.io/deckhouse/se@$SE_K8S_API_PROXY|' /var/lib/bashible/bundle_steps/051_pull_and_configure_kubernetes_api_proxy.sh
+
+   EOF
+   ```
+
+   Wait for the `/etc/containerd/conf.d/se-sandbox.toml` file to propagate to the nodes and for bashible synchronization to complete.
+
+   You can track the synchronization status via the `UPTODATE` value (the displayed number of nodes having this status must match the total number of nodes (`NODES`) in the group):
+
+   ```console
+   $ sudo /opt/deckhouse/bin/kubectl  get ng  -o custom-columns=NAME:.metadata.name,NODES:.status.nodes,READY:.status.ready,UPTODATE:.status.upToDate -w
+   NAME     NODES   READY   UPTODATE
+   master   1       1       1
+   worker   2       2       2
+   ```
+
+   Also, the `Configuration is in sync, nothing to do` message must show up in the bashible systemd service log, e.g.:
+
+   ```console
+   $ journalctl -u bashible -n 5
+   Aug 21 11:04:28 master-ee-to-se-0 bashible.sh[53407]: Configuration is in sync, nothing to do.
+   Aug 21 11:04:28 master-ee-to-se-0 bashible.sh[53407]: Annotate node master-ee-to-se-0 with annotation node.deckhouse.io/   configuration-checksum=9cbe6db6c91574b8b732108a654c99423733b20f04848d0b4e1e2dadb231206a
+   Aug 21 11:04:29 master ee-to-se-0 bashible.sh[53407]: Succesful annotate node master-ee-to-se-0 with annotation node.deckhouse.io/   configuration-checksum=9cbe6db6c91574b8b732108a654c99423733b20f04848d0b4e1e2dadb231206a
+   Aug 21 11:04:29 master-ee-to-se-0 systemd[1]: bashible.service: Deactivated successfully.
+   ```
+
+1. Update the secret to access the Deckhouse registry by running the following command:
+
+   ```shell
+   sudo /opt/deckhouse/bin/kubectl -n d8-system exec -ti  svc/deckhouse-leader -c deckhouse -- kubectl -n d8-system create secret generic deckhouse-registry \
+     --from-literal=".dockerconfigjson"="{\"auths\": { \"registry.deckhouse.io\": { \"username\": \"license-token\", \"password\": \"$LICENSE_TOKEN\", \"auth\":    \"$AUTH_STRING\" }}}" \
+     --from-literal="address"=registry.deckhouse.io   --from-literal="path"=/deckhouse/se \
+     --from-literal="scheme"=https   --type=kubernetes.io/dockerconfigjson \
+     --dry-run=client \
+     -o yaml | sudo /opt/deckhouse/bin/kubectl -n d8-system exec -i  svc/deckhouse-leader -c deckhouse -- kubectl replace -f -
+   ```
+
+1. Apply the Deckhouse SE image. Enter the latest version of Deckhouse into the <DECKHOUSE_VERSION> variable:
+
+   ```shell
+   sudo /opt/deckhouse/bin/kubectl -n d8-system set image deployment/deckhouse deckhouse=registry.deckhouse.io/deckhouse/se:<DECKHOUSE_VERSION>
+   ```
+
+   > To find the latest Deckhouse version, you can run:
+   >
+   >  ```shell
+   >  sudo /opt/deckhouse/bin/kubectl get deckhousereleases
+   >  ```
+
+1. Wait for the Deckhouse pod to become `Ready` and for [all the queued jobs to complete](#how-to-check-the-job-queue-in-deckhouse). If an `ImagePullBackOff` error is generated in the process, wait for the pod to be restarted automatically.
+
+   Use the following command to check the Deckhouse pod's status:
+
+   ```shell
+   sudo /opt/deckhouse/bin/kubectl -n d8-system get po -l app=deckhouse
+   ```
+
+   Use the following command to check the Deckhouse queue:
+
+   ```shell
+   sudo /opt/deckhouse/bin/kubectl -n d8-system exec deploy/deckhouse -c deckhouse -- deckhouse-controller queue list
+   ```
+
+1. Check if there are any pods with the Deckhouse EE registry address left in the cluster:
+
+   ```shell
+   sudo /opt/deckhouse/bin/kubectl get pods -A -o json | jq -r '.items[] | select(.status.phase=="Running" or .status.phase=="Pending" or .status.phase=="PodInitializing")  | select(.spec.containers[] | select(.image | contains("deckhouse.io/deckhouse/ee"))) | .metadata.namespace + "\t" + .metadata.name' | sort | uniq
+   ```
+
+1. Purge temporary files, `NodeGroupConfiguration` resource, and variables:
+
+   ```shell
+   sudo /opt/deckhouse/bin/kubectl delete ngc containerd-se-config.sh se-set-sha-images.sh
+   sudo /opt/deckhouse/bin/kubectl delete pod se-image
+   sudo /opt/deckhouse/bin/kubectl apply -f - <<EOF
+       apiVersion: deckhouse.io/v1alpha1
+       kind: NodeGroupConfiguration
+       metadata:
+         name: del-temp-config.sh
+       spec:
+         nodeGroups:
+         - '*'
+         bundles:
+         - '*'
+         weight: 90
+         content: |
+           if [ -f /etc/containerd/conf.d/se-registry.toml ]; then
+             rm -f /etc/containerd/conf.d/se-registry.toml
+           fi
+           if [ -f /etc/containerd/conf.d/se-sandbox.toml ]; then
+             rm -f /etc/containerd/conf.d/se-sandbox.toml
+           fi
+   EOF
+   ```
+
+   Once bashible synchronization is complete (you can track the synchronization status on nodes via the `UPTODATE` value of the NodeGroup), delete the NodeGroupConfiguration resource you created earlier:
+
+   ```shell
+   sudo /opt/deckhouse/bin/kubectl delete ngc del-temp-config.sh
+   ```
+
 ### How do I get access to Deckhouse controller in multimaster cluster?
 
 In clusters with multiple master nodes Deckhouse runs in high availability mode (in several instances). To access the active Deckhouse controller, you can use the following command (as an example of the command `deckhouse-controller queue list`):
