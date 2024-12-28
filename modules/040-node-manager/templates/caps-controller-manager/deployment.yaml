@@ -87,6 +87,7 @@ spec:
             readOnly: true
         args:
           - "--leader-elect"
+          - "--sync-period=1m"
         livenessProbe:
           httpGet:
             path: /healthz
