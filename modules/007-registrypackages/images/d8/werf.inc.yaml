@@ -45,6 +45,9 @@ git:
     stageDependencies:
       setup:
       - '**/*'
+mount:
+- fromPath: ~/go-pkg-cache
+  to: /go/pkg
 shell:
   beforeInstall:
   {{- include "debian packages proxy" . | nindent 2 }}

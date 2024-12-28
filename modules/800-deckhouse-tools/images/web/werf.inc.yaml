@@ -1,8 +1,5 @@
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/nginx-static
-mount:
-- fromPath: ~/go-pkg-cache
-  to: /go/pkg
 git:
 - add: /{{ $.ModulePath }}modules/800-{{ $.ModuleName }}/images/{{ $.ImageName }}/nginx.conf
   to: /opt/nginx-static/conf/nginx.conf
@@ -20,6 +17,9 @@ docker:
 artifact: {{ .ModuleName }}/{{ .ImageName }}-artifact
 from: {{ .Images.BASE_GOLANG_23_BULLSEYE }}
 fromCacheVersion: {{ .CandiVersionMap.d8.d8CliVersion }}
+mount:
+  - fromPath: ~/go-pkg-cache
+    to: /go/pkg
 git:
   - add: /{{ $.ModulePath }}modules/800-{{ $.ModuleName }}/images/{{ $.ImageName }}/static
     to: /static
