@@ -21,11 +21,11 @@
   add: /images_digests.json
   to: {{ $prefix }}/deckhouse/candi/images_digests.json
   before: setup
-- artifact: version-map-artifact
+- image: version-map-artifact
   add: /version_map_{{ $context.Env }}.yml
   to: {{ $prefix }}/deckhouse/candi/version_map.yml
   before: setup
-- artifact: ssh-static
+- image: ssh-static
   add: /ssh/bin
   to: /bin
   before: setup
