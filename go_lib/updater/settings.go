@@ -22,3 +22,15 @@ type Settings struct {
 	Mode                   UpdateMode
 	Windows                update.Windows
 }
+
+func (s *Settings) InDisruptionApprovalMode() bool {
+	if s.DisruptionApprovalMode == "" || s.DisruptionApprovalMode == "Auto" {
+		return false
+	}
+
+	return true
+}
+
+func (s *Settings) InManualMode() bool {
+	return s.Mode == ModeManual
+}

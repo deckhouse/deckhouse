@@ -63,7 +63,7 @@ type Updater[R v1alpha1.Release] struct {
 
 	logger            *log.Logger
 	kubeAPI           KubeAPI[R]
-	metricsUpdater    MetricsUpdater[R]
+	metricsUpdater    MetricsUpdater
 	webhookDataSource WebhookDataSource[R]
 
 	// don't modify releases order, logic is based on this sorted slice
@@ -76,7 +76,8 @@ type Updater[R v1alpha1.Release] struct {
 
 	deckhousePodIsReady      bool
 	deckhouseIsBootstrapping bool
-	releaseData              DeckhouseReleaseData
+
+	releaseData DeckhouseReleaseData
 }
 
 func NewUpdater[R v1alpha1.Release](
@@ -87,7 +88,7 @@ func NewUpdater[R v1alpha1.Release](
 	data DeckhouseReleaseData,
 	podIsReady, isBootstrapping bool,
 	kubeAPI KubeAPI[R],
-	metricsUpdater MetricsUpdater[R],
+	metricsUpdater MetricsUpdater,
 	webhookDataSource WebhookDataSource[R],
 	enabledModules []string,
 ) *Updater[R] {
@@ -428,7 +429,7 @@ func (u *Updater[R]) checkReleaseDisruptions(rl R) bool {
 		hasDisruptionUpdate, reason := requirements.HasDisruption(key)
 		if hasDisruptionUpdate {
 			if !rl.GetDisruptionApproved() {
-				msg := fmt.Sprintf("Release requires disruption approval (`kubectl annotate DeckhouseRelease %s release.deckhouse.io/disruption-approved=true`): %s", rl.GetName(), reason)
+				msg := fmt.Sprintf("release requires disruption approval (`kubectl annotate DeckhouseRelease %s release.deckhouse.io/disruption-approved=true`): %s", rl.GetName(), reason)
 				err := u.updateStatus(rl, msg, PhasePending)
 				if err != nil {
 					u.logger.Error("update status", log.Err(err))
@@ -489,7 +490,7 @@ func (u *Updater[R]) runReleaseDeploy(predictedRelease R, currentRelease *R) err
 			ctx,
 			predictedRelease,
 			map[string]interface{}{
-				"release.deckhouse.io/apply-now": nil,
+				v1alpha1.DeckhouseReleaseAnnotationApplyNow: nil,
 			})
 		if err != nil {
 			return fmt.Errorf("remove apply-now annotation: %w", err)
@@ -518,13 +519,17 @@ func (u *Updater[R]) PredictNextRelease(release R) {
 		}
 	}
 
+	// TODO: remove double loop???
 	for i, rl := range u.releases {
 		switch rl.GetPhase() {
 		case PhaseSuperseded, PhaseSuspended, PhaseSkipped:
 			// pass
 
 		case PhasePending:
+			// TODO: get check result and update release within
 			releaseRequirementsMet := u.checkReleaseRequirements(rl)
+
+			// note: here's we have assignment of predicted release
 			u.processPendingRelease(i, rl, releaseRequirementsMet)
 			// update metric only for the release that initiated prediction so as not to provoke metrics churn on every prediction
 			if rl.GetName() == release.GetName() {
@@ -574,7 +579,7 @@ func (u *Updater[R]) ApplyForcedRelease(ctx context.Context) error {
 
 	// remove annotation
 	err := u.kubeAPI.PatchReleaseAnnotations(ctx, forcedRelease, map[string]any{
-		"release.deckhouse.io/force": nil,
+		v1alpha1.DeckhouseReleaseAnnotationForce: nil,
 	})
 	if err != nil {
 		return fmt.Errorf("patch force annotation: %w", err)
@@ -813,17 +818,13 @@ func (u *Updater[R]) postponeDeploy(release R, reason deployDelayReason, applyTi
 
 	var (
 		zeroTime      time.Time
-		retryDelay    time.Duration
 		statusMessage string
 	)
-
-	if !applyTime.IsZero() {
-		retryDelay = applyTime.Sub(u.now)
-	}
 
 	if applyTime == u.now {
 		applyTime = zeroTime
 	}
+
 	statusMessage = reason.Message(release, applyTime)
 
 	err := u.updateStatus(release, statusMessage, PhasePending)
@@ -831,5 +832,5 @@ func (u *Updater[R]) postponeDeploy(release R, reason deployDelayReason, applyTi
 		return fmt.Errorf("update release %s status: %w", release.GetName(), err)
 	}
 
-	return NewNotReadyForDeployError(statusMessage, retryDelay)
+	return NewNotReadyForDeployError(statusMessage)
 }

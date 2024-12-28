@@ -21,12 +21,14 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
 	"net/http"
-	"os"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
 
+	aoapp "github.com/flant/addon-operator/pkg/app"
 	metricstorage "github.com/flant/shell-operator/pkg/metric_storage"
 	"github.com/gofrs/uuid/v5"
 	gcr "github.com/google/go-containerregistry/pkg/name"
@@ -43,6 +45,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/ctrlutils"
 	d8updater "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/deckhouse-release/updater"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers"
@@ -55,6 +58,13 @@ import (
 const (
 	metricReleasesGroup = "d8_releases"
 	metricUpdatingGroup = "d8_updating"
+
+	deckhouseNamespace          = "d8-system"
+	deckhouseDeployment         = "deckhouse"
+	deckhouseRegistrySecretName = "deckhouse-registry"
+
+	deckhouseReleaseAnnotationDryrun            = "dryrun"
+	deckhouseReleaseAnnotationTriggeredByDryrun = "triggered_by_dryrun"
 )
 
 const defaultCheckInterval = 15 * time.Second
@@ -71,6 +81,10 @@ type deckhouseReleaseReconciler struct {
 	preflightCountDown      *sync.WaitGroup
 	clusterUUID             string
 	releaseVersionImageHash string
+
+	imageRegistry            string
+	deckhouseIsBootstrapping bool
+	metricsUpdater           updater.MetricsUpdater
 }
 
 func NewDeckhouseReleaseController(ctx context.Context, mgr manager.Manager, dc dependency.Container,
@@ -85,6 +99,8 @@ func NewDeckhouseReleaseController(ctx context.Context, mgr manager.Manager, dc 
 		updateSettings:     updateSettings,
 		metricStorage:      metricStorage,
 		preflightCountDown: preflightCountDown,
+
+		metricsUpdater: d8updater.NewMetricsUpdater(metricStorage),
 	}
 
 	// Add Preflight Check
@@ -97,7 +113,7 @@ func NewDeckhouseReleaseController(ctx context.Context, mgr manager.Manager, dc 
 	// wait for cache sync
 	go func() {
 		if ok := mgr.GetCache().WaitForCacheSync(ctx); !ok {
-			r.logger.Fatalf("Sync cache failed")
+			r.logger.Fatal("Sync cache failed")
 		}
 		go r.updateByImageHashLoop(ctx)
 		go r.checkDeckhouseReleaseLoop(ctx)
@@ -123,13 +139,16 @@ func NewDeckhouseReleaseController(ctx context.Context, mgr manager.Manager, dc 
 }
 
 func (r *deckhouseReleaseReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	var result ctrl.Result
-	r.logger.Debugf("%s release processing started", req.Name)
-	defer func() { r.logger.Debugf("%s release processing complete: %+v", req.Name, result) }()
+	var res ctrl.Result
+
+	r.logger.Debug("release processing started", slog.String("resource_name", req.Name))
+	defer func() {
+		r.logger.Debug("release processing complete", slog.String("resource_name", req.Name), slog.Any("reconcile_result", res))
+	}()
 
 	if r.updateSettings.Get().ReleaseChannel == "" {
 		r.logger.Debug("release channel not set")
-		return result, nil
+		return res, nil
 	}
 
 	r.metricStorage.Grouped().ExpireGroupMetrics(metricReleasesGroup)
@@ -137,19 +156,20 @@ func (r *deckhouseReleaseReconciler) Reconcile(ctx context.Context, req ctrl.Req
 	release := new(v1alpha1.DeckhouseRelease)
 	err := r.client.Get(ctx, req.NamespacedName, release)
 	if err != nil {
-		r.logger.Debugf("get release: %s", err.Error())
 		// The DeckhouseRelease resource may no longer exist, in which case we stop
 		// processing.
 		if apierrors.IsNotFound(err) {
-			return result, nil
+			return res, nil
 		}
 
-		return result, err
+		r.logger.Debug("get release", log.Err(err))
+
+		return res, err
 	}
 
 	if !release.DeletionTimestamp.IsZero() {
-		r.logger.Debugf("release deletion timestamp: %s", release.DeletionTimestamp.String())
-		return result, nil
+		r.logger.Debug("release deletion", slog.String("deletion_timestamp", release.DeletionTimestamp.String()))
+		return res, nil
 	}
 
 	return r.createOrUpdateReconcile(ctx, release)
@@ -167,7 +187,9 @@ func (r *deckhouseReleaseReconciler) getClusterUUID(ctx context.Context) string 
 	key := types.NamespacedName{Namespace: "d8-system", Name: "deckhouse-discovery"}
 	err := r.client.Get(ctx, key, &secret)
 	if err != nil {
-		r.logger.Warnf("Read clusterUUID from secret %s failed: %v. Generating random uuid", key, err)
+		r.logger.Warn("read clusterUUID from secret", slog.Any("namespaced_name", key), log.Err(err))
+		r.logger.Warn("generating random uuid")
+
 		return uuid.Must(uuid.NewV4()).String()
 	}
 
@@ -178,8 +200,14 @@ func (r *deckhouseReleaseReconciler) getClusterUUID(ctx context.Context) string 
 	return uuid.Must(uuid.NewV4()).String()
 }
 
+// 1) all new releases state is pending
+// 2) sort releases by version
+// 3) do predict
+// 4) all releases between pending (include) and predicted became skipped
+// 5) enroll predicted
+// 6) requeue
 func (r *deckhouseReleaseReconciler) createOrUpdateReconcile(ctx context.Context, dr *v1alpha1.DeckhouseRelease) (ctrl.Result, error) {
-	var result ctrl.Result
+	var res ctrl.Result
 
 	// prepare releases
 	switch dr.Status.Phase {
@@ -188,15 +216,15 @@ func (r *deckhouseReleaseReconciler) createOrUpdateReconcile(ctx context.Context
 		// initial state
 		dr.Status.Phase = v1alpha1.ModuleReleasePhasePending
 		dr.Status.TransitionTime = metav1.NewTime(r.dc.GetClock().Now().UTC())
-		if e := r.client.Status().Update(ctx, dr); e != nil {
-			return ctrl.Result{Requeue: true}, e
+		if err := r.client.Status().Update(ctx, dr); err != nil {
+			return res, err
 		}
 
 		return ctrl.Result{Requeue: true}, nil // process to the next phase
 
 	case v1alpha1.ModuleReleasePhaseSkipped, v1alpha1.ModuleReleasePhaseSuperseded, v1alpha1.ModuleReleasePhaseSuspended:
-		r.logger.Debugf("release phase: %s", dr.Status.Phase)
-		return result, nil
+		r.logger.Debug("release phase", slog.String("phase", dr.Status.Phase))
+		return res, nil
 
 	case v1alpha1.ModuleReleasePhaseDeployed:
 		// don't think we have to do anything with Deployed release
@@ -205,115 +233,273 @@ func (r *deckhouseReleaseReconciler) createOrUpdateReconcile(ctx context.Context
 	}
 
 	// update pending release with suspend annotation
-	err := r.patchSuspendAnnotation(dr)
+	err := r.patchSuspendAnnotation(ctx, dr)
 	if err != nil {
-		return ctrl.Result{RequeueAfter: defaultCheckInterval}, err
+		return res, err
 	}
 
-	err = r.patchManualRelease(dr)
+	err = r.patchManualRelease(ctx, dr)
 	if err != nil {
-		return ctrl.Result{RequeueAfter: defaultCheckInterval}, err
+		return res, err
 	}
 
 	return r.pendingReleaseReconcile(ctx, dr)
 }
 
-func (r *deckhouseReleaseReconciler) patchManualRelease(dr *v1alpha1.DeckhouseRelease) error {
+func (r *deckhouseReleaseReconciler) patchManualRelease(ctx context.Context, dr *v1alpha1.DeckhouseRelease) error {
 	if r.updateSettings.Get().Update.Mode != updater.ModeManual.String() {
 		return nil
 	}
 
-	if !dr.GetManuallyApproved() {
-		dr.SetApprovedStatus(false)
-		// TODO: don't know yet how to count manual releases
-		// du.totalPendingManualReleases++
-	} else {
-		dr.SetApprovedStatus(true)
+	drCopy := dr.DeepCopy()
+
+	drCopy.SetApprovedStatus(drCopy.GetManuallyApproved())
+
+	err := r.client.Status().Patch(ctx, drCopy, client.MergeFrom(dr))
+	if err != nil {
+		return fmt.Errorf("patch approved status: %w", err)
 	}
 
-	return r.client.Status().Update(context.Background(), dr)
+	return nil
 }
 
-func (r *deckhouseReleaseReconciler) patchSuspendAnnotation(dr *v1alpha1.DeckhouseRelease) error {
+func (r *deckhouseReleaseReconciler) patchSuspendAnnotation(ctx context.Context, dr *v1alpha1.DeckhouseRelease) error {
 	if !dr.GetSuspend() {
 		return nil
 	}
 
-	ctx := context.Background()
-	patch, _ := json.Marshal(map[string]any{
-		"metadata": map[string]any{
-			"annotations": map[string]any{
-				"release.deckhouse.io/suspended": nil,
-			},
-		},
-	})
+	drCopy := dr.DeepCopy()
 
-	p := client.RawPatch(types.MergePatchType, patch)
-	return r.client.Patch(ctx, dr, p)
+	drCopy.Status.Phase = v1alpha1.DeckhouseReleasePhaseSuspended
+
+	delete(drCopy.Annotations, v1alpha1.DeckhouseReleaseAnnotationSuspended)
+
+	err := r.client.Patch(ctx, drCopy, client.MergeFrom(dr))
+	if err != nil {
+		return fmt.Errorf("patch suspend annotation: %w", err)
+	}
+
+	err = r.client.Status().Patch(ctx, drCopy, client.MergeFrom(dr))
+	if err != nil {
+		return fmt.Errorf("patch suspend phase: %w", err)
+	}
+
+	return nil
 }
 
 func (r *deckhouseReleaseReconciler) pendingReleaseReconcile(ctx context.Context, dr *v1alpha1.DeckhouseRelease) (ctrl.Result, error) {
-	var result ctrl.Result
+	var res ctrl.Result
 
 	clusterBootstrapping := true
 	var imagesRegistry string
+	// TODO: make registry service to check secrets in it (make issue)
+	// TODO: incapsulate to kubernetes service
+	// TODO: read once
 	registrySecret, err := r.getRegistrySecret(ctx)
 	if apierrors.IsNotFound(err) {
 		err = nil
 	}
 	if err != nil {
-		return result, fmt.Errorf("get registry secret: %w", err)
+		return res, fmt.Errorf("get registry secret: %w", err)
 	}
 
 	if registrySecret != nil {
-		clusterBootstrapped, ok := registrySecret.Data["clusterIsBootstrapped"]
-		if ok {
-			clusterBootstrapping = string(clusterBootstrapped) != `"true"`
+		if registrySecret.ClusterIsBootstrapped != "" {
+			// is it working???
+			clusterBootstrapping = registrySecret.ClusterIsBootstrapped != `"true"`
 		}
 
-		imagesRegistry = string(registrySecret.Data["imagesRegistry"])
+		imagesRegistry = registrySecret.ImageRegistry
+
+		r.imageRegistry = registrySecret.ImageRegistry
+		r.deckhouseIsBootstrapping = registrySecret.ClusterIsBootstrapped != `"true"`
+		defer func() {
+			r.imageRegistry = ""
+			r.deckhouseIsBootstrapping = false
+		}()
 	}
 
-	podReady := r.isDeckhousePodReady()
+	// note: in module release we have pod ready by default
+	podReady := r.isDeckhousePodReady(ctx)
+
 	us := r.updateSettings.Get()
+
 	dus := &updater.Settings{
 		NotificationConfig:     us.Update.NotificationConfig,
 		DisruptionApprovalMode: us.Update.DisruptionApprovalMode,
-		Mode:                   updater.ParseUpdateMode(us.Update.Mode),
-		Windows:                us.Update.Windows,
+		// if we have whrong mode - autopatch
+		Mode:    updater.ParseUpdateMode(us.Update.Mode),
+		Windows: us.Update.Windows,
 	}
+
+	// TODO: rename get release update settings? because there's no data
 	releaseData := getReleaseData(dr)
+
+	// note: in module we have no
+	// 1) release data
+	// 2) pod is ready true by default
+	// 3) bootstrapping is false by default
+	//
+	// TODO: replace updater (struct with logic) with permanent service with info about current release info?
 	deckhouseUpdater := d8updater.NewDeckhouseUpdater(
 		ctx, r.logger, r.client, r.dc, dus, releaseData, r.metricStorage, podReady,
 		clusterBootstrapping, imagesRegistry, r.moduleManager.GetEnabledModuleNames(),
 	)
 
+	if releaseData.IsUpdating && !podReady {
+		r.metricStorage.Grouped().GaugeSet(metricUpdatingGroup, "d8_is_updating", 1, map[string]string{"releaseChannel": r.updateSettings.Get().ReleaseChannel})
+	}
+
 	if podReady {
 		r.metricStorage.Grouped().ExpireGroupMetrics(metricUpdatingGroup)
 
 		if releaseData.IsUpdating {
+			// note: if pod is ready and release is updating - patch annotations if changed
+			// here, we patch updating annotation
+			// but we have no patch here, because we have no predicted release and just change update settings (what???)
 			_ = deckhouseUpdater.ChangeUpdatingFlag(false)
+
+			// releaseData.IsUpdating = false
 		}
-	} else if releaseData.IsUpdating {
-		r.metricStorage.Grouped().GaugeSet(metricUpdatingGroup, "d8_is_updating", 1, map[string]string{"releaseChannel": r.updateSettings.Get().ReleaseChannel})
 	}
+
+	////////////////////////////////////////////////////
+	// New Logic start
+	//
+	// 1) Calculate task for current release
+	// 1.1) if skip - update phase to Skipped and stop reconcile
+	// 1.2) if await - update phase to Pending and requeue
+	// 1.3) if process - go forward
+	// 2) Check requirements
+	// 2.1) if not met any requirements - update phase to Pending with all requirements errors and requeue
+	// 3) Apply if force with force logic ???
+	// 4) Check deploy time and notify
+	// 5) Apply ussually release
+
+	// TODO: check for force annotation and make all previous pending in skipped phase
+	if dr.GetForce() {
+		err := r.ApplyForcedRelease(ctx, dr, nil)
+		if err != nil {
+			return res, fmt.Errorf("apply forced release: %w", err)
+		}
+
+		// stop requeue because we restart deckhous (deployment)
+		return ctrl.Result{}, nil
+	}
+
+	oCalc := d8updater.NewTaskCalculator(r.client, r.logger)
+	task, err := oCalc.CalculatePendingReleaseOrder(ctx, dr)
+	if err != nil {
+		return res, err
+	}
+
+	switch task.TaskType {
+	case d8updater.Process:
+		// pass
+	case d8updater.Skip:
+		err := r.updateReleaseStatus(ctx, dr, &v1alpha1.DeckhouseReleaseStatus{
+			Phase:   v1alpha1.DeckhouseReleasePhaseSkipped,
+			Message: task.Message,
+		})
+		if err != nil {
+			r.logger.Warn("skip order status update ", slog.String("name", dr.GetName()), log.Err(err))
+			return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
+		}
+
+		return res, nil
+	case d8updater.Await:
+		err := r.updateReleaseStatus(ctx, dr, &v1alpha1.DeckhouseReleaseStatus{
+			Phase:   v1alpha1.DeckhouseReleasePhasePending,
+			Message: task.Message,
+		})
+		if err != nil {
+			r.logger.Warn("await order status update ", slog.String("name", dr.GetName()), log.Err(err))
+		}
+
+		return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
+	}
+
+	checker, err := d8updater.NewRequirementsChecker(r.client, r.moduleManager.GetEnabledModuleNames(), r.logger)
+	if err != nil {
+		updateErr := r.updateReleaseStatus(ctx, dr, &v1alpha1.DeckhouseReleaseStatus{
+			Phase:   v1alpha1.DeckhouseReleasePhasePending,
+			Message: err.Error(),
+		})
+		if updateErr != nil {
+			r.logger.Warn("create release checker status update ", slog.String("name", dr.GetName()), log.Err(err))
+		}
+
+		return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
+	}
+
+	reasons := checker.MetRequirements(dr)
+	if len(reasons) > 0 {
+		msgs := make([]string, 0, len(reasons))
+		for _, reason := range reasons {
+			msgs = append(msgs, reason.Message)
+		}
+
+		err := r.updateReleaseStatus(ctx, dr, &v1alpha1.DeckhouseReleaseStatus{
+			Phase:   v1alpha1.DeckhouseReleasePhasePending,
+			Message: strings.Join(msgs, ";"),
+		})
+		if err != nil {
+			r.logger.Warn("met requirements status update ", slog.String("name", dr.GetName()), log.Err(err))
+		}
+
+		return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
+	}
+
+	// if deckhouse pod has bootstrap image -> apply first release
+	// doesn't matter which update mode is
+	if (r.deckhouseIsBootstrapping && task.IsSingle) || dr.GetApplyNow() {
+		err := r.runReleaseDeploy(ctx, dr, task.DeployedReleaseInfo)
+		if err != nil {
+			// TODO: deal with error
+			return res, fmt.Errorf("run single bootstrapping release deploy: %w", err)
+		}
+
+		// stop requeue because we restart deckhous (deployment)
+		return ctrl.Result{}, nil
+	}
+
+	err = r.PreApplyReleaseCheck(ctx, dr, task)
+	if err != nil {
+		// ignore this err, just requeue because of check failed
+		return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
+	}
+
+	err = r.ApplyPredictedRelease(ctx, dr, task)
+	if err != nil {
+		return res, fmt.Errorf("apply predicted release: %w", err)
+	}
+
+	return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
+
+	////////////////////////////////////////////////////
+	// New Logic End
+	//
+
 	{
 		var releases v1alpha1.DeckhouseReleaseList
 		err = r.client.List(ctx, &releases)
 		if err != nil {
-			return result, fmt.Errorf("get deckhouse releases: %w", err)
+			return res, fmt.Errorf("get deckhouse releases: %w", err)
 		}
 
+		if len(releases.Items) == 0 {
+			r.logger.Debug("releases count is zero")
+			return res, nil
+		}
+
+		// note: slice pointer? purpose? only because of use generics???
 		pointerReleases := make([]*v1alpha1.DeckhouseRelease, 0, len(releases.Items))
 		for _, rl := range releases.Items {
 			pointerReleases = append(pointerReleases, &rl)
 		}
-		deckhouseUpdater.SetReleases(pointerReleases)
-	}
 
-	if deckhouseUpdater.ReleasesCount() == 0 {
-		r.logger.Debug("releases count is zero")
-		return result, nil
+		// sort by version and save it to updater
+		deckhouseUpdater.SetReleases(pointerReleases)
 	}
 
 	// predict next patch for Deploy
@@ -322,12 +508,12 @@ func (r *deckhouseReleaseReconciler) pendingReleaseReconcile(ctx context.Context
 	// has already Deployed the latest release
 	if deckhouseUpdater.LastReleaseDeployed() {
 		r.logger.Debug("latest release is deployed")
-		return result, nil
+		return res, nil
 	}
 
 	// set skipped releases to PhaseSkipped
 	if err = deckhouseUpdater.CommitSkippedReleases(); err != nil {
-		return result, err
+		return res, err
 	}
 
 	if rel := deckhouseUpdater.GetPredictedRelease(); rel != nil {
@@ -341,11 +527,11 @@ func (r *deckhouseReleaseReconciler) pendingReleaseReconcile(ctx context.Context
 	// some release is forced, burn everything, apply this patch!
 	if deckhouseUpdater.HasForceRelease() {
 		err = deckhouseUpdater.ApplyForcedRelease(ctx)
-		if err == nil {
-			return result, nil
+		if err != nil {
+			return res, fmt.Errorf("apply forced release: %w", err)
 		}
 
-		return result, fmt.Errorf("apply forced release: %w", err)
+		return res, nil
 	}
 
 	err = deckhouseUpdater.ApplyPredictedRelease()
@@ -356,11 +542,302 @@ func (r *deckhouseReleaseReconciler) pendingReleaseReconcile(ctx context.Context
 	return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
 }
 
+var ErrPreApplyCheckIsFailed = errors.New("pre apply check is failed")
+
+func (r *deckhouseReleaseReconciler) PreApplyReleaseCheck(ctx context.Context, dr *v1alpha1.DeckhouseRelease, task *d8updater.Task) error {
+	metricLabels := updater.NewReleaseMetricLabels(dr)
+
+	dtr := r.DeployTimeCalculate(ctx, dr, task, metricLabels)
+
+	if metricLabels[updater.ManualApprovalRequired] == "true" {
+		metricLabels[updater.ReleaseQueueDepth] = strconv.Itoa(task.QueueDepth)
+	}
+
+	// if the predicted release has an index less than the number of awaiting releases
+	// calculate and set releaseDepthQueue label
+	r.metricsUpdater.UpdateReleaseMetric(dr.GetName(), metricLabels)
+
+	if dtr == nil {
+		return nil
+	}
+
+	err := r.updateReleaseStatus(ctx, dr, &v1alpha1.DeckhouseReleaseStatus{
+		Phase:   v1alpha1.DeckhouseReleasePhasePending,
+		Message: dtr.Message,
+	})
+	if err != nil {
+		r.logger.Warn("met release conditions status update ", slog.String("name", dr.GetName()), log.Err(err))
+	}
+
+	err = ctrlutils.UpdateWithRetry(ctx, r.client, dr, func() error {
+		if dr.Annotations == nil {
+			dr.Annotations = make(map[string]string, 2)
+		}
+
+		dr.Annotations[v1alpha1.DeckhouseReleaseAnnotationIsUpdating] = "false"
+		dr.Annotations[v1alpha1.DeckhouseReleaseAnnotationNotified] = strconv.FormatBool(dtr.Notified)
+
+		if !dtr.ReleaseApplyAfterTime.IsZero() {
+			dr.Spec.ApplyAfter = &metav1.Time{Time: dtr.ReleaseApplyAfterTime.UTC()}
+
+			dr.Annotations[v1alpha1.DeckhouseReleaseAnnotationNotificationTimeShift] = "true"
+		}
+
+		return nil
+	})
+	if err != nil {
+		r.logger.Warn("met release conditions resource update ", slog.String("name", dr.GetName()), log.Err(err))
+	}
+
+	return ErrPreApplyCheckIsFailed
+}
+
+func (r *deckhouseReleaseReconciler) DeployTimeCalculate(ctx context.Context, dr *v1alpha1.DeckhouseRelease, task *d8updater.Task, metricLabels updater.MetricLabels) *d8updater.DeployTimeReason {
+	us := r.updateSettings.Get()
+
+	dus := &updater.Settings{
+		NotificationConfig:     us.Update.NotificationConfig,
+		DisruptionApprovalMode: us.Update.DisruptionApprovalMode,
+		// if we have whrong mode - autopatch
+		Mode:    updater.ParseUpdateMode(us.Update.Mode),
+		Windows: us.Update.Windows,
+	}
+
+	releaseNotifier := d8updater.NewReleaseNotifier(dus)
+	timeChecker := d8updater.NewDeployTimeChecker(r.dc, dus, r.isDeckhousePodReady, r.logger)
+
+	var deployTimeResult *d8updater.DeployTimeResult
+
+	if task.IsPatch {
+		deployTimeResult = timeChecker.CalculatePatchDeployTime(dr, metricLabels)
+
+		// TODO: set notified if not notified???
+		notifyErr := releaseNotifier.SendPatchReleaseNotification(ctx, dr, deployTimeResult.ReleaseApplyAfterTime, metricLabels)
+		if notifyErr != nil {
+			return &d8updater.DeployTimeReason{
+				Message:               notifyErr.Error(),
+				ReleaseApplyAfterTime: deployTimeResult.ReleaseApplyAfterTime,
+			}
+		}
+
+		dtr := timeChecker.ProcessPatchReleaseDeployTime(dr, deployTimeResult)
+		if dtr != nil {
+			dtr.Notified = true
+		}
+
+		return dtr
+	}
+
+	checker := d8updater.NewPreApplyChecker(dus, r.logger)
+	reasons := checker.MetRequirements(dr)
+	if len(reasons) > 0 {
+		metricLabels.SetTrue(updater.DisruptionApprovalRequired)
+
+		msgs := make([]string, 0, len(reasons))
+		for _, reason := range reasons {
+			msgs = append(msgs, reason.Message)
+		}
+
+		return &d8updater.DeployTimeReason{
+			Message: fmt.Sprintf("release blocked, disruption approval required: %s", strings.Join(msgs, ", ")),
+		}
+	}
+
+	deployTimeResult = timeChecker.CalculateMinorDeployTime(dr, metricLabels)
+
+	notifyErr := releaseNotifier.SendMinorReleaseNotification(ctx, dr, deployTimeResult.ReleaseApplyAfterTime, metricLabels)
+	if notifyErr != nil {
+		return &d8updater.DeployTimeReason{
+			Message:               notifyErr.Error(),
+			ReleaseApplyAfterTime: deployTimeResult.ReleaseApplyAfterTime,
+		}
+	}
+
+	dtr := timeChecker.ProcessMinorReleaseDeployTime(ctx, dr, deployTimeResult)
+	if dtr != nil {
+		dtr.Notified = true
+	}
+
+	return dtr
+}
+
+// ApplyForcedRelease deploys forced release without any checks (windows, requirements, approvals and so on)
+func (r *deckhouseReleaseReconciler) ApplyForcedRelease(ctx context.Context, dr *v1alpha1.DeckhouseRelease, task *d8updater.Task) error {
+	r.logger.Warn("forcing release", slog.String("release", dr.GetName()))
+
+	err := r.runReleaseDeploy(ctx, dr, task.DeployedReleaseInfo)
+	if err != nil {
+		return fmt.Errorf("run release deploy: %w", err)
+	}
+
+	// TODO: if force, make ALL previous releases superseded??? or just deployed?
+	// // Outdate all previous releases
+	// for i, release := range u.releases {
+	// 	if i < u.forcedReleaseIndex {
+	// 		err := u.updateStatus(release, "", PhaseSuperseded)
+	// 		if err != nil {
+	// 			u.logger.Error("update status", log.Err(err))
+	// 		}
+	// 	}
+	// }
+
+	return nil
+}
+
+// ApplyPredictedRelease applies predicted release, checks everything:
+//   - Deckhouse is ready (except patch)
+//   - Canary settings
+//   - Manual approving
+//   - Release requirements
+//
+// In addition to the regular error, ErrDeployConditionsNotMet or NotReadyForDeployError is returned as appropriate.
+func (r *deckhouseReleaseReconciler) ApplyPredictedRelease(ctx context.Context, dr *v1alpha1.DeckhouseRelease, task *d8updater.Task) error {
+	err := r.runReleaseDeploy(ctx, dr, task.DeployedReleaseInfo)
+	if err != nil {
+		return fmt.Errorf("run release deploy: %w", err)
+	}
+
+	return nil
+}
+
+// 1) bump deckhouse deployment (retry if error)
+// 2) bump previous deployment status superseded (retry if error)
+// 3) bump release annotations (retry if error)
+// 3) bump release status to deployed (retry if error)
+func (r *deckhouseReleaseReconciler) runReleaseDeploy(ctx context.Context, dr *v1alpha1.DeckhouseRelease, deployedReleaseInfo *d8updater.ReleaseInfo) error {
+	r.logger.Info("applying release", slog.String("name", dr.GetName()))
+
+	err := r.bumpDeckhouseDeployment(ctx, dr)
+	if err != nil {
+		return fmt.Errorf("deploy release: %w", err)
+	}
+
+	if deployedReleaseInfo != nil {
+		err := r.updateReleaseStatus(ctx, newDeckhouseReleaseWithName(deployedReleaseInfo.Name), &v1alpha1.DeckhouseReleaseStatus{
+			Phase:   v1alpha1.DeckhouseReleasePhaseSuperseded,
+			Message: "",
+		})
+		if err != nil {
+			r.logger.Error("update status", slog.String("release", deployedReleaseInfo.Name), log.Err(err))
+		}
+	}
+
+	err = ctrlutils.UpdateWithRetry(ctx, r.client, dr, func() error {
+		annotations := map[string]string{
+			v1alpha1.DeckhouseReleaseAnnotationIsUpdating: "true",
+			v1alpha1.DeckhouseReleaseAnnotationNotified:   "false",
+		}
+
+		if dr.Annotations == nil {
+			dr.Annotations = make(map[string]string, 2)
+		}
+
+		for k, v := range annotations {
+			dr.Annotations[k] = v
+		}
+
+		if dr.GetApplyNow() {
+			delete(dr.Annotations, v1alpha1.DeckhouseReleaseAnnotationApplyNow)
+		}
+
+		if dr.GetForce() {
+			delete(dr.Annotations, v1alpha1.DeckhouseReleaseAnnotationForce)
+		}
+
+		return nil
+	})
+	if err != nil {
+		return fmt.Errorf("update with retry: %w", err)
+	}
+
+	err = r.updateReleaseStatus(ctx, dr, &v1alpha1.DeckhouseReleaseStatus{
+		Phase: v1alpha1.DeckhouseReleasePhaseDeployed,
+	})
+	if err != nil {
+		return fmt.Errorf("update status with retry: %w", err)
+	}
+
+	return nil
+}
+
+func (r *deckhouseReleaseReconciler) bumpDeckhouseDeployment(ctx context.Context, dr *v1alpha1.DeckhouseRelease) error {
+	key := client.ObjectKey{Namespace: deckhouseNamespace, Name: deckhouseDeployment}
+
+	depl := new(appsv1.Deployment)
+
+	err := r.client.Get(ctx, key, depl)
+	if err != nil {
+		return fmt.Errorf("get deployment %s: %w", key, err)
+	}
+
+	// dryrun for testing purpose
+	val, ok := dr.GetAnnotations()[deckhouseReleaseAnnotationDryrun]
+	if ok && val == "true" {
+		go func() {
+			r.logger.Debug("dryrun start soon...")
+
+			time.Sleep(3 * time.Second)
+
+			r.logger.Debug("dryrun started")
+
+			// because we do not know how long is parent context and how long will be update
+			// 1 minute - magic constant
+			ctxwt, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
+			defer cancel()
+
+			releases := new(v1alpha1.DeckhouseReleaseList)
+			err = r.client.List(ctxwt, releases)
+			if err != nil {
+				r.logger.Error("dryrun list deckhouse releases", log.Err(err))
+
+				return
+			}
+
+			for _, release := range releases.Items {
+				release := &release
+
+				if release.GetName() == dr.GetName() {
+					continue
+				}
+
+				if release.Status.Phase != v1alpha1.ModuleReleasePhasePending {
+					continue
+				}
+
+				// update releases to trigger their requeue
+				err := ctrlutils.UpdateWithRetry(ctxwt, r.client, release, func() error {
+					if release.Annotations == nil {
+						release.Annotations = make(map[string]string, 1)
+					}
+
+					release.Annotations[deckhouseReleaseAnnotationTriggeredByDryrun] = dr.GetName()
+
+					return nil
+				})
+				if err != nil {
+					r.logger.Error("dryrun update release to requeue", log.Err(err))
+				}
+
+				r.logger.Debug("dryrun release successfully updated", slog.String("release", release.Name))
+			}
+		}()
+
+		return nil
+	}
+
+	return ctrlutils.UpdateWithRetry(ctx, r.client, depl, func() error {
+		depl.Spec.Template.Spec.Containers[0].Image = r.imageRegistry + ":" + dr.Spec.Version
+
+		return nil
+	})
+}
+
 func (r *deckhouseReleaseReconciler) wrapApplyReleaseError(err error) (ctrl.Result, error) {
-	var result ctrl.Result
+	var res ctrl.Result
+
 	var notReadyErr *updater.NotReadyForDeployError
 	if errors.As(err, &notReadyErr) {
-		r.logger.Info(err.Error())
+		r.logger.Warn(err.Error())
 		// TODO: requeue all releases if deckhouse update settings is changed
 		// requeueAfter := notReadyErr.RetryDelay()
 		// if requeueAfter == 0 {
@@ -371,7 +848,7 @@ func (r *deckhouseReleaseReconciler) wrapApplyReleaseError(err error) (ctrl.Resu
 		return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
 	}
 
-	return result, fmt.Errorf("apply predicted release: %w", err)
+	return res, fmt.Errorf("apply predicted release: %w", err)
 }
 
 func (r *deckhouseReleaseReconciler) getDeckhouseLatestPod(ctx context.Context) (*corev1.Pod, error) {
@@ -457,11 +934,10 @@ func (r *deckhouseReleaseReconciler) tagUpdate(ctx context.Context, leaderPod *c
 
 	var opts []cr.Option
 	if registrySecret != nil {
-		drs, _ := utils.ParseDeckhouseRegistrySecret(registrySecret.Data)
 		rconf := &utils.RegistryConfig{
-			DockerConfig: drs.DockerConfig,
-			Scheme:       drs.Scheme,
-			CA:           drs.CA,
+			DockerConfig: registrySecret.DockerConfig,
+			Scheme:       registrySecret.Scheme,
+			CA:           registrySecret.CA,
 			UserAgent:    r.clusterUUID,
 		}
 		opts = utils.GenerateRegistryOptions(rconf, r.logger)
@@ -520,24 +996,31 @@ func (r *deckhouseReleaseReconciler) tagUpdate(ctx context.Context, leaderPod *c
 	return nil
 }
 
-func (r *deckhouseReleaseReconciler) getRegistrySecret(ctx context.Context) (*corev1.Secret, error) {
-	var secret corev1.Secret
-	key := types.NamespacedName{Namespace: "d8-system", Name: "deckhouse-registry"}
-	err := r.client.Get(ctx, key, &secret)
+func (r *deckhouseReleaseReconciler) getRegistrySecret(ctx context.Context) (*utils.DeckhouseRegistrySecret, error) {
+	key := types.NamespacedName{Namespace: deckhouseNamespace, Name: deckhouseRegistrySecretName}
+
+	secret := new(corev1.Secret)
+
+	err := r.client.Get(ctx, key, secret)
 	if err != nil {
 		return nil, fmt.Errorf("get secret %s: %w", key, err)
 	}
 
-	return &secret, nil
+	regSecret, err := utils.ParseDeckhouseRegistrySecret(secret.Data)
+	if errors.Is(err, utils.ErrImageRegistryFieldIsNotFound) {
+		regSecret.ImageRegistry = regSecret.Address + regSecret.Path
+	}
+
+	return regSecret, nil
 }
 
-func (r *deckhouseReleaseReconciler) isDeckhousePodReady() bool {
-	deckhousePodIP := os.Getenv("ADDON_OPERATOR_LISTEN_ADDRESS")
+func (r *deckhouseReleaseReconciler) isDeckhousePodReady(ctx context.Context) bool {
+	deckhousePodIP := aoapp.ListenAddress
 
 	url := fmt.Sprintf("http://%s:4222/readyz", deckhousePodIP)
-	req, err := http.NewRequest(http.MethodGet, url, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
-		r.logger.Errorf("error getting deckhouse pod readyz status: %s", err)
+		r.logger.Error("error getting deckhouse pod readyz", log.Err(err))
 	}
 
 	resp, err := r.dc.GetHTTPClient().Do(req)
@@ -557,33 +1040,33 @@ func (r *deckhouseReleaseReconciler) updateByImageHashLoop(ctx context.Context) 
 
 		deckhouseLeaderPod, err := r.getDeckhouseLatestPod(ctx)
 		if err != nil {
-			r.logger.Warnf("Error getting deckhouse pods: %s", err)
+			r.logger.Warn("getting deckhouse pods", log.Err(err))
 			return
 		}
 
 		if deckhouseLeaderPod == nil {
-			r.logger.Debug("Deckhouse pods not found. Skipping update")
+			r.logger.Debug("deckhouse pods not found. Skipping update")
 			return
 		}
 
 		err = r.tagUpdate(ctx, deckhouseLeaderPod)
 		if err != nil {
-			r.logger.Errorf("deckhouse image tag update failed: %s", err)
+			r.logger.Error("deckhouse image tag update", log.Err(err))
 		}
 	}, 15*time.Second)
 }
 
 func (r *deckhouseReleaseReconciler) reconcileDeployedRelease(ctx context.Context, dr *v1alpha1.DeckhouseRelease) (ctrl.Result, error) {
-	var result ctrl.Result
+	var res ctrl.Result
 
-	if r.isDeckhousePodReady() {
+	if r.isDeckhousePodReady(ctx) {
 		data := getReleaseData(dr)
 		data.IsUpdating = false
 		err := r.newUpdaterKubeAPI().SaveReleaseData(ctx, dr, data)
 		if err != nil {
-			return result, fmt.Errorf("change updating flag: %w", err)
+			return res, fmt.Errorf("change updating flag: %w", err)
 		}
-		return result, nil
+		return res, nil
 	}
 
 	return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
@@ -591,6 +1074,21 @@ func (r *deckhouseReleaseReconciler) reconcileDeployedRelease(ctx context.Contex
 
 func (r *deckhouseReleaseReconciler) newUpdaterKubeAPI() *d8updater.KubeAPI {
 	return d8updater.NewKubeAPI(r.client, r.dc, "")
+}
+
+func (r *deckhouseReleaseReconciler) updateReleaseStatus(ctx context.Context, dr *v1alpha1.DeckhouseRelease, status *v1alpha1.DeckhouseReleaseStatus) error {
+	r.logger.Debug("refresh release status", slog.String("name", dr.GetName()))
+
+	return ctrlutils.UpdateStatusWithRetry(ctx, r.client, dr, func() error {
+		if dr.Status.Phase != status.Phase {
+			dr.Status.TransitionTime = metav1.NewTime(r.dc.GetClock().Now().UTC())
+		}
+
+		dr.Status.Phase = status.Phase
+		dr.Status.Message = status.Message
+
+		return nil
+	})
 }
 
 func getDeckhouseContainerIndex(containers []corev1.Container) int {
@@ -615,7 +1113,15 @@ func getDeckhouseContainerStatusIndex(statuses []corev1.ContainerStatus) int {
 
 func getReleaseData(dr *v1alpha1.DeckhouseRelease) updater.DeckhouseReleaseData {
 	return updater.DeckhouseReleaseData{
-		IsUpdating: dr.Annotations[d8updater.IsUpdatingAnnotation] == "true",
-		Notified:   dr.Annotations[d8updater.NotifiedAnnotation] == "true",
+		IsUpdating: dr.Annotations[v1alpha1.DeckhouseReleaseAnnotationIsUpdating] == "true",
+		Notified:   dr.Annotations[v1alpha1.DeckhouseReleaseAnnotationNotified] == "true",
+	}
+}
+
+func newDeckhouseReleaseWithName(name string) *v1alpha1.DeckhouseRelease {
+	return &v1alpha1.DeckhouseRelease{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: name,
+		},
 	}
 }
