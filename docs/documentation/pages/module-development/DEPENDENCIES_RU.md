@@ -41,7 +41,7 @@ requirements:
    ```console
    root@dev-master-0:~# kubectl get mr
    ```
-   
+
    Выводимая информация:
 
    ```text
