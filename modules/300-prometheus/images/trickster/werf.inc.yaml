@@ -4,14 +4,14 @@ fromImage: common/distroless
 import:
 - artifact: {{ .ModuleName }}/{{ .ImageName }}-entrypoint-artifact
   add: /src/entrypoint
-  to: /entrypoint
+  to: /usr/local/bin/entrypoint
   before: setup
 - artifact: {{ .ModuleName }}/{{ .ImageName }}-artifact
   add: /src/OPATH/trickster
-  to: /trickster
+  to: /usr/local/bin/trickster
   before: setup
 docker:
-  ENTRYPOINT: ["/entrypoint"]
+  ENTRYPOINT: ["entrypoint"]
 ---
 artifact: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
 fromArtifact: common/src-artifact
