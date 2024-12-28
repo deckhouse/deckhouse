@@ -142,7 +142,7 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "gomod"
-  directory: "/ee/se-plus/modules/021-cni-cilium/images/egress-gateway-agent"
+  directory: "/ee/se-plus/modules/021-cni-cilium/images/egress-gateway-agent/src"
   labels:
   - "type/dependencies"
   - "status/ok-to-test"

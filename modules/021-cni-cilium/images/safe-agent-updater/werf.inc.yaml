@@ -1,9 +1,9 @@
 ---
-image: {{ $.ModuleName }}/{{ $.ImageName }}-build-artifact
+image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+fromImage: common/src-artifact
 final: false
-from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
 git:
-- add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}
+- add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}
   to: /src
   excludePaths:
   - "**/*.md"
@@ -14,6 +14,18 @@ git:
     - go.sum
     setup:
     - "**/*.go"
+shell:
+  install:
+  - cd /src
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
+from: {{ .Images.BASE_GOLANG_23_ALPINE }}
+final: false
+import:
+- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+  add: /src
+  to: /src
+  before: install
 mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
@@ -29,13 +41,12 @@ shell:
   - chown 64535:64535 /src/safe-agent-updater
   - chmod 0700 /src/safe-agent-updater
 ---
-image: {{ $.ModuleName }}/{{ .ImageName }}
+image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
 import:
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-build-artifact
+- image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
   add: /src/safe-agent-updater
   to: /safe-agent-updater
   before: install
 docker:
-  USER: 64535
   ENTRYPOINT: ["/safe-agent-updater"]
