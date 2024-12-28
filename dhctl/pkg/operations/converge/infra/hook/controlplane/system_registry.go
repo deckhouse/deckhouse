@@ -20,7 +20,7 @@ import (
 	"fmt"
 	"time"
 
-	corev1 "k8s.io/api/core/v1"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/template"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -49,97 +49,18 @@ const (
 
 	registryTerraformEnableFlagVar = "systemRegistryEnable"
 
-	NGCUmountTaskName    = "umount-registry-data-device-sh"
-	NGCUmountTaskContent = `
-NODE_NAME="%s"
-UNMOUNT_ALLOWED_ANNOTATION="%s"
-UNMOUNT_DONE_ANNOTATION="%s"
-
-function check_annotation(){
-    local annotation="$1"
-    local node="$D8_NODE_HOSTNAME"
-    local node_annotations=$(bb-kubectl --request-timeout=60s --kubeconfig=/etc/kubernetes/kubelet.conf get node $node -o json | jq '.metadata.annotations')
-
-    if echo "$node_annotations" | jq 'has("'$annotation'")' | grep -q 'true'; then
-        return 0
-    fi
-    return 1
-}
-
-function create_annotation(){
-    local annotation="$1=\"\""
-    local node="$D8_NODE_HOSTNAME"
-    bb-kubectl --request-timeout=60s --kubeconfig=/etc/kubernetes/kubelet.conf annotate node $node --overwrite $annotation
-}
-
-function find_path_by_data_device_mountpoint() {
-  local data_device_mountpoint="$1"
-  lsblk -o path,type,mountpoint,fstype --tree --json | jq -r "
-    [
-      .blockdevices[] 
-      | select(.mountpoint == \"$data_device_mountpoint\")  # Match the specific device mountpoint
-      | .path
-    ] | first"
-}
-
-function is_data_device_mounted() {
-  local data_device_mountpoint="$1"
-  local data_device
-  data_device=$(find_path_by_data_device_mountpoint "$data_device_mountpoint")
-  if [ "$data_device" != "null" ] && [ -n "$data_device" ]; then
-    return 0
-  else
-    return 1
-  fi
-}
-
-function teardown_registry_data_device() {
-    local mount_point="/mnt/system-registry-data"
-    local fstab_file="/etc/fstab"
-    local link_target="/opt/deckhouse/system-registry"
-    local label="registry-data"
-
-    # Umount data device
-    if is_data_device_mounted "$mount_point"; then
-        umount $mount_point
-    fi
-    
-    # Remove the entry from /etc/fstab
-    if grep -q "$label" "$fstab_file"; then
-        sed -i "/^LABEL=${label}.*/d" "$fstab_file"
-    fi
-
-    # Remove the mount point if it exists
-    if [[ -e "$mount_point" ]]; then
-        rm -rf "$mount_point"
-    fi
-  
-    # Remove the symbolic link if it exists
-    if [[ -L "$link_target" ]]; then
-        rm -f "$link_target"
-    fi
-}
-
-if [[ "$D8_NODE_HOSTNAME" != "$NODE_NAME" ]]; then
-    exit 0
-fi
-
-if check_annotation "$UNMOUNT_ALLOWED_ANNOTATION"; then
-    teardown_registry_data_device
-    create_annotation "$UNMOUNT_DONE_ANNOTATION"
-fi
-`
+	NgcUmountTaskName = "umount-registry-data-device"
 )
 
 var (
-	NGCGVK = schema.GroupVersionKind{
+	NgcGVK = schema.GroupVersionKind{
 		Group:   "deckhouse.io",
 		Version: "v1alpha1",
 		Kind:    "NodeGroupConfiguration",
 	}
-	NGCGVR = schema.GroupVersionResource{
-		Group:    NGCGVK.Group,
-		Version:  NGCGVK.Version,
+	NgcGVR = schema.GroupVersionResource{
+		Group:    NgcGVK.Group,
+		Version:  NgcGVK.Version,
 		Resource: "nodegroupconfigurations",
 	}
 )
@@ -162,160 +83,287 @@ func isRegistryMustBeEnabled(terraformVars []byte) (bool, error) {
 	return boolValue, nil
 }
 
-func waitForRegistryPodsDeletion(kubeClient *client.KubernetesClient, nodeName string) error {
-	return retry.NewLoop(
-		fmt.Sprintf("Checking for registry pods on node '%s'", nodeName),
-		45, 10*time.Second,
-	).Run(func() error {
-		var result *multierror.Error
+func waitForNoRegistryPodsOnNode(ctx context.Context, kubeClient *client.KubernetesClient, nodeName string) error {
+	loopName := fmt.Sprintf("Check registry pods on node '%s'", nodeName)
+	const loopRetryAttempts = 45
+	const loopRetryInterval = 10 * time.Second
 
-		if err := checkPodsExistence(
-			kubeClient, nodeName, registryPodsNamespace, "registry static",
-			map[string]string{
+	registryPods := []struct {
+		description string
+		labels      map[string]string
+	}{
+		{
+			description: "registry static",
+			labels: map[string]string{
 				"component": "system-registry",
 				"tier":      "control-plane",
 			},
-		); err != nil {
-			result = multierror.Append(result, err)
-		}
-
-		if err := checkPodsExistence(
-			kubeClient, nodeName, registryPodsNamespace, "registry static pod manager",
-			map[string]string{
+		},
+		{
+			description: "registry static pod manager",
+			labels: map[string]string{
 				"app": "system-registry-staticpod-manager",
 			},
-		); err != nil {
-			result = multierror.Append(result, err)
-		}
+		},
+	}
 
-		if result.ErrorOrNil() != nil {
-			result = multierror.Append(
-				result,
-				fmt.Errorf(
-					"pods of module '%s' have been detected. Before disconnecting the disks, you need to disable module '%s'",
-					registryModuleName,
-					registryModuleName,
-				),
-			)
-		}
+	return retry.NewLoop(loopName, loopRetryAttempts, loopRetryInterval).
+		WithContext(ctx).
+		Run(func() error {
+			var result *multierror.Error
 
-		return result.ErrorOrNil()
-	})
+			for _, pod := range registryPods {
+				if err := checkPodsExistence(
+					ctx,
+					kubeClient,
+					nodeName,
+					registryPodsNamespace,
+					pod.description,
+					pod.labels,
+				); err != nil {
+					result = multierror.Append(result, err)
+				}
+			}
+
+			if result.ErrorOrNil() != nil {
+				result = multierror.Append(
+					result,
+					fmt.Errorf(
+						"pods of module '%s' have been detected. Before disconnecting the disks, you need to disable module '%s'",
+						registryModuleName,
+						registryModuleName,
+					),
+				)
+			}
+
+			return result.ErrorOrNil()
+		})
 }
 
-func tryLockRegistryDataDeviceMount(kubeClient *client.KubernetesClient, nodeName string) error {
-	return retry.NewLoop(
-		fmt.Sprintf("Attempting to lock mount actions for registry data device on node '%s'", nodeName),
-		45, 10*time.Second,
-	).Run(func() error {
-		return setAnnotations(kubeClient, nodeName, map[string]string{registryDataDeviceMountLockAnnotation: ""})
-	})
-}
+func createNgcForUmountingRegistryDataDevice(ctx context.Context, kubeClient *client.KubernetesClient, nodeName string) error {
+	loopName := fmt.Sprintf("Create NodeGroupConfiguration '%s'", NgcUmountTaskName)
+	const loopRetryAttempts = 45
+	const loopRetryInterval = 10 * time.Second
 
-func tryUnlockRegistryDataDeviceMount(kubeClient *client.KubernetesClient, nodeName string) error {
-	return retry.NewLoop(
-		fmt.Sprintf("Attempting to unlock registry data device on node '%s'", nodeName),
-		45, 10*time.Second,
-	).Run(func() error {
-		return unsetAnnotations(kubeClient, nodeName, []string{registryDataDeviceMountLockAnnotation})
-	})
-}
+	renderedTemplate, err := template.RenderUmountRegistryDataDeviceStep(
+		nodeName,
+		registryDataDeviceUnmountAllowedAnnotation,
+		registryDataDeviceUnmountDoneAnnotation,
+	)
+	if err != nil {
+		return err
+	}
 
-func setRegistryDataDeviceUnmountAnnotations(kubeClient *client.KubernetesClient, nodeName string) error {
-	return retry.NewLoop(
-		fmt.Sprintf("Attempting to set umount annotations on node '%s'", nodeName),
-		45, 10*time.Second,
-	).Run(func() error {
-		return setAnnotations(kubeClient, nodeName, map[string]string{registryDataDeviceUnmountAllowedAnnotation: ""})
-	})
-}
-
-func unsetRegistryDataDeviceUnmountAnnotations(kubeClient *client.KubernetesClient, nodeName string) error {
-	return retry.NewLoop(
-		fmt.Sprintf("Attempting to unset umount annotations on node '%s'", nodeName),
-		45, 10*time.Second,
-	).Run(func() error {
-		return unsetAnnotations(
-			kubeClient,
-			nodeName,
-			[]string{
-				registryDataDeviceUnmountAllowedAnnotation,
-				registryDataDeviceUnmountDoneAnnotation,
+	// Create a new NodeGroupConfiguration object
+	newObj := &unstructured.Unstructured{
+		Object: map[string]interface{}{
+			"apiVersion": NgcGVK.GroupVersion().String(),
+			"kind":       NgcGVK.Kind,
+			"metadata": map[string]interface{}{
+				"name": NgcUmountTaskName,
 			},
-		)
-	})
+			"spec": map[string]interface{}{
+				"weight":     0,
+				"nodeGroups": []string{"master"},
+				"bundles":    []string{"*"},
+				"content":    renderedTemplate.Content.String(),
+			},
+		},
+	}
+
+	return retry.NewLoop(loopName, loopRetryAttempts, loopRetryInterval).
+		WithContext(ctx).
+		Run(func() error {
+			// Prepare annatations
+			err := manageNodeAnnotations(
+				ctx,
+				kubeClient,
+				nodeName,
+				// Create annatations
+				map[string]string{registryDataDeviceUnmountAllowedAnnotation: ""},
+				// Delete annatations
+				[]string{registryDataDeviceUnmountDoneAnnotation},
+			)
+			if err != nil {
+				return err
+			}
+
+			// Get current NGC
+			currentObj, err := kubeClient.
+				Dynamic().
+				Resource(NgcGVR).
+				Get(ctx, NgcUmountTaskName, metav1.GetOptions{})
+			if err != nil {
+				if errors.IsNotFound(err) {
+					// Create if not exist
+					_, createErr := kubeClient.
+						Dynamic().
+						Resource(NgcGVR).
+						Create(ctx, newObj, metav1.CreateOptions{})
+					return createErr
+				}
+				return err
+			}
+
+			// Update if NGC exist
+			newObj.SetResourceVersion(currentObj.GetResourceVersion())
+			_, updateErr := kubeClient.Dynamic().Resource(NgcGVR).
+				Update(ctx, newObj, metav1.UpdateOptions{})
+			return updateErr
+		})
 }
 
-func unsetRegistryDataDeviceNodeLabel(kubeClient *client.KubernetesClient, nodeName string) error {
-	return retry.NewLoop(
-		fmt.Sprintf("Attempting to unset DataDeviceNodeLabel '%s'", nodeName),
-		45, 10*time.Second,
-	).Run(func() error {
-		return unsetLabels(kubeClient, nodeName, []string{registryDataDeviceLabel})
-	})
+func deleteNgcForUmountingRegistryDataDevice(ctx context.Context, kubeClient *client.KubernetesClient, nodeName string) error {
+	loopName := fmt.Sprintf("Delete NodeGroupConfiguration '%s'", NgcUmountTaskName)
+	const loopRetryAttempts = 45
+	const loopRetryInterval = 10 * time.Second
+
+	return retry.NewLoop(loopName, loopRetryAttempts, loopRetryInterval).
+		WithContext(ctx).
+		Run(func() error {
+			// Prepare annatations
+			manageNodeAnnotations(
+				ctx,
+				kubeClient,
+				nodeName,
+				// Create annatations
+				map[string]string{},
+				// Delete annatations
+				[]string{
+					registryDataDeviceUnmountAllowedAnnotation,
+					registryDataDeviceUnmountDoneAnnotation,
+				},
+			)
+
+			// Delete NGC if not exist
+			err := kubeClient.
+				Dynamic().
+				Resource(NgcGVR).
+				Delete(ctx, NgcUmountTaskName, metav1.DeleteOptions{})
+			if err != nil && !errors.IsNotFound(err) {
+				return err
+			}
+			return nil
+		})
 }
 
-func isExistRegistryDataDeviceUnmountDoneAnnotation(kubeClient *client.KubernetesClient, nodeName string) (bool, error) {
-	isExist := false
-	err := retry.NewLoop(
-		fmt.Sprintf("Attempting to check RegistryDataDeviceUnmountDoneAnnotation '%s'", nodeName),
-		45, 10*time.Second,
-	).Run(func() error {
-		var err error
-		isExist, err = isAnnotationExist(kubeClient, nodeName, registryDataDeviceUnmountDoneAnnotation)
-		if !isExist {
-			return fmt.Errorf("Failed to wait...")
-		}
-		return err
-	})
+func waitDoneNgcForUmountingRegistryDataDevice(ctx context.Context, kubeClient *client.KubernetesClient, nodeName string) error {
+	loopName := fmt.Sprintf("Wait for '%s' to unmount registry data device", nodeName)
+	const loopRetryAttempts = 100
+	const loopRetryInterval = 10 * time.Second
+
+	var isExist bool
+	err := retry.NewLoop(loopName, loopRetryAttempts, loopRetryInterval).
+		WithContext(ctx).
+		Run(func() error {
+			var err error
+			isExist, err = isAnnotationExist(ctx, kubeClient, nodeName, registryDataDeviceUnmountDoneAnnotation)
+			if err != nil {
+				return fmt.Errorf("failed to check unmount done annotation for node '%s': %v", nodeName, err)
+			}
+			if !isExist {
+				return fmt.Errorf("waiting for the registry data device to be unmounted on node '%s'", nodeName)
+			}
+			return nil
+		})
+	return err
+}
+
+func isRegistryDataDeviceExistOnNode(ctx context.Context, kubeClient *client.KubernetesClient, nodeName string) (bool, error) {
+	loopName := fmt.Sprintf("Check if registry data device exists on node '%s'", nodeName)
+	const loopRetryAttempts = 45
+	const loopRetryInterval = 10 * time.Second
+
+	var isExist bool
+	err := retry.NewLoop(loopName, loopRetryAttempts, loopRetryInterval).
+		WithContext(ctx).
+		Run(func() error {
+			var checkErr error
+			isExist, checkErr = isLabelExist(ctx, kubeClient, nodeName, registryDataDeviceLabel, registryDataDeviceLabelValue)
+			return checkErr
+		})
+
 	return isExist, err
 }
 
-func isExistRegistryDataDeviceNodeLabel(kubeClient *client.KubernetesClient, nodeName string) (bool, error) {
-	isExist := false
-	err := retry.NewLoop(
-		fmt.Sprintf("Attempting to check RegistryDataDeviceNodeLabel '%s'", nodeName),
-		45, 10*time.Second,
-	).Run(func() error {
-		var err error
-		isExist, err = isLabelExist(kubeClient, nodeName, registryDataDeviceLabel, registryDataDeviceLabelValue)
-		if !isExist {
-			return fmt.Errorf("Failed to wait...")
-		}
-		return err
-	})
-	return isExist, err
+func lockRegistryDataDeviceMount(ctx context.Context, kubeClient *client.KubernetesClient, nodeName string) error {
+	loopName := fmt.Sprintf("Lock mount actions for registry data device on node '%s'", nodeName)
+	const loopRetryAttempts = 45
+	const loopRetryInterval = 10 * time.Second
+
+	return retry.NewLoop(loopName, loopRetryAttempts, loopRetryInterval).
+		WithContext(ctx).
+		Run(func() error {
+			return manageNodeAnnotations(ctx, kubeClient, nodeName, map[string]string{registryDataDeviceMountLockAnnotation: ""}, []string{})
+		})
 }
 
-func checkPodsExistence(kubeClient *client.KubernetesClient, nodeName, podNamespace, podName string, podLabels map[string]string) error {
-	staticPods, err := kubeClient.CoreV1().Pods(podNamespace).List(context.Background(), metav1.ListOptions{
+func unlockRegistryDataDeviceMount(ctx context.Context, kubeClient *client.KubernetesClient, nodeName string) error {
+	loopName := fmt.Sprintf("Ulock mount actions for registry data device on node '%s'", nodeName)
+	const loopRetryAttempts = 45
+	const loopRetryInterval = 10 * time.Second
+
+	return retry.NewLoop(loopName, loopRetryAttempts, loopRetryInterval).
+		WithContext(ctx).
+		Run(func() error {
+			return manageNodeAnnotations(ctx, kubeClient, nodeName, map[string]string{}, []string{registryDataDeviceMountLockAnnotation})
+		})
+}
+
+func unsetRegistryDataDeviceNodeLabel(ctx context.Context, kubeClient *client.KubernetesClient, nodeName string) error {
+	loopName := fmt.Sprintf("Remove registry data device labels from node '%s'", nodeName)
+	const loopRetryAttempts = 45
+	const loopRetryInterval = 10 * time.Second
+
+	return retry.NewLoop(loopName, loopRetryAttempts, loopRetryInterval).
+		WithContext(ctx).
+		Run(func() error {
+			return manageNodeLabels(ctx, kubeClient, nodeName, map[string]string{}, []string{registryDataDeviceLabel})
+		})
+}
+
+func checkPodsExistence(
+	ctx context.Context,
+	kubeClient *client.KubernetesClient,
+	nodeName,
+	podNamespace,
+	podDescription string,
+	podLabels map[string]string,
+) error {
+	staticPods, err := kubeClient.CoreV1().Pods(podNamespace).List(ctx, metav1.ListOptions{
 		LabelSelector: labels.Set(podLabels).String(),
 		FieldSelector: fmt.Sprintf("spec.nodeName=%s", nodeName),
 	})
+
+	// Handle error if listing pods fails
 	if err != nil {
 		if errors.IsNotFound(err) {
-			log.InfoF("No '%s' pod found on node '%s'. Skipping.", podName, nodeName)
-			return nil
+			log.InfoF("No '%s' pod found on node '%s'. Skipping.", podDescription, nodeName)
+			return nil // No pods found, but it's not an error
 		}
-		return fmt.Errorf("failed to list '%s' pod on node '%s': %v", podName, nodeName, err)
+		return fmt.Errorf("failed to list '%s' pod on node '%s': %v", podDescription, nodeName, err)
 	}
+
+	// If pods are found, log them as a problem
 	if len(staticPods.Items) > 0 {
 		var podNames []string
 		for _, pod := range staticPods.Items {
 			podNames = append(podNames, pod.Name)
 		}
 		return fmt.Errorf(
-			"found '%s' pod '%v' on node '%s'",
-			podName,
+			"found '%s' pod(s) %v on node '%s'",
+			podDescription,
 			podNames,
 			nodeName,
 		)
 	}
+
+	// No matching pods found, so nothing to report
 	return nil
 }
 
-func isAnnotationExist(kubeClient *client.KubernetesClient, nodeName, annotation string) (bool, error) {
-	nodeObj, err := kubeClient.CoreV1().Nodes().Get(context.Background(), nodeName, metav1.GetOptions{})
+func isAnnotationExist(ctx context.Context, kubeClient *client.KubernetesClient, nodeName, annotation string) (bool, error) {
+	nodeObj, err := kubeClient.CoreV1().Nodes().Get(ctx, nodeName, metav1.GetOptions{})
 	if err != nil {
 		return false, fmt.Errorf("failed to get the node %s: %w", nodeName, err)
 	}
@@ -325,69 +373,58 @@ func isAnnotationExist(kubeClient *client.KubernetesClient, nodeName, annotation
 	return ok, nil
 }
 
-func setAnnotations(kubeClient *client.KubernetesClient, nodeName string, annotations map[string]string) error {
-	nodeObj, err := kubeClient.CoreV1().Nodes().Get(context.Background(), nodeName, metav1.GetOptions{})
+func isLabelExist(ctx context.Context, kubeClient *client.KubernetesClient, nodeName, label, labelValue string) (bool, error) {
+	nodeObj, err := kubeClient.CoreV1().Nodes().Get(ctx, nodeName, metav1.GetOptions{})
 	if err != nil {
-		return fmt.Errorf("failed to get the node %s: %w", nodeName, err)
+		return false, fmt.Errorf("failed to get the node %s: %w", nodeName, err)
 	}
 
-	nodeAnnotations := nodeObj.GetAnnotations()
-
-	patchData := &corev1.Node{
-		ObjectMeta: metav1.ObjectMeta{
-			Annotations: map[string]string{},
-		},
-	}
-
-	for annotation, expectedValue := range annotations {
-		// Check if the annotation exists
-		if currentValue, ok := nodeAnnotations[annotation]; ok && expectedValue == currentValue {
-			continue
-		}
-		patchData.ObjectMeta.Annotations[annotation] = expectedValue
-	}
-
-	if len(patchData.ObjectMeta.Annotations) == 0 {
-		return nil
-	}
-
-	patch, err := json.Marshal(patchData)
-	if err != nil {
-		return fmt.Errorf("failed to marshal patch: %w", err)
-	}
-
-	_, err = kubeClient.CoreV1().Nodes().Patch(
-		context.Background(),
-		nodeName,
-		types.MergePatchType,
-		patch,
-		metav1.PatchOptions{},
-	)
-	if err != nil {
-		return fmt.Errorf("failed to set annotations for the node: %w", err)
-	}
-	return nil
+	nodeLabels := nodeObj.GetLabels()
+	value, ok := nodeLabels[label]
+	return ok && value == labelValue, nil
 }
 
-func unsetAnnotations(kubeClient *client.KubernetesClient, nodeName string, annotations []string) error {
-	nodeObj, err := kubeClient.CoreV1().Nodes().Get(context.Background(), nodeName, metav1.GetOptions{})
+func manageNodeAnnotations(ctx context.Context, kubeClient *client.KubernetesClient, nodeName string, annotationsToSet map[string]string, annotationsToUnset []string) error {
+	// Check for conflicts between annotationsToSet and annotationsToUnset
+	unsetMap := make(map[string]struct{}, len(annotationsToUnset))
+	for _, annotation := range annotationsToUnset {
+		unsetMap[annotation] = struct{}{}
+	}
+
+	for annotation := range annotationsToSet {
+		if _, exists := unsetMap[annotation]; exists {
+			return fmt.Errorf("conflict: annotation %q exists in both set and unset lists", annotation)
+		}
+	}
+
+	nodeObj, err := kubeClient.CoreV1().Nodes().Get(ctx, nodeName, metav1.GetOptions{})
 	if err != nil {
-		return fmt.Errorf("failed to get the node %s: %w", nodeName, err)
+		return fmt.Errorf("failed to get the node %q: %w", nodeName, err)
 	}
 
 	nodeAnnotations := nodeObj.GetAnnotations()
 
-	patchOperations := make([]map[string]interface{}, 0, len(annotations))
+	var patchOperations []map[string]interface{}
 
-	for _, annotation := range annotations {
-		// Check if the annotation exists
-		if _, ok := nodeAnnotations[annotation]; !ok {
+	// Add or update annotations
+	for annotation, expectedValue := range annotationsToSet {
+		if currentValue, exists := nodeAnnotations[annotation]; exists && currentValue == expectedValue {
 			continue
 		}
-
 		patchOperations = append(patchOperations, map[string]interface{}{
-			"op": "remove",
-			// JSON patch requires slashes to be escaped with ~1
+			"op":    "add",
+			"path":  fmt.Sprintf("/metadata/annotations/%s", strings.ReplaceAll(annotation, "/", "~1")),
+			"value": expectedValue,
+		})
+	}
+
+	// Remove annotations
+	for _, annotation := range annotationsToUnset {
+		if _, exists := nodeAnnotations[annotation]; !exists {
+			continue
+		}
+		patchOperations = append(patchOperations, map[string]interface{}{
+			"op":   "remove",
 			"path": fmt.Sprintf("/metadata/annotations/%s", strings.ReplaceAll(annotation, "/", "~1")),
 		})
 	}
@@ -402,48 +439,60 @@ func unsetAnnotations(kubeClient *client.KubernetesClient, nodeName string, anno
 	}
 
 	_, err = kubeClient.CoreV1().Nodes().Patch(
-		context.Background(),
+		ctx,
 		nodeName,
 		types.JSONPatchType,
 		patch,
 		metav1.PatchOptions{},
 	)
 	if err != nil {
-		return fmt.Errorf("failed to unset annotations for the node: %w", err)
+		return fmt.Errorf("failed to apply annotations patch to the node %q: %w", nodeName, err)
 	}
+
 	return nil
 }
 
-func isLabelExist(kubeClient *client.KubernetesClient, nodeName, label, labelValue string) (bool, error) {
-	nodeObj, err := kubeClient.CoreV1().Nodes().Get(context.Background(), nodeName, metav1.GetOptions{})
+func manageNodeLabels(ctx context.Context, kubeClient *client.KubernetesClient, nodeName string, labelsToSet map[string]string, labelsToUnset []string) error {
+	// Check for conflicts between labelsToSet and labelsToUnset
+	unsetMap := make(map[string]struct{}, len(labelsToUnset))
+	for _, label := range labelsToUnset {
+		unsetMap[label] = struct{}{}
+	}
+
+	for label := range labelsToSet {
+		if _, exists := unsetMap[label]; exists {
+			return fmt.Errorf("conflict: label %q exists in both set and unset lists", label)
+		}
+	}
+
+	nodeObj, err := kubeClient.CoreV1().Nodes().Get(ctx, nodeName, metav1.GetOptions{})
 	if err != nil {
-		return false, fmt.Errorf("failed to get the node %s: %w", nodeName, err)
+		return fmt.Errorf("failed to get the node %q: %w", nodeName, err)
 	}
 
 	nodeLabels := nodeObj.GetLabels()
-	value, ok := nodeLabels[label]
-	return ok && value == labelValue, nil
-}
 
-func unsetLabels(kubeClient *client.KubernetesClient, nodeName string, labels []string) error {
-	nodeObj, err := kubeClient.CoreV1().Nodes().Get(context.Background(), nodeName, metav1.GetOptions{})
-	if err != nil {
-		return fmt.Errorf("failed to get the node %s: %w", nodeName, err)
-	}
+	var patchOperations []map[string]interface{}
 
-	nodeLabels := nodeObj.GetLabels()
-
-	patchOperations := make([]map[string]interface{}, 0, len(labels))
-
-	for _, label := range labels {
-		// Check if the label exists
-		if _, ok := nodeLabels[label]; !ok {
+	// Add or update labels
+	for label, expectedValue := range labelsToSet {
+		if currentValue, exists := nodeLabels[label]; exists && currentValue == expectedValue {
 			continue
 		}
-
 		patchOperations = append(patchOperations, map[string]interface{}{
-			"op": "remove",
-			// JSON patch requires slashes to be escaped with ~1
+			"op":    "add",
+			"path":  fmt.Sprintf("/metadata/labels/%s", strings.ReplaceAll(label, "/", "~1")),
+			"value": expectedValue,
+		})
+	}
+
+	// Remove labels
+	for _, label := range labelsToUnset {
+		if _, exists := nodeLabels[label]; !exists {
+			continue
+		}
+		patchOperations = append(patchOperations, map[string]interface{}{
+			"op":   "remove",
 			"path": fmt.Sprintf("/metadata/labels/%s", strings.ReplaceAll(label, "/", "~1")),
 		})
 	}
@@ -458,90 +507,15 @@ func unsetLabels(kubeClient *client.KubernetesClient, nodeName string, labels []
 	}
 
 	_, err = kubeClient.CoreV1().Nodes().Patch(
-		context.Background(),
+		ctx,
 		nodeName,
 		types.JSONPatchType,
 		patch,
 		metav1.PatchOptions{},
 	)
 	if err != nil {
-		return fmt.Errorf("failed to unset labels for the node: %w", err)
+		return fmt.Errorf("failed to apply labels patch to the node %q: %w", nodeName, err)
 	}
-	time.Sleep(5 * time.Second)
+
 	return nil
-}
-
-func createOrUpdateNGCUmountTask(kubeClient *client.KubernetesClient, nodeName string) error {
-	return createOrUpdateNGCUmountTaskWithContent(
-		kubeClient,
-		createNGCUmountTaskContent(
-			nodeName,
-			registryDataDeviceUnmountAllowedAnnotation,
-			registryDataDeviceUnmountDoneAnnotation,
-		),
-	)
-}
-
-func createNGCUmountTaskContent(nodeName, unmountAllowedAnnotation, unmountDoneAnnotation string) string {
-	return fmt.Sprintf(NGCUmountTaskContent, nodeName, unmountAllowedAnnotation, unmountDoneAnnotation)
-}
-
-func createOrUpdateNGCUmountTaskWithContent(kubeClient *client.KubernetesClient, content string) error {
-	const retryAttempts = 45
-	const retryInterval = 10 * time.Second
-
-	// Create a new NodeGroupConfiguration object
-	newObj := &unstructured.Unstructured{
-		Object: map[string]interface{}{
-			"apiVersion": NGCGVK.GroupVersion().String(),
-			"kind":       NGCGVK.Kind,
-			"metadata": map[string]interface{}{
-				"name": NGCUmountTaskName,
-			},
-			"spec": map[string]interface{}{
-				"weight":     0,
-				"nodeGroups": []string{"master"},
-				"bundles":    []string{"*"},
-				"content":    content,
-			},
-		},
-	}
-
-	return retry.NewLoop(
-		fmt.Sprintf(`Attempting to create/update NodeGroupConfiguration "%s"`, NGCUmountTaskName),
-		retryAttempts, retryInterval,
-	).Run(func() error {
-		currentObj, err := kubeClient.Dynamic().Resource(NGCGVR).
-			Get(context.TODO(), NGCUmountTaskName, metav1.GetOptions{})
-		if err != nil {
-			if errors.IsNotFound(err) {
-				_, createErr := kubeClient.Dynamic().Resource(NGCGVR).
-					Create(context.TODO(), newObj, metav1.CreateOptions{})
-				return createErr
-			}
-			return err
-		}
-
-		newObj.SetResourceVersion(currentObj.GetResourceVersion())
-		_, updateErr := kubeClient.Dynamic().Resource(NGCGVR).
-			Update(context.TODO(), newObj, metav1.UpdateOptions{})
-		return updateErr
-	})
-}
-
-func removeNGCUmountTask(kubeClient *client.KubernetesClient) error {
-	const retryAttempts = 45
-	const retryInterval = 10 * time.Second
-
-	return retry.NewLoop(
-		fmt.Sprintf(`Attempting to delete NodeGroupConfiguration "%s"`, NGCUmountTaskName),
-		retryAttempts, retryInterval,
-	).Run(func() error {
-		err := kubeClient.Dynamic().Resource(NGCGVR).
-			Delete(context.TODO(), NGCUmountTaskName, metav1.DeleteOptions{})
-		if err != nil && !errors.IsNotFound(err) {
-			return err
-		}
-		return nil
-	})
 }

@@ -114,7 +114,7 @@ func (h *HookForUpdatePipeline) BeforeAction(runner terraform.RunnerInterface) (
 		return false, fmt.Errorf("not all nodes are ready: %v", err)
 	}
 
-	err = tryLockRegistryDataDeviceMount(h.kubeCl, h.nodeToConverge)
+	err = lockRegistryDataDeviceMount(context.TODO(), h.kubeCl, h.nodeToConverge)
 	if err != nil {
 		return false, fmt.Errorf("failed to lock registry data device mount: %v", err)
 	}
@@ -124,7 +124,7 @@ func (h *HookForUpdatePipeline) BeforeAction(runner terraform.RunnerInterface) (
 		return false, fmt.Errorf("failed to check is registry must be enable: %v", err)
 	}
 	if !isRegistryMustBeEnabled {
-		err = gracefulUnmountRegistryData(h.kubeCl, h.nodeToConverge)
+		err = gracefulUnmountRegistryData(context.TODO(), h.kubeCl, h.nodeToConverge)
 		if err != nil {
 			return false, fmt.Errorf("failed to umount registry data device from node '%s': %v", h.nodeToConverge, err)
 		}
@@ -177,7 +177,7 @@ func (h *HookForUpdatePipeline) AfterAction(runner terraform.RunnerInterface) er
 		return fmt.Errorf("failed to save registry data device path: %v", err)
 	}
 
-	err = tryUnlockRegistryDataDeviceMount(h.kubeCl, h.nodeToConverge)
+	err = unlockRegistryDataDeviceMount(context.TODO(), h.kubeCl, h.nodeToConverge)
 	if err != nil {
 		return fmt.Errorf("failed to unlock registry data device mount: %v", err)
 	}

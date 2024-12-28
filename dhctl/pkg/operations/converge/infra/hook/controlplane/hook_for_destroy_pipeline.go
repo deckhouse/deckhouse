@@ -106,41 +106,28 @@ func removeControlPlaneRoleFromNode(kubeCl *client.KubernetesClient, nodeName st
 	return nil
 }
 
-func gracefulUnmountRegistryData(kubeClient *client.KubernetesClient, nodeName string) error {
-	if err := waitForRegistryPodsDeletion(kubeClient, nodeName); err != nil {
-		return fmt.Errorf("failed to wait for removing registry pods on node '%s': %v", nodeName, err)
+func gracefulUnmountRegistryData(ctx context.Context, kubeClient *client.KubernetesClient, nodeName string) error {
+	if err := waitForNoRegistryPodsOnNode(ctx, kubeClient, nodeName); err != nil {
+		return err
 	}
 
-	isLabelExist, err := isExistRegistryDataDeviceNodeLabel(kubeClient, nodeName)
+	isExist, err := isRegistryDataDeviceExistOnNode(ctx, kubeClient, nodeName)
 	if err != nil {
 		return err
 	}
-	if isLabelExist {
-		if err := unsetRegistryDataDeviceUnmountAnnotations(kubeClient, nodeName); err != nil {
+	if isExist {
+		if err := createNgcForUmountingRegistryDataDevice(ctx, kubeClient, nodeName); err != nil {
 			return err
 		}
-		if err := setRegistryDataDeviceUnmountAnnotations(kubeClient, nodeName); err != nil {
-			return err
-		}
-		if err := createOrUpdateNGCUmountTask(kubeClient, nodeName); err != nil {
-			return err
-		}
-		isAnnotationExist, err := isExistRegistryDataDeviceUnmountDoneAnnotation(kubeClient, nodeName)
+		err := waitDoneNgcForUmountingRegistryDataDevice(ctx, kubeClient, nodeName)
 		if err != nil {
 			return err
 		}
-		if !isAnnotationExist{
-			return fmt.Errorf("Failed to wait...")
-		}
 	}
-
-	if err := unsetRegistryDataDeviceUnmountAnnotations(kubeClient, nodeName); err != nil {
+	if err := deleteNgcForUmountingRegistryDataDevice(ctx, kubeClient, nodeName); err != nil {
 		return err
 	}
-	if err := removeNGCUmountTask(kubeClient); err != nil {
-		return err
-	}
-	if err := unsetRegistryDataDeviceNodeLabel(kubeClient, nodeName); err != nil {
+	if err := unsetRegistryDataDeviceNodeLabel(ctx, kubeClient, nodeName); err != nil {
 		return err
 	}
 	return nil

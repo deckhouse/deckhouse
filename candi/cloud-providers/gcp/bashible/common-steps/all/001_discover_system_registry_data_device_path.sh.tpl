@@ -41,7 +41,7 @@ function discover_device_path() {
   echo "$device_path"
 }
 
-function check_annotation(){
+function is_annotation_exist(){
     local annotation="$1"
     local node="$D8_NODE_HOSTNAME"
     local node_annotations=$(bb-kubectl --request-timeout=60s --kubeconfig=/etc/kubernetes/kubelet.conf get node $node -o json | jq '.metadata.annotations')
@@ -54,7 +54,7 @@ function check_annotation(){
 
 
 # Set empty string to escape mount by 005_integrate_system_registry_data_device.sh
-if check_annotation "embedded-registry.deckhouse.io/data-device-mount-lock"; then
+if is_annotation_exist "embedded-registry.deckhouse.io/data-device-mount-lock"; then
   echo "" > "/var/lib/bashible/system_registry_data_device_path"
   exit 0
 fi
