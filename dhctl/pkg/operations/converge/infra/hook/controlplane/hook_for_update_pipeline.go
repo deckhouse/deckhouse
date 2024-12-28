@@ -177,14 +177,14 @@ func (h *HookForUpdatePipeline) AfterAction(runner terraform.RunnerInterface) er
 		return fmt.Errorf("failed to save registry data device path: %v", err)
 	}
 
-	err = unlockRegistryDataDeviceMount(context.TODO(), h.kubeCl, h.nodeToConverge)
-	if err != nil {
-		return fmt.Errorf("failed to unlock registry data device mount: %v", err)
-	}
-
 	err = waitEtcdHasMember(h.kubeCl.KubeClient.(*flantkubeclient.Client), h.nodeToConverge)
 	if err != nil {
 		return fmt.Errorf("failed to wait for the master node '%s' to be listed as etcd cluster member: %v", h.nodeToConverge, err)
+	}
+
+	err = unlockRegistryDataDeviceMount(context.TODO(), h.kubeCl, h.nodeToConverge)
+	if err != nil {
+		return fmt.Errorf("failed to unlock registry data device mount: %v", err)
 	}
 
 	err = retry.NewLoop(fmt.Sprintf("Check the master node '%s' is ready", h.nodeToConverge), 45, 10*time.Second).Run(func() error {
