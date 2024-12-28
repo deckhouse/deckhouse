@@ -180,7 +180,7 @@ apiVersions:
 
                   Also, a route for the node's internal network interface will be added for the entire subnet specified in [nodeNetworkCIDR](#yandexclusterconfiguration-nodenetworkcidr).
 
-                  The array elements **must** be listed in the same order as the zones in which the nodes will be created. For example:
+                  The array elements **must** be listed in the same order as the zones (parameter `zones`) in which the nodes will be created. For example:
 
                   ```yaml
                   - <RU-CENTRAL1-A-SUBNET-ID>

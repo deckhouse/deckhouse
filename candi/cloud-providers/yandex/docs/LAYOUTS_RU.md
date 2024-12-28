@@ -35,20 +35,23 @@ provider:
     "private_key": "-----BEGIN PRIVATE KEY-----\nMIIE....1ZPJeBLt+\n-----END PRIVATE KEY-----\n"
     }
 masterNodeGroup:
-  replicas: 2
+  replicas: 3
   zones:
   - ru-central1-a
   - ru-central1-b
+  - ru-central1-d
   instanceClass:
     cores: 4
     memory: 8192
-    imageID: testtest
+    imageID: <IMAGE_ID>
     externalIPAddresses:
-    - "198.51.100.5"
+    - "<ZONE_A_EXTERNAL_IP_MASTER_1>"
+    - "Auto"
     - "Auto"
     externalSubnetIDs:
     - <ZONE_A_SUBNET_ID>
     - <ZONE_B_SUBNET_ID>
+    - <ZONE_D_SUBNET_ID>
     additionalLabels:
       takes: priority
 nodeGroups:
@@ -60,23 +63,23 @@ nodeGroups:
   instanceClass:
     cores: 4
     memory: 8192
-    imageID: testtest
+    imageID: <IMAGE_ID>
     coreFraction: 50
     externalIPAddresses:
-    - "198.51.100.6"
+    - "Auto"
     - "Auto"
     externalSubnetIDs:
     - <ZONE_A_SUBNET_ID>
     - <ZONE_B_SUBNET_ID>
     additionalLabels:
-      toy: example
+      role: example
 labels:
   billing: prod
 dhcpOptions:
   domainName: test.local
   domainNameServers:
-  - 213.177.96.1
-  - 231.177.97.1
+  - <DNS_SERVER_1>
+  - <DNS_SERVER_2>
 ```
 
 ## WithoutNAT
@@ -106,30 +109,33 @@ provider:
     "private_key": "-----BEGIN PRIVATE KEY-----\nMIIE....1ZPJeBLt+\n-----END PRIVATE KEY-----\n"
     }    
 masterNodeGroup:
-  replicas: 2
+  replicas: 3
   instanceClass:
     cores: 4
     memory: 8192
     imageID: <IMAGE_ID>
     externalIPAddresses:
-    - "198.51.100.5"
+    - "Auto"
+    - "Auto"
     - "Auto"
     externalSubnetIDs:
     - <ZONE_A_SUBNET_ID>
     - <ZONE_B_SUBNET_ID>
+    - <ZONE_D_SUBNET_ID>
     zones:
     - ru-central1-a
     - ru-central1-b
+    - ru-central1-d
 nodeGroups:
 - name: worker
   replicas: 2
   instanceClass:
     cores: 4
     memory: 8192
-    imageID: testtest
+    imageID: <IMAGE_ID>
     coreFraction: 50
     externalIPAddresses:
-    - "198.51.100.5"
+    - "<ZONE_A_EXTERNAL_IP_WORKER_1>"
     - "Auto"
     externalSubnetIDs:
     - <ZONE_A_SUBNET_ID>
@@ -143,8 +149,8 @@ existingNetworkID: <EXISTING_NETWORK_ID>
 dhcpOptions:
   domainName: test.local
   domainNameServers:
-  - 8.8.8.8
-  - 8.8.4.4
+  - <DNS_SERVER_1>
+  - <DNS_SERVER_2>
 ```
 
 ## WithNATInstance
@@ -190,12 +196,10 @@ masterNodeGroup:
     memory: 8192
     imageID: <IMAGE_ID>
     externalIPAddresses:
-    - "1.1.1.1"
     - "Auto"
     externalSubnetID: <EXTERNAL_SUBNET_ID>
     zones:
     - ru-central1-a
-    - ru-central1-b
 nodeGroups:
 - name: worker
   replicas: 1
@@ -205,7 +209,6 @@ nodeGroups:
     imageID: <IMAGE_ID>
     coreFraction: 50
     externalIPAddresses:
-    - "1.1.1.1"
     - "Auto"
     externalSubnetID: <EXTERNAL_SUBNET_ID>
     zones:
@@ -216,6 +219,6 @@ existingNetworkID: <EXISTING_NETWORK_ID>
 dhcpOptions:
   domainName: test.local
   domainNameServers:
-  - 8.8.8.8
-  - 8.8.4.4
+  - <DNS_SERVER_1>
+  - <DNS_SERVER_2>
 ```
