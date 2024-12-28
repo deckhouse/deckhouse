@@ -78,7 +78,7 @@ shell:
   install:
   - mkdir -p /src/flannel
   - cd /src/flannel
-  - git clone --depth 1 --branch v0.26.2 {{ $.SOURCE_REPO }}/flannel-io/flannel.git . && rm -rf /src/.git
+  - git clone --depth 1 --branch v0.26.2 {{ $.SOURCE_REPO }}/flannel-io/flannel.git . && rm -rf /src/flannel/.git
   - git apply /patches/*.patch --verbose
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
