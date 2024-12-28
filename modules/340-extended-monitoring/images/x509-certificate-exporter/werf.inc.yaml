@@ -3,7 +3,7 @@ image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 fromImage: common/src-artifact
 shell:
   install:
-    - git clone --depth 1 --branch v3.18.1 {{ .SOURCE_REPO }}/enix/x509-certificate-expoter.git /src
+    - git clone --depth 1 --branch v3.18.1 {{ .SOURCE_REPO }}/enix/x509-certificate-exporter.git /src
     - cd /src
     - rm -r .git
 ---
