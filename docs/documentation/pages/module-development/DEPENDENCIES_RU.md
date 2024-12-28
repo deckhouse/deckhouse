@@ -40,6 +40,11 @@ requirements:
 
    ```console
    root@dev-master-0:~# kubectl get mr
+   ```
+   
+   Выводимая информация:
+
+   ```text
    NAME                     PHASE        UPDATE POLICY   TRANSITIONTIME   MESSAGE
    test-v0.8.3              Pending      test-alpha      2m30s            requirements are not satisfied: current deckhouse version is not suitable: 1.0.0 is less than or equal to v1.64.0 
    ```
@@ -51,6 +56,11 @@ requirements:
 
    ```console
    root@dev-master-0:~# kubectl get deckhousereleases.deckhouse.io
+   ```
+
+   Выводимая информация:
+
+   ```text
    NAME                     PHASE         TRANSITIONTIME   MESSAGE
    v1.73.3                  Skipped       74m
    v1.73.4                  Pending       2m13s            requirements of test are not satisfied: v1.73.4 deckhouse version is not suitable: v1.73.4 is greater than or equal to v1.73.4
@@ -85,6 +95,11 @@ requirements:
 
    ```console
    root@dev-master-0:~# kubectl get modulereleases.deckhouse.io
+   ```
+
+   Выводимая информация:
+
+   ```text
    NAME                          PHASE        UPDATE POLICY   TRANSITIONTIME   MESSAGE
    test-v0.8.2                   Pending      test-alpha      24m              requirements are not satisfied: current kubernetes version is not suitable: 1.29.6 is less than or equal to 1.29
    virtualization-v.0.0.0-dev4   Deployed      deckhouse      142d
@@ -97,6 +112,11 @@ requirements:
 
    ```console
    root@dev-master-0:~# kubectl -n d8-system exec -it deployment/deckhouse -c deckhouse -- deckhouse-controller edit cluster-configuration
+   ```
+
+   Выводимая информация:
+
+   ```text
    Save cluster-configuration back to the Kubernetes cluster
    Update cluster-configuration secret
    Attempt 1 of 5 |
@@ -114,6 +134,11 @@ requirements:
 
    ```console
    root@dev-master-0:~# kubectl get deckhousereleases.deckhouse.io
+   ```
+
+   Выводимая информация:
+
+   ```text
    NAME                     PHASE         TRANSITIONTIME   MESSAGE
    v1.73.3                  Pending       7s              requirements of test are not satisfied: 1.27 kubernetes version is not suitable: 1.27.0 is less than or equal to 1.28            
    ```
