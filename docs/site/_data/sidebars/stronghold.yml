@@ -143,45 +143,6 @@ entries:
                     ru: Настройка NTP
                   url: /stronghold/documentation/admin/platform-management/network/ntp.html
             - title:
-                en: Storage management
-                ru: Управление хранилищами
-              folders:
-                - title:
-                    en: Storage settings
-                    ru: Настройка хранилищ
-                  url: /stronghold/documentation/admin/platform-management/storage/supported-storage.html
-                - title:
-                    en: Supported storages
-                    ru: Поддерживаемые хранилища
-                  folders:
-                    - title:
-                        en: SDS
-                        ru: Программно определяемые
-                      folders:
-                        - title:
-                            en: Local storage based on LVM
-                            ru: Локальные на основе LVM
-                          url: /stronghold/documentation/admin/platform-management/storage/sds/lvm-local.html
-                        - title:
-                            en: Replicated storage based on LVM
-                            ru: Реплицируемые на основе LVM
-                          url: /stronghold/documentation/admin/platform-management/storage/sds/lvm-replicated.html
-                    - title:
-                        en: External
-                        ru: Внешние
-                      folders:
-                        - title:
-                            ru: Yadro
-                          url: /stronghold/documentation/admin/platform-management/storage/hardware/yadro.html
-                        - title:
-                            en: NFS storage
-                            ru: NFS-хранилище
-                          url: /stronghold/documentation/admin/platform-management/storage/sds/nfs.html
-                        - title:
-                            en: CEPH storage
-                            ru: CEPH-хранилище
-                          url: /stronghold/documentation/admin/platform-management/storage/sds/ceph.html
-            - title:
                 en: Monitoring
                 ru: Мониторинг
               folders:

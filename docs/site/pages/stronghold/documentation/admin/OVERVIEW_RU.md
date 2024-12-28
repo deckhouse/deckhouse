@@ -4,7 +4,7 @@ permalink: ru/stronghold/documentation/admin/overview.html
 lang: ru
 ---
 
-Данный раздел предназначен для администраторов Deckhouse Virtualization Platform.
+Данный раздел предназначен для администраторов Deckhouse Stronghold.
 
 В руководстве администратора платформы представлены следующие разделы:
 

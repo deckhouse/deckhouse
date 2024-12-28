@@ -4,7 +4,7 @@ permalink: en/stronghold/documentation/admin/update-channels.html
 lang: en
 ---
 
-Deckhouse Virtualization Platform (DVP) uses five update channels intended for use in different environments, with varying requirements in terms of stability:
+Deckhouse Stronghold uses five update channels intended for use in different environments, with varying requirements in terms of stability:
 
 | Update channel | Description                                                                                                                                                                                                                                                                                          |
 | ---------------- |---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
@@ -14,7 +14,7 @@ Deckhouse Virtualization Platform (DVP) uses five update channels intended for u
 | Stable           | The stable update channel for clusters where active development has finished and the focus is on normal operation. New features are introduced to this channel no earlier than two weeks after their initial release.                                                |
 | Rock Solid       | The most stable update channel. Suitable for clusters that require a higher level of stability. New features are introduced to this channel no earlier than one month after their initial release.                                                                 |
 
-DVP components can update either automatically or upon manual confirmation as updates are released in the update channels.
+Deckhouse Stronghold components can update either automatically or upon manual confirmation as updates are released in the update channels.
 
 For information about the versions available in update channels, visit [releases.deckhouse.io](https://releases.deckhouse.io/).
 

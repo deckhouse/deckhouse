@@ -4,7 +4,7 @@ permalink: en/stronghold/documentation/admin/overview.html
 lang: en
 ---
 
-This section is intended for Deckhouse Virtualization Platform (DVP) administrators.
+This section is intended for Deckhouse Stronghold administrators.
 
 The DVP administrator guide includes the following sections:
 
