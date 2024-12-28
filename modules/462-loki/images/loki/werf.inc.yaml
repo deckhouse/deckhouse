@@ -41,7 +41,7 @@ fromImage: common/distroless
 import:
   - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
     add: /src/loki
-    to: /app/loki
+    to: /usr/bin/loki
     after: setup
 docker:
-  ENTRYPOINT: ["/app/loki"]
+  ENTRYPOINT: ["/usr/bin/loki"]
