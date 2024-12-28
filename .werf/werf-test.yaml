@@ -42,7 +42,7 @@ git:
   {{ .Files.Get (printf "tools/build_includes/modules-%s.yaml" .Env) }}
   {{ .Files.Get (printf "tools/build_includes/candi-%s.yaml" .Env) }}
 import:
-- artifact: deckhouse-controller
+- image: deckhouse-controller-artifact
   add: /out/deckhouse-controller
   to: /usr/bin/deckhouse-controller
   after: setup
@@ -50,11 +50,11 @@ import:
   add: /usr/bin/jq
   to: /usr/bin/jq
   after: setup
-- artifact: version-map-artifact
+- image: version-map-artifact
   add: /version_map_{{ $.Env }}.yml
   to: /deckhouse/candi/version_map.yml
   after: setup
-- artifact: golangci-lint-artifact
+- image: golangci-lint-artifact
   add: /usr/local/bin/golangci-lint
   to: /usr/local/bin/golangci-lint
   before: install
