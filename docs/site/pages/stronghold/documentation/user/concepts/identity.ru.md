@@ -1,168 +1,89 @@
 ---
-title: "Сущности"
+title: "Идентификация"
 permalink: ru/stronghold/documentation/user/concepts/identity.html
 lang: ru
 description: >-
   Stronghold provides an identity management solution to maintain clients who are recognized by Stronghold.
 ---
 
-This document contains conceptual information about **Identity** along with an
-overview of the various terminologies and their concepts. The idea of Identity
-is to maintain the clients who are recognized by Stronghold. As such, Stronghold provides
-an identity management solution through the **Identity secrets engine**. For
-more information about the Identity secrets engine and how it is used, refer to
-the [Identity Secrets Engine](/docs/secrets/identity) documentation.
+Этот документ содержит информацию о **Identity**, а также обзор различных терминов и концепций. Идея Identity состоит в том, чтобы обслуживать клиентов, которые получили доступ в Stronghold. Таким образом, Stronghold предоставляет решение для управления идентификацией с помощью механизма **Identity secrets engine**. Для получения дополнительной информации о механизме секретов Identity и о том, как он используется, обратитесь к документации [Identity Secrets Engine](/docs/secrets/identity).
 
-## Entities and aliases
+## Сущности и псевдонимы
 
-Each user may have multiple accounts with various identity providers, and Stronghold
-supports many of those providers to authenticate with Stronghold. Stronghold Identity can
-tie authentications from various auth methods to a single representation. This representation of a consolidated identity is called an **Entity** and their
-corresponding accounts with authentication providers can be mapped as
-**Aliases**. In essence, each entity is made up of zero or more aliases. An entity cannot have more than one alias for
-a particular authentication backend.
+Каждый пользователь может иметь несколько учетных записей у различных поставщиков идентификационных данных, и Stronghold поддерживает множество таких поставщиков для аутентификации. Stronghold Identity может связать аутентификацию от различных методов аутентификации в единое представление. Такое представление консолидированной идентификации называется **Entity** (сущность), а соответствующие учетные записи у провайдеров аутентификации могут быть отображены как **Aliases** (прсевдонимы). По сути, каждая сущность состоит из нуля или более псевдонимов. Сущность не может иметь более одного псевдонима для определенного бэкенда аутентификации.
 
-For example, a user with accounts in both GitHub and LDAP can be mapped to a
-single entity in Stronghold with two aliases, one of type GitHub and one of type
-LDAP.
+Например, пользователь, имеющий учетные записи Userpass и LDAP, может быть сопоставлен с одной сущностью в Stronghold с помощью двух псевдонимов, одного типа Userpass и одного типа LDAP.
 
 ![Entity  overview](/img/stronghold-identity-doc-1.png)
 
-However, if both aliases are created on the same auth mount, such as
-a Github mount, both aliases cannot be mapped to the same entity. The aliases can
-have the same auth type, as long as the auth mounts are different, and
-still be associated to the same entity. The diagrams below illustrate both valid
-and invalid scenarios.
+Однако если оба псевдонима созданы на одном auth path, например на Userpass, оба псевдонима не могут быть сопоставлены с одной и той же сущностью. Псевдонимы могут иметь один и тот же тип аутентификации, если используются разные аутентификации, и все равно будут связаны с одной и той же сущностью. Приведенные ниже диаграммы иллюстрируют как допустимые, так и недопустимые сценарии.
 
 ![Valid Alias Mapping](/img/stronghold-identity-doc-4.png)
 ![Invalid Alias Mapping](/img/stronghold-identity-doc-5.png)
 
-When a client authenticates via any credential backend (except the Token
-backend), Stronghold creates a new entity. It attaches a new alias to it if a
-corresponding entity does not already exist. The entity identifier will be tied
-to the authenticated token. When such tokens are used, their entity identifiers
-are audit logged, marking a trail of actions performed by specific users.
+Когда клиент проходит аутентификацию через любой бэкенд (кроме бэкенда Token), Stronghold создает новую сущность. Он прикрепляет к ней новый псевдоним, если соответствующая сущность еще не существует. Идентификатор сущности будет привязан к аутентифицированному токену. При использовании таких токенов их идентификаторы сущностей регистрируются в журнале аудита, что позволяет отследить действия, совершенные конкретными пользователями.
 
-## Entity management
+## Управление сущностями
 
-Entities in Stronghold **do not** automatically pull identity information from
-anywhere. It needs to be explicitly managed by operators. This way, it is
-flexible in terms of administratively controlling the number of entities to be
-synced against Stronghold. In some sense, Stronghold will serve as a _cache_ of
-identities and not as a _source_ of identities.
+Сущности в Stronghold извлекают информацию об идентификации откуда-либо **не** автоматически. Она должна явно управляться операторами. Таким образом, обеспечивается гибкость в плане административного управления количеством сущностей, которые будут синхронизированы со Stronghold. В некотором смысле Stronghold будет служить _кэшем_ идентификационных данных, а не _источником_ идентификационных данных.
 
-## Entity policies
+## Политики для сущностей
 
-Stronghold policies can be assigned to entities which will grant _additional_
-permissions to the token on top of the existing policies on the token. If the
-token presented on the API request contains an identifier for the entity and if
-that entity has a set of policies on it, then the token will be capable of
-performing actions allowed by the policies on the entity as well.
+Сущностям могут быть назначены политики, которые обеспечат токен дополнительными разрешениями, дополняющими текущие политики токена. Если токен, использованный в API-запросе, связан с идентификатором сущности, и у этой сущности есть назначенные политики, то токен сможет выполнять действия, разрешенные этими политиками.
 
 ![Entity policies](/img/stronghold-identity-doc-2.png)
 
-This is a paradigm shift in terms of _when_ the policies of the token get
-evaluated. Before identity, the policy names on the token were immutable (not
-the contents of those policies though). But with entity policies, along with
-the immutable set of policy names on the token, the evaluation of policies
-applicable to the token through its identity will happen at request time. This
-also adds enormous flexibility to control the behavior of already issued
-tokens.
+Это изменение парадигмы в отношении того, когда происходит оценка политик токена. До появления системы идентификации названия политик на токене были неизменяемыми (при этом содержание самих политик могло меняться). Однако с введением политик для сущностей, помимо неизменяемого набора названий политик на токене, оценка политик, применяемых к токену через его идентичность, будет осуществляться в момент выполнения запроса. Это также значительно увеличивает гибкость управления поведением уже выданных токенов.
 
-It is important to note that the policies on the entity are only a means to grant
-_additional_ capabilities and not a replacement for the policies on the token.
-To know the full set of capabilities of the token with an associated entity
-identifier, the policies on the token should be taken into account.
+Важно отметить, что политики на сущности являются лишь средством предоставления _дополнительных_ возможностей, а не заменой политик на токене. Чтобы знать полный набор возможностей токена со связанным с ним идентификатором сущности, необходимо учитывать политики токена.
 
 {% alert level="warning" %}
 
-**NOTE:** Be careful in granting permissions to non-readonly identity endpoints.
-If a user can modify an entity, they can grant it additional privileges through
-policies. If a user can modify an alias they can login with, they can bind it to
-an entity with higher privileges. If a user can modify group membership, they
-can add their entity to a group with higher privileges.
+**ПРИМЕЧАНИЕ:** Будьте осторожны при предоставлении разрешений к эдпоинтам идентификации, доступным для изменения. Если пользователь может изменять сущность, он может предоставить ей дополнительные привилегии с помощью политик. Если пользователь может изменить псевдоним, с которым он может войти в систему, он может привязать его к сущности с более высокими привилегиями. Если пользователь может изменять членство в группе, он может добавить свою сущность в группу с более высокими привилегиями.
 
 {% endalert %}
-## Mount bound aliases
 
-Stronghold supports multiple authentication backends and also allows enabling the
-same type of authentication backend on different mount paths. The alias name of
-the user will be unique within the backend's mount. But identity store needs to
-uniquely distinguish between conflicting alias names across different mounts of
-these identity providers. Hence, the alias name in combination with the
-authentication backend mount's accessor, serve as the unique identifier of an
-alias.
+## Псевдонимы, привязанные к точкам монтирования
 
-The table below shows what information each of the supported auth methods uses
-to form the alias name. This is the identifying information that is used to match or create
-an entity. If no entities are explicitly created or merged, then one [entity will be implicitly created](#implicit-entities)
-for each object on the right-hand side of the table, when it is used to authenticate on
-a particular auth mount point.
+Stronghold поддерживает несколько бэкендов аутентификации, а также позволяет использовать один и тот же тип бэкенда аутентификации на разных путях монтирования. Псевдоним пользователя будет уникальным в пределах монтирования бэкенда. Но хранилищу идентификационных данных необходимо однозначно различать конфликтующие псевдонимы в разных монтированиях этих поставщиков идентификационных данных. Таким образом, имя псевдонима в сочетании с аксессором монтирования бэкенда аутентификации служит уникальным идентификатором псевдонима.
 
-| Auth method         | Name reported by auth method                                                                        |
+В таблице ниже показано, какую информацию использует каждый из поддерживаемых методов аутентификации для формирования имени псевдонима. Это идентификационная информация, которая используется для сопоставления или создания сущности. Если сущности не создаются или не объединяются явно, то для каждого объекта в правой части таблицы будет неявно создана одна [entity](#implicit-entities), когда она будет использоваться для аутентификации на определенной точке монтирования auth.
+
+| Метод аутентификаии | Name reported by auth method                                                                        |
 | ------------------- | --------------------------------------------------------------------------------------------------- |
 | AppRole             | Role ID                                                                                             |
-| JWT/OIDC            | Configurable via `user_claim` to one of the presented claims (no default value)                     |
-| Kerberos            | Username                                                                                            |
-| Kubernetes          | Configurable via `alias_name_source` to one of: Service account UID (default), Service account name |
-| LDAP                | Username                                                                                            |
-| RADIUS              | Username                                                                                            |
+| JWT/OIDC            | Настраивается через `user_claim` на одно из представленных claim (нет значения по умолчанию)        |
+| Kerberos            | Имя польльзователя (Username)                                                                       |
+| Kubernetes          | Настраивается через `alias_name_source`: Service account UID (умолчение) или Service account name   |
+| LDAP                | Имя польльзователя (Username)                                                                       |
 | TLS Certificate     | Subject CommonName                                                                                  |
-| Token               | `entity_alias`, if provided                                                                         |
-| Username (userpass) | Username                                                                                            |
+| Token               | `entity_alias`, если присутствует                                                                   |
+| Username (userpass) | Имя польльзователя (Username)                                                                       |
 
-## Implicit entities
+## Неявные сущности
 
-Operators can create entities for all the users of an auth mount beforehand and
-assign policies to them, so that when users login, the desired capabilities to
-the tokens via entities are already assigned. But if that's not done, upon a
-successful user login from any of the authentication backends, Stronghold will
-create a new entity and assign an alias against the login that was successful.
+Операторы могут заранее создать сущности для всех пользователей auth mount и назначить им политики, чтобы при входе пользователей в систему нужные возможности токенов через сущности уже были назначены. Но если этого не сделать, то при успешном входе пользователя с любого из бэкендов аутентификации Stronghold создаст новую сущность и назначит псевдоним.
 
-Note that the tokens created using the token authentication backend will not
-normally have any associated identity information. An existing or new implicit
-entity can be assigned by using the `entity_alias` parameter, when creating a
-token using a token role with a configured list of `allowed_entity_aliases`.
+Обратите внимание, что токены, созданные с помощью бэкенда аутентификации токенов, обычно не содержат никакой связанной с ними информации об идентификации. Существующая или новая неявная сущность может быть назначена с помощью параметра `entity_alias` при создании токена с использованием роли токена с настроенным списком `allowed_entity_aliases`.
 
-## Identity auditing
+## Аудит сущностей
 
-If the token used to make API calls has an associated entity identifier, it
-will be audit logged as well. This leaves a trail of actions performed by
-specific users.
+Если токен, используемый для выполнения вызовов API, имеет связанный с ним идентификатор сущности, он также будет занесен в журнал аудита. Таким образом, остается след действий, совершенных конкретными пользователями.
 
-## Identity groups
+## Группы сущностей
 
-Stronghold identity has support for **groups**. A group can contain multiple entities
-as its members. A group can also have subgroups. Policies set on the group are
-granted to all members of the group. During request time, when the token's
-entity ID is being evaluated for the policies that it has access to, policies
-that are inherited due to group memberships are granted along with the policies
-on the entity itself.
+В Stronghold identity есть поддержка **групп**. Группа может содержать несколько сущностей в качестве своих членов. Группа также может иметь подгруппы. Политики, установленные для группы, предоставляются всем ее членам. Во время запроса, когда идентификатор сущности токена оценивается на предмет политик, к которым он имеет доступ, политики, унаследованные от членства в группе, предоставляются вместе с политиками самой сущности.
+
 
 ![Identity overview](/img/stronghold-identity-doc-3.png)
 
-## Group hierarchical permissions
+## Иерархия групп
 
-Entities can be direct members of groups, in which case they inherit the
-policies of the groups they belong to. Entities can also be indirect members of
-groups. For example, if a GroupA has GroupB as subgroup, then members of GroupB
-are indirect members of GroupA. Hence, the members of GroupB will have access
-to policies on both GroupA and GroupB.
+Объекты могут быть прямыми членами групп, в этом случае они наследуют политики групп, в которых состоят. Сущности также могут быть косвенными членами групп. Например, если группа А имеет в качестве подгруппы группу В, то члены группы В являются косвенными членами группы А. Следовательно, члены группы B будут иметь доступ к политикам как группы A, так и группы B.
 
-## External vs internal groups
+## Внешние и внутренние группы
 
-By default, the groups created in identity store are called the internal
-groups. The membership management of these groups should be carried out
-manually. A group can also be created as an external group. In this case, the
-entity membership in the group is managed semi-automatically. An external group
-serves as a mapping to a group that is outside of the identity store. External
-groups can have one (and only one) alias. This alias should map to a notion of
-a group that is outside of the identity store. For example, groups in LDAP and
-teams in GitHub. A username in LDAP belonging to a group in LDAP can get its
-entity ID added as a member of a group in Stronghold automatically during _logins_
-and _token renewals_. This works only if the group in Stronghold is an external
-group and has an alias that maps to the group in LDAP. If the user is removed
-from the group in LDAP, that change gets reflected in Stronghold only upon the
-subsequent login or renewal operation.
+По умолчанию группы, созданные в хранилище идентификационных данных, называются внутренними группами. Управление членством в этих группах должно осуществляться вручную. Группа также может быть создана как внешняя. В этом случае управление членством сущности в группе осуществляется полуавтоматически. Внешняя группа служит для сопоставления с группой, которая находится вне хранилища идентификационных данных. У внешних групп может быть один (и только один) псевдоним. Этот псевдоним должен соответствовать понятию группы, находящейся вне хранилища идентификационных данных. Например, группы в LDAP или DEX. Имя пользователя в LDAP, принадлежащее группе в LDAP, может получить свой идентификатор сущности, добавленный как член группы в Stronghold автоматически во время _входа в систему_ и _обновления токена_. Это работает только в том случае, если группа в Stronghold является внешней группой и имеет псевдоним, сопоставленный с группой в LDAP. Если пользователь удален из группы в LDAP, это изменение будет отражено в Stronghold только при последующем входе или обновлении.
 
-For information about Identity Secrets Engine, refer to [Identity Secrets Engine](/docs/secrets/identity).
+Информацию о Identity Secrets Engine см. в разделе [Identity Secrets Engine](/docs/secrets/identity).
+

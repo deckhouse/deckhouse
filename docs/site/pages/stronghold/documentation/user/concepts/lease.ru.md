@@ -7,87 +7,38 @@ description: >-
   will revoke that secret.
 ---
 
-## Lease, renew, and revoke
+## Аренда, продление и отзыв
 
-With every dynamic secret and `service` type authentication token, Stronghold
-creates a _lease_: metadata containing information such as a time duration,
-renewability, and more. Stronghold promises that the data will be valid for the
-given duration, or Time To Live (TTL). Once the lease is expired, Stronghold can
-automatically revoke the data, and the consumer of the secret can no longer be
-certain that it is valid.
+Для каждого динамического секрета и сервиса аутентификации Stronghold создает _аренду_ (_lease_), в которой содержатся метаданные, такие как срок действия, возможность продления и прочее. Stronghold гарантирует, что данные будут оставаться актуальными в течение установленного периода, известного как время жизни (TTL). После окончания срока аренды Stronghold может автоматически аннулировать данные, после чего потребитель секрета не может быть уверен в их актуальности.
 
-The benefit should be clear: consumers of secrets need to check in with
-Stronghold routinely to either renew the lease (if allowed) or request a
-replacement secret. This makes the Stronghold audit logs more valuable and
-also makes key rolling a lot easier.
+Смысл очевиден: потребители секретов должны регулярно связываться с Stronghold, чтобы продлить аренду (если это разрешено) или запросить новый секрет. Это делает журналы аудита Stronghold более полезными, а также значительно упрощает процесс смены ключей.
 
-All dynamic secrets in Stronghold are required to have a lease. Even if the data is
-meant to be valid for eternity, a lease is required to force the consumer
-to check in routinely.
+Все динамические секреты в Stronghold должны иметь _lease_. Даже если предполагается, что данные будут действовать вечно, аренда необходима, чтобы заставить потребителя регулярно перепроверять их.
 
-In addition to renewals, a lease can be _revoked_. When a lease is revoked, it
-invalidates that secret immediately and prevents any further renewals. For
-example, with the [Kubernetes secrets engine](/docs/secrets/kubernetes), the
-service accounts will be deleted from Kubernetes the moment a lease is revoked. This
-renders the access keys invalid from that point forward.
+Помимо продления, аренда может быть _отменена_. Когда аренда отменяется, секрет немедленно становится недействительным и не подлежит дальнейшему продлению. Например, при использовании движка [Kubernetes secrets engine](/docs/secrets/kubernetes) учетные записи служб будут удалены из Kubernetes в момент отзыва аренды. С этого момента ключи доступа становятся недействительными.
 
-Revocation can happen manually via the API, via the `d8 stronghold lease revoke` cli command,
-the user interface (UI) under the Access tab, or automatically by Stronghold. When a lease
-is expired, Stronghold will automatically revoke that lease. When a token is revoked,
-Stronghold will revoke all leases that were created using that token.
+Отзыв может происходить вручную через API, с помощью команды `d8 stronghold lease revoke` cli, через пользовательский интерфейс (UI) на вкладке Access, или автоматически. Когда срок аренды истекает, Stronghold автоматически отзывает эту аренду. При отзыве токена Stronghold отзывает все аренды, которые были созданы с использованием этого токена.
 
-**Note**: The [Key/Value Backend](/docs/secrets/kv) which stores
-arbitrary secrets does not issue leases although it will sometimes return a
-lease duration; see the documentation for more information.
+**Примечание**: Бэкенд [Key/Value Backend] (/docs/secrets/kv), который хранит произвольные секреты, не выдает аренды, хотя иногда возвращает продолжительность аренды; см. документацию для получения дополнительной информации.
 
-## Lease IDs
+## Идентификаторы аренды (Lease IDs)
 
-When reading a dynamic secret, such as via `d8 stronghold read`, Stronghold always returns a
-`lease_id`. This is the ID used with commands such as `d8 stronghold lease renew` and `d8 stronghold lease revoke` to manage the lease of the secret.
+При чтении динамического секрета, например, с помощью команды `d8 stronghold read`, Stronghold всегда возвращает `lease_id`. Это идентификатор, который может быть использован такими командами, как `d8 stronghold lease renew` и `d8 stronghold lease revoke` для управления арендой секрета.
 
-## Lease durations and renewal
+## Срок действия и продление аренды
 
-Along with the lease ID, a _lease duration_ can be read. The lease duration is
-a Time To Live value: the time in seconds for which the lease is valid. A
-consumer of this secret must renew the lease within that time.
+Вместе с идентификатором аренды возвражается _длительность аренды_. Это значение Time To Live: время в секундах, в течение которого аренда действительна. Потребитель этого секрета должен продлить аренду в течение этого времени.
 
-When renewing the lease, the user can request a specific amount of time they
-want remaining on the lease, termed the `increment`. This is not an increment
-at the end of the current TTL; it is an increment _from the current time_. For
-example, `d8 stronghold lease renew -increment=3600 my-lease-id` would request that the TTL of the lease
-be adjusted to 1 hour (3600 seconds). Having the increment be rooted at the
-current time instead of the end of the lease makes it easy for users to reduce
-the length of leases if they don't actually need credentials for the full
-possible lease period, allowing those credentials to expire sooner and
-resources to be cleaned up earlier.
+При продлении аренды пользователь может запросить определенное количество времени, которое он хочет оставить в аренде, называемое `increment`. Это не приращение по окочании текущего TTL; это приращение _от текущего времени_. Например, `d8 stronghold lease renew -increment=3600 my-lease-id` запросит, чтобы TTL аренды был изменен на 1 час (3600 секунд). Такой способ позволяет пользователям не только увеличить, но и сократить длительность аренды, если им не нужны учетные данные на весь возможный период аренды.
 
-The requested increment is completely advisory. The backend in charge of the
-secret can choose to completely ignore it. For most secrets, the backend does
-its best to respect the increment, but often limits it to ensure renewals every
-so often.
+Запрашиваемый прирост является рекомендательным. Бэкэнд, отвечающий за секрет, может решить полностью проигнорировать его. Для большинства секретов бэкэнд делает все возможное, чтобы соблюсти инкремент, но часто ограничивает его, чтобы обеспечить периодическое обновление.
 
-As a result, the return value of renewals should be carefully inspected to
-determine what the new lease is.
+Поэтому возвращаемое значение обновлений должно быть проверено, чтобы определить, какова на самом деле новая аренда.
 
+## Отзыв на основе префикса
 
-{% alert level="info" %}
+Помимо отзыва одного секрета, операторы с надлежащим уровнем доступа могут отзывать несколько секретов на основе префикса их идентификатора аренды.
 
-To implement token renewal logic in your application code, refer to the [code example in the Authentication doc](/docs/concepts/auth#code-example).
+Идентификаторы аренды построены таким образом, что их префикс всегда является путем, по которому был запрошен секрет. Это позволяет отзывать деревья секретов. Например, чтобы отозвать все логины Userpass, вы можете выполнить команду `d8 stronghold lease revoke -prefix auth/userpass/`. Для получения дополнительной информации о команде revoke ознакомьтесь с документацией по команде [cli's lease revoke](/docs/commands/lease/revoke#lease-revoke).
 
-{% endalert %}
-## Prefix-based revocation
-
-In addition to revoking a single secret, operators with proper access control
-can revoke multiple secrets based on their lease ID prefix.
-
-Lease IDs are structured in a way that their prefix is always the path where
-the secret was requested from. This lets you revoke trees of secrets. For
-example, to revoke all Userpass logins, you can do `d8 stronghold lease revoke -prefix auth/userpass/`.
-For more information about revoke command please check
-[cli's lease revoke](/docs/commands/lease/revoke#lease-revoke)
-command docs.
-
-This is very useful if there is an intrusion within a specific system: all
-secrets of a specific backend or a certain configured backend can be revoked
-quickly and easily.
-
+Это очень полезно в случае вторжения в конкретную систему: все секреты конкретного бэкенда или определенного сконфигурированного бэкенда могут быть быстро и легко отозваны.
