@@ -134,6 +134,7 @@ import:
 {{ include "base components imports" (dict "k8sVersions" $context.k8sVersions "CandiVersionMap" $context.CandiVersionMap ) }}
 shell:
   beforeInstall:
+  - apt-get update
   - apt-get install -y golang make git gcc
   {{- include "base components" (list $context.rootContext $context.prefix) | nindent 2 }}
 
