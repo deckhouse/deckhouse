@@ -66,3 +66,8 @@ variable "tags" {
 locals {
   zones = sort(distinct(var.zones))
 }
+
+variable "resourceManagementTimeout" {
+  type = string
+  default = "10m"
+}

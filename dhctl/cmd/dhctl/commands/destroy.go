@@ -49,6 +49,7 @@ func DefineDestroyCommand(parent *kingpin.Application) *kingpin.CmdClause {
 	app.DefineCacheFlags(cmd)
 	app.DefineSanityFlags(cmd)
 	app.DefineDestroyResourcesFlags(cmd)
+	app.DefineTFResourceManagementTimeout(cmd)
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
 		if !app.SanityCheck {

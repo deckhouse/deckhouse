@@ -19,6 +19,11 @@ variable "cloudConfig" {
   default = ""
 }
 
+variable "resourceManagementTimeout" {
+  type = string
+  default = "10m"
+}
+
 locals{
   resource_name_prefix = var.clusterConfiguration.cloud.prefix
   master_node_name = join("-", [local.resource_name_prefix, "master", var.nodeIndex])
