@@ -9,14 +9,16 @@ import:
   to: /
   before: setup
   includePaths:
-  - usr/lib/python3/site-packages
+  - usr/bin/python3
+  - usr/bin/python3.*
+  - usr/lib/python3
   - usr/lib64/python3
   - usr/lib64/python3.*
 shell:
   install:
     - apt-get update
-    - apt-get install -y python3-modules-sqlite3 pip dnsmasq
-    - /usr/bin/pip3 install pyroute2 six ipcalc
+    - apt-get install -y python3-modules-sqlite3 dnsmasq
+    - pip3 install pyroute2 six ipcalc
     - /binary_replace.sh -i "{{ $binaries }}" -o /relocate
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
