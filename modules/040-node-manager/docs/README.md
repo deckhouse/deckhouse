@@ -341,11 +341,11 @@ rm /var/lib/bashible/configuration_checksum
 When writing your own scripts, it is important to consider the following features of their use in Deckhouse:
 
 1. Scripts in deckhouse are executed once every 4 hours or more often based on external triggers. Therefore, it is important to write scripts in such a way that they check the need for their changes in the system before performing actions, thereby not making changes every time they are launched.
-2. There are [built-in scripts](https://github.com/deckhouse/deckhouse/tree/main/candi/bashible/common-steps/node-group) that perform various actions, including installing and configuring services. This is important to consider when choosing the [priority](cr.html#nodegroupconfiguration-v1alpha1-spec-weight) of custom scripts. For example, if a script is planned to restart a service, then this script should be called after the service installation script, since otherwise it will not be able to execute when deploying a new node.
+2. There are [built-in scripts](https://github.com/deckhouse/deckhouse/tree/main/candi/bashible/common-steps/all) that perform various actions, including installing and configuring services. This is important to consider when choosing the [priority](cr.html#nodegroupconfiguration-v1alpha1-spec-weight) of custom scripts. For example, if a script is planned to restart a service, then this script should be called after the service installation script, since otherwise it will not be able to execute when deploying a new node.
 
 Useful features of some scripts:
 
-* [`032_configure_containerd.sh`](https://github.com/deckhouse/deckhouse/blob/main/candi/bashible/common-steps/node-group/032_configure_containerd.sh.tpl) - merges all configuration files of the `containerd` service located at `/etc/containerd/conf.d/*.toml`, and also **restarts** the service. It is important to note that the `/etc/containerd/conf.d/` directory is not created automatically, and that files in this directory should be created in scripts with a priority lower than `32`
+* [`032_configure_containerd.sh`](https://github.com/deckhouse/deckhouse/blob/main/candi/bashible/common-steps/all/032_configure_containerd.sh.tpl) - merges all configuration files of the `containerd` service located at `/etc/containerd/conf.d/*.toml`, and also **restarts** the service. It is important to note that the `/etc/containerd/conf.d/` directory is not created automatically, and that files in this directory should be created in scripts with a priority lower than `32`
 
 ## Chaos Monkey
 
