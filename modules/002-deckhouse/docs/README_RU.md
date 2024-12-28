@@ -62,12 +62,12 @@ search: releaseChannel, стабилизация релизного канала
 Это может понадобиться, если в какой-то версии Deckhouse обнаружилась ошибка, которой не было раньше, и вы хотите откатиться на предыдущий релиз, но обновиться, как только выйдет релиз с исправлением данной ошибки.
 
   Например:
-    `kubectl -n d8-system set image deployment/deckhouse deckhouse=registry.deckhouse.io/deckhouse/ee:v1.30.5`.
+    `kubectl -ti -n d8-system exec svc/deckhouse-leader -c deckhouse -- kubectl set image deployment/deckhouse deckhouse=deckhouse=registry.deckhouse.io/deckhouse/ee:v1.66.3`.
 - Установить конкретный тег для deployment/deckhouse и удалить `releaseChannel` из конфигурации модуля `deckhouse`.
     В таком случае вы останетесь на конкретной версии Deckhouse и не будете получать обновлений.
 
-  ```sh
-  $ kubectl -n d8-system set image deployment/deckhouse deckhouse=registry.deckhouse.io/deckhouse/ee:v1.30.5
+  ```shell
+  $ kubectl -ti -n d8-system exec svc/deckhouse-leader -c deckhouse -- kubectl set image deployment/deckhouse deckhouse=deckhouse=registry.deckhouse.io/deckhouse/ee:v1.66.3
   $ kubectl edit mc deckhouse
     // удалить releaseChannel
   ```

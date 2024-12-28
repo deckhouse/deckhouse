@@ -69,7 +69,7 @@ There are 3 options to pin a release:
   Example:
   
   ```shell
-  kubectl -n d8-system set image deployment/deckhouse deckhouse=registry.deckhouse.io/deckhouse/ee:v1.30.5
+  kubectl -ti -n d8-system exec svc/deckhouse-leader -c deckhouse -- kubectl set image deployment/deckhouse deckhouse=deckhouse=registry.deckhouse.io/deckhouse/ee:v1.66.3
   ```
 
 - Set a specified image tag for deployment/deckhouse and remove `releaseChannel` from deckhouse module configuration.
@@ -77,7 +77,7 @@ There are 3 options to pin a release:
   In this case, you will hold a specified version and will not get any more updates.
 
   ```shell
-  $ kubectl -n d8-system set image deployment/deckhouse deckhouse=registry.deckhouse.io/deckhouse/ee:v1.30.5
+  $ kubectl -ti -n d8-system exec svc/deckhouse-leader -c deckhouse -- kubectl set image deployment/deckhouse deckhouse=deckhouse=registry.deckhouse.io/deckhouse/ee:v1.66.3
   $ kubectl edit mc deckhouse
     // remove releaseChannel
   ```
