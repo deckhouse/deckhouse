@@ -41,7 +41,7 @@ Deckhouse checks whether the dependency is met in the following cases:
    ```console
    root@dev-master-0:~# kubectl get mr
    ```
-   
+
    Output information:
 
    ```text
@@ -57,7 +57,7 @@ Deckhouse checks whether the dependency is met in the following cases:
    ```console
    root@dev-master-0:~# kubectl get deckhousereleases.deckhouse.io
    ```
-   
+
    Output information:
 
    ```text

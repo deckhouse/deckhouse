@@ -106,7 +106,7 @@ Deckhouse Kubernetes Platform (DKP) has its own library for working with templat
 
 ## crds
 
-This directory contains [_CustomResourceDefinitions_](https://kubernetes.io/docs/tasks/extend-kubernetes/custom-resources/custom-resource-definitions/) (CRDs) used by the module components. CRDs are updated every time the module is started, if there are updates.
+This directory contains [*CustomResourceDefinitions*](https://kubernetes.io/docs/tasks/extend-kubernetes/custom-resources/custom-resource-definitions/) (CRDs) used by the module components. CRDs are updated every time the module is started, if there are updates.
 
 To render CRDs from the `/crds` directory in the site documentation or documentation module in the cluster, follow these steps:
 * create a translation file with a structure identical to the original resource file:
@@ -346,7 +346,7 @@ properties:
 
 The `/templates` directory contains [Helm templates](https://helm.sh/docs/chart_template_guide/getting_started/).
 
-* Use the path `.Values.<moduleName>` to access module settings in templates, and `.Values.global` for global settings. The module name is converted to _camelCase_ notation.
+* Use the path `.Values.<moduleName>` to access module settings in templates, and `.Values.global` for global settings. The module name is converted to *camelCase* notation.
 
 * To facilitate working with templates, use [lib-helm](https://github.com/deckhouse/lib-helm), which is a set of extra functions that make it easier to work with global and module values.
 
