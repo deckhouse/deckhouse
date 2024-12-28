@@ -1,6 +1,6 @@
 {{- define "x509_certificate_exporter_resources" }}
 cpu: 50m
-memory: 150Mi
+memory: 50Mi
 {{- end }}
 
 {{- if .Values.extendedMonitoring.certificates.exporterEnabled }}
