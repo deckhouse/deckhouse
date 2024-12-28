@@ -3,16 +3,16 @@
 ---
 # Based on https://github.com/istio/istio/blob/1.21.6/docker/Dockerfile.base
 #      and https://github.com/istio/istio/blob/1.21.6/pilot/docker/Dockerfile.proxyv2
-image: {{ .ModuleName }}/{{ .ImageName }}
+imageFrom: {{ .ModuleName }}/{{ .ImageName }}
 from: common/distroless
 import:
-- artifact: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
+- image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
   add: /tmp/istio/out/pilot-agent
   to: /usr/local/bin/pilot-agent
   owner: 1337
   group: 1337
   after: setup
-- artifact: {{ .ModuleName }}/{{ .ImageName }}-binary-artifact
+- image: {{ .ModuleName }}/{{ .ImageName }}-binary-artifact
   add: /var/lib/istio/envoy/
   to: /var/lib/istio/envoy/
   includePaths:
@@ -21,7 +21,7 @@ import:
   owner: 1337
   group: 1337
   after: setup
-- artifact: {{ .ModuleName }}/{{ .ImageName }}-binary-artifact
+- image: {{ .ModuleName }}/{{ .ImageName }}-binary-artifact
   add: /usr/local/bin/envoy
   to: /usr/local/bin/envoy
   owner: 1337
@@ -69,7 +69,7 @@ docker:
   USER: 1337
   ENTRYPOINT: ["/usr/local/bin/pilot-agent"]
 ---
-artifact: {{ .ModuleName }}/{{ .ImageName }}-binary-artifact
+image: {{ .ModuleName }}/{{ .ImageName }}-binary-artifact
 from: istio/proxyv2:1.21.6@sha256:a0afbbc8488060f8059e7fa04576edde01915d40576132dae83479b3abe5ce15
 shell:
   install:
@@ -87,7 +87,7 @@ shell:
   # - chmod 0755 /busybox/strace
   # - chown 1337:1337 /busybox/strace
 ---
-artifact: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
+image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
 from: {{ .Images.BASE_GOLANG_23_ALPINE_DEV }}
 mount:
 - fromPath: ~/go-pkg-cache
