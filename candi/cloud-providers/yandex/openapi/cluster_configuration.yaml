@@ -150,13 +150,19 @@ apiVersions:
                   - [reserved public IP address](faq.html#how-to-reserve-a-public-ip-address), if the list of additional external networks is not defined (parameter `externalSubnetIDs`);
                   - `Auto`, to order a public IP address in the corresponding zone.
 
-                  Note that the array elements must be listed in the same order as the zones in which the nodes will be created. For example:
+                  Please note:
+                  - The array elements must be listed according to the order of zones (parameter `zones`) in which the nodes will be created.
 
-                  ```yaml
-                  - <RU-CENTRAL1-A-IP-ADDRESS>
-                  - <RU-CENTRAL1-B-IP-ADDRESS>
-                  - <RU-CENTRAL1-D-IP-ADDRESS>
-                  ```
+                    For example:
+
+                    ```yaml
+                    - <RU-CENTRAL1-A-IP-ADDRESS>
+                    - <RU-CENTRAL1-B-IP-ADDRESS>
+                    - <RU-CENTRAL1-D-IP-ADDRESS>
+                    ```
+
+                  - The number of elements in the `externalIPAddresses` array must equal the number of nodes in the group (the `replicas` parameter). To automatically order public IP addresses in the zone, use the value `Auto` in the list of the `externalIPAddresses` parameter at the corresponding position (matching the order of zones).
+                  - If `externalIPAddresses` is not specified, the nodes in the group will be ordered without external IP addresses.
                 items:
                   type: string
                   pattern: '^([0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3})|(Auto)$'
