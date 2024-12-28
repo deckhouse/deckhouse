@@ -181,6 +181,16 @@ cleanup:
 image: common-base
 from: {{ .Images.BASE_ALT }}
 import:
+- image: common/python-static-artifact
+  add: /
+  to: /
+  before: setup
+  includePaths:
+  - usr/bin/python3
+  - usr/bin/python3.*
+  - usr/lib/python3
+  - usr/lib64/python3
+  - usr/lib64/python3.*
 - artifact: dev-alt-artifact
   add: /
   to: /
@@ -192,11 +202,6 @@ import:
   - lib64/libcrypto.so.*
   - etc/pki
   - usr/share/ca-certificates/ca-bundle.crt
-  - usr/bin/python3
-  - usr/bin/python3.9
-  - usr/lib/python3
-  - usr/lib64/python3
-  - usr/lib64/python3.9
   - usr/lib64/libffi.so*
   - usr/share/vim
   - etc/vim
