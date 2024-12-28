@@ -60,7 +60,7 @@ shell:
   install:
   - export GO_VERSION=${GOLANG_VERSION} GOPROXY={{ $.GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64
   - cd /src
-  - go mod download
+  - go mod vendor
   - make build
   - cp bin/snapshot-controller bin/csi-snapshotter bin/snapshot-validation-webhook /
   - chown 64535:64535 /snapshot-controller /csi-snapshotter /snapshot-validation-webhook
