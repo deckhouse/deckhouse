@@ -29,8 +29,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
 )
 
-func DefineTestSSHConnectionCommand(parent *kingpin.CmdClause) *kingpin.CmdClause {
-	cmd := parent.Command("ssh-connection", "Test connection via ssh.")
+func DefineTestSSHConnectionCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 	app.DefineSSHFlags(cmd, config.ConnectionConfigParser{})
 	app.DefineBecomeFlags(cmd)
 
@@ -57,13 +56,12 @@ func DefineTestSSHConnectionCommand(parent *kingpin.CmdClause) *kingpin.CmdClaus
 	return cmd
 }
 
-func DefineTestSCPCommand(parent *kingpin.CmdClause) *kingpin.CmdClause {
+func DefineTestSCPCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 	var SrcPath string
 	var DstPath string
 	var Data string
 	var Direction string
 
-	cmd := parent.Command("scp", "Test scp file operations.")
 	app.DefineSSHFlags(cmd, config.ConnectionConfigParser{})
 	app.DefineBecomeFlags(cmd)
 
@@ -126,10 +124,10 @@ func DefineTestSCPCommand(parent *kingpin.CmdClause) *kingpin.CmdClause {
 	return cmd
 }
 
-func DefineTestUploadExecCommand(parent *kingpin.CmdClause) *kingpin.CmdClause {
+func DefineTestUploadExecCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 	var ScriptPath string
 	var Sudo bool
-	cmd := parent.Command("upload-exec", "Test scp upload and ssh run uploaded script.")
+
 	app.DefineSSHFlags(cmd, config.ConnectionConfigParser{})
 	app.DefineBecomeFlags(cmd)
 	cmd.Flag("script", "source path").
@@ -164,11 +162,10 @@ func DefineTestUploadExecCommand(parent *kingpin.CmdClause) *kingpin.CmdClause {
 	return cmd
 }
 
-func DefineTestBundle(parent *kingpin.CmdClause) *kingpin.CmdClause {
+func DefineTestBundle(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 	var ScriptName string
 	var BundleDir string
 
-	cmd := parent.Command("bashible-bundle", "Test upload and execute a bundle.")
 	app.DefineSSHFlags(cmd, config.ConnectionConfigParser{})
 	app.DefineBecomeFlags(cmd)
 	cmd.Flag("bundle-dir", "path of a bundle root directory").
