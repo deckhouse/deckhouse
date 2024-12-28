@@ -50,11 +50,11 @@ import:
   add: /usr/bin/jq
   to: /usr/bin/jq
   after: setup
-- artifact: version-map-artifact
+- image: version-map-artifact
   add: /version_map_{{ $.Env }}.yml
   to: /deckhouse/candi/version_map.yml
   after: setup
-- artifact: golangci-lint-artifact
+- image: golangci-lint-artifact
   add: /usr/local/bin/golangci-lint
   to: /usr/local/bin/golangci-lint
   before: install
