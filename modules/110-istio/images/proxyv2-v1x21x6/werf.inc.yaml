@@ -3,8 +3,8 @@
 ---
 # Based on https://github.com/istio/istio/blob/1.21.6/docker/Dockerfile.base
 #      and https://github.com/istio/istio/blob/1.21.6/pilot/docker/Dockerfile.proxyv2
-imageFrom: {{ .ModuleName }}/{{ .ImageName }}
-from: common/distroless
+image: {{ .ModuleName }}/{{ .ImageName }}
+fromImage: common/distroless
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
   add: /tmp/istio/out/pilot-agent
