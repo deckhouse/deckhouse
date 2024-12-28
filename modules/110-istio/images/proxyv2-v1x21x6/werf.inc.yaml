@@ -51,12 +51,12 @@ import:
 #   owner: 1337
 #   group: 1337
 #   after: setup
-# - artifact: {{ .ModuleName }}/{{ .ImageName }}-binary-artifact
-#   add: /busybox/strace
-#   to: /bin/strace
-#   owner: 1337
-#   group: 1337
-#   after: setup
+- image: {{ .ModuleName }}/{{ .ImageName }}-binary-artifact
+  add: /busybox/strace
+  to: /bin/strace
+  owner: 1337
+  group: 1337
+  after: setup
 # shell:
 #   install:
 #   - useradd -m --uid 1337 istio-proxy
@@ -84,9 +84,9 @@ shell:
   - chmod 0500 /busybox/id
   # - chmod 0500 /busybox/su
   # - chmod 0500 /busybox/cat
-  # - curl --output /busybox/strace https://raw.githubusercontent.com/yunchih/static-binaries/master/strace
-  # - chmod 0755 /busybox/strace
-  # - chown 1337:1337 /busybox/strace
+  - curl --output /busybox/strace https://raw.githubusercontent.com/yunchih/static-binaries/master/strace
+  - chmod 0755 /busybox/strace
+  - chown 1337:1337 /busybox/strace
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
 from: {{ .Images.BASE_GOLANG_23_ALPINE_DEV }}
