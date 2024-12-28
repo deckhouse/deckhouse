@@ -3,7 +3,7 @@ title: "Platform editions"
 permalink: en/stronghold/documentation/admin/editions.html
 ---
 
-The Deckhouse Virtualization Platform is available in Community Edition (CE) and Enterprise Edition (EE). DVP editions differ in their set of features and the level of available support.
+The Deckhouse Stronghold is available in Standart Edition (SE), Standart Edition Plus (SE+), Enterprise Edition (EE). Deckhouse Stronghold editions differ in their set of features and the level of available support.
 
 The table below provides brief a comparison of editions listing its main features and functions:
 
@@ -11,19 +11,17 @@ The table below provides brief a comparison of editions listing its main feature
 {% assign not_supported = '<img src="/images/icons/not_supported.svg">' %}
 {% assign supported = '<img src="/images/icons/supported.svg">' %}
 
-| Feature                                                        | CE                  | EE |
-|------------------------------------------------------------------|---------------------|----|
-| Deploying to an air-gapped environment                           | {{ not_supported }} | {{ supported }} |
-| Network policies (micro-segmentation)                            | {{ supported }}     | {{ supported }} |
-| Extended monitoring                                              | {{ supported }}     | {{ supported }} |
-| Traffic load balancing management                                | {{ supported }}     | {{ supported }} |
-| Support for NFS                                                  | {{ supported }}     | {{ supported }} |
-| Built-in SDS                                                     | {{ supported }}     | {{ supported }} |
-| Support for hardware storage systems                             | {{ not_supported }} | {{ supported }} |
-| Public LUN                                                       | {{ coming_soon }}   | {{ coming_soon }} |
-| Administrator interface                                          | {{ not_supported }} | {{ supported }} |
-| Changing VM parameters without stopping it                       | {{ not_supported }} | {{ supported }} |
-| High Availability (HA) mode of virtual machines                  | {{ coming_soon }}   | {{ coming_soon }} |
-| Disaster resilience (inter-cluster replication)                  | {{ coming_soon }}   | {{ coming_soon }} |
-| [Extended technical support](https://deckhouse.io/tech-support/) | {{ not_supported }} | {{ supported }}  |
-| [Extended technical support](https://deckhouse.io/tech-support/) | {{ not_supported }} | {{ supported }}  |
+| Feature                                                          | SE                  | SE+               | EE |
+|------------------------------------------------------------------|---------------------|-------------------|----|
+| Deploying to an air-gapped environment                           | {{ supported }}     | {{ supported }} | {{ supported }} |
+| Network policies (micro-segmentation)                            | {{ supported }}     | {{ supported }} | {{ supported }} |
+| Extended monitoring                                              | {{ supported }}     | {{ supported }} | {{ supported }} |
+| Traffic load balancing management                                | {{ supported }}     | {{ supported }} | {{ supported }} |
+| Administrator interface                                          | {{ supported }}     | {{ supported }} | {{ supported }} |
+| High Availability (HA) mode                                      | {{ supported }}     | {{ supported }} | {{ supported }} |
+| Enterprise Security                                              | {{ not_supported }} | {{ supported }} | {{ supported }} |
+| Online security scanner                                          | {{ not_supported }} | {{ supported }} | {{ supported }} |
+| Runtime audit engine                                             | {{ not_supported }} | {{ supported }} | {{ supported }} |
+| [Extended technical support](https://deckhouse.io/tech-support/) | {{ supported }} | {{ supported }}  | {{ supported }} |
+| [Extended technical support](https://deckhouse.io/tech-support/) | {{ supported }} | {{ supported }}  | {{ supported }} |
+

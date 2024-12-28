@@ -255,7 +255,7 @@ entries:
               url: /stronghold/documentation/user/concepts/policy.html
             - title:
                 en: Token
-                ru: Token
+                ru: Токен
               url: /stronghold/documentation/user/concepts/tokens.html
         - title:
             en: Auth methods

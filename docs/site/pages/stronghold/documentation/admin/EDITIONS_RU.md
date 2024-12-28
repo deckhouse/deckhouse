@@ -4,7 +4,7 @@ permalink: ru/stronghold/documentation/admin/editions.html
 lang: ru
 ---
 
-Deckhouse Virtualization Platform поставляется в редакциях Community Edition (CE) и Enterprise Edition (EE). Deckhouse Virtualization Platform CSE, имеющая сертификат ФСТЭК, готовится к выходу в ближайшее время. Редакции DVP отличаются набором возможностей и уровнем доступной поддержки.
+Deckhouse Stronghold поставляется в редакциях Standart Edition (SE), Standart Edition Plus (SE+), Enterprise Edition (EE). Deckhouse Stronghold CSE, имеющая сертификат ФСТЭК, готовится к выходу в ближайшее время. Редакции DVP отличаются набором возможностей и уровнем доступной поддержки.
 
 Краткое сравнение ключевых возможностей и особенностей редакций:
 
@@ -12,20 +12,17 @@ Deckhouse Virtualization Platform поставляется в редакциях
 {% assign not_supported = '<img src="/images/icons/not_supported.svg">' %}
 {% assign supported = '<img src="/images/icons/supported.svg">' %}
 
-| Возможности                                                     | CE                  | EE |
-|-----------------------------------------------------------------|---------------------|----|
-| Поддержка российских ОС                                         | {{ not_supported }} | {{ supported }} |
-| Развертывание в закрытом контуре                                | {{ not_supported }} | {{ supported }} |
-| Сетевые политики (микросегментация)                             | {{ supported }}     | {{ supported }} |
-| Расширенный мониторинг                                          | {{ supported }}     | {{ supported }} |
-| Управление балансировкой трафика                                | {{ supported }}     | {{ supported }} |
-| Поддержка NFS                                                   | {{ supported }}     | {{ supported }} |
-| Встроенный SDS                                                  | {{ supported }}     | {{ supported }} |
-| Поддержка аппаратных СХД                                        | {{ not_supported }} | {{ supported }} |
-| Общедоступный LUN                                               | {{ coming_soon }}   | {{ coming_soon }} |
-| Интерфейс администратора                                        | {{ not_supported }} | {{ supported }} |
-| Изменение параметров ВМ без ее остановки                        | {{ not_supported }} | {{ supported }} |
-| Режим высокой доступности (HA) виртуальных машин                | {{ coming_soon }}   | {{ coming_soon }} |
-| Катастрофоустойчивость (межкластерная репликация)               | {{ coming_soon }}   | {{ coming_soon }} |
-| [Техподдержка «Стандарт»](https://deckhouse.ru/tech-support/)   | {{ not_supported }} | {{ supported }}  |
-| [Техподдержка «Стандарт +»](https://deckhouse.ru/tech-support/) | {{ not_supported }} | {{ supported }}  |
+| Возможности                                                     | SE                  | SE+               | EE |
+|-----------------------------------------------------------------|---------------------|-------------------|----|
+| Поддержка российских ОС                                         | {{ supported }}     | {{ supported }} | {{ supported }} |
+| Развертывание в закрытом контуре                                | {{ supported }}     | {{ supported }} | {{ supported }} |
+| Сетевые политики (микросегментация)                             | {{ supported }}     | {{ supported }} | {{ supported }} |
+| Расширенный мониторинг                                          | {{ supported }}     | {{ supported }} | {{ supported }} |
+| Управление балансировкой трафика                                | {{ supported }}     | {{ supported }} | {{ supported }} |
+| Интерфейс администратора                                        | {{ supported }}     | {{ supported }} | {{ supported }} |
+| Режим высокой доступности (HA)                                  | {{ supported }}     | {{ supported }} | {{ supported }} |
+| Запрет на запуск контейнеров с уязвимостями                     | {{ not_supported }} | {{ not_supported }} | {{ supported }} |
+| Поиск угроз безопасности                                        | {{ not_supported }} | {{ not_supported }} | {{ supported }} |
+| Сканирование образов в runtime на уязвимости                    | {{ not_supported }} | {{ not_supported }} | {{ supported }} |
+| [Техподдержка «Стандарт»](https://deckhouse.ru/tech-support/)   | {{ supported }}     | {{ supported }} | {{ supported }} |
+| [Техподдержка «Стандарт +»](https://deckhouse.ru/tech-support/) | {{ supported }}     | {{ supported }} | {{ supported }} |
