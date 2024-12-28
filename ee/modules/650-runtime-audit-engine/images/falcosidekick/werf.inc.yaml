@@ -1,5 +1,5 @@
 # Based on https://github.com/falcosecurity/falcosidekick/blob/41d530807f1a0294c0276e4cb42af68c8b26a659/Dockerfile
-{{- $sidekickVersion := "2.29.0" }}
+{{- $sidekickVersion := "2.30.0" }}
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
@@ -46,7 +46,7 @@ shell:
   install:
   - cd /src
   - export GOPROXY={{ .GOPROXY }} GOOS=linux GOARCH=amd64 CGO_ENABLED=0
-  - go mod tidy
+  - go mod download
   - make falcosidekick
   - chown -R 64535:64535 falcosidekick
   - chmod 0755 falcosidekick
