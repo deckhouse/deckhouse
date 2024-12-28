@@ -115,6 +115,4 @@ import:
   - usr/lib64/python3.*
 shell:
   install:
-  - apt-get update
-  - apt-get install -y python3-module-pip-run
   - pip3 install -r /requirements.txt
