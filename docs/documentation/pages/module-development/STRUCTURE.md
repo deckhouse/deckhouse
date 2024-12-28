@@ -316,13 +316,13 @@ properties:
       [automatically](https://deckhouse.io/products/kubernetes-platform/documentation/v1/#advanced-scheduling).</code>
 ```
 
-An example of the `/openapi/doc-ru-config-values.yaml` file for the Russian translation of the schema:
+An example of the `/openapi/doc-ru-config-values.yaml` file:
 
 ```yaml
 properties:
   nodeSelector:
     description: |
-      Russian description. Markdown markup.</code>
+      English description. Markdown markup.</code>
 ```
 
 ### values.yaml

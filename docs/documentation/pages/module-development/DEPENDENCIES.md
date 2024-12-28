@@ -40,8 +40,13 @@ Deckhouse checks whether the dependency is met in the following cases:
 
    ```console
    root@dev-master-0:~# kubectl get mr
-   NAME                     PHASE        UPDATE POLICY   TRANSITIONTIME   MESSAGE
-   test-v0.8.3              Pending      test-alpha      2m30s            requirements are not satisfied: current deckhouse version is not suitable: 1.0.0 is less than or equal to v1.64.0 
+   ```
+   
+   Output information:
+
+   ```text
+      NAME                     PHASE        UPDATE POLICY   TRANSITIONTIME   MESSAGE
+      test-v0.8.3              Pending      test-alpha      2m30s            requirements are not satisfied: current deckhouse version is not suitable: 1.0.0 is less than or equal to v1.64.0 
    ```
 
 1. **When upgrading Deckhouse Kubernetes Platform**  
@@ -51,6 +56,11 @@ Deckhouse checks whether the dependency is met in the following cases:
 
    ```console
    root@dev-master-0:~# kubectl get deckhousereleases.deckhouse.io
+   ```
+   
+   Output information:
+
+   ```text
    NAME                     PHASE         TRANSITIONTIME   MESSAGE
    v1.73.3                  Skipped       74m
    v1.73.4                  Pending       2m13s            requirements of test are not satisfied: v1.73.4 deckhouse version is not suitable: v1.73.4 is greater than or equal to v1.73.4
@@ -85,6 +95,11 @@ Deckhouse checks whether the dependency is met in the following cases:
 
    ```console
    root@dev-master-0:~# kubectl get modulereleases.deckhouse.io
+   ```
+
+   Output information:
+
+   ```text
    NAME                          PHASE        UPDATE POLICY   TRANSITIONTIME   MESSAGE
    test-v0.8.2                   Pending      test-alpha      24m              requirements are not satisfied: current kubernetes version is not suitable: 1.29.6 is less than or equal to 1.29
    virtualization-v.0.0.0-dev4   Deployed      deckhouse      142d
@@ -97,6 +112,11 @@ Deckhouse checks whether the dependency is met in the following cases:
 
    ```console
    root@dev-master-0:~# kubectl -n d8-system exec -it deployment/deckhouse -c deckhouse -- deckhouse-controller edit cluster-configuration
+   ```
+
+   Output information:
+
+   ```text
    Save cluster-configuration back to the Kubernetes cluster
    Update cluster-configuration secret
    Attempt 1 of 5 |
@@ -114,6 +134,11 @@ Deckhouse checks whether the dependency is met in the following cases:
 
    ```console
    root@dev-master-0:~# kubectl get deckhousereleases.deckhouse.io
+   ```
+
+   Output information:
+
+   ```text
    NAME                     PHASE         TRANSITIONTIME   MESSAGE
    v1.73.3                  Pending       7s              requirements of test are not satisfied: 1.27 kubernetes version is not suitable: 1.27.0 is less than or equal to 1.28            
    ```
@@ -148,7 +173,7 @@ requirements:
     user-authn: ">= 0.0.0"
 ```
 
-Пример настройки зависимости от трех модулей:
+Example of setting up a dependency on three modules:
 
 ```yaml
 name: hello-world
