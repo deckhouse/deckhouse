@@ -174,14 +174,14 @@ func createNgcForUmountingRegistryDataDevice(ctx context.Context, kubeClient *cl
 	return retry.NewLoop(loopName, loopRetryAttempts, loopRetryInterval).
 		WithContext(ctx).
 		Run(func() error {
-			// Prepare annatations
+			// Prepare annotation
 			err := manageNodeAnnotations(
 				ctx,
 				kubeClient,
 				nodeName,
-				// Create annatations
+				// Create annotation
 				map[string]string{registryDataDeviceUnmountAllowedAnnotation: ""},
-				// Delete annatations
+				// Delete annotation
 				[]string{registryDataDeviceUnmountDoneAnnotation},
 			)
 			if err != nil {
@@ -221,14 +221,14 @@ func deleteNgcForUmountingRegistryDataDevice(ctx context.Context, kubeClient *cl
 	return retry.NewLoop(loopName, loopRetryAttempts, loopRetryInterval).
 		WithContext(ctx).
 		Run(func() error {
-			// Prepare annatations
+			// Prepare annotation
 			manageNodeAnnotations(
 				ctx,
 				kubeClient,
 				nodeName,
-				// Create annatations
+				// Create annotation
 				map[string]string{},
-				// Delete annatations
+				// Delete annotation
 				[]string{
 					registryDataDeviceUnmountAllowedAnnotation,
 					registryDataDeviceUnmountDoneAnnotation,
