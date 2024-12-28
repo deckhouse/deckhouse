@@ -357,12 +357,12 @@ Dryrun
 DSL
 DSR
 dst
-dst
 DVP
 eBPF
 eBPF
 EBS
 ECMP
+ECR
 EdgeRouter
 ee
 EE
@@ -885,6 +885,7 @@ PersistentVolume
 PersistentVolumeClaim
 PersistentVolumeClaims
 PersistentVolumes
+perring
 php
 PID
 PKCS
