@@ -18,7 +18,7 @@ Deckhouse Kubernetes Platform (DKP) supports the following module dependencies:
 
 This dependency defines the minimum or maximum DKP version with which the module is compatible.
 
-Here's how you can set the module dependency in the `module.yaml` file: during installation, the module will require DKP version 1.61 or higher:
+An example of setting up a dependency for Kubernetes 1.27 and higher in the `module.yaml` file:
 
 ```yaml
 name: test
@@ -63,7 +63,7 @@ Deckhouse checks whether the dependency is met in the following cases:
 
 This dependency defines the minimum or maximum Kubernetes version with which the module is compatible.
 
-Here is how you can enable the Kubernetes version dependency in the `module.yaml` file:
+Here is how you can enable the Kubernetes version dependency for Kubernetes 1.27 and higher in the `module.yaml` file:
 
 ```yaml
 name: test
@@ -122,7 +122,7 @@ Deckhouse checks whether the dependency is met in the following cases:
 
 This dependency indicates that the module requires a cluster whose installation and configuration is complete. The dependency can only be set for built-in DKP modules.
 
-Here is how you can enable this dependency in the `module.yaml` file:
+Here is how you can enable this dependency on the cluster installation status in the `module.yaml` file:
 
 ```yaml
 name: ingress-nginx
@@ -135,3 +135,26 @@ requirements:
 ```
 
 This check is carried out only once - during the initial module analysis. If the cluster installation and configuration is not complete, the module will not be enabled.
+
+### Dependency on the version of other modules
+
+This dependency defines the list of **enabled** modules and their minimum versions that are required for the module to work. The built-in DKP module version is considered equal to the DKP version.
+
+If you need to specify that some module is simply enabled, no matter what version, then you can use the following syntax (using the `user-authn` module as an example):
+
+```yaml
+requirements:
+  modules:
+    user-authn: ">= 0.0.0"
+```
+
+Пример настройки зависимости от трех модулей:
+
+```yaml
+name: hello-world
+requirements:
+  modules:
+    ingress-nginx: '> 1.67.0'
+    node-local-dns: '>= 0.0.0'
+    operator-trivy: '> v1.64.0'
+```
