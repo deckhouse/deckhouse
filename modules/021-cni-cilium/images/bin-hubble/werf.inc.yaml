@@ -7,7 +7,7 @@
 # and https://github.com/cilium/hubble/blob/v1.16.0/Dockerfile
 # #####################################################################
 ---
-artifact: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
 fromImage: common/src-artifact
 final: false
 git:

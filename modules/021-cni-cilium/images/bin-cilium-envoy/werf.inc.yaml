@@ -12,7 +12,7 @@
 # and https://github.com/cilium/proxy/blob/39a2a56bbd5b3a591f69dbca51d3e30ef97e0e51/.github/workflows/build-envoy-images-release.yaml
 # #####################################################################
 ---
-artifact: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
 fromImage: common/src-artifact
 final: false
 shell:
@@ -25,7 +25,7 @@ image: {{ .ModuleName }}/cilium-envoy-artifact
 fromImage: {{ .ModuleName }}/base-cilium-dev
 final: false
 import:
-- artifact: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
   add: /src
   to: /src
   before: install
