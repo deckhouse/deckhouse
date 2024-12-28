@@ -2,7 +2,7 @@
 title: "The admission-policy-engine module: Custom Resources (by Gatekeeper)"
 ---
 
-## Mutation Custom Resouces
+## Mutation Custom Resources
 
 [Reference](https://open-policy-agent.github.io/gatekeeper/website/docs/mutation/#mutation-crds)
 
