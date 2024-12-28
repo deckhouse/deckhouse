@@ -1,6 +1,7 @@
 ---
-artifact: version-map-artifact
+image: version-map-artifact
 from: {{ .Images.BASE_ALPINE }}
+final: false
 import:
 - image: common/yq4-artifact
   add: /usr/local/bin/yq

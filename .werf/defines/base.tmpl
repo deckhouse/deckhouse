@@ -15,7 +15,7 @@
   before: setup
   {{- range $k8sVersion := $context.k8sVersions }}
     {{- $image_version := printf "%s.%d" $k8sVersion (index $context.CandiVersionMap "k8s" $k8sVersion "patch") | replace "." "-" }}
-- artifact: common/kubernetes-artifact-{{ $image_version }}
+- image: common/kubernetes-artifact-{{ $image_version }}
   add: /src/_output/bin/kubectl
   to: /usr/local/bin/kubectl-{{ $k8sVersion }}
   before: setup
