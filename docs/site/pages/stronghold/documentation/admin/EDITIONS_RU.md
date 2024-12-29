@@ -4,7 +4,7 @@ permalink: ru/stronghold/documentation/admin/editions.html
 lang: ru
 ---
 
-Deckhouse Stronghold поставляется в редакциях Standart Edition (SE), Standart Edition Plus (SE+), Enterprise Edition (EE). Deckhouse Stronghold CSE, имеющая сертификат ФСТЭК, готовится к выходу в ближайшее время. Редакции DVP отличаются набором возможностей и уровнем доступной поддержки.
+Deckhouse Stronghold поставляется в редакциях Standart Edition (SE), Standart Edition Plus (SE+), Enterprise Edition (EE). Deckhouse Stronghold CSE, имеющая сертификат ФСТЭК, готовится к выходу в ближайшее время. Редакции отличаются набором возможностей и уровнем доступной поддержки.
 
 Краткое сравнение ключевых возможностей и особенностей редакций:
 

@@ -179,7 +179,7 @@ real path).
    $ d8 stronghold kv put -mount=secret my-secret foo=a bar=b
    Key              Value
    ---              -----
-   created_time     2019-06-19T17:20:22.985303Z
+   created_time     2024-06-19T17:20:22.985303Z
    custom_metadata  <nil>
    deletion_time    n/a
    destroyed        false
@@ -193,7 +193,7 @@ real path).
    ====== Metadata ======
    Key              Value
    ---              -----
-   created_time     2019-06-19T17:20:22.985303Z
+   created_time     2024-06-19T17:20:22.985303Z
    custom_metadata  <nil>
    deletion_time    n/a
    destroyed        false
@@ -219,7 +219,7 @@ real path).
    $ d8 stronghold kv put -mount=secret -cas=1 my-secret foo=aa bar=bb
    Key              Value
    ---              -----
-   created_time     2019-06-19T17:22:23.369372Z
+   created_time     2024-06-19T17:22:23.369372Z
    custom_metadata  <nil>
    deletion_time    n/a
    destroyed        false
@@ -233,7 +233,7 @@ real path).
    ====== Metadata ======
    Key              Value
    ---              -----
-   created_time     2019-06-19T17:22:23.369372Z
+   created_time     2024-06-19T17:22:23.369372Z
    custom_metadata  <nil>
    deletion_time    n/a
    destroyed        false
@@ -262,7 +262,7 @@ real path).
    $ d8 stronghold kv patch -mount=secret -cas=2 my-secret bar=bbb
    Key              Value
    ---              -----
-   created_time     2019-06-19T17:23:49.199802Z
+   created_time     2024-06-19T17:23:49.199802Z
    custom_metadata  <nil>
    deletion_time    n/a
    destroyed        false
@@ -279,7 +279,7 @@ real path).
    $ d8 stronghold kv patch -mount=secret -method=patch -cas=2 my-secret bar=bbb
    Key              Value
    ---              -----
-   created_time     2019-06-19T17:23:49.199802Z
+   created_time     2024-06-19T17:23:49.199802Z
    custom_metadata  <nil>
    deletion_time    n/a
    destroyed        false
@@ -292,7 +292,7 @@ real path).
    $ d8 stronghold kv patch -mount=secret -method=rw my-secret bar=bbb
    Key              Value
    ---              -----
-   created_time     2019-06-19T17:23:49.199802Z
+   created_time     2024-06-19T17:23:49.199802Z
    custom_metadata  <nil>
    deletion_time    n/a
    destroyed        false
@@ -307,7 +307,7 @@ real path).
    ====== Metadata ======
    Key              Value
    ---              -----
-   created_time     2019-06-19T17:23:49.199802Z
+   created_time     2024-06-19T17:23:49.199802Z
    custom_metadata  <nil>
    deletion_time    n/a
    destroyed        false
@@ -327,7 +327,7 @@ real path).
    ====== Metadata ======
    Key              Value
    ---              -----
-   created_time     2019-06-19T17:20:22.985303Z
+   created_time     2024-06-19T17:20:22.985303Z
    custom_metadata  <nil>
    deletion_time    n/a
    destroyed        false
@@ -441,7 +441,7 @@ See the commands below for more information:
    ====== Metadata ======
    Key              Value
    ---              -----
-   created_time     2019-06-19T17:23:21.834403Z
+   created_time     2024-06-19T17:23:21.834403Z
    custom_metadata  <nil>
    deletion_time    n/a
    destroyed        false
@@ -476,25 +476,25 @@ See the commands below for more information:
    Key                     Value
    ---                     -----
    cas_required            false
-   created_time            2019-06-19T17:20:22.985303Z
+   created_time            2024-06-19T17:20:22.985303Z
    current_version         2
    custom_metadata         <nil>
    delete_version_after    0s
    max_versions            0
    oldest_version          0
-   updated_time            2019-06-19T17:22:23.369372Z
+   updated_time            2024-06-19T17:22:23.369372Z
 
    ====== Version 1 ======
    Key              Value
    ---              -----
-   created_time     2019-06-19T17:20:22.985303Z
+   created_time     2024-06-19T17:20:22.985303Z
    deletion_time    n/a
    destroyed        false
 
    ====== Version 2 ======
    Key              Value
    ---              -----
-   created_time     2019-06-19T17:22:23.369372Z
+   created_time     2024-06-19T17:22:23.369372Z
    deletion_time    n/a
    destroyed        true
    ```
@@ -513,9 +513,9 @@ See the commands below for more information:
    $ d8 stronghold kv put -mount=secret my-secret my-value=newer-s3cr3t
    Key              Value
    ---              -----
-   created_time     2019-06-19T17:31:16.662563Z
+   created_time     2024-06-19T17:31:16.662563Z
    custom_metadata  <nil>
-   deletion_time    2019-06-19T20:56:35.662563Z
+   deletion_time    2024-06-19T20:56:35.662563Z
    destroyed        false
    version          4
    ```
@@ -529,26 +529,26 @@ See the commands below for more information:
    Key                     Value
    ---                     -----
    cas_required            false
-   created_time            2019-06-19T17:20:22.985303Z
+   created_time            2024-06-19T17:20:22.985303Z
    current_version         4
    custom_metadata         <nil>
    delete_version_after    3h25m19s
    max_versions            2
    oldest_version          3
-   updated_time            2019-06-19T17:31:16.662563Z
+   updated_time            2024-06-19T17:31:16.662563Z
 
    ====== Version 3 ======
    Key              Value
    ---              -----
-   created_time     2019-06-19T17:23:21.834403Z
+   created_time     2024-06-19T17:23:21.834403Z
    deletion_time    n/a
    destroyed        true
 
    ====== Version 4 ======
    Key              Value
    ---              -----
-   created_time     2019-06-19T17:31:16.662563Z
-   deletion_time    2019-06-19T20:56:35.662563Z
+   created_time     2024-06-19T17:31:16.662563Z
+   deletion_time    2024-06-19T20:56:35.662563Z
    destroyed        false
    ```
 
@@ -566,7 +566,7 @@ See the commands below for more information:
    ====== Metadata ======
    Key              Value
    ---              -----
-   created_time     2019-06-19T17:22:23.369372Z
+   created_time     2024-06-19T17:22:23.369372Z
    custom_metadata  map[bar:123 foo:abc]
    deletion_time    n/a
    destroyed        false
@@ -592,7 +592,7 @@ See the commands below for more information:
    ====== Metadata ======
    Key              Value
    ---              -----
-   created_time     2019-06-19T17:22:23.369372Z
+   created_time     2024-06-19T17:22:23.369372Z
    custom_metadata  map[bar:123 foo:def]
    deletion_time    n/a
    destroyed        false

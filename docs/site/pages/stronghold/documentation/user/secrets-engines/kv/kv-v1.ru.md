@@ -5,49 +5,42 @@ lang: ru
 description: The KV secrets engine can store arbitrary secrets.
 ---
 
-The `kv` secrets engine is used to store arbitrary secrets within the
-configured physical storage for Stronghold.
+Механизм секретов `kv` используется для хранения произвольных секретов в пределах хранилища Stronghold.
 
-Writing to a key in the `kv` backend will replace the old value; sub-fields are
-not merged together.
+При записи ключа в `kv` старое значение заменяется.
 
-Key names must always be strings. If you write non-string values directly via
-the CLI, they will be converted into strings. However, you can preserve
-non-string values by writing the key/value pairs to Stronghold from a JSON file or
-using the HTTP API.
+Имена ключей всегда должны быть строками. Если вы записываете нестроковые значения напрямую через CLI, они будут преобразованы в строки. Однако вы можете сохранить нестроковые значения, записав пары ключ/значение из JSON-файла или используя HTTP API.
 
-This secrets engine honors the distinction between the `create` and `update`
-capabilities inside ACL policies.
+Этот механизм секретов учитывает различие между операциями `create` и `update` в ACL-политиках.
+
 
 {% alert level="warning" %}
 
-**Note**: Path and key names are _not_ obfuscated or encrypted; only the
-values set on keys are. You should not store sensitive information as part of a
-secret's path.
+**Примечание**: Пути и имена ключей _не_ обфусцируются и не шифруются; шифруются только
+значения для ключей. Поэтому следует хранить конфиденциальную информацию как часть пути секрета.
 
 {% endalert %}
-## Setup
 
-To enable a version 1 kv store:
+## Как включить
+
+Чтобы включить хранилище kv версии 1 выполните команду:
 
 ```shell-session
 $ d8 stronghold secrets enable -version=1 kv
 ```
 
-## Usage
+## Использование
 
-After the secrets engine is configured and a user/machine has an Stronghold token with
-the proper permission, it can generate credentials. The `kv` secrets engine
-allows for writing keys with arbitrary values.
+Механизм секретов `kv` позволяет записывать ключи с произвольными значениями. Для этого потребуется токен с соответствующими правами
 
-1. Write arbitrary data:
+1. Запись произвольных данных:
 
    ```shell-session
    $ d8 stronghold kv put kv/my-secret my-value=s3cr3t
    Success! Data written to: kv/my-secret
    ```
 
-1. Read arbitrary data:
+2. Чтение произвольных данных:
 
    ```shell-session
    $ d8 stronghold kv get kv/my-secret
@@ -56,7 +49,7 @@ allows for writing keys with arbitrary values.
    my-value            s3cr3t
    ```
 
-1. List the keys:
+3. Получить список ключей:
 
    ```shell-session
    $ d8 stronghold kv list kv/
@@ -65,16 +58,16 @@ allows for writing keys with arbitrary values.
    my-secret
    ```
 
-1. Delete a key:
+4. Удалить ключ:
 
    ```shell-session
    $ d8 stronghold kv delete kv/my-secret
    Success! Data deleted (if it existed) at: kv/my-secret
    ```
 
-You can also use [Stronghold's password policy](/docs/concepts/password-policies) feature to generate arbitrary values.
+Вы также можете использовать механизм [password policy](/docs/concepts/password-policies) для генерации произвольных значений.
 
-1. Write a password policy:
+1. Создать политику для паролей:
 
    ```shell-session
    $ d8 stronghold write sys/policies/password/example policy=-<<EOF
@@ -94,14 +87,14 @@ You can also use [Stronghold's password policy](/docs/concepts/password-policies
    EOF
    ```
 
-1. Write data using the `example` policy:
+2. Сгенерировать пароль используя политику `example`:
 
    ```shell-session
    $ d8 stronghold kv put kv/my-generated-secret \
        password=$(d8 stronghold read -field password sys/policies/password/example/generate)
    ```
 
-1. Read the generated data:
+3. Прочитать сгенерированное значение секрета:
 
    ```shell-session
    $ d8 stronghold kv get kv/my-generated-secret
@@ -111,36 +104,46 @@ You can also use [Stronghold's password policy](/docs/concepts/password-policies
    password    ^dajd609Xf8Zhac$dW24
    ```
 
-## TTLs
+## Время жизни ключей (TTL)
 
-Unlike other secrets engines, the KV secrets engine does not enforce TTLs
-for expiration. Instead, the `lease_duration` is a hint for how often consumers
-should check back for a new value.
+В отличие от других механизмов секретов, механизм секретов KV не применяет TTL для истечения срока действия. Вместо этого `lease_duration` является информацией для пользователя, как часто нужно проверять новое значение.
 
-If provided a key of `ttl`, the KV secrets engine will utilize this value
-as the lease duration:
+Если ключ имеет значение `ttl`, механизм секретов KV будет использовать это значение
+в качестве продолжительности аренды:
+
+Если ключ имеет значение `ttl`, движок будет использовать это значение в качестве продолжительности аренды:
 
 ```shell-session
-$ d8 stronghold kv put kv/my-secret ttl=30m my-value=s3cr3t
+$ d8 stronghold kv put kv/my-secret ttl=5s my-value=s3cr3t
 Success! Data written to: kv/my-secret
 ```
 
-Even with a `ttl` set, the secrets engine _never_ removes data on its own. The
-`ttl` key is merely advisory.
+Даже при установленном `ttl` движок secrets _никогда_ не удаляет данные самостоятельно. Ключ `ttl` носит лишь рекомендательный характер.
 
-When reading a value with a `ttl`, both the `ttl` key _and_ the refresh interval
-will reflect the value:
+При чтении значения с `ttl`, как ключ `ttl`, так и интервал обновления будут отражать это значение:
 
 ```shell-session
 $ d8 stronghold kv get kv/my-secret
 Key                 Value
 ---                 -----
 my-value            s3cr3t
-ttl                 30m
+ttl                 5s
+
+curl -X 'GET' \
+  'https://stronghold.example.com/v1/kv/my-secret' \
+  -H 'X-Vault-Token: ***'
+
+{
+  "request_id": "3879d849-cb78-725a-c2eb-3ba9dfe8a1d3",
+  "lease_id": "",
+  "renewable": false,
+  "lease_duration": 5,
+  "data": {
+    "my-value": "s3cr3t",
+    "ttl": "5s"
+  },
+  "wrap_info": null,
+  "warnings": null,
+  "auth": null
+}
 ```
-
-## API
-
-The KV secrets engine has a full HTTP API. Please see the
-[KV secrets engine API](/api-docs/secret/kv/kv-v1) for more
-details.
