@@ -9,15 +9,6 @@ description: |-
 
 # Kubernetes auth method
 
-{% alert level="warning" %}
-
-**Note**: This engine can use external X.509 certificates as part of TLS or signature validation.
-   Verifying signatures against X.509 certificates that use SHA-1 is deprecated and is no longer
-   usable without a workaround. See the
-   [deprecation FAQ](/docs/deprecation/faq#q-what-is-the-impact-of-removing-support-for-x-509-certificates-with-signatures-that-use-sha-1)
-   for more information.
-
-{% endalert %}
 The `kubernetes` auth method can be used to authenticate with Stronghold using a
 Kubernetes Service Account Token. This method of authentication makes it easy to
 introduce an Stronghold token into a Kubernetes Pod.
