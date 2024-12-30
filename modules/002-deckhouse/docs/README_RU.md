@@ -50,24 +50,38 @@ search: releaseChannel, стабилизация релизного канала
 
 #### *Закрепление* релиза
 
-*Закрепление* релиза нужно, если вы по какой-то причине не хотите обновлять Deckhouse.
+Под *закреплением* релиза подразумевается полное или частичное отключение автоматического обновления версий Deckhouse.
 
-Есть три варианта *закрепления* релиза:
-- Установить [ручной режим обновления](usage.html#ручное-подтверждение-обновлений).
-В этом случае вы остановитесь на текущем релизе, но будете получать patch-релизы, а minor-релиз не будет обновляться без явного одобрения.
+Есть три варианта ограничения автоматического обновления Deckhouse:
+- Установить ручной режим обновления.
+
+  В этом случае вы остановитесь на текущей версии, сможете получать обновления в кластер, но для применения обновления необходимо будет выполнить [ручное действие](usage.html#ручное-подтверждение-обновлений). Это носится и к patch-версиям, и к минорным версиям.
   
-  Например:
-    текущий релиз `v1.29.3`, после установки ручного режима обновлений Deckhouse сможет обновиться до версии `v1.29.9`, но не будет обновляться на релиз `v1.30.0`.
-- Установить конкретный тег для deployment/deckhouse. В таком случае Deckhouse останется на этом релизе до выхода следующего patch/minor-релиза.
-Это может понадобиться, если в какой-то версии Deckhouse обнаружилась ошибка, которой не было раньше, и вы хотите откатиться на предыдущий релиз, но обновиться, как только выйдет релиз с исправлением данной ошибки.
-
-  Например:
-    `kubectl -ti -n d8-system exec svc/deckhouse-leader -c deckhouse -- kubectl set image deployment/deckhouse deckhouse=deckhouse=registry.deckhouse.io/deckhouse/ee:v1.66.3`.
-- Установить конкретный тег для deployment/deckhouse и удалить `releaseChannel` из конфигурации модуля `deckhouse`.
-    В таком случае вы останетесь на конкретной версии Deckhouse и не будете получать обновлений.
+  Для установки ручного режима обновления необходимо в ModuleConfig `deckhouse` установить параметр [settings.update.mode](configuration.html#parameters-update-mode) в `Manual`:
 
   ```shell
-  $ kubectl -ti -n d8-system exec svc/deckhouse-leader -c deckhouse -- kubectl set image deployment/deckhouse deckhouse=deckhouse=registry.deckhouse.io/deckhouse/ee:v1.66.3
-  $ kubectl edit mc deckhouse
-    // удалить releaseChannel
+  kubectl patch mc deckhouse --type=merge -p='{"spec":{"settings":{"update":{"mode":"Manual"}}}}'
+  ```
+  
+- Установить режим автоматического обновления для патч-версий.
+
+  В этом случае вы остановитесь на текущем релизе, но будете получать patch-версии текущего релиза. Для применения обновления минорной версии релиза необходимо будет выполнить [ручное действие](usage.html#ручное-подтверждение-обновлений).
+  
+  Например: текущая версия DKP `v1.65.2`, после установки режима автоматического обновления для патч-версий, Deckhouse сможет обновиться до версии `v1.65.6`, но не будет обновляться до версии `v1.66.*` и выше.
+
+  Для установки режима автоматического обновления для патч-версий необходимо в ModuleConfig `deckhouse` установить параметр [settings.update.mode](configuration.html#parameters-update-mode) в `AutoPatch`:
+
+  ```shell
+  kubectl patch mc deckhouse --type=merge -p='{"spec":{"settings":{"update":{"mode":"AutoPatch"}}}}'
+  ```
+
+- Установить конкретный тег для Deployment `deckhouse` и удалить параметр [releaseChannel](configuration.html#parameters-releasechannel) из конфигурации модуля `deckhouse`.
+
+  В таком случае DKP останется на конкретной версии, никакой информаций о новых доступных версиях в кластере (объекты DeckhouseRelease) появляться не будет.
+
+  Пример установки версии `v1.66.3` для DKP EE и удаления параметра `releaseChannel` из конфигурации модуля `deckhouse`:
+
+  ```shell
+  kubectl -ti -n d8-system exec svc/deckhouse-leader -c deckhouse -- kubectl set image deployment/deckhouse deckhouse=registry.deckhouse.ru/deckhouse/ee:v1.66.3
+  kubectl patch mc deckhouse --type=json -p='[{"op": "remove", "path": "/spec/settings/releaseChannel"}]'
   ```
