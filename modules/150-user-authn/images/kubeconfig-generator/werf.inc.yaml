@@ -51,6 +51,9 @@ import:
     add: /src
     to: /src
     before: install
+mount:
+  - fromPath: ~/go-pkg-cache
+    to: /go/pkg
 shell:
   install:
     - export GOPROXY={{ $.GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64
