@@ -53,7 +53,7 @@ you can approve them all at once. In that case Deckhouse will update in series k
 
 ### Pin a release
 
-Pinnin the release means fully or partially disabling the automatic Deckhouse version update.
+To pin a release means fully or partially disable the automatic Deckhouse version update.
 
 There are three options to limit the automatic update of Deckhouse:
 - Enable a manual update mode.
