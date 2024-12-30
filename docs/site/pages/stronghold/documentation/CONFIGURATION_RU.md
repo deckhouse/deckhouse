@@ -365,7 +365,7 @@ d8 kubectl -n d8-system exec deploy/deckhouse -c deckhouse -it -- deckhouse-cont
 
 После запуска модуля проследить:
 1. убедиться в наличии сертификата для домена stronghold.*
-    `d8 kubectl -n d8-stronhold get ingress-tls` (либо через Консоль)
+    `d8 kubectl -n d8-stronghold get ingress-tls` (либо через Консоль)
   В разделе [Трудности](#трудности) есть описания решений возможных проблем с отсутствием сертификата.
 2. Убедиться в доступности адреса https://stronghold.mycompany.tld/v1/sys/health
 3. Проверить соответствие Издателя сертификата с CA сертификатом (Опционально)
