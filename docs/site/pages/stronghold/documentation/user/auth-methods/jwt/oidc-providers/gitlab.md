@@ -1,4 +1,7 @@
 ---
+title: "OIDC Provider Gitlab"
+permalink: en/stronghold/documentation/user/auth-methods/jwt/oidc-providers/gitlab.html
+lang: en
 description: OIDC provider configuration for Gitlab
 ---
 

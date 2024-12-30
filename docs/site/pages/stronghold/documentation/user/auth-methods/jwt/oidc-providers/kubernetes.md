@@ -1,4 +1,7 @@
 ---
+title: "OIDC Provider Kubernetes"
+permalink: en/stronghold/documentation/user/auth-methods/jwt/oidc-providers/kubernetes.html
+lang: en
 description: OIDC provider configuration for Kubernetes
 ---
 

@@ -1,4 +1,7 @@
 ---
+title: "OIDC Provider Keycloak"
+permalink: en/stronghold/documentation/user/auth-methods/jwt/oidc-providers/keycloak.html
+lang: en
 description: OIDC provider configuration for Keycloak
 ---
 

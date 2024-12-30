@@ -223,6 +223,26 @@ entries:
             ru: Методы аутентификации
           folders:
             - title:
+                en: OIDC providers
+                ru: Провайдеры OIDC
+              folders:
+              - title:
+                  en: Overview
+                  ru: Обзор
+                url: /stronghold/documentation/user/auth-methods/jwt/oidc-providers/overview.html
+              - title:
+                  en: Gitlab
+                  ru: Gitlab
+                url: /stronghold/documentation/user/auth-methods/jwt/oidc-providers/gitlab.html
+              - title:
+                  en: Keycloak
+                  ru: Keycloak
+                url: /stronghold/documentation/user/auth-methods/jwt/oidc-providers/keycloak.html
+              - title:
+                  en: Kubernetes
+                  ru: Kubernetes
+                url: /stronghold/documentation/user/auth-methods/jwt/oidc-providers/kubernetes.html
+            - title:
                 en: OIDC
                 ru: OIDC
               url: /stronghold/documentation/user/auth-methods/oidc.html
