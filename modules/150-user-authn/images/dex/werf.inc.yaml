@@ -27,7 +27,7 @@ git:
         - '**/go.sum'
   - add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches/
     to: /patches
-  - add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/web
+  - add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/src/web
     to: /web
 shell:
   install:
@@ -43,6 +43,9 @@ import:
     add: /src
     to: /src
     before: install
+mount:
+  - fromPath: ~/go-pkg-cache
+    to: /go/pkg
 shell:
   install:
     - export GOPROXY={{ $.GOPROXY }} CGO_ENABLED=1 GOOS=linux GOARCH=amd64
