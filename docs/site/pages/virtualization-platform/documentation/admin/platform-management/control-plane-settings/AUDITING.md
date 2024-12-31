@@ -17,7 +17,7 @@ By default, Deckhouse clusters have basic audit policies:
 
 ### Disabling basic policies
 
-You can disable log collection by basic policies by setting the [basicAuditPolicyEnabled](https://deckhouse.io/products/virtualization-platform/reference/mc.html#control-plane-manager-parameters-apiserver-basicauditpolicyenabled) flag to `false`.
+You can disable log collection by basic policies by setting the [basicAuditPolicyEnabled](/products/virtualization-platform/reference/mc.html#control-plane-manager-parameters-apiserver-basicauditpolicyenabled) flag to `false`.
 
 An example of enabling auditing in kube-apiserver, but without Deckhouse basic policies:
 
@@ -44,7 +44,7 @@ d8 k patch mc control-plane-manager --type=strategic -p '{"settings":{"apiserver
 
 The control-plane manager module automates the configuration of kube-apiserver to add custom audit policies. To make these additional policies work, you need to make sure that audit is enabled in the `apiserver` parameters section and create a secret with the audit policy:
 
-1. Enable the [auditPolicyEnabled](https://deckhouse.io/products/virtualization-platform/reference/mc.html#control-plane-manager-parameters-apiserver-auditpolicyenabled) parameter in the module settings:
+1. Enable the [auditPolicyEnabled](/products/virtualization-platform/reference/mc.html#control-plane-manager-parameters-apiserver-auditpolicyenabled) parameter in the module settings:
 
    ```yaml
    apiVersion: deckhouse.io/v1alpha1
@@ -126,7 +126,7 @@ Please note that "maximum write depth" does not mean "guaranteed". The intensity
 
 ## Outputting the audit log to standard output
 
-If the cluster has a log collector configured from pods, you can collect the audit log by outputting it to standard output. To do this, set the value `Stdout` in the [apiserver.auditLog.output](https://deckhouse.io/products/virtualization-platform/reference/mc.html#control-plane-manager-parameters-apiserver-auditlog) parameter in the module settings (<https://deckhouse.io/products/virtualization-platform/reference/mc.html#control-plane-manager-parameters-apiserver-auditlog>).
+If the cluster has a log collector configured from pods, you can collect the audit log by outputting it to standard output. To do this, set the value `Stdout` in the [apiserver.auditLog.output](/products/virtualization-platform/reference/mc.html#control-plane-manager-parameters-apiserver-auditlog) parameter in the module settings (</products/virtualization-platform/reference/mc.html#control-plane-manager-parameters-apiserver-auditlog>).
 
 Example of enabling auditing with output to stdout:
 

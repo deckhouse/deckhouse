@@ -112,7 +112,7 @@ rm -r ./kubernetes ./etcd-backup.snapshot
 
 Для корректного восстановления мультимастерного кластера выполните следующие шаги:
 
-1. Явно включите режим High Availability (HA) с помощью глобального параметра [highAvailability](https://deckhouse.ru/products/virtualization-platform/reference/mc.html#global-parameters-highavailability). Это нужно, например, чтобы не потерять одну реплику Prometheus и её PVC, поскольку в режиме кластера с одним master-узлом HA отключен по умолчанию.
+1. Явно включите режим High Availability (HA) с помощью глобального параметра [highAvailability](/products/virtualization-platform/reference/mc.html#global-parameters-highavailability). Это нужно, например, чтобы не потерять одну реплику Prometheus и её PVC, поскольку в режиме кластера с одним master-узлом HA отключен по умолчанию.
 
 1. Переведите кластер в режим с одним master-узлом, в соответствии с [инструкцией](#как-уменьшить-число-master-узлов-в-облачном-кластере-multi-master-в-single-master) для облачных кластеров или самостоятельно выведите статические master-узлы из кластера.
 
@@ -132,7 +132,7 @@ rm -r ./kubernetes ./etcd-backup.snapshot
    d8 k -n d8-system exec svc/deckhouse-leader -c deckhouse -- deckhouse-controller queue main
    ```
 
-1. Переведите кластер обратно в режим мультимастерного в соответствии с [инструкцией](#как-добавить-master-узлы-в-облачном-кластере-single-master-в-multi-master) для облачных кластеров или [инструкцией](https://deckhouse.ru/products/virtualization-platform/documentation/admin/platform-management/node-management/adding-node.html) для статических или гибридных кластеров.
+1. Переведите кластер обратно в режим мультимастерного в соответствии с [инструкцией](#как-добавить-master-узлы-в-облачном-кластере-single-master-в-multi-master) для облачных кластеров или [инструкцией](/products/virtualization-platform/documentation/admin/platform-management/node-management/adding-node.html) для статических или гибридных кластеров.
 
 ## Восстановление объекта Kubernetes из резервной копии etcd
 
@@ -147,7 +147,7 @@ rm -r ./kubernetes ./etcd-backup.snapshot
 
 В примере:
 
-- `etcd-snapshot.bin` — файл с [резервной копией](https://deckhouse.ru/products/virtualization-platform/documentation/admin/platform-management/control-plane-settings/etcd.html#%D1%80%D0%B5%D0%B7%D0%B5%D1%80%D0%B2%D0%BD%D0%BE%D0%B5-%D0%BA%D0%BE%D0%BF%D0%B8%D1%80%D0%BE%D0%B2%D0%B0%D0%BD%D0%B8%D0%B5-etcd) данных etcd (snapshot);
+- `etcd-snapshot.bin` — файл с [резервной копией](/products/virtualization-platform/documentation/admin/platform-management/control-plane-settings/etcd.html#%D1%80%D0%B5%D0%B7%D0%B5%D1%80%D0%B2%D0%BD%D0%BE%D0%B5-%D0%BA%D0%BE%D0%BF%D0%B8%D1%80%D0%BE%D0%B2%D0%B0%D0%BD%D0%B8%D0%B5-etcd) данных etcd (snapshot);
 - `infra-production` — пространство имен, в котором нужно восстановить объекты.
 
 1. Запустите под с временным экземпляром etcd.

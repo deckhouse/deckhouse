@@ -111,7 +111,7 @@ To correctly recover a cluster with one master node, follow these steps:
 
 To properly recover a multi-master cluster, follow these steps:
 
-1. Explicitly enable High Availability (HA) mode using the global parameter [highAvailability](https://deckhouse.ru/products/virtualization-platform/reference/mc.html#global-parameters-highavailability). This is necessary, for example, to avoid losing one Prometheus replica and its PVC, since HA is disabled by default in single-master cluster mode.
+1. Explicitly enable High Availability (HA) mode using the global parameter [highAvailability](/products/virtualization-platform/reference/mc.html#global-parameters-highavailability). This is necessary, for example, to avoid losing one Prometheus replica and its PVC, since HA is disabled by default in single-master cluster mode.
 
 1. Switch the cluster to single-master mode, according to the [instruction](#how-to-reduce-the-number-of-master-nodes-in-a-multi-master-cloud-cluster-to-single-master) for cloud clusters or manually remove static master nodes from the cluster.
 
@@ -131,7 +131,7 @@ To properly recover a multi-master cluster, follow these steps:
     d8 k -n d8-system exec svc/deckhouse-leader -c deckhouse -- deckhouse-controller queue main
     ```
 
-1. Switch the cluster back to multi-master mode in accordance with [instruction](#how-to-add-master-nodes-in-a-cloud-cluster-single-master-to-multi-master) for cloud clusters or [instruction](https://deckhouse.io/products/virtualization-platform/documentation/admin/platform-management/node-management/adding-node.html) for static or hybrid clusters.
+1. Switch the cluster back to multi-master mode in accordance with [instruction](#how-to-add-master-nodes-in-a-cloud-cluster-single-master-to-multi-master) for cloud clusters or [instruction](/products/virtualization-platform/documentation/admin/platform-management/node-management/adding-node.html) for static or hybrid clusters.
 
 ## Restoring a Kubernetes object from an etcd backup
 
@@ -149,7 +149,7 @@ A short scenario for restoring individual objects from an etcd backup:
 
 In the example:
 
-- `etcd-snapshot.bin` is a file with a [backup](https://deckhouse.io/products/virtualization-platform/documentation/admin/platform-management/control-plane-settings/etcd.html#%D1%80%D0%B5%D0%B7%D0%B5%D1%80%D0%B2%D0%BD%D0%BE%D0%B5-%D0%BA%D0%BE%D0%BF%D0%B8%D1%80%D0%BE%D0%B2%D0%B0%D0%BD%D0%B8%D0%B5-etcd) of etcd data (snapshot);
+- `etcd-snapshot.bin` is a file with a [backup](/products/virtualization-platform/documentation/admin/platform-management/control-plane-settings/etcd.html#%D1%80%D0%B5%D0%B7%D0%B5%D1%80%D0%B2%D0%BD%D0%BE%D0%B5-%D0%BA%D0%BE%D0%BF%D0%B8%D1%80%D0%BE%D0%B2%D0%B0%D0%BD%D0%B8%D0%B5-etcd) of etcd data (snapshot);
 - `infra-production` is the namespace in which you want to restore the objects.
 
 1. Start a pod with a temporary etcd instance.

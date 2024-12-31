@@ -114,19 +114,19 @@ lang: "ru"
 - Установка метки `node-role.kubernetes.io/control-plane=""` на узле приводит к развертыванию на нем компонентов `control-plane`, подключению нового узла `etcd` в etcd-кластер, а также перегенерации необходимых сертификатов и конфигурационных файлов.
 - Удаление метки `node-role.kubernetes.io/control-plane=""` с узла приводит к удалению всех компонентов `control-plane`, перегенерации необходимых конфигурационных файлов и сертификатов, а также корректному исключению узла из etcd-кластера.
 
-> **Внимание.** При масштабировании узлов с 2 до 1 требуются [ручные действия](https://deckhouse.ru/products/virtualization-platform/documentation/admin/platform-management/control-plane-settings/etcd.html#пересборка-кластера-etcd) с `etcd`. В остальных случаях все необходимые действия происходят автоматически. Обратите внимание, что при масштабировании с любого количества master-узлов до 1 рано или поздно на последнем шаге возникнет ситуация масштабирования узлов с 2 до 1.
+> **Внимание.** При масштабировании узлов с 2 до 1 требуются [ручные действия](/products/virtualization-platform/documentation/admin/platform-management/control-plane-settings/etcd.html#пересборка-кластера-etcd) с `etcd`. В остальных случаях все необходимые действия происходят автоматически. Обратите внимание, что при масштабировании с любого количества master-узлов до 1 рано или поздно на последнем шаге возникнет ситуация масштабирования узлов с 2 до 1.
 
-Другие операции с master-узлами рассмотрены в разделе [работа с master-узлами](https://deckhouse.ru/products/virtualization-platform/documentation/admin/platform-management/control-plane-settings/masters.html).
+Другие операции с master-узлами рассмотрены в разделе [работа с master-узлами](/products/virtualization-platform/documentation/admin/platform-management/control-plane-settings/masters.html).
 
 ### Управление версиями
 
 Обновление **patch-версии** компонентов управляющего слоя (то есть в рамках минорной версии, например с `1.27.3` на `1.27.5`) происходит автоматически вместе с обновлением версии Deckhouse. Управлять обновлением patch-версий нельзя.
 
-Обновлением **минорной-версии** компонентов управляющего слоя (например, с `1.26.*` на `1.28.*`) можно управлять с помощью параметра [kubernetesVersion](https://deckhouse.ru/products/virtualization-platform/reference/cr/clusterconfiguration.html#clusterconfiguration-kubernetesversion), в котором можно выбрать автоматический режим обновления (значение `Automatic`) или указать желаемую минорную версию. Версию, которая используется по умолчанию (при `kubernetesVersion: Automatic`), а также список поддерживаемых версий Kubernetes можно найти в [документации](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.66/supported_versions.html).
+Обновлением **минорной-версии** компонентов управляющего слоя (например, с `1.26.*` на `1.28.*`) можно управлять с помощью параметра [kubernetesVersion](/products/virtualization-platform/reference/cr/clusterconfiguration.html#clusterconfiguration-kubernetesversion), в котором можно выбрать автоматический режим обновления (значение `Automatic`) или указать желаемую минорную версию. Версию, которая используется по умолчанию (при `kubernetesVersion: Automatic`), а также список поддерживаемых версий Kubernetes можно найти в [документации](/products/kubernetes-platform/documentation/v1.66/supported_versions.html).
 
 Обновление control plane выполняется безопасно как для конфигурации `multi-master`, так и для `single-master`. Во время обновления может быть кратковременно недоступен API-сервер. На работу приложений в кластере обновление не влияет и может выполняться без выделения окна для регламентных работ.
 
-Если указанная для обновления версия (параметр [kubernetesVersion](https://deckhouse.ru/products/virtualization-platform/reference/cr/clusterconfiguration.html#clusterconfiguration-kubernetesversion)) не соответствует текущей версии управляющего слоя в кластере, запускается умная стратегия изменения версий компонентов:
+Если указанная для обновления версия (параметр [kubernetesVersion](/products/virtualization-platform/reference/cr/clusterconfiguration.html#clusterconfiguration-kubernetesversion)) не соответствует текущей версии управляющего слоя в кластере, запускается умная стратегия изменения версий компонентов:
 
 - Общие замечания:
   - Обновление в разных NodeGroup выполняется параллельно. Внутри каждой NodeGroup узлы обновляются последовательно, по одному.

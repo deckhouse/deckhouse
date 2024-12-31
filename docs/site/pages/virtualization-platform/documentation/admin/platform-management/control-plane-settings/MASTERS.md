@@ -23,7 +23,7 @@ master-2 Ready control-plane,master 247d v1.28.15
 
 ## Removing the master node role while keeping the node in the cluster
 
-1. Make a [backup of etcd](https://deckhouse.io/products/virtualization-platform/documentation/admin/platform-management/control-plane-settings/etcd.html#%D1%80%D0%B5%D0%B7%D0%B5%D1%80%D0%B2%D0%BD%D0%BE%D0%B5-%D0%BA%D0%BE%D0%BF%D0%B8%D1%80%D0%BE%D0%B2%D0%B0%D0%BD%D0%B8%D0%B5-etcd) and the `/etc/kubernetes` directory.
+1. Make a [backup of etcd](/products/virtualization-platform/documentation/admin/platform-management/control-plane-settings/etcd.html#%D1%80%D0%B5%D0%B7%D0%B5%D1%80%D0%B2%D0%BD%D0%BE%D0%B5-%D0%BA%D0%BE%D0%BF%D0%B8%D1%80%D0%BE%D0%B2%D0%B0%D0%BD%D0%B8%D0%B5-etcd) and the `/etc/kubernetes` directory.
 1. Copy the resulting archive outside the cluster (for example, to a local machine).
 1. Make sure there are no alerts in the cluster that could prevent the master nodes from updating.
    A list of all alerts can be viewed using the command:

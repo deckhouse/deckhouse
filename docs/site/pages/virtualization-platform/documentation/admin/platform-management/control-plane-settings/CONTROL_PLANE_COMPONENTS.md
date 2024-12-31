@@ -114,19 +114,19 @@ Control plane nodes are scaled automatically using the `node-role.kubernetes.io/
 - Setting the `node-role.kubernetes.io/control-plane=""` label on a node results in the deployment of the `control-plane` components on it, connecting a new `etcd` node to the etcd cluster, and regenerating the necessary certificates and configuration files.
 - Removing the `node-role.kubernetes.io/control-plane=""` label from a node results in the removal of all `control-plane` components, regeneration of the necessary configuration files and certificates, and the correct exclusion of the node from the etcd cluster.
 
-**Attention.** When scaling nodes from 2 to 1, [manual actions](https://deckhouse.io/products/virtualization-platform/documentation/admin/platform-management/control-plane-settings/etcd.html#rebuild-class-etcd) with `etcd` are required.
+**Attention.** When scaling nodes from 2 to 1, [manual actions](/products/virtualization-platform/documentation/admin/platform-management/control-plane-settings/etcd.html#rebuild-class-etcd) with `etcd` are required.
 
-Other operations with master nodes are discussed in the section [working with master nodes](https://deckhouse.io/products/virtualization-platform/documentation/admin/platform-management/control-plane-settings/masters.html).
+Other operations with master nodes are discussed in the section [working with master nodes](/products/virtualization-platform/documentation/admin/platform-management/control-plane-settings/masters.html).
 
 ### Versioning
 
 Updating the **patch version** of control plane components (i.e. within a minor version, e.g. from `1.27.3` to `1.27.5`) happens automatically when you upgrade the Deckhouse version. You cannot manage patch version upgrades.
 
-Updating the **minor version** of control plane components (e.g. from `1.26.*` to `1.28.*`) can be managed using the [kubernetesVersion](https://deckhouse.io/products/virtualization-platform/reference/cr/clusterconfiguration.html#clusterconfiguration-kubernetesversion) parameter, which allows you to select the automatic upgrade mode (`Automatic`) or specify the desired minor version. The version that is used by default (`kubernetesVersion: Automatic`) and the list of supported Kubernetes versions can be found in the [documentation](https://deckhouse.io/products/kubernetes-platform/documentation/v1.66/supported_versions.html).
+Updating the **minor version** of control plane components (e.g. from `1.26.*` to `1.28.*`) can be managed using the [kubernetesVersion](/products/virtualization-platform/reference/cr/clusterconfiguration.html#clusterconfiguration-kubernetesversion) parameter, which allows you to select the automatic upgrade mode (`Automatic`) or specify the desired minor version. The version that is used by default (`kubernetesVersion: Automatic`) and the list of supported Kubernetes versions can be found in the [documentation](/products/kubernetes-platform/documentation/v1.66/supported_versions.html).
 
 The control plane upgrade is performed safely for both `multi-master` and `single-master` configurations. During the upgrade, the API server may be briefly unavailable. The upgrade does not affect the operation of applications in the cluster and can be performed without allocating a maintenance window.
 
-If the version specified for the upgrade (the [kubernetesVersion](https://deckhouse.io/products/virtualization-platform/reference/cr/clusterconfiguration.html#clusterconfiguration-kubernetesversion) parameter) does not match the current version of the control plane in the cluster, a smart strategy for changing component versions is launched:
+If the version specified for the upgrade (the [kubernetesVersion](/products/virtualization-platform/reference/cr/clusterconfiguration.html#clusterconfiguration-kubernetesversion) parameter) does not match the current version of the control plane in the cluster, a smart strategy for changing component versions is launched:
 
 - General notes:
   - Upgrades in different NodeGroups are performed in parallel. Within each NodeGroup, nodes are upgraded sequentially, one at a time.
