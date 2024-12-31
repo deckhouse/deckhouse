@@ -18,7 +18,7 @@ Create an IngressNginxController resource that describes the parameters for the 
 ```yaml
 sudo -i d8 k apply -f - <<EOF
 # Section describing the NGINX Ingress controller parameters.
-# /products/virtualization-platform/reference/cr/ingressnginxcontroller.html
+# https://deckhouse.io/products/virtualization-platform/reference/cr/ingressnginxcontroller.html
 apiVersion: deckhouse.io/v1
 kind: IngressNginxController
 metadata:

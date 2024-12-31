@@ -19,7 +19,7 @@ sudo -i d8 k -n d8-ingress-nginx get po -l app=kruise
 ```yaml
 sudo -i d8 k apply -f - <<EOF
 # Секция, описывающая параметры NGINX Ingress controller.
-# /products/virtualization-platform/reference/cr/ingressnginxcontroller.html
+# https://deckhouse.ru/products/virtualization-platform/reference/cr/ingressnginxcontroller.html
 apiVersion: deckhouse.io/v1
 kind: IngressNginxController
 metadata:
