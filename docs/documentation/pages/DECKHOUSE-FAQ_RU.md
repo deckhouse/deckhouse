@@ -1408,12 +1408,24 @@ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-con
 {% alert %}
 - Инструкция подразумевает использование публичного адреса container registry: `registry-cse.deckhouse.ru`. В случае использования другого адреса container registry измените команды или воспользуйтесь [инструкцией по переключению Deckhouse на использование стороннего registry](#как-переключить-работающий-кластер-deckhouse-на-использование-стороннего-registry).
 - В Deckhouse CSE не поддерживается работа облачных кластеров и ряда модулей.
-- На текущий момент мигрировать на CSE-редакцию можно только с релиза 1.58.
+- На текущий момент мигрировать на CSE-редакцию можно только с релиза `1.58`.
+- На текущий момент CSE-редакция поддерживает только kubernetes `1.27`.
 - При переключении на CSE-редакцию может наблюдаться недоступность компонентов кластера.
 {% endalert %}
 
 Для переключения кластера Deckhouse Enterprise Edition на Certified Security Edition выполните следующие действия (все команды выполняются на master-узле действующего кластера):
 
+1. Настройте кластер на использование kuberntes версии `1.27`. Для этого
+    1. Выполните команду:
+
+      ```shell
+      kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller edit cluster-configuration
+      ```
+
+    1. Измените параметр `kubernetesVersion` на значение `"1.27"` (в кавычках).
+    1. Сохраните изменения. Узлы кластера начнут последовательно обновляться.
+    1. Дождитесь окончания обновления. Отслеживать ход обновления можно с помощью команды `kubectl get no`.  
+    Обновление можно считать завершенным, когда в выводе команды у каждого узла кластера в колонке `VERSION` появится обновленная версия.
 1. Подготовьте переменные с токеном лицензии и создайте NodeGroupConfiguration для переходной авторизации в `registry-cse.deckhouse.ru`:
 
    ```shell
@@ -1496,15 +1508,13 @@ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-con
    ```console
    CSE_SANDBOX_IMAGE=$(kubectl exec cse-image -- cat deckhouse/candi/images_digests.json | grep  pause | grep -oE 'sha256:\w*')
    CSE_K8S_API_PROXY=$(kubectl exec cse-image -- cat deckhouse/candi/images_digests.json | grep kubernetesApiProxy | grep -oE 'sha256:\w*')
-   CSE_REGISTRY_PACKAGE_PROXY=$(kubectl exec cse-image -- cat deckhouse/candi/images_digests.json | grep registryPackagesProxy | grep -oE 'sha256:\w*')
-   crictl pull registry-cse.deckhouse.ru/deckhouse/cse@$CSE_REGISTRY_PACKAGE_PROXY
    CSE_MODULES=$(kubectl exec cse-image -- ls -l deckhouse/modules/ | awk {'print $9'}  |grep -oP "\d.*-\w*"  | cut -c5-)
    USED_MODULES=$(kubectl get modules | grep -v 'snapshot-controller-crd' | grep Enabled |awk {'print $1'})
    MODULES_WILL_DISABLE=$(echo $USED_MODULES | tr ' ' '\n' | grep -Fxv -f <(echo $CSE_MODULES | tr ' ' '\n'))
    ```
 
-1. Убедитесь, что используемые в кластере модули поддерживаются в CSE-редакции.
-   Например, на текущий момент в CSE-редакции отсутствует модуль cert-manager, поэтому перед его отключением необходимо перевести `https.mode` для связанных компонентов (например [user-authn](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.58/modules/150-user-authn/configuration.html#parameters-https-mode) или [prometheus](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.58/modules/300-prometheus/configuration.html#parameters-https-mode)) на альтернативные варианты.
+1. Убедитесь, что используемые в кластере модули поддерживаются в CSE-редакции.  
+   Например, на текущий момент в CSE-редакции отсутствует модуль cert-manager, поэтому перед его отключением необходимо перевести `https.mode` для связанных компонентов (например [user-authn](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.58/modules/150-user-authn/configuration.html#parameters-https-mode) или [prometheus](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.58/modules/300-prometheus/configuration.html#parameters-https-mode)) на альтернативные варианты. Либо изменить [глобальный параметр](deckhouse-configure-global.html#parameters-modules-https-mode) отвечающий за режим работы https в кластере.  
 
    Отобразить список модулей, которые не поддерживаются в CSE-редакции и будут отключены, можно следующей командой:
 
@@ -1521,7 +1531,19 @@ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-con
      tr ' ' '\n' | awk {'print "kubectl -n d8-system exec  deploy/deckhouse -- deckhouse-controller module disable",$1'} | bash
    ```
 
-   Дождитесь перехода пода Deckhouse в статус `Ready` и [выполнения всех задач в очереди](#как-проверить-очередь-заданий-в-deckhouse).
+   Также на данный момент редакция 1.58 CSE не поддерживает компонент earlyOOM. Отключите его с помощью [настройки](modules/node-manager/configuration.html#parameters-earlyoomenabled).
+
+   Дождитесь перехода пода Deckhouse в статус `Ready` и выполнения всех задач в очереди.
+
+   ```shell
+   kubectl -n d8-system exec -it svc/deckhouse-leader -c deckhouse -- deckhouse-controller queue list
+   ```
+
+   Также дополнительно проверьте, что отключенные модули перешли в состояние `Disabled`.
+
+   ```shell
+   kubectl get modules
+   ```
 
 1. Создайте NodeGroupConfiguration:
 
