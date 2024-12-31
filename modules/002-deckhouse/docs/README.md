@@ -25,9 +25,9 @@ In Deckhouse, this module sets up:
 
   The validation service prevents creating Custom Resources with invalid values or adding such values to the existing Custom Resources. Note that it only tracks Custom Resources managed by Deckhouse modules.
 
-### Deckhouse releases update
+## Deckhouse releases update
 
-#### Get Deckhouse releases status
+### Get Deckhouse releases status
 
 You can get Deckhouse releases list via the command `kubectl get deckhousereleases`. By default, a cluster keeps the last 10 Superseded releases and all deployed/pending releases.
 
@@ -38,7 +38,7 @@ is going asynchronously and could not have been finished yet.
 * `Superseded` - release is outdated and not used anymore.
 * `Suspended` - release was suspended (for ex. it has an error). Can be set only if `suspended` release was not deployed yet.
 
-#### Update process
+### Update process
 
 When release status is changed to `Deployed` state, release is updating only a tag of the Deckhouse image.
 Deckhouse will start checking and updating process of the all modules, which were changed from the last release.
@@ -46,38 +46,45 @@ Duration of an update could be different and connected to cluster size, enabled 
 Foe example: if you cluster have a lot of `NodeGroup` resources, it will take some time to update them because these resources are updated one by one
 `IngressNginxControllers` also updating one by one.
 
-#### Manual release deployment
+### Manual release deployment
 
 If you have a [manual update mode](usage.html#manual-update-confirmation) enabled and have a few Pending releases,
 you can approve them all at once. In that case Deckhouse will update in series keeping a release order and changing their status during the update.
 
-#### Pin a release
+### Pin a release
 
-Release pinning could be necessary if you want to hold a Deckhouse update for some reason.
+To pin a release means fully or partially disable the automatic Deckhouse version update.
 
-There are 3 options to pin a release:
-- Set a [manual update mode](usage.html#manual-update-confirmation).
+There are three options to limit the automatic update of Deckhouse:
+- Enable a manual update mode.
 
-  In this case, you will hold a current release but patch-release will still be applied. Minor-release will not be changed without your approval.
-
-  Example: The current release is `v1.29.3`, after setting a manual update mode Deckhouse will be able to update to version `v1.29.9` but won't be able to apply version `v1.30.0`.
-
-- Set a specified image tag for deployment/deckhouse.
-
-  In this case, you will hold a Deckhouse version until a new release will come. You may need this in a situation when some Deckhouse release has an error that hasn't occurred earlier and you want to roll back to the previous release but update as soon as a new release with a patch will come.
-
-  Example:
+  In this case, Deckhouse holds on a current version and able to receive updates. But to apply the update, a [manual action](usage.html#manual-confirmation-of-updates) will need to be performed. This applies to both patch versions and minor versions.
+  
+  To enable manual update mode, you need to set the parameter [settings.update.mode](configuration.html#parameters-update-mode) in ModuleConfig `deckhouse` to `Manual`:
   
   ```shell
-  kubectl -n d8-system set image deployment/deckhouse deckhouse=registry.deckhouse.io/deckhouse/ee:v1.30.5
+  kubectl patch mc deckhouse --type=merge -p='{"spec":{"settings":{"update":{"mode":"Manual"}}}}'
   ```
 
-- Set a specified image tag for deployment/deckhouse and remove `releaseChannel` from deckhouse module configuration.
+- Set the automatic update mode for patch versions.
 
-  In this case, you will hold a specified version and will not get any more updates.
+  In this case, Deckhouse holds on a current version and will automatically update to patch versions of the current release. To apply a minor version update, a [manual action](usage.html#manual-confirmation-of-updates) will need to be performed.
+  
+  For example: the current version of DKP is `v1.65.2`, after setting the automatic update mode for patch versions, Deckhouse can be updated to version `v1.65.6`, but will not update to version `v1.66.*` or higher.
+
+  To set the automatic update mode for patch versions, you need to set the parameter [settings.update.mode](configuration.html#parameters-update-mode) to `AutoPatch` in the ModuleConfig `deckhouse`:
 
   ```shell
-  $ kubectl -n d8-system set image deployment/deckhouse deckhouse=registry.deckhouse.io/deckhouse/ee:v1.30.5
-  $ kubectl edit mc deckhouse
-    // remove releaseChannel
+  kubectl patch mc deckhouse --type=merge -p='{"spec":{"settings":{"update":{"mode":"AutoPatch"}}}}'
+  ```
+
+- Set a specified image tag for Deployment `deckhouse` and remove [releaseChannel](configuration.html#parameters-releasechannel) parameter from `deckhouse` module configuration.
+
+  In that case, DKP holds on a current version, and no information about new available versions in the cluster (DeckhouseRelease objects) will be received.
+
+  An example of installing version `v1.66.3` for DKP EE and removing the `releaseChannel` parameter from the configuration of the `deckhouse` module:
+  
+  ```shell
+  kubectl -ti -n d8-system exec svc/deckhouse-leader -c deckhouse -- kubectl set image deployment/deckhouse deckhouse=registry.deckhouse.io/deckhouse/ee:v1.66.3
+  kubectl patch mc deckhouse --type=json -p='[{"op": "remove", "path": "/spec/settings/releaseChannel"}]'
   ```
