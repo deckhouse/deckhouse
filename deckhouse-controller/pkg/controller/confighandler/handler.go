@@ -50,6 +50,10 @@ func New(client client.Client, deckhouseConfigCh chan<- utils.Values, logger *lo
 	}
 }
 
+func (h *Handler) ModuleConfigChannelIsSet() bool {
+	return h.configEventCh != nil
+}
+
 // HandleEvent sends event to addon-operator
 func (h *Handler) HandleEvent(moduleConfig *v1alpha1.ModuleConfig, op config.Op) {
 	kubeConfig := config.NewConfig()
@@ -122,6 +126,8 @@ func (h *Handler) LoadConfig(ctx context.Context, _ ...string) (*config.KubeConf
 			h.deckhouseConfigCh <- values
 		}
 	}
+
+	h.log.Debug("ConfigHandler loaded initial config")
 
 	return kubeConfig, nil
 }
