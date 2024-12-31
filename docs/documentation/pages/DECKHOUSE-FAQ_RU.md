@@ -31,14 +31,14 @@ kubectl get moduleconfigs user-authn -o yaml
 Документация запущенной в кластере версии Deckhouse доступна по адресу `documentation.<cluster_domain>`, где `<cluster_domain>` — DNS-имя в соответствии с шаблоном из параметра [modules.publicDomainTemplate](deckhouse-configure-global.html#parameters-modules-publicdomaintemplate) глобальной конфигурации.
 
 {% alert level="warning" %}
-Документация доступна, если в кластере включен модуль [documentation](modules/810-documentation/). Он включен по умолчанию, кроме [варианта поставки](modules/002-deckhouse/configuration.html#parameters-bundle) `Minimal`.
+Документация доступна, если в кластере включен модуль [documentation](modules/documentation/). Он включен по умолчанию, кроме [варианта поставки](modules/deckhouse/configuration.html#parameters-bundle) `Minimal`.
 {% endalert %}
 
 ## Обновление Deckhouse
 
 ### Как понять, в каком режиме обновляется кластер?
 
-Посмотреть режим обновления кластера можно в [конфигурации](modules/002-deckhouse/configuration.html) модуля `deckhouse`. Для этого выполните следующую команду:
+Посмотреть режим обновления кластера можно в [конфигурации](modules/deckhouse/configuration.html) модуля `deckhouse`. Для этого выполните следующую команду:
 
 ```shell
 kubectl get mc deckhouse -oyaml
@@ -75,11 +75,11 @@ status:
 Существуют три возможных режима обновления:
 * **Автоматический + окна обновлений не заданы.** Кластер обновится сразу после появления новой версии на соответствующем [канале обновлений](https://deckhouse.ru/documentation/deckhouse-release-channels.html).
 * **Автоматический + заданы окна обновлений.** Кластер обновится в ближайшее доступное окно после появления новой версии на канале обновлений.
-* **Ручной режим.** Для применения обновления требуются [ручные действия](modules/002-deckhouse/usage.html#ручное-подтверждение-обновлений).
+* **Ручной режим.** Для применения обновления требуются [ручные действия](modules/deckhouse/usage.html#ручное-подтверждение-обновлений).
 
 ### Как установить желаемый канал обновлений?
 
-Чтобы перейти на другой канал обновлений автоматически, нужно в [конфигурации](modules/002-deckhouse/configuration.html) модуля `deckhouse` изменить (установить) параметр [releaseChannel](modules/002-deckhouse/configuration.html#parameters-releasechannel).
+Чтобы перейти на другой канал обновлений автоматически, нужно в [конфигурации](modules/deckhouse/configuration.html) модуля `deckhouse` изменить (установить) параметр [releaseChannel](modules/deckhouse/configuration.html#parameters-releasechannel).
 
 В этом случае включится механизм [автоматической стабилизации релизного канала](#как-работает-автоматическое-обновление-deckhouse).
 
@@ -98,7 +98,7 @@ spec:
 
 ### Как отключить автоматическое обновление?
 
-Чтобы полностью отключить механизм обновления Deckhouse, удалите в [конфигурации](modules/002-deckhouse/configuration.html) модуля `deckhouse` параметр [releaseChannel](modules/002-deckhouse/configuration.html#parameters-releasechannel).
+Чтобы полностью отключить механизм обновления Deckhouse, удалите в [конфигурации](modules/deckhouse/configuration.html) модуля `deckhouse` параметр [releaseChannel](modules/deckhouse/configuration.html#parameters-releasechannel).
 
 В этом случае Deckhouse не проверяет обновления и даже обновление на patch-релизы не выполняется.
 
@@ -111,7 +111,7 @@ spec:
 Чтобы применить обновление немедленно, установите в соответствующем ресурсе [DeckhouseRelease](cr.html#deckhouserelease) аннотацию `release.deckhouse.io/apply-now: "true"`.
 
 {% alert level="info" %}
-**Обратите внимание!** В этом случае будут проигнорированы окна обновления, настройки [canary-release](cr.html#deckhouserelease-v1alpha1-spec-applyafter) и режим [ручного обновления кластера](modules/002-deckhouse/configuration.html#parameters-update-disruptionapprovalmode). Обновление применится сразу после установки аннотации.
+**Обратите внимание!** В этом случае будут проигнорированы окна обновления, настройки [canary-release](cr.html#deckhouserelease-v1alpha1-spec-applyafter) и режим [ручного обновления кластера](modules/deckhouse/configuration.html#parameters-update-disruptionapprovalmode). Обновление применится сразу после установки аннотации.
 {% endalert %}
 
 Пример команды установки аннотации пропуска окон обновлений для версии `v1.56.2`:
@@ -184,25 +184,25 @@ deckhouse-7844b47bcd-qtbx9  1/1   Running  0       1d
   kubectl -n d8-system logs -f -l app=deckhouse | jq -Rr 'fromjson? | .msg'
   ```
 
-- Соберите [отладочную информацию](modules/002-deckhouse/faq.html#как-собрать-информацию-для-отладки) и свяжитесь с технической поддержкой.
+- Соберите [отладочную информацию](modules/deckhouse/faq.html#как-собрать-информацию-для-отладки) и свяжитесь с технической поддержкой.
 - Попросите помощи у [сообщества](https://deckhouse.ru/community/about.html).
 {% endalert %}
 
 ### Как узнать, что для кластера доступна новая версия?
 
 Как только на установленном в кластере канале обновления появляется новая версия Deckhouse:
-- Загорается алерт `DeckhouseReleaseIsWaitingManualApproval`, если кластер использует ручной режим обновлений (параметр [update.mode](modules/002-deckhouse/configuration.html#parameters-update-mode) установлен в `Manual`).
+- Загорается алерт `DeckhouseReleaseIsWaitingManualApproval`, если кластер использует ручной режим обновлений (параметр [update.mode](modules/deckhouse/configuration.html#parameters-update-mode) установлен в `Manual`).
 - Появляется новый custom resource [DeckhouseRelease](cr.html#deckhouserelease). Используйте команду `kubectl get deckhousereleases`, чтобы посмотреть список релизов. Если `DeckhouseRelease` новой версии находится в состоянии `Pending`, указанная версия еще не установлена. Возможные причины, при которых `DeckhouseRelease` может находиться в `Pending`:
-  - Установлен ручной режим обновлений (параметр [update.mode](modules/002-deckhouse/configuration.html#parameters-update-mode) установлен в `Manual`).
-  - Установлен автоматический режим обновлений и настроены [окна обновлений](modules/002-deckhouse/usage.html#конфигурация-окон-обновлений), интервал которых еще не наступил.
+  - Установлен ручной режим обновлений (параметр [update.mode](modules/deckhouse/configuration.html#parameters-update-mode) установлен в `Manual`).
+  - Установлен автоматический режим обновлений и настроены [окна обновлений](modules/deckhouse/usage.html#конфигурация-окон-обновлений), интервал которых еще не наступил.
   - Установлен автоматический режим обновлений, окна обновлений не настроены, но применение версии отложено на случайный период времени из-за механизма снижения нагрузки на репозиторий образов контейнеров. В поле `status.message` ресурса `DeckhouseRelease` будет соответствующее сообщение.
-  - Установлен параметр [update.notification.minimalNotificationTime](modules/002-deckhouse/configuration.html#parameters-update-notification-minimalnotificationtime) и указанное в нем время еще не прошло.
+  - Установлен параметр [update.notification.minimalNotificationTime](modules/deckhouse/configuration.html#parameters-update-notification-minimalnotificationtime) и указанное в нем время еще не прошло.
 
 ### Как заранее получать информацию о предстоящем обновлении?
 
 Получать заранее информацию об обновлении минорных версий Deckhouse на канале обновлений можно следующими способами:
-- Настроить ручной [режим обновлений](modules/002-deckhouse/configuration.html#parameters-update-mode). В этом случае при появлении новой версии на канале обновлений загорится алерт `DeckhouseReleaseIsWaitingManualApproval` и в кластере появится новый custom resource [DeckhouseRelease](cr.html#deckhouserelease).
-- Настроить автоматический [режим обновлений](modules/002-deckhouse/configuration.html#parameters-update-mode) и указать минимальное время в параметре [minimalNotificationTime](modules/002-deckhouse/configuration.html#parameters-update-notification-minimalnotificationtime), на которое будет отложено обновление. В этом случае при появлении новой версии на канале обновлений в кластере появится новый custom resource [DeckhouseRelease](cr.html#deckhouserelease). А если указать URL в параметре [update.notification.webhook](modules/002-deckhouse/configuration.html#parameters-update-notification-webhook), дополнительно произойдет вызов webhook'а.
+- Настроить ручной [режим обновлений](modules/deckhouse/configuration.html#parameters-update-mode). В этом случае при появлении новой версии на канале обновлений загорится алерт `DeckhouseReleaseIsWaitingManualApproval` и в кластере появится новый custom resource [DeckhouseRelease](cr.html#deckhouserelease).
+- Настроить автоматический [режим обновлений](modules/deckhouse/configuration.html#parameters-update-mode) и указать минимальное время в параметре [minimalNotificationTime](modules/deckhouse/configuration.html#parameters-update-notification-minimalnotificationtime), на которое будет отложено обновление. В этом случае при появлении новой версии на канале обновлений в кластере появится новый custom resource [DeckhouseRelease](cr.html#deckhouserelease). А если указать URL в параметре [update.notification.webhook](modules/deckhouse/configuration.html#parameters-update-notification-webhook), дополнительно произойдет вызов webhook'а.
 
 ### Как узнать, какая версия Deckhouse находится на каком канале обновлений?
 
@@ -214,7 +214,7 @@ deckhouse-7844b47bcd-qtbx9  1/1   Running  0       1d
 
 При появлении нового релиза Deckhouse скачивает его в кластер и создает custom resource [DeckhouseRelease](cr.html#deckhouserelease).
 
-После появления custom resource'а `DeckhouseRelease` в кластере Deckhouse выполняет обновление на соответствующую версию согласно установленным [параметрам обновления](modules/002-deckhouse/configuration.html#parameters-update) (по умолчанию — автоматически, в любое время).
+После появления custom resource'а `DeckhouseRelease` в кластере Deckhouse выполняет обновление на соответствующую версию согласно установленным [параметрам обновления](modules/deckhouse/configuration.html#parameters-update) (по умолчанию — автоматически, в любое время).
 
 Чтобы посмотреть список и состояние всех релизов, воспользуйтесь командной:
 
@@ -233,7 +233,7 @@ Patch-релизы (например, обновление на версию `1.
   * Если более *поздние* релизы уже применены (в статусе `Deployed`), смены релиза не происходит. В этом случае Deckhouse останется на таком релизе до тех пор, пока на канале обновлений `EarlyAccess` не появится более поздний релиз.
 * При смене канала обновлений на **менее стабильный** (например, с `EarlyAcess` на `Alpha`):
   * Deckhouse скачивает данные о релизе (в примере — из канала `Alpha`) и сравнивает их с данными из существующих в кластере custom resource'ов `DeckhouseRelease`.
-  * Затем Deckhouse выполняет обновление согласно установленным [параметрам обновления](modules/002-deckhouse/configuration.html#parameters-update).
+  * Затем Deckhouse выполняет обновление согласно установленным [параметрам обновления](modules/deckhouse/configuration.html#parameters-update).
 
 {% offtopic title="Схема использования параметра releaseChannel при установке и в процессе работы Deckhouse" %}
 ![Схема использования параметра releaseChannel при установке и в процессе работы Deckhouse](images/common/deckhouse-update-process.png)
@@ -738,7 +738,7 @@ echo "$MYRESULTSTRING"
 * Если вы хотите установить Deckhouse с отключенным автоматическим обновлением:
   * Используйте тег образа установщика соответствующей версии. Например, если вы хотите установить релиз `v1.60.5`, используйте образ `your.private.registry.com/deckhouse/install:v1.60.5`.
   * **Не указывайте** параметр [deckhouse.releaseChannel](installing/configuration.html#initconfiguration-deckhouse-releasechannel) в ресурсе [InitConfiguration](installing/configuration.html#initconfiguration).
-* Если вы хотите отключить автоматические обновления у уже установленного Deckhouse (включая обновления patch-релизов), удалите параметр [releaseChannel](modules/002-deckhouse/configuration.html#parameters-releasechannel) из конфигурации модуля `deckhouse`.
+* Если вы хотите отключить автоматические обновления у уже установленного Deckhouse (включая обновления patch-релизов), удалите параметр [releaseChannel](modules/deckhouse/configuration.html#parameters-releasechannel) из конфигурации модуля `deckhouse`.
 
 ### Использование proxy-сервера
 
@@ -825,7 +825,7 @@ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-con
 
 ### Как изменить конфигурацию облачного провайдера в кластере?
 
-Настройки используемого облачного провайдера в облачном или гибридном кластере хранятся в структуре `<PROVIDER_NAME>ClusterConfiguration`, где `<PROVIDER_NAME>` — название/код провайдера. Например, для провайдера OpenStack структура будет называться [OpenStackClusterConfiguration]({% if site.mode == 'module' and site.d8Revision == 'CE' %}{{ site.urls[page.lang] }}/products/kubernetes-platform/documentation/v1/{% endif %}modules/030-cloud-provider-openstack/cluster_configuration.html).
+Настройки используемого облачного провайдера в облачном или гибридном кластере хранятся в структуре `<PROVIDER_NAME>ClusterConfiguration`, где `<PROVIDER_NAME>` — название/код провайдера. Например, для провайдера OpenStack структура будет называться [OpenStackClusterConfiguration]({% if site.mode == 'module' and site.d8Revision == 'CE' %}{{ site.urls[page.lang] }}/products/kubernetes-platform/documentation/v1/{% endif %}modules/cloud-provider-openstack/cluster_configuration.html).
 
 Независимо от используемого облачного провайдера его настройки можно изменить с помощью следующей команды:
 
@@ -1504,7 +1504,7 @@ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-con
    ```
 
 1. Убедитесь, что используемые в кластере модули поддерживаются в CSE-редакции.
-   Например, на текущий момент в CSE-редакции отсутствует модуль cert-manager, поэтому перед его отключением необходимо перевести `https.mode` для связанных компонентов (например [user-authn](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.58/modules/150-user-authn/configuration.html#parameters-https-mode) или [prometheus](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.58/modules/300-prometheus/configuration.html#parameters-https-mode)) на альтернативные варианты.
+   Например, на текущий момент в CSE-редакции отсутствует модуль cert-manager, поэтому перед его отключением необходимо перевести `https.mode` для связанных компонентов (например [user-authn](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.58/modules/user-authn/configuration.html#parameters-https-mode) или [prometheus](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.58/modules/prometheus/configuration.html#parameters-https-mode)) на альтернативные варианты.
 
    Отобразить список модулей, которые не поддерживаются в CSE-редакции и будут отключены, можно следующей командой:
 
@@ -1680,7 +1680,7 @@ kubectl -n d8-system exec -it svc/deckhouse-leader -c deckhouse -- deckhouse-con
 
 ### Как запускать Deckhouse на произвольном узле?
 
-Для запуска Deckhouse на произвольном узле установите у модуля `deckhouse` соответствующий [параметр](modules/002-deckhouse/configuration.html) `nodeSelector` и не задавайте `tolerations`.  Необходимые значения `tolerations` в этом случае будут проставлены автоматически.
+Для запуска Deckhouse на произвольном узле установите у модуля `deckhouse` соответствующий [параметр](modules/deckhouse/configuration.html) `nodeSelector` и не задавайте `tolerations`.  Необходимые значения `tolerations` в этом случае будут проставлены автоматически.
 
 {% alert level="warning" %}
 Используйте для запуска Deckhouse только узлы с типом **CloudStatic** или **Static**. Также избегайте использования для запуска Deckhouse группы узлов (`NodeGroup`), содержащей только один узел.
