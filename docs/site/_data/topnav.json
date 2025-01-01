@@ -43,25 +43,25 @@
             "items": [
               {
                 "title": "Getting started",
-                "url": "/gs/",
+                "url": "/products/kubernetes-platform/gs/",
                 "target": "",
                 "rel": ""
               },
               {
                 "title": "Going to Production",
-                "url": "/guides/production.html",
+                "url": "/products/kubernetes-platform/guides/production.html",
                 "target": "",
                 "rel": ""
               },
               {
                 "title": "Platform",
-                "url": "/documentation/v1/deckhouse-overview.html",
+                "url": "/products/kubernetes-platform/documentation/v1/deckhouse-overview.html",
                 "target": "",
                 "rel": ""
               },
               {
                 "title": "Modules",
-                "url": "/modules/",
+                "url": "/products/kubernetes-platform/modules/",
                 "target": "",
                 "rel": ""
               }
