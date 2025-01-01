@@ -72,7 +72,7 @@ kubectl -n d8-log-shipper exec $pod -it -c vector -- bash
 
 Пример вывода команды:
 
-![Vector TOP output](../../images/460-log-shipper/vector_top.png)
+![Vector TOP output](../../images/log-shipper/vector_top.png)
 
 ### Получить необработанные образцы log'ов
 

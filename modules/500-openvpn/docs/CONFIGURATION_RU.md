@@ -6,7 +6,7 @@ title: "Модуль openvpn: настройки"
 
 ## Аутентификация
 
-По умолчанию используется модуль [user-authn](../150-user-authn/). Также можно настроить аутентификацию с помощью параметра [externalAuthentication](#parameters-auth-externalauthentication). Если эти варианты отключены, модуль включит basic auth со сгенерированным паролем.
+По умолчанию используется модуль [user-authn](../user-authn/). Также можно настроить аутентификацию с помощью параметра [externalAuthentication](#parameters-auth-externalauthentication). Если эти варианты отключены, модуль включит basic auth со сгенерированным паролем.
 
 Посмотреть сгенерированный пароль можно командой:
 

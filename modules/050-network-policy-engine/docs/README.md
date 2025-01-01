@@ -3,7 +3,7 @@ title: "The network-policy-engine module"
 ---
 
 {% alert level="warning" %}
-Do not use the module if the <a href="../021-cni-cilium/">cilium</a> module is enabled because it already has network policy management. 
+Do not use the module if the <a href="../cni-cilium/">cilium</a> module is enabled because it already has network policy management. 
 {% endalert %}
 
 This module manages network policies.

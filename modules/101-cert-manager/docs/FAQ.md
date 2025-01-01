@@ -56,7 +56,7 @@ The module automatically creates `ClusterIssuer` of supported cloud providers wh
 If necessary, you can create such `ClusterIssuer` yourself.
 
 An example of using AWS Route53 is available in the section [How to protect `cert-manager` credentials](#how-to-protect-cert-manager-credentials).  
-The list of all possible `ClusterIssuer`s that can be created is available in the [module templates](https://github.com/deckhouse/deckhouse/tree/main/modules/101-cert-manager/templates/cert-manager).
+The list of all possible `ClusterIssuer`s that can be created is available in the [module templates](https://github.com/deckhouse/deckhouse/tree/main/modules/cert-manager/templates/cert-manager).
 
 Using third-party DNS providers is implemented via the `webhook` method.  
 
@@ -103,7 +103,7 @@ As an example, let's consider using the `Yandex Cloud DNS` service.
 
 You can use [this manual](https://learn.hashicorp.com/tutorials/vault/kubernetes-cert-manager?in=vault/kubernetes) for configuring certificate issuance using Vault.
 
-After configuring PKI and enabling Kubernetes [authorization](../../modules/140-user-authz/), you have to:
+After configuring PKI and enabling Kubernetes [authorization](../../modules/user-authz/), you have to:
 - Create a service account and copy its secret reference:
 
   ```shell

@@ -8,7 +8,7 @@ title: "Модуль documentation: настройки"
 
 ## Аутентификация
 
-По умолчанию используется модуль [user-authn](/products/kubernetes-platform/documentation/v1/modules/150-user-authn/). Также можно настроить аутентификацию через `externalAuthentication` (см. ниже).
+По умолчанию используется модуль [user-authn](../user-authn/). Также можно настроить аутентификацию через `externalAuthentication` (см. ниже).
 Если эти варианты отключены, модуль включит basic auth со сгенерированным паролем.
 
 Посмотреть сгенерированный пароль можно командой:
