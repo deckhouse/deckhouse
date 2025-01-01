@@ -136,7 +136,7 @@ spec:
 
 Для начала вам потребуется закодировать в base64 ваш токен доступа к Grafana Cloud.
 
-![Grafana cloud API key](../../images/460-log-shipper/grafana_cloud.png)
+![Grafana cloud API key](../../images/log-shipper/grafana_cloud.png)
 
 ```bash
 echo -n "<YOUR-GRAFANACLOUD-TOKEN>" | base64 -w0
@@ -163,7 +163,7 @@ spec:
 
 ## Добавление Loki в Deckhouse Grafana
 
-Вы можете работать с Loki из встроенной в Deckhouse Grafana. Достаточно добавить [**GrafanaAdditionalDatasource**](../../modules/300-prometheus/cr.html#grafanaadditionaldatasource).
+Вы можете работать с Loki из встроенной в Deckhouse Grafana. Достаточно добавить [**GrafanaAdditionalDatasource**](../../modules/prometheus/cr.html#grafanaadditionaldatasource).
 
 ```yaml
 apiVersion: deckhouse.io/v1
@@ -381,7 +381,7 @@ extraLabels:
 
 ## Сбор событий Kubernetes
 
-События Kubernetes могут быть собраны log-shipper'ом, если `events-exporter` включен в настройках модуля [extended-monitoring](../340-extended-monitoring/).
+События Kubernetes могут быть собраны log-shipper'ом, если `events-exporter` включен в настройках модуля [extended-monitoring](../extended-monitoring/).
 
 Включите events-exporter, изменив параметры модуля `extended-monitoring`:
 

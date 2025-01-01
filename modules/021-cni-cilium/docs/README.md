@@ -10,7 +10,7 @@ The `cni-cilium module` provides a network in a cluster. It is based on the [Cil
 1. Services with type `NodePort` and `LoadBalancer` are incompatible with hostNetwork endpoints in LB mode `DSR`. Switch to `SNAT` mode if it is required.
 2. `HostPort` pods only bind to [one IP address](https://github.com/deckhouse/deckhouse/issues/3035). If the OS has multiple ultiple interfaces/IP, Cilium will choose one, preferring `private` to `public`.
 3. Kernel requirements:
-   * Linux kernel version not lower than `5.7` for the `cni-cilium` module to work and work together with the [istio](../110-istio/), [openvpn](../500-openvpn/) or [node-local-dns]({% if site.d8Revision == 'CE' %}{{ site.urls.ru}}/products/kubernetes-platform/documentation/v1/modules/{% else %}..{% endif %}/350-node-local-dns/) modules.
+   * Linux kernel version not lower than `5.7` for the `cni-cilium` module to work and work together with the [istio](../istio/), [openvpn](../openvpn/) or [node-local-dns]({% if site.d8Revision == 'CE' %}{{ site.urls.ru}}/products/kubernetes-platform/documentation/v1/modules/{% else %}..{% endif %}/node-local-dns/) modules.
 4. OS compatibility:
     * Ubuntu:
       * incompatible with version 18.04;
@@ -28,7 +28,7 @@ To extend the capabilities, the module allows [selectable mode of operation](../
   * if `externalTrafficPolicy: Local` is specified in the `Service`, the traffic will be forwarded and balanced only to those target pods running on the same node where the traffic arrived. If the target pod is not running on this node, the traffic will be dropped.
   * if `externalTrafficPolicy: Cluster` is specified in the `Service`, the traffic will be forwarded and balanced to all target pods in the cluster. At the same time, if the target pods are located on other nodes, SNAT will be performed when transmitting traffic to them (the source IP address will be replaced with the InternalIP of the node).
 
-   ![SNAT data flow diagram](../../images/021-cni-cilium/snat.png)
+   ![SNAT data flow diagram](../../images/cni-cilium/snat.png)
 
 * `DSR` (Direct Server Return) — is a method where all incoming traffic passes through the load balancer, and all outgoing traffic bypasses it. This method is used instead of `SNAT`. Often, responses are much larger than requests, and `DSR` can significantly increase the overall throughput of the scheme:
   * if `externalTrafficPolicy: Local` is specified in the `Service`, its behavior is completely analogous to `kube-proxy` and `bpfLB` in `SNAT` mode.
@@ -38,7 +38,7 @@ To extend the capabilities, the module allows [selectable mode of operation](../
     * outgoing traffic will go directly from the node on which the target pod was launched;
     * the source IP address will be replaced with the external IP address of the node to which the incoming request **originally** came.
 
-   ![DSR data flow diagram](../../images/021-cni-cilium/dsr.png)
+   ![DSR data flow diagram](../../images/cni-cilium/dsr.png)
 
 {% alert level="warning" %}
 In case of using `DSR` and `Service` mode with `externalTrafficPolicy: Cluster` additional network environment settings are required.  
@@ -87,12 +87,12 @@ Cilium fully replaces the functionality of the `kube-proxy` module, so `kube-pro
 
 Pre-configured IP addresses are used on egress nodes.
 
-<div data-presentation="../../presentations/021-cni-cilium/egressgateway_base_en.pdf"></div>
+<div data-presentation="../../presentations/cni-cilium/egressgateway_base_en.pdf"></div>
 <!--- Source: https://docs.google.com/presentation/d/1Gp8b82WQQnYr6te_zBROKnKmBicdhtX4SXNXDh3lB6Q/ --->
 
 ### Virtual IP mode
 
 The ability to dynamically assign additional IP addresses to nodes is implemented.
 
-<div data-presentation="../../presentations/021-cni-cilium/egressgateway_virtualip_en.pdf"></div>
+<div data-presentation="../../presentations/cni-cilium/egressgateway_virtualip_en.pdf"></div>
 <!--- Source: https://docs.google.com/presentation/d/1jdn39uDFSraQIXVdrREBsRv-Lp4kPidhx4C-gvv1DVk/ --->
