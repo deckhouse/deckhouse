@@ -318,7 +318,7 @@ alerts:
 
         They must be moved from Deckhouse namespace to user-spec namespace (was not labeled as `heritage: deckhouse`).
 
-        The detailed description of the metric collecting process is available in the [documentation](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/300-prometheus/faq.html).
+        The detailed description of the metric collecting process is available in the [documentation](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/prometheus/faq.html).
       summary: |
         There are PodMonitors in Deckhouse namespace that were not created by Deckhouse.
       severity: "9"
@@ -335,7 +335,7 @@ alerts:
 
         They must be moved from Deckhouse namespace to user-spec namespace (was not labeled as `heritage: deckhouse`).
 
-        The detailed description of the metric collecting process is available in the [documentation](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/300-prometheus/faq.html).
+        The detailed description of the metric collecting process is available in the [documentation](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/prometheus/faq.html).
       summary: |
         There are ServiceMonitors in Deckhouse namespace that were not created by Deckhouse.
       severity: "9"
@@ -596,7 +596,7 @@ alerts:
 
         They must be abandoned and replaced with the `CustomPrometheusRules` object.
 
-        Please, refer to the [documentation](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/300-prometheus/faq.html#how-do-i-add-alerts-andor-recording-rules) for information about adding alerts and/or recording rules.
+        Please, refer to the [documentation](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/prometheus/faq.html#how-do-i-add-alerts-andor-recording-rules) for information about adding alerts and/or recording rules.
       summary: |
         There are PrometheusRules in the cluster that were not created by Deckhouse.
       severity: "9"
@@ -1135,7 +1135,7 @@ alerts:
         ```
         max by (namespace, dataplane_pod) (d8_istio_dataplane_metadata{full_version="{{$labels.full_version}}"})
         ```
-        Also consider using the automatic istio data-plane update described in the documentation: https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/110-istio/examples.html#upgrading-istio
+        Also consider using the automatic istio data-plane update described in the documentation: https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/istio/examples.html#upgrading-istio
       summary: |
         There are Pods with data-plane version different from control-plane one.
       severity: "8"
@@ -1164,7 +1164,7 @@ alerts:
       description: |
         There is deprecated istio version `{{$labels.version}}` installed.
         Impact — version support will be removed in future deckhouse releases. The higher alert severity — the higher probability of support cancelling.
-        Read [documentation](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/110-istio/examples.html#upgrading-istio) on upgrading Istio.
+        Read [documentation](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/istio/examples.html#upgrading-istio) on upgrading Istio.
       summary: |
         There is deprecated istio version installed
       severity: undefined
@@ -1305,7 +1305,7 @@ alerts:
       description: |
         The current istio version `{{$labels.istio_version}}` may not work properly with the current k8s version `{{$labels.k8s_version}}`, because it is unsupported officially.
         Please upgrade istio as soon as possible.
-        Read [documentation](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/110-istio/examples.html#upgrading-istio) on upgrading Istio.
+        Read [documentation](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/istio/examples.html#upgrading-istio) on upgrading Istio.
       summary: |
         The installed istio version is incompatible with the k8s version
       severity: "3"
@@ -1386,7 +1386,7 @@ alerts:
       edition: ce
       description: |-
         Found ClusterLogDestination resource {{$labels.resource_name}} without authorization params.
-        You should [add](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/460-log-shipper/faq.html#how-to-add-authorization-to-the-clusterlogdestination-resource) authorization params to the ClusterLogDestination resource.
+        You should [add](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/log-shipper/faq.html#how-to-add-authorization-to-the-clusterlogdestination-resource) authorization params to the ClusterLogDestination resource.
       summary: |
         Required authorization params for ClusterLogDestination.
       severity: "9"
@@ -1733,10 +1733,10 @@ alerts:
       module: node-manager
       edition: ce
       description: |
-        The {{ $labels.node }} Node is not managed by the [node-manager](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/040-node-manager/) module.
+        The {{ $labels.node }} Node is not managed by the [node-manager](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/node-manager/) module.
 
         The recommended actions are as follows:
-        - Follow these instructions to clean up the node and add it to the cluster: https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/040-node-manager/faq.html#how-to-clean-up-a-node-for-adding-to-the-cluster
+        - Follow these instructions to clean up the node and add it to the cluster: https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/node-manager/faq.html#how-to-clean-up-a-node-for-adding-to-the-cluster
       summary: |
         The {{ $labels.node }} Node is not managed by the node-manager module.
       severity: "9"
@@ -1774,7 +1774,7 @@ alerts:
 
         Note that the label format has changed. You need to change the `prometheus-custom-target` label to `prometheus.deckhouse.io/custom-target`.
 
-        For more information, refer to the [documentation](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/300-prometheus/faq.html).
+        For more information, refer to the [documentation](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/prometheus/faq.html).
       summary: |
         Services with the prometheus-custom-target label are used to collect metrics in the cluster.
       severity: "9"
@@ -1911,7 +1911,7 @@ alerts:
         - reserved `metadata.labels` *node-role.deckhouse.io/* with ending not in `(system|frontend|monitoring|_deckhouse_module_name_)`
         - or reserved `spec.taints` *dedicated.deckhouse.io* with values not in `(system|frontend|monitoring|_deckhouse_module_name_)`
 
-        [Get instructions on how to fix it here](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/040-node-manager/faq.html#how-do-i-allocate-nodes-to-specific-loads).
+        [Get instructions on how to fix it here](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/node-manager/faq.html#how-do-i-allocate-nodes-to-specific-loads).
       summary: |
         Node {{ $labels.name }} needs fixing up
       severity: "6"
