@@ -1,7 +1,7 @@
 # [<en>] Section containing the parameters of instance class for worker nodes.
-# [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-vsphere/cr.html
+# [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/cloud-provider-vsphere/cr.html
 # [<ru>] Секция, описывающая параметры инстанс-класса для узлов c компонентами, обеспечивающими рабочую нагрузку.
-# [<ru>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-vsphere/cr.html
+# [<ru>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/cloud-provider-vsphere/cr.html
 apiVersion: deckhouse.io/v1
 kind: VsphereInstanceClass
 metadata:
