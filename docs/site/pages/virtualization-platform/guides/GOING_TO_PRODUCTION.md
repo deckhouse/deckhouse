@@ -34,7 +34,7 @@ it may contain bugs that have long been eliminated in newer versions.
 In such a case, you make it difficult, if not impossible, to address issues promptly.
 {% endalert %}
 
-The [update windows](/products/kubernetes-platform/documentation/v1/modules/002-deckhouse/configuration.html#parameters-update-windows) management lets you schedule automatic Deckhouse release updates during periods of low cluster activity.
+The [update windows](/products/kubernetes-platform/documentation/v1/modules/deckhouse/configuration.html#parameters-update-windows) management lets you schedule automatic Deckhouse release updates during periods of low cluster activity.
 
 ## Kubernetes version
 
@@ -44,7 +44,7 @@ Use the automatic [Kubernetes version selection](/products/kubernetes-platform/d
 
 In most cases, we recommend opting for the automatic selection of the Kubernetes version.
 In Deckhouse, this behavior is set by default, but it can be changed with the [kubernetesVersion](/products/kubernetes-platform/documentation/v1/installing/configuration.html#clusterconfiguration-kubernetesversion) parameter.
-Upgrading the Kubernetes version in the cluster has no effect on applications and is done [consistently and securely](/products/kubernetes-platform/documentation/v1/modules/040-control-plane-manager/#version-control).
+Upgrading the Kubernetes version in the cluster has no effect on applications and is done [consistently and securely](/products/kubernetes-platform/documentation/v1/modules/control-plane-manager/#version-control).
 
 If the automatic Kubernetes version selection is enabled,
 Deckhouse can upgrade the Kubernetes version in the cluster together with the Deckhouse update (when upgrading a minor version).
@@ -95,7 +95,7 @@ Any extra master nodes aren't necessary, and using 2 nodes (or any other even nu
 
 Related guides:
 
-- [Working with static nodes...](/products/kubernetes-platform/documentation/latest/modules/040-node-manager/#working-with-static-nodes)
+- [Working with static nodes...](/products/kubernetes-platform/documentation/latest/modules/node-manager/#working-with-static-nodes)
 
 ### Frontend nodes
 
@@ -140,7 +140,7 @@ For high-load clusters, use two monitoring nodes equipped with fast disks.
 {% endalert %}
 
 Monitoring nodes are used to run Grafana, Prometheus, and other monitoring components.
-The [NodeGroup](/products/kubernetes-platform/documentation/v1/modules/040-node-manager/cr.html#nodegroup) for monitoring nodes has the `node-role.deckhouse.io/monitoring` label.
+The [NodeGroup](/products/kubernetes-platform/documentation/v1/modules/node-manager/cr.html#nodegroup) for monitoring nodes has the `node-role.deckhouse.io/monitoring` label.
 
 In high-load clusters, where many alerts are generated and many metrics are collected,
 we recommend allocating dedicated nodes for monitoring.
@@ -149,11 +149,11 @@ Otherwise, monitoring components will be deployed to [system nodes](#system-node
 When allocating monitoring nodes, it's important to equip them with fast disks.
 You can do so by providing a dedicated `storageClass` on fast disks for all Deckhouse components (the [storageClass](/products/kubernetes-platform/documentation/v1/deckhouse-configure-global.html#parameters-storageclass) global parameter)
 or allocating a dedicated `storageClass` to monitoring components only
-([storageClass](/products/kubernetes-platform/documentation/v1/modules/300-prometheus/configuration.html#parameters-storageclass) and [longtermStorageClass](/products/kubernetes-platform/documentation/v1/modules/300-prometheus/configuration.html#parameters-longtermstorageclass) parameters of the `prometheus` module).
+([storageClass](/products/kubernetes-platform/documentation/v1/modules/prometheus/configuration.html#parameters-storageclass) and [longtermStorageClass](/products/kubernetes-platform/documentation/v1/modules/prometheus/configuration.html#parameters-longtermstorageclass) parameters of the `prometheus` module).
 
 If the cluster is initially created with nodes allocated for a specific type of workload, such as system nodes, monitoring nodes, and so on,
 we recommend that you explicitly specify the corresponding nodeSelector in the configuration of modules using persistent storage volumes.
-For example, for the `prometheus` module, this parameter is [nodeSelector](/products/kubernetes-platform/documentation/v1/modules/300-prometheus/configuration.html#parameters-nodeselector).
+For example, for the `prometheus` module, this parameter is [nodeSelector](/products/kubernetes-platform/documentation/v1/modules/prometheus/configuration.html#parameters-nodeselector).
 
 ### System nodes
 
@@ -162,7 +162,7 @@ Use two system nodes.
 {% endalert %}
 
 System nodes are used to run Deckhouse modules.
-Their [NodeGroup](/products/kubernetes-platform/documentation/v1/modules/040-node-manager/cr.html#nodegroup) has the `node-role.deckhouse.io/system` label.
+Their [NodeGroup](/products/kubernetes-platform/documentation/v1/modules/node-manager/cr.html#nodegroup) has the `node-role.deckhouse.io/system` label.
 
 Allocate two system nodes.
 This way, Deckhouse modules will run on them without interfering with user applications in the cluster.
@@ -173,30 +173,30 @@ Note that fast disks are recommended for the Deckhouse components (the [storageC
 ## Monitoring alerts
 
 {% alert %}
-You can configure alerts using the [internal Alertmanager](/products/kubernetes-platform/documentation/v1/modules/300-prometheus/faq.html#how-do-i-add-alertmanager) or connect the [external one](/products/kubernetes-platform/documentation/v1/modules/300-prometheus/faq.html#how-do-i-add-an-additional-alertmanager).
+You can configure alerts using the [internal Alertmanager](/products/kubernetes-platform/documentation/v1/modules/prometheus/faq.html#how-do-i-add-alertmanager) or connect the [external one](/products/kubernetes-platform/documentation/v1/modules/prometheus/faq.html#how-do-i-add-an-additional-alertmanager).
 {% endalert %}
 
 Monitoring will work out of the box once Deckhouse is installed, but it's not enough for production clusters.
-To receive alerts about incidents, configure the [built-in](/products/kubernetes-platform/documentation/v1/modules/300-prometheus/faq.html#how-do-i-add-alertmanager) Deckhouse Alertmanager or [connect your own](/products/kubernetes-platform/documentation/v1/modules/300-prometheus/faq.html#how-do-i-add-an-additional-alertmanager) Alertmanager.
+To receive alerts about incidents, configure the [built-in](/products/kubernetes-platform/documentation/v1/modules/prometheus/faq.html#how-do-i-add-alertmanager) Deckhouse Alertmanager or [connect your own](/products/kubernetes-platform/documentation/v1/modules/prometheus/faq.html#how-do-i-add-an-additional-alertmanager) Alertmanager.
 
-Using the [CustomAlertmanager](/products/kubernetes-platform/documentation/v1/modules/300-prometheus/cr.html#customalertmanager) custom resource, you can set up alerts to be sent to [e-mail](/products/kubernetes-platform/documentation/v1/modules/300-prometheus/cr.html#customalertmanager-v1alpha1-spec-internal-receivers-emailconfigs), [Slack](/products/kubernetes-platform/documentation/v1/modules/300-prometheus/cr.html#customalertmanager-v1alpha1-spec-internal-receivers-slackconfigs), [Telegram](/products/kubernetes-platform/documentation/v1/modules/300-prometheus/usage.html#sending-alerts-to-telegram), via [webhooks](/products/kubernetes-platform/documentation/v1/modules/300-prometheus/cr.html#customalertmanager-v1alpha1-spec-internal-receivers-webhookconfigs), or by other means.
+Using the [CustomAlertmanager](/products/kubernetes-platform/documentation/v1/modules/prometheus/cr.html#customalertmanager) custom resource, you can set up alerts to be sent to [e-mail](/products/kubernetes-platform/documentation/v1/modules/prometheus/cr.html#customalertmanager-v1alpha1-spec-internal-receivers-emailconfigs), [Slack](/products/kubernetes-platform/documentation/v1/modules/prometheus/cr.html#customalertmanager-v1alpha1-spec-internal-receivers-slackconfigs), [Telegram](/products/kubernetes-platform/documentation/v1/modules/prometheus/usage.html#sending-alerts-to-telegram), via [webhooks](/products/kubernetes-platform/documentation/v1/modules/prometheus/cr.html#customalertmanager-v1alpha1-spec-internal-receivers-webhookconfigs), or by other means.
 
 <!-- ## Logging
 
 {% alert %}
-Configure centralized logging using the [log-shipper](/products/kubernetes-platform/documentation/v1/modules/460-log-shipper/) module.
+Configure centralized logging using the [log-shipper](/products/kubernetes-platform/documentation/v1/modules/log-shipper/) module.
 {% endalert %}
 
-Configure centralized logging from system and user applications using the [log-shipper](/products/kubernetes-platform/documentation/v1/modules/460-log-shipper/) module.
+Configure centralized logging from system and user applications using the [log-shipper](/products/kubernetes-platform/documentation/v1/modules/log-shipper/) module.
 
-All you have to do is to create a custom resource specifying *what to collect* ([ClusterLoggingConfig](/products/kubernetes-platform/documentation/v1/modules/460-log-shipper/cr.html#clusterloggingconfig) or [PodLoggingConfig](/products/kubernetes-platform/documentation/v1/modules/460-log-shipper/cr.html#podloggingconfig))
-and another custom resource specifying *where to send* the collected logs: [ClusterLogDestination](/products/kubernetes-platform/documentation/v1/modules/460-log-shipper/cr.html#clusterlogdestination).
+All you have to do is to create a custom resource specifying *what to collect* ([ClusterLoggingConfig](/products/kubernetes-platform/documentation/v1/modules/log-shipper/cr.html#clusterloggingconfig) or [PodLoggingConfig](/products/kubernetes-platform/documentation/v1/modules/log-shipper/cr.html#podloggingconfig))
+and another custom resource specifying *where to send* the collected logs: [ClusterLogDestination](/products/kubernetes-platform/documentation/v1/modules/log-shipper/cr.html#clusterlogdestination).
 
 Related guides:
 
-- [Grafana Loki example](/products/kubernetes-platform/documentation/v1/modules/460-log-shipper/examples.html#getting-logs-from-all-cluster-pods-and-sending-them-to-loki)
-- [Logstash example](/products/kubernetes-platform/documentation/v1/modules/460-log-shipper/examples.html#simple-logstash-example)
-- [Splunk example](/products/kubernetes-platform/documentation/v1/modules/460-log-shipper/examples.html#splunk-integration)
+- [Grafana Loki example](/products/kubernetes-platform/documentation/v1/modules/log-shipper/examples.html#getting-logs-from-all-cluster-pods-and-sending-them-to-loki)
+- [Logstash example](/products/kubernetes-platform/documentation/v1/modules/log-shipper/examples.html#simple-logstash-example)
+- [Splunk example](/products/kubernetes-platform/documentation/v1/modules/log-shipper/examples.html#splunk-integration)
 -->
 
 ## Backups
