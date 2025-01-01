@@ -3,29 +3,22 @@ image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
 import:
   - image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
-    add: /gatekeeper
-    to: /bin/gatekeeper
+    add: /constraint_exporter
+    to: /constraint_exporter
     before: setup
 docker:
-  ENTRYPOINT: [ "/bin/gatekeeper" ]
+  ENTRYPOINT: [ "/constraint_exporter" ]
   USER: deckhouse:deckhouse
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 fromImage: common/src-artifact
 final: false
 git:
-- add: /{{ $.ModulePath }}modules/015-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
-  to: /patches
+- add: /{{ $.ModulePath }}modules/015-{{ $.ModuleName }}/images/{{ $.ImageName }}/src
+  to: /src
   stageDependencies:
     install:
     - '**/*'
-shell:
-  install:
-  - git clone --depth 1 --branch v3.18.1 {{ .SOURCE_REPO }}/open-policy-agent/gatekeeper.git /src
-  - cd /src
-  - git apply /patches/*.patch --verbose
-  - rm -rf website
-  - rm -rf .git
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
 from: {{ .Images.BASE_GOLANG_23_ALPINE }}
@@ -42,7 +35,6 @@ shell:
   install:
   - export GOPROXY={{ .GOPROXY }}
   - cd /src
-  - go mod vendor
-  - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -mod vendor -ldflags="-s -w" -o /gatekeeper .
-  - chown 64535:64535 /gatekeeper
-  - chmod 0700 /gatekeeper
+  - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o /constraint_exporter .
+  - chown 64535:64535 /constraint_exporter
+  - chmod 0700 /constraint_exporter
