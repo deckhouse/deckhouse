@@ -50,7 +50,7 @@ properties:
     description: |
       Save logs from the `d8-*` namespaces to loki.
 
-      The [log-shipper](../460-log-shipper) module must be enabled.
+      The [log-shipper](../log-shipper/) module must be enabled.
   lokiConfig:
     type: object
     default: {}
