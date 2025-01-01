@@ -37,7 +37,7 @@ properties:
       > Внимание! Режим VXLAN не совместим со следующими режимами bpfLBMode: Hybrid, DSR. Если tunnelMode настроен на VXLAN, то bpfLBMode будет переопределён на SNAT автоматически.
   svcSourceRangeCheck:
     description: |
-      Для сервисов с типом `loadBalancer` включает проверку source IP на его соответствие [loadBalancer.sourceRanges](../402-ingress-nginx/cr.html#ingressnginxcontroller-v1-spec-loadbalancer-sourceranges).
+      Для сервисов с типом `loadBalancer` включает проверку source IP на его соответствие [loadBalancer.sourceRanges](../ingress-nginx/cr.html#ingressnginxcontroller-v1-spec-loadbalancer-sourceranges).
       Проверка не производится, если доступ производится изнутри кластера или параметр `sourceRanges` пуст/не указан.
       Некоторые облачные провайдеры в своих реализациях loadBalancer поддерживают фильтрацию входящего трафика на основе параметра `sourceRanges`, в таком случае [документация по cilium](https://docs.cilium.io/en/stable/network/kubernetes/kubeproxy-free/#loadbalancer-source-ranges-checks)
       рекомендует отключать проверку `svcSourceRangeCheck`.

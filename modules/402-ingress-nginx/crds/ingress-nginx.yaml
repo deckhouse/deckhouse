@@ -362,7 +362,7 @@ spec:
                   description: |
                     Enable old TLS protocol versions and legacy cipher suites.
 
-                    Also, this options enables legacy cipher suites to support legacy libraries and software: [OWASP Cipher String 'C' ](https://cheatsheetseries.owasp.org/cheatsheets/TLS_Cipher_String_Cheat_Sheet.html). Learn more [here](https://github.com/deckhouse/deckhouse/blob/main/modules/402-ingress-nginx/templates/controller/configmap.yaml).
+                    Also, this options enables legacy cipher suites to support legacy libraries and software: [OWASP Cipher String 'C' ](https://cheatsheetseries.owasp.org/cheatsheets/TLS_Cipher_String_Cheat_Sheet.html). Learn more [here](https://github.com/deckhouse/deckhouse/blob/main/modules/ingress-nginx/templates/controller/configmap.yaml).
 
                     By default, only TLSv1.2 and the newest cipher suites are enabled.
                 disableHTTP2:
@@ -1013,7 +1013,7 @@ spec:
                   description: |
                     Enable old TLS protocol versions and legacy cipher suites.
 
-                    Also, this options enables legacy cipher suites to support legacy libraries and software: [OWASP Cipher String 'C' ](https://cheatsheetseries.owasp.org/cheatsheets/TLS_Cipher_String_Cheat_Sheet.html). Learn more [here](https://github.com/deckhouse/deckhouse/blob/main/modules/402-ingress-nginx/templates/controller/configmap.yaml).
+                    Also, this options enables legacy cipher suites to support legacy libraries and software: [OWASP Cipher String 'C' ](https://cheatsheetseries.owasp.org/cheatsheets/TLS_Cipher_String_Cheat_Sheet.html). Learn more [here](https://github.com/deckhouse/deckhouse/blob/main/modules/ingress-nginx/templates/controller/configmap.yaml).
 
                     By default, only TLSv1.2 and the newest cipher suites are enabled.
                 disableHTTP2:

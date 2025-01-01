@@ -27,7 +27,7 @@ properties:
     description: |
       Сохранять логи из пространства имен `d8-*` в loki.
 
-      Для работы необходим включенный модуль [log-shipper](../460-log-shipper).
+      Для работы необходим включенный модуль [log-shipper](../log-shipper/).
   lokiConfig:
     description: |
       Опции Loki, доступные для изменения.
