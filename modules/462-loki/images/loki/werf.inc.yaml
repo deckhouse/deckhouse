@@ -14,6 +14,7 @@ shell:
   install:
     - git clone --depth 1 --branch {{ $LokiVersion }} {{ .SOURCE_REPO }}/grafana/loki.git /src
     - cd /src
+    - git apply --verbose /patches/*.patch
     - rm -r .git
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
