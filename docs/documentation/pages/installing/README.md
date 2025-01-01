@@ -6,7 +6,7 @@ description: |
 ---
 
 {% alert level="warning" %}
-This page is under active development and may contain incomplete information. Below is an overview of the Deckhouse installation process. For more detailed instructions, we recommend visiting the [Getting Started](/gs/) section, where step-by-step guides are available.
+This page is under active development and may contain incomplete information. Below is an overview of the Deckhouse installation process. For more detailed instructions, we recommend visiting the [Getting Started](/products/kubernetes-platform/gs/) section, where step-by-step guides are available.
 {% endalert %}
 
 The Deckhouse installer is available as a container image and is based on the [dhctl](<https://github.com{{ site.github_repo_path }}/tree/main/dhctl/>) utility, which is responsible for:

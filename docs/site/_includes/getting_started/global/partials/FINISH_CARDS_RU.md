@@ -62,7 +62,7 @@
 <div class="cards-item__text" markdown="1">
 Подготовьте ваш кластер к приему продуктивного трафика.
 
-Воспользуйтесь нашим [чек-листом](/guides/production.html), чтобы убедиться, что вы ничего не забыли.
+Воспользуйтесь нашим [чек-листом](/products/kubernetes-platform/guides/production.html), чтобы убедиться, что вы ничего не забыли.
 </div>
 </div>
 
