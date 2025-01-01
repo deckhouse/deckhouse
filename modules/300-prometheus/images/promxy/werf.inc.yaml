@@ -3,13 +3,11 @@
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 fromImage: common/src-artifact
 git:
-  - add: /modules/300-prometheus/images/{{ $.ImageName }}
-    to: /
-    stageDependencies:
-      setup:
-        - "**/*"
-    includePaths:
-      - patches
+- add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/patches
+  to: /patches
+  stageDependencies:
+    install:
+    - '**/*'
 shell:
   install:
     - git clone --depth 1 --branch {{ $PromxyVersion }} {{ .SOURCE_REPO }}/jacksontj/promxy.git /src
