@@ -3,29 +3,27 @@ image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
 import:
   - image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
-    add: /gatekeeper
-    to: /bin/gatekeeper
+    add: /trivy_provider
+    to: /trivy_provider
     before: setup
 docker:
-  ENTRYPOINT: [ "/bin/gatekeeper" ]
+  ENTRYPOINT: [ "/trivy_provider" ]
   USER: deckhouse:deckhouse
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 fromImage: common/src-artifact
 final: false
 git:
-- add: /{{ $.ModulePath }}modules/015-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
-  to: /patches
+- add: /{{ $.ModulePath }}modules/015-{{ $.ModuleName }}/images/{{ $.ImageName }}/src
+  to: /src
   stageDependencies:
     install:
     - '**/*'
 shell:
   install:
-  - git clone --depth 1 --branch v3.18.1 {{ .SOURCE_REPO }}/open-policy-agent/gatekeeper.git /src
-  - cd /src
-  - git apply /patches/*.patch --verbose
-  - rm -rf website
-  - rm -rf .git
+  - git clone --depth 1 --branch flant-v2 {{ .SOURCE_REPO }}/aquasecurity/trivy-db.git /src/trivy-db
+  - git clone --depth 1 --branch v0.55.0-flant-1 {{ .SOURCE_REPO }}/aquasecurity/trivy.git /src/trivy
+  - rm -rf /src/trivy/.git /src/trivy-db/.git
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
 from: {{ .Images.BASE_GOLANG_23_ALPINE }}
@@ -42,7 +40,7 @@ shell:
   install:
   - export GOPROXY={{ .GOPROXY }}
   - cd /src
-  - go mod vendor
-  - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -mod vendor -ldflags="-s -w" -o /gatekeeper .
-  - chown 64535:64535 /gatekeeper
-  - chmod 0700 /gatekeeper
+  - ln -s ./trivy-db ./original-trivy-db
+  - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o /trivy_provider main.go
+  - chown 64535:64535 /trivy_provider
+  - chmod 0700 /trivy_provider
