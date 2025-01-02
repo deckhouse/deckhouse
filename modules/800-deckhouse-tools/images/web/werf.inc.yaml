@@ -10,30 +10,53 @@ git:
     setup:
     - '**/*'
 import:
-  - artifact: {{ .ModuleName }}/{{ .ImageName }}-artifact
+  - image: {{ .ModuleName }}/{{ .ImageName }}-artifact
     add: /app
     to: /app
     before: setup
 docker:
   ENTRYPOINT: [ "/opt/nginx-static/sbin/nginx", "-g", "daemon off;" ]
 ---
-artifact: {{ .ModuleName }}/{{ .ImageName }}-artifact
+image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+final: false
+fromImage: common/src-artifact
+git:
+- add: /{{ $.ModulePath }}modules/800-{{ $.ModuleName }}/images/{{ $.ImageName }}/src
+  to: /src/src
+  stageDependencies:
+    setup:
+    - '**/*'
+- add: /{{ $.ModulePath }}modules/800-{{ $.ModuleName }}/images/{{ $.ImageName }}/static
+  to: /src/static
+  stageDependencies:
+    setup:
+    - '**/*'
+shell:
+  install:
+  - git clone --depth 1 --branch {{ .CandiVersionMap.d8.d8CliVersion }} {{ $.SOURCE_REPO }}/deckhouse/deckhouse-cli.git /src/deckhouse-cli
+  - cd /src/deckhouse-cli
+  - git describe --tags > VERSION
+  - sed -i "s|sh:\ git describe --tags|sh:\ cat VERSION|" Taskfile.yml
+  - rm -rf /src/deckhouse-cli/.git
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-artifact
+final: false
 from: {{ .Images.BASE_GOLANG_23_BULLSEYE }}
 fromCacheVersion: {{ .CandiVersionMap.d8.d8CliVersion }}
-git:
-  - add: /{{ $.ModulePath }}modules/800-{{ $.ModuleName }}/images/{{ $.ImageName }}/static
-    to: /static
-    stageDependencies:
-      setup:
-        - '**/*'
 import:
-  - artifact: {{ .ModuleName }}/{{ .ImageName }}-frontend-artifact
+  - image: {{ .ModuleName }}/{{ .ImageName }}-frontend-artifact
     add: /app/dist
     to: /app
     before: setup
+  - image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+    add: /src/static
+    to: /static
+    before: setup
+  - image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+    add: /src/deckhouse-cli
+    to: /deckhouse-cli
+    before: setup
 shell:
-  beforeInstall:
-  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
   setup:
     {{- include "debian packages proxy" . | nindent 4 }}
     - export GOPROXY={{ $.GOPROXY }}
@@ -43,7 +66,6 @@ shell:
     - apt-get install -y libbtrfs-dev jq
     - go install github.com/go-task/task/v3/cmd/task@latest
     - git config --global url."https://gitlab-ci-token:${PRIVATE_REPO_TOKEN}@${PRIVATE_REPO}/".insteadOf https://${PRIVATE_REPO}/
-    - git clone --depth 1 --branch {{ .CandiVersionMap.d8.d8CliVersion }} {{ $.SOURCE_REPO }}/deckhouse/deckhouse-cli.git
     - cd /deckhouse-cli
     - task build:dist:all
     - mkdir -p /app/files/d8-cli
@@ -52,16 +74,17 @@ shell:
     - mv /static/robots.txt /app
     - rm ~/.gitconfig # Prevent PRIVATE_REPO_TOKEN from leaking into the image layer
 ---
-artifact: {{ .ModuleName }}/{{ .ImageName }}-frontend-artifact
-from: {{ .Images.BASE_NODE_20_ALPINE_DEV }}
-git:
-  - add: /{{ $.ModulePath }}modules/800-{{ $.ModuleName }}/images/{{ $.ImageName }}/frontend
-    to: /app
-    stageDependencies:
-      setup:
-        - '**/*'
+image: {{ .ModuleName }}/{{ .ImageName }}-frontend-artifact
+final: false
+from: {{ .Images.BASE_NODE_20_ALPINE }}
+import:
+- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+  add: /src/src
+  to: /app
+  before: setup
 shell:
   setup:
+    {{- include "node packages proxy" . | nindent 2 }}
     - cd /app
     - npm install
     - npm run build
