@@ -1,0 +1,166 @@
+diff --git a/src/components/EndpointCardHeader/helpers.ts b/src/components/EndpointCardHeader/helpers.ts
+index 79f2ac2..829b3b0 100644
+--- a/src/components/EndpointCardHeader/helpers.ts
++++ b/src/components/EndpointCardHeader/helpers.ts
+@@ -46,6 +46,13 @@ export const extractLogo = (ep: ServiceCard): Logo => {
+     };
+   }
+
++  if (ep.isD8VirtualMachine) {
++    return {
++      id: 'virtualmachine',
++      type: LogoType.PROTOCOL,
++    };
++  }
++
+   const appProto = ep.appProtocol || 'kubernetes';
+   return {
+     id: appProto,
+diff --git a/src/components/EndpointCardHeader/logos.ts b/src/components/EndpointCardHeader/logos.ts
+index 2b87f16..820f41f 100644
+--- a/src/components/EndpointCardHeader/logos.ts
++++ b/src/components/EndpointCardHeader/logos.ts
+@@ -1,6 +1,7 @@
+ export const kubernetes = 'icons/logos/kubernetes-logo.svg';
+ export const world = 'icons/logos/world-logo.svg';
+ export const host = world;
++export const virtualmachine = 'icons/logos/virtualmachine-logo.svg';
+ export const mongodb = 'icons/logos/mongodb-logo.svg';
+ export const redis = 'icons/logos/redis-logo.svg';
+ export const rabbitmq = 'icons/logos/rabbitmq-logo.svg';
+diff --git a/src/domain/labels.ts b/src/domain/labels.ts
+index b4947533..2ebc8ac7 100644
+--- a/src/domain/labels.ts
++++ b/src/domain/labels.ts
+@@ -13,6 +13,7 @@ export interface LabelsProps {
+   isInit: boolean;
+   isHealth: boolean;
+   isPrometheusApp: boolean;
++  isD8VirtualMachine: boolean;
+   isIngress: boolean;
+   appName?: string;
+   clusterName?: string;
+@@ -33,6 +34,7 @@ export enum ReservedLabel {
+ export enum SpecialLabel {
+   KubeDNS = 'k8s:k8s-app=kube-dns',
+   PrometheusApp = 'k8s:app=prometheus',
++  D8VirtualMachine = 'k8s:kubevirt.internal.virtualization.deckhouse.io=virt-launcher',
+   Networks = 'cni:com.isovalent.v1alpha1.network.attachment',
+   CNPName = 'k8s:io.cilium.k8s.policy.name',
+   CNPUID = 'k8s:io.cilium.k8s.policy.uid',
+@@ -57,6 +59,7 @@ export class Labels {
+     'app',
+     'name',
+     'functionname',
++    'vm.kubevirt.internal.virtualization.deckhouse.io/name',
+     'k8s-app',
+   ]);
+
+@@ -352,6 +355,7 @@ export class Labels {
+       isKubeDNS: false,
+       isHealth: false,
+       isPrometheusApp: false,
++      isD8VirtualMachine: false,
+       isIngress: false,
+       appName: undefined,
+       clusterName: undefined,
+@@ -371,6 +375,8 @@ export class Labels {
+       props.isRemoteNode =
+         !!props.isRemoteNode || Labels.isReserved(kv, ReservedLabel.RemoteNode, false);
+       props.isPrometheusApp = !!props.isPrometheusApp || kv.key === SpecialLabel.PrometheusApp;
++      props.isD8VirtualMachine =
++        !!props.isD8VirtualMachine || Labels.isSpecial(kv,  SpecialLabel.D8VirtualMachine);
+
+       if (!props.appName) {
+         props.appName = Labels.getAppNameFromLabel(kv) || void 0;
+diff --git a/src/domain/service-map/card.ts b/src/domain/service-map/card.ts
+index 7551e29e..b3411e6c 100644
+--- a/src/domain/service-map/card.ts
++++ b/src/domain/service-map/card.ts
+@@ -315,6 +315,10 @@ export class ServiceCard extends AbstractCard {
+   public get isPrometheusApp(): boolean {
+     return this.labelsProps.isPrometheusApp;
+   }
++
++  public get isD8VirtualMachine(): boolean {
++    return this.labelsProps.isD8VirtualMachine;
++  }
+ }
+
+ export default ServiceCard;
+diff --git a/server/public/icons/logos/virtualmachine-logo.svg b/server/public/icons/logos/virtualmachine-logo.svg
+new file mode 100644
+index 0000000..e4a253a
+--- /dev/null
++++ b/server/public/icons/logos/virtualmachine-logo.svg
+@@ -0,0 +1,70 @@
++<?xml version="1.0" encoding="UTF-8" standalone="no"?>
++<svg
++   width="40"
++   height="40"
++   viewBox="0 0 40 40"
++   fill="none"
++   version="1.1"
++   id="svg14"
++   sodipodi:docname="vm.svg"
++   inkscape:version="1.1.2 (0a00cf5339, 2022-02-04)"
++   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
++   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
++   xmlns="http://www.w3.org/2000/svg"
++   xmlns:svg="http://www.w3.org/2000/svg">
++  <defs
++     id="defs18" />
++  <sodipodi:namedview
++     id="namedview16"
++     pagecolor="#ffffff"
++     bordercolor="#666666"
++     borderopacity="1.0"
++     inkscape:pageshadow="2"
++     inkscape:pageopacity="0.0"
++     inkscape:pagecheckerboard="0"
++     showgrid="false"
++     inkscape:zoom="1.5207603"
++     inkscape:cx="54.24918"
++     inkscape:cy="88.442602"
++     inkscape:window-width="1117"
++     inkscape:window-height="1371"
++     inkscape:window-x="25"
++     inkscape:window-y="35"
++     inkscape:window-maximized="1"
++     inkscape:current-layer="svg14" />
++  <rect
++     width="40"
++     height="40"
++     rx="5.1282"
++     fill="#0064FF"
++     id="rect2"
++     style="fill:#326de6;fill-opacity:1" />
++  <rect
++     x="8.20533"
++     y="10.2564"
++     width="23.5897"
++     height="15.3846"
++     rx="2.05128"
++     stroke="white"
++     stroke-width="2.05128"
++     id="rect4" />
++  <path
++     d="M19.7334 24.6154V30.7692"
++     stroke="white"
++     stroke-width="2.05128"
++     id="path6" />
++  <path
++     d="M13.3335 30.7692H26.6668"
++     stroke="white"
++     stroke-width="2.05128"
++     stroke-linecap="round"
++     id="path8" />
++  <path
++     d="M22.4285 20.9877L20.7043 15.987H20.6674C20.6756 16.099 20.6852 16.2519 20.6961 16.4457C20.707 16.6396 20.7166 16.8471 20.7248 17.0683C20.733 17.2894 20.7371 17.501 20.7371 17.7031V20.9877H19.8442V15H21.2244L22.8831 19.7795H22.9077L24.6238 15H25.9999V20.9877H25.062V17.6539C25.062 17.471 25.0647 17.273 25.0702 17.0601C25.0784 16.8471 25.0866 16.6451 25.0947 16.4539C25.1057 16.2628 25.1139 16.1099 25.1193 15.9952H25.0866L23.2968 20.9877H22.4285Z"
++     fill="white"
++     id="path10" />
++  <path
++     d="M19.2259 15L17.1331 20.9877H16.0928L14 15H15.0075L16.2689 18.7515C16.3072 18.8608 16.3481 18.9932 16.3918 19.1488C16.4382 19.3044 16.4805 19.4614 16.5188 19.6198C16.5597 19.7782 16.5911 19.9188 16.613 20.0416C16.6348 19.9188 16.6648 19.7782 16.7031 19.6198C16.744 19.4614 16.7863 19.3044 16.83 19.1488C16.8737 18.9932 16.9147 18.8594 16.9529 18.7474L18.2184 15H19.2259Z"
++     fill="white"
++     id="path12" />
++</svg>
