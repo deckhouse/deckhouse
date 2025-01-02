@@ -35,7 +35,7 @@ All following commands are assumed to be executed from the Pod's shell.
 ### See pipelines as a graph
 
 * Execute the `vector graph` command to get the output of logs pipelines topology in the [DOT format](https://graphviz.org/doc/info/lang.html).
-* Put the output to [webgraphviz](http://www.webgraphviz.com/) os similar service to render the graph.
+* Put the output to [webgraphviz](https://www.webgraphviz.com/) os similar service to render the graph.
 
 Example of the graph output for a single pipeline in ASCII format:
 
