@@ -1,5 +1,11 @@
 # Changelog v1.67
 
+## [MALFORMED]
+
+
+ - #11229 unknown section "mulitenancy-manager"
+ - #11301 unknown section "monitorint"
+
 ## Know before update
 
 
@@ -60,8 +66,11 @@
  - **[cni-cilium]** Fixed tunnelMode setting for Static clusters. [#11233](https://github.com/deckhouse/deckhouse/pull/11233)
  - **[cni-cilium]** Fixed package dropping issues with VXLAN and VMWare-hosted nodes. [#10087](https://github.com/deckhouse/deckhouse/pull/10087)
  - **[cni-flannel]** Fixed package dropping issues with VXLAN and VMWare-hosted nodes. [#10087](https://github.com/deckhouse/deckhouse/pull/10087)
+ - **[deckhouse]** Fix deleting module config for embedded modules. [#11347](https://github.com/deckhouse/deckhouse/pull/11347)
  - **[deckhouse]** Fix several deployed module releases. [#11245](https://github.com/deckhouse/deckhouse/pull/11245)
  - **[deckhouse]** Fix source deletion error. [#10750](https://github.com/deckhouse/deckhouse/pull/10750)
+ - **[deckhouse-controller]** update golang.org/x/net to 0.33.0 [#11326](https://github.com/deckhouse/deckhouse/pull/11326)
+ - **[deckhouse-controller]** update golang.org/x/net to 0.33.0 [#11316](https://github.com/deckhouse/deckhouse/pull/11316)
  - **[deckhouse-controller]** check spec object in validations [#11216](https://github.com/deckhouse/deckhouse/pull/11216)
  - **[deckhouse-controller]** Rollout restart for Deckhouse workloads (heritage=deckhouse) is forbidden. [#10844](https://github.com/deckhouse/deckhouse/pull/10844)
  - **[descheduler]** Fix conversation from v1alpha1 to v1alpha2 (add nodeAffinityType default for removePodsViolatingNodeAffinity strategy). [#11223](https://github.com/deckhouse/deckhouse/pull/11223)
@@ -73,14 +82,18 @@
  - **[dhctl]** Add tasks for moduleconfigs routines for post bootstrap and creating with resources phases. [#10688](https://github.com/deckhouse/deckhouse/pull/10688)
  - **[dhctl]** Fixed work with drain for nodes with kruise.io DaemonSet. [#10578](https://github.com/deckhouse/deckhouse/pull/10578)
  - **[dhctl]** Delete docker CRI type support. [#10114](https://github.com/deckhouse/deckhouse/pull/10114)
+ - **[docs]** Adding info about Log Retention Settings Discrepancy in kube-bench test [#11352](https://github.com/deckhouse/deckhouse/pull/11352)
+    Users will be warned about inconsistencies in log storage settings when checking with kube-bench.
  - **[docs]** Added information about preflight skips flags. [#10916](https://github.com/deckhouse/deckhouse/pull/10916)
  - **[docs]** Fix priority-class module documentation. [#10897](https://github.com/deckhouse/deckhouse/pull/10897)
  - **[docs]** Add required NetworkInterface AWS policies. [#10842](https://github.com/deckhouse/deckhouse/pull/10842)
  - **[helm_lib]** Updated helm_lib to 1.37.1, which should fix issue [#10950](https://github.com/deckhouse/deckhouse/pull/10950)
  - **[istio]** Fixes for Federation/Multicluster metadata-exporter and for istio-operator. [#11150](https://github.com/deckhouse/deckhouse/pull/11150)
  - **[istio]** Fixed `IngressIstioController` CRD docs rendering. [#10581](https://github.com/deckhouse/deckhouse/pull/10581)
+ - **[metallb]** Fix metallb RBAC rules. [#11298](https://github.com/deckhouse/deckhouse/pull/11298)
  - **[metallb]** Fixed MetalLB migration issues and improved stability. [#11224](https://github.com/deckhouse/deckhouse/pull/11224)
  - **[multitenancy-manager]** Fix the 'secure' and 'secure_with_dedicated_nodes' project templates and add supporting default values. [#11096](https://github.com/deckhouse/deckhouse/pull/11096)
+ - **[node-manager]** tune caps sync period [#11384](https://github.com/deckhouse/deckhouse/pull/11384)
  - **[node-manager]** Fix the key usage with cert-authority. [#10718](https://github.com/deckhouse/deckhouse/pull/10718)
  - **[node-manager]** no_proxy/http_proxy tuning, `bb-set-proxy/bb-unset-proxy` functions. [#10676](https://github.com/deckhouse/deckhouse/pull/10676)
  - **[prometheus]** Fixes for D8CNIMisconfigured alerts — renamed group and typos fixed. [#11259](https://github.com/deckhouse/deckhouse/pull/11259)
