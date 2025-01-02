@@ -737,8 +737,8 @@ echo "$MYRESULTSTRING"
 
 * Если вы хотите установить Deckhouse с отключенным автоматическим обновлением:
   * Используйте тег образа установщика соответствующей версии. Например, если вы хотите установить релиз `v1.60.5`, используйте образ `your.private.registry.com/deckhouse/install:v1.60.5`.
-  * **Не указывайте** параметр [deckhouse.releaseChannel](installing/configuration.html#initconfiguration-deckhouse-releasechannel) в ресурсе [InitConfiguration](installing/configuration.html#initconfiguration).
-* Если вы хотите отключить автоматические обновления у уже установленного Deckhouse (включая обновления patch-релизов), удалите параметр [releaseChannel](modules/deckhouse/configuration.html#parameters-releasechannel) из конфигурации модуля `deckhouse`.
+  * **Не указывайте** параметр [deckhouse.releaseChannel](modules/deckhouse/configuration.html#parameters-releasechannel).
+* Если вы хотите отключить автоматические обновления у уже установленного Deckhouse, ознакомьтесь с документацией [по закреплению релиза](modules/deckhouse/#закрепление-релиза].
 
 ### Использование proxy-сервера
 

@@ -2789,7 +2789,7 @@ alerts:
       module: ingress-nginx
       edition: ce
       description: |-
-        There is an IngressNginxController and/or an Ingress object that utilize(s) Nginx GeoIPv1 module's variables. The module is deprecated and its support is discontinued from Ingess Nginx Controller of version 1.10 and higher. It's recommend to upgrade your configuration to use [GeoIPv2 module](https://deckhouse.io/documentation/v1/modules/ingress-nginx/cr.html#ingressnginxcontroller-v1-spec-geoip2).
+        There is an IngressNginxController and/or an Ingress object that utilize(s) Nginx GeoIPv1 module's variables. The module is deprecated and its support is discontinued from Ingess Nginx Controller of version 1.10 and higher. It's recommend to upgrade your configuration to use [GeoIPv2 module](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/ingress-nginx/cr.html#ingressnginxcontroller-v1-spec-geoip2).
         Use the following command to get the list of the IngressNginxControllers that contain GeoIPv1 variables:
         `kubectl  get ingressnginxcontrollers.deckhouse.io -o json | jq '.items[] | select(..|strings | test("\\$geoip_(country_(code3|code|name)|area_code|city_continent_code|city_country_(code3|code|name)|dma_code|latitude|longitude|region|region_name|city|postal_code|org)([^_a-zA-Z0-9]|$)+")) | .metadata.name'`
 
@@ -2842,7 +2842,7 @@ alerts:
           * CPU overloads and throttling of containers
           * 500 errors on ingress
           * Replicas quantity of controllers (alerts about the insufficient amount of replicas of  Deployment, StatefulSet, DaemonSet)
-          * And [others](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/340-extended-monitoring/)
+          * And [others](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/extended-monitoring/)
 
         To debug, execute the following commands:
           1. `kubectl -n d8-monitoring describe deploy extended-monitoring-exporter`
@@ -4387,9 +4387,9 @@ alerts:
            * 'kubectl -n d8-chrony exec <POD_NAME> -- /opt/chrony-static/bin/chronyc sources'
         3. Correct the time synchronization problems:
            * correct network problems:
-             - provide availability to upstream time synchronization servers defined in the module [configuration](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/470-chrony/configuration.html);
+             - provide availability to upstream time synchronization servers defined in the module [configuration](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/chrony/configuration.html);
              - eliminate large packet loss and excessive latency to upstream time synchronization servers.
-           * Modify NTP servers list defined in the module [configuration](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/470-chrony/configuration.html).
+           * Modify NTP servers list defined in the module [configuration](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/chrony/configuration.html).
       summary: |
         NTP daemon on node {{$labels.node}} have not synchronized time for too long.
       severity: "5"
@@ -4506,7 +4506,7 @@ alerts:
         ```shell
         kubectl -n {{ $labels.namespace }} exec -ti {{ $labels.pod_name }} -c prometheus -- df -PBG /prometheus
         ```
-        Consider increasing it https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/300-prometheus/faq.html#how-to-expand-disk-size
+        Consider increasing it https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/prometheus/faq.html#how-to-expand-disk-size
       summary: |
         Prometheus disk is over 95% used.
       severity: "4"

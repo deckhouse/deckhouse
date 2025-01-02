@@ -86,9 +86,9 @@ spec:
           kubeconfigGeneratorMasterCA: ""
 ---
 # [<en>] cni-cilium module settings.
-# [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/021-cni-cilium/configuration.html
+# [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/cni-cilium/configuration.html
 # [<ru>] Настройки модуля cni-cilium.
-# [<ru>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/021-cni-cilium/configuration.html
+# [<ru>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/cni-cilium/configuration.html
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
@@ -100,9 +100,9 @@ spec:
   enabled: true
   settings:
     # [<en>] cni-cilium module settings
-    # [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/021-cni-cilium/configuration.html
+    # [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/cni-cilium/configuration.html
     # [<ru>] Настройки модуля cni-cilium
-    # [<ru>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/021-cni-cilium/configuration.html
+    # [<ru>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/cni-cilium/configuration.html
     tunnelMode: VXLAN
 ---
 # [<en>] Static cluster settings.

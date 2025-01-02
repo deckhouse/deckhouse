@@ -37,7 +37,7 @@ These `ClusterIssuers` support the `DNS-01` method.
    * `digitalocean`
    * `route53`
 1. `ClusterIssuers` using the `HTTP-01` method.  
-Added automatically unless their creation is disabled in the [module settings](./configuration.htmll#parameters-disableletsencrypt).
+Added automatically unless their creation is disabled in the [module settings](./configuration.html#parameters-disableletsencrypt).
    * `letsencrypt`
    * `letsencrypt-staging`
 
