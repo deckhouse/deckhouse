@@ -46,26 +46,26 @@ import:
   - image: {{ .ModuleName }}/{{ .ImageName }}-frontend-artifact
     add: /app/dist
     to: /app
-    before: setup
+    before: install
   - image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
     add: /src/static
     to: /static
-    before: setup
+    before: install
   - image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
     add: /src/deckhouse-cli
-    to: /deckhouse-cli
-    before: setup
+    to: /src
+    before: install
   - image: common/task-artifact
     add: /task
     to: /usr/local/bin/task
-    before: setup
+    before: install
 shell:
   beforeInstall:
     {{- include "debian packages proxy" . | nindent 4 }}
     - apt-get install -y libbtrfs-dev jq
   install:
     - export GOPROXY={{ $.GOPROXY }}
-    - cd /deckhouse-cli
+    - cd /src
     - task build:dist:all
     - mkdir -p /app/files/d8-cli
     - mv dist/{{ .CandiVersionMap.d8.d8CliVersion }}/* /app/files/d8-cli
