@@ -658,7 +658,7 @@ Follow these steps for manual loading images of modules, connected from the modu
    d8 k apply -f $HOME/module_source.yml
    ```
 
-   Once the manifest has been applied, the modules are ready for use. For more detailed instructions on configuring and using modules, please refer to the [module developer's documentation]({% if site.mode == 'module' %}{{ site.urls[page.lang] }}/documentation/latest{% endif %}/module-development/).
+   Once the manifest has been applied, the modules are ready for use. For more detailed instructions on configuring and using modules, please refer to the [module developer's documentation](./module-development/).
 
 ### How do I switch a running Deckhouse cluster to use a third-party registry?
 
