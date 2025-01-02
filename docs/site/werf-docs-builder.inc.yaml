@@ -46,7 +46,7 @@ shell:
 {{ if ne .ModuleName "docs" }}
 ---
 artifact: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
-fromArtifact: common/src-artifact
+fromImage: common/src-artifact
 shell:
   install:
   - cd /src
