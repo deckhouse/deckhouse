@@ -24,10 +24,6 @@ git:
     - '**/*.go'
     - '**/go.mod'
     - '**/go.sum'
-shell:
-  install:
-    - cd /src
-    - rm -rf .git
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-basic-auth-proxy-artifact
 from: {{ $.Images.BASE_GOLANG_23_ALPINE }}

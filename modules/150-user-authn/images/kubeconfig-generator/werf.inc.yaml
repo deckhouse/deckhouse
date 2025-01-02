@@ -39,9 +39,7 @@ git:
 shell:
   install:
     - cd /src
-    - git apply --whitespace=fix -v /patches/already_logged.patch
-    - git apply --whitespace=fix -v /patches/deps.patch
-    - rm -rf .git
+    - git apply --whitespace=fix -v /patches/*.patch
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-dex-k8s-authenticator-artifact
 from: {{ $.Images.BASE_GOLANG_23_ALPINE }}

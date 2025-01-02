@@ -4,7 +4,7 @@ fromImage: common/distroless
 import:
   - image: {{ $.ModuleName }}/{{ $.ImageName }}-oauth2-proxy-artifact
     add: /src/oauth2-proxy
-    to: /usr/local/bin/oauth2_proxy
+    to: /bin/oauth2_proxy
     before: setup
   - image: {{ $.ModuleName }}/{{ $.ImageName }}-url-exec-prober-artifact
     add: /src/url-exec-prober
@@ -31,10 +31,7 @@ git:
 shell:
   install:
     - cd /src
-    - git apply -v /patches/cookie-refresh.patch
-    - git apply -v /patches/remove-groups.patch
-    - git apply -v /patches/deps.patch
-    - rm -rf .git
+    - git apply --verbose /patches/*.patch
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-oauth2-proxy-artifact
 from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
@@ -70,10 +67,6 @@ git:
     - '**/*.go'
     - '**/go.mod'
     - '**/go.sum'
-shell:
-  install:
-    - cd /src
-    - rm -rf .git
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-url-exec-prober-artifact
 from: {{ $.Images.BASE_GOLANG_23_ALPINE }}

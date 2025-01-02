@@ -11,7 +11,7 @@ import:
     to: /web
     before: setup
 docker:
-  ENTRYPOINT: ["dex", "serve", "/etc/dex/config.docker.yaml"]
+  ENTRYPOINT: ["/usr/local/bin/dex", "serve", "/etc/dex/config.docker.yaml"]
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-dex-src-artifact
 fromImage: common/src-artifact
@@ -33,7 +33,6 @@ shell:
   install:
     - cd /src
     - git apply /patches/*.patch --verbose
-    - rm -rf .git
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-dex-artifact
 from: {{ $.Images.BASE_GOLANG_23_BOOKWORM }}
