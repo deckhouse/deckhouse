@@ -66,7 +66,7 @@ The manage role defines access rights:
 
 The manage role name format is `d8:manage:<SUBSYSTEM>:<ACCESS_LEVEL>`, where:
 - `SUBSYSTEM` is the role's subsystem. It can be one of the [subsystem](#subsystems-of-the-role-based-model), or `all`, for access across all subsystems;
-- `ACCESS_LEVEL` is the [access level](#access-levels-of-the-role-based-model).
+- `ACCESS_LEVEL` is the access level.
 
   Examples of manage roles:
   - `d8:manage:all:viewer` — access to view the configuration of all DKP modules (`moduleConfig` resource), their cluster-wide resources, their namespaced resources, and standard Kubernetes objects (except Secrets and RBAC resources) in all system namespaces (starting with `d8-` or `kube-`);

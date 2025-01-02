@@ -29,7 +29,7 @@ properties:
       Loki cannot automatically delete old data when the disk is full.
 
       The
-      [extended-monitoring](../340-extended-monitoring/configuration.html#namespaced-kubernetes-objects)
+      [extended-monitoring](../extended-monitoring/configuration.html#namespaced-kubernetes-objects)
       module automatically monitors the percentage of used disk space.
 
       **CAUTION!** If the Loki data disk becomes full, the application will stop
