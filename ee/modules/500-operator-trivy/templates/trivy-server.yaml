@@ -77,7 +77,7 @@ spec:
       {{- include "helm_lib_node_selector" (tuple . "system") | nindent 6 }}
       {{- include "helm_lib_tolerations" (tuple . "system") | nindent 6 }}
       {{- include "helm_lib_priority_class" (tuple . "cluster-low") | nindent 6 }}
-      {{- include "helm_lib_module_pod_security_context_run_as_user_nobody_with_writable_fs" . | nindent 6 }}
+      {{- include "helm_lib_module_pod_security_context_run_as_user_deckhouse_with_writable_fs" . | nindent 6 }}
       containers:
         - name: server
           {{- include "helm_lib_module_container_security_context_capabilities_drop_all_and_add"  (list . (list)) | nindent 10 }}
