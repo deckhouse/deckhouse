@@ -181,7 +181,7 @@ spec:
 
                     Независимо от inlet'а всегда проверяется непосредственный адрес (в логах содержится в поле `original_address`), с которого производится подключение, а не «адрес клиента», который может передаваться в некоторых inlet'ах через заголовки или с использованием `proxy protocol`.
 
-                    Параметр реализован с помощью [map module](http://nginx.org/en/docs/http/ngx_http_map_module.html), и если адрес, с которого непосредственно производится подключение, не разрешен – NGINX закрывает соединение (используя return 444).
+                    Параметр реализован с помощью [map module](https://nginx.org/en/docs/http/ngx_http_map_module.html), и если адрес, с которого непосредственно производится подключение, не разрешен – NGINX закрывает соединение (используя return 444).
 
                     **По умолчанию** к контроллеру можно подключаться с любых адресов.
                 hsts:
@@ -300,7 +300,7 @@ spec:
                   description: |
                     Разрешены ли нижние подчеркивания в заголовках.
 
-                    [Подробнее...](http://nginx.org/en/docs/http/ngx_http_core_module.html#underscores_in_headers).
+                    [Подробнее...](https://nginx.org/en/docs/http/ngx_http_core_module.html#underscores_in_headers).
 
                     [Почему](https://docs.nginx.com/#missing-disappearing-http-headers) не стоит бездумно это включать.
                 minReplicas:
@@ -312,7 +312,7 @@ spec:
                 defaultSSLCertificate:
                   description: |
                     Сертификат, который используется:
-                    - при запросах на `catch-all`-сервер (подразумевается [директива server](http://nginx.org/en/docs/http/ngx_http_core_module.html#server) nginx). На `catch-all`-сервер попадают запросы, для которых нет соответствующего Ingress-ресурса;
+                    - при запросах на `catch-all`-сервер (подразумевается [директива server](https://nginx.org/en/docs/http/ngx_http_core_module.html#server) nginx). На `catch-all`-сервер попадают запросы, для которых нет соответствующего Ingress-ресурса;
                     - для Ingress–ресурсов, в которых не задан `secretName` в секции `tls`.
 
                     По умолчанию используется самоподписанный сертификат.
@@ -578,7 +578,7 @@ spec:
 
                     Независимо от inlet'а всегда проверяется непосредственный адрес (в логах содержится в поле `original_address`), с которого производится подключение, а не «адрес клиента», который может передаваться в некоторых inlet'ах через заголовки или с использованием `proxy protocol`.
 
-                    Параметр реализован с помощью [map module](http://nginx.org/en/docs/http/ngx_http_map_module.html), и если адрес, с которого непосредственно производится подключение, не разрешен – NGINX закрывает соединение (используя return 444).
+                    Параметр реализован с помощью [map module](https://nginx.org/en/docs/http/ngx_http_map_module.html), и если адрес, с которого непосредственно производится подключение, не разрешен – NGINX закрывает соединение (используя return 444).
 
                     **По умолчанию** к контроллеру можно подключаться с любых адресов.
                 hsts:
@@ -702,7 +702,7 @@ spec:
                   description: |
                     Разрешены ли нижние подчеркивания в заголовках.
 
-                    [Подробнее...](http://nginx.org/en/docs/http/ngx_http_core_module.html#underscores_in_headers).
+                    [Подробнее...](https://nginx.org/en/docs/http/ngx_http_core_module.html#underscores_in_headers).
 
                     [Почему](https://docs.nginx.com/#missing-disappearing-http-headers) нужно внимательно включать разрешение для нижних подчеркиваний в заголовках.
                 minReplicas:
@@ -714,7 +714,7 @@ spec:
                 defaultSSLCertificate:
                   description: |
                     Сертификат, который используется:
-                    - при запросах на `catch-all`-сервер (подразумевается [директива server](http://nginx.org/en/docs/http/ngx_http_core_module.html#server) nginx). На `catch-all`-сервер попадают запросы, для которых нет соответствующего Ingress-ресурса;
+                    - при запросах на `catch-all`-сервер (подразумевается [директива server](https://nginx.org/en/docs/http/ngx_http_core_module.html#server) nginx). На `catch-all`-сервер попадают запросы, для которых нет соответствующего Ingress-ресурса;
                     - для Ingress–ресурсов, в которых не задан `secretName` в секции `tls`.
 
                     По умолчанию используется самоподписанный сертификат.

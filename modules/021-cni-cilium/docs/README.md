@@ -16,7 +16,7 @@ The `cni-cilium module` provides a network in a cluster. It is based on the [Cil
       * incompatible with version 18.04;
       * HWE kernel installation required for working with version 20.04.
     * CentOS:
-      * for versions 7 and 8, a new kernel from the [repository](http://elrepo.org) is required.
+      * for versions 7 and 8, a new kernel from the [repository](https://elrepo.org) is required.
 
 ## Handling external traffic in different `bpfLB` modes (replacing kube-proxy from Cilium)
 
