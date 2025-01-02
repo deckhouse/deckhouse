@@ -84,6 +84,7 @@ import:
   before: setup
 shell:
   setup:
+    {{- include "node packages proxy" . | nindent 2 }}
     - cd /app
     - npm install
     - npm run build
