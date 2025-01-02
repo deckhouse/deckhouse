@@ -40,6 +40,8 @@ import:
   to: /src
   before: install
 shell:
+  beforeInstall:
+  - apk add --no-cache make bash
   install:
     - export GO_VERSION=${GOLANG_VERSION}
     - export GOPROXY={{ $.GOPROXY }}
