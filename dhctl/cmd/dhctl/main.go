@@ -228,6 +228,9 @@ var (
 			Name:    "edit",
 			Help:    "Change configuration files in Kubernetes cluster conveniently and safely.",
 			Parrent: "config",
+			DefineFunc: func(cmd *kingpin.CmdClause) {
+				commands.DefineEditCommands(cmd /* wConnFlags */, true)
+			},
 		},
 		{
 			Name: "test",
@@ -636,11 +639,7 @@ func registerCommands(kpApp *kingpin.Application) error {
 				commandList[i].cmd = cmd
 
 				if command.DefineFunc != nil {
-					if command.Name != "edit" {
-						command.DefineFunc(cmd)
-					} else {
-						commands.DefineEditCommands(cmd /* wConnFlags */, true)
-					}
+					command.DefineFunc(cmd)
 				}
 			}
 		}
