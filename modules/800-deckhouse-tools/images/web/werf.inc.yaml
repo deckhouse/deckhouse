@@ -74,6 +74,7 @@ shell:
     - mv dist/{{ .CandiVersionMap.d8.d8CliVersion }}/* /app/files/d8-cli
     - jq '[.[] | .version="{{ .CandiVersionMap.d8.d8CliVersion }}"]' /static/tools.json > /app/tools.json
     - mv /static/robots.txt /app
+    - rm ~/.gitconfig # Prevent PRIVATE_REPO_TOKEN from leaking into the image layer
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-frontend-artifact
 final: false
