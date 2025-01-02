@@ -63,17 +63,19 @@ shell:
   beforeInstall:
     {{- include "debian packages proxy" . | nindent 4 }}
     - apt-get install -y libbtrfs-dev jq
+  install:
+    - export GOPROXY={{ $.GOPROXY }}
+    - export PRIVATE_REPO={{ $.DECKHOUSE_PRIVATE_REPO }}
     - export PRIVATE_REPO_TOKEN={{ $.STRONGHOLD_PULL_TOKEN }}
     - export GOPRIVATE={{ $.DECKHOUSE_PRIVATE_REPO }}
     - git config --global url."https://gitlab-ci-token:${PRIVATE_REPO_TOKEN}@${PRIVATE_REPO}/".insteadOf https://${PRIVATE_REPO}/
-  install:
-    - export GOPROXY={{ $.GOPROXY }}
     - cd /src
     - task build:dist:all
     - mkdir -p /app/files/d8-cli
     - mv dist/{{ .CandiVersionMap.d8.d8CliVersion }}/* /app/files/d8-cli
     - jq '[.[] | .version="{{ .CandiVersionMap.d8.d8CliVersion }}"]' /static/tools.json > /app/tools.json
     - mv /static/robots.txt /app
+    - rm ~/.gitconfig # Prevent PRIVATE_REPO_TOKEN from leaking into the image layer
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-frontend-artifact
 final: false
