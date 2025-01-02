@@ -33,7 +33,7 @@ apiVersions:
               Список зон, в которых допустимо создавать узлы.
           instanceClass:
             description: |
-              Частичное содержимое полей [YandexInstanceClass](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-yandex/cr.html#yandexinstanceclass).
+              Частичное содержимое полей [YandexInstanceClass](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/cloud-provider-yandex/cr.html#yandexinstanceclass).
             properties: &instanceClassProperties_ru
               platform:
                 description: |
@@ -139,7 +139,7 @@ apiVersions:
                     > **Внимание!** Доступны только поля `effect`, `key`, `values`.
             instanceClass:
               description: |
-                Частичное содержимое полей [YandexInstanceClass](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-yandex/cr.html#yandexinstanceclass).
+                Частичное содержимое полей [YandexInstanceClass](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/cloud-provider-yandex/cr.html#yandexinstanceclass).
               properties:
                 <<: *instanceClassProperties_ru
                 coreFraction:
@@ -165,7 +165,7 @@ apiVersions:
         description: |
           Список DHCP-опций, которые будут установлены на все подсети.
 
-          [Возможные проблемы](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-yandex/faq.html#проблемы-dhcpoptions-и-пути-их-решения) при использовании.
+          [Возможные проблемы](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/cloud-provider-yandex/faq.html#проблемы-dhcpoptions-и-пути-их-решения) при использовании.
         properties:
           domainName:
             description: |
@@ -177,10 +177,10 @@ apiVersions:
         description: |
           Название схемы размещения.
 
-          [Подробнее](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-yandex/layouts.html) о возможных схемах размещения провайдера.
+          [Подробнее](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/cloud-provider-yandex/layouts.html) о возможных схемах размещения провайдера.
       withNATInstance:
         description: |
-          Настройки для схемы размещения [`WithNATInstance`](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-yandex/layouts.html#withnatinstance).
+          Настройки для схемы размещения [`WithNATInstance`](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/cloud-provider-yandex/layouts.html#withnatinstance).
         properties:
           exporterAPIKey:
             description: |
@@ -192,7 +192,7 @@ apiVersions:
                 Service account'у, для которого будет создан ключ, необходимо назначить роль `monitoring.viewer`.
           natInstanceExternalAddress:
             description: |
-              Внешний [зарезервированный IP-адрес](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-yandex/faq.html#как-зарезервировать-публичный-ip-адрес) или адрес из `externalSubnetID` при указании опции.
+              Внешний [зарезервированный IP-адрес](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/cloud-provider-yandex/faq.html#как-зарезервировать-публичный-ip-адрес) или адрес из `externalSubnetID` при указании опции.
           natInstanceInternalAddress:
             description: |
               Лучше не использовать эту опцию, а использовать автоматически назначаемые адреса.
@@ -215,7 +215,7 @@ apiVersions:
                   Количество оперативной памяти (в мегабайтах) у создаваемого NAT-инстанса.
       provider:
         description: |
-          [Параметры подключения](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-yandex/environment.html) к API Yandex Cloud.
+          [Параметры подключения](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/cloud-provider-yandex/environment.html) к API Yandex Cloud.
         properties:
           cloudID:
             description: |

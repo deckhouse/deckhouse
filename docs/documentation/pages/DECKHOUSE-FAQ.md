@@ -736,8 +736,8 @@ This method should only be used if there are no release channel images in your a
 
 * If you want to install Deckhouse with automatic updates disabled:
   * Use the tag of the installer image of the corresponding version. For example, use the image `your.private.registry.com/deckhouse/install:v1.60.5`, if you want to install release `v1.60.5`.
-  * **Do not** set the [deckhouse.releaseChannel](installing/configuration.html#initconfiguration-deckhouse-releasechannel) parameter of the `InitConfiguration` resource.
-* If you want to disable automatic updates for an already installed Deckhouse (including patch release updates), then delete the [releaseChannel](modules/deckhouse/configuration.html#parameters-releasechannel) parameter from the `deckhouse` module configuration.
+  * **Do not** set the [deckhouse.releaseChannel](modules/deckhouse/configuration.html#parameters-releasechannel) parameter.
+* If you want to disable automatic updates for an already installed Deckhouse, please refer to the documentation on [release pinning](modules/deckhouse/#pin-a-release).
 
 ### Using a proxy server
 

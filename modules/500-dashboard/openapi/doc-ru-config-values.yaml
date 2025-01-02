@@ -13,7 +13,7 @@ properties:
         description: |
           Параметры для подключения внешней аутентификации (используется механизм NGINX Ingress [external-auth](https://kubernetes.github.io/ingress-nginx/examples/auth/external-auth/), работающий на основе модуля Nginx [auth_request](http://nginx.org/en/docs/http/ngx_http_auth_request_module.html).
 
-          Внешняя аутентификация включается автоматически, если включен модуль [user-authn](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/150-user-authn/).
+          Внешняя аутентификация включается автоматически, если включен модуль [user-authn](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/user-authn/).
 
           > **Внимание.** Из соображений безопасности этот режим работает только при условии, что параметр `https.mode` (глобальный или в модуле) не установлен в значение `Disabled`.
         properties:
@@ -33,7 +33,7 @@ properties:
 
           Этот параметр используется, если модуль `user-authn` включён или настроен параметр `externalAuthentication`.
 
-          > **Внимание.** Если модуль используется вместе с [user-authn](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/150-user-authn/), не забудьте добавить эти группы в соответствующее поле конфигурации DexProvider.        
+          > **Внимание.** Если модуль используется вместе с [user-authn](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/user-authn/), не забудьте добавить эти группы в соответствующее поле конфигурации DexProvider.
       whitelistSourceRanges:
         description: |
           Список адресов в формате CIDR, которым разрешено проходить аутентификацию для доступа в dashboard.
@@ -49,7 +49,7 @@ properties:
           * `CertManager` — dashboard будет работать по HTTPS и заказывать сертификат с помощью ClusterIssuer, заданного в параметре `certManager.clusterIssuerName`;
           * `CustomCertificate` — dashboard будет работать по HTTPS, используя сертификат из пространства имен `d8-system`;
           * `Disabled` — в данном режиме dashboard не будет работать;
-          * `OnlyInURI` — это режим, при котором dashboard работает через HTTP (с учетом того, что перед ним настроен внешний HTTPS-балансировщик, который завершает HTTPS-соединение). В этом случае все ссылки в [user-authn](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/150-user-authn/) будут генерироваться с использованием схемы HTTPS. Балансировщик должен обеспечивать автоматическое перенаправление с HTTP на HTTPS.
+          * `OnlyInURI` — это режим, при котором dashboard работает через HTTP (с учетом того, что перед ним настроен внешний HTTPS-балансировщик, который завершает HTTPS-соединение). В этом случае все ссылки в [user-authn](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/user-authn/) будут генерироваться с использованием схемы HTTPS. Балансировщик должен обеспечивать автоматическое перенаправление с HTTP на HTTPS.
       certManager:
         properties:
           clusterIssuerName:

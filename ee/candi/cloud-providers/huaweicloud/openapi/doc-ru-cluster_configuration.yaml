@@ -33,7 +33,7 @@ apiVersions:
               Количество создаваемых master-узлов. Для обеспечения кворума важно, чтобы оно было нечетным.
           instanceClass:
             description: |
-              Частичное содержимое полей [HuaweiCloudInstanceClass](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-huaweicloud/cr.html#huaweicloudinstanceclass).
+              Частичное содержимое полей [HuaweiCloudInstanceClass](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/cloud-provider-huaweicloud/cr.html#huaweicloudinstanceclass).
             properties: &instanceClassProperties_ru
               flavorName: &instanceClassFlavorName_ru
                 description: |
@@ -47,7 +47,7 @@ apiVersions:
                 description: |
                   Размер root-диска. Значение указывается в гигабайтах.
 
-                  Параметр также влияет на тип диска. Особенности применения параметра описаны в разделе [Как использовать rootDiskSize и когда он предпочтителен](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-huaweicloud/faq.html#как-использовать-rootdisksize-и-когда-он-предпочтителен).
+                  Параметр также влияет на тип диска. Особенности применения параметра описаны в разделе [Как использовать rootDiskSize и когда он предпочтителен](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/cloud-provider-huaweicloud/faq.html#как-использовать-rootdisksize-и-когда-он-предпочтителен).
               etcdDiskSizeGb:
                 description: |
                   Размер диска для etcd. Значение указывается в гигабайтах.
@@ -130,11 +130,11 @@ apiVersions:
         description: |
           Название схемы размещения.
 
-          Возможные схемы размещения провайдера описаны на странице [Схемы размещения](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-huaweicloud/layouts.html).
+          Возможные схемы размещения провайдера описаны на странице [Схемы размещения](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/cloud-provider-huaweicloud/layouts.html).
       standard:
         type: object
         description: |
-          Настройки для [схемы размещения `Standard`](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-huaweicloud/layouts.html#standard).
+          Настройки для [схемы размещения `Standard`](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/cloud-provider-huaweicloud/layouts.html#standard).
         properties:
           internalNetworkCIDR: &internalNetworkCIDR_ru
             description: |
@@ -144,15 +144,15 @@ apiVersions:
               Список адресов рекурсивных DNS внутренней сети.
           internalNetworkSecurity: &internalNetworkSecurity_ru
             description: |
-              Флаг, который определяет необходимость настройки [SecurityGroups](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-huaweicloud/faq.html#как-проверить-поддерживает-ли-провайдер-securitygroups) на портах внутренней сети.
+              Флаг, который определяет необходимость настройки [SecurityGroups](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/cloud-provider-huaweicloud/faq.html#как-проверить-поддерживает-ли-провайдер-securitygroups) на портах внутренней сети.
           enableEIP:
             description: |
                 Включите Elastic IP для мастер узлов.
       provider:
         description: |
-          [Параметры подключения](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-huaweicloud/environment.html) к API Huawei Cloud.
+          [Параметры подключения](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/cloud-provider-huaweicloud/environment.html) к API Huawei Cloud.
 
-          Совпадают с параметрами, передаваемыми в поле `connection` в модуле [cloud-provider-huaweicloud](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-huaweicloud/configuration.html#parameters).
+          Совпадают с параметрами, передаваемыми в поле `connection` в модуле [cloud-provider-huaweicloud](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/cloud-provider-huaweicloud/configuration.html#parameters).
         properties:
           cloud:
             description: |

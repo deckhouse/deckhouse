@@ -99,7 +99,7 @@ spec:
 # [<en>] Cloud provider settings.
 # [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/cloud-provider-openstack/cluster_configuration.html
 # [<ru>] Настройки облачного провайдера.
-# [<ru>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-openstack/cluster_configuration.html
+# [<ru>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/cloud-provider-openstack/cluster_configuration.html
 apiVersion: deckhouse.io/v1
 kind: DynamixClusterConfiguration
 layout: Standard
