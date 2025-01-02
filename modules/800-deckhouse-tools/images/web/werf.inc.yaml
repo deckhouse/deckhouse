@@ -53,7 +53,7 @@ import:
     before: setup
   - image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
     add: /src/deckhouse-cli
-    to: /deckhouse-cli
+    to: /src
     before: setup
   - image: common/task-artifact
     add: /task
@@ -65,7 +65,7 @@ shell:
     - apt-get install -y libbtrfs-dev jq
   install:
     - export GOPROXY={{ $.GOPROXY }}
-    - cd /deckhouse-cli
+    - cd /src
     - task build:dist:all
     - mkdir -p /app/files/d8-cli
     - mv dist/{{ .CandiVersionMap.d8.d8CliVersion }}/* /app/files/d8-cli
