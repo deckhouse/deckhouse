@@ -55,7 +55,7 @@ The full list is available [in the `cert-manager` documentation](https://cert-ma
 The module automatically creates `ClusterIssuer` of supported cloud providers when filling in the module settings related to the cloud used.  
 If necessary, you can create such `ClusterIssuer` yourself.
 
-An example of using AWS Route53 is available in the section [How to protect `cert-manager` credentials](#how-to-protect-cert-manager-credentials).  
+An example of using AWS Route53 is available in the section [How to protect `cert-manager` credentials](#how-to-secure-cert-manager-credentials).  
 The list of all possible `ClusterIssuer`s that can be created is available in the [module templates](https://github.com/deckhouse/deckhouse/tree/main/modules/cert-manager/templates/cert-manager).
 
 Using third-party DNS providers is implemented via the `webhook` method.  

@@ -17,7 +17,7 @@ properties:
       Вы должны самостоятельно указать необходимый размер диска для хранения логов за период, указанный в параметре `retentionPeriodHours`.
       Loki не может удалять старые данные автоматически при заполнении диска.
 
-      Занятый объем автоматически мониторится с помощью модуля [extended-monitoring](../340-extended-monitoring/configuration.html#namespaced-kubernetes-объекты)
+      Занятый объем автоматически мониторится с помощью модуля [extended-monitoring](../extended-monitoring/configuration.html#namespaced-kubernetes-объекты)
 
       **Внимание.**  Если диск с данными Loki переполнится, приложение перестанет работать. Вам следует выбрать необходимый баланс между значениями параметров `retentionPeriodHours` и `diskSizeGigabytes`.
   retentionPeriodHours:

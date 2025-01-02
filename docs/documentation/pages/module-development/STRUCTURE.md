@@ -409,7 +409,7 @@ If confirmation is required to disable a module (the `confirmation` parameter is
 - `deckhouse` — *String.* Pod dependency [on Deckhouse Kubernetes Platform version](../dependencies/#deckhouse-kubernetes-platform-version-dependency) that the pod is compatible with.
 - `kubernetes` — *String.* Pod dependency [on Kubernetes version](../dependencies/#kubernetes-version-dependency) that the pod is compatible with.
 - `modules` — *Object.* Module dependency [on the version of other modules](../dependencies/#dependency-on-the-version-of-other-modules).
-- `stage` — *String.* [Module lifecycle stage](../versioning/#how-to-know-how-stable-a-module-is). Possible values: `Sandbox`, `Incubating`, `Graduated`, or `Deprecated`.
+- `stage` — *String.* [Module lifecycle stage](../versioning/#how-do-i-figure-out-how-stable-a-module-is). Possible values: `Sandbox`, `Incubating`, `Graduated`, or `Deprecated`.
 - `tags` — *Array of strings.* List of additional module tags. Tags are converted to [Module](../../cr.html#module) object labels according to the template `module.deckhouse.io/<TAG>=""` (where `<TAG>` is the tag name).
 
 For example, if you specify `tags: ["test", "myTag"]`, then the corresponding Module object in the cluster will be assigned the labels `module.deckhouse.io/test=""` and `module.deckhouse.io/myTag=""`.
