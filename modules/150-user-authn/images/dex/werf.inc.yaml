@@ -1,0 +1,55 @@
+---
+image: {{ .ModuleName }}/{{ .ImageName }}
+fromImage: common/distroless
+import:
+  - image: {{ $.ModuleName }}/{{ $.ImageName }}-dex-artifact
+    add: /src/dex
+    to: /usr/local/bin/dex
+    before: setup
+  - image: {{ $.ModuleName }}/{{ $.ImageName }}-dex-src-artifact
+    add: /web
+    to: /web
+    before: setup
+docker:
+  ENTRYPOINT: ["/usr/local/bin/dex", "serve", "/etc/dex/config.docker.yaml"]
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-dex-src-artifact
+fromImage: common/src-artifact
+final: false
+git:
+  - url: {{ $.SOURCE_REPO }}/dexidp/dex.git
+    to: /src
+    tag: v2.41.1
+    stageDependencies:
+      install:
+        - '**/*.go'
+        - '**/go.mod'
+        - '**/go.sum'
+  - add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches/
+    to: /patches
+  - add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/web
+    to: /web
+shell:
+  install:
+    - cd /src
+    - git apply /patches/*.patch --verbose
+    - rm -rf .git
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-dex-artifact
+from: {{ $.Images.BASE_GOLANG_23_BOOKWORM }}
+final: false
+import:
+  - image: {{ $.ModuleName }}/{{ $.ImageName }}-dex-src-artifact
+    add: /src
+    to: /src
+    before: install
+mount:
+  - fromPath: ~/go-pkg-cache
+    to: /go/pkg
+shell:
+  install:
+    - export GOPROXY={{ $.GOPROXY }} CGO_ENABLED=1 GOOS=linux GOARCH=amd64
+    - cd /src
+    - go build -ldflags '-s -w' -ldflags "-linkmode external -extldflags -static" -tags netgo -o dex ./cmd/dex
+    - chown 64535:64535 dex
+    - chmod 0700 dex
