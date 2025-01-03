@@ -1445,7 +1445,6 @@ jobs:
           WERF_ENV: "EE"
           DECKHOUSE_REGISTRY_READ_HOST: ${{secrets.DECKHOUSE_REGISTRY_READ_HOST}}
           CHECKER_IMAGE: "${{vars.DOC_LINK_CHECKER_IMAGE}}"
-          "/base_images/html-proofer:5.0.9-alpine@sha256:0ff718180d4b9db9f58e39f37ef9c5633462240a9c711f934456b240bf259add"
 
           WEB_REGISTRY_PATH: ${{steps.check_dev_registry.outputs.web_registry_path}}
         run: |
