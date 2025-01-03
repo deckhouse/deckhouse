@@ -1,48 +1,20 @@
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
-fromImage: common/alt-p11
+fromImage: common/shell-operator
 import:
-- image: common/shell-operator-artifact
-  add: /shell-operator/shell-operator
-  to: /shell-operator
-  before: setup
-- image: common/shell-operator-artifact
-  add: /shell-operator/shell_lib.sh
-  to: /shell_lib.sh
-  before: setup
-- image: common/shell-operator-artifact
-  add: /shell-operator/frameworks
-  to: /frameworks
-  before: setup
-- image: common/shell-operator-artifact
-  add: /jq/jq
-  to: /usr/local/bin/jq
-  before: setup
-{{- $k8sVersion := "1.27" }}
-{{- $image_version := printf "%s.%d" $k8sVersion (index $.CandiVersionMap "k8s" $k8sVersion "patch") | replace "." "-" }}
-- image: common/kubernetes-artifact-{{ $image_version }}
-  add: /src/_output/bin/kubectl
-  to: /usr/local/bin/kubectl
-  before: setup
-- image: tini-artifact
-  add: /tini/tini-static
-  to: /sbin/tini
-  before: install
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-binary-artifact
   add: /opt/python-static/bin
   to: /usr/bin
   before: install
   includePaths:
-  - python3.11
+  - python3*
   - python3
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-binary-artifact
-  add: /opt/python-static/lib/python3.11
-  to: /usr/lib/python3.11
+  add: /opt/python-static/lib
+  to: /usr/lib
   before: install
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-binary-artifact
-  add: /opt/python-static/lib/python3.11
-  to: /usr/lib/python3
-  before: install
+  includePaths:
+  - python3*
 - image: {{ $.ModuleName }}/falco-artifact
   add: /falco-package
   to: /
@@ -79,5 +51,11 @@ import:
   to: /opt/python-static
   before: install
 shell:
+  beforeInstall:
+  - apt-get install -y git
   install:
-  - /opt/python-static/bin/pip3 install -r requirements.txt
+  - export SOURCE_REPO={{ .SOURCE_REPO }}
+  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
+  - git clone --depth 1 {{ $.SOURCE_REPO }}/python-modules/wheels /wheels
+  - rm -rf /wheels/.git
+  - /opt/python-static/bin/pip3 install -f file:///wheels --no-index -r requirements.txt

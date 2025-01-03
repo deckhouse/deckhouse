@@ -2,7 +2,7 @@
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
 import:
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
   add: /src/manager
   to: /manager
   before: setup
@@ -29,8 +29,7 @@ import:
 shell:
   beforeInstall:
   {{- include "alpine packages proxy" . | nindent 2 }}
-  - apk add --no-cache openssh-client make bash
-  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
+  - apk add --no-cache make bash
   install:
   - cd /src
   - export GOPROXY={{ .GOPROXY }} GOOS=linux GOARCH=amd64 CGO_ENABLED=0
