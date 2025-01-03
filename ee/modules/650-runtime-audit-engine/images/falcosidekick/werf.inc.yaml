@@ -25,6 +25,10 @@ shell:
   - git clone -c advice.detachedHead=false --branch {{ $sidekickVersion }} --depth 1 {{ .SOURCE_REPO }}/falcosecurity/falcosidekick.git /src
   - cd /src
   - git apply /patches/*.patch --verbose
+  - git describe --tags --always --dirty > GIT_VERSION
+  - git rev-parse HEAD > GIT_HASH
+  - git log -1 --pretty=%ct > SOURCE_DATE_EPOCH
+  -
   - rm -rf /src/.git
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
@@ -46,7 +50,6 @@ shell:
   install:
   - cd /src
   - export GOPROXY={{ .GOPROXY }} GOOS=linux GOARCH=amd64 CGO_ENABLED=0
-  - go mod download
-  - make falcosidekick
+  - DIFF="" GIT_VERSION="$(cat GIT_VERSION)" GIT_HASH="$(cat GIT_HASH)" SOURCE_DATE_EPOCH="$(cat SOURCE_DATE_EPOCH)" make falcosidekick
   - chown -R 64535:64535 falcosidekick
   - chmod 0755 falcosidekick
