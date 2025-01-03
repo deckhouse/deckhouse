@@ -1188,7 +1188,7 @@ jobs:
           DOC_API_KEY: "${{secrets.DOC_API_KEY}}"
           DOC_API_URL: "${{vars.DOC_API_URL}}"
           WERF_ENV: "EE"
-          DECKHOUSE_REGISTRY_READ_HOST: ${{secrets.DECKHOUSE_REGISTRY_READ_HOST}}
+          DECKHOUSE_REGISTRY_READ_HOST: "${{secrets.DECKHOUSE_REGISTRY_READ_HOST}}"
           CHECKER_IMAGE: "${{vars.DOC_LINK_CHECKER_IMAGE}}"
 
           WEB_REGISTRY_PATH: ${{steps.check_rw_registry.outputs.web_registry_path}}
@@ -1228,7 +1228,7 @@ jobs:
           export WERF_DIR=$BASEDIR/documentation
           type werf && source $(werf ci-env github --verbose --as-file)
           echo "werf stage image docs/web:"
-          werf stage image web | tr 'a-z' 'A-Z'
+          werf stage image docs/web | tr 'a-z' 'A-Z'
           docker pull $(werf stage image docs/web)
           echo "Copying DKP documentation files from the docs/web container..."
           docker cp $(docker create --rm $(werf stage image docs/web)):/app ${_TMPDIR}/dkp-documentation
@@ -1263,6 +1263,9 @@ jobs:
           mv  ${_TMPDIR}/site_en/virtualization-platform ${_TMPDIR}/site_en/products/virtualization-platform
 
       - name: Check links with html-proofer (EN)
+        env:
+          DECKHOUSE_REGISTRY_READ_HOST: "${{secrets.DECKHOUSE_REGISTRY_READ_HOST}}"
+          CHECKER_IMAGE: "${{vars.DOC_LINK_CHECKER_IMAGE}}"
         run: |
           # Do not exit on html-proofer error.
           set +e
@@ -1276,6 +1279,9 @@ jobs:
           exit 0
 
       - name: Check links with html-proofer (RU)
+        env:
+          DECKHOUSE_REGISTRY_READ_HOST: "${{secrets.DECKHOUSE_REGISTRY_READ_HOST}}"
+          CHECKER_IMAGE: "${{vars.DOC_LINK_CHECKER_IMAGE}}"
         run: |
           # Do not exit on html-proofer error.
           set +e
