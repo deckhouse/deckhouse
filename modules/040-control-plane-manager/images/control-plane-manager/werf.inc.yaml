@@ -5,7 +5,6 @@
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $version | replace "." "-" }}
 fromImage: common/distroless
-fromCacheVersion: 1
 import:
 - image: common/kubernetes-artifact-{{ $image_version }}
   add: /src/_output/bin

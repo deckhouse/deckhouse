@@ -403,6 +403,7 @@ spec:
                           - csi
                           - downwardAPI
                           - emptyDir
+                          - ephemeral
                           - fc
                           - flexVolume
                           - flocker

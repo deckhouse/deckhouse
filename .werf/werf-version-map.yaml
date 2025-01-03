@@ -1,0 +1,52 @@
+---
+image: version-map-artifact
+final: false
+from: {{ .Images.BASE_ALPINE }}
+import:
+- image: common/yq4-artifact
+  add: /usr/local/bin/yq
+  to: /usr/local/bin/yq
+  before: install
+git:
+- add: /
+  to: /
+  stageDependencies:
+    setup:
+    {{- range $_, $edition := $.Editions }}
+      {{- if $edition.versionMapFile }}
+      - {{ $edition.versionMapFile }}
+      {{- end }}
+    {{- end }}
+  includePaths:
+{{- range $_, $edition := $.Editions }}
+  {{- if $edition.versionMapFile }}
+  - {{ $edition.versionMapFile }}
+  {{- end }}
+{{- end }}
+shell:
+  setup:
+{{- $previousEditionFile := "" }}
+{{- range $_, $edition := $.Editions }}
+  {{- $curEditionFile := printf "/version_map_%s.yml" $edition.name }}
+  {{- if $edition.versionMapFile }}
+    {{- $tmpEditionFile := printf "%s.tmp" $curEditionFile }}
+
+     {{- if $previousEditionFile }}
+  - cp {{ $edition.versionMapFile }} {{ $tmpEditionFile }}
+  - yq eval-all 'select(fileIndex == 0) * select(fileIndex == 1)' {{ $previousEditionFile }} {{ $tmpEditionFile }} > {{ $curEditionFile }}
+
+      {{- else }}
+
+  - cp {{ $edition.versionMapFile }} {{ $curEditionFile }}
+
+      {{- end }}
+
+  {{- else }}
+
+  - cp {{ $previousEditionFile }} {{ $curEditionFile }}
+
+  {{- end }}
+
+  {{- $previousEditionFile = $curEditionFile }}
+{{- end }}
+---
