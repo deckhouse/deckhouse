@@ -1,0 +1,93 @@
+candi:
+  features:
+    - summary: >-
+        Added a way to control node labels from files, stored in local directory and it
+        subdirectories.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/10905
+ci:
+  fixes:
+    - summary: Remove remaining code from matrix tests.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/11300
+    - summary: Fixed 'trdl' startup in older versions of 'make'.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/11097
+cloud-provider-dynamix:
+  fixes:
+    - summary: provider RBAC-for-us fixes.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/11235
+control-plane-manager:
+  features:
+    - summary: Change of logic detection enough free space for etcd-backup.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/11170
+deckhouse-controller:
+  features:
+    - summary: Add module dependency extender.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/11033
+dhctl:
+  features:
+    - summary: Parallel bootstrap cloud permanent node groups.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/11031
+docs:
+  features:
+    - summary: Added a selection of additional editions in step 4.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/10912
+  fixes:
+    - summary: Fixed errors in config generation.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/11375
+    - summary: Fixed broken links at Getting Started.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/11181
+    - summary: The command on the fifth step page has been fixed.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/11156
+    - summary: Added information about SIEM.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/11064
+extended-monitoring:
+  features:
+    - summary: Added IAM authentication support for ECR in image-availability-exporter.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/10893
+kube-dns:
+  features:
+    - summary: Refactor build and bump version coredns  to v1.12.0.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/11240
+local-path-provisioner:
+  fixes:
+    - summary: Fix security context for helperPod.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/11322
+log-shipper:
+  features:
+    - summary: >-
+        Add keepDeletedFilesOpenedFor option. Now it is possible to configure how long Vector keeps
+        deleted file in case of unavailability of a log storage (when Vector cannot send logs to a
+        storage and the internal buffer is already filled). Before the change, Vector used to hold
+        log files opened indefinitely, which can cause a node outage by flooding the disk space. The
+        option makes this behaviour configurable.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/10641
+node-manager:
+  fixes:
+    - summary: in bootstrap output error text in stderr for function load_phase2_script
+      pull_request: https://github.com/deckhouse/deckhouse/pull/11187
+okmeter:
+  fixes:
+    - summary: Remove RBAC from the okmeter module
+      pull_request: https://github.com/deckhouse/deckhouse/pull/10323
+      impact: okmeter agents are no longer able to access the Kubernetes API
+prometheus:
+  fixes:
+    - summary: Fix alerts-receiver CVE
+      pull_request: https://github.com/deckhouse/deckhouse/pull/11270
+    - summary: Fix alerts-receiver CVE
+      pull_request: https://github.com/deckhouse/deckhouse/pull/11257
+    - summary: Fix links to modules documentation
+      pull_request: https://github.com/deckhouse/deckhouse/pull/10748
+upmeter:
+  features:
+    - summary: Added `backup.deckhouse.io/cluster-config` label to relevant module CRDs.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/10568
+user-authn:
+  features:
+    - summary: Add HA option to DexAuthenticator CRD.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/11049
+      impact: >-
+        All authenticators deployed by deckhouse will inherit the highAvailable option from the
+        module instead of using the highAvailable option value of the user-authn. It means that if,
+        e.g., the prometheus module is running in non HA mode, the DexAuthenticator instance will
+        also be deployed without HA.
+
