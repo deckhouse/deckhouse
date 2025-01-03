@@ -31,7 +31,7 @@ import:
 shell:
   beforeInstall:
   {{- include "alpine packages proxy" . | nindent 2 }}
-  - apk add --no-cache automake autoconf libtool build-base
+  - apk add --no-cache automake autoconf libtool build-base bison asciidoctor
   install:
   - cd /src
   - echo "{{ $version }}" > version.txt
@@ -66,8 +66,8 @@ import:
 - image: {{ .ModuleName }}/build-chrony-static-artifact
   add: /opt/chrony-static
   before: setup
-- image: {{ .ModuleName }}/build-chrony-static-artifact
-  add: /sbin/tini-static
+- image: common/tini-artifact
+  add: /tini/tini-static
   to: /tini
   before: setup
 - image: {{ .ModuleName }}/build-entrypoint-artifact
