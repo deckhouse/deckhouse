@@ -18,3 +18,4 @@ openapi/values\.ya?ml$
 ^testing/.+$
 ^tools/.+$
 ^global-hooks/.+$
+patches/README.md$

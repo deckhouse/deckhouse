@@ -1,5 +1,5 @@
 ---
-{{- $date := "2024-12-26" }}
+{{- $date := "2024-12-27" }}
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
 from: {{ .Images.BASE_ALT_P11 }}
 final: false

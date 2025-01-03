@@ -1,0 +1,88 @@
+---
+image: {{ .ModuleName }}/{{ .ImageName }}
+fromImage: common/distroless
+import:
+  - image: {{ $.ModuleName }}/{{ $.ImageName }}-oauth2-proxy-artifact
+    add: /src/oauth2-proxy
+    to: /bin/oauth2_proxy
+    before: setup
+  - image: {{ $.ModuleName }}/{{ $.ImageName }}-url-exec-prober-artifact
+    add: /src/url-exec-prober
+    to: /usr/local/bin/url-exec-prober
+    before: setup
+docker:
+  ENTRYPOINT: [ "/bin/oauth2_proxy" ]
+  CMD: [ "--upstream=http://0.0.0.0:8080/", "--http-address=0.0.0.0:4180" ]
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-oauth2-proxy-src-artifact
+fromImage: common/src-artifact
+final: false
+git:
+  - add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches/
+    to: /patches
+  - url: {{ $.SOURCE_REPO }}/oauth2-proxy/oauth2-proxy.git
+    to: /src
+    tag: v7.5.1
+    stageDependencies:
+      install:
+        - '**/*.go'
+        - '**/go.mod'
+        - '**/go.sum'
+shell:
+  install:
+    - cd /src
+    - git apply --verbose /patches/*.patch
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-oauth2-proxy-artifact
+from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
+final: false
+import:
+  - image: {{ $.ModuleName }}/{{ $.ImageName }}-oauth2-proxy-src-artifact
+    add: /src
+    to: /src
+    before: install
+mount:
+  - fromPath: ~/go-pkg-cache
+    to: /go/pkg
+shell:
+  install:
+    - export GOPROXY={{ $.GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64
+    - cd /src
+    - go build -ldflags '-s -w' -o oauth2-proxy .
+    - chown 64535:64535 oauth2-proxy
+    - chmod 0700 oauth2-proxy
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-url-exec-prober-src-artifact
+fromImage: common/src-artifact
+final: false
+git:
+- add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/url-exec-prober
+  to: /src
+  includePaths:
+  - '**/*.go'
+  - '**/go.mod'
+  - '**/go.sum'
+  stageDependencies:
+    install:
+    - '**/*.go'
+    - '**/go.mod'
+    - '**/go.sum'
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-url-exec-prober-artifact
+from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
+final: false
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-url-exec-prober-src-artifact
+  add: /src
+  to: /src
+  before: install
+mount:
+  - fromPath: ~/go-pkg-cache
+    to: /go/pkg
+shell:
+  install:
+    - export GOPROXY={{ $.GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64
+    - cd /src
+    - go build -ldflags '-s -w' -o url-exec-prober main.go
+    - chown 64535:64535 url-exec-prober
+    - chmod 0700 url-exec-prober

@@ -299,7 +299,6 @@ var DefaultImagesDigests = map[string]interface{}{
 		"keepalived": "imageHash-keepalived-keepalived",
 	},
 	"kubeDns": map[string]interface{}{
-		"resolvWatcher":                     "imageHash-kubeDns-resolvWatcher",
 		"stsPodsHostsAppenderInitContainer": "imageHash-kubeDns-stsPodsHostsAppenderInitContainer",
 		"stsPodsHostsAppenderWebhook":       "imageHash-kubeDns-stsPodsHostsAppenderWebhook",
 	},
@@ -319,13 +318,14 @@ var DefaultImagesDigests = map[string]interface{}{
 		"vector": "imageHash-logShipper-vector",
 	},
 	"loki": map[string]interface{}{
-		"loki": "imageHash-loki-loki",
+		"loki":            "imageHash-loki-loki",
+		"lokiSrcArtifact": "imageHash-loki-lokiSrcArtifact",
 	},
 	"metallb": map[string]interface{}{
-		"controller":     "imageHash-metallb-controller",
-		"l2lbController": "imageHash-metallb-l2lbController",
-		"l2lbSpeaker":    "imageHash-metallb-l2lbSpeaker",
-		"speaker":        "imageHash-metallb-speaker",
+		"l2lbController":    "imageHash-metallb-l2lbController",
+		"l2lbSpeaker":       "imageHash-metallb-l2lbSpeaker",
+		"metallbController": "imageHash-metallb-metallbController",
+		"metallbSpeaker":    "imageHash-metallb-metallbSpeaker",
 	},
 	"monitoringKubernetes": map[string]interface{}{
 		"ebpfExporter":                      "imageHash-monitoringKubernetes-ebpfExporter",
@@ -391,9 +391,11 @@ var DefaultImagesDigests = map[string]interface{}{
 		"memcached":                   "imageHash-prometheus-memcached",
 		"memcachedExporter":           "imageHash-prometheus-memcachedExporter",
 		"mimir":                       "imageHash-prometheus-mimir",
+		"mimirSrcArtifact":            "imageHash-prometheus-mimirSrcArtifact",
 		"prometheus":                  "imageHash-prometheus-prometheus",
 		"prometheuspp":                "imageHash-prometheus-prometheuspp",
 		"promxy":                      "imageHash-prometheus-promxy",
+		"promxySrcArtifact":           "imageHash-prometheus-promxySrcArtifact",
 		"trickster":                   "imageHash-prometheus-trickster",
 	},
 	"prometheusMetricsAdapter": map[string]interface{}{

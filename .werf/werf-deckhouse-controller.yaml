@@ -1,0 +1,55 @@
+---
+image: deckhouse-controller-artifact
+final: false
+fromImage: base-for-go
+git:
+- add: /
+  to: /deckhouse
+  includePaths:
+    {{ include "controller_src_git_imports_include_paths" . | nindent 4}}
+  excludePaths:
+    {{ .Files.Get (printf "tools/build_includes/modules-excluded-%s.yaml" .Env) | nindent 4}}
+    {{ include "controller_src_git_imports_exclude_paths" . | nindent 4}}
+  stageDependencies:
+    setup:
+      {{ include "controller_src_git_imports_stage_deps" . | nindent 6}}
+{{ .Files.Get (printf "tools/build_includes/modules-with-dependencies-%s.yaml" .Env) }}
+{{ .Files.Get (printf "tools/build_includes/candi-%s.yaml" .Env) }}
+mount:
+- fromPath: ~/go-pkg-cache
+  to: /go/pkg
+shell:
+  beforeInstall:
+  - mkdir /deckhouse /out
+
+  setup:
+  # Migrate internal packages imports
+{{- range $_, $edition := $.Editions }}
+  {{- if not $edition.skipFixingImports }}
+  - find /deckhouse/modules/* -type f -name '*.go' -exec sed -E -i 's|github.com/deckhouse/deckhouse/{{ $edition.modulesDir }}|github.com/deckhouse/deckhouse/modules|g' {} +
+  {{- end }}
+{{- end }}
+  - |
+    if [ -z "$CI_COMMIT_TAG" ]; then
+        latest_tag=$(git -c 'versionsort.suffix=-' ls-remote --exit-code --refs --sort='version:refname' --tags https://github.com/deckhouse/deckhouse.git 'v*.*.*' | tail --lines=1 | cut --delimiter='/' --fields=3)
+        IFS='.' read -r -a version_parts <<< "$latest_tag"
+
+        major=${version_parts[0]}
+        minor=${version_parts[1]}
+        new_minor=$((minor + 1))
+        new_patch=0
+        prerelease={{- env "CI_COMMIT_REF_SLUG" "main" }}
+
+        new_version="${major}.${new_minor}.${new_patch}-${prerelease}+${WERF_COMMIT_HASH::7}"
+        export CI_COMMIT_TAG=${new_version}
+    fi
+  - cd /deckhouse
+  # Generate hooks imports for particular edition
+  - go generate ./tools/register.go
+  # Go modules depend on `register-go-hooks.go` file, hence we cannot split downloading dependencies and building
+  # into separate phases.
+  - go mod download
+  - cd /deckhouse/deckhouse-controller
+  - D8_VERSION=${CI_COMMIT_TAG} ./go-build.sh
+  - mv deckhouse-controller /out
+---
