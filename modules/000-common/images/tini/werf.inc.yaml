@@ -3,16 +3,17 @@ image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
 fromImage: common/src-artifact
 final: false
 git:
-- add: /{{ $.ModulePath }}modules/000-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
+- add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/patches
   to: /patches
   stageDependencies:
     install:
       - '**/*'
 shell:
   install:
-    - git clone --depth 1 {{ .SOURCE_REPO }}/krallin/tini --branch v0.19.0 /src && rm -rf /src/.git
     - cd /src
+    - git clone --depth 1 {{ .SOURCE_REPO }}/krallin/tini --branch v0.19.0 .
     - git apply /patches/*.patch --verbose
+    - rm -rf /src/.git
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
 from: {{ $.Images.BASE_ALPINE }}

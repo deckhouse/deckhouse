@@ -2,28 +2,51 @@
 {{- range $key, $value := .CandiVersionMap.k8s }}
   {{- $version := toString $key }}
   {{- if $value.csi.livenessprobe }}
+    {{- $src_version := toString $value.csi.livenessprobe }}
+    {{- $patches := (printf "/%smodules/%s-%s/images/%s" $.ModulePath $.ModulePriority $.ModuleName $.ImageName) }}
+    {{- $patch := false }}
+    {{- range $path, $_ := $.Files.Glob (printf "%s/*" $patches) }}
+      {{- if contains $src_version $path }}
+        {{- $patch = true }}
+      {{- end }}
+    {{- end }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $version | replace "." "-" }}
 fromImage: common/distroless
 import:
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
   add: /livenessprobe
   to: /livenessprobe
   before: setup
 docker:
   ENTRYPOINT: ["/livenessprobe"]
 ---
-artifact: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $version | replace "." "-" }}
-fromArtifact: common/src-artifact
+image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $version | replace "." "-" }}
+fromImage: common/src-artifact
+final: false
+    {{- if $patch }}
+git:
+- add: {{ $patches }}/patches/{{ $src_version }}
+  to: /patches
+  stageDependencies:
+    install:
+    - '**/*'
+    {{- end }}
 shell:
   install:
-  - git clone --depth 1 --branch {{ $value.csi.livenessprobe }} {{ $.SOURCE_REPO }}/kubernetes-csi/livenessprobe.git /src
-  - rm -r /src/.git
+  - cd /src
+  - git clone --depth 1 --branch {{ $src_version }} {{ $.SOURCE_REPO }}/kubernetes-csi/livenessprobe.git .
+  {{- if $patch }}
+  - git apply /patches/*.patch --verbose
+  {{- end }}
+  - rm -rf vendor
+  - rm -rf .git
 ---
-artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
+image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
 from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
+final: false
 import:
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $version | replace "." "-" }}
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $version | replace "." "-" }}
   add: /src
   to: /src
   before: install
@@ -34,6 +57,7 @@ shell:
   install:
   - export GO_VERSION=${GOLANG_VERSION} GOPROXY={{ $.GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64
   - cd /src
+  - go mod download
   - make build
   - cp bin/livenessprobe /livenessprobe
   - chown 64535:64535 /livenessprobe
