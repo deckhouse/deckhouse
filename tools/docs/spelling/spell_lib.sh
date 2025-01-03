@@ -16,7 +16,9 @@
 
 DICTIONARIES="/app/dictionaries/ru_RU,/app/dictionaries/en_US,/app/dictionaries/dev_OPS"
 FILES_TO_IGNORE="$(dirname "$(realpath "$0")")/filesignore"
-FILES_MATCH_PATTERN='.+(.md|.html|.htm|.liquid|.yaml|.yml)$'
+FILES_MATCH_PATTERN='.+\.(md|html|htm|liquid|yaml|yml)$'
+#FIND_RE_MATCH_PATTERN='.\+\(docs\|openapi\|crds\).\+\.\(md\|html\|htm\|liquid\|yaml\|yml\)$'
+FIND_RE_MATCH_PATTERN='.\+\.\(md\|html\|htm\|liquid\|yaml\|yml\)$'
 
 MSG_PREFIX_FILE_TYPOS="Possible typos in"
 
@@ -34,9 +36,16 @@ validate_file_name() {
   # Check if the list of files to ignore exists
   if test -f "${FILES_TO_IGNORE}"; then
     ignore_patterns=$(grep -vE '^#\s*|^\s*$' "${FILES_TO_IGNORE}" | tr '\n' '|' | sed 's/|$//')
+
     if [[ "$file_name" =~ $ignore_patterns ]]; then
-      echo "Ignoring ${file_name}..." >&2
+      if [[ "$DEBUG" == 1 ]]; then
+        echo "Ignoring ${file_name}..." >&2
+      fi
       return 1
+    else
+      if [[ "$DEBUG" == 1 ]]; then
+        echo "File name is valid" >&2
+      fi
     fi
   else
     # Warn if the list of files to ignore is missing
