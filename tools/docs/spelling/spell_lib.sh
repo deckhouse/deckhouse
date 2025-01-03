@@ -17,8 +17,7 @@
 DICTIONARIES="/app/dictionaries/ru_RU,/app/dictionaries/en_US,/app/dictionaries/dev_OPS"
 FILES_TO_IGNORE="$(dirname "$(realpath "$0")")/filesignore"
 FILES_MATCH_PATTERN='.+\.(md|html|htm|liquid|yaml|yml)$'
-#FIND_RE_MATCH_PATTERN='.\+\(docs\|openapi\|crds\).\+\.\(md\|html\|htm\|liquid\|yaml\|yml\)$'
-FIND_RE_MATCH_PATTERN='.\+\.\(md\|html\|htm\|liquid\|yaml\|yml\)$'
+FIND_RE_MATCH_PATTERN='.\+\(docs\|openapi\|crds\).\+\.\(md\|html\|htm\|liquid\|yaml\|yml\)$'
 
 MSG_PREFIX_FILE_TYPOS="Possible typos in"
 
