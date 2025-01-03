@@ -28,7 +28,6 @@ shell:
   - git describe --tags --always --dirty > GIT_VERSION
   - git rev-parse HEAD > GIT_HASH
   - git log -1 --pretty=%ct > SOURCE_DATE_EPOCH
-  -
   - rm -rf /src/.git
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
