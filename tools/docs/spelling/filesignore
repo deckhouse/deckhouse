@@ -9,6 +9,9 @@ site/_layouts/.+$
 /images/.+\.ya?ml$
 /templates/.+\.ya?ml$
 openapi/values\.ya?ml$
+^.werf/.+$
+werf.yaml
+werf-giterminism.yaml
 ^.github/.+$
 ^go_lib/.+$
 ^helm_lib/.+$
@@ -18,3 +21,6 @@ openapi/values\.ya?ml$
 ^testing/.+$
 ^tools/.+$
 ^global-hooks/.+$
+/pkg/
+/images/
+/templates/

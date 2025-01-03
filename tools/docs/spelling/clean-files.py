@@ -108,6 +108,7 @@ if file_extension == 'html' or file_extension == 'md' or file_extension == 'liqu
     text = delete_nbsp(text)
     print(text)
 elif file_extension == 'yml' or file_extension == 'yaml':
+    data = None
     if args.stdin:
         try:
             data = yaml.safe_load(sys.stdin.read())
@@ -117,11 +118,19 @@ elif file_extension == 'yml' or file_extension == 'yaml':
             sys.exit(1)
     else:
         with open(sys.argv[1], 'r') as f:
-            data = yaml.safe_load(Path(sys.argv[1]).read_text())
+            try:
+                data = yaml.safe_load(Path(sys.argv[1]).read_text())
+            except FileNotFoundError:
+                print(f"File not found: {sys.argv[1]}")
+            except yaml.YAMLError as e:
+                print(f"Error parsing YAML: {e}")
+            except Exception as e:
+                print(f"An error occurred: {e}")
 
-    descriptions = find_all_keys(data)
-    if bool(descriptions):
-        for item in descriptions:
-            text = delete_code_blocks(str(item))
-            text = delete_md_links(text)
-            print(text)
+    if data:
+        descriptions = find_all_keys(data)
+        if bool(descriptions):
+            for item in descriptions:
+                text = delete_code_blocks(str(item))
+                text = delete_md_links(text)
+                print(text)
