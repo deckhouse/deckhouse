@@ -36,7 +36,7 @@ title: "Модуль cert-manager: FAQ"
    * `digitalocean`
    * `route53`
 1. `ClusterIssuer` использующие метод `HTTP-01`.  
-Добавляются автоматически, если их создание не отключено в [настройках модуля](./configuration.html#parameters-disableletsencrypt).
+   Добавляются автоматически, если их создание не отключено в [настройках модуля](./configuration.html#parameters-disableletsencrypt).
    * `letsencrypt`
    * `letsencrypt-staging`
 

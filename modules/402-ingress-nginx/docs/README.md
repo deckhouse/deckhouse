@@ -75,7 +75,7 @@ All the collected metrics have service labels that allow you to identify the con
   * `*_upstream_retries_{count,sum}` — the number of requests for which retries were sent to backends, and the number of retries;
 
 * The following metrics are collected for the overall level:
-  * `*_geohash_total` — the total number of requests with a specific geohash (additional labes: `geohash`, `place`);
+  * `*_geohash_total` — the total number of requests with a specific geohash (additional labels: `geohash`, `place`);
 
 * The following metrics are collected for the detail_backend level:
   * `*_lowres_upstream_response_seconds` — same as a similar metric for overall and detail;

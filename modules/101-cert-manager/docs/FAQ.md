@@ -30,14 +30,16 @@ The `HTTP-01` method does not support issuing wildcard certificates.
 The `ClusterIssuers` in standard delivery set that issue certificates via Let's Encrypt are divided into two types:
 
 1. `ClusterIssuer` specific to the cloud provider being used.
-Added automatically when filling in the [module settings](./configuration.html) associated with the cloud provider.  
-These `ClusterIssuers` support the `DNS-01` method.
+
+   Added automatically when filling in the [module settings](./configuration.html) associated with the cloud provider.  
+   These `ClusterIssuers` support the `DNS-01` method.
    * `clouddns`
    * `cloudflare`
    * `digitalocean`
    * `route53`
-1. `ClusterIssuers` using the `HTTP-01` method.  
-Added automatically unless their creation is disabled in the [module settings](./configuration.html#parameters-disableletsencrypt).
+1. `ClusterIssuers` using the `HTTP-01` method.
+  
+   Added automatically unless their creation is disabled in the [module settings](./configuration.html#parameters-disableletsencrypt).
    * `letsencrypt`
    * `letsencrypt-staging`
 

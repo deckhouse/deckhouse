@@ -177,7 +177,7 @@ The workflow for dealing with static nodes when using Cluster API Provider Stati
 
    The following is a list of possible `StaticInstance` states and its associated servers (VMs) and cluster nodes:
    - `Pending`. The server is not configured and there is no associated node in the cluster.
-   - `Bootstraping`. The procedure for configuring the server (VM) and connecting the node to the cluster is in progress.
+   - `Bootstrapping`. The procedure for configuring the server (VM) and connecting the node to the cluster is in progress.
    - `Running`. The server is configured and the associated node is added to the cluster.
    - `Cleaning`. The procedure of cleaning up the server and disconnecting the node from the cluster is in progress.
 

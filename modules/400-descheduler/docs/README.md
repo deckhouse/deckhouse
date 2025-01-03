@@ -72,7 +72,7 @@ Node resource usage takes into account [extended resources](https://kubernetes.i
 ### RemoveDuplicates
 
 {% alert level="info" %}
-Prevents multiple pods from the same controller (ReplicaSet, ReplicationController, StatefulSet) or the samee Job from running on the same node.
+Prevents multiple pods from the same controller (ReplicaSet, ReplicationController, StatefulSet) or the same Job from running on the same node.
 {% endalert %}
 
 The strategy ensures that no more than one pod of a ReplicaSet, ReplicationController, StatefulSet, or pods of a single Job is running on the same node. If there are two or more such pods, the module evicts the excess pods so that they are better distributed across the cluster.

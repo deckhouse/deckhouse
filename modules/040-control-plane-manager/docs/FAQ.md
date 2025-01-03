@@ -661,7 +661,7 @@ Follow these steps to restore a single-master cluster on master node:
    crictl ps --label io.kubernetes.pod.name=etcd-$HOSTNAME
    ```
 
-#### Restorige a multi-master cluster
+#### Restoring a multi-master cluster
 
 Follow these steps to restore a multi-master cluster:
 

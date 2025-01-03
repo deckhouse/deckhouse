@@ -258,7 +258,7 @@ Enabling federation (via the `istio.federation.enabled = true` module parameter)
 To establish a federation, you must:
 
 * Create a set of `IstioFederation` resources in each cluster that describe all the other clusters.
-  * After successful auto-negotiation between clusters, the status of `IstioFederation` resoure will be filled with neighbour's public and private metadata (`status.metadataCache.public` and `status.metadataCache.private`).
+  * After successful auto-negotiation between clusters, the status of `IstioFederation` resource will be filled with neighbour's public and private metadata (`status.metadataCache.public` and `status.metadataCache.private`).
 * Add the `federation.istio.deckhouse.io/public-service: ""` label to each resource(`service`) that is considered public within the federation.
   * In the other federation clusters, a corresponding `ServiceEntry` will be created for each `service`, leading to the `ingressgateway` of the original cluster.
 
