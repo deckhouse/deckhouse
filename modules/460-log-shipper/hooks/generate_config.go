@@ -303,7 +303,7 @@ func generateConfig(input *go_hook.HookInput) error {
 		if err != nil {
 			return errors.Wrap(err, "failed to get tls spec")
 		}
-		if destinationTLSSpec.SecretRef != nil {
+		if destinationTLSSpec.SecretRef != nil && destinationTLSSpec.SecretRef.Name != "" {
 			secretTLSSpec, err := extractTLSSpecFromSecrets(destinationTLSSpec.SecretRef.Name, tlsSecretsSnap)
 			if err != nil {
 				return errors.Wrap(err, "failed to extract tls data from secret")
