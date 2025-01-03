@@ -305,3 +305,73 @@ document.addEventListener('DOMContentLoaded', () => {
 window.addEventListener("load", function() {
   openDiagram()
 });
+
+document.addEventListener('DOMContentLoaded', function () {
+  let pre = document.querySelectorAll('pre');
+
+  if (pre.length) {
+    pre.forEach((el) => {
+      el.addEventListener('mouseenter', () => {
+        if (el.querySelector('.icon--copy') &&
+          !el.querySelector('.icon--copy').classList.contains('show')) {
+          el.querySelector('.icon--copy').classList.add('show');
+          return;
+        };
+
+        let copyBtn = document.createElement('div');
+        copyBtn.classList.add('icon--copy');
+        copyBtn.setAttribute('data-clipboard-target', '');
+
+        el.prepend(copyBtn);
+
+        let copyBtnTippy = tippy(el.querySelector('.icon--copy'), {
+          placement: 'left',
+          arrow: false,
+          animation: 'shift-away-subtle',
+          theme: 'light',
+          content: 'Copy',
+          hideOnClick: false,
+          delay: [300, 50],
+          offset: [0, 10],
+          duration: [300],
+        });
+
+        el.querySelector('.icon--copy').addEventListener('click', () => {
+          const code = el.querySelector('code').textContent;
+
+          navigator.clipboard.writeText(code).then(r => {
+            copyBtnTippy.setContent('Copied!');
+
+            setTimeout(() => {
+              copyBtnTippy.hide()
+            }, 1000);
+          }, () => {
+            copyBtnTippy.setContent('Error!');
+
+            setTimeout(() => {
+              copyBtnTippy.hide()
+            }, 1000);
+          });
+        });
+
+        setTimeout(() => {
+          el.querySelector('.icon--copy').classList.add('show')
+        }, 0);
+      });
+
+      el.addEventListener('mouseleave', (e) => {
+        if (!el.querySelector('.icon--copy')) {
+          return;
+        };
+
+        el.querySelector('.icon--copy').classList.remove('show');
+
+        setTimeout(() => {
+          if (!el.querySelector('.icon--copy').classList.contains('show')) {
+            el.querySelector('.icon--copy').remove();
+          };
+        }, 300);
+      });
+    });
+  };
+});
