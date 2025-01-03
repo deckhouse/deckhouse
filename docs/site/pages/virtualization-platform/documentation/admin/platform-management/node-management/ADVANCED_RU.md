@@ -4,39 +4,41 @@ permalink: ru/virtualization-platform/documentation/admin/platform-management/no
 lang: ru
 ---
 
-## Восстановление master-узла, если kubelet не может загрузить компоненты control plane
+## Восстановление master-узла, если kubelet не может загрузить компоненты управляющего слоя
 
-Подобная ситуация может возникнуть, если в кластере с одним master-узлом на нем были удалены образы
-компонентов control plane (например, удалена директория `/var/lib/containerd`). В этом случае kubelet при рестарте не сможет скачать образы компонентов `control plane`, поскольку на master-узле нет параметров авторизации в `registry.deckhouse.io`.
-
-Ниже инструкция по восстановлению master-узла.
+Подобная ситуация может возникнуть, если в кластере с одним master-узлом были удалены образы
+компонентов управляющего слоя (например, удалена директория `/var/lib/containerd`). В этом случае kubelet при рестарте не сможет скачать образы компонентов управляющего слоя, поскольку на master-узле нет параметров авторизации в `registry.deckhouse.io`.
 
 ### containerd
 
-Для восстановления работоспособности master-узла нужно в любом рабочем кластере под управлением Deckhouse выполнить команду:
+Для восстановления работоспособности master-узла выполните следующие шаги:
 
-```shell
-d8 k -n d8-system get secrets deckhouse-registry -o json |
-jq -r '.data.".dockerconfigjson"' | base64 -d |
-jq -r '.auths."registry.deckhouse.io".auth'
-```
+1. В любом рабочем кластере под управлением Deckhouse выполните следующую команду:
 
-Вывод команды нужно скопировать и присвоить переменной AUTH на поврежденном master-узле.
-Далее на поврежденном master-узле нужно загрузить образы компонентов `control-plane`:
+   ```shell
+   d8 k -n d8-system get secrets deckhouse-registry -o json |
+   jq -r '.data.".dockerconfigjson"' | base64 -d |
+   jq -r '.auths."registry.deckhouse.io".auth'
+   ```
 
-```shell
-for image in $(grep "image:" /etc/kubernetes/manifests/* | awk '{print $3}'); do
-  crictl pull --auth $AUTH $image
-done
-```
+1. Скопируйте вывод команды и присвойте его переменной `AUTH` на повреждённом master-узле.
+1. Загрузите образы компонентов управляющего слоя на повреждённом master-узле:
 
-После загрузки образов необходимо перезапустить kubelet.
+   ```shell
+   for image in $(grep "image:" /etc/kubernetes/manifests/* | awk '{print $3}'); do
+     crictl pull --auth $AUTH $image
+   done
+   ```
+
+1. После того как образы будут загружены, перезапустите kubelet.
 
 ## Изменение CRI для NodeGroup
 
-> **Внимание!** Возможен переход только с `Containerd` на `NotManaged` и обратно (параметр [cri.type](../../../reference/cr.html#nodegroup-v1-spec-cri-type)).
+{% alert level="info" %}
+Возможен переход CRI только с `Containerd` на `NotManaged` и обратно.
+{% endalert %}
 
-Установить параметр [cri.type](../../../reference/cr.html#nodegroup-v1-spec-cri-type) в `Containerd` или в `NotManaged`.
+Чтобы сменить CRI, задайте для параметра [cri.type](../../../../reference/cr/nodegroup.html#nodegroup-v1-spec-cri-type) значение `Containerd` или `NotManaged`.
 
 Пример YAML-манифеста NodeGroup:
 
@@ -65,19 +67,24 @@ spec:
   d8 k patch nodegroup <имя NodeGroup> --type merge -p '{"spec":{"cri":{"type":"NotManaged"}}}'
   ```
 
-> **Внимание!** При смене `cri.type` для NodeGroup, созданных с помощью `dhctl`, нужно менять ее в `dhctl config edit provider-cluster-configuration` и настройках объекта NodeGroup.
+{% alert level="warning" %}
+При смене `cri.type` для объектов NodeGroup, созданных с помощью `dhctl`, измените CRI в `dhctl config edit provider-cluster-configuration` и настройках объекта NodeGroup.
+{% endalert %}
 
-После настройки нового CRI для NodeGroup модуль `node-manager` по одному drain'ит узлы и устанавливает на них новый CRI. Обновление узла
+После настройки нового CRI для NodeGroup модуль `node-manager` выполняет drain на каждом узле и устанавливает на них новый CRI. Обновление узла
 сопровождается простоем (disruption). В зависимости от настройки `disruption` для NodeGroup модуль `node-manager` либо автоматически разрешает обновление
 узлов, либо требует ручного подтверждения.
 
 ## Изменение CRI для всего кластера
 
-> **Внимание!** Возможен переход только с `Containerd` на `NotManaged` и обратно (параметр [cri.type](../../../reference/cr.html#nodegroup-v1-spec-cri-type)).
+{% alert level="info" %}
+Возможен переход CRI только с `Containerd` на `NotManaged` и обратно.
+{% endalert %}
 
 Необходимо с помощью утилиты `dhctl` отредактировать параметр `defaultCRI` в конфиге `cluster-configuration`.
 
 Также возможно выполнить эту операцию с помощью патча. Пример:
+
 * Для `Containerd`:
 
   ```shell
@@ -93,11 +100,13 @@ spec:
   ```
 
 Если необходимо какую-то NodeGroup оставить на другом CRI, перед изменением `defaultCRI` необходимо установить CRI для этой NodeGroup,
-как описано [здесь](#как-изменить-cri-для-nodegroup).
+следуя [соответствующей инструкции](#изменение-cri-для-nodegroup).
 
-> **Внимание!** Изменение `defaultCRI` влечет за собой изменение CRI на всех узлах, включая master-узлы.
-> Если master-узел один, данная операция является опасной и может привести к полной неработоспособности кластера!
-> Предпочтительный вариант — сделать multimaster и поменять тип CRI!
+{% alert level="danger" %}
+Изменение `defaultCRI` влечет за собой изменение CRI на всех узлах, включая master-узлы.
+Если master-узел один, данная операция является опасной и может привести к полной неработоспособности кластера.
+Предпочтительный вариант — сделать multimaster и поменять тип CRI.
+{% endalert %}
 
 При изменении CRI в кластере для master-узлов необходимо выполнить дополнительные шаги:
 
@@ -117,69 +126,72 @@ spec:
 
 ## Как использовать containerd с поддержкой Nvidia GPU?
 
-Необходимо создать отдельную NodeGroup для GPU-нод.
+1. Создайте отдельную NodeGroup для GPU-узлов:
 
-```yaml
-apiVersion: deckhouse.io/v1
-kind: NodeGroup
-metadata:
-  name: gpu
-spec:
-  chaos:
-    mode: Disabled
-  disruptions:
-    approvalMode: Automatic
-  nodeType: CloudStatic
-```
+   ```yaml
+   apiVersion: deckhouse.io/v1
+   kind: NodeGroup
+   metadata:
+     name: gpu
+   spec:
+     chaos:
+       mode: Disabled
+     disruptions:
+       approvalMode: Automatic
+     nodeType: CloudStatic
+   ```
 
-Далее необходимо создать NodeGroupConfiguration для NodeGroup `gpu` для конфигурации containerd:
+1. Далее необходимо создать NodeGroupConfiguration для NodeGroup `gpu` для конфигурации containerd:
 
-```yaml
-apiVersion: deckhouse.io/v1alpha1
-kind: NodeGroupConfiguration
-metadata:
-  name: containerd-additional-config.sh
-spec:
-  bundles:
-  - '*'
-  content: |
-    # Copyright 2023 Flant JSC
-    #
-    # Licensed under the Apache License, Version 2.0 (the "License");
-    # you may not use this file except in compliance with the License.
-    # You may obtain a copy of the License at
-    #
-    #     http://www.apache.org/licenses/LICENSE-2.0
-    #
-    # Unless required by applicable law or agreed to in writing, software
-    # distributed under the License is distributed on an "AS IS" BASIS,
-    # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-    # See the License for the specific language governing permissions and
-    # limitations under the License.
+   ```yaml
+   apiVersion: deckhouse.io/v1alpha1
+   kind: NodeGroupConfiguration
+   metadata:
+     name: containerd-additional-config.sh
+   spec:
+     bundles:
+     - '*'
+     content: |
+       # Copyright 2023 Flant JSC
+       #
+       # Licensed under the Apache License, Version 2.0 (the "License");
+       # you may not use this file except in compliance with the License.
+       # You may obtain a copy of the License at
+       #
+       #     http://www.apache.org/licenses/LICENSE-2.0
+       #
+       # Unless required by applicable law or agreed to in writing, software
+       # distributed under the License is distributed on an "AS IS" BASIS,
+       # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+       # See the License for the specific language governing permissions and
+       # limitations under the License.
 
-    mkdir -p /etc/containerd/conf.d
-    bb-sync-file /etc/containerd/conf.d/nvidia_gpu.toml - << "EOF"
-    [plugins]
-      [plugins."io.containerd.grpc.v1.cri"]
-        [plugins."io.containerd.grpc.v1.cri".containerd]
-          default_runtime_name = "nvidia"
-          [plugins."io.containerd.grpc.v1.cri".containerd.runtimes]
-            [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.runc]
-              [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.nvidia]
-                privileged_without_host_devices = false
-                runtime_engine = ""
-                runtime_root = ""
-                runtime_type = "io.containerd.runc.v1"
-                [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.nvidia.options]
-                  BinaryName = "/usr/bin/nvidia-container-runtime"
-                  SystemdCgroup = false
-    EOF
-  nodeGroups:
-  - gpu
-  weight: 31
-```
+       mkdir -p /etc/containerd/conf.d
+       bb-sync-file /etc/containerd/conf.d/nvidia_gpu.toml - << "EOF"
+       [plugins]
+         [plugins."io.containerd.grpc.v1.cri"]
+           [plugins."io.containerd.grpc.v1.cri".containerd]
+             default_runtime_name = "nvidia"
+             [plugins."io.containerd.grpc.v1.cri".containerd.runtimes]
+               [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.runc]
+                 [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.nvidia]
+                   privileged_without_host_devices = false
+                   runtime_engine = ""
+                   runtime_root = ""
+                   runtime_type = "io.containerd.runc.v1"
+                   [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.nvidia.options]
+                     BinaryName = "/usr/bin/nvidia-container-runtime"
+                     SystemdCgroup = false
+       EOF
+     nodeGroups:
+     - gpu
+     weight: 31
+   ```
 
-Далее необходимо добавить NodeGroupConfiguration для установки драйверов Nvidia для NodeGroup `gpu`.
+1. Добавьте NodeGroupConfiguration для установки драйверов Nvidia для NodeGroup `gpu`:
+   * [пример конфигурации для Ubuntu](#ubuntu);
+   * [пример конфигурации для CentOS](#centos).
+1. Выполните бутстрап и перезагрузите узел.
 
 ### Ubuntu
 
@@ -218,7 +230,7 @@ spec:
   weight: 30
 ```
 
-### Centos
+### CentOS
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -254,11 +266,9 @@ spec:
   weight: 30
 ```
 
-После этого выполните бутстрап и ребут узла.
-
 ### Как проверить, что все прошло успешно?
 
-Создайте в кластере Job:
+Создайте в кластере `Job` под именем `nvidia-cuda-test`:
 
 ```yaml
 apiVersion: batch/v1
@@ -281,10 +291,15 @@ spec:
             - nvidia-smi
 ```
 
-И посмотрите логи:
+Посмотрите логи, выполнив следующую команду:
 
 ```shell
-$ d8 k logs job/nvidia-cuda-test
+d8 k logs job/nvidia-cuda-test
+```
+
+Пример вывода команды:
+
+```console
 Tue Jan 24 11:36:18 2023
 +-----------------------------------------------------------------------------+
 | NVIDIA-SMI 525.60.13    Driver Version: 525.60.13    CUDA Version: 12.0     |
@@ -307,7 +322,7 @@ Tue Jan 24 11:36:18 2023
 +-----------------------------------------------------------------------------+
 ```
 
-Создайте в кластере Job:
+Создайте в кластере `Job` под именем `gpu-operator-test`:
 
 ```yaml
 apiVersion: batch/v1
@@ -328,10 +343,15 @@ spec:
           imagePullPolicy: "IfNotPresent"
 ```
 
-И посмотрите логи:
+Посмотрите логи, выполнив следующую команду:
 
 ```shell
-$ d8 k logs job/gpu-operator-test
+d8 k logs job/gpu-operator-test
+```
+
+Пример вывода команды:
+
+```console
 [Vector addition of 50000 elements]
 Copy input data from the host memory to the CUDA device
 CUDA kernel launch with 196 blocks of 256 threads
@@ -342,7 +362,18 @@ Done
 
 ## Как добавить несколько статических узлов в кластер вручную?
 
-Используйте существующий или создайте новый custom resource [NodeGroup](../../../reference/cr.html#nodegroup) ([пример](examples.html#пример-описания-статической-nodegroup) NodeGroup с именем `worker`).
+Используйте существующий или создайте новый ресурс [NodeGroup](../../../../reference/cr/nodegroup.html).
+
+Пример ресурса NodeGroup с именем `worker`:
+
+```yaml
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: worker
+spec:
+  nodeType: Static
+```
 
 Автоматизировать процесс добавления узлов можно с помощью любой платформы автоматизации. Далее приведен пример для Ansible.
 
@@ -352,22 +383,22 @@ Done
    d8 k -n default get ep kubernetes -o json | jq '.subsets[0].addresses[0].ip + ":" + (.subsets[0].ports[0].port | tostring)' -r
    ```
 
-   Проверьте версию K8s. Если версия >= 1.25, создайте токен `node-group`:
+   Проверьте версию Kubernetes. Если версия больше 1.25, создайте токен `node-group`:
 
    ```shell
    d8 k create token node-group --namespace d8-cloud-instance-manager --duration 1h
    ```
 
-   Сохраните полученный токен, и добавьте в поле `token:` playbook'а Ansible на дальнейших шагах.
+   Сохраните полученный токен и добавьте в поле `token` в Ansible playbook на дальнейших шагах.
 
-1. Если версия Kubernetes меньше 1.25, получите Kubernetes API-токен для специального ServiceAccount'а, которым управляет Deckhouse:
+1. Если версия Kubernetes меньше 1.25, получите Kubernetes API-токен для специального ServiceAccount, которым управляет Deckhouse:
 
    ```shell
    d8 k -n d8-cloud-instance-manager get $(d8 k -n d8-cloud-instance-manager get secret -o name | grep node-group-token) \
      -o json | jq '.data.token' -r | base64 -d && echo ""
    ```
 
-1. Создайте Ansible playbook с `vars`, которые заменены на полученные на предыдущих шагах значения:
+1. Создайте Ansible playbook и замените значения `vars` данными, полученными на предыдущих шагах:
 
    ```yaml
    - hosts: all
@@ -377,11 +408,11 @@ Done
        kube_apiserver: <KUBE_APISERVER>
        token: <TOKEN>
      tasks:
-       - name: Check if node is already bootsrapped
+       - name: # Проверка, что на узле уже был выполнен бутстрап.
          stat:
            path: /var/lib/bashible
          register: bootstrapped
-       - name: Get bootstrap secret
+       - name: # Получение секрета бутстрапа.
          uri:
            url: "https://{{ kube_apiserver }}/api/v1/namespaces/d8-cloud-instance-manager/secrets/manual-bootstrap-for-{{ node_group }}"
            return_content: yes
@@ -427,9 +458,11 @@ Done
 
 ## Как заставить werf игнорировать состояние Ready в группе узлов?
 
-[werf](https://ru.werf.io) проверяет состояние ```Ready``` у ресурсов и в случае его наличия дожидается, пока значение станет ```True```.
+[werf](https://ru.werf.io) проверяет состояние `Ready` у ресурсов и в случае его наличия дожидается, пока значение станет `True`.
 
-Создание (обновление) ресурса NodeGroup в кластере может потребовать значительного времени на развертывание необходимого количества узлов. При развертывании такого ресурса в кластере с помощью werf (например, в рамках процесса CI/CD) развертывание может завершиться по превышении времени ожидания готовности ресурса. Чтобы заставить werf игнорировать состояние `nodeGroup`, необходимо добавить к `nodeGroup` следующие аннотации:
+Создание (обновление) ресурса NodeGroup в кластере может потребовать значительного времени на развертывание необходимого количества узлов. Развертывание такого ресурса в кластере с помощью werf (например, в рамках процесса CI/CD) может завершиться в случае превышения времени ожидания готовности ресурса.
+
+Чтобы заставить werf игнорировать состояние NodeGroup, добавьте к NodeGroup следующие аннотации:
 
 ```yaml
 metadata:

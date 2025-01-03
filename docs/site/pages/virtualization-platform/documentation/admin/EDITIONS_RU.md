@@ -27,5 +27,5 @@ Deckhouse Virtualization Platform поставляется в редакциях
 | Изменение параметров ВМ без ее остановки                        | {{ not_supported }} | {{ supported }} |
 | Режим высокой доступности (HA) виртуальных машин                | {{ coming_soon }}   | {{ coming_soon }} |
 | Катастрофоустойчивость (межкластерная репликация)               | {{ coming_soon }}   | {{ coming_soon }} |
-| [Техподдержка «Стандарт»](https://deckhouse.ru/tech-support/)   | {{ not_supported }} | {{ supported }}  |
-| [Техподдержка «Стандарт +»](https://deckhouse.ru/tech-support/) | {{ not_supported }} | {{ supported }}  |
+| [Техподдержка «Стандарт»](/tech-support/)   | {{ not_supported }} | {{ supported }}  |
+| [Техподдержка «Стандарт +»](/tech-support/) | {{ not_supported }} | {{ supported }}  |

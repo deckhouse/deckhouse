@@ -61,7 +61,7 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "gomod"
-  directory: "/ee/modules/015-admission-policy-engine/images/trivy-provider"
+  directory: "/ee/modules/015-admission-policy-engine/images/trivy-provider/src"
   labels:
   - "type/dependencies"
   - "status/ok-to-test"
@@ -259,7 +259,7 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "gomod"
-  directory: "/modules/015-admission-policy-engine/images/constraint-exporter"
+  directory: "/modules/015-admission-policy-engine/images/constraint-exporter/src"
   labels:
   - "type/dependencies"
   - "status/ok-to-test"
@@ -349,7 +349,7 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "gomod"
-  directory: "/modules/036-kube-proxy/images/init-container/entrypoint"
+  directory: "/modules/036-kube-proxy/images/init-container/src"
   labels:
   - "type/dependencies"
   - "status/ok-to-test"
@@ -394,7 +394,7 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "gomod"
-  directory: "/modules/040-node-manager/images/bashible-apiserver"
+  directory: "/modules/040-node-manager/images/bashible-apiserver/src"
   labels:
   - "type/dependencies"
   - "status/ok-to-test"
@@ -421,7 +421,7 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "gomod"
-  directory: "/modules/040-node-manager/images/fencing-agent"
+  directory: "/modules/040-node-manager/images/fencing-agent/src"
   labels:
   - "type/dependencies"
   - "status/ok-to-test"

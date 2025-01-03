@@ -22,7 +22,7 @@
 {%- endif %}
 
 Создайте файл `config.yml`.
-{% capture includePath %}_includes/getting_started/{{ page.platform_code }}/partials/config.yml{% if include.layout.size > 0 %}.{{ include.layout }}{% endif %}.{% if revision != "ce" %}{{ "other" }}{% else %}{{ revision }}{% endif %}.inc{% endcapture %}
+{% capture includePath %}_includes/getting_started/{{ page.platform_code }}/partials/config.ru.yml{% if include.layout.size > 0 %}.{{ include.layout }}{% endif %}.{% if revision != "ce" %}{{ "other" }}{% else %}{{ revision }}{% endif %}.inc{% endcapture %}
 {% snippetcut name="config.yml" selector="config-yml" %}
 {% include_file "{{ includePath }}" syntax="yaml" %}
 {% endsnippetcut %}
@@ -68,6 +68,9 @@
 <script>
   $(document).ready(function() {
     document.getElementById('block_layout_{{ revision }}').querySelectorAll('span').forEach(element => {
+      element.textContent = element.textContent.replace('<REVISION>', '{{ revision }}');
+    })
+    document.getElementById('block_layout_{{ revision }}').querySelectorAll('.dimmer-block-content div .snippetcut .snippetcut__raw').forEach(element => {
       element.textContent = element.textContent.replace('<REVISION>', '{{ revision }}');
     })
   });

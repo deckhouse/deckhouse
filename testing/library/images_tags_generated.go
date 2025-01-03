@@ -319,7 +319,8 @@ var DefaultImagesDigests = map[string]interface{}{
 		"vector": "imageHash-logShipper-vector",
 	},
 	"loki": map[string]interface{}{
-		"loki": "imageHash-loki-loki",
+		"loki":            "imageHash-loki-loki",
+		"lokiSrcArtifact": "imageHash-loki-lokiSrcArtifact",
 	},
 	"metallb": map[string]interface{}{
 		"controller":     "imageHash-metallb-controller",
@@ -391,9 +392,11 @@ var DefaultImagesDigests = map[string]interface{}{
 		"memcached":                   "imageHash-prometheus-memcached",
 		"memcachedExporter":           "imageHash-prometheus-memcachedExporter",
 		"mimir":                       "imageHash-prometheus-mimir",
+		"mimirSrcArtifact":            "imageHash-prometheus-mimirSrcArtifact",
 		"prometheus":                  "imageHash-prometheus-prometheus",
 		"prometheuspp":                "imageHash-prometheus-prometheuspp",
 		"promxy":                      "imageHash-prometheus-promxy",
+		"promxySrcArtifact":           "imageHash-prometheus-promxySrcArtifact",
 		"trickster":                   "imageHash-prometheus-trickster",
 	},
 	"prometheusMetricsAdapter": map[string]interface{}{
@@ -428,7 +431,7 @@ var DefaultImagesDigests = map[string]interface{}{
 		"ecrCredentialProvider131":  "imageHash-registrypackages-ecrCredentialProvider131",
 		"growpart033":               "imageHash-registrypackages-growpart033",
 		"iptables189":               "imageHash-registrypackages-iptables189",
-		"jq16":                      "imageHash-registrypackages-jq16",
+		"jq171":                     "imageHash-registrypackages-jq171",
 		"kubeadm12716":              "imageHash-registrypackages-kubeadm12716",
 		"kubeadm12815":              "imageHash-registrypackages-kubeadm12815",
 		"kubeadm12912":              "imageHash-registrypackages-kubeadm12912",

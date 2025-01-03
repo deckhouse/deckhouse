@@ -76,7 +76,7 @@ Use the following commands:
   file=ee/se-plus/modules/030-cloud-provider-vsphere/docs/CONFIGURATION_RU.md make docs-spellcheck`
   ```
 
-- `make docs-spellcheck-generate-dictionary` — to generate a dictionary of words. Run it after adding new words to the tools/spelling/wordlist file.
+- `make docs-spellcheck-generate-dictionary` — to generate a dictionary of words. Run it after adding new words to the tools/docs/spelling/wordlist file.
 - `make docs-spellcheck-get-typos-list` — to get the sorted list of typos from the documentation.
 
 The `make lint-doc-spellcheck-pr` command is used in CI to check the spelling of the documentation in a PR.
