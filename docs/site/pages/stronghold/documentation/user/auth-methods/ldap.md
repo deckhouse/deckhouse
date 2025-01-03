@@ -9,15 +9,6 @@ description: |-
 
 # LDAP auth method
 
-{% alert level="warning" %}
-
-**Note**: This engine can use external X.509 certificates as part of TLS or signature validation.
-   Verifying signatures against X.509 certificates that use SHA-1 is deprecated and is no longer
-   usable without a workaround. See the
-   [deprecation FAQ](/docs/deprecation/faq#q-what-is-the-impact-of-removing-support-for-x-509-certificates-with-signatures-that-use-sha-1)
-   for more information.
-
-{% endalert %}
 The `ldap` auth method allows authentication using an existing LDAP
 server and user/password credentials. This allows Stronghold to be integrated
 into environments using LDAP without duplicating the user/pass configuration
@@ -260,7 +251,23 @@ Next we want to create a mapping from an LDAP group to an Stronghold policy:
 $ d8 stronghold write auth/ldap/groups/scientists policies=foo,bar
 ```
 
-This maps the LDAP group "scientists" to the "foo" and "bar" Stronghold policies.
+This maps the LDAP group "scient
+## Блокировка пользователя
+
+Если пользователь несколько раз подряд предоставит неверные учетные данные, Stronghold на некоторое время прекратит попытки проверить его учетные данные, а вместо этого сразу же вернет ошибку с отказом доступе. Мы называем такое поведение «блокировкой пользователя» (`user_lockout`). Время, на которое пользователь будет заблокирован, называется «длительностью блокировки» (`lockout_duration`). Пользователь сможет войти в систему после истечения срока блокировки. Количество неудачных попыток входа, после которых пользователь будет заблокирован, называется «порог блокировки» (`lockout_threshold`). Счетчик порога блокировки обнуляется через несколько минут без попыток входа или при успешной попытке входа. Время, в течение которого счетчик будет обнулен после отсутствия попыток входа, называется «сброс счетчика блокировки» (`lockout_counter_reset`). Это позволяет предотвратить атаки с целью подбора пароля.
+
+Функция блокировки пользователя включена по умолчанию. Значения по умолчанию:
+- `lockout_threshold` - 5 попыток
+- `lockout_duration` - 15 минут
+- `lockout_counter_reset` - 15 минут.
+
+Функцию блокировки пользователя можно отключить с помощью команды «auth tune», передав значение `disable_lockout` true
+
+{% alert level="warning" %}
+
+**ПРИМЕЧАНИЕ**: Эта функция поддерживается только методами userpass, ldap и approle auth.
+{% endalert %}
+ists" to the "foo" and "bar" Stronghold policies.
 We can also add specific LDAP users to additional (potentially non-LDAP)
 groups. Note that policies can also be specified on LDAP users as well.
 

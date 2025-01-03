@@ -3,53 +3,15 @@ title: LDAP
 permalink: ru/stronghold/documentation/user/auth-methods/ldap.html
 lang: ru
 description: |-
-  The "ldap" auth method allows users to authenticate with Stronghold using LDAP
-  credentials.
+  The "ldap" auth method allows users to authenticate with Stronghold using LDAP credentials.
 ---
 
-# LDAP auth method
+Метод `ldap` auth позволяет выполнять аутентификацию с использованием существующего сервера LDAP и учетных данных - имени пользователя и пароля. Это позволяет интегрировать Stronghold в среды, использующие LDAP.
+Сопоставление групп и пользователей в LDAP с политиками Stronghold осуществляется с помощью путей `users/` и `groups/`.
 
-{% alert level="warning" %}
+## Аутентификация
 
-**Note**: This engine can use external X.509 certificates as part of TLS or signature validation.
-   Verifying signatures against X.509 certificates that use SHA-1 is deprecated and is no longer
-   usable without a workaround. See the
-   [deprecation FAQ](/docs/deprecation/faq#q-what-is-the-impact-of-removing-support-for-x-509-certificates-with-signatures-that-use-sha-1)
-   for more information.
-
-{% endalert %}
-The `ldap` auth method allows authentication using an existing LDAP
-server and user/password credentials. This allows Stronghold to be integrated
-into environments using LDAP without duplicating the user/pass configuration
-in multiple places.
-
-The mapping of groups and users in LDAP to Stronghold policies is managed by using
-the `users/` and `groups/` paths.
-
-## A note on escaping
-
-**It is up to the administrator** to provide properly escaped DNs. This
-includes the user DN, bind DN for search, and so on.
-
-The only DN escaping performed by this method is on usernames given at login
-time when they are inserted into the final bind DN, and uses escaping rules
-defined in RFC 4514.
-
-Additionally, Active Directory has escaping rules that differ slightly from the
-RFC; in particular it requires escaping of '#' regardless of position in the DN
-(the RFC only requires it to be escaped when it is the first character), and
-'=', which the RFC indicates can be escaped with a backslash, but does not
-contain in its set of required escapes. If you are using Active Directory and
-these appear in your usernames, please ensure that they are escaped, in
-addition to being properly escaped in your configured DNs.
-
-For reference, see [RFC 4514](https://www.ietf.org/rfc/rfc4514.txt) and this
-[TechNet post on characters to escape in Active
-Directory](http://social.technet.microsoft.com/wiki/contents/articles/5312.active-directory-characters-to-escape.aspx).
-
-## Authentication
-
-### Via the CLI
+### С помощью CLI
 
 ```shell-session
 $ d8 stronghold login -method=ldap username=mitchellh
@@ -60,7 +22,7 @@ with this token are listed below:
 admins
 ```
 
-### Via the API
+### С помошью API
 
 ```shell-session
 $ curl \
@@ -69,7 +31,7 @@ $ curl \
     http://127.0.0.1:8200/v1/auth/ldap/login/mitchellh
 ```
 
-The response will be in JSON. For example:
+Ответ будет представлен в формате JSON. Например:
 
 ```javascript
 {
@@ -91,102 +53,88 @@ The response will be in JSON. For example:
 }
 ```
 
-## Configuration
+## Конфигурация
 
-Auth methods must be configured in advance before users or machines can
-authenticate. These steps are usually completed by an operator or configuration
-management tool.
+Перед тем как пользователи смогут проходить аутентификацию, необходимо предварительно настроить методы аутентификации. Эти шаги обычно выполняются оператором или средством управления конфигурацией.
 
-1. Enable the ldap auth method:
+1. Включить метод аутентификации LDAP:
 
-   ```text
-   $ d8 stronghold auth enable ldap
-   ```
+```text
+$ d8 stronghold auth enable ldap
+```
 
-1. Configure connection details for your LDAP server, information on how to
-   authenticate users, and instructions on how to query for group membership. The
-   configuration options are categorized and detailed below.
+1. Настройте параметры подключения к серверу LDAP, а также информацию о том, как аутентифицировать пользователей, и как запрашивать членство в группах.
 
-### Connection parameters
+### Параметры подключения
 
-- `url` (string, required) - The LDAP server to connect to. Examples: `ldap://ldap.myorg.com`, `ldaps://ldap.myorg.com:636`. This can also be a comma-delineated list of URLs, e.g. `ldap://ldap.myorg.com,ldaps://ldap.myorg.com:636`, in which case the servers will be tried in-order if there are errors during the connection process.
-- `starttls` (bool, optional) - If true, issues a `StartTLS` command after establishing an unencrypted connection.
-- `insecure_tls` - (bool, optional) - If true, skips LDAP server SSL certificate verification - insecure, use with caution!
-- `certificate` - (string, optional) - CA certificate to use when verifying LDAP server certificate, must be x509 PEM encoded.
-- `client_tls_cert` - (string, optional) - Client certificate to provide to the LDAP server, must be x509 PEM encoded.
-- `client_tls_key` - (string, optional) - Client certificate key to provide to the LDAP server, must be x509 PEM encoded.
+- `url` (строка, обязательно) - Сервер LDAP, к которому необходимо подключиться. Примеры: `ldap://ldap.myorg.com`, `ldaps://ldap.myorg.com:636`. Это также может быть список URL через запятую, например, `ldap://ldap.myorg.com,ldaps://ldap.myorg.com:636`, в этом случае серверы будут использованы в порядке очереди, если в процессе соединения возникнут ошибки.
+- `starttls` (bool, необязательно) - Если значение параметра true, то после установления незашифрованного соединения выдается команда `StartTLS`.
+- `insecure_tls` - (bool, необязательно) - Если true, пропускает проверку SSL-сертификата LDAP-сервера - небезопасно, используйте с осторожностью!
+- `certificate` - (строка, необязательно) - сертификат CA, который будет использоваться при проверке сертификата LDAP-сервера, должен быть в кодировке x509 PEM.
+- `client_tls_cert` - (строка, необязательно) - Сертификат клиента для предоставления серверу LDAP, должен быть в кодировке x509 PEM.
+- `client_tls_key` - (строка, необязательно) - Ключ сертификата клиента для предоставления серверу LDAP, должен быть закодирован в формате x509 PEM.
 
-### Binding parameters
 
-There are two alternate methods of resolving the user object used to authenticate the end user: _Search_ or _User Principal Name_. When using _Search_, the bind can be either anonymous or authenticated. User Principal Name is a method of specifying users supported by Active Directory. More information on UPN can be found [here](<https://msdn.microsoft.com/en-us/library/ms677605(v=vs.85).aspx#userPrincipalName>).
+### Параметры поиска
+Существуют два разных способа определения объекта пользователя для аутентификации конечного пользователя: _Поиск_ и _Основное имя пользователя_ (User Principal Name, UPN). Если используется _Поиск_, привязка может быть выполнена либо анонимно, либо с аутентификацией. Метод UPN поддерживается в Active Directory для указания пользователей. Дополнительную информацию о UPN можно найти [здесь](<https://msdn.microsoft.com/en-us/library/ms677605(v=vs.85).aspx#userPrincipalName>).
 
-#### Binding - authenticated search
+### Аутентифицированный поиск
 
-- `binddn` (string, optional) - Distinguished name of object to bind when performing user and group search. Example: `cn=stronghold,ou=Users,dc=example,dc=com`
-- `bindpass` (string, optional) - Password to use along with `binddn` when performing user search.
-- `userdn` (string, optional) - Base DN under which to perform user search. Example: `ou=Users,dc=example,dc=com`
-- `userattr` (string, optional) - Attribute on user attribute object matching the username passed when authenticating. Examples: `sAMAccountName`, `cn`, `uid`
-- `userfilter` (string, optional) - Go template used to construct a ldap user search filter. The template can access the following context variables: \[`UserAttr`, `Username`\]. The default userfilter is `({{.UserAttr}}={{.Username}})` or `(userPrincipalName={{.Username}}@UPNDomain)` if the `upndomain` parameter is set. The user search filter can be used to restrict what user can attempt to log in. For example, to limit login to users that are not contractors, you could write `(&(objectClass=user)({{.UserAttr}}={{.Username}})(!(employeeType=Contractor)))`.
+- `binddn` (строка, необязательно) - Имя объекта для привязки при выполнении поиска пользователей и групп. Пример: `cn=stronghold,ou=Users,dc=example,dc=com`.
+- `bindpass` (строка, необязательно) - Пароль, используемый вместе с `binddn` при поиске пользователей.
+- `userdn` (строка, необязательно) - Корневой DN, в котором осуществляется поиск пользователя. Пример: `ou=Users,dc=example,dc=com`.
+- `userattr` (строка, необязательно) - Атрибут LDAP-объекта пользователя, который должен совпадать с именем пользователя, переданным при аутентификации. Примеры: `sAMAccountName`, `cn`, `uid`.
+- `userfilter` (строка, необязательно) - шаблон Go, используемый для построения фильтра поиска пользователей ldap. Шаблон может обращаться к следующим контекстным переменным: \[`UserAttr`, `Username`\]. По умолчанию используется фильтр `({{.UserAttr}}={{.Username}})` или `(userPrincipalName={{.Username}}@UPNDomain)`, если задан параметр `upndomain`. Фильтр поиска пользователей можно использовать для ограничения количества пользователей, которые могут попытаться войти в систему. Например, чтобы ограничить вход для пользователей, которые не являются подрядчиками (Contractors), можно написать `(&(objectClass=user)({{.UserAttr}}={{.Username}})(!(employeeType=Contractor)))`.
 
 {% alert level="warning" %}
 
-When specifying a `userfilter`, either the templated value `{{.UserAttr}}` or
-the literal value that matches `userattr` should be present in the filter to
-ensure that the search returns a unique result that takes `userattr` into
-consideration for entity alias mapping purposes and avoid possible collisions on login.
+При указании `userfilter` в фильтре должно присутствовать либо шаблонизированное значение `{{.UserAttr}}`, либо литеральное значение, соответствующее `userattr`, чтобы гарантировать, что поиск возвращает уникальный результат, учитывающий `userattr` для целей сопоставления псевдонимов сущностей, и избежать возможных коллизий при входе в систему.
 
 {% endalert %}
-#### Binding - anonymous search
+### Анонимный поиск
 
-- `discoverdn` (bool, optional) - If true, use anonymous bind to discover the bind DN of a user
-- `userdn` (string, optional) - Base DN under which to perform user search. Example: `ou=Users,dc=example,dc=com`
-- `userattr` (string, optional) - Attribute on user attribute object matching the username passed when authenticating. Examples: `sAMAccountName`, `cn`, `uid`
-- `userfilter` (string, optional) - Go template used to construct a ldap user search filter. The template can access the following context variables: \[`UserAttr`, `Username`\]. The default userfilter is `({{.UserAttr}}={{.Username}})` or `(userPrincipalName={{.Username}}@UPNDomain)` if the `upndomain` parameter is set. The user search filter can be used to restrict what user can attempt to log in. For example, to limit login to users that are not contractors, you could write `(&(objectClass=user)({{.UserAttr}}={{.Username}})(!(employeeType=Contractor)))`.
-- `deny_null_bind` (bool, optional) - This option prevents users from bypassing authentication when providing an empty password. The default is `true`.
-- `anonymous_group_search` (bool, optional) - Use anonymous binds when performing LDAP group searches. Defaults to `false`.
+- `discoverdn` (bool, необязательно) - Если true, используется анонимное подключение для определения bind DN пользователя.
+- `userdn` (строка, необязательно) - Корневой DN, в котором осуществляется поиск пользователя. Пример: `ou=Users,dc=example,dc=com`.
+- `userattr` (строка, необязательно) - Атрибут LDAP-объекта пользователя, который должен совпадать с именем пользователя, переданным при аутентификации. Примеры: `sAMAccountName`, `cn`, `uid`.
+- `userfilter` (строка, необязательно) - шаблон Go, используемый для построения фильтра поиска пользователей ldap. Шаблон может обращаться к следующим контекстным переменным: \[`UserAttr`, `Username`\]. По умолчанию используется фильтр `({{.UserAttr}}={{.Username}})` или `(userPrincipalName={{.Username}}@UPNDomain)`, если задан параметр `upndomain`. Фильтр поиска пользователей можно использовать для ограничения количества пользователей, которые могут попытаться войти в систему. Например, чтобы ограничить вход для пользователей, которые не являются подрядчиками (Contractors), можно написать `(&(objectClass=user)({{.UserAttr}}={{.Username}})(!(employeeType=Contractor)))`.
+- `deny_null_bind` (bool, optional) - Опция, предотвращающая обход аутентификации, если указан пустой пароль. По умолчанию установлено значение `true`.
+- `anonymous_group_search` (bool, необязательно) - Использовать анонимные подключения при выполнении поиска групп в LDAP. По умолчанию установлено значение `false`.
 
 {% alert level="warning" %}
 
-When specifying a `userfilter`, either the templated value `{{.UserAttr}}` or
-the literal value that matches `userattr` should be present in the filter to
-ensure that the search returns a unique result that takes `userattr` into
-consideration for entity alias mapping purposes and avoid possible collisions on login.
+При указании `userfilter` в фильтре должно присутствовать либо шаблонизированное значение `{{.UserAttr}}`, либо литеральное значение, соответствующее `userattr`, чтобы гарантировать, что поиск возвращает уникальный результат, учитывающий `userattr` для целей сопоставления псевдонимов сущностей, и избежать возможных коллизий при входе в систему.
 
 {% endalert %}
-#### Alias dereferencing
 
-- `dereference_aliases` (string, optional) - Control how aliases are dereferenced when performing the search. Possible values are: `never`, `finding`, `searching`, and `always`. `finding` will only dereference aliases during name resolution of the base. `searching` will dereference aliases after name resolution.
+### Разрешение алиасов
+- `dereference_aliases` (строка, необязательно) - Управляет тем, как алиасы разрешаются при выполнении поиска. Возможные значения: `never`, `finding`, `searching` и `always`. Значение `finding` разрешает алиасы только во время определения имени. Значение `searching` разрешает алиасы после определения имени.
 
-#### Binding - user principal name (AD)
+### Использование UPN (AD)
+- `upndomain` (строка, необязательно) - userPrincipalDomain, используемый для построения строки UPN (основное имя пользователя) для аутентифицируемого пользователя. UPN будет иметь вид `[username]@UPNDomain`. Пример: `example.com`, что приведет к тому, что Stronghold произведет привязку как `username@example.com`.
 
-- `upndomain` (string, optional) - userPrincipalDomain used to construct the UPN string for the authenticating user. The constructed UPN will appear as `[username]@UPNDomain`. Example: `example.com`, which will cause Stronghold to bind as `username@example.com`.
+### Определение членства в группах
+После аутентификации пользователя метод аутентификации LDAP должен определить, к каким группам принадлежит пользователь. Конфигурация может варьироваться в зависимости от вашего LDAP-сервера и схемы каталога. Существует два основных подхода к определению членства в группе — первый заключается в поиске аутентифицированного объекта пользователя и следовании за атрибутом к группам, в которых он состоит. Второй подход подразумевает поиск объектов группы, членом которых является аутентифицированный пользователь. Поддерживаются оба метода.
+- `groupfilter` (строка, необязательно) - Шаблон Go, используемый при построении запроса на членство в группе. Шаблон может использовать следующие переменные контекста: \[`UserDN`, `Username`\]. По умолчанию используется `(|(memberUid={{.Username}})(member={{.UserDN}})(uniqueMember={{.UserDN}}))`, что совместимо с несколькими распространенными схемами каталогов. Для поддержки разрешения вложенных групп в Active Directory вместо этого используйте следующий запрос: `(&(objectClass=group)(member:1.2.840.113556.1.4.1941:={{.UserDN}}))`.
+- `groupdn` (строка, обязательно) - База поиска LDAP для использования при поиске членства в группах. Это может быть корень, содержащий либо группы, либо пользователей. Пример: `ou=Groups,dc=example,dc=com`.
+- `groupattr` (строка, необязательно) - Атрибут LDAP, используемый для объектов, возвращаемых `groupfilter`, чтобы перечислить членство в группах пользователя. Примеры: для запросов `groupfilter`, возвращающих объекты _group_, используйте: `cn`. Для запросов, возвращающих объекты _user_, используйте: `memberOf`. Значение по умолчанию — `cn`.
 
-### Group membership resolution
+_Примечание_: При использовании _Аутентифицированного поиска_ имя, указанное в `binddn`, также используется для поиска группы. В противном случае для выполнения поиска группы используется аутентифицированный пользователь (пользователь, выполняюший вход).
 
-Once a user has been authenticated, the LDAP auth method must know how to resolve which groups the user is a member of. The configuration for this can vary depending on your LDAP server and your directory schema. There are two main strategies when resolving group membership - the first is searching for the authenticated user object and following an attribute to groups it is a member of. The second is to search for group objects of which the authenticated user is a member of. Both methods are supported.
+### Другие параметры
+- `username_as_alias` (bool, необязательно) - Если установлено в true, метод аутентификации будет использовать имя пользователя, переданное пользователем, в качестве имени алиаса.
+- `max_page_size` (int, необязательно) - Если установлено значение больше 0, Stronhold будет выполнять постаничный поиск на LDAP-сервере, и запрашивать страницы размером до указанного значения. Этот параметр может понадобиться, если существует ограничение на максимальный размер результата LDAP-сервера. В противном случае постраничный поиск не будет использоваться.
 
-- `groupfilter` (string, optional) - Go template used when constructing the group membership query. The template can access the following context variables: \[`UserDN`, `Username`\]. The default is `(|(memberUid={{.Username}})(member={{.UserDN}})(uniqueMember={{.UserDN}}))`, which is compatible with several common directory schemas. To support nested group resolution for Active Directory, instead use the following query: `(&(objectClass=group)(member:1.2.840.113556.1.4.1941:={{.UserDN}}))`.
-- `groupdn` (string, required) - LDAP search base to use for group membership search. This can be the root containing either groups or users. Example: `ou=Groups,dc=example,dc=com`
-- `groupattr` (string, optional) - LDAP attribute to follow on objects returned by `groupfilter` in order to enumerate user group membership. Examples: for groupfilter queries returning _group_ objects, use: `cn`. For queries returning _user_ objects, use: `memberOf`. The default is `cn`.
+## Примеры:
 
-_Note_: When using _Authenticated Search_ for binding parameters (see above) the distinguished name defined for `binddn` is used for the group search. Otherwise, the authenticating user is used to perform the group search.
+### Сценацрий 1
 
-### Other
-
-- `username_as_alias` (bool, optional) - If set to true, forces the auth method to use the username passed by the user as the alias name.
-- `max_page_size` (int, optional) - If set to a value greater than 0, the LDAP backend will use the LDAP server's paged search control to request pages of up to the given size. This can be used to avoid hitting the LDAP server's maximum result size limit. Otherwise, the LDAP backend will not use the paged search control.
-
-## Examples:
-
-### Scenario 1
-
-- LDAP server running on `ldap.example.com`, port 389.
-- Server supports `STARTTLS` command to initiate encryption on the standard port.
-- CA Certificate stored in file named `ldap_ca_cert.pem`
-- Server is Active Directory supporting the userPrincipalName attribute. Users are identified as `username@example.com`.
-- Groups are nested, we will use `LDAP_MATCHING_RULE_IN_CHAIN` to walk the ancestry graph.
-- Group search will start under `ou=Groups,dc=example,dc=com`. For all group objects under that path, the `member` attribute will be checked for a match against the authenticated user.
-- Group names are identified using their `cn` attribute.
+- LDAP-сервер доступен по адресу `ldap.example.com`, порт 389.
+- Сервер поддерживает команду `STARTTLS` для инициации шифрования на стандартном порту.
+- Сертификат УЦ хранится в файле с именем `ldap_ca_cert.pem`.
+- Сервер является Active Directory и поддерживает атрибут userPrincipalName. Пользователи идентифицируются как `username@example.com`.
+- Группы являются вложенными, мы будем использовать `LDAP_MATCHING_RULE_IN_CHAIN` для обхода дерева групп.
+- Поиск групп начнется с `ou=Groups,dc=example,dc=com`. Для всех объектов групп по этому пути атрибут `member` будет проверяться на соответствие аутентифицированному пользователю.
+- Имена групп определяются на основании их атрибута `cn`.
 
 ```shell-session
 $ d8 stronghold write auth/ldap/config \
@@ -202,16 +150,16 @@ $ d8 stronghold write auth/ldap/config \
 ...
 ```
 
-### Scenario 2
+### Сценарий 2
 
-- LDAP server running on `ldap.example.com`, port 389.
-- Server supports `STARTTLS` command to initiate encryption on the standard port.
-- CA Certificate stored in file named `ldap_ca_cert.pem`
-- Server does not allow anonymous binds for performing user search.
-- Bind account used for searching is `cn=stronghold,ou=users,dc=example,dc=com` with password `My$ecrt3tP4ss`.
-- User objects are under the `ou=Users,dc=example,dc=com` organizational unit.
-- Username passed to stronghold when authenticating maps to the `sAMAccountName` attribute.
-- Group membership will be resolved via the `memberOf` attribute of _user_ objects. That search will begin under `ou=Users,dc=example,dc=com`.
+- LDAP-сервер доступен по адресу `ldap.example.com`, порт 389.
+- Сервер поддерживает команду `STARTTLS` для инициации шифрования на стандартном порту.
+- Сертификат УЦ хранится в файле с именем `ldap_ca_cert.pem`.
+- Сервер не позволяет анонимные подключения для выполнения поиска пользователей.
+- На сервере существует учетная запись для поиска — `cn=stronghold,ou=users,dc=example,dc=com` с паролем `My$ecrt3tP4ss`.
+- Объекты пользователей находятся в OU `ou=Users,dc=example,dc=com`.
+- Имя пользователя, переданное в stronghold при аутентификации, отображается на атрибут `sAMAccountName`.
+- Членство в группе будет определяться через атрибут `memberOf` объектов _user_. Этот поиск начнется в `ou=Users,dc=example,dc=com`.
 
 ```shell-session
 $ d8 stronghold write auth/ldap/config \
@@ -229,15 +177,15 @@ $ d8 stronghold write auth/ldap/config \
 ...
 ```
 
-### Scenario 3
+### Сценарий 3
 
-- LDAP server running on `ldap.example.com`, port 636 (LDAPS)
-- CA Certificate stored in file named `ldap_ca_cert.pem`
-- User objects are under the `ou=Users,dc=example,dc=com` organizational unit.
-- Username passed to Stronghold when authenticating maps to the `uid` attribute.
-- User bind DN will be auto-discovered using anonymous binding.
-- Group membership will be resolved via any one of `memberUid`, `member`, or `uniqueMember` attributes. That search will begin under `ou=Groups,dc=example,dc=com`.
-- Group names are identified using the `cn` attribute.
+- LDAP-сервер доступен по адресу `ldap.example.com`, порт 636 (LDAPS).
+- Сертификат УЦ хранится в файле с именем `ldap_ca_cert.pem`.
+- Объекты пользователей находятся в OU `ou=Users,dc=example,dc=com`.
+- Имя пользователя, переданное в Stronghold при аутентификации, соответствует атрибуту `uid`.
+- User bind DN будет автоматически определен с использованием анонимного подключения.
+- Членство в группе будет определяться через один из атрибутов: `memberUid`, `member` или `uniqueMember`. Этот поиск начнется в `ou=Groups,dc=example,dc=com`.
+- Имена групп идентифицируются с использованием атрибута `cn`.
 
 ```shell-session
 $ d8 stronghold write auth/ldap/config \
@@ -252,28 +200,24 @@ $ d8 stronghold write auth/ldap/config \
 ...
 ```
 
-## LDAP group -> policy mapping
+## Сопоставление групп LDAP и политик
 
-Next we want to create a mapping from an LDAP group to an Stronghold policy:
+Далее мы хотим создать сопоставление группы LDAP с политикой Stronghold:
 
 ```shell-session
 $ d8 stronghold write auth/ldap/groups/scientists policies=foo,bar
 ```
 
-This maps the LDAP group "scientists" to the "foo" and "bar" Stronghold policies.
-We can also add specific LDAP users to additional (potentially non-LDAP)
-groups. Note that policies can also be specified on LDAP users as well.
+Это сопоставляет группу LDAP «scientists» с политиками Stronghold «foo» и «bar». Мы также можем добавить определенных пользователей LDAP в дополнительные (потенциально не-LDAP) группы. Обратите внимание, что политики могут быть указаны и для пользователей LDAP.
 
 ```shell-session
 $ d8 stronghold write auth/ldap/groups/engineers policies=foobar
 $ d8 stronghold write auth/ldap/users/tesla groups=engineers policies=zoobar
 ```
 
-This adds the LDAP user "tesla" to the "engineers" group, which maps to
-the "foobar" Stronghold policy. User "tesla" itself is associated with "zoobar"
-policy.
+Это добавляет пользователя LDAP «tesla» в группу «engineers», которая соответствует политике Stronghold «foobar». Сам пользователь «tesla» связан с политикой «zoobar».
 
-Finally, we can test this by authenticating:
+Наконец, мы можем проверить это, пройдя аутентификацию:
 
 ```shell-session
 $ d8 stronghold login -method=ldap username=tesla
@@ -284,40 +228,28 @@ with this token are listed below:
 default, foobar, zoobar
 ```
 
-## Note on policy mapping
+## Примечание о сопоставлении политик
 
-It should be noted that user -> policy mapping happens at token creation time. And changes in group membership on the LDAP server will not affect tokens that have already been provisioned. To see these changes, old tokens should be revoked and the user should be asked to reauthenticate.
+Следует отметить, что сопоставление пользователь -> политика происходит во время создания токена. Изменения в членстве группы на LDAP-сервере ниак не повлияют на токены, которые уже были предоставлены. Чтобы эти изменения стали актуальными, необходимо отозвать старые токены и попросить пользователя пройти повторную аутентификацию.
 
-## User lockout
+## Блокировка пользователя
 
-If a user provides bad credentials several times in quick succession,
-Stronghold will stop trying to validate their credentials for a while, instead returning immediately
-with a permission denied error. We call this behavior "user lockout". The time for which
-a user will be locked out is called “lockout duration”. The user will be able to login after the lockout
-duration has passed. The number of failed login attempts after which the user is locked out is called
-“lockout threshold”. The lockout threshold counter is reset to zero after a few minutes without login attempts,
-or upon a successful login attempt. The duration after which the counter will be reset to zero
-after no login attempts is called "lockout counter reset". This can defeat both automated and targeted requests
-i.e, user-based password guessing attacks as well as automated attacks.
+Если пользователь несколько раз подряд предоставит неверные учетные данные, Stronghold на некоторое время прекратит попытки проверить его учетные данные, а вместо этого сразу же вернет ошибку с отказом доступе. Мы называем такое поведение «блокировкой пользователя» (`user_lockout`). Время, на которое пользователь будет заблокирован, называется «длительностью блокировки» (`lockout_duration`). Пользователь сможет войти в систему после истечения срока блокировки. Количество неудачных попыток входа, после которых пользователь будет заблокирован, называется «порог блокировки» (`lockout_threshold`). Счетчик порога блокировки обнуляется через несколько минут без попыток входа или при успешной попытке входа. Время, в течение которого счетчик будет обнулен после отсутствия попыток входа, называется «сброс счетчика блокировки» (`lockout_counter_reset`). Это позволяет предотвратить атаки с целью подбора пароля.
 
-The user lockout feature is enabled by default. The default values for "lockout threshold" is 5 attempts,
-"lockout duration" is 15 minutes, "lockout counter reset" is 15 minutes.
+Функция блокировки пользователя включена по умолчанию. Значения по умолчанию:
+- `lockout_threshold` - 5 попыток
+- `lockout_duration` - 15 минут
+- `lockout_counter_reset` - 15 минут.
 
-The user lockout feature can be disabled as follows:
-- It can be disabled globally using environment variable `VAULT_DISABLE_USER_LOCKOUT`.
-- It can be disabled for all supported auth methods (ldap, userpass and approle) or a specific supported auth method using the `disable_lockout`
-  parameter within `user_lockout` stanza in configuration file.
-  Please see [user lockout configuration](/docs/configuration/user-lockout#user_lockout-stanza) for more details.
-- It can be disabled for a specific auth mount using "auth tune". Please see [auth tune command](/docs/commands/auth/tune)
-  or [auth tune api](/api-docs/system/auth#tune-auth-method) for more details.
+Функцию блокировки пользователя можно отключить с помощью команды «auth tune», передав значение `disable_lockout` true
 
 {% alert level="warning" %}
 
-**NOTE**: This feature is only supported by the userpass, ldap, and approle auth methods.
-
+**ПРИМЕЧАНИЕ**: Этот функционал поддерживается только методами userpass, ldap и approle auth.
 {% endalert %}
-## API
 
-The LDAP auth method has a full HTTP API. Please see the
-[LDAP auth method API](/api-docs/auth/ldap) for more
-details.
+## Экранирование DN
+
+Важно выполнить правильное экранирования DN (Distinguished Names - Уникальные имена), а именно DN пользователя, DN для поиска и так далее. Единственное экранирование DN, выполняемое этим методом, касается имен пользователей, указанных при входе в систему, когда они вставляются в окончательный bind DN, и оно использует правила экранирования, определенные в RFC 4514.
+Кроме того, в Active Directory существуют правила экранирования, которые немного отличаются от RFC; в частности, требуется экранирование символа '#', независимо от его положения в DN (RFC требует его экранирования только в случае, если он является первым символом), и '=', который согласно RFC может быть экранирован с помощью обратного слэша, но не включен в набор обязательных символов для экранирования. Если вы используете Active Directory и эти символы присутствуют в ваших именах пользователей, убедитесь, что они экранированы, а также корректно экранированы в ваших настроенных DN.
+Для справки см. [RFC 4514](https://www.ietf.org/rfc/rfc4514.txt) и эту [статью TechNet о символах для экранирования в Active Directory](http://social.technet.microsoft.com/wiki/contents/articles/5312.active-directory-characters-to-escape.aspx).
