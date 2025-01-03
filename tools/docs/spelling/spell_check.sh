@@ -19,6 +19,7 @@ set -e
 . $(dirname "$(realpath "$0")")/spell_lib.sh
 
 SKIP_MISSING_FILES=0
+DEBUG=0
 exit_code=0
 
 HELP_STRING=$(cat <<EOF
@@ -48,6 +49,8 @@ while true; do
       ;;
     -l | --list )
       files_list_filename=$2; shift 2;;
+    --debug )
+      DEBUG=1; shift 1;;
     --skipmissing )
       SKIP_MISSING_FILES=1; shift 1;;
     -h | --help )
@@ -73,10 +76,14 @@ else
   if [ -n "${files_list_filename}" ]; then
       files_search_path="$(cat ${files_list_filename})"
   else
-      files_search_path="$(find ./ -type f)"
+      files_search_path="$(find ./ -type f -regex ${FIND_RE_MATCH_PATTERN} | sed 's#^\./##')"
   fi
   for file_name in ${files_search_path};
   do
+    if [[ "$DEBUG" == 1 ]]; then
+      echo "Checking file ${file_name}" >&2
+    fi
+
     if validate_file_name "${file_name}"; then
         result="$(file_check_spell "${file_name}")"
         if [ -n "${result}" ]; then
