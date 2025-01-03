@@ -1,6 +1,6 @@
-{{- $falcoVersion := "0.38.2" }}
-{{- $falcoctlVersion := "0.10.0" }}
-{{- $pluginsVersion := "plugins/k8smeta/v0.2.0" }}
+{{- $falcoVersion := "0.39.2" }}
+{{- $falcoctlVersion := "0.10.1" }}
+{{- $pluginsVersion := "plugins/kafka/v0.1.3" }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: common/alt-p11
@@ -17,10 +17,6 @@ import:
   add: /src/falcoctl
   to: /usr/bin/falcoctl
   before: install
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-plugins-artifact
-  add: /plugins
-  to: /usr/share/falco/plugins
-  before: install
 shell:
   beforeInstall:
   - rm -df /lib/modules
@@ -33,6 +29,14 @@ docker:
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 fromImage: common/src-artifact
 final: false
+git:
+- add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/patches/falcoctl
+  to: /patches/falcoctl
+  includePaths:
+  - '**/*.patch'
+  stageDependencies:
+    install:
+    - '**/*.patch'
 shell:
   install:
   - git clone --branch {{ $falcoVersion }} --depth 1 {{ .SOURCE_REPO }}/falcosecurity/falco.git /src/falco
@@ -40,6 +44,10 @@ shell:
   - git clone --branch v{{ $falcoctlVersion }} --depth 1 {{ .SOURCE_REPO }}/falcosecurity/falcoctl.git /src/falcoctl
   - cd /src/plugins
   - rm -rf shared plugins/cloudtrail plugins/dummy* plugins/gcpaudit plugins/github plugins/k8saudit-* plugins/kafka plugins/okta build docs
+  - cd /src/falcoctl
+  - git apply /patches/falcoctl/*.patch --verbose
+  - git rev-parse HEAD > RELEASE
+  - git rev-parse HEAD > COMMIT
   - rm -rf /src/falco/.git
   - rm -rf /src/plugins/.git
   - rm -rf /src/falcoctl/.git
@@ -62,48 +70,10 @@ shell:
   install:
   - cd /src
   - export GOPROXY={{ .GOPROXY }} GOOS=linux GOARCH=amd64 CGO_ENABLED=0
-  - make falcoctl
+  - go mod download
+  - RELEASE="$(cat RELEASE)" COMMIT="$(cat COMMIT)" make falcoctl
   - chown 64535:64535 falcoctl
   - chmod 0755 falcoctl
----
-image: {{ .ModuleName }}/{{ .ImageName }}-plugins-artifact
-fromImage: common/alt-p11-artifact
-final: false
-import:
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
-  add: /src/plugins
-  to: /src
-  before: install
-mount:
-- fromPath: ~/go-pkg-cache
-  to: /go/pkg
-shell:
-  beforeInstall:
-  {{- include "alt packages proxy" . | nindent 2 }}
-  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
-  - apt-get install -y git openssl-devel wget clang cmake libelf-devel libbpf-devel bpftool perl-IPC-Cmd gcc12 gcc12-c++ build-essential golang
-  - git config --global url."{{ .SOURCE_REPO }}".insteadOf https://github.com
-  - rm -f /usr/bin/clang
-  - ln -s /usr/bin/clang-18 /usr/bin/clang
-  - rm -f /usr/bin/x86_64-alt-linux-gcc /usr/bin/x86_64-alt-linux-g++
-  - ln -s x86_64-alt-linux-gcc-12 /usr/bin/x86_64-alt-linux-gcc
-  - ln -s x86_64-alt-linux-g++-12 /usr/bin/x86_64-alt-linux-g++
-  install:
-  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
-  - mkdir -p /plugins
-  # build plugins
-  - export GOPROXY={{ .GOPROXY }} GOOS=linux GOARCH=amd64 CGO_ENABLED=1
-  - cd /src/plugins/json
-  - make
-  - cd /src/plugins/k8saudit
-  - make
-  - cd /src/plugins/k8smeta
-  {{- if $.DistroPackagesProxy }}
-  # build in the closed env
-  - sed -i "s|https://raw.githubusercontent.com|http://{{ $.DistroPackagesProxy }}/repository/githubusercontent|g" test/CMakeLists.txt
-  {{- end }}
-  - make
-  - cp /src/plugins/json/libjson.so /src/plugins/k8saudit/libk8saudit.so /src/plugins/k8smeta/libk8smeta.so /plugins
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
 fromImage: common/alt-p11-artifact
@@ -120,7 +90,6 @@ shell:
   beforeInstall:
   {{- include "alt packages proxy" . | nindent 2 }}
   - apt-get install -y git openssl-devel wget clang cmake libelf-devel libbpf-devel bpftool perl-IPC-Cmd gcc12 gcc12-c++ build-essential golang
-  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
   - git config --global url."{{ .SOURCE_REPO }}".insteadOf https://github.com
   - rm -f /usr/bin/clang
   - ln -s /usr/bin/clang-18 /usr/bin/clang
@@ -128,7 +97,6 @@ shell:
   - ln -s x86_64-alt-linux-gcc-12 /usr/bin/x86_64-alt-linux-gcc
   - ln -s x86_64-alt-linux-g++-12 /usr/bin/x86_64-alt-linux-g++
   install:
-  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
   - cd /src/falco
   {{- if $.DistroPackagesProxy }}
   # build in the closed env
@@ -155,4 +123,20 @@ shell:
   - mkdir -p /falco-package
   - tar -zxvf falco-*-x86_64.tar.gz --strip-components 1 -C /falco-package
   # cleanup to reduce artifact size
+  - make clean
+  - cd /src/plugins/plugins/json
+  - make
+  - cp libjson.so /falco-package/usr/share/falco/plugins
+  - make clean
+  - cd /src/plugins/plugins/k8saudit
+  - make
+  - cp libk8saudit.so /falco-package/usr/share/falco/plugins
+  - make clean
+  - cd /src/plugins/plugins/k8smeta
+  {{- if $.DistroPackagesProxy }}
+  # build in the closed env
+  - sed -i "s|https://raw.githubusercontent.com|http://{{ $.DistroPackagesProxy }}/repository/githubusercontent|g" test/CMakeLists.txt
+  {{- end }}
+  - make
+  - cp libk8smeta.so /falco-package/usr/share/falco/plugins
   - make clean
