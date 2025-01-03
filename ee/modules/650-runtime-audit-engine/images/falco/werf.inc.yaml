@@ -50,6 +50,8 @@ shell:
   - rm -rf shared plugins/cloudtrail plugins/dummy* plugins/gcpaudit plugins/github plugins/k8saudit-* plugins/kafka plugins/okta build docs
   - cd /src/falcoctl
   - git apply /patches/falcoctl/*.patch --verbose
+  - git rev-parse HEAD > RELEASE
+  - git rev-parse HEAD > COMMIT
   - rm -rf /src/falco/.git
   - rm -rf /src/plugins/.git
   - rm -rf /src/falcoctl/.git
@@ -73,7 +75,7 @@ shell:
   - cd /src
   - export GOPROXY={{ .GOPROXY }} GOOS=linux GOARCH=amd64 CGO_ENABLED=0
   - go mod download
-  - make falcoctl
+  - RELEASE="$(cat RELEASE)" COMMIT="$(cat COMMIT)" make falcoctl
   - chown 64535:64535 falcoctl
   - chmod 0755 falcoctl
 ---
