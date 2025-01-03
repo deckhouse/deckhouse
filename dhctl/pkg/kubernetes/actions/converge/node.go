@@ -44,8 +44,10 @@ var (
 	ErrNodeGroupChanged = fmt.Errorf("Node group was changed during accept diff.")
 )
 
-const HideDeckhouseLogs = false
-const ShowDeckhouseLogs = true
+const (
+	HideDeckhouseLogs = false
+	ShowDeckhouseLogs = true
+)
 
 func GetCloudConfig(kubeCl *client.KubernetesClient, nodeGroupName string, showDeckhouseLogs bool, logger log.Logger, apiserverHosts ...string) (string, error) {
 	var cloudData string
@@ -169,7 +171,6 @@ func GetNodeGroup(kubeCl *client.KubernetesClient, nodeGroupName string) (*unstr
 
 		return err
 	})
-
 	if err != nil {
 		return nil, err
 	}
@@ -181,7 +182,6 @@ func GetNodeGroups(kubeCl *client.KubernetesClient) ([]unstructured.Unstructured
 	ngs, err := kubeCl.Dynamic().
 		Resource(nodeGroupResource).
 		List(context.TODO(), metav1.ListOptions{})
-
 	if err != nil {
 		return nil, err
 	}

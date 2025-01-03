@@ -40,9 +40,16 @@ spec:
         apiVersion: {{ $context.Values.nodeManager.internal.cloudProvider.capiMachineTemplateAPIVersion | quote }}
         kind:  {{ $context.Values.nodeManager.internal.cloudProvider.capiMachineTemplateKind | quote }}
         name: {{ $template_name }}
+  {{- if $ng.nodeDrainTimeoutSecond }}
+      drainTimeout: {{$ng.nodeDrainTimeoutSecond}}s
+      nodeDrainTimeout: {{$ng.nodeDrainTimeoutSecond}}s
+      nodeDeletionTimeout: {{$ng.nodeDrainTimeoutSecond}}s
+      nodeVolumeDetachTimeout: {{$ng.nodeDrainTimeoutSecond}}s
+  {{- else }}
       nodeDrainTimeout: 5m
       nodeDeletionTimeout: 5m
       nodeVolumeDetachTimeout: 5m
+  {{- end }}
   strategy:
     type: RollingUpdate
     rollingUpdate:
