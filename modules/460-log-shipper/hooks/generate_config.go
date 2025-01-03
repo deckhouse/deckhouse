@@ -205,94 +205,63 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	},
 }, generateConfig)
 
-type tlsConfigFromSecret struct {
-	CACert     []byte
-	ClientCert []byte
-	ClientKey  []byte
-	KeyPass    []byte
-}
-
-func getTLSConfigFromSecretSnapshot(name string, snapshot []go_hook.FilterResult) (*tlsConfigFromSecret, error) {
+func extractTLSSpecFromSecrets(name string, snapshot []go_hook.FilterResult) (v1alpha1.CommonTLSSpec, error) {
 	for _, secret := range snapshot {
-		if secret.(*corev1.Secret).Name == name {
-			s := secret.(*corev1.Secret)
-			return &tlsConfigFromSecret{
-				CACert:     s.Data["ca.pem"],
-				ClientCert: s.Data["crt.pem"],
-				ClientKey:  s.Data["key.pem"],
-				KeyPass:    s.Data["keyPass"],
+		s, ok := secret.(*corev1.Secret)
+		if !ok {
+			continue
+		}
+		if s.Name == name {
+			return v1alpha1.CommonTLSSpec{
+				CAFile: string(s.Data["ca.pem"]),
+				CommonTLSClientCert: v1alpha1.CommonTLSClientCert{
+					CertFile: string(s.Data["crt.pem"]),
+					KeyFile:  string(s.Data["key.pem"]),
+					KeyPass:  string(s.Data["keyPass"]),
+				},
 			}, nil
 		}
 	}
-	return nil, fmt.Errorf("secret %s not found", name)
+	return v1alpha1.CommonTLSSpec{}, fmt.Errorf("secret %s not found", name)
 }
 
-func getTLSSecretRef(dest v1alpha1.ClusterLogDestination) string {
-	switch dest.Spec.Type {
-	case "Elasticsearch":
-		if dest.Spec.Elasticsearch.TLS.SecretRef != nil {
-			return dest.Spec.Elasticsearch.TLS.SecretRef.Name
-		}
-	case "Vector":
-		if dest.Spec.Vector.TLS.SecretRef != nil {
-			return dest.Spec.Vector.TLS.SecretRef.Name
-		}
-	case "Loki":
-		if dest.Spec.Loki.TLS.SecretRef != nil {
-			return dest.Spec.Loki.TLS.SecretRef.Name
-		}
-	case "Splunk":
-		if dest.Spec.Splunk.TLS.SecretRef != nil {
-			return dest.Spec.Splunk.TLS.SecretRef.Name
-		}
-	case "Logstash":
-		if dest.Spec.Logstash.TLS.SecretRef != nil {
-			return dest.Spec.Logstash.TLS.SecretRef.Name
-		}
-	case "Socket":
-		if dest.Spec.Socket.TCP.TLS.SecretRef != nil {
-			return dest.Spec.Socket.TCP.TLS.SecretRef.Name
-		}
-	case "Kafka":
-		if dest.Spec.Kafka.TLS.SecretRef != nil {
-			return dest.Spec.Kafka.TLS.SecretRef.Name
-		}
+func getTLSSpec(dest *v1alpha1.ClusterLogDestination) (*v1alpha1.CommonTLSSpec, error) {
+	typeSpecMap := map[string]*v1alpha1.CommonTLSSpec{
+		"Elasticsearch": &dest.Spec.Elasticsearch.TLS,
+		"Vector":        &dest.Spec.Vector.TLS,
+		"Loki":          &dest.Spec.Loki.TLS,
+		"Splunk":        &dest.Spec.Splunk.TLS,
+		"Logstash":      &dest.Spec.Logstash.TLS,
+		"Socket":        &dest.Spec.Socket.TCP.TLS,
+		"Kafka":         &dest.Spec.Kafka.TLS,
 	}
-	return ""
+
+	if tlsSpec, found := typeSpecMap[dest.Spec.Type]; found {
+		return tlsSpec, nil
+	}
+
+	return nil, fmt.Errorf("unsupported destination type: %s", dest.Spec.Type)
 }
 
-func applyTLSConfig(dest *v1alpha1.ClusterLogDestination, tlsConfig *tlsConfigFromSecret) error {
-	accessors := map[string]func() *v1alpha1.CommonTLSSpec{
-		"Elasticsearch": func() *v1alpha1.CommonTLSSpec { return &dest.Spec.Elasticsearch.TLS },
-		"Vector":        func() *v1alpha1.CommonTLSSpec { return &dest.Spec.Vector.TLS },
-		"Loki":          func() *v1alpha1.CommonTLSSpec { return &dest.Spec.Loki.TLS },
-		"Splunk":        func() *v1alpha1.CommonTLSSpec { return &dest.Spec.Splunk.TLS },
-		"Logstash":      func() *v1alpha1.CommonTLSSpec { return &dest.Spec.Logstash.TLS },
-		"Socket":        func() *v1alpha1.CommonTLSSpec { return &dest.Spec.Socket.TCP.TLS },
-		"Kafka":         func() *v1alpha1.CommonTLSSpec { return &dest.Spec.Kafka.TLS },
+func overrideTLSSpec(source v1alpha1.CommonTLSSpec, dst *v1alpha1.CommonTLSSpec) error {
+	encodeBase64 := func(str string) string {
+		return base64.StdEncoding.EncodeToString([]byte(str))
 	}
 
-	getTLSSpec := accessors[dest.Spec.Type]
-	if getTLSSpec == nil {
-		return errors.Errorf("no tls spec accessor for destination type %s", dest.Spec.Type)
+	if source.CAFile != "" {
+		dst.CAFile = encodeBase64(source.CAFile)
 	}
 
-	tls := getTLSSpec()
-	if tls.SecretRef == nil {
-		return nil
+	if source.CommonTLSClientCert.CertFile != "" {
+		dst.CommonTLSClientCert.CertFile = encodeBase64(source.CommonTLSClientCert.CertFile)
 	}
 
-	if len(tlsConfig.CACert) > 0 {
-		tls.CAFile = base64.RawStdEncoding.EncodeToString(tlsConfig.CACert)
+	if source.CommonTLSClientCert.KeyPass != "" {
+		dst.CommonTLSClientCert.KeyPass = encodeBase64(source.CommonTLSClientCert.KeyPass)
 	}
-	if len(tlsConfig.ClientCert) > 0 {
-		tls.CommonTLSClientCert.CertFile = base64.StdEncoding.EncodeToString(tlsConfig.ClientCert)
-	}
-	if len(tlsConfig.ClientKey) > 0 {
-		tls.CommonTLSClientCert.KeyFile = base64.StdEncoding.EncodeToString(tlsConfig.ClientKey)
-	}
-	if len(tlsConfig.KeyPass) > 0 {
-		tls.CommonTLSClientCert.KeyPass = base64.StdEncoding.EncodeToString(tlsConfig.KeyPass)
+
+	if source.CommonTLSClientCert.KeyFile != "" {
+		dst.CommonTLSClientCert.KeyFile = encodeBase64(source.CommonTLSClientCert.KeyFile)
 	}
 
 	return nil
@@ -330,14 +299,18 @@ func generateConfig(input *go_hook.HookInput) error {
 	for _, destination := range destSnap {
 		dest := destination.(v1alpha1.ClusterLogDestination)
 
-		// Override TLS config if secretRef is provided
-		if secretName := getTLSSecretRef(dest); secretName != "" {
-			tlsConfig, err := getTLSConfigFromSecretSnapshot(secretName, tlsSecretsSnap)
+		destinationTLSSpec, err := getTLSSpec(&dest)
+		if err != nil {
+			return errors.Wrap(err, "failed to get tls spec")
+		}
+		if destinationTLSSpec.SecretRef != nil {
+			secretTLSSpec, err := extractTLSSpecFromSecrets(destinationTLSSpec.SecretRef.Name, tlsSecretsSnap)
 			if err != nil {
-				return errors.Wrap(err, "failed to get TLS config from secret snapshot")
+				return errors.Wrap(err, "failed to extract tls data from secret")
 			}
-			if err := applyTLSConfig(&dest, tlsConfig); err != nil {
-				return errors.Wrap(err, "failed to apply TLS config")
+			err = overrideTLSSpec(secretTLSSpec, destinationTLSSpec)
+			if err != nil {
+				return errors.Wrap(err, "failed to apply tls config")
 			}
 		}
 
