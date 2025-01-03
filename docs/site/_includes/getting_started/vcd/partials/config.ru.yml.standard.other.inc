@@ -34,9 +34,9 @@ deckhouse:
   registryDockerCfg: <YOUR_ACCESS_STRING_IS_HERE>
 ---
 # [<en>] Deckhouse module settings.
-# [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/002-deckhouse/configuration.html
+# [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/deckhouse/configuration.html
 # [<ru>] Настройки модуля deckhouse.
-# [<ru>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/002-deckhouse/configuration.html
+# [<ru>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/deckhouse/configuration.html
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
@@ -72,9 +72,9 @@ spec:
       publicDomainTemplate: "%s.example.com"
 ---
 # [<en>] user-authn module settings.
-# [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/150-user-authn/configuration.html
+# [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/user-authn/configuration.html
 # [<ru>] Настройки модуля user-authn.
-# [<ru>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/150-user-authn/configuration.html
+# [<ru>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/user-authn/configuration.html
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
@@ -86,9 +86,9 @@ spec:
     controlPlaneConfigurator:
       dexCAMode: DoNotNeed
     # [<ru>] Включение доступа к API-серверу Kubernetes через Ingress.
-    # [<ru>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/150-user-authn/configuration.html#parameters-publishapi
+    # [<ru>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/user-authn/configuration.html#parameters-publishapi
     # [<en>] Enabling access to the API server through Ingress.
-    # [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/150-user-authn/configuration.html#parameters-publishapi
+    # [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/user-authn/configuration.html#parameters-publishapi
     publishAPI:
       enabled: true
       https:
@@ -97,9 +97,9 @@ spec:
           kubeconfigGeneratorMasterCA: ""
 ---
 # [<en>] cni-cilium module settings.
-# [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/021-cni-cilium/configuration.html
+# [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/cni-cilium/configuration.html
 # [<ru>] Настройки модуля cni-cilium.
-# [<ru>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/021-cni-cilium/configuration.html
+# [<ru>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/cni-cilium/configuration.html
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
@@ -108,9 +108,9 @@ spec:
   enabled: true
 ---
 # [<en>] metallb module settings.
-# [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/380-metallb/configuration.html
+# [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/metallb/configuration.html
 # [<ru>] Настройки модуля metallb.
-# [<ru>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/380-metallb/configuration.html
+# [<ru>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/metallb/configuration.html
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
@@ -120,18 +120,18 @@ spec:
   enabled: true
   settings:
       # [<ru>] Настройки metaillb-пула для входящего трафика.
-      # [<ru>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/380-metallb/configuration.html#parameters-addresspools
+      # [<ru>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/metallb/configuration.html#parameters-addresspools
       # [<en>] Metallb pool settings for incoming traffic.
-      # [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/380-metallb/configuration.html#parameters-addresspools
+      # [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/metallb/configuration.html#parameters-addresspools
     addressPools:
     - addresses:
       - *!CHANGE_SUBNET_METALLB_POOL*.10/32
       name: frontend-pool
       protocol: layer2
     # [<ru>] Размещение спикера на frontend-узлах.
-    # [<ru>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/380-metallb/configuration.html#parameters-speaker
+    # [<ru>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/metallb/configuration.html#parameters-speaker
     # [<en>] Speaker placement on frontend hosts.
-    # [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/380-metallb/configuration.html#parameters-speaker
+    # [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/metallb/configuration.html#parameters-speaker
     speaker:
       nodeSelector:
         node-role.deckhouse.io/frontend: ""
@@ -142,9 +142,9 @@ spec:
         value: frontend
 ---
 # [<en>] Cloud provider settings.
-# [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-vsphere/cluster_configuration.html
+# [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/cloud-provider-vsphere/cluster_configuration.html
 # [<ru>] Настройки облачного провайдера.
-# [<ru>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-vsphere/cluster_configuration.html
+# [<ru>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/cloud-provider-vsphere/cluster_configuration.html
 apiVersion: deckhouse.io/v1
 internalNetworkCIDR: 10.15.11.0/24
 kind: VCDClusterConfiguration

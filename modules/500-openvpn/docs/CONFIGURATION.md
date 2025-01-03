@@ -6,7 +6,7 @@ title: "The openvpn module: configuration"
 
 ## Authentication
 
-[user-authn](../150-user-authn/) module provides authentication by default. You can also configure authentication using the [externalAuthentication](#parameters-auth-externalauthentication) parameter. If these options are disabled, the module will use basic auth with the auto-generated password.
+[user-authn](../user-authn/) module provides authentication by default. You can also configure authentication using the [externalAuthentication](#parameters-auth-externalauthentication) parameter. If these options are disabled, the module will use basic auth with the auto-generated password.
 
 Use kubectl to see password:
 

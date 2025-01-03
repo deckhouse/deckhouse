@@ -11,7 +11,7 @@ Three layouts are supported. Below is more information about each of them.
 In this placement strategy, nodes do not have public IP addresses allocated to them; they use NAT gateway service in Yandex Cloud to connect to the Internet.
 {% endalert %}
 
-![Yandex Cloud Standard Layout scheme](../../images/030-cloud-provider-yandex/layout-standard.png)
+![Yandex Cloud Standard Layout scheme](../../images/cloud-provider-yandex/layout-standard.png)
 <!--- Source: https://docs.google.com/drawings/d/1WI8tu-QZYcz3DvYBNlZG4s5OKQ9JKyna7ESHjnjuCVQ/edit --->
 
 Example of the layout configuration:
@@ -88,7 +88,7 @@ In this layout, NAT (of any kind) is not used, and each node is assigned a publi
 
 > **Caution!** Currently, the cloud-provider-yandex module does not support Security Groups; thus, is why all cluster nodes connect directly to the Internet.
 
-![Yandex Cloud WithoutNAT Layout scheme](../../images/030-cloud-provider-yandex/layout-withoutnat.png)
+![Yandex Cloud WithoutNAT Layout scheme](../../images/cloud-provider-yandex/layout-withoutnat.png)
 <!--- Source: https://docs.google.com/drawings/d/1I7M9DquzLNu-aTjqLx1_6ZexPckL__-501Mt393W1fw/edit --->
 
 Example of the layout configuration:
@@ -165,7 +165,7 @@ If neither `withNATInstance.externalSubnetID` nor `withNATInstance.internalSubne
 
 If the IP address of the NAT-instance does not matter, you can pass an empty object `withNATInstance: {}`, then the necessary networks and dynamic IP will be created automatically.
 
-![Yandex Cloud WithNATInstance Layout scheme](../../images/030-cloud-provider-yandex/layout-withnatinstance.png)
+![Yandex Cloud WithNATInstance Layout scheme](../../images/cloud-provider-yandex/layout-withnatinstance.png)
 <!--- Source: https://docs.google.com/drawings/d/1oVpZ_ldcuNxPnGCkx0dRtcAdL7BSEEvmsvbG8Aif1pE/edit --->
 
 Example of the layout configuration:

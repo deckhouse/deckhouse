@@ -3,7 +3,7 @@ title: The prometheus-metrics-adapter module
 search: autoscaler, HorizontalPodAutoscaler 
 ---
 
-This module allows [HPA](https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/) and [VPA](../../modules/302-vertical-pod-autoscaler/) autoscalers base their decisions on various metrics.
+This module allows [HPA](https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/) and [VPA](../../modules/vertical-pod-autoscaler/) autoscalers base their decisions on various metrics.
 
 It installs an [implementation](https://github.com/kubernetes-sigs/prometheus-adapter) of the Kubernetes [resource metrics API](https://github.com/kubernetes/design-proposals-archive/blob/main/instrumentation/resource-metrics-api.md), [custom metrics API](https://github.com/kubernetes/design-proposals-archive/blob/main/instrumentation/custom-metrics-api.md), and [external metrics API](https://github.com/kubernetes/design-proposals-archive/blob/main/instrumentation/external-metrics-api.md) to get Prometheus metrics.
 

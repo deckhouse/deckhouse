@@ -45,7 +45,7 @@ title: "Модуль operator-prometheus"
 
 * В целом Prometheus работает следующим образом:
 
-  ![Работа Prometheus](../../images/200-operator-prometheus/targets.png)
+  ![Работа Prometheus](../../images/operator-prometheus/targets.png)
 
   * **(1)** Prometheus читает секцию конфига `scrape_configs`, согласно которой настраивает свой внутренний механизм Service Discovery
   * **(2)** Механизм Service Discovery взаимодействует с API Kubernetes (в основном — получает endpoint`ы)
@@ -131,7 +131,7 @@ title: "Модуль operator-prometheus"
 
 ### Что в Pod'е с Prometheus'ом?
 
-![Что в Pod Prometheus](../../images/200-operator-prometheus/pod.png)
+![Что в Pod Prometheus](../../images/operator-prometheus/pod.png)
 
 * Два контейнера:
   * `prometheus` — сам Prometheus
@@ -145,7 +145,7 @@ title: "Модуль operator-prometheus"
 
 ### Как обрабатываются Service Monitor'ы?
 
-![Как обрабатываются Service Monitor'ы](../../images/200-operator-prometheus/servicemonitors.png)
+![Как обрабатываются Service Monitor'ы](../../images/operator-prometheus/servicemonitors.png)
 
 * **(1)** Prometheus Operator читает (а также следит за добавлением/удалением/изменением) Service Monitor'ы (какие именно Service Monitor'ы — указано в самом ресурсе `prometheus`, см. подробней [официальную документацию](https://github.com/coreos/prometheus-operator/blob/master/Documentation/api.md#prometheusspec)).
 * **(2)** Для каждого Service Monitor'а, если в нем НЕ указан конкретный список namespace'ов (указано `any: true`), Prometheus Operator вычисляет (обращаясь к API Kubernetes) список namespace'ов, в которых есть Service'ы (подходящие под указанные в Service Monitor'е label'ы).
@@ -156,7 +156,7 @@ title: "Модуль operator-prometheus"
 
 ### Как обрабатываются Custome Resources с *rule'ами*?
 
-![Как обрабатываются Custome Resources с rule'ами](../../images/200-operator-prometheus/rules.png)
+![Как обрабатываются Custome Resources с rule'ами](../../images/operator-prometheus/rules.png)
 
 * **(1)** Prometheus Operator следит за PrometheusRule'ами (подходящими под указанный в ресурсе `prometheus` `ruleSelector`).
 * **(2)** Если появился новый (или был удален существующий) PrometheusRule — Prometheus Operator обновляет `prometheus.yaml` (а дальше срабатывает логика в точности соответствующая обработке Service Monitor'ов, которая описана выше).

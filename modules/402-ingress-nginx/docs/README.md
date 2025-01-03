@@ -25,7 +25,7 @@ The module allows you to manage HTTPS security policies for each of the NGINX In
 - hsts parameters;
 - available SSL/TLS versions and encryption protocols.
 
-The module integrates with the [cert-manager](../../modules/101-cert-manager/) module. Thus, it can get SSL certificates automatically and pass them to NGINX Ingress controllers for further use.
+The module integrates with the [cert-manager](../../modules/cert-manager/) module. Thus, it can get SSL certificates automatically and pass them to NGINX Ingress controllers for further use.
 
 ## Monitoring and statistics
 

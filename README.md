@@ -46,7 +46,7 @@ Deckhouse Platform follows the upstream version of Kubernetes, using that as a b
 
 # Trying Deckhouse
 
-Please, refer to the project's [Getting started](https://deckhouse.io/gs/) to begin your journey with Deckhouse Platform. Choose the cloud provider or bare-metal option for your infrastructure and follow the relevant step-by-step instructions to deploy your first Deckhouse Kubernetes cluster.
+Please, refer to the project's [Getting started](https://deckhouse.io/products/kubernetes-platform/gs/) to begin your journey with Deckhouse Platform. Choose the cloud provider or bare-metal option for your infrastructure and follow the relevant step-by-step instructions to deploy your first Deckhouse Kubernetes cluster.
 
 If anything works in an unexpected manner or you have any questions, feel free to contact us via GitHub Issues / Discussions or reach a wider [community of Deckhouse users](#online-community) in Telegram and other resources.
 
