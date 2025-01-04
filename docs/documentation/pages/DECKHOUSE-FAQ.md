@@ -30,14 +30,14 @@ kubectl get moduleconfigs user-authn -o yaml
 The documentation for the Deckhouse version running in the cluster is available at `documentation.<cluster_domain>`, where `<cluster_domain>` is the DNS name that matches the template defined in the [modules.publicDomainTemplate](deckhouse-configure-global.html#parameters-modules-publicdomaintemplate) parameter.
 
 {% alert level="warning" %}
-Documentation is available when the [documentation](modules/810-documentation/) module is enabled. It is enabled by default except the `Minimal` [bundle](modules/002-deckhouse/configuration.html#parameters-bundle).
+Documentation is available when the [documentation](modules/documentation/) module is enabled. It is enabled by default except the `Minimal` [bundle](modules/deckhouse/configuration.html#parameters-bundle).
 {% endalert %}
 
 ## Deckhouse update
 
 ### How to find out in which mode the cluster is being updated?
 
-You can view the cluster update mode in the [configuration](modules/002-deckhouse/configuration.html) of the `deckhouse` module. To do this, run the following command:
+You can view the cluster update mode in the [configuration](modules/deckhouse/configuration.html) of the `deckhouse` module. To do this, run the following command:
 
 ```shell
 kubectl get mc deckhouse -oyaml
@@ -74,11 +74,11 @@ status:
 There are three possible update modes:
 * **Automatic + update windows are not set.** The cluster will be updated after the new version appears on the corresponding [release channel](deckhouse-release-channels.html).
 * **Automatic + update windows are set.** The cluster will be updated in the nearest available window after the new version appears on the release channel.
-* **Manual.** [Manual action](modules/002-deckhouse/usage.html#manual-update-confirmation) is required to apply the update.
+* **Manual.** [Manual action](modules/deckhouse/usage.html#manual-update-confirmation) is required to apply the update.
 
 ### How do I set the desired release channel?
 
-Change (set) the [releaseChannel](modules/002-deckhouse/configuration.html#parameters-releasechannel) parameter in the `deckhouse` module [configuration](modules/002-deckhouse/configuration.html) to automatically switch to another release channel.
+Change (set) the [releaseChannel](modules/deckhouse/configuration.html#parameters-releasechannel) parameter in the `deckhouse` module [configuration](modules/deckhouse/configuration.html) to automatically switch to another release channel.
 
 It will activate the mechanism of [automatic stabilization of the release channel](#how-does-automatic-deckhouse-update-work).
 
@@ -97,7 +97,7 @@ spec:
 
 ### How do I disable automatic updates?
 
-To completely disable the Deckhouse update mechanism, remove the [releaseChannel](modules/002-deckhouse/configuration.html#parameters-releasechannel) parameter in the `deckhouse` module [configuration](modules/002-deckhouse/configuration.html).
+To completely disable the Deckhouse update mechanism, remove the [releaseChannel](modules/deckhouse/configuration.html#parameters-releasechannel) parameter in the `deckhouse` module [configuration](modules/deckhouse/configuration.html).
 
 In this case, Deckhouse does not check for updates and even doesn't apply patch releases.
 
@@ -110,7 +110,7 @@ It is highly not recommended to disable automatic updates! It will block updates
 To apply an update immediately, set the `release.deckhouse.io/apply-now : "true"` annotation on the [DeckhouseRelease](cr.html#deckhouserelease) resource.
 
 {% alert level="info" %}
-**Caution!** In this case, the update windows, settings [canary-release](cr.html#deckhouserelease-v1alpha1-spec-applyafter) and [manual cluster update mode](modules/002-deckhouse/configuration.html#parameters-update-disruptionapprovalmode) will be ignored. The update will be applied immediately after the annotation is installed.
+**Caution!** In this case, the update windows, settings [canary-release](cr.html#deckhouserelease-v1alpha1-spec-applyafter) and [manual cluster update mode](modules/deckhouse/configuration.html#parameters-update-disruptionapprovalmode) will be ignored. The update will be applied immediately after the annotation is installed.
 {% endalert %}
 
 An example of a command to set the annotation to skip the update windows for version `v1.56.2`:
@@ -183,25 +183,25 @@ Possible options for action if something went wrong:
   kubectl -n d8-system logs -f -l app=deckhouse | jq -Rr 'fromjson? | .msg'
   ```
 
-- [Collect debugging information](modules/002-deckhouse/faq.html#how-to-collect-debug-info) and contact technical support.
+- [Collect debugging information](modules/deckhouse/faq.html#how-to-collect-debug-info) and contact technical support.
 - Ask for help from the [community](https://deckhouse.io/community/about.html).
 {% endalert %}
 
 ### How do I know that a new version is available for the cluster?
 
 As soon as a new version of Deckhouse appears on the release channel installed in the cluster:
-- The alert `DeckhouseReleaseIsWaitingManualApproval` fires, if the cluster uses manual update mode (the [update.mode](modules/002-deckhouse/configuration.html#parameters-update-mode) parameter is set to `Manual`).
+- The alert `DeckhouseReleaseIsWaitingManualApproval` fires, if the cluster uses manual update mode (the [update.mode](modules/deckhouse/configuration.html#parameters-update-mode) parameter is set to `Manual`).
 - There is a new custom resource [DeckhouseRelease](cr.html#deckhouserelease). Use the `kubectl get deckhousereleases` command, to view the list of releases. If the `DeckhouseRelease` is in the `Pending` state, the specified version has not yet been installed. Possible reasons why `DeckhouseRelease` may be in `Pending`:
-  - Manual update mode is set (the [update.mode](modules/002-deckhouse/configuration.html#parameters-update-mode) parameter is set to `Manual`).
-  - The automatic update mode is set, and the [update windows](modules/002-deckhouse/usage.html#update-windows-configuration) are configured, the interval of which has not yet come.
+  - Manual update mode is set (the [update.mode](modules/deckhouse/configuration.html#parameters-update-mode) parameter is set to `Manual`).
+  - The automatic update mode is set, and the [update windows](modules/deckhouse/usage.html#update-windows-configuration) are configured, the interval of which has not yet come.
   - The automatic update mode is set, update windows are not configured, but the installation of the version has been postponed for a random time due to the mechanism of reducing the load on the repository of container images. There will be a corresponding message in the `status.message` field of the `DeckhouseRelease` resource.
-  - The [update.notification.minimalNotificationTime](modules/002-deckhouse/configuration.html#parameters-update-notification-minimalnotificationtime) parameter is set, and the specified time has not passed yet.
+  - The [update.notification.minimalNotificationTime](modules/deckhouse/configuration.html#parameters-update-notification-minimalnotificationtime) parameter is set, and the specified time has not passed yet.
 
 ### How do I get information about the upcoming update in advance?
 
 You can get information in advance about updating minor versions of Deckhouse on the release channel in the following ways:
-- Configure manual [update mode](modules/002-deckhouse/configuration.html#parameters-update-mode). In this case, when a new version appears on the release channel, the alert `DeckhouseReleaseIsWaitingManualApproval` will fire and a new custom resource [DeckhouseRelease](cr.html#deckhouserelease) will appear in the cluster.
-- Configure automatic [update mode](modules/002-deckhouse/configuration.html#parameters-update-mode) and specify the minimum time in the [minimalNotificationTime](modules/002-deckhouse/configuration.html#parameters-update-notification-minimalnotificationtime) parameter for which the update will be postponed. In this case, when a new version appears on the release channel, a new custom resource [DeckhouseRelease](cr.html#deckhouserelease) will appear in the cluster. And if you specify a URL in the [update.notification.webhook](modules/002-deckhouse/configuration.html#parameters-update-notification-webhook) parameter, then the webhook will be called additionally.
+- Configure manual [update mode](modules/deckhouse/configuration.html#parameters-update-mode). In this case, when a new version appears on the release channel, the alert `DeckhouseReleaseIsWaitingManualApproval` will fire and a new custom resource [DeckhouseRelease](cr.html#deckhouserelease) will appear in the cluster.
+- Configure automatic [update mode](modules/deckhouse/configuration.html#parameters-update-mode) and specify the minimum time in the [minimalNotificationTime](modules/deckhouse/configuration.html#parameters-update-notification-minimalnotificationtime) parameter for which the update will be postponed. In this case, when a new version appears on the release channel, a new custom resource [DeckhouseRelease](cr.html#deckhouserelease) will appear in the cluster. And if you specify a URL in the [update.notification.webhook](modules/deckhouse/configuration.html#parameters-update-notification-webhook) parameter, then the webhook will be called additionally.
 
 ### How do I find out which version of Deckhouse is on which release channel?
 
@@ -209,11 +209,11 @@ Information about which version of Deckhouse is on which release channel can be 
 
 ### How does automatic Deckhouse update work?
 
-Every minute Deckhouse checks a new release appeared in the release channel specified by the [releaseChannel](modules/002-deckhouse/configuration.html#parameters-releasechannel) parameter.
+Every minute Deckhouse checks a new release appeared in the release channel specified by the [releaseChannel](modules/deckhouse/configuration.html#parameters-releasechannel) parameter.
 
 When a new release appears on the release channel, Deckhouse downloads it and creates CustomResource [DeckhouseRelease](cr.html#deckhouserelease).
 
-After creating a `DeckhouseRelease` custom resource in a cluster, Deckhouse updates the `deckhouse` Deployment and sets the image tag to a specified release tag according to [selected](modules/002-deckhouse/configuration.html#parameters-update) update mode and update windows (automatic at any time by default).
+After creating a `DeckhouseRelease` custom resource in a cluster, Deckhouse updates the `deckhouse` Deployment and sets the image tag to a specified release tag according to [selected](modules/deckhouse/configuration.html#parameters-update) update mode and update windows (automatic at any time by default).
 
 To get list and status of all releases use the following command:
 
@@ -232,7 +232,7 @@ Patch releases (e.g., an update from version `1.30.1` to version `1.30.2`) ignor
   * if *the latest* releases have been already Deployed, then Deckhouse will hold the current release until a later release appears on the release channel (on the `EarlyAccess` release channel in the example).
 * When switching to a less stable release channel (e.g., from `EarlyAcess` to `Alpha`), the following actions take place:
   * Deckhouse downloads release data from the release channel (the `Alpha` release channel in the example) and compares it with the existing `DeckhouseReleases`.
-  * Then Deckhouse performs the update according to the [update parameters](modules/002-deckhouse/configuration.html#parameters-update).
+  * Then Deckhouse performs the update according to the [update parameters](modules/deckhouse/configuration.html#parameters-update).
 
 {% offtopic title="The scheme of using the releaseChannel parameter during Deckhouse installation and operation" %}
 ![The scheme of using the releaseChannel parameter during Deckhouse installation and operation](images/common/deckhouse-update-process.png)
@@ -541,11 +541,11 @@ Check [releases.deckhouse.io](https://releases.deckhouse.io) for the current sta
    > Before pushing images, make sure that the path for loading into the registry exists (`/sys/deckhouse` in the example above), and the account being used has write permissions.
    > Harbor users, please note that you will not be able to upload images to the project root; instead use a dedicated repository in the project to host Deckhouse images.
 
-1. Once pushing images to the air-gapped private registry is complete, you are ready to install Deckhouse from it. Refer to the [Getting started](/gs/bm-private/step2.html) guide.
+1. Once pushing images to the air-gapped private registry is complete, you are ready to install Deckhouse from it. Refer to the [Getting started](/products/kubernetes-platform/gs/bm-private/step2.html) guide.
 
    When launching the installer, use a repository where Deckhouse images have previously been loaded instead of official Deckhouse registry. For example, the address for launching the installer will look like `corp.company.com:5000/sys/deckhouse/install:stable` instead of `registry.deckhouse.io/deckhouse/ee/install:stable`.
 
-   During installation, add your registry address and authorization data to the [InitConfiguration](installing/configuration.html#initconfiguration) resource (the [imagesRepo](installing/configuration.html#initconfiguration-deckhouse-imagesrepo) and [registryDockerCfg](installing/configuration.html#initconfiguration-deckhouse-registrydockercfg) parameters; you might refer to [step 3]({% if site.mode == 'module' %}{{ site.urls[page.lang] }}{% endif %}/gs/bm-private/step3.html) of the Getting started guide as well).
+   During installation, add your registry address and authorization data to the [InitConfiguration](installing/configuration.html#initconfiguration) resource (the [imagesRepo](installing/configuration.html#initconfiguration-deckhouse-imagesrepo) and [registryDockerCfg](installing/configuration.html#initconfiguration-deckhouse-registrydockercfg) parameters; you might refer to [step 3]({% if site.mode == 'module' %}{{ site.urls[page.lang] }}{% endif %}/products/kubernetes-platform/gs/bm-private/step3.html) of the Getting started guide as well).
 
    After installation, apply DeckhouseReleases manifests that were generated by the `d8 mirror pull` command to your cluster via Deckhouse CLI as follows:
 
@@ -658,7 +658,7 @@ Follow these steps for manual loading images of modules, connected from the modu
    d8 k apply -f $HOME/module_source.yml
    ```
 
-   Once the manifest has been applied, the modules are ready for use. For more detailed instructions on configuring and using modules, please refer to the [module developer's documentation]({% if site.mode == 'module' %}{{ site.urls[page.lang] }}/documentation/latest{% endif %}/module-development/).
+   Once the manifest has been applied, the modules are ready for use. For more detailed instructions on configuring and using modules, please refer to the [module developer's documentation](./module-development/).
 
 ### How do I switch a running Deckhouse cluster to use a third-party registry?
 
@@ -722,7 +722,7 @@ To switch the Deckhouse cluster to using a third-party registry, follow these st
 
 * Wait for the Deckhouse Pod to become `Ready`. Restart Deckhouse Pod if it will be in `ImagePullBackoff` state.
 * Wait for bashible to apply the new settings on the master node. The bashible log on the master node (`journalctl -u bashible`) should contain the message `Configuration is in sync, nothing to do`.
-* If you want to disable Deckhouse automatic updates, remove the [releaseChannel](modules/002-deckhouse/configuration.html#parameters-releasechannel) parameter from the `deckhouse` module configuration.
+* If you want to disable Deckhouse automatic updates, remove the [releaseChannel](modules/deckhouse/configuration.html#parameters-releasechannel) parameter from the `deckhouse` module configuration.
 * Check if there are Pods with original registry in cluster (if there are — restart them):
 
   ```shell
@@ -736,8 +736,8 @@ This method should only be used if there are no release channel images in your a
 
 * If you want to install Deckhouse with automatic updates disabled:
   * Use the tag of the installer image of the corresponding version. For example, use the image `your.private.registry.com/deckhouse/install:v1.60.5`, if you want to install release `v1.60.5`.
-  * **Do not** set the [deckhouse.releaseChannel](installing/configuration.html#initconfiguration-deckhouse-releasechannel) parameter of the `InitConfiguration` resource.
-* If you want to disable automatic updates for an already installed Deckhouse (including patch release updates), then delete the [releaseChannel](modules/002-deckhouse/configuration.html#parameters-releasechannel) parameter from the `deckhouse` module configuration.
+  * **Do not** set the [deckhouse.releaseChannel](modules/deckhouse/configuration.html#parameters-releasechannel) parameter.
+* If you want to disable automatic updates for an already installed Deckhouse, please refer to the documentation on [release pinning](modules/deckhouse/#pin-a-release).
 
 ### Using a proxy server
 
@@ -824,7 +824,7 @@ After saving the changes, Deckhouse will bring the cluster configuration to the 
 
 ### How do I change the configuration of a cloud provider in a cluster?
 
-Cloud provider setting of a cloud of hybrid cluster are stored in the `<PROVIDER_NAME>ClusterConfiguration` structure, where `<PROVIDER_NAME>` — name/code of the cloud provider. E.g., for an OpenStack provider, the structure will be called [OpenStackClusterConfiguration]({% if site.mode == 'module' and site.d8Revision == 'CE' %}{{ site.urls[page.lang] }}/products/kubernetes-platform/documentation/v1/{% endif %}modules/030-cloud-provider-openstack/cluster_configuration.html).
+Cloud provider setting of a cloud of hybrid cluster are stored in the `<PROVIDER_NAME>ClusterConfiguration` structure, where `<PROVIDER_NAME>` — name/code of the cloud provider. E.g., for an OpenStack provider, the structure will be called [OpenStackClusterConfiguration]({% if site.mode == 'module' and site.d8Revision == 'CE' %}{{ site.urls[page.lang] }}/products/kubernetes-platform/documentation/v1/{% endif %}modules/cloud-provider-openstack/cluster_configuration.html).
 
 Regardless of the cloud provider used, its settings can be changed using the following command:
 
@@ -1735,7 +1735,7 @@ To upgrade the Kubernetes version in a cluster change the [kubernetesVersion](in
 
 ### How do I run Deckhouse on a particular node?
 
-Set the `nodeSelector` [parameter](modules/002-deckhouse/configuration.html) of the `deckhouse` module and avoid setting `tolerations`. The necessary values will be assigned to the `tolerations` parameter automatically.
+Set the `nodeSelector` [parameter](modules/deckhouse/configuration.html) of the `deckhouse` module and avoid setting `tolerations`. The necessary values will be assigned to the `tolerations` parameter automatically.
 
 {% alert level="warning" %}
 Use only nodes with the **CloudStatic** or **Static** type to run Deckhouse. Also, avoid using a `NodeGroup` containing only one node to run Deckhouse.

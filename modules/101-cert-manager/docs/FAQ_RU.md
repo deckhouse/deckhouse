@@ -36,7 +36,7 @@ title: "Модуль cert-manager: FAQ"
    * `digitalocean`
    * `route53`
 1. `ClusterIssuer` использующие метод `HTTP-01`.  
-Добавляются автоматически, если их создание не отключено в [настройках модуля](./configuration.htmll#parameters-disableletsencrypt).
+   Добавляются автоматически, если их создание не отключено в [настройках модуля](./configuration.html#parameters-disableletsencrypt).
    * `letsencrypt`
    * `letsencrypt-staging`
 
@@ -55,7 +55,7 @@ title: "Модуль cert-manager: FAQ"
 При необходимости можно создать такие `ClusterIssuer` самостоятельно.  
 
 Пример использования AWS Route53 доступен в разделе [Как защитить учетные данные `cert-manager`](#как-защитить-учетные-данные-cert-manager).  
-Актуальный перечень всех возможных для создания `ClusterIssuer` доступен в [шаблонах модуля](https://github.com/deckhouse/deckhouse/tree/main/modules/101-cert-manager/templates/cert-manager).
+Актуальный перечень всех возможных для создания `ClusterIssuer` доступен в [шаблонах модуля](https://github.com/deckhouse/deckhouse/tree/main/modules/cert-manager/templates/cert-manager).
 
 Использование сторонних DNS-провайдеров реализуется через метод `webhook`.  
 Когда `cert-manager` выполняет вызов `ACME` `DNS01`, он отправляет запрос на вебхук-сервер, который затем выполняет нужные операции для обновления записи DNS.  
@@ -101,7 +101,7 @@ title: "Модуль cert-manager: FAQ"
 
 Для выпуска сертификатов с помощью HashiСorp Vault, можете использовать [инструкцию](https://learn.hashicorp.com/tutorials/vault/kubernetes-cert-manager?in=vault/kubernetes).
 
-После конфигурации PKI и [включения авторизации](../../modules/140-user-authz/) в Kubernetes, нужно:
+После конфигурации PKI и [включения авторизации](../../modules/user-authz/) в Kubernetes, нужно:
 - Создать `ServiceAccount` и скопировать ссылку на его `Secret`:
 
   ```shell

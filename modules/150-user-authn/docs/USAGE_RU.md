@@ -365,4 +365,4 @@ spec:
 
 ## Выдача прав пользователю или группе
 
-Для настройки используются параметры в Custom Resource [`ClusterAuthorizationRule`](../../modules/140-user-authz/cr.html#clusterauthorizationrule).
+Для настройки используются параметры в Custom Resource [`ClusterAuthorizationRule`](../../modules/user-authz/cr.html#clusterauthorizationrule).

@@ -133,7 +133,7 @@ user-authn   false     1         12h
 
 ## Module bundles
 
-Depending on the [bundle used](./modules/002-deckhouse/configuration.html#parameters-bundle), modules may be enabled or disabled by default.
+Depending on the [bundle used](./modules/deckhouse/configuration.html#parameters-bundle), modules may be enabled or disabled by default.
 
 <table>
 <thead>
@@ -192,7 +192,7 @@ You cannot set `nodeSelector` and `tolerations` for modules:
 
 {% raw %}
 * The *monitoring*-related modules (`operator-prometheus`, `prometheus` and `vertical-pod-autoscaler`):
-  * Deckhouse examines nodes to determine a [nodeSelector](https://deckhouse.io/products/kubernetes-platform/documentation/modules/300-prometheus/configuration.html#parameters-nodeselector) in the following order:
+  * Deckhouse examines nodes to determine a [nodeSelector](https://deckhouse.io/products/kubernetes-platform/documentation/modules/prometheus/configuration.html#parameters-nodeselector) in the following order:
     1. It checks if a node with the `node-role.deckhouse.io/MODULE_NAME` label is present in the cluster.
     1. It checks if a node with the `node-role.deckhouse.io/monitoring` label is present in the cluster.
     1. It checks if a node with the `node-role.deckhouse.io/system` label is present in the cluster.
