@@ -1,6 +1,5 @@
 {%- assign moduleName = page['module-kebab-name'] %}
-{%- assign i18nmoduleDowncase = site.data.i18n.common['module'][page.lang] | downcase %}
-{%- assign moduleAlertsUrl = "../../alerts.html#" | append: i18nmoduleDowncase | append: "-" | append: moduleName %}
+{%- assign moduleAlertsUrl = "../../alerts.html#" | append: moduleName %}
 
 {%- assign moduleAlerts = site.data.deckhouse-alerts.alerts | where: "module", moduleName  %}
 

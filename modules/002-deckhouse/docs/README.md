@@ -58,7 +58,7 @@ To pin a release means fully or partially disable the automatic Deckhouse versio
 There are three options to limit the automatic update of Deckhouse:
 - Enable a manual update mode.
 
-  In this case, Deckhouse holds on a current version and able to receive updates. But to apply the update, a [manual action](usage.html#manual-confirmation-of-updates) will need to be performed. This applies to both patch versions and minor versions.
+  In this case, Deckhouse holds on a current version and able to receive updates. But to apply the update, a [manual action](usage.html#manual-update-confirmation) will need to be performed. This applies to both patch versions and minor versions.
   
   To enable manual update mode, you need to set the parameter [settings.update.mode](configuration.html#parameters-update-mode) in ModuleConfig `deckhouse` to `Manual`:
   
@@ -68,7 +68,7 @@ There are three options to limit the automatic update of Deckhouse:
 
 - Set the automatic update mode for patch versions.
 
-  In this case, Deckhouse holds on a current version and will automatically update to patch versions of the current release. To apply a minor version update, a [manual action](usage.html#manual-confirmation-of-updates) will need to be performed.
+  In this case, Deckhouse holds on a current version and will automatically update to patch versions of the current release. To apply a minor version update, a [manual action](usage.html#manual-update-confirmation) will need to be performed.
   
   For example: the current version of DKP is `v1.65.2`, after setting the automatic update mode for patch versions, Deckhouse can be updated to version `v1.65.6`, but will not update to version `v1.66.*` or higher.
 

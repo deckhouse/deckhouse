@@ -134,7 +134,7 @@ user-authn   false     1         12h
 
 ## Наборы модулей
 
-В зависимости от используемого [набора модулей](./modules/002-deckhouse/configuration.html#parameters-bundle) (bundle) модули могут быть включены или выключены по умолчанию.
+В зависимости от используемого [набора модулей](./modules/deckhouse/configuration.html#parameters-bundle) (bundle) модули могут быть включены или выключены по умолчанию.
 
 <table>
 <thead>
@@ -193,7 +193,7 @@ Deckhouse с набором модулей `Minimal` без включения �
 
 {% raw %}
 * Модули *monitoring* (`operator-prometheus`, `prometheus` и `vertical-pod-autoscaler`):
-  * Порядок поиска узлов (для определения [nodeSelector](modules/300-prometheus/configuration.html#parameters-nodeselector)):
+  * Порядок поиска узлов (для определения [nodeSelector](modules/prometheus/configuration.html#parameters-nodeselector)):
     1. Наличие узла с лейблом `node-role.deckhouse.io/MODULE_NAME`.
     1. Наличие узла с лейблом `node-role.deckhouse.io/monitoring`.
     1. Наличие узла с лейблом `node-role.deckhouse.io/system`.

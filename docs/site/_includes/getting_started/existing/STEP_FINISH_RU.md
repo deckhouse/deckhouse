@@ -9,9 +9,9 @@
 
 Рассмотрим дальнейшие возможности Deckhouse, открывающиеся сразу после установки.
 
-Для доступа к внутрикластерной документации выделен домен `deckhouse` в соответствии с установленным [шаблоном DNS-имен](../../products/kubernetes-platform/documentation/v1/deckhouse-configure-global.html#parameters-modules-publicdomaintemplate). Например, для шаблона DNS-имен `%s.1.2.3.4.sslip.io`, веб-интерфейс документации будет доступен по адресу `https://deckhouse.1.2.3.4.sslip.io`.
+Для доступа к внутрикластерной документации выделен домен `deckhouse` в соответствии с установленным [шаблоном DNS-имен](/products/kubernetes-platform/documentation/v1/deckhouse-configure-global.html#parameters-modules-publicdomaintemplate). Например, для шаблона DNS-имен `%s.1.2.3.4.sslip.io`, веб-интерфейс документации будет доступен по адресу `https://deckhouse.1.2.3.4.sslip.io`.
 
-Доступ к документации ограничен basic-аутентификацией (больше вариантов аутентификации можно получить включив модуль [user-auth](../../products/kubernetes-platform/documentation/v1/modules/150-user-authn/)):  
+Доступ к документации ограничен basic-аутентификацией (больше вариантов аутентификации можно получить включив модуль [user-auth](/products/kubernetes-platform/documentation/v1/modules/user-authn/)):  
 - Логин — `admin`
 - Пароль сгенерирован автоматически. Узнать его можно выполнив команду:
 

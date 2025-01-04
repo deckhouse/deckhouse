@@ -5,7 +5,7 @@ description: "Schemes of placement and interaction of resources in VMware Cloud 
 
 ## Standard
 
-![resources](../../images/030-cloud-provider-vcd/VCD-Standard.svg)
+![resources](../../images/cloud-provider-vcd/VCD-Standard.svg)
 <!--- Source: https://docs.google.com/drawings/d/1aosnFD7AzBgHrQGvxxQHZPfV0PSaTM66A-EPMWgPEqw/edit --->
 
 Example of the layout configuration:

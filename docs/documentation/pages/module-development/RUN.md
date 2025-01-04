@@ -299,7 +299,7 @@ The module update policy refers to the rules that DKP uses to update modules in 
 - the release channel to use for updates;
 - time windows for automatic updates during which the module update is permitted.
 
-You do not have to create the ModuleUpdatePolicy resource. If the update policy for a module is not defined (there is no corresponding ModuleUpdatePolicy resource), the update settings match the update settings of DKP (the [update](../../modules/002-deckhouse/configuration.html#parameters-update) parameter of the `deckhouse` module).
+You do not have to create the ModuleUpdatePolicy resource. If the update policy for a module is not defined (there is no corresponding ModuleUpdatePolicy resource), the update settings match the update settings of DKP (the [update](../../modules/deckhouse/configuration.html#parameters-update) parameter of the `deckhouse` module).
 
 Example of the ModuleUpdatePolicy resource, whose update policy allows automatic module updates on Mondays and Wednesdays from 13:30 to 14:00 UTC:
 
@@ -345,7 +345,7 @@ module-two                   Available   False     False
 
 It shows that the `module-one` module can be enabled.
 
-If the module is not in the list, check that [module source](#module-source) is defined and the module is listed in the module source. Also check the [update policy](#module-update-policy) of the module (if defined). If the module update policy is not defined, it matches the DKP update policy (the [releaseChannel](../../modules/002-deckhouse/configuration.html#parameters-releasechannel) parameter and the [update](../../modules/002-deckhouse/configuration.html#parameters-update) section of the `deckhouse` module parameters).
+If the module is not in the list, check that [module source](#module-source) is defined and the module is listed in the module source. Also check the [update policy](#module-update-policy) of the module (if defined). If the module update policy is not defined, it matches the DKP update policy (the [releaseChannel](../../modules/deckhouse/configuration.html#parameters-releasechannel) parameter and the [update](../../modules/deckhouse/configuration.html#parameters-update) section of the `deckhouse` module parameters).
 
 You can enable the module similarly to built-in DKP modules using any of the following methods:
 - Run the command below (specify the name of the module):

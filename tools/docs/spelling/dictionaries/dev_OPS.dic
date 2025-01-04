@@ -1,4 +1,4 @@
-2177
+2194
 1GB
 2GB
 5XX
@@ -107,6 +107,7 @@ BitbucketCloud
 blackholing
 blog
 bm
+Bootstrapping
 boto
 boto3
 BPF
@@ -359,6 +360,7 @@ DSR
 dst
 dst
 DVP
+Dynamix
 eBPF
 eBPF
 EBS
@@ -467,6 +469,7 @@ GrafanaAdditionalDatasource
 GrafanaAlertsChannel
 GrafanaCloud
 GrafanaDashboardDefinition
+Graylog
 grep
 gRPC
 GRPC
@@ -933,6 +936,7 @@ promtail
 Promtail
 protobuf
 ProviderClusterConfiguration
+providerID
 proxied
 ProxyConfig
 proxyHttpsURI
@@ -1140,6 +1144,7 @@ syscall
 syscalls
 sysctl
 sysctls
+Syslog
 systemd
 TaintToleration
 tarball
@@ -1396,9 +1401,12 @@ zVirt
 валидирования
 валидировать
 валидируются
+вебхук
+вебхук
 вендором
 вендору
 вендору
+вендоры
 версионирование
 версионирование
 версионирования
@@ -1640,6 +1648,7 @@ zVirt
 лейбле
 лейблов
 лейблом
+лейблу
 лейблы
 Лейблы
 лексикографически
@@ -1707,6 +1716,10 @@ zVirt
 мультикластера
 мультикластерной
 мультикластером
+мультимастер
+мультимастерного
+мультимастерном
+мультимастерный
 мультиплатформенной
 мультитенантности
 мусорку
@@ -1871,6 +1884,7 @@ zVirt
 превью
 предзагрузки
 преднастроенный
+преднастроенных
 прилинкованным
 применились
 применится
@@ -2019,6 +2033,7 @@ zVirt
 сконвертировать
 сконфигурировать
 Сконфигурировать
+сконфигурируйте
 скрейпа
 скрейпера
 скриншоте
@@ -2121,6 +2136,7 @@ zVirt
 фреймворк
 фреймворков
 Фронтенд
+ФСТЭК
 х
 Хабре
 хардкода
@@ -2176,3 +2192,4 @@ zVirt
 эндпоинты
 эскалаций
 юзера
+юнит
