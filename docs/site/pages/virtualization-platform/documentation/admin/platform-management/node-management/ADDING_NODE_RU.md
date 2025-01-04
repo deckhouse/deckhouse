@@ -305,7 +305,7 @@ bash /var/lib/bashible/cleanup_static_node.sh --yes-i-am-sane-and-i-understand-w
 
 StaticInstance, находящийся в состоянии `Pending`, можно удалять без каких-либо проблем.
 
-Чтобы удалить StaticInstance находящийся в любом состоянии, отличном от `Pending` (`Running`, `Cleaning`, `Bootstraping`):
+Чтобы удалить StaticInstance находящийся в любом состоянии, отличном от `Pending` (`Running`, `Cleaning`, `Bootstrapping`):
 1. Добавьте лейбл `"node.deckhouse.io/allow-bootstrap": "false"` в StaticInstance.
 1. Дождитесь, пока StaticInstance перейдет в статус `Pending`.
 1. Удалите StaticInstance.

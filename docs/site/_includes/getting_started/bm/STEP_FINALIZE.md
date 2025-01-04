@@ -32,7 +32,7 @@ sudo /opt/deckhouse/bin/kubectl patch nodegroup master --type json -p '[{"op": "
 {% endsnippetcut %}
   </li>
   <li>
-<p>Configure the StorageClass for the <a href="/products/kubernetes-platform/documentation/v1/modules/031-local-path-provisioner/cr.html#localpathprovisioner">local storage</a> by running the following command on the <strong>master node</strong>:</p>
+<p>Configure the StorageClass for the <a href="/products/kubernetes-platform/documentation/v1/modules/local-path-provisioner/cr.html#localpathprovisioner">local storage</a> by running the following command on the <strong>master node</strong>:</p>
 {% snippetcut %}
 ```shell
 sudo /opt/deckhouse/bin/kubectl create -f - << EOF
@@ -60,14 +60,14 @@ sudo /opt/deckhouse/bin/kubectl patch mc global --type merge \
 </div>
 
 <div id="block_layout_worker" class="tabs__content_worker">
-<p>Add a new node to the cluster (for more information about adding a static node to a cluster, read <a href="/products/kubernetes-platform/documentation/latest/modules/040-node-manager/examples.html#adding-a-static-node-to-a-cluster">the documentation</a>):</p>
+<p>Add a new node to the cluster (for more information about adding a static node to a cluster, read <a href="/products/kubernetes-platform/documentation/latest/modules/node-manager/examples.html#adding-a-static-node-to-a-cluster">the documentation</a>):</p>
 
 <ul>
   <li>
     Start a <strong>new virtual machine</strong> that will become the cluster node.
   </li>
   <li>
-  Configure the StorageClass for the <a href="/products/kubernetes-platform/documentation/v1/modules/031-local-path-provisioner/cr.html#localpathprovisioner">local storage</a> by running the following command on the <strong>master node</strong>:
+  Configure the StorageClass for the <a href="/products/kubernetes-platform/documentation/v1/modules/local-path-provisioner/cr.html#localpathprovisioner">local storage</a> by running the following command on the <strong>master node</strong>:
 {% snippetcut %}
 ```shell
 sudo /opt/deckhouse/bin/kubectl create -f - << EOF
@@ -92,7 +92,7 @@ sudo /opt/deckhouse/bin/kubectl patch mc global --type merge \
 {% endsnippetcut %}
   </li>
   <li>
-    <p>Create a <a href="/products/kubernetes-platform/documentation/v1/modules/040-node-manager/cr.html#nodegroup">NodeGroup</a> <code>worker</code>. To do so, run the following command on the <strong>master node</strong>:</p>
+    <p>Create a <a href="/products/kubernetes-platform/documentation/v1/modules/node-manager/cr.html#nodegroup">NodeGroup</a> <code>worker</code>. To do so, run the following command on the <strong>master node</strong>:</p>
 {% snippetcut %}
 ```bash
 sudo /opt/deckhouse/bin/kubectl create -f - << EOF
@@ -120,7 +120,7 @@ ssh-keygen -t rsa -f /dev/shm/caps-id -C "" -N ""
 {% endsnippetcut %}
   </li>
   <li>
-    <p>Create an <a href="/products/kubernetes-platform/documentation/v1/modules/040-node-manager/cr.html#sshcredentials">SSHCredentials</a> resource in the cluster. To do so, run the following command on the <strong>master node</strong>:</p>
+    <p>Create an <a href="/products/kubernetes-platform/documentation/v1/modules/node-manager/cr.html#sshcredentials">SSHCredentials</a> resource in the cluster. To do so, run the following command on the <strong>master node</strong>:</p>
 {% snippetcut %}
 ```bash
 kubectl create -f - <<EOF
@@ -161,7 +161,7 @@ chmod 600 /home/caps/.ssh/authorized_keys
 {% endsnippetcut %}
   </li>
   <li>
-    <p>Create a <a href="/products/kubernetes-platform/documentation/v1/modules/040-node-manager/cr.html#staticinstance">StaticInstance</a> for the node to be added. To do so, run the following command on the <strong>master node</strong> (specify IP address of the node):</p>
+    <p>Create a <a href="/products/kubernetes-platform/documentation/v1/modules/node-manager/cr.html#staticinstance">StaticInstance</a> for the node to be added. To do so, run the following command on the <strong>master node</strong> (specify IP address of the node):</p>
 {% snippetcut %}
 ```bash
 # Specify the IP address of the node you want to connect to the cluster.

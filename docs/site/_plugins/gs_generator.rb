@@ -71,7 +71,7 @@ class DKP_GSPage < Jekyll::Page
       'platform_name' => @installData['name'],
       'product_code' => 'kubernetes-platform',
       'sitemap_include' => false,
-      'url_prefix' => '',
+      'url_prefix' => '/products/kubernetes-platform',
       'gs_data_key' => 'dkp_data',
       'toc' => false,
       'steps' => (installData['steps'].length + 1).to_s,

@@ -9,7 +9,7 @@ search: prometheus monitoring, prometheus custom alert, prometheus custom alerti
 
 ## How do I collect metrics from applications running outside of the cluster?
 
-1. Configure a Service similar to the one that [collects metrics from your application](../../modules/340-monitoring-custom/#an-example-service) (but do not set the `spec.selector` parameter).
+1. Configure a Service similar to the one that [collects metrics from your application](../monitoring-custom/#an-example-service) (but do not set the `spec.selector` parameter).
 1. Create Endpoints for this Service and explicitly specify the `IP:PORT` pairs that your applications use to expose metrics.
 
    > Port names in Endpoints must match those in the Service.
@@ -320,7 +320,7 @@ Follow these steps:
      namespace: d8-service-accounts
    ```
 
-2. Generate a `kubeconfig` file for the created `ServiceAccount` ([refer to the example on how to generate `kubeconfig` for `ServiceAccount`](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/140-user-authz/usage.html#creating-a-serviceaccount-for-a-machine-and-granting-it-access)).
+2. Generate a `kubeconfig` file for the created `ServiceAccount` ([refer to the example on how to generate `kubeconfig` for `ServiceAccount`](../user-authz/usage.html#creating-a-serviceaccount-for-a-machine-and-granting-it-access)).
 
 3. Copy the `kubeconfig` file to the *remote server*. You will also have to specify the `kubeconfig` path in the `kube-rbac-proxy` settings (our example uses `${PWD}/.kube/config`).
 
