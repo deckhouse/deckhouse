@@ -243,7 +243,7 @@ func getTLSSpec(dest *v1alpha1.ClusterLogDestination) (*v1alpha1.CommonTLSSpec, 
 	return nil, fmt.Errorf("unsupported destination type: %s", dest.Spec.Type)
 }
 
-func overrideTLSSpec(source v1alpha1.CommonTLSSpec, dst *v1alpha1.CommonTLSSpec) error {
+func overrideTLSSpec(source v1alpha1.CommonTLSSpec, dst *v1alpha1.CommonTLSSpec) {
 	encodeBase64 := func(str string) string {
 		return base64.StdEncoding.EncodeToString([]byte(str))
 	}
@@ -263,8 +263,6 @@ func overrideTLSSpec(source v1alpha1.CommonTLSSpec, dst *v1alpha1.CommonTLSSpec)
 	if source.CommonTLSClientCert.KeyFile != "" {
 		dst.CommonTLSClientCert.KeyFile = encodeBase64(source.CommonTLSClientCert.KeyFile)
 	}
-
-	return nil
 }
 
 func generateConfig(input *go_hook.HookInput) error {
@@ -308,10 +306,7 @@ func generateConfig(input *go_hook.HookInput) error {
 			if err != nil {
 				return errors.Wrap(err, "failed to extract tls data from secret")
 			}
-			err = overrideTLSSpec(secretTLSSpec, destinationTLSSpec)
-			if err != nil {
-				return errors.Wrap(err, "failed to apply tls config")
-			}
+			overrideTLSSpec(secretTLSSpec, destinationTLSSpec)
 		}
 
 		if dest.Spec.Type != "Loki" || token == "" {
