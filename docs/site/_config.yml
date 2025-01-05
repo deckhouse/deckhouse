@@ -26,9 +26,6 @@ chat_script_url:
   en: "https://crm.flant.ru/upload/crm/site_button/loader_2_qurrbf.js"
   ru: "https://crm.flant.ru/upload/crm/site_button/loader_3_20bbbd.js"
 
-assets:
-  precompile: ['**/*.*']
-
 social_links:
   ru:
     telegram: https://t.me/deckhouse_ru
@@ -55,9 +52,16 @@ highlighter: rouge
 feedback_disable: true
 
 plugins:
-  - jekyll-assets
   - jekyll-regex-replace
   - jekyll_include_plugin
+  - jekyll_asset_pipeline
+
+asset_pipeline:
+  bundle: true
+  compress: true
+  output_path: assets
+  #display_path: nil
+  gzip: false
 
 markdown: kramdown
 kramdown:

@@ -1,4 +1,3 @@
----
 image: {{ .ModuleName }}/{{ .ImageName }}
 {{ if eq .ModuleName "docs" }}
 from: {{ .Images.BASE_NGINX_ALPINE }}
@@ -40,6 +39,9 @@ shell:
         echo "Ruby: $(ruby --version)"
         echo "Gem: $(gem --version)"
         bundle --version
+        jekyll -version
+        yq -V
+        echo "jq: $(jq -V)"
 
         echo '[] Creating modules.yml ...'
         cd /srv/jekyll-data/documentation/
@@ -104,8 +106,7 @@ shell:
         sed '/^bashible:/r version_map_addition.yml' version_map.yml >> supported_versions.yml
 
         echo '[] Converting editions structure...'
-        yq e -j editions-source.yaml | jq -M 'reduce .editions[] as $item ({}; .[$item.name | ascii_downcase] = $item)' | jq -Ms '.[0] * .[1]' - editions-addition.json | jq --argfile data modules/be-addition.json '(.[] | select(.name == "BE").excludeModules) += $data.excludeModules' - > editions.json
-        #  yq eval -j | jq  '.editions' | jq --argfile data modules/be-additions.json '(.[] | select(.name == "BE").excludeModules) += $data.excludeModules' -
+        yq e -j editions-source.yaml | jq -M 'reduce .editions[] as $item ({}; .[$item.name | ascii_downcase] = $item)' | jq -Ms '.[0] * .[1]' - editions-addition.json | jq '. as $editions | input as $be | .["be"].excludeModules += $be.excludeModules' - modules/be-addition.json > editions.json
 
 
 {{ if ne .ModuleName "docs" }}

@@ -50,9 +50,10 @@ shell:
   install: apk add jq curl
 ---
 {{- if and (ne $.Env "development") (ne $.Env "module") (ne $.Env "local") }}
-artifact: site-external-artifacts
+image: site-external-artifacts
 fromCacheVersion: {{ div .Commit.Date.Unix (mul 60 60) }}v1
 fromImage: site-tools
+final: false
 shell:
   install:
     - mkdir -p /data
@@ -69,8 +70,9 @@ shell:
       jq '.copyright | if ( ( .en | length) < 1 ) or ( ( .ru | length) < 1 ) then error("Got empty copyright array!") else . end ' /tmp/menus.json > /data/copyright.json
 {{- end }}
 ---
-artifact: web-static
+image: web-static
 from: {{ .Images.BASE_JEKYLL }}
+final: false
 shell:
   install:
   - |
@@ -97,9 +99,9 @@ git:
   owner: jekyll
   group: jekyll
   includePaths:
-  - js/lunr*.js
-  - js/pdf.worker.min.js
-  - js/search.js
+  - _assets/js/lunr*.js
+  - _assets/js/pdf.worker.min.js
+  - _assets/js/search.js
   - _data/rbac/
   - _includes/rbac/
   stageDependencies:
@@ -265,26 +267,27 @@ git:
     setup: ['**/*']
 {{- if and (ne $.Env "development") (ne $.Env "module") (ne $.Env "local") }}
 import:
-  - artifact: site-external-artifacts
+  - image: site-external-artifacts
     add: /data/topnav.json
     to: /srv/jekyll-data/site/_data/topnav.json
     before: setup
-  - artifact: site-external-artifacts
+  - image: site-external-artifacts
     add: /data/topnav-l2-products.json
     to: /srv/jekyll-data/site/_data/topnav-l2-products.json
     before: setup
-  - artifact: site-external-artifacts
+  - image: site-external-artifacts
     add: /data/footer.json
     to: /srv/jekyll-data/site/_data/footer.json
     before: setup
-  - artifact: site-external-artifacts
+  - image: site-external-artifacts
     add: /data/copyright.json
     to: /srv/jekyll-data/site/_data/copyright.json
     before: setup
 {{- end }}
 ---
-artifact: web-backend-srv
+image: web-backend-srv
 from: {{ .Images.BASE_GOLANG_16_ALPINE }}
+final: false
 shell:
   install:
   - cd /go/src/app
@@ -309,11 +312,11 @@ shell:
   install:
   - apk add --no-cache curl jq
 import:
-  - artifact: web-backend-srv
+  - image: web-backend-srv
     add: /go/src/app/server
     to: /app/server
     before: setup
-  - artifact: web-static
+  - image: web-static
     add: /app/_site
     to: /app/root
     before: setup
@@ -332,7 +335,7 @@ shell:
       {{- .Files.Get ".werf/nginx.conf" | nindent 6 }}
       EOD
 import:
-- artifact: web-static
+- image: web-static
   add: /app/_site
   to: /app
   before: setup

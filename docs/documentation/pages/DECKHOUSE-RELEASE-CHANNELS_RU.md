@@ -6,7 +6,7 @@ toc: false
 lang: ru
 ---
 
-<link rel="stylesheet" type="text/css" href='{{ assets["releases.css"].digest_path }}' />
+<link rel="stylesheet" type="text/css" href='{%- css_asset_tag global %}[_assets/css/releases.css]{% endcss_asset_tag %}' />
 {%- assign releases = site.data.releases.channels | sort: "stability" -%}
 
 {% alert %}
