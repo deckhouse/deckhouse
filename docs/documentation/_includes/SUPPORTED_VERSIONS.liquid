@@ -1,4 +1,4 @@
-<link rel="stylesheet" type="text/css" href='{{ assets["supported_versions.css"].digest_path | true_relative_url }}' />
+<link rel="stylesheet" type="text/css" href='{%- css_asset_tag global %}[_assets/css/supported_versions.css]{% endcss_asset_tag %}' />
 
 {%- assign osVersions = site.data.supported_versions.bashible | sort %}
 {%- assign k8sVersions = site.data.supported_versions.k8s  %}
