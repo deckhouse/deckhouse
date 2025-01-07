@@ -6,7 +6,7 @@ toc: false
 ---
 
 {% capture asset_url %}{%- css_asset_tag releases %}[_assets/css/releases.css]{% endcss_asset_tag %}{% endcapture %}
-<link rel="stylesheet" type="text/css"href='{{ asset_url | strip_newlines  | true_relative_url }}' />
+<link rel="stylesheet" type="text/css" href='{{ asset_url | strip_newlines  | true_relative_url }}' />
 
 {%- assign releases = site.data.releases.channels | sort: "stability" -%}
 

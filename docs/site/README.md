@@ -75,7 +75,7 @@ Some tips:
 
   ```liquid
   {% capture asset_url %}{%- css_asset_tag supported_versions %}[_assets/css/supported_versions.css]{% endcss_asset_tag %}{% endcapture %}
-  <link rel="stylesheet" type="text/css"href='{{ asset_url | strip_newlines  | true_relative_url }}' />
+  <link rel="stylesheet" type="text/css" href='{{ asset_url | strip_newlines  | true_relative_url }}' />
   ```
 
 ### Dependencies
