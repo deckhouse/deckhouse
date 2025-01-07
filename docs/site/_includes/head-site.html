@@ -201,20 +201,3 @@
 {%- unless site.mode == "module" %}
 {%- include counters-and-chat.liquid %}
 {%- endunless %}
-<script type="text/javascript">
-    $(document).ready(function () {
-
-        function getCookie (name) {
-            let value = '; ' + document.cookie;
-            let parts = value.split(`; ${name}=`);
-            if (parts.length == 2) return parts.pop().split(';').shift();
-        }
-
-        var token = getCookie('license-token') ? getCookie('license-token') : getCookie('demotoken');
-        if (token) {
-            window.yaParams = { "license-token": token };
-            ym(78422802, 'params', window.yaParams||{});
-        }
-
-    });
-</script>
