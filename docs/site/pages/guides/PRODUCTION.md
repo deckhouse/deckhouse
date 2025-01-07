@@ -101,7 +101,7 @@ The `HostWithFailover` inlet is suitable for clusters with a single frontend nod
 
 The algorithm for choosing an inlet:
 
-![The algorithm for choosing an inlet]({{ assets["guides/going_to_production/ingress-inlet.svg"].digest_path }})
+![The algorithm for choosing an inlet](/images/guides/going_to_production/ingress-inlet.svg)
 
 ### Monitoring nodes
 

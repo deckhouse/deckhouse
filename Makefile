@@ -257,7 +257,7 @@ docs-down: ## Stop all the documentation containers (e.g. site_site_1 - for Linu
 
 .PHONY: tests-doc-links
 docs-linkscheck: ## Build documentation and run checker of html links.
-	bash tools/doc_check_links.sh
+	@bash tools/docs/link-checker/run.sh
 
 .PHONY: docs-spellcheck
 docs-spellcheck: ## Check the spelling in the documentation.
