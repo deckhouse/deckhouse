@@ -6,8 +6,8 @@ lang: ru
 toc: false
 ---
 
-<link rel="stylesheet" type="text/css" href='{{ assets["getting-started.css"].digest_path }}' />
-<script type="text/javascript" src='{{ assets["getting-started.js"].digest_path }}'></script>
+<link rel="stylesheet" type="text/css" href='{% css_asset_tag getting-started-css %}[_assets/css/getting-started.css]{% endcss_asset_tag %}' />
+<script type="text/javascript" src='{% javascript_asset_tag getting-started %}[_assets/js/getting-started.js]{% endjavascript_asset_tag %}'></script>
 
 <p>Скорее всего, вы уже ознакомились с основными <a href="/products/kubernetes-platform/">возможностями Deckhouse
     Platform</a>. В данном руководстве рассмотрен пошаговый процесс установки платформы.</p>
