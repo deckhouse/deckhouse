@@ -104,6 +104,9 @@ git:
   - _assets/js/search.js
   - _data/rbac/
   - _includes/rbac/
+  - _plugins/jekyll_asset_pipeline.rb
+  - _plugins/custom_filters.rb
+  - _plugins/offtopic.rb
   stageDependencies:
     setup: '**/*'
 - add: /docs/site
