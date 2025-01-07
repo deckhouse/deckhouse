@@ -56,7 +56,7 @@ for module_edition_path in $(find ${MODULES_DIR} -type d -print | grep -E '.+/mo
   module_doc_path=""
 
   # Skip modules, which are listed in modules_menu_skip file
-  if grep -Fxq "$module_name" modules_menu_skip; then
+  if grep -Fxq "$module_name" _tools/modules_menu_skip; then
       continue
   fi
 

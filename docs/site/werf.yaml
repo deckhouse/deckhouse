@@ -44,18 +44,14 @@ gitWorktree:
     {{- end }}
   {{- end }}
 ---
-image: site-tools
-from: {{ .Images.BASE_ALPINE }}
-shell:
-  install: apk add jq curl
----
 {{- if and (ne $.Env "development") (ne $.Env "module") (ne $.Env "local") }}
 image: site-external-artifacts
 fromCacheVersion: {{ div .Commit.Date.Unix (mul 60 60) }}v1
-fromImage: site-tools
+from: {{ .Images.BASE_ALPINE }}
 final: false
 shell:
   install:
+    - apk add --no-cache jq curl
     - mkdir -p /data
   setup:
     - echo "Getting data from the API server..."
@@ -86,7 +82,7 @@ shell:
         export MODULES_RAW_DIR=/rawdata
         export CRD_PATH=virtualization-platform/crds
         export OPENAPI_PATH=virtualization-platform/openapi
-        bash ./prepare_resources.sh
+        bash _tools/prepare_resources.sh
 
         # "Building static files"
         cd /srv/jekyll-data/site/
@@ -114,7 +110,7 @@ git:
   owner: jekyll
   group: jekyll
   excludePaths:
-  - LOCAL_DEV.md
+  - '*.md'
   - werf*.yaml
   - docker-compose*.yml
   - .werf

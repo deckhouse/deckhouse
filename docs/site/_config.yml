@@ -40,13 +40,13 @@ exclude:
 - vendor
 - Gemfile.lock
 - Gemfile
-- backend
+- backends
 - '*.sh'
 - '*.yml'
 - '*.yaml'
-- docker-compose.yml
-- modules_make_data
-- modules_menu_skip
+- docker-compose*.yml
+- _tools/
+
 
 highlighter: rouge
 feedback_disable: true

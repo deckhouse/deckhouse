@@ -48,11 +48,11 @@ shell:
 {{ if ne .ModuleName "docs" }}
         export MODULES_DIR=/comparison
 {{ end }}
-        ./modules_list.sh 1>_data/modules/internal.yaml
+        _tools/modules_list.sh 1>_data/modules/internal.yaml
         # Creating list of ALL the modules...
         cat _data/modules/internal.yaml |yq eval -j | jq -MsS '.[0] * .[1]' - _data/modules/modules-addition.json > _data/modules/all.json
 
-        cat modules_menu_skip  | sed -E 's/^[0-9]+-//'  | jq -nRc '[inputs]' > _data/excludedModules.json
+        cat _tools/modules_menu_skip  | sed -E 's/^[0-9]+-//'  | jq -nRc '[inputs]' > _data/excludedModules.json
 
         echo '[] Edition - {{ .Edition }}. Merging modules of different editions...'
         for dir in {be,se,ee,se-plus,fe}; do if [ -d /src/$dir/modules ];then cp -rf /src/$dir/modules /src >& /dev/null; fi; done
@@ -61,7 +61,7 @@ shell:
         export MODULES_SRC_DIR=/src/modules
         export MODULES_DST_EN=/srv/jekyll-data/documentation/modules_en
         export MODULES_DST_RU=/srv/jekyll-data/documentation/modules_ru
-        bash ./modules_prepare.sh
+        bash _tools/modules_prepare.sh
 
         echo '[] Adding permalinks...'
         for i in $(find . -regex '.*.md' -print); do
@@ -75,28 +75,28 @@ shell:
 
         echo '[] Generating configuration schemas...'
         export MODULES_DIR=modules_en
-        bash ./modules_generate_configuration.sh
+        bash _tools/modules_generate_configuration.sh
         export MODULES_DIR=modules_ru MODULES_LANG=ru
-        bash ./modules_generate_configuration.sh
+        bash _tools/modules_generate_configuration.sh
 
         echo
         echo '[] Generating cluster configuration schemas...'
         export MODULES_DIR=modules_en
-        bash ./generate_cluster_configuration.sh
+        bash _tools/generate_cluster_configuration.sh
         export MODULES_DIR=modules_ru MODULES_LANG=ru
-        bash ./generate_cluster_configuration.sh
+        bash _tools/generate_cluster_configuration.sh
 
         echo
         echo "[] Generating CR schemas..."
         export MODULES_DIR=modules_en
-        bash ./modules_generate_cr.sh
+        bash _tools/modules_generate_cr.sh
         export MODULES_DIR=modules_ru
-        bash ./modules_generate_cr.sh
+        bash _tools/modules_generate_cr.sh
 
         echo
         echo '[] Preparing OSS license info...'
         export MODULES_DIR=/src/modules
-        bash ./modules_generate_ossinfo.sh
+        bash _tools/modules_generate_ossinfo.sh
 
         echo '[] Extracting the default Kubernetes version...'
         echo "default: \"$(grep "DefaultKubernetesVersion" -m 1 _data/dhctl-base.go | grep -Eo '[0-9.]+')\"" > _data/version_kubernetes.yml
