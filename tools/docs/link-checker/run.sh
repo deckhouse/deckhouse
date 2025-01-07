@@ -76,8 +76,8 @@ rsync -a --exclude='ru' --exclude='en' --exclude='compare' ${_TMPDIR}/dkp-docume
 rsync -a ${_TMPDIR}/dkp-documentation/en/ ${_TMPDIR}/site_en/products/kubernetes-platform/documentation/
 rsync -a ${_TMPDIR}/dkp-documentation/ru/ ${_TMPDIR}/site_ru/products/kubernetes-platform/documentation/
 #
-rsync -a ${_TMPDIR}/dkp-documentation/{assets,css,images,js} ${_TMPDIR}/site_en/products/kubernetes-platform/documentation
-rsync -a ${_TMPDIR}/dkp-documentation/{assets,css,images,js} ${_TMPDIR}/site_ru/products/kubernetes-platform/documentation
+rsync -a ${_TMPDIR}/dkp-documentation/{assets,images} ${_TMPDIR}/site_en/products/kubernetes-platform/documentation
+rsync -a ${_TMPDIR}/dkp-documentation/{assets,images} ${_TMPDIR}/site_ru/products/kubernetes-platform/documentation
 
 echo "Moving DKP guides and GS files..."
 
