@@ -198,7 +198,10 @@
 "></script>
 <![endif]-->
 
- <script type="text/javascript">
+{%- unless site.mode == "module" %}
+{%- include counters-and-chat.liquid %}
+{%- endunless %}
+<script type="text/javascript">
     $(document).ready(function () {
 
         function getCookie (name) {
@@ -215,7 +218,3 @@
 
     });
 </script>
-
-{%- unless site.mode == "module" %}
-{%- include counters-and-chat.liquid %}
-{%- endunless %}
