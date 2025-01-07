@@ -1,6 +1,6 @@
-<script type="text/javascript" src='{{ assets["getting-started.js"].digest_path }}'></script>
-<script type="text/javascript" src='{{ assets["getting-started-access.js"].digest_path }}'></script>
-<script type="text/javascript" src='{{ assets["bcrypt.js"].digest_path }}'></script>
+<script type="text/javascript" src='{% javascript_asset_tag getting-started %}[_assets/js/getting-started.js]{% endjavascript_asset_tag %}'></script>
+<script type="text/javascript" src='{% javascript_asset_tag getting-started-access %}[_assets/js/getting-started-access.js]{% endjavascript_asset_tag %}'></script>
+<script type="text/javascript" src='{% javascript_asset_tag bcrypt %}[_assets/js/bcrypt.js]{% endjavascript_asset_tag %}'></script>
 
 На данном этапе вы создали кластер, который состоит из **единственного** узла — master-узла. На master-узле по умолчанию работает только ограниченный набор системных компонентов. Для полноценной работы кластера необходимо либо добавить в кластер хотя бы один worker-узел, либо разрешить остальным компонентам Deckhouse работать на master-узле.
 

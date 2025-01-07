@@ -100,7 +100,7 @@ Inlet `HostWithFailover` подходит для кластеров с одни�
 
 Алгоритм выбора inlet'а:
 
-![Алгоритм выбора inlet'а]({{ assets["guides/going_to_production/ingress-inlet-ru.svg"].digest_path }})
+![Алгоритм выбора inlet'а](/images/guides/going_to_production/ingress-inlet-ru.svg)
 
 ### Узлы мониторинга
 

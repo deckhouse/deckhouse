@@ -247,7 +247,7 @@ module Jekyll
                         elsif exampleObject.is_a?(Array)
                             exampleContent = %Q(```yaml\n#{( if name then {name => exampleObject} else exampleObject end).to_yaml.sub(/^---(\n| ){1}/,'')}```)
                         else
-                            if exampleObject =~ /\`\`\`|\n/
+                            if exampleObject.is_a?(String) and exampleObject =~ /\`\`\`|\n/
                                 exampleContent = "#{exampleObject}"
                             elsif attributes['type'] == 'boolean' then
                                 exampleContent = %Q(```yaml\n#{(if name then {name => (exampleObject and true)} else (exampleObject and true) end).to_yaml.sub(/^---(\n| ){1}/,'')}```)

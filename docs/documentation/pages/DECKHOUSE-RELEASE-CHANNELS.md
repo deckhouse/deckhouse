@@ -4,7 +4,10 @@ permalink: en/deckhouse-release-channels.html
 layout: page
 toc: false
 ---
-<link rel="stylesheet" type="text/css" href='{{ assets["releases.css"].digest_path }}' />
+
+{% capture asset_url %}{%- css_asset_tag releases %}[_assets/css/releases.css]{% endcss_asset_tag %}{% endcapture %}
+<link rel="stylesheet" type="text/css" href='{{ asset_url | strip_newlines  | true_relative_url }}' />
+
 {%- assign releases = site.data.releases.channels | sort: "stability" -%}
 
 {% alert %}
