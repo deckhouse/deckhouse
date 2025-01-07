@@ -96,8 +96,8 @@ git:
   group: jekyll
   includePaths:
   - _assets/js/lunr*.js
-  - _assets/js/pdf.worker.min.js
   - _assets/js/search.js
+  - assets/js/pdf.worker.min.js
   - _data/rbac/
   - _includes/rbac/
   - _plugins/jekyll_asset_pipeline.rb
