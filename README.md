@@ -59,4 +59,4 @@ In addition to common GitHub features, here are some other online resources rela
 * [Deckhouse blog](https://blog.deckhouse.io/) to read the latest articles about Deckhouse.
 * Check our [work board](https://github.com/orgs/deckhouse/projects/2) and [roadmap](https://github.com/orgs/deckhouse/projects/6) for more insights.
 
-<!-- test changes -->
+<!-- test changes 2 -->
