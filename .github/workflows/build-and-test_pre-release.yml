@@ -1317,12 +1317,11 @@ jobs:
           mv  ${_TMPDIR}/site_en/virtualization-platform ${_TMPDIR}/site_en/products/virtualization-platform
 
       - name: Check links with html-proofer
+        continue-on-error: true
         env:
           DECKHOUSE_REGISTRY_READ_HOST: "${{secrets.DECKHOUSE_REGISTRY_READ_HOST}}"
           CHECKER_IMAGE: "${{vars.DOC_LINK_CHECKER_IMAGE}}"
         run: |
-          # Do not exit on html-proofer error.
-          set +e
           docker run --rm -v "${_TMPDIR}/site_en:/src/en:ro" -v "${_TMPDIR}/site_ru:/src/ru:ro" \
                     -v "./tools/docs/link-checker/entrypoint.sh:/entrypoint.sh:ro" ${DECKHOUSE_REGISTRY_READ_HOST}/base_images/${CHECKER_IMAGE} /entrypoint.sh
 
