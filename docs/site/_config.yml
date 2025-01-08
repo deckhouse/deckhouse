@@ -69,7 +69,8 @@ kramdown:
  auto_ids: true
  hard_wrap: false
  syntax_highlighter: rouge
- parse_block_html: true
+ # TODO: Find out if disabling this option will break something in the documentation!!!
+ #parse_block_html: true
 
 defaults:
   - scope:
