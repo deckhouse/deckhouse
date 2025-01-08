@@ -787,7 +787,7 @@ module Jekyll
             if !( get_hash_value(input, 'i18n', 'en', 'properties', 'settings' ) )
                input['i18n']['en']['properties'] = { "settings" => { "type" => "object", "properties" => input['i18n']['en']['properties'] } }
             end
-            if !( get_hash_value(input, 'i18n', 'ru', 'properties', 'settings' ) )
+            if !( get_hash_value(input, 'i18n', 'ru', 'properties', 'settings' ) ) and get_hash_value(input, 'i18n', 'ru', 'properties' )
                input['i18n']['ru']['properties'] = { "settings" => { "type" => "object", "properties" => input['i18n']['ru']['properties'] } }
             end
         end
