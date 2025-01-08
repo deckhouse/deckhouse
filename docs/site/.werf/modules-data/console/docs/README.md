@@ -17,7 +17,7 @@ Assuming public domain template is `%s.example.com`, the web app will be availab
 - Node management: configuration, scaling, and update settings
 - Multitenancy: projects and project templates
 - Access control: external authentication providers, group and user permissions
-- Ingress controllers to rul incoming traffic
+- Ingress controllers to rule incoming traffic
 - Journaling: collecting logs from node file and pods, and sending them to various storage types
 - Monitoring: processing and sending of metrics, recording rules and alerts, Grafana dashboards and data sources, Prometheus settings, and a list of firing alerts
 - GitOps support: special marks on Kubernetes resources, created by automation like werf, Argo CD, Helm.
