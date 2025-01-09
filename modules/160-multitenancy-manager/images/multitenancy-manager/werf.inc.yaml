@@ -1,0 +1,57 @@
+---
+image: {{ .ModuleName }}/{{ .ImageName }}
+fromImage: common/distroless
+import:
+  - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-multitenancy-manager-artifact
+    add: /src/multitenancy-manager
+    to: /multitenancy-manager
+    before: setup
+  - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-multitenancy-manager-src-artifact
+    add: /src/templates
+    to: /templates
+  - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-multitenancy-manager-src-artifact
+    add: /src/default
+    to: /default
+docker:
+  ENTRYPOINT: [ "/multitenancy-manager" ]
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-multitenancy-manager-src-artifact
+fromImage: common/src-artifact
+final: false
+git:
+  - add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/src
+    to: /src
+    includePaths:
+      - '**/*.go'
+      - '**/go.mod'
+      - '**/go.sum'
+      - '**/default/*.yaml'
+      - '**/templates/*.yaml'
+      - '**/templates/*.tpl'
+    stageDependencies:
+      install:
+        - '**/*.go'
+        - '**/go.mod'
+        - '**/go.sum'
+        - '**/default/*.yaml'
+        - '**/templates/*.yaml'
+        - '**/templates/*.tpl'
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-multitenancy-manager-artifact
+from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
+final: false
+import:
+  - image: {{ $.ModuleName }}/{{ $.ImageName }}-multitenancy-manager-src-artifact
+    add: /src
+    to: /src
+    before: install
+mount:
+  - fromPath: ~/go-pkg-cache
+    to: /go/pkg
+shell:
+  install:
+    - export GOPROXY={{ .GOPROXY }}
+    - cd /src
+    - CGO_ENABLED=0 GOOS=linux go build -ldflags '-s -w' -o multitenancy-manager ./cmd/main.go
+    - chown 64535:64535 multitenancy-manager
+    - chmod 0700 multitenancy-manager
