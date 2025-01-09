@@ -122,6 +122,7 @@ func (p *TaskCalculator) CalculatePendingReleaseOrder(ctx context.Context, dr *v
 
 	releaseQueueDepth := len(releases) - 1 - releaseIdx
 	isLatestRelease := releaseQueueDepth == 0
+	isPatch := true
 
 	// check previous release
 	// only for awaiting purpose
@@ -129,19 +130,22 @@ func (p *TaskCalculator) CalculatePendingReleaseOrder(ctx context.Context, dr *v
 		prevRelease := releases[releaseIdx-1]
 
 		// if release version is greater in major or minor version than previous release
-		// it must await for release Deployed state
-		if (dr.GetVersion().Major() > prevRelease.GetVersion().Major() ||
-			dr.GetVersion().Minor() > prevRelease.GetVersion().Minor()) &&
-			prevRelease.GetPhase() != v1alpha1.DeckhouseReleasePhaseDeployed {
-			msg := prevRelease.Status.Message
-			if !strings.Contains(msg, "awaiting") {
-				msg = fmt.Sprintf("awaiting for v%s release to be deployed", prevRelease.GetVersion().String())
-			}
+		// it must await for previous release has Deployed state
+		if dr.GetVersion().Major() > prevRelease.GetVersion().Major() ||
+			dr.GetVersion().Minor() > prevRelease.GetVersion().Minor() {
+			isPatch = false
 
-			return &Task{
-				TaskType: Await,
-				Message:  msg,
-			}, nil
+			if prevRelease.GetPhase() != v1alpha1.DeckhouseReleasePhaseDeployed {
+				msg := prevRelease.Status.Message
+				if !strings.Contains(msg, "awaiting") {
+					msg = fmt.Sprintf("awaiting for v%s release to be deployed", prevRelease.GetVersion().String())
+				}
+
+				return &Task{
+					TaskType: Await,
+					Message:  msg,
+				}, nil
+			}
 		}
 	}
 
@@ -156,7 +160,7 @@ func (p *TaskCalculator) CalculatePendingReleaseOrder(ctx context.Context, dr *v
 			dr.GetVersion().Minor() < nextRelease.GetVersion().Minor() {
 			return &Task{
 				TaskType:            Process,
-				IsPatch:             true,
+				IsPatch:             isPatch,
 				IsLatest:            isLatestRelease,
 				DeployedReleaseInfo: deployedReleaseInfo,
 				QueueDepth:          releaseQueueDepth,
@@ -165,7 +169,7 @@ func (p *TaskCalculator) CalculatePendingReleaseOrder(ctx context.Context, dr *v
 
 		return &Task{
 			TaskType: Skip,
-			IsPatch:  true,
+			IsPatch:  isPatch,
 		}, nil
 	}
 

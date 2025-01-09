@@ -82,13 +82,13 @@ func (c *DeployTimeChecker) ProcessPatchReleaseDeployTime(dr *v1alpha1.Deckhouse
 // for minor release we check:
 // - Deckhouse pod is ready
 // - No delay from calculated deploy time
-func (c *DeployTimeChecker) ProcessMinorReleaseDeployTime(ctx context.Context, dr *v1alpha1.DeckhouseRelease, res *DeployTimeResult) *DeployTimeReason {
+func (c *DeployTimeChecker) ProcessMinorReleaseDeployTime(ctx context.Context, dr *v1alpha1.DeckhouseRelease, res *DeployTimeResult, dri *ReleaseInfo) *DeployTimeReason {
 	// check: Deckhouse pod is ready
 	if !c.deckhousePodReadyFunc(ctx) {
 		c.logger.Info("Deckhouse is not ready. Skipping upgrade")
 
 		return &DeployTimeReason{
-			Message:               "awaiting for Deckhouse pod to be ready",
+			Message:               fmt.Sprintf("awaiting for Deckhouse v%s pod to be ready", dri.Version.String()),
 			ReleaseApplyAfterTime: res.ReleaseApplyAfterTime,
 		}
 	}

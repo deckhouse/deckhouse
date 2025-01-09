@@ -395,9 +395,8 @@ func (r *deckhouseReleaseReconciler) pendingReleaseReconcile(ctx context.Context
 		return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
 	}
 
-	// if deckhouse pod has bootstrap image -> apply first release
-	// doesn't matter which update mode is
-	if (r.registrySecret.ClusterIsBootstrapped && task.IsSingle) || dr.GetApplyNow() {
+	// if cluster needs bootstrap and we found only one release - apply release
+	if (!r.registrySecret.ClusterIsBootstrapped && task.IsSingle) || dr.GetApplyNow() {
 		err := r.ApplyRelease(ctx, dr, task.DeployedReleaseInfo)
 		if err != nil {
 			// TODO: deal with error
@@ -550,7 +549,7 @@ func (r *deckhouseReleaseReconciler) DeployTimeCalculate(ctx context.Context, dr
 		}
 	}
 
-	dtr := timeChecker.ProcessMinorReleaseDeployTime(ctx, dr, deployTimeResult)
+	dtr := timeChecker.ProcessMinorReleaseDeployTime(ctx, dr, deployTimeResult, task.DeployedReleaseInfo)
 	if dtr != nil {
 		dtr.Notified = true
 	}
