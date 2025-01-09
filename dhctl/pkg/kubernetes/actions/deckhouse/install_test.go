@@ -318,7 +318,7 @@ func TestDeckhouseInstallWithModuleConfigsReturnsResults(t *testing.T) {
 
 			require.Len(t, mcs.Items, 2)
 
-			require.NotContains(t, mcs.Items[0].Object["spec"].(map[string]interface{})["settings"].(map[string]interface{})["modules"], "https")
+			require.NotContains(t, mcs.Items[1].Object["spec"].(map[string]interface{})["settings"].(map[string]interface{})["modules"], "https")
 		})
 	})
 
