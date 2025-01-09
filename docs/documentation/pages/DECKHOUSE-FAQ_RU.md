@@ -1051,7 +1051,7 @@ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-con
 1. Актуализируйте секрет доступа к registry Deckhouse, выполнив следующую команду:
 
    ```bash
-   kubectl -n d8-system create secret generic deckhouse-registry \
+   sudo /opt/deckhouse/bin/kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- kubectl -n d8-system create secret generic deckhouse-registry \
      --from-literal=".dockerconfigjson"="{\"auths\": { \"registry.deckhouse.ru\": {}}}" \
      --from-literal="address"=registry.deckhouse.ru \
      --from-literal="path"=/deckhouse/ce \
@@ -1334,7 +1334,7 @@ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-con
 1. Актуализируйте секрет доступа к registry Deckhouse, выполнив следующую команду:
 
    ```shell
-   kubectl -n d8-system create secret generic deckhouse-registry \
+   sudo /opt/deckhouse/bin/kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- kubectl -n d8-system create secret generic deckhouse-registry \
      --from-literal=".dockerconfigjson"="{\"auths\": { \"registry.deckhouse.ru\": { \"username\": \"license-token\", \"password\": \"$LICENSE_TOKEN\", \"auth\":    \"$AUTH_STRING\" }}}" \
      --from-literal="address"=registry.deckhouse.ru \
      --from-literal="path"=/deckhouse/ee \
@@ -1641,7 +1641,7 @@ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-con
 1. Актуализируйте секрет доступа к registry Deckhouse, выполнив следующую команду:
 
    ```shell
-   sudo /opt/deckhouse/bin/kubectl -n d8-system exec -ti  svc/deckhouse-leader -c deckhouse -- kubectl -n d8-system create secret generic deckhouse-registry \
+   sudo /opt/deckhouse/bin/kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- kubectl -n d8-system create secret generic deckhouse-registry \
      --from-literal=".dockerconfigjson"="{\"auths\": { \"registry.deckhouse.ru\": { \"username\": \"license-token\", \"password\": \"$LICENSE_TOKEN\", \"auth\":    \"$AUTH_STRING\" }}}" \
      --from-literal="address"=registry.deckhouse.ru   --from-literal="path"=/deckhouse/se \
      --from-literal="scheme"=https   --type=kubernetes.io/dockerconfigjson \
@@ -1887,7 +1887,7 @@ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-con
 1. Актуализируйте секрет доступа к registry Deckhouse, выполнив следующую команду:
 
    ```console
-   kubectl -n d8-system create secret generic deckhouse-registry \
+   sudo /opt/deckhouse/bin/kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- kubectl -n d8-system create secret generic deckhouse-registry \
      --from-literal=".dockerconfigjson"="{\"auths\": { \"registry-cse.deckhouse.ru\": { \"username\": \"license-token\", \"password\": \"$LICENSE_TOKEN\", \"auth\": \"$AUTH_STRING\" }}}" \
      --from-literal="address"=registry-cse.deckhouse.ru \
      --from-literal="path"=/deckhouse/cse \

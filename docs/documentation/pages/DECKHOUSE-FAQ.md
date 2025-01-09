@@ -1050,7 +1050,7 @@ Perform the following steps to switch a Deckhouse Enterprise Edition cluster to 
 1. Update the secret to access the Deckhouse registry by running the following command:
 
    ```bash
-   kubectl -n d8-system create secret generic deckhouse-registry \
+   sudo /opt/deckhouse/bin/kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- kubectl -n d8-system create secret generic deckhouse-registry \
      --from-literal=".dockerconfigjson"="{\"auths\": { \"registry.deckhouse.io\": {}}}" \
      --from-literal="address"=registry.deckhouse.io \
      --from-literal="path"=/deckhouse/ce \
@@ -1333,7 +1333,7 @@ To switch Deckhouse Community Edition to Enterprise Edition, follow these steps:
 1. Update the secret to access the Deckhouse registry by running the following command:
 
    ```shell
-   kubectl -n d8-system create secret generic deckhouse-registry \
+   sudo /opt/deckhouse/bin/kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- kubectl -n d8-system create secret generic deckhouse-registry \
      --from-literal=".dockerconfigjson"="{\"auths\": { \"registry.deckhouse.io\": { \"username\": \"license-token\", \"password\": \"$LICENSE_TOKEN\", \"auth\":    \"$AUTH_STRING\" }}}" \
      --from-literal="address"=registry.deckhouse.io \
      --from-literal="path"=/deckhouse/ee \
