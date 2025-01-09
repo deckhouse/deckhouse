@@ -4,3 +4,5 @@ idna==3.7
 requests==2.32.0
 setuptools==75.6.0
 urllib3>=1.26.19
+py==1.11.0
+cryptography==42.0.4
