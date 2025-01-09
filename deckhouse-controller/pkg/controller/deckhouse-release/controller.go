@@ -398,7 +398,7 @@ func (r *deckhouseReleaseReconciler) pendingReleaseReconcile(ctx context.Context
 	// TODO: it's maybe deprecated history about bootstrap deploying. delete???
 	//
 	// if cluster needs bootstrap and we found only one release - apply release
-	if (!r.registrySecret.ClusterIsBootstrapped && task.IsSingle) || dr.GetApplyNow() {
+	if !r.registrySecret.ClusterIsBootstrapped && task.IsSingle {
 		err := r.ApplyRelease(ctx, dr, task)
 		if err != nil {
 			// TODO: deal with error
