@@ -40,6 +40,10 @@ deckhouse:
   bundle: {{ .bundle }}
 {{- end }}
 
+{{- if .releaseChannel }}
+  releaseChannel: {{ .releaseChannel }}
+{{- end }}
+
 {{- if .logLevel }}
   logLevel: {{ .logLevel }}
 {{- end }}
