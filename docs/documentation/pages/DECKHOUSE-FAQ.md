@@ -854,10 +854,10 @@ Deckhouse CE does not support cloud clusters on OpenStack and VMware vSphere.
 
 Perform the following steps to switch a Deckhouse Enterprise Edition cluster to Community Edition (all commands must be run on the master node of the active cluster):
 
-1. Run a temporary Deckhouse CE pod to retrieve up-to-date digests and module lists:
+1. Run a temporary Deckhouse CE pod to retrieve up-to-date digests and module lists. Enter the latest version of Deckhouse into the <DECKHOUSE_VERSION> variable::
 
    ```shell
-   kubectl run ce-image --image=registry.deckhouse.io/deckhouse/ce/install:v1.63.7 --command sleep -- infinity
+   kubectl run ce-image --image=registry.deckhouse.io/deckhouse/ce/install:<DECKHOUSE_VERSION> --command sleep -- infinity
    ```
 
    > Run an image of the latest installed Deckhouse version in the cluster. To find out which version is currently installed, use the following command:
@@ -1050,20 +1050,20 @@ Perform the following steps to switch a Deckhouse Enterprise Edition cluster to 
 1. Update the secret to access the Deckhouse registry by running the following command:
 
    ```bash
-   sudo /opt/deckhouse/bin/kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- kubectl -n d8-system create secret generic deckhouse-registry \
+   kubectl -n d8-system create secret generic deckhouse-registry \
      --from-literal=".dockerconfigjson"="{\"auths\": { \"registry.deckhouse.io\": {}}}" \
      --from-literal="address"=registry.deckhouse.io \
      --from-literal="path"=/deckhouse/ce \
      --from-literal="scheme"=https \
      --type=kubernetes.io/dockerconfigjson \
      --dry-run='client' \
-     -o yaml | kubectl replace -f -
+     -o yaml | sudo /opt/deckhouse/bin/kubectl -n d8-system exec -i  svc/deckhouse-leader -c deckhouse -- kubectl replace -f -
    ```
 
-1. Apply the Deckhouse CE image:
+1. Apply the Deckhouse CE image. Enter the latest version of Deckhouse into the <DECKHOUSE_VERSION> variable:
 
    ```shell
-   kubectl -n d8-system set image deployment/deckhouse deckhouse=registry.deckhouse.io/deckhouse/ce:v1.63.7
+   sudo /opt/deckhouse/bin/kubectl -n d8-system exec -i svc/deckhouse-leader -c deckhouse -- kubectl -n d8-system set image deployment/deckhouse deckhouse=registry.deckhouse.io/deckhouse/ce:<DECKHOUSE_VERSION>
    ```
 
 1. Wait for the Deckhouse pod to become `Ready` and for [all the queued jobs to complete](https://deckhouse.io/products/kubernetes-platform/documentation/latest/deckhouse-faq.html#how-to-check-the-job-queue-in-deckhouse). If an `ImagePullBackOff` error is generated in the process, wait for the pod to be restarted automatically.
@@ -1192,10 +1192,10 @@ To switch Deckhouse Community Edition to Enterprise Edition, follow these steps:
    Aug 21 11:04:29 master-ce-to-ee-0 systemd[1]: bashible.service: Deactivated successfully.
    ```
 
-   Run a temporary Deckhouse EE pod to retrieve up-to-date digests and module lists:
+   Run a temporary Deckhouse EE pod to retrieve up-to-date digests and module lists. Enter the latest version of Deckhouse into the <DECKHOUSE_VERSION> variable:
 
    ```shell
-   kubectl run ee-image --image=registry.deckhouse.io/deckhouse/ee/install:v1.63.8 --command sleep -- infinity
+   kubectl run ee-image --image=registry.deckhouse.io/deckhouse/ee/install:<DECKHOUSE_VERSION> --command sleep -- infinity
    ```
 
    > Run an image of the latest installed Deckhouse version in the cluster. To find out which version is currently installed, use the following command:
@@ -1333,20 +1333,20 @@ To switch Deckhouse Community Edition to Enterprise Edition, follow these steps:
 1. Update the secret to access the Deckhouse registry by running the following command:
 
    ```shell
-   sudo /opt/deckhouse/bin/kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- kubectl -n d8-system create secret generic deckhouse-registry \
+   kubectl -n d8-system create secret generic deckhouse-registry \
      --from-literal=".dockerconfigjson"="{\"auths\": { \"registry.deckhouse.io\": { \"username\": \"license-token\", \"password\": \"$LICENSE_TOKEN\", \"auth\":    \"$AUTH_STRING\" }}}" \
      --from-literal="address"=registry.deckhouse.io \
      --from-literal="path"=/deckhouse/ee \
      --from-literal="scheme"=https \
      --type=kubernetes.io/dockerconfigjson \
      --dry-run='client' \
-     -o yaml | kubectl replace -f -
+     -o yaml | sudo /opt/deckhouse/bin/kubectl -n d8-system exec -i  svc/deckhouse-leader -c deckhouse -- kubectl replace -f -
    ```
 
-1. Apply the Deckhouse EE image:
+1. Apply the Deckhouse EE image. Enter the latest version of Deckhouse into the <DECKHOUSE_VERSION> variable:
 
    ```shell
-   kubectl -n d8-system set image deployment/deckhouse deckhouse=registry.deckhouse.ru/deckhouse/ee:v1.63.8
+   sudo /opt/deckhouse/bin/kubectl -n d8-system exec -i svc/deckhouse-leader -c deckhouse -- kubectl -n d8-system set image deployment/deckhouse deckhouse=registry.deckhouse.ru/deckhouse/ee:<DECKHOUSE_VERSION>
    ```
 
 1. Wait for the Deckhouse pod to become `Ready` and for [all the queued jobs to complete](https://deckhouse.io/products/kubernetes-platform/documentation/latest/deckhouse-faq.html#how-to-check-the-job-queue-in-deckhouse). If an `ImagePullBackOff` error is generated in the process, wait for the pod to be restarted automatically.
@@ -1640,7 +1640,7 @@ All commands should be executed on a master node of the existing cluster.
 1. Update the secret to access the Deckhouse registry by running the following command:
 
    ```shell
-   sudo /opt/deckhouse/bin/kubectl -n d8-system exec -ti  svc/deckhouse-leader -c deckhouse -- kubectl -n d8-system create secret generic deckhouse-registry \
+   kubectl -n d8-system create secret generic deckhouse-registry \
      --from-literal=".dockerconfigjson"="{\"auths\": { \"registry.deckhouse.io\": { \"username\": \"license-token\", \"password\": \"$LICENSE_TOKEN\", \"auth\":    \"$AUTH_STRING\" }}}" \
      --from-literal="address"=registry.deckhouse.io   --from-literal="path"=/deckhouse/se \
      --from-literal="scheme"=https   --type=kubernetes.io/dockerconfigjson \
@@ -1651,7 +1651,7 @@ All commands should be executed on a master node of the existing cluster.
 1. Apply the Deckhouse SE image. Enter the latest version of Deckhouse into the <DECKHOUSE_VERSION> variable:
 
    ```shell
-   sudo /opt/deckhouse/bin/kubectl -n d8-system set image deployment/deckhouse deckhouse=registry.deckhouse.io/deckhouse/se:<DECKHOUSE_VERSION>
+   sudo /opt/deckhouse/bin/kubectl -n d8-system exec -i svc/deckhouse-leader -c deckhouse -- kubectl -n d8-system set image deployment/deckhouse deckhouse=registry.deckhouse.io/deckhouse/se:<DECKHOUSE_VERSION>
    ```
 
    > To find the latest Deckhouse version, you can run:
