@@ -41,7 +41,7 @@ shell:
 {{ include "dev_image" . }}
 ---
 image: common-base/binary-artifact
-fromImage: common/alt-p11-artifact
+fromImage: dev-alt-artifact
 final: false
 import:
 - artifact: common/python-static
