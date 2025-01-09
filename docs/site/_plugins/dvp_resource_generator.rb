@@ -65,7 +65,7 @@ class ResourcePage < Jekyll::Page
       _renderedContent = @JSONSchema.format_cluster_configuration(site.data['schemas']['virtualization-platform']['crds'][@crdKey])
     end
     if _renderedContent.nil?
-      self.content = 'The CRD has no parameters'
+      self.content = @site.data['i18n']['common']['crd_has_no_parameters'][@lang]
     else
       self.content = _renderedContent
     end
