@@ -144,6 +144,8 @@ func (c *DeployTimeChecker) checkNotify(dtr *DeployTimeResult, dr *v1alpha1.Deck
 		c.settings.NotificationConfig.MinimalNotificationTime.Duration > 0 {
 		minApplyTime := c.now.Add(c.settings.NotificationConfig.MinimalNotificationTime.Duration)
 
+		dtr.ReleaseApplyAfterTime = dtr.ReleaseApplyTime
+
 		if !minApplyTime.Before(dtr.ReleaseApplyTime) {
 			dtr.ReleaseApplyTime = minApplyTime
 			dtr.ReleaseApplyAfterTime = minApplyTime

@@ -179,6 +179,7 @@ func (p *TaskCalculator) CalculatePendingReleaseOrder(ctx context.Context, dr *v
 	return &Task{
 		TaskType:            Process,
 		IsLatest:            isLatestRelease,
+		IsPatch:             isPatch,
 		DeployedReleaseInfo: deployedReleaseInfo,
 		QueueDepth:          releaseQueueDepth,
 	}, nil
