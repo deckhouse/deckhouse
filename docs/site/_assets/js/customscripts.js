@@ -327,7 +327,7 @@ document.addEventListener('DOMContentLoaded', function () {
         const copyBtnTippy = tippy(el.querySelector('.icon--copy'), {
           placement: 'left',
           arrow: false,
-          animation: 'shift-away-subtle',
+          animation: 'scale',
           theme: 'light',
           content: 'Copy',
           hideOnClick: false,
