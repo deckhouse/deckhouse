@@ -7,7 +7,7 @@ lang: ru
 ---
 
 {% alert level="warning" %}
-Страница находится в стадии активной разработки и может содержать неполные данные. Ниже представлена обзорная информация о процессе установки Deckhouse. Для более детального ознакомления рекомендуем перейти в раздел [Быстрый старт](/gs/), где доступны пошаговые инструкции.
+Страница находится в стадии активной разработки и может содержать неполные данные. Ниже представлена обзорная информация о процессе установки Deckhouse. Для более детального ознакомления рекомендуем перейти в раздел [Быстрый старт](/products/kubernetes-platform/gs/), где доступны пошаговые инструкции.
 {% endalert %}
 
 Инсталлятор Deckhouse доступен в виде образа контейнера и основан на утилите [dhctl](<https://github.com{{ site.github_repo_path }}/tree/main/dhctl/>), в задачи которой входят:
@@ -75,20 +75,20 @@ YAML-файл конфигурации установки содержит па�
 
    Список ресурсов конфигурации поддерживаемых облачных провайдеров:
 
-   * [AWSClusterConfiguration](../modules/030-cloud-provider-aws/cluster_configuration.html#awsclusterconfiguration) — Amazon Web Services;
-   * [AzureClusterConfiguration](../modules/030-cloud-provider-azure/cluster_configuration.html#azureclusterconfiguration) — Microsoft Azure;
-   * [GCPClusterConfiguration](../modules/030-cloud-provider-gcp/cluster_configuration.html#gcpclusterconfiguration) — Google Cloud Platform;
-   * [OpenStackClusterConfiguration](../modules/030-cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration) — OpenStack;
-   * [VsphereClusterConfiguration](../modules/030-cloud-provider-vsphere/cluster_configuration.html#vsphereclusterconfiguration) — VMware vSphere;
-   * [VCDClusterConfiguration](../modules/030-cloud-provider-vcd/cluster_configuration.html#vcdclusterconfiguration) — VMware Cloud Director;
-   * [YandexClusterConfiguration](../modules/030-cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration) — Yandex Cloud;
-   * [ZvirtClusterConfiguration](../modules/030-cloud-provider-zvirt/cluster_configuration.html#zvirtclusterconfiguration) — zVirt.
+   * [AWSClusterConfiguration](../modules/cloud-provider-aws/cluster_configuration.html#awsclusterconfiguration) — Amazon Web Services;
+   * [AzureClusterConfiguration](../modules/cloud-provider-azure/cluster_configuration.html#azureclusterconfiguration) — Microsoft Azure;
+   * [GCPClusterConfiguration](../modules/cloud-provider-gcp/cluster_configuration.html#gcpclusterconfiguration) — Google Cloud Platform;
+   * [OpenStackClusterConfiguration](../modules/cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration) — OpenStack;
+   * [VsphereClusterConfiguration](../modules/cloud-provider-vsphere/cluster_configuration.html#vsphereclusterconfiguration) — VMware vSphere;
+   * [VCDClusterConfiguration](../modules/cloud-provider-vcd/cluster_configuration.html#vcdclusterconfiguration) — VMware Cloud Director;
+   * [YandexClusterConfiguration](../modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration) — Yandex Cloud;
+   * [ZvirtClusterConfiguration](../modules/cloud-provider-zvirt/cluster_configuration.html#zvirtclusterconfiguration) — zVirt.
 
 1. `ModuleConfig` — набор ресурсов, содержащих параметры конфигурации [встроенных модулей Deckhouse](../).
 
    Если кластер изначально создается с узлами, выделенными для определенных типов нагрузки (например, системные узлы или узлы для мониторинга), рекомендуется в конфигурации модулей, использующих тома постоянного хранилища явно задавать параметр `nodeSelector`.
 
-   Например, для модуля `prometheus` настройка указывается в параметре [nodeSelector](../modules/300-prometheus/configuration.html#parameters-nodeselector).
+   Например, для модуля `prometheus` настройка указывается в параметре [nodeSelector](../modules/prometheus/configuration.html#parameters-nodeselector).
 
 {% offtopic title="Пример файла конфигурации установки..." %}
 
@@ -341,7 +341,7 @@ docker run --pull=always -it [<MOUNT_OPTIONS>] registry.deckhouse.ru/deckhouse/<
    - SSH-ключи доступа;
    - Файл конфигурации;
    - Файл ресурсов и т. д.
-1. `<RELEASE_CHANNEL>` — [канал обновлений](../modules/002-deckhouse/configuration.html#parameters-releasechannel) в формате kebab-case, который должен совпадать с указанным в  `config.yml`:
+1. `<RELEASE_CHANNEL>` — [канал обновлений](../modules/deckhouse/configuration.html#parameters-releasechannel) в формате kebab-case, который должен совпадать с указанным в  `config.yml`:
    - `alpha` — для канала обновлений Alpha;
    - `beta` — для канала обновлений Beta;
    - `early-access` — для канала обновлений Early Access;

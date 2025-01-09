@@ -22,7 +22,7 @@ Before installation, you need to plan the parameters of the virtualization platf
 1. Define the public domain for the cluster:
    - A common practice is to use a wildcard domain that resolves to the address of the node with the Ingress controller;
    - The domain template for applications in this case will be `%s.<public wildcard domain of the cluster>`;
-   - For test clusters, you can use a universal wildcard domain from the sslip.io service.
+   - For test clusters, you can use a universal wildcard domain from the [sslip.io](https://sslip.io/) service.
 
      > The domain used in the template must not coincide with the domain specified in the `clusterDomain` parameter. For example, if `clusterDomain: cluster.local` (the default value) is used, then `publicDomainTemplate` cannot be `%s.cluster.local`.
 

@@ -6,7 +6,7 @@ title: "Модуль upmeter: настройки"
 
 ## Аутентификация
 
-По умолчанию используется модуль [user-authn](/products/kubernetes-platform/documentation/v1/modules/150-user-authn/). Также можно настроить аутентификацию через `externalAuthentication` (см. ниже).
+По умолчанию используется модуль [user-authn](/products/kubernetes-platform/documentation/v1/modules/user-authn/). Также можно настроить аутентификацию через `externalAuthentication` (см. ниже).
 Если эти варианты отключены, то модуль включит basic auth со сгенерированным паролем.
 
 Посмотреть сгенерированный пароль можно командой:

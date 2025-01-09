@@ -83,7 +83,19 @@ rules:
   - apiGroups:
       - config.gatekeeper.sh
     resources:
-      - configs
+      - '*'
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - expansion.gatekeeper.sh
+    resources:
+      - '*'
     verbs:
       - create
       - delete
@@ -150,10 +162,7 @@ rules:
   - apiGroups:
       - status.gatekeeper.sh
     resources:
-      - constraintpodstatuses
-      - constrainttemplatepodstatuses
-      - expansiontemplatepodstatuses
-      - mutatorpodstatuses
+      - '*'
     verbs:
       - create
       - delete
