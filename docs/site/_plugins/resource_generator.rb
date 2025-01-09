@@ -4,6 +4,7 @@ module ResourceGenerator
 
     def generate(site)
       ['virtualization-platform', 'stronghold'].each do |productUrlPath|
+        next unless site.data['schemas'] and site.data['schemas'][productUrlPath] and site.data['schemas'][productUrlPath]['crds']
         if site.data['schemas'][productUrlPath] then
           site.data['schemas'][productUrlPath]['crds'].each do |crdKey, crdData|
             languages = ['ru', 'en']

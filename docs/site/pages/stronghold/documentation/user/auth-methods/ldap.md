@@ -7,6 +7,7 @@ description: |-
   credentials.
 ---
 
+{% raw %}
 # LDAP auth method
 
 The `ldap` auth method allows authentication using an existing LDAP
@@ -119,14 +120,17 @@ There are two alternate methods of resolving the user object used to authenticat
 - `userattr` (string, optional) - Attribute on user attribute object matching the username passed when authenticating. Examples: `sAMAccountName`, `cn`, `uid`
 - `userfilter` (string, optional) - Go template used to construct a ldap user search filter. The template can access the following context variables: \[`UserAttr`, `Username`\]. The default userfilter is `({{.UserAttr}}={{.Username}})` or `(userPrincipalName={{.Username}}@UPNDomain)` if the `upndomain` parameter is set. The user search filter can be used to restrict what user can attempt to log in. For example, to limit login to users that are not contractors, you could write `(&(objectClass=user)({{.UserAttr}}={{.Username}})(!(employeeType=Contractor)))`.
 
+{% endraw %}
 {% alert level="warning" %}
-
+{% raw %}
 When specifying a `userfilter`, either the templated value `{{.UserAttr}}` or
 the literal value that matches `userattr` should be present in the filter to
 ensure that the search returns a unique result that takes `userattr` into
 consideration for entity alias mapping purposes and avoid possible collisions on login.
-
+{% endraw %}
 {% endalert %}
+{% raw %}
+
 #### Binding - anonymous search
 
 - `discoverdn` (bool, optional) - If true, use anonymous bind to discover the bind DN of a user
@@ -136,14 +140,17 @@ consideration for entity alias mapping purposes and avoid possible collisions on
 - `deny_null_bind` (bool, optional) - This option prevents users from bypassing authentication when providing an empty password. The default is `true`.
 - `anonymous_group_search` (bool, optional) - Use anonymous binds when performing LDAP group searches. Defaults to `false`.
 
+{% endraw %}
 {% alert level="warning" %}
-
+{% raw %}
 When specifying a `userfilter`, either the templated value `{{.UserAttr}}` or
 the literal value that matches `userattr` should be present in the filter to
 ensure that the search returns a unique result that takes `userattr` into
 consideration for entity alias mapping purposes and avoid possible collisions on login.
-
+{% endraw %}
 {% endalert %}
+{% raw %}
+
 #### Alias dereferencing
 
 - `dereference_aliases` (string, optional) - Control how aliases are dereferenced when performing the search. Possible values are: `never`, `finding`, `searching`, and `always`. `finding` will only dereference aliases during name resolution of the base. `searching` will dereference aliases after name resolution.
@@ -263,10 +270,12 @@ This maps the LDAP group "scient
 
 Функцию блокировки пользователя можно отключить с помощью команды «auth tune», передав значение `disable_lockout` true
 
+{% endraw %}
 {% alert level="warning" %}
-
-**ПРИМЕЧАНИЕ**: Эта функция поддерживается только методами userpass, ldap и approle auth.
+Эта функция поддерживается только методами userpass, ldap и approle auth.
 {% endalert %}
+{% raw %}
+
 ists" to the "foo" and "bar" Stronghold policies.
 We can also add specific LDAP users to additional (potentially non-LDAP)
 groups. Note that policies can also be specified on LDAP users as well.
@@ -318,11 +327,11 @@ The user lockout feature can be disabled as follows:
 - It can be disabled for a specific auth mount using "auth tune". Please see [auth tune command](/docs/commands/auth/tune)
   or [auth tune api](/api-docs/system/auth#tune-auth-method) for more details.
 
+{% endraw %}
 {% alert level="warning" %}
-
-**NOTE**: This feature is only supported by the userpass, ldap, and approle auth methods.
-
+This feature is only supported by the userpass, ldap, and approle auth methods.
 {% endalert %}
+
 ## API
 
 The LDAP auth method has a full HTTP API. Please see the

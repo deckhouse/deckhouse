@@ -36,10 +36,9 @@ kubectl -n d8-system exec deploy/deckhouse -c deckhouse -it -- deckhouse-control
 kubectl -n d8-system exec deploy/deckhouse -c deckhouse -it -- deckhouse-controller module disable stronghold
 ```
 
-{{< alert level="danger" >}}
-ВНИМАНИЕ!
+{% alert level="danger" %}
 При отключении модуля удалятся все контейнеры Stronghold из неймспейса `d8-stronghold`, а так же секрет `stronghold-keys` с root и unseal ключами. При этом данные сервиса не удалятся с ноды. Вы можете включить модуль снова, создать и поместить в неймспейс `d8-stronghold` сохраненную копию секрета `stronghold-keys`, тогда доступ к данным будет восстановлен.
-{{< /alert >}}
+{% endalert %}
 
 Если старые данные больше не нужны, нужно предварительно удалить каталог `/var/lib/deckhouse/stronghold`
 со всех мастер-нод кластера.

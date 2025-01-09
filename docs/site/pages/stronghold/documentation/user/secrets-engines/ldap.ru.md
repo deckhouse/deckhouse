@@ -8,13 +8,14 @@ description: >-
 
 {% alert level="warning" %}
 
-**Note**: This engine can use external X.509 certificates as part of TLS or signature validation.
+This engine can use external X.509 certificates as part of TLS or signature validation.
    Verifying signatures against X.509 certificates that use SHA-1 is deprecated and is no longer
    usable without a workaround. See the
    [deprecation FAQ](/docs/deprecation/faq#q-what-is-the-impact-of-removing-support-for-x-509-certificates-with-signatures-that-use-sha-1)
    for more information.
-
 {% endalert %}
+{% raw %}
+
 The LDAP secrets engine provides management of LDAP credentials as well as dynamic
 creation of credentials. It supports integration with implementations of the LDAP
 v3 protocol, including OpenLDAP, Active Directory, and IBM Resource Access Control
@@ -169,12 +170,13 @@ $ d8 stronghold write ldap/role/dynamic-role \
   max_ttl=24h
 ```
 
+{% endraw %}
 {% alert level="info" %}
-
-Note: The `rollback_ldif` argument is optional, but recommended. The statements within `rollback_ldif` will be
+The `rollback_ldif` argument is optional, but recommended. The statements within `rollback_ldif` will be
 executed if the creation fails for any reason. This ensures any entities are removed in the event of a failure.
-
 {% endalert %}
+{% raw %}
+
 To generate credentials:
 
 ```bash
@@ -460,3 +462,4 @@ olcPPolicyUseLockout: TRUE
 
 The LDAP secrets engine has a full HTTP API. Please see the [LDAP secrets engine API docs](/api-docs/secret/ldap)
 for more details.
+{% endraw %}
