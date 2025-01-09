@@ -1,7 +1,7 @@
 # [<en>] Section containing the parameters of instance class for worker nodes.
-# [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-aws/cr.html
+# [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/cloud-provider-aws/cr.html
 # [<ru>] Секция, описывающая параметры инстанс-класса для узлов c компонентами, обеспечивающими рабочую нагрузку.
-# [<ru>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-aws/cr.html
+# [<ru>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/cloud-provider-aws/cr.html
 apiVersion: deckhouse.io/v1
 kind: AWSInstanceClass
 metadata:
@@ -24,9 +24,9 @@ spec:
   instanceType: c5.xlarge
 ---
 # [<en>] Section containing the parameters of worker node group.
-# [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/040-node-manager/cr.html#nodegroup
+# [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/node-manager/cr.html#nodegroup
 # [<ru>] Секция, описывающая параметры группы узлов c компонентами, обеспечивающими рабочую нагрузку.
-# [<ru>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/040-node-manager/cr.html#nodegroup
+# [<ru>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/node-manager/cr.html#nodegroup
 apiVersion: deckhouse.io/v1
 kind: NodeGroup
 metadata:
@@ -55,9 +55,9 @@ spec:
   nodeType: CloudEphemeral
 ---
 # [<en>] Section containing the parameters of NGINX Ingress controller.
-# [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/402-ingress-nginx/cr.html
+# [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/ingress-nginx/cr.html
 # [<ru>] Секция, описывающая параметры NGINX Ingress controller.
-# [<ru>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/402-ingress-nginx/cr.html
+# [<ru>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/ingress-nginx/cr.html
 apiVersion: deckhouse.io/v1
 kind: IngressNginxController
 metadata:
@@ -74,9 +74,9 @@ spec:
     node.deckhouse.io/group: worker
 ---
 # [<en>] RBAC and authorization settings.
-# [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/140-user-authz/cr.html#clusterauthorizationrule
+# [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/user-authz/cr.html#clusterauthorizationrule
 # [<ru>] Настройки RBAC и авторизации.
-# [<ru>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/140-user-authz/cr.html#clusterauthorizationrule
+# [<ru>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/user-authz/cr.html#clusterauthorizationrule
 apiVersion: deckhouse.io/v1
 kind: ClusterAuthorizationRule
 metadata:
@@ -89,9 +89,9 @@ spec:
   portForwarding: true
 ---
 # [<en>] Parameters of the static user.
-# [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/150-user-authn/cr.html#user
+# [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/user-authn/cr.html#user
 # [<ru>] Данные статического пользователя.
-# [<ru>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/150-user-authn/cr.html#user
+# [<ru>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/user-authn/cr.html#user
 apiVersion: deckhouse.io/v1
 kind: User
 metadata:

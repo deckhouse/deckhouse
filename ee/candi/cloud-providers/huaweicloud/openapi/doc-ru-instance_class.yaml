@@ -6,7 +6,7 @@ spec:
       schema:
         openAPIV3Schema:
           description: |
-            Параметры группы Huawei Cloud servers, которые будет использовать `CAPI` (модуль [node-manager](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/040-node-manager/)).
+            Параметры группы Huawei Cloud servers, которые будет использовать `CAPI` (модуль [node-manager](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/node-manager/)).
 
             На этот ресурс ссылается ресурс CloudInstanceClass модуля `node-manager`.
           properties:
@@ -34,7 +34,7 @@ spec:
                   description: |
                     Размер root-диска. Значение указывается в гигабайтах.
 
-                    Параметр также влияет на тип диска. Особенности применения параметра описаны в разделе [Как использовать rootDiskSize и когда он предпочтителен](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-huaweicloud/faq.html#как-использовать-rootdisksize-и-когда-он-предпочтителен).
+                    Параметр также влияет на тип диска. Особенности применения параметра описаны в разделе [Как использовать rootDiskSize и когда он предпочтителен](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/cloud-provider-huaweicloud/faq.html#как-использовать-rootdisksize-и-когда-он-предпочтителен).
                 rootDiskType:
                   description: |
                     Тип root-диска.

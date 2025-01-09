@@ -64,6 +64,7 @@ shell:
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
+final: false
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-artifact
   add: /opt/python-static
