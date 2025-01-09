@@ -307,7 +307,7 @@ window.addEventListener("load", function() {
 });
 
 document.addEventListener('DOMContentLoaded', function () {
-  let pre = document.querySelectorAll('pre');
+  const pre = document.querySelectorAll('pre');
 
   if (pre.length) {
     pre.forEach((el) => {
@@ -318,13 +318,13 @@ document.addEventListener('DOMContentLoaded', function () {
           return;
         };
 
-        let copyBtn = document.createElement('div');
+        const copyBtn = document.createElement('div');
         copyBtn.classList.add('icon--copy');
         copyBtn.setAttribute('data-clipboard-target', '');
 
         el.prepend(copyBtn);
 
-        let copyBtnTippy = tippy(el.querySelector('.icon--copy'), {
+        const copyBtnTippy = tippy(el.querySelector('.icon--copy'), {
           placement: 'left',
           arrow: false,
           animation: 'shift-away-subtle',
