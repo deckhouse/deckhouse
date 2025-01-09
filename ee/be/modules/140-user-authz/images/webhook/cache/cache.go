@@ -9,14 +9,18 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log"
 	"net"
 	"net/http"
 	"os"
+	"slices"
 	"sync"
 	"time"
+
+	k8sversion "k8s.io/apimachinery/pkg/version"
 )
 
 const (
@@ -33,11 +37,12 @@ const (
 
 type Cache interface {
 	Get(string, string) (bool, error)
-	GetPreferredVersion(group string) (string, error)
+	GetPreferredVersion(group, resource string) (string, error)
 	Check() error
 }
 
 var _ Cache = (*NamespacedDiscoveryCache)(nil)
+var ErrNotFound = errors.New("not found")
 
 type cacheEntry struct {
 	TTL     time.Duration
@@ -189,39 +194,88 @@ func (c *NamespacedDiscoveryCache) renewCache(apiGroup string) error {
 	})
 }
 
-func (c *NamespacedDiscoveryCache) requestPreferredVersion(group string) (string, error) {
+func (c *NamespacedDiscoveryCache) getAvailableAPIGrouPVerionsInDescendingOrder(group string) ([]string, error) {
 	path := "/apis/" + group
 
-	preferredVersion := ""
+	availableVersions := make([]string, 0)
 
 	err := Retry(func() (bool, error) {
 		req, err := http.NewRequest(http.MethodGet, c.kubernetesAPIAddress+path, nil)
 		if err != nil {
-			return false, fmt.Errorf("request preferred version build error: %w", err)
+			return false, fmt.Errorf("build request for available apigroup versions: %w", err)
 		}
 
-		var apiGroup APIGroupResponse
-		rawRespBody, err := c.execRequest(req, "request preferred version", &apiGroup)
+		var apiGroupVersions APIGroupResponse
+		_, err = c.execRequest(req, "request available apigroup versions", &apiGroupVersions)
 		if err != nil {
-			return true, err
+			return true, fmt.Errorf("request available apigroup verions: %w", err)
 		}
 
-		preferredVersion = apiGroup.PreferredVersion.Version
-		if preferredVersion == "" {
-			return true, fmt.Errorf("empty preferred version parsed from kube response: %s", rawRespBody)
+		for _, v := range apiGroupVersions.Versions {
+			availableVersions = append(availableVersions, v.Version)
 		}
 
 		return false, nil
 	})
 
-	return preferredVersion, err
+	slices.SortFunc(availableVersions, func(v1, v2 string) int {
+		return -(k8sversion.CompareKubeAwareVersionStrings(v1, v2))
+	})
+
+	return availableVersions, err
 }
 
-func (c *NamespacedDiscoveryCache) preferredVersionFromCache(group string) string {
+func (c *NamespacedDiscoveryCache) requestPreferredVersion(group, resource string) (string, error) {
+	preferredVersion := ""
+
+	availableVersions, err := c.getAvailableAPIGrouPVerionsInDescendingOrder(group)
+	if err != nil {
+		return "", fmt.Errorf("get availalble apigroup versions: %w", err)
+	}
+
+	for _, version := range availableVersions {
+		path := fmt.Sprintf("/apis/%s/%s", group, version)
+		if err := Retry(func() (bool, error) {
+			req, err := http.NewRequest(http.MethodGet, c.kubernetesAPIAddress+path, nil)
+			if err != nil {
+				return false, fmt.Errorf("request %s %s/%s version build error: %w", resource, group, version, err)
+			}
+
+			var apiResourceList APIResourceList
+			_, err = c.execRequest(req, "request list of resources", &apiResourceList)
+			if err != nil {
+				return true, fmt.Errorf("request list of resources: %w", err)
+			}
+
+			if apiResourceList.Has(resource) {
+				preferredVersion = version
+			}
+
+			return false, nil
+		}); err != nil {
+			if errors.Is(err, ErrNotFound) {
+				continue
+			}
+			return "", fmt.Errorf("get preferred version: %w", err)
+		}
+
+		if preferredVersion != "" {
+			break
+		}
+	}
+
+	if preferredVersion == "" {
+		return "", fmt.Errorf("failed to discover preferred version for %s.%s", resource, group)
+	}
+
+	return preferredVersion, nil
+}
+
+func (c *NamespacedDiscoveryCache) preferredVersionFromCache(group, resource string) string {
 	c.muPv.RLock()
 	defer c.muPv.RUnlock()
 
-	entry, ok := c.preferredVersions[group]
+	entry, ok := c.preferredVersions[fmt.Sprintf("%s.%s", resource, group)]
 
 	if ok && !c.isEntryExpired(entry.cacheEntry) {
 		return entry.Version
@@ -230,13 +284,13 @@ func (c *NamespacedDiscoveryCache) preferredVersionFromCache(group string) strin
 	return ""
 }
 
-func (c *NamespacedDiscoveryCache) GetPreferredVersion(group string) (string, error) {
-	version := c.preferredVersionFromCache(group)
+func (c *NamespacedDiscoveryCache) GetPreferredVersion(group, resource string) (string, error) {
+	version := c.preferredVersionFromCache(group, resource)
 	if version != "" {
 		return version, nil
 	}
 
-	version, err := c.requestPreferredVersion(group)
+	version, err := c.requestPreferredVersion(group, resource)
 	if err != nil {
 		return "", err
 	}
@@ -244,7 +298,7 @@ func (c *NamespacedDiscoveryCache) GetPreferredVersion(group string) (string, er
 	c.muPv.Lock()
 	defer c.muPv.Unlock()
 
-	c.preferredVersions[group] = newPreferredVersionCacheEntry(c.now(), version)
+	c.preferredVersions[fmt.Sprintf("%s.%s", resource, group)] = newPreferredVersionCacheEntry(c.now(), version)
 
 	return version, nil
 }
@@ -313,13 +367,17 @@ func (c *NamespacedDiscoveryCache) execRequest(req *http.Request, logTag string,
 		return "", fmt.Errorf("%s: decoding response error: %w", logTag, err)
 	}
 
+	if resp.StatusCode == 404 {
+		return "", ErrNotFound
+	}
+
 	if resp.StatusCode/100 > 2 {
 		return "", fmt.Errorf("%s: kube response error: %d %s", logTag, resp.StatusCode, respBody)
 	}
 
 	if result != nil {
 		if err := json.Unmarshal(respBody, result); err != nil {
-			return "", fmt.Errorf("%s: do not unmarshal response: %w", logTag, err)
+			return "", fmt.Errorf("%s: failed to unmarshal response: %w", logTag, err)
 		}
 	}
 
@@ -346,5 +404,23 @@ type PreferredVersion struct {
 }
 
 type APIGroupResponse struct {
-	PreferredVersion PreferredVersion `json:"preferredVersion"`
+	Versions []APIGroupVersion `json:"versions"`
+}
+
+type APIGroupVersion struct {
+	Version string `json:"version"`
+}
+
+type APIResourceList struct {
+	Resources []Resource `json:"resources"`
+}
+
+func (l *APIResourceList) Has(resource string) bool {
+	for _, res := range l.Resources {
+		if res.Name == resource {
+			return true
+		}
+	}
+
+	return false
 }
