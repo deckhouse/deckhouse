@@ -111,7 +111,7 @@ type ControlPlaneClass struct {
 	// NOTE: NodeDrainTimeout is different from `kubectl drain --timeout`
 	// NOTE: This value can be overridden while defining a Cluster.Topology.
 	// +optional
-	NodeDrainTimeoutSecond *metav1.Duration `json:"nodeDrainTimeoutSecond,omitempty"`
+	NodeDrainTimeout *metav1.Duration `json:"nodeDrainTimeout,omitempty"`
 
 	// NodeVolumeDetachTimeout is the total amount of time that the controller will spend on waiting for all volumes
 	// to be detached. The default value is 0, meaning that the volumes can be detached without any time limitations.
@@ -162,7 +162,7 @@ type MachineDeploymentClass struct {
 	// NOTE: NodeDrainTimeout is different from `kubectl drain --timeout`
 	// NOTE: This value can be overridden while defining a Cluster.Topology using this MachineDeploymentClass.
 	// +optional
-	NodeDrainTimeout *metav1.Duration `json:"nodeDrainTimeoutSecond,omitempty"`
+	NodeDrainTimeout *metav1.Duration `json:"nodeDrainTimeout,omitempty"`
 
 	// NodeVolumeDetachTimeout is the total amount of time that the controller will spend on waiting for all volumes
 	// to be detached. The default value is 0, meaning that the volumes can be detached without any time limitations.
