@@ -14,6 +14,7 @@ shell:
   - git clone --depth 1 --branch v{{ $memcachedExporterVersion }} {{ $.SOURCE_REPO }}/prometheus/memcached_exporter.git /src
   - cd /src
   - git apply /patches/*.patch --verbose
+  - rm -rf /src/.git
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-exporter-artifact
 from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
