@@ -104,15 +104,11 @@ git:
     - '**/*'
 import:
 - image: common/shell-operator-artifact
-  add: /
+  add: /opt/python-static
   to: /
   before: setup
   includePaths:
-  - usr/bin/python3
-  - usr/bin/python3.*
-  - usr/lib/python3
-  - usr/lib64/python3
-  - usr/lib64/python3.*
+  - opt/python-static
 shell:
   install:
-  - pip3 install -r /requirements.txt
+  - /opt/python-static/pip3 install -r /requirements.txt
