@@ -46,11 +46,11 @@ import:
     - python3.11
     - python3
   - image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
-    add: /opt/python-static/lib/python3.11
+    add: /opt/python-static/lib/python3*
     to: /usr/lib/python3.11
     before: install
   - image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
-    add: /opt/python-static/lib/python3.11
+    add: /opt/python-static/lib/python3*
     to: /usr/lib/python3
     before: install
 docker:
