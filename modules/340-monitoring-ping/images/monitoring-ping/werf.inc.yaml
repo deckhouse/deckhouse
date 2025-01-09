@@ -50,7 +50,6 @@ shell:
   beforeInstall:
   - apt-get install -y git
   install:
-  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
   - git clone --depth 1 {{ .SOURCE_REPO }}/python-modules/wheels /wheels
   - /opt/python-static/bin/pip3 install -f file:///wheels --no-index -r requirements.txt
   - rm -rf /wheels
