@@ -1,6 +1,5 @@
 kubernetes==22.6.0
 certifi==2024.12.14
-cryptography>=42.0.4
 idna==3.7
 requests==2.32.0
 setuptools==75.6.0
