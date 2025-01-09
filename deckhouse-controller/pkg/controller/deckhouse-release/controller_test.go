@@ -360,7 +360,6 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 		require.NoError(suite.T(), err)
 	})
 
-	// TODO: remake test for forced release
 	suite.Run("Few patch releases", func() {
 		dependency.TestDC.HTTPClient.DoMock.
 			Expect(&http.Request{}).
@@ -383,8 +382,6 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 		require.NoError(suite.T(), err)
 	})
 
-	// TODO: make another test with awaiting pending release
-	// TODO: remake test for forced release
 	suite.Run("few minor releases", func() {
 		dependency.TestDC.HTTPClient.DoMock.
 			Expect(&http.Request{}).
@@ -406,6 +403,31 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 				StatusCode: http.StatusInternalServerError,
 			}, errors.New("some internal error"))
 
+		dr = suite.getDeckhouseRelease("v1.33.0")
+		_, err = suite.ctr.createOrUpdateReconcile(ctx, dr)
+		require.NoError(suite.T(), err)
+		dr = suite.getDeckhouseRelease("v1.34.0")
+		_, err = suite.ctr.createOrUpdateReconcile(ctx, dr)
+		require.NoError(suite.T(), err)
+		dr = suite.getDeckhouseRelease("v1.35.0")
+		_, err = suite.ctr.createOrUpdateReconcile(ctx, dr)
+		require.NoError(suite.T(), err)
+	})
+
+	suite.Run("forced through few minor releases", func() {
+		dependency.TestDC.HTTPClient.DoMock.
+			Expect(&http.Request{}).
+			Return(&http.Response{
+				StatusCode: http.StatusInternalServerError,
+			}, errors.New("some internal error"))
+
+		suite.setupController("forced-few-minor-releases.yaml", initValues, embeddedMUP)
+		dr := suite.getDeckhouseRelease("v1.31.0")
+		_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
+		require.NoError(suite.T(), err)
+		dr = suite.getDeckhouseRelease("v1.32.0")
+		_, err = suite.ctr.createOrUpdateReconcile(ctx, dr)
+		require.NoError(suite.T(), err)
 		dr = suite.getDeckhouseRelease("v1.33.0")
 		_, err = suite.ctr.createOrUpdateReconcile(ctx, dr)
 		require.NoError(suite.T(), err)

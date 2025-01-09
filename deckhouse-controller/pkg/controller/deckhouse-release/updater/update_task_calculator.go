@@ -142,8 +142,9 @@ func (p *TaskCalculator) CalculatePendingReleaseOrder(ctx context.Context, dr *v
 				}
 
 				return &Task{
-					TaskType: Await,
-					Message:  msg,
+					TaskType:            Await,
+					Message:             msg,
+					DeployedReleaseInfo: deployedReleaseInfo,
 				}, nil
 			}
 		}

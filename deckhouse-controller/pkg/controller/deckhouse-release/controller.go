@@ -329,7 +329,7 @@ func (r *deckhouseReleaseReconciler) pendingReleaseReconcile(ctx context.Context
 		r.logger.Warn("forced release found")
 
 		// deploy forced release without any checks (windows, requirements, approvals and so on)
-		err := r.ApplyRelease(ctx, dr, task.DeployedReleaseInfo)
+		err := r.ApplyRelease(ctx, dr, task)
 		if err != nil {
 			return res, fmt.Errorf("apply forced release: %w", err)
 		}
@@ -395,9 +395,11 @@ func (r *deckhouseReleaseReconciler) pendingReleaseReconcile(ctx context.Context
 		return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
 	}
 
+	// TODO: it's maybe deprecated history about bootstrap deploying. delete???
+	//
 	// if cluster needs bootstrap and we found only one release - apply release
 	if (!r.registrySecret.ClusterIsBootstrapped && task.IsSingle) || dr.GetApplyNow() {
-		err := r.ApplyRelease(ctx, dr, task.DeployedReleaseInfo)
+		err := r.ApplyRelease(ctx, dr, task)
 		if err != nil {
 			// TODO: deal with error
 			return res, fmt.Errorf("run single bootstrapping release deploy: %w", err)
@@ -414,7 +416,7 @@ func (r *deckhouseReleaseReconciler) pendingReleaseReconcile(ctx context.Context
 		return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
 	}
 
-	err = r.ApplyRelease(ctx, dr, task.DeployedReleaseInfo)
+	err = r.ApplyRelease(ctx, dr, task)
 	if err != nil {
 		return res, fmt.Errorf("apply predicted release: %w", err)
 	}
@@ -558,8 +560,14 @@ func (r *deckhouseReleaseReconciler) DeployTimeCalculate(ctx context.Context, dr
 }
 
 // ApplyRelease applies predicted release
-func (r *deckhouseReleaseReconciler) ApplyRelease(ctx context.Context, dr *v1alpha1.DeckhouseRelease, deployedReleaseInfo *d8updater.ReleaseInfo) error {
-	err := r.runReleaseDeploy(ctx, dr, deployedReleaseInfo)
+func (r *deckhouseReleaseReconciler) ApplyRelease(ctx context.Context, dr *v1alpha1.DeckhouseRelease, task *d8updater.Task) error {
+	var dri *d8updater.ReleaseInfo
+
+	if task != nil {
+		dri = task.DeployedReleaseInfo
+	}
+
+	err := r.runReleaseDeploy(ctx, dr, dri)
 	if err != nil {
 		return fmt.Errorf("run release deploy: %w", err)
 	}
