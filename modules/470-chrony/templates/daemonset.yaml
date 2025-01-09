@@ -197,12 +197,12 @@ spec:
         livenessProbe:
           httpGet:
             path: /healthz
-            scheme: HTTP
+            scheme: HTTPS
             port: 4228
         readinessProbe:
           httpGet:
             path: /healthz
-            scheme: HTTP
+            scheme: HTTPS
             port: 4228
         volumeMounts:
         - name: var-run
@@ -393,12 +393,12 @@ spec:
         livenessProbe:
           httpGet:
             path: /healthz
-            scheme: HTTP
+            scheme: HTTPS
             port: 4228
         readinessProbe:
           httpGet:
             path: /healthz
-            scheme: HTTP
+            scheme: HTTPS
             port: 4228
         volumeMounts:
         - name: var-run
