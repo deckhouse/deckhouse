@@ -5,3 +5,4 @@ requests==2.32.0
 setuptools==75.6.0
 urllib3==2.3.0
 cryptography==42.0.5
+cffi==1.16.0
