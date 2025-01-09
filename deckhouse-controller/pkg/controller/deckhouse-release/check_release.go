@@ -573,11 +573,6 @@ func (dcr *DeckhouseReleaseChecker) nextVersion(ctx context.Context, actual, tar
 
 	var patchVersion, nextVersion *semver.Version
 	for _, tag := range vs {
-		if tag.Major() == actual.Major() &&
-			tag.Minor() == actual.Minor() &&
-			tag.Patch() > actual.Patch() {
-			patchVersion = tag
-		}
 		if tag.Major() > actual.Major() || tag.Minor() > actual.Minor() {
 			if nextVersion == nil ||
 				(tag.Major() == nextVersion.Major() &&
@@ -585,7 +580,11 @@ func (dcr *DeckhouseReleaseChecker) nextVersion(ctx context.Context, actual, tar
 					tag.Patch() > nextVersion.Patch()) {
 				nextVersion = tag
 			}
+
+			continue
 		}
+
+		patchVersion = tag
 	}
 
 	if patchVersion != nil {
