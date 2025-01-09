@@ -13,8 +13,8 @@ import:
 shell:
   install:
     - apt-get update
-    - apt-get install -y python3-modules-sqlite3 dnsmasq
-    - opt/python-static/bin/pip3 install pyroute2 six ipcalc
+    - apt-get install -y python3-modules-sqlite3 dnsmasq --no-install-recommends
+    - /opt/python-static/bin/pip3 install pyroute2 six ipcalc
     - /binary_replace.sh -i "{{ $binaries }}" -o /relocate
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
