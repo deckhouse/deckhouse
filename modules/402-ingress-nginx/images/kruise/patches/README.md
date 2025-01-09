@@ -1,5 +1,8 @@
 ## Patches
 
+## go.mod patch 
+Fix vulnerabilities in components.
+
 ### Disable controllers
 By default kruise controller enables all embeded controllers and watching for all CRDs
 We don't have any CRDs except `AdvancedDaemonSet`
