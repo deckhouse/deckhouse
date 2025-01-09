@@ -429,15 +429,15 @@ spec:
             - /healthz
             upstreams:
             - upstream: http://127.0.0.1:4228/
-            path: /
-            authorization:
-              resourceAttributes:
-                namespace: d8-chrony
-                apiGroup: apps
-                apiVersion: v1
-                resource: daemonsets
-                subresource: prometheus-metrics
-                name: chrony
+              path: /
+              authorization:
+                resourceAttributes:
+                  namespace: d8-chrony
+                  apiGroup: apps
+                  apiVersion: v1
+                  resource: daemonsets
+                  subresource: prometheus-metrics
+                  name: chrony-master
         ports:
         - containerPort: 4228
           name: https-metrics
