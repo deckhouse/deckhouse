@@ -97,6 +97,13 @@ func (c *DeployTimeChecker) ProcessMinorReleaseDeployTime(ctx context.Context, d
 		return nil
 	}
 
+	err := c.checkReleaseDisruptions(dr)
+	if err != nil {
+		return &DeployTimeReason{
+			Message: err.Error(),
+		}
+	}
+
 	if res.ReleaseApplyTime == c.now {
 		res.ReleaseApplyTime = time.Time{}
 	}

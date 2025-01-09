@@ -126,7 +126,9 @@ func ParseDeckhouseRegistrySecret(data map[string][]byte) (*DeckhouseRegistrySec
 	var clusterIsBootstrapped bool
 	var castErr error
 	if ok {
-		clusterIsBootstrapped, castErr = strconv.ParseBool(string(clusterIsBootstrappedRaw))
+		trimmedBool := strings.ReplaceAll(string(clusterIsBootstrappedRaw), "\"", "")
+
+		clusterIsBootstrapped, castErr = strconv.ParseBool(trimmedBool)
 		if castErr != nil {
 			err = errors.Join(err, fmt.Errorf("clusterIsBootstrapped is not bool: %w", castErr))
 		}

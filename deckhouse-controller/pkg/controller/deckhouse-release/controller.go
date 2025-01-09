@@ -308,6 +308,10 @@ func (r *deckhouseReleaseReconciler) pendingReleaseReconcile(ctx context.Context
 			return res, fmt.Errorf("get registry secret: %w", err)
 		}
 
+		if errors.Is(err, utils.ErrClisterIsBootstrappedFieldIsNotFound) {
+			r.registrySecret.ClusterIsBootstrapped = true
+		}
+
 		r.registrySecret = registrySecret
 	}
 
