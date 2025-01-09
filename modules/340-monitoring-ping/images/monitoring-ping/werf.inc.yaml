@@ -45,7 +45,6 @@ import:
   before: install
 - artifact: common/python-static
   add: /opt/python-static
-  to: /opt/python-static
   before: install
 shell:
   beforeInstall:
