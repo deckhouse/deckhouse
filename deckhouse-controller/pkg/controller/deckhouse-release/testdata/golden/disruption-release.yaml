@@ -3,16 +3,19 @@ apiVersion: deckhouse.io/v1alpha1
 approved: false
 kind: DeckhouseRelease
 metadata:
+  annotations:
+    release.deckhouse.io/isUpdating: "false"
+    release.deckhouse.io/notified: "false"
   creationTimestamp: null
   name: v1.36.0
-  resourceVersion: "1000"
+  resourceVersion: "1001"
 spec:
   disruptions:
   - testme
   version: v1.36.0
 status:
   approved: false
-  message: 'Release requires disruption approval (`kubectl annotate DeckhouseRelease
+  message: 'release blocked, disruption approval required: (`kubectl annotate DeckhouseRelease
     v1.36.0 release.deckhouse.io/disruption-approved=true`): some test reason'
   phase: Pending
   transitionTime: null
