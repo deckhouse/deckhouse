@@ -39,7 +39,7 @@
       },
       "gridPos": {
         "h": 3,
-        "w": 8,
+        "w": 12,
         "x": 0,
         "y": 0
       },
@@ -97,116 +97,6 @@
     {
       "cacheTimeout": null,
       "colorBackground": false,
-      "colorPrefix": false,
-      "colorValue": true,
-      "colors": [
-        "#299c46",
-        "rgba(237, 129, 40, 0.89)",
-        "#d44a3a"
-      ],
-      "datasource": "$ds_prometheus",
-      "description": "Aggregate NTPD health including stratum, leap flag, sane freshness, root distance being less than collector.ntp.max-distance and causality violation being less than collector.ntp.local-offset-tolerance.\n\nCausality violation is lower bound estimate of clock error done using SNTP, it's calculated as positive portion of abs(node_ntp_offset) - node_ntp_rtt / 2.",
-      "format": "none",
-      "gauge": {
-        "maxValue": 15,
-        "minValue": 0,
-        "show": false,
-        "thresholdLabels": true,
-        "thresholdMarkers": true
-      },
-      "gridPos": {
-        "h": 3,
-        "w": 8,
-        "x": 8,
-        "y": 0
-      },
-      "id": 11,
-      "interval": null,
-      "links": [],
-      "mappingType": 1,
-      "mappingTypes": [
-        {
-          "name": "value to text",
-          "value": 1
-        },
-        {
-          "name": "range to text",
-          "value": 2
-        }
-      ],
-      "maxDataPoints": 100,
-      "nullPointMode": "connected",
-      "nullText": null,
-      "postfix": "",
-      "postfixFontSize": "50%",
-      "prefix": "",
-      "prefixFontSize": "50%",
-      "rangeMaps": [
-        {
-          "from": "null",
-          "text": "N/A",
-          "to": "null"
-        }
-      ],
-      "sparkline": {
-        "fillColor": "rgba(31, 118, 189, 0.18)",
-        "full": true,
-        "lineColor": "rgb(31, 120, 193)",
-        "show": false
-      },
-      "tableColumn": "key",
-      "targets": [
-        {
-          "alias": "Reference ID",
-          "expr": "count (node_ntp_sanity{node=~\"$node\"}==0)\nor vector(0)",
-          "format": "time_series",
-          "groupBy": [
-            {
-              "params": [
-                "$__interval"
-              ],
-              "type": "time"
-            },
-            {
-              "params": [
-                "null"
-              ],
-              "type": "fill"
-            }
-          ],
-          "hide": false,
-          "instant": false,
-          "intervalFactor": 1,
-          "measurement": "chrony",
-          "orderByTime": "ASC",
-          "policy": "default",
-          "query": "SELECT \"reference_id\"  FROM (SELECT \"reference_id\", \"system_time\" FROM \"chrony\" WHERE $timeFilter)",
-          "rawQuery": true,
-          "refId": "A",
-          "resultFormat": "time_series",
-          "select": [
-            [
-              {
-                "params": [
-                  "stratum"
-                ],
-                "type": "field"
-              }
-            ]
-          ],
-          "tags": []
-        }
-      ],
-      "thresholds": "1,1",
-      "title": "Insane nodes",
-      "type": "singlestat",
-      "valueFontSize": "100%",
-      "valueMaps": [],
-      "valueName": "current"
-    },
-    {
-      "cacheTimeout": null,
-      "colorBackground": false,
       "colorValue": true,
       "colors": [
         "#299c46",
@@ -225,7 +115,7 @@
       },
       "gridPos": {
         "h": 3,
-        "w": 8,
+        "w": 12,
         "x": 16,
         "y": 0
       },
@@ -267,7 +157,7 @@
       "targets": [
         {
           "alias": "Stratum",
-          "expr": "count (node_ntp_stratum{node=~\"$node\"}==16)\nor vector(0)",
+          "expr": "count (chrony_tracking_stratum{node=~\"$node\"}==16)\nor vector(0)",
           "format": "time_series",
           "groupBy": [
             {
@@ -510,15 +400,7 @@
           "refId": "A"
         },
         {
-          "expr": "max by (node) (min_over_time(node_ntp_sanity{node=~\"$node\"}[$__range]))",
-          "format": "table",
-          "instant": true,
-          "intervalFactor": 1,
-          "legendFormat": "Sanity",
-          "refId": "B"
-        },
-        {
-          "expr": "max by (node) (max_over_time(node_ntp_stratum{node=~\"$node\"}[$__range]))",
+          "expr": "max by (node) (max_over_time(chrony_tracking_stratum{node=~\"$node\"}[$__range]))",
           "format": "table",
           "instant": true,
           "intervalFactor": 1,
@@ -526,7 +408,7 @@
           "refId": "C"
         },
         {
-          "expr": "max by (node) (max_over_time(node_ntp_offset_seconds:abs{node=~\"$node\"}[$__range]))",
+          "expr": "max by (node) (max_over_time(chrony_tracking_last_offset_seconds:abs{node=~\"$node\"}[$__range]))",
           "format": "table",
           "instant": true,
           "intervalFactor": 1,
@@ -534,7 +416,7 @@
           "refId": "D"
         },
         {
-          "expr": "max by (node) (max_over_time(node_ntp_rtt_seconds{node=~\"$node\"}[$__range]))",
+          "expr": "max by (node) (max_over_time(chrony_rtt_seconds{node=~\"$node\"}[$__range]))",
           "format": "table",
           "instant": true,
           "intervalFactor": 1,
@@ -542,7 +424,7 @@
           "refId": "E"
         },
         {
-          "expr": "max by (node) (max_over_time(node_ntp_root_dispersion_seconds{node=~\"$node\"}[$__range]))",
+          "expr": "max by (node) (max_over_time(chrony_tracking_root_dispersion_seconds{node=~\"$node\"}[$__range]))",
           "format": "table",
           "instant": true,
           "intervalFactor": 1,
@@ -550,7 +432,7 @@
           "refId": "F"
         },
         {
-          "expr": "max by (node) (max_over_time(node_ntp_root_delay_seconds{node=~\"$node\"}[$__range]))",
+          "expr": "max by (node) (max_over_time(chrony_tracking_root_delay_seconds{node=~\"$node\"}[$__range]))",
           "format": "table",
           "instant": true,
           "intervalFactor": 1,
@@ -558,7 +440,7 @@
           "refId": "G"
         },
         {
-          "expr": "max by (node) (node_time_seconds{node=~\"$node\"} - node_ntp_reference_timestamp_seconds{node=~\"$node\"})",
+          "expr": "max by (node) (node_time_seconds{node=~\"$node\"} - chrony_tracking_reference_timestamp_seconds{node=~\"$node\"})",
           "format": "table",
           "instant": true,
           "intervalFactor": 1,
@@ -621,7 +503,7 @@
       "targets": [
         {
           "alias": "Frequency",
-          "expr": "max_over_time(node_ntp_rtt_seconds{node=~\"$node\"}[$__rate_interval])",
+          "expr": "max_over_time(chrony_rtt_seconds{node=~\"$node\"}[$__rate_interval])",
           "format": "time_series",
           "groupBy": [
             {
@@ -671,7 +553,7 @@
         "sort": 0,
         "value_type": "individual"
       },
-      "type": "graph",
+      "type": "timeseries",
       "xaxis": {
         "buckets": null,
         "mode": "time",
@@ -748,7 +630,7 @@
       "targets": [
         {
           "alias": "Last Offset",
-          "expr": "(max_over_time(node_ntp_offset_seconds{node=~\"$node\"}[$__rate_interval]) > 0)\nor\n(min_over_time(node_ntp_offset_seconds{node=~\"$node\"}[$__rate_interval]) < 0)",
+          "expr": "(max_over_time(chrony_tracking_last_offset_seconds{node=~\"$node\"}[$__rate_interval]) > 0)\nor\n(min_over_time(chrony_tracking_last_offset_seconds{node=~\"$node\"}[$__rate_interval]) < 0)",
           "format": "time_series",
           "groupBy": [
             {
@@ -800,7 +682,7 @@
         "sort": 0,
         "value_type": "individual"
       },
-      "type": "graph",
+      "type": "timeseries",
       "xaxis": {
         "buckets": null,
         "mode": "time",
@@ -880,7 +762,7 @@
       "targets": [
         {
           "alias": "Frequency",
-          "expr": "max_over_time(node_ntp_root_dispersion_seconds{node=~\"$node\"}[$__rate_interval])",
+          "expr": "max_over_time(chrony_tracking_root_dispersion_seconds{node=~\"$node\"}[$__rate_interval])",
           "format": "time_series",
           "groupBy": [
             {
@@ -930,7 +812,7 @@
         "sort": 0,
         "value_type": "individual"
       },
-      "type": "graph",
+      "type": "timeseries",
       "xaxis": {
         "buckets": null,
         "mode": "time",
@@ -1007,7 +889,7 @@
       "targets": [
         {
           "alias": "Last Offset",
-          "expr": "(max_over_time(node_ntp_root_delay_seconds{node=~\"$node\"}[$__rate_interval]) > 0)\nor\n(min_over_time(node_ntp_root_delay_seconds{node=~\"$node\"}[$__rate_interval]) < 0)",
+          "expr": "(max_over_time(chrony_tracking_root_delay_seconds{node=~\"$node\"}[$__rate_interval]) > 0)\nor\n(min_over_time(chrony_tracking_root_delay_seconds{node=~\"$node\"}[$__rate_interval]) < 0)",
           "format": "time_series",
           "groupBy": [
             {
@@ -1059,7 +941,7 @@
         "sort": 0,
         "value_type": "individual"
       },
-      "type": "graph",
+      "type": "timeseries",
       "xaxis": {
         "buckets": null,
         "mode": "time",
@@ -1132,7 +1014,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "node_time_seconds - node_ntp_reference_timestamp_seconds{node=~\"$node\"}",
+          "expr": "node_time_seconds - on(node) chrony_tracking_reference_timestamp_seconds{node=~\"$node\"}",
           "format": "time_series",
           "hide": false,
           "intervalFactor": 1,
@@ -1150,7 +1032,7 @@
         "sort": 0,
         "value_type": "individual"
       },
-      "type": "graph",
+      "type": "timeseries",
       "xaxis": {
         "buckets": null,
         "mode": "time",
@@ -1215,14 +1097,14 @@
           "value": "$__all"
         },
         "datasource": "$ds_prometheus",
-        "definition": "label_values(node_ntp_sanity, node)",
+        "definition": "label_values(chrony_exporter_build_info, node)",
         "hide": 0,
         "includeAll": true,
         "label": "Node",
         "multi": true,
         "name": "node",
         "options": [],
-        "query": "label_values(node_ntp_sanity, node)",
+        "query": "label_values(chrony_exporter_build_info, node)",
         "refresh": 2,
         "regex": "",
         "skipUrlSync": false,
