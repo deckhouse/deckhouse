@@ -49,8 +49,3 @@ subjects:
   name: pricing
   namespace: d8-flant-integration
 {{- end }}
-{{- if (.Values.global.enabledModules | has "observability") }}
-- kind: ServiceAccount
-  name: label-proxy
-  namespace: d8-observability
-{{- end }}
