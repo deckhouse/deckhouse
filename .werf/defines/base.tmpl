@@ -84,6 +84,7 @@ import:
   - usr/lib64/libexpat.so*
   - usr/lib64/libssl.so.*
   - usr/lib64/libcrypto.so.*
+  - usr/bin/openssl
   - etc/pki
   - usr/share/ca-certificates/ca-bundle.crt
   - usr/lib64/libffi.so*
@@ -94,7 +95,6 @@ import:
   - etc/bashrc.d/bash_completion.sh
   - usr/share/bash-completion
   - usr/bin/vim-console
-{{ include "base components imports" (dict "k8sVersions" $context.k8sVersions "CandiVersionMap" $context.CandiVersionMap ) }}
 
 - image: common-base/binary-artifact
   add: /opt/python-static/bin
@@ -120,6 +120,8 @@ import:
   add: /d8-curl
   to: /usr/bin/curl
   before: setup
+
+{{ include "base components imports" (dict "k8sVersions" $context.k8sVersions "CandiVersionMap" $context.CandiVersionMap ) }}
 
 shell:
   beforeInstall:
