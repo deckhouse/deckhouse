@@ -15,7 +15,7 @@ search: Developing Prometheus rules, prometheus alerting rules
   * `kubernetes` stores our rules related to Kubernetes monitoring (the platform — control plane, NGINX Ingress, Prometheus, etc) and monitoring of objects in Kubernetes (Pods, CronJobs, disk space, etc.);
   * `applications` stores rules for monitoring applications (e.g., redis, mongo, etc.).
 * Changes to these files (including the creation of new ones) should be automatically shown on the `/prometheus/rules` page (you need to wait about a minute after deckhouse is deployed so that Prometheus Operator and other tools do their work).
-* Here is how you can troubleshoot the problem if your changes are not shown (for more information, see the documentation of the [Prometheus Operator](../../modules/200-operator-prometheus/) module):
+* Here is how you can troubleshoot the problem if your changes are not shown (for more information, see the documentation of the [Prometheus Operator](../../modules/operator-prometheus/) module):
   * Check that your changes are present in the ConfigMap in Kubernetes:
     * `kubectl -n d8-monitoring get prometheusrule/prometheus-rules-<DIRECTORY NAME> -o yaml`
     * If no changes are shown, you need to check that deckhouse is deployed successfully:

@@ -72,7 +72,7 @@ lang: ru
 
 1. **Оборудование для хранилища.**
 
-  В зависимости от выбранного хранилища могут потребоваться дополнительные ресурсы. Подробности смотрите в разделе [Управление хранилищами](https://deckhouse.ru/products/virtualization-platform/documentation/admin/platform-management/storage/sds/lvm-local.html).
+  В зависимости от выбранного хранилища могут потребоваться дополнительные ресурсы. Подробности смотрите в разделе [Управление хранилищами](/products/virtualization-platform/documentation/admin/platform-management/storage/sds/lvm-local.html).
 
 ## Поддерживаемые ОС
 

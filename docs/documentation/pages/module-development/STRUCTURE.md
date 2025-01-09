@@ -290,7 +290,7 @@ You can use the `conversion.TestConvert` function to write conversion tests. It 
 - path to the source configuration file (i.e., the version before the conversion);
 - path to the resulting configuration file (i.e., the version after the conversion).
 
-An [example](https://github.com/deckhouse/deckhouse/blob/main/modules/300-prometheus/openapi/conversions/conversions_test.go) of a conversion test.
+An [example](https://github.com/deckhouse/deckhouse/blob/main/modules/prometheus/openapi/conversions/conversions_test.go) of a conversion test.
 
 ### config-values.yaml
 
@@ -409,7 +409,7 @@ If confirmation is required to disable a module (the `confirmation` parameter is
 - `deckhouse` — *String.* Pod dependency [on Deckhouse Kubernetes Platform version](../dependencies/#deckhouse-kubernetes-platform-version-dependency) that the pod is compatible with.
 - `kubernetes` — *String.* Pod dependency [on Kubernetes version](../dependencies/#kubernetes-version-dependency) that the pod is compatible with.
 - `modules` — *Object.* Module dependency [on the version of other modules](../dependencies/#dependency-on-the-version-of-other-modules).
-- `stage` — *String.* [Module lifecycle stage](../versioning/#how-to-know-how-stable-a-module-is). Possible values: `Sandbox`, `Incubating`, `Graduated`, or `Deprecated`.
+- `stage` — *String.* [Module lifecycle stage](../versioning/#how-do-i-figure-out-how-stable-a-module-is). Possible values: `Sandbox`, `Incubating`, `Graduated`, or `Deprecated`.
 - `tags` — *Array of strings.* List of additional module tags. Tags are converted to [Module](../../cr.html#module) object labels according to the template `module.deckhouse.io/<TAG>=""` (where `<TAG>` is the tag name).
 
 For example, if you specify `tags: ["test", "myTag"]`, then the corresponding Module object in the cluster will be assigned the labels `module.deckhouse.io/test=""` and `module.deckhouse.io/myTag=""`.

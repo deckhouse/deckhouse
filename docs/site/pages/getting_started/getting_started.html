@@ -5,10 +5,10 @@ layout: page-nosidebar
 toc: false
 ---
 
-<link rel="stylesheet" type="text/css" href='{{ assets["getting-started.css"].digest_path }}' />
-<script type="text/javascript" src='{{ assets["getting-started.js"].digest_path }}'></script>
+<link rel="stylesheet" type="text/css" href='{% css_asset_tag getting-started-css %}[_assets/css/getting-started.css]{% endcss_asset_tag %}' />
+<script type="text/javascript" src='{% javascript_asset_tag getting-started %}[_assets/js/getting-started.js]{% endjavascript_asset_tag %}'></script>
 
-<p>Probably, you have already familiarized yourself with the main <a href="/#features">Deckhouse Kubernetes
+<p>Probably, you have already familiarized yourself with the main <a href="/products/kubernetes-platform/">Deckhouse Kubernetes
     Platform features</a>. This getting started guide walks you through the step-by-step process of installing the
   platform.</p>
 
@@ -33,7 +33,7 @@ toc: false
           class="button button_default button_card button_disabled">{{ provider[1].name[page.lang] }} ({{ site.data.i18n.soon[page.lang] }})</a>
         {%- else %}
         <a class="button button_default button_card"
-          href="/gs/{{ provider[0] }}/step2.html">
+          href="/products/kubernetes-platform/gs/{{ provider[0] }}/step2.html">
             {% if provider[1].iconPath %}
               <div class="icon">
                 <img src="/{{provider[1].iconPath}}" alt="{{ provider[1].name[page.lang] }} icon"/>
@@ -70,7 +70,7 @@ toc: false
           class="button button_default button_card button_disabled">{{ provider[1].name[page.lang] }} ({{ site.data.i18n.soon[page.lang] }})</a>
         {%- else %}
         <a class="button button_default button_card"
-          href="/gs/{{ provider[0] }}/step2.html">{% if provider[1].iconPath %}<div class="icon"><img src="/{{provider[1].iconPath}}" alt="{{ provider[1].name[page.lang] }} icon"/></div>{% endif %}<span class="name">{{ provider[1].name[page.lang] }}</span></a>
+          href="/products/kubernetes-platform/gs/{{ provider[0] }}/step2.html">{% if provider[1].iconPath %}<div class="icon"><img src="/{{provider[1].iconPath}}" alt="{{ provider[1].name[page.lang] }} icon"/></div>{% endif %}<span class="name">{{ provider[1].name[page.lang] }}</span></a>
         {%- endif %}
         {% endfor %}
       </div>

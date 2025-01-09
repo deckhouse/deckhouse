@@ -6,7 +6,7 @@ lang: ru
 
 ## Настройка Ingress
 
-Убедитесь, что под Kruise controller manager модуля [ingress-nginx](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/ingress-nginx/) запустился и находится в статусе `Running`.
+Убедитесь, что под Kruise controller manager модуля [ingress-nginx](/products/kubernetes-platform/documentation/v1/modules/ingress-nginx/) запустился и находится в статусе `Running`.
 
 Выполните на **master-узле** следующую команду:
 

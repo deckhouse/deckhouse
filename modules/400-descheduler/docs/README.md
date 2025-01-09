@@ -12,7 +12,7 @@ The module is based on the [descheduler](https://github.com/kubernetes-sigs/desc
 * The module can take into account the pod priority class (parameter [spec.priorityClassThreshold](cr.html#descheduler-v1alpha2-spec-priorityclassthreshold)), restricting its operation to only those pods that have a priority class lower than the specified threshold;
 * The module does not evict pods in the following cases:
   * a pod is in the `d8-*` or `kube-system` namespaces;
-  * a pod has a [priorityClassName](../001-priority-class/) `system-cluster-critical` or `system-node-critical`;
+  * a pod has a [priorityClassName](../priority-class/) `system-cluster-critical` or `system-node-critical`;
   * a pod is associated with a local storage;
   * a pod is associated with a [DaemonSet](https://kubernetes.io/docs/concepts/workloads/controllers/daemonset/);
   * pod eviction will violate [Pod Disruption Budget (PDB)](https://kubernetes.io/docs/concepts/workloads/pods/disruptions/);
@@ -72,7 +72,7 @@ Node resource usage takes into account [extended resources](https://kubernetes.i
 ### RemoveDuplicates
 
 {% alert level="info" %}
-Prevents multiple pods from the same controller (ReplicaSet, ReplicationController, StatefulSet) or the samee Job from running on the same node.
+Prevents multiple pods from the same controller (ReplicaSet, ReplicationController, StatefulSet) or the same Job from running on the same node.
 {% endalert %}
 
 The strategy ensures that no more than one pod of a ReplicaSet, ReplicationController, StatefulSet, or pods of a single Job is running on the same node. If there are two or more such pods, the module evicts the excess pods so that they are better distributed across the cluster.

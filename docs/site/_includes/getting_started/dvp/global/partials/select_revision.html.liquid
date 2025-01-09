@@ -1,11 +1,12 @@
 <script type="text/javascript">const responseFromLicense = {{ site.data.license.response | jsonify }}; const pageLang = '{{ page.lang }}';</script>
-<script type="text/javascript" src='{{ assets["getting-started.js"].digest_path }}'></script>
+<script type="text/javascript" src='{% javascript_asset_tag getting-started %}[_assets/js/getting-started.js]{% endjavascript_asset_tag %}'></script>
 {% if page.platform_code == "bm-private" -%}
-  <script type="text/javascript" src='{{ assets["getting-started-private.js"].digest_path }}'></script>
+  <script type="text/javascript" src='{% javascript_asset_tag getting-started-private %}[_assets/js/getting-started-private.js]{% endjavascript_asset_tag %}'></script>
   {%- include getting_started/global/partials/NOTICES.liquid %}
 {% endif %}
-<script type="text/javascript" src='{{ assets["getting-started-install.js"].digest_path }}'></script>
-<script type="text/javascript" src='{{ assets["bcrypt.js"].digest_path }}'></script>
+<script type="text/javascript" src='{% javascript_asset_tag getting-started-install %}[_assets/js/getting-started-install.js]{% endjavascript_asset_tag %}'></script>
+<script type="text/javascript" src='{% javascript_asset_tag bcrypt %}[_assets/js/bcrypt.js]{% endjavascript_asset_tag %}'></script>
+
 
 <span style="display: none" id="platform_code">{{page.platform_code}}</span>
 

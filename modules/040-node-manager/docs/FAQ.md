@@ -6,11 +6,11 @@ description: Managing nodes of a Kubernetes cluster. Adding or removing nodes in
 
 ## How do I add a master nodes to a cloud cluster (single-master to a multi-master)?
 
-See [the control-plane-manager module FAQ.](../040-control-plane-manager/faq.html#how-do-i-add-a-master-nodes-to-a-cloud-cluster-single-master-to-a-multi-master)
+See [the control-plane-manager module FAQ.](../control-plane-manager/faq.html#how-do-i-add-a-master-nodes-to-a-cloud-cluster-single-master-to-a-multi-master)
 
 ## How do I reduce the number of master nodes in a cloud cluster (multi-master to single-master)?
 
-See [the control-plane-manager module FAQ.](../040-control-plane-manager/faq.html#how-do-i-reduce-the-number-of-master-nodes-in-a-cloud-cluster-multi-master-to-single-master)
+See [the control-plane-manager module FAQ.](../control-plane-manager/faq.html#how-do-i-reduce-the-number-of-master-nodes-in-a-cloud-cluster-multi-master-to-single-master)
 
 ## Static nodes
 
@@ -178,7 +178,7 @@ bash /var/lib/bashible/cleanup_static_node.sh --yes-i-am-sane-and-i-understand-w
 
 A `StaticInstance` that is in the `Pending` state can be deleted with no adverse effects.
 
-To delete a `StaticInstance` in any state other than `Pending` (`Runnig`, `Cleaning`, `Bootstraping`), you need to:
+To delete a `StaticInstance` in any state other than `Pending` (`Running`, `Cleaning`, `Bootstrapping`), you need to:
 
 1. Add the label `"node.deckhouse.io/allow-bootstrap": "false"` to the `StaticInstance`.
 1. Wait until the `StaticInstance` status becomes `Pending`.

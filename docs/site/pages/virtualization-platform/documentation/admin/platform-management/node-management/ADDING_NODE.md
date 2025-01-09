@@ -346,7 +346,7 @@ To clean up a node for adding to another cluster, follow these steps:
 
 A StaticInstance in the `Pending` state can be deleted safely.
 
-To delete a StaticInstance in any state other than `Pending`, such as `Running`, `Cleaning`, or `Bootstraping`,
+To delete a StaticInstance in any state other than `Pending`, such as `Running`, `Cleaning`, or `Bootstrapping`,
 do the following:
 
 1. Add the label `"node.deckhouse.io/allow-bootstrap": "false"` to the StaticInstance.

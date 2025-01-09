@@ -11,7 +11,7 @@ Attach the `extended-monitoring.deckhouse.io/enabled` label to the Namespace to 
 - adding the appropriate helm-chart to the project (recommended method);
 - adding it to `.gitlab-ci.yml` (kubectl patch/create);
 - attaching it manually (`kubectl label namespace my-app-production extended-monitoring.deckhouse.io/enabled=""`).
-- configuring via [namespace-configurator](/products/kubernetes-platform/documentation/v1/modules/600-namespace-configurator/) module.
+- configuring via [namespace-configurator](../namespace-configurator/) module.
 
 Any of the methods above would result in the emergence of the default metrics (+ any custom metrics with the `threshold.extended-monitoring.deckhouse.io/` prefix) for all supported Kubernetes objects in the target namespace. Note that monitoring is enabled automatically for a number of [non-namespaced](#non-namespaced-kubernetes-objects) Kubernetes objects described below.
 
