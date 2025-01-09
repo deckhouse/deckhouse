@@ -360,4 +360,4 @@ spec:
 
 ## How to set permissions for a user or group
 
-Parameters in the custom resource [`ClusterAuthorizationRule`](../../modules/140-user-authz/cr.html#clusterauthorizationrule) are used for configuration.
+Parameters in the custom resource [`ClusterAuthorizationRule`](../../modules/user-authz/cr.html#clusterauthorizationrule) are used for configuration.

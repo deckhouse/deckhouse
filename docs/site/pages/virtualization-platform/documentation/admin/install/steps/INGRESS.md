@@ -5,7 +5,7 @@ permalink: en/virtualization-platform/documentation/admin/install/steps/ingress.
 
 ## Ingress Setup
 
-Ensure that the Kruise controller manager for the [ingress-nginx](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/ingress-nginx/) module has started and is in the `Running` status.
+Ensure that the Kruise controller manager for the [ingress-nginx](/products/kubernetes-platform/documentation/v1/modules/ingress-nginx/) module has started and is in the `Running` status.
 
 Run the following command on the **master node**:
 
