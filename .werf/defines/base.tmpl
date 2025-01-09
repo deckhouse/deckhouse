@@ -96,13 +96,13 @@ import:
   - usr/bin/vim-console
 {{ include "base components imports" (dict "k8sVersions" $context.k8sVersions "CandiVersionMap" $context.CandiVersionMap ) }}
 
-- image: common/python-static
+- image: common-base/binary-artifact
   add: /opt/python-static/bin
   to: /usr/bin
   before: setup
   includePaths:
   - python*
-- image: common/python-static
+- image: common-base/binary-artifact
   add: /opt/python-static/lib
   to: /usr/lib
   before: setup
