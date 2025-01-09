@@ -39,6 +39,7 @@ shell:
   - git apply /patches/*.patch --verbose
   - rm -r vendor
   - rm -rf .git
+  - rm -rf .git
 ---
 artifact: {{ .ModuleName }}/{{ .ImageName }}-artifact
 from: {{ .Images.BASE_GOLANG_23_ALPINE }}
