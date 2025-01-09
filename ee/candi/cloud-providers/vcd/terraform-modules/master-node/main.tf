@@ -89,7 +89,8 @@ resource "vcd_vapp_vm" "master" {
   lifecycle {
     ignore_changes = [
       guest_properties,
-      disk
+      disk,
+      metadata
     ]
   }
 
