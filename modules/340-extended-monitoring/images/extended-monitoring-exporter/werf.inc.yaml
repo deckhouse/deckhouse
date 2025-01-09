@@ -14,6 +14,7 @@ shell:
     - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
     - git clone --depth 1 {{ $.SOURCE_REPO }}/python-modules/wheels /wheels
     - rm -rf /wheels/.git
+    - apt-get -y remove python3-module-cryptography
     - pip3 install -f file:///wheels --no-index -r /requirements.txt
     - /binary_replace.sh -i "{{ $binaries }}" -o /relocate
 ---
