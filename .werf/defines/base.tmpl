@@ -86,11 +86,6 @@ import:
   - usr/lib64/libcrypto.so.*
   - etc/pki
   - usr/share/ca-certificates/ca-bundle.crt
-  - usr/bin/python3
-  - usr/bin/python3.12
-  - usr/lib/python3
-  - usr/lib64/python3
-  - usr/lib64/python3.12
   - usr/lib64/libffi.so*
   - usr/lib64/libb2.so*
   - usr/share/vim
@@ -100,6 +95,21 @@ import:
   - usr/share/bash-completion
   - usr/bin/vim-console
 {{ include "base components imports" (dict "k8sVersions" $context.k8sVersions "CandiVersionMap" $context.CandiVersionMap ) }}
+
+- image: common/python-static
+  add: /opt/python-static/bin
+  to: /usr/bin
+  before: setup
+  includePaths:
+  - python*
+- image: common/python-static
+  add: /opt/python-static/lib
+  to: /usr/lib
+  before: setup
+  includePaths:
+  - python3*
+  excludePaths:
+  - python3*/config-3*-x86_64-linux-gnu/libpython3*.a
 
 - image: common/distroless
   add: /etc/ssl
