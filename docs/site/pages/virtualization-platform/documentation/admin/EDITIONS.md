@@ -25,5 +25,5 @@ The table below provides brief a comparison of editions listing its main feature
 | Changing VM parameters without stopping it                       | {{ not_supported }} | {{ supported }} |
 | High Availability (HA) mode of virtual machines                  | {{ coming_soon }}   | {{ coming_soon }} |
 | Disaster resilience (inter-cluster replication)                  | {{ coming_soon }}   | {{ coming_soon }} |
-| [Extended technical support](https://deckhouse.io/tech-support/) | {{ not_supported }} | {{ supported }}  |
-| [Extended technical support](https://deckhouse.io/tech-support/) | {{ not_supported }} | {{ supported }}  |
+| [Extended technical support](/tech-support/) | {{ not_supported }} | {{ supported }}  |
+| [Extended technical support](/tech-support/) | {{ not_supported }} | {{ supported }}  |

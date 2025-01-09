@@ -71,7 +71,7 @@ properties:
         description: |
           Опциональные параметры аутентификации клиентов Kubernetes API.
 
-          По умолчанию используются данные из ConfigMap, устанавливаемого модулем [user-authn](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/150-user-authn/).
+          По умолчанию используются данные из ConfigMap, устанавливаемого модулем [user-authn](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/user-authn/).
         properties:
           oidcIssuerURL:
             description: |
@@ -97,7 +97,7 @@ properties:
         description: |
           Параметры авторизации клиентов Kubernetes API.
 
-          По умолчанию используются данные из ConfigMap, устанавливаемого модулем [user-authz](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/140-user-authz/).
+          По умолчанию используются данные из ConfigMap, устанавливаемого модулем [user-authz](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/user-authz/).
         properties:
           webhookURL:
             description: |

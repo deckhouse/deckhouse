@@ -11,7 +11,7 @@ description: "Описание схем размещения и взаимоде
 В данной схеме размещения узлы не будут иметь публичных IP-адресов, а будут выходить в интернет через NAT-шлюз (NAT Gateway) Yandex Cloud.
 {% endalert %}
 
-![Схема размещения Standard в Yandex Cloud](../../images/030-cloud-provider-yandex/layout-standard.png)
+![Схема размещения Standard в Yandex Cloud](../../images/cloud-provider-yandex/layout-standard.png)
 <!--- Исходник: https://docs.google.com/drawings/d/1WI8tu-QZYcz3DvYBNlZG4s5OKQ9JKyna7ESHjnjuCVQ/edit --->
 
 Пример конфигурации схемы размещения:
@@ -88,7 +88,7 @@ dhcpOptions:
 
 > **Внимание!** В модуле `cloud-provider-yandex` пока нет поддержки групп безопасности (security group), поэтому все узлы кластера будут смотреть *наружу*.
 
-![Схема размещения WithoutNAT в Yandex Cloud](../../images/030-cloud-provider-yandex/layout-withoutnat.png)
+![Схема размещения WithoutNAT в Yandex Cloud](../../images/cloud-provider-yandex/layout-withoutnat.png)
 <!--- Исходник: https://docs.google.com/drawings/d/1I7M9DquzLNu-aTjqLx1_6ZexPckL__-501Mt393W1fw/edit --->
 
 Пример конфигурации схемы размещения:
@@ -165,7 +165,7 @@ dhcpOptions:
 
 Если IP-адрес NAT-инстанса не имеет значения, можно передать пустой объект `withNATInstance: {}`, тогда необходимые сети и динамический IP-адрес будут созданы автоматически.
 
-![Схема размещения WithNATInstance в Yandex Cloud](../../images/030-cloud-provider-yandex/layout-withnatinstance.png)
+![Схема размещения WithNATInstance в Yandex Cloud](../../images/cloud-provider-yandex/layout-withnatinstance.png)
 <!--- Исходник: https://docs.google.com/drawings/d/1oVpZ_ldcuNxPnGCkx0dRtcAdL7BSEEvmsvbG8Aif1pE/edit --->
 
 Пример конфигурации схемы размещения:

@@ -71,7 +71,7 @@ permalink: en/virtualization-platform/documentation/admin/install/requirements.h
 
 1. **Storage hardware**
 
-   Depending on the chosen storage solution, additional resources may be required. For details, refer to the section [Storage Management](https://deckhouse.ru/products/virtualization-platform/documentation/admin/platform-management/storage/sds/lvm-local.html).
+   Depending on the chosen storage solution, additional resources may be required. For details, refer to the section [Storage Management](/products/virtualization-platform/documentation/admin/platform-management/storage/sds/lvm-local.html).
 
 ## Supported OS
 

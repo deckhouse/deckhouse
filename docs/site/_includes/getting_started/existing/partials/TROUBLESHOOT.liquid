@@ -33,7 +33,7 @@ Here are some common problems and ways to solve them. Should you run into diffic
   ```
   Status:   ModuleError: unable to build kubernetes objects from release manifest: [resource mapping not found for name: "system-ns.deckhouse.io" namespace: "" from "": no matches for kind "ValidatingAdmissionPolicy" in version "admissionregistration.k8s.io/v1beta1" ensure CRDs are installed first, resource mapping not found for name: "label-objects.deckhouse.io" namespace: "" from "": no matches for kind "ValidatingAdmissionPolicy" in version "admissionregistration.k8s.io/v1beta1" ensure CRDs are installed first, resource mapping not found for name: "system-ns.deckhouse.io" namespace: "" from "": no matches for kind "ValidatingAdmissionPolicyBinding" in version "admissionregistration.k8s.io/v1beta1" ensure CRDs are installed first, resource mapping not found for name: "heritage-label-objects.deckhouse.io" namespace: "" from "": no matches for kind "ValidatingAdmissionPolicyBinding" in version "admissionregistration.k8s.io/v1beta1" ensure CRDs are installed first]
   ```
-  
+
   May be, the `kube-apiserver.yaml` static manifest does not specify `runtime-config'.
 
   Add the `spec.containers.command` parameter to `/etc/kubernetes/manifests/kube-api server.yaml` value- --runtime-config=admissionregistration.k8s.io/v1beta1=true,admissionregistration.k8s.io/v1alpha1=true`.
@@ -63,7 +63,7 @@ and then start the installation again.
 {% endofftopic %}
 
 {% offtopic title="There is no Ingress controller in the cluster..." %}
-The `documentation` module (`deckhouse-web` in Deckhouse 1.45 or older), which provides a web interface to the cluster documentation, requires the Ingress controller to be active in the cluster. If there is no Ingress controller in your cluster, you can use the built-in [ingress-nginx](/products/kubernetes-platform/documentation/v1/modules/402-ingress-nginx/) module:
+The `documentation` module (`deckhouse-web` in Deckhouse 1.45 or older), which provides a web interface to the cluster documentation, requires the Ingress controller to be active in the cluster. If there is no Ingress controller in your cluster, you can use the built-in [ingress-nginx](/products/kubernetes-platform/documentation/v1/modules/ingress-nginx/) module:
 <ul>
   <li><p>Enable the <code>ingress-nginx</code> module, by executing the following command:</p>
 {% snippetcut selector="enable-ingress" %}

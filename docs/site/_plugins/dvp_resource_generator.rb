@@ -3,6 +3,7 @@ module ResourceGenerator
     safe true
 
     def generate(site)
+      return unless site.data['schemas'] and site.data['schemas']['virtualization-platform'] and site.data['schemas']['virtualization-platform']['crds']
       site.data['schemas']['virtualization-platform']['crds'].each do |crdKey, crdData|
         languages = ['ru', 'en']
 

@@ -6,7 +6,7 @@ lang: ru
 
 ## Настройка хранилища
 
-После добавления worker-узлов необходимо настроить хранилище, которое будет использоваться для создания дисков виртуальных машин и для хранения метрик компонентов кластера. Хранилище можно выбрать из [списка поддерживаемых](http://deckhouse.ru/products/virtualization-platform/documentation/admin/install/requirements.html).
+После добавления worker-узлов необходимо настроить хранилище, которое будет использоваться для создания дисков виртуальных машин и для хранения метрик компонентов кластера. Хранилище можно выбрать из [списка поддерживаемых](/products/virtualization-platform/documentation/admin/install/requirements.html).
 
 Далее рассмотрим включение и настройку программно-определяемого хранилища `sds-replicated-volume`. Это хранилище позволяет создать реплицируемые тома на основе дискового пространства узлов. Для примера настроим StorageClass на основе томов с двумя репликами, которые располагаются на дисках `/dev/sda`.
 
@@ -66,7 +66,7 @@ sudo -i d8 k -n d8-sds-replicated-volume get pod -owide -w
 
 1. Создайте VolumeGroup на каждом узле.
 
-   На каждом узле необходимо создать группу томов LVM с помощью ресурса [LVMVolumeGroup](http://deckhouse.ru/products/virtualization-platform/reference/cr/lvmvolumegroup.html).
+   На каждом узле необходимо создать группу томов LVM с помощью ресурса [LVMVolumeGroup](/products/virtualization-platform/reference/cr/lvmvolumegroup.html).
 
    Для создания ресурса LVMVolumeGroup на узле используйте следующие команды:
   
@@ -149,7 +149,7 @@ sudo -i d8 k -n d8-sds-replicated-volume get pod -owide -w
    - `replication` — параметры репликации, для 2 реплик будет использоваться значение `Availability`;
    - `storagePool` — имя созданного ранее пула, в данном примере указывается `sds-pool`.
   
-   Остальные параметры описаны [в документации ресурса ReplicatedStorageClass](http://deckhouse.ru/products/virtualization-platform/reference/cr/replicatedstorageclass.html).
+   Остальные параметры описаны [в документации ресурса ReplicatedStorageClass](/products/virtualization-platform/reference/cr/replicatedstorageclass.html).
 
    ```yaml
    sudo -i d8 k apply -f - <<EOF

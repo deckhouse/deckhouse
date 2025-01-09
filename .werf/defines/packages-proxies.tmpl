@@ -1,0 +1,59 @@
+{{- define "alt packages proxy" }}
+# Replace altlinux repos with our proxy
+  {{- if $.DistroPackagesProxy }}
+- sed -i "s|ftp.altlinux.org/pub/distributions/ALTLinux|{{ $.DistroPackagesProxy }}/repository/ALT-Linux-APT-Repository|g" /etc/apt/sources.list.d/alt.list
+  {{- end }}
+- export DEBIAN_FRONTEND=noninteractive
+- apt-get update
+{{- end }}
+
+{{- define "debian packages proxy" }}
+# 5 years 157680000
+- |
+    echo "Acquire::Check-Valid-Until false;" >> /etc/apt/apt.conf
+    echo "Acquire::Check-Date false;" >> /etc/apt/apt.conf
+    echo "Acquire::Max-FutureTime 157680000;" >> /etc/apt/apt.conf
+# Replace debian repos with our proxy
+  {{- if $.DistroPackagesProxy }}
+- sed -i "s|http://deb.debian.org|http://{{ $.DistroPackagesProxy }}/repository|g" /etc/apt/sources.list
+  {{- end }}
+- export DEBIAN_FRONTEND=noninteractive
+- apt-get update
+{{- end }}
+
+{{- define "ubuntu packages proxy" }}
+  # Replace ubuntu repos with our proxy
+  {{- if $.DistroPackagesProxy }}
+- sed -i 's|http://archive.ubuntu.com|http://{{ $.DistroPackagesProxy }}/repository/archive-ubuntu|g' /etc/apt/sources.list
+- sed -i 's|http://security.ubuntu.com|http://{{ $.DistroPackagesProxy }}/repository/security-ubuntu|g' /etc/apt/sources.list
+  {{- end }}
+- export DEBIAN_FRONTEND=noninteractive
+# one year
+- apt-get -o Acquire::Check-Valid-Until=false -o Acquire::Check-Date=false -o Acquire::Max-FutureTime=31536000 update
+{{- end }}
+
+{{- define "alpine packages proxy" }}
+# Replace alpine repos with our proxy
+  {{- if $.DistroPackagesProxy }}
+- sed -i 's|https://dl-cdn.alpinelinux.org|http://{{ $.DistroPackagesProxy }}/repository|g' /etc/apk/repositories
+  {{- end }}
+- apk update
+{{- end }}
+
+{{- define "node packages proxy" }}
+  {{- if $.DistroPackagesProxy }}
+- npm config set registry http://{{ $.DistroPackagesProxy }}/repository/npmjs/
+  {{- end }}
+{{- end }}
+
+{{- define "pypi proxy" }}
+  {{- if $.DistroPackagesProxy }}
+- |
+  cat <<"EOD" > /etc/pip.conf
+  [global]
+  index = http://{{ $.DistroPackagesProxy }}/repository/pypi-proxy/pypi
+  index-url = http://{{ $.DistroPackagesProxy }}/repository/pypi-proxy/simple
+  trusted-host = {{ $.DistroPackagesProxy }}
+  EOD
+  {{- end }}
+{{- end }}

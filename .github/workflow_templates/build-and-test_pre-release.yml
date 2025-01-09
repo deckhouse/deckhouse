@@ -71,7 +71,7 @@ jobs:
     # Wait for success build of modules.
     needs:
       - git_info
-{!{ tmpl.Exec "web_build_template" (slice $ctx "main" "dev") | strings.Indent 4 }!}
+{!{ tmpl.Exec "web_build_template" (slice $ctx "main" "release") | strings.Indent 4 }!}
 
   tests:
     name: Tests

@@ -86,11 +86,11 @@ spec:
 
                           Set `modules.deckhouse.io/approved="true"` annotation on the corresponding ModuleRelease resource, to confirm the update.
 
-                          A patch version update (for example, from `v1.65.1` to `v1.65.4`) is applied according to the [update windows](./modules/002-deckhouse/configuration.html#parameters-update-windows), if they are set.
+                          A patch version update (for example, from `v1.65.1` to `v1.65.4`) is applied according to the [update windows](./modules/deckhouse/configuration.html#parameters-update-windows), if they are set.
 
                         - `Auto` — all updates are applied automatically.
 
-                          Modules minor version updates (release updates, for example, from `v1.26.*` to `v1.27.*`), are applied according to the [update windows](./modules/002-deckhouse/configuration.html#parameters-update-windows) or (if no update windows are set) as they appear on the corresponding release channel;
+                          Modules minor version updates (release updates, for example, from `v1.26.*` to `v1.27.*`), are applied according to the [update windows](./modules/deckhouse/configuration.html#parameters-update-windows) or (if no update windows are set) as they appear on the corresponding release channel;
                         - `Manual` — to change a minor version of modules (for example, from `v1.26.*` to `v1.27.*`), manual confirmation is required. Set `modules.deckhouse.io/approved="true"` annotation on the corresponding ModuleRelease resource, to confirm the update.
 
                         - `Ignore` — updates are ignored.
@@ -269,11 +269,11 @@ spec:
 
                           Set `modules.deckhouse.io/approved="true"` annotation on the corresponding ModuleRelease resource, to confirm the update.
 
-                          A patch version update (for example, from `v1.65.1` to `v1.65.4`) is applied according to the [update windows](./modules/002-deckhouse/configuration.html#parameters-update-windows), if they are set.
+                          A patch version update (for example, from `v1.65.1` to `v1.65.4`) is applied according to the [update windows](./modules/deckhouse/configuration.html#parameters-update-windows), if they are set.
 
                         - `Auto` — all updates are applied automatically.
 
-                          Modules minor version updates (release updates, for example, from `v1.26.*` to `v1.27.*`), are applied according to the [update windows](./modules/002-deckhouse/configuration.html#parameters-update-windows) or (if no update windows are set) as they appear on the corresponding release channel;
+                          Modules minor version updates (release updates, for example, from `v1.26.*` to `v1.27.*`), are applied according to the [update windows](./modules/deckhouse/configuration.html#parameters-update-windows) or (if no update windows are set) as they appear on the corresponding release channel;
                         - `Manual` — to change a minor version of modules (for example, from `v1.26.*` to `v1.27.*`), manual confirmation is required. Set `modules.deckhouse.io/approved="true"` annotation on the corresponding ModuleRelease resource, to confirm the update.
 
                       enum:

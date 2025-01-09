@@ -43,4 +43,4 @@
         The BTF module required for ebpf_exporter is missing in the kernel.
         Possible actions to resolve the problem:
         * Built kernel with BTF type information [info](https://github.com/libbpf/libbpf?tab=readme-ov-file#bpf-co-re-compile-once--run-everywhere).
-        * [Disable](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/340-monitoring-kubernetes/configuration.html#parameters-ebpfexporterenaled) ebpf_exporter
+        * [Disable](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/monitoring-kubernetes/configuration.html#parameters-ebpfexporterenaled) ebpf_exporter

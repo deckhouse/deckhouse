@@ -1,5 +1,5 @@
 {% for module in site.data.deckhouse-alerts.modules-having-alerts %}
-<h2>{{ site.data.i18n.common['module'][page.lang] | capitalize }} {{ module }}</h2>
+<h2 id="{{ module }}">{{ site.data.i18n.common['module'][page.lang] | capitalize }} {{ module }}</h2>
 
 {% assign alerts = site.data.deckhouse-alerts.alerts | where: "module", module  %}
 <ul class="alertslist">

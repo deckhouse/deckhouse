@@ -81,15 +81,15 @@ title: "Модуль user-authn: FAQ"
 
 ## Как работает аутентификация с помощью DexAuthenticator
 
-![Как работает аутентификация с помощью DexAuthenticator](../../images/150-user-authn/dex_login.svg)
+![Как работает аутентификация с помощью DexAuthenticator](../../images/user-authn/dex_login.svg)
 
 1. Dex в большинстве случаев перенаправляет пользователя на страницу входа провайдера и ожидает, что пользователь будет перенаправлен на его `/callback` URL. Однако такие провайдеры, как LDAP или Atlassian Crowd, не поддерживают этот вариант. Вместо этого пользователь должен ввести свои логин и пароль в форму входа в Dex, и Dex сам проверит их верность, сделав запрос к API провайдера.
 
 2. DexAuthenticator устанавливает cookie с целым refresh token (вместо того чтобы выдать тикет, как для ID token) потому что Redis не сохраняет данные на диск.
 Если по тикету в Redis не найден ID token, пользователь сможет запросить новый ID token, предоставив refresh token из cookie.
 
-3. DexAuthenticator выставляет HTTP-заголовок `Authorization`, равный значению ID token из Redis. Это необязательно для сервисов по типу [Upmeter](../500-upmeter/), потому что права доступа к Upmeter не такие проработанные.
-С другой стороны, для [Kubernetes Dashboard](../500-dashboard/) это критичный функционал, потому что она отправляет ID token дальше для доступа к Kubernetes API.
+3. DexAuthenticator выставляет HTTP-заголовок `Authorization`, равный значению ID token из Redis. Это необязательно для сервисов по типу [Upmeter](../upmeter/), потому что права доступа к Upmeter не такие проработанные.
+С другой стороны, для [Kubernetes Dashboard](../dashboard/) это критичный функционал, потому что она отправляет ID token дальше для доступа к Kubernetes API.
 
 ## Как я могу сгенерировать kubeconfig для доступа к Kubernetes API?
 
@@ -114,7 +114,7 @@ title: "Модуль user-authn: FAQ"
 
 ### Настройка kube-apiserver
 
-С помощью функционала модуля [control-plane-manager](../../modules/040-control-plane-manager/) Deckhouse автоматически настраивает kube-apiserver, выставляя следующие флаги так, чтобы модули `dashboard` и `kubeconfig-generator` могли работать в кластере.
+С помощью функционала модуля [control-plane-manager](../../modules/control-plane-manager/) Deckhouse автоматически настраивает kube-apiserver, выставляя следующие флаги так, чтобы модули `dashboard` и `kubeconfig-generator` могли работать в кластере.
 
 {% offtopic title="Аргументы kube-apiserver, которые будут настроены" %}
 
@@ -132,7 +132,7 @@ title: "Модуль user-authn: FAQ"
 
 ### Как работает подключение к Kubernetes API с помощью сгенерированного kubeconfig
 
-![Схема взаимодействия при подключении к Kubernetes API с помощью сгенерированного kubeconfig](../../images/150-user-authn/kubeconfig_dex.svg)
+![Схема взаимодействия при подключении к Kubernetes API с помощью сгенерированного kubeconfig](../../images/user-authn/kubeconfig_dex.svg)
 
 1. До начала работы kube-apiserver необходимо запросить конфигурационный endpoint OIDC провайдера (в нашем случае — Dex), чтобы получить issuer и настройки JWKS endpoint.
 

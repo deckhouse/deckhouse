@@ -186,7 +186,7 @@ The general procedure for working with static nodes when using CAPS is as follow
    The following is a list of possible states of StaticInstance, the associated servers (VMs), and cluster nodes:
 
    - `Pending`: The server isn't configured and there's no associated node in the cluster.
-   - `Bootstraping`: The procedure for configuring the server (VM) and connecting the node to the cluster is in progress.
+   - `Bootstrapping`: The procedure for configuring the server (VM) and connecting the node to the cluster is in progress.
    - `Running`: The server is configured, and the associated node is added to the cluster.
    - `Cleaning`: The procedure of cleaning up the server and disconnecting a node from the cluster is in progress.
 

@@ -22,7 +22,7 @@ description: Описание модуля runtime-audit-engine Deckhouse, пр�
 Ядро модуля основано на системе обнаружения угроз [Falco](https://falco.org/).
 Deckhouse запускает агенты Falco (объединены в DaemonSet) на каждом узле, после чего те приступают к сбору событий ядра и данных, полученных в ходе аудита Kubernetes.
 
-![Falco DaemonSet](../../images/650-runtime-audit-engine/falco_daemonset.svg)
+![Falco DaemonSet](../../images/runtime-audit-engine/falco_daemonset.svg)
 <!--- Source: https://docs.google.com/drawings/d/1NZ91z8NXNiuS50ybcMoMsZI3SbQASZXJGLANdaNNm_U --->
 
 {% alert %}
@@ -30,7 +30,7 @@ Deckhouse запускает агенты Falco (объединены в DaemonS
 {% endalert %}
 
 Один под Falco состоит из четырех контейнеров:
-![Falco Pod](../../images/650-runtime-audit-engine/falco_pod.svg)
+![Falco Pod](../../images/runtime-audit-engine/falco_pod.svg)
 <!--- Source: https://docs.google.com/drawings/d/1rxSuJFs0tumfZ56WbAJ36crtPoy_NiPBHE6Hq5lejuI --->
 
 1. `falco` — собирает события, обогащает их метаданными и отправляет их в stdout.
@@ -60,7 +60,7 @@ Deckhouse запускает агенты Falco (объединены в DaemonS
 Этот экземпляр считывает правила из custom resource'ов Kubernetes, конвертирует их в правила Falco и сохраняет правила Falco в директорию `/etc/falco/rules.d/` пода.
 При добавлении нового правила Falco автоматически обновляет конфигурацию.
 
-![Falco shell-operator](../../images/650-runtime-audit-engine/falco_shop.svg)
+![Falco shell-operator](../../images/runtime-audit-engine/falco_shop.svg)
 <!--- Source: https://docs.google.com/drawings/d/13MFYtiwH4Y66SfEPZIcS7S2wAY6vnKcoaztxsmX1hug --->
 
 Такая схема позволяет использовать подход «Инфраструктура как код» при работе с правилами Falco.
@@ -83,7 +83,7 @@ Deckhouse запускает агенты Falco (объединены в DaemonS
 ## Kubernetes Audit Webhook
 
 Режим [Webhook audit mode](https://kubernetes.io/docs/tasks/debug/debug-cluster/audit/#webhook-backend) должен быть настроен на получение событий аудита от `kube-apiserver`.
-Если модуль [control-plane-manager](../040-control-plane-manager/) включен, настройки автоматически применятся при включении модуля `runtime-audit-engine`.
+Если модуль [control-plane-manager](../control-plane-manager/) включен, настройки автоматически применятся при включении модуля `runtime-audit-engine`.
 
 В кластерах Kubernetes, в которых control plane не управляется Deckhouse, webhook необходимо настроить вручную. Для этого:
 
@@ -113,7 +113,7 @@ Deckhouse запускает агенты Falco (объединены в DaemonS
 
 {% alert level="warning" %}
 Не забудьте настроить audit policy, поскольку Deckhouse по умолчанию собирает только события аудита Kubernetes для системных пространств имен.
-Пример конфигурации можно найти в документации модуля [control-plane-manager](../040-control-plane-manager/).
+Пример конфигурации можно найти в документации модуля [control-plane-manager](../control-plane-manager/).
 {% endalert %}
 
 ## Алерты

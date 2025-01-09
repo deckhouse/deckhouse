@@ -35,7 +35,7 @@
   ```
   Status:   ModuleError: unable to build kubernetes objects from release manifest: [resource mapping not found for name: "system-ns.deckhouse.io" namespace: "" from "": no matches for kind "ValidatingAdmissionPolicy" in version "admissionregistration.k8s.io/v1beta1" ensure CRDs are installed first, resource mapping not found for name: "label-objects.deckhouse.io" namespace: "" from "": no matches for kind "ValidatingAdmissionPolicy" in version "admissionregistration.k8s.io/v1beta1" ensure CRDs are installed first, resource mapping not found for name: "system-ns.deckhouse.io" namespace: "" from "": no matches for kind "ValidatingAdmissionPolicyBinding" in version "admissionregistration.k8s.io/v1beta1" ensure CRDs are installed first, resource mapping not found for name: "heritage-label-objects.deckhouse.io" namespace: "" from "": no matches for kind "ValidatingAdmissionPolicyBinding" in version "admissionregistration.k8s.io/v1beta1" ensure CRDs are installed first]
   ```
-  
+
   Скорее всего в статичном манифесте `kube-apiserver.yaml` не указан `runtime-config`.
 
   Добавьте в `/etc/kubernetes/manifests/kube-apiserver.yaml` в параметр `spec.containers.command` значение `- --runtime-config=admissionregistration.k8s.io/v1beta1=true,admissionregistration.k8s.io/v1alpha1=true`.
@@ -65,7 +65,7 @@
 {% endofftopic %}
 
 {% offtopic title="В кластере нет Ingress-контроллера..." %}
-Для работы модуля `documentation` (`deckhouse-web` в Deckhouse версии 1.45 и старее), предоставляющего веб-интерфейс к документации кластера, необходимо наличие в кластере Ingress-контроллера. Если в вашем кластере нет Ingress-контролллера, вы можете использовать модуль [ingress-nginx](/products/kubernetes-platform/documentation/v1/modules/402-ingress-nginx/) следующим способом:
+Для работы модуля `documentation` (`deckhouse-web` в Deckhouse версии 1.45 и старее), предоставляющего веб-интерфейс к документации кластера, необходимо наличие в кластере Ingress-контроллера. Если в вашем кластере нет Ingress-контролллера, вы можете использовать модуль [ingress-nginx](/products/kubernetes-platform/documentation/v1/modules/ingress-nginx/) следующим способом:
 <ul>
   <li><p>Включите модуль <code>ingress-nginx</code>, выполнив следующую команду:</p>
 {% snippetcut selector="enable-ingress" %}

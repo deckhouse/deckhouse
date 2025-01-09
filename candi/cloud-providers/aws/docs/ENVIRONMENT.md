@@ -190,7 +190,7 @@ Save credentials (`Access key ID` and `Secret access key`).
 >
 > If there is no access to the region, then you will receive the following message (may differ):
 >
-> ![Enable region](../../images/030-cloud-provider-aws/region_enable.png)
+> ![Enable region](../../images/cloud-provider-aws/region_enable.png)
 >
 > In this case, click `Continue` to enable the region.
 

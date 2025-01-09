@@ -7,7 +7,7 @@
       severity_level: "9"
     annotations:
       description: |-
-        There is an IngressNginxController and/or an Ingress object that utilize(s) Nginx GeoIPv1 module's variables. The module is deprecated and its support is discontinued from Ingess Nginx Controller of version 1.10 and higher. It's recommend to upgrade your configuration to use [GeoIPv2 module]({{ include "helm_lib_module_documentation_uri" (list . "/modules/402-ingress-nginx/cr.html#ingressnginxcontroller-v1-spec-geoip2") }}).
+        There is an IngressNginxController and/or an Ingress object that utilize(s) Nginx GeoIPv1 module's variables. The module is deprecated and its support is discontinued from Ingess Nginx Controller of version 1.10 and higher. It's recommend to upgrade your configuration to use [GeoIPv2 module]({{ include "helm_lib_module_documentation_uri" (list . "/modules/ingress-nginx/cr.html#ingressnginxcontroller-v1-spec-geoip2") }}).
         Use the following command to get the list of the IngressNginxControllers that contain GeoIPv1 variables:
         `kubectl  get ingressnginxcontrollers.deckhouse.io -o json | jq '.items[] | select(..|strings | test("\\$geoip_(country_(code3|code|name)|area_code|city_continent_code|city_country_(code3|code|name)|dma_code|latitude|longitude|region|region_name|city|postal_code|org)([^_a-zA-Z0-9]|$)+")) | .metadata.name'`
 

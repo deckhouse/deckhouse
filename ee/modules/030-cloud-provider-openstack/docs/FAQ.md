@@ -52,7 +52,7 @@ The `additionalSecurityGroups` field contains an array of strings with security 
 
 ### Enabling additional security groups on ephemeral nodes
 
-You have to set the `additionalSecurityGroups` parameter for all OpenStackInstanceClasses in the cluster that require additional security groups. See the [parameters of the cloud-provider-openstack](../../modules/030-cloud-provider-openstack/configuration.html) module.
+You have to set the `additionalSecurityGroups` parameter for all OpenStackInstanceClasses in the cluster that require additional security groups. See the [parameters of the cloud-provider-openstack](../../modules/cloud-provider-openstack/configuration.html) module.
 
 ## How do I create a hybrid cluster?
 
@@ -63,7 +63,7 @@ To set up a hybrid cluster, follow these steps:
 1. Delete flannel from kube-system: `kubectl -n kube-system delete ds flannel-ds`.
 2. Enable and [configure](configuration.html#parameters) the module.
 3. Create one or more [OpenStackInstanceClass](cr.html#openstackinstanceclass) custom resources.
-4. Create one or more [NodeManager](../../modules/040-node-manager/cr.html#nodegroup) custom resources for specifying the number of machines and managing the provisioning process in the cloud.
+4. Create one or more [NodeManager](../../modules/node-manager/cr.html#nodegroup) custom resources for specifying the number of machines and managing the provisioning process in the cloud.
 
 > **Caution!** Cloud-controller-manager synchronizes OpenStack and Kubernetes states by deleting Kubernetes nodes that are not in OpenStack. In a hybrid cluster, such behavior does not always make sense. That is why cloud-controller-manager automatically skips Kubernetes nodes that do not have the `--cloud-provider=external` parameter (Deckhouse inserts `static://` into nodes in `.spec.providerID`, and cloud-controller-manager ignores them).
 

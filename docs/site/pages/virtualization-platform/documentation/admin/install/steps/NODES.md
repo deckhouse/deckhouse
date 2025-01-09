@@ -9,9 +9,9 @@ After the initial installation, the cluster consists of only one node — the ma
 
 Next, we'll cover the process of adding two worker nodes. For more detailed information about adding static nodes to the cluster, refer to the [documentation](../../platform-management/node-management/adding-node.html)).
 
-Ensure that all preparation steps have been completed (see [preparation of worker nodes](http://deckhouse.ru/products/virtualization-platform/documentation/admin/install/steps/prepare.html)).
+Ensure that all preparation steps have been completed (see [preparation of worker nodes](/products/virtualization-platform/documentation/admin/install/steps/prepare.html)).
 
-Create the [NodeGroup](http://deckhouse.ru/products/virtualization-platform/reference/cr/nodegroup.html) resource `worker`. To do this, execute the following command on the **master node**:
+Create the [NodeGroup](/products/virtualization-platform/reference/cr/nodegroup.html) resource `worker`. To do this, execute the following command on the **master node**:
 
 ```yaml
 sudo -i d8 k create -f - << EOF
@@ -35,7 +35,7 @@ Generate an SSH key with an empty passphrase. To do this, execute the following 
 ssh-keygen -t rsa -f /dev/shm/caps-id -C "" -N ""
 ```
 
-Create an [SSHCredentials](https://deckhouse.io/products/virtualization-platform/reference/cr/sshcredentials.html) resource in the cluster. To do this, execute the following command on the **master node**:
+Create an [SSHCredentials](/products/virtualization-platform/reference/cr/sshcredentials.html) resource in the cluster. To do this, execute the following command on the **master node**:
 
 ```yaml
 sudo -i d8 k create -f - <<EOF
@@ -75,7 +75,7 @@ chmod 600 /home/caps/.ssh/authorized_keys
 pdpl-user -i 63 caps
 ```
 
-Create the [StaticInstance](http://deckhouse.io/products/virtualization-platform/reference/cr/staticinstance.html) resources.
+Create the [StaticInstance](/products/virtualization-platform/reference/cr/staticinstance.html) resources.
 Execute the following commands on the **master node**, specifying the IP address and unique name of each node:
 
 ```yaml

@@ -3,7 +3,7 @@ title: Control Plane Kubeadm
 ---
 
 Go templates to render a Kubernetes bootstrap configuration.
-These templates are used during first master node creation and in the [control-plane-manager]({{"/modules/040-control-plane-manager/" | true_relative_url }} ).
+These templates are used during first master node creation and in the [control-plane-manager]({{"/modules/control-plane-manager/" | true_relative_url }} ).
 
 * `config.yaml.tpl` - main config
 * `patches/` - control plane components patches
