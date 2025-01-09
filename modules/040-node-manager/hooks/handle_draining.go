@@ -43,7 +43,7 @@ const (
 	drainingAnnotationKey = "update.node.deckhouse.io/draining"
 	drainedAnnotationKey  = "update.node.deckhouse.io/drained"
 	nodeGroupLabel        = "node.deckhouse.io/group"
-	defaultDrainTimeout   = 5 * time.Minute
+	defaultDrainTimeout   = 10 * time.Minute
 )
 
 var nodeGroupResource = schema.GroupVersionResource{Group: "deckhouse.io", Version: "v1", Resource: "nodegroups"}

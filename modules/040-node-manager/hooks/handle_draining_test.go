@@ -222,7 +222,6 @@ metadata:
   name: worker-group
 spec:
   nodeType: Static
-  nodeDrainTimeoutSecond: 300
 status:
   desired: 1
   ready: 1
