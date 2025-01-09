@@ -8,14 +8,19 @@ git:
     stageDependencies:
       install:
         - '**/*'
+import:
+- artifact: common/python-static
+  add: /opt/python-static
+  to: /opt/python-static
+  before: install
 shell:
   install:
     - export SOURCE_REPO={{ .SOURCE_REPO }}
     - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
     - git clone --depth 1 {{ $.SOURCE_REPO }}/python-modules/wheels /wheels
     - rm -rf /wheels/.git
-    - apt-get -y remove python3-module-cryptography
-    - pip3 install -f file:///wheels --no-index -r /requirements.txt
+    - apt-get -y remove python3-module-cryptography python3-pip
+    - /opt/python-static/bin/pip3 install -f file:///wheels --no-index -r /requirements.txt
     - /binary_replace.sh -i "{{ $binaries }}" -o /relocate
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
