@@ -33,6 +33,11 @@ variable "clusterUUID" {
   type = string
 }
 
+variable "resourceManagementTimeout" {
+  type = string
+  default = "10m"
+}
+
 data "aws_availability_zones" "available" {}
 
 locals {

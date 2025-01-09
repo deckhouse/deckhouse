@@ -25,6 +25,11 @@ variable "clusterUUID" {
   type = string
 }
 
+variable "resourceManagementTimeout" {
+  type = string
+  default = "10m"
+}
+
 # SimpleWithInternalNetwork only
 data "openstack_networking_subnet_v2" "internal" {
   count = local.layout == "simpleWithInternalNetwork" ? 1 : 0
