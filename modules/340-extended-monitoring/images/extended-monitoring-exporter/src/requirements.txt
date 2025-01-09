@@ -6,3 +6,4 @@ setuptools==75.6.0
 urllib3==2.3.0
 cryptography==44.0.0
 pip==23.3
+setuptools==75.6.0
