@@ -41,8 +41,8 @@ import:
   before: install
 shell:
   beforeInstall:
-  - apk add --no-cache openssh-client make bash
-  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
+  {{- include "alpine packages proxy" . | nindent 2 }}
+  - apk add --no-cache make bash
   install:
     - export GO_VERSION=${GOLANG_VERSION}
     - export GOPROXY={{ $.GOPROXY }}
