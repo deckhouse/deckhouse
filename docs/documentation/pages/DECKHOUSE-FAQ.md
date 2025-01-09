@@ -1251,32 +1251,6 @@ To switch Deckhouse Community Edition to Enterprise Edition, follow these steps:
      Image is up to date for sha256:8127efa0f903a7194d6fb7b810839279b9934b200c2af5fc416660857bfb7832
      ```
 
-   * Retrieve the value of `EE_MODULES`:
-
-     ```shell
-     EE_MODULES=$(kubectl exec ee-image -- ls -l deckhouse/modules/ | grep -oE "\d.*-\w*"  | awk {'print $9'} | cut -c5-)
-     ```
-
-     An example:
-
-     ```console
-     $ echo $EE_MODULES
-     common priority-class deckhouse external-module-manager ...
-     ```
-
-   * Retrieve the value of `USED_MODULES`:
-
-     ```shell
-     USED_MODULES=$(kubectl get modules | grep -v 'snapshot-controller-crd' | grep Enabled |awk {'print $1'})
-     ```
-
-     An example:
-
-     ```console
-     $ echo $USED_MODULES
-     admission-policy-engine cert-manager chrony cloud-data-crd ...
-     ```
-
 1. Create a NodeGroupConfiguration resource:
 
    ```shell
