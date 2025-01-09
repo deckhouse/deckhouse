@@ -38,8 +38,6 @@ spec:
 `, name)
 	}
 
-	const invalidCni = "invalid"
-
 	f := HookExecutionConfigInit(`{"global": {"discovery": {}}}`, `{}`)
 	f.RegisterCRD("deckhouse.io", "v1alpha1", "ModuleConfig", false)
 
@@ -51,6 +49,7 @@ spec:
 
 		It("ExecuteSuccessfully", func() {
 			Expect(f).To(ExecuteSuccessfully())
+			Expect(string(f.LoggerOutput.Contents())).To(ContainSubstring("No cni is explicitly enabled"))
 		})
 	})
 
@@ -62,6 +61,7 @@ spec:
 
 		It("ExecuteSuccessfully", func() {
 			Expect(f).To(ExecuteSuccessfully())
+			Expect(string(f.LoggerOutput.Contents())).To(ContainSubstring("Enabled CNI from Deckhouse ModuleConfig: cni-cilium"))
 		})
 	})
 
@@ -73,7 +73,7 @@ spec:
 
 		It("Throw the error", func() {
 			Expect(f).ToNot(ExecuteSuccessfully())
-			Expect(f.GoHookError.Error()).To(ContainSubstring("more then one CNI enabled"))
+			Expect(f.GoHookError.Error()).Should(ContainSubstring("more then one CNI enabled"))
 			value, exists := requirements.GetValue(cniConfigurationSettledKey)
 			Expect(exists).To(BeTrue())
 			Expect(value).To(BeEquivalentTo("false"))

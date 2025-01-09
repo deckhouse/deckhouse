@@ -21,33 +21,13 @@ import (
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/utils/ptr"
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency/requirements"
 	"github.com/deckhouse/deckhouse/go_lib/set"
 )
 
-/*
-This hook enables cni module enabled either explicitly in configuration or
-during installation in Secret/d8-cni-configuration.
-
-Developer notes:
-- It uses "dynamic enable" feature of addon-operator to enable module in runtime.
-- It executes on Synchronization to return values patch before ConvergeModules task.
-- It is the only hook that subscribes to configuration ConfigMap because
-  there is no way to get enabled modules list in global hook.
-*/
-
 const (
 	cniConfigurationSettledKey = "cniConfigurationSettled"
-)
-
-var (
-	cniNameToModule = map[string]string{
-		"flannel":       "cniFlannelEnabled",
-		"simple-bridge": "cniSimpleBridgeEnabled",
-		"cilium":        "cniCiliumEnabled",
-	}
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -59,9 +39,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			NameSelector: &types.NameSelector{
 				MatchNames: []string{"cni-flannel", "cni-cilium", "cni-simple-bridge"},
 			},
-			ExecuteHookOnEvents:          ptr.To(false),
-			ExecuteHookOnSynchronization: ptr.To(false),
-			FilterFunc:                   applyMCFilter,
+			FilterFunc: applyMCFilter,
 		},
 	},
 }, enableCni)
@@ -90,12 +68,10 @@ func enableCni(input *go_hook.HookInput) error {
 		requirements.SaveValue(cniConfigurationSettledKey, "false")
 		return fmt.Errorf("more then one CNI enabled: %v", explicitlyEnabledCNIs.Slice())
 	} else if len(explicitlyEnabledCNIs) == 1 {
-		input.Logger.Infof("enabled CNI from Deckhouse ModuleConfig: %s", explicitlyEnabledCNIs.Slice()[0])
+		input.Logger.Infof("Enabled CNI from Deckhouse ModuleConfig: %s", explicitlyEnabledCNIs.Slice()[0])
 		return nil
 	}
 
-	// nor any CNI enabled directly via MC, found default CNI from secret
-
-	input.Logger.Warnf("no cni is explicitly enabled")
+	input.Logger.Warnf("No cni is explicitly enabled")
 	return nil
 }
