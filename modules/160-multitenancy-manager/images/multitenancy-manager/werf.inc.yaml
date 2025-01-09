@@ -9,9 +9,11 @@ import:
   - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-multitenancy-manager-src-artifact
     add: /src/templates
     to: /templates
+    before: setup
   - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-multitenancy-manager-src-artifact
     add: /src/default
     to: /default
+    before: setup
 docker:
   ENTRYPOINT: [ "/multitenancy-manager" ]
 ---
