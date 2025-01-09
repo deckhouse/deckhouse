@@ -6,7 +6,9 @@ toc: false
 lang: ru
 ---
 
-<link rel="stylesheet" type="text/css" href='{{ assets["releases.css"].digest_path }}' />
+{% capture asset_url %}{%- css_asset_tag releases %}[_assets/css/releases.css]{% endcss_asset_tag %}{% endcapture %}
+<link rel="stylesheet" type="text/css" href='{{ asset_url | strip_newlines  | true_relative_url }}' />
+
 {%- assign releases = site.data.releases.channels | sort: "stability" -%}
 
 {% alert %}
@@ -17,7 +19,7 @@ lang: ru
 
 Например, production-кластер, в отличие от кластера разработки, более требователен к надежности: в нем нежелательно часто обновлять или изменять какие-либо компоненты без особой необходимости, при этом сами компоненты должны быть тщательно протестированы.
 
-Deckhouse использует **пять каналов обновлений**. *Мягко* переключаться между ними можно с помощью модуля [deckhouse](modules/002-deckhouse/): достаточно указать желаемый канал обновлений в [конфигурации](modules/002-deckhouse/configuration.html#parameters-releasechannel) модуля.
+Deckhouse использует **пять каналов обновлений**. *Мягко* переключаться между ними можно с помощью модуля [deckhouse](modules/deckhouse/): достаточно указать желаемый канал обновлений в [конфигурации](modules/deckhouse/configuration.html#parameters-releasechannel) модуля.
 
 <div id="releases__stale__block" class="releases__info releases__stale__warning" >
   <strong>Внимание!</strong> В этом кластере не используется какой-либо канал обновлений.

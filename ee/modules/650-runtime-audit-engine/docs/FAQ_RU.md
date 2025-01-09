@@ -7,9 +7,9 @@ title: "Модуль runtime-audit-engine: FAQ"
 ## Как собирать события?
 
 Поды `runtime-audit-engine` выводят все события в стандартный вывод.
-Далее [агенты log-shipper](../460-log-shipper/) могут собирать их и отправлять в хранилище логов.
+Далее [агенты log-shipper](../log-shipper/) могут собирать их и отправлять в хранилище логов.
 
-Пример конфигурации [ClusterLoggingConfig](../460-log-shipper/cr.html#clusterloggingconfig) для модуля `log-shipper`:
+Пример конфигурации [ClusterLoggingConfig](../log-shipper/cr.html#clusterloggingconfig) для модуля `log-shipper`:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -33,7 +33,7 @@ spec:
 ## Как оповещать о критических событиях?
 
 Prometheus автоматически собирает метрики о событиях.
-Чтобы включить оповещения, добавьте в кластер правило [CustomPrometheusRule](../300-prometheus/cr.html#customprometheusrules).
+Чтобы включить оповещения, добавьте в кластер правило [CustomPrometheusRule](../prometheus/cr.html#customprometheusrules).
 
 Пример настройки такого правила:
 
@@ -72,7 +72,7 @@ spec:
 
 ```shell
 git clone github.com/deckhouse/deckhouse
-cd deckhouse/ee/modules/650-runtime-audit-engine/hack/far-converter
+cd deckhouse/ee/modules/runtime-audit-engine/hack/far-converter
 go run main.go -input /path/to/falco/rule_example.yaml > ./my-rules-cr.yaml
 ```
 

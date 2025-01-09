@@ -32,7 +32,7 @@ You can find various VPA-related information on the following dashboards:
 ## Vertical Pod Autoscaler Architecture
 
 VPA consists of 3 components:
-- `Recommender` — this component monitors the current resource consumption (by making requests to the [Metrics API](https://github.com/kubernetes/design-proposals-archive/blob/main/instrumentation/resource-metrics-api.md) implemented in the [`prometheus-metrics-adapter`](../../modules/301-prometheus-metrics-adapter/) module) as well as consumption history (by making requests to Trickster caching proxy). As its name suggests, the component provides CPU and memory recommendations for containers.
+- `Recommender` — this component monitors the current resource consumption (by making requests to the [Metrics API](https://github.com/kubernetes/design-proposals-archive/blob/main/instrumentation/resource-metrics-api.md) implemented in the [`prometheus-metrics-adapter`](../../modules/prometheus-metrics-adapter/) module) as well as consumption history (by making requests to Trickster caching proxy). As its name suggests, the component provides CPU and memory recommendations for containers.
 - `Updater` — this component checks if the Pods have correct resources set and, if not, kills them so that they can be recreated by their controllers with the updated resource requests.
 - `Admission Plugin` — this component sets the correct resource requests on new Pods (either just created or recreated by their controller due to Updater's activity).
 

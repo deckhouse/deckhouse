@@ -22,7 +22,7 @@ This module:
 The module is based on the [Falco](https://falco.org/) system. 
 Deckhouse deploys Falco agents (which run as a DaemonSet) on every node. The agents then start consuming kernel / kube audit events.
 
-![Falco DaemonSet](../../images/650-runtime-audit-engine/falco_daemonset.svg)
+![Falco DaemonSet](../../images/runtime-audit-engine/falco_daemonset.svg)
 <!--- Source: https://docs.google.com/drawings/d/1NZ91z8NXNiuS50ybcMoMsZI3SbQASZXJGLANdaNNm_U --->
 
 {% alert %}
@@ -32,7 +32,7 @@ Additional security mechanisms of Deckhouse (implemented by other modules), such
 {% endalert %}
 
 There are four different containers in a single agent Pod:
-![Falco Pod](../../images/650-runtime-audit-engine/falco_pod.svg)
+![Falco Pod](../../images/runtime-audit-engine/falco_pod.svg)
 <!--- Source: https://docs.google.com/drawings/d/1rxSuJFs0tumfZ56WbAJ36crtPoy_NiPBHE6Hq5lejuI --->
 
 1. `falco` — collects events, enriches them with metadata and sends them to stdout.
@@ -62,7 +62,7 @@ Each Falco agent Pod has a sidecar container running [shell-operator](https://gi
 This sidecar reads rules from the custom resources, converts them to Falco rules and saves Falco rules in the Pod's `/etc/falco/rules.d/` directory.
 Falco automatically reloads the configuration when a new rule becomes available.
 
-![Falco shell-operator](../../images/650-runtime-audit-engine/falco_shop.svg)
+![Falco shell-operator](../../images/runtime-audit-engine/falco_shop.svg)
 <!--- Source: https://docs.google.com/drawings/d/13MFYtiwH4Y66SfEPZIcS7S2wAY6vnKcoaztxsmX1hug --->
 
 Such a schema allows the IaC approach to be used to maintain Falco rules.
@@ -86,7 +86,7 @@ Falco agents are running on every node. Therefore, the resource consumption of e
 ## Kubernetes Audit Webhook
 
 [Webhook audit mode](https://kubernetes.io/docs/tasks/debug/debug-cluster/audit/#webhook-backend) should be configured to collect audit events of `kube-apiserver`. 
-If the [control-plane-manager](../040-control-plane-manager/) module is enabled, settings will be automatically applied when the `runtime-audit-engine` module is enabled.
+If the [control-plane-manager](../control-plane-manager/) module is enabled, settings will be automatically applied when the `runtime-audit-engine` module is enabled.
 
 You can manually configure the webhook for Kubernetes clusters with a control plane that is not controlled by Deckhouse:
 1. Create a webhook kubeconfig file with the `https://127.0.0.1:9765/k8s-audit` address and the CA (ca.crt) from the `d8-runtime-audit-engine/runtime-audit-engine-webhook-tls` secret.
@@ -113,7 +113,7 @@ You can manually configure the webhook for Kubernetes clusters with a control pl
 
 {% alert level="warning" %}
 Remember to configure the audit policy, because Deckhouse only collects Kubernetes audit events from the system namespaces by default. 
-An example of configuration can be found in the [control-plane-manager](../040-control-plane-manager/) module documentation.
+An example of configuration can be found in the [control-plane-manager](../control-plane-manager/) module documentation.
 {% endalert %}
 
 ## Alerting

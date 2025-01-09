@@ -214,7 +214,6 @@ var DefaultImagesDigests = map[string]interface{}{
 		"kubeRbacProxy":             "imageHash-common-kubeRbacProxy",
 		"nginxStatic":               "imageHash-common-nginxStatic",
 		"pause":                     "imageHash-common-pause",
-		"pythonStatic":              "imageHash-common-pythonStatic",
 		"redisStatic":               "imageHash-common-redisStatic",
 		"shellOperator":             "imageHash-common-shellOperator",
 		"vxlanOffloadingFixer":      "imageHash-common-vxlanOffloadingFixer",
@@ -320,7 +319,8 @@ var DefaultImagesDigests = map[string]interface{}{
 		"vector": "imageHash-logShipper-vector",
 	},
 	"loki": map[string]interface{}{
-		"loki": "imageHash-loki-loki",
+		"loki":            "imageHash-loki-loki",
+		"lokiSrcArtifact": "imageHash-loki-lokiSrcArtifact",
 	},
 	"metallb": map[string]interface{}{
 		"controller":     "imageHash-metallb-controller",
@@ -396,6 +396,7 @@ var DefaultImagesDigests = map[string]interface{}{
 		"prometheus":                  "imageHash-prometheus-prometheus",
 		"prometheuspp":                "imageHash-prometheus-prometheuspp",
 		"promxy":                      "imageHash-prometheus-promxy",
+		"promxySrcArtifact":           "imageHash-prometheus-promxySrcArtifact",
 		"trickster":                   "imageHash-prometheus-trickster",
 	},
 	"prometheusMetricsAdapter": map[string]interface{}{

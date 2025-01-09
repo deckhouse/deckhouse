@@ -11,7 +11,7 @@ This module installs and configures the [Prometheus](https://prometheus.io/) mon
 
 If a StorageClass supports automatic volume expansion (allowVolumeExpansion: true), it can automatically expand the volume if there is not enough disk space for Prometheus data. Otherwise, you will receive an alert that the volume space in Prometheus is running out.
 
-The [Vertical Pod Autoscaler](../../modules/302-vertical-pod-autoscaler/) module makes it possible to automatically request CPU and memory resources based on the utilization history when the Pod is recreated. Also, the Prometheus memory consumption is minimized by caching requests to it via [Trickster](https://github.com/trickstercache/trickster).
+The [Vertical Pod Autoscaler](../../modules/vertical-pod-autoscaler/) module makes it possible to automatically request CPU and memory resources based on the utilization history when the Pod is recreated. Also, the Prometheus memory consumption is minimized by caching requests to it via [Trickster](https://github.com/trickstercache/trickster).
 
 Both pulling and pushing of metrics are supported.
 
@@ -42,11 +42,11 @@ Deckhouse enables monitoring of a large set of "health" parameters of Kubernetes
 
 ## Ingress monitoring
 
-The detailed description is available [here](../../modules/402-ingress-nginx/#monitoring-and-statistics).
+The detailed description is available [here](../../modules/ingress-nginx/#monitoring-and-statistics).
 
 ## Advanced monitoring mode
 
-Deckhouse also provides [the advanced monitoring mode](../340-extended-monitoring/) that implements additional metrics-based alerts, such as: free space and inode-related, the node usage, the availability of Pods and container images, certificates expiration and other Kubernetes cluster events.
+Deckhouse also provides [the advanced monitoring mode](../extended-monitoring/) that implements additional metrics-based alerts, such as: free space and inode-related, the node usage, the availability of Pods and container images, certificates expiration and other Kubernetes cluster events.
 
 ### Alerting in advanced monitoring mode
 
@@ -71,7 +71,7 @@ Deckhouse supports sending alerts using `Alertmanager`:
 
 ## Included modules
 
-![The scheme of interaction](../../images/300-prometheus/prometheus_monitoring_new.svg)
+![The scheme of interaction](../../images/prometheus/prometheus_monitoring_new.svg)
 
 ### Components installed by Deckhouse
 

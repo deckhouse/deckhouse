@@ -3,38 +3,18 @@ title: "Модуль deckhouse: примеры конфигурации"
 
 ---
 
-## Пример конфигурации модуля
-
-Ниже представлен простой пример конфигурации модуля:
-
-```yaml
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleConfig
-metadata:
-  name: deckhouse
-spec:
-  version: 1
-  settings:
-    logLevel: Debug
-    bundle: Minimal
-    releaseChannel: EarlyAccess
-```
-
-Также можно настроить дополнительные параметры.
 
 ## Настройка режима обновления
 
-Если в автоматическом режиме окна обновлений не заданы, Deckhouse обновится сразу, как только новый релиз станет доступен.
-
-Patch-версии (например, обновления с `1.26.1` до `1.26.2`) устанавливаются без подтверждения и без учета окон обновлений.
-
-{% alert %}
-Вы также можете настраивать окна disruption-обновлений узлов в custom resource'ах [NodeGroup](../040-node-manager/cr.html#nodegroup) (параметр `disruptions.automatic.windows`).
-{% endalert %}
+Управлять обновлением DKP можно следующими способами:
+- С помощью параметра [settings.update](configuration.html#parameters-update) ModuleConfig `deckhouse`;
+- С помощью секции параметров [disruptions](../node-manager/cr.html#nodegroup-v1-spec-disruptions) NodeGroup.
 
 ### Конфигурация окон обновлений
 
-Настроить время, когда Deckhouse будет устанавливать обновления, можно в параметре [update.windows](configuration.html#parameters-update-windows) конфигурации модуля.
+Управлять временными окнами, когда Deckhouse будет устанавливать обновления автоматически, можно следующими способами:
+- в параметре [update.windows](configuration.html#parameters-update-windows) ModuleConfig `deckhouse`, для общего управления обновлениями;
+- в параметрах [disruptions.automatic.windows](../node-manager/cr.html#nodegroup-v1-spec-disruptions-automatic-windows) и [disruptions.rollingUpdate.windows](../node-manager/cr.html#nodegroup-v1-spec-disruptions-rollingupdate-windows) NodeGroup, для управления потенциально опасными обновлениями.
 
 Пример настройки двух ежедневных окон обновлений: с 8:00 до 10:00 и c 20:00 до 22:00 (UTC):
 
@@ -75,55 +55,48 @@ spec:
             - Sat
 ```
 
+<div id="ручное-подтверждение-потенциально-опасных-disruptive-обновлений"></div>
+
 ### Ручное подтверждение обновлений
 
-При необходимости возможно включить ручное подтверждение обновлений. Сделать это можно следующим образом:
+Ручное подтверждение обновления версии Deckhouse предусмотрено в следующих случаях:
+- Включен режим подтверждения обновлений Deckhouse.
 
-```yaml
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleConfig
-metadata:
-  name: deckhouse
-spec:
-  version: 1
-  settings:
-    releaseChannel: Stable
-    update:
-      mode: Manual
-```
+  Это значит, что параметр [settings.update.mode](configuration.html#parameters-update-mode) ModuleConfig `deckhouse` установлен в `Manual` (подтверждение как patch-версии, так и минорной версии Deckhouse) или в `AutoPatch` (подтверждение минорной версии Deckhouse).
+  
+  Для подтверждения обновления необходимо выполнить следующую команду, указав необходимую версию Deckhouse:
 
-В этом режиме необходимо подтверждать каждое минорное обновление Deckhouse (без учета patch-версий).
+  ```shell
+  kubectl patch DeckhouseRelease v1.66.2 --type=merge -p='{"approved": true}'
+  ```
 
-Пример подтверждения обновления на версию `v1.43.2`:
+- Включено подтверждение потенциально опасных обновлений (disruptive-обновлений).
 
-```shell
-kubectl patch DeckhouseRelease v1.43.2 --type=merge -p='{"approved": true}'
-```
+  Это значит, что параметр [update.disruptionApprovalMode](configuration.html#parameters-update-disruptionapprovalmode) ModuleConfig `deckhouse` установлен в `Manual`. Вы можете использовать следующую команду, чтобы установить его в `Manual`:
+  
+  ```shell
+  kubectl patch mc deckhouse --type=merge -p='{"spec":{"update":{"disruptionApprovalMode":"Manual"}}}'
+  ```
 
-### Ручное подтверждение потенциально опасных (disruptive) обновлений
+  Для подтверждения потенциального опасного обновления необходимо установить аннотацию `release.deckhouse.io/disruption-approved=true` на соответствующем ресурсе [DeckhouseRelease](../../cr.html#deckhouserelease).
+  
+  Пример:
 
-При необходимости возможно включить ручное подтверждение потенциально опасных (disruptive) обновлений (которые меняют значения по умолчанию или поведение некоторых модулей). Сделать это можно следующим образом:
+  ```shell
+  kubectl annotate DeckhouseRelease v1.66.2 release.deckhouse.io/disruption-approved=true
+  ```
+  
+- Если для какой-либо группы узлов отключено автоматическое применение потенциально опасных обновлений.
 
-```yaml
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleConfig
-metadata:
-  name: deckhouse
-spec:
-  version: 1
-  settings:
-    releaseChannel: Stable
-    update:
-      disruptionApprovalMode: Manual
-```
+  Это значит, что у NodeGroup, соответствующего группе узлов, установлен параметр [spec.disruptions.approvalMode](../node-manager/cr.html#nodegroup-v1-spec-disruptions-approvalmode) в `Manual`.
 
-В этом режиме необходимо подтверждать каждое минорное потенциально опасное (disruptive) обновление Deckhouse (без учета patch-версий) с помощью аннотации `release.deckhouse.io/disruption-approved=true` на соответствующем ресурсе [DeckhouseRelease](../../cr.html#deckhouserelease).
+  Для обновления **каждого** узла в такой группе на узел нужно установить аннотацию `update.node.deckhouse.io/disruption-approved=`.
+  
+  Пример:
 
-Пример подтверждения минорного потенциально опасного обновления Deckhouse `v1.36.4`:
-
-```shell
-kubectl annotate DeckhouseRelease v1.36.4 release.deckhouse.io/disruption-approved=true
-```
+  ```shell
+  kubectl annotate node ${NODE_1} update.node.deckhouse.io/disruption-approved=
+  ```
 
 ### Оповещение об обновлении Deckhouse
 
