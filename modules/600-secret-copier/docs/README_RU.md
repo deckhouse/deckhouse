@@ -19,7 +19,9 @@ title: "Модуль secret-copier"
 
 ### Что нужно настроить?
 
-Чтобы все заработало, достаточно создать в default namespace Secret с лейблом `secret-copier.deckhouse.io/enabled: ""`.
+Чтобы все заработало, достаточно создать в `default` namespace Secret с лейблом `secret-copier.deckhouse.io/enabled: ""`.
+
+> **Внимание!** рабочим namespace для модуля является `default`, Secrets будут копироваться только из него. Secrets с лейблом `secret-copier.deckhouse.io/enabled: ""` созданные в других namespace при включенном модуле будут автоматически удалены.
 
 ### Как ограничить список namespace'ов, в которые будет производиться копирование?
 
