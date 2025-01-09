@@ -1,4 +1,4 @@
-{{- $PythonVersion := "v3.11.10" }}
+{{- $PythonVersion := "v3.11.11" }}
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
 fromImage: common/src-artifact
@@ -35,7 +35,6 @@ fromImage: common/alt-p11-artifact
 final: false
 shell:
   beforeInstall:
-  {{- include "alt packages proxy" . | nindent 2 }}
   - apt-get install -y pip
   install:
   {{- include "pypi proxy" . | nindent 2 }}
@@ -65,6 +64,7 @@ shell:
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
+final: false
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-artifact
   add: /opt/python-static
