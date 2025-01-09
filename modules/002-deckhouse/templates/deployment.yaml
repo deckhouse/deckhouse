@@ -213,6 +213,7 @@ spec:
               value: /tmp/.bash_history
             - name: DEBUG_HTTP_SERVER_ADDR
               value: "127.0.0.1:9652"
+            # todo: Necessary for backward compatibility of external modules.
             - name: CRYPTOGRAPHY_OPENSSL_NO_LEGACY
               value: "true"
           ports:
