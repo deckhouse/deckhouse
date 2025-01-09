@@ -213,6 +213,8 @@ spec:
               value: /tmp/.bash_history
             - name: DEBUG_HTTP_SERVER_ADDR
               value: "127.0.0.1:9652"
+            - name: CRYPTOGRAPHY_OPENSSL_NO_LEGACY
+              value: "true"
           ports:
             - containerPort: 4222
               name: self
