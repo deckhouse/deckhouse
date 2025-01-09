@@ -28,11 +28,7 @@ import:
   to: /
   before: setup
   includePaths:
-  - usr/bin/python3
-  - usr/bin/python3.*
-  - usr/lib/python3
-  - usr/lib64/python3
-  - usr/lib64/python3.*
+  - opt/python-static
 git:
 - add: /{{ $.ModulePath }}modules/300-{{ $.ModuleName }}/images/{{ $.ImageName }}/requirements.txt
   to: /requirements.txt
@@ -41,4 +37,4 @@ git:
     - '**/*'
 shell:
   install:
-  - pip3 install -r /requirements.txt
+  - /opt/python-static/pip3 install -r /requirements.txt
