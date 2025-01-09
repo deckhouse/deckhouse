@@ -1,15 +1,38 @@
-require 'cgi'
+require 'erb'
 
-CONVERTER = Jekyll::Converters::Markdown::KramdownParser.new(Jekyll.configuration())
+module JSONSchemaRenderer
+  class JSONSchemaRenderer
+    # Liquid Template characters to escape
+    @@CHARS_TO_ESCAPE = {
+      #'&' => '&amp;',
+      #'<' => '&lt;',
+      #'>' => '&gt;',
+      #'"' => '&quot;',
+      #"'" => '&#39;',
+      '{' => '&#123;',
+      '}' => '&#125;',
+      '%' => '&#37;'
+    }
 
-module Jekyll
-  module Openapi
-    #
-    # Return localised description
-    # the source parameter is for object without i18n structure and for legacy support
+    def convert(content)
+      return @converter.convert(content)
+    end
 
-    @moduleName = ''
-    @resourceType = ''
+    def initialize(site, data, converter)
+       @site = site
+       @path = data['permalink']
+       @lang = data['lang']
+       @converter = converter
+    end
+
+    def escape_chars(input)
+      @@CHARS_TO_ESCAPE.each do |char, escaped_char|
+        input = input.gsub(char, escaped_char)
+      end
+      input
+    end
+
+    input_string = 'Hello & Welcome <to> "Ruby"!'
 
     # moduleName
     # revision - Deckhouse revision
@@ -23,20 +46,20 @@ module Jekyll
         item['linkAnchor'] = linkAnchor
         item['resourceType'] = resourceType
         item['title'] = %Q(#{if resourceType == 'crd' and  resourceName then resourceName + ":&nbsp;" end}#{parameterName})
-        if get_hash_value(@context.registers[:site].data['modules'], 'modules', moduleName, %Q(parameters-#{revision})) == nil then
-          @context.registers[:site].data['modules']['modules'][moduleName][%Q(parameters-#{revision})] = Hash.new
+        if get_hash_value(@site.data['modules'], 'modules', moduleName, %Q(parameters-#{revision})) == nil then
+          @site.data['modules']['modules'][moduleName][%Q(parameters-#{revision})] = Hash.new
         end
-        if get_hash_value(@context.registers[:site].data['modules'], 'modules', moduleName, %Q(parameters-#{revision}),
+        if get_hash_value(@site.data['modules'], 'modules', moduleName, %Q(parameters-#{revision}),
            %Q(#{if resourceType != 'moduleConfig' then
                    if resourceName then resourceName + "." end
                 end
                }#{parameterName})) == nil then
-          @context.registers[:site].data['modules']['modules'][moduleName][%Q(parameters-#{revision})][%Q(#{
+          @site.data['modules']['modules'][moduleName][%Q(parameters-#{revision})][%Q(#{
             if resourceType != 'moduleConfig' then
                    if resourceName then resourceName + "." end
             end
             }#{parameterName})] = Hash.new
-          @context.registers[:site].data['modules']['modules'][moduleName][%Q(parameters-#{revision})][%Q(#{
+          @site.data['modules']['modules'][moduleName][%Q(parameters-#{revision})][%Q(#{
             if resourceType != 'moduleConfig' then
                    if resourceName then resourceName + "." end
             end
@@ -104,7 +127,7 @@ module Jekyll
             addItemToIndex = true
             if !searchItemData['version'].nil?
                 itemIsMoreStable = false
-                otherVersions = @context.registers[:site].data['search']['searchItems'][@context.registers[:page]["lang"]].
+                otherVersions = @site.data['search']['searchItems'][@lang].
                    select { |item| item['url'] == searchItemData['url'] and item['name'] == searchItemData['name'] }
                 if otherVersions and otherVersions.length > 0
                     addItemToIndex = false
@@ -117,13 +140,13 @@ module Jekyll
                        end
                     if itemIsMoreStable
                         # delete items of the parameter from index? as they are less stable
-                        @context.registers[:site].data['search']['searchItems'][@context.registers[:page]["lang"]].
+                        @site.data['search']['searchItems'][@lang].
                           reject! { |item| item['url'] == searchItemData['url'] and item['name'] == searchItemData['name'] }
                     end
                 end
             end
 
-            @context.registers[:site].data['search']['searchItems'][@context.registers[:page]["lang"]] << searchItemData if addItemToIndex == true
+            @site.data['search']['searchItems'][@lang] << searchItemData if addItemToIndex == true
 
         end
 
@@ -131,8 +154,8 @@ module Jekyll
 
 
     def get_i18n_term(term)
-        lang = @context.registers[:page]["lang"]
-        i18n = @context.registers[:site].data["i18n"]["common"]
+        lang = @lang
+        i18n = @site.data["i18n"]["common"]
 
         if ! i18n[term]
             result = term
@@ -165,8 +188,8 @@ module Jekyll
     end
 
     def format_type(first_type, second_type)
-        lang = @context.registers[:page]["lang"]
-        i18n = @context.registers[:site].data["i18n"]["common"]
+        lang = @lang
+        i18n = @site.data["i18n"]["common"]
 
         if !i18n[first_type] then
             result = first_type
@@ -261,7 +284,7 @@ module Jekyll
                             end
 
                         end
-            exampleContent = CONVERTER.convert(exampleContent).delete_prefix('<p>').sub(/<\/p>[\s]*$/,"")
+            exampleContent = escape_chars(convert(exampleContent)).delete_prefix('<p>').sub(/<\/p>[\s]*$/,"")
             if exampleContent.match?(/^<div/)
                 result.push(%Q(#{example}</p>#{exampleContent}))
             else
@@ -274,7 +297,7 @@ module Jekyll
     def format_attribute(name, attributes, parent, primaryLanguage = nil, fallbackLanguage = nil)
         result = Array.new()
         exampleObject = nil
-        lang = @context.registers[:page]["lang"]
+        lang = @lang
 
         if parent.has_key?('required') && parent['required'].include?(name)
             result.push(%Q(<p class="resources__attrs required"><span class="resources__attrs_name required">#{get_i18n_term('required_value_sentence')}</span></p>))
@@ -286,10 +309,10 @@ module Jekyll
             end
         else
             # Not sure if there will always be an optional value here...
-            # result.push(CONVERTER.convert('**' + get_i18n_term('not_required_value_sentence')  + '**'))
+            # result.push(convert('**' + get_i18n_term('not_required_value_sentence')  + '**'))
         end
 
-        result.push(sprintf(%q(<div class="resources__prop_description">%s</div>),CONVERTER.convert(get_i18n_description(primaryLanguage, fallbackLanguage, attributes)))) if attributes['description']
+        result.push(sprintf(%q(<div class="resources__prop_description">%s</div>),escape_chars(convert(get_i18n_description(primaryLanguage, fallbackLanguage, attributes))))) if attributes['description']
 
         if attributes.has_key?('x-doc-default')
             if attributes['x-doc-default'].is_a?(Array) or attributes['x-doc-default'].is_a?(Hash)
@@ -320,18 +343,18 @@ module Jekyll
         if attributes.has_key?('x-doc-d8Revision')
           case attributes['x-doc-d8Revision']
           when "ee"
-            result.push(CONVERTER.convert('**' + @context.registers[:site].data['i18n']['features']['ee'][lang].capitalize + '**'))
+            result.push(%Q(<p><strong>#{@site.data['i18n']['features']['ee'][lang].capitalize}</strong></p>))
           end
         end
 
         if attributes.has_key?('x-doc-featureStatus')
           case attributes['x-doc-featureStatus']
           when "proprietaryOkmeter"
-            result.push(CONVERTER.convert('**' + @context.registers[:site].data['i18n']['features']['proprietaryOkmeter'][lang].capitalize + '**'))
+            result.push(%Q(<p><strong>#{@site.data['i18n']['features']['proprietaryOkmeter'][lang].capitalize}</strong></p>))
           when "experimental"
-            result.push(CONVERTER.convert('**' + @context.registers[:site].data['i18n']['features']['experimental'][lang].capitalize + '**'))
+            result.push(%Q(<p><strong>#{@site.data['i18n']['features']['experimental'][lang].capitalize}</strong></p>))
           when "temporaryDeprecated"
-            result.push(CONVERTER.convert('**' + @context.registers[:site].data['i18n']['features']['temporaryDeprecated'][lang].capitalize + '**'))
+            result.push(%Q(<p><strong>#{@site.data['i18n']['features']['temporaryDeprecated'][lang].capitalize}</strong></p>))
           end
         end
 
@@ -348,7 +371,7 @@ module Jekyll
               valuesRange += " #{comparator} #{attributes['maximum'].to_json}"
             end
             valuesRange += "</code></span></p>"
-            result.push(CONVERTER.convert(valuesRange.to_s))
+            result.push(convert(valuesRange.to_s))
         end
 
         if attributes.has_key?('enum')
@@ -376,7 +399,7 @@ module Jekyll
             end
             unless attributes['type'] == 'string' && caption == 'min_length'
                 description = %Q(<p class="resources__attrs"><span class="resources__attrs_name">#{get_i18n_term(caption).capitalize}:</span> <span class="resources__attrs_content"><code>#{lengthValue}</code></span></p>)
-                result.push(CONVERTER.convert(description.to_s))
+                result.push(convert(description.to_s))
             end
         end
 
@@ -409,12 +432,12 @@ module Jekyll
         linkAnchor = @moduleName.downcase + '-' + linkAnchor if @resourceType == 'moduleConfig' and @moduleName != ''
         pathString = fullPath.slice(1,fullPath.length-1).join('.')
         if resourceName.nil? or resourceName.length < 1
-           resourceName = @context.registers[:page]["title"]
+           resourceName = @site.data['title']
         end
 
         # Data for search index
         # FIX THIS! TODO!
-        #if name and name.length > 0 and ! @context.registers[:site].data['search']['skipParameters'].include?(name)
+        #if name and name.length > 0 and ! @site.data['search']['skipParameters'].include?(name)
         #    searchItemData = Hash.new
         #    searchItemData['pathString'] = pathString
         #    searchItemData['name'] = name
@@ -422,14 +445,14 @@ module Jekyll
         #    searchItemData['deprecated'] = get_hash_value(attributes,"deprecated") or get_hash_value(attributes,"x-doc-deprecated") ? true : false
         #    searchItemData['version'] = versionAPI
         #    searchItemData['resourceName'] = resourceName
-        #    searchItemData['content'] = CONVERTER.convert(get_i18n_description(primaryLanguage, fallbackLanguage, attributes)).to_s if attributes['description']
+        #    searchItemData['content'] = convert(get_i18n_description(primaryLanguage, fallbackLanguage, attributes)).to_s if attributes['description']
         #    searchKeywords = get_search_keywords(primaryLanguage, fallbackLanguage)
         #    searchItemData['search'] = searchKeywords if searchKeywords
-#
+        #
         #    addItemToIndex = true
         #    if !searchItemData['version'].nil?
         #        itemIsMoreStable = false
-        #        otherVersions = @context.registers[:site].data['search']['searchItems'][@context.registers[:page]["lang"]].
+        #        otherVersions = @site.data['search']['searchItems'][@lang].
         #           select { |item| item['pathString'] == searchItemData['pathString'] and item['resourceName'] == searchItemData['resourceName'] }
         #        if otherVersions and otherVersions.length > 0
         #            addItemToIndex = false
@@ -442,13 +465,13 @@ module Jekyll
         #               end
         #            if itemIsMoreStable
         #                # delete items of the parameter from index? as they are less stable
-        #                @context.registers[:site].data['search']['searchItems'][@context.registers[:page]["lang"]].
+        #                @site.data['search']['searchItems'][@lang].
         #                  reject! { |item| item['pathString'] == searchItemData['pathString'] and item['resourceName'] == searchItemData['resourceName'] }
         #            end
         #        end
         #    end
 
-        #     @context.registers[:site].data['search']['searchItems'][@context.registers[:page]["lang"]] << searchItemData if addItemToIndex
+        #     @site.data['search']['searchItems'][@lang] << searchItemData if addItemToIndex
         # end
 
         if parameterTitle != ''
@@ -516,8 +539,8 @@ module Jekyll
                 # Array of non-objects (string, integer, etc.)
                 keysToShow = ['description', 'example', 'x-examples', 'x-doc-example', 'x-doc-examples', 'enum', 'default', 'x-doc-default', 'minimum', 'maximum', 'pattern', 'minLength', 'maxLength']
                 if (attributes['items'].keys & keysToShow).length > 0
-                    lang = @context.registers[:page]["lang"]
-                    i18n = @context.registers[:site].data["i18n"]["common"]
+                    lang = @lang
+                    i18n = @site.data["i18n"]["common"]
                     result.push('<ul>')
                     result.push(format_schema(nil, attributes['items'], attributes, get_hash_value(primaryLanguage,"items") , get_hash_value(fallbackLanguage,"items"), fullPath, resourceName, versionAPI))
                     result.push('</ul>')
@@ -534,20 +557,19 @@ module Jekyll
     end
 
     def format_crd(input, moduleName = "")
-
-        puts "Module name: #{moduleName}"
         return nil if !input
 
         @moduleName = moduleName
-        @resourceType = "crd"
-        return
 
-        if ( @context.registers[:page]["lang"] == 'en' )
+        @resourceType = "crd"
+
+        if ( @lang == 'en' )
             fallbackLanguageName = 'ru'
         else
             fallbackLanguageName = 'en'
         end
         result = []
+
         if !( input.has_key?('i18n'))
            input['i18n'] = {}
         end
@@ -563,27 +585,27 @@ module Jekyll
                 versionAPI = 'v1beta1'
                 resourceName = input["spec"]["names"]["kind"]
                 fullPath = [sprintf(%q(v1beta1-%s), input["spec"]["names"]["kind"])]
-                result.push(CONVERTER.convert("## " + input["spec"]["names"]["kind"]))
+                result.push(convert("## " + input["spec"]["names"]["kind"]))
                 result.push('<p><font size="-1">Scope: ' + input["spec"]["scope"])
                 if input["spec"].has_key?("version") then
                    result.push('<br/>Version: ' + input["spec"]["version"] + '</font></p>')
                 end
 
                 if get_hash_value(input,'spec','validation','openAPIV3Schema','description')
-                   searchKeywords = get_search_keywords(input['i18n'][@context.registers[:page]["lang"]],"spec","validation","openAPIV3Schema", input['i18n'][fallbackLanguageName],"spec","validation","openAPIV3Schema")
+                   searchKeywords = get_search_keywords(input['i18n'][@lang],"spec","validation","openAPIV3Schema", input['i18n'][fallbackLanguageName],"spec","validation","openAPIV3Schema")
 
-                   if get_hash_value(input['i18n'][@context.registers[:page]["lang"]],"spec","validation","openAPIV3Schema","description") then
-                       description = CONVERTER.convert(get_hash_value(input['i18n'][@context.registers[:page]["lang"]],"spec","validation","openAPIV3Schema","description"))
+                   if get_hash_value(input['i18n'][@lang],"spec","validation","openAPIV3Schema","description") then
+                       description = escape_chars(convert(get_hash_value(input['i18n'][@lang],"spec","validation","openAPIV3Schema","description")))
                        result.push(description)
-                       AppendResource2Search(input["spec"]["names"]["kind"], @context.registers[:page]["url"].sub(%r{^(/?ru/|/?en/)}, ''), '', description, searchKeywords)
+                       AppendResource2Search(input["spec"]["names"]["kind"], @path.sub(%r{^(/?ru/|/?en/)}, ''), '', description, searchKeywords)
                    elsif get_hash_value(input['i18n'][fallbackLanguageName],"spec","validation","openAPIV3Schema","description") then
-                       description = CONVERTER.convert(input['i18n'][fallbackLanguageName]["spec"]["validation"]["openAPIV3Schema"]["description"])
+                       description = escape_chars(convert(input['i18n'][fallbackLanguageName]["spec"]["validation"]["openAPIV3Schema"]["description"]))
                        result.push(description)
-                       AppendResource2Search(input["spec"]["names"]["kind"], @context.registers[:page]["url"].sub(%r{^(/?ru/|/?en/)}, ''), '', description, searchKeywords)
+                       AppendResource2Search(input["spec"]["names"]["kind"], @path.sub(%r{^(/?ru/|/?en/)}, ''), '', description, searchKeywords)
                    else
-                       description = CONVERTER.convert(input["spec"]["validation"]["openAPIV3Schema"]["description"])
+                       description = escape_chars(convert(input["spec"]["validation"]["openAPIV3Schema"]["description"]))
                        result.push(description)
-                       AppendResource2Search(input["spec"]["names"]["kind"], @context.registers[:page]["url"].sub(%r{^(/?ru/|/?en/)}, ''), '', description, searchKeywords)
+                       AppendResource2Search(input["spec"]["names"]["kind"], @path.sub(%r{^(/?ru/|/?en/)}, ''), '', description, searchKeywords)
                    end
                 end
 
@@ -593,8 +615,8 @@ module Jekyll
                     _primaryLanguage = nil
                     _fallbackLanguage = nil
 
-                    if  input['i18n'][@context.registers[:page]["lang"]] then
-                        _primaryLanguage = get_hash_value(input['i18n'][@context.registers[:page]["lang"]],"spec","validation","openAPIV3Schema","properties",key)
+                    if  input['i18n'][@lang] then
+                        _primaryLanguage = get_hash_value(input['i18n'][@lang],"spec","validation","openAPIV3Schema","properties",key)
                     end
                     if   input['i18n'][fallbackLanguageName] then
                         _fallbackLanguage = get_hash_value(input['i18n'][fallbackLanguageName],"spec","validation","openAPIV3Schema","properties",key)
@@ -617,7 +639,7 @@ module Jekyll
                      return nil
                  end
 
-                 result.push(CONVERTER.convert("## " + input["spec"]["names"]["kind"]))
+                 result.push(%Q(<h2>#{input["spec"]["names"]["kind"]}</h2>))
 
                  if  input["spec"]["versions"].length > 1 then
                      result.push('<p><font size="-1">Scope: ' + input["spec"]["scope"] + '</font></p>')
@@ -645,7 +667,7 @@ module Jekyll
                         result.push('<p><font size="-1">Scope: ' + input["spec"]["scope"])
                         result.push('<br/>Version: ' + item['name'] + '</font></p>')
                     else
-                        #result.push(CONVERTER.convert("### " + item['name'] + ' {#' + input["spec"]["names"]["kind"].downcase + '-' + item['name'].downcase + '}'))
+                        #result.push(convert("### " + item['name'] + ' {#' + input["spec"]["names"]["kind"].downcase + '-' + item['name'].downcase + '}'))
                         #result.push('<p><font size="-1">Scope: ' + input["spec"]["scope"] + '</font></p>')
                     end
 
@@ -662,26 +684,26 @@ module Jekyll
 
                     description = ''
                     if get_hash_value(item,'schema','openAPIV3Schema','description') then
-                       if    input['i18n'][@context.registers[:page]["lang"]] and
-                             get_hash_value(input['i18n'][@context.registers[:page]["lang"]],"spec","versions") and
-                             input['i18n'][@context.registers[:page]["lang"]]["spec"]["versions"].select {|i| i['name'].to_s == item['name'].to_s; }[0] then
-                           description = CONVERTER.convert(input['i18n'][@context.registers[:page]["lang"]]["spec"]["versions"].select {|i| i['name'].to_s == item['name'].to_s; }[0]["schema"]["openAPIV3Schema"]["description"])
-                           result.push(description)
+                       if    input['i18n'][@lang] and
+                             get_hash_value(input['i18n'][@lang],"spec","versions") and
+                             input['i18n'][@lang]["spec"]["versions"].select {|i| i['name'].to_s == item['name'].to_s; }[0] then
+                           description = convert(input['i18n'][@lang]["spec"]["versions"].select {|i| i['name'].to_s == item['name'].to_s; }[0]["schema"]["openAPIV3Schema"]["description"])
+                           result.push(escape_chars(description))
                        elsif input['i18n'][fallbackLanguageName] and
                              get_hash_value(input['i18n'][fallbackLanguageName],"spec","versions") and
                              input['i18n'][fallbackLanguageName]["spec"]["versions"].select {|i| i['name'].to_s == item['name'].to_s; }[0] then
-                           description = CONVERTER.convert(input['i18n'][fallbackLanguageName]["spec"]["versions"].select {|i| i['name'].to_s == item['name'].to_s; }[0]["schema"]["openAPIV3Schema"]["description"])
-                           result.push(description)
+                           description = convert(input['i18n'][fallbackLanguageName]["spec"]["versions"].select {|i| i['name'].to_s == item['name'].to_s; }[0]["schema"]["openAPIV3Schema"]["description"])
+                           result.push(escape_chars(description))
                        else
-                           description = CONVERTER.convert(item["schema"]["openAPIV3Schema"]["description"])
+                           description = escape_chars(convert(item["schema"]["openAPIV3Schema"]["description"]))
                            result.push('<div class="resources__prop_description">' + description + '</div>')
                        end
                     end
 
                     # Get search keywords
-                    if    get_hash_value(input['i18n'][@context.registers[:page]["lang"]],"spec","versions") and
-                          input['i18n'][@context.registers[:page]["lang"]]["spec"]["versions"].select {|i| i['name'].to_s == item['name'].to_s; }[0] then
-                          searchKeywords = get_search_keywords(input['i18n'][@context.registers[:page]["lang"]]["spec"]["versions"].select {|i| i['name'].to_s == item['name'].to_s; }[0]["schema"]["openAPIV3Schema"])
+                    if    get_hash_value(input['i18n'][@lang],"spec","versions") and
+                          input['i18n'][@lang]["spec"]["versions"].select {|i| i['name'].to_s == item['name'].to_s; }[0] then
+                          searchKeywords = get_search_keywords(input['i18n'][@lang]["spec"]["versions"].select {|i| i['name'].to_s == item['name'].to_s; }[0]["schema"]["openAPIV3Schema"])
                     elsif get_hash_value(input['i18n'][fallbackLanguageName],"spec","versions") and
                           input['i18n'][fallbackLanguageName]["spec"]["versions"].select {|i| i['name'].to_s == item['name'].to_s; }[0] then
                           searchKeywords = get_search_keywords(input['i18n'][fallbackLanguageName]["spec"]["versions"].select {|i| i['name'].to_s == item['name'].to_s; }[0]["schema"]["openAPIV3Schema"])
@@ -690,8 +712,8 @@ module Jekyll
                     end
 
                     AppendResource2Search(input["spec"]["names"]["kind"],
-                                          @context.registers[:page]["url"].sub(%r{^(/?ru/|/?en/)}, ''),
-                                          @context.registers[:page]["title"],
+                                          @path.sub(%r{^(/?ru/|/?en/)}, ''),
+                                          @site.data['title'],
                                           description,
                                           item['name'],
                                           searchKeywords)
@@ -716,11 +738,11 @@ module Jekyll
                             header = ''
                         end
 
-                        if  input['i18n'][@context.registers[:page]["lang"]] and
-                            get_hash_value(input['i18n'][@context.registers[:page]["lang"]],"spec","versions") and
-                            input['i18n'][@context.registers[:page]["lang"]]["spec"]["versions"].select {|i| i['name'].to_s == item['name'].to_s; }[0]
+                        if  input['i18n'][@lang] and
+                            get_hash_value(input['i18n'][@lang],"spec","versions") and
+                            input['i18n'][@lang]["spec"]["versions"].select {|i| i['name'].to_s == item['name'].to_s; }[0]
                         then
-                            _primaryLanguage = input['i18n'][@context.registers[:page]["lang"]]["spec"]["versions"].select {|i| i['name'].to_s == item['name'].to_s; }[0]
+                            _primaryLanguage = input['i18n'][@lang]["spec"]["versions"].select {|i| i['name'].to_s == item['name'].to_s; }[0]
                             _primaryLanguage = get_hash_value(_primaryLanguage,'schema','openAPIV3Schema','properties',key)
                         end
                         if  input['i18n'][fallbackLanguageName] and
@@ -810,8 +832,8 @@ module Jekyll
                 _primaryLanguage = nil
                 _fallbackLanguage = nil
 
-                _primaryLanguage = get_hash_value(input,  'i18n', @context.registers[:page]["lang"], 'properties', key)
-                if ( @context.registers[:page]["lang"] == 'en' )
+                _primaryLanguage = get_hash_value(input,  'i18n', @lang, 'properties', key)
+                if ( @lang == 'en' )
                     fallbackLanguageName = 'ru'
                 else
                     fallbackLanguageName = 'en'
@@ -832,14 +854,17 @@ module Jekyll
         @moduleName = moduleName
         @resourceType = "clusterConfig"
 
-        if ( @context.registers[:page]["lang"] == 'en' )
+        puts "Module name: #{moduleName}"
+        puts "lang: #{@lang}"
+
+        if ( @lang == 'en' )
             fallbackLanguageName = 'ru'
         else
             fallbackLanguageName = 'en'
         end
 
         result.push('<div markdown="0">')
-        result.push(CONVERTER.convert('## '+ input["kind"]))
+        result.push(convert(%Q(<h2>#{input["kind"]}</h2>)))
 
         for i in 0..(input["apiVersions"].length-1)
           result.push("<p><font size='-1'>Version: #{input["apiVersions"][i]["apiVersion"]}</font></p>")
@@ -852,21 +877,21 @@ module Jekyll
 
           description = ''
           if get_hash_value(item, 'description')
-             if get_hash_value(item['i18n'][@context.registers[:page]["lang"]],"description") then
-                 description = CONVERTER.convert(get_hash_value(item['i18n'][@context.registers[:page]["lang"]],"description"))
+             if get_hash_value(item['i18n'][@lang],"description") then
+                 description = convert(get_hash_value(item['i18n'][@lang],"description"))
              elsif get_hash_value(item['i18n'][fallbackLanguageName],"description") then
-                 description = CONVERTER.convert(item['i18n'][fallbackLanguageName]["description"])
+                 description = convert(item['i18n'][fallbackLanguageName]["description"])
              else
-                 description = CONVERTER.convert(item["description"])
+                 description = convert(item["description"])
              end
-             result.push(description)
+             result.push(escape_chars(description))
           end
 
-          searchKeywords = get_search_keywords(item['i18n'][@context.registers[:page]["lang"]], item['i18n'][fallbackLanguageName])
+          searchKeywords = get_search_keywords(item['i18n'][@lang], item['i18n'][fallbackLanguageName])
 
           AppendResource2Search(item["resourceName"],
-                                @context.registers[:page]["url"].sub(%r{^(/?ru/|/?en/)}, ''),
-                                @context.registers[:page]["title"],
+                                @path.sub(%r{^(/?ru/|/?en/)}, ''),
+                                @site.data['title'],
                                 description,
                                 item["APIversion"],
                                 searchKeywords)
@@ -887,5 +912,3 @@ module Jekyll
     end
   end
 end
-
-Liquid::Template.register_filter(Jekyll::Openapi)
