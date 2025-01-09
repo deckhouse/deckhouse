@@ -156,28 +156,32 @@ func (h *Handler) fillDenyRequest(request *WebhookRequest, reason, logEntry stri
 
 func (h *Handler) authorizeClusterScopedRequest(request *WebhookRequest, entry *DirectoryEntry) *WebhookRequest {
 	// if resource is not nil and namespace is nil
-	apiGroup := request.Spec.ResourceAttributes.Version
+	apiVersion := request.Spec.ResourceAttributes.Version
 	group := request.Spec.ResourceAttributes.Group
+	resource := request.Spec.ResourceAttributes.Resource
+	var apiGroup string
 
-	if apiGroup == "" {
+	if apiVersion == "" || apiVersion == "*" {
 		if group != "" {
 			var err error
-			apiGroup, err = h.cache.GetPreferredVersion(group)
+			apiVersion, err = h.cache.GetPreferredVersion(group, resource)
 			if err != nil {
 				// could not check whether resource is namespaced or not (from cache) - deny access
 				return h.fillDenyRequest(request, internalErrorReason, err.Error())
 			}
 		} else {
-			// apiGroup and group versions both empty, which means that this is a core Kubernetes resource
-			apiGroup = "v1"
+			// apiVersion and group both empty, which means that this is a core Kubernetes resource
+			apiVersion = "v1"
 		}
 	}
 
 	if group != "" {
-		apiGroup = group + "/" + apiGroup
+		apiGroup = group + "/" + apiVersion
+	} else {
+		apiGroup = apiVersion
 	}
 
-	namespaced, err := h.cache.Get(apiGroup, request.Spec.ResourceAttributes.Resource)
+	namespaced, err := h.cache.Get(apiGroup, resource)
 	if err != nil {
 		// could not check whether resource is namespaced or not (from cache) - deny access
 		h.fillDenyRequest(request, internalErrorReason, err.Error())
