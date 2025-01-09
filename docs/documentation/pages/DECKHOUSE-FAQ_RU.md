@@ -855,7 +855,7 @@ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-con
 
 Для переключения кластера Deckhouse Enterprise Edition на Community Edition выполните следующие действия (все команды выполняются на master-узле действующего кластера):
 
-1. Выполните следующую команду для запуска временного пода Deckhouse CE для получения актуальных дайджестов и списка модулей. В переменную <DECKHOUSE_VERSION> введите последнюю версию Deckhouse::
+1. Выполните следующую команду для запуска временного пода Deckhouse CE для получения актуальных дайджестов и списка модулей. В переменную <DECKHOUSE_VERSION> введите последнюю версию Deckhouse:
 
    ```shell
    kubectl run ce-image --image=registry.deckhouse.ru/deckhouse/ce/install:<DECKHOUSE_VERSION> --command sleep -- infinity
@@ -1766,7 +1766,7 @@ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-con
    Aug 21 11:04:29 master-ee-to-cse-0 systemd[1]: bashible.service: Deactivated successfully.
    ```
 
-1. Выполните следующие команды для запуска временного пода CSE-редакции для получения актуальных дайджестов и списка модулей. В переменную <DECKHOUSE_VERSION> введите последнюю версию Deckhouse::
+1. Выполните следующие команды для запуска временного пода CSE-редакции для получения актуальных дайджестов и списка модулей. В переменную <DECKHOUSE_VERSION> введите последнюю версию Deckhouse CSE:
 
    ```console
    kubectl run cse-image --image=registry-cse.deckhouse.ru/deckhouse/cse/install:<DECKHOUSE_VERSION> --command sleep -- infinity

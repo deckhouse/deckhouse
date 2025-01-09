@@ -854,7 +854,7 @@ Deckhouse CE does not support cloud clusters on OpenStack and VMware vSphere.
 
 Perform the following steps to switch a Deckhouse Enterprise Edition cluster to Community Edition (all commands must be run on the master node of the active cluster):
 
-1. Run a temporary Deckhouse CE pod to retrieve up-to-date digests and module lists. Enter the latest version of Deckhouse into the <DECKHOUSE_VERSION> variable::
+1. Run a temporary Deckhouse CE pod to retrieve up-to-date digests and module lists. Enter the latest version of Deckhouse into the <DECKHOUSE_VERSION> variable:
 
    ```shell
    kubectl run ce-image --image=registry.deckhouse.io/deckhouse/ce/install:<DECKHOUSE_VERSION> --command sleep -- infinity
