@@ -507,8 +507,8 @@ func (in *ControlPlaneClass) DeepCopyInto(out *ControlPlaneClass) {
 		*out = new(MachineHealthCheckClass)
 		(*in).DeepCopyInto(*out)
 	}
-	if in.NodeDrainTimeout != nil {
-		in, out := &in.NodeDrainTimeout, &out.NodeDrainTimeout
+	if in.NodeDrainTimeoutSecond != nil {
+		in, out := &in.NodeDrainTimeoutSecond, &out.NodeDrainTimeoutSecond
 		*out = new(metav1.Duration)
 		**out = **in
 	}
@@ -548,8 +548,8 @@ func (in *ControlPlaneTopology) DeepCopyInto(out *ControlPlaneTopology) {
 		*out = new(MachineHealthCheckTopology)
 		(*in).DeepCopyInto(*out)
 	}
-	if in.NodeDrainTimeout != nil {
-		in, out := &in.NodeDrainTimeout, &out.NodeDrainTimeout
+	if in.NodeDrainTimeoutSecond != nil {
+		in, out := &in.NodeDrainTimeoutSecond, &out.NodeDrainTimeoutSecond
 		*out = new(metav1.Duration)
 		**out = **in
 	}
@@ -911,8 +911,8 @@ func (in *MachineDeploymentClass) DeepCopyInto(out *MachineDeploymentClass) {
 		*out = new(string)
 		**out = **in
 	}
-	if in.NodeDrainTimeout != nil {
-		in, out := &in.NodeDrainTimeout, &out.NodeDrainTimeout
+	if in.NodeDrainTimeoutSecond != nil {
+		in, out := &in.NodeDrainTimeoutSecond, &out.NodeDrainTimeoutSecond
 		*out = new(metav1.Duration)
 		**out = **in
 	}
@@ -1105,8 +1105,8 @@ func (in *MachineDeploymentTopology) DeepCopyInto(out *MachineDeploymentTopology
 		*out = new(MachineHealthCheckTopology)
 		(*in).DeepCopyInto(*out)
 	}
-	if in.NodeDrainTimeout != nil {
-		in, out := &in.NodeDrainTimeout, &out.NodeDrainTimeout
+	if in.NodeDrainTimeoutSecond != nil {
+		in, out := &in.NodeDrainTimeoutSecond, &out.NodeDrainTimeoutSecond
 		*out = new(metav1.Duration)
 		**out = **in
 	}
@@ -1552,8 +1552,8 @@ func (in *MachineSpec) DeepCopyInto(out *MachineSpec) {
 		*out = new(string)
 		**out = **in
 	}
-	if in.NodeDrainTimeout != nil {
-		in, out := &in.NodeDrainTimeout, &out.NodeDrainTimeout
+	if in.NodeDrainTimeoutSecond != nil {
+		in, out := &in.NodeDrainTimeoutSecond, &out.NodeDrainTimeoutSecond
 		*out = new(metav1.Duration)
 		**out = **in
 	}

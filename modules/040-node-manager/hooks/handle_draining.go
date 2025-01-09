@@ -235,7 +235,7 @@ func getDrainTimeout(input *go_hook.HookInput, client k8s.Client, ngName string)
 			continue
 		}
 
-		timeoutValue := nodeGroup.Spec.NodeDrainTimeout
+		timeoutValue := nodeGroup.Spec.NodeDrainTimeoutSecond
 		if timeoutValue != nil {
 			drainTimeout := time.Duration(*timeoutValue) * time.Second
 			return drainTimeout

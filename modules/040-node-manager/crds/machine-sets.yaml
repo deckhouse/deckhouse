@@ -284,8 +284,8 @@ spec:
                             the Machine is marked for deletion. A duration of 0 will
                             retry deletion indefinitely. Defaults to 10 seconds.
                           type: string
-                        nodeDrainTimeoutSecond:
-                          description: 'NodeDrainTimeoutSecond is the total amount of time
+                        nodeDrainTimeout:
+                          description: 'NodeDrainTimeout is the total amount of time
                           that the controller will spend on draining a node. The default
                           value is 0, meaning that the node can be drained without
                           any time limitations. NOTE: NodeDrainTimeout is different
