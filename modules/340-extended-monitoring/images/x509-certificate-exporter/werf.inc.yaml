@@ -1,6 +1,7 @@
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 fromImage: common/src-artifact
+final: false
 shell:
   install:
     - git clone --depth 1 --branch v3.18.1 {{ .SOURCE_REPO }}/enix/x509-certificate-exporter.git /src
@@ -30,7 +31,7 @@ shell:
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: common/distroless
 import:
-  - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+  - image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
     add: /src/x509-certificate-exporter
     to: /x509-certificate-exporter
     after: setup
