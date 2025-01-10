@@ -9,6 +9,8 @@ git:
       install:
         - '**/*'
 shell:
+  beforeInstall:
+    - apt-get install -y git
   install:
     - export SOURCE_REPO={{ .SOURCE_REPO }}
     - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
