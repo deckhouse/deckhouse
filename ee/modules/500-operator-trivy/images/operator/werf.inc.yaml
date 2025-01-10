@@ -1,20 +1,22 @@
 ---
-image: {{ $.ModuleName }}/{{ $.ImageName }}
+image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
 import:
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
-  add: /operator-trivy
-  to: /operator-trivy
-  before: install
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
-  add: /src/local
-  to: /local
-  before: install
+  - image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+    add: /operator-trivy
+    to: /operator-trivy
+    before: setup
+  - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+    add: /src/local
+    to: /local
+    before: setup
 docker:
-  ENTRYPOINT: ["/operator-trivy"]
+  ENTRYPOINT: [ "/operator-trivy" ]
+  USER: deckhouse:deckhouse
 ---
-artifact: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
-fromArtifact: common/src-artifact
+image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+fromImage: common/src-artifact
+final: false
 git:
 - add: /{{ $.ModulePath }}modules/500-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
   to: /patches
@@ -25,33 +27,34 @@ git:
   to: /bundle.tar.gz
   stageDependencies:
     install:
-      - '**/*'
+    - '**/*'
 shell:
-  beforeInstall:
-  {{- include "alt packages proxy" . | nindent 2 }}
-  - apt-get install patch
   install:
-  - git clone --depth 1 --branch v0.22.0 {{ $.SOURCE_REPO }}/aquasecurity/trivy-operator.git /src
+  - git clone --depth 1 --branch v0.22.0 {{ .SOURCE_REPO }}/aquasecurity/trivy-operator.git /src/
+  - git clone --depth 1 --branch v0.55.0-flant-2 {{ .SOURCE_REPO }}/aquasecurity/trivy.git /src/trivy
+  - git clone --depth 1 --branch flant-v2 {{ .SOURCE_REPO }}/aquasecurity/trivy-db.git /src/trivy-db
+  - rm -rf /src/trivy-operator/.git /src/trivy/.git
   - cd /src
-  - |
-      for f in /patches/*.patch; do
-        patch -p1 < $f
-      done
-  - mkdir -p local
-  - tar -zxvf /bundle.tar.gz -C ./local
-  - rm -f /bundle.tar.gz
+  - git apply /patches/*.patch --verbose
+  - mkdir ./local && tar zxvf /bundle.tar.gz -C ./local
 ---
-artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
-from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
+image: {{ .ModuleName }}/{{ .ImageName }}-artifact
+from: {{ .Images.BASE_GOLANG_23_ALPINE }}
+final: false
 import:
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
   add: /src
   to: /src
   before: install
+mount:
+- fromPath: ~/go-pkg-cache
+  to: /go/pkg
 shell:
   install:
-  - export GO_VERSION=${GOLANG_VERSION} GOPROXY={{ $.GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64
+  - export GOPROXY={{ .GOPROXY }}
   - cd /src
-  - go build -ldflags '-s -w -extldflags "-static"' -o /operator-trivy ./cmd/trivy-operator/main.go
+  - ln -s ./trivy-db ./original-trivy-db
+  - go mod tidy
+  - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o /operator-trivy ./cmd/trivy-operator/main.go
   - chown 64535:64535 /operator-trivy
-  - chmod 0755 /operator-trivy
+  - chmod 0700 /operator-trivy

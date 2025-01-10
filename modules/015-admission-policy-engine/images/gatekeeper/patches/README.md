@@ -1,5 +1,4 @@
-# Patches
+## Patches
 
-### go-mod.patch
-
-Bump libraries versions to fix security errors.
+### Go mod
+This patch updates dependencies' versions to meet security concerns.

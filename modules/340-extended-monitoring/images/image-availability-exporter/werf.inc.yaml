@@ -1,5 +1,16 @@
 {{ $imageAvailabilityExporterVersion := "0.11.0" }}
 ---
+image: {{ $.ModuleName }}/{{ $.ImageName }}
+fromImage: common/distroless
+import:
+  - image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+    add: /k8s-image-availability-exporter
+    to: /k8s-image-availability-exporter
+    before: setup
+docker:
+  ENTRYPOINT: ["/k8s-image-availability-exporter"]
+
+---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 fromImage: common/src-artifact
 final: false
