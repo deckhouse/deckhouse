@@ -1,7 +1,7 @@
 {{- $binaries := "/usr/bin/python3 /lib64/libz.so* /lib64/libexpat.so* /usr/lib64/libffi.so* /lib64/libcrypto.so* /lib64/libssl.so*" }}
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
-from: {{ .Images.BASE_ALT_P11 }}
+fromImage: common/alt-p11-artifact
 git:
   - add: /{{ $.ModulePath }}modules/340-{{ $.ModuleName }}/images/{{ $.ImageName }}/src/requirements.txt
     to: /requirements.txt
@@ -10,17 +10,13 @@ git:
         - '**/*'
 shell:
   beforeInstall:
-  {{- include "alt packages proxy" . | nindent 2 }}
   - apt-get install -y git
   install:
     - export SOURCE_REPO={{ .SOURCE_REPO }}
     - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
     - git clone --depth 1 {{ $.SOURCE_REPO }}/python-modules/wheels /wheels
     - rm -rf /wheels/.git
-    - apt-get -y remove python3-module-cryptography
-    - pip3 install -f file:///wheels --no-index -r /requirements.txt
-    - apt-get remove python3-module-pip
-    - /binary_replace.sh -i "{{ $binaries }}" -o /relocate
+    - /opt/python-static/bin/pip3 install -f file:///wheels --no-index -r /requirements.txt
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
@@ -28,25 +24,18 @@ git:
   - add: /{{ $.ModulePath }}modules/340-{{ $.ModuleName }}/images/{{ $.ImageName }}/src/extended-monitoring.py
     to: /app/extended-monitoring.py
 import:
-  - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
-    add: /relocate
-    to: /
-    before: install
-  - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
-    add: /usr/lib64/python3
-    to: /usr/lib64/python3
-    before: install
-  - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
-    add: /usr/lib/python3
-    to: /usr/lib/python3
-    before: install
-  - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
-    add: /usr/lib64/python3.9
-    to: /usr/lib64/python3.9
-    before: install
-  - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
-    add: /usr/local/lib/python3
-    to: /usr/local/lib/python3
-    before: install
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-binary-artifact
+  add: /opt/python-static/bin
+  to: /usr/bin
+  before: install
+  includePaths:
+  - python3*
+  - python3
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-binary-artifact
+  add: /opt/python-static/lib
+  to: /usr/lib
+  before: install
+  includePaths:
+  - python3*
 docker:
   ENTRYPOINT: ["python3"]
