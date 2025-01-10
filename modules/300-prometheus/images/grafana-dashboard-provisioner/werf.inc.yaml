@@ -27,7 +27,7 @@ import:
 - image: common/python-static
   add: /
   to: /
-  before: setup
+  before: install
   includePaths:
   - opt/python-static
   - usr/bin/pip3
@@ -40,4 +40,4 @@ git:
     - '**/*'
 shell:
   install:
-  - /usr/bin/pip3 install -r /requirements.txt
+  - pip3 install -r /requirements.txt
