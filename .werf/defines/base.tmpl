@@ -116,6 +116,9 @@ shell:
   beforeInstall:
   {{- include "base components" (list $context.rootContext $context.prefix) | nindent 2 }}
 
+docker:
+  ENV:
+    CRYPTOGRAPHY_OPENSSL_NO_LEGACY: "true"
 {{- end }}
 
 
