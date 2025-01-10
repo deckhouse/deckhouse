@@ -42,7 +42,7 @@ type NotificationConfig struct {
 }
 
 func (cfg *NotificationConfig) IsEmpty() bool {
-	return cfg == (&NotificationConfig{})
+	return cfg != nil && *cfg == NotificationConfig{}
 }
 
 type Auth struct {

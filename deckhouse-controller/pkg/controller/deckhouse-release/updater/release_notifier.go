@@ -50,7 +50,6 @@ type WebhookData struct {
 	Message   string `json:"message"`
 }
 
-var ErrNotificationIsNotSent = errors.New("")
 var ErrFailedToSendReleaseNotification = errors.New("release blocked, failed to send release notification")
 
 // SendPatchReleaseNotification sending patch notification (only if notification config has release type "All")

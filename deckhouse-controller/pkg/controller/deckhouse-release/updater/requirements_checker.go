@@ -181,7 +181,7 @@ func (c *kubernetesVersionCheck) isKubernetesVersionAutomatic() bool {
 	return c.clusterKubernetesVersion == k8sAutomaticVersion
 }
 
-var clusterConf struct {
+type clusterConf struct {
 	KubernetesVersion string `json:"kubernetesVersion"`
 }
 
@@ -197,7 +197,8 @@ func (c *kubernetesVersionCheck) initClusterKubernetesVersion(ctx context.Contex
 		return fmt.Errorf("expected field 'cluster-configuration.yaml' not found in secret %s", secret.Name)
 	}
 
-	if err := yaml.Unmarshal(clusterConfigurationRaw, &clusterConf); err != nil {
+	clusterConf := new(clusterConf)
+	if err := yaml.Unmarshal(clusterConfigurationRaw, clusterConf); err != nil {
 		return fmt.Errorf("failed to unmarshal cluster configuration: %w", err)
 	}
 
