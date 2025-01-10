@@ -852,7 +852,7 @@ The instruction implies using the public address of the container registry: `reg
 Deckhouse CE does not support cloud clusters on OpenStack and VMware vSphere.
 {% endalert %}
 
-Perform the following steps to switch a Deckhouse Enterprise Edition cluster to Community Edition (all commands must be run on the master node of the active cluster):
+Follow this steps to switch a Deckhouse Enterprise Edition cluster to Community Edition (all commands must be executed on the master node of the active cluster, either by a user with a configured `kubectl` context or by a superuser):
 
 1. Run a temporary Deckhouse CE pod to retrieve up-to-date digests and module lists. Enter the latest version of Deckhouse into the <DECKHOUSE_VERSION> variable:
 
@@ -1063,7 +1063,7 @@ Perform the following steps to switch a Deckhouse Enterprise Edition cluster to 
 1. Apply the Deckhouse CE image. Enter the latest version of Deckhouse into the <DECKHOUSE_VERSION> variable:
 
    ```shell
-   sudo /opt/deckhouse/bin/kubectl -n d8-system exec -i svc/deckhouse-leader -c deckhouse -- kubectl -n d8-system set image deployment/deckhouse deckhouse=registry.deckhouse.io/deckhouse/ce:<DECKHOUSE_VERSION>
+   sudo /opt/deckhouse/bin/kubectl -n d8-system exec svc/deckhouse-leader -c deckhouse -- kubectl -n d8-system set image deployment/deckhouse deckhouse=registry.deckhouse.io/deckhouse/ce:<DECKHOUSE_VERSION>
    ```
 
 1. Wait for the Deckhouse pod to become `Ready` and for [all the queued jobs to complete](https://deckhouse.io/products/kubernetes-platform/documentation/latest/deckhouse-faq.html#how-to-check-the-job-queue-in-deckhouse). If an `ImagePullBackOff` error is generated in the process, wait for the pod to be restarted automatically.
