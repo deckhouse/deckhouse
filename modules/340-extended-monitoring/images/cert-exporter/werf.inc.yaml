@@ -1,0 +1,53 @@
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}
+fromImage: common/distroless
+import:
+  - image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+    add: /cert-exporter
+    to: /cert-exporter
+    before: setup
+docker:
+  ENTRYPOINT: ["/cert-exporter"]
+
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+fromImage: common/src-artifact
+final: false
+shell:
+  setup:
+  - git clone --depth 1 --branch v2.9.3 {{ $.SOURCE_REPO }}/giantswarm/cert-exporter.git /src
+  - cd /src
+  - git apply /patches/*.patch --verbose
+  - rm -rf /src/.git
+git:
+  - add: /modules/340-extended-monitoring/images/{{ $.ImageName }}
+    to: /
+    stageDependencies:
+      setup:
+        - "**/*"
+    includePaths:
+      - patches
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
+final: false
+mount:
+  - fromPath: ~/go-pkg-cache
+    to: /go/pkg
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+  add: /src
+  to: /src
+  before: install
+shell:
+  beforeInstall:
+  {{- include "alpine packages proxy" . | nindent 2 }}
+  - apk add --no-cache make bash
+  install:
+    - export GO_VERSION=${GOLANG_VERSION}
+    - export GOPROXY={{ $.GOPROXY }}
+    - cd /src
+    - make
+    - mv cert-exporter /cert-exporter
+    - chown 64535:64535 /cert-exporter
+    - chmod 700 /cert-exporter
