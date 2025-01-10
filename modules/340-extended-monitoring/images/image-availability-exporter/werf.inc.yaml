@@ -1,3 +1,4 @@
+{{ $imageAvailabilityExporterVersion := "0.11.0" }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: common/distroless
@@ -17,11 +18,11 @@ git:
 - add: /{{ $.ModulePath }}modules/340-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
   to: /patches
   stageDependencies:
-    setup:
-    - "**/*"
+    install:
+      - '**/*'
 shell:
-  setup:
-  - git clone --depth 1 --branch v0.10.0 {{ $.SOURCE_REPO }}/deckhouse/k8s-image-availability-exporter.git /src
+  install:
+  - git clone --depth 1 --branch v{{ $imageAvailabilityExporterVersion }} {{ $.SOURCE_REPO }}/deckhouse/k8s-image-availability-exporter.git /src
   - cd /src
   - git apply /patches/*.patch --verbose
   - rm -rf /src/.git
@@ -29,19 +30,29 @@ shell:
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
 from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
 final: false
-mount:
-  - fromPath: ~/go-pkg-cache
-    to: /go/pkg
 import:
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+- image: {{ .ModuleName }}/{{ $.ImageName }}-src-artifact
   add: /src
   to: /src
   before: install
+mount:
+- fromPath: ~/go-pkg-cache
+  to: /go/pkg
 shell:
   install:
-    - export GO_VERSION=${GOLANG_VERSION}
-    - export GOPROXY={{ $.GOPROXY }}
-    - cd /src
-    - CGO_ENABLED=0 go build -a -ldflags '-s -w -extldflags "-static"' -o /k8s-image-availability-exporter main.go
-    - chown 64535:64535 /k8s-image-availability-exporter
-    - chmod 700 /k8s-image-availability-exporter
+  - export GOPROXY={{ $.GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64
+  - cd /src
+  - go build -a -ldflags '-s -w -extldflags "-static"' -o k8s-image-availability-exporter main.go
+  - chown -R 64535:64535 /src/
+  - chmod 0700 /src/k8s-image-availability-exporter
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}
+fromImage: common/distroless
+import:
+  - image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+    add: /src/k8s-image-availability-exporter
+    to: /k8s-image-availability-exporter
+    before: setup
+docker:
+  ENTRYPOINT:
+    - "/k8s-image-availability-exporter"
