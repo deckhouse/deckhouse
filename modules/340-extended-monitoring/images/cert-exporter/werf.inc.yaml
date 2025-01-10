@@ -14,7 +14,7 @@ image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 fromImage: common/src-artifact
 final: false
 git:
-- add: /modules/340-extended-monitoring/images/{{ $.ImageName }}/patches
+- add: /{{ $.ModulePath }}modules/340-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
   to: /patches
   stageDependencies:
     setup:
