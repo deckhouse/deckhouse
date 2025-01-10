@@ -103,12 +103,10 @@ git:
     install:
     - '**/*'
 import:
-- image: common/shell-operator-artifact
+- image: common/python-static
   add: /opt/python-static
-  to: /
-  before: setup
-  includePaths:
-  - opt/python-static
+  to: /usr
+  before: install
 shell:
   install:
   - /opt/python-static/pip3 install -r /requirements.txt
