@@ -16,6 +16,7 @@ shell:
   install:
     - apt-get update
     - apt-get install -y dnsmasq git
+    - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
     - git clone --depth 1 {{ .SOURCE_REPO }}/python-modules/wheels /wheels
     - pip3 install /wheels/pysqlite3_binary-0.5.4-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
     - rm -rf /wheels
