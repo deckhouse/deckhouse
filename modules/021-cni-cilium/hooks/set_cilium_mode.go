@@ -27,7 +27,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, setCiliumMode)
 
 func setCiliumMode(input *go_hook.HookInput) error {
-	value, ok = input.ConfigValues.GetOk("cniCilium.tunnelMode")
+	value, ok := input.ConfigValues.GetOk("cniCilium.tunnelMode")
 	if ok {
 		switch value.String() {
 		case "VXLAN":
