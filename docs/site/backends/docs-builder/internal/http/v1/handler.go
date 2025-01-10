@@ -40,9 +40,6 @@ func NewHandler(docsService *docs.Service) *DocsBuilderHandler {
 	r.HandleFunc("/readyz", h.handleReadyZ)
 	r.HandleFunc("/healthz", h.handleHealthZ)
 
-	r.HandleFunc("POST /loadDocArchive/{moduleName}/{version}", h.handleUpload)
-	r.HandleFunc("POST /build", h.handleBuild)
-
 	r.HandleFunc("POST /api/v1/doc/{moduleName}/{version}", h.handleUpload)
 	r.HandleFunc("DELETE /api/v1/doc/{moduleName}", h.handleDelete)
 	r.HandleFunc("POST /api/v1/build", h.handleBuild)
