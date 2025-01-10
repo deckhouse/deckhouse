@@ -3,13 +3,11 @@
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 fromImage: common/src-artifact
 git:
-  - add: /modules/462-loki/images/{{ $.ImageName }}
-    to: /
-    stageDependencies:
-      setup:
-        - "**/*"
-    includePaths:
-      - patches
+- add: /{{ $.ModulePath }}modules/462-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
+  to: /patches
+  stageDependencies:
+    setup:
+    - "**/*"
 shell:
   install:
     - git clone --depth 1 --branch {{ $LokiVersion }} {{ .SOURCE_REPO }}/grafana/loki.git /src
