@@ -619,9 +619,13 @@ spec:
                         [Подробнее...](https://dev.maxmind.com/geoip/geolite2-free-geolocation-data)
                 legacySSL:
                   description: |
-                    Включены ли старые версии TLS. Также опция разрешает legacy cipher suites для поддержки старых библиотек и программ: [OWASP Cipher String 'C' ](https://cheatsheetseries.owasp.org/cheatsheets/TLS_Cipher_String_Cheat_Sheet.html). Подробнее [здесь](https://github.com/deckhouse/deckhouse/blob/main/modules/402-ingress-nginx/templates/controller/configmap.yaml).
+                    Определяет, разрешены ли устаревшие версии протокола TLS и алгоритмов шифрования (cipher suites).
 
-                    **По умолчанию** включены только TLSv1.2 и самые новые cipher suites.
+                    Работа разрешена для следующих версий протокола TLS: `TLSv1`, `TLSv1.1`, `TLSv1.2`, `TLSv1.3`.
+
+                    Допустимые комбинации алгоритмов шифрования, расположенные в порядке от наиболее надёжной к наименее надёжной: `ECDHE-ECDSA-AES256-GCM-SHA384`, `ECDHE-RSA-AES256-GCM-SHA384`, `ECDHE-ECDSA-CHACHA20-POLY1305`, `ECDHE-RSA-CHACHA20-POLY1305`, `ECDHE-ECDSA-AES128-GCM-SHA256`, `ECDHE-RSA-AES128-GCM-SHA256`, `ECDHE-ECDSA-AES256-SHA384`, `ECDHE-RSA-AES256-SHA384`, `ECDHE-ECDSA-AES128-SHA256`, `ECDHE-RSA-AES128-SHA256`, `ECDHE-ECDSA-AES256-SHA`, `ECDHE-RSA-AES256-SHA`, `ECDHE-ECDSA-AES128-SHA`, `ECDHE-RSA-AES128-SHA`, `AES256-GCM-SHA384`, `AES128-GCM-SHA256`, `AES256-SHA256`, `AES128-SHA256`, `AES256-SHA`, `AES128-SHA`.
+
+                    **По умолчанию** включены только `TLSv1.2`, `TLSv1.3` и самые новые алгоритмы шифрования.
                 disableHTTP2:
                   description: |
                     Выключить ли HTTP/2.
