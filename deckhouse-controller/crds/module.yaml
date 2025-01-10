@@ -82,6 +82,7 @@ spec:
                   enum:
                     - Available
                     - Downloading
+                    - DownloadingError
                     - Reconciling
                     - Installing
                     - HooksDisabled

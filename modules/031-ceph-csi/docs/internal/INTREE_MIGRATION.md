@@ -138,7 +138,7 @@ Apply this manifest in the cluster? (Type yes to confirm): yes
 persistentvolume/pvc-4a77a995-ce1e-463c-9726-d05966d3c5ef created
 ```
 
-**Caution!** Before switching to containerd, make sure that no log collectors other than log-shipper are used in the cluster. If there are any, you will either have to discard them in favor of the [log-shipper](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/460-log-shipper/) module or reconfigure them to work with containerd. This is because containerd has a different log format and stores log files under a different path.
+**Caution!** Before switching to containerd, make sure that no log collectors other than log-shipper are used in the cluster. If there are any, you will either have to discard them in favor of the [log-shipper](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/log-shipper/) module or reconfigure them to work with containerd. This is because containerd has a different log format and stores log files under a different path.
 
 | CRI        | Log format  | Log files path         |
 | ---------- | ----------- | -----------------------|

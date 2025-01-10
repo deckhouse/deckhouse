@@ -30,14 +30,16 @@ The `HTTP-01` method does not support issuing wildcard certificates.
 The `ClusterIssuers` in standard delivery set that issue certificates via Let's Encrypt are divided into two types:
 
 1. `ClusterIssuer` specific to the cloud provider being used.
-Added automatically when filling in the [module settings](./configuration.html) associated with the cloud provider.  
-These `ClusterIssuers` support the `DNS-01` method.
+
+   Added automatically when filling in the [module settings](./configuration.html) associated with the cloud provider.  
+   These `ClusterIssuers` support the `DNS-01` method.
    * `clouddns`
    * `cloudflare`
    * `digitalocean`
    * `route53`
-1. `ClusterIssuers` using the `HTTP-01` method.  
-Added automatically unless their creation is disabled in the [module settings](./configuration.htmll#parameters-disableletsencrypt).
+1. `ClusterIssuers` using the `HTTP-01` method.
+  
+   Added automatically unless their creation is disabled in the [module settings](./configuration.html#parameters-disableletsencrypt).
    * `letsencrypt`
    * `letsencrypt-staging`
 
@@ -55,8 +57,8 @@ The full list is available [in the `cert-manager` documentation](https://cert-ma
 The module automatically creates `ClusterIssuer` of supported cloud providers when filling in the module settings related to the cloud used.  
 If necessary, you can create such `ClusterIssuer` yourself.
 
-An example of using AWS Route53 is available in the section [How to protect `cert-manager` credentials](#how-to-protect-cert-manager-credentials).  
-The list of all possible `ClusterIssuer`s that can be created is available in the [module templates](https://github.com/deckhouse/deckhouse/tree/main/modules/101-cert-manager/templates/cert-manager).
+An example of using AWS Route53 is available in the section [How to protect `cert-manager` credentials](#how-to-secure-cert-manager-credentials).  
+The list of all possible `ClusterIssuer`s that can be created is available in the [module templates](https://github.com/deckhouse/deckhouse/tree/main/modules/cert-manager/templates/cert-manager).
 
 Using third-party DNS providers is implemented via the `webhook` method.  
 
@@ -103,7 +105,7 @@ As an example, let's consider using the `Yandex Cloud DNS` service.
 
 You can use [this manual](https://learn.hashicorp.com/tutorials/vault/kubernetes-cert-manager?in=vault/kubernetes) for configuring certificate issuance using Vault.
 
-After configuring PKI and enabling Kubernetes [authorization](../../modules/140-user-authz/), you have to:
+After configuring PKI and enabling Kubernetes [authorization](../../modules/user-authz/), you have to:
 - Create a service account and copy its secret reference:
 
   ```shell

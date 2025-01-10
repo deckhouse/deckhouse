@@ -6,8 +6,8 @@ entries:
         ru: Введение
       url: /virtualization-platform/documentation/
     - title:
-        en: Administration guide
-        ru: Руководство администратора
+        en: Administration
+        ru: Администрирование
       folders:
         - title:
             en: Platform editions
@@ -45,19 +45,19 @@ entries:
                 - title:
                     en: Initial access configuration
                     ru: Первичная настройка доступа
-                  url: /virtualization-platform/documentation/admin/install/steps/access.html   
+                  url: /virtualization-platform/documentation/admin/install/steps/access.html
                 - title:
                     en: Adding nodes
                     ru: Добавление узлов
-                  url: /virtualization-platform/documentation/admin/install/steps/nodes.html 
+                  url: /virtualization-platform/documentation/admin/install/steps/nodes.html
                 - title:
                     en: Setup storage
                     ru: Настройка хранилища
-                  url: /virtualization-platform/documentation/admin/install/steps/storage.html      
+                  url: /virtualization-platform/documentation/admin/install/steps/storage.html
                 - title:
                     en: Setup virtualization
                     ru: Настройка виртуализации
-                  url: /virtualization-platform/documentation/admin/install/steps/virtualization.html     
+                  url: /virtualization-platform/documentation/admin/install/steps/virtualization.html
         - title:
             en: Platform configuration
             ru: Настройка платформы
@@ -67,20 +67,20 @@ entries:
                 ru: Управление узлами
               folders:
                 - title:
-                    en: NodeGroup
+                    en: Node groups
                     ru: Группы узлов
                   url: /virtualization-platform/documentation/admin/platform-management/node-management/node-group.html
                 - title:
-                    en: Adding a node
-                    ru: Добавление узла
+                    en: Adding and removing a node
+                    ru: Добавление и удаление узла
                   url: /virtualization-platform/documentation/admin/platform-management/node-management/adding-node.html
                 - title:
                     en: Node сonfiguration
                     ru: Настройка узлов
                   folders:
                     - title:
-                        en: NodeGroupConfiguration
-                        ru: Конфигурация групп узлов
+                        en: Node configuration
+                        ru: Конфигурация узлов
                       url: /virtualization-platform/documentation/admin/platform-management/node-management/configuration.html
                     - title:
                         en: OS configuration
@@ -90,6 +90,10 @@ entries:
                         en: Containerd configuration
                         ru: Настройка containerd
                       url: /virtualization-platform/documentation/admin/platform-management/node-management/containerd.html
+                    - title:
+                        en: Advanced configuration
+                        ru: Расширенные настройки
+                      url: /virtualization-platform/documentation/admin/platform-management/node-management/advanced.html
             - title:
                 en: Control plane
                 ru: Управляющий слой
@@ -103,7 +107,7 @@ entries:
                         ru: Описание
                       url: /virtualization-platform/documentation/admin/platform-management/control-plane-settings/control-plane-components.html
                     - title:
-                        en: Etcd operations
+                        en: Working with etcd
                         ru: Работа с etcd
                       url: /virtualization-platform/documentation/admin/platform-management/control-plane-settings/etcd.html
                     - title:
@@ -116,7 +120,7 @@ entries:
                       url: /virtualization-platform/documentation/admin/platform-management/control-plane-settings/audit.html
                 - title:
                     en: Master nodes
-                    ru: Мастер узлы
+                    ru: Master-узлы
                   url: /virtualization-platform/documentation/admin/platform-management/control-plane-settings/masters.html
                 - title:
                     en: Components placement
@@ -243,8 +247,8 @@ entries:
             ru: Удаление платформы
           url: /virtualization-platform/documentation/admin/removing/removing.html
     - title:
-        en: User guide
-        ru: Руководство пользователя
+        en: Using
+        ru: Использование
       folders:
         - title:
             en: Overview

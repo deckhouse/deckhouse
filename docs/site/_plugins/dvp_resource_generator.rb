@@ -1,3 +1,5 @@
+require_relative "render-jsonschema"
+
 module ResourceGenerator
   class ResourceGenerator < Jekyll::Generator
     safe true
@@ -16,6 +18,7 @@ module ResourceGenerator
           puts "Processing CRD %s..." % [crdData["spec"]["names"]["kind"]]
 
           languages.each do |lang|
+
             site.pages << ResourcePage.new(site, crdKey, crdData, lang)
           end
         end
@@ -33,12 +36,13 @@ class ResourcePage < Jekyll::Page
     @crdKey = crdKey
     @fileName = ""
     @kind = ""
-
+    @converter = Jekyll::Converters::Markdown::KramdownParser.new(Jekyll.configuration())
 
     type == "crd" ? @kind = crdData["spec"]["names"]["kind"] : @kind = crdData["kind"]
     @fileName =  "#{@kind.downcase}.html"
 
     @path = "virtualization-platform/reference/cr/#{@fileName}"
+    self.process(@path)
 
     self.data = {
       'title' => "Custom resource #{@kind}",
@@ -52,13 +56,19 @@ class ResourcePage < Jekyll::Page
       'sitemap_include' => false
     }
 
-    if type == "crd" then
-      self.content = %q({{ site.data.schemas.virtualization-platform.crds['%s'] | format_crd: "" }}) % @crdKey
-    else
-      self.content = %q({{ site.data.schemas.virtualization-platform.crds['%s'] | format_cluster_configuration }}) % @crdKey
-    end
+    @JSONSchema = JSONSchemaRenderer::JSONSchemaRenderer.new(@site, self.data, @converter)
 
-    self.process(@path)
+    self.content = ""
+    if type == "crd" then
+      _renderedContent = @JSONSchema.format_crd(site.data['schemas']['virtualization-platform']['crds'][@crdKey], @crdKey)
+    else
+      _renderedContent = @JSONSchema.format_cluster_configuration(site.data['schemas']['virtualization-platform']['crds'][@crdKey])
+    end
+    if _renderedContent.nil?
+      self.content = @site.data['i18n']['common']['crd_has_no_parameters'][@lang]
+    else
+      self.content = _renderedContent
+    end
 
     Jekyll::Hooks.trigger :pages, :post_init, self
   end

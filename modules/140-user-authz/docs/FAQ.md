@@ -16,7 +16,7 @@ To limit a user's rights to specific namespaces, use `RoleBinding` with the [use
 The example uses the [obsolete role-based model](./#the-obsolete-role-based-model).
 {% endalert %}
 
-Use the `namespaceSelector` or `limitNamespaces` (deprecated) parameters in the [`ClusterAuthorizationRule`](../../modules/140-user-authz/cr.html#clusterauthorizationrule) CR.
+Use the `namespaceSelector` or `limitNamespaces` (deprecated) parameters in the [`ClusterAuthorizationRule`](../../modules/user-authz/cr.html#clusterauthorizationrule) CR.
 
 ## What if there are two ClusterAuthorizationRules matching to a single user?
 

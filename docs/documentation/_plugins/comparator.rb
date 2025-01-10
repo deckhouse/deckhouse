@@ -61,13 +61,13 @@ module Comparator
       @converter = converter
 
       if page.permalink then
-        if page.permalink.end_with?(FORWARD_SLASH) then
+        if page.permalink.end_with?("/") then
           @dir = page.permalink
         else
           @dir = File.dirname(page.permalink)
         end
       else
-        if page.path.end_with?(FORWARD_SLASH) then
+        if page.path.end_with?("/") then
           @dir = page.path.split(/pages/)[-1]
         else
           @dir = File.dirname(page.path.split(/pages/)[-1]).gsub(%r{/[^\/]+$},'/')
@@ -103,7 +103,7 @@ module Comparator
       maxlength = para1.length > para2.length ? para1.length : para2.length
 
       result = %q(
-      <link rel="stylesheet" type="text/css" href="/css/dev.css">{% raw %}
+      <link rel="stylesheet" type="text/css" href="/assets/css/dev.css">{% raw %}
       <table class="lang__compare">
 )
 

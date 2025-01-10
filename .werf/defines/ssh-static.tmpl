@@ -1,0 +1,33 @@
+# render images digests image with /images_digests.json file
+# . is dict with next params
+#   SOURCE_REPO - SOURCE_REPO env value
+#   Images - map from images_versions.yml
+{{- define "ssh_static_artifact" }}
+{{- $context := . -}}
+
+---
+image: ssh-static-src-artifact
+final: false
+fromImage: common/src-artifact
+shell:
+  install:
+  - git clone -b V_9_9_P1 --single-branch --depth=1 {{ $context.SOURCE_REPO }}/openssh/openssh-portable /src
+---
+image: ssh-static
+final: false
+from: {{ $context.Images.BASE_ALPINE }}
+import:
+- image: ssh-static-src-artifact
+  add: /src
+  to: /src
+  before: install
+shell:
+  beforeInstall:
+  {{- include "alpine packages proxy" $context | nindent 2 }}
+  - apk add --no-cache build-base make autoconf automake zlib-dev zlib-static openssl-dev openssl-libs-static
+  install:
+  - cd /src
+  - autoreconf
+  - ./configure LDFLAGS="-static $(LDFLAGS)" --prefix /ssh
+  - make install
+{{- end }}

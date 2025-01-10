@@ -1,7 +1,9 @@
 - name: kubernetes.node.chrony
   rules:
-  - record: node_ntp_offset_seconds:abs
-    expr: abs(node_ntp_offset_seconds)
+  - record: chrony_tracking_last_offset_seconds:abs
+    expr: abs(chrony_tracking_last_offset_seconds)
+  - record: chrony_rtt_seconds
+    expr: chrony_tracking_last_offset_seconds - chrony_serverstats_ntp_timestamps_held
 
   - alert: NTPDaemonOnNodeDoesNotSynchronizeTime
     expr: (min by (node) (node_timex_sync_status{job="node-exporter"})) == 0
@@ -19,13 +21,13 @@
            * 'kubectl -n d8-chrony exec <POD_NAME> -- /opt/chrony-static/bin/chronyc sources'
         3. Correct the time synchronization problems:
            * correct network problems:
-             - provide availability to upstream time synchronization servers defined in the module [configuration](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/470-chrony/configuration.html);
+             - provide availability to upstream time synchronization servers defined in the module [configuration](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/chrony/configuration.html);
              - eliminate large packet loss and excessive latency to upstream time synchronization servers.
-           * Modify NTP servers list defined in the module [configuration](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/470-chrony/configuration.html).
+           * Modify NTP servers list defined in the module [configuration](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/chrony/configuration.html).
       summary: NTP daemon on node {{$labels.node}} have not synchronized time for too long.
 
   - alert: NodeTimeOutOfSync
-    expr: abs(node_ntp_offset_seconds:abs - (node_ntp_rtt_seconds/2)) > 0.05
+    expr: abs(chrony_tracking_last_offset_seconds:abs - (node_ntp_rtt_seconds/2)) > 0.05
     for: 30m
     labels:
       severity_level: "5"

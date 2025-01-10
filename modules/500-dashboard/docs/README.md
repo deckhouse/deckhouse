@@ -4,7 +4,7 @@ webIfaces:
 - name: dashboard
 ---
 
-This module installs Kubernetes Dashboard [Web UI](https://github.com/kubernetes/dashboard) that allows you to manage applications running in the cluster. It is integrated with [user-authn](../../modules/150-user-authn/) and [user-authz](../../modules/140-user-authz/) modules (access to the cluster is based on the user ID and credentials).
+This module installs Kubernetes Dashboard [Web UI](https://github.com/kubernetes/dashboard) that allows you to manage applications running in the cluster. It is integrated with [user-authn](../../modules/user-authn/) and [user-authz](../../modules/user-authz/) modules (access to the cluster is based on the user ID and credentials).
 
 Kubernetes Dashboard provides the following features:
 

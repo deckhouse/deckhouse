@@ -44,7 +44,7 @@ env:
   SOURCE_REPO: "${{secrets.SOURCE_REPO_GIT}}"
   # cloud providers source repo should contain creds for repo for ex https://user:password@my-repo.com/group
   CLOUD_PROVIDERS_SOURCE_REPO: "${{secrets.CLOUD_PROVIDERS_SOURCE_REPO}}"
-  GOPROXY: "${{secrets.GOPROXY}}"
+  GOPROXY: "${{vars.GOPROXY}}"
   # observability source repo should contain creds for repo for ex https://user:password@my-repo.com/group
   OBSERVABILITY_SOURCE_REPO: "${{secrets.OBSERVABILITY_SOURCE_REPO}}"
   # Next two are required for accessing the stronghold repo during d8 cli builds.
@@ -660,6 +660,35 @@ jobs:
       # </template: login_dev_registry_step>
 
 
+      # <template: login_rw_registry_step>
+      - name: Check rw registry credentials
+        id: check_rw_registry
+        env:
+          HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
+        run: |
+          if [[ -n $HOST ]]; then
+            echo "has_credentials=true" >> $GITHUB_OUTPUT
+            echo "web_registry_path=${{secrets.DECKHOUSE_REGISTRY_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
+          fi
+      - name: Login to rw registry
+        uses: docker/login-action@v2.1.0
+        if: ${{ steps.check_rw_registry.outputs.has_credentials == 'true' }}
+        with:
+          registry: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
+          username: ${{ secrets.DECKHOUSE_REGISTRY_USER }}
+          password: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
+          logout: false
+      - name: Login to Github Container Registry
+        uses: docker/login-action@v2.1.0
+        if: ${{ steps.check_rw_registry.outputs.has_credentials != 'true' }}
+        with:
+          registry: ghcr.io
+          username: ${{ secrets.GHCR_IO_REGISTRY_USER }}
+          password: ${{ secrets.GHCR_IO_REGISTRY_PASSWORD }}
+          logout: false
+      # </template: login_rw_registry_step>
+
+
       - name: Run main web build
         uses: werf/actions/build@43075e4ab81952b181d33e125ef15b9c060a782e
         with:
@@ -670,7 +699,8 @@ jobs:
           WERF_ENV: "EE"
           DOC_API_KEY: "${{secrets.DOC_API_KEY}}"
           DOC_API_URL: "${{vars.DOC_API_URL}}"
-          WERF_REPO: "${{ steps.check_dev_registry.outputs.web_registry_path }}"
+          WERF_REPO: "${{ steps.check_rw_registry.outputs.web_registry_path }}"
+          WERF_SECONDARY_REPO: "${{ steps.check_dev_registry.outputs.web_registry_path }}"
 
     # </template: web_build_template>
 
@@ -1158,6 +1188,8 @@ jobs:
           DOC_API_KEY: "${{secrets.DOC_API_KEY}}"
           DOC_API_URL: "${{vars.DOC_API_URL}}"
           WERF_ENV: "EE"
+          DECKHOUSE_REGISTRY_READ_HOST: "${{secrets.DECKHOUSE_REGISTRY_READ_HOST}}"
+          CHECKER_IMAGE: "${{vars.DOC_LINK_CHECKER_IMAGE}}"
 
           WEB_REGISTRY_PATH: ${{steps.check_rw_registry.outputs.web_registry_path}}
         run: |
@@ -1178,32 +1210,32 @@ jobs:
           export WERF_DIR=$BASEDIR/site
           echo "Use werf_dir $WERF_DIR"
           type werf && source $(werf ci-env github --verbose --as-file)
+
           echo "werf stage image web-backend:"
           werf stage image web-backend | tr 'a-z' 'A-Z'
-          echo "Run 'docker pull' from werf stage image web-backend"
           docker pull $(werf stage image web-backend) || true
+
           echo "werf stage image web-frontend:"
           werf stage image web-frontend | tr 'a-z' 'A-Z'
-          echo "Run 'docker pull' from werf stage image web-frontend"
           docker pull $(werf stage image web-frontend) || true
-          echo "Run 'docker cp' from werf stage image web-backend"
+
+          echo "Copying files from the web-backend container..."
           docker cp $(docker create --rm $(werf stage image web-backend)):/app/root ${_TMPDIR}/backend
-          echo "Run 'docker cp' from werf stage image web-frontend"
+          echo "Copying files from the web-frontend container..."
           docker cp $(docker create --rm $(werf stage image web-frontend)):/app ${_TMPDIR}/frontend
 
           # Extract documentation content to the tmp directory.
           export WERF_DIR=$BASEDIR/documentation
           type werf && source $(werf ci-env github --verbose --as-file)
           echo "werf stage image docs/web:"
-          werf stage image web | tr 'a-z' 'A-Z'
-          echo "Run 'docker pull' from werf stage image docs/web"
+          werf stage image docs/web | tr 'a-z' 'A-Z'
           docker pull $(werf stage image docs/web)
-          echo "Run 'docker cp' from werf stage image docs/web"
-          docker cp $(docker create --rm $(werf stage image docs/web)):/app ${_TMPDIR}/documentation
+          echo "Copying DKP documentation files from the docs/web container..."
+          docker cp $(docker create --rm $(werf stage image docs/web)):/app ${_TMPDIR}/dkp-documentation
 
           # Create EN site structure.
-          echo "Create site structure in '${_TMPDIR}/site_en/'"
-          mkdir -p ${_TMPDIR}/site_en/ ${_TMPDIR}/site_ru/
+          echo "Create site structure in ${_TMPDIR}"
+          mkdir -p ${_TMPDIR}/site_en/products/kubernetes-platform/documentation/ ${_TMPDIR}/site_ru/products/kubernetes-platform/documentation/
           touch ${_TMPDIR}/site_en/index.html ${_TMPDIR}/site_ru/index.html
           rsync -a --exclude='ru' --exclude='en' --exclude='compare' --exclude='includes/header.html' ${_TMPDIR}/frontend/ ${_TMPDIR}/site_en/
           rsync -a --exclude='ru' --exclude='en' --exclude='compare' --exclude='includes/header.html' ${_TMPDIR}/frontend/ ${_TMPDIR}/site_ru/
@@ -1214,41 +1246,37 @@ jobs:
           rsync -a --exclude='includes/header.html' ${_TMPDIR}/backend/en/ ${_TMPDIR}/site_en/
           rsync -a --exclude='includes/header.html' ${_TMPDIR}/backend/ru/ ${_TMPDIR}/site_ru/
           #
-          rsync -a --exclude='ru' --exclude='en' --exclude='compare' ${_TMPDIR}/documentation/ ${_TMPDIR}/site_en/documentation/
-          rsync -a --exclude='ru' --exclude='en' --exclude='compare' ${_TMPDIR}/documentation/ ${_TMPDIR}/site_ru/documentation/
-          rsync -a ${_TMPDIR}/documentation/en/ ${_TMPDIR}/site_en/documentation/
-          rsync -a ${_TMPDIR}/documentation/ru/ ${_TMPDIR}/site_ru/documentation/
+          rsync -a --exclude='ru' --exclude='en' --exclude='compare' ${_TMPDIR}/dkp-documentation/ ${_TMPDIR}/site_en/products/kubernetes-platform/documentation/
+          rsync -a --exclude='ru' --exclude='en' --exclude='compare' ${_TMPDIR}/dkp-documentation/ ${_TMPDIR}/site_ru/products/kubernetes-platform/documentation/
+          rsync -a ${_TMPDIR}/dkp-documentation/en/ ${_TMPDIR}/site_en/products/kubernetes-platform/documentation/
+          rsync -a ${_TMPDIR}/dkp-documentation/ru/ ${_TMPDIR}/site_ru/products/kubernetes-platform/documentation/
           #
-          rsync -a ${_TMPDIR}/documentation/{assets,css,images,js} ${_TMPDIR}/site_en/documentation
-          rsync -a ${_TMPDIR}/documentation/{assets,css,images,js} ${_TMPDIR}/site_ru/documentation
+          rsync -a ${_TMPDIR}/dkp-documentation/{assets,images} ${_TMPDIR}/site_en/products/kubernetes-platform/documentation
+          rsync -a ${_TMPDIR}/dkp-documentation/{assets,images} ${_TMPDIR}/site_ru/products/kubernetes-platform/documentation
 
-      - name: Check links with html-proofer (EN)
-        run: |
-          # Do not exit on html-proofer error.
-          set +e
-          # Checking EN site
-          docker run --rm -v "${_TMPDIR}/site_en:/src:ro" klakegg/html-proofer:3.19.2 \
-            --allow-hash-href --check-html --empty-alt-ignore \
-            --url-ignore "/alerts.html/,/^\/(?!(gs\/|documentation\/|guides\/))/,/localhost/,/https\:\/\/t.me/,/docs-prv\.pcisecuritystandards\.org/,/gitlab.com\/profile/,/dash.cloudflare.com\/profile/,/example.com/,/vmware.com/,/.slack.com/,/habr.com/,/flant.ru/,/bcrypt-generator.com/,/candi\/bashible\/bashbooster/,/..\/..\/compare\//,/compare\/ru\//,/compare\/en\//,/\.yml$/,/\.yaml$/,/\.tmpl$/,/\.tpl$/" \
-            --url-swap "https\:\/\/deckhouse.io\/:/,\/products\/kubernetes-platform\/documentation\/v1\/:/documentation/,\/products\/kubernetes-platform\/documentation\/latest\/:/documentation/,\/documentation\/v1\/:/documentation/" \
-            --file_ignore "404.html,./documentation/alerts.html" \
-            --http-status-ignore "0,429" ${1}
-          # Emulate 'allow_failure: true' from Gitlab. Github has only two state: success and failure.
-          exit 0
+          echo "Moving DKP guides and GS files..."
+          mv  ${_TMPDIR}/site_ru/{gs,guides} ${_TMPDIR}/site_ru/products/kubernetes-platform
+          mv  ${_TMPDIR}/site_en/{gs,guides} ${_TMPDIR}/site_en/products/kubernetes-platform
 
-      - name: Check links with html-proofer (RU)
+          echo "Moving DVP files..."
+          mv  ${_TMPDIR}/site_ru/virtualization-platform ${_TMPDIR}/site_ru/products/virtualization-platform
+          mv  ${_TMPDIR}/site_en/virtualization-platform ${_TMPDIR}/site_en/products/virtualization-platform
+
+      - name: Check links with html-proofer
+        continue-on-error: true
+        env:
+          DECKHOUSE_REGISTRY_READ_HOST: "${{secrets.DECKHOUSE_REGISTRY_READ_HOST}}"
+          CHECKER_IMAGE: "${{vars.DOC_LINK_CHECKER_IMAGE}}"
         run: |
-          # Do not exit on html-proofer error.
-          set +e
-          # Checking RU site
-          docker run --rm -v "${_TMPDIR}/site_ru:/src:ro" klakegg/html-proofer:3.19.2 \
-            --allow-hash-href --check-html --empty-alt-ignore \
-            --url-ignore "/alerts.html/,/^\/(?!(gs\/|documentation\/|guides\/))/,/localhost/,/https\:\/\/t.me/,/docs-prv\.pcisecuritystandards\.org/,/gitlab.com\/profile/,/dash.cloudflare.com\/profile/,/example.com/,/vmware.com/,/.slack.com/,/habr.com/,/flant.ru/,/bcrypt-generator.com/,/candi\/bashible\/bashbooster/,/..\/..\/compare\//,/compare\/ru\//,/compare\/en\//,/\.yml$/,/\.yaml$/,/\.tmpl$/,/\.tpl$/" \
-            --url-swap "https\:\/\/deckhouse.io\/:/,\/products\/kubernetes-platform\/documentation\/v1\/:/documentation/,\/products\/kubernetes-platform\/documentation\/latest\/:/documentation/,\/documentation\/v1\/:/documentation/" \
-            --file_ignore "404.html,./documentation/alerts.html" \
-            --http-status-ignore "0,429" ${1}
-          # Emulate 'allow_failure: true' from Gitlab. Github has only two state: success and failure.
-          exit 0
+          test -e ./tools/docs/link-checker/entrypoint.sh && \
+          docker run \
+            --rm \
+            -v "${_TMPDIR}/site_en:/src/en:ro" \
+            -v "${_TMPDIR}/site_ru:/src/ru:ro" \
+            -v "./tools/docs/link-checker/entrypoint.sh:/entrypoint.sh:ro" \
+            -u $(id -u) \
+            ${DECKHOUSE_REGISTRY_READ_HOST}/base_images/${CHECKER_IMAGE} \
+            /entrypoint.sh
 
       - name: Clean TMPDIR
         if: always()

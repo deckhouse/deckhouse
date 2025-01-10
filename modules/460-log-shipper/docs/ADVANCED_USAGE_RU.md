@@ -38,7 +38,7 @@ kubectl -n d8-log-shipper exec $pod -it -c vector -- bash
 ### Посмотреть каналы как graph
 
 * Выполните команду `vector graph`, чтобы получить graph [в формате DOT](https://graphviz.org/doc/info/lang.html).
-* Выставьте его в [webgraphviz](http://www.webgraphviz.com/) или другой похожий сервис, чтобы получить изображение.
+* Выставьте его в [webgraphviz](https://www.webgraphviz.com/) или другой похожий сервис, чтобы получить изображение.
 
 Пример graph'а для одного канала передачи логов в формате ASCII:
 
@@ -72,7 +72,7 @@ kubectl -n d8-log-shipper exec $pod -it -c vector -- bash
 
 Пример вывода команды:
 
-![Vector TOP output](../../images/460-log-shipper/vector_top.png)
+![Vector TOP output](../../images/log-shipper/vector_top.png)
 
 ### Получить необработанные образцы log'ов
 
