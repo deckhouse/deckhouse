@@ -199,12 +199,6 @@ func (r *deckhouseReleaseReconciler) getClusterUUID(ctx context.Context) string 
 	return uuid.Must(uuid.NewV4()).String()
 }
 
-// 1) all new releases state is pending
-// 2) sort releases by version
-// 3) do predict
-// 4) all releases between pending (include) and predicted became skipped
-// 5) enroll predicted
-// 6) requeue
 func (r *deckhouseReleaseReconciler) createOrUpdateReconcile(ctx context.Context, dr *v1alpha1.DeckhouseRelease) (ctrl.Result, error) {
 	var res ctrl.Result
 
@@ -226,8 +220,6 @@ func (r *deckhouseReleaseReconciler) createOrUpdateReconcile(ctx context.Context
 		return res, nil
 
 	case v1alpha1.ModuleReleasePhaseDeployed:
-		// don't think we have to do anything with Deployed release
-		// probably, we have to move the Deployment's image update logic here
 		return r.reconcileDeployedRelease(ctx, dr)
 	}
 
@@ -483,15 +475,15 @@ func (r *deckhouseReleaseReconciler) PreApplyReleaseCheck(ctx context.Context, d
 // If patch, calculate by checking this conditions:
 // - Canary
 // - Notify
-// - Window Mode is AutoPatch
+// - Window
 // - ManualApproved
 //
 // If minor, calculate by checking this conditions:
 // - Cooldown
-// - Canary Not In Manual Mode
+// - Canary
 // - Notify
-// - Window Mode is Auto
-// - Manual Approved Not odeAuto
+// - Window
+// - Manual Approved
 func (r *deckhouseReleaseReconciler) DeployTimeCalculate(ctx context.Context, dr *v1alpha1.DeckhouseRelease, task *d8updater.Task, metricLabels updater.MetricLabels) *d8updater.DeployTimeReason {
 	us := r.updateSettings.Get()
 
@@ -578,6 +570,7 @@ func (r *deckhouseReleaseReconciler) ApplyRelease(ctx context.Context, dr *v1alp
 }
 
 // runReleaseDeploy
+//
 // 1) bump deckhouse deployment (retry if error)
 // 2) bump previous deployment status superseded (retry if error)
 // 3) bump release annotations (retry if error)
