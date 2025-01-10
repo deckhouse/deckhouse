@@ -70,6 +70,10 @@ fromImage: common/distroless
 final: false
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-artifact
-  add: /opt/python-static
-  to: /opt/python-static
+  add: /
+  to: /
   before: setup
+  includePaths:
+  - opt/python-static
+  - usr/bin/pip3
+  - usr/bin/python3
