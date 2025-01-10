@@ -1,7 +1,7 @@
 {{- $binaries := "/usr/bin/python3 /lib64/libz.so* /lib64/libexpat.so* /usr/lib64/libffi.so* /lib64/libcrypto.so* /lib64/libssl.so*" }}
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
-from: {{ .Images.BASE_ALT_DEV }}
+from: {{ .Images.BASE_ALT_P11 }}
 git:
   - add: /{{ $.ModulePath }}modules/340-{{ $.ModuleName }}/images/{{ $.ImageName }}/src/requirements.txt
     to: /requirements.txt
@@ -16,6 +16,7 @@ shell:
     - rm -rf /wheels/.git
     - apt-get -y remove python3-module-cryptography
     - pip3 install -f file:///wheels --no-index -r /requirements.txt
+    - apt-get remove python3-module-pip
     - /binary_replace.sh -i "{{ $binaries }}" -o /relocate
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
