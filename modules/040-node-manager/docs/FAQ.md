@@ -614,6 +614,26 @@ When changing the CRI in the cluster, additional steps are required for the mast
 
 Additional node configuration steps are set via the [NodeGroupConfiguration](cr.html#nodegroupconfiguration) custom resource.
 
+## How to automatically put custom labels on the added node?
+
+1. On the newly added node, create the directory `/var/lib/node_labels`.
+
+1. Create a file or files containing the necessary labels in it. The number of files can be any, as well as the number of subdirectories containing them.
+
+2. Add the necessary labels to the files in the `key=value` format. For example:
+
+   ```
+   example-label=test
+   ```
+
+1. Save the files.
+
+When adding a node to the cluster, the labels specified in the files will be automatically affixed to the node.
+
+{% alert level="warning" %}
+Please note that it is not possible to add labels used in DKP in this way. This method will only work with custom labels that do not overlap with those reserved for Deckhouse.
+{% endalert %}
+
 ## How to use containerd with Nvidia GPU support?
 
 Create NodeGroup for GPU-nodes.
