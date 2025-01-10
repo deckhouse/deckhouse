@@ -61,7 +61,7 @@ spec:
                   description: |
                     Desirable module release channel.
 
-                    The order in which the stability of the release channel increases (from **less** stable to **more** stable): `Alpha`, `Beta`, `EarlyAccess`, `Stable`, `RockSolid`.
+                    The order in which the stability of the release channel increases (from **less** stable to **more** stable): `Alpha`, `Beta`, `EarlyAccess`, `Stable`, `RockSolid`, `LTS`.
                   default: Stable
                   enum:
                     - Alpha
@@ -69,6 +69,7 @@ spec:
                     - EarlyAccess
                     - Stable
                     - RockSolid
+                    - LTS
                 update:
                   type: object
                   description: Update settings for target modules.
