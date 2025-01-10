@@ -346,7 +346,7 @@ You can use the `conversion.TestConvert` function to write conversion tests. It 
 - path to the source configuration file (i.e., the version before the conversion);
 - path to the resulting configuration file (i.e., the version after the conversion).
 
-An [example](https://github.com/deckhouse/deckhouse/blob/main/modules/prometheus/openapi/conversions/conversions_test.go) of a conversion test.
+An [example](https://github.com/deckhouse/deckhouse/blob/main/modules/300-prometheus/openapi/conversions/conversions_test.go) of a conversion test.
 
 ## templates
 
