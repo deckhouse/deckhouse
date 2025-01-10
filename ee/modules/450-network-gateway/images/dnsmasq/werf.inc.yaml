@@ -7,7 +7,7 @@ import:
 - image: common/python-static
   add: /
   to: /
-  before: setup
+  before: install
   includePaths:
   - opt/python-static
   - usr/bin/pip3
@@ -16,7 +16,7 @@ shell:
   install:
     - apt-get update
     - apt-get install -y dnsmasq
-    - /usr/bin/pip3 install pysqlite3 pyroute2 six ipcalc
+    - pip3 install pysqlite3 pyroute2 six ipcalc
     - /binary_replace.sh -i "{{ $binaries }}" -o /relocate
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
