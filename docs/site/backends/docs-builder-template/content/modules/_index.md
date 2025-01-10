@@ -10,4 +10,19 @@ The distinguishing feature of an _embedded_ Deckhouse module is that it is deliv
 
 Deckhouse modules (connected using the `ModuleSource` resource) have a release cycle that is independent of Deckhouse, i. e. they can be updated independently of Deckhouse versions. Deckhouse modules may be developed by a team that is not part of the Deckhouse development team. The operation of a particular module may affect the stability of Deckhouse, but we strive to ensure that such an impact will not have serious consequences for the platform as a whole.
 
+You can view the type of module present in the cluster using the command:
+
+```shell
+kubectl get modules
+```
+
+Example output:
+```
+NAME                WEIGHT   SOURCE      PHASE        ENABLED   READY
+cni-simple-bridge   35       Embedded    Ready        True      True
+commander           911      deckhouse   Available    False     False
+```
+
+If the `Source` column contains `Embedded`, then this module is built into deckhouse. In other cases, this column contains the name of the `ModuleSource` object from which the module is installed.
+
 This section provides information on Deckhouse modules that have passed preliminary compatibility testing and have been approved for use with Deckhouse.
