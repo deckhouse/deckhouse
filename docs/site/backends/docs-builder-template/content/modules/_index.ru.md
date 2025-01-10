@@ -17,6 +17,7 @@ kubectl get modules
 ```
 
 Пример вывода:
+
 ```
 NAME                WEIGHT   SOURCE      PHASE        ENABLED   READY
 cni-simple-bridge   35       Embedded    Ready        True      True
