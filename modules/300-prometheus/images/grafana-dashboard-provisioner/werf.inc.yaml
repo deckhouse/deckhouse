@@ -21,6 +21,7 @@ git:
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
 final: false
+fromCacheVersion: "0"
 from: {{ $.Images.BASE_ALT_P11 }}
 import:
 - image: common/python-static
@@ -35,4 +36,4 @@ git:
     - '**/*'
 shell:
   install:
-  - /usr/bin/pip3 install -r /requirements.txt
+  - pip3 install -r /requirements.txt
