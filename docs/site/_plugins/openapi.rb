@@ -250,7 +250,7 @@ module Jekyll
                         elsif exampleObject.is_a?(Array)
                             exampleContent = %Q(```yaml\n#{( if name then {name => exampleObject} else exampleObject end).to_yaml.sub(/^---(\n| ){1}/,'')}```)
                         else
-                            if exampleObject =~ /\`\`\`|\n/
+                            if exampleObject.is_a?(String) and exampleObject =~ /\`\`\`|\n/
                                 exampleContent = "#{exampleObject}"
                             elsif attributes['type'] == 'boolean' then
                                 exampleContent = %Q(```yaml\n#{(if name then {name => (exampleObject and true)} else (exampleObject and true) end).to_yaml.sub(/^---(\n| ){1}/,'')}```)
@@ -535,10 +535,12 @@ module Jekyll
 
     def format_crd(input, moduleName = "")
 
+        puts "Module name: #{moduleName}"
         return nil if !input
 
         @moduleName = moduleName
         @resourceType = "crd"
+        return
 
         if ( @context.registers[:page]["lang"] == 'en' )
             fallbackLanguageName = 'ru'
@@ -787,7 +789,7 @@ module Jekyll
             if !( get_hash_value(input, 'i18n', 'en', 'properties', 'settings' ) )
                input['i18n']['en']['properties'] = { "settings" => { "type" => "object", "properties" => input['i18n']['en']['properties'] } }
             end
-            if !( get_hash_value(input, 'i18n', 'ru', 'properties', 'settings' ) )
+            if !( get_hash_value(input, 'i18n', 'ru', 'properties', 'settings' ) ) and get_hash_value(input, 'i18n', 'ru', 'properties' )
                input['i18n']['ru']['properties'] = { "settings" => { "type" => "object", "properties" => input['i18n']['ru']['properties'] } }
             end
         end

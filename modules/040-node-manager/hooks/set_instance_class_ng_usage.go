@@ -32,7 +32,7 @@ import (
 var kindToVersion = map[string]string{
 	"vcdinstanceclass":         "deckhouse.io/v1",
 	"zvirtinstanceclass":       "deckhouse.io/v1",
-	"dynamixinstanceclass":     "deckhouse.io/v1alpha1",
+	"dynamixinstanceclass":     "deckhouse.io/v1",
 	"huaweicloudinstanceclass": "deckhouse.io/v1",
 }
 

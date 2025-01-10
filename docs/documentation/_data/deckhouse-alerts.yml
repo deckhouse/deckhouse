@@ -225,7 +225,14 @@ alerts:
       moduleUrl: 340-extended-monitoring
       module: extended-monitoring
       edition: ce
-      description: ""
+      description: |
+        Print Job details: `kubectl -n {{$labels.namespace}} describe job {{$labels.job_name}}`
+
+        Check the Job status:
+        `kubectl -n {{$labels.namespace}} get job {{$labels.job_name}}`
+
+        Check the status of pods created by the Job:
+        `kubectl -n {{$labels.namespace}} get pods -l job-name={{$labels.job_name}}`
       summary: |
         Job {{$labels.namespace}}/{{$labels.job_name}} failed in CronJob {{$labels.namespace}}/{{$labels.owner_name}}.
       severity: "5"
@@ -246,7 +253,14 @@ alerts:
       moduleUrl: 340-extended-monitoring
       module: extended-monitoring
       edition: ce
-      description: ""
+      description: |
+        Print Job details: `kubectl -n {{$labels.namespace}} describe job {{$labels.job_name}}`
+
+        Check the Job status:
+        `kubectl -n {{$labels.namespace}} get job {{$labels.job_name}}`
+
+        Check the status of pods created by the Job:
+        `kubectl -n {{$labels.namespace}} get pods -l job-name={{$labels.job_name}}`
       summary: |
         CronJob {{$labels.namespace}}/{{$labels.job_name}} pods still not created.
       severity: "5"
@@ -304,7 +318,7 @@ alerts:
 
         They must be moved from Deckhouse namespace to user-spec namespace (was not labeled as `heritage: deckhouse`).
 
-        The detailed description of the metric collecting process is available in the [documentation](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/300-prometheus/faq.html).
+        The detailed description of the metric collecting process is available in the [documentation](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/prometheus/faq.html).
       summary: |
         There are PodMonitors in Deckhouse namespace that were not created by Deckhouse.
       severity: "9"
@@ -321,7 +335,7 @@ alerts:
 
         They must be moved from Deckhouse namespace to user-spec namespace (was not labeled as `heritage: deckhouse`).
 
-        The detailed description of the metric collecting process is available in the [documentation](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/300-prometheus/faq.html).
+        The detailed description of the metric collecting process is available in the [documentation](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/prometheus/faq.html).
       summary: |
         There are ServiceMonitors in Deckhouse namespace that were not created by Deckhouse.
       severity: "9"
@@ -505,6 +519,57 @@ alerts:
         Cluster-autoscaler issues too many errors.
       severity: "8"
       markupFormat: markdown
+    - name: D8CNIEnabledMoreThanOne
+      sourceFile: modules/340-monitoring-deckhouse/monitoring/prometheus-rules/cni-checks.yaml
+      moduleUrl: 340-monitoring-deckhouse
+      module: monitoring-deckhouse
+      edition: ce
+      description: |
+        Several CNIs are enabled in the cluster:
+        For the cluster to work correctly, only one CNI must be enabled.
+      summary: |
+        More than one CNI is enabled in the cluster.
+      severity: "2"
+      markupFormat: markdown
+    - name: D8CNIMisconfigured
+      sourceFile: modules/021-cni-cilium/monitoring/prometheus-rules/cni-checks.yaml
+      moduleUrl: 021-cni-cilium
+      module: cni-cilium
+      edition: ce
+      description: |
+        It is necessary to correct the settings in the CNI {{ $labels.cni }} ModuleConfig.
+        You can find the desired settings in the `d8-system/desired-cni-moduleconfig` configmap.
+        To do this, please run the following command: `kubectl -n d8-system get configmap desired-cni-moduleconfig -o yaml`.
+      summary: |
+        The settings from the secret d8-cni-configuration and the ModuleConfig contradict each other.
+      severity: "3"
+      markupFormat: markdown
+    - name: D8CNIMisconfigured
+      sourceFile: modules/035-cni-flannel/monitoring/prometheus-rules/cni-checks.yaml
+      moduleUrl: 035-cni-flannel
+      module: cni-flannel
+      edition: ce
+      description: |
+        It is necessary to correct the settings in the CNI {{ $labels.cni }} ModuleConfig.
+        You can find the desired settings in the `d8-system/desired-cni-moduleconfig` configmap.
+        To do this, please run the following command: `kubectl -n d8-system get configmap desired-cni-moduleconfig -o yaml`.
+      summary: |
+        The settings from the secret d8-cni-configuration and the ModuleConfig contradict each other.
+      severity: "3"
+      markupFormat: markdown
+    - name: D8CNIMisconfigured
+      sourceFile: modules/035-cni-simple-bridge/monitoring/prometheus-rules/cni-checks.yaml
+      moduleUrl: 035-cni-simple-bridge
+      module: cni-simple-bridge
+      edition: ce
+      description: |
+        It is necessary to correct the settings in the CNI {{ $labels.cni }} ModuleConfig.
+        You can find the desired settings in the `d8-system/desired-cni-moduleconfig` configmap.
+        To do this, please run the following command: `kubectl -n d8-system get configmap desired-cni-moduleconfig -o yaml`.
+      summary: |
+        The settings from the secret d8-cni-configuration and the ModuleConfig contradict each other.
+      severity: "3"
+      markupFormat: markdown
     - name: D8ControlPlaneManagerPodNotRunning
       sourceFile: modules/040-control-plane-manager/monitoring/prometheus-rules/control-plane-manager.yaml
       moduleUrl: 040-control-plane-manager
@@ -531,7 +596,7 @@ alerts:
 
         They must be abandoned and replaced with the `CustomPrometheusRules` object.
 
-        Please, refer to the [documentation](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/300-prometheus/faq.html#how-do-i-add-alerts-andor-recording-rules) for information about adding alerts and/or recording rules.
+        Please, refer to the [documentation](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/prometheus/faq.html#how-do-i-add-alerts-andor-recording-rules) for information about adding alerts and/or recording rules.
       summary: |
         There are PrometheusRules in the cluster that were not created by Deckhouse.
       severity: "9"
@@ -844,9 +909,9 @@ alerts:
 
         The Deployment is in the MinimumReplicasUnavailable state.
 
-        Run the following command to check the status of the Deployment: `kubectl -n d8-monitoring get deployment grafana -o json | jq .status`.
+        Run the following command to check the status of the Deployment: `kubectl -n d8-monitoring get deployment grafana-v10 -o json | jq .status`.
 
-        Run the following command to check the status of the Pods: `kubectl -n d8-monitoring get pods -l app=grafana -o json | jq '.items[] | {(.metadata.name):.status}'`.
+        Run the following command to check the status of the Pods: `kubectl -n d8-monitoring get pods -l app=grafana-v10 -o json | jq '.items[] | {(.metadata.name):.status}'`.
       summary: |
         One or more Grafana Pods are NOT Running.
       severity: "6"
@@ -885,7 +950,7 @@ alerts:
 
         Excessive Grafana restarts indicate that something is wrong. Normally, Grafana should be up and running all the time.
 
-        Please, refer to the corresponding logs: `kubectl -n d8-monitoring logs -f -l app=grafana -c grafana`.
+        Please, refer to the corresponding logs: `kubectl -n d8-monitoring logs -f -l app=grafana-v10 -c grafana`.
       summary: |
         Excessive Grafana restarts are detected.
       severity: "9"
@@ -901,9 +966,9 @@ alerts:
         Grafana unavailability can negatively impact users who actively use it in their work.
 
         The recommended course of action:
-        1. Check the availability and status of Grafana Pods: `kubectl -n d8-monitoring get pods -l app=grafana`;
-        2. Check the availability of the Grafana Deployment: `kubectl -n d8-monitoring get deployment grafana`;
-        3. Examine the status of the Grafana Deployment: `kubectl -n d8-monitoring describe deployment grafana`.
+        1. Check the availability and status of Grafana Pods: `kubectl -n d8-monitoring get pods -l app=grafana-v10`;
+        2. Check the availability of the Grafana Deployment: `kubectl -n d8-monitoring get deployment grafana-v10`;
+        3. Examine the status of the Grafana Deployment: `kubectl -n d8-monitoring describe deployment grafana-v10`.
       summary: |
         There is no Grafana target in Prometheus.
       severity: "6"
@@ -932,7 +997,7 @@ alerts:
 
         Removing a module from a cluster can lead to a number of irreparable consequences.
 
-        Please run `kubectl annotate moduleconfig {{ $labels.module }} modules.deckhouse.io/allow-disable-` to stop this alert.
+        Please run `kubectl annotate moduleconfig {{ $labels.module }} modules.deckhouse.io/allow-disabling-` to stop this alert.
       summary: |
         ModuleConfig annotation for allow to disable is setted.
       severity: "4"
@@ -1070,7 +1135,7 @@ alerts:
         ```
         max by (namespace, dataplane_pod) (d8_istio_dataplane_metadata{full_version="{{$labels.full_version}}"})
         ```
-        Also consider using the automatic istio data-plane update described in the documentation: https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/110-istio/examples.html#upgrading-istio
+        Also consider using the automatic istio data-plane update described in the documentation: https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/istio/examples.html#upgrading-istio
       summary: |
         There are Pods with data-plane version different from control-plane one.
       severity: "8"
@@ -1099,7 +1164,7 @@ alerts:
       description: |
         There is deprecated istio version `{{$labels.version}}` installed.
         Impact — version support will be removed in future deckhouse releases. The higher alert severity — the higher probability of support cancelling.
-        Read [documentation](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/110-istio/examples.html#upgrading-istio) on upgrading Istio.
+        Read [documentation](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/istio/examples.html#upgrading-istio) on upgrading Istio.
       summary: |
         There is deprecated istio version installed
       severity: undefined
@@ -1240,7 +1305,7 @@ alerts:
       description: |
         The current istio version `{{$labels.istio_version}}` may not work properly with the current k8s version `{{$labels.k8s_version}}`, because it is unsupported officially.
         Please upgrade istio as soon as possible.
-        Read [documentation](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/110-istio/examples.html#upgrading-istio) on upgrading Istio.
+        Read [documentation](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/istio/examples.html#upgrading-istio) on upgrading Istio.
       summary: |
         The installed istio version is incompatible with the k8s version
       severity: "3"
@@ -1321,7 +1386,7 @@ alerts:
       edition: ce
       description: |-
         Found ClusterLogDestination resource {{$labels.resource_name}} without authorization params.
-        You should [add](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/460-log-shipper/faq.html#how-to-add-authorization-to-the-clusterlogdestination-resource) authorization params to the ClusterLogDestination resource.
+        You should [add](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/log-shipper/faq.html#how-to-add-authorization-to-the-clusterlogdestination-resource) authorization params to the ClusterLogDestination resource.
       summary: |
         Required authorization params for ClusterLogDestination.
       severity: "9"
@@ -1668,10 +1733,10 @@ alerts:
       module: node-manager
       edition: ce
       description: |
-        The {{ $labels.node }} Node is not managed by the [node-manager](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/040-node-manager/) module.
+        The {{ $labels.node }} Node is not managed by the [node-manager](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/node-manager/) module.
 
         The recommended actions are as follows:
-        - Follow these instructions to clean up the node and add it to the cluster: https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/040-node-manager/faq.html#how-to-clean-up-a-node-for-adding-to-the-cluster
+        - Follow these instructions to clean up the node and add it to the cluster: https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/node-manager/faq.html#how-to-clean-up-a-node-for-adding-to-the-cluster
       summary: |
         The {{ $labels.node }} Node is not managed by the node-manager module.
       severity: "9"
@@ -1709,7 +1774,7 @@ alerts:
 
         Note that the label format has changed. You need to change the `prometheus-custom-target` label to `prometheus.deckhouse.io/custom-target`.
 
-        For more information, refer to the [documentation](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/300-prometheus/faq.html).
+        For more information, refer to the [documentation](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/prometheus/faq.html).
       summary: |
         Services with the prometheus-custom-target label are used to collect metrics in the cluster.
       severity: "9"
@@ -1846,7 +1911,7 @@ alerts:
         - reserved `metadata.labels` *node-role.deckhouse.io/* with ending not in `(system|frontend|monitoring|_deckhouse_module_name_)`
         - or reserved `spec.taints` *dedicated.deckhouse.io* with values not in `(system|frontend|monitoring|_deckhouse_module_name_)`
 
-        [Get instructions on how to fix it here](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/040-node-manager/faq.html#how-do-i-allocate-nodes-to-specific-loads).
+        [Get instructions on how to fix it here](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/node-manager/faq.html#how-do-i-allocate-nodes-to-specific-loads).
       summary: |
         Node {{ $labels.name }} needs fixing up
       severity: "6"
@@ -2724,7 +2789,7 @@ alerts:
       module: ingress-nginx
       edition: ce
       description: |-
-        There is an IngressNginxController and/or an Ingress object that utilize(s) Nginx GeoIPv1 module's variables. The module is deprecated and its support is discontinued from Ingess Nginx Controller of version 1.10 and higher. It's recommend to upgrade your configuration to use [GeoIPv2 module](https://deckhouse.io/documentation/v1/modules/402-ingress-nginx/cr.html#ingressnginxcontroller-v1-spec-geoip2).
+        There is an IngressNginxController and/or an Ingress object that utilize(s) Nginx GeoIPv1 module's variables. The module is deprecated and its support is discontinued from Ingess Nginx Controller of version 1.10 and higher. It's recommend to upgrade your configuration to use [GeoIPv2 module](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/ingress-nginx/cr.html#ingressnginxcontroller-v1-spec-geoip2).
         Use the following command to get the list of the IngressNginxControllers that contain GeoIPv1 variables:
         `kubectl  get ingressnginxcontrollers.deckhouse.io -o json | jq '.items[] | select(..|strings | test("\\$geoip_(country_(code3|code|name)|area_code|city_continent_code|city_country_(code3|code|name)|dma_code|latitude|longitude|region|region_name|city|postal_code|org)([^_a-zA-Z0-9]|$)+")) | .metadata.name'`
 
@@ -2777,7 +2842,7 @@ alerts:
           * CPU overloads and throttling of containers
           * 500 errors on ingress
           * Replicas quantity of controllers (alerts about the insufficient amount of replicas of  Deployment, StatefulSet, DaemonSet)
-          * And [others](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/340-extended-monitoring/)
+          * And [others](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/extended-monitoring/)
 
         To debug, execute the following commands:
           1. `kubectl -n d8-monitoring describe deploy extended-monitoring-exporter`
@@ -3678,7 +3743,10 @@ alerts:
       moduleUrl: 340-monitoring-deckhouse
       module: monitoring-deckhouse
       edition: ce
-      description: "The '{{ $labels.moduleName }}' module has a deprecated module update policy, the policy selector does not work, and the module will use deckhouse update policy. \n\nPlease specify the proper update policy in the module configuration to continue get updates.\n"
+      description: |
+        The '{{ $labels.moduleName }}' module has a deprecated module update policy, the policy selector does not work, and the module will use deckhouse update policy.
+
+        Please specify the proper update policy in the module configuration to continue get updates.
       summary: |
         The '{{ $labels.moduleName }}' module has a deprecated module update policy.
       severity: "4"
@@ -4319,9 +4387,9 @@ alerts:
            * 'kubectl -n d8-chrony exec <POD_NAME> -- /opt/chrony-static/bin/chronyc sources'
         3. Correct the time synchronization problems:
            * correct network problems:
-             - provide availability to upstream time synchronization servers defined in the module [configuration](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/470-chrony/configuration.html);
+             - provide availability to upstream time synchronization servers defined in the module [configuration](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/chrony/configuration.html);
              - eliminate large packet loss and excessive latency to upstream time synchronization servers.
-           * Modify NTP servers list defined in the module [configuration](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/470-chrony/configuration.html).
+           * Modify NTP servers list defined in the module [configuration](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/chrony/configuration.html).
       summary: |
         NTP daemon on node {{$labels.node}} have not synchronized time for too long.
       severity: "5"
@@ -4438,7 +4506,7 @@ alerts:
         ```shell
         kubectl -n {{ $labels.namespace }} exec -ti {{ $labels.pod_name }} -c prometheus -- df -PBG /prometheus
         ```
-        Consider increasing it https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/300-prometheus/faq.html#how-to-expand-disk-size
+        Consider increasing it https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/prometheus/faq.html#how-to-expand-disk-size
       summary: |
         Prometheus disk is over 95% used.
       severity: "4"
@@ -4687,6 +4755,8 @@ modules-having-alerts:
     - chrony
     - cloud-provider-yandex
     - cni-cilium
+    - cni-flannel
+    - cni-simple-bridge
     - control-plane-manager
     - documentation
     - extended-monitoring

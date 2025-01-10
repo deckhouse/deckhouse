@@ -167,10 +167,17 @@ spec:
                         description: |-
                           The value that the toleration must match.
 
-                          Must be empty if the operator parameter is set to `Exists`.
+                          Must be empty if the `operator` parameter is set to `Exists`.
                         type: string
                     type: object
                   type: array
+                highAvailability:
+                  type: boolean
+                  description: |-
+                    Enables high availability mode for `dex-authenticator`.
+
+                    When this mode is enabled, multiple pod replicas will be deployed to ensure fault tolerance.
+                  x-doc-default: 'false'
                 additionalApplications:
                   type: array
                   description: |
@@ -335,10 +342,17 @@ spec:
                         description: |-
                           The value that the toleration must match.
 
-                          Must be empty if the operator parameter is set to `Exists`.
+                          Must be empty if the `operator` parameter is set to `Exists`.
                         type: string
                     type: object
                   type: array
+                highAvailability:
+                  type: boolean
+                  description: |-
+                    Enables high availability mode for `dex-authenticator`.
+
+                    When this mode is enabled, multiple pod replicas will be deployed to ensure fault tolerance.
+                  x-doc-default: 'false'
       additionalPrinterColumns:
         - jsonPath: .spec.applications[*].domain
           name: Domains

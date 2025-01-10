@@ -1,6 +1,6 @@
 ---
 image: dev/install
-from: {{ .Images.BASE_ALT }}
+fromImage: common/alt-p11
 git:
 - add: /
   to: /deckhouse
@@ -8,102 +8,10 @@ git:
   - candi
 {{ .Files.Get (printf "tools/build_includes/candi-%s.yaml" .Env) }}
 import:
-- artifact: dhctl
-  add: /dhctl/bin/dhctl
-  to: /dhctl
-  after: setup
-- image: dev-prebuild
-  add: /deckhouse
-  to: /deckhouse
-  includePaths:
-  - modules/*/openapi/config-values.yaml
-  - global-hooks/openapi/config-values.yaml
-  after: setup
-- artifact: terraform # from modules/040-terraform-manager/images/terraform-manager-base/werf.inc.yaml
-  add: /terraform/terraform
-  to: /bin/terraform
-  before: setup
-{{- range $_, $edition := $.Editions }}
-  {{- if $edition.terraformProviders }}
-    {{- range $_, $tfProvider := $edition.terraformProviders }}
-      {{- $tf := index $.TF $tfProvider }}
-- artifact: {{ $tf.artifact }} # from modules/040-terraform-manager/images/terraform-manager-{PROVIDER}/werf.inc.yaml
-  add: /{{ $tf.artifactBinary }}
-  to: /plugins/registry.terraform.io/{{ $tf.namespace }}/{{ $tf.type }}/{{ $tf.version }}/linux_amd64/{{ $tf.destinationBinary }}
-  before: setup
-    {{- end }}
-  {{- end }}
-  {{- if eq $.Env $edition.name }}
-    {{- break -}}
-  {{- end }}
-{{- end }}
-- artifact: dev-alt-artifact
-  add: /relocate
-  to: /
-  before: setup
-- artifact: ssh-static
-  add: /ssh/bin
-  to: /bin
-  before: setup
-  includePaths:
-  - ssh
-  - ssh-add
-  - ssh-agent
-  - scp
-- image: images-digests
-  add: /images_digests.json
-  to: /deckhouse/candi/images_digests.json
-  after: setup
-- artifact: version-map-artifact
-  add: /version_map_{{ $.Env }}.yml
-  to: /deckhouse/candi/version_map.yml
-  after: setup
-- artifact: dev-alt-artifact
-  add: /
-  to: /
-  before: setup
-  includePaths:
-  - etc/pki
-  - usr/share/ca-certificates/ca-bundle.crt
-  - usr/share/vim
-  - etc/vim
-  - etc/bash_completion.d
-  - etc/bashrc.d/bash_completion.sh
-  - usr/share/bash-completion
-  - usr/bin/vim-console
-docker:
-  ENV:
-    EDITOR: vim
-shell:
-  beforeInstall:
-  - |
-    apt-get update && apt-get install -y locale && apt-get clean
-    find /var/lib/apt/ /var/cache/apt/ -type f -delete
-  setup:
-  - |
-    ln -fs /dhctl /usr/bin/dhctl
-    cat <<"EOD" > /etc/inputrc
-    {{- .Files.Get "deckhouse-controller/files/inputrc" | nindent 4 }}
-    EOD
+{{ include "installer_and_installer_standalone_generic_imports" (dict "Env" $.Env "prefix" "") }}
+{{ include "installer_and_installer_standalone_terraform_imports" (dict "Env" $.Env "TF" $.TF "Editions" $.Editions "prefix" "") }}
+{{ include "installer_and_installer_standalone_libraries_and_binaries_imports" . }}
 
-    cat <<"EOD" > /etc/bashrc
-    PS1='\[\033[01;30m\][deckhouse]\[\033[00m\] \[\033[01;33m\]\u@\h\[\033[01;34m\] \w \$\[\033[00m\] '
+{{ include "installer_docker_properties" . }}
 
-    source /etc/bashrc.d/bash_completion.sh
-    EOD
-
-    rm -f /root/.bashrc
-    ln -s /etc/bashrc /root/.bashrc
-    rm -f  /.bashrc
-    ln -s /etc/bashrc /.bashrc
-
-    ln -fs /usr/bin/vim-console /usr/bin/vim
-    ln -fs /usr/bin/vim-console /usr/bin/vi
-
-    mkdir -p /etc/vim
-    cat <<"EOD" > /etc/vim/vimrc.local
-    {{- .Files.Get "deckhouse-controller/files/vimrc.local" | nindent 4 }}
-    EOD
-
-    echo 'eval "$(dhctl --completion-script-bash)"' >> /etc/bashrc
-    echo '{{- env "CI_COMMIT_TAG" | default "dev" }}' > /deckhouse/version
+{{ include "installer_prepare_with_shell" (dict "rootContext" . "prefix" "" "CI_COMMIT_TAG" .CI_COMMIT_TAG) }}

@@ -71,7 +71,7 @@ jobs:
     # Wait for success build of modules.
     needs:
       - git_info
-{!{ tmpl.Exec "web_build_template" (slice $ctx "main" "dev") | strings.Indent 4 }!}
+{!{ tmpl.Exec "web_build_template" (slice $ctx "main" "release") | strings.Indent 4 }!}
 
   tests:
     name: Tests
@@ -85,11 +85,12 @@ jobs:
       - git_info
 {!{ tmpl.Exec "tests_webhooks_template" (slice $ctx) | strings.Indent 4 }!}
 
-  matrix_tests:
-    name: Matrix tests
+  tests_dmt_lint:
+    if: ${{ needs.pull_request_info.outputs.changes_not_markdown == 'true' }}
+    name: Tests DMT lint
     needs:
-      - git_info
-{!{ tmpl.Exec "tests_before_build_template" (slice $ctx "matrix") | strings.Indent 4 }!}
+    - git_info
+{!{ tmpl.Exec "tests_dmt_lint" (slice $ctx) | strings.Indent 4 }!}
 
   dhctl_tests:
     name: Dhctl Tests

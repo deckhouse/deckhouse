@@ -2,7 +2,7 @@ type: object
 properties:
   storageClass:
     description: |
-      > **УСТАРЕВШИЙ**. Теперь его значение задается в [global.modules.storageClass](#parameters-modules-storageclass).
+      > **Устарел**. Используйте параметр [settings.modules.storageClass](#parameters-modules-storageclass).
 
       Имя StorageClass, который будет использоваться для всех компонентов Deckhouse Kubernetes Platform (Prometheus, Grafana, OpenVPN и т. д.).
 
@@ -64,7 +64,7 @@ properties:
               Режим работы HTTPS:
               * `CertManager` — модули Deckhouse будут работать по HTTPS, самостоятельно заказывая сертификат с помощью ClusterIssuer, указанного в параметре `certManager.clusterIssuerName`;
               * `CustomCertificate` — модули Deckhouse будут работать по HTTPS, используя сертификат из пространства имен `d8-system`;
-              * `Disabled` — модули Deckhouse будут работать только по HTTP (некоторые модули могут не работать, например [user-authn](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/150-user-authn/));
+              * `Disabled` — модули Deckhouse будут работать только по HTTP (некоторые модули могут не работать, например [user-authn](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/user-authn/));
               * `OnlyInURI` — модули Deckhouse будут работать по HTTP, подразумевая, что перед ними стоит внешний HTTPS-балансировщик, который терминирует HTTPS. Балансировщик должен обеспечивать перенаправление с HTTP на HTTPS.
           certManager:
             properties:
@@ -72,7 +72,7 @@ properties:
                 description: |
                   Имя `ClusterIssuer`, используемого модулями Deckhouse.
 
-                  В модуле [cert-manager](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/101-cert-manager/) доступны следующие `ClusterIssuer`: `letsencrypt`, `letsencrypt-staging`, `selfsigned`, `clouddns`, `cloudflare`, `digitalocean`, `route53`. Также вы можете использовать свой `ClusterIssuer`.
+                  В модуле [cert-manager](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/cert-manager/) доступны следующие `ClusterIssuer`: `letsencrypt`, `letsencrypt-staging`, `selfsigned`, `clouddns`, `cloudflare`, `digitalocean`, `route53`. Также вы можете использовать свой `ClusterIssuer`.
           customCertificate:
             properties:
               secretName:

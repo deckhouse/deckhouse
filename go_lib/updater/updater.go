@@ -220,9 +220,12 @@ func (u *Updater[R]) checkMinorReleaseConditions(release R, metricLabels MetricL
 	return u.postponeDeploy(release, delayReason, resultDeployTime)
 }
 
-func (u *Updater[R]) calculateMinorResultDeployTime(release R, metricLabels MetricLabels) (releaseApplyTime time.Time, reason deployDelayReason, err error) {
-	var newApplyAfter time.Time
-	releaseApplyTime = u.now
+func (u *Updater[R]) calculateMinorResultDeployTime(release R, metricLabels MetricLabels) (time.Time, deployDelayReason, error) {
+	var (
+		newApplyAfter    time.Time
+		releaseApplyTime = u.now
+		reason           deployDelayReason
+	)
 
 	if release.GetApplyNow() {
 		return releaseApplyTime, reason, nil
@@ -279,9 +282,12 @@ func (u *Updater[R]) calculateMinorResultDeployTime(release R, metricLabels Metr
 	return releaseApplyTime, reason, nil
 }
 
-func (u *Updater[R]) calculatePatchResultDeployTime(release R, metricLabels MetricLabels) (releaseApplyTime time.Time, reason deployDelayReason, err error) {
-	var newApplyAfter time.Time
-	releaseApplyTime = u.now
+func (u *Updater[R]) calculatePatchResultDeployTime(release R, metricLabels MetricLabels) (time.Time, deployDelayReason, error) {
+	var (
+		newApplyAfter    time.Time
+		releaseApplyTime = u.now
+		reason           deployDelayReason
+	)
 
 	if release.GetApplyNow() {
 		return releaseApplyTime, reason, nil
@@ -349,7 +355,8 @@ func (u *Updater[R]) setReleaseQueueDepthLabel(metricLabels map[string]string) {
 //   - Release requirements
 //
 // In addition to the regular error, ErrDeployConditionsNotMet or NotReadyForDeployError is returned as appropriate.
-func (u *Updater[R]) ApplyPredictedRelease() (err error) {
+func (u *Updater[R]) ApplyPredictedRelease() error {
+	var err error
 	if u.predictedReleaseIndex == -1 {
 		return ErrDeployConditionsNotMet // has no predicted release
 	}
@@ -650,7 +657,8 @@ func (u *Updater[R]) checkReleaseRequirements(rl R) bool {
 	switch any(rl).(type) {
 	case *v1alpha1.ModuleRelease:
 		u.logger.Debugf("checking requirements of '%s' for module '%s' by extenders", rl.GetName(), rl.GetModuleName())
-		if err := extenders.CheckModuleReleaseRequirements(rl.GetName(), rl.GetRequirements()); err != nil {
+		moduleRelease := any(rl).(*v1alpha1.ModuleRelease)
+		if err := extenders.CheckModuleReleaseRequirements(moduleRelease.GetModuleName(), moduleRelease.GetName(), moduleRelease.GetVersion(), moduleRelease.GetModuleReleaseRequirements()); err != nil {
 			err = u.updateStatus(rl, err.Error(), PhasePending)
 			if err != nil {
 				u.logger.Error("update status", log.Err(err))

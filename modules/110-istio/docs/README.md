@@ -9,8 +9,8 @@ webIfaces:
 
 | Istio version | [K8S versions supported by Istio](https://istio.io/latest/docs/releases/supported-releases/#support-status-of-istio-releases) |          Status in D8          |
 |:-------------:|:-----------------------------------------------------------------------------------------------------------------------------:|:------------------------------:|
-|     1.16      |                                                1.22<sup>*</sup>, 1.23<sup>*</sup>, 1.24<sup>*</sup>, 1.25                                                | Deprecated and will be deleted |
-|     1.19      |                                                    1.25, 1.26, 1.27, 1.28                                                     |           Supported            |
+|     1.21      |                                                1.26, 1.27, 1.28, 1.29, 1.30, 1.31                                                | Supported |
+|     1.19      |                                                    1.25<sup>*</sup>, 1.26, 1.27, 1.28                                                     |           Deprecated and will be deleted            |
 
 <sup>*</sup> — the Kubernetes version **is NOT supported** in the current Deckhouse Kubernetes Platform release.
 
@@ -117,7 +117,7 @@ The cluster components are divided into two categories:
 * control plane — managing and maintaining services; "control-plane" usually refers to istiod Pods;
 * data plane — mediating and controlling all network communication between microservices, it is composed of a set of sidecar-proxy containers.
 
-![Architecture of the cluster with Istio enabled](../../images/110-istio/istio-architecture.svg)
+![Architecture of the cluster with Istio enabled](../../images/istio/istio-architecture.svg)
 <!--- Source: https://docs.google.com/drawings/d/1wXwtPwC4BM9_INjVVoo1WXj5Cc7Wbov2BjxKp84qjkY/edit --->
 
 All data plane services are grouped into a mesh with the following features:
@@ -146,7 +146,7 @@ Control plane components:
 
 The Ingress controller must be refined to receive user traffic:
 
-* You need to add sidecar-proxy to the controller Pods. It only handles traffic from the controller to the application services (the [`enableIstioSidecar`](../402-ingress-nginx/cr.html#ingressnginxcontroller-v1-spec-enableistiosidecar) parameter of the `IngressNginxController` resource).
+* You need to add sidecar-proxy to the controller Pods. It only handles traffic from the controller to the application services (the [`enableIstioSidecar`](../ingress-nginx/cr.html#ingressnginxcontroller-v1-spec-enableistiosidecar) parameter of the `IngressNginxController` resource).
 * Services not managed by Istio continue to function as before, requests to them are not intercepted by the controller sidecar.
 * Requests to services running under Istio are intercepted by the sidecar and processed according to Istio rules (read more about [activating Istio to work with the application](#activating-istio-to-work-with-the-application)).
 
@@ -175,12 +175,12 @@ The istiod controller and sidecar-proxy containers export their own metrics that
 
 #### Application with Istio turned off
 
-<div data-presentation="../../presentations/110-istio/request_lifecycle_istio_disabled_en.pdf"></div>
+<div data-presentation="../../presentations/istio/request_lifecycle_istio_disabled_en.pdf"></div>
 <!--- Source: https://docs.google.com/presentation/d/1BtvvtETQENVaWkEpF00zpi7xjFxfWu3ddZmvCF3f2LQ/ --->
 
 #### Application with Istio turned on
 
-<div data-presentation="../../presentations/110-istio/request_lifecycle_istio_enabled_en.pdf"></div>
+<div data-presentation="../../presentations/istio/request_lifecycle_istio_enabled_en.pdf"></div>
 <!--- Source: https://docs.google.com/presentation/d/1fg_3eVA9JLizZaiN8W5vpkzOE6y9eD-4Iu10At4LN9U/ --->
 
 ## Activating Istio to work with the application
@@ -203,7 +203,7 @@ It is also possible to add the sidecar to an individual pod in namespace without
 
 It is also important to get the Ingress controller and the application's Ingress resources ready:
 
-* Enable [`enableIstioSidecar`](../402-ingress-nginx/cr.html#ingressnginxcontroller-v1-spec-enableistiosidecar) of the `IngressNginxController` resource.
+* Enable [`enableIstioSidecar`](../ingress-nginx/cr.html#ingressnginxcontroller-v1-spec-enableistiosidecar) of the `IngressNginxController` resource.
 * Add annotations to the application's Ingress resources:
   * `nginx.ingress.kubernetes.io/service-upstream: "true"` — the Ingress controller will use the service's ClusterIP as upstream instead of the Pod addresses. In this case, traffic balancing between the Pods is now handled by the sidecar-proxy. Use this option only if your service has a ClusterIP.
   * `nginx.ingress.kubernetes.io/upstream-vhost: "myservice.myns.svc"` — the Ingress controller's sidecar-proxy makes routing decisions based on the Host header. If this annotation is omitted, the controller will leave a header with the site address (e.g. `Host: example.com`).
@@ -237,7 +237,7 @@ Below are their fundamental differences:
 * Federation requires mutual trust between clusters. Thereby, to use federation, you have to make sure that both clusters (say, A and B) trust each other. From a technical point of view, this is achieved by a mutual exchange of root certificates.
 * You also need to share information about government services to use the federation. You can do that using ServiceEntry. A service entry defines the public ingress-gateway address of the B cluster so that services of the A cluster can communicate with the bar service in the B cluster.
 
-<div data-presentation="../../presentations/110-istio/federation_common_principles_en.pdf"></div>
+<div data-presentation="../../presentations/istio/federation_common_principles_en.pdf"></div>
 <!--- Source: https://docs.google.com/presentation/d/1klrLIXqe-zl9Dspbsu9nTI1a1nD3v7HHQqIN4iqF00s/ --->
 
 #### Enabling the federation
@@ -252,13 +252,13 @@ Enabling federation (via the `istio.federation.enabled = true` module parameter)
 
 #### Managing the federation
 
-<div data-presentation="../../presentations/110-istio/federation_istio_federation_en.pdf"></div>
+<div data-presentation="../../presentations/istio/federation_istio_federation_en.pdf"></div>
 <!--- Source: https://docs.google.com/presentation/d/1dYOeYKGaGOsgskWCDDcVJfXcMC9iQ4cvaCkhyqrDKgg/ --->
 
 To establish a federation, you must:
 
 * Create a set of `IstioFederation` resources in each cluster that describe all the other clusters.
-  * After successful auto-negotiation between clusters, the status of `IstioFederation` resoure will be filled with neighbour's public and private metadata (`status.metadataCache.public` and `status.metadataCache.private`).
+  * After successful auto-negotiation between clusters, the status of `IstioFederation` resource will be filled with neighbour's public and private metadata (`status.metadataCache.public` and `status.metadataCache.private`).
 * Add the `federation.istio.deckhouse.io/public-service: ""` label to each resource(`service`) that is considered public within the federation.
   * In the other federation clusters, a corresponding `ServiceEntry` will be created for each `service`, leading to the `ingressgateway` of the original cluster.
 
@@ -273,7 +273,7 @@ To establish a federation, you must:
 
 #### General principles
 
-<div data-presentation="../../presentations/110-istio/multicluster_common_principles_en.pdf"></div>
+<div data-presentation="../../presentations/istio/multicluster_common_principles_en.pdf"></div>
 <!--- Source: https://docs.google.com/presentation/d/1fmVDf-6yDSCEHhg_2vSvZcRkLSkQtUYrE6MISjZdb8Q/ --->
 
 * Multicluster requires mutual trust between clusters. Thereby, to use multiclustering, you have to make sure that both clusters (say, A and B) trust each other. From a technical point of view, this is achieved by a mutual exchange of root certificates.
@@ -294,7 +294,7 @@ Enabling the multicluster (via the `istio.multicluster.enabled = true` module pa
 
 #### Managing the multicluster
 
-<div data-presentation="../../presentations/110-istio/multicluster_istio_multicluster_en.pdf"></div>
+<div data-presentation="../../presentations/istio/multicluster_istio_multicluster_en.pdf"></div>
 <!--- Source: https://docs.google.com/presentation/d/1fy3jIynIPTrJ5Whn4eqQxeLk7ORtipDxBWP3By4buoc/ --->
 
 To create a multicluster, you need to create a set of `IstioMulticluster` resources in each cluster that describe all the other clusters.

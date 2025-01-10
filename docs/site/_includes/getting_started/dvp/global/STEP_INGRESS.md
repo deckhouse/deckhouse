@@ -1,6 +1,6 @@
-<script type="text/javascript" src='{{ assets["getting-started.js"].digest_path }}'></script>
-<script type="text/javascript" src='{{ assets["getting-started-access.js"].digest_path }}'></script>
-Make sure the Kruise controller manager is `Ready`.
+<script type="text/javascript" src='{% javascript_asset_tag getting-started %}[_assets/js/getting-started.js]{% endjavascript_asset_tag %}'></script>
+<script type="text/javascript" src='{% javascript_asset_tag getting-started-access %}[_assets/js/getting-started-access.js]{% endjavascript_asset_tag %}'></script>
+Make sure the Kruise controller manager is `Running`.
   Run the following command on the **master node**:
 
 {% snippetcut %}
@@ -50,11 +50,11 @@ sudo d8 k -n d8-ingress-nginx get po -l app=controller
 ```
 {% endsnippetcut %}
 
-<p>Wait for the Ingress controller pods to switch to <code>Ready</code> state.</p>
+<p>Wait for the Ingress controller pods to switch to <code>Running</code> state.</p>
 
 {% offtopic title="Example of the output..." %}
 ```console
-$ sudo /opt/deckhouse/bin/kubectl -n d8-ingress-nginx get po -l app=controller
+$ sudo -i d8 k -n d8-ingress-nginx get po -l app=controller
 NAME                                       READY   STATUS    RESTARTS   AGE
 controller-nginx-r6hxc                     3/3     Running   0          5m
 ```

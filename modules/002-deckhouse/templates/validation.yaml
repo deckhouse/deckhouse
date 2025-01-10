@@ -52,16 +52,18 @@ spec:
     - name: 'exclude-kinds'
       expression: '!(has(request.kind) && ["StorageClass"].exists(e, (e == request.kind.kind)))'
     - name: 'exclude-restartedAt'
-      expression: '!((!has(oldObject.spec.template.metadata.annotations) && has(object.spec.template.metadata.annotations)
-                    && "kubectl.kubernetes.io/restartedAt" in object.spec.template.metadata.annotations)
-                    || (has(oldObject.spec.template.metadata.annotations) && has(object.spec.template.metadata.annotations)
-                    && !("kubectl.kubernetes.io/restartedAt" in oldObject.spec.template.metadata.annotations)
-                    && "kubectl.kubernetes.io/restartedAt" in object.spec.template.metadata.annotations)
-                    || (has(oldObject.spec.template.metadata.annotations) && has(object.spec.template.metadata.annotations)
-                    && "kubectl.kubernetes.io/restartedAt" in oldObject.spec.template.metadata.annotations
-                    && "kubectl.kubernetes.io/restartedAt" in object.spec.template.metadata.annotations
-                    && oldObject.spec.template.metadata.annotations["kubectl.kubernetes.io/restartedAt"]
-                    != object.spec.template.metadata.annotations["kubectl.kubernetes.io/restartedAt"]))'
+      expression: '!((has(object.spec) && has(object.spec.template) && has(object.spec.template.metadata)
+          && has(oldObject.spec) && has(oldObject.spec.template) && has(oldObject.spec.template.metadata))
+          && ((!has(oldObject.spec.template.metadata.annotations) && has(object.spec.template.metadata.annotations)
+          && "kubectl.kubernetes.io/restartedAt" in object.spec.template.metadata.annotations)
+          || (has(oldObject.spec.template.metadata.annotations) && has(object.spec.template.metadata.annotations)
+          && !("kubectl.kubernetes.io/restartedAt" in oldObject.spec.template.metadata.annotations)
+          && "kubectl.kubernetes.io/restartedAt" in object.spec.template.metadata.annotations)
+          || (has(oldObject.spec.template.metadata.annotations) && has(object.spec.template.metadata.annotations)
+          && "kubectl.kubernetes.io/restartedAt" in oldObject.spec.template.metadata.annotations
+          && "kubectl.kubernetes.io/restartedAt" in object.spec.template.metadata.annotations
+          && oldObject.spec.template.metadata.annotations["kubectl.kubernetes.io/restartedAt"]
+          != object.spec.template.metadata.annotations["kubectl.kubernetes.io/restartedAt"])))'
   validations:
     - expression: 'request.userInfo.username.startsWith("system:serviceaccount:d8-")'
       reason: Forbidden
