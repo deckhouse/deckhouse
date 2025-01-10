@@ -27,9 +27,9 @@ spec:
     endpoint: http://loki.loki:3100
 ```
 
-## Чтение логов подов из указанного namespace с указанным label и перенаправление одновременно в Loki и Elasticsearch
+## Чтение логов подов из указанного пространства имён с указанным label и перенаправление одновременно в Loki и Elasticsearch
 
-Чтение логов подов из namespace `whispers` только с label `app=booking` и перенаправление одновременно в Loki и Elasticsearch:
+Чтение логов подов из пространства имён `whispers` только с label `app=booking` и перенаправление одновременно в Loki и Elasticsearch:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -73,9 +73,9 @@ spec:
       password: c2VjcmV0IC1uCg==
 ```
 
-## Создание source в namespace и чтение логов всех подов в этом NS с направлением их в Loki
+## Создание source и чтение логов всех подов в пространстве имён с направлением их в Loki
 
-Следующий pipeline создает source в namespace `test-whispers`, читает логи всех подов в этом NS и пишет их в Loki:
+Следующий pipeline создаёт source в пространстве имён `test-whispers`, читает логи всех подов в этом пространстве имён и пишет их в Loki:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -97,9 +97,9 @@ spec:
     endpoint: http://loki.loki:3100
 ```
 
-## Чтение только подов в указанном namespace и с определенным label
+## Чтение подов в указанном пространстве имён и с определённым label
 
-Пример чтения только подов, имеющих label `app=booking`, в namespace `test-whispers`:
+Пример чтения подов в пространстве имён `test-whispers`, имеющих label `app=booking`:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -134,15 +134,15 @@ spec:
 
 Данная документация подразумевает, что у вас уже [создан ключ API](https://grafana.com/docs/grafana-cloud/reference/create-api-key/).
 
-Для начала вам потребуется закодировать в base64 ваш токен доступа к Grafana Cloud.
+Для начала вам потребуется закодировать в Base64 ваш токен доступа к Grafana Cloud.
 
 ![Grafana cloud API key](../../images/log-shipper/grafana_cloud.png)
 
 ```bash
-echo -n "<YOUR-GRAFANACLOUD-TOKEN>" | base64 -w0
+echo -n "<YOUR-GRAFANA-CLOUD-TOKEN>" | base64 -w0
 ```
 
-Затем нужно создать **ClusterLogDestination**
+Затем нужно создать ресурс **ClusterLogDestination**:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -154,8 +154,8 @@ spec:
     auth:
       password: PFlPVVItR1JBRkFOQUNMT1VELVRPS0VOPg==
       strategy: Basic
-      user: "<YOUR-GRAFANACLOUD-USER>"
-    endpoint: <YOUR-GRAFANACLOUD-URL> # Например https://logs-prod-us-central1.grafana.net или https://logs-prod-eu-west-0.grafana.net
+      user: "<YOUR-GRAFANA-CLOUD-USER>"
+    endpoint: <YOUR-GRAFANA-CLOUD-URL> # Например, https://logs-prod-us-central1.grafana.net или https://logs-prod-eu-west-0.grafana.net.
   type: Loki
 ```
 
@@ -182,8 +182,7 @@ spec:
 
 ## Поддержка Elasticsearch < 6.X
 
-Для Elasticsearch < 6.0 нужно включить поддержку doc_type индексов.
-Сделать это можно следующим образом:
+Для Elasticsearch < 6.0 нужно включить поддержку индексов `doc_type`:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -203,7 +202,7 @@ spec:
 
 ## Шаблон индекса для Elasticsearch
 
-Существует возможность отправлять сообщения в определенные индексы на основе метаданных с помощью шаблонов индексов:
+Существует возможность отправлять сообщения в определённые индексы на основе метаданных с помощью шаблонов индексов:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -217,7 +216,7 @@ spec:
     index: "k8s-{{ namespace }}-%F"
 ```
 
-В приведенном выше примере для каждого пространства имен Kubernetes будет создан свой индекс в Elasticsearch.
+В приведённом выше примере для каждого пространства имён Kubernetes будет создан свой индекс в Elasticsearch.
 
 Эта функция также хорошо работает в комбинации с `extraLabels`:
 
@@ -291,7 +290,7 @@ output {
 }
 ```
 
-Пример манифеста `ClusterLogDestination`:
+Пример манифеста ClusterLogDestination:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -322,7 +321,7 @@ spec:
       codec: Syslog
   extraLabels:
     syslog.severity: "alert"
-    # поле request_id должно присутствовать в сообщении
+    # В сообщении должно присутствовать поле `request_id`.
     syslog.message_id: "{{ request_id }}"
 ```
 
@@ -344,11 +343,11 @@ spec:
       codec: GELF
 ```
 
-## Логи в CEF формате
+## Логи в CEF-формате
 
 Существует способ формировать логи в формате CEF, используя `codec: CEF`, с переопределением `cef.name` и `cef.severity` по значениям из поля `message` (лога приложения) в формате JSON.
 
-В примере ниже `app` и `log_level` это ключи содержащие значения для переопределения:
+В примере ниже `app` и `log_level` – это ключи, содержащие значения для переопределения:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -371,7 +370,7 @@ spec:
     topic: logs
 ```
 
-Так же можно вручную задать свои значения:
+Также можно вручную задать свои значения:
 
 ```yaml
 extraLabels:
@@ -381,9 +380,9 @@ extraLabels:
 
 ## Сбор событий Kubernetes
 
-События Kubernetes могут быть собраны log-shipper'ом, если `events-exporter` включен в настройках модуля [extended-monitoring](../extended-monitoring/).
+События Kubernetes могут быть собраны модулем `log-shipper`, если `events-exporter` включён в настройках модуля [`extended-monitoring`](../extended-monitoring/).
 
-Включите events-exporter, изменив параметры модуля `extended-monitoring`:
+Включите `events-exporter`, изменив параметры модуля `extended-monitoring`:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -419,9 +418,9 @@ spec:
 
 ## Фильтрация логов
 
-Пользователи могут фильтровать логи, используя следующие фильтры:
+Пользователи могут применять следующие фильтры к логам:
 
-* `labelFilter` — применяется к метаданным, например имени контейнера (`container`), пространству имен (`namespace`) или имени пода (`pod_name`);
+* `labelFilter` — применяется к метаданным, например, к имени контейнера (`container`), пространству имён (`namespace`) или имени пода (`pod_name`);
 * `logFilter` — применяется к полям самого сообщения, если оно в JSON-формате.
 
 ### Сборка логов только для контейнера `nginx`
@@ -459,7 +458,7 @@ spec:
     - .*GET /status" 200$
 ```
 
-### Аудит событий kubelet'а
+### Аудит событий kubelet
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -505,11 +504,11 @@ spec:
 
 {% endraw %}
 {% alert -%}
-Если вам нужны только логи одного пода или малой группы подов, постарайтесь использовать настройки `kubernetesPods`, чтобы сузить количество читаемых файлов. Фильтры необходимы только для высокогранулярной настройки.
+Если вам нужны только логи одного пода или малой группы подов, постарайтесь использовать настройки `kubernetesPods`, чтобы ограничить количество читаемых файлов. Фильтры необходимы только для детализированной настройки.
 {%- endalert %}
 {% raw %}
 
-## Настройка сборки логов с продуктовых пространств имен, используя опцию namespace label selector
+## Настройка сборки логов с продуктовых пространств имён через опцию namespace label selector
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -527,9 +526,9 @@ spec:
   - loki-storage
 ```
 
-## Исключение подов и пространств имён, используя label
+## Исключение подов и пространств имён с помощью label
 
-Существует преднастроенный label для исключения определенных подов и пространств имён: `log-shipper.deckhouse.io/exclude=true`.
+Существует преднастроенный label для исключения определённых подов и пространств имён: `log-shipper.deckhouse.io/exclude=true`.
 Он помогает остановить сбор логов с подов и пространств имён без изменения глобальной конфигурации.
 
 ```yaml
@@ -553,16 +552,18 @@ spec:
         log-shipper.deckhouse.io/exclude: "true"
 ```
 
-## Исключение логов определенного контейнера внутри пода
+## Исключение логов определённого контейнера внутри пода
 
-Для исключения логов определенного контейнера внутри пода нужно добавить на под аннотацию следующего вида
+Чтобы исключить сбор логов определённого контейнера внутри пода, добавьте на данный под аннотацию следующего вида:
 
 ```yaml
 vector.dev/exclude-containers: "container1,container2"
 ```
 
-Эта аннотация заставит Vector пропускать логи контейнеров с именем `container1` и `container2`, в то время, как логи других контейнеров в поде продолжат собираться
-Подробнее с этой функцией можно ознакомиться на [официальном сайте vector](https://vector.dev/docs/reference/configuration/sources/kubernetes_logs/#container-exclusion)
+При данной аннотации Vector будет пропускать логи контейнеров с именем `container1` и `container2`.
+Логи других контейнеров в поде продолжат собираться без каких-либо изменений.
+
+Подробнее с этой функцией можно ознакомиться [в официальной документации Vector](https://vector.dev/docs/reference/configuration/sources/kubernetes_logs/#container-exclusion).
 
 ## Включение буферизации
 

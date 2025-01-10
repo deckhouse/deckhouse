@@ -5,7 +5,7 @@ description: Examples of using the log-shipper Deckhouse module. Examples of mod
 
 {% raw %}
 
-## Getting logs from all cluster Pods and sending them to Loki
+## Getting logs from all cluster pods and sending them to Loki
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -27,7 +27,7 @@ spec:
     endpoint: http://loki.loki:3100
 ```
 
-## Reading Pod logs from a specified namespace with a specified label and redirecting to Loki and Elasticsearch
+## Reading pod logs from a specified namespace with a specified label and redirecting to Loki and Elasticsearch
 
 Reading logs from `namespace=whispers` with label `app=booking` and storing them into Loki and Elasticsearch:
 
@@ -73,9 +73,9 @@ spec:
       password: c2VjcmV0IC1uCg==
 ```
 
-## Creating a source in namespace and reading logs of all Pods in that NS with forwarding them to Loki
+## Creating a source and reading logs of all pods in a namespace with forwarding them to Loki
 
-Namespaced pipeline - reading logs from `test-whispers` namespace (all Pods):
+The following pipeline creates a source in the `test-whispers` namespace, reads logs of all pods in that namespace and writes them to Loki:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -97,9 +97,9 @@ spec:
     endpoint: http://loki.loki:3100
 ```
 
-## Reading only Pods in the specified namespace and having a certain label
+## Reading pods in the specified namespace, with a certain label
 
-Read logs from Pods with label `app=booking` in namespace `test-whispers`:
+Example of reading logs from pods with the `app=booking` label in the `test-whispers` namespace:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -126,23 +126,23 @@ spec:
 
 ## Migration from Promtail to Log-Shipper
 
-Path `/loki/api/v1/push` has to be removed from the previously used Loki URL.
+The path `/loki/api/v1/push` has to be removed from the previously used Loki URL.
 
-**Vector** will add this PATH automatically during working with Loki destination.
+**Vector** will add this path automatically when working with Loki.
 
 ## Working with Grafana Cloud
 
-This documentation expects that you have [created API key](https://grafana.com/docs/grafana-cloud/reference/create-api-key/).
+This documentation expects that you [have created an API key](https://grafana.com/docs/grafana-cloud/reference/create-api-key/).
 
 ![Grafana cloud API key](../../images/log-shipper/grafana_cloud.png)
 
-Firstly you should encode your token with base64.
+Firstly, you should encode your token with Base64.
 
 ```bash
-echo -n "<YOUR-GRAFANACLOUD-TOKEN>" | base64 -w0
+echo -n "<YOUR-GRAFANA-CLOUD-TOKEN>" | base64 -w0
 ```
 
-Then you can create **ClusterLogDestination**
+Then you can create **ClusterLogDestination**:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -154,16 +154,16 @@ spec:
     auth:
       password: PFlPVVItR1JBRkFOQUNMT1VELVRPS0VOPg==
       strategy: Basic
-      user: "<YOUR-GRAFANACLOUD-USER>"
-    endpoint: <YOUR-GRAFANACLOUD-URL> # For example https://logs-prod-us-central1.grafana.net or https://logs-prod-eu-west-0.grafana.net
+      user: "<YOUR-GRAFANA-CLOUD-USER>"
+    endpoint: <YOUR-GRAFANA-CLOUD-URL> # For example, https://logs-prod-us-central1.grafana.net or https://logs-prod-eu-west-0.grafana.net.
   type: Loki
 ```
 
 Now you can create PodLogginConfig or ClusterPodLoggingConfig and send logs to **Grafana Cloud**.
 
-## Adding Loki source to Deckhouse Grafana
+## Adding a Loki source to Deckhouse Grafana
 
-You can work with Loki from embedded to deckhouse Grafana. Just add [**GrafanaAdditionalDatasource**](../../modules/prometheus/cr.html#grafanaadditionaldatasource)
+You can work with Loki using Grafana embedded into Deckhouse. Just add [**GrafanaAdditionalDatasource**](../prometheus/cr.html#grafanaadditionaldatasource).
 
 ```yaml
 apiVersion: deckhouse.io/v1
@@ -182,8 +182,7 @@ spec:
 
 ## Elasticsearch < 6.X usage
 
-For Elasticsearch < 6.0 doc_type indexing should be set.
-Config should look like this:
+For Elasticsearch < 6.0, set the `doc_type` indexing using the following configuration:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -194,7 +193,7 @@ spec:
   type: Elasticsearch
   elasticsearch:
     endpoint: http://192.168.1.1:9200
-    docType: "myDocType" # Set any string here. It should not start with '_'
+    docType: "myDocType" # Set any string here. It can't start with '_'.
     auth:
       strategy: Basic
       user: elastic
@@ -217,9 +216,9 @@ spec:
     index: "k8s-{{ namespace }}-%F"
 ```
 
-For the above example for each Kubernetes namespace a dedicated index in Elasticsearch will be created.
+In this example, for each Kubernetes namespace a dedicated Elasticsearch index is created.
 
-This feature works well combining with `extraLabels`:
+This feature works well together with `extraLabels`:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -242,9 +241,9 @@ spec:
 
 It is possible to send logs from Deckhouse to Splunk.
 
-1. Endpoint must be equal to the Splunk instance name with the `8088` port and no path provided, e.g. `https://prd-p-xxxxxx.splunkcloud.com:8088`.
-2. To add a token to ingest logs, go to `Setting` -> `Data inputs`, add a new `HTTP Event Collector` and copy a token.
-3. Provide a Splunk index to store logs, e.g., `logs`.
+1. The endpoint must be equal to the Splunk instance name with the `8088` port and no path provided, for example, `https://prd-p-xxxxxx.splunkcloud.com:8088`.
+2. To add a token to ingest logs, go to `Setting` -> `Data inputs`, add a new `HTTP Event Collector` and copy the token.
+3. Provide a Splunk index to store logs, for example, `logs`.
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -291,7 +290,7 @@ output {
 }
 ```
 
-An example of the `ClusterLogDestination` manifest:
+An example of the ClusterLogDestination manifest:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -306,7 +305,7 @@ spec:
 
 ## Syslog
 
-The following examples sets severity for the syslog messages and uses the socket destination:
+The following example configures sending messages over a socket via TCP protocol in syslog format:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -322,7 +321,7 @@ spec:
       codec: Syslog
   extraLabels:
     syslog.severity: "alert"
-    # the request_id field should be present in the log message
+    # The `request_id` field must be present in the log message.
     syslog.message_id: "{{ request_id }}"
 ```
 
@@ -344,11 +343,11 @@ spec:
       codec: GELF
 ```
 
-## Logs in CEF Format
+## Logs in CEF format
 
-There is a way to format logs in CEF format using `codec: CEF`, with overriding `cef.name` and `cef.severity` based on values from the `message` field (application log) in JSON format.
+There is a way to format logs in CEF using `codec: CEF`, with overriding `cef.name` and `cef.severity` based on values from the `message` field (application log) in JSON format.
 
-In the example below, `app` and `log_level` are keys containing values for overriding:
+In the example below, `app` and `log_level` are the keys containing values for overriding:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -379,11 +378,11 @@ extraLabels:
   cef.severity: '1'
 ```
 
-## Collect Kubernetes Events
+## Collect Kubernetes events
 
-Kubernetes Events can be collected by log-shipper if `events-exporter` is enabled in the [extended-monitoring](../extended-monitoring/) module configuration.
+Kubernetes events can be collected by `log-shipper` if `events-exporter` is enabled in the [`extended-monitoring`](../extended-monitoring/) module configuration.
 
-Enable `events-exporter` by adjusting `extended-monitoring` settings:
+Enable `events-exporter` by adjusting the `extended-monitoring` settings:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -397,7 +396,7 @@ spec:
       exporterEnabled: true
 ```
 
-Apply the following `ClusterLoggingConfig` to collect logs from the `events-exporter` Pod:
+Apply the following `ClusterLoggingConfig` to collect logs from the `events-exporter` pod:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -419,10 +418,10 @@ spec:
 
 ## Log filters
 
-Users can filter logs by applying two filters:
+Users can apply the following filters to logs:
 
-* `labelFilter` — applies to the top-level metadata, e.g., container, namespace, or Pod name.
-* `logFilter` — applies to fields of a message if it is in JSON format.
+* `labelFilter`: Applies to the top-level metadata, for example, a container, namespace, or pod name.
+* `logFilter`: Applies to fields of a message if it is in JSON format.
 
 ### Collect only logs of the `nginx` container
 
@@ -441,7 +440,7 @@ spec:
   - loki-storage
 ```
 
-### Collect logs without strings `GET /status" 200`
+### Collect logs without the string containing `GET /status" 200`
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -459,7 +458,7 @@ spec:
     - .*GET /status" 200$
 ```
 
-### Audit of kubelet actions
+### Audit of kubelet events
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -527,10 +526,10 @@ spec:
   - loki-storage
 ```
 
-## Exclude Pods or namespaces with a label
+## Exclude pods or namespaces with a label
 
-There is a preconfigured label to exclude particular namespaces or Pods: `log-shipper.deckhouse.io/exclude=true`.
-It can help to stop collecting logs from a namespace or Pod without changing global configurations.
+There is a preconfigured label to exclude particular namespaces or pods: `log-shipper.deckhouse.io/exclude=true`.
+It can help to stop collecting logs from a namespace or pod without changing global configurations.
 
 ```yaml
 ---
@@ -553,18 +552,20 @@ spec:
         log-shipper.deckhouse.io/exclude: "true"
 ```
 
-## Exclude logs of a certain Container inside the Pod
+## Exclude logs of a certain container in a pod
 
-To exclude logs of a certain Container inside the Pod, you need to add the following annotation to the Pod
+To exclude logs of a certain container in a pod, add the following annotation to the pod:
 
 ```yaml
 vector.dev/exclude-containers: "container1,container2"
 ```
 
-This annotation will make Vector skip logs originating from the `container1` and `container2` of the Pod marked with the annotation, while logs from other Containers in the Pod will still be collected.
-More information about this feature can be found on [vector's official website](https://vector.dev/docs/reference/configuration/sources/kubernetes_logs/#container-exclusion)
+This annotation instructs Vector to skip logs originating from `container1` and `container2`.
+Logs from other containers in the pod will be collected normally.
 
-## Enable Buffering
+For details on this feature, refer to the [Vector's official docs](https://vector.dev/docs/reference/configuration/sources/kubernetes_logs/#container-exclusion).
+
+## Enable buffering
 
 The log buffering configuration is essential for improving the reliability and performance of the log collection system. Buffering can be useful in the following cases:
 
@@ -626,6 +627,6 @@ spec:
     endpoint: http://loki.loki:3100
 ```
 
-More detailed description of the parameters is available in the [ClusterLogDestination](cr.html#clusterlogdestination) resource.
+For detailed description of parameters, refer to the [ClusterLogDestination](cr.html#clusterlogdestination) resource.
 
 {% endraw %}
