@@ -8,6 +8,11 @@ git:
     stageDependencies:
       install:
         - '**/*'
+import:
+- artifact: common/python-static
+  add: /opt/python-static
+  to: /opt/python-static
+  before: install
 shell:
   beforeInstall:
   - apt-get install -y git
