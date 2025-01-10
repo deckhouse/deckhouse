@@ -24,18 +24,18 @@ docker:
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $version | replace "." "-" }}
 fromImage: common/src-artifact
 final: false
+git:
+- add: /{{ $.ModulePath }}modules/000-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
+  to: /patches
+  stageDependencies:
+    setup:
+    - "**/*"
 shell:
   setup:
   - git clone --depth 1 --branch {{ $value.csi.snapshotter }} {{ $.SOURCE_REPO }}/kubernetes-csi/external-snapshotter.git /src
   - cd /src
   - git apply /patches/*.patch --verbose
   - rm -rf /src/.git
-git:
-  - add: /modules/000-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
-    to: /patches
-    stageDependencies:
-      setup:
-        - "**/*"
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
 from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
