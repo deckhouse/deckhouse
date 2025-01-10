@@ -53,9 +53,8 @@ type WebhookData struct {
 var ErrNotificationIsNotSent = errors.New("")
 var ErrFailedToSendReleaseNotification = errors.New("release blocked, failed to send release notification")
 
+// SendPatchReleaseNotification sending patch notification (only if notification config has release type "All")
 func (u *ReleaseNotifier) SendPatchReleaseNotification(ctx context.Context, dr *v1alpha1.DeckhouseRelease, applyTime time.Time, metricLabels updater.MetricLabels) error {
-	// check it before calling sendReleaseNotification
-	// TODO: if we already notify - ??? it will get from annotation
 	if dr.GetNotified() {
 		return nil
 	}
@@ -75,8 +74,6 @@ func (u *ReleaseNotifier) SendPatchReleaseNotification(ctx context.Context, dr *
 }
 
 func (u *ReleaseNotifier) SendMinorReleaseNotification(ctx context.Context, dr *v1alpha1.DeckhouseRelease, applyTime time.Time, metricLabels updater.MetricLabels) error {
-	// check it before calling sendReleaseNotification
-	// TODO: if we already notify - ??? it will get from annotation
 	if dr.GetNotified() {
 		return nil
 	}

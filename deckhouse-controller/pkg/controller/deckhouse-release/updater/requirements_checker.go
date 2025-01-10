@@ -79,6 +79,13 @@ func (c *Checker[T]) MetRequirements(v *T) []NotMetReason {
 	return reasons
 }
 
+// NewRequirementsChecker returns DeckhouseRelease checker with this checks:
+//
+// 1) deckhouse version check
+// 2) deckhouse requirements check
+// 3) deckhouse kubernetes version check
+//
+// for more checks information - look at extenders
 func NewRequirementsChecker(k8sclient client.Client, enabledModules []string, logger *log.Logger) (*Checker[v1alpha1.DeckhouseRelease], error) {
 	k8sCheck, err := newKubernetesVersionCheck(k8sclient, enabledModules)
 	if err != nil {
@@ -115,7 +122,9 @@ func (c *deckhouseVersionCheck) GetName() string {
 func (c *deckhouseVersionCheck) Verify(dr *v1alpha1.DeckhouseRelease) error {
 	releaseName, err := deckhouseversion.Instance().ValidateBaseVersion(dr.GetVersion().String())
 	if err != nil {
-		// invalid deckhouse version in deckhouse release or an enabled module has requirements that prevent deckhouse release from becoming predicted
+		// invalid deckhouse version in deckhouse release
+		// or an enabled module has requirements
+		// prevent deckhouse release from becoming predicted
 		if releaseName == "" || c.enabledModules.Has(releaseName) {
 			return err
 		}
@@ -156,7 +165,9 @@ func (c *kubernetesVersionCheck) GetName() string {
 func (c *kubernetesVersionCheck) Verify(dr *v1alpha1.DeckhouseRelease) error {
 	if c.isKubernetesVersionAutomatic() && len(dr.GetRequirements()["autoK8sVersion"]) > 0 {
 		if moduleName, err := kubernetesversion.Instance().ValidateBaseVersion(dr.GetRequirements()["autoK8sVersion"]); err != nil {
-			// invalid auto kubernetes version in deckhouse release or an enabled module has requirements that prevent deckhouse release from becoming predicted
+			// invalid auto kubernetes version in deckhouse release
+			// or an enabled module has requirements
+			// prevent deckhouse release from becoming predicted
 			if moduleName == "" || c.enabledModules.Has(moduleName) {
 				return err
 			}
@@ -233,6 +244,9 @@ func (c *deckhouseRequirementsCheck) Verify(dr *v1alpha1.DeckhouseRelease) error
 	return nil
 }
 
+// NewPreApplyChecker returns DeckhouseRelease checker with this checks:
+//
+// 1) disruption check
 func NewPreApplyChecker(settings *updater.Settings, logger *log.Logger) *Checker[v1alpha1.DeckhouseRelease] {
 	return &Checker[v1alpha1.DeckhouseRelease]{
 		fns: []Check[v1alpha1.DeckhouseRelease]{

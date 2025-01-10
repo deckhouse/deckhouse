@@ -70,6 +70,11 @@ type ReleaseInfo struct {
 
 var ErrReleasePhaseIsNotPending = errors.New("release phase is not pending")
 
+// CalculatePendingReleaseOrder calculate task with information about current reconcile
+//
+// calculating flow:
+// 1) find forced release. if current release has a lower version - skip
+// 2) find deployed release. if current release has a lower version - skip
 func (p *TaskCalculator) CalculatePendingReleaseOrder(ctx context.Context, dr *v1alpha1.DeckhouseRelease) (*Task, error) {
 	if dr.GetPhase() != v1alpha1.DeckhouseReleasePhasePending {
 		return nil, ErrReleasePhaseIsNotPending
@@ -130,11 +135,11 @@ func (p *TaskCalculator) CalculatePendingReleaseOrder(ctx context.Context, dr *v
 		prevRelease := releases[releaseIdx-1]
 
 		// if release version is greater in major or minor version than previous release
-		// it must await for previous release has Deployed state
 		if dr.GetVersion().Major() > prevRelease.GetVersion().Major() ||
 			dr.GetVersion().Minor() > prevRelease.GetVersion().Minor() {
 			isPatch = false
 
+			// it must await if previous release has Deployed state
 			if prevRelease.GetPhase() != v1alpha1.DeckhouseReleasePhaseDeployed {
 				msg := prevRelease.Status.Message
 				if !strings.Contains(msg, "awaiting") {
@@ -157,6 +162,11 @@ func (p *TaskCalculator) CalculatePendingReleaseOrder(ctx context.Context, dr *v
 
 		// if nextRelease version is greater in major or minor version
 		// current release is definitely greatest at patch version
+		//
+		// "isPatch" value could be false, if we have versions like:
+		// 1.65.0 (Deployed)
+		// 1.66.0 (Pending) - is greatest patch now, bot must handle like minor version bump
+		// 1.67.0 (Pending)
 		if dr.GetVersion().Major() < nextRelease.GetVersion().Major() ||
 			dr.GetVersion().Minor() < nextRelease.GetVersion().Minor() {
 			return &Task{
@@ -196,7 +206,7 @@ func (p *TaskCalculator) listReleases(ctx context.Context) ([]v1alpha1.Deckhouse
 }
 
 // getFirstReleaseInfoByPhase
-// releases slice must be sorted
+// releases slice must be sorted asc
 func (p *TaskCalculator) getFirstReleaseInfoByPhase(releases []v1alpha1.DeckhouseRelease, phase string) *ReleaseInfo {
 	idx := slices.IndexFunc(releases, func(a v1alpha1.DeckhouseRelease) bool {
 		return a.Status.Phase == phase
@@ -215,7 +225,7 @@ func (p *TaskCalculator) getFirstReleaseInfoByPhase(releases []v1alpha1.Deckhous
 }
 
 // getLatestForcedReleaseInfo
-// releases slice must be sorted
+// releases slice must be sorted asc
 func (p *TaskCalculator) getLatestForcedReleaseInfo(releases []v1alpha1.DeckhouseRelease) *ReleaseInfo {
 	for _, dr := range slices.Backward(releases) {
 		if !dr.GetForce() {

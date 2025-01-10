@@ -321,8 +321,6 @@ func (r *deckhouseReleaseReconciler) pendingReleaseReconcile(ctx context.Context
 		r.metricStorage.Grouped().GaugeSet(metricUpdatingGroup, "d8_is_updating", 1, map[string]string{"releaseChannel": r.updateSettings.Get().ReleaseChannel})
 	}
 
-	////////////////////////////////////////////////////
-	// New Logic start
 	oCalc := d8updater.NewTaskCalculator(r.client, r.logger)
 	task, err := oCalc.CalculatePendingReleaseOrder(ctx, dr)
 	if err != nil {
@@ -405,11 +403,10 @@ func (r *deckhouseReleaseReconciler) pendingReleaseReconcile(ctx context.Context
 	if !r.registrySecret.ClusterIsBootstrapped && task.IsSingle {
 		err := r.ApplyRelease(ctx, dr, task)
 		if err != nil {
-			// TODO: deal with error
 			return res, fmt.Errorf("run single bootstrapping release deploy: %w", err)
 		}
 
-		// stop requeue because we restart deckhous (deployment)
+		// stop requeue because we restart deckhouse (deployment)
 		return ctrl.Result{}, nil
 	}
 
@@ -530,6 +527,7 @@ func (r *deckhouseReleaseReconciler) DeployTimeCalculate(ctx context.Context, dr
 		return dtr
 	}
 
+	// for minor release we must check additional conditions
 	checker := d8updater.NewPreApplyChecker(dus, r.logger)
 	reasons := checker.MetRequirements(dr)
 	if len(reasons) > 0 {

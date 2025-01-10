@@ -24,7 +24,6 @@ import (
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
-	"github.com/deckhouse/deckhouse/go_lib/dependency/requirements"
 	"github.com/deckhouse/deckhouse/go_lib/updater"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
@@ -97,13 +96,6 @@ func (c *DeployTimeChecker) ProcessMinorReleaseDeployTime(ctx context.Context, d
 		return nil
 	}
 
-	err := c.checkReleaseDisruptions(dr)
-	if err != nil {
-		return &DeployTimeReason{
-			Message: err.Error(),
-		}
-	}
-
 	if res.ReleaseApplyTime == c.now {
 		res.ReleaseApplyTime = time.Time{}
 	}
@@ -133,19 +125,6 @@ func (c *DeployTimeChecker) checkCanary(dtr *DeployTimeResult, dr *v1alpha1.Deck
 	}
 }
 
-func (c *DeployTimeChecker) checkCanaryNotInManualMode(dtr *DeployTimeResult, dr *v1alpha1.DeckhouseRelease) {
-	if dr.GetApplyAfter() != nil && !c.settings.InManualMode() {
-		applyAfter := *dr.GetApplyAfter()
-
-		if c.now.Before(applyAfter) {
-			c.logger.Warn("release is postponed by canary process, waiting", slog.String("name", dr.GetName()))
-
-			dtr.ReleaseApplyTime = applyAfter
-			dtr.Reason = dtr.Reason.add(canaryDelayReason)
-		}
-	}
-}
-
 func (c *DeployTimeChecker) checkNotify(dtr *DeployTimeResult, dr *v1alpha1.DeckhouseRelease) {
 	if !dr.GetNotified() &&
 		c.settings.NotificationConfig.MinimalNotificationTime.Duration > 0 {
@@ -161,42 +140,18 @@ func (c *DeployTimeChecker) checkNotify(dtr *DeployTimeResult, dr *v1alpha1.Deck
 	}
 }
 
-func (c *DeployTimeChecker) checkWindowModeAutoPatch(dtr *DeployTimeResult) {
-	if c.settings.Mode == updater.ModeAutoPatch && !c.settings.Windows.IsAllowed(dtr.ReleaseApplyTime) {
-		dtr.ReleaseApplyTime = c.settings.Windows.NextAllowedTime(dtr.ReleaseApplyTime)
-		dtr.Reason = dtr.Reason.add(outOfWindowReason)
-	}
+func (c *DeployTimeChecker) processManualApproved(dtr *DeployTimeResult, dr *v1alpha1.DeckhouseRelease, metricLabels updater.MetricLabels) {
+	c.logger.Info("release is waiting for manual approval", slog.String("name", dr.GetName()))
+
+	metricLabels.SetTrue(updater.ManualApprovalRequired)
+
+	dtr.ReleaseApplyTime = c.now
+	dtr.Reason = manualApprovalRequiredReason
 }
 
-func (c *DeployTimeChecker) checkManualApproved(dtr *DeployTimeResult, dr *v1alpha1.DeckhouseRelease, metricLabels updater.MetricLabels) {
-	// check: release is approved in Manual mode
-	if c.settings.Mode == updater.ModeManual && !dr.GetManuallyApproved() {
-		c.logger.Info("release is waiting for manual approval", slog.String("name", dr.GetName()))
-
-		metricLabels.SetTrue(updater.ManualApprovalRequired)
-
-		dtr.ReleaseApplyTime = c.now
-		dtr.Reason = manualApprovalRequiredReason
-	}
-}
-
-func (c *DeployTimeChecker) checkWindowModeAuto(dtr *DeployTimeResult) {
-	if c.settings.Mode == updater.ModeAuto && !c.settings.Windows.IsAllowed(dtr.ReleaseApplyTime) {
-		dtr.ReleaseApplyTime = c.settings.Windows.NextAllowedTime(dtr.ReleaseApplyTime)
-		dtr.Reason = dtr.Reason.add(outOfWindowReason)
-	}
-}
-
-func (c *DeployTimeChecker) checkManualApprovedNotModeAuto(dtr *DeployTimeResult, dr *v1alpha1.DeckhouseRelease, metricLabels updater.MetricLabels) {
-	// check: release is approved in Manual mode
-	if c.settings.Mode != updater.ModeAuto && !dr.GetManuallyApproved() {
-		c.logger.Info("release is waiting for manual approval", slog.String("name", dr.GetName()))
-
-		metricLabels.SetTrue(updater.ManualApprovalRequired)
-
-		dtr.ReleaseApplyTime = c.now
-		dtr.Reason = manualApprovalRequiredReason
-	}
+func (c *DeployTimeChecker) processWindow(dtr *DeployTimeResult) {
+	dtr.ReleaseApplyTime = c.settings.Windows.NextAllowedTime(dtr.ReleaseApplyTime)
+	dtr.Reason = dtr.Reason.add(outOfWindowReason)
 }
 
 func (c *DeployTimeChecker) checkCooldown(dtr *DeployTimeResult, dr *v1alpha1.DeckhouseRelease) {
@@ -212,6 +167,15 @@ func (c *DeployTimeChecker) checkCooldown(dtr *DeployTimeResult, dr *v1alpha1.De
 	}
 }
 
+// CalculatePatchDeployTime calculates deploy time, returns deploy time or postpone time and reason.
+// To calculate deploy time, we need to check:
+//
+// 1) Canary
+// 2) Notify
+// 3) Window (only in "AutoPatch" mode)
+// 4) Manual approve (only in "Manual" mode)
+//
+// Notify reason must override any other reason
 func (c *DeployTimeChecker) CalculatePatchDeployTime(dr *v1alpha1.DeckhouseRelease, metricLabels updater.MetricLabels) *DeployTimeResult {
 	result := &DeployTimeResult{
 		Reason:           noDelay,
@@ -224,8 +188,14 @@ func (c *DeployTimeChecker) CalculatePatchDeployTime(dr *v1alpha1.DeckhouseRelea
 
 	c.checkCanary(result, dr)
 	c.checkNotify(result, dr)
-	c.checkWindowModeAutoPatch(result)
-	c.checkManualApproved(result, dr, metricLabels)
+
+	if c.settings.Mode == updater.ModeAutoPatch && !c.settings.Windows.IsAllowed(result.ReleaseApplyTime) {
+		c.processWindow(result)
+	}
+
+	if c.settings.Mode == updater.ModeManual && !dr.GetManuallyApproved() {
+		c.processManualApproved(result, dr, metricLabels)
+	}
 
 	if !result.ReleaseApplyAfterTime.IsZero() {
 		result.Reason = notificationDelayReason
@@ -236,6 +206,16 @@ func (c *DeployTimeChecker) CalculatePatchDeployTime(dr *v1alpha1.DeckhouseRelea
 	return result
 }
 
+// CalculatePatchDeployTime calculates deploy time, returns deploy time or postpone time and reason.
+// To calculate deploy time, we need to check:
+//
+// 1) Cooldown (TODO: deprecated?)
+// 1) Canary (in any mode, except "Manual")
+// 2) Notify
+// 3) Window (only in "Auto" mode)
+// 4) Manual approve (in any mode, except "Auto")
+//
+// Notify reason must override any other reason
 func (c *DeployTimeChecker) CalculateMinorDeployTime(dr *v1alpha1.DeckhouseRelease, metricLabels updater.MetricLabels) *DeployTimeResult {
 	result := &DeployTimeResult{
 		Reason:           noDelay,
@@ -247,10 +227,20 @@ func (c *DeployTimeChecker) CalculateMinorDeployTime(dr *v1alpha1.DeckhouseRelea
 	}
 
 	c.checkCooldown(result, dr)
-	c.checkCanaryNotInManualMode(result, dr)
+
+	if !c.settings.InManualMode() {
+		c.checkCanary(result, dr)
+	}
+
 	c.checkNotify(result, dr)
-	c.checkWindowModeAuto(result)
-	c.checkManualApprovedNotModeAuto(result, dr, metricLabels)
+
+	if c.settings.Mode == updater.ModeAuto && !c.settings.Windows.IsAllowed(result.ReleaseApplyTime) {
+		c.processWindow(result)
+	}
+
+	if c.settings.Mode != updater.ModeAuto && !dr.GetManuallyApproved() {
+		c.processManualApproved(result, dr, metricLabels)
+	}
 
 	if !result.ReleaseApplyAfterTime.IsZero() {
 		result.Reason = notificationDelayReason
@@ -259,20 +249,4 @@ func (c *DeployTimeChecker) CalculateMinorDeployTime(dr *v1alpha1.DeckhouseRelea
 	}
 
 	return result
-}
-
-func (c *DeployTimeChecker) checkReleaseDisruptions(dr *v1alpha1.DeckhouseRelease) error {
-	if !c.settings.InDisruptionApprovalMode() {
-		return nil
-	}
-
-	// TODO: we save only last disruption condition
-	for _, key := range dr.GetDisruptions() {
-		hasDisruptionUpdate, reason := requirements.HasDisruption(key)
-		if hasDisruptionUpdate && !dr.GetDisruptionApproved() {
-			return fmt.Errorf("(`kubectl annotate DeckhouseRelease %s release.deckhouse.io/disruption-approved=true`): %s", dr.GetName(), reason)
-		}
-	}
-
-	return nil
 }
