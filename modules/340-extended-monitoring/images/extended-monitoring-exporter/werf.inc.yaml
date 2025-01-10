@@ -1,6 +1,6 @@
 {{- $binaries := "/usr/bin/python3 /lib64/libz.so* /lib64/libexpat.so* /usr/lib64/libffi.so* /lib64/libcrypto.so* /lib64/libssl.so*" }}
 ---
-artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binary-artifact
 fromImage: common/alt-p11-artifact
 git:
   - add: /{{ $.ModulePath }}modules/340-{{ $.ModuleName }}/images/{{ $.ImageName }}/src/requirements.txt
