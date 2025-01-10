@@ -23,12 +23,10 @@ image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
 final: false
 from: {{ $.Images.BASE_ALT_P11 }}
 import:
-- image: common/shell-operator-artifact
-  add: /
-  to: /
+- image: common/python-static
+  add: /opt/python-static
+  to: /usr
   before: setup
-  includePaths:
-  - opt/python-static
 git:
 - add: /{{ $.ModulePath }}modules/300-{{ $.ModuleName }}/images/{{ $.ImageName }}/requirements.txt
   to: /requirements.txt

@@ -1,20 +1,18 @@
-{{- $binaries := "/opt/python-static/bin/python3 /lib64/libz.so* /lib64/libexpat.so* /usr/lib64/libffi.so* /lib64/libcrypto.so* /lib64/libssl.so* /usr/lib64/libsqlite3.so* /usr/sbin/dnsmasq /lib64/libnss_*" }}
+{{- $binaries := "/usr/bin/python3 /lib64/libz.so* /lib64/libexpat.so* /usr/lib64/libffi.so* /lib64/libcrypto.so* /lib64/libssl.so* /usr/lib64/libsqlite3.so* /usr/sbin/dnsmasq /lib64/libnss_*" }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
 final: false
 fromImage: common/relocate-artifact
 import:
 - image: common/python-static
-  add: /
-  to: /
+  add: /opt/python-static
+  to: /usr
   before: setup
-  includePaths:
-  - opt/python-static
 shell:
   install:
     - apt-get update
-    - apt-get install -y python3-modules-sqlite3 dnsmasq --no-install-recommends
-    - /opt/python-static/bin/pip3 install pyroute2 six ipcalc
+    - apt-get install -y dnsmasq
+    - pip3 install pysqlite3 pyroute2 six ipcalc
     - /binary_replace.sh -i "{{ $binaries }}" -o /relocate
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
