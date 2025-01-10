@@ -109,4 +109,4 @@ import:
   before: install
 shell:
   install:
-  - /opt/python-static/pip3 install -r /requirements.txt
+  - /usr/bin/pip3 install -r /requirements.txt
