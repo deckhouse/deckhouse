@@ -11,6 +11,7 @@ import:
   - usr/lib/python3
   - usr/lib64/python3
   - usr/lib64/python3.*
+  - opt/python-static
 git:
 - add: /{{ $.ModulePath }}modules/300-{{ $.ModuleName }}/images/{{ $.ImageName }}/hooks
   to: /hooks
@@ -21,13 +22,16 @@ git:
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
 final: false
-fromCacheVersion: "0"
 from: {{ $.Images.BASE_ALT_P11 }}
 import:
 - image: common/python-static
-  add: /opt/python-static
-  to: /usr
+  add: /
+  to: /
   before: setup
+  includePaths:
+  - opt/python-static
+  - usr/bin/pip3
+  - usr/bin/python3
 git:
 - add: /{{ $.ModulePath }}modules/300-{{ $.ModuleName }}/images/{{ $.ImageName }}/requirements.txt
   to: /requirements.txt
