@@ -51,11 +51,11 @@ func TestDeployDelayReason(t *testing.T) {
 	reason = reason.add(manualApprovalRequiredReason)
 	require.True(t, reason.contains(manualApprovalRequiredReason))
 	require.True(t, reason.contains(outOfWindowReason))
-	require.Equal(t, "outOfWindowReason, manualApprovalRequiredReason", reason.String())
+	require.Equal(t, "manualApprovalRequiredReason, outOfWindowReason", reason.String())
 	require.Panics(t, func() { reason.Message(nil, zeroTime) })
 	require.Equal(t, "Release is waiting for the update window, waiting for the 'release.deckhouse.io/approved: \"true\"' annotation", reason.Message(deckhouseRelease, zeroTime))
 	require.Equal(t, "Release is waiting for the update window, waiting for the 'modules.deckhouse.io/approved: \"true\"' annotation", reason.Message(moduleRelease, zeroTime))
 	require.Equal(t, "Release is waiting for the update window, waiting for the 'release.deckhouse.io/approved: \"true\"' annotation. After approval the release will be delayed until 17 Oct 19 15:33 UTC", reason.Message(deckhouseRelease, now))
 	require.Equal(t, "Release is waiting for the update window, waiting for the 'modules.deckhouse.io/approved: \"true\"' annotation. After approval the release will be delayed until 17 Oct 19 15:33 UTC", reason.Message(moduleRelease, now))
-	require.Equal(t, "outOfWindowReason|manualApprovalRequiredReason", reason.GoString())
+	require.Equal(t, "manualApprovalRequiredReason|outOfWindowReason", reason.GoString())
 }

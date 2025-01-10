@@ -18,6 +18,7 @@ package d8updater
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 	"time"
 
@@ -149,6 +150,8 @@ func (r deployDelayReason) splitReasons() []string {
 			reasons = append(reasons, str)
 		}
 	}
+
+	slices.Sort(reasons)
 
 	return reasons
 }
