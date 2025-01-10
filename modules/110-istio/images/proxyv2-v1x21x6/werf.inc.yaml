@@ -29,10 +29,10 @@ import:
   after: setup
 shell:
   beforeInstall:
-  ###curl iputils knot-utils netcat conntrack-tools net-tools whois lsof sudo
+  ###curl iputils knot-utils netcat conntrack-tools net-tools whois lsof
   - |
     apt-get update && \
-    apt-get install -y ca-certificates iptables iproute2 \
+    apt-get install -y ca-certificates iptables iproute2 sudo \
     strace procps jq
   - update-ca-trust
   - apt-get clean
