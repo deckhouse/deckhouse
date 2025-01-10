@@ -81,10 +81,11 @@ import:
   to: /
   before: setup
   includePaths:
-  - lib64/libz.so*
-  - lib64/libexpat.so*
-  - lib64/libssl.so.*
-  - lib64/libcrypto.so.*
+  - usr/lib64/libz.so*
+  - usr/lib64/libexpat.so*
+  - usr/lib64/libssl.so.*
+  - usr/lib64/libcrypto.so.*
+  - usr/bin/openssl
   - etc/pki
   - usr/share/ca-certificates/ca-bundle.crt
   - usr/bin/python3
@@ -93,6 +94,7 @@ import:
   - usr/lib64/python3
   - usr/lib64/python3.12
   - usr/lib64/libffi.so*
+  - usr/lib64/libb2.so*
   - usr/share/vim
   - etc/vim
   - etc/bash_completion.d
@@ -115,6 +117,9 @@ shell:
   beforeInstall:
   {{- include "base components" (list $context.rootContext $context.prefix) | nindent 2 }}
 
+docker:
+  ENV:
+    CRYPTOGRAPHY_OPENSSL_NO_LEGACY: "true"
 {{- end }}
 
 
