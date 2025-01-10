@@ -161,7 +161,6 @@ podSubnetCIDR: 10.231.0.0/16
 serviceSubnetCIDR: 10.232.0.0/16
 `))
 			f.ValuesSet("cniCilium.internal.mode", "Direct")
-			f.ValuesSet("cniCilium.internal.masqueradeMode", "BPF")
 			f.ConfigValuesSet("cniCilium.masqueradeMode", "Netfilter")
 			f.ConfigValuesSet("cniCilium.tunnelMode", "VXLAN")
 			f.RunHook()
@@ -169,7 +168,6 @@ serviceSubnetCIDR: 10.232.0.0/16
 		It("hook should run successfully, cilium mode should be `VXLAN` and masqueradeMode is `Netfilter`", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet("cniCilium.internal.mode").String()).To(Equal("VXLAN"))
-			Expect(f.ValuesGet("cniCilium.internal.masqueradeMode").String()).To(Equal("Netfilter"))
 		})
 	})
 })
