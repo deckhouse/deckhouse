@@ -930,14 +930,14 @@ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-con
    * Получите значение `USED_MODULES`:
 
      ```shell
-     USED_MODULES=$(kubectl get modules | grep -v 'snapshot-controller-crd' | grep Enabled |awk {'print $1'})
+     USED_MODULES=$(kubectl get modules | grep -v 'admission-policy-engine' | grep Enabled |awk {'print $1'})
      ```
 
      Проверка:
 
      ```console
      $ echo $USED_MODULES
-     admission-policy-engine cert-manager chrony cloud-data-crd ...
+     admission-policy-engine cert-manager chrony ...
      ```
 
    * Получите значение `MODULES_WILL_DISABLE`:
@@ -950,7 +950,7 @@ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-con
 
      ```console
      $ echo $MODULES_WILL_DISABLE
-     metallb-crd node-local-dns registry-packages-proxy
+     node-local-dns registry-packages-proxy
      ```
 
      > Обратите внимание, если в `$MODULES_WILL_DISABLE` указана `registry-packages-proxy`, то его надо будет включить обратно, иначе кластер не сможет перейти на образы Deckhouse CE. Включение в 8 пункте.
@@ -975,9 +975,6 @@ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-con
    Пример результата выполнения:
 
    ```console
-   Defaulted container "deckhouse" out of: deckhouse, kube-rbac-proxy, init-external-modules (init)
-   Module metallb-crd disabled
-
    Defaulted container "deckhouse" out of: deckhouse, kube-rbac-proxy, init-external-modules (init)
    Module node-local-dns disabled
    ```
@@ -1522,14 +1519,14 @@ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-con
    * Получите значение `USED_MODULES`:
 
      ```shell
-     USED_MODULES=$(sudo /opt/deckhouse/bin/kubectl get modules | grep -v 'snapshot-controller-crd' | grep Enabled |awk {'print $1'})
+     USED_MODULES=$(sudo /opt/deckhouse/bin/kubectl get modules | grep -v 'admission-policy-engine' | grep Enabled |awk {'print $1'})
      ```
 
      Проверка:
 
      ```console
      $ echo $USED_MODULES
-     admission-policy-engine cert-manager chrony cloud-data-crd ...
+     admission-policy-engine cert-manager chrony ...
      ```
 
    * Сформируйте список модулей, которые должны быть отключены:
@@ -1780,7 +1777,7 @@ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-con
    CSE_REGISTRY_PACKAGE_PROXY=$(kubectl exec cse-image -- cat deckhouse/candi/images_digests.json | grep registryPackagesProxy | grep -oE 'sha256:\w*')
    crictl pull registry-cse.deckhouse.ru/deckhouse/cse@$CSE_REGISTRY_PACKAGE_PROXY
    CSE_MODULES=$(kubectl exec cse-image -- ls -l deckhouse/modules/ | awk {'print $9'}  |grep -oP "\d.*-\w*"  | cut -c5-)
-   USED_MODULES=$(kubectl get modules | grep -v 'snapshot-controller-crd' | grep Enabled |awk {'print $1'})
+   USED_MODULES=$(kubectl get modules | grep -v 'admission-policy-engine' | grep Enabled |awk {'print $1'})
    MODULES_WILL_DISABLE=$(echo $USED_MODULES | tr ' ' '\n' | grep -Fxv -f <(echo $CSE_MODULES | tr ' ' '\n'))
    ```
 
