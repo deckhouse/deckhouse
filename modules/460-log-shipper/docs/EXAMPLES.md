@@ -242,8 +242,8 @@ spec:
 It is possible to send logs from Deckhouse to Splunk.
 
 1. The endpoint must be equal to the Splunk instance name with the `8088` port and no path provided, for example, `https://prd-p-xxxxxx.splunkcloud.com:8088`.
-2. To add a token to ingest logs, go to `Setting` -> `Data inputs`, add a new `HTTP Event Collector` and copy the token.
-3. Provide a Splunk index to store logs, for example, `logs`.
+1. To add a token to ingest logs, go to `Setting` -> `Data inputs`, add a new `HTTP Event Collector` and copy the token.
+1. Provide a Splunk index to store logs, for example, `logs`.
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -378,9 +378,9 @@ extraLabels:
   cef.severity: '1'
 ```
 
-## Collect Kubernetes events
+## Collect Kubernetes Events
 
-Kubernetes events can be collected by `log-shipper` if `events-exporter` is enabled in the [`extended-monitoring`](../extended-monitoring/) module configuration.
+Kubernetes Events can be collected by `log-shipper` if `events-exporter` is enabled in the [`extended-monitoring`](../extended-monitoring/) module configuration.
 
 Enable `events-exporter` by adjusting the `extended-monitoring` settings:
 
