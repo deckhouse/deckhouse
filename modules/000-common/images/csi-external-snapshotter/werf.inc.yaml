@@ -24,14 +24,6 @@ docker:
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $version | replace "." "-" }}
 fromImage: common/src-artifact
 final: false
-    {{- if $patch }}
-git:
-- add: {{ $patches }}/patches/{{ $src_version }}
-  to: /patches
-  stageDependencies:
-    install:
-    - '**/*'
-    {{- end }}
 shell:
   setup:
   - git clone --depth 1 --branch {{ $value.csi.snapshotter }} {{ $.SOURCE_REPO }}/kubernetes-csi/external-snapshotter.git /src
