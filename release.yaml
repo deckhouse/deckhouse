@@ -36,6 +36,7 @@ requirements:
   "yandexHasDeprecatedZoneInConfig": "false" # modules/030-cloud-provider-yandex/requirements/check.go
   "yandexHasDeprecatedZoneInNodes": "false" # modules/030-cloud-provider-yandex/requirements/check.go
   "metallbHasStandardConfiguration": "true" # ee/se/modules/380-metallb/requirements/check.go
+  "cniConfigurationSettled" : "true" # modules/021-cni-cilium/requirements/check.go, modules/035-cni-flannel/requirements/check.go, modules/035-cni-simple-bridge/requirements/check.go,
 
 # map of disruptions, associated with a specific release. You have to register check functions before specified release
 disruptions:
