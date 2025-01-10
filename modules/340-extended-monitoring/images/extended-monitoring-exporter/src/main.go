@@ -32,116 +32,14 @@ import (
 	"k8s.io/client-go/rest"
 )
 
-func ListStatefulSet(client metadata.Interface, namespasce string) *metav1.PartialObjectMetadataList {
-	resource := schema.GroupVersionResource{
-		Group:    "apps",
-		Version:  "v1",
-		Resource: "statefulsets",
+func ListResources(ctx context.Context, client metadata.Interface, resource schema.GroupVersionResource, option metav1.ListOptions, namespace string) *metav1.PartialObjectMetadataList {
+	request := client.Resource(resource)
+	if namespace != "" {
+		request.Namespace(namespace)
 	}
-	rows, err := client.Resource(resource).Namespace(namespasce).List(context.Background(), metav1.ListOptions{TimeoutSeconds: &timeOut})
+	rows, err := request.List(ctx, option)
 	if err != nil {
-		log.Print("[StatefulSet] couldn't get")
-		log.Fatal(err.Error())
-	}
-	return rows
-}
-
-func ListDaemonSet(client metadata.Interface, namespasce string) *metav1.PartialObjectMetadataList {
-	resource := schema.GroupVersionResource{
-		Group:    "apps",
-		Version:  "v1",
-		Resource: "daemonsets",
-	}
-	rows, err := client.Resource(resource).Namespace(namespasce).List(context.Background(), metav1.ListOptions{TimeoutSeconds: &timeOut})
-	if err != nil {
-		log.Print("[DaemonSet] couldn't get")
-		log.Fatal(err.Error())
-	}
-	return rows
-}
-
-func ListDeployment(client metadata.Interface, namespasce string) *metav1.PartialObjectMetadataList {
-	resource := schema.GroupVersionResource{
-		Group:    "apps",
-		Version:  "v1",
-		Resource: "deployments",
-	}
-	rows, err := client.Resource(resource).Namespace(namespasce).List(context.Background(), metav1.ListOptions{TimeoutSeconds: &timeOut})
-	if err != nil {
-		log.Print("[Deployments] couldn't get")
-		log.Fatal(err.Error())
-	}
-	return rows
-}
-
-func ListCronJob(client metadata.Interface, namespasce string) *metav1.PartialObjectMetadataList {
-	resource := schema.GroupVersionResource{
-		Group:    "batch",
-		Version:  "v1",
-		Resource: "cronjobs",
-	}
-	rows, err := client.Resource(resource).Namespace(namespasce).List(context.Background(), metav1.ListOptions{TimeoutSeconds: &timeOut})
-	if err != nil {
-		log.Print("[CronJob] couldn't get")
-		log.Fatal(err.Error())
-	}
-	return rows
-}
-
-func ListIngress(client metadata.Interface, namespasce string) *metav1.PartialObjectMetadataList {
-	resource := schema.GroupVersionResource{
-		Group:    "networking.k8s.io",
-		Version:  "v1",
-		Resource: "ingresses",
-	}
-	rows, err := client.Resource(resource).Namespace(namespasce).List(context.Background(), metav1.ListOptions{TimeoutSeconds: &timeOut})
-	if err != nil {
-		log.Print("[Ingress] couldn't get")
-		log.Fatal(err.Error())
-	}
-	return rows
-}
-
-func ListPods(client metadata.Interface, namespasce string) *metav1.PartialObjectMetadataList {
-	resource := schema.GroupVersionResource{
-		Group:    "",
-		Version:  "v1",
-		Resource: "pods",
-	}
-	rows, err := client.Resource(resource).Namespace(namespasce).List(context.Background(), metav1.ListOptions{TimeoutSeconds: &timeOut})
-	if err != nil {
-		log.Print("[Pods] couldn't get")
-		log.Fatal(err.Error())
-	}
-	return rows
-}
-
-func ListNodes(client metadata.Interface) *metav1.PartialObjectMetadataList {
-	resource := schema.GroupVersionResource{
-		Group:    "",
-		Version:  "v1",
-		Resource: "nodes",
-	}
-	rows, err := client.Resource(resource).List(context.Background(), metav1.ListOptions{TimeoutSeconds: &timeOut})
-	if err != nil {
-		log.Print("[Nodes] couldn't get")
-		log.Fatal(err.Error())
-	}
-	return rows
-}
-
-func ListNamespaces(client metadata.Interface) *metav1.PartialObjectMetadataList {
-	resource := schema.GroupVersionResource{
-		Group:    "",
-		Version:  "v1",
-		Resource: "namespaces",
-	}
-	rows, err := client.Resource(resource).List(context.Background(), metav1.ListOptions{
-		LabelSelector:  namespaces_enabled_label,
-		TimeoutSeconds: &timeOut,
-	})
-	if err != nil {
-		log.Print("[Namespaces] couldn't get")
+		log.Print(resource.String() + " couldn't get")
 		log.Fatal(err.Error())
 	}
 	return rows
@@ -235,7 +133,7 @@ func recordMetrics() {
 				[]string{"namespace", "cronjob"},
 			)
 			//node
-			for _, node := range ListNodes(kubeMetadata).Items {
+			for _, node := range ListResources(context.Background(), kubeMetadata, resource_nodes, options, "").Items {
 				enabled := enabledLabel(node.Labels)
 				node_enabled.WithLabelValues(node.Name).Add(enabled)
 				if enabled == 1 {
@@ -245,13 +143,13 @@ func recordMetrics() {
 				}
 			}
 			//namespace
-			for _, namespasce := range ListNamespaces(kubeMetadata).Items {
+			for _, namespasce := range ListResources(context.Background(), kubeMetadata, resource_namespaces, options_ns, "").Items {
 				enabled_namespace := enabledLabel(namespasce.Labels)
 				namespaces_enabled.WithLabelValues(namespasce.Name).Add(enabled_namespace)
 
 				if enabled_namespace == 1 {
 					//pod
-					for _, pod := range ListPods(kubeMetadata, namespasce.Name).Items {
+					for _, pod := range ListResources(context.Background(), kubeMetadata, resource_pods, options, namespasce.Name).Items {
 						enabled := enabledLabel(pod.Labels)
 						pod_enabled.WithLabelValues(namespasce.Name, pod.Name).Add(enabled)
 						if enabled == 1 {
@@ -261,7 +159,7 @@ func recordMetrics() {
 						}
 					}
 					//ingress
-					for _, ingress := range ListIngress(kubeMetadata, namespasce.Name).Items {
+					for _, ingress := range ListResources(context.Background(), kubeMetadata, resource_ingresses, options, namespasce.Name).Items {
 						enabled := enabledLabel(ingress.Labels)
 						ingress_enabled.WithLabelValues(namespasce.Name, ingress.Name).Add(enabled)
 						if enabled == 1 {
@@ -271,7 +169,7 @@ func recordMetrics() {
 						}
 					}
 					//deployment
-					for _, deployment := range ListDeployment(kubeMetadata, namespasce.Name).Items {
+					for _, deployment := range ListResources(context.Background(), kubeMetadata, resource_deployments, options, namespasce.Name).Items {
 						enabled := enabledLabel(deployment.Labels)
 						deployment_enabled.WithLabelValues(namespasce.Name, deployment.Name).Add(enabled)
 						if enabled == 1 {
@@ -281,7 +179,7 @@ func recordMetrics() {
 						}
 					}
 					//daemonset
-					for _, daemonset := range ListDaemonSet(kubeMetadata, namespasce.Name).Items {
+					for _, daemonset := range ListResources(context.Background(), kubeMetadata, resource_daemonsets, options, namespasce.Name).Items {
 						enabled := enabledLabel(daemonset.Labels)
 						daemonset_enabled.WithLabelValues(namespasce.Name, daemonset.Name).Add(enabled)
 						if enabled == 1 {
@@ -291,7 +189,7 @@ func recordMetrics() {
 						}
 					}
 					//statefulset
-					for _, statefulset := range ListStatefulSet(kubeMetadata, namespasce.Name).Items {
+					for _, statefulset := range ListResources(context.Background(), kubeMetadata, resource_statefulsets, options, namespasce.Name).Items {
 						enabled := enabledLabel(statefulset.Labels)
 						statefulset_enabled.WithLabelValues(namespasce.Name, statefulset.Name).Add(enabled)
 						if enabled == 1 {
@@ -301,7 +199,7 @@ func recordMetrics() {
 						}
 					}
 					//cronjob
-					for _, cronjob := range ListCronJob(kubeMetadata, namespasce.Name).Items {
+					for _, cronjob := range ListResources(context.Background(), kubeMetadata, resource_cronjobs, options, namespasce.Name).Items {
 						cronjob_enabled.WithLabelValues(namespasce.Name, cronjob.Name).Add(enabledLabel(cronjob.Labels))
 					}
 				}
@@ -330,6 +228,19 @@ func recordMetrics() {
 const (
 	label_theshold_prefix    = "threshold.extended-monitoring.deckhouse.io/"
 	namespaces_enabled_label = "extended-monitoring.deckhouse.io/enabled"
+)
+
+var (
+	options               = metav1.ListOptions{TimeoutSeconds: &timeOut}
+	options_ns            = metav1.ListOptions{LabelSelector: namespaces_enabled_label, TimeoutSeconds: &timeOut}
+	resource_nodes        = schema.GroupVersionResource{Group: "", Version: "v1", Resource: "nodes"}
+	resource_namespaces   = schema.GroupVersionResource{Group: "", Version: "v1", Resource: "namespaces"}
+	resource_pods         = schema.GroupVersionResource{Group: "", Version: "v1", Resource: "pods"}
+	resource_ingresses    = schema.GroupVersionResource{Group: "networking.k8s.io", Version: "v1", Resource: "ingresses"}
+	resource_deployments  = schema.GroupVersionResource{Group: "apps", Version: "v1", Resource: "deployments"}
+	resource_daemonsets   = schema.GroupVersionResource{Group: "apps", Version: "v1", Resource: "daemonsets"}
+	resource_statefulsets = schema.GroupVersionResource{Group: "apps", Version: "v1", Resource: "statefulsets"}
+	resource_cronjobs     = schema.GroupVersionResource{Group: "batch", Version: "v1", Resource: "cronjobs"}
 )
 
 var (
@@ -369,7 +280,7 @@ var (
 	}
 )
 
-func init() {
+func main() {
 	config, err := rest.InClusterConfig()
 	if err != nil {
 		log.Fatalf("Error kubernetes config: %v\n", err)
@@ -382,9 +293,7 @@ func init() {
 	if err != nil {
 		log.Fatal(err)
 	}
-}
 
-func main() {
 	handler := promhttp.HandlerFor(
 		reg,
 		promhttp.HandlerOpts{
