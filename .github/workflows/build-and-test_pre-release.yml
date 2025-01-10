@@ -1268,8 +1268,15 @@ jobs:
           DECKHOUSE_REGISTRY_READ_HOST: "${{secrets.DECKHOUSE_REGISTRY_READ_HOST}}"
           CHECKER_IMAGE: "${{vars.DOC_LINK_CHECKER_IMAGE}}"
         run: |
-          test ./tools/docs/link-checker/entrypoint.sh && docker run --rm -v "${_TMPDIR}/site_en:/src/en:ro" -v "${_TMPDIR}/site_ru:/src/ru:ro" \
-                    -v "./tools/docs/link-checker/entrypoint.sh:/entrypoint.sh:ro" ${DECKHOUSE_REGISTRY_READ_HOST}/base_images/${CHECKER_IMAGE} /entrypoint.sh
+          test -e ./tools/docs/link-checker/entrypoint.sh && \
+          docker run \
+            --rm \
+            -v "${_TMPDIR}/site_en:/src/en:ro" \
+            -v "${_TMPDIR}/site_ru:/src/ru:ro" \
+            -v "./tools/docs/link-checker/entrypoint.sh:/entrypoint.sh:ro" \
+            -u $(id -u) \
+            ${DECKHOUSE_REGISTRY_READ_HOST}/base_images/${CHECKER_IMAGE} \
+            /entrypoint.sh
 
       - name: Clean TMPDIR
         if: always()
