@@ -1,13 +1,17 @@
-{{- $binaries := "/usr/bin/python3 /lib64/libz.so* /lib64/libexpat.so* /usr/lib64/libffi.so* /lib64/libcrypto.so* /lib64/libssl.so* /usr/lib64/libsqlite3.so* /usr/sbin/dnsmasq /lib64/libnss_*" }}
+{{- $binaries := "/opt/python-static/python3 /lib64/libz.so* /lib64/libexpat.so* /usr/lib64/libffi.so* /lib64/libcrypto.so* /lib64/libssl.so* /usr/lib64/libsqlite3.so* /usr/sbin/dnsmasq /lib64/libnss_*" }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
 final: false
 fromImage: common/relocate-artifact
 import:
 - image: common/python-static
-  add: /opt/python-static
-  to: /usr
+  add: /
+  to: /
   before: setup
+  includePaths:
+  - opt/python-static
+  - usr/bin/pip3
+  - usr/bin/python3
 shell:
   install:
     - apt-get update
@@ -33,6 +37,7 @@ import:
     - usr/lib/python3/site-packages
     - usr/lib64/python3
     - usr/lib64/python3.*
+    - opt/python-static
   - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
     add: /etc/dnsmasq.conf
     before: install
