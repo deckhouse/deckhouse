@@ -346,7 +346,7 @@ conversions:
 - путь до исходного файла конфигурации (версия до конвертации);
 - путь до ожидаемого файла конфигурации (версия после конвертации).
 
-[Пример](https://github.com/deckhouse/deckhouse/blob/main/modules/prometheus/openapi/conversions/conversions_test.go) теста конверсии.
+[Пример](https://github.com/deckhouse/deckhouse/blob/main/modules/300-prometheus/openapi/conversions/conversions_test.go) теста конверсии.
 
 ## templates
 
