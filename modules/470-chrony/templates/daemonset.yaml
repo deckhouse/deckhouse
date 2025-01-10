@@ -194,6 +194,16 @@ spec:
         - '--collector.tracking'
         - '--collector.serverstats'
         - '--log.level=info'
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            scheme: HTTPS
+            port: 4228
+        readinessProbe:
+          httpGet:
+            path: /healthz
+            scheme: HTTPS
+            port: 4228
         volumeMounts:
         - name: var-run
           mountPath: /var/run
@@ -219,9 +229,11 @@ spec:
               fieldPath: status.hostIP
         - name: KUBE_RBAC_PROXY_CONFIG
           value: |
+            excludePaths:
+            - /healthz
             upstreams:
-            - upstream: http://127.0.0.1:4228/metrics
-              path: /metrics
+            - upstream: http://127.0.0.1:4228/
+              path: /
               authorization:
                 resourceAttributes:
                   namespace: d8-chrony
@@ -378,6 +390,16 @@ spec:
         - '--collector.tracking'
         - '--collector.serverstats'
         - '--log.level=info'
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            scheme: HTTPS
+            port: 4228
+        readinessProbe:
+          httpGet:
+            path: /healthz
+            scheme: HTTPS
+            port: 4228
         volumeMounts:
         - name: var-run
           mountPath: /var/run
@@ -403,9 +425,11 @@ spec:
               fieldPath: status.hostIP
         - name: KUBE_RBAC_PROXY_CONFIG
           value: |
+            excludePaths:
+            - /healthz
             upstreams:
-            - upstream: http://127.0.0.1:4228/metrics
-              path: /metrics
+            - upstream: http://127.0.0.1:4228/
+              path: /
               authorization:
                 resourceAttributes:
                   namespace: d8-chrony

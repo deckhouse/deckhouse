@@ -360,11 +360,13 @@ spec:
                 legacySSL:
                   type: boolean
                   description: |
-                    Enable old TLS protocol versions and legacy cipher suites.
+                    Enable outdated versions of the TLS protocol and cipher suites.
 
-                    Also, this options enables legacy cipher suites to support legacy libraries and software: [OWASP Cipher String 'C' ](https://cheatsheetseries.owasp.org/cheatsheets/TLS_Cipher_String_Cheat_Sheet.html). Learn more [here](https://github.com/deckhouse/deckhouse/blob/main/modules/ingress-nginx/templates/controller/configmap.yaml).
+                    Enables the following TLS protocol versions: `TLSv1`, `TLSv1.1`, `TLSv1.2`, `TLSv1.3`.
 
-                    By default, only TLSv1.2 and the newest cipher suites are enabled.
+                    Enables the following combinations of cipher suites in order from the strongest to the weakest: `ECDHE-ECDSA-AES256-GCM-SHA384`, `ECDHE-RSA-AES256-GCM-SHA384`, `ECDHE-ECDSA-CHACHA20-POLY1305`, `ECDHE-RSA-CHACHA20-POLY1305`, `ECDHE-ECDSA-AES128-GCM-SHA256`, `ECDHE-RSA-AES128-GCM-SHA256`, `ECDHE-ECDSA-AES256-SHA384`, `ECDHE-RSA-AES256-SHA384`, `ECDHE-ECDSA-AES128-SHA256`, `ECDHE-RSA-AES128-SHA256`, `ECDHE-ECDSA-AES256-SHA`, `ECDHE-RSA-AES256-SHA`, `ECDHE-ECDSA-AES128-SHA`, `ECDHE-RSA-AES128-SHA`, `AES256-GCM-SHA384`, `AES128-GCM-SHA256`, `AES256-SHA256`, `AES128-SHA256`, `AES256-SHA`, `AES128-SHA`.
+
+                    **By default**, only `TLSv1.2` and `TLSv1.3` with the newest cipher suites are enabled.
                 disableHTTP2:
                   type: boolean
                   description: |
@@ -1011,11 +1013,13 @@ spec:
                 legacySSL:
                   type: boolean
                   description: |
-                    Enable old TLS protocol versions and legacy cipher suites.
+                    Enable outdated versions of the TLS protocol and cipher suites.
 
-                    Also, this options enables legacy cipher suites to support legacy libraries and software: [OWASP Cipher String 'C' ](https://cheatsheetseries.owasp.org/cheatsheets/TLS_Cipher_String_Cheat_Sheet.html). Learn more [here](https://github.com/deckhouse/deckhouse/blob/main/modules/ingress-nginx/templates/controller/configmap.yaml).
+                    Enables the following TLS protocol versions: `TLSv1`, `TLSv1.1`, `TLSv1.2`, `TLSv1.3`.
 
-                    By default, only TLSv1.2 and the newest cipher suites are enabled.
+                    Enables the following combinations of cipher suites in order from the strongest to the weakest: `ECDHE-ECDSA-AES256-GCM-SHA384`, `ECDHE-RSA-AES256-GCM-SHA384`, `ECDHE-ECDSA-CHACHA20-POLY1305`, `ECDHE-RSA-CHACHA20-POLY1305`, `ECDHE-ECDSA-AES128-GCM-SHA256`, `ECDHE-RSA-AES128-GCM-SHA256`, `ECDHE-ECDSA-AES256-SHA384`, `ECDHE-RSA-AES256-SHA384`, `ECDHE-ECDSA-AES128-SHA256`, `ECDHE-RSA-AES128-SHA256`, `ECDHE-ECDSA-AES256-SHA`, `ECDHE-RSA-AES256-SHA`, `ECDHE-ECDSA-AES128-SHA`, `ECDHE-RSA-AES128-SHA`, `AES256-GCM-SHA384`, `AES128-GCM-SHA256`, `AES256-SHA256`, `AES128-SHA256`, `AES256-SHA`, `AES128-SHA`.
+
+                    **By default**, only `TLSv1.2` and `TLSv1.3` with the newest cipher suites are enabled.
                 disableHTTP2:
                   type: boolean
                   description: |
