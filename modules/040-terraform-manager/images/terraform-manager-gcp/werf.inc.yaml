@@ -10,7 +10,8 @@ import:
   to: /plugins/registry.terraform.io/{{ .TF.gcp.namespace }}/{{ .TF.gcp.type }}/{{ .TF.gcp.version }}/linux_amd64/terraform-provider-google
   before: setup
 ---
-artifact: terraform-provider-gcp
+image: terraform-provider-gcp
+final: false
 from: {{ $.Images.BASE_GOLANG_20_ALPINE }}
 mount:
   - fromPath: ~/go-pkg-cache

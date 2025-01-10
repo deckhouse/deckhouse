@@ -71,7 +71,7 @@ spec:
             value: memberlist
           - name: METALLB_DEPLOYMENT
             value: controller
-          image: {{ include "helm_lib_module_image" (list . "controller") }}
+          image: {{ include "helm_lib_module_image" (list . "metallbController") }}
           imagePullPolicy: IfNotPresent
           name: controller
           {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 10 }}

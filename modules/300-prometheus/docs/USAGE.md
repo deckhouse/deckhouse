@@ -129,7 +129,7 @@ Next, you only need to add the data source to Grafana:
 
 **Set `https://prometheus-api.<cluster-domain>` as the URL**.
 
-<img src="../../images/300-prometheus/prometheus_connect_settings.png" height="500">
+<img src="../../images/prometheus/prometheus_connect_settings.png" height="500">
 
 * Note that **basic authorization** is not sufficiently secure and safe. You are encouraged to implement additional safety measures, e.g., attach the `nginx.ingress.kubernetes.io/whitelist-source-range` annotation.
 

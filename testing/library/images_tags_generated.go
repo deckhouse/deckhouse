@@ -22,7 +22,8 @@ var DefaultImagesDigests = map[string]interface{}{
 		"certManagerWebhook":    "imageHash-certManager-certManagerWebhook",
 	},
 	"chrony": map[string]interface{}{
-		"chrony": "imageHash-chrony-chrony",
+		"chrony":         "imageHash-chrony-chrony",
+		"chronyExporter": "imageHash-chrony-chronyExporter",
 	},
 	"ciliumHubble": map[string]interface{}{
 		"relay":      "imageHash-ciliumHubble-relay",
@@ -214,7 +215,6 @@ var DefaultImagesDigests = map[string]interface{}{
 		"kubeRbacProxy":             "imageHash-common-kubeRbacProxy",
 		"nginxStatic":               "imageHash-common-nginxStatic",
 		"pause":                     "imageHash-common-pause",
-		"pythonStatic":              "imageHash-common-pythonStatic",
 		"redisStatic":               "imageHash-common-redisStatic",
 		"shellOperator":             "imageHash-common-shellOperator",
 		"vxlanOffloadingFixer":      "imageHash-common-vxlanOffloadingFixer",
@@ -320,13 +320,14 @@ var DefaultImagesDigests = map[string]interface{}{
 		"vector": "imageHash-logShipper-vector",
 	},
 	"loki": map[string]interface{}{
-		"loki": "imageHash-loki-loki",
+		"loki":            "imageHash-loki-loki",
+		"lokiSrcArtifact": "imageHash-loki-lokiSrcArtifact",
 	},
 	"metallb": map[string]interface{}{
-		"controller":     "imageHash-metallb-controller",
-		"l2lbController": "imageHash-metallb-l2lbController",
-		"l2lbSpeaker":    "imageHash-metallb-l2lbSpeaker",
-		"speaker":        "imageHash-metallb-speaker",
+		"l2lbController":    "imageHash-metallb-l2lbController",
+		"l2lbSpeaker":       "imageHash-metallb-l2lbSpeaker",
+		"metallbController": "imageHash-metallb-metallbController",
+		"metallbSpeaker":    "imageHash-metallb-metallbSpeaker",
 	},
 	"monitoringKubernetes": map[string]interface{}{
 		"ebpfExporter":                      "imageHash-monitoringKubernetes-ebpfExporter",
@@ -392,9 +393,11 @@ var DefaultImagesDigests = map[string]interface{}{
 		"memcached":                   "imageHash-prometheus-memcached",
 		"memcachedExporter":           "imageHash-prometheus-memcachedExporter",
 		"mimir":                       "imageHash-prometheus-mimir",
+		"mimirSrcArtifact":            "imageHash-prometheus-mimirSrcArtifact",
 		"prometheus":                  "imageHash-prometheus-prometheus",
 		"prometheuspp":                "imageHash-prometheus-prometheuspp",
 		"promxy":                      "imageHash-prometheus-promxy",
+		"promxySrcArtifact":           "imageHash-prometheus-promxySrcArtifact",
 		"trickster":                   "imageHash-prometheus-trickster",
 	},
 	"prometheusMetricsAdapter": map[string]interface{}{
@@ -429,7 +432,7 @@ var DefaultImagesDigests = map[string]interface{}{
 		"ecrCredentialProvider131":  "imageHash-registrypackages-ecrCredentialProvider131",
 		"growpart033":               "imageHash-registrypackages-growpart033",
 		"iptables189":               "imageHash-registrypackages-iptables189",
-		"jq16":                      "imageHash-registrypackages-jq16",
+		"jq171":                     "imageHash-registrypackages-jq171",
 		"kubeadm12716":              "imageHash-registrypackages-kubeadm12716",
 		"kubeadm12815":              "imageHash-registrypackages-kubeadm12815",
 		"kubeadm12912":              "imageHash-registrypackages-kubeadm12912",

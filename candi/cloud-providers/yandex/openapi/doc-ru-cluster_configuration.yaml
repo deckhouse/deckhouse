@@ -33,7 +33,7 @@ apiVersions:
               Список зон, в которых допустимо создавать узлы.
           instanceClass:
             description: |
-              Частичное содержимое полей [YandexInstanceClass](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-yandex/cr.html#yandexinstanceclass).
+              Частичное содержимое полей [YandexInstanceClass](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/cloud-provider-yandex/cr.html#yandexinstanceclass).
             properties: &instanceClassProperties_ru
               platform:
                 description: |
@@ -60,31 +60,38 @@ apiVersions:
                   При изменении этого параметра необходимо вручную расширить каждый диск для etcd в интерфейсе Yandex Cloud (причина такого поведения — в [issue](https://github.com/yandex-cloud/terraform-provider-yandex/issues/226)).
               externalIPAddresses:
                 description: |
-                  Список внешних IP-адресов.
+                  Список внешних IP-адресов, перечисленных в порядке зон, в которых будут создаваться узлы.
 
-                  При отсутствии опции `externalSubnetID` необходимо использовать или [зарезервированные публичные IP-адреса](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-yandex/faq.html#как-зарезервировать-публичный-ip-адрес), или константу `Auto`.
+                  В списке можно указывать следующие значения:
+                  - IP-адрес из дополнительной внешней сети для соответствующей зоны (параметр `externalSubnetIDs`);
+                  - [зарезервированный публичный IP-адрес](faq.html#как-зарезервировать-публичный-ip-адрес), если список дополнительных внешних сетей не определен (параметр `externalSubnetIDs`);
+                  - `Auto`, для заказа публичного IP-адреса в соответствующей зоне.
 
-                  При наличии опции `externalSubnetID` необходимо выбрать конкретные свободные IP-адреса из указанной подсети.
+                  Обратите внимание:
+                  - Элементы массива должны быть перечислены согласно порядку зон (параметр `zones`), в которых будут создаваться узлы.
 
-                  Если количество элементов массива меньше количества узлов в группе (значение параметра `replicas`), то используется значение `Auto` (автоматический заказ публичных IP-адресов).
+                    Например:
 
-                  Элементы массива должны быть перечислены согласно порядку зон, в которых будут создаваться узлы. Например:
+                    ```yaml
+                    - <RU-CENTRAL1-A-IP-ADDRESS>
+                    - <RU-CENTRAL1-B-IP-ADDRESS>
+                    - <RU-CENTRAL1-D-IP-ADDRESS>
+                    ```
 
-                  ```yaml
-                  - <RU-CENTRAL1-A-IP-ADDRESS>
-                  - <RU-CENTRAL1-B-IP-ADDRESS>
-                  - <RU-CENTRAL1-D-IP-ADDRESS>
-                  ```
+                  - Количество элементов массива в параметре `externalIPAddresses` должно быть равно количеству узлов в группе (параметра `replicas`). Для автоматического заказа публичных IP-адресов в зоне, используйте значение `Auto` в списке в параметре `externalIPAddresses` на соответствующем месте (соответствующему порядку зон).
+                  - Если не указать externalIPAddresses, то узлы в группе будут заказаны без внешних IP-адресов.
               externalSubnetID:
                 description: |
                   Подключаемый к узлу дополнительный сетевой интерфейс, в который будет идти маршрут по умолчанию.
               externalSubnetIDs:
                 description: |
-                  Подключаемый к узлу дополнительный сетевой интерфейс, в который будет идти маршрут по умолчанию.
+                  Список дополнительных внешних сетей, подключаемых к узлам.
 
-                  Также будет добавлен маршрут для internal-интерфейса узла на всю подсеть, указанную в `nodeNetworkCIDR`.
+                  Интерфейс узла, находящийся в сети из списка, будет назначен шлюзом по умолчанию.
 
-                  Элементы массива должны быть перечислены согласно порядку зон, в которых будут создаваться узлы. Например:
+                  Также будет добавлен маршрут для интерфейса внутренней сети узла на всю подсеть, указанную в [nodeNetworkCIDR](#yandexclusterconfiguration-nodenetworkcidr).
+
+                  Элементы массива **должны** быть перечислены согласно порядку зон (параметр `zones`), в которых будут создаваться узлы. Например:
 
                   ```yaml
                   - <RU-CENTRAL1-A-SUBNET-ID>
@@ -132,7 +139,7 @@ apiVersions:
                     > **Внимание!** Доступны только поля `effect`, `key`, `values`.
             instanceClass:
               description: |
-                Частичное содержимое полей [YandexInstanceClass](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-yandex/cr.html#yandexinstanceclass).
+                Частичное содержимое полей [YandexInstanceClass](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/cloud-provider-yandex/cr.html#yandexinstanceclass).
               properties:
                 <<: *instanceClassProperties_ru
                 coreFraction:
@@ -158,7 +165,7 @@ apiVersions:
         description: |
           Список DHCP-опций, которые будут установлены на все подсети.
 
-          [Возможные проблемы](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-yandex/faq.html#проблемы-dhcpoptions-и-пути-их-решения) при использовании.
+          [Возможные проблемы](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/cloud-provider-yandex/faq.html#проблемы-dhcpoptions-и-пути-их-решения) при использовании.
         properties:
           domainName:
             description: |
@@ -170,10 +177,10 @@ apiVersions:
         description: |
           Название схемы размещения.
 
-          [Подробнее](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-yandex/layouts.html) о возможных схемах размещения провайдера.
+          [Подробнее](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/cloud-provider-yandex/layouts.html) о возможных схемах размещения провайдера.
       withNATInstance:
         description: |
-          Настройки для схемы размещения [`WithNATInstance`](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-yandex/layouts.html#withnatinstance).
+          Настройки для схемы размещения [`WithNATInstance`](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/cloud-provider-yandex/layouts.html#withnatinstance).
         properties:
           exporterAPIKey:
             description: |
@@ -185,7 +192,7 @@ apiVersions:
                 Service account'у, для которого будет создан ключ, необходимо назначить роль `monitoring.viewer`.
           natInstanceExternalAddress:
             description: |
-              Внешний [зарезервированный IP-адрес](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-yandex/faq.html#как-зарезервировать-публичный-ip-адрес) или адрес из `externalSubnetID` при указании опции.
+              Внешний [зарезервированный IP-адрес](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/cloud-provider-yandex/faq.html#как-зарезервировать-публичный-ip-адрес) или адрес из `externalSubnetID` при указании опции.
           natInstanceInternalAddress:
             description: |
               Лучше не использовать эту опцию, а использовать автоматически назначаемые адреса.
@@ -208,7 +215,7 @@ apiVersions:
                   Количество оперативной памяти (в мегабайтах) у создаваемого NAT-инстанса.
       provider:
         description: |
-          [Параметры подключения](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-yandex/environment.html) к API Yandex Cloud.
+          [Параметры подключения](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/cloud-provider-yandex/environment.html) к API Yandex Cloud.
         properties:
           cloudID:
             description: |

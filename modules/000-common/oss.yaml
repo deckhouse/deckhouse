@@ -20,6 +20,6 @@
 
 - name: Nginx
   description: A HTTP and reverse proxy server, a mail proxy server, and a generic TCP/UDP proxy server and load balancer.
-  link: http://nginx.org
+  link: https://nginx.org
   logo: /images/logos/nginx.svg
-  license: 2-clause BSD-like license (http://nginx.org/LICENSE)
+  license: 2-clause BSD-like license (https://nginx.org/LICENSE)

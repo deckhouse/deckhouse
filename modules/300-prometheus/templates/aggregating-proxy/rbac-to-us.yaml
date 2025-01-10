@@ -39,6 +39,11 @@ subjects:
     name: prometheus-metrics-adapter
     namespace: d8-monitoring
 {{- end }}
+{{- if (.Values.global.enabledModules | has "observability") }}
+  - kind: ServiceAccount
+    name: label-proxy
+    namespace: d8-observability
+{{- end }}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role

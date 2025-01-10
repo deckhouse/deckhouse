@@ -36,7 +36,7 @@ title: "Модуль cert-manager: FAQ"
    * `digitalocean`
    * `route53`
 1. `ClusterIssuer` использующие метод `HTTP-01`.  
-Добавляются автоматически, если их создание не отключено в [настройках модуля](./configuration.htmll#parameters-disableletsencrypt).
+   Добавляются автоматически, если их создание не отключено в [настройках модуля](./configuration.html#parameters-disableletsencrypt).
    * `letsencrypt`
    * `letsencrypt-staging`
 
@@ -101,7 +101,7 @@ title: "Модуль cert-manager: FAQ"
 
 Для выпуска сертификатов с помощью HashiСorp Vault, можете использовать [инструкцию](https://learn.hashicorp.com/tutorials/vault/kubernetes-cert-manager?in=vault/kubernetes).
 
-После конфигурации PKI и [включения авторизации](../../modules/140-user-authz/) в Kubernetes, нужно:
+После конфигурации PKI и [включения авторизации](../../modules/user-authz/) в Kubernetes, нужно:
 - Создать `ServiceAccount` и скопировать ссылку на его `Secret`:
 
   ```shell

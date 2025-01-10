@@ -1,29 +1,55 @@
-{{ $memcachedExporterVersion := "0.14.1" }}
+{{ $memcachedExporterVersion := "0.15.0" }}
 ---
-artifact: {{ $.ModuleName }}/{{ $.ImageName }}-builder
-from: {{ $.Images.BASE_GOLANG_21_BULLSEYE_DEV }}
+image: {{ $.ModuleName }}/{{ $.ImageName }}-exporter-src-artifact
+fromImage: common/src-artifact
+final: false
+git:
+- add: /{{ $.ModulePath }}modules/300-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
+  to: /patches
+  stageDependencies:
+    install:
+      - '**/*'
+shell:
+  install:
+  - git clone --depth 1 --branch v{{ $memcachedExporterVersion }} {{ $.SOURCE_REPO }}/prometheus/memcached_exporter.git /src
+  - cd /src
+  - git apply /patches/*.patch --verbose
+  - rm -rf /src/.git
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-exporter-artifact
+from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
+final: false
+import:
+- image: {{ .ModuleName }}/{{ $.ImageName }}-exporter-src-artifact
+  add: /src
+  to: /src
+  before: install
 mount:
-  - fromPath: ~/go-pkg-cache
-    to: /go/pkg
+- fromPath: ~/go-pkg-cache
+  to: /go/pkg
 shell:
+  beforeInstall:
+  {{- include "alpine packages proxy" $ | nindent 2 }}
+  - apk add --no-cache make curl git
   install:
-    - export GOPROXY={{ $.GOPROXY }} CGO_ENABLED=1 GOOS=linux GOARCH=amd64 CC=/usr/bin/musl-gcc
-    - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
-    - git clone --depth 1 --branch v{{ $memcachedExporterVersion }} {{ $.SOURCE_REPO }}/prometheus/memcached_exporter.git /src
-    - cd /src
-    - make build
+  - export GOPROXY={{ $.GOPROXY }} CGO_ENABLED=1 GOOS=linux GOARCH=amd64 CC=/usr/bin/musl-gcc
+  - cd /src
+  - make build
 ---
-artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
-from: {{ $.Images.BASE_ALT_DEV }}
+image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+fromImage: common/relocate-artifact
+final: false
 shell:
+  beforeInstall:
+  - apt-get update -y
+  - apt-get install -y memcached
   install:
-    - apt-get install memcached
-    - /binary_replace.sh -i "/usr/bin/memcached" -o /relocate
+  - /binary_replace.sh -i "/usr/bin/memcached" -o /relocate
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: common/distroless
 import:
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
   add: /relocate
   to: /
   before: setup
@@ -31,7 +57,7 @@ import:
 image: {{ $.ModuleName }}/{{ $.ImageName }}-exporter
 fromImage: common/distroless
 import:
-  - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-builder
+  - image: {{ $.ModuleName }}/{{ $.ImageName }}-exporter-artifact
     add: /src/memcached_exporter
     to: /usr/bin/memcached_exporter
     before: install

@@ -10,9 +10,9 @@ lang: ru
 
 Далее будет рассмотрено добавление двух worker-узлов. Более подробную информацию о добавлении статических узлов в кластер можно найти [в документации](../../platform-management/node-management/adding-node.html)).
 
-Убедитесь, что все шаги подготовки выполнены (см. [подготовка worker-узлов](http://deckhouse.ru/products/virtualization-platform/documentation/admin/install/steps/prepare.html))
+Убедитесь, что все шаги подготовки выполнены (см. [подготовка worker-узлов](/products/virtualization-platform/documentation/admin/install/steps/prepare.html))
 
-Создайте ресурс [NodeGroup](http://deckhouse.ru/products/virtualization-platform/reference/cr/nodegroup.html) `worker`. Для этого выполните на **master-узле** следующую команду:
+Создайте ресурс [NodeGroup](/products/virtualization-platform/reference/cr/nodegroup.html) `worker`. Для этого выполните на **master-узле** следующую команду:
 
 ```yaml
 sudo -i d8 k create -f - << EOF
@@ -36,7 +36,7 @@ EOF
 ssh-keygen -t rsa -f /dev/shm/caps-id -C "" -N ""
 ```
 
-Создайте в кластере ресурс [SSHCredentials](https://deckhouse.ru/products/virtualization-platform/reference/cr/sshcredentials.html). Для этого выполните на **master-узле** следующую команду:
+Создайте в кластере ресурс [SSHCredentials](/products/virtualization-platform/reference/cr/sshcredentials.html). Для этого выполните на **master-узле** следующую команду:
 
 ```yaml
 sudo -i d8 k create -f - <<EOF
@@ -76,7 +76,7 @@ chmod 600 /home/caps/.ssh/authorized_keys
 pdpl-user -i 63 caps
 ```
 
-Создайте ресурcы [StaticInstance](http://deckhouse.ru/products/virtualization-platform/reference/cr/staticinstance.html).
+Создайте ресурcы [StaticInstance](/products/virtualization-platform/reference/cr/staticinstance.html).
 Выполните на **master-узле** следующие команды с указанием IP-адреса и уникального имени каждого узла:
 
 ```yaml

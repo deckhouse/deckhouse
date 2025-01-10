@@ -159,3 +159,5 @@ k8s:
       livenessprobe: v2.14.0
 d8:
   d8CliVersion: v0.8.0
+jq:
+  version: 1.7.1
