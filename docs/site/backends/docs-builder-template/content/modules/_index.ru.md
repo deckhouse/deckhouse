@@ -4,26 +4,21 @@ url: modules/readme.html
 layout: modules
 ---
 
-Deckhouse Kubernetes Platform имеет модульную структуру. Модули могут быть как встроенные в Deckhouse, так и обычные — подключаемые с помощью ресурса `ModuleSource`.
+Deckhouse Kubernetes Platform имеет модульную структуру. Модуль может быть либо встроенным в Deckhouse, либо подключаемым (с помощью ресурса [ModuleSource](/products/kubernetes-platform/documentation/v1/cr.html#modulesource)).
 
-Основное отличие _встроенного_ модуля Deckhouse в том, что такой модуль поставляется в составе платформы Deckhouse и имеет общий с Deckhouse релизный цикл. Подробную информацию по встроенным модулям Deckhouse можно найти в разделе [документации Deckhouse](/products/kubernetes-platform/documentation/v1/).
+Основное отличие встроенного модуля Deckhouse от подключаемого в том, что встроенный модуль поставляется в составе платформы Deckhouse и имеет общий с Deckhouse релизный цикл. Подробную информацию по встроенным модулям Deckhouse можно найти в разделе [документации Deckhouse](/products/kubernetes-platform/documentation/v1/).
 
-Обычные модули Deckhouse (подключаемые с помощью ресурса `ModuleSource`) имеют независимый от Deckhouse релизный цикл, то есть могут обновляться независимо от версий Deckhouse. Разработка модулей может вестись командой разработчиков, не связанной с командой самого Deckhouse. Работа конкретного модуля может оказывать влияние на работу Deckhouse, хотя мы стремимся к тому, чтобы это влияние не приводило к серьезным последствиям для всей платформы.
+Модули Deckhouse, подключаемые с помощью ресурса [ModuleSource](/products/kubernetes-platform/documentation/v1/cr.html#modulesource), имеют независимый от Deckhouse релизный цикл, и могут обновляться независимо от версий Deckhouse. Разработка подключаемых модулей может вестись командой разработчиков, не связанной с командой разработки Deckhouse.
 
-Посмотреть тип модуля присутствующего в кластере можно с помощью команды:
+Определить, является ли модуль встроенным или подключаемым, можно по значению поля `SOURCE` в выводе команды `kubectl get modules`. Для встроенных модулей в этом поле указано `Embedded`, для подключаемых — имя объекта [ModuleSource](/products/kubernetes-platform/documentation/v1/cr.html#modulesource) (источник модулей, из которого производится установка модуля).
 
-```shell
-kubectl get modules
-```
-
-Пример вывода:
+Пример:
 
 ```console
+$ kubectl get modules
 NAME                WEIGHT   SOURCE      PHASE        ENABLED   READY
-cni-simple-bridge   35       Embedded    Ready        True      True
+cni-cilium          21       Embedded    Ready        True      True
 commander           911      deckhouse   Available    False     False
 ```
 
-Если столбце `Source` указан источник модуля `Embedded`, то данный модуль является встроенным. В остальных случаях в данном столбце указано имя объекта `ModuleSource` из которого производится установка модуля.
-
-В данном разделе представлена информация по модулям Deckhouse, прошедшим предварительное тестирование совместимости и допущенным к использованию совместно с Deckhouse.
+В данном разделе представлена информация по модулям Deckhouse, которые могут быть подключены из источника модулей. Модули прошли предварительное тестирование совместимости и допущенным к использованию совместно с Deckhouse.
