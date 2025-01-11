@@ -8,14 +8,15 @@ module ResourceGenerator
       site.data['schemas']['virtualization-platform']['crds'].each do |crdKey, crdData|
         languages = ['ru', 'en']
 
+
         if crdData["apiVersions"] and crdData["kind"] then
-          puts "Processing %s..." % [crdData["kind"]]
+          puts "Generating page for CRD %s..." % [crdData["kind"]]
           languages.each do |lang|
             site.pages << ResourcePage.new(site, crdKey, crdData, lang, "resource")
           end
         elsif crdData["spec"] and crdData["spec"]["names"]
           next unless crdData["spec"]["names"]["kind"]
-          puts "Processing CRD %s..." % [crdData["spec"]["names"]["kind"]]
+          puts "Generating page for CRD %s..." % [crdData["spec"]["names"]["kind"]]
 
           languages.each do |lang|
 
@@ -36,7 +37,6 @@ class ResourcePage < Jekyll::Page
     @crdKey = crdKey
     @fileName = ""
     @kind = ""
-    @converter = Jekyll::Converters::Markdown::KramdownParser.new(Jekyll.configuration())
 
     type == "crd" ? @kind = crdData["spec"]["names"]["kind"] : @kind = crdData["kind"]
     @fileName =  "#{@kind.downcase}.html"
@@ -56,13 +56,13 @@ class ResourcePage < Jekyll::Page
       'sitemap_include' => false
     }
 
-    @JSONSchema = JSONSchemaRenderer::JSONSchemaRenderer.new(@site, self.data, @converter)
+    @JSONSchema = JSONSchemaRenderer::JSONSchemaRenderer.new()
 
     self.content = ""
     if type == "crd" then
-      _renderedContent = @JSONSchema.format_crd(site.data['schemas']['virtualization-platform']['crds'][@crdKey], @crdKey)
+      _renderedContent = @JSONSchema.format_crd(site, self.data ,site.data['schemas']['virtualization-platform']['crds'][@crdKey], @crdKey)
     else
-      _renderedContent = @JSONSchema.format_cluster_configuration(site.data['schemas']['virtualization-platform']['crds'][@crdKey])
+      _renderedContent = @JSONSchema.format_cluster_configuration(site, self.data, site.data['schemas']['virtualization-platform']['crds'][@crdKey])
     end
     if _renderedContent.nil?
       self.content = @site.data['i18n']['common']['crd_has_no_parameters'][@lang]
