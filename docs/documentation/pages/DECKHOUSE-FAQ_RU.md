@@ -853,7 +853,7 @@ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-con
 В Deckhouse CE не поддерживается работа облачных кластеров на OpenStack и VMware vSphere.
 {% endalert %}
 
-Для переключения кластера Deckhouse Enterprise Edition на Community Edition выполните следующие действия (все команды выполняются на master-узле активного кластера от имени пользователя с настроенным контекстом `kubectl` или от имени суперпользователя):
+Для переключения Deckhouse Enterprise Edition на Community Edition выполните следующие действия (все команды выполняются на master-узле кластера от имени пользователя с настроенным контекстом `kubectl` или от имени суперпользователя):
 
 1. Выполните следующую команду для запуска временного пода Deckhouse CE для получения актуальных дайджестов и списка модулей. В переменную <DECKHOUSE_VERSION> введите последнюю версию Deckhouse:
 
@@ -1055,13 +1055,13 @@ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-con
      --from-literal="scheme"=https \
      --type=kubernetes.io/dockerconfigjson \
      --dry-run='client' \
-     -o yaml | sudo /opt/deckhouse/bin/kubectl -n d8-system exec -i svc/deckhouse-leader -c deckhouse -- kubectl replace -f -
+     -o yaml | kubectl -n d8-system exec -i svc/deckhouse-leader -c deckhouse -- kubectl replace -f -
    ```
 
 1. Примените образ Deckhouse CE. В переменную <DECKHOUSE_VERSION> введите последнюю версию Deckhouse:
 
    ```shell
-   sudo /opt/deckhouse/bin/kubectl -n d8-system exec svc/deckhouse-leader -c deckhouse -- kubectl -n d8-system set image deployment/deckhouse deckhouse=registry.deckhouse.ru/deckhouse/ce:<DECKHOUSE_VERSION>
+   kubectl -n d8-system exec svc/deckhouse-leader -c deckhouse -- kubectl -n d8-system set image deployment/deckhouse deckhouse=registry.deckhouse.ru/deckhouse/ce:<DECKHOUSE_VERSION>
    ```
 
 1. Дождитесь перехода пода Deckhouse в статус `Ready` и [выполнения всех задач в очереди](https://deckhouse.ru/products/kubernetes-platform/documentation/latest/deckhouse-faq.html#%D0%BA%D0%B0%D0%BA-%D0%BF%D1%80%D0%BE%D0%B2%D0%B5%D1%80%D0%B8%D1%82%D1%8C-%D0%BE%D1%87%D0%B5%D1%80%D0%B5%D0%B4%D1%8C-%D0%B7%D0%B0%D0%B4%D0%B0%D0%BD%D0%B8%D0%B9-%D0%B2-deckhouse). Если в процессе возникает ошибка `ImagePullBackOff`, подождите автоматического перезапуска пода.
@@ -1128,7 +1128,7 @@ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-con
 Инструкция подразумевает использование публичного адреса container registry: `registry.deckhouse.ru`. В случае использования другого адреса container registry измените команды или воспользуйтесь [инструкцией по переключению Deckhouse на использование стороннего registry](#как-переключить-работающий-кластер-deckhouse-на-использование-стороннего-registry).
 {% endalert %}
 
-Для переключения кластера Deckhouse Community Edition на Enterprise Edition выполните следующие действия (все команды выполняются на master-узле действующего кластера):
+Для переключения Deckhouse Community Edition на Enterprise Edition выполните следующие действия (все команды выполняются на master-узле кластера от имени пользователя с настроенным контекстом `kubectl` или от имени суперпользователя):
 
 1. Подготовьте переменные с токеном лицензии:
 
@@ -1312,13 +1312,13 @@ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-con
      --from-literal="scheme"=https \
      --type=kubernetes.io/dockerconfigjson \
      --dry-run='client' \
-     -o yaml | sudo /opt/deckhouse/bin/kubectl -n d8-system exec -i svc/deckhouse-leader -c deckhouse -- kubectl replace -f -
+     -o yaml | kubectl -n d8-system exec -i svc/deckhouse-leader -c deckhouse -- kubectl replace -f -
    ```
 
 1. Примените образ Deckhouse EE. В переменную <DECKHOUSE_VERSION> введите последнюю версию Deckhouse:
 
    ```shell
-   sudo /opt/deckhouse/bin/kubectl -n d8-system exec -i svc/deckhouse-leader -c deckhouse -- kubectl -n d8-system set image deployment/deckhouse deckhouse=registry.deckhouse.ru/deckhouse/ee:<DECKHOUSE_VERSION>
+   kubectl -n d8-system exec svc/deckhouse-leader -c deckhouse -- kubectl -n d8-system set image deployment/deckhouse deckhouse=registry.deckhouse.ru/deckhouse/ee:<DECKHOUSE_VERSION>
    ```
 
 1. Дождитесь перехода пода Deckhouse в статус `Ready` и [выполнения всех задач в очереди](https://deckhouse.ru/products/kubernetes-platform/documentation/latest/deckhouse-faq.html#%D0%BA%D0%B0%D0%BA-%D0%BF%D1%80%D0%BE%D0%B2%D0%B5%D1%80%D0%B8%D1%82%D1%8C-%D0%BE%D1%87%D0%B5%D1%80%D0%B5%D0%B4%D1%8C-%D0%B7%D0%B0%D0%B4%D0%B0%D0%BD%D0%B8%D0%B9-%D0%B2-deckhouse). Если в процессе возникает ошибка `ImagePullBackOff`, подождите автоматического перезапуска пода.
@@ -1693,7 +1693,7 @@ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-con
 - При переключении на CSE-редакцию может наблюдаться недоступность компонентов кластера.
 {% endalert %}
 
-Для переключения кластера Deckhouse Enterprise Edition на Certified Security Edition выполните следующие действия (все команды выполняются на master-узле действующего кластера):
+Для переключения Deckhouse Enterprise Edition на Certified Security Edition выполните следующие действия (все команды выполняются на master-узле кластера):
 
 1. Подготовьте переменные с токеном лицензии и создайте NodeGroupConfiguration для переходной авторизации в `registry-cse.deckhouse.ru`:
 

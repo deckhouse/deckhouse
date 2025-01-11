@@ -852,7 +852,7 @@ The instruction implies using the public address of the container registry: `reg
 Deckhouse CE does not support cloud clusters on OpenStack and VMware vSphere.
 {% endalert %}
 
-Follow this steps to switch a Deckhouse Enterprise Edition cluster to Community Edition (all commands must be executed on the master node of the active cluster, either by a user with a configured `kubectl` context or by a superuser):
+Follow this steps to switch a Deckhouse Enterprise Edition to Community Edition (all commands must be executed on the master node, either by a user with a configured `kubectl` context or by a superuser):
 
 1. Run a temporary Deckhouse CE pod to retrieve up-to-date digests and module lists. Enter the latest version of Deckhouse into the <DECKHOUSE_VERSION> variable:
 
@@ -1057,13 +1057,13 @@ Follow this steps to switch a Deckhouse Enterprise Edition cluster to Community 
      --from-literal="scheme"=https \
      --type=kubernetes.io/dockerconfigjson \
      --dry-run='client' \
-     -o yaml | sudo /opt/deckhouse/bin/kubectl -n d8-system exec -i  svc/deckhouse-leader -c deckhouse -- kubectl replace -f -
+     -o yaml | kubectl -n d8-system exec -i  svc/deckhouse-leader -c deckhouse -- kubectl replace -f -
    ```
 
 1. Apply the Deckhouse CE image. Enter the latest version of Deckhouse into the <DECKHOUSE_VERSION> variable:
 
    ```shell
-   sudo /opt/deckhouse/bin/kubectl -n d8-system exec svc/deckhouse-leader -c deckhouse -- kubectl -n d8-system set image deployment/deckhouse deckhouse=registry.deckhouse.io/deckhouse/ce:<DECKHOUSE_VERSION>
+   kubectl -n d8-system exec svc/deckhouse-leader -c deckhouse -- kubectl -n d8-system set image deployment/deckhouse deckhouse=registry.deckhouse.io/deckhouse/ce:<DECKHOUSE_VERSION>
    ```
 
 1. Wait for the Deckhouse pod to become `Ready` and for [all the queued jobs to complete](https://deckhouse.io/products/kubernetes-platform/documentation/latest/deckhouse-faq.html#how-to-check-the-job-queue-in-deckhouse). If an `ImagePullBackOff` error is generated in the process, wait for the pod to be restarted automatically.
@@ -1130,7 +1130,7 @@ You will need a valid license key (you can [request a trial license key](https:/
 The instruction implies using the public address of the container registry: `registry.deckhouse.io`. If you use a different container registry address, change the commands or use [the instruction](#how-do-i-configure-deckhouse-to-use-a-third-party-registry) for switching Deckhouse to using a third-party registry.
 {% endalert %}
 
-To switch Deckhouse Community Edition to Enterprise Edition, follow these steps:
+Follow this steps to switch a Deckhouse Community Edition to Enterprise Edition (all commands must be executed on the master node, either by a user with a configured `kubectl` context or by a superuser):
 
 1. Create the variables containing the license token:
 
@@ -1314,13 +1314,13 @@ To switch Deckhouse Community Edition to Enterprise Edition, follow these steps:
      --from-literal="scheme"=https \
      --type=kubernetes.io/dockerconfigjson \
      --dry-run='client' \
-     -o yaml | sudo /opt/deckhouse/bin/kubectl -n d8-system exec -i  svc/deckhouse-leader -c deckhouse -- kubectl replace -f -
+     -o yaml | kubectl -n d8-system exec -i  svc/deckhouse-leader -c deckhouse -- kubectl replace -f -
    ```
 
 1. Apply the Deckhouse EE image. Enter the latest version of Deckhouse into the <DECKHOUSE_VERSION> variable:
 
    ```shell
-   sudo /opt/deckhouse/bin/kubectl -n d8-system exec -i svc/deckhouse-leader -c deckhouse -- kubectl -n d8-system set image deployment/deckhouse deckhouse=registry.deckhouse.ru/deckhouse/ee:<DECKHOUSE_VERSION>
+   kubectl -n d8-system exec svc/deckhouse-leader -c deckhouse -- kubectl -n d8-system set image deployment/deckhouse deckhouse=registry.deckhouse.ru/deckhouse/ee:<DECKHOUSE_VERSION>
    ```
 
 1. Wait for the Deckhouse pod to become `Ready` and for [all the queued jobs to complete](https://deckhouse.io/products/kubernetes-platform/documentation/latest/deckhouse-faq.html#how-to-check-the-job-queue-in-deckhouse). If an `ImagePullBackOff` error is generated in the process, wait for the pod to be restarted automatically.
