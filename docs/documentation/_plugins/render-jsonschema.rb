@@ -30,25 +30,24 @@ module JSONSchemaRenderer
     # parameterName - name of a parameter
     # linkAnchor - HTML anchor for parameter
     def addRevisionParameter(moduleName, revision, resourceType, resourceName, parameterName, linkAnchor)
-        return
         item = Hash.new
         item['linkAnchor'] = linkAnchor
         item['resourceType'] = resourceType
         item['title'] = %Q(#{if resourceType == 'crd' and  resourceName then resourceName + ":&nbsp;" end}#{parameterName})
-        if get_hash_value(@site.data['modules'], 'modules', moduleName, %Q(parameters-#{revision})) == nil then
-          @site.data['modules']['modules'][moduleName][%Q(parameters-#{revision})] = Hash.new
+        if get_hash_value(@site.data['modules'], 'all', moduleName, %Q(parameters-#{revision})) == nil then
+          @site.data['modules']['all'][moduleName][%Q(parameters-#{revision})] = Hash.new
         end
-        if get_hash_value(@site.data['modules'], 'modules', moduleName, %Q(parameters-#{revision}),
+        if get_hash_value(@site.data['modules'], 'all', moduleName, %Q(parameters-#{revision}),
            %Q(#{if resourceType != 'moduleConfig' then
                    if resourceName then resourceName + "." end
                 end
                }#{parameterName})) == nil then
-          @site.data['modules']['modules'][moduleName][%Q(parameters-#{revision})][%Q(#{
+          @site.data['modules']['all'][moduleName][%Q(parameters-#{revision})][%Q(#{
             if resourceType != 'moduleConfig' then
                    if resourceName then resourceName + "." end
             end
             }#{parameterName})] = Hash.new
-          @site.data['modules']['modules'][moduleName][%Q(parameters-#{revision})][%Q(#{
+          @site.data['modules']['all'][moduleName][%Q(parameters-#{revision})][%Q(#{
             if resourceType != 'moduleConfig' then
                    if resourceName then resourceName + "." end
             end
@@ -100,8 +99,6 @@ module JSONSchemaRenderer
     end
 
     def AppendResource2Search(name, url, resourceName, description, version = '', search = '')
-
-        return
         # Data for search index
         if name and name.length > 0
             searchItemData = Hash.new
@@ -418,50 +415,48 @@ module JSONSchemaRenderer
 
         # The replacement with sub is for preserving anchor links for ModuleConfig parameters
         linkAnchor = fullPath.join('-').downcase.sub(/^parameters-settings-/, 'parameters-')
-        linkAnchor = @moduleName.downcase + '-' + linkAnchor if @resourceType == 'moduleConfig' and @moduleName != ''
         pathString = fullPath.slice(1,fullPath.length-1).join('.')
         if resourceName.nil? or resourceName.length < 1
-           resourceName = @site.data['title']
+           resourceName = @page["title"]
         end
 
         # Data for search index
-        # FIX THIS! TODO!
-        #if name and name.length > 0 and ! @site.data['search']['skipParameters'].include?(name)
-        #    searchItemData = Hash.new
-        #    searchItemData['pathString'] = pathString
-        #    searchItemData['name'] = name
-        #    searchItemData['url'] = sprintf(%q(%s#%s), @context.registers[:page]["url"].sub(%r{^(/?ru/|/?en/)}, ''), linkAnchor)
-        #    searchItemData['deprecated'] = get_hash_value(attributes,"deprecated") or get_hash_value(attributes,"x-doc-deprecated") ? true : false
-        #    searchItemData['version'] = versionAPI
-        #    searchItemData['resourceName'] = resourceName
-        #    searchItemData['content'] = convert(get_i18n_description(primaryLanguage, fallbackLanguage, attributes)).to_s if attributes['description']
-        #    searchKeywords = get_search_keywords(primaryLanguage, fallbackLanguage)
-        #    searchItemData['search'] = searchKeywords if searchKeywords
-        #
-        #    addItemToIndex = true
-        #    if !searchItemData['version'].nil?
-        #        itemIsMoreStable = false
-        #        otherVersions = @site.data['search']['searchItems'][@lang].
-        #           select { |item| item['pathString'] == searchItemData['pathString'] and item['resourceName'] == searchItemData['resourceName'] }
-        #        if otherVersions and otherVersions.length > 0
-        #            addItemToIndex = false
-        #            otherVersions.each do | item |
-        #                   if !item['version'].nil? and compareAPIVersion(searchItemData['version'], item['version']) == 1
-        #                      # current item (searchItemData) has more stable version than we already have in array
-        #                      itemIsMoreStable = true
-        #                      addItemToIndex = true
-        #                   end
-        #               end
-        #            if itemIsMoreStable
-        #                # delete items of the parameter from index? as they are less stable
-        #                @site.data['search']['searchItems'][@lang].
-        #                  reject! { |item| item['pathString'] == searchItemData['pathString'] and item['resourceName'] == searchItemData['resourceName'] }
-        #            end
-        #        end
-        #    end
+        if name and name.length > 0 and ! @site.data['search']['skipParameters'].include?(name)
+            searchItemData = Hash.new
+            searchItemData['pathString'] = pathString
+            searchItemData['name'] = name
+            searchItemData['url'] = sprintf(%q(%s#%s), @page["url"].sub(%r{^(/?ru/|/?en/)}, ''), linkAnchor)
+            searchItemData['deprecated'] = get_hash_value(attributes,"deprecated") or get_hash_value(attributes,"x-doc-deprecated") ? true : false
+            searchItemData['version'] = versionAPI
+            searchItemData['resourceName'] = resourceName
+            searchItemData['content'] = convert(get_i18n_description(primaryLanguage, fallbackLanguage, attributes)).to_s if attributes['description']
+            searchKeywords = get_search_keywords(primaryLanguage, fallbackLanguage)
+            searchItemData['search'] = searchKeywords if searchKeywords
 
-        #     @site.data['search']['searchItems'][@lang] << searchItemData if addItemToIndex
-        # end
+            addItemToIndex = true
+            if !searchItemData['version'].nil?
+                itemIsMoreStable = false
+                otherVersions = @site.data['search']['searchItems'][@lang].
+                   select { |item| item['pathString'] == searchItemData['pathString'] and item['resourceName'] == searchItemData['resourceName'] }
+                if otherVersions and otherVersions.length > 0
+                    addItemToIndex = false
+                    otherVersions.each do | item |
+                           if !item['version'].nil? and compareAPIVersion(searchItemData['version'], item['version']) == 1
+                              # current item (searchItemData) has more stable version than we already have in array
+                              itemIsMoreStable = true
+                              addItemToIndex = true
+                           end
+                       end
+                    if itemIsMoreStable
+                        # delete items of the parameter from index? as they are less stable
+                        @site.data['search']['searchItems'][@lang].
+                          reject! { |item| item['pathString'] == searchItemData['pathString'] and item['resourceName'] == searchItemData['resourceName'] }
+                    end
+                end
+            end
+
+            @site.data['search']['searchItems'][@lang] << searchItemData if addItemToIndex
+        end
 
         if parameterTitle != ''
             parameterTextContent = ''
@@ -480,7 +475,7 @@ module JSONSchemaRenderer
                 parameterTextContent = sprintf(%q(<div id="%s" data-anchor-id="%s" class="resources__prop_name anchored">
                     <span class="plus-icon"><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M5.00005 1.5V4.99995M5.00005 4.99995V8.5M5.00005 4.99995H1.5M5.00005 4.99995H8.5" stroke="#0D69F2" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
                     <span  class="minus-icon"><svg xmlns="http://www.w3.org/2000/svg" width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1.5 3.99982L8.5 3.99982" stroke="#0D69F2" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
-                    <div><span class="ancestors">%s</span><span>%s</span></div><span data-tippy-content="%s" class="resources__prop_is_deprecated">%s</span></div>), linkAnchor, linkAnchor, ancestorsPathString, parameterTitle,get_i18n_term('deprecated_parameter_hint'), get_i18n_term('deprecated_parameter') )
+                    <div><span class="ancestors">%s</span><span>%s</span></div><span title="%s" class="resources__prop_is_deprecated">%s</span></div>), linkAnchor, linkAnchor, ancestorsPathString, parameterTitle,get_i18n_term('deprecated_parameter_hint'), get_i18n_term('deprecated_parameter') )
             else
                 parameterTextContent = sprintf(%q(<div id="%s" data-anchor-id="%s" class="resources__prop_name anchored">
                     <span class="plus-icon"><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M5.00005 1.5V4.99995M5.00005 4.99995V8.5M5.00005 4.99995H1.5M5.00005 4.99995H8.5" stroke="#0D69F2" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
@@ -550,11 +545,9 @@ module JSONSchemaRenderer
 
         @site = site
         @page = page
-        @path = page['permalink']
         @lang = page['lang']
 
         @moduleName = moduleName
-
         @resourceType = "crd"
 
         if ( @lang == 'en' )
@@ -563,7 +556,6 @@ module JSONSchemaRenderer
             fallbackLanguageName = 'en'
         end
         result = []
-
         if !( input.has_key?('i18n'))
            input['i18n'] = {}
         end
@@ -591,15 +583,15 @@ module JSONSchemaRenderer
                    if get_hash_value(input['i18n'][@lang],"spec","validation","openAPIV3Schema","description") then
                        description = escape_chars(convert(get_hash_value(input['i18n'][@lang],"spec","validation","openAPIV3Schema","description")))
                        result.push(description)
-                       AppendResource2Search(input["spec"]["names"]["kind"], @path.sub(%r{^(/?ru/|/?en/)}, ''), '', description, searchKeywords)
+                       AppendResource2Search(input["spec"]["names"]["kind"], @page["url"].sub(%r{^(/?ru/|/?en/)}, ''), '', description, searchKeywords)
                    elsif get_hash_value(input['i18n'][fallbackLanguageName],"spec","validation","openAPIV3Schema","description") then
                        description = escape_chars(convert(input['i18n'][fallbackLanguageName]["spec"]["validation"]["openAPIV3Schema"]["description"]))
                        result.push(description)
-                       AppendResource2Search(input["spec"]["names"]["kind"], @path.sub(%r{^(/?ru/|/?en/)}, ''), '', description, searchKeywords)
+                       AppendResource2Search(input["spec"]["names"]["kind"], @page["url"].sub(%r{^(/?ru/|/?en/)}, ''), '', description, searchKeywords)
                    else
                        description = escape_chars(convert(input["spec"]["validation"]["openAPIV3Schema"]["description"]))
                        result.push(description)
-                       AppendResource2Search(input["spec"]["names"]["kind"], @path.sub(%r{^(/?ru/|/?en/)}, ''), '', description, searchKeywords)
+                       AppendResource2Search(input["spec"]["names"]["kind"], @page["url"].sub(%r{^(/?ru/|/?en/)}, ''), '', description, searchKeywords)
                    end
                 end
 
@@ -706,8 +698,8 @@ module JSONSchemaRenderer
                     end
 
                     AppendResource2Search(input["spec"]["names"]["kind"],
-                                          @path.sub(%r{^(/?ru/|/?en/)}, ''),
-                                          @site.data['title'],
+                                          @page["url"].sub(%r{^(/?ru/|/?en/)}, ''),
+                                          @page["title"],
                                           description,
                                           item['name'],
                                           searchKeywords)
@@ -774,7 +766,6 @@ module JSONSchemaRenderer
     def format_configuration(site, page, input, moduleConfig = false)
         @site = site
         @page = page
-        @path = @page['permalink']
         @lang = @page['lang']
 
         result = []
@@ -850,7 +841,6 @@ module JSONSchemaRenderer
     def format_cluster_configuration(site, page, input, moduleName = "")
         @site = site
         @page = page
-        @path = @page['permalink']
         @lang = @page['lang']
         @moduleName = moduleName
         @resourceType = "clusterConfig"
@@ -890,8 +880,8 @@ module JSONSchemaRenderer
           searchKeywords = get_search_keywords(item['i18n'][@lang], item['i18n'][fallbackLanguageName])
 
           AppendResource2Search(item["resourceName"],
-                                @path.sub(%r{^(/?ru/|/?en/)}, ''),
-                                @site.data['title'],
+                                @page["url"].sub(%r{^(/?ru/|/?en/)}, ''),
+                                @page["title"],
                                 description,
                                 item["APIversion"],
                                 searchKeywords)
