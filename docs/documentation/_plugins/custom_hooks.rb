@@ -1,5 +1,12 @@
 require 'json'
 
+# Fills site.data.modulesFeatureStatus according to the site.data.sidebars.main.entries
+# DEPRECATED.
+# The site.data.modulesFeatureStatus structure used in the comparison table.
+# {
+#  "module-kebab-name": "<feature_status>",
+#  ...
+# }
 def parse_module_data(input, site)
     if input.has_key?("featureStatus")
        featureStatus = input["featureStatus"]
@@ -23,7 +30,8 @@ def parse_module_data(input, site)
     end
 end
 
-Jekyll::Hooks.register :site, :post_read do |site|
+##
+Jekyll::Hooks.register :site, :pre_render do |site|
   bundlesByModule = Hash.new()
   bundlesModules = Hash.new()
   bundleNames = []
@@ -57,8 +65,26 @@ Jekyll::Hooks.register :site, :post_read do |site|
   site.data['bundles']['bundleNames'] = bundleNames.sort
   site.data['bundles']['bundleModules'] = bundlesModules
 
-  # Fill site.data.modulesFeatureStatus
   parse_module_data(site.data["sidebars"]["main"]["entries"], site)
+
+  _editionsFullList = site.data['modules']['editions-weight'].keys
+  # Automatically fill editions, except for CSE, since their CSE needs to be specified explicitly.
+  _editionsToFillWith = _editionsFullList.reject { |key| key.start_with?("cse")  }
+  site.data['modules']['all'].each do |moduleName, moduleData|
+    editions = []
+    if moduleData.has_key?("editionMinimumAvailable") then
+      _index = _editionsToFillWith.find_index(moduleData['editionMinimumAvailable'])
+      editions = _editionsToFillWith.slice(_index, _editionsToFillWith.length())
+    end
+    site.data['editions'].each do |edition, editionData|
+      editions = editions | [edition] if editionData.has_key?("includeModules") && editionData['includeModules'].include?(moduleName)
+      editions.delete(edition) if editionData.has_key?("excludeModules") && editionData['excludeModules'].include?(moduleName)
+    end
+    editions = editions | moduleData['editionFullyAvailable'] if moduleData.has_key?("editionFullyAvailable")
+    editions = editions | moduleData['editionRestrictions'] if moduleData.has_key?("editionRestrictions")
+    puts "Module #{moduleName} editions: #{editions}"
+    site.data['modules']['all'][moduleName]['editions'] = editions
+  end
 
   # Exclude custom resource and module setting files from the search index by setting the 'searchable' parameter to false.
   # Add module name in kebab case and snake case to metadata of module pages.
@@ -72,6 +98,9 @@ Jekyll::Hooks.register :site, :post_read do |site|
     'FAQ_RU.md', 'FAQ.md'
   ]
 
+  # Set the following data for each module page:
+  # - module-kebab-name: module name in kebab case
+  # - module-snake-name: module name in snake case
   site.pages.each do |page|
     if page.url.match?(%r{/modules/([0-9]+-)?[^/]+/$}) || pageSuffixes.any? { |suffix| page.name.end_with?(suffix) }
     then

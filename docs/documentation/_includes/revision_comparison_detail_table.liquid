@@ -3,7 +3,7 @@
 {%- assign notsupported_img_url = '/images/icons/not_supported.svg' %}
 {%- assign partially_supported_img_url = '/images/icons/intermediate.svg' %}
 {%- assign siteD8Edition = 'fe' %}
-{%- assign editionsWeight = site.data.editions-weight %}
+{%- assign editionsWeight = site.data.modules.editions-weight %}
 {%- if site.mode == 'module' and site.d8Revision %}
   {%- assign siteD8Edition = site.d8Revision | downcase %}
 {%- endif %}
@@ -41,14 +41,14 @@
   <tbody>
   {%- for module in modules %}
     {%- assign moduleName = module[0] %}
-    {%- assign moduleEdition = module[1].edition %}
+    {%- assign moduleEdition = module[1].editionMinimumAvailable %}
     {%- assign moduleDoesntBelongToEdition = false %}
 
-    {%- if siteD8Edition == 'ce' and module[1].edition != 'ce' %}
+    {%- if siteD8Edition == 'ce' and module[1].editionMinimumAvailable != 'ce' %}
       {%- assign moduleDoesntBelongToEdition = true %}
     {%- endif %}
 
-    {%- if siteD8Edition == 'ee' and module[1].edition == 'fe' %}
+    {%- if siteD8Edition == 'ee' and module[1].editionMinimumAvailable == 'fe' %}
       {%- assign moduleDoesntBelongToEdition = true %}
     {%- endif %}
 
