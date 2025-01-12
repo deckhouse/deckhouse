@@ -7,7 +7,7 @@ module GSGenerator
 
         next unless installTypeData['steps']
 
-        puts "[GS DKP] Generating for %s..." % [installTypeKey]
+        puts "[GS DKP] Generating pages for %s..." % [installTypeKey]
 
         installTypeData['steps'].each do |stepName, stepData|
           languages = installTypeData['languages'] ? installTypeData['languages'] : ['ru', 'en']
@@ -27,7 +27,7 @@ module GSGenerator
 
         next unless installTypeData['steps']
 
-        puts "[GS DVP] Generating for %s..." % [installTypeKey]
+        puts "[GS DVP] Generating pages for %s..." % [installTypeKey]
 
         installTypeData['steps'].each do |stepName, stepData|
           languages = installTypeData['languages'] ? installTypeData['languages'] : ['ru', 'en']
