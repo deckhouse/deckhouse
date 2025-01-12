@@ -6,7 +6,7 @@ toc: false
 lang: ru
 ---
 
-<link rel="stylesheet" type="text/css" href='{{ assets["releases.css"].digest_path }}' />
+<link rel="stylesheet" type="text/css" href='{{ assets["releases.css"].digest_path | true_relative_url }}' />
 {%- assign releases = site.data.releases.channels | sort: "stability" -%}
 
 {% alert %}
