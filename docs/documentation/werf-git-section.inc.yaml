@@ -326,7 +326,7 @@
   stageDependencies:
     setup: ['**/*']
 - add: /editions.yaml
-  to: /srv/jekyll-data/documentation/_data/editions-source.yaml
+  to: /srv/jekyll-data/documentation/_data/editions-repo-data.yaml
   owner: jekyll
   group: jekyll
   stageDependencies:

@@ -66,7 +66,7 @@ for module_edition_path in $(find ${MODULES_DIR} -type d -print | grep -E '.+/mo
 
   cat << YAML
 $module_name:
-  path: ${module_doc_path}
-  edition: $(echo $module_edition_path | cut -d/ -f1)
+  path: "${module_doc_path}"
+  editionMinimumAvailable: "$(echo $module_edition_path | cut -d/ -f1)"
 YAML
 done

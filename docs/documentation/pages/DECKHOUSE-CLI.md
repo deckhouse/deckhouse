@@ -4,6 +4,30 @@ permalink: en/deckhouse-cli/
 description: Deckhouse CLI is a command line interface for cluster management created by the Deckhouse team.
 ---
 
+<pre>
+{{ site.data.bundles.byModule | jsonify  }}
+</pre>
+<hr />
+{{ site.data.bundles.bundleNames | jsonify }}
+<hr />
+{{ site.data.bundles.bundleModules | jsonify }}
+<hr />
+site.data.modulesFeatureStatus:
+{{ site.data.modulesFeatureStatus | jsonify }}
+<hr />
+site.data.modules.internal:<br>
+{{ site.data.modules.internal | jsonify }}
+<hr />
+
+site.data["modulesFeatureStatus"]:<br>
+{{ site.data["modulesFeatureStatus"] | jsonify }}
+<hr />
+
+site.data.editions:<br>
+{{ site.data.editions | jsonify }}
+<hr />
+
+
 Deckhouse CLI is a command line interface for cluster management created by the developers of Deckhouse Kubernetes Platform (DKP). Starting with version 1.59, the DH CLI is automatically installed on all cluster nodes. You can also [install](#how-do-i-install-deckhouse-cli) the CLI on any machine and use it to operate clusters that are not managed by DKP.
 
 On the command line, the utility can be invoked using the `d8` alias. All the commands are grouped by their function:

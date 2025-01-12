@@ -1,0 +1,12 @@
+{%- assign moduleKebabName = page['module-kebab-name'] %}
+{%- assign editions = site.data['modules']['all'][moduleKebabName]['editions'] %}
+{%- assign editionRestrictions = site.data['modules']['all'][moduleKebabName]['editionRestrictions'] %}
+{%- assign editionRestrictionsComment = site.data['modules']['all'][moduleKebabName]['editionRestrictionsComment'] %}
+
+Available in:
+{%-  for edition in editions %}
+{%- if edition == "fe" %}{%  continue %}{% endif %}
+ {{ edition }}
+ {%- if editionRestrictions contains edition %}{{ site.i18n.comparison['module_has_restrictions'][page.lang] }}{%  endif %}
+{%- unless forloop.last %}, {% endunless %}
+{%-  endfor %}
