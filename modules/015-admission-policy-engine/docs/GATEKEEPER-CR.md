@@ -4,6 +4,10 @@ title: "The admission-policy-engine module: Custom Resources (by Gatekeeper)"
 
 ## Mutation Custom Resources
 
+{% alert level="info" %}
+The `reinvocationPolicy: IfNeeded` is used in MutatingWebhookConfiguration. More details [in the Kubernetes documentation.](https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/#reinvocation-policy)
+{% endalert %}  
+
 [Reference](https://open-policy-agent.github.io/gatekeeper/website/docs/mutation/#mutation-crds)
 
 Provide a configurable set of policies for modifying Kubernetes resources at the time they are deployed.

@@ -157,10 +157,10 @@ spec:
 
 ### Изменение ресурсов Kubernetes
 
-Модуль также позволяет использовать [Custom Resource от Gatekeeper](./gatekeeper-cr.html) для легкой модификации объектов в кластере, такие как:
-- `AssignMetadata` — для изменения секции `metadata` в ресурсе;
-- `Assign` — для изменения других полей, кроме `metadata`;
-- `ModifySet` — для добавления или удаления значений из списка, например аргументов для запуска контейнера.
-- `AssignImage` - для изменения параметра `image` ресурса.
+Модуль позволяет использовать [кастомные ресурсы Gatekeeper](gatekeeper-cr.html) для модификации объектов в кластере, такие как:
+- [AssignMetadata](gatekeeper-cr.html#assignmetadata) — для изменения секции `metadata` в ресурсе;
+- [Assign](gatekeeper-cr.html#assign) — для изменения других полей, кроме `metadata`;
+- [ModifySet](gatekeeper-cr.html#modifyset) — для добавления или удаления значений из списка, например аргументов для запуска контейнера.
+- [AssignImage](gatekeeper-cr.html#assignimage) — для изменения параметра `image` ресурса.
 
 Подробнее про доступные варианты можно прочитать в документации [Gatekeeper](https://open-policy-agent.github.io/gatekeeper/website/docs/mutation/).
