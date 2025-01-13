@@ -9,7 +9,8 @@ import:
   to: /plugins/registry.terraform.io/{{ .TF.yandex.namespace }}/{{ .TF.yandex.type }}/{{ .TF.yandex.version }}/linux_amd64/terraform-provider-yandex
   before: setup
 ---
-artifact: terraform-provider-yandex
+image: terraform-provider-yandex
+final: false
 from: {{ $.Images.BASE_GOLANG_20_ALPINE }}
 mount:
   - fromPath: ~/go-pkg-cache

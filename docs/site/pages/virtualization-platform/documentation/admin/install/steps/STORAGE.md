@@ -5,7 +5,7 @@ permalink: en/virtualization-platform/documentation/admin/install/steps/storage.
 
 ## Storage Configuration
 
-After adding worker nodes, it is necessary to configure the storage that will be used for creating virtual machine disks and storing cluster component metrics. The storage can be selected from the [supported list](http://deckhouse.io/products/virtualization-platform/documentation/admin/install/requirements.html).
+After adding worker nodes, it is necessary to configure the storage that will be used for creating virtual machine disks and storing cluster component metrics. The storage can be selected from the [supported list](/products/virtualization-platform/documentation/admin/install/requirements.html).
 
 Next, we will consider enabling and configuring the software-defined storage `sds-replicated-volume`. This storage allows you to create replicated volumes based on the disk space of nodes. As an example, we will configure a StorageClass based on volumes with two replicas, located on the disks `/dev/sda`.
 
@@ -65,7 +65,7 @@ Configuring the storage involves combining the available block devices on the no
 
 1. Create a VolumeGroup on each node.
 
-   On each node, you need to create an LVM volume group using the [LVMVolumeGroup](http://deckhouse.io/products/virtualization-platform/reference/cr/lvmvolumegroup.html) resource.
+   On each node, you need to create an LVM volume group using the [LVMVolumeGroup](/products/virtualization-platform/reference/cr/lvmvolumegroup.html) resource.
 
    To create the LVMVolumeGroup resource on the node, use the following commands:
   
@@ -148,7 +148,7 @@ Configuring the storage involves combining the available block devices on the no
    - `replication` — replication parameters, for 2 replicas, the value `Availability` will be used;
    - `storagePool` — the name of the pool created earlier, in this example, it is `sds-pool`.
   
-   Other parameters are described in the [ReplicatedStorageClass resource documentation](http://deckhouse.io/products/virtualization-platform/reference/cr/replicatedstorageclass.html).
+   Other parameters are described in the [ReplicatedStorageClass resource documentation](/products/virtualization-platform/reference/cr/replicatedstorageclass.html).
 
    ```yaml
    sudo -i d8 k apply -f - <<EOF

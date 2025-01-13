@@ -5,7 +5,7 @@ description: "Описание схем размещения и взаимоде
 
 ## Standard
 
-![resources](../../images/030-cloud-provider-zvirt/network/zvirt-standard.svg)
+![resources](../../images/cloud-provider-zvirt/network/zvirt-standard.svg)
 <!--- Исходник: https://docs.google.com/drawings/d/1aosnFD7AzBgHrQGvxxQHZPfV0PSaTM66A-EPMWgPEqw/edit --->
 
 Пример конфигурации схемы размещения:

@@ -1,0 +1,14 @@
+---
+# base artifact to do relocate
+image: {{ .ModuleName }}/{{ .ImageName }}-artifact
+fromImage: common/alt-p11-artifact
+final: false
+git:
+- add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/binary_replace.sh
+  to: /binary_replace.sh
+  stageDependencies:
+    install:
+    - '**/*'
+shell:
+  install:
+  - apt-get install -y glibc-utils

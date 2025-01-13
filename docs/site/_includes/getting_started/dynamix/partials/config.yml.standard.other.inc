@@ -74,9 +74,9 @@ spec:
     controlPlaneConfigurator:
       dexCAMode: DoNotNeed
     # [<ru>] Включение доступа к API-серверу Kubernetes через Ingress.
-    # [<ru>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/150-user-authn/configuration.html#parameters-publishapi
+    # [<ru>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/user-authn/configuration.html#parameters-publishapi
     # [<en>] Enabling access to the API server through Ingress.
-    # [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/150-user-authn/configuration.html#parameters-publishapi
+    # [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/user-authn/configuration.html#parameters-publishapi
     publishAPI:
       enabled: true
       https:
@@ -85,9 +85,9 @@ spec:
           kubeconfigGeneratorMasterCA: ""
 ---
 # [<en>] Cloud provider settings.
-# [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-openstack/cluster_configuration.html
+# [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/cloud-provider-openstack/cluster_configuration.html
 # [<ru>] Настройки облачного провайдера..
-# [<ru>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-openstack/cluster_configuration.html
+# [<ru>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/cloud-provider-openstack/cluster_configuration.html
 apiVersion: deckhouse.io/v1
 kind: DynamixClusterConfiguration
 layout: Standard

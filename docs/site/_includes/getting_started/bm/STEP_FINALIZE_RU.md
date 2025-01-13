@@ -1,6 +1,6 @@
-<script type="text/javascript" src='{{ assets["getting-started.js"].digest_path }}'></script>
-<script type="text/javascript" src='{{ assets["getting-started-access.js"].digest_path }}'></script>
-<script type="text/javascript" src='{{ assets["bcrypt.js"].digest_path }}'></script>
+<script type="text/javascript" src='{% javascript_asset_tag getting-started %}[_assets/js/getting-started.js]{% endjavascript_asset_tag %}'></script>
+<script type="text/javascript" src='{% javascript_asset_tag getting-started-access %}[_assets/js/getting-started-access.js]{% endjavascript_asset_tag %}'></script>
+<script type="text/javascript" src='{% javascript_asset_tag bcrypt %}[_assets/js/bcrypt.js]{% endjavascript_asset_tag %}'></script>
 
 На данном этапе вы создали кластер, который состоит из **единственного** узла — master-узла. На master-узле по умолчанию работает только ограниченный набор системных компонентов. Для полноценной работы кластера необходимо либо добавить в кластер хотя бы один worker-узел, либо разрешить остальным компонентам Deckhouse работать на master-узле.
 
@@ -32,7 +32,7 @@ sudo -i d8 k patch nodegroup master --type json -p '[{"op": "remove", "path": "/
 {% endsnippetcut %}
   </li>
   <li>
-<p>Настройте StorageClass <a href="/products/kubernetes-platform/documentation/v1/modules/031-local-path-provisioner/cr.html#localpathprovisioner">локального хранилища</a>, выполнив на <strong>master-узле</strong> следующую команду:</p>
+<p>Настройте StorageClass <a href="/products/kubernetes-platform/documentation/v1/modules/local-path-provisioner/cr.html#localpathprovisioner">локального хранилища</a>, выполнив на <strong>master-узле</strong> следующую команду:</p>
 {% snippetcut %}
 ```shell
 sudo -i d8 k create -f - << EOF
@@ -60,14 +60,14 @@ sudo -i d8 k patch mc global --type merge \
 </div>
 
 <div id="block_layout_worker" class="tabs__content_worker">
-<p>Добавьте узел в кластер (подробнее о добавлении статического узла в кластер читайте в <a href="/products/kubernetes-platform/documentation/latest/modules/040-node-manager/examples.html#добавление-статического-узла-в-кластер">документации</a>):</p>
+<p>Добавьте узел в кластер (подробнее о добавлении статического узла в кластер читайте в <a href="/products/kubernetes-platform/documentation/latest/modules/node-manager/examples.html#добавление-статического-узла-в-кластер">документации</a>):</p>
 
 <ul>
   <li>
     Подготовьте <strong>чистую</strong> виртуальную машину, которая будет узлом кластера.
   </li>
   <li>
-<p>Настройте StorageClass <a href="/products/kubernetes-platform/documentation/v1/modules/031-local-path-provisioner/cr.html#localpathprovisioner">локального хранилища</a>, выполнив на <strong>master-узле</strong> следующую команду:</p>
+<p>Настройте StorageClass <a href="/products/kubernetes-platform/documentation/v1/modules/local-path-provisioner/cr.html#localpathprovisioner">локального хранилища</a>, выполнив на <strong>master-узле</strong> следующую команду:</p>
 {% snippetcut %}
 ```shell
 sudo -i d8 k create -f - << EOF
@@ -92,7 +92,7 @@ sudo -i d8 k patch mc global --type merge \
 {% endsnippetcut %}
   </li>
   <li>
-    <p>Создайте <a href="/products/kubernetes-platform/documentation/v1/modules/040-node-manager/cr.html#nodegroup">NodeGroup</a> <code>worker</code>. Для этого выполните на <strong>master-узле</strong> следующую команду:</p>
+    <p>Создайте <a href="/products/kubernetes-platform/documentation/v1/modules/node-manager/cr.html#nodegroup">NodeGroup</a> <code>worker</code>. Для этого выполните на <strong>master-узле</strong> следующую команду:</p>
 {% snippetcut %}
 ```bash
 sudo -i d8 k create -f - << EOF
@@ -120,10 +120,10 @@ ssh-keygen -t rsa -f /dev/shm/caps-id -C "" -N ""
 {% endsnippetcut %}
   </li>
   <li>
-    <p>Создайте в кластере ресурс <a href="/products/kubernetes-platform/documentation/v1/modules/040-node-manager/cr.html#sshcredentials">SSHCredentials</a>. Для этого выполните на <strong>master-узле</strong> следующую команду:</p>
+    <p>Создайте в кластере ресурс <a href="/products/kubernetes-platform/documentation/v1/modules/node-manager/cr.html#sshcredentials">SSHCredentials</a>. Для этого выполните на <strong>master-узле</strong> следующую команду:</p>
 {% snippetcut %}
 ```bash
-sudo -i d8 k -f - <<EOF
+sudo -i d8 k create -f - <<EOF
 apiVersion: deckhouse.io/v1alpha1
 kind: SSHCredentials
 metadata:
@@ -169,12 +169,12 @@ pdpl-user -i 63 caps
 {% endsnippetcut %}
   </li>
   <li>
-    <p>Создайте <a href="/products/kubernetes-platform/documentation/v1/modules/040-node-manager/cr.html#staticinstance">StaticInstance</a> для добавляемого узла. Для этого выполните на <strong>master-узле</strong> следующую команду, указав IP-адрес добавляемого узла:</p>
+    <p>Создайте <a href="/products/kubernetes-platform/documentation/v1/modules/node-manager/cr.html#staticinstance">StaticInstance</a> для добавляемого узла. Для этого выполните на <strong>master-узле</strong> следующую команду, указав IP-адрес добавляемого узла:</p>
 {% snippetcut %}
 ```bash
 # Укажите IP-адрес узла, который необходимо подключить к кластеру.
 export NODE=<NODE-IP-ADDRESS>
-sudo -i d8 k -f - <<EOF
+sudo -i d8 k create -f - <<EOF
 apiVersion: deckhouse.io/v1alpha1
 kind: StaticInstance
 metadata:
@@ -213,7 +213,7 @@ d8cluster-worker   Ready    worker                 10m   v1.23.17
 <p>Запуск всех компонентов Deckhouse после завершения установки может занять какое-то время.</p>
 
 <ul>
-<li><p>Убедитесь, что под Kruise controller manager модуля <a href="/products/kubernetes-platform/documentation/v1/modules/402-ingress-nginx/">ingress-nginx</a> запустился и находится в статусе <code>Ready</code>.</p>
+<li><p>Убедитесь, что под Kruise controller manager модуля <a href="/products/kubernetes-platform/documentation/v1/modules/ingress-nginx/">ingress-nginx</a> запустился и находится в статусе <code>Ready</code>.</p>
 <p>Выполните на <strong>master-узле</strong> следующую команду:</p>
 
 {% snippetcut %}
