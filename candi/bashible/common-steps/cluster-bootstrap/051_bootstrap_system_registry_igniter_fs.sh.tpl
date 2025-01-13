@@ -204,7 +204,7 @@ proxy:
 auth:
   token:
     realm: https://127.0.0.1:5051/auth
-    service: Docker registry
+    service: Deckhouse registry
     issuer: Registry server
     rootcertbundle: "$IGNITER_DIR/token.crt"
     autoredirect: false

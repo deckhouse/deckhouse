@@ -37,7 +37,7 @@ proxy:
 auth:
   token:
     realm: "https://{{ .Address }}:5051/auth"
-    service: Docker registry
+    service: Deckhouse registry
     issuer: Registry server
     rootcertbundle: /system_registry_pki/token.crt
     autoredirect: true

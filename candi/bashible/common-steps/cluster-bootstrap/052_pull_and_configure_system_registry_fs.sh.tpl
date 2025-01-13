@@ -199,7 +199,7 @@ proxy:
 auth:
   token:
     realm: "https://${discovered_node_ip}:5051/auth"
-    service: Docker registry
+    service: Deckhouse registry
     issuer: Registry server
     rootcertbundle: /system_registry_pki/token.crt
     autoredirect: false
