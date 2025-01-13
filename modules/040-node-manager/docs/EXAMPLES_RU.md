@@ -199,9 +199,7 @@ spec:
    EOF
    ```
 
-{% alert level="warning" %}
-Поле `labelSelector` в ресурсе `NodeGroup` является неизменным. Чтобы обновить labelSelector, нужно создать новую NodeGroup и перенести в неё статические узлы, изменив их метки (labels).
-{% endalert %}
+   >Поле `labelSelector` в ресурсе `NodeGroup` является неизменным. Чтобы обновить labelSelector, нужно создать новую NodeGroup и перенести в неё статические узлы, изменив их метки (labels).
 
 1. Создайте в кластере ресурс [NodeGroup](cr.html#nodegroup):
 
