@@ -375,7 +375,7 @@ EOF
 kubectl label staticinstance static-worker-1 role=front --overwrite
 ```
 
-##### Уменьшаем количество статических узло в исходной `NodeGroup`
+##### 3. Уменьшение количества статических узлов в исходной `NodeGroup`
 
 Обновите ресурс `NodeGroup` `worker`, уменьшив значение параметра `count` с `1` до `0`.
 
