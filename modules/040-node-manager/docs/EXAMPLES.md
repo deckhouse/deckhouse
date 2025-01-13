@@ -223,9 +223,7 @@ This example shows how you can use filters in the StaticInstance [label selector
 
 1. Create two [NodeGroup](cr.html#nodegroup) in the cluster (from this point on, use `kubectl` configured to manage the cluster):
 
-{% alert level="warning" %}
-The `labelSelector` field in the `NodeGroup` resource is immutable. To update the `labelSelector`, you need to create a new `NodeGroup` and move the static nodes into it by changing their labels.
-{% endalert %}
+   >The `labelSelector` field in the `NodeGroup` resource is immutable. To update the `labelSelector`, you need to create a new `NodeGroup` and move the static nodes into it by changing their labels.
 
    ```shell
    kubectl create -f - <<EOF
