@@ -211,7 +211,7 @@ auth:
     autoredirect: true
     proxy:
       url: https://127.0.0.1:5051/auth
-      ca: /system_registry_pki/ca.crt
+      ca: $IGNITER_DIR/ca.crt
 EOF
 
 bb-sync-file "$IGNITER_DIR/start_system_registry_igniter.sh" - << EOF
