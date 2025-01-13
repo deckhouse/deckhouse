@@ -55,14 +55,11 @@ func enabledLabel(labels map[string]string) float64 {
 }
 
 func thresholdLabel(labels map[string]string, threshold string, i float64) float64 {
-	for key, value := range labels {
-		if key == (label_theshold_prefix + threshold) {
-			tmp, err := strconv.ParseFloat(value, 64)
-			if err != nil {
-				log.Printf("[thresholdLabel] could not parse the value of \"%s\": %v\n", label_theshold_prefix+threshold, err)
-			} else {
-				i = tmp
-			}
+	if value, ok := labels[label_theshold_prefix+threshold]; ok {
+		if tmp, err := strconv.ParseFloat(value, 64); err != nil {
+			log.Printf("[thresholdLabel] could not parse the value of \"%s\": %v\n", label_theshold_prefix+threshold, err)
+		} else {
+			i = tmp
 		}
 	}
 	return i
