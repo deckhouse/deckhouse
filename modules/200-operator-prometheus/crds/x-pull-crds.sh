@@ -16,15 +16,13 @@
 #limitations under the License.
 #
 
-version="0.77.2"
+version="0.79.2"
 
 repo="https://raw.githubusercontent.com/prometheus-operator/prometheus-operator/v${version}/example/prometheus-operator-crd/monitoring.coreos.com"
 
 crds=("alertmanagers.yaml alertmanagerconfigs.yaml podmonitors.yaml probes.yaml prometheuses.yaml prometheusrules.yaml servicemonitors.yaml thanosrulers.yaml scrapeconfigs.yaml prometheusagents.yaml")
 
-for crd in $crds
-do
+for crd in $crds; do
   file="${repo}_${crd}"
-  curl -s ${file} > ${crd}
+  curl -s ${file} >${crd}
 done
-
