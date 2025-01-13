@@ -3,7 +3,7 @@
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 fromImage: common/src-artifact
 git:
-  - add: /modules/{{ $.ModuleName }}/300-prometheus/images/{{ $.ImageName }}
+  - add: /modules/{{ $.ModuleName }}/images/{{ $.ImageName }}
     to: /
     stageDependencies:
       setup:
