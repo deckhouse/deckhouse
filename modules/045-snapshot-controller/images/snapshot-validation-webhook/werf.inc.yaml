@@ -1,6 +1,7 @@
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: common/distroless
+fromCacheVersion: 2025011301
 import:
   - image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
     add: /snapshot-validation-webhook
