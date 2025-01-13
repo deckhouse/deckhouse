@@ -7,14 +7,15 @@ import:
   before: setup
   includePaths:
   - opt/python-static
-  - usr/bin/pip3
-  - usr/bin/python3
 git:
 - add: /{{ $.ModulePath }}modules/300-{{ $.ModuleName }}/images/{{ $.ImageName }}/hooks
   to: /hooks
   stageDependencies:
     install:
     - '**/*'
+docker:
+  ENV:
+    PATH: "/opt/python-static/bin:$PATH"
 
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
@@ -27,8 +28,6 @@ import:
   before: install
   includePaths:
   - opt/python-static
-  - usr/bin/pip3
-  - usr/bin/python3
 git:
 - add: /{{ $.ModulePath }}modules/300-{{ $.ModuleName }}/images/{{ $.ImageName }}/requirements.txt
   to: /requirements.txt
@@ -37,4 +36,4 @@ git:
     - '**/*'
 shell:
   install:
-  - pip3 install -r /requirements.txt
+  - /opt/python-static/bin/pip3 install -r /requirements.txt

@@ -35,7 +35,6 @@ fromImage: common/alt-p11-artifact
 final: false
 shell:
   beforeInstall:
-  {{- include "alt packages proxy" . | nindent 2 }}
   - apt-get install -y pip
   install:
   {{- include "pypi proxy" . | nindent 2 }}
@@ -62,18 +61,12 @@ shell:
   - chown -R 64535:64535 /opt/python-static
   - chmod 0700 /opt/python-static/bin/python3
   - chmod 0700 /opt/python-static/bin/pip3
-  - ln -s /opt/python-static/bin/python3 /usr/bin/python3
-  - ln -s /opt/python-static/bin/pip3 /usr/bin/pip3
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
 final: false
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-artifact
-  add: /
-  to: /
+  add: /opt/python-static
+  to: /opt/python-static
   before: setup
-  includePaths:
-  - opt/python-static
-  - usr/bin/pip3
-  - usr/bin/python3
