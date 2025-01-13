@@ -154,6 +154,32 @@ func TestCheckOrSetupArbitaryCNIModuleConfig(t *testing.T) {
 			},
 		},
 		{
+			cloudProvider:  "Dynamix",
+			podNetworkMode: "",
+			result: result{
+				cniName: "cni-cilium",
+				enabled: true,
+				version: 1,
+				settings: map[string]interface{}{
+					"tunnelMode":     "VXLAN",
+					"masqueradeMode": "BPF",
+				},
+			},
+		},
+		{
+			cloudProvider:  "HuaweiCloud",
+			podNetworkMode: "",
+			result: result{
+				cniName: "cni-cilium",
+				enabled: true,
+				version: 1,
+				settings: map[string]interface{}{
+					"tunnelMode":     "VXLAN",
+					"masqueradeMode": "BPF",
+				},
+			},
+		},
+		{
 			cloudProvider:  "VCD",
 			podNetworkMode: "",
 			result: result{
@@ -162,7 +188,7 @@ func TestCheckOrSetupArbitaryCNIModuleConfig(t *testing.T) {
 				version: 1,
 				settings: map[string]interface{}{
 					"tunnelMode":       "Disabled",
-					"masqueradeMode":   "Netfilter",
+					"masqueradeMode":   "BPF",
 					"createNodeRoutes": true,
 				},
 			},
@@ -176,7 +202,7 @@ func TestCheckOrSetupArbitaryCNIModuleConfig(t *testing.T) {
 				version: 1,
 				settings: map[string]interface{}{
 					"tunnelMode":       "Disabled",
-					"masqueradeMode":   "Netfilter",
+					"masqueradeMode":   "BPF",
 					"createNodeRoutes": true,
 				},
 			},
@@ -190,7 +216,7 @@ func TestCheckOrSetupArbitaryCNIModuleConfig(t *testing.T) {
 				version: 1,
 				settings: map[string]interface{}{
 					"tunnelMode":       "Disabled",
-					"masqueradeMode":   "Netfilter",
+					"masqueradeMode":   "BPF",
 					"createNodeRoutes": true,
 				},
 			},
@@ -205,7 +231,7 @@ func TestCheckOrSetupArbitaryCNIModuleConfig(t *testing.T) {
 				version: 1,
 				settings: map[string]interface{}{
 					"tunnelMode":       "Disabled",
-					"masqueradeMode":   "Netfilter",
+					"masqueradeMode":   "BPF",
 					"createNodeRoutes": true,
 				},
 			},
