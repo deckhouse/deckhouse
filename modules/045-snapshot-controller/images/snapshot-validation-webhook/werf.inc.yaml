@@ -2,7 +2,7 @@
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: common/distroless
 import:
-  - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+  - image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
     add: /snapshot-validation-webhook
     to: /snapshot-validation-webhook
     before: setup
@@ -10,9 +10,15 @@ docker:
   ENTRYPOINT: ["/snapshot-validation-webhook"]
 
 ---
-artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
-from: {{ $.Images.BASE_GOLANG_22_ALPINE_DEV }}
-
+image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+fromImage: common/src-artifact
+final: false
+shell:
+  setup:
+  - git clone --depth 1 --branch v8.1.1 {{ $.SOURCE_REPO }}/kubernetes-csi/external-snapshotter.git /src
+  - cd /src
+  - git apply /patches/*.patch --verbose
+  - rm -rf /src/.git
 git:
   - add: /modules/045-snapshot-controller/images/{{ $.ImageName }}
     to: /
@@ -21,23 +27,25 @@ git:
         - "**/*"
     includePaths:
       - patches
-
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
+final: false
 mount:
   - fromPath: ~/go-pkg-cache
     to: /go/pkg
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+  add: /src
+  to: /src
+  before: install
 shell:
-  beforeInstall:
-  - apk add --no-cache openssh-client
-  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
   install:
     - export GO_VERSION=${GOLANG_VERSION}
     - export GOPROXY={{ $.GOPROXY }}
-    - mkdir -p /go/src/github.com/kubernetes-csi/external-snapshotter
-    - |
-      git clone --depth 1 --branch v8.0.1 \
-        {{ $.SOURCE_REPO }}/kubernetes-csi/external-snapshotter.git \
-        /go/src/github.com/kubernetes-csi/external-snapshotter
-    - cd /go/src/github.com/kubernetes-csi/external-snapshotter/
-    - git apply /patches/*.patch --verbose
-    - cd /go/src/github.com/kubernetes-csi/external-snapshotter/cmd/snapshot-validation-webhook
+    - cd /src
+    - go mod vendor
+    - cd /src/cmd/snapshot-validation-webhook
     - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o /snapshot-validation-webhook
+    - chown 64535:64535 /snapshot-validation-webhook
+    - chmod 700 /snapshot-validation-webhook
