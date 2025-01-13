@@ -883,6 +883,65 @@ entries:
                 en: Examples
                 ru: Примеры
               url: /modules/service-with-healthchecks/examples.html
+        - title:
+            en: keepalived
+            ru: keepalived
+          d8Revision: ee
+          folders:
+            - title:
+                en: Description
+                ru: Описание
+              url: /modules/keepalived/
+            - title:
+                en: Examples
+                ru: Примеры
+              url: /modules/keepalived/examples.html
+            - title:
+                en: Reference
+                ru: Справка
+              folders:
+                - title:
+                    en: Configuration
+                    ru: Настройки
+                  url: /modules/keepalived/configuration.html
+                - title:
+                    en: Custom Resources
+                    ru: Custom Resources
+                  url: /modules/keepalived/cr.html
+            - title:
+                en: FAQ
+                ru: FAQ
+              url: /modules/keepalived/faq.html
+        - title:
+            en: metallb
+            ru: metallb
+          d8Revision: ee
+          folders:
+            - title:
+                en: Description
+                ru: Описание
+              url: /modules/metallb/
+            - title:
+                en: Examples
+                ru: Примеры
+              url: /modules/metallb/examples.html
+            - title:
+                en: Configuration
+                ru: Настройки
+              url: /modules/metallb/configuration.html
+        - title:
+            en: network-gateway
+            ru: network-gateway
+          d8Revision: ee
+          folders:
+            - title:
+                en: Description
+                ru: Описание
+              url: /modules/network-gateway/
+            - title:
+                en: Configuration
+                ru: Настройки
+              url: /modules/network-gateway/configuration.html
     - title:
         en: Monitoring
         ru: Мониторинг
@@ -1587,67 +1646,6 @@ entries:
                 en: Configuration
                 ru: Настройки
               url: /modules/deckhouse-tools/configuration.html
-    - title:
-        en: Bare Metal
-        ru: Bare Metal
-      folders:
-        - title: keepalived
-          d8Revision: ee
-          folders:
-            - title:
-                en: Description
-                ru: Описание
-              url: /modules/keepalived/
-            - title:
-                en: Examples
-                ru: Примеры
-              url: /modules/keepalived/examples.html
-            - title:
-                en: Reference
-                ru: Справка
-              folders:
-                - title:
-                    en: Configuration
-                    ru: Настройки
-                  url: /modules/keepalived/configuration.html
-                - title:
-                    en: Custom Resources
-                    ru: Custom Resources
-                  url: /modules/keepalived/cr.html
-            - title:
-                en: FAQ
-                ru: FAQ
-              url: /modules/keepalived/faq.html
-        - title:
-            en: metallb
-            ru: metallb
-          d8Revision: ee
-          folders:
-            - title:
-                en: Description
-                ru: Описание
-              url: /modules/metallb/
-            - title:
-                en: Examples
-                ru: Примеры
-              url: /modules/metallb/examples.html
-            - title:
-                en: Configuration
-                ru: Настройки
-              url: /modules/metallb/configuration.html
-        - title:
-            en: network-gateway
-            ru: network-gateway
-          d8Revision: ee
-          folders:
-            - title:
-                en: Description
-                ru: Описание
-              url: /modules/network-gateway/
-            - title:
-                en: Configuration
-                ru: Настройки
-              url: /modules/network-gateway/configuration.html
     - title:
         en: Deckhouse CLI
         ru: Deckhouse CLI
