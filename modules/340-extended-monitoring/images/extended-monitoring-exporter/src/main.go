@@ -76,7 +76,6 @@ func recordMetrics() {
 		for {
 			//init
 			local := prometheus.NewRegistry()
-			ctx := context.Background()
 			node_enabled := prometheus.NewCounterVec(
 				prometheus.CounterOpts{Name: "extended_monitoring_node_enabled"},
 				[]string{"node"},
@@ -250,6 +249,7 @@ var (
 	kubeClient         *kubernetes.Clientset
 	kubeMetadata       metadata.Interface
 	reg                = prometheus.NewRegistry()
+	ctx                = context.Background()
 	node_threshold_map = map[string]float64{
 		"disk-bytes-warning":             70,
 		"disk-bytes-critical":            80,
@@ -294,7 +294,6 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-
 	handler := promhttp.HandlerFor(
 		reg,
 		promhttp.HandlerOpts{
