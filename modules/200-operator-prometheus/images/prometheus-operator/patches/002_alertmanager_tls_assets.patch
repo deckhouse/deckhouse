@@ -1,8 +1,8 @@
 diff --git a/pkg/alertmanager/amcfg.go b/pkg/alertmanager/amcfg.go
-index 600f52ae7..fcf567722 100644
+index 959bf63..df09fdc 100644
 --- a/pkg/alertmanager/amcfg.go
 +++ b/pkg/alertmanager/amcfg.go
-@@ -1087,6 +1087,9 @@ func (cb *configBuilder) convertEmailConfig(ctx context.Context, in monitoringv1
+@@ -1096,6 +1096,9 @@ func (cb *configBuilder) convertEmailConfig(ctx context.Context, in monitoringv1
  	}
  
  	if in.TLSConfig != nil {
@@ -12,7 +12,7 @@ index 600f52ae7..fcf567722 100644
  		out.TLSConfig = cb.convertTLSConfig(in.TLSConfig, crKey)
  	}
  
-@@ -1549,6 +1552,9 @@ func (cb *configBuilder) convertHTTPConfig(ctx context.Context, in *monitoringv1
+@@ -1571,5 +1574,8 @@ func (cb *configBuilder) convertHTTPConfig(ctx context.Context, in *monitoringv1
  	}
  
  	if in.TLSConfig != nil {
@@ -21,4 +21,3 @@ index 600f52ae7..fcf567722 100644
 +		}
  		out.TLSConfig = cb.convertTLSConfig(in.TLSConfig, crKey)
  	}
- 
