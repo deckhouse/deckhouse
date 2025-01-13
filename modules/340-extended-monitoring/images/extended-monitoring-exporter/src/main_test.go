@@ -45,35 +45,3 @@ func TestThresholdLabel(t *testing.T) {
 	labels["threshold.extended-monitoring.deckhouse.io/cpu"] = "invalid"
 	assert.Equal(t, 100.0, thresholdLabel(labels, "cpu", 100.0))
 }
-
-func TestRecordMetrics(t *testing.T) {
-	reg := prometheus.NewRegistry()
-	nodeEnabled := prometheus.NewCounterVec(
-		prometheus.CounterOpts{Name: "test_node_enabled"},
-		[]string{"node"},
-	)
-	reg.MustRegister(nodeEnabled)
-
-	nodeEnabled.WithLabelValues("node1").Add(1)
-	nodeEnabled.WithLabelValues("node2").Add(0)
-
-	metricFamilies, err := reg.Gather()
-	assert.NoError(t, err)
-	assert.Len(t, metricFamilies, 1)
-
-	metricFamily := metricFamilies[0]
-	assert.Equal(t, "test_node_enabled", metricFamily.GetName())
-	assert.Len(t, metricFamily.Metric, 2)
-
-	for _, metric := range metricFamily.Metric {
-		nodeName := metric.GetLabel()[0].GetValue()
-		value := metric.GetCounter().GetValue()
-		if nodeName == "node1" {
-			assert.Equal(t, 1.0, value)
-		} else if nodeName == "node2" {
-			assert.Equal(t, 0.0, value)
-		} else {
-			t.Errorf("Unexpected node: %s", nodeName)
-		}
-	}
-}

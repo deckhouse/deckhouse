@@ -43,6 +43,7 @@ shell:
   - cd /src
   - export GOPROXY={{ .GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64
   - go mod download
+  - go test ./... -v
   - go build -ldflags="-s -w" -o /extended-monitoring-exporter main.go
   - chown 64535:64535 /extended-monitoring-exporter
   - chmod 0700 /extended-monitoring-exporter
