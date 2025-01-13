@@ -220,7 +220,7 @@ func recordMetrics() {
 			local.MustRegister(cronjob_enabled)
 			*reg = *local
 			time_healthz = time.Now()
-			time.Sleep(5 * 60 * time.Second)
+			time.Sleep(interval_recordMetrics)
 		}
 	}()
 }
@@ -228,6 +228,8 @@ func recordMetrics() {
 const (
 	label_theshold_prefix    = "threshold.extended-monitoring.deckhouse.io/"
 	namespaces_enabled_label = "extended-monitoring.deckhouse.io/enabled"
+	timeOut_healthz          = time.Duration(15 * time.Minute)
+	interval_recordMetrics   = 5 * time.Minute
 )
 
 var (
@@ -312,8 +314,8 @@ func main() {
 	})
 	http.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
 		time_check := time.Now()
-		if time_check.Sub(time_healthz) > time.Duration(15*time.Minute) {
-			log.Printf("Fail if metrics were last collected more than %v", time.Duration(15*time.Minute))
+		if time_check.Sub(time_healthz) > timeOut_healthz {
+			log.Printf("Fail if metrics were last collected more than %v", timeOut_healthz)
 			http.Error(w, "Error", http.StatusInternalServerError)
 		} else {
 			w.WriteHeader(http.StatusOK)
