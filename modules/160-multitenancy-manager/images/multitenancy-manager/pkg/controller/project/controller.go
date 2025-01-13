@@ -98,6 +98,7 @@ func Register(runtimeManager manager.Manager, helmClient *helm.Client, log logr.
 			if strings.HasPrefix(object.GetName(), projectmanager.KubernetesNamespacePrefix) || strings.HasPrefix(object.GetName(), projectmanager.DeckhouseNamespacePrefix) {
 				return []reconcile.Request{{NamespacedName: client.ObjectKey{Name: projectmanager.DeckhouseProjectName}}}
 			}
+			log.Info("namespace trigger", "namespace", object.GetName())
 			return []reconcile.Request{{NamespacedName: client.ObjectKey{Name: projectmanager.DefaultProjectName}}}
 		})).
 		Complete(projectController)
@@ -150,6 +151,8 @@ type customPredicate[T metav1.Object] struct {
 }
 
 func (p customPredicate[T]) Update(e event.TypedUpdateEvent[T]) bool {
+	p.log.Info("update event", "project", e.ObjectNew.GetName())
+
 	if isNil(e.ObjectOld) {
 		p.log.Error(nil, "update event has no old object to update", "event", e)
 		return false
