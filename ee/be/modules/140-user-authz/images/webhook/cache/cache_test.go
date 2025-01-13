@@ -80,15 +80,16 @@ func TestCacheGet(t *testing.T) {
 func TestCachePreferredVersionGet(t *testing.T) {
 	cache := newTestPreferredVersionCache()
 
+	const resource = "challenges"
 	const group = "acme.cert-manager.io"
 	const expectedVersion = "v1"
 
-	version := cache.preferredVersionFromCache(group)
+	version := cache.preferredVersionFromCache(group, resource)
 	if version != "" {
 		t.Fatalf("cache does not empty")
 	}
 
-	version, err := cache.GetPreferredVersion(group)
+	version, err := cache.GetPreferredVersion(group, resource)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -97,7 +98,7 @@ func TestCachePreferredVersionGet(t *testing.T) {
 		t.Fatalf("acme.cert-manager.io: %v != %v", version, expectedVersion)
 	}
 
-	version = cache.preferredVersionFromCache(group)
+	version = cache.preferredVersionFromCache(group, resource)
 	if version == "" {
 		t.Fatal("version for group does not save in cache")
 	}
@@ -106,12 +107,12 @@ func TestCachePreferredVersionGet(t *testing.T) {
 	// change client here to not be able to update the cache
 	cache.now = func() time.Time { return now.Add(time.Hour * 3) }
 
-	version = cache.preferredVersionFromCache(group)
+	version = cache.preferredVersionFromCache(group, resource)
 	if version != "" {
 		t.Fatalf("version does not expire")
 	}
 
-	version, err = cache.GetPreferredVersion(group)
+	version, err = cache.GetPreferredVersion(group, resource)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -178,6 +179,7 @@ func TestCacheCheck(t *testing.T) {
 	server := newErrorServer()
 
 	cache := NamespacedDiscoveryCache{}
+	cache.logger = log.New(io.Discard, "", log.LstdFlags)
 
 	cache.client = server.Client()
 	cache.kubernetesAPIAddress = server.URL
@@ -249,7 +251,15 @@ func newTestServer() *httptest.Server {
 func newPreferredVersionTestServer() *httptest.Server {
 	return httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Add("Content-Type", "application/json")
-		w.Write([]byte(preferredVersionResponse))
+		switch r.URL.Path {
+		case "/apis/acme.cert-manager.io":
+			w.Write([]byte(preferredVersionResponse))
+		case "/apis/acme.cert-manager.io/v1":
+			w.Write([]byte(discoveryByVersionResponse))
+		default:
+			w.WriteHeader(http.StatusNotFound)
+			w.Write([]byte{})
+		}
 	}))
 }
 
@@ -261,7 +271,8 @@ func newErrorServer() *httptest.Server {
 	}))
 }
 
-const preferredVersionResponse = `{
+const preferredVersionResponse = `
+{
   "kind": "APIGroup",
   "apiVersion": "v1",
   "name": "acme.cert-manager.io",
@@ -287,8 +298,58 @@ const preferredVersionResponse = `{
     "groupVersion": "acme.cert-manager.io/v1",
     "version": "v1"
   }
-}
-`
+}`
+
+const discoveryByVersionResponse = `
+{
+  "kind": "APIResourceList",
+  "apiVersion": "v1",
+  "groupVersion": "acme.cert-manager.io/v1",
+  "resources": [
+    {
+      "name": "orders",
+      "singularName": "order",
+      "namespaced": true,
+      "kind": "Order",
+      "verbs": [
+        "delete",
+        "deletecollection",
+        "get",
+        "list",
+        "patch",
+        "create",
+        "update",
+        "watch"
+      ],
+      "categories": [
+        "cert-manager",
+        "cert-manager-acme"
+      ],
+      "storageVersionHash": "FQscJvYs/a4="
+    },
+    {
+      "name": "challenges",
+      "singularName": "challenge",
+      "namespaced": true,
+      "kind": "Challenge",
+      "verbs": [
+        "delete",
+        "deletecollection",
+        "get",
+        "list",
+        "patch",
+        "create",
+        "update",
+        "watch"
+      ],
+      "categories": [
+        "cert-manager",
+        "cert-manager-acme"
+      ],
+      "storageVersionHash": "T6RvmdSxRBY="
+    }
+  ]
+}`
 
 const testResponse = `{
   "kind": "APIResourceList",
