@@ -9,8 +9,8 @@ import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
   add: /tmp/istio/out/pilot-agent
   to: /usr/local/bin/pilot-agent
-  owner: 1337
-  group: 1337
+  # owner: 1337
+  # group: 1337
   after: setup
 - image: {{ .ModuleName }}/{{ .ImageName }}-binary-artifact
   add: /var/lib/istio/envoy/
@@ -18,14 +18,14 @@ import:
   includePaths:
   - envoy_bootstrap_tmpl.json
   - gcp_envoy_bootstrap_tmpl.json
-  owner: 1337
-  group: 1337
+  # owner: 1337
+  # group: 1337
   after: setup
 - image: {{ .ModuleName }}/{{ .ImageName }}-binary-artifact
   add: /usr/local/bin/envoy
   to: /usr/local/bin/envoy
-  owner: 1337
-  group: 1337
+  # owner: 1337
+  # group: 1337
   after: setup
 shell:
   beforeInstall:
@@ -46,7 +46,7 @@ docker:
     ISTIO_META_ISTIO_PROXY_SHA: "istio-proxy:78bd2d9b284978e170a49cd13decd5f952544489"
     ISTIO_META_ISTIO_VERSION: "1.21.6"
   WORKDIR: "/"
-  USER: 1337
+  # USER: 1337
   ENTRYPOINT: ["/usr/local/bin/pilot-agent"]
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-binary-artifact
@@ -55,7 +55,7 @@ final: false
 shell:
   install:
   - chmod 0500 /usr/local/bin/envoy
-  - chown 1337:1337 /usr/local/bin/envoy
+  # - chown 1337:1337 /usr/local/bin/envoy
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
 from: {{ .Images.BASE_GOLANG_23_ALPINE_DEV }}
@@ -71,4 +71,4 @@ shell:
   - export GOPROXY={{ $.GOPROXY }}
   - GOOS=linux GOARCH=amd64 LDFLAGS='-extldflags -static -s -w' common/scripts/gobuild.sh /tmp/istio/out/ -tags=agent,disable_pgv /tmp/istio/pilot/cmd/pilot-agent/
   - chmod 0500 /tmp/istio/out/pilot-agent
-  - chown 1337:1337 /tmp/istio/out/pilot-agent
+  # - chown 1337:1337 /tmp/istio/out/pilot-agent
