@@ -199,7 +199,7 @@ spec:
    EOF
    ```
 
-   >Поле `labelSelector` в ресурсе `NodeGroup` является неизменным. Чтобы обновить labelSelector, нужно создать новую NodeGroup и перенести в неё статические узлы, изменив их метки (labels).
+   > Поле `labelSelector` в ресурсе `NodeGroup` является неизменным. Чтобы обновить labelSelector, нужно создать новую NodeGroup и перенести в неё статические узлы, изменив их метки (labels).
 
 1. Создайте в кластере ресурс [NodeGroup](cr.html#nodegroup):
 
