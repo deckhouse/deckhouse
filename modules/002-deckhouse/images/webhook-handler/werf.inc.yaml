@@ -19,11 +19,9 @@ import:
     to: /
     before: setup
     includePaths:
+    - opt/python-static
+    - usr/bin/pip3
     - usr/bin/python3
-    - usr/bin/python3.*
-    - usr/lib/python3
-    - usr/lib64/python3
-    - usr/lib64/python3.*
   - image: {{ $.ModuleName }}/{{ .ImageName }}-label-converter-artifact
     add: /label-converter
     to: /usr/local/bin/label-converter
@@ -103,10 +101,14 @@ git:
     install:
     - '**/*'
 import:
-- image: common/python-static
-  add: /opt/python-static
-  to: /usr
-  before: install
+- image: common/python-static-artifact
+  add: /
+  to: /
+  before: setup
+  includePaths:
+  - opt/python-static
+  - usr/bin/pip3
+  - usr/bin/python3
 shell:
   install:
-  - /usr/bin/pip3 install -r /requirements.txt
+  - pip3 install -r /requirements.txt
