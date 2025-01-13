@@ -1,5 +1,5 @@
 ---
-title: "Deckhouse Virtualization Platform"
+title: "Deckhouse Stronghold"
 permalink: ru/stronghold/documentation/faq.html
 lang: ru
 ---

@@ -1,5 +1,5 @@
 ---
-title: "Deckhouse Virtualization Platform"
+title: "Deckhouse Stronghold"
 permalink: en/stronghold/documentation/architecture/functional-specifications.html
 ---
 

@@ -20,7 +20,3 @@ We will do our best to help you.
 
 If you are an Enterprise Edition user, reach out via <a href="mailto:support@deckhouse.io">support@deckhouse.io</a>.
 We will be glad to provide assistance.
-
-Are you interested in improving the DVP?
-Feel free to open a [GitHub Issue](https://github.com/deckhouse/virtualization/issues/),
-suggest an idea or join the list of [contributors](https://github.com/deckhouse/virtualization/blob/main/CONTRIBUTING.md).

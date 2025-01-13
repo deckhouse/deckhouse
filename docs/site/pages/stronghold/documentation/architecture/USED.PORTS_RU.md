@@ -1,7 +1,7 @@
 ---
-title: "Deckhouse Virtualization Platform"
+title: "Deckhouse Stronghold"
 permalink: ru/stronghold/documentation/architecture/used-ports.html
 lang: ru
 ---
 
-Ожидается в ближайшее время...
+В разработке

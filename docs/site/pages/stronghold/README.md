@@ -3,9 +3,9 @@ title: "Overview"
 permalink: en/stronghold/documentation/
 ---
 
-Welcome to the home page of the Deckhouse Virtualization Platform documentation!
+Welcome to the home page of the Deckhouse Stronghold documentation!
 
-The Deckhouse Virtualization Platform is designed for launching, managing, and orchestrating virtual machines and associated resources.
+The Deckhouse Stronghold is designed for launching, managing, and orchestrating virtual machines and associated resources.
 
 The documentation includes the following sections:
 
@@ -20,6 +20,3 @@ We will do our best to help you.
 If you are an Enterprise Edition user, reach out via <a href="mailto:support@deckhouse.io">support@deckhouse.io</a>.
 We will be glad to provide assistance.
 
-Are you interested in improving the DVP?
-Feel free to open a [GitHub Issue](https://github.com/deckhouse/virtualization/issues/),
-suggest an idea or join the list of [contributors](https://github.com/deckhouse/virtualization/blob/main/CONTRIBUTING.md).
