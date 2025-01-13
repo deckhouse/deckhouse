@@ -20,7 +20,7 @@ shell:
   - cd /usr/src/app
   - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
   - git clone --depth 1 --branch v{{ $grafanaVersion }} {{ $.SOURCE_REPO }}/grafana/grafana.git .
-  - git clone --depth 1 --branch v{{ $grafanaVersion }} {{ $.SOURCE_REPO }}/grafana/grafana-deps.git /grafana-deps
+  - git clone --depth 1 --branch v{{ $grafanaVersion }} {{ $.SOURCE_REPO }}/grafana/grafana-deps.git /grafana-static
   - find /patches -name '*.patch' -exec git apply {} \;
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-go-builder
@@ -71,7 +71,7 @@ import:
   to: /usr/share/grafana/bin/grafana
   before: install
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-src-files
-  add: /usr/src/app/public
+  add: /grafana-static/public
   to: /usr/share/grafana/public
   before: install
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-src-files
