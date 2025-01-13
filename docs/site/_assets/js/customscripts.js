@@ -309,6 +309,21 @@ window.addEventListener("load", function() {
 document.addEventListener('DOMContentLoaded', function () {
   const pre = document.querySelectorAll('pre');
 
+  const lang = document.documentElement.lang;
+  const textTooltip = {
+    en: {
+      copy: 'Copy',
+      copied: 'Copied!',
+      error: 'Error!'
+    },
+    ru: {
+      copy: 'Копировать',
+      copied: 'Скопировано!',
+      error: 'Ошибка!'
+    }
+  };
+  const  texts = textTooltip[lang];
+
   if (pre.length) {
     pre.forEach((el) => {
       el.addEventListener('mouseenter', () => {
@@ -320,7 +335,6 @@ document.addEventListener('DOMContentLoaded', function () {
 
         const copyBtn = document.createElement('div');
         copyBtn.classList.add('icon--copy');
-        copyBtn.setAttribute('data-clipboard-target', '');
 
         el.prepend(copyBtn);
 
@@ -329,7 +343,7 @@ document.addEventListener('DOMContentLoaded', function () {
           arrow: false,
           animation: 'scale',
           theme: 'light',
-          content: 'Copy',
+          content: texts.copy,
           hideOnClick: false,
           delay: [300, 50],
           offset: [0, 10],
@@ -337,16 +351,17 @@ document.addEventListener('DOMContentLoaded', function () {
         });
 
         el.querySelector('.icon--copy').addEventListener('click', () => {
-          const code = el.querySelector('code').textContent;
+          const code = el.querySelector('code');
+          if (!code) return;
 
-          navigator.clipboard.writeText(code).then(r => {
-            copyBtnTippy.setContent('Copied!');
+          navigator.clipboard.writeText(code.textContent).then(r => {
+            copyBtnTippy.setContent(texts.copied);
 
             setTimeout(() => {
               copyBtnTippy.hide()
             }, 1000);
           }, () => {
-            copyBtnTippy.setContent('Error!');
+            copyBtnTippy.setContent(texts.error);
 
             setTimeout(() => {
               copyBtnTippy.hide()
