@@ -47,5 +47,5 @@ shell:
     - go mod vendor
     - cd /src/cmd/snapshot-validation-webhook
     - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o /snapshot-validation-webhook
-    - chown 64535:64535 /snapshot-validation-webhook
+    - chown 65534:65534 /snapshot-validation-webhook
     - chmod 700 /snapshot-validation-webhook

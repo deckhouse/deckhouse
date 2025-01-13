@@ -47,5 +47,5 @@ shell:
     - go mod vendor
     - cd /src/cmd/snapshot-controller
     - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o /snapshot-controller
-    - chown 64535:64535 /snapshot-controller
+    - chown 65534:65534 /snapshot-controller
     - chmod 700 /snapshot-controller
