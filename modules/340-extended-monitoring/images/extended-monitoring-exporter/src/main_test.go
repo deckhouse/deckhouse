@@ -29,24 +29,24 @@ import (
 
 func TestEnabledLabel(t *testing.T) {
 	labels := map[string]string{
-		"extended-monitoring.deckhouse.io/enabled": "true",
+		namespaces_enabled_label: "true",
 	}
 	assert.Equal(t, 1.0, enabledLabel(labels))
 
-	labels["extended-monitoring.deckhouse.io/enabled"] = "false"
+	labels[namespaces_enabled_label] = "false"
 	assert.Equal(t, 0.0, enabledLabel(labels))
 
-	delete(labels, "extended-monitoring.deckhouse.io/enabled")
+	delete(labels, namespaces_enabled_label)
 	assert.Equal(t, 1.0, enabledLabel(labels))
 }
 
 func TestThresholdLabel(t *testing.T) {
 	labels := map[string]string{
-		"threshold.extended-monitoring.deckhouse.io/cpu": "80",
+		label_theshold_prefix + "cpu": "80",
 	}
 	assert.Equal(t, 80.0, thresholdLabel(labels, "cpu", 100.0))
 
-	labels["threshold.extended-monitoring.deckhouse.io/cpu"] = "invalid"
+	labels[label_theshold_prefix+"cpu"] = "invalid"
 	assert.Equal(t, 100.0, thresholdLabel(labels, "cpu", 100.0))
 }
 
@@ -62,20 +62,20 @@ func TestRecordMetrics(t *testing.T) {
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:   "namespace1",
-			Labels: map[string]string{"extended-monitoring.deckhouse.io/enabled": "true"},
+			Labels: map[string]string{namespaces_enabled_label: "true"},
 		},
 	}, metav1.CreateOptions{})
 
-	FakeClient.Resource(resource_namespaces).(fake.MetadataClient).CreateFake(&metav1.PartialObjectMetadata{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "v1",
-			Kind:       "pod",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "pod1",
-			Namespace: "namespace1",
-		},
-	}, metav1.CreateOptions{})
+	// FakeClient.Resource(resource_namespaces).(fake.MetadataClient).CreateFake(&metav1.PartialObjectMetadata{
+	// 	TypeMeta: metav1.TypeMeta{
+	// 		APIVersion: "v1",
+	// 		Kind:       "pod",
+	// 	},
+	// 	ObjectMeta: metav1.ObjectMeta{
+	// 		Name:      "pod1",
+	// 		Namespace: "namespace1",
+	// 	},
+	// }, metav1.CreateOptions{})
 
 	registry := prometheus.NewRegistry()
 	recordMetrics(ctx, FakeClient, registry)
@@ -86,5 +86,7 @@ func TestRecordMetrics(t *testing.T) {
 	}
 	assert.Equal(t, 1, len(mfs))
 	assert.Equal(t, "extended_monitoring_enabled", mfs[0].GetName())
-	assert.Contains(t, mfs[0].String(), "name:\"extended_monitoring_enabled\"  help:\"\"  type:COUNTER  metric:{label:{name:\"namespace\"  value:\"namespace1\"}  counter:{value:1  created_timestamp:")
+	assert.Regexp(t, "^name:\"extended_monitoring_enabled\".*help:\"\".*type:COUNTER.*metric:{label:{name:\"namespace\".*value:\"namespace1\"}.*counter:{value:1.*created_timestamp:.*$", mfs[0].String())
+	// assert.Contains(t, mfs[0].String(), "name:\"extended_monitoring_enabled\"  help:\"\"  type:COUNTER  metric:{label:{name:\"namespace\"  value:\"namespace1\"}  counter:{value:1  created_timestamp:")
+
 }

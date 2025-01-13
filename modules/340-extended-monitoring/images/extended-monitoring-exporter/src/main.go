@@ -62,7 +62,7 @@ func thresholdLabel(labels map[string]string, threshold string, i float64) float
 		if key == (label_theshold_prefix + threshold) {
 			tmp, err := strconv.ParseFloat(value, 64)
 			if err != nil {
-				log.Printf("[thresholdLabel] failed ParseFloat: %v\n", err)
+				log.Printf("[thresholdLabel] could not parse the value of \"%s\": %v\n", label_theshold_prefix + threshold, err)
 			} else {
 				i = tmp
 			}
