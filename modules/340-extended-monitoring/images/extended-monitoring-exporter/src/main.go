@@ -1,5 +1,5 @@
 /*
-Copyright 2024 Flant JSC
+Copyright 2025 Flant JSC
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -71,7 +71,7 @@ func thresholdLabel(labels map[string]string, threshold string, i float64) float
 	return i
 }
 
-func recordMetrics() {
+func recordMetrics(ctx context.Context, client metadata.Interface) {
 	//init
 	local := prometheus.NewRegistry()
 	node_enabled := prometheus.NewCounterVec(
@@ -131,7 +131,7 @@ func recordMetrics() {
 		[]string{"namespace", "cronjob"},
 	)
 	//node
-	for _, node := range ListResources(ctx, kubeMetadata, resource_nodes, options, "").Items {
+	for _, node := range ListResources(ctx, client, resource_nodes, options, "").Items {
 		enabled := enabledLabel(node.Labels)
 		node_enabled.WithLabelValues(node.Name).Add(enabled)
 		if enabled == 1 {
@@ -141,13 +141,13 @@ func recordMetrics() {
 		}
 	}
 	//namespace
-	for _, namespasce := range ListResources(ctx, kubeMetadata, resource_namespaces, options_ns, "").Items {
+	for _, namespasce := range ListResources(ctx, client, resource_namespaces, options_ns, "").Items {
 		enabled_namespace := enabledLabel(namespasce.Labels)
 		namespaces_enabled.WithLabelValues(namespasce.Name).Add(enabled_namespace)
 
 		if enabled_namespace == 1 {
 			//pod
-			for _, pod := range ListResources(ctx, kubeMetadata, resource_pods, options, namespasce.Name).Items {
+			for _, pod := range ListResources(ctx, client, resource_pods, options, namespasce.Name).Items {
 				enabled := enabledLabel(pod.Labels)
 				pod_enabled.WithLabelValues(namespasce.Name, pod.Name).Add(enabled)
 				if enabled == 1 {
@@ -157,7 +157,7 @@ func recordMetrics() {
 				}
 			}
 			//ingress
-			for _, ingress := range ListResources(ctx, kubeMetadata, resource_ingresses, options, namespasce.Name).Items {
+			for _, ingress := range ListResources(ctx, client, resource_ingresses, options, namespasce.Name).Items {
 				enabled := enabledLabel(ingress.Labels)
 				ingress_enabled.WithLabelValues(namespasce.Name, ingress.Name).Add(enabled)
 				if enabled == 1 {
@@ -167,7 +167,7 @@ func recordMetrics() {
 				}
 			}
 			//deployment
-			for _, deployment := range ListResources(ctx, kubeMetadata, resource_deployments, options, namespasce.Name).Items {
+			for _, deployment := range ListResources(ctx, client, resource_deployments, options, namespasce.Name).Items {
 				enabled := enabledLabel(deployment.Labels)
 				deployment_enabled.WithLabelValues(namespasce.Name, deployment.Name).Add(enabled)
 				if enabled == 1 {
@@ -177,7 +177,7 @@ func recordMetrics() {
 				}
 			}
 			//daemonset
-			for _, daemonset := range ListResources(ctx, kubeMetadata, resource_daemonsets, options, namespasce.Name).Items {
+			for _, daemonset := range ListResources(ctx, client, resource_daemonsets, options, namespasce.Name).Items {
 				enabled := enabledLabel(daemonset.Labels)
 				daemonset_enabled.WithLabelValues(namespasce.Name, daemonset.Name).Add(enabled)
 				if enabled == 1 {
@@ -187,7 +187,7 @@ func recordMetrics() {
 				}
 			}
 			//statefulset
-			for _, statefulset := range ListResources(ctx, kubeMetadata, resource_statefulsets, options, namespasce.Name).Items {
+			for _, statefulset := range ListResources(ctx, client, resource_statefulsets, options, namespasce.Name).Items {
 				enabled := enabledLabel(statefulset.Labels)
 				statefulset_enabled.WithLabelValues(namespasce.Name, statefulset.Name).Add(enabled)
 				if enabled == 1 {
@@ -197,7 +197,7 @@ func recordMetrics() {
 				}
 			}
 			//cronjob
-			for _, cronjob := range ListResources(ctx, kubeMetadata, resource_cronjobs, options, namespasce.Name).Items {
+			for _, cronjob := range ListResources(ctx, client, resource_cronjobs, options, namespasce.Name).Items {
 				cronjob_enabled.WithLabelValues(namespasce.Name, cronjob.Name).Add(enabledLabel(cronjob.Labels))
 			}
 		}
@@ -297,7 +297,7 @@ func main() {
 		})
 	go func() {
 		for {
-			recordMetrics()
+			recordMetrics(ctx, kubeMetadata)
 			time_healthz = time.Now()
 			time.Sleep(interval_recordMetrics)
 		}
