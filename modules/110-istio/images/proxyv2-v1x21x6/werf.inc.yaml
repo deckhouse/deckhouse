@@ -6,8 +6,8 @@
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/alt-p11
 import:
-- image: {{ .ModuleName }}/{{ .ImageName }}-binary-artifact
-  add: /usr/local/bin/pilot-agent
+- image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
+  add: /tmp/istio/pilot/cmd/pilot-agent
   to: /usr/local/bin/pilot-agent
   # owner: 1337
   # group: 1337
@@ -69,6 +69,6 @@ shell:
   - cd /tmp/istio/
   - echo {{ $istioProxyVersion }} > version
   - export GOPROXY={{ $.GOPROXY }}
-  - GOOS=linux GOARCH=amd64 LDFLAGS='-extldflags -static -s -w' common/scripts/gobuild.sh /tmp/istio/out/ -tags=agent,disable_pgv /tmp/istio/pilot/cmd/pilot-agent/
+  - GOOS=linux GOARCH=amd64 LDFLAGS='-extldflags -static -s -w' common/scripts/gobuild.sh /tmp/istio/out/ -tags=agent,disable_pgv /tmp/istio/pilot/cmd/pilot-agent
   # - chmod 0500 /tmp/istio/out/pilot-agent
   # - chown 1337:1337 /tmp/istio/out/pilot-agent
