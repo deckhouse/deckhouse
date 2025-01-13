@@ -228,8 +228,8 @@ func recordMetrics() {
 const (
 	label_theshold_prefix    = "threshold.extended-monitoring.deckhouse.io/"
 	namespaces_enabled_label = "extended-monitoring.deckhouse.io/enabled"
-	timeOut_healthz          = time.Duration(15 * time.Minute)
 	interval_recordMetrics   = 5 * time.Minute
+	timeOut_healthz          = time.Duration(3 * interval_recordMetrics)
 )
 
 var (
