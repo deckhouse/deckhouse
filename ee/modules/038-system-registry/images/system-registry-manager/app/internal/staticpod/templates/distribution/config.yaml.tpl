@@ -40,4 +40,7 @@ auth:
     service: Docker registry
     issuer: Registry server
     rootcertbundle: /system_registry_pki/token.crt
-    autoredirect: false
+    autoredirect: true
+    proxy:
+      url: https://127.0.0.1:5051/auth
+      ca: /system_registry_pki//ca.crt

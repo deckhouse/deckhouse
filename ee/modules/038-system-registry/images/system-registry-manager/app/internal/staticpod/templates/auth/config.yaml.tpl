@@ -1,5 +1,5 @@
 server:
-  addr: "{{ .Address }}:5051"
+  addr: "127.0.0.1:5051"
   certificate: "/system_registry_pki/auth.crt"
   key: "/system_registry_pki/auth.key"
 token:
