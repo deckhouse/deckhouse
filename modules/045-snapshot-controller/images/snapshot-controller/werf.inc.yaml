@@ -44,7 +44,7 @@ shell:
     - export GO_VERSION=${GOLANG_VERSION}
     - export GOPROXY={{ $.GOPROXY }}
     - cd /src
-    - go mod vendor
+    - go mod vendor -x
     - cd /src/cmd/snapshot-controller
     - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o /snapshot-controller
     - chown 65534:65534 /snapshot-controller
