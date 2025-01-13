@@ -349,7 +349,9 @@ Useful features of some scripts:
 
 ### Automatic installation of custom labels for nodes
 
-Custom labels can be set automatically for new nodes added to the cluster. To do this, in the directory `/var/lib/node_labels` of the node to be added, you need to create files containing the necessary labels in the format `key=value`. The file names can be any, the nesting of directories with files is not limited.
+Custom labels can be set automatically for nodes. To do this, in the directory `/var/lib/node_labels` of the node, you need to create files containing the necessary labels in the format `key=value`. The file names can be any, the nesting of directories with files is not limited.
+
+This method works both for existing nodes in the cluster and during the addition of new nodes.
 
 {% alert level="warning" %}
 Please note that it is not possible to add labels used in DKP in this way. This method will only work with custom labels that do not overlap with those reserved for Deckhouse.

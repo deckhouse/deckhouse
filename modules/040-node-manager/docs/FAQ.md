@@ -614,9 +614,9 @@ When changing the CRI in the cluster, additional steps are required for the mast
 
 Additional node configuration steps are set via the [NodeGroupConfiguration](cr.html#nodegroupconfiguration) custom resource.
 
-## How to automatically put custom labels on the added node?
+## How to automatically put custom labels on the node?
 
-1. On the newly added node, create the directory `/var/lib/node_labels`.
+1. On the node, create the directory `/var/lib/node_labels`.
 
 1. Create a file or files containing the necessary labels in it. The number of files can be any, as well as the number of subdirectories containing them.
 
