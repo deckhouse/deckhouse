@@ -182,6 +182,7 @@ jobs:
       run_containerd_automatic: ${{ steps.check.outputs.run_containerd_automatic }}
       edition: ${{ steps.check.outputs.edition }}
       multimaster: ${{ steps.check.outputs.multimaster }}
+      cis: ${{ steps.check.outputs.cis }}
     steps:
 
       # <template: checkout_step>
@@ -461,6 +462,7 @@ jobs:
           REPOSITORY: ${{ github.repository }}
           DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
           GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+          CIS_ENABLED: ${{ needs.check_e2e_labels.outputs.cis }}
         run: |
           echo "Execute 'script.sh run-test' via 'docker run', using environment:
             INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
@@ -473,6 +475,7 @@ jobs:
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
+            CIS_ENABLED=${CIS_ENABLED}
           "
 
           ls -lh $(pwd)/testing
@@ -517,6 +520,7 @@ jobs:
             -e LAYOUT_VSPHERE_PASSWORD=${LAYOUT_VSPHERE_PASSWORD:-not_provided} \
             -e LAYOUT_VSPHERE_BASE_DOMAIN=${LAYOUT_VSPHERE_BASE_DOMAIN:-not_provided} \
             -e USER_RUNNER_ID=${user_runner_id} \
+            -e CIS_ENABLED=${CIS_ENABLED} \
             -v $(pwd)/testing:/deckhouse/testing \
             -v $(pwd)/release.yaml:/deckhouse/release.yaml \
             -v ${TMP_DIR_PATH}:/tmp \
@@ -953,6 +957,7 @@ jobs:
           REPOSITORY: ${{ github.repository }}
           DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
           GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+          CIS_ENABLED: ${{ needs.check_e2e_labels.outputs.cis }}
         run: |
           echo "Execute 'script.sh run-test' via 'docker run', using environment:
             INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
@@ -965,6 +970,7 @@ jobs:
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
+            CIS_ENABLED=${CIS_ENABLED}
           "
 
           ls -lh $(pwd)/testing
@@ -1009,6 +1015,7 @@ jobs:
             -e LAYOUT_VSPHERE_PASSWORD=${LAYOUT_VSPHERE_PASSWORD:-not_provided} \
             -e LAYOUT_VSPHERE_BASE_DOMAIN=${LAYOUT_VSPHERE_BASE_DOMAIN:-not_provided} \
             -e USER_RUNNER_ID=${user_runner_id} \
+            -e CIS_ENABLED=${CIS_ENABLED} \
             -v $(pwd)/testing:/deckhouse/testing \
             -v $(pwd)/release.yaml:/deckhouse/release.yaml \
             -v ${TMP_DIR_PATH}:/tmp \
@@ -1445,6 +1452,7 @@ jobs:
           REPOSITORY: ${{ github.repository }}
           DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
           GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+          CIS_ENABLED: ${{ needs.check_e2e_labels.outputs.cis }}
         run: |
           echo "Execute 'script.sh run-test' via 'docker run', using environment:
             INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
@@ -1457,6 +1465,7 @@ jobs:
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
+            CIS_ENABLED=${CIS_ENABLED}
           "
 
           ls -lh $(pwd)/testing
@@ -1501,6 +1510,7 @@ jobs:
             -e LAYOUT_VSPHERE_PASSWORD=${LAYOUT_VSPHERE_PASSWORD:-not_provided} \
             -e LAYOUT_VSPHERE_BASE_DOMAIN=${LAYOUT_VSPHERE_BASE_DOMAIN:-not_provided} \
             -e USER_RUNNER_ID=${user_runner_id} \
+            -e CIS_ENABLED=${CIS_ENABLED} \
             -v $(pwd)/testing:/deckhouse/testing \
             -v $(pwd)/release.yaml:/deckhouse/release.yaml \
             -v ${TMP_DIR_PATH}:/tmp \
@@ -1937,6 +1947,7 @@ jobs:
           REPOSITORY: ${{ github.repository }}
           DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
           GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+          CIS_ENABLED: ${{ needs.check_e2e_labels.outputs.cis }}
         run: |
           echo "Execute 'script.sh run-test' via 'docker run', using environment:
             INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
@@ -1949,6 +1960,7 @@ jobs:
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
+            CIS_ENABLED=${CIS_ENABLED}
           "
 
           ls -lh $(pwd)/testing
@@ -1993,6 +2005,7 @@ jobs:
             -e LAYOUT_VSPHERE_PASSWORD=${LAYOUT_VSPHERE_PASSWORD:-not_provided} \
             -e LAYOUT_VSPHERE_BASE_DOMAIN=${LAYOUT_VSPHERE_BASE_DOMAIN:-not_provided} \
             -e USER_RUNNER_ID=${user_runner_id} \
+            -e CIS_ENABLED=${CIS_ENABLED} \
             -v $(pwd)/testing:/deckhouse/testing \
             -v $(pwd)/release.yaml:/deckhouse/release.yaml \
             -v ${TMP_DIR_PATH}:/tmp \
@@ -2429,6 +2442,7 @@ jobs:
           REPOSITORY: ${{ github.repository }}
           DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
           GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+          CIS_ENABLED: ${{ needs.check_e2e_labels.outputs.cis }}
         run: |
           echo "Execute 'script.sh run-test' via 'docker run', using environment:
             INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
@@ -2441,6 +2455,7 @@ jobs:
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
+            CIS_ENABLED=${CIS_ENABLED}
           "
 
           ls -lh $(pwd)/testing
@@ -2485,6 +2500,7 @@ jobs:
             -e LAYOUT_VSPHERE_PASSWORD=${LAYOUT_VSPHERE_PASSWORD:-not_provided} \
             -e LAYOUT_VSPHERE_BASE_DOMAIN=${LAYOUT_VSPHERE_BASE_DOMAIN:-not_provided} \
             -e USER_RUNNER_ID=${user_runner_id} \
+            -e CIS_ENABLED=${CIS_ENABLED} \
             -v $(pwd)/testing:/deckhouse/testing \
             -v $(pwd)/release.yaml:/deckhouse/release.yaml \
             -v ${TMP_DIR_PATH}:/tmp \
@@ -2921,6 +2937,7 @@ jobs:
           REPOSITORY: ${{ github.repository }}
           DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
           GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+          CIS_ENABLED: ${{ needs.check_e2e_labels.outputs.cis }}
         run: |
           echo "Execute 'script.sh run-test' via 'docker run', using environment:
             INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
@@ -2933,6 +2950,7 @@ jobs:
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
+            CIS_ENABLED=${CIS_ENABLED}
           "
 
           ls -lh $(pwd)/testing
@@ -2977,6 +2995,7 @@ jobs:
             -e LAYOUT_VSPHERE_PASSWORD=${LAYOUT_VSPHERE_PASSWORD:-not_provided} \
             -e LAYOUT_VSPHERE_BASE_DOMAIN=${LAYOUT_VSPHERE_BASE_DOMAIN:-not_provided} \
             -e USER_RUNNER_ID=${user_runner_id} \
+            -e CIS_ENABLED=${CIS_ENABLED} \
             -v $(pwd)/testing:/deckhouse/testing \
             -v $(pwd)/release.yaml:/deckhouse/release.yaml \
             -v ${TMP_DIR_PATH}:/tmp \
@@ -3413,6 +3432,7 @@ jobs:
           REPOSITORY: ${{ github.repository }}
           DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
           GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+          CIS_ENABLED: ${{ needs.check_e2e_labels.outputs.cis }}
         run: |
           echo "Execute 'script.sh run-test' via 'docker run', using environment:
             INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
@@ -3425,6 +3445,7 @@ jobs:
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
+            CIS_ENABLED=${CIS_ENABLED}
           "
 
           ls -lh $(pwd)/testing
@@ -3469,6 +3490,7 @@ jobs:
             -e LAYOUT_VSPHERE_PASSWORD=${LAYOUT_VSPHERE_PASSWORD:-not_provided} \
             -e LAYOUT_VSPHERE_BASE_DOMAIN=${LAYOUT_VSPHERE_BASE_DOMAIN:-not_provided} \
             -e USER_RUNNER_ID=${user_runner_id} \
+            -e CIS_ENABLED=${CIS_ENABLED} \
             -v $(pwd)/testing:/deckhouse/testing \
             -v $(pwd)/release.yaml:/deckhouse/release.yaml \
             -v ${TMP_DIR_PATH}:/tmp \
