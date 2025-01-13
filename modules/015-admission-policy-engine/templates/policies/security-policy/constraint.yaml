@@ -145,9 +145,10 @@ spec:
     scope: Namespaced
     {{- include "constraint_selector" (list $cr) }}
   parameters:
-    {{- if not $cr.spec.policies.allowHostNetwork }}
-    allowHostNetwork:
-      {{- $cr.spec.policies.allowHostNetwork | toYaml | nindent 6 }}
+    {{- if $cr.spec.policies.allowHostNetwork }}
+    allowHostNetwork: true
+    {{- else }}
+    allowHostNetwork: false
     {{- end }}
     {{- if hasKey $cr.spec.policies "allowedHostPorts" }}
     ranges:
