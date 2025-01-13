@@ -73,8 +73,6 @@ import:
   before: setup
   includePaths:
   - opt/python-static
-  - usr/bin/pip3
-  - usr/bin/python3
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
   add: /src
   to: /src
@@ -102,3 +100,4 @@ shell:
   - cp -r shell_lib.sh frameworks shell-operator /shell-operator
   - chown -R 64535:64535 /shell-operator
   - chmod 700 /shell-operator/shell-operator
+  - export PATH="/opt/python-static/bin:$PATH"
