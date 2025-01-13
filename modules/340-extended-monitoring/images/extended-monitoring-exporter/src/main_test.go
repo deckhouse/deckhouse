@@ -90,10 +90,13 @@ func Test_enabled(t *testing.T) {
 	}
 	assert.Equal(t, 1, len(mfs))
 	assert.Equal(t, "extended_monitoring_enabled", mfs[0].GetName())
+	assert.Equal(t, 2, len(mfs[0].Metric))
 	assert.Regexp(t, "^label:{name:\"namespace\".*value:\"namespace1\"}.*counter:{value:1.*created_timestamp:{seconds:.*nanos:.*}}$", mfs[0].Metric[0].String())
+	assert.Regexp(t, "^label:{name:\"namespace\".*value:\"namespace2\"}.*counter:{value:0.*created_timestamp:{seconds:.*nanos:.*}}$", mfs[0].Metric[1].String())
+
 }
 
-func Test_node_enabled(t *testing.T) {
+func Test_node(t *testing.T) {
 	ctx := context.Background()
 	scheme := runtime.NewScheme()
 	metav1.AddMetaToScheme(scheme)
@@ -127,8 +130,18 @@ func Test_node_enabled(t *testing.T) {
 	}
 	assert.Equal(t, 2, len(mfs))
 	assert.Equal(t, "extended_monitoring_node_enabled", mfs[0].GetName())
+	assert.Equal(t, 2, len(mfs[0].Metric))
 	assert.Regexp(t, "^label:{name:\"node\".*value:\"node1\"}.*counter:{value:1.*created_timestamp:{seconds:.*nanos:.*}}$", mfs[0].Metric[0].String())
 	assert.Regexp(t, "^label:{name:\"node\".*value:\"node2\"}.*counter:{value:0.*created_timestamp:{seconds:.*nanos:.*}}$", mfs[0].Metric[1].String())
+	assert.Equal(t, "extended_monitoring_node_threshold", mfs[1].GetName())
+	// print(mfs[1].String())
+	assert.Equal(t, 6, len(mfs[1].Metric))
+	assert.Regexp(t, "^label:{name:\"node\".*value:\"node1\"}.*label:{name:\"threshold\".*value:\"disk-bytes-critical\"}.*counter:{value:80 created_timestamp:{seconds:.*nanos:.*}}$", mfs[1].Metric[0].String())
+	assert.Regexp(t, "^label:{name:\"node\".*value:\"node1\"}.*label:{name:\"threshold\".*value:\"disk-bytes-critical\"}.*counter:{value:80 created_timestamp:{seconds:.*nanos:.*}}$", mfs[1].Metric[1].String())
+	assert.Regexp(t, "^label:{name:\"node\".*value:\"node1\"}.*label:{name:\"threshold\".*value:\"disk-bytes-critical\"}.*counter:{value:80 created_timestamp:{seconds:.*nanos:.*}}$", mfs[1].Metric[2].String())
+	assert.Regexp(t, "^label:{name:\"node\".*value:\"node1\"}.*label:{name:\"threshold\".*value:\"disk-bytes-critical\"}.*counter:{value:80 created_timestamp:{seconds:.*nanos:.*}}$", mfs[1].Metric[3].String())
+	assert.Regexp(t, "^label:{name:\"node\".*value:\"node1\"}.*label:{name:\"threshold\".*value:\"disk-bytes-critical\"}.*counter:{value:80 created_timestamp:{seconds:.*nanos:.*}}$", mfs[1].Metric[4].String())
+	assert.Regexp(t, "^label:{name:\"node\"\\s*value:\"node1\"}\\s*label:{name:\"threshold\"\\s*value:\"load-average-per-core-warning\"}\\s*counter:{value:3\\s*created_timestamp:{seconds:.*nanos:.*}}$", mfs[1].Metric[5].String())
 }
 
 	// prometheus.CounterOpts{Name: "extended_monitoring_node_threshold"},
