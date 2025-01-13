@@ -46,15 +46,12 @@ func ListResources(ctx context.Context, client metadata.Interface, resource sche
 }
 
 func enabledLabel(labels map[string]string) float64 {
-	var i float64 = 1
-	for key, value := range labels {
-		if key == namespaces_enabled_label {
-			if value == "false" {
-				i = 0
-			}
+	if value, ok := labels[namespaces_enabled_label]; ok {
+		if enabled, err := strconv.ParseBool(value); err == nil && !enabled {
+			return 0
 		}
 	}
-	return i
+	return 1
 }
 
 func thresholdLabel(labels map[string]string, threshold string, i float64) float64 {
@@ -62,7 +59,7 @@ func thresholdLabel(labels map[string]string, threshold string, i float64) float
 		if key == (label_theshold_prefix + threshold) {
 			tmp, err := strconv.ParseFloat(value, 64)
 			if err != nil {
-				log.Printf("[thresholdLabel] could not parse the value of \"%s\": %v\n", label_theshold_prefix + threshold, err)
+				log.Printf("[thresholdLabel] could not parse the value of \"%s\": %v\n", label_theshold_prefix+threshold, err)
 			} else {
 				i = tmp
 			}
