@@ -1,5 +1,5 @@
-{{- $REPO := "https://github.com/cesanta/docker_auth"}}
-{{- $BRANCH := "1.12.0"}}
+{{- $REPO := "https://github.com/deckhouse/3p-docker_auth.git"}}
+{{- $BRANCH := "1.13.0"}}
 {{- $GIT_CLONE_DEST_PATH := "/go/src/github.com/cesanta/docker_auth"}}
 ---
 artifact: "{{ $.ModuleName }}/{{ $.ImageName }}-artifact"
