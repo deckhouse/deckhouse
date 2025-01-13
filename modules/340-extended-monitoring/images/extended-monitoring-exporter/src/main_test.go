@@ -46,7 +46,7 @@ func TestThresholdLabel(t *testing.T) {
 	assert.Equal(t, 100.0, thresholdLabel(labels, "cpu", 100.0))
 }
 
-func TestRecordMetrics(t *testing.T) {
+func Test_enabled(t *testing.T) {
 	ctx := context.Background()
 	scheme := runtime.NewScheme()
 	metav1.AddMetaToScheme(scheme)
@@ -61,6 +61,25 @@ func TestRecordMetrics(t *testing.T) {
 			Labels: map[string]string{namespaces_enabled_label: "true"},
 		},
 	}, metav1.CreateOptions{})
+	FakeClient.Resource(resource_namespaces).(fake.MetadataClient).CreateFake(&metav1.PartialObjectMetadata{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "v1",
+			Kind:       "namespaces",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:   "namespace2",
+			Labels: map[string]string{namespaces_enabled_label: "false"},
+		},
+	}, metav1.CreateOptions{})
+	FakeClient.Resource(resource_namespaces).(fake.MetadataClient).CreateFake(&metav1.PartialObjectMetadata{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "v1",
+			Kind:       "namespaces",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:   "namespace3",
+		},
+	}, metav1.CreateOptions{})
 
 	registry := prometheus.NewRegistry()
 	recordMetrics(ctx, FakeClient, registry)
@@ -71,6 +90,56 @@ func TestRecordMetrics(t *testing.T) {
 	}
 	assert.Equal(t, 1, len(mfs))
 	assert.Equal(t, "extended_monitoring_enabled", mfs[0].GetName())
-	assert.Regexp(t, "^name:\"extended_monitoring_enabled\".*help:\"\".*type:COUNTER.*metric:{label:{name:\"namespace\".*value:\"namespace1\"}.*counter:{value:1.*created_timestamp:.*$", mfs[0].String())
-
+	assert.Regexp(t, "^label:{name:\"namespace\".*value:\"namespace1\"}.*counter:{value:1.*created_timestamp:{seconds:.*nanos:.*}}$", mfs[0].Metric[0].String())
 }
+
+func Test_node_enabled(t *testing.T) {
+	ctx := context.Background()
+	scheme := runtime.NewScheme()
+	metav1.AddMetaToScheme(scheme)
+	FakeClient := fake.NewSimpleMetadataClient(scheme)
+	FakeClient.Resource(resource_nodes).(fake.MetadataClient).CreateFake(&metav1.PartialObjectMetadata{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "v1",
+			Kind:       "nodes",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:   "node1",
+		},
+	}, metav1.CreateOptions{})
+	FakeClient.Resource(resource_nodes).(fake.MetadataClient).CreateFake(&metav1.PartialObjectMetadata{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "v1",
+			Kind:       "nodes",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:   "node2",
+			Labels: map[string]string{namespaces_enabled_label: "false"},
+		},
+	}, metav1.CreateOptions{})
+
+	registry := prometheus.NewRegistry()
+	recordMetrics(ctx, FakeClient, registry)
+
+	mfs, err := registry.Gather()
+	if err != nil {
+		t.Fatalf("Error gathering metrics: %v", err)
+	}
+	assert.Equal(t, 2, len(mfs))
+	assert.Equal(t, "extended_monitoring_node_enabled", mfs[0].GetName())
+	assert.Regexp(t, "^label:{name:\"node\".*value:\"node1\"}.*counter:{value:1.*created_timestamp:{seconds:.*nanos:.*}}$", mfs[0].Metric[0].String())
+	assert.Regexp(t, "^label:{name:\"node\".*value:\"node2\"}.*counter:{value:0.*created_timestamp:{seconds:.*nanos:.*}}$", mfs[0].Metric[1].String())
+}
+
+	// prometheus.CounterOpts{Name: "extended_monitoring_node_threshold"},
+	// prometheus.CounterOpts{Name: "extended_monitoring_pod_enabled"},
+	// prometheus.CounterOpts{Name: "extended_monitoring_pod_threshold"},
+	// prometheus.CounterOpts{Name: "extended_monitoring_ingress_enabled"},
+	// prometheus.CounterOpts{Name: "extended_monitoring_ingress_threshold"},
+	// prometheus.CounterOpts{Name: "extended_monitoring_deployment_enabled"},
+	// prometheus.CounterOpts{Name: "extended_monitoring_deployment_threshold"},
+	// prometheus.CounterOpts{Name: "extended_monitoring_daemonset_enabled"},
+	// prometheus.CounterOpts{Name: "extended_monitoring_daemonset_threshold"},
+	// prometheus.CounterOpts{Name: "extended_monitoring_statefulset_enabled"},
+	// prometheus.CounterOpts{Name: "extended_monitoring_statefulset_threshold"},
+	// prometheus.CounterOpts{Name: "extended_monitoring_cronjob_enabled"},
