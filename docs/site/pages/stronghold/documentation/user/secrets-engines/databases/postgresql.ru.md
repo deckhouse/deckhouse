@@ -8,39 +8,38 @@ description: |-
   roles for the PostgreSQL database.
 ---
 
-# PostgreSQL database secrets engine
+# Механизм секретов базы данных PostgreSQL
 
-PostgreSQL is one of the supported plugins for the database secrets engine. This
-plugin generates database credentials dynamically based on configured roles for
-the PostgreSQL database, and also supports [Static
-Roles](/docs/secrets/databases#static-roles).
+PostgreSQL это один из поддерживаемых плагинов для механизма секретов баз данных. Этот плагин генерирует 
+учетные данные базы данных динамически на основе настроенных ролей для базы данных PostgreSQL, а также 
+поддерживает [Static Roles](/docs/secrets/databases#static-roles).
 
-See the [database secrets engine](/docs/secrets/databases) docs for
-more information about setting up the database secrets engine.
+Смотрите [database secrets engine](/docs/secrets/databases) документацию для получения дополнительной 
+информации о настройке механизма секретов базы данных.
 
-The PostgreSQL secrets engine uses [pgx][pgxlib]. Connection string
-options, including SSL options, can be found in the [pgx][pgxlib] and
-[PostgreSQL connection string][pg_conn_docs] documentation.
+Механизм секретов PostgreSQL использует [pgx][pgxlib]. Параметры строки соединения, 
+включая параметры SSL, можно найти в документациях [pgx][pgxlib] и
+[PostgreSQL connection string][pg_conn_docs].
 
-## Capabilities
+## Возможности
 
-| Plugin Name                  | Root Credential Rotation | Dynamic Roles | Static Roles | Username Customization |
-| ---------------------------- | ------------------------ | ------------- | ------------ | ---------------------- |
-| `postgresql-database-plugin` | Yes                      | Yes           | Yes          | Yes (1.7+)             |
+| Имя плагина                  | Изменение Root учетной записи | Динамические роли | Статические роли | Кастомизация имени пользователя |
+|------------------------------|-------------------------------|-------------------|------------------|---------------------------------|
+| `postgresql-database-plugin` | Yes                           | Yes               | Yes              | Yes (1.7+)                      |
 
-## Setup
+## Установка
 
-1.  Enable the database secrets engine if it is not already enabled:
+1.  Включите механизм секретов базы данных, если он еще не включен:
 
     ```shell-session
     $ d8 stronghold secrets enable database
     Success! Enabled the database secrets engine at: database/
     ```
 
-    By default, the secrets engine will enable at the name of the engine. To
-    enable the secrets engine at a different path, use the `-path` argument.
+    По умолчанию механизм секретов будет включаться на основе его имени. 
+    Чтобы включить механизм секретов по другому пути, используйте аргумент `-path`.
 
-1.  Configure Stronghold with the proper plugin and connection information:
+2. Настройте Stronghold с помощью соответствующего плагина и информации о подключении:
 
     ```shell-session
     $ d8 stronghold write database/config/my-postgresql-database \
@@ -52,8 +51,8 @@ options, including SSL options, can be found in the [pgx][pgxlib] and
         password_authentication="scram-sha-256"
     ```
 
-1.  Configure a role that maps a name in Stronghold to an SQL statement to execute to
-    create the database credential:
+3. Настройте роль, которая сопоставляет имя в Stronghold SQL-запросом, 
+   выполняемым для создания учетной записи базы данных:
 
     ```shell-session
     $ d8 stronghold write database/roles/my-role \
@@ -65,13 +64,12 @@ options, including SSL options, can be found in the [pgx][pgxlib] and
     Success! Data written to: database/roles/my-role
     ```
 
-## Usage
+## Использование
 
-After the secrets engine is configured and a user/machine has an Stronghold token with
-the proper permission, it can generate credentials.
+После того как механизм секретов настроен и у пользователя/машины есть токен Stronghold с 
+соответствующими правами, он может генерировать учетные данные.
 
-1.  Generate a new credential by reading from the `/creds` endpoint with the name
-    of the role:
+1.  Сгенерируйте новую учетную запись, используя `/creds` и имя роли:
 
     ```shell-session
     $ d8 stronghold read database/creds/my-role
@@ -86,11 +84,11 @@ the proper permission, it can generate credentials.
 
 ## API
 
-The full list of configurable options can be seen in the [PostgreSQL database
-plugin API](/api-docs/secret/databases/postgresql) page.
+Полный список конфигурируемых опций может быть найден на странице [PostgreSQL database
+plugin API](/api-docs/secret/databases/postgresql).
 
-For more information on the database secrets engine's HTTP API please see the
-[Database secrets engine API](/api-docs/secret/databases) page.
+Более подробную информацию о HTTP API механизма секретов баз данных можно найти в разделе
+[Database secrets engine API](/api-docs/secret/databases).
 
 [pgxlib]: https://pkg.go.dev/github.com/jackc/pgx/stdlib
 [pg_conn_docs]: https://www.postgresql.org/docs/current/libpq-connect.html#LIBPQ-CONNSTRING
