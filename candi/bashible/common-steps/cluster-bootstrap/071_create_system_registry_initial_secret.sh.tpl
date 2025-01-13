@@ -25,10 +25,6 @@ bb-kubectl --kubeconfig=/etc/kubernetes/admin.conf get ns d8-system || bb-kubect
 
 bb-kubectl --kubeconfig=/etc/kubernetes/admin.conf -n d8-system delete secret registry-node-${D8_NODE_HOSTNAME}-pki || true
 bb-kubectl --kubeconfig=/etc/kubernetes/admin.conf -n d8-system create secret generic registry-node-${D8_NODE_HOSTNAME}-pki \
-{{- if eq .registry.registryStorageMode "S3" }}
-  --from-file=seaweedfs.key=$registry_pki_path/seaweedfs.key \
-  --from-file=seaweedfs.crt=$registry_pki_path/seaweedfs.crt \
-{{- end }}
   --from-file=auth.key=$registry_pki_path/auth.key \
   --from-file=auth.crt=$registry_pki_path/auth.crt \
   --from-file=distribution.key=$registry_pki_path/distribution.key \
