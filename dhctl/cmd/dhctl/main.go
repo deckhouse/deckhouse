@@ -45,130 +45,100 @@ var (
 	allowedCommands []string
 	commandList     = []Command{
 		{
-			Name: "server",
-			Help: "Start dhctl as GRPC server.",
-			DefineFunc: func(cmd *kingpin.CmdClause) {
-				commands.DefineServerCommand(cmd)
-			},
+			Name:       "server",
+			Help:       "Start dhctl as GRPC server.",
+			DefineFunc: commands.DefineServerCommand,
 		},
 		{
-			Name: "_server",
-			Help: "Start dhctl as GRPC server. Single threaded version.",
-			DefineFunc: func(cmd *kingpin.CmdClause) {
-				commands.DefineSingleThreadedServerCommand(cmd)
-			},
+			Name:       "_server",
+			Help:       "Start dhctl as GRPC server. Single threaded version.",
+			DefineFunc: commands.DefineSingleThreadedServerCommand,
 		},
 		{
-			Name: "bootstrap",
-			Help: "Bootstrap cluster.",
-			DefineFunc: func(cmd *kingpin.CmdClause) {
-				bootstrap.DefineBootstrapCommand(cmd)
-			},
+			Name:       "bootstrap",
+			Help:       "Bootstrap cluster.",
+			DefineFunc: bootstrap.DefineBootstrapCommand,
 		},
 		{
 			Name: "bootstrap-phase",
 			Help: "Commands to run a single phase of the bootstrap process.",
 		},
 		{
-			Name: "execute-bashible-bundle",
-			Help: "Prepare Master node and install Kubernetes.",
-			DefineFunc: func(cmd *kingpin.CmdClause) {
-				bootstrap.DefineBootstrapExecuteBashibleCommand(cmd)
-			},
-			Parrent: "bootstrap-phase",
+			Name:       "execute-bashible-bundle",
+			Help:       "Prepare Master node and install Kubernetes.",
+			DefineFunc: bootstrap.DefineBootstrapExecuteBashibleCommand,
+			Parrent:    "bootstrap-phase",
 		},
 		{
-			Name: "create-resources",
-			Help: "Create resources in Kubernetes cluster.",
-			DefineFunc: func(cmd *kingpin.CmdClause) {
-				bootstrap.DefineCreateResourcesCommand(cmd)
-			},
-			Parrent: "bootstrap-phase",
+			Name:       "create-resources",
+			Help:       "Create resources in Kubernetes cluster.",
+			DefineFunc: bootstrap.DefineCreateResourcesCommand,
+			Parrent:    "bootstrap-phase",
 		},
 		{
-			Name: "install-deckhouse",
-			Help: "Install deckhouse and wait for its readiness.",
-			DefineFunc: func(cmd *kingpin.CmdClause) {
-				bootstrap.DefineBootstrapInstallDeckhouseCommand(cmd)
-			},
-			Parrent: "bootstrap-phase",
+			Name:       "install-deckhouse",
+			Help:       "Install deckhouse and wait for its readiness.",
+			DefineFunc: bootstrap.DefineBootstrapInstallDeckhouseCommand,
+			Parrent:    "bootstrap-phase",
 		},
 		{
-			Name: "abort",
-			Help: "Delete every node, which was created during bootstrap process.",
-			DefineFunc: func(cmd *kingpin.CmdClause) {
-				bootstrap.DefineBootstrapAbortCommand(cmd)
-			},
-			Parrent: "bootstrap-phase",
+			Name:       "abort",
+			Help:       "Delete every node, which was created during bootstrap process.",
+			DefineFunc: bootstrap.DefineBootstrapAbortCommand,
+			Parrent:    "bootstrap-phase",
 		},
 		{
-			Name: "base-infra",
-			Help: "Create base infrastructure for Cloud Kubernetes cluster.",
-			DefineFunc: func(cmd *kingpin.CmdClause) {
-				bootstrap.DefineBaseInfrastructureCommand(cmd)
-			},
-			Parrent: "bootstrap-phase",
+			Name:       "base-infra",
+			Help:       "Create base infrastructure for Cloud Kubernetes cluster.",
+			DefineFunc: bootstrap.DefineBaseInfrastructureCommand,
+			Parrent:    "bootstrap-phase",
 		},
 		{
-			Name: "exec-post-bootstrap",
-			Help: "Test scp upload and ssh run uploaded script.",
-			DefineFunc: func(cmd *kingpin.CmdClause) {
-				bootstrap.DefineExecPostBootstrapScript(cmd)
-			},
-			Parrent: "bootstrap-phase",
+			Name:       "exec-post-bootstrap",
+			Help:       "Test scp upload and ssh run uploaded script.",
+			DefineFunc: bootstrap.DefineExecPostBootstrapScript,
+			Parrent:    "bootstrap-phase",
 		},
 		{
-			Name: "converge",
-			Help: "Converge kubernetes cluster.",
-			DefineFunc: func(cmd *kingpin.CmdClause) {
-				commands.DefineConvergeCommand(cmd)
-			},
+			Name:       "converge",
+			Help:       "Converge kubernetes cluster.",
+			DefineFunc: commands.DefineConvergeCommand,
 		},
 		{
-			Name: "converge-periodical",
-			Help: "Start service for periodical run converge.",
-			DefineFunc: func(cmd *kingpin.CmdClause) {
-				commands.DefineConvergeCommand(cmd)
-			},
+			Name:       "converge-periodical",
+			Help:       "Start service for periodical run converge.",
+			DefineFunc: commands.DefineConvergeCommand,
 		},
 		{
 			Name: "lock",
 			Help: "Converge cluster lock",
 		},
 		{
-			Name: "release",
-			Help: "Release converge lock fully. It's remove converge lease lock from cluster regardless of owner. Be careful",
-			DefineFunc: func(cmd *kingpin.CmdClause) {
-				commands.DefineReleaseConvergeLockCommand(cmd)
-			},
-			Parrent: "lock",
+			Name:       "release",
+			Help:       "Release converge lock fully. It's remove converge lease lock from cluster regardless of owner. Be careful",
+			DefineFunc: commands.DefineReleaseConvergeLockCommand,
+			Parrent:    "lock",
 		},
 		{
-			Name: "destroy",
-			Help: "Destroy Kubernetes cluster.",
-			DefineFunc: func(cmd *kingpin.CmdClause) {
-				commands.DefineDestroyCommand(cmd)
-			},
+			Name:       "destroy",
+			Help:       "Destroy Kubernetes cluster.",
+			DefineFunc: commands.DefineDestroyCommand,
 		},
 		{
 			Name: "terraform",
 			Help: "Terraform commands.",
 		},
 		{
-			Name: "converge-exporter",
-			Help: "Run terraform converge exporter.",
-			DefineFunc: func(cmd *kingpin.CmdClause) {
-				commands.DefineTerraformConvergeExporterCommand(cmd)
-			},
-			Parrent: "terraform",
+			Name:       "converge-exporter",
+			Help:       "Run terraform converge exporter.",
+			DefineFunc: commands.DefineTerraformConvergeExporterCommand,
+			Parrent:    "terraform",
 		},
 		{
-			Name: "check",
-			Help: "Check differences between state of Kubernetes cluster and Terraform state.",
-			DefineFunc: func(cmd *kingpin.CmdClause) {
-				commands.DefineTerraformCheckCommand(cmd)
-			},
-			Parrent: "terraform",
+			Name:       "check",
+			Help:       "Check differences between state of Kubernetes cluster and Terraform state.",
+			DefineFunc: commands.DefineTerraformCheckCommand,
+			Parrent:    "terraform",
 		},
 		{
 			Name: "config",
@@ -180,20 +150,16 @@ var (
 			Parrent: "config",
 		},
 		{
-			Name: "cluster-configuration",
-			Help: "Parse configuration and print it.",
-			DefineFunc: func(cmd *kingpin.CmdClause) {
-				commands.DefineCommandParseClusterConfiguration(cmd)
-			},
-			Parrent: "parse",
+			Name:       "cluster-configuration",
+			Help:       "Parse configuration and print it.",
+			DefineFunc: commands.DefineCommandParseClusterConfiguration,
+			Parrent:    "parse",
 		},
 		{
-			Name: "cloud-discovery-data",
-			Help: "Parse cloud discovery data and print it.",
-			DefineFunc: func(cmd *kingpin.CmdClause) {
-				commands.DefineCommandParseCloudDiscoveryData(cmd)
-			},
-			Parrent: "parse",
+			Name:       "cloud-discovery-data",
+			Help:       "Parse cloud discovery data and print it.",
+			DefineFunc: commands.DefineCommandParseCloudDiscoveryData,
+			Parrent:    "parse",
 		},
 		{
 			Name:    "render",
@@ -201,35 +167,30 @@ var (
 			Parrent: "config",
 		},
 		{
-			Name: "bashible-bundle",
-			Help: "Render bashible bundle.",
-			DefineFunc: func(cmd *kingpin.CmdClause) {
-				commands.DefineRenderBashibleBundle(cmd)
-			},
-			Parrent: "render",
+			Name:       "bashible-bundle",
+			Help:       "Render bashible bundle.",
+			DefineFunc: commands.DefineRenderBashibleBundle,
+			Parrent:    "render",
 		},
 		{
-			Name: "kubeadm-config",
-			Help: "Render kubeadm config.",
-			DefineFunc: func(cmd *kingpin.CmdClause) {
-				commands.DefineRenderKubeadmConfig(cmd)
-			},
-			Parrent: "render",
+			Name:       "kubeadm-config",
+			Help:       "Render kubeadm config.",
+			DefineFunc: commands.DefineRenderKubeadmConfig,
+			Parrent:    "render",
 		},
 		{
-			Name: "master-bootstrap-scripts",
-			Help: "Render master bootstrap scripts.",
-			DefineFunc: func(cmd *kingpin.CmdClause) {
-				commands.DefineRenderMasterBootstrap(cmd)
-			},
-			Parrent: "render",
+			Name:       "master-bootstrap-scripts",
+			Help:       "Render master bootstrap scripts.",
+			DefineFunc: commands.DefineRenderMasterBootstrap,
+			Parrent:    "render",
 		},
 		{
 			Name:    "edit",
 			Help:    "Change configuration files in Kubernetes cluster conveniently and safely.",
 			Parrent: "config",
-			DefineFunc: func(cmd *kingpin.CmdClause) {
+			DefineFunc: func(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 				commands.DefineEditCommands(cmd /* wConnFlags */, true)
+				return nil
 			},
 		},
 		{
@@ -237,44 +198,34 @@ var (
 			Help: "Commands to test the parts of bootstrap and converge process.",
 		},
 		{
-			Name: "ssh-connection",
-			Help: "Test connection via ssh.",
-			DefineFunc: func(cmd *kingpin.CmdClause) {
-				commands.DefineTestSSHConnectionCommand(cmd)
-			},
-			Parrent: "test",
+			Name:       "ssh-connection",
+			Help:       "Test connection via ssh.",
+			DefineFunc: commands.DefineTestSSHConnectionCommand,
+			Parrent:    "test",
 		},
 		{
-			Name: "kubernetes-api-connection",
-			Help: "Test connection to kubernetes api via ssh or directly.",
-			DefineFunc: func(cmd *kingpin.CmdClause) {
-				commands.DefineTestKubernetesAPIConnectionCommand(cmd)
-			},
-			Parrent: "test",
+			Name:       "kubernetes-api-connection",
+			Help:       "Test connection to kubernetes api via ssh or directly.",
+			DefineFunc: commands.DefineTestKubernetesAPIConnectionCommand,
+			Parrent:    "test",
 		},
 		{
-			Name: "scp",
-			Help: "Test scp file operations.",
-			DefineFunc: func(cmd *kingpin.CmdClause) {
-				commands.DefineTestSCPCommand(cmd)
-			},
-			Parrent: "test",
+			Name:       "scp",
+			Help:       "Test scp file operations.",
+			DefineFunc: commands.DefineTestSCPCommand,
+			Parrent:    "test",
 		},
 		{
-			Name: "upload-exec",
-			Help: "Test scp upload and ssh run uploaded script.",
-			DefineFunc: func(cmd *kingpin.CmdClause) {
-				commands.DefineTestUploadExecCommand(cmd)
-			},
-			Parrent: "test",
+			Name:       "upload-exec",
+			Help:       "Test scp upload and ssh run uploaded script.",
+			DefineFunc: commands.DefineTestUploadExecCommand,
+			Parrent:    "test",
 		},
 		{
-			Name: "bashible-bundle",
-			Help: "Test upload and execute a bundle.",
-			DefineFunc: func(cmd *kingpin.CmdClause) {
-				commands.DefineTestBundle(cmd)
-			},
-			Parrent: "test",
+			Name:       "bashible-bundle",
+			Help:       "Test upload and execute a bundle.",
+			DefineFunc: commands.DefineTestBundle,
+			Parrent:    "test",
 		},
 		{
 			Name:    "control-plane",
@@ -282,20 +233,16 @@ var (
 			Parrent: "test",
 		},
 		{
-			Name: "manager",
-			Help: "Test control plane manager is ready.",
-			DefineFunc: func(cmd *kingpin.CmdClause) {
-				commands.DefineTestControlPlaneManagerReadyCommand(cmd)
-			},
-			Parrent: "control-plane",
+			Name:       "manager",
+			Help:       "Test control plane manager is ready.",
+			DefineFunc: commands.DefineTestControlPlaneManagerReadyCommand,
+			Parrent:    "control-plane",
 		},
 		{
-			Name: "node",
-			Help: "Test control plane node is ready.",
-			DefineFunc: func(cmd *kingpin.CmdClause) {
-				commands.DefineTestControlPlaneNodeReadyCommand(cmd)
-			},
-			Parrent: "control-plane",
+			Name:       "node",
+			Help:       "Test control plane node is ready.",
+			DefineFunc: commands.DefineTestControlPlaneNodeReadyCommand,
+			Parrent:    "control-plane",
 		},
 		{
 			Name:    "deckhouse",
@@ -303,28 +250,22 @@ var (
 			Parrent: "test",
 		},
 		{
-			Name: "create-deployment",
-			Help: "Install deckhouse after terraform is applied successful.",
-			DefineFunc: func(cmd *kingpin.CmdClause) {
-				commands.DefineDeckhouseCreateDeployment(cmd)
-			},
-			Parrent: "deckhouse",
+			Name:       "create-deployment",
+			Help:       "Install deckhouse after terraform is applied successful.",
+			DefineFunc: commands.DefineDeckhouseCreateDeployment,
+			Parrent:    "deckhouse",
 		},
 		{
-			Name: "remove-deployment",
-			Help: "Delete deckhouse deployment.",
-			DefineFunc: func(cmd *kingpin.CmdClause) {
-				commands.DefineDeckhouseRemoveDeployment(cmd)
-			},
-			Parrent: "deckhouse",
+			Name:       "remove-deployment",
+			Help:       "Delete deckhouse deployment.",
+			DefineFunc: commands.DefineDeckhouseRemoveDeployment,
+			Parrent:    "deckhouse",
 		},
 		{
-			Name: "deployment-ready",
-			Help: "Wait while deployment is ready.",
-			DefineFunc: func(cmd *kingpin.CmdClause) {
-				commands.DefineWaitDeploymentReadyCommand(cmd)
-			},
-			Parrent: "deckhouse",
+			Name:       "deployment-ready",
+			Help:       "Wait while deployment is ready.",
+			DefineFunc: commands.DefineWaitDeploymentReadyCommand,
+			Parrent:    "deckhouse",
 		},
 	}
 )
@@ -332,7 +273,7 @@ var (
 type Command struct {
 	Name       string
 	Help       string
-	DefineFunc func(cmd *kingpin.CmdClause)
+	DefineFunc func(cmd *kingpin.CmdClause) *kingpin.CmdClause
 	Parrent    string
 	cmd        *kingpin.CmdClause
 }
