@@ -857,33 +857,6 @@ entries:
                 ru: Примеры
               url: /modules/istio/examples.html
         - title:
-            en: service-with-healthchecks
-            ru: service-with-healthchecks
-          featureStatus: experimental
-          d8Revision: ee
-          moduleName: service-with-healthchecks
-          folders:
-            - title:
-                en: Description
-                ru: Описание
-              url: /modules/service-with-healthchecks/
-            - title:
-                en: Reference
-                ru: Справка
-              folders:
-                - title:
-                    en: Configuration
-                    ru: Настройки
-                  url: /modules/service-with-healthchecks/configuration.html
-                - title:
-                    en: Custom Resources
-                    ru: Custom Resources
-                  url: /modules/service-with-healthchecks/cr.html
-            - title:
-                en: Examples
-                ru: Примеры
-              url: /modules/service-with-healthchecks/examples.html
-        - title:
             en: keepalived
             ru: keepalived
           d8Revision: ee
@@ -942,6 +915,33 @@ entries:
                 en: Configuration
                 ru: Настройки
               url: /modules/network-gateway/configuration.html
+        - title:
+            en: service-with-healthchecks
+            ru: service-with-healthchecks
+          featureStatus: experimental
+          d8Revision: ee
+          moduleName: service-with-healthchecks
+          folders:
+            - title:
+                en: Description
+                ru: Описание
+              url: /modules/service-with-healthchecks/
+            - title:
+                en: Reference
+                ru: Справка
+              folders:
+                - title:
+                    en: Configuration
+                    ru: Настройки
+                  url: /modules/service-with-healthchecks/configuration.html
+                - title:
+                    en: Custom Resources
+                    ru: Custom Resources
+                  url: /modules/service-with-healthchecks/cr.html
+            - title:
+                en: Examples
+                ru: Примеры
+              url: /modules/service-with-healthchecks/examples.html
     - title:
         en: Monitoring
         ru: Мониторинг
