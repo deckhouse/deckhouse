@@ -132,7 +132,8 @@ mv "${registry_pki_path}/token-key.pem" "${registry_pki_path}/token.key"
 
 bb-sync-file /etc/kubernetes/system-registry/auth_config/config.yaml - << EOF
 server:
-  addr: "${discovered_node_ip}:5051"
+  addr: "127.0.0.1:5051"
+  real_ip_header: "X-Forwarded-For"
   certificate: "/system_registry_pki/auth.crt"
   key: "/system_registry_pki/auth.key"
 token:
@@ -198,11 +199,14 @@ proxy:
 {{- end }}
 auth:
   token:
-    realm: "https://${discovered_node_ip}:5051/auth"
+    realm: https://127.0.0.1:5051/auth
     service: Deckhouse registry
     issuer: Registry server
     rootcertbundle: /system_registry_pki/token.crt
-    autoredirect: false
+    autoredirect: true
+    proxy:
+      url: https://127.0.0.1:5051/auth
+      ca: /system_registry_pki/ca.crt
 EOF
 
 bb-sync-file /etc/kubernetes/manifests/system-registry.yaml - << EOF

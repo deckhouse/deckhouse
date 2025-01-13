@@ -134,6 +134,7 @@ mv "${IGNITER_DIR}/token-key.pem" "${IGNITER_DIR}/token.key"
 bb-sync-file "$IGNITER_DIR/auth_config.yaml" - << EOF
 server:
   addr: "127.0.0.1:5051"
+  real_ip_header: "X-Forwarded-For"
   certificate: "$IGNITER_DIR/auth.crt"
   key: "$IGNITER_DIR/auth.key"
 token:
@@ -207,7 +208,10 @@ auth:
     service: Deckhouse registry
     issuer: Registry server
     rootcertbundle: "$IGNITER_DIR/token.crt"
-    autoredirect: false
+    autoredirect: true
+    proxy:
+      url: https://127.0.0.1:5051/auth
+      ca: /system_registry_pki/ca.crt
 EOF
 
 bb-sync-file "$IGNITER_DIR/start_system_registry_igniter.sh" - << EOF
