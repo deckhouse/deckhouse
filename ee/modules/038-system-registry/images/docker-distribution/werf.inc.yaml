@@ -1,6 +1,6 @@
-{{- $REPO := "https://github.com/distribution/distribution"}}
-{{- $BRANCH := "v2.8.3"}}
-{{- $GIT_CLONE_DEST_PATH := "/go/src/github.com/docker/distribution"}}
+{{- $REPO := "https://github.com/deckhouse/3p-distribution.git"}}
+{{- $BRANCH := "release/2.8-flant"}}
+{{- $GIT_CLONE_DEST_PATH := "/src"}}
 ---
 artifact: "{{ $.ModuleName }}/{{ $.ImageName }}-artifact"
 from: {{ $.Images.BASE_GOLANG_22_ALPINE }}
@@ -13,16 +13,6 @@ git:
     stageDependencies:
       install:
         - '**/*'
-  - add: /{{ $.ModulePath }}modules/038-{{ $.ModuleName }}/images/{{ $.ImageName }}/s3_healthcheck
-    to: /s3_healthcheck
-    stageDependencies:
-      install:
-        - '**/*'
-  - add: /{{ $.ModulePath }}modules/038-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
-    to: /patches
-    stageDependencies:
-      install:
-      - '**/*'
 
 shell:
   beforeInstall:
@@ -32,16 +22,12 @@ shell:
     - git config --global advice.detachedHead false
     - git clone --depth 1 --single-branch --branch {{ $BRANCH }} {{ $REPO }} {{ $GIT_CLONE_DEST_PATH }}
     - cd {{ $GIT_CLONE_DEST_PATH }}
-    - git apply /patches/*.patch --verbose
     - export GOPROXY={{ .GOPROXY }}
     - export GOOS=linux
     - export GOARCH=amd64
     - export CGO_ENABLED=0
-    - GO111MODULE=on script/setup/install-dev-tools
-    - GO111MODULE=off make build
-    - GO111MODULE=off make binaries
-    - cd /s3_healthcheck
-    - go build -ldflags="-s -w" -o /entrypoint ./main.go
+    - make build
+    - make binaries
 
 ---
 image: "{{ $.ModuleName }}/{{ $.ImageName }}"
@@ -56,10 +42,6 @@ import:
     to: /registry
     before: setup
   - artifact: "{{ $.ModuleName }}/{{ $.ImageName }}-artifact"
-    add: /entrypoint
-    to: /entrypoint
-    before: setup
-  - artifact: "{{ $.ModuleName }}/{{ $.ImageName }}-artifact"
     add: /scripts
     to: /
     before: setup
@@ -69,5 +51,5 @@ import:
     before: setup
 
 docker:
-  ENTRYPOINT: ["/entrypoint"]
-
+  ENTRYPOINT: ["/registry"]
+  CMD: ["serve", "/config/config.yaml"]
