@@ -71,9 +71,8 @@ func thresholdLabel(labels map[string]string, threshold string, i float64) float
 	return i
 }
 
-func recordMetrics(ctx context.Context, client metadata.Interface) {
+func recordMetrics(ctx context.Context, client metadata.Interface, registry *prometheus.Registry) {
 	//init
-	local := prometheus.NewRegistry()
 	node_enabled := prometheus.NewCounterVec(
 		prometheus.CounterOpts{Name: "extended_monitoring_node_enabled"},
 		[]string{"node"},
@@ -202,21 +201,20 @@ func recordMetrics(ctx context.Context, client metadata.Interface) {
 			}
 		}
 	}
-	local.MustRegister(node_enabled)
-	local.MustRegister(node_threshold)
-	local.MustRegister(namespaces_enabled)
-	local.MustRegister(pod_enabled)
-	local.MustRegister(pod_threshold)
-	local.MustRegister(ingress_enabled)
-	local.MustRegister(ingress_threshold)
-	local.MustRegister(deployment_enabled)
-	local.MustRegister(deployment_threshold)
-	local.MustRegister(daemonset_enabled)
-	local.MustRegister(daemonset_threshold)
-	local.MustRegister(statefulset_enabled)
-	local.MustRegister(statefulset_threshold)
-	local.MustRegister(cronjob_enabled)
-	*reg = *local
+	registry.MustRegister(node_enabled)
+	registry.MustRegister(node_threshold)
+	registry.MustRegister(namespaces_enabled)
+	registry.MustRegister(pod_enabled)
+	registry.MustRegister(pod_threshold)
+	registry.MustRegister(ingress_enabled)
+	registry.MustRegister(ingress_threshold)
+	registry.MustRegister(deployment_enabled)
+	registry.MustRegister(deployment_threshold)
+	registry.MustRegister(daemonset_enabled)
+	registry.MustRegister(daemonset_threshold)
+	registry.MustRegister(statefulset_enabled)
+	registry.MustRegister(statefulset_threshold)
+	registry.MustRegister(cronjob_enabled)
 }
 
 const (
@@ -297,7 +295,9 @@ func main() {
 		})
 	go func() {
 		for {
-			recordMetrics(ctx, kubeMetadata)
+			local := prometheus.NewRegistry()
+			recordMetrics(ctx, kubeMetadata, local)
+			*reg = *local
 			time_healthz = time.Now()
 			time.Sleep(interval_recordMetrics)
 		}
