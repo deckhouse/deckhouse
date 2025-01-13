@@ -10,9 +10,9 @@ require (
 	github.com/cloudflare/cfssl v1.5.0
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc
 	github.com/fatih/color v1.13.0 // indirect
-	github.com/flant/addon-operator v0.0.0-20241213133444-cc7128a26f51
+	github.com/flant/addon-operator v0.0.0-20241228100647-7c39f505a61b
 	github.com/flant/kube-client v1.2.2
-	github.com/flant/shell-operator v1.5.3-0.20241209162655-7e40c61f7666
+	github.com/flant/shell-operator v1.5.2
 	github.com/go-openapi/spec v0.19.8
 	github.com/gojuno/minimock/v3 v3.4.3
 	github.com/golang/protobuf v1.5.4
@@ -24,7 +24,7 @@ require (
 	github.com/imdario/mergo v0.3.15
 	github.com/mitchellh/mapstructure v1.5.0 // indirect
 	github.com/onsi/ginkgo v1.16.5
-	github.com/onsi/gomega v1.35.1
+	github.com/onsi/gomega v1.36.1
 	github.com/otiai10/copy v1.14.0
 	github.com/pkg/errors v0.9.1
 	github.com/sirupsen/logrus v1.9.3
@@ -65,6 +65,7 @@ require (
 	github.com/gofrs/uuid/v5 v5.3.0
 	github.com/itchyny/gojq v0.12.17
 	github.com/jonboulle/clockwork v0.4.0
+	github.com/kolyshkin/capability v0.1.1
 	github.com/slok/kubewebhook/v2 v2.5.0
 	github.com/sylabs/oci-tools v0.16.0
 	golang.org/x/mod v0.20.0
@@ -123,7 +124,7 @@ require (
 	github.com/felixge/httpsnoop v1.0.4 // indirect
 	github.com/flant/libjq-go v1.6.3-0.20201126171326-c46a40ff22ee // indirect
 	github.com/fogleman/gg v1.3.0 // indirect
-	github.com/go-chi/chi/v5 v5.1.0 // indirect
+	github.com/go-chi/chi/v5 v5.2.0 // indirect
 	github.com/go-errors/errors v1.4.2 // indirect
 	github.com/go-gorp/gorp/v3 v3.1.0 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
