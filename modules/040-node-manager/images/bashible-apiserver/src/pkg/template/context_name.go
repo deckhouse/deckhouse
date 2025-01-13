@@ -37,24 +37,16 @@ func ParseName(name string) (string, string, error) {
 }
 
 // GetNodegroupContextKey parses context secretKey for nodegroup bundles
-func GetNodegroupContextKey(name string) (string, error) {
-	os, ng, err := ParseName(name)
-	if err != nil {
-		return "", fmt.Errorf("bad os name: %v", err)
-	}
-	return fmt.Sprintf("bundle-%s-%s", os, ng), nil
+func GetNodegroupContextKey(nodegroup string) (string, error) {
+	return fmt.Sprintf("bundle-%s", nodegroup), nil
 }
 
 // GetBashibleContextKey parses context secretKey bashible
-func GetBashibleContextKey(name string) (string, error) {
-	os, nodegroup, err := ParseName(name)
-	if err != nil {
-		return "", fmt.Errorf("bad bashible name: %v", err)
-	}
-	return fmt.Sprintf("bashible-%s-%s", os, nodegroup), nil
+func GetBashibleContextKey(nodegroup string) (string, error) {
+	return fmt.Sprintf("bashible-%s", nodegroup), nil
 }
 
 // GetBootstrapContextKey parses context secretKey bootstrap
 func GetBootstrapContextKey(nodegroup string) (string, error) {
-	return fmt.Sprintf("bashible-common-%s", nodegroup), nil
+	return fmt.Sprintf("bootstrap-%s", nodegroup), nil
 }
