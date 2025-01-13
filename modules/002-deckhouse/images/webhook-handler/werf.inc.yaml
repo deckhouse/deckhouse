@@ -15,13 +15,9 @@ import:
     to: /usr/local/bin/promtool
     before: setup
   - image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
-    add: /
-    to: /
+    add: /opt/python-static
+    to: /opt/python-static
     before: setup
-    includePaths:
-    - opt/python-static
-    - usr/bin/pip3
-    - usr/bin/python3
   - image: {{ $.ModuleName }}/{{ .ImageName }}-label-converter-artifact
     add: /label-converter
     to: /usr/local/bin/label-converter
@@ -57,6 +53,7 @@ git:
 docker:
   ENV:
     PYTHONPATH: /frameworks/python
+    PATH: "/opt/python-static/bin:$PATH"
   ENTRYPOINT: ["/entrypoint.sh"]
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-label-converter-src-artifact
@@ -102,13 +99,9 @@ git:
     - '**/*'
 import:
 - image: common/python-static-artifact
-  add: /
-  to: /
+  add: /opt/python-static
+  to: /opt/python-static
   before: install
-  includePaths:
-  - opt/python-static
-  - usr/bin/pip3
-  - usr/bin/python3
 shell:
   install:
-  - pip3 install -r /requirements.txt
+  - /opt/python-static/bin/pip3 install -r /requirements.txt
