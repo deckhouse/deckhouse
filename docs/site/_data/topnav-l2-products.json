@@ -121,6 +121,12 @@
           "url": "/products/stronghold/documentation/",
           "target": "",
           "rel": "doc"
+        },
+        {
+          "title": "Быстрый старт",
+          "url": "/products/stronghold/gs/",
+          "target": "",
+          "rel": ""
         }
       ]
     },

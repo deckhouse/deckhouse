@@ -1,0 +1,76 @@
+<ul>
+  <li>If you have the DNS server and you can add a DNS records:
+    <ul>
+      <li>If your cluster DNS name template is a <a href="https://en.wikipedia.org/wiki/Wildcard_DNS_record">wildcard
+        DNS</a> (e.g., <code>%s.kube.company.my</code>), then add
+        {%- if page.platform_code == 'aws' %} a corresponding wildcard CNAME record containing the hostname of load
+        balancer. To get the hostname of load balancer:
+{% include getting_started/global/partials/GET_BALANCER_ADDR.liquid %}
+        {%- elsif page.platform_code == 'vsphere' %}  a corresponding wildcard A record containing the IP of the master-node.
+        {%- else %} a corresponding wildcard A record containing the IP of the load balancer.{% if page.platform_code != 'existing' %} To get the load balancer IP:
+{% include getting_started/global/partials/GET_BALANCER_ADDR.liquid %}{% endif %}
+        {%- endif -%}
+      </li>
+      <li>
+        If your cluster DNS name template is <strong>NOT</strong> a <a href="https://en.wikipedia.org/wiki/Wildcard_DNS_record">wildcard DNS template</a> (e.g., <code>%s-kube.company.my</code>), then add
+         {%- if page.platform_code == 'aws' %} A records
+         {%- else %} A or CNAME records
+         {%- endif -%} containing the IP of {% if page.platform_code == 'vsphere' %}the master node{% else %}the load balancer{% endif %}, for the following DNS names according to the Deckhouse DNS templates:
+        <ul>
+          <li><b title="E.g., <em>&quot;api-kube.company.my&quot;</em><br>for the <em>&quot;%s-kube.company.my&quot; template</em>">api</b></li>
+          <li><b title="E.g., <em>&quot;argocd-kube.company.my&quot;</em><br>for the <em>&quot;%s-kube.company.my&quot; template</em>">argocd</b></li>
+          <li><b title="E.g.,  <em>&quot;dashboard-kube.company.my&quot;</em><br>for the <em>&quot;%s-kube.company.my&quot; template</em>">dashboard</b></li>
+          <li><b title="E.g., <em>&quot;documentation-kube.company.my&quot;</em><br>for the <em>&quot;%s-kube.company.my&quot; template</em>">documentation</b></li>
+          <li><b title="E.g.,  <em>&quot;dex-kube.company.my&quot;</em><br>for the <em>&quot;%s-kube.company.my&quot; template</em>">dex</b></li>
+          <li><b title="E.g., <em>&quot;grafana-kube.company.my&quot;</em><br>for the <em>&quot;%s-kube.company.my&quot; template</em>">grafana</b></li>
+          <li><b title="E.g., <em>&quot;hubble-kube.company.my&quot;</em><br>for the <em>&quot;%s-kube.company.my&quot; template</em>">hubble</b></li>
+          <li><b title="E.g., <em>&quot;istio-kube.company.my&quot;</em><br>for the <em>&quot;%s-kube.company.my&quot; template</em>">istio</b></li>
+          <li><b title="E.g., <em>&quot;istio-api-proxy-kube.company.my&quot;</em><br>for the <em>&quot;%s-kube.company.my&quot; template</em>">istio-api-proxy</b></li>
+          <li><b title="E.g.,  <em>&quot;kubeconfig-kube.company.my&quot;</em><br>for the <em>&quot;%s-kube.company.my&quot; template</em>">kubeconfig</b></li>
+          <li><b title="E.g.,  <em>&quot;openvpn-admin-kube.company.my&quot;</em><br>for the <em>&quot;%s-kube.company.my&quot; template</em>">openvpn-admin</b></li>
+          <li><b title="E.g.,  <em>&quot;prometheus-kube.company.my&quot;</em><br>for the <em>&quot;%s-kube.company.my&quot; template</em>">prometheus</b></li>
+          <li><b title="E.g., <em>&quot;status-kube.company.my&quot;</em><br>for the <em>&quot;%s-kube.company.my&quot; template</em>">status</b></li>
+          <li><b title="E.g.,  <em>&quot;upmeter-kube.company.my&quot;</em><br>for the <em>&quot;%s-kube.company.my&quot; template</em>">upmeter</b></li>
+        </ul>
+        {%- if page.platform_code == 'aws' %}<p>To get the hostname of load balancer:
+{% include getting_started/global/partials/GET_BALANCER_ADDR.liquid %}
+</p>
+        {%- elsif page.platform_code != 'vsphere' and page.platform_code != 'existing' %}<p>To get the load balancer IP:
+{% include getting_started/global/partials/GET_BALANCER_ADDR.liquid %}
+</p>
+        {%- endif -%}
+      </li>
+    </ul>
+  </li>
+  <li><p>If you don't have a DNS server, then on the computer from which you need access to Deckhouse services add static records to the file <code>/etc/hosts</code> (for Linux, or <code>%SystemRoot%\system32\drivers\etc\hosts</code> for Windows).</p>
+  <p>Make the following steps to add records to the <code>/etc/hosts</code> file <b>on Linux</b>, from which you need access to Deckhouse services (<b>the PC</b>)</p>
+<ul>
+<li><p>{% if page.platform_code != 'existing' %}<b>[On the PC]</b>{% endif %} Specify the DNS name template used in the <code>DOMAIN_TEMPLATE</code> variable (e.g., <code>%s.kube.company.my</code>):
+{% snippetcut %}
+```shell
+DOMAIN_TEMPLATE='<DOMAIN_TEMPLATE>'
+```
+{% endsnippetcut %}
+</p></li>
+{% if page.platform_code != 'vsphere' and page.platform_code != 'existing' %}
+<li><p><b>[On the master node]</b> Get the IP of the load balancer:
+{% include getting_started/global/partials/GET_BALANCER_ADDR.liquid mode="hosts" %}</p>
+</li>
+{%- endif -%}
+<li><p>{% if page.platform_code != 'existing' %}<b>[On the PC]</b>{% endif %} Specify the load balancer IP used in the <code>BALANCER_IP</code> variable:
+{% snippetcut %}
+```shell
+BALANCER_IP='<BALANCER_IP>'
+```
+{% endsnippetcut %}
+</p>
+</li>
+<li><p>{% if page.platform_code != 'existing' %}<b>[On the PC]</b>{% endif %} Add records to the <code>/etc/hosts</code> file:</p>
+{% snippetcut %}
+```shell
+for i in api argocd dashboard documentation dex grafana hubble istio istio-api-proxy kubeconfig openvpn-admin prometheus status upmeter; do echo "${BALANCER_IP}  ${DOMAIN_TEMPLATE} "| sed "s/%s/$i/"; done  | sudo bash -c "cat >>/etc/hosts"
+```
+{% endsnippetcut %}
+</li>
+</ul></li>
+</ul>
