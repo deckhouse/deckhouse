@@ -1,5 +1,6 @@
 server:
   addr: "127.0.0.1:5051"
+  real_ip_header: "X-Forwarded-For"
   certificate: "/system_registry_pki/auth.crt"
   key: "/system_registry_pki/auth.key"
 token:
