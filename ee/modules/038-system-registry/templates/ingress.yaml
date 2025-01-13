@@ -1,4 +1,4 @@
-{{- if .Values.global.modules.publicDomainTemplate }}
+{{- if and .Values.global.modules.publicDomainTemplate .Values.global.clusterIsBootstrapped }}
 ---
 apiVersion: networking.k8s.io/v1
 kind: Ingress
