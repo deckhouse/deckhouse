@@ -55,7 +55,7 @@ shell:
   - go mod vendor
   - make build
   - cp bin/snapshot-controller bin/csi-snapshotter bin/snapshot-validation-webhook /
-  - chown 64535:64535 /snapshot-controller /csi-snapshotter /snapshot-validation-webhook
+  - chown 65534:65534 /snapshot-controller /csi-snapshotter /snapshot-validation-webhook
   - chmod 0755 /snapshot-controller /csi-snapshotter /snapshot-validation-webhook
   {{- end }}
 {{- end }}
