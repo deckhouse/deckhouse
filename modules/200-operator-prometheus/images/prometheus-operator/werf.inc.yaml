@@ -1,15 +1,14 @@
 {{- $version := "0.79.2" }}
 ---
-image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
 fromImage: common/src-artifact
+final: false
 git:
-  - add: /modules/{{ $.ModuleName }}/images/{{ $.ImageName }}
-    to: /
+  - add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/patches
+    to: /patches
     stageDependencies:
-      setup:
-        - "**/*"
-    includePaths:
-      - patches
+      install:
+      - '**/*'
 shell:
   install:
     - git clone --depth 1 --branch "v{{ $version }}" {{ $.SOURCE_REPO }}/prometheus-operator/prometheus-operator.git /src
@@ -17,7 +16,7 @@ shell:
     - git apply /patches/*.patch --verbose
     - rm -r .git
 ---
-image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
+image: {{ .ModuleName }}/{{ .ImageName }}-artifact-{{ $version | replace "." "-" }}
 from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
 final: false
 import:
@@ -41,10 +40,10 @@ shell:
     - chmod 0700 /src/prometheus-config-reloader
     - chown -R 64535:64535 /src/
 ---
-image: {{ $.ModuleName }}/{{ $.ImageName }}
+image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
 import:
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
+- artifact: {{ .ModuleName }}/{{ .ImageName }}-artifact-{{ $version | replace "." "-" }}
   add: /src/operator
   to: /bin/operator
   before: setup
