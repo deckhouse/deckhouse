@@ -5,17 +5,15 @@ final: false
 fromImage: common/relocate-artifact
 import:
 - image: common/python-static
-  add: /
-  to: /
+  add: /opt/python-static
+  to: /opt/python-static
   before: install
-  includePaths:
-  - opt/python-static
 shell:
   install:
     - apt-get update
     - apt-get install -y dnsmasq git
     - git clone --depth 1 {{ .SOURCE_REPO }}/python-modules/wheels /wheels
-    - pip3 install /wheels/pysqlite3_binary-0.5.4-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
+    - /opt/python-static/bin/pip3 install /wheels/pysqlite3_binary-0.5.4-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
     - rm -rf /wheels
     - /opt/python-static/bin/pip3 install pyroute2 six ipcalc
     - /binary_replace.sh -i "{{ $binaries }}" -o /relocate
