@@ -193,8 +193,7 @@ A brief example of adding a static node to a cluster using [Cluster API Provider
    EOF
    ```
 
-{% alert level="warning" %}
-The `labelSelector` field in the `NodeGroup` resource is immutable. To update the `labelSelector`, you need to create a new `NodeGroup` and move the static nodes into it by changing their labels.
+   >The `labelSelector` field in the `NodeGroup` resource is immutable. To update the `labelSelector`, you need to create a new `NodeGroup` and move the static nodes into it by changing their labels.
 {% endalert %}
 
 1. Create a [NodeGroup](cr.html#nodegroup) resource in the cluster:
