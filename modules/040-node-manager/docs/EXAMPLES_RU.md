@@ -377,7 +377,7 @@ kubectl label staticinstance static-worker-1 role=front --overwrite
 
 ##### Уменьшаем количество статических узло в исходной `NodeGroup`
 
-Необходимо обновить ресурс `NodeGroup` `worker`, уменьшив значение параметра `count` с `1` до `0`.
+Обновите ресурс `NodeGroup` `worker`, уменьшив значение параметра `count` с `1` до `0`.
 
 ```shell
 kubectl patch nodegroup worker -p '{"spec": {"staticInstances": {"count": 0}}}' --type=merge
