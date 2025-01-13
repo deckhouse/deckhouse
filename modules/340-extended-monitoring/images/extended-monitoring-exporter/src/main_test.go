@@ -62,17 +62,6 @@ func TestRecordMetrics(t *testing.T) {
 		},
 	}, metav1.CreateOptions{})
 
-	// FakeClient.Resource(resource_namespaces).(fake.MetadataClient).CreateFake(&metav1.PartialObjectMetadata{
-	// 	TypeMeta: metav1.TypeMeta{
-	// 		APIVersion: "v1",
-	// 		Kind:       "pod",
-	// 	},
-	// 	ObjectMeta: metav1.ObjectMeta{
-	// 		Name:      "pod1",
-	// 		Namespace: "namespace1",
-	// 	},
-	// }, metav1.CreateOptions{})
-
 	registry := prometheus.NewRegistry()
 	recordMetrics(ctx, FakeClient, registry)
 
