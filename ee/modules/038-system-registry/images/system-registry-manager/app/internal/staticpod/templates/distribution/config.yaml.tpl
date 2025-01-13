@@ -43,4 +43,4 @@ auth:
     autoredirect: true
     proxy:
       url: https://127.0.0.1:5051/auth
-      ca: /system_registry_pki//ca.crt
+      ca: /system_registry_pki/ca.crt
