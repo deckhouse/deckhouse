@@ -320,20 +320,6 @@ func setupSSHTunnelToSystemRegistryDistribution(sshCl *ssh.Client) (*frontend.Tu
 	return tun, nil
 }
 
-func setupSSHTunnelToSystemRegistryAuth(sshCl *ssh.Client) (*frontend.Tunnel, error) {
-	log.DebugF("Running local ssh tunnel for system registry auth")
-
-	port := "5051"
-	listenAddress := "127.0.0.1"
-
-	tun := sshCl.Tunnel("L", fmt.Sprintf("%s:%s:%s", port, listenAddress, port))
-	err := tun.Up()
-	if err != nil {
-		return tun, fmt.Errorf("failed to setup SSH tunnel to system registry auth: %v", err)
-	}
-	return tun, nil
-}
-
 func pushDockerImagesToSystemRegistry(ctx context.Context, nodeInterface node.Interface, registryData *config.DetachedModeRegistryData) error {
 	var wg sync.WaitGroup
 
@@ -355,34 +341,6 @@ func pushDockerImagesToSystemRegistry(ctx context.Context, nodeInterface node.In
 
 	if wrapper, ok := nodeInterface.(*ssh.NodeInterfaceWrapper); ok {
 		sshClient := wrapper.Client()
-
-		log.DebugLn("PushDockerImagesToSystemRegistry: Creating auth tunnel")
-
-		// Create auth tunnel
-		authTun, err := setupSSHTunnelToSystemRegistryAuth(sshClient)
-		if err != nil {
-			return err
-		}
-
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			defer ctxCancel(nil)
-
-			err := frontend.RecreateSshTun(ctx, authTun, func() (*frontend.Tunnel, error) {
-				return setupSSHTunnelToSystemRegistryAuth(sshClient)
-			})
-
-			if ctx.Err() != nil {
-				// Context was cancelled, skipping error processing
-				return
-			}
-
-			if err != nil {
-				log.ErrorF("error re-creating ssh tunnel for remote docker auth service: %s", err.Error())
-				ctxCancel(fmt.Errorf("recreate auth tunnel error: %w", err))
-			}
-		}()
 
 		if sshClient.Settings.BastionHost == "" {
 			distributionHost = fmt.Sprintf("%s:5001", sshClient.Settings.Host())
