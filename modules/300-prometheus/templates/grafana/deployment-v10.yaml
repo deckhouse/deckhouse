@@ -151,6 +151,8 @@ spec:
         volumeMounts:
         - name: grafana-data
           mountPath: /var/lib/grafana/data
+        - name: grafana-alerting
+          mountPath: /var/lib/grafana/data/alerting
         - name: grafana-datasources
           mountPath: /etc/grafana/provisioning/datasources
         - name: grafana-alerts-channels
@@ -197,6 +199,8 @@ spec:
         volumeMounts:
         - name: grafana-data
           mountPath: /var/lib/grafana/data
+        - name: grafana-alerting
+          mountPath: /var/lib/grafana/data/alerting
         - name: shared-dashboards-folder
           mountPath: /etc/grafana/dashboards
         - name: tmp
@@ -282,6 +286,8 @@ spec:
           defaultMode: 420
           name: kube-rbac-proxy-ca.crt
       - name: grafana-data
+        emptyDir: {}
+      - name: grafana-alerting
         emptyDir: {}
       - name: tmp
         emptyDir: {}
