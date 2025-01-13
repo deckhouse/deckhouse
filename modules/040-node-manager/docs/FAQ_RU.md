@@ -632,7 +632,7 @@ spec:
 
 1. Добавьте в файлы нужные лейблы в формате `key=value`. Например:
 
-   ```
+   ```console
    example-label=test
    ```
 

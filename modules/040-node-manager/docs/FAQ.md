@@ -620,9 +620,9 @@ Additional node configuration steps are set via the [NodeGroupConfiguration](cr.
 
 1. Create a file or files containing the necessary labels in it. The number of files can be any, as well as the number of subdirectories containing them.
 
-2. Add the necessary labels to the files in the `key=value` format. For example:
+1. Add the necessary labels to the files in the `key=value` format. For example:
 
-   ```
+   ```console
    example-label=test
    ```
 
