@@ -28,9 +28,7 @@ import (
 )
 
 func TestEnabledLabel(t *testing.T) {
-	labels := map[string]string{
-		namespaces_enabled_label: "true",
-	}
+	labels := map[string]string{namespaces_enabled_label: "true"}
 	assert.Equal(t, 1.0, enabledLabel(labels))
 
 	labels[namespaces_enabled_label] = "false"
@@ -41,9 +39,7 @@ func TestEnabledLabel(t *testing.T) {
 }
 
 func TestThresholdLabel(t *testing.T) {
-	labels := map[string]string{
-		label_theshold_prefix + "cpu": "80",
-	}
+	labels := map[string]string{label_theshold_prefix + "cpu": "80"}
 	assert.Equal(t, 80.0, thresholdLabel(labels, "cpu", 100.0))
 
 	labels[label_theshold_prefix+"cpu"] = "invalid"
@@ -87,6 +83,5 @@ func TestRecordMetrics(t *testing.T) {
 	assert.Equal(t, 1, len(mfs))
 	assert.Equal(t, "extended_monitoring_enabled", mfs[0].GetName())
 	assert.Regexp(t, "^name:\"extended_monitoring_enabled\".*help:\"\".*type:COUNTER.*metric:{label:{name:\"namespace\".*value:\"namespace1\"}.*counter:{value:1.*created_timestamp:.*$", mfs[0].String())
-	// assert.Contains(t, mfs[0].String(), "name:\"extended_monitoring_enabled\"  help:\"\"  type:COUNTER  metric:{label:{name:\"namespace\"  value:\"namespace1\"}  counter:{value:1  created_timestamp:")
 
 }
