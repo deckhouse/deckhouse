@@ -104,7 +104,7 @@ import:
 - image: common/python-static-artifact
   add: /
   to: /
-  before: setup
+  before: install
   includePaths:
   - opt/python-static
   - usr/bin/pip3
