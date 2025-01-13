@@ -19,7 +19,7 @@ docker:
     growpart: {{ $version }}
 ---
 artifact: {{ .ModuleName }}/{{ .ImageName }}-src-artifact-{{ $image_version }}
-fromArtifact: common/src-artifact
+fromImage: common/src-artifact
 git:
 - add: /{{ .ModulePath }}/modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/scripts
   to: /src/scripts

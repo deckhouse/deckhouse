@@ -123,7 +123,7 @@ ssh-keygen -t rsa -f /dev/shm/caps-id -C "" -N ""
     <p>Создайте в кластере ресурс <a href="/products/kubernetes-platform/documentation/v1/modules/node-manager/cr.html#sshcredentials">SSHCredentials</a>. Для этого выполните на <strong>master-узле</strong> следующую команду:</p>
 {% snippetcut %}
 ```bash
-sudo -i d8 k -f - <<EOF
+sudo -i d8 k create -f - <<EOF
 apiVersion: deckhouse.io/v1alpha1
 kind: SSHCredentials
 metadata:
@@ -174,7 +174,7 @@ pdpl-user -i 63 caps
 ```bash
 # Укажите IP-адрес узла, который необходимо подключить к кластеру.
 export NODE=<NODE-IP-ADDRESS>
-sudo -i d8 k -f - <<EOF
+sudo -i d8 k create -f - <<EOF
 apiVersion: deckhouse.io/v1alpha1
 kind: StaticInstance
 metadata:

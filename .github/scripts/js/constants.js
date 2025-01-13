@@ -70,7 +70,10 @@ const labels = {
   'edition/ee': { type: 'edition', edition: 'EE' },
   'edition/be': { type: 'edition', edition: 'BE' },
   'edition/se': { type: 'edition', edition: 'SE' },
-  'edition/se+': { type: 'edition', edition: 'SE-plus' }
+  'edition/se+': { type: 'edition', edition: 'SE-plus' },
+
+  // Enable operator-trivy to get CIS benchmark report
+  'e2e/use/cis': { type: 'e2e-use', cis: true }
 };
 module.exports.knownLabels = labels;
 
@@ -159,6 +162,7 @@ module.exports.e2eDefaults = {
   criName: 'Containerd',
   edition: 'FE',
   multimaster: false,
+  cis: false
 }
 
 const editions = [
