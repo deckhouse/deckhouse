@@ -367,7 +367,7 @@ spec:
 EOF
 ```
 
-##### Обновляем метку у `StaticInstance`
+##### 2. Обновление метки у `StaticInstance`
 
 Измените метку `role` у существующего `StaticInstance` с `worker` на `front`. Это позволит новой `NodeGroup` `front` начать управлять этим узлом.
 
