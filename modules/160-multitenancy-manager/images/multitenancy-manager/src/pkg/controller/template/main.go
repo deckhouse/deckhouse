@@ -56,7 +56,7 @@ func Register(runtimeManager manager.Manager, defaultPath string, log logr.Logge
 		return err
 	}
 
-	// init template manager
+	// init template manager, it has to ensure default templates
 	if err = runtimeManager.Add(manager.RunnableFunc(func(ctx context.Context) error {
 		return retry.OnError(
 			wait.Backoff{
@@ -66,7 +66,7 @@ func Register(runtimeManager manager.Manager, defaultPath string, log logr.Logge
 				Jitter:   0.1,
 			},
 			func(e error) bool {
-				log.Info("failed to init template manager - retrying", "error", e.Error())
+				log.Info("failed to init template manager - try to retry", "error", e.Error())
 				return true
 			},
 			func() error {
