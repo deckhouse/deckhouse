@@ -15,7 +15,8 @@
     echo "Acquire::Max-FutureTime 157680000;" >> /etc/apt/apt.conf
 # Replace debian repos with our proxy
   {{- if $.DistroPackagesProxy }}
-- sed -i "s|http://deb.debian.org|http://{{ $.DistroPackagesProxy }}/repository|g" /etc/apt/sources.list
+- if [ -f /etc/apt/sources.list ]; then sed -i "s|http://deb.debian.org|http://{{ $.DistroPackagesProxy }}/repository|g" /etc/apt/sources.list; fi
+- if [ -f /etc/apt/sources.list.d/debian.sources ]; then sed -i "s|http://deb.debian.org|http://{{ $.DistroPackagesProxy }}/repository|g" /etc/apt/sources.list.d/debian.sources; fi
   {{- end }}
 - export DEBIAN_FRONTEND=noninteractive
 - apt-get update

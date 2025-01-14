@@ -853,12 +853,12 @@ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-con
 В Deckhouse CE не поддерживается работа облачных кластеров на OpenStack и VMware vSphere.
 {% endalert %}
 
-Для переключения кластера Deckhouse Enterprise Edition на Community Edition выполните следующие действия (все команды выполняются на master-узле действующего кластера):
+Для переключения Deckhouse Enterprise Edition на Community Edition выполните следующие действия (все команды выполняются на master-узле кластера от имени пользователя с настроенным контекстом `kubectl` или от имени суперпользователя):
 
-1. Выполните следующую команду для запуска временного пода Deckhouse CE для получения актуальных дайджестов и списка модулей:
+1. Выполните следующую команду для запуска временного пода Deckhouse CE для получения актуальных дайджестов и списка модулей. В переменную <DECKHOUSE_VERSION> введите последнюю версию Deckhouse:
 
    ```shell
-   kubectl run ce-image --image=registry.deckhouse.ru/deckhouse/ce/install:v1.63.7 --command sleep -- infinity
+   kubectl run ce-image --image=registry.deckhouse.ru/deckhouse/ce/install:<DECKHOUSE_VERSION> --command sleep -- infinity
    ```
 
    > Запускайте образ последней установленной версии Deckhouse в кластере. Определить, какая версия сейчас установлена, можно командой:
@@ -980,9 +980,6 @@ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-con
 
    Defaulted container "deckhouse" out of: deckhouse, kube-rbac-proxy, init-external-modules (init)
    Module node-local-dns disabled
-
-   Defaulted container "deckhouse" out of: deckhouse, kube-rbac-proxy, init-external-modules (init)
-   Module registry-packages-proxy disabled
    ```
 
 1. Создайте ресурс `NodeGroupConfiguration`:
@@ -1058,13 +1055,13 @@ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-con
      --from-literal="scheme"=https \
      --type=kubernetes.io/dockerconfigjson \
      --dry-run='client' \
-     -o yaml | kubectl replace -f -
+     -o yaml | kubectl -n d8-system exec -i svc/deckhouse-leader -c deckhouse -- kubectl replace -f -
    ```
 
-1. Примените образ Deckhouse CE:
+1. Примените образ Deckhouse CE. В переменную <DECKHOUSE_VERSION> введите последнюю версию Deckhouse:
 
    ```shell
-   kubectl -n d8-system set image deployment/deckhouse deckhouse=registry.deckhouse.ru/deckhouse/ce:v1.63.7
+   kubectl -n d8-system exec svc/deckhouse-leader -c deckhouse -- kubectl -n d8-system set image deployment/deckhouse deckhouse=registry.deckhouse.ru/deckhouse/ce:<DECKHOUSE_VERSION>
    ```
 
 1. Дождитесь перехода пода Deckhouse в статус `Ready` и [выполнения всех задач в очереди](https://deckhouse.ru/products/kubernetes-platform/documentation/latest/deckhouse-faq.html#%D0%BA%D0%B0%D0%BA-%D0%BF%D1%80%D0%BE%D0%B2%D0%B5%D1%80%D0%B8%D1%82%D1%8C-%D0%BE%D1%87%D0%B5%D1%80%D0%B5%D0%B4%D1%8C-%D0%B7%D0%B0%D0%B4%D0%B0%D0%BD%D0%B8%D0%B9-%D0%B2-deckhouse). Если в процессе возникает ошибка `ImagePullBackOff`, подождите автоматического перезапуска пода.
@@ -1131,7 +1128,7 @@ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-con
 Инструкция подразумевает использование публичного адреса container registry: `registry.deckhouse.ru`. В случае использования другого адреса container registry измените команды или воспользуйтесь [инструкцией по переключению Deckhouse на использование стороннего registry](#как-переключить-работающий-кластер-deckhouse-на-использование-стороннего-registry).
 {% endalert %}
 
-Для переключения кластера Deckhouse Community Edition на Enterprise Edition выполните следующие действия (все команды выполняются на master-узле действующего кластера):
+Для переключения Deckhouse Community Edition на Enterprise Edition выполните следующие действия (все команды выполняются на master-узле кластера от имени пользователя с настроенным контекстом `kubectl` или от имени суперпользователя):
 
 1. Подготовьте переменные с токеном лицензии:
 
@@ -1193,10 +1190,10 @@ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-con
    Aug 21 11:04:29 master-ce-to-ee-0 systemd[1]: bashible.service: Deactivated successfully.
    ```
 
-   Выполните следующую команду для запуска временного пода Deckhouse EE для получения актуальных дайджестов и списка модулей:
+   Выполните следующую команду для запуска временного пода Deckhouse EE для получения актуальных дайджестов и списка модулей. В переменную <DECKHOUSE_VERSION> введите последнюю версию Deckhouse:
 
    ```shell
-   kubectl run ee-image --image=registry.deckhouse.ru/deckhouse/ee/install:v1.63.8 --command sleep -- infinity
+   kubectl run ee-image --image=registry.deckhouse.ru/deckhouse/ee/install:<DECKHOUSE_VERSION> --command sleep -- infinity
    ```
 
    > Запускайте образ последней установленной версии DH в кластере, посмотреть можно командой:
@@ -1250,32 +1247,6 @@ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-con
      ```console
      $ crictl pull registry.deckhouse.ru/deckhouse/ee@$EE_REGISTRY_PACKAGE_PROXY
      Image is up to date for sha256:8127efa0f903a7194d6fb7b810839279b9934b200c2af5fc416660857bfb7832
-     ```
-
-   * Получите значение `EE_MODULES`:
-
-     ```shell
-     EE_MODULES=$(kubectl exec ee-image -- ls -l deckhouse/modules/ | grep -oE "\d.*-\w*"  | awk {'print $9'} | cut -c5-)
-     ```
-
-     Проверка:
-
-     ```console
-     $ echo $EE_MODULES
-     common priority-class deckhouse external-module-manager ...
-     ```
-
-   * Получите значение `USED_MODULES`:
-
-     ```shell
-     USED_MODULES=$(kubectl get modules | grep -v 'snapshot-controller-crd' | grep Enabled |awk {'print $1'})
-     ```
-
-     Проверка:
-
-     ```console
-     $ echo $USED_MODULES
-     admission-policy-engine cert-manager chrony cloud-data-crd ...
      ```
 
 1. Создайте ресурс NodeGroupConfiguration:
@@ -1341,13 +1312,13 @@ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-con
      --from-literal="scheme"=https \
      --type=kubernetes.io/dockerconfigjson \
      --dry-run='client' \
-     -o yaml | kubectl replace -f -
+     -o yaml | kubectl -n d8-system exec -i svc/deckhouse-leader -c deckhouse -- kubectl replace -f -
    ```
 
-1. Примените образ Deckhouse EE:
+1. Примените образ Deckhouse EE. В переменную <DECKHOUSE_VERSION> введите последнюю версию Deckhouse:
 
    ```shell
-   kubectl -n d8-system set image deployment/deckhouse deckhouse=registry.deckhouse.ru/deckhouse/ee:v1.63.8
+   kubectl -n d8-system exec svc/deckhouse-leader -c deckhouse -- kubectl -n d8-system set image deployment/deckhouse deckhouse=registry.deckhouse.ru/deckhouse/ee:<DECKHOUSE_VERSION>
    ```
 
 1. Дождитесь перехода пода Deckhouse в статус `Ready` и [выполнения всех задач в очереди](https://deckhouse.ru/products/kubernetes-platform/documentation/latest/deckhouse-faq.html#%D0%BA%D0%B0%D0%BA-%D0%BF%D1%80%D0%BE%D0%B2%D0%B5%D1%80%D0%B8%D1%82%D1%8C-%D0%BE%D1%87%D0%B5%D1%80%D0%B5%D0%B4%D1%8C-%D0%B7%D0%B0%D0%B4%D0%B0%D0%BD%D0%B8%D0%B9-%D0%B2-deckhouse). Если в процессе возникает ошибка `ImagePullBackOff`, подождите автоматического перезапуска пода.
@@ -1641,18 +1612,18 @@ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-con
 1. Актуализируйте секрет доступа к registry Deckhouse, выполнив следующую команду:
 
    ```shell
-   sudo /opt/deckhouse/bin/kubectl -n d8-system exec -ti  svc/deckhouse-leader -c deckhouse -- kubectl -n d8-system create secret generic deckhouse-registry \
+   kubectl -n d8-system create secret generic deckhouse-registry \
      --from-literal=".dockerconfigjson"="{\"auths\": { \"registry.deckhouse.ru\": { \"username\": \"license-token\", \"password\": \"$LICENSE_TOKEN\", \"auth\":    \"$AUTH_STRING\" }}}" \
      --from-literal="address"=registry.deckhouse.ru   --from-literal="path"=/deckhouse/se \
      --from-literal="scheme"=https   --type=kubernetes.io/dockerconfigjson \
      --dry-run=client \
-     -o yaml | sudo /opt/deckhouse/bin/kubectl -n d8-system exec -i  svc/deckhouse-leader -c deckhouse -- kubectl replace -f -
+     -o yaml | sudo /opt/deckhouse/bin/kubectl -n d8-system exec -i svc/deckhouse-leader -c deckhouse -- kubectl replace -f -
    ```
 
 1. Примените образ Deckhouse SE. В переменную <DECKHOUSE_VERSION> введите последнюю версию Deckhouse:
 
    ```shell
-   sudo /opt/deckhouse/bin/kubectl -n d8-system set image deployment/deckhouse deckhouse=registry.deckhouse.ru/deckhouse/se:<DECKHOUSE_VERSION>
+   sudo /opt/deckhouse/bin/kubectl -n d8-system exec -i svc/deckhouse-leader -c deckhouse -- kubectl -n d8-system set image deployment/deckhouse deckhouse=registry.deckhouse.ru/deckhouse/se:<DECKHOUSE_VERSION>
    ```
 
    > Узнать последнюю версию Deckhouse можно при помощи команды:
@@ -1722,7 +1693,7 @@ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-con
 - При переключении на CSE-редакцию может наблюдаться недоступность компонентов кластера.
 {% endalert %}
 
-Для переключения кластера Deckhouse Enterprise Edition на Certified Security Edition выполните следующие действия (все команды выполняются на master-узле действующего кластера):
+Для переключения Deckhouse Enterprise Edition на Certified Security Edition выполните следующие действия (все команды выполняются на master-узле кластера):
 
 1. Подготовьте переменные с токеном лицензии и создайте NodeGroupConfiguration для переходной авторизации в `registry-cse.deckhouse.ru`:
 
@@ -1795,10 +1766,10 @@ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-con
    Aug 21 11:04:29 master-ee-to-cse-0 systemd[1]: bashible.service: Deactivated successfully.
    ```
 
-1. Выполните следующие команды для запуска временного пода CSE-редакции для получения актуальных дайджестов и списка модулей:
+1. Выполните следующие команды для запуска временного пода CSE-редакции для получения актуальных дайджестов и списка модулей. В переменную <DECKHOUSE_VERSION> введите последнюю версию Deckhouse CSE:
 
    ```console
-   kubectl run cse-image --image=registry-cse.deckhouse.ru/deckhouse/cse/install:v1.58.2 --command sleep -- infinity
+   kubectl run cse-image --image=registry-cse.deckhouse.ru/deckhouse/cse/install:<DECKHOUSE_VERSION> --command sleep -- infinity
    ```
 
    Как только под перейдёт в статус `Running`, выполните следующие команды:
@@ -1894,13 +1865,13 @@ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-con
      --from-literal="scheme"=https \
      --type=kubernetes.io/dockerconfigjson \
      --dry-run='client' \
-     -o yaml | kubectl replace -f -
+     -o yaml | sudo /opt/deckhouse/bin/kubectl -n d8-system exec -i svc/deckhouse-leader -c deckhouse -- kubectl replace -f -
    ```
 
-1. Примените CSE-образ:
+1. Примените CSE-образ. В переменную <DECKHOUSE_VERSION> введите последнюю версию Deckhouse CSE:
 
    ```console
-   kubectl -n d8-system set image deployment/deckhouse deckhouse=registry-cse.deckhouse.ru/deckhouse/cse:v1.58.2
+   sudo /opt/deckhouse/bin/kubectl -n d8-system exec -i svc/deckhouse-leader -c deckhouse -- kubectl -n d8-system set image deployment/deckhouse deckhouse=registry-cse.deckhouse.ru/deckhouse/cse:<DECKHOUSE_VERSION>
    ```
 
 1. Дождитесь перехода пода Deckhouse в статус `Ready` и [выполнения всех задач в очереди](#как-проверить-очередь-заданий-в-deckhouse). Если в процессе возникает ошибка `ImagePullBackOff`, подождите автоматического перезапуска пода.

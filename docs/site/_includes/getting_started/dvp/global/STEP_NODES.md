@@ -40,7 +40,7 @@ ssh-keygen -t rsa -f /dev/shm/caps-id -C "" -N ""
 
   {% snippetcut %}
   ```shell
-sudo -i d8 k -f - <<EOF
+sudo -i d8 k create -f - <<EOF
   apiVersion: deckhouse.io/v1alpha1
   kind: SSHCredentials
   metadata:
@@ -81,7 +81,7 @@ chmod 600 /home/caps/.ssh/authorized_keys
   {% snippetcut %}
   ```shell
 export NODE=<NODE-IP-ADDRESS> # Specify the IP address of the node you want to connect to the cluster.
-  sudo -i d8 k -f - <<EOF
+  sudo -i d8 k create -f - <<EOF
   apiVersion: deckhouse.io/v1alpha1
   kind: StaticInstance
   metadata:

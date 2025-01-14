@@ -1,27 +1,27 @@
 {{- $shellOperatorVersion := "v1.5.1"}}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
-from: {{ $.Images.BASE_ALT_P11 }}
+fromImage: common/alt-p11-artifact
 import:
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
   add: /shell-operator/shell-operator
   to: /shell-operator
   before: setup
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
   add: /shell-operator/shell_lib.sh
   to: /shell_lib.sh
   before: setup
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
   add: /shell-operator/frameworks
   to: /frameworks
   before: setup
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
   add: /src/jq/jq
   to: /usr/local/bin/jq
   before: setup
 {{- $k8sVersion := "1.27" }}
 {{- $image_version := printf "%s.%d" $k8sVersion (index $.CandiVersionMap "k8s" $k8sVersion "patch") | replace "." "-" }}
-- artifact: common/kubernetes-artifact-{{ $image_version }}
+- image: common/kubernetes-artifact-{{ $image_version }}
   add: /src/_output/bin/kubectl
   to: /usr/local/bin/kubectl
   before: setup
@@ -32,8 +32,9 @@ import:
 docker:
   ENTRYPOINT: ["tini", "--", "/shell-operator"]
 ---
-artifact: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
-fromArtifact: common/src-artifact
+image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+fromImage: common/src-artifact
+final: false
 shell:
   install:
   - git clone --branch {{ $shellOperatorVersion }} --depth 1 {{ $.SOURCE_REPO }}/flant/shell-operator.git /src/shell-operator
@@ -53,10 +54,11 @@ shell:
   - mkdir -p docs/content/manual
   - touch docs/content/manual/manual.yml
 ---
-artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
 from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
+final: false
 import:
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
   add: /src
   to: /src
   before: install

@@ -100,7 +100,7 @@ spec:
               value: "4218"
             - name: METALLB_ML_SECRET_KEY_PATH
               value: "/etc/ml_secret_key"
-          image: {{ include "helm_lib_module_image" (list . "speaker") }}
+          image: {{ include "helm_lib_module_image" (list . "metallbSpeaker") }}
           imagePullPolicy: IfNotPresent
           name: speaker
           {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all_and_add" (list . (list "NET_RAW")) | nindent 10 }}

@@ -32,7 +32,9 @@ module Jekyll
       def render(context)
         content = super
 
-        rendered_content = Jekyll::Converters::Markdown::KramdownParser.new(Jekyll.configuration()).convert(content)
+        site = context.registers[:site]
+        @converter = site.find_converter_instance(::Jekyll::Converters::Markdown)
+        rendered_content = @converter.convert(content)
 
         %Q(
 <div class="details">

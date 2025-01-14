@@ -1,0 +1,70 @@
+{{- $chronyExproterVersion := "0.11.0"}}
+{{- $promuVersion := "0.14.0"}}
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-promu
+fromImage: common/src-artifact
+final: false
+shell:
+  install:
+  - git clone --depth 1 --branch v{{$promuVersion}} {{ $.SOURCE_REPO }}/prometheus/promu.git /promu
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-promu
+from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
+final: false
+import:
+- image: {{ .ModuleName }}/{{ $.ImageName }}-src-artifact-promu
+  add: /promu
+  to: /promu
+  before: install
+mount:
+- fromPath: ~/go-pkg-cache
+  to: /go/pkg
+shell:
+  install:
+  - export GOPROXY={{ $.GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64
+  - cd /promu
+  - go build -ldflags="-s -w" -o promu ./main.go
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+fromImage: common/src-artifact
+final: false
+shell:
+  install:
+  - git clone -b v{{$chronyExproterVersion}} --single-branch {{ $.SOURCE_REPO }}/chrony/chrony_exporter /src
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
+final: false
+mount:
+- fromPath: ~/go-pkg-cache
+  to: /go/pkg
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-promu
+  add: /promu/promu
+  to: /bin/promu
+  before: install
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+  add: /src
+  to: /chrony_exporter
+  before: install
+shell:
+  beforeInstall:
+  {{- include "alpine packages proxy" . | nindent 2 }}
+  - apk update && apk add --no-cache gcc g++
+  install:
+  - export GOPROXY={{ $.GOPROXY }} CGO_ENABLED=1 GOOS=linux GOARCH=amd64
+  - cd /chrony_exporter
+  - /bin/promu build
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}
+fromImage: common/distroless
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+  add: /chrony_exporter/chrony_exporter
+  to: /usr/bin/chrony_exporter
+  before: install
+docker:
+  EXPOSE:
+    - "9123"
+  ENTRYPOINT:
+    - "/usr/bin/chrony_exporter"

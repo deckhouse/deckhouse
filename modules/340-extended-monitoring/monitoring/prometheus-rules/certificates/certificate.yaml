@@ -3,7 +3,7 @@
   - alert: CertificateSecretExpiredSoon
     expr: |
       max by (name, namespace) (
-        cert_exporter_secret_not_after{job="cert-exporter", secretkey!="ca.crt"} - time() < 1209600
+        x509_cert_not_after{job="x509-certificate-exporter", secret_key!="ca.crt"} - time() < 1209600
       ) * on (namespace) group_left() max by (namespace) (extended_monitoring_enabled)
     for: 1h
     labels:
@@ -25,7 +25,7 @@
   - alert: CertificateSecretExpired
     expr: |
       max by (name, namespace) (
-        cert_exporter_secret_not_after{job="cert-exporter", secretkey!="ca.crt"} - time() < 0
+        x509_cert_not_after{job="x509-certificate-exporter", secret_key!="ca.crt"} - time() < 0
       ) * on (namespace) group_left() max by (namespace) (extended_monitoring_enabled)
     for: 1h
     labels:

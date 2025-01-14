@@ -1345,6 +1345,10 @@ entries:
                     en: Custom Resources
                     ru: Custom Resources
                   url: /modules/admission-policy-engine/cr.html
+                - title:
+                    ru: Custom Resources (от Gatekeeper)
+                    en: Custom Resources (by Gatekeeper)
+                  url: /modules/admission-policy-engine/gatekeeper-cr.html
             - title:
                 en: FAQ
                 ru: FAQ

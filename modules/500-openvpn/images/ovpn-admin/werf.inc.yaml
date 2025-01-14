@@ -34,7 +34,7 @@ docker:
   WORKDIR: /app
 ---
 artifact: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
-fromArtifact: common/src-artifact
+fromImage: common/src-artifact
 git:
 - add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/patches
   to: /patches

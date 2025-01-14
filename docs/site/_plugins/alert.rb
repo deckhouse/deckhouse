@@ -34,8 +34,10 @@ module Jekyll
 
       def render(context)
         content = super
+        site = context.registers[:site]
+        @converter = site.find_converter_instance(::Jekyll::Converters::Markdown)
 
-        rendered_content = Jekyll::Converters::Markdown::KramdownParser.new(Jekyll.configuration()).convert(content)
+        rendered_content = @converter.convert(content)
 
         id = @config[:id] ? %Q(id="#{@config[:id]}") : ""
         %Q(<#{@config[:tag]} markdown="0" #{id} class="#{@config[:level]} #{@config[:class]}">

@@ -31,7 +31,7 @@ shell:
   - chmod 0755 /dashboard-api
 ---
 artifact: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
-fromArtifact: common/src-artifact
+fromImage: common/src-artifact
 shell:
   install:
   - cd /src

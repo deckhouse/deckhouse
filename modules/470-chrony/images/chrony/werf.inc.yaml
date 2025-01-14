@@ -31,7 +31,7 @@ import:
 shell:
   beforeInstall:
   {{- include "alpine packages proxy" . | nindent 2 }}
-  - apk add --no-cache automake autoconf libtool build-base bison asciidoctor
+  - apk add --no-cache automake autoconf libtool build-base bison asciidoctor libcap-dev libcap-static
   install:
   - cd /src
   - echo "{{ $version }}" > version.txt

@@ -55,7 +55,7 @@ title: "Модуль cert-manager: FAQ"
 При необходимости можно создать такие `ClusterIssuer` самостоятельно.  
 
 Пример использования AWS Route53 доступен в разделе [Как защитить учетные данные `cert-manager`](#как-защитить-учетные-данные-cert-manager).  
-Актуальный перечень всех возможных для создания `ClusterIssuer` доступен в [шаблонах модуля](https://github.com/deckhouse/deckhouse/tree/main/modules/cert-manager/templates/cert-manager).
+Актуальный перечень всех возможных для создания `ClusterIssuer` доступен в [шаблонах модуля](https://github.com/deckhouse/deckhouse/tree/main/modules/101-cert-manager/templates/cert-manager).
 
 Использование сторонних DNS-провайдеров реализуется через метод `webhook`.  
 Когда `cert-manager` выполняет вызов `ACME` `DNS01`, он отправляет запрос на вебхук-сервер, который затем выполняет нужные операции для обновления записи DNS.  

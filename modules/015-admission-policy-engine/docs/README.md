@@ -158,29 +158,10 @@ To apply the policy, it will be sufficient to set the label `enforce: "mypolicy"
 
 ### Modifying Kubernetes resources
 
-The module also allows you to use the Gatekeeper's Custom Resources to easily modify objects in the cluster, such as
-- `AssignMetadata` — defines changes to the metadata section of a resource.
-- `Assign` —  any change outside the metadata section.
-- `ModifySet` —  adds or removes entries from a list, such as the arguments to a container.
-
-Example:
-
-```yaml
-apiVersion: mutations.gatekeeper.sh/v1
-kind: AssignMetadata
-metadata:
-  name: demo-annotation-owner
-spec:
-  match:
-    scope: Namespaced
-    namespaces: ["default"]
-    kinds:
-      - apiGroups: [""]
-        kinds: ["Pod"]
-  location: "metadata.annotations.foo"
-  parameters:
-    assign:
-      value: "bar"
-```
+The module allows you to use the [Gatekeeper Custom Resources](gatekeeper-cr.html) to modify objects in the cluster, such as
+- [AssignMetadata](gatekeeper-cr.html#assignmetadata) — defines changes to the `metadata` section of a resource.
+- [Assign](gatekeeper-cr.html#assign) — any change outside the `metadata` section.
+- [ModifySet](gatekeeper-cr.html#modifyset) — adds or removes entries from a list, such as the arguments to a container.
+- [AssignImage](gatekeeper-cr.html#assignimage) — to change the `image` parameter of the resource.
 
 You can read more about the available options in the [gatekeeper](https://open-policy-agent.github.io/gatekeeper/website/docs/mutation/) documentation.

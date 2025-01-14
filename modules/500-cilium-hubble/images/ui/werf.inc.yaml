@@ -1,0 +1,71 @@
+{{- $hubbleUIVersion := "0.13.1" }}
+---
+# Based on https://github.com/cilium/hubble-ui/blob/v0.13.1/backend/Dockerfile
+image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+fromImage: common/src-artifact
+final: false
+git:
+- add: /{{ $.ModulePath }}modules/500-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
+  to: /patches
+  stageDependencies:
+    install:
+      - '**/*'
+- add: /{{ $.ModulePath }}modules/500-{{ $.ModuleName }}/images/{{ $.ImageName }}/static
+  to: /src/server/public
+  stageDependencies:
+    install:
+      - '**/*'
+shell:
+  install:
+  #- git clone --depth 1 --branch v{{ $hubbleUIVersion }} {{ $.SOURCE_REPO }}/cilium/hubble-ui.git /src
+  - cd /src
+  - git init .
+  - git remote add origin -f {{ $.SOURCE_REPO }}/cilium/hubble-ui.git
+  - git checkout v{{ $hubbleUIVersion }}
+  - git apply /patches/*.patch --verbose
+  - chown -R 64535:64535 /src/server/public
+  - rm -r /src/.git
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-backend-build-artifact
+from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
+final: false
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+  add: /src
+  to: /src
+  before: install
+mount:
+- fromPath: ~/go-pkg-cache
+  to: /go/pkg
+shell:
+  install:
+  - export GO_VERSION=${GOLANG_VERSION}
+  - export GOPROXY={{ $.GOPROXY }}
+  - export "GOARCH=amd64"
+  - cd /src/backend
+  - go mod vendor && go mod download -x 
+  - CGO_ENABLED=0 go build -ldflags "-s -w" -o backend
+  - chown 64535:64535 /src/backend/backend
+  - chmod 0700 /src/backend/backend
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-frontend
+fromImage: common/nginx-static
+import:
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+  add: /src/server/public
+  to: /app
+  before: install
+docker:
+  USER: 64535
+  ENTRYPOINT: [ "/opt/nginx-static/sbin/nginx", "-g", "daemon off;" ]
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-backend
+fromImage: common/distroless
+import:
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-backend-build-artifact
+  add: /src/backend/backend
+  to: /usr/local/bin/hubble-ui-backend
+  before: install
+docker:
+  USER: 64535
+  ENTRYPOINT: ["/usr/local/bin/hubble-ui-backend"]

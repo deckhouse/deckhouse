@@ -214,6 +214,9 @@ common:
   documentation_develop:
     en: The documentation is under development and may contain incomplete information.
     ru: Документация находится в разработке, может содержать неполную информацию.
+  crd_has_no_parameters:
+    en: The CRD has no fields for configuration.
+    ru: У CRD нет полей для настройки.
 
 comparison:
   except_parameters:

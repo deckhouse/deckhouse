@@ -20,6 +20,9 @@ module Jekyll
       end
 
       def render(context)
+        site = context.registers[:site]
+        @converter = site.find_converter_instance(::Jekyll::Converters::Markdown)
+
         @markup = Liquid::Template
           .parse(@raw_markup)
           .render(context)
@@ -38,7 +41,7 @@ module Jekyll
         end
 
         content = super
-        rendered_content = Jekyll::Converters::Markdown::KramdownParser.new(Jekyll.configuration()).convert(content)
+        rendered_content = @converter.convert(content)
         #         <div class="snippetcut#{@config[:limited] ? ' snippetcut_limited' : ''}" data-snippetcut>
         #             <div class="snippetcut__title">#{if (@config[:url]!='#') then "<a href=\""+@config[:url]+"\" target=\"_blank\"
         #                                                                               class=\"snippetcut__title-name\"
