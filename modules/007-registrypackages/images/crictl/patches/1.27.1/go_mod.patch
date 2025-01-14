@@ -1,5 +1,5 @@
 diff --git a/go.mod b/go.mod
-index bf3cbc15..0e9b172b 100644
+index bf3cbc15..14af1c27 100644
 --- a/go.mod
 +++ b/go.mod
 @@ -4,7 +4,7 @@ go 1.20
@@ -11,7 +11,7 @@ index bf3cbc15..0e9b172b 100644
  	github.com/docker/go-units v0.5.0
  	github.com/golang/glog v1.1.1
  	github.com/golang/protobuf v1.5.3
-@@ -17,9 +17,9 @@ require (
+@@ -17,16 +17,16 @@ require (
  	github.com/pborman/uuid v1.2.1
  	github.com/sirupsen/logrus v1.9.3
  	github.com/urfave/cli/v2 v2.25.7
@@ -24,6 +24,14 @@ index bf3cbc15..0e9b172b 100644
  	gopkg.in/yaml.v3 v3.0.1
  	k8s.io/api v0.0.0
  	k8s.io/apimachinery v0.0.0
+ 	k8s.io/client-go v0.0.0
+ 	k8s.io/cri-api v0.0.0
+ 	k8s.io/kubectl v0.0.0
+-	k8s.io/kubernetes v0.0.0
++	k8s.io/kubernetes v1.27.16
+ 	sigs.k8s.io/yaml v1.3.0
+ )
+ 
 @@ -37,7 +37,7 @@ require (
  	github.com/beorn7/perks v1.0.1 // indirect
  	github.com/blang/semver/v4 v4.0.0 // indirect
