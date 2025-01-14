@@ -2,15 +2,15 @@
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
 import:
-  - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-multitenancy-manager-artifact
+  - image: {{ $.ModuleName }}/{{ $.ImageName }}-multitenancy-manager-artifact
     add: /src/multitenancy-manager
     to: /multitenancy-manager
     before: setup
-  - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-multitenancy-manager-src-artifact
+  - image: {{ $.ModuleName }}/{{ $.ImageName }}-multitenancy-manager-src-artifact
     add: /src/templates
     to: /templates
     before: setup
-  - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-multitenancy-manager-src-artifact
+  - image: {{ $.ModuleName }}/{{ $.ImageName }}-multitenancy-manager-src-artifact
     add: /src/default
     to: /default
     before: setup
