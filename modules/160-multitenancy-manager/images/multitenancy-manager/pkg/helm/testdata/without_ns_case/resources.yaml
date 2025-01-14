@@ -13,59 +13,6 @@ spec: {}
 status: {}
 
 ---
-apiVersion: deckhouse.io/v1alpha1
-kind: OperationPolicy
-metadata:
-  labels:
-    heritage: multitenancy-manager
-    projects.deckhouse.io/project: test
-    projects.deckhouse.io/project-template: without_ns
-  name: required-requests-9f86d081
-  namespace: test
-spec:
-  match:
-    namespaceSelector:
-      labelSelector:
-        matchLabels:
-          kubernetes.io/metadata.name: test
-  policies:
-    requiredResources:
-      requests:
-      - cpu
-      - memory
-
----
-apiVersion: deckhouse.io/v1alpha1
-kind: AuthorizationRule
-metadata:
-  labels:
-    heritage: multitenancy-manager
-    projects.deckhouse.io/project: test
-    projects.deckhouse.io/project-template: without_ns
-  name: user-gmail-com
-  namespace: test
-spec:
-  accessLevel: Admin
-  subjects:
-  - kind: User
-    name: user@gmail.com
-
----
-apiVersion: v1
-kind: ResourceQuota
-metadata:
-  labels:
-    heritage: multitenancy-manager
-    projects.deckhouse.io/project: test
-    projects.deckhouse.io/project-template: without_ns
-  name: all-pods
-  namespace: test
-spec:
-  hard:
-    limits.memory: 15Gi
-    requests.cpu: 1
-
----
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
@@ -110,3 +57,56 @@ spec:
   policyTypes:
   - Ingress
   - Egress
+
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: OperationPolicy
+metadata:
+  labels:
+    heritage: multitenancy-manager
+    projects.deckhouse.io/project: test
+    projects.deckhouse.io/project-template: without_ns
+  name: required-requests-9f86d081
+  namespace: test
+spec:
+  match:
+    namespaceSelector:
+      labelSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: test
+  policies:
+    requiredResources:
+      requests:
+      - cpu
+      - memory
+
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: AuthorizationRule
+metadata:
+  labels:
+    heritage: multitenancy-manager
+    projects.deckhouse.io/project: test
+    projects.deckhouse.io/project-template: without_ns
+  name: user-gmail.com
+  namespace: test
+spec:
+  accessLevel: Admin
+  subjects:
+  - kind: User
+    name: user@gmail.com
+
+---
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  labels:
+    heritage: multitenancy-manager
+    projects.deckhouse.io/project: test
+    projects.deckhouse.io/project-template: without_ns
+  name: all-pods
+  namespace: test
+spec:
+  hard:
+    limits.memory: 15Gi
+    requests.cpu: 1
