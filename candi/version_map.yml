@@ -17,36 +17,8 @@ bashible: &bashible
     '15.5':
     '15.6':
 k8s:
-  '1.27':
-    status: end-of-life
-    patch: 16
-    bashible: *bashible
-    clusterAutoscalerPatch: 3
-    crictlPatch: 1
-    ccm:
-      openstack: v1.27.3
-      yandex: v0.31.0
-      aws: v1.27.1
-      vsphere: 4e80a0c86d2ae8a1b843b4ba9e5ac31707758912
-      azure: v1.27.21
-      gcp: ccm/v27.14.0
-    csi:
-      aws: v1.28.0
-      azure: v1.27.1
-      gcp: v1.10.18
-      yandex: v0.14.0
-      vcd: 1.6.0
-      zvirt: release-4.19
-      vsphere: v3.0.3
-      openstack: v1.27.3
-      provisioner: v3.5.0
-      attacher: v4.3.0
-      resizer: v1.8.0
-      registrar: v2.8.0
-      snapshotter: v6.3.1
-      livenessprobe: v2.11.0
   '1.28':
-    status: available
+    status: end-of-life
     patch: 15
     bashible: *bashible
     clusterAutoscalerPatch: 3
@@ -130,7 +102,7 @@ k8s:
       snapshotter: v8.0.0
       livenessprobe: v2.13.0
   '1.31':
-    status: preview
+    status: available
     patch: 4
     bashible: *bashible
     clusterAutoscalerPatch: '0'
@@ -157,6 +129,34 @@ k8s:
       registrar: v2.12.0
       snapshotter: v8.1.0
       livenessprobe: v2.14.0
+  '1.32':
+    status: preview
+    patch: 0
+    bashible: *bashible
+    clusterAutoscalerPatch: '0'
+    crictlPatch: 1
+    ccm:
+      openstack: v1.31.2
+      yandex: v0.30.0
+      aws: v1.32.0
+      vsphere: v1.32.1
+      azure: v1.32.0
+      gcp: ccm/v30.1.4
+    csi:
+      aws: v1.38.1
+      azure: v1.31.2
+      gcp: v1.15.3
+      yandex: v0.12.0
+      vcd: 1.6.0
+      zvirt: release-4.20
+      vsphere: v3.3.1
+      openstack: v1.31.2
+      provisioner: v5.1.0
+      attacher: v4.8.0
+      resizer: v1.13.0
+      registrar: v2.13.0
+      snapshotter: v8.1.1
+      livenessprobe: v2.15.0
 d8:
   d8CliVersion: v0.10.3
 jq:

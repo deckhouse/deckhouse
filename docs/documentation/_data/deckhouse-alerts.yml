@@ -1630,7 +1630,7 @@ alerts:
       description: |-
         The current Kubernetes version `{{ $labels.k8s_version }}` has been deprecated, and support for it will be removed in upcoming releases.
 
-        To resolve this issue, migrate to Kubernetes version `1.28` or later.
+        Please migrate to the next kubernetes version (at least 1.29)
 
         Refer to the [Kubernetes upgrade guide](https://deckhouse.io/documentation/deckhouse-faq.html#how-do-i-upgrade-the-kubernetes-version-in-a-cluster) for instructions.
       summary: |
