@@ -933,3 +933,18 @@ When there is 5-10% (random value from the range) of time left before the certif
 To ensure that kubelet has time to install the certificate before it expires, we recommend setting the certificate lifetime to more than 1 hour. The time is set using the `--cluster-signing-duration` argument in the `/etc/kubernetes/manifests/kube-controller-manager.yaml` manifest. By default, this value is 1 year (8760 hours).
 
 If the client certificate lifetime has expired, kubelet will not be able to make requests to kube-apiserver and will not be able to renew certificates. In this case, the node will be marked as `NotReady` and recreated.
+
+## How to manually update control plane component certificates?
+
+A situation may arise when the cluster master nodes are turned off for a long time. During this time, the control plane component certificates may expire. After the nodes are turned on, the certificates will not be updated automatically, so this must be done manually.
+Control plane component certificates are updated using the `kubeadm` utility
+To update control plane certificates, you must:
+
+1. Find the kubeadm utility on the master node and create a symbolic link
+   ```bash
+   ln -s $(find /var/lib/containerd -name kubeadm -type f -executable -print) /usr/bin/kubeadm
+   ```
+2. Update the certificates:
+   ```bash
+   kubeadm certs renew all
+   ```
