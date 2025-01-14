@@ -547,7 +547,7 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "gomod"
-  directory: "/modules/402-ingress-nginx/images/protobuf-exporter"
+  directory: "/modules/402-ingress-nginx/images/protobuf-exporter/src"
   labels:
   - "type/dependencies"
   - "status/ok-to-test"
@@ -556,7 +556,7 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "gomod"
-  directory: "/modules/402-ingress-nginx/images/proxy-failover"
+  directory: "/modules/402-ingress-nginx/images/proxy-failover/src"
   labels:
   - "type/dependencies"
   - "status/ok-to-test"
