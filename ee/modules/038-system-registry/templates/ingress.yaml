@@ -9,7 +9,6 @@ metadata:
   annotations:
     nginx.ingress.kubernetes.io/backend-protocol: HTTPS
     nginx.ingress.kubernetes.io/upstream-hash-by: "$remote_addr"
-    {{- /* 0 - no limit on the request body size */ -}}
     nginx.ingress.kubernetes.io/proxy-body-size: "0"
   {{- if .Values.systemRegistry.whitelistSourceRanges }}
     nginx.ingress.kubernetes.io/whitelist-source-range: {{ .Values.systemRegistry.whitelistSourceRanges | join "," }}

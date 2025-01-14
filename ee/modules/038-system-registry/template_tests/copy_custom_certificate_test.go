@@ -40,6 +40,7 @@ var _ = Describe("Module :: system-registry :: helm template :: custom-certifica
 	Context("Default", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYaml("systemRegistry", customCertificatePresent)
 			f.HelmRender()
 		})
