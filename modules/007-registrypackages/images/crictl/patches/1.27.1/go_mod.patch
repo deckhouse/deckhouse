@@ -1,5 +1,5 @@
 diff --git a/go.mod b/go.mod
-index bf3cbc15..62b98b0e 100644
+index bf3cbc15..8edef6a1 100644
 --- a/go.mod
 +++ b/go.mod
 @@ -4,10 +4,10 @@ go 1.20
@@ -78,12 +78,12 @@ index bf3cbc15..62b98b0e 100644
  	k8s.io/kubectl => k8s.io/kubernetes/staging/src/k8s.io/kubectl v0.0.0-20230614094738-25b4e43193bc
  	k8s.io/kubelet => k8s.io/kubernetes/staging/src/k8s.io/kubelet v0.0.0-20230614094738-25b4e43193bc
 -	k8s.io/kubernetes => k8s.io/kubernetes v1.27.3
-+	k8s.io/kubernetes => k8s.io/kubernetes v1.27.5
++	k8s.io/kubernetes => k8s.io/kubernetes v1.27.6
  	k8s.io/legacy-cloud-providers => k8s.io/kubernetes/staging/src/k8s.io/legacy-cloud-providers v0.0.0-20230614094738-25b4e43193bc
  	k8s.io/metrics => k8s.io/kubernetes/staging/src/k8s.io/metrics v0.0.0-20230614094738-25b4e43193bc
  	k8s.io/mount-utils => k8s.io/kubernetes/staging/src/k8s.io/mount-utils v0.0.0-20230614094738-25b4e43193bc
 diff --git a/go.sum b/go.sum
-index 1d619716..f590608d 100644
+index 1d619716..1e23a573 100644
 --- a/go.sum
 +++ b/go.sum
 @@ -13,13 +13,15 @@ cloud.google.com/go v0.56.0/go.mod h1:jr7tqZxxKOVYizybht9+26Z/gUq7tiRzu+ACVAMbKV
@@ -294,8 +294,8 @@ index 1d619716..f590608d 100644
  k8s.io/kube-openapi v0.0.0-20230501164219-8b0f38b5fd1f/go.mod h1:byini6yhqGC14c3ebc/QwanvYwhuMWF6yz2F8uwW8eg=
 -k8s.io/kubernetes v1.27.3 h1:gwufSj7y6X18Q2Gl8v4Ev+AJHdzWkG7A8VNFffS9vu0=
 -k8s.io/kubernetes v1.27.3/go.mod h1:U8ZXeKBAPxeb4J4/HOaxjw1A9K6WfSH+fY2SS7CR6IM=
-+k8s.io/kubernetes v1.27.5 h1:qnkrNAPz2jm/k+oWBNOJ6q+kCQ7OXkO8v3WWU9jumwo=
-+k8s.io/kubernetes v1.27.5/go.mod h1:MbYZxAacYS6HjZ6VJuvKaKTilbzp0B0atzW3J8TFBEo=
++k8s.io/kubernetes v1.27.6 h1:S89BDD6Rl316AMoxbkddiNhGyUHmxV3fdxGtrx8aqq8=
++k8s.io/kubernetes v1.27.6/go.mod h1:otFZGfN11HvC2Es0PN7FpbkSDRT7LYG7xyc9pCd6f4E=
  k8s.io/kubernetes/staging/src/k8s.io/api v0.0.0-20230614094738-25b4e43193bc h1:pljr+MQPoY2u+87NPyZ6ljZAKTd6YbslfaroZNP+dAQ=
  k8s.io/kubernetes/staging/src/k8s.io/api v0.0.0-20230614094738-25b4e43193bc/go.mod h1:BkLIWuLYarkyXCgyBapJTaVKh6Y6dtizkSS6yaOw90A=
  k8s.io/kubernetes/staging/src/k8s.io/apimachinery v0.0.0-20230614094738-25b4e43193bc h1:USfMnxcf1jvhuUStL7GGX8aCLTtYmhY9JNC8fBuHxzk=
