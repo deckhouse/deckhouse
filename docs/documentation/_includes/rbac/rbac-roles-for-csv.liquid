@@ -1,0 +1,11 @@
+{%- assign types = site.data.rbac.rbac_roles_for_csv.types %}
+{%- assign useRoles = site.data.rbac.rbac_roles_for_csv.useRoles %}
+
+
+role;capability;comment;{% for type in types %}{{ type }}{%- unless forloop.last %};{% endunless %}{% endfor %}
+
+
+{%- for role in useRoles %}
+  {{ role.capabilities }}
+{%- endfor %}
+
