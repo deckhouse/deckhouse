@@ -312,7 +312,8 @@ func (s *StepsStorage) renderNodeGroupConfigurations(ng string, templateContext 
 		if err != nil {
 			return nil, fmt.Errorf("cannot render node configuration %q: %v", sc.Name, err)
 		}
-		steps[step.FileName] = step.Content.String()
+		bbHeader := "### is bundle header ###"
+		steps[step.FileName] = fmt.Sprintf("%s\n%s", bbHeader, step.Content.String())
 	}
 
 	return steps, nil
