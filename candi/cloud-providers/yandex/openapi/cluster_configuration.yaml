@@ -421,6 +421,11 @@ apiVersions:
                   Amount of primary memory in MB provision on the NAT instance.
                 type: integer
                 default: 2048
+              platform:
+                description: |
+                  Processor platform type on the NAT instance.
+                type: string
+                default: "standard-v2"
       provider:
         type: object
         description: |
