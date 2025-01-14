@@ -1,5 +1,5 @@
 diff --git a/go.mod b/go.mod
-index 2a26e89e..cdd0c010 100644
+index 2a26e89e..600ae132 100644
 --- a/go.mod
 +++ b/go.mod
 @@ -4,21 +4,21 @@ go 1.20
@@ -72,17 +72,71 @@ index 2a26e89e..cdd0c010 100644
  	gopkg.in/inf.v0 v0.9.1 // indirect
  	gopkg.in/yaml.v2 v2.4.0 // indirect
  	k8s.io/apiextensions-apiserver v0.0.0 // indirect
-@@ -128,7 +129,7 @@ replace (
- 	k8s.io/kube-scheduler => k8s.io/kubernetes/staging/src/k8s.io/kube-scheduler v0.0.0-20230810203337-add7e14df11e
- 	k8s.io/kubectl => k8s.io/kubernetes/staging/src/k8s.io/kubectl v0.0.0-20230810203337-add7e14df11e
- 	k8s.io/kubelet => k8s.io/kubernetes/staging/src/k8s.io/kubelet v0.0.0-20230810203337-add7e14df11e
+@@ -105,33 +106,33 @@ require (
+ )
+ 
+ replace (
+-	k8s.io/api => k8s.io/kubernetes/staging/src/k8s.io/api v0.0.0-20230810203337-add7e14df11e
+-	k8s.io/apiextensions-apiserver => k8s.io/kubernetes/staging/src/k8s.io/apiextensions-apiserver v0.0.0-20230810203337-add7e14df11e
+-	k8s.io/apimachinery => k8s.io/kubernetes/staging/src/k8s.io/apimachinery v0.0.0-20230810203337-add7e14df11e
+-	k8s.io/apiserver => k8s.io/kubernetes/staging/src/k8s.io/apiserver v0.0.0-20230810203337-add7e14df11e
+-	k8s.io/cli-runtime => k8s.io/kubernetes/staging/src/k8s.io/cli-runtime v0.0.0-20230810203337-add7e14df11e
+-	k8s.io/client-go => k8s.io/kubernetes/staging/src/k8s.io/client-go v0.0.0-20230810203337-add7e14df11e
+-	k8s.io/cloud-provider => k8s.io/kubernetes/staging/src/k8s.io/cloud-provider v0.0.0-20230810203337-add7e14df11e
+-	k8s.io/cluster-bootstrap => k8s.io/kubernetes/staging/src/k8s.io/cluster-bootstrap v0.0.0-20230810203337-add7e14df11e
+-	k8s.io/code-generator => k8s.io/kubernetes/staging/src/k8s.io/code-generator v0.0.0-20230810203337-add7e14df11e
+-	k8s.io/component-base => k8s.io/kubernetes/staging/src/k8s.io/component-base v0.0.0-20230810203337-add7e14df11e
+-	k8s.io/component-helpers => k8s.io/kubernetes/staging/src/k8s.io/component-helpers v0.0.0-20230810203337-add7e14df11e
+-	k8s.io/controller-manager => k8s.io/kubernetes/staging/src/k8s.io/controller-manager v0.0.0-20230810203337-add7e14df11e
+-	k8s.io/cri-api => k8s.io/kubernetes/staging/src/k8s.io/cri-api v0.0.0-20230810203337-add7e14df11e
+-	k8s.io/csi-translation-lib => k8s.io/kubernetes/staging/src/k8s.io/csi-translation-lib v0.0.0-20230810203337-add7e14df11e
+-	k8s.io/dynamic-resource-allocation => k8s.io/kubernetes/staging/src/k8s.io/dynamic-resource-allocation v0.0.0-20230810203337-add7e14df11e
+-	k8s.io/endpointslice => k8s.io/kubernetes/staging/src/k8s.io/endpointslice v0.0.0-20230810203337-add7e14df11e
+-	k8s.io/kms => k8s.io/kubernetes/staging/src/k8s.io/kms v0.0.0-20230810203337-add7e14df11e
+-	k8s.io/kube-aggregator => k8s.io/kubernetes/staging/src/k8s.io/kube-aggregator v0.0.0-20230810203337-add7e14df11e
+-	k8s.io/kube-controller-manager => k8s.io/kubernetes/staging/src/k8s.io/kube-controller-manager v0.0.0-20230810203337-add7e14df11e
+-	k8s.io/kube-proxy => k8s.io/kubernetes/staging/src/k8s.io/kube-proxy v0.0.0-20230810203337-add7e14df11e
+-	k8s.io/kube-scheduler => k8s.io/kubernetes/staging/src/k8s.io/kube-scheduler v0.0.0-20230810203337-add7e14df11e
+-	k8s.io/kubectl => k8s.io/kubernetes/staging/src/k8s.io/kubectl v0.0.0-20230810203337-add7e14df11e
+-	k8s.io/kubelet => k8s.io/kubernetes/staging/src/k8s.io/kubelet v0.0.0-20230810203337-add7e14df11e
 -	k8s.io/kubernetes => k8s.io/kubernetes v1.28.0-rc.1
-+	k8s.io/kubernetes => k8s.io/kubernetes v1.28.2
- 	k8s.io/legacy-cloud-providers => k8s.io/kubernetes/staging/src/k8s.io/legacy-cloud-providers v0.0.0-20230810203337-add7e14df11e
- 	k8s.io/metrics => k8s.io/kubernetes/staging/src/k8s.io/metrics v0.0.0-20230810203337-add7e14df11e
- 	k8s.io/mount-utils => k8s.io/kubernetes/staging/src/k8s.io/mount-utils v0.0.0-20230810203337-add7e14df11e
+-	k8s.io/legacy-cloud-providers => k8s.io/kubernetes/staging/src/k8s.io/legacy-cloud-providers v0.0.0-20230810203337-add7e14df11e
+-	k8s.io/metrics => k8s.io/kubernetes/staging/src/k8s.io/metrics v0.0.0-20230810203337-add7e14df11e
+-	k8s.io/mount-utils => k8s.io/kubernetes/staging/src/k8s.io/mount-utils v0.0.0-20230810203337-add7e14df11e
+-	k8s.io/pod-security-admission => k8s.io/kubernetes/staging/src/k8s.io/pod-security-admission v0.0.0-20230810203337-add7e14df11e
+-	k8s.io/sample-apiserver => k8s.io/kubernetes/staging/src/k8s.io/sample-apiserver v0.0.0-20230810203337-add7e14df11e
++	k8s.io/api => k8s.io/kubernetes/staging/src/k8s.io/api v0.0.0-20241022202626-841856557ef0
++	k8s.io/apiextensions-apiserver => k8s.io/kubernetes/staging/src/k8s.io/apiextensions-apiserver v0.0.0-20241022202626-841856557ef0
++	k8s.io/apimachinery => k8s.io/kubernetes/staging/src/k8s.io/apimachinery v0.0.0-20241022202626-841856557ef0
++	k8s.io/apiserver => k8s.io/kubernetes/staging/src/k8s.io/apiserver v0.0.0-20241022202626-841856557ef0
++	k8s.io/cli-runtime => k8s.io/kubernetes/staging/src/k8s.io/cli-runtime v0.0.0-20241022202626-841856557ef0
++	k8s.io/client-go => k8s.io/kubernetes/staging/src/k8s.io/client-go v0.0.0-20241022202626-841856557ef0
++	k8s.io/cloud-provider => k8s.io/kubernetes/staging/src/k8s.io/cloud-provider v0.0.0-20241022202626-841856557ef0
++	k8s.io/cluster-bootstrap => k8s.io/kubernetes/staging/src/k8s.io/cluster-bootstrap v0.0.0-20241022202626-841856557ef0
++	k8s.io/code-generator => k8s.io/kubernetes/staging/src/k8s.io/code-generator v0.0.0-20241022202626-841856557ef0
++	k8s.io/component-base => k8s.io/kubernetes/staging/src/k8s.io/component-base v0.0.0-20241022202626-841856557ef0
++	k8s.io/component-helpers => k8s.io/kubernetes/staging/src/k8s.io/component-helpers v0.0.0-20241022202626-841856557ef0
++	k8s.io/controller-manager => k8s.io/kubernetes/staging/src/k8s.io/controller-manager v0.0.0-20241022202626-841856557ef0
++	k8s.io/cri-api => k8s.io/kubernetes/staging/src/k8s.io/cri-api v0.0.0-20241022202626-841856557ef0
++	k8s.io/csi-translation-lib => k8s.io/kubernetes/staging/src/k8s.io/csi-translation-lib v0.0.0-20241022202626-841856557ef0
++	k8s.io/dynamic-resource-allocation => k8s.io/kubernetes/staging/src/k8s.io/dynamic-resource-allocation v0.0.0-20241022202626-841856557ef0
++	k8s.io/endpointslice => k8s.io/kubernetes/staging/src/k8s.io/endpointslice v0.0.0-20241022202626-841856557ef0
++	k8s.io/kms => k8s.io/kubernetes/staging/src/k8s.io/kms v0.0.0-20241022202626-841856557ef0
++	k8s.io/kube-aggregator => k8s.io/kubernetes/staging/src/k8s.io/kube-aggregator v0.0.0-20241022202626-841856557ef0
++	k8s.io/kube-controller-manager => k8s.io/kubernetes/staging/src/k8s.io/kube-controller-manager v0.0.0-20241022202626-841856557ef0
++	k8s.io/kube-proxy => k8s.io/kubernetes/staging/src/k8s.io/kube-proxy v0.0.0-20241022202626-841856557ef0
++	k8s.io/kube-scheduler => k8s.io/kubernetes/staging/src/k8s.io/kube-scheduler v0.0.0-20241022202626-841856557ef0
++	k8s.io/kubectl => k8s.io/kubernetes/staging/src/k8s.io/kubectl v0.0.0-20241022202626-841856557ef0
++	k8s.io/kubelet => k8s.io/kubernetes/staging/src/k8s.io/kubelet v0.0.0-20241022202626-841856557ef0
++	k8s.io/kubernetes => k8s.io/kubernetes v1.28.15
++	k8s.io/legacy-cloud-providers => k8s.io/kubernetes/staging/src/k8s.io/legacy-cloud-providers v0.0.0-20241022202626-841856557ef0
++	k8s.io/metrics => k8s.io/kubernetes/staging/src/k8s.io/metrics v0.0.0-20241022202626-841856557ef0
++	k8s.io/mount-utils => k8s.io/kubernetes/staging/src/k8s.io/mount-utils v0.0.0-20241022202626-841856557ef0
++	k8s.io/pod-security-admission => k8s.io/kubernetes/staging/src/k8s.io/pod-security-admission v0.0.0-20241022202626-841856557ef0
++	k8s.io/sample-apiserver => k8s.io/kubernetes/staging/src/k8s.io/sample-apiserver v0.0.0-20241022202626-841856557ef0
+ )
 diff --git a/go.sum b/go.sum
-index c2438f95..58a57416 100644
+index c2438f95..fa7e8b65 100644
 --- a/go.sum
 +++ b/go.sum
 @@ -20,7 +20,7 @@ cloud.google.com/go/bigquery v1.4.0/go.mod h1:S8dzgnTigyfTmLBfrtrhyYhwRxG72rYxvf
@@ -251,14 +305,46 @@ index c2438f95..58a57416 100644
  gopkg.in/check.v1 v0.0.0-20161208181325-20d25e280405/go.mod h1:Co6ibVJAznAaIkqp8huTwlJQCZ016jof/cbN4VW5Yz0=
  gopkg.in/check.v1 v1.0.0-20180628173108-788fd7840127/go.mod h1:Co6ibVJAznAaIkqp8huTwlJQCZ016jof/cbN4VW5Yz0=
  gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c h1:Hei/4ADfdWqJk1ZMxUNpqntNwaWcugrBjAiHlqqRiVk=
-@@ -601,8 +604,8 @@ k8s.io/klog/v2 v2.100.1 h1:7WCHKK6K8fNhTqfBhISHQ97KrnJNFZMcQvKp7gP/tmg=
+@@ -601,24 +604,24 @@ k8s.io/klog/v2 v2.100.1 h1:7WCHKK6K8fNhTqfBhISHQ97KrnJNFZMcQvKp7gP/tmg=
  k8s.io/klog/v2 v2.100.1/go.mod h1:y1WjHnz7Dj687irZUWR/WLkLc5N1YHtjLdmgWjndZn0=
  k8s.io/kube-openapi v0.0.0-20230717233707-2695361300d9 h1:LyMgNKD2P8Wn1iAwQU5OhxCKlKJy0sHc+PcDwFB24dQ=
  k8s.io/kube-openapi v0.0.0-20230717233707-2695361300d9/go.mod h1:wZK2AVp1uHCp4VamDVgBP2COHZjqD1T68Rf0CM3YjSM=
 -k8s.io/kubernetes v1.28.0-rc.1 h1:MNHQ5sYYOJOHIc/q9cKaJ7PW5ZjvmGQwjiI9FcIMYxc=
 -k8s.io/kubernetes v1.28.0-rc.1/go.mod h1:rBQpjGYlLBV0KuOLw8EG45N5EBCskWiPpi0xy5liHMI=
-+k8s.io/kubernetes v1.28.2 h1:GhcnYeNTukeaC0dD5BC+UWBvzQsFEpWj7XBVMQptfYc=
-+k8s.io/kubernetes v1.28.2/go.mod h1:FmB1Mlp9ua0ezuwQCTGs/y6wj/fVisN2sVxhzjj0WDk=
- k8s.io/kubernetes/staging/src/k8s.io/api v0.0.0-20230810203337-add7e14df11e h1:E3BFgz6yp3pwWPFNDs4IMtndGum2WpIhKi3ofKmmKAw=
- k8s.io/kubernetes/staging/src/k8s.io/api v0.0.0-20230810203337-add7e14df11e/go.mod h1:8xzcEoDNNrqJCJPhjd93lvErGyOVp5/89+/Bo6MhbTg=
- k8s.io/kubernetes/staging/src/k8s.io/apiextensions-apiserver v0.0.0-20230810203337-add7e14df11e h1:ON8fq/OntqCh9QUc7hCiEMLDdPyp9pGEdgAxOmvnmv4=
+-k8s.io/kubernetes/staging/src/k8s.io/api v0.0.0-20230810203337-add7e14df11e h1:E3BFgz6yp3pwWPFNDs4IMtndGum2WpIhKi3ofKmmKAw=
+-k8s.io/kubernetes/staging/src/k8s.io/api v0.0.0-20230810203337-add7e14df11e/go.mod h1:8xzcEoDNNrqJCJPhjd93lvErGyOVp5/89+/Bo6MhbTg=
+-k8s.io/kubernetes/staging/src/k8s.io/apiextensions-apiserver v0.0.0-20230810203337-add7e14df11e h1:ON8fq/OntqCh9QUc7hCiEMLDdPyp9pGEdgAxOmvnmv4=
+-k8s.io/kubernetes/staging/src/k8s.io/apiextensions-apiserver v0.0.0-20230810203337-add7e14df11e/go.mod h1:tZvumLf9vHRjwDsJRhIny4YVGx+8sCce1naTRER8dBk=
+-k8s.io/kubernetes/staging/src/k8s.io/apimachinery v0.0.0-20230810203337-add7e14df11e h1:H95ziVHyucTK6Q3XuFQt1VtIY7CP28JEBr2zVdmq7os=
+-k8s.io/kubernetes/staging/src/k8s.io/apimachinery v0.0.0-20230810203337-add7e14df11e/go.mod h1:EfuOiBWTT14aPm2HEaG+cI4d+7UeOlmthQPEuyicSH0=
+-k8s.io/kubernetes/staging/src/k8s.io/apiserver v0.0.0-20230810203337-add7e14df11e h1:Ost9n6xR3/i3G2vCzaalcg5RGgrzqG1G21CT4EJIn8g=
+-k8s.io/kubernetes/staging/src/k8s.io/apiserver v0.0.0-20230810203337-add7e14df11e/go.mod h1:DbcpaHEOqYVZ+g8IrmlkM8vM6L7aX7nzJDu+4oEoltY=
+-k8s.io/kubernetes/staging/src/k8s.io/client-go v0.0.0-20230810203337-add7e14df11e h1:L4uLwGRz+Dx5OYggE/IB2ueiEU4/5lEp5+QVUpfHYJ4=
+-k8s.io/kubernetes/staging/src/k8s.io/client-go v0.0.0-20230810203337-add7e14df11e/go.mod h1:e80ivewkGiKTAAr+jW+Oa+wjdOcAd5ePsOEqZ9P14G8=
+-k8s.io/kubernetes/staging/src/k8s.io/component-base v0.0.0-20230810203337-add7e14df11e h1:x8TyR7+gaPweHaV87jvYxv4J09oSA7eoG78CkYIZc1o=
+-k8s.io/kubernetes/staging/src/k8s.io/component-base v0.0.0-20230810203337-add7e14df11e/go.mod h1:0RA31RlGnXZdzSWHNR1OKn+7aVzRZXSrZIguBtFFJX0=
+-k8s.io/kubernetes/staging/src/k8s.io/cri-api v0.0.0-20230810203337-add7e14df11e h1:fmhGPwc4kVTIvGeqdn9ggQzA3N+RGLaJq+ZSeVTBsm0=
+-k8s.io/kubernetes/staging/src/k8s.io/cri-api v0.0.0-20230810203337-add7e14df11e/go.mod h1:KPLEHfMFAw9ArVJOSjVXco3LkTvUhUK+ixB+3ZN1sCI=
+-k8s.io/kubernetes/staging/src/k8s.io/kubectl v0.0.0-20230810203337-add7e14df11e h1:MOp/Hb5a1omDtXoIQuVp7OYtGIOnBh/e0a1AkgPrGVY=
+-k8s.io/kubernetes/staging/src/k8s.io/kubectl v0.0.0-20230810203337-add7e14df11e/go.mod h1:O0FzHmTFAdcgIT2YqxDFCQUZH7fFoN+egmB354typ3M=
++k8s.io/kubernetes v1.28.15 h1:d91N2Znk+E8REIJZlrD6za2JtIwvEypa0DB1IoU4fJ0=
++k8s.io/kubernetes v1.28.15/go.mod h1:chlmcCDBnOA/y+572cw8dO0Rci1wiA8bm5+zhPdFLCk=
++k8s.io/kubernetes/staging/src/k8s.io/api v0.0.0-20241022202626-841856557ef0 h1:hmbeV1ecL8hnGop7f8jIpL7W+IsHYyhfag66FaYB50A=
++k8s.io/kubernetes/staging/src/k8s.io/api v0.0.0-20241022202626-841856557ef0/go.mod h1:pkQ1fRUQGPIcEafim+HRGpLoINmJ5NXdD9PCsdNF7sM=
++k8s.io/kubernetes/staging/src/k8s.io/apiextensions-apiserver v0.0.0-20241022202626-841856557ef0 h1:xD+5DEgW0CSB2mhSzBNKerRH/puqivA9I2Ef4ZKJfgg=
++k8s.io/kubernetes/staging/src/k8s.io/apiextensions-apiserver v0.0.0-20241022202626-841856557ef0/go.mod h1:jYu2WJNys0YsaQaWogXmC8vXzPrk5mClz/XZNWrgwpk=
++k8s.io/kubernetes/staging/src/k8s.io/apimachinery v0.0.0-20241022202626-841856557ef0 h1:iJIE2kerv0A8Tir61/GUaOWdmkovapw23d+nt/P4hag=
++k8s.io/kubernetes/staging/src/k8s.io/apimachinery v0.0.0-20241022202626-841856557ef0/go.mod h1:uWR2HuDJVCHpIROldiK0YakARglCGuNMR6eGkt08ywQ=
++k8s.io/kubernetes/staging/src/k8s.io/apiserver v0.0.0-20241022202626-841856557ef0 h1:msy/8CWi9r1pRGeSWiMmHQDj8lH6z3z3GY9QV+L49Rs=
++k8s.io/kubernetes/staging/src/k8s.io/apiserver v0.0.0-20241022202626-841856557ef0/go.mod h1:T2OGq17rzeHxuU3TgMpJmjImFyYTavKkD0FJM1mVQ8s=
++k8s.io/kubernetes/staging/src/k8s.io/client-go v0.0.0-20241022202626-841856557ef0 h1:k4O59gUm7nUeyaKdee45zPDHPywnnYrdhik87a1PhDU=
++k8s.io/kubernetes/staging/src/k8s.io/client-go v0.0.0-20241022202626-841856557ef0/go.mod h1:5/W9XaqI1bRF/L+tZT0SExq+XEBrMES+wEiIUphJDCY=
++k8s.io/kubernetes/staging/src/k8s.io/component-base v0.0.0-20241022202626-841856557ef0 h1:HYsL0DgnMRkOVpp3fCG3URRZRqcQnHOZjEIcEtrcHB8=
++k8s.io/kubernetes/staging/src/k8s.io/component-base v0.0.0-20241022202626-841856557ef0/go.mod h1:nKweG7AAnRoQa9GFnstbk19WEY0yqgEkGDKqCMGQkyA=
++k8s.io/kubernetes/staging/src/k8s.io/cri-api v0.0.0-20241022202626-841856557ef0 h1:whb+6ZFecX6AW7VCSdIuwFWZkt90Rg+H84EEq63Whck=
++k8s.io/kubernetes/staging/src/k8s.io/cri-api v0.0.0-20241022202626-841856557ef0/go.mod h1:wvJ+QNRnFlQBxZ+zKhj9Hq42OECxNF+4VVLBjEbTkzU=
++k8s.io/kubernetes/staging/src/k8s.io/kubectl v0.0.0-20241022202626-841856557ef0 h1:iNrPe1u70TD0AD1h2w1PCcjkBKsFhapeq6wNqfxxWPo=
++k8s.io/kubernetes/staging/src/k8s.io/kubectl v0.0.0-20241022202626-841856557ef0/go.mod h1:p0+Uqj6KBZcTk9pmm/wdK8wQXqqa6LRpxRywnRWuHIM=
+ k8s.io/utils v0.0.0-20230406110748-d93618cff8a2 h1:qY1Ad8PODbnymg2pRbkyMT/ylpTrCM8P2RJ0yroCyIk=
+ k8s.io/utils v0.0.0-20230406110748-d93618cff8a2/go.mod h1:OLgZIPagt7ERELqWJFomSt595RzquPNLL48iOWgYOg0=
+ rsc.io/binaryregexp v0.2.0/go.mod h1:qTv7/COck+e2FymRvadv62gMdZztPaShugOCi3I+8D8=
