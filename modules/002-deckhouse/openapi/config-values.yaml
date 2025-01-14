@@ -1,5 +1,9 @@
 type: object
 properties:
+  chrooted:
+    type: boolean
+    default: false
+    description: Defines if Deckhouse has to run modules' exec scripts in an isolated environment.
   logLevel:
     type: string
     enum: ["Debug", "Info", "Error"]

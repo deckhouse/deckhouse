@@ -72,7 +72,9 @@ spec:
       annotations:
         checksum/registry: {{ include (print $.Template.BasePath "/registry-secret.yaml") . | sha256sum }}
         kubectl.kubernetes.io/default-container: deckhouse
+{{- if .Values.deckhouse.chrooted }}
         container.apparmor.security.beta.kubernetes.io/deckhouse: localhost/deckhouse-controller
+{{- end }}
     spec:
       affinity:
         nodeAffinity:
@@ -128,12 +130,18 @@ spec:
       containers:
         - name: deckhouse
           {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_with_selinux" . | nindent 10 }}
+{{- if .Values.deckhouse.chrooted }}
             capabilities:
               add:
               - SYS_ADMIN
+{{- end }}
           command:
+{{- if .Values.deckhouse.chrooted }}
             - /usr/bin/cap-wrapper
             - -runDeckhouseController=true
+{{- else }}
+            - /deckhouse/deckhouse
+{{- end }}
           image: "{{ .Values.deckhouse.internal.currentReleaseImageName }}"
           imagePullPolicy: Always
           env:
@@ -218,10 +226,12 @@ spec:
               value: /tmp/.bash_history
             - name: DEBUG_HTTP_SERVER_ADDR
               value: "127.0.0.1:9652"
+{{- if .Values.deckhouse.chrooted }}
             - name: ADDON_OPERATOR_SHELL_CHROOT_DIR
               value: "/chroot"
             - name: ADDON_OPERATOR_SHELL_WRAPPER
               value: "/usr/bin/cap-wrapper"
+{{- end }}
           ports:
             - containerPort: 4222
               name: self
@@ -245,8 +255,10 @@ spec:
           volumeMounts:
           - mountPath: /tmp
             name: tmp
+{{- if .Values.deckhouse.chrooted }}
           - mountPath: /chroot
             name: chroot
+{{- end }}            
           - mountPath: /.kube
             name: kube
           - mountPath: /certs
@@ -311,9 +323,10 @@ spec:
       - emptyDir:
           medium: Memory
         name: tmp
+{{- if .Values.deckhouse.chrooted }}
       - emptyDir:
-          medium: Memory
         name: chroot
+{{- end }}        
       - emptyDir:
           medium: Memory
         name: kube
