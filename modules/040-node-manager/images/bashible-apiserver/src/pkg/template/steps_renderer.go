@@ -42,8 +42,8 @@ type StepsRenderer struct {
 }
 
 // Render renders single script content by name which is expected to be of form {os}.{target}
-func (s StepsRenderer) Render(name string, ng ...string) (map[string]string, error) {
-	templateContext, err := s.getContext(name)
+func (s StepsRenderer) Render(ng string) (map[string]string, error) {
+	templateContext, err := s.getContext(ng)
 	if err != nil {
 		return nil, err
 	}
@@ -52,7 +52,7 @@ func (s StepsRenderer) Render(name string, ng ...string) (map[string]string, err
 		return nil, err
 	}
 
-	return s.stepsStorage.Render(s.target, providerType, templateContext, ng...)
+	return s.stepsStorage.Render(s.target, providerType, templateContext, ng)
 }
 
 func (s StepsRenderer) getContext(name string) (map[string]interface{}, error) {

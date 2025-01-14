@@ -43,13 +43,9 @@ type StorageWithK8sBundles struct {
 
 // Render renders single script content by name which is expected to be of form {bundle}.{node-group-name}
 // with hyphens as delimiters, e.g. `ubuntu-lts.master`.
-func (s StorageWithK8sBundles) Render(name string) (runtime.Object, error) {
-	_, ng, err := template.ParseName(name)
-	if err != nil {
-		return nil, err
-	}
+func (s StorageWithK8sBundles) Render(ng string) (runtime.Object, error) {
 
-	ngBundleData, err := s.ngRenderer.Render(name, ng)
+	ngBundleData, err := s.ngRenderer.Render(ng)
 	if err != nil {
 		return nil, err
 	}
