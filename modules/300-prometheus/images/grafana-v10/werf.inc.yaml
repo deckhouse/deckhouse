@@ -2,7 +2,8 @@
 {{ $grafanaVersion := "10.4.14" }}
 {{ $bundledPlugins := "petrslavotinek-carpetplot-panel,vonage-status-panel,btplc-status-dot-panel,natel-plotly-panel,savantly-heatmap-panel,grafana-piechart-panel,grafana-worldmap-panel" }}
 ---
-artifact: {{ $.ModuleName }}/{{ $.ImageName }}-src-files
+image: {{ $.ModuleName }}/{{ $.ImageName }}-src-files
+final: false
 from: {{ $.Images.BASE_ALPINE_DEV }}
 git:
 - add: /{{ $.ModulePath }}modules/300-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
@@ -23,13 +24,14 @@ shell:
   - git clone --depth 1 --branch v{{ $grafanaVersion }} {{ $.SOURCE_REPO }}/grafana/grafana-deps.git /grafana-public
   - find /patches -name '*.patch' -exec git apply {} \;
 ---
-artifact: {{ $.ModuleName }}/{{ $.ImageName }}-go-builder
+image: {{ $.ModuleName }}/{{ $.ImageName }}-go-builder
+final: false
 from: {{ $.Images.BASE_GOLANG_23_BULLSEYE }}
 mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
 import:
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-src-files
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-files
   add: /usr/src/app
   to: /usr/src/app
   before: install
@@ -44,7 +46,8 @@ shell:
   - /go/bin/wire gen -tags oss ./pkg/server
   - go build -ldflags -w -ldflags "-X main.version={{ $grafanaVersion }} -linkmode external -extldflags -static" -tags netgo -o ./bin/linux-amd64/grafana ./pkg/cmd/grafana
 ---
-artifact: {{ $.ModuleName }}/{{ $.ImageName }}-entrypoint
+image: {{ $.ModuleName }}/{{ $.ImageName }}-entrypoint
+final: false
 from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
 mount:
 - fromPath: ~/go-pkg-cache
@@ -63,18 +66,19 @@ shell:
   - chown -R 64535:64535 /app/
   - chmod 0700 /app/entrypoint
 ---
-artifact: {{ $.ModuleName }}/{{ $.ImageName }}-grafana-distr
+image: {{ $.ModuleName }}/{{ $.ImageName }}-grafana-distr
+final: false
 from: {{ $.Images.BASE_UBUNTU_DEV }}
 import:
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-go-builder
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-go-builder
   add: /usr/src/app/bin/linux-amd64/grafana
   to: /usr/share/grafana/bin/grafana
   before: install
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-src-files
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-files
   add: /grafana-public/public
   to: /usr/share/grafana/public
   before: install
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-src-files
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-files
   add: /usr/src/app/conf
   to: /usr/share/grafana/conf
   before: install
@@ -134,36 +138,26 @@ shell:
   - chown -R 64535:64535 /var/log/grafana
   - chmod 0700 ./bin/grafana
 ---
-artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
-from: {{ $.Images.BASE_ALT }}
----
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: common/distroless
 import:
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
-  add: /
-  to: /
-  includePaths:
-  - usr/lib
-  - usr/lib64
-  before: install
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-entrypoint
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-entrypoint
   add: /app/entrypoint
   to: /usr/local/bin/entrypoint
   before: install
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-grafana-distr
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-grafana-distr
   add: /usr/share/grafana/
   to: /usr/share/grafana
   before: install
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-grafana-distr
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-grafana-distr
   add: /etc/grafana/
   to: /etc/grafana
   before: install
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-grafana-distr
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-grafana-distr
   add: /var/lib/grafana/
   to: /var/lib/grafana
   before: install
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-grafana-distr
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-grafana-distr
   add: /var/log/grafana/
   to: /var/log/grafana
   before: install
