@@ -18,6 +18,7 @@ import (
 	_ "github.com/deckhouse/deckhouse/ee/modules/030-cloud-provider-openstack/hooks"
 	_ "github.com/deckhouse/deckhouse/ee/modules/030-cloud-provider-vcd/hooks"
 	_ "github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks"
+	_ "github.com/deckhouse/deckhouse/ee/modules/038-system-registry/hooks/https"
 	_ "github.com/deckhouse/deckhouse/ee/modules/110-istio/hooks/ee"
 	_ "github.com/deckhouse/deckhouse/ee/modules/110-istio/hooks/ee/lib/crd"
 	_ "github.com/deckhouse/deckhouse/ee/modules/150-user-authn/hooks"
