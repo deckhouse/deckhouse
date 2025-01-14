@@ -77,7 +77,7 @@ shell:
   - export GOPROXY={{ $.GOPROXY }}
   - cd /src/cri-tools
   - go mod vendor
-  - export VERSION=v{{ $full_version }}
+  - export VERSION={{ $full_version }}
   - make install crictl
   - mv /usr/local/bin/crictl /crictl
   - mv /src/scripts/* /
