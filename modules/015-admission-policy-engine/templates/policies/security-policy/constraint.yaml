@@ -117,13 +117,15 @@ spec:
     scope: Namespaced
     {{- include "constraint_selector" (list $cr) }}
   parameters:
-    {{- if not $cr.spec.policies.allowHostPID }}
-    allowHostPID:
-      {{- $cr.spec.policies.allowHostPID | toYaml | nindent 6 }}
+    {{- if $cr.spec.policies.allowHostPID }}
+    allowHostPID: true
+    {{- else }}
+    allowHostPID: false
     {{- end }}
-    {{- if not $cr.spec.policies.allowHostIPC }}
-    allowHostIPC:
-      {{- $cr.spec.policies.allowHostIPC | toYaml | nindent 6 }}
+    {{- if $cr.spec.policies.allowHostIPC }}
+    allowHostIPC: true
+    {{- else }}
+    allowHostIPC: false
     {{- end }}
 {{- end }}
 
