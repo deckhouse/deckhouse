@@ -1,16 +1,19 @@
 diff --git a/go.mod b/go.mod
-index 2a26e89e..365ab2c2 100644
+index 2a26e89e..43719aa2 100644
 --- a/go.mod
 +++ b/go.mod
-@@ -4,7 +4,7 @@ go 1.20
+@@ -4,9 +4,9 @@ go 1.20
  
  require (
  	github.com/docker/distribution v2.8.2+incompatible
 -	github.com/docker/docker v24.0.5+incompatible
 +	github.com/docker/docker v25.0.7+incompatible
  	github.com/docker/go-units v0.5.0
- 	github.com/golang/protobuf v1.5.3
+-	github.com/golang/protobuf v1.5.3
++	github.com/golang/protobuf v1.5.4
  	github.com/google/uuid v1.3.0
+ 	github.com/moby/term v0.5.0
+ 	github.com/onsi/ginkgo/v2 v2.11.0
 @@ -16,9 +16,9 @@ require (
  	github.com/opencontainers/selinux v1.11.0
  	github.com/sirupsen/logrus v1.9.3
@@ -66,8 +69,17 @@ index 2a26e89e..365ab2c2 100644
  	gopkg.in/inf.v0 v0.9.1 // indirect
  	gopkg.in/yaml.v2 v2.4.0 // indirect
  	k8s.io/apiextensions-apiserver v0.0.0 // indirect
+@@ -128,7 +129,7 @@ replace (
+ 	k8s.io/kube-scheduler => k8s.io/kubernetes/staging/src/k8s.io/kube-scheduler v0.0.0-20230810203337-add7e14df11e
+ 	k8s.io/kubectl => k8s.io/kubernetes/staging/src/k8s.io/kubectl v0.0.0-20230810203337-add7e14df11e
+ 	k8s.io/kubelet => k8s.io/kubernetes/staging/src/k8s.io/kubelet v0.0.0-20230810203337-add7e14df11e
+-	k8s.io/kubernetes => k8s.io/kubernetes v1.28.0-rc.1
++	k8s.io/kubernetes => k8s.io/kubernetes v1.28.2
+ 	k8s.io/legacy-cloud-providers => k8s.io/kubernetes/staging/src/k8s.io/legacy-cloud-providers v0.0.0-20230810203337-add7e14df11e
+ 	k8s.io/metrics => k8s.io/kubernetes/staging/src/k8s.io/metrics v0.0.0-20230810203337-add7e14df11e
+ 	k8s.io/mount-utils => k8s.io/kubernetes/staging/src/k8s.io/mount-utils v0.0.0-20230810203337-add7e14df11e
 diff --git a/go.sum b/go.sum
-index c2438f95..2ffc1972 100644
+index c2438f95..c35317d5 100644
 --- a/go.sum
 +++ b/go.sum
 @@ -20,7 +20,7 @@ cloud.google.com/go/bigquery v1.4.0/go.mod h1:S8dzgnTigyfTmLBfrtrhyYhwRxG72rYxvf
@@ -112,6 +124,17 @@ index c2438f95..2ffc1972 100644
  github.com/felixge/httpsnoop v1.0.3 h1:s/nj+GCswXYzN5v2DpNMuMQYe+0DDwt5WVCU6CWBdXk=
  github.com/felixge/httpsnoop v1.0.3/go.mod h1:m8KPJKqk1gH5J9DgRY2ASl2lWCfGKXixSwevea8zH2U=
  github.com/fsnotify/fsnotify v1.6.0 h1:n+5WquG0fcWoWp6xPWfHdbskMCQaFnG6PfBrh1Ky4HY=
+@@ -143,8 +145,8 @@ github.com/golang/protobuf v1.4.2/go.mod h1:oDoupMAO8OvCJWAcko0GGGIgR6R6ocIYbsSw
+ github.com/golang/protobuf v1.4.3/go.mod h1:oDoupMAO8OvCJWAcko0GGGIgR6R6ocIYbsSw735rRwI=
+ github.com/golang/protobuf v1.5.0/go.mod h1:FsONVRAS9T7sI+LIUmWTfcYkHO4aIWwzhcaSAoJOfIk=
+ github.com/golang/protobuf v1.5.2/go.mod h1:XVQd3VNwM+JqD3oG2Ue2ip4fOMUkwXdXDdiuN0vRsmY=
+-github.com/golang/protobuf v1.5.3 h1:KhyjKVUg7Usr/dYsdSqoFveMYd5ko72D+zANwlG1mmg=
+-github.com/golang/protobuf v1.5.3/go.mod h1:XVQd3VNwM+JqD3oG2Ue2ip4fOMUkwXdXDdiuN0vRsmY=
++github.com/golang/protobuf v1.5.4 h1:i7eJL8qZTpSEXOPTxNKhASYpMn+8e5Q6AdndVa1dWek=
++github.com/golang/protobuf v1.5.4/go.mod h1:lnTiLA8Wa4RWRcIUkrtSVa5nRhsEGBg48fD6rSs7xps=
+ github.com/google/btree v0.0.0-20180813153112-4030bb1f1f0c/go.mod h1:lNA+9X1NB3Zf8V7Ke586lFgjr2dZNuvo3lPJSGZ5JPQ=
+ github.com/google/btree v1.0.0/go.mod h1:lNA+9X1NB3Zf8V7Ke586lFgjr2dZNuvo3lPJSGZ5JPQ=
+ github.com/google/gnostic-models v0.6.8 h1:yo/ABAfM5IMRsS1VnXjTBvUb61tFIHozhlYvRgGre9I=
 @@ -158,8 +160,8 @@ github.com/google/go-cmp v0.5.0/go.mod h1:v8dTdLbMG2kIc/vJvl+f65V22dbkXbowE6jgT/
  github.com/google/go-cmp v0.5.1/go.mod h1:v8dTdLbMG2kIc/vJvl+f65V22dbkXbowE6jgT/gNBxE=
  github.com/google/go-cmp v0.5.5/go.mod h1:v8dTdLbMG2kIc/vJvl+f65V22dbkXbowE6jgT/gNBxE=
@@ -214,3 +237,14 @@ index c2438f95..2ffc1972 100644
  gopkg.in/check.v1 v0.0.0-20161208181325-20d25e280405/go.mod h1:Co6ibVJAznAaIkqp8huTwlJQCZ016jof/cbN4VW5Yz0=
  gopkg.in/check.v1 v1.0.0-20180628173108-788fd7840127/go.mod h1:Co6ibVJAznAaIkqp8huTwlJQCZ016jof/cbN4VW5Yz0=
  gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c h1:Hei/4ADfdWqJk1ZMxUNpqntNwaWcugrBjAiHlqqRiVk=
+@@ -601,8 +604,8 @@ k8s.io/klog/v2 v2.100.1 h1:7WCHKK6K8fNhTqfBhISHQ97KrnJNFZMcQvKp7gP/tmg=
+ k8s.io/klog/v2 v2.100.1/go.mod h1:y1WjHnz7Dj687irZUWR/WLkLc5N1YHtjLdmgWjndZn0=
+ k8s.io/kube-openapi v0.0.0-20230717233707-2695361300d9 h1:LyMgNKD2P8Wn1iAwQU5OhxCKlKJy0sHc+PcDwFB24dQ=
+ k8s.io/kube-openapi v0.0.0-20230717233707-2695361300d9/go.mod h1:wZK2AVp1uHCp4VamDVgBP2COHZjqD1T68Rf0CM3YjSM=
+-k8s.io/kubernetes v1.28.0-rc.1 h1:MNHQ5sYYOJOHIc/q9cKaJ7PW5ZjvmGQwjiI9FcIMYxc=
+-k8s.io/kubernetes v1.28.0-rc.1/go.mod h1:rBQpjGYlLBV0KuOLw8EG45N5EBCskWiPpi0xy5liHMI=
++k8s.io/kubernetes v1.28.2 h1:GhcnYeNTukeaC0dD5BC+UWBvzQsFEpWj7XBVMQptfYc=
++k8s.io/kubernetes v1.28.2/go.mod h1:FmB1Mlp9ua0ezuwQCTGs/y6wj/fVisN2sVxhzjj0WDk=
+ k8s.io/kubernetes/staging/src/k8s.io/api v0.0.0-20230810203337-add7e14df11e h1:E3BFgz6yp3pwWPFNDs4IMtndGum2WpIhKi3ofKmmKAw=
+ k8s.io/kubernetes/staging/src/k8s.io/api v0.0.0-20230810203337-add7e14df11e/go.mod h1:8xzcEoDNNrqJCJPhjd93lvErGyOVp5/89+/Bo6MhbTg=
+ k8s.io/kubernetes/staging/src/k8s.io/apiextensions-apiserver v0.0.0-20230810203337-add7e14df11e h1:ON8fq/OntqCh9QUc7hCiEMLDdPyp9pGEdgAxOmvnmv4=
