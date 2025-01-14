@@ -41,8 +41,7 @@ type StorageWithK8sBundles struct {
 	bashibleContext template.Context
 }
 
-// Render renders single script content by name which is expected to be of form {bundle}.{node-group-name}
-// with hyphens as delimiters, e.g. `ubuntu-lts.master`.
+// Render renders single script content by name which is expected to be of form {node-group-name}.
 func (s StorageWithK8sBundles) Render(ng string) (runtime.Object, error) {
 
 	ngBundleData, err := s.ngRenderer.Render(ng)
@@ -51,7 +50,7 @@ func (s StorageWithK8sBundles) Render(ng string) (runtime.Object, error) {
 	}
 
 	obj := bashible.NodeGroupBundle{}
-	obj.ObjectMeta.Name = name
+	obj.ObjectMeta.Name = ng
 	obj.ObjectMeta.CreationTimestamp = metav1.NewTime(time.Now())
 	obj.Data = ngBundleData
 
