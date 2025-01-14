@@ -41,6 +41,9 @@ func ParseName(name string) (string, string, error) {
 // "bashible-centos.worker" - > "bashible.worker"
 func TransformName(name string) (string, error) {
 	parts := strings.Split(name, ".")
+	if len(parts) == 1 {
+		return name, nil
+	}
 	resource, ng := parts[0], parts[1]
 	partName := strings.Split(resource, "-")
 	if len(parts) != 2 {
