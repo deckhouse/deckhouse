@@ -1,3 +1,11 @@
+{{- /* 
+    Secret: "embedded-registry-ingress-tls-customcertificate"
+    Condition: created if mode == "CustomCertificate"
+    How it works:
+        - fetches a secret with the name "https.customCertificate.secretName" in the "d8-system" namespace
+          using the hook "https/copy_custom_certificate.go"
+        - creates a similar secret named "embedded-registry-ingress-tls-customcertificate" in the "d8-system" namespace
+*/ -}}
 {{- if .Values.global.enabledModules | has "cert-manager" }}
 {{- include "helm_lib_module_https_copy_custom_certificate" (list . "d8-system" "embedded-registry-ingress-tls") -}}
 {{- end }}

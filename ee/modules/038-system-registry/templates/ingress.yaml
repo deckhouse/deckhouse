@@ -9,7 +9,8 @@ metadata:
   annotations:
     nginx.ingress.kubernetes.io/backend-protocol: HTTPS
     nginx.ingress.kubernetes.io/upstream-hash-by: "$remote_addr"
-    nginx.ingress.kubernetes.io/proxy-body-size: "0" # 0 - no limit on the request body size
+    {{- /* 0 - no limit on the request body size */ -}}
+    nginx.ingress.kubernetes.io/proxy-body-size: "0"
   {{- if .Values.systemRegistry.whitelistSourceRanges }}
     nginx.ingress.kubernetes.io/whitelist-source-range: {{ .Values.systemRegistry.whitelistSourceRanges | join "," }}
   {{- end }}
@@ -26,29 +27,17 @@ spec:
               number: 5001
         path: /
         pathType: Prefix
+  {{- /* 
+      TLS for the ingress
+      Condition: enabled if mode == CustomCertificate or CertManager
+      How it works:
+          - if mode == CertManager - uses the certificate "embedded-registry-ingress-tls"
+          - if mode == CustomCertificate - uses the certificate "embedded-registry-ingress-tls-customcertificate"
+  */ -}}
   {{- if (include "helm_lib_module_https_ingress_tls_enabled" . ) }}
   tls:
   - hosts:
     - {{ include "helm_lib_module_public_domain" (list . "embedded-registry") }}
     secretName: {{ include "helm_lib_module_https_secret_name" (list . "embedded-registry-ingress-tls") }}
-  {{- end }}
-  
-  {{- if eq (include "helm_lib_module_https_mode" .) "CertManager" }}
----
-apiVersion: cert-manager.io/v1
-kind: Certificate
-metadata:
-  name: embedded-registry
-  namespace: d8-system
-  {{- include "helm_lib_module_labels" (list . (dict "app" "embedded-registry")) | nindent 2 }}
-spec:
-  certificateOwnerRef: false
-  secretName: {{ include "helm_lib_module_https_secret_name" (list . "embedded-registry-ingress-tls") }}
-  {{ include "helm_lib_module_generate_common_name" (list . "embedded-registry") | nindent 2 }}
-  dnsNames:
-    - {{ include "helm_lib_module_public_domain" (list . "embedded-registry") }}
-  issuerRef:
-    name: {{ include "helm_lib_module_https_cert_manager_cluster_issuer_name" . }}
-    kind: ClusterIssuer
   {{- end }}
 {{- end }}
