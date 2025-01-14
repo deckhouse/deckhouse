@@ -42,15 +42,15 @@ type StorageWithK8sBundles struct {
 }
 
 // Render renders single script content by name which is expected to be of form {node-group-name}.
-func (s StorageWithK8sBundles) Render(ng string) (runtime.Object, error) {
-
-	ngBundleData, err := s.ngRenderer.Render(ng)
+func (s StorageWithK8sBundles) Render(name string) (runtime.Object, error) {
+	nameWithoutBundle, err := template.TransformName(name)
+	ngBundleData, err := s.ngRenderer.Render(nameWithoutBundle)
 	if err != nil {
 		return nil, err
 	}
 
 	obj := bashible.NodeGroupBundle{}
-	obj.ObjectMeta.Name = ng
+	obj.ObjectMeta.Name = nameWithoutBundle
 	obj.ObjectMeta.CreationTimestamp = metav1.NewTime(time.Now())
 	obj.Data = ngBundleData
 
