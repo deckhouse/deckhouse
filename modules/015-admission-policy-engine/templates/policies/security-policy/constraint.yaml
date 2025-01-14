@@ -36,7 +36,7 @@
   {{- if or (hasKey $cr.spec.policies "allowedCapabilities") (hasKey $cr.spec.policies "requiredDropCapabilities") }}
     {{- include "allowed_capabilities" (list $context $cr) }}
   {{- end }}
-  {{- if or (hasKey $cr.spec.policies "allowedAppArmor") }}
+  {{- if hasKey $cr.spec.policies "allowedAppArmor" }}
     {{- include "allowed_apparmor" (list $context $cr) }}
   {{- end }}
   {{- if hasKey $cr.spec.policies "allowedProcMount" }}
