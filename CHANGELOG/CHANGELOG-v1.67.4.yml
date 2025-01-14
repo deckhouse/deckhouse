@@ -1,0 +1,70 @@
+admission-policy-engine:
+  fixes:
+    - summary: Added a documentation page with Gatekeeper's Custom Resources.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/10341
+dashboard:
+  fixes:
+    - summary: Specified the correct certificates for ingress to access via kube-rbac-proxy.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/11444
+deckhouse:
+  features:
+    - summary: Add downloading error phase for modules.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/11178
+  fixes:
+    - summary: Fix deleting module config for embedded modules.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/11347
+    - summary: Rename disabling annotation
+      pull_request: https://github.com/deckhouse/deckhouse/pull/11338
+    - summary: Fix regexp for parsing image_digests.json.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/11305
+    - summary: Fire the deprecated module update policy alert only for enabled modules.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/11250
+deckhouse-controller:
+  fixes:
+    - summary: Update golang.org/x/net to `0.33.0`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/11316
+descheduler:
+  fixes:
+    - summary: Fix label conversion.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/11303
+dhctl:
+  fixes:
+    - summary: Fix the deckhouse-registry secret on bootstrap.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/11304
+docs:
+  fixes:
+    - summary: Update documentation for release pinning and manual updates.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/11392
+    - summary: Adding info about Log Retention Settings Discrepancy in kube-bench test.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/11352
+      impact: >-
+        Users will be warned about inconsistencies in log storage settings when checking with
+        kube-bench.
+    - summary: Added a documentation page with Gatekeeper's Custom Resources.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/10341
+    - summary: Add documentation about creating DNS-Challenge based cert-manager issuer
+      pull_request: https://github.com/deckhouse/deckhouse/pull/10276
+metallb:
+  fixes:
+    - summary: Fix metallb RBAC rules.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/11298
+multitenancy-manager:
+  features:
+    - summary: Helm client logs have the json format.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/11204
+  fixes:
+    - summary: Fix normalize function.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/11229
+node-manager:
+  fixes:
+    - summary: Tune CAPS sync period.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/11384
+prometheus:
+  fixes:
+    - summary: Excluded unwanted labels from `D8CNIMisconfigured` alert.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/11301
+user-authz:
+  fixes:
+    - summary: Move the 'related-with' label to annotations.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/11082
+
