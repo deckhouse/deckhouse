@@ -24,6 +24,7 @@ import:
   includePaths:
   - mke2fs
   - fsck
+  - tune2fs
   - install
   - uninstall
   before: setup
@@ -33,6 +34,7 @@ docker:
     version: all
     mke2fs: {{ $version }}
     fsck: {{ $version }}
+    tune2fs: {{ $version }}
   USER: 64535
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
@@ -51,7 +53,7 @@ shell:
   - cd /src/e2fsprogs
   - CFLAGS='-static' LDFLAGS="-static" ./configure
   - make
-  - strip ./misc/mke2fs && strip ./misc/fsck
-  - mv ./misc/mke2fs /mke2fs && mv ./misc/fsck /fsck
+  - strip ./misc/mke2fs && strip ./misc/fsck && strip ./misc/tune2fs
+  - mv ./misc/mke2fs /mke2fs && mv ./misc/fsck /fsck && mv ./misc/tune2fs /tune2fs
   - mv /src/scripts/* /
-  - chmod +x /mke2fs /fsck  /install /uninstall
+  - chmod +x /mke2fs /fsck /tune2fs  /install /uninstall

@@ -80,6 +80,7 @@ type Runner struct {
 	statePath     string
 	planPath      string
 	variablesPath string
+	variablesData []byte
 
 	changeSettings ChangeActionSettings
 
@@ -179,6 +180,9 @@ func (r *Runner) WithState(stateData []byte) *Runner {
 }
 
 func (r *Runner) WithVariables(variablesData []byte) *Runner {
+	r.variablesData = make([]byte, len(variablesData))
+    copy(r.variablesData, variablesData)
+
 	tmpFile, err := os.CreateTemp(app.TmpDirName, varFileName)
 	if err != nil {
 		log.ErrorF("can't save terraform variables for runner %s: %s\n", r.step, err)
@@ -628,6 +632,12 @@ func (r *Runner) GetPlanPath() string {
 
 func (r *Runner) GetTerraformExecutor() Executor {
 	return r.terraformExecutor
+}
+
+func (r *Runner) GetInputVariables() []byte {
+    result := make([]byte, len(r.variablesData))
+    copy(result, r.variablesData)
+    return result
 }
 
 // Stop interrupts the current runner command and sets

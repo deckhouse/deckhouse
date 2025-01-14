@@ -34,6 +34,9 @@ apiVersions:
                 etcdDiskSizeGb:
                   description: |
                     Размер диска etcd. Значение указывается в гигабайтах.
+                systemRegistryDiskSizeGb:
+                  description: |
+                    Размер диска system registry. Значение указывается в гигабайтах.
                 placementPolicy:
                   description: |
                     PlacementPolicy, которая будет использоваться на данном компьютере.
