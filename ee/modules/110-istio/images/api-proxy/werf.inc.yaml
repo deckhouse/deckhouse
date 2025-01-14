@@ -1,0 +1,37 @@
+---
+image: {{ .ModuleName }}/{{ .ImageName }}
+fromImage: common/distroless
+import:
+- image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
+  add: /src/api-proxy
+  to: /api-proxy
+  after: setup
+docker:
+  ENTRYPOINT: ["/api-proxy"]
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
+from: {{ .Images.BASE_GOLANG_16_ALPINE_DEV }}
+final: false
+git:
+- add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}
+  to: /src
+  excludePaths:
+  - "*.md"
+  - "*.yaml"
+  stageDependencies:
+    install:
+    - go.mod
+    - go.sum
+    setup:
+    - "*.go"
+mount:
+- fromPath: ~/go-pkg-cache
+  to: /go/pkg
+shell:
+  install:
+  - cd /src
+  - go mod download
+  setup:
+  - cd /src
+  - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o /src/api-proxy main.go
+  - chmod 0500 /src/api-proxy
