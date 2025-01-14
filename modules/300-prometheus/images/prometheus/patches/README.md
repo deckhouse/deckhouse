@@ -13,11 +13,3 @@ metadata:
 ### Successfully sent metric
 
 Exports gauge metric with the count of successfully sent alerts.
-
-### go-mod
-
-Fix cve.
-
-### npm-package
-
-Fix cve.
