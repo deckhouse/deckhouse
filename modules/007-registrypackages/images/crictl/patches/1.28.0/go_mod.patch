@@ -1,8 +1,8 @@
 diff --git a/go.mod b/go.mod
-index 2a26e89e..43719aa2 100644
+index 2a26e89e..cdd0c010 100644
 --- a/go.mod
 +++ b/go.mod
-@@ -4,9 +4,9 @@ go 1.20
+@@ -4,21 +4,21 @@ go 1.20
  
  require (
  	github.com/docker/distribution v2.8.2+incompatible
@@ -14,7 +14,10 @@ index 2a26e89e..43719aa2 100644
  	github.com/google/uuid v1.3.0
  	github.com/moby/term v0.5.0
  	github.com/onsi/ginkgo/v2 v2.11.0
-@@ -16,9 +16,9 @@ require (
+ 	github.com/onsi/gomega v1.27.10
+ 	github.com/opencontainers/go-digest v1.0.0
+-	github.com/opencontainers/runc v1.1.9
++	github.com/opencontainers/runc v1.1.12
  	github.com/opencontainers/selinux v1.11.0
  	github.com/sirupsen/logrus v1.9.3
  	github.com/urfave/cli/v2 v2.25.7
@@ -79,7 +82,7 @@ index 2a26e89e..43719aa2 100644
  	k8s.io/metrics => k8s.io/kubernetes/staging/src/k8s.io/metrics v0.0.0-20230810203337-add7e14df11e
  	k8s.io/mount-utils => k8s.io/kubernetes/staging/src/k8s.io/mount-utils v0.0.0-20230810203337-add7e14df11e
 diff --git a/go.sum b/go.sum
-index c2438f95..c35317d5 100644
+index c2438f95..58a57416 100644
 --- a/go.sum
 +++ b/go.sum
 @@ -20,7 +20,7 @@ cloud.google.com/go/bigquery v1.4.0/go.mod h1:S8dzgnTigyfTmLBfrtrhyYhwRxG72rYxvf
@@ -146,6 +149,17 @@ index c2438f95..c35317d5 100644
  github.com/google/gofuzz v1.0.0/go.mod h1:dBl0BpW6vV/+mYPU4Po3pmUjxk6FQPldtuIdl/M65Eg=
  github.com/google/gofuzz v1.2.0 h1:xRy4A+RhZaiKjJ1bPfwQ8sedCA+YS2YcCHW6ec7JMi0=
  github.com/google/gofuzz v1.2.0/go.mod h1:dBl0BpW6vV/+mYPU4Po3pmUjxk6FQPldtuIdl/M65Eg=
+@@ -226,8 +228,8 @@ github.com/onsi/gomega v1.27.10 h1:naR28SdDFlqrG6kScpT8VWpu1xWY5nJRCF3XaYyBjhI=
+ github.com/onsi/gomega v1.27.10/go.mod h1:RsS8tutOdbdgzbPtzzATp12yT7kM5I5aElG3evPbQ0M=
+ github.com/opencontainers/go-digest v1.0.0 h1:apOUWs51W5PlhuyGyz9FCeeBIOUDA/6nW8Oi/yOhh5U=
+ github.com/opencontainers/go-digest v1.0.0/go.mod h1:0JzlMkj0TRzQZfJkVvzbP0HBR3IKzErnv2BNG4W4MAM=
+-github.com/opencontainers/runc v1.1.9 h1:XR0VIHTGce5eWPkaPesqTBrhW2yAcaraWfsEalNwQLM=
+-github.com/opencontainers/runc v1.1.9/go.mod h1:CbUumNnWCuTGFukNXahoo/RFBZvDAgRh/smNYNOhA50=
++github.com/opencontainers/runc v1.1.12 h1:BOIssBaW1La0/qbNZHXOOa71dZfZEQOzW7dqQf3phss=
++github.com/opencontainers/runc v1.1.12/go.mod h1:S+lQwSfncpBha7XTy/5lBwWgm5+y5Ma/O44Ekby9FK8=
+ github.com/opencontainers/selinux v1.11.0 h1:+5Zbo97w3Lbmb3PeqQtpmTkMwsW5nRI3YaLpt7tQ7oU=
+ github.com/opencontainers/selinux v1.11.0/go.mod h1:E5dMC3VPuVvVHDYmi78qvhJp8+M586T4DlDRYpFkyec=
+ github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=
 @@ -333,8 +335,8 @@ golang.org/x/mod v0.1.1-0.20191105210325-c90efee705ee/go.mod h1:QqPTAvyqsEbceGzB
  golang.org/x/mod v0.1.1-0.20191107180719-034126e5016b/go.mod h1:QqPTAvyqsEbceGzBzNggFXnrqF1CaUcvgkdR5Ot7KZg=
  golang.org/x/mod v0.2.0/go.mod h1:s0Qsj1ACt9ePp/hMypM3fl4fZqREWJwdYDEqhRiZZUA=
