@@ -76,7 +76,12 @@ func (s Storage) Render(name string) (runtime.Object, error) {
 }
 
 func (s Storage) getContext(name string) (map[string]interface{}, error) {
-	contextKey, err := template.GetBashibleContextKey(name)
+	nameWithoutBundle, err := template.TransformName(name)
+	if err != nil {
+		return nil, fmt.Errorf("cannot get context key: %v", err)
+	}
+
+	contextKey, err := template.GetBashibleContextKey(nameWithoutBundle)
 	if err != nil {
 		return nil, fmt.Errorf("cannot get context key: %v", err)
 	}

@@ -36,6 +36,24 @@ func ParseName(name string) (string, string, error) {
 	return os, target, nil
 }
 
+// Make resourcse name without bundles.
+// e.g.
+// "bashible-centos.worker" - > "bashible.worker"
+func TransformName(name string) (string, error) {
+	parts := strings.Split(name, ".")
+	if len(parts) != 2 {
+		return "", fmt.Errorf("name: %q must comply with format {target} using hyphens as innner delimiters", name)
+	}
+
+	resource, ng := parts[0], parts[1]
+	partName := strings.Split(resource, "-")
+	if len(parts) != 2 {
+		return name, nil
+	}
+
+	return fmt.Sprintf("%s.%s", partName[0], ng), nil
+}
+
 // GetNodegroupContextKey parses context secretKey for nodegroup bundles
 func GetNodegroupContextKey(nodegroup string) (string, error) {
 	return fmt.Sprintf("bundle-%s", nodegroup), nil
