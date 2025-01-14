@@ -71,4 +71,4 @@ shell:
   - export GOPROXY={{ $.GOPROXY }}
   - GOOS=linux GOARCH=amd64 LDFLAGS='-extldflags -static -s -w' common/scripts/gobuild.sh /tmp/istio/out/ -tags=agent,disable_pgv /tmp/istio/pilot/cmd/pilot-agent
   - chmod 0555 /tmp/istio/out/pilot-agent
-  - chown 1337:1337 /tmp/istio/out/pilot-agent
+  # - chown 1337:1337 /tmp/istio/out/pilot-agent
