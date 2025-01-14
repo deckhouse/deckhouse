@@ -1,6 +1,6 @@
 {% assign revision=include.revision %}
 
-Use a Docker image to install the **Deckhouse Virtualization Platform**. It is necessary to transfer configuration files to the container{%- if page.platform_type != 'existing' %} as well as SSH keys for accessing **the master node** (further, it is assumed that the SSH key `~/.ssh/id_rsa` is used){% endif %}.
+Use a Docker image to install the **Deckhouse Virtualization Platform**. It is necessary to transfer configuration file to the container{%- if page.platform_type != 'existing' %} as well as SSH keys for accessing **the master node** (further, it is assumed that the SSH key `~/.ssh/id_rsa` is used){% endif %}.
 {% if page.platform_code == 'bm-private' %}
 Log in on the **personal computer** to the container image registry you specified in the previous step.
 {%- endif %}

@@ -83,15 +83,6 @@ function update_domain_parameters() {
       $(this)[0].innerText = content.replace('admin@deckhouse.io', 'admin@' + dhctlDomain.replace(/%s[^.]*./, ''));
     }
   });
-  // update user email in the resources-yml or user-yml snippet
-  $('[resources-yml],[user-yml]').each(function (index) {
-    let content = ($(this)[0]) ? $(this)[0].textContent : null;
-    if (content && content.length > 0 && dhctlDomain) {
-      $(this)[0].textContent = content.replace(/admin@deckhouse.io/g, 'admin@' + dhctlDomain.replace(/%s[^.]*./, ''));
-    }
-  });
-
-  update_parameter((sessionStorage.getItem('dhctl-domain') || 'example.com').replace('%s.', ''), null, 'example.com', null, '[resources-yml]');
 }
 
 function update_parameter(sourceDataName, searchKey, replacePattern, value = null, snippetSelector = '', multilineIndent = 0) {
@@ -299,8 +290,6 @@ function generate_password(force = false) {
 
 function replace_snippet_password() {
   update_parameter('dhctl-user-password-hash', 'password', '<GENERATED_PASSWORD_HASH>', null, null);
-  update_parameter('dhctl-user-password-hash', null, '<GENERATED_PASSWORD_HASH>', null, '[resources-yml]');
-  update_parameter('dhctl-user-password', null, '<GENERATED_PASSWORD>', null, '[resources-yml]');
   update_parameter('dhctl-user-password', null, '<GENERATED_PASSWORD>', null, 'code span.c1');
   update_parameter('dhctl-domain', null, '<GENERATED_PASSWORD>', null, 'code span.c1');
 }

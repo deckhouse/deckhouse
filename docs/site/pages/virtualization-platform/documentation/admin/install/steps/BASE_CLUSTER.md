@@ -263,7 +263,7 @@ Example of using the preflight skip flag:
   ```shell
       dhctl bootstrap \
       --ssh-user=<SSH_USER> --ssh-agent-private-keys=/tmp/.ssh/id_rsa \
-      --config=/config.yml --config=/resources.yml \
+      --config=/config.yml \
       --preflight-skip-all-checks 
   ```
 

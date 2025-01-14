@@ -138,7 +138,7 @@ sudo -i d8 k patch mc global --type merge -p "{\"spec\": {\"settings\":{\"module
 
 On **a personal computer** follow these steps to configure the connection of `kubectl` to the cluster:
 - Open *Kubeconfig Generator* web interface. The name `kubeconfig` is reserved for it, and the address for access is formed according to the DNS names template (which you set up erlier). For example, for the DNS name template `%s.1.2.3.4.sslip.io`, the *Kubeconfig Generator* web interface will be available at `https://kubeconfig.1.2.3.4.sslip.io`.
-- Log in as a user `admin@deckhouse.io`. The user password generated in the previous step is `<GENERATED_PASSWORD>` (you can also find it in the `User` CustomResource in the `resource.yml` file).
+- Log in as a user `admin@deckhouse.io`. The user password generated in the previous step is `<GENERATED_PASSWORD>` (you can also find it in the `User` CustomResource in the `config.yml` file).
 - Select the tab with the OS of the personal computer.
 - Sequentially copy and execute the commands given on the page.
 - Check that `kubectl` connects to the cluster (for example, execute the command `kubectl get no`).
