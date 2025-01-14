@@ -46,7 +46,7 @@
       "panels": [
         {
           "datasource": {
-            "uid": "$datasource"
+            "uid": "$ds_prometheus"
           },
           "fieldConfig": {
             "defaults": {
@@ -141,7 +141,7 @@
         },
         {
           "datasource": {
-            "uid": "$datasource"
+            "uid": "$ds_prometheus"
           },
           "fieldConfig": {
             "defaults": {
@@ -235,7 +235,7 @@
         },
         {
           "datasource": {
-            "uid": "$datasource"
+            "uid": "$ds_prometheus"
           },
           "fieldConfig": {
             "defaults": {
@@ -318,7 +318,7 @@
         },
         {
           "datasource": {
-            "uid": "$datasource"
+            "uid": "$ds_prometheus"
           },
           "fieldConfig": {
             "defaults": {
@@ -401,7 +401,7 @@
         },
         {
           "datasource": {
-            "uid": "$datasource"
+            "uid": "$ds_prometheus"
           },
           "description": "Number of nodes in the cluster",
           "fieldConfig": {
@@ -481,7 +481,7 @@
         },
         {
           "datasource": {
-            "uid": "$datasource"
+            "uid": "$ds_prometheus"
           },
           "description": "Number of data nodes in the cluster",
           "fieldConfig": {
@@ -561,7 +561,7 @@
         },
         {
           "datasource": {
-            "uid": "$datasource"
+            "uid": "$ds_prometheus"
           },
           "description": "Cluster level changes which have not yet been executed",
           "fieldConfig": {
@@ -646,7 +646,7 @@
         },
         {
           "datasource": {
-            "uid": "$datasource"
+            "uid": "$ds_prometheus"
           },
           "fieldConfig": {
             "defaults": {
@@ -734,7 +734,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "$datasource"
+            "uid": "$ds_prometheus"
           },
           "description": "The number of primary shards in your cluster. This is an aggregate total across all indices.",
           "fieldConfig": {
@@ -818,7 +818,7 @@
         },
         {
           "datasource": {
-            "uid": "$datasource"
+            "uid": "$ds_prometheus"
           },
           "description": "Aggregate total of all shards across all indices, which includes replica shards",
           "fieldConfig": {
@@ -897,7 +897,7 @@
         },
         {
           "datasource": {
-            "uid": "$datasource"
+            "uid": "$ds_prometheus"
           },
           "description": "Count of shards that are being freshly created",
           "fieldConfig": {
@@ -977,7 +977,7 @@
         },
         {
           "datasource": {
-            "uid": "$datasource"
+            "uid": "$ds_prometheus"
           },
           "description": "The number of shards that are currently moving from one node to another node.",
           "fieldConfig": {
@@ -1056,7 +1056,7 @@
         },
         {
           "datasource": {
-            "uid": "$datasource"
+            "uid": "$ds_prometheus"
           },
           "description": "Shards delayed to reduce reallocation overhead",
           "fieldConfig": {
@@ -1135,7 +1135,7 @@
         },
         {
           "datasource": {
-            "uid": "$datasource"
+            "uid": "$ds_prometheus"
           },
           "description": "The number of shards that exist in the cluster state, but cannot be found in the cluster itself",
           "fieldConfig": {
@@ -1233,7 +1233,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "$datasource"
+            "uid": "$ds_prometheus"
           },
           "fieldConfig": {
             "defaults": {
@@ -1337,7 +1337,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "$datasource"
+            "uid": "$ds_prometheus"
           },
           "fieldConfig": {
             "defaults": {
@@ -1459,7 +1459,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "$datasource"
+            "uid": "$ds_prometheus"
           },
           "fieldConfig": {
             "defaults": {
@@ -1560,7 +1560,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "$datasource"
+            "uid": "$ds_prometheus"
           },
           "fieldConfig": {
             "defaults": {
@@ -1679,7 +1679,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "$datasource"
+            "uid": "$ds_prometheus"
           },
           "fieldConfig": {
             "defaults": {
@@ -1779,7 +1779,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "$datasource"
+            "uid": "$ds_prometheus"
           },
           "fieldConfig": {
             "defaults": {
@@ -1908,7 +1908,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "$datasource"
+            "uid": "$ds_prometheus"
           },
           "fieldConfig": {
             "defaults": {
@@ -2046,7 +2046,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "$datasource"
+            "uid": "$ds_prometheus"
           },
           "fieldConfig": {
             "defaults": {
@@ -2153,7 +2153,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "$datasource"
+            "uid": "$ds_prometheus"
           },
           "fieldConfig": {
             "defaults": {
@@ -2282,7 +2282,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "$datasource"
+            "uid": "$ds_prometheus"
           },
           "fieldConfig": {
             "defaults": {
@@ -2415,7 +2415,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "$datasource"
+            "uid": "$ds_prometheus"
           },
           "fieldConfig": {
             "defaults": {
@@ -2525,7 +2525,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "$datasource"
+            "uid": "$ds_prometheus"
           },
           "fieldConfig": {
             "defaults": {
@@ -2671,7 +2671,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "$datasource"
+            "uid": "$ds_prometheus"
           },
           "fieldConfig": {
             "defaults": {
@@ -2776,7 +2776,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "$datasource"
+            "uid": "$ds_prometheus"
           },
           "fieldConfig": {
             "defaults": {
@@ -2880,7 +2880,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "$datasource"
+            "uid": "$ds_prometheus"
           },
           "description": "Count of deleted documents on this node",
           "fieldConfig": {
@@ -2985,7 +2985,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "$datasource"
+            "uid": "$ds_prometheus"
           },
           "fieldConfig": {
             "defaults": {
@@ -3090,7 +3090,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "$datasource"
+            "uid": "$ds_prometheus"
           },
           "fieldConfig": {
             "defaults": {
@@ -3215,7 +3215,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "$datasource"
+        "uid": "$ds_prometheus"
       },
       "fieldConfig": {
         "defaults": {
@@ -3320,7 +3320,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "$datasource"
+        "uid": "$ds_prometheus"
       },
       "fieldConfig": {
         "defaults": {
@@ -3424,7 +3424,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "$datasource"
+        "uid": "$ds_prometheus"
       },
       "fieldConfig": {
         "defaults": {
@@ -3528,7 +3528,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "$datasource"
+        "uid": "$ds_prometheus"
       },
       "fieldConfig": {
         "defaults": {
@@ -3649,7 +3649,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "$datasource"
+        "uid": "$ds_prometheus"
       },
       "fieldConfig": {
         "defaults": {
@@ -3882,7 +3882,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "$datasource"
+        "uid": "$ds_prometheus"
       },
       "fieldConfig": {
         "defaults": {
@@ -4144,7 +4144,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "$datasource"
+        "uid": "$ds_prometheus"
       },
       "fieldConfig": {
         "defaults": {
@@ -4266,7 +4266,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "$datasource"
+        "uid": "$ds_prometheus"
       },
       "fieldConfig": {
         "defaults": {
@@ -4388,7 +4388,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "$datasource"
+        "uid": "$ds_prometheus"
       },
       "fieldConfig": {
         "defaults": {
@@ -4510,7 +4510,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "$datasource"
+        "uid": "$ds_prometheus"
       },
       "fieldConfig": {
         "defaults": {
@@ -4649,7 +4649,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "$datasource"
+        "uid": "$ds_prometheus"
       },
       "fieldConfig": {
         "defaults": {
@@ -4753,7 +4753,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "$datasource"
+        "uid": "$ds_prometheus"
       },
       "fieldConfig": {
         "defaults": {
@@ -4856,7 +4856,7 @@
     },
     {
       "datasource": {
-        "uid": "$datasource"
+        "uid": "$ds_prometheus"
       },
       "fieldConfig": {
         "defaults": {
@@ -4956,7 +4956,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "$datasource"
+        "uid": "$ds_prometheus"
       },
       "fieldConfig": {
         "defaults": {
@@ -5059,7 +5059,7 @@
     },
     {
       "datasource": {
-        "uid": "$datasource"
+        "uid": "$ds_prometheus"
       },
       "fieldConfig": {
         "defaults": {
@@ -5173,7 +5173,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "$datasource"
+            "uid": "$ds_prometheus"
           },
           "fieldConfig": {
             "defaults": {
@@ -5272,7 +5272,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "$datasource"
+            "uid": "$ds_prometheus"
           },
           "fieldConfig": {
             "defaults": {
@@ -5430,7 +5430,7 @@
         },
         "datasource": {
           "type": "prometheus",
-          "uid": "$datasource"
+          "uid": "$ds_prometheus"
         },
         "definition": "label_values(elasticsearch_cluster_health_status{namespace=\"$namespace\"},cluster)",
         "hide": 0,
@@ -5462,7 +5462,7 @@
         },
         "datasource": {
           "type": "prometheus",
-          "uid": "$datasource"
+          "uid": "$ds_prometheus"
         },
         "definition": "label_values(elasticsearch_process_cpu_percent{namespace=\"$namespace\",cluster=\"$cluster\"},name)",
         "hide": 0,
