@@ -20,7 +20,7 @@ metadata:
     heritage: multitenancy-manager
     projects.deckhouse.io/project: test
     projects.deckhouse.io/project-template: secure
-  name: user-gmail-com
+  name: user-gmail.com
   namespace: test
 spec:
   accessLevel: Admin
