@@ -3,9 +3,9 @@ title: "Управление узлами: примеры"
 description: Примеры управления узлами кластера Kubernetes. Примеры создания группы узлов. Примеры автоматизации выполнения произвольных настроек на узле.
 ---
 
-Ниже представлены несколько примеров описания `NodeGroup`, а также установки плагина cert-manager для kubectl и задания параметра sysctl.
+Ниже представлены несколько примеров описания NodeGroup, а также установки плагина cert-manager для `kubectl` и задания параметра `sysctl`.
 
-## Примеры описания `NodeGroup`
+## Примеры описания NodeGroup
 
 <span id="пример-описания-nodegroup"></span>
 
@@ -87,7 +87,7 @@ spec:
    - [Для AWS](../cloud-provider-aws/faq.html#добавление-cloudstatic-узлов-в-кластер)
    - [Для GCP](../cloud-provider-gcp/faq.html#добавление-cloudstatic-узлов-в-кластер)
    - [Для YC](../cloud-provider-yandex/faq.html#добавление-cloudstatic-узлов-в-кластер)
-1. Используйте существующий или создайте новый custom resource [NodeGroup](cr.html#nodegroup) ([пример](#статические-узлы) `NodeGroup` с именем `worker`). Параметр [nodeType](cr.html#nodegroup-v1-spec-nodetype) в custom resource NodeGroup для статических узлов должен быть `Static` или `CloudStatic`.
+1. Используйте существующий или создайте новый custom resource [NodeGroup](cr.html#nodegroup) ([пример](#статические-узлы) NodeGroup с именем `worker`). Параметр [nodeType](cr.html#nodegroup-v1-spec-nodetype) в custom resource NodeGroup для статических узлов должен быть `Static` или `CloudStatic`.
 1. Получите код скрипта в кодировке Base64 для добавления и настройки узла.
 
    Пример получения кода скрипта в кодировке Base64 для добавления узла в NodeGroup `worker`:
@@ -101,7 +101,7 @@ spec:
    - добавьте необходимые точки монтирования в файл `/etc/fstab` (NFS, Ceph и т. д.);
    - установите необходимые пакеты (например, `ceph-common`);
    - настройте сетевую связанность между новым узлом и остальными узлами кластера.
-1. Зайдите на новый узел по SSH и выполните следующую команду, вставив полученную в п. 2 Base64-строку:
+1. Зайдите на новый узел по SSH и выполните следующую команду, вставив полученную в п. 3 Base64-строку:
 
    ```shell
    echo <Base64-КОД-СКРИПТА> | base64 -d | bash
@@ -134,7 +134,7 @@ spec:
      ssh-keygen -t rsa -f caps-id -C "" -N ""
      ```
 
-     Публичный и приватный ключи пользователя `caps` будут сохранены в файлах `caps-id.pub` и `caps-id` в текущей папке на сервере.
+     Публичный и приватный ключи пользователя `caps` будут сохранены в файлах caps-id.pub и caps-id в текущей папке на сервере.
 
    * Добавьте полученный публичный ключ в файл `/home/caps/.ssh/authorized_keys` пользователя `caps`, выполнив в директории с ключами **на сервере** следующие команды:
 
@@ -301,11 +301,11 @@ spec:
 
 ### Cluster API Provider Static: перемещение узлов между NodeGroup
 
-В данном разделе описывается процесс перемещения статических узлов между различными `NodeGroup` с использованием Cluster API Provider Static (CAPS). Процесс включает изменение конфигурации `NodeGroup` и обновление меток (`labels`) у соответствующих `StaticInstance`.
+В данном разделе описывается процесс перемещения статических узлов между различными NodeGroup с использованием Cluster API Provider Static (CAPS). Процесс включает изменение конфигурации NodeGroup и обновление меток (`labels`) у соответствующих StaticInstance.
 
 #### Исходная конфигурация
 
-Предположим, что в кластере уже существует `NodeGroup` с именем `worker`, настроенный для управления одним статическим узлом с меткой `role: worker`.
+Предположим, что в кластере уже существует NodeGroup с именем `worker`, настроенный для управления одним статическим узлом с меткой `role: worker`.
 
 `NodeGroup` worker:
 
@@ -342,12 +342,12 @@ spec:
 #### Шаги по перемещению узла между `NodeGroup`
 
 {% alert level="warning" %}
-В процессе переноса узлов между `NodeGroup` будет выполнена очистка и повторный бутстрап узла, объект `Node` будет пересоздан.
+В процессе переноса узлов между NodeGroup будет выполнена очистка и повторный бутстрап узла, объект `Node` будет пересоздан.
 {% endalert %}
 
 ##### 1. Создание новой `NodeGroup` для целевой группы узлов
 
-Создайте новый ресурс `NodeGroup`, например, с именем `front`, который будет управлять статическим узлом с меткой `role: front`.
+Создайте новый ресурс NodeGroup, например, с именем `front`, который будет управлять статическим узлом с меткой `role: front`.
 
 ```shell
 kubectl create -f - <<EOF
@@ -367,7 +367,7 @@ EOF
 
 ##### 2. Обновление метки у `StaticInstance`
 
-Измените метку `role` у существующего `StaticInstance` с `worker` на `front`. Это позволит новой `NodeGroup` `front` начать управлять этим узлом.
+Измените метку `role` у существующего StaticInstance с `worker` на `front`. Это позволит новой NodeGroup `front` начать управлять этим узлом.
 
 ```shell
 kubectl label staticinstance static-worker-1 role=front --overwrite
@@ -375,7 +375,7 @@ kubectl label staticinstance static-worker-1 role=front --overwrite
 
 ##### 3. Уменьшение количества статических узлов в исходной `NodeGroup`
 
-Обновите ресурс `NodeGroup` `worker`, уменьшив значение параметра `count` с `1` до `0`.
+Обновите ресурс NodeGroup `worker`, уменьшив значение параметра `count` с `1` до `0`.
 
 ```shell
 kubectl patch nodegroup worker -p '{"spec": {"staticInstances": {"count": 0}}}' --type=merge
@@ -522,7 +522,7 @@ spec:
 {% endalert %}
 
 {% alert level="info" %}
-Пример `NodeGroupConfiguration` основан на функциях, заложенных в скрипте [032_configure_containerd.sh](./#особенности-написания-скриптов).
+Пример NodeGroupConfiguration основан на функциях, заложенных в скрипте [032_configure_containerd.sh](./#особенности-написания-скриптов).
 {% endalert %}
 
 ```yaml
