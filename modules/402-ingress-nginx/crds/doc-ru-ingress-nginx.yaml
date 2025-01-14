@@ -333,6 +333,12 @@ spec:
                         namespace:
                           description: |
                             Имя namespace, в котором находится Secret с SSL—сертификатом.
+
+                controllerPodsAdditionalAnnotations:
+                  description: |
+                    Пользовательские дополнительные аннотации для pods контроллера Ingress.
+
+                    > **Внимание.** Использование этого параметра не рекомендуется; обратная совместимость или работоспособность контроллера Ingress, использующего эту опцию, не гарантируется.
     - name: v1
       served: true
       storage: false

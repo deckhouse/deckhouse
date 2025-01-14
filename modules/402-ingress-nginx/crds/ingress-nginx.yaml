@@ -1197,6 +1197,14 @@ spec:
                           default: d8-ingress-nginx
                           type: string
                           pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?$'
+                controllerPodsAdditionalAnnotations:
+                  type: object
+                  description: |
+                    Custom additional annotations for Ingress controller pods.
+
+                    > **Caution.** The usage of this parameter is not recommended; the backward compatibility or operability of the ingress controller that uses this option is not guaranteed.
+                  additionalProperties:
+                    type: string
               oneOf:
                 - properties:
                     inlet:
