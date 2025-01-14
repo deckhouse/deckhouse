@@ -140,6 +140,7 @@ shell:
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: common/distroless
+import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-entrypoint
   add: /app/entrypoint
   to: /usr/local/bin/entrypoint
