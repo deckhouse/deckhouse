@@ -1,5 +1,5 @@
 diff --git a/go.mod b/go.mod
-index bf3cbc15..15c82482 100644
+index bf3cbc15..0e9b172b 100644
 --- a/go.mod
 +++ b/go.mod
 @@ -4,7 +4,7 @@ go 1.20
@@ -59,12 +59,12 @@ index bf3cbc15..15c82482 100644
 -	google.golang.org/protobuf v1.28.1 // indirect
 +	google.golang.org/genproto v0.0.0-20230410155749-daa745c078e1 // indirect
 +	google.golang.org/grpc v1.56.3 // indirect
-+	google.golang.org/protobuf v1.30.0 // indirect
++	google.golang.org/protobuf v1.33.0 // indirect
  	gopkg.in/inf.v0 v0.9.1 // indirect
  	gopkg.in/yaml.v2 v2.4.0 // indirect
  	gotest.tools/v3 v3.4.0 // indirect
 diff --git a/go.sum b/go.sum
-index 1d619716..93d332fa 100644
+index 1d619716..2c6ac0c3 100644
 --- a/go.sum
 +++ b/go.sum
 @@ -13,13 +13,15 @@ cloud.google.com/go v0.56.0/go.mod h1:jr7tqZxxKOVYizybht9+26Z/gUq7tiRzu+ACVAMbKV
@@ -236,8 +236,8 @@ index 1d619716..93d332fa 100644
 -google.golang.org/protobuf v1.28.0/go.mod h1:HV8QOd/L58Z+nl8r43ehVNZIU/HEI6OcFqwMG9pJV4I=
 -google.golang.org/protobuf v1.28.1 h1:d0NfwRgPtno5B1Wa6L2DAG+KivqkdutMf1UhdNx175w=
 -google.golang.org/protobuf v1.28.1/go.mod h1:HV8QOd/L58Z+nl8r43ehVNZIU/HEI6OcFqwMG9pJV4I=
-+google.golang.org/protobuf v1.30.0 h1:kPPoIgf3TsEvrm0PFe15JQ+570QVxYzEvvHqChK+cng=
-+google.golang.org/protobuf v1.30.0/go.mod h1:HV8QOd/L58Z+nl8r43ehVNZIU/HEI6OcFqwMG9pJV4I=
++google.golang.org/protobuf v1.33.0 h1:uNO2rsAINq/JlFpSdYEKIZ0uKD/R9cpdv0T+yoGwGmI=
++google.golang.org/protobuf v1.33.0/go.mod h1:c6P6GXX6sHbq/GpV6MGZEdwhWPcYBgnhAHhKbcUYpos=
  gopkg.in/alecthomas/kingpin.v2 v2.2.6/go.mod h1:FMv+mEhP44yOT+4EoQTLFTRgOQ1FBLkstjWtayDeSgw=
  gopkg.in/check.v1 v0.0.0-20161208181325-20d25e280405/go.mod h1:Co6ibVJAznAaIkqp8huTwlJQCZ016jof/cbN4VW5Yz0=
  gopkg.in/check.v1 v1.0.0-20180628173108-788fd7840127/go.mod h1:Co6ibVJAznAaIkqp8huTwlJQCZ016jof/cbN4VW5Yz0=
