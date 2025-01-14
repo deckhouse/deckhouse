@@ -29,13 +29,13 @@ func checkCertExporterObjects(hec *Config, exist bool) {
 		matcher = BeTrue()
 	}
 
-	Expect(hec.KubernetesResource("Deployment", "d8-monitoring", "cert-exporter").Exists()).To(matcher)
-	Expect(hec.KubernetesResource("VerticalPodAutoscaler", "d8-monitoring", "cert-exporter").Exists()).To(matcher)
-	Expect(hec.KubernetesResource("PodDisruptionBudget", "d8-monitoring", "cert-exporter").Exists()).To(matcher)
-	Expect(hec.KubernetesResource("ServiceAccount", "d8-monitoring", "cert-exporter").Exists()).To(matcher)
+	Expect(hec.KubernetesResource("Deployment", "d8-monitoring", "x509-certificate-exporter").Exists()).To(matcher)
+	Expect(hec.KubernetesResource("VerticalPodAutoscaler", "d8-monitoring", "x509-certificate-exporter").Exists()).To(matcher)
+	Expect(hec.KubernetesResource("PodDisruptionBudget", "d8-monitoring", "x509-certificate-exporter").Exists()).To(matcher)
+	Expect(hec.KubernetesResource("ServiceAccount", "d8-monitoring", "x509-certificate-exporter").Exists()).To(matcher)
 }
 
-var _ = Describe("Module :: extendedMonitoring :: helm template :: cert-exporter ", func() {
+var _ = Describe("Module :: extendedMonitoring :: helm template :: x509-certificate-exporter ", func() {
 	hec := SetupHelmConfig("")
 	BeforeEach(func() {
 		hec.ValuesSet("global.discovery.kubernetesVersion", "1.15.6")
