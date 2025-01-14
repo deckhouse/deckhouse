@@ -6,7 +6,7 @@ description: |
 ---
 
 {% alert level="warning" %}
-This page is under active development and may contain incomplete information. Below is an overview of the Deckhouse installation process. For more detailed instructions, we recommend visiting the [Getting Started](/gs/) section, where step-by-step guides are available.
+This page is under active development and may contain incomplete information. Below is an overview of the Deckhouse installation process. For more detailed instructions, we recommend visiting the [Getting Started](/products/kubernetes-platform/gs/) section, where step-by-step guides are available.
 {% endalert %}
 
 The Deckhouse installer is available as a container image and is based on the [dhctl](<https://github.com{{ site.github_repo_path }}/tree/main/dhctl/>) utility, which is responsible for:
@@ -71,20 +71,20 @@ The installation configuration YAML file contains parameters for several resourc
    * Node group creation settings.
 
    List of cloud provider configuration resources:
-   * [AWSClusterConfiguration](../modules/030-cloud-provider-aws/cluster_configuration.html#awsclusterconfiguration) — Amazon Web Services;
-   * [AzureClusterConfiguration](../modules/030-cloud-provider-azure/cluster_configuration.html#azureclusterconfiguration) — Microsoft Azure;
-   * [GCPClusterConfiguration](../modules/030-cloud-provider-gcp/cluster_configuration.html#gcpclusterconfiguration) — Google Cloud Platform;
-   * [OpenStackClusterConfiguration](../modules/030-cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration) — OpenStack;
-   * [VsphereClusterConfiguration](../modules/030-cloud-provider-vsphere/cluster_configuration.html#vsphereclusterconfiguration) — VMware vSphere;
-   * [VCDClusterConfiguration](../modules/030-cloud-provider-vcd/cluster_configuration.html#vcdclusterconfiguration) — VMware Cloud Director;
-   * [YandexClusterConfiguration](../modules/030-cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration) — Yandex Cloud;
-   * [ZvirtClusterConfiguration](../modules/030-cloud-provider-zvirt/cluster_configuration.html#zvirtclusterconfiguration) — zVirt.
+   * [AWSClusterConfiguration](../modules/cloud-provider-aws/cluster_configuration.html#awsclusterconfiguration) — Amazon Web Services;
+   * [AzureClusterConfiguration](../modules/cloud-provider-azure/cluster_configuration.html#azureclusterconfiguration) — Microsoft Azure;
+   * [GCPClusterConfiguration](../modules/cloud-provider-gcp/cluster_configuration.html#gcpclusterconfiguration) — Google Cloud Platform;
+   * [OpenStackClusterConfiguration](../modules/cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration) — OpenStack;
+   * [VsphereClusterConfiguration](../modules/cloud-provider-vsphere/cluster_configuration.html#vsphereclusterconfiguration) — VMware vSphere;
+   * [VCDClusterConfiguration](../modules/cloud-provider-vcd/cluster_configuration.html#vcdclusterconfiguration) — VMware Cloud Director;
+   * [YandexClusterConfiguration](../modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration) — Yandex Cloud;
+   * [ZvirtClusterConfiguration](../modules/cloud-provider-zvirt/cluster_configuration.html#zvirtclusterconfiguration) — zVirt.
 
 1. `ModuleConfig` — a set of resources containing configuration parameters for [Deckhouse built-in modules](../).
 
    If the cluster is initially created with nodes dedicated to specific types of workloads (e.g., system nodes or monitoring nodes), it is recommended to explicitly set the `nodeSelector` parameter in the configuration of modules that use persistent storage volumes.
 
-   For example, for the `prometheus` module, the configuration is specified in the [nodeSelector](../modules/300-prometheus/configuration.html#parameters-nodeselector) parameter.
+   For example, for the `prometheus` module, the configuration is specified in the [nodeSelector](../modules/prometheus/configuration.html#parameters-nodeselector) parameter.
 
 {% offtopic title="An example of the installation config..." %}
 
@@ -337,7 +337,7 @@ Where:
    - SSH access keys;
    - Configuration file;
    - Resource file, etc.
-1. `<RELEASE_CHANNEL>` — the [update channel](../modules/002-deckhouse/configuration.html#parameters-releasechannel) in kebab-case format, which must match the one specified in `config.yml`:
+1. `<RELEASE_CHANNEL>` — the [update channel](../modules/deckhouse/configuration.html#parameters-releasechannel) in kebab-case format, which must match the one specified in `config.yml`:
    - `alpha` — for the Alpha update channel;
    - `beta` — for the Beta update channel;
    - `early-access` — for the Early Access update channel;
@@ -384,7 +384,7 @@ Where:
 ![Diagram of pre-installation checks execution](../images/installing/preflight-checks.png)
 {% endofftopic %}
 
-### List of checks performed by the installer before starting Deckhouse installation:
+List of checks performed by the installer before starting Deckhouse installation:
 
 1. General checks:
    - The values of the parameters [PublicDomainTemplate](../deckhouse-configure-global.html#parameters-modules-publicdomaintemplate) and [clusterDomain](configuration.html#clusterconfiguration-clusterdomain) do not match.

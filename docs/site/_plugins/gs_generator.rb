@@ -7,7 +7,7 @@ module GSGenerator
 
         next unless installTypeData['steps']
 
-        puts "[GS DKP] Generating for %s..." % [installTypeKey]
+        puts "[GS DKP] Generating pages for %s..." % [installTypeKey]
 
         installTypeData['steps'].each do |stepName, stepData|
           languages = installTypeData['languages'] ? installTypeData['languages'] : ['ru', 'en']
@@ -27,7 +27,7 @@ module GSGenerator
 
         next unless installTypeData['steps']
 
-        puts "[GS DVP] Generating for %s..." % [installTypeKey]
+        puts "[GS DVP] Generating pages for %s..." % [installTypeKey]
 
         installTypeData['steps'].each do |stepName, stepData|
           languages = installTypeData['languages'] ? installTypeData['languages'] : ['ru', 'en']
@@ -71,7 +71,7 @@ class DKP_GSPage < Jekyll::Page
       'platform_name' => @installData['name'],
       'product_code' => 'kubernetes-platform',
       'sitemap_include' => false,
-      'url_prefix' => '',
+      'url_prefix' => '/products/kubernetes-platform',
       'gs_data_key' => 'dkp_data',
       'toc' => false,
       'steps' => (installData['steps'].length + 1).to_s,
@@ -84,8 +84,10 @@ class DKP_GSPage < Jekyll::Page
       self.data['nextStepName'] = @installData['steps']["step#{(@stepNumber + 1).to_s}"]['name'][lang]
     end
 
+    # TODO Refactor this weird logic
     self.data['ee_only'] = true if @installData['ee_only']
     self.data['ce_only'] = true if @installData['ce_only']
+    self.data['se_support'] = true if @installData['se_support']
 
     self.content = "{% include #{globalData['step']['header']} %}\n\n"
 

@@ -82,15 +82,15 @@ DexAuthenticator does not have a built-in system for allowing the user authentic
 
 ## Authentication flow with DexAuthenticator
 
-![Authentication flow with DexAuthenticator](../../images/150-user-authn/dex_login.svg)
+![Authentication flow with DexAuthenticator](../../images/user-authn/dex_login.svg)
 
 1. Dex redirects the user to the provider's login page in most cases and wait for the user to be redirected back to the `/callback` URL. However, some providers like LDAP or Atlassian Crowd do not support this flow. The user should write credentials to the Dex login form instead, and Dex will make a request to the provider's API to validate them.
 
 2. DexAuthenticator sets the cookie with the whole refresh token (instead of storing it in Redis like an id token) because Redis does not persist data.
 If there is no id token by the id token ticket in Redis, the user will be able to get the new id token by providing the refresh token from the cookie.
 
-3. DexAuthenticator sets the `Authorization` HTTP header to the ID token value from Redis. It is not required for services like [Upmeter](../500-upmeter/), because permissions to Upmeter entities are not highly grained.
-On the other hand, for the [Kubernetes Dashboard](../500-dashboard/), it is a crucial functionality because it sends the ID token further to access Kubernetes API.
+3. DexAuthenticator sets the `Authorization` HTTP header to the ID token value from Redis. It is not required for services like [Upmeter](../upmeter/), because permissions to Upmeter entities are not highly grained.
+On the other hand, for the [Kubernetes Dashboard](../dashboard/), it is a crucial functionality because it sends the ID token further to access Kubernetes API.
 
 ## How can I generate a kubeconfig and access Kubernetes API?
 
@@ -115,7 +115,7 @@ The name `kubeconfig` is reserved for accessing the web interface that allows ge
 
 ### Configuring kube-apiserver
 
-With the functional of the [control-plane-manager](../../modules/040-control-plane-manager/) module, Deckhouse automatically configures kube-apiserver by providing the following flags, so that dashboard and kubeconfig-generator modules can work in the cluster.
+With the functional of the [control-plane-manager](../../modules/control-plane-manager/) module, Deckhouse automatically configures kube-apiserver by providing the following flags, so that dashboard and kubeconfig-generator modules can work in the cluster.
 
 {% offtopic title="kube-apiserver arguments that will be configured" %}
 
@@ -133,7 +133,7 @@ If self-signed certificates are used, Dex will get one more argument. At the sam
 
 ### The flow of accessing Kubernetes API with generated kubeconfig
 
-![Interaction scheme when accessing Kubernetes API using generated kubeconfig](../../images/150-user-authn/kubeconfig_dex.svg)
+![Interaction scheme when accessing Kubernetes API using generated kubeconfig](../../images/user-authn/kubeconfig_dex.svg)
 
 1. Before the start, kube-apiserver needs to request the configuration endpoint of the OIDC provider (Dex in our case) to get the issuer and JWKS endpoint settings.
 

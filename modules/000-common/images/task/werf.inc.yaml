@@ -1,0 +1,26 @@
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+fromImage: common/src-artifact
+final: false
+shell:
+  install:
+  - cd /src
+  - git clone --depth 1 {{ .SOURCE_REPO }}/go-task/task --branch "v3.40.1" . && rm -rf /src/.git
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-artifact
+from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
+final: false
+import:
+- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+  add: /src
+  to: /src
+  before: install
+shell:
+  beforeInstall:
+  {{- include "alpine packages proxy" . | nindent 2 }}
+  install:
+  - export GOPROXY={{ .GOPROXY }}
+  - cd /src
+  - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o /task cmd/task/task.go
+  - chown 64535:64535 /task
+  - chmod 0755 /task

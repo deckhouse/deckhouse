@@ -17,7 +17,6 @@ limitations under the License.
 package hooks
 
 import (
-	"context"
 	"os"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -27,8 +26,6 @@ import (
 	discv1 "k8s.io/api/discovery/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
-
-	"github.com/deckhouse/deckhouse/go_lib/dependency"
 )
 
 // We will create the EndpointSlice manually, because Deckhouse only goes to the Ready state after the 'first converge' of modules.
@@ -43,9 +40,9 @@ const (
 // should run before all hooks
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	OnStartup: &go_hook.OrderedConfig{Order: 1},
-}, dependency.WithExternalDependencies(generateDeckhouseEndpoints))
+}, generateDeckhouseEndpoints)
 
-func generateDeckhouseEndpoints(input *go_hook.HookInput, dc dependency.Container) error {
+func generateDeckhouseEndpoints(input *go_hook.HookInput) error {
 	// hostname := os.Getenv("HOSTNAME")
 	// At this moment we don't use Hostname because of 2 reasons:
 	// 1. According to the endpoint controller, it should be set only when:
@@ -167,44 +164,8 @@ func generateDeckhouseEndpoints(input *go_hook.HookInput, dc dependency.Containe
 		},
 	}
 
-	// TODO: remove this part after Deckhouse release 1.56
-	// we have to remove old endpointslices here also, to prevent block on cm/deckhouse check
-	err := cleanupOldEndpoints(input, dc)
-	if err != nil {
-		return err
-	}
-
 	input.PatchCollector.Create(ep, object_patch.UpdateIfExists())
 	input.PatchCollector.Create(es, object_patch.UpdateIfExists())
-
-	return nil
-}
-
-func cleanupOldEndpoints(input *go_hook.HookInput, dc dependency.Container) error {
-	client, err := dc.GetK8sClient()
-	if err != nil {
-		return err
-	}
-
-	list, err := client.DiscoveryV1().EndpointSlices(d8Namespace).List(context.Background(), metav1.ListOptions{LabelSelector: "app=deckhouse,heritage=deckhouse,endpointslice.kubernetes.io/managed-by=endpointslice-controller.k8s.io"})
-	if err != nil {
-		return err
-	}
-
-	if len(list.Items) > 0 {
-		// remove selector from deckhouse service to prevent endpointslices creation
-		patch := map[string]interface{}{
-			"spec": map[string]interface{}{
-				"selector": nil,
-			},
-		}
-
-		input.PatchCollector.MergePatch(patch, "v1", "Service", d8Namespace, d8Name)
-	}
-
-	for _, es := range list.Items {
-		input.PatchCollector.Delete("discovery.k8s.io/v1", "EndpointSlice", d8Namespace, es.Name)
-	}
 
 	return nil
 }

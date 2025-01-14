@@ -1,10 +1,10 @@
-<script type="text/javascript" src='{{ assets["getting-started.js"].digest_path }}'></script>
-<script type="text/javascript" src='{{ assets["getting-started-access.js"].digest_path }}'></script>
-<script type="text/javascript" src='{{ assets["bcrypt.js"].digest_path }}'></script>
+<script type="text/javascript" src='{% javascript_asset_tag getting-started %}[_assets/js/getting-started.js]{% endjavascript_asset_tag %}'></script>
+<script type="text/javascript" src='{% javascript_asset_tag getting-started-access %}[_assets/js/getting-started-access.js]{% endjavascript_asset_tag %}'></script>
+<script type="text/javascript" src='{% javascript_asset_tag bcrypt %}[_assets/js/bcrypt.js]{% endjavascript_asset_tag %}'></script>
 
-На данном этапе вы создали кластер, который состоит из **единственного** узла — master-узла. На master-узле по умолчанию работает только ограниченный набор системных компонентов. Для полноценной работы кластера необходимо добавить в кластер хотя бы один worker-узел.
+На данном этапе вы создали кластер, который состоит из **единственного** узла — master-узла. На master-узле по умолчанию запускаются только системные компоненты. Для полноценной работы платформы виртуализации необходимо добавить в кластер хотя бы один worker-узел.
 
-Добавьте узел в кластер (подробнее о добавлении статического узла в кластер читайте в [документации](../documentation/admin/platform-management/node-management/adding-node.html)):
+Добавьте узел в кластер (подробнее о добавлении статического узла в кластер читайте [в документации](../documentation/admin/platform-management/node-management/adding-node.html)):
 
 - Подготовьте сервер, который будет worker-узлом кластера.
 
@@ -12,7 +12,7 @@
 
   {% snippetcut %}
   ```shell
-sudo d8 k create -f - << EOF
+sudo -i d8 k create -f - << EOF
   apiVersion: deckhouse.io/v1
   kind: NodeGroup
   metadata:
@@ -31,7 +31,7 @@ EOF
 - Сгенерируйте SSH-ключ с пустой парольной фразой. Для этого выполните на **master-узле** следующую команду:
 
   {% snippetcut %}
-```
+```shell
 ssh-keygen -t rsa -f /dev/shm/caps-id -C "" -N ""
 ```
   {% endsnippetcut %}
@@ -40,7 +40,7 @@ ssh-keygen -t rsa -f /dev/shm/caps-id -C "" -N ""
 
   {% snippetcut %}
   ```shell
-kubectl create -f - <<EOF
+sudo -i d8 k create -f - <<EOF
   apiVersion: deckhouse.io/v1alpha1
   kind: SSHCredentials
   metadata:
@@ -55,10 +55,10 @@ EOF
 - Выведите публичную часть сгенерированного ранее SSH-ключа (он понадобится на следующем шаге). Для этого выполните на **master-узле** следующую команду:
 
   {% snippetcut %}
-```
+```shell
 cat /dev/shm/caps-id.pub
 ```
-{% endsnippetcut %}
+  {% endsnippetcut %}
 
 - **На подготовленной виртуальной машине** создайте пользователя `caps`. Для этого выполните следующую команду, указав публичную часть SSH-ключа, полученную на предыдущем шаге:
 
@@ -79,7 +79,7 @@ chmod 600 /home/caps/.ssh/authorized_keys
 - **В операционных системах семейства Astra Linux**, при использовании модуля мандатного контроля целостности Parsec, сконфигурируйте максимальный уровень целостности для пользователя `caps`:
 
   {% snippetcut %}
-```
+```shell
 pdpl-user -i 63 caps
 ```
   {% endsnippetcut %}
@@ -89,7 +89,7 @@ pdpl-user -i 63 caps
   {% snippetcut %}
   ```shell
 export NODE=<NODE-IP-ADDRESS> # Укажите IP-адрес узла, который необходимо подключить к кластеру.
-  kubectl create -f - <<EOF
+  sudo -i d8 k create -f - <<EOF
   apiVersion: deckhouse.io/v1alpha1
   kind: StaticInstance
   metadata:
@@ -110,6 +110,6 @@ EOF
 
   {% snippetcut %}
 ```shell
-sudo kubectl get no
+sudo -i d8 k get no
 ```
   {% endsnippetcut %}

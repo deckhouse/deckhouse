@@ -83,10 +83,10 @@ Adding a static node can be done manually or using the Cluster API Provider Stat
 
 Follow the steps below to add a new static node (e.g., VM or bare metal server) to the cluster:
 
-1. For [CloudStatic nodes](../040-node-manager/cr.html#nodegroup-v1-spec-nodetype) in the following cloud providers, refer to the steps outlined in the documentation:
-   - [For AWS](../030-cloud-provider-aws/faq.html#adding-cloudstatic-nodes-to-a-cluster)
-   - [For GCP](../030-cloud-provider-gcp/faq.html#adding-cloudstatic-nodes-to-a-cluster)
-   - [For YC](../030-cloud-provider-yandex/faq.html#adding-cloudstatic-nodes-to-a-cluster)
+1. For [CloudStatic nodes](../node-manager/cr.html#nodegroup-v1-spec-nodetype) in the following cloud providers, refer to the steps outlined in the documentation:
+   - [For AWS](../cloud-provider-aws/faq.html#adding-cloudstatic-nodes-to-a-cluster)
+   - [For GCP](../cloud-provider-gcp/faq.html#adding-cloudstatic-nodes-to-a-cluster)
+   - [For YC](../cloud-provider-yandex/faq.html#adding-cloudstatic-nodes-to-a-cluster)
 1. Use the existing one or create a new [NodeGroup](cr.html#nodegroup) custom resource (see the [example](#static-nodes) for the `NodeGroup` called `worker`). The [nodeType](cr.html#nodegroup-v1-spec-nodetype) parameter for static nodes in the NodeGroup must be `Static` or `CloudStatic`.
 1. Get the Base64-encoded script code to add and configure the node.
 
@@ -181,7 +181,9 @@ A brief example of adding a static node to a cluster using [Cluster API Provider
    apiVersion: deckhouse.io/v1alpha1
    kind: StaticInstance
    metadata:
-     name: static-0
+     name: static-worker-1
+     labels:
+       role: worker
    spec:
      # Specify the IP address of the static node server.
      address: "<SERVER-IP>"
@@ -190,6 +192,8 @@ A brief example of adding a static node to a cluster using [Cluster API Provider
        name: credentials
    EOF
    ```
+
+   > The `labelSelector` field in the `NodeGroup` resource is immutable. To update the `labelSelector`, you need to create a new `NodeGroup` and move the static nodes into it by changing their labels.
 
 1. Create a [NodeGroup](cr.html#nodegroup) resource in the cluster:
 
@@ -203,16 +207,21 @@ A brief example of adding a static node to a cluster using [Cluster API Provider
      nodeType: Static
      staticInstances:
        count: 1
+       labelSelector:
+         matchLabels:
+           role: worker
    EOF
    ```
 
-### Using the Cluster API Provider Static and label selector filters
+### Using Cluster API Provider Static for multiple node groups
 
 This example shows how you can use filters in the StaticInstance [label selector](cr.html#nodegroup-v1-spec-staticinstances-labelselector) to group static nodes and use them in different NodeGroups. Here, two node groups (`front` and `worker`) are used for different tasks. Each group includes nodes with different characteristics — the `front` group has two servers and the `worker` group has one.
 
 1. Prepare the required resources (3 servers or virtual machines) and create the `SSHCredentials` resource in the same way as step 1 and step 2 [of the example](#using-the-cluster-api-provider-static).
 
 1. Create two [NodeGroup](cr.html#nodegroup) in the cluster (from this point on, use `kubectl` configured to manage the cluster):
+
+   > The `labelSelector` field in the `NodeGroup` resource is immutable. To update the `labelSelector`, you need to create a new `NodeGroup` and move the static nodes into it by changing their labels.
 
    ```shell
    kubectl create -f - <<EOF
@@ -283,6 +292,88 @@ This example shows how you can use filters in the StaticInstance [label selector
        name: credentials
    EOF
    ```
+
+### Cluster API Provider Static: Moving Instances Between Node Groups
+
+{% alert level="warning" %}
+During the process of transferring instances between node groups, the instance will be cleaned and re-bootstrapped, and the `Node` object will be recreated.
+{% endalert %}
+
+This section describes the process of moving static instances between different node groups (`NodeGroup`) using the Cluster API Provider Static (CAPS). The process involves modifying the `NodeGroup` configuration and updating the labels (`labels`) of the corresponding `StaticInstance`.
+
+#### Initial Configuration
+
+Assume that there is already a `NodeGroup` named `worker` in the cluster, configured to manage one static instance with the label `role: worker`.
+
+**`NodeGroup` worker:**
+
+```yaml
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: worker
+spec:
+  nodeType: Static
+  staticInstances:
+    count: 1
+    labelSelector:
+      matchLabels:
+        role: worker
+```
+
+**`StaticInstance` static-worker-1:**
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: StaticInstance
+metadata:
+  name: static-worker-1
+  labels:
+    role: worker
+spec:
+  address: "192.168.1.100"
+  credentialsRef:
+    kind: SSHCredentials
+    name: credentials
+```
+
+#### Steps to Move an Instance Between Node Groups
+
+##### 1. Create a New `NodeGroup` for the Target Node Group
+
+Create a new `NodeGroup` resource, for example, named `front`, which will manage a static instance with the label `role: front`.
+
+```shell
+kubectl create -f - <<EOF
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: front
+spec:
+  nodeType: Static
+  staticInstances:
+    count: 1
+    labelSelector:
+      matchLabels:
+        role: front
+EOF
+```
+
+##### 2. Update the Label on the `StaticInstance`
+
+Change the `role` label of the existing `StaticInstance` from `worker` to `front`. This will allow the new `NodeGroup` `front` to manage this instance.
+
+```shell
+kubectl label staticinstance static-worker-1 role=front --overwrite
+```
+
+##### 3. Decrease the Number of Static Instances in the Original `NodeGroup`
+
+Update the `NodeGroup` resource `worker` by reducing the `count` parameter from `1` to `0`.
+
+```shell
+kubectl patch nodegroup worker -p '{"spec": {"staticInstances": {"count": 0}}}' --type=merge
+```
 
 ## An example of the `NodeUser` configuration
 

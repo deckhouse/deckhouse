@@ -1,7 +1,7 @@
-<script type="text/javascript" src='{{ assets["getting-started.js"].digest_path }}'></script>
-<script type="text/javascript" src='{{ assets["getting-started-access.js"].digest_path }}'></script>
-<script type="text/javascript" src='{{ assets["getting-started-finish.js"].digest_path }}'></script>
-<script type="text/javascript" src='{{ assets["bcrypt.js"].digest_path }}'></script>
+<script type="text/javascript" src='{% javascript_asset_tag getting-started %}[_assets/js/getting-started.js]{% endjavascript_asset_tag %}'></script>
+<script type="text/javascript" src='{% javascript_asset_tag getting-started-access %}[_assets/js/getting-started-access.js]{% endjavascript_asset_tag %}'></script>
+<script type="text/javascript" src='{% javascript_asset_tag getting-started-finish %}[_assets/js/getting-started-finish.js]{% endjavascript_asset_tag %}'></script>
+<script type="text/javascript" src='{% javascript_asset_tag bcrypt %}[_assets/js/bcrypt.js]{% endjavascript_asset_tag %}'></script>
 
 ## Accessing to the master node
 Deckhouse have finished installation process. It remains to make some settings, for which you need to connect to the **master node**.
@@ -16,13 +16,13 @@ ssh {% if page.platform_code == "azure" %}azureuser{% elsif page.platform_code =
 Check the kubectl is working by displaying a list of cluster nodes:
 {% snippetcut %}
 ```shell
-sudo /opt/deckhouse/bin/kubectl get nodes
+sudo -i d8 k get nodes
 ```
 {% endsnippetcut %}
 
 {% offtopic title="Example of the output..." %}
 ```
-$ sudo /opt/deckhouse/bin/kubectl get nodes
+$ sudo -i d8 k get nodes
 NAME                                     STATUS   ROLES                  AGE   VERSION
 cloud-demo-master-0                      Ready    control-plane,master   12h   v1.23.9
 cloud-demo-worker-01a5df48-84549-jwxwm   Ready    worker                 12h   v1.23.9
@@ -33,7 +33,7 @@ It may take some time to start the Ingress controller after installing Deckhouse
 
 {% snippetcut %}
 ```shell
-sudo /opt/deckhouse/bin/kubectl -n d8-ingress-nginx get po
+sudo -i d8 k-n d8-ingress-nginx get po
 ```
 {% endsnippetcut %}
 
@@ -41,7 +41,7 @@ Wait for the Pods to switch to `Ready` state.
 
 {% offtopic title="Example of the output..." %}
 ```
-$ sudo /opt/deckhouse/bin/kubectl -n d8-ingress-nginx get po
+$ sudo -i d8 k -n d8-ingress-nginx get po
 NAME                                       READY   STATUS    RESTARTS   AGE
 controller-nginx-r6hxc                     3/3     Running   0          16h
 kruise-controller-manager-78786f57-82wph   3/3     Running   0          16h
@@ -52,7 +52,7 @@ kruise-controller-manager-78786f57-82wph   3/3     Running   0          16h
 Also wait for the load balancer to be ready:
 {% snippetcut %}
 ```shell
-sudo /opt/deckhouse/bin/kubectl -n d8-ingress-nginx get svc nginx-load-balancer
+sudo -i d8 k -n d8-ingress-nginx get svc nginx-load-balancer
 ```
 {% endsnippetcut %}
 
@@ -60,7 +60,7 @@ The `EXTERNAL-IP` value must be filled with a public IP address or DNS name.
 
 {% offtopic title="Example of the output..." %}
 ```
-$ sudo /opt/deckhouse/bin/kubectl -n d8-ingress-nginx get svc nginx-load-balancer
+$ sudo -i d8 k -n d8-ingress-nginx get svc nginx-load-balancer
 NAME                  TYPE           CLUSTER-IP      EXTERNAL-IP     PORT(S)                      AGE
 nginx-load-balancer   LoadBalancer   10.222.91.204   1.2.3.4         80:30493/TCP,443:30618/TCP   1m
 ```
@@ -83,10 +83,10 @@ Run the following command on **the master node** to get the load balancer IP and
 {% snippetcut %}
 {% raw %}
 ```shell
-BALANCER_IP=$(dig $(sudo /opt/deckhouse/bin/kubectl -n d8-ingress-nginx get svc nginx-load-balancer -o json | jq -r '.status.loadBalancer.ingress[0].hostname') +short | head -1) && \
-echo "Balancer IP is '${BALANCER_IP}'." && sudo /opt/deckhouse/bin/kubectl patch mc global --type merge \
+BALANCER_IP=$(dig $(sudo -i d8 k -n d8-ingress-nginx get svc nginx-load-balancer -o json | jq -r '.status.loadBalancer.ingress[0].hostname') +short | head -1) && \
+echo "Balancer IP is '${BALANCER_IP}'." && sudo -i d8 k patch mc global --type merge \
   -p "{\"spec\": {\"settings\":{\"modules\":{\"publicDomainTemplate\":\"%s.${BALANCER_IP}.sslip.io\"}}}}" && echo && \
-echo "Domain template is '$(sudo /opt/deckhouse/bin/kubectl get mc global -o=jsonpath='{.spec.settings.modules.publicDomainTemplate}')'."
+echo "Domain template is '$(sudo -i d8 k get mc global -o=jsonpath='{.spec.settings.modules.publicDomainTemplate}')'."
 ```
 {% endraw %}
 {% endsnippetcut %}
@@ -94,10 +94,10 @@ echo "Domain template is '$(sudo /opt/deckhouse/bin/kubectl get mc global -o=jso
 {% snippetcut %}
 {% raw %}
 ```shell
-BALANCER_IP=$(sudo /opt/deckhouse/bin/kubectl -n d8-ingress-nginx get svc nginx-load-balancer -o json | jq -r '.status.loadBalancer.ingress[0].ip') && \
-echo "Balancer IP is '${BALANCER_IP}'." && sudo /opt/deckhouse/bin/kubectl patch mc global --type merge \
+BALANCER_IP=$(sudo -i d8 k -n d8-ingress-nginx get svc nginx-load-balancer -o json | jq -r '.status.loadBalancer.ingress[0].ip') && \
+echo "Balancer IP is '${BALANCER_IP}'." && sudo -i d8 k patch mc global --type merge \
   -p "{\"spec\": {\"settings\":{\"modules\":{\"publicDomainTemplate\":\"%s.${BALANCER_IP}.sslip.io\"}}}}" && echo && \
-echo "Domain template is '$(sudo /opt/deckhouse/bin/kubectl get mc global -o=jsonpath='{.spec.settings.modules.publicDomainTemplate}')'."
+echo "Domain template is '$(sudo -i d8 k get mc global -o=jsonpath='{.spec.settings.modules.publicDomainTemplate}')'."
 ```
 {% endraw %}
 {% endsnippetcut %}
@@ -124,7 +124,7 @@ Then, run the following command on the **master node** (specify the template for
 {% snippetcut %}
 ```shell
 DOMAIN_TEMPLATE='<DOMAIN_TEMPLATE>'
-sudo /opt/deckhouse/bin/kubectl patch mc global --type merge -p "{\"spec\": {\"settings\":{\"modules\":{\"publicDomainTemplate\":\"${DOMAIN_TEMPLATE}\"}}}}"
+sudo -i d8 k patch mc global --type merge -p "{\"spec\": {\"settings\":{\"modules\":{\"publicDomainTemplate\":\"${DOMAIN_TEMPLATE}\"}}}}"
 ```
 {% endsnippetcut %}
 </div>
@@ -141,7 +141,7 @@ Then, run the following command on the **master node** (specify the template for
 {% raw %}
 ```shell
 DOMAIN_TEMPLATE='<DOMAIN_TEMPLATE>'
-sudo /opt/deckhouse/bin/kubectl patch mc global --type merge -p "{\"spec\": {\"settings\":{\"modules\":{\"publicDomainTemplate\":\"${DOMAIN_TEMPLATE}\"}}}}"
+sudo -i d8 k patch mc global --type merge -p "{\"spec\": {\"settings\":{\"modules\":{\"publicDomainTemplate\":\"${DOMAIN_TEMPLATE}\"}}}}"
 ```
 {% endraw %}
 {% endsnippetcut %}

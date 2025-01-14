@@ -1,10 +1,24 @@
 {{- $version := "1.47.0" }}
 {{- $image_version := $version | replace "." "-" }}
 ---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
+final: false
+fromImage: common/src-artifact
+git:
+- add: /{{ $.ModulePath }}/modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
+  to: /src/scripts
+  stageDependencies:
+    install:
+    - '**/*'
+shell:
+  install:
+  - git clone -b v{{ $version }} --depth 1 {{ $.SOURCE_REPO }}/ext2/e2fsprogs.git /src/e2fsprogs
+  - rm -rf /src/e2fsprogs/.git
+---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
 from: {{ $.Images.BASE_SCRATCH }}
 import:
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
   add: /
   to: /
   includePaths:
@@ -19,24 +33,25 @@ docker:
     version: all
     mke2fs: {{ $version }}
     fsck: {{ $version }}
+  USER: 64535
 ---
-artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
-from: {{ $.Images.BASE_ALPINE_DEV }}
-git:
-  - add: /{{ $.ModulePath }}modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
-    to: /
-    stageDependencies:
-      setup:
-      - '**/*'
+image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
+final: false
+from: {{ $.Images.BASE_ALPINE }}
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
+  add: /src
+  to: /src
+  before: install
 shell:
   beforeInstall:
-    - apk add --no-cache openssh-client
+  {{- include "alpine packages proxy" . | nindent 2 }}
+  - apk add --no-cache make gettext-dev autoconf automake libtool flex bison clang binutils g++ linux-headers
   setup:
-    - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
-    - git clone -b v{{ $version }} --depth 1 {{ $.SOURCE_REPO }}/ext2/e2fsprogs.git src
-    - cd /src
-    - CFLAGS='-static' LDFLAGS="-static" ./configure
-    - make
-    - strip ./misc/mke2fs && strip ./misc/fsck
-    - mv ./misc/mke2fs /mke2fs && mv ./misc/fsck /fsck
-    - chmod +x /mke2fs /fsck  /install /uninstall
+  - cd /src/e2fsprogs
+  - CFLAGS='-static' LDFLAGS="-static" ./configure
+  - make
+  - strip ./misc/mke2fs && strip ./misc/fsck
+  - mv ./misc/mke2fs /mke2fs && mv ./misc/fsck /fsck
+  - mv /src/scripts/* /
+  - chmod +x /mke2fs /fsck  /install /uninstall

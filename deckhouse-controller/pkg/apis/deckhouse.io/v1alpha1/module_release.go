@@ -111,6 +111,20 @@ func (mr *ModuleRelease) GetApplyAfter() *time.Time {
 }
 
 func (mr *ModuleRelease) GetRequirements() map[string]string {
+	requirements := make(map[string]string)
+
+	if len(mr.Spec.Requirements.ModuleReleasePlatformRequirements.Deckhouse) > 0 {
+		requirements[DeckhouseRequirementFieldName] = mr.Spec.Requirements.ModuleReleasePlatformRequirements.Deckhouse
+	}
+
+	if len(mr.Spec.Requirements.ModuleReleasePlatformRequirements.Kubernetes) > 0 {
+		requirements[KubernetesRequirementFieldName] = mr.Spec.Requirements.ModuleReleasePlatformRequirements.Kubernetes
+	}
+
+	return requirements
+}
+
+func (mr *ModuleRelease) GetModuleReleaseRequirements() *ModuleReleaseRequirements {
 	return mr.Spec.Requirements
 }
 
@@ -197,8 +211,6 @@ func (mr *ModuleRelease) GetWeight() uint32 {
 	return mr.Spec.Weight
 }
 
-type Changelog map[string]any
-
 func (c Changelog) DeepCopy() Changelog {
 	if c == nil {
 		return nil
@@ -218,14 +230,24 @@ func (c Changelog) DeepCopy() Changelog {
 	return out
 }
 
+type ModuleReleaseRequirements struct {
+	ModuleReleasePlatformRequirements `json:",inline"`
+	ParentModules                     map[string]string `json:"modules,omitempty"`
+}
+
+type ModuleReleasePlatformRequirements struct {
+	Deckhouse  string `json:"deckhouse,omitempty"`
+	Kubernetes string `json:"kubernetes,omitempty"`
+}
+
 type ModuleReleaseSpec struct {
 	ModuleName string          `json:"moduleName"`
 	Version    *semver.Version `json:"version,omitempty"`
 	Weight     uint32          `json:"weight,omitempty"`
 
-	ApplyAfter   *metav1.Time      `json:"applyAfter,omitempty"`
-	Requirements map[string]string `json:"requirements,omitempty"`
-	Changelog    Changelog         `json:"changelog,omitempty"`
+	ApplyAfter   *metav1.Time               `json:"applyAfter,omitempty"`
+	Requirements *ModuleReleaseRequirements `json:"requirements,omitempty"`
+	Changelog    Changelog                  `json:"changelog,omitempty"`
 }
 
 type ModuleReleaseStatus struct {
