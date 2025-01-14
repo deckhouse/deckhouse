@@ -33,9 +33,11 @@ import (
 )
 
 func ListResources(ctx context.Context, client metadata.Interface, resource schema.GroupVersionResource, option metav1.ListOptions, namespace string) *metav1.PartialObjectMetadataList {
-	request := client.Resource(resource)
+	var request metadata.ResourceInterface
 	if namespace != "" {
-		request.Namespace(namespace)
+		request = client.Resource(resource).Namespace(namespace)
+	} else {
+		request = client.Resource(resource)
 	}
 	rows, err := request.List(ctx, option)
 	if err != nil {
