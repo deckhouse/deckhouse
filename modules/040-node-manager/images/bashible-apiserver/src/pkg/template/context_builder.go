@@ -159,7 +159,6 @@ func (cb *ContextBuilder) Build() (BashibleContextData, map[string][]byte, map[s
 		PackagesProxy: cb.clusterInputData.PackagesProxy,
 	}
 
-	cb.clusterInputData.AllowedBundles = append(cb.clusterInputData.AllowedBundles, "common") // temporary hack for using single bundle boostrap for all bundles
 	for _, ng := range cb.clusterInputData.NodeGroups {
 		checksumCollector, ok := hashMap[ng.Name()]
 		if !ok {
@@ -178,10 +177,6 @@ func (cb *ContextBuilder) Build() (BashibleContextData, map[string][]byte, map[s
 		// bashibleContext always exists. Err is only for checksum generation
 		bb.bashibleContexts[bashibleContextName] = bashibleContext
 
-		for _, bundle := range cb.clusterInputData.AllowedBundles {
-			bashibleContextName := fmt.Sprintf("bashible-%s-%s", bundle, ng.Name())
-			bb.bashibleContexts[bashibleContextName] = bashibleContext
-		}
 	}
 
 	for _, ng := range cb.clusterInputData.NodeGroups {
