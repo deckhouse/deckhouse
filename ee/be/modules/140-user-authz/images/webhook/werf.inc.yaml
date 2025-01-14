@@ -2,11 +2,11 @@
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
 import:
-  - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-user-authz-webhook-artifact
+  - image: {{ $.ModuleName }}/{{ $.ImageName }}-user-authz-webhook-artifact
     add: /src/webhook
     to: /webhook
     before: setup
-  - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-user-authz-webhook-artifact
+  - image: {{ $.ModuleName }}/{{ $.ImageName }}-user-authz-webhook-artifact
     add: /src/healthcheck
     to: /healthcheck
     before: setup
