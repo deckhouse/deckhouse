@@ -43,7 +43,7 @@ func main() {
 	builder.WriteString("--config=")
 	builder.WriteString(tmpfile.Name())
 
-	err = syscall.Exec("/trickster", []string{"trickster", builder.String()}, os.Environ())
+	err = syscall.Exec("/usr/local/bin/trickster", []string{"trickster", builder.String()}, os.Environ())
 	if err != nil {
 		log.Fatal(err)
 	}
