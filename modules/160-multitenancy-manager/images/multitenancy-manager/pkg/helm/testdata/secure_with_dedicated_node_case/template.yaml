@@ -353,20 +353,20 @@ spec:
       - macro:
           name: container
           condition: (container.id != host)
-      - list:
-          name: known_drop_and_execute_containers
-          items: []
       - rule:
           name: Drop and execute new binary in container in {{ .projectName }} project
           condition: >
             spawned_process 
             and container 
             and proc.is_exe_upper_layer=true 
-            and not container.image.repository in (known_drop_and_execute_containers) {{ with .parameters.allowedUIDs }} 
+            {{ with .parameters.allowedUIDs }} 
             and user.uid > {{ .min }} 
-            and user.uid < {{ .max }} {{ end }} {{ with .parameters.allowedGIDs }} 
+            and user.uid < {{ .max }} 
+            {{ end }} 
+            {{ with .parameters.allowedGIDs }} 
             and user.gid >= {{ .min }} 
-            and user.gid <= {{ .max }} {{ end }} 
+            and user.gid <= {{ .max }} 
+            {{ end }} 
             and k8s.ns.name={{ .projectName }}
           desc: Detect if an executable not belonging to the base image of a container is being executed. The drop and execute pattern can be observed very often after an attacker gained an initial foothold. is_exe_upper_layer filter field only applies for container runtimes that use overlayfs as union mount filesystem.
           output: |
