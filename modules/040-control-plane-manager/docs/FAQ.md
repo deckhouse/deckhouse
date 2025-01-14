@@ -936,15 +936,15 @@ If the client certificate lifetime has expired, kubelet will not be able to make
 
 ## How to manually update control plane component certificates?
 
-A situation may arise when the cluster master nodes are turned off for a long time. During this time, the control plane component certificates may expire. After the nodes are turned on, the certificates will not be updated automatically, so this must be done manually.
+There may be a situation when the cluster master nodes are turned off for a long time. During this time, the certificates of the control plane components may expire. After the nodes are turned on, the certificates will not be updated automatically, so this must be done manually.
 Control plane component certificates are updated using the `kubeadm` utility
-To update control plane certificates, you must:
+To update the control plane certificates, you must perform the following steps on each master node:
 
 1. Find the kubeadm utility on the master node and create a symbolic link
-   ```bash
+   ```shell
    ln -s $(find /var/lib/containerd -name kubeadm -type f -executable -print) /usr/bin/kubeadm
    ```
 2. Update the certificates:
-   ```bash
+   ```shell
    kubeadm certs renew all
    ```
