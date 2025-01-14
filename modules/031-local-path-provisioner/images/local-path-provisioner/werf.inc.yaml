@@ -1,39 +1,53 @@
 {{- $localPathProvisionerVersion := "0.0.26"}}
 
 ---
-image: {{ $.ModuleName }}/{{ $.ImageName }}
-fromImage: common/distroless
-import:
-  - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
-    add: /local-path-provisioner
-    to: /usr/bin/local-path-provisioner
-    after: install
-docker:
-  ENTRYPOINT: ["/usr/bin/local-path-provisioner"]
----
-artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
-from: {{ $.Images.BASE_GOLANG_21_ALPINE_DEV }}
+image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+fromImage: common/src-artifact
+final: false
 git:
   - add: /{{ $.ModulePath }}modules/031-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
     to: /patches
     stageDependencies:
       install:
-        - '**/*'
+        - "**/*"
+
+shell:
+  install:
+    - cd /src
+    - git clone --depth 1 --branch v{{$localPathProvisionerVersion}} {{ $.SOURCE_REPO }}/rancher/local-path-provisioner.git /src
+    - git apply /patches/*.patch --verbose
+    - rm -rf .git
+
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
+final: false
+
+import:
+  - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+    add: /src
+    to: /src
+    before: install
+
 mount:
   - fromPath: ~/go-pkg-cache
     to: /go/pkg
+
 shell:
-  beforeInstall:
-  - apk add --no-cache openssh-client
-  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
   install:
-    - mkdir /src
-    - git clone --depth 1 --branch v{{$localPathProvisionerVersion}} {{ $.SOURCE_REPO }}/rancher/local-path-provisioner.git /src
     - cd /src
-    - git apply /patches/*.patch --verbose
-    - go get github.com/prometheus/client_golang@v1.17.0
-    - go mod tidy
-    - go mod vendor
     - GOPROXY={{ $.GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags "-X main.VERSION={{$localPathProvisionerVersion}} -extldflags -static -s -w" -o /local-path-provisioner
     - chown -R 64535:64535 /local-path-provisioner
     - chmod 0700 /local-path-provisioner
+
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}
+fromImage: common/distroless
+
+import:
+  - image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+    add: /local-path-provisioner
+    to: /usr/bin/local-path-provisioner
+    after: install
+docker:
+  ENTRYPOINT: ["/usr/bin/local-path-provisioner"]
