@@ -1043,7 +1043,7 @@ Follow this steps to switch a Deckhouse Enterprise Edition to Community Edition 
    $ journalctl -u bashible -n 5
    Aug 21 11:04:28 master-ee-to-ce-0 bashible.sh[53407]: Configuration is in sync, nothing to do.
    Aug 21 11:04:28 master-ee-to-ce-0 bashible.sh[53407]: Annotate node master-ee-to-ce-0 with annotation node.deckhouse.io/  configuration-checksum=9cbe6db6c91574b8b732108a654c99423733b20f04848d0b4e1e2dadb231206a
-   Aug 21 11:04:29 master-ee-to-ce-0 bashible.sh[53407]: Succesful annotate node master-ee-to-ce-0 with annotation node.deckhouse.io/ configuration-checksum=9cbe6db6c91574b8b732108a654c99423733b20f04848d0b4e1e2dadb231206a
+   Aug 21 11:04:29 master-ee-to-ce-0 bashible.sh[53407]: Successful annotate node master-ee-to-ce-0 with annotation node.deckhouse.io/ configuration-checksum=9cbe6db6c91574b8b732108a654c99423733b20f04848d0b4e1e2dadb231206a
    Aug 21 11:04:29 master-ee-to-ce-0 systemd[1]: bashible.service: Deactivated successfully.
    ```
 
@@ -1188,7 +1188,7 @@ Follow this steps to switch a Deckhouse Community Edition to Enterprise Edition 
    $ journalctl -u bashible -n 5
    Aug 21 11:04:28 master-ce-to-ee-0 bashible.sh[53407]: , nothing to do.
    Aug 21 11:04:28 master-ce-to-ee-0 bashible.sh[53407]: Annotate node master-ce-to-ee-0 with annotation node.deckhouse.io/   configuration-checksum=9cbe6db6c91574b8b732108a654c99423733b20f04848d0b4e1e2dadb231206a
-   Aug 21 11:04:29 master ce-to-ee-0 bashible.sh[53407]: Succesful annotate node master-ce-to-ee-0 with annotation node.deckhouse.io/   configuration-checksum=9cbe6db6c91574b8b732108a654c99423733b20f04848d0b4e1e2dadb231206a
+   Aug 21 11:04:29 master ce-to-ee-0 bashible.sh[53407]: Successful annotate node master-ce-to-ee-0 with annotation node.deckhouse.io/   configuration-checksum=9cbe6db6c91574b8b732108a654c99423733b20f04848d0b4e1e2dadb231206a
    Aug 21 11:04:29 master-ce-to-ee-0 systemd[1]: bashible.service: Deactivated successfully.
    ```
 
@@ -1300,7 +1300,7 @@ Follow this steps to switch a Deckhouse Community Edition to Enterprise Edition 
    $ journalctl -u bashible -n 5
    Aug 21 11:04:28 master-ce-to-ee-0 bashible.sh[53407]: Configuration is in sync, nothing to do.
    Aug 21 11:04:28 master-ce-to-ee-0 bashible.sh[53407]: Annotate node master-ce-to-ee-0 with annotation node.deckhouse.io/ configuration-checksum=9cbe6db6c91574b8b732108a654c99423733b20f04848d0b4e1e2dadb231206a
-   Aug 21 11:04:29 master-ce-to-ee-0 bashible.sh[53407]: Succesful annotate node master-ce-to-ee-0 with annotation node.deckhouse.io/ configuration-checksum=9cbe6db6c91574b8b732108a654c99423733b20f04848d0b4e1e2dadb231206a
+   Aug 21 11:04:29 master-ce-to-ee-0 bashible.sh[53407]: Successful annotate node master-ce-to-ee-0 with annotation node.deckhouse.io/ configuration-checksum=9cbe6db6c91574b8b732108a654c99423733b20f04848d0b4e1e2dadb231206a
    Aug 21 11:04:29 master-ce-to-ee-0 systemd[1]: bashible.service: Deactivated successfully.
    ```
 
@@ -1445,7 +1445,7 @@ All commands should be executed on a master node of the existing cluster.
    $ journalctl -u bashible -n 5
    Aug 21 11:04:28 master-ee-to-se-0 bashible.sh[53407]: Configuration is in sync, nothing to do.
    Aug 21 11:04:28 master-ee-to-se-0 bashible.sh[53407]: Annotate node master-ee-to-se-0 with annotation node.deckhouse.io/   configuration-checksum=9cbe6db6c91574b8b732108a654c99423733b20f04848d0b4e1e2dadb231206a
-   Aug 21 11:04:29 master ee-to-se-0 bashible.sh[53407]: Succesful annotate node master-ee-to-se-0 with annotation node.deckhouse.io/   configuration-checksum=9cbe6db6c91574b8b732108a654c99423733b20f04848d0b4e1e2dadb231206a
+   Aug 21 11:04:29 master ee-to-se-0 bashible.sh[53407]: Successful annotate node master-ee-to-se-0 with annotation node.deckhouse.io/   configuration-checksum=9cbe6db6c91574b8b732108a654c99423733b20f04848d0b4e1e2dadb231206a
    Aug 21 11:04:29 master-ee-to-se-0 systemd[1]: bashible.service: Deactivated successfully.
    ```
 
@@ -1607,7 +1607,7 @@ All commands should be executed on a master node of the existing cluster.
    $ journalctl -u bashible -n 5
    Aug 21 11:04:28 master-ee-to-se-0 bashible.sh[53407]: Configuration is in sync, nothing to do.
    Aug 21 11:04:28 master-ee-to-se-0 bashible.sh[53407]: Annotate node master-ee-to-se-0 with annotation node.deckhouse.io/   configuration-checksum=9cbe6db6c91574b8b732108a654c99423733b20f04848d0b4e1e2dadb231206a
-   Aug 21 11:04:29 master ee-to-se-0 bashible.sh[53407]: Succesful annotate node master-ee-to-se-0 with annotation node.deckhouse.io/   configuration-checksum=9cbe6db6c91574b8b732108a654c99423733b20f04848d0b4e1e2dadb231206a
+   Aug 21 11:04:29 master ee-to-se-0 bashible.sh[53407]: Successful annotate node master-ee-to-se-0 with annotation node.deckhouse.io/   configuration-checksum=9cbe6db6c91574b8b732108a654c99423733b20f04848d0b4e1e2dadb231206a
    Aug 21 11:04:29 master-ee-to-se-0 systemd[1]: bashible.service: Deactivated successfully.
    ```
 
