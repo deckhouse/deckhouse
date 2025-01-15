@@ -21,19 +21,3 @@ properties:
             type: string
             x-examples:
               - plainstring
-      effectiveStorageClass:
-        default: false
-        oneOf:
-          - type: string
-          - type: boolean
-      registryCA:
-        type: object
-        default: { }
-        x-examples:
-          - cert: "-----BEGIN CERTIFICATE-----....-----END CERTIFICATE-----"
-            key: "-----BEGIN RSA PRIVATE KEY-----....-----END RSA PRIVATE KEY----"
-        properties:
-          cert:
-            type: string
-          key:
-            type: string
