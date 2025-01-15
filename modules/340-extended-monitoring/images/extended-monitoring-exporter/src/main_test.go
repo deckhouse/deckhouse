@@ -1,0 +1,229 @@
+/*
+Copyright 2025 Flant JSC
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
+package main
+
+import (
+	"context"
+	"testing"
+
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/stretchr/testify/assert"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	fake "k8s.io/client-go/metadata/fake"
+)
+
+func TestEnabledLabel(t *testing.T) {
+	labels := map[string]string{namespaces_enabled_label: "true"}
+	assert.Equal(t, 1.0, enabledLabel(labels))
+
+	labels[namespaces_enabled_label] = "false"
+	assert.Equal(t, 0.0, enabledLabel(labels))
+
+	delete(labels, namespaces_enabled_label)
+	assert.Equal(t, 1.0, enabledLabel(labels))
+}
+
+func TestThresholdLabel(t *testing.T) {
+	labels := map[string]string{label_theshold_prefix + "cpu": "80"}
+	assert.Equal(t, 80.0, thresholdLabel(labels, "cpu", 100.0))
+
+	labels[label_theshold_prefix+"cpu"] = "invalid"
+	assert.Equal(t, 100.0, thresholdLabel(labels, "cpu", 100.0))
+}
+
+func Test_enabled(t *testing.T) {
+	ctx := context.Background()
+	scheme := runtime.NewScheme()
+	metav1.AddMetaToScheme(scheme)
+	FakeClient := fake.NewSimpleMetadataClient(scheme)
+	FakeClient.Resource(resource_namespaces).(fake.MetadataClient).CreateFake(&metav1.PartialObjectMetadata{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "v1",
+			Kind:       "namespaces",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:   "namespace1",
+			Labels: map[string]string{namespaces_enabled_label: "true"},
+		},
+	}, metav1.CreateOptions{})
+	FakeClient.Resource(resource_namespaces).(fake.MetadataClient).CreateFake(&metav1.PartialObjectMetadata{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "v1",
+			Kind:       "namespaces",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:   "namespace2",
+			Labels: map[string]string{namespaces_enabled_label: "false"},
+		},
+	}, metav1.CreateOptions{})
+	FakeClient.Resource(resource_namespaces).(fake.MetadataClient).CreateFake(&metav1.PartialObjectMetadata{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "v1",
+			Kind:       "namespaces",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "namespace3",
+		},
+	}, metav1.CreateOptions{})
+
+	registry := prometheus.NewRegistry()
+	recordMetrics(ctx, FakeClient, registry)
+
+	mfs, err := registry.Gather()
+	if err != nil {
+		t.Fatalf("Error gathering metrics: %v", err)
+	}
+	assert.Equal(t, 1, len(mfs))
+	assert.Equal(t, "extended_monitoring_enabled", mfs[0].GetName())
+	assert.Equal(t, 2, len(mfs[0].Metric))
+	assert.Regexp(t, "^label:{name:\"namespace\"\\s*value:\"namespace1\"}\\s*counter:{value:1\\s*created_timestamp:{seconds:[0-9]*\\s*nanos:[0-9]*}}$", mfs[0].Metric[0].String())
+	assert.Regexp(t, "^label:{name:\"namespace\"\\s*value:\"namespace2\"}\\s*counter:{value:0\\s*created_timestamp:{seconds:[0-9]*\\s*nanos:[0-9]*}}$", mfs[0].Metric[1].String())
+}
+
+func Test_node(t *testing.T) {
+	ctx := context.Background()
+	scheme := runtime.NewScheme()
+	metav1.AddMetaToScheme(scheme)
+	FakeClient := fake.NewSimpleMetadataClient(scheme)
+	FakeClient.Resource(resource_nodes).(fake.MetadataClient).CreateFake(&metav1.PartialObjectMetadata{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "v1",
+			Kind:       "nodes",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:   "node1",
+			Labels: map[string]string{label_theshold_prefix + "load-average-per-core-critical": "9"},
+		},
+	}, metav1.CreateOptions{})
+	FakeClient.Resource(resource_nodes).(fake.MetadataClient).CreateFake(&metav1.PartialObjectMetadata{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "v1",
+			Kind:       "nodes",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:   "node2",
+			Labels: map[string]string{namespaces_enabled_label: "false"},
+		},
+	}, metav1.CreateOptions{})
+
+	registry := prometheus.NewRegistry()
+	recordMetrics(ctx, FakeClient, registry)
+
+	mfs, err := registry.Gather()
+	if err != nil {
+		t.Fatalf("Error gathering metrics: %v", err)
+	}
+	assert.Equal(t, 2, len(mfs))
+	assert.Equal(t, "extended_monitoring_node_enabled", mfs[0].GetName())
+	assert.Equal(t, 2, len(mfs[0].Metric))
+	assert.Regexp(t, "^label:{name:\"node\"\\s*value:\"node1\"}\\s*counter:{value:1\\s*created_timestamp:{seconds:[0-9]*\\s*nanos:[0-9]*}}$", mfs[0].Metric[0].String())
+	assert.Regexp(t, "^label:{name:\"node\"\\s*value:\"node2\"}\\s*counter:{value:0\\s*created_timestamp:{seconds:[0-9]*\\s*nanos:[0-9]*}}$", mfs[0].Metric[1].String())
+	assert.Equal(t, "extended_monitoring_node_threshold", mfs[1].GetName())
+	// print(mfs[1].String())
+	assert.Equal(t, 6, len(mfs[1].Metric))
+	assert.Regexp(t, "^label:{name:\"node\"\\s*value:\"node1\"}\\s*label:{name:\"threshold\"\\s*value:\"disk-bytes-critical\"}\\s*counter:{value:80\\s*created_timestamp:{seconds:[0-9]*\\s*nanos:[0-9]*}}$", mfs[1].Metric[0].String())
+	assert.Regexp(t, "^label:{name:\"node\"\\s*value:\"node1\"}\\s*label:{name:\"threshold\"\\s*value:\"disk-bytes-warning\"}\\s*counter:{value:70\\s*created_timestamp:{seconds:[0-9]*\\s*nanos:[0-9]*}}$", mfs[1].Metric[1].String())
+	assert.Regexp(t, "^label:{name:\"node\"\\s*value:\"node1\"}\\s*label:{name:\"threshold\"\\s*value:\"disk-inodes-critical\"}\\s*counter:{value:95\\s*created_timestamp:{seconds:[0-9]*\\s*nanos:[0-9]*}}$", mfs[1].Metric[2].String())
+	assert.Regexp(t, "^label:{name:\"node\"\\s*value:\"node1\"}\\s*label:{name:\"threshold\"\\s*value:\"disk-inodes-warning\"}\\s*counter:{value:90\\s*created_timestamp:{seconds:[0-9]*\\s*nanos:[0-9]*}}$", mfs[1].Metric[3].String())
+	assert.Regexp(t, "^label:{name:\"node\"\\s*value:\"node1\"}\\s*label:{name:\"threshold\"\\s*value:\"load-average-per-core-critical\"}\\s*counter:{value:9\\s*created_timestamp:{seconds:[0-9]*\\s*nanos:[0-9]*}}$", mfs[1].Metric[4].String())
+	assert.Regexp(t, "^label:{name:\"node\"\\s*value:\"node1\"}\\s*label:{name:\"threshold\"\\s*value:\"load-average-per-core-warning\"}\\s*counter:{value:3\\s*created_timestamp:{seconds:[0-9]*\\s*nanos:[0-9]*}}$", mfs[1].Metric[5].String())
+}
+
+func Test_pod(t *testing.T) {
+	ctx := context.Background()
+	scheme := runtime.NewScheme()
+	metav1.AddMetaToScheme(scheme)
+	FakeClient := fake.NewSimpleMetadataClient(scheme)
+	FakeClient.Resource(resource_namespaces).(fake.MetadataClient).CreateFake(&metav1.PartialObjectMetadata{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "v1",
+			Kind:       "namespaces",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:   "namespace1",
+			Labels: map[string]string{namespaces_enabled_label: "true"},
+		},
+	}, metav1.CreateOptions{})
+	FakeClient.Resource(resource_namespaces).(fake.MetadataClient).CreateFake(&metav1.PartialObjectMetadata{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "v1",
+			Kind:       "namespaces",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "namespace2",
+		},
+	}, metav1.CreateOptions{})
+	FakeClient.Resource(resource_pods).(fake.MetadataClient).CreateFake(&metav1.PartialObjectMetadata{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "v1",
+			Kind:       "pods",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "pod1",
+			Namespace: "namespace1",
+			Labels:    map[string]string{namespaces_enabled_label: "false"},
+		},
+	}, metav1.CreateOptions{})
+	FakeClient.Resource(resource_pods).(fake.MetadataClient).CreateFake(&metav1.PartialObjectMetadata{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "v1",
+			Kind:       "pods",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "pod2",
+			Namespace: "namespace1",
+		},
+	}, metav1.CreateOptions{})
+	FakeClient.Resource(resource_pods).(fake.MetadataClient).CreateFake(&metav1.PartialObjectMetadata{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "v1",
+			Kind:       "pods",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "pod3",
+			Namespace: "namespace2",
+			Labels:    map[string]string{namespaces_enabled_label: "true"},
+		},
+	}, metav1.CreateOptions{})
+
+	registry := prometheus.NewRegistry()
+	recordMetrics(ctx, FakeClient, registry)
+
+	mfs, err := registry.Gather()
+	if err != nil {
+		t.Fatalf("Error gathering metrics: %v", err)
+	}
+	print(mfs[0].String())
+	assert.Equal(t, 1, len(mfs))
+	assert.Equal(t, "extended_monitoring_enabled", mfs[0].GetName())
+	assert.Equal(t, 1, len(mfs[0].Metric))
+	assert.Regexp(t, "^label:{name:\"namespace\"\\s*value:\"namespace1\"}\\s*counter:{value:1\\s*created_timestamp:{seconds:[0-9]*\\s*nanos:[0-9]*}}$", mfs[0].Metric[0].String())
+	// assert.Regexp(t, "^label:{name:\"namespace\"\\s*value:\"namespace2\"}\\s*counter:{value:0\\s*created_timestamp:{seconds:[0-9]*\\s*nanos:[0-9]*}}$", mfs[0].Metric[1].String())
+}
+
+// prometheus.CounterOpts{Name: "extended_monitoring_pod_enabled"},
+// prometheus.CounterOpts{Name: "extended_monitoring_pod_threshold"},
+// prometheus.CounterOpts{Name: "extended_monitoring_ingress_enabled"},
+// prometheus.CounterOpts{Name: "extended_monitoring_ingress_threshold"},
+// prometheus.CounterOpts{Name: "extended_monitoring_deployment_enabled"},
+// prometheus.CounterOpts{Name: "extended_monitoring_deployment_threshold"},
+// prometheus.CounterOpts{Name: "extended_monitoring_daemonset_enabled"},
+// prometheus.CounterOpts{Name: "extended_monitoring_daemonset_threshold"},
+// prometheus.CounterOpts{Name: "extended_monitoring_statefulset_enabled"},
+// prometheus.CounterOpts{Name: "extended_monitoring_statefulset_threshold"},
+// prometheus.CounterOpts{Name: "extended_monitoring_cronjob_enabled"},
