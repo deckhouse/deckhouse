@@ -134,7 +134,7 @@ A brief example of adding a static node to a cluster using [Cluster API Provider
      ssh-keygen -t rsa -f caps-id -C "" -N ""
      ```
 
-     The public and private keys of the `caps` user will be stored in the caps-id.pub and caps-id files in the current directory on the server.
+     The public and private keys of the `caps` user will be stored in the `caps-id.pub` and `caps-id` files in the current directory on the server.
 
    * Add the generated public key to the `/home/caps/.ssh/authorized_keys` file of the `caps` user by executing the following commands in the keys directory **on the server**:
 
@@ -299,7 +299,7 @@ This example shows how you can use filters in the StaticInstance [label selector
 During the process of transferring instances between node groups, the instance will be cleaned and re-bootstrapped, and the `Node` object will be recreated.
 {% endalert %}
 
-This section describes the process of moving static instances between different node groups (NodeGroup) using the Cluster API Provider Static (CAPS). The process involves modifying the NodeGroup configuration and updating the labels (`labels`) of the corresponding StaticInstance.
+This section describes the process of moving static instances between different node groups (NodeGroup) using the Cluster API Provider Static (CAPS). The process involves modifying the NodeGroup configuration and updating the labels of the corresponding StaticInstance.
 
 #### Initial Configuration
 
