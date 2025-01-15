@@ -131,12 +131,16 @@ spec:
       {{- with $crd.spec.podsAnnotations }}
       annotations:
         {{- toYaml . | nindent 8 }}
-        {{- if $crd.spec.enableIstioSidecar }}
+      {{- end }}
+      {{- if $crd.spec.enableIstioSidecar }}
+      annotations:
+        {{- with $crd.spec.podsAnnotations }}
+          {{- toYaml . | nindent 8 }}
+        {{- end }}
         traffic.sidecar.istio.io/includeInboundPorts: ""
         traffic.sidecar.istio.io/includeOutboundIPRanges: {{ $context.Values.global.discovery.serviceSubnet | quote }}
         inject.istio.io/templates: "sidecar,d8-hold-istio-proxy-termination-until-application-stops"
         {{ include "helm_lib_prevent_ds_eviction_annotation" . | nindent 8 }}
-        {{- end }}
       {{- end }}
     spec:
   {{- if $crd.spec.nodeSelector }}
