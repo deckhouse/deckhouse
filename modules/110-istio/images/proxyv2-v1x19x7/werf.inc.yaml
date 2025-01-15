@@ -32,8 +32,7 @@ shell:
   ###curl iputils knot-utils netcat conntrack-tools net-tools whois lsof sudo
   - |
     apt-get update && \
-    apt-get install -y ca-certificates iptables iproute2 \
-    strace procps jq
+    apt-get install -y ca-certificates iptables iproute2
   - update-ca-trust
   - apt-get clean
   - rm -rf  /var/log/*log /var/lib/apt/lists/* /var/log/apt/* /var/lib/dpkg/*-old /var/cache/debconf/*-old
@@ -71,5 +70,5 @@ shell:
   - echo {{ $istioProxyVersion }} > version
   - export GOPROXY={{ $.GOPROXY }}
   - GOOS=linux GOARCH=amd64 LDFLAGS='-extldflags -static -s -w' common/scripts/gobuild.sh /tmp/istio/out/ -tags=agent,disable_pgv /tmp/istio/pilot/cmd/pilot-agent/
-  - chmod 0500 /tmp/istio/out/pilot-agent
+  - chmod 0555 /tmp/istio/out/pilot-agent
   - chown 1337:1337 /tmp/istio/out/pilot-agent

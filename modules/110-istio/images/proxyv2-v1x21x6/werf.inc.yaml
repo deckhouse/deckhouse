@@ -31,8 +31,7 @@ shell:
   beforeInstall:
   - |
     apt-get update && \
-    apt-get install -y ca-certificates iptables iproute2 sudo curl iputils knot-utils netcat conntrack-tools net-tools whois lsof \
-    strace procps
+    apt-get install -y ca-certificates iptables iproute2
   - update-ca-trust
   - apt-get clean
   - rm -rf  /var/log/*log /var/lib/apt/lists/* /var/log/apt/* /var/lib/dpkg/*-old /var/cache/debconf/*-old
