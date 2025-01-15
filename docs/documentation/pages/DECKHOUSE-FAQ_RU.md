@@ -1689,9 +1689,9 @@ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-con
 {% alert %}
 - Инструкция подразумевает использование публичного адреса container registry: `registry-cse.deckhouse.ru`. В случае использования другого адреса container registry измените команды или воспользуйтесь [инструкцией по переключению Deckhouse на использование стороннего registry](#как-переключить-работающий-кластер-deckhouse-на-использование-стороннего-registry).
 - В Deckhouse CSE не поддерживается работа облачных кластеров и ряда модулей.
-- На текущий момент мигрировать на CSE-редакцию можно только с Deckhouse EE версии `1.58`.
-- CSE-редакция поддерживает только Kubernetes версии `1.27`.
-- При переключении на CSE-редакцию может наблюдаться недоступность компонентов кластера.
+- На текущий момент мигрировать на Deckhouse CSE можно только с Deckhouse EE версии `1.58`.
+- Deckhouse CSE поддерживает только Kubernetes версии `1.27`.
+- При переключении на Deckhouse CSE может наблюдаться недоступность компонентов кластера.
 {% endalert %}
 
 Для переключения кластера Deckhouse Enterprise Edition на Certified Security Edition выполните следующие действия (все команды выполняются на master-узле кластера от имени пользователя с настроенным контекстом `kubectl` или от имени суперпользователя):
@@ -1779,15 +1779,15 @@ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-con
    Aug 21 11:04:29 master-ee-to-cse-0 systemd[1]: bashible.service: Deactivated successfully.
    ```
 
-1. Выполните следующие команды для запуска временного пода CSE-редакции для получения актуальных дайджестов и списка модулей:
+1. Выполните следующие команды для запуска временного пода Deckhouse CSE для получения актуальных дайджестов и списка модулей:
 
-   ```console
+   ```shell
    kubectl run cse-image --image=registry-cse.deckhouse.ru/deckhouse/cse/install:v1.58.2 --command sleep -- infinity
    ```
 
    Как только под перейдёт в статус `Running`, выполните следующие команды:
 
-   ```console
+   ```shell
    CSE_SANDBOX_IMAGE=$(kubectl exec cse-image -- cat deckhouse/candi/images_digests.json | grep  pause | grep -oE 'sha256:\w*')
    CSE_K8S_API_PROXY=$(kubectl exec cse-image -- cat deckhouse/candi/images_digests.json | grep kubernetesApiProxy | grep -oE 'sha256:\w*')
    CSE_MODULES=$(kubectl exec cse-image -- ls -l deckhouse/modules/ | awk {'print $9'}  |grep -oP "\d.*-\w*"  | cut -c5-)
@@ -1795,10 +1795,10 @@ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-con
    MODULES_WILL_DISABLE=$(echo $USED_MODULES | tr ' ' '\n' | grep -Fxv -f <(echo $CSE_MODULES | tr ' ' '\n'))
    ```
 
-1. Убедитесь, что используемые в кластере модули поддерживаются в CSE-редакции.
-   Например, на текущий момент в CSE-редакции отсутствует модуль cert-manager, поэтому перед его отключением необходимо перевести `https.mode` для связанных компонентов (например [user-authn](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.58/modules/user-authn/configuration.html#parameters-https-mode) или [prometheus](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.58/modules/prometheus/configuration.html#parameters-https-mode)) на альтернативные варианты. Либо изменить [глобальный параметр](deckhouse-configure-global.html#parameters-modules-https-mode) отвечающий за режим работы https в кластере.  
+1. Убедитесь, что используемые в кластере модули поддерживаются в Deckhouse CSE.
+   Например, на текущий момент в Deckhouse CSE отсутствует модуль cert-manager. Поэтому, перед отключением модуля cert-manager необходимо перевести режим работы HTTPS некоторых  компонентов (например [user-authn](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.58/modules/user-authn/configuration.html#parameters-https-mode) или [prometheus](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.58/modules/prometheus/configuration.html#parameters-https-mode)) на альтернативные варианты работы, либо изменить [глобальный параметр](deckhouse-configure-global.html#parameters-modules-https-mode) отвечающий за режим работы HTTPS в кластере.  
 
-   Отобразить список модулей, которые не поддерживаются в CSE-редакции и будут отключены, можно следующей командой:
+   Отобразить список модулей, которые не поддерживаются в Deckhouse CSE и будут отключены, можно следующей командой:
 
    ```shell
    echo $MODULES_WILL_DISABLE
@@ -1806,14 +1806,14 @@ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-con
 
    > Проверьте список и убедитесь, что функциональность указанных модулей не задействована вами в кластере, и вы готовы к их отключению.
 
-   Отключите неподдерживаемые в CSE-редакции модули:
+   Отключите неподдерживаемые в Deckhouse CSE модули:
 
    ```shell
    echo $MODULES_WILL_DISABLE | 
      tr ' ' '\n' | awk {'print "kubectl -n d8-system exec  deploy/deckhouse -- deckhouse-controller module disable",$1'} | bash
    ```
 
-   На данный момент редакция 1.58 CSE не поддерживает компонент earlyOOM. Отключите его с помощью [настройки](modules/node-manager/configuration.html#parameters-earlyoomenabled).
+   На данный момент Deckhouse CSE 1.58 не поддерживает компонент earlyOOM. Отключите его с помощью [настройки](modules/node-manager/configuration.html#parameters-earlyoomenabled).
 
    Дождитесь перехода пода Deckhouse в статус `Ready` и выполнения всех задач в очереди.
 
@@ -1878,9 +1878,9 @@ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-con
    Aug 21 11:04:29 master-ee-to-cse-0 systemd[1]: bashible.service: Deactivated successfully.
    ```
 
-1. Актуализируйте секрет доступа к registry Deckhouse, выполнив следующую команду:
+1. Актуализируйте секрет доступа к registry Deckhouse CSE, выполнив следующую команду:
 
-   ```console
+   ```shell
    kubectl -n d8-system create secret generic deckhouse-registry \
      --from-literal=".dockerconfigjson"="{\"auths\": { \"registry-cse.deckhouse.ru\": { \"username\": \"license-token\", \"password\": \"$LICENSE_TOKEN\", \"auth\": \"$AUTH_STRING\" }}}" \
      --from-literal="address"=registry-cse.deckhouse.ru \
@@ -1891,9 +1891,9 @@ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-con
      -o yaml | sudo /opt/deckhouse/bin/kubectl -n d8-system exec -i svc/deckhouse-leader -c deckhouse -- kubectl replace -f -
    ```
 
-1. Примените CSE-образ:
+1. Измените образ Deckhouse на образ Deckhouse CSE:
 
-   ```console
+   ```shell
    kubectl -n d8-system set image deployment/deckhouse deckhouse=registry-cse.deckhouse.ru/deckhouse/cse:v1.58.2
    ```
 
@@ -1901,32 +1901,32 @@ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-con
 
    Посмотреть статус пода Deckhouse:
 
-   ```console
+   ```shell
    kubectl -n d8-system get po -l app=deckhouse
    ```
 
    Проверить состояние очереди Deckhouse:
 
-   ```console
+   ```shell
    kubectl -n d8-system exec deploy/deckhouse -c deckhouse -- deckhouse-controller queue list
    ```
 
 1. Проверьте, не осталось ли в кластере подов с адресом registry для Deckhouse EE:
 
-   ```console
+   ```shell
    kubectl get pods -A -o json | jq -r '.items[] | select(.spec.containers[]
      | select(.image | contains("deckhouse.ru/deckhouse/ee"))) | .metadata.namespace + "\t" + .metadata.name' | sort | uniq
    ```
 
-   Если в выводе присутствуют поды модуля chrony, заново включите данный модуль (в CSE этот модуль по умолчанию выключен):
+   Если в выводе присутствуют поды модуля chrony, заново включите данный модуль (в Deckhouse CSE этот модуль по умолчанию выключен):
 
-   ```console
+   ```shell
    kubectl -n d8-system exec deploy/deckhouse -- deckhouse-controller module enable chrony
    ```
 
 1. Очистите временные файлы, ресурс `NodeGroupConfiguration` и переменные:
 
-   ```console
+   ```shell
    rm /tmp/cse-deckhouse-registry.yaml
 
    kubectl delete ngc containerd-cse-config.sh cse-set-sha-images.sh
