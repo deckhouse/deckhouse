@@ -3,7 +3,7 @@ title: "Managing nodes: examples"
 description: Examples of managing Kubernetes cluster nodes. Examples of creating a node group. Examples of automating the execution of arbitrary settings on a node.
 ---
 
-Below are some examples of `NodeGroup` description, as well as installing the cert-manager plugin for kubectl and setting the sysctl parameter.
+Below are some examples of NodeGroup description, as well as installing the cert-manager plugin for `kubectl` and setting the `sysctl` parameter.
 
 ## Examples of the `NodeGroup` configuration
 
@@ -101,7 +101,7 @@ Follow the steps below to add a new static node (e.g., VM or bare metal server) 
    - Add all the necessary mount points to the `/etc/fstab` file (NFS, Ceph, etc.);
    - Install the necessary packages (e.g., `ceph-common`);
    - Configure network connectivity between the new node and the other nodes of the cluster.
-1. Connect to the new node over SSH and run the following command, inserting the Base64 string you got in step 2:
+1. Connect to the new node over SSH and run the following command, inserting the Base64 string you got in step 3:
 
    ```shell
    echo <Base64-CODE> | base64 -d | bash
