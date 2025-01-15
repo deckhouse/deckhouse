@@ -1784,7 +1784,8 @@ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-con
 1. Выполните следующие команды для запуска временного пода Deckhouse CSE для получения актуальных дайджестов и списка модулей:
 
    ```shell
-   DECKHOUSE_VERSION=<ВЕРСИЯ_DECKHOUSE_CSE>
+   DECKHOUSE_VERSION=v<ВЕРСИЯ_DECKHOUSE_CSE>
+   # Например, DECKHOUSE_VERSION=v1.58.2
    kubectl run cse-image --image=registry-cse.deckhouse.ru/deckhouse/cse/install:$DECKHOUSE_VERSION --command sleep -- infinity
    ```
 
