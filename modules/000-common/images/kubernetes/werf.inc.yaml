@@ -37,7 +37,7 @@ shell:
   {{- if $patch }}
   - git apply /patches/*.patch --verbose
   {{- end }}
-  - rm -r .git
+  - rm -r .git vendor
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $full_version | replace "." "-" }}
        {{- if semverCompare ">=1.30" $version }}
