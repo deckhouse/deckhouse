@@ -8,7 +8,7 @@ shell:
       {{- .Files.Get ".werf/nginx.conf" | nindent 6 }}
       EOD
 import:
-- artifact: {{ .ModuleName }}/{{ .ImageName }}/static
+- image: {{ .ModuleName }}/{{ .ImageName }}/static
   add: /app/_site
   to: /app
   before: setup
@@ -17,7 +17,7 @@ docker:
 {{ else }}
 fromImage: common/nginx-static
 import:
-- artifact: {{ .ModuleName }}/{{ .ImageName }}/static
+- image: {{ .ModuleName }}/{{ .ImageName }}/static
   add: /app/_site/documentation
   to: /app/platform
   before: setup
