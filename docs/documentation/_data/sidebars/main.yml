@@ -752,8 +752,8 @@ entries:
                     ru: Описание
                   url: /modules/cni-simple-bridge/
         - title:
-            en: Balancing
-            ru: Балансировка
+            en: Load Balancing
+            ru: Балансировка трафика
           folders:
             - title:
                 en: ingress-nginx
