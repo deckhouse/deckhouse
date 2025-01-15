@@ -233,7 +233,10 @@ Istio позволяет осуществлять сбор трейсов с п�
 
 #### Требования к кластерам
 
-* У каждого кластера должен быть уникальный домен в параметре [`clusterDomain`](../../installing/configuration.html#clusterconfiguration-clusterdomain) ресурса [*ClusterConfiguration*](../../installing/configuration.html#clusterconfiguration). По умолчанию значение параметра — `cluster.local`.
+* У каждого кластера должен быть уникальный домен в параметре [`clusterDomain`](../../installing/configuration.html#clusterconfiguration-clusterdomain) ресурса [*ClusterConfiguration*](../../installing/configuration.html#clusterconfiguration). При этом ни у одного из кластеров домен не должен быть `cluster.local` (является значением по умолчанию).
+  > `cluster.local` является не переопределяемым алиасом для домена локального кластера.
+  > Указание `cluster.local` как principals в AuthorizationPolicy всегда будет указывать на локальный кластер, даже если в mesh существует кластер у которого [`clusterDomain`](../../installing/configuration.html#clusterconfiguration-clusterdomain) явно определен как `cluster.local`.
+
 * Подсети подов и сервисов в параметрах [`podSubnetCIDR`](../../installing/configuration.html#clusterconfiguration-podsubnetcidr) и [`serviceSubnetCIDR`](../../installing/configuration.html#clusterconfiguration-servicesubnetcidr) ресурса [*ClusterConfiguration*](../../installing/configuration.html#clusterconfiguration) не должны быть уникальными.
 
 #### Общие принципы федерации
