@@ -25,3 +25,4 @@ werf-giterminism.yaml
 /pkg/
 /images/
 /templates/
+docs/site/werf-*.yaml
