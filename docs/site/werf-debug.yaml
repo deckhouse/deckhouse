@@ -21,8 +21,9 @@ configVersion: 1
   {{- end }}
 
 ---
-artifact: web-static
+image: web-static
 from: {{ .Images.BASE_JEKYLL }}
+final: false
 shell:
   install:
   - |
