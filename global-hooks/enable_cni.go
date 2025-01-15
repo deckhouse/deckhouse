@@ -20,53 +20,18 @@ import (
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
-	v1core "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/utils/ptr"
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency/requirements"
 	"github.com/deckhouse/deckhouse/go_lib/set"
 )
 
-/*
-This hook enables cni module enabled either explicitly in configuration or
-during installation in Secret/d8-cni-configuration.
-
-Developer notes:
-- It uses "dynamic enable" feature of addon-operator to enable module in runtime.
-- It executes on Synchronization to return values patch before ConvergeModules task.
-- It is the only hook that subscribes to configuration ConfigMap because
-  there is no way to get enabled modules list in global hook.
-*/
-
 const (
 	cniConfigurationSettledKey = "cniConfigurationSettled"
 )
 
-var (
-	cniNameToModule = map[string]string{
-		"flannel":       "cniFlannelEnabled",
-		"simple-bridge": "cniSimpleBridgeEnabled",
-		"cilium":        "cniCiliumEnabled",
-	}
-)
-
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Kubernetes: []go_hook.KubernetesConfig{
-		{
-			Name:       "cni_name",
-			ApiVersion: "v1",
-			Kind:       "Secret",
-			NameSelector: &types.NameSelector{
-				MatchNames: []string{"d8-cni-configuration"},
-			},
-			NamespaceSelector: &types.NamespaceSelector{
-				NameSelector: &types.NameSelector{
-					MatchNames: []string{"kube-system"},
-				},
-			},
-			FilterFunc: applyCniConfigFilter,
-		},
 		{
 			Name:       "deckhouse_mc",
 			ApiVersion: "deckhouse.io/v1alpha1",
@@ -74,9 +39,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			NameSelector: &types.NameSelector{
 				MatchNames: []string{"cni-flannel", "cni-cilium", "cni-simple-bridge"},
 			},
-			ExecuteHookOnEvents:          ptr.To(false),
-			ExecuteHookOnSynchronization: ptr.To(false),
-			FilterFunc:                   applyMCFilter,
+			FilterFunc: applyMCFilter,
 		},
 	},
 }, enableCni)
@@ -94,50 +57,21 @@ func applyMCFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error)
 	return obj.GetName(), nil
 }
 
-func applyCniConfigFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	var cm v1core.Secret
-	err := sdk.FromUnstructured(obj, &cm)
-	if err != nil {
-		return "", err
-	}
-
-	cni, ok := cm.Data["cni"]
-	if ok {
-		return string(cni), nil
-	}
-
-	return nil, nil
-}
-
 func enableCni(input *go_hook.HookInput) error {
 	requirements.RemoveValue(cniConfigurationSettledKey)
 
-	cniNameSnap := input.Snapshots["cni_name"]
 	deckhouseMCSnap := input.Snapshots["deckhouse_mc"]
 
 	explicitlyEnabledCNIs := set.NewFromSnapshot(deckhouseMCSnap)
-
-	if len(cniNameSnap) == 0 {
-		input.Logger.Warn("CNI name not found")
-		return nil
-	}
 
 	if len(explicitlyEnabledCNIs) > 1 {
 		requirements.SaveValue(cniConfigurationSettledKey, "false")
 		return fmt.Errorf("more then one CNI enabled: %v", explicitlyEnabledCNIs.Slice())
 	} else if len(explicitlyEnabledCNIs) == 1 {
-		input.Logger.Infof("enabled CNI from Deckhouse ModuleConfig: %s", explicitlyEnabledCNIs.Slice()[0])
+		input.Logger.Infof("Enabled CNI from Deckhouse ModuleConfig: %s", explicitlyEnabledCNIs.Slice()[0])
 		return nil
 	}
 
-	// nor any CNI enabled directly via MC, found default CNI from secret
-	cniToEnable := cniNameSnap[0].(string)
-	if _, ok := cniNameToModule[cniToEnable]; !ok {
-		input.Logger.Warnf("Incorrect cni name: '%v'. Skip", cniToEnable)
-		return nil
-	}
-
-	input.Logger.Infof("enabled CNI by secret: %s", cniToEnable)
-	input.Values.Set(cniNameToModule[cniToEnable], true)
+	input.Logger.Warnf("No cni is explicitly enabled")
 	return nil
 }

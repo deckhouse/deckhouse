@@ -22,7 +22,7 @@ linters-settings:
   goimports:
     local-prefixes: github.com/deckhouse/
   # TODO: replace deprecated methods
-  # ignore deprecated 
+  # ignore deprecated
   # https://staticcheck.dev/docs/checks/#SA1019
   staticcheck:
      checks: ["all","-SA1019"]

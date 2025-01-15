@@ -96,7 +96,7 @@ func TestDeckhouseInstall(t *testing.T) {
 			func() error {
 				conf := config.DeckhouseInstaller{
 					ClusterConfig:         []byte(`test`),
-					ProviderClusterConfig: []byte(`test`),
+					ProviderClusterConfig: []byte(`{"Kind": "OpenstackCloudProvider"}`),
 					TerraformState:        []byte(`test`),
 				}
 				_, err := CreateDeckhouseManifests(fakeClient, &conf)
@@ -236,8 +236,9 @@ func TestDeckhouseInstallWithModuleConfigs(t *testing.T) {
 	mcs, err := fakeClient.Dynamic().Resource(config.ModuleConfigGVR).List(context.TODO(), metav1.ListOptions{})
 	require.NoError(t, err)
 
-	require.Len(t, mcs.Items, 2)
+	require.Len(t, mcs.Items, 3)
 
+	require.Equal(t, mcs.Items[0].GetName(), "cni-cilium")
 	// should be not found for unlock deckhouse queue
 	_, err = fakeClient.CoreV1().ConfigMaps("d8-system").Get(context.TODO(), "deckhouse-bootstrap-lock", metav1.GetOptions{})
 	require.True(t, errors.IsNotFound(err))
@@ -278,7 +279,7 @@ func TestDeckhouseInstallWithModuleConfigsReturnsResults(t *testing.T) {
 			mcs, err := fakeClient.Dynamic().Resource(config.ModuleConfigGVR).List(context.TODO(), metav1.ListOptions{})
 			require.NoError(t, err)
 
-			require.Len(t, mcs.Items, 1)
+			require.Len(t, mcs.Items, 2)
 
 			require.NotContains(t, mcs.Items[0].Object["spec"].(map[string]interface{})["settings"], "releaseChannel")
 		})
@@ -315,9 +316,9 @@ func TestDeckhouseInstallWithModuleConfigsReturnsResults(t *testing.T) {
 			mcs, err := fakeClient.Dynamic().Resource(config.ModuleConfigGVR).List(context.TODO(), metav1.ListOptions{})
 			require.NoError(t, err)
 
-			require.Len(t, mcs.Items, 1)
+			require.Len(t, mcs.Items, 2)
 
-			require.NotContains(t, mcs.Items[0].Object["spec"].(map[string]interface{})["settings"].(map[string]interface{})["modules"], "https")
+			require.NotContains(t, mcs.Items[1].Object["spec"].(map[string]interface{})["settings"].(map[string]interface{})["modules"], "https")
 		})
 	})
 
@@ -343,7 +344,7 @@ func TestDeckhouseInstallWithModuleConfigsReturnsResults(t *testing.T) {
 			mcs, err := fakeClient.Dynamic().Resource(config.ModuleConfigGVR).List(context.TODO(), metav1.ListOptions{})
 			require.NoError(t, err)
 
-			require.Len(t, mcs.Items, 1)
+			require.Len(t, mcs.Items, 2)
 		})
 	})
 
@@ -384,7 +385,7 @@ func TestDeckhouseInstallWithModuleConfigsReturnsResults(t *testing.T) {
 			mcs, err := fakeClient.Dynamic().Resource(config.ModuleConfigGVR).List(context.TODO(), metav1.ListOptions{})
 			require.NoError(t, err)
 
-			require.Len(t, mcs.Items, 2)
+			require.Len(t, mcs.Items, 3)
 		})
 	})
 }
