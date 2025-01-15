@@ -1654,17 +1654,17 @@ entries:
             - title:
                 en: Description
                 ru: Описание
-              url: /modules/038-system-registry/
+              url: /modules/system-registry/
             - title:
                 en: Examples
                 ru: Примеры
-              url: /modules/038-system-registry/examples.html
+              url: /modules/system-registry/examples.html
             - title:
                 en: Configuration
                 ru: Настройки
-              url: /modules/038-system-registry/configuration.html
+              url: /modules/system-registry/configuration.html
             - title: FAQ
-              url: /modules/038-system-registry/faq.html
+              url: /modules/system-registry/faq.html
     - title:
         en: Deckhouse CLI
         ru: Deckhouse CLI
