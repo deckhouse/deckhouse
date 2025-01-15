@@ -184,7 +184,7 @@ spec:
         readinessProbe:
           exec:
             command:
-            - /url-exec-prober
+            - /usr/local/bin/url-exec-prober
             - https://dex.d8-user-authn/.well-known/openid-configuration
           initialDelaySeconds: 5
           periodSeconds: 5
