@@ -47,6 +47,7 @@ shell:
   - cd /src/containerd
   - git describe --match 'v[0-9]*' --dirty='.m' --always > VERSION
   - git rev-parse HEAD > REVISION
+  - git apply /patches/containerd/*.patch --verbose
   - cd /src/runc
   - git apply /patches/runc/*.patch --verbose 
   - git describe --dirty --long --always > COMMIT
@@ -72,9 +73,13 @@ shell:
   - export GOPROXY={{ $.GOPROXY }}
   - cd /src/containerd
   - git config --global user.email "builder@deckhouse.io"
+  - go mod download
+  - go mod vendor
   - make STATIC=1 VERSION="$(cat VERSION)" REVISION="$(cat REVISION)" all
   - mv bin/* /
   - cd /src/runc
+  - go mod download
+  - go mod vendor
   - git config --global user.email "builder@deckhouse.io"
   - make COMMIT="$(cat COMMIT)" static
   - mv runc /runc
