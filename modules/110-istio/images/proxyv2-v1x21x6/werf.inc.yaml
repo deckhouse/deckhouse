@@ -1,0 +1,69 @@
+---
+{{- $istioProxyVersion := "1.21.6" }}
+---
+# Based on https://github.com/istio/istio/blob/1.21.6/docker/Dockerfile.base
+#      and https://github.com/istio/istio/blob/1.21.6/pilot/docker/Dockerfile.proxyv2
+image: {{ .ModuleName }}/{{ .ImageName }}
+fromImage: common/alt-p11
+import:
+- image: {{ .ModuleName }}/{{ .ImageName }}-build-agent-artifact
+  add: /tmp/istio/out/pilot-agent
+  to: /usr/local/bin/pilot-agent
+  owner: 1337
+  group: 1337
+  after: setup
+- image: {{ .ModuleName }}/{{ .ImageName }}-binary-artifact
+  add: /var/lib/istio/envoy/
+  to: /var/lib/istio/envoy/
+  includePaths:
+  - envoy_bootstrap_tmpl.json
+  - gcp_envoy_bootstrap_tmpl.json
+  owner: 1337
+  group: 1337
+  after: setup
+- image: {{ .ModuleName }}/{{ .ImageName }}-binary-artifact
+  add: /usr/local/bin/envoy
+  to: /usr/local/bin/envoy
+  owner: 1337
+  group: 1337
+  after: setup
+shell:
+  beforeInstall:
+  - |
+    apt-get update && \
+    apt-get install -y ca-certificates iptables iproute2
+  - update-ca-trust
+  - apt-get clean
+  - rm -rf  /var/log/*log /var/lib/apt/lists/* /var/log/apt/* /var/lib/dpkg/*-old /var/cache/debconf/*-old
+  - update-alternatives --set iptables /usr/sbin/iptables-legacy
+  - update-alternatives --set ip6tables /usr/sbin/ip6tables-legacy
+  install:
+  - useradd -m --uid 1337 istio-proxy
+  - echo istio-proxy ALL=NOPASSWD:ALL | tee -a /etc/sudoers
+docker:
+  ENV:
+    ISTIO_META_ISTIO_PROXY_SHA: "istio-proxy:78bd2d9b284978e170a49cd13decd5f952544489"
+    ISTIO_META_ISTIO_VERSION: "1.21.6"
+  WORKDIR: "/"
+  USER: 1337
+  ENTRYPOINT: ["/usr/local/bin/pilot-agent"]
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-binary-artifact
+from: istio/proxyv2:1.21.6@sha256:a0afbbc8488060f8059e7fa04576edde01915d40576132dae83479b3abe5ce15
+final: false
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-build-agent-artifact
+from: {{ .Images.BASE_GOLANG_23_ALPINE_DEV }}
+final: false
+mount:
+- fromPath: ~/go-pkg-cache
+  to: /go/pkg
+shell:
+  install:
+  - git clone --depth 1 --branch {{ $istioProxyVersion }} https://github.com/istio/istio.git /tmp/istio/
+  - cd /tmp/istio/
+  - echo {{ $istioProxyVersion }} > version
+  - export GOPROXY={{ $.GOPROXY }}
+  - GOOS=linux GOARCH=amd64 LDFLAGS='-extldflags -static -s -w' common/scripts/gobuild.sh /tmp/istio/out/ -tags=agent,disable_pgv /tmp/istio/pilot/cmd/pilot-agent
+  - chmod 0555 /tmp/istio/out/pilot-agent
+  - chown 1337:1337 /tmp/istio/out/pilot-agent 
