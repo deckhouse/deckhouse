@@ -47,8 +47,9 @@ type Storage struct {
 }
 
 // Render renders single script content by nodegroup name (single bootstrap script is used for all bundles).
-func (s Storage) Render(ng string) (runtime.Object, error) {
-	data, err := s.getContext(ng)
+func (s Storage) Render(name string) (runtime.Object, error) {
+	nameWithoutBundle, err := template.TransformName(name)
+	data, err := s.getContext(nameWithoutBundle)
 	if err != nil {
 		return nil, fmt.Errorf("cannot get context: %v", err)
 	}
@@ -62,7 +63,7 @@ func (s Storage) Render(ng string) (runtime.Object, error) {
 	}
 
 	obj := bashible.Bootstrap{}
-	obj.ObjectMeta.Name = ng
+	obj.ObjectMeta.Name = nameWithoutBundle
 	obj.ObjectMeta.CreationTimestamp = metav1.NewTime(time.Now())
 	obj.Bootstrap = r.Content.String()
 
