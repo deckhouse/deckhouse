@@ -13,6 +13,7 @@ Deckhouse Kubernetes Platform (DKP) supports the following module dependencies:
 - [Deckhouse Kubernetes Platform version](#deckhouse-kubernetes-platform-version-dependency);
 - [Kubernetes version](#kubernetes-version-dependency);
 - [cluster installation status](#cluster-installation-status-dependency).
+- [version of other modules](#dependency-on-the-version-of-other-modules).
 
 ### Deckhouse Kubernetes Platform version dependency
 
