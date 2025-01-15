@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: nginx-apparmor-disallowed
+  namespace: testns
+  labels:
+    app: nginx-apparmor
+spec:
+  containers:
+    - name: nginx
+      image: nginx
+  securityContext:
+    appArmorProfile:
+      type: Unconfined
