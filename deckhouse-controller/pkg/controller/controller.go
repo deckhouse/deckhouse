@@ -188,51 +188,65 @@ func NewDeckhouseController(ctx context.Context, version string, operator *addon
 		{
 			Source: "/usr/bin",
 			Flags:  syscall.MS_BIND | syscall.MS_RDONLY,
+			Type: mountmgr.Mount,
 		},
 		{
 			Source: "/bin",
 			Flags:  syscall.MS_BIND | syscall.MS_RDONLY,
+			Type: mountmgr.Mount,
 		},
 		{
 			Source: "/usr/local/bin",
 			Flags:  syscall.MS_BIND | syscall.MS_RDONLY,
+			Type: mountmgr.Mount,
 		},
 		{
 			Source: "/lib",
 			Flags:  syscall.MS_BIND | syscall.MS_RDONLY,
+			Type: mountmgr.Mount,
 		},
 		{
 			Source: "/lib64",
 			Flags:  syscall.MS_BIND | syscall.MS_RDONLY,
+			Type: mountmgr.Mount,
 		},
 		{
 			Source: "/deckhouse/shell_lib",
 			Flags:  syscall.MS_BIND | syscall.MS_RDONLY,
+			Type: mountmgr.Mount,
 		},
 		{
 			Source: "/deckhouse/shell-operator",
 			Flags:  syscall.MS_BIND | syscall.MS_RDONLY,
+			Type: mountmgr.Mount,
 		},
 		{
 			Source: "/deckhouse/candi",
 			Flags:  syscall.MS_BIND | syscall.MS_RDONLY,
+			Type: mountmgr.Mount,
 		},
 		{
 			Source: "/deckhouse/helm_lib",
 			Flags:  syscall.MS_BIND | syscall.MS_RDONLY,
+			Type: mountmgr.Mount,
 		},
 		{
 			Source:   "/proc/sys/kernel/cap_last_cap",
-			TypeFile: true,
+			Type: mountmgr.File,
 		},
 		{
 			Source:   "/deckhouse/shell_lib.sh",
-			TypeFile: true,
+			Type: mountmgr.File,
 		},
 		{
 			Source: "/chroot/tmp",
 			Target: "/tmp",
 			Flags:  syscall.MS_BIND,
+			Type: mountmgr.Mount,
+		},
+		{
+			Target: "/dev/null",
+			Type: mountmgr.DevNull,
 		},
 	}...)
 
