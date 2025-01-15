@@ -12,7 +12,7 @@ Adding a master node to a static or hybrid cluster has no difference from adding
 
 <div id='how-do-i-add-a-master-nodes-to-a-cloud-cluster-single-master-to-a-multi-master'></div>
 
-## How do I add a master nodes to a cloud cluster?
+## How do I add master nodes to a cloud cluster?
 
 The following describes the conversion of a single-master cluster into a multi-master.
 
@@ -464,7 +464,7 @@ spec:
       basicAuditPolicyEnabled: false
 ```
 
-### How stream audit log to stdout instead of files?
+### How to stream audit log to stdout instead of files?
 
 Set the [apiserver.auditLog.output](configuration.html#parameters-apiserver-auditlog) parameter to `Stdout`.
 
@@ -936,11 +936,12 @@ If the client certificate lifetime has expired, kubelet will not be able to make
 
 ## How to manually update control plane component certificates?
 
-There may be a situation when the cluster master nodes are turned off for a long time. During this time, the certificates of the control plane components may expire. After the nodes are turned on, the certificates will not be updated automatically, so this must be done manually.
-Control plane component certificates are updated using the `kubeadm` utility
-To update the control plane certificates, you must perform the following steps on each master node:
+There may be a situation when the cluster's master nodes are powered off for an extended period. During this time, the control plane component certificates may expire. After the nodes are powered back on, the certificates will not update automatically and must be renewed manually.
 
-1. Find the kubeadm utility on the master node and create a symbolic link
+Control plane component certificates are updated using the `kubeadm` utility.
+To update the certificates, do the following on each master node:
+
+1. Find the `kubeadm` utility on the master node and create a symbolic link using the following command:
 
    ```shell
    ln -s $(find /var/lib/containerd -name kubeadm -type f -executable -print) /usr/bin/kubeadm
