@@ -1,0 +1,44 @@
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+fromImage: common/src-artifact
+final: false
+git:
+- add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/src/
+  to: /src
+  stageDependencies:
+    install:
+    - '**/*'
+---
+image: {{ .ModuleName }}/{{ $.ImageName }}-artifact
+from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
+final: false
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+  add: /src
+  to: /src
+  before: install
+mount:
+  - fromPath: ~/go-pkg-cache
+    to: /go/pkg
+shell:
+  install:
+    - cd /src
+    - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags='-extldflags "-static" -s -w' -o ./protobuf_exporter ./main.go
+    - chown 64535:64535 ./protobuf_exporter
+    - chmod 0755 ./protobuf_exporter
+---
+image: {{ .ModuleName }}/{{ .ImageName }}
+fromImage: common/distroless
+import:
+- image: {{ .ModuleName }}/{{ $.ImageName }}-artifact
+  add: /src/protobuf_exporter
+  to: /protobuf_exporter
+  before: setup
+git:
+- add: /{{ $.ModulePath }}modules/402-{{ $.ModuleName }}/images/{{ $.ImageName }}/rootfs/
+  to: /
+  stageDependencies:
+    install:
+      - '**/*.yaml'
+docker:
+  ENTRYPOINT: ["/protobuf_exporter", "-server.telemetry-address", "127.0.0.1:9090", "-server.exporter-address", "127.0.0.1:9091" , "-mappings", "/etc/protobuf_exporter/mappings.yaml"]
