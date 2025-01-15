@@ -34,6 +34,8 @@ git:
       - '**/*'
 {{- end }}
 shell:
+  beforeInstall:
+    - apk add --no-cache make bash git mercurial patch rsync gcc
   install:
   - git clone --depth 1 --branch {{ $value.ccm.azure }}  {{ $.SOURCE_REPO }}/kubernetes-sigs/cloud-provider-azure.git /src
   - cd /src
