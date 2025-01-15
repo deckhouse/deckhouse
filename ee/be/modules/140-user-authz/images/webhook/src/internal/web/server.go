@@ -14,8 +14,8 @@ import (
 	"os"
 	"time"
 
-	"user-authz-webhook/cache"
-	"user-authz-webhook/web/hook"
+	"webhook/internal/cache"
+	"webhook/internal/web/hook"
 )
 
 const (
@@ -61,13 +61,13 @@ type Server struct {
 	logger  *log.Logger
 }
 
-func NewServer(l *log.Logger) (*Server, error) {
-	c := cache.NewNamespacedDiscoveryCache(l)
-	h, err := hook.NewHandler(l, c)
+func NewServer(logger *log.Logger) (*Server, error) {
+	c := cache.NewNamespacedDiscoveryCache(logger)
+	h, err := hook.NewHandler(logger, c)
 	if err != nil {
 		return nil, err
 	}
-	return &Server{logger: l, cache: c, handler: h}, nil
+	return &Server{logger: logger, cache: c, handler: h}, nil
 }
 
 func (s *Server) prepareHTTPServer() (*http.Server, error) {
@@ -121,7 +121,7 @@ func (s *Server) Run() error {
 		stopCh <- struct{}{}
 	})
 
-	if err := httpServer.ListenAndServeTLS(sslListenCert, sslListenKey); err != nil && err != http.ErrServerClosed {
+	if err = httpServer.ListenAndServeTLS(sslListenCert, sslListenKey); err != nil && err != http.ErrServerClosed {
 		return fmt.Errorf("could not listen on %s: %v", ListenAddr, err)
 	}
 
