@@ -2,10 +2,15 @@
 {%- assign useRoles = site.data.rbac.rbac_roles_for_csv.useRoles %}
 
 
-role;capability;comment;{% for type in types %}{{ type }}{%- unless forloop.last %};{% endunless %}{% endfor %}
+role;capability;comment;{%- for type in types %}{{ type }}{%- unless forloop.last %};{%- endunless %}{%- endfor %}
 
 
 {%- for role in useRoles %}
-  {{ role.capabilities }}
+{%- for capability in role.capabilities %}
+{{ role.name }};{{ capability.name }};{%- if capability.comment != '' %}{{ capability.comment }}{%- else %}-{%- endif %};
+  {%- for type in types %}
+    {%- for tp in capability.types %}{%- if type == tp.name %}{%- if tp.data != '' %}{{ tp.data }}{%- else %}-{%- endif %}{%- endif %}{%- endfor %}{%- unless forloop.last %};{%- endunless %}
+  {%- endfor %}
+{%- endfor %}
 {%- endfor %}
 
