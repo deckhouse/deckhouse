@@ -6,14 +6,14 @@ fromImage: common/src-artifact
 final: false
 shell:
   install:
-  - git clone --depth 1 --branch v{{$promuVersion}} {{ $.SOURCE_REPO }}/prometheus/promu.git /promu
+  - git clone --depth 1 --branch v{{$promuVersion}} {{ $.SOURCE_REPO }}/prometheus/promu.git /src
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-promu
 from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
 final: false
 import:
 - image: {{ .ModuleName }}/{{ $.ImageName }}-src-artifact-promu
-  add: /promu
+  add: /src
   to: /promu
   before: install
 mount:
