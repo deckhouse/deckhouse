@@ -1,4 +1,4 @@
-{{- /* 
+{{- /*
     Secret: "embedded-registry-ingress-tls-customcertificate"
     Condition: created if mode == "CustomCertificate"
     How it works:
