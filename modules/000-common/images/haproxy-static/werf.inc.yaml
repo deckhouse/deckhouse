@@ -1,0 +1,60 @@
+{{- $HAProxyVersion := "3.1.0" }}
+{{- $OpenSSLVersion := "3.3.2" }}
+{{- $PCREVersion := "10.44" }}
+
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+fromImage: common/src-artifact
+final: false
+shell:
+  install:
+  - git clone -b v{{ $HAProxyVersion }} --single-branch --depth=1 {{ $.SOURCE_REPO }}/haproxy/haproxy.git /src
+  - cd /src
+  - rm -r .git
+  - git clone -b openssl-{{ $OpenSSLVersion }} --single-branch --depth=1 {{ $.SOURCE_REPO }}/openssl/openssl.git /src/openssl
+  - rm -r openssl/.git
+  - git clone -b pcre2-{{ $PCREVersion }} --single-branch --depth=1 {{ $.SOURCE_REPO }}/PCRE2Project/pcre2.git /src/pcre2
+  - rm -r pcre2/.git
+
+---
+image: {{ $.ModuleName }}/build-{{ $.ImageName }}-artifact
+from: {{ $.Images.BASE_UBUNTU }}
+final: true
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+  add: /src
+  to: /src
+  before: install
+shell:
+  beforeInstall:
+  {{- include "ubuntu packages proxy" . | nindent 2 }}
+  - apt install -y --no-install-recommends procps libssl3 zlib1g "libpcre2-*" liblua5.4-0 libatomic1 socat ca-certificates libjemalloc2 libssl-dev libpcre3-dev zlib1g-dev liblua5.4-dev libjemalloc-dev build-essential autoconf automake libtool pkg-config
+  install:
+  - export OPENSSL=/tmp/staticssl
+  - export PCRE2=/tmp/staticpcre
+
+  - cd /src/openssl
+  - ./Configure gcc -static -no-shared --prefix=${OPENSSL}
+  - make -j"$(nproc)"
+  - make install_sw
+
+  - ./autogen.sh && ./configure --disable-shared --prefix=${PCRE2}
+  - make -j$(nproc)
+    && make install
+
+  - make -j"$(nproc)" TARGET=linux-gcc CPU=generic \
+    PCRE_LIB=${PCRE2}/lib PCRE_INC=${PCRE2}/include PCRE2DIR=${PCRE2} \
+    SSL_INC=${OPENSSL}/include SSL_LIB=${OPENSSL}/lib \
+    USE_STATIC_PCRE2=1 USE_PCRE2_JIT=1 USE_TFO=1 \
+    USE_LINUX_TPROXY=1 USE_LUA=0 USE_GETADDRINFO=1 \
+    USE_PROMEX=1 USE_SLZ=1 USE_OPENSSL=1 USE_PTHREAD_EMULATION=1 \
+    USE_QUIC=0 \
+    CFLAGS="-static" all
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}
+fromImage: common/distroless
+import:
+- artifact: {{ $.ModuleName }}/build-nginx-static-artifact
+  add: /opt/nginx-static
+  to: /opt/nginx-static
+  before: setup
