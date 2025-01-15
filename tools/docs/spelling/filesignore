@@ -7,7 +7,7 @@ site/_includes/getting_started/global/partials/getting-started-setup.js.liquid$
 site/_includes/header.html$
 site/_layouts/.+$
 site/werf.+.inc.yaml$
-docs/site/werf-*.yaml$
+docs/site/werf-.*.yaml$
 /images/.+\.ya?ml$
 /templates/.+\.ya?ml$
 openapi/values\.ya?ml$
