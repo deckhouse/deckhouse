@@ -3,7 +3,7 @@ title: "Managing nodes: examples"
 description: Examples of managing Kubernetes cluster nodes. Examples of creating a node group. Examples of automating the execution of arbitrary settings on a node.
 ---
 
-Below are some examples of `NodeGroup` description, as well as installing the cert-manager plugin for kubectl and setting the sysctl parameter.
+Below are some examples of NodeGroup description, as well as installing the cert-manager plugin for `kubectl` and setting the `sysctl` parameter.
 
 ## Examples of the `NodeGroup` configuration
 
@@ -101,7 +101,7 @@ Follow the steps below to add a new static node (e.g., VM or bare metal server) 
    - Add all the necessary mount points to the `/etc/fstab` file (NFS, Ceph, etc.);
    - Install the necessary packages (e.g., `ceph-common`);
    - Configure network connectivity between the new node and the other nodes of the cluster.
-1. Connect to the new node over SSH and run the following command, inserting the Base64 string you got in step 2:
+1. Connect to the new node over SSH and run the following command, inserting the Base64 string you got in step 3:
 
    ```shell
    echo <Base64-CODE> | base64 -d | bash
@@ -299,11 +299,11 @@ This example shows how you can use filters in the StaticInstance [label selector
 During the process of transferring instances between node groups, the instance will be cleaned and re-bootstrapped, and the `Node` object will be recreated.
 {% endalert %}
 
-This section describes the process of moving static instances between different node groups (`NodeGroup`) using the Cluster API Provider Static (CAPS). The process involves modifying the `NodeGroup` configuration and updating the labels (`labels`) of the corresponding `StaticInstance`.
+This section describes the process of moving static instances between different node groups (NodeGroup) using the Cluster API Provider Static (CAPS). The process involves modifying the NodeGroup configuration and updating the labels of the corresponding StaticInstance.
 
 #### Initial Configuration
 
-Assume that there is already a `NodeGroup` named `worker` in the cluster, configured to manage one static instance with the label `role: worker`.
+Assume that there is already a NodeGroup named `worker` in the cluster, configured to manage one static instance with the label `role: worker`.
 
 **`NodeGroup` worker:**
 
@@ -341,7 +341,7 @@ spec:
 
 ##### 1. Create a New `NodeGroup` for the Target Node Group
 
-Create a new `NodeGroup` resource, for example, named `front`, which will manage a static instance with the label `role: front`.
+Create a new NodeGroup resource, for example, named `front`, which will manage a static instance with the label `role: front`.
 
 ```shell
 kubectl create -f - <<EOF
@@ -361,7 +361,7 @@ EOF
 
 ##### 2. Update the Label on the `StaticInstance`
 
-Change the `role` label of the existing `StaticInstance` from `worker` to `front`. This will allow the new `NodeGroup` `front` to manage this instance.
+Change the `role` label of the existing StaticInstance from `worker` to `front`. This will allow the new NodeGroup `front` to manage this instance.
 
 ```shell
 kubectl label staticinstance static-worker-1 role=front --overwrite
@@ -369,7 +369,7 @@ kubectl label staticinstance static-worker-1 role=front --overwrite
 
 ##### 3. Decrease the Number of Static Instances in the Original `NodeGroup`
 
-Update the `NodeGroup` resource `worker` by reducing the `count` parameter from `1` to `0`.
+Update the NodeGroup resource `worker` by reducing the `count` parameter from `1` to `0`.
 
 ```shell
 kubectl patch nodegroup worker -p '{"spec": {"staticInstances": {"count": 0}}}' --type=merge
