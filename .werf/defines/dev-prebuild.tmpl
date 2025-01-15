@@ -79,7 +79,7 @@ chown deckhouse:deckhouse -R /deckhouse
 ln -fs /usr/bin/vim-console /usr/bin/vim
 ln -fs /usr/bin/vim-console /usr/bin/vi
 # Set capabilities to the cap-wrapper binary
-setcap "cap_sys_chroot=p cap_sys_admin=p" /usr/bin/cap-wrapper
+setcap "cap_sys_chroot=p cap_sys_admin=p cap_mknod=p" /usr/bin/cap-wrapper
 {{- end }}
 
 # render docker parameters for installer image

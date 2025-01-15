@@ -53,7 +53,7 @@ func main() {
 			returnError(fmt.Sprintf("creating pid capabilities: %s", err))
 		}
 
-		caps.Set(capability.INHERITABLE|capability.AMBIENT, capability.CAP_SYS_CHROOT, capability.CAP_SYS_ADMIN)
+		caps.Set(capability.INHERITABLE|capability.AMBIENT, capability.CAP_SYS_CHROOT, capability.CAP_SYS_ADMIN, capability.CAP_MKNOD)
 
 		err = caps.Apply(capability.CAPS | capability.AMBS)
 		if err != nil {
