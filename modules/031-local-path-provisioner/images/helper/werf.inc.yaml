@@ -1,15 +1,27 @@
 ---
-artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-dir-manager
-from: {{ $.Images.BASE_GOLANG_20_ALPINE }}
-fromCacheVersion: "2023-10-16.1"
+image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+fromImage: common/src-artifact
+final: false
+
 git:
   - add: /{{ $.ModulePath }}modules/031-{{ $.ModuleName }}/images/{{ $.ImageName }}/dir-manager
     to: /src
     stageDependencies:
       install:
-        - '**/*'
+        - "**/*"
+
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-dir-manager
+from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
+final: false
+
+import:
+  - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+    add: /src
+    to: /src
+    before: install
+
 shell:
-  installCacheVersion: "2023-10-16.2"
   install:
     - export "CGO_ENABLED=0"
     - export "GOOS=linux"
@@ -18,12 +30,13 @@ shell:
     - echo "Build manager"
     - GOPROXY={{ $.GOPROXY }} go build -o /tmp/manager main.go
     - chmod 0777 /tmp/manager
+
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: common/distroless
-fromCacheVersion: "2023-10-16.3"
+
 import:
- - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-dir-manager
+ - image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-dir-manager
    add: /tmp/manager
    to: /manager
    after: install
