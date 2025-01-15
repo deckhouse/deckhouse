@@ -1,0 +1,188 @@
+candi:
+  features:
+    - summary: >-
+        Added a way to control node labels from files, stored in local directory and it
+        subdirectories.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/10905
+  fixes:
+    - summary: Ignore metadata changes in `vcd_vapp_vm` resource.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/11201
+chrony:
+  fixes:
+    - summary: Fix ports conflict
+      pull_request: https://github.com/deckhouse/deckhouse/pull/11450
+    - summary: Fix ports conflict
+      pull_request: https://github.com/deckhouse/deckhouse/pull/11449
+    - summary: fix build
+      pull_request: https://github.com/deckhouse/deckhouse/pull/11431
+ci:
+  features:
+    - summary: Update CI templates to set CIS_ENABLED in e2e tests to true if e2e/use/cis label set.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/11176
+  fixes:
+    - summary: fix bookworm packages proxy
+      pull_request: https://github.com/deckhouse/deckhouse/pull/11443
+    - summary: Remove remaining code from matrix tests.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/11300
+    - summary: Fixed 'trdl' startup in older versions of 'make'.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/11097
+cloud-provider-dynamix:
+  fixes:
+    - summary: provider RBAC-for-us fixes.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/11235
+control-plane-manager:
+  features:
+    - summary: Change of logic detection enough free space for etcd-backup.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/11170
+  fixes:
+    - summary: fixed CVE-2024-51744
+      pull_request: https://github.com/deckhouse/deckhouse/pull/11536
+deckhouse-controller:
+  features:
+    - summary: Add module dependency extender.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/11033
+  fixes:
+    - summary: Added pyOpenSSL to the image
+      pull_request: https://github.com/deckhouse/deckhouse/pull/11424
+dhctl:
+  features:
+    - summary: Parallel bootstrap cloud permanent node groups.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/11031
+docs:
+  features:
+    - summary: Add additional information in external modules main page.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/11458
+    - summary: Added a selection of additional editions in step 4.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/10912
+  fixes:
+    - summary: >-
+        Add missing "create" command in "sudo -i d8 k create -f - <<EOF" in DVP and DKP Getting
+        Started sections.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/11457
+    - summary: Fixed errors in config generation.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/11375
+    - summary: Fixed broken links at Getting Started.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/11181
+    - summary: The command on the fifth step page has been fixed.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/11156
+    - summary: Added information about SIEM.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/11064
+extended-monitoring:
+  features:
+    - summary: >-
+        Replaced cert-exporter with x509-certificate-exporter, adding support for custom Opaque
+        certificates.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/11469
+    - summary: Added IAM authentication support for ECR in image-availability-exporter.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/10893
+    - summary: >-
+        Replaced cert-exporter with x509-certificate-exporter, adding support for custom Opaque
+        certificates.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/10554
+  fixes:
+    - summary: Fix typo in documentation
+      pull_request: https://github.com/deckhouse/deckhouse/pull/11492
+    - summary: Fix events-exporter CVE
+      pull_request: https://github.com/deckhouse/deckhouse/pull/11442
+    - summary: Fix extended-monitoring-exporter CVE
+      pull_request: https://github.com/deckhouse/deckhouse/pull/11440
+    - summary: Fix extended-monitoring-exporter CVE
+      pull_request: https://github.com/deckhouse/deckhouse/pull/11425
+    - summary: Fix image-availability-exporter CVEs
+      pull_request: https://github.com/deckhouse/deckhouse/pull/11350
+    - summary: Fix image-availability-exporter CVEs
+      pull_request: https://github.com/deckhouse/deckhouse/pull/11336
+ingress-nginx:
+  fixes:
+    - summary: Return lost TLSv1.3 if legacySSL activated
+      pull_request: https://github.com/deckhouse/deckhouse/pull/10871
+kube-dns:
+  features:
+    - summary: Refactor build and bump version coredns  to v1.12.0.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/11240
+local-path-provisioner:
+  fixes:
+    - summary: Fix security context for helperPod.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/11322
+log-shipper:
+  features:
+    - summary: >-
+        Add keepDeletedFilesOpenedFor option. Now it is possible to configure how long Vector keeps
+        deleted file in case of unavailability of a log storage (when Vector cannot send logs to a
+        storage and the internal buffer is already filled). Before the change, Vector used to hold
+        log files opened indefinitely, which can cause a node outage by flooding the disk space. The
+        option makes this behaviour configurable.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/10641
+node-manager:
+  fixes:
+    - summary: in bootstrap output error text in stderr for function load_phase2_script
+      pull_request: https://github.com/deckhouse/deckhouse/pull/11187
+    - summary: disallow changes of `nodeGroup.spec.staticInstances.labelSelector`
+      pull_request: https://github.com/deckhouse/deckhouse/pull/11111
+okmeter:
+  fixes:
+    - summary: Remove RBAC from the okmeter module
+      pull_request: https://github.com/deckhouse/deckhouse/pull/10323
+      impact: okmeter agents are no longer able to access the Kubernetes API
+prometheus:
+  fixes:
+    - summary: Fix trickster binary path
+      pull_request: https://github.com/deckhouse/deckhouse/pull/11482
+    - summary: Fix alertmanager CVE
+      pull_request: https://github.com/deckhouse/deckhouse/pull/11480
+    - summary: Fix alertmanager CVE
+      pull_request: https://github.com/deckhouse/deckhouse/pull/11459
+    - summary: Fix grafana CVEs
+      pull_request: https://github.com/deckhouse/deckhouse/pull/11417
+      impact: grafana in cluster will be restarted as the image has changed
+    - summary: Observability must walk to aggregating proxy instead of directly to prometheus
+      pull_request: https://github.com/deckhouse/deckhouse/pull/11394
+    - summary: Fix trickster werf
+      pull_request: https://github.com/deckhouse/deckhouse/pull/11385
+    - summary: Fix trickster CVEs
+      pull_request: https://github.com/deckhouse/deckhouse/pull/11353
+    - summary: Fix memcached CVEs
+      pull_request: https://github.com/deckhouse/deckhouse/pull/11327
+    - summary: Fix memcached CVEs
+      pull_request: https://github.com/deckhouse/deckhouse/pull/11296
+    - summary: Fix alerts-receiver CVE
+      pull_request: https://github.com/deckhouse/deckhouse/pull/11270
+    - summary: Fix alerts-receiver CVE
+      pull_request: https://github.com/deckhouse/deckhouse/pull/11257
+    - summary: Fix links to modules documentation
+      pull_request: https://github.com/deckhouse/deckhouse/pull/10748
+prometheus-metrics-adapter:
+  fixes:
+    - summary: Fix prometheus-reverse-proxy CVE
+      pull_request: https://github.com/deckhouse/deckhouse/pull/11474
+    - summary: Fix prometheus-reverse-proxy CVE
+      pull_request: https://github.com/deckhouse/deckhouse/pull/11472
+    - summary: Fix k8s-prometheus-adapter CVEs
+      pull_request: https://github.com/deckhouse/deckhouse/pull/11420
+    - summary: Fix k8s-prometheus-adapter CVEs
+      pull_request: https://github.com/deckhouse/deckhouse/pull/11389
+snapshot-controller:
+  fixes:
+    - summary: Fix snapshot-controller user and group.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/11478
+    - summary: Fix snapshot-controller user and group.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/11476
+upmeter:
+  features:
+    - summary: Added `backup.deckhouse.io/cluster-config` label to relevant module CRDs.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/10568
+user-authn:
+  features:
+    - summary: Add HA option to DexAuthenticator CRD.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/11049
+      impact: >-
+        All authenticators deployed by deckhouse will inherit the highAvailable option from the
+        module instead of using the highAvailable option value of the user-authn. It means that if,
+        e.g., the prometheus module is running in non HA mode, the DexAuthenticator instance will
+        also be deployed without HA.
+  fixes:
+    - summary: bump dependencies for user-authn
+      pull_request: https://github.com/deckhouse/deckhouse/pull/11544
+    - summary: bump dependencies for user-authn
+      pull_request: https://github.com/deckhouse/deckhouse/pull/11332
+
