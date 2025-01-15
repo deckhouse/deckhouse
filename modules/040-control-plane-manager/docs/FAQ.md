@@ -941,10 +941,13 @@ Control plane component certificates are updated using the `kubeadm` utility
 To update the control plane certificates, you must perform the following steps on each master node:
 
 1. Find the kubeadm utility on the master node and create a symbolic link
+
    ```shell
    ln -s $(find /var/lib/containerd -name kubeadm -type f -executable -print) /usr/bin/kubeadm
    ```
+
 2. Update the certificates:
+
    ```shell
    kubeadm certs renew all
    ```

@@ -945,10 +945,13 @@ Kubelet использует клиентский TLS сертификат(`/var
 Чтобы обновить сертификаты control plane необходимо на каждом master-узле выполнить следующие действия:  
 
 1 . Найдите утилиту kubeadm на мастер-узле и создайте символьную ссылку
+
    ```shell
    ln -s  $(find /var/lib/containerd  -name kubeadm -type f -executable -print) /usr/bin/kubeadm
    ```
+
 2 . Выполните обновление сертификатов:
+
    ```shell
    kubeadm certs renew all
    ```
