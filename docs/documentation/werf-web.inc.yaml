@@ -31,8 +31,9 @@ docker:
   ENTRYPOINT: [ "/opt/nginx-static/sbin/nginx", "-e", "/dev/stderr", "-g", "daemon off;" ]
 {{ end }}
 ---
-artifact: {{ .ModuleName }}/{{ .ImageName }}/static
+image: {{ .ModuleName }}/{{ .ImageName }}/static
 from: {{ .Images.BASE_JEKYLL }}
+final: false
 shell:
   setup:
   - |
