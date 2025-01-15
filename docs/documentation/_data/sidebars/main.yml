@@ -857,19 +857,6 @@ entries:
                     en: Configuration
                     ru: Настройки
                   url: /modules/metallb/configuration.html
-            - title:
-                en: network-gateway
-                ru: network-gateway
-              d8Revision: ee
-              folders:
-                - title:
-                    en: Description
-                    ru: Описание
-                  url: /modules/network-gateway/
-                - title:
-                    en: Configuration
-                    ru: Настройки
-                  url: /modules/network-gateway/configuration.html
         - title:
             en: Other modules
             ru: Другие модули
@@ -902,6 +889,19 @@ entries:
                     en: Description
                     ru: Описание
                   url: /modules/kube-proxy/
+            - title:
+                en: network-gateway
+                ru: network-gateway
+              d8Revision: ee
+              folders:
+                - title:
+                    en: Description
+                    ru: Описание
+                  url: /modules/network-gateway/
+                - title:
+                    en: Configuration
+                    ru: Настройки
+                  url: /modules/network-gateway/configuration.html
             - title:
                 en: service-with-healthchecks
                 ru: service-with-healthchecks
