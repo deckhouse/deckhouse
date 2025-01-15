@@ -1648,7 +1648,9 @@ entries:
                 en: Configuration
                 ru: Настройки
               url: /modules/network-gateway/configuration.html
-        - title: embedded-registry
+        - title:
+            en: embedded-registry
+            ru: embedded-registry
           d8Revision: ee
           folders:
             - title:
@@ -1663,7 +1665,9 @@ entries:
                 en: Configuration
                 ru: Настройки
               url: /modules/system-registry/configuration.html
-            - title: FAQ
+            - title:
+                en: FAQ
+                ru: FAQ
               url: /modules/system-registry/faq.html
     - title:
         en: Deckhouse CLI
