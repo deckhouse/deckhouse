@@ -112,7 +112,6 @@ function trivyGetHTMLReportPartForImage() (
   bin/trivy i --policy "$TRIVY_POLICY_URL" --java-db-repository "$TRIVY_JAVA_DB_URL" --db-repository "$TRIVY_DB_URL" --severity=$SEVERITY --ignorefile "$IGNORE" --format template --template "@tools/cve/html/body-part.tpl" --quiet "$IMAGE_ARGS"
   echo -n "    <br/>"
 )
-
 function htmlReportFooter() (
   cat tools/cve/html/footer.tpl
 )
