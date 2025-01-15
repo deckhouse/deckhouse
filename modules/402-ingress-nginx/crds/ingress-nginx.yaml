@@ -1200,7 +1200,7 @@ spec:
                 podsAnnotations:
                   type: object
                   description: |
-                    Adds custom annotations for ingress controller pods
+                    Adds custom annotations for ingress controller pods.
                   additionalProperties:
                     type: string
               oneOf:
