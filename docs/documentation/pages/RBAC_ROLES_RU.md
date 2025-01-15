@@ -1,6 +1,8 @@
 ---
 permalink: ru/csv/rbac-roles.csv
 layout: none
+searchable: false
+sitemap_include: false
 ---
 
 {% include rbac/rbac-roles-for-csv.liquid %}
