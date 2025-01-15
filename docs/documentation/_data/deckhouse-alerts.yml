@@ -47,9 +47,12 @@ alerts:
       moduleUrl: 101-cert-manager
       module: cert-manager
       edition: ce
-      description: Certificate {{$labels.exported_namespace}}/{{$labels.name}} expired
+      description: |
+        The certificate `{{$labels.exported_namespace}}/{{$labels.name}}` has expired.
+
+        To learn how to issue a new certificate, refer to the [Usage](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/cert-manager/usage.html) section in the cert-manager documentation.
       summary: |
-        Certificate expired
+        Certificate expired.
       severity: "4"
       markupFormat: default
     - name: CertmanagerCertificateExpiredSoon
@@ -57,9 +60,16 @@ alerts:
       moduleUrl: 101-cert-manager
       module: cert-manager
       edition: ce
-      description: The certificate {{$labels.exported_namespace}}/{{$labels.name}} will expire in less than 2 weeks
+      description: |
+        The certificate `{{$labels.exported_namespace}}/{{$labels.name}}` will expire in less than two weeks.
+
+        To check the certificate details, run the following command:
+
+        ```bash
+        kubectl -n <NAMESPACE> describe certificate <CERTIFICATE-NAME>
+        ```
       summary: |
-        Certificate will expire soon
+        Certificate will expire soon.
       severity: "4"
       markupFormat: default
     - name: CertmanagerCertificateOrderErrors
@@ -68,12 +78,15 @@ alerts:
       module: cert-manager
       edition: ce
       description: |
-        Cermanager receives responses with the code `{{ $labels.status }}` on requesting {{ $labels.scheme }}://{{ $labels.host }}{{ $labels.path }}.
+        Cert-manager received responses with the status code `{{ $labels.status }}` when requesting `{{ $labels.scheme }}://{{ $labels.host }}{{ $labels.path }}`.
 
-        It can affect certificates ordering and prolongation. Check certmanager logs for more info.
-        `kubectl -n d8-cert-manager logs -l app=cert-manager -c cert-manager`
+        This can affect certificate ordering and prolongation in the future. For details, check the cert-manager logs using the following command:
+
+        ```bash
+        kubectl -n d8-cert-manager logs -l app=cert-manager -c cert-manager`
+        ```
       summary: |
-        Certmanager cannot order a certificate.
+        Cert-manager couldn't order a certificate.
       severity: "5"
       markupFormat: default
     - name: CiliumAgentEndpointsNotReady
@@ -346,11 +359,23 @@ alerts:
       module: admission-policy-engine
       edition: ce
       description: |-
-        Admission policy engine module couldn't bootstrap. Please check that the module's components are up and running: `kubectl get pods -n d8-admission-policy-engine`.
-        Also, it makes sense to check relevant logs in case there are missing constraint
-        templates or not all CRD were created: `kubectl  logs -n d8-system -lapp=deckhouse --tail=1000 | grep admission-policy-engine`
+        The admission-policy-engine module couldn't bootstrap.
+
+        Steps to troubleshoot:
+
+        1. Verify that the module's components are up and running:
+
+           ```bash
+           kubectl get pods -n d8-admission-policy-engine
+           ```
+
+        2. Check logs for issues, such as missing constraint templates or incomplete CRD creation:
+
+           ```bash
+           kubectl logs -n d8-system -lapp=deckhouse --tail=1000 | grep admission-policy-engine
+           ```
       summary: |
-        Admission policy engine module hasn't been bootstrapped for 10 minutes.
+        Admission-policy-engine module hasn't been bootstrapped for 10 minutes.
       severity: "7"
       markupFormat: markdown
     - name: D8BashibleApiserverLocked
@@ -4353,9 +4378,16 @@ alerts:
       module: chrony
       edition: ce
       description: |
-        Node's {{$labels.node}} time is out of sync from ntp server by {{ $value }} seconds.
+        Time on the node `{{$labels.node}}` is out of sync and drifts apart from the NTP server clock by {{ $value }} seconds.
+
+        To resolve the time synchronization issues:
+
+           - Fix network errors:
+             - Ensure the upstream time synchronization servers defined in the [chrony configuration](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/chrony/configuration.html) are available.
+             - Eliminate large packet loss and excessive latency to upstream time synchronization servers.
+           - Modify the NTP servers list defined in the [chrony configuration](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/chrony/configuration.html).
       summary: |
-        Node's {{$labels.node}} clock is drifting.
+        Clock on the node {{$labels.node}} is drifting.
       severity: "5"
       markupFormat: markdown
     - name: NodeUnschedulable
@@ -4381,17 +4413,27 @@ alerts:
       module: chrony
       edition: ce
       description: |
-        1. check if Chrony pod is running on the node by executing the following command:
-           * 'kubectl -n d8-chrony --field-selector spec.nodeName="{{$labels.node}}" get pods'
-        2. check the Chrony daemon's status by executing the following command:
-           * 'kubectl -n d8-chrony exec <POD_NAME> -- /opt/chrony-static/bin/chronyc sources'
-        3. Correct the time synchronization problems:
-           * correct network problems:
-             - provide availability to upstream time synchronization servers defined in the module [configuration](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/chrony/configuration.html);
-             - eliminate large packet loss and excessive latency to upstream time synchronization servers.
-           * Modify NTP servers list defined in the module [configuration](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/chrony/configuration.html).
+        Steps to troubleshoot:
+
+        1. Check if the chrony pod is running on the node by executing the following command:
+
+           ```bash
+           kubectl -n d8-chrony --field-selector spec.nodeName="{{$labels.node}}" get pods
+           ```
+
+        2. Verify the chrony daemon's status by executing the following command:
+
+           ```bash
+           kubectl -n d8-chrony exec <POD_NAME> -- /opt/chrony-static/bin/chronyc sources
+           ```
+
+        3. Resolve the time synchronization issues:
+           - Fix network errors:
+             - Ensure the upstream time synchronization servers defined in the [chrony configuration](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/chrony/configuration.html) are available.
+             - Eliminate large packet loss and excessive latency to upstream time synchronization servers.
+           - Modify the NTP servers list defined in the [chrony configuration](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/chrony/configuration.html).
       summary: |
-        NTP daemon on node {{$labels.node}} have not synchronized time for too long.
+        NTP daemon on the node {{$labels.node}} haven't synchronized time for too long.
       severity: "5"
       markupFormat: markdown
     - name: OperationPolicyViolation
@@ -4400,12 +4442,24 @@ alerts:
       module: admission-policy-engine
       edition: ce
       description: |-
-        You have configured OperationPolicy for the cluster.
+        You have configured operation policies for the cluster, and one or more existing objects are violating these policies.
 
-        You can find existing objects violating policies by running `count by (violating_namespace, violating_kind, violating_name, violation_msg) (d8_gatekeeper_exporter_constraint_violations{violation_enforcement="deny",source_type="OperationPolicy"})`
-        prometheus query or via the Admission policy engine Grafana dashboard.
+        To identify violating objects:
+
+        - Run the following Prometheus query:
+
+          ```promql
+          count by (violating_namespace, violating_kind, violating_name, violation_msg) (
+            d8_gatekeeper_exporter_constraint_violations{
+              violation_enforcement="deny",
+              source_type="OperationPolicy"
+            }
+          )
+          ```
+
+        - Alternatively, check the admission-policy-engine Grafana dashboard.
       summary: |
-        At least one object violates configured cluster Operation Policies.
+        At least one object violates the configured cluster operation policies.
       severity: "7"
       markupFormat: markdown
     - name: PersistentVolumeClaimBytesUsage
@@ -4470,12 +4524,26 @@ alerts:
       module: admission-policy-engine
       edition: ce
       description: |-
-        You have configured pod security standards (https://kubernetes.io/docs/concepts/security/pod-security-standards/).
+        You have configured [Pod Security Standards](https://kubernetes.io/docs/concepts/security/pod-security-standards/), and one or more running pods are violating these standards.
 
-        You can find already Running pods which are violate standards by running `count by (violating_namespace, violating_name, violation_msg) (d8_gatekeeper_exporter_constraint_violations{violation_enforcement="deny",violating_namespace=~".*",violating_kind="Pod",source_type="PSS"})`
-        prometheus query or via the Admission policy engine grafana dashboard.
+        To identify violating pods:
+
+        - Run the following Prometheus query:
+
+          ```promql
+          count by (violating_namespace, violating_name, violation_msg) (
+            d8_gatekeeper_exporter_constraint_violations{
+              violation_enforcement="deny",
+              violating_namespace=~".*",
+              violating_kind="Pod",
+              source_type="PSS"
+            }
+          )
+          ```
+
+        - Alternatively, check the admission-policy-engine Grafana dashboard.
       summary: |
-        At least one pod violates configured cluster pod security standards.
+        At least one pod violates the configured cluster pod security standards.
       severity: "7"
       markupFormat: markdown
     - name: PodStatusIsIncorrect
@@ -4578,12 +4646,24 @@ alerts:
       module: admission-policy-engine
       edition: ce
       description: |-
-        You have configured SecurityPolicy for the cluster.
+        You have configured security policies for the cluster, and one or more existing objects are violating these policies.
 
-        You can find existing objects violating policies by running `count by (violating_namespace, violating_kind, violating_name, violation_msg) (d8_gatekeeper_exporter_constraint_violations{violation_enforcement="deny",source_type="SecurityPolicy"})`
-        prometheus query or via the Admission policy engine Grafana dashboard.
+        To identify violating objects:
+
+        - Run the following Prometheus query:
+
+          ```promql
+          count by (violating_namespace, violating_kind, violating_name, violation_msg) (
+            d8_gatekeeper_exporter_constraint_violations{
+              violation_enforcement="deny",
+              source_type="SecurityPolicy"
+            }
+          )
+          ```
+
+        - Alternatively, check the admission-policy-engine Grafana dashboard.
       summary: |
-        At least one object violates configured cluster Security Policies.
+        At least one object violates the configured cluster security policies.
       severity: "7"
       markupFormat: markdown
     - name: StatefulSetAuthenticationFailure
