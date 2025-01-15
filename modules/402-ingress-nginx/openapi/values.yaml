@@ -85,6 +85,12 @@ properties:
                   type: boolean
                 validationEnabled:
                   type: boolean
+                podsAnnotations:
+                  type: object
+                  additionalProperties:
+                    type: string
+                  description: |
+                      Annotations for pods nginx controller DaemonSet.
                 annotationValidationEnabled:
                   type: boolean
                   default: false
