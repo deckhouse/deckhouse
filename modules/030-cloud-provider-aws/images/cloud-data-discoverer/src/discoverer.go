@@ -27,7 +27,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ec2"
-	log "github.com/sirupsen/logrus"
+	"github.com/deckhouse/deckhouse/pkg/log"
 	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/utils/ptr"
 
@@ -35,11 +35,11 @@ import (
 )
 
 type Discoverer struct {
-	logger *log.Entry
+	logger *log.Logger
 	region string
 }
 
-func NewDiscoverer(logger *log.Entry) *Discoverer {
+func NewDiscoverer(logger *log.Logger) *Discoverer {
 	region := os.Getenv("AWS_REGION")
 	if region == "" {
 		logger.Fatal("AWS_REGION not found")

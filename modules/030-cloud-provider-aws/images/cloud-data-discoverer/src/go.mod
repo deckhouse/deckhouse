@@ -5,11 +5,12 @@ go 1.23
 require (
 	github.com/aws/aws-sdk-go v1.55.6
 	github.com/deckhouse/deckhouse/go_lib/cloud-data v0.0.0-00010101000000-000000000000
-	github.com/sirupsen/logrus v1.9.0
+	github.com/deckhouse/deckhouse/pkg/log v0.0.0-20250115075301-5b6ae3aa8eb7
 	k8s.io/utils v0.0.0-20240921022957-49e7df575cb6
 )
 
 require (
+	github.com/DataDog/gostackparse v0.7.0 // indirect
 	github.com/PuerkitoBio/purell v1.1.1 // indirect
 	github.com/PuerkitoBio/urlesc v0.0.0-20170810143723-de5bf2ad4578 // indirect
 	github.com/emicklei/go-restful/v3 v3.8.0 // indirect
