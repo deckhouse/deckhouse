@@ -14,7 +14,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/sirupsen/logrus"
+	"github.com/deckhouse/deckhouse/pkg/log"
 
 	cloudDataV1 "github.com/deckhouse/deckhouse/go_lib/cloud-data/apis/v1"
 	"github.com/deckhouse/deckhouse/go_lib/cloud-data/apis/v1alpha1"

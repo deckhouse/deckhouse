@@ -1,6 +1,8 @@
 module discoverer
 
-go 1.19
+go 1.22.8
+
+toolchain go1.24.1
 
 require (
 	github.com/alecthomas/kingpin v2.2.6+incompatible
@@ -73,4 +75,5 @@ require (
 )
 
 replace github.com/deckhouse/deckhouse/go_lib/cloud-data => /deckhouse/go_lib/cloud-data
+
 replace github.com/ovirt/go-ovirt-client/v3 v3.2.0 => github.com/flant/go-ovirt-client/v3 v3.2.0-flant-1

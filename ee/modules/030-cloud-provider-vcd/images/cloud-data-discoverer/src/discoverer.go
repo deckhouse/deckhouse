@@ -9,16 +9,15 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/deckhouse/deckhouse/pkg/log"
+	"github.com/vmware/go-vcloud-director/v2/govcd"
+	"github.com/vmware/go-vcloud-director/v2/types/v56"
+	"k8s.io/apimachinery/pkg/api/resource"
 	"net/url"
 	"os"
 	"sort"
 	"strconv"
 	"strings"
-
-	log "github.com/sirupsen/logrus"
-	"github.com/vmware/go-vcloud-director/v2/govcd"
-	"github.com/vmware/go-vcloud-director/v2/types/v56"
-	"k8s.io/apimachinery/pkg/api/resource"
 
 	"github.com/deckhouse/deckhouse/go_lib/cloud-data/apis/v1alpha1"
 )

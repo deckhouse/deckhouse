@@ -8,19 +8,18 @@ package main
 import (
 	"context"
 	"fmt"
-	"net/url"
-	"os"
-	"strconv"
-	"strings"
-	"time"
-
-	log "github.com/sirupsen/logrus"
+	"github.com/deckhouse/deckhouse/pkg/log"
 	"github.com/vmware/govmomi"
 	"github.com/vmware/govmomi/cns"
 	"github.com/vmware/govmomi/cns/types"
 	"github.com/vmware/govmomi/session"
 	"github.com/vmware/govmomi/vim25"
 	"github.com/vmware/govmomi/vim25/soap"
+	"net/url"
+	"os"
+	"strconv"
+	"strings"
+	"time"
 
 	"github.com/deckhouse/deckhouse/go_lib/cloud-data/apis/v1alpha1"
 )

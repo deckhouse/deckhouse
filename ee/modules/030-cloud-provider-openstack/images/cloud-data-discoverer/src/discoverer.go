@@ -18,6 +18,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/deckhouse/deckhouse/pkg/log"
 	"github.com/gophercloud/gophercloud"
 	"github.com/gophercloud/gophercloud/openstack"
 	"github.com/gophercloud/gophercloud/openstack/blockstorage/v3/volumes"
@@ -26,14 +27,13 @@ import (
 	"github.com/gophercloud/gophercloud/openstack/imageservice/v2/images"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/security/groups"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/networks"
-	log "github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/api/resource"
 
 	"github.com/deckhouse/deckhouse/go_lib/cloud-data/apis/v1alpha1"
 )
 
 type Discoverer struct {
-	logger       *log.Entry
+	logger       *log.Logger
 	authOpts     gophercloud.AuthOptions
 	region       string
 	moduleConfig []byte

@@ -21,7 +21,7 @@ import (
 	"fmt"
 	"strconv"
 
-	log "github.com/sirupsen/logrus"
+	"github.com/deckhouse/deckhouse/pkg/log"
 	"google.golang.org/api/compute/v1"
 	"google.golang.org/api/option"
 	"k8s.io/apimachinery/pkg/api/resource"
