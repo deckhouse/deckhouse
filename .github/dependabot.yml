@@ -475,7 +475,7 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "gomod"
-  directory: "/modules/160-multitenancy-manager/images/multitenancy-manager"
+  directory: "/modules/160-multitenancy-manager/images/multitenancy-manager/src"
   labels:
   - "type/dependencies"
   - "status/ok-to-test"
