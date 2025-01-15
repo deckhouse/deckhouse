@@ -626,6 +626,80 @@ entries:
             ru: Другие модули
           folders:
             - title:
+                en: node-local-dns
+                ru: node-local-dns
+              d8Revision: ee
+              folders:
+                - title:
+                    en: Description
+                    ru: Описание
+                  url: /modules/node-local-dns/
+                - title:
+                    en: Examples
+                    ru: Примеры
+                  url: /modules/node-local-dns/examples.html
+                - title:
+                    en: Configuration
+                    ru: Настройки
+                  url: /modules/node-local-dns/configuration.html
+            - title:
+                en: terraform-manager
+                ru: terraform-manager
+              folders:
+                - title:
+                    en: Description
+                    ru: Описание
+                  url: /modules/terraform-manager/
+                - title:
+                    en: Configuration
+                    ru: Настройки
+                  url: /modules/terraform-manager/configuration.html
+    - title:
+        en: Accessing cluster
+        ru: Доступ к кластеру
+      folders:
+        - title:
+            en: dashboard
+            ru: dashboard
+          folders:
+            - title:
+                en: Description
+                ru: Описание
+              url: /modules/dashboard/
+            - title:
+                en: Examples
+                ru: Примеры
+              url: /modules/dashboard/examples.html
+            - title:
+                en: Configuration
+                ru: Настройки
+              url: /modules/dashboard/configuration.html
+        - title:
+            en: openvpn
+            ru: openvpn
+          featureStatus: experimental
+          folders:
+            - title:
+                en: Description
+                ru: Описание
+              url: /modules/openvpn/
+            - title:
+                en: Examples
+                ru: Примеры
+              url: /modules/openvpn/examples.html
+            - title:
+                en: Configuration
+                ru: Настройки
+              url: /modules/openvpn/configuration.html
+    - title:
+        en: Network
+        ru: Сеть
+      folders:
+        - title:
+            en: CNI
+            ru: CNI
+          folders:
+            - title:
                 en: cilium-hubble
                 ru: cilium-hubble
               folders:
@@ -677,6 +751,116 @@ entries:
                     en: Description
                     ru: Описание
                   url: /modules/cni-simple-bridge/
+        - title:
+            en: Balancing
+            ru: Балансировка
+          folders:
+            - title:
+                en: ingress-nginx
+                ru: ingress-nginx
+              folders:
+                - title:
+                    en: Description
+                    ru: Описание
+                  url: /modules/ingress-nginx/
+                - title:
+                    en: Examples
+                    ru: Примеры
+                  url: /modules/ingress-nginx/examples.html
+                - title:
+                    en: Reference
+                    ru: Справка
+                  folders:
+                    - title:
+                        en: Configuration
+                        ru: Настройки
+                      url: /modules/ingress-nginx/configuration.html
+                    - title:
+                        en: Custom Resources
+                        ru: Custom Resources
+                      url: /modules/ingress-nginx/cr.html
+                - title:
+                    en: FAQ
+                    ru: FAQ
+                  url: /modules/ingress-nginx/faq.html
+            - title:
+                en: istio
+                ru: istio
+              folders:
+                - title:
+                    en: Description
+                    ru: Описание
+                  url: /modules/istio/
+                - title:
+                    en: Reference
+                    ru: Справка
+                  folders:
+                    - title:
+                        en: Configuration
+                        ru: Настройки
+                      url: /modules/istio/configuration.html
+                    - title:
+                        en: Custom Resources
+                        ru: Custom Resources
+                      url: /modules/istio/cr.html
+                    - title:
+                        en: "Custom Resources (by istio.io)"
+                        ru: "Custom Resources (от istio.io)"
+                      url: /modules/istio/istio-cr.html
+                - title:
+                    en: Examples
+                    ru: Примеры
+                  url: /modules/istio/examples.html
+            - title:
+                en: keepalived
+                ru: keepalived
+              d8Revision: ee
+              folders:
+                - title:
+                    en: Description
+                    ru: Описание
+                  url: /modules/keepalived/
+                - title:
+                    en: Examples
+                    ru: Примеры
+                  url: /modules/keepalived/examples.html
+                - title:
+                    en: Reference
+                    ru: Справка
+                  folders:
+                    - title:
+                        en: Configuration
+                        ru: Настройки
+                      url: /modules/keepalived/configuration.html
+                    - title:
+                        en: Custom Resources
+                        ru: Custom Resources
+                      url: /modules/keepalived/cr.html
+                - title:
+                    en: FAQ
+                    ru: FAQ
+                  url: /modules/keepalived/faq.html
+            - title:
+                en: metallb
+                ru: metallb
+              d8Revision: ee
+              folders:
+                - title:
+                    en: Description
+                    ru: Описание
+                  url: /modules/metallb/
+                - title:
+                    en: Examples
+                    ru: Примеры
+                  url: /modules/metallb/examples.html
+                - title:
+                    en: Configuration
+                    ru: Настройки
+                  url: /modules/metallb/configuration.html
+        - title:
+            en: Other modules
+            ru: Другие модули
+          folders:
             - title:
                 en: kube-dns
                 ru: kube-dns
@@ -706,22 +890,45 @@ entries:
                     ru: Описание
                   url: /modules/kube-proxy/
             - title:
-                en: node-local-dns
-                ru: node-local-dns
+                en: network-gateway
+                ru: network-gateway
               d8Revision: ee
               folders:
                 - title:
                     en: Description
                     ru: Описание
-                  url: /modules/node-local-dns/
-                - title:
-                    en: Examples
-                    ru: Примеры
-                  url: /modules/node-local-dns/examples.html
+                  url: /modules/network-gateway/
                 - title:
                     en: Configuration
                     ru: Настройки
-                  url: /modules/node-local-dns/configuration.html
+                  url: /modules/network-gateway/configuration.html
+            - title:
+                en: service-with-healthchecks
+                ru: service-with-healthchecks
+              featureStatus: experimental
+              d8Revision: ee
+              moduleName: service-with-healthchecks
+              folders:
+                - title:
+                    en: Description
+                    ru: Описание
+                  url: /modules/service-with-healthchecks/
+                - title:
+                    en: Reference
+                    ru: Справка
+                  folders:
+                    - title:
+                        en: Configuration
+                        ru: Настройки
+                      url: /modules/service-with-healthchecks/configuration.html
+                    - title:
+                        en: Custom Resources
+                        ru: Custom Resources
+                      url: /modules/service-with-healthchecks/cr.html
+                - title:
+                    en: Examples
+                    ru: Примеры
+                  url: /modules/service-with-healthchecks/examples.html
             - title:
                 en: static-routing-manager
                 ru: static-routing-manager
@@ -747,142 +954,6 @@ entries:
                     en: Examples
                     ru: Примеры
                   url: /modules/static-routing-manager/examples.html
-            - title:
-                en: terraform-manager
-                ru: terraform-manager
-              folders:
-                - title:
-                    en: Description
-                    ru: Описание
-                  url: /modules/terraform-manager/
-                - title:
-                    en: Configuration
-                    ru: Настройки
-                  url: /modules/terraform-manager/configuration.html
-    - title:
-        en: Accessing cluster
-        ru: Доступ к кластеру
-      folders:
-        - title:
-            en: dashboard
-            ru: dashboard
-          folders:
-            - title:
-                en: Description
-                ru: Описание
-              url: /modules/dashboard/
-            - title:
-                en: Examples
-                ru: Примеры
-              url: /modules/dashboard/examples.html
-            - title:
-                en: Configuration
-                ru: Настройки
-              url: /modules/dashboard/configuration.html
-        - title:
-            en: openvpn
-            ru: openvpn
-          featureStatus: experimental
-          folders:
-            - title:
-                en: Description
-                ru: Описание
-              url: /modules/openvpn/
-            - title:
-                en: Examples
-                ru: Примеры
-              url: /modules/openvpn/examples.html
-            - title:
-                en: Configuration
-                ru: Настройки
-              url: /modules/openvpn/configuration.html
-    - title:
-        en: Network Load Balancing
-        ru: Балансировка трафика
-      folders:
-        - title:
-            en: ingress-nginx
-            ru: ingress-nginx
-          folders:
-            - title:
-                en: Description
-                ru: Описание
-              url: /modules/ingress-nginx/
-            - title:
-                en: Examples
-                ru: Примеры
-              url: /modules/ingress-nginx/examples.html
-            - title:
-                en: Reference
-                ru: Справка
-              folders:
-                - title:
-                    en: Configuration
-                    ru: Настройки
-                  url: /modules/ingress-nginx/configuration.html
-                - title:
-                    en: Custom Resources
-                    ru: Custom Resources
-                  url: /modules/ingress-nginx/cr.html
-            - title:
-                en: FAQ
-                ru: FAQ
-              url: /modules/ingress-nginx/faq.html
-        - title:
-            en: istio
-            ru: istio
-          folders:
-            - title:
-                en: Description
-                ru: Описание
-              url: /modules/istio/
-            - title:
-                en: Reference
-                ru: Справка
-              folders:
-                - title:
-                    en: Configuration
-                    ru: Настройки
-                  url: /modules/istio/configuration.html
-                - title:
-                    en: Custom Resources
-                    ru: Custom Resources
-                  url: /modules/istio/cr.html
-                - title:
-                    en: "Custom Resources (by istio.io)"
-                    ru: "Custom Resources (от istio.io)"
-                  url: /modules/istio/istio-cr.html
-            - title:
-                en: Examples
-                ru: Примеры
-              url: /modules/istio/examples.html
-        - title:
-            en: service-with-healthchecks
-            ru: service-with-healthchecks
-          featureStatus: experimental
-          d8Revision: ee
-          moduleName: service-with-healthchecks
-          folders:
-            - title:
-                en: Description
-                ru: Описание
-              url: /modules/service-with-healthchecks/
-            - title:
-                en: Reference
-                ru: Справка
-              folders:
-                - title:
-                    en: Configuration
-                    ru: Настройки
-                  url: /modules/service-with-healthchecks/configuration.html
-                - title:
-                    en: Custom Resources
-                    ru: Custom Resources
-                  url: /modules/service-with-healthchecks/cr.html
-            - title:
-                en: Examples
-                ru: Примеры
-              url: /modules/service-with-healthchecks/examples.html
     - title:
         en: Monitoring
         ru: Мониторинг
@@ -1587,67 +1658,6 @@ entries:
                 en: Configuration
                 ru: Настройки
               url: /modules/deckhouse-tools/configuration.html
-    - title:
-        en: Bare Metal
-        ru: Bare Metal
-      folders:
-        - title: keepalived
-          d8Revision: ee
-          folders:
-            - title:
-                en: Description
-                ru: Описание
-              url: /modules/keepalived/
-            - title:
-                en: Examples
-                ru: Примеры
-              url: /modules/keepalived/examples.html
-            - title:
-                en: Reference
-                ru: Справка
-              folders:
-                - title:
-                    en: Configuration
-                    ru: Настройки
-                  url: /modules/keepalived/configuration.html
-                - title:
-                    en: Custom Resources
-                    ru: Custom Resources
-                  url: /modules/keepalived/cr.html
-            - title:
-                en: FAQ
-                ru: FAQ
-              url: /modules/keepalived/faq.html
-        - title:
-            en: metallb
-            ru: metallb
-          d8Revision: ee
-          folders:
-            - title:
-                en: Description
-                ru: Описание
-              url: /modules/metallb/
-            - title:
-                en: Examples
-                ru: Примеры
-              url: /modules/metallb/examples.html
-            - title:
-                en: Configuration
-                ru: Настройки
-              url: /modules/metallb/configuration.html
-        - title:
-            en: network-gateway
-            ru: network-gateway
-          d8Revision: ee
-          folders:
-            - title:
-                en: Description
-                ru: Описание
-              url: /modules/network-gateway/
-            - title:
-                en: Configuration
-                ru: Настройки
-              url: /modules/network-gateway/configuration.html
     - title:
         en: Deckhouse CLI
         ru: Deckhouse CLI
