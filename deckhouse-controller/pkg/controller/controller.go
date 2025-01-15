@@ -226,6 +226,11 @@ func NewDeckhouseController(ctx context.Context, version string, operator *addon
 			Type:   mountmgr.Mount,
 		},
 		{
+			Source: "/deckhouse/python_lib",
+			Flags:  syscall.MS_BIND | syscall.MS_RDONLY,
+			Type:   mountmgr.Mount,
+		},
+		{
 			Source: "/proc/sys/kernel/cap_last_cap",
 			Type:   mountmgr.File,
 		},
