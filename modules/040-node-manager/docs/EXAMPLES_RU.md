@@ -87,7 +87,7 @@ spec:
    - [Для AWS](../cloud-provider-aws/faq.html#добавление-cloudstatic-узлов-в-кластер)
    - [Для GCP](../cloud-provider-gcp/faq.html#добавление-cloudstatic-узлов-в-кластер)
    - [Для YC](../cloud-provider-yandex/faq.html#добавление-cloudstatic-узлов-в-кластер)
-1. Используйте существующий или создайте новый custom resource [NodeGroup](cr.html#nodegroup) ([пример](#статические-узлы) NodeGroup с именем `worker`). Параметр [nodeType](cr.html#nodegroup-v1-spec-nodetype) в custom resource NodeGroup для статических узлов должен быть `Static` или `CloudStatic`.
+1. Используйте существующий или создайте новый ресурс [NodeGroup](cr.html#nodegroup) ([пример](#статические-узлы) NodeGroup с именем `worker`). Параметр [nodeType](cr.html#nodegroup-v1-spec-nodetype) в ресурсе NodeGroup для статических узлов должен быть `Static` или `CloudStatic`.
 1. Получите код скрипта в кодировке Base64 для добавления и настройки узла.
 
    Пример получения кода скрипта в кодировке Base64 для добавления узла в NodeGroup `worker`:
