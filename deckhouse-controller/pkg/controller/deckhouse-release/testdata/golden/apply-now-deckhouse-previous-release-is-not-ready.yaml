@@ -20,14 +20,16 @@ kind: DeckhouseRelease
 metadata:
   annotations:
     release.deckhouse.io/apply-now: "true"
+    release.deckhouse.io/isUpdating: "false"
+    release.deckhouse.io/notified: "true"
   creationTimestamp: null
   name: v1.26.0
-  resourceVersion: "1000"
+  resourceVersion: "1001"
 spec:
   version: v1.26.0
 status:
   approved: false
-  message: Awaiting for Deckhouse pod to be ready
+  message: awaiting for Deckhouse v1.25.0 pod to be ready
   phase: Pending
   transitionTime: null
 ---

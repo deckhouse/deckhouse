@@ -18,11 +18,9 @@ apiVersion: deckhouse.io/v1alpha1
 approved: false
 kind: DeckhouseRelease
 metadata:
-  annotations:
-    release.deckhouse.io/suspended: "true"
   creationTimestamp: null
   name: v1.25.1
-  resourceVersion: "1000"
+  resourceVersion: "1002"
 spec:
   version: v1.25.1
 status:
