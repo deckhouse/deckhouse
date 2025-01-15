@@ -44,6 +44,7 @@ type StepsRenderer struct {
 // Render renders single script content by name which is expected to be of form {os}.{target}
 func (s StepsRenderer) Render(name string) (map[string]string, error) {
 	nameWithoutBundle, err := TransformName(name)
+	fmt.Println("bashible/template", nameWithoutBundle)
 	if err != nil {
 		return nil, fmt.Errorf("cannot get context with namewithoutbundle: %v", err)
 	}

@@ -58,6 +58,7 @@ type Storage struct {
 // Render renders single script content by name
 func (s Storage) Render(name string) (runtime.Object, error) {
 	nameWithoutBundle, err := template.TransformName(name)
+	fmt.Println("bashible/bashible", nameWithoutBundle)
 	if err != nil {
 		return nil, fmt.Errorf("cannot get context with namewithoutbundle: %v", err)
 	}

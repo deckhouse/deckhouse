@@ -49,6 +49,7 @@ type Storage struct {
 // Render renders single script content by nodegroup name (single bootstrap script is used for all bundles).
 func (s Storage) Render(name string) (runtime.Object, error) {
 	nameWithoutBundle, err := template.TransformName(name)
+	fmt.Println("bashible/bootstrap", nameWithoutBundle)
 	data, err := s.getContext(nameWithoutBundle)
 	if err != nil {
 		return nil, fmt.Errorf("cannot get context: %v", err)
