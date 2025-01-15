@@ -199,7 +199,7 @@ spec:
    EOF
    ```
 
-   > Поле `labelSelector` в ресурсе `NodeGroup` является неизменным. Чтобы обновить labelSelector, нужно создать новую NodeGroup и перенести в неё статические узлы, изменив их метки (labels).
+   > Поле `labelSelector` в ресурсе `NodeGroup` является неизменным. Чтобы обновить labelSelector, нужно создать новую NodeGroup и перенести в неё статические узлы, изменив их лейблы (labels).
 
 1. Создайте в кластере ресурс [NodeGroup](cr.html#nodegroup):
 
@@ -227,7 +227,7 @@ spec:
 
 1. Создайте в кластере два ресурса [NodeGroup](cr.html#nodegroup) (здесь и далее используйте `kubectl`, настроенный на управление кластером):
 
-   > Поле `labelSelector` в ресурсе `NodeGroup` является неизменным. Чтобы обновить labelSelector, нужно создать новую NodeGroup и перенести в неё статические узлы, изменив их метки (labels).
+   > Поле `labelSelector` в ресурсе `NodeGroup` является неизменным. Чтобы обновить labelSelector, нужно создать новую NodeGroup и перенести в неё статические узлы, изменив их лейблы (labels).
 
    ```shell
    kubectl create -f - <<EOF
@@ -301,11 +301,11 @@ spec:
 
 ### Cluster API Provider Static: перемещение узлов между NodeGroup
 
-В данном разделе описывается процесс перемещения статических узлов между различными NodeGroup с использованием Cluster API Provider Static (CAPS). Процесс включает изменение конфигурации NodeGroup и обновление и обновление лейблов у соответствующих StaticInstance.
+В данном разделе описывается процесс перемещения статических узлов между различными NodeGroup с использованием Cluster API Provider Static (CAPS). Процесс включает изменение конфигурации NodeGroup и обновление лейблов у соответствующих StaticInstance.
 
 #### Исходная конфигурация
 
-Предположим, что в кластере уже существует NodeGroup с именем `worker`, настроенный для управления одним статическим узлом с меткой `role: worker`.
+Предположим, что в кластере уже существует NodeGroup с именем `worker`, настроенный для управления одним статическим узлом с лейблом `role: worker`.
 
 `NodeGroup` worker:
 
@@ -347,7 +347,7 @@ spec:
 
 ##### 1. Создание новой `NodeGroup` для целевой группы узлов
 
-Создайте новый ресурс NodeGroup, например, с именем `front`, который будет управлять статическим узлом с меткой `role: front`.
+Создайте новый ресурс NodeGroup, например, с именем `front`, который будет управлять статическим узлом с лейблом `role: front`.
 
 ```shell
 kubectl create -f - <<EOF
@@ -365,9 +365,9 @@ spec:
 EOF
 ```
 
-##### 2. Обновление метки у `StaticInstance`
+##### 2. Обновление лейбла у `StaticInstance`
 
-Измените метку `role` у существующего StaticInstance с `worker` на `front`. Это позволит новой NodeGroup `front` начать управлять этим узлом.
+Измените лейбл `role` у существующего StaticInstance с `worker` на `front`. Это позволит новой NodeGroup `front` начать управлять этим узлом.
 
 ```shell
 kubectl label staticinstance static-worker-1 role=front --overwrite
