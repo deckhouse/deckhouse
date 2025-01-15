@@ -28,22 +28,22 @@ import (
 func TestIstioOperatorVersionRequirement(t *testing.T) {
 	requirements.RemoveValue(minVersionValuesKey)
 	t.Run("requirement met", func(t *testing.T) {
-		requirements.SaveValue(minVersionValuesKey, "1.16.2")
-		ok, err := requirements.CheckRequirement(requirementIstioMinimalVersionKey, "1.16")
+		requirements.SaveValue(minVersionValuesKey, "1.19.7")
+		ok, err := requirements.CheckRequirement(requirementIstioMinimalVersionKey, "1.19")
 		assert.True(t, ok)
 		require.NoError(t, err)
 	})
 
 	t.Run("requirement failed", func(t *testing.T) {
 		requirements.SaveValue(minVersionValuesKey, "1.13")
-		ok, err := requirements.CheckRequirement(requirementIstioMinimalVersionKey, "1.16")
+		ok, err := requirements.CheckRequirement(requirementIstioMinimalVersionKey, "1.19")
 		assert.False(t, ok)
 		require.Error(t, err)
 	})
 
 	t.Run("Istio is not installed on the cluster", func(t *testing.T) {
 		requirements.RemoveValue(minVersionValuesKey)
-		ok, err := requirements.CheckRequirement(requirementIstioMinimalVersionKey, "1.16")
+		ok, err := requirements.CheckRequirement(requirementIstioMinimalVersionKey, "1.19")
 		assert.True(t, ok)
 		require.NoError(t, err)
 	})
