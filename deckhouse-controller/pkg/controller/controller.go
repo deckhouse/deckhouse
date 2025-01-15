@@ -186,17 +186,12 @@ func NewDeckhouseController(ctx context.Context, version string, operator *addon
 	// set chrooted environment
 	operator.ModuleManager.SetRequiredMounts([]mountmgr.MountDescriptor{
 		{
-			Source: "/usr/bin",
+			Source: "/usr",
 			Flags:  syscall.MS_BIND | syscall.MS_RDONLY,
 			Type:   mountmgr.Mount,
 		},
 		{
 			Source: "/bin",
-			Flags:  syscall.MS_BIND | syscall.MS_RDONLY,
-			Type:   mountmgr.Mount,
-		},
-		{
-			Source: "/usr/local/bin",
 			Flags:  syscall.MS_BIND | syscall.MS_RDONLY,
 			Type:   mountmgr.Mount,
 		},
