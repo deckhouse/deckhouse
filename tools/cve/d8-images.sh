@@ -106,7 +106,7 @@ function __main__() {
       -H "Authorization: Bearer ${GITHUB_TOKEN}" \
       -H "X-GitHub-Api-Version: 2022-11-28" \
       https://api.github.com/repos/deckhouse/deckhouse/issues \
-      -d '{"title":"'$module' CVE Issue","body":'"$(cat out/${MODULE_NAME}_report)"',"assignees":["Nikolay1224"],"labels":["cve"]}'
+      -d '{"title":"'"$module"' CVE Issue","body":"'\"$(cat out/${MODULE_NAME}_report)\"'","assignees":["Nikolay1224"],"labels":["cve"]}'
 
   done
 
