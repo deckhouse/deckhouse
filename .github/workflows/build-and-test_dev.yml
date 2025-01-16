@@ -1526,9 +1526,9 @@ jobs:
           test -e ./tools/docs/link-checker/entrypoint.sh && \
           docker run \
             --rm \
-            -v "${_TMPDIR}/site_en:/src/en:ro" \
-            -v "${_TMPDIR}/site_ru:/src/ru:ro" \
-            -v "./tools/docs/link-checker/entrypoint.sh:/entrypoint.sh:ro" \
+            --mount type=bind,src="${_TMPDIR}/site_en",dst="/src/en",ro \
+            --mount type=bind,src="${_TMPDIR}/site_ru",dst="/src/ru",ro \
+            --mount type=bind,src="./tools/docs/link-checker/entrypoint.sh",dst="/entrypoint.sh",r \
             -u $(id -u) \
             ${DECKHOUSE_REGISTRY_READ_HOST}/base_images/${CHECKER_IMAGE} \
             /entrypoint.sh
