@@ -41,10 +41,7 @@ spec:
   - name: node-proxy
     image: {{ printf "%s%s@%s" $.registry.address $.registry.path (index $.images.controlPlaneManager "nodeProxy") }}
     imagePullPolicy: IfNotPresent
-    command: ["/opt/nginx-static/sbin/nginx", "-c", "/etc/nginx/config/nginx.conf", "-g", "daemon off;"]
-    env:
-    - name: PATH
-      value: /opt/nginx-static/sbin
+    command: ["/bin/haproxy", "-W", "-db", "-f", "/config.cfg"]
   priorityClassName: system-node-critical
 EOF
 
