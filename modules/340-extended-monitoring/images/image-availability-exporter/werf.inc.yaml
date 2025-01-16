@@ -1,4 +1,3 @@
-{{ $imageAvailabilityExporterVersion := "0.11.0" }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 fromImage: common/src-artifact
@@ -11,7 +10,7 @@ git:
       - '**/*'
 shell:
   install:
-  - git clone --depth 1 --branch v{{ $imageAvailabilityExporterVersion }} {{ $.SOURCE_REPO }}/deckhouse/k8s-image-availability-exporter.git /src
+  - git clone --depth 1 --branch test_iae {{ $.SOURCE_REPO }}/deckhouse/k8s-image-availability-exporter.git /src
   - cd /src
   - git apply /patches/*.patch --verbose
   - rm -rf /src/.git
