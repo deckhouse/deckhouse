@@ -1,93 +1,102 @@
 {
   "commander-agent": {
     "path": "",
-    "edition": "ce"
+    "editionMinimumAvailable": "ce"
   },
   "istio": {
     "path": "modules/istio/",
-    "edition": "ce"
+    "editionMinimumAvailable": "ce"
   },
   "metallb": {
     "path": "modules/metallb/",
-    "editionRestrictions": ["se", "se-plus", "cse-lite"],
+    "editionRestrictions": ["se", "se-plus"],
     "editionRestrictionsComment": {"all": {"ru": "Ограничение на работу с BGP", "en": "Restriction on working with BGP"}},
-    "edition": "ee"
+    "editionMinimumAvailable": "se"
   },
   "cloud-provider-vsphere": {
     "path": "modules/cloud-provider-vsphere/",
     "editionFullyAvailable": ["se-plus", "ee"],
-    "edition": "ee"
+    "editionMinimumAvailable": "ee"
   },
   "cloud-provider-zvirt": {
     "path": "modules/cloud-provider-zvirt/",
     "editionFullyAvailable": ["se-plus", "ee"],
-    "edition": "ee"
+    "editionMinimumAvailable": "ee"
   },
   "cni-cilium": {
     "path": "modules/cni-cilium/",
     "editionFullyAvailable": ["se-plus"],
-    "edition": "ce"
+    "editionMinimumAvailable": "ce"
   },
   "user-authz": {
     "path": "modules/user-authz/",
     "editionFullyAvailable": ["be", "se", "se-plus"],
-    "edition": "ce"
+    "editionMinimumAvailable": "ce"
   },
   "registrypackages": {
     "path": "",
-    "edition": "ce"
+    "editionMinimumAvailable": "ce"
   },
   "console": {
     "path": "/products/kubernetes-platform/modules/console/stable/",
     "external": "true",
-    "edition": "se"
+    "editionMinimumAvailable": "se"
   },
   "sds-node-configurator": {
     "external": "true",
     "path": "/products/kubernetes-platform/modules/sds-node-configurator/stable/",
-    "edition": "ce"
+    "editionMinimumAvailable": "ce"
   },
   "sds-drbd": {
     "external": "true",
     "path": "/products/kubernetes-platform/modules/sds-drbd/stable/",
-    "edition": "ee"
+    "editionMinimumAvailable": "ee"
   },
   "sds-replicated-volume": {
     "external": "true",
     "path": "/products/kubernetes-platform/modules/sds-replicated-volume/stable/",
-    "edition": "se",
+    "editionMinimumAvailable": "se",
     "editionRestrictions": ["ce"]
   },
   "sds-local-volume": {
     "external": "true",
     "path": "/products/kubernetes-platform/modules/sds-local-volume/stable/",
-    "edition": "ce"
+    "editionMinimumAvailable": "ce"
   },
   "virtualization": {
     "external": "true",
     "path": "/products/kubernetes-platform/modules/virtualization/stable/",
-    "edition": "ee",
+    "editionMinimumAvailable": "ee",
     "editionRestrictions": ["ce"]
   },
   "secrets-store-integration": {
     "external": "true",
     "path": "/products/kubernetes-platform/modules/secrets-store-integration/stable/",
-    "edition": "be"
+    "editionMinimumAvailable": "be"
   },
   "csi-ceph": {
     "external": "true",
     "path": "/products/kubernetes-platform/modules/csi-ceph/stable/",
-    "edition": "ce"
+    "editionMinimumAvailable": "ce"
   },
   "csi-nfs": {
     "external": "true",
     "path": "/products/kubernetes-platform/modules/csi-nfs/stable/",
-    "edition": "ce"
+    "editionMinimumAvailable": "ce"
   },
   "commander": {
     "external": "true",
     "path": "/products/kubernetes-platform/modules/commander/stable/",
-    "edition": "ee"
+    "editionRestrictions": ["be", "se"],
+    "editionRestrictionsComment": {"all": {"ru": "Требуется дополнительная лицензия", "en": "Additional license required"}},
+    "editionMinimumAvailable": "be"
+  },
+  "stronghold": {
+    "external": "true",
+    "path": "/products/kubernetes-platform/modules/stronghold/stable/",
+    "editionRestrictions": ["be", "se", "se-plus", "ee"],
+    "editionRestrictionsComment": {"all": {"ru": "Требуется дополнительная лицензия", "en": "Additional license required"}},
+    "editionMinimumAvailable": "be"
   }
 }
 

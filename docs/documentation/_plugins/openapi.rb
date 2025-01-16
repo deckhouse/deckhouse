@@ -7,12 +7,14 @@ module Jekyll
     @@JSONSchema = JSONSchemaRenderer::JSONSchemaRenderer.new()
 
     def format_crd(input, moduleName = "")
+        return
         return if input.nil? || input.empty?
 
         @@JSONSchema.format_crd(@context.registers[:site], @context.registers[:page], input, moduleName)
     end
 
     def format_cluster_configuration(input, moduleName = "")
+        return
         return if input.nil? || input.empty? || input["kind"].nil? || input["kind"].empty?
 
         puts "Rendering #{input["kind"]} (#{@context.registers[:page]['lang']})"
@@ -20,6 +22,7 @@ module Jekyll
     end
 
     def format_module_configuration(input, moduleName = "")
+        return
         return if input.nil? || input.empty? || input["properties"].nil?|| input["properties"].empty?
 
         puts "Rendering ModuleConfig for #{moduleName} (#{@context.registers[:page]['lang']})"
