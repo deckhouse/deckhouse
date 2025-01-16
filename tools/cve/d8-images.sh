@@ -78,7 +78,8 @@ function __main__() {
     # Create an issue with found vulnerabilities
     CODEOWNERS_MODULE_NAME=$(echo $MODULE_NAME|sed -s 's/[A-Z]/-&/g')
     owners="[\"Nikolay1224\"]" # Default assignee in case if not found in CODEOWNERS file
-    for line in $(cat ./.github/CODEOWNERS); do
+
+    while IFS="\n" read -r line; do
       echo " DEBUG"
       echo "CODEOWNERS_MODULE_NAME: $CODEOWNERS_MODULE_NAME"
       echo "line: $line"
@@ -87,7 +88,19 @@ function __main__() {
         owner_found=true
         break
       fi
-    done
+    done < .github/CODEOWNERS
+
+
+#    for line in $(cat ./.github/CODEOWNERS); do
+#      echo " DEBUG"
+#      echo "CODEOWNERS_MODULE_NAME: $CODEOWNERS_MODULE_NAME"
+#      echo "line: $line"
+#      if echo $line| grep -i -q "$CODEOWNERS_MODULE_NAME"; then
+#        owners=$(echo $line | cut -d "@" -f 2-|jq --raw-input 'split(" @")')
+#        owner_found=true
+#        break
+#      fi
+#    done
     echo " Creating GitHub issue for module $MODULE_NAME with assignees $owners"
     echo ""
     curl -L \
