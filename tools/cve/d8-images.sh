@@ -77,7 +77,7 @@ function __main__() {
     done
     # Create an issue with found vulnerabilities
     CODEOWNERS_MODULE_NAME=$(echo $MODULE_NAME|sed -s 's/[A-Z]/-&/g')
-    owners="[\"RomanenkoDenys\"]" # Default assignee in case if not found in CODEOWNERS file
+    owners="[\"Nikolay1224\"]" # Default assignee in case if not found in CODEOWNERS file
     for line in $(cat /deckhouse/.github/CODEOWNERS); do
       if echo $line| grep -i "$CODEOWNERS_MODULE_NAME"; then
         owners=$(echo $line | cut -d "@" -f 2-|jq --raw-input 'split(" @")')
@@ -91,7 +91,7 @@ function __main__() {
         -H "Authorization: Bearer ${GITHUB_TOKEN}" \
         -H "X-GitHub-Api-Version: 2022-11-28" \
         https://api.github.com/repos/deckhouse/deckhouse/issues \
-        -d '{"title":"'$module' CVE Issue","body":"'$(cat out/${MODULE_NAME}_report)'","assignees":'$owners',"labels":["cve"]}'
+        -d '{"title":"'$module' CVE Issue","body":"'$(cat out/${MODULE_NAME}_report)'","assignees":"[\"Nikolay1224\"]","labels":["cve"]}'
     done
   done
 
