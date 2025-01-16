@@ -1,5 +1,4 @@
 common
-cloud-data-crd
 monitoring-applications
 prometheus-madison-integration
 basic-auth
