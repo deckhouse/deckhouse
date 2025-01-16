@@ -1,0 +1,26 @@
+diff --git a/go.mod b/go.mod
+index a80b43f..f9cc7c6 100644
+--- a/go.mod
++++ b/go.mod
+@@ -1,6 +1,8 @@
+ module github.com/containernetworking/plugins
+ 
+-go 1.20
++go 1.21
++
++toolchain go1.23.1
+ 
+ require (
+ 	github.com/Microsoft/hcsshim v0.12.3
+diff --git a/go.sum b/go.sum
+index 4cc06fa..7031bdc 100644
+--- a/go.sum
++++ b/go.sum
+@@ -121,6 +121,7 @@ github.com/stretchr/testify v1.7.1/go.mod h1:6Fq8oRcR53rry900zMqJjRRixrwX3KX962/
+ github.com/stretchr/testify v1.8.0/go.mod h1:yNjHg4UonilssWZ8iaSj1OCr/vHnekPRkoO+kdMU+MU=
+ github.com/stretchr/testify v1.8.1/go.mod h1:w2LPCIKwWwSfY2zedu0+kehJoqGctiVI29o6fzry7u4=
+ github.com/stretchr/testify v1.8.4 h1:CcVxjf3Q8PM0mHUKJCdn+eZZtm5yQwehR5yeSVQQcUk=
++github.com/stretchr/testify v1.8.4/go.mod h1:sz/lmYIOXD/1dqDmKjjqLyZ2RngseejIcXlSw2iwfAo=
+ github.com/vishvananda/netlink v1.2.1-beta.2 h1:Llsql0lnQEbHj0I1OuKyp8otXp0r3q0mPkuhwHfStVs=
+ github.com/vishvananda/netlink v1.2.1-beta.2/go.mod h1:twkDnbuQxJYemMlGd4JFIcuhgX83tXhKS2B/PRMpOho=
+ github.com/vishvananda/netns v0.0.0-20200728191858-db3c7e526aae/go.mod h1:DD4vA1DwXk04H54A1oHXtwZmA0grkVMdPxx/VGLCah0=

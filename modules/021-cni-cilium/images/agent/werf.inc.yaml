@@ -18,9 +18,9 @@
 # kmod and dependencies
 {{ $binariesFromALT := cat $binariesFromALT "/bin/kmod /bin/lsmod /sbin/depmod /sbin/insmod /sbin/lsmod /sbin/modinfo /sbin/modprobe /sbin/rmmod" }}
 # iproute2 and dependencies
-{{ $binariesFromALT := cat $binariesFromALT "/sbin/ip /usr/sbin/ss /usr/sbin/bridge /sbin/dcb /sbin/devlink /usr/sbin/rtacct /sbin/rtmon /sbin/tc /usr/sbin/tipc /sbin/vdpa /usr/bin/lnstat" }}
-{{ $binariesFromALT := cat $binariesFromALT "/usr/bin/nstat /sbin/rdma /usr/sbin/routef /usr/sbin/routel /usr/sbin/ctstat /usr/sbin/rtstat /usr/sbin/genl" }}
-# {{ $binariesFromALT := cat $binariesFromALT "/usr/sbin/arpd" }}
+{{ $binariesFromALT := cat $binariesFromALT "/sbin/dcb /sbin/devlink /sbin/ip /sbin/rdma /sbin/rtmon /sbin/tc /sbin/vdpa /usr/bin/ip /usr/bin/lnstat /usr/bin/nstat /usr/bin/rtmon /usr/bin/ss /usr/bin/tc" }}
+{{ $binariesFromALT := cat $binariesFromALT "/usr/sbin/bridge /usr/sbin/ctstat /usr/sbin/genl /usr/sbin/ifstat /usr/sbin/lnstat /usr/sbin/nstat /usr/sbin/rtacct /usr/sbin/rtstat /usr/sbin/ss /usr/sbin/tipc" }}
+{{ $binariesFromALT := cat $binariesFromALT "/usr/lib64/tc/experimental.dist /usr/lib64/tc/normal.dist /usr/lib64/tc/pareto.dist /usr/lib64/tc/paretonormal.dist" }}
 # ipset and dependencies
 {{ $binariesFromALT := cat $binariesFromALT "/sbin/ipset" }}
 # clang dependencies
@@ -66,38 +66,54 @@
 # #####################################################################
 # Binaries artifact for distroless agent (based on Ubuntu)
 ---
-artifact: {{ $.ModuleName }}/agent-binaries-artifact
-fromImage: {{ $.ModuleName }}/base-cilium-dev
+image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+fromImage: common/src-artifact
+final: false
 git:
-- add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}
-  to: /
+- add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}
+  to: /src
   includePaths:
   - binary_replace.sh
   - check-n-cleaning-iptables.sh
   stageDependencies:
     install:
-    - "**/*.sh"
+    - '**/*.sh'
+shell:
+  install:
+  - cd /src
+---
+image: {{ .ModuleName }}/agent-binaries-artifact
+fromImage: {{ .ModuleName }}/base-cilium-dev
+final: false
 import:
-- artifact: {{ $.ModuleName }}/llvm-artifact
+- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+  add: /src/check-n-cleaning-iptables.sh
+  to: /check-n-cleaning-iptables.sh
+  before: install
+- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+  add: /src/binary_replace.sh
+  to: /binary_replace.sh
+  before: install
+- image: {{ .ModuleName }}/llvm-artifact
   add: /usr/local/bin/
   to: /usr/local/bin
   before: install
   includePaths:
   - clang
   - llc
-- artifact: {{ $.ModuleName }}/bpftool-artifact
+- image: {{ .ModuleName }}/bpftool-artifact
   add: /usr/local/bin/bpftool
   to: /usr/local/bin/bpftool
   before: install
-- artifact: {{ $.ModuleName }}/cni-plugins-artifact
+- image: {{ .ModuleName }}/cni-plugins-artifact
   add: /out/linux/amd64/bin/loopback
   to: /cni/loopback
   before: install
-- artifact: {{ $.ModuleName }}/gops-artifact
+- image: {{ .ModuleName }}/gops-artifact
   add: /out/linux/amd64/bin/gops
   to: /bin/gops
   before: install
-- artifact: registrypackages/iptables-artifact-{{ $iptables_image_version }}
+- image: registrypackages/iptables-artifact-{{ $iptables_image_version }}
   add: /
   to: /sbin
   includePaths:
@@ -108,7 +124,7 @@ import:
   add: /iptables-wrapper
   to: /usr/sbin/iptables-wrapper
   before: install
-- artifact: {{ $.ModuleName }}/cilium-artifact
+- image: {{ .ModuleName }}/cilium-artifact
   add: /tmp/install
   to: /
   before: install
@@ -121,7 +137,7 @@ import:
   - opt/cni/bin/cilium-cni
   - usr/bin/cilium*
   - var/lib/cilium/bpf
-- artifact: {{ $.ModuleName }}/cilium-envoy-artifact
+- image: {{ .ModuleName }}/cilium-envoy-artifact
   add: /tmp/install/usr
   to: /usr
   before: install
@@ -129,11 +145,11 @@ import:
   - bin/cilium-envoy
   - bin/cilium-envoy-starter
   - lib/libcilium.so
-- artifact: {{ $.ModuleName }}/hubble-artifact
+- image: {{ .ModuleName }}/hubble-artifact
   add: /hubble
   to: /usr/bin/hubble
   before: install
-- artifact: {{ $.ModuleName }}/hubble-artifact
+- image: {{ .ModuleName }}/hubble-artifact
   add: /bash_completion
   to: /etc/bash_completion.d/hubble
   before: install
@@ -192,6 +208,9 @@ shell:
   - echo ". /etc/bashrc.d/bash_completion.sh" >> /root/.bashrc
   - mkdir -p /relocate/root && cp -a /root/.bashrc /relocate/root
   setup:
+  # locale
+  - mkdir -p /relocate/usr/lib
+  - cp -a /usr/lib/locale /relocate/usr/lib
   # prepare final fs
   - mkdir -p /relocate/usr/sbin
   - if [ -d "/relocate/sbin" ]; then cp -a /relocate/sbin/* /relocate/usr/sbin/ && rm -rf /relocate/sbin; fi
@@ -223,10 +242,10 @@ shell:
 # #####################################################################
 # New Main Agent Image (Distroless)
 ---
-image: {{ $.ModuleName }}/agent-distroless
+image: {{ .ModuleName }}/agent-distroless
 fromImage: common/distroless
 import:
-- artifact: {{ $.ModuleName }}/agent-binaries-artifact
+- image: {{ .ModuleName }}/agent-binaries-artifact
   add: /relocate
   to: /
   before: install
@@ -236,5 +255,8 @@ docker:
     INITSYSTEM: SYSTEMD
     HUBBLE_COMPAT: legacy-json-output
     PATH: "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+    LANG: en_US.UTF-8
+    LANGUAGE: en_US:en
+    LC_ALL: en_US.UTF-8
   WORKDIR: "/home/cilium"
   CMD: ["/usr/bin/cilium"]
