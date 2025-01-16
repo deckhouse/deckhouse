@@ -96,6 +96,8 @@ func setKubeDNSPolicy(input *go_hook.HookInput) error {
 	for _, o := range nodes {
 		node := o.(k8sNode)
 		nodesRolesCounters[node.Role]++
+		//debug
+		fmt.Printf("node role %q counter %d\n", node.Role, nodesRolesCounters[node.Role])
 	}
 	// Adds the ability to run kube-dns pods on worker nodes
 	customRole := input.Values.Get("kubeDns.CustomRoleNodes").Str
