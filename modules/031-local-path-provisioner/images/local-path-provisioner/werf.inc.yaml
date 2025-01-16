@@ -36,7 +36,10 @@ mount:
 shell:
   install:
     - cd /src
-    - GOPROXY={{ $.GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags "-X main.VERSION={{$localPathProvisionerVersion}} -extldflags -static -s -w" -o /local-path-provisioner
+    - export GOPROXY={{ $.GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64
+    - go mod download
+    - go mod vendor
+    - go build -ldflags "-X main.VERSION={{$localPathProvisionerVersion}} -extldflags -static -s -w" -o /local-path-provisioner
     - chown -R 64535:64535 /local-path-provisioner
     - chmod 0700 /local-path-provisioner
 
