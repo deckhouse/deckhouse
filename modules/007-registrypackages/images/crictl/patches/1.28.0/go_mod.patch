@@ -1,5 +1,5 @@
 diff --git a/go.mod b/go.mod
-index 2a26e89e..600ae132 100644
+index 2a26e89e..60d75cbf 100644
 --- a/go.mod
 +++ b/go.mod
 @@ -4,21 +4,21 @@ go 1.20
@@ -17,7 +17,7 @@ index 2a26e89e..600ae132 100644
  	github.com/onsi/gomega v1.27.10
  	github.com/opencontainers/go-digest v1.0.0
 -	github.com/opencontainers/runc v1.1.9
-+	github.com/opencontainers/runc v1.1.12
++	github.com/opencontainers/runc v1.1.14
  	github.com/opencontainers/selinux v1.11.0
  	github.com/sirupsen/logrus v1.9.3
  	github.com/urfave/cli/v2 v2.25.7
@@ -136,7 +136,7 @@ index 2a26e89e..600ae132 100644
 +	k8s.io/sample-apiserver => k8s.io/kubernetes/staging/src/k8s.io/sample-apiserver v0.0.0-20241022202626-841856557ef0
  )
 diff --git a/go.sum b/go.sum
-index c2438f95..fa7e8b65 100644
+index c2438f95..6f67319c 100644
 --- a/go.sum
 +++ b/go.sum
 @@ -20,7 +20,7 @@ cloud.google.com/go/bigquery v1.4.0/go.mod h1:S8dzgnTigyfTmLBfrtrhyYhwRxG72rYxvf
@@ -209,8 +209,8 @@ index c2438f95..fa7e8b65 100644
  github.com/opencontainers/go-digest v1.0.0/go.mod h1:0JzlMkj0TRzQZfJkVvzbP0HBR3IKzErnv2BNG4W4MAM=
 -github.com/opencontainers/runc v1.1.9 h1:XR0VIHTGce5eWPkaPesqTBrhW2yAcaraWfsEalNwQLM=
 -github.com/opencontainers/runc v1.1.9/go.mod h1:CbUumNnWCuTGFukNXahoo/RFBZvDAgRh/smNYNOhA50=
-+github.com/opencontainers/runc v1.1.12 h1:BOIssBaW1La0/qbNZHXOOa71dZfZEQOzW7dqQf3phss=
-+github.com/opencontainers/runc v1.1.12/go.mod h1:S+lQwSfncpBha7XTy/5lBwWgm5+y5Ma/O44Ekby9FK8=
++github.com/opencontainers/runc v1.1.14 h1:rgSuzbmgz5DUJjeSnw337TxDbRuqjs6iqQck/2weR6w=
++github.com/opencontainers/runc v1.1.14/go.mod h1:E4C2z+7BxR7GHXp0hAY53mek+x49X1LjPNeMTfRGvOA=
  github.com/opencontainers/selinux v1.11.0 h1:+5Zbo97w3Lbmb3PeqQtpmTkMwsW5nRI3YaLpt7tQ7oU=
  github.com/opencontainers/selinux v1.11.0/go.mod h1:E5dMC3VPuVvVHDYmi78qvhJp8+M586T4DlDRYpFkyec=
  github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=
