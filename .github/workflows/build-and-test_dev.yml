@@ -1528,7 +1528,7 @@ jobs:
             --rm \
             --mount type=bind,src="${_TMPDIR}/site_en",dst="/src/en",ro \
             --mount type=bind,src="${_TMPDIR}/site_ru",dst="/src/ru",ro \
-            --mount type=bind,src="./tools/docs/link-checker/entrypoint.sh",dst="/entrypoint.sh",r \
+            --mount type=bind,src="./tools/docs/link-checker/entrypoint.sh",dst="/entrypoint.sh",ro \
             -u $(id -u) \
             ${DECKHOUSE_REGISTRY_READ_HOST}/base_images/${CHECKER_IMAGE} \
             /entrypoint.sh
