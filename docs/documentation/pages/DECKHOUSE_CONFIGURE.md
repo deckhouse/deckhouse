@@ -166,7 +166,6 @@ Deckhouse with the `Minimal` module set and no basic modules included will only 
 To install Deckhouse with the `Minimal` module set, enable at least the following modules by specifying them in the installer configuration file:
 
 * cloud provider module (for example, `cloud-provider-aws` for AWS), in a case of deploying a cloud cluster;
-* cloud-data-crd;
 * cni-cilium or another CNI control module (if necessary);
 * control-plane-manager;
 * kube-dns;
