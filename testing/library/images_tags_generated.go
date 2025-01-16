@@ -246,6 +246,7 @@ var DefaultImagesDigests = map[string]interface{}{
 		"kubeScheduler130":         "imageHash-controlPlaneManager-kubeScheduler130",
 		"kubeScheduler131":         "imageHash-controlPlaneManager-kubeScheduler131",
 		"kubernetesApiProxy":       "imageHash-controlPlaneManager-kubernetesApiProxy",
+		"nodeProxy":                "imageHash-controlPlaneManager-nodeProxy",
 	},
 	"dashboard": map[string]interface{}{
 		"api":            "imageHash-dashboard-api",

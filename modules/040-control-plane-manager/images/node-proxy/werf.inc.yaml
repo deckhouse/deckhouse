@@ -1,0 +1,16 @@
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}
+fromImage: common/haproxy-static
+# import:
+# - image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+#   add: /src/kubernetes-api-proxy-reloader
+#   to: /kubernetes-api-proxy-reloader
+#   before: install
+docker:
+  ENTRYPOINT: ["/bin/haproxy", "-W", "-db", "-f /config.cfg"]
+git:
+  - add: /{{ $.ModulePath }}modules/040-{{ $.ModuleName }}/images/{{ $.ImageName }}/config.cfg
+    to: /config.cfg
+    stageDependencies:
+      install:
+        - '**/*'
