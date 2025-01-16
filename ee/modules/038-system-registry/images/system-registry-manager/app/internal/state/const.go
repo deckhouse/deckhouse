@@ -23,7 +23,8 @@ const (
 )
 
 var (
-	ErrSecretIsNil = errors.New("secret is nil")
-	ErrInvalid     = errors.New("data is invalid")
-	ErrIsNil       = errors.New("data is nil")
+	ErrConfigMapIsNil = errors.New("configmap is nil")
+	ErrSecretIsNil    = errors.New("secret is nil")
+	ErrInvalid        = errors.New("data is invalid")
+	ErrIsNil          = errors.New("data is nil")
 )

@@ -176,6 +176,15 @@ func (nc *nodeController) SetupWithManager(ctx context.Context, mgr ctrl.Manager
 			name == state.UserMirrorPusherName
 	})
 
+	rbacProxyPKIPredicate := predicate.NewPredicateFuncs(func(obj client.Object) bool {
+		if obj.GetNamespace() != nc.Namespace {
+			return false
+		}
+
+		name := obj.GetName()
+		return name == state.RbacProxyPKIConfigMapName
+	})
+
 	staticPodManagerPredicate := predicate.NewPredicateFuncs(func(obj client.Object) bool {
 		if obj.GetNamespace() != nc.Namespace {
 			return false
@@ -233,6 +242,11 @@ func (nc *nodeController) SetupWithManager(ctx context.Context, mgr ctrl.Manager
 			&corev1.Secret{},
 			reprocessAllHandler,
 			builder.WithPredicates(globalSecretsPredicate),
+		).
+		Watches(
+			&corev1.ConfigMap{},
+			reprocessAllHandler,
+			builder.WithPredicates(rbacProxyPKIPredicate),
 		).
 		WithOptions(controller.Options{
 			MaxConcurrentReconciles: 10,
@@ -400,6 +414,12 @@ func (nc *nodeController) handleMasterNode(ctx context.Context, node *corev1.Nod
 		return
 	}
 
+	rbacProxyPKI, err := nc.loadRbacProxyPKI(ctx)
+	if err != nil {
+		err = fmt.Errorf("cannot load rbac proxy PKI: %w", err)
+		return
+	}
+
 	nodeInternalIP := getNodeInternalIP(node)
 	if nodeInternalIP == "" {
 		err = fmt.Errorf("node does not have internal IP")
@@ -439,6 +459,7 @@ func (nc *nodeController) handleMasterNode(ctx context.Context, node *corev1.Nod
 		globalPKI,
 		globalSecrets,
 		nodePKI,
+		rbacProxyPKI,
 		mirrorerUpstreams,
 	)
 
@@ -463,6 +484,7 @@ func (nc *nodeController) contructStaticPodConfig(
 	globalPKI state.GlobalPKI,
 	globalSecrets state.GlobalSecrets,
 	nodePKI state.NodePKI,
+	rbacProxyPKI *state.RbacProxyPKI,
 	mirrorerUpstreams []string,
 ) (config staticpod.Config, err error) {
 	tokenKey, err := pki.EncodePrivateKey(globalPKI.Token.Key)
@@ -481,6 +503,12 @@ func (nc *nodeController) contructStaticPodConfig(
 	if err != nil {
 		err = fmt.Errorf("cannot encode node's Distribution key: %w", err)
 		return
+	}
+
+	var rbacProxyCaCert *string
+	if rbacProxyPKI != nil {
+		rbacProxyCaCertEncoded := string(pki.EncodeCertificate(rbacProxyPKI.CaCert))
+		rbacProxyCaCert = &rbacProxyCaCertEncoded
 	}
 
 	registryHostPath := fmt.Sprintf("%s%s", nc.Settings.RegistryAddress, nc.Settings.RegistryPath)
@@ -513,6 +541,7 @@ func (nc *nodeController) contructStaticPodConfig(
 			AuthKey:          string(authKey),
 			DistributionCert: string(pki.EncodeCertificate(nodePKI.Distribution.Cert)),
 			DistributionKey:  string(distributionKey),
+			RbacProxyCaCert:  rbacProxyCaCert,
 		},
 		Mirrorer: staticpod.Mirrorer{
 			UserPuller: staticpod.User{
@@ -815,6 +844,28 @@ func (nc *nodeController) loadGlobalPKI(ctx context.Context) (ret state.GlobalPK
 	}
 
 	return
+}
+
+func (nc *nodeController) loadRbacProxyPKI(ctx context.Context) (*state.RbacProxyPKI, error) {
+	cm := corev1.ConfigMap{}
+	key := types.NamespacedName{
+		Name:      state.RbacProxyPKIConfigMapName,
+		Namespace: nc.Namespace,
+	}
+
+	if err := nc.Client.Get(ctx, key, &cm); err != nil {
+		if apierrors.IsNotFound(err) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("cannot get configmap %v k8s object: %w", key.Name, err)
+	}
+
+	ret := state.RbacProxyPKI{}
+	err := ret.DecodeConfigMap(&cm)
+	if err != nil {
+		return nil, fmt.Errorf("cannot decode PKI from configmap: %w", err)
+	}
+	return &ret, nil
 }
 
 func (nc *nodeController) getAllMasterNodesInternalIPs(ctx context.Context) (ips []string, err error) {
