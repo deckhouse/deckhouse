@@ -1,35 +1,33 @@
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/shell-operator
 import:
-  - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
-    add: /usr/bin
-    to: /usr/bin
-    before: setup
-    includePaths:
-    - python3
-    - python3.12
-  - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
-    add: /usr/lib/python3
-    to: /usr/lib/python3
-    before: setup
-  - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
-    add: /usr/lib64/python3
-    to: /usr/lib64/python3
-    before: setup
-  - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
-    add: /usr/lib64/python3.12
-    to: /usr/lib64/python3.12
-    before: setup
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+  add: /
+  to: /
+  before: setup
+  includePaths:
+  - opt/python-static
 git:
 - add: /{{ $.ModulePath }}modules/300-{{ $.ModuleName }}/images/{{ $.ImageName }}/hooks
   to: /hooks
   stageDependencies:
     install:
     - '**/*'
+docker:
+  ENV:
+    PATH: "/opt/python-static/bin:$PATH"
 
 ---
-artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+final: false
 from: {{ $.Images.BASE_ALT_P11 }}
+import:
+- image: common/python-static
+  add: /
+  to: /
+  before: install
+  includePaths:
+  - opt/python-static
 git:
 - add: /{{ $.ModulePath }}modules/300-{{ $.ModuleName }}/images/{{ $.ImageName }}/requirements.txt
   to: /requirements.txt
@@ -37,8 +35,5 @@ git:
     install:
     - '**/*'
 shell:
-  beforeInstall:
-    - apt-get update
-    - apt-get install -y python3 python3-module-pip-run
   install:
-    - pip3 install -r /requirements.txt
+  - /opt/python-static/bin/pip3 install -r /requirements.txt

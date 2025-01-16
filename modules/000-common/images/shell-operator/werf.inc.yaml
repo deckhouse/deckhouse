@@ -58,6 +58,12 @@ image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
 from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
 final: false
 import:
+- image: common/python-static-artifact
+  add: /
+  to: /
+  before: setup
+  includePaths:
+  - opt/python-static
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
   add: /src
   to: /src
@@ -85,3 +91,4 @@ shell:
   - cp -r shell_lib.sh frameworks shell-operator /shell-operator
   - chown -R 64535:64535 /shell-operator
   - chmod 700 /shell-operator/shell-operator
+  - export PATH="/opt/python-static/bin:$PATH"
