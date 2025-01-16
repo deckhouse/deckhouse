@@ -540,6 +540,19 @@ check_e2e_labels:
         INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
   {!{- tmpl.Exec "e2e_run_template" (slice .provider "run-test" (coll.Has $ctx "manualRun") ) | strings.Indent 6 }!}
 
+    {!{- if coll.Has $ctx "manualRun" }!}
+# </template: e2e_tests_create_debug_logs>
+    - name: Create Deckhouse debug logs
+      id: e2e_tests_create_debug_logs
+      if: failure()
+      uses: ./.github/actions/upload-d8-debug-logs
+      with:
+        sshloginfile: ${{ steps.e2e_test_run.outputs.ssh_connection_str_file }}
+        sshkey: ${{ secrets.LAYOUT_SSH_KEY }}
+# </template: e2e_tests_create_debug_logs>
+    {!{- end }!}
+
+
 {!{- if coll.Has $ctx "manualRun" }!}
     - name: Read connection string
       if: ${{ failure() || cancelled() }}
