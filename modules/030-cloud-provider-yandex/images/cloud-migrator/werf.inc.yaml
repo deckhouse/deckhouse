@@ -10,6 +10,7 @@ docker:
   ENTRYPOINT: ["/migrator"]
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
+final: false
 from: {{ .Images.BASE_GOLANG_21_ALPINE }}
 shell:
   setup:
