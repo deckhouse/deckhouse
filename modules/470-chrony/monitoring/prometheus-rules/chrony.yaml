@@ -14,17 +14,27 @@
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: markdown
+      summary: NTP daemon on the node `{{$labels.node}}` haven't synchronized time for too long.
       description: |
-        1. check if Chrony pod is running on the node by executing the following command:
-           * 'kubectl -n d8-chrony --field-selector spec.nodeName="{{$labels.node}}" get pods'
-        2. check the Chrony daemon's status by executing the following command:
-           * 'kubectl -n d8-chrony exec <POD_NAME> -- /opt/chrony-static/bin/chronyc sources'
-        3. Correct the time synchronization problems:
-           * correct network problems:
-             - provide availability to upstream time synchronization servers defined in the module [configuration](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/chrony/configuration.html);
-             - eliminate large packet loss and excessive latency to upstream time synchronization servers.
-           * Modify NTP servers list defined in the module [configuration](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/chrony/configuration.html).
-      summary: NTP daemon on node {{$labels.node}} have not synchronized time for too long.
+        Steps to troubleshoot:
+
+        1. Check if the chrony pod is running on the node by executing the following command:
+
+           ```bash
+           kubectl -n d8-chrony --field-selector spec.nodeName="{{$labels.node}}" get pods
+           ```
+
+        2. Verify the chrony daemon's status by executing the following command:
+
+           ```bash
+           kubectl -n d8-chrony exec <POD_NAME> -- /opt/chrony-static/bin/chronyc sources
+           ```
+
+        3. Resolve the time synchronization issues:
+           - Fix network errors:
+             - Ensure the upstream time synchronization servers defined in the [chrony configuration](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/chrony/configuration.html) are available.
+             - Eliminate large packet loss and excessive latency to upstream time synchronization servers.
+           - Modify the NTP servers list defined in the [chrony configuration](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/chrony/configuration.html).
 
   - alert: NodeTimeOutOfSync
     expr: abs(chrony_tracking_last_offset_seconds:abs - (node_ntp_rtt_seconds/2)) > 0.05
@@ -35,6 +45,13 @@
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: markdown
+      summary: Clock on the node `{{$labels.node}}` is drifting.
       description: |
-        Node's {{$labels.node}} time is out of sync from ntp server by {{ $value }} seconds.
-      summary: Node's {{$labels.node}} clock is drifting.
+        Time on the node `{{$labels.node}}` is out of sync and drifts apart from the NTP server clock by {{ $value }} seconds.
+
+        To resolve the time synchronization issues:
+
+           - Fix network errors:
+             - Ensure the upstream time synchronization servers defined in the [chrony configuration](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/chrony/configuration.html) are available.
+             - Eliminate large packet loss and excessive latency to upstream time synchronization servers.
+           - Modify the NTP servers list defined in the [chrony configuration](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/chrony/configuration.html).
