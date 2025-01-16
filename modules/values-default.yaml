@@ -3,8 +3,6 @@ admissionPolicyEngineEnabled: true
 certManagerEnabled: true
 chronyEnabled: true
 ciliumHubbleEnabled: false
-cloudDataCrdEnabled: true
-containerizedDataImporterEnabled: true
 controlPlaneManagerEnabled: true
 dashboardEnabled: true
 deckhouseEnabled: true
@@ -13,13 +11,11 @@ deckhouseToolsEnabled: true
 deschedulerEnabled: true
 extendedMonitoringEnabled: true
 flowSchemaEnabled: true
-helmEnabled: true
 ingressNginxEnabled: true
 kubeDnsEnabled: true
 kubeProxyEnabled: true
 localPathProvisionerEnabled: true
 logShipperEnabled: true
-metallbCrdEnabled: true
 monitoringCustomEnabled: true
 monitoringDeckhouseEnabled: true
 monitoringKubernetesControlPlaneEnabled: true
@@ -29,22 +25,16 @@ multitenancyManagerEnabled: true
 namespaceConfiguratorEnabled: true
 registryPackagesProxyEnabled: true
 nodeManagerEnabled: true
-operatorPrometheusCrdEnabled: true
 operatorPrometheusEnabled: true
 podReloaderEnabled: true
 priorityClassEnabled: true
-prometheusCrdEnabled: true
 prometheusEnabled: true
 prometheusMetricsAdapterEnabled: true
 secretCopierEnabled: true
 smokeMiniEnabled: true
-snapshotControllerCrdEnabled: true
 snapshotControllerEnabled: true
 terraformManagerEnabled: true
 upmeterEnabled: true
-userAuthnCrdEnabled: true
 userAuthnEnabled: true
 userAuthzEnabled: true
-verticalPodAutoscalerCrdEnabled: true
 verticalPodAutoscalerEnabled: true
-
