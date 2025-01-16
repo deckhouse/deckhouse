@@ -22,7 +22,7 @@ http:
   tls:
     certificate: /system_registry_pki/distribution.crt
     key: /system_registry_pki/distribution.key
-  ## Must be set onlt if CA cert exists!
+  ## Must present only if CA cert exists!
   # realip:
   #   enabled: true
   #   clientcert:
