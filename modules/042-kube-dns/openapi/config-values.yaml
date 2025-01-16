@@ -91,7 +91,7 @@ properties:
     items:
       type: string
       pattern: '^[0-9a-zA-Z\.-]+$'
-  customRoleNodes:
+  CustomRoleNodes:
     description: |
       Adds the ability to run kube-dns pods on worker nodes:
       hook search label in this patterns:
