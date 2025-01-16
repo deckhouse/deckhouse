@@ -124,8 +124,8 @@ github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSs
 github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc h1:U9qPSI2PIWSS1VwoXQT9A3Wy9MM3WgvqSxFWenqJduM=
 github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/davecgh/go-xdr v0.0.0-20161123171359-e6a2ba005892/go.mod h1:CTDl0pzVzE5DEzZhPfvhY/9sPFMQIxaJ9VAMs9AagrE=
-github.com/deckhouse/module-sdk v0.1.0 h1:YgMnr0vmjVLwIdQfTE1ytR2nPndO2SfQprcW45wsT34=
-github.com/deckhouse/module-sdk v0.1.0/go.mod h1:0gxlSr0WRrGnB82J+45FBIXNP/fKl8+yEvRTzrygiAE=
+github.com/deckhouse/module-sdk v0.1.1-0.20250116112031-b450dbc3d54f h1:uNlbvgrC88lPm2Ge3qD4ClEogZJxti9vcO4GyEvP1Nk=
+github.com/deckhouse/module-sdk v0.1.1-0.20250116112031-b450dbc3d54f/go.mod h1:ApufGFVUNGE02IBTYSRNGfCT43tt4jv2+wG9V077eZ0=
 github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f h1:lO4WD4F/rVNCu3HqELle0jiPLLBs70cWOduZpkS1E78=
 github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f/go.mod h1:cuUVRXasLTGF7a8hSLbxyZXjz+1KgoB3wDUb6vlszIc=
 github.com/distribution/distribution/v3 v3.0.0-beta.1 h1:X+ELTxPuZ1Xe5MsD3kp2wfGUhc8I+MPfRis8dZ818Ic=
