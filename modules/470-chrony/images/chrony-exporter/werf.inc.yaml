@@ -1,5 +1,4 @@
 {{- $chronyExproterVersion := "0.11.0"}}
-{{- $promuVersion := "0.17.0"}}
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
 fromImage: common/src-artifact
@@ -14,28 +13,10 @@ git:
     - '**/*.patch'
 shell:
   install:
-  - git clone --depth 1 --branch v{{$chronyExproterVersion}} {{ .SOURCE_REPO }}/SuperQ/chrony_exporter.git /src/chrony_exporter
-  - cd /src/chrony_exporter
+  - cd /src
+  - git clone --depth 1 --branch v{{$chronyExproterVersion}} {{ .SOURCE_REPO }}/SuperQ/chrony_exporter.git .
   - git apply /patches/*.patch --verbose
-  - git clone --depth 1 --branch v{{$promuVersion}} {{ .SOURCE_REPO }}/prometheus/promu.git /src/promu
-  - rm -rf /src/chrony_exporter/.git /src/promu/.git
----
-image: {{ .ModuleName }}/{{ .ImageName }}-artifact-promu
-from: {{ .Images.BASE_GOLANG_23_ALPINE }}
-final: false
-import:
-- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
-  add: /src/promu
-  to: /promu
-  before: install
-mount:
-- fromPath: ~/go-pkg-cache
-  to: /go/pkg
-shell:
-  install:
-  - export GOPROXY={{ .GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64
-  - cd /promu
-  - go build -ldflags="-s -w" -o promu ./main.go
+  - rm -rf .git 
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
 from: {{ .Images.BASE_GOLANG_23_ALPINE }}
@@ -43,33 +24,31 @@ final: false
 mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
+- from: tmp_dir
+  to: /root/.cache/go-build
 import:
-- image: {{ .ModuleName }}/{{ .ImageName }}-artifact-promu
-  add: /promu/promu
-  to: /bin/promu
-  before: install
 - image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
-  add: /src/chrony_exporter
+  add: /src
   to: /chrony_exporter
   before: install
 shell:
   beforeInstall:
-  {{- include "alpine packages proxy" . | nindent 2 }}
-  - apk update && apk add --no-cache gcc g++
+  - export GOPROXY={{ .GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64
+  - go install github.com/prometheus/promu@v0.17.0
   install:
   - export GOPROXY={{ .GOPROXY }} CGO_ENABLED=1 GOOS=linux GOARCH=amd64
   - cd /chrony_exporter
-  - /bin/promu build
+  - promu build
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-artifact
   add: /chrony_exporter/chrony_exporter
-  to: /usr/bin/chrony_exporter
+  to: /bin/chrony_exporter
   before: install
 docker:
   EXPOSE:
   - "9123"
   ENTRYPOINT:
-  - "/usr/bin/chrony_exporter"
+  - "/bin/chrony_exporter"
