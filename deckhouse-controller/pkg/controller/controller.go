@@ -185,7 +185,7 @@ func NewDeckhouseController(ctx context.Context, version string, operator *addon
 	operator.ModuleManager.SetModuleEventsChannel(moduleEventCh)
 	// set chrooted environment for modules
 	if len(os.Getenv("ADDON_OPERATOR_SHELL_CHROOT_DIR")) > 0 {
-		setModulesMounts(operator)
+		setModulesEnvironment(operator)
 	}
 
 	// instantiate ModuleDependency extender
@@ -282,7 +282,7 @@ func NewDeckhouseController(ctx context.Context, version string, operator *addon
 	}, nil
 }
 
-func setModulesMounts(operator *addonoperator.AddonOperator) {
+func setModulesEnvironment(operator *addonoperator.AddonOperator) {
 	operator.ModuleManager.SetRequiredMounts([]mountmgr.MountDescriptor{
 		{
 			Source: "/usr",
