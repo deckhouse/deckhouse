@@ -9,6 +9,7 @@
     - Cluster readiness: before migration, you may need to ensure the cluster is in a specific state (refer to cluster alerts).
     - Backup configurations: it is highly recommended to backup custom resource configurations like L2Advertisement and IPAddressPool which were created manually bypassing the ModuleConfig before migration.
     - Additional resources: after migrating the L2 balancer, additional MetalLoadBalancerClass resources will be created in the cluster. These resources are used to configure the module instead of ModuleConfig.
+ - Prometheus will be restarted.
  - The `releaseChannel`, `bundle` and `logLevel` parameters of the InitConfiguration resource are no longer available. Use the corresponding parameters in the ModuleConfig `deckhouse` instead.
  - v1alpha1 API version for ModulePullOverride is deprecated. A module source is now selected according to the moduleConfig.
  - v1alpha1 API version for ModuleUpdatePolicy is deprecated, the  source for the module and the module update policy is now selected according to the moduleConfig.
@@ -132,5 +133,7 @@
  - **[istio]** Enabling the use of self hosted certificates for metadata decrypt and excluding certificate verification in Istio Multicluster and Federation. [#10740](https://github.com/deckhouse/deckhouse/pull/10740)
  - **[node-manager]** Rewrite NodeGroup convesion webhook on Python. [#10777](https://github.com/deckhouse/deckhouse/pull/10777)
  - **[operator-trivy]** Use local policies. [#10799](https://github.com/deckhouse/deckhouse/pull/10799)
+ - **[prometheus]** Add init container and switcher for prom image. [#11085](https://github.com/deckhouse/deckhouse/pull/11085)
+    Prometheus will be restarted.
  - **[user-authz]** Replace manage capabilities and scopes. [#10810](https://github.com/deckhouse/deckhouse/pull/10810)
 
