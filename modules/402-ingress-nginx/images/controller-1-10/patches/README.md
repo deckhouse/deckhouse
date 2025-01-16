@@ -1,5 +1,10 @@
 ## Patches
 
+### gomod
+
+Go mod patches for ingress-nginx-controller
+Collected with
+
 ### Healthcheck
 
 After catching SIGTERM, ingress stops responding to the readiness probe.
