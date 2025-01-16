@@ -1,107 +1,31 @@
 ---
-artifact: {{ $.ModuleName }}/{{ $.ImageName }}-promu-artifact
-from: {{ $.Images.BASE_GOLANG_18_ALPINE_DEV }}
-mount:
-- fromPath: ~/go-pkg-cache
-  to: /go/pkg
-shell:
-  beforeInstall:
-  - apk add --no-cache openssh-client
-  install:
-  - export GOPROXY={{ $.GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64
-  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
-  - git clone --depth 1 --branch v0.14.0 {{ $.SOURCE_REPO }}/prometheus/promu.git /promu
-  - cd /promu
-  - go build -ldflags="-s -w" -o promu ./main.go
----
-artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
-from: {{ $.Images.BASE_GOLANG_21_BULLSEYE_DEV }}
-fromCacheVersion: 2024022701
-mount:
-- fromPath: ~/go-pkg-cache
-  to: /go/pkg
-import:
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-promu-artifact
-  add: /promu/promu
-  to: /bin/promu
-  before: install
-git:
-- add: /{{ $.ModulePath }}modules/300-{{ $.ModuleName }}/images/{{ $.ImageName }}
-  to: /patches
-  includePaths:
-  - '**/*.patch'
-  stageDependencies:
-    install:
-    - '**/*'
-shell:
-  install:
-  - export NODE_MAJOR=20
-  - export GOPROXY={{ $.GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64 PROMETHEUS_VERSION=v2.45.2
-  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
-  - git clone -b "${PROMETHEUS_VERSION}" --single-branch {{ $.SOURCE_REPO }}/prometheus/prometheus-deps
-  - mkdir /prometheus && cd /prometheus
-  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
-  - git clone -b "${PROMETHEUS_VERSION}" --single-branch {{ $.SOURCE_REPO }}/prometheus/prometheus
-  - cd /prometheus/prometheus/web/ui
-  - mv /prometheus-deps/* .
-  - npm run build
-  - cd /prometheus/prometheus
-  - scripts/compress_assets.sh
-  - go mod tidy
-  - git apply /patches/*.patch --verbose
-  - go generate -tags plugins ./plugins
-  - /bin/promu build --prefix /prometheus/prometheus
-  - mkdir -p /consoles
-  - cp /prometheus/prometheus/consoles/* /consoles
-  - cp /prometheus/prometheus/console_libraries/* /consoles
-  - mkdir -p /etc
-  - cp /prometheus/prometheus/documentation/examples/prometheus.yml /etc
-  - cp /prometheus/prometheus/console_libraries/* /etc
-  - mkdir /empty
-  - chown -R 64535:64535 /empty
-  - chown -R 64535:64535 /prometheus/
-  - chown -R 64535:64535 /etc/
-  - chown -R 64535:64535 /consoles/
-  - chmod 0700 /prometheus/prometheus/prometheus
-  - chmod 0700 /prometheus/prometheus/promtool
----
-{{ $binariesList := "/usr/bin/curl /bin/sh /bin/df" }}
----
-artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
-from: {{ $.Images.BASE_ALT_DEV }}
-shell:
-  install:
-    - /binary_replace.sh -i "{{ $binariesList }}" -o /relocate
----
-image: {{ $.ModuleName }}/{{ $.ImageName }}
+image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
-fromCacheVersion: 2024022701
 import:
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
-  add: /prometheus/prometheus/prometheus
-  to: /bin/prometheus
+- image: {{ .ModuleName }}/{{ .ImageName }}-artifact
+  add: /src
+  to: /bin
   before: setup
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
-  add: /prometheus/prometheus/promtool
-  to: /bin/promtool
-  before: setup
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
-  add: /prometheus/prometheus/console_libraries/
-  to: /usr/share/prometheus/console_libraries
-  before: setup
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
-  add: /consoles/
+  includePaths:
+  - 'promtool'
+  - 'prometheus'
+- image: {{ .ModuleName }}/{{ .ImageName }}-artifact
+  add: /src/consoles
   to: /usr/share/prometheus/consoles
   before: setup
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
-  add: /etc/
-  to: /etc/prometheus
+- image: {{ .ModuleName }}/{{ .ImageName }}-artifact
+  add: /src/console_libraries
+  to: /usr/share/prometheus/console_libraries
   before: setup
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
-  add: /empty/
+- image: {{ .ModuleName }}/{{ .ImageName }}-artifact
+  add: /src/documentation/examples/prometheus.yml
+  to: /etc/prometheus/prometheus.yml
+  before: setup
+- image: {{ .ModuleName }}/{{ .ImageName }}-artifact
+  add: /empty
   to: /prometheus
   before: setup
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+- image: {{ .ModuleName }}/{{ .ImageName }}-binaries-artifact
   add: /relocate
   to: /
   before: install
@@ -120,3 +44,81 @@ docker:
   - "--storage.tsdb.path=/prometheus"
   - "--web.console.libraries=/usr/share/prometheus/console_libraries"
   - "--web.console.templates=/usr/share/prometheus/consoles"
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+fromImage: common/src-artifact
+final: false
+git:
+- add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/patches
+  to: /patches
+  stageDependencies:
+    install:
+    - '**/*'
+shell:
+  install:
+  - git clone --depth 1 --branch v0.17.0 {{ .SOURCE_REPO }}/prometheus/promu.git /src/promu
+  - git clone --depth 1 --branch v2.55.1 {{ .SOURCE_REPO }}/prometheus/prometheus-deps.git /src/prometheus-deps
+  - git clone --depth 1 --branch v2.55.1 {{ .SOURCE_REPO }}/prometheus/prometheus.git /src/prometheus
+  - cd /src/prometheus
+  - git apply /patches/*.patch --verbose
+  - rm -rf web/ui/*
+  - cp -r /src/prometheus-deps/web/ui/* web/ui/.
+  - scripts/compress_assets.sh
+  - rm -r documentation/examples/remote_storage
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-promu-artifact
+from: {{ .Images.BASE_GOLANG_23_ALPINE }}
+final: false
+import:
+- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+  add: /src/promu
+  to: /src
+  before: install
+mount:
+- fromPath: ~/go-pkg-cache
+  to: /go/pkg
+shell:
+  install:
+  - export GOPROXY={{ .GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64
+  - cd /src
+  - go build -ldflags="-s -w" -o promu ./main.go
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-artifact
+from: {{ .Images.BASE_GOLANG_23_ALPINE }}
+final: false
+mount:
+- fromPath: ~/go-pkg-cache
+  to: /go/pkg
+import:
+- image: {{ .ModuleName }}/{{ .ImageName }}-promu-artifact
+  add: /src/promu
+  to: /bin/promu
+  before: install
+- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+  add: /src/prometheus
+  to: /src
+  before: install
+shell:
+  install:
+  - export GOPROXY={{ .GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64
+  - cd /src
+  - go generate -tags plugins ./plugins
+  - /bin/promu build --prefix /src
+  - mkdir -p /empty
+  - chown 64535:64535 /src/prometheus /src/promtool
+  - chmod 0700 /src/prometheus /src/promtool
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-binaries-artifact
+fromImage: common/relocate-artifact
+final: false
+shell:
+  beforeInstall:
+  {{- include "alt packages proxy" . | nindent 2 }}
+  - apt-get install -y curl
+  install:
+  - |
+    /binary_replace.sh -i "\
+      /usr/bin/curl \
+      /bin/sh \
+      /bin/df \
+      " -o /relocate
