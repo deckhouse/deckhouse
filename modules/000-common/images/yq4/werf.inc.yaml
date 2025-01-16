@@ -5,7 +5,7 @@ final: false
 shell:
   install:
   - cd /src
-  - git clone --branch v4.45.1 --depth 1 {{ .SOURCE_REPO }}/mikefarah/yq .
+  - git clone --depth 1 --branch v4.45.1 {{ .SOURCE_REPO }}/mikefarah/yq .
   - rm -rf .git
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
