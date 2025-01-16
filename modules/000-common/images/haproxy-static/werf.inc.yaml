@@ -19,7 +19,7 @@ shell:
 ---
 image: {{ $.ModuleName }}/build-{{ $.ImageName }}-artifact
 from: {{ $.Images.BASE_UBUNTU }}
-final: true
+final: false
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
   add: /src
@@ -38,23 +38,27 @@ shell:
   - make -j"$(nproc)"
   - make install_sw
 
+  - cd /src/pcre2
   - ./autogen.sh && ./configure --disable-shared --prefix=${PCRE2}
   - make -j$(nproc)
     && make install
 
+  - cd /src
+  - sed -i 's/-Wl,-Bdynamic//' Makefile
   - make -j"$(nproc)" TARGET=linux-gcc CPU=generic \
     PCRE_LIB=${PCRE2}/lib PCRE_INC=${PCRE2}/include PCRE2DIR=${PCRE2} \
     SSL_INC=${OPENSSL}/include SSL_LIB=${OPENSSL}/lib \
     USE_STATIC_PCRE2=1 USE_PCRE2_JIT=1 USE_TFO=1 \
-    USE_LINUX_TPROXY=1 USE_LUA=0 USE_GETADDRINFO=1 \
+    USE_LINUX_TPROXY=1 USE_LUA=0 USE_GETADDRINFO=0 \
     USE_PROMEX=1 USE_SLZ=1 USE_OPENSSL=1 USE_PTHREAD_EMULATION=1 \
     USE_QUIC=0 \
-    CFLAGS="-static" all
+    TARGET_CFLAGS="-static" TARGET_LDFLAGS=-static all
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: common/distroless
+final: true
 import:
-- artifact: {{ $.ModuleName }}/build-nginx-static-artifact
-  add: /opt/nginx-static
-  to: /opt/nginx-static
+- artifact: {{ $.ModuleName }}/build-{{ $.ImageName }}-artifact
+  add: /src/haproxy
+  to: /bin/haproxy
   before: setup
