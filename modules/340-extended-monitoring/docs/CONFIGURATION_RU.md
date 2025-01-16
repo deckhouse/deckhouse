@@ -18,7 +18,7 @@ force_searchable: true
 К Kubernetes-объектам `threshold.extended-monitoring.deckhouse.io/что-то свое` можно добавить любые другие лейблы с указанным значением. Пример: `kubectl label pod test threshold.extended-monitoring.deckhouse.io/disk-inodes-warning=30`.
 В таком случае значение из лейбла заменит значение по умолчанию.
 
-Если вы хотите переопределить значения threshold для всех объектов в определенном namespace, вы можете установить лейбл `threshold.extended-monitoring.deckhouse.io/` на уровне namespace. Например: `kubectl label namespace my-app-production threshold.extended-monitoring.deckhouse.io/disk-inodes-warning=30`.
+Если вы хотите переопределить значения threshold для всех объектов в определенном namespace, вы можете установить лейбл `threshold.extended-monitoring.deckhouse.io/` на уровне namespace. Например: `kubectl label namespace my-app-production threshold.extended-monitoring.deckhouse.io/5xx-warning=20`.
 Это заменит значение по умолчанию для всех объектов namespace, для которых еще не установлен этот лейбл.
 
 Слежение за объектом можно отключить индивидуально, поставив на него лейбл `extended-monitoring.deckhouse.io/enabled=false`. Соответственно, отключатся и лейблы по умолчанию, а также все алерты, привязанные к лейблам.

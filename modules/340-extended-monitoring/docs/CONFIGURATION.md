@@ -19,7 +19,7 @@ You can also add custom labels with the specified value to `threshold.extended-m
 In this case, the label value will replace the default one.
 
 If you want to override the default thresholds for all objects in a namespace, you can set the `threshold.extended-monitoring.deckhouse.io/` label at the namespace level. For example:
-`kubectl label namespace my-app-production threshold.extended-monitoring.deckhouse.io/disk-inodes-warning=30`
+`kubectl label namespace my-app-production threshold.extended-monitoring.deckhouse.io/5xx-warning=20`
 This will replace the default value for all objects in the namespace that do not already have this label set.
 
 You can disable monitoring on a per-object basis by adding the `extended-monitoring.deckhouse.io/enabled=false` label to it. Thus, the default labels will also be disabled (as well as label-based alerts).
