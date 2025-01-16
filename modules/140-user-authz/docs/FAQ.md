@@ -16,7 +16,7 @@ In the current role-based model, use the `namespaceSelector` or `limitNamespaces
 
 ## What if there are two ClusterAuthorizationRules matching to a single user?
 
-Imagine that the user `jane.doe@example.com` is in the `administrators` group. There are two cluster authorization rules:
+In the example, the user `jane.doe@example.com` is in the `administrators` group. There are two cluster authorization rules:
 
 ```yaml
 apiVersion: deckhouse.io/v1
@@ -56,10 +56,13 @@ spec:
 2. `Administrators` can get, edit, list, and delete objects on the cluster level and in the namespaces labeled `env=prod` and `env=stage`.
 
 Because `Jane Doe` matches two rules, some calculations will be made:
-* She will have the most powerful accessLevel across all matching rules — `ClusterAdmin`.
+
+* `Jane Doe` will have the most powerful accessLevel across all matching rules — `ClusterAdmin`.
 * The `namespaceSelector` options will be combined, so that Jane will have access to all the namespaces labeled with `env` label of the following values: `review`, `stage`, or `prod`.
 
-> **Note!** If there is a rule without the `namespaceSelector` option and `limitNamespaces` deprecated option, it means that all namespaces are allowed excluding system namespaces, which will affect the resulting limit namespaces calculation.
+{% alert level="warning" %}
+If there is a rule without the `namespaceSelector` option and `limitNamespaces` deprecated option, it means that all namespaces are allowed excluding system namespaces, which will affect the resulting limit namespaces calculation.
+{% endalert %}
 
 ## How do I extend a role or create a new one?
 
@@ -100,33 +103,33 @@ rules: []
 
 The labels for the new role listed at the top suggest that:
 
-- the hook will use this use role:
+- The hook will use this use role:
 
   ```yaml
   rbac.deckhouse.io/use-role: admin
   ```
 
-- the role must be treated as a managed one:
+- The role must be treated as a managed one:
 
   ```yaml
   rbac.deckhouse.io/kind: manage
   ```
 
-  > Note that this label is mandatory!
+  > Note that this label is mandatory.
   
-- the role is a subsystem one, and it shall be handled accordingly:
+- The role is a subsystem one, and it shall be handled accordingly:
 
   ```yaml
   rbac.deckhouse.io/level: subsystem
   ```
 
-- there is a subsystem for which the role is responsible:
+- There is a subsystem for which the role is responsible:
 
   ```yaml
   rbac.deckhouse.io/subsystem: custom
   ```
 
-- the `manage:all` role can aggregate this role:
+- The `manage:all` role can aggregate this role:
 
   ```yaml
   rbac.deckhouse.io/aggregate-to-all-as: manager
@@ -134,14 +137,14 @@ The labels for the new role listed at the top suggest that:
 
 Then there are selectors that implement aggregation:
 
-- this one aggregates the manager role from the `deckhouse` subsystem:
+- This one aggregates the manager role from the `deckhouse` subsystem:
 
   ```yaml
   rbac.deckhouse.io/kind: manage
   rbac.deckhouse.io/aggregate-to-deckhouse-as: manager
   ```
 
-- this one aggregates all the rules defined for the user-authn module:
+- This one aggregates all the rules defined for the user-authn module:
 
   ```yaml
    rbac.deckhouse.io/kind: manage
@@ -152,8 +155,8 @@ This way, your role will combine permissions of the `deckhouse` subsystem, `kube
 
 Notes:
 
-* there are no restrictions on role name, but we recommend following the same pattern for the sake of readability;
-* use-roles will be created in aggregate subsystems and the module namespace, the role type is specified by the label.
+* There are no restrictions on role name, but we recommend following the same pattern for the sake of readability.
+* Use-roles will be created in aggregate subsystems and the module namespace, the role type is specified by the label.
 
 ### Extending the custom role
 
@@ -221,7 +224,7 @@ The role will update the subsystem role to include its rights, so that the role 
 
 Notes:
 
-* there are no restrictions on capability names, but we recommend following the same pattern for the sake of readability.
+* There are no restrictions on capability names, but we recommend following the same pattern for the sake of readability.
 
 ### Extending the existing manage subsystem roles
 
