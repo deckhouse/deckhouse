@@ -62,8 +62,12 @@ func (sc *stateController) SetupWithManager(ctx context.Context, mgr ctrl.Manage
 		}
 
 		name := obj.GetName()
-		return name == state.PKISecretName || name == state.GlobalSecretsName ||
-			name == state.UserROSecretName || name == state.UserRWSecretName
+		return name == state.PKISecretName ||
+			name == state.GlobalSecretsName ||
+			name == state.UserROSecretName ||
+			name == state.UserRWSecretName ||
+			name == state.UserMirrorPullerName ||
+			name == state.UserMirrorPusherName
 	})
 
 	secretsHandler := handler.EnqueueRequestsFromMapFunc(func(ctx context.Context, obj client.Object) []reconcile.Request {

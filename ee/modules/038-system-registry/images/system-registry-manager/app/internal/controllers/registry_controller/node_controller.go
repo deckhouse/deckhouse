@@ -168,8 +168,12 @@ func (nc *nodeController) SetupWithManager(ctx context.Context, mgr ctrl.Manager
 		}
 
 		name := obj.GetName()
-		return name == state.PKISecretName || name == state.GlobalSecretsName ||
-			name == state.UserROSecretName || name == state.UserRWSecretName
+		return name == state.PKISecretName ||
+			name == state.GlobalSecretsName ||
+			name == state.UserROSecretName ||
+			name == state.UserRWSecretName ||
+			name == state.UserMirrorPullerName ||
+			name == state.UserMirrorPusherName
 	})
 
 	staticPodManagerPredicate := predicate.NewPredicateFuncs(func(obj client.Object) bool {
@@ -440,15 +444,6 @@ func (nc *nodeController) handleMasterNode(ctx context.Context, node *corev1.Nod
 
 	if err != nil {
 		err = fmt.Errorf("cannot construct static pod config: %w", err)
-		return
-	}
-
-	if moduleConfig.Settings.Mode == state.RegistryModeDetached {
-		err = nc.applyStaticPodConfig(ctx, node.Name, staticPodConfig)
-		if err != nil {
-			err = fmt.Errorf("apply static pod configuration error: %w", err)
-		}
-
 		return
 	}
 
