@@ -58,7 +58,7 @@ func Register(runtimeManager manager.Manager, helmClient *helm.Client, log logr.
 
 	r.init.Add(1)
 
-	// init project manager, project manager have to ensure default templates
+	// init project manager, it has to ensure default templates
 	if err := runtimeManager.Add(manager.RunnableFunc(func(ctx context.Context) error {
 		return retry.OnError(
 			wait.Backoff{
@@ -68,7 +68,7 @@ func Register(runtimeManager manager.Manager, helmClient *helm.Client, log logr.
 				Jitter:   0.1,
 			},
 			func(e error) bool {
-				log.Info("failed to init project manager - retrying", "error", e.Error())
+				log.Info("failed to init project manager - try to retry", "error", e.Error())
 				return true
 			},
 			func() error {

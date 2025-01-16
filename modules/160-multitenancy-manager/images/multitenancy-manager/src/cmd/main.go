@@ -22,19 +22,10 @@ import (
 	"os"
 	"time"
 
-	"controller/pkg/apis/deckhouse.io/v1alpha1"
-	"controller/pkg/apis/deckhouse.io/v1alpha2"
-	projectcontroller "controller/pkg/controller/project"
-	templatecontroller "controller/pkg/controller/template"
-	"controller/pkg/helm"
-	namespacewebhook "controller/pkg/webhook/namespace"
-	projectwebhook "controller/pkg/webhook/project"
-	templatewebhook "controller/pkg/webhook/template"
-
 	"github.com/go-logr/logr"
 	"go.uber.org/zap/zapcore"
 
-	v1 "k8s.io/api/core/v1"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/utils/ptr"
 
@@ -45,6 +36,15 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	metrics "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
+
+	"controller/pkg/apis/deckhouse.io/v1alpha1"
+	"controller/pkg/apis/deckhouse.io/v1alpha2"
+	projectcontroller "controller/pkg/controller/project"
+	templatecontroller "controller/pkg/controller/template"
+	"controller/pkg/helm"
+	namespacewebhook "controller/pkg/webhook/namespace"
+	projectwebhook "controller/pkg/webhook/project"
+	templatewebhook "controller/pkg/webhook/template"
 )
 
 var (
@@ -119,7 +119,7 @@ func setupRuntimeManager(log logr.Logger) (ctrl.Manager, error) {
 	addToScheme := []func(s *runtime.Scheme) error{
 		v1alpha1.AddToScheme,
 		v1alpha2.AddToScheme,
-		v1.AddToScheme,
+		corev1.AddToScheme,
 	}
 
 	scheme := runtime.NewScheme()
