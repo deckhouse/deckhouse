@@ -96,7 +96,6 @@ updateEpoch: "1680009541"
 
 	bc := bashibleContext{
 		KubernetesVersion: "1.26",
-		Bundle:            "bundle",
 		Normal:            map[string][]string{"apiserverEndpoints": clusterMasterAddresses},
 		NodeGroup:         ng,
 		RunType:           "Normal",

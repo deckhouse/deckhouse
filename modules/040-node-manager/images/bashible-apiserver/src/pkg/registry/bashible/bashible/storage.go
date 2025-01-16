@@ -57,7 +57,13 @@ type Storage struct {
 
 // Render renders single script content by name
 func (s Storage) Render(name string) (runtime.Object, error) {
-	data, err := s.getContext(name)
+	fmt.Println("bashible/bashible before", name)
+	nameWithoutBundle, err := template.TransformName(name)
+	fmt.Println("bashible/bashible", nameWithoutBundle)
+	if err != nil {
+		return nil, fmt.Errorf("cannot get context with namewithoutbundle: %v", err)
+	}
+	data, err := s.getContext(nameWithoutBundle)
 	if err != nil {
 		return nil, fmt.Errorf("cannot get context: %v", err)
 	}
@@ -67,7 +73,7 @@ func (s Storage) Render(name string) (runtime.Object, error) {
 	}
 
 	obj := bashible.Bashible{}
-	obj.ObjectMeta.Name = name
+	obj.ObjectMeta.Name = nameWithoutBundle
 	obj.ObjectMeta.CreationTimestamp = metav1.NewTime(time.Now())
 	obj.Data = map[string]string{}
 	obj.Data[r.FileName] = r.Content.String()
@@ -76,6 +82,11 @@ func (s Storage) Render(name string) (runtime.Object, error) {
 }
 
 func (s Storage) getContext(name string) (map[string]interface{}, error) {
+	// nameWithoutBundle, err := template.TransformName(name)
+	// if err != nil {
+	// 	return nil, fmt.Errorf("cannot get context key: %v", err)
+	// }
+
 	contextKey, err := template.GetBashibleContextKey(name)
 	if err != nil {
 		return nil, fmt.Errorf("cannot get context key: %v", err)
