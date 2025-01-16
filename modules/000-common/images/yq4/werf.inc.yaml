@@ -4,10 +4,12 @@ fromImage: common/src-artifact
 final: false
 shell:
   install:
-    - git clone --depth 1 {{ .SOURCE_REPO }}/mikefarah/yq --branch "v4.44.3" /src && rm -rf /src/.git
+  - cd /src
+  - git clone --branch v4.45.1 --depth 1 {{ .SOURCE_REPO }}/mikefarah/yq .
+  - rm -rf .git
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
-from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
+from: {{ .Images.BASE_GOLANG_23_ALPINE }}
 final: false
 mount:
 - fromPath: ~/go-pkg-cache
