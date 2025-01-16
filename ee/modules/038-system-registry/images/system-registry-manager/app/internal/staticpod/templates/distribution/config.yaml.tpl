@@ -22,6 +22,12 @@ http:
   tls:
     certificate: /system_registry_pki/distribution.crt
     key: /system_registry_pki/distribution.key
+  ## Must be set onlt if CA cert exists!
+  # realip:
+  #   enabled: true
+  #   clientcert:
+  #     ca: /system_registry_pki/rbac-proxy-ca.crt
+  #     cn: nginx-ingress:nginx
 
 {{- if eq .Registry.Mode "Proxy" }}
 proxy:
