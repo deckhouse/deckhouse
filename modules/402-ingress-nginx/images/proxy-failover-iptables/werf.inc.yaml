@@ -1,65 +1,73 @@
+{{- $binaries := "/usr/sbin/conntrack /usr/lib64/libnetfilter_conntrack.so*" }}
 {{- $iptables_version := "1.8.9" }}
 {{- $iptables_image_version := $iptables_version | replace "." "-" }}
----
-artifact: {{ .ModuleName }}/distroless-proxy-failover-iptables-artifact
-from: {{ $.Images.BASE_ALT_DEV }}
+image: {{ .ModuleName }}/distroless-proxy-failover-iptables-artifact
+fromImage: common/relocate-artifact
+final: false
 shell:
+  beforeInstall:
+  {{- include "alt packages proxy" . | nindent 2 }}
+  - apt-get install -y conntrack-tools
   install:
-    - mkdir -p /relocate/sbin
-    - |
-      for cmd in iptables iptables-save iptables-restore ip6tables ip6tables-save ip6tables-restore; do
-        ln -f -s /sbin/iptables-wrapper "/relocate/sbin/${cmd}"
-      done
-      # broken symlinks are not imported from the artifact
-      touch /sbin/iptables-wrapper
-    - |
-      for mode in legacy nft; do
-        for basecmd in iptables ip6tables; do
-          for cmd in ${basecmd}-${mode} ${basecmd}-${mode}-save ${basecmd}-${mode}-restore; do
-            ln -sf /sbin/xtables-${mode}-multi "/relocate/sbin/${cmd}"
-          done
-        done
-      done
+  - /binary_replace.sh -i "{{ $binaries }}" -o /relocate
+  - |
+    for cmd in iptables iptables-save iptables-restore ip6tables ip6tables-save ip6tables-restore iptables-legacy iptables-legacy-save iptables-legacy-restore ip6tables-legacy ip6tables-legacy-save ip6tables-legacy-restore iptables-nft iptables-nft-save iptables-nft-restore ip6tables-nft ip6tables-nft-save ip6tables-nft-restore; do
+      ln -f -s /iptables-wrapper "/relocate/usr/sbin/${cmd}"
+    done
+    # broken symlinks are not imported from the artifact
+    touch /iptables-wrapper
 ---
-artifact: {{ .ModuleName }}/failover-artifact
-from: {{ .Images.BASE_GOLANG_21_ALPINE }}
+image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+fromImage: common/src-artifact
+final: false
 git:
-- add: /{{ $.ModulePath }}modules/402-ingress-nginx/images/proxy-failover-iptables/failover/
-  to: /workdir
+- add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/failover/
+  to: /src
   stageDependencies:
     install:
     - '**/*.go'
     - '**/*.sum'
     - '**/*.mod'
+---
+image: {{ .ModuleName }}/failover-artifact
+from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
+final: false
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+  add: /src
+  to: /src
+  before: install
 mount:
-  - fromPath: ~/go-pkg-cache
-    to: /go/pkg
+- fromPath: ~/go-pkg-cache
+  to: /go/pkg
 shell:
   install:
-    - cd /workdir
-    - GOPROXY={{ $.GOPROXY }} GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o failover main.go
+  - cd /src
+  - GOPROXY={{ $.GOPROXY }} GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o failover main.go
+  - chown -R 64535:64535 failover
+  - chmod 0700 failover
 ---
-image: {{ $.ModuleName }}/proxy-failover-iptables
+image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: common/distroless
 import:
-- artifact: {{ $.ModuleName }}/distroless-proxy-failover-iptables-artifact
+- image: {{ $.ModuleName }}/distroless-proxy-failover-iptables-artifact
   add: /relocate
   to: /
   before: setup
-- artifact: registrypackages/iptables-artifact-{{ $iptables_image_version }}
-  add: /
-  to: /sbin
-  includePaths:
-  - xtables-legacy-multi
-  - xtables-nft-multi
+- image: {{ .ModuleName }}/failover-artifact
+  add: /src/failover
+  to: /failover
   before: setup
 - image: common/iptables-wrapper
   add: /iptables-wrapper
-  to: /sbin/iptables-wrapper
+  to: /iptables-wrapper
   before: setup
-- artifact: {{ .ModuleName }}/failover-artifact
-  add: /workdir/failover
-  to: /failover
+- image: registrypackages/iptables-artifact-{{ $iptables_image_version }}
+  add: /
+  to: /usr/sbin/
+  includePaths:
+  - xtables-legacy-multi
+  - xtables-nft-multi
   before: setup
 docker:
   ENTRYPOINT: ["/failover"]
