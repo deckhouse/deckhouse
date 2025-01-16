@@ -33,7 +33,7 @@ It may take some time to start the Ingress controller after installing Deckhouse
 
 {% snippetcut %}
 ```shell
-sudo -i d8 k-n d8-ingress-nginx get po
+sudo -i d8 k -n d8-ingress-nginx get po
 ```
 {% endsnippetcut %}
 
