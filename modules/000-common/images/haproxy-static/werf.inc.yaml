@@ -8,7 +8,7 @@ fromImage: common/src-artifact
 final: false
 shell:
   install:
-  - git clone -b v{{ $HAProxyVersion }} --single-branch --depth=1 {{ $.SOURCE_REPO }}/haproxy.git /src
+  - git clone -b v{{ $HAProxyVersion }} --single-branch --depth=1 {{ $.SOURCE_REPO }}/haproxy/haproxy.git /src
   - cd /src
   - rm -r .git
   - git clone -b openssl-{{ $OpenSSLVersion }} --single-branch --depth=1 {{ $.SOURCE_REPO }}/openssl/openssl.git /src/openssl
