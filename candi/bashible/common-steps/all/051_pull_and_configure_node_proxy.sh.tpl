@@ -33,9 +33,9 @@ spec:
   dnsPolicy: ClusterFirstWithHostNet
   hostNetwork: true
   securityContext:
-    runAsNonRoot: false
-    runAsUser: 0
-    runAsGroup: 0
+    runAsNonRoot: true
+    runAsUser: 64535
+    runAsGroup: 64535
   shareProcessNamespace: true
   containers:
   - name: node-proxy

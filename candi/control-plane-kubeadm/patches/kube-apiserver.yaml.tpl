@@ -76,25 +76,19 @@ spec:
   - name: kube-apiserver
     readinessProbe:
       httpGet:
-    {{- if hasKey . "nodeIP" }}
-        host: {{ .nodeIP | quote }}
-    {{- end }}
+        host: "127.0.0.1"
         path: /healthz
         port: 3990
         scheme: HTTP
     livenessProbe:
       httpGet:
-    {{- if hasKey . "nodeIP" }}
-        host: {{ .nodeIP | quote }}
-    {{- end }}
+        host: "127.0.0.1"
         path: /livez
         port: 3990
         scheme: HTTP
     startupProbe:
       httpGet:
-    {{- if hasKey . "nodeIP" }}
-        host: {{ .nodeIP | quote }}
-    {{- end }}
+        host: "127.0.0.1" 
         path: /livez
         port: 3990
         scheme: HTTP
@@ -108,9 +102,7 @@ spec:
       httpGet:
         path: /.kube-apiserver-healthcheck/healthz
         port: 3990
-    {{- if hasKey . "nodeIP" }}
-        host: {{ .nodeIP | quote }}
-    {{- end }}
+        host: "127.0.0.1"
       initialDelaySeconds: 5
       timeoutSeconds: 5
     command:
