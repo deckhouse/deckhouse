@@ -83,7 +83,7 @@ alerts:
         This can affect certificate ordering and prolongation in the future. For details, check the cert-manager logs using the following command:
 
         ```bash
-        kubectl -n d8-cert-manager logs -l app=cert-manager -c cert-manager`
+        kubectl -n d8-cert-manager logs -l app=cert-manager -c cert-manager
         ```
       summary: |
         Cert-manager couldn't order a certificate.
