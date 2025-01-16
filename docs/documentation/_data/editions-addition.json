@@ -34,7 +34,6 @@
       "flant-integration",
       "istio",
       "keepalived",
-      "metallb-crd",
       "monitoring-custom",
       "monitoring-custom",
       "monitoring-ping",

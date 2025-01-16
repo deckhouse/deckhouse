@@ -1,7 +1,6 @@
 # CE Bundle "Managed"
 admissionPolicyEngineEnabled: true
 certManagerEnabled: true
-containerizedDataImporterEnabled: true
 dashboardEnabled: true
 deckhouseEnabled: true
 documentationEnabled: true
@@ -9,7 +8,6 @@ deckhouseToolsEnabled: true
 deschedulerEnabled: true
 extendedMonitoringEnabled: true
 flowSchemaEnabled: true
-helmEnabled: true
 ingressNginxEnabled: true
 localPathProvisionerEnabled: true
 logShipperEnabled: true
@@ -19,16 +17,12 @@ monitoringKubernetesEnabled: true
 monitoringPingEnabled: true
 multitenancyManagerEnabled: true
 namespaceConfiguratorEnabled: true
-operatorPrometheusCrdEnabled: true
 operatorPrometheusEnabled: true
 podReloaderEnabled: true
-prometheusCrdEnabled: true
 prometheusEnabled: true
 prometheusMetricsAdapterEnabled: true
 secretCopierEnabled: true
-snapshotControllerCrdEnabled: true
 snapshotControllerEnabled: true
 upmeterEnabled: true
 userAuthzEnabled: true
-verticalPodAutoscalerCrdEnabled: true
 verticalPodAutoscalerEnabled: true
