@@ -103,4 +103,3 @@ cleanup:
 {{ range $path, $content := .Files.Glob ".werf/werf-**.yaml" }}
 {{ tpl $content $ }}
 {{ end }}
----

@@ -21,10 +21,12 @@ import (
 	"fmt"
 	"os"
 	"sync"
+	"syscall"
 	"time"
 
 	addonoperator "github.com/flant/addon-operator/pkg/addon-operator"
 	"github.com/flant/addon-operator/pkg/module_manager/models/modules/events"
+	mountmgr "github.com/flant/addon-operator/pkg/module_manager/mount_manager"
 	"github.com/flant/addon-operator/pkg/utils"
 	"github.com/go-logr/logr"
 	appsv1 "k8s.io/api/apps/v1"
@@ -181,6 +183,10 @@ func NewDeckhouseController(ctx context.Context, version string, operator *addon
 
 	moduleEventCh := make(chan events.ModuleEvent, 350)
 	operator.ModuleManager.SetModuleEventsChannel(moduleEventCh)
+	// set chrooted environment for modules
+	if len(os.Getenv("ADDON_OPERATOR_SHELL_CHROOT_DIR")) > 0 {
+		setModulesEnvironment(operator)
+	}
 
 	// instantiate ModuleDependency extender
 	moduledependency.Instance().SetModulesVersionHelper(func(moduleName string) (string, error) {
@@ -274,6 +280,74 @@ func NewDeckhouseController(ctx context.Context, version string, operator *addon
 		settings:       settingsContainer,
 		log:            logger,
 	}, nil
+}
+
+func setModulesEnvironment(operator *addonoperator.AddonOperator) {
+	operator.ModuleManager.SetRequiredMounts([]mountmgr.MountDescriptor{
+		{
+			Source: "/usr",
+			Flags:  syscall.MS_BIND | syscall.MS_RDONLY,
+			Type:   mountmgr.Mount,
+		},
+		{
+			Source: "/bin",
+			Flags:  syscall.MS_BIND | syscall.MS_RDONLY,
+			Type:   mountmgr.Mount,
+		},
+		{
+			Source: "/lib",
+			Flags:  syscall.MS_BIND | syscall.MS_RDONLY,
+			Type:   mountmgr.Mount,
+		},
+		{
+			Source: "/lib64",
+			Flags:  syscall.MS_BIND | syscall.MS_RDONLY,
+			Type:   mountmgr.Mount,
+		},
+		{
+			Source: "/deckhouse/shell_lib",
+			Flags:  syscall.MS_BIND | syscall.MS_RDONLY,
+			Type:   mountmgr.Mount,
+		},
+		{
+			Source: "/deckhouse/shell-operator",
+			Flags:  syscall.MS_BIND | syscall.MS_RDONLY,
+			Type:   mountmgr.Mount,
+		},
+		{
+			Source: "/deckhouse/candi",
+			Flags:  syscall.MS_BIND | syscall.MS_RDONLY,
+			Type:   mountmgr.Mount,
+		},
+		{
+			Source: "/deckhouse/helm_lib",
+			Flags:  syscall.MS_BIND | syscall.MS_RDONLY,
+			Type:   mountmgr.Mount,
+		},
+		{
+			Source: "/deckhouse/python_lib",
+			Flags:  syscall.MS_BIND | syscall.MS_RDONLY,
+			Type:   mountmgr.Mount,
+		},
+		{
+			Source: "/proc/sys/kernel/cap_last_cap",
+			Type:   mountmgr.File,
+		},
+		{
+			Source: "/deckhouse/shell_lib.sh",
+			Type:   mountmgr.File,
+		},
+		{
+			Source: "/chroot/tmp",
+			Target: "/tmp",
+			Flags:  syscall.MS_BIND,
+			Type:   mountmgr.Mount,
+		},
+		{
+			Target: "/dev/null",
+			Type:   mountmgr.DevNull,
+		},
+	}...)
 }
 
 // Start loads and ensures modules from FS, starts controllers and runs deckhouse config event loop
