@@ -1,0 +1,50 @@
+---
+image: {{ .ModuleName }}/{{ .ImageName }}
+from: {{ $.Images.BASE_ALT_P11 }}
+import:
+  - image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+    add: /node-collector
+    to: /usr/local/bin/node-collector
+    before: setup
+docker:
+  ENTRYPOINT: [ "/usr/local/bin/node-collector" ]
+shell:
+  setup:
+  - apt-get update
+  - apt-get install procps -y
+  - rm /var/lib/apt/lists/ftp* -f
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+fromImage: common/src-artifact
+final: false
+git:
+- add: /{{ $.ModulePath }}modules/500-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
+  to: /patches
+  stageDependencies:
+    install:
+    - '**/*'
+shell:
+  install:
+  - git clone --depth 1 --branch v0.3.1 {{ .SOURCE_REPO }}/aquasecurity/k8s-node-collector.git /src
+  - cd /src
+  - git apply /patches/*.patch --verbose
+  - rm -rf .git
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-artifact
+from: {{ .Images.BASE_GOLANG_23_ALPINE }}
+final: false
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+  add: /src
+  to: /src
+  before: install
+mount:
+- fromPath: ~/go-pkg-cache
+  to: /go/pkg
+shell:
+  install:
+  - export GOPROXY={{ .GOPROXY }}
+  - cd /src
+  - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o /node-collector cmd/node-collector/main.go
+  - chown root:root /node-collector
+  - chmod 0700 /node-collector

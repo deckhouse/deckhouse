@@ -3,22 +3,16 @@ image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
 import:
   - image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
-    add: /trivy_provider
-    to: /trivy_provider
+    add: /trivy
+    to: /usr/local/bin/trivy
     before: setup
 docker:
-  ENTRYPOINT: [ "/trivy_provider" ]
+  ENTRYPOINT: [ "/usr/local/bin/trivy" ]
   USER: deckhouse:deckhouse
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 fromImage: common/src-artifact
 final: false
-git:
-- add: /{{ $.ModulePath }}modules/015-{{ $.ModuleName }}/images/{{ $.ImageName }}/src
-  to: /src
-  stageDependencies:
-    install:
-    - '**/*'
 shell:
   install:
   - git clone --depth 1 --branch flant-v2 {{ .SOURCE_REPO }}/aquasecurity/trivy-db.git /src/trivy-db
@@ -39,8 +33,7 @@ mount:
 shell:
   install:
   - export GOPROXY={{ .GOPROXY }}
-  - cd /src
-  - ln -s ./trivy-db ./original-trivy-db
-  - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o /trivy_provider main.go
-  - chown 64535:64535 /trivy_provider
-  - chmod 0700 /trivy_provider
+  - cd /src/trivy
+  - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o /trivy ./cmd/trivy/main.go
+  - chown 64535:64535 /trivy
+  - chmod 0700 /trivy
