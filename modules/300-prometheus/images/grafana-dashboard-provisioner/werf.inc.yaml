@@ -28,7 +28,7 @@ git:
     install:
     - '**/*'
 import:
-- artifact: common/python-static
+- image: common/python-static
   add: /opt/python-static
   to: /opt/python-static
   before: install

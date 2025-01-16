@@ -2,7 +2,8 @@
 {{- $iptables_version := "1.8.9" }}
 {{- $iptables_image_version := $iptables_version | replace "." "-" }}
 ---
-artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+final: false
 from: {{ .Images.BASE_ALT_DEV }}
 shell:
   install:
@@ -14,7 +15,8 @@ shell:
       # broken symlinks are not imported from the artifact
       touch /iptables-wrapper
 ---
-artifact: {{ .ModuleName }}/kube-router-artifact
+image: {{ .ModuleName }}/kube-router-artifact
+final: false
 from: {{ .Images.BASE_GOLANG_20_ALPINE_DEV }}
 shell:
   beforeInstall:
@@ -32,15 +34,15 @@ shell:
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
 import:
-- artifact: {{ .ModuleName }}/kube-router-artifact
+- image: {{ .ModuleName }}/kube-router-artifact
   add: /src/kube-router
   to: /opt/bin/kube-router
   before: setup
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
   add: /relocate
   to: /
   before: setup
-- artifact: registrypackages/iptables-artifact-{{ $iptables_image_version }}
+- image: registrypackages/iptables-artifact-{{ $iptables_image_version }}
   add: /
   to: /sbin
   includePaths:
