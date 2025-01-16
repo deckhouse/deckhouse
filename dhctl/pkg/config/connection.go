@@ -156,6 +156,8 @@ type ConnectionConfigParser struct{}
 
 // ParseConnectionConfigFromFile parses SSH connection config from file (app.ConnectionConfigPath)
 // and fills app.SSH* variables with corresponding data.
+// TODO:
+// Transform raw string from connection config into a temp key file
 func (ConnectionConfigParser) ParseConnectionConfigFromFile() error {
 	cfg, err := parseConnectionConfigFromFile(app.ConnectionConfigPath)
 	if err != nil {
