@@ -18,7 +18,7 @@ shell:
   - git clone --depth 1 --branch flant-v2 {{ .SOURCE_REPO }}/aquasecurity/trivy-db.git /src/trivy-db
   - git clone --depth 1 --branch v0.55.0-flant-2 {{ .SOURCE_REPO }}/aquasecurity/trivy.git /src/trivy
   - rm -rf /src/trivy/docs /src/trivy/integration
-  - find /src/trivy -type d -name testdata -delete
+  - find /src/trivy -type d -name testdata -exec rm -rf \{} \;
   - rm -rf /src/trivy/.git /src/trivy-db/.git
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
