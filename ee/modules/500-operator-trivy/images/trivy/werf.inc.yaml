@@ -2,10 +2,10 @@
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
 import:
-  - image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
-    add: /trivy
-    to: /usr/local/bin/trivy
-    before: setup
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+  add: /trivy
+  to: /usr/local/bin/trivy
+  before: setup
 docker:
   ENTRYPOINT: [ "/usr/local/bin/trivy" ]
   USER: deckhouse:deckhouse
@@ -17,6 +17,8 @@ shell:
   install:
   - git clone --depth 1 --branch flant-v2 {{ .SOURCE_REPO }}/aquasecurity/trivy-db.git /src/trivy-db
   - git clone --depth 1 --branch v0.55.0-flant-2 {{ .SOURCE_REPO }}/aquasecurity/trivy.git /src/trivy
+  - rm -rf /src/trivy/docs /src/trivy/integration
+  - find /src/trivy -type d -name testdata | xargs rm -rf
   - rm -rf /src/trivy/.git /src/trivy-db/.git
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
