@@ -91,7 +91,7 @@ properties:
     items:
       type: string
       pattern: '^[0-9a-zA-Z\.-]+$'
-  CustomRoleNodes:
+  customRoleNodes:
     description: |
       Adds the ability to run kube-dns pods on worker nodes:
       hook search label in this patterns:
@@ -100,4 +100,11 @@ properties:
       set value "worker" as example
     type: string
     default: ""
+  scheduleOnControlPlane:
+    type: boolean
+    default: true
+    description: |
+      works with parameter `CustomRoleNodes`, if disable, after delete pods kube-dns, they
+      don't schedule on master nodes, then kube-dns will be run only specific role nodes.
+
 

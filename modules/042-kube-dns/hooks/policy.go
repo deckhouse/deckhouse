@@ -100,14 +100,14 @@ func setKubeDNSPolicy(input *go_hook.HookInput) error {
 		fmt.Printf("node role %q counter %d\n", node.Role, nodesRolesCounters[node.Role])
 	}
 	// Adds the ability to run kube-dns pods on worker nodes
-	customRole := input.Values.Get("kubeDns.CustomRoleNodes").Str
+	customRole := input.Values.Get("kubeDns.customRoleNodes").Str
 	fmt.Printf("Found custom role for place Core DNS %s: ", customRole)
 
 	switch {
-	case nodesRolesCounters["kube-dns"] > 0:
-		input.Values.Set("kubeDns.internal.specificNodeType", "kube-dns")
-	case nodesRolesCounters["system"] > 0:
-		input.Values.Set("kubeDns.internal.specificNodeType", "system")
+	//case nodesRolesCounters["kube-dns"] > 0:
+	//	input.Values.Set("kubeDns.internal.specificNodeType", "kube-dns")
+	//case nodesRolesCounters["system"] > 0:
+	//	input.Values.Set("kubeDns.internal.specificNodeType", "system")
 	case nodesRolesCounters[customRole] > 0:
 		input.Values.Set("kubeDns.internal.specificNodeType", customRole)
 	default:
@@ -121,7 +121,7 @@ func setKubeDNSPolicy(input *go_hook.HookInput) error {
 	case nodesRolesCounters["system"] > 0:
 		replicas = nodesRolesCounters["master"] + nodesRolesCounters["system"]
 	case nodesRolesCounters["master"] > 2:
-		replicas = nodesRolesCounters["master"]
+		replicas = nodesRolesCounters["master"] + nodesRolesCounters[customRole]
 	}
 
 	// limit coredns replicas quantity to prevent special nodes autoscaling problem
