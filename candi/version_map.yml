@@ -134,7 +134,7 @@ k8s:
     patch: 0
     bashible: *bashible
     clusterAutoscalerPatch: '0'
-    crictlPatch: 1
+    crictlPatch: 0
     ccm:
       openstack: v1.31.2
       yandex: v0.30.0
