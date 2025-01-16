@@ -61,7 +61,7 @@ func New(client client.Client, helmClient *helm.Client, log logr.Logger) *Manage
 }
 
 func (m *Manager) Init(ctx context.Context, checker healthz.Checker, init *sync.WaitGroup) error {
-	m.log.Info("waiting for webhook server starting")
+	m.log.Info("waiting until webhook server start")
 	check := func(ctx context.Context) (bool, error) {
 		if err := checker(nil); err != nil {
 			m.log.Info("webhook server not startup yet")
