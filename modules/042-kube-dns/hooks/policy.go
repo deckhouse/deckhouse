@@ -104,12 +104,13 @@ func setKubeDNSPolicy(input *go_hook.HookInput) error {
 	fmt.Printf("Found custom role for place Core DNS %s: ", customRole)
 
 	switch {
-	//case nodesRolesCounters["kube-dns"] > 0:
-	//	input.Values.Set("kubeDns.internal.specificNodeType", "kube-dns")
-	//case nodesRolesCounters["system"] > 0:
-	//	input.Values.Set("kubeDns.internal.specificNodeType", "system")
+	// if exists `customRoleNodes` pods kube-dns will be planned on their nodes
 	case nodesRolesCounters[customRole] > 0:
 		input.Values.Set("kubeDns.internal.specificNodeType", customRole)
+	case nodesRolesCounters["kube-dns"] > 0:
+		input.Values.Set("kubeDns.internal.specificNodeType", "kube-dns")
+	case nodesRolesCounters["system"] > 0:
+		input.Values.Set("kubeDns.internal.specificNodeType", "system")
 	default:
 		input.Values.Remove("kubeDns.internal.specificNodeType")
 	}

@@ -98,6 +98,9 @@ properties:
       "node-role.kubernetes.io/worker="
       "node-role.deckhouse.io/worker="
       set value "worker" as example
+      By default pods will be planned on roles:
+        - kube-dns
+        - system
     type: string
     default: ""
   scheduleOnControlPlane:
