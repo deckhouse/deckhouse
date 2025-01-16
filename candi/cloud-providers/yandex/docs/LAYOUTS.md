@@ -3,15 +3,19 @@ title: "Cloud provider — Yandex Cloud: Layouts"
 description: "Schemes of placement and interaction of resources in Yandex Cloud when working with the Deckhouse cloud provider."
 ---
 
-Three layouts are supported. Below is more information about each of them.
+Before reading this document, make sure you are familiar with the [Cloud provider layout](/deckhouse/docs/documentation/pages/CLOUD-PROVIDER-LAYOUT.md).
+
+Three layouts are supported.
 
 ## Standard
+
+**Recommended layout.**
 
 {% alert level="danger" %}
 In this placement strategy, nodes do not have public IP addresses allocated to them; they use NAT gateway service in Yandex Cloud to connect to the Internet.
 {% endalert %}
 
-![Yandex Cloud Standard Layout scheme](../../images/cloud-provider-yandex/layout-standard.png)
+![Yandex Cloud Standard Layout scheme](https://docs.google.com/drawings/d/e/2PACX-1vTSpvzjcEBpD1qad9u_UgvsOrYT_Xtnxwg6Pzb64HQHLqQWcZi6hhCNRPKVUdYKX32nXEVJeCzACVRG/pub?w=1217&h=982)
 <!--- Source: https://docs.google.com/drawings/d/1WI8tu-QZYcz3DvYBNlZG4s5OKQ9JKyna7ESHjnjuCVQ/edit --->
 
 Example of the layout configuration:
@@ -88,7 +92,7 @@ In this layout, NAT (of any kind) is not used, and each node is assigned a publi
 
 > **Caution!** Currently, the cloud-provider-yandex module does not support Security Groups; thus, is why all cluster nodes connect directly to the Internet.
 
-![Yandex Cloud WithoutNAT Layout scheme](../../images/cloud-provider-yandex/layout-withoutnat.png)
+![Yandex Cloud WithoutNAT Layout scheme](https://docs.google.com/drawings/d/e/2PACX-1vTgwXWsNX6CKCRaMf5t6rl3kpKQQFHK6T8Dsg1jAwAwYaN1MRbxKFsSFQHeo1N3Qec4etPpeA0guB6-/pub?w=1217&h=982)
 <!--- Source: https://docs.google.com/drawings/d/1I7M9DquzLNu-aTjqLx1_6ZexPckL__-501Mt393W1fw/edit --->
 
 Example of the layout configuration:
@@ -165,7 +169,7 @@ If neither `withNATInstance.externalSubnetID` nor `withNATInstance.internalSubne
 
 If the IP address of the NAT-instance does not matter, you can pass an empty object `withNATInstance: {}`, then the necessary networks and dynamic IP will be created automatically.
 
-![Yandex Cloud WithNATInstance Layout scheme](../../images/cloud-provider-yandex/layout-withnatinstance.png)
+![Yandex Cloud WithNATInstance Layout scheme](https://docs.google.com/drawings/d/e/2PACX-1vSnNqebgRdwGP8lhKMJfrn5c0QXDpe9YdmIlK4eDberysLLgYiKNuwaPLHcyQhJigvQ21SANH89uipE/pub?w=1217&h=982)
 <!--- Source: https://docs.google.com/drawings/d/1oVpZ_ldcuNxPnGCkx0dRtcAdL7BSEEvmsvbG8Aif1pE/edit --->
 
 Example of the layout configuration:
