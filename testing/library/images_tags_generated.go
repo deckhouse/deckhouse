@@ -211,6 +211,7 @@ var DefaultImagesDigests = map[string]interface{}{
 		"csiVsphereSyncer130":       "imageHash-common-csiVsphereSyncer130",
 		"csiVsphereSyncer131":       "imageHash-common-csiVsphereSyncer131",
 		"distroless":                "imageHash-common-distroless",
+		"haproxyStatic":             "imageHash-common-haproxyStatic",
 		"init":                      "imageHash-common-init",
 		"iptablesWrapper":           "imageHash-common-iptablesWrapper",
 		"kubeRbacProxy":             "imageHash-common-kubeRbacProxy",
