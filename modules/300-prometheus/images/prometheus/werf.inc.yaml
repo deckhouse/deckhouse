@@ -57,9 +57,13 @@ git:
 shell:
   install:
   - git clone --depth 1 --branch v0.17.0 {{ .SOURCE_REPO }}/prometheus/promu.git /src/promu
-  - git clone --depth 1 --branch v2.45.6 {{ .SOURCE_REPO }}/prometheus/prometheus.git /src/prometheus
+  - git clone --depth 1 --branch v2.55.1 {{ .SOURCE_REPO }}/prometheus/prometheus-deps.git /src/prometheus-deps
+  - git clone --depth 1 --branch v2.55.1 {{ .SOURCE_REPO }}/prometheus/prometheus.git /src/prometheus
   - cd /src/prometheus
   - git apply /patches/*.patch --verbose
+  - rm -rf web/ui/*
+  - cp -r /src/prometheus-deps/web/ui/* web/ui/.
+  - scripts/compress_assets.sh
   - rm -r documentation/examples/remote_storage
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-promu-artifact
@@ -79,27 +83,6 @@ shell:
   - cd /src
   - go build -ldflags="-s -w" -o promu ./main.go
 ---
-image: {{ .ModuleName }}/{{ .ImageName }}-node-artifact
-from: {{ .Images.BASE_NODE_20_ALPINE }}
-final: false
-import:
-- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
-  add: /src/prometheus
-  to: /src
-  before: install
-shell:
-  beforeInstall:
-  {{- include "alpine packages proxy" . | nindent 2 }}
-  - apk add --no-cache bash
-  install:
-  {{- include "node packages proxy" . | nindent 2 }}
-  - cd /src/web/ui
-  - npm install
-  - npm run build
-  - cd /src
-  - scripts/compress_assets.sh
-  - rm -r /src/web/ui/node_modules /root/.npm
----
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
 from: {{ .Images.BASE_GOLANG_23_ALPINE }}
 final: false
@@ -111,8 +94,8 @@ import:
   add: /src/promu
   to: /bin/promu
   before: install
-- image: {{ .ModuleName }}/{{ .ImageName }}-node-artifact
-  add: /src
+- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+  add: /src/prometheus
   to: /src
   before: install
 shell:
