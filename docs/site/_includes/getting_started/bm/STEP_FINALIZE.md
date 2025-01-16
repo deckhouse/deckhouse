@@ -123,7 +123,7 @@ ssh-keygen -t rsa -f /dev/shm/caps-id -C "" -N ""
     <p>Create an <a href="/products/kubernetes-platform/documentation/v1/modules/node-manager/cr.html#sshcredentials">SSHCredentials</a> resource in the cluster. To do so, run the following command on the <strong>master node</strong>:</p>
 {% snippetcut %}
 ```bash
-sudo -i d8 k -f - <<EOF
+sudo -i d8 k create -f - <<EOF
 apiVersion: deckhouse.io/v1alpha1
 kind: SSHCredentials
 metadata:
@@ -166,7 +166,7 @@ chmod 600 /home/caps/.ssh/authorized_keys
 ```bash
 # Specify the IP address of the node you want to connect to the cluster.
 export NODE=<NODE-IP-ADDRESS>
-sudo -i d8 k -f - <<EOF
+sudo -i d8 k create -f - <<EOF
 apiVersion: deckhouse.io/v1alpha1
 kind: StaticInstance
 metadata:

@@ -4,25 +4,16 @@ module JSONSchemaRenderer
   class JSONSchemaRenderer
     # Liquid Template characters to escape
     @@CHARS_TO_ESCAPE = {
-      #'&' => '&amp;',
-      #'<' => '&lt;',
-      #'>' => '&gt;',
-      #'"' => '&quot;',
-      #"'" => '&#39;',
       '{' => '&#123;',
       '}' => '&#125;',
       '%' => '&#37;'
     }
 
     def convert(content)
+      if @converter.nil?
+        @converter = @site.find_converter_instance(::Jekyll::Converters::Markdown)
+      end
       return @converter.convert(content)
-    end
-
-    def initialize(site, data, converter)
-       @site = site
-       @path = data['permalink']
-       @lang = data['lang']
-       @converter = converter
     end
 
     def escape_chars(input)
@@ -31,8 +22,6 @@ module JSONSchemaRenderer
       end
       input
     end
-
-    input_string = 'Hello & Welcome <to> "Ruby"!'
 
     # moduleName
     # revision - Deckhouse revision
@@ -556,8 +545,13 @@ module JSONSchemaRenderer
         result.join
     end
 
-    def format_crd(input, moduleName = "")
+    def format_crd(site, page, input, moduleName = "")
         return nil if !input
+
+        @site = site
+        @page = page
+        @path = page['permalink']
+        @lang = page['lang']
 
         @moduleName = moduleName
 
@@ -777,7 +771,12 @@ module JSONSchemaRenderer
 
     #
     # Returns configuration module content from the openAPI spec
-    def format_configuration(input, moduleConfig = false)
+    def format_configuration(site, page, input, moduleConfig = false)
+        @site = site
+        @page = page
+        @path = @page['permalink']
+        @lang = @page['lang']
+
         result = []
         result.push('<div markdown="0">')
 
@@ -848,14 +847,15 @@ module JSONSchemaRenderer
         result.join
     end
 
-    def format_cluster_configuration(input, moduleName = "")
-        result = []
-
+    def format_cluster_configuration(site, page, input, moduleName = "")
+        @site = site
+        @page = page
+        @path = @page['permalink']
+        @lang = @page['lang']
         @moduleName = moduleName
         @resourceType = "clusterConfig"
 
-        puts "Module name: #{moduleName}"
-        puts "lang: #{@lang}"
+        result = []
 
         if ( @lang == 'en' )
             fallbackLanguageName = 'ru'
@@ -896,19 +896,19 @@ module JSONSchemaRenderer
                                 item["APIversion"],
                                 searchKeywords)
 
-          result.push(format_configuration(item, false))
+          result.push(format_configuration(@site, @page, item, false))
         end
         result.push('</div>')
         result.join
     end
 
-    def format_module_configuration(input, moduleName = "")
+    def format_module_configuration(site, page, input, moduleName = "")
         return if input.nil? || input.empty? || input["properties"].nil?|| input["properties"].empty?
 
         @moduleName = moduleName
         @resourceType = "moduleConfig"
-        puts "Generating moduleConfig for #{@moduleName}"
-        format_configuration(input, true)
+
+        format_configuration(site, page, input, true)
     end
   end
 end

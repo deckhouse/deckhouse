@@ -1,40 +1,53 @@
 ---
-image: {{ $.ModuleName }}/{{ $.ImageName }}
-fromImage: common/distroless
-import:
-  - image: common/pause
-    add: /pause
-    to: /pause
-    before: setup
-  - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
-    add: /
-    to: /usr/bin
-    includePaths:
-    - etcd
-    - etcdctl
-    before: setup
-docker:
-  ENTRYPOINT: ["/usr/bin/etcd"]
----
-artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
-from: {{ $.Images.BASE_GOLANG_22_ALPINE_DEV }}
-mount:
-  - fromPath: ~/go-pkg-cache
-    to: /go/pkg
+image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+final: false
+fromImage: common/src-artifact
 git:
-- add: /{{ $.ModulePath }}/modules/040-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
+- add: /{{ .ModulePath }}/modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/patches
   to: /patches
   stageDependencies:
     install:
     - '**/*'
 shell:
-  beforeInstall:
-  - apk add --no-cache openssh-client
-  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
   install:
-    - export GOPROXY={{ $.GOPROXY }} GOOS=linux GOARCH=amd64 CGO_ENABLED=0
-    - mkdir /src && cd /src
-    - git clone -b v3.5.16 --depth 1 {{ $.SOURCE_REPO }}/etcd-io/etcd.git .
-    - git apply /patches/*.patch --verbose
+  - git clone -b v3.5.17 --depth 1 {{ .SOURCE_REPO }}/etcd-io/etcd.git /src
+  - cd /src
+  - git apply /patches/*.patch --verbose
+  - rm -rf tools
+  - rm -rf .git
+---
+image: {{ .ModuleName }}/{{ .ImageName }}
+fromImage: common/distroless
+import:
+- image: common/pause
+  add: /pause
+  to: /pause
+  before: setup
+- image: {{ .ModuleName }}/{{ .ImageName }}-artifact
+  add: /
+  to: /usr/bin
+  includePaths:
+  - etcd
+  - etcdctl
+  before: setup
+docker:
+  ENTRYPOINT: ["/usr/bin/etcd"]
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-artifact
+from: {{ .Images.BASE_GOLANG_23_ALPINE }}
+final: false
+mount:
+- fromPath: ~/go-pkg-cache
+  to: /go/pkg
+import:
+- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+  add: /src
+  to: /src
+  before: install
+shell:
+  install:
+    - cd /src/
+    - export GOPROXY={{ .GOPROXY }} GOOS=linux GOARCH=amd64 CGO_ENABLED=0
+    - go mod download
     - cd server && go build -ldflags="-s -w" -o /etcd . && cd ..
     - cd etcdctl && go build -ldflags="-s -w" -o /etcdctl . && cd ..

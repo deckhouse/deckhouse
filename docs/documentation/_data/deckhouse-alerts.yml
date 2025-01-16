@@ -371,10 +371,10 @@ alerts:
       edition: ce
       description: |
         The recommended course of action:
-        1. Retrieve details of the Deployment: `kubectl -n d8-monitoring describe deploy cert-exporter`
-        2. View the status of the Pod and try to figure out why it is not running: `kubectl -n d8-monitoring describe pod -l app=cert-exporter`
+        1. Retrieve details of the Deployment: `kubectl -n d8-monitoring describe deploy x509-certificate-exporter`
+        2. View the status of the Pod and try to figure out why it is not running: `kubectl -n d8-monitoring describe pod -l app=x509-certificate-exporter`
       summary: |
-        The cert-exporter Pod is NOT Ready.
+        The x509-certificate-exporter Pod is NOT Ready.
       severity: "8"
       markupFormat: markdown
     - name: D8CertExporterPodIsNotRunning
@@ -384,10 +384,10 @@ alerts:
       edition: ce
       description: |
         The recommended course of action:
-        1. Retrieve details of the Deployment: `kubectl -n d8-monitoring describe deploy cert-exporter`
-        2. View the status of the Pod and try to figure out why it is not running: `kubectl -n d8-monitoring describe pod -l app=cert-exporter`
+        1. Retrieve details of the Deployment: `kubectl -n d8-monitoring describe deploy x509-certificate-exporter`
+        2. View the status of the Pod and try to figure out why it is not running: `kubectl -n d8-monitoring describe pod -l app=x509-certificate-exporter`
       summary: |
-        The cert-exporter Pod is NOT Running.
+        The x509-certificate-exporter Pod is NOT Running.
       severity: "8"
       markupFormat: markdown
     - name: D8CertExporterTargetAbsent
@@ -396,11 +396,11 @@ alerts:
       module: extended-monitoring
       edition: ce
       description: |
-        Check the Pod status: `kubectl -n d8-monitoring get pod -l app=cert-exporter`
+        Check the Pod status: `kubectl -n d8-monitoring get pod -l app=x509-certificate-exporter`
 
-        Or check the Pod logs: `kubectl -n d8-monitoring logs -l app=cert-exporter -c cert-exporter`
+        Or check the Pod logs: `kubectl -n d8-monitoring logs -l app=x509-certificate-exporter -c x509-certificate-exporter`
       summary: |
-        There is no cert-exporter target in Prometheus.
+        There is no x509-certificate-exporter target in Prometheus.
       severity: "8"
       markupFormat: markdown
     - name: D8CertExporterTargetDown
@@ -409,11 +409,11 @@ alerts:
       module: extended-monitoring
       edition: ce
       description: |
-        Check the Pod status: `kubectl -n d8-monitoring get pod -l app=cert-exporter`
+        Check the Pod status: `kubectl -n d8-monitoring get pod -l app=x509-certificate-exporter`
 
-        Or check the Pod logs: `kubectl -n d8-monitoring logs -l app=cert-exporter -c cert-exporter`
+        Or check the Pod logs: `kubectl -n d8-monitoring logs -l app=x509-certificate-exporter -c x509-certificate-exporter`
       summary: |
-        Prometheus cannot scrape the cert-exporter metrics.
+        Prometheus cannot scrape the x509-certificate-exporter metrics.
       severity: "8"
       markupFormat: markdown
     - name: D8CloudDataDiscovererCloudRequestError

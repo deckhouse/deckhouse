@@ -347,6 +347,16 @@ Useful features of some scripts:
 
 * [`032_configure_containerd.sh`](https://github.com/deckhouse/deckhouse/blob/main/candi/bashible/common-steps/all/032_configure_containerd.sh.tpl) - merges all configuration files of the `containerd` service located at `/etc/containerd/conf.d/*.toml`, and also **restarts** the service. It is important to note that the `/etc/containerd/conf.d/` directory is not created automatically, and that files in this directory should be created in scripts with a priority lower than `32`
 
+### Automatic installation of custom labels for nodes
+
+Custom labels can be set automatically for nodes. To do this, in the directory `/var/lib/node_labels` of the node, you need to create files containing the necessary labels in the format `key=value`. The file names can be any, the nesting of directories with files is not limited.
+
+This method works both for existing nodes in the cluster and during the addition of new nodes.
+
+{% alert level="warning" %}
+Please note that it is not possible to add labels used in DKP in this way. This method will only work with custom labels that do not overlap with those reserved for Deckhouse.
+{% endalert %}
+
 ## Chaos Monkey
 
 The instrument (you can enable it for each `NodeGroup` individually) for unexpected and random termination of nodes in a systemic manner. Chaos Monkey tests the resilience of cluster elements, applications, and infrastructure components.
