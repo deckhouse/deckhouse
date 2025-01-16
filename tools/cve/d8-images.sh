@@ -80,9 +80,6 @@ function __main__() {
     owners="[\"Nikolay1224\"]" # Default assignee in case if not found in CODEOWNERS file
 
     while IFS="\n" read -r line; do
-      echo " DEBUG"
-      echo "CODEOWNERS_MODULE_NAME: $CODEOWNERS_MODULE_NAME"
-      echo "line: $line"
       if echo $line| grep -i -q "$CODEOWNERS_MODULE_NAME"; then
         owners=$(echo $line | cut -d "@" -f 2-|jq --raw-input 'split(" @")')
         owner_found=true
@@ -118,10 +115,3 @@ function __main__() {
 }
 
 __main__
-
-
-for line in $(cat ./.github/CODEOWNERS); do
-  if echo $line| grep -i -q "prometheus"; then
-    echo "good"
-  fi
-done
