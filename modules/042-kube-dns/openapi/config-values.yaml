@@ -91,3 +91,10 @@ properties:
     items:
       type: string
       pattern: '^[0-9a-zA-Z\.-]+$'
+  CustomRoleNodes:
+    description: |
+      Adds the ability to run kube-dns pods on worker nodes:
+      "node.deckhouse.io/group=worker"
+    type: string
+    default: ""
+
