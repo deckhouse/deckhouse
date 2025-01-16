@@ -237,13 +237,13 @@ Below are their fundamental differences:
 
 * Pod and Service subnets in the [`podSubnetCIDR`](../../installing/configuration.html#clusterconfiguration-podsubnetcidr) and [`serviceSubnetCIDR`](../../installing/configuration.html#clusterconfiguration-servicesubnetcidr) parameters of the resource [_ClusterConfiguration_](../../installing/configuration.html#clusterconfiguration) must be unique for each federation member.
 
-  > - When analyzing HTTP and HTTPS traffic _(in istio terminology)_, you can identify them and decide on further routing or blocking based on their headers.
-  > - At the same time, when analyzing TCP traffic _(in istio terminology)_, it is possible to identify them and decide on further routing or blocking based only on their destination IP address or port number.
-
+  > - When analyzing HTTP and HTTPS traffic *(in istio terminology)*, you can identify them and decide on further routing or blocking based on their headers.
+  > - At the same time, when analyzing TCP traffic *(in istio terminology)*, it is possible to identify them and decide on further routing or blocking based only on their destination IP address or port number.
+  >
   > If the IP addresses of services or pods in different clusters match, requests from other pods in other clusters may mistakenly fall under the istio's rules.
   > The intersection of subnets of services and pods is strictly prohibited in `single-network` mode, and is acceptable but not recommended in `multi-networks` mode.
   > [source](https://istio.io/latest/docs/ops/deployment/deployment-models/#single-network )
-
+  >
   > - In the `single-network` mode, pods from different clusters can communicate with each other directly.
   > - In the `multi-networks` mode, pods from different clusters can only communicate with each other if they use the Istio-gateway.
 
@@ -287,13 +287,13 @@ To establish a federation, you must:
 
 * Pod and Service subnets in the [`podSubnetCIDR`](../../installing/configuration.html#clusterconfiguration-podsubnetcidr) and [`serviceSubnetCIDR`](../../installing/configuration.html#clusterconfiguration-servicesubnetcidr) parameters of the resource [_ClusterConfiguration_](../../installing/configuration.html#clusterconfiguration) must be unique for each multicluster member.
 
-  > - When analyzing HTTP and HTTPS traffic _(in istio terminology)_, you can identify them and decide on further routing or blocking based on their headers.
-  > - At the same time, when analyzing TCP traffic _(in istio terminology)_, it is possible to identify them and decide on further routing or blocking based only on their destination IP address or port number.
-
+  > - When analyzing HTTP and HTTPS traffic *(in istio terminology)*, you can identify them and decide on further routing or blocking based on their headers.
+  > - At the same time, when analyzing TCP traffic *(in istio terminology)*, it is possible to identify them and decide on further routing or blocking based only on their destination IP address or port number.
+  >
   > If the IP addresses of services or pods in different clusters match, requests from other pods in other clusters may mistakenly fall under the istio's rules.
   > The intersection of subnets of services and pods is strictly prohibited in `single-network` mode, and is acceptable but not recommended in `multi-networks` mode.
   > [source](https://istio.io/latest/docs/ops/deployment/deployment-models/#single-network )
-
+  >
   > - In the `single-network` mode, pods from different clusters can communicate with each other directly.
   > - In the `multi-networks` mode, pods from different clusters can only communicate with each other if they use the Istio-gateway.
 
