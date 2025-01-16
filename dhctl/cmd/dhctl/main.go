@@ -107,7 +107,7 @@ var (
 		{
 			Name:       "converge-periodical",
 			Help:       "Start service for periodical run converge.",
-			DefineFunc: commands.DefineConvergeCommand,
+			DefineFunc: commands.DefineAutoConvergeCommand,
 		},
 		{
 			Name: "lock",
