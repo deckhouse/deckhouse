@@ -1496,8 +1496,7 @@ spec:
                 nodeDrainTimeoutSecond:
                   type: integer
                   description: |
-                    Maximum drain time of Node
-                    This parameter sets the maximum time the controller will attempt to reschedule pods to a new machine during the node draining process.
+                    Maximum duration (in seconds) for which the controller attempts to reschedule pods to a new machine during node draining.
                 cri:
                   type: object
                   description: |
