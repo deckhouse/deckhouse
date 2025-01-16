@@ -333,6 +333,10 @@ spec:
                         namespace:
                           description: |
                             Имя namespace, в котором находится Secret с SSL—сертификатом.
+
+                podsAnnotations:
+                  description: |
+                    Секция позволяет добавить кастомные аннотации для `pods` `IngressNginxController`
     - name: v1
       served: true
       storage: false
