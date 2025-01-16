@@ -1,8 +1,8 @@
 diff --git a/cluster-autoscaler/simulator/cluster.go b/cluster-autoscaler/simulator/cluster.go
-index 23ccd037e..b9b82d7b6 100644
+index d568becef..d8b3ff8c0 100644
 --- a/cluster-autoscaler/simulator/cluster.go
 +++ b/cluster-autoscaler/simulator/cluster.go
-@@ -234,6 +234,10 @@ func (r *RemovalSimulator) findPlaceFor(removedNode string, pods []*apiv1.Pod, n
+@@ -230,6 +230,10 @@ func (r *RemovalSimulator) findPlaceFor(removedNode string, pods []*apiv1.Pod, n
  
  	newpods := make([]*apiv1.Pod, 0, len(pods))
  	for _, podptr := range pods {
@@ -13,68 +13,57 @@ index 23ccd037e..b9b82d7b6 100644
  		newpod := *podptr
  		newpod.Spec.NodeName = ""
  		newpods = append(newpods, &newpod)
-diff --git a/cluster-autoscaler/utils/drain/drain.go b/cluster-autoscaler/utils/drain/drain.go
-index 02ddb7a12..b2a1f89f6 100644
---- a/cluster-autoscaler/utils/drain/drain.go
-+++ b/cluster-autoscaler/utils/drain/drain.go
-@@ -116,7 +116,7 @@ func GetPodsForDeletionOnNodeDrain(
+diff --git a/cluster-autoscaler/simulator/drainability/rules/pdb/rule.go b/cluster-autoscaler/simulator/drainability/rules/pdb/rule.go
+index 9c9e89cf8..9efbb30d3 100644
+--- a/cluster-autoscaler/simulator/drainability/rules/pdb/rule.go
++++ b/cluster-autoscaler/simulator/drainability/rules/pdb/rule.go
+@@ -39,9 +39,20 @@ func (r *Rule) Name() string {
  
- 		if skipNodesWithCustomControllerPods {
- 			// TODO(vadasambar): remove this when we get rid of skipNodesWithCustomControllerPods
--			replicated, isDaemonSetPod, blockingPod, err = legacyCheckForReplicatedPods(listers, pod, minReplica)
-+			replicated, isDaemonSetPod, blockingPod, err = legacyCheckForReplicatedPods(listers, pod, pdbs, minReplica)
- 			if err != nil {
- 				return []*apiv1.Pod{}, []*apiv1.Pod{}, blockingPod, err
- 			}
-@@ -155,7 +155,7 @@ func GetPodsForDeletionOnNodeDrain(
- 	return pods, daemonSetPods, nil, nil
- }
- 
--func legacyCheckForReplicatedPods(listers kube_util.ListerRegistry, pod *apiv1.Pod, minReplica int32) (replicated bool, isDaemonSetPod bool, blockingPod *BlockingPod, err error) {
-+func legacyCheckForReplicatedPods(listers kube_util.ListerRegistry, pod *apiv1.Pod, pdbs []*policyv1.PodDisruptionBudget, minReplica int32) (replicated bool, isDaemonSetPod bool, blockingPod *BlockingPod, err error) {
- 	replicated = false
- 	refKind := ""
- 	checkReferences := listers != nil
-@@ -188,15 +188,33 @@ func legacyCheckForReplicatedPods(listers kube_util.ListerRegistry, pod *apiv1.P
- 			replicated = true
- 		}
- 	} else if pod_util.IsDaemonSetPod(pod) {
--		isDaemonSetPod = true
--		// don't have listener for other DaemonSet kind
--		// TODO: we should use a generic client for checking the reference.
--		if checkReferences && refKind == "DaemonSet" {
--			_, err := listers.DaemonSetLister().DaemonSets(controllerNamespace).Get(controllerRef.Name)
--			if apierrors.IsNotFound(err) {
--				return replicated, isDaemonSetPod, &BlockingPod{Pod: pod, Reason: ControllerNotFound}, fmt.Errorf("daemonset for %s/%s is not present, err: %v", pod.Namespace, pod.Name, err)
--			} else if err != nil {
--				return replicated, isDaemonSetPod, &BlockingPod{Pod: pod, Reason: UnexpectedError}, fmt.Errorf("error when trying to get daemonset for %s/%s , err: %v", pod.Namespace, pod.Name, err)
-+		// kruise daemonset
-+		if controllerRef.APIVersion == "apps.kruise.io/v1alpha1" {
-+			var pdbFound bool
-+			for _, pdb := range pdbs {
-+				if pdb.Namespace == controllerNamespace && pdb.Name == controllerRef.Name {
-+					pdbFound = true
-+					if pdb.Status.CurrentHealthy > minReplica {
-+						replicated = true
-+					}
-+					break
-+				}
+ // Drainable decides how to handle pods with pdbs on node drain.
+ func (Rule) Drainable(drainCtx *drainability.DrainContext, pod *apiv1.Pod) drainability.Status {
++	kruiseAds := false
++	controllerRef := drain.ControllerRef(pod)
++	if controllerRef.APIVersion == "apps.kruise.io/v1alpha1" && controllerRef.Kind == "DaemonSet" {
++		kruiseAds = true
++	}
+ 	for _, pdb := range drainCtx.RemainingPdbTracker.MatchingPdbs(pod) {
+-		if pdb.Status.DisruptionsAllowed < 1 {
+-			return drainability.NewBlockedStatus(drain.NotEnoughPdb, fmt.Errorf("not enough pod disruption budget to move %s/%s", pod.Namespace, pod.Name))
++		if kruiseAds {
++			if pdb.Status.CurrentHealthy <= 1 {
++				return drainability.NewBlockedStatus(drain.NotEnoughPdb, fmt.Errorf("not enough healthy pods to move %s/%s", pod.Namespace, pod.Name))
 +			}
-+			if !pdbFound {
-+				return replicated, isDaemonSetPod, &BlockingPod{Pod: pod, Reason: ControllerNotFound}, fmt.Errorf("pdb controlle for %s/%s is not present, err: %v", pod.Namespace, pod.Name, err)
-+			}
-+			// common daemonset
 +		} else {
-+			isDaemonSetPod = true
-+			// don't have listener for other DaemonSet kind
-+			// TODO: we should use a generic client for checking the reference.
-+			if checkReferences && refKind == "DaemonSet" {
-+				_, err := listers.DaemonSetLister().DaemonSets(controllerNamespace).Get(controllerRef.Name)
-+				if apierrors.IsNotFound(err) {
-+					return replicated, isDaemonSetPod, &BlockingPod{Pod: pod, Reason: ControllerNotFound}, fmt.Errorf("daemonset for %s/%s is not present, err: %v", pod.Namespace, pod.Name, err)
-+				} else if err != nil {
-+					return replicated, isDaemonSetPod, &BlockingPod{Pod: pod, Reason: UnexpectedError}, fmt.Errorf("error when trying to get daemonset for %s/%s , err: %v", pod.Namespace, pod.Name, err)
-+				}
- 			}
++			if pdb.Status.DisruptionsAllowed < 1 {
++				return drainability.NewBlockedStatus(drain.NotEnoughPdb, fmt.Errorf("not enough pod disruption budget to move %s/%s", pod.Namespace, pod.Name))
++			}
  		}
- 	} else if refKind == "Job" {
+ 	}
+ 	return drainability.NewUndefinedStatus()
+diff --git a/cluster-autoscaler/simulator/drainability/rules/replicated/rule.go b/cluster-autoscaler/simulator/drainability/rules/replicated/rule.go
+index 5a760d6bf..97e99420f 100644
+--- a/cluster-autoscaler/simulator/drainability/rules/replicated/rule.go
++++ b/cluster-autoscaler/simulator/drainability/rules/replicated/rule.go
+@@ -48,7 +48,7 @@ func (r *Rule) Drainable(drainCtx *drainability.DrainContext, pod *apiv1.Pod) dr
+ 
+ 	if r.skipNodesWithCustomControllerPods {
+ 		// TODO(vadasambar): remove this when we get rid of skipNodesWithCustomControllerPods
+-		replicated = replicated && replicatedKind[controllerRef.Kind]
++		replicated = replicated && (replicatedKind[controllerRef.Kind] || (controllerRef.Kind == "DaemonSet" && controllerRef.APIVersion == "apps.kruise.io/v1alpha1"))
+ 	}
+ 
+ 	if !replicated {
+diff --git a/cluster-autoscaler/utils/pod/pod.go b/cluster-autoscaler/utils/pod/pod.go
+index b85b14ac3..77dd43a87 100644
+--- a/cluster-autoscaler/utils/pod/pod.go
++++ b/cluster-autoscaler/utils/pod/pod.go
+@@ -32,6 +32,9 @@ const (
+ func IsDaemonSetPod(pod *apiv1.Pod) bool {
+ 	controllerRef := metav1.GetControllerOf(pod)
+ 	if controllerRef != nil && controllerRef.Kind == "DaemonSet" {
++		if controllerRef.APIVersion == "apps.kruise.io/v1alpha1" {
++			return false
++		}
+ 		return true
+ 	}
+ 
