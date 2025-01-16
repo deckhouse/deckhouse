@@ -14,7 +14,7 @@ properties:
         default: 2
       specificNodeType:
         type: string
-        enum: ["system", "kube-dns"]
+        enum: ["system", "kube-dns", "worker"]
       stsNamespaces:
         type: array
         items:

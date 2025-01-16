@@ -94,7 +94,10 @@ properties:
   CustomRoleNodes:
     description: |
       Adds the ability to run kube-dns pods on worker nodes:
+      hook search label in this patterns:
       "node-role.kubernetes.io/worker="
+      "node-role.deckhouse.io/worker="
+      set value "worker" as example
     type: string
     default: ""
 
