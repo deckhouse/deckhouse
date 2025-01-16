@@ -310,6 +310,7 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 				NodeGroupName:   "master",
 				NodeIndex:       0,
 				NodeCloudConfig: "",
+				RunnerLogger:    log.GetDefaultLogger(),
 			})
 
 			masterOutputs, err := terraform.ApplyPipeline(masterRunner, masterNodeName, terraform.GetMasterNodeResult)
@@ -389,6 +390,13 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 	if wrapper, ok := b.NodeInterface.(*ssh.NodeInterfaceWrapper); ok {
 		if err := WaitForSSHConnectionOnMaster(wrapper.Client()); err != nil {
 			return fmt.Errorf("failed to wait for SSH connection on master: %v", err)
+		}
+	}
+
+	if metaConfig.ClusterType == config.CloudClusterType {
+		err = preflightChecker.PostCloud()
+		if err != nil {
+			return err
 		}
 	}
 
@@ -569,13 +577,8 @@ func bootstrapAdditionalNodesForCloudCluster(kubeCl *client.KubernetesClient, me
 	}
 
 	return log.Process("bootstrap", "Waiting for Node Groups are ready", func() error {
-		if err := converge.WaitForNodesBecomeReady(kubeCl, "master", metaConfig.MasterNodeGroupSpec.Replicas); err != nil {
+		if err := converge.WaitForNodesBecomeReady(kubeCl, map[string]int{"master": metaConfig.MasterNodeGroupSpec.Replicas}); err != nil {
 			return err
-		}
-		for _, terraNodeGroup := range terraNodeGroups {
-			if err := converge.WaitForNodesBecomeReady(kubeCl, terraNodeGroup.Name, terraNodeGroup.Replicas); err != nil {
-				return err
-			}
 		}
 		return nil
 	})

@@ -1,4 +1,4 @@
-x-config-version: 2
+x-config-version: 3
 type: object
 properties:
   ingressClass:
@@ -17,9 +17,11 @@ properties:
       externalAuthentication:
         type: object
         description: |
-          Parameters to enable external authentication based on the NGINX Ingress [external-auth](https://kubernetes.github.io/ingress-nginx/examples/auth/external-auth/) mechanism that uses the Nginx [auth_request](http://nginx.org/en/docs/http/ngx_http_auth_request_module.html) module.
+          Parameters to enable external authentication based on the NGINX Ingress [external-auth](https://kubernetes.github.io/ingress-nginx/examples/auth/external-auth/) mechanism that uses the Nginx [auth_request](https://nginx.org/en/docs/http/ngx_http_auth_request_module.html) module.
 
-          > **Note!** External authentication is enabled automatically if the [user-authn](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/150-user-authn/) module is enabled.
+          External authentication is enabled automatically if the [user-authn](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/user-authn/) module is enabled.
+
+          > **Warning.** For security reasons, this mode only works if `https.mode` (global or for a module) is not set to `Disabled`.
         properties:
           authURL:
             type: string
@@ -31,12 +33,9 @@ properties:
               The URL to redirect the user for authentication (if the authentication service returned a non-200 HTTP response code).
           useBearerTokens:
             type: boolean
+            x-doc-default: false
             description: |
               The dashboard must use the user ID to work with the Kubernetes API (the authentication service must return the Authorization HTTP header that contains the bearer-token – the dashboard will use this token to make requests to the Kubernetes API server).
-
-              Default value is false.
-
-              > **Caution!** For security reasons, this mode only works if `https.mode` (global or for a module) is not set to `Disabled`;
       allowedUserGroups:
         type: array
         items:
@@ -46,7 +45,7 @@ properties:
 
           This parameter is used if the `user-authn` module is enabled or the `externalAuthentication` parameter is set.
 
-          **Caution!** Note that you must add those groups to the appropriate field in the DexProvider config if this module is used together with the [user-authn](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/150-user-authn/) one.
+          > **Warning.** Note that you must add those groups to the appropriate field in the DexProvider config if this module is used together with the [user-authn](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/user-authn/) one.
       whitelistSourceRanges:
         type: array
         items:
@@ -55,12 +54,6 @@ properties:
           - [ "1.1.1.1/32" ]
         description: |
           The CIDR range for which authentication to access the dashboard is allowed.
-      allowScale:
-        type: boolean
-        description: |
-          Activate ability to scale Deployment and StatefulSet from the web interface.
-
-          This parameter has no effect if the `externalAuthentication` is enabled.
   https:
     type: object
     x-examples:
@@ -84,10 +77,10 @@ properties:
           - OnlyInURI
         description: |
           The HTTPS usage mode:
-          * `CertManager` — the dashboard will use HTTPS and get a certificate from the ClusterIssuer defined in the `certManager.clusterIssuerName` parameter.
-          * `CustomCertificate` — the dashboard will use the certificate from the `d8-system` namespace for HTTPS.
-          * `Disabled` — in this mode, the dashboard works over HTTP only.
-          * `OnlyInURI` — the dashboard will work over HTTP (thinking that there is an external HTTPS load balancer in front of it that terminates HTTPS traffic). All the links in the [user-authn](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/150-user-authn/) will be generated using the HTTPS scheme. Load balancer should provide a redirect from HTTP to HTTPS.
+          * `CertManager` — the dashboard will use HTTPS and get a certificate from the ClusterIssuer defined in the `certManager.clusterIssuerName` parameter;
+          * `CustomCertificate` — the dashboard will use the certificate from the `d8-system` namespace for HTTPS;
+          * `Disabled` — dashboard will not work in this mode;
+          * `OnlyInURI` — the dashboard will work over HTTP (thinking that there is an external HTTPS load balancer in front of it that terminates HTTPS traffic). All the links in the [user-authn](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/user-authn/) will be generated using the HTTPS scheme. Load balancer should provide a redirect from HTTP to HTTPS.
       certManager:
         type: object
         properties:
@@ -141,13 +134,3 @@ properties:
           format: int64
         value:
           type: string
-  accessLevel:
-    type: string
-    enum: [User,PrivilegedUser,Editor,Admin,ClusterEditor,ClusterAdmin,SuperAdmin]
-    default: 'User'
-    description: |
-      The level of access to the dashboard if the `user-authn` module is disabled and no `externalAuthentication` is configured. See supported values in the [user-authz](../../modules/140-user-authz/) documentation.
-
-      By default, `User` level is used.
-
-      Use `user-authz` module settings to configure access if the `user-authn` module is enabled or `externalAuthentication` is configured.

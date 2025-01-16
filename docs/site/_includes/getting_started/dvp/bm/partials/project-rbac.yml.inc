@@ -8,7 +8,8 @@ spec:
   description: test-project
   projectTemplateName: default
   parameters:
-    # Квоты проекта
+    # [<ru>] Квоты проекта.
+    # [<en>] Project quotas.
     resourceQuota:
       requests:
         cpu: 20
@@ -16,7 +17,8 @@ spec:
       limits:
         cpu: 20
         memory: 20Gi
-    # Администраторы проекта
+    # [<en>] Project administrators.
+    # [<ru>] Администраторы проекта.
     administrators:
       - subject: User
         name: test-user
@@ -26,7 +28,8 @@ kind: User
 metadata:
   name: test-user
 spec:
-  # e-mail пользователя
+  # [<en>] User e-mail.
+  # [<ru>] e-mail пользователя.
   email: test-user@deckhouse.io
   # [<en>] this is a hash of the password <GENERATED_PASSWORD>, generated  now
   # [<en>] generate your own or use it at your own risk (for testing purposes)
@@ -49,7 +52,8 @@ subjects:
     apiGroup: rbac.authorization.k8s.io
 roleRef:
   kind: ClusterRole
-  # Роль пользователя
+  # [<en>] User role.
+  # [<ru>] Роль пользователя.
   name: d8:use:role:admin
   apiGroup: rbac.authorization.k8s.io
 EOF

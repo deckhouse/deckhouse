@@ -1,7 +1,9 @@
 {
   "cse-lite": {
     "name": "CSE Lite",
-    "languages": ["ru"],
+    "languages": [
+      "ru"
+    ],
     "excludeModules": [
       "basic-auth",
       "ceph-csi",
@@ -32,8 +34,6 @@
       "flant-integration",
       "istio",
       "keepalived",
-      "l2-load-balancer",
-      "metallb-crd",
       "monitoring-custom",
       "monitoring-custom",
       "monitoring-ping",
@@ -66,7 +66,9 @@
   },
   "cse-pro": {
     "name": "CSE Pro",
-    "languages": ["ru"],
+    "languages": [
+      "ru"
+    ],
     "excludeModules": [
       "basic-auth",
       "ceph-csi",
@@ -94,7 +96,6 @@
       "flant-integration",
       "istio",
       "keepalived",
-      "l2-load-balancer",
       "monitoring-custom",
       "monitoring-ping",
       "namespace-configurator",
@@ -121,7 +122,9 @@
     ]
   },
   "se-plus": {
-    "languages": ["ru"],
+    "languages": [
+      "ru"
+    ],
     "name": "SE+",
     "excludeModules": [
       "cloud-provider-dynamix",
@@ -129,7 +132,6 @@
       "cloud-provider-vcd",
       "dashboard",
       "keepalived",
-      "l2-load-balancer",
       "network-gateway",
       "operator-trivy",
       "runtime-audit-engine",

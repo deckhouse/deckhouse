@@ -66,7 +66,7 @@ roleRef:
 ```
 
 {% offtopic title="The rights that the user will get" %}
-The rights that the user will get will be limited to the following list of DKP module namespaces from the `networking` scope (the actual list depends on the list of modules included in the cluster):
+The rights that the user will get will be limited to the following list of DKP module namespaces from the `networking` subsystem (the actual list depends on the list of modules included in the cluster):
 - `d8-cni-cilium`
 - `d8-cni-flannel`
 - `d8-cni-simple-bridge`
@@ -80,7 +80,7 @@ The rights that the user will get will be limited to the following list of DKP m
 - `kube-system`
 
 The user will be able to:
-- View, modify, delete, and create *standard* Kubernetes resources in the module namespace from the `networking` scope.
+- View, modify, delete, and create *standard* Kubernetes resources in the module namespace from the `networking` subsystem.
 
   Example of resources that the user will be able to manage (the list is not exhaustive):
   - `Certificate`
@@ -113,7 +113,7 @@ The user will be able to:
   - `VerticalPodAutoscaler`
   - `VolumeSnapshot`
 
-- View, modify, delete, and create the following resources in the modules namespace from the `networking` scope:
+- View, modify, delete, and create the following resources in the modules namespace from the `networking` subsystem:
 
   A list of resources that the user will be able to manage:
   - `EgressGateway`
@@ -127,7 +127,7 @@ The user will be able to:
   - `IstioMulticluster`
   - `RoutingTable`
 
-- Modify the configuration of modules (view, change, delete, and create moduleConfig resources) from the `networking` scope.
+- Modify the configuration of modules (view, change, delete, and create moduleConfig resources) from the `networking` subsystem.
 
   List of modules that the user will be able to manage:
   - `cilium-hubble`
@@ -146,7 +146,7 @@ The user will be able to:
   - `openvpn`
   - `static-routing-manager`
   
-- Execute the following commands with pods and services in the modules namespace from the `networking` scope:
+- Execute the following commands with pods and services in the modules namespace from the `networking` subsystem:
   - `kubectl attach`
   - `kubectl exec`
   - `kubectl port-forward`
@@ -269,7 +269,7 @@ There are two types of users in Kubernetes:
 
 * Service accounts managed by Kubernetes via the API;
 * Regular users managed by some external tool that the cluster administrator configures. There are many authentication mechanisms and, accordingly, many ways to create users. Currently, two authentication methods are supported:
-  * Via the [user-authn](../../modules/150-user-authn/) module.
+  * Via the [user-authn](../../modules/user-authn/) module.
   * Via the certificates.
 
 When issuing the authentication certificate, you need to specify the name (`CN=<name>`), the required number of groups (`O=<group>`), and sign it using the root CA of the cluster. It is this mechanism that authenticates you in the cluster when, for example, you use kubectl on a bastion node.
@@ -350,8 +350,8 @@ You may need to create a ServiceAccount with access to the Kubernetes API when, 
         ```
 
    * If there is no direct access to the API server, use one of the following options:
-      * enable access to the API-server over the Ingress controller (the [publishAPI](../150-user-authn/configuration.html#parameters-publishapi) parameter) and specify the addresses from which requests originate (the [whitelistSourceRanges](../150-user-authn/configuration.html#parameters-publishapi-whitelistsourceranges) parameter);
-      * specify addresses from which requests will originate in a separate Ingress controller (the [acceptRequestsFrom](../402-ingress-nginx/cr.html#ingressnginxcontroller-v1-spec-acceptrequestsfrom) parameter).
+      * enable access to the API-server over the Ingress controller (the [publishAPI](../user-authn/configuration.html#parameters-publishapi) parameter) and specify the addresses from which requests originate (the [whitelistSourceRanges](../user-authn/configuration.html#parameters-publishapi-whitelistsourceranges) parameter);
+      * specify addresses from which requests will originate in a separate Ingress controller (the [acceptRequestsFrom](../ingress-nginx/cr.html#ingressnginxcontroller-v1-spec-acceptrequestsfrom) parameter).
 
    * If a non-public CA is used:
 
@@ -479,7 +479,7 @@ spec:
 
 The multi-tenancy mode, which allows you to restrict access to namespaces, is enabled by the [enableMultiTenancy](configuration.html#parameters-enablemultitenancy) module's parameter.
 
-Working in multi-tenancy mode requires enabling the [Webhook authorization plugin](https://kubernetes.io/docs/reference/access-authn-authz/webhook/) and configuring a `kube-apiserver.` All actions necessary for the multi-tenancy mode are performed **automatically** by the [control-plane-manager](../../modules/040-control-plane-manager/) module; no additional steps are required.
+Working in multi-tenancy mode requires enabling the [Webhook authorization plugin](https://kubernetes.io/docs/reference/access-authn-authz/webhook/) and configuring a `kube-apiserver.` All actions necessary for the multi-tenancy mode are performed **automatically** by the [control-plane-manager](../../modules/control-plane-manager/) module; no additional steps are required.
 
 Changes to the `kube-apiserver` manifest that will occur after enabling multi-tenancy mode:
 

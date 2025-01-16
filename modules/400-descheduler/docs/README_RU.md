@@ -12,7 +12,7 @@ description: "Модуль descheduler Deckhouse Kubernetes Platform. Кажды
 * Модуль может учитывать класс приоритета пода (параметр [spec.priorityClassThreshold](cr.html#descheduler-v1alpha2-spec-priorityclassthreshold)), ограничивая работу только подами, у которых класс приоритета ниже заданного порога;
 * Модуль не вытесняет под в следующих случаях:
   * под находится в пространстве имен `d8-*` или `kube-system`;
-  * под имеет [priorityClassName](../001-priority-class/) `system-cluster-critical` или `system-node-critical`;
+  * под имеет [priorityClassName](../priority-class/) `system-cluster-critical` или `system-node-critical`;
   * под связан с локальным хранилищем;
   * под связан с [DaemonSet](https://kubernetes.io/docs/concepts/workloads/controllers/daemonset/);
   * вытеснение пода нарушит [Pod Disruption Budget (PDB)](https://kubernetes.io/docs/concepts/workloads/pods/disruptions/);
@@ -30,12 +30,12 @@ description: "Модуль descheduler Deckhouse Kubernetes Platform. Кажды
 ### HighNodeUtilization
 
 {% alert level="info" %}
-Концентрирует нагрузку на меньшем числе узлов. Требует настройку планировщика и включение автоматического масштабирования.  
+Концентрирует нагрузку на меньшем числе узлов. Требует настройку планировщика и включение автоматического масштабирования.
+
+Чтобы использовать `HighNodeUtilization`, необходимо явно указать профиль планировщика [high-node-utilization](../control-plane-manager/faq.html#профили-планировщика) для каждого пода (этот профиль не может быть установлен как профиль по умолчанию).
 {% endalert %}
 
 Стратегия определяет *недостаточно нагруженные узлы* и вытесняет с них поды, чтобы распределить их компактнее, на меньшем числе узлов.
-
-Стратегия предназначена для использования совместно с авто-масштабированием, чтобы сокращать количество недостаточно нагруженных узлов. При использовании стратегии необходимо также настроить стратегию оценки планировщика как `MostAllocated`.
 
 **Недостаточно нагруженный узел** — узел, использование ресурсов которого меньше **всех** пороговых значений, заданных в секции параметров [strategies.highNodeUtilization.thresholds](cr.html#descheduler-v1alpha2-spec-strategies-highnodeutilization-thresholds).
 

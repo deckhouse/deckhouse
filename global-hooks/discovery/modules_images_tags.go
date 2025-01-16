@@ -17,7 +17,6 @@ package hooks
 import (
 	"encoding/json"
 	"fmt"
-	"log/slog"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -27,9 +26,10 @@ import (
 	"github.com/iancoleman/strcase"
 
 	"github.com/deckhouse/deckhouse/go_lib/d8env"
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
-var re = regexp.MustCompile(`^([0-9]+)-([a-zA-Z-]+)$`)
+var re = regexp.MustCompile(`^([0-9]+)-([0-9a-zA-Z-]+)$`)
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	OnStartup: &go_hook.OrderedConfig{Order: 10},
@@ -90,7 +90,7 @@ func readModulesImagesDigests(input *go_hook.HookInput, modulesDir string) map[s
 
 	dirItems, err := os.ReadDir(modulesDir)
 	if err != nil {
-		input.Logger.Warn("read dir", slog.String("error", err.Error()))
+		input.Logger.Warn("read dir", log.Err(err))
 		return nil
 	}
 
@@ -98,13 +98,13 @@ func readModulesImagesDigests(input *go_hook.HookInput, modulesDir string) map[s
 		evalPath := filepath.Join(modulesDir, dirItem.Name())
 		evalPath, err = filepath.EvalSymlinks(evalPath)
 		if err != nil {
-			input.Logger.Warn("eval symlinks", slog.String("error", err.Error()))
+			input.Logger.Warn("eval symlinks", log.Err(err))
 			continue
 		}
 
 		fi, err := os.Stat(evalPath)
 		if err != nil {
-			input.Logger.Warn("stat", slog.String("error", err.Error()))
+			input.Logger.Warn("stat", log.Err(err))
 			continue
 		}
 		if !fi.Mode().IsDir() {
@@ -113,7 +113,7 @@ func readModulesImagesDigests(input *go_hook.HookInput, modulesDir string) map[s
 
 		moduleDigestsObj, err := parseImagesDigestsFile(filepath.Join(evalPath, "images_digests.json"))
 		if err != nil {
-			input.Logger.Warn("parse image digest", slog.String("error", err.Error()))
+			input.Logger.Warn("parse image digest", log.Err(err))
 			continue
 		}
 

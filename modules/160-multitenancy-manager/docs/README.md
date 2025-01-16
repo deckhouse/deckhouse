@@ -29,10 +29,12 @@ For platform administrators:
 * **Resource Consumption**: Administrators can easily set quotas on resources and limitations for each project, preventing excessive resource usage.
 
 For platform users:
-* **Isolation**: Each project provides an isolated environment where developers can deploy and test their applications without impacting other projects.
 * **Quick Start**: Developers can request projects created from ready-made templates from administrators, allowing for a quick start to developing a new application.
+* **Isolation**: Each project provides an isolated environment where developers can deploy and test their applications without impacting other projects.
 
 ## Internal Logic
+
+### Creating a project
 
 To create projects, the following [Custom Resources](https://kubernetes.io/docs/concepts/extend-kubernetes/api-extension/custom-resources/) are used:
 * [ProjectTemplate](cr.html#projecttemplate) — a resource that describes the project template. It defines a list of resources to be created in the project and a schema for parameters that can be passed when creating the project;
@@ -45,3 +47,14 @@ When creating a [Project](cr.html#project) resource from a specific [ProjectTemp
 1. All resources described in the template are created in sequence.
 
 > **Attention!** When changing the project template, all created projects will be updated according to the new template.
+
+### Isolating a project
+
+The project is based on the `Namespace` resource mechanism. Namespaces group pods, services, secrets, and other objects but do not provide complete isolation. The project functionality enhances namespaces by offering additional tools to improve control and security levels. To manage project isolation, Kubernetes features can be leveraged, such as:
+
+- Access control resources (`AuthorizationRule` / `RoleBinding`) — manage interaction with objects within a `Namespace`. Define rules and assign roles to precisely control who can perform actions in your project.
+- Resource quotas (`ResourceQuota`) — set limits on resource usage, such as CPU time, RAM, and object counts within a `Namespace`. These quotas help prevent excessive load and maintain control over applications within the project.
+- Network connectivity control resources  (`NetworkPolicy`) — control incoming and outgoing network traffic within a `Namespace`. Configure allowed connections between pods to enhance security and manage network interactions effectively.
+
+These tools can be combined to configure the project according to the requirements of your application.
+

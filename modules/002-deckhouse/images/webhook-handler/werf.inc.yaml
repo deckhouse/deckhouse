@@ -2,11 +2,11 @@
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/shell-operator
 import:
-  - artifact: yq4-artifact
+  - image: common/yq4-artifact
     add: /usr/local/bin/yq
     to: /usr/local/bin/yq
     before: install
-  - artifact: semver-artifact
+  - image: common/semver-artifact
     add: /usr/local/bin/semver
     to: /usr/local/bin/semver
     before: setup
@@ -14,26 +14,26 @@ import:
     add: /bin/promtool
     to: /usr/local/bin/promtool
     before: setup
-  - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+  - image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
     add: /usr/bin
     to: /usr/bin
     before: setup
     includePaths:
     - python3
     - python3.12
-  - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+  - image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
     add: /usr/lib/python3
     to: /usr/lib/python3
     before: setup
-  - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+  - image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
     add: /usr/lib64/python3
     to: /usr/lib64/python3
     before: setup
-  - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+  - image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
     add: /usr/lib64/python3.12
     to: /usr/lib64/python3.12
     before: setup
-  - artifact: {{ $.ModuleName }}/{{ .ImageName }}-label-converter-artifact
+  - image: {{ $.ModuleName }}/{{ .ImageName }}-label-converter-artifact
     add: /label-converter
     to: /usr/local/bin/label-converter
     before: setup
@@ -43,6 +43,7 @@ git:
   includePaths:
   - 'modules/*/webhooks/'
   - 'ee/modules/*/webhooks/'
+  - 'ee/se/modules/*/webhooks'
 # - 'ee/fe/modules/*/webhooks/'
   excludePaths:
     - '**/*_test.py'
@@ -69,8 +70,9 @@ docker:
     PYTHONPATH: /frameworks/python
   ENTRYPOINT: ["/entrypoint.sh"]
 ---
-artifact: {{ .ModuleName }}/{{ .ImageName }}-label-converter-src-artifact
-fromArtifact: common/src-artifact
+image: {{ .ModuleName }}/{{ .ImageName }}-label-converter-src-artifact
+final: false
+fromImage: common/src-artifact
 git:
 - add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/label-converter
   to: /src
@@ -84,10 +86,11 @@ git:
     - '**/go.mod'
     - '**/go.sum'
 ---
-artifact: {{ .ModuleName }}/{{ .ImageName }}-label-converter-artifact
+image: {{ .ModuleName }}/{{ .ImageName }}-label-converter-artifact
+final: false
 from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
 import:
-- artifact: {{ .ModuleName }}/{{ .ImageName }}-label-converter-src-artifact
+- image: {{ .ModuleName }}/{{ .ImageName }}-label-converter-src-artifact
   add: /src
   to: /src
   before: install
@@ -99,7 +102,8 @@ shell:
     - chown 64535:64535 /label-converter
     - chmod 755 /label-converter
 ---
-artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+final: false
 from: {{ $.Images.BASE_ALT_P11 }}
 git:
 - add: /{{ .ModulePath }}modules/002-deckhouse/images/webhook-handler/requirements.txt

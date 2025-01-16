@@ -21,7 +21,6 @@ import (
 	"strings"
 	"time"
 
-	addonOpUtils "github.com/flant/addon-operator/pkg/utils"
 	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -43,6 +42,7 @@ const (
 	deployServiceHostEnvVarName = "KUBERNETES_SERVICE_HOST"
 	deployServicePortEnvVarName = "KUBERNETES_SERVICE_PORT"
 	deployTimeEnvVarFormat      = time.RFC3339
+	pathSeparator               = ":"
 
 	ConvergeLabel = "dhctl.deckhouse.io/node-for-converge"
 )
@@ -416,7 +416,7 @@ func DeckhouseDeployment(params DeckhouseDeploymentParams) *appsv1.Deployment {
 		},
 		{
 			Name:  "MODULES_DIR",
-			Value: strings.Join(modulesDirs, addonOpUtils.PathsSeparator),
+			Value: strings.Join(modulesDirs, pathSeparator),
 		},
 	}
 
@@ -527,11 +527,13 @@ func DeckhouseRegistrySecret(registry config.RegistryData) *apiv1.Secret {
 			apiv1.DockerConfigJsonKey: data,
 			"address":                 []byte(registry.Address),
 			"scheme":                  []byte(registry.Scheme),
+			"imagesRegistry":          []byte(registry.Address),
 		},
 	}
 
 	if registry.Path != "" {
 		ret.Data["path"] = []byte(registry.Path)
+		ret.Data["imagesRegistry"] = []byte(registry.Address + registry.Path)
 	}
 
 	if registry.CA != "" {
@@ -584,7 +586,7 @@ func SecretWithClusterConfig(data []byte) *apiv1.Secret {
 		"d8-cluster-configuration",
 		"kube-system",
 		map[string][]byte{"cluster-configuration.yaml": data},
-		nil,
+		map[string]string{"name": "d8-cluster-configuration"},
 	)
 }
 

@@ -17,6 +17,7 @@
     secretKeyRef:
       name: cloud-controller-manager
       key: aws-secret-access-key
+{{- include "helm_lib_envs_for_proxy" . }}
 {{- end }}
 
 ###
@@ -43,6 +44,11 @@
   {{- $_ := set $csiNodeConfig "nodeImage" $csiControllerImage }}
   {{- $_ := set $csiNodeConfig "additionalNodeArgs" (include "node_args" . | fromYamlArray) }}
   {{- $_ := set $csiNodeConfig "driverFQDN" "ebs.csi.aws.com" }}
+  {{- $_ := set $csiNodeConfig "additionalNodeEnvs" (include "csi_node_envs" . | fromYamlArray) }}
 
   {{- include "helm_lib_csi_node_manifests" (list . $csiNodeConfig) }}
+{{- end }}
+
+{{- define "csi_node_envs" }}
+{{- include "helm_lib_envs_for_proxy" . }}
 {{- end }}

@@ -65,6 +65,8 @@ type KubernetesPodsSpec struct {
 	NamespaceSelector NamespaceSelector `json:"namespaceSelector,omitempty"`
 
 	LabelSelector metav1.LabelSelector `json:"labelSelector,omitempty"`
+
+	KeepDeletedFilesOpenedFor metav1.Duration `json:"keepDeletedFilesOpenedFor,omitempty"`
 }
 
 type NamespaceSelector struct {

@@ -546,7 +546,8 @@ var epochTimestampAccessor = func() int64 {
 	return time.Now().Unix()
 }
 
-var detectInstanceClassKind = func(input *go_hook.HookInput, config *go_hook.HookConfig) (inUse string, fromSecret string) {
+var detectInstanceClassKind = func(input *go_hook.HookInput, config *go_hook.HookConfig) (string, string) {
+	var fromSecret string
 	if len(input.Snapshots["cloud_provider_secret"]) > 0 {
 		if secretInfo, ok := input.Snapshots["cloud_provider_secret"][0].(map[string]interface{}); ok {
 			if kind, ok := secretInfo["instanceClassKind"].(string); ok {

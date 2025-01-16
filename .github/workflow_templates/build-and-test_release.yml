@@ -57,6 +57,37 @@ jobs:
 
 {!{ tmpl.Exec "git_info_job" $ctx | strings.Indent 2 }!}
 
+  detect_editions:
+    name: Detect editions
+    runs-on: ubuntu-latest
+    outputs:
+      BUILD_CE: ${{steps.detect_editions.outputs.BUILD_CE}}
+      BUILD_EE: ${{steps.detect_editions.outputs.BUILD_EE}}
+      BUILD_BE: ${{steps.detect_editions.outputs.BUILD_BE}}
+      BUILD_SE: ${{steps.detect_editions.outputs.BUILD_SE}}
+      BUILD_SE-plus: ${{steps.detect_editions.outputs.BUILD_SE-plus}}
+    steps:
+      - name: Detect editions
+        id: detect_editions
+        env:
+          EDITIONS: ${{ github.event.inputs.editions }}
+        run: |
+          echo "Input allowed editions: '${EDITIONS}'"
+
+          EMPTY_EDITIONS=yes
+
+          for edition in CE EE BE SE SE-plus ; do
+            if grep -i ",${edition}," <<<",${EDITIONS}," 2>/dev/null 1>&2 ; then
+              echo "  - enable build of ${edition} edition."
+              echo "BUILD_${edition}=true" >> $GITHUB_OUTPUT
+              EMPTY_EDITIONS=no
+            fi
+          done
+
+          if [[ $EMPTY_EDITIONS == "yes" ]] ; then
+            echo "No editions requested. Building only FE."
+          fi
+
   comment_on_start:
     name: Update issue comment
     runs-on: ubuntu-latest
@@ -100,7 +131,8 @@ jobs:
       - go_generate
       - workflow_render
       - build_fe
-    if: ${{ startsWith(github.ref, 'refs/tags/v') || contains(github.event.inputs.editions, 'ee') }}
+      - detect_editions
+    if: ${{ startsWith(github.ref, 'refs/tags/v') || (needs.detect_editions.outputs.BUILD_EE == 'true') }}
     env:
       WERF_ENV: "EE"
 {!{ tmpl.Exec "build_template" (slice $ctx "release") | strings.Indent 4 }!}
@@ -114,7 +146,8 @@ jobs:
       - go_generate
       - workflow_render
       - build_fe
-    if: ${{ startsWith(github.ref, 'refs/tags/v') || contains(github.event.inputs.editions, 'se') }}
+      - detect_editions
+    if: ${{ startsWith(github.ref, 'refs/tags/v') || (needs.detect_editions.outputs.BUILD_SE == 'true') }}
     env:
       WERF_ENV: "SE"
 {!{ tmpl.Exec "build_template" (slice $ctx "release") | strings.Indent 4 }!}
@@ -128,7 +161,8 @@ jobs:
       - go_generate
       - workflow_render
       - build_fe
-    if: ${{ startsWith(github.ref, 'refs/tags/v') || contains(github.event.inputs.editions, 'se-plus') }}
+      - detect_editions
+    if: ${{ startsWith(github.ref, 'refs/tags/v') || (needs.detect_editions.outputs.BUILD_SE-plus == 'true') }}
     env:
       WERF_ENV: "SE-plus"
 {!{ tmpl.Exec "build_template" (slice $ctx "release") | strings.Indent 4 }!}
@@ -142,7 +176,8 @@ jobs:
       - go_generate
       - workflow_render
       - build_fe
-    if: ${{ startsWith(github.ref, 'refs/tags/v') || contains(github.event.inputs.editions, 'be') }}
+      - detect_editions
+    if: ${{ startsWith(github.ref, 'refs/tags/v') || (needs.detect_editions.outputs.BUILD_BE == 'true') }}
     env:
       WERF_ENV: "BE"
 {!{ tmpl.Exec "build_template" (slice $ctx "release") | strings.Indent 4 }!}
@@ -156,7 +191,8 @@ jobs:
       - go_generate
       - workflow_render
       - build_fe
-    if: ${{ startsWith(github.ref, 'refs/tags/v') || contains(github.event.inputs.editions, 'ce') }}
+      - detect_editions
+    if: ${{ startsWith(github.ref, 'refs/tags/v') || (needs.detect_editions.outputs.BUILD_CE == 'true') }}
     env:
       WERF_ENV: "CE"
 {!{ tmpl.Exec "build_template" (slice $ctx "release") | strings.Indent 4 }!}
@@ -198,13 +234,13 @@ jobs:
 {!{ tmpl.Exec "tests_webhooks_template" (slice $ctx) | strings.Indent 4 }!}
 {!{ tmpl.Exec "update_comment_on_finish" (slice "job,one-line" $jobNames.tests_python_webhooks) | strings.Indent 6 }!}
 
-{!{ $jobNames = coll.Merge $jobNames (dict "matrix_tests" "Matrix tests") }!}
-  matrix_tests:
-    name: {!{ $jobNames.matrix_tests }!}
+{!{ $jobNames = coll.Merge $jobNames (dict "tests_dmt_lint" "DMT lint") }!}
+  tests_dmt_lint:
+    name: {!{ $jobNames.tests_dmt_lint }!}
     needs:
-      - git_info
-{!{ tmpl.Exec "tests_before_build_template" (slice $ctx "matrix") | strings.Indent 4 }!}
-{!{ tmpl.Exec "update_comment_on_finish" (slice "job,one-line" $jobNames.matrix_tests) | strings.Indent 6 }!}
+    - git_info
+{!{ tmpl.Exec "tests_dmt_lint" (slice $ctx) | strings.Indent 4 }!}
+{!{ tmpl.Exec "update_comment_on_finish" (slice "job,one-line" $jobNames.tests_dmt_lint) | strings.Indent 6 }!}
 
 {!{ $jobNames = coll.Merge $jobNames (dict "dhctl_tests" "Dhctl Tests") }!}
   dhctl_tests:
@@ -307,7 +343,6 @@ jobs:
       - deploy_latest_web_site_prod_sel
       - deploy_latest_web_doc_prod_sel
       - tests
-      - matrix_tests
       - dhctl_tests
       - golangci_lint
       - openapi_test_cases

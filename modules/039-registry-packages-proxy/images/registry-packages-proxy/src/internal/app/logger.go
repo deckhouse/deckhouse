@@ -15,20 +15,12 @@
 package app
 
 import (
-	log "github.com/sirupsen/logrus"
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
-func InitLogger(config *Config) *log.Entry {
-	var formatter log.Formatter = &log.TextFormatter{
-		DisableColors:   true,
-		TimestampFormat: "2006-01-02 15:04:05",
-		FullTimestamp:   true,
-	}
-	formatter = &log.JSONFormatter{}
-
-	l := log.New()
+func InitLogger(config *Config) *log.Logger {
+	l := log.NewLogger(log.Options{})
 	l.SetLevel(config.LogLevel)
-	l.SetFormatter(formatter)
 
-	return log.NewEntry(l)
+	return l
 }

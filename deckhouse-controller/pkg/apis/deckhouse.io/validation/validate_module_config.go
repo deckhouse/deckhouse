@@ -25,7 +25,7 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/flant/shell-operator/pkg/metric_storage"
+	metricstorage "github.com/flant/shell-operator/pkg/metric_storage"
 	kwhhttp "github.com/slok/kubewebhook/v2/pkg/http"
 	kwhmodel "github.com/slok/kubewebhook/v2/pkg/model"
 	kwhvalidating "github.com/slok/kubewebhook/v2/pkg/webhook/validating"
@@ -34,6 +34,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
 	"github.com/deckhouse/deckhouse/go_lib/configtools"
 )
 
@@ -45,11 +46,11 @@ type ObjectMeta struct {
 	Annotations map[string]string `json:"annotations,omitempty"`
 }
 
-const disableReasonSuffix = "Please annotate ModuleConfig with `modules.deckhouse.io/allow-disable=true` if you're sure that you want to disable the module."
+const disableReasonSuffix = "Please annotate ModuleConfig with `modules.deckhouse.io/allow-disabling=true` if you're sure that you want to disable the module."
 
 // moduleConfigValidationHandler validations for ModuleConfig creation
-func moduleConfigValidationHandler(cli client.Client, moduleStorage moduleStorage, metricStorage *metric_storage.MetricStorage, configValidator *configtools.Validator) http.Handler {
-	vf := kwhvalidating.ValidatorFunc(func(_ context.Context, review *kwhmodel.AdmissionReview, obj metav1.Object) (result *kwhvalidating.ValidatorResult, err error) {
+func moduleConfigValidationHandler(cli client.Client, moduleStorage moduleStorage, metricStorage *metricstorage.MetricStorage, configValidator *configtools.Validator) http.Handler {
+	vf := kwhvalidating.ValidatorFunc(func(ctx context.Context, review *kwhmodel.AdmissionReview, obj metav1.Object) (*kwhvalidating.ValidatorResult, error) {
 		var (
 			cfg = new(v1alpha1.ModuleConfig)
 			ok  bool
@@ -79,6 +80,14 @@ func moduleConfigValidationHandler(cli client.Client, moduleStorage moduleStorag
 					}
 				}
 
+				exists, err := utils.ModulePullOverrideExists(ctx, cli, cfg.Name)
+				if err != nil {
+					return nil, fmt.Errorf("get the '%s' module pull override: %w", cfg.Name, err)
+				}
+				if exists {
+					return rejectResult("delete the ModulePullOverride before deleting the module config")
+				}
+
 				metricStorage.GaugeSet("d8_moduleconfig_allowed_to_disable", 0, map[string]string{"module": cfg.GetName()})
 
 				// if module is already disabled - we don't need to warn user about disabling module
@@ -98,7 +107,7 @@ func moduleConfigValidationHandler(cli client.Client, moduleStorage moduleStorag
 			oldModuleMeta := new(AnnotationsOnly)
 
 			buf := bytes.NewBuffer(review.OldObjectRaw)
-			if err = json.NewDecoder(buf).Decode(oldModuleMeta); err != nil {
+			if err := json.NewDecoder(buf).Decode(oldModuleMeta); err != nil {
 				return nil, fmt.Errorf("can not parse old module config: %w", err)
 			}
 
@@ -136,22 +145,25 @@ func moduleConfigValidationHandler(cli client.Client, moduleStorage moduleStorag
 			return rejectResult("'Embedded' is a forbidden source")
 		}
 
-		module := new(v1alpha1.Module)
-		if err = cli.Get(context.Background(), client.ObjectKey{Name: cfg.Name}, module); err != nil {
-			if apierrors.IsNotFound(err) {
-				return allowResult(fmt.Sprintf("the '%s' module not found", cfg.Name))
+		// skip checking source for the global module
+		if cfg.Name != "global" {
+			module := new(v1alpha1.Module)
+			if err := cli.Get(ctx, client.ObjectKey{Name: cfg.Name}, module); err != nil {
+				if apierrors.IsNotFound(err) {
+					return allowResult(fmt.Sprintf("the '%s' module not found", cfg.Name))
+				}
+				return nil, fmt.Errorf("get the '%s' module: %w", cfg.Name, err)
 			}
-			return nil, fmt.Errorf("get the '%s' module: %w", cfg.Name, err)
-		}
 
-		if cfg.Spec.Source != "" && !slices.Contains(module.Properties.AvailableSources, cfg.Spec.Source) {
-			return rejectResult(fmt.Sprintf("the '%s' module source is an unavailable source for the '%s' module, available sources: %v", cfg.Spec.Source, cfg.Name, module.Properties.AvailableSources))
+			if cfg.Spec.Source != "" && !slices.Contains(module.Properties.AvailableSources, cfg.Spec.Source) {
+				return rejectResult(fmt.Sprintf("the '%s' module source is an unavailable source for the '%s' module, available sources: %v", cfg.Spec.Source, cfg.Name, module.Properties.AvailableSources))
+			}
 		}
 
 		// empty policy means module uses deckhouse embedded policy
 		if cfg.Spec.UpdatePolicy != "" {
 			tmp := new(v1alpha1.ModuleUpdatePolicy)
-			if err = cli.Get(context.Background(), client.ObjectKey{Name: cfg.Spec.UpdatePolicy}, tmp); err != nil {
+			if err := cli.Get(ctx, client.ObjectKey{Name: cfg.Spec.UpdatePolicy}, tmp); err != nil {
 				if !apierrors.IsNotFound(err) {
 					return nil, fmt.Errorf("get the '%s' module policy: %w", cfg.Spec.UpdatePolicy, err)
 				}

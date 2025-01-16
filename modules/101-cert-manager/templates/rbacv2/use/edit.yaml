@@ -5,7 +5,7 @@ metadata:
   labels:
     heritage: deckhouse
     module: cert-manager
-    rbac.deckhouse.io/aggregate-to-role: manager
+    rbac.deckhouse.io/aggregate-to-kubernetes-as: manager
     rbac.deckhouse.io/kind: use
   name: d8:use:capability:module:cert-manager:edit
 rules:

@@ -34,17 +34,19 @@ const (
 	ModuleConditionEnabledByModuleConfig  = "EnabledByModuleConfig"
 	ModuleConditionEnabledByModuleManager = "EnabledByModuleManager"
 	ModuleConditionIsReady                = "IsReady"
+	ModuleConditionIsOverridden           = "IsOverridden"
 
-	ModulePhaseAvailable     = "Available"
-	ModulePhaseDownloading   = "Downloading"
-	ModulePhaseReconciling   = "Reconciling"
-	ModulePhaseInstalling    = "Installing"
-	ModulePhaseHooksDisabled = "HooksDisabled"
-	ModulePhaseWaitSyncTasks = "WaitSyncTasks"
-	ModulePhaseDownloaded    = "Downloaded"
-	ModulePhaseConflict      = "Conflict"
-	ModulePhaseReady         = "Ready"
-	ModulePhaseError         = "Error"
+	ModulePhaseAvailable        = "Available"
+	ModulePhaseDownloading      = "Downloading"
+	ModulePhaseDownloadingError = "DownloadingError"
+	ModulePhaseReconciling      = "Reconciling"
+	ModulePhaseInstalling       = "Installing"
+	ModulePhaseHooksDisabled    = "HooksDisabled"
+	ModulePhaseWaitSyncTasks    = "WaitSyncTasks"
+	ModulePhaseDownloaded       = "Downloaded"
+	ModulePhaseConflict         = "Conflict"
+	ModulePhaseReady            = "Ready"
+	ModulePhaseError            = "Error"
 
 	ModuleReasonBundle                      = "Bundle"
 	ModuleReasonModuleConfig                = "ModuleConfig"
@@ -53,11 +55,12 @@ const (
 	ModuleReasonDeckhouseVersionExtender    = "DeckhouseVersionExtender"
 	ModuleReasonKubernetesVersionExtender   = "KubernetesVersionExtender"
 	ModuleReasonClusterBootstrappedExtender = "ClusterBootstrappedExtender"
+	ModuleReasonModuleDependencyExtender    = "ModuleDependencyExtender"
 	ModuleReasonNotInstalled                = "NotInstalled"
 	ModuleReasonDisabled                    = "Disabled"
-	ModuleReasonInit                        = "Init"
 	ModuleReasonConflict                    = "Conflict"
 	ModuleReasonDownloading                 = "Downloading"
+	ModuleReasonDownloadingError            = "DownloadingError"
 	ModuleReasonHookError                   = "HookError"
 	ModuleReasonModuleError                 = "ModuleError"
 	ModuleReasonReconciling                 = "Reconciling"
@@ -73,16 +76,21 @@ const (
 	ModuleMessageDeckhouseVersionExtender    = "turned off by deckhouse version"
 	ModuleMessageKubernetesVersionExtender   = "turned off by kubernetes version"
 	ModuleMessageClusterBootstrappedExtender = "turned off because the cluster not bootstrapped yet"
+	ModuleMessageModuleDependencyExtender    = "turned off because of unmet module dependencies"
 	ModuleMessageNotInstalled                = "not installed"
 	ModuleMessageDisabled                    = "disabled"
-	ModuleMessageInit                        = "init"
 	ModuleMessageConflict                    = "several available sources"
 	ModuleMessageDownloading                 = "downloading"
 	ModuleMessageReconciling                 = "reconciling"
 	ModuleMessageInstalling                  = "installing"
 	ModuleMessageWaitSyncTasks               = "run sync tasks"
-	ModuleMessageOnStartupHook               = "completed OnStartup hooks"
+	ModuleMessageOnStartupHook               = "onStartup hooks done"
 	ModuleMessageHooksDisabled               = "hooks disabled"
+
+	DeckhouseRequirementFieldName        string = "deckhouse"
+	KubernetesRequirementFieldName       string = "kubernetes"
+	BootstrappedRequirementFieldName     string = "bootstrapped"
+	ModuleDependencyRequirementFieldName string = "modules"
 )
 
 var (
@@ -131,16 +139,27 @@ type Module struct {
 	Status ModuleStatus `json:"status,omitempty"`
 }
 
+type ModuleRequirements struct {
+	ModulePlatformRequirements `json:",inline" yaml:",inline"`
+	ParentModules              map[string]string `json:"modules,omitempty" yaml:"modules,omitempty"`
+}
+
+type ModulePlatformRequirements struct {
+	Deckhouse    string `json:"deckhouse,omitempty" yaml:"deckhouse,omitempty"`
+	Kubernetes   string `json:"kubernetes,omitempty" yaml:"kubernetes,omitempty"`
+	Bootstrapped string `json:"bootstrapped,omitempty" yaml:"bootstrapped,omitempty"`
+}
+
 type ModuleProperties struct {
-	Weight           uint32            `json:"weight,omitempty"`
-	Source           string            `json:"source,omitempty"`
-	ReleaseChannel   string            `json:"releaseChannel,omitempty"`
-	Stage            string            `json:"stage,omitempty"`
-	Description      string            `json:"description,omitempty"`
-	Version          string            `json:"version,omitempty"`
-	UpdatePolicy     string            `json:"updatePolicy,omitempty"`
-	AvailableSources []string          `json:"availableSources,omitempty"`
-	Requirements     map[string]string `json:"requirements,omitempty"`
+	Weight           uint32              `json:"weight,omitempty"`
+	Source           string              `json:"source,omitempty"`
+	ReleaseChannel   string              `json:"releaseChannel,omitempty"`
+	Stage            string              `json:"stage,omitempty"`
+	Description      string              `json:"description,omitempty"`
+	Version          string              `json:"version,omitempty"`
+	UpdatePolicy     string              `json:"updatePolicy,omitempty"`
+	AvailableSources []string            `json:"availableSources,omitempty"`
+	Requirements     *ModuleRequirements `json:"requirements,omitempty" yaml:"requirements,omitempty"`
 }
 
 type ModuleStatus struct {
@@ -181,6 +200,16 @@ func (m *Module) ConditionStatus(condName string) bool {
 			return cond.Status == corev1.ConditionTrue
 		}
 	}
+	return false
+}
+
+func (m *Module) CheckConditionTrue(condName string) bool {
+	for _, cond := range m.Status.Conditions {
+		if cond.Type == condName {
+			return cond.Status == corev1.ConditionTrue
+		}
+	}
+
 	return false
 }
 
@@ -241,4 +270,8 @@ func (m *Module) DisabledByModuleConfigMoreThan(timeout time.Duration) bool {
 		}
 	}
 	return false
+}
+
+func (m *Module) GetVersion() string {
+	return m.Properties.Version
 }

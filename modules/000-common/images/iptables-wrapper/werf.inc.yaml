@@ -7,18 +7,28 @@ import:
   to: /iptables-wrapper
   before: setup
 ---
-artifact: {{ .ModuleName }}/{{ .ImageName }}-artifact
-from: {{ $.Images.BASE_GOLANG_19_ALPINE_DEV }}
+image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+fromImage: common/src-artifact
+final: false
+shell:
+  install:
+  - git clone {{ $.SOURCE_REPO }}/kubernetes-sigs/iptables-wrappers.git /src
+  - cd /src
+  - git reset --hard 680003b3c6e93b471a59ecc9ae87a8f9054b82f3
+  - rm -r .git
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
+final: false
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+  add: /src
+  to: /src
+  before: install
 mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
 shell:
-  beforeInstall:
-  - apk add --no-cache openssh-client
-  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
-  - git clone {{ .SOURCE_REPO }}/kubernetes-sigs/iptables-wrappers.git /src
-  - cd /src
-  - git reset --hard 680003b3c6e93b471a59ecc9ae87a8f9054b82f3
   install:
   - cd /src
   - GOPROXY={{ .GOPROXY }} GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o iptables-wrapper main.go

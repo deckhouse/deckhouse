@@ -4,10 +4,25 @@
   {{- $crictlPatch := toString $value.crictlPatch }}
   {{- $full_version := printf "%s.%s" $version $crictlPatch }}
 ---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
+final: false
+fromImage: common/src-artifact
+git:
+- add: /{{ $.ModulePath }}modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
+  to: /src/scripts
+  stageDependencies:
+    install:
+    - '**/*'
+shell:
+  install:
+  - git clone --depth 1 --branch v{{ $full_version }} {{ $.SOURCE_REPO }}/kubernetes-sigs/cri-tools.git /src/cri-tools
+  - rm -rf /src/cri-tools/hack/tools
+  - rm -rf /src/cri-tools/.git
+---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
 from: {{ $.Images.BASE_SCRATCH }}
 import:
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
   add: /
   to: /
   includePaths:
@@ -20,13 +35,16 @@ docker:
     distro: all
     version: all
     crictl: {{ $version }}
+  USER: 64535
 ---
-artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
-{{- if semverCompare ">=1.30" $version }}
-from: {{ $.Images.BASE_GOLANG_22_ALPINE_DEV }}
-{{- else }}
-from: {{ $.Images.BASE_GOLANG_20_ALPINE_DEV }}
-{{- end }}
+image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
+final: false
+from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
+  add: /src
+  to: /src
+  before: install
 git:
   - add: /{{ $.ModulePath }}modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
     to: /
@@ -35,13 +53,13 @@ git:
       - '**/*'
 shell:
   beforeInstall:
-  - apk add --no-cache openssh-client
+  {{- include "alpine packages proxy" . | nindent 2 }}
+  - apk add --no-cache make git
   setup:
   - export GOPROXY={{ $.GOPROXY }}
-  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
-  - git clone --depth 1 --branch v{{ $full_version }} {{ $.SOURCE_REPO }}/kubernetes-sigs/cri-tools.git
-  - cd /cri-tools
+  - cd /src/cri-tools
   - make install crictl
   - mv /usr/local/bin/crictl /crictl
+  - mv /src/scripts/* /
   - chmod +x /crictl /install /uninstall
 {{- end }}

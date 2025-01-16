@@ -9,6 +9,7 @@
 ## Features
 
 
+ - **[admission-policy-engine]** Add custom CA for private registries when verifying image signatures. [#10925](https://github.com/deckhouse/deckhouse/pull/10925)
  - **[admission-policy-engine]** Add SecurityPolicy with ability to check images, signed with cosign. EE only. [#10846](https://github.com/deckhouse/deckhouse/pull/10846)
  - **[admission-policy-engine]** Set MutatingWebhookConfiguration reinvocationPolicy to `IfNeeded` to enable the use of webhook with other mutating webhooks [#10611](https://github.com/deckhouse/deckhouse/pull/10611)
  - **[candi]** Add Kubernetes 1.31 support. [#9772](https://github.com/deckhouse/deckhouse/pull/9772)
@@ -45,12 +46,16 @@
  - **[candi]** Fix LC_MESSAGES unknown locale. [#10440](https://github.com/deckhouse/deckhouse/pull/10440)
  - **[candi]** Change permissions for containerd dir. [#10133](https://github.com/deckhouse/deckhouse/pull/10133)
  - **[control-plane-manager]** Label `heritage: deckhouse` in namespace kube-system. [#10224](https://github.com/deckhouse/deckhouse/pull/10224)
+ - **[dhctl]** Fix panic during commander masters converge. [#11053](https://github.com/deckhouse/deckhouse/pull/11053)
+ - **[dhctl]** Fix converge through bastion. [#10278](https://github.com/deckhouse/deckhouse/pull/10278)
  - **[dhctl]** Add human readable error on dhctl converge except [#10589](https://github.com/deckhouse/deckhouse/pull/10589)
  - **[docs]** Update docs about module creation, fix bugs [#10476](https://github.com/deckhouse/deckhouse/pull/10476)
  - **[monitoring-kubernetes]** Minor `Nodes` dashboard improvements. [#10339](https://github.com/deckhouse/deckhouse/pull/10339)
  - **[multitenancy-manager]** Enable multitenancy-manager by default in default and managed bundles. [#10652](https://github.com/deckhouse/deckhouse/pull/10652)
+ - **[node-local-dns]** Fix stuck in iptables-loop script. [#10937](https://github.com/deckhouse/deckhouse/pull/10937)
  - **[node-manager]** Add instruction on how to add static node to cluster. [#10655](https://github.com/deckhouse/deckhouse/pull/10655)
  - **[node-manager]** Fix handling of machine creation errors in the `machine-controller-manager`(`vsphere` driver). [#10225](https://github.com/deckhouse/deckhouse/pull/10225)
+ - **[openvpn]** Fix supported ciphers list. [#10739](https://github.com/deckhouse/deckhouse/pull/10739)
  - **[user-authn]** Numbers in dex groups. [#10211](https://github.com/deckhouse/deckhouse/pull/10211)
 
 ## Chore

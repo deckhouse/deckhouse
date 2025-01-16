@@ -7,6 +7,7 @@ FORMATTING_END = \033[0m
 FOCUS =
 
 MDLINTER_IMAGE = ghcr.io/igorshubovych/markdownlint-cli@sha256:2e22b4979347f70e0768e3fef1a459578b75d7966e4b1a6500712b05c5139476
+SPELLCHECKER_IMAGE = registry.deckhouse.io/base_images/hunspell:1.7.0-r1-alpine@sha256:f419f1dc5b55cd9c0038ece60612549e64333bb0a0e7d4764d45ed94336dec9c
 
 # Explicitly set architecture on arm, since werf currently does not support building of images for any other platform
 # besides linux/amd64 (e.g. relevant for mac m1).
@@ -104,7 +105,7 @@ help:
 
 
 GOLANGCI_VERSION = 1.54.2
-TRIVY_VERSION= 0.38.3
+TRIVY_VERSION= 0.55.0
 PROMTOOL_VERSION = 2.37.0
 GATOR_VERSION = 3.9.0
 GH_VERSION = 2.52.0
@@ -142,14 +143,14 @@ bin/gator: bin/gator-${GATOR_VERSION}/gator
 bin/yq: bin ## Install yq deps for update-patchversion script.
 	curl -sSfL https://github.com/mikefarah/yq/releases/download/v4.25.3/yq_$(YQ_PLATFORM)_$(YQ_ARCH) -o bin/yq && chmod +x bin/yq
 
-.PHONY: tests-modules tests-matrix tests-openapi tests-controller tests-webhooks
+.PHONY: tests-modules dmt-lint tests-openapi tests-controller tests-webhooks
 tests-modules: ## Run unit tests for modules hooks and templates.
   ##~ Options: FOCUS=module-name
 	go test -timeout=${TESTS_TIMEOUT} -vet=off ${TESTS_PATH}
 
-tests-matrix: bin/promtool bin/gator ## Test how helm templates are rendered with different input values generated from values examples.
-  ##~ Options: FOCUS=module-name
-	go test -timeout=${TESTS_TIMEOUT} ./testing/matrix/ -v
+dmt-lint:
+	docker run --rm -v ${PWD}:/deckhouse-src --user $(id -u):$(id -g) ubuntu /deckhouse-src/tools/dmt-lint.sh
+
 
 tests-openapi: ## Run tests against modules openapi values schemas.
 	go test -vet=off ./testing/openapi_cases/
@@ -214,12 +215,14 @@ bin/regcopy: bin ## App to copy docker images to the Deckhouse registry
 
 bin/trivy-${TRIVY_VERSION}/trivy:
 	mkdir -p bin/trivy-${TRIVY_VERSION}
-	curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b ./bin/trivy-${TRIVY_VERSION} v${TRIVY_VERSION}
+	# curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b ./bin/trivy-${TRIVY_VERSION} v${TRIVY_VERSION}
+	curl --header "PRIVATE-TOKEN: ${TRIVY_TOKEN}" https://${DECKHOUSE_PRIVATE_REPO}/api/v4/projects/${TRIVY_PROJECT_ID}/packages/generic/deckhouse-trivy/v${TRIVY_VERSION}/trivy -o bin/trivy-${TRIVY_VERSION}/trivy
 
 .PHONY: trivy
 bin/trivy: bin bin/trivy-${TRIVY_VERSION}/trivy
-	rm -f bin/trivy
-	ln -s trivy-${TRIVY_VERSION}/trivy bin/trivy
+	rm -rf bin/trivy
+	chmod u+x bin/trivy-${TRIVY_VERSION}/trivy
+	ln -s ${PWD}/bin/trivy-${TRIVY_VERSION}/trivy bin/trivy
 
 .PHONY: cve-report cve-base-images
 cve-report: bin/trivy bin/jq ## Generate CVE report for a Deckhouse release.
@@ -256,31 +259,33 @@ docs-down: ## Stop all the documentation containers (e.g. site_site_1 - for Linu
 
 .PHONY: tests-doc-links
 docs-linkscheck: ## Build documentation and run checker of html links.
-	bash tools/doc_check_links.sh
+	@bash tools/docs/link-checker/run.sh
 
 .PHONY: docs-spellcheck
 docs-spellcheck: ## Check the spelling in the documentation.
   ##~ Options: file="path/to/file" (Specify a path to a specific file)
-	cd tools/spelling && werf run docs-spell-checker --dev --docker-options="--entrypoint=sh" -- /app/spell_check.sh -f $(file)
+	@docker run --rm -v ${PWD}:/spelling -v ${PWD}/tools/docs/spelling:/app ${SPELLCHECKER_IMAGE} /app/spell_check.sh -f $(file)
 
 lint-doc-spellcheck-pr:
-	@cd tools/spelling && werf run docs-spell-checker --dev --docker-options="--entrypoint=bash" -- /app/check_diff.sh
+	@docker run --rm -v ${PWD}:/spelling -v ${PWD}/tools/docs/spelling:/app ${SPELLCHECKER_IMAGE} /app/check_diff.sh
+	#@cd tools/docs/spelling && werf run docs-spell-checker --dev --docker-options="--entrypoint=sh" -- /app/check_diff.sh
 
 .PHONY: docs-spellcheck-generate-dictionary
-docs-spellcheck-generate-dictionary: ## Generate a dictionary (run it after adding new words to the tools/spelling/wordlist file).
+docs-spellcheck-generate-dictionary: ## Generate a dictionary (run it after adding new words to the tools/docs/spelling/wordlist file).
 	@echo "Sorting wordlist..."
-	@sort ./tools/spelling/wordlist -o ./tools/spelling/wordlist
+	@sort ./tools/docs/spelling/wordlist -o ./tools/docs/spelling/wordlist
 	@echo "Generating dictionary..."
-	@test -f ./tools/spelling/dictionaries/dev_OPS.dic && rm ./tools/spelling/dictionaries/dev_OPS.dic
-	@touch ./tools/spelling/dictionaries/dev_OPS.dic
-	@cat ./tools/spelling/wordlist | wc -l | sed 's/^[ \t]*//g' > ./tools/spelling/dictionaries/dev_OPS.dic
-	@sort ./tools/spelling/wordlist >> ./tools/spelling/dictionaries/dev_OPS.dic
+	@test -f ./tools/docs/spelling/dictionaries/dev_OPS.dic && rm ./tools/docs/spelling/dictionaries/dev_OPS.dic
+	@touch ./tools/docs/spelling/dictionaries/dev_OPS.dic
+	@cat ./tools/docs/spelling/wordlist | wc -l | sed 's/^[ \t]*//g' > ./tools/docs/spelling/dictionaries/dev_OPS.dic
+	@sort ./tools/docs/spelling/wordlist >> ./tools/docs/spelling/dictionaries/dev_OPS.dic
 	@echo "Don't forget to commit changes and push it!"
 	@git diff --stat
 
 .PHONY: docs-spellcheck-get-typos-list
 docs-spellcheck-get-typos-list: ## Print out a list of all the terms in all pages that were considered as a typo.
-	@cd tools/spelling && werf run docs-spell-checker --dev --docker-options="--entrypoint=sh" -- "/app/spell_check.sh" 2>/dev/null | sed "1,/Spell-checking the documentation/ d; /^Possible typos/d" | sort -u
+	@echo "Please wait a bit. It may take about 20 minutes and there may be no output in the terminal..." && \
+	docker run --rm -v ${PWD}:/spelling --entrypoint /bin/bash -v ${PWD}/tools/docs/spelling:/app ${SPELLCHECKER_IMAGE} -c "/app/spell_check.sh 2>/dev/null | sed '/Spell-checking the documentation/ d; /^Possible typos/d' | sort -u"
 
 ##@ Update kubernetes control-plane patchversions
 
@@ -301,9 +306,13 @@ bin/trdl: bin
 	chmod +x bin/trdl
 
 bin/werf: bin bin/trdl ## Install werf for images-digests generator.
-	trdl --home-dir bin/.trdl add werf https://tuf.werf.io 1 b7ff6bcbe598e072a86d595a3621924c8612c7e6dc6a82e919abe89707d7e3f468e616b5635630680dd1e98fc362ae5051728406700e6274c5ed1ad92bea52a2 && \
-	trdl --home-dir bin/.trdl --no-self-update=true update werf 1.2 stable
-	ln -sf $$(bin/trdl --home-dir bin/.trdl bin-path werf 1.2 stable | sed 's|^.*/bin/\(.trdl.*\)|\1/werf|') bin/werf
+	@bash -c 'trdl --home-dir bin/.trdl add werf https://tuf.werf.io 1 b7ff6bcbe598e072a86d595a3621924c8612c7e6dc6a82e919abe89707d7e3f468e616b5635630680dd1e98fc362ae5051728406700e6274c5ed1ad92bea52a2'
+	@if command -v bin/werf >/dev/null 2>&1; then \
+		trdl --home-dir bin/.trdl --no-self-update=true update --in-background werf 1.2 stable; \
+	else \
+		trdl --home-dir bin/.trdl --no-self-update=true update werf 1.2 stable; \
+		ln -sf $$(bin/trdl --home-dir bin/.trdl bin-path werf 1.2 stable | sed 's|^.*/bin/\(.trdl.*\)|\1/werf|') bin/werf; \
+	fi
 
 bin/gh: bin ## Install gh cli.
 	curl -sSfL https://github.com/cli/cli/releases/download/v$(GH_VERSION)/gh_$(GH_VERSION)_$(GH_PLATFORM)_$(GH_ARCH).zip -o bin/gh.zip
@@ -335,6 +344,9 @@ set-build-envs:
   ifeq ($(SOURCE_REPO),)
  		export SOURCE_REPO=https://github.com
   endif
+  ifeq ($(CLOUD_PROVIDERS_SOURCE_REPO),)
+ 		export CLOUD_PROVIDERS_SOURCE_REPO=https://github.com
+  endif
   ifeq ($(GOPROXY),)
  		export GOPROXY=https://proxy.golang.org/
   endif
@@ -362,6 +374,13 @@ set-build-envs:
   ifeq ($(OBSERVABILITY_SOURCE_REPO),)
   	export OBSERVABILITY_SOURCE_REPO=https://example.com
   endif
+  ifeq ($(DECKHOUSE_PRIVATE_REPO),)
+  	export DECKHOUSE_PRIVATE_REPO=https://github.com
+  endif
+  ifeq ($(STRONGHOLD_PULL_TOKEN=),)
+  	export STRONGHOLD_PULL_TOKEN="token"
+  endif
+
 	export WERF_REPO=$(DEV_REGISTRY_PATH)
 	export REGISTRY_SUFFIX=$(shell echo $(WERF_ENV) | tr '[:upper:]' '[:lower:]')
 	export SECONDARY_REPO=--secondary-repo $(DECKHOUSE_REGISTRY_HOST)/deckhouse/$(REGISTRY_SUFFIX)
@@ -408,4 +427,4 @@ build: set-build-envs ## Build Deckhouse images.
   endif
 
 build-render: set-build-envs ## render werf.yaml for build Deckhouse images.
-	werf config render
+	werf config render --dev

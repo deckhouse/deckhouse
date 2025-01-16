@@ -12,13 +12,13 @@ lang: "ru"
 
 В кластерах Deckhouse по умолчанию созданы базовые политики аудита:
 - логирование операций создания, удаления и изменения ресурсов;
-  TODO здесь какие ресурсы имеются в виду? Надо бы уточнить.
+  <!-- TODO здесь какие ресурсы имеются в виду? Надо бы уточнить. -->
 - логирование действий, совершаемых от имени сервисных аккаунтов из системных пространств имён: `kube-system`, `d8-*`;
 - логирование действий, совершаемых с ресурсами в системных пространствах имён: `kube-system`, `d8-*`.
 
 ### Отключение базовых политик
 
-Отключить сбор логов по базовым политикам можно установив флаг [basicAuditPolicyEnabled](../../../../reference/cr/parameters-apiserver-basicauditpolicyenabled.html) в `false`.
+Отключить сбор логов по базовым политикам можно установив флаг [basicAuditPolicyEnabled](/products/virtualization-platform/reference/mc.html#control-plane-manager-parameters-apiserver-basicauditpolicyenabled) в `false`.
 
 Пример включения возможности аудита в kube-apiserver, но без базовых политик Deckhouse:
 
@@ -45,7 +45,7 @@ d8 k patch mc control-plane-manager --type=strategic -p '{"settings":{"apiserver
 
 Модуль control-plane manager автоматизирует настройку kube-apiserver для добавления пользовательских политик аудита. Чтобы такие дополнительные политики заработали, нужно удостовериться, что аудит включён в секции параметров `apiserver` и создать секрет с политикой аудита:
 
-1. Включите параметр [auditPolicyEnabled](../../../../reference/cr/parameters-apiserver-auditpolicyenabled.html) в настройках модуля:
+1. Включите параметр [auditPolicyEnabled](/products/virtualization-platform/reference/mc.html#control-plane-manager-parameters-apiserver-auditpolicyenabled) в настройках модуля:
 
    ```yaml
    apiVersion: deckhouse.io/v1alpha1
@@ -128,7 +128,7 @@ d8 k -n kube-system delete secret audit-policy
 
 ## Вывод аудит-лога в стандартный вывод
 
-Если в кластере настроен сборщик логов с подов, можно собирать аудит лог, выведя его в стандартный вывод. Для этого  в настройках модуля установите значение `Stdout` в параметре [apiserver.auditLog.output](../../../../reference/cr/parameters-apiserver-auditlog.html).
+Если в кластере настроен сборщик логов с подов, можно собирать аудит лог, выведя его в стандартный вывод. Для этого  в настройках модуля установите значение `Stdout` в параметре [apiserver.auditLog.output](/products/virtualization-platform/reference/mc.html#control-plane-manager-parameters-apiserver-auditlog).
 
 Пример включения аудита с выводом в stdout:
 

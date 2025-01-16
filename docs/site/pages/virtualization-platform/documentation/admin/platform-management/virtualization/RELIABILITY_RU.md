@@ -16,17 +16,22 @@ lang: ru
 
 Далее рассмотрен пример миграции выбранной виртуальной машины.
 
-Перед началом миграции проверьте текущий статус виртуальной машины:
+Перед началом миграции проверьте текущий статус виртуальной машины с помощью следующей команды:
 
 ```bash
 d8 k get vm
-# NAME                                   PHASE     NODE           IPADDRESS     AGE
-# linux-vm                              Running   virtlab-pt-1   10.66.10.14   79m
+```
+
+В результате будет выведена информация о виртуальной машине:
+
+```console
+NAME                                   PHASE     NODE           IPADDRESS     AGE
+linux-vm                              Running   virtlab-pt-1   10.66.10.14   79m
 ```
 
 Как видно, виртуальная машина в данный момент работает на узле `virtlab-pt-1`.
 
-Для выполнения миграции виртуальной машины с одного узла на другой, с учетом требований по размещению, используется ресурс [VirtualMachineOperations](../../../../reference/cr.html/virtualmachineoperations.html) (`vmop`) с типом `Evict`.
+Для выполнения миграции виртуальной машины с одного узла на другой, с учетом требований по размещению, используется ресурс [VirtualMachineOperation](../../../../reference/cr/virtualmachineoperation.html) (`vmop`) с типом `Evict`.
 
 ```yaml
 d8 k apply -f - <<EOF
@@ -46,11 +51,16 @@ EOF
 
 ```bash
 d8 k get vm -w
-# NAME                                   PHASE       NODE           IPADDRESS     AGE
-# linux-vm                              Running     virtlab-pt-1   10.66.10.14   79m
-# linux-vm                              Migrating   virtlab-pt-1   10.66.10.14   79m
-# linux-vm                              Migrating   virtlab-pt-1   10.66.10.14   79m
-# linux-vm                              Running     virtlab-pt-2   10.66.10.14   79m
+```
+
+В результате будет выведена информация о статусе виртуальной машины:
+
+```console
+NAME                                   PHASE       NODE           IPADDRESS     AGE
+linux-vm                              Running     virtlab-pt-1   10.66.10.14   79m
+linux-vm                              Migrating   virtlab-pt-1   10.66.10.14   79m
+linux-vm                              Migrating   virtlab-pt-1   10.66.10.14   79m
+linux-vm                              Running     virtlab-pt-2   10.66.10.14   79m
 ```
 
 Эта команда отображает статус виртуальной машины в процессе миграции. Она позволяет наблюдать за перемещением виртуальной машины с одного узла на другой.
@@ -94,7 +104,7 @@ ColdStandby обеспечивает механизм восстановлени
 Для работы данного механизма необходимо выполнить следующие требования:
 
 - Политика запуска виртуальной машины (`.spec.runPolicy`) должна быть установлена в одно из следующих значений: `AlwaysOnUnlessStoppedManually`, `AlwaysOn`.
-- На узлах, где запускаются виртуальные машины, должен быть активирован механизм [fencing](../../../../reference/cr/nodegroup-v1-spec-fencing-mode.html).
+- На узлах, где запускаются виртуальные машины, должен быть активирован механизм [fencing](../../../../reference/cr/nodegroup.html#nodegroup-v1-spec-fencing-mode).
 
 Рассмотрим, как работает механизм ColdStandby на примере:
 

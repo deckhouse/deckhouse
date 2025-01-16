@@ -1,4 +1,3 @@
----
 image: {{ .ModuleName }}/{{ .ImageName }}
 {{ if eq .ModuleName "docs" }}
 from: {{ .Images.BASE_NGINX_ALPINE }}
@@ -9,7 +8,7 @@ shell:
       {{- .Files.Get ".werf/nginx.conf" | nindent 6 }}
       EOD
 import:
-- artifact: {{ .ModuleName }}/{{ .ImageName }}/static
+- image: {{ .ModuleName }}/{{ .ImageName }}/static
   add: /app/_site
   to: /app
   before: setup
@@ -18,7 +17,7 @@ docker:
 {{ else }}
 fromImage: common/nginx-static
 import:
-- artifact: {{ .ModuleName }}/{{ .ImageName }}/static
+- image: {{ .ModuleName }}/{{ .ImageName }}/static
   add: /app/_site/documentation
   to: /app/platform
   before: setup
@@ -32,25 +31,29 @@ docker:
   ENTRYPOINT: [ "/opt/nginx-static/sbin/nginx", "-e", "/dev/stderr", "-g", "daemon off;" ]
 {{ end }}
 ---
-artifact: {{ .ModuleName }}/{{ .ImageName }}/static
+image: {{ .ModuleName }}/{{ .ImageName }}/static
 from: {{ .Images.BASE_JEKYLL }}
+final: false
 shell:
   setup:
   - |
         echo "Ruby: $(ruby --version)"
         echo "Gem: $(gem --version)"
         bundle --version
+        jekyll -version
+        yq -V
+        echo "jq: $(jq -V)"
 
         echo '[] Creating modules.yml ...'
         cd /srv/jekyll-data/documentation/
 {{ if ne .ModuleName "docs" }}
         export MODULES_DIR=/comparison
 {{ end }}
-        ./modules_list.sh 1>_data/modules/internal.yaml
+        _tools/modules_list.sh 1>_data/modules/internal.yaml
         # Creating list of ALL the modules...
         cat _data/modules/internal.yaml |yq eval -j | jq -MsS '.[0] * .[1]' - _data/modules/modules-addition.json > _data/modules/all.json
 
-        cat modules_menu_skip  | sed -E 's/^[0-9]+-//'  | jq -nRc '[inputs]' > _data/excludedModules.json
+        cat _tools/modules_menu_skip  | sed -E 's/^[0-9]+-//'  | jq -nRc '[inputs]' > _data/excludedModules.json
 
         echo '[] Edition - {{ .Edition }}. Merging modules of different editions...'
         for dir in {be,se,ee,se-plus,fe}; do if [ -d /src/$dir/modules ];then cp -rf /src/$dir/modules /src >& /dev/null; fi; done
@@ -59,7 +62,7 @@ shell:
         export MODULES_SRC_DIR=/src/modules
         export MODULES_DST_EN=/srv/jekyll-data/documentation/modules_en
         export MODULES_DST_RU=/srv/jekyll-data/documentation/modules_ru
-        bash ./modules_prepare.sh
+        bash _tools/modules_prepare.sh
 
         echo '[] Adding permalinks...'
         for i in $(find . -regex '.*.md' -print); do
@@ -73,28 +76,28 @@ shell:
 
         echo '[] Generating configuration schemas...'
         export MODULES_DIR=modules_en
-        bash ./modules_generate_configuration.sh
+        bash _tools/modules_generate_configuration.sh
         export MODULES_DIR=modules_ru MODULES_LANG=ru
-        bash ./modules_generate_configuration.sh
+        bash _tools/modules_generate_configuration.sh
 
         echo
         echo '[] Generating cluster configuration schemas...'
         export MODULES_DIR=modules_en
-        bash ./generate_cluster_configuration.sh
+        bash _tools/generate_cluster_configuration.sh
         export MODULES_DIR=modules_ru MODULES_LANG=ru
-        bash ./generate_cluster_configuration.sh
+        bash _tools/generate_cluster_configuration.sh
 
         echo
         echo "[] Generating CR schemas..."
         export MODULES_DIR=modules_en
-        bash ./modules_generate_cr.sh
+        bash _tools/modules_generate_cr.sh
         export MODULES_DIR=modules_ru
-        bash ./modules_generate_cr.sh
+        bash _tools/modules_generate_cr.sh
 
         echo
         echo '[] Preparing OSS license info...'
         export MODULES_DIR=/src/modules
-        bash ./modules_generate_ossinfo.sh
+        bash _tools/modules_generate_ossinfo.sh
 
         echo '[] Extracting the default Kubernetes version...'
         echo "default: \"$(grep "DefaultKubernetesVersion" -m 1 _data/dhctl-base.go | grep -Eo '[0-9.]+')\"" > _data/version_kubernetes.yml
@@ -104,11 +107,14 @@ shell:
         sed '/^bashible:/r version_map_addition.yml' version_map.yml >> supported_versions.yml
 
         echo '[] Converting editions structure...'
-        yq e -j editions-source.yaml | jq -M 'reduce .editions[] as $item ({}; .[$item.name | ascii_downcase] = $item)' | jq -Ms '.[0] * .[1]' - editions-addition.json | jq --argfile data modules/be-addition.json '(.[] | select(.name == "BE").excludeModules) += $data.excludeModules' - > editions.json
-        #  yq eval -j | jq  '.editions' | jq --argfile data modules/be-additions.json '(.[] | select(.name == "BE").excludeModules) += $data.excludeModules' -
+        yq e -j editions-source.yaml | jq -M 'reduce .editions[] as $item ({}; .[$item.name | ascii_downcase] = $item)' | jq -Ms '.[0] * .[1]' - editions-addition.json | jq '. as $editions | input as $be | .["be"].excludeModules += $be.excludeModules' - modules/be-addition.json > editions.json
 
 
 {{ if ne .ModuleName "docs" }}
+        # Syncing file from the documentation to the main site...
+        cp /srv/jekyll-data/documentation/_plugins/{jekyll_asset_pipeline.rb,custom_filters.rb,offtopic.rb} /srv/jekyll-data/site/_plugins/
+        cp /srv/jekyll-data/documentation/_assets/js/{lunr*.js,search.js} /srv/jekyll-data/site/_assets/
+
         # "Converting public documentation links to internal relative..."
         grep -rl '](https://deckhouse.io' /srv/jekyll-data/documentation/_data/schemas/ | \
           xargs sed -Ei 's$\]\(https://deckhouse.io/(ru|en)/documentation/v[0-9]+/(modules/|#)$](/\1/\2$'

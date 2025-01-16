@@ -60,4 +60,5 @@
     secretKeyRef:
       name: csi-credentials
       key: serviceAccountJSON
+{{- include "helm_lib_envs_for_proxy" . }}
 {{- end }}

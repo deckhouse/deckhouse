@@ -5,13 +5,15 @@ apiVersions:
       description: |
         Описывает конфигурацию облачного кластера в vSphere.
 
-        Используется cloud-провайдером, если control plane кластера размещен в облаке.
+        Используется облачным провайдером, если управляющий слой (control plane) кластера размещен в облаке.
 
         Выполните следующую команду, чтобы изменить конфигурацию в работающем кластере:
 
         ```shell
         kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller edit provider-cluster-configuration
         ```
+
+        > После изменения параметров узлов необходимо выполнить команду [dhctl converge](../../deckhouse-faq.html#изменение-конфигурации), чтобы изменения вступили в силу.
       x-doc-search: |
         ProviderClusterConfiguration
       properties:
@@ -28,7 +30,7 @@ apiVersions:
               description: Список зон, в которых допустимо создавать узлы.
             instanceClass:
               description: |
-                Частичное содержимое полей [VsphereInstanceClass](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-vsphere/cr.html#vsphereinstanceclass).
+                Частичное содержимое полей [VsphereInstanceClass](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/cloud-provider-vsphere/cr.html#vsphereinstanceclass).
               properties: &instanceClassProperties
                 numCPUs:
                   description: |
@@ -142,7 +144,7 @@ apiVersions:
                 description: Список зон, в которых допустимо создавать узлы.
               instanceClass:
                 description: |
-                  Частичное содержимое полей [VsphereInstanceClass](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-vsphere/cr.html#vsphereinstanceclass).
+                  Частичное содержимое полей [VsphereInstanceClass](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/cloud-provider-vsphere/cr.html#vsphereinstanceclass).
                 properties:
                   <<: *instanceClassProperties
         sshPublicKey:
@@ -195,7 +197,7 @@ apiVersions:
           description: |
             Название схемы размещения.
 
-            [Подробнее](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-vsphere/layouts.html) о возможных схемах размещения провайдера.
+            [Подробнее](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/cloud-provider-vsphere/layouts.html) о возможных схемах размещения провайдера.
         provider:
           description: Параметры подключения к vCenter.
           properties:

@@ -22,7 +22,7 @@ import (
 	metricstorage "github.com/flant/shell-operator/pkg/metric_storage"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/moduleloader"
+	moduletypes "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/moduleloader/types"
 	"github.com/deckhouse/deckhouse/go_lib/configtools"
 )
 
@@ -31,7 +31,7 @@ type registerer interface {
 }
 
 type moduleStorage interface {
-	GetModuleByName(name string) (*moduleloader.Module, error)
+	GetModuleByName(name string) (*moduletypes.Module, error)
 }
 
 type moduleManager interface {

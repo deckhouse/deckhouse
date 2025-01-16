@@ -1,8 +1,8 @@
 {% assign revision=include.revision %}
 
 {% if revision == 'ee' %}
-{% include getting_started/global/EE_ACCESS_RU.md %}
-<div class="dimmer-block-content{% if page.ee_only %} TODOdisabled{% endif %}">
+{% include getting_started/global/EE_ACCESS_RU.md revision=revision %}
+<div class="dimmer-block-content{% if page.ee_only %} disabled{% endif %}">
 {% endif %}
 
 <div markdown="1">

@@ -20,6 +20,9 @@ _reload_systemd() {
 }
 
 {{- if .proxy }}
+
+bb-set-proxy
+
 bb-event-on 'bb-sync-file-changed' '_reload_systemd'
 
 mkdir -p /etc/systemd/system.conf.d/
@@ -36,14 +39,8 @@ Environment="HTTP_PROXY=${HTTP_PROXY}" "http_proxy=${HTTP_PROXY}" "HTTPS_PROXY=$
 EOF
   {{- end }}
 
-bb-sync-file /etc/profile.d/d8-system-proxy.sh - << EOF
-export HTTP_PROXY=${HTTP_PROXY}
-export http_proxy=${HTTP_PROXY}
-export HTTPS_PROXY=${HTTPS_PROXY}
-export https_proxy=${HTTPS_PROXY}
-export NO_PROXY=${NO_PROXY}
-export no_proxy=${NO_PROXY}
-EOF
+bb-unset-proxy
+
 {{- else }}
 if [ -f /etc/systemd/system.conf.d/proxy-default-environment.conf ]; then
   rm -f /etc/systemd/system.conf.d/proxy-default-environment.conf
@@ -58,4 +55,5 @@ fi
 if [ -f /etc/profile.d/d8-system-proxy.sh ]; then
   rm -f /etc/profile.d/d8-system-proxy.sh
 fi
+
 {{- end }}

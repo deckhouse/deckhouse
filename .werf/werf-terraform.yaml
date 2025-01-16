@@ -64,7 +64,8 @@ shell:
     touch /terraform.log
     chmod 755 /terraform.log
 ---
-artifact: e2e-eks-terraform-plugins
+image: e2e-eks-terraform-plugins
+final: false
 from: {{ $.Images.BASE_GOLANG_21_ALPINE_DEV }}
 mount:
 - fromPath: ~/go-pkg-cache

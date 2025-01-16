@@ -74,25 +74,25 @@ EOF
 
 У всех собираемых метрик есть служебные метки, позволяющие идентифицировать экземпляр контроллера: controller, app, instance и endpoint (видны в `/prometheus/targets`).
 
-* Все метрики (кроме geo), экспортируемые protobuf_exporter, представлены в трех уровнях детализации:
-  * `ingress_nginx_overall_*` — обзорное представление, у всех метрик есть метки `namespace`, `vhost` и `content_kind`;
-  * `ingress_nginx_detail_*` — кроме меток уровня overall, добавляются `ingress`, `service`, `service_port` и `location`;
-  * `ingress_nginx_detail_backend_*` — ограниченная часть данных, собирается в разрезе по бэкендам. У этих метрик, кроме меток уровня detail, добавляется лейбл `pod_ip`.
+- Все метрики (кроме geo), экспортируемые protobuf_exporter, представлены в трех уровнях детализации:
+  - `ingress_nginx_overall_*` — обзорное представление, у всех метрик есть метки `namespace`, `vhost` и `content_kind`;
+  - `ingress_nginx_detail_*` — кроме меток уровня overall, добавляются `ingress`, `service`, `service_port` и `location`;
+  - `ingress_nginx_detail_backend_*` — ограниченная часть данных, собирается в разрезе по бэкендам. У этих метрик, кроме меток уровня detail, добавляется лейбл `pod_ip`.
 
-* Для уровней overall и detail собираются следующие метрики:
-  * `*_requests_total` — counter количества запросов (дополнительные метки — `scheme`, `method`);
-  * `*_responses_total` — counter количества ответов (дополнительная метка — `status`);
-  * `*_request_seconds_{sum,count,bucket}` — histogram времени ответа;
-  * `*_bytes_received_{sum,count,bucket}` — histogram размера запроса;
-  * `*_bytes_sent_{sum,count,bucket}` — histogram размера ответа;
-  * `*_upstream_response_seconds_{sum,count,bucket}` — histogram времени ответа upstream (используется сумма времен ответов всех upstream, если их было несколько);
-  * `*_lowres_upstream_response_seconds_{sum,count,bucket}` — то же самое, что и предыдущая метрика, только с меньшей детализацией (подходит для визуализации, но не подходит для расчета quantile);
-  * `*_upstream_retries_{count,sum}` — количество запросов, при обработке которых были retry бэкендов, и сумма retry.
+- Для уровней overall и detail собираются следующие метрики:
+  - `*_requests_total` — counter количества запросов (дополнительные метки — `scheme`, `method`);
+  - `*_responses_total` — counter количества ответов (дополнительная метка — `status`);
+  - `*_request_seconds_{sum,count,bucket}` — histogram времени ответа;
+  - `*_bytes_received_{sum,count,bucket}` — histogram размера запроса;
+  - `*_bytes_sent_{sum,count,bucket}` — histogram размера ответа;
+  - `*_upstream_response_seconds_{sum,count,bucket}` — histogram времени ответа upstream (используется сумма времен ответов всех upstream, если их было несколько);
+  - `*_lowres_upstream_response_seconds_{sum,count,bucket}` — то же самое, что и предыдущая метрика, только с меньшей детализацией (подходит для визуализации, но не подходит для расчета quantile);
+  - `*_upstream_retries_{count,sum}` — количество запросов, при обработке которых были retry бэкендов, и сумма retry.
 
-* Для уровня overall собираются следующие метрики:
-  * `*_geohash_total` — counter количества запросов с определенным geohash (дополнительные метки — `geohash`, `place`).
+- Для уровня overall собираются следующие метрики:
+  - `*_geohash_total` — counter количества запросов с определенным geohash (дополнительные метки — `geohash`, `place`).
 
-* Для уровня detail_backend собираются следующие метрики:
-  * `*_lowres_upstream_response_seconds` — то же самое, что аналогичная метрика для overall и detail;
-  * `*_responses_total` — counter количества ответов (дополнительный лейбл — `status_class`, а не просто `status`);
-  * `*_upstream_bytes_received_sum` — counter суммы размеров ответов бэкенда.
+- Для уровня detail_backend собираются следующие метрики:
+  - `*_lowres_upstream_response_seconds` — то же самое, что аналогичная метрика для overall и detail;
+  - `*_responses_total` — counter количества ответов (дополнительный лейбл — `status_class`, а не просто `status`);
+  - `*_upstream_bytes_received_sum` — counter суммы размеров ответов бэкенда.

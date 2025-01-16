@@ -1,0 +1,46 @@
+---
+{{- $istioOperatorVersion := "1.19.7" }}
+---
+# Based on https://github.com/istio/istio/blob/1.19.7/operator/docker/Dockerfile.operator
+image: {{ .ModuleName }}/{{ .ImageName }}
+fromImage: common/distroless
+import:
+- image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
+  add: /tmp/istio/out/operator
+  to: /usr/local/bin/operator
+  after: setup
+- image: {{ .ModuleName }}/{{ .ImageName }}-binary-artifact
+  add: /var/lib/istio/manifests/
+  to: /var/lib/istio/manifests/
+  after: setup
+docker:
+  USER: "1337:1337"
+  ENTRYPOINT: ["/usr/local/bin/operator"]
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
+final: false
+from: {{ .Images.BASE_GOLANG_23_ALPINE_DEV }}
+git:
+- add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/patches
+  to: /patches
+  includePaths:
+  - '**/*.patch'
+  stageDependencies:
+    install:
+    - '**/*.patch'
+mount:
+- fromPath: ~/go-pkg-cache
+  to: /go/pkg
+shell:
+  install:
+  - git clone --depth 1 --branch {{ $istioOperatorVersion }} https://github.com/istio/istio.git /tmp/istio/
+  - cd /tmp/istio/
+  - find /patches -name '*.patch' | xargs git apply --verbose
+  - echo {{ $istioOperatorVersion }} > version
+  - export GOPROXY={{ $.GOPROXY }}
+  - GOOS=linux GOARCH=amd64 LDFLAGS='-extldflags -static -s -w' common/scripts/gobuild.sh /tmp/istio/out/ -tags=agent,disable_pgv /tmp/istio/operator/cmd/operator/
+  - chown 0700 /tmp/istio/out/operator
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-binary-artifact
+final: false
+from: istio/operator:1.19.7@sha256:f7f371476a2224fe55ff4e7c8b31773e2c048da255bb634075666f88fa7cb990

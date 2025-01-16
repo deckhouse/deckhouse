@@ -14,6 +14,8 @@ apiVersions:
       ```shell
       kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller edit provider-cluster-configuration
       ```
+
+      > After updating the node parameters, you need to run the [dhctl converge](../../deckhouse-faq.html#changing-the-configuration) command to apply the changes.
     x-doc-search: |
       ProviderClusterConfiguration
     x-unsafe-rules: [deleteZones]
@@ -97,7 +99,7 @@ apiVersions:
             additionalProperties: false
             required: [numCPUs, memory, template, mainNetwork, datastore]
             description: |
-              Partial contents of the fields of the [VsphereInstanceClass](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-vsphere/cr.html#vsphereinstanceclass).
+              Partial contents of the fields of the [VsphereInstanceClass](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/cloud-provider-vsphere/cr.html#vsphereinstanceclass).
             properties: &instanceClassProperties
               numCPUs:
                 type: integer
@@ -296,7 +298,7 @@ apiVersions:
               additionalProperties: false
               required: [numCPUs, memory, template, mainNetwork, datastore]
               description: |
-                Partial contents of the fields of the [VsphereInstanceClass](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-vsphere/cr.html#vsphereinstanceclass).
+                Partial contents of the fields of the [VsphereInstanceClass](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/cloud-provider-vsphere/cr.html#vsphereinstanceclass).
               properties:
                 <<: *instanceClassProperties
       sshPublicKey:
@@ -393,7 +395,7 @@ apiVersions:
         description: |
           The way resources are located in the cloud.
 
-          Read [more](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-vsphere/layouts.html) about possible provider layouts.
+          Read [more](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/cloud-provider-vsphere/layouts.html) about possible provider layouts.
         x-unsafe: true
       provider:
         type: object
