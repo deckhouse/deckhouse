@@ -79,20 +79,25 @@ function __main__() {
     CODEOWNERS_MODULE_NAME=$(echo $MODULE_NAME|sed -s 's/[A-Z]/-&/g')
     owners="[\"Nikolay1224\"]" # Default assignee in case if not found in CODEOWNERS file
     for line in $(cat ./.github/CODEOWNERS); do
+      echo " DEBUG"
+      echo "CODEOWNERS_MODULE_NAME: $CODEOWNERS_MODULE_NAME"
+      echo "line: $line"
       if echo $line| grep -i -q "$CODEOWNERS_MODULE_NAME"; then
         owners=$(echo $line | cut -d "@" -f 2-|jq --raw-input 'split(" @")')
+        owner_found=true
+        break
       fi
-      echo " Creating GitHub issue for module $MODULE_NAME with assignees $owners"
-      echo ""
-
-      curl -L \
-        -X POST \
-        -H "Accept: application/vnd.github+json" \
-        -H "Authorization: Bearer ${GITHUB_TOKEN}" \
-        -H "X-GitHub-Api-Version: 2022-11-28" \
-        https://api.github.com/repos/deckhouse/deckhouse/issues \
-        -d '{"title":"'$module' CVE Issue","body":"'$(cat out/${MODULE_NAME}_report)'","assignees":"[\"Nikolay1224\"]","labels":["cve"]}'
     done
+    echo " Creating GitHub issue for module $MODULE_NAME with assignees $owners"
+    echo ""
+    curl -L \
+      -X POST \
+      -H "Accept: application/vnd.github+json" \
+      -H "Authorization: Bearer ${GITHUB_TOKEN}" \
+      -H "X-GitHub-Api-Version: 2022-11-28" \
+      https://api.github.com/repos/deckhouse/deckhouse/issues \
+      -d '{"title":"'$module' CVE Issue","body":"'$(cat out/${MODULE_NAME}_report)'","assignees":"[\"Nikolay1224\"]","labels":["cve"]}'
+    
   done
 
   rm -r "$HTML_TEMP"
@@ -100,3 +105,10 @@ function __main__() {
 }
 
 __main__
+
+
+for line in $(cat ./.github/CODEOWNERS); do
+  if echo $line| grep -i -q "prometheus"; then
+    echo "good"
+  fi
+done
