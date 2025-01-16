@@ -115,7 +115,7 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "gomod"
-  directory: "/ee/modules/500-operator-trivy/images/report-updater"
+  directory: "/ee/modules/500-operator-trivy/images/report-updater/src"
   labels:
   - "type/dependencies"
   - "status/ok-to-test"

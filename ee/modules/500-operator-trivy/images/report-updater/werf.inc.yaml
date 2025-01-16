@@ -3,27 +3,22 @@ image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
 import:
   - image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
-    add: /trivy_provider
-    to: /trivy_provider
+    add: /report-updater
+    to: /report-updater
     before: setup
 docker:
-  ENTRYPOINT: [ "/trivy_provider" ]
+  ENTRYPOINT: [ "/report-updater" ]
   USER: deckhouse:deckhouse
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 fromImage: common/src-artifact
 final: false
 git:
-- add: /{{ $.ModulePath }}modules/015-{{ $.ModuleName }}/images/{{ $.ImageName }}/src
+- add: /{{ $.ModulePath }}modules/500-{{ $.ModuleName }}/images/{{ $.ImageName }}/src
   to: /src
   stageDependencies:
     install:
     - '**/*'
-shell:
-  install:
-  - git clone --depth 1 --branch flant-v2 {{ .SOURCE_REPO }}/aquasecurity/trivy-db.git /src/trivy-db
-  - git clone --depth 1 --branch v0.55.0-flant-2 {{ .SOURCE_REPO }}/aquasecurity/trivy.git /src/trivy
-  - rm -rf /src/trivy/.git /src/trivy-db/.git
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
 from: {{ .Images.BASE_GOLANG_23_ALPINE }}
@@ -40,7 +35,6 @@ shell:
   install:
   - export GOPROXY={{ .GOPROXY }}
   - cd /src
-  - ln -s ./trivy-db ./original-trivy-db
-  - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o /trivy_provider main.go
-  - chown 64535:64535 /trivy_provider
-  - chmod 0700 /trivy_provider
+  - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o /report-updater main.go
+  - chown 64535:64535 /report-updater
+  - chmod 0700 /report-updater
