@@ -21,11 +21,10 @@
 {%- endif %}
 
 Create the `config.yml` file.
-{% capture includePath %}_includes/getting_started/dvp/{{ page.platform_code }}/partials/config.yml{% if include.layout.size > 0 %}.{{ include.layout }}{% endif %}.{{ revision }}.inc{% endcapture %}
-{% snippetcut name="config.yml" selector="config-yml" %}
-{% include_file "{{ includePath }}" syntax="yaml" %}
-{% endsnippetcut %}
-
+{% capture includePath %}getting_started/dvp/{{ page.platform_code }}/partials/config.yml{% if include.layout.size > 0 %}.{{ include.layout }}{% endif %}.{{ revision }}.inc{% endcapture %}
+```yaml
+{% include {{ includePath }} %}
+```
 {%- if page.platform_type == 'existing' %}
 {% offtopic title="About nodeSelector, taints and tolerations..." %}
 You can control on which nodes the Deckhouse core components will run by setting  `nodeSelector`/`tolerations` in the `configOverrides.deckhouse` parameter of the installation configuration. You can also specify cluster node taints in the `configOverrides.global.modules.placement.customTolerationKeys` array so that Deckhouse can automatically add the appropriate `toleration` to its components.

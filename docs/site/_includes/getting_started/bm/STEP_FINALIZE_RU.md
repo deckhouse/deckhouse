@@ -24,16 +24,15 @@
 <ul>
   <li>
 <p>Выполните на <strong>master-узле</strong> следующую команду, для того чтобы снять с него <i>taint</i> и разрешить остальным компонентам Deckhouse работать на master-узле:</p>
-
-{% snippetcut %}
+<div markdown="1">
 ```bash
 sudo -i d8 k patch nodegroup master --type json -p '[{"op": "remove", "path": "/spec/nodeTemplate/taints"}]'
 ```
-{% endsnippetcut %}
+</div>
   </li>
   <li>
 <p>Настройте StorageClass <a href="/products/kubernetes-platform/documentation/v1/modules/local-path-provisioner/cr.html#localpathprovisioner">локального хранилища</a>, выполнив на <strong>master-узле</strong> следующую команду:</p>
-{% snippetcut %}
+<div markdown="1">
 ```shell
 sudo -i d8 k create -f - << EOF
 apiVersion: deckhouse.io/v1alpha1
@@ -45,16 +44,16 @@ spec:
   reclaimPolicy: Delete
 EOF
 ```
-{% endsnippetcut %}
+</div>
   </li>
   <li>
 <p>Укажите, что созданный StorageClass должен использоваться как StorageClass по умолчанию. Для этого выполните на <strong>master-узле</strong> следующую команду:</p>
-{% snippetcut %}
+<div markdown="1">
 ```shell
 sudo -i d8 k patch mc global --type merge \
   -p "{\"spec\": {\"settings\":{\"defaultClusterStorageClass\":\"localpath\"}}}"
 ```
-{% endsnippetcut %}
+</div>
   </li>
 </ul>
 </div>
@@ -68,7 +67,7 @@ sudo -i d8 k patch mc global --type merge \
   </li>
   <li>
 <p>Настройте StorageClass <a href="/products/kubernetes-platform/documentation/v1/modules/local-path-provisioner/cr.html#localpathprovisioner">локального хранилища</a>, выполнив на <strong>master-узле</strong> следующую команду:</p>
-{% snippetcut %}
+<div markdown="1">
 ```shell
 sudo -i d8 k create -f - << EOF
 apiVersion: deckhouse.io/v1alpha1
@@ -80,20 +79,20 @@ spec:
   reclaimPolicy: Delete
 EOF
 ```
-{% endsnippetcut %}
+</div>
   </li>
   <li>
 <p>Укажите, что созданный StorageClass должен использоваться как StorageClass по умолчанию. Для этого выполните на <strong>master-узле</strong> следующую команду:</p>
-{% snippetcut %}
+<div markdown="1">
 ```shell
 sudo -i d8 k patch mc global --type merge \
   -p "{\"spec\": {\"settings\":{\"defaultClusterStorageClass\":\"localpath\"}}}"
 ```
-{% endsnippetcut %}
+</div>
   </li>
   <li>
     <p>Создайте <a href="/products/kubernetes-platform/documentation/v1/modules/node-manager/cr.html#nodegroup">NodeGroup</a> <code>worker</code>. Для этого выполните на <strong>master-узле</strong> следующую команду:</p>
-{% snippetcut %}
+<div markdown="1">
 ```bash
 sudo -i d8 k create -f - << EOF
 apiVersion: deckhouse.io/v1
@@ -109,19 +108,19 @@ spec:
         role: worker
 EOF
 ```
-{% endsnippetcut %}
+</div>
   </li>
   <li>
     <p>Сгенерируйте SSH-ключ с пустой парольной фразой. Для этого выполните на <strong>master-узле</strong> следующую команду:</p>
-{% snippetcut %}
+<div markdown="1">
 ```bash
 ssh-keygen -t rsa -f /dev/shm/caps-id -C "" -N ""
 ```
-{% endsnippetcut %}
+</div>
   </li>
   <li>
     <p>Создайте в кластере ресурс <a href="/products/kubernetes-platform/documentation/v1/modules/node-manager/cr.html#sshcredentials">SSHCredentials</a>. Для этого выполните на <strong>master-узле</strong> следующую команду:</p>
-{% snippetcut %}
+<div markdown="1">
 ```bash
 sudo -i d8 k create -f - <<EOF
 apiVersion: deckhouse.io/v1alpha1
@@ -133,19 +132,19 @@ spec:
   privateSSHKey: "`cat /dev/shm/caps-id | base64 -w0`"
 EOF
 ```
-{% endsnippetcut %}
+</div>
   </li>
   <li>
     <p>Выведите публичную часть сгенерированного ранее SSH-ключа (он понадобится на следующем шаге). Для этого выполните на <strong>master-узле</strong> следующую команду:</p>
-{% snippetcut %}
+<div markdown="1">
 ```bash
 cat /dev/shm/caps-id.pub
 ```
-{% endsnippetcut %}
+</div>
   </li>
   <li>
     <p><strong>На подготовленной виртуальной машине</strong> создайте пользователя <code>caps</code>. Для этого выполните следующую команду, указав публичную часть SSH-ключа, полученную на предыдущем шаге:</p>
-{% snippetcut %}
+<div markdown="1">
 ```bash
 # Укажите публичную часть SSH-ключа пользователя.
 export KEY='<SSH-PUBLIC-KEY>'
@@ -158,19 +157,19 @@ chown -R caps:caps /home/caps
 chmod 700 /home/caps/.ssh
 chmod 600 /home/caps/.ssh/authorized_keys
 ```
-{% endsnippetcut %}
+</div>
   </li>
   <li>
     <p><strong>В операционных системах семейства Astra Linux</strong>, при использовании модуля мандатного контроля целостности Parsec, сконфигурируйте максимальный уровень целостности для пользователя <code>caps</code>:</p>
-{% snippetcut %}
+<div markdown="1">
 ```bash
 pdpl-user -i 63 caps
 ```
-{% endsnippetcut %}
+</div>
   </li>
   <li>
     <p>Создайте <a href="/products/kubernetes-platform/documentation/v1/modules/node-manager/cr.html#staticinstance">StaticInstance</a> для добавляемого узла. Для этого выполните на <strong>master-узле</strong> следующую команду, указав IP-адрес добавляемого узла:</p>
-{% snippetcut %}
+<div markdown="1">
 ```bash
 # Укажите IP-адрес узла, который необходимо подключить к кластеру.
 export NODE=<NODE-IP-ADDRESS>
@@ -188,15 +187,15 @@ spec:
     name: caps
 EOF
 ```
-{% endsnippetcut %}
+</div>
   </li>
   <li><p>Убедитесь, что все узлы кластера находятся в статусе <code>Ready</code>.</p>
 <p>Выполните на <strong>master-узле</strong> следующую команду, чтобы получить список узлов кластера:</p>
-{% snippetcut %}
+<div markdown="1">
 ```shell
 sudo -i d8 k get no
 ```
-{% endsnippetcut %}
+</div>
 
 {% offtopic title="Пример вывода..." %}
 ```
@@ -216,11 +215,11 @@ d8cluster-worker   Ready    worker                 10m   v1.23.17
 <li><p>Убедитесь, что под Kruise controller manager модуля <a href="/products/kubernetes-platform/documentation/v1/modules/ingress-nginx/">ingress-nginx</a> запустился и находится в статусе <code>Ready</code>.</p>
 <p>Выполните на <strong>master-узле</strong> следующую команду:</p>
 
-{% snippetcut %}
+<div markdown="1">
 ```shell
 sudo -i d8 k -n d8-ingress-nginx get po -l app=kruise
 ```
-{% endsnippetcut %}
+</div>
 
 {% offtopic title="Пример вывода..." %}
 ```
@@ -235,25 +234,29 @@ kruise-controller-manager-7dfcbdc549-b4wk7   3/3     Running   0           15m
 
 <ul><li><p><strong>Установка Ingress-контроллера</strong></p>
 <p>Создайте на <strong>master-узле</strong> файл <code>ingress-nginx-controller.yml</code> содержащий конфигурацию Ingress-контроллера:</p>
-{% snippetcut name="ingress-nginx-controller.yml" selector="ingress-nginx-controller-yml" %}
-{% include_file "_includes/getting_started/{{ page.platform_code }}/partials/ingress-nginx-controller.yml.inc" syntax="yaml" %}
-{% endsnippetcut %}
+{% capture includePath %}getting_started/{{ page.platform_code }}/partials/ingress-nginx-controller.yml.inc{% endcapture %}
+<div markdown="1">
+```yaml
+{% include {{ includePath }} %}
+```
+</div>
 <p>Примените его, выполнив на <strong>master-узле</strong> следующую команду:</p>
-{% snippetcut %}
+
+<div markdown="1">
 ```shell
 sudo -i d8 k create -f ingress-nginx-controller.yml
 ```
-{% endsnippetcut %}
+</div>
 
-Запуск Ingress-контроллера после завершения установки Deckhouse может занять какое-то время. Прежде чем продолжить убедитесь что Ingress-контроллер запустился (выполните на <code>master-узле</code>):
+<p>Запуск Ingress-контроллера после завершения установки Deckhouse может занять какое-то время. Прежде чем продолжить убедитесь что Ingress-контроллер запустился (выполните на <code>master-узле</code>):</p>
 
-{% snippetcut %}
+<div markdown="1">
 ```shell
 sudo -i d8 k -n d8-ingress-nginx get po -l app=controller
 ```
-{% endsnippetcut %}
+</div>
 
-Дождитесь перехода подов Ingress-контроллера в статус <code>Ready</code>.
+<p>Дождитесь перехода подов Ingress-контроллера в статус <code>Ready</code>.</p>
 
 {% offtopic title="Пример вывода..." %}
 ```
@@ -265,15 +268,18 @@ controller-nginx-r6hxc                     3/3     Running   0          5m
 </li>
 <li><p><strong>Создание пользователя</strong> для доступа в веб-интерфейсы кластера</p>
 <p>Создайте на <strong>master-узле</strong> файл <code>user.yml</code> содержащий описание учетной записи пользователя и прав доступа:</p>
-{% snippetcut name="user.yml" selector="user-yml" %}
-{% include_file "_includes/getting_started/{{ page.platform_code }}/partials/user.yml.inc" syntax="yaml" %}
-{% endsnippetcut %}
+{% capture includePath %}getting_started/{{ page.platform_code }}/partials/user.yml.inc{% endcapture %}
+<div markdown="1">
+```yaml
+{% include {{ includePath }} %}
+```
+</div>
 <p>Примените его, выполнив на <strong>master-узле</strong> следующую команду:</p>
-{% snippetcut %}
+<div markdown="1">
 ```shell
 sudo -i d8 k create -f user.yml
 ```
-{% endsnippetcut %}
+</div>
 </li>
 <li><strong>Создание DNS-записи</strong>, для доступа в веб-интерфейсы кластера
   <ul><li>Выясните публичный IP-адрес узла, на котором работает Ingress-контроллер.</li>
@@ -312,7 +318,7 @@ upmeter.example.com</code>
   </li>
 
   <li><p>Если вы <strong>не</strong> имеете под управлением DNS-сервер: добавьте статические записи соответствия имен конкретных сервисов публичному IP-адресу узла, на котором работает Ingress-контроллер.</p><p>Например, на персональном Linux-компьютере, с которого необходим доступ к сервисам Deckhouse, выполните следующую команду (укажите ваш публичный IP-адрес в переменной <code>PUBLIC_IP</code>) для добавления записей в файл <code>/etc/hosts</code> (для Windows используйте файл <code>%SystemRoot%\system32\drivers\etc\hosts</code>):</p>
-{% snippetcut selector="example-hosts" %}
+<div markdown="1">
 ```bash
 export PUBLIC_IP="<PUBLIC_IP>"
 sudo -E bash -c "cat <<EOF >> /etc/hosts
@@ -333,7 +339,7 @@ $PUBLIC_IP upmeter.example.com
 EOF
 "
 ```
-{% endsnippetcut %}
+</div>
 </li>
 </ul>
 

@@ -64,31 +64,29 @@ and then start the installation again.
 
 {% offtopic title="There is no Ingress controller in the cluster..." %}
 The `documentation` module (`deckhouse-web` in Deckhouse 1.45 or older), which provides a web interface to the cluster documentation, requires the Ingress controller to be active in the cluster. If there is no Ingress controller in your cluster, you can use the built-in [ingress-nginx](/products/kubernetes-platform/documentation/v1/modules/ingress-nginx/) module:
-<ul>
-  <li><p>Enable the <code>ingress-nginx</code> module, by executing the following command:</p>
-{% snippetcut selector="enable-ingress" %}
-```shell
-kubectl create -f - <<EOF
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleConfig
-metadata:
-  name: ingress-nginx
-spec:
-  enabled: true
-EOF
-```
-{% endsnippetcut %}
-</li>
-<li><p>Create an <code>ingress-nginx-controller.yml</code> file with the following contents:</p>
-{% snippetcut name="ingress-nginx-controller.yml" selector="ingress-nginx-controller-yml" %}
-{% include_file "_includes/getting_started/{{ page.platform_code }}/partials/ingress-nginx-controller.yml.inc" syntax="yaml" %}
-{% endsnippetcut %}</li>
-<li><p>Once Deckhouse is installed, apply the file using the command below:</p>
-{% snippetcut %}
-```shell
-kubectl create -f ingress-nginx-controller.yml
-```
-{% endsnippetcut %}
-</li>
-</ul>
+
+- Enable the <code>ingress-nginx</code> module, by executing the following command:
+
+  ```shell
+  kubectl create -f - <<EOF
+  apiVersion: deckhouse.io/v1alpha1
+  kind: ModuleConfig
+  metadata:
+    name: ingress-nginx
+  spec:
+    enabled: true
+  EOF
+  ```
+
+- Create an <code>ingress-nginx-controller.yml</code> file with the following contents:
+  {% capture includePath %}getting_started/{{ page.platform_code }}/partials/ingress-nginx-controller.yml.inc{% endcapture %}
+  ```yaml
+  {% include {{ includePath }} %}
+  ```
+
+- Once Deckhouse is installed, apply the file using the command below:
+
+  ```shell
+  kubectl create -f ingress-nginx-controller.yml
+  ```
 {% endofftopic %}

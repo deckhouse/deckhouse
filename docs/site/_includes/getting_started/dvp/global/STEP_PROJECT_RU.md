@@ -4,9 +4,10 @@
 
 Создайте проект и администратора проекта (в примере используется проект `test-project` и пользователь `test-user@deckhouse.io`, измените их, если необходимо):
 
-{% snippetcut selector="project-rbac-yml" %}
-{% include_file "_includes/getting_started/dvp/{{ page.platform_code }}/partials/project-rbac.yml.inc" syntax="yaml" %}
-{% endsnippetcut %}
+{% capture includePath %}getting_started/dvp/{{ page.platform_code }}/partials/project-rbac.yml.inc{% endcapture %}
+```yaml
+{% include {{ includePath }} %}
+```
 
 Откройте веб-интерфейс генерации файла kubeconfig, для удаленного доступа к API-серверу. Адрес веб-интерфейса формируется в соответствии с шаблоном DNS-имен, указанным в глобальном параметре [publicDomainTemplate](/products/virtualization-platform/reference/mc.html#parameters-modules-publicdomaintemplate). Например, если `publicDomainTemplate: %s.kube.my`, то веб-интерфейс будет доступен по адресу `kubeconfig.kube.my`.
  
@@ -18,7 +19,6 @@
 
 Создайте виртуальную машину:
 
-{% snippetcut %}
 ```yaml
 kubectl create -f - <<EOF
 ---
@@ -65,15 +65,12 @@ spec:
     size: 1Gi
 EOF
 ```
-{% endsnippetcut %}
 
 Выведите список виртуальных машин, чтобы увидеть статус виртуальной машины:
 
-{% snippetcut %}
 ```shell
 kubectl get vm -o wide
 ```
-{% endsnippetcut %}
 
 После успешного старта виртуальная машина должна перейти в статус `Running`.
 
@@ -86,11 +83,9 @@ vm     Running   1       100%           1Gi      False          False   True    
 
 Подключитесь к виртуальной машине, введите логин (в примере — `test-user@deckhouse.io`) и пароль:
 
-{% snippetcut %}
 ```shell
 d8 v console -n test-project vm
 ```
-{% endsnippetcut %}
 
 Поздравляем! Вы создали виртуальную машину и подключились к ней.
 

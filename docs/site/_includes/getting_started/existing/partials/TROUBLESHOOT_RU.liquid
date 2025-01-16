@@ -66,66 +66,62 @@
 
 {% offtopic title="В кластере нет Ingress-контроллера..." %}
 Для работы модуля `documentation` (`deckhouse-web` в Deckhouse версии 1.45 и старее), предоставляющего веб-интерфейс к документации кластера, необходимо наличие в кластере Ingress-контроллера. Если в вашем кластере нет Ingress-контролллера, вы можете использовать модуль [ingress-nginx](/products/kubernetes-platform/documentation/v1/modules/ingress-nginx/) следующим способом:
-<ul>
-  <li><p>Включите модуль <code>ingress-nginx</code>, выполнив следующую команду:</p>
-{% snippetcut selector="enable-ingress" %}
-```shell
-kubectl create -f - <<EOF
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleConfig
-metadata:
-  name: ingress-nginx
-spec:
-  enabled: true
-EOF
-```
-{% endsnippetcut %}
-</li>
-<li><p>Создайте файл <code>ingress-nginx-controller.yml</code> следующего содержания:</p>
-{% snippetcut name="ingress-nginx-controller.yml" selector="ingress-nginx-controller-yml" %}
-{% include_file "_includes/getting_started/{{ page.platform_code }}/partials/ingress-nginx-controller.yml.inc" syntax="yaml" %}
-{% endsnippetcut %}</li>
-<li><p>Примените его, после установки Deckhouse, выполнив следующую команду:</p>
-{% snippetcut %}
-```shell
-kubectl create -f ingress-nginx-controller.yml
-```
-{% endsnippetcut %}
-</li>
-</ul>
+
+- Включите модуль <code>ingress-nginx</code>, выполнив следующую команду:
+
+  ```shell
+  kubectl create -f - <<EOF
+  apiVersion: deckhouse.io/v1alpha1
+  kind: ModuleConfig
+  metadata:
+    name: ingress-nginx
+  spec:
+    enabled: true
+  EOF
+  ```
+
+- Создайте файл <code>ingress-nginx-controller.yml</code> следующего содержания:
+  {% capture includePath %}getting_started/{{ page.platform_code }}/partials/ingress-nginx-controller.yml.inc{% endcapture %}
+  ```yaml
+  {% include {{ includePath }} %}
+  ```
+
+- Примените его, после установки Deckhouse, выполнив следующую команду:
+
+  ```shell
+  kubectl create -f ingress-nginx-controller.yml
+  ```
 {% endofftopic %}
 
 
 {% offtopic title="Кластер в VK Cloud Solutions (MailRu Cloud Solutions)" %}
-<ul>
-<li><p>В конфигурации инсталляции Deckhouse в массиве <code>customTolerationKeys</code> укажите taint <code>CriticalAddonsOnly</code>.</p>
-<p>Пример:</p>
-<div markdown="1">
-```yaml
-deckhouse:
-  releaseChannel: Stable
-  bundle: Minimal
-  configOverrides:
-    global:
-      modules:
-        placement:
-          customTolerationKeys:
-          - CriticalAddonsOnly
-        publicDomainTemplate: "%s.example.com"
-```
-</div>
-</li>
-<li><p>В кластерах версии 1.21+ VK Cloud Solutions установлен Gatekeeper (OPA), который требует выставления requests и limits Pod'ам. Pod <code>deckhouse</code> не имеет requests/limits, остальные компоненты и модули Deckhouse получают вычисляемые параметры requests/limits в процессе работы Deckhouse.</p>
-<p>При просмотре событий Deployment <code>deckhouse</code> вы можете увидеть следующую ошибку:</p>
-<div class="highlight"><pre><code>admission webhook "validation.gatekeeper.sh" denied the request: [container-must-have-limits] container <...> has no resource limits...</code></pre></div>
+- В конфигурации инсталляции Deckhouse в массиве <code>customTolerationKeys</code> укажите taint <code>CriticalAddonsOnly</code>. Пример:
 
-<p>Чтобы Deckhouse смог запуститься, необходимо перед установкой Deckhouse в таких кластерах добавить исключение GateKeeper (OPA) для namespace'ов компонентов Deckhouse (<code>d8*-</code>).</p><p>Выполните в кластере:</p>
-{% snippetcut selector="gatekeeper-uninstall" %}
-```shell
-kubectl patch constraints container-must-have-limits --type json -p '[{"op": "replace", "path": "/spec/match/excludedNamespaces", "value": ["d8-*"]}]'
-```
-{% endsnippetcut %}
-</li>
-</ul>
+  ```yaml
+  deckhouse:
+    releaseChannel: Stable
+    bundle: Minimal
+    configOverrides:
+      global:
+        modules:
+          placement:
+            customTolerationKeys:
+            - CriticalAddonsOnly
+          publicDomainTemplate: "%s.example.com"
+  ```
+
+- В кластерах версии 1.21+ VK Cloud Solutions установлен Gatekeeper (OPA), который требует выставления requests и limits Pod'ам. Pod <code>deckhouse</code> не имеет requests/limits, остальные компоненты и модули Deckhouse получают вычисляемые параметры requests/limits в процессе работы Deckhouse.
+
+  При просмотре событий Deployment <code>deckhouse</code> вы можете увидеть следующую ошибку:
+
+  ```text
+  admission webhook "validation.gatekeeper.sh" denied the request: [container-must-have-limits] container <...> has no resource limits...
+  ```
+
+  Чтобы Deckhouse смог запуститься, необходимо перед установкой Deckhouse в таких кластерах добавить исключение GateKeeper (OPA) для namespace'ов компонентов Deckhouse (<code>d8*-</code>). Выполните в кластере:
+
+  ```shell
+  kubectl patch constraints container-must-have-limits --type json -p '[{"op": "replace", "path": "/spec/match/excludedNamespaces", "value": ["d8-*"]}]'
+  ```
 {% endofftopic %}
 

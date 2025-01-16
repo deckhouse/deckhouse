@@ -4,9 +4,10 @@
 
 Create a project and a project administrator (in the example, the project `test-project` and the user `test-user@deckhouse.io` are used, change them if necessary):
 
-{% snippetcut selector="project-rbac-yml" %}
-{% include_file "_includes/getting_started/dvp/{{ page.platform_code }}/partials/project-rbac.yml.inc" syntax="yaml" %}
-{% endsnippetcut %}
+{% capture includePath %}getting_started/dvp/{{ page.platform_code }}/partials/project-rbac.yml.inc{% endcapture %}
+```yaml
+{% include {{ includePath }} %}
+```
 
 Open the web interface for generating the kubeconfig file for remote access to the API server. The address of the web interface is formed according to the DNS name template specified in the global parameter [publicDomainTemplate](/products/virtualization-platform/reference/mc.html#parameters-modules-publicdomaintemplate). For example, if `publicDomainTemplate: %s.kube.my`, then the web interface will be available at the address `kubeconfig.kube.my`.
  
@@ -18,7 +19,6 @@ You have configured kubectl on this computer to manage the cluster. Execute the 
 
 Create a virtual machine:
 
-{% snippetcut %}
 ```yaml
 kubectl create -f - <<EOF
 ---
@@ -65,15 +65,12 @@ spec:
     size: 1Gi
 EOF
 ```
-{% endsnippetcut %}
 
 Display the list of virtual machines to get their status:
 
-{% snippetcut %}
 ```shell
 kubectl get vm -o wide
 ```
-{% endsnippetcut %}
 
 After a successful start, the virtual machine should change to the `Running` status.
 
@@ -87,11 +84,9 @@ vm     Running   1       100%           1Gi      False          False   True    
 
 Connect to the virtual machine, enter the login (in the example — `test-user@deckhouse.io`) and the password:
 
-{% snippetcut %}
 ```shell
 d8 v console -n test-project vm
 ```
-{% endsnippetcut %}
 
 Congratulations! You have created a virtual machine and connected to it.
 

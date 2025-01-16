@@ -85,9 +85,10 @@
 Create the `resources.yml` file.
 {% endif %}
 
-{% snippetcut name="resources.yml" selector="resources-yml" %}
-{% include_file "_includes/getting_started/{{ page.platform_code }}/partials/resources.yml.minimal.inc" syntax="yaml" %}
-{% endsnippetcut %}
+{% capture includePath %}getting_started/{{ page.platform_code }}/partials/resources.yml.minimal.inc{% endcapture %}
+```yaml
+{% include {{ includePath }} %}
+```
 {% endif %}
 
 </div>

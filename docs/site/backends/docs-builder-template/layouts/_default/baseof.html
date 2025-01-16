@@ -1,6 +1,7 @@
 <!DOCTYPE html>
-<html>
-  <head lang="{{ page.lang }}">
+{{- $lang := .Language.Lang }}
+<html lang="{{- $lang }}">
+  <head>
   {{- partial "head" . }}
   {{- "<!--#include virtual=\"/includes/head-site.html\" -->"  | safeHTML }}
   </head>

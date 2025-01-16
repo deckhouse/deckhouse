@@ -5,16 +5,19 @@
 Создайте пользователя для доступа в веб-интерфейсы кластера:
 <ul>
 <li><p>Создайте на <strong>master-узле</strong> файл <code>user.yml</code> содержащий описание учетной записи пользователя и прав доступа:</p>
-{% snippetcut name="user.yml" selector="user-yml" %}
-{% include_file "_includes/getting_started/dvp/{{ page.platform_code }}/partials/user.yml.inc" syntax="yaml" %}
-{% endsnippetcut %}
+{% capture includePath %}getting_started/dvp/{{ page.platform_code }}/partials/user.yml.inc{% endcapture %}
+<div markdown="1">
+```yaml
+{% include {{ includePath }} %}
+```
+</div>
 </li>
 <li><p>Примените его, выполнив на <strong>master-узле</strong> следующую команду:</p>
-{% snippetcut %}
+<div markdown="1">
 ```shell
 sudo -i d8 k create -f user.yml
 ```
-{% endsnippetcut %}
+</div>
 </li>
 </ul>
 
