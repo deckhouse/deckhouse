@@ -89,8 +89,8 @@ echo "Moving DVP files..."
 mv  ${_TMPDIR}/site_ru/virtualization-platform ${_TMPDIR}/site_ru/products/virtualization-platform
 mv  ${_TMPDIR}/site_en/virtualization-platform ${_TMPDIR}/site_en/products/virtualization-platform
 
-docker run --rm -v "${_TMPDIR}/site_en:/src/en:ro" -v "${_TMPDIR}/site_ru:/src/ru:ro" \
-                -v "./tools/docs/link-checker/entrypoint.sh:/entrypoint.sh:ro" ${REGISTRY_PATH}${BASE_IMAGE} /entrypoint.sh
+docker run --rm --mount type=bind,src="${_TMPDIR}/site_en",dst="/src/en",ro --mount type=bind,src="${_TMPDIR}/site_ru",dst="/src/ru",ro \
+                --mount type=bind,src="./tools/docs/link-checker/entrypoint.sh",dst="/entrypoint.sh",ro ${REGISTRY_PATH}${BASE_IMAGE} /entrypoint.sh
 
 echo "Cleaning..."
 rm -rf $_TMPDIR
