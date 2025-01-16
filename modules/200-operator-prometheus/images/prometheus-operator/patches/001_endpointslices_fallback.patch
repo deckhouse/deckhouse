@@ -1,8 +1,8 @@
 diff --git a/pkg/prometheus/promcfg.go b/pkg/prometheus/promcfg.go
-index 9436d73..5435fd4 100644
+index 762eb75..7464f92 100644
 --- a/pkg/prometheus/promcfg.go
 +++ b/pkg/prometheus/promcfg.go
-@@ -1789,6 +1789,10 @@ func (cg *ConfigGenerator) generateServiceMonitorConfig(
+@@ -1688,6 +1688,10 @@ func (cg *ConfigGenerator) generateServiceMonitorConfig(
  
  	relabelings := initRelabelings()
  
@@ -12,9 +12,9 @@ index 9436d73..5435fd4 100644
 +
  	// Filter targets by services selected by the monitor.
  	// Exact label matches.
- 	// If roleSelector is set, we don't need to add the service labels to the relabeling rules.
-@@ -4682,6 +4686,39 @@ func (cg *ConfigGenerator) appendOTLPConfig(cfg yaml.MapSlice) (yaml.MapSlice, e
- 	return cg.AppendMapItem(cfg, "otlp", otlp), nil
+ 	for _, k := range util.SortedKeys(m.Spec.Selector.MatchLabels) {
+@@ -4489,6 +4493,39 @@ func (cg *ConfigGenerator) appendOTLPConfig(cfg yaml.MapSlice) (yaml.MapSlice, e
+ 		}), nil
  }
  
 +func generateFallbackEndpointSliceRelabeling(relabelings []yaml.MapSlice) []yaml.MapSlice {
@@ -53,3 +53,5 @@ index 9436d73..5435fd4 100644
  func (cg *ConfigGenerator) appendTracingConfig(cfg yaml.MapSlice, s assets.StoreGetter) (yaml.MapSlice, error) {
  	tracingConfig := cg.prom.GetCommonPrometheusFields().TracingConfig
  	if tracingConfig == nil {
+-- 
+
