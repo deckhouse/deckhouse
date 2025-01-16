@@ -141,7 +141,7 @@ Control plane components:
 * `operator` — installs all the resources required to operate a specific version of the control plane.
 * `kiali` — dashboard for monitoring and controlling Istio resources as well as user services managed by Istio that allows you:
   * Visualize inter-service connections.
-  * Viagnose problem inter-service connections.
+  * Diagnose problem inter-service connections.
   * Diagnose the control plane state.
 
 The Ingress controller must be refined to receive user traffic:
@@ -157,7 +157,7 @@ The istiod controller and sidecar-proxy containers export their own metrics that
 ### Details
 
 * Each service Pod gets a sidecar container — sidecar-proxy. From the technical standpoint, this container contains two applications:
-  * **Envoy** proxifies service traffic. It is responsible for implementing all the Istio functionality, including routing, authentication, authorization, etc.
+  * **Envoy** proxies service traffic. It is responsible for implementing all the Istio functionality, including routing, authentication, authorization, etc.
   * **pilot-agent** is a part of Istio. It keeps the Envoy configurations up to date and has a built-in caching DNS server.
 * Each Pod has a DNAT configured for incoming and outgoing service requests to the sidecar-proxy. The additional init container is used for that. Thus, the traffic is routed transparently for applications.
 * Since incoming service traffic is redirected to the sidecar-proxy, this also applies to the readiness/liveness traffic. The Kubernetes subsystem that does this doesn't know how to probe containers under Mutual TLS. Thus, all the existing probes are automatically reconfigured to use a dedicated sidecar-proxy port that routes traffic to the application unchanged.
