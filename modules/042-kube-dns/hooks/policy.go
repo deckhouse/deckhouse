@@ -97,12 +97,17 @@ func setKubeDNSPolicy(input *go_hook.HookInput) error {
 		node := o.(k8sNode)
 		nodesRolesCounters[node.Role]++
 	}
+	// Adds the ability to run kube-dns pods on worker nodes
+	customRole := input.Values.Get("kubeDns.CustomRoleNodes").Str
+	fmt.Printf("Found custom role for place Core DNS %s: ", customRole)
 
 	switch {
 	case nodesRolesCounters["kube-dns"] > 0:
 		input.Values.Set("kubeDns.internal.specificNodeType", "kube-dns")
 	case nodesRolesCounters["system"] > 0:
 		input.Values.Set("kubeDns.internal.specificNodeType", "system")
+	case nodesRolesCounters[customRole] > 0:
+		input.Values.Set("kubeDns.internal.specificNodeType", customRole)
 	default:
 		input.Values.Remove("kubeDns.internal.specificNodeType")
 	}
