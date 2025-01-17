@@ -166,11 +166,6 @@ spec:
 {{- if .Values.kubeDns.internal.specificNodeType }}
           requiredDuringSchedulingIgnoredDuringExecution:
             nodeSelectorTerms:
-            {{- if .Values.kubeDns.internal.scheduleOnControlPlane }}
-            - matchExpressions:
-              - key: "node-role.kubernetes.io/control-plane"
-                operator: "Exists"
-            {{- end }}
             - matchExpressions:
               - key: "node-role.deckhouse.io/{{ .Values.kubeDns.internal.specificNodeType }}"
                 operator: "Exists"

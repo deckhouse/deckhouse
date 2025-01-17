@@ -118,21 +118,22 @@ func setKubeDNSPolicy(input *go_hook.HookInput) error {
 	replicas := 2
 	switch {
 	case nodesRolesCounters["kube-dns"] > 0:
-		replicas = nodesRolesCounters["master"] + nodesRolesCounters["kube-dns"]
+		replicas = nodesRolesCounters["kube-dns"]
 	case nodesRolesCounters["system"] > 0:
-		replicas = nodesRolesCounters["master"] + nodesRolesCounters["system"]
+		replicas = nodesRolesCounters["system"]
 	case nodesRolesCounters["master"] > 2:
-		replicas = nodesRolesCounters["master"] + nodesRolesCounters[customRole]
+		replicas = nodesRolesCounters["master"]
 	}
 
 	// limit coredns replicas quantity to prevent special nodes autoscaling problem
 	// This block limits count of kube-dns replicas
+	//
 	if (nodesRolesCounters["master"] + 2) < replicas {
 		replicas = nodesRolesCounters["master"] + 2
 	}
 	input.Values.Set("kubeDns.internal.replicas", replicas)
 
-	if (nodesRolesCounters["master"] + nodesRolesCounters["system"] + nodesRolesCounters["kube-dns"]) > 1 {
+	if (nodesRolesCounters["master"] + nodesRolesCounters["system"] + nodesRolesCounters["kube-dns"] + nodesRolesCounters[customRole]) > 1 {
 		input.Values.Set("kubeDns.internal.enablePodAntiAffinity", true)
 	} else {
 		input.Values.Set("kubeDns.internal.enablePodAntiAffinity", false)

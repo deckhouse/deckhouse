@@ -98,16 +98,18 @@ properties:
       "node-role.kubernetes.io/worker="
       "node-role.deckhouse.io/worker="
       set value "worker" as example
-      By default pods will be planned on roles:
+      By default pods will be planned on nodes in this order:
+        - control-plane
         - kube-dns
         - system
+      To get roles nodes, use command: `kubectl get nodes`
     type: string
     default: ""
-  scheduleOnControlPlane:
-    type: boolean
-    default: true
-    description: |
-      works with parameter `CustomRoleNodes`, if disable, after delete pods kube-dns, they
-      don't schedule on master nodes, then kube-dns will be run only specific role nodes.
+#  scheduleOnControlPlane:
+#    type: boolean
+#    default: true
+#    description: |
+#      works with parameter `CustomRoleNodes`, if disable, after delete pods kube-dns, they
+#      don't schedule on master nodes, then kube-dns will be run only specific role nodes.
 
 
