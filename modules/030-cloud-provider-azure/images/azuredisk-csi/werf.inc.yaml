@@ -19,15 +19,7 @@ docker:
   ENTRYPOINT: ["/azurediskplugin"]
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
-    {{- if semverCompare ">=1.31" $version }}
 from: {{ $.Images.BASE_GOLANG_23_ALPINE_DEV }}
-    {{- else if semverCompare "=1.30" $version }}
-from: {{ $.Images.BASE_GOLANG_22_ALPINE_DEV }}
-    {{- else if semverCompare "=1.29" $version }}
-from: {{ $.Images.BASE_GOLANG_21_ALPINE_DEV }}
-    {{- else if semverCompare ">=1.27" $version }}
-from: {{ $.Images.BASE_GOLANG_20_ALPINE_DEV }}
-    {{- end }}
 mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg

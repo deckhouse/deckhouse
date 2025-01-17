@@ -28,7 +28,7 @@ docker:
   ENTRYPOINT: ["/cloud-director-named-disk-csi-driver"]
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
-from: {{ $.Images.BASE_GOLANG_20_BUSTER }}
+from: {{ $.Images.BASE_GOLANG_23_BUSTER }}
 git:
 - add: /{{ $.ModulePath }}/modules/030-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
   to: /patches

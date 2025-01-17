@@ -10,7 +10,7 @@ docker:
   ENTRYPOINT: ["/node-termination-handler"]
 ---
 artifact: {{ .ModuleName }}/{{ .ImageName }}-artifact
-from: {{ .Images.BASE_GOLANG_20_ALPINE }}
+from: {{ .Images.BASE_GOLANG_23_ALPINE }}
 mount:
   - fromPath: ~/go-pkg-cache
     to: /go/pkg

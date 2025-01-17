@@ -12,7 +12,7 @@ docker:
 {{ $discovererAbsPath := "/deckhouse/modules/030-cloud-provider-azure/images/cloud-data-discoverer" }}
 {{ $discovererRelPath := printf "%smodules/030-cloud-provider-azure/images/cloud-data-discoverer" .ModulePath }}
 artifact: {{ .ModuleName }}/{{ .ImageName }}-artifact
-from: {{ .Images.BASE_GOLANG_19_ALPINE }}
+from: {{ .Images.BASE_GOLANG_23_ALPINE }}
 shell:
   install:
     - cd {{ $discovererAbsPath }}
@@ -22,7 +22,6 @@ shell:
     - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o /discoverer
     - chown 64535:64535 /discoverer
     - chmod 0755 /discoverer
-
 git:
 - add: /{{ $discovererRelPath }}
   to:  {{ $discovererAbsPath }}

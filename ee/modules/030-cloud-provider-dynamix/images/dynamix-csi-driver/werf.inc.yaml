@@ -26,7 +26,7 @@ docker:
   ENTRYPOINT: ["/dynamix-csi-driver"]
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
-from: {{ $.Images.BASE_GOLANG_22_ALPINE_DEV }}
+from: {{ $.Images.BASE_GOLANG_23_ALPINE_DEV }}
 mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
@@ -54,4 +54,3 @@ from: {{ $.Images.BASE_ALT_DEV }}
 shell:
   setup:
     - /binary_replace.sh -i "{{ $csiBinaries }}" -o /relocate
-

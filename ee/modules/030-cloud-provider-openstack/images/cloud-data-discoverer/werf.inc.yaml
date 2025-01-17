@@ -12,8 +12,7 @@ docker:
 {{ $discovererAbsPath := "/deckhouse/ee/modules/030-cloud-provider-openstack/images/cloud-data-discoverer" }}
 {{ $discovererRelPath := printf "%s/modules/030-cloud-provider-openstack/images/cloud-data-discoverer" .ModulePath }}
 artifact: {{ .ModuleName }}/{{ .ImageName }}-artifact
-fromCacheVersion: "2023-03-24.2"
-from: {{ .Images.BASE_GOLANG_21_ALPINE }}
+from: {{ .Images.BASE_GOLANG_23_ALPINE }}
 shell:
   install:
     - cd {{ $discovererAbsPath }}
