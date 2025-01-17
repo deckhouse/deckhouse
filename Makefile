@@ -268,7 +268,7 @@ docs-spellcheck: ## Check the spelling in the documentation.
 
 lint-doc-spellcheck-pr:
 	@docker run --rm -v ${PWD}:/spelling -v ${PWD}/tools/docs/spelling:/app ${SPELLCHECKER_IMAGE} /app/check_diff.sh
-	#@cd tools/docs/spelling && werf run docs-spell-checker --dev --docker-options="--entrypoint=sh" -- /app/check_diff.sh
+	@cd tools/docs/spelling && werf run docs-spell-checker --dev --docker-options="--entrypoint=sh" -- /app/check_diff.sh
 
 .PHONY: docs-spellcheck-generate-dictionary
 docs-spellcheck-generate-dictionary: ## Generate a dictionary (run it after adding new words to the tools/docs/spelling/wordlist file).
