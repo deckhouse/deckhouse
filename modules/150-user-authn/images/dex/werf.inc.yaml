@@ -33,6 +33,7 @@ shell:
   install:
     - cd /src
     - git apply /patches/*.patch --verbose
+    - rm -rf examples
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-dex-artifact
 from: {{ $.Images.BASE_GOLANG_23_BOOKWORM }}
