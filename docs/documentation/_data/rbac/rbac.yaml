@@ -1487,38 +1487,6 @@ modules:
     namespace: d8-multitenancy-manager
     subsystems:
     - deckhouse
-  namespace-configurator:
-    capabilities:
-      manage:
-      - name: d8:manage:permission:module:namespace-configurator:view
-        rules:
-        - apiGroups:
-          - deckhouse.io
-          resourceNames:
-          - namespace-configurator
-          resources:
-          - moduleconfigs
-          verbs:
-          - get
-          - list
-          - watch
-      - name: d8:manage:permission:module:namespace-configurator:edit
-        rules:
-        - apiGroups:
-          - deckhouse.io
-          resourceNames:
-          - namespace-configurator
-          resources:
-          - moduleconfigs
-          verbs:
-          - create
-          - update
-          - patch
-          - delete
-      use: null
-    namespace: ""
-    subsystems:
-    - infrastructure
   network-gateway:
     capabilities:
       manage:
@@ -2522,7 +2490,6 @@ subsystems:
     - loki
     - pod-reloader
     - chrony
-    - namespace-configurator
     namespaces:
     - d8-ceph-csi
     - d8-chrony

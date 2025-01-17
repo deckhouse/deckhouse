@@ -1,6 +1,5 @@
 name: namespace-configurator
 weight: 600
-subsystems:
-    - infrastructure
+
 requirements:
-    bootstrapped: "true"
+    bootstrapped: true
