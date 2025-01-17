@@ -39,12 +39,11 @@ Fixes several CVEs.
 
 ``` sh
 go mod edit -go 1.23
-go get -u golang.org/x/net@v0.33.0
-go get -u github.com/golang-jwt/jwt/v4@v4.5.1
-go get -u google.golang.org/protobuf@v1.33.0
-go get -u github.com/Azure/azure-sdk-for-go/sdk/azidentity@v1.6.0
+go get golang.org/x/net@v0.33.0
+go get github.com/golang-jwt/jwt/v4@v4.5.1
+go get google.golang.org/protobuf@v1.33.0
+go get github.com/Azure/azure-sdk-for-go/sdk/azidentity@v1.6.0
 go mod tidy
-go mod vendor
 git diff
 ```
 
