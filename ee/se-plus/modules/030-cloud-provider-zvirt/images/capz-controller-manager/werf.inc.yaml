@@ -18,7 +18,7 @@ import:
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
 final: false
-from: {{ $.Images.BASE_GOLANG_21_ALPINE_DEV }}
+from: {{ $.Images.BASE_GOLANG_23_ALPINE_DEV }}
 git:
   - add: /{{ $.ModulePath }}modules/030-{{ $.ModuleName }}/images/{{ $.ImageName }}/src
     to: /src

@@ -51,7 +51,7 @@ shell:
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
 final: false
-from: {{ $.Images.BASE_GOLANG_22_BULLSEYE_DEV }}
+from: {{ $.Images.BASE_GOLANG_23_BULLSEYE_DEV }}
 import:
   - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
     add: /src
