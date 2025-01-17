@@ -121,7 +121,7 @@ Where:
 
 - `<REVISION>` — the [edition](../../editions.html) of the platform (e.g., `ee` for Enterprise Edition, `ce` for Community Edition, etc.)
 
-- `<RELEASE_CHANNEL>` — the [update channel](../../release-channels.html) of the platform in kebab-case. It should match the one specified in `config.yaml`:
+- `<RELEASE_CHANNEL>` — the [update channel](../../release-channels.html) of the platform in kebab-case:
   - `alpha` — for the *Alpha* update channel;
   - `beta` — for the *Beta* update channel;
   - `early-access` — for the *EarlyAccess* update channel;
