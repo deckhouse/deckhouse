@@ -1,4 +1,150 @@
 {
+  "en": [
+    {
+      "title": "Kubernetes Platform",
+      "url": "/products/kubernetes-platform/",
+      "target": "",
+      "rel": "",
+      "items": [
+        {
+          "title": "Learn more",
+          "url": "/products/kubernetes-platform/",
+          "target": "",
+          "rel": ""
+        },
+        {
+          "title": "Documentation",
+          "url": "/products/kubernetes-platform/documentation/v1/deckhouse-overview.html",
+          "target": "",
+          "rel": "doc"
+        },
+        {
+          "title": "Getting started",
+          "url": "/products/kubernetes-platform/gs/",
+          "target": "",
+          "rel": ""
+        },
+        {
+          "title": "Going to Production",
+          "url": "/products/kubernetes-platform/guides/production.html",
+          "target": "",
+          "rel": ""
+        }
+      ]
+    },
+    {
+      "title": "Virtualization Platform",
+      "url": "/products/virtualization-platform/",
+      "target": "",
+      "rel": "",
+      "items": [
+        {
+          "title": "Learn more",
+          "url": "/products/virtualization-platform/",
+          "target": "",
+          "rel": ""
+        },
+        {
+          "title": "Documentation",
+          "url": "/products/virtualization-platform/documentation/",
+          "target": "",
+          "rel": "doc"
+        },
+        {
+          "title": "Getting started",
+          "url": "/products/virtualization-platform/gs/bm/",
+          "target": "",
+          "rel": ""
+        },
+        {
+          "title": "Going to Production",
+          "url": "/products/virtualization-platform/guides/production.html",
+          "target": "",
+          "rel": ""
+        }
+      ]
+    },
+    {
+      "title": "Observability Platform",
+      "url": "/products/observability-platform/",
+      "target": "",
+      "rel": "",
+      "items": [
+        {
+          "title": "Learn more",
+          "url": "/products/observability-platform/",
+          "target": "",
+          "rel": ""
+        },
+        {
+          "title": "Documentation",
+          "url": "/products/kubernetes-platform/modules/observability-platform/stable/",
+          "target": "",
+          "rel": "doc"
+        }
+      ]
+    },
+    {
+      "title": "Commander",
+      "url": "/products/commander/",
+      "target": "",
+      "rel": "",
+      "items": [
+        {
+          "title": "Learn more",
+          "url": "/products/commander/",
+          "target": "",
+          "rel": ""
+        },
+        {
+          "title": "Documentation",
+          "url": "/products/kubernetes-platform/modules/commander/stable/",
+          "target": "",
+          "rel": "doc"
+        }
+      ]
+    },
+    {
+      "title": "Stronghold",
+      "url": "/products/stronghold/",
+      "target": "",
+      "rel": "",
+      "items": [
+        {
+          "title": "Learn more",
+          "url": "/products/stronghold/",
+          "target": "",
+          "rel": ""
+        },
+        {
+          "title": "Documentation",
+          "url": "/products/kubernetes-platform/modules/stronghold/stable/",
+          "target": "",
+          "rel": "doc"
+        }
+      ]
+    },
+    {
+      "title": "Delivery Kit",
+      "url": "/products/delivery-kit/",
+      "target": "",
+      "rel": "",
+      "items": [
+        {
+          "title": "Learn more",
+          "url": "/products/delivery-kit/",
+          "target": "",
+          "rel": ""
+        },
+        {
+          "title": "Documentation",
+          "url": "/products/kubernetes-platform/modules/delivery-kit/stable/",
+          "target": "",
+          "rel": "doc"
+        }
+      ]
+    }
+  ],
   "ru": [
     {
       "title": "Kubernetes Platform",
@@ -9,6 +155,18 @@
         {
           "title": "О продукте",
           "url": "/products/kubernetes-platform/",
+          "target": "",
+          "rel": ""
+        },
+        {
+          "title": "ФСТЭК-редакция",
+          "url": "/products/kubernetes-platform/certified-security-edition/",
+          "target": "",
+          "rel": ""
+        },
+        {
+          "title": "Условия и цены",
+          "url": "/products/kubernetes-platform/pricing/",
           "target": "",
           "rel": ""
         },
@@ -117,6 +275,12 @@
           "rel": ""
         },
         {
+          "title": "Условия и цены",
+          "url": "/products/stronghold/pricing/",
+          "target": "",
+          "rel": ""
+        },
+        {
           "title": "Документация",
           "url": "/products/kubernetes-platform/modules/stronghold/stable/",
           "target": "",
@@ -138,7 +302,7 @@
         },
         {
           "title": "Документация",
-          "url": "/products/kubernetes-platform/modules/deckhouse-delivery/stable/",
+          "url": "/products/kubernetes-platform/modules/delivery-kit/stable/",
           "target": "",
           "rel": "doc"
         }
