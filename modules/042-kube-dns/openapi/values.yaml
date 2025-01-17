@@ -15,9 +15,6 @@ properties:
       specificNodeType:
         type: string
         #enum: ["system", "kube-dns", "worker"] comment this for available set custom node role
-      scheduleOnControlPlane:
-        type: boolean
-        default: true
       stsNamespaces:
         type: array
         items:
