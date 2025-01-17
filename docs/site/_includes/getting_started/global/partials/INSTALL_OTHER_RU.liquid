@@ -1,6 +1,15 @@
 {% assign revision=include.revision %}
 
 Для установки **Deckhouse Kubernetes Platform** используется Docker-образ, в который необходимо передать конфигурационные файлы{%- if page.platform_type != 'existing' %} и SSH-ключи доступа на **master-узел** (далее подразумевается что используется SSH-ключ `~/.ssh/id_rsa`){% endif %}.
+
+{% if page.platform_type != 'existing' %}
+**В операционных системах семейства Astra Linux**, при использовании модуля мандатного контроля целостности Parsec, сконфигурируйте максимальный уровень целостности для пользователя, под которым будет выполняться установка. Для этого выполните **на будущем master-узле** команду, заменив `<USERNAME>` на имя пользователя:
+
+```shell
+pdpl-user -i 63 <USERNAME>
+```
+{%- endif %}
+
 {% if page.platform_code == 'bm-private' %}
 Авторизуйтесь на **персональном компьютере** в container image registry, который вы указали на предыдущем этапе.
 {%- endif %}

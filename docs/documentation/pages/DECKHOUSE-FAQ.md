@@ -929,14 +929,14 @@ Follow this steps to switch a Deckhouse Enterprise Edition to Community Edition 
    * Retrieve the value of `USED_MODULES`:
 
      ```shell
-     USED_MODULES=$(kubectl get modules | grep -v 'snapshot-controller-crd' | grep Enabled |awk {'print $1'})
+     USED_MODULES=$(kubectl get modules | grep Enabled | awk {'print $1'})
      ```
 
      Check the result of the command to make sure it was successful:
 
      ```console
      $ echo $USED_MODULES
-     admission-policy-engine cert-manager chrony cloud-data-crd ...
+     admission-policy-engine cert-manager chrony ...
      ```
 
    * Retrieve the value of `MODULES_WILL_DISABLE`:
@@ -949,7 +949,7 @@ Follow this steps to switch a Deckhouse Enterprise Edition to Community Edition 
 
      ```console
      $ echo $MODULES_WILL_DISABLE
-     metallb-crd node-local-dns registry-packages-proxy
+     node-local-dns registry-packages-proxy
      ```
 
      > Note that if `registry-packages-proxy` is listed in `$MODULES_WILL_DISABLE`, you will need to enable it back, otherwise the cluster will not be able to migrate to Deckhouse CE images. See paragraph 8 on how to enable it.
@@ -974,9 +974,6 @@ Follow this steps to switch a Deckhouse Enterprise Edition to Community Edition 
    An example of the output you might get as a result of running the previous command:
 
    ```console
-   Defaulted container "deckhouse" out of: deckhouse, kube-rbac-proxy, init-external-modules (init)
-   Module metallb-crd disabled
-
    Defaulted container "deckhouse" out of: deckhouse, kube-rbac-proxy, init-external-modules (init)
    Module node-local-dns disabled
 
@@ -1043,7 +1040,7 @@ Follow this steps to switch a Deckhouse Enterprise Edition to Community Edition 
    $ journalctl -u bashible -n 5
    Aug 21 11:04:28 master-ee-to-ce-0 bashible.sh[53407]: Configuration is in sync, nothing to do.
    Aug 21 11:04:28 master-ee-to-ce-0 bashible.sh[53407]: Annotate node master-ee-to-ce-0 with annotation node.deckhouse.io/  configuration-checksum=9cbe6db6c91574b8b732108a654c99423733b20f04848d0b4e1e2dadb231206a
-   Aug 21 11:04:29 master-ee-to-ce-0 bashible.sh[53407]: Succesful annotate node master-ee-to-ce-0 with annotation node.deckhouse.io/ configuration-checksum=9cbe6db6c91574b8b732108a654c99423733b20f04848d0b4e1e2dadb231206a
+   Aug 21 11:04:29 master-ee-to-ce-0 bashible.sh[53407]: Successful annotate node master-ee-to-ce-0 with annotation node.deckhouse.io/ configuration-checksum=9cbe6db6c91574b8b732108a654c99423733b20f04848d0b4e1e2dadb231206a
    Aug 21 11:04:29 master-ee-to-ce-0 systemd[1]: bashible.service: Deactivated successfully.
    ```
 
@@ -1188,7 +1185,7 @@ Follow this steps to switch a Deckhouse Community Edition to Enterprise Edition 
    $ journalctl -u bashible -n 5
    Aug 21 11:04:28 master-ce-to-ee-0 bashible.sh[53407]: , nothing to do.
    Aug 21 11:04:28 master-ce-to-ee-0 bashible.sh[53407]: Annotate node master-ce-to-ee-0 with annotation node.deckhouse.io/   configuration-checksum=9cbe6db6c91574b8b732108a654c99423733b20f04848d0b4e1e2dadb231206a
-   Aug 21 11:04:29 master ce-to-ee-0 bashible.sh[53407]: Succesful annotate node master-ce-to-ee-0 with annotation node.deckhouse.io/   configuration-checksum=9cbe6db6c91574b8b732108a654c99423733b20f04848d0b4e1e2dadb231206a
+   Aug 21 11:04:29 master ce-to-ee-0 bashible.sh[53407]: Successful annotate node master-ce-to-ee-0 with annotation node.deckhouse.io/   configuration-checksum=9cbe6db6c91574b8b732108a654c99423733b20f04848d0b4e1e2dadb231206a
    Aug 21 11:04:29 master-ce-to-ee-0 systemd[1]: bashible.service: Deactivated successfully.
    ```
 
@@ -1300,7 +1297,7 @@ Follow this steps to switch a Deckhouse Community Edition to Enterprise Edition 
    $ journalctl -u bashible -n 5
    Aug 21 11:04:28 master-ce-to-ee-0 bashible.sh[53407]: Configuration is in sync, nothing to do.
    Aug 21 11:04:28 master-ce-to-ee-0 bashible.sh[53407]: Annotate node master-ce-to-ee-0 with annotation node.deckhouse.io/ configuration-checksum=9cbe6db6c91574b8b732108a654c99423733b20f04848d0b4e1e2dadb231206a
-   Aug 21 11:04:29 master-ce-to-ee-0 bashible.sh[53407]: Succesful annotate node master-ce-to-ee-0 with annotation node.deckhouse.io/ configuration-checksum=9cbe6db6c91574b8b732108a654c99423733b20f04848d0b4e1e2dadb231206a
+   Aug 21 11:04:29 master-ce-to-ee-0 bashible.sh[53407]: Successful annotate node master-ce-to-ee-0 with annotation node.deckhouse.io/ configuration-checksum=9cbe6db6c91574b8b732108a654c99423733b20f04848d0b4e1e2dadb231206a
    Aug 21 11:04:29 master-ce-to-ee-0 systemd[1]: bashible.service: Deactivated successfully.
    ```
 
@@ -1445,7 +1442,7 @@ All commands should be executed on a master node of the existing cluster.
    $ journalctl -u bashible -n 5
    Aug 21 11:04:28 master-ee-to-se-0 bashible.sh[53407]: Configuration is in sync, nothing to do.
    Aug 21 11:04:28 master-ee-to-se-0 bashible.sh[53407]: Annotate node master-ee-to-se-0 with annotation node.deckhouse.io/   configuration-checksum=9cbe6db6c91574b8b732108a654c99423733b20f04848d0b4e1e2dadb231206a
-   Aug 21 11:04:29 master ee-to-se-0 bashible.sh[53407]: Succesful annotate node master-ee-to-se-0 with annotation node.deckhouse.io/   configuration-checksum=9cbe6db6c91574b8b732108a654c99423733b20f04848d0b4e1e2dadb231206a
+   Aug 21 11:04:29 master ee-to-se-0 bashible.sh[53407]: Successful annotate node master-ee-to-se-0 with annotation node.deckhouse.io/   configuration-checksum=9cbe6db6c91574b8b732108a654c99423733b20f04848d0b4e1e2dadb231206a
    Aug 21 11:04:29 master-ee-to-se-0 systemd[1]: bashible.service: Deactivated successfully.
    ```
 
@@ -1524,14 +1521,14 @@ All commands should be executed on a master node of the existing cluster.
    * Retrieve the value of `USED_MODULES`:
 
      ```shell
-     USED_MODULES=$(sudo /opt/deckhouse/bin/kubectl get modules | grep -v 'snapshot-controller-crd' | grep Enabled |awk {'print $1'})
+     USED_MODULES=$(sudo /opt/deckhouse/bin/kubectl get modules | grep Enabled | awk {'print $1'})
      ```
 
      An example:
 
      ```console
      $ echo $USED_MODULES
-     admission-policy-engine cert-manager chrony cloud-data-crd ...
+     admission-policy-engine cert-manager chrony ...
      ```
 
    * Form the list of modules that must be disabled:
@@ -1607,7 +1604,7 @@ All commands should be executed on a master node of the existing cluster.
    $ journalctl -u bashible -n 5
    Aug 21 11:04:28 master-ee-to-se-0 bashible.sh[53407]: Configuration is in sync, nothing to do.
    Aug 21 11:04:28 master-ee-to-se-0 bashible.sh[53407]: Annotate node master-ee-to-se-0 with annotation node.deckhouse.io/   configuration-checksum=9cbe6db6c91574b8b732108a654c99423733b20f04848d0b4e1e2dadb231206a
-   Aug 21 11:04:29 master ee-to-se-0 bashible.sh[53407]: Succesful annotate node master-ee-to-se-0 with annotation node.deckhouse.io/   configuration-checksum=9cbe6db6c91574b8b732108a654c99423733b20f04848d0b4e1e2dadb231206a
+   Aug 21 11:04:29 master ee-to-se-0 bashible.sh[53407]: Successful annotate node master-ee-to-se-0 with annotation node.deckhouse.io/   configuration-checksum=9cbe6db6c91574b8b732108a654c99423733b20f04848d0b4e1e2dadb231206a
    Aug 21 11:04:29 master-ee-to-se-0 systemd[1]: bashible.service: Deactivated successfully.
    ```
 

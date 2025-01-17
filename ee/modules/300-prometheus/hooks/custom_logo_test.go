@@ -13,7 +13,7 @@ import (
 )
 
 var _ = Describe("Global hooks :: set custom logo for grafana", func() {
-	f := HookExecutionConfigInit(`{"global": {}, "prometheus": {"internal": {"grafana": {"customLogo": {}}}}}`, `{}`)
+	f := HookExecutionConfigInit(`{"global": {"clusterIsBootstrapped": true}, "prometheus": {"internal": {"grafana": {"customLogo": {}}}}}`, `{}`)
 	Context("ConfigMap with logo in d8-system does not exist", func() {
 		BeforeEach(func() {
 			f.KubeStateSet(``)
