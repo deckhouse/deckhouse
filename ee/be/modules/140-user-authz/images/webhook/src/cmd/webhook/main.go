@@ -9,17 +9,18 @@ import (
 	"log"
 	"os"
 
-	"user-authz-webhook/web"
+	"webhook/internal/web"
 )
 
 func main() {
 	logger := log.New(os.Stdout, "", log.LstdFlags)
 
-	newServer, err := web.NewServer(logger)
+	server, err := web.NewServer(logger)
 	if err != nil {
 		logger.Fatal(err)
 	}
-	if err := newServer.Run(); err != nil {
+
+	if err = server.Run(); err != nil {
 		logger.Fatal(err)
 	}
 }

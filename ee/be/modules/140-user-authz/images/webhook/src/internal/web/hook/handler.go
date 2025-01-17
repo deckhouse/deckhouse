@@ -16,7 +16,7 @@ import (
 	"sync"
 	"time"
 
-	"user-authz-webhook/cache"
+	"webhook/internal/cache"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	labels "k8s.io/apimachinery/pkg/labels"

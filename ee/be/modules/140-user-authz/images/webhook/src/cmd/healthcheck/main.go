@@ -11,7 +11,7 @@ import (
 	"net/http"
 	"net/url"
 
-	"user-authz-webhook/web"
+	"webhook/internal/web"
 )
 
 func main() {
