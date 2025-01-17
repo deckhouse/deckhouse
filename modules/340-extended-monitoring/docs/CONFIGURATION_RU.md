@@ -3,20 +3,21 @@ title: "Модуль extended-monitoring: настройки"
 force_searchable: true
 ---
 
-<!-- SCHEMA -->
-
 ## Как использовать `extended-monitoring-exporter`
 
-Чтобы включить экспортирование extended-monitoring метрик, нужно навесить на namespace лейбл `extended-monitoring.deckhouse.io/enabled` любым удобным способом, например:
+Чтобы включить экспортирование extended-monitoring метрик, нужно указать в пространстве имён лейбл `extended-monitoring.deckhouse.io/enabled` любым удобным способом, например:
 - добавить в проект соответствующий helm-чарт (рекомендуемый);
 - добавить в описание `.gitlab-ci.yml` (kubectl patch/create);
-- поставить руками (`kubectl label namespace my-app-production extended-monitoring.deckhouse.io/enabled=""`);
+- добавить вручную (`kubectl label namespace my-app-production extended-monitoring.deckhouse.io/enabled=""`);
 - настроить через [namespace-configurator](../namespace-configurator/) модуль.
 
-Сразу же после этого для всех поддерживаемых Kubernetes-объектов в данном namespace в Prometheus появятся default-метрики + любые кастомные с префиксом `threshold.extended-monitoring.deckhouse.io/`. Для ряда [non-namespaced](#non-namespaced-kubernetes-объекты) Kubernetes-объектов, описанных ниже, мониторинг включается автоматически.
+Сразу же после этого для всех поддерживаемых Kubernetes-объектов в данном пространстве имён в Prometheus появятся default-метрики + любые кастомные с префиксом `threshold.extended-monitoring.deckhouse.io/`. Для ряда [non-namespaced](#non-namespaced-kubernetes-объекты) Kubernetes-объектов, описанных ниже, мониторинг включается автоматически.
 
 К Kubernetes-объектам `threshold.extended-monitoring.deckhouse.io/что-то свое` можно добавить любые другие лейблы с указанным значением. Пример: `kubectl label pod test threshold.extended-monitoring.deckhouse.io/disk-inodes-warning=30`.
 В таком случае значение из лейбла заменит значение по умолчанию.
+
+Если вы хотите переопределить значения threshold для всех объектов в определенном пространстве имен, вы можете установить лейбл `threshold.extended-monitoring.deckhouse.io/` на уровне namespace. Например: `kubectl label namespace my-app-production threshold.extended-monitoring.deckhouse.io/5xx-warning=20`.
+Это заменит значение по умолчанию для всех объектов namespace, для которых еще не установлен этот лейбл.
 
 Слежение за объектом можно отключить индивидуально, поставив на него лейбл `extended-monitoring.deckhouse.io/enabled=false`. Соответственно, отключатся и лейблы по умолчанию, а также все алерты, привязанные к лейблам.
 
@@ -30,62 +31,62 @@ force_searchable: true
 
 #### Non-namespaced Kubernetes-объекты
 
-Non-namespaced Kubernetes-объекты не нуждаются в лейблах на namespace и мониторинг на них включается по умолчанию при включении модуля.
+Non-namespaced Kubernetes-объекты, то есть объекты вне пространств имён, не нуждаются в лейблах на этих пространствах и мониторинг на них включается по умолчанию при включении модуля.
 
-##### Node
+##### Узел
 
-| Label                                   | Type          | Default value  |
-|-----------------------------------------|---------------|----------------|
-| disk-bytes-warning                      | int (percent) | 70             |
-| disk-bytes-critical                     | int (percent) | 80             |
-| disk-inodes-warning                     | int (percent) | 90             |
-| disk-inodes-critical                    | int (percent) | 95             |
-| load-average-per-core-warning           | int           | 3              |
-| load-average-per-core-critical          | int           | 10             |
+| Лейбл                          | Тип           | Значение по умолчанию |
+|--------------------------------|---------------|-----------------------|
+| disk-bytes-warning             | int (percent) | 70                    |
+| disk-bytes-critical            | int (percent) | 80                    |
+| disk-inodes-warning            | int (percent) | 90                    |
+| disk-inodes-critical           | int (percent) | 95                    |
+| load-average-per-core-warning  | int           | 3                     |
+| load-average-per-core-critical | int           | 10                    |
 
 > **Важно!** Эти лейблы **не** действуют для тех разделов, в которых расположены `imagefs` (по умолчанию — `/var/lib/docker`) и `nodefs` (по умолчанию — `/var/lib/kubelet`).
 Для этих разделов пороги настраиваются полностью автоматически согласно [eviction thresholds в kubelet](https://kubernetes.io/docs/tasks/administer-cluster/out-of-resource/).
-Значения по умолчанию см. [тут](https://github.com/kubernetes/kubernetes/blob/743e4fba6339237cc8d5c11413f76ea54b4cc3e8/pkg/kubelet/apis/config/v1beta1/defaults_linux.go#L22-L27), подробнее см. [экспортер](https://github.com/deckhouse/deckhouse/blob/main/modules/340-monitoring-kubernetes/images/kubelet-eviction-thresholds-exporter/).
+Значения по умолчанию указаны в документации [Kubernetes](https://github.com/kubernetes/kubernetes/blob/743e4fba6339237cc8d5c11413f76ea54b4cc3e8/pkg/kubelet/apis/config/v1beta1/defaults_linux.go#L22-L27), в описании [экспортера](https://github.com/deckhouse/deckhouse/blob/main/modules/340-monitoring-kubernetes/images/kubelet-eviction-thresholds-exporter/).
 
 #### Namespaced Kubernetes-объекты
 
 ##### Под
 
-| Label                                   | Type          | Default value  |
-|-----------------------------------------|---------------|----------------|
-| disk-bytes-warning                      | int (percent) | 85             |
-| disk-bytes-critical                     | int (percent) | 95             |
-| disk-inodes-warning                     | int (percent) | 85             |
-| disk-inodes-critical                    | int (percent) | 90             |
+| Лейбл                | Тип           | Значение по умолчанию |
+|----------------------|---------------|-----------------------|
+| disk-bytes-warning   | int (percent) | 85                    |
+| disk-bytes-critical  | int (percent) | 95                    |
+| disk-inodes-warning  | int (percent) | 85                    |
+| disk-inodes-critical | int (percent) | 90                    |
 
 ##### Ingress
 
-| Label                  | Type          | Default value |
-|------------------------|---------------|---------------|
-| 5xx-warning            | int (percent) | 10            |
-| 5xx-critical           | int (percent) | 20            |
+| Лейбл        | Тип           | Значение по умолчанию |
+|--------------|---------------|-----------------------|
+| 5xx-warning  | int (percent) | 10                    |
+| 5xx-critical | int (percent) | 20                    |
 
 ##### Deployment
 
-| Label                  | Type          | Default value |
-|------------------------|---------------|---------------|
-| replicas-not-ready     | int (count)   | 0             |
+| Лейбл              | Тип         | Значение по умолчанию |
+|--------------------|-------------|-----------------------|
+| replicas-not-ready | int (count) | 0                     |
 
-Порог подразумевает количество недоступных реплик **сверх** [maxUnavailable](https://kubernetes.io/docs/concepts/workloads/controllers/deployment/#max-unavailable). Сработает, если недоступно реплик больше на указанное значение, чем разрешено в `maxUnavailable`. То есть при нуле сработает, если недоступно больше, чем указано в `maxUnavailable`, а при единице сработает, если недоступно больше, чем указано в `maxUnavailable`, плюс 1. Таким образом, у конкретных Deployment, которые находятся в namespace со включенным расширенным мониторингом и которым допустимо быть недоступными, можно подкрутить этот параметр, чтобы не получать ненужные алерты.
+Порог подразумевает количество недоступных реплик **сверх** [maxUnavailable](https://kubernetes.io/docs/concepts/workloads/controllers/deployment/#max-unavailable). Сработает, если недоступно реплик больше на указанное значение, чем разрешено в `maxUnavailable`. То есть при нуле сработает, если недоступно больше, чем указано в `maxUnavailable`, а при единице сработает, если недоступно больше, чем указано в `maxUnavailable`, плюс 1. Таким образом, у конкретных Deployment, которые находятся в пространстве имён со включенным расширенным мониторингом и которым допустимо быть недоступными, можно установить этот параметр, чтобы не получать ненужные алерты.
 
 ##### StatefulSet
 
-| Label                  | Type          | Default value |
-|------------------------|---------------|---------------|
-| replicas-not-ready     | int (count)   | 0             |
+| Лейбл              | Тип         | Значение по умолчанию |
+|--------------------|-------------|-----------------------|
+| replicas-not-ready | int (count) | 0                     |
 
 Порог подразумевает количество недоступных реплик **сверх** [maxUnavailable](https://kubernetes.io/docs/concepts/workloads/controllers/deployment/#max-unavailable) (см. комментарии к [Deployment](#deployment)).
 
 ##### DaemonSet
 
-| Label                  | Type          | Default value |
-|------------------------|---------------|---------------|
-| replicas-not-ready     | int (count)   | 0             |
+| Лейбл              | Тип         | Значение по умолчанию |
+|--------------------|-------------|-----------------------|
+| replicas-not-ready | int (count) | 0                     |
 
 Порог подразумевает количество недоступных реплик **сверх** [maxUnavailable](https://kubernetes.io/docs/concepts/workloads/controllers/deployment/#max-unavailable) (см. комментарии к [Deployment](#deployment)).
 
@@ -118,3 +119,5 @@ Non-namespaced Kubernetes-объекты не нуждаются в лейбла
   max by (namespace, statefulset) (extended_monitoring_statefulset_threshold{threshold="replicas-not-ready"})
 )
 ```
+
+<!-- SCHEMA -->
