@@ -1,5 +1,5 @@
 {{- $docker_version := "2.8.3" }}
-{{- $docker_auth_version := "1.12.0" }}
+{{- $docker_auth_version := "1.13.0" }}
 
 {{- $image_version := $docker_version | replace "." "-" }}
 ---
@@ -21,9 +21,7 @@ shell:
   install:
   - git clone --depth 1 --branch {{ $docker_auth_version }} {{ $.SOURCE_REPO }}/cesanta/docker_auth.git /src/docker_auth
   - git clone --depth 1 --branch v{{ $docker_version }} {{ $.SOURCE_REPO }}/distribution/distribution.git /src/distribution
-  - cd /src/docker_auth
-  - git apply /patches/docker_auth/*.patch --verbose
-  - rm -rf .git
+  - rm -rf /src/docker_auth/.git
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
 from: {{ $.Images.BASE_SCRATCH }}
@@ -59,6 +57,11 @@ git:
   stageDependencies:
     setup:
     - '**/*'
+mount:
+- fromPath: ~/go-pkg-cache
+  to: /go/pkg
+- from: tmp_dir
+  to: /root/.cache/go-build
 shell:
   beforeInstall:
   {{- include "alpine packages proxy" . | nindent 2 }}
