@@ -1,6 +1,3 @@
-module: admission-policy-engine
-subsystems:
-  - security
 allowedResources:
   - group: templates.gatekeeper.sh
     resources:

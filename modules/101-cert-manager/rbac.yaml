@@ -1,6 +1,3 @@
-module: cert-manager
-subsystems:
-  - security
 allowedResources:
   - group: cert-manager.io
     resources:
