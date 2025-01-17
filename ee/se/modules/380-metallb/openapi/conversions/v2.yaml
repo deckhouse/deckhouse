@@ -1,3 +1,3 @@
 version: 2
 conversions:
-  - del(.addressPools[]? | select(.protocol == "layer2"))
+  - . # We will force users to get rid of extra unwanted elements in MC through alert
