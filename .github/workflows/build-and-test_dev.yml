@@ -1651,15 +1651,21 @@ jobs:
       - tests
     runs-on: ubuntu-latest
     steps:
-    - name: Set commit status after e2e run
-      id: set_e2e_requirement_status
-      uses: actions/github-script@v6.4.1
-      env:
-        STATUS_TARGET_COMMIT: ${{needs.git_info.outputs.github_sha}}
-        PR_LABELS: ${{ needs.pull_request_info.outputs.labels }}
-      with:
-        github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
-        script: |
-          const e2eStatus = require('./.github/scripts/js/e2e-commit-status');
 
-          await e2eStatus.setInitialStatus({github, context, core});
+      # <template: checkout_step>
+      - name: Checkout sources
+        uses: actions/checkout@v3.5.2
+
+      # </template: checkout_step>
+      - name: Set commit status after e2e run
+        id: set_e2e_requirement_status
+        uses: actions/github-script@v6.4.1
+        env:
+          STATUS_TARGET_COMMIT: ${{needs.git_info.outputs.github_sha}}
+          PR_LABELS: ${{ needs.pull_request_info.outputs.labels }}
+        with:
+          github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+          script: |
+            const e2eStatus = require('./.github/scripts/js/e2e-commit-status');
+
+            await e2eStatus.setInitialStatus({github, context, core});
