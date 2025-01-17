@@ -133,7 +133,7 @@ function __main__() {
       -F "close_old_findings=false" \
       -F "push_to_jira=false" \
       -F "file=@out/d8-images_${MODULE_NAME}_report.json" \
-      -F "product_name=Test" -F "scan_date=2022-06-14" -F "engagement_name=Test"
+      -F "product_name=Deckhouse" -F "scan_date=2022-06-14" -F "engagement_name=Test"
 
   done
 
