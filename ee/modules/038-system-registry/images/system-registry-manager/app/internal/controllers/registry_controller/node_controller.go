@@ -176,13 +176,13 @@ func (nc *nodeController) SetupWithManager(ctx context.Context, mgr ctrl.Manager
 			name == state.UserMirrorPusherName
 	})
 
-	rbacProxyPKIPredicate := predicate.NewPredicateFuncs(func(obj client.Object) bool {
+	globalConfigMapsPredicate := predicate.NewPredicateFuncs(func(obj client.Object) bool {
 		if obj.GetNamespace() != nc.Namespace {
 			return false
 		}
 
 		name := obj.GetName()
-		return name == state.RbacProxyPKIConfigMapName
+		return name == state.IngressClientPKIConfigMapName
 	})
 
 	staticPodManagerPredicate := predicate.NewPredicateFuncs(func(obj client.Object) bool {
@@ -246,7 +246,7 @@ func (nc *nodeController) SetupWithManager(ctx context.Context, mgr ctrl.Manager
 		Watches(
 			&corev1.ConfigMap{},
 			reprocessAllHandler,
-			builder.WithPredicates(rbacProxyPKIPredicate),
+			builder.WithPredicates(globalConfigMapsPredicate),
 		).
 		WithOptions(controller.Options{
 			MaxConcurrentReconciles: 10,
@@ -414,9 +414,9 @@ func (nc *nodeController) handleMasterNode(ctx context.Context, node *corev1.Nod
 		return
 	}
 
-	rbacProxyPKI, err := nc.loadRbacProxyPKI(ctx)
+	ingressClientPKI, err := nc.loadIngressClientPKI(ctx)
 	if err != nil {
-		err = fmt.Errorf("cannot load rbac proxy PKI: %w", err)
+		err = fmt.Errorf("cannot load ingress client PKI: %w", err)
 		return
 	}
 
@@ -459,7 +459,7 @@ func (nc *nodeController) handleMasterNode(ctx context.Context, node *corev1.Nod
 		globalPKI,
 		globalSecrets,
 		nodePKI,
-		rbacProxyPKI,
+		ingressClientPKI,
 		mirrorerUpstreams,
 	)
 
@@ -484,7 +484,7 @@ func (nc *nodeController) contructStaticPodConfig(
 	globalPKI state.GlobalPKI,
 	globalSecrets state.GlobalSecrets,
 	nodePKI state.NodePKI,
-	rbacProxyPKI *state.RbacProxyPKI,
+	ingressClientPKI *state.IngressClientPKI,
 	mirrorerUpstreams []string,
 ) (config staticpod.Config, err error) {
 	tokenKey, err := pki.EncodePrivateKey(globalPKI.Token.Key)
@@ -503,12 +503,6 @@ func (nc *nodeController) contructStaticPodConfig(
 	if err != nil {
 		err = fmt.Errorf("cannot encode node's Distribution key: %w", err)
 		return
-	}
-
-	var rbacProxyCaCert *string
-	if rbacProxyPKI != nil {
-		rbacProxyCaCertEncoded := string(pki.EncodeCertificate(rbacProxyPKI.CaCert))
-		rbacProxyCaCert = &rbacProxyCaCertEncoded
 	}
 
 	registryHostPath := fmt.Sprintf("%s%s", nc.Settings.RegistryAddress, nc.Settings.RegistryPath)
@@ -541,7 +535,6 @@ func (nc *nodeController) contructStaticPodConfig(
 			AuthKey:          string(authKey),
 			DistributionCert: string(pki.EncodeCertificate(nodePKI.Distribution.Cert)),
 			DistributionKey:  string(distributionKey),
-			RbacProxyCaCert:  rbacProxyCaCert,
 		},
 		Mirrorer: staticpod.Mirrorer{
 			UserPuller: staticpod.User{
@@ -560,6 +553,10 @@ func (nc *nodeController) contructStaticPodConfig(
 
 	if moduleConfig.Settings.ImagesOverride.Mirrorer != "" {
 		config.Images.Mirrorer = moduleConfig.Settings.ImagesOverride.Mirrorer
+	}
+
+	if ingressClientPKI != nil {
+		config.PKI.IngressClientCaCert = string(pki.EncodeCertificate(ingressClientPKI.CaCert))
 	}
 
 	if moduleConfig.Settings.Mode == state.RegistryModeProxy {
@@ -846,10 +843,10 @@ func (nc *nodeController) loadGlobalPKI(ctx context.Context) (ret state.GlobalPK
 	return
 }
 
-func (nc *nodeController) loadRbacProxyPKI(ctx context.Context) (*state.RbacProxyPKI, error) {
+func (nc *nodeController) loadIngressClientPKI(ctx context.Context) (*state.IngressClientPKI, error) {
 	cm := corev1.ConfigMap{}
 	key := types.NamespacedName{
-		Name:      state.RbacProxyPKIConfigMapName,
+		Name:      state.IngressClientPKIConfigMapName,
 		Namespace: nc.Namespace,
 	}
 
@@ -860,7 +857,7 @@ func (nc *nodeController) loadRbacProxyPKI(ctx context.Context) (*state.RbacProx
 		return nil, fmt.Errorf("cannot get configmap %v k8s object: %w", key.Name, err)
 	}
 
-	ret := state.RbacProxyPKI{}
+	ret := state.IngressClientPKI{}
 	err := ret.DecodeConfigMap(&cm)
 	if err != nil {
 		return nil, fmt.Errorf("cannot decode PKI from configmap: %w", err)

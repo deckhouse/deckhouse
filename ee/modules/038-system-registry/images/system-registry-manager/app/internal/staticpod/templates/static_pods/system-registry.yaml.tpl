@@ -21,7 +21,7 @@ metadata:
     authTokenKeyHash: {{ quote .Hashes.TokenKey }}
     distributionCertHash: {{ quote .Hashes.DistributionCert }}
     distributionKeyHash: {{ quote .Hashes.DistributionKey }}
-    rbacProxyCaCertHash: {{ quote .Hashes.RbacProxyCaCert }}
+    ingressClientCaCertHash: {{ quote .Hashes.IngressClientCaCert }}
   name: system-registry
   namespace: d8-system
 spec:

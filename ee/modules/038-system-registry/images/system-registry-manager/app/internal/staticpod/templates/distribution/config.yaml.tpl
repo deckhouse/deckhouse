@@ -22,12 +22,13 @@ http:
   tls:
     certificate: /system_registry_pki/distribution.crt
     key: /system_registry_pki/distribution.key
-  ## Must present only if CA cert exists!
-  # realip:
-  #   enabled: true
-  #   clientcert:
-  #     ca: /system_registry_pki/rbac-proxy-ca.crt
-  #     cn: nginx-ingress:nginx
+{{- if .PKI.IngressClientCaCert }}
+  realip:
+    enabled: true
+    clientcert:
+      ca: /system_registry_pki/ingress-client-ca.crt
+      cn: nginx-ingress:nginx
+{{- end }}
 
 {{- if eq .Registry.Mode "Proxy" }}
 proxy:

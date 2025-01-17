@@ -14,21 +14,21 @@ import (
 )
 
 const (
-	RbacProxyPKIConfigMapName        = "kube-rbac-proxy-ca.crt"
-	RbacProxyPKIConfigMapCACertField = "ca.crt"
+	IngressClientPKIConfigMapName        = "kube-rbac-proxy-ca.crt"
+	IngressClientPKIConfigMapCACertField = "ca.crt"
 )
 
-type RbacProxyPKI struct {
+type IngressClientPKI struct {
 	CaCert *x509.Certificate
 }
 
-func (nc *RbacProxyPKI) DecodeConfigMap(cm *corev1.ConfigMap) error {
+func (nc *IngressClientPKI) DecodeConfigMap(cm *corev1.ConfigMap) error {
 	if cm == nil {
 		return ErrConfigMapIsNil
 	}
 
 	var err error
-	caCertFieldData := []byte(cm.Data[RbacProxyPKIConfigMapCACertField])
+	caCertFieldData := []byte(cm.Data[IngressClientPKIConfigMapCACertField])
 
 	if nc.CaCert, err = pki.DecodeCertificate(caCertFieldData); err != nil {
 		return fmt.Errorf("cannot decode certificate: %w", err)

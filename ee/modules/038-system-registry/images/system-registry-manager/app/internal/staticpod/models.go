@@ -45,14 +45,14 @@ func (cfg *Config) Bind(r *http.Request) error {
 
 // PKIModel holds the configuration for the PKI
 type PKIModel struct {
-	CACert           string  `json:"ca,omitempty"`
-	AuthCert         string  `json:"authCert,omitempty"`
-	AuthKey          string  `json:"authKey,omitempty"`
-	TokenCert        string  `json:"tokenCert,omitempty"`
-	TokenKey         string  `json:"tokenKey,omitempty"`
-	DistributionCert string  `json:"distributionCert,omitempty"`
-	DistributionKey  string  `json:"distributionKey,omitempty"`
-	RbacProxyCaCert  *string `json:"rbacProxyCaCert,omitempty"`
+	CACert                string `json:"ca,omitempty"`
+	AuthCert              string `json:"authCert,omitempty"`
+	AuthKey               string `json:"authKey,omitempty"`
+	TokenCert             string `json:"tokenCert,omitempty"`
+	TokenKey              string `json:"tokenKey,omitempty"`
+	DistributionCert      string `json:"distributionCert,omitempty"`
+	DistributionKey       string `json:"distributionKey,omitempty"`
+	IngressClientCaCert   string `json:"ingressClientCaCert,omitempty"`
 }
 
 func (p PKIModel) Validate() error {
@@ -64,7 +64,7 @@ func (p PKIModel) Validate() error {
 		validation.Field(&p.TokenKey, validation.Required),
 		validation.Field(&p.DistributionCert, validation.Required),
 		validation.Field(&p.DistributionKey, validation.Required),
-		validation.Field(&p.RbacProxyCaCert, validation.NilOrNotEmpty),
+		// IngressClientCaCert is optional field and can be empty
 	)
 }
 
@@ -79,7 +79,7 @@ type ConfigHashes struct {
 	TokenKey             string
 	DistributionCert     string
 	DistributionKey      string
-	RbacProxyCaCert      string
+	IngressClientCaCert  string
 	MirrorerTemplate     string
 }
 
@@ -231,17 +231,17 @@ func (pki *PKIModel) syncPKIFiles(basePath string, configHashes *ConfigHashes) (
 
 	// Define paths for each PKI file and corresponding hash field in ConfigHashes
 	fileMap := map[string]struct {
-		content   *string
+		content   string
 		hashField *string
 	}{
-		"ca.crt":            {&pki.CACert, &configHashes.CACert},
-		"auth.crt":          {&pki.AuthCert, &configHashes.AuthCert},
-		"auth.key":          {&pki.AuthKey, &configHashes.AuthKey},
-		"token.crt":         {&pki.TokenCert, &configHashes.TokenCert},
-		"token.key":         {&pki.TokenKey, &configHashes.TokenKey},
-		"distribution.crt":  {&pki.DistributionCert, &configHashes.DistributionCert},
-		"distribution.key":  {&pki.DistributionKey, &configHashes.DistributionKey},
-		"rbac-proxy-ca.crt": {pki.RbacProxyCaCert, &configHashes.RbacProxyCaCert},
+		"ca.crt":                {pki.CACert, &configHashes.CACert},
+		"auth.crt":              {pki.AuthCert, &configHashes.AuthCert},
+		"auth.key":              {pki.AuthKey, &configHashes.AuthKey},
+		"token.crt":             {pki.TokenCert, &configHashes.TokenCert},
+		"token.key":             {pki.TokenKey, &configHashes.TokenKey},
+		"distribution.crt":      {pki.DistributionCert, &configHashes.DistributionCert},
+		"distribution.key":      {pki.DistributionKey, &configHashes.DistributionKey},
+		"ingress-client-ca.crt": {pki.IngressClientCaCert, &configHashes.IngressClientCaCert},
 	}
 
 	// Iterate over the PKI files and process them
@@ -249,15 +249,15 @@ func (pki *PKIModel) syncPKIFiles(basePath string, configHashes *ConfigHashes) (
 		path := filepath.Join(basePath, name)
 
 		// Process each template and check if it has changed
-		if data.content != nil {
-			changed, err := saveFileIfChanged(path, []byte(*data.content), data.hashField)
+		if data.content != "" {
+			changed, err := saveFileIfChanged(path, []byte(data.content), data.hashField)
 			if err != nil {
 				return false, fmt.Errorf("failed to process PKI file %s: %v", path, err)
 			}
 
 			anyFileChanged = anyFileChanged || changed
 		} else {
-			emptyContentHash := computeHash([]byte{})
+			emptyContentHash := ""
 			data.hashField = &emptyContentHash
 
 			changed, err := deleteFile(path)
