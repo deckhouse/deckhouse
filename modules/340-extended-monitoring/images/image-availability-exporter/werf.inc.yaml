@@ -1,6 +1,7 @@
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 fromImage: common/src-artifact
+fromCacheVersion: "testGopa"
 final: false
 git:
 - add: /{{ $.ModulePath }}modules/340-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
@@ -18,7 +19,6 @@ shell:
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
 from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
 final: false
-fromCacheVersion: "testGopa"
 import:
 - image: {{ .ModuleName }}/{{ $.ImageName }}-src-artifact
   add: /src
