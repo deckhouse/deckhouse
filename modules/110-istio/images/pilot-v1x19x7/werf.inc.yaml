@@ -8,6 +8,8 @@ import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
   add: /tmp/istio/out/pilot-discovery
   to: /usr/local/bin/pilot-discovery
+  owner: 1337
+  group: 1337
   after: setup
 - image: {{ .ModuleName }}/{{ .ImageName }}-binary-artifact
   add: /var/lib/istio/envoy/
@@ -15,6 +17,8 @@ import:
   includePaths:
   - envoy_bootstrap_tmpl.json
   - gcp_envoy_bootstrap_tmpl.json
+  owner: 1337
+  group: 1337
   after: setup
 docker:
   USER: 1337
@@ -41,4 +45,4 @@ shell:
   - export GOPROXY={{ $.GOPROXY }}
   - GOOS=linux GOARCH=amd64 LDFLAGS='-extldflags -static -s -w' common/scripts/gobuild.sh /tmp/istio/out/ -tags=agent,disable_pgv /tmp/istio/pilot/cmd/pilot-discovery/
   - chmod 0700 /tmp/istio/out/pilot-discovery
-  
+  - chown 1337:1337 /tmp/istio/out/pilot-discovery

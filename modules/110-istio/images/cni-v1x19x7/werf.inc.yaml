@@ -8,15 +8,20 @@ import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
   add: /tmp/istio/out/istio-cni
   to: /opt/cni/bin/istio-cni
+  owner: 1337
+  group: 1337
   after: setup
 - image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
   add: /tmp/istio/out/install-cni
   to: /usr/local/bin/install-cni
+  owner: 1337
+  group: 1337
   after: setup
 docker:
   ENV:
     PATH: "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/opt/cni/bin"
   WORKDIR: "/opt/cni/bin"
+  USER: 1337
   ENTRYPOINT: ["/usr/local/bin/install-cni"]
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
@@ -36,4 +41,5 @@ shell:
   - export GOPROXY={{ $.GOPROXY }}
   - GOOS=linux GOARCH=amd64 LDFLAGS='-extldflags -static -s -w' common/scripts/gobuild.sh /tmp/istio/out/ -tags=agent,disable_pgv /tmp/istio/cni/cmd/install-cni/
   - GOOS=linux GOARCH=amd64 LDFLAGS='-extldflags -static -s -w' common/scripts/gobuild.sh /tmp/istio/out/ -tags=agent,disable_pgv /tmp/istio/cni/cmd/istio-cni/
-  - chown 0700 /tmp/istio/out/install-cni /tmp/istio/out/istio-cni
+  - chmod 0700 /tmp/istio/out/install-cni /tmp/istio/out/istio-cni
+  - chown 1337:1337 /tmp/istio/out/istio-cni
