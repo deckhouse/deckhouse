@@ -38,6 +38,11 @@ import:
   to: /src
   before: install
 {{ end }}
+mount:
+- from: tmp_dir
+  to: /go/pkg
+- from: tmp_dir
+  to: /root/.cache/go-build
 shell:
   install:
   - cd /src
@@ -64,6 +69,4 @@ git:
   - '**/*.sum'
   stageDependencies:
     install:
-    - '**/*.go'
-    - 'go.mod'
-    - 'go.sum'
+    - '**/*'
