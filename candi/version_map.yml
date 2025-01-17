@@ -158,6 +158,6 @@ k8s:
       snapshotter: v8.1.0
       livenessprobe: v2.14.0
 d8:
-  d8CliVersion: v0.8.0
+  d8CliVersion: v0.9.0
 jq:
   version: 1.7.1

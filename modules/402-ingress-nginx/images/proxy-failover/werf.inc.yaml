@@ -1,18 +1,28 @@
 ---
-artifact: {{ .ModuleName }}/build-proxy-failover-artifact
-from: {{ .Images.BASE_GOLANG_19_ALPINE }}
+image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+fromImage: common/src-artifact
+final: false
 git:
-- add: /{{ $.ModulePath }}modules/402-{{ $.ModuleName }}/images/{{ $.ImageName }}/
+- add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/src
   to: /src
   includePaths:
-  - '**/*.go'
-  - '**/*.mod'
-  - '**/*.sum'
+    - '**/*.go'
+    - '**/*.mod'
+    - '**/*.sum'
   stageDependencies:
     install:
-    - '**/*.go'
-    - 'go.mod'
-    - 'go.sum'
+      - '**/*.go'
+      - 'go.mod'
+      - 'go.sum'
+---
+image: {{ .ModuleName }}/build-proxy-failover-artifact
+from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
+final: false
+import:
+  - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+    add: /src
+    to: /src
+    before: install
 mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
@@ -23,9 +33,8 @@ shell:
   - chown -R 64535:64535 proxy-failover-controller
   - chmod 0700 proxy-failover-controller
 ---
-artifact: {{ .ModuleName }}/nginx-static-artifact
+image: {{ .ModuleName }}/nginx-static-artifact
 fromImage: common/nginx-static
-fromCacheVersion: 432
 git:
 - add: /{{ $.ModulePath }}modules/402-{{ $.ModuleName }}/images/{{ $.ImageName }}/conf/
   to: /opt/nginx-static/conf
@@ -36,11 +45,11 @@ git:
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
 import:
-- artifact: {{ .ModuleName }}/build-proxy-failover-artifact
+- image: {{ .ModuleName }}/build-proxy-failover-artifact
   add: /src/proxy-failover-controller
   to: /proxy-failover-controller
-  before: setup 
-- artifact: {{ .ModuleName }}/nginx-static-artifact
+  before: setup
+- image: {{ .ModuleName }}/nginx-static-artifact
   add: /opt/nginx-static
   before: setup
 docker:
