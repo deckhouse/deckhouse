@@ -113,6 +113,7 @@ function __main__() {
 
     echo " Creating a defectDojo engagement for module $MODULE_NAME"
     echo ""
+    echo "host: ${DEFECTDOJO_HOST}"
     curl -X POST \
       -H "Authorization: Token ${DEFECTDOJO_API_TOKEN}" \
       http://${DEFECTDOJO_HOST}/api/v2/engagements/ \
