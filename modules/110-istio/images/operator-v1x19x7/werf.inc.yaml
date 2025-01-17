@@ -8,10 +8,14 @@ import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
   add: /tmp/istio/out/operator
   to: /usr/local/bin/operator
+  owner: 1337
+  group: 1337
   after: setup
 - image: {{ .ModuleName }}/{{ .ImageName }}-binary-artifact
   add: /var/lib/istio/manifests/
   to: /var/lib/istio/manifests/
+  owner: 1337
+  group: 1337
   after: setup
 docker:
   USER: "1337:1337"
@@ -42,7 +46,8 @@ shell:
   - echo {{ $istioOperatorVersion }} > version
   - export GOPROXY={{ $.GOPROXY }}
   - GOOS=linux GOARCH=amd64 LDFLAGS='-extldflags -static -s -w' common/scripts/gobuild.sh /tmp/istio/out/ -tags=agent,disable_pgv /tmp/istio/operator/cmd/operator/
-  - chown 0700 /tmp/istio/out/operator
+  - chmod 0700 /tmp/istio/out/operator
+  - chown 1337:1337 /tmp/istio/out/operator
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-binary-artifact
 final: false
