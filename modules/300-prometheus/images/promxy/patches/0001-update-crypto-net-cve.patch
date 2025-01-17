@@ -203,32 +203,186 @@ index c0a6f692..9dd36e5a 100644
  // ParseUnverified parses the token but doesn't validate the signature.
 diff --git a/vendor/github.com/google/s2a-go/internal/v2/certverifier/testdata/client_intermediate_cert.der b/vendor/github.com/google/s2a-go/internal/v2/certverifier/testdata/client_intermediate_cert.der
 deleted file mode 100644
-index 958f3cfa..00000000
-Binary files a/vendor/github.com/google/s2a-go/internal/v2/certverifier/testdata/client_intermediate_cert.der and /dev/null differ
+index 958f3cfaddf3645fa6c0578b5b6955d65ac4c172..0000000000000000000000000000000000000000
+GIT binary patch
+literal 0
+HcmV?d00001
+
+literal 998
+zcmXqLVt!=M#B^!_GZP~dlZfxTkgMw#Mx5CteAhsdS=K*t&xAY!UN%mxHjlRNyo`+8
+ztPBQ??S|Y2oNUaYENsF|p}{Z?2M?38qoI(207!<Nhcmb|FR!vJF(=hfz<>`V#>K<#
+zoS$2em{(~iXuuB=;pX9R$t=q(&dkp<6f+P32{H5V78@nTm!uY##3!c~l^9AHNWiV<
+zWEA7BsH}1TV!h=2Tmw0AULzv|Gec7&Lt`^z^C)p%6J+ina%mHz5^^vyvNA9?G4eAQ
+zG%<29H8C<W9Nt&6Og&yK;BEQ+&)lC6TkJXAv2-f0Nr{K_j%4;<{u$jO6aNcHY8t(~
+zqy9y&-1Lzs?~BsEkFGl8R8RP>nfQWlH+Myj<F(Sn!hQWyYraPcCEBrtXFWTArbgzD
+zm5IZ{bD=fd*)4ZeK5z9e=XhyZ+3(MM(MSL5oWy@hr_^6Rn|+8eIXzO*Cp*6;N>Tjz
+z2Bjk+Ub9TzT(Z$!`+w1f9a{SYn?h^$U$mDJKK^KOurlxGlhf8coXvjW^}bgt-rFjD
+znHJ|Xo9Wew;}%JlW_Kjsthc+chb^XXpU3LOdy_KCS4OTntgUFd?YsGkV{8gPCrIUU
+z7xZ1<|6Oe5g44&3J$ODp>G5YKW=00a#V!U;2J*mEAgjzGVIbBZvce&_^W7!+r|T*d
+zavIkkZ(n>dQ`LY6q(GR3)qt6i@xOr}h$qOxWx&zImXe>Fn2DZTf#J-^uui3sYst!#
+z{ImS~I{#0uS#WDz%!i-3yIxOGkAC<p^jwU<)XyikaNa8oiP79sW{{liX=%#*`SJI8
+zMcYgrntF|<A2Po$Z~L`udV^0!W9`!87p^3hsecxJ7d1D__DG4$xz}g@S(q)=657eI
+zRakm`-?5C8>KhN$DyM2L{LbrkL@xJCpY3crHP)J~LHEx;nsZlX$z1Na++S~*x&F8L
+zSHsIX`Pf;-7fz4f$yxWfRV}c$Te2$X#22gkrUlwjtNp9{IiD}~zjo}z)1J=iJoj~z
+zPFk$n)~eK8B%5+0@w1g$N8H(l+-H4!LOMmyS_+%b`$^TD`}g=z?!9=Gts-l=GE2@y
+HTP6bly#{pd
+
 diff --git a/vendor/github.com/google/s2a-go/internal/v2/certverifier/testdata/client_leaf_cert.der b/vendor/github.com/google/s2a-go/internal/v2/certverifier/testdata/client_leaf_cert.der
 deleted file mode 100644
-index d2817641..00000000
-Binary files a/vendor/github.com/google/s2a-go/internal/v2/certverifier/testdata/client_leaf_cert.der and /dev/null differ
+index d2817641bafb022339926786ab85b545f40ac665..0000000000000000000000000000000000000000
+GIT binary patch
+literal 0
+HcmV?d00001
+
+literal 1147
+zcmXqLVktLhVvb+H%*4pVB*OPMYW498DSV5WgVNVW|Jr8oCgimNFB_*;n@8JsUPeZ4
+zRtAH{c0+ChPB!LH7B*p~&|nycgNMo4(NM@h03^fC!x>zfmseSqn3HNKV890w<Kkg=
+z&d)7K%&RmMG~fq`aPx4uWR_(XXXfV_iW!K2gqV4Fi;WWFOHzwV;*(R0N(`k8B;eL_
+zGKz6mR8~0vv0ie1u7R95uaS{~nW3qXp^2fPag;c(2{LyOxwMH<2{{-USs9p{82K3t
+zni#p5niv@wo;*yPCCXlYe?^B-(;DHW%6oSHT^;mIIyZa%%0}@fp3IN`n3U=!8oYmC
+zx$Bx#esbWw!c%jdQ)h2XXzh~a-c}{E)#88C^IglkPyd|owRl08L`B~JwZ4vz-YZX7
+zv)Ce6;FhjT*5j|PsSB=h^Bd2ec&K!u5=Zc_35w@VJ#yyRmHBj^jY_lT!^g4v8)Z{&
+zrj~|YSf1kBW!8JC{`HU5msIM4=9xBV3EoX;JHkB6EoRyG>6yxnyM_06xZQcZ?W<Su
+zO^scC0W1Ifow;&jPR_ckj7N?Jt}ry&qVQ_v_NEP`5+}F*Uw>@M4y!->Y40>Qzg1y0
+z&gNQpqF{|c>D+ZZ(rFIKEL_n{%!~|-iyLnkG+s4m+z3nvvdS!tD-9Z#Eo|&v(%3b4
+zVzNoZ_g%=<^$R1;>=M3fAjvH2AGv2jo&gWY$-*qG2F#3%{|y8|JV6#N1CA!Pl>FSp
+z%sk}C2j(GQ<TElTpY@M^tCo8#OWd4A>()!XwH^ngbB~t_{rh@w&h5|n>_#Tt3odjy
+zuPCdY_u)fF^#8=jc^^+Q{aqN5`$@Gm({I-q6VU_LtQOD6naL>j(`V|D&;QI6%^$Dc
+z@$uH$=blqSKTV1FFaEpmVP=>@<Nv4E^jE8jxIUOsm|y+YPIku{xm}zZ;ymZ3En<+r
+ze0yiM+SH!gGfiI2V)$EU-5^uEV1L#G8<(&WFQa{D>vvi*Y`l|mqO|ORNA0oIS8nOI
+z?NiA8%5=ljL@D29-OKpueEYz|zv5rHb554&taa#n7142tpUKWU?R-O_r^0)6j>G3Y
+aOB;Xxy<$H9NT-Uzt(mu6i*GEf3IzZ)c%0q<
+
 diff --git a/vendor/github.com/google/s2a-go/internal/v2/certverifier/testdata/client_root_cert.der b/vendor/github.com/google/s2a-go/internal/v2/certverifier/testdata/client_root_cert.der
 deleted file mode 100644
-index d8c3710c..00000000
-Binary files a/vendor/github.com/google/s2a-go/internal/v2/certverifier/testdata/client_root_cert.der and /dev/null differ
+index d8c3710c85f9ff41ddfc709924c866350a727a4f..0000000000000000000000000000000000000000
+GIT binary patch
+literal 0
+HcmV?d00001
+
+literal 1013
+zcmXqLV*Y5*#B_53GZP~dlZa+<DywMROZSz%tV%tN{wd=1kCqwmvT<s)d9;1!Wn|=L
+zWiV)LH{>?pWMd9xVH0Kw4Tf<zc$l0W4TTH@Kr-w+oWZ4ed6i{}IjM#M27DkfE*^I0
+z{M>@Xyh=ks1AdSQHxGwPW?5!&W`3Tbn1KjLh?$4C*eEf+B(=CCJ~_3h#8ApW0&YDg
+zqZoHZWt9UE>m}#s8pw(B8W|aw8XFoJ7#JIxMv3#90J%nHQ0^ddX%nLoaxgNoGB7tW
+z@-rATF>*0AF)}hdZr#y6M}F(|x(>G^%gcAlKWcTb*S((Se#vIyuMojqJ6T@W9G$-N
+zZ|C3aC}V-ru$PA$a>||`V5!;WvLO9;#Z4xLTYkS~Q%%)mH+DGbsA<2rr@8F$Psyk!
+zC02_czBy5RY)XCG=Yl1DX=(>VSrdJ-C#|hK7^zn?b35awX<K}+vVPvN>)f$Ntvf$$
+zcUg9sL1fPSDbXqWt6$VVZu~MYZrj`2y}fI?80UuXsujC8ao09pzRe<Bw;hfu$Qhop
+zchzEJ&%VmpUZ?MM>SEFH3&Hjk;!&j?yPw^7|NHlfMLseyY=TyHB}&&4U!T;kt&%Ic
+z-@@f=`1w!pGyVU%zJI$PWGYXZ;?Bg($iTQb*dWkA7MKcT`B=nQL{>NicfPwM|8!l2
+zLQdoQ<L!$tW~v&<gQS&NBn-qFuqyy1ELmYj#{Vp=2FySTIoN@z7Z~h}4F12&IEtO8
+zzk97xB~UcG{~OPm@Zh%#mp`jr!}#xmdhKZ?iB>tUFt($qvv(cdI=i6tz3tUW`|a0C
+z&5N-8^H(H$?psgMz!}<?=eS*uc<N)`vF62T!8ej=XMIv1aC^+(al1<W$U&js>^;s&
+z=?+d?)Hkg%emvc~QLj+DwRvTMu)Tl4_m}{_7kTC1{xNsF-p9krsM-B)Ge_#Kiu#~{
+zd67^5U(N6lVcaug+5}Tw2V+f_-BCNQyG;7WAZ_<^`6QjCrOhu7&ztq4tdo7t^%&>)
+zT<y)NGjrG(I^DL<%h_YG%;0fd{;U~)n&$qEY`gxqr`BI{wMf|2<hvV^>R0VF*I2Sr
+HHQW{e5x{wf
+
 diff --git a/vendor/github.com/google/s2a-go/internal/v2/certverifier/testdata/server_intermediate_cert.der b/vendor/github.com/google/s2a-go/internal/v2/certverifier/testdata/server_intermediate_cert.der
 deleted file mode 100644
-index dae619c0..00000000
-Binary files a/vendor/github.com/google/s2a-go/internal/v2/certverifier/testdata/server_intermediate_cert.der and /dev/null differ
+index dae619c097512f20d09d2054c63fc0f715d7be24..0000000000000000000000000000000000000000
+GIT binary patch
+literal 0
+HcmV?d00001
+
+literal 998
+zcmXqLVt!=M#B^!_GZP~dlZZk6mxvepr#-!NVoqOL*`yn*LOZ7#@Un4gwRyCC=VfH%
+zW@RvFY&YaK;ACSCWnmL$3Jr#FICz+x9SwyH1VA$EJe<L$d3lv(i8-l;0tS2_F)ki<
+z=ltA)#JoyFK?8n}2saOhOJ-SSab|v=p_qXPNQjw-x7a8#z9hA{BtAK{sKijpKmu+(
+zC!-j5MP-!(5bGu9=Nia~^BNf$m>HTH8JZfJT11KSnjmurkxQExm5_sxk(GhDiIJbd
+zpox)-sfm%1VO{t`EzVyWX$3+}`kJnrGQY>^=jnZyz4d%;|IQeuB_Gcfo1a{_>B5Fg
+zXYbI=4K*7QZdjc*51-)~EjRzyir2SPA5Z@zcTLeXV*g^*2f0P(7p>c<z3aD;l~DF-
+z&y#Bf+eN<I+xS*y8W(fvK_;!G(z3m4|C#Kb9Pou@(IH8%FE=m7OPTD5QT~77iSK^n
+zj?mc?Ig0vzyqYN4#&<SiohMgM?Dt+@*6v*6oEHh_p1eC{%)E7#x1FVt+=r@^WjxM8
+zW%EyEH!b#_{r32dR#^#;1N%=sP8KS(uV2~rZtk&H%Pp6?9b0gk#Wua^Sp3nLmF_Fr
+z^{Q6{3P}Dei<=kX_FPV0XQCk!Gb01zViyA^19@O7kX2@pFc51H;hEsb-IKY0Mj+Q>
+z?c<>#uh>H(ryKBq6bQ4h8Za|5{x=W=@dR183^<zDQu1>XGxLzc8JJvw;mpWjp+5Pu
+z!*l<vg@Hn^|6H3WFE%rH_O6Mx$4~F}75{kIX^Q{N_aEEtdi^dfyYuqN153{c9<x(*
+zYdJSpoI8JDrlP)M@bsM5GdX^7^2B_v?%Pq_uy)Rp40V~)ZM&xLxg&orKe$?SmHfLW
+zM+@(Y>q#5Sb^i@`a>klJNjzx%iu)2*?h3yy-gEL(;p^g~mZo#n!wzh9Qua5C+wfRd
+ztarh_l9E{Oro7&WNVTl@3-~vy&EDU;)-f|r-8<&mQ>C=;``&D2+5V0(pW(g3o1}Sj
+z^gY793Mi&+ntK1`1tm%ENt=U{rb%k1PtbRHEhYTylqR?8HqOeuvA1fBY>pc~NUFTR
+KZE!sDzAgX``fm0B
+
 diff --git a/vendor/github.com/google/s2a-go/internal/v2/certverifier/testdata/server_leaf_cert.der b/vendor/github.com/google/s2a-go/internal/v2/certverifier/testdata/server_leaf_cert.der
 deleted file mode 100644
-index ce7f8d31..00000000
-Binary files a/vendor/github.com/google/s2a-go/internal/v2/certverifier/testdata/server_leaf_cert.der and /dev/null differ
+index ce7f8d31d6802c7e68c188af8797c3a063894857..0000000000000000000000000000000000000000
+GIT binary patch
+literal 0
+HcmV?d00001
+
+literal 1147
+zcmXqLVktLhVvb+H%*4pVB%&$)xidhT`$ARBi)~L`p2_<Bs<SiTW#iOp^Jx3d%gD&h
+z%3#pgZpdxG$;KSY!Y0fV8Vuub@Gv<$8VVT*fMnQtID<>`@+!*`b5acj4ER7|Ts-W~
+z`MCv&d6kBO2K*oqZXOPo%(Bel%=|n<F#{2h5Hk;Nu~A}tNosLPd~#}0iJ_E%1l)Q~
+zMltS+$|?sS)=SRMHINhMH8L_VGc*N~2F8|A;=Crv+(G2hCPpRXU}R)vU~XdMXE11D
+z<YH=KWMnwdp|;EFuK1za(r!=pH!pdapOn20ODNE9)SoP}k&l0M<Yt4fD{D3!e!kB@
+zc<t7$<tvSK%O@U~a`;wH_zxp@;pdC=Rpbo!KR+&YDrLj=eQ#&lY&#_t*TZ!uqu`wW
+z!G_X(FZVpWbXz6QaV@ia%<J<jF1Ng0@MMN>TUzhK>3dC_Z(le%bCn$9moio9jI@8{
+zd;5%c{XT!(ig$;5K+$bpwI6ChVmse+UV1r`!RY5*U#A%ppFJxS>PX#w$sz7*X_R~A
+zg!|$g&z66XI$)aW-TrxDio@fp!U<u!W?ji&nY8lfa`lt@jKrIsRbE{6F}h`%#kDZ!
+zd!LiH?o+UrI(7BuhhCZaq4rG7j0}v68*dmiUNvak2uujF$}Ej54H}m%Z0udq*fn@!
+zvPs0C{!7G*{nMUaIx(j&t!&bbRiT|z4R}CK7G_~JU}j|eZy*Tb39@h*a5S-{<mV=4
+z<{?KuFb@GEpOGOu^N;8i_bKT<dl^?bw^j;Yn9^@AZr#e#TcxkMRoadBAxnGj&t(^#
+z4l?$opGm9R@@vcG*RxwDMPHH#kiIDAAQ*8<t2CVRO;97(@t$R#-z=}Gyz<!o^x9e5
+zb=T!hE#=<3r7UUvxhU%8_W8O+jv8uR_S<Ck?B_nyoho`$<ih#;Px=xk{W+poY+Lel
+z+AcQpgJ+(^1(!Y*nei^cK*_`V@Y3Z!Em!BYGcT-={bt=_-1yCIN}6r@fyN+<o6^i`
+zi*_!%BgnkrSm1{3b%w{L7j>^sS#+*GdHMB|H?BTf!^g~J_=D$Y-Ot{~xpTg~G+{k6
+Zdr{DieczoQDL-a%Ib3(Tsv+bGCjf+Ap-TV&
+
 diff --git a/vendor/github.com/google/s2a-go/internal/v2/certverifier/testdata/server_root_cert.der b/vendor/github.com/google/s2a-go/internal/v2/certverifier/testdata/server_root_cert.der
 deleted file mode 100644
-index 04b0d736..00000000
-Binary files a/vendor/github.com/google/s2a-go/internal/v2/certverifier/testdata/server_root_cert.der and /dev/null differ
+index 04b0d73600b72f80a03943d41973b279db9e8b32..0000000000000000000000000000000000000000
+GIT binary patch
+literal 0
+HcmV?d00001
+
+literal 1013
+zcmXqLV*Y5*#B_53GZP~dlZb{E^N!s~snriRh?%)HJiGKl>CAisUN%mxHjlRNyo`+8
+ztPBQ??S|Y2oNUaYENsF|p}{Z?2M?38qoI(207!<Nhcmb|FR!vJF(=hfz<>`V#>K<#
+zoS$2em{(~iXuuB=;pX9R$t=q(&dkp<6f+P32{H5V78@nTm!uY##3!c~l^9AHNWiV<
+zWEA7BsH}1TV!h=2Tmw0AULzv|Q)5FT0|N^q(<pIX6Cl^f49XouE^T5|LJmeoRtDxK
+zMt%l^CPpr%CPqevMO%MAzV7_kyv>aL-(RkWjuO*nCZC(^b4{<TlG&~yN@J19pEn;a
+zWz7h#JIf!hf8K}VIE(lB)-1neDdIJgBhJ~#aQ(1)CH894|9yW$ZgvD6*ig3MoTKrN
+z5YLr%E~_{06xp-kn$GoWZ;EX0y=8E15#qbI>cp%V+e53*PfoZW)2DU5BJN^Jypf0+
+z%dyqB7eAAEDfH_&Z*6C3aP8^9M)sYbgC^`~v;4F5#oepTLYl5+2bdY(i!-?My>4G)
+z&8u+L`?_9LxQB1$HP?fpd*5i(-|SJJ!`sZHa8UZu(QeP3Dc(Yr8?G#iY20z>);Fh$
+zMQ>DZHkC%KUBdEb&cYv;1sHCx@Vv~#%*epFIM^W2Ko*z^WcgUcSVVXxICA%7?w=9J
+zwOIRjXviz}kjUu<@*rtt76}8f2J8wz2}@R(k?}tZs{u2RLJoFd>IDWnBZI}4y?mP{
+zW+WALO{`uTY0T-O8uy=9`&z_;*e^$wYu3!Wz-Re-&a7vV%g_8h++q8CMf&zxTFdl~
+zp5i+{-R9L&+mdUFEBoKr@u=5M->UQ>MNWJ7BRi)4^M4~B*uKhe`J%yAbG&-Thr?bk
+zCap<joG92Ab~%`p;q(Xph%cKxrj_-3$828a&2wkQxk)>+`USuL4V}qf=6kBV_EFAN
+zmIn*31Qb`P{oxd|=2o5l$|&AdTJ_-*k&5oDQvTTOiN8OjczyHyta<w9_es3h)~)%z
+z&sP2UiroQq_v`0ApCc*mlF9S=tYWC6Yrt7^ud93ynYaCXy0?8#+xAHp9!)yGM(r3c
+JpX9EclL5Omdg1^8
+
 diff --git a/vendor/github.com/google/s2a-go/internal/v2/remotesigner/testdata/client_cert.der b/vendor/github.com/google/s2a-go/internal/v2/remotesigner/testdata/client_cert.der
 deleted file mode 100644
-index d8c3710c..00000000
-Binary files a/vendor/github.com/google/s2a-go/internal/v2/remotesigner/testdata/client_cert.der and /dev/null differ
+index d8c3710c85f9ff41ddfc709924c866350a727a4f..0000000000000000000000000000000000000000
+GIT binary patch
+literal 0
+HcmV?d00001
+
+literal 1013
+zcmXqLV*Y5*#B_53GZP~dlZa+<DywMROZSz%tV%tN{wd=1kCqwmvT<s)d9;1!Wn|=L
+zWiV)LH{>?pWMd9xVH0Kw4Tf<zc$l0W4TTH@Kr-w+oWZ4ed6i{}IjM#M27DkfE*^I0
+z{M>@Xyh=ks1AdSQHxGwPW?5!&W`3Tbn1KjLh?$4C*eEf+B(=CCJ~_3h#8ApW0&YDg
+zqZoHZWt9UE>m}#s8pw(B8W|aw8XFoJ7#JIxMv3#90J%nHQ0^ddX%nLoaxgNoGB7tW
+z@-rATF>*0AF)}hdZr#y6M}F(|x(>G^%gcAlKWcTb*S((Se#vIyuMojqJ6T@W9G$-N
+zZ|C3aC}V-ru$PA$a>||`V5!;WvLO9;#Z4xLTYkS~Q%%)mH+DGbsA<2rr@8F$Psyk!
+zC02_czBy5RY)XCG=Yl1DX=(>VSrdJ-C#|hK7^zn?b35awX<K}+vVPvN>)f$Ntvf$$
+zcUg9sL1fPSDbXqWt6$VVZu~MYZrj`2y}fI?80UuXsujC8ao09pzRe<Bw;hfu$Qhop
+zchzEJ&%VmpUZ?MM>SEFH3&Hjk;!&j?yPw^7|NHlfMLseyY=TyHB}&&4U!T;kt&%Ic
+z-@@f=`1w!pGyVU%zJI$PWGYXZ;?Bg($iTQb*dWkA7MKcT`B=nQL{>NicfPwM|8!l2
+zLQdoQ<L!$tW~v&<gQS&NBn-qFuqyy1ELmYj#{Vp=2FySTIoN@z7Z~h}4F12&IEtO8
+zzk97xB~UcG{~OPm@Zh%#mp`jr!}#xmdhKZ?iB>tUFt($qvv(cdI=i6tz3tUW`|a0C
+z&5N-8^H(H$?psgMz!}<?=eS*uc<N)`vF62T!8ej=XMIv1aC^+(al1<W$U&js>^;s&
+z=?+d?)Hkg%emvc~QLj+DwRvTMu)Tl4_m}{_7kTC1{xNsF-p9krsM-B)Ge_#Kiu#~{
+zd67^5U(N6lVcaug+5}Tw2V+f_-BCNQyG;7WAZ_<^`6QjCrOhu7&ztq4tdo7t^%&>)
+zT<y)NGjrG(I^DL<%h_YG%;0fd{;U~)n&$qEY`gxqr`BI{wMf|2<hvV^>R0VF*I2Sr
+HHQW{e5x{wf
+
 diff --git a/vendor/github.com/google/s2a-go/internal/v2/remotesigner/testdata/client_cert.pem b/vendor/github.com/google/s2a-go/internal/v2/remotesigner/testdata/client_cert.pem
 deleted file mode 100644
 index 493a5a26..00000000
@@ -294,8 +448,30 @@ index 55a7f10c..00000000
 ------END RSA PRIVATE KEY-----
 diff --git a/vendor/github.com/google/s2a-go/internal/v2/remotesigner/testdata/server_cert.der b/vendor/github.com/google/s2a-go/internal/v2/remotesigner/testdata/server_cert.der
 deleted file mode 100644
-index 04b0d736..00000000
-Binary files a/vendor/github.com/google/s2a-go/internal/v2/remotesigner/testdata/server_cert.der and /dev/null differ
+index 04b0d73600b72f80a03943d41973b279db9e8b32..0000000000000000000000000000000000000000
+GIT binary patch
+literal 0
+HcmV?d00001
+
+literal 1013
+zcmXqLV*Y5*#B_53GZP~dlZb{E^N!s~snriRh?%)HJiGKl>CAisUN%mxHjlRNyo`+8
+ztPBQ??S|Y2oNUaYENsF|p}{Z?2M?38qoI(207!<Nhcmb|FR!vJF(=hfz<>`V#>K<#
+zoS$2em{(~iXuuB=;pX9R$t=q(&dkp<6f+P32{H5V78@nTm!uY##3!c~l^9AHNWiV<
+zWEA7BsH}1TV!h=2Tmw0AULzv|Q)5FT0|N^q(<pIX6Cl^f49XouE^T5|LJmeoRtDxK
+zMt%l^CPpr%CPqevMO%MAzV7_kyv>aL-(RkWjuO*nCZC(^b4{<TlG&~yN@J19pEn;a
+zWz7h#JIf!hf8K}VIE(lB)-1neDdIJgBhJ~#aQ(1)CH894|9yW$ZgvD6*ig3MoTKrN
+z5YLr%E~_{06xp-kn$GoWZ;EX0y=8E15#qbI>cp%V+e53*PfoZW)2DU5BJN^Jypf0+
+z%dyqB7eAAEDfH_&Z*6C3aP8^9M)sYbgC^`~v;4F5#oepTLYl5+2bdY(i!-?My>4G)
+z&8u+L`?_9LxQB1$HP?fpd*5i(-|SJJ!`sZHa8UZu(QeP3Dc(Yr8?G#iY20z>);Fh$
+zMQ>DZHkC%KUBdEb&cYv;1sHCx@Vv~#%*epFIM^W2Ko*z^WcgUcSVVXxICA%7?w=9J
+zwOIRjXviz}kjUu<@*rtt76}8f2J8wz2}@R(k?}tZs{u2RLJoFd>IDWnBZI}4y?mP{
+zW+WALO{`uTY0T-O8uy=9`&z_;*e^$wYu3!Wz-Re-&a7vV%g_8h++q8CMf&zxTFdl~
+zp5i+{-R9L&+mdUFEBoKr@u=5M->UQ>MNWJ7BRi)4^M4~B*uKhe`J%yAbG&-Thr?bk
+zCap<joG92Ab~%`p;q(Xph%cKxrj_-3$828a&2wkQxk)>+`USuL4V}qf=6kBV_EFAN
+zmIn*31Qb`P{oxd|=2o5l$|&AdTJ_-*k&5oDQvTTOiN8OjczyHyta<w9_es3h)~)%z
+z&sP2UiroQq_v`0ApCc*mlF9S=tYWC6Yrt7^ud93ynYaCXy0?8#+xAHp9!)yGM(r3c
+JpX9EclL5Omdg1^8
+
 diff --git a/vendor/github.com/google/s2a-go/internal/v2/remotesigner/testdata/server_cert.pem b/vendor/github.com/google/s2a-go/internal/v2/remotesigner/testdata/server_cert.pem
 deleted file mode 100644
 index 0f98322c..00000000
@@ -769,72 +945,42 @@ index db42e667..c709b728 100644
  
  package chacha20
  
-diff --git a/vendor/golang.org/x/crypto/chacha20/chacha_ppc64le.go b/vendor/golang.org/x/crypto/chacha20/chacha_ppc64le.go
-deleted file mode 100644
-index 3a4287f9..00000000
+diff --git a/vendor/golang.org/x/crypto/chacha20/chacha_ppc64le.go b/vendor/golang.org/x/crypto/chacha20/chacha_ppc64x.go
+similarity index 89%
+rename from vendor/golang.org/x/crypto/chacha20/chacha_ppc64le.go
+rename to vendor/golang.org/x/crypto/chacha20/chacha_ppc64x.go
+index 3a4287f9..bd183d9b 100644
 --- a/vendor/golang.org/x/crypto/chacha20/chacha_ppc64le.go
-+++ /dev/null
-@@ -1,16 +0,0 @@
--// Copyright 2019 The Go Authors. All rights reserved.
--// Use of this source code is governed by a BSD-style
--// license that can be found in the LICENSE file.
--
++++ b/vendor/golang.org/x/crypto/chacha20/chacha_ppc64x.go
+@@ -2,7 +2,7 @@
+ // Use of this source code is governed by a BSD-style
+ // license that can be found in the LICENSE file.
+ 
 -//go:build gc && !purego
--
--package chacha20
--
--const bufSize = 256
--
--//go:noescape
--func chaCha20_ctr32_vsx(out, inp *byte, len int, key *[8]uint32, counter *uint32)
--
--func (c *Cipher) xorKeyStreamBlocks(dst, src []byte) {
--	chaCha20_ctr32_vsx(&dst[0], &src[0], len(src), &c.key, &c.counter)
--}
-diff --git a/vendor/golang.org/x/crypto/chacha20/chacha_ppc64le.s b/vendor/golang.org/x/crypto/chacha20/chacha_ppc64le.s
-deleted file mode 100644
-index c672ccf6..00000000
++//go:build gc && !purego && (ppc64 || ppc64le)
+ 
+ package chacha20
+ 
+diff --git a/vendor/golang.org/x/crypto/chacha20/chacha_ppc64le.s b/vendor/golang.org/x/crypto/chacha20/chacha_ppc64x.s
+similarity index 76%
+rename from vendor/golang.org/x/crypto/chacha20/chacha_ppc64le.s
+rename to vendor/golang.org/x/crypto/chacha20/chacha_ppc64x.s
+index c672ccf6..a660b411 100644
 --- a/vendor/golang.org/x/crypto/chacha20/chacha_ppc64le.s
-+++ /dev/null
-@@ -1,443 +0,0 @@
--// Copyright 2019 The Go Authors. All rights reserved.
--// Use of this source code is governed by a BSD-style
--// license that can be found in the LICENSE file.
--
--// Based on CRYPTOGAMS code with the following comment:
--// # ====================================================================
--// # Written by Andy Polyakov <appro@openssl.org> for the OpenSSL
--// # project. The module is, however, dual licensed under OpenSSL and
--// # CRYPTOGAMS licenses depending on where you obtain it. For further
--// # details see http://www.openssl.org/~appro/cryptogams/.
--// # ====================================================================
--
--// Code for the perl script that generates the ppc64 assembler
--// can be found in the cryptogams repository at the link below. It is based on
--// the original from openssl.
--
--// https://github.com/dot-asm/cryptogams/commit/a60f5b50ed908e91
--
--// The differences in this and the original implementation are
--// due to the calling conventions and initialization of constants.
--
++++ b/vendor/golang.org/x/crypto/chacha20/chacha_ppc64x.s
+@@ -19,7 +19,7 @@
+ // The differences in this and the original implementation are
+ // due to the calling conventions and initialization of constants.
+ 
 -//go:build gc && !purego
--
--#include "textflag.h"
--
--#define OUT  R3
--#define INP  R4
--#define LEN  R5
--#define KEY  R6
--#define CNT  R7
--#define TMP  R15
--
--#define CONSTBASE  R16
--#define BLOCKS R17
--
--// for VPERMXOR
--#define MASK  R18
--
++//go:build gc && !purego && (ppc64 || ppc64le)
+ 
+ #include "textflag.h"
+ 
+@@ -36,32 +36,68 @@
+ // for VPERMXOR
+ #define MASK  R18
+ 
 -DATA consts<>+0x00(SB)/8, $0x3320646e61707865
 -DATA consts<>+0x08(SB)/8, $0x6b20657479622d32
 -DATA consts<>+0x10(SB)/8, $0x0000000000000001
@@ -859,387 +1005,150 @@ index c672ccf6..00000000
 -DATA consts<>+0xa8(SB)/8, $0xddeeffcc99aabb88
 -DATA consts<>+0xb0(SB)/8, $0x6677445522330011
 -DATA consts<>+0xb8(SB)/8, $0xeeffccddaabb8899
--GLOBL consts<>(SB), RODATA, $0xc0
--
--//func chaCha20_ctr32_vsx(out, inp *byte, len int, key *[8]uint32, counter *uint32)
--TEXT ·chaCha20_ctr32_vsx(SB),NOSPLIT,$64-40
--	MOVD out+0(FP), OUT
--	MOVD inp+8(FP), INP
--	MOVD len+16(FP), LEN
--	MOVD key+24(FP), KEY
--	MOVD counter+32(FP), CNT
--
--	// Addressing for constants
--	MOVD $consts<>+0x00(SB), CONSTBASE
--	MOVD $16, R8
--	MOVD $32, R9
--	MOVD $48, R10
--	MOVD $64, R11
--	SRD $6, LEN, BLOCKS
--	// for VPERMXOR
--	MOVD $consts<>+0xa0(SB), MASK
--	MOVD $16, R20
--	// V16
--	LXVW4X (CONSTBASE)(R0), VS48
--	ADD $80,CONSTBASE
--
--	// Load key into V17,V18
--	LXVW4X (KEY)(R0), VS49
--	LXVW4X (KEY)(R8), VS50
--
--	// Load CNT, NONCE into V19
--	LXVW4X (CNT)(R0), VS51
--
--	// Clear V27
--	VXOR V27, V27, V27
--
--	// V28
--	LXVW4X (CONSTBASE)(R11), VS60
--
--	// Load mask constants for VPERMXOR
--	LXVW4X (MASK)(R0), V20
--	LXVW4X (MASK)(R20), V21
--
--	// splat slot from V19 -> V26
--	VSPLTW $0, V19, V26
--
--	VSLDOI $4, V19, V27, V19
--	VSLDOI $12, V27, V19, V19
--
--	VADDUWM V26, V28, V26
--
--	MOVD $10, R14
--	MOVD R14, CTR
--	PCALIGN $16
--loop_outer_vsx:
--	// V0, V1, V2, V3
--	LXVW4X (R0)(CONSTBASE), VS32
--	LXVW4X (R8)(CONSTBASE), VS33
--	LXVW4X (R9)(CONSTBASE), VS34
--	LXVW4X (R10)(CONSTBASE), VS35
--
--	// splat values from V17, V18 into V4-V11
--	VSPLTW $0, V17, V4
--	VSPLTW $1, V17, V5
--	VSPLTW $2, V17, V6
--	VSPLTW $3, V17, V7
--	VSPLTW $0, V18, V8
--	VSPLTW $1, V18, V9
--	VSPLTW $2, V18, V10
--	VSPLTW $3, V18, V11
--
--	// VOR
--	VOR V26, V26, V12
--
--	// splat values from V19 -> V13, V14, V15
--	VSPLTW $1, V19, V13
--	VSPLTW $2, V19, V14
--	VSPLTW $3, V19, V15
--
--	// splat   const values
--	VSPLTISW $-16, V27
--	VSPLTISW $12, V28
--	VSPLTISW $8, V29
--	VSPLTISW $7, V30
--	PCALIGN $16
--loop_vsx:
--	VADDUWM V0, V4, V0
--	VADDUWM V1, V5, V1
--	VADDUWM V2, V6, V2
--	VADDUWM V3, V7, V3
--
--	VPERMXOR V12, V0, V21, V12
--	VPERMXOR V13, V1, V21, V13
--	VPERMXOR V14, V2, V21, V14
--	VPERMXOR V15, V3, V21, V15
--
--	VADDUWM V8, V12, V8
--	VADDUWM V9, V13, V9
--	VADDUWM V10, V14, V10
--	VADDUWM V11, V15, V11
--
--	VXOR V4, V8, V4
--	VXOR V5, V9, V5
--	VXOR V6, V10, V6
--	VXOR V7, V11, V7
--
--	VRLW V4, V28, V4
--	VRLW V5, V28, V5
--	VRLW V6, V28, V6
--	VRLW V7, V28, V7
--
--	VADDUWM V0, V4, V0
--	VADDUWM V1, V5, V1
--	VADDUWM V2, V6, V2
--	VADDUWM V3, V7, V3
--
--	VPERMXOR V12, V0, V20, V12
--	VPERMXOR V13, V1, V20, V13
--	VPERMXOR V14, V2, V20, V14
--	VPERMXOR V15, V3, V20, V15
--
--	VADDUWM V8, V12, V8
--	VADDUWM V9, V13, V9
--	VADDUWM V10, V14, V10
--	VADDUWM V11, V15, V11
--
--	VXOR V4, V8, V4
--	VXOR V5, V9, V5
--	VXOR V6, V10, V6
--	VXOR V7, V11, V7
--
--	VRLW V4, V30, V4
--	VRLW V5, V30, V5
--	VRLW V6, V30, V6
--	VRLW V7, V30, V7
--
--	VADDUWM V0, V5, V0
--	VADDUWM V1, V6, V1
--	VADDUWM V2, V7, V2
--	VADDUWM V3, V4, V3
--
--	VPERMXOR V15, V0, V21, V15
--	VPERMXOR V12, V1, V21, V12
--	VPERMXOR V13, V2, V21, V13
--	VPERMXOR V14, V3, V21, V14
--
--	VADDUWM V10, V15, V10
--	VADDUWM V11, V12, V11
--	VADDUWM V8, V13, V8
--	VADDUWM V9, V14, V9
--
--	VXOR V5, V10, V5
--	VXOR V6, V11, V6
--	VXOR V7, V8, V7
--	VXOR V4, V9, V4
--
--	VRLW V5, V28, V5
--	VRLW V6, V28, V6
--	VRLW V7, V28, V7
--	VRLW V4, V28, V4
--
--	VADDUWM V0, V5, V0
--	VADDUWM V1, V6, V1
--	VADDUWM V2, V7, V2
--	VADDUWM V3, V4, V3
--
--	VPERMXOR V15, V0, V20, V15
--	VPERMXOR V12, V1, V20, V12
--	VPERMXOR V13, V2, V20, V13
--	VPERMXOR V14, V3, V20, V14
--
--	VADDUWM V10, V15, V10
--	VADDUWM V11, V12, V11
--	VADDUWM V8, V13, V8
--	VADDUWM V9, V14, V9
--
--	VXOR V5, V10, V5
--	VXOR V6, V11, V6
--	VXOR V7, V8, V7
--	VXOR V4, V9, V4
--
--	VRLW V5, V30, V5
--	VRLW V6, V30, V6
--	VRLW V7, V30, V7
--	VRLW V4, V30, V4
--	BDNZ   loop_vsx
--
--	VADDUWM V12, V26, V12
--
--	VMRGEW V0, V1, V27
--	VMRGEW V2, V3, V28
--
--	VMRGOW V0, V1, V0
--	VMRGOW V2, V3, V2
--
--	VMRGEW V4, V5, V29
--	VMRGEW V6, V7, V30
--
--	XXPERMDI VS32, VS34, $0, VS33
--	XXPERMDI VS32, VS34, $3, VS35
--	XXPERMDI VS59, VS60, $0, VS32
--	XXPERMDI VS59, VS60, $3, VS34
--
--	VMRGOW V4, V5, V4
--	VMRGOW V6, V7, V6
--
--	VMRGEW V8, V9, V27
--	VMRGEW V10, V11, V28
--
--	XXPERMDI VS36, VS38, $0, VS37
--	XXPERMDI VS36, VS38, $3, VS39
--	XXPERMDI VS61, VS62, $0, VS36
--	XXPERMDI VS61, VS62, $3, VS38
--
--	VMRGOW V8, V9, V8
--	VMRGOW V10, V11, V10
--
--	VMRGEW V12, V13, V29
--	VMRGEW V14, V15, V30
--
--	XXPERMDI VS40, VS42, $0, VS41
--	XXPERMDI VS40, VS42, $3, VS43
--	XXPERMDI VS59, VS60, $0, VS40
--	XXPERMDI VS59, VS60, $3, VS42
--
--	VMRGOW V12, V13, V12
--	VMRGOW V14, V15, V14
--
--	VSPLTISW $4, V27
--	VADDUWM V26, V27, V26
--
--	XXPERMDI VS44, VS46, $0, VS45
--	XXPERMDI VS44, VS46, $3, VS47
--	XXPERMDI VS61, VS62, $0, VS44
--	XXPERMDI VS61, VS62, $3, VS46
--
--	VADDUWM V0, V16, V0
--	VADDUWM V4, V17, V4
--	VADDUWM V8, V18, V8
--	VADDUWM V12, V19, V12
--
--	CMPU LEN, $64
--	BLT tail_vsx
--
--	// Bottom of loop
--	LXVW4X (INP)(R0), VS59
--	LXVW4X (INP)(R8), VS60
--	LXVW4X (INP)(R9), VS61
--	LXVW4X (INP)(R10), VS62
--
--	VXOR V27, V0, V27
--	VXOR V28, V4, V28
--	VXOR V29, V8, V29
--	VXOR V30, V12, V30
--
--	STXVW4X VS59, (OUT)(R0)
--	STXVW4X VS60, (OUT)(R8)
--	ADD     $64, INP
--	STXVW4X VS61, (OUT)(R9)
--	ADD     $-64, LEN
--	STXVW4X VS62, (OUT)(R10)
--	ADD     $64, OUT
--	BEQ     done_vsx
--
--	VADDUWM V1, V16, V0
--	VADDUWM V5, V17, V4
--	VADDUWM V9, V18, V8
--	VADDUWM V13, V19, V12
--
--	CMPU  LEN, $64
--	BLT   tail_vsx
--
--	LXVW4X (INP)(R0), VS59
--	LXVW4X (INP)(R8), VS60
--	LXVW4X (INP)(R9), VS61
--	LXVW4X (INP)(R10), VS62
++DATA consts<>+0x00(SB)/4, $0x61707865
++DATA consts<>+0x04(SB)/4, $0x3320646e
++DATA consts<>+0x08(SB)/4, $0x79622d32
++DATA consts<>+0x0c(SB)/4, $0x6b206574
++DATA consts<>+0x10(SB)/4, $0x00000001
++DATA consts<>+0x14(SB)/4, $0x00000000
++DATA consts<>+0x18(SB)/4, $0x00000000
++DATA consts<>+0x1c(SB)/4, $0x00000000
++DATA consts<>+0x20(SB)/4, $0x00000004
++DATA consts<>+0x24(SB)/4, $0x00000000
++DATA consts<>+0x28(SB)/4, $0x00000000
++DATA consts<>+0x2c(SB)/4, $0x00000000
++DATA consts<>+0x30(SB)/4, $0x0e0f0c0d
++DATA consts<>+0x34(SB)/4, $0x0a0b0809
++DATA consts<>+0x38(SB)/4, $0x06070405
++DATA consts<>+0x3c(SB)/4, $0x02030001
++DATA consts<>+0x40(SB)/4, $0x0d0e0f0c
++DATA consts<>+0x44(SB)/4, $0x090a0b08
++DATA consts<>+0x48(SB)/4, $0x05060704
++DATA consts<>+0x4c(SB)/4, $0x01020300
++DATA consts<>+0x50(SB)/4, $0x61707865
++DATA consts<>+0x54(SB)/4, $0x61707865
++DATA consts<>+0x58(SB)/4, $0x61707865
++DATA consts<>+0x5c(SB)/4, $0x61707865
++DATA consts<>+0x60(SB)/4, $0x3320646e
++DATA consts<>+0x64(SB)/4, $0x3320646e
++DATA consts<>+0x68(SB)/4, $0x3320646e
++DATA consts<>+0x6c(SB)/4, $0x3320646e
++DATA consts<>+0x70(SB)/4, $0x79622d32
++DATA consts<>+0x74(SB)/4, $0x79622d32
++DATA consts<>+0x78(SB)/4, $0x79622d32
++DATA consts<>+0x7c(SB)/4, $0x79622d32
++DATA consts<>+0x80(SB)/4, $0x6b206574
++DATA consts<>+0x84(SB)/4, $0x6b206574
++DATA consts<>+0x88(SB)/4, $0x6b206574
++DATA consts<>+0x8c(SB)/4, $0x6b206574
++DATA consts<>+0x90(SB)/4, $0x00000000
++DATA consts<>+0x94(SB)/4, $0x00000001
++DATA consts<>+0x98(SB)/4, $0x00000002
++DATA consts<>+0x9c(SB)/4, $0x00000003
++DATA consts<>+0xa0(SB)/4, $0x11223300
++DATA consts<>+0xa4(SB)/4, $0x55667744
++DATA consts<>+0xa8(SB)/4, $0x99aabb88
++DATA consts<>+0xac(SB)/4, $0xddeeffcc
++DATA consts<>+0xb0(SB)/4, $0x22330011
++DATA consts<>+0xb4(SB)/4, $0x66774455
++DATA consts<>+0xb8(SB)/4, $0xaabb8899
++DATA consts<>+0xbc(SB)/4, $0xeeffccdd
+ GLOBL consts<>(SB), RODATA, $0xc0
+ 
++#ifdef GOARCH_ppc64
++#define BE_XXBRW_INIT() \
++		LVSL (R0)(R0), V24 \
++		VSPLTISB $3, V25   \
++		VXOR V24, V25, V24 \
++
++#define BE_XXBRW(vr) VPERM vr, vr, V24, vr
++#else
++#define BE_XXBRW_INIT()
++#define BE_XXBRW(vr)
++#endif
++
+ //func chaCha20_ctr32_vsx(out, inp *byte, len int, key *[8]uint32, counter *uint32)
+ TEXT ·chaCha20_ctr32_vsx(SB),NOSPLIT,$64-40
+ 	MOVD out+0(FP), OUT
+@@ -94,6 +130,8 @@ TEXT ·chaCha20_ctr32_vsx(SB),NOSPLIT,$64-40
+ 	// Clear V27
+ 	VXOR V27, V27, V27
+ 
++	BE_XXBRW_INIT()
++
+ 	// V28
+ 	LXVW4X (CONSTBASE)(R11), VS60
+ 
+@@ -299,6 +337,11 @@ loop_vsx:
+ 	VADDUWM V8, V18, V8
+ 	VADDUWM V12, V19, V12
+ 
++	BE_XXBRW(V0)
++	BE_XXBRW(V4)
++	BE_XXBRW(V8)
++	BE_XXBRW(V12)
++
+ 	CMPU LEN, $64
+ 	BLT tail_vsx
+ 
+@@ -327,6 +370,11 @@ loop_vsx:
+ 	VADDUWM V9, V18, V8
+ 	VADDUWM V13, V19, V12
+ 
++	BE_XXBRW(V0)
++	BE_XXBRW(V4)
++	BE_XXBRW(V8)
++	BE_XXBRW(V12)
++
+ 	CMPU  LEN, $64
+ 	BLT   tail_vsx
+ 
+@@ -334,8 +382,8 @@ loop_vsx:
+ 	LXVW4X (INP)(R8), VS60
+ 	LXVW4X (INP)(R9), VS61
+ 	LXVW4X (INP)(R10), VS62
 -	VXOR   V27, V0, V27
--
--	VXOR V28, V4, V28
--	VXOR V29, V8, V29
--	VXOR V30, V12, V30
--
--	STXVW4X VS59, (OUT)(R0)
--	STXVW4X VS60, (OUT)(R8)
--	ADD     $64, INP
--	STXVW4X VS61, (OUT)(R9)
--	ADD     $-64, LEN
--	STXVW4X VS62, (OUT)(V10)
--	ADD     $64, OUT
--	BEQ     done_vsx
--
--	VADDUWM V2, V16, V0
--	VADDUWM V6, V17, V4
--	VADDUWM V10, V18, V8
--	VADDUWM V14, V19, V12
--
--	CMPU LEN, $64
--	BLT  tail_vsx
--
--	LXVW4X (INP)(R0), VS59
--	LXVW4X (INP)(R8), VS60
--	LXVW4X (INP)(R9), VS61
--	LXVW4X (INP)(R10), VS62
--
--	VXOR V27, V0, V27
--	VXOR V28, V4, V28
--	VXOR V29, V8, V29
--	VXOR V30, V12, V30
--
--	STXVW4X VS59, (OUT)(R0)
--	STXVW4X VS60, (OUT)(R8)
--	ADD     $64, INP
--	STXVW4X VS61, (OUT)(R9)
--	ADD     $-64, LEN
--	STXVW4X VS62, (OUT)(R10)
--	ADD     $64, OUT
--	BEQ     done_vsx
--
--	VADDUWM V3, V16, V0
--	VADDUWM V7, V17, V4
--	VADDUWM V11, V18, V8
--	VADDUWM V15, V19, V12
--
--	CMPU  LEN, $64
--	BLT   tail_vsx
--
--	LXVW4X (INP)(R0), VS59
--	LXVW4X (INP)(R8), VS60
--	LXVW4X (INP)(R9), VS61
--	LXVW4X (INP)(R10), VS62
--
--	VXOR V27, V0, V27
--	VXOR V28, V4, V28
--	VXOR V29, V8, V29
--	VXOR V30, V12, V30
--
--	STXVW4X VS59, (OUT)(R0)
--	STXVW4X VS60, (OUT)(R8)
--	ADD     $64, INP
--	STXVW4X VS61, (OUT)(R9)
--	ADD     $-64, LEN
--	STXVW4X VS62, (OUT)(R10)
--	ADD     $64, OUT
--
--	MOVD $10, R14
--	MOVD R14, CTR
--	BNE  loop_outer_vsx
--
--done_vsx:
--	// Increment counter by number of 64 byte blocks
+ 
++	VXOR V27, V0, V27
+ 	VXOR V28, V4, V28
+ 	VXOR V29, V8, V29
+ 	VXOR V30, V12, V30
+@@ -354,6 +402,11 @@ loop_vsx:
+ 	VADDUWM V10, V18, V8
+ 	VADDUWM V14, V19, V12
+ 
++	BE_XXBRW(V0)
++	BE_XXBRW(V4)
++	BE_XXBRW(V8)
++	BE_XXBRW(V12)
++
+ 	CMPU LEN, $64
+ 	BLT  tail_vsx
+ 
+@@ -381,6 +434,11 @@ loop_vsx:
+ 	VADDUWM V11, V18, V8
+ 	VADDUWM V15, V19, V12
+ 
++	BE_XXBRW(V0)
++	BE_XXBRW(V4)
++	BE_XXBRW(V8)
++	BE_XXBRW(V12)
++
+ 	CMPU  LEN, $64
+ 	BLT   tail_vsx
+ 
+@@ -408,9 +466,9 @@ loop_vsx:
+ 
+ done_vsx:
+ 	// Increment counter by number of 64 byte blocks
 -	MOVD (CNT), R14
--	ADD  BLOCKS, R14
++	MOVWZ (CNT), R14
+ 	ADD  BLOCKS, R14
 -	MOVD R14, (CNT)
--	RET
--
--tail_vsx:
--	ADD  $32, R1, R11
--	MOVD LEN, CTR
--
--	// Save values on stack to copy from
--	STXVW4X VS32, (R11)(R0)
--	STXVW4X VS36, (R11)(R8)
--	STXVW4X VS40, (R11)(R9)
--	STXVW4X VS44, (R11)(R10)
--	ADD $-1, R11, R12
--	ADD $-1, INP
--	ADD $-1, OUT
--	PCALIGN $16
--looptail_vsx:
--	// Copying the result to OUT
--	// in bytes.
--	MOVBZU 1(R12), KEY
--	MOVBZU 1(INP), TMP
--	XOR    KEY, TMP, KEY
--	MOVBU  KEY, 1(OUT)
--	BDNZ   looptail_vsx
--
--	// Clear the stack values
--	STXVW4X VS48, (R11)(R0)
--	STXVW4X VS48, (R11)(R8)
--	STXVW4X VS48, (R11)(R9)
--	STXVW4X VS48, (R11)(R10)
--	BR      done_vsx
++	MOVWZ R14, (CNT)
+ 	RET
+ 
+ tail_vsx:
 diff --git a/vendor/golang.org/x/crypto/chacha20poly1305/chacha20poly1305_amd64.s b/vendor/golang.org/x/crypto/chacha20poly1305/chacha20poly1305_amd64.s
 index 731d2ac6..fd5ee845 100644
 --- a/vendor/golang.org/x/crypto/chacha20poly1305/chacha20poly1305_amd64.s
@@ -13420,244 +13329,114 @@ index e0d3c647..13375738 100644
  	MOVQ R9, 8(DI)
  	MOVQ R10, 16(DI)
  	RET
-diff --git a/vendor/golang.org/x/crypto/internal/poly1305/sum_ppc64le.go b/vendor/golang.org/x/crypto/internal/poly1305/sum_ppc64le.go
-deleted file mode 100644
-index 4aec4874..00000000
+diff --git a/vendor/golang.org/x/crypto/internal/poly1305/sum_ppc64le.go b/vendor/golang.org/x/crypto/internal/poly1305/sum_ppc64x.go
+similarity index 95%
+rename from vendor/golang.org/x/crypto/internal/poly1305/sum_ppc64le.go
+rename to vendor/golang.org/x/crypto/internal/poly1305/sum_ppc64x.go
+index 4aec4874..1a1679aa 100644
 --- a/vendor/golang.org/x/crypto/internal/poly1305/sum_ppc64le.go
-+++ /dev/null
-@@ -1,47 +0,0 @@
--// Copyright 2019 The Go Authors. All rights reserved.
--// Use of this source code is governed by a BSD-style
--// license that can be found in the LICENSE file.
--
++++ b/vendor/golang.org/x/crypto/internal/poly1305/sum_ppc64x.go
+@@ -2,7 +2,7 @@
+ // Use of this source code is governed by a BSD-style
+ // license that can be found in the LICENSE file.
+ 
 -//go:build gc && !purego
--
--package poly1305
--
--//go:noescape
--func update(state *macState, msg []byte)
--
--// mac is a wrapper for macGeneric that redirects calls that would have gone to
--// updateGeneric to update.
--//
--// Its Write and Sum methods are otherwise identical to the macGeneric ones, but
--// using function pointers would carry a major performance cost.
--type mac struct{ macGeneric }
--
--func (h *mac) Write(p []byte) (int, error) {
--	nn := len(p)
--	if h.offset > 0 {
--		n := copy(h.buffer[h.offset:], p)
--		if h.offset+n < TagSize {
--			h.offset += n
--			return nn, nil
--		}
--		p = p[n:]
--		h.offset = 0
--		update(&h.macState, h.buffer[:])
--	}
--	if n := len(p) - (len(p) % TagSize); n > 0 {
--		update(&h.macState, p[:n])
--		p = p[n:]
--	}
--	if len(p) > 0 {
--		h.offset += copy(h.buffer[h.offset:], p)
--	}
--	return nn, nil
--}
--
--func (h *mac) Sum(out *[16]byte) {
--	state := h.macState
--	if h.offset > 0 {
--		update(&state, h.buffer[:h.offset])
--	}
--	finalize(out, &state.h, &state.s)
--}
-diff --git a/vendor/golang.org/x/crypto/internal/poly1305/sum_ppc64le.s b/vendor/golang.org/x/crypto/internal/poly1305/sum_ppc64le.s
-deleted file mode 100644
-index b3c1699b..00000000
++//go:build gc && !purego && (ppc64 || ppc64le)
+ 
+ package poly1305
+ 
+diff --git a/vendor/golang.org/x/crypto/internal/poly1305/sum_ppc64le.s b/vendor/golang.org/x/crypto/internal/poly1305/sum_ppc64x.s
+similarity index 89%
+rename from vendor/golang.org/x/crypto/internal/poly1305/sum_ppc64le.s
+rename to vendor/golang.org/x/crypto/internal/poly1305/sum_ppc64x.s
+index b3c1699b..6899a1da 100644
 --- a/vendor/golang.org/x/crypto/internal/poly1305/sum_ppc64le.s
-+++ /dev/null
-@@ -1,179 +0,0 @@
--// Copyright 2019 The Go Authors. All rights reserved.
--// Use of this source code is governed by a BSD-style
--// license that can be found in the LICENSE file.
--
++++ b/vendor/golang.org/x/crypto/internal/poly1305/sum_ppc64x.s
+@@ -2,15 +2,25 @@
+ // Use of this source code is governed by a BSD-style
+ // license that can be found in the LICENSE file.
+ 
 -//go:build gc && !purego
--
--#include "textflag.h"
--
--// This was ported from the amd64 implementation.
--
--#define POLY1305_ADD(msg, h0, h1, h2, t0, t1, t2) \
++//go:build gc && !purego && (ppc64 || ppc64le)
+ 
+ #include "textflag.h"
+ 
+ // This was ported from the amd64 implementation.
+ 
++#ifdef GOARCH_ppc64le
++#define LE_MOVD MOVD
++#define LE_MOVWZ MOVWZ
++#define LE_MOVHZ MOVHZ
++#else
++#define LE_MOVD MOVDBR
++#define LE_MOVWZ MOVWBR
++#define LE_MOVHZ MOVHBR
++#endif
++
+ #define POLY1305_ADD(msg, h0, h1, h2, t0, t1, t2) \
 -	MOVD (msg), t0;  \
 -	MOVD 8(msg), t1; \
--	MOVD $1, t2;     \
--	ADDC t0, h0, h0; \
--	ADDE t1, h1, h1; \
--	ADDE t2, h2;     \
--	ADD  $16, msg
--
--#define POLY1305_MUL(h0, h1, h2, r0, r1, t0, t1, t2, t3, t4, t5) \
--	MULLD  r0, h0, t0;  \
--	MULHDU r0, h0, t1;  \
--	MULLD  r0, h1, t4;  \
--	MULHDU r0, h1, t5;  \
--	ADDC   t4, t1, t1;  \
--	MULLD  r0, h2, t2;  \
--	MULHDU r1, h0, t4;  \
--	MULLD  r1, h0, h0;  \
--	ADDE   t5, t2, t2;  \
--	ADDC   h0, t1, t1;  \
--	MULLD  h2, r1, t3;  \
--	ADDZE  t4, h0;      \
--	MULHDU r1, h1, t5;  \
--	MULLD  r1, h1, t4;  \
--	ADDC   t4, t2, t2;  \
--	ADDE   t5, t3, t3;  \
--	ADDC   h0, t2, t2;  \
--	MOVD   $-4, t4;     \
--	ADDZE  t3;          \
--	RLDICL $0, t2, $62, h2; \
--	AND    t2, t4, h0;  \
--	ADDC   t0, h0, h0;  \
--	ADDE   t3, t1, h1;  \
--	SLD    $62, t3, t4; \
--	SRD    $2, t2;      \
--	ADDZE  h2;          \
--	OR     t4, t2, t2;  \
--	SRD    $2, t3;      \
--	ADDC   t2, h0, h0;  \
--	ADDE   t3, h1, h1;  \
--	ADDZE  h2
--
++	LE_MOVD (msg)( R0), t0; \
++	LE_MOVD (msg)(R24), t1; \
+ 	MOVD $1, t2;     \
+ 	ADDC t0, h0, h0; \
+ 	ADDE t1, h1, h1; \
+@@ -50,10 +60,6 @@
+ 	ADDE   t3, h1, h1;  \
+ 	ADDZE  h2
+ 
 -DATA ·poly1305Mask<>+0x00(SB)/8, $0x0FFFFFFC0FFFFFFF
 -DATA ·poly1305Mask<>+0x08(SB)/8, $0x0FFFFFFC0FFFFFFC
 -GLOBL ·poly1305Mask<>(SB), RODATA, $16
 -
--// func update(state *[7]uint64, msg []byte)
--TEXT ·update(SB), $0-32
--	MOVD state+0(FP), R3
--	MOVD msg_base+8(FP), R4
--	MOVD msg_len+16(FP), R5
--
--	MOVD 0(R3), R8   // h0
--	MOVD 8(R3), R9   // h1
--	MOVD 16(R3), R10 // h2
--	MOVD 24(R3), R11 // r0
--	MOVD 32(R3), R12 // r1
--
--	CMP R5, $16
--	BLT bytes_between_0_and_15
--
--loop:
--	POLY1305_ADD(R4, R8, R9, R10, R20, R21, R22)
--
--	PCALIGN $16
--multiply:
--	POLY1305_MUL(R8, R9, R10, R11, R12, R16, R17, R18, R14, R20, R21)
--	ADD $-16, R5
--	CMP R5, $16
--	BGE loop
--
--bytes_between_0_and_15:
--	CMP  R5, $0
--	BEQ  done
--	MOVD $0, R16 // h0
--	MOVD $0, R17 // h1
--
--flush_buffer:
--	CMP R5, $8
--	BLE just1
--
--	MOVD $8, R21
--	SUB  R21, R5, R21
--
--	// Greater than 8 -- load the rightmost remaining bytes in msg
--	// and put into R17 (h1)
+ // func update(state *[7]uint64, msg []byte)
+ TEXT ·update(SB), $0-32
+ 	MOVD state+0(FP), R3
+@@ -66,6 +72,8 @@ TEXT ·update(SB), $0-32
+ 	MOVD 24(R3), R11 // r0
+ 	MOVD 32(R3), R12 // r1
+ 
++	MOVD $8, R24
++
+ 	CMP R5, $16
+ 	BLT bytes_between_0_and_15
+ 
+@@ -94,7 +102,7 @@ flush_buffer:
+ 
+ 	// Greater than 8 -- load the rightmost remaining bytes in msg
+ 	// and put into R17 (h1)
 -	MOVD (R4)(R21), R17
--	MOVD $16, R22
--
--	// Find the offset to those bytes
--	SUB R5, R22, R22
--	SLD $3, R22
--
--	// Shift to get only the bytes in msg
--	SRD R22, R17, R17
--
--	// Put 1 at high end
--	MOVD $1, R23
--	SLD  $3, R21
--	SLD  R21, R23, R23
--	OR   R23, R17, R17
--
--	// Remainder is 8
--	MOVD $8, R5
--
--just1:
--	CMP R5, $8
--	BLT less8
--
--	// Exactly 8
++	LE_MOVD (R4)(R21), R17
+ 	MOVD $16, R22
+ 
+ 	// Find the offset to those bytes
+@@ -118,7 +126,7 @@ just1:
+ 	BLT less8
+ 
+ 	// Exactly 8
 -	MOVD (R4), R16
--
--	CMP R17, $0
--
--	// Check if we've already set R17; if not
--	// set 1 to indicate end of msg.
--	BNE  carry
--	MOVD $1, R17
--	BR   carry
--
--less8:
--	MOVD  $0, R16   // h0
--	MOVD  $0, R22   // shift count
--	CMP   R5, $4
--	BLT   less4
++	LE_MOVD (R4), R16
+ 
+ 	CMP R17, $0
+ 
+@@ -133,7 +141,7 @@ less8:
+ 	MOVD  $0, R22   // shift count
+ 	CMP   R5, $4
+ 	BLT   less4
 -	MOVWZ (R4), R16
--	ADD   $4, R4
--	ADD   $-4, R5
--	MOVD  $32, R22
--
--less4:
--	CMP   R5, $2
--	BLT   less2
++	LE_MOVWZ (R4), R16
+ 	ADD   $4, R4
+ 	ADD   $-4, R5
+ 	MOVD  $32, R22
+@@ -141,7 +149,7 @@ less8:
+ less4:
+ 	CMP   R5, $2
+ 	BLT   less2
 -	MOVHZ (R4), R21
--	SLD   R22, R21, R21
--	OR    R16, R21, R16
--	ADD   $16, R22
--	ADD   $-2, R5
--	ADD   $2, R4
--
--less2:
--	CMP   R5, $0
--	BEQ   insert1
--	MOVBZ (R4), R21
--	SLD   R22, R21, R21
--	OR    R16, R21, R16
--	ADD   $8, R22
--
--insert1:
--	// Insert 1 at end of msg
--	MOVD $1, R21
--	SLD  R22, R21, R21
--	OR   R16, R21, R16
--
--carry:
--	// Add new values to h0, h1, h2
--	ADDC  R16, R8
--	ADDE  R17, R9
--	ADDZE R10, R10
--	MOVD  $16, R5
--	ADD   R5, R4
--	BR    multiply
--
--done:
--	// Save h0, h1, h2 in state
--	MOVD R8, 0(R3)
--	MOVD R9, 8(R3)
--	MOVD R10, 16(R3)
--	RET
++	LE_MOVHZ (R4), R21
+ 	SLD   R22, R21, R21
+ 	OR    R16, R21, R16
+ 	ADD   $16, R22
 diff --git a/vendor/golang.org/x/net/LICENSE b/vendor/golang.org/x/net/LICENSE
 index 6a66aea5..2a7cf70d 100644
 --- a/vendor/golang.org/x/net/LICENSE
@@ -13711,6 +13490,223 @@ index 780968d6..e81b73e6 100644
  
  	p := c.p
  	p.mu.Lock()
+diff --git a/vendor/golang.org/x/net/http2/config.go b/vendor/golang.org/x/net/http2/config.go
+new file mode 100644
+index 00000000..de58dfb8
+--- /dev/null
++++ b/vendor/golang.org/x/net/http2/config.go
+@@ -0,0 +1,122 @@
++// Copyright 2024 The Go Authors. All rights reserved.
++// Use of this source code is governed by a BSD-style
++// license that can be found in the LICENSE file.
++
++package http2
++
++import (
++	"math"
++	"net/http"
++	"time"
++)
++
++// http2Config is a package-internal version of net/http.HTTP2Config.
++//
++// http.HTTP2Config was added in Go 1.24.
++// When running with a version of net/http that includes HTTP2Config,
++// we merge the configuration with the fields in Transport or Server
++// to produce an http2Config.
++//
++// Zero valued fields in http2Config are interpreted as in the
++// net/http.HTTPConfig documentation.
++//
++// Precedence order for reconciling configurations is:
++//
++//   - Use the net/http.{Server,Transport}.HTTP2Config value, when non-zero.
++//   - Otherwise use the http2.{Server.Transport} value.
++//   - If the resulting value is zero or out of range, use a default.
++type http2Config struct {
++	MaxConcurrentStreams         uint32
++	MaxDecoderHeaderTableSize    uint32
++	MaxEncoderHeaderTableSize    uint32
++	MaxReadFrameSize             uint32
++	MaxUploadBufferPerConnection int32
++	MaxUploadBufferPerStream     int32
++	SendPingTimeout              time.Duration
++	PingTimeout                  time.Duration
++	WriteByteTimeout             time.Duration
++	PermitProhibitedCipherSuites bool
++	CountError                   func(errType string)
++}
++
++// configFromServer merges configuration settings from
++// net/http.Server.HTTP2Config and http2.Server.
++func configFromServer(h1 *http.Server, h2 *Server) http2Config {
++	conf := http2Config{
++		MaxConcurrentStreams:         h2.MaxConcurrentStreams,
++		MaxEncoderHeaderTableSize:    h2.MaxEncoderHeaderTableSize,
++		MaxDecoderHeaderTableSize:    h2.MaxDecoderHeaderTableSize,
++		MaxReadFrameSize:             h2.MaxReadFrameSize,
++		MaxUploadBufferPerConnection: h2.MaxUploadBufferPerConnection,
++		MaxUploadBufferPerStream:     h2.MaxUploadBufferPerStream,
++		SendPingTimeout:              h2.ReadIdleTimeout,
++		PingTimeout:                  h2.PingTimeout,
++		WriteByteTimeout:             h2.WriteByteTimeout,
++		PermitProhibitedCipherSuites: h2.PermitProhibitedCipherSuites,
++		CountError:                   h2.CountError,
++	}
++	fillNetHTTPServerConfig(&conf, h1)
++	setConfigDefaults(&conf, true)
++	return conf
++}
++
++// configFromServer merges configuration settings from h2 and h2.t1.HTTP2
++// (the net/http Transport).
++func configFromTransport(h2 *Transport) http2Config {
++	conf := http2Config{
++		MaxEncoderHeaderTableSize: h2.MaxEncoderHeaderTableSize,
++		MaxDecoderHeaderTableSize: h2.MaxDecoderHeaderTableSize,
++		MaxReadFrameSize:          h2.MaxReadFrameSize,
++		SendPingTimeout:           h2.ReadIdleTimeout,
++		PingTimeout:               h2.PingTimeout,
++		WriteByteTimeout:          h2.WriteByteTimeout,
++	}
++
++	// Unlike most config fields, where out-of-range values revert to the default,
++	// Transport.MaxReadFrameSize clips.
++	if conf.MaxReadFrameSize < minMaxFrameSize {
++		conf.MaxReadFrameSize = minMaxFrameSize
++	} else if conf.MaxReadFrameSize > maxFrameSize {
++		conf.MaxReadFrameSize = maxFrameSize
++	}
++
++	if h2.t1 != nil {
++		fillNetHTTPTransportConfig(&conf, h2.t1)
++	}
++	setConfigDefaults(&conf, false)
++	return conf
++}
++
++func setDefault[T ~int | ~int32 | ~uint32 | ~int64](v *T, minval, maxval, defval T) {
++	if *v < minval || *v > maxval {
++		*v = defval
++	}
++}
++
++func setConfigDefaults(conf *http2Config, server bool) {
++	setDefault(&conf.MaxConcurrentStreams, 1, math.MaxUint32, defaultMaxStreams)
++	setDefault(&conf.MaxEncoderHeaderTableSize, 1, math.MaxUint32, initialHeaderTableSize)
++	setDefault(&conf.MaxDecoderHeaderTableSize, 1, math.MaxUint32, initialHeaderTableSize)
++	if server {
++		setDefault(&conf.MaxUploadBufferPerConnection, initialWindowSize, math.MaxInt32, 1<<20)
++	} else {
++		setDefault(&conf.MaxUploadBufferPerConnection, initialWindowSize, math.MaxInt32, transportDefaultConnFlow)
++	}
++	if server {
++		setDefault(&conf.MaxUploadBufferPerStream, 1, math.MaxInt32, 1<<20)
++	} else {
++		setDefault(&conf.MaxUploadBufferPerStream, 1, math.MaxInt32, transportDefaultStreamFlow)
++	}
++	setDefault(&conf.MaxReadFrameSize, minMaxFrameSize, maxFrameSize, defaultMaxReadFrameSize)
++	setDefault(&conf.PingTimeout, 1, math.MaxInt64, 15*time.Second)
++}
++
++// adjustHTTP1MaxHeaderSize converts a limit in bytes on the size of an HTTP/1 header
++// to an HTTP/2 MAX_HEADER_LIST_SIZE value.
++func adjustHTTP1MaxHeaderSize(n int64) int64 {
++	// http2's count is in a slightly different unit and includes 32 bytes per pair.
++	// So, take the net/http.Server value and pad it up a bit, assuming 10 headers.
++	const perFieldOverhead = 32 // per http2 spec
++	const typicalHeaders = 10   // conservative
++	return n + typicalHeaders*perFieldOverhead
++}
+diff --git a/vendor/golang.org/x/net/http2/config_go124.go b/vendor/golang.org/x/net/http2/config_go124.go
+new file mode 100644
+index 00000000..e3784123
+--- /dev/null
++++ b/vendor/golang.org/x/net/http2/config_go124.go
+@@ -0,0 +1,61 @@
++// Copyright 2024 The Go Authors. All rights reserved.
++// Use of this source code is governed by a BSD-style
++// license that can be found in the LICENSE file.
++
++//go:build go1.24
++
++package http2
++
++import "net/http"
++
++// fillNetHTTPServerConfig sets fields in conf from srv.HTTP2.
++func fillNetHTTPServerConfig(conf *http2Config, srv *http.Server) {
++	fillNetHTTPConfig(conf, srv.HTTP2)
++}
++
++// fillNetHTTPServerConfig sets fields in conf from tr.HTTP2.
++func fillNetHTTPTransportConfig(conf *http2Config, tr *http.Transport) {
++	fillNetHTTPConfig(conf, tr.HTTP2)
++}
++
++func fillNetHTTPConfig(conf *http2Config, h2 *http.HTTP2Config) {
++	if h2 == nil {
++		return
++	}
++	if h2.MaxConcurrentStreams != 0 {
++		conf.MaxConcurrentStreams = uint32(h2.MaxConcurrentStreams)
++	}
++	if h2.MaxEncoderHeaderTableSize != 0 {
++		conf.MaxEncoderHeaderTableSize = uint32(h2.MaxEncoderHeaderTableSize)
++	}
++	if h2.MaxDecoderHeaderTableSize != 0 {
++		conf.MaxDecoderHeaderTableSize = uint32(h2.MaxDecoderHeaderTableSize)
++	}
++	if h2.MaxConcurrentStreams != 0 {
++		conf.MaxConcurrentStreams = uint32(h2.MaxConcurrentStreams)
++	}
++	if h2.MaxReadFrameSize != 0 {
++		conf.MaxReadFrameSize = uint32(h2.MaxReadFrameSize)
++	}
++	if h2.MaxReceiveBufferPerConnection != 0 {
++		conf.MaxUploadBufferPerConnection = int32(h2.MaxReceiveBufferPerConnection)
++	}
++	if h2.MaxReceiveBufferPerStream != 0 {
++		conf.MaxUploadBufferPerStream = int32(h2.MaxReceiveBufferPerStream)
++	}
++	if h2.SendPingTimeout != 0 {
++		conf.SendPingTimeout = h2.SendPingTimeout
++	}
++	if h2.PingTimeout != 0 {
++		conf.PingTimeout = h2.PingTimeout
++	}
++	if h2.WriteByteTimeout != 0 {
++		conf.WriteByteTimeout = h2.WriteByteTimeout
++	}
++	if h2.PermitProhibitedCipherSuites {
++		conf.PermitProhibitedCipherSuites = true
++	}
++	if h2.CountError != nil {
++		conf.CountError = h2.CountError
++	}
++}
+diff --git a/vendor/golang.org/x/net/http2/config_pre_go124.go b/vendor/golang.org/x/net/http2/config_pre_go124.go
+new file mode 100644
+index 00000000..060fd6c6
+--- /dev/null
++++ b/vendor/golang.org/x/net/http2/config_pre_go124.go
+@@ -0,0 +1,16 @@
++// Copyright 2024 The Go Authors. All rights reserved.
++// Use of this source code is governed by a BSD-style
++// license that can be found in the LICENSE file.
++
++//go:build !go1.24
++
++package http2
++
++import "net/http"
++
++// Pre-Go 1.24 fallback.
++// The Server.HTTP2 and Transport.HTTP2 config fields were added in Go 1.24.
++
++func fillNetHTTPServerConfig(conf *http2Config, srv *http.Server) {}
++
++func fillNetHTTPTransportConfig(conf *http2Config, tr *http.Transport) {}
 diff --git a/vendor/golang.org/x/net/http2/frame.go b/vendor/golang.org/x/net/http2/frame.go
 index 105c3b27..81faec7e 100644
 --- a/vendor/golang.org/x/net/http2/frame.go
@@ -14971,6 +14967,32 @@ index 61075bd1..00000000
 -	}
 -	return active
 -}
+diff --git a/vendor/golang.org/x/net/http2/timer.go b/vendor/golang.org/x/net/http2/timer.go
+new file mode 100644
+index 00000000..0b1c17b8
+--- /dev/null
++++ b/vendor/golang.org/x/net/http2/timer.go
+@@ -0,0 +1,20 @@
++// Copyright 2024 The Go Authors. All rights reserved.
++// Use of this source code is governed by a BSD-style
++// license that can be found in the LICENSE file.
++package http2
++
++import "time"
++
++// A timer is a time.Timer, as an interface which can be replaced in tests.
++type timer = interface {
++	C() <-chan time.Time
++	Reset(d time.Duration) bool
++	Stop() bool
++}
++
++// timeTimer adapts a time.Timer to the timer interface.
++type timeTimer struct {
++	*time.Timer
++}
++
++func (t timeTimer) C() <-chan time.Time { return t.Timer.C }
 diff --git a/vendor/golang.org/x/net/http2/transport.go b/vendor/golang.org/x/net/http2/transport.go
 index 2fa49490..090d0e1b 100644
 --- a/vendor/golang.org/x/net/http2/transport.go
@@ -16398,6 +16420,44 @@ index 2fa49490..090d0e1b 100644
  	}
  	cc.mu.Unlock()
  
+diff --git a/vendor/golang.org/x/net/http2/unencrypted.go b/vendor/golang.org/x/net/http2/unencrypted.go
+new file mode 100644
+index 00000000..b2de2116
+--- /dev/null
++++ b/vendor/golang.org/x/net/http2/unencrypted.go
+@@ -0,0 +1,32 @@
++// Copyright 2024 The Go Authors. All rights reserved.
++// Use of this source code is governed by a BSD-style
++// license that can be found in the LICENSE file.
++
++package http2
++
++import (
++	"crypto/tls"
++	"errors"
++	"net"
++)
++
++const nextProtoUnencryptedHTTP2 = "unencrypted_http2"
++
++// unencryptedNetConnFromTLSConn retrieves a net.Conn wrapped in a *tls.Conn.
++//
++// TLSNextProto functions accept a *tls.Conn.
++//
++// When passing an unencrypted HTTP/2 connection to a TLSNextProto function,
++// we pass a *tls.Conn with an underlying net.Conn containing the unencrypted connection.
++// To be extra careful about mistakes (accidentally dropping TLS encryption in a place
++// where we want it), the tls.Conn contains a net.Conn with an UnencryptedNetConn method
++// that returns the actual connection we want to use.
++func unencryptedNetConnFromTLSConn(tc *tls.Conn) (net.Conn, error) {
++	conner, ok := tc.NetConn().(interface {
++		UnencryptedNetConn() net.Conn
++	})
++	if !ok {
++		return nil, errors.New("http2: TLS conn unexpectedly found in unencrypted handoff")
++	}
++	return conner.UnencryptedNetConn(), nil
++}
 diff --git a/vendor/golang.org/x/net/http2/write.go b/vendor/golang.org/x/net/http2/write.go
 index 33f61398..6ff6bee7 100644
 --- a/vendor/golang.org/x/net/http2/write.go
@@ -16589,6 +16649,29 @@ index 6a66aea5..2a7cf70d 100644
  contributors may be used to endorse or promote products derived from
  this software without specific prior written permission.
  
+diff --git a/vendor/golang.org/x/sys/cpu/asm_darwin_x86_gc.s b/vendor/golang.org/x/sys/cpu/asm_darwin_x86_gc.s
+new file mode 100644
+index 00000000..ec2acfe5
+--- /dev/null
++++ b/vendor/golang.org/x/sys/cpu/asm_darwin_x86_gc.s
+@@ -0,0 +1,17 @@
++// Copyright 2024 The Go Authors. All rights reserved.
++// Use of this source code is governed by a BSD-style
++// license that can be found in the LICENSE file.
++
++//go:build darwin && amd64 && gc
++
++#include "textflag.h"
++
++TEXT libc_sysctl_trampoline<>(SB),NOSPLIT,$0-0
++	JMP	libc_sysctl(SB)
++GLOBL	·libc_sysctl_trampoline_addr(SB), RODATA, $8
++DATA	·libc_sysctl_trampoline_addr(SB)/8, $libc_sysctl_trampoline<>(SB)
++
++TEXT libc_sysctlbyname_trampoline<>(SB),NOSPLIT,$0-0
++	JMP	libc_sysctlbyname(SB)
++GLOBL	·libc_sysctlbyname_trampoline_addr(SB), RODATA, $8
++DATA	·libc_sysctlbyname_trampoline_addr(SB)/8, $libc_sysctlbyname_trampoline<>(SB)
 diff --git a/vendor/golang.org/x/sys/cpu/cpu.go b/vendor/golang.org/x/sys/cpu/cpu.go
 index 8fa707aa..02609d5b 100644
 --- a/vendor/golang.org/x/sys/cpu/cpu.go
@@ -16665,6 +16748,73 @@ index 0e27a21e..af2aa99f 100644
  }
  
  func parseARM64SVERegister(zfr0 uint64) {
+diff --git a/vendor/golang.org/x/sys/cpu/cpu_darwin_x86.go b/vendor/golang.org/x/sys/cpu/cpu_darwin_x86.go
+new file mode 100644
+index 00000000..b838cb9e
+--- /dev/null
++++ b/vendor/golang.org/x/sys/cpu/cpu_darwin_x86.go
+@@ -0,0 +1,61 @@
++// Copyright 2024 The Go Authors. All rights reserved.
++// Use of this source code is governed by a BSD-style
++// license that can be found in the LICENSE file.
++
++//go:build darwin && amd64 && gc
++
++package cpu
++
++// darwinSupportsAVX512 checks Darwin kernel for AVX512 support via sysctl
++// call (see issue 43089). It also restricts AVX512 support for Darwin to
++// kernel version 21.3.0 (MacOS 12.2.0) or later (see issue 49233).
++//
++// Background:
++// Darwin implements a special mechanism to economize on thread state when
++// AVX512 specific registers are not in use. This scheme minimizes state when
++// preempting threads that haven't yet used any AVX512 instructions, but adds
++// special requirements to check for AVX512 hardware support at runtime (e.g.
++// via sysctl call or commpage inspection). See issue 43089 and link below for
++// full background:
++// https://github.com/apple-oss-distributions/xnu/blob/xnu-11215.1.10/osfmk/i386/fpu.c#L214-L240
++//
++// Additionally, all versions of the Darwin kernel from 19.6.0 through 21.2.0
++// (corresponding to MacOS 10.15.6 - 12.1) have a bug that can cause corruption
++// of the AVX512 mask registers (K0-K7) upon signal return. For this reason
++// AVX512 is considered unsafe to use on Darwin for kernel versions prior to
++// 21.3.0, where a fix has been confirmed. See issue 49233 for full background.
++func darwinSupportsAVX512() bool {
++	return darwinSysctlEnabled([]byte("hw.optional.avx512f\x00")) && darwinKernelVersionCheck(21, 3, 0)
++}
++
++// Ensure Darwin kernel version is at least major.minor.patch, avoiding dependencies
++func darwinKernelVersionCheck(major, minor, patch int) bool {
++	var release [256]byte
++	err := darwinOSRelease(&release)
++	if err != nil {
++		return false
++	}
++
++	var mmp [3]int
++	c := 0
++Loop:
++	for _, b := range release[:] {
++		switch {
++		case b >= '0' && b <= '9':
++			mmp[c] = 10*mmp[c] + int(b-'0')
++		case b == '.':
++			c++
++			if c > 2 {
++				return false
++			}
++		case b == 0:
++			break Loop
++		default:
++			return false
++		}
++	}
++	if c != 2 {
++		return false
++	}
++	return mmp[0] > major || mmp[0] == major && (mmp[1] > minor || mmp[1] == minor && mmp[2] >= patch)
++}
 diff --git a/vendor/golang.org/x/sys/cpu/cpu_gc_x86.go b/vendor/golang.org/x/sys/cpu/cpu_gc_x86.go
 index 910728fb..32a44514 100644
 --- a/vendor/golang.org/x/sys/cpu/cpu_gc_x86.go
@@ -16682,6 +16832,22 @@ index 910728fb..32a44514 100644
 +// xgetbv with ecx = 0 is implemented in cpu_gc_x86.s for gc compiler
  // and in cpu_gccgo.c for gccgo.
  func xgetbv() (eax, edx uint32)
+diff --git a/vendor/golang.org/x/sys/cpu/cpu_x86.s b/vendor/golang.org/x/sys/cpu/cpu_gc_x86.s
+similarity index 94%
+rename from vendor/golang.org/x/sys/cpu/cpu_x86.s
+rename to vendor/golang.org/x/sys/cpu/cpu_gc_x86.s
+index 7d7ba33e..ce208ce6 100644
+--- a/vendor/golang.org/x/sys/cpu/cpu_x86.s
++++ b/vendor/golang.org/x/sys/cpu/cpu_gc_x86.s
+@@ -18,7 +18,7 @@ TEXT ·cpuid(SB), NOSPLIT, $0-24
+ 	RET
+ 
+ // func xgetbv() (eax, edx uint32)
+-TEXT ·xgetbv(SB),NOSPLIT,$0-8
++TEXT ·xgetbv(SB), NOSPLIT, $0-8
+ 	MOVL $0, CX
+ 	XGETBV
+ 	MOVL AX, eax+0(FP)
 diff --git a/vendor/golang.org/x/sys/cpu/cpu_gccgo_x86.go b/vendor/golang.org/x/sys/cpu/cpu_gccgo_x86.go
 index 99c60fe9..170d21dd 100644
 --- a/vendor/golang.org/x/sys/cpu/cpu_gccgo_x86.go
@@ -16736,6 +16902,166 @@ index cd63e733..7d902b68 100644
  
  package cpu
  
+diff --git a/vendor/golang.org/x/sys/cpu/cpu_linux_riscv64.go b/vendor/golang.org/x/sys/cpu/cpu_linux_riscv64.go
+new file mode 100644
+index 00000000..cb4a0c57
+--- /dev/null
++++ b/vendor/golang.org/x/sys/cpu/cpu_linux_riscv64.go
+@@ -0,0 +1,137 @@
++// Copyright 2024 The Go Authors. All rights reserved.
++// Use of this source code is governed by a BSD-style
++// license that can be found in the LICENSE file.
++
++package cpu
++
++import (
++	"syscall"
++	"unsafe"
++)
++
++// RISC-V extension discovery code for Linux. The approach here is to first try the riscv_hwprobe
++// syscall falling back to HWCAP to check for the C extension if riscv_hwprobe is not available.
++//
++// A note on detection of the Vector extension using HWCAP.
++//
++// Support for the Vector extension version 1.0 was added to the Linux kernel in release 6.5.
++// Support for the riscv_hwprobe syscall was added in 6.4. It follows that if the riscv_hwprobe
++// syscall is not available then neither is the Vector extension (which needs kernel support).
++// The riscv_hwprobe syscall should then be all we need to detect the Vector extension.
++// However, some RISC-V board manufacturers ship boards with an older kernel on top of which
++// they have back-ported various versions of the Vector extension patches but not the riscv_hwprobe
++// patches. These kernels advertise support for the Vector extension using HWCAP. Falling
++// back to HWCAP to detect the Vector extension, if riscv_hwprobe is not available, or simply not
++// bothering with riscv_hwprobe at all and just using HWCAP may then seem like an attractive option.
++//
++// Unfortunately, simply checking the 'V' bit in AT_HWCAP will not work as this bit is used by
++// RISC-V board and cloud instance providers to mean different things. The Lichee Pi 4A board
++// and the Scaleway RV1 cloud instances use the 'V' bit to advertise their support for the unratified
++// 0.7.1 version of the Vector Specification. The Banana Pi BPI-F3 and the CanMV-K230 board use
++// it to advertise support for 1.0 of the Vector extension. Versions 0.7.1 and 1.0 of the Vector
++// extension are binary incompatible. HWCAP can then not be used in isolation to populate the
++// HasV field as this field indicates that the underlying CPU is compatible with RVV 1.0.
++//
++// There is a way at runtime to distinguish between versions 0.7.1 and 1.0 of the Vector
++// specification by issuing a RVV 1.0 vsetvli instruction and checking the vill bit of the vtype
++// register. This check would allow us to safely detect version 1.0 of the Vector extension
++// with HWCAP, if riscv_hwprobe were not available. However, the check cannot
++// be added until the assembler supports the Vector instructions.
++//
++// Note the riscv_hwprobe syscall does not suffer from these ambiguities by design as all of the
++// extensions it advertises support for are explicitly versioned. It's also worth noting that
++// the riscv_hwprobe syscall is the only way to detect multi-letter RISC-V extensions, e.g., Zba.
++// These cannot be detected using HWCAP and so riscv_hwprobe must be used to detect the majority
++// of RISC-V extensions.
++//
++// Please see https://docs.kernel.org/arch/riscv/hwprobe.html for more information.
++
++// golang.org/x/sys/cpu is not allowed to depend on golang.org/x/sys/unix so we must
++// reproduce the constants, types and functions needed to make the riscv_hwprobe syscall
++// here.
++
++const (
++	// Copied from golang.org/x/sys/unix/ztypes_linux_riscv64.go.
++	riscv_HWPROBE_KEY_IMA_EXT_0   = 0x4
++	riscv_HWPROBE_IMA_C           = 0x2
++	riscv_HWPROBE_IMA_V           = 0x4
++	riscv_HWPROBE_EXT_ZBA         = 0x8
++	riscv_HWPROBE_EXT_ZBB         = 0x10
++	riscv_HWPROBE_EXT_ZBS         = 0x20
++	riscv_HWPROBE_KEY_CPUPERF_0   = 0x5
++	riscv_HWPROBE_MISALIGNED_FAST = 0x3
++	riscv_HWPROBE_MISALIGNED_MASK = 0x7
++)
++
++const (
++	// sys_RISCV_HWPROBE is copied from golang.org/x/sys/unix/zsysnum_linux_riscv64.go.
++	sys_RISCV_HWPROBE = 258
++)
++
++// riscvHWProbePairs is copied from golang.org/x/sys/unix/ztypes_linux_riscv64.go.
++type riscvHWProbePairs struct {
++	key   int64
++	value uint64
++}
++
++const (
++	// CPU features
++	hwcap_RISCV_ISA_C = 1 << ('C' - 'A')
++)
++
++func doinit() {
++	// A slice of key/value pair structures is passed to the RISCVHWProbe syscall. The key
++	// field should be initialised with one of the key constants defined above, e.g.,
++	// RISCV_HWPROBE_KEY_IMA_EXT_0. The syscall will set the value field to the appropriate value.
++	// If the kernel does not recognise a key it will set the key field to -1 and the value field to 0.
++
++	pairs := []riscvHWProbePairs{
++		{riscv_HWPROBE_KEY_IMA_EXT_0, 0},
++		{riscv_HWPROBE_KEY_CPUPERF_0, 0},
++	}
++
++	// This call only indicates that extensions are supported if they are implemented on all cores.
++	if riscvHWProbe(pairs, 0) {
++		if pairs[0].key != -1 {
++			v := uint(pairs[0].value)
++			RISCV64.HasC = isSet(v, riscv_HWPROBE_IMA_C)
++			RISCV64.HasV = isSet(v, riscv_HWPROBE_IMA_V)
++			RISCV64.HasZba = isSet(v, riscv_HWPROBE_EXT_ZBA)
++			RISCV64.HasZbb = isSet(v, riscv_HWPROBE_EXT_ZBB)
++			RISCV64.HasZbs = isSet(v, riscv_HWPROBE_EXT_ZBS)
++		}
++		if pairs[1].key != -1 {
++			v := pairs[1].value & riscv_HWPROBE_MISALIGNED_MASK
++			RISCV64.HasFastMisaligned = v == riscv_HWPROBE_MISALIGNED_FAST
++		}
++	}
++
++	// Let's double check with HWCAP if the C extension does not appear to be supported.
++	// This may happen if we're running on a kernel older than 6.4.
++
++	if !RISCV64.HasC {
++		RISCV64.HasC = isSet(hwCap, hwcap_RISCV_ISA_C)
++	}
++}
++
++func isSet(hwc uint, value uint) bool {
++	return hwc&value != 0
++}
++
++// riscvHWProbe is a simplified version of the generated wrapper function found in
++// golang.org/x/sys/unix/zsyscall_linux_riscv64.go. We simplify it by removing the
++// cpuCount and cpus parameters which we do not need. We always want to pass 0 for
++// these parameters here so the kernel only reports the extensions that are present
++// on all cores.
++func riscvHWProbe(pairs []riscvHWProbePairs, flags uint) bool {
++	var _zero uintptr
++	var p0 unsafe.Pointer
++	if len(pairs) > 0 {
++		p0 = unsafe.Pointer(&pairs[0])
++	} else {
++		p0 = unsafe.Pointer(&_zero)
++	}
++
++	_, _, e1 := syscall.Syscall6(sys_RISCV_HWPROBE, uintptr(p0), uintptr(len(pairs)), uintptr(0), uintptr(0), uintptr(flags), 0)
++	return e1 == 0
++}
+diff --git a/vendor/golang.org/x/sys/cpu/cpu_other_x86.go b/vendor/golang.org/x/sys/cpu/cpu_other_x86.go
+new file mode 100644
+index 00000000..a0fd7e2f
+--- /dev/null
++++ b/vendor/golang.org/x/sys/cpu/cpu_other_x86.go
+@@ -0,0 +1,11 @@
++// Copyright 2024 The Go Authors. All rights reserved.
++// Use of this source code is governed by a BSD-style
++// license that can be found in the LICENSE file.
++
++//go:build 386 || amd64p32 || (amd64 && (!darwin || !gc))
++
++package cpu
++
++func darwinSupportsAVX512() bool {
++	panic("only implemented for gc && amd64 && darwin")
++}
 diff --git a/vendor/golang.org/x/sys/cpu/cpu_riscv64.go b/vendor/golang.org/x/sys/cpu/cpu_riscv64.go
 index 7f0c79c0..aca3199c 100644
 --- a/vendor/golang.org/x/sys/cpu/cpu_riscv64.go
@@ -16772,38 +17098,110 @@ index c29f5e4c..600a6807 100644
  		} else {
  			// Check if OPMASK and ZMM registers have OS support.
  			osSupportsAVX512 = osSupportsAVX && isSet(5, eax) && isSet(6, eax) && isSet(7, eax)
-diff --git a/vendor/golang.org/x/sys/cpu/cpu_x86.s b/vendor/golang.org/x/sys/cpu/cpu_x86.s
-deleted file mode 100644
-index 7d7ba33e..00000000
---- a/vendor/golang.org/x/sys/cpu/cpu_x86.s
-+++ /dev/null
-@@ -1,26 +0,0 @@
--// Copyright 2018 The Go Authors. All rights reserved.
--// Use of this source code is governed by a BSD-style
--// license that can be found in the LICENSE file.
--
--//go:build (386 || amd64 || amd64p32) && gc
--
--#include "textflag.h"
--
--// func cpuid(eaxArg, ecxArg uint32) (eax, ebx, ecx, edx uint32)
--TEXT ·cpuid(SB), NOSPLIT, $0-24
--	MOVL eaxArg+0(FP), AX
--	MOVL ecxArg+4(FP), CX
--	CPUID
--	MOVL AX, eax+8(FP)
--	MOVL BX, ebx+12(FP)
--	MOVL CX, ecx+16(FP)
--	MOVL DX, edx+20(FP)
--	RET
--
--// func xgetbv() (eax, edx uint32)
--TEXT ·xgetbv(SB),NOSPLIT,$0-8
--	MOVL $0, CX
--	XGETBV
--	MOVL AX, eax+0(FP)
--	MOVL DX, edx+4(FP)
--	RET
+diff --git a/vendor/golang.org/x/sys/cpu/syscall_darwin_x86_gc.go b/vendor/golang.org/x/sys/cpu/syscall_darwin_x86_gc.go
+new file mode 100644
+index 00000000..4d0888b0
+--- /dev/null
++++ b/vendor/golang.org/x/sys/cpu/syscall_darwin_x86_gc.go
+@@ -0,0 +1,98 @@
++// Copyright 2024 The Go Authors. All rights reserved.
++// Use of this source code is governed by a BSD-style
++// license that can be found in the LICENSE file.
++
++// Minimal copy of x/sys/unix so the cpu package can make a
++// system call on Darwin without depending on x/sys/unix.
++
++//go:build darwin && amd64 && gc
++
++package cpu
++
++import (
++	"syscall"
++	"unsafe"
++)
++
++type _C_int int32
++
++// adapted from unix.Uname() at x/sys/unix/syscall_darwin.go L419
++func darwinOSRelease(release *[256]byte) error {
++	// from x/sys/unix/zerrors_openbsd_amd64.go
++	const (
++		CTL_KERN       = 0x1
++		KERN_OSRELEASE = 0x2
++	)
++
++	mib := []_C_int{CTL_KERN, KERN_OSRELEASE}
++	n := unsafe.Sizeof(*release)
++
++	return sysctl(mib, &release[0], &n, nil, 0)
++}
++
++type Errno = syscall.Errno
++
++var _zero uintptr // Single-word zero for use when we need a valid pointer to 0 bytes.
++
++// from x/sys/unix/zsyscall_darwin_amd64.go L791-807
++func sysctl(mib []_C_int, old *byte, oldlen *uintptr, new *byte, newlen uintptr) error {
++	var _p0 unsafe.Pointer
++	if len(mib) > 0 {
++		_p0 = unsafe.Pointer(&mib[0])
++	} else {
++		_p0 = unsafe.Pointer(&_zero)
++	}
++	if _, _, err := syscall_syscall6(
++		libc_sysctl_trampoline_addr,
++		uintptr(_p0),
++		uintptr(len(mib)),
++		uintptr(unsafe.Pointer(old)),
++		uintptr(unsafe.Pointer(oldlen)),
++		uintptr(unsafe.Pointer(new)),
++		uintptr(newlen),
++	); err != 0 {
++		return err
++	}
++
++	return nil
++}
++
++var libc_sysctl_trampoline_addr uintptr
++
++// adapted from internal/cpu/cpu_arm64_darwin.go
++func darwinSysctlEnabled(name []byte) bool {
++	out := int32(0)
++	nout := unsafe.Sizeof(out)
++	if ret := sysctlbyname(&name[0], (*byte)(unsafe.Pointer(&out)), &nout, nil, 0); ret != nil {
++		return false
++	}
++	return out > 0
++}
++
++//go:cgo_import_dynamic libc_sysctl sysctl "/usr/lib/libSystem.B.dylib"
++
++var libc_sysctlbyname_trampoline_addr uintptr
++
++// adapted from runtime/sys_darwin.go in the pattern of sysctl() above, as defined in x/sys/unix
++func sysctlbyname(name *byte, old *byte, oldlen *uintptr, new *byte, newlen uintptr) error {
++	if _, _, err := syscall_syscall6(
++		libc_sysctlbyname_trampoline_addr,
++		uintptr(unsafe.Pointer(name)),
++		uintptr(unsafe.Pointer(old)),
++		uintptr(unsafe.Pointer(oldlen)),
++		uintptr(unsafe.Pointer(new)),
++		uintptr(newlen),
++		0,
++	); err != 0 {
++		return err
++	}
++
++	return nil
++}
++
++//go:cgo_import_dynamic libc_sysctlbyname sysctlbyname "/usr/lib/libSystem.B.dylib"
++
++// Implemented in the runtime package (runtime/sys_darwin.go)
++func syscall_syscall6(fn, a1, a2, a3, a4, a5, a6 uintptr) (r1, r2 uintptr, err Errno)
++
++//go:linkname syscall_syscall6 syscall.syscall6
 diff --git a/vendor/golang.org/x/sys/unix/README.md b/vendor/golang.org/x/sys/unix/README.md
 index 7d3c060e..6e08a76a 100644
 --- a/vendor/golang.org/x/sys/unix/README.md
@@ -17348,6 +17746,42 @@ index 312ae6ac..7bf5c04b 100644
 +		}
 +	}
 +	return n2, nil
++}
+diff --git a/vendor/golang.org/x/sys/unix/vgetrandom_linux.go b/vendor/golang.org/x/sys/unix/vgetrandom_linux.go
+new file mode 100644
+index 00000000..07ac8e09
+--- /dev/null
++++ b/vendor/golang.org/x/sys/unix/vgetrandom_linux.go
+@@ -0,0 +1,13 @@
++// Copyright 2024 The Go Authors. All rights reserved.
++// Use of this source code is governed by a BSD-style
++// license that can be found in the LICENSE file.
++
++//go:build linux && go1.24
++
++package unix
++
++import _ "unsafe"
++
++//go:linkname vgetrandom runtime.vgetrandom
++//go:noescape
++func vgetrandom(p []byte, flags uint32) (ret int, supported bool)
+diff --git a/vendor/golang.org/x/sys/unix/vgetrandom_unsupported.go b/vendor/golang.org/x/sys/unix/vgetrandom_unsupported.go
+new file mode 100644
+index 00000000..297e97bc
+--- /dev/null
++++ b/vendor/golang.org/x/sys/unix/vgetrandom_unsupported.go
+@@ -0,0 +1,11 @@
++// Copyright 2024 The Go Authors. All rights reserved.
++// Use of this source code is governed by a BSD-style
++// license that can be found in the LICENSE file.
++
++//go:build !linux || !go1.24
++
++package unix
++
++func vgetrandom(p []byte, flags uint32) (ret int, supported bool) {
++	return -1, false
 +}
 diff --git a/vendor/golang.org/x/sys/unix/zerrors_darwin_amd64.go b/vendor/golang.org/x/sys/unix/zerrors_darwin_amd64.go
 index e40fa852..d73c4652 100644
@@ -21250,3 +21684,5 @@ index c14c0460..96673f57 100644
  ## explicit; go 1.18
  golang.org/x/text/secure/bidirule
  golang.org/x/text/transform
+-- 
+2.47.0
