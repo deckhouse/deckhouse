@@ -1,11 +1,12 @@
 {{- range $key, $value := .CandiVersionMap.k8s }}
   {{- $version := toString $key }}
+  {{- $image_version := $version | replace "." "-" }}
   {{- if $value.csi.yandex }}
 ---
-image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $version | replace "." "-" }}
+image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
 fromImage: common/distroless
 import:
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
   add: /go/bin/yandex-csi-driver
   to: /bin/yandex-csi-driver
   before: setup
@@ -18,29 +19,40 @@ import:
 docker:
   ENTRYPOINT: ["/bin/yandex-csi-driver"]
 ---
-image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
+image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
 final: false
-    {{- if semverCompare ">=1.27" $version }}
-from: {{ $.Images.BASE_GOLANG_21_ALPINE_DEV }}
-    {{- end }}
-mount:
-- fromPath: ~/go-pkg-cache
-  to: /go/pkg
+fromImage: common/src-artifact
 shell:
-  beforeInstall:
-  - apk add --no-cache openssh-client
   install:
-  - export GO_VERSION=${GOLANG_VERSION}
-  - export GOPROXY={{ $.GOPROXY }}
-  - mkdir -p /go/src/app
-  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
-  - git clone --depth 1 --branch {{ $value.csi.yandex }} {{ $.SOURCE_REPO }}/deckhouse/yandex-csi-driver.git /go/src/app
+    - git clone --depth 1 --branch {{ $value.csi.yandex }} {{ $.SOURCE_REPO }}/deckhouse/yandex-csi-driver.git /go/src/app
+    - cd /go/src/app
+    - rm -rf .git
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
+final: false
+from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
+import:
+  - image: { { $.ModuleName } }/{{ $.ImageName }}-src-artifact-{{ $image_version }}
+    add: /go/src/app
+    to: /go/src/app
+    before: install
+mount:
+  - fromPath: ~/go-pkg-cache
+    to: /go/pkg
+shell:
+  install:
   - cd /go/src/app
-  - |
-    CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a \
-    -ldflags '-X github.com/deckhouse/yandex-csi-driver/driver.version={{ $value.csi.yandex }}' \
-    -o /go/bin/yandex-csi-driver \
-    github.com/deckhouse/yandex-csi-driver/cmd/yandex-csi-driver
+  - export GOPROXY={{ $.GOPROXY }}
+  - go mod download
+  setup:
+    - cd /go/src/app
+    - |
+      CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a \
+      -ldflags '-X github.com/deckhouse/yandex-csi-driver/driver.version={{ $value.csi.yandex }}' \
+      -o /go/bin/yandex-csi-driver \
+      github.com/deckhouse/yandex-csi-driver/cmd/yandex-csi-driver
+    - chown 64535:64535 /go/bin/yandex-csi-driver
+    - chmod 0755 /go/bin/yandex-csi-driver
  {{- end }}
 {{- end }}
 ---

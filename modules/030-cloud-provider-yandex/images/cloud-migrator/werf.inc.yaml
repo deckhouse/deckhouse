@@ -11,7 +11,7 @@ docker:
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
 final: false
-from: {{ .Images.BASE_GOLANG_21_ALPINE }}
+from: {{ .Images.BASE_GOLANG_23_ALPINE }}
 shell:
   setup:
   - export GOPROXY={{ $.GOPROXY }}
