@@ -114,14 +114,14 @@ function __main__() {
     echo " Creating a defectDojo engagement for module $MODULE_NAME"
     echo ""
     curl -X POST \
-      "https://${DEFECTDOJO_HOST}/api/v2/engagements/" \
+      "https://$DEFECTDOJO_HOST/api/v2/engagements/" \
       -H "Authorization: Token ${DEFECTDOJO_API_TOKEN}" \
       -F "name=Test" -F "product=1" -F "target_start=$(date -I)" -F "target_end=$(date -I)"
 
     echo " Uploading trivy CVE report for module $MODULE_NAME"
     echo ""
     curl -X POST \
-      "https://${DEFECTDOJO_HOST}/api/v2/import-scan/" \
+      "https://$DEFECTDOJO_HOST/api/v2/import-scan/" \
       -H "accept: application/json" \
       -H "Content-Type: multipart/form-data"  \
       -H "Authorization: Token ${DEFECTDOJO_API_TOKEN}" \
