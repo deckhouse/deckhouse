@@ -155,6 +155,8 @@ type ModuleProperties struct {
 	Source           string              `json:"source,omitempty"`
 	ReleaseChannel   string              `json:"releaseChannel,omitempty"`
 	Stage            string              `json:"stage,omitempty"`
+	Namespace        string              `json:"namespace,omitempty"`
+	Subsystems       []string            `json:"subsystems,omitempty"`
 	Description      string              `json:"description,omitempty"`
 	Version          string              `json:"version,omitempty"`
 	UpdatePolicy     string              `json:"updatePolicy,omitempty"`

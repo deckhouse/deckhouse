@@ -830,7 +830,7 @@ modules:
           - patch
           - delete
       use: null
-    namespace: none
+    namespace: ""
     subsystems:
     - kubernetes
     - networking
@@ -1487,6 +1487,38 @@ modules:
     namespace: d8-multitenancy-manager
     subsystems:
     - deckhouse
+  namespace-configurator:
+    capabilities:
+      manage:
+      - name: d8:manage:permission:module:namespace-configurator:view
+        rules:
+        - apiGroups:
+          - deckhouse.io
+          resourceNames:
+          - namespace-configurator
+          resources:
+          - moduleconfigs
+          verbs:
+          - get
+          - list
+          - watch
+      - name: d8:manage:permission:module:namespace-configurator:edit
+        rules:
+        - apiGroups:
+          - deckhouse.io
+          resourceNames:
+          - namespace-configurator
+          resources:
+          - moduleconfigs
+          verbs:
+          - create
+          - update
+          - patch
+          - delete
+      use: null
+    namespace: ""
+    subsystems:
+    - infrastructure
   network-gateway:
     capabilities:
       manage:
@@ -1894,7 +1926,7 @@ modules:
           - patch
           - delete
       use: null
-    namespace: none
+    namespace: ""
     subsystems:
     - kubernetes
   prometheus:
@@ -2164,7 +2196,7 @@ modules:
           - patch
           - delete
       use: null
-    namespace: none
+    namespace: ""
     subsystems:
     - security
   snapshot-controller:
@@ -2425,7 +2457,7 @@ modules:
           - patch
           - delete
       use: null
-    namespace: none
+    namespace: ""
     subsystems:
     - security
   vertical-pod-autoscaler:
@@ -2460,139 +2492,4 @@ modules:
     namespace: kube-system
     subsystems:
     - infrastructure
-subsystems:
-  deckhouse:
-    modules:
-    - deckhouse
-    - multitenancy-manager
-    namespaces:
-    - d8-multitenancy-manager
-    - d8-system
-  infrastructure:
-    modules:
-    - cloud-provider-openstack
-    - cloud-provider-vcd
-    - keepalived
-    - cloud-provider-vsphere
-    - cloud-provider-zvirt
-    - cloud-provider-aws
-    - cloud-provider-azure
-    - cloud-provider-gcp
-    - cloud-provider-yandex
-    - ceph-csi
-    - local-path-provisioner
-    - node-manager
-    - terraform-manager
-    - snapshot-controller
-    - istio
-    - vertical-pod-autoscaler
-    - descheduler
-    - loki
-    - pod-reloader
-    - chrony
-    namespaces:
-    - d8-ceph-csi
-    - d8-chrony
-    - d8-cloud-instance-manager
-    - d8-cloud-provider-aws
-    - d8-cloud-provider-azure
-    - d8-cloud-provider-gcp
-    - d8-cloud-provider-openstack
-    - d8-cloud-provider-vcd
-    - d8-cloud-provider-vsphere
-    - d8-cloud-provider-yandex
-    - d8-cloud-provider-zvirt
-    - d8-descheduler
-    - d8-istio
-    - d8-keepalived
-    - d8-local-path-provisioner
-    - d8-monitoring
-    - d8-pod-reloader
-    - d8-snapshot-controller
-    - d8-system
-    - kube-system
-  kubernetes:
-    modules:
-    - priority-class
-    - flow-schema
-    - kube-proxy
-    - control-plane-manager
-    - kube-dns
-    namespaces:
-    - kube-system
-  networking:
-    modules:
-    - node-local-dns
-    - static-routing-manager
-    - network-gateway
-    - metallb
-    - flow-schema
-    - cni-cilium
-    - cni-flannel
-    - cni-simple-bridge
-    - kube-proxy
-    - kube-dns
-    - network-policy-engine
-    - istio
-    - ingress-nginx
-    - cilium-hubble
-    - openvpn
-    namespaces:
-    - d8-cni-cilium
-    - d8-cni-flannel
-    - d8-cni-simple-bridge
-    - d8-ingress-nginx
-    - d8-istio
-    - d8-metallb
-    - d8-network-gateway
-    - d8-openvpn
-    - d8-static-routing-manager
-    - d8-system
-    - kube-system
-  observability:
-    modules:
-    - monitoring-applications
-    - operator-prometheus
-    - prometheus
-    - prometheus-metrics-adapter
-    - prometheus-pushgateway
-    - extended-monitoring
-    - monitoring-custom
-    - monitoring-deckhouse
-    - monitoring-kubernetes
-    - monitoring-kubernetes-control-plane
-    - monitoring-ping
-    - log-shipper
-    - dashboard
-    - okmeter
-    - upmeter
-    namespaces:
-    - d8-dashboard
-    - d8-log-shipper
-    - d8-monitoring
-    - d8-okmeter
-    - d8-operator-prometheus
-    - d8-upmeter
-    - kube-prometheus-pushgateway
-  security:
-    modules:
-    - operator-trivy
-    - runtime-audit-engine
-    - admission-policy-engine
-    - cert-manager
-    - user-authz
-    - user-authn
-    - secret-copier
-    namespaces:
-    - d8-admission-policy-engine
-    - d8-cert-manager
-    - d8-operator-trivy
-    - d8-runtime-audit-engine
-    - d8-user-authn
-  storage:
-    modules:
-    - ceph-csi
-    - snapshot-controller
-    namespaces:
-    - d8-ceph-csi
-    - d8-snapshot-controller
+subsystems: {}
