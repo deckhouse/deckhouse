@@ -327,7 +327,7 @@ final: false
 shell:
   install:
   - cd /go/src/app
-  - go mod tidy
+  - go mod download
   setup:
   - cd /go/src/app
   - go build -ldflags "-w -s" -v -o /go/src/app/server /go/src/app/cmd/v-router
