@@ -103,6 +103,8 @@ properties:
         - kube-dns
         - system
       To get roles nodes, use command: `kubectl get nodes`
+
+      Required DNS Deployment restart.
     type: string
     default: ""
 #  scheduleOnControlPlane:
