@@ -27,21 +27,15 @@
       "rel": ""
     },
     {
-      "title": "Лицензионное соглашение",
-      "url": "/license/",
+      "title": "Политика использования файлов «cookie»",
+      "url": "/cookie-policy/",
       "target": "",
       "rel": ""
     },
     {
-      "title": "Правила лицензирования",
-      "url": "/license-rules/",
-      "target": "",
-      "rel": ""
-    },
-    {
-      "title": "Регламент технической поддержки",
-      "url": "/regulations/",
-      "target": "",
+      "title": "Правовые документы",
+      "url": "https://legal.flant.ru/",
+      "target": "_blank",
       "rel": ""
     }
   ]
