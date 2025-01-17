@@ -88,4 +88,4 @@ shell:
     - cd /src/cni-plugin
     - make build_linux
     - mv /src/scripts/* /
-    - cp -f /go/src/github.com/flannel-io/cni-plugin/dist/flannel-amd64 /flannel
+    - cp -f /src/cni-plugin/dist/flannel-amd64 /flannel
