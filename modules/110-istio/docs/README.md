@@ -244,8 +244,8 @@ Below are their fundamental differences:
   > The intersection of subnets of services and pods is strictly prohibited in `single-network` mode, and is acceptable but not recommended in `multi-networks` mode.
   > [source](https://istio.io/latest/docs/ops/deployment/deployment-models/#single-network )
   >
-  > - In the `single-network` mode, pods from different clusters can communicate with each other directly.
-  > - In the `multi-networks` mode, pods from different clusters can only communicate with each other if they use the Istio-gateway.
+  > - In the single-network mode, pods from different clusters can communicate with each other directly.
+  > - In the multi-networks mode, pods from different clusters can only communicate with each other if they use the Istio-gateway.
 
 #### General principles of federation
 
