@@ -31,15 +31,17 @@ import:
   add: /src
   to: /src
   before: install
-mount:
-- fromPath: ~/go-pkg-cache
-  to: /go/pkg
 {{ end }}
+mount:
+- from: tmp_dir
+  to: /go/pkg
+- from: tmp_dir
+  to: /root/.cache/go-build
 shell:
   install:
   - cd /src
   - export GOPROXY={{ .GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64
-  - go mod tidy
+  - go mod download
   - go build -ldflags '-s -w' .
   - chown -R 64535:64535 /src
   - chmod 0700 /src/docs-builder
@@ -60,6 +62,4 @@ git:
   - '**/*.sum'
   stageDependencies:
     install:
-    - '**/*.go'
-    - 'go.mod'
-    - 'go.sum'
+    - '**/*'
