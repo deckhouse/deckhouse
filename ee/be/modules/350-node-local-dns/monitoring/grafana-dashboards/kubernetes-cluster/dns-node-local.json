@@ -26,7 +26,7 @@
       "collapsed": true,
       "datasource": {
         "type": "prometheus",
-        "uid": "P0D6E4079E36703EB"
+        "uid": "$ds_prometheus"
       },
       "gridPos": {
         "h": 1,
@@ -755,7 +755,7 @@
           "dataFormat": "tsbuckets",
           "datasource": {
             "type": "prometheus",
-            "uid": "P0D6E4079E36703EB"
+            "uid": "$ds_prometheus"
           },
           "fieldConfig": {
             "defaults": {
@@ -829,7 +829,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "P0D6E4079E36703EB"
+                "uid": "$ds_prometheus"
               },
               "expr": "sum(rate(coredns_forward_request_duration_seconds_bucket{node=~\"$node\", job=\"node-local-dns\"}[$__rate_interval])) by (le)",
               "format": "heatmap",
@@ -1434,7 +1434,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "P0D6E4079E36703EB"
+            "uid": "$ds_prometheus"
           },
           "refId": "A"
         }
@@ -1446,7 +1446,7 @@
       "collapsed": true,
       "datasource": {
         "type": "prometheus",
-        "uid": "P0D6E4079E36703EB"
+        "uid": "$ds_prometheus"
       },
       "gridPos": {
         "h": 1,
@@ -2644,7 +2644,7 @@
           "dataFormat": "tsbuckets",
           "datasource": {
             "type": "prometheus",
-            "uid": "P0D6E4079E36703EB"
+            "uid": "$ds_prometheus"
           },
           "fieldConfig": {
             "defaults": {
@@ -2718,7 +2718,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "P0D6E4079E36703EB"
+                "uid": "$ds_prometheus"
               },
               "expr": "sum(rate(coredns_forward_request_duration_seconds_bucket{node=~\"$node\", job=\"node-local-dns\"}[$__rate_interval])) by (le)",
               "format": "heatmap",
@@ -2749,7 +2749,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "P0D6E4079E36703EB"
+            "uid": "$ds_prometheus"
           },
           "refId": "A"
         }
@@ -2761,7 +2761,7 @@
       "collapsed": true,
       "datasource": {
         "type": "prometheus",
-        "uid": "P0D6E4079E36703EB"
+        "uid": "$ds_prometheus"
       },
       "gridPos": {
         "h": 1,
@@ -3044,7 +3044,7 @@
           "dataFormat": "tsbuckets",
           "datasource": {
             "type": "prometheus",
-            "uid": "P0D6E4079E36703EB"
+            "uid": "$ds_prometheus"
           },
           "fieldConfig": {
             "defaults": {
@@ -3118,7 +3118,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "P0D6E4079E36703EB"
+                "uid": "$ds_prometheus"
               },
               "expr": "sum(rate(coredns_forward_request_duration_seconds_bucket{node=~\"$node\", to=~\"$upstream\"}[$__rate_interval])) by (le)",
               "format": "heatmap",
@@ -3281,7 +3281,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "P0D6E4079E36703EB"
+            "uid": "$ds_prometheus"
           },
           "refId": "A"
         }
