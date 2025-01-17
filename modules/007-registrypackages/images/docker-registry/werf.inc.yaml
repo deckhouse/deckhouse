@@ -3,25 +3,25 @@
 
 {{- $image_version := $docker_version | replace "." "-" }}
 ---
-image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
+image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact-{{ $image_version }}
 final: false
 fromImage: common/src-artifact
 git:
-- add: /{{ $.ModulePath }}/modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
+- add: /{{ .ModulePath }}/modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/scripts
   to: /src/scripts
   stageDependencies:
     install:
     - '**/*'
 shell:
   install:
-  - git clone --depth 1 --branch {{ $docker_auth_version }} {{ $.SOURCE_REPO }}/cesanta/docker_auth.git /src/docker_auth
-  - git clone --depth 1 --branch v{{ $docker_version }} {{ $.SOURCE_REPO }}/distribution/distribution.git /src/distribution
+  - git clone --depth 1 --branch {{ $docker_auth_version }} {{ .SOURCE_REPO }}/cesanta/docker_auth.git /src/docker_auth
+  - git clone --depth 1 --branch v{{ $docker_version }} {{ .SOURCE_REPO }}/distribution/distribution.git /src/distribution
   - rm -rf /src/docker_auth/.git
 ---
-image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
-from: {{ $.Images.BASE_SCRATCH }}
+image: {{ .ModuleName }}/{{ .ImageName }}-{{ $image_version }}
+from: {{ .Images.BASE_SCRATCH }}
 import:
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
+- image: {{ .ModuleName }}/{{ .ImageName }}-artifact-{{ $image_version }}
   add: /
   to: /
   includePaths:
@@ -38,20 +38,14 @@ docker:
     cesanta_auth: {{ $docker_auth_version }}
   USER: 64535
 ---
-image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
+image: {{ .ModuleName }}/{{ .ImageName }}-artifact-{{ $image_version }}
 final: false
-from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
+from: {{ .Images.BASE_GOLANG_23_ALPINE }}
 import:
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
+- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact-{{ $image_version }}
   add: /src
   to: /src
   before: install
-git:
-- add: /{{ $.ModulePath }}modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
-  to: /
-  stageDependencies:
-    setup:
-    - '**/*'
 mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
@@ -62,7 +56,7 @@ shell:
   {{- include "alpine packages proxy" . | nindent 2 }}
   - apk add --no-cache make git
   setup:
-  - export GOPROXY={{ $.GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GO111MODULE=auto
+  - export GOPROXY={{ .GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GO111MODULE=auto
   - cd /src/docker_auth/auth_server
   - make build
   - mv ./auth_server /auth_server
