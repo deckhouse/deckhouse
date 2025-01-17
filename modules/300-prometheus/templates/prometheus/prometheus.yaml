@@ -135,6 +135,7 @@ spec:
 {{- end }}
   scrapeInterval: {{ .Values.prometheus.scrapeInterval | default "30s"}}
   evaluationInterval: {{ .Values.prometheus.scrapeInterval | default "30s" }}
+  serviceDiscoveryRole: EndpointSlice
   # Empty field because when scraping metrics via the Federation API,
   # labels from externalLabels are being added,
   # which makes the series in long-term storage and regular Prometheus different

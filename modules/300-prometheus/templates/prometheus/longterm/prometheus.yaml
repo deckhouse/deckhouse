@@ -130,6 +130,7 @@ spec:
                 prometheus: main
             topologyKey: kubernetes.io/hostname
       {{- end }}
+  serviceDiscoveryRole: EndpointSlice
   scrapeInterval: {{ .Values.prometheus.longtermScrapeInterval | default "5m" }}
   evaluationInterval: {{ .Values.prometheus.longtermScrapeInterval | default "5m" }}
 {{- if .Values.global.modules.publicDomainTemplate }}
