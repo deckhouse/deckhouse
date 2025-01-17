@@ -1689,11 +1689,11 @@ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-con
 {% alert %}
 - Инструкция подразумевает использование публичного адреса container registry: `registry-cse.deckhouse.ru`. В случае использования другого адреса container registry измените команды или воспользуйтесь [инструкцией по переключению Deckhouse на использование стороннего registry](#как-переключить-работающий-кластер-deckhouse-на-использование-стороннего-registry).
 - В Deckhouse CSE не поддерживается работа облачных кластеров и ряда модулей.
-- На текущий момент миграция Deckhouse EE на Deckhouse CSE поддерживается только для версий: `1.58`, `1.64`. 
-- Миграция может быть выполнена только с одной минорной версии Deckhouse EE на такую же версию Deckhouse CSE, например, с `1.58` Deckhouse EE на `1.58` Deckhouse CSE. Работоспособность кластера при попытке повысить версию на несколько релизов не гарантируется.
-- Deckhouse CSE поддерживает только Kubernetes версии `1.27`.
-- При переключении на Deckhouse CSE может наблюдаться недоступность компонентов кластера.
-- Актуальные версии Deckhouse CSE: `1.58.2` для релиза `1.58` и `1.64.1` для релиза `1.64`, точная версия понадобится дальше в инструкции для переменной `DECKHOUSE_VERSION`.
+- Миграция на Deckhouse CSE возможна только с версии Deckhouse EE `1.58` или `1.64`.
+- Актуальные версии Deckhouse CSE: `1.58.2` для релиза `1.58` и `1.64.1` для релиза `1.64`. Эти версии потребуется использовать далее для указания переменной `DECKHOUSE_VERSION`.
+- Переход поддерживается только между одинаковыми минорными версиями, например, с Deckhouse EE 1.58 на Deckhouse CSE 1.58. Попытки обновить версию на несколько релизов сразу могут привести к неработоспособности кластера.
+- Deckhouse CSE совместим только с Kubernetes версии `1.27`.
+- При переключении на Deckhouse CSE возможна временная недоступность компонентов кластера.
 {% endalert %}
 
 Для переключения кластера Deckhouse Enterprise Edition на Certified Security Edition выполните следующие действия (все команды выполняются на master-узле кластера от имени пользователя с настроенным контекстом `kubectl` или от имени суперпользователя):
@@ -1799,13 +1799,12 @@ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-con
    MODULES_WILL_DISABLE=$(echo $USED_MODULES | tr ' ' '\n' | grep -Fxv -f <(echo $CSE_MODULES | tr ' ' '\n'))
    CSE_DECKHOUSE_KUBE_RBAC_PROXY=$(kubectl exec cse-image -- cat deckhouse/candi/images_digests.json | jq -r ".common.kubeRbacProxy")
    ```
-  {% alert %}
-   Дополнительная команда, которая необходима только при переключении на Deckhouse CSE `1.64`:
-
-   ```shell
-   CSE_DECKHOUSE_INIT_CONTAINER=$(kubectl exec cse-image -- cat deckhouse/candi/images_digests.json | jq -r ".common.init")
-   ```
-   {% endalert %}
+   
+   > Дополнительная команда, которая необходима только при переключении на Deckhouse CSE версии `1.64`:
+   >
+   >  ```shell
+   >  CSE_DECKHOUSE_INIT_CONTAINER=$(kubectl exec cse-image -- cat deckhouse/candi/images_digests.json | jq -r ".common.init")
+   >  ```
 
 1. Убедитесь, что используемые в кластере модули поддерживаются в Deckhouse CSE.
    Например, на текущий момент в Deckhouse CSE отсутствует модуль cert-manager. Поэтому, перед отключением модуля cert-manager необходимо перевести режим работы HTTPS некоторых  компонентов (например [user-authn](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.58/modules/user-authn/configuration.html#parameters-https-mode) или [prometheus](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.58/modules/prometheus/configuration.html#parameters-https-mode)) на альтернативные варианты работы, либо изменить [глобальный параметр](deckhouse-configure-global.html#parameters-modules-https-mode) отвечающий за режим работы HTTPS в кластере.  
@@ -1825,7 +1824,7 @@ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-con
      tr ' ' '\n' | awk {'print "kubectl -n d8-system exec  deploy/deckhouse -- deckhouse-controller module disable",$1'} | bash
    ```
 
-   На данный момент версии `1.58`, `1.64` Deckhouse CSE не поддерживают компонент earlyOOM. Отключите его с помощью [настройки](modules/node-manager/configuration.html#parameters-earlyoomenabled).
+   На данный момент в Deckhouse CSE версий `1.58` и `1.64` не поддерживается компонент earlyOOM. Отключите его с помощью [настройки](modules/node-manager/configuration.html#parameters-earlyoomenabled).
 
    Дождитесь перехода пода Deckhouse в статус `Ready` и выполнения всех задач в очереди.
 
@@ -1905,13 +1904,13 @@ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-con
 
 1. Измените образ Deckhouse на образ Deckhouse CSE:
 
-   Команда для версии `1.58`:
+   Команда для Deckhouse CSE версии `1.58`:
 
    ```shell
    kubectl -n d8-system set image deployment/deckhouse kube-rbac-proxy=registry-cse.deckhouse.ru/deckhouse/cse@$CSE_DECKHOUSE_KUBE_RBAC_PROXY deckhouse=registry-cse.deckhouse.ru/deckhouse/cse:$DECKHOUSE_VERSION
    ```
 
-   Команда для версии `1.64`:
+   Команда для Deckhouse CSE версии `1.64`:
 
    ```shell
    kubectl -n d8-system set image deployment/deckhouse init-downloaded-modules=registry-cse.deckhouse.ru/deckhouse/cse@$CSE_DECKHOUSE_INIT_CONTAINER kube-rbac-proxy=registry-cse.deckhouse.ru/deckhouse/cse@$CSE_DECKHOUSE_KUBE_RBAC_PROXY deckhouse=registry-cse.deckhouse.ru/deckhouse/cse:$DECKHOUSE_VERSION
