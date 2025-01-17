@@ -81,6 +81,9 @@ rules:
   resources:
   - endpointslices
   verbs:
+  - create
+  - update
+  - delete
   - get
   - list
   - watch
