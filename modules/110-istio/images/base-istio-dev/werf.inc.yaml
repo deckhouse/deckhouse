@@ -26,7 +26,7 @@ shell:
     python python3 python3-module-pip python3-module-virtualenv \
     build-essential libtool \
     libnetfilter_conntrack libnetfilter_conntrack-devel libnfnetlink-devel \
-    libmnl-devel libnftnl-devel elfutils-devel zlib-devel java-1.8.0-openjdk golangci-lint
+    libmnl-devel libnftnl-devel elfutils-devel zlib-devel java-1.8.0-openjdk golangci-lint clang
   # for debug
   - apt-get install -y strace vim-console
   # apt clean
