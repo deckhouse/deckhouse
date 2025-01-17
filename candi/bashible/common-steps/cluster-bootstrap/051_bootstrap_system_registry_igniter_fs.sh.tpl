@@ -89,47 +89,57 @@ bb-sync-file "$IGNITER_DIR/profiles.json" - << EOF
     }
 }
 EOF
-bb-sync-file "$IGNITER_DIR/client-server.json" - << EOF
+
+client_server_csr_json=$(cat << EOF
 {
   "hosts": ["127.0.0.1", "localhost", "${discovered_node_ip}", "${internal_registry_domain}"],
   "key": {"algo": "rsa", "size": 2048}
 }
 EOF
-bb-sync-file "$IGNITER_DIR/auth-token.json" - << EOF
+)
+
+auth_token_csr_json=$(cat << EOF
 {
   "key": {"algo": "rsa", "size": 2048}
 }
 EOF
+)
 
 # Auth certs
-/opt/deckhouse/bin/cfssl gencert \
+echo $client_server_csr_json | /opt/deckhouse/bin/cfssl gencert \
   -cn="embedded-registry-auth" \
   -ca="$IGNITER_DIR/ca.crt" \
   -ca-key="$IGNITER_DIR/ca.key" \
   -config="$IGNITER_DIR/profiles.json" \
-  -profile="client-server" "$IGNITER_DIR/client-server.json" | /opt/deckhouse/bin/cfssljson -bare "${IGNITER_DIR}/auth"
+  -profile="client-server" - | /opt/deckhouse/bin/cfssljson -bare "${IGNITER_DIR}/auth"
 mv "${IGNITER_DIR}/auth.pem" "${IGNITER_DIR}/auth.crt"
 mv "${IGNITER_DIR}/auth-key.pem" "${IGNITER_DIR}/auth.key"
 
 # Distribution certs
-/opt/deckhouse/bin/cfssl gencert \
+echo $client_server_csr_json | /opt/deckhouse/bin/cfssl gencert \
   -cn="embedded-registry-distribution" \
   -ca="$IGNITER_DIR/ca.crt" \
   -ca-key="$IGNITER_DIR/ca.key" \
   -config="$IGNITER_DIR/profiles.json" \
-  -profile="client-server" "$IGNITER_DIR/client-server.json" | /opt/deckhouse/bin/cfssljson -bare "${IGNITER_DIR}/distribution"
+  -profile="client-server" - | /opt/deckhouse/bin/cfssljson -bare "${IGNITER_DIR}/distribution"
 mv "${IGNITER_DIR}/distribution.pem" "${IGNITER_DIR}/distribution.crt"
 mv "${IGNITER_DIR}/distribution-key.pem" "${IGNITER_DIR}/distribution.key"
 
 # Auth token certs
-/opt/deckhouse/bin/cfssl gencert \
+echo $auth_token_csr_json | /opt/deckhouse/bin/cfssl gencert \
   -cn="embedded-registry-auth-token" \
   -ca="$IGNITER_DIR/ca.crt" \
   -ca-key="$IGNITER_DIR/ca.key" \
   -config="$IGNITER_DIR/profiles.json" \
-  -profile="auth-token" "$IGNITER_DIR/auth-token.json" | /opt/deckhouse/bin/cfssljson -bare "${IGNITER_DIR}/token"
+  -profile="auth-token" - | /opt/deckhouse/bin/cfssljson -bare "${IGNITER_DIR}/token"
 mv "${IGNITER_DIR}/token.pem" "${IGNITER_DIR}/token.crt"
 mv "${IGNITER_DIR}/token-key.pem" "${IGNITER_DIR}/token.key"
+
+# Cleanup
+rm "${IGNITER_DIR}/auth.csr"\
+    "${IGNITER_DIR}/distribution.csr" \
+    "${IGNITER_DIR}/token.csr" \
+    "${IGNITER_DIR}/profiles.json"
 
 bb-sync-file "$IGNITER_DIR/auth_config.yaml" - << EOF
 server:

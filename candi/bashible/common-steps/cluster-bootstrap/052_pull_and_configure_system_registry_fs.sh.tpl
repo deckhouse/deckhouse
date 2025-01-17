@@ -88,47 +88,57 @@ bb-sync-file "$registry_pki_path/profiles.json" - << EOF
     }
 }
 EOF
-bb-sync-file "$registry_pki_path/client-server.json" - << EOF
+
+client_server_csr_json=$(cat << EOF
 {
   "hosts": ["127.0.0.1", "localhost", "${discovered_node_ip}", "${internal_registry_domain}"],
   "key": {"algo": "rsa", "size": 2048}
 }
 EOF
-bb-sync-file "$registry_pki_path/auth-token.json" - << EOF
+)
+
+auth_token_csr_json=$(cat << EOF
 {
   "key": {"algo": "rsa", "size": 2048}
 }
 EOF
+)
 
 # Auth certs
-/opt/deckhouse/bin/cfssl gencert \
+echo $client_server_csr_json | /opt/deckhouse/bin/cfssl gencert \
   -cn="embedded-registry-auth" \
   -ca="$registry_pki_path/ca.crt" \
   -ca-key="$registry_pki_path/ca.key" \
   -config="$registry_pki_path/profiles.json" \
-  -profile="client-server" "$registry_pki_path/client-server.json" | /opt/deckhouse/bin/cfssljson -bare "${registry_pki_path}/auth"
+  -profile="client-server" - | /opt/deckhouse/bin/cfssljson -bare "${registry_pki_path}/auth"
 mv "${registry_pki_path}/auth.pem" "${registry_pki_path}/auth.crt"
 mv "${registry_pki_path}/auth-key.pem" "${registry_pki_path}/auth.key"
 
 # Distribution certs
-/opt/deckhouse/bin/cfssl gencert \
+echo $client_server_csr_json | /opt/deckhouse/bin/cfssl gencert \
   -cn="embedded-registry-distribution" \
   -ca="$registry_pki_path/ca.crt" \
   -ca-key="$registry_pki_path/ca.key" \
   -config="$registry_pki_path/profiles.json" \
-  -profile="client-server" "$registry_pki_path/client-server.json" | /opt/deckhouse/bin/cfssljson -bare "${registry_pki_path}/distribution"
+  -profile="client-server" - | /opt/deckhouse/bin/cfssljson -bare "${registry_pki_path}/distribution"
 mv "${registry_pki_path}/distribution.pem" "${registry_pki_path}/distribution.crt"
 mv "${registry_pki_path}/distribution-key.pem" "${registry_pki_path}/distribution.key"
 
 # Auth token certs
-/opt/deckhouse/bin/cfssl gencert \
+echo $auth_token_csr_json | /opt/deckhouse/bin/cfssl gencert \
   -cn="embedded-registry-auth-token" \
   -ca="$registry_pki_path/ca.crt" \
   -ca-key="$registry_pki_path/ca.key" \
   -config="$registry_pki_path/profiles.json" \
-  -profile="auth-token" "$registry_pki_path/auth-token.json" | /opt/deckhouse/bin/cfssljson -bare "${registry_pki_path}/token"
+  -profile="auth-token" - | /opt/deckhouse/bin/cfssljson -bare "${registry_pki_path}/token"
 mv "${registry_pki_path}/token.pem" "${registry_pki_path}/token.crt"
 mv "${registry_pki_path}/token-key.pem" "${registry_pki_path}/token.key"
+
+# Cleanup
+rm "${registry_pki_path}/auth.csr"\
+    "${registry_pki_path}/distribution.csr" \
+    "${registry_pki_path}/token.csr" \
+    "${registry_pki_path}/profiles.json"
 
 bb-sync-file /etc/kubernetes/system-registry/auth_config/config.yaml - << EOF
 server:
