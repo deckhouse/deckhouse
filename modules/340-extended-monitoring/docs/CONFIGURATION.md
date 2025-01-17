@@ -3,8 +3,6 @@ title: "The extended-monitoring module: configuration"
 force_searchable: true
 ---
 
-<!-- SCHEMA -->
-
 ## How to use `extended-monitoring-exporter`
 
 Attach the `extended-monitoring.deckhouse.io/enabled` label to the Namespace to enable the export of extended monitoring metrics. You can do it by:
@@ -122,3 +120,5 @@ After:
   max by (namespace, statefulset) (extended_monitoring_statefulset_threshold{threshold="replicas-not-ready"})
 )
 ```
+
+<!-- SCHEMA -->
