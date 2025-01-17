@@ -1649,7 +1649,7 @@ jobs:
       - golangci_lint
       - dhctl_tests
       - tests
-    runs-on: [ self-hosted, regular ]
+    runs-on: ubuntu-latest
     steps:
     - name: Set commit status after e2e run
       id: set_e2e_requirement_status
