@@ -113,6 +113,13 @@ function trivyGetHTMLReportPartForImage() (
   echo -n "    <br/>"
 )
 
+function trivyGetJSONReportPartForImage() (
+  prepareImageArgs "$@"
+  echo -n "    <h1>$LABEL</h1>"
+  bin/trivy i --policy "$TRIVY_POLICY_URL" --java-db-repository "$TRIVY_JAVA_DB_URL" --db-repository "$TRIVY_DB_URL" --severity=$SEVERITY --ignorefile "$IGNORE" --format json --quiet "$IMAGE_ARGS"
+  echo -n "    <br/>"
+)
+
 function htmlReportFooter() (
   cat tools/cve/html/footer.tpl
 )
