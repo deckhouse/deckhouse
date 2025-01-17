@@ -21,7 +21,7 @@ metadata:
     authTokenKeyHash: {{ quote .Hashes.TokenKey }}
     distributionCertHash: {{ quote .Hashes.DistributionCert }}
     distributionKeyHash: {{ quote .Hashes.DistributionKey }}
-    ingressClientCaCertHash: {{ quote .Hashes.IngressClientCaCert }}
+    ingressClientCACertHash: {{ quote .Hashes.IngressClientCACert }}
   name: system-registry
   namespace: d8-system
 spec:

@@ -22,7 +22,7 @@ http:
   tls:
     certificate: /system_registry_pki/distribution.crt
     key: /system_registry_pki/distribution.key
-{{- if .PKI.IngressClientCaCert }}
+{{- if .PKI.IngressClientCACert }}
   realip:
     enabled: true
     clientcert:

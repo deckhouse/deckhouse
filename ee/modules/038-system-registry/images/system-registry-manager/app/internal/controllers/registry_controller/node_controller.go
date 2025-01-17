@@ -182,7 +182,7 @@ func (nc *nodeController) SetupWithManager(ctx context.Context, mgr ctrl.Manager
 		}
 
 		name := obj.GetName()
-		return name == state.IngressClientPKIConfigMapName
+		return name == state.IngressPKIConfigMapName
 	})
 
 	staticPodManagerPredicate := predicate.NewPredicateFuncs(func(obj client.Object) bool {
@@ -414,9 +414,9 @@ func (nc *nodeController) handleMasterNode(ctx context.Context, node *corev1.Nod
 		return
 	}
 
-	ingressClientPKI, err := nc.loadIngressClientPKI(ctx)
+	ingressPKI, err := nc.loadIngressPKI(ctx)
 	if err != nil {
-		err = fmt.Errorf("cannot load ingress client PKI: %w", err)
+		err = fmt.Errorf("cannot load ingress PKI: %w", err)
 		return
 	}
 
@@ -459,7 +459,7 @@ func (nc *nodeController) handleMasterNode(ctx context.Context, node *corev1.Nod
 		globalPKI,
 		globalSecrets,
 		nodePKI,
-		ingressClientPKI,
+		ingressPKI,
 		mirrorerUpstreams,
 	)
 
@@ -484,7 +484,7 @@ func (nc *nodeController) contructStaticPodConfig(
 	globalPKI state.GlobalPKI,
 	globalSecrets state.GlobalSecrets,
 	nodePKI state.NodePKI,
-	ingressClientPKI *state.IngressClientPKI,
+	ingressPKI *state.IngressPKI,
 	mirrorerUpstreams []string,
 ) (config staticpod.Config, err error) {
 	tokenKey, err := pki.EncodePrivateKey(globalPKI.Token.Key)
@@ -555,8 +555,8 @@ func (nc *nodeController) contructStaticPodConfig(
 		config.Images.Mirrorer = moduleConfig.Settings.ImagesOverride.Mirrorer
 	}
 
-	if ingressClientPKI != nil {
-		config.PKI.IngressClientCaCert = string(pki.EncodeCertificate(ingressClientPKI.CaCert))
+	if ingressPKI != nil {
+		config.PKI.IngressClientCACert = string(pki.EncodeCertificate(ingressPKI.ClientCACert))
 	}
 
 	if moduleConfig.Settings.Mode == state.RegistryModeProxy {
@@ -843,10 +843,10 @@ func (nc *nodeController) loadGlobalPKI(ctx context.Context) (ret state.GlobalPK
 	return
 }
 
-func (nc *nodeController) loadIngressClientPKI(ctx context.Context) (*state.IngressClientPKI, error) {
+func (nc *nodeController) loadIngressPKI(ctx context.Context) (*state.IngressPKI, error) {
 	cm := corev1.ConfigMap{}
 	key := types.NamespacedName{
-		Name:      state.IngressClientPKIConfigMapName,
+		Name:      state.IngressPKIConfigMapName,
 		Namespace: nc.Namespace,
 	}
 
@@ -857,10 +857,10 @@ func (nc *nodeController) loadIngressClientPKI(ctx context.Context) (*state.Ingr
 		return nil, fmt.Errorf("cannot get configmap %v k8s object: %w", key.Name, err)
 	}
 
-	ret := state.IngressClientPKI{}
+	ret := state.IngressPKI{}
 	err := ret.DecodeConfigMap(&cm)
 	if err != nil {
-		return nil, fmt.Errorf("cannot decode PKI from configmap: %w", err)
+		return nil, fmt.Errorf("cannot decode PKI from configmap %v: %w", key.Name, err)
 	}
 	return &ret, nil
 }

@@ -6,8 +6,8 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package time
 
 import (
-	"errors"
 	"encoding/json"
+	"errors"
 	"time"
 
 	"sigs.k8s.io/yaml"

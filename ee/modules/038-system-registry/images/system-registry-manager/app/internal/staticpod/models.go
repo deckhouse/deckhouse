@@ -45,14 +45,14 @@ func (cfg *Config) Bind(r *http.Request) error {
 
 // PKIModel holds the configuration for the PKI
 type PKIModel struct {
-	CACert                string `json:"ca,omitempty"`
-	AuthCert              string `json:"authCert,omitempty"`
-	AuthKey               string `json:"authKey,omitempty"`
-	TokenCert             string `json:"tokenCert,omitempty"`
-	TokenKey              string `json:"tokenKey,omitempty"`
-	DistributionCert      string `json:"distributionCert,omitempty"`
-	DistributionKey       string `json:"distributionKey,omitempty"`
-	IngressClientCaCert   string `json:"ingressClientCaCert,omitempty"`
+	CACert              string `json:"ca,omitempty"`
+	AuthCert            string `json:"authCert,omitempty"`
+	AuthKey             string `json:"authKey,omitempty"`
+	TokenCert           string `json:"tokenCert,omitempty"`
+	TokenKey            string `json:"tokenKey,omitempty"`
+	DistributionCert    string `json:"distributionCert,omitempty"`
+	DistributionKey     string `json:"distributionKey,omitempty"`
+	IngressClientCACert string `json:"ingressClientCACert,omitempty"`
 }
 
 func (p PKIModel) Validate() error {
@@ -64,7 +64,7 @@ func (p PKIModel) Validate() error {
 		validation.Field(&p.TokenKey, validation.Required),
 		validation.Field(&p.DistributionCert, validation.Required),
 		validation.Field(&p.DistributionKey, validation.Required),
-		// IngressClientCaCert is optional field and can be empty
+		// IngressClientCACert is optional field and can be empty
 	)
 }
 
@@ -79,7 +79,7 @@ type ConfigHashes struct {
 	TokenKey             string
 	DistributionCert     string
 	DistributionKey      string
-	IngressClientCaCert  string
+	IngressClientCACert  string
 	MirrorerTemplate     string
 }
 
@@ -241,7 +241,7 @@ func (pki *PKIModel) syncPKIFiles(basePath string, configHashes *ConfigHashes) (
 		"token.key":             {pki.TokenKey, &configHashes.TokenKey},
 		"distribution.crt":      {pki.DistributionCert, &configHashes.DistributionCert},
 		"distribution.key":      {pki.DistributionKey, &configHashes.DistributionKey},
-		"ingress-client-ca.crt": {pki.IngressClientCaCert, &configHashes.IngressClientCaCert},
+		"ingress-client-ca.crt": {pki.IngressClientCACert, &configHashes.IngressClientCACert},
 	}
 
 	// Iterate over the PKI files and process them

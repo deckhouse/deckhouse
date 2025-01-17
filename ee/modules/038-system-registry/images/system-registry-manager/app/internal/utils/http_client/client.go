@@ -19,7 +19,7 @@ import (
 )
 
 var (
-	defaultCaPath    = "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
+	defaultCAPath    = "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
 	defaultUserAgent = "system-registry-manager"
 )
 
@@ -39,7 +39,7 @@ type Client struct {
 
 func NewDefaultHttpClient() (*Client, error) {
 	config := ClientConfig{
-		CAPath:     defaultCaPath,
+		CAPath:     defaultCAPath,
 		UserAgent:  defaultUserAgent,
 		TLS:        true,
 		SkipVerify: true,
