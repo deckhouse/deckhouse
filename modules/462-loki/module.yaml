@@ -1,5 +1,7 @@
 name: loki
 weight: 462
-
+subsystems:
+    - infrastructure
+namespace: d8-monitoring
 requirements:
-  bootstrapped: true
+    bootstrapped: "true"

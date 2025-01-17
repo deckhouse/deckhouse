@@ -1,0 +1,5 @@
+name: chrony
+weight: 470
+subsystems:
+    - infrastructure
+namespace: d8-chrony

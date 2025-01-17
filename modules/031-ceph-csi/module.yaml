@@ -1,0 +1,6 @@
+name: ceph-csi
+weight: 31
+subsystems:
+    - storage
+    - infrastructure
+namespace: d8-ceph-csi

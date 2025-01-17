@@ -1,0 +1,5 @@
+name: monitoring-applications
+weight: 340
+subsystems:
+    - observability
+namespace: d8-monitoring

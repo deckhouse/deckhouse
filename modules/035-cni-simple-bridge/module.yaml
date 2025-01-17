@@ -1,0 +1,5 @@
+name: cni-simple-bridge
+weight: 35
+subsystems:
+    - networking
+namespace: d8-cni-simple-bridge

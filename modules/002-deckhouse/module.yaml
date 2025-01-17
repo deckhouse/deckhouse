@@ -1,0 +1,5 @@
+name: deckhouse
+weight: 2
+subsystems:
+    - deckhouse
+namespace: d8-system

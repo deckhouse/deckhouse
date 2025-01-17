@@ -1,5 +1,7 @@
 name: dashboard
 weight: 500
-
+subsystems:
+    - observability
+namespace: d8-dashboard
 requirements:
-  bootstrapped: true
+    bootstrapped: "true"

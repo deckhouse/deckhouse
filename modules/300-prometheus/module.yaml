@@ -1,5 +1,8 @@
 name: prometheus
 weight: 300
+subsystems:
+    - observability
+namespace: d8-monitoring
 description: |
     The Prometheus monitoring module
 

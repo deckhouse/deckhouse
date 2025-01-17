@@ -1,8 +1,10 @@
 name: cert-manager
 weight: 101
+subsystems:
+    - security
+namespace: d8-cert-manager
 description: |
-  This module installs the reliable and highly available cert-manager
-  https://github.com/jetstack/cert-manager
-
+    This module installs the reliable and highly available cert-manager
+    https://github.com/jetstack/cert-manager
 requirements:
-  bootstrapped: true
+    bootstrapped: "true"
