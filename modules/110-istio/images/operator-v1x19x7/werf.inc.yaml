@@ -33,6 +33,7 @@ mount:
   to: /go/pkg
 shell:
   install:
+  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
   - git clone --depth 1 --branch {{ $istioOperatorVersion }} {{ $.SOURCE_REPO }}/istio/istio.git /tmp/istio/
   - cd /tmp/istio/
   - find /patches -name '*.patch' | xargs git apply --verbose

@@ -60,6 +60,7 @@ mount:
   to: /go/pkg
 shell:
   install:
+  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
   - git clone --depth 1 --branch {{ $istioProxyVersion }} {{ $.SOURCE_REPO }}/istio/istio.git /tmp/istio/
   - cd /tmp/istio/
   - echo {{ $istioProxyVersion }} > version
