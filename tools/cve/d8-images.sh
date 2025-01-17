@@ -72,20 +72,22 @@ function __main__() {
       IMAGE_HASH="$(jq -rc '.value' <<< "$module_image")"
       IMAGE_REPORT_NAME="$MODULE_NAME::$IMAGE_NAME"
       # Output reports to common_report file and appropriate module_report file
-      trivyGetHTMLReportPartForImage  -l "$IMAGE_REPORT_NAME" -i "$IMAGE@$IMAGE_HASH" -s "$SEVERITY" --ignore out/.trivyignore | tee -a out/${MODULE_NAME}_report >> out/d8-images.html
+      #trivyGetHTMLReportPartForImage  -l "$IMAGE_REPORT_NAME" -i "$IMAGE@$IMAGE_HASH" -s "$SEVERITY" --ignore out/.trivyignore | tee -a out/${MODULE_NAME}_report >> out/d8-images.html
+
+      trivyGetJSONReportPartForImage  -l "$IMAGE_REPORT_NAME" -i "$IMAGE@$IMAGE_HASH" -s "$SEVERITY" --ignore out/.trivyignore >> out/d8-images_${MODULE_NAME}_report.json
 
     done
-    # Create an issue with found vulnerabilities
-    CODEOWNERS_MODULE_NAME=$(echo $MODULE_NAME|sed -s 's/[A-Z]/-&/g')
-    owners="[\"Nikolay1224\"]" # Default assignee in case if not found in CODEOWNERS file
-
-    while IFS="\n" read -r line; do
-      if echo $line| grep -i -q "$CODEOWNERS_MODULE_NAME"; then
-        owners=$(echo $line | cut -d "@" -f 2-|jq --raw-input 'split(" @")')
-        owner_found=true
-        break
-      fi
-    done < .github/CODEOWNERS
+#    # Create an issue with found vulnerabilities
+#    CODEOWNERS_MODULE_NAME=$(echo $MODULE_NAME|sed -s 's/[A-Z]/-&/g')
+#    owners="[\"Nikolay1224\"]" # Default assignee in case if not found in CODEOWNERS file
+#
+#    while IFS="\n" read -r line; do
+#      if echo $line| grep -i -q "$CODEOWNERS_MODULE_NAME"; then
+#        owners=$(echo $line | cut -d "@" -f 2-|jq --raw-input 'split(" @")')
+#        owner_found=true
+#        break
+#      fi
+#    done < .github/CODEOWNERS
 
 
 #    for line in $(cat ./.github/CODEOWNERS); do
@@ -98,15 +100,39 @@ function __main__() {
 #        break
 #      fi
 #    done
-    echo " Creating GitHub issue for module $MODULE_NAME with assignees $owners"
+    
+#    echo " Creating GitHub issue for module $MODULE_NAME with assignees $owners"
+#    echo ""
+#    curl -L \
+#      -X POST \
+#      -H "Accept: application/vnd.github+json" \
+#      -H "Authorization: Bearer ${GITHUB_TOKEN}" \
+#      -H "X-GitHub-Api-Version: 2022-11-28" \
+#      https://api.github.com/repos/deckhouse/deckhouse/issues \
+#      -d '{"title":"'"$module"' CVE Issue","body":"'\"$(cat out/${MODULE_NAME}_report)\"'","assignees":["Nikolay1224"],"labels":["cve"]}'
+
+    echo " Creating a defectDojo engagement for module $MODULE_NAME"
     echo ""
-    curl -L \
-      -X POST \
-      -H "Accept: application/vnd.github+json" \
-      -H "Authorization: Bearer ${GITHUB_TOKEN}" \
-      -H "X-GitHub-Api-Version: 2022-11-28" \
-      https://api.github.com/repos/deckhouse/deckhouse/issues \
-      -d '{"title":"'"$module"' CVE Issue","body":"'\"$(cat out/${MODULE_NAME}_report)\"'","assignees":["Nikolay1224"],"labels":["cve"]}'
+    curl -X POST \
+      "https://${DEFECTDOJO_HOST}/api/v2/engagements/" \
+      -H "Authorization: Token ${DEFECTDOJO_API_TOKEN}" \
+      -F "name=Test" -F "product=1" -F "target_start=$(date -I)" -F "target_end=$(date -I)"
+
+    echo " Uploading trivy CVE report for module $MODULE_NAME"
+    echo ""
+    curl -X POST \
+      "https://${DEFECTDOJO_HOST}/api/v2/import-scan/" \
+      -H "accept: application/json" \
+      -H "Content-Type: multipart/form-data"  \
+      -H "Authorization: Token ${DEFECTDOJO_API_TOKEN}" \
+      -F "minimum_severity=Info" \
+      -F "active=true" \
+      -F "verified=true" \
+      -F "scan_type=Trivy Scan" \
+      -F "close_old_findings=false" \
+      -F "push_to_jira=false" \
+      -F "file=@out/d8-images_${MODULE_NAME}_report.json" \
+      -F "product_name=Test" -F "scan_date=2022-06-14" -F "engagement_name=Test"
 
   done
 
