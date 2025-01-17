@@ -26,7 +26,7 @@ git:
     - '**/*'
 shell:
   install:
-  - git clone --depth 1 --branch v0.43.1 {{ .SOURCE_REPO }}/vectordotdev/vector.git /src/vector
+  - git clone --depth 1 --branch v0.44.0 {{ .SOURCE_REPO }}/vectordotdev/vector.git /src/vector
   # trivy fs . --scanners vuln
   - rm -rf /src/vector/website /src/vector/scripts/integration
   - rm -rf /src/vector/.git
