@@ -70,6 +70,9 @@ docker:
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
 final: false
 from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
+mount:
+- fromPath: ~/go-pkg-cache
+  to: /go/pkg
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
   add: /src
@@ -86,6 +89,7 @@ shell:
     - CGO_ENABLED=0 ./build_linux.sh -ldflags '-extldflags -static -X github.com/containernetworking/plugins/pkg/utils/buildversion.BuildVersion={{ $cni_version }}'
     - cp -f bin/* /
     - cd /src/cni-plugin
+    - export VERSION=v{{ $cni_flannel_version }}
     - make build_linux
     - mv /src/scripts/* /
     - cp -f /src/cni-plugin/dist/flannel-amd64 /flannel
