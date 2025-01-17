@@ -54,8 +54,6 @@ spec:
       containers:
       - args:
         - --kubelet-service=d8-monitoring/kubelet
-        - --kubelet-endpoints=true
-        - --kubelet-endpointslice=false
 {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
         - --config-reloader-cpu-request=0
         - --config-reloader-cpu-limit=0
