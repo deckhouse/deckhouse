@@ -27,7 +27,7 @@ mount:
   to: /go/pkg
 shell:
   install:
-  - git clone --depth 1 --branch {{ $istioCniVersion }} https://github.com/istio/istio.git /tmp/istio/
+  - git clone --depth 1 --branch {{ $istioCniVersion }} {{ $.SOURCE_REPO }}/istio/istio.git /tmp/istio/
   - cd /tmp/istio/
   - echo {{ $istioCniVersion }} > version
   - export GOPROXY={{ $.GOPROXY }}

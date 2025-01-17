@@ -33,7 +33,7 @@ mount:
   to: /go/pkg
 shell:
   install:
-  - git clone --depth 1 --branch {{ $istioOperatorVersion }} https://github.com/istio/istio.git /tmp/istio/
+  - git clone --depth 1 --branch {{ $istioOperatorVersion }} {{ $.SOURCE_REPO }}/istio/istio.git /tmp/istio/
   - cd /tmp/istio/
   - find /patches -name '*.patch' | xargs git apply --verbose
   - echo {{ $istioOperatorVersion }} > version
