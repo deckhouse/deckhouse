@@ -100,7 +100,6 @@ apiVersions:
               -----BEGIN CERTIFICATE-----
               ...
               -----END CERTIFICATE-----
-            storageMode: Fs
       - apiVersion: deckhouse.io/v2alpha1
         kind: InitConfiguration
         deckhouse:
@@ -108,7 +107,6 @@ apiVersions:
           mode: Detached
           detached:
             imagesBundlePath: ~/deckhouse/bundle.tar
-            storageMode: Fs
     properties:
       apiVersion:
         type: string
