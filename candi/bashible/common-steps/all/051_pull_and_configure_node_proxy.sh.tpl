@@ -16,10 +16,7 @@ mkdir -p /etc/kubernetes/manifests
 mkdir -p /etc/kubernetes/node-proxy
 
 cd /etc/kubernetes/node-proxy
-openssl verify -CAfile /etc/kubernetes/pki/ca.crt /etc/kubernetes/node-proxy/haproxy.pem 2>/dev/null
-
-if [ $? -ne 0 ]; then
-  bb-log-error "Node-proxy certificate verification failed; generating a new certificate"
+if ! openssl verify -CAfile /etc/kubernetes/pki/ca.crt /etc/kubernetes/node-proxy/haproxy.pem 2>/dev/null; then
   cp /etc/kubernetes/pki/ca.crt /etc/kubernetes/node-proxy/ca.crt
   openssl genrsa -out key.pem 2048
   openssl req -new -key  key.pem -out key.csr -subj "/CN=health-user/O=health-group"
