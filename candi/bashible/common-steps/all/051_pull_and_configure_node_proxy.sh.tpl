@@ -21,7 +21,7 @@ openssl verify -CAfile /etc/kubernetes/pki/ca.crt /etc/kubernetes/node-proxy/hap
 
 if [ $? -ne 0 ]; then
   bb-log-error "Node-proxy certificate verification failed; generating a new certificate"
-  bb-sync-file /etc/kubernetes/pki/ca.crt /etc/kubernetes/node-proxy/ca.crt
+  cp /etc/kubernetes/pki/ca.crt /etc/kubernetes/node-proxy/ca.crt
   openssl genrsa -out key.pem 2048
   openssl req -new -key  key.pem -out key.csr -subj "/CN=health-user/O=health-group"
   openssl x509 -req -in key.csr -CA ca.crt -CAkey /etc/kubernetes/pki/ca.key -CAcreateserial -out cert.pem -days 3650 -sha256
