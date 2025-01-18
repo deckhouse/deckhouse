@@ -93,8 +93,8 @@ apiVersions:
           mode: Proxy
           proxy:
             imagesRepo: nexus.company.my/deckhouse/ee
-            username: "nexus-user"
-            password: "nexus-p@ssw0rd"
+            username: nexus-user
+            password: nexus-p@ssw0rd
             scheme: HTTPS
             ca: |
               -----BEGIN CERTIFICATE-----
