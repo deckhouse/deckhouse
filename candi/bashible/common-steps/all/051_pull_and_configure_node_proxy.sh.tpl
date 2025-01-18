@@ -17,7 +17,7 @@ mkdir -p /etc/kubernetes/node-proxy
 chown deckhouse:deckhouse /etc/kubernetes/node-proxy
 
 cd /etc/kubernetes/node-proxy
-openssl verify -CAfile /etc/kubernetes/pki/ca.crt /etc/kubernetes/node-proxy/haproxy.pem 2>/den/null
+openssl verify -CAfile /etc/kubernetes/pki/ca.crt /etc/kubernetes/node-proxy/haproxy.pem 2>/dev/null
 
 if [ $? -ne 0 ]; then
   bb-log-error "Node-proxy certificate verification failed; generating a new certificate"
