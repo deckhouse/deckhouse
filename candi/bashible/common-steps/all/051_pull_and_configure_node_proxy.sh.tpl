@@ -14,7 +14,6 @@
 
 mkdir -p /etc/kubernetes/manifests
 mkdir -p /etc/kubernetes/node-proxy
-chown deckhouse:deckhouse /etc/kubernetes/node-proxy
 
 cd /etc/kubernetes/node-proxy
 openssl verify -CAfile /etc/kubernetes/pki/ca.crt /etc/kubernetes/node-proxy/haproxy.pem 2>/dev/null
@@ -27,6 +26,9 @@ if [ $? -ne 0 ]; then
   openssl x509 -req -in key.csr -CA ca.crt -CAkey /etc/kubernetes/pki/ca.key -CAcreateserial -out cert.pem -days 3650 -sha256
   cat key.pem cert.pem > haproxy.pem
   rm -rf key.csr cert.pem key.pem
+  chown deckhouse:deckhouse -R /etc/kubernetes/node-proxy
+  chmod 700 /etc/kubernetes/node-proxy
+  chmod 600 /etc/kubernetes/node-proxy/*
 fi
 
 bb-set-proxy
