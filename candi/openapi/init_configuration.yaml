@@ -76,10 +76,11 @@ apiVersions:
         kind: InitConfiguration
         deckhouse:
         registry:
-          mode: direct
+          mode: Direct
           direct:
             imagesRepo: nexus.company.my/deckhouse/ee
-            dockerCfg: eyJhdXRocyI6IHsgIm5leHVzLmNvbXBhbnkubXkiOiB7InVzZXJuYW1lIjoibmV4dXMtdXNlciIsInBhc3N3b3JkIjoibmV4dXMtcEBzc3cwcmQiLCJhdXRoIjoiYm1WNGRYTXRkWE5sY2pwdVpYaDFjeTF3UUhOemR6QnlaQW89In19fQo=
+            username: "nexus-user"
+            password: "nexus-p@ssw0rd"
             scheme: HTTPS
             ca: |
               -----BEGIN CERTIFICATE-----
@@ -92,7 +93,8 @@ apiVersions:
           mode: Proxy
           proxy:
             imagesRepo: nexus.company.my/deckhouse/ee
-            dockerCfg: eyJhdXRocyI6IHsgIm5leHVzLmNvbXBhbnkubXkiOiB7InVzZXJuYW1lIjoibmV4dXMtdXNlciIsInBhc3N3b3JkIjoibmV4dXMtcEBzc3cwcmQiLCJhdXRoIjoiYm1WNGRYTXRkWE5sY2pwdVpYaDFjeTF3UUhOemR6QnlaQW89In19fQo=
+            username: "nexus-user"
+            password: "nexus-p@ssw0rd"
             scheme: HTTPS
             ca: |
               -----BEGIN CERTIFICATE-----
@@ -139,19 +141,19 @@ apiVersions:
                 description: |
                   Address of a container registry with Deckhouse images.
 
-                  Specify it if Deckhouse Enterprise Edition edition or third-party registry (e.g. proxy server in a closed environment) is used.
+                  Specify it if Deckhouse Enterprise Edition edition or third-party registry (e.g. registry in a closed environment) is used.
 
                   The address matches the edition of Deckhouse used. The public container registry address for Deckhouse Enterprise Edition is `registry.deckhouse.io/deckhouse/ee`.
                 minLength: 1
                 default: registry.deckhouse.io/deckhouse/ce
-              dockerCfg:
+              username:
                 type: string
                 description: |
-                  A Base64-encoded string from the Docker client configuration file (in Linux it is usually `$HOME/.docker/config.json`), for accessing a third-party container registry.
-
-                  For example, to access the container registry `registry.company.my` under the user `user` with the password `P@ssw0rd` it will be `eyJhdXRocyI6eyJyZWdpc3RyeS5jb21wYW55Lm15Ijp7ImF1dGgiOiJkWE5sY2pwUVFITnpkekJ5WkFvPSJ9fX0K` (string `{"auths":{"registry.company.my":{"auth":"dXNlcjpQQHNzdzByZAo="}}}` in Base64).
-                minLength: 1
-                default: eyJhdXRocyI6IHsgInJlZ2lzdHJ5LmRlY2tob3VzZS5pbyI6IHt9fX0=
+                  Username for accessing container registry with deckhouse images.
+              password:
+                type: string
+                description: |
+                  Password for accessing container registry with deckhouse images.
               ca:
                 type: string
                 description: |

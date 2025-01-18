@@ -233,10 +233,10 @@ func (m *MetaConfig) PrepareAfterGlobalCacheInit() error {
 func (m *MetaConfig) prepareDataFromInitClusterConfig() error {
 	// Migrate from old to new init config apiVersion
 	var initCfgApiVersion string
+	var dockerCfg string
 	if err := json.Unmarshal(m.InitClusterConfig["apiVersion"], &initCfgApiVersion); err != nil {
 		return fmt.Errorf("unable to unmarshal apiVersion for init configuration: %v", err)
 	}
-
 	if initCfgApiVersion != "deckhouse.io/v2alpha1" {
 		var deckhouseCfgOld DeckhouseClusterConfigOld
 		if err := json.Unmarshal(m.InitClusterConfig["deckhouse"], &deckhouseCfgOld); err != nil {
@@ -258,6 +258,12 @@ func (m *MetaConfig) prepareDataFromInitClusterConfig() error {
 				LogLevel:        deckhouseCfgOld.LogLevel,
 				ConfigOverrides: deckhouseCfgOld.ConfigOverrides,
 			}
+
+			registryAddress := getRegistryAddressFromImagesRepo(deckhouseCfgOld.ImagesRepo)
+			if err = validateRegistryDockerCfg(deckhouseCfgOld.RegistryDockerCfg, registryAddress); err != nil {
+				return err
+			}
+
 		}
 	} else {
 		if err := json.Unmarshal(m.InitClusterConfig["deckhouse"], &m.DeckhouseConfig); err != nil {
@@ -275,17 +281,24 @@ func (m *MetaConfig) prepareDataFromInitClusterConfig() error {
 		if properties == nil {
 			return fmt.Errorf("unable to get the properties of the direct registry mode")
 		}
-		address, path := getRegistryAddressAndPath(properties.ImagesRepo)
-		if err := validateRegistryDockerCfg(properties.DockerCfg, address); err != nil {
-			return err
+		address, path := getRegistryAddressAndPathFromImagesRepo(properties.ImagesRepo)
+		if initCfgApiVersion != "deckhouse.io/v2alpha1" {
+			dockerCfg = properties.DockerCfg
+		} else {
+			var err error
+			dockerCfg, err = generateDockerCfgBase64(properties.Username, properties.Password, address)
+			if err != nil {
+				return err
+			}
 		}
+
 		m.Registry = Registry{
 			Data: RegistryData{
 				Address:   address,
 				Path:      path,
 				Scheme:    strings.ToLower(properties.Scheme),
 				CA:        properties.CA,
-				DockerCfg: properties.DockerCfg,
+				DockerCfg: dockerCfg,
 			},
 		}
 	case RegistryModeProxy:
@@ -294,9 +307,15 @@ func (m *MetaConfig) prepareDataFromInitClusterConfig() error {
 		if properties == nil {
 			return fmt.Errorf("unable to get the properties of the proxy registry mode")
 		}
-		address, path := getRegistryAddressAndPath(properties.ImagesRepo)
-		if err := validateRegistryDockerCfg(properties.DockerCfg, address); err != nil {
-			return err
+		address, path := getRegistryAddressAndPathFromImagesRepo(properties.ImagesRepo)
+		if initCfgApiVersion != "deckhouse.io/v2alpha1" {
+			dockerCfg = properties.DockerCfg
+		} else {
+			var err error
+			dockerCfg, err = generateDockerCfgBase64(properties.Username, properties.Password, address)
+			if err != nil {
+				return err
+			}
 		}
 
 		m.Registry = Registry{
@@ -314,7 +333,7 @@ func (m *MetaConfig) prepareDataFromInitClusterConfig() error {
 					Path:      path,
 					Scheme:    strings.ToLower(properties.Scheme),
 					CA:        properties.CA,
-					DockerCfg: properties.DockerCfg,
+					DockerCfg: dockerCfg,
 				},
 				RegistryStorageMode: properties.StorageMode,
 				TTL:                 properties.TTL,
@@ -346,18 +365,54 @@ func (m *MetaConfig) prepareDataFromInitClusterConfig() error {
 	return nil
 }
 
-func getRegistryAddressAndPath(imgRepo string) (string, string) {
-	imgRepo = strings.TrimRight(
-		strings.TrimSpace(imgRepo),
-		"/",
-	)
-	parts := strings.SplitN(imgRepo, "/", 2)
-	address := parts[0]
-	path := ""
-	if len(parts) == 2 {
-		path = fmt.Sprintf("/%s", parts[1])
+// getRegistryAddressFromImagesRepo returns the registry address from the given image repository.
+func getRegistryAddressFromImagesRepo(imgRepo string) string {
+	return strings.SplitN(strings.TrimSpace(strings.TrimRight(imgRepo, "/")), "/", 2)[0]
+}
+
+// getRegistryAddressAndPathFromImagesRepo returns the registry address and path from the given image repository.
+func getRegistryAddressAndPathFromImagesRepo(imgRepo string) (string, string) {
+	parts := strings.SplitN(strings.TrimSpace(strings.TrimRight(imgRepo, "/")), "/", 2)
+	if len(parts) == 1 {
+		return parts[0], ""
 	}
-	return address, path
+	return parts[0], "/" + parts[1]
+}
+
+// generateDockerCfgBase64 creates a base64-encoded Docker config.json with credentials for a given registry.
+func generateDockerCfgBase64(username, password, registryAddress string) (string, error) {
+	// Create the "auth" field by base64-encoding "username:password"
+	authString := fmt.Sprintf("%s:%s", username, password)
+	encodedAuth := base64.StdEncoding.EncodeToString([]byte(authString))
+
+	// Build Docker config JSON structure
+	type authEntry struct {
+		Auth     string `json:"auth"`
+		Username string `json:"username"`
+		Password string `json:"password"`
+	}
+	type dockerCfg struct {
+		Auths map[string]authEntry `json:"auths"`
+	}
+
+	cfg := dockerCfg{
+		Auths: map[string]authEntry{
+			registryAddress: {
+				Auth:     encodedAuth,
+				Username: username,
+				Password: password,
+			},
+		},
+	}
+
+	// Convert the config structure to JSON
+	jsonBytes, err := json.Marshal(cfg)
+	if err != nil {
+		return "", fmt.Errorf("failed to marshal DockerCfg JSON: %w", err)
+	}
+
+	// Encode the JSON to a base64 string
+	return base64.StdEncoding.EncodeToString(jsonBytes), nil
 }
 
 func validateRegistryDockerCfg(cfg string, repo string) error {

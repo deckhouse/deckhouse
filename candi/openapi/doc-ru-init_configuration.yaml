@@ -56,10 +56,11 @@ apiVersions:
         kind: InitConfiguration
         deckhouse:
         registry:
-          mode: direct
+          mode: Direct
           direct:
             imagesRepo: nexus.company.my/deckhouse/ee
-            dockerCfg: eyJhdXRocyI6IHsgIm5leHVzLmNvbXBhbnkubXkiOiB7InVzZXJuYW1lIjoibmV4dXMtdXNlciIsInBhc3N3b3JkIjoibmV4dXMtcEBzc3cwcmQiLCJhdXRoIjoiYm1WNGRYTXRkWE5sY2pwdVpYaDFjeTF3UUhOemR6QnlaQW89In19fQo=
+            username: "nexus-user"
+            password: "nexus-p@ssw0rd"
             scheme: HTTPS
             ca: |
               -----BEGIN CERTIFICATE-----
@@ -72,7 +73,8 @@ apiVersions:
           mode: Proxy
           proxy:
             imagesRepo: nexus.company.my/deckhouse/ee
-            dockerCfg: eyJhdXRocyI6IHsgIm5leHVzLmNvbXBhbnkubXkiOiB7InVzZXJuYW1lIjoibmV4dXMtdXNlciIsInBhc3N3b3JkIjoibmV4dXMtcEBzc3cwcmQiLCJhdXRoIjoiYm1WNGRYTXRkWE5sY2pwdVpYaDFjeTF3UUhOemR6QnlaQW89In19fQo=
+            username: "nexus-user"
+            password: "nexus-p@ssw0rd"
             scheme: HTTPS
             ca: |
               -----BEGIN CERTIFICATE-----
@@ -108,14 +110,13 @@ apiVersions:
                 description: |
                   Адрес container registry с образами Deckhouse.
 
-                  Укажите, если используется редакция Enterprise Edition Deckhouse или сторонний container registry (например, прокси-сервер в закрытом окружении).
+                  Укажите его, если используется Deckhouse Enterprise Edition или сторонний container registry (например, registry в закрытой среде).
 
-                  Адрес учитывает используемую редакцию Deckhouse. Публичный адрес container registry для Deckhouse Enterprise Edition — `registry.deckhouse.io/deckhouse/ee`.
-              dockerCfg:
-                description: |
-                  Строка авторизации из файла конфигурации Docker-клиента (в Linux обычно это `$HOME/.docker/config.json`) для доступа к стороннему container registry, закодированная в Base64.
-
-                  Например, для доступа к container registry `registry.company.my` под пользователем `user` с паролем `P@ssw0rd` это будет `eyJhdXRocyI6eyJyZWdpc3RyeS5jb21wYW55Lm15Ijp7ImF1dGgiOiJkWE5sY2pwUVFITnpkekJ5WkFvPSJ9fX0K` (строка `{"auths":{"registry.company.my":{"auth":"dXNlcjpQQHNzdzByZAo="}}}` в Base64).
+                  Адрес должен соответствовать используемой редакции Deckhouse. Публичный адрес container registry для Deckhouse Enterprise Edition — `registry.deckhouse.io/deckhouse/ee`.
+              username:
+                description: Имя пользователя для доступа к container registry с образами Deckhouse.
+              password:
+                description: Пароль для доступа к container registry с образами Deckhouse.
               ca:
                 description: |
                   Корневой сертификат, которым можно проверить сертификат container registry при работе по HTTPS (если registry использует самоподписанные SSL-сертификаты).

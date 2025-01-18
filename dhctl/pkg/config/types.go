@@ -106,6 +106,8 @@ type RegistryClusterConfig struct {
 
 type RegistryDirectModeProperties struct {
 	ImagesRepo string `json:"imagesRepo,omitempty"`
+	Username   string `json:"username,omitempty"`
+	Password   string `json:"password,omitempty"`
 	DockerCfg  string `json:"dockerCfg,omitempty"`
 	CA         string `json:"ca,omitempty"`
 	Scheme     string `json:"scheme,omitempty"`
