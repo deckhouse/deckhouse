@@ -16,17 +16,18 @@ mkdir -p /etc/kubernetes/manifests
 mkdir -p /etc/kubernetes/node-proxy
 chown deckhouse:deckhouse /etc/kubernetes/node-proxy
 
+cd /etc/kubernetes/node-proxy
+openssl verify -CAfile /etc/kubernetes/pki/ca.crt /etc/kubernetes/node-proxy/haproxy.pem 2>/den/null
 
-
-if !bb-flag? node-proxy-certs-ready; then
-  cd /etc/kubernetes/node-proxy
+if [ $? -ne 0 ]; then
+  bb-log-error "Node-proxy certificate verification failed; generating a new certificate"
+  bb-sync-file /etc/kubernetes/pki/ca.crt /etc/kubernetes/node-proxy/ca.crt
   openssl genrsa -out key.pem 2048
   openssl req -new -key  key.pem -out key.csr -subj "/CN=health-user/O=health-group"
-  openssl x509 -req -in key.csr -CA /etc/kubernetes/pki/ca.crt -CAkey /etc/kubernetes/pki/ca.key -CAcreateserial -out cert.pem -days 3650 -sha256
-  rm -rf key.csr
+  openssl x509 -req -in key.csr -CA ca.crt -CAkey /etc/kubernetes/pki/ca.key -CAcreateserial -out cert.pem -days 3650 -sha256
+  cat key.pem cert.pem > haproxy.pem
+  rm -rf key.csr cert.pem key.pem
 fi
-bb-flag-set node-proxy-certs-ready
-
 
 bb-set-proxy
 
