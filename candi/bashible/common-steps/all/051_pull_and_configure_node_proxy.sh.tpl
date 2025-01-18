@@ -13,6 +13,20 @@
 # limitations under the License.
 
 mkdir -p /etc/kubernetes/manifests
+mkdir -p /etc/kubernetes/node-proxy
+chown deckhouse:deckhouse /etc/kubernetes/node-proxy
+
+
+
+if !bb-flag? node-proxy-certs-ready; then
+  cd /etc/kubernetes/node-proxy
+  openssl genrsa -out key.pem 2048
+  openssl req -new -key  key.pem -out key.csr -subj "/CN=health-user/O=health-group"
+  openssl x509 -req -in key.csr -CA /etc/kubernetes/pki/ca.crt -CAkey /etc/kubernetes/pki/ca.key -CAcreateserial -out cert.pem -days 3650 -sha256
+  rm -rf key.csr
+fi
+bb-flag-set node-proxy-certs-ready
+
 
 bb-set-proxy
 
@@ -42,7 +56,17 @@ spec:
     image: {{ printf "%s%s@%s" $.registry.address $.registry.path (index $.images.controlPlaneManager "nodeProxy") }}
     imagePullPolicy: IfNotPresent
     command: ["/bin/haproxy", "-W", "-db", "-f", "/config.cfg"]
+    volumeMounts:
+    volumeMounts:
+      - name: certs
+        mountPath: /etc/kubernetes/node-proxy
+        readOnly: true
   priorityClassName: system-node-critical
+  volumes:
+    - name: certs
+      hostPath:
+        path: /etc/kubernetes/node-proxy
+        type: Directory
 EOF
 
 bb-unset-proxy
