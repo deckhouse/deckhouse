@@ -82,10 +82,9 @@ description: ""
     settings:
       mode: Proxy
       proxy:
-        host: dev-registry.deckhouse.io
-        scheme: http
-        path: /sys/deckhouse-oss
-        ca: ""
+        host: registry.deckhouse.ru
+        scheme: https
+        path: /deckhouse/ee
         password: "password"
         user: "user"
         storageMode: Fs
