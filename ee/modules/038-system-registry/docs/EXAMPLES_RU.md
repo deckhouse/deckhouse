@@ -18,7 +18,8 @@ description: ""
     mode: Proxy
     proxy:
       imagesRepo: nexus.company.my/deckhouse/ee
-      dockerCfg: eyJhdXRocyI6IHsgIm5leHVzLmNvbXBhbnkubXkiOiB7InVzZXJuYW1lIjoibmV4dXMtdXNlciIsInBhc3N3b3JkIjoibmV4dXMtcEBzc3cwcmQiLCJhdXRoIjoiYm1WNGRYTXRkWE5sY2pwdVpYaDFjeTF3UUhOemR6QnlaQW89In19fQo=
+      username: "nexus-user"
+      password: "nexus-p@ssw0rd"
       scheme: HTTPS
       ca: |
         -----BEGIN CERTIFICATE-----
