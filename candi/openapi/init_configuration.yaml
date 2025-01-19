@@ -172,19 +172,12 @@ apiVersions:
                   The path to the image bundle for the Deckhouse Kubernetes Platform distribution. The path can be specified both on the folder and on the tar archive.
 
                   For more information on how to get it, consult the docs at https://deckhouse.io/documentation/v1/deckhouse-faq.html#manually-uploading-images-to-an-air-gapped-registry
-              storageMode: &storageMode
-                enum: [S3, Fs]
-                description: |
-                  The type of data storage for the system registry module.
-                default: Fs
           proxy:
             x-doc-d8Revision: ee
             type: object
             description: Proxy mode properties.
             properties:
               <<: *directProperties
-              storageMode:
-                <<: *storageMode
               ttl:
                 type: string
                 pattern: '(^(?:(\d+)h)?(?:(\d+)m)?(?:(\d+)s)?(?:(\d+)ms)?(?:(\d+)(µs|us))?(?:(\d+)ns)?$)|(^(0)$)'

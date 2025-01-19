@@ -12,8 +12,6 @@ positive:
         scheme: http
         user: "user"
     - mode: Detached
-      detached:
-        storageMode: Fs
 negative:
   values:
     - somethingInConfig: yes

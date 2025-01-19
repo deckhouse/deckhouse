@@ -123,23 +123,18 @@ func CheckOrSetupSystemRegistryModuleConfig(cfg *DeckhouseInstaller) error {
 		systemRegistryMC.Spec.Settings = SettingsValues{
 			"mode": RegistryModeProxy,
 			"proxy": SettingsValues{
-				"storageMode": modeSpecificFields.RegistryStorageMode,
-				"scheme":      strings.ToLower(modeSpecificFields.UpstreamRegistryData.Scheme),
-				"host":        modeSpecificFields.UpstreamRegistryData.Address,
-				"path":        modeSpecificFields.UpstreamRegistryData.Path,
-				"ca":          modeSpecificFields.UpstreamRegistryData.CA,
-				"user":        user,
-				"password":    password,
-				"ttl":         modeSpecificFields.TTL.String(),
+				"scheme":   strings.ToLower(modeSpecificFields.UpstreamRegistryData.Scheme),
+				"host":     modeSpecificFields.UpstreamRegistryData.Address,
+				"path":     modeSpecificFields.UpstreamRegistryData.Path,
+				"ca":       modeSpecificFields.UpstreamRegistryData.CA,
+				"user":     user,
+				"password": password,
+				"ttl":      modeSpecificFields.TTL.String(),
 			},
 		}
 	case DetachedModeRegistryData:
-		modeSpecificFields := cfg.Registry.ModeSpecificFields.(DetachedModeRegistryData)
 		systemRegistryMC.Spec.Settings = SettingsValues{
 			"mode": RegistryModeDetached,
-			"detached": SettingsValues{
-				"storageMode": modeSpecificFields.RegistryStorageMode,
-			},
 		}
 	default:
 		// Remove moduleConfig systemRegistry if init_config.registry.mode != "Proxy" or "Detached"

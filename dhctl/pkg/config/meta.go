@@ -78,7 +78,6 @@ type RegistryData struct {
 type ProxyModeRegistryData struct {
 	UpstreamRegistryData   RegistryData       `json:"-"`
 	InternalRegistryAccess RegistryAccessData `json:"-"`
-	RegistryStorageMode    string             `json:"-"`
 	TTL                    util_time.Duration `json:"-"`
 }
 
@@ -86,7 +85,6 @@ type DetachedModeRegistryData struct {
 	RegistryPath           string             `json:"-"`
 	ImagesBundlePath       string             `json:"-"`
 	InternalRegistryAccess RegistryAccessData `json:"-"`
-	RegistryStorageMode    string             `json:"-"`
 }
 
 // Prepare extracts all necessary information from raw json messages to the root structure
@@ -335,8 +333,7 @@ func (m *MetaConfig) prepareDataFromInitClusterConfig() error {
 					CA:        properties.CA,
 					DockerCfg: dockerCfg,
 				},
-				RegistryStorageMode: properties.StorageMode,
-				TTL:                 properties.TTL,
+				TTL: properties.TTL,
 			},
 		}
 	case RegistryModeDetached:
@@ -356,9 +353,8 @@ func (m *MetaConfig) prepareDataFromInitClusterConfig() error {
 				// CA:           "",
 			},
 			ModeSpecificFields: DetachedModeRegistryData{
-				RegistryPath:        embeddedRegistryPath,
-				ImagesBundlePath:    properties.ImagesBundlePath,
-				RegistryStorageMode: properties.StorageMode,
+				RegistryPath:     embeddedRegistryPath,
+				ImagesBundlePath: properties.ImagesBundlePath,
 			},
 		}
 	}
@@ -882,7 +878,6 @@ func (rData ProxyModeRegistryData) DeepCopy() ProxyModeRegistryData {
 	return ProxyModeRegistryData{
 		UpstreamRegistryData:   rData.UpstreamRegistryData,
 		InternalRegistryAccess: rData.InternalRegistryAccess,
-		RegistryStorageMode:    rData.RegistryStorageMode,
 		TTL:                    rData.TTL,
 	}
 }
@@ -892,7 +887,6 @@ func (rData DetachedModeRegistryData) DeepCopy() DetachedModeRegistryData {
 		RegistryPath:           rData.RegistryPath,
 		ImagesBundlePath:       rData.ImagesBundlePath,
 		InternalRegistryAccess: rData.InternalRegistryAccess,
-		RegistryStorageMode:    rData.RegistryStorageMode,
 	}
 }
 
@@ -1048,7 +1042,6 @@ func (r Registry) ConvertToMap() (map[string]interface{}, error) {
 	switch r.ModeSpecificFields.(type) {
 	case ProxyModeRegistryData:
 		modeSpecificFields := r.ModeSpecificFields.(ProxyModeRegistryData)
-		mapData["registryStorageMode"] = modeSpecificFields.RegistryStorageMode
 		mapData["internalRegistryAccess"] = modeSpecificFields.InternalRegistryAccess.ConvertToMap()
 		mapData["upstreamRegistry"], err = modeSpecificFields.UpstreamRegistryData.ConvertToMap()
 		mapData["ttl"] = modeSpecificFields.TTL.String()
@@ -1057,7 +1050,6 @@ func (r Registry) ConvertToMap() (map[string]interface{}, error) {
 		}
 	case DetachedModeRegistryData:
 		modeSpecificFields := r.ModeSpecificFields.(DetachedModeRegistryData)
-		mapData["registryStorageMode"] = modeSpecificFields.RegistryStorageMode
 		mapData["internalRegistryAccess"] = modeSpecificFields.InternalRegistryAccess.ConvertToMap()
 	}
 	return mapData, nil

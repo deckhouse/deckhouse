@@ -77,7 +77,6 @@ description: ""
      settings:
        mode: Detached
        detached:
-         storageMode: Fs
    ```
 
 {% alert level="warning" %}

@@ -10,8 +10,6 @@ x-examples:
       scheme: http
       user: "user"
   - mode: Detached
-    detached:
-      storageMode: Fs
 properties:
   imagesOverride:
     type: object
@@ -43,21 +41,6 @@ properties:
     enum: [Direct, Proxy, Detached]
     x-doc-default: Direct
     default: Direct
-  detached:
-    type: object
-    x-example:
-      - storageMode: Fs
-    description: |
-      Detached mode properties.
-    properties:
-      storageMode: &storageMode
-        enum: [S3, Fs]
-        description: |
-          The type of data storage for the system registry module.
-        x-example:
-          - Fs
-        x-doc-default: Fs
-        default: Fs
   proxy:
     type: object
     x-example:
@@ -126,8 +109,6 @@ properties:
           - "168h10m"
           - "168h10m5s"
         default: 168h
-      storageMode:
-        <<: *storageMode
   whitelistSourceRanges:
     type: array
     description: 'An array of CIDRs that are allowed to connect to the embedded registry ingress.'

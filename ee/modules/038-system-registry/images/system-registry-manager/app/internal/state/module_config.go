@@ -47,26 +47,17 @@ type ImagesOverride struct {
 	Mirrorer        string `json:"mirrorer,omitempty"`
 }
 
-type StorageMode string // enum: S3, Fs
-
-const (
-	StorageModeFS StorageMode = "Fs"
-	StorageModeS3 StorageMode = "S3"
-)
-
 type DetachedConfig struct {
-	StorageMode StorageMode `json:"storageMode"`
 }
 
 type ProxyConfig struct {
-	Host        string             `json:"host"`
-	Scheme      string             `json:"scheme"`
-	CA          string             `json:"ca"`
-	Path        string             `json:"path"`
-	User        string             `json:"user"`
-	Password    string             `json:"password"`
-	StorageMode StorageMode        `json:"storageMode"`
-	TTL         *utiltime.Duration `json:"ttl"`
+	Host     string             `json:"host"`
+	Scheme   string             `json:"scheme"`
+	CA       string             `json:"ca"`
+	Path     string             `json:"path"`
+	User     string             `json:"user"`
+	Password string             `json:"password"`
+	TTL      *utiltime.Duration `json:"ttl"`
 }
 
 func GetModuleConfigObject() unstructured.Unstructured {

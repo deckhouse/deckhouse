@@ -25,7 +25,6 @@ description: ""
         -----BEGIN CERTIFICATE-----
         ...
         -----END CERTIFICATE-----
-      storageMode: Fs
   ```
 
   Где:
@@ -58,7 +57,6 @@ description: ""
     mode: Detached
     detached:
       imagesBundlePath: ~/deckhouse/d8.tar
-      storageMode: Fs
   ```
 
   Где:
@@ -87,7 +85,6 @@ description: ""
         path: /deckhouse/ee
         password: "password"
         user: "user"
-        storageMode: Fs
   EOF
   ```
 
@@ -113,8 +110,6 @@ description: ""
     enabled: true
     settings:
       mode: Detached
-      detached:
-        storageMode: Fs
   EOF
   ```
 

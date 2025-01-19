@@ -21,7 +21,6 @@ registry:
         -----BEGIN CERTIFICATE-----
         ...
         -----END CERTIFICATE-----
-    storageMode: Fs
 ---
 apiVersion: deckhouse.io/v2alpha1
 kind: InitConfiguration
@@ -30,7 +29,6 @@ registry:
     mode: Detached
     detached:
     imagesBundlePath: ~/deckhouse/bundle.tar
-    storageMode: Fs
 ```
 
 The parameters are parsed and passed to Basible for template rendering. The main templates are located in:

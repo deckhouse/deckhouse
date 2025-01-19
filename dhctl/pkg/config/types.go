@@ -115,11 +115,9 @@ type RegistryDirectModeProperties struct {
 
 type RegistryProxyModeProperties struct {
 	RegistryDirectModeProperties
-	StorageMode string             `json:"storageMode,omitempty"`
-	TTL         util_time.Duration `json:"ttl,omitempty"`
+	TTL util_time.Duration `json:"ttl,omitempty"`
 }
 
 type RegistryDetachedModeProperties struct {
 	ImagesBundlePath string `json:"imagesBundlePath,omitempty"`
-	StorageMode      string `json:"storageMode,omitempty"`
 }

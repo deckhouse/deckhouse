@@ -128,15 +128,15 @@ apiVersions:
                   Путь к imagesBundle для дистрибутива платформы Deckhouse Kubernetes. Путь можно указать как к папке, так и к .tar архиву.
 
                   Для получения дополнительной информации о том, как получить imagesBundle, обратитесь к документации по адресу https://deckhouse.io/documentation/v1/deckhouse-faq.html#manually-uploading-images-to-an-air-gapped-registry
-              storageMode: &storageMode
-                description: |
-                  Тип хранилища данных для модуля system-registry.
           proxy:
             description: Параметры `Proxy` режима.
             properties:
               <<: *directProperties
-              storageMode:
-                <<: *storageMode
+              ttl:
+                description: |
+                  TTL определяет время жизни кэшированного контента, по истечении которого он будет автоматически очищен.
+                  Значение по умолчанию: Если не указано, TTL по умолчанию составляет 7 дней (168 часов).
+                  Постоянный кэш: Если установить значение 0, у кэша не будет срока действия, и данные из него удаляться не будут.
       deckhouse:
         description: Параметры, необходимые для установки Deckhouse.
         properties:

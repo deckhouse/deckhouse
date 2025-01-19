@@ -35,10 +35,6 @@ bb-kubectl --kubeconfig=/etc/kubernetes/admin.conf -n d8-system label secret reg
 
 bb-kubectl --kubeconfig=/etc/kubernetes/admin.conf -n d8-system delete secret registry-pki || true
 bb-kubectl --kubeconfig=/etc/kubernetes/admin.conf -n d8-system create secret generic registry-pki \
-{{- if eq .registry.registryStorageMode "S3" }}
-  --from-file=etcd-ca.key=$etcd_pki_path/ca.key \
-  --from-file=etcd-ca.crt=$etcd_pki_path/ca.crt \
-{{- end }}
   --from-file=token.key=$registry_pki_path/token.key \
   --from-file=token.crt=$registry_pki_path/token.crt \
   --from-file=registry-ca.key=$registry_pki_path/ca.key \

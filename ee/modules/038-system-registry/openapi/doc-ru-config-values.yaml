@@ -13,13 +13,6 @@ properties:
   mode:
     description: |
       Тип регистри
-  detached:
-    description: |
-      Параметры для detached режима
-    properties:
-      storageMode: &storageMode
-        description: |
-          Тип хранилища данных
   proxy:
     description: |
       Параметры для proxy режима
@@ -42,8 +35,6 @@ properties:
       password:
         description: |
           Пароль для upstream регистри
-      storageMode:
-        <<: *storageMode
   whitelistSourceRanges:
     description: 'Список адресов в формате CIDR, которым разрешено подключение к ingress-у embedded registry.'
   https:
