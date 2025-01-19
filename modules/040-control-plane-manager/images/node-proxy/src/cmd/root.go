@@ -21,13 +21,14 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"node-proxy-sidecar/internal/config"
 	"node-proxy-sidecar/internal/k8s"
 )
 
 var (
-	Version    string
-	devMode    bool
-	socketPath string
+	Version     string
+	cfg         config.Config
+	authModeStr string
 )
 
 var rootCmd = &cobra.Command{
@@ -37,8 +38,12 @@ var rootCmd = &cobra.Command{
 }
 
 func init() {
-	rootCmd.Flags().BoolVar(&devMode, "dev", false, "local development")
-	rootCmd.Flags().StringVar(&socketPath, "socket-path", "", "path to haproxy socket")
+	rootCmd.Flags().StringVar(&authModeStr, "auth-mode", "dev", "Authentication mode: dev, cert")
+	rootCmd.Flags().StringSliceVar(&cfg.APIHosts, "api-host", []string{"https://127.0.0.1:6443"}, "Kubernetes API server host(s)")
+	rootCmd.Flags().StringVar(&cfg.SocketPath, "socket-path", "/var/run/haproxy.sock", "Path to HAProxy socket")
+	rootCmd.Flags().StringVar(&cfg.CertPath, "cert-path", "/etc/kubernetes/node-proxy/haproxy.pem", "Path to client certificate")
+	rootCmd.Flags().StringVar(&cfg.KeyPath, "key-path", "/etc/kubernetes/node-proxy/haproxy.key", "Path to client key")
+	rootCmd.Flags().StringVar(&cfg.CACertPath, "ca-cert-path", "/etc/kubernetes/node-proxy/ca.crt", "Path to CA certificate")
 }
 
 func Execute() {
@@ -50,7 +55,17 @@ func test(updatedList []string) {
 }
 
 func run(cmd *cobra.Command, args []string) {
-	k8sClient := k8s.NewClient(devMode)
+	cfg.AuthMode = config.ParseAuthMode(authModeStr)
+	if cfg.AuthMode == config.AuthCert {
+		if cfg.CertPath == "" || cfg.KeyPath == "" || cfg.CACertPath == "" {
+			fmt.Println("--cert-path, --key-path --ca-cert-path required")
+			cmd.Usage()
+			return
+		}
+	}
+
+	k8s := &k8s.Client{}
+	k8sClient := k8s.NewClient(cfg)
 
 	err := k8sClient.WatchEndpoints("default", "kubernetes", []string{"https"}, test)
 	if err != nil {
