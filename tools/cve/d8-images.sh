@@ -93,9 +93,11 @@ function __main__() {
         -F "product_name=${MODULE_NAME}" \
         -F "scan_date=${date_iso}" \
         -F "engagement_name=${IMAGE_NAME} CVE Report ${date_iso}" \
+        -F "engagement_end_date=${date_iso}" \
         -F "service=${MODULE_NAME}" \
         -F "group_by=component_name+component_version" \
         -F "lead=1" \
+        -F "deduplication_on_engagement=true" \
       > /dev/null
 
     done

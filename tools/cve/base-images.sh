@@ -104,7 +104,9 @@ function __main__() {
       -F "product_name=Base Images" \
       -F "scan_date=${date_iso}" \
       -F "engagement_name=${image} CVE Report ${date_iso}" \
+      -F "engagement_end_date=${date_iso}" \
       -F "group_by=component_name+component_version" \
+      -F "deduplication_on_engagement=true" \
     > /dev/null
   done
 
