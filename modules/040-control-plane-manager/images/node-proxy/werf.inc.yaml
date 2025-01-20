@@ -48,8 +48,8 @@ import:
   to: /bin/node-proxy-sidecar
   before: install
 git:
-  - add: /{{ $.ModulePath }}modules/040-{{ $.ModuleName }}/images/{{ $.ImageName }}/config.cfg
-    to: /config.cfg
+  - add: /{{ $.ModulePath }}modules/040-{{ $.ModuleName }}/images/{{ $.ImageName }}/config
+    to: /config
     stageDependencies:
       install:
         - '**/*'

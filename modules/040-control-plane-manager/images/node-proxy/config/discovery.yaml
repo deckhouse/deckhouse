@@ -1,0 +1,7 @@
+---
+backends:
+- name: kube_api_backend
+  k8s:
+    namespace: default
+    endpointName: kubernetes
+    portName: https

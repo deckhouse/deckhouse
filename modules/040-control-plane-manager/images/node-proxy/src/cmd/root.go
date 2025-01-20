@@ -48,10 +48,10 @@ func init() {
 	rootCmd.Flags().StringVar(&cfg.CertPath, "cert-path", "/etc/kubernetes/node-proxy/haproxy.pem", "Path to client certificate")
 	rootCmd.Flags().StringVar(&cfg.KeyPath, "key-path", "/etc/kubernetes/node-proxy/haproxy.key", "Path to client key")
 	rootCmd.Flags().StringVar(&cfg.CACertPath, "ca-cert-path", "/etc/kubernetes/node-proxy/ca.crt", "Path to CA certificate")
-	rootCmd.Flags().StringVar(&cfg.HAProxyConfigurationFile, "ha-config-path", "/node-proxy/config.cfg", "Path HAProxy configuration file")
+	rootCmd.Flags().StringVar(&cfg.HAProxyConfigurationFile, "ha-config-path", "/config/config.cfg", "Path HAProxy configuration file")
 	rootCmd.Flags().StringVar(&cfg.HAProxyHAProxyBin, "ha-bin", "/bin/haproxy", "Path to HAProxy bin file")
 	rootCmd.Flags().StringVar(&cfg.HAProxyTransactionsDir, "ha-transactions-dir", "/tmp/transactions-dir/", "Path to HA transactions dir")
-	rootCmd.Flags().StringVar(&cfg.ConfigPath, "config", "/config.yaml", "Path to backends config")
+	rootCmd.Flags().StringVar(&cfg.ConfigPath, "config", "/config/discovery.yaml", "Path to backends config")
 }
 
 func Execute() {
