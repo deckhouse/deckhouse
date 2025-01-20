@@ -23,27 +23,27 @@ import (
 // Тест checkMetricExistenceByLabels
 func TestCheckMetricExistenceByLabels(t *testing.T) {
 	registry := prometheus.NewRegistry()
-	counter := prometheus.NewCounterVec(prometheus.CounterOpts{Name: "test_metric"}, []string{"label1", "label2"})
+	counter := prometheus.NewCounterVec(prometheus.CounterOpts{Name: "test_metric"}, []string{"task_memcg"})
 	registry.MustRegister(counter)
 
-	labels := map[string]string{"label1": "value1", "label2": "value2"}
+	labels := map[string]string{"task_memcg": "value1"}
 	counter.With(labels).Inc()
 
-	exists := checkMetricExistenceByLabels("test_metric", labels, registry)
+	exists := checkMetricExistenceByLabels("test_metric", map[string]string{"task_memcg": "value1"}, registry)
 	assert.True(t, exists, "Metric with labels should exist in registry")
 
-	labels = map[string]string{"label1": "value1", "label2": "nonexistent"}
-	exists = checkMetricExistenceByLabels("test_metric", labels, registry)
+	exists = checkMetricExistenceByLabels("test_metric", map[string]string{"task_memcg": "nonexistent"}, registry)
 	assert.False(t, exists, "Metric with non-existent labels should not exist")
 }
 
 // Тест getContainerIDFromLog
 func TestGetContainerIDFromLog(t *testing.T) {
 	line := "oom-kill: task_memcg=/kubepods/burstable/pod123"
-	containerID := getContainerIDFromLog(line)
-	assert.Equal(t, "/kubepods/burstable/pod123", containerID, "Should extract correct task_memcg")
+	assert.Equal(t, "/kubepods/burstable/pod123", getContainerIDFromLog(line), "Should extract correct task_memcg")
 
 	line = "oom-kill: no task_memcg present"
-	containerID = getContainerIDFromLog(line)
-	assert.Equal(t, "", containerID, "Should return empty string if task_memcg is not present")
+	assert.Equal(t, "", getContainerIDFromLog(line), "Should return empty string if task_memcg is not present")
+
+	line = "eth0: renamed from veth3658ab6"
+	assert.Equal(t, "", getContainerIDFromLog(line), "Should return empty string if oom-kill is not present")
 }

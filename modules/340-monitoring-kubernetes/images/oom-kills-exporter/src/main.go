@@ -60,7 +60,8 @@ func checkMetricExistenceByLabels(metricName string, labels map[string]string, r
 
 func getContainerIDFromLog(line string) string {
 	match := strings.Split(line, "oom-kill:")
-	if len(match) == 2 {
+	println(len(match))
+	if len(match) != 2 {
 		return ""
 	}
 	log.Print(line)
