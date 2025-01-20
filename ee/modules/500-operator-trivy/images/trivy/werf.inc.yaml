@@ -1,0 +1,41 @@
+---
+image: {{ .ModuleName }}/{{ .ImageName }}
+fromImage: common/distroless
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+  add: /trivy
+  to: /usr/local/bin/trivy
+  before: setup
+docker:
+  ENTRYPOINT: [ "/usr/local/bin/trivy" ]
+  USER: deckhouse:deckhouse
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+fromImage: common/src-artifact
+final: false
+shell:
+  install:
+  - git clone --depth 1 --branch flant-v2 {{ .SOURCE_REPO }}/aquasecurity/trivy-db.git /src/trivy-db
+  - git clone --depth 1 --branch v0.55.0-flant-2 {{ .SOURCE_REPO }}/aquasecurity/trivy.git /src/trivy
+  - rm -rf /src/trivy/docs /src/trivy/integration
+  - find /src/trivy -type d -name testdata | xargs rm -rf
+  - rm -rf /src/trivy/.git /src/trivy-db/.git
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-artifact
+from: {{ .Images.BASE_GOLANG_23_ALPINE }}
+final: false
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+  add: /src
+  to: /src
+  before: install
+mount:
+- fromPath: ~/go-pkg-cache
+  to: /go/pkg
+shell:
+  install:
+  - export GOPROXY={{ .GOPROXY }}
+  - cd /src/trivy
+  - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o /trivy ./cmd/trivy/main.go
+  - chown 64535:64535 /trivy
+  - chmod 0700 /trivy

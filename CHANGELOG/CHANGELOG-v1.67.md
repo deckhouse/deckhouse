@@ -9,6 +9,7 @@
     - Cluster readiness: before migration, you may need to ensure the cluster is in a specific state (refer to cluster alerts).
     - Backup configurations: it is highly recommended to backup custom resource configurations like L2Advertisement and IPAddressPool which were created manually bypassing the ModuleConfig before migration.
     - Additional resources: after migrating the L2 balancer, additional MetalLoadBalancerClass resources will be created in the cluster. These resources are used to configure the module instead of ModuleConfig.
+ - Prometheus will be restarted.
  - The `releaseChannel`, `bundle` and `logLevel` parameters of the InitConfiguration resource are no longer available. Use the corresponding parameters in the ModuleConfig `deckhouse` instead.
  - v1alpha1 API version for ModulePullOverride is deprecated. A module source is now selected according to the moduleConfig.
  - v1alpha1 API version for ModuleUpdatePolicy is deprecated, the  source for the module and the module update policy is now selected according to the moduleConfig.
@@ -60,10 +61,14 @@
  - **[cni-cilium]** Fixed tunnelMode setting for Static clusters. [#11233](https://github.com/deckhouse/deckhouse/pull/11233)
  - **[cni-cilium]** Fixed package dropping issues with VXLAN and VMWare-hosted nodes. [#10087](https://github.com/deckhouse/deckhouse/pull/10087)
  - **[cni-flannel]** Fixed package dropping issues with VXLAN and VMWare-hosted nodes. [#10087](https://github.com/deckhouse/deckhouse/pull/10087)
+ - **[dashboard]** Specified the correct certificates for ingress to access via kube-rbac-proxy. [#11444](https://github.com/deckhouse/deckhouse/pull/11444)
+ - **[deckhouse]** Fix deleting module config for embedded modules. [#11347](https://github.com/deckhouse/deckhouse/pull/11347)
  - **[deckhouse]** Fix several deployed module releases. [#11245](https://github.com/deckhouse/deckhouse/pull/11245)
  - **[deckhouse]** Fix source deletion error. [#10750](https://github.com/deckhouse/deckhouse/pull/10750)
+ - **[deckhouse-controller]** Update golang.org/x/net to `0.33.0`. [#11316](https://github.com/deckhouse/deckhouse/pull/11316)
  - **[deckhouse-controller]** check spec object in validations [#11216](https://github.com/deckhouse/deckhouse/pull/11216)
  - **[deckhouse-controller]** Rollout restart for Deckhouse workloads (heritage=deckhouse) is forbidden. [#10844](https://github.com/deckhouse/deckhouse/pull/10844)
+ - **[descheduler]** Fix label conversion. [#11303](https://github.com/deckhouse/deckhouse/pull/11303)
  - **[descheduler]** Fix conversation from v1alpha1 to v1alpha2 (add nodeAffinityType default for removePodsViolatingNodeAffinity strategy). [#11223](https://github.com/deckhouse/deckhouse/pull/11223)
  - **[descheduler]** Fix and update descheduler. [#10361](https://github.com/deckhouse/deckhouse/pull/10361)
     descheduler pod will be restarted.
@@ -73,16 +78,21 @@
  - **[dhctl]** Add tasks for moduleconfigs routines for post bootstrap and creating with resources phases. [#10688](https://github.com/deckhouse/deckhouse/pull/10688)
  - **[dhctl]** Fixed work with drain for nodes with kruise.io DaemonSet. [#10578](https://github.com/deckhouse/deckhouse/pull/10578)
  - **[dhctl]** Delete docker CRI type support. [#10114](https://github.com/deckhouse/deckhouse/pull/10114)
+ - **[docs]** Adding info about Log Retention Settings Discrepancy in kube-bench test. [#11352](https://github.com/deckhouse/deckhouse/pull/11352)
+    Users will be warned about inconsistencies in log storage settings when checking with kube-bench.
  - **[docs]** Added information about preflight skips flags. [#10916](https://github.com/deckhouse/deckhouse/pull/10916)
  - **[docs]** Fix priority-class module documentation. [#10897](https://github.com/deckhouse/deckhouse/pull/10897)
  - **[docs]** Add required NetworkInterface AWS policies. [#10842](https://github.com/deckhouse/deckhouse/pull/10842)
  - **[helm_lib]** Updated helm_lib to 1.37.1, which should fix issue [#10950](https://github.com/deckhouse/deckhouse/pull/10950)
  - **[istio]** Fixes for Federation/Multicluster metadata-exporter and for istio-operator. [#11150](https://github.com/deckhouse/deckhouse/pull/11150)
  - **[istio]** Fixed `IngressIstioController` CRD docs rendering. [#10581](https://github.com/deckhouse/deckhouse/pull/10581)
+ - **[metallb]** Fix metallb RBAC rules. [#11298](https://github.com/deckhouse/deckhouse/pull/11298)
  - **[metallb]** Fixed MetalLB migration issues and improved stability. [#11224](https://github.com/deckhouse/deckhouse/pull/11224)
  - **[multitenancy-manager]** Fix the 'secure' and 'secure_with_dedicated_nodes' project templates and add supporting default values. [#11096](https://github.com/deckhouse/deckhouse/pull/11096)
+ - **[node-manager]** Tune CAPS sync period. [#11384](https://github.com/deckhouse/deckhouse/pull/11384)
  - **[node-manager]** Fix the key usage with cert-authority. [#10718](https://github.com/deckhouse/deckhouse/pull/10718)
  - **[node-manager]** no_proxy/http_proxy tuning, `bb-set-proxy/bb-unset-proxy` functions. [#10676](https://github.com/deckhouse/deckhouse/pull/10676)
+ - **[prometheus]** Excluded unwanted labels from `D8CNIMisconfigured` alert. [#11301](https://github.com/deckhouse/deckhouse/pull/11301)
  - **[prometheus]** Fixes for D8CNIMisconfigured alerts — renamed group and typos fixed. [#11259](https://github.com/deckhouse/deckhouse/pull/11259)
  - **[prometheus]** Rename targets for alerts and docs fixes. [#11243](https://github.com/deckhouse/deckhouse/pull/11243)
  - **[runtime-audit-engine]** Fix k8s labels collection from containers in syscall event source. [#10639](https://github.com/deckhouse/deckhouse/pull/10639)
@@ -123,5 +133,7 @@
  - **[istio]** Enabling the use of self hosted certificates for metadata decrypt and excluding certificate verification in Istio Multicluster and Federation. [#10740](https://github.com/deckhouse/deckhouse/pull/10740)
  - **[node-manager]** Rewrite NodeGroup convesion webhook on Python. [#10777](https://github.com/deckhouse/deckhouse/pull/10777)
  - **[operator-trivy]** Use local policies. [#10799](https://github.com/deckhouse/deckhouse/pull/10799)
+ - **[prometheus]** Add init container and switcher for prom image. [#11085](https://github.com/deckhouse/deckhouse/pull/11085)
+    Prometheus will be restarted.
  - **[user-authz]** Replace manage capabilities and scopes. [#10810](https://github.com/deckhouse/deckhouse/pull/10810)
 

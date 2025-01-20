@@ -37,7 +37,7 @@ sudo -i d8 k -n d8-ingress-nginx get po
 ```
 {% endsnippetcut %}
 
-Дождитесь перехода Pod'ов в статус `Ready`.
+Дождитесь перехода подов в статус `Ready`.
 
 {% offtopic title="Пример вывода..." %}
 ```
