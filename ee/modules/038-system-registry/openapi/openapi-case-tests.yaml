@@ -5,12 +5,11 @@ positive:
     - mode: Direct
     - mode: Proxy
       proxy:
+        imagesRepo: dev-registry.deckhouse.io/sys/deckhouse-oss
         ca: ""
-        host: dev-registry.deckhouse.io
         password: "password"
-        path: /sys/deckhouse-oss
         scheme: http
-        user: "user"
+        username: "user"
     - mode: Detached
 negative:
   values:
