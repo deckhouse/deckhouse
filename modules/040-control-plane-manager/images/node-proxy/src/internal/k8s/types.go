@@ -9,5 +9,5 @@ type Endpoint struct {
 }
 
 type Client struct {
-	kubeClient *kubernetes.Clientset
+	client *kubernetes.Clientset
 }

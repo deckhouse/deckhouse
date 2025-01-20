@@ -22,7 +22,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"node-proxy-sidecar/internal/config"
-	"node-proxy-sidecar/internal/k8s"
+	"node-proxy-sidecar/internal/haproxy"
 )
 
 var (
@@ -64,13 +64,16 @@ func run(cmd *cobra.Command, args []string) {
 		}
 	}
 
-	k8s := &k8s.Client{}
-	k8sClient := k8s.NewClient(cfg)
+	// k8s := &k8s.Client{}
+	ha := &haproxy.Client{}
+	haproxyClient := ha.NewClient(cfg)
+	haproxyClient.Watcher()
+	// k8sClient := k8s.NewClient(cfg)
 
-	err := k8sClient.WatchEndpoints("default", "kubernetes", []string{"https"}, test)
-	if err != nil {
-		fmt.Println("Error watching endpoints:", err)
-		return
-	}
-	select {}
+	// err := k8sClient.WatchEndpoints("default", "kubernetes", []string{"https"}, test)
+	// if err != nil {
+	// 	fmt.Println("Error watching endpoints:", err)
+	// 	return
+	// }
+	// select {}
 }

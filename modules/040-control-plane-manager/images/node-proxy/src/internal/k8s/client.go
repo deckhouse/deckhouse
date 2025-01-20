@@ -43,7 +43,7 @@ func (c *Client) NewClient(cfg config.Config) *Client {
 		log.Fatal("Failed to create Kubernetes client")
 	}
 
-	c.kubeClient = clientset
+	c.client = clientset
 	return c
 }
 

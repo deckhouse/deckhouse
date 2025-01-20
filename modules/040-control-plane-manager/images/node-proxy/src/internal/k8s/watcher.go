@@ -10,7 +10,7 @@ import (
 )
 
 func (c *Client) WatchEndpoints(namespace string, endpointName string, portNames []string, onChange func([]string)) error {
-	factory := informers.NewSharedInformerFactoryWithOptions(c.kubeClient, 0, informers.WithNamespace(namespace))
+	factory := informers.NewSharedInformerFactoryWithOptions(c.client, 0, informers.WithNamespace(namespace))
 	informer := factory.Core().V1().Endpoints().Informer()
 	informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
