@@ -14,7 +14,6 @@ limitations under the License.
 package main
 
 import (
-	"errors"
 	"log"
 	"net/http"
 	"os"
@@ -65,7 +64,7 @@ func checkMetricExistenceByLabels(metricName string, labels map[string]string, r
 	return false
 }
 
-func getContainerIDFromLog(line string) (string, error) {
+func getContainerIDFromLog(line string) string {
 	var taskMemcg string
 	if matches := regexpOom.FindStringSubmatch(line); matches != nil {
 		log.Print(line)
@@ -76,9 +75,9 @@ func getContainerIDFromLog(line string) (string, error) {
 				}
 			}
 		}
-		return taskMemcg, nil
+		return taskMemcg
 	}
-	return "", errors.New("Don't oom-kill log")
+	return ""
 }
 
 func main() {
@@ -119,7 +118,7 @@ func main() {
 	}
 
 	for item := range logCh {
-		if taskMemcg, err := getContainerIDFromLog(item.Message); err == nil {
+		if taskMemcg := getContainerIDFromLog(item.Message); taskMemcg != "" {
 			labels := map[string]string{
 				"task_memcg": taskMemcg,
 			}
