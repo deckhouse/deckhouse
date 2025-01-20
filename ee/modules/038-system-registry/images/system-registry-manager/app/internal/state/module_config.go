@@ -52,7 +52,7 @@ type DetachedConfig struct {
 
 type ProxyConfig struct {
 	ImagesRepo string             `json:"imagesRepo"`
-	UserName   string             `json:"user"`
+	UserName   string             `json:"username"`
 	Password   string             `json:"password"`
 	Scheme     string             `json:"scheme"`
 	CA         string             `json:"ca"`
