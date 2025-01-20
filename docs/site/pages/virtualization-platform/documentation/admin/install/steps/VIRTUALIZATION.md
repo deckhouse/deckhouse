@@ -1,5 +1,5 @@
 ---
-title: "Setup virtualization"
+title: "Set up virtualization"
 permalink: en/virtualization-platform/documentation/admin/install/steps/virtualization.html
 ---
 
