@@ -1,7 +1,7 @@
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 fromImage: common/src-artifact
-fromCacheVersion: "testGop123a"
+fromCacheVersion: "testGop12233a"
 final: false
 git:
 - add: /{{ $.ModulePath }}modules/340-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
