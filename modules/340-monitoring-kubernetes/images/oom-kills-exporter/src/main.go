@@ -60,20 +60,20 @@ func checkMetricExistenceByLabels(metricName string, labels map[string]string, r
 
 func getContainerIDFromLog(line string) string {
 	match := strings.Split(line, "oom-kill:")
-	println(len(match))
 	if len(match) != 2 {
 		return ""
 	}
 	log.Print(line)
-	var taskMemcg string
+	// var taskMemcg string
 	for _, word := range strings.Split(match[1], ",") {
 		key, value, ok := strings.Cut(word, "=")
 		if key != "task_memcg" || !ok {
 			continue
 		}
-		taskMemcg = value
+		return value
 	}
-	return taskMemcg
+	println("[WARNING] Parse err line: " + line)
+	return ""
 }
 
 func dmesgWatcher(sleepG time.Duration, registry *prometheus.Registry, counterVec *prometheus.CounterVec) {
