@@ -1,5 +1,5 @@
 ---
-title: "Setup Ingress and DNS"
+title: "Set up Ingress and DNS"
 permalink: en/virtualization-platform/documentation/admin/install/steps/ingress.html
 ---
 
