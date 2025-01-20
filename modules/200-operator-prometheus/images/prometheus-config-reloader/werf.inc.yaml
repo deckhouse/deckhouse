@@ -3,7 +3,7 @@ image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: common/distroless
 import:
 - artifact: {{ $.ModuleName }}/prometheus-operator-artifact-{{ $version | replace "." "-" }}
-  add: /prometheus-operator/prometheus-config-reloader
+  add: /prometheus-config-reloader
   to: /bin/prometheus-config-reloader
   before: setup
 docker:
