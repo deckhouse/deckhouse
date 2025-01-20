@@ -626,6 +626,28 @@ entries:
             ru: Другие модули
           folders:
             - title:
+                en: embedded-registry
+                ru: embedded-registry
+              d8Revision: ee
+              featureStatus: experimental
+              folders:
+                - title:
+                    en: Description
+                    ru: Описание
+                  url: /modules/system-registry/
+                - title:
+                    en: Examples
+                    ru: Примеры
+                  url: /modules/system-registry/examples.html
+                - title:
+                    en: Configuration
+                    ru: Настройки
+                  url: /modules/system-registry/configuration.html
+                - title:
+                    en: FAQ
+                    ru: FAQ
+                  url: /modules/system-registry/faq.html
+            - title:
                 en: cilium-hubble
                 ru: cilium-hubble
               folders:
@@ -1648,27 +1670,6 @@ entries:
                 en: Configuration
                 ru: Настройки
               url: /modules/network-gateway/configuration.html
-        - title:
-            en: embedded-registry
-            ru: embedded-registry
-          d8Revision: ee
-          folders:
-            - title:
-                en: Description
-                ru: Описание
-              url: /modules/system-registry/
-            - title:
-                en: Examples
-                ru: Примеры
-              url: /modules/system-registry/examples.html
-            - title:
-                en: Configuration
-                ru: Настройки
-              url: /modules/system-registry/configuration.html
-            - title:
-                en: FAQ
-                ru: FAQ
-              url: /modules/system-registry/faq.html
     - title:
         en: Deckhouse CLI
         ru: Deckhouse CLI
