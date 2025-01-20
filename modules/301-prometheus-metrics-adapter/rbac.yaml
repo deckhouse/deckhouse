@@ -1,2 +1,0 @@
-crds:
-  - modules/301-prometheus-metrics-adapter/crds/*.yaml

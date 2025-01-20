@@ -2,5 +2,3 @@ allowedResources:
   - group: cert-manager.io
     resources:
       - all
-crds:
-  - modules/101-cert-manager/crds/*.yaml

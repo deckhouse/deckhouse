@@ -1,2 +1,0 @@
-crds:
-  - modules/031-ceph-csi/crds/*.yaml

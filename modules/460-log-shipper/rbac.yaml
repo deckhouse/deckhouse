@@ -1,2 +1,0 @@
-crds:
-  - modules/460-log-shipper/crds/*.yaml

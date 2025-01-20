@@ -1,2 +1,0 @@
-crds:
-  - modules/150-user-authn/crds/*.yaml

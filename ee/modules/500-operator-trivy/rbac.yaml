@@ -1,5 +1,3 @@
-crds:
-  - ee/modules/500-operator-trivy/crds/native/*.yaml
 allowedResources:
   - group: aquasecurity.github.io
     resources:
