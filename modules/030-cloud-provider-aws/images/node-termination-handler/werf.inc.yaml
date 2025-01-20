@@ -17,7 +17,7 @@ shell:
   install:
   - git clone --depth 1 --branch v1.23.1 {{ $.SOURCE_REPO }}/aws/aws-node-termination-handler.git /src
   - cd /src
-  - rm -rf .git
+  - rm -rf .git vendor
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
 final: false
@@ -32,6 +32,7 @@ import:
   before: install
 shell:
   beforeInstall:
+  {{- include "alpine packages proxy" . | nindent 2}}
   - |
     apk upgrade --available --no-cache && \
     apk add --no-cache ca-certificates make
