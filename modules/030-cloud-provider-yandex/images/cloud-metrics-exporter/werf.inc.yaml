@@ -9,27 +9,37 @@ import:
 docker:
   ENTRYPOINT: [ "/exporter"]
 ---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+final: false
+fromImage: common/src-artifact
+git:
+  - add: /{{ .ModulePath }}modules/030-{{ .ModuleName }}/images/{{ .ImageName }}
+    to: /src
+    excludePaths:
+      - "**/*.md"
+      - "**/*.yaml"
+      - hack
+    stageDependencies:
+      install:
+        - go.mod
+        - go.sum
+        - "**/*.go"
+        - "*.go"
+shell:
+  install:
+    - cd /src
+---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
 final: false
 from: {{ .Images.BASE_GOLANG_23_ALPINE }}
-git:
-- add: /{{ .ModulePath }}modules/030-{{ .ModuleName }}/images/{{ .ImageName }}
-  to: /src
-  excludePaths:
-    - "**/*.md"
-    - "**/*.yaml"
-    - hack
-  stageDependencies:
-    install:
-      - go.mod
-      - go.sum
-    setup:
-      - go.mod
-      - go.sum
-      - "**/*.go"
+import:
+  - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+    add: /src
+    to: /src
+    before: install
 mount:
-- fromPath: ~/go-pkg-cache
-  to: /go/pkg
+  - fromPath: ~/go-pkg-cache
+    to: /go/pkg
 shell:
   install:
   - cd /src
