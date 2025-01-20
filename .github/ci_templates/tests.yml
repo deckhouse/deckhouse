@@ -7,7 +7,7 @@ docker_options: '-w /deckhouse -v ${{github.workspace}}:/deckhouse -e "TERM=xter
 
 {!{ define "matrix_run_args" }!}
 # <template: matrix_run_args>
-args: 'make tests-matrix'
+args: 'sh -c "git config --global --add safe.directory /deckhouse && make tests-matrix"'
 docker_options: '-w /deckhouse -v ${{github.workspace}}:/deckhouse -e "TERM=xterm-256color" -v ~/go-pkg-cache:/go/pkg -v ~/deckhouse-bin-cache:/deckhouse/bin'
 # </template: matrix_run_args>
 {!{- end -}!}

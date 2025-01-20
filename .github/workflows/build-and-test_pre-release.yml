@@ -865,7 +865,7 @@ jobs:
           echo "⚓️ 📥 [$(date -u)] Pull 'tests' image..."
           docker pull ${TESTS_IMAGE_NAME}
           echo "⚓️ 🏎 [$(date -u)] Run tests..."
-          docker run -w /deckhouse -v ${{github.workspace}}:/deckhouse -e "TERM=xterm-256color" -v ~/go-pkg-cache:/go/pkg -v ~/deckhouse-bin-cache:/deckhouse/bin ${TESTS_IMAGE_NAME} make tests-matrix
+          docker run -w /deckhouse -v ${{github.workspace}}:/deckhouse -e "TERM=xterm-256color" -v ~/go-pkg-cache:/go/pkg -v ~/deckhouse-bin-cache:/deckhouse/bin ${TESTS_IMAGE_NAME} sh -c "git config --global --add safe.directory /deckhouse && make tests-matrix"
     # </template: tests_before_build_template>
 
   dhctl_tests:
