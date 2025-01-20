@@ -77,7 +77,7 @@ function __main__() {
       echo " Uploading trivy CVE report for image ${IMAGE_NAME} of ${MODULE_NAME} module"
       echo ""
       curl -s -X POST \
-        http://${DEFECTDOJO_HOST}/api/v2/import-scan/ \
+        http://${DEFECTDOJO_HOST}/api/v2/reimport-scan/ \
         -H "accept: application/json" \
         -H "Content-Type: multipart/form-data"  \
         -H "Authorization: Token ${DEFECTDOJO_API_TOKEN}" \
@@ -97,7 +97,7 @@ function __main__() {
         -F "service=${MODULE_NAME}" \
         -F "group_by=component_name+component_version" \
         -F "lead=1" \
-        -F "deduplication_on_engagement=true" \
+        -F "deduplication_on_engagement=false" \
       > /dev/null
 
     done
