@@ -83,7 +83,7 @@ function __main__() {
     echo ""
     trivyGetCVEListForImage -r "$REGISTRY" -i "$image" > "$WORKDIR/$(echo "$image" | tr "/" "_").cve"
     # Output reports per images
-    trivyGetJSONReportPartForImage -l "$IMAGE_REPORT_NAME" -i "$IMAGE@$IMAGE_HASH" -s "$SEVERITY" --ignore "out/.trivyignore" --output "out/json/base_image_${image}_report.json"
+    trivyGetJSONReportPartForImage -r "$REGISTRY" -i "$image" -l "$(echo "$image" | cut -d@ -f1)" --output "out/json/base_image_${image}_report.json"
     echo ""
     echo " Uploading trivy CVE report for base image ${image}"
     echo ""
