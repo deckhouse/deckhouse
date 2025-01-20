@@ -40,24 +40,23 @@ func checkMetricExistenceByLabels(metricName string, labels map[string]string, r
 	}
 
 	for _, mf := range mfs {
-		if mf.GetName() == metricName {
-			for _, metric := range mf.Metric {
-				labelMap := make(map[string]string)
-				for _, label := range metric.Label {
-					labelMap[*label.Name] = *label.Value
+		if mf.GetName() != metricName {
+			continue
+		}
+		for _, metric := range mf.Metric {
+			labelMap := make(map[string]string)
+			for _, label := range metric.Label {
+				labelMap[*label.Name] = *label.Value
+			}
+			match := true
+			for key, value := range labels {
+				if labelMap[key] != value {
+					match = false
+					break
 				}
-
-				match := true
-				for key, value := range labels {
-					if labelMap[key] != value {
-						match = false
-						break
-					}
-				}
-
-				if match {
-					return true
-				}
+			}
+			if match {
+				return true
 			}
 		}
 	}
