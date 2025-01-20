@@ -1,5 +1,5 @@
 ---
-title: "Setup storage"
+title: "Set up storage"
 permalink: en/virtualization-platform/documentation/admin/install/steps/storage.html
 ---
 
