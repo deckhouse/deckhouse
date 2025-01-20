@@ -18,5 +18,5 @@ As part of the test, a Pod is created and placed on a node. Then this pod is del
 `StatefulSet` is created for the test, and it is checked that this object has spawned a Pod (since the actual placement of the pod is not required and is checked as part of another test, a Pod is created that is guaranteed not to be placed, i.e. is in the `Pending` state). Deletes the StatefulSet, checks that the Pod it spawned has been deleted.
 
 `smoke-mini` objects implement network connectivity testing between nodes.
-Five `StatefulSet` with one replica are deployed for testing. The test checks connectivity between `smoke-mini` Pods as well as network connectivity with `upmeter-agent` Pods running on master nodes.
+Five `StatefulSet` with one replica are deployed for testing. The test checks connectivity between `smoke-mini` Pods as well as network connectivity with `upmeter-agent` Pods running on master nodes.  
 Once per minute, one of the `smoke-mini` Pods is migrated to another node.
