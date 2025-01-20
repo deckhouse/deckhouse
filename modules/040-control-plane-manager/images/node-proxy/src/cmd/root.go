@@ -44,9 +44,9 @@ var rootCmd = &cobra.Command{
 func init() {
 	rootCmd.Flags().StringVar(&authModeStr, "auth-mode", "cert", "Authentication mode: dev, cert")
 	rootCmd.Flags().StringSliceVar(&cfg.APIHosts, "api-host", []string{"https://127.0.0.1:6443"}, "Kubernetes API server host(s)")
-	rootCmd.Flags().StringVar(&cfg.SocketPath, "socket-path", "/socket/haproxy.sock", "Path to HAProxy socket")
+	rootCmd.Flags().StringVar(&cfg.SocketPath, "socket-path", "/socket/haproxy.socket", "Path to HAProxy socket")
 	rootCmd.Flags().StringVar(&cfg.CertPath, "cert-path", "/etc/kubernetes/node-proxy/haproxy.pem", "Path to client certificate")
-	rootCmd.Flags().StringVar(&cfg.KeyPath, "key-path", "/etc/kubernetes/node-proxy/haproxy.key", "Path to client key")
+	rootCmd.Flags().StringVar(&cfg.KeyPath, "key-path", "/etc/kubernetes/node-proxy/haproxy.pem", "Path to client key")
 	rootCmd.Flags().StringVar(&cfg.CACertPath, "ca-cert-path", "/etc/kubernetes/node-proxy/ca.crt", "Path to CA certificate")
 	rootCmd.Flags().StringVar(&cfg.HAProxyConfigurationFile, "ha-config-path", "/config/config.cfg", "Path HAProxy configuration file")
 	rootCmd.Flags().StringVar(&cfg.HAProxyHAProxyBin, "ha-bin", "/bin/haproxy", "Path to HAProxy bin file")

@@ -35,9 +35,10 @@ func (c *Client) BackendSync(backend config.Backend, desiredServers []Server) {
 
 	if curBackend == "" {
 		log.Infof("Backend with name %s not found in Haproxy Config", backend.Name)
+		// return err
 	}
 
-	currentServers, err := c.getServes(curBackend)
+	currentServers, err := c.getServes(backend.Name)
 	if err != nil {
 		log.Error(err)
 	}
@@ -47,32 +48,29 @@ func (c *Client) BackendSync(backend config.Backend, desiredServers []Server) {
 	log.Infoln("serversToAdd", serversToAdd)
 	log.Infoln("serversToRemove", serversToRemove)
 
-	c.addServer(curBackend, serversToAdd)
-	c.delServer(curBackend, serversToRemove)
+	c.addServer(backend, serversToAdd)
+	c.delServer(backend, serversToRemove)
 }
 
-func (c *Client) addServer(backend string, servers []Server) {
+func (c *Client) addServer(backend config.Backend, servers []Server) {
 	for _, server := range servers {
 		serverName := fmt.Sprintf("%s_%d", server.Address, server.Port)
 		addr := fmt.Sprintf("%s:%d", server.Address, server.Port)
-		err := c.runtimeClient.AddServer(backend, serverName, addr)
+		attr := fmt.Sprintf("%s %s", addr, backend.HAProxy.DefautlServer)
+		err := c.runtimeClient.AddServer(backend.Name, serverName, attr)
 		if err != nil {
 			log.Error(err)
 		}
-		// err = c.runtimeClient.SetServerAddr(backend, serverName, server.Address, int(server.Port))
-		// if err != nil {
-		// 	log.Error(err)
-		// }
 	}
 }
 
-func (c *Client) delServer(backend string, servers []Server) {
+func (c *Client) delServer(backend config.Backend, servers []Server) {
 	for _, server := range servers {
-		err := c.runtimeClient.DisableServer(backend, server.Name)
+		err := c.runtimeClient.DisableServer(backend.Name, server.Name)
 		if err != nil {
 			log.Error(err)
 		}
-		err = c.runtimeClient.DeleteServer(backend, server.Name)
+		err = c.runtimeClient.DeleteServer(backend.Name, server.Name)
 		if err != nil {
 			log.Error(err)
 		}

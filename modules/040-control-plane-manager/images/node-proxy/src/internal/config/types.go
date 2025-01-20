@@ -31,4 +31,7 @@ type Backend struct {
 		EndpointName string `yaml:"endpointName"`
 		PortName     string `yaml:"portName"`
 	} `yaml:"k8s"`
+	HAProxy struct {
+		DefautlServer string `yaml:"defautlServer"`
+	} `yaml:"haproxy"`
 }

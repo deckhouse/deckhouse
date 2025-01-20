@@ -63,7 +63,6 @@ spec:
     imagePullPolicy: IfNotPresent
     command: ["/bin/haproxy", "-W", "-db", "-f", "/config/config.cfg"]
     volumeMounts:
-    volumeMounts:
       - name: certs
         mountPath: /etc/kubernetes/node-proxy
         readOnly: true
@@ -72,8 +71,7 @@ spec:
   - name: sidecar
     image: {{ printf "%s%s@%s" $.registry.address $.registry.path (index $.images.controlPlaneManager "nodeProxy") }}
     imagePullPolicy: IfNotPresent
-    command: ["/bin/node-proxy-sidecar", "--config=/config/discovery.yaml" "--api-host=10.241.44.17:6443"]
-    volumeMounts:
+    command: ["/bin/node-proxy-sidecar", "--config=/config/discovery.yaml", "--api-host=10.241.44.17:6443"]
     volumeMounts:
       - name: certs
         mountPath: /etc/kubernetes/node-proxy
@@ -86,7 +84,7 @@ spec:
       hostPath:
         path: /etc/kubernetes/node-proxy
         type: Directory
-    - name: socket-volume
+    - name: socket
       emptyDir: {}
 EOF
 
