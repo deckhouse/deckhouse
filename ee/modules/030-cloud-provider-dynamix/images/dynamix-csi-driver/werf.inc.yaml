@@ -26,35 +26,47 @@ imageSpec:
   config:
     entrypoint: ["/dynamix-csi-driver"]
 ---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+final: false
+fromImage: common/src-artifact
+shell:
+  install:
+  - export VERSION="v0.2.0"
+  - export VERSION_COMMON="v0.3.0"
+  - git clone --depth 1 --branch ${VERSION} {{ $.CLOUD_PROVIDERS_SOURCE_REPO }}/dynamix/dynamix-csi-driver.git /src
+  - git clone --depth 1 --branch ${VERSION_COMMON} {{ $.CLOUD_PROVIDERS_SOURCE_REPO }}/dynamix/dynamix-common.git /src/dynamix-common
+  - cd /src
+  - rm -rf .git vendor
+  - sed -i -e 's# ../../dynamix-common# /src/dynamix-common#g' go.mod
+  - cd /src/dynamix-common
+  - rm -rf .git vendor
+---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
 final: false
-from: {{ $.Images.BASE_GOLANG_22_ALPINE_DEV }}
+from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+  add: /src
+  to: /src
+  before: install
 mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
 shell:
-  beforeInstall:
-  - apk add --no-cache openssh-client
-  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
   install:
-  - export GO_VERSION=${GOLANG_VERSION}
+  - cd /src
   - export GOPROXY={{ $.GOPROXY }}
-  - export VERSION="v0.1.0"
-  - export VERSION_COMMON="v0.2.0"
-  - git clone --depth 1 --branch ${VERSION} {{ $.CLOUD_PROVIDERS_SOURCE_REPO }}/dynamix/dynamix-csi-driver.git /dynamix/dynamix-csi-driver/src
-  - git clone --depth 1 --branch ${VERSION_COMMON} {{ $.CLOUD_PROVIDERS_SOURCE_REPO }}/dynamix/dynamix-common.git /dynamix/dynamix-common
-  - cd /dynamix/dynamix-csi-driver/src
-  - go mod tidy
+  - go mod download
+  setup:
+  - cd /src
   - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags "-s -w -X main.version=${VERSION}" -o /dynamix-csi-driver cmd/dynamix-csi-driver/main.go
   - chown 64535:64535 /dynamix-csi-driver
   - chmod 0755 /dynamix-csi-driver
 ---
 {{- $csiBinaries := "/bin/chmod /bin/mount /bin/mkdir /bin/rmdir /bin/umount /bin/findmnt /bin/lsblk /sbin/badblocks /sbin/blockdev /sbin/blk* /sbin/btrfs* /sbin/dumpe2fs /sbin/e2* /sbin/findfs /sbin/fsck* /sbin/fsfreeze /sbin/fstrim /sbin/mke2fs /sbin/mkfs* /sbin/resize2fs /sbin/xfs_repair /usr/sbin/nvme /usr/sbin/parted /usr/sbin/xfs*" }}
----
 image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
 final: false
 from: {{ $.Images.BASE_ALT_DEV }}
 shell:
   setup:
     - /binary_replace.sh -i "{{ $csiBinaries }}" -o /relocate
-
