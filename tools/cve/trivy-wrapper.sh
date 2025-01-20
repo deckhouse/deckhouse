@@ -68,6 +68,11 @@ function prepareImageArgs() {
       shift
       shift
       ;;
+    -o | --output)
+      OUTPUT="$2"
+      shift
+      shift
+      ;;
     *)
       echo "Unknown option $1"
       exit 1
@@ -94,6 +99,10 @@ function prepareImageArgs() {
   if [ -z "$SEVERITY" ]; then
     SEVERITY="CRITICAL,HIGH"
   fi
+
+  if [ -z "$OUTPUT" ]; then
+    OUTPUT="out/report.json"
+  fi
 }
 
 function trivyGetCVEListForImage() (
@@ -116,7 +125,7 @@ function trivyGetHTMLReportPartForImage() (
 function trivyGetJSONReportPartForImage() (
   prepareImageArgs "$@"
   echo -n "    <h1>$LABEL</h1>"
-  bin/trivy i --policy "$TRIVY_POLICY_URL" --java-db-repository "$TRIVY_JAVA_DB_URL" --db-repository "$TRIVY_DB_URL" --severity=$SEVERITY --ignorefile "$IGNORE" --format json --quiet "$IMAGE_ARGS"
+  bin/trivy i --policy "$TRIVY_POLICY_URL" --java-db-repository "$TRIVY_JAVA_DB_URL" --db-repository "$TRIVY_DB_URL" --severity=$SEVERITY --ignorefile "$IGNORE" --format json --output $OUTPUT --quiet "$IMAGE_ARGS"
   echo -n "    <br/>"
 )
 
