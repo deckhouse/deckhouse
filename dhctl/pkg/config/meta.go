@@ -329,7 +329,7 @@ func (m *MetaConfig) prepareDataFromInitClusterConfig() error {
 				UpstreamRegistryData: RegistryData{
 					Address:   address,
 					Path:      path,
-					Scheme:    strings.ToLower(properties.Scheme),
+					Scheme:    properties.Scheme,
 					CA:        properties.CA,
 					DockerCfg: dockerCfg,
 				},
