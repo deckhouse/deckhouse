@@ -2,25 +2,28 @@ package k8s
 
 import (
 	"fmt"
-	"slices"
 
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/tools/cache"
+
+	"node-proxy-sidecar/internal/config"
+	"node-proxy-sidecar/internal/haproxy"
 )
 
-func (c *Client) WatchEndpoints(namespace string, endpointName string, portNames []string, onChange func([]string)) error {
+func (c *Client) WatchEndpoints(backend config.Backend, onChange func(config.Backend, []haproxy.Server)) error {
+	namespace := backend.K8S.Namespace
 	factory := informers.NewSharedInformerFactoryWithOptions(c.client, 0, informers.WithNamespace(namespace))
 	informer := factory.Core().V1().Endpoints().Informer()
 	informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
-			c.processEndpoints(obj, endpointName, portNames, onChange)
+			c.processEndpoints(obj, backend, onChange)
 		},
 		UpdateFunc: func(oldObj, newObj interface{}) {
-			c.processEndpoints(newObj, endpointName, portNames, onChange)
+			c.processEndpoints(newObj, backend, onChange)
 		},
 		DeleteFunc: func(obj interface{}) {
-			onChange([]string{})
+			onChange(backend, []haproxy.Server{})
 		},
 	})
 
@@ -34,40 +37,37 @@ func (c *Client) WatchEndpoints(namespace string, endpointName string, portNames
 	return nil
 }
 
-func (c *Client) processEndpoints(obj interface{}, endpointName string, portNames []string, onChange func([]string)) {
-	var addresses []string
-	var ports []int32
-	var addressPortList []string
+func (c *Client) processEndpoints(obj interface{}, backend config.Backend, onChange func(config.Backend, []haproxy.Server)) {
+	servers := make([]haproxy.Server, 0, 1)
+	endpointName := backend.K8S.EndpointName
+	portName := backend.K8S.PortName
+	var port int32
 
 	ep, ok := obj.(*v1.Endpoints)
 	if !ok || ep.Name != endpointName {
-		onChange(addressPortList) // empty
+		onChange(backend, servers) // empty
 		return
 	}
 
 	for _, subset := range ep.Subsets {
 		for _, p := range subset.Ports {
-			if slices.Contains(portNames, p.Name) {
-				ports = append(ports, p.Port)
+			if p.Name == portName {
+				port = p.Port
+				break
 			}
+			continue
 		}
 	}
-	if len(ports) < 1 {
-		onChange(addressPortList) // empty
+	if port == 0 {
+		onChange(backend, servers) // empty
 		return
 	}
 
 	for _, subset := range ep.Subsets {
 		for _, a := range subset.Addresses {
-			addresses = append(addresses, a.IP)
+			servers = append(servers, haproxy.Server{Address: a.IP, Port: int64(port)})
 		}
 	}
 
-	for _, address := range addresses {
-		for _, port := range ports {
-			addressPortList = append(addressPortList, fmt.Sprintf("%s:%d", address, port))
-		}
-	}
-
-	onChange(addressPortList)
+	onChange(backend, servers)
 }

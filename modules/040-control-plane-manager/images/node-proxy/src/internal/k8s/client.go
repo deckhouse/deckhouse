@@ -2,7 +2,6 @@ package k8s
 
 import (
 	"context"
-	"crypto/x509"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -27,37 +26,40 @@ func (c *Client) checkConnection(clientset *kubernetes.Clientset, host string) e
 	return nil
 }
 
-func (c *Client) NewClient(cfg config.Config) *Client {
-	var clientset *kubernetes.Clientset
+func (c *Client) NewClient(cfg config.Config) (*Client, error) {
+	var (
+		clientset *kubernetes.Clientset
+		err       error
+	)
 
 	switch cfg.AuthMode {
 	case config.AuthCert:
-		clientset = c.certAuthClient(cfg)
+		clientset, err = c.certAuthClient(cfg)
+		if err != nil {
+			return nil, err
+		}
 	case config.AuthDev:
-		clientset = c.kubeConfigClient()
+		clientset, err = c.kubeConfigClient()
+		if err != nil {
+			return nil, err
+		}
 	default:
-		log.Fatalln("Unsupported AuthMode")
+		return nil, fmt.Errorf("unsupported auth mode: %s", cfg.AuthMode)
 	}
 
 	if clientset == nil {
-		log.Fatal("Failed to create Kubernetes client")
+		return nil, fmt.Errorf("failed to create k8s client")
 	}
 
 	c.client = clientset
-	return c
+	return c, nil
 }
 
-func (c *Client) certAuthClient(cfg config.Config) *kubernetes.Clientset {
+func (c *Client) certAuthClient(cfg config.Config) (*kubernetes.Clientset, error) {
 	for _, host := range cfg.APIHosts {
-
 		caCert, err := os.ReadFile(cfg.CACertPath)
 		if err != nil {
-			log.Fatalln("CA Certificate error", err)
-		}
-		caCertPool := x509.NewCertPool()
-		caCertPool.AppendCertsFromPEM(caCert)
-		if err != nil {
-			log.Fatalln("Client Certificate error", err)
+			return nil, fmt.Errorf("read CA cert: %v", err)
 		}
 
 		kubeConfig := &rest.Config{
@@ -72,19 +74,20 @@ func (c *Client) certAuthClient(cfg config.Config) *kubernetes.Clientset {
 
 		clientset, err := kubernetes.NewForConfig(kubeConfig)
 		if err != nil {
-			log.Fatal("Kubernetes Client creation failed. ", err)
+			return nil, fmt.Errorf("create k8s client: %v", err)
 		}
+
 		err = c.checkConnection(clientset, kubeConfig.Host)
 		if err != nil {
-			log.Error(err)
+			log.Warnf("connection check failed for host %s: %v", host, err)
 			continue
 		}
-		return clientset
+		return clientset, nil
 	}
-	return nil
+	return nil, fmt.Errorf("no available hosts for cert-based auth")
 }
 
-func (c *Client) kubeConfigClient() *kubernetes.Clientset {
+func (c *Client) kubeConfigClient() (*kubernetes.Clientset, error) {
 	kubeconfigPath := os.Getenv("KUBECONFIG")
 	if kubeconfigPath == "" {
 		kubeconfigPath = filepath.Join(homedir.HomeDir(), ".kube", "config")
@@ -92,11 +95,12 @@ func (c *Client) kubeConfigClient() *kubernetes.Clientset {
 
 	kubeConfig, err := clientcmd.BuildConfigFromFlags("", kubeconfigPath)
 	if err != nil {
-		log.Fatal(err)
+		return nil, fmt.Errorf("build config: %v", err)
 	}
+
 	clientset, err := kubernetes.NewForConfig(kubeConfig)
 	if err != nil {
-		log.Fatal("Kubernetes Client creation failed", err)
+		return nil, fmt.Errorf("create k8s client: %v", err)
 	}
-	return clientset
+	return clientset, nil
 }

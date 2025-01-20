@@ -18,11 +18,15 @@ package cmd
 
 import (
 	"fmt"
+	"log"
+	"os"
 
 	"github.com/spf13/cobra"
+	"gopkg.in/yaml.v3"
 
 	"node-proxy-sidecar/internal/config"
 	"node-proxy-sidecar/internal/haproxy"
+	"node-proxy-sidecar/internal/k8s"
 )
 
 var (
@@ -44,15 +48,20 @@ func init() {
 	rootCmd.Flags().StringVar(&cfg.CertPath, "cert-path", "/etc/kubernetes/node-proxy/haproxy.pem", "Path to client certificate")
 	rootCmd.Flags().StringVar(&cfg.KeyPath, "key-path", "/etc/kubernetes/node-proxy/haproxy.key", "Path to client key")
 	rootCmd.Flags().StringVar(&cfg.CACertPath, "ca-cert-path", "/etc/kubernetes/node-proxy/ca.crt", "Path to CA certificate")
+	rootCmd.Flags().StringVar(&cfg.HAProxyConfigurationFile, "ha-config-path", "/node-proxy/config.cfg", "Path HAProxy configuration file")
+	rootCmd.Flags().StringVar(&cfg.HAProxyHAProxyBin, "ha-bin", "/bin/haproxy", "Path to HAProxy bin file")
+	rootCmd.Flags().StringVar(&cfg.HAProxyTransactionsDir, "ha-transactions-dir", "/tmp/transactions-dir/", "Path to HA transactions dir")
+	rootCmd.Flags().StringVar(&cfg.ConfigPath, "config", "/config.yaml", "Path to backends config")
 }
 
 func Execute() {
 	cobra.CheckErr(rootCmd.Execute())
 }
 
-func test(updatedList []string) {
-	fmt.Println("Updated Endpoints List:", updatedList)
-}
+// func test(updatedList []haproxy.Server) {
+// 	// Updated Endpoints List: [10.241.44.17:6443 10.241.44.36:6443 10.241.44.5:6443]
+// 	fmt.Println("Updated Endpoints List:", updatedList)
+// }
 
 func run(cmd *cobra.Command, args []string) {
 	cfg.AuthMode = config.ParseAuthMode(authModeStr)
@@ -63,17 +72,36 @@ func run(cmd *cobra.Command, args []string) {
 			return
 		}
 	}
+	configData, err := os.ReadFile(cfg.ConfigPath)
+	if err != nil {
+		log.Fatalf("Error reading config file: %v", err)
+	}
+	c := config.BackendConfig{}
+	err = yaml.Unmarshal(configData, &c)
+	if err != nil {
+		log.Fatalf("Error unmarshaling config file: %v", err)
+	}
 
-	// k8s := &k8s.Client{}
 	ha := &haproxy.Client{}
-	haproxyClient := ha.NewClient(cfg)
-	haproxyClient.Watcher()
-	// k8sClient := k8s.NewClient(cfg)
+	haproxyClient, err := ha.NewClient(cfg)
+	if err != nil {
+		log.Fatalf("Error creating HAProxy client: %v", err)
+	}
 
-	// err := k8sClient.WatchEndpoints("default", "kubernetes", []string{"https"}, test)
-	// if err != nil {
-	// 	fmt.Println("Error watching endpoints:", err)
-	// 	return
-	// }
-	// select {}
+	k := &k8s.Client{}
+	k8sClient, err := k.NewClient(cfg)
+	if err != nil {
+		log.Fatalf("Error creating K8S client: %v", err)
+	}
+
+	for _, backend := range c.Backends {
+
+		err = k8sClient.WatchEndpoints(backend, haproxyClient.BackendSync)
+		if err != nil {
+			fmt.Println("Error watching endpoints:", err)
+			return
+		}
+	}
+
+	select {}
 }

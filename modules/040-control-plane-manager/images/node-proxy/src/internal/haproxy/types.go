@@ -1,7 +1,17 @@
 package haproxy
 
-import runtime_api "github.com/haproxytech/client-native/v6/runtime"
+import (
+	clientnative "github.com/haproxytech/client-native/v6"
+	"github.com/haproxytech/client-native/v6/runtime"
+)
 
 type Client struct {
-	client runtime_api.Runtime
+	client        clientnative.HAProxyClient
+	runtimeClient runtime.Runtime
+}
+
+type Server struct {
+	Name    string
+	Address string
+	Port    int64
 }
