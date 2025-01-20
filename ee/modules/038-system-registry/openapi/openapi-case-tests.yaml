@@ -8,7 +8,7 @@ positive:
         imagesRepo: dev-registry.deckhouse.io/sys/deckhouse-oss
         ca: ""
         password: "password"
-        scheme: http
+        scheme: HTTP
         username: "user"
     - mode: Detached
 negative:
