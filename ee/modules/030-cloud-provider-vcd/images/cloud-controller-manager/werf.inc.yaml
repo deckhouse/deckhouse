@@ -13,7 +13,7 @@ docker:
   ENTRYPOINT: ["/cloud-provider-for-cloud-director"]
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
-from: {{ $.Images.BASE_GOLANG_23_BUSTER }}
+from: {{ $.Images.BASE_GOLANG_23_BOOKWORM }}
 git:
   - add: /{{ $.ModulePath }}modules/030-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
     to: /patches
