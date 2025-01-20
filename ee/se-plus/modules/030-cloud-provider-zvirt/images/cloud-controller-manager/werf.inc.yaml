@@ -20,16 +20,19 @@ git:
     install:
       - go.mod
       - go.sum
+    setup:
+      - go.mod
+      - go.sum
       - "**/*.go"
 mount:
   - fromPath: ~/go-pkg-cache
     to: /go/pkg
 shell:
-  beforeInstall:
-    - apt update && apt install -y ca-certificates
   install:
-    - export GO_VERSION=${GOLANG_VERSION}
+    - cd /src
     - export GOPROXY={{ $.GOPROXY }}
+    - go mod download
+  setup:
     - cd /src
     - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags "-s -w " -o /zvirt-cloud-controller-manager cmd/zvirt-cloud-controller-manager/main.go
     - chown 64535:64535 /zvirt-cloud-controller-manager
