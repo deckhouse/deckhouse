@@ -207,6 +207,11 @@ groups:
     description:
       en: "*cilium-hubble* API"
       ru: "API для модуля *cilium-hubble*"
+  - ports: "4245"
+    protocol: TCP
+    description:
+      en: chrony-exporter metrics port
+      ru: Метрики chrony-exporter
 
 - group: ExternalToMaster
   description:

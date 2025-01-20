@@ -1,0 +1,16 @@
+docs:
+  features:
+    - summary: Corrected the deckhouse CLI page for DKP and DVP to reflect the deckhouse-tools module.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/11446
+  fixes:
+    - summary: Add documentation to faq with instructions on updating control plane certificates
+      pull_request: https://github.com/deckhouse/deckhouse/pull/11505
+    - summary: Fix backticks then it used in accordance with redpolicy.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/11504
+    - summary: Fix documentation on switching version from EE to CSE
+      pull_request: https://github.com/deckhouse/deckhouse/pull/11324
+user-authn:
+  fixes:
+    - summary: Apply custom logo after the bootstrap.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/11503
+
