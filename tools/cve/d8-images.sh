@@ -134,7 +134,7 @@ function __main__() {
       -F "close_old_findings=false" \
       -F "push_to_jira=false" \
       -F "file=@out/json/d8-images_${MODULE_NAME}_report.json" \
-      -F "product_name=Deckhouse" \
+      -F "product_id=1" \
       -F "scan_date=$(date -I)" \
       -F "engagement_name=CVE" \
       -F "service=${MODULE_NAME}" \
