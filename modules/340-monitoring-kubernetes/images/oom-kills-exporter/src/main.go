@@ -17,7 +17,6 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -26,10 +25,6 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"k8s.io/node-problem-detector/pkg/systemlogmonitor/logwatchers/kmsg"
 	"k8s.io/node-problem-detector/pkg/systemlogmonitor/logwatchers/types"
-)
-
-var (
-	regexpOom = regexp.MustCompile(`^oom-kill:(.+)`)
 )
 
 func checkMetricExistenceByLabels(metricName string, labels map[string]string, r *prometheus.Registry) bool {
@@ -64,13 +59,13 @@ func checkMetricExistenceByLabels(metricName string, labels map[string]string, r
 }
 
 func getContainerIDFromLog(line string) string {
-	matches := regexpOom.FindStringSubmatch(line)
-	if matches == nil {
+	match := strings.Split(line, "oom-kill:")
+	if len(match) == 2 {
 		return ""
 	}
 	log.Print(line)
 	var taskMemcg string
-	for _, word := range strings.Split(matches[0], ",") {
+	for _, word := range strings.Split(match[1], ",") {
 		if !strings.Contains(word, "task_memcg") {
 			continue
 		}
@@ -79,6 +74,35 @@ func getContainerIDFromLog(line string) string {
 		}
 	}
 	return taskMemcg
+}
+
+func dmesgWatcher(sleepG time.Duration, registry *prometheus.Registry, counterVec *prometheus.CounterVec) {
+	kmsgWatcher := kmsg.NewKmsgWatcher(types.WatcherConfig{Plugin: "kmsg", Lookback: "240h"})
+	logCh, err := kmsgWatcher.Watch()
+	if err != nil {
+		log.Fatal("Could not create log watcher")
+	}
+
+	for item := range logCh {
+		if taskMemcg := getContainerIDFromLog(item.Message); taskMemcg != "" {
+			labels := map[string]string{
+				"task_memcg": taskMemcg,
+			}
+			sleep := 0 * time.Second
+			if !checkMetricExistenceByLabels("klog_oomkill", labels, registry) {
+				// The GetMetricWith query creates a metric with 0 value.
+				if _, err := counterVec.GetMetricWith(labels); err != nil {
+					log.Fatal("Could not create metrics")
+				}
+				sleep = sleepG // Delay so that prometeus can read the metric value with zero value.
+			}
+
+			go func() {
+				time.Sleep(sleep)
+				counterVec.With(labels).Inc()
+			}()
+		}
+	}
 }
 
 func main() {
@@ -112,30 +136,5 @@ func main() {
 		log.Fatal(http.ListenAndServe("127.0.0.1:4205", nil))
 	}()
 
-	kmsgWatcher := kmsg.NewKmsgWatcher(types.WatcherConfig{Plugin: "kmsg", Lookback: "240h"})
-	logCh, err := kmsgWatcher.Watch()
-	if err != nil {
-		log.Fatal("Could not create log watcher")
-	}
-
-	for item := range logCh {
-		if taskMemcg := getContainerIDFromLog(item.Message); taskMemcg != "" {
-			labels := map[string]string{
-				"task_memcg": taskMemcg,
-			}
-			sleep := 0 * time.Second
-			if !checkMetricExistenceByLabels("klog_oomkill", labels, local) {
-				// The GetMetricWith query creates a metric with 0 value.
-				if _, err := klogOomkill.GetMetricWith(labels); err != nil {
-					log.Fatal("Could not create metrics")
-				}
-				sleep = sleepG // Delay so that prometeus can read the metric value with zero value.
-			}
-
-			go func() {
-				time.Sleep(sleep)
-				klogOomkill.With(labels).Inc()
-			}()
-		}
-	}
+	dmesgWatcher(sleepG, local, klogOomkill)
 }
