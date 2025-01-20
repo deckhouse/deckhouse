@@ -54,6 +54,8 @@ function __main__() {
   htmlReportHeader > out/d8-images.html
   trivyGetHTMLReportPartForImage -l "$IMAGE_REPORT_NAME" -i "$IMAGE" -t "$TAG" -s "$SEVERITY" --ignore out/.trivyignore >> out/d8-images.html
 
+  date_iso=$(date -I)
+
   for module in $(jq -rc 'to_entries[]' <<< "$digests"); do
     MODULE_NAME=$(jq -rc '.key' <<< "$module")
     touch out/${MODULE_NAME}_report
@@ -74,7 +76,29 @@ function __main__() {
       # Output reports to common_report file and appropriate module_report file
       #trivyGetHTMLReportPartForImage  -l "$IMAGE_REPORT_NAME" -i "$IMAGE@$IMAGE_HASH" -s "$SEVERITY" --ignore out/.trivyignore | tee -a out/${MODULE_NAME}_report >> out/d8-images.html
 
-      trivyGetJSONReportPartForImage -l "$IMAGE_REPORT_NAME" -i "$IMAGE@$IMAGE_HASH" -s "$SEVERITY" --ignore "out/.trivyignore" --output "out/json/d8-images_${MODULE_NAME}_report.json"
+      trivyGetJSONReportPartForImage -l "$IMAGE_REPORT_NAME" -i "$IMAGE@$IMAGE_HASH" -s "$SEVERITY" --ignore "out/.trivyignore" --output "out/json/d8_${MODULE_NAME}_${IMAGE_NAME}_report.json"
+      echo ""
+      echo " Uploading trivy CVE report for image ${IMAGE_NAME} of ${MODULE_NAME} module"
+      echo ""
+      curl -X POST \
+        http://${DEFECTDOJO_HOST}/api/v2/import-scan/ \
+        -H "accept: application/json" \
+        -H "Content-Type: multipart/form-data"  \
+        -H "Authorization: Token ${DEFECTDOJO_API_TOKEN}" \
+        -F "auto_create_context=True" \
+        -F "minimum_severity=Info" \
+        -F "active=true" \
+        -F "verified=true" \
+        -F "scan_type=Trivy Scan" \
+        -F "close_old_findings=false" \
+        -F "push_to_jira=false" \
+        -F "file=@out/json/d8-images_${MODULE_NAME}_report.json" \
+        -F "product_type_name=Deckhouse images" \
+        -F "product_name=${MODULE_NAME}" \
+        -F "scan_date=${date_iso}" \
+        -F "engagement_name=${IMAGE_NAME} CVE Report ${date_iso}" \
+        -F "service=${MODULE_NAME}" \
+        -F "group_by=component_name+component_version"
 
     done
 #    # Create an issue with found vulnerabilities
@@ -101,45 +125,6 @@ function __main__() {
 #      fi
 #    done
     
-#    echo " Creating GitHub issue for module $MODULE_NAME with assignees $owners"
-#    echo ""
-#    curl -L \
-#      -X POST \
-#      -H "Accept: application/vnd.github+json" \
-#      -H "Authorization: Bearer ${GITHUB_TOKEN}" \
-#      -H "X-GitHub-Api-Version: 2022-11-28" \
-#      https://api.github.com/repos/deckhouse/deckhouse/issues \
-#      -d '{"title":"'"$module"' CVE Issue","body":"'\"$(cat out/${MODULE_NAME}_report)\"'","assignees":["Nikolay1224"],"labels":["cve"]}'
-
-#    echo " Creating a defectDojo engagement for module $MODULE_NAME"
-#    echo ""
-#    curl -X POST \
-#      -H "Authorization: Token ${DEFECTDOJO_API_TOKEN}" \
-#      http://${DEFECTDOJO_HOST}/api/v2/engagements/ \
-#      -F "name=Test" -F "product=1" -F "target_start=2025-01-17" -F "target_end=2025-01-17"
-
-    echo ""
-    echo " Uploading trivy CVE report for module $MODULE_NAME"
-    echo ""
-    curl -X POST \
-      http://${DEFECTDOJO_HOST}/api/v2/import-scan/ \
-      -H "accept: application/json" \
-      -H "Content-Type: multipart/form-data"  \
-      -H "Authorization: Token ${DEFECTDOJO_API_TOKEN}" \
-      -F "auto_create_context=True" \
-      -F "minimum_severity=Info" \
-      -F "active=true" \
-      -F "verified=true" \
-      -F "scan_type=Trivy Scan" \
-      -F "close_old_findings=false" \
-      -F "push_to_jira=false" \
-      -F "file=@out/json/d8-images_${MODULE_NAME}_report.json" \
-      -F "product_id=1" \
-      -F "scan_date=$(date -I)" \
-      -F "engagement_name=CVE" \
-      -F "service=${MODULE_NAME}" \
-      -F "test_title=${MODULE_NAME}" \
-      -F "group_by=component_name+component_version"
 
   done
 
