@@ -31,20 +31,3 @@ __meta_kubernetes_endpoint_address_target_name - __meta_kubernetes_endpointslice
 
 ### 003_alertmanager_tls_assets
 Prometheus operator does not save TLS assets for alertmanager Webhook and Email recievers in the secret which mounted in alert manager pod. This patch fix it.
-
-
-### 004_fix_cve
-
-Fixes several CVEs.
-
-``` sh
-go mod edit -go 1.23
-go get golang.org/x/net@v0.33.0
-go get github.com/golang-jwt/jwt/v4@v4.5.1
-go get google.golang.org/protobuf@v1.33.0
-go get github.com/Azure/azure-sdk-for-go/sdk/azidentity@v1.6.0
-go mod tidy
-git diff
-```
-
-`
