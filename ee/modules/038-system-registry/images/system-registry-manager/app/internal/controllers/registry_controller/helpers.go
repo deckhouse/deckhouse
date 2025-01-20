@@ -9,6 +9,7 @@ import (
 	"context"
 	"fmt"
 	"reflect"
+	"strings"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -71,4 +72,13 @@ func ensureSecret(ctx context.Context, cli client.Client, name, namespace string
 	}
 
 	return
+}
+
+// getRegistryAddressAndPathFromImagesRepo returns the registry address and path from the given image repository.
+func getRegistryAddressAndPathFromImagesRepo(imgRepo string) (string, string) {
+	parts := strings.SplitN(strings.TrimSpace(strings.TrimRight(imgRepo, "/")), "/", 2)
+	if len(parts) == 1 {
+		return parts[0], ""
+	}
+	return parts[0], "/" + parts[1]
 }

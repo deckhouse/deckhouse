@@ -51,13 +51,12 @@ type DetachedConfig struct {
 }
 
 type ProxyConfig struct {
-	Host     string             `json:"host"`
-	Scheme   string             `json:"scheme"`
-	CA       string             `json:"ca"`
-	Path     string             `json:"path"`
-	User     string             `json:"user"`
-	Password string             `json:"password"`
-	TTL      *utiltime.Duration `json:"ttl"`
+	ImagesRepo string             `json:"imagesRepo"`
+	UserName   string             `json:"user"`
+	Password   string             `json:"password"`
+	Scheme     string             `json:"scheme"`
+	CA         string             `json:"ca"`
+	TTL        *utiltime.Duration `json:"ttl"`
 }
 
 func GetModuleConfigObject() unstructured.Unstructured {
@@ -90,6 +89,21 @@ func LoadModuleConfig(ctx context.Context, cli client.Client) (config ModuleConf
 	err = jsonRecode(configSpec, &config)
 	if err != nil {
 		err = fmt.Errorf("recode error: %w", err)
+	}
+
+	// Set defaults
+	if config.Settings.Mode == "" {
+		config.Settings.Mode = RegistryModeDirect
+	}
+
+	if config.Settings.Proxy != nil {
+		if config.Settings.Proxy.Scheme == "" {
+			config.Settings.Proxy.Scheme = "HTTPS"
+		}
+
+		if config.Settings.Proxy.TTL == nil {
+			// Default handled by distribution
+		}
 	}
 
 	return

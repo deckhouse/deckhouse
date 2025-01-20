@@ -3,12 +3,14 @@ x-examples:
   - mode: Direct
   - mode: Proxy
     proxy:
-      ca: ""
-      host: dev-registry.deckhouse.io
-      password: "password"
-      path: /sys/deckhouse-oss
-      scheme: http
-      user: "user"
+      imagesRepo: registry.deckhouse.io/deckhouse/ee
+      username: user
+      password: password
+      scheme: HTTPS
+      ca: |
+        -----BEGIN CERTIFICATE-----
+        ...
+        -----END CERTIFICATE-----
   - mode: Detached
 properties:
   imagesOverride:
@@ -44,59 +46,57 @@ properties:
   proxy:
     type: object
     x-example:
-      - ca: ""
-        host: dev-registry.deckhouse.io
-        password: "password"
-        path: /sys/deckhouse-oss
-        scheme: http
-        user: "user"
-      - ca: "<CA>"
-        host: dev-registry.deckhouse.io
-        password: "password"
-        path: /sys/deckhouse-oss
-        scheme: https
-        user: "user"
+      - imagesRepo: registry.deckhouse.io/deckhouse/ee
+        username: user
+        password: password
+        scheme: HTTP
+      - imagesRepo: registry.deckhouse.io/deckhouse/ee
+        username: user
+        password: password
+        scheme: HTTPS
+        ca: |
+          -----BEGIN CERTIFICATE-----
+          ...
+          -----END CERTIFICATE-----
     description: |
       Proxy mode properties.
     properties:
-      host:
+      imagesRepo:
         type: string
+        pattern: '^[0-9a-zA-Z\.\-]+(\:[0-9]{1,5})?(\/[0-9a-zA-Z\.\-\_\/]+)?$'
         description: |
-          Host of upstream registry
-        x-example:
-          - dev-registry.deckhouse.io
-      scheme:
+          Address of a upstream container registry with Deckhouse images.
+
+          Specify it if Deckhouse Enterprise Edition edition or third-party registry (e.g. registry in a closed environment) is used.
+
+          The address matches the edition of Deckhouse used. The public container registry address for Deckhouse Enterprise Edition is `registry.deckhouse.io/deckhouse/ee`.
+        minLength: 1
+        x-example: registry.deckhouse.io/deckhouse/ee
+      username:
         type: string
-        description: |
-          Registry access scheme (http or https).
-        x-example:
-          - https
-          - http
-      ca:
-        type: string
-        description: |
-          CA of upstream registry
-        default: ""
-        x-example:
-          - ""
-      path:
-        type: string
-        description: |
-          Path of upstream registry
-        x-example:
-          - sys/deckhouse-oss
-      user:
-        type: string
-        description: |
-          User of upstream registry
+        description: Username for accessing upstream container registry with deckhouse images.
         x-example:
           - license-token
       password:
         type: string
-        description: |
-          Password of upstream registry
+        description: Password for accessing upstream container registry with deckhouse images.
         x-example:
           - "123456"
+      scheme:
+        type: string
+        description: Registry access scheme (HTTP or HTTPS).
+        enum: [HTTP, HTTPS]
+        default: HTTPS
+        x-example:
+          - HTTPS
+          - HTTP
+      ca:
+        type: string
+        description: |
+          Root CA certificate to validate the container registry’s HTTPS certificate (if self-signed certificates are used).
+        default: ""
+        x-example:
+          - ""
       ttl:
         type: string
         pattern: '(^(?:(\d+)h)?(?:(\d+)m)?(?:(\d+)s)?(?:(\d+)ms)?(?:(\d+)(µs|us))?(?:(\d+)ns)?$)|(^(0)$)'

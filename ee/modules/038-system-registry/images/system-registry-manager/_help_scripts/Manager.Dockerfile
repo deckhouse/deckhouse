@@ -28,6 +28,10 @@ RUN mkdir -p $MANAGER_PATH_TO $GO_LIB_PATH_TO
 COPY $MANAGER_PATH_FROM/ $MANAGER_PATH_TO/
 COPY $GO_LIB_PATH_FROM/ $GO_LIB_PATH_TO/
 
+# Run tests
+RUN cd $MANAGER_PATH_TO && \
+  go test ./...
+
 # Build binary
 ARG TARGETOS TARGETARCH
 RUN --mount=type=cache,target=/root/.cache/go-build \

@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"net/http"
 	"sort"
+	"strings"
 	"sync"
 
 	"embeded-registry-manager/internal/state"
@@ -560,12 +561,14 @@ func (nc *nodeController) contructStaticPodConfig(
 	}
 
 	if moduleConfig.Settings.Mode == state.RegistryModeProxy {
+		host, path := getRegistryAddressAndPathFromImagesRepo(moduleConfig.Settings.Proxy.ImagesRepo)
+
 		config.Registry.Upstream = staticpod.UpstreamRegistry{
-			Scheme:   moduleConfig.Settings.Proxy.Scheme,
-			Host:     moduleConfig.Settings.Proxy.Host,
-			Path:     moduleConfig.Settings.Proxy.Path,
+			Scheme:   strings.ToLower(moduleConfig.Settings.Proxy.Scheme),
+			Host:     host,
+			Path:     path,
 			CA:       moduleConfig.Settings.Proxy.CA,
-			User:     moduleConfig.Settings.Proxy.User,
+			User:     moduleConfig.Settings.Proxy.UserName,
 			Password: moduleConfig.Settings.Proxy.Password,
 			TTL:      moduleConfig.Settings.Proxy.TTL.StringPointer(),
 		}

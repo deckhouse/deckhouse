@@ -17,24 +17,23 @@ properties:
     description: |
       Параметры для proxy режима
     properties:
-      host:
+      imagesRepo:
         description: |
-          Host или upstream регистри
+          Адрес container registry с образами Deckhouse.
+
+          Укажите его, если используется Deckhouse Enterprise Edition или сторонний container registry (например, registry в закрытой среде).
+
+          Адрес должен соответствовать используемой редакции Deckhouse. Публичный адрес container registry для Deckhouse Enterprise Edition — `registry.deckhouse.io/deckhouse/ee`.
+      username:
+              description: Имя пользователя для доступа к container registry с образами Deckhouse.
+      password:
+        description: Пароль для доступа к container registry с образами Deckhouse.
       scheme:
         description: |
-          Схема upstream регистри
+          Протокол доступа к container registry (HTTP или HTTPS).
       ca:
         description: |
-          CA сертификат upstream регистри
-      path:
-        description: |
-          Путь upstream регистри
-      user:
-        description: |
-          Имя пользователя для upstream регистри
-      password:
-        description: |
-          Пароль для upstream регистри
+          Корневой сертификат, которым можно проверить сертификат container registry при работе по HTTPS (если registry использует самоподписанные SSL-сертификаты).
   whitelistSourceRanges:
     description: 'Список адресов в формате CIDR, которым разрешено подключение к ingress-у embedded registry.'
   https:

@@ -17,8 +17,6 @@ limitations under the License.
 package config
 
 import (
-	"strings"
-
 	"github.com/iancoleman/strcase"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -123,13 +121,12 @@ func CheckOrSetupSystemRegistryModuleConfig(cfg *DeckhouseInstaller) error {
 		systemRegistryMC.Spec.Settings = SettingsValues{
 			"mode": RegistryModeProxy,
 			"proxy": SettingsValues{
-				"scheme":   strings.ToLower(modeSpecificFields.UpstreamRegistryData.Scheme),
-				"host":     modeSpecificFields.UpstreamRegistryData.Address,
-				"path":     modeSpecificFields.UpstreamRegistryData.Path,
-				"ca":       modeSpecificFields.UpstreamRegistryData.CA,
-				"user":     user,
-				"password": password,
-				"ttl":      modeSpecificFields.TTL.String(),
+				"imagesRepo": modeSpecificFields.UpstreamRegistryData.Address + modeSpecificFields.UpstreamRegistryData.Path,
+				"username":   user,
+				"password":   password,
+				"scheme":     modeSpecificFields.UpstreamRegistryData.Scheme,
+				"ca":         modeSpecificFields.UpstreamRegistryData.CA,
+				"ttl":        modeSpecificFields.TTL.String(),
 			},
 		}
 	case DetachedModeRegistryData:
