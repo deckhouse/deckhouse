@@ -110,6 +110,7 @@ func (s *apiServer) handleStaticPodPost(w http.ResponseWriter, r *http.Request) 
 
 	// Decode request body to struct EmbeddedRegistryConfig and return error if decoding fails
 	if err = render.Bind(r, &data); err != nil {
+		log.Warn("Validation error", "error", err)
 		render.Render(w, r, ErrBadRequest(err))
 		return
 	}
