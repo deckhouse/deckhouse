@@ -29,6 +29,10 @@ import (
 	"k8s.io/node-problem-detector/pkg/systemlogmonitor/logwatchers/types"
 )
 
+var (
+	regexpOom = regexp.MustCompile(`^oom-kill:(.+)`)
+)
+
 func checkMetricExistenceByLabels(metricName string, labels map[string]string, r *prometheus.Registry) bool {
 	mfs, err := r.Gather()
 	if err != nil {
@@ -63,7 +67,7 @@ func checkMetricExistenceByLabels(metricName string, labels map[string]string, r
 
 func getContainerIDFromLog(line string) (string, error) {
 	var taskMemcg string
-	if matches := regexp.MustCompile(`^oom-kill:(.+)`).FindStringSubmatch(line); matches != nil {
+	if matches := regexpOom.FindStringSubmatch(line); matches != nil {
 		log.Print(line)
 		for _, word := range strings.Split(matches[0], ",") {
 			if strings.Contains(word, "task_memcg") {
