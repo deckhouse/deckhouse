@@ -15,11 +15,18 @@
 image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
 fromImage: common/src-artifact
 final: false
+git:
+- add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/patches
+  to: /patches
+  stageDependencies:
+    install:
+    - '**/*'
 shell:
   install:
   - git clone {{ $.SOURCE_REPO }}/cilium/proxy.git /src/proxy
   - cd /src/proxy
   - git checkout {{ $ciliumProxyRev }}
+  - git apply --verbose /patches/*.patch
   - rm -rf /src/proxy/.git
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-basel-artifact
@@ -77,6 +84,7 @@ shell:
   - export GO_VERSION=${GOLANG_VERSION} GOPROXY={{ $.GOPROXY }}
   - export GOOS=linux GOARCH=amd64 CGO_ENABLED=0
   - cd /cilium/proxy
+  - go mod tidy && go mod vendor && go mod verify
   - sudo -u cilium PATH=${PATH} make -C proxylib all
   - sudo -u cilium PATH=${PATH} mkdir -p /tmp/install/usr/lib
   - mv proxylib/libcilium.so /tmp/install/usr/lib/libcilium.so
