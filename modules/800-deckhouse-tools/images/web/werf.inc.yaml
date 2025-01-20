@@ -1,8 +1,5 @@
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/nginx-static
-mount:
-- fromPath: ~/go-pkg-cache
-  to: /go/pkg
 git:
 - add: /{{ $.ModulePath }}modules/800-{{ $.ModuleName }}/images/{{ $.ImageName }}/nginx.conf
   to: /opt/nginx-static/conf/nginx.conf
