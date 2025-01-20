@@ -103,15 +103,30 @@
                 },
                 "properties": [
                   {
-                    "id": "custom.drawStyle",
-                    "value": "line"
-                  },
-                  {
                     "id": "custom.stacking",
                     "value": {
                       "group": "A",
                       "mode": "none"
                     }
+                  },
+                  {
+                    "id": "custom.fillOpacity",
+                    "value": 0
+                  },
+                  {
+                    "id": "custom.lineWidth",
+                    "value": 0
+                  },
+                  {
+                    "id": "color",
+                    "value": {
+                      "fixedColor": "yellow",
+                      "mode": "fixed"
+                    }
+                  },
+                  {
+                    "id": "custom.pointSize",
+                    "value": 0
                   }
                 ]
               }
@@ -234,15 +249,30 @@
                 },
                 "properties": [
                   {
-                    "id": "custom.drawStyle",
-                    "value": "line"
-                  },
-                  {
                     "id": "custom.stacking",
                     "value": {
                       "group": "A",
                       "mode": "none"
                     }
+                  },
+                  {
+                    "id": "custom.fillOpacity",
+                    "value": 0
+                  },
+                  {
+                    "id": "custom.lineWidth",
+                    "value": 0
+                  },
+                  {
+                    "id": "color",
+                    "value": {
+                      "fixedColor": "yellow",
+                      "mode": "fixed"
+                    }
+                  },
+                  {
+                    "id": "custom.pointSize",
+                    "value": 0
                   }
                 ]
               }
@@ -573,19 +603,30 @@
                 },
                 "properties": [
                   {
-                    "id": "custom.drawStyle",
-                    "value": "line"
+                    "id": "custom.stacking",
+                    "value": {
+                      "group": "A",
+                      "mode": "none"
+                    }
+                  },
+                  {
+                    "id": "custom.fillOpacity",
+                    "value": 0
                   },
                   {
                     "id": "custom.lineWidth",
                     "value": 0
                   },
                   {
-                    "id": "custom.stacking",
+                    "id": "color",
                     "value": {
-                      "group": "A",
-                      "mode": "none"
+                      "fixedColor": "yellow",
+                      "mode": "fixed"
                     }
+                  },
+                  {
+                    "id": "custom.pointSize",
+                    "value": 0
                   }
                 ]
               }
@@ -921,15 +962,30 @@
                 },
                 "properties": [
                   {
-                    "id": "custom.drawStyle",
-                    "value": "line"
-                  },
-                  {
                     "id": "custom.stacking",
                     "value": {
                       "group": "A",
                       "mode": "none"
                     }
+                  },
+                  {
+                    "id": "custom.fillOpacity",
+                    "value": 0
+                  },
+                  {
+                    "id": "custom.lineWidth",
+                    "value": 0
+                  },
+                  {
+                    "id": "color",
+                    "value": {
+                      "fixedColor": "yellow",
+                      "mode": "fixed"
+                    }
+                  },
+                  {
+                    "id": "custom.pointSize",
+                    "value": 0
                   }
                 ]
               }
@@ -1252,15 +1308,30 @@
                 },
                 "properties": [
                   {
-                    "id": "custom.drawStyle",
-                    "value": "line"
-                  },
-                  {
                     "id": "custom.stacking",
                     "value": {
                       "group": "A",
                       "mode": "none"
                     }
+                  },
+                  {
+                    "id": "custom.fillOpacity",
+                    "value": 0
+                  },
+                  {
+                    "id": "custom.lineWidth",
+                    "value": 0
+                  },
+                  {
+                    "id": "color",
+                    "value": {
+                      "fixedColor": "yellow",
+                      "mode": "fixed"
+                    }
+                  },
+                  {
+                    "id": "custom.pointSize",
+                    "value": 0
                   }
                 ]
               }
@@ -1722,15 +1793,30 @@
                 },
                 "properties": [
                   {
-                    "id": "custom.drawStyle",
-                    "value": "line"
-                  },
-                  {
                     "id": "custom.stacking",
                     "value": {
                       "group": "A",
                       "mode": "none"
                     }
+                  },
+                  {
+                    "id": "custom.fillOpacity",
+                    "value": 0
+                  },
+                  {
+                    "id": "custom.lineWidth",
+                    "value": 0
+                  },
+                  {
+                    "id": "color",
+                    "value": {
+                      "fixedColor": "yellow",
+                      "mode": "fixed"
+                    }
+                  },
+                  {
+                    "id": "custom.pointSize",
+                    "value": 0
                   }
                 ]
               }
@@ -1854,15 +1940,30 @@
                 },
                 "properties": [
                   {
-                    "id": "custom.drawStyle",
-                    "value": "line"
-                  },
-                  {
                     "id": "custom.stacking",
                     "value": {
                       "group": "A",
                       "mode": "none"
                     }
+                  },
+                  {
+                    "id": "custom.fillOpacity",
+                    "value": 0
+                  },
+                  {
+                    "id": "custom.lineWidth",
+                    "value": 0
+                  },
+                  {
+                    "id": "color",
+                    "value": {
+                      "fixedColor": "yellow",
+                      "mode": "fixed"
+                    }
+                  },
+                  {
+                    "id": "custom.pointSize",
+                    "value": 0
                   }
                 ]
               }
@@ -1986,15 +2087,30 @@
                 },
                 "properties": [
                   {
-                    "id": "custom.drawStyle",
-                    "value": "line"
-                  },
-                  {
                     "id": "custom.stacking",
                     "value": {
                       "group": "A",
                       "mode": "none"
                     }
+                  },
+                  {
+                    "id": "custom.fillOpacity",
+                    "value": 0
+                  },
+                  {
+                    "id": "custom.lineWidth",
+                    "value": 0
+                  },
+                  {
+                    "id": "color",
+                    "value": {
+                      "fixedColor": "yellow",
+                      "mode": "fixed"
+                    }
+                  },
+                  {
+                    "id": "custom.pointSize",
+                    "value": 0
                   }
                 ]
               }
@@ -2328,15 +2444,30 @@
                 },
                 "properties": [
                   {
-                    "id": "custom.drawStyle",
-                    "value": "line"
-                  },
-                  {
                     "id": "custom.stacking",
                     "value": {
                       "group": "A",
                       "mode": "none"
                     }
+                  },
+                  {
+                    "id": "custom.fillOpacity",
+                    "value": 0
+                  },
+                  {
+                    "id": "custom.lineWidth",
+                    "value": 0
+                  },
+                  {
+                    "id": "color",
+                    "value": {
+                      "fixedColor": "yellow",
+                      "mode": "fixed"
+                    }
+                  },
+                  {
+                    "id": "custom.pointSize",
+                    "value": 0
                   }
                 ]
               }
@@ -2458,15 +2589,30 @@
                 },
                 "properties": [
                   {
-                    "id": "custom.drawStyle",
-                    "value": "line"
-                  },
-                  {
                     "id": "custom.stacking",
                     "value": {
                       "group": "A",
                       "mode": "none"
                     }
+                  },
+                  {
+                    "id": "custom.fillOpacity",
+                    "value": 0
+                  },
+                  {
+                    "id": "custom.lineWidth",
+                    "value": 0
+                  },
+                  {
+                    "id": "color",
+                    "value": {
+                      "fixedColor": "yellow",
+                      "mode": "fixed"
+                    }
+                  },
+                  {
+                    "id": "custom.pointSize",
+                    "value": 0
                   }
                 ]
               }
@@ -2837,15 +2983,30 @@
                 },
                 "properties": [
                   {
-                    "id": "custom.drawStyle",
-                    "value": "line"
-                  },
-                  {
                     "id": "custom.stacking",
                     "value": {
                       "group": "A",
                       "mode": "none"
                     }
+                  },
+                  {
+                    "id": "custom.fillOpacity",
+                    "value": 0
+                  },
+                  {
+                    "id": "custom.lineWidth",
+                    "value": 0
+                  },
+                  {
+                    "id": "color",
+                    "value": {
+                      "fixedColor": "yellow",
+                      "mode": "fixed"
+                    }
+                  },
+                  {
+                    "id": "custom.pointSize",
+                    "value": 0
                   }
                 ]
               }
@@ -2967,15 +3128,30 @@
                 },
                 "properties": [
                   {
-                    "id": "custom.drawStyle",
-                    "value": "line"
-                  },
-                  {
                     "id": "custom.stacking",
                     "value": {
                       "group": "A",
                       "mode": "none"
                     }
+                  },
+                  {
+                    "id": "custom.fillOpacity",
+                    "value": 0
+                  },
+                  {
+                    "id": "custom.lineWidth",
+                    "value": 0
+                  },
+                  {
+                    "id": "color",
+                    "value": {
+                      "fixedColor": "yellow",
+                      "mode": "fixed"
+                    }
+                  },
+                  {
+                    "id": "custom.pointSize",
+                    "value": 0
                   }
                 ]
               }
@@ -3210,15 +3386,30 @@
                 },
                 "properties": [
                   {
-                    "id": "custom.drawStyle",
-                    "value": "line"
-                  },
-                  {
                     "id": "custom.stacking",
                     "value": {
                       "group": "A",
                       "mode": "none"
                     }
+                  },
+                  {
+                    "id": "custom.fillOpacity",
+                    "value": 0
+                  },
+                  {
+                    "id": "custom.lineWidth",
+                    "value": 0
+                  },
+                  {
+                    "id": "color",
+                    "value": {
+                      "fixedColor": "yellow",
+                      "mode": "fixed"
+                    }
+                  },
+                  {
+                    "id": "custom.pointSize",
+                    "value": 0
                   }
                 ]
               }
