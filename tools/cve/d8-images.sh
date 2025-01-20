@@ -137,7 +137,9 @@ function __main__() {
       -F "product_name=Deckhouse" \
       -F "scan_date=$(date -I)" \
       -F "engagement_name=CVE" \
-      -F "service=${MODULE_NAME}"
+      -F "service=${MODULE_NAME}" \
+      -F "test_title=${MODULE_NAME}" \
+      -F "group_by=component_name+component_version"
 
   done
 
