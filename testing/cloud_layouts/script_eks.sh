@@ -232,6 +232,22 @@ function wait_cluster_ready() {
     return 1
   fi
 
+  if [[ $CIS_ENABLED == "true" ]]; then
+    for ((i=1; i<=5; i++)); do
+      if $ssh_command -i "$ssh_private_key_path" $ssh_bastion "$ssh_user@$master_ip" sudo su -c /bin/bash <<"ENDSSH"; then
+export PATH="/opt/deckhouse/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+export LANG=C
+set -Eeuo pipefail
+kubectl -n d8-system exec svc/deckhouse-leader -c deckhouse -- deckhouse-controller module enable operator-trivy
+ENDSSH
+        break
+      else
+        sleep 20
+      fi
+    done
+    get_cis_report
+  fi
+
   chmod 755 /deckhouse/testing/cloud_layouts/script.d/wait_cluster_ready/test_alerts.sh
 
   testRunAttempts=5
@@ -287,6 +303,27 @@ function chmod_dirs_for_cleanup() {
   fi
 }
 
+function get_cis_report() {
+  $ssh_command -i "$ssh_private_key_path" $ssh_bastion "$ssh_user@$master_ip" sudo su -c /bin/bash <<ENDSSH
+export PATH="/opt/deckhouse/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+export LANG=C
+set -Eeuo pipefail
+sudo -i
+testRunAttempts=20
+for ((i=1; i<=$testRunAttempts; i++)); do
+  FAILED=$(kubectl get clustercompliancereports.aquasecurity.github.io cis -o wide --no-headers 2>/dev/null | awk '{print $3}')
+  PASSED=$(kubectl get clustercompliancereports.aquasecurity.github.io cis -o wide --no-headers 2>/dev/null | awk '{print $4}')
+  if [[ $PASSED && "$((PASSED+$FAILED))" -gt '100' ]]; then
+    echo "CIS report is ready"
+    break
+  else
+    echo "CIS report is still not ready. Attemption: $i/$testRunAttempts"
+    sleep 20
+  fi
+done
+kubectl get clustercompliancereports.aquasecurity.github.io cis -o json |jq '.status.detailReport.results | map(select(.checks | map(.success) | all | not))'
+ENDSSH
+}
 
 function main() {
    >&2 echo "Start cloud test script"
