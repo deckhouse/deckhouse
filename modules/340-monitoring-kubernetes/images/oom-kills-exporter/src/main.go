@@ -79,6 +79,7 @@ func getContainerIDFromLog(line string) string {
 
 func dmesgWatcher(sleepG time.Duration, registry *prometheus.Registry, counterVec *prometheus.CounterVec) {
 	kmsgWatcher := kmsg.NewKmsgWatcher(types.WatcherConfig{Plugin: "kmsg", Lookback: "240h"})
+	defer kmsgWatcher.Stop()
 	logCh, err := kmsgWatcher.Watch()
 	if err != nil {
 		log.Fatal("Could not create log watcher")
