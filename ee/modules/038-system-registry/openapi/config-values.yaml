@@ -28,7 +28,7 @@ properties:
       mirrorer:
         type: string
         description: |
-          Mirroper img full path
+          Mirrorer img full path
         x-example:
           - dev-registry.deckhouse.io/mirrorer:latest
   enableRegistryManager:

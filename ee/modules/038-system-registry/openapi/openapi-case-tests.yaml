@@ -5,7 +5,7 @@ positive:
     - mode: Direct
     - mode: Proxy
       proxy:
-        imagesRepo: dev-registry.deckhouse.io/sys/deckhouse-oss
+        imagesRepo: registry.deckhouse.ru/deckhouse/ee
         ca: ""
         password: "password"
         scheme: HTTP
