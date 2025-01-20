@@ -32,8 +32,8 @@ fromImage: {{ $.ModuleName }}/{{ $.ImageName }}-sidecar-artifact
 docker:
   ENTRYPOINT: ["/bin/node-proxy-sidecar"]
 git:
-  - add: /{{ $.ModulePath }}modules/040-{{ $.ModuleName }}/images/{{ $.ImageName }}/config.cfg
-    to: /config.cfg
+  - add: /{{ $.ModulePath }}modules/040-{{ $.ModuleName }}/images/{{ $.ImageName }}/config
+    to: /config
     stageDependencies:
       install:
         - '**/*'
