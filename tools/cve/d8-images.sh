@@ -111,14 +111,14 @@ function __main__() {
 #      https://api.github.com/repos/deckhouse/deckhouse/issues \
 #      -d '{"title":"'"$module"' CVE Issue","body":"'\"$(cat out/${MODULE_NAME}_report)\"'","assignees":["Nikolay1224"],"labels":["cve"]}'
 
-    echo " Creating a defectDojo engagement for module $MODULE_NAME"
-    echo ""
-    echo "host: ${DEFECTDOJO_HOST}"
-    curl -X POST \
-      -H "Authorization: Token ${DEFECTDOJO_API_TOKEN}" \
-      http://${DEFECTDOJO_HOST}/api/v2/engagements/ \
-      -F "name=Test" -F "product=1" -F "target_start=2025-01-17" -F "target_end=2025-01-17"
+#    echo " Creating a defectDojo engagement for module $MODULE_NAME"
+#    echo ""
+#    curl -X POST \
+#      -H "Authorization: Token ${DEFECTDOJO_API_TOKEN}" \
+#      http://${DEFECTDOJO_HOST}/api/v2/engagements/ \
+#      -F "name=Test" -F "product=1" -F "target_start=2025-01-17" -F "target_end=2025-01-17"
 
+    echo ""
     echo " Uploading trivy CVE report for module $MODULE_NAME"
     echo ""
     curl -X POST \
@@ -126,6 +126,7 @@ function __main__() {
       -H "accept: application/json" \
       -H "Content-Type: multipart/form-data"  \
       -H "Authorization: Token ${DEFECTDOJO_API_TOKEN}" \
+      -F "auto_create_context=True" \
       -F "minimum_severity=Info" \
       -F "active=true" \
       -F "verified=true" \
@@ -133,7 +134,9 @@ function __main__() {
       -F "close_old_findings=false" \
       -F "push_to_jira=false" \
       -F "file=@out/d8-images_${MODULE_NAME}_report.json" \
-      -F "product_name=Deckhouse" -F "scan_date=2022-06-14" -F "engagement_name=Test"
+      -F "product_name=Deckhouse" \
+      -F "scan_date=$(date -I)" \
+      -F "engagement_name=CVE"
 
   done
 
