@@ -51,7 +51,7 @@ shell:
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
 final: false
-from: {{ $.Images.BASE_GOLANG_20_BULLSEYE_DEV }} # https://github.com/golang/go/commit/00401835c1d5122a84f0500e48655cd787402f3f
+from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
 import:
   - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
     add: /src
