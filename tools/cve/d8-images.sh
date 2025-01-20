@@ -74,7 +74,7 @@ function __main__() {
       # Output reports to common_report file and appropriate module_report file
       #trivyGetHTMLReportPartForImage  -l "$IMAGE_REPORT_NAME" -i "$IMAGE@$IMAGE_HASH" -s "$SEVERITY" --ignore out/.trivyignore | tee -a out/${MODULE_NAME}_report >> out/d8-images.html
 
-      trivyGetJSONReportPartForImage  -l "$IMAGE_REPORT_NAME" -i "$IMAGE@$IMAGE_HASH" -s "$SEVERITY" --ignore "out/.trivyignore" -o "out/json/d8-images_${MODULE_NAME}_report.json"
+      trivyGetJSONReportPartForImage --output "out/json/d8-images_${MODULE_NAME}_report.json" -l "$IMAGE_REPORT_NAME" -i "$IMAGE@$IMAGE_HASH" -s "$SEVERITY" --ignore "out/.trivyignore"
 
     done
 #    # Create an issue with found vulnerabilities
