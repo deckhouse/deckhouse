@@ -65,19 +65,21 @@ func checkMetricExistenceByLabels(metricName string, labels map[string]string, r
 }
 
 func getContainerIDFromLog(line string) string {
-	var taskMemcg string
-	if matches := regexpOom.FindStringSubmatch(line); matches != nil {
-		log.Print(line)
-		for _, word := range strings.Split(matches[0], ",") {
-			if strings.Contains(word, "task_memcg") {
-				if idx := strings.Index(word, "="); idx != -1 {
-					taskMemcg = word[idx+1:]
-				}
-			}
-		}
-		return taskMemcg
+	matches := regexpOom.FindStringSubmatch(line)
+	if matches == nil {
+		return ""
 	}
-	return ""
+	log.Print(line)
+	var taskMemcg string
+	for _, word := range strings.Split(matches[0], ",") {
+		if !strings.Contains(word, "task_memcg") {
+			continue
+		}
+		if idx := strings.Index(word, "="); idx != -1 {
+			taskMemcg = word[idx+1:]
+		}
+	}
+	return taskMemcg
 }
 
 func main() {
