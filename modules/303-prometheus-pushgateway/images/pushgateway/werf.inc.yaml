@@ -1,35 +1,54 @@
+{{- $version := "1.6.2" }}
 ---
-artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
-from: {{ $.Images.BASE_GOLANG_21_BULLSEYE }}
-mount:
-- fromPath: ~/go-pkg-cache
-  to: /go/pkg
-import:
-- image: prometheus/prometheus-promu-artifact
-  add: /src/promu
-  to: /bin/promu
-  before: install
+image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+fromImage: common/src-artifact
+final: false
+git:
+  - add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/patches
+    to: /patches
+    stageDependencies:
+      install:
+      - '**/*'
 shell:
   install:
-  - export GOPROXY={{ $.GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64
-  - mkdir /prometheus && cd /prometheus
-  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
-  - git clone -b v1.6.2 --single-branch {{ $.SOURCE_REPO }}/prometheus/pushgateway.git
-  - cd /prometheus/pushgateway
-  - /bin/promu build --prefix /prometheus/pushgateway
-  - mkdir /empty
-  - chown -R 64535:64535 /empty
-  - chown -R 64535:64535 /prometheus/
-  - chmod 0700 /prometheus/pushgateway/pushgateway
+    - git clone --depth 1 --branch "v{{ $version }}" {{ $.SOURCE_REPO }}/prometheus/pushgateway.git /src
+    - cd /src
+    - git apply /patches/*.patch --verbose
+    - rm -r .git
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-artifact
+from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
+final: false
+import:
+  - image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+    add: /src
+    to: /src/pushgateway
+    before: install
+  - image: prometheus/prometheus-promu-artifact
+    add: /src/promu
+    to: /bin/promu
+    before: install
+mount:
+  - fromPath: ~/go-pkg-cache
+    to: /go/pkg
+shell:
+  install:
+    - cd /src/pushgateway
+    - export GOPROXY={{ $.GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64
+    - /bin/promu build --prefix /src/pushgateway
+    - mkdir /empty
+    - chown -R 64535:64535 /empty
+    - chown -R 64535:64535 /src/
+    - chmod 0700 /src/pushgateway/pushgateway
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: common/distroless
 import:
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
-  add: /prometheus/pushgateway/pushgateway
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+  add: /src/pushgateway/pushgateway
   to: /bin/pushgateway
   before: setup
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
   add: /empty/
   to: /pushgateway/
   before: setup
