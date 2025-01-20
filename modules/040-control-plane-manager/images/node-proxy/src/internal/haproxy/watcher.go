@@ -61,6 +61,14 @@ func (c *Client) addServer(backend config.Backend, servers []Server) {
 		if err != nil {
 			log.Error(err)
 		}
+		err = c.runtimeClient.EnableServer(backend.Name, serverName)
+		if err != nil {
+			log.Error(err)
+		}
+		err = c.runtimeClient.EnableServerHealth(backend.Name, serverName)
+		if err != nil {
+			log.Error(err)
+		}
 	}
 }
 

@@ -2,7 +2,7 @@
 backends:
 - name: kube_api_backend
   haproxy:
-    defautlServer: check inter 5s downinter 15s rise 2 fall 2 slowstart 60s maxconn 1000 maxqueue 256 weight 100 check-ssl verify none ca-file /etc/kubernetes/node-proxy/ca.crt crt /etc/kubernetes/node-proxy/haproxy.pem
+    defautlServer: check inter 5s downinter 15s rise 2 fall 2 slowstart 60s maxconn 1000 maxqueue 256 weight 100 check-ssl  ca-file ca.crt crt @k8s/haproxy.pem"
   k8s:
     namespace: default
     endpointName: kubernetes
