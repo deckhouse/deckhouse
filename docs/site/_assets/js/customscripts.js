@@ -194,11 +194,15 @@ $(document).ready(function(){
 
   if (tables.length === 0) {
     return;
-  }
+  };
 
   tables.each((_, table) => {
-    $(table).wrap("<div class='table-wrapper table-wrapper__small'></div>")
-  })
+    if($(table).hasClass('table__small')) {
+      $(table).wrap("<div class='table-wrapper table-wrapper__small'></div>");
+    } else {
+      $(table).wrap("<div class='table-wrapper'></div>");
+    }
+  });
 });
 
 $(document).ready(function(){
