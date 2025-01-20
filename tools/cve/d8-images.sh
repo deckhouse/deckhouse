@@ -95,7 +95,8 @@ function __main__() {
         -F "engagement_name=${IMAGE_NAME} CVE Report ${date_iso}" \
         -F "service=${MODULE_NAME}" \
         -F "group_by=component_name+component_version" \
-        -F "lead=1"
+        -F "lead=1" \
+      > /dev/null
 
     done
 #    # Create an issue with found vulnerabilities
