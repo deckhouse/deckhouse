@@ -11,8 +11,7 @@ git:
 shell:
   install:
   - cd /src
-  - git clone --depth 1 {{ .SOURCE_REPO }}/go-task/task --branch "v3.40.1" .
-  - git apply /patches/*.patch --verbose
+  - git clone --depth 1 --branch v3.41.0 {{ .SOURCE_REPO }}/go-task/task .
   - rm -rf .git website
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
