@@ -50,7 +50,7 @@ function __main__() {
 
   HTML_TEMP=$(mktemp -d)
   IMAGE_REPORT_NAME="deckhouse::$(echo "$IMAGE:$TAG" | sed 's/^.*\/\(.*\)/\1/')"
-  mkdir -p out/
+  mkdir -p out/json
   htmlReportHeader > out/d8-images.html
   trivyGetHTMLReportPartForImage -l "$IMAGE_REPORT_NAME" -i "$IMAGE" -t "$TAG" -s "$SEVERITY" --ignore out/.trivyignore >> out/d8-images.html
 
@@ -74,7 +74,7 @@ function __main__() {
       # Output reports to common_report file and appropriate module_report file
       #trivyGetHTMLReportPartForImage  -l "$IMAGE_REPORT_NAME" -i "$IMAGE@$IMAGE_HASH" -s "$SEVERITY" --ignore out/.trivyignore | tee -a out/${MODULE_NAME}_report >> out/d8-images.html
 
-      trivyGetJSONReportPartForImage  -l "$IMAGE_REPORT_NAME" -i "$IMAGE@$IMAGE_HASH" -s "$SEVERITY" --ignore out/.trivyignore >> out/d8-images_${MODULE_NAME}_report.json
+      trivyGetJSONReportPartForImage  -l "$IMAGE_REPORT_NAME" -i "$IMAGE@$IMAGE_HASH" -s "$SEVERITY" --ignore "out/.trivyignore" -o "out/json/d8-images_${MODULE_NAME}_report.json"
 
     done
 #    # Create an issue with found vulnerabilities
@@ -133,10 +133,11 @@ function __main__() {
       -F "scan_type=Trivy Scan" \
       -F "close_old_findings=false" \
       -F "push_to_jira=false" \
-      -F "file=@out/d8-images_${MODULE_NAME}_report.json" \
+      -F "file=@out/json/d8-images_${MODULE_NAME}_report.json" \
       -F "product_name=Deckhouse" \
       -F "scan_date=$(date -I)" \
-      -F "engagement_name=CVE"
+      -F "engagement_name=CVE" \
+      -F "service=${MODULE_NAME}"
 
   done
 
