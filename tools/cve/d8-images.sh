@@ -92,7 +92,7 @@ function __main__() {
         -F "scan_type=Trivy Scan" \
         -F "close_old_findings=false" \
         -F "push_to_jira=false" \
-        -F "file=@out/json/d8-images_${MODULE_NAME}_report.json" \
+        -F "file=@out/json/d8_${MODULE_NAME}_${IMAGE_NAME}_report.json" \
         -F "product_type_name=Deckhouse images" \
         -F "product_name=${MODULE_NAME}" \
         -F "scan_date=${date_iso}" \
