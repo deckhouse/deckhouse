@@ -53,7 +53,6 @@ git:
 docker:
   ENV:
     PYTHONPATH: /frameworks/python
-    PATH: "/opt/python-static/bin:$PATH"
   ENTRYPOINT: ["/entrypoint.sh"]
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-label-converter-src-artifact
@@ -104,4 +103,6 @@ import:
   before: install
 shell:
   install:
-  - /opt/python-static/bin/pip3 install -r /requirements.txt
+  - git clone --depth 1 {{ .SOURCE_REPO }}/python-modules/wheels /wheels
+  - rm -rf /wheels/.git
+  - /opt/python-static/bin/pip3 install -f file:///wheels --no-index -r requirements.txt
