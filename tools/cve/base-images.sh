@@ -66,8 +66,9 @@ function __main__() {
   BASE_IMAGES_RAW=$(base_images_tags)
   REGISTRY=$(echo "$BASE_IMAGES_RAW" | head -n 1)
   BASE_IMAGES=$(echo "$BASE_IMAGES_RAW" | tail -n +2)
-  mkdir -p out/
-  htmlReportHeader > out/base-images.html
+  mkdir -p out/json
+
+  date_iso=$(date -I)
 
   for image in $BASE_IMAGES; do
     # Some of our base images contain no layers.
@@ -81,12 +82,33 @@ function __main__() {
     echo "👾 Image: $image"
     echo ""
     trivyGetCVEListForImage -r "$REGISTRY" -i "$image" > "$WORKDIR/$(echo "$image" | tr "/" "_").cve"
-    trivyGetHTMLReportPartForImage -r "$REGISTRY" -i "$image" -l "$(echo "$image" | cut -d@ -f1)" >> out/base-images.html
+    # Output reports per images
+    trivyGetJSONReportPartForImage -l "$IMAGE_REPORT_NAME" -i "$IMAGE@$IMAGE_HASH" -s "$SEVERITY" --ignore "out/.trivyignore" --output "out/json/base_image_${image}_report.json"
+    echo ""
+    echo " Uploading trivy CVE report for base image ${image}"
+    echo ""
+    curl -s -X POST \
+      http://${DEFECTDOJO_HOST}/api/v2/import-scan/ \
+      -H "accept: application/json" \
+      -H "Content-Type: multipart/form-data"  \
+      -H "Authorization: Token ${DEFECTDOJO_API_TOKEN}" \
+      -F "auto_create_context=True" \
+      -F "minimum_severity=Info" \
+      -F "active=true" \
+      -F "verified=true" \
+      -F "scan_type=Trivy Scan" \
+      -F "close_old_findings=false" \
+      -F "push_to_jira=false" \
+      -F "file=@out/json/base_image_${image}_report.json" \
+      -F "product_type_name=Base Images" \
+      -F "product_name=Base Images" \
+      -F "scan_date=${date_iso}" \
+      -F "engagement_name=${image} CVE Report ${date_iso}" \
+      -F "group_by=component_name+component_version"
   done
 
   find "$WORKDIR" -type f -exec cat {} + | uniq | sort > out/.trivyignore
   rm -r "$WORKDIR"
-  htmlReportFooter >> out/base-images.html
 }
 
 __main__
