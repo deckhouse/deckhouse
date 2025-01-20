@@ -67,12 +67,27 @@ spec:
       - name: certs
         mountPath: /etc/kubernetes/node-proxy
         readOnly: true
+      - name: socket
+        mountPath: /socket
+  - name: sidecar
+    image: {{ printf "%s%s@%s" $.registry.address $.registry.path (index $.images.controlPlaneManager "nodeProxy") }}
+    imagePullPolicy: IfNotPresent
+    command: ["/bin/node-proxy-sidecar", "--api-host=10.241.44.17:6443"]
+    volumeMounts:
+    volumeMounts:
+      - name: certs
+        mountPath: /etc/kubernetes/node-proxy
+        readOnly: true
+      - name: socket
+        mountPath: /socket
   priorityClassName: system-node-critical
   volumes:
     - name: certs
       hostPath:
         path: /etc/kubernetes/node-proxy
         type: Directory
+    - name: socket-volume
+      emptyDir: {}
 EOF
 
 bb-unset-proxy

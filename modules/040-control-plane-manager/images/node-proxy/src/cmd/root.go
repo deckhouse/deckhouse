@@ -42,9 +42,9 @@ var rootCmd = &cobra.Command{
 }
 
 func init() {
-	rootCmd.Flags().StringVar(&authModeStr, "auth-mode", "dev", "Authentication mode: dev, cert")
+	rootCmd.Flags().StringVar(&authModeStr, "auth-mode", "cert", "Authentication mode: dev, cert")
 	rootCmd.Flags().StringSliceVar(&cfg.APIHosts, "api-host", []string{"https://127.0.0.1:6443"}, "Kubernetes API server host(s)")
-	rootCmd.Flags().StringVar(&cfg.SocketPath, "socket-path", "/var/run/haproxy.sock", "Path to HAProxy socket")
+	rootCmd.Flags().StringVar(&cfg.SocketPath, "socket-path", "/socket/haproxy.sock", "Path to HAProxy socket")
 	rootCmd.Flags().StringVar(&cfg.CertPath, "cert-path", "/etc/kubernetes/node-proxy/haproxy.pem", "Path to client certificate")
 	rootCmd.Flags().StringVar(&cfg.KeyPath, "key-path", "/etc/kubernetes/node-proxy/haproxy.key", "Path to client key")
 	rootCmd.Flags().StringVar(&cfg.CACertPath, "ca-cert-path", "/etc/kubernetes/node-proxy/ca.crt", "Path to CA certificate")
@@ -58,20 +58,15 @@ func Execute() {
 	cobra.CheckErr(rootCmd.Execute())
 }
 
-// func test(updatedList []haproxy.Server) {
-// 	// Updated Endpoints List: [10.241.44.17:6443 10.241.44.36:6443 10.241.44.5:6443]
-// 	fmt.Println("Updated Endpoints List:", updatedList)
-// }
-
 func run(cmd *cobra.Command, args []string) {
 	cfg.AuthMode = config.ParseAuthMode(authModeStr)
-	if cfg.AuthMode == config.AuthCert {
-		if cfg.CertPath == "" || cfg.KeyPath == "" || cfg.CACertPath == "" {
-			fmt.Println("--cert-path, --key-path --ca-cert-path required")
-			cmd.Usage()
-			return
-		}
-	}
+	// if cfg.AuthMode == config.AuthCert {
+	// 	if cfg.CertPath == "" || cfg.KeyPath == "" || cfg.CACertPath == "" {
+	// 		fmt.Println("--cert-path, --key-path --ca-cert-path required")
+	// 		cmd.Usage()
+	// 		return
+	// 	}
+	// }
 	configData, err := os.ReadFile(cfg.ConfigPath)
 	if err != nil {
 		log.Fatalf("Error reading config file: %v", err)
