@@ -1,15 +1,15 @@
 {{- range $key, $value := .CandiVersionMap.k8s }}
-  {{- $version := toString $key }}
+  {{- $image_version := toString $key | replace "." "-" }}
   {{- if $value.csi.openstack }}
 ---
-image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $version | replace "." "-" }}
+image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
 fromImage: common/distroless
 import:
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
   add: /src/cinder-csi-plugin
   to: /bin/cinder-csi-plugin
   before: setup
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
   add: /relocate
   to: /
   before: install
@@ -18,32 +18,44 @@ import:
 docker:
   ENTRYPOINT: ["/bin/cinder-csi-plugin"]
 ---
-artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
-from: {{ $.Images.BASE_GOLANG_23_BULLSEYE }}
+image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
+final: false
+fromImage: common/src-artifact
+shell:
+  install:
+    - git clone --depth 1 --branch {{ $value.csi.openstack }} {{ $.SOURCE_REPO }}/kubernetes/cloud-provider-openstack.git /src
+    - cd /src
+    - rm -rf .git
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
+final: false
+from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
+import:
+  - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
+    add: /src
+    to: /src
+    before: install
 mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
 shell:
   beforeInstall:
-  - apt update && apt-get install -y --no-install-recommends ca-certificates git make
+  - apk add --no-cache make
   install:
-  - export GO_VERSION=${GOLANG_VERSION}
-  - export GOPROXY={{ $.GOPROXY }}
-  - mkdir -p /src
-  - mkdir ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
-  - git clone {{ $.SOURCE_REPO }}/kubernetes/cloud-provider-openstack.git /src
   - cd /src
-  - git checkout tags/{{ $value.csi.openstack }}
-  - git config --global user.email "builder@deckhouse.io"
+  - export GOPROXY={{ $.GOPROXY }}
   - export VERSION={{ $value.csi.openstack }}
   - make cinder-csi-plugin
   {{- end }}
 {{- end }}
 ---
 {{- $csiBinaries := "/bin/chmod /bin/mount /bin/mkdir /bin/rmdir /bin/umount /bin/findmnt /bin/lsblk /sbin/badblocks /sbin/blockdev /sbin/blk* /sbin/btrfs* /sbin/dumpe2fs /sbin/e2* /sbin/findfs /sbin/fsck* /sbin/fsfreeze /sbin/fstrim /sbin/mke2fs /sbin/mkfs* /sbin/resize2fs /usr/sbin/parted /usr/sbin/xfs*" }}
----
-artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
-from: {{ $.Images.BASE_ALT_DEV }}
+image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+final: false
+fromImage: common/relocate-artifact
 shell:
-  setup:
+  beforeInstall:
+    - apt-get update -y
+    - apt-get install -y e2fsprogs xfsprogs parted btrfs-progs
+  install:
     - /binary_replace.sh -i "{{ $csiBinaries }}" -o /relocate
