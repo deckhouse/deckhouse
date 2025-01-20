@@ -38,8 +38,8 @@ func TestCheckMetricExistenceByLabels(t *testing.T) {
 
 // Тест getContainerIDFromLog
 func TestGetContainerIDFromLog(t *testing.T) {
-	line := "oom-kill: task_memcg=/kubepods/burstable/pod123"
-	assert.Equal(t, "/kubepods/burstable/pod123", getContainerIDFromLog(line), "Should extract correct task_memcg")
+	line := "oom-kill:constraint=CONSTRAINT_MEMCG,nodemask=(null),cpuset=id,mems_allowed=0,task_memcg=/kubepods/burstable/pod123/contanerID"
+	assert.Equal(t, "/kubepods/burstable/pod123/contanerID", getContainerIDFromLog(line), "Should extract correct task_memcg")
 
 	line = "oom-kill: no task_memcg present"
 	assert.Equal(t, "", getContainerIDFromLog(line), "Should return empty string if task_memcg is not present")

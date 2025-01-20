@@ -67,12 +67,11 @@ func getContainerIDFromLog(line string) string {
 	log.Print(line)
 	var taskMemcg string
 	for _, word := range strings.Split(match[1], ",") {
-		if !strings.Contains(word, "task_memcg") {
+		key, value, ok := strings.Cut(word, "=")
+		if key != "task_memcg" || !ok {
 			continue
 		}
-		if idx := strings.Index(word, "="); idx != -1 {
-			taskMemcg = word[idx+1:]
-		}
+		taskMemcg = value
 	}
 	return taskMemcg
 }
