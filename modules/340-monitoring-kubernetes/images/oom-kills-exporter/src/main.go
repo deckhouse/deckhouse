@@ -29,11 +29,6 @@ import (
 	"k8s.io/node-problem-detector/pkg/systemlogmonitor/logwatchers/types"
 )
 
-var (
-	local  = prometheus.NewRegistry()
-	sleepG time.Duration
-)
-
 func checkMetricExistenceByLabels(metricName string, labels map[string]string, r *prometheus.Registry) bool {
 	mfs, err := r.Gather()
 	if err != nil {
@@ -82,7 +77,8 @@ func getContainerIDFromLog(line string) (string, error) {
 	return "", errors.New("Don't oom-kill log")
 }
 
-func init() {
+func main() {
+	var sleepG time.Duration
 	if envValue := os.Getenv("PROMETHEUS_SCRAPE_INTERVAL"); envValue != "" {
 		interval, err := strconv.Atoi(envValue)
 		if err != nil {
@@ -90,10 +86,7 @@ func init() {
 		}
 		sleepG = time.Duration(interval+1) * time.Second
 	}
-
-}
-
-func main() {
+	local := prometheus.NewRegistry()
 	handler := promhttp.HandlerFor(
 		local,
 		promhttp.HandlerOpts{
