@@ -1138,7 +1138,8 @@ for ((i=1; i<=$testRunAttempts; i++)); do
     sleep 20
   fi
 done
-kubectl get clustercompliancereports.aquasecurity.github.io cis -o json |jq '.status.detailReport.results | map(select(.checks | map(.success) | all | not))'
+REPORT=$(kubectl get clustercompliancereports.aquasecurity.github.io cis -o json |jq '.status.detailReport.results | map(select(.checks | map(.success) | all | not))')
+>&2 echo $REPORT
 ENDSSH
 }
 
