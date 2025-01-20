@@ -140,6 +140,8 @@ func recordMetrics(ctx context.Context, client metadata.Interface, registry *pro
 		enabled_namespace := enabledLabel(namespasce.Labels)
 		namespaces_enabled.WithLabelValues(namespasce.Name).Add(enabled_namespace)
 
+		//todo: need backport https://github.com/deckhouse/deckhouse/commit/6c1c2f80997fac76ff0f65b67da61beb682538ce
+
 		if enabled_namespace == 1 {
 			//pod
 			for _, pod := range ListResources(ctx, client, resource_pods, options, namespasce.Name).Items {
