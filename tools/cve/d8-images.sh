@@ -48,11 +48,8 @@ function __main__() {
   docker pull "$IMAGE:$TAG"
   digests=$(docker run --rm "$IMAGE:$TAG" cat /deckhouse/modules/images_digests.json)
 
-  HTML_TEMP=$(mktemp -d)
   IMAGE_REPORT_NAME="deckhouse::$(echo "$IMAGE:$TAG" | sed 's/^.*\/\(.*\)/\1/')"
   mkdir -p out/json
-  htmlReportHeader > out/d8-images.html
-  trivyGetHTMLReportPartForImage -l "$IMAGE_REPORT_NAME" -i "$IMAGE" -t "$TAG" -s "$SEVERITY" --ignore out/.trivyignore >> out/d8-images.html
 
   date_iso=$(date -I)
 
@@ -73,14 +70,13 @@ function __main__() {
 
       IMAGE_HASH="$(jq -rc '.value' <<< "$module_image")"
       IMAGE_REPORT_NAME="$MODULE_NAME::$IMAGE_NAME"
-      # Output reports to common_report file and appropriate module_report file
-      #trivyGetHTMLReportPartForImage  -l "$IMAGE_REPORT_NAME" -i "$IMAGE@$IMAGE_HASH" -s "$SEVERITY" --ignore out/.trivyignore | tee -a out/${MODULE_NAME}_report >> out/d8-images.html
 
+      # Output reports per images
       trivyGetJSONReportPartForImage -l "$IMAGE_REPORT_NAME" -i "$IMAGE@$IMAGE_HASH" -s "$SEVERITY" --ignore "out/.trivyignore" --output "out/json/d8_${MODULE_NAME}_${IMAGE_NAME}_report.json"
       echo ""
       echo " Uploading trivy CVE report for image ${IMAGE_NAME} of ${MODULE_NAME} module"
       echo ""
-      curl -X POST \
+      curl -s -X POST \
         http://${DEFECTDOJO_HOST}/api/v2/import-scan/ \
         -H "accept: application/json" \
         -H "Content-Type: multipart/form-data"  \
@@ -98,7 +94,8 @@ function __main__() {
         -F "scan_date=${date_iso}" \
         -F "engagement_name=${IMAGE_NAME} CVE Report ${date_iso}" \
         -F "service=${MODULE_NAME}" \
-        -F "group_by=component_name+component_version"
+        -F "group_by=component_name+component_version" \
+        -F "lead=1"
 
     done
 #    # Create an issue with found vulnerabilities
@@ -128,8 +125,6 @@ function __main__() {
 
   done
 
-  rm -r "$HTML_TEMP"
-  htmlReportFooter >> out/d8-images.html
 }
 
 __main__
