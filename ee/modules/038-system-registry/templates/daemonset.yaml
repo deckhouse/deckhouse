@@ -11,7 +11,6 @@ memory: 10Mi
 {{- $images := dict }}
 {{- $_ := set $images "dockerAuth" $.Values.global.modulesImages.digests.systemRegistry.dockerAuth }}
 {{- $_ := set $images "dockerDistribution" $.Values.global.modulesImages.digests.systemRegistry.dockerDistribution }}
-{{- $_ := set $images "seaweedfs" $.Values.global.modulesImages.digests.systemRegistry.seaweedfs }}
 {{- $_ := set $images "mirrorer" $.Values.global.modulesImages.digests.systemRegistry.mirrorer }}
 
 {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
@@ -97,8 +96,6 @@ spec:
           value: "{{ $.Values.global.modulesImages.digests.systemRegistry.dockerAuth }}"
         - name: IMAGE_DOCKER_DISTRIBUTION
           value: "{{ $.Values.global.modulesImages.digests.systemRegistry.dockerDistribution }}"
-        - name: IMAGE_SEAWEEDFS
-          value: "{{ $.Values.global.modulesImages.digests.systemRegistry.seaweedfs }}"
         - name: IMAGE_MIRRORER
           value: "{{ $.Values.global.modulesImages.digests.systemRegistry.mirrorer }}"
         {{- include "helm_lib_envs_for_proxy" . | nindent 8 }}

@@ -11,7 +11,6 @@ memory: 10Mi
 {{- $images := dict }}
 {{- $_ := set $images "dockerAuth" $.Values.global.modulesImages.digests.systemRegistry.dockerAuth }}
 {{- $_ := set $images "dockerDistribution" $.Values.global.modulesImages.digests.systemRegistry.dockerDistribution }}
-{{- $_ := set $images "seaweedfs" $.Values.global.modulesImages.digests.systemRegistry.seaweedfs }}
 {{- $_ := set $images "mirrorer" $.Values.global.modulesImages.digests.systemRegistry.mirrorer }}
 
 {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}

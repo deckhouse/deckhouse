@@ -16,10 +16,3 @@
         state: absent
       tags:
         - data
-
-    - name: Remove /opt/deckhouse/system-registry/seaweedfs_data directory
-      file:
-        path: /opt/deckhouse/system-registry/seaweedfs_data
-        state: absent
-      tags:
-        - data

@@ -110,37 +110,3 @@ run_ansible_playbook "inventory.yaml" "ansible-delete-registry.yaml" "--tags sta
 wait_for_pods_inactive "d8-system" "component=system-registry,tier=control-plane" 10
 run_ansible_playbook "inventory.yaml" "ansible-delete-registry.yaml" "--tags data"
 
-################################################
-#            Removing data from etcd           #
-################################################
-echo "Clearing etcd"
-
-etcd_pod_name=$(kubectl get pods -n kube-system -l=component=etcd,tier=control-plane -o jsonpath='{.items[0].metadata.name}')
-
-if [ -z "$etcd_pod_name" ]; then
-  echo "Error: Pod with etcd not found!"
-  exit 1
-fi
-
-# Get the etcd endpoint using jsonpath
-etcd_endpoint=$(kubectl get pod "$etcd_pod_name" -n kube-system -o jsonpath='{.status.podIP}')
-
-if [ -z "$etcd_endpoint" ]; then
-  echo "Error: Failed to get etcd endpoint!"
-  exit 1
-fi
-
-kubectl exec -it pod/"$etcd_pod_name" -n kube-system etcd -- etcdctl \
---endpoints="$etcd_endpoint":2379 \
---cacert=/etc/kubernetes/pki/etcd/ca.crt \
---cert=/etc/kubernetes/pki/etcd/server.crt \
---key=/etc/kubernetes/pki/etcd/server.key \
-del seaweedfs_meta. --prefix
-
-# Check the result of the execution
-if [ $? -eq 0 ]; then
-  echo "Etcd cleared successfully!"
-else
-  echo "Error clearing etcd!"
-  exit 1
-fi
