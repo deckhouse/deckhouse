@@ -25,6 +25,8 @@ shell:
   install:
   - export GOPROXY={{ .GOPROXY }}
   - cd /src
+  - go mod download
+  - go test ./... -v
   - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o /task cmd/task/task.go
   - chown 64535:64535 /task
   - chmod 0755 /task
