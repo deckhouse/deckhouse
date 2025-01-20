@@ -8,9 +8,3 @@
   description: distribution/distribution is an open-source toolkit used to pack, ship, store, and deliver container content, providing a secure and scalable foundation for developing large-scale registry solutions or managing private registries. It supports the OCI Distribution Specification, which is used by major registry operators like Docker Hub and GitHub Container Registry.
   logo: https://github.com/distribution/distribution/blob/main/distribution-logo.svg
   license: Apache License 2.0 (https://github.com/distribution/distribution/blob/v2.8.3/LICENSE)
-
-- name: Seaweedfs
-  link: https://github.com/seaweedfs/seaweedfs
-  description: seaweedfs/seaweedfs is a simple and highly scalable distributed file system, with integrated features such as seaweedfs/seaweedfs is a simple and highly scalable distributed file system, with integrated features such as blob storage, key-value store, and optional SQL and full-text search capabilities. It is designed for high capacity and performance, supporting billions of files in one namespace with fast O(1) lookup speed.
-  logo: https://raw.githubusercontent.com/seaweedfs/seaweedfs/master/note/seaweedfs.png
-  license: Apache License 2.0 (https://github.com/seaweedfs/seaweedfs/blob/3.65/LICENSE)
