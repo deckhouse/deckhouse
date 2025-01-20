@@ -197,7 +197,7 @@ $(document).ready(function(){
   }
 
   tables.each((_, table) => {
-    $(table).wrap("<div class='table-wrapper'></div>")
+    $(table).wrap("<div class='table-wrapper table-wrapper__small'></div>")
   })
 });
 
