@@ -45,14 +45,15 @@ func (cfg *Config) Bind(r *http.Request) error {
 
 // PKIModel holds the configuration for the PKI
 type PKIModel struct {
-	CACert              string `json:"ca,omitempty"`
-	AuthCert            string `json:"authCert,omitempty"`
-	AuthKey             string `json:"authKey,omitempty"`
-	TokenCert           string `json:"tokenCert,omitempty"`
-	TokenKey            string `json:"tokenKey,omitempty"`
-	DistributionCert    string `json:"distributionCert,omitempty"`
-	DistributionKey     string `json:"distributionKey,omitempty"`
-	IngressClientCACert string `json:"ingressClientCACert,omitempty"`
+	CACert                 string `json:"ca,omitempty"`
+	AuthCert               string `json:"authCert,omitempty"`
+	AuthKey                string `json:"authKey,omitempty"`
+	TokenCert              string `json:"tokenCert,omitempty"`
+	TokenKey               string `json:"tokenKey,omitempty"`
+	DistributionCert       string `json:"distributionCert,omitempty"`
+	DistributionKey        string `json:"distributionKey,omitempty"`
+	UpstreamRegistryCACert string `json:"upstreamRegistryCACert,omitempty"`
+	IngressClientCACert    string `json:"ingressClientCACert,omitempty"`
 }
 
 func (p PKIModel) Validate() error {
@@ -64,23 +65,25 @@ func (p PKIModel) Validate() error {
 		validation.Field(&p.TokenKey, validation.Required),
 		validation.Field(&p.DistributionCert, validation.Required),
 		validation.Field(&p.DistributionKey, validation.Required),
+		// UpstreamRegistryCACert is optional field and can be empty
 		// IngressClientCACert is optional field and can be empty
 	)
 }
 
 // ConfigHashes holds the hash of the configuration files
 type ConfigHashes struct {
-	AuthTemplate         string
-	DistributionTemplate string
-	CACert               string
-	AuthCert             string
-	AuthKey              string
-	TokenCert            string
-	TokenKey             string
-	DistributionCert     string
-	DistributionKey      string
-	IngressClientCACert  string
-	MirrorerTemplate     string
+	AuthTemplate           string
+	DistributionTemplate   string
+	CACert                 string
+	AuthCert               string
+	AuthKey                string
+	TokenCert              string
+	TokenKey               string
+	DistributionCert       string
+	DistributionKey        string
+	UpstreamRegistryCACert string
+	IngressClientCACert    string
+	MirrorerTemplate       string
 }
 
 type RegistryMode string
@@ -135,7 +138,6 @@ type UpstreamRegistry struct {
 	Scheme   string  `json:"scheme,omitempty"`
 	Host     string  `json:"host,omitempty"`
 	Path     string  `json:"path,omitempty"`
-	CA       string  `json:"ca,omitempty"`
 	User     string  `json:"user,omitempty"`
 	Password string  `json:"password,omitempty"`
 	TTL      *string `json:"ttl,omitempty"`
@@ -234,14 +236,15 @@ func (pki *PKIModel) syncPKIFiles(basePath string, configHashes *ConfigHashes) (
 		content   string
 		hashField *string
 	}{
-		"ca.crt":                {pki.CACert, &configHashes.CACert},
-		"auth.crt":              {pki.AuthCert, &configHashes.AuthCert},
-		"auth.key":              {pki.AuthKey, &configHashes.AuthKey},
-		"token.crt":             {pki.TokenCert, &configHashes.TokenCert},
-		"token.key":             {pki.TokenKey, &configHashes.TokenKey},
-		"distribution.crt":      {pki.DistributionCert, &configHashes.DistributionCert},
-		"distribution.key":      {pki.DistributionKey, &configHashes.DistributionKey},
-		"ingress-client-ca.crt": {pki.IngressClientCACert, &configHashes.IngressClientCACert},
+		"ca.crt":                   {pki.CACert, &configHashes.CACert},
+		"auth.crt":                 {pki.AuthCert, &configHashes.AuthCert},
+		"auth.key":                 {pki.AuthKey, &configHashes.AuthKey},
+		"token.crt":                {pki.TokenCert, &configHashes.TokenCert},
+		"token.key":                {pki.TokenKey, &configHashes.TokenKey},
+		"distribution.crt":         {pki.DistributionCert, &configHashes.DistributionCert},
+		"distribution.key":         {pki.DistributionKey, &configHashes.DistributionKey},
+		"ingress-client-ca.crt":    {pki.IngressClientCACert, &configHashes.IngressClientCACert},
+		"upstream-registry-ca.crt": {pki.UpstreamRegistryCACert, &configHashes.UpstreamRegistryCACert},
 	}
 
 	// Iterate over the PKI files and process them

@@ -37,6 +37,9 @@ proxy:
   password: {{ quote .Registry.Upstream.Password }}
   remotepathonly: {{ quote .Registry.Upstream.Path }}
   localpathalias: "/system/deckhouse"
+  {{- if .PKI.UpstreamRegistryCACert }}
+  ca: /system_registry_pki/upstream-registry-ca.crt
+  {{- end }}
   {{- if .Registry.Upstream.TTL }}
   ttl: {{ quote .Registry.Upstream.TTL }}
   {{- end }}

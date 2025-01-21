@@ -52,9 +52,11 @@ bb-sync-file "$IGNITER_DIR/ca.key" - << EOF
 EOF
 
 {{- if eq .registry.embeddedRegistryModuleMode "Proxy" }}
+  {{- if .registry.upstreamRegistry.ca }}
 bb-sync-file "$IGNITER_DIR/upstream-registry-ca.crt" - << EOF
 {{ .registry.upstreamRegistry.ca }}
 EOF
+  {{- end }}
 {{- end }}
 
 bb-sync-file "$IGNITER_DIR/profiles.json" - << EOF
@@ -208,6 +210,9 @@ proxy:
   password: "$UPSTREAM_REGISTRY_PASSWORD"
   remotepathonly: "{{ .registry.upstreamRegistry.path }}"
   localpathalias: "{{ .registry.path }}"
+  {{- if .registry.upstreamRegistry.ca }}
+  ca: $IGNITER_DIR/upstream-registry-ca.crt
+  {{- end }}
   ttl: "{{ .registry.ttl }}"
 {{- end }}
 

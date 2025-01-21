@@ -51,9 +51,11 @@ bb-sync-file "$registry_pki_path/ca.key" - << EOF
 EOF
 
 {{- if eq .registry.embeddedRegistryModuleMode "Proxy" }}
+  {{- if .registry.upstreamRegistry.ca }}
 bb-sync-file "$registry_pki_path/upstream-registry-ca.crt" - << EOF
 {{ .registry.upstreamRegistry.ca }}
 EOF
+  {{- end }}
 {{- end }}
 
 bb-sync-file "$registry_pki_path/profiles.json" - << EOF
@@ -204,6 +206,9 @@ proxy:
   password: "$UPSTREAM_REGISTRY_PASSWORD"
   remotepathonly: "{{ .registry.upstreamRegistry.path }}"
   localpathalias: "{{ .registry.path }}"
+  {{- if .registry.upstreamRegistry.ca }}
+  ca: /system_registry_pki/upstream-registry-ca.crt
+  {{- end }}
   ttl: "{{ .registry.ttl }}"
 {{- end }}
 auth:

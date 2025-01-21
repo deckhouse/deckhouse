@@ -22,6 +22,7 @@ metadata:
     distributionCertHash: {{ quote .Hashes.DistributionCert }}
     distributionKeyHash: {{ quote .Hashes.DistributionKey }}
     ingressClientCACertHash: {{ quote .Hashes.IngressClientCACert }}
+    upstreamRegistryCACertHash: {{ quote .Hashes.UpstreamRegistryCACert }}
   name: system-registry
   namespace: d8-system
 spec:
