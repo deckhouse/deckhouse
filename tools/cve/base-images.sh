@@ -113,6 +113,7 @@ function __main__() {
       -F "tags=Base Image,image:${IMAGE_NAME},codeowner:RomanenkoDenys" \
       -F "test_title=Base Image: ${IMAGE_NAME}" \
       -F "version=${IMAGE_VERSION}" \
+      -F "engagement_end_date=${date_iso}" \
     > /dev/null
   done
 
