@@ -6,7 +6,6 @@
   </div>
   <div class="breadcrumbs__right">
     <ol class="breadcrumbs">
-      <li class="breadcrumbs__item">{{ site.data.i18n.common.platform[page.lang] }}</li>
       {%- assign page_url_parts = page.url | split: '/' -%}
       {%- assign max_ind = page_url_parts.size | minus: 1 -%}
       {% if max_ind == 1 %}{%- assign max_ind = 2 -%}{% endif %}

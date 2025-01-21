@@ -1,8 +1,0 @@
----
-permalink: ru/deckhouse-directories.csv
-layout: none
-lang: ru
-searchable: false
-sitemap_include: false
----
-{%- include deckhouse-directories-csv.liquid -%}

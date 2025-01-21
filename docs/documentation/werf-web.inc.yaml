@@ -112,7 +112,8 @@ shell:
 {{ if ne .ModuleName "docs" }}
         # Syncing file from the documentation to the main site...
         cp /srv/jekyll-data/documentation/_plugins/{jekyll_asset_pipeline.rb,custom_filters.rb,offtopic.rb} /srv/jekyll-data/site/_plugins/
-        cp /srv/jekyll-data/documentation/_assets/js/{lunr*.js,search.js} /srv/jekyll-data/site/_assets/
+        cp /srv/jekyll-data/documentation/_plugins/{jekyll_asset_pipeline.rb,custom_filters.rb,offtopic.rb} /srv/jekyll-data/site/_plugins/
+        cp -r /srv/jekyll-data/site/_assets/* /srv/jekyll-data/documentation/_assets/
 
         # "Converting public documentation links to internal relative..."
         grep -rl '](https://deckhouse.io' /srv/jekyll-data/documentation/_data/schemas/ | \
@@ -170,6 +171,7 @@ git:
     - site/_includes/head.html
     - site/Gemfile
     - site/Gemfile.lock
+    - site/_assets
 {{ else }}
     - site
 {{ end }}

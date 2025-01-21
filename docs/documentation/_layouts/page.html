@@ -16,10 +16,6 @@ layout: sidebar
                     $('.compare').addClass('active');
                 }
                 // Shows warning the viewing documentation about unreleased version
-                if (window.location.pathname.indexOf('/latest/') !== -1) {
-                    console.log("The latest version");
-                    $('#notice-latest-doc-version-block div').removeClass('hide');
-                }
             });
         </script>
         {%- endif %}
