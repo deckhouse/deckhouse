@@ -4,7 +4,7 @@ git:
   - add: /{{ .ModulePath }}candi/cloud-providers/dynamix
     to: /deckhouse/candi/cloud-providers/dynamix
 import:
-  - artifact: terraform-provider-decort
+  - image: terraform-provider-decort
     add: /terraform-provider-decort
     to: /plugins/registry.terraform.io/{{ .TF.decort.namespace }}/{{ .TF.decort.type }}/{{ .TF.decort.version }}/linux_amd64/terraform-provider-decort
     before: setup

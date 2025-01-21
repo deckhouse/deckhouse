@@ -2,34 +2,35 @@
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: common/distroless
 import:
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
   add: /evs-csi-plugin
   to: /evs-csi-plugin
   before: setup
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
   add: /sfs-csi-plugin
   to: /sfs-csi-plugin
   before: setup
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
   add: /relocate
   to: /
   before: install
   includePaths:
   - '**/*'
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
   add: /lib64
   to: /lib64
   before: install
   includePaths:
   - 'libresolv*'
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
   add: /lib/udev/scsi_id
   to: /lib/udev/scsi_id
   before: setup
 docker:
   ENTRYPOINT: ["/evs-csi-plugin"]
 ---
-artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+final: false
 from: {{ $.Images.BASE_GOLANG_19_BULLSEYE_DEV }}
 mount:
 - fromPath: ~/go-pkg-cache
@@ -50,7 +51,8 @@ shell:
 ---
 {{- $csiBinaries := "/bin/chmod /bin/mount /bin/mkdir /bin/rmdir /bin/umount /bin/findmnt /bin/lsblk /sbin/badblocks /sbin/blockdev /sbin/blk* /sbin/btrfs* /sbin/dumpe2fs /sbin/e2* /sbin/findfs /sbin/fsck* /sbin/fsfreeze /sbin/fstrim /sbin/mke2fs /sbin/mkfs* /sbin/resize2fs /sbin/xfs_repair /usr/sbin/nvme /usr/sbin/parted /usr/sbin/xfs*" }}
 ---
-artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+final: false
 from: {{ $.Images.BASE_ALT_DEV }}
 shell:
   setup:

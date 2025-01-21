@@ -35,7 +35,7 @@ shell:
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: common/distroless
 import:
-- artifact: {{ $.ModuleName }}/build-nginx-static-artifact
+- image: {{ $.ModuleName }}/build-nginx-static-artifact
   add: /opt/nginx-static
   to: /opt/nginx-static
   before: setup

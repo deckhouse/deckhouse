@@ -4,14 +4,15 @@
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: common/distroless
 import:
-  - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+  - image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
     add: /local-path-provisioner
     to: /usr/bin/local-path-provisioner
     after: install
 docker:
   ENTRYPOINT: ["/usr/bin/local-path-provisioner"]
 ---
-artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+final: false
 from: {{ $.Images.BASE_GOLANG_21_ALPINE_DEV }}
 git:
   - add: /{{ $.ModulePath }}modules/031-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
