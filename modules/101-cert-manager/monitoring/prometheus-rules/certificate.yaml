@@ -2,7 +2,7 @@
   rules:
   - alert: CertmanagerCertificateExpiredSoon
     expr: |
-      max by (name, exported_namespace) (certmanager_certificate_expiration_timestamp_seconds{job="cert-manager"} - time() < 1209600)
+     max by (name, exported_namespace) ((certmanager_certificate_expiration_timestamp_seconds{job="cert-manager"} - time() < 1209600) and certmanager_certificate_expiration_timestamp_seconds{job="cert-manager"} != 0)
     for: 1h
     labels:
       severity_level: "4"
@@ -23,9 +23,15 @@
       plk_protocol_version: "1"
       plk_create_group_if_not_exists__cluster_has_expired_certificates: ClusterHasCertmanagerCertificatesExpired,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes
       plk_grouped_by__cluster_has_expired_certificates: ClusterHasCertmanagerCertificatesExpired,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes
-      description: Certificate {{$labels.exported_namespace}}/{{$labels.name}} expired
-      summary: Certificate expired
+      summary: Certificate {{$labels.exported_namespace}}/{{$labels.name}} is not provided.
+      description: |
+        Certificate is not provided.
 
+        To check the certificate details, run the following command:
+
+        ```shell
+        kubectl -n {{$labels.exported_namespace}} describe certificate {{$labels.name}}
+        ```
   - alert: CertmanagerCertificateOrderErrors
     expr: |
       sum by (scheme, host, path, status) (
