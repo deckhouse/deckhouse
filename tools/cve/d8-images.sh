@@ -90,14 +90,15 @@ function __main__() {
         -F "push_to_jira=false" \
         -F "file=@out/json/d8_${MODULE_NAME}_${IMAGE_NAME}_report.json" \
         -F "product_type_name=Deckhouse images" \
-        -F "product_name=${MODULE_NAME}" \
+        -F "product_name=Deckhouse" \
         -F "scan_date=${date_iso}" \
-        -F "engagement_name=${IMAGE_NAME} CVE Report ${date_iso}" \
-        -F "engagement_end_date=${date_iso}" \
+        -F "engagement_name=CVE Test: Deckhouse Images" \
         -F "service=${MODULE_NAME}" \
         -F "group_by=component_name+component_version" \
         -F "lead=1" \
         -F "deduplication_on_engagement=false" \
+        -f "tags=[${MODULE_NAME}, ${IMAGE_NAME}]" \
+        -F "test_title=${MODULE_NAME}: ${IMAGE_NAME}" \
       > /dev/null
 
     done
