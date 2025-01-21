@@ -82,10 +82,11 @@ function __main__() {
     echo "👾 Image: $image"
     echo ""
     trivyGetCVEListForImage -r "$REGISTRY" -i "$image" > "$WORKDIR/$(echo "$image" | tr "/" "_").cve"
+
     # Output reports per images
-    trivyGetJSONReportPartForImage -r "$REGISTRY" -i "$image" -l "$(echo "$image" | cut -d@ -f1)" --output "out/json/base_image_${image}_report.json"
     IMAGE_NAME=${image}|cut -d ":" -f 1
-    IMAGE_VERSION=${image}|cut -d ":" -f 2|cut -d "@" -f 1
+    IMAGE_TAG=${image}|cut -d ":" -f 2|cut -d "@" -f 1
+    trivyGetJSONReportPartForImage -r "$REGISTRY" -i "$image" -l "${IMAGE_NAME}:${IMAGE_TAG}" --output "out/json/base_image_${IMAGE_NAME}_report.json"
     echo ""
     echo " Uploading trivy CVE report for base image ${IMAGE_NAME}"
     echo ""
@@ -112,7 +113,7 @@ function __main__() {
       -F "deduplication_on_engagement=false" \
       -F "tags=Base Image,image:${IMAGE_NAME},codeowner:RomanenkoDenys" \
       -F "test_title=Base Image: ${IMAGE_NAME}" \
-      -F "version=${IMAGE_VERSION}" \
+      -F "version=${IMAGE_TAG}" \
       -F "engagement_end_date=${date_iso}"
 #    > /dev/null
   done
