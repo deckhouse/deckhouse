@@ -10,6 +10,10 @@ entries:
         ru: Администрирование
       folders:
         - title:
+            en: Overview
+            ru: Введение
+          url: /virtualization-platform/documentation/admin/overview.html
+        - title:
             en: Platform editions
             ru: Редакции платформы
           url: /virtualization-platform/documentation/admin/editions.html
