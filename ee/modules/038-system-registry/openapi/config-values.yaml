@@ -116,6 +116,13 @@ properties:
     x-examples:
       - [ "10.0.0.0/10", "192.168.0.0/16" ]
     description: 'A list of CIDR-formatted addresses allowed to connect to the embedded registry. If not specified, connections from any address are allowed.'
+  ingressClass:
+    type: string
+    pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
+    description: |
+      The class of the Ingress controller used for the embedded registry.
+
+      By default, the `modules.ingressClass` global value is used.
   https:
     type: object
     x-examples:

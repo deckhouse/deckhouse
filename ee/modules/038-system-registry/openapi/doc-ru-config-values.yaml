@@ -44,6 +44,11 @@ properties:
 
   whitelistSourceRanges:
     description: "Список адресов в формате CIDR, которым разрешено подключение к embedded registry. Если не указано, то разрешено подключение с любых адресов"
+  ingressClass:
+    description: |
+      Класс Ingress-контроллера, который используется для embedded registry.
+
+      Опциональный параметр, по умолчанию используется глобальное значение `modules.ingressClass`.
   https:
     description: |
       Тип используемого сертификата.
