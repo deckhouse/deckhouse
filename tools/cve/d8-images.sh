@@ -59,6 +59,20 @@ function __main__() {
     echo "=============================================="
     echo "🛰 Module: $MODULE_NAME"
 
+    # Get codeowners to fill defectDojo tags
+    CODEOWNERS_MODULE_NAME=$(echo $MODULE_NAME|sed -s 's/[A-Z]/-&/g')
+    codeowner_tags=""
+    while IFS="\n" read -r line; do
+      if echo $line| grep -i -q "$CODEOWNERS_MODULE_NAME"; then
+        for owner_name in $(echo "${line#*@}"); do
+          codeowner_tags="${codeowner_tags},codeowner:${owner_name#*@}"
+        done
+        break
+      else
+        codeowner_tags=",codeowner:RomanenkoDenys" # Set default codeowner in case if not found in CODEOWNERS file
+      fi
+    done < .github/CODEOWNERS
+
     for module_image in $(jq -rc '.value | to_entries[]' <<<"$module"); do
       IMAGE_NAME=$(jq -rc '.key' <<< "$module_image")
       if [[ "$IMAGE_NAME" == "trivy" ]]; then
@@ -97,8 +111,9 @@ function __main__() {
         -F "group_by=component_name+component_version" \
         -F "lead=1" \
         -F "deduplication_on_engagement=false" \
-        -F "tags=${MODULE_NAME}, ${IMAGE_NAME}" \
+        -F "tags=Deckhouse Image,module:${MODULE_NAME},image:${IMAGE_NAME},branch:${TAG}${codeowner_tags}" \
         -F "test_title=${MODULE_NAME}: ${IMAGE_NAME}" \
+        -F "version=${TAG}" \
       > /dev/null
 
     done
