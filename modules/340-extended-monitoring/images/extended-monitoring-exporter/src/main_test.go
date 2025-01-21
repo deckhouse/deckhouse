@@ -25,6 +25,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	fake "k8s.io/client-go/metadata/fake"
 )
 
@@ -36,6 +37,7 @@ var (
 	deployment  = metav1.TypeMeta{APIVersion: "apps/v1", Kind: "Deployment"}
 	daemonset   = metav1.TypeMeta{APIVersion: "apps/v1", Kind: "DaemonSet"}
 	statefulset = metav1.TypeMeta{APIVersion: "apps/v1", Kind: "StatefulSet"}
+	cronjob     = metav1.TypeMeta{APIVersion: "batch/v1", Kind: "CronJob"}
 )
 
 func removeCreatedTimestamp(data interface{}) interface{} {
@@ -94,6 +96,20 @@ func TestThresholdLabel(t *testing.T) {
 	assert.Equal(t, 100.0, thresholdLabel(labels, "cpu", 100.0))
 }
 
+func createResource(client *fake.FakeMetadataClient, resource schema.GroupVersionResource, namespace string, meta metav1.TypeMeta, object metav1.ObjectMeta) error {
+	var request fake.MetadataClient
+	if namespace != "" {
+		request = client.Resource(resource).Namespace(namespace).(fake.MetadataClient)
+	} else {
+		request = client.Resource(resource).(fake.MetadataClient)
+	}
+	_, err := request.CreateFake(&metav1.PartialObjectMetadata{
+		TypeMeta:   meta,
+		ObjectMeta: object,
+	}, metav1.CreateOptions{})
+	return err
+}
+
 func TestMetricsEnabled(t *testing.T) {
 	testJSON := `[
 		{
@@ -105,32 +121,18 @@ func TestMetricsEnabled(t *testing.T) {
 	scheme := runtime.NewScheme()
 	_ = metav1.AddMetaToScheme(scheme)
 	FakeClient := fake.NewSimpleMetadataClient(scheme)
-	if _, err := FakeClient.Resource(resource_namespaces).(fake.MetadataClient).CreateFake(&metav1.PartialObjectMetadata{
-		TypeMeta: ns,
-		ObjectMeta: metav1.ObjectMeta{
-			Name:   "namespace1",
-			Labels: map[string]string{namespaces_enabled_label: "true"},
-		},
-	}, metav1.CreateOptions{}); err != nil {
-		t.Fatalf("CreateFake: %v", err)
-	}
-	if _, err := FakeClient.Resource(resource_namespaces).(fake.MetadataClient).CreateFake(&metav1.PartialObjectMetadata{
-		TypeMeta: ns,
-		ObjectMeta: metav1.ObjectMeta{
-			Name:   "namespace2",
-			Labels: map[string]string{namespaces_enabled_label: "false"},
-		},
-	}, metav1.CreateOptions{}); err != nil {
-		t.Fatalf("CreateFake: %v", err)
-	}
-	if _, err := FakeClient.Resource(resource_namespaces).(fake.MetadataClient).CreateFake(&metav1.PartialObjectMetadata{
-		TypeMeta: ns,
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "namespace3",
-		},
-	}, metav1.CreateOptions{}); err != nil {
-		t.Fatalf("CreateFake: %v", err)
-	}
+
+	assert.NoError(t, createResource(FakeClient, resource_namespaces, "", ns, metav1.ObjectMeta{
+		Name:   "namespace1",
+		Labels: map[string]string{namespaces_enabled_label: "true"},
+	}))
+	assert.NoError(t, createResource(FakeClient, resource_namespaces, "", ns, metav1.ObjectMeta{
+		Name:   "namespace2",
+		Labels: map[string]string{namespaces_enabled_label: "false"},
+	}))
+	assert.NoError(t, createResource(FakeClient, resource_namespaces, "", ns, metav1.ObjectMeta{
+		Name: "namespace3",
+	}))
 
 	assert.JSONEq(t, testJSON, cleanedJSON(t, FakeClient))
 }
@@ -154,24 +156,14 @@ func TestMetricsNode(t *testing.T) {
 	scheme := runtime.NewScheme()
 	_ = metav1.AddMetaToScheme(scheme)
 	FakeClient := fake.NewSimpleMetadataClient(scheme)
-	if _, err := FakeClient.Resource(resource_nodes).(fake.MetadataClient).CreateFake(&metav1.PartialObjectMetadata{
-		TypeMeta: nodes,
-		ObjectMeta: metav1.ObjectMeta{
-			Name:   "node1",
-			Labels: map[string]string{labelThesholdPrefix + "load-average-per-core-critical": "9"},
-		},
-	}, metav1.CreateOptions{}); err != nil {
-		t.Fatalf("CreateFake: %v", err)
-	}
-	if _, err := FakeClient.Resource(resource_nodes).(fake.MetadataClient).CreateFake(&metav1.PartialObjectMetadata{
-		TypeMeta: nodes,
-		ObjectMeta: metav1.ObjectMeta{
-			Name:   "node2",
-			Labels: map[string]string{namespaces_enabled_label: "false"},
-		},
-	}, metav1.CreateOptions{}); err != nil {
-		t.Fatalf("CreateFake: %v", err)
-	}
+	assert.NoError(t, createResource(FakeClient, resource_nodes, "", ns, metav1.ObjectMeta{
+		Name:   "node1",
+		Labels: map[string]string{labelThesholdPrefix + "load-average-per-core-critical": "9"},
+	}))
+	assert.NoError(t, createResource(FakeClient, resource_nodes, "", ns, metav1.ObjectMeta{
+		Name:   "node2",
+		Labels: map[string]string{namespaces_enabled_label: "false"},
+	}))
 
 	assert.JSONEq(t, testJSON, cleanedJSON(t, FakeClient))
 }
@@ -205,62 +197,32 @@ func TestMetricsPod(t *testing.T) {
 	scheme := runtime.NewScheme()
 	_ = metav1.AddMetaToScheme(scheme)
 	FakeClient := fake.NewSimpleMetadataClient(scheme)
-	if _, err := FakeClient.Resource(resource_namespaces).(fake.MetadataClient).CreateFake(&metav1.PartialObjectMetadata{
-		TypeMeta: ns,
-		ObjectMeta: metav1.ObjectMeta{
-			Name:   "ns1",
-			Labels: map[string]string{namespaces_enabled_label: "true"},
-		},
-	}, metav1.CreateOptions{}); err != nil {
-		t.Fatalf("CreateFake: %v", err)
-	}
-	if _, err := FakeClient.Resource(resource_namespaces).(fake.MetadataClient).CreateFake(&metav1.PartialObjectMetadata{
-		TypeMeta: ns,
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "ns2",
-		},
-	}, metav1.CreateOptions{}); err != nil {
-		t.Fatalf("CreateFake: %v", err)
-	}
-	if _, err := FakeClient.Resource(resource_pods).Namespace("ns1").(fake.MetadataClient).CreateFake(&metav1.PartialObjectMetadata{
-		TypeMeta: pods,
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "pod1",
-			Namespace: "ns1",
-			Labels:    map[string]string{namespaces_enabled_label: "false"},
-		},
-	}, metav1.CreateOptions{}); err != nil {
-		t.Fatalf("CreateFake: %v", err)
-	}
-	if _, err := FakeClient.Resource(resource_pods).Namespace("ns1").(fake.MetadataClient).CreateFake(&metav1.PartialObjectMetadata{
-		TypeMeta: pods,
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "pod2",
-			Namespace: "ns1",
-		},
-	}, metav1.CreateOptions{}); err != nil {
-		t.Fatalf("CreateFake: %v", err)
-	}
-	if _, err := FakeClient.Resource(resource_pods).Namespace("ns1").(fake.MetadataClient).CreateFake(&metav1.PartialObjectMetadata{
-		TypeMeta: pods,
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "pod3",
-			Namespace: "ns1",
-			Labels:    map[string]string{namespaces_enabled_label: "true"},
-		},
-	}, metav1.CreateOptions{}); err != nil {
-		t.Fatalf("CreateFake: %v", err)
-	}
-	if _, err := FakeClient.Resource(resource_pods).Namespace("ns2").(fake.MetadataClient).CreateFake(&metav1.PartialObjectMetadata{
-		TypeMeta: pods,
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "pod4",
-			Namespace: "ns2",
-			Labels:    map[string]string{namespaces_enabled_label: "true"},
-		},
-	}, metav1.CreateOptions{}); err != nil {
-		t.Fatalf("CreateFake: %v", err)
-	}
+	assert.NoError(t, createResource(FakeClient, resource_namespaces, "", ns, metav1.ObjectMeta{
+		Name:   "ns1",
+		Labels: map[string]string{namespaces_enabled_label: "true"},
+	}))
+	assert.NoError(t, createResource(FakeClient, resource_namespaces, "", ns, metav1.ObjectMeta{
+		Name: "ns2",
+	}))
+	assert.NoError(t, createResource(FakeClient, resource_pods, "ns1", pods, metav1.ObjectMeta{
+		Name:      "pod1",
+		Namespace: "ns1",
+		Labels:    map[string]string{namespaces_enabled_label: "false"},
+	}))
+	assert.NoError(t, createResource(FakeClient, resource_pods, "ns1", pods, metav1.ObjectMeta{
+		Name:      "pod2",
+		Namespace: "ns1",
+	}))
+	assert.NoError(t, createResource(FakeClient, resource_pods, "ns1", pods, metav1.ObjectMeta{
+		Name:      "pod3",
+		Namespace: "ns1",
+		Labels:    map[string]string{namespaces_enabled_label: "true"},
+	}))
+	assert.NoError(t, createResource(FakeClient, resource_pods, "ns2", pods, metav1.ObjectMeta{
+		Name:      "pod4",
+		Namespace: "ns2",
+		Labels:    map[string]string{namespaces_enabled_label: "true"},
+	}))
 
 	assert.JSONEq(t, testJSON, cleanedJSON(t, FakeClient))
 }
@@ -287,62 +249,32 @@ func TestMetricsIngress(t *testing.T) {
 	scheme := runtime.NewScheme()
 	_ = metav1.AddMetaToScheme(scheme)
 	FakeClient := fake.NewSimpleMetadataClient(scheme)
-	if _, err := FakeClient.Resource(resource_namespaces).(fake.MetadataClient).CreateFake(&metav1.PartialObjectMetadata{
-		TypeMeta: ns,
-		ObjectMeta: metav1.ObjectMeta{
-			Name:   "ns1",
-			Labels: map[string]string{namespaces_enabled_label: "true"},
-		},
-	}, metav1.CreateOptions{}); err != nil {
-		t.Fatalf("CreateFake: %v", err)
-	}
-	if _, err := FakeClient.Resource(resource_namespaces).(fake.MetadataClient).CreateFake(&metav1.PartialObjectMetadata{
-		TypeMeta: ns,
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "ns2",
-		},
-	}, metav1.CreateOptions{}); err != nil {
-		t.Fatalf("CreateFake: %v", err)
-	}
-	if _, err := FakeClient.Resource(resource_ingresses).Namespace("ns1").(fake.MetadataClient).CreateFake(&metav1.PartialObjectMetadata{
-		TypeMeta: ingress,
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "ing1",
-			Namespace: "ns1",
-			Labels:    map[string]string{namespaces_enabled_label: "false"},
-		},
-	}, metav1.CreateOptions{}); err != nil {
-		t.Fatalf("CreateFake: %v", err)
-	}
-	if _, err := FakeClient.Resource(resource_ingresses).Namespace("ns1").(fake.MetadataClient).CreateFake(&metav1.PartialObjectMetadata{
-		TypeMeta: ingress,
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "ing2",
-			Namespace: "ns1",
-		},
-	}, metav1.CreateOptions{}); err != nil {
-		t.Fatalf("CreateFake: %v", err)
-	}
-	if _, err := FakeClient.Resource(resource_ingresses).Namespace("ns1").(fake.MetadataClient).CreateFake(&metav1.PartialObjectMetadata{
-		TypeMeta: ingress,
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "ing3",
-			Namespace: "ns1",
-			Labels:    map[string]string{namespaces_enabled_label: "true"},
-		},
-	}, metav1.CreateOptions{}); err != nil {
-		t.Fatalf("CreateFake: %v", err)
-	}
-	if _, err := FakeClient.Resource(resource_ingresses).Namespace("ns2").(fake.MetadataClient).CreateFake(&metav1.PartialObjectMetadata{
-		TypeMeta: ingress,
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "ing4",
-			Namespace: "ns2",
-			Labels:    map[string]string{namespaces_enabled_label: "true"},
-		},
-	}, metav1.CreateOptions{}); err != nil {
-		t.Fatalf("CreateFake: %v", err)
-	}
+	assert.NoError(t, createResource(FakeClient, resource_namespaces, "", ns, metav1.ObjectMeta{
+		Name:   "ns1",
+		Labels: map[string]string{namespaces_enabled_label: "true"},
+	}))
+	assert.NoError(t, createResource(FakeClient, resource_namespaces, "", ns, metav1.ObjectMeta{
+		Name: "ns2",
+	}))
+	assert.NoError(t, createResource(FakeClient, resource_ingresses, "ns1", ingress, metav1.ObjectMeta{
+		Name:      "ing1",
+		Namespace: "ns1",
+		Labels:    map[string]string{namespaces_enabled_label: "false"},
+	}))
+	assert.NoError(t, createResource(FakeClient, resource_ingresses, "ns1", ingress, metav1.ObjectMeta{
+		Name:      "ing2",
+		Namespace: "ns1",
+	}))
+	assert.NoError(t, createResource(FakeClient, resource_ingresses, "ns1", ingress, metav1.ObjectMeta{
+		Name:      "ing3",
+		Namespace: "ns1",
+		Labels:    map[string]string{namespaces_enabled_label: "true"},
+	}))
+	assert.NoError(t, createResource(FakeClient, resource_ingresses, "ns2", ingress, metav1.ObjectMeta{
+		Name:      "ing4",
+		Namespace: "ns2",
+		Labels:    map[string]string{namespaces_enabled_label: "true"},
+	}))
 
 	assert.JSONEq(t, testJSON, cleanedJSON(t, FakeClient))
 }
@@ -366,62 +298,32 @@ func TestMetricsDeployment(t *testing.T) {
 	scheme := runtime.NewScheme()
 	_ = metav1.AddMetaToScheme(scheme)
 	FakeClient := fake.NewSimpleMetadataClient(scheme)
-	if _, err := FakeClient.Resource(resource_namespaces).(fake.MetadataClient).CreateFake(&metav1.PartialObjectMetadata{
-		TypeMeta: ns,
-		ObjectMeta: metav1.ObjectMeta{
-			Name:   "ns1",
-			Labels: map[string]string{namespaces_enabled_label: "true"},
-		},
-	}, metav1.CreateOptions{}); err != nil {
-		t.Fatalf("CreateFake: %v", err)
-	}
-	if _, err := FakeClient.Resource(resource_namespaces).(fake.MetadataClient).CreateFake(&metav1.PartialObjectMetadata{
-		TypeMeta: ns,
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "ns2",
-		},
-	}, metav1.CreateOptions{}); err != nil {
-		t.Fatalf("CreateFake: %v", err)
-	}
-	if _, err := FakeClient.Resource(resource_deployments).Namespace("ns1").(fake.MetadataClient).CreateFake(&metav1.PartialObjectMetadata{
-		TypeMeta: deployment,
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "deploy1",
-			Namespace: "ns1",
-			Labels:    map[string]string{namespaces_enabled_label: "false"},
-		},
-	}, metav1.CreateOptions{}); err != nil {
-		t.Fatalf("CreateFake: %v", err)
-	}
-	if _, err := FakeClient.Resource(resource_deployments).Namespace("ns1").(fake.MetadataClient).CreateFake(&metav1.PartialObjectMetadata{
-		TypeMeta: deployment,
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "deploy2",
-			Namespace: "ns1",
-		},
-	}, metav1.CreateOptions{}); err != nil {
-		t.Fatalf("CreateFake: %v", err)
-	}
-	if _, err := FakeClient.Resource(resource_deployments).Namespace("ns1").(fake.MetadataClient).CreateFake(&metav1.PartialObjectMetadata{
-		TypeMeta: deployment,
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "deploy3",
-			Namespace: "ns1",
-			Labels:    map[string]string{namespaces_enabled_label: "true"},
-		},
-	}, metav1.CreateOptions{}); err != nil {
-		t.Fatalf("CreateFake: %v", err)
-	}
-	if _, err := FakeClient.Resource(resource_deployments).Namespace("ns2").(fake.MetadataClient).CreateFake(&metav1.PartialObjectMetadata{
-		TypeMeta: deployment,
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "deploy4",
-			Namespace: "ns2",
-			Labels:    map[string]string{namespaces_enabled_label: "true"},
-		},
-	}, metav1.CreateOptions{}); err != nil {
-		t.Fatalf("CreateFake: %v", err)
-	}
+	assert.NoError(t, createResource(FakeClient, resource_namespaces, "", ns, metav1.ObjectMeta{
+		Name:   "ns1",
+		Labels: map[string]string{namespaces_enabled_label: "true"},
+	}))
+	assert.NoError(t, createResource(FakeClient, resource_namespaces, "", ns, metav1.ObjectMeta{
+		Name: "ns2",
+	}))
+	assert.NoError(t, createResource(FakeClient, resource_deployments, "ns1", deployment, metav1.ObjectMeta{
+		Name:      "deploy1",
+		Namespace: "ns1",
+		Labels:    map[string]string{namespaces_enabled_label: "false"},
+	}))
+	assert.NoError(t, createResource(FakeClient, resource_deployments, "ns1", deployment, metav1.ObjectMeta{
+		Name:      "deploy2",
+		Namespace: "ns1",
+	}))
+	assert.NoError(t, createResource(FakeClient, resource_deployments, "ns1", deployment, metav1.ObjectMeta{
+		Name:      "deploy3",
+		Namespace: "ns1",
+		Labels:    map[string]string{namespaces_enabled_label: "true"},
+	}))
+	assert.NoError(t, createResource(FakeClient, resource_deployments, "ns2", deployment, metav1.ObjectMeta{
+		Name:      "deploy4",
+		Namespace: "ns2",
+		Labels:    map[string]string{namespaces_enabled_label: "true"},
+	}))
 
 	assert.JSONEq(t, testJSON, cleanedJSON(t, FakeClient))
 }
@@ -445,62 +347,32 @@ func TestMetricsDaemonset(t *testing.T) {
 	scheme := runtime.NewScheme()
 	_ = metav1.AddMetaToScheme(scheme)
 	FakeClient := fake.NewSimpleMetadataClient(scheme)
-	if _, err := FakeClient.Resource(resource_namespaces).(fake.MetadataClient).CreateFake(&metav1.PartialObjectMetadata{
-		TypeMeta: ns,
-		ObjectMeta: metav1.ObjectMeta{
-			Name:   "ns1",
-			Labels: map[string]string{namespaces_enabled_label: "true"},
-		},
-	}, metav1.CreateOptions{}); err != nil {
-		t.Fatalf("CreateFake: %v", err)
-	}
-	if _, err := FakeClient.Resource(resource_namespaces).(fake.MetadataClient).CreateFake(&metav1.PartialObjectMetadata{
-		TypeMeta: ns,
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "ns2",
-		},
-	}, metav1.CreateOptions{}); err != nil {
-		t.Fatalf("CreateFake: %v", err)
-	}
-	if _, err := FakeClient.Resource(resource_daemonsets).Namespace("ns1").(fake.MetadataClient).CreateFake(&metav1.PartialObjectMetadata{
-		TypeMeta: daemonset,
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "ds1",
-			Namespace: "ns1",
-			Labels:    map[string]string{namespaces_enabled_label: "false"},
-		},
-	}, metav1.CreateOptions{}); err != nil {
-		t.Fatalf("CreateFake: %v", err)
-	}
-	if _, err := FakeClient.Resource(resource_daemonsets).Namespace("ns1").(fake.MetadataClient).CreateFake(&metav1.PartialObjectMetadata{
-		TypeMeta: daemonset,
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "ds2",
-			Namespace: "ns1",
-		},
-	}, metav1.CreateOptions{}); err != nil {
-		t.Fatalf("CreateFake: %v", err)
-	}
-	if _, err := FakeClient.Resource(resource_daemonsets).Namespace("ns1").(fake.MetadataClient).CreateFake(&metav1.PartialObjectMetadata{
-		TypeMeta: daemonset,
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "ds3",
-			Namespace: "ns1",
-			Labels:    map[string]string{namespaces_enabled_label: "true"},
-		},
-	}, metav1.CreateOptions{}); err != nil {
-		t.Fatalf("CreateFake: %v", err)
-	}
-	if _, err := FakeClient.Resource(resource_daemonsets).Namespace("ns2").(fake.MetadataClient).CreateFake(&metav1.PartialObjectMetadata{
-		TypeMeta: daemonset,
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "ds4",
-			Namespace: "ns2",
-			Labels:    map[string]string{namespaces_enabled_label: "true"},
-		},
-	}, metav1.CreateOptions{}); err != nil {
-		t.Fatalf("CreateFake: %v", err)
-	}
+	assert.NoError(t, createResource(FakeClient, resource_namespaces, "", ns, metav1.ObjectMeta{
+		Name:   "ns1",
+		Labels: map[string]string{namespaces_enabled_label: "true"},
+	}))
+	assert.NoError(t, createResource(FakeClient, resource_namespaces, "", ns, metav1.ObjectMeta{
+		Name: "ns2",
+	}))
+	assert.NoError(t, createResource(FakeClient, resource_daemonsets, "ns1", daemonset, metav1.ObjectMeta{
+		Name:      "ds1",
+		Namespace: "ns1",
+		Labels:    map[string]string{namespaces_enabled_label: "false"},
+	}))
+	assert.NoError(t, createResource(FakeClient, resource_daemonsets, "ns1", daemonset, metav1.ObjectMeta{
+		Name:      "ds2",
+		Namespace: "ns1",
+	}))
+	assert.NoError(t, createResource(FakeClient, resource_daemonsets, "ns1", daemonset, metav1.ObjectMeta{
+		Name:      "ds3",
+		Namespace: "ns1",
+		Labels:    map[string]string{namespaces_enabled_label: "true"},
+	}))
+	assert.NoError(t, createResource(FakeClient, resource_daemonsets, "ns2", daemonset, metav1.ObjectMeta{
+		Name:      "ds4",
+		Namespace: "ns2",
+		Labels:    map[string]string{namespaces_enabled_label: "true"},
+	}))
 
 	assert.JSONEq(t, testJSON, cleanedJSON(t, FakeClient))
 }
@@ -524,65 +396,77 @@ func TestMetricsStatefulset(t *testing.T) {
 	scheme := runtime.NewScheme()
 	_ = metav1.AddMetaToScheme(scheme)
 	FakeClient := fake.NewSimpleMetadataClient(scheme)
-	if _, err := FakeClient.Resource(resource_namespaces).(fake.MetadataClient).CreateFake(&metav1.PartialObjectMetadata{
-		TypeMeta: ns,
-		ObjectMeta: metav1.ObjectMeta{
-			Name:   "ns1",
-			Labels: map[string]string{namespaces_enabled_label: "true"},
-		},
-	}, metav1.CreateOptions{}); err != nil {
-		t.Fatalf("CreateFake: %v", err)
-	}
-	if _, err := FakeClient.Resource(resource_namespaces).(fake.MetadataClient).CreateFake(&metav1.PartialObjectMetadata{
-		TypeMeta: ns,
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "ns2",
-		},
-	}, metav1.CreateOptions{}); err != nil {
-		t.Fatalf("CreateFake: %v", err)
-	}
-	if _, err := FakeClient.Resource(resource_statefulsets).Namespace("ns1").(fake.MetadataClient).CreateFake(&metav1.PartialObjectMetadata{
-		TypeMeta: statefulset,
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "ds1",
-			Namespace: "ns1",
-			Labels:    map[string]string{namespaces_enabled_label: "false"},
-		},
-	}, metav1.CreateOptions{}); err != nil {
-		t.Fatalf("CreateFake: %v", err)
-	}
-	if _, err := FakeClient.Resource(resource_statefulsets).Namespace("ns1").(fake.MetadataClient).CreateFake(&metav1.PartialObjectMetadata{
-		TypeMeta: statefulset,
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "ds2",
-			Namespace: "ns1",
-		},
-	}, metav1.CreateOptions{}); err != nil {
-		t.Fatalf("CreateFake: %v", err)
-	}
-	if _, err := FakeClient.Resource(resource_statefulsets).Namespace("ns1").(fake.MetadataClient).CreateFake(&metav1.PartialObjectMetadata{
-		TypeMeta: statefulset,
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "ds3",
-			Namespace: "ns1",
-			Labels:    map[string]string{namespaces_enabled_label: "true"},
-		},
-	}, metav1.CreateOptions{}); err != nil {
-		t.Fatalf("CreateFake: %v", err)
-	}
-	if _, err := FakeClient.Resource(resource_statefulsets).Namespace("ns2").(fake.MetadataClient).CreateFake(&metav1.PartialObjectMetadata{
-		TypeMeta: statefulset,
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "ds4",
-			Namespace: "ns2",
-			Labels:    map[string]string{namespaces_enabled_label: "true"},
-		},
-	}, metav1.CreateOptions{}); err != nil {
-		t.Fatalf("CreateFake: %v", err)
-	}
+	assert.NoError(t, createResource(FakeClient, resource_namespaces, "", ns, metav1.ObjectMeta{
+		Name:   "ns1",
+		Labels: map[string]string{namespaces_enabled_label: "true"},
+	}))
+	assert.NoError(t, createResource(FakeClient, resource_namespaces, "", ns, metav1.ObjectMeta{
+		Name: "ns2",
+	}))
+	assert.NoError(t, createResource(FakeClient, resource_statefulsets, "ns1", statefulset, metav1.ObjectMeta{
+		Name:      "ds1",
+		Namespace: "ns1",
+		Labels:    map[string]string{namespaces_enabled_label: "false"},
+	}))
+	assert.NoError(t, createResource(FakeClient, resource_statefulsets, "ns1", statefulset, metav1.ObjectMeta{
+		Name:      "ds2",
+		Namespace: "ns1",
+	}))
+	assert.NoError(t, createResource(FakeClient, resource_statefulsets, "ns1", statefulset, metav1.ObjectMeta{
+		Name:      "ds3",
+		Namespace: "ns1",
+		Labels:    map[string]string{namespaces_enabled_label: "true"},
+	}))
+	assert.NoError(t, createResource(FakeClient, resource_statefulsets, "ns2", statefulset, metav1.ObjectMeta{
+		Name:      "ds4",
+		Namespace: "ns2",
+		Labels:    map[string]string{namespaces_enabled_label: "true"},
+	}))
 
 	assert.JSONEq(t, testJSON, cleanedJSON(t, FakeClient))
-	// println(cleanedJSON(t, FakeClient))
 }
 
-// prometheus.CounterOpts{Name: "extended_monitoring_cronjob_enabled"},
+func TestMetricsCronjob(t *testing.T) {
+	testJSON := `[
+		{
+			"name":"extended_monitoring_cronjob_enabled","type":0,"help":"","metric":[
+				{"counter":{"value":0},"label":[{"name":"cronjob","value":"ds1"},{"name":"namespace","value":"ns1"}]},
+				{"counter":{"value":1},"label":[{"name":"cronjob","value":"ds2"},{"name":"namespace","value":"ns1"}]},
+				{"counter":{"value":1},"label":[{"name":"cronjob","value":"ds3"},{"name":"namespace","value":"ns1"}]}
+		]},{
+			"name":"extended_monitoring_enabled","type":0,"help":"","metric":[
+				{"counter":{"value":1},"label":[{"name":"namespace","value":"ns1"}]}
+		]}]`
+
+	scheme := runtime.NewScheme()
+	_ = metav1.AddMetaToScheme(scheme)
+	FakeClient := fake.NewSimpleMetadataClient(scheme)
+	assert.NoError(t, createResource(FakeClient, resource_namespaces, "", ns, metav1.ObjectMeta{
+		Name:   "ns1",
+		Labels: map[string]string{namespaces_enabled_label: "true"},
+	}))
+	assert.NoError(t, createResource(FakeClient, resource_namespaces, "", ns, metav1.ObjectMeta{
+		Name: "ns2",
+	}))
+	assert.NoError(t, createResource(FakeClient, resource_cronjobs, "ns1", cronjob, metav1.ObjectMeta{
+		Name:      "ds1",
+		Namespace: "ns1",
+		Labels:    map[string]string{namespaces_enabled_label: "false"},
+	}))
+	assert.NoError(t, createResource(FakeClient, resource_cronjobs, "ns1", cronjob, metav1.ObjectMeta{
+		Name:      "ds2",
+		Namespace: "ns1",
+	}))
+	assert.NoError(t, createResource(FakeClient, resource_cronjobs, "ns1", cronjob, metav1.ObjectMeta{
+		Name:      "ds3",
+		Namespace: "ns1",
+		Labels:    map[string]string{namespaces_enabled_label: "true"},
+	}))
+	assert.NoError(t, createResource(FakeClient, resource_cronjobs, "ns2", cronjob, metav1.ObjectMeta{
+		Name:      "ds4",
+		Namespace: "ns2",
+		Labels:    map[string]string{namespaces_enabled_label: "true"},
+	}))
+
+	assert.JSONEq(t, testJSON, cleanedJSON(t, FakeClient))
+}
