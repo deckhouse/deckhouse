@@ -36,8 +36,9 @@ shell:
     apt-get update && apt-get install -y -d \
     sudo \
     libcap-devel libpcap-devel \
-    clang17.0 clang17.0-tools lldb17.0 lld17.0 llvm17.0-devel \
+    clang14.0 clang14.0-tools lld14.0 llvm14.0-devel \
     libcxxabi-devel \
+    libcxx libcxx-static libcxxabi-static lld14.0 llvm-config
   install:
   # Install Go
   - curl -sfL https://go.dev/dl/go{{ $goVersion }}.linux-amd64.tar.gz -o go.tar.gz

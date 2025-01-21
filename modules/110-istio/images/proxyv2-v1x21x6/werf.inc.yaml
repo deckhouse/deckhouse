@@ -1,5 +1,7 @@
 ---
 {{- $istioProxyVersion := "1.21.6" }}
+{{- $istioProxyCacheRev := "v1.29.7-39a2a56bbd5b3a591f69dbca51d3e30ef97e0e51-alt-v1" }}
+{{- $istioProxyDepsRev := "v1.29.7-39a2a56bbd5b3a591f69dbca51d3e30ef97e0e51-alt-v1" }}
 ---
 # Based on https://github.com/istio/istio/blob/1.21.6/docker/Dockerfile.base
 #      and https://github.com/istio/istio/blob/1.21.6/pilot/docker/Dockerfile.proxyv2
@@ -69,4 +71,65 @@ shell:
   - export GOPROXY={{ $.GOPROXY }}
   - GOOS=linux GOARCH=amd64 LDFLAGS='-extldflags -static -s -w' common/scripts/gobuild.sh /tmp/istio/out/ -tags=agent,disable_pgv /tmp/istio/pilot/cmd/pilot-agent
   - chmod 0555 /tmp/istio/out/pilot-agent
-  - chown 1337:1337 /tmp/istio/out/pilot-agent 
+  - chown 1337:1337 /tmp/istio/out/pilot-agent
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-build-envoy-artifact
+from: {{ $.ModuleName }}/base-istio-dev
+final: false
+mount:
+- fromPath: ~/go-pkg-cache
+  to: /go/pkg
+shell:
+  beforeInstall:
+  - |
+    apt-get install -y \
+    sudo \
+    libcap-devel libpcap-devel \
+    clang14.0 clang14.0-tools lld14.0 llvm14.0-devel \
+    libcxxabi-devel \
+    libcxx libcxx-static libcxxabi-static llvm-config llvm-dev llvm14.0-devel llvm-nm
+  # - ln -f -s llvm-17.0 "/usr/lib/llvm-17"
+  - update-alternatives --install /usr/bin/python python /usr/bin/python3 1
+  - apt-get autoclean && apt-get clean
+  install:
+  - sed -i "s/# root ALL=(ALL:ALL) ALL/root ALL=(ALL:ALL) ALL/" /etc/sudoers
+  - echo 'Defaults env_keep += "GOPROXY GOPATH GOROOT GOOS GOARCH GO_VERSION CGO_ENABLED"' >> /etc/sudoers
+  - echo 'Defaults env_keep += "TARGETARCH ARCH BAZEL_VERSION USE_BAZEL_VERSION BAZEL_OUTPUT_BASE"' >> /etc/sudoers
+  - echo 'Defaults env_keep += "BAZEL_BUILD_OPTS PKG_BUILD V DEBUG DESTDIR"' >> /etc/sudoers
+  - groupadd -f -g 1337 istio && useradd -m -g istio -u 1337 istio
+  - chmod -R a+w /tmp
+  - mkdir -p /istio/proxy
+  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
+  - git clone --depth 1 --branch {{ $istioProxyVersion }} {{ $.SOURCE_REPO }}/istio/proxy.git /istio/proxy
+  - chown -R 1337:1337 /istio/proxy
+  beforeSetup:
+  - export GO_VERSION=${GOLANG_VERSION} GOPROXY={{ $.GOPROXY }}
+  - export GOOS=linux GOARCH=amd64 CGO_ENABLED=0
+  - rm -f /usr/bin/clang
+  - rm -f /usr/bin/clang++
+  - ln -s /usr/lib/llvm-14.0/bin/clang /usr/bin/clang
+  - ln -s /usr/lib/llvm-14.0/bin/clang++ /usr/bin/clang++
+  setup:
+  - mkdir -p /tmp/bazel-cache
+  # - git clone --depth 1 --branch {{ $istioProxyCacheRev }} {{ $.SOURCE_REPO }}/istio/envoy-build-cache.git /tmp/bazel-cache
+  - chown -R 1337:1337 /tmp/bazel-cache
+  - mkdir -p /tmp/bazel-deps
+  # - git clone --depth 1 --branch {{ $istioProxyDepsRev }} {{ .SOURCE_REPO }}/istio/envoy-build-deps.git /tmp/bazel-deps
+  - chown -R 1337:1337 /tmp/bazel-deps
+  #
+  - export TARGETARCH=amd64 ARCH="x86_64"
+  - export BAZEL_VERSION="6.3.2" USE_BAZEL_VERSION="6.3.2"
+  - export BAZEL_BUILD_OPTS="--disk_cache=/tmp/bazel-cache"
+  - export PKG_BUILD=1 V=$V DEBUG=$DEBUG DESTDIR=/tmp/install
+  - cd /istio/proxy
+  #
+  - sudo -u istio sed -i '/^build:clang-asan --linkopt --unwindlib=libgcc/a build:clang-asan --linkopt=-L/usr/lib/llvm-14.0/lib64/clang/14.0.6/lib/x86_64-unknown-linux-gnu' envoy.bazelrc
+  - |
+    sudo -u istio sed -i '/^build:clang --linkopt=-fuse-ld=lld/a build:clang --host_action_env=PATH=/usr/lib/llvm-14.0/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/local/go/bin:/go/bin:/usr/lib/llvm-14.0/bin/ --action_env=PATH=/usr/lib/llvm-14.0/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/local/go/bin:/go/bin:/usr/lib/llvm-14.0/bin/\n\
+    build:clang --action_env=LLVM_CONFIG=/usr/lib/llvm-14.0/bin/llvm-config --host_action_env=LLVM_CONFIG=/usr/lib/llvm-14.0/bin/llvm-config\n\
+    build:clang --repo_env=LLVM_CONFIG=/usr/lib/llvm-14.0/bin/llvm-config\n\
+    build:clang --linkopt=-L/usr/lib/llvm-14.0/lib64\n\
+    build:clang --linkopt=-Wl,-rpath,/usr/lib/llvm-14.0/lib64' envoy.bazelrc
+  - sudo -u istio sed -i 's|ENVOY_SHA = "|ENVOY_SHA = "5c3dc559371181d5baa4a7533c36f2370fc97581"|' WORKSPACE
+  - sudo -u istio sed -i 's|ENVOY_SHA256 = "|ENVOY_SHA256 = "17f36c4267570e64123e3f08cdf8fc9442634572c5dc87f3f4192d953a4d29bf"|' WORKSPACE
+  - sudo -u istio PATH=${PATH} bazel build -- //...
