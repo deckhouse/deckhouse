@@ -1,3 +1,6 @@
+# Trivy version
+{{- $_ := set . "trivyVersion" (env "TRIVY_VERSION" "v0.55.2") }}
+
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
@@ -15,11 +18,12 @@ fromImage: common/src-artifact
 final: false
 shell:
   install:
-  - echo {{ .SOURCE_REPO }}/trivy.git /src/trivy-patch | base64 -d
-  - git clone --depth 1 --branch v0.55.2 {{ .SOURCE_REPO }}/aquasecurity/trivy-db.git /src/trivy-db
-  - git clone --depth 1 --branch v0.55.2 {{ .SOURCE_REPO }}/trivy-db.git /src/trivy-db-patch
+  - git clone --depth 1 --branch  v0.55.2 {{ .SOURCE_REPO }}/aquasecurity/trivy-db.git /src/trivy-db
+  - git clone --depth 1 --branch v0.55.2 git@{{ .DECKHOUSE_PRIVATE_REPO }}:deckhouse/trivy-db.git /src/trivy-db-patch
   - git clone --depth 1 --branch v0.55.2 {{ .SOURCE_REPO }}/aquasecurity/trivy.git /src/trivy
-  - git clone --depth 1 --branch v0.55.2 {{ .SOURCE_REPO }}/trivy.git /src/trivy-patch
+  - git clone --depth 1 --branch v0.55.2 git@{{ .DECKHOUSE_PRIVATE_REPO }}:deckhouse/trivy.git /src/trivy-patch
+  - cd /src/trivy-db && git apply --verbose --whitespace=fix /src/trivy-db-patch/patches/v0.55.2/*.patch
+  - cd /src/trivy && git apply --verbose --whitespace=fix /src/trivy-patch/patches/v0.55.2/*.patch
   - rm -rf /src/trivy/docs /src/trivy/integration
   - find /src/trivy -type d -name testdata | xargs rm -rf
   - rm -rf /src/trivy/.git /src/trivy-db/.git

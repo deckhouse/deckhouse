@@ -13,6 +13,7 @@ config:
     - CARGO_PROXY
     - STRONGHOLD_PULL_TOKEN
     - DECKHOUSE_PRIVATE_REPO
+    - TRIVY_VERSION
     allowUncommittedFiles: [ "tools/build_includes/*" ]
   stapel:
     mount:
