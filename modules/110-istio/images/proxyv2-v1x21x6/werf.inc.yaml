@@ -74,7 +74,7 @@ shell:
   - chown 1337:1337 /tmp/istio/out/pilot-agent
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-build-envoy-artifact
-from: {{ $.ModuleName }}/base-istio-dev
+fromImage: {{ $.ModuleName }}/base-istio-dev
 final: false
 mount:
 - fromPath: ~/go-pkg-cache
