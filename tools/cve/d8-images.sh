@@ -115,6 +115,7 @@ function __main__() {
         -F "test_title=${MODULE_NAME}: ${IMAGE_NAME}" \
         -F "version=test_branch" \
         -F "engagement_end_date=${date_iso}" \
+        -F "build_id=${TAG}" \
       > /dev/null
 
     done
