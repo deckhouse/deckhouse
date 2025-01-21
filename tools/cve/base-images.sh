@@ -84,8 +84,10 @@ function __main__() {
     trivyGetCVEListForImage -r "$REGISTRY" -i "$image" > "$WORKDIR/$(echo "$image" | tr "/" "_").cve"
     # Output reports per images
     trivyGetJSONReportPartForImage -r "$REGISTRY" -i "$image" -l "$(echo "$image" | cut -d@ -f1)" --output "out/json/base_image_${image}_report.json"
+    IMAGE_NAME=${image}|cut -d ":" -f 1
+    IMAGE_VERSION=${image}|cut -d ":" -f 2|cut -d "@" -f 1
     echo ""
-    echo " Uploading trivy CVE report for base image ${image}"
+    echo " Uploading trivy CVE report for base image ${IMAGE_NAME}"
     echo ""
     curl -s -X POST \
       http://${DEFECTDOJO_HOST}/api/v2/reimport-scan/ \
@@ -99,7 +101,7 @@ function __main__() {
       -F "scan_type=Trivy Scan" \
       -F "close_old_findings=false" \
       -F "push_to_jira=false" \
-      -F "file=@out/json/base_image_${image}_report.json" \
+      -F "file=@out/json/base_image_${IMAGE_NAME}_report.json" \
       -F "product_type_name=Deckhouse images" \
       -F "product_name=Deckhouse" \
       -F "scan_date=${date_iso}" \
@@ -108,8 +110,9 @@ function __main__() {
       -F "group_by=component_name+component_version" \
       -F "lead=1" \
       -F "deduplication_on_engagement=false" \
-      -F "tags=Base Image, ${image}" \
-      -F "test_title=Base Image: ${image}" \
+      -F "tags=Base Image,image:${IMAGE_NAME},codeowner:RomanenkoDenys" \
+      -F "test_title=Base Image: ${IMAGE_NAME}" \
+      -F "version=${IMAGE_VERSION}" \
     > /dev/null
   done
 
