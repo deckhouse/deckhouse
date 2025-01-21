@@ -72,6 +72,7 @@
  - **[descheduler]** Fix conversation from v1alpha1 to v1alpha2 (add nodeAffinityType default for removePodsViolatingNodeAffinity strategy). [#11223](https://github.com/deckhouse/deckhouse/pull/11223)
  - **[descheduler]** Fix and update descheduler. [#10361](https://github.com/deckhouse/deckhouse/pull/10361)
     descheduler pod will be restarted.
+ - **[dhctl]** Add validations settings for Huawei Cloud & Dynamix. [#11337](https://github.com/deckhouse/deckhouse/pull/11337)
  - **[dhctl]** Resource readiness fix. [#11018](https://github.com/deckhouse/deckhouse/pull/11018)
  - **[dhctl]** Fix the `master_ip_address_for_ssh` terraform output variable handling in converge. [#11039](https://github.com/deckhouse/deckhouse/pull/11039)
  - **[dhctl]** Fixed bootstrap on systems with umask `027`. [#10967](https://github.com/deckhouse/deckhouse/pull/10967)
@@ -86,6 +87,7 @@
  - **[helm_lib]** Updated helm_lib to 1.37.1, which should fix issue [#10950](https://github.com/deckhouse/deckhouse/pull/10950)
  - **[istio]** Fixes for Federation/Multicluster metadata-exporter and for istio-operator. [#11150](https://github.com/deckhouse/deckhouse/pull/11150)
  - **[istio]** Fixed `IngressIstioController` CRD docs rendering. [#10581](https://github.com/deckhouse/deckhouse/pull/10581)
+ - **[metallb]** Fix overlapping networks in IPAddressPools. [#11579](https://github.com/deckhouse/deckhouse/pull/11579)
  - **[metallb]** Fix metallb RBAC rules. [#11298](https://github.com/deckhouse/deckhouse/pull/11298)
  - **[metallb]** Fixed MetalLB migration issues and improved stability. [#11224](https://github.com/deckhouse/deckhouse/pull/11224)
  - **[multitenancy-manager]** Fix the 'secure' and 'secure_with_dedicated_nodes' project templates and add supporting default values. [#11096](https://github.com/deckhouse/deckhouse/pull/11096)
