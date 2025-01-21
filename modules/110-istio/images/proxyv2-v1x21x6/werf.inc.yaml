@@ -96,12 +96,12 @@ shell:
   - echo 'Defaults env_keep += "GOPROXY GOPATH GOROOT GOOS GOARCH GO_VERSION CGO_ENABLED"' >> /etc/sudoers
   - echo 'Defaults env_keep += "TARGETARCH ARCH BAZEL_VERSION USE_BAZEL_VERSION BAZEL_OUTPUT_BASE"' >> /etc/sudoers
   - echo 'Defaults env_keep += "BAZEL_BUILD_OPTS PKG_BUILD V DEBUG DESTDIR"' >> /etc/sudoers
-  - groupadd -f -g 1337 istio && useradd -m -g istio -u 1337 istio
-  - chmod -R a+w /tmp
+  # - groupadd -f -g 1337 istio && useradd -m -g istio -u 1337 istio
+  # - chmod -R a+w /tmp
   - mkdir -p /istio/proxy
   - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
   - git clone --depth 1 --branch {{ $istioProxyVersion }} {{ $.SOURCE_REPO }}/istio/proxy.git /istio/proxy
-  - chown -R 1337:1337 /istio/proxy
+  # - chown -R 1337:1337 /istio/proxy
   beforeSetup:
   - export GO_VERSION=${GOLANG_VERSION} GOPROXY={{ $.GOPROXY }}
   - export GOOS=linux GOARCH=amd64 CGO_ENABLED=0
@@ -115,21 +115,19 @@ shell:
   - chown -R 1337:1337 /tmp/bazel-cache
   - mkdir -p /tmp/bazel-deps
   # - git clone --depth 1 --branch {{ $istioProxyDepsRev }} {{ .SOURCE_REPO }}/istio/envoy-build-deps.git /tmp/bazel-deps
-  - chown -R 1337:1337 /tmp/bazel-deps
+  # - chown -R 1337:1337 /tmp/bazel-deps
   #
-  - export TARGETARCH=amd64 ARCH="x86_64"
   - export BAZEL_VERSION="6.3.2" USE_BAZEL_VERSION="6.3.2"
   - export BAZEL_BUILD_OPTS="--disk_cache=/tmp/bazel-cache"
-  - export PKG_BUILD=1 V=$V DEBUG=$DEBUG DESTDIR=/tmp/install
   - cd /istio/proxy
   #
-  - sudo -u istio sed -i '/^build:clang-asan --linkopt --unwindlib=libgcc/a build:clang-asan --linkopt=-L/usr/lib/llvm-14.0/lib64/clang/14.0.6/lib/x86_64-unknown-linux-gnu' envoy.bazelrc
+  - sed -i '/^build:clang-asan --linkopt --unwindlib=libgcc/a build:clang-asan --linkopt=-L/usr/lib/llvm-14.0/lib64/clang/14.0.6/lib/x86_64-unknown-linux-gnu' envoy.bazelrc
   - |
-    sudo -u istio sed -i '/^build:clang --linkopt=-fuse-ld=lld/a build:clang --host_action_env=PATH=/usr/lib/llvm-14.0/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/local/go/bin:/go/bin:/usr/lib/llvm-14.0/bin/ --action_env=PATH=/usr/lib/llvm-14.0/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/local/go/bin:/go/bin:/usr/lib/llvm-14.0/bin/\n\
+    sed -i '/^build:clang --linkopt=-fuse-ld=lld/a build:clang --host_action_env=PATH=/usr/lib/llvm-14.0/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/local/go/bin:/go/bin:/usr/lib/llvm-14.0/bin/ --action_env=PATH=/usr/lib/llvm-14.0/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/local/go/bin:/go/bin:/usr/lib/llvm-14.0/bin/\n\
     build:clang --action_env=LLVM_CONFIG=/usr/lib/llvm-14.0/bin/llvm-config --host_action_env=LLVM_CONFIG=/usr/lib/llvm-14.0/bin/llvm-config\n\
     build:clang --repo_env=LLVM_CONFIG=/usr/lib/llvm-14.0/bin/llvm-config\n\
     build:clang --linkopt=-L/usr/lib/llvm-14.0/lib64\n\
     build:clang --linkopt=-Wl,-rpath,/usr/lib/llvm-14.0/lib64' envoy.bazelrc
-  - sudo -u istio sed -i 's|ENVOY_SHA = "94aa5f7f82fb543e7fbc011ea398ac12cc396817"|ENVOY_SHA = "5c3dc559371181d5baa4a7533c36f2370fc97581"|' WORKSPACE
-  - sudo -u istio sed -i 's|ENVOY_SHA256 = "092784be59d19e99343afc095c1a65eca916b0b3f218d48545a6f0d43cdd5885"|ENVOY_SHA256 = "17f36c4267570e64123e3f08cdf8fc9442634572c5dc87f3f4192d953a4d29bf"|' WORKSPACE
-  - sudo -u istio PATH=${PATH} bazel build -- //...
+  - sed -i 's|ENVOY_SHA = "94aa5f7f82fb543e7fbc011ea398ac12cc396817"|ENVOY_SHA = "5c3dc559371181d5baa4a7533c36f2370fc97581"|' WORKSPACE
+  - sed -i 's|ENVOY_SHA256 = "092784be59d19e99343afc095c1a65eca916b0b3f218d48545a6f0d43cdd5885"|ENVOY_SHA256 = "17f36c4267570e64123e3f08cdf8fc9442634572c5dc87f3f4192d953a4d29bf"|' WORKSPACE
+  - bazel build -- //...
