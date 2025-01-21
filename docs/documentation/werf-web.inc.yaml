@@ -43,6 +43,11 @@ shell:
         yq -V
         echo "jq: $(jq -V)"
 
+        echo '[CSE] Converts from HuGo...'
+        find ./ -type f -iname '*.md' -exec sed -i -E 's/\{\{<[ ]*alert (level="[a-z]+")?\ ?>}}/{% alert \2 %}/g' {} +
+        find ./ -type f -iname '*.md' -exec sed -i -E 's/\{\{<[ ]*\/alert[ ]*>}}/{% endalert %}/g' {} +
+        find ./ -type f -name '*.ru.md' -exec bash -c 'mv "$0" "${0%.ru.md}_RU.md"' {} \;
+
         echo '[] Creating modules.yml ...'
         cd /srv/jekyll-data/documentation/
 {{ if ne .ModuleName "docs" }}

@@ -1,0 +1,62 @@
+spec:
+  versions:
+    - name: v1alpha1
+      schema:
+        openAPIV3Schema:
+          description: |
+            Интерфейс управления StorageСlass для CSI-драйвера nfs.csi.k8s.io. Ручное создание StorageClass для данного драйвера запрещено.
+          properties:
+            spec:
+              description: |
+                Определяет конфигурацию StorageClass.
+              properties:
+                connection:
+                  description: |
+                    Настройки сервера NFS
+                  properties:
+                    host:
+                      description: |
+                        Адрес NFS сервера
+                    share:
+                      description: |
+                        Путь к точке монтирования на NFS сервере
+                    nfsVersion:
+                      description: |
+                        Версия NFS сервера
+                mountOptions:
+                  description: |
+                    Опции монтирования
+                  properties:
+                    mountMode:
+                      description: |
+                        Режим монтирования NFS раздела
+                    timeout:
+                      description: |
+                        Таймаут NFS сервера
+                    retransmissions:
+                      description: |
+                        Количество попыток подключения к NFS серверу
+                    readOnly:
+                      description: |
+                        Монтирование в режиме "только чтение"
+                chmodPermissions:
+                  description: |
+                    Права для chmod, которые будут применены к субдиректории тома в NFS разделе
+                reclaimPolicy:
+                  description: |
+                    Режим поведения при удалении PVC. Может быть:
+                    - Delete (При удалении PVC будет удален PV и данные на NFS-сервере)
+                    - Retain (При удалении PVC не будут удалены PV и данные на NFS-сервере, потребуют ручного удаления пользователем)
+                volumeBindingMode:
+                  description: |
+                    Режим создания тома. Может быть Immediate (запрос при создании PVC) или WaitForFirstConsumer (до появления первого Pod)
+            status:
+              properties:
+                phase:
+                  description: |
+                    Общее текущее состояние StorageClass. Может быть: 
+                    - Failed (если контроллер получил некорректную конфигурацию ресурса или возникли ошибки в процессе выполнения операции)
+                    - Created (если StorageClass создан успешно)
+                reason:
+                  description: |
+                    Дополнительная информация о текущем состоянии StorageClass.

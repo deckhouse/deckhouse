@@ -85,6 +85,22 @@ entries:
                 ru: Настройки
               url: /modules/control-plane-manager/configuration.html
         - title:
+            en: flow-schema
+            ru: flow-schema
+          folders:
+            - title:
+                en: Description
+                ru: Описание
+              url: /modules/flow-schema/
+            - title:
+                en: Configuration
+                ru: Настройки
+              url: /modules/flow-schema/configuration.html
+            - title:
+                en: FAQ
+                ru: FAQ
+              url: /modules/flow-schema/faq.html
+        - title:
             ru: ingress-nginx
           folders:
             - title:
@@ -158,14 +174,6 @@ entries:
                 en: Configuration
                 ru: Настройки
               url: /modules/kube-dns/configuration.html
-        - title:
-            en: kube-proxy
-            ru: kube-proxy
-          folders:
-            - title:
-                en: Description
-                ru: Описание
-              url: /modules/kube-proxy/
         - title:
             en: local-path-provisioner
             ru: local-path-provisioner
@@ -526,6 +534,34 @@ entries:
                     ru: Custom Resources
                   url: /modules/admission-policy-engine/cr.html
         - title:
+            en: cert-manager
+            ru: cert-manager
+          folders:
+            - title:
+                en: Description
+                ru: Описание
+              url: /modules/cert-manager/
+            - title:
+                en: Usage
+                ru: Примеры
+              url: /modules/cert-manager/usage.html
+            - title:
+                en: Reference
+                ru: Справка
+              folders:
+                - title:
+                    en: Configuration
+                    ru: Настройки
+                  url: /modules/cert-manager/configuration.html
+                - title:
+                    en: Custom Resources
+                    ru: Custom Resources
+                  url: /modules/cert-manager/cr.html
+            - title:
+                en: FAQ
+                ru: FAQ
+              url: /modules/cert-manager/faq.html
+        - title:
             ru: multitenancy-manager
           moduleName: multitenancy-manager
           folders:
@@ -634,6 +670,23 @@ entries:
                 en: Description
                 ru: Описание
               url: /modules/secrets-store-integration/
+            - title:
+                en: Usage
+                ru: Примеры
+              url: /modules/secrets-store-integration/usage.html
+            - title:
+                en: Reference
+                ru: Справка
+              folders:
+                - title:
+                    en: Configuration
+                    ru: Настройки
+                  url: /modules/secrets-store-integration/configuration.html
+                - title:
+                    en: Custom Resources
+                    ru: Custom Resources
+                  url: /modules/secrets-store-integration/cr.html
+
         - title:
             en: stronghold
             ru: stronghold
@@ -645,15 +698,32 @@ entries:
             - title:
                 ru: Справка
                 en: Reference
-              folders:
-                - title:
-                    ru: Настройки
-                    en: Configuration
-                  url: /modules/stronghold/configuration.html
-                - title:
-                    en: Custom Resources
-                    ru: Custom Resources
-                  url: /modules/stronghold/cr.html
+            - title:
+                ru: Настройки
+                en: Configuration
+              url: /modules/stronghold/configuration.html
+            - title:
+                en: Usage
+                ru: Примеры
+              url: /modules/stronghold/usage.html
+            - title:
+                ru: Руководство администратора
+              url: /modules/stronghold/admin_guide.html
+            - title:
+                ru: Методы аутентификации
+              url: /modules/stronghold/admin_guide_auth_methods.html
+            - title:
+                ru: Механизм секретов KV
+              url: /modules/stronghold/admin_guide_kv.html
+            - title:
+                ru: Механизм секретов PKI
+              url: /modules/stronghold/admin_guide_pki.html
+            - title:
+                ru: Механизмы секретов
+              url: /modules/stronghold/admin_guide_secret_engines.html
+            - title:
+                ru: Описание функциональных характеристик
+              url: /modules/stronghold/characteristics_description.html
     - title:
         en: Storage
         ru: Подсистема Хранение данных
@@ -773,6 +843,10 @@ entries:
                     en: Custom Resources
                     ru: Custom Resources
                   url: /modules/sds-node-configurator/cr.html
+            - title:
+                en: Сценарии конфигурации
+                ru: Сценарии конфигурации
+              url: /modules/sds-node-configurator/layouts.html
             - title:
                 en: FAQ
                 ru: FAQ

@@ -1,0 +1,63 @@
+x-extend:
+  schema: config-values.yaml
+type: object
+x-required-for-helm:
+  - auth
+  - internal
+properties:
+  internal:
+    type: object
+    default: {}
+    properties:
+      debug:
+        type: object
+        description: |
+          Debug configuration
+        default: {}
+        properties:
+          backendLogLevel:
+            type: string
+            description: |
+              Log level
+            default: info
+            enum:
+              - debug
+              - info
+              - warn
+              - error
+          backendPprof:
+            type: boolean
+            description: |
+              Enables pprof on /debug/pprof/
+            default: false
+      deployDexAuthenticator:
+        type: boolean
+        x-examples: [true]
+      deployIngressRedirect:
+        type: boolean
+      customCertificateData:
+        type: object
+        properties:
+          tls.crt:
+            type: string
+          tls.key:
+            type: string
+          ca.crt:
+            type: string
+      auth:
+        type: object
+        default: {}
+        properties:
+          password:
+            type: string
+      logo:
+        type: object
+        default:
+          enabled: false
+        properties:
+          enabled:
+            type: boolean
+            description: The presence of the image
+          content:
+            type: string
+            description: Image content from configmap

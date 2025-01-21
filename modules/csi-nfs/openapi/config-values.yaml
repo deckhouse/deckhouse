@@ -1,0 +1,16 @@
+type: object
+properties:
+  logLevel:
+    type: string
+    enum:
+      - ERROR
+      - WARN
+      - INFO
+      - DEBUG
+      - TRACE
+    description: Module log level
+    default: DEBUG
+  v3support:
+    type: boolean
+    default: false
+    description: NFS version v3 support. After enabling this setting, rpc-statd will be installed on nodes. When this setting is disabled, it will NOT be removed from the nodes.

@@ -1,0 +1,79 @@
+spec:
+  versions:
+    - name: v1alpha1
+      schema:
+        openAPIV3Schema:
+          type: object
+          description: | 
+            LVMLogicalVolume ресурс описывает, где будет выделено место при создании PV.
+          properties:
+            spec:
+              properties:
+                actualLVNameOnTheNode:
+                  type: string
+                  description: |
+                    Имя LV на узле.
+                type:
+                  description: |
+                    Тип LV: Thick или Thin.
+                size:
+                  description: |
+                    Желаемый размер LV. Может быть указан как в численном, так и процентном отношении к общему размеру VG или thin pool (для thin pool общий размер - это реальный размер пула, умноженный на allocationLimit).
+                    
+                    > Обратите внимание, что при указании размера в процентах LV будет автоматически расширена при расширении VG, расширении thin pool или увеличения поля AllocationLimit для thin pool.
+                lvmVolumeGroupName:
+                  description: |
+                    Имя LVMVolumeGroup ресурса, VG которого будет использовано для создания LV.
+                thin:
+                  description: |
+                    Описывает используемый Thin Pool. Указывается только при Thin LV.
+                  properties:
+                    poolName:
+                      description: |
+                        Имя используемого Thin pool.
+                thick:
+                  description: | 
+                    Описывает настройки используемого Thick LV.
+                  properties:
+                    contiguous:
+                      description: |
+                        Если true, логический том будет создан с флагом contiguous. Примечание: Этот флаг следует использовать с осторожностью, так как он может привести к невозможности создания LV, не смотря на наличие свободного пространства.
+            status:
+              description: |
+                Описывает состояние ресурса.
+              properties:
+                phase:
+                  description: |
+                    Текущая фаза ресурса.
+                reason:
+                  description: |
+                    Причина выставленной фазы.
+                actualSize:
+                  description: |
+                    Актуальный размер LV на узле.
+                contiguous:
+                  description: |
+                    Создан ли логический том с флагом contiguous.
+      subresources:
+        status: {}
+      additionalPrinterColumns:
+        - jsonPath: .status.phase
+          name: Phase
+          type: string
+          description: The current resource status.
+        - jsonPath: .spec.lvmVolumeGroupName
+          name: LVMVolumeGroup
+          type: string
+          description: The selected LVMVolumeGroup resource.
+        - jsonPath: .spec.thin.poolName
+          name: ThinPool
+          type: string
+          description: The selected ThinPool in LVMVolumeGroup. Might be empty if the LVMVolumeGroup is thick.
+        - jsonPath: .status.actualSize
+          name: Size
+          type: string
+          description: Actual LVMLogicalVolume size.
+        - jsonPath: .metadata.creationTimestamp
+          name: Age
+          type: date
+          description: The age of this resource
