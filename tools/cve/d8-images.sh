@@ -97,7 +97,7 @@ function __main__() {
         -F "group_by=component_name+component_version" \
         -F "lead=1" \
         -F "deduplication_on_engagement=false" \
-        -f "tags=[${MODULE_NAME}, ${IMAGE_NAME}]" \
+        -F "tags=${MODULE_NAME}, ${IMAGE_NAME}" \
         -F "test_title=${MODULE_NAME}: ${IMAGE_NAME}" \
       > /dev/null
 
