@@ -32,14 +32,13 @@
       plk_grouped_by__cluster_has_expired_certificates: ClusterHasCertmanagerCertificatesExpired,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes
       description: Certificate {{$labels.exported_namespace}}/{{$labels.name}} is not provided.
       summary: |
-       Certificate is not provided.
+        Certificate is not provided.
 
+        To check the certificate details, run the following command:
 
-       To check the certificate details, run the following command:
-
-       ```shell
-       kubectl -n {{$labels.exported_namespace}} describe certificate {{$labels.name}}
-       ```
+        ```shell
+        kubectl -n {{$labels.exported_namespace}} describe certificate {{$labels.name}}
+        ```
   - alert: CertmanagerCertificateOrderErrors
     expr: |
       sum by (scheme, host, path, status) (

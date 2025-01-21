@@ -48,7 +48,7 @@ alerts:
       module: cert-manager
       edition: ce
       description: Certificate {{$labels.exported_namespace}}/{{$labels.name}} is not provided.
-      summary: "Certificate is not provided.   To check the certificate details, run the following command:  shell kubectl -n {{$labels.exported_namespace}} describe certificate {{$labels.name}} \n"
+      summary: "Certificate is not provided.  To check the certificate details, run the following command:  shell kubectl -n {{$labels.exported_namespace}} describe certificate {{$labels.name}} \n"
       severity: "4"
       markupFormat: default
     - name: CertmanagerCertificateExpiredSoon
