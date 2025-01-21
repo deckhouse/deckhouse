@@ -122,6 +122,8 @@ shell:
   - cd /istio/proxy
   #
   - sed -i '/^build:clang-asan --linkopt --unwindlib=libgcc/a build:clang-asan --linkopt=-L/usr/lib/llvm-14.0/lib64/clang/14.0.6/lib/x86_64-unknown-linux-gnu' envoy.bazelrc
+  - sed -i 's|build:clang --linkopt=-fuse-ld=lld|build:clang --linkopt=-fuse-ld=/usr/lib/llvm-14.0/bin/ld.lld|' envoy.bazelrc
+  - sed -i 's|build:libc++ --action_env=BAZEL_LINKLIBS=-l%:libc++.a:-l%:libc++abi.a|build:libc++ --action_env=BAZEL_LINKLIBS=-lc++:-lc++abi|' envoy.bazelrc
   - |
     sed -i '/^build:clang --linkopt=-fuse-ld=lld/a build:clang --host_action_env=PATH=/usr/lib/llvm-14.0/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/local/go/bin:/go/bin:/usr/lib/llvm-14.0/bin/ --action_env=PATH=/usr/lib/llvm-14.0/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/local/go/bin:/go/bin:/usr/lib/llvm-14.0/bin/\n\
     build:clang --action_env=LLVM_CONFIG=/usr/lib/llvm-14.0/bin/llvm-config --host_action_env=LLVM_CONFIG=/usr/lib/llvm-14.0/bin/llvm-config\n\
