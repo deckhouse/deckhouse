@@ -86,6 +86,7 @@ function __main__() {
     # Output reports per images
     IMAGE_NAME="$(echo ${image}|cut -d ':' -f 1)"
     IMAGE_TAG="$(echo ${image}|cut -d ':' -f 2|cut -d '@' -f 1)"
+    IMAGE_HASH="$(echo ${image}|cut -d '@' -f 2)"
     trivyGetJSONReportPartForImage -r "$REGISTRY" -i "$image" -l "${IMAGE_NAME}:${IMAGE_TAG}" --output "out/json/base_image_${IMAGE_NAME}_report.json"
     echo ""
     echo " Uploading trivy CVE report for base image ${IMAGE_NAME}"
@@ -115,8 +116,16 @@ function __main__() {
       -F "test_title=Base Image: ${IMAGE_NAME}" \
       -F "version=${IMAGE_TAG}" \
       -F "engagement_end_date=${date_iso}" \
+      -F "build_id=${IMAGE_HASH}" \
+      -F "branch_tag=${IMAGE_TAG}" \
+      -F "apply_tags_to_findings=true" \
     > /dev/null
   done
+
+        -F "engagement_end_date=${date_iso}" \
+        -F "build_id=${IMAGE_HASH}" \
+        -F "branch_tag=${TAG}" \
+        -F "apply_tags_to_findings=true" \
 
   find "$WORKDIR" -type f -exec cat {} + | uniq | sort > out/.trivyignore
   rm -r "$WORKDIR"
