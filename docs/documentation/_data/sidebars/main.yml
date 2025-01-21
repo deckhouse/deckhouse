@@ -1,82 +1,49 @@
 # Next lines are for local build only
-# Next lines are for local build only
 entries:
   folders:
-    - title: Deckhouse Platform Certified Security Edition
+    - title:
+        ru: Deckhouse Platform Certified Security Edition
+        en: Deckhouse Platform Certified Security Edition
       folders:
         - title:
             en: Overview
             ru: Введение
-          url: /index.html
+          url: /
         - title:
             en: Global configuration
             ru: Глобальные настройки
           url: /deckhouse-configure-global.html
-        - title: Custom Resources
+        - title:
+            en: Custom Resources
+            ru: Custom Resources
           url: /cr.html
-        - title: FAQ
+        - title:
+            en: FAQ
+            ru: FAQ
           url: /deckhouse-faq.html
     - title:
         en: Kubernetes Cluster
-        ru: Кластер Kubernetes
+        ru: Подсистема Кластер Kubernetes
       folders:
         - title:
-            en: Description
-            ru: Описание
-          url: /kubernetes.html
-        - title:
-            en: Control plane manager
-            ru: Control plane manager
+            ru: chrony
           folders:
             - title:
                 en: Description
                 ru: Описание
-              url: /modules/control-plane-manager/index.html
+              url: /modules/chrony/
             - title:
                 en: Configuration
                 ru: Настройки
-              url: /modules/control-plane-manager/configuration.html
-        - title: Ingress nginx
-          folders:
-            - title:
-                en: Description
-                ru: Описание
-              url: /modules/ingress-nginx/index.html
-            - title:
-                en: Reference
-                ru: Справка
-              folders:
-                - title:
-                    en: Configuration
-                    ru: Настройки
-                  url: /modules/ingress-nginx/configuration.html
-                - title: Custom Resources
-                  url: /modules/ingress-nginx/cr.html
+              url: /modules/chrony/configuration.html
         - title:
-            en: Node manager
-            ru: Node manager
-          folders:
-            - title:
-                en: Description
-                ru: Описание
-              url: /modules/node-manager/index.html
-            - title:
-                en: Reference
-                ru: Справка
-              folders:
-                - title:
-                    en: Configuration
-                    ru: Настройки
-                  url: /modules/node-manager/configuration.html
-                - title: Custom Resources
-                  url: /modules/node-manager/cr.html
-        - title: CNI cilium
+            ru: cni-cilium
           moduleName: cni-cilium
           folders:
             - title:
                 ru: Описание
                 en: Description
-              url: /modules/cni-cilium/index.html
+              url: /modules/cni-cilium/
             - title:
                 en: Reference
                 ru: Справка
@@ -85,98 +52,129 @@ entries:
                     en: Configuration
                     ru: Настройки
                   url: /modules/cni-cilium/configuration.html
-                - title: Custom Resources
+                - title:
+                    en: Custom Resources
+                    ru: Custom Resources
                   url: /modules/cni-cilium/cr.html
             - title:
                 en: Examples
                 ru: Примеры
               url: /modules/cni-cilium/examples.html
-        - title: Kube DNS
+        - title:
+            en: cilium-hubble
+            ru: cilium-hubble
+          folders:
+            - title:
+                ru: Описание
+                en: Description
+              url: /modules/cilium-hubble/
+            - title:
+                ru: Настройки
+                en: Configuration
+              url: /modules/cilium-hubble/configuration.html
+        - title:
+            en: control-plane-manager
+            ru: control-plane-manager
           folders:
             - title:
                 en: Description
                 ru: Описание
-              url: /modules/kube-dns/index.html
+              url: /modules/control-plane-manager/
+            - title:
+                en: Configuration
+                ru: Настройки
+              url: /modules/control-plane-manager/configuration.html
+        - title:
+            ru: ingress-nginx
+          folders:
+            - title:
+                en: Description
+                ru: Описание
+              url: /modules/ingress-nginx/
+            - title:
+                en: Reference
+                ru: Справка
+              folders:
+                - title:
+                    en: Configuration
+                    ru: Настройки
+                  url: /modules/ingress-nginx/configuration.html
+                - title:
+                    en: Custom Resources
+                    ru: Custom Resources
+                  url: /modules/ingress-nginx/cr.html
+        - title:
+            en: istio
+            ru: istio
+          folders:
+            - title:
+                en: Description
+                ru: Описание
+              url: /modules/istio/
+            - title:
+                en: Reference
+                ru: Справка
+              folders:
+                - title:
+                    en: Configuration
+                    ru: Настройки
+                  url: /modules/istio/configuration.html
+                - title:
+                    en: Custom Resources
+                    ru: Custom Resources
+                  url: /modules/istio/cr.html
+            - title:
+                en: Examples
+                ru: Примеры
+              url: /modules/istio/examples.html
+        - title:
+            en: node-manager
+            ru: node-manager
+          folders:
+            - title:
+                en: Description
+                ru: Описание
+              url: /modules/node-manager/
+            - title:
+                en: Reference
+                ru: Справка
+              folders:
+                - title:
+                    en: Configuration
+                    ru: Настройки
+                  url: /modules/node-manager/configuration.html
+                - title:
+                    en: Custom Resources
+                    ru: Custom Resources
+                  url: /modules/node-manager/cr.html
+        - title:
+            ru: kube-dns
+          folders:
+            - title:
+                en: Description
+                ru: Описание
+              url: /modules/kube-dns/
             - title:
                 en: Configuration
                 ru: Настройки
               url: /modules/kube-dns/configuration.html
-        - title: metallb
-          moduleName: metallb
+        - title:
+            en: kube-proxy
+            ru: kube-proxy
           folders:
             - title:
                 en: Description
                 ru: Описание
-              url: /modules/metallb/index.html
-            - title:
-                en: Examples
-                ru: Примеры
-              url: /modules/metallb/examples.html
-            - title:
-                en: Configuration
-                ru: Настройки
-              url: /modules/metallb/configuration.html
-        - title: Node local DNS
-          moduleName: node-local-dns
-          folders:
-            - title:
-                en: Description
-                ru: Описание
-              url: /modules/node-local-dns/index.html
-            - title:
-                en: Examples
-                ru: Примеры
-              url: /modules/node-local-dns/examples.html
-            - title:
-                en: Configuration
-                ru: Настройки
-              url: /modules/node-local-dns/configuration.html
-        - title: CNI flannel
-          folders:
-            - title:
-                en: Description
-                ru: Описание
-              url: /modules/cni-flannel/index.html
-            - title:
-                en: Configuration
-                ru: Настройки
-              url: /modules/cni-flannel/configuration.html
-        - title: chrony
-          folders:
-            - title:
-                en: Description
-                ru: Описание
-              url: /modules/chrony/index.html
-            - title:
-                en: Configuration
-                ru: Настройки
-              url: /modules/chrony/configuration.html
-    - title:
-        en: Storage
-        ru: Хранение данных
-      folders:
-        - title: Snapshot controller
-          moduleName: snapshot-controller
-          folders:
-            - title:
-                en: Description
-                ru: Описание
-              url: /modules/snapshot-controller/index.html
-            - title:
-                en: Usage
-                ru: Примеры
-              url: /modules/snapshot-controller/usage.html
-            - title:
-                en: Configuration
-                ru: Настройки
-              url: /modules/snapshot-controller/configuration.html
-        - title: Local path provisioner
+              url: /modules/kube-proxy/
+        - title:
+            en: local-path-provisioner
+            ru: local-path-provisioner
           moduleName: local-path-provisioner
           folders:
             - title:
                 en: Description
                 ru: Описание
-              url: /modules/local-path-provisioner/index.html
+              url: /modules/local-path-provisioner/
             - title:
                 en: Reference
                 ru: Справка
@@ -185,70 +183,115 @@ entries:
                     en: Configuration
                     ru: Настройки
                   url: /modules/local-path-provisioner/configuration.html
-                - title: Custom Resources
+                - title:
+                    en: Custom Resources
+                    ru: Custom Resources
                   url: /modules/local-path-provisioner/cr.html
-        - title: CSI ceph
-          moduleName: csi-ceph
+        - title:
+            ru: metallb
+          moduleName: metallb
           folders:
             - title:
                 en: Description
                 ru: Описание
-              url: /modules/csi-ceph/index.html
-            - title:
-                en: Reference
-                ru: Справка
-              folders:
-                - title:
-                    en: Configuration
-                    ru: Настройки
-                  url: /modules/csi-ceph/configuration.html
-                - title: Custom Resources
-                  url: /modules/csi-ceph/cr.html
+              url: /modules/metallb/
             - title:
                 en: Examples
                 ru: Примеры
-              url: /modules/csi-ceph/examples.html
-            - title: FAQ
-              url: /modules/csi-ceph/faq.html
-        - title: CSI NFS
-          moduleName: csi-nfs
+              url: /modules/metallb/examples.html
+            - title:
+                en: Configuration
+                ru: Настройки
+              url: /modules/metallb/configuration.html
+        - title:
+            ru: node-local-dns
+          moduleName: node-local-dns
           folders:
             - title:
                 en: Description
                 ru: Описание
-              url: /modules/csi-nfs/index.html
+              url: /modules/node-local-dns/
             - title:
-                en: Reference
-                ru: Справка
-              folders:
-                - title:
-                    en: Configuration
-                    ru: Настройки
-                  url: /modules/csi-nfs/configuration.html
-                - title: Custom Resources
-                  url: /modules/csi-nfs/cr.html
-            - title: FAQ
-              url: /modules/csi-nfs/faq.html
+                en: Examples
+                ru: Примеры
+              url: /modules/node-local-dns/examples.html
+            - title:
+                en: Configuration
+                ru: Настройки
+              url: /modules/node-local-dns/configuration.html
+        - title:
+            en: namespace-configurator
+            ru: namespace-configurator
+          folders:
+            - title:
+                en: Description
+                ru: Описание
+              url: /modules/namespace-configurator/
+            - title:
+                en: Configuration
+                ru: Настройки
+              url: /modules/namespace-configurator/configuration.html
+            - title:
+                en: Examples
+                ru: Примеры
+              url: /modules/namespace-configurator/examples.html
+        - title:
+            en: priority-class
+            ru: priority-class
+          folders:
+            - title:
+                en: Description
+                ru: Описание
+              url: /modules/priority-class/
+            - title:
+                en: Configuration
+                ru: Настройки
+              url: /modules/priority-class/configuration.html
     - title:
         en: Deckhouse
-        ru: Deckhouse
+        ru: Подсистема Deckhouse
       folders:
-        - title: deckhouse
+        - title:
+            ru: console
           folders:
             - title:
                 en: Description
                 ru: Описание
-              url: /modules/deckhouse/index.html
+              url: /modules/console/
+            - title:
+                en: Configuration
+                ru: Настройки
+              url: /modules/console/configuration.html
+        - title:
+            ru: deckhouse
+          folders:
+            - title:
+                en: Description
+                ru: Описание
+              url: /modules/deckhouse/
             - title:
                 en: Configuration
                 ru: Настройки
               url: /modules/deckhouse/configuration.html
-        - title: documentation
+        - title:
+            en: deckhouse-tools
+            ru: deckhouse-tools
           folders:
             - title:
                 en: Description
                 ru: Описание
-              url: /modules/documentation/index.html
+              url: /modules/deckhouse-tools/
+            - title:
+                en: Configuration
+                ru: Настройки
+              url: /modules/deckhouse-tools/configuration.html
+        - title:
+            ru: documentation
+          folders:
+            - title:
+                en: Description
+                ru: Описание
+              url: /modules/documentation/
             - title:
                 en: Examples
                 ru: Примеры
@@ -257,65 +300,42 @@ entries:
                 en: Configuration
                 ru: Настройки
               url: /modules/documentation/configuration.html
-
     - title:
         en: Monitoring
-        ru: Мониторинг
+        ru: Подсистема Мониторинг
       folders:
         - title:
-            ru: Monitoring Kubernetes
-            en: Monitoring Kubernetes
+            en: extended-monitoring
+            ru: extended-monitoring
           folders:
             - title:
                 en: Description
                 ru: Описание
-              url: /modules/monitoring-kubernetes/index.html
+              url: /modules/extended-monitoring/
             - title:
                 en: Configuration
                 ru: Настройки
-              url: /modules/monitoring-kubernetes/configuration.html
+              url: /modules/extended-monitoring/configuration.html
         - title:
-            en: Monitoring Kubernetes Control plane
-            ru: Monitoring Kubernetes Control plane
+            en: loki
+            ru: loki
           folders:
             - title:
                 en: Description
                 ru: Описание
-              url: /modules/monitoring-kubernetes-control-plane/index.html
-            - title:
-                en: Configuration
-                ru: Настройки
-              url: /modules/monitoring-kubernetes-control-plane/configuration.html
-        - title: Operator prometheus
-          folders:
-            - title:
-                en: Description
-                ru: Описание
-              url: /modules/operator-prometheus/index.html
-            - title:
-                en: Configuration
-                ru: Настройки
-              url: /modules/operator-prometheus/configuration.html
-        - title:
-            en: Loki
-            ru: Loki
-          folders:
-            - title:
-                en: Description
-                ru: Описание
-              url: /modules/loki/index.html
+              url: /modules/loki/
             - title:
                 en: Configuration
                 ru: Настройки
               url: /modules/loki/configuration.html
         - title:
-            en: Log shipper
-            ru: Log shipper
+            en: log-shipper
+            ru: log-shipper
           folders:
             - title:
                 en: Description
                 ru: Описание
-              url: /modules/log-shipper/index.html
+              url: /modules/log-shipper/
             - title:
                 en: Reference
                 ru: Справка
@@ -324,15 +344,81 @@ entries:
                     en: Configuration
                     ru: Настройки
                   url: /modules/log-shipper/configuration.html
-                - title: Custom Resources
+                - title:
+                    en: Custom Resources
+                    ru: Custom Resources
                   url: /modules/log-shipper/cr.html
-        - title: Prometheus
-          url: /modules/prometheus/index.html
+        - title:
+            en: monitoring-custom
+            ru: monitoring-custom
           folders:
             - title:
                 en: Description
                 ru: Описание
-              url: /modules/prometheus/index.html
+              url: /modules/monitoring-custom/
+            - title:
+                en: Configuration
+                ru: Настройки
+              url: /modules/monitoring-custom/configuration.html
+        - title:
+            ru: monitoring-kubernetes
+            en: monitoring-kubernetes
+          folders:
+            - title:
+                en: Description
+                ru: Описание
+              url: /modules/monitoring-kubernetes/
+            - title:
+                en: Configuration
+                ru: Настройки
+              url: /modules/monitoring-kubernetes/configuration.html
+        - title:
+            en: monitoring-kubernetes-control-plane
+            ru: monitoring-kubernetes-control-plane
+          folders:
+            - title:
+                en: Description
+                ru: Описание
+              url: /modules/monitoring-kubernetes-control-plane/
+            - title:
+                en: Configuration
+                ru: Настройки
+              url: /modules/monitoring-kubernetes-control-plane/configuration.html
+        - title:
+            en: monitoring-ping
+            ru: monitoring-ping
+          folders:
+            - title:
+                en: Description
+                ru: Описание
+              url: /modules/monitoring-ping/
+            - title:
+                en: Configuration
+                ru: Настройки
+              url: /modules/monitoring-ping/configuration.html
+            - title:
+                en: Usage
+                ru: Примеры
+              url: /modules/monitoring-ping/usage.html
+        - title:
+            ru: operator-prometheus
+          folders:
+            - title:
+                en: Description
+                ru: Описание
+              url: /modules/operator-prometheus/
+            - title:
+                en: Configuration
+                ru: Настройки
+              url: /modules/operator-prometheus/configuration.html
+        - title:
+            ru: prometheus
+          url: /modules/prometheus/
+          folders:
+            - title:
+                en: Description
+                ru: Описание
+              url: /modules/prometheus/
             - title:
                 en: Reference
                 ru: Справка
@@ -341,34 +427,47 @@ entries:
                     en: Configuration
                     ru: Настройки
                   url: /modules/prometheus/configuration.html
-                - title: Custom Resources
+                - title:
+                    en: Custom Resources
+                    ru: Custom Resources
                   url: /modules/prometheus/cr.html
-        - title:
-            en: Monitoring custom
-            ru: Monitoring custom
-          moduleName: monitoring-custom
-          folders:
-            - title:
-                en: Description
-                ru: Описание
-              url: /modules/monitoring-custom/index.html
-            - title:
-                en: Configuration
-                ru: Настройки
-              url: /modules/monitoring-custom/configuration.html
     - title:
         en: Autoscaling & Managing resources
-        ru: Масштабирование и управление ресурсами
+        ru: Подсистема Масштабирование и управление ресурсами
       moduleName: prometheus-metrics-adapter
       folders:
         - title:
-            en: Prometheus Metrics Adapter
-            ru: Prometheus Metrics Adapter
+            en: descheduler
+            ru: descheduler
           folders:
             - title:
                 en: Description
                 ru: Описание
-              url: /modules/prometheus-metrics-adapter/index.html
+              url: /modules/descheduler/
+            - title:
+                en: Examples
+                ru: Примеры
+              url: /modules/descheduler/examples.html
+            - title:
+                en: Reference
+                ru: Справка
+              folders:
+                - title:
+                    en: Configuration
+                    ru: Настройки
+                  url: /modules/descheduler/configuration.html
+                - title:
+                    en: Custom Resources
+                    ru: Custom Resources
+                  url: /modules/descheduler/cr.html
+        - title:
+            en: prometheus-metrics-adapter
+            ru: prometheus-metrics-adapter
+          folders:
+            - title:
+                en: Description
+                ru: Описание
+              url: /modules/prometheus-metrics-adapter/
             - title:
                 en: Reference
                 ru: Справка
@@ -377,17 +476,19 @@ entries:
                     en: Configuration
                     ru: Настройки
                   url: /modules/prometheus-metrics-adapter/configuration.html
-                - title: Custom Resources
+                - title:
+                    en: Custom Resources
+                    ru: Custom Resources
                   url: /modules/prometheus-metrics-adapter/cr.html
         - title:
-            en: Vertical Pod autoscaler
-            ru: Vertical Pod autoscaler
+            en: vertical-pod-autoscaler
+            ru: vertical-pod-autoscaler
           moduleName: vertical-pod-autoscaler
           folders:
             - title:
                 en: Description
                 ru: Описание
-              url: /modules/vertical-pod-autoscaler/index.html
+              url: /modules/vertical-pod-autoscaler/
             - title:
                 en: Examples
                 ru: Примеры
@@ -396,35 +497,42 @@ entries:
                 en: Configuration
                 ru: Настройки
               url: /modules/vertical-pod-autoscaler/configuration.html
-            - title: FAQ
+            - title:
+                en: FAQ
+                ru: FAQ
               url: /modules/vertical-pod-autoscaler/faq.html
     - title:
         en: Security
-        ru: Безопасность
+        ru: Подсистема Безопасность
       folders:
-        - title: User authz
+        - title:
+            en: admission-policy-engine
+            ru: admission-policy-engine
           folders:
             - title:
                 en: Description
                 ru: Описание
-              url: /modules/user-authz/index.html
+              url: /modules/admission-policy-engine/
             - title:
-                en: Reference
                 ru: Справка
+                en: Reference
               folders:
                 - title:
-                    en: Configuration
                     ru: Настройки
-                  url: /modules/user-authz/configuration.html
-                - title: Custom Resources
-                  url: /modules/user-authz/cr.html
-        - title: Multitenancy manager
+                    en: Configuration
+                  url: /modules/admission-policy-engine/configuration.html
+                - title:
+                    en: Custom Resources
+                    ru: Custom Resources
+                  url: /modules/admission-policy-engine/cr.html
+        - title:
+            ru: multitenancy-manager
           moduleName: multitenancy-manager
           folders:
             - title:
                 en: Description
                 ru: Описание
-              url: /modules/multitenancy-manager/index.html
+              url: /modules/multitenancy-manager/
             - title:
                 en: Usage
                 ru: Примеры
@@ -437,42 +545,28 @@ entries:
                     en: Configuration
                     ru: Настройки
                   url: /modules/multitenancy-manager/configuration.html
-                - title: Custom Resources
+                - title:
+                    en: Custom Resources
+                    ru: Custom Resources
                   url: /modules/multitenancy-manager/cr.html
-        - title: Operator trivy
+        - title:
+            ru: operator-trivy
           folders:
             - title:
                 en: Description
                 ru: Описание
-              url: /modules/operator-trivy/index.html
+              url: /modules/operator-trivy/
             - title:
                 en: Configuration
                 ru: Настройки
               url: /modules/operator-trivy/configuration.html
         - title:
-            en: Admission policy engine
-            ru: Admission policy engine
+            ru: user-authn
           folders:
             - title:
                 en: Description
                 ru: Описание
-              url: /modules/admission-policy-engine/index.html
-            - title:
-                ru: Справка
-                en: Reference
-              folders:
-                - title:
-                    ru: Настройки
-                    en: Configuration
-                  url: /modules/admission-policy-engine/configuration.html
-                - title: Custom Resources
-                  url: /modules/admission-policy-engine/cr.html
-        - title: User authn
-          folders:
-            - title:
-                en: Description
-                ru: Описание
-              url: /modules/user-authn/index.html
+              url: /modules/user-authn/
             - title:
                 en: Reference
                 ru: Справка
@@ -481,16 +575,37 @@ entries:
                     en: Configuration
                     ru: Настройки
                   url: /modules/user-authn/configuration.html
-                - title: Custom Resources
+                - title:
+                    en: Custom Resources
+                    ru: Custom Resources
                   url: /modules/user-authn/cr.html
         - title:
-            en: Runtime audit engine
-            ru: Runtime audit engine
+            ru: user-authz
           folders:
             - title:
                 en: Description
                 ru: Описание
-              url: /modules/runtime-audit-engine/index.html
+              url: /modules/user-authz/
+            - title:
+                en: Reference
+                ru: Справка
+              folders:
+                - title:
+                    en: Configuration
+                    ru: Настройки
+                  url: /modules/user-authz/configuration.html
+                - title:
+                    en: Custom Resources
+                    ru: Custom Resources
+                  url: /modules/user-authz/cr.html
+        - title:
+            en: runtime-audit-engine
+            ru: runtime-audit-engine
+          folders:
+            - title:
+                en: Description
+                ru: Описание
+              url: /modules/runtime-audit-engine/
             - title:
                 ru: Справка
                 en: Reference
@@ -499,5 +614,166 @@ entries:
                     ru: Настройки
                     en: Configuration
                   url: /modules/runtime-audit-engine/configuration.html
-                - title: Custom Resources
+                - title:
+                    en: Custom Resources
+                    ru: Custom Resources
                   url: /modules/runtime-audit-engine/cr.html
+        - title:
+            en: secret-copier
+            ru: secret-copier
+          folders:
+            - title:
+                en: Description
+                ru: Описание
+              url: /modules/secret-copier/
+        - title:
+            en: secrets-store-integration
+            ru: secrets-store-integration
+          folders:
+            - title:
+                en: Description
+                ru: Описание
+              url: /modules/secrets-store-integration/
+        - title:
+            en: stronghold
+            ru: stronghold
+          folders:
+            - title:
+                en: Description
+                ru: Описание
+              url: /modules/stronghold/
+            - title:
+                ru: Справка
+                en: Reference
+              folders:
+                - title:
+                    ru: Настройки
+                    en: Configuration
+                  url: /modules/stronghold/configuration.html
+                - title:
+                    en: Custom Resources
+                    ru: Custom Resources
+                  url: /modules/stronghold/cr.html
+    - title:
+        en: Storage
+        ru: Подсистема Хранение данных
+      folders:
+        - title:
+            en: snapshot-controller
+            ru: snapshot-controller
+          moduleName: snapshot-controller
+          folders:
+            - title:
+                en: Description
+                ru: Описание
+              url: /modules/snapshot-controller/
+            - title:
+                en: Usage
+                ru: Примеры
+              url: /modules/snapshot-controller/usage.html
+            - title:
+                en: Configuration
+                ru: Настройки
+              url: /modules/snapshot-controller/configuration.html
+        - title:
+            ru: csi-ceph
+          moduleName: csi-ceph
+          folders:
+            - title:
+                en: Description
+                ru: Описание
+              url: /modules/csi-ceph/
+            - title:
+                en: Reference
+                ru: Справка
+              folders:
+                - title:
+                    en: Configuration
+                    ru: Настройки
+                  url: /modules/csi-ceph/configuration.html
+                - title:
+                    en: Custom Resources
+                    ru: Custom Resources
+                  url: /modules/csi-ceph/cr.html
+            - title:
+                en: Examples
+                ru: Примеры
+              url: /modules/csi-ceph/examples.html
+            - title:
+                en: FAQ
+                ru: FAQ
+              url: /modules/csi-ceph/faq.html
+        - title:
+            ru: csi-nfs
+          moduleName: csi-nfs
+          folders:
+            - title:
+                en: Description
+                ru: Описание
+              url: /modules/csi-nfs/
+            - title:
+                en: Reference
+                ru: Справка
+              folders:
+                - title:
+                    en: Configuration
+                    ru: Настройки
+                  url: /modules/csi-nfs/configuration.html
+                - title:
+                    en: Custom Resources
+                    ru: Custom Resources
+                  url: /modules/csi-nfs/cr.html
+            - title:
+                en: FAQ
+                ru: FAQ
+              url: /modules/csi-nfs/faq.html
+        - title:
+            ru: sds-local-volume
+            en: sds-local-volume
+          moduleName: sds-local-volume
+          folders:
+            - title:
+                en: Description
+                ru: Описание
+              url: /modules/sds-local-volume/
+            - title:
+                en: Reference
+                ru: Справка
+              folders:
+                - title:
+                    en: Configuration
+                    ru: Настройки
+                  url: /modules/sds-local-volume/configuration.html
+                - title:
+                    en: Custom Resources
+                    ru: Custom Resources
+                  url: /modules/sds-local-volume/cr.html
+            - title:
+                en: FAQ
+                ru: FAQ
+              url: /modules/sds-local-volume/faq.html
+        - title:
+            ru: sds-node-configurator
+            en: sds-node-configurator
+          moduleName: sds-node-configurator
+          folders:
+            - title:
+                en: Description
+                ru: Описание
+              url: /modules/sds-node-configurator/
+            - title:
+                en: Reference
+                ru: Справка
+              folders:
+                - title:
+                    en: Configuration
+                    ru: Настройки
+                  url: /modules/sds-node-configurator/configuration.html
+                - title:
+                    en: Custom Resources
+                    ru: Custom Resources
+                  url: /modules/sds-node-configurator/cr.html
+            - title:
+                en: FAQ
+                ru: FAQ
+              url: /modules/sds-node-configurator/faq.html
