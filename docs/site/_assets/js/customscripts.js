@@ -310,7 +310,6 @@ document.addEventListener('DOMContentLoaded', function () {
   const pre = document.querySelectorAll('pre');
 
   let lang = document.documentElement.lang;
-  console.log(lang)
 
   if (lang.length === 0) {
     if (window.location.href.includes("deckhouse.ru") || window.location.href.includes("ru.localhost")) {
