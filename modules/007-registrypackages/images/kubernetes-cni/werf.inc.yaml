@@ -1,5 +1,8 @@
-{{- $cni_version := "1.4.0" }}
-{{- $flannel_version := "1.1.2" }}
+# The cni-flannel version corresponds to the flanneld version.
+# https://github.com/deckhouse/deckhouse/blob/main/modules/035-cni-flannel/images/flanneld/werf.inc.yaml
+# https://github.com/flannel-io/flannel/blob/v0.26.2/chart/kube-flannel/values.yaml#L18
+{{- $cni_flannel_version := "1.6.0-flannel1" }}
+{{- $cni_version := "1.6.2" }}
 {{- $image_version := $cni_version | replace "." "-" }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
@@ -22,7 +25,7 @@ shell:
   - cd /src/plugins
   - git apply /patches/plugins/*.patch --verbose
   - rm -rf .git
-  - git clone --depth 1 --branch v{{ $flannel_version }} {{ $.SOURCE_REPO }}/flannel-io/cni-plugin.git /src/cni-plugin
+  - git clone --depth 1 --branch v{{ $cni_flannel_version }} {{ $.SOURCE_REPO }}/flannel-io/cni-plugin.git /src/cni-plugin
   - cd /src/cni-plugin
   - git apply /patches/cni-plugins/*.patch --verbose
   - rm -rf .git
@@ -61,12 +64,15 @@ docker:
     distro: all
     version: all
     kubernetes-cni: {{ $cni_version }}
-    flannel: {{ $flannel_version }}
+    flannel: {{ $cni_flannel_version }}
   USER: 64535
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
 final: false
 from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
+mount:
+- fromPath: ~/go-pkg-cache
+  to: /go/pkg
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
   add: /src
@@ -83,6 +89,7 @@ shell:
     - CGO_ENABLED=0 ./build_linux.sh -ldflags '-extldflags -static -X github.com/containernetworking/plugins/pkg/utils/buildversion.BuildVersion={{ $cni_version }}'
     - cp -f bin/* /
     - cd /src/cni-plugin
+    - export VERSION=v{{ $cni_flannel_version }}
     - make build_linux
     - mv /src/scripts/* /
-    - cp -f /go/src/github.com/flannel-io/cni-plugin/dist/flannel-amd64 /flannel
+    - cp -f /src/cni-plugin/dist/flannel-amd64 /flannel
