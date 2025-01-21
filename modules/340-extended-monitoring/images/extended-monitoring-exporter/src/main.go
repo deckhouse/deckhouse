@@ -81,12 +81,12 @@ func recordMetrics(ctx context.Context, client metadata.Interface, registry *pro
 		prometheus.CounterOpts{Name: "extended_monitoring_enabled"},
 		[]string{"namespace"},
 	)
-	pod_enabled := prometheus.NewCounterVec(
+	podEnabled := prometheus.NewCounterVec(
 		prometheus.CounterOpts{Name: "extended_monitoring_pod_enabled"},
 		[]string{"namespace", "pod"},
 	)
-	pod_threshold := prometheus.NewCounterVec(
-		prometheus.CounterOpts{Name: "extended_monitoring_pod_threshold"},
+	podThreshold := prometheus.NewCounterVec(
+		prometheus.CounterOpts{Name: "extended_monitoring_podThreshold"},
 		[]string{"namespace", "pod", "threshold"},
 	)
 	ingress_enabled := prometheus.NewCounterVec(
@@ -146,10 +146,10 @@ func recordMetrics(ctx context.Context, client metadata.Interface, registry *pro
 			// pod
 			for _, pod := range ListResources(ctx, client, resource_pods, options, namespasce.Name).Items {
 				enabled := enabledLabel(pod.Labels)
-				pod_enabled.WithLabelValues(namespasce.Name, pod.Name).Add(enabled)
+				podEnabled.WithLabelValues(namespasce.Name, pod.Name).Add(enabled)
 				if enabled == 1 {
 					for key, value := range pod_threshold_map {
-						pod_threshold.WithLabelValues(namespasce.Name, pod.Name, key).Add(thresholdLabel(pod.Labels, key, value))
+						podThreshold.WithLabelValues(namespasce.Name, pod.Name, key).Add(thresholdLabel(pod.Labels, key, value))
 					}
 				}
 			}
@@ -202,8 +202,8 @@ func recordMetrics(ctx context.Context, client metadata.Interface, registry *pro
 	registry.MustRegister(nodeEnabled)
 	registry.MustRegister(nodeThreshold)
 	registry.MustRegister(namespacesEnabled)
-	registry.MustRegister(pod_enabled)
-	registry.MustRegister(pod_threshold)
+	registry.MustRegister(podEnabled)
+	registry.MustRegister(podThreshold)
 	registry.MustRegister(ingress_enabled)
 	registry.MustRegister(ingress_threshold)
 	registry.MustRegister(deployment_enabled)
@@ -268,7 +268,7 @@ var (
 	daemonset_threshold_map = map[string]float64{
 		"replicas-not-ready": 0,
 	}
-	statefulset_threshold_map = map[string]float64{
+	statefulsetThresholdMap = map[string]float64{
 		"replicas-not-ready": 0,
 	}
 )
