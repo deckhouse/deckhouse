@@ -1,5 +1,6 @@
 ---
-artifact: {{ .ModuleName }}/build-webui-artifact
+image: {{ .ModuleName }}/build-webui-artifact
+final: false
 from: node:14-alpine3.12@sha256:426384fb33a11d27dbbdc545f39bb8daacd3e7db7c60b52cd6bc0597e0045b8d
 git:
 - add: /{{ $.ModulePath }}modules/500-{{ $.ModuleName }}/images/{{ $.ImageName }}/
@@ -18,7 +19,7 @@ shell:
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/nginx-static
 import:
-- artifact: {{ .ModuleName }}/build-webui-artifact
+- image: {{ .ModuleName }}/build-webui-artifact
   add: /src/dist
   to: /opt/nginx-static/html
   before: setup

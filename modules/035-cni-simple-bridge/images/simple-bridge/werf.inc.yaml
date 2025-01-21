@@ -4,18 +4,18 @@
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: common/distroless
 import:
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
   add: /relocate
   to: /
   before: setup
-- artifact: registrypackages/iptables-artifact-{{ $iptables_image_version }}
+- image: registrypackages/iptables-artifact-{{ $iptables_image_version }}
   add: /
   to: /sbin
   includePaths:
   - xtables-legacy-multi
   - xtables-nft-multi
   before: setup
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
   add: /usr/lib64
   to: /usr/lib64
   before: setup
@@ -30,7 +30,8 @@ docker:
 ---
 {{ $simpleBridgeBinaries := "/bin/awk /bin/cat /bin/rm /bin/echo /usr/bin/tee /bin/sleep /bin/hostname /usr/bin/python3 /usr/bin/curl /usr/bin/jq /bin/bash /bin/grep /sbin/ip /usr/sbin/bridge" }}
 ---
-artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+final: false
 from: {{ .Images.BASE_ALT_DEV }}
 git:
 - add: /{{ $.ModulePath }}modules/035-{{ $.ModuleName }}/images/{{ $.ImageName }}/rootfs

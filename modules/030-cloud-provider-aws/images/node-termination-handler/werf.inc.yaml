@@ -2,21 +2,22 @@
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: common/distroless
 import:
-  - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+  - image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
     add: /src/build/node-termination-handler
     to: /node-termination-handler
     before: setup
 docker:
   ENTRYPOINT: ["/node-termination-handler"]
 ---
-artifact: {{ .ModuleName }}/{{ .ImageName }}-artifact
+image: {{ .ModuleName }}/{{ .ImageName }}-artifact
+final: false
 from: {{ .Images.BASE_GOLANG_20_ALPINE }}
 mount:
   - fromPath: ~/go-pkg-cache
     to: /go/pkg
 shell:
   beforeInstall:
-  - | 
+  - |
     apk upgrade --available --no-cache && \
     apk add --no-cache ca-certificates git make openssh-client
   install:

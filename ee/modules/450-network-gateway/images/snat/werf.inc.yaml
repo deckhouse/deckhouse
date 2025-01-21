@@ -2,7 +2,8 @@
 {{- $iptables_image_version := $iptables_version | replace "." "-" }}
 {{- $binaries := "/usr/bin/python3 /lib64/libz.so* /lib64/libexpat.so* /usr/lib64/libffi.so* /lib64/libcrypto.so* /lib64/libssl.so* /bin/grep /bin/sed /bin/sh" }}
 ---
-artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+final: false
 from: {{ $.Images.BASE_ALT_DEV }}
 shell:
   install:
@@ -29,19 +30,19 @@ git:
   - add: /{{ $.ModulePath }}modules/450-{{ $.ModuleName }}/images/{{ $.ImageName }}/iptables-loop.py
     to: /iptables-loop.py
 import:
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
   add: /relocate
   to: /
   before: setup
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
   add: /usr/lib64/python3
   to: /usr/lib64/python3
   before: setup
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
   add: /usr/lib64/python3.9
   to: /usr/lib64/python3.9
   before: setup
-- artifact: registrypackages/iptables-artifact-{{ $iptables_image_version }}
+- image: registrypackages/iptables-artifact-{{ $iptables_image_version }}
   add: /
   to: /sbin
   includePaths:

@@ -7,11 +7,11 @@ from: {{ .Images.BASE_UBUNTU }}
 import:
   {{- $k8sVersion := "1.27"}}
   {{- $image_version := printf "%s.%d" $k8sVersion (index $.CandiVersionMap "k8s" $k8sVersion "patch") | replace "." "-" }}
-  - artifact: common/kubernetes-artifact-{{ $image_version }}
+  - image: common/kubernetes-artifact-{{ $image_version }}
     add: /src/_output/bin/kubectl
     to: /usr/local/bin/kubectl
     before: setup
-  - artifact: terraform # from modules/040-terraform-manager/images/terraform-manager-base/werf.inc.yaml
+  - image: terraform # from modules/040-terraform-manager/images/terraform-manager-base/werf.inc.yaml
     add: /terraform/terraform
     to: /image/bin/terraform
     before: setup
@@ -19,7 +19,7 @@ import:
       {{- if $edition.terraformProviders }}
         {{- range $_, $tfProvider := $edition.terraformProviders }}
           {{- $tf := index $.TF $tfProvider }}
-  - artifact: {{ $tf.artifact }} # from modules/040-terraform-manager/images/terraform-manager-{PROVIDER}/werf.inc.yaml
+  - image: {{ $tf.artifact }} # from modules/040-terraform-manager/images/terraform-manager-{PROVIDER}/werf.inc.yaml
     add: /{{ $tf.artifactBinary }}
     to: /usr/local/share/terraform/plugins/registry.terraform.io/{{ $tf.namespace }}/{{ $tf.type }}/{{ $tf.version }}//linux_amd64/{{ $tf.destinationBinary }}
     before: setup
@@ -29,19 +29,19 @@ import:
       {{- break -}}
     {{- end }}
   {{- end }}
-  - artifact: e2e-eks-terraform-plugins
+  - image: e2e-eks-terraform-plugins
     add: /terraform-provider-random
     to: /usr/local/share/terraform/plugins/registry.terraform.io/hashicorp/random/3.4.3/linux_amd64/terraform-provider-random_v3.4.3_x5
     before: setup
-  - artifact: e2e-eks-terraform-plugins
+  - image: e2e-eks-terraform-plugins
     add: /terraform-provider-tls
     to: /usr/local/share/terraform/plugins/registry.terraform.io/hashicorp/tls/4.0.5/linux_amd64/terraform-provider-tls_v4.0.5_x5
     before: setup
-  - artifact: e2e-eks-terraform-plugins
+  - image: e2e-eks-terraform-plugins
     add: /terraform-provider-cloudinit
     to: /usr/local/share/terraform/plugins/registry.terraform.io/hashicorp/cloudinit/2.2.0/linux_amd64/terraform-provider-cloudinit_v2.2.0_x5
     before: setup
-  - artifact: e2e-eks-terraform-plugins
+  - image: e2e-eks-terraform-plugins
     add: /terraform-provider-kubernetes
     to: /usr/local/share/terraform/plugins/registry.terraform.io/hashicorp/kubernetes/2.31.0/linux_amd64/terraform-provider-kubernetes_v2.31.0_x5
     before: setup

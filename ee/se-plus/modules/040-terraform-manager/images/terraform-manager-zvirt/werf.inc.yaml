@@ -4,7 +4,7 @@ git:
   - add: /{{ .ModulePath }}candi/cloud-providers/zvirt
     to: /deckhouse/candi/cloud-providers/zvirt
 import:
-  - artifact: terraform-provider-ovirt
+  - image: terraform-provider-ovirt
     add: /terraform-provider-ovirt
     to: /plugins/registry.terraform.io/{{ .TF.ovirt.namespace }}/{{ .TF.ovirt.type }}/{{ .TF.ovirt.version }}/linux_amd64/terraform-provider-ovirt
     before: setup

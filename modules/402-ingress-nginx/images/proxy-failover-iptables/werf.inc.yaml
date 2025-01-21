@@ -50,7 +50,7 @@ shell:
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: common/distroless
 import:
-- image: {{ $.ModuleName }}/distroless-proxy-failover-iptables-artifact
+- artifact: {{ $.ModuleName }}/distroless-proxy-failover-iptables-artifact
   add: /relocate
   to: /
   before: setup

@@ -14,7 +14,8 @@
 # Corresponding commit is 063fa0d879d9560b85b6134c48ece08e672fa057 (https://github.com/cilium/image-tools/tree/063fa0d879d9560b85b6134c48ece08e672fa057)
 # #####################################################################
 ---
-artifact: {{ $.ModuleName }}/bpftool-artifact
+image: {{ $.ModuleName }}/bpftool-artifact
+final: false
 fromImage: {{ $.ModuleName }}/base-cilium-dev
 shell:
   beforeInstall:

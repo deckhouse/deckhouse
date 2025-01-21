@@ -2,14 +2,15 @@
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
 import:
-- artifact: {{ .ModuleName }}/{{ .ImageName }}-artifact
+- image: {{ .ModuleName }}/{{ .ImageName }}-artifact
   add: /src/exporter
   to: /exporter
   after: setup
 docker:
   ENTRYPOINT: [ "/exporter"]
 ---
-artifact: {{ .ModuleName }}/{{ .ImageName }}-artifact
+image: {{ .ModuleName }}/{{ .ImageName }}-artifact
+final: false
 from: {{ .Images.BASE_GOLANG_19_ALPINE }}
 git:
 - add: /{{ .ModulePath }}modules/030-{{ .ModuleName }}/images/{{ .ImageName }}

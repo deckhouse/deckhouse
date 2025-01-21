@@ -2,19 +2,20 @@
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
 import:
-- artifact: {{ .ModuleName }}/{{ .ImageName }}-entrypoint-artifact
+- image: {{ .ModuleName }}/{{ .ImageName }}-entrypoint-artifact
   add: /src/entrypoint
   to: /usr/local/bin/entrypoint
   before: setup
-- artifact: {{ .ModuleName }}/{{ .ImageName }}-artifact
+- image: {{ .ModuleName }}/{{ .ImageName }}-artifact
   add: /src/OPATH/trickster
   to: /usr/local/bin/trickster
   before: setup
 docker:
   ENTRYPOINT: ["entrypoint"]
 ---
-artifact: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
-fromArtifact: common/src-artifact
+image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+final: false
+fromImage: common/src-artifact
 git:
 - add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/entrypoint
   to: /src/entrypoint
@@ -41,10 +42,11 @@ shell:
   - rm -rf .git
   - rm -rf .git
 ---
-artifact: {{ .ModuleName }}/{{ .ImageName }}-artifact
+image: {{ .ModuleName }}/{{ .ImageName }}-artifact
+final: false
 from: {{ .Images.BASE_GOLANG_23_ALPINE }}
 import:
-- artifact: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
   add: /src/trickster
   to: /src
   before: install
@@ -62,10 +64,11 @@ shell:
   - chown -R 64535:64535 /src
   - chmod 0700 /src/OPATH/trickster
 ---
-artifact: {{ .ModuleName }}/{{ .ImageName }}-entrypoint-artifact
+image: {{ .ModuleName }}/{{ .ImageName }}-entrypoint-artifact
+final: false
 from: {{ .Images.BASE_GOLANG_23_ALPINE }}
 import:
-- artifact: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
   add: /src/entrypoint
   to: /src
   before: install
