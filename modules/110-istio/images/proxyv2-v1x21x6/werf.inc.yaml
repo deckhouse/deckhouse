@@ -112,7 +112,7 @@ shell:
   setup:
   - mkdir -p /tmp/bazel-cache
   # - git clone --depth 1 --branch {{ $istioProxyCacheRev }} {{ $.SOURCE_REPO }}/istio/envoy-build-cache.git /tmp/bazel-cache
-  - chown -R 1337:1337 /tmp/bazel-cache
+  # - chown -R 1337:1337 /tmp/bazel-cache
   - mkdir -p /tmp/bazel-deps
   # - git clone --depth 1 --branch {{ $istioProxyDepsRev }} {{ .SOURCE_REPO }}/istio/envoy-build-deps.git /tmp/bazel-deps
   # - chown -R 1337:1337 /tmp/bazel-deps
