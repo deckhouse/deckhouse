@@ -114,6 +114,7 @@ function __main__() {
         -F "tags=Deckhouse Image,module:${MODULE_NAME},image:${IMAGE_NAME},branch:${TAG}${codeowner_tags}" \
         -F "test_title=${MODULE_NAME}: ${IMAGE_NAME}" \
         -F "version=${TAG}" \
+        -F "engagement_end_date=${date_iso}" \
       > /dev/null
 
     done
