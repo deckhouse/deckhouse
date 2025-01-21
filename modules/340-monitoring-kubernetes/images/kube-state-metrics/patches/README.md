@@ -7,4 +7,4 @@ Should be removed after [this changes](https://github.com/kubernetes/kube-state-
 
 ### go-mod 
 
-Fixes net/crypo vulnerablities.
+Fixes net/crypto go packages CVEs.
