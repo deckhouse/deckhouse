@@ -226,11 +226,9 @@ Next, you will need to create an Ingress controller, a user to access the web in
 <ul><li><p><strong>Setting up an Ingress controller</strong></p>
 <p>On the <strong>master node</strong>, create the <code>ingress-nginx-controller.yml</code> file containing the Ingress controller configuration:</p>
 
-{% capture includePath %}getting_started/{{ page.platform_code }}/partials/ingress-nginx-controller.yml.inc{% endcapture %}
+{% capture includePath %}_includes/getting_started/{{ page.platform_code }}/partials/ingress-nginx-controller.yml.inc{% endcapture %}
 <div markdown="1">
-```yaml
-{% include {{ includePath }} %}
-```
+{% include_file "{{ includePath }}" syntax="yaml" %}
 </div>
   <p>Apply it using the following command on the <strong>master node</strong>:</p>
 <div markdown="1">
@@ -260,11 +258,9 @@ controller-nginx-r6hxc                     3/3     Running   0          5m
 <li><p><strong>Create a user</strong> to access the cluster web interfaces</p>
 <p>Create on the <strong>master node</strong> the <code>user.yml</code> file containing the user account data and access rights:</p>
 
-{% capture includePath %}getting_started/{{ page.platform_code }}/partials/user.yml.inc{% endcapture %}
+{% capture includePath %}_includes/getting_started/{{ page.platform_code }}/partials/user.yml.inc{% endcapture %}
 <div markdown="1">
-```yaml
-{% include {{ includePath }} %}
-```
+{% include_file "{{ includePath }}" syntax="yaml" %}
 </div>
 <p>Apply it using the following command on the <strong>master node</strong>:</p>
 <div markdown="1">

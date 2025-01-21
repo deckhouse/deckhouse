@@ -79,10 +79,8 @@ The `documentation` module (`deckhouse-web` in Deckhouse 1.45 or older), which p
   ```
 
 - Create an <code>ingress-nginx-controller.yml</code> file with the following contents:
-  {% capture includePath %}getting_started/{{ page.platform_code }}/partials/ingress-nginx-controller.yml.inc{% endcapture %}
-  ```yaml
-  {% include {{ includePath }} %}
-  ```
+  {% capture includePath %}_includes/getting_started/{{ page.platform_code }}/partials/ingress-nginx-controller.yml.inc{% endcapture %}
+  {% include_file "{{ includePath }}" syntax="yaml" %}
 
 - Once Deckhouse is installed, apply the file using the command below:
 

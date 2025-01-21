@@ -22,10 +22,8 @@
 {%- endif %}
 
 Создайте файл `config.yml`.
-{% capture includePath %}getting_started/{{ page.platform_code }}/partials/config.yml{% if include.layout.size > 0 %}.{{ include.layout }}{% endif %}.{% if revision != "ce" %}{{ "other" }}{% else %}{{ revision }}{% endif %}.inc{% endcapture %}
-```yaml
-{% include {{ includePath }} %}
-```
+{% capture includePath %}_includes/getting_started/{{ page.platform_code }}/partials/config.yml{% if include.layout.size > 0 %}.{{ include.layout }}{% endif %}.{% if revision != "ce" %}{{ "other" }}{% else %}{{ revision }}{% endif %}.inc{% endcapture %}
+{% include_file "{{ includePath }}" syntax="yaml" %}
 {%- if page.platform_type == 'existing' %}
 {% offtopic title="Про nodeSelector, taints и tolerations..." %}
 Управлять тем, на каких узлах будет запускаться ядро Deckhouse, можно с помощью параметра `spec.setting.nodeSelector` в ModuleConfig `deckhouse` в конфигурации установки.

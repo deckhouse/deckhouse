@@ -152,10 +152,8 @@ dhctl bootstrap --ssh-user={% if page.platform_code == "azure" %}azureuser{%- el
 
 Осталось создать конфигурацию Ingress-контроллера. Для этого создайте файл `ingress-nginx-controller.yml` следующего содержания:
 
-{% capture includePath %}getting_started/{{ page.platform_code }}/partials/ingress-nginx-controller.yml.inc{% endcapture %}
-```yaml
-{% include {{ includePath }} %}
-```
+{% capture includePath %}_includes/getting_started/{{ page.platform_code }}/partials/ingress-nginx-controller.yml.inc{% endcapture %}
+{% include_file "{{ includePath }}" syntax="yaml" %}
 
 <p>Примените его, выполнив следующую команду:</p>
 ```shell

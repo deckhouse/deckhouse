@@ -4,10 +4,8 @@
 
 Создайте проект и администратора проекта (в примере используется проект `test-project` и пользователь `test-user@deckhouse.io`, измените их, если необходимо):
 
-{% capture includePath %}getting_started/dvp/{{ page.platform_code }}/partials/project-rbac.yml.inc{% endcapture %}
-```yaml
-{% include {{ includePath }} %}
-```
+{% capture includePath %}_includes/getting_started/dvp/{{ page.platform_code }}/partials/project-rbac.yml.inc{% endcapture %}
+{% include_file "{{ includePath }}" syntax="yaml" %}
 
 Откройте веб-интерфейс генерации файла kubeconfig, для удаленного доступа к API-серверу. Адрес веб-интерфейса формируется в соответствии с шаблоном DNS-имен, указанным в глобальном параметре [publicDomainTemplate](/products/virtualization-platform/reference/mc.html#parameters-modules-publicdomaintemplate). Например, если `publicDomainTemplate: %s.kube.my`, то веб-интерфейс будет доступен по адресу `kubeconfig.kube.my`.
  

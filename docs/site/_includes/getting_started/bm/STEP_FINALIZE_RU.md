@@ -234,11 +234,9 @@ kruise-controller-manager-7dfcbdc549-b4wk7   3/3     Running   0           15m
 
 <ul><li><p><strong>Установка Ingress-контроллера</strong></p>
 <p>Создайте на <strong>master-узле</strong> файл <code>ingress-nginx-controller.yml</code> содержащий конфигурацию Ingress-контроллера:</p>
-{% capture includePath %}getting_started/{{ page.platform_code }}/partials/ingress-nginx-controller.yml.inc{% endcapture %}
+{% capture includePath %}_includes/getting_started/{{ page.platform_code }}/partials/ingress-nginx-controller.yml.inc{% endcapture %}
 <div markdown="1">
-```yaml
-{% include {{ includePath }} %}
-```
+{% include_file "{{ includePath }}" syntax="yaml" %}
 </div>
 <p>Примените его, выполнив на <strong>master-узле</strong> следующую команду:</p>
 
@@ -268,11 +266,9 @@ controller-nginx-r6hxc                     3/3     Running   0          5m
 </li>
 <li><p><strong>Создание пользователя</strong> для доступа в веб-интерфейсы кластера</p>
 <p>Создайте на <strong>master-узле</strong> файл <code>user.yml</code> содержащий описание учетной записи пользователя и прав доступа:</p>
-{% capture includePath %}getting_started/{{ page.platform_code }}/partials/user.yml.inc{% endcapture %}
+{% capture includePath %}_includes/getting_started/{{ page.platform_code }}/partials/user.yml.inc{% endcapture %}
 <div markdown="1">
-```yaml
-{% include {{ includePath }} %}
-```
+{% include_file "{{ includePath }}" syntax="yaml" %}
 </div>
 <p>Примените его, выполнив на <strong>master-узле</strong> следующую команду:</p>
 <div markdown="1">

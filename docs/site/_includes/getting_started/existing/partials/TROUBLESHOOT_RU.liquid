@@ -81,9 +81,9 @@
   ```
 
 - Создайте файл <code>ingress-nginx-controller.yml</code> следующего содержания:
-  {% capture includePath %}getting_started/{{ page.platform_code }}/partials/ingress-nginx-controller.yml.inc{% endcapture %}
+  {% capture includePath %}_includes/getting_started/{{ page.platform_code }}/partials/ingress-nginx-controller.yml.inc{% endcapture %}
   ```yaml
-  {% include {{ includePath }} %}
+  {% include_file "{{ includePath }}" syntax="yaml" %}
   ```
 
 - Примените его, после установки Deckhouse, выполнив следующую команду:

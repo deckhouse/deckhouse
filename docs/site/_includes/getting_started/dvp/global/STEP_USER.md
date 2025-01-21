@@ -5,11 +5,9 @@
 Create a user to access the cluster web interfaces:
 <ul>
 <li><p>Create on the <strong>master node</strong> the <code>user.yml</code> file containing the user account data and access rights:</p>
-{% capture includePath %}getting_started/dvp/{{ page.platform_code }}/partials/user.yml.inc{% endcapture %}
+{% capture includePath %}_includes/getting_started/dvp/{{ page.platform_code }}/partials/user.yml.inc{% endcapture %}
 <div markdown="1">
-```yaml
-{% include {{ includePath }} %}
-```
+{% include_file "{{ includePath }}" syntax="yaml" %}
 </div>
 </li>
 <li><p>Apply it using the following command on the <strong>master node</strong>:</p>
