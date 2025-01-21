@@ -14,27 +14,61 @@
 
 mkdir -p /etc/kubernetes/manifests
 mkdir -p /etc/kubernetes/node-proxy
-
 cd /etc/kubernetes/node-proxy
 
 
-set +e
-openssl verify -CAfile /etc/kubernetes/pki/ca.crt /etc/kubernetes/node-proxy/haproxy.pem 2>/dev/null
-exit_code=$?
-set -e
+function get_node_proxy_cert() {
+  # Kubectl exist
+  if type kubectl >/dev/null 2>&1 && test -f /etc/kubernetes/kubelet.conf; then
+    bb-log-info "Trying to get node-proxy certificate using kubectl"
+    kubectl get secret -n kube-system node-proxy -o jsonpath='{.data.haproxy\.pem}' | base64 -d > haproxy.pem
+    return $?
+  fi
 
-if [ $exit_code -ne 0 ]; then
-  bb-log-error "Node-proxy certificate verification failed, generating a new certificate"
-  cp /etc/kubernetes/pki/ca.crt /etc/kubernetes/node-proxy/ca.crt
-  openssl genrsa -out key.pem 2048
-  openssl req -new -key  key.pem -out key.csr -subj "/CN=health-user/O=health-group"
-  openssl x509 -req -in key.csr -CA ca.crt -CAkey /etc/kubernetes/pki/ca.key -CAcreateserial -out cert.pem -days 3650 -sha256
-  cat key.pem cert.pem > haproxy.pem
-  rm -rf key.csr cert.pem key.pem
-  chown deckhouse:deckhouse -R /etc/kubernetes/node-proxy
-  chmod 700 /etc/kubernetes/node-proxy
-  chmod 600 /etc/kubernetes/node-proxy/*
+  # Kubectl does not exist
+  for server in {{ .normal.apiserverEndpoints | join " " }}; do
+    bb-log-info "Trying to get certificate from $server"
+    if d8-curl -sS --fail -X GET "https://$server/api/v1/namespaces/kube-system/secrets/node-proxy" \
+      -H "Authorization: Bearer $(</var/lib/bashible/bootstrap-token)" \
+      --cacert "$BOOTSTRAP_DIR/ca.crt" | jq -r '.data["haproxy.pem"]' | base64 -d > haproxy.pem; then
+      return 0
+    fi
+  done
+  bb-log-error "All attempts to get certificate failed"
+  return 1
+}
+
+# Master nodes: generate certificate locally
+if [ -f /etc/kubernetes/pki/ca.key ]; then
+  if ! openssl verify -CAfile /etc/kubernetes/pki/ca.crt haproxy.pem >/dev/null 2>&1; then
+    bb-log-info "Generating new node-proxy certificate"
+    cp /etc/kubernetes/pki/ca.crt ca.crt
+    openssl genrsa -out key.pem 2048
+    openssl req -new -key key.pem -out key.csr -subj "/CN=health-user/O=health-group"
+    openssl x509 -req -in key.csr -CA ca.crt -CAkey /etc/kubernetes/pki/ca.key -CAcreateserial -out cert.pem -days 3650 -sha256
+    cat key.pem cert.pem > haproxy.pem
+    rm -f key.csr cert.pem key.pem
+  fi
+
+# Worker nodes: get certificate from secret
+else
+  set +e
+  openssl verify -CAfile /etc/kubernetes/pki/ca.crt /etc/kubernetes/node-proxy/haproxy.pem 2>/dev/null
+  exit_code=$?
+  set -e
+
+  if [ ! -f /etc/kubernetes/node-proxy/haproxy.pem ] || [ $exit_code -ne 0 ]; then
+    bb-log-error "Node-proxy certificate verification failed, fetching new certificate"
+    cp /etc/kubernetes/pki/ca.crt /etc/kubernetes/node-proxy/ca.crt
+    rm -f /etc/kubernetes/node-proxy/haproxy.pem
+    get_node_proxy_cert || exit 1
+  fi
 fi
+
+# Set permissions
+chown deckhouse:deckhouse -R /etc/kubernetes/node-proxy
+chmod 700 /etc/kubernetes/node-proxy
+chmod 600 /etc/kubernetes/node-proxy/*
 
 bb-set-proxy
 
