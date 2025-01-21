@@ -336,6 +336,7 @@ check_e2e_labels:
     - check_e2e_labels
 {!{- end }!}
     - git_info
+    - block-e2e-until-image-is-not-ready
 {!{- if coll.Has $ctx "manualRun" }!}
   if: needs.check_e2e_labels.outputs.run_{!{ $ctx.cri }!}_{!{ $ctx.kubernetesVersionSlug }!} == 'true'
 {!{- end }!}
@@ -386,6 +387,7 @@ check_e2e_labels:
         INITIAL_REF_SLUG: ${{ github.event.inputs.initial_ref_slug }}
         MANUAL_RUN: {!{ coll.Has $ctx "manualRun" | conv.ToString | strings.Quote }!}
         MULTIMASTER: ${{ needs.check_e2e_labels.outputs.multimaster }}
+        WAIT_IMAGE_TIME: 300 # 5 minutes
       run: |
         # Calculate unique prefix for e2e test.
         # GITHUB_RUN_ID is a unique number for each workflow run.

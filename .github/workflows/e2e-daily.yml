@@ -138,6 +138,7 @@ jobs:
     name: "AWS, Containerd, Kubernetes 1.29"
     needs:
       - git_info
+      - block-e2e-until-image-is-not-ready
     outputs:
       ssh_master_connection_string: ${{ steps.check_stay_failed_cluster.outputs.ssh_master_connection_string }}
       ssh_bastion_connection_string: ${{ steps.check_stay_failed_cluster.outputs.ssh_bastion_connection_string }}
@@ -240,6 +241,7 @@ jobs:
           INITIAL_REF_SLUG: ${{ github.event.inputs.initial_ref_slug }}
           MANUAL_RUN: "false"
           MULTIMASTER: ${{ needs.check_e2e_labels.outputs.multimaster }}
+          WAIT_IMAGE_TIME: 300 # 5 minutes
         run: |
           # Calculate unique prefix for e2e test.
           # GITHUB_RUN_ID is a unique number for each workflow run.
@@ -600,6 +602,7 @@ jobs:
     name: "EKS, Containerd, Kubernetes 1.29"
     needs:
       - git_info
+      - block-e2e-until-image-is-not-ready
     outputs:
       ssh_master_connection_string: ${{ steps.check_stay_failed_cluster.outputs.ssh_master_connection_string }}
       ssh_bastion_connection_string: ${{ steps.check_stay_failed_cluster.outputs.ssh_bastion_connection_string }}
@@ -702,6 +705,7 @@ jobs:
           INITIAL_REF_SLUG: ${{ github.event.inputs.initial_ref_slug }}
           MANUAL_RUN: "false"
           MULTIMASTER: ${{ needs.check_e2e_labels.outputs.multimaster }}
+          WAIT_IMAGE_TIME: 300 # 5 minutes
         run: |
           # Calculate unique prefix for e2e test.
           # GITHUB_RUN_ID is a unique number for each workflow run.
@@ -1107,6 +1111,7 @@ jobs:
     name: "Azure, Containerd, Kubernetes 1.29"
     needs:
       - git_info
+      - block-e2e-until-image-is-not-ready
     outputs:
       ssh_master_connection_string: ${{ steps.check_stay_failed_cluster.outputs.ssh_master_connection_string }}
       ssh_bastion_connection_string: ${{ steps.check_stay_failed_cluster.outputs.ssh_bastion_connection_string }}
@@ -1209,6 +1214,7 @@ jobs:
           INITIAL_REF_SLUG: ${{ github.event.inputs.initial_ref_slug }}
           MANUAL_RUN: "false"
           MULTIMASTER: ${{ needs.check_e2e_labels.outputs.multimaster }}
+          WAIT_IMAGE_TIME: 300 # 5 minutes
         run: |
           # Calculate unique prefix for e2e test.
           # GITHUB_RUN_ID is a unique number for each workflow run.
@@ -1577,6 +1583,7 @@ jobs:
     name: "GCP, Containerd, Kubernetes 1.29"
     needs:
       - git_info
+      - block-e2e-until-image-is-not-ready
     outputs:
       ssh_master_connection_string: ${{ steps.check_stay_failed_cluster.outputs.ssh_master_connection_string }}
       ssh_bastion_connection_string: ${{ steps.check_stay_failed_cluster.outputs.ssh_bastion_connection_string }}
@@ -1679,6 +1686,7 @@ jobs:
           INITIAL_REF_SLUG: ${{ github.event.inputs.initial_ref_slug }}
           MANUAL_RUN: "false"
           MULTIMASTER: ${{ needs.check_e2e_labels.outputs.multimaster }}
+          WAIT_IMAGE_TIME: 300 # 5 minutes
         run: |
           # Calculate unique prefix for e2e test.
           # GITHUB_RUN_ID is a unique number for each workflow run.
@@ -2035,6 +2043,7 @@ jobs:
     name: "Yandex.Cloud, Containerd, Kubernetes 1.29"
     needs:
       - git_info
+      - block-e2e-until-image-is-not-ready
     outputs:
       ssh_master_connection_string: ${{ steps.check_stay_failed_cluster.outputs.ssh_master_connection_string }}
       ssh_bastion_connection_string: ${{ steps.check_stay_failed_cluster.outputs.ssh_bastion_connection_string }}
@@ -2137,6 +2146,7 @@ jobs:
           INITIAL_REF_SLUG: ${{ github.event.inputs.initial_ref_slug }}
           MANUAL_RUN: "false"
           MULTIMASTER: ${{ needs.check_e2e_labels.outputs.multimaster }}
+          WAIT_IMAGE_TIME: 300 # 5 minutes
         run: |
           # Calculate unique prefix for e2e test.
           # GITHUB_RUN_ID is a unique number for each workflow run.
@@ -2501,6 +2511,7 @@ jobs:
     name: "OpenStack, Containerd, Kubernetes 1.29"
     needs:
       - git_info
+      - block-e2e-until-image-is-not-ready
     outputs:
       ssh_master_connection_string: ${{ steps.check_stay_failed_cluster.outputs.ssh_master_connection_string }}
       ssh_bastion_connection_string: ${{ steps.check_stay_failed_cluster.outputs.ssh_bastion_connection_string }}
@@ -2603,6 +2614,7 @@ jobs:
           INITIAL_REF_SLUG: ${{ github.event.inputs.initial_ref_slug }}
           MANUAL_RUN: "false"
           MULTIMASTER: ${{ needs.check_e2e_labels.outputs.multimaster }}
+          WAIT_IMAGE_TIME: 300 # 5 minutes
         run: |
           # Calculate unique prefix for e2e test.
           # GITHUB_RUN_ID is a unique number for each workflow run.
@@ -2959,6 +2971,7 @@ jobs:
     name: "vSphere, Containerd, Kubernetes 1.29"
     needs:
       - git_info
+      - block-e2e-until-image-is-not-ready
     outputs:
       ssh_master_connection_string: ${{ steps.check_stay_failed_cluster.outputs.ssh_master_connection_string }}
       ssh_bastion_connection_string: ${{ steps.check_stay_failed_cluster.outputs.ssh_bastion_connection_string }}
@@ -3061,6 +3074,7 @@ jobs:
           INITIAL_REF_SLUG: ${{ github.event.inputs.initial_ref_slug }}
           MANUAL_RUN: "false"
           MULTIMASTER: ${{ needs.check_e2e_labels.outputs.multimaster }}
+          WAIT_IMAGE_TIME: 300 # 5 minutes
         run: |
           # Calculate unique prefix for e2e test.
           # GITHUB_RUN_ID is a unique number for each workflow run.
@@ -3421,6 +3435,7 @@ jobs:
     name: "VCD, Containerd, Kubernetes 1.29"
     needs:
       - git_info
+      - block-e2e-until-image-is-not-ready
     outputs:
       ssh_master_connection_string: ${{ steps.check_stay_failed_cluster.outputs.ssh_master_connection_string }}
       ssh_bastion_connection_string: ${{ steps.check_stay_failed_cluster.outputs.ssh_bastion_connection_string }}
@@ -3523,6 +3538,7 @@ jobs:
           INITIAL_REF_SLUG: ${{ github.event.inputs.initial_ref_slug }}
           MANUAL_RUN: "false"
           MULTIMASTER: ${{ needs.check_e2e_labels.outputs.multimaster }}
+          WAIT_IMAGE_TIME: 300 # 5 minutes
         run: |
           # Calculate unique prefix for e2e test.
           # GITHUB_RUN_ID is a unique number for each workflow run.
@@ -3895,6 +3911,7 @@ jobs:
     name: "Static, Containerd, Kubernetes 1.29"
     needs:
       - git_info
+      - block-e2e-until-image-is-not-ready
     outputs:
       ssh_master_connection_string: ${{ steps.check_stay_failed_cluster.outputs.ssh_master_connection_string }}
       ssh_bastion_connection_string: ${{ steps.check_stay_failed_cluster.outputs.ssh_bastion_connection_string }}
@@ -3997,6 +4014,7 @@ jobs:
           INITIAL_REF_SLUG: ${{ github.event.inputs.initial_ref_slug }}
           MANUAL_RUN: "false"
           MULTIMASTER: ${{ needs.check_e2e_labels.outputs.multimaster }}
+          WAIT_IMAGE_TIME: 300 # 5 minutes
         run: |
           # Calculate unique prefix for e2e test.
           # GITHUB_RUN_ID is a unique number for each workflow run.
