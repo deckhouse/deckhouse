@@ -84,8 +84,8 @@ function __main__() {
     trivyGetCVEListForImage -r "$REGISTRY" -i "$image" > "$WORKDIR/$(echo "$image" | tr "/" "_").cve"
 
     # Output reports per images
-    IMAGE_NAME=${image}|cut -d ":" -f 1
-    IMAGE_TAG=${image}|cut -d ":" -f 2|cut -d "@" -f 1
+    IMAGE_NAME="$(echo ${image}|cut -d ':' -f 1)"
+    IMAGE_TAG="$(echo ${image}|cut -d ':' -f 2|cut -d '@' -f 1)"
     trivyGetJSONReportPartForImage -r "$REGISTRY" -i "$image" -l "${IMAGE_NAME}:${IMAGE_TAG}" --output "out/json/base_image_${IMAGE_NAME}_report.json"
     echo ""
     echo " Uploading trivy CVE report for base image ${IMAGE_NAME}"
