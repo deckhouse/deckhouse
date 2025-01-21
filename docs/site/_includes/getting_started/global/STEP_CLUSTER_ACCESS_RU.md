@@ -112,8 +112,7 @@ Domain template is '%s.1.2.3.4.sslip.io'.
 {% include getting_started/global/partials/DNS_OPTIONS_RU.liquid %}
 
 Затем, на **master-узле** выполните следующую команду (укажите используемый шаблон DNS-имен в переменной <code>DOMAIN_TEMPLATE</code>):
-<div markdown="0">
-
+<div markdown="1">
 ```shell
 DOMAIN_TEMPLATE='<DOMAIN_TEMPLATE>'
 sudo -i d8 k patch mc global --type merge -p "{\"spec\": {\"settings\":{\"modules\":{\"publicDomainTemplate\":\"${DOMAIN_TEMPLATE}\"}}}}"

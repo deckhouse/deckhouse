@@ -111,7 +111,7 @@ Instead of using *sslip.io*, you can use other options.
 {% include getting_started/global/partials/DNS_OPTIONS.liquid %}
 
 Then, run the following command on the **master node** (specify the template for DNS names to use in the <code>DOMAIN_TEMPLATE</code> variable):
-<div markdown="0">
+<div markdown="1">
 ```shell
 DOMAIN_TEMPLATE='<DOMAIN_TEMPLATE>'
 sudo -i d8 k patch mc global --type merge -p "{\"spec\": {\"settings\":{\"modules\":{\"publicDomainTemplate\":\"${DOMAIN_TEMPLATE}\"}}}}"
