@@ -32,6 +32,64 @@ import (
 	"k8s.io/client-go/rest"
 )
 
+const (
+	labelThesholdPrefix      = "threshold.extended-monitoring.deckhouse.io/"
+	namespaces_enabled_label = "extended-monitoring.deckhouse.io/enabled"
+	interval_recordMetrics   = 5 * time.Minute
+	timeOut_healthz          = time.Duration(3 * interval_recordMetrics)
+)
+
+var (
+	options               = metav1.ListOptions{TimeoutSeconds: &timeOut}
+	optionsNs             = metav1.ListOptions{LabelSelector: namespaces_enabled_label, TimeoutSeconds: &timeOut}
+	resource_nodes        = schema.GroupVersionResource{Group: "", Version: "v1", Resource: "nodes"}
+	resource_namespaces   = schema.GroupVersionResource{Group: "", Version: "v1", Resource: "namespaces"}
+	resource_pods         = schema.GroupVersionResource{Group: "", Version: "v1", Resource: "pods"}
+	resource_ingresses    = schema.GroupVersionResource{Group: "networking.k8s.io", Version: "v1", Resource: "ingresses"}
+	resource_deployments  = schema.GroupVersionResource{Group: "apps", Version: "v1", Resource: "deployments"}
+	resource_daemonsets   = schema.GroupVersionResource{Group: "apps", Version: "v1", Resource: "daemonsets"}
+	resource_statefulsets = schema.GroupVersionResource{Group: "apps", Version: "v1", Resource: "statefulsets"}
+	resource_cronjobs     = schema.GroupVersionResource{Group: "batch", Version: "v1", Resource: "cronjobs"}
+)
+
+var (
+	time_healthz       = time.Now()
+	timeOut            = int64(60)
+	kubeClient         *kubernetes.Clientset
+	kubeMetadata       metadata.Interface
+	reg                = prometheus.NewRegistry()
+	ctx                = context.Background()
+	node_threshold_map = map[string]float64{
+		"disk-bytes-warning":             70,
+		"disk-bytes-critical":            80,
+		"disk-inodes-warning":            90,
+		"disk-inodes-critical":           95,
+		"load-average-per-core-warning":  3,
+		"load-average-per-core-critical": 10,
+	}
+	pod_threshold_map = map[string]float64{
+		"disk-bytes-warning":            85,
+		"disk-bytes-critical":           95,
+		"disk-inodes-warning":           85,
+		"disk-inodes-critical":          90,
+		"container-throttling-warning":  25,
+		"container-throttling-critical": 50,
+	}
+	ingress_threshold_map = map[string]float64{
+		"5xx-warning":  10,
+		"5xx-critical": 20,
+	}
+	deployment_threshold_map = map[string]float64{
+		"replicas-not-ready": 0,
+	}
+	daemonset_threshold_map = map[string]float64{
+		"replicas-not-ready": 0,
+	}
+	statefulsetThresholdMap = map[string]float64{
+		"replicas-not-ready": 0,
+	}
+)
+
 func ListResources(ctx context.Context, client metadata.Interface, resource schema.GroupVersionResource, option metav1.ListOptions, namespace string) *metav1.PartialObjectMetadataList {
 	var request metadata.ResourceInterface
 	if namespace != "" {
@@ -214,64 +272,6 @@ func recordMetrics(ctx context.Context, client metadata.Interface, registry *pro
 	registry.MustRegister(statefulset_threshold)
 	registry.MustRegister(cronjob_enabled)
 }
-
-const (
-	labelThesholdPrefix    = "threshold.extended-monitoring.deckhouse.io/"
-	namespaces_enabled_label = "extended-monitoring.deckhouse.io/enabled"
-	interval_recordMetrics   = 5 * time.Minute
-	timeOut_healthz          = time.Duration(3 * interval_recordMetrics)
-)
-
-var (
-	options               = metav1.ListOptions{TimeoutSeconds: &timeOut}
-	optionsNs             = metav1.ListOptions{LabelSelector: namespaces_enabled_label, TimeoutSeconds: &timeOut}
-	resource_nodes        = schema.GroupVersionResource{Group: "", Version: "v1", Resource: "nodes"}
-	resource_namespaces   = schema.GroupVersionResource{Group: "", Version: "v1", Resource: "namespaces"}
-	resource_pods         = schema.GroupVersionResource{Group: "", Version: "v1", Resource: "pods"}
-	resource_ingresses    = schema.GroupVersionResource{Group: "networking.k8s.io", Version: "v1", Resource: "ingresses"}
-	resource_deployments  = schema.GroupVersionResource{Group: "apps", Version: "v1", Resource: "deployments"}
-	resource_daemonsets   = schema.GroupVersionResource{Group: "apps", Version: "v1", Resource: "daemonsets"}
-	resource_statefulsets = schema.GroupVersionResource{Group: "apps", Version: "v1", Resource: "statefulsets"}
-	resource_cronjobs     = schema.GroupVersionResource{Group: "batch", Version: "v1", Resource: "cronjobs"}
-)
-
-var (
-	time_healthz       = time.Now()
-	timeOut            = int64(60)
-	kubeClient         *kubernetes.Clientset
-	kubeMetadata       metadata.Interface
-	reg                = prometheus.NewRegistry()
-	ctx                = context.Background()
-	node_threshold_map = map[string]float64{
-		"disk-bytes-warning":             70,
-		"disk-bytes-critical":            80,
-		"disk-inodes-warning":            90,
-		"disk-inodes-critical":           95,
-		"load-average-per-core-warning":  3,
-		"load-average-per-core-critical": 10,
-	}
-	pod_threshold_map = map[string]float64{
-		"disk-bytes-warning":            85,
-		"disk-bytes-critical":           95,
-		"disk-inodes-warning":           85,
-		"disk-inodes-critical":          90,
-		"container-throttling-warning":  25,
-		"container-throttling-critical": 50,
-	}
-	ingress_threshold_map = map[string]float64{
-		"5xx-warning":  10,
-		"5xx-critical": 20,
-	}
-	deployment_threshold_map = map[string]float64{
-		"replicas-not-ready": 0,
-	}
-	daemonset_threshold_map = map[string]float64{
-		"replicas-not-ready": 0,
-	}
-	statefulsetThresholdMap = map[string]float64{
-		"replicas-not-ready": 0,
-	}
-)
 
 func main() {
 	config, err := rest.InClusterConfig()
