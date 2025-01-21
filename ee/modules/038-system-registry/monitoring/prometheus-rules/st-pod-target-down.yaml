@@ -3,7 +3,7 @@
   - alert: TargetDown
     expr: |
       label_replace(
-        up{job=~"^system-registry-distribution$"},
+        up{job=~"^system-registry-(distribution|auth)$"},
         "host_ip",
         "$1",
         "instance",
@@ -12,7 +12,7 @@
       * on (host_ip) group_left (pod, node)
         kube_pod_info{created_by_kind="Node",namespace="d8-system",pod=~"^system-registry-.*$"}
       == 0 unless on (job) ALERTS{alertname=~".+TargetDown"}
-    for: 10m
+    for: 3m
     labels:
       severity_level: "7"
     annotations:
@@ -24,7 +24,7 @@
   - alert: TargetDown
     expr: |
       label_replace(
-        up{job=~"^system-registry-distribution$"},
+        up{job=~"^system-registry-(distribution|auth)$"},
         "host_ip",
         "$1",
         "instance",
@@ -33,7 +33,7 @@
       * on (host_ip) group_left (pod, node)
         kube_pod_info{created_by_kind="Node",namespace="d8-system",pod=~"^system-registry-.*$"}
       == 0 unless on (job) ALERTS{alertname=~".+TargetDown"}
-    for: 30m
+    for: 10m
     labels:
       severity_level: "6"
     annotations:
@@ -45,7 +45,7 @@
   - alert: TargetDown
     expr: |
       label_replace(
-        up{job=~"^system-registry-distribution$"},
+        up{job=~"^system-registry-(distribution|auth)$"},
         "host_ip",
         "$1",
         "instance",
@@ -54,7 +54,7 @@
       * on (host_ip) group_left (pod, node)
         kube_pod_info{created_by_kind="Node",namespace="d8-system",pod=~"^system-registry-.*$"}
       == 0 unless on (job) ALERTS{alertname=~".+TargetDown"}
-    for: 60m
+    for: 20m
     labels:
       severity_level: "5"
     annotations:
