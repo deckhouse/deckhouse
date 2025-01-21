@@ -1,0 +1,39 @@
+image: {{ .ModuleName }}/{{ .ImageName }}
+fromImage: {{ .ModuleName }}/base-terraform-manager
+git:
+- add: /{{ .ModulePath }}candi/cloud-providers/dvp
+  to: /deckhouse/candi/cloud-providers/dvp
+import:
+- artifact: terraform-provider-kubernetes
+  add: /terraform-provider-kubernetes
+  to: /plugins/registry.terraform.io/{{ .TF.kubernetes.namespace }}/{{ .TF.kubernetes.type }}/{{ .TF.kubernetes.version }}/linux_amd64/terraform-provider-kubernetes
+  before: setup
+---
+image: terraform-provider-kubernetes
+from: {{ $.Images.BASE_GOLANG_22_ALPINE_DEV }}
+final: false
+mount:
+- fromPath: ~/go-pkg-cache
+  to: /go/pkg
+git:
+- add: /{{ $.ModulePath }}modules/040-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
+  to: /patches
+  stageDependencies:
+    install:
+    - '**/*'
+shell:
+  beforeInstall:
+  - apk add --no-cache git openssh-client
+  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
+  install:
+  - mkdir /src
+  - export GOPROXY={{ $.GOPROXY }}
+  - git clone --depth 1 --branch v{{ .TF.kubernetes.version }} {{ $.SOURCE_REPO }}/hashicorp/terraform-provider-kubernetes.git /src
+  - cd /src
+  - find /patches -name '*.patch' | xargs git apply --verbose
+  - go mod tidy
+  - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w -extldflags \"-static\" -X main.version={{ .TF.kubernetes.version }} -X main.commit=00000000" -o terraform-provider-kubernetes ./
+  - mv /src/terraform-provider-kubernetes /terraform-provider-kubernetes
+  - chmod -R 755 /terraform-provider-kubernetes
+  - chown 64535:64535 /terraform-provider-kubernetes
+
