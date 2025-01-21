@@ -110,7 +110,7 @@ func CheckOrSetupArbitaryCNIModuleConfig(cfg *DeckhouseInstaller) error {
 		}
 	}
 
-	log.InfoLn("Doesn't found ModuleConfig for cni, creating.")
+	log.InfoLn("ModuleConfig for cni not found, creating.")
 	schemasStore := NewSchemaStore()
 	cniMC := &ModuleConfig{}
 	cniMC.SetGroupVersionKind(schema.GroupVersionKind{
