@@ -17,10 +17,10 @@ limitations under the License.
 package cmd
 
 import (
-	"fmt"
-	"log"
 	"os"
+	"time"
 
+	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
 
@@ -60,13 +60,7 @@ func Execute() {
 
 func run(cmd *cobra.Command, args []string) {
 	cfg.AuthMode = config.ParseAuthMode(authModeStr)
-	// if cfg.AuthMode == config.AuthCert {
-	// 	if cfg.CertPath == "" || cfg.KeyPath == "" || cfg.CACertPath == "" {
-	// 		fmt.Println("--cert-path, --key-path --ca-cert-path required")
-	// 		cmd.Usage()
-	// 		return
-	// 	}
-	// }
+
 	configData, err := os.ReadFile(cfg.ConfigPath)
 	if err != nil {
 		log.Fatalf("Error reading config file: %v", err)
@@ -89,14 +83,36 @@ func run(cmd *cobra.Command, args []string) {
 		log.Fatalf("Error creating K8S client: %v", err)
 	}
 
-	for _, backend := range c.Backends {
+	updates := make(chan k8s.BackendUpdate)
 
-		err = k8sClient.WatchEndpoints(backend, haproxyClient.BackendSync)
+	// Haproxy sync
+	go func() {
+		for update := range updates {
+			haproxyClient.BackendSync(update.Backend, update.Servers)
+		}
+	}()
+
+	for _, backend := range c.Backends {
+		// Endpoint watcher
+		err = k8sClient.WatchEndpoints(backend, updates)
 		if err != nil {
-			fmt.Println("Error watching endpoints:", err)
+			log.Error("Error watching endpoints:", err)
 			return
 		}
-	}
 
+		// ForceSync every 30 Second
+		go func(b config.Backend) {
+			ticker := time.NewTicker(30 * time.Second)
+			defer ticker.Stop()
+
+			for {
+				<-ticker.C
+				err := k8sClient.ForceSync(b, updates)
+				if err != nil {
+					log.Errorf("ForceSync failed for %s: %v", b.K8S.EndpointName, err)
+				}
+			}
+		}(backend)
+	}
 	select {}
 }

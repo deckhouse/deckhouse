@@ -45,8 +45,12 @@ func (c *Client) BackendSync(backend config.Backend, desiredServers []Server) {
 
 	serversToAdd, serversToRemove := c.diffServers(currentServers, desiredServers)
 
-	log.Infoln("serversToAdd", serversToAdd)
-	log.Infoln("serversToRemove", serversToRemove)
+	if len(serversToAdd) > 0 {
+		log.Infoln("serversToAdd", serversToAdd)
+	}
+	if len(serversToRemove) > 0 {
+		log.Infoln("serversToRemove", serversToRemove)
+	}
 
 	c.addServer(backend, serversToAdd)
 	c.delServer(backend, serversToRemove)
