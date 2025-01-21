@@ -309,7 +309,19 @@ window.addEventListener("load", function() {
 document.addEventListener('DOMContentLoaded', function () {
   const pre = document.querySelectorAll('pre');
 
-  const lang = document.documentElement.lang;
+  let lang = document.documentElement.lang;
+  console.log(lang)
+
+  if (lang.length === 0) {
+    if (window.location.href.includes("deckhouse.ru") || window.location.href.includes("ru.localhost")) {
+      lang = "ru"
+    } else if (window.location.href.includes("deckhouse.io") || window.location.href.includes("localhost/")) {
+      lang = "en"
+    }
+  }
+
+  console.log(lang)
+
   const textTooltip = {
     en: {
       copy: 'Copy',
@@ -322,7 +334,7 @@ document.addEventListener('DOMContentLoaded', function () {
       error: 'Ошибка!'
     }
   };
-  const  texts = textTooltip[lang];
+  const texts = textTooltip[lang];
 
   if (pre.length) {
     pre.forEach((el) => {
