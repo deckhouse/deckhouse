@@ -5,137 +5,141 @@ description: "Configuring Huawei Cloud for Deckhouse cloud provider operation."
 
 {% include notice_envinronment.liquid %}
 
-To manage resources in an HuaweiCloud cloud, Deckhouse components connects to the HuaweiCloud API. To do this, you need to create a user in the HuaweiCloud IAM service and provide it with the necessary permissions.
+To interact with resources in the HuaweiCloud cloud, Deckhouse components use the HuaweiCloud API. To configure this connection, you need to create a user in the HuaweiCloud IAM service and provide it with the necessary permissions.
 
 ## Configuring IAM via the web interface
 
-In order to configure IAM via the web interface, first create a new user group and assign necessary permissions to it:
+To configure IAM via the web interface, first create a new user group and assign the necessary permissions. Follow these steps:
 
-1. Open `Identity and Access Management (IAM)`.
-1. Open the `User Groups` page and click `Create User Group`.
-1. Enter a group name in the `Name` field (e.g., `deckhouse`).
-1. Click `OK`.
-1. Click on the created group.
-2. Click `Authorize` on the `Permissions` tab.
-3. Select `ECS Admin`, `VPC Administrator`, `NAT Admin`, and `DEW KeypairFullAccess` policies.
-4. Click `Next`, then `OK`, and then `Finish`.
+1. Go to the "Identity and Access Management (IAM)" section.  
+1. Open the "User Groups" page and click "Create User Group".  
+1. In the "Name" field, enter the group name (e.g., `deckhouse`).  
+1. Click "OK" to create the group.  
+1. Select the newly created group from the list.  
+1. On the "Permissions" tab, click "Authorize".  
+1. Assign the following policies: ECS Admin, VPC Administrator, NAT Admin, DEW KeypairFullAccess.  
+1. Click "Next", then "OK", and complete the setup by clicking "Finish".  
 
-Then add a new user:
+Then add a new user. Follow these steps:
 
-1. Open the `Users` page of IAM and click `Create user`.
-1. Enter a name in the `Username` field (e.g., `deckhouse`).
-1. Select `Access type - Programmatic access`, ensure that `Access type - Management console access` is disabled.
-1. Select `Credential Type - Access key`.
-1. Click `Next`.
-2. Select the group created above.
-3. Click `Create`.
-1. Click `OK` to download the `Access Key Id` and `Secret Access Key`.
+1. Go to the "Users" page in the IAM section and click "Create User".
+1. In the "Username" field, enter the username (e.g., `deckhouse`).
+1. Set "Access type" to "Programmatic access" and make sure "Management console access" is disabled.
+1. Select "Access key" as the "Credential Type".
+1. Click "Next".
+1. Select the previously created user group.
+1. Click "Create" to complete the user creation process.
+1. Click "OK" to download the `Access Key ID` and `Secret Access Key`. Make sure to save these credentials in a secure location, as they will be needed to access the API.
 
 ## JSON Policies
 
-Content of the policies in JSON format:
+Below are the contents of the policies in JSON format:
 
-ECS Admin policy:
-```json
-{
+- ECS Admin policy:
+
+  ```json
+  {
   "Version": "1.1",
   "Statement": [
-    {
+  {
       "Action": [
-        "ecs:*:*",
-        "evs:*:get",
-        "evs:*:list",
-        "evs:volumes:create",
-        "evs:volumes:delete",
-        "evs:volumes:attach",
-        "evs:volumes:detach",
-        "evs:volumes:manage",
-        "evs:volumes:update",
-        "evs:volumes:use",
-        "evs:volumes:uploadImage",
-        "evs:snapshots:create",
-        "vpc:*:get",
-        "vpc:*:list",
-        "vpc:networks:create",
-        "vpc:networks:update",
-        "vpc:subnets:update",
-        "vpc:subnets:create",
-        "vpc:ports:*",
-        "vpc:routers:get",
-        "vpc:routers:update",
-        "vpc:securityGroups:*",
-        "vpc:securityGroupRules:*",
-        "vpc:floatingIps:*",
-        "vpc:publicIps:*",
-        "ims:images:create",
-        "ims:images:delete",
-        "ims:images:get",
-        "ims:images:list",
-        "ims:images:update",
-        "ims:images:upload"
+      "ecs:*:*",
+      "evs:*:get",
+      "evs:*:list",
+      "evs:volumes:create",
+      "evs:volumes:delete",
+      "evs:volumes:attach",
+      "evs:volumes:detach",
+      "evs:volumes:manage",
+      "evs:volumes:update",
+      "evs:volumes:use",
+      "evs:volumes:uploadImage",
+      "evs:snapshots:create",
+      "vpc:*:get",
+      "vpc:*:list",
+      "vpc:networks:create",
+      "vpc:networks:update",
+      "vpc:subnets:update",
+      "vpc:subnets:create",
+      "vpc:ports:*",
+      "vpc:routers:get",
+      "vpc:routers:update",
+      "vpc:securityGroups:*",
+      "vpc:securityGroupRules:*",
+      "vpc:floatingIps:*",
+      "vpc:publicIps:*",
+      "ims:images:create",
+      "ims:images:delete",
+      "ims:images:get",
+      "ims:images:list",
+      "ims:images:update",
+      "ims:images:upload"
       ],
       "Effect": "Allow"
-    }
+  }
   ]
-}
-```
+  }
+  ```
 
-VPC Administrator policy:
-```
-{
-    "Version": "1.1",
-    "Statement": [
-        {
-            "Action": [
-                "vpc:vpcs:*",
-                "vpc:routers:*",
-                "vpc:networks:*",
-                "vpc:subnets:*",
-                "vpc:ports:*",
-                "vpc:privateIps:*",
-                "vpc:peerings:*",
-                "vpc:routes:*",
-                "vpc:lbaas:*",
-                "vpc:vpns:*",
-                "ecs:*:get",
-                "ecs:*:list",
-                "elb:*:get",
-                "elb:*:list"
-            ],
-            "Effect": "Allow"
-        }
-    ]
-}
-```
+- VPC Administrator policy:
 
-NAT Admin policy:
-```
-{
-    "Version": "1.1",
-    "Statement": [
-        {
-            "Action": [
-                "nat:*:*",
-                "vpc:*:*"
-            ],
-            "Effect": "Allow"
-        }
-    ]
-}
-```
+  ```json
+  {
+      "Version": "1.1",
+      "Statement": [
+          {
+              "Action": [
+                  "vpc:vpcs:*",
+                  "vpc:routers:*",
+                  "vpc:networks:*",
+                  "vpc:subnets:*",
+                  "vpc:ports:*",
+                  "vpc:privateIps:*",
+                  "vpc:peerings:*",
+                  "vpc:routes:*",
+                  "vpc:lbaas:*",
+                  "vpc:vpns:*",
+                  "ecs:*:get",
+                  "ecs:*:list",
+                  "elb:*:get",
+                  "elb:*:list"
+              ],
+              "Effect": "Allow"
+          }
+      ]
+  }
+  ```
 
-DEW KeypairFullAccess policy:
-```
-{
-    "Version": "1.1",
-    "Statement": [
-        {
-            "Action": [
-                "kps:domainKeypairs:*",
-                "ecs:serverKeypairs:*"
-            ],
-            "Effect": "Allow"
-        }
-    ]
-}
-```
+- NAT Admin policy:
+
+  ```json
+  {
+      "Version": "1.1",
+      "Statement": [
+          {
+              "Action": [
+                  "nat:*:*",
+                  "vpc:*:*"
+              ],
+              "Effect": "Allow"
+          }
+      ]
+  }
+  ```
+
+- DEW KeypairFullAccess policy:
+
+  ```json
+  {
+      "Version": "1.1",
+      "Statement": [
+          {
+              "Action": [
+                  "kps:domainKeypairs:*",
+                  "ecs:serverKeypairs:*"
+              ],
+              "Effect": "Allow"
+          }
+      ]
+  }
+  ```
