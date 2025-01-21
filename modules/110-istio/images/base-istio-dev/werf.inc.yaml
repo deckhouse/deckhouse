@@ -38,7 +38,7 @@ shell:
     libcap-devel libpcap-devel \
     clang14.0 clang14.0-tools lld14.0 llvm14.0-devel \
     libcxxabi-devel \
-    libcxx libcxx-static libcxxabi-static lld14.0 llvm-config
+    libcxx libcxx-static libcxxabi-static lld14.0
   install:
   # Install Go
   - curl -sfL https://go.dev/dl/go{{ $goVersion }}.linux-amd64.tar.gz -o go.tar.gz
