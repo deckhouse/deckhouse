@@ -1,0 +1,16 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: registry-packages-proxy
+  namespace: d8-cloud-instance-manager
+  {{- include "helm_lib_module_labels" (list . (dict "app" "registry-packages-proxy" "workload-resource-policy.deckhouse.io" "master")) | nindent 2 }}
+spec:
+  selector:
+    app: registry-packages-proxy
+  ports:
+    - name: https
+      port: 4219
+      targetPort: 4219
+      protocol: TCP
+  type: ClusterIP
