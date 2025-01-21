@@ -47,12 +47,8 @@ alerts:
       moduleUrl: 101-cert-manager
       module: cert-manager
       edition: ce
-      description: |
-        The certificate `{{$labels.exported_namespace}}/{{$labels.name}}` has expired.
-
-        To learn how to issue a new certificate, refer to the [Usage](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/cert-manager/usage.html) section in the cert-manager documentation.
-      summary: |
-        Certificate expired.
+      description: Certificate {{$labels.exported_namespace}}/{{$labels.name}} is not provided.
+      summary: "Certificate is not provided.   To check the certificate details, run the following command:  shell kubectl -n {{$labels.exported_namespace}} describe certificate {{$labels.name}} \n"
       severity: "4"
       markupFormat: default
     - name: CertmanagerCertificateExpiredSoon

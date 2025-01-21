@@ -34,9 +34,12 @@
       summary: |
        Certificate is not provided.
 
-       Check certificate details for more info.
-       `kubectl -n {{$labels.exported_namespace}} describe certificate {{$labels.name}}`
 
+       To check the certificate details, run the following command:
+
+       ```shell
+       kubectl -n {{$labels.exported_namespace}} describe certificate {{$labels.name}}
+       ```
   - alert: CertmanagerCertificateOrderErrors
     expr: |
       sum by (scheme, host, path, status) (
