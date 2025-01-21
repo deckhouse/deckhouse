@@ -52,7 +52,7 @@ spec:
     WD="/dev/watchdog"
 
     start_wd() {
-      if [ -d "${WD}" ]; then
+      if [ -e "${WD}" ]; then
         ls -lha /dev/watchdog* 2>/dev/null
         rm -rf "${WD}"
       fi
