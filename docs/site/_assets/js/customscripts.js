@@ -315,7 +315,7 @@ document.addEventListener('DOMContentLoaded', function () {
   if (lang.length === 0) {
     if (window.location.href.includes("deckhouse.ru") || window.location.href.includes("ru.localhost")) {
       lang = "ru"
-    } else if (window.location.href.includes("deckhouse.io") || window.location.href.includes("localhost/")) {
+    } else if (window.location.href.includes("deckhouse.io") || (window.location.href.includes("deckhouse.stage") || window.location.href.includes("localhost/")) {
       lang = "en"
     }
   }
