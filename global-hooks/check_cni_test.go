@@ -24,7 +24,7 @@ import (
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
-var _ = Describe("Global hooks :: enable_cni ::", func() {
+var _ = Describe("Global hooks :: check_cni ::", func() {
 
 	cniMC := func(name string) string {
 		return fmt.Sprintf(`
@@ -41,7 +41,7 @@ spec:
 	f := HookExecutionConfigInit(`{"global": {"discovery": {}}}`, `{}`)
 	f.RegisterCRD("deckhouse.io", "v1alpha1", "ModuleConfig", false)
 
-	Context("Cluster has no deckhouse MC", func() {
+	Context("Cluster has no deckhouse MC and cluster managed by other", func() {
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(""))
 			f.RunHook()
@@ -49,7 +49,22 @@ spec:
 
 		It("ExecuteSuccessfully", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(string(f.LoggerOutput.Contents())).To(ContainSubstring("No cni is explicitly enabled"))
+		})
+	})
+
+	Context("Cluster has no deckhouse MC and cluster managed by D8", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(""))
+			f.ValuesSetFromYaml("global.enabledModules", []byte(`["control-plane-manager"]`))
+			f.RunHook()
+		})
+
+		It("Throw the error", func() {
+			Expect(f).ToNot(ExecuteSuccessfully())
+			Expect(f.GoHookError.Error()).Should(ContainSubstring("the cluster is managed by D8, but there are no explicitly enabled CNI-modules"))
+			value, exists := requirements.GetValue(cniConfigurationSettledKey)
+			Expect(exists).To(BeTrue())
+			Expect(value).To(BeEquivalentTo("false"))
 		})
 	})
 

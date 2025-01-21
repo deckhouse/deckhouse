@@ -17,6 +17,8 @@ package hooks
 import (
 	"fmt"
 
+	"github.com/deckhouse/deckhouse/go_lib/module"
+
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
@@ -42,7 +44,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			FilterFunc: applyMCFilter,
 		},
 	},
-}, enableCni)
+}, checkCni)
 
 func applyMCFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	v, _, err := unstructured.NestedBool(obj.UnstructuredContent(), "spec", "enabled")
@@ -57,7 +59,7 @@ func applyMCFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error)
 	return obj.GetName(), nil
 }
 
-func enableCni(input *go_hook.HookInput) error {
+func checkCni(input *go_hook.HookInput) error {
 	requirements.RemoveValue(cniConfigurationSettledKey)
 
 	deckhouseMCSnap := input.Snapshots["deckhouse_mc"]
@@ -72,6 +74,10 @@ func enableCni(input *go_hook.HookInput) error {
 		return nil
 	}
 
-	input.Logger.Warnf("No cni is explicitly enabled")
+	controlPlaneEnabled := module.IsEnabled("control-plane-manager", input)
+	if controlPlaneEnabled {
+		requirements.SaveValue(cniConfigurationSettledKey, "false")
+		return fmt.Errorf("the cluster is managed by D8, but there are no explicitly enabled CNI-modules")
+	}
 	return nil
 }
