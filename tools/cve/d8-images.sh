@@ -113,9 +113,10 @@ function __main__() {
         -F "deduplication_on_engagement=false" \
         -F "tags=Deckhouse Image,module:${MODULE_NAME},image:${IMAGE_NAME},branch:${TAG}${codeowner_tags}" \
         -F "test_title=${MODULE_NAME}: ${IMAGE_NAME}" \
-        -F "version=test_branch" \
+        -F "version=${TAG}" \
         -F "engagement_end_date=${date_iso}" \
         -F "build_id=${TAG}" \
+        -F "branch_tag=${TAG}" \
       > /dev/null
 
     done
