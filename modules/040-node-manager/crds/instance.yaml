@@ -55,6 +55,7 @@ spec:
                         - ZvirtInstanceClass
                         - DynamixInstanceClass
                         - HuaweiCloudInstanceClass
+                        - DVPInstanceClass
                     name:
                       description: |
                         The name of the required `InstanceClass` object (e.g., `finland-medium`).
