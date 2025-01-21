@@ -39,17 +39,17 @@ func TestEnabledLabel(t *testing.T) {
 }
 
 func TestThresholdLabel(t *testing.T) {
-	labels := map[string]string{label_theshold_prefix + "cpu": "80"}
+	labels := map[string]string{labelThesholdPrefix + "cpu": "80"}
 	assert.Equal(t, 80.0, thresholdLabel(labels, "cpu", 100.0))
 
-	labels[label_theshold_prefix+"cpu"] = "invalid"
+	labels[labelThesholdPrefix+"cpu"] = "invalid"
 	assert.Equal(t, 100.0, thresholdLabel(labels, "cpu", 100.0))
 }
 
 func Test_enabled(t *testing.T) {
 	ctx := context.Background()
 	scheme := runtime.NewScheme()
-	metav1.AddMetaToScheme(scheme)
+	_ = metav1.AddMetaToScheme(scheme)
 	FakeClient := fake.NewSimpleMetadataClient(scheme)
 	FakeClient.Resource(resource_namespaces).(fake.MetadataClient).CreateFake(&metav1.PartialObjectMetadata{
 		TypeMeta: metav1.TypeMeta{
@@ -98,7 +98,7 @@ func Test_enabled(t *testing.T) {
 func Test_node(t *testing.T) {
 	ctx := context.Background()
 	scheme := runtime.NewScheme()
-	metav1.AddMetaToScheme(scheme)
+	_ = metav1.AddMetaToScheme(scheme)
 	FakeClient := fake.NewSimpleMetadataClient(scheme)
 	FakeClient.Resource(resource_nodes).(fake.MetadataClient).CreateFake(&metav1.PartialObjectMetadata{
 		TypeMeta: metav1.TypeMeta{
@@ -107,7 +107,7 @@ func Test_node(t *testing.T) {
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:   "node1",
-			Labels: map[string]string{label_theshold_prefix + "load-average-per-core-critical": "9"},
+			Labels: map[string]string{labelThesholdPrefix + "load-average-per-core-critical": "9"},
 		},
 	}, metav1.CreateOptions{})
 	FakeClient.Resource(resource_nodes).(fake.MetadataClient).CreateFake(&metav1.PartialObjectMetadata{
@@ -147,7 +147,7 @@ func Test_node(t *testing.T) {
 func Test_pod(t *testing.T) {
 	ctx := context.Background()
 	scheme := runtime.NewScheme()
-	metav1.AddMetaToScheme(scheme)
+	_ = metav1.AddMetaToScheme(scheme)
 	FakeClient := fake.NewSimpleMetadataClient(scheme)
 	FakeClient.Resource(resource_namespaces).(fake.MetadataClient).CreateFake(&metav1.PartialObjectMetadata{
 		TypeMeta: metav1.TypeMeta{
@@ -196,6 +196,17 @@ func Test_pod(t *testing.T) {
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "pod3",
+			Namespace: "namespace1",
+			Labels:    map[string]string{namespaces_enabled_label: "true"},
+		},
+	}, metav1.CreateOptions{})
+	FakeClient.Resource(resource_pods).(fake.MetadataClient).CreateFake(&metav1.PartialObjectMetadata{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "v1",
+			Kind:       "pods",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "pod4",
 			Namespace: "namespace2",
 			Labels:    map[string]string{namespaces_enabled_label: "true"},
 		},

@@ -57,9 +57,9 @@ func enabledLabel(labels map[string]string) float64 {
 }
 
 func thresholdLabel(labels map[string]string, threshold string, i float64) float64 {
-	if value, ok := labels[label_theshold_prefix+threshold]; ok {
+	if value, ok := labels[labelThesholdPrefix+threshold]; ok {
 		if tmp, err := strconv.ParseFloat(value, 64); err != nil {
-			log.Printf("[thresholdLabel] could not parse the value of \"%s\": %v\n", label_theshold_prefix+threshold, err)
+			log.Printf("[thresholdLabel] could not parse the value of \"%s\": %v\n", labelThesholdPrefix+threshold, err)
 		} else {
 			i = tmp
 		}
@@ -68,16 +68,16 @@ func thresholdLabel(labels map[string]string, threshold string, i float64) float
 }
 
 func recordMetrics(ctx context.Context, client metadata.Interface, registry *prometheus.Registry) {
-	//init
-	node_enabled := prometheus.NewCounterVec(
+	// init
+	nodeEnabled := prometheus.NewCounterVec(
 		prometheus.CounterOpts{Name: "extended_monitoring_node_enabled"},
 		[]string{"node"},
 	)
-	node_threshold := prometheus.NewCounterVec(
+	nodeThreshold := prometheus.NewCounterVec(
 		prometheus.CounterOpts{Name: "extended_monitoring_node_threshold"},
 		[]string{"node", "threshold"},
 	)
-	namespaces_enabled := prometheus.NewCounterVec(
+	namespacesEnabled := prometheus.NewCounterVec(
 		prometheus.CounterOpts{Name: "extended_monitoring_enabled"},
 		[]string{"namespace"},
 	)
@@ -125,25 +125,25 @@ func recordMetrics(ctx context.Context, client metadata.Interface, registry *pro
 		prometheus.CounterOpts{Name: "extended_monitoring_cronjob_enabled"},
 		[]string{"namespace", "cronjob"},
 	)
-	//node
+	// node
 	for _, node := range ListResources(ctx, client, resource_nodes, options, "").Items {
 		enabled := enabledLabel(node.Labels)
-		node_enabled.WithLabelValues(node.Name).Add(enabled)
+		nodeEnabled.WithLabelValues(node.Name).Add(enabled)
 		if enabled == 1 {
 			for key, value := range node_threshold_map {
-				node_threshold.WithLabelValues(node.Name, key).Add(thresholdLabel(node.Labels, key, value))
+				nodeThreshold.WithLabelValues(node.Name, key).Add(thresholdLabel(node.Labels, key, value))
 			}
 		}
 	}
-	//namespace
-	for _, namespasce := range ListResources(ctx, client, resource_namespaces, options_ns, "").Items {
-		enabled_namespace := enabledLabel(namespasce.Labels)
-		namespaces_enabled.WithLabelValues(namespasce.Name).Add(enabled_namespace)
+	// namespace
+	for _, namespasce := range ListResources(ctx, client, resource_namespaces, optionsNs, "").Items {
+		enabledNamespace := enabledLabel(namespasce.Labels)
+		namespacesEnabled.WithLabelValues(namespasce.Name).Add(enabledNamespace)
 
-		//todo: need backport https://github.com/deckhouse/deckhouse/commit/6c1c2f80997fac76ff0f65b67da61beb682538ce
+		// todo: need backport https://github.com/deckhouse/deckhouse/commit/6c1c2f80997fac76ff0f65b67da61beb682538ce
 
-		if enabled_namespace == 1 {
-			//pod
+		if enabledNamespace == 1 {
+			// pod
 			for _, pod := range ListResources(ctx, client, resource_pods, options, namespasce.Name).Items {
 				enabled := enabledLabel(pod.Labels)
 				pod_enabled.WithLabelValues(namespasce.Name, pod.Name).Add(enabled)
@@ -153,7 +153,7 @@ func recordMetrics(ctx context.Context, client metadata.Interface, registry *pro
 					}
 				}
 			}
-			//ingress
+			// ingress
 			for _, ingress := range ListResources(ctx, client, resource_ingresses, options, namespasce.Name).Items {
 				enabled := enabledLabel(ingress.Labels)
 				ingress_enabled.WithLabelValues(namespasce.Name, ingress.Name).Add(enabled)
@@ -163,7 +163,7 @@ func recordMetrics(ctx context.Context, client metadata.Interface, registry *pro
 					}
 				}
 			}
-			//deployment
+			// deployment
 			for _, deployment := range ListResources(ctx, client, resource_deployments, options, namespasce.Name).Items {
 				enabled := enabledLabel(deployment.Labels)
 				deployment_enabled.WithLabelValues(namespasce.Name, deployment.Name).Add(enabled)
@@ -173,7 +173,7 @@ func recordMetrics(ctx context.Context, client metadata.Interface, registry *pro
 					}
 				}
 			}
-			//daemonset
+			// daemonset
 			for _, daemonset := range ListResources(ctx, client, resource_daemonsets, options, namespasce.Name).Items {
 				enabled := enabledLabel(daemonset.Labels)
 				daemonset_enabled.WithLabelValues(namespasce.Name, daemonset.Name).Add(enabled)
@@ -183,7 +183,7 @@ func recordMetrics(ctx context.Context, client metadata.Interface, registry *pro
 					}
 				}
 			}
-			//statefulset
+			// statefulset
 			for _, statefulset := range ListResources(ctx, client, resource_statefulsets, options, namespasce.Name).Items {
 				enabled := enabledLabel(statefulset.Labels)
 				statefulset_enabled.WithLabelValues(namespasce.Name, statefulset.Name).Add(enabled)
@@ -193,15 +193,15 @@ func recordMetrics(ctx context.Context, client metadata.Interface, registry *pro
 					}
 				}
 			}
-			//cronjob
+			// cronjob
 			for _, cronjob := range ListResources(ctx, client, resource_cronjobs, options, namespasce.Name).Items {
 				cronjob_enabled.WithLabelValues(namespasce.Name, cronjob.Name).Add(enabledLabel(cronjob.Labels))
 			}
 		}
 	}
-	registry.MustRegister(node_enabled)
-	registry.MustRegister(node_threshold)
-	registry.MustRegister(namespaces_enabled)
+	registry.MustRegister(nodeEnabled)
+	registry.MustRegister(nodeThreshold)
+	registry.MustRegister(namespacesEnabled)
 	registry.MustRegister(pod_enabled)
 	registry.MustRegister(pod_threshold)
 	registry.MustRegister(ingress_enabled)
@@ -216,7 +216,7 @@ func recordMetrics(ctx context.Context, client metadata.Interface, registry *pro
 }
 
 const (
-	label_theshold_prefix    = "threshold.extended-monitoring.deckhouse.io/"
+	labelThesholdPrefix    = "threshold.extended-monitoring.deckhouse.io/"
 	namespaces_enabled_label = "extended-monitoring.deckhouse.io/enabled"
 	interval_recordMetrics   = 5 * time.Minute
 	timeOut_healthz          = time.Duration(3 * interval_recordMetrics)
@@ -224,7 +224,7 @@ const (
 
 var (
 	options               = metav1.ListOptions{TimeoutSeconds: &timeOut}
-	options_ns            = metav1.ListOptions{LabelSelector: namespaces_enabled_label, TimeoutSeconds: &timeOut}
+	optionsNs             = metav1.ListOptions{LabelSelector: namespaces_enabled_label, TimeoutSeconds: &timeOut}
 	resource_nodes        = schema.GroupVersionResource{Group: "", Version: "v1", Resource: "nodes"}
 	resource_namespaces   = schema.GroupVersionResource{Group: "", Version: "v1", Resource: "namespaces"}
 	resource_pods         = schema.GroupVersionResource{Group: "", Version: "v1", Resource: "pods"}
