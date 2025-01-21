@@ -18,7 +18,6 @@ data "vcd_catalog" "catalog" {
 }
 
 data "vcd_catalog_vapp_template" "template" {
-  org        = local.org
   catalog_id = data.vcd_catalog.catalog.id
   name       = local.template
 }
@@ -90,7 +89,8 @@ resource "vcd_vapp_vm" "master" {
   lifecycle {
     ignore_changes = [
       guest_properties,
-      disk
+      disk,
+      metadata
     ]
   }
 

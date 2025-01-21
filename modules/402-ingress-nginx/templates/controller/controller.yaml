@@ -52,6 +52,10 @@ spec:
       maxAllowed:
         cpu: {{ $resourcesRequestsVPA_CPU.max | default "50m" | quote }}
         memory: {{ $resourcesRequestsVPA_Memory.max | default "200Mi" | quote }}
+      {{- if $crd.spec.enableIstioSidecar }}
+    - containerName: istio-proxy
+      mode: "Off"
+      {{- end }}
     {{- else }}
   updatePolicy:
     updateMode: "Off"

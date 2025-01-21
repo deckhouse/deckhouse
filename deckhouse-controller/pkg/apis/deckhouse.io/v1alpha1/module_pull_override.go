@@ -26,6 +26,18 @@ import (
 
 const (
 	ModulePullOverrideAnnotationDeployedOn = "modules.deckhouse.io/deployed-on"
+
+	ModulePullOverrideFinalizer = "modules.deckhouse.io/mpo-finalizer"
+
+	ModulePullOverrideMessageReady          = "Ready"
+	ModulePullOverrideMessageModuleEmbedded = "The module is embedded"
+	ModulePullOverrideMessageModuleDisabled = "The module disabled"
+	ModulePullOverrideMessageModuleNotFound = "The module not found"
+	ModulePullOverrideMessageSourceNotFound = "The source not found"
+	ModulePullOverrideMessageNoSource       = "The module does not have an active source"
+	ModulePullOverrideMessageNoDef          = "The module does not have a module definition"
+
+	ModulePullOverrideAnnotationRenew = "renew"
 )
 
 var (
@@ -75,7 +87,7 @@ type ModulePullOverride struct {
 }
 
 type ModulePullOverrideSpec struct {
-	Source       string          `json:"source"`
+	Source       string          `json:"source,omitempty"`
 	ImageTag     string          `json:"imageTag"`
 	ScanInterval libapi.Duration `json:"scanInterval"`
 }

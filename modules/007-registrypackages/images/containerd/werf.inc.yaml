@@ -1,11 +1,11 @@
-{{- $containerd_version := "1.7.20" }}
+{{- $containerd_version := "1.7.24" }}
 {{- $image_version := $containerd_version | replace "." "-" }}
-{{- $runc_version := "1.1.13" }}
+{{- $runc_version := "1.2.3" }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
 from: {{ $.Images.BASE_SCRATCH }}
 import:
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
   add: /
   to: /
   includePaths:
@@ -26,31 +26,61 @@ docker:
     containerd: {{ $containerd_version }}
     runc: {{ $runc_version }}
 ---
-artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
-from: {{ $.Images.BASE_GOLANG_21_BULLSEYE_DEV }}
+image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact-{{ $image_version }}
+final: false
+fromImage: common/src-artifact
 git:
 - add: /{{ $.ModulePath }}modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
-  to: /
+  to: /src/scripts
   stageDependencies:
     install:
       - '**/*'
+- add: /{{ $.ModulePath }}modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
+  to: /patches
+  stageDependencies:
+    install:
+      - '**/*'
+shell:
+  install:
+  - git clone --depth=1 --branch v{{ $containerd_version }} {{ $.SOURCE_REPO }}/containerd/containerd.git /src/containerd
+  - git clone --depth=1 --branch v{{ $runc_version }} {{ $.SOURCE_REPO }}/opencontainers/runc /src/runc
+  - cd /src/containerd
+  - git describe --match 'v[0-9]*' --dirty='.m' --always > VERSION
+  - git rev-parse HEAD > REVISION
+  - git apply /patches/containerd/*.patch --verbose
+  - cd /src/runc
+  - git apply /patches/runc/*.patch --verbose
+  - git describe --dirty --long --always > COMMIT
+  - rm -rf /src/containerd/.git
+  - rm -rf /src/runc/.git
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
+from: {{ $.Images.BASE_GOLANG_23_BULLSEYE }}
+final: false
+import:
+- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact-{{ $image_version }}
+  add: /src
+  to: /src
+  before: install
 mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
 shell:
+  beforeInstall:
+  {{- include "debian packages proxy" . | nindent 2 }}
+  - apt-get update && apt-get install libseccomp-dev -y
   install:
   - export GOPROXY={{ $.GOPROXY }}
-  - mkdir -p /src
-  - cd /src
-  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
-  - git clone --depth=1 --branch v{{ $containerd_version }} {{ $.SOURCE_REPO }}/containerd/containerd.git
-  - cd containerd
+  - cd /src/containerd
   - git config --global user.email "builder@deckhouse.io"
-  - make STATIC=1 all
+  - go mod download
+  - go mod vendor
+  - make STATIC=1 VERSION="$(cat VERSION)" REVISION="$(cat REVISION)" all
   - mv bin/* /
-  - cd /src
-  - git clone --depth=1 --branch v{{ $runc_version }} {{ $.SOURCE_REPO }}/opencontainers/runc
-  - cd runc
+  - cd /src/runc
+  - go mod download
+  - go mod vendor
   - git config --global user.email "builder@deckhouse.io"
-  - make static
+  - make COMMIT="$(cat COMMIT)" static
   - mv runc /runc
+  - mv /src/scripts/* /

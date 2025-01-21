@@ -136,6 +136,14 @@ spec:
           value: "false"
         - name: GF_UNIFIED_ALERTING_DISABLED_ORGS
           value: "1"
+        - name: GF_ANALYTICS_REPORTING_ENABLED
+          value: "false"
+        - name: GF_ANALYTICS_CHECK_FOR_UPDATES
+          value: "false"
+        - name: GF_ANALYTICS_CHECK_FOR_PLUGIN_UPDATES
+          value: "false"
+        - name: GF_ANALYTICS_FEEDBACK_LINKS_ENABLED
+          value: "false"
         {{- if hasKey .Values.prometheus "grafana" }}
           {{- if hasKey .Values.prometheus.grafana "customPlugins" }}
         - name: GF_INSTALL_PLUGINS
@@ -151,6 +159,8 @@ spec:
         volumeMounts:
         - name: grafana-data
           mountPath: /var/lib/grafana/data
+        - name: grafana-alerting
+          mountPath: /var/lib/grafana/data/alerting
         - name: grafana-datasources
           mountPath: /etc/grafana/provisioning/datasources
         - name: grafana-alerts-channels
@@ -197,6 +207,8 @@ spec:
         volumeMounts:
         - name: grafana-data
           mountPath: /var/lib/grafana/data
+        - name: grafana-alerting
+          mountPath: /var/lib/grafana/data/alerting
         - name: shared-dashboards-folder
           mountPath: /etc/grafana/dashboards
         - name: tmp
@@ -282,6 +294,8 @@ spec:
           defaultMode: 420
           name: kube-rbac-proxy-ca.crt
       - name: grafana-data
+        emptyDir: {}
+      - name: grafana-alerting
         emptyDir: {}
       - name: tmp
         emptyDir: {}

@@ -2,7 +2,7 @@ type: object
 properties:
   storageClass:
     description: |
-      > **УСТАРЕВШИЙ**. Теперь его значение задается в [global.modules.storageClass](#parameters-modules-storageclass).
+      > **Устарел**. Используйте параметр [settings.modules.storageClass](#parameters-modules-storageclass).
 
       Имя StorageClass, который будет использоваться для всех компонентов Deckhouse Kubernetes Platform (Prometheus, Grafana, OpenVPN и т. д.).
 
@@ -64,7 +64,7 @@ properties:
               Режим работы HTTPS:
               * `CertManager` — модули Deckhouse будут работать по HTTPS, самостоятельно заказывая сертификат с помощью ClusterIssuer, указанного в параметре `certManager.clusterIssuerName`;
               * `CustomCertificate` — модули Deckhouse будут работать по HTTPS, используя сертификат из пространства имен `d8-system`;
-              * `Disabled` — модули Deckhouse будут работать только по HTTP (некоторые модули могут не работать, например [user-authn](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/150-user-authn/));
+              * `Disabled` — модули Deckhouse будут работать только по HTTP (некоторые модули могут не работать, например [user-authn](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/user-authn/));
               * `OnlyInURI` — модули Deckhouse будут работать по HTTP, подразумевая, что перед ними стоит внешний HTTPS-балансировщик, который терминирует HTTPS. Балансировщик должен обеспечивать перенаправление с HTTP на HTTPS.
           certManager:
             properties:
@@ -72,7 +72,7 @@ properties:
                 description: |
                   Имя `ClusterIssuer`, используемого модулями Deckhouse.
 
-                  В модуле [cert-manager](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/101-cert-manager/) доступны следующие `ClusterIssuer`: `letsencrypt`, `letsencrypt-staging`, `selfsigned`, `clouddns`, `cloudflare`, `digitalocean`, `route53`. Также вы можете использовать свой `ClusterIssuer`.
+                  В модуле [cert-manager](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/cert-manager/) доступны следующие `ClusterIssuer`: `letsencrypt`, `letsencrypt-staging`, `selfsigned`, `clouddns`, `cloudflare`, `digitalocean`, `route53`. Также вы можете использовать свой `ClusterIssuer`.
           customCertificate:
             properties:
               secretName:
@@ -96,32 +96,6 @@ properties:
               memory:
                 description: |
                   Объем памяти, выделяемой для компонентов control plane, работающих на каждом master-узле кластера.
-          everyNode:
-            description: |
-              Количество ресурсов (CPU и памяти), выделяемых для компонентов Deckhouse, работающих на каждом узле кластера.
-            properties:
-              cpu:
-                description: |
-                  Количество CPU, выделяемых на каждом узле.
-              memory:
-                description: |
-                  Объем памяти, выделяемой на каждом узле.
-          masterNode:
-            description: |
-              Количество ресурсов (CPU и памяти), выделяемых для компонентов Deckhouse, работающих на каждом master-узле (в том числе `control plane`, если `control plane` управляется Deckhouse).
-
-              > **Внимание!** В случае managed-кластера (Kubernetes as a Service) Deckhouse может не управлять компонентами `control plane`. В таких случаях все указанные в параметре `masterNode` ресурсы отдаются компонентам Deckhouse.
-            properties:
-              cpu:
-                description: |
-                  Количество CPU, выделяемых на каждом master-узле **дополнительно** к указанному в параметре `everyNode.cpu`:
-                    * Для кластера, управляемого Deckhouse, значение по умолчанию определяется автоматически по формуле: `.status.allocatable.cpu` минимального master-узла (но не более `4` (ядер CPU)) минус количество CPU, указанное в параметре `everyNode.cpu`.
-                    * Для managed-кластера значение по умолчанию: `1` (одно ядро CPU) минус количество CPU, указанное в параметре `everyNode.cpu`.
-              memory:
-                description: |
-                  Объем памяти, выделяемой на каждом master-узле, **дополнительно** к указанному в параметре `everyNode.memory`:
-                    * Для кластера, управляемого Deckhouse, значение по умолчанию определяется автоматически по формуле: `.status.allocatable.memory` минимального master-узла (но не более `8Gi`) минус значение, указанное в параметре `everyNode.memory`.
-                    * Для managed-кластера значение по умолчанию: `1Gi` минус значение, указанное в параметре `everyNode.memory`.
       storageClass:
         description: |
           Имя StorageClass, который будет использоваться для всех компонентов Deckhouse Kubernetes Platform (Prometheus, Grafana, OpenVPN и т. д.).
@@ -129,16 +103,3 @@ properties:
             * Если значение не указано, то используется [StorageClass по умолчанию](https://kubernetes.io/docs/concepts/storage/storage-classes/#default-storageclass), установленный в кластере.
             * Этот параметр имеет смысл использовать только в исключительных ситуациях.
             * Этот параметр применяется в процессе включения модуля.
-      proxy:
-        description: |
-          Глобальная настройка proxy для модулей.
-        properties:
-          httpProxy:
-            description: |
-              Proxy URL для HTTP-запросов.
-          httpsProxy:
-            description: |
-              Proxy URL для HTTPS-запросов.
-          noProxy:
-            description: |
-              Список IP и доменных имен, для которых проксирование не применяется. Для указания wildcard-домена используйте имя с точкой в качестве префикса (например, `.example.com`).

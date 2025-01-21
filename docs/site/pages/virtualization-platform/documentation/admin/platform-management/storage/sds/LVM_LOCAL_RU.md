@@ -27,13 +27,18 @@ spec:
 EOF
 ```
 
-Дождитесь, когда модуль `sds-node-configurator` перейдет в состояние `Ready`:
+Дождитесь, когда модуль `sds-node-configurator` перейдет в состояние `Ready`.
+Проверить состояние можно, выполнив следующую команду:
 
 ```shell
 d8 k get modules sds-node-configurator -w
+```
 
-# NAME                    WEIGHT   STATE     SOURCE      STAGE   STATUS
-# sds-node-configurator   900      Enabled   deckhouse           Ready
+В результате будет выведена информация о модуле `sds-node-configurator`:
+
+```console
+NAME                    WEIGHT   STATE     SOURCE      STAGE   STATUS
+sds-node-configurator   900      Enabled   deckhouse           Ready
 ```
 
 Затем, чтобы включить модуль `sds-local-volume` с настройками по умолчанию, выполните команду:
@@ -51,15 +56,20 @@ EOF
 ```
 
 Это приведет к тому, что на всех узлах кластера будут запущены служебные поды компонентов `sds-local-volume`.
+Чтобы проверить состояние модуля, выполните следующую команду:
 
 ```shell
 d8 k get modules sds-local-volume -w
-
-# NAME               WEIGHT   STATE     SOURCE     STAGE   STATUS
-# sds-local-volume   920      Enabled   Embedded           Ready
 ```
 
-Чтобы проверить, что в пространстве имен `d8-sds-local-volume` и `d8-sds-node-configurator` все поды в состоянии Running или Completed, и запущены на всех узлах, где планируется использовать ресурсы LVM, можно использовать команды:
+В результате будет выведена информация о модуле `sds-local-volume`:
+
+```console
+NAME               WEIGHT   STATE     SOURCE     STAGE   STATUS
+sds-local-volume   920      Enabled   Embedded           Ready
+```
+
+Чтобы проверить, что в пространстве имен `d8-sds-local-volume` и `d8-sds-node-configurator` все поды в состоянии `Running` или `Completed`, и запущены на всех узлах, где планируется использовать ресурсы LVM, можно использовать команды:
 
 ```shell
 d8 k -n d8-sds-local-volume get pod -w
@@ -85,14 +95,18 @@ d8 k -n d8-sds-local-volume get pod -l app=sds-local-volume-csi-node -owide
 
 ```shell
 d8 k get bd
+```
 
-# NAME                                           NODE       CONSUMABLE   SIZE           PATH
-# dev-ef4fb06b63d2c05fb6ee83008b55e486aa1161aa   worker-0   false        976762584Ki    /dev/nvme1n1
-# dev-0cfc0d07f353598e329d34f3821bed992c1ffbcd   worker-0   false        894006140416   /dev/nvme0n1p6
-# dev-7e4df1ddf2a1b05a79f9481cdf56d29891a9f9d0   worker-1   false        976762584Ki    /dev/nvme1n1
-# dev-b103062f879a2349a9c5f054e0366594568de68d   worker-1   false        894006140416   /dev/nvme0n1p6
-# dev-53d904f18b912187ac82de29af06a34d9ae23199   worker-2   false        976762584Ki    /dev/nvme1n1
-# dev-6c5abbd549100834c6b1668c8f89fb97872ee2b1   worker-2   false        894006140416   /dev/nvme0n1p6
+В результате будет выведен список доступных блочных устройств:
+
+```console
+NAME                                           NODE       CONSUMABLE   SIZE           PATH
+dev-ef4fb06b63d2c05fb6ee83008b55e486aa1161aa   worker-0   false        976762584Ki    /dev/nvme1n1
+dev-0cfc0d07f353598e329d34f3821bed992c1ffbcd   worker-0   false        894006140416   /dev/nvme0n1p6
+dev-7e4df1ddf2a1b05a79f9481cdf56d29891a9f9d0   worker-1   false        976762584Ki    /dev/nvme1n1
+dev-b103062f879a2349a9c5f054e0366594568de68d   worker-1   false        894006140416   /dev/nvme0n1p6
+dev-53d904f18b912187ac82de29af06a34d9ae23199   worker-2   false        976762584Ki    /dev/nvme1n1
+dev-6c5abbd549100834c6b1668c8f89fb97872ee2b1   worker-2   false        894006140416   /dev/nvme0n1p6
 ```
 
 В примере выполнения команды выше в наличии имеется шесть блочных устройств, расположенных на трех узлах.
@@ -122,7 +136,7 @@ spec:
           - dev-0cfc0d07f353598e329d34f3821bed992c1ffbcd
   # Имя группы томов LVM, которая будет создана из указанных выше блочных устройств на выбранном узле.
   actualVGNameOnTheNode: "vg"
-  # Раскомментируйте, если важно иметь возмоность создавать Thin-хранилища, детали будут раскрыты далее.
+  # Раскомментируйте, если важно иметь возможность создавать Thin-хранилища, детали будут раскрыты далее.
   # thinPools:
   #   - name: thin-pool-0
   #     size: 70%
@@ -131,28 +145,37 @@ EOF
 
 Подробности о возможностях конфигурации ресурса `LVMVolumeGroup` описаны в разделе [«Справка»](../../../../../reference/cr/lvmvolumegroup.html).
 
-Дождитесь, когда созданный ресурс `LVMVolumeGroup` перейдет в состояние `Ready`:
+Дождитесь, когда созданный ресурс `LVMVolumeGroup` перейдет в состояние `Ready`.
+Чтобы проверить состояние ресурса, выполните следующую команду:
 
 ```shell
 d8 k get lvg vg-on-worker-0 -w
+```
 
-# NAME             THINPOOLS   CONFIGURATION APPLIED   PHASE   NODE       SIZE       ALLOCATED SIZE   VG   AGE
-# vg-on-worker-0   1/1         True                    Ready   worker-0   360484Mi   30064Mi          vg   1h
+В результате будет выведена информация о состоянии ресурса:
+
+```console
+NAME             THINPOOLS   CONFIGURATION APPLIED   PHASE   NODE       SIZE       ALLOCATED SIZE   VG   AGE
+vg-on-worker-0   1/1         True                    Ready   worker-0   360484Mi   30064Mi          vg   1h
 ```
 
 Если ресурс перешел в состояние `Ready`, то это значит, что на узле worker-0 из блочных устройств `/dev/nvme1n1` и `/dev/nvme0n1p6` была создана группа томов LVM с именем `vg`.
 
 Далее необходимо повторить создание ресурсов `LVMVolumeGroup` для оставшихся узлов (worker-1 и worker-2), изменив в примере выше имя ресурса `LVMVolumeGroup`, имя узла и имена блочных устройств, соответствующих узлу.
 
-Убедитесь, что группы томов LVM созданы на всех узлах, где планируется их использовать:
+Убедитесь, что группы томов LVM созданы на всех узлах, где планируется их использовать, выполнив следующую команду:
 
 ```shell
 d8 k get lvg -w
+```
 
-# NAME             THINPOOLS   CONFIGURATION APPLIED   PHASE   NODE       SIZE       ALLOCATED SIZE   VG   AGE
-# vg-on-worker-0   0/0         True                    Ready   worker-0   360484Mi   30064Mi          vg   1h
-# vg-on-worker-1   0/0         True                    Ready   worker-1   360484Mi   30064Mi          vg   1h
-# vg-on-worker-2   0/0         True                    Ready   worker-2   360484Mi   30064Mi          vg   1h
+В результате будет выведен список созданных групп томов:
+
+```console
+NAME             THINPOOLS   CONFIGURATION APPLIED   PHASE   NODE       SIZE       ALLOCATED SIZE   VG   AGE
+vg-on-worker-0   0/0         True                    Ready   worker-0   360484Mi   30064Mi          vg   1h
+vg-on-worker-1   0/0         True                    Ready   worker-1   360484Mi   30064Mi          vg   1h
+vg-on-worker-2   0/0         True                    Ready   worker-2   360484Mi   30064Mi          vg   1h
 ```
 
 ### Создание StorageClass
@@ -166,7 +189,7 @@ d8 k get lvg -w
 Thick-пул обладает высокой производительностью, сравнимой с производительностью накопителя, но не позволяет использовать снапшоты, в то время как Thin-пул позволит использовать снапшоты и overprovisioning (сверхвыделение ресурсов), но производительность будет ниже.
 
 {% alert level="warning" %}
-Overprovisioning нужно использовать с осторожностью, контроллируя наличие свободного места в пуле (в системе мониторинга кластера есть отдельные события при достижении 20%, 10%, 5% и 1% свободного места в пуле). При отсутствии свободного места в пуле будет наблюдаться деградация в работе модуля в целом, а также существует реальная вероятность потери данных.
+Overprovisioning нужно использовать с осторожностью, контролируя наличие свободного места в пуле (в системе мониторинга кластера есть отдельные события при достижении 20%, 10%, 5% и 1% свободного места в пуле). При отсутствии свободного места в пуле будет наблюдаться деградация в работе модуля в целом, а также существует реальная вероятность потери данных.
 {% endalert %}
 
 Пример создания ресурса `LocalStorageClass` с типом `Thick`:
@@ -189,18 +212,30 @@ spec:
 EOF
 ```
 
-Проверьте, что созданный `LocalStorageClass` перешел в состояние Created и соответствующий StorageClass создался:
+Проверьте, что созданный `LocalStorageClass` перешел в состояние `Created`, выполнив следующую команду:
 
 ```shell
 d8 k get lsc local-storage-class -w
+```
 
-# NAME                        PHASE     AGE
-# local-storage-class-thick   Created   1h
+В результате будет выведена информация о созданном `LocalStorageClass`:
 
+```console
+NAME                        PHASE     AGE
+local-storage-class-thick   Created   1h
+```
+
+Убедитесь, что был создан соответствующий StorageClass, выполнив следующую команду:
+
+```shell
 d8 k get sc local-storage-class
+```
 
-# NAME                        PROVISIONER                      RECLAIMPOLICY   VOLUMEBINDINGMODE      ALLOWVOLUMEEXPANSION   AGE
-# local-storage-class-thick   local.csi.storage.deckhouse.io   Delete          WaitForFirstConsumer   true                   1h
+В результате будет выведена информация о созданном StorageClass:
+
+```console
+NAME                        PROVISIONER                      RECLAIMPOLICY   VOLUMEBINDINGMODE      ALLOWVOLUMEEXPANSION   AGE
+local-storage-class-thick   local.csi.storage.deckhouse.io   Delete          WaitForFirstConsumer   true                   1h
 ```
 
 ### StorageClass с типом Thin
@@ -251,16 +286,28 @@ spec:
 EOF
 ```
 
-Проверьте, что созданный LocalStorageClass перешел в состояние Created и соответствующий StorageClass создался:
+Проверьте, что созданный `LocalStorageClass` перешел в состояние `Created`, выполнив следующую команду:
 
 ```shell
 d8 k get lsc local-storage-class -w
+```
 
-# NAME                       PHASE     AGE
-# local-storage-class-thin   Created   1h
+В результате будет выведена информация о созданном `LocalStorageClass`:
 
+```console
+NAME                       PHASE     AGE
+local-storage-class-thin   Created   1h
+```
+
+Убедитесь, что был создан соответствующий StorageClass, выполнив следующую команду:
+
+```shell
 d8 k get sc local-storage-class
+```
 
-# NAME                       PROVISIONER                      RECLAIMPOLICY   VOLUMEBINDINGMODE      ALLOWVOLUMEEXPANSION   AGE
-# local-storage-class-thin   local.csi.storage.deckhouse.io   Delete          WaitForFirstConsumer   true                   1h
+В результате будет выведена информация о созданном StorageClass:
+
+```console
+NAME                       PROVISIONER                      RECLAIMPOLICY   VOLUMEBINDINGMODE      ALLOWVOLUMEEXPANSION   AGE
+local-storage-class-thin   local.csi.storage.deckhouse.io   Delete          WaitForFirstConsumer   true                   1h
 ```

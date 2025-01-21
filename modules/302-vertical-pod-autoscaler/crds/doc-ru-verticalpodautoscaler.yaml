@@ -90,7 +90,7 @@ spec:
                     description: |-
                       Имя связанного объекта.
 
-                      Больше информации [в документации](http://kubernetes.io/docs/user-guide/identifiers#names).
+                      Больше информации [в документации](https://kubernetes.io/docs/user-guide/identifiers#names).
                 type: object
               updatePolicy:
                 description: |-

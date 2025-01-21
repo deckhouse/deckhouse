@@ -1,8 +1,22 @@
 ---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+final: false
+fromImage: common/src-artifact
+git:
+- add: /{{ $.ModulePath }}/modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
+  to: /src/scripts
+  stageDependencies:
+    install:
+    - '**/*'
+shell:
+  install:
+  - git clone --depth 1 --branch {{ .CandiVersionMap.d8.d8CliVersion }} {{ $.SOURCE_REPO }}/deckhouse/deckhouse-cli.git /src/deckhouse-cli
+#  - rm -rf /src/deckhouse-cli/.git # https://github.com/deckhouse/deckhouse-cli/blob/main/Taskfile.yml#L9
+---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 from: {{ $.Images.BASE_SCRATCH }}
 import:
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
   add: /
   to: /
   includePaths:
@@ -15,9 +29,16 @@ docker:
     distro: all
     version: all
     d8: {{ .CandiVersionMap.d8.d8CliVersion }}
+  USER: 64535
 ---
-artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+final: false
 from: {{ $.Images.BASE_GOLANG_23_BULLSEYE }}
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+  add: /src
+  to: /src
+  before: install
 git:
   - add: /{{ $.ModulePath }}modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
     to: /
@@ -25,19 +46,19 @@ git:
       setup:
       - '**/*'
 shell:
-  setup:
+  beforeInstall:
   {{- include "debian packages proxy" . | nindent 2 }}
+  - apt-get update && apt-get install libbtrfs-dev -y
+  install:
   - export GOPROXY={{ $.GOPROXY }}
   - export PRIVATE_REPO={{ $.DECKHOUSE_PRIVATE_REPO }}
   - export PRIVATE_REPO_TOKEN={{ $.STRONGHOLD_PULL_TOKEN }}
   - export GOPRIVATE={{ $.DECKHOUSE_PRIVATE_REPO }}
   - git config --global url."https://gitlab-ci-token:${PRIVATE_REPO_TOKEN}@${PRIVATE_REPO}/".insteadOf https://${PRIVATE_REPO}/
-  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
   - go install github.com/go-task/task/v3/cmd/task@latest
-  - git clone --depth 1 --branch {{ .CandiVersionMap.d8.d8CliVersion }} {{ $.SOURCE_REPO }}/deckhouse/deckhouse-cli.git
-  - cd /deckhouse-cli
-  - apt-get install -y libbtrfs-dev
+  - cd /src/deckhouse-cli
   - task build:dist:linux:amd64
-  - mv ./dist/{{ .CandiVersionMap.d8.d8CliVersion }}/linux-amd64/d8 /d8
+  - mv ./dist/{{ .CandiVersionMap.d8.d8CliVersion }}/linux-amd64/bin/d8 /d8
+  - mv /src/scripts/* /
   - chmod +x /d8 /install /uninstall
   - rm ~/.gitconfig # Prevent PRIVATE_REPO_TOKEN from leaking into the image layer

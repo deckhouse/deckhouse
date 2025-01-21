@@ -16,7 +16,7 @@
           >
           {%- unless site.mode == "module" %}
             {%- if page.lang == "ru" %}
-              <a href="#!">Продукты</a>
+              <a href="#">Продукты</a>
               <div class="sub-menu-container">
               <ul class="sub-menu sub-menu_products">
                 <li>
@@ -65,18 +65,18 @@
                   </a>
                 </li>
                 <li>
-                  <a href="/products/delivery/">
+                  <a href="/products/delivery-kit/">
                     <svg class="products__icon">
                       <use xlink:href="/images/sprite.svg#delivery-icon"></use>
                     </svg>
-                    <span>Delivery</span>
+                    <span>Delivery Kit</span>
                     <p>Сборка и&nbsp;доставка контейнеризованного ПО</p>
                   </a>
                 </li>
               </ul>
             </div>
             {%- else %}
-              <a href="#!">Products</a>
+              <a href="#">Products</a>
               <div class="sub-menu-container">
                 <ul class="sub-menu sub-menu_products">
                   <li>
@@ -125,11 +125,11 @@
                     </a>
                   </li>
                   <li>
-                    <a href="/products/delivery/">
+                    <a href="/products/delivery-kit/">
                       <svg class="products__icon">
                         <use xlink:href="/images/sprite.svg#delivery-icon"></use>
                       </svg>
-                      <span>Delivery</span>
+                      <span>Delivery Kit</span>
                       <p>Building and&nbsp;delivering containerized software</p>
                     </a>
                   </li>
@@ -184,11 +184,9 @@
         </ul>
       </div>
       <div class="header__right-box">
-        {%- unless site.mode == "module" %}
-           {%- if page.lang == "ru" %}
-             <a href="/products/kubernetes-platform/documentation/v1/deckhouse-overview.html" class="button button--outline">Документация</a>
-           {%- endif %}
-        {%- endunless %}
+      {%- unless site.mode == "module" %}
+          <a href="/products/kubernetes-platform/documentation/v1/deckhouse-overview.html" class="button button--outline">{{ site.data.i18n.common['documentation_title'][page.lang] }}</a>
+      {%- endunless %}
         {%- if page.lang == "ru" %}
           <a class="lang-switcher" href="
             {%- if site.mode == 'module' %}/en
@@ -224,7 +222,6 @@
   </header>
 </div>
 {%- unless site.mode == "module" %}
-{%- if page.lang == "ru" %}
   {%- assign l2MenuData = site.data.topnav-l2-products[page.lang] %}
   {%- if l2MenuData %}
     {%- assign productCode = page.product_code | default: "kubernetes-platform" %}
@@ -240,16 +237,13 @@
           </svg>
           <span>{{ productName }}</span>
         </div>
-    {%- if page.lang == 'ru' %}
         <ul class="nav">
           {%- for item in productMenuData.items %}
             {%- if item.rel == "doc" %}{% assign itemClass='class="active"' %}{% else %}{% assign itemClass='' %}{% endif %}
             <li {{ itemClass }}><a href="{{ item.url }}"{% if item.target.size > 0 %} target="{{ item.target }}"{% endif %}>{{ item.title }}</a></li>
           {%- endfor %}
         </ul>
-    {%- endif %}
       </div>
     </div>
   {%- endif %}
-{%- endif %}
 {%- endunless %}

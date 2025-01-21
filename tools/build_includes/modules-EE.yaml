@@ -144,6 +144,11 @@
   stageDependencies:
     setup:
         - '**/*.go'
+- add: /ee/modules/030-cloud-provider-huaweicloud
+  to: /deckhouse/modules/030-cloud-provider-huaweicloud
+  stageDependencies:
+    setup:
+        - '**/*.go'
 - add: /ee/modules/030-cloud-provider-openstack
   to: /deckhouse/modules/030-cloud-provider-openstack
   stageDependencies:
@@ -161,6 +166,11 @@
         - '**/*.go'
 - add: /ee/modules/040-node-manager/capi/dynamix
   to: /deckhouse/modules/040-node-manager/capi/dynamix
+  stageDependencies:
+    setup:
+        - '**/*.go'
+- add: /ee/modules/040-node-manager/capi/huaweicloud
+  to: /deckhouse/modules/040-node-manager/capi/huaweicloud
   stageDependencies:
     setup:
         - '**/*.go'
@@ -259,8 +269,38 @@
   stageDependencies:
     setup:
         - '**/*'
-- add: /ee/modules/381-l2-load-balancer
-  to: /deckhouse/modules/381-l2-load-balancer
+- add: /ee/modules/380-metallb/images/metallb
+  to: /deckhouse/modules/380-metallb/images/metallb
+  stageDependencies:
+    setup:
+        - '**/*.go'
+- add: /ee/modules/380-metallb/templates/controller
+  to: /deckhouse/modules/380-metallb/templates/controller
+  stageDependencies:
+    setup:
+        - '**/*.go'
+- add: /ee/modules/380-metallb/templates/rbac-for-us.yaml
+  to: /deckhouse/modules/380-metallb/templates/rbac-for-us.yaml
+  stageDependencies:
+    setup:
+        - '**/*'
+- add: /ee/modules/380-metallb/templates/speaker
+  to: /deckhouse/modules/380-metallb/templates/speaker
+  stageDependencies:
+    setup:
+        - '**/*.go'
+- add: /ee/modules/380-metallb/template_tests/bgp_test.go
+  to: /deckhouse/modules/380-metallb/template_tests/bgp_test.go
+  stageDependencies:
+    setup:
+        - '**/*'
+- add: /ee/modules/380-metallb/monitoring/grafana-dashboards
+  to: /deckhouse/modules/380-metallb/monitoring/grafana-dashboards
+  stageDependencies:
+    setup:
+        - '**/*.go'
+- add: /ee/modules/380-metallb/monitoring/prometheus-rules
+  to: /deckhouse/modules/380-metallb/monitoring/prometheus-rules
   stageDependencies:
     setup:
         - '**/*.go'
@@ -276,6 +316,11 @@
         - '**/*.go'
 - add: /ee/modules/500-operator-trivy
   to: /deckhouse/modules/500-operator-trivy
+  stageDependencies:
+    setup:
+        - '**/*.go'
+- add: /ee/modules/610-service-with-healthchecks
+  to: /deckhouse/modules/610-service-with-healthchecks
   stageDependencies:
     setup:
         - '**/*.go'

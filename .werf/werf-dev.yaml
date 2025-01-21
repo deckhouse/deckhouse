@@ -8,38 +8,15 @@ git:
     setup:
       - '**/*'
   includePaths:
-  - candi
-  - modules
-  - global-hooks
-  - shell_lib.sh
-  - shell_lib
-  - deckhouse-controller/entrypoint.sh
-  - deckhouse-controller/crds/*.yaml
-  - jq_lib
-  - helm_lib
-  - python_lib
+    {{ include "dev_prebuild_git_imports_include_paths" . | nindent 4}}
   excludePaths:
 {{- include "exclude_modules_dir_from_images" .  | nindent 2}}
 {{ .Files.Get (printf "tools/build_includes/modules-excluded-%s.yaml" .Env) | nindent 2}}
-- url: {{ .SOURCE_REPO }}/flant/shell-operator
-  tag: v1.4.10
-  add: /frameworks/shell
-  to: /deckhouse/shell-operator/frameworks/shell
+{{ include "dev_prebuild_git_shell_operator" . }}
 {{ .Files.Get (printf "tools/build_includes/modules-with-exclude-%s.yaml" .Env) }}
 {{ .Files.Get (printf "tools/build_includes/candi-%s.yaml" .Env) }}
 import:
-- artifact: deckhouse-controller
-  add: /out/deckhouse-controller
-  to: /usr/bin/deckhouse-controller
-  after: setup
-- artifact: jq
-  add: /usr/bin/jq
-  to: /usr/bin/jq
-  after: setup
-- artifact: version-map-artifact
-  add: /version_map_{{ $.Env }}.yml
-  to: /deckhouse/candi/version_map.yml
-  after: setup
+{{ include "dev_prebuild_images_imports" (dict "Env" .Env) }}
 mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
@@ -57,47 +34,9 @@ shell:
      {{- end }}
     EOD
 {{- end }}
-    # Add version info
-    cat <<"EOD" > /deckhouse/version
-    {{- env "CI_COMMIT_TAG" | default "dev" | nindent 4 }}
-    EOD
-    # Add edition info
-    cat <<"EOD" > /deckhouse/edition
-    {{- .Env | default "unknown" | nindent 4 }}
-    EOD
-    # Override deckhouse entrypoint to use tini as supervisor
-    cat <<"EOD" > /deckhouse/deckhouse
-    #!/bin/bash
-    exec tini -- /deckhouse/deckhouse-controller/entrypoint.sh
-    EOD
-    chmod +x /deckhouse/deckhouse
-    # Create symlink to grant entrypoint.sh write permission
-    ln -fs /tmp/values.yaml /deckhouse/modules/values.yaml
-    # Create deckhouse group
-    groupadd -g 64535 deckhouse
-    # Create deckhouse user
-    useradd -d / -u 64535 -g deckhouse -s /sbin/nologin deckhouse
-    # Run deckhouse from dedicated user
-    chown deckhouse:deckhouse -R /deckhouse
-    # Create symlink to vim-console
-    ln -fs /usr/bin/vim-console /usr/bin/vim
-    ln -fs /usr/bin/vim-console /usr/bin/vi
-docker:
-  ENV:
-    MODULES_DIR: /deckhouse/modules
-    GLOBAL_HOOKS_DIR: /deckhouse/global-hooks
-    PYTHONPATH: /deckhouse/python_lib
-    LC_ALL: C
+    {{ include "dev_prebuild_setup_script_general_part" (dict "Env" .Env "CI_COMMIT_TAG" .CI_COMMIT_TAG) | nindent 4}}
+
+{{ include "dev_prebuild_docker_properties" . }}
 ---
-image: dev
-fromImage: dev-prebuild
-import:
-- image: images-digests
-  add: /images_digests.json
-  to: /deckhouse/modules/images_digests.json
-  after: setup
-- image: images-digests
-  add: /images_digests.json
-  to: /deckhouse/modules/040-node-manager/images_digests.json
-  after: setup
+{{ include "dev_image" . }}
 ---

@@ -152,7 +152,7 @@ func (r *reconciler) releaseExists(ctx context.Context, sourceName, moduleName, 
 		return false, nil
 	}
 
-	r.log.Debugf("the module release with '%s' checksum exist for the '%s' module of the '%s' source", checksum, moduleName, sourceName)
+	r.log.Debugf("the module release with '%s' checksum exists for the '%s' module of the '%s' source", checksum, moduleName, sourceName)
 	return true, nil
 }
 
@@ -193,8 +193,14 @@ func (r *reconciler) ensureModuleRelease(ctx context.Context, sourceUID types.UI
 				Changelog:  meta.Changelog,
 			},
 		}
-		if meta.ModuleDefinition != nil {
-			release.Spec.Requirements = meta.ModuleDefinition.Requirements
+		if meta.ModuleDefinition != nil && meta.ModuleDefinition.Requirements != nil {
+			release.Spec.Requirements = &v1alpha1.ModuleReleaseRequirements{
+				ModuleReleasePlatformRequirements: v1alpha1.ModuleReleasePlatformRequirements{
+					Deckhouse:  meta.ModuleDefinition.Requirements.Deckhouse,
+					Kubernetes: meta.ModuleDefinition.Requirements.Kubernetes,
+				},
+				ParentModules: meta.ModuleDefinition.Requirements.ParentModules,
+			}
 		}
 
 		// if it's a first release for a Module, we have to install it immediately

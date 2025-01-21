@@ -43,7 +43,7 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "gomod"
-  directory: "/ee/be/modules/140-user-authz/images/webhook"
+  directory: "/ee/be/modules/140-user-authz/images/webhook/src"
   labels:
   - "type/dependencies"
   - "status/ok-to-test"
@@ -52,7 +52,7 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "gomod"
-  directory: "/ee/be/modules/350-node-local-dns/images/stale-dns-connections-cleaner/src"
+  directory: "/ee/be/modules/350-node-local-dns/images/stale-dns-connections-cleaner"
   labels:
   - "type/dependencies"
   - "status/ok-to-test"
@@ -61,7 +61,7 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "gomod"
-  directory: "/ee/modules/015-admission-policy-engine/images/trivy-provider"
+  directory: "/ee/modules/015-admission-policy-engine/images/trivy-provider/src"
   labels:
   - "type/dependencies"
   - "status/ok-to-test"
@@ -115,7 +115,16 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "gomod"
-  directory: "/ee/modules/500-operator-trivy/images/report-updater"
+  directory: "/ee/modules/500-operator-trivy/images/report-updater/src"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
+  directory: "/ee/modules/610-service-with-healthchecks/images/artifact"
   labels:
   - "type/dependencies"
   - "status/ok-to-test"
@@ -223,7 +232,7 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "gomod"
-  directory: "/modules/000-common/images/vxlan-offloading-fixer"
+  directory: "/modules/000-common/images/vxlan-offloading-fixer/src"
   labels:
   - "type/dependencies"
   - "status/ok-to-test"
@@ -250,7 +259,7 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "gomod"
-  directory: "/modules/015-admission-policy-engine/images/constraint-exporter"
+  directory: "/modules/015-admission-policy-engine/images/constraint-exporter/src"
   labels:
   - "type/dependencies"
   - "status/ok-to-test"
@@ -340,7 +349,7 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "gomod"
-  directory: "/modules/036-kube-proxy/images/init-container/entrypoint"
+  directory: "/modules/036-kube-proxy/images/init-container/src"
   labels:
   - "type/dependencies"
   - "status/ok-to-test"
@@ -385,7 +394,7 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "gomod"
-  directory: "/modules/040-node-manager/images/bashible-apiserver"
+  directory: "/modules/040-node-manager/images/bashible-apiserver/src"
   labels:
   - "type/dependencies"
   - "status/ok-to-test"
@@ -412,7 +421,7 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "gomod"
-  directory: "/modules/040-node-manager/images/fencing-agent"
+  directory: "/modules/040-node-manager/images/fencing-agent/src"
   labels:
   - "type/dependencies"
   - "status/ok-to-test"
@@ -421,7 +430,7 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "gomod"
-  directory: "/modules/042-kube-dns/images/resolv-watcher"
+  directory: "/modules/042-kube-dns/images/sts-pods-hosts-appender-init-container/src"
   labels:
   - "type/dependencies"
   - "status/ok-to-test"
@@ -430,16 +439,7 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "gomod"
-  directory: "/modules/042-kube-dns/images/sts-pods-hosts-appender-init-container"
-  labels:
-  - "type/dependencies"
-  - "status/ok-to-test"
-  schedule:
-    interval: "daily"
-  open-pull-requests-limit: 0
-
-- package-ecosystem: "gomod"
-  directory: "/modules/042-kube-dns/images/sts-pods-hosts-appender-webhook"
+  directory: "/modules/042-kube-dns/images/sts-pods-hosts-appender-webhook/src"
   labels:
   - "type/dependencies"
   - "status/ok-to-test"
@@ -475,7 +475,7 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "gomod"
-  directory: "/modules/160-multitenancy-manager/images/multitenancy-manager"
+  directory: "/modules/160-multitenancy-manager/images/multitenancy-manager/src"
   labels:
   - "type/dependencies"
   - "status/ok-to-test"
@@ -485,15 +485,6 @@ updates:
 
 - package-ecosystem: "gomod"
   directory: "/modules/300-prometheus/images/alerts-receiver/src"
-  labels:
-  - "type/dependencies"
-  - "status/ok-to-test"
-  schedule:
-    interval: "daily"
-  open-pull-requests-limit: 0
-
-- package-ecosystem: "gomod"
-  directory: "/modules/300-prometheus/images/grafana/entrypoint"
   labels:
   - "type/dependencies"
   - "status/ok-to-test"
@@ -538,7 +529,7 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "gomod"
-  directory: "/modules/340-monitoring-kubernetes/images/kubelet-eviction-thresholds-exporter/exporter"
+  directory: "/modules/340-monitoring-kubernetes/images/kubelet-eviction-thresholds-exporter/src"
   labels:
   - "type/dependencies"
   - "status/ok-to-test"
@@ -556,7 +547,7 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "gomod"
-  directory: "/modules/402-ingress-nginx/images/protobuf-exporter"
+  directory: "/modules/402-ingress-nginx/images/protobuf-exporter/src"
   labels:
   - "type/dependencies"
   - "status/ok-to-test"
@@ -565,7 +556,7 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "gomod"
-  directory: "/modules/402-ingress-nginx/images/proxy-failover"
+  directory: "/modules/402-ingress-nginx/images/proxy-failover/src"
   labels:
   - "type/dependencies"
   - "status/ok-to-test"
@@ -592,7 +583,7 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "gomod"
-  directory: "/modules/470-chrony/images/chrony"
+  directory: "/modules/470-chrony/images/chrony/src"
   labels:
   - "type/dependencies"
   - "status/ok-to-test"
@@ -701,7 +692,7 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "pip"
-  directory: "/modules/340-monitoring-ping/images/monitoring-ping"
+  directory: "/modules/340-monitoring-ping/images/monitoring-ping/src"
   labels:
   - "type/dependencies"
   - "status/ok-to-test"

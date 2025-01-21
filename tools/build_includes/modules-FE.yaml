@@ -144,6 +144,11 @@
   stageDependencies:
     setup:
         - '**/*.go'
+- add: /ee/modules/030-cloud-provider-huaweicloud
+  to: /deckhouse/modules/030-cloud-provider-huaweicloud
+  stageDependencies:
+    setup:
+        - '**/*.go'
 - add: /ee/modules/030-cloud-provider-openstack
   to: /deckhouse/modules/030-cloud-provider-openstack
   stageDependencies:
@@ -161,6 +166,11 @@
         - '**/*.go'
 - add: /ee/modules/040-node-manager/capi/dynamix
   to: /deckhouse/modules/040-node-manager/capi/dynamix
+  stageDependencies:
+    setup:
+        - '**/*.go'
+- add: /ee/modules/040-node-manager/capi/huaweicloud
+  to: /deckhouse/modules/040-node-manager/capi/huaweicloud
   stageDependencies:
     setup:
         - '**/*.go'
@@ -259,8 +269,38 @@
   stageDependencies:
     setup:
         - '**/*'
-- add: /ee/modules/381-l2-load-balancer
-  to: /deckhouse/modules/381-l2-load-balancer
+- add: /ee/modules/380-metallb/images/metallb
+  to: /deckhouse/modules/380-metallb/images/metallb
+  stageDependencies:
+    setup:
+        - '**/*.go'
+- add: /ee/modules/380-metallb/templates/controller
+  to: /deckhouse/modules/380-metallb/templates/controller
+  stageDependencies:
+    setup:
+        - '**/*.go'
+- add: /ee/modules/380-metallb/templates/rbac-for-us.yaml
+  to: /deckhouse/modules/380-metallb/templates/rbac-for-us.yaml
+  stageDependencies:
+    setup:
+        - '**/*'
+- add: /ee/modules/380-metallb/templates/speaker
+  to: /deckhouse/modules/380-metallb/templates/speaker
+  stageDependencies:
+    setup:
+        - '**/*.go'
+- add: /ee/modules/380-metallb/template_tests/bgp_test.go
+  to: /deckhouse/modules/380-metallb/template_tests/bgp_test.go
+  stageDependencies:
+    setup:
+        - '**/*'
+- add: /ee/modules/380-metallb/monitoring/grafana-dashboards
+  to: /deckhouse/modules/380-metallb/monitoring/grafana-dashboards
+  stageDependencies:
+    setup:
+        - '**/*.go'
+- add: /ee/modules/380-metallb/monitoring/prometheus-rules
+  to: /deckhouse/modules/380-metallb/monitoring/prometheus-rules
   stageDependencies:
     setup:
         - '**/*.go'
@@ -279,6 +319,11 @@
   stageDependencies:
     setup:
         - '**/*.go'
+- add: /ee/modules/610-service-with-healthchecks
+  to: /deckhouse/modules/610-service-with-healthchecks
+  stageDependencies:
+    setup:
+        - '**/*.go'
 - add: /ee/modules/650-runtime-audit-engine
   to: /deckhouse/modules/650-runtime-audit-engine
   stageDependencies:
@@ -294,28 +339,8 @@
   stageDependencies:
     setup:
         - '**/*'
-- add: /ee/fe/modules/300-prometheus/openapi/openapi-case-tests.yaml
-  to: /deckhouse/modules/300-prometheus/openapi/openapi-case-tests.yaml
-  stageDependencies:
-    setup:
-        - '**/*'
-- add: /ee/fe/modules/300-prometheus/openapi/values.yaml
-  to: /deckhouse/modules/300-prometheus/openapi/values.yaml
-  stageDependencies:
-    setup:
-        - '**/*'
-- add: /ee/fe/modules/300-prometheus/templates/prometheus/pp
-  to: /deckhouse/modules/300-prometheus/templates/prometheus/pp
-  stageDependencies:
-    setup:
-        - '**/*.go'
-- add: /ee/fe/modules/300-prometheus/images/prometheuspp
-  to: /deckhouse/modules/300-prometheus/images/prometheuspp
-  stageDependencies:
-    setup:
-        - '**/*.go'
-- add: /ee/fe/modules/300-prometheus/hooks/cm_check.go
-  to: /deckhouse/modules/300-prometheus/hooks/cm_check.go
+- add: /ee/fe/modules/300-prometheus/templates/prometheus/prometheus.yaml
+  to: /deckhouse/modules/300-prometheus/templates/prometheus/prometheus.yaml
   stageDependencies:
     setup:
         - '**/*'

@@ -6,7 +6,7 @@ osDistributions:
     en_support: 'false'
     cse_support:
       versions:
-        - '8 СП'
+        - '8 СП (релиз 10)'
   astra:
     name: Astra Linux Special Edition
     url: https://astralinux.ru/products/astra-linux-special-edition/
@@ -18,6 +18,10 @@ osDistributions:
         - '1.7.3'
         - '1.7.4'
         - '1.7.5'
+        - '1.7.6'
+      note_content:
+        ru: |
+          Начиная с версии <b>1.7.6</b> модуль <b>runtime-audit-engine не работает</b>.
     note_content:
       ru: |
         В версии <b>1.8</b> рекомендуется использовать ядро <b>linux-image-6.1-debug</b>.<br>

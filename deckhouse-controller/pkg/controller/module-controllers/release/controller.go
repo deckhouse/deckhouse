@@ -258,12 +258,11 @@ func (r *reconciler) handleRelease(ctx context.Context, release *v1alpha1.Module
 	}
 
 	// if module pull override exists, don't process pending release, to avoid fs override
-	exists, err := utils.ModulePullOverrideExists(ctx, r.client, release.GetModuleSource(), release.Spec.ModuleName)
+	exists, err := utils.ModulePullOverrideExists(ctx, r.client, release.Spec.ModuleName)
 	if err != nil {
 		r.log.Errorf("failed to get the '%s' module pull override: %v", release.Spec.ModuleName, err)
 		return ctrl.Result{Requeue: true}, nil
 	}
-
 	if exists {
 		r.log.Infof("the %q module is overridden, skip release processing", release.Spec.ModuleName)
 		return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
@@ -273,7 +272,7 @@ func (r *reconciler) handleRelease(ctx context.Context, release *v1alpha1.Module
 	return r.handlePendingRelease(ctx, release)
 }
 
-// handleRelease handles deployed releases
+// handleDeployedRelease handles deployed releases
 func (r *reconciler) handleDeployedRelease(ctx context.Context, release *v1alpha1.ModuleRelease) (ctrl.Result, error) {
 	var needsUpdate bool
 
@@ -329,17 +328,14 @@ func (r *reconciler) handleDeployedRelease(ctx context.Context, release *v1alpha
 	}
 
 	// checks if the module release is overridden by modulepulloverride
-	mpo := new(v1alpha1.ModulePullOverride)
-	err := r.client.Get(ctx, client.ObjectKey{Name: release.GetModuleName()}, mpo)
-	if err == nil {
-		// mpo has been found and mpo version must be used as the source of the documentation
-		return ctrl.Result{}, nil
-	}
-
-	// some other error apart from IsNotFound
-	if !apierrors.IsNotFound(err) {
-		r.log.Errorf("failed to get the '%s' module pull override: %v", release.GetModuleName(), err)
+	exists, err := utils.ModulePullOverrideExists(ctx, r.client, release.GetModuleName())
+	if err != nil {
+		r.log.Errorf("failed to get the '%s' module pull override: %v", release.Spec.ModuleName, err)
 		return ctrl.Result{Requeue: true}, nil
+	}
+	if exists {
+		r.log.Debugf("the %q module is overridden, skip it", release.Spec.ModuleName)
+		return ctrl.Result{}, nil
 	}
 
 	modulePath := fmt.Sprintf("/%s/v%s", release.GetModuleName(), release.Spec.Version.String())
@@ -368,7 +364,7 @@ func (r *reconciler) handleDeployedRelease(ctx context.Context, release *v1alpha
 	return r.deleteOutdatedModuleReleases(ctx, release.GetModuleSource(), release.GetModuleName())
 }
 
-// handleRelease handles pending releases
+// handlePendingRelease handles pending releases
 func (r *reconciler) handlePendingRelease(ctx context.Context, release *v1alpha1.ModuleRelease) (ctrl.Result, error) {
 	var modulesChangedReason string
 	defer func() {

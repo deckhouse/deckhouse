@@ -14,6 +14,8 @@ soon:
   en: "soon..."
   ru: "скоро..."
 ce: Community Edition
+be: Basic Edition
+se: Standard Edition / Standard Edition+
 ee: Enterprise Edition
 
 common:
@@ -80,6 +82,9 @@ common:
   deprecated_parameter_hint:
     en: Support for the parameter might be removed in a later release.
     ru: Поддержка параметра может быть исключена в следующих версиях.
+  documentation_title:
+    en: Documentation
+    ru: Документация
   coming_soon:
     en: "coming soon..."
     ru: "скоро..."
@@ -212,6 +217,9 @@ common:
   documentation_develop:
     en: The documentation is under development and may contain incomplete information.
     ru: Документация находится в разработке, может содержать неполную информацию.
+  crd_has_no_parameters:
+    en: The CRD has no fields for configuration.
+    ru: У CRD нет полей для настройки.
 
 comparison:
   except_parameters:

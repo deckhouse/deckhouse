@@ -145,7 +145,7 @@ func renderMachineClassChecksum(templateContent []byte, ng *nodeGroupValue) (str
 	return checksum, nil
 }
 
-func getChecksumTemplate(values *go_hook.PatchableValues) ([]byte, error) {
+func getChecksumTemplate(values go_hook.PatchableValuesCollector) ([]byte, error) {
 	cloudType := values.Get("nodeManager.internal.cloudProvider.type").String()
 	if cloudType == "" {
 		// Can be empty for the first run even in cloud.

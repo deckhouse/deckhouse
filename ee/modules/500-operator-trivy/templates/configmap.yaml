@@ -29,7 +29,7 @@ data:
   {{- end }}
   # Mount docker-config to download JavaDB from the registry
   scanJob.customVolumes: '[{"name": "docker-config","secret": {"defaultMode": 420,"items": [{"key": ".dockerconfigjson","path": "config.json"}],"secretName": "deckhouse-registry"}}]'
-  scanJob.customVolumesMount: '[{"name": "docker-config", "mountPath": "/root/.docker","readOnly": true}]'
+  scanJob.customVolumesMount: '[{"name": "docker-config", "mountPath": "/.docker","readOnly": true}]'
   # Skip upmeter probes in vulnerability scanning
   # https://github.com/deckhouse/deckhouse/blob/v1.49.0/modules/500-upmeter/images/upmeter/pkg/probe/checker/k8s_statefulset.go#L138
   skipResourceByLabels: upmeter-group,upmeter-probe
@@ -88,6 +88,14 @@ data:
   TRIVY_DEBUG: "false"
   TRIVY_SKIP_DB_UPDATE: "false"
   TRIVY_DB_REPOSITORY: {{ $dbRepository }}
-  {{- if $.Values.global.modulesImages.registry.CA }}
-  TRIVY_REGISTRY_CA: | {{ $.Values.global.modulesImages.registry.CA | nindent 4 }}
+  {{- if or $.Values.global.modulesImages.registry.CA .Values.operatorTrivy.additionalRegistryCA }}
+  TRIVY_REGISTRY_CA: |-
+    {{- if $.Values.global.modulesImages.registry.CA -}}
+    {{- trim $.Values.global.modulesImages.registry.CA | nindent 4 -}}
+    {{- end -}}
+    {{- if .Values.operatorTrivy.additionalRegistryCA -}}
+    {{- range .Values.operatorTrivy.additionalRegistryCA }} 
+    {{- trim .ca | nindent 4 }}
+    {{- end -}}
+    {{- end -}}
   {{- end }}

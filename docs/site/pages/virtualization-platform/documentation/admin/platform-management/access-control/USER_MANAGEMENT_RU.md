@@ -78,10 +78,15 @@ spec:
 
     ```shell
     d8 k get ingress -n d8-user-authn
-    # NAME                   CLASS   HOSTS                              ADDRESS                            PORTS     AGE
-    # ...
-    # kubeconfig-generator   nginx   kubeconfig.example.com             172.25.0.2,172.25.0.3,172.25.0.4   80, 443   267d
-    # ...
+    ```
+
+    Пример вывода команды:
+
+    ```console
+    NAME                   CLASS   HOSTS                              ADDRESS                            PORTS     AGE
+    ...
+    kubeconfig-generator   nginx   kubeconfig.example.com             172.25.0.2,172.25.0.3,172.25.0.4   80, 443   267d
+    ...
     ```
 
 1. Перейдите по предоставленному адресу и используйте в качестве учетных данных email и пароль, которые вы указали при создании пользователя.
@@ -302,7 +307,7 @@ spec:
 
 #### Blitz Identity Provider
 
-На стороне провайдера Blitz Identity Provider при [регистрации приложения](https://docs.identityblitz.ru/latest/integration-guide/oidc-app-enrollment.html) необходимо указать URL для перенаправления пользователя после авторизации. При использовании `DexProvider` необходимо указать `https://dex.<publicDomainTemplate>/`, где [`publicDomainTemplate`](../../../../reference/cr/publicdomaintemplate.html) – указанный в модуле `global` шаблон DNS-имен кластера.
+На стороне провайдера Blitz Identity Provider при [регистрации приложения](https://docs.identityblitz.ru/latest/integration-guide/oidc-app-enrollment.html) необходимо указать URL для перенаправления пользователя после авторизации. При использовании `DexProvider` необходимо указать `https://dex.<publicDomainTemplate>/`, где [`publicDomainTemplate`](../../../../reference/mc.html#global-parameters-modules-publicdomaintemplate) – указанный в модуле `global` шаблон DNS-имен кластера.
 
 В примере представлены настройки провайдера для интеграции с Blitz Identity Provider:
 

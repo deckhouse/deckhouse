@@ -11,7 +11,7 @@ Three layouts are supported. Below is more information about each of them.
 In this placement strategy, nodes do not have public IP addresses allocated to them; they use NAT gateway service in Yandex Cloud to connect to the Internet.
 {% endalert %}
 
-![Yandex Cloud Standard Layout scheme](../../images/030-cloud-provider-yandex/layout-standard.png)
+![Yandex Cloud Standard Layout scheme](../../images/cloud-provider-yandex/layout-standard.png)
 <!--- Source: https://docs.google.com/drawings/d/1WI8tu-QZYcz3DvYBNlZG4s5OKQ9JKyna7ESHjnjuCVQ/edit --->
 
 Example of the layout configuration:
@@ -20,6 +20,9 @@ Example of the layout configuration:
 apiVersion: deckhouse.io/v1
 kind: YandexClusterConfiguration
 layout: Standard
+sshPublicKey: "<SSH_PUBLIC_KEY>"
+nodeNetworkCIDR: 192.168.12.13/24
+existingNetworkID: <EXISTING_NETWORK_ID>
 provider:
   cloudID: <CLOUD_ID>
   folderID: <FOLDER_ID>
@@ -32,46 +35,51 @@ provider:
     "private_key": "-----BEGIN PRIVATE KEY-----\nMIIE....1ZPJeBLt+\n-----END PRIVATE KEY-----\n"
     }
 masterNodeGroup:
-  replicas: 1
+  replicas: 3
+  zones:
+  - ru-central1-a
+  - ru-central1-b
+  - ru-central1-d
+  instanceClass:
+    cores: 4
+    memory: 8192
+    imageID: <IMAGE_ID>
+    externalIPAddresses:
+    - "<ZONE_A_EXTERNAL_IP_MASTER_1>"
+    - "Auto"
+    - "Auto"
+    externalSubnetIDs:
+    - <ZONE_A_SUBNET_ID>
+    - <ZONE_B_SUBNET_ID>
+    - <ZONE_D_SUBNET_ID>
+    additionalLabels:
+      takes: priority
+nodeGroups:
+- name: worker
+  replicas: 2
   zones:
   - ru-central1-a
   - ru-central1-b
   instanceClass:
     cores: 4
     memory: 8192
-    imageID: fd8nb7ecsbvj76dfaa8b
-    externalIPAddresses:
-    - "198.51.100.5"
-    - "Auto"
-    externalSubnetID: <EXTERNAL_SUBNET_ID>
-    additionalLabels:
-      takes: priority
-nodeGroups:
-- name: worker
-  replicas: 1
-  zones:
-  - ru-central1-a
-  instanceClass:
-    cores: 4
-    memory: 8192
-    imageID: fd8nb7ecsbvj76dfaa8b
+    imageID: <IMAGE_ID>
     coreFraction: 50
     externalIPAddresses:
-    - "198.51.100.5"
     - "Auto"
-    externalSubnetID: <EXTERNAL_SUBNET_ID>
+    - "Auto"
+    externalSubnetIDs:
+    - <ZONE_A_SUBNET_ID>
+    - <ZONE_B_SUBNET_ID>
     additionalLabels:
-      toy: example
+      role: example
 labels:
   billing: prod
-sshPublicKey: "<SSH_PUBLIC_KEY>"
-nodeNetworkCIDR: 192.168.12.13/24
-existingNetworkID: <EXISTING_NETWORK_ID>
 dhcpOptions:
   domainName: test.local
   domainNameServers:
-  - 213.177.96.1
-  - 231.177.97.1
+  - <DNS_SERVER_1>
+  - <DNS_SERVER_2>
 ```
 
 ## WithoutNAT
@@ -80,7 +88,7 @@ In this layout, NAT (of any kind) is not used, and each node is assigned a publi
 
 > **Caution!** Currently, the cloud-provider-yandex module does not support Security Groups; thus, is why all cluster nodes connect directly to the Internet.
 
-![Yandex Cloud WithoutNAT Layout scheme](../../images/030-cloud-provider-yandex/layout-withoutnat.png)
+![Yandex Cloud WithoutNAT Layout scheme](../../images/cloud-provider-yandex/layout-withoutnat.png)
 <!--- Source: https://docs.google.com/drawings/d/1I7M9DquzLNu-aTjqLx1_6ZexPckL__-501Mt393W1fw/edit --->
 
 Example of the layout configuration:
@@ -101,40 +109,48 @@ provider:
     "private_key": "-----BEGIN PRIVATE KEY-----\nMIIE....1ZPJeBLt+\n-----END PRIVATE KEY-----\n"
     }    
 masterNodeGroup:
-  replicas: 1
+  replicas: 3
   instanceClass:
     cores: 4
     memory: 8192
     imageID: <IMAGE_ID>
     externalIPAddresses:
-    - "198.51.100.5"
     - "Auto"
-    externalSubnetID: <EXTERNAL_SUBNET_ID>
+    - "Auto"
+    - "Auto"
+    externalSubnetIDs:
+    - <ZONE_A_SUBNET_ID>
+    - <ZONE_B_SUBNET_ID>
+    - <ZONE_D_SUBNET_ID>
     zones:
     - ru-central1-a
     - ru-central1-b
+    - ru-central1-d
 nodeGroups:
 - name: worker
-  replicas: 1
+  replicas: 2
   instanceClass:
     cores: 4
     memory: 8192
-    imageID: testtest
+    imageID: <IMAGE_ID>
     coreFraction: 50
     externalIPAddresses:
-    - "198.51.100.5"
+    - "<ZONE_A_EXTERNAL_IP_WORKER_1>"
     - "Auto"
-    externalSubnetID: <EXTERNAL_SUBNET_ID>
+    externalSubnetIDs:
+    - <ZONE_A_SUBNET_ID>
+    - <ZONE_B_SUBNET_ID>
     zones:
     - ru-central1-a
+    - ru-central1-b
 sshPublicKey: "<SSH_PUBLIC_KEY>"
 nodeNetworkCIDR: 192.168.12.13/24
 existingNetworkID: <EXISTING_NETWORK_ID>
 dhcpOptions:
   domainName: test.local
   domainNameServers:
-  - 8.8.8.8
-  - 8.8.4.4
+  - <DNS_SERVER_1>
+  - <DNS_SERVER_2>
 ```
 
 ## WithNATInstance
@@ -149,7 +165,7 @@ If neither `withNATInstance.externalSubnetID` nor `withNATInstance.internalSubne
 
 If the IP address of the NAT-instance does not matter, you can pass an empty object `withNATInstance: {}`, then the necessary networks and dynamic IP will be created automatically.
 
-![Yandex Cloud WithNATInstance Layout scheme](../../images/030-cloud-provider-yandex/layout-withnatinstance.png)
+![Yandex Cloud WithNATInstance Layout scheme](../../images/cloud-provider-yandex/layout-withnatinstance.png)
 <!--- Source: https://docs.google.com/drawings/d/1oVpZ_ldcuNxPnGCkx0dRtcAdL7BSEEvmsvbG8Aif1pE/edit --->
 
 Example of the layout configuration:
@@ -180,12 +196,10 @@ masterNodeGroup:
     memory: 8192
     imageID: <IMAGE_ID>
     externalIPAddresses:
-    - "1.1.1.1"
     - "Auto"
     externalSubnetID: <EXTERNAL_SUBNET_ID>
     zones:
     - ru-central1-a
-    - ru-central1-b
 nodeGroups:
 - name: worker
   replicas: 1
@@ -195,7 +209,6 @@ nodeGroups:
     imageID: <IMAGE_ID>
     coreFraction: 50
     externalIPAddresses:
-    - "1.1.1.1"
     - "Auto"
     externalSubnetID: <EXTERNAL_SUBNET_ID>
     zones:
@@ -206,6 +219,6 @@ existingNetworkID: <EXISTING_NETWORK_ID>
 dhcpOptions:
   domainName: test.local
   domainNameServers:
-  - 8.8.8.8
-  - 8.8.4.4
+  - <DNS_SERVER_1>
+  - <DNS_SERVER_2>
 ```

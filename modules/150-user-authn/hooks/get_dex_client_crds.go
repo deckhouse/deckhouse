@@ -47,6 +47,8 @@ type DexClient struct {
 
 	Labels      map[string]string `json:"labels"`
 	Annotations map[string]string `json:"annotations"`
+
+	AllowAccessToKubernetes bool `json:"allowAccessToKubernetes"`
 }
 
 type DexClientSecret struct {
@@ -100,21 +102,24 @@ func applyDexClientFilter(obj *unstructured.Unstructured) (go_hook.FilterResult,
 
 	delete(annotations, "kubectl.kubernetes.io/last-applied-configuration")
 	for key := range annotations {
-		if strings.Contains(key, "werf.io/") || strings.Contains(key, "meta.helm.sh/") {
+		if strings.Contains(key, "werf.io/") || strings.Contains(key, "helm.sh/") {
 			delete(annotations, key)
 		}
 	}
 
+	_, allowAccessToKubernetes := annotations["dexclient.deckhouse.io/allow-access-to-kubernetes"]
+
 	return DexClient{
-		ID:              id,
-		LegacyID:        legacyID,
-		EncodedID:       encoding.ToFnvLikeDex(id),
-		LegacyEncodedID: encoding.ToFnvLikeDex(legacyID),
-		Name:            name,
-		Namespace:       namespace,
-		Spec:            spec,
-		Labels:          labels,
-		Annotations:     annotations,
+		ID:                      id,
+		LegacyID:                legacyID,
+		EncodedID:               encoding.ToFnvLikeDex(id),
+		LegacyEncodedID:         encoding.ToFnvLikeDex(legacyID),
+		Name:                    name,
+		Namespace:               namespace,
+		Spec:                    spec,
+		Labels:                  labels,
+		Annotations:             annotations,
+		AllowAccessToKubernetes: allowAccessToKubernetes,
 	}, nil
 }
 

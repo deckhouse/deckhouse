@@ -131,10 +131,6 @@ func (v *Validator) Validate(config *v1alpha1.ModuleConfig) ValidationResult {
 		return result
 	}
 
-	if module := v.valuesValidator.GetModule(config.Name); module == nil {
-		return result
-	}
-
 	if err := v.validateSettings(config.GetName(), result.Settings); err != nil {
 		convMsg := ""
 		if config.Spec.Version != result.Version {
@@ -167,6 +163,9 @@ func (v *Validator) validateSettings(configName string, configSettings map[strin
 		schemaStorage = v.valuesValidator.GetGlobal().GetSchemaStorage()
 	} else {
 		module := v.valuesValidator.GetModule(configName)
+		if module == nil {
+			return nil
+		}
 		schemaStorage = module.GetSchemaStorage()
 	}
 

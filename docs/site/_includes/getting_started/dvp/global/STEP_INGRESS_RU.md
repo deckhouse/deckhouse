@@ -1,11 +1,11 @@
-<script type="text/javascript" src='{{ assets["getting-started.js"].digest_path }}'></script>
-<script type="text/javascript" src='{{ assets["getting-started-access.js"].digest_path }}'></script>
-Убедитесь, что под Kruise controller manager модуля [ingress-nginx](https://TODO) запустился и находится в статусе `Ready`.
+<script type="text/javascript" src='{% javascript_asset_tag getting-started %}[_assets/js/getting-started.js]{% endjavascript_asset_tag %}'></script>
+<script type="text/javascript" src='{% javascript_asset_tag getting-started-access %}[_assets/js/getting-started-access.js]{% endjavascript_asset_tag %}'></script>
+Убедитесь, что под Kruise controller manager запустился и находится в статусе `Running`.
   Выполните на **master-узле** следующую команду:
 
 {% snippetcut %}
 ```shell
-sudo d8 k -n d8-ingress-nginx get po -l app=kruise
+sudo -i d8 k -n d8-ingress-nginx get po -l app=kruise
 ```
 {% endsnippetcut %}
 
@@ -16,8 +16,8 @@ sudo d8 k -n d8-ingress-nginx get po -l app=kruise
   <li><p><strong>Установка Ingress-контроллера</strong></p>
 {% snippetcut %}
 ```shell
-sudo d8 k apply -f - <<EOF
-# Секция, описывающая параметры NGINX Ingress controller.
+sudo -i d8 k apply -f - <<EOF
+# Параметры контроллера NGINX Ingress.
 # https://deckhouse.ru/products/virtualization-platform/reference/cr/ingressnginxcontroller.html
 apiVersion: deckhouse.io/v1
 kind: IngressNginxController
@@ -46,21 +46,21 @@ EOF
 
 {% snippetcut %}
 ```shell
-sudo d8 k -n d8-ingress-nginx get po -l app=controller
+sudo -i d8 k -n d8-ingress-nginx get po -l app=controller
 ```
 {% endsnippetcut %}
 
-<p>Дождитесь перехода подов Ingress-контроллера в статус <code>Ready</code>.</p>
+<p>Дождитесь перехода подов Ingress-контроллера в статус <code>Running</code>.</p>
 
 {% offtopic title="Пример вывода..." %}
-```
-$ sudo /opt/deckhouse/bin/kubectl -n d8-ingress-nginx get po -l app=controller
+```console
+$ sudo -i d8 k -n d8-ingress-nginx get po -l app=controller
 NAME                                       READY   STATUS    RESTARTS   AGE
 controller-nginx-r6hxc                     3/3     Running   0          5m
 ```
 {% endofftopic %}
 </li>
-<li><strong>Создание DNS-записи</strong>, для доступа в веб-интерфейсы кластера
+<li><strong>Создание DNS-записи</strong>, для доступа в веб-интерфейсы кластера:
   <ul>
   <li>Выясните публичный IP-адрес узла, на котором работает Ingress-контроллер.</li>
   <li>Если у вас есть возможность добавить DNS-запись используя DNS-сервер:

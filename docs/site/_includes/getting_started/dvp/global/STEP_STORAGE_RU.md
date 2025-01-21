@@ -1,10 +1,10 @@
-На этом этапе кластер в минимальном исполнении развернут. Настроим хранилище, которое будет использоваться для создания хранения метрик компонент кластер и дисков виртуальных машин.
+На этом шаге кластер в минимальном исполнении развернут. Настройте хранилище, которое будет использоваться для создания хранения метрик компонент кластер и дисков виртуальных машин.
 
-Включите модуль программно-определяемого хранилища sds-replicated-volume:
+Включите модуль программно-определяемого хранилища sds-replicated-volume. Выполните на **master-узле** следующие команды:
 
 {% snippetcut %}
 ```shell
-kubectl create -f - <<EOF
+sudo -i d8 k create -f - <<EOF
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
@@ -29,15 +29,15 @@ EOF
 
 {% snippetcut %}
 ```sheel
-kubectl wait module sds-replicated-volume --for='jsonpath={.status.status}=Ready' --timeout=1200s
+sudo -i d8 k wait module sds-replicated-volume --for='jsonpath={.status.status}=Ready' --timeout=1200s
 ```
 {% endsnippetcut %}
 
-Далее необходимо объединить доступные на узлах блочные устройства в группы томов LVM. Чтобы получить доступные блочные устройства, выполните команду:
+Объедините доступные на узлах блочные устройства в группы томов LVM. Чтобы получить доступные блочные устройства, выполните команду:
 
 {% snippetcut %}
 ```shell
-sudo d8 k get blockdevices.storage.deckhouse.io
+sudo -i d8 k get blockdevices.storage.deckhouse.io
 ```
 {% endsnippetcut %}
 
@@ -46,7 +46,7 @@ sudo d8 k get blockdevices.storage.deckhouse.io
 
 {% snippetcut %}
 ```shell
-sudo d8 k apply -f - <<EOF
+sudo -i d8 k apply -f - <<EOF
 apiVersion: storage.deckhouse.io/v1alpha1
 kind: LVMVolumeGroup
 metadata:
@@ -65,7 +65,7 @@ spec:
           - dev-ef4fb06b63d2c05fb6ee83008b55e486aa1161aa
   # Имя группы томов LVM, которая будет создана из указанных выше блочных устройств на выбранном узле.
   actualVGNameOnTheNode: "vg"
-  # Раскомментируйте, если важно иметь возмоность создавать Thin-пулы, детали будут раскрыты далее.
+  # Раскомментируйте, если важно иметь возможность создавать Thin-пулы, детали будут раскрыты далее.
   # thinPools:
   #   - name: thin-pool-0
   #     size: 70%
@@ -77,7 +77,7 @@ EOF
 
 {% snippetcut %}
 ```shell
-sudo d8 k get lvg vg-on-worker-0 -w
+sudo -i d8 k get lvg vg-on-worker-0 -w
 ```
 {% endsnippetcut %}
 
@@ -92,7 +92,7 @@ vg-on-worker-0   1/1         True                    Ready   worker-0   360484Mi
 
 {% snippetcut %}
 ```bash
-sudo d8 k apply -f - <<EOF
+sudo -i d8 k apply -f - <<EOF
  apiVersion: storage.deckhouse.io/v1alpha1
  kind: ReplicatedStoragePool
  metadata:
@@ -105,11 +105,11 @@ EOF
 ```
 {% endsnippetcut %}
 
-Дождитесь, когда созданный ресурс ReplicatedStoragePool перейдет в состояние Completed:
+Дождитесь, когда созданный ресурс ReplicatedStoragePool перейдет в состояние `Completed`:
 
 {% snippetcut %}
 ```shell
-sudo d8 k get rsp data -w
+sudo -i d8 k get rsp data -w
 ```
 {% endsnippetcut %}
 
@@ -124,7 +124,7 @@ sds-pool     Completed   LVM    87d
 
 {% snippetcut %}
 ```bash
-sudo d8 k apply -f - <<EOF
+sudo -i d8 k apply -f - <<EOF
  ---
  apiVersion: storage.deckhouse.io/v1alpha1
  kind: ReplicatedStorageClass
@@ -139,11 +139,11 @@ EOF
 ```
 {% endsnippetcut %}
 
-Проверьте что StorageClass'ы создались:
+Проверьте, что ресурсы StorageClass появились в кластере:
 
 {% snippetcut %}
 ```bash
-sudo d8 k get storageclass
+sudo -i d8 k get storageclass
 ```
 {% endsnippetcut %}
 
@@ -152,6 +152,6 @@ sudo d8 k get storageclass
 {% snippetcut %}
 ```shell
 DEFAULT_STORAGE_CLASS=replicated-storage-class
-sudo d8 k patch mc global --type='json' -p='[{"op": "replace", "path": "/spec/settings/defaultClusterStorageClass", "value": "'"$DEFAULT_STORAGE_CLASS"'"}]'
+sudo -i d8 k patch mc global --type='json' -p='[{"op": "replace", "path": "/spec/settings/defaultClusterStorageClass", "value": "'"$DEFAULT_STORAGE_CLASS"'"}]'
 ```
 {% endsnippetcut %}

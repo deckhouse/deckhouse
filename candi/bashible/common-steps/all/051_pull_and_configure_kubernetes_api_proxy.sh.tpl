@@ -32,6 +32,10 @@ metadata:
 spec:
   dnsPolicy: ClusterFirstWithHostNet
   hostNetwork: true
+  securityContext:
+    runAsNonRoot: false
+    runAsUser: 0
+    runAsGroup: 0
   shareProcessNamespace: true
   containers:
   - name: kubernetes-api-proxy

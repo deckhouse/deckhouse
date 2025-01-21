@@ -4,11 +4,11 @@ permalink: ru/virtualization-platform/documentation/user/resource-management/sna
 lang: ru
 ---
 
-Снимки предназначены для сохранения состояния ресурса в конкретный момент времени; поддерживаются снимки дисков и снимки виртуальных машин.
+Снимки предназначены для сохранения состояния ресурса в конкретный момент времени. Поддерживаются снимки дисков и снимки виртуальных машин.
 
 ## Создание снимков из дисков
 
-Для создания снимков дисков используется ресурс [`VirtualDiskSnapshot`](../../../reference/cr/virtualdisksnapshot.html). Он может быть использован в качестве источников данных для создания новых виртуальных дисков.
+Для создания снимков дисков используется ресурс [VirtualDiskSnapshot](../../../reference/cr/virtualdisksnapshot.html). Он может быть использован в качестве источников данных для создания новых виртуальных дисков.
 
 Для гарантии целостности и консистентности данных, снимок диска можно создать в следующих случаях:
 
@@ -29,9 +29,14 @@ spec:
 
 ```shell
 d8 k get volumesnapshotclasses
-# NAME                     DRIVER                                DELETIONPOLICY   AGE
-# csi-nfs-snapshot-class   nfs.csi.k8s.io                        Delete           34d
-# sds-replicated-volume    replicated.csi.storage.deckhouse.io   Delete           39d
+```
+
+Пример вывода:
+
+```console
+NAME                     DRIVER                                DELETIONPOLICY   AGE
+csi-nfs-snapshot-class   nfs.csi.k8s.io                        Delete           34d
+sds-replicated-volume    replicated.csi.storage.deckhouse.io   Delete           39d
 ```
 
 Пример манифеста для создания снимка диска:
@@ -53,8 +58,13 @@ EOF
 
 ```shell
 d8 k get vdsnapshot
-# NAME                   PHASE     CONSISTENT   AGE
-# linux-vm-root-snapshot Ready     true         3m2s
+```
+
+Пример вывода:
+
+```console
+NAME                   PHASE     CONSISTENT   AGE
+linux-vm-root-snapshot Ready     true         3m2s
 ```
 
 После создания, `VirtualDiskSnapshot` может находиться в следующих состояниях:
@@ -113,9 +123,14 @@ spec:
 
 ```shell
 d8 k get volumesnapshotclasses
-# NAME                     DRIVER                                DELETIONPOLICY   AGE
-# csi-nfs-snapshot-class   nfs.csi.k8s.io                        Delete           34d
-# sds-replicated-volume    replicated.csi.storage.deckhouse.io   Delete           39d
+```
+
+Пример вывода:
+
+```console
+NAME                     DRIVER                                DELETIONPOLICY   AGE
+csi-nfs-snapshot-class   nfs.csi.k8s.io                        Delete           34d
+sds-replicated-volume    replicated.csi.storage.deckhouse.io   Delete           39d
 ```
 
 Снимок виртуальной машины не будет создан, если выполнится хотя бы одно из следующих условий:
@@ -175,18 +190,18 @@ spec:
     - from:
         kind: VirtualMachine
         name: linux-vm
-      to: linux-vm-2 # Воссоздание существующей виртуальной машины `linux-vm` с новым именем `linux-vm-2`.
+      to: linux-vm-2 # Воссоздание существующей виртуальной машины linux-vm с новым именем linux-vm-2.
     - from:
         kind: VirtualDisk
         name: linux-vm-root
-      to: linux-vm-root-2 # Воссоздание существующего виртуального диска `linux-vm-root` с новым именем `linux-vm-root-2`.
+      to: linux-vm-root-2 # Воссоздание существующего виртуального диска linux-vm-root с новым именем linux-vm-root-2.
     - from:
         kind: VirtualDisk
         name: blank-disk
-      to: blank-disk-2 # Воссоздание существующего виртуального диска `blank-disk` с новым именем `blank-disk-2`.
+      to: blank-disk-2 # Воссоздание существующего виртуального диска blank-disk с новым именем blank-disk-2.
     - from:
         kind: VirtualMachineBlockDeviceAttachment
         name: attach-blank-disk
-      to: attach-blank-disk-2 # Воссоздание существующего виртуального диска `attach-blank-disk` с новым именем `attach-blank-disk-2`.
+      to: attach-blank-disk-2 # Воссоздание существующего виртуального диска attach-blank-disk с новым именем attach-blank-disk-2.
 EOF
 ```

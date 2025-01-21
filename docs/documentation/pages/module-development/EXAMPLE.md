@@ -174,40 +174,52 @@ The following is the sequence of steps to enable the `helloworld` in a cluster m
 
 1. Check the list of available modules
 
-   ```shell
-   kubectl  get ms ghcr -o jsonpath='{.status.modules[*].name}'
+   ```console
+   $ kubectl get module
+   NAME       WEIGHT   SOURCE   PHASE       ENABLED   READY
+   ...
+   helloworld                   Available   False     False     
+   ...
    ```
-
-   The list should only contain the `helloworld` module.
 
 1. Create a [ModuleUpdatePolicy](../../cr.html#moduleupdatepolicy) resource that defines the module update policy.
 
-   Run the following command to create an update policy for the `helloworld-policy` module with the *Alpha* release channel and *Auto* update mode:
+   Run the following command to create an update policy with the *Alpha* release channel and *Auto* update mode:
 
    ```shell
    kubectl apply -f - <<EOF
-   apiVersion: deckhouse.io/v1alpha1
+   apiVersion: deckhouse.io/v1alpha2
    kind: ModuleUpdatePolicy
    metadata:
      name: helloworld-policy
    spec:
-     moduleReleaseSelector:
-       labelSelector:
-         matchLabels:
-           source: ghcr
      releaseChannel: Alpha
      update:
        mode: Auto
    EOF
    ```
 
-1. Check the *ModuleSource* resource (the status should have no errors and list the available modules):
+1. Create a ModuleConfig where you specify the module source (the `source` parameter), the update policy (the `updatePolicy` parameter), and set the `enabled` parameter to `true`:
+
+   ```shell
+   kubectl apply -f - <<EOF
+      apiVersion: deckhouse.io/v1alpha1
+      kind: ModuleConfig
+      metadata:
+        name: helloworld
+      spec:
+         enabled: true
+         source: ghcr
+         updatePolicy: helloworld-policy
+   ```
+
+1. Check the ModuleSource (the status should have no errors and list the available modules):
 
    ```shell
    kubectl get ms ghcr -o yaml
    ```
 
-1. Confirm that new [ModuleRelease](../../cr.html#modulerelease) resources have been created for the module:
+1. Confirm that the new [ModuleRelease](../../cr.html#modulerelease) objects have been created for the module:
 
    ```shell
    kubectl get mr
@@ -227,12 +239,6 @@ The following is the sequence of steps to enable the `helloworld` in a cluster m
    kubectl -n d8-system get pod -l app=deckhouse
    ```
 
-1. Enable the module by running the following command:
-
-   ```shell
-   kubectl -ti -n d8-system exec svc/deckhouse-leader -c deckhouse -- deckhouse-controller module enable helloworld
-   ```
-
    After a while, the module objects will be available in the cluster.
 
    If you run into errors while starting the module, check the DKP log:
@@ -246,5 +252,18 @@ The following is the sequence of steps to enable the `helloworld` in a cluster m
    ```shell
    kubectl -n d8-system exec svc/deckhouse-leader -c deckhouse -- deckhouse-controller queue list
    ```
+
+## Migration of ModuleUpdatePolicy to version v1alpha2
+
+If there is a ModuleUpdatePolicy of version v1alpha1 in the cluster, the following migration steps to version v1alpha2 must be performed:
+
+If any ModuleUpdatePolicy of version v1alpha1 in the cluster defines `moduleReleaseSelector`, alerts [ModuleHasDeprecatedUpdatePolicy](../../alerts.html#monitoring-deckhouse-modulehasdeprecatedupdatepolicy) will be triggered in the monitoring system for all modules that match this selector. In this case, follow these steps to migrate to version v1alpha2 of ModuleUpdatePolicy:
+- Specify the update policy for the corresponding modules in the moduleConfig `properties.updatePolicy` parameter.
+- Execute the following command, specifying the required ModuleUpdatePolicy:
+
+  ```shell
+  kubectl patch moduleupdatepolicies.v1alpha1.deckhouse.io <MUP_NAME> --type='json' \
+    -p='[{"op": "replace", "path": "/spec/moduleReleaseSelector/labelSelector/matchLabels", "value": {"": ""}}]'
+  ```
 
 {% endraw %}

@@ -134,7 +134,7 @@ Path `/loki/api/v1/push` has to be removed from the previously used Loki URL.
 
 This documentation expects that you have [created API key](https://grafana.com/docs/grafana-cloud/reference/create-api-key/).
 
-![Grafana cloud API key](../../images/460-log-shipper/grafana_cloud.png)
+![Grafana cloud API key](../../images/log-shipper/grafana_cloud.png)
 
 Firstly you should encode your token with base64.
 
@@ -163,7 +163,7 @@ Now you can create PodLogginConfig or ClusterPodLoggingConfig and send logs to *
 
 ## Adding Loki source to Deckhouse Grafana
 
-You can work with Loki from embedded to deckhouse Grafana. Just add [**GrafanaAdditionalDatasource**](../../modules/300-prometheus/cr.html#grafanaadditionaldatasource)
+You can work with Loki from embedded to deckhouse Grafana. Just add [**GrafanaAdditionalDatasource**](../../modules/prometheus/cr.html#grafanaadditionaldatasource)
 
 ```yaml
 apiVersion: deckhouse.io/v1
@@ -326,6 +326,24 @@ spec:
     syslog.message_id: "{{ request_id }}"
 ```
 
+## Graylog integration
+
+Make sure that an incoming stream is configured in Graylog to receive messages over the TCP protocol on the specified port. Example manifest for integration with Graylog:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ClusterLogDestination
+metadata:
+  name: test-socket2-dest
+spec:
+  type: Socket
+  socket:
+    address: graylog.svc.cluster.local:9200
+    mode: TCP
+    encoding:
+      codec: GELF
+```
+
 ## Logs in CEF Format
 
 There is a way to format logs in CEF format using `codec: CEF`, with overriding `cef.name` and `cef.severity` based on values from the `message` field (application log) in JSON format.
@@ -363,7 +381,7 @@ extraLabels:
 
 ## Collect Kubernetes Events
 
-Kubernetes Events can be collected by log-shipper if `events-exporter` is enabled in the [extended-monitoring](../340-extended-monitoring/) module configuration.
+Kubernetes Events can be collected by log-shipper if `events-exporter` is enabled in the [extended-monitoring](../extended-monitoring/) module configuration.
 
 Enable `events-exporter` by adjusting `extended-monitoring` settings:
 

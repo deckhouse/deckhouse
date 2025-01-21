@@ -19,9 +19,9 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
-	"maps"
 	"os"
 	"path/filepath"
+	"reflect"
 	"regexp"
 	"strconv"
 	"strings"
@@ -50,6 +50,8 @@ import (
 const (
 	moduleOrderIdx = 2
 	moduleNameIdx  = 3
+
+	embeddedModulesDir = "/deckhouse/modules"
 )
 
 var (
@@ -71,9 +73,11 @@ type Loader struct {
 	client         client.Client
 	log            *log.Logger
 	embeddedPolicy *helpers.ModuleUpdatePolicySpecContainer
+	modules        map[string]*moduletypes.Module
 	version        string
 	modulesDirs    []string
-	modules        map[string]*moduletypes.Module
+	// global module dir
+	globalDir string
 
 	dependencyContainer dependency.Container
 
@@ -82,11 +86,12 @@ type Loader struct {
 	clusterUUID          string
 }
 
-func New(client client.Client, version, modulesDir string, dc dependency.Container, embeddedPolicy *helpers.ModuleUpdatePolicySpecContainer, logger *log.Logger) *Loader {
+func New(client client.Client, version, modulesDir, globalDir string, dc dependency.Container, embeddedPolicy *helpers.ModuleUpdatePolicySpecContainer, logger *log.Logger) *Loader {
 	return &Loader{
 		client:               client,
 		log:                  logger,
 		modulesDirs:          utils.SplitToPaths(modulesDir),
+		globalDir:            globalDir,
 		downloadedModulesDir: d8env.GetDownloadedModulesDir(),
 		symlinksDir:          filepath.Join(d8env.GetDownloadedModulesDir(), "modules"),
 		modules:              make(map[string]*moduletypes.Module),
@@ -194,7 +199,7 @@ func (l *Loader) processModuleDefinition(def *moduletypes.Definition) (*modulety
 		return nil, fmt.Errorf("load conversions for the %q module: %w", def.Name, err)
 	}
 
-	// load constrains
+	// load constraints
 	if err = extenders.AddConstraints(def.Name, def.Requirements); err != nil {
 		return nil, fmt.Errorf("load constraints for the %q module: %w", def.Name, err)
 	}
@@ -224,6 +229,16 @@ func (l *Loader) GetModuleByName(name string) (*moduletypes.Module, error) {
 
 // LoadModulesFromFS parses and ensures modules from FS
 func (l *Loader) LoadModulesFromFS(ctx context.Context) error {
+	// load the 'global' module conversions
+	if _, err := os.Stat(filepath.Join(l.globalDir, "openapi", "conversions")); err == nil {
+		l.log.Debug("conversions for the 'global' module found")
+		if err = conversion.Store().Add("global", filepath.Join(l.globalDir, "openapi", "conversions")); err != nil {
+			return fmt.Errorf("load conversions for the 'global' module: %w", err)
+		}
+	} else if !os.IsNotExist(err) {
+		return fmt.Errorf("load conversions for the 'global' module: %w", err)
+	}
+
 	for _, dir := range l.modulesDirs {
 		l.log.Debugf("parse modules from the '%s' dir", dir)
 		definitions, err := l.parseModulesDir(dir)
@@ -244,7 +259,7 @@ func (l *Loader) LoadModulesFromFS(ctx context.Context) error {
 			}
 
 			l.log.Debugf("ensure the '%s' module", def.Name)
-			if err = l.ensureModule(ctx, def, !strings.HasPrefix(def.Path, d8env.GetDownloadedModulesDir())); err != nil {
+			if err = l.ensureModule(ctx, def, strings.HasPrefix(def.Path, embeddedModulesDir)); err != nil {
 				return fmt.Errorf("ensure the '%s' embedded module: %w", def.Name, err)
 			}
 
@@ -319,7 +334,7 @@ func (l *Loader) ensureModule(ctx context.Context, def *moduletypes.Definition, 
 				needsUpdate = true
 			}
 
-			if !maps.Equal(module.Properties.Requirements, def.Requirements) {
+			if !reflect.DeepEqual(module.Properties.Requirements, def.Requirements) {
 				module.Properties.Requirements = def.Requirements
 				needsUpdate = true
 			}
@@ -343,6 +358,12 @@ func (l *Loader) ensureModule(ctx context.Context, def *moduletypes.Definition, 
 					module.Properties.Source = v1alpha1.ModuleSourceEmbedded
 					needsUpdate = true
 				}
+			}
+
+			// TODO(ipaqsa): it is needed for migration, can be removed after 1.68
+			if !embedded && module.IsEmbedded() {
+				module.Properties.Source = ""
+				needsUpdate = true
 			}
 
 			if needsUpdate {

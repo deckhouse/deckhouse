@@ -124,6 +124,23 @@ var _ = Describe("Modules :: cni-cilium :: hooks :: set_cilium_mode", func() {
 		})
 	})
 
+	Context("kube-system/d8-cni-configuration is absent, masqueradeMode set to `Netfilter`", func() {
+		BeforeEach(func() {
+			f.KubeStateSet("")
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
+			f.ConfigValuesSet("cniCilium.tunnelMode", "VXLAN")
+			f.ConfigValuesSet("cniCilium.masqueradeMode", "Netfilter")
+			f.ValuesSet("cniCilium.internal.mode", "Direct")
+			f.ValuesSet("cniCilium.internal.masqueradeMode", "BPF")
+			f.RunHook()
+		})
+		It("hook should run successfully, secret should be changed", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("cniCilium.internal.mode").String()).To(Equal("VXLAN"))
+			Expect(f.ValuesGet("cniCilium.internal.masqueradeMode").String()).To(Equal("Netfilter"))
+		})
+	})
+
 	Context("kube-system/d8-cni-configuration is absent, tunnelMode set to `Disabled`, but previously the mode was discovered to `VXLAN`", func() {
 		BeforeEach(func() {
 			f.KubeStateSet("")
@@ -220,6 +237,30 @@ serviceSubnetCIDR: 10.232.0.0/16
 		})
 	})
 
+	Context("kube-system/d8-cni-configuration is absent, cloud provider = Static, tunnelMode = VXLAN and masqueradeMode = Netfilter are configured", func() {
+		BeforeEach(func() {
+			f.KubeStateSet("")
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
+			f.ValuesSetFromYaml("global.clusterConfiguration", []byte(`
+apiVersion: deckhouse.io/v1
+clusterType: Static
+kind: ClusterConfiguration
+kubernetesVersion: "Automatic"
+podSubnetCIDR: 10.231.0.0/16
+serviceSubnetCIDR: 10.232.0.0/16
+`))
+			f.ValuesSet("cniCilium.internal.mode", "Direct")
+			f.ValuesSet("cniCilium.internal.masqueradeMode", "BPF")
+			f.ConfigValuesSet("cniCilium.masqueradeMode", "Netfilter")
+			f.ConfigValuesSet("cniCilium.tunnelMode", "VXLAN")
+			f.RunHook()
+		})
+		It("hook should run successfully, cilium mode should be `VXLAN` and masqueradeMode is `Netfilter`", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("cniCilium.internal.mode").String()).To(Equal("VXLAN"))
+			Expect(f.ValuesGet("cniCilium.internal.masqueradeMode").String()).To(Equal("Netfilter"))
+		})
+	})
 })
 
 func generateCniConfigurationSecret(cni string, mode string, masqueradeMode string) string {

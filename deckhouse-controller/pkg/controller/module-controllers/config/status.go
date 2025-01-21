@@ -38,6 +38,7 @@ import (
 	bootstrappedextender "github.com/deckhouse/deckhouse/go_lib/dependency/extenders/bootstrapped"
 	d7sversionextender "github.com/deckhouse/deckhouse/go_lib/dependency/extenders/deckhouseversion"
 	k8sversionextender "github.com/deckhouse/deckhouse/go_lib/dependency/extenders/kubernetesversion"
+	moduledependencyextender "github.com/deckhouse/deckhouse/go_lib/dependency/extenders/moduledependency"
 )
 
 // refreshModule refreshes module in cluster
@@ -89,14 +90,18 @@ func (r *reconciler) refreshModuleConfig(ctx context.Context, configName string)
 				return err
 			}
 
-			// update metrics
-			converter := conversion.Store().Get(moduleConfig.Name)
-			if moduleConfig.Spec.Version > 0 && moduleConfig.Spec.Version < converter.LatestVersion() {
-				r.metricStorage.Grouped().GaugeSet(metricGroup, "d8_module_config_obsolete_version", 1.0, map[string]string{
-					"name":    moduleConfig.Name,
-					"version": strconv.Itoa(moduleConfig.Spec.Version),
-					"latest":  strconv.Itoa(converter.LatestVersion()),
-				})
+			// skip firing alert for global module
+			if moduleConfig.Name != "global" {
+				// update metrics
+				converter := conversion.Store().Get(moduleConfig.Name)
+				// fire alert at obsolete version
+				if moduleConfig.Spec.Version > 0 && moduleConfig.Spec.Version < converter.LatestVersion() {
+					r.metricStorage.Grouped().GaugeSet(metricGroup, "d8_module_config_obsolete_version", 1.0, map[string]string{
+						"name":    moduleConfig.Name,
+						"version": strconv.Itoa(moduleConfig.Spec.Version),
+						"latest":  strconv.Itoa(converter.LatestVersion()),
+					})
+				}
 			}
 			return nil
 		})
@@ -223,6 +228,14 @@ func (r *reconciler) refreshModuleStatus(module *v1alpha1.Module) {
 	case bootstrappedextender.Name:
 		reason = v1alpha1.ModuleReasonClusterBootstrappedExtender
 		message = v1alpha1.ModuleMessageClusterBootstrappedExtender
+
+	case moduledependencyextender.Name:
+		reason = v1alpha1.ModuleReasonModuleDependencyExtender
+		_, errMsg := moduledependencyextender.Instance().Filter(module.Name, map[string]string{})
+		message = v1alpha1.ModuleMessageModuleDependencyExtender
+		if errMsg != nil {
+			message += ": " + errMsg.Error()
+		}
 	}
 
 	// do not change phase of not installed module

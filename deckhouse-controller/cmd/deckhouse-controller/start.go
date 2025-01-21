@@ -17,7 +17,6 @@ package main
 import (
 	"context"
 	"fmt"
-	"log/slog"
 	"os"
 	"strings"
 	"syscall"
@@ -67,7 +66,7 @@ func start(logger *log.Logger) func(_ *kingpin.ParseContext) error {
 		}
 
 		if err := run(ctx, operator, logger); err != nil {
-			logger.Error("run", slog.String("error", err.Error()))
+			logger.Error("run", log.Err(err))
 			os.Exit(1)
 		}
 
@@ -119,7 +118,7 @@ func runHAMode(ctx context.Context, operator *addonoperator.AddonOperator, logge
 			OnStartedLeading: func(ctx context.Context) {
 				err := run(ctx, operator, logger)
 				if err != nil {
-					operator.Logger.Info("run", slog.String("error", err.Error()))
+					operator.Logger.Info("run", log.Err(err))
 					os.Exit(1)
 				}
 			},
@@ -131,7 +130,7 @@ func runHAMode(ctx context.Context, operator *addonoperator.AddonOperator, logge
 		},
 		ReleaseOnCancel: true,
 	}); err != nil {
-		operator.Logger.Error("run", slog.String("error", err.Error()))
+		operator.Logger.Error("run", log.Err(err))
 	}
 
 	go func() {

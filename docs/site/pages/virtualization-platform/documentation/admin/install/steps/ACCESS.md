@@ -16,12 +16,12 @@ Connect to the master node via SSH (the master node's IP address is provided by 
 ssh <USER_NAME>@<MASTER_IP>
 ```
 
-Verify that platform resources are accessible by listing the cluster nodes:
+Verify that platform resources are accessible by listing cluster nodes:
 
 ```bash
-d8 k get nodes
+sudo -i d8 k get nodes
 ```
 
 ## Remote Connection to the Platform
 
-You can set up a remote connection to the cluster. To do this, follow the steps on your personal computer as described in [the instructions](../../platform-management/access-control/user_management.html).
+You can set up a remote connection to the cluster. To do this, follow the steps on your personal computer as described in [the instructions](../../platform-management/access-control/user-management.html).
