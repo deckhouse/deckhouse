@@ -30,8 +30,8 @@
       plk_protocol_version: "1"
       plk_create_group_if_not_exists__cluster_has_expired_certificates: ClusterHasCertmanagerCertificatesExpired,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes
       plk_grouped_by__cluster_has_expired_certificates: ClusterHasCertmanagerCertificatesExpired,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes
-      description: Certificate {{$labels.exported_namespace}}/{{$labels.name}} is not provided.
-      summary: |
+      summary: Certificate {{$labels.exported_namespace}}/{{$labels.name}} is not provided.
+      description: |
         Certificate is not provided.
 
         To check the certificate details, run the following command:
