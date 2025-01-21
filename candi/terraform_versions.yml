@@ -98,3 +98,11 @@ huaweicloud:
   artifact: terraform-provider-huaweicloud
   artifactBinary: terraform-provider-huaweicloud
   destinationBinary: terraform-provider-huaweicloud
+
+kubernetes:
+  namespace: hashicorp
+  type: kubernetes
+  version: 2.35.1
+  artifact: terraform-provider-kubernetes
+  artifactBinary: terraform-provider-kubernetes
+  destinationBinary: terraform-provider-kubernetes
