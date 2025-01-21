@@ -118,7 +118,7 @@ func UpdateMasterImageRule(oldRaw, newRaw json.RawMessage) error {
 			URN       string `yaml:"urn"`       // AzureClusterConfiguration
 			Image     string `yaml:"image"`     // GCPClusterConfiguration
 			ImageID   string `yaml:"imageID"`   // YandexClusterConfiguration
-			ImageName string `yaml:"imageName"` // OpenStackClusterConfiguration
+			ImageName string `yaml:"imageName"` // OpenStackClusterConfiguration,HuaweiCloudClusterConfiguration,DynamixClusterConfiguration
 			Template  string `yaml:"template"`  // VsphereClusterConfiguration,VCDClusterConfiguration,ZvirtClusterConfiguration
 		} `yaml:"instanceClass"`
 	}

@@ -2,14 +2,15 @@
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: common/distroless
 import:
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
   add: /migrator
   to: /migrator
   before: setup
 docker:
   ENTRYPOINT: ["/migrator"]
 ---
-artifact: {{ .ModuleName }}/{{ .ImageName }}-artifact
+image: {{ .ModuleName }}/{{ .ImageName }}-artifact
+final: false
 from: {{ .Images.BASE_GOLANG_21_ALPINE }}
 shell:
   setup:

@@ -43,7 +43,7 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "gomod"
-  directory: "/ee/be/modules/140-user-authz/images/webhook"
+  directory: "/ee/be/modules/140-user-authz/images/webhook/src"
   labels:
   - "type/dependencies"
   - "status/ok-to-test"
@@ -133,7 +133,7 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "gomod"
-  directory: "/ee/modules/500-operator-trivy/images/report-updater"
+  directory: "/ee/modules/500-operator-trivy/images/report-updater/src"
   labels:
   - "type/dependencies"
   - "status/ok-to-test"
@@ -502,7 +502,7 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "gomod"
-  directory: "/modules/160-multitenancy-manager/images/multitenancy-manager"
+  directory: "/modules/160-multitenancy-manager/images/multitenancy-manager/src"
   labels:
   - "type/dependencies"
   - "status/ok-to-test"
@@ -574,7 +574,7 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "gomod"
-  directory: "/modules/402-ingress-nginx/images/protobuf-exporter"
+  directory: "/modules/402-ingress-nginx/images/protobuf-exporter/src"
   labels:
   - "type/dependencies"
   - "status/ok-to-test"
@@ -583,7 +583,7 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "gomod"
-  directory: "/modules/402-ingress-nginx/images/proxy-failover"
+  directory: "/modules/402-ingress-nginx/images/proxy-failover/src"
   labels:
   - "type/dependencies"
   - "status/ok-to-test"

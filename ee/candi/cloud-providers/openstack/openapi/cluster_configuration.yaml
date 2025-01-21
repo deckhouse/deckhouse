@@ -106,7 +106,7 @@ apiVersions:
         description: |
           The definition of the master's NodeGroup.
 
-          > Caution! After changing the parameters of the section, you need to run `dhctl converge` for the changes to take effect.
+          > Caution. After changing the parameters of the section, you need to run `dhctl converge` command for the changes to take effect.
         x-doc-required: true
         additionalProperties: false
         required: [replicas, instanceClass, volumeTypeMap]
@@ -128,7 +128,7 @@ apiVersions:
                 description: |
                   Flavor of OpenStack servers.
 
-                  Get a list of all available flavors: `openstack flavor list`.
+                  To get a list of all available flavors, run the command: `openstack flavor list`.
 
                   For all non-master nodes it is advisable to use flavor's with a local disk. If cloud provider supports local disks they are usually faster and cheaper. The disadvantage of using such flavors is the inability to migrate nodes between hypervisors.
 
@@ -207,7 +207,7 @@ apiVersions:
           serverGroup:
             type: object
             description: |
-              The ServerGroup object groups instances together. The instances in the group are placed on the same hypervisor (affinity) or different hypervisors (anti-affinity). This allows you to increase the fault tolerance of the cluster.
+              Object groups instances together. The instances in the group are placed on the same hypervisor (affinity) or different hypervisors (anti-affinity). This allows you to increase the fault tolerance of the cluster.
             required: [policy]
             properties:
               policy:
@@ -285,7 +285,7 @@ apiVersions:
                   description: |
                     The same as the `.spec.taints` field of the [Node](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#taint-v1-core) object.
 
-                    **Caution!** Only the `effect`, `key`, `values`  fields are available.
+                    **Caution.** Only the `effect`, `key`, `values`  fields are available.
                   x-doc-examples:
                   - - effect: NoExecute
                       key: ship-class
@@ -324,16 +324,16 @@ apiVersions:
                 mainNetwork:
                   type: string
                   description: |
-                    Path to the network that VirtualMachines' primary NICs will connect to (default gateway).
-                    Get a list of all available networks: `openstack network list`.
+                    Path to the network that VirtualMachines primary NICs will connect to (default gateway).
+                    To get a list of all available networks, run the command: `openstack network list`.
                   x-doc-required: true
                 additionalNetworks:
                   type: array
                   items:
                     type: string
                   description: |
-                    Paths to networks that VirtualMachines' secondary NICs will connect to.
-                    Get a list of all available networks: `openstack network list`.
+                    Paths to networks that VirtualMachines secondary NICs will connect to.
+                    To get a list of all available networks, run the command: `openstack network list`.
                   example:
                     - "BGP-network-VLAN-3894"
                     - "External-VLAN-3699"
@@ -342,7 +342,7 @@ apiVersions:
                   items:
                     type: string
                   description: |
-                    A list of `mainNetwork` and `additionalNetworks` in which `SecurityGroups` and `AllowedAddressPairs` on ports **CANNOT** be configured.
+                    A list of `mainNetwork` and `additionalNetworks` in which `SecurityGroups` and `AllowedAddressPairs` on ports **cannot be configured**.
                 floatingIPPools:
                   type: array
                   items:
@@ -366,7 +366,7 @@ apiVersions:
 
                 If the value specified in `replicas` exceeds the number of elements in the dictionary, the nodes whose number exceeds the length of the dictionary get the values starting from the beginning of the dictionary. For example, if `replicas: 5`, then worker-0, worker-2, worker-4 will have the `fast-eu-1a` disk type, while worker-1, worker-3 will have the `fast-eu-1b` disk type.
 
-                > **Caution!** Limits by availability zones works only when using the `zones` parameter (`nodeGroups.zones`). If `zones` parameter is not specified, all availability zones will be used.
+                > **Caution.** Limits by availability zones works only when using the `zones` parameter (`nodeGroups.zones`). If `zones` parameter is not specified, all availability zones will be used.
 
                 Useful commands:
                 - `openstack availability zone list` — get list of availability zones.
@@ -430,7 +430,7 @@ apiVersions:
                     description: |
                       Flavor of OpenStack servers.
 
-                      Get a list of all available flavors: `openstack flavor list`.
+                      To get a list of all available flavors, run the command: `openstack flavor list`.
                     x-doc-required: true
                   imageName:
                     description: |
@@ -478,7 +478,7 @@ apiVersions:
           externalNetworkName: &externalNetworkName
             description: |
               The name of the network for external connections.
-              Get a list of all available networks: `openstack network list`.
+              To get a list of all available networks, run the command: `openstack network list`.
             type: string
             x-unsafe: true
       standardWithNoRouter:
@@ -516,9 +516,9 @@ apiVersions:
               * `DirectRouting` — nodes are directly routed (SecurityGroups are disabled in this mode).
               * `VXLAN` — direct routing does NOT work between nodes, VXLAN must be used (SecurityGroups are disabled in this mode).
 
-              > **Caution!** After changing this parameter, you need to run `dhctl converge`.
+              > **Caution.** After changing this parameter, you need to run `dhctl converge` command for the changes to take effect.
 
-              > **Caution!** All cluster nodes must be rebooted after switching work mode from/to VXLAN.
+              > **Caution.** All cluster nodes must be rebooted after switching work mode from/to VXLAN.
             type: string
             enum: [VXLAN, DirectRouting]
             default: VXLAN
@@ -538,12 +538,12 @@ apiVersions:
               Sets the traffic mode for the network that the pods use to communicate with each other (usually, it is an internal network; however, there can be exceptions):
               * `DirectRouting` — nodes are directly routed (SecurityGroups are disabled in this mode).
               * `DirectRoutingWithPortSecurityEnabled` — direct routing is enabled between the nodes, but only if  the range of addresses of the internal network is explicitly allowed in OpenStack for Ports:
-                * **Caution!** Make sure that the `username` can edit `AllowedAddressPairs` on Ports connected to the `internalNetworkName` network. Usually, an OpenStack user doesn't have such a privilege if the network has the `shared` flag set.
+                * **Caution.** Make sure that the `username` can edit `AllowedAddressPairs` on Ports connected to the `internalNetworkName` network. Usually, an OpenStack user doesn't have such a privilege if the network has the `shared` flag set.
               * `VXLAN` — direct routing does NOT work between nodes, VXLAN must be used (`SecurityGroups` are disabled in this mode).
 
-              > **Caution!** After changing this parameter, you need to run `dhctl converge`.
+              > **Caution.** After changing this parameter, you need to run `dhctl converge` command for the changes to take effect.
 
-              > **Caution!** All cluster nodes must be rebooted after switching work mode from/to VXLAN.
+              > **Caution.** All cluster nodes must be rebooted after switching work mode from/to VXLAN.
             type: string
             enum: [VXLAN, DirectRouting, DirectRoutingWithPortSecurityEnabled]
             default: DirectRoutingWithPortSecurityEnabled
@@ -575,7 +575,7 @@ apiVersions:
             x-doc-examples:
               - |
                 ```yaml
-                caCert:
+                caCert: |
                   -----BEGIN CERTIFICATE-----
                   MIIFyDCCBLCgAwIBAgIQBwDIWH1asdaKNaALUa4NUzANBgkqhkiG9w0BAQsFADBc
                   ...

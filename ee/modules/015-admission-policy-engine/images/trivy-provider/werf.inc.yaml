@@ -11,7 +11,7 @@ docker:
   USER: deckhouse:deckhouse
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
-fromImage: common/src-artifact
+fromImage: operator-trivy/trivy-src-artifact
 final: false
 git:
 - add: /{{ $.ModulePath }}modules/015-{{ $.ModuleName }}/images/{{ $.ImageName }}/src
@@ -19,11 +19,6 @@ git:
   stageDependencies:
     install:
     - '**/*'
-shell:
-  install:
-  - git clone --depth 1 --branch flant-v2 {{ .SOURCE_REPO }}/aquasecurity/trivy-db.git /src/trivy-db
-  - git clone --depth 1 --branch v0.55.0-flant-1 {{ .SOURCE_REPO }}/aquasecurity/trivy.git /src/trivy
-  - rm -rf /src/trivy/.git /src/trivy-db/.git
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
 from: {{ .Images.BASE_GOLANG_23_ALPINE }}

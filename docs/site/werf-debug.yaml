@@ -21,8 +21,9 @@ configVersion: 1
   {{- end }}
 
 ---
-artifact: web-static
+image: web-static
 from: {{ .Images.BASE_JEKYLL }}
+final: false
 shell:
   install:
   - |
@@ -78,7 +79,7 @@ git:
       install: 'go.mod'
       setup: '**/*'
 import:
-  - artifact: web-static
+  - image: web-static
     add: /app/_site
     to: /app/root
     before: setup
@@ -94,7 +95,7 @@ shell:
       {{- .Files.Get ".werf/nginx.conf" | nindent 6 }}
       EOD
 import:
-- artifact: web-static
+- image: web-static
   add: /app/_site
   to: /app
   before: setup

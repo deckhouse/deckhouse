@@ -141,7 +141,7 @@ Control plane components:
 * `operator` — installs all the resources required to operate a specific version of the control plane.
 * `kiali` — dashboard for monitoring and controlling Istio resources as well as user services managed by Istio that allows you:
   * Visualize inter-service connections.
-  * Viagnose problem inter-service connections.
+  * Diagnose problem inter-service connections.
   * Diagnose the control plane state.
 
 The Ingress controller must be refined to receive user traffic:
@@ -157,7 +157,7 @@ The istiod controller and sidecar-proxy containers export their own metrics that
 ### Details
 
 * Each service Pod gets a sidecar container — sidecar-proxy. From the technical standpoint, this container contains two applications:
-  * **Envoy** proxifies service traffic. It is responsible for implementing all the Istio functionality, including routing, authentication, authorization, etc.
+  * **Envoy** proxies service traffic. It is responsible for implementing all the Istio functionality, including routing, authentication, authorization, etc.
   * **pilot-agent** is a part of Istio. It keeps the Envoy configurations up to date and has a built-in caching DNS server.
 * Each Pod has a DNAT configured for incoming and outgoing service requests to the sidecar-proxy. The additional init container is used for that. Thus, the traffic is routed transparently for applications.
 * Since incoming service traffic is redirected to the sidecar-proxy, this also applies to the readiness/liveness traffic. The Kubernetes subsystem that does this doesn't know how to probe containers under Mutual TLS. Thus, all the existing probes are automatically reconfigured to use a dedicated sidecar-proxy port that routes traffic to the application unchanged.
@@ -229,8 +229,23 @@ Below are their fundamental differences:
 
 #### Requirements for clusters
 
-* Each cluster must have a unique domain in the [`clusterDomain`](../../installing/configuration.html#clusterconfiguration-clusterdomain) parameter of the resource [_ClusterConfiguration_](../../installing/configuration.html#clusterconfiguration). The default value is `cluster.local`.
-* Pod and Service subnets in the [`podSubnetCIDR`](../../installing/configuration.html#clusterconfiguration-podsubnetcidr) and [`serviceSubnetCIDR`](../../installing/configuration.html#clusterconfiguration-servicesubnetcidr) parameters of the resource [_ClusterConfiguration_](../../installing/configuration.html#clusterconfiguration) can be the same.
+* Each cluster must have a unique domain in the [`clusterDomain`](../../installing/configuration.html#clusterconfiguration-clusterdomain) parameter of the resource [_ClusterConfiguration_](../../installing/configuration.html#clusterconfiguration). Please note that none of the clusters should use the domain `cluster.local`, which is the default setting.
+
+  > `cluster.local` is an unmodified alias for the local cluster domain.
+  > When specifying `cluster.local` as a principals in the AuthorizationPolicy, it will always refer to the local cluster, even if there is another cluster in the mesh with [`clusterDomain`](../../installing/configuration.html#cluster-configuration-cluster-domain) explicitly defined as `cluster.local`.
+  > [source](https://istio.io/latest/docs/tasks/security/authorization/authz-td-migration/#best-practices)
+
+* Pod and Service subnets in the [`podSubnetCIDR`](../../installing/configuration.html#clusterconfiguration-podsubnetcidr) and [`serviceSubnetCIDR`](../../installing/configuration.html#clusterconfiguration-servicesubnetcidr) parameters of the resource [_ClusterConfiguration_](../../installing/configuration.html#clusterconfiguration) must be unique for each federation member.
+
+  > - When analyzing HTTP and HTTPS traffic *(in istio terminology)*, you can identify them and decide on further routing or blocking based on their headers.
+  > - At the same time, when analyzing TCP traffic *(in istio terminology)*, it is possible to identify them and decide on further routing or blocking based only on their destination IP address or port number.
+  >
+  > If the IP addresses of services or pods in different clusters match, requests from other pods in other clusters may mistakenly fall under the istio's rules.
+  > The intersection of subnets of services and pods is strictly prohibited in `single-network` mode, and is acceptable but not recommended in `multi-networks` mode.
+  > [source](https://istio.io/latest/docs/ops/deployment/deployment-models/#single-network )
+  >
+  > - In the single-network mode, pods from different clusters can communicate with each other directly.
+  > - In the multi-networks mode, pods from different clusters can only communicate with each other if they use the Istio-gateway.
 
 #### General principles of federation
 
@@ -269,7 +284,18 @@ To establish a federation, you must:
 #### Requirements for clusters
 
 * Cluster domains in the [`clusterDomain`](../../installing/configuration.html#clusterconfiguration-clusterdomain) parameter of the resource [_ClusterConfiguration_](../../installing/configuration.html#clusterconfiguration) must be the same for all multicluster members. The default value is `cluster.local`.
+
 * Pod and Service subnets in the [`podSubnetCIDR`](../../installing/configuration.html#clusterconfiguration-podsubnetcidr) and [`serviceSubnetCIDR`](../../installing/configuration.html#clusterconfiguration-servicesubnetcidr) parameters of the resource [_ClusterConfiguration_](../../installing/configuration.html#clusterconfiguration) must be unique for each multicluster member.
+
+  > - When analyzing HTTP and HTTPS traffic *(in istio terminology)*, you can identify them and decide on further routing or blocking based on their headers.
+  > - At the same time, when analyzing TCP traffic *(in istio terminology)*, it is possible to identify them and decide on further routing or blocking based only on their destination IP address or port number.
+  >
+  > If the IP addresses of services or pods in different clusters match, requests from other pods in other clusters may mistakenly fall under the istio's rules.
+  > The intersection of subnets of services and pods is strictly prohibited in `single-network` mode, and is acceptable but not recommended in `multi-networks` mode.
+  > [source](https://istio.io/latest/docs/ops/deployment/deployment-models/#single-network )
+  >
+  > - In the single-network mode, pods from different clusters can communicate with each other directly.
+  > - In the multi-networks mode, pods from different clusters can only communicate with each other if they use the Istio-gateway.
 
 #### General principles
 
