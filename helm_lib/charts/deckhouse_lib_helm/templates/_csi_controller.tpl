@@ -43,6 +43,7 @@ memory: 50Mi
   {{- $resizerEnabled := dig "resizerEnabled" true $config }}
   {{- $syncerEnabled := dig "syncerEnabled" false $config }}
   {{- $topologyEnabled := dig "topologyEnabled" true $config }}
+  {{- $runAsRootUser := dig "runAsRootUser" false $config }}
   {{- $extraCreateMetadataEnabled := dig "extraCreateMetadataEnabled" false $config }}
   {{- $controllerImage := $config.controllerImage | required "$config.controllerImage is required" }}
   {{- $provisionerTimeout := $config.provisionerTimeout | default "600s" }}
@@ -61,6 +62,7 @@ memory: 50Mi
   {{- $additionalContainers := $config.additionalContainers }}
   {{- $livenessProbePort := $config.livenessProbePort | default 9808 }}
   {{- $initContainers := $config.initContainers }}
+  {{- $customNodeSelector := $config.customNodeSelector }}
 
   {{- $kubernetesSemVer := semver $context.Values.global.discovery.kubernetesVersion }}
 
@@ -168,6 +170,11 @@ metadata:
   name: {{ $fullname }}
   namespace: d8-{{ $context.Chart.Name }}
   {{- include "helm_lib_module_labels" (list $context (dict "app" "csi-controller")) | nindent 2 }}
+
+  {{- if eq $context.Chart.Name "csi-nfs" }}
+  annotations:
+    pod-reloader.deckhouse.io/auto: "true"
+  {{- end }}
 spec:
   replicas: 1
   revisionHistoryLimit: 2
@@ -190,13 +197,18 @@ spec:
       imagePullSecrets:
       - name: deckhouse-registry
       {{- include "helm_lib_priority_class" (tuple $context "system-cluster-critical") | nindent 6 }}
+      {{- if $customNodeSelector }}
+      nodeSelector:
+        {{- $customNodeSelector | toYaml | nindent 8 }}
+      {{- else }}
       {{- include "helm_lib_node_selector" (tuple $context "master") | nindent 6 }}
+      {{- end }}
       {{- include "helm_lib_tolerations" (tuple $context "any-node" "with-uninitialized") | nindent 6 }}
-{{- if $context.Values.global.enabledModules | has "csi-nfs" }}
-      {{- include "helm_lib_module_pod_security_context_runtime_default" . | nindent 6 }}
-{{- else }}
+      {{- if $runAsRootUser }}
+      {{- include "helm_lib_module_pod_security_context_run_as_user_root" . | nindent 6 }}
+      {{- else }}
       {{- include "helm_lib_module_pod_security_context_run_as_user_deckhouse" . | nindent 6 }}
-{{- end }}
+      {{- end }}
       serviceAccountName: csi
       containers:
       - name: provisioner
@@ -435,9 +447,11 @@ spec:
       - name: tmp
         emptyDir: {}
       {{- end }}
-    {{- if $additionalControllerVolumes }}
-      {{- $additionalControllerVolumes | toYaml | nindent 6 }}
-    {{- end }}
+
+      {{- if $additionalControllerVolumes }}
+        {{- $additionalControllerVolumes | toYaml | nindent 6 }}
+      {{- end }}
+
   {{- end }}
 {{- end }}
 
