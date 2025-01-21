@@ -28,6 +28,13 @@ import (
 	fake "k8s.io/client-go/metadata/fake"
 )
 
+var (
+	ns      = metav1.TypeMeta{APIVersion: "v1", Kind: "namespaces"}
+	nodes   = metav1.TypeMeta{APIVersion: "v1", Kind: "nodes"}
+	pods    = metav1.TypeMeta{APIVersion: "v1", Kind: "pods"}
+	ingress = metav1.TypeMeta{APIVersion: "networking.k8s.io/v1", Kind: "Ingress"}
+)
+
 func removeCreatedTimestamp(data interface{}) interface{} {
 	switch v := data.(type) {
 	case map[string]interface{}:
@@ -87,23 +94,17 @@ func TestThresholdLabel(t *testing.T) {
 func Test_enabled(t *testing.T) {
 	testJSON := `[
 		{
-			"help":"",
+			"name":"extended_monitoring_enabled","type":0,"help":"",
 			"metric":[
 				{"counter":{"value":1},"label":[{"name":"namespace","value":"namespace1"}]},
 				{"counter":{"value":0},"label":[{"name":"namespace","value":"namespace2"}]}
-			],
-			"name":"extended_monitoring_enabled",
-			"type":0
-		}]`
+			]}]`
 
 	scheme := runtime.NewScheme()
 	_ = metav1.AddMetaToScheme(scheme)
 	FakeClient := fake.NewSimpleMetadataClient(scheme)
 	if _, err := FakeClient.Resource(resource_namespaces).(fake.MetadataClient).CreateFake(&metav1.PartialObjectMetadata{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "v1",
-			Kind:       "namespaces",
-		},
+		TypeMeta: ns,
 		ObjectMeta: metav1.ObjectMeta{
 			Name:   "namespace1",
 			Labels: map[string]string{namespaces_enabled_label: "true"},
@@ -112,10 +113,7 @@ func Test_enabled(t *testing.T) {
 		t.Fatalf("CreateFake: %v", err)
 	}
 	if _, err := FakeClient.Resource(resource_namespaces).(fake.MetadataClient).CreateFake(&metav1.PartialObjectMetadata{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "v1",
-			Kind:       "namespaces",
-		},
+		TypeMeta: ns,
 		ObjectMeta: metav1.ObjectMeta{
 			Name:   "namespace2",
 			Labels: map[string]string{namespaces_enabled_label: "false"},
@@ -124,10 +122,7 @@ func Test_enabled(t *testing.T) {
 		t.Fatalf("CreateFake: %v", err)
 	}
 	if _, err := FakeClient.Resource(resource_namespaces).(fake.MetadataClient).CreateFake(&metav1.PartialObjectMetadata{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "v1",
-			Kind:       "namespaces",
-		},
+		TypeMeta: ns,
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "namespace3",
 		},
@@ -141,15 +136,13 @@ func Test_enabled(t *testing.T) {
 func Test_node(t *testing.T) {
 	testJSON := `[
 		{
-			"help":"",
+			"name":"extended_monitoring_node_enabled","type":0,"help":"",
 			"metric":[
 				{"counter":{"value":1},"label":[{"name":"node","value":"node1"}]},
 				{"counter":{"value":0},"label":[{"name":"node","value":"node2"}]}
-			],
-			"name":"extended_monitoring_node_enabled",
-			"type":0
+			]
 		},{
-			"help":"",
+			"name":"extended_monitoring_node_threshold","type":0,"help":"",
 			"metric":[
 				{"counter":{"value":80},"label":[{"name":"node","value":"node1"},{"name":"threshold","value":"disk-bytes-critical"}]},
 				{"counter":{"value":70},"label":[{"name":"node","value":"node1"},{"name":"threshold","value":"disk-bytes-warning"}]},
@@ -157,19 +150,13 @@ func Test_node(t *testing.T) {
 				{"counter":{"value":90},"label":[{"name":"node","value":"node1"},{"name":"threshold","value":"disk-inodes-warning"}]},
 				{"counter":{"value":9},"label":[{"name":"node","value":"node1"},{"name":"threshold","value":"load-average-per-core-critical"}]},
 				{"counter":{"value":3},"label":[{"name":"node","value":"node1"},{"name":"threshold","value":"load-average-per-core-warning"}]}
-			],
-			"name":"extended_monitoring_node_threshold",
-			"type":0
-		}]`
+			]}]`
 
 	scheme := runtime.NewScheme()
 	_ = metav1.AddMetaToScheme(scheme)
 	FakeClient := fake.NewSimpleMetadataClient(scheme)
 	if _, err := FakeClient.Resource(resource_nodes).(fake.MetadataClient).CreateFake(&metav1.PartialObjectMetadata{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "v1",
-			Kind:       "nodes",
-		},
+		TypeMeta: nodes,
 		ObjectMeta: metav1.ObjectMeta{
 			Name:   "node1",
 			Labels: map[string]string{labelThesholdPrefix + "load-average-per-core-critical": "9"},
@@ -178,10 +165,7 @@ func Test_node(t *testing.T) {
 		t.Fatalf("CreateFake: %v", err)
 	}
 	if _, err := FakeClient.Resource(resource_nodes).(fake.MetadataClient).CreateFake(&metav1.PartialObjectMetadata{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "v1",
-			Kind:       "nodes",
-		},
+		TypeMeta: nodes,
 		ObjectMeta: metav1.ObjectMeta{
 			Name:   "node2",
 			Labels: map[string]string{namespaces_enabled_label: "false"},
@@ -195,50 +179,40 @@ func Test_node(t *testing.T) {
 
 func Test_pod(t *testing.T) {
 	testJSON := `[
-        {
-        	"name": "extended_monitoring_enabled",
-        	"help": "",
-        	"type": 0,
-        	"metric": [
+		{
+			"name": "extended_monitoring_enabled","help": "","type": 0,
+			"metric": [
 				{"label":[{"name": "namespace","value": "ns1"}],"counter":{"value": 1}}
 			]
-        },{
-            "name": "extended_monitoring_pod_enabled",
-            "help": "",
-            "type": 0,
-            "metric": [
-              	{"label": [{"name": "namespace", "value": "ns1"},{"name": "pod", "value": "pod1"}],"counter": {"value": 0}},
-              	{"label": [{"name": "namespace", "value": "ns1"},{"name": "pod", "value": "pod2"}],"counter": {"value": 1}},
-              	{"label": [{"name": "namespace", "value": "ns1"},{"name": "pod", "value": "pod3"}],"counter": {"value": 1}}
-            ]
-        },{
-            "name": "extended_monitoring_pod_threshold",
-            "help": "",
-            "type": 0,
-            "metric": [
-              	{"label": [{"name": "namespace", "value": "ns1"},{"name": "pod", "value": "pod2"},{"name": "threshold", "value": "container-throttling-critical"}],"counter": {"value": 50}},
-              	{"label": [{"name": "namespace", "value": "ns1"},{"name": "pod", "value": "pod2"},{"name": "threshold", "value": "container-throttling-warning"}],"counter": {"value": 25}},
-              	{"label": [{"name": "namespace", "value": "ns1"},{"name": "pod", "value": "pod2"},{"name": "threshold", "value": "disk-bytes-critical"}],"counter": {"value": 95}},
-              	{"label": [{"name": "namespace", "value": "ns1"},{"name": "pod", "value": "pod2"},{"name": "threshold", "value": "disk-bytes-warning"}],"counter": {"value": 85}},
-              	{"label": [{"name": "namespace", "value": "ns1"},{"name": "pod", "value": "pod2"},{"name": "threshold", "value": "disk-inodes-critical"}],"counter": {"value": 90}},
-              	{"label": [{"name": "namespace", "value": "ns1"},{"name": "pod", "value": "pod2"},{"name": "threshold", "value": "disk-inodes-warning"}],"counter": {"value": 85}},
-              	{"label": [{"name": "namespace", "value": "ns1"},{"name": "pod", "value": "pod3"},{"name": "threshold", "value": "container-throttling-critical"}],"counter": {"value": 50}},
-              	{"label": [{"name": "namespace", "value": "ns1"},{"name": "pod", "value": "pod3"},{"name": "threshold", "value": "container-throttling-warning"}],"counter": {"value": 25}},
-              	{"label": [{"name": "namespace", "value": "ns1"},{"name": "pod", "value": "pod3"},{"name": "threshold", "value": "disk-bytes-critical"}],"counter": {"value": 95}},
-              	{"label": [{"name": "namespace", "value": "ns1"},{"name": "pod", "value": "pod3"},{"name": "threshold", "value": "disk-bytes-warning"}],"counter": {"value": 85}},
-              	{"label": [{"name": "namespace", "value": "ns1"},{"name": "pod", "value": "pod3"},{"name": "threshold", "value": "disk-inodes-critical"}],"counter": {"value": 90}},
-              	{"label": [{"name": "namespace", "value": "ns1"},{"name": "pod", "value": "pod3"},{"name": "threshold", "value": "disk-inodes-warning"}],"counter": {"value": 85}}
-            ]
-		}]`
+		},{
+			"name": "extended_monitoring_pod_enabled","help": "","type": 0,
+			"metric": [
+				{"label": [{"name": "namespace", "value": "ns1"},{"name": "pod", "value": "pod1"}],"counter": {"value": 0}},
+				{"label": [{"name": "namespace", "value": "ns1"},{"name": "pod", "value": "pod2"}],"counter": {"value": 1}},
+				{"label": [{"name": "namespace", "value": "ns1"},{"name": "pod", "value": "pod3"}],"counter": {"value": 1}}
+			]
+		},{
+			"name": "extended_monitoring_pod_threshold","help": "","type": 0,
+			"metric": [
+				{"label": [{"name": "namespace", "value": "ns1"},{"name": "pod", "value": "pod2"},{"name": "threshold", "value": "container-throttling-critical"}],"counter": {"value": 50}},
+				{"label": [{"name": "namespace", "value": "ns1"},{"name": "pod", "value": "pod2"},{"name": "threshold", "value": "container-throttling-warning"}],"counter": {"value": 25}},
+				{"label": [{"name": "namespace", "value": "ns1"},{"name": "pod", "value": "pod2"},{"name": "threshold", "value": "disk-bytes-critical"}],"counter": {"value": 95}},
+				{"label": [{"name": "namespace", "value": "ns1"},{"name": "pod", "value": "pod2"},{"name": "threshold", "value": "disk-bytes-warning"}],"counter": {"value": 85}},
+				{"label": [{"name": "namespace", "value": "ns1"},{"name": "pod", "value": "pod2"},{"name": "threshold", "value": "disk-inodes-critical"}],"counter": {"value": 90}},
+				{"label": [{"name": "namespace", "value": "ns1"},{"name": "pod", "value": "pod2"},{"name": "threshold", "value": "disk-inodes-warning"}],"counter": {"value": 85}},
+				{"label": [{"name": "namespace", "value": "ns1"},{"name": "pod", "value": "pod3"},{"name": "threshold", "value": "container-throttling-critical"}],"counter": {"value": 50}},
+				{"label": [{"name": "namespace", "value": "ns1"},{"name": "pod", "value": "pod3"},{"name": "threshold", "value": "container-throttling-warning"}],"counter": {"value": 25}},
+				{"label": [{"name": "namespace", "value": "ns1"},{"name": "pod", "value": "pod3"},{"name": "threshold", "value": "disk-bytes-critical"}],"counter": {"value": 95}},
+				{"label": [{"name": "namespace", "value": "ns1"},{"name": "pod", "value": "pod3"},{"name": "threshold", "value": "disk-bytes-warning"}],"counter": {"value": 85}},
+				{"label": [{"name": "namespace", "value": "ns1"},{"name": "pod", "value": "pod3"},{"name": "threshold", "value": "disk-inodes-critical"}],"counter": {"value": 90}},
+				{"label": [{"name": "namespace", "value": "ns1"},{"name": "pod", "value": "pod3"},{"name": "threshold", "value": "disk-inodes-warning"}],"counter": {"value": 85}}
+			]}]`
 
 	scheme := runtime.NewScheme()
 	_ = metav1.AddMetaToScheme(scheme)
 	FakeClient := fake.NewSimpleMetadataClient(scheme)
 	if _, err := FakeClient.Resource(resource_namespaces).(fake.MetadataClient).CreateFake(&metav1.PartialObjectMetadata{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "v1",
-			Kind:       "namespaces",
-		},
+		TypeMeta: ns,
 		ObjectMeta: metav1.ObjectMeta{
 			Name:   "ns1",
 			Labels: map[string]string{namespaces_enabled_label: "true"},
@@ -247,10 +221,7 @@ func Test_pod(t *testing.T) {
 		t.Fatalf("CreateFake: %v", err)
 	}
 	if _, err := FakeClient.Resource(resource_namespaces).(fake.MetadataClient).CreateFake(&metav1.PartialObjectMetadata{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "v1",
-			Kind:       "namespaces",
-		},
+		TypeMeta: ns,
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "ns2",
 		},
@@ -258,10 +229,7 @@ func Test_pod(t *testing.T) {
 		t.Fatalf("CreateFake: %v", err)
 	}
 	if _, err := FakeClient.Resource(resource_pods).Namespace("ns1").(fake.MetadataClient).CreateFake(&metav1.PartialObjectMetadata{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "v1",
-			Kind:       "pods",
-		},
+		TypeMeta: pods,
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "pod1",
 			Namespace: "ns1",
@@ -271,10 +239,7 @@ func Test_pod(t *testing.T) {
 		t.Fatalf("CreateFake: %v", err)
 	}
 	if _, err := FakeClient.Resource(resource_pods).Namespace("ns1").(fake.MetadataClient).CreateFake(&metav1.PartialObjectMetadata{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "v1",
-			Kind:       "pods",
-		},
+		TypeMeta: pods,
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "pod2",
 			Namespace: "ns1",
@@ -283,10 +248,7 @@ func Test_pod(t *testing.T) {
 		t.Fatalf("CreateFake: %v", err)
 	}
 	if _, err := FakeClient.Resource(resource_pods).Namespace("ns1").(fake.MetadataClient).CreateFake(&metav1.PartialObjectMetadata{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "v1",
-			Kind:       "pods",
-		},
+		TypeMeta: pods,
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "pod3",
 			Namespace: "ns1",
@@ -296,10 +258,7 @@ func Test_pod(t *testing.T) {
 		t.Fatalf("CreateFake: %v", err)
 	}
 	if _, err := FakeClient.Resource(resource_pods).Namespace("ns2").(fake.MetadataClient).CreateFake(&metav1.PartialObjectMetadata{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "v1",
-			Kind:       "pods",
-		},
+		TypeMeta: pods,
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "pod4",
 			Namespace: "ns2",
@@ -312,8 +271,92 @@ func Test_pod(t *testing.T) {
 	assert.JSONEq(t, testJSON, cleanedJSON(t, FakeClient))
 }
 
-// prometheus.CounterOpts{Name: "extended_monitoring_ingress_enabled"},
-// prometheus.CounterOpts{Name: "extended_monitoring_ingress_threshold"},
+func Test_ingress(t *testing.T) {
+	testJSON := `[
+		{
+			"name":"extended_monitoring_enabled","help":"","type":0,
+			"metric":[
+				{"counter":{"value":1},"label":[{"name":"namespace","value":"ns1"}]}
+			]
+		},{
+			"name":"extended_monitoring_ingress_enabled","type":0,"help":"",
+			"metric":[
+				{"counter":{"value":0},"label":[{"name":"ingress","value":"ing1"},{"name":"namespace","value":"ns1"}]},
+				{"counter":{"value":1},"label":[{"name":"ingress","value":"ing2"},{"name":"namespace","value":"ns1"}]},
+				{"counter":{"value":1},"label":[{"name":"ingress","value":"ing3"},{"name":"namespace","value":"ns1"}]}
+			]	
+		},{
+			"name":"extended_monitoring_ingress_threshold","type":0,"help":"",
+			"metric":[
+				{"counter":{"value":20},"label":[{"name":"ingress","value":"ing2"},{"name":"namespace","value":"ns1"},{"name":"threshold","value":"5xx-critical"}]},
+				{"counter":{"value":10},"label":[{"name":"ingress","value":"ing2"},{"name":"namespace","value":"ns1"},{"name":"threshold","value":"5xx-warning"}]},
+				{"counter":{"value":20},"label":[{"name":"ingress","value":"ing3"},{"name":"namespace","value":"ns1"},{"name":"threshold","value":"5xx-critical"}]},
+				{"counter":{"value":10},"label":[{"name":"ingress","value":"ing3"},{"name":"namespace","value":"ns1"},{"name":"threshold","value":"5xx-warning"}]}
+			]}]`
+
+	scheme := runtime.NewScheme()
+	_ = metav1.AddMetaToScheme(scheme)
+	FakeClient := fake.NewSimpleMetadataClient(scheme)
+	if _, err := FakeClient.Resource(resource_namespaces).(fake.MetadataClient).CreateFake(&metav1.PartialObjectMetadata{
+		TypeMeta: ns,
+		ObjectMeta: metav1.ObjectMeta{
+			Name:   "ns1",
+			Labels: map[string]string{namespaces_enabled_label: "true"},
+		},
+	}, metav1.CreateOptions{}); err != nil {
+		t.Fatalf("CreateFake: %v", err)
+	}
+	if _, err := FakeClient.Resource(resource_namespaces).(fake.MetadataClient).CreateFake(&metav1.PartialObjectMetadata{
+		TypeMeta: ns,
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "ns2",
+		},
+	}, metav1.CreateOptions{}); err != nil {
+		t.Fatalf("CreateFake: %v", err)
+	}
+	if _, err := FakeClient.Resource(resource_ingresses).Namespace("ns1").(fake.MetadataClient).CreateFake(&metav1.PartialObjectMetadata{
+		TypeMeta: ingress,
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "ing1",
+			Namespace: "ns1",
+			Labels:    map[string]string{namespaces_enabled_label: "false"},
+		},
+	}, metav1.CreateOptions{}); err != nil {
+		t.Fatalf("CreateFake: %v", err)
+	}
+	if _, err := FakeClient.Resource(resource_ingresses).Namespace("ns1").(fake.MetadataClient).CreateFake(&metav1.PartialObjectMetadata{
+		TypeMeta: ingress,
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "ing2",
+			Namespace: "ns1",
+		},
+	}, metav1.CreateOptions{}); err != nil {
+		t.Fatalf("CreateFake: %v", err)
+	}
+	if _, err := FakeClient.Resource(resource_ingresses).Namespace("ns1").(fake.MetadataClient).CreateFake(&metav1.PartialObjectMetadata{
+		TypeMeta: ingress,
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "ing3",
+			Namespace: "ns1",
+			Labels:    map[string]string{namespaces_enabled_label: "true"},
+		},
+	}, metav1.CreateOptions{}); err != nil {
+		t.Fatalf("CreateFake: %v", err)
+	}
+	if _, err := FakeClient.Resource(resource_ingresses).Namespace("ns2").(fake.MetadataClient).CreateFake(&metav1.PartialObjectMetadata{
+		TypeMeta: ingress,
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "ing4",
+			Namespace: "ns2",
+			Labels:    map[string]string{namespaces_enabled_label: "true"},
+		},
+	}, metav1.CreateOptions{}); err != nil {
+		t.Fatalf("CreateFake: %v", err)
+	}
+
+	assert.JSONEq(t, testJSON, cleanedJSON(t, FakeClient))
+}
+
 // prometheus.CounterOpts{Name: "extended_monitoring_deployment_enabled"},
 // prometheus.CounterOpts{Name: "extended_monitoring_deployment_threshold"},
 // prometheus.CounterOpts{Name: "extended_monitoring_daemonset_enabled"},
