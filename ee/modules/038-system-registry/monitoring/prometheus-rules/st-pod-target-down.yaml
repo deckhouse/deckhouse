@@ -3,7 +3,7 @@
   - alert: TargetDown
     expr: |
       label_replace(
-        up{job=~"^system-registry-(distribution|seaweedfs)$"},
+        up{job=~"^system-registry-distribution$"},
         "host_ip",
         "$1",
         "instance",
@@ -24,7 +24,7 @@
   - alert: TargetDown
     expr: |
       label_replace(
-        up{job=~"^system-registry-(distribution|seaweedfs)$"},
+        up{job=~"^system-registry-distribution$"},
         "host_ip",
         "$1",
         "instance",
@@ -45,7 +45,7 @@
   - alert: TargetDown
     expr: |
       label_replace(
-        up{job=~"^system-registry-(distribution|seaweedfs)$"},
+        up{job=~"^system-registry-distribution$"},
         "host_ip",
         "$1",
         "instance",
