@@ -5,7 +5,7 @@ description: "Configuring Huawei Cloud for Deckhouse cloud provider operation."
 
 {% include notice_envinronment.liquid %}
 
-To interact with resources in the HuaweiCloud cloud, Deckhouse components use the HuaweiCloud API. To configure this connection, you need to create a user in the HuaweiCloud IAM service and provide it with the necessary permissions.
+Deckhouse components interact with Huawei Cloud resources through the Huawei Cloud API. To configure this connection, you need to create a user in the Huawei Cloud IAM service and provide it with the necessary permissions.
 
 ## Configuring IAM via the web interface
 
@@ -17,7 +17,7 @@ To configure IAM via the web interface, first create a new user group and assign
 1. Click "OK" to create the group.  
 1. Select the newly created group from the list.  
 1. On the "Permissions" tab, click "Authorize".  
-1. Assign the following policies: ECS Admin, VPC Administrator, NAT Admin, DEW KeypairFullAccess.  
+1. Assign the following policies: "ECS Admin", "VPC Administrator", "NAT Admin", "DEW KeypairFullAccess".  
 1. Click "Next", then "OK", and complete the setup by clicking "Finish".  
 
 Then add a new user. Follow these steps:
@@ -31,7 +31,7 @@ Then add a new user. Follow these steps:
 1. Click "Create" to complete the user creation process.
 1. Click "OK" to download the `Access Key ID` and `Secret Access Key`. Make sure to save these credentials in a secure location, as they will be needed to access the API.
 
-## JSON Policies
+## JSON policies
 
 Below are the contents of the policies in JSON format:
 

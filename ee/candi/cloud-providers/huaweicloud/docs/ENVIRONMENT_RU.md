@@ -5,7 +5,7 @@ description: "Настройка окружения Huawei Cloud для рабо
 
 {% include notice_envinronment.liquid %}
 
-Для взаимодействия с ресурсами в облаке HuaweiCloud компоненты Deckhouse используют API HuaweiCloud. Для настройки этого подключения требуется создать пользователя в сервисе HuaweiCloud IAM и назначить ему соответствующие права доступа.
+Для взаимодействия с ресурсами в облаке Huawei Cloud компоненты Deckhouse используют API Huawei Cloud. Для настройки этого подключения требуется создать пользователя в сервисе Huawei Cloud IAM и назначить ему соответствующие права доступа.
 
 ## Настройка IAM через веб-интерфейс
 
@@ -17,7 +17,7 @@ description: "Настройка окружения Huawei Cloud для рабо
 1. Нажмите «OK» для создания группы.
 1. Выберите созданную группу из списка.
 1. На вкладке «Permissions» нажмите «Authorize».
-1. Укажите следующие политики: ECS Admin, VPC Administrator, NAT Admin, DEW KeypairFullAccess.
+1. Укажите следующие политики: «ECS Admin», «VPC Administrator», «NAT Admin», «DEW KeypairFullAccess».
 1. Нажмите «Next», затем «OK» и завершите настройку, нажав «Finish».
 
 Добавьте нового пользователя. Для этого выполните следующие шаги:
@@ -29,13 +29,13 @@ description: "Настройка окружения Huawei Cloud для рабо
 1. Нажмите «Next».
 1. Выберите ранее созданную группу пользователей.
 1. Нажмите «Create», чтобы завершить создание пользователя.
-1. Нажмите «OK», чтобы загрузить `Access Key ID` и `Secret Access Key`. Убедитесь, что вы сохранили эти данные в надежном месте, так как они понадобятся для доступа к API.
+1. Нажмите «OK», чтобы загрузить `Access Key ID` и `Secret Access Key`. Убедитесь, что вы сохранили эти данные в надёжном месте, так как они понадобятся для доступа к API.
 
-## JSON политики
+## JSON-политики
 
 Далее приведено содержание политик в формате JSON:
 
-- Политика ECS Admin:
+- Политика «ECS Admin»:
 
   ```json
   {
@@ -81,7 +81,7 @@ description: "Настройка окружения Huawei Cloud для рабо
   }
   ```
 
-- Политика VPC Administrator:
+- Политика «VPC Administrator»:
 
   ```json
   {
@@ -110,7 +110,7 @@ description: "Настройка окружения Huawei Cloud для рабо
   }
   ```
 
-- Политика NAT Admin:
+- Политика «NAT Admin»:
 
   ```json
   {
@@ -127,7 +127,7 @@ description: "Настройка окружения Huawei Cloud для рабо
   }
   ```
 
-- Политика DEW KeypairFullAccess:
+- Политика «DEW KeypairFullAccess»:
 
   ```json
   {
