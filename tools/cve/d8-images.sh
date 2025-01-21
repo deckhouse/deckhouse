@@ -115,8 +115,9 @@ function __main__() {
         -F "test_title=${MODULE_NAME}: ${IMAGE_NAME}" \
         -F "version=${TAG}" \
         -F "engagement_end_date=${date_iso}" \
-        -F "build_id=${TAG}" \
+        -F "build_id=${IMAGE_HASH}" \
         -F "branch_tag=${TAG}" \
+        -F "apply_tags_to_findings=true" \
       > /dev/null
 
     done
