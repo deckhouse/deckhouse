@@ -87,7 +87,7 @@ shell:
     libcap-devel libpcap-devel \
     clang14.0 clang14.0-tools lld14.0 llvm14.0-devel \
     libcxxabi-devel \
-    libcxx libcxx-static libcxxabi-static llvm14.0-devel llvm-nm
+    libcxx libcxx-static libcxxabi-static llvm14.0-devel
   # - ln -f -s llvm-17.0 "/usr/lib/llvm-17"
   - update-alternatives --install /usr/bin/python python /usr/bin/python3 1
   - apt-get autoclean && apt-get clean
