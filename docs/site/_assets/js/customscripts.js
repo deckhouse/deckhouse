@@ -319,9 +319,6 @@ document.addEventListener('DOMContentLoaded', function () {
       lang = "en"
     }
   }
-
-  console.log(lang)
-
   const textTooltip = {
     en: {
       copy: 'Copy',
