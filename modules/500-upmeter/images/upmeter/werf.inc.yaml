@@ -1,5 +1,6 @@
 ---
-artifact: {{ .ModuleName }}/build-upmeter-artifact
+image: {{ .ModuleName }}/build-upmeter-artifact
+final: false
 from: {{ .Images.BASE_GOLANG_20_ALPINE }}
 git:
 - add: /{{ $.ModulePath }}modules/500-{{ $.ModuleName }}/images/{{ $.ImageName }}/
@@ -33,19 +34,19 @@ shell:
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
 import:
-- artifact: {{ .ModuleName }}/build-upmeter-artifact
+- image: {{ .ModuleName }}/build-upmeter-artifact
   add: /src/pkg/db/migrations/agent
   to: /data/migrations/agent
   before: setup
-- artifact: {{ .ModuleName }}/build-upmeter-artifact
+- image: {{ .ModuleName }}/build-upmeter-artifact
   add: /src/pkg/db/migrations/server
   to: /data/migrations/server
   before: setup
-- artifact: {{ .ModuleName }}/build-upmeter-artifact
+- image: {{ .ModuleName }}/build-upmeter-artifact
   add: /src/migrate
   to: /migrate
   before: setup
-- artifact: {{ .ModuleName }}/build-upmeter-artifact
+- image: {{ .ModuleName }}/build-upmeter-artifact
   add: /src/upmeter
   to: /upmeter
   before: setup

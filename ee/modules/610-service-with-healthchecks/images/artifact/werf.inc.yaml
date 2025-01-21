@@ -1,5 +1,6 @@
 ---
-artifact: {{ $.ModuleName }}/service-with-healthchecks-build-artifact
+image: {{ $.ModuleName }}/service-with-healthchecks-build-artifact
+final: false
 from: {{ $.Images.BASE_GOLANG_22_ALPINE }}
 git:
 - add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}

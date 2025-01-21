@@ -12,7 +12,8 @@
 # and https://packages.altlinux.org/ru/p10/srpms/iptables/specfiles/2623143627906179825
 # #####################################################################
 ---
-artifact: {{ $.ModuleName }}/iptables-artifact
+image: {{ $.ModuleName }}/iptables-artifact
+final: false
 fromImage: {{ $.ModuleName }}/base-cilium-dev
 shell:
   beforeInstall:

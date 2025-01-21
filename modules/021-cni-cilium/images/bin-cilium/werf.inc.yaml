@@ -4,8 +4,8 @@
 # Build cilium-agent binaries
 # Based on https://github.com/cilium/cilium/blob/v1.14.14/images/cilium/Dockerfile (builder stage)
 ---
-artifact: {{ $.ModuleName }}/cilium-artifact
-fromCacheVersion: "2024-11-21.0"
+image: {{ $.ModuleName }}/cilium-artifact
+final: false
 fromImage: {{ $.ModuleName }}/base-cilium-dev
 git:
 - add: /{{ $.ModulePath }}modules/021-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
@@ -14,7 +14,7 @@ git:
     install:
       - '**/*'
 import:
-- artifact: {{ $.ModuleName }}/llvm-artifact
+- image: {{ $.ModuleName }}/llvm-artifact
   add: /usr/local/bin/
   to: /usr/local/bin
   before: install
@@ -22,15 +22,15 @@ import:
   - clang
   - llc
   - llvm-objcopy
-- artifact: {{ $.ModuleName }}/bpftool-artifact
+- image: {{ $.ModuleName }}/bpftool-artifact
   add: /usr/local/bin/bpftool
   to: /usr/local/bin/bpftool
   before: install
-- artifact: {{ $.ModuleName }}/cni-plugins-artifact
+- image: {{ $.ModuleName }}/cni-plugins-artifact
   add: /out/linux/amd64/bin/loopback
   to: /cni/loopback
   before: install
-- artifact: {{ $.ModuleName }}/gops-artifact
+- image: {{ $.ModuleName }}/gops-artifact
   add: /out/linux/amd64/bin/gops
   to: /bin/gops
   before: install

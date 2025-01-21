@@ -4,7 +4,7 @@ image: {{ $.ModuleName }}/{{ $.ImageName }}
 from: {{ $.Images.BASE_SCRATCH }}
 
 import:
-  - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+  - image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
     add: /
     to: /
     includePaths:
@@ -18,7 +18,8 @@ docker:
     version: all
     drbd: {{ $version }}
 ---
-artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+final: false
 from: {{ $.Images.BASE_ALPINE }}
 
 git:
