@@ -37,6 +37,16 @@ spec:
                     tls:
                       description: Настройки защищенного TLS-соединения.
                       properties:
+                        secretRef:
+                          description: |
+                            Ссылка на секрет Kubernetes, содержащий сертификат CA (ca.pem), клиентский сертификат
+                            (crt.pem), приватный ключ (key.pem) и пароль ключа для клиентского сертификата (keyPass)
+                            в формате PEM, закодированном в Base64. Настройки TLS будут переопределены значениями из секрета.
+                            Секрет должен находиться в пространстве имён `d8-log-shipper` и иметь лейбл
+                            `log-shipper.deckhouse.io/watch-secret: true`.
+                          properties:
+                            name:
+                              description: Имя секрета с TLS-сертификатами.
                         caFile:
                           description: Закодированный в Base64 сертификат CA в формате PEM.
                         clientCrt:
@@ -100,6 +110,16 @@ spec:
                     tls:
                       description: Настройки защищенного TLS-соединения.
                       properties:
+                        secretRef:
+                          description: |
+                            Ссылка на секрет Kubernetes, содержащий сертификат CA (ca.pem), клиентский сертификат
+                            (crt.pem), приватный ключ (key.pem) и пароль ключа для клиентского сертификата (keyPass)
+                            в формате PEM, закодированном в Base64. Настройки TLS будут переопределены значениями из секрета.
+                            Секрет должен находиться в пространстве имён `d8-log-shipper` и иметь лейбл
+                            `log-shipper.deckhouse.io/watch-secret: true`.
+                          properties:
+                            name:
+                              description: Имя секрета с TLS сертификатами.
                         caFile:
                           description: Закодированный в Base64 сертификат CA в формате PEM.
                         clientCrt:
@@ -128,6 +148,16 @@ spec:
                     tls:
                       description: Настройки защищенного TLS-соединения.
                       properties:
+                        secretRef:
+                          description: |
+                            Ссылка на секрет Kubernetes, содержащий сертификат CA (ca.pem), клиентский сертификат
+                            (crt.pem), приватный ключ (key.pem) и пароль ключа для клиентского сертификата (keyPass)
+                            в формате PEM, закодированном в Base64. Настройки TLS будут переопределены значениями из секрета.
+                            Секрет должен находиться в пространстве имён `d8-log-shipper` и иметь лейбл
+                            `log-shipper.deckhouse.io/watch-secret: true`.
+                          properties:
+                            name:
+                              description: Имя секрета с TLS-сертификатами.
                         caFile:
                           description: Закодированный в Base64 сертификат CA в формате PEM.
                         clientCrt:
@@ -176,6 +206,16 @@ spec:
                     tls:
                       description: Настройки защищенного TLS-соединения.
                       properties:
+                        secretRef:
+                          description: |
+                            Ссылка на секрет Kubernetes, содержащий сертификат CA (ca.pem), клиентский сертификат
+                            (crt.pem), приватный ключ (key.pem) и пароль ключа для клиентского сертификата (keyPass)
+                            в формате PEM, закодированном в Base64. Настройки TLS будут переопределены значениями из секрета.
+                            Секрет должен находиться в пространстве имён `d8-log-shipper` и иметь лейбл
+                            `log-shipper.deckhouse.io/watch-secret: true`.
+                          properties:
+                            name:
+                              description: Имя секрета с TLS-сертификатами.
                         caFile:
                           description: Закодированный в Base64 сертификат CA в формате PEM.
                         clientCrt:
@@ -208,6 +248,16 @@ spec:
                     tls:
                       description: Настройки защищенного TLS-соединения.
                       properties:
+                        secretRef:
+                          description: |
+                            Ссылка на секрет Kubernetes, содержащий сертификат CA (ca.pem), клиентский сертификат
+                            (crt.pem), приватный ключ (key.pem) и пароль ключа для клиентского сертификата (keyPass)
+                            в формате PEM, закодированном в Base64. Настройки TLS будут переопределены значениями из секрета.
+                            Секрет должен находиться в пространстве имён `d8-log-shipper` и иметь лейбл
+                            `log-shipper.deckhouse.io/watch-secret: true`.
+                          properties:
+                            name:
+                              description: Имя секрета с TLS-сертификатами.
                         caFile:
                           description: Закодированный в Base64 сертификат CA в формате PEM.
                         clientCrt:
@@ -243,6 +293,16 @@ spec:
                         tls:
                           description: Настройки защищенного TLS-соединения.
                           properties:
+                            secretRef:
+                              description: |
+                                Ссылка на секрет Kubernetes, содержащий сертификат CA (ca.pem), клиентский сертификат
+                                (crt.pem), приватный ключ (key.pem) и пароль ключа для клиентского сертификата (keyPass)
+                                в формате PEM, закодированном в Base64. Настройки TLS будут переопределены значениями из секрета.
+                                Секрет должен находиться в пространстве имён `d8-log-shipper` и иметь лейбл
+                                `log-shipper.deckhouse.io/watch-secret: true`.
+                              properties:
+                                name:
+                                  description: Имя секрета с TLS-сертификатами.
                             caFile:
                               description: Закодированный в Base64 сертификат CA в формате PEM.
                             clientCrt:
@@ -274,6 +334,16 @@ spec:
                     tls:
                       description: Настройки защищенного TLS-соединения.
                       properties:
+                        secretRef:
+                          description: |
+                            Ссылка на секрет Kubernetes, содержащий сертификат CA (ca.pem), клиентский сертификат
+                            (crt.pem), приватный ключ (key.pem) и пароль ключа для клиентского сертификата (keyPass)
+                            в формате PEM, закодированном в Base64. Настройки TLS будут переопределены значениями из секрета.
+                            Секрет должен находиться в пространстве имён `d8-log-shipper` и иметь лейбл
+                            `log-shipper.deckhouse.io/watch-secret: true`.
+                          properties:
+                            name:
+                              description: Имя секрета с TLS-сертификатами.
                         caFile:
                           description: Закодированный в Base64 сертификат CA в формате PEM.
                         clientCrt:
