@@ -122,7 +122,7 @@ properties:
     description: |
       The class of the Ingress controller used for the embedded registry.
 
-      By default, the `modules.ingressClass` global value is used.
+      Optional. By default, the `modules.ingressClass` global value is used.
   https:
     type: object
     x-examples:
