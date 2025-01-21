@@ -112,7 +112,7 @@ apiVersions:
             replicas:
               description: |
                 The number of master nodes to create.
-                
+
                 It is important to have an odd number of masters to ensure a quorum.
               type: integer
               minimum: 1
@@ -296,7 +296,7 @@ apiVersions:
                           type: string
                           description: |
                             The name of the image that will be used to create the root disk.
-                            
+
                             > The installation requires Linux OS images with cloud-init pre-installed.
                 etcdDisk:
                   type: object
@@ -392,7 +392,7 @@ apiVersions:
                     type: array
                     description: |
                       The same as the `.spec.taints` field of the [Node](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#taint-v1-core) object.
-                      
+
                       > Only the `effect`, `key`, and `values` fields are available.
                     x-doc-example: |
                       ```yaml
