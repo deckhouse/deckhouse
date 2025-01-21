@@ -86,7 +86,7 @@ func recordMetrics(ctx context.Context, client metadata.Interface, registry *pro
 		[]string{"namespace", "pod"},
 	)
 	podThreshold := prometheus.NewCounterVec(
-		prometheus.CounterOpts{Name: "extended_monitoring_podThreshold"},
+		prometheus.CounterOpts{Name: "extended_monitoring_pod_threshold"},
 		[]string{"namespace", "pod", "threshold"},
 	)
 	ingress_enabled := prometheus.NewCounterVec(
