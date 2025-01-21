@@ -51,6 +51,7 @@ var cloudProviderToProviderKind = map[string]string{
 	"Zvirt":       "ZvirtClusterConfiguration",
 	"Huaweicloud": "HuaweiCloudClusterConfiguration",
 	"Dynamix":     "DynamixClusterConfiguration",
+	"DVP":         "DVPClusterConfiguration",
 }
 
 var cloudProviderSpecificClusterPrefix = map[string]interface{}{
@@ -64,6 +65,7 @@ var cloudProviderSpecificClusterPrefix = map[string]interface{}{
 	"Zvirt":       regexp.MustCompile(".+"),
 	"Huaweicloud": regexp.MustCompile(".+"),
 	"Dynamix":     regexp.MustCompile(".+"),
+	"DVP":         regexp.MustCompile(".+"),
 }
 
 type ClusterConfig struct {
@@ -302,6 +304,7 @@ func ValidateClusterConfiguration(
 // "ZvirtClusterConfiguration",
 // "HuaweiCloudClusterConfiguration",
 // "DynamixClusterConfiguration",
+// "DVPClusterConfiguration",
 // ]
 func ValidateProviderSpecificClusterConfiguration(
 	providerSpecificClusterConfiguration string,
