@@ -89,7 +89,7 @@ function __main__() {
     echo ""
     echo " Uploading trivy CVE report for base image ${IMAGE_NAME}"
     echo ""
-    curl -s -X POST \
+    curl -X POST \
       http://${DEFECTDOJO_HOST}/api/v2/reimport-scan/ \
       -H "accept: application/json" \
       -H "Content-Type: multipart/form-data"  \
@@ -113,8 +113,8 @@ function __main__() {
       -F "tags=Base Image,image:${IMAGE_NAME},codeowner:RomanenkoDenys" \
       -F "test_title=Base Image: ${IMAGE_NAME}" \
       -F "version=${IMAGE_VERSION}" \
-      -F "engagement_end_date=${date_iso}" \
-    > /dev/null
+      -F "engagement_end_date=${date_iso}"
+#    > /dev/null
   done
 
   find "$WORKDIR" -type f -exec cat {} + | uniq | sort > out/.trivyignore
