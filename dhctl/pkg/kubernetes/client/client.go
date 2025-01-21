@@ -135,7 +135,7 @@ func (k *KubernetesClient) StartKubernetesProxy() (port string, err error) {
 }
 
 func (k *KubernetesClient) startRemoteKubeProxy(sshCl *ssh.Client) (port string, err error) {
-	err = retry.NewLoop("Starting kube proxy", sshCl.Settings.CountHosts(), 1*time.Second).Run(func() error {
+	err = retry.NewLoop("Starting kube proxy", sshCl.Settings.CountHosts(), 5*time.Second).Run(func() error {
 		log.InfoF("Using host %s\n", sshCl.Settings.Host())
 
 		k.KubeProxy = sshCl.KubeProxy()
