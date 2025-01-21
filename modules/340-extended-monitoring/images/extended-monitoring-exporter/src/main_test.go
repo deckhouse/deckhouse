@@ -34,6 +34,7 @@ var (
 	pods       = metav1.TypeMeta{APIVersion: "v1", Kind: "pods"}
 	ingress    = metav1.TypeMeta{APIVersion: "networking.k8s.io/v1", Kind: "Ingress"}
 	deployment = metav1.TypeMeta{APIVersion: "apps/v1", Kind: "Deployment"}
+	daemonset  = metav1.TypeMeta{APIVersion: "apps/v1", Kind: "DaemonSet"}
 )
 
 func removeCreatedTimestamp(data interface{}) interface{} {
@@ -442,8 +443,91 @@ func Test_deployment(t *testing.T) {
 	assert.JSONEq(t, testJSON, cleanedJSON(t, FakeClient))
 }
 
-// prometheus.CounterOpts{Name: "extended_monitoring_daemonset_enabled"},
-// prometheus.CounterOpts{Name: "extended_monitoring_daemonset_threshold"},
+func Test_daemonset(t *testing.T) {
+	testJSON := `[
+		{
+			"name":"extended_monitoring_daemonset_enabled","type":0,"help":"",
+			"metric":[
+				{"counter":{"value":0},"label":[{"name":"daemonset","value":"ds1"},{"name":"namespace","value":"ns1"}]},
+				{"counter":{"value":1},"label":[{"name":"daemonset","value":"ds2"},{"name":"namespace","value":"ns1"}]},
+				{"counter":{"value":1},"label":[{"name":"daemonset","value":"ds3"},{"name":"namespace","value":"ns1"}]}
+			]
+		},{
+			"name":"extended_monitoring_daemonset_threshold","type":0,"help":"",
+			"metric":[
+				{"counter":{"value":0},"label":[{"name":"daemonset","value":"ds2"},{"name":"namespace","value":"ns1"},{"name":"threshold","value":"replicas-not-ready"}]},
+				{"counter":{"value":0},"label":[{"name":"daemonset","value":"ds3"},{"name":"namespace","value":"ns1"},{"name":"threshold","value":"replicas-not-ready"}]}
+			]
+		},{
+			"name":"extended_monitoring_enabled","type":0,"help":"",
+			"metric":[
+				{"counter":{"value":1},"label":[{"name":"namespace","value":"ns1"}]}
+			]}]`
+
+	scheme := runtime.NewScheme()
+	_ = metav1.AddMetaToScheme(scheme)
+	FakeClient := fake.NewSimpleMetadataClient(scheme)
+	if _, err := FakeClient.Resource(resource_namespaces).(fake.MetadataClient).CreateFake(&metav1.PartialObjectMetadata{
+		TypeMeta: ns,
+		ObjectMeta: metav1.ObjectMeta{
+			Name:   "ns1",
+			Labels: map[string]string{namespaces_enabled_label: "true"},
+		},
+	}, metav1.CreateOptions{}); err != nil {
+		t.Fatalf("CreateFake: %v", err)
+	}
+	if _, err := FakeClient.Resource(resource_namespaces).(fake.MetadataClient).CreateFake(&metav1.PartialObjectMetadata{
+		TypeMeta: ns,
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "ns2",
+		},
+	}, metav1.CreateOptions{}); err != nil {
+		t.Fatalf("CreateFake: %v", err)
+	}
+	if _, err := FakeClient.Resource(resource_daemonsets).Namespace("ns1").(fake.MetadataClient).CreateFake(&metav1.PartialObjectMetadata{
+		TypeMeta: daemonset,
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "ds1",
+			Namespace: "ns1",
+			Labels:    map[string]string{namespaces_enabled_label: "false"},
+		},
+	}, metav1.CreateOptions{}); err != nil {
+		t.Fatalf("CreateFake: %v", err)
+	}
+	if _, err := FakeClient.Resource(resource_daemonsets).Namespace("ns1").(fake.MetadataClient).CreateFake(&metav1.PartialObjectMetadata{
+		TypeMeta: daemonset,
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "ds2",
+			Namespace: "ns1",
+		},
+	}, metav1.CreateOptions{}); err != nil {
+		t.Fatalf("CreateFake: %v", err)
+	}
+	if _, err := FakeClient.Resource(resource_daemonsets).Namespace("ns1").(fake.MetadataClient).CreateFake(&metav1.PartialObjectMetadata{
+		TypeMeta: daemonset,
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "ds3",
+			Namespace: "ns1",
+			Labels:    map[string]string{namespaces_enabled_label: "true"},
+		},
+	}, metav1.CreateOptions{}); err != nil {
+		t.Fatalf("CreateFake: %v", err)
+	}
+	if _, err := FakeClient.Resource(resource_daemonsets).Namespace("ns2").(fake.MetadataClient).CreateFake(&metav1.PartialObjectMetadata{
+		TypeMeta: daemonset,
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "ds4",
+			Namespace: "ns2",
+			Labels:    map[string]string{namespaces_enabled_label: "true"},
+		},
+	}, metav1.CreateOptions{}); err != nil {
+		t.Fatalf("CreateFake: %v", err)
+	}
+
+	assert.JSONEq(t, testJSON, cleanedJSON(t, FakeClient))
+	// println(cleanedJSON(t, FakeClient))
+}
+
 // prometheus.CounterOpts{Name: "extended_monitoring_statefulset_enabled"},
 // prometheus.CounterOpts{Name: "extended_monitoring_statefulset_threshold"},
 // prometheus.CounterOpts{Name: "extended_monitoring_cronjob_enabled"},
