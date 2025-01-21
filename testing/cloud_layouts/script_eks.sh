@@ -333,6 +333,7 @@ done
 kubectl get clustercompliancereports.aquasecurity.github.io cis -o yaml | sed 's#cron: 0 \*/6 \* \* \*#cron: "*/5 * * * *"#' | kubectl apply -f - > /dev/null
 kubectl get clustercompliancereports.aquasecurity.github.io cis -o json |jq '.status.detailReport.results | map(select(.checks | map(.success) | all | not))'
 ENDSSH
+}
 
 function main() {
    >&2 echo "Start cloud test script"
