@@ -122,11 +122,6 @@ function __main__() {
     > /dev/null
   done
 
-        -F "engagement_end_date=${date_iso}" \
-        -F "build_id=${IMAGE_HASH}" \
-        -F "branch_tag=${TAG}" \
-        -F "apply_tags_to_findings=true" \
-
   find "$WORKDIR" -type f -exec cat {} + | uniq | sort > out/.trivyignore
   rm -r "$WORKDIR"
 }
