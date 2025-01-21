@@ -1,5 +1,6 @@
 ---
-artifact: {{ $.ModuleName }}/{{ $.ImageName }}-build-artifact
+image: {{ $.ModuleName }}/{{ $.ImageName }}-build-artifact
+final: false
 from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
 git:
 - add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}
@@ -31,7 +32,7 @@ shell:
 image: {{ $.ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
 import:
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-build-artifact
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-build-artifact
   add: /src/safe-agent-updater
   to: /safe-agent-updater
   before: install

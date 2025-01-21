@@ -2,11 +2,11 @@
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: common/distroless
 import:
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-csi-artifact
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-csi-artifact
   add: /src/vsphere-csi
   to: /bin/vsphere-csi
   before: setup
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
   add: /relocate
   to: /
   before: install
@@ -15,7 +15,8 @@ import:
 docker:
   ENTRYPOINT: ["/bin/vsphere-csi"]
 ---
-artifact: {{ $.ModuleName }}/{{ $.ImageName }}-cloud-provider-vsphere-artifact
+image: {{ $.ModuleName }}/{{ $.ImageName }}-cloud-provider-vsphere-artifact
+final: false
 from: {{ $.Images.BASE_GOLANG_20_ALPINE_DEV }}
 git:
 - add: /{{ $.ModulePath }}modules/030-{{ $.ModuleName }}/images/{{ $.ImageName }}/cloud-provider-vsphere-patches
@@ -36,10 +37,11 @@ shell:
   - cd /src
   - git apply /patches/*.patch --verbose
 ---
-artifact: {{ $.ModuleName }}/{{ $.ImageName }}-csi-artifact
+image: {{ $.ModuleName }}/{{ $.ImageName }}-csi-artifact
+final: false
 from: {{ $.Images.BASE_GOLANG_20_ALPINE_DEV }}
 import:
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-cloud-provider-vsphere-artifact
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-cloud-provider-vsphere-artifact
   add: /src
   to: /cloud-provider-vsphere
   before: install
@@ -71,7 +73,8 @@ shell:
 ---
 {{- $csiBinaries := "/bin/chmod /bin/mount /bin/mkdir /bin/rmdir /bin/umount /bin/findmnt /bin/lsblk /sbin/badblocks /sbin/blockdev /sbin/blk* /sbin/btrfs* /sbin/dumpe2fs /sbin/e2* /sbin/findfs /sbin/fsck* /sbin/fsfreeze /sbin/fstrim /sbin/mke2fs /sbin/mkfs* /sbin/resize2fs /usr/sbin/parted /usr/sbin/xfs* /sbin/mount.nfs* /sbin/umount.nfs*" }}
 ---
-artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+final: false
 from: {{ $.Images.BASE_ALT_DEV }}
 shell:
   setup:

@@ -6,24 +6,25 @@
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
 import:
-- artifact: {{ .ModuleName }}/{{ .ImageName }}-artifact
+- image: {{ .ModuleName }}/{{ .ImageName }}-artifact
   add: /dashboard-web
   before: setup
-- artifact: {{ .ModuleName }}/{{ .ImageName }}-node-artifact
+- image: {{ .ModuleName }}/{{ .ImageName }}-node-artifact
   add: /src/modules/web/.dist/public
   to: /public
   before: setup
-- artifact: {{ .ModuleName }}/{{ .ImageName }}-node-artifact
+- image: {{ .ModuleName }}/{{ .ImageName }}-node-artifact
   add: /src/modules/web/.dist/public/locale_conf.json
   to: /locale_conf.json
   before: setup
 docker:
   ENTRYPOINT: ["/dashboard-web"]
 ---
-artifact: {{ .ModuleName }}/{{ .ImageName }}-artifact
+image: {{ .ModuleName }}/{{ .ImageName }}-artifact
+final: false
 from: {{ .Images.BASE_GOLANG_23_ALPINE }}
 import:
-- artifact: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
   add: /src
   before: install
 mount:
@@ -38,10 +39,11 @@ shell:
   - chown 64535:64535 /dashboard-web
   - chmod 0755 /dashboard-web
 ---
-artifact: {{ .ModuleName }}/{{ .ImageName }}-node-artifact
+image: {{ .ModuleName }}/{{ .ImageName }}-node-artifact
+final: false
 from: {{ .Images.BASE_NODE_20_ALPINE }}
 import:
-- artifact: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
   add: /src
   before: install
 mount:
@@ -61,7 +63,8 @@ shell:
   - ./install_logout.sh
   - rm -r node_modules .angular .yarn /root/.cache /root/.yarn #1Gi
 ---
-artifact: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+final: false
 fromImage: common/src-artifact
 git:
 - add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/patches
