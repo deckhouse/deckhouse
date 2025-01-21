@@ -111,7 +111,7 @@ function __main__() {
         -F "group_by=component_name+component_version" \
         -F "lead=1" \
         -F "deduplication_on_engagement=false" \
-        -F "tags=Deckhouse Image,module:${MODULE_NAME},image:${IMAGE_NAME},branch:${TAG}${codeowner_tags}" \
+        -F "tags=Deckhouse Image,module:${MODULE_NAME},image:${IMAGE_NAME},branch:test_branch${codeowner_tags}" \
         -F "test_title=${MODULE_NAME}: ${IMAGE_NAME}" \
         -F "version=${TAG}" \
         -F "engagement_end_date=${date_iso}" \
