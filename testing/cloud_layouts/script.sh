@@ -439,7 +439,8 @@ function run-test() {
   wait_cluster_ready || return $?
 
   if [[ $CIS_ENABLED == "true" ]]; then
-    get_cis_report
+    REPORT=$(get_cis_report)
+    >&2 echo $REPORT | jq '.'
   fi
 
   if [[ -n ${SWITCH_TO_IMAGE_TAG} ]]; then
@@ -1128,20 +1129,28 @@ set -Eeuo pipefail
 sudo -i
 testRunAttempts=20
 for ((i=1; i<=$testRunAttempts; i++)); do
-  FAILED=$(kubectl get clustercompliancereports.aquasecurity.github.io cis -o wide --no-headers 2>/dev/null | awk '{print $3}')
-  PASSED=$(kubectl get clustercompliancereports.aquasecurity.github.io cis -o wide --no-headers 2>/dev/null | awk '{print $4}')
-  if [[ $PASSED && "$((PASSED+$FAILED))" -gt '100' ]]; then
-    echo "CIS report is ready"
+  FAILED=$(kubectl get clustercompliancereports.aquasecurity.github.io cis -o wide --no-headers 2>/dev/null | awk '{print $4}')
+  PASSED=$(kubectl get clustercompliancereports.aquasecurity.github.io cis -o wide --no-headers 2>/dev/null | awk '{print $3}')
+  CRAR=$(kubectl get clusterrbacassessmentreports.aquasecurity.github.io |wc -l)
+  if [[ -z $FAILED ]]
+    then
+      FAILED=0
+  fi
+  if [[ -z $PASSED ]]
+    then
+      PASSED=0
+  fi
+  if [[ $PASSED && "$(($PASSED+$FAILED))" -gt '100' && $CRAR -gt 290 ]]; then
+    >&2 echo "CIS report is ready"
     break
   else
-    echo "CIS report is still not ready. Attemption: $i/$testRunAttempts"
+    >&2 echo "Still not ready. Attemption: #$i"
     sleep 20
   fi
 done
-REPORT=$(kubectl get clustercompliancereports.aquasecurity.github.io cis -o json |jq '.status.detailReport.results | map(select(.checks | map(.success) | all | not))')
->&2 echo $REPORT
+kubectl get clustercompliancereports.aquasecurity.github.io cis -o yaml | sed 's#cron: 0 \*/6 \* \* \*#cron: "*/5 * * * *"#' | kubectl apply -f - > /dev/null
+kubectl get clustercompliancereports.aquasecurity.github.io cis -o json |jq '.status.detailReport.results | map(select(.checks | map(.success) | all | not))'
 ENDSSH
-}
 
 function main() {
   >&2 echo "Start cloud test script"
