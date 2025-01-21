@@ -19,7 +19,6 @@
 
 # Prepare vars
 registry_pki_path="/etc/kubernetes/system-registry/pki"
-etcd_pki_path="/etc/kubernetes/pki/etcd"
 
 bb-kubectl --kubeconfig=/etc/kubernetes/admin.conf get ns d8-system || bb-kubectl --kubeconfig=/etc/kubernetes/admin.conf create ns d8-system
 
