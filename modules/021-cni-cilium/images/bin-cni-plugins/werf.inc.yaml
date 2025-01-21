@@ -41,6 +41,7 @@ shell:
   - export GO_VERSION=${GOLANG_VERSION} GOPROXY={{ $.GOPROXY }}
   - export GOOS=linux GOARCH=amd64 CGO_ENABLED=0
   - cd /src/plugins
+  - go mod tidy && go mod vendor && go mod verify
   - ./build_linux.sh -ldflags '-extldflags -static -X github.com/containernetworking/plugins/pkg/utils/buildversion.BuildVersion={{ $cniVersion }}'
   - mkdir -p /out/linux/amd64/bin
   - cp -f /src/plugins/bin/* /out/linux/amd64/bin
