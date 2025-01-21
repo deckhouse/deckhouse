@@ -94,9 +94,6 @@ properties:
         type: string
         description: |
           Root CA certificate to validate the container registry’s HTTPS certificate (if self-signed certificates are used).
-        default: ""
-        x-example:
-          - ""
       ttl:
         type: string
         pattern: '(^(?:(\d+)h)?(?:(\d+)m)?(?:(\d+)s)?(?:(\d+)ms)?(?:(\d+)(µs|us))?(?:(\d+)ns)?$)|(^(0)$)'
