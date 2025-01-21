@@ -77,6 +77,20 @@ func cleanedJSON(t *testing.T, client *fake.FakeMetadataClient) string {
 	return string(cleanedJSON)
 }
 
+func createResource(client *fake.FakeMetadataClient, resource schema.GroupVersionResource, namespace string, meta metav1.TypeMeta, object metav1.ObjectMeta) error {
+	var request fake.MetadataClient
+	if namespace != "" {
+		request = client.Resource(resource).Namespace(namespace).(fake.MetadataClient)
+	} else {
+		request = client.Resource(resource).(fake.MetadataClient)
+	}
+	_, err := request.CreateFake(&metav1.PartialObjectMetadata{
+		TypeMeta:   meta,
+		ObjectMeta: object,
+	}, metav1.CreateOptions{})
+	return err
+}
+
 func TestEnabledLabel(t *testing.T) {
 	labels := map[string]string{namespaces_enabled_label: "true"}
 	assert.Equal(t, 1.0, enabledLabel(labels))
@@ -94,20 +108,6 @@ func TestThresholdLabel(t *testing.T) {
 
 	labels[labelThesholdPrefix+"cpu"] = "invalid"
 	assert.Equal(t, 100.0, thresholdLabel(labels, "cpu", 100.0))
-}
-
-func createResource(client *fake.FakeMetadataClient, resource schema.GroupVersionResource, namespace string, meta metav1.TypeMeta, object metav1.ObjectMeta) error {
-	var request fake.MetadataClient
-	if namespace != "" {
-		request = client.Resource(resource).Namespace(namespace).(fake.MetadataClient)
-	} else {
-		request = client.Resource(resource).(fake.MetadataClient)
-	}
-	_, err := request.CreateFake(&metav1.PartialObjectMetadata{
-		TypeMeta:   meta,
-		ObjectMeta: object,
-	}, metav1.CreateOptions{})
-	return err
 }
 
 func TestMetricsEnabled(t *testing.T) {
@@ -183,7 +183,7 @@ func TestMetricsPod(t *testing.T) {
 				{"label": [{"name": "namespace", "value": "ns1"},{"name": "pod", "value": "pod2"},{"name": "threshold", "value": "container-throttling-critical"}],"counter": {"value": 50}},
 				{"label": [{"name": "namespace", "value": "ns1"},{"name": "pod", "value": "pod2"},{"name": "threshold", "value": "container-throttling-warning"}],"counter": {"value": 25}},
 				{"label": [{"name": "namespace", "value": "ns1"},{"name": "pod", "value": "pod2"},{"name": "threshold", "value": "disk-bytes-critical"}],"counter": {"value": 95}},
-				{"label": [{"name": "namespace", "value": "ns1"},{"name": "pod", "value": "pod2"},{"name": "threshold", "value": "disk-bytes-warning"}],"counter": {"value": 85}},
+				{"label": [{"name": "namespace", "value": "ns1"},{"name": "pod", "value": "pod2"},{"name": "threshold", "value": "disk-bytes-warning"}],"counter": {"value": 84}},
 				{"label": [{"name": "namespace", "value": "ns1"},{"name": "pod", "value": "pod2"},{"name": "threshold", "value": "disk-inodes-critical"}],"counter": {"value": 90}},
 				{"label": [{"name": "namespace", "value": "ns1"},{"name": "pod", "value": "pod2"},{"name": "threshold", "value": "disk-inodes-warning"}],"counter": {"value": 85}},
 				{"label": [{"name": "namespace", "value": "ns1"},{"name": "pod", "value": "pod3"},{"name": "threshold", "value": "container-throttling-critical"}],"counter": {"value": 50}},
@@ -212,6 +212,7 @@ func TestMetricsPod(t *testing.T) {
 	assert.NoError(t, createResource(FakeClient, resource_pods, "ns1", pods, metav1.ObjectMeta{
 		Name:      "pod2",
 		Namespace: "ns1",
+		Labels:    map[string]string{labelThesholdPrefix + "disk-bytes-warning": "84"},
 	}))
 	assert.NoError(t, createResource(FakeClient, resource_pods, "ns1", pods, metav1.ObjectMeta{
 		Name:      "pod3",
@@ -241,7 +242,7 @@ func TestMetricsIngress(t *testing.T) {
 		},{
 			"name":"extended_monitoring_ingress_threshold","type":0,"help":"","metric":[
 				{"counter":{"value":20},"label":[{"name":"ingress","value":"ing2"},{"name":"namespace","value":"ns1"},{"name":"threshold","value":"5xx-critical"}]},
-				{"counter":{"value":10},"label":[{"name":"ingress","value":"ing2"},{"name":"namespace","value":"ns1"},{"name":"threshold","value":"5xx-warning"}]},
+				{"counter":{"value":9},"label":[{"name":"ingress","value":"ing2"},{"name":"namespace","value":"ns1"},{"name":"threshold","value":"5xx-warning"}]},
 				{"counter":{"value":20},"label":[{"name":"ingress","value":"ing3"},{"name":"namespace","value":"ns1"},{"name":"threshold","value":"5xx-critical"}]},
 				{"counter":{"value":10},"label":[{"name":"ingress","value":"ing3"},{"name":"namespace","value":"ns1"},{"name":"threshold","value":"5xx-warning"}]}
 		]}]`
@@ -264,6 +265,7 @@ func TestMetricsIngress(t *testing.T) {
 	assert.NoError(t, createResource(FakeClient, resource_ingresses, "ns1", ingress, metav1.ObjectMeta{
 		Name:      "ing2",
 		Namespace: "ns1",
+		Labels:    map[string]string{labelThesholdPrefix + "5xx-warning": "9"},
 	}))
 	assert.NoError(t, createResource(FakeClient, resource_ingresses, "ns1", ingress, metav1.ObjectMeta{
 		Name:      "ing3",
@@ -288,7 +290,7 @@ func TestMetricsDeployment(t *testing.T) {
 				{"counter":{"value":1},"label":[{"name":"deployment","value":"deploy3"},{"name":"namespace","value":"ns1"}]}
 		]},{
 			"name":"extended_monitoring_deployment_threshold","type":0,"help":"","metric":[
-				{"counter":{"value":0},"label":[{"name":"deployment","value":"deploy2"},{"name":"namespace","value":"ns1"},{"name":"threshold","value":"replicas-not-ready"}]},
+				{"counter":{"value":1},"label":[{"name":"deployment","value":"deploy2"},{"name":"namespace","value":"ns1"},{"name":"threshold","value":"replicas-not-ready"}]},
 				{"counter":{"value":0},"label":[{"name":"deployment","value":"deploy3"},{"name":"namespace","value":"ns1"},{"name":"threshold","value":"replicas-not-ready"}]}
 		]},{
 			"name":"extended_monitoring_enabled","type":0,"help":"","metric":[
@@ -313,6 +315,7 @@ func TestMetricsDeployment(t *testing.T) {
 	assert.NoError(t, createResource(FakeClient, resource_deployments, "ns1", deployment, metav1.ObjectMeta{
 		Name:      "deploy2",
 		Namespace: "ns1",
+		Labels:    map[string]string{labelThesholdPrefix + "replicas-not-ready": "1"},
 	}))
 	assert.NoError(t, createResource(FakeClient, resource_deployments, "ns1", deployment, metav1.ObjectMeta{
 		Name:      "deploy3",
@@ -337,7 +340,7 @@ func TestMetricsDaemonset(t *testing.T) {
 				{"counter":{"value":1},"label":[{"name":"daemonset","value":"ds3"},{"name":"namespace","value":"ns1"}]}
 		]},{
 			"name":"extended_monitoring_daemonset_threshold","type":0,"help":"","metric":[
-				{"counter":{"value":0},"label":[{"name":"daemonset","value":"ds2"},{"name":"namespace","value":"ns1"},{"name":"threshold","value":"replicas-not-ready"}]},
+				{"counter":{"value":1},"label":[{"name":"daemonset","value":"ds2"},{"name":"namespace","value":"ns1"},{"name":"threshold","value":"replicas-not-ready"}]},
 				{"counter":{"value":0},"label":[{"name":"daemonset","value":"ds3"},{"name":"namespace","value":"ns1"},{"name":"threshold","value":"replicas-not-ready"}]}
 		]},{
 			"name":"extended_monitoring_enabled","type":0,"help":"","metric":[
@@ -362,6 +365,7 @@ func TestMetricsDaemonset(t *testing.T) {
 	assert.NoError(t, createResource(FakeClient, resource_daemonsets, "ns1", daemonset, metav1.ObjectMeta{
 		Name:      "ds2",
 		Namespace: "ns1",
+		Labels:    map[string]string{labelThesholdPrefix + "replicas-not-ready": "1"},
 	}))
 	assert.NoError(t, createResource(FakeClient, resource_daemonsets, "ns1", daemonset, metav1.ObjectMeta{
 		Name:      "ds3",
@@ -384,13 +388,13 @@ func TestMetricsStatefulset(t *testing.T) {
 				{"counter":{"value":1},"label":[{"name":"namespace","value":"ns1"}]}
 		]},{
 			"name":"extended_monitoring_statefulset_enabled","type":0,"help":"","metric":[
-				{"counter":{"value":0},"label":[{"name":"namespace","value":"ns1"},{"name":"statefulset","value":"ds1"}]},
-				{"counter":{"value":1},"label":[{"name":"namespace","value":"ns1"},{"name":"statefulset","value":"ds2"}]},
-				{"counter":{"value":1},"label":[{"name":"namespace","value":"ns1"},{"name":"statefulset","value":"ds3"}]}
+				{"counter":{"value":0},"label":[{"name":"namespace","value":"ns1"},{"name":"statefulset","value":"sts1"}]},
+				{"counter":{"value":1},"label":[{"name":"namespace","value":"ns1"},{"name":"statefulset","value":"sts2"}]},
+				{"counter":{"value":1},"label":[{"name":"namespace","value":"ns1"},{"name":"statefulset","value":"sts3"}]}
 		]},{
 			"name":"extended_monitoring_statefulset_threshold","type":0,"help":"","metric":[
-				{"counter":{"value":0},"label":[{"name":"namespace","value":"ns1"},{"name":"statefulset","value":"ds2"},{"name":"threshold","value":"replicas-not-ready"}]},
-				{"counter":{"value":0},"label":[{"name":"namespace","value":"ns1"},{"name":"statefulset","value":"ds3"},{"name":"threshold","value":"replicas-not-ready"}]}
+				{"counter":{"value":1},"label":[{"name":"namespace","value":"ns1"},{"name":"statefulset","value":"sts2"},{"name":"threshold","value":"replicas-not-ready"}]},
+				{"counter":{"value":0},"label":[{"name":"namespace","value":"ns1"},{"name":"statefulset","value":"sts3"},{"name":"threshold","value":"replicas-not-ready"}]}
 		]}]`
 
 	scheme := runtime.NewScheme()
@@ -404,21 +408,22 @@ func TestMetricsStatefulset(t *testing.T) {
 		Name: "ns2",
 	}))
 	assert.NoError(t, createResource(FakeClient, resource_statefulsets, "ns1", statefulset, metav1.ObjectMeta{
-		Name:      "ds1",
+		Name:      "sts1",
 		Namespace: "ns1",
 		Labels:    map[string]string{namespaces_enabled_label: "false"},
 	}))
 	assert.NoError(t, createResource(FakeClient, resource_statefulsets, "ns1", statefulset, metav1.ObjectMeta{
-		Name:      "ds2",
+		Name:      "sts2",
 		Namespace: "ns1",
+		Labels:    map[string]string{labelThesholdPrefix + "replicas-not-ready": "1"},
 	}))
 	assert.NoError(t, createResource(FakeClient, resource_statefulsets, "ns1", statefulset, metav1.ObjectMeta{
-		Name:      "ds3",
+		Name:      "sts3",
 		Namespace: "ns1",
 		Labels:    map[string]string{namespaces_enabled_label: "true"},
 	}))
 	assert.NoError(t, createResource(FakeClient, resource_statefulsets, "ns2", statefulset, metav1.ObjectMeta{
-		Name:      "ds4",
+		Name:      "sts4",
 		Namespace: "ns2",
 		Labels:    map[string]string{namespaces_enabled_label: "true"},
 	}))
@@ -430,9 +435,9 @@ func TestMetricsCronjob(t *testing.T) {
 	testJSON := `[
 		{
 			"name":"extended_monitoring_cronjob_enabled","type":0,"help":"","metric":[
-				{"counter":{"value":0},"label":[{"name":"cronjob","value":"ds1"},{"name":"namespace","value":"ns1"}]},
-				{"counter":{"value":1},"label":[{"name":"cronjob","value":"ds2"},{"name":"namespace","value":"ns1"}]},
-				{"counter":{"value":1},"label":[{"name":"cronjob","value":"ds3"},{"name":"namespace","value":"ns1"}]}
+				{"counter":{"value":0},"label":[{"name":"cronjob","value":"cron1"},{"name":"namespace","value":"ns1"}]},
+				{"counter":{"value":1},"label":[{"name":"cronjob","value":"cron2"},{"name":"namespace","value":"ns1"}]},
+				{"counter":{"value":1},"label":[{"name":"cronjob","value":"cron3"},{"name":"namespace","value":"ns1"}]}
 		]},{
 			"name":"extended_monitoring_enabled","type":0,"help":"","metric":[
 				{"counter":{"value":1},"label":[{"name":"namespace","value":"ns1"}]}
@@ -449,21 +454,21 @@ func TestMetricsCronjob(t *testing.T) {
 		Name: "ns2",
 	}))
 	assert.NoError(t, createResource(FakeClient, resource_cronjobs, "ns1", cronjob, metav1.ObjectMeta{
-		Name:      "ds1",
+		Name:      "cron1",
 		Namespace: "ns1",
 		Labels:    map[string]string{namespaces_enabled_label: "false"},
 	}))
 	assert.NoError(t, createResource(FakeClient, resource_cronjobs, "ns1", cronjob, metav1.ObjectMeta{
-		Name:      "ds2",
+		Name:      "cron2",
 		Namespace: "ns1",
 	}))
 	assert.NoError(t, createResource(FakeClient, resource_cronjobs, "ns1", cronjob, metav1.ObjectMeta{
-		Name:      "ds3",
+		Name:      "cron3",
 		Namespace: "ns1",
 		Labels:    map[string]string{namespaces_enabled_label: "true"},
 	}))
 	assert.NoError(t, createResource(FakeClient, resource_cronjobs, "ns2", cronjob, metav1.ObjectMeta{
-		Name:      "ds4",
+		Name:      "cron4",
 		Namespace: "ns2",
 		Labels:    map[string]string{namespaces_enabled_label: "true"},
 	}))
