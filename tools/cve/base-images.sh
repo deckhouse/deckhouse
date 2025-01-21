@@ -113,7 +113,7 @@ function __main__() {
       -F "lead=1" \
       -F "deduplication_on_engagement=false" \
       -F "tags=Base Image,image:${IMAGE_NAME},codeowner:RomanenkoDenys" \
-      -F "test_title=Base Image: ${IMAGE_NAME}" \
+      -F "test_title=[Base Image]: ${IMAGE_NAME}:${IMAGE_TAG}" \
       -F "version=${IMAGE_TAG}" \
       -F "engagement_end_date=${date_iso}" \
       -F "build_id=${IMAGE_HASH}" \
