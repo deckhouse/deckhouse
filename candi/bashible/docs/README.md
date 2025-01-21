@@ -45,7 +45,6 @@ Bashible consists of small bash scripts, that are called `steps`.
     * `all/` - for all run types
     * `cluster-bootstrap/` - only for the `ClusterBootstrap` run type
   * `bashible.sh.tpl` - bashible steps entrypoint
-  * `detect_bundle.sh` - a script to detect bashible bundle, only for the `ClusterBootstrap`
 * `cloud-providers/` - cloud-providers list
   * `*cloud_provider_name*/`
     * `bashible/`

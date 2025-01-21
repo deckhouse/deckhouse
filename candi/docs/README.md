@@ -96,7 +96,6 @@ If every node in cluster has only one network interface `StaticClusterConfigurat
 #### Preparations
 
 * **SSH connection check**: dhctl will quite the bootstrap process if does not manage connect to the host.
-* **Detect bashible bundle**: execute `/candi/bashible/detect_bundle.sh` to get a bashible bundle name from the host.
 * **Execute bootstrap.sh and bootstrap-network.sh**: scripts to install basdic software (jq, curl) and st up the network.
 
 > **Note!** dhctl will check the ssh connection first.
