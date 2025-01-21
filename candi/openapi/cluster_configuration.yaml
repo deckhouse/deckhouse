@@ -71,6 +71,7 @@ apiVersions:
             - "Zvirt"
             - "Dynamix"
             - "Huaweicloud"
+            - "DVP"
           prefix:
             type: string
             description: |
