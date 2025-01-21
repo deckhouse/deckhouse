@@ -15,6 +15,7 @@ fromImage: common/src-artifact
 final: false
 shell:
   install:
+  - echo {{ .SOURCE_REPO }}/trivy.git /src/trivy-patch | base64 -d
   - git clone --depth 1 --branch v0.55.2 {{ .SOURCE_REPO }}/aquasecurity/trivy-db.git /src/trivy-db
   - git clone --depth 1 --branch v0.55.2 {{ .SOURCE_REPO }}/trivy-db.git /src/trivy-db-patch
   - git clone --depth 1 --branch v0.55.2 {{ .SOURCE_REPO }}/aquasecurity/trivy.git /src/trivy
