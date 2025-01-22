@@ -92,21 +92,21 @@ func createResource(client *fake.FakeMetadataClient, resource schema.GroupVersio
 }
 
 func TestEnabledLabel(t *testing.T) {
-	labels := map[string]string{namespaces_enabled_label: "true"}
+	labels := map[string]string{"extended-monitoring.deckhouse.io/enabled": "true"}
 	assert.Equal(t, 1.0, enabledLabel(labels))
 
-	labels[namespaces_enabled_label] = "false"
+	labels["extended-monitoring.deckhouse.io/enabled"] = "false"
 	assert.Equal(t, 0.0, enabledLabel(labels))
 
-	delete(labels, namespaces_enabled_label)
+	delete(labels, "extended-monitoring.deckhouse.io/enabled")
 	assert.Equal(t, 1.0, enabledLabel(labels))
 }
 
 func TestThresholdLabel(t *testing.T) {
-	labels := map[string]string{labelThesholdPrefix + "cpu": "80"}
+	labels := map[string]string{"threshold.extended-monitoring.deckhouse.io/" + "cpu": "80"}
 	assert.Equal(t, 80.0, thresholdLabel(labels, "cpu", 100.0))
 
-	labels[labelThesholdPrefix+"cpu"] = "invalid"
+	labels["threshold.extended-monitoring.deckhouse.io/"+"cpu"] = "invalid"
 	assert.Equal(t, 100.0, thresholdLabel(labels, "cpu", 100.0))
 }
 
@@ -122,15 +122,15 @@ func TestMetricsEnabled(t *testing.T) {
 	_ = metav1.AddMetaToScheme(scheme)
 	FakeClient := fake.NewSimpleMetadataClient(scheme)
 
-	assert.NoError(t, createResource(FakeClient, resource_namespaces, "", ns, metav1.ObjectMeta{
+	assert.NoError(t, createResource(FakeClient, resourceNamespaces, "", ns, metav1.ObjectMeta{
 		Name:   "namespace1",
-		Labels: map[string]string{namespaces_enabled_label: "true"},
+		Labels: map[string]string{"extended-monitoring.deckhouse.io/enabled": "true"},
 	}))
-	assert.NoError(t, createResource(FakeClient, resource_namespaces, "", ns, metav1.ObjectMeta{
+	assert.NoError(t, createResource(FakeClient, resourceNamespaces, "", ns, metav1.ObjectMeta{
 		Name:   "namespace2",
-		Labels: map[string]string{namespaces_enabled_label: "false"},
+		Labels: map[string]string{"extended-monitoring.deckhouse.io/enabled": "false"},
 	}))
-	assert.NoError(t, createResource(FakeClient, resource_namespaces, "", ns, metav1.ObjectMeta{
+	assert.NoError(t, createResource(FakeClient, resourceNamespaces, "", ns, metav1.ObjectMeta{
 		Name: "namespace3",
 	}))
 
@@ -156,13 +156,13 @@ func TestMetricsNode(t *testing.T) {
 	scheme := runtime.NewScheme()
 	_ = metav1.AddMetaToScheme(scheme)
 	FakeClient := fake.NewSimpleMetadataClient(scheme)
-	assert.NoError(t, createResource(FakeClient, resource_nodes, "", ns, metav1.ObjectMeta{
+	assert.NoError(t, createResource(FakeClient, resourceNodes, "", ns, metav1.ObjectMeta{
 		Name:   "node1",
-		Labels: map[string]string{labelThesholdPrefix + "load-average-per-core-critical": "9"},
+		Labels: map[string]string{"threshold.extended-monitoring.deckhouse.io/" + "load-average-per-core-critical": "9"},
 	}))
-	assert.NoError(t, createResource(FakeClient, resource_nodes, "", ns, metav1.ObjectMeta{
+	assert.NoError(t, createResource(FakeClient, resourceNodes, "", ns, metav1.ObjectMeta{
 		Name:   "node2",
-		Labels: map[string]string{namespaces_enabled_label: "false"},
+		Labels: map[string]string{"extended-monitoring.deckhouse.io/enabled": "false"},
 	}))
 
 	assert.JSONEq(t, testJSON, cleanedJSON(t, FakeClient))
@@ -197,32 +197,32 @@ func TestMetricsPod(t *testing.T) {
 	scheme := runtime.NewScheme()
 	_ = metav1.AddMetaToScheme(scheme)
 	FakeClient := fake.NewSimpleMetadataClient(scheme)
-	assert.NoError(t, createResource(FakeClient, resource_namespaces, "", ns, metav1.ObjectMeta{
+	assert.NoError(t, createResource(FakeClient, resourceNamespaces, "", ns, metav1.ObjectMeta{
 		Name:   "ns1",
-		Labels: map[string]string{namespaces_enabled_label: "true"},
+		Labels: map[string]string{"extended-monitoring.deckhouse.io/enabled": "true"},
 	}))
-	assert.NoError(t, createResource(FakeClient, resource_namespaces, "", ns, metav1.ObjectMeta{
+	assert.NoError(t, createResource(FakeClient, resourceNamespaces, "", ns, metav1.ObjectMeta{
 		Name: "ns2",
 	}))
-	assert.NoError(t, createResource(FakeClient, resource_pods, "ns1", pods, metav1.ObjectMeta{
+	assert.NoError(t, createResource(FakeClient, resourcePods, "ns1", pods, metav1.ObjectMeta{
 		Name:      "pod1",
 		Namespace: "ns1",
-		Labels:    map[string]string{namespaces_enabled_label: "false"},
+		Labels:    map[string]string{"extended-monitoring.deckhouse.io/enabled": "false"},
 	}))
-	assert.NoError(t, createResource(FakeClient, resource_pods, "ns1", pods, metav1.ObjectMeta{
+	assert.NoError(t, createResource(FakeClient, resourcePods, "ns1", pods, metav1.ObjectMeta{
 		Name:      "pod2",
 		Namespace: "ns1",
-		Labels:    map[string]string{labelThesholdPrefix + "disk-bytes-warning": "84"},
+		Labels:    map[string]string{"threshold.extended-monitoring.deckhouse.io/" + "disk-bytes-warning": "84"},
 	}))
-	assert.NoError(t, createResource(FakeClient, resource_pods, "ns1", pods, metav1.ObjectMeta{
+	assert.NoError(t, createResource(FakeClient, resourcePods, "ns1", pods, metav1.ObjectMeta{
 		Name:      "pod3",
 		Namespace: "ns1",
-		Labels:    map[string]string{namespaces_enabled_label: "true"},
+		Labels:    map[string]string{"extended-monitoring.deckhouse.io/enabled": "true"},
 	}))
-	assert.NoError(t, createResource(FakeClient, resource_pods, "ns2", pods, metav1.ObjectMeta{
+	assert.NoError(t, createResource(FakeClient, resourcePods, "ns2", pods, metav1.ObjectMeta{
 		Name:      "pod4",
 		Namespace: "ns2",
-		Labels:    map[string]string{namespaces_enabled_label: "true"},
+		Labels:    map[string]string{"extended-monitoring.deckhouse.io/enabled": "true"},
 	}))
 
 	assert.JSONEq(t, testJSON, cleanedJSON(t, FakeClient))
@@ -250,32 +250,32 @@ func TestMetricsIngress(t *testing.T) {
 	scheme := runtime.NewScheme()
 	_ = metav1.AddMetaToScheme(scheme)
 	FakeClient := fake.NewSimpleMetadataClient(scheme)
-	assert.NoError(t, createResource(FakeClient, resource_namespaces, "", ns, metav1.ObjectMeta{
+	assert.NoError(t, createResource(FakeClient, resourceNamespaces, "", ns, metav1.ObjectMeta{
 		Name:   "ns1",
-		Labels: map[string]string{namespaces_enabled_label: "true"},
+		Labels: map[string]string{"extended-monitoring.deckhouse.io/enabled": "true"},
 	}))
-	assert.NoError(t, createResource(FakeClient, resource_namespaces, "", ns, metav1.ObjectMeta{
+	assert.NoError(t, createResource(FakeClient, resourceNamespaces, "", ns, metav1.ObjectMeta{
 		Name: "ns2",
 	}))
-	assert.NoError(t, createResource(FakeClient, resource_ingresses, "ns1", ingress, metav1.ObjectMeta{
+	assert.NoError(t, createResource(FakeClient, resourceIngresses, "ns1", ingress, metav1.ObjectMeta{
 		Name:      "ing1",
 		Namespace: "ns1",
-		Labels:    map[string]string{namespaces_enabled_label: "false"},
+		Labels:    map[string]string{"extended-monitoring.deckhouse.io/enabled": "false"},
 	}))
-	assert.NoError(t, createResource(FakeClient, resource_ingresses, "ns1", ingress, metav1.ObjectMeta{
+	assert.NoError(t, createResource(FakeClient, resourceIngresses, "ns1", ingress, metav1.ObjectMeta{
 		Name:      "ing2",
 		Namespace: "ns1",
-		Labels:    map[string]string{labelThesholdPrefix + "5xx-warning": "9"},
+		Labels:    map[string]string{"threshold.extended-monitoring.deckhouse.io/" + "5xx-warning": "9"},
 	}))
-	assert.NoError(t, createResource(FakeClient, resource_ingresses, "ns1", ingress, metav1.ObjectMeta{
+	assert.NoError(t, createResource(FakeClient, resourceIngresses, "ns1", ingress, metav1.ObjectMeta{
 		Name:      "ing3",
 		Namespace: "ns1",
-		Labels:    map[string]string{namespaces_enabled_label: "true"},
+		Labels:    map[string]string{"extended-monitoring.deckhouse.io/enabled": "true"},
 	}))
-	assert.NoError(t, createResource(FakeClient, resource_ingresses, "ns2", ingress, metav1.ObjectMeta{
+	assert.NoError(t, createResource(FakeClient, resourceIngresses, "ns2", ingress, metav1.ObjectMeta{
 		Name:      "ing4",
 		Namespace: "ns2",
-		Labels:    map[string]string{namespaces_enabled_label: "true"},
+		Labels:    map[string]string{"extended-monitoring.deckhouse.io/enabled": "true"},
 	}))
 
 	assert.JSONEq(t, testJSON, cleanedJSON(t, FakeClient))
@@ -300,32 +300,32 @@ func TestMetricsDeployment(t *testing.T) {
 	scheme := runtime.NewScheme()
 	_ = metav1.AddMetaToScheme(scheme)
 	FakeClient := fake.NewSimpleMetadataClient(scheme)
-	assert.NoError(t, createResource(FakeClient, resource_namespaces, "", ns, metav1.ObjectMeta{
+	assert.NoError(t, createResource(FakeClient, resourceNamespaces, "", ns, metav1.ObjectMeta{
 		Name:   "ns1",
-		Labels: map[string]string{namespaces_enabled_label: "true"},
+		Labels: map[string]string{"extended-monitoring.deckhouse.io/enabled": "true"},
 	}))
-	assert.NoError(t, createResource(FakeClient, resource_namespaces, "", ns, metav1.ObjectMeta{
+	assert.NoError(t, createResource(FakeClient, resourceNamespaces, "", ns, metav1.ObjectMeta{
 		Name: "ns2",
 	}))
-	assert.NoError(t, createResource(FakeClient, resource_deployments, "ns1", deployment, metav1.ObjectMeta{
+	assert.NoError(t, createResource(FakeClient, resourceDeployments, "ns1", deployment, metav1.ObjectMeta{
 		Name:      "deploy1",
 		Namespace: "ns1",
-		Labels:    map[string]string{namespaces_enabled_label: "false"},
+		Labels:    map[string]string{"extended-monitoring.deckhouse.io/enabled": "false"},
 	}))
-	assert.NoError(t, createResource(FakeClient, resource_deployments, "ns1", deployment, metav1.ObjectMeta{
+	assert.NoError(t, createResource(FakeClient, resourceDeployments, "ns1", deployment, metav1.ObjectMeta{
 		Name:      "deploy2",
 		Namespace: "ns1",
-		Labels:    map[string]string{labelThesholdPrefix + "replicas-not-ready": "1"},
+		Labels:    map[string]string{"threshold.extended-monitoring.deckhouse.io/" + "replicas-not-ready": "1"},
 	}))
-	assert.NoError(t, createResource(FakeClient, resource_deployments, "ns1", deployment, metav1.ObjectMeta{
+	assert.NoError(t, createResource(FakeClient, resourceDeployments, "ns1", deployment, metav1.ObjectMeta{
 		Name:      "deploy3",
 		Namespace: "ns1",
-		Labels:    map[string]string{namespaces_enabled_label: "true"},
+		Labels:    map[string]string{"extended-monitoring.deckhouse.io/enabled": "true"},
 	}))
-	assert.NoError(t, createResource(FakeClient, resource_deployments, "ns2", deployment, metav1.ObjectMeta{
+	assert.NoError(t, createResource(FakeClient, resourceDeployments, "ns2", deployment, metav1.ObjectMeta{
 		Name:      "deploy4",
 		Namespace: "ns2",
-		Labels:    map[string]string{namespaces_enabled_label: "true"},
+		Labels:    map[string]string{"extended-monitoring.deckhouse.io/enabled": "true"},
 	}))
 
 	assert.JSONEq(t, testJSON, cleanedJSON(t, FakeClient))
@@ -350,32 +350,32 @@ func TestMetricsDaemonset(t *testing.T) {
 	scheme := runtime.NewScheme()
 	_ = metav1.AddMetaToScheme(scheme)
 	FakeClient := fake.NewSimpleMetadataClient(scheme)
-	assert.NoError(t, createResource(FakeClient, resource_namespaces, "", ns, metav1.ObjectMeta{
+	assert.NoError(t, createResource(FakeClient, resourceNamespaces, "", ns, metav1.ObjectMeta{
 		Name:   "ns1",
-		Labels: map[string]string{namespaces_enabled_label: "true"},
+		Labels: map[string]string{"extended-monitoring.deckhouse.io/enabled": "true"},
 	}))
-	assert.NoError(t, createResource(FakeClient, resource_namespaces, "", ns, metav1.ObjectMeta{
+	assert.NoError(t, createResource(FakeClient, resourceNamespaces, "", ns, metav1.ObjectMeta{
 		Name: "ns2",
 	}))
-	assert.NoError(t, createResource(FakeClient, resource_daemonsets, "ns1", daemonset, metav1.ObjectMeta{
+	assert.NoError(t, createResource(FakeClient, resourceDaemonsets, "ns1", daemonset, metav1.ObjectMeta{
 		Name:      "ds1",
 		Namespace: "ns1",
-		Labels:    map[string]string{namespaces_enabled_label: "false"},
+		Labels:    map[string]string{"extended-monitoring.deckhouse.io/enabled": "false"},
 	}))
-	assert.NoError(t, createResource(FakeClient, resource_daemonsets, "ns1", daemonset, metav1.ObjectMeta{
+	assert.NoError(t, createResource(FakeClient, resourceDaemonsets, "ns1", daemonset, metav1.ObjectMeta{
 		Name:      "ds2",
 		Namespace: "ns1",
-		Labels:    map[string]string{labelThesholdPrefix + "replicas-not-ready": "1"},
+		Labels:    map[string]string{"threshold.extended-monitoring.deckhouse.io/" + "replicas-not-ready": "1"},
 	}))
-	assert.NoError(t, createResource(FakeClient, resource_daemonsets, "ns1", daemonset, metav1.ObjectMeta{
+	assert.NoError(t, createResource(FakeClient, resourceDaemonsets, "ns1", daemonset, metav1.ObjectMeta{
 		Name:      "ds3",
 		Namespace: "ns1",
-		Labels:    map[string]string{namespaces_enabled_label: "true"},
+		Labels:    map[string]string{"extended-monitoring.deckhouse.io/enabled": "true"},
 	}))
-	assert.NoError(t, createResource(FakeClient, resource_daemonsets, "ns2", daemonset, metav1.ObjectMeta{
+	assert.NoError(t, createResource(FakeClient, resourceDaemonsets, "ns2", daemonset, metav1.ObjectMeta{
 		Name:      "ds4",
 		Namespace: "ns2",
-		Labels:    map[string]string{namespaces_enabled_label: "true"},
+		Labels:    map[string]string{"extended-monitoring.deckhouse.io/enabled": "true"},
 	}))
 
 	assert.JSONEq(t, testJSON, cleanedJSON(t, FakeClient))
@@ -400,32 +400,32 @@ func TestMetricsStatefulset(t *testing.T) {
 	scheme := runtime.NewScheme()
 	_ = metav1.AddMetaToScheme(scheme)
 	FakeClient := fake.NewSimpleMetadataClient(scheme)
-	assert.NoError(t, createResource(FakeClient, resource_namespaces, "", ns, metav1.ObjectMeta{
+	assert.NoError(t, createResource(FakeClient, resourceNamespaces, "", ns, metav1.ObjectMeta{
 		Name:   "ns1",
-		Labels: map[string]string{namespaces_enabled_label: "true"},
+		Labels: map[string]string{"extended-monitoring.deckhouse.io/enabled": "true"},
 	}))
-	assert.NoError(t, createResource(FakeClient, resource_namespaces, "", ns, metav1.ObjectMeta{
+	assert.NoError(t, createResource(FakeClient, resourceNamespaces, "", ns, metav1.ObjectMeta{
 		Name: "ns2",
 	}))
-	assert.NoError(t, createResource(FakeClient, resource_statefulsets, "ns1", statefulset, metav1.ObjectMeta{
+	assert.NoError(t, createResource(FakeClient, resourceStatefulsets, "ns1", statefulset, metav1.ObjectMeta{
 		Name:      "sts1",
 		Namespace: "ns1",
-		Labels:    map[string]string{namespaces_enabled_label: "false"},
+		Labels:    map[string]string{"extended-monitoring.deckhouse.io/enabled": "false"},
 	}))
-	assert.NoError(t, createResource(FakeClient, resource_statefulsets, "ns1", statefulset, metav1.ObjectMeta{
+	assert.NoError(t, createResource(FakeClient, resourceStatefulsets, "ns1", statefulset, metav1.ObjectMeta{
 		Name:      "sts2",
 		Namespace: "ns1",
-		Labels:    map[string]string{labelThesholdPrefix + "replicas-not-ready": "1"},
+		Labels:    map[string]string{"threshold.extended-monitoring.deckhouse.io/" + "replicas-not-ready": "1"},
 	}))
-	assert.NoError(t, createResource(FakeClient, resource_statefulsets, "ns1", statefulset, metav1.ObjectMeta{
+	assert.NoError(t, createResource(FakeClient, resourceStatefulsets, "ns1", statefulset, metav1.ObjectMeta{
 		Name:      "sts3",
 		Namespace: "ns1",
-		Labels:    map[string]string{namespaces_enabled_label: "true"},
+		Labels:    map[string]string{"extended-monitoring.deckhouse.io/enabled": "true"},
 	}))
-	assert.NoError(t, createResource(FakeClient, resource_statefulsets, "ns2", statefulset, metav1.ObjectMeta{
+	assert.NoError(t, createResource(FakeClient, resourceStatefulsets, "ns2", statefulset, metav1.ObjectMeta{
 		Name:      "sts4",
 		Namespace: "ns2",
-		Labels:    map[string]string{namespaces_enabled_label: "true"},
+		Labels:    map[string]string{"extended-monitoring.deckhouse.io/enabled": "true"},
 	}))
 
 	assert.JSONEq(t, testJSON, cleanedJSON(t, FakeClient))
@@ -446,31 +446,31 @@ func TestMetricsCronjob(t *testing.T) {
 	scheme := runtime.NewScheme()
 	_ = metav1.AddMetaToScheme(scheme)
 	FakeClient := fake.NewSimpleMetadataClient(scheme)
-	assert.NoError(t, createResource(FakeClient, resource_namespaces, "", ns, metav1.ObjectMeta{
+	assert.NoError(t, createResource(FakeClient, resourceNamespaces, "", ns, metav1.ObjectMeta{
 		Name:   "ns1",
-		Labels: map[string]string{namespaces_enabled_label: "true"},
+		Labels: map[string]string{"extended-monitoring.deckhouse.io/enabled": "true"},
 	}))
-	assert.NoError(t, createResource(FakeClient, resource_namespaces, "", ns, metav1.ObjectMeta{
+	assert.NoError(t, createResource(FakeClient, resourceNamespaces, "", ns, metav1.ObjectMeta{
 		Name: "ns2",
 	}))
-	assert.NoError(t, createResource(FakeClient, resource_cronjobs, "ns1", cronjob, metav1.ObjectMeta{
+	assert.NoError(t, createResource(FakeClient, resourceCronjobs, "ns1", cronjob, metav1.ObjectMeta{
 		Name:      "cron1",
 		Namespace: "ns1",
-		Labels:    map[string]string{namespaces_enabled_label: "false"},
+		Labels:    map[string]string{"extended-monitoring.deckhouse.io/enabled": "false"},
 	}))
-	assert.NoError(t, createResource(FakeClient, resource_cronjobs, "ns1", cronjob, metav1.ObjectMeta{
+	assert.NoError(t, createResource(FakeClient, resourceCronjobs, "ns1", cronjob, metav1.ObjectMeta{
 		Name:      "cron2",
 		Namespace: "ns1",
 	}))
-	assert.NoError(t, createResource(FakeClient, resource_cronjobs, "ns1", cronjob, metav1.ObjectMeta{
+	assert.NoError(t, createResource(FakeClient, resourceCronjobs, "ns1", cronjob, metav1.ObjectMeta{
 		Name:      "cron3",
 		Namespace: "ns1",
-		Labels:    map[string]string{namespaces_enabled_label: "true"},
+		Labels:    map[string]string{"extended-monitoring.deckhouse.io/enabled": "true"},
 	}))
-	assert.NoError(t, createResource(FakeClient, resource_cronjobs, "ns2", cronjob, metav1.ObjectMeta{
+	assert.NoError(t, createResource(FakeClient, resourceCronjobs, "ns2", cronjob, metav1.ObjectMeta{
 		Name:      "cron4",
 		Namespace: "ns2",
-		Labels:    map[string]string{namespaces_enabled_label: "true"},
+		Labels:    map[string]string{"extended-monitoring.deckhouse.io/enabled": "true"},
 	}))
 
 	assert.JSONEq(t, testJSON, cleanedJSON(t, FakeClient))

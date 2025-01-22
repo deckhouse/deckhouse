@@ -33,33 +33,33 @@ import (
 )
 
 const (
-	labelThesholdPrefix      = "threshold.extended-monitoring.deckhouse.io/"
-	namespaces_enabled_label = "extended-monitoring.deckhouse.io/enabled"
-	interval_recordMetrics   = 5 * time.Minute
-	timeOut_healthz          = time.Duration(3 * interval_recordMetrics)
+	labelThesholdPrefix    = "threshold.extended-monitoring.deckhouse.io/"
+	namespacesEnabledLabel = "extended-monitoring.deckhouse.io/enabled"
+	intervalRecordMetrics  = 5 * time.Minute
+	timeOutHealthz         = time.Duration(3 * intervalRecordMetrics)
 )
 
 var (
-	options               = metav1.ListOptions{TimeoutSeconds: &timeOut}
-	optionsNs             = metav1.ListOptions{LabelSelector: namespaces_enabled_label, TimeoutSeconds: &timeOut}
-	resource_nodes        = schema.GroupVersionResource{Group: "", Version: "v1", Resource: "nodes"}
-	resource_namespaces   = schema.GroupVersionResource{Group: "", Version: "v1", Resource: "namespaces"}
-	resource_pods         = schema.GroupVersionResource{Group: "", Version: "v1", Resource: "pods"}
-	resource_ingresses    = schema.GroupVersionResource{Group: "networking.k8s.io", Version: "v1", Resource: "ingresses"}
-	resource_deployments  = schema.GroupVersionResource{Group: "apps", Version: "v1", Resource: "deployments"}
-	resource_daemonsets   = schema.GroupVersionResource{Group: "apps", Version: "v1", Resource: "daemonsets"}
-	resource_statefulsets = schema.GroupVersionResource{Group: "apps", Version: "v1", Resource: "statefulsets"}
-	resource_cronjobs     = schema.GroupVersionResource{Group: "batch", Version: "v1", Resource: "cronjobs"}
+	options              = metav1.ListOptions{TimeoutSeconds: &timeOut}
+	optionsNs            = metav1.ListOptions{LabelSelector: namespacesEnabledLabel, TimeoutSeconds: &timeOut}
+	resourceNodes        = schema.GroupVersionResource{Group: "", Version: "v1", Resource: "nodes"}
+	resourceNamespaces   = schema.GroupVersionResource{Group: "", Version: "v1", Resource: "namespaces"}
+	resourcePods         = schema.GroupVersionResource{Group: "", Version: "v1", Resource: "pods"}
+	resourceIngresses    = schema.GroupVersionResource{Group: "networking.k8s.io", Version: "v1", Resource: "ingresses"}
+	resourceDeployments  = schema.GroupVersionResource{Group: "apps", Version: "v1", Resource: "deployments"}
+	resourceDaemonsets   = schema.GroupVersionResource{Group: "apps", Version: "v1", Resource: "daemonsets"}
+	resourceStatefulsets = schema.GroupVersionResource{Group: "apps", Version: "v1", Resource: "statefulsets"}
+	resourceCronjobs     = schema.GroupVersionResource{Group: "batch", Version: "v1", Resource: "cronjobs"}
 )
 
 var (
-	time_healthz       = time.Now()
-	timeOut            = int64(60)
-	kubeClient         *kubernetes.Clientset
-	kubeMetadata       metadata.Interface
-	reg                = prometheus.NewRegistry()
-	ctx                = context.Background()
-	node_threshold_map = map[string]float64{
+	timeHealthz      = time.Now()
+	timeOut          = int64(60)
+	kubeClient       *kubernetes.Clientset
+	kubeMetadata     metadata.Interface
+	reg              = prometheus.NewRegistry()
+	ctx              = context.Background()
+	nodeThresholdMap = map[string]float64{
 		"disk-bytes-warning":             70,
 		"disk-bytes-critical":            80,
 		"disk-inodes-warning":            90,
@@ -67,7 +67,7 @@ var (
 		"load-average-per-core-warning":  3,
 		"load-average-per-core-critical": 10,
 	}
-	pod_threshold_map = map[string]float64{
+	podThresholdMap = map[string]float64{
 		"disk-bytes-warning":            85,
 		"disk-bytes-critical":           95,
 		"disk-inodes-warning":           85,
@@ -75,14 +75,14 @@ var (
 		"container-throttling-warning":  25,
 		"container-throttling-critical": 50,
 	}
-	ingress_threshold_map = map[string]float64{
+	ingressThresholdMap = map[string]float64{
 		"5xx-warning":  10,
 		"5xx-critical": 20,
 	}
-	deployment_threshold_map = map[string]float64{
+	deploymentThresholdMap = map[string]float64{
 		"replicas-not-ready": 0,
 	}
-	daemonset_threshold_map = map[string]float64{
+	daemonsetThresholdMap = map[string]float64{
 		"replicas-not-ready": 0,
 	}
 	statefulsetThresholdMap = map[string]float64{
@@ -106,7 +106,7 @@ func ListResources(ctx context.Context, client metadata.Interface, resource sche
 }
 
 func enabledLabel(labels map[string]string) float64 {
-	if value, ok := labels[namespaces_enabled_label]; ok {
+	if value, ok := labels[namespacesEnabledLabel]; ok {
 		if enabled, err := strconv.ParseBool(value); err == nil && !enabled {
 			return 0
 		}
@@ -147,54 +147,54 @@ func recordMetrics(ctx context.Context, client metadata.Interface, registry *pro
 		prometheus.CounterOpts{Name: "extended_monitoring_pod_threshold"},
 		[]string{"namespace", "pod", "threshold"},
 	)
-	ingress_enabled := prometheus.NewCounterVec(
+	ingressEnabled := prometheus.NewCounterVec(
 		prometheus.CounterOpts{Name: "extended_monitoring_ingress_enabled"},
 		[]string{"namespace", "ingress"},
 	)
-	ingress_threshold := prometheus.NewCounterVec(
+	ingressThreshold := prometheus.NewCounterVec(
 		prometheus.CounterOpts{Name: "extended_monitoring_ingress_threshold"},
 		[]string{"namespace", "ingress", "threshold"},
 	)
-	deployment_enabled := prometheus.NewCounterVec(
+	deploymentEnabled := prometheus.NewCounterVec(
 		prometheus.CounterOpts{Name: "extended_monitoring_deployment_enabled"},
 		[]string{"namespace", "deployment"},
 	)
-	deployment_threshold := prometheus.NewCounterVec(
+	deploymentThreshold := prometheus.NewCounterVec(
 		prometheus.CounterOpts{Name: "extended_monitoring_deployment_threshold"},
 		[]string{"namespace", "deployment", "threshold"},
 	)
-	daemonset_enabled := prometheus.NewCounterVec(
+	daemonsetEnabled := prometheus.NewCounterVec(
 		prometheus.CounterOpts{Name: "extended_monitoring_daemonset_enabled"},
 		[]string{"namespace", "daemonset"},
 	)
-	daemonset_threshold := prometheus.NewCounterVec(
+	daemonsetThreshold := prometheus.NewCounterVec(
 		prometheus.CounterOpts{Name: "extended_monitoring_daemonset_threshold"},
 		[]string{"namespace", "daemonset", "threshold"},
 	)
-	statefulset_enabled := prometheus.NewCounterVec(
+	statefulsetEnabled := prometheus.NewCounterVec(
 		prometheus.CounterOpts{Name: "extended_monitoring_statefulset_enabled"},
 		[]string{"namespace", "statefulset"},
 	)
-	statefulset_threshold := prometheus.NewCounterVec(
+	statefulsetThreshold := prometheus.NewCounterVec(
 		prometheus.CounterOpts{Name: "extended_monitoring_statefulset_threshold"},
 		[]string{"namespace", "statefulset", "threshold"},
 	)
-	cronjob_enabled := prometheus.NewCounterVec(
+	cronjobEnabled := prometheus.NewCounterVec(
 		prometheus.CounterOpts{Name: "extended_monitoring_cronjob_enabled"},
 		[]string{"namespace", "cronjob"},
 	)
 	// node
-	for _, node := range ListResources(ctx, client, resource_nodes, options, "").Items {
+	for _, node := range ListResources(ctx, client, resourceNodes, options, "").Items {
 		enabled := enabledLabel(node.Labels)
 		nodeEnabled.WithLabelValues(node.Name).Add(enabled)
 		if enabled == 1 {
-			for key, value := range node_threshold_map {
+			for key, value := range nodeThresholdMap {
 				nodeThreshold.WithLabelValues(node.Name, key).Add(thresholdLabel(node.Labels, key, value))
 			}
 		}
 	}
 	// namespace
-	for _, namespasce := range ListResources(ctx, client, resource_namespaces, optionsNs, "").Items {
+	for _, namespasce := range ListResources(ctx, client, resourceNamespaces, optionsNs, "").Items {
 		enabledNamespace := enabledLabel(namespasce.Labels)
 		namespacesEnabled.WithLabelValues(namespasce.Name).Add(enabledNamespace)
 
@@ -202,58 +202,58 @@ func recordMetrics(ctx context.Context, client metadata.Interface, registry *pro
 
 		if enabledNamespace == 1 {
 			// pod
-			for _, pod := range ListResources(ctx, client, resource_pods, options, namespasce.Name).Items {
+			for _, pod := range ListResources(ctx, client, resourcePods, options, namespasce.Name).Items {
 				enabled := enabledLabel(pod.Labels)
 				podEnabled.WithLabelValues(namespasce.Name, pod.Name).Add(enabled)
 				if enabled == 1 {
-					for key, value := range pod_threshold_map {
+					for key, value := range podThresholdMap {
 						podThreshold.WithLabelValues(namespasce.Name, pod.Name, key).Add(thresholdLabel(pod.Labels, key, value))
 					}
 				}
 			}
 			// ingress
-			for _, ingress := range ListResources(ctx, client, resource_ingresses, options, namespasce.Name).Items {
+			for _, ingress := range ListResources(ctx, client, resourceIngresses, options, namespasce.Name).Items {
 				enabled := enabledLabel(ingress.Labels)
-				ingress_enabled.WithLabelValues(namespasce.Name, ingress.Name).Add(enabled)
+				ingressEnabled.WithLabelValues(namespasce.Name, ingress.Name).Add(enabled)
 				if enabled == 1 {
-					for key, value := range ingress_threshold_map {
-						ingress_threshold.WithLabelValues(namespasce.Name, ingress.Name, key).Add(thresholdLabel(ingress.Labels, key, value))
+					for key, value := range ingressThresholdMap {
+						ingressThreshold.WithLabelValues(namespasce.Name, ingress.Name, key).Add(thresholdLabel(ingress.Labels, key, value))
 					}
 				}
 			}
 			// deployment
-			for _, deployment := range ListResources(ctx, client, resource_deployments, options, namespasce.Name).Items {
+			for _, deployment := range ListResources(ctx, client, resourceDeployments, options, namespasce.Name).Items {
 				enabled := enabledLabel(deployment.Labels)
-				deployment_enabled.WithLabelValues(namespasce.Name, deployment.Name).Add(enabled)
+				deploymentEnabled.WithLabelValues(namespasce.Name, deployment.Name).Add(enabled)
 				if enabled == 1 {
-					for key, value := range deployment_threshold_map {
-						deployment_threshold.WithLabelValues(namespasce.Name, deployment.Name, key).Add(thresholdLabel(deployment.Labels, key, value))
+					for key, value := range deploymentThresholdMap {
+						deploymentThreshold.WithLabelValues(namespasce.Name, deployment.Name, key).Add(thresholdLabel(deployment.Labels, key, value))
 					}
 				}
 			}
 			// daemonset
-			for _, daemonset := range ListResources(ctx, client, resource_daemonsets, options, namespasce.Name).Items {
+			for _, daemonset := range ListResources(ctx, client, resourceDaemonsets, options, namespasce.Name).Items {
 				enabled := enabledLabel(daemonset.Labels)
-				daemonset_enabled.WithLabelValues(namespasce.Name, daemonset.Name).Add(enabled)
+				daemonsetEnabled.WithLabelValues(namespasce.Name, daemonset.Name).Add(enabled)
 				if enabled == 1 {
-					for key, value := range daemonset_threshold_map {
-						daemonset_threshold.WithLabelValues(namespasce.Name, daemonset.Name, key).Add(thresholdLabel(daemonset.Labels, key, value))
+					for key, value := range daemonsetThresholdMap {
+						daemonsetThreshold.WithLabelValues(namespasce.Name, daemonset.Name, key).Add(thresholdLabel(daemonset.Labels, key, value))
 					}
 				}
 			}
 			// statefulset
-			for _, statefulset := range ListResources(ctx, client, resource_statefulsets, options, namespasce.Name).Items {
+			for _, statefulset := range ListResources(ctx, client, resourceStatefulsets, options, namespasce.Name).Items {
 				enabled := enabledLabel(statefulset.Labels)
-				statefulset_enabled.WithLabelValues(namespasce.Name, statefulset.Name).Add(enabled)
+				statefulsetEnabled.WithLabelValues(namespasce.Name, statefulset.Name).Add(enabled)
 				if enabled == 1 {
-					for key, value := range daemonset_threshold_map {
-						statefulset_threshold.WithLabelValues(namespasce.Name, statefulset.Name, key).Add(thresholdLabel(statefulset.Labels, key, value))
+					for key, value := range daemonsetThresholdMap {
+						statefulsetThreshold.WithLabelValues(namespasce.Name, statefulset.Name, key).Add(thresholdLabel(statefulset.Labels, key, value))
 					}
 				}
 			}
 			// cronjob
-			for _, cronjob := range ListResources(ctx, client, resource_cronjobs, options, namespasce.Name).Items {
-				cronjob_enabled.WithLabelValues(namespasce.Name, cronjob.Name).Add(enabledLabel(cronjob.Labels))
+			for _, cronjob := range ListResources(ctx, client, resourceCronjobs, options, namespasce.Name).Items {
+				cronjobEnabled.WithLabelValues(namespasce.Name, cronjob.Name).Add(enabledLabel(cronjob.Labels))
 			}
 		}
 	}
@@ -262,15 +262,15 @@ func recordMetrics(ctx context.Context, client metadata.Interface, registry *pro
 	registry.MustRegister(namespacesEnabled)
 	registry.MustRegister(podEnabled)
 	registry.MustRegister(podThreshold)
-	registry.MustRegister(ingress_enabled)
-	registry.MustRegister(ingress_threshold)
-	registry.MustRegister(deployment_enabled)
-	registry.MustRegister(deployment_threshold)
-	registry.MustRegister(daemonset_enabled)
-	registry.MustRegister(daemonset_threshold)
-	registry.MustRegister(statefulset_enabled)
-	registry.MustRegister(statefulset_threshold)
-	registry.MustRegister(cronjob_enabled)
+	registry.MustRegister(ingressEnabled)
+	registry.MustRegister(ingressThreshold)
+	registry.MustRegister(deploymentEnabled)
+	registry.MustRegister(deploymentThreshold)
+	registry.MustRegister(daemonsetEnabled)
+	registry.MustRegister(daemonsetThreshold)
+	registry.MustRegister(statefulsetEnabled)
+	registry.MustRegister(statefulsetThreshold)
+	registry.MustRegister(cronjobEnabled)
 }
 
 func main() {
@@ -296,8 +296,8 @@ func main() {
 			local := prometheus.NewRegistry()
 			recordMetrics(ctx, kubeMetadata, local)
 			*reg = *local
-			time_healthz = time.Now()
-			time.Sleep(interval_recordMetrics)
+			timeHealthz = time.Now()
+			time.Sleep(intervalRecordMetrics)
 		}
 	}()
 
@@ -312,9 +312,8 @@ func main() {
 		}
 	})
 	http.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
-		time_check := time.Now()
-		if time_check.Sub(time_healthz) > timeOut_healthz {
-			log.Printf("Fail if metrics were last collected more than %v", timeOut_healthz)
+		if time.Since(timeHealthz) > timeOutHealthz {
+			log.Printf("Fail if metrics were last collected more than %v", timeOutHealthz)
 			http.Error(w, "Error", http.StatusInternalServerError)
 		} else {
 			w.WriteHeader(http.StatusOK)
