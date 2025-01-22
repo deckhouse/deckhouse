@@ -2,7 +2,6 @@ At this step, the cluster is deployed in a minimal configuration. Configure the 
 
 Enable `sds-replicated-volume` module — a module for the software-defined storage. Run the following commands on the **master node**:
 
-{% snippetcut %}
 ```shell
 kubectl create -f - <<EOF
 ---
@@ -23,28 +22,22 @@ spec:
   enabled: true
 EOF
 ```
-{% endsnippetcut %}
 
 Wait for the module to start; you can use the following command for this:
 
-{% snippetcut %}
-```sheel
+```shell
 kubectl wait module sds-replicated-volume --for='jsonpath={.status.status}=Ready' --timeout=1200s
 ```
-{% endsnippetcut %}
 
 Combine the available block devices on the nodes into LVM volume groups. To obtain the available block devices, run the command:
 
-{% snippetcut %}
 ```shell
 sudo -i d8 k get blockdevices.storage.deckhouse.io
 ```
-{% endsnippetcut %}
 
 To combine block devices on one node, it is necessary to create an LVM volume group using the [LVMVolumeGroup](/products/virtualization-platform/reference/cr/lvmvolumegroup.html) resource. 
 To create the LVMVolumeGroup resource on the node, run the following command, replacing the names of the node and block devices with your own:
 
-{% snippetcut %}
 ```shell
 sudo -i d8 k apply -f - <<EOF
 apiVersion: storage.deckhouse.io/v1alpha1
@@ -71,15 +64,12 @@ spec:
   #     size: 70%
 EOF
 ```
-{% endsnippetcut %}
 
 Wait for the created LVMVolumeGroup resource to enter the `Operational` state:
 
-{% snippetcut %}
 ```shell
 sudo -i d8 k get lvg vg-on-worker-0 -w
 ```
-{% endsnippetcut %}
 
 Example of the output:
 
@@ -90,7 +80,6 @@ vg-on-worker-0   1/1         True                    Ready   worker-0   360484Mi
 
 Create an LVM volume pool:
 
-{% snippetcut %}
 ```bash
 sudo -i d8 k apply -f - <<EOF
  apiVersion: storage.deckhouse.io/v1alpha1
@@ -103,15 +92,12 @@ sudo -i d8 k apply -f - <<EOF
      - name: vg-on-dvp-worker
 EOF
 ```
-{% endsnippetcut %}
 
 Wait for the created resource ReplicatedStoragePool to enter the `Completed` state:
 
-{% snippetcut %}
 ```shell
 sudo -i d8 k get rsp data -w
 ```
-{% endsnippetcut %}
 
 Example of the output:
 
@@ -122,7 +108,6 @@ sds-pool     Completed   LVM    87d
 
 Create a StorageClass:
 
-{% snippetcut %}
 ```bash
 sudo -i d8 k apply -f - <<EOF
  ---
@@ -137,21 +122,16 @@ sudo -i d8 k apply -f - <<EOF
    topology: Ignored
 EOF
 ```
-{% endsnippetcut %}
 
 Check that the StorageClasses have been created:
 
-{% snippetcut %}
 ```bash
 sudo -i d8 k get storageclass
 ```
-{% endsnippetcut %}
 
 Set the StorageClass as the default StorageClass (specify the name of the StorageClass):
 
-{% snippetcut %}
 ```shell
 DEFAULT_STORAGE_CLASS=replicated-storage-class
 sudo -i d8 k patch mc global --type='json' -p='[{"op": "replace", "path": "/spec/settings/defaultClusterStorageClass", "value": "'"$DEFAULT_STORAGE_CLASS"'"}]'
 ```
-{% endsnippetcut %}
