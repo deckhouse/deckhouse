@@ -1144,8 +1144,14 @@ a.comparison-table__module-proprietaryOkmeter::after {
     text-decoration: none;
 }
 
-.docs .table-wrapper {
-    overflow: auto;
+.docs {
+    .table-wrapper {
+        overflow: auto;
+
+        &.table-wrapper__small {
+            overflow: visible;
+        }
+    }
 }
 
 .docs table .tippy-content table {
@@ -1172,10 +1178,21 @@ a.comparison-table__module-proprietaryOkmeter::after {
     font-size: 16px;
 }
 
-.docs table th,
-.docs table td {
-    padding: 1em 1.5em;
-    border-bottom: 1px solid #C4CAD4;
+.docs {
+    table {
+        th, td {
+            padding: 1em 1.5em;
+            border-bottom: 1px solid #C4CAD4;  
+        }
+    }
+
+    .table-wrapper__small {
+        table {
+            th, td {
+                padding: 1em 1.2em; 
+            }
+        }
+    }
 }
 
 .docs table tr:last-child td {
