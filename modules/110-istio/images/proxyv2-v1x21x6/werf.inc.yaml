@@ -256,7 +256,7 @@ shell:
   - git clone --branch "{{ $llvmRev }}" {{ $.SOURCE_REPO }}/llvm/llvm-project.git /src/llvm
   - rm -rf /src/llvm/.git
   - git clone --depth 1 --branch {{ $istioProxyVersion }} {{ $.SOURCE_REPO }}/istio/istio.git /src/istio/
-  - git apply --verbose /patches/*.patch
+  #- git apply --verbose /patches/*.patch
   - rm -rf /src/istio/.git
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-basel-artifact
