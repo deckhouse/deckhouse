@@ -26,6 +26,7 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders/bootstrapped"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders/deckhouseversion"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders/editionavailable"
+	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders/editionenabled"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders/kubernetesversion"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders/moduledependency"
 	"github.com/deckhouse/deckhouse/pkg/log"
@@ -47,6 +48,7 @@ func Extenders(logger *log.Logger) []extenders.Extender {
 		bootstrapped.Instance(),
 		moduledependency.Instance(),
 		editionavailable.Instance().SetLogger(logger),
+		editionenabled.Instance().SetLogger(logger),
 	}
 }
 

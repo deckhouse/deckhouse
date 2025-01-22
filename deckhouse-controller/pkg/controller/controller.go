@@ -19,6 +19,7 @@ package controller
 import (
 	"context"
 	"fmt"
+	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders/editionenabled"
 	"sync"
 	"time"
 
@@ -299,6 +300,7 @@ func (c *DeckhouseController) Start(ctx context.Context) error {
 	}
 
 	editionavailable.Instance().SetEdition(edition)
+	editionenabled.Instance().SetEdition(edition)
 
 	// load and ensure modules from FS at start
 	if err = c.moduleLoader.LoadModulesFromFS(ctx); err != nil {

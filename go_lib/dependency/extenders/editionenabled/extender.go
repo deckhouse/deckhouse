@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package editionavailable
+package editionenabled
 
 import (
 	"sync"
@@ -24,7 +24,7 @@ import (
 )
 
 const (
-	Name extenders.ExtenderName = "EditionAvailable"
+	Name extenders.ExtenderName = "EditionEnabled"
 )
 
 var (
@@ -62,10 +62,10 @@ func (e *Extender) Name() extenders.ExtenderName {
 
 // IsTerminator implements Extender interface, it is used by scheduler in addon-operator
 func (e *Extender) IsTerminator() bool {
-	return true
+	return false
 }
 
 // Filter implements Extender interface, it is used by scheduler in addon-operator
 func (e *Extender) Filter(name string, _ map[string]string) (*bool, error) {
-	return e.edition.IsEnabled(d8edition.Embedded, name), nil
+	return e.edition.IsAvailable(d8edition.Embedded, name), nil
 }

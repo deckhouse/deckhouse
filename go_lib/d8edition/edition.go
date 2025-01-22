@@ -35,7 +35,7 @@ const (
 
 	deckhouseConfig = "deckhouse"
 
-	embeddedSource = "embedded"
+	Embedded = "embedded"
 )
 
 type Edition struct {
@@ -50,7 +50,7 @@ type Config struct {
 }
 
 type Module struct {
-	Available bool  `json:"available" yaml:"available"`
+	Available *bool `json:"available" yaml:"available"`
 	Enabled   *bool `json:"enabled" yaml:"enabled,omitempty"`
 }
 
@@ -104,6 +104,15 @@ func (e *Edition) IsAvailable(sourceName, moduleName string) *bool {
 	if source, ok := e.Modules[sourceName]; ok {
 		if module, ok := source[moduleName]; ok {
 			return &module.Available
+		}
+	}
+	return nil
+}
+
+func (e *Edition) IsEnabled(sourceName, moduleName string) *bool {
+	if source, ok := e.Modules[sourceName]; ok {
+		if module, ok := source[moduleName]; ok {
+			return module.Enabled
 		}
 	}
 	return nil
