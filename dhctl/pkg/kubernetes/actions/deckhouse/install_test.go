@@ -95,6 +95,7 @@ func TestDeckhouseInstall(t *testing.T) {
 			"With secrets",
 			func() error {
 				conf := config.DeckhouseInstaller{
+					Bundle:                "Default",
 					ClusterConfig:         []byte(`test`),
 					ProviderClusterConfig: []byte(`{"Kind": "OpenstackCloudProvider"}`),
 					TerraformState:        []byte(`test`),
