@@ -583,7 +583,7 @@ func (r *deckhouseReleaseReconciler) ApplyRelease(ctx context.Context, dr *v1alp
 func (r *deckhouseReleaseReconciler) runReleaseDeploy(ctx context.Context, dr *v1alpha1.DeckhouseRelease, deployedReleaseInfo *d8updater.ReleaseInfo) error {
 	r.logger.Info("applying release", slog.String("name", dr.GetName()))
 
-	err, dryrun := r.bumpDeckhouseDeployment(ctx, dr)
+	dryrun, err := r.bumpDeckhouseDeployment(ctx, dr)
 	if err != nil {
 		return fmt.Errorf("deploy release: %w", err)
 	}
@@ -642,19 +642,21 @@ func (r *deckhouseReleaseReconciler) runReleaseDeploy(ctx context.Context, dr *v
 
 var ErrDeploymentContainerIsNotFound = errors.New("deployment container is not found")
 
-func (r *deckhouseReleaseReconciler) bumpDeckhouseDeployment(ctx context.Context, dr *v1alpha1.DeckhouseRelease) (error, bool /* dryrun? */) {
+func (r *deckhouseReleaseReconciler) bumpDeckhouseDeployment(ctx context.Context, dr *v1alpha1.DeckhouseRelease) (bool /* dryrun? */, error) {
+	var dryrun bool
 	key := client.ObjectKey{Namespace: deckhouseNamespace, Name: deckhouseDeployment}
 
 	depl := new(appsv1.Deployment)
 
 	err := r.client.Get(ctx, key, depl)
 	if err != nil {
-		return fmt.Errorf("get deployment %s: %w", key, err), false
+		return dryrun, fmt.Errorf("get deployment %s: %w", key, err)
 	}
 
 	// dryrun for testing purpose
 	val, ok := dr.GetAnnotations()[v1alpha1.DeckhouseReleaseAnnotationDryrun]
 	if ok && val == "true" {
+		dryrun = true
 		go func() {
 			r.logger.Debug("dryrun start soon...")
 
@@ -704,10 +706,10 @@ func (r *deckhouseReleaseReconciler) bumpDeckhouseDeployment(ctx context.Context
 			}
 		}()
 
-		return nil, true
+		return dryrun, nil
 	}
 
-	return ctrlutils.UpdateWithRetry(ctx, r.client, depl, func() error {
+	return dryrun, ctrlutils.UpdateWithRetry(ctx, r.client, depl, func() error {
 		if len(depl.Spec.Template.Spec.Containers) == 0 {
 			return ErrDeploymentContainerIsNotFound
 		}
@@ -715,7 +717,7 @@ func (r *deckhouseReleaseReconciler) bumpDeckhouseDeployment(ctx context.Context
 		depl.Spec.Template.Spec.Containers[0].Image = r.registrySecret.ImageRegistry + ":" + dr.Spec.Version
 
 		return nil
-	}), false
+	})
 }
 
 func (r *deckhouseReleaseReconciler) getDeckhouseLatestPod(ctx context.Context) (*corev1.Pod, error) {
