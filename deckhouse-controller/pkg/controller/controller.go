@@ -19,7 +19,6 @@ package controller
 import (
 	"context"
 	"fmt"
-	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders/editionenabled"
 	"sync"
 	"time"
 
@@ -60,6 +59,7 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders/editionavailable"
+	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders/editionenabled"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders/moduledependency"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )

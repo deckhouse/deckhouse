@@ -48,7 +48,7 @@ func Instance() *Extender {
 }
 
 func (e *Extender) SetLogger(logger *log.Logger) *Extender {
-	e.logger = logger
+	e.logger = logger.Named("extender-edition-available")
 	return e
 }
 
@@ -70,12 +70,13 @@ func (e *Extender) IsTerminator() bool {
 func (e *Extender) Filter(name string, _ map[string]string) (*bool, error) {
 	available := e.edition.IsAvailable(d8edition.Embedded, name)
 	if available == nil {
-		e.logger.Warnf("the '%s' module skipped", name)
+		e.logger.Debugf("the '%s' module skipped", name)
 		return nil, nil
 	}
 	if *available {
 		e.logger.Debugf("the '%s' module available in the '%s' edition", name, e.edition.String())
 		return available, nil
 	}
+	e.logger.Warnf("the '%s' module is unavailable in the '%s' edition", name, e.edition.String())
 	return available, fmt.Errorf("unavailable in the '%s' edition", e.edition.String())
 }
