@@ -14,9 +14,10 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/sirupsen/logrus"
+
 	cloudDataV1 "github.com/deckhouse/deckhouse/go_lib/cloud-data/apis/v1"
 	"github.com/deckhouse/deckhouse/go_lib/cloud-data/apis/v1alpha1"
-	"github.com/sirupsen/logrus"
 
 	ovirtclientlog "github.com/ovirt/go-ovirt-client-log/v3"
 	ovirtclient "github.com/ovirt/go-ovirt-client/v3"
@@ -152,30 +153,9 @@ func (d *Discoverer) getStorageDomains(
 	return sd, nil
 }
 
+// NotImplemented
 func (d *Discoverer) DisksMeta(ctx context.Context) ([]v1alpha1.DiskMeta, error) {
-	zvirtClient, err := d.config.client()
-	if err != nil {
-		return nil, err
-	}
-
-	disks, err := zvirtClient.WithContext(ctx).ListDisks()
-	if err != nil {
-		return nil, err
-	}
-
-	if len(disks) == 0 {
-		return []v1alpha1.DiskMeta{}, nil
-	}
-
-	diskMeta := make([]v1alpha1.DiskMeta, 0, len(disks))
-	for _, disk := range disks {
-		diskMeta = append(diskMeta, v1alpha1.DiskMeta{
-			ID:   string(disk.ID()),
-			Name: disk.Alias(),
-		})
-	}
-
-	return diskMeta, nil
+	return []v1alpha1.DiskMeta{}, nil
 }
 
 // NotImplemented

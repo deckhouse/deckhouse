@@ -5,14 +5,15 @@
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $version | replace "." "-" }}
 fromImage: common/distroless
 import:
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
   add: /src/bin/cloud-provider-for-cloud-director
   to: /cloud-provider-for-cloud-director
   before: setup
 docker:
   ENTRYPOINT: ["/cloud-provider-for-cloud-director"]
 ---
-artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
+image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
+final: false
 from: {{ $.Images.BASE_GOLANG_20_BUSTER }}
 git:
   - add: /{{ $.ModulePath }}modules/030-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
