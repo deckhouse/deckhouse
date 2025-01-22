@@ -78,7 +78,7 @@ shell:
   - echo {{ $istioProxyVersion }} > version
   - export GOPROXY={{ $.GOPROXY }} GOOS=linux GOARCH=amd64
   - export LDFLAGS='-extldflags -static -s -w'
-  - common/scripts/gobuild.sh /tmp/istio/out/ -tags=agent,disable_pgv /tmp/istio/pilot/cmd/pilot-agent
+  - common/scripts/gobuild.sh /tmp/istio/out/ -tags=agent,disable_pgv /src/istio/pilot/cmd/pilot-agent
   #
   - chmod 0555 /tmp/istio/out/pilot-agent
   - chown 1337:1337 /tmp/istio/out/pilot-agent
@@ -107,12 +107,9 @@ mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
 shell:
-  beforeInstall:
-  install:
-  beforeSetup:
+  setup:
   - export GO_VERSION=${GOLANG_VERSION} GOPROXY={{ $.GOPROXY }}
   - export GOOS=linux GOARCH=amd64 CGO_ENABLED=0
-  setup:
   - export BAZEL_VERSION="6.3.2" USE_BAZEL_VERSION="6.3.2"
   - export BAZEL_BUILD_OPTS="--disk_cache=/tmp/bazel-cache"
   - cd /src/proxy
