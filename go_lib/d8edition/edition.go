@@ -103,7 +103,7 @@ func (e *Edition) String() string {
 func (e *Edition) IsAvailable(sourceName, moduleName string) *bool {
 	if source, ok := e.Modules[sourceName]; ok {
 		if module, ok := source[moduleName]; ok {
-			return &module.Available
+			return module.Available
 		}
 	}
 	return nil
