@@ -111,9 +111,8 @@ func CheckOrSetupSystemRegistryModuleConfig(cfg *DeckhouseInstaller) error {
 	systemRegistryMC.Spec.Enabled = pointer.Bool(true)
 	systemRegistryMC.Spec.Version = schemasStore.GetModuleConfigVersion(systemRegistryModuleName)
 
-	switch cfg.Registry.ModeSpecificFields.(type) {
+	switch modeSpecificFields := cfg.Registry.ModeSpecificFields.(type) {
 	case ProxyModeRegistryData:
-		modeSpecificFields := cfg.Registry.ModeSpecificFields.(ProxyModeRegistryData)
 		user, password, err := modeSpecificFields.UpstreamRegistryData.GetUserNameAndPasswordFromAuth()
 		if err != nil {
 			return err

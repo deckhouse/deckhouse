@@ -188,39 +188,23 @@ func (m *MetaConfig) PrepareAfterGlobalCacheInit() error {
 				return fmt.Errorf("unable to get internal registry access data: %v", err)
 			}
 
-			dockerCfg, err := json.Marshal(
-				DockerCfg{
-					Auths: map[string]struct {
-						Auth string `json:"auth"`
-					}{
-						m.Registry.Data.Address: {
-							Auth: base64.StdEncoding.EncodeToString(
-								[]byte(fmt.Sprintf(
-									"%s:%s",
-									internalRegistryAccessData.UserRo.Name,
-									internalRegistryAccessData.UserRo.Password,
-								)),
-							),
-						},
-					},
-				},
-			)
-			if err != nil {
-				return fmt.Errorf("cannot marshal docker cfg: %v", err)
-			}
-
-			switch m.Registry.ModeSpecificFields.(type) {
+			switch modeSpecificFields := m.Registry.ModeSpecificFields.(type) {
 			case ProxyModeRegistryData:
-				modeSpecificFields := m.Registry.ModeSpecificFields.(ProxyModeRegistryData)
 				modeSpecificFields.InternalRegistryAccess = *internalRegistryAccessData
 				m.Registry.ModeSpecificFields = modeSpecificFields
 			case DetachedModeRegistryData:
-				modeSpecificFields := m.Registry.ModeSpecificFields.(DetachedModeRegistryData)
 				modeSpecificFields.InternalRegistryAccess = *internalRegistryAccessData
 				m.Registry.ModeSpecificFields = modeSpecificFields
 			}
 
-			m.Registry.Data.DockerCfg = string(base64.StdEncoding.EncodeToString(dockerCfg))
+			m.Registry.Data.DockerCfg, err = generateDockerCfgBase64(
+				internalRegistryAccessData.UserRo.Name,
+				internalRegistryAccessData.UserRo.Password,
+				m.Registry.Data.Address,
+			)
+			if err != nil {
+				return fmt.Errorf("unable to generate dockerCfg: %v", err)
+			}
 			m.Registry.Data.Scheme = "https"
 			m.Registry.Data.CA = (*internalRegistryAccessData).CA.Cert
 		}
@@ -1015,12 +999,10 @@ func (r *Registry) Mode() string {
 
 func (r Registry) DeepCopy() Registry {
 	var modeSpecificFieldsCopy interface{}
-	switch r.ModeSpecificFields.(type) {
+	switch modeSpecificFields := r.ModeSpecificFields.(type) {
 	case ProxyModeRegistryData:
-		modeSpecificFields := r.ModeSpecificFields.(ProxyModeRegistryData)
 		modeSpecificFieldsCopy = modeSpecificFields.DeepCopy()
 	case DetachedModeRegistryData:
-		modeSpecificFields := r.ModeSpecificFields.(DetachedModeRegistryData)
 		modeSpecificFieldsCopy = modeSpecificFields.DeepCopy()
 	}
 	return Registry{
@@ -1039,9 +1021,8 @@ func (r Registry) ConvertToMap() (map[string]interface{}, error) {
 	mapData["registryMode"] = r.Mode()
 	mapData["embeddedRegistryModuleMode"] = r.EmbeddedRegistryModuleMode()
 
-	switch r.ModeSpecificFields.(type) {
+	switch modeSpecificFields := r.ModeSpecificFields.(type) {
 	case ProxyModeRegistryData:
-		modeSpecificFields := r.ModeSpecificFields.(ProxyModeRegistryData)
 		mapData["internalRegistryAccess"] = modeSpecificFields.InternalRegistryAccess.ConvertToMap()
 		mapData["upstreamRegistry"], err = modeSpecificFields.UpstreamRegistryData.ConvertToMap()
 		mapData["ttl"] = modeSpecificFields.TTL.String()
@@ -1049,7 +1030,6 @@ func (r Registry) ConvertToMap() (map[string]interface{}, error) {
 			return nil, err
 		}
 	case DetachedModeRegistryData:
-		modeSpecificFields := r.ModeSpecificFields.(DetachedModeRegistryData)
 		mapData["internalRegistryAccess"] = modeSpecificFields.InternalRegistryAccess.ConvertToMap()
 	}
 	return mapData, nil
