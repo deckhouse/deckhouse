@@ -63,7 +63,8 @@ function __main__() {
     CODEOWNERS_MODULE_NAME=$(echo $MODULE_NAME|sed -s 's/[A-Z]/-&/g')
     codeowner_tags=""
     while IFS="\n" read -r line; do
-      if echo $line| grep -i -q "$CODEOWNERS_MODULE_NAME"; then
+      # 'sed' will cut "/" before folder name if exist, 'cut' will get dirname that will be used as regexp for current module_name
+      if echo ${CODEOWNERS_MODULE_NAME} | grep -i -q "$(echo $line| sed 's/^\///'|cut -d '/' -f 1)"; then
         for owner_name in $(echo "${line#*@}"); do
           codeowner_tags="${codeowner_tags},codeowner:${owner_name#*@}"
         done
