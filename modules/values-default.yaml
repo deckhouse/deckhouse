@@ -1,7 +1,6 @@
 # CE Bundle "Default"
 admissionPolicyEngineEnabled: true
 certManagerEnabled: true
-chronyEnabled: true
 ciliumHubbleEnabled: false
 controlPlaneManagerEnabled: true
 dashboardEnabled: true
