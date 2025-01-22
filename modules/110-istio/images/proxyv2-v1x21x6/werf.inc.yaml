@@ -94,10 +94,10 @@ import:
   add: /opt/libcxx
   to: /opt/libcxx
   before: install
-# - image: {{ .ModuleName }}/{{ .ImageName }}-basel-artifact
-#   add: /tmp/bazel-cache
-#   to: /tmp/bazel-cache
-#   before: install
+- image: {{ .ModuleName }}/{{ .ImageName }}-basel-artifact
+  add: /tmp/bazel-cache
+  to: /tmp/bazel-cache
+  before: install
 - image: {{ .ModuleName }}/{{ .ImageName }}-basel-artifact
   add: /tmp/bazel-deps
   to: /tmp/bazel-deps
@@ -260,8 +260,8 @@ final: false
 shell:
   install:
   - mkdir -p /tmp/bazel-cache
-  # - git clone --depth 1 --branch {{ $istioProxyCacheRev }} {{ $.SOURCE_REPO }}/istio/envoy-build-cache.git /tmp/bazel-cache
-  # - rm -rf /tmp/bazel-cache/.git
+  - git clone --depth 1 --branch {{ $istioProxyCacheRev }} {{ $.SOURCE_REPO }}/istio/envoy-build-cache.git /tmp/bazel-cache
+  - rm -rf /tmp/bazel-cache/.git
   - mkdir -p /tmp/bazel-deps
   - git clone --depth 1 --branch {{ $istioProxyDepsRev }} {{ .SOURCE_REPO }}/istio/envoy-build-deps.git /tmp/bazel-deps
   - rm -rf /tmp/bazel-deps/.git
