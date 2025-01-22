@@ -4,31 +4,58 @@ approved: false
 kind: DeckhouseRelease
 metadata:
   creationTimestamp: null
-  name: v1.26.2
+  name: v1.31.0
   resourceVersion: "999"
 spec:
-  version: v1.26.2
+  version: v1.31.0
 status:
-  approved: true
+  approved: false
   message: ""
   phase: Deployed
-  transitionTime: "2021-12-08T08:34:01Z"
+  transitionTime: null
 ---
 apiVersion: deckhouse.io/v1alpha1
 approved: false
 kind: DeckhouseRelease
 metadata:
-  annotations:
-    release.deckhouse.io/isUpdating: "false"
-    release.deckhouse.io/notified: "true"
   creationTimestamp: null
-  name: v1.27.0
-  resourceVersion: "1002"
+  name: v1.33.0
+  resourceVersion: "1000"
 spec:
-  version: v1.27.0
+  version: v1.33.0
 status:
   approved: false
-  message: 'Release is waiting for the ''release.deckhouse.io/approved: "true"'' annotation'
+  message: minor version is more than deployed v1.31.0 by one
+  phase: Pending
+  transitionTime: null
+---
+apiVersion: deckhouse.io/v1alpha1
+approved: false
+kind: DeckhouseRelease
+metadata:
+  creationTimestamp: null
+  name: v1.34.0
+  resourceVersion: "1000"
+spec:
+  version: v1.34.0
+status:
+  approved: false
+  message: awaiting for v1.33.0 release to be deployed
+  phase: Pending
+  transitionTime: null
+---
+apiVersion: deckhouse.io/v1alpha1
+approved: false
+kind: DeckhouseRelease
+metadata:
+  creationTimestamp: null
+  name: v1.35.0
+  resourceVersion: "1000"
+spec:
+  version: v1.35.0
+status:
+  approved: false
+  message: awaiting for v1.33.0 release to be deployed
   phase: Pending
   transitionTime: null
 ---
@@ -43,7 +70,7 @@ metadata:
   resourceVersion: "999"
 spec:
   containers:
-  - image: dev-registry.deckhouse.io/sys/deckhouse-oss:1.26.2
+  - image: dev-registry.deckhouse.io/sys/deckhouse-oss:v1.2.3
     name: deckhouse
     resources: {}
 status:
@@ -72,7 +99,7 @@ spec:
       creationTimestamp: null
     spec:
       containers:
-      - image: my.registry.com/deckhouse:v1.26.2
+      - image: my.registry.com/deckhouse:v1.25.0
         name: deckhouse
         resources: {}
 status: {}

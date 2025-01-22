@@ -3,16 +3,37 @@ apiVersion: deckhouse.io/v1alpha1
 approved: false
 kind: DeckhouseRelease
 metadata:
+  annotations:
+    release.deckhouse.io/isUpdating: "false"
+    release.deckhouse.io/notified: "true"
   creationTimestamp: null
-  name: v1.25.0
-  resourceVersion: "999"
+  name: v1.31.0
+  resourceVersion: "1001"
 spec:
-  version: v1.25.0
+  version: v1.31.0
+status:
+  approved: false
+  message: ""
+  phase: Superseded
+  transitionTime: "2019-10-17T15:33:00Z"
+---
+apiVersion: deckhouse.io/v1alpha1
+approved: false
+kind: DeckhouseRelease
+metadata:
+  annotations:
+    release.deckhouse.io/isUpdating: "true"
+    release.deckhouse.io/notified: "false"
+  creationTimestamp: null
+  name: v1.32.0
+  resourceVersion: "1001"
+spec:
+  version: v1.32.0
 status:
   approved: false
   message: ""
   phase: Deployed
-  transitionTime: null
+  transitionTime: "2019-10-17T15:33:00Z"
 ---
 apiVersion: deckhouse.io/v1alpha1
 approved: false
@@ -20,17 +41,45 @@ kind: DeckhouseRelease
 metadata:
   annotations:
     release.deckhouse.io/isUpdating: "false"
-    release.deckhouse.io/notification-time-shift: "true"
     release.deckhouse.io/notified: "true"
   creationTimestamp: null
-  name: v1.26.0
+  name: v1.33.0
   resourceVersion: "1001"
 spec:
-  applyAfter: "2019-10-17T17:33:00Z"
-  version: v1.25.1
+  version: v1.33.0
 status:
   approved: false
-  message: Release is postponed by notification until 17 Oct 19 17:33 UTC
+  message: awaiting for Deckhouse v1.32.0 pod to be ready
+  phase: Pending
+  transitionTime: null
+---
+apiVersion: deckhouse.io/v1alpha1
+approved: false
+kind: DeckhouseRelease
+metadata:
+  creationTimestamp: null
+  name: v1.34.0
+  resourceVersion: "1000"
+spec:
+  version: v1.34.0
+status:
+  approved: false
+  message: awaiting for Deckhouse v1.32.0 pod to be ready
+  phase: Pending
+  transitionTime: null
+---
+apiVersion: deckhouse.io/v1alpha1
+approved: false
+kind: DeckhouseRelease
+metadata:
+  creationTimestamp: null
+  name: v1.35.0
+  resourceVersion: "1000"
+spec:
+  version: v1.35.0
+status:
+  approved: false
+  message: awaiting for Deckhouse v1.32.0 pod to be ready
   phase: Pending
   transitionTime: null
 ---
@@ -65,7 +114,7 @@ metadata:
   creationTimestamp: null
   name: deckhouse
   namespace: d8-system
-  resourceVersion: "999"
+  resourceVersion: "1000"
 spec:
   selector: null
   strategy: {}
@@ -74,7 +123,7 @@ spec:
       creationTimestamp: null
     spec:
       containers:
-      - image: my.registry.com/deckhouse:v1.25.0
+      - image: my.registry.com/deckhouse:v1.32.0
         name: deckhouse
         resources: {}
 status: {}

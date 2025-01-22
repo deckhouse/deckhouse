@@ -36,6 +36,8 @@ const (
 	ModuleReleasePhaseSuspended  = "Suspended"
 	ModuleReleasePhaseSkipped    = "Skipped"
 
+	ModuleReleaseApprovalAnnotation = "modules.deckhouse.io/approved"
+
 	ModuleReleaseAnnotationApplyNow = "release.deckhouse.io/apply-now"
 
 	ModuleReleaseAnnotationRegistrySpecChanged = "modules.deckhouse.io/registry-spec-changed"

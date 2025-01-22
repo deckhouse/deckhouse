@@ -22,6 +22,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 )
 
+// TODO: replace patch marshalling with controller-runtime patch
 type StatusPatch v1alpha1.DeckhouseReleaseStatus
 
 func (sp StatusPatch) MarshalJSON() ([]byte, error) {

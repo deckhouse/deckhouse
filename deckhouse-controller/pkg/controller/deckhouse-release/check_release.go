@@ -90,17 +90,16 @@ func (r *deckhouseReleaseReconciler) checkDeckhouseRelease(ctx context.Context) 
 		imagesRegistry string
 	)
 	if registrySecret != nil {
-		drs, _ := utils.ParseDeckhouseRegistrySecret(registrySecret.Data)
 		rconf := &utils.RegistryConfig{
-			DockerConfig: drs.DockerConfig,
-			Scheme:       drs.Scheme,
-			CA:           drs.CA,
+			DockerConfig: registrySecret.DockerConfig,
+			Scheme:       registrySecret.Scheme,
+			CA:           registrySecret.CA,
 			UserAgent:    r.clusterUUID,
 		}
 
 		opts = utils.GenerateRegistryOptions(rconf, r.logger)
 
-		imagesRegistry = drs.ImageRegistry
+		imagesRegistry = registrySecret.ImageRegistry
 	}
 
 	releaseChecker, err := NewDeckhouseReleaseChecker(opts, r.logger, r.dc, r.moduleManager, imagesRegistry, releaseChannelName)
@@ -151,7 +150,7 @@ func (r *deckhouseReleaseReconciler) checkDeckhouseRelease(ctx context.Context) 
 		// GT
 		case release.GetVersion().GreaterThan(newSemver):
 			// cleanup versions which are older than current version in a specified channel and are in a Pending state
-			if release.Status.Phase == v1alpha1.ModuleReleasePhasePending {
+			if release.Status.Phase == v1alpha1.DeckhouseReleasePhasePending {
 				err = r.client.Delete(ctx, release, client.PropagationPolicy(metav1.DeletePropagationBackground))
 				if err != nil {
 					return fmt.Errorf("delete old release: %w", err)
@@ -162,7 +161,7 @@ func (r *deckhouseReleaseReconciler) checkDeckhouseRelease(ctx context.Context) 
 		case release.GetVersion().Equal(newSemver):
 			r.logger.Debugf("Release with version %s already exists", release.GetVersion())
 			switch release.Status.Phase {
-			case v1alpha1.ModuleReleasePhasePending, "":
+			case v1alpha1.DeckhouseReleasePhasePending, "":
 				if releaseChecker.releaseMetadata.Suspend {
 					patch := client.RawPatch(types.MergePatchType, buildSuspendAnnotation(releaseChecker.releaseMetadata.Suspend))
 					err := r.client.Patch(ctx, release, patch)
@@ -176,7 +175,7 @@ func (r *deckhouseReleaseReconciler) checkDeckhouseRelease(ctx context.Context) 
 					}
 				}
 
-			case v1alpha1.ModuleReleasePhaseSuspended:
+			case v1alpha1.DeckhouseReleasePhaseSuspended:
 				if !releaseChecker.releaseMetadata.Suspend {
 					patch := client.RawPatch(types.MergePatchType, buildSuspendAnnotation(releaseChecker.releaseMetadata.Suspend))
 					err := r.client.Patch(ctx, release, patch)
@@ -284,8 +283,8 @@ func (r *deckhouseReleaseReconciler) createRelease(ctx context.Context, releaseC
 		ObjectMeta: metav1.ObjectMeta{
 			Name: releaseChecker.releaseMetadata.Version,
 			Annotations: map[string]string{
-				"release.deckhouse.io/isUpdating": "false",
-				"release.deckhouse.io/notified":   "false",
+				v1alpha1.DeckhouseReleaseAnnotationIsUpdating: "false",
+				v1alpha1.DeckhouseReleaseAnnotationNotified:   "false",
 			},
 		},
 		Spec: v1alpha1.DeckhouseReleaseSpec{
@@ -300,13 +299,13 @@ func (r *deckhouseReleaseReconciler) createRelease(ctx context.Context, releaseC
 	}
 
 	if releaseChecker.releaseMetadata.Suspend {
-		release.ObjectMeta.Annotations["release.deckhouse.io/suspended"] = "true"
+		release.ObjectMeta.Annotations[v1alpha1.DeckhouseReleaseAnnotationSuspended] = "true"
 	}
 	if cooldownUntil != nil {
-		release.ObjectMeta.Annotations["release.deckhouse.io/cooldown"] = cooldownUntil.UTC().Format(time.RFC3339)
+		release.ObjectMeta.Annotations[v1alpha1.DeckhouseReleaseAnnotationCooldown] = cooldownUntil.UTC().Format(time.RFC3339)
 	}
 	if notificationShiftTime != nil {
-		release.ObjectMeta.Annotations["release.deckhouse.io/notification-time-shift"] = "true"
+		release.ObjectMeta.Annotations[v1alpha1.DeckhouseReleaseAnnotationNotificationTimeShift] = "true"
 	}
 
 	return client.IgnoreAlreadyExists(r.client.Create(ctx, release))
@@ -649,7 +648,7 @@ func buildSuspendAnnotation(suspend bool) []byte {
 	p := map[string]interface{}{
 		"metadata": map[string]interface{}{
 			"annotations": map[string]interface{}{
-				"release.deckhouse.io/suspended": annotationValue,
+				v1alpha1.DeckhouseReleaseAnnotationSuspended: annotationValue,
 			},
 		},
 	}
