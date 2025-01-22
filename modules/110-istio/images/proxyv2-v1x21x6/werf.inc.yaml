@@ -1,8 +1,8 @@
 ---
 {{- $istioProxyVersion := "1.21.6" }}
-# {{- $istioProxyCacheRev := "v1.29.7-39a2a56bbd5b3a591f69dbca51d3e30ef97e0e51-alt-v1" }}
+{{- $istioImageVersion := (printf "v%s" (replace "." "x" $istioProxyVersion)) }} # 1.21.6 -> v1x21x6
+{{- $istioProxyCacheRev := "v1.21.6-5c3dc559371181d5baa4a7533c36f2370fc97581-alt-v1" }}
 {{- $istioProxyDepsRev := "v1.21.6-5c3dc559371181d5baa4a7533c36f2370fc97581-alt-v1" }}
-{{- $istioProxyCacheRev := "main" }}
 {{- $llvmRev := "llvmorg-14.0.6" }}
 {{- $goVersion := "1.23.1" }}
 {{- $protocVersion := "22.3" }}
@@ -13,23 +13,26 @@
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/alt-p11
 import:
+- image: {{ .ModuleName }}/pilot-{{ $istioImageVersion }}-src-artifact
+  add: /src/istio/tools/packaging/common/envoy_bootstrap.json
+  to: /var/lib/istio/envoy/envoy_bootstrap_tmpl.json
+  owner: 1337
+  group: 1337
+  after: setup
+- image: {{ .ModuleName }}/pilot-{{ $istioImageVersion }}-src-artifact
+  add: /src/istio/tools/packaging/common/gcp_envoy_bootstrap.json
+  to: /var/lib/istio/envoy/gcp_envoy_bootstrap_tmpl.json
+  owner: 1337
+  group: 1337
+  after: setup
 - image: {{ .ModuleName }}/{{ .ImageName }}-agent-artifact
-  add: /tmp/istio/out/pilot-agent
+  add: /src/istio/out/pilot-agent
   to: /usr/local/bin/pilot-agent
   owner: 1337
   group: 1337
   after: setup
-- image: {{ .ModuleName }}/{{ .ImageName }}-original-binary-artifact
-  add: /var/lib/istio/envoy
-  to: /var/lib/istio/envoy
-  includePaths:
-  - envoy_bootstrap_tmpl.json
-  - gcp_envoy_bootstrap_tmpl.json
-  owner: 1337
-  group: 1337
-  after: setup
-- image: {{ .ModuleName }}/{{ .ImageName }}-original-binary-artifact
-  add: /usr/local/bin/envoy
+- image: {{ .ModuleName }}/{{ .ImageName }}-build-envoy-artifact
+  add: /src/proxy/bazel-bin/envoy
   to: /usr/local/bin/envoy
   owner: 1337
   group: 1337
@@ -51,14 +54,10 @@ shell:
 docker:
   ENV:
     ISTIO_META_ISTIO_PROXY_SHA: "istio-proxy:78bd2d9b284978e170a49cd13decd5f952544489"
-    ISTIO_META_ISTIO_VERSION: "1.21.6"
+    ISTIO_META_ISTIO_VERSION: "{{ $istioProxyVersion }}"
   WORKDIR: "/"
   USER: 1337
   ENTRYPOINT: ["/usr/local/bin/pilot-agent"]
----
-image: {{ .ModuleName }}/{{ .ImageName }}-original-binary-artifact
-from: istio/proxyv2:1.21.6@sha256:a0afbbc8488060f8059e7fa04576edde01915d40576132dae83479b3abe5ce15
-final: false
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-agent-artifact
 from: {{ .Images.BASE_GOLANG_23_ALPINE_DEV }}
@@ -86,7 +85,7 @@ image: {{ .ModuleName }}/{{ .ImageName }}-build-envoy-artifact
 fromImage: {{ $.ModuleName }}/{{ .ImageName }}-build-image-artifact
 final: false
 import:
-- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+- image: {{ .ModuleName }}/pilot-{{ $istioImageVersion }}-src-artifact
   add: /src/proxy
   to: /src/proxy
   before: install
@@ -123,8 +122,7 @@ shell:
   - rm -rf /tmp/bazel-deps
   #
   - bazel build --disk_cache=/tmp/bazel-cache --nofetch --stamp --config=release //:envoy
-  setup:
-  # - strip /src/proxy/bazel-bin/envoy
+  - echo test-cache
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-build-libcxx-artifact
 fromImage: {{ $.ModuleName }}/{{ .ImageName }}-build-image-artifact
