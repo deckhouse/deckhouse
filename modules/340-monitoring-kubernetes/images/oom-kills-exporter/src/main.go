@@ -115,9 +115,9 @@ func main() {
 		}
 		sleepG = time.Duration(interval+1) * time.Second
 	}
-	local := prometheus.NewRegistry()
+	registry := prometheus.NewRegistry()
 	handler := promhttp.HandlerFor(
-		local,
+		registry,
 		promhttp.HandlerOpts{
 			EnableOpenMetrics: false,
 		})
@@ -125,10 +125,12 @@ func main() {
 		prometheus.CounterOpts{Name: "klog_oomkill"},
 		[]string{"task_memcg"},
 	)
-	local.MustRegister(klogOomkill)
+	if err := registry.Register(klogOomkill); err != nil {
+		log.Fatal(err.Error())
+	}
 
 	go func() {
-		dmesgWatcher(sleepG, local, klogOomkill)
+		dmesgWatcher(sleepG, registry, klogOomkill)
 	}()
 
 	log.Print("Starting prometheus metrics")
