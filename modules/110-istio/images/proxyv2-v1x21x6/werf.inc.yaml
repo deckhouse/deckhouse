@@ -123,9 +123,9 @@ shell:
   - tar -zxf /tmp/bazel-deps/external.tar.gz -C ${BAZEL_OUTPUT_BASE}/external
   - rm -rf /tmp/bazel-deps
   #
-  - bazel build -c opt -- //...
+  - bazel build --stamp --config=release //:envoy
   setup:
-  - strip /src/proxy/bazel-bin/envoy
+  # - strip /src/proxy/bazel-bin/envoy
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-build-libcxx-artifact
 fromImage: {{ $.ModuleName }}/{{ .ImageName }}-build-image-artifact
