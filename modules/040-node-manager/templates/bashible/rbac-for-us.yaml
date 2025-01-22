@@ -287,6 +287,7 @@ kind: RoleBinding
 metadata:
   namespace: kube-system
   name: d8:node-manager:bashible:node-proxy-cert-reader
+  {{- include "helm_lib_module_labels" (list . ) | nindent 2 }}
 subjects:
 - kind: Group
   name: system:bootstrappers:d8-node-manager
