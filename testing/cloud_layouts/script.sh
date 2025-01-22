@@ -440,7 +440,7 @@ function run-test() {
 
   if [[ $CIS_ENABLED == "true" ]]; then
     REPORT=$(get_cis_report)
-    >&2 echo $REPORT | jq '.'
+    >&2 echo $REPORT
   fi
 
   if [[ -n ${SWITCH_TO_IMAGE_TAG} ]]; then
@@ -1133,7 +1133,6 @@ function get_cis_report() {
 export PATH="/opt/deckhouse/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 export LANG=C
 set -Eeuo pipefail
-sudo -i
 testRunAttempts=20
 for ((i=1; i<=$testRunAttempts; i++)); do
   FAILED=$(kubectl get clustercompliancereports.aquasecurity.github.io cis -o wide --no-headers 2>/dev/null | awk '{print $4}')
