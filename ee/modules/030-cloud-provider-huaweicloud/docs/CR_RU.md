@@ -1,5 +1,5 @@
 ---
-title: "Cloud provider — HuaweiCloud: Custom Resources"
+title: "Cloud provider — Huawei Cloud: Custom Resources"
 ---
 
 <!-- SCHEMA -->
