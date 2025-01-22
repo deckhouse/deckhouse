@@ -23,7 +23,6 @@ import (
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/yaml"
 
@@ -36,7 +35,7 @@ const (
 
 	deckhouseConfig = "deckhouse"
 
-	Embedded = "embedded"
+	embeddedSource = "embedded"
 )
 
 type Edition struct {
@@ -105,8 +104,6 @@ func (e *Edition) IsAvailable(sourceName, moduleName string) *bool {
 	if source, ok := e.Modules[sourceName]; ok {
 		if module, ok := source[moduleName]; ok {
 			return &module.Available
-		} else {
-			return ptr.To(false)
 		}
 	}
 	return nil

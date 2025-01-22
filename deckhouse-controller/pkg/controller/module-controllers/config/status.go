@@ -19,7 +19,6 @@ package config
 import (
 	"context"
 	"fmt"
-	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders/editionavailable"
 	"strconv"
 	"time"
 
@@ -38,6 +37,7 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/configtools/conversion"
 	bootstrappedextender "github.com/deckhouse/deckhouse/go_lib/dependency/extenders/bootstrapped"
 	d7sversionextender "github.com/deckhouse/deckhouse/go_lib/dependency/extenders/deckhouseversion"
+	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders/editionavailable"
 	k8sversionextender "github.com/deckhouse/deckhouse/go_lib/dependency/extenders/kubernetesversion"
 	moduledependencyextender "github.com/deckhouse/deckhouse/go_lib/dependency/extenders/moduledependency"
 )
