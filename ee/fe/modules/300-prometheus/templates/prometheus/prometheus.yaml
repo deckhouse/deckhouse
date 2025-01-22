@@ -62,7 +62,7 @@ spec:
   version: v2.53.2
 {{- else }}
   image: {{ include "helm_lib_module_image" (list . "prometheus") }}
-  version: v2.45.2
+  version: v2.55.1
 {{- end }}
   enableRemoteWriteReceiver: true
   enableFeatures:
