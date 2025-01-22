@@ -78,6 +78,6 @@ func (e *Extender) Filter(name string, _ map[string]string) (*bool, error) {
 		return available, nil
 	}
 
-	e.logger.Debugf("the '%s' module is unavailable in the '%s' edition", name, e.edition.String())
+	e.logger.Debugf("the '%s' module disabled in the '%s' edition", name, e.edition.String())
 	return available, fmt.Errorf("disabled in the '%s' edition", e.edition.String())
 }

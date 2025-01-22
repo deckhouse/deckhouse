@@ -200,7 +200,7 @@ func (r *reconciler) refreshModuleStatus(module *v1alpha1.Module) {
 		}
 
 	case editionavailable.Name:
-		module.Status.Phase = v1alpha1.ModulePhaseNotAvailable
+		module.Status.Phase = v1alpha1.ModulePhaseUnavailable
 		reason = v1alpha1.ModuleReasonEditionAvailableExtender
 		_, errMsg := editionavailable.Instance().Filter(module.Name, map[string]string{})
 		message = v1alpha1.ModuleMessageEditionAvailableExtender
@@ -258,7 +258,7 @@ func (r *reconciler) refreshModuleStatus(module *v1alpha1.Module) {
 	}
 
 	// do not change phase of not installed module or unavailable module
-	if module.Status.Phase != v1alpha1.ModulePhaseAvailable && module.Status.Phase != v1alpha1.ModulePhaseNotAvailable {
+	if module.Status.Phase != v1alpha1.ModulePhaseAvailable && module.Status.Phase != v1alpha1.ModulePhaseUnavailable {
 		module.Status.Phase = v1alpha1.ModulePhaseDownloaded
 	}
 	module.SetConditionFalse(v1alpha1.ModuleConditionEnabledByModuleManager, reason, message)

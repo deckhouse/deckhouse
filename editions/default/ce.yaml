@@ -2,3 +2,4 @@ modules:
   embedded:
     chrony:
       available: true
+      enabled: false

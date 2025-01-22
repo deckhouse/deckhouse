@@ -36,7 +36,7 @@ const (
 	ModuleConditionIsReady                = "IsReady"
 	ModuleConditionIsOverridden           = "IsOverridden"
 
-	ModulePhaseNotAvailable     = "NotAvailable"
+	ModulePhaseUnavailable      = "Unavailable"
 	ModulePhaseAvailable        = "Available"
 	ModulePhaseDownloading      = "Downloading"
 	ModulePhaseDownloadingError = "DownloadingError"
