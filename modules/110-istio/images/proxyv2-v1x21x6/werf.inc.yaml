@@ -107,7 +107,7 @@ mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
 shell:
-  setup:
+  install:
   - export GO_VERSION=${GOLANG_VERSION} GOPROXY={{ $.GOPROXY }}
   - export GOOS=linux GOARCH=amd64 CGO_ENABLED=0
   - export BAZEL_VERSION="6.3.2" USE_BAZEL_VERSION="6.3.2"
@@ -125,8 +125,9 @@ shell:
   # - rm -rf /tmp/bazel-deps
   #
   - bazel build -- //...
+  setup:
   #
-  # - stripe bazel-out/envoy
+  # - strip bazel-out/envoy
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-build-libcxx-artifact
 fromImage: {{ $.ModuleName }}/{{ .ImageName }}-build-image-artifact
@@ -145,7 +146,6 @@ shell:
     -GNinja \
     -DLLVM_ENABLE_PROJECTS="libcxxabi;libcxx" \
     -DLLVM_USE_LINKER=lld \
-    -DLLVM_USE_SANITIZER=Thread \
     -DCMAKE_BUILD_TYPE=Release \
     -DCMAKE_C_COMPILER=clang \
     -DCMAKE_CXX_COMPILER=clang++ \
