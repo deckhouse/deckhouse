@@ -187,13 +187,13 @@ func TestMetricsPod(t *testing.T) {
 			"name": "extended_monitoring_pod_threshold","help": "","type": 0,"metric": [
 				{"label": [{"name": "namespace", "value": "ns1"},{"name": "pod", "value": "pod2"},{"name": "threshold", "value": "container-throttling-critical"}],"counter": {"value": 50}},
 				{"label": [{"name": "namespace", "value": "ns1"},{"name": "pod", "value": "pod2"},{"name": "threshold", "value": "container-throttling-warning"}],"counter": {"value": 25}},
-				{"label": [{"name": "namespace", "value": "ns1"},{"name": "pod", "value": "pod2"},{"name": "threshold", "value": "disk-bytes-critical"}],"counter": {"value": 95}},
+				{"label": [{"name": "namespace", "value": "ns1"},{"name": "pod", "value": "pod2"},{"name": "threshold", "value": "disk-bytes-critical"}],"counter": {"value": 94}},
 				{"label": [{"name": "namespace", "value": "ns1"},{"name": "pod", "value": "pod2"},{"name": "threshold", "value": "disk-bytes-warning"}],"counter": {"value": 84}},
 				{"label": [{"name": "namespace", "value": "ns1"},{"name": "pod", "value": "pod2"},{"name": "threshold", "value": "disk-inodes-critical"}],"counter": {"value": 90}},
 				{"label": [{"name": "namespace", "value": "ns1"},{"name": "pod", "value": "pod2"},{"name": "threshold", "value": "disk-inodes-warning"}],"counter": {"value": 85}},
 				{"label": [{"name": "namespace", "value": "ns1"},{"name": "pod", "value": "pod3"},{"name": "threshold", "value": "container-throttling-critical"}],"counter": {"value": 50}},
 				{"label": [{"name": "namespace", "value": "ns1"},{"name": "pod", "value": "pod3"},{"name": "threshold", "value": "container-throttling-warning"}],"counter": {"value": 25}},
-				{"label": [{"name": "namespace", "value": "ns1"},{"name": "pod", "value": "pod3"},{"name": "threshold", "value": "disk-bytes-critical"}],"counter": {"value": 95}},
+				{"label": [{"name": "namespace", "value": "ns1"},{"name": "pod", "value": "pod3"},{"name": "threshold", "value": "disk-bytes-critical"}],"counter": {"value": 94}},
 				{"label": [{"name": "namespace", "value": "ns1"},{"name": "pod", "value": "pod3"},{"name": "threshold", "value": "disk-bytes-warning"}],"counter": {"value": 85}},
 				{"label": [{"name": "namespace", "value": "ns1"},{"name": "pod", "value": "pod3"},{"name": "threshold", "value": "disk-inodes-critical"}],"counter": {"value": 90}},
 				{"label": [{"name": "namespace", "value": "ns1"},{"name": "pod", "value": "pod3"},{"name": "threshold", "value": "disk-inodes-warning"}],"counter": {"value": 85}}
@@ -204,7 +204,7 @@ func TestMetricsPod(t *testing.T) {
 	FakeClient := fake.NewSimpleMetadataClient(scheme)
 	assert.NoError(t, createResource(FakeClient, resourceNamespaces, "", ns, metav1.ObjectMeta{
 		Name:   "ns1",
-		Labels: map[string]string{enabled: "true"},
+		Labels: map[string]string{enabled: "true", threshold + "disk-bytes-critical": "94"},
 	}))
 	assert.NoError(t, createResource(FakeClient, resourceNamespaces, "", ns, metav1.ObjectMeta{
 		Name: "ns2",
@@ -246,9 +246,9 @@ func TestMetricsIngress(t *testing.T) {
 			]	
 		},{
 			"name":"extended_monitoring_ingress_threshold","type":0,"help":"","metric":[
-				{"counter":{"value":20},"label":[{"name":"ingress","value":"ing2"},{"name":"namespace","value":"ns1"},{"name":"threshold","value":"5xx-critical"}]},
+				{"counter":{"value":22},"label":[{"name":"ingress","value":"ing2"},{"name":"namespace","value":"ns1"},{"name":"threshold","value":"5xx-critical"}]},
 				{"counter":{"value":9},"label":[{"name":"ingress","value":"ing2"},{"name":"namespace","value":"ns1"},{"name":"threshold","value":"5xx-warning"}]},
-				{"counter":{"value":20},"label":[{"name":"ingress","value":"ing3"},{"name":"namespace","value":"ns1"},{"name":"threshold","value":"5xx-critical"}]},
+				{"counter":{"value":22},"label":[{"name":"ingress","value":"ing3"},{"name":"namespace","value":"ns1"},{"name":"threshold","value":"5xx-critical"}]},
 				{"counter":{"value":10},"label":[{"name":"ingress","value":"ing3"},{"name":"namespace","value":"ns1"},{"name":"threshold","value":"5xx-warning"}]}
 		]}]`
 
@@ -257,7 +257,7 @@ func TestMetricsIngress(t *testing.T) {
 	FakeClient := fake.NewSimpleMetadataClient(scheme)
 	assert.NoError(t, createResource(FakeClient, resourceNamespaces, "", ns, metav1.ObjectMeta{
 		Name:   "ns1",
-		Labels: map[string]string{enabled: "true"},
+		Labels: map[string]string{enabled: "true", threshold + "5xx-critical": "22"},
 	}))
 	assert.NoError(t, createResource(FakeClient, resourceNamespaces, "", ns, metav1.ObjectMeta{
 		Name: "ns2",
@@ -296,7 +296,7 @@ func TestMetricsDeployment(t *testing.T) {
 		]},{
 			"name":"extended_monitoring_deployment_threshold","type":0,"help":"","metric":[
 				{"counter":{"value":1},"label":[{"name":"deployment","value":"deploy2"},{"name":"namespace","value":"ns1"},{"name":"threshold","value":"replicas-not-ready"}]},
-				{"counter":{"value":0},"label":[{"name":"deployment","value":"deploy3"},{"name":"namespace","value":"ns1"},{"name":"threshold","value":"replicas-not-ready"}]}
+				{"counter":{"value":2},"label":[{"name":"deployment","value":"deploy3"},{"name":"namespace","value":"ns1"},{"name":"threshold","value":"replicas-not-ready"}]}
 		]},{
 			"name":"extended_monitoring_enabled","type":0,"help":"","metric":[
 				{"counter":{"value":1},"label":[{"name":"namespace","value":"ns1"}]}
@@ -307,7 +307,7 @@ func TestMetricsDeployment(t *testing.T) {
 	FakeClient := fake.NewSimpleMetadataClient(scheme)
 	assert.NoError(t, createResource(FakeClient, resourceNamespaces, "", ns, metav1.ObjectMeta{
 		Name:   "ns1",
-		Labels: map[string]string{enabled: "true"},
+		Labels: map[string]string{enabled: "true", threshold + "replicas-not-ready": "2"},
 	}))
 	assert.NoError(t, createResource(FakeClient, resourceNamespaces, "", ns, metav1.ObjectMeta{
 		Name: "ns2",
@@ -346,7 +346,7 @@ func TestMetricsDaemonset(t *testing.T) {
 		]},{
 			"name":"extended_monitoring_daemonset_threshold","type":0,"help":"","metric":[
 				{"counter":{"value":1},"label":[{"name":"daemonset","value":"ds2"},{"name":"namespace","value":"ns1"},{"name":"threshold","value":"replicas-not-ready"}]},
-				{"counter":{"value":0},"label":[{"name":"daemonset","value":"ds3"},{"name":"namespace","value":"ns1"},{"name":"threshold","value":"replicas-not-ready"}]}
+				{"counter":{"value":2},"label":[{"name":"daemonset","value":"ds3"},{"name":"namespace","value":"ns1"},{"name":"threshold","value":"replicas-not-ready"}]}
 		]},{
 			"name":"extended_monitoring_enabled","type":0,"help":"","metric":[
 				{"counter":{"value":1},"label":[{"name":"namespace","value":"ns1"}]}
@@ -357,7 +357,7 @@ func TestMetricsDaemonset(t *testing.T) {
 	FakeClient := fake.NewSimpleMetadataClient(scheme)
 	assert.NoError(t, createResource(FakeClient, resourceNamespaces, "", ns, metav1.ObjectMeta{
 		Name:   "ns1",
-		Labels: map[string]string{enabled: "true"},
+		Labels: map[string]string{enabled: "true", threshold + "replicas-not-ready": "2"},
 	}))
 	assert.NoError(t, createResource(FakeClient, resourceNamespaces, "", ns, metav1.ObjectMeta{
 		Name: "ns2",
@@ -399,7 +399,7 @@ func TestMetricsStatefulset(t *testing.T) {
 		]},{
 			"name":"extended_monitoring_statefulset_threshold","type":0,"help":"","metric":[
 				{"counter":{"value":1},"label":[{"name":"namespace","value":"ns1"},{"name":"statefulset","value":"sts2"},{"name":"threshold","value":"replicas-not-ready"}]},
-				{"counter":{"value":0},"label":[{"name":"namespace","value":"ns1"},{"name":"statefulset","value":"sts3"},{"name":"threshold","value":"replicas-not-ready"}]}
+				{"counter":{"value":2},"label":[{"name":"namespace","value":"ns1"},{"name":"statefulset","value":"sts3"},{"name":"threshold","value":"replicas-not-ready"}]}
 		]}]`
 
 	scheme := runtime.NewScheme()
@@ -407,7 +407,7 @@ func TestMetricsStatefulset(t *testing.T) {
 	FakeClient := fake.NewSimpleMetadataClient(scheme)
 	assert.NoError(t, createResource(FakeClient, resourceNamespaces, "", ns, metav1.ObjectMeta{
 		Name:   "ns1",
-		Labels: map[string]string{enabled: "true"},
+		Labels: map[string]string{enabled: "true", threshold + "replicas-not-ready": "2"},
 	}))
 	assert.NoError(t, createResource(FakeClient, resourceNamespaces, "", ns, metav1.ObjectMeta{
 		Name: "ns2",
