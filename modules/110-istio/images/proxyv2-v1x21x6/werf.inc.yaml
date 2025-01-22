@@ -1,7 +1,7 @@
 ---
 {{- $istioProxyVersion := "1.21.6" }}
 # {{- $istioProxyCacheRev := "v1.29.7-39a2a56bbd5b3a591f69dbca51d3e30ef97e0e51-alt-v1" }}
-# {{- $istioProxyDepsRev := "v1.29.7-39a2a56bbd5b3a591f69dbca51d3e30ef97e0e51-alt-v1" }}
+{{- $istioProxyDepsRev := "v1.21.6-5c3dc559371181d5baa4a7533c36f2370fc97581-alt-v1" }}
 {{- $istioProxyCacheRev := "main" }}
 {{- $istioProxyDepsRev := "main" }}
 {{- $llvmRev := "llvmorg-14.0.6" }}
@@ -121,13 +121,12 @@ shell:
   #
   - export BAZEL_OUTPUT_BASE=$(bazel info output_base)
   - mkdir -p ${BAZEL_OUTPUT_BASE}/external
-  # - tar -zxf /tmp/bazel-deps/external.tar.gz -C ${BAZEL_OUTPUT_BASE}/external
-  # - rm -rf /tmp/bazel-deps
+  - tar -zxf /tmp/bazel-deps/external.tar.gz -C ${BAZEL_OUTPUT_BASE}/external
+  - rm -rf /tmp/bazel-deps
   #
-  - bazel build -- //...
+  - bazel query //... | grep -Ev '_test$' | xargs bazel build -c opt
   setup:
-  #
-  # - strip bazel-out/envoy
+  - strip /src/proxy/bazel-bin/envoy
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-build-libcxx-artifact
 fromImage: {{ $.ModuleName }}/{{ .ImageName }}-build-image-artifact
