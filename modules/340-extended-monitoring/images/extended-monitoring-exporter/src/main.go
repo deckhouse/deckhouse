@@ -103,6 +103,27 @@ func thresholdLabel(labels map[string]string, threshold string, i float64) float
 	return i
 }
 
+func thresholdMetric(
+	ctx context.Context,
+	client metadata.Interface, maps map[string]float64,
+	namespasce metav1.PartialObjectMetadata,
+	resource schema.GroupVersionResource,
+	enabled *prometheus.CounterVec,
+	threshold *prometheus.CounterVec) {
+	for key, value := range maps {
+		maps[key] = thresholdLabel(namespasce.Labels, key, value)
+	}
+	for _, pod := range ListResources(ctx, client, resource, options, namespasce.Name).Items {
+		e := enabledLabel(pod.Labels)
+		enabled.WithLabelValues(namespasce.Name, pod.Name).Add(e)
+		if e == 1 {
+			for key, value := range maps {
+				threshold.WithLabelValues(namespasce.Name, pod.Name, key).Add(thresholdLabel(pod.Labels, key, value))
+			}
+		}
+	}
+}
+
 func recordMetrics(ctx context.Context, client metadata.Interface, registry *prometheus.Registry) {
 	// init
 	nodeEnabled := prometheus.NewCounterVec(
@@ -178,95 +199,33 @@ func recordMetrics(ctx context.Context, client metadata.Interface, registry *pro
 
 		if enabledNamespace == 1 {
 			// pod
-			podThresholdMap := map[string]float64{
+			thresholdMetric(ctx, client, map[string]float64{
 				"disk-bytes-warning":            85,
 				"disk-bytes-critical":           95,
 				"disk-inodes-warning":           85,
 				"disk-inodes-critical":          90,
 				"container-throttling-warning":  25,
 				"container-throttling-critical": 50,
-			}
-			for key, value := range podThresholdMap {
-				podThresholdMap[key] = thresholdLabel(namespasce.Labels, key, value)
-			}
-			for _, pod := range ListResources(ctx, client, resourcePods, options, namespasce.Name).Items {
-				enabled := enabledLabel(pod.Labels)
-				podEnabled.WithLabelValues(namespasce.Name, pod.Name).Add(enabled)
-				if enabled == 1 {
-					for key, value := range podThresholdMap {
-						podThreshold.WithLabelValues(namespasce.Name, pod.Name, key).Add(thresholdLabel(pod.Labels, key, value))
-					}
-				}
-			}
+			}, namespasce, resourcePods, podEnabled, podThreshold)
 			// ingress
-			ingressThresholdMap := map[string]float64{
+			thresholdMetric(ctx, client, map[string]float64{
 				"5xx-warning":  10,
 				"5xx-critical": 20,
-			}
-			for key, value := range ingressThresholdMap {
-				ingressThresholdMap[key] = thresholdLabel(namespasce.Labels, key, value)
-			}
-			for _, ingress := range ListResources(ctx, client, resourceIngresses, options, namespasce.Name).Items {
-				enabled := enabledLabel(ingress.Labels)
-				ingressEnabled.WithLabelValues(namespasce.Name, ingress.Name).Add(enabled)
-				if enabled == 1 {
-					for key, value := range ingressThresholdMap {
-						ingressThreshold.WithLabelValues(namespasce.Name, ingress.Name, key).Add(thresholdLabel(ingress.Labels, key, value))
-					}
-				}
-			}
+			}, namespasce, resourceIngresses, ingressEnabled, ingressThreshold)
 			// deployment
-			deploymentThresholdMap := map[string]float64{
+			thresholdMetric(ctx, client, map[string]float64{
 				"replicas-not-ready": 0,
-			}
-			for key, value := range deploymentThresholdMap {
-				deploymentThresholdMap[key] = thresholdLabel(namespasce.Labels, key, value)
-			}
-			for _, deployment := range ListResources(ctx, client, resourceDeployments, options, namespasce.Name).Items {
-				enabled := enabledLabel(deployment.Labels)
-				deploymentEnabled.WithLabelValues(namespasce.Name, deployment.Name).Add(enabled)
-				if enabled == 1 {
-					for key, value := range deploymentThresholdMap {
-						deploymentThreshold.WithLabelValues(namespasce.Name, deployment.Name, key).Add(thresholdLabel(deployment.Labels, key, value))
-					}
-				}
-			}
+			}, namespasce, resourceDeployments, deploymentEnabled, deploymentThreshold)
 			// daemonset
-			daemonsetThresholdMap := map[string]float64{
+			thresholdMetric(ctx, client, map[string]float64{
 				"replicas-not-ready": 0,
-			}
-			for key, value := range daemonsetThresholdMap {
-				daemonsetThresholdMap[key] = thresholdLabel(namespasce.Labels, key, value)
-			}
-			for _, daemonset := range ListResources(ctx, client, resourceDaemonsets, options, namespasce.Name).Items {
-				enabled := enabledLabel(daemonset.Labels)
-				daemonsetEnabled.WithLabelValues(namespasce.Name, daemonset.Name).Add(enabled)
-				if enabled == 1 {
-					for key, value := range daemonsetThresholdMap {
-						daemonsetThreshold.WithLabelValues(namespasce.Name, daemonset.Name, key).Add(thresholdLabel(daemonset.Labels, key, value))
-					}
-				}
-			}
+			}, namespasce, resourceDaemonsets, daemonsetEnabled, daemonsetThreshold)
 			// statefulset
-			statefulsetThresholdMap := map[string]float64{
+			thresholdMetric(ctx, client, map[string]float64{
 				"replicas-not-ready": 0,
-			}
-			for key, value := range statefulsetThresholdMap {
-				statefulsetThresholdMap[key] = thresholdLabel(namespasce.Labels, key, value)
-			}
-			for _, statefulset := range ListResources(ctx, client, resourceStatefulsets, options, namespasce.Name).Items {
-				enabled := enabledLabel(statefulset.Labels)
-				statefulsetEnabled.WithLabelValues(namespasce.Name, statefulset.Name).Add(enabled)
-				if enabled == 1 {
-					for key, value := range statefulsetThresholdMap {
-						statefulsetThreshold.WithLabelValues(namespasce.Name, statefulset.Name, key).Add(thresholdLabel(statefulset.Labels, key, value))
-					}
-				}
-			}
-			// cronjob
-			for _, cronjob := range ListResources(ctx, client, resourceCronjobs, options, namespasce.Name).Items {
-				cronjobEnabled.WithLabelValues(namespasce.Name, cronjob.Name).Add(enabledLabel(cronjob.Labels))
-			}
+			}, namespasce, resourceStatefulsets, statefulsetEnabled, statefulsetThreshold)
+			// cronjob (one cronjobEnabled)
+			thresholdMetric(ctx, client, map[string]float64{}, namespasce, resourceCronjobs, cronjobEnabled, cronjobEnabled)
 		}
 	}
 	registry.MustRegister(nodeEnabled)
