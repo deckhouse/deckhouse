@@ -31,11 +31,6 @@ properties:
           Mirrorer img full path
         x-example:
           - dev-registry.deckhouse.io/mirrorer:latest
-  enableRegistryManager:
-    type: boolean
-    description: |
-      Registry manager enable flag
-    default: false
   mode:
     type: string
     description: |

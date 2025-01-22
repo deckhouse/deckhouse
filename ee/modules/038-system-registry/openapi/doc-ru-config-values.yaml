@@ -7,9 +7,6 @@ properties:
       registryManager:
         description: |
           Образ registry manager-а
-  enableRegistryManager:
-    description: |
-      Флаг включения registry manager-а
   mode:
     description: |
       Тип регистри
