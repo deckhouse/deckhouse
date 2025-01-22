@@ -10,9 +10,9 @@ Add a new node to the cluster (for more information about adding a static node t
 
 - Create a [NodeGroup](../../reference/cr/nodegroup.html) `worker`. To do this, run the following command on the **master node**:
 
-  {% snippetcut %}
+
   ```shell
-sudo d8 k create -f - << EOF
+  sudo d8 k create -f - << EOF
   apiVersion: deckhouse.io/v1
   kind: NodeGroup
   metadata:
@@ -26,21 +26,17 @@ sudo d8 k create -f - << EOF
           role: worker
 EOF
   ```
-  {% endsnippetcut %}
   
 - Generate an SSH key with an empty passphrase. To do this, run the following command on the **master node**:
 
-  {% snippetcut %}
-```
-ssh-keygen -t rsa -f /dev/shm/caps-id -C "" -N ""
-```
-  {% endsnippetcut %}
+  ```
+  ssh-keygen -t rsa -f /dev/shm/caps-id -C "" -N ""
+  ```
 
 - Create an [SSHCredentials](../../reference/cr/sshcredentials.html) resource in the cluster. To do this, run the following command on the **master node**:
 
-  {% snippetcut %}
   ```shell
-sudo -i d8 k create -f - <<EOF
+  sudo -i d8 k create -f - <<EOF
   apiVersion: deckhouse.io/v1alpha1
   kind: SSHCredentials
   metadata:
@@ -48,39 +44,33 @@ sudo -i d8 k create -f - <<EOF
   spec:
     user: caps
     privateSSHKey: "`cat /dev/shm/caps-id | base64 -w0`"
-EOF
+  EOF
   ```
-  {% endsnippetcut %}
 
 - Print the public part of the previously generated SSH key (you will need it in the next step). To do so, run the following command on the **master node**:
 
-  {% snippetcut %}
-```
-cat /dev/shm/caps-id.pub
-```
-{% endsnippetcut %}
+  ```
+  cat /dev/shm/caps-id.pub
+  ```
 
 - Create the `caps` user on the **virtual machine you have started**. To do so, run the following command, specifying the public part of the SSH key obtained in the previous step:
 
-  {% snippetcut %}
-```shell
-export KEY='<SSH-PUBLIC-KEY>' # Укажите публичную часть SSH-ключа пользователя.
-useradd -m -s /bin/bash caps
-usermod -aG sudo caps
-echo 'caps ALL=(ALL) NOPASSWD: ALL' | sudo EDITOR='tee -a' visudo
-mkdir /home/caps/.ssh
-echo $KEY >> /home/caps/.ssh/authorized_keys
-chown -R caps:caps /home/caps
-chmod 700 /home/caps/.ssh
-chmod 600 /home/caps/.ssh/authorized_keys
-```
-  {% endsnippetcut %}
+  ```shell
+  export KEY='<SSH-PUBLIC-KEY>' # Укажите публичную часть SSH-ключа пользователя.
+  useradd -m -s /bin/bash caps
+  usermod -aG sudo caps
+  echo 'caps ALL=(ALL) NOPASSWD: ALL' | sudo EDITOR='tee -a' visudo
+  mkdir /home/caps/.ssh
+  echo $KEY >> /home/caps/.ssh/authorized_keys
+  chown -R caps:caps /home/caps
+  chmod 700 /home/caps/.ssh
+  chmod 600 /home/caps/.ssh/authorized_keys
+  ```
 
 - Create a [StaticInstance](../../reference/cr/staticinstance.html) for the node to be added. To do so, run the following command on the **master node** (specify IP address of the node):
 
-  {% snippetcut %}
   ```shell
-export NODE=<NODE-IP-ADDRESS> # Specify the IP address of the node you want to connect to the cluster.
+  export NODE=<NODE-IP-ADDRESS> # Specify the IP address of the node you want to connect to the cluster.
   sudo -i d8 k create -f - <<EOF
   apiVersion: deckhouse.io/v1alpha1
   kind: StaticInstance
@@ -93,15 +83,12 @@ export NODE=<NODE-IP-ADDRESS> # Specify the IP address of the node you want to c
     credentialsRef:
       kind: SSHCredentials
       name: caps
-EOF
+  EOF
   ```
-  {% endsnippetcut %}
 
 - Ensure that all nodes in the cluster are `Ready`.
   On the **master node**, run the following command to get nodes list:
 
-  {% snippetcut %}
-```shell
-sudo kubectl get no
-```
-  {% endsnippetcut %}
+  ```shell
+  sudo kubectl get no
+  ```

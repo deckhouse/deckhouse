@@ -22,10 +22,9 @@
 
 Create the `config.yml` file.
 {% capture includePath %}_includes/getting_started/{{ page.platform_code }}/partials/config.yml{% if include.layout.size > 0 %}.{{ include.layout }}{% endif %}.{% if revision != "ce" %}{{ "other" }}{% else %}{{ revision }}{% endif %}.inc{% endcapture %}
-{% snippetcut name="config.yml" selector="config-yml" %}
+<div markdown="1">
 {% include_file "{{ includePath }}" syntax="yaml" %}
-{% endsnippetcut %}
-
+</div>
 {%- if page.platform_type == 'existing' %}
 {% offtopic title="About nodeSelector, taints and tolerations..." %}
 You can control which nodes the Deckhouse kernel will run on by using the `spec.setting.nodeSelector` parameter in the ModuleConfig `deckhouse` of the installation configuration.
