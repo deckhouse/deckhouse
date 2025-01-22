@@ -62,7 +62,7 @@ spec:
   version: v2.53.2
 {{- else }}
   image: {{ include "helm_lib_module_image" (list . "prometheus") }}
-  version: v2.55.1
+  version: v2.45.2
 {{- end }}
   enableRemoteWriteReceiver: true
   enableFeatures:
@@ -91,7 +91,7 @@ spec:
     - "walpp"
     {{- end }}
     volumeMounts:
-    - name: prometheus-longterm-db
+    - name: prometheus-main-db
       mountPath: /prometheus
       subPath: prometheus-db
       securityContext:
