@@ -122,7 +122,7 @@ shell:
   # - git clone --depth 1 --branch {{ $istioProxyDepsRev }} {{ .SOURCE_REPO }}/istio/envoy-build-deps.git /tmp/bazel-deps
   # - chown -R 1337:1337 /tmp/bazel-deps
   #
-  - cd /src/llvm/llvm
+  - cd /tmp/
   - |
     cmake \
     -GNinja \
@@ -132,7 +132,7 @@ shell:
     -DCMAKE_BUILD_TYPE=Release \
     -DCMAKE_C_COMPILER=/usr/bin/clang \
     -DCMAKE_CXX_COMPILER=/usr/bin/clang++ \
-    -DCMAKE_INSTALL_PREFIX="/opt/libcxx"
+    -DCMAKE_INSTALL_PREFIX="/opt/libcxx" /src/llvm/llvm
   - ninja install-cxx install-cxxabi
 
   - export BAZEL_VERSION="6.3.2" USE_BAZEL_VERSION="6.3.2"
