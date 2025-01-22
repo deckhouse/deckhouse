@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// FIXME(dhctl-for-installer): fix connection-config, converge and check options
+
 package main
 
 import (
