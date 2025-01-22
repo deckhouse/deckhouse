@@ -94,10 +94,10 @@ import:
   add: /opt/libcxx
   to: /opt/libcxx
   before: install
-- image: {{ .ModuleName }}/{{ .ImageName }}-basel-artifact
-  add: /tmp/bazel-cache
-  to: /tmp/bazel-cache
-  before: install
+# - image: {{ .ModuleName }}/{{ .ImageName }}-basel-artifact
+#   add: /tmp/bazel-cache
+#   to: /tmp/bazel-cache
+#   before: install
 - image: {{ .ModuleName }}/{{ .ImageName }}-basel-artifact
   add: /tmp/bazel-deps
   to: /tmp/bazel-deps
@@ -110,7 +110,7 @@ shell:
   - export GO_VERSION=${GOLANG_VERSION} GOPROXY={{ $.GOPROXY }}
   - export GOOS=linux GOARCH=amd64 CGO_ENABLED=0
   - export BAZEL_VERSION="6.3.2" USE_BAZEL_VERSION="6.3.2"
-  - export BAZEL_BUILD_OPTS="--disk_cache=/tmp/bazel-cache --nofetch"
+  - export BAZEL_BUILD_OPTS="--disk_cache=/tmp/bazel-cache"
   - cd /src/proxy
   - sed -i '/^build --enable_platform_specific_config/a build --linkopt=-L/opt/libcxx/lib'          envoy.bazelrc
   - sed -i '/^build --enable_platform_specific_config/a build --linkopt=-Wl,-rpath,/opt/libcxx/lib' envoy.bazelrc
@@ -260,8 +260,8 @@ final: false
 shell:
   install:
   - mkdir -p /tmp/bazel-cache
-  - git clone --depth 1 --branch {{ $istioProxyCacheRev }} {{ $.SOURCE_REPO }}/istio/envoy-build-cache.git /tmp/bazel-cache
-  - rm -rf /tmp/bazel-cache/.git
+  # - git clone --depth 1 --branch {{ $istioProxyCacheRev }} {{ $.SOURCE_REPO }}/istio/envoy-build-cache.git /tmp/bazel-cache
+  # - rm -rf /tmp/bazel-cache/.git
   - mkdir -p /tmp/bazel-deps
   - git clone --depth 1 --branch {{ $istioProxyDepsRev }} {{ .SOURCE_REPO }}/istio/envoy-build-deps.git /tmp/bazel-deps
   - rm -rf /tmp/bazel-deps/.git
