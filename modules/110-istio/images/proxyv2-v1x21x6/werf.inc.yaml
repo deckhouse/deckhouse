@@ -123,7 +123,7 @@ shell:
   - tar -zxf /tmp/bazel-deps/external.tar.gz -C ${BAZEL_OUTPUT_BASE}/external
   - rm -rf /tmp/bazel-deps
   #
-  - bazel query //... | grep -Ev '_test$' | xargs bazel build -c opt
+  - bazel build -c opt -- //...
   setup:
   - strip /src/proxy/bazel-bin/envoy
 ---
