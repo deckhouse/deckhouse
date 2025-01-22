@@ -203,7 +203,7 @@ func (r *reconciler) refreshModuleStatus(module *v1alpha1.Module) {
 		module.Status.Phase = v1alpha1.ModulePhaseUnavailable
 		reason = v1alpha1.ModuleReasonEditionAvailableExtender
 		_, errMsg := editionavailable.Instance().Filter(module.Name, map[string]string{})
-		message = v1alpha1.ModuleMessageEditionAvailableExtender
+		message = v1alpha1.ModuleMessageEditionExtender
 		if errMsg != nil {
 			message += ": " + errMsg.Error()
 		}
@@ -211,7 +211,7 @@ func (r *reconciler) refreshModuleStatus(module *v1alpha1.Module) {
 	case editionenabled.Name:
 		reason = v1alpha1.ModuleReasonEditionEnabledExtender
 		_, errMsg := editionenabled.Instance().Filter(module.Name, map[string]string{})
-		message = v1alpha1.ModuleMessageEditionEnabledExtender
+		message = v1alpha1.ModuleMessageEditionExtender
 		if errMsg != nil {
 			message += ": " + errMsg.Error()
 		}

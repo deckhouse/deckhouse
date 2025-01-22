@@ -74,8 +74,7 @@ const (
 
 	ModuleMessageBundle                      = "turned off by bundle"
 	ModuleMessageModuleConfig                = "turned off by module config"
-	ModuleMessageEditionAvailableExtender    = "turned off by edition available extender"
-	ModuleMessageEditionEnabledExtender      = "turned off by edition enabled extender"
+	ModuleMessageEditionExtender             = "turned off by edition extender"
 	ModuleMessageDynamicGlobalHookExtender   = "turned off by global hook"
 	ModuleMessageEnabledScriptExtender       = "turned off by enabled script"
 	ModuleMessageDeckhouseVersionExtender    = "turned off by deckhouse version"
