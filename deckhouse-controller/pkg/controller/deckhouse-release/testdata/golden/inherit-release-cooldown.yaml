@@ -1,19 +1,21 @@
 ---
 apiVersion: deckhouse.io/v1alpha1
-approved: false
+approved: true
 kind: DeckhouseRelease
 metadata:
   annotations:
-    release.deckhouse.io/cooldown: "2026-06-06T16:16:16Z"
+    dryrun: "true"
     release.deckhouse.io/isUpdating: "false"
     release.deckhouse.io/notified: "false"
   creationTimestamp: null
-  name: v1.31.1
-  resourceVersion: "1"
+  labels:
+    heritage: deckhouse
+  name: v1.15.0
+  resourceVersion: "2"
 spec:
-  changelogLink: https://github.com/deckhouse/deckhouse/releases/tag/v1.31.1
-  version: v1.31.1
+  version: v1.15.0
 status:
-  approved: false
-  message: ""
-  transitionTime: null
+  approved: true
+  message: Release object was restored
+  phase: Deployed
+  transitionTime: "2019-10-17T15:33:00Z"

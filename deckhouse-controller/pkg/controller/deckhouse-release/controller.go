@@ -28,6 +28,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/Masterminds/semver/v3"
 	aoapp "github.com/flant/addon-operator/pkg/app"
 	metricstorage "github.com/flant/shell-operator/pkg/metric_storage"
 	"github.com/gofrs/uuid/v5"
@@ -62,9 +63,6 @@ const (
 	deckhouseNamespace          = "d8-system"
 	deckhouseDeployment         = "deckhouse"
 	deckhouseRegistrySecretName = "deckhouse-registry"
-
-	deckhouseReleaseAnnotationDryrun            = "dryrun"
-	deckhouseReleaseAnnotationTriggeredByDryrun = "triggered_by_dryrun"
 )
 
 const defaultCheckInterval = 15 * time.Second
@@ -84,12 +82,19 @@ type deckhouseReleaseReconciler struct {
 
 	registrySecret *utils.DeckhouseRegistrySecret
 	metricsUpdater updater.MetricsUpdater
+
+	deckhouseVersion string
 }
 
 func NewDeckhouseReleaseController(ctx context.Context, mgr manager.Manager, dc dependency.Container,
 	moduleManager moduleManager, updateSettings *helpers.DeckhouseSettingsContainer, metricStorage *metricstorage.MetricStorage,
-	preflightCountDown *sync.WaitGroup, logger *log.Logger,
+	preflightCountDown *sync.WaitGroup, deckhouseVersion string, logger *log.Logger,
 ) error {
+	parsedVersion, err := semver.NewVersion(deckhouseVersion)
+	if err != nil {
+		return fmt.Errorf("parse deckhouse version: %w", err)
+	}
+
 	r := &deckhouseReleaseReconciler{
 		client:             mgr.GetClient(),
 		dc:                 dc,
@@ -98,14 +103,14 @@ func NewDeckhouseReleaseController(ctx context.Context, mgr manager.Manager, dc 
 		updateSettings:     updateSettings,
 		metricStorage:      metricStorage,
 		preflightCountDown: preflightCountDown,
+		deckhouseVersion:   fmt.Sprintf("v%d.%d.%d", parsedVersion.Major(), parsedVersion.Minor(), parsedVersion.Patch()),
 
 		metricsUpdater: d8updater.NewMetricsUpdater(metricStorage),
 	}
 
 	// Add Preflight Check
-	err := mgr.Add(manager.RunnableFunc(r.PreflightCheck))
-	if err != nil {
-		return err
+	if err = mgr.Add(manager.RunnableFunc(r.PreflightCheck)); err != nil {
+		return fmt.Errorf("add a runnable function: %w", err)
 	}
 	r.preflightCountDown.Add(1)
 
@@ -644,7 +649,7 @@ func (r *deckhouseReleaseReconciler) bumpDeckhouseDeployment(ctx context.Context
 	}
 
 	// dryrun for testing purpose
-	val, ok := dr.GetAnnotations()[deckhouseReleaseAnnotationDryrun]
+	val, ok := dr.GetAnnotations()[v1alpha1.DeckhouseReleaseAnnotationDryrun]
 	if ok && val == "true" {
 		go func() {
 			r.logger.Debug("dryrun start soon...")
@@ -673,7 +678,7 @@ func (r *deckhouseReleaseReconciler) bumpDeckhouseDeployment(ctx context.Context
 					continue
 				}
 
-				if release.Status.Phase != v1alpha1.ModuleReleasePhasePending {
+				if release.Status.Phase != v1alpha1.DeckhouseReleasePhasePending {
 					continue
 				}
 
@@ -683,7 +688,7 @@ func (r *deckhouseReleaseReconciler) bumpDeckhouseDeployment(ctx context.Context
 						release.Annotations = make(map[string]string, 1)
 					}
 
-					release.Annotations[deckhouseReleaseAnnotationTriggeredByDryrun] = dr.GetName()
+					release.Annotations[v1alpha1.DeckhouseReleaseAnnotationTriggeredByDryrun] = dr.GetName()
 
 					return nil
 				})
