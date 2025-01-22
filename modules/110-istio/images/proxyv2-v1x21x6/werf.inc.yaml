@@ -155,6 +155,7 @@ shell:
   setup:
   - cd /tmp/
   - ninja install-cxx install-cxxabi
+  - rm -rf /opt/libcxx/include
 ---
 #=====================================================================================================
 ---
