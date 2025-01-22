@@ -37,7 +37,6 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/confighandler"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/moduleloader"
 	"github.com/deckhouse/deckhouse/go_lib/configtools"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
@@ -59,19 +58,15 @@ func RegisterController(
 	mm moduleManager,
 	handler *confighandler.Handler,
 	ms *metricstorage.MetricStorage,
-	loader *moduleloader.Loader,
-	bundle string,
 	logger *log.Logger,
 ) error {
 	r := &reconciler{
 		init:            new(sync.WaitGroup),
 		client:          runtimeManager.GetClient(),
-		log:             logger,
+		log:             logger.Named("module-config-controller"),
 		handler:         handler,
 		moduleManager:   mm,
 		metricStorage:   ms,
-		moduleLoader:    loader,
-		bundle:          bundle,
 		configValidator: configtools.NewValidator(mm),
 	}
 
@@ -104,9 +99,7 @@ type reconciler struct {
 	handler         *confighandler.Handler
 	moduleManager   moduleManager
 	metricStorage   *metricstorage.MetricStorage
-	moduleLoader    *moduleloader.Loader
 	configValidator *configtools.Validator
-	bundle          string
 }
 
 type moduleManager interface {

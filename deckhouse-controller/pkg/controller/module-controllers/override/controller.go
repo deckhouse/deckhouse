@@ -59,7 +59,7 @@ func RegisterController(runtimeManager manager.Manager, mm moduleManager, dc dep
 	r := &reconciler{
 		init:                 new(sync.WaitGroup),
 		client:               runtimeManager.GetClient(),
-		log:                  logger,
+		log:                  logger.Named("module-pull-override-controller"),
 		moduleManager:        mm,
 		downloadedModulesDir: d8env.GetDownloadedModulesDir(),
 		symlinksDir:          filepath.Join(d8env.GetDownloadedModulesDir(), "modules"),

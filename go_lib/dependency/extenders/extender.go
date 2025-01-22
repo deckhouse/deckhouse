@@ -17,6 +17,7 @@ limitations under the License.
 package extenders
 
 import (
+	"github.com/deckhouse/deckhouse/pkg/log"
 	"slices"
 
 	"github.com/Masterminds/semver/v3"
@@ -25,6 +26,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders/bootstrapped"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders/deckhouseversion"
+	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders/editionavailable"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders/kubernetesversion"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders/moduledependency"
 )
@@ -38,12 +40,13 @@ func IsExtendersField(field string) bool {
 	}, field)
 }
 
-func Extenders() []extenders.Extender {
+func Extenders(logger *log.Logger) []extenders.Extender {
 	return []extenders.Extender{
 		kubernetesversion.Instance(),
 		deckhouseversion.Instance(),
 		bootstrapped.Instance(),
 		moduledependency.Instance(),
+		editionavailable.Instance().SetLogger(logger),
 	}
 }
 

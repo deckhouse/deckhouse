@@ -1,0 +1,4 @@
+modules:
+  embedded:
+    chrony:
+      available: false

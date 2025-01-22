@@ -148,11 +148,11 @@ func (r *reconciler) releaseExists(ctx context.Context, sourceName, moduleName, 
 		return false, fmt.Errorf("list module releases: %w", err)
 	}
 	if len(moduleReleases.Items) == 0 {
-		r.log.Debugf("no module release with '%s' checksum for the '%s' module of the '%s' source", checksum, moduleName, sourceName)
+		r.logger.Debugf("no module release with '%s' checksum for the '%s' module of the '%s' source", checksum, moduleName, sourceName)
 		return false, nil
 	}
 
-	r.log.Debugf("the module release with '%s' checksum exists for the '%s' module of the '%s' source", checksum, moduleName, sourceName)
+	r.logger.Debugf("the module release with '%s' checksum exists for the '%s' module of the '%s' source", checksum, moduleName, sourceName)
 	return true, nil
 }
 
@@ -253,7 +253,7 @@ func (r *reconciler) ensureModule(ctx context.Context, sourceName, moduleName, r
 		if !apierrors.IsNotFound(err) {
 			return nil, fmt.Errorf("get the '%s' module: %w", moduleName, err)
 		}
-		r.log.Debugf("the '%s' module not installed", moduleName)
+		r.logger.Debugf("the '%s' module not installed", moduleName)
 		module = &v1alpha1.Module{
 			TypeMeta: metav1.TypeMeta{
 				Kind:       v1alpha1.ModuleGVK.Kind,
@@ -266,7 +266,7 @@ func (r *reconciler) ensureModule(ctx context.Context, sourceName, moduleName, r
 				AvailableSources: []string{sourceName},
 			},
 		}
-		r.log.Debugf("the '%s' module not found, create it", moduleName)
+		r.logger.Debugf("the '%s' module not found, create it", moduleName)
 		if err = r.client.Create(ctx, module); err != nil {
 			return nil, fmt.Errorf("create the '%s' module: %w", moduleName, err)
 		}
@@ -299,12 +299,12 @@ func (r *reconciler) ensureModule(ctx context.Context, sourceName, moduleName, r
 	}
 
 	if module.Properties.Source != sourceName {
-		r.log.Debugf("the '%s' source not active source for the '%s' module, skip it", sourceName, moduleName)
+		r.logger.Debugf("the '%s' source not active source for the '%s' module, skip it", sourceName, moduleName)
 		return nil, nil
 	}
 
 	if !module.ConditionStatus(v1alpha1.ModuleConditionEnabledByModuleConfig) {
-		r.log.Debugf("skip the '%s' disabled module", moduleName)
+		r.logger.Debugf("skip the '%s' disabled module", moduleName)
 		return nil, nil
 	}
 

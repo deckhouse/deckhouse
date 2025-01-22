@@ -19,6 +19,7 @@ package config
 import (
 	"context"
 	"fmt"
+	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders/editionavailable"
 	"strconv"
 	"time"
 
@@ -197,6 +198,11 @@ func (r *reconciler) refreshModuleStatus(module *v1alpha1.Module) {
 			message = v1alpha1.ModuleMessageDisabled
 		}
 
+	case editionavailable.Name:
+		reason = v1alpha1.ModuleReasonEditionExtender
+		message = v1alpha1.ModuleMessageEditionExtender
+		module.Status.Phase = v1alpha1.ModulePhaseNotAvailable
+
 	case kubeconfig.Name:
 		reason = v1alpha1.ModuleReasonModuleConfig
 		message = v1alpha1.ModuleMessageModuleConfig
@@ -238,8 +244,8 @@ func (r *reconciler) refreshModuleStatus(module *v1alpha1.Module) {
 		}
 	}
 
-	// do not change phase of not installed module
-	if module.Status.Phase != v1alpha1.ModulePhaseAvailable {
+	// do not change phase of not installed module or unavailable module
+	if module.Status.Phase != v1alpha1.ModulePhaseAvailable && module.Status.Phase != v1alpha1.ModulePhaseNotAvailable {
 		module.Status.Phase = v1alpha1.ModulePhaseDownloaded
 	}
 	module.SetConditionFalse(v1alpha1.ModuleConditionEnabledByModuleManager, reason, message)
