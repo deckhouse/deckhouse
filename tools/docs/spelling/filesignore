@@ -2,10 +2,13 @@
 
 documentation/_includes/revision_comparison_detail_table.liquid$
 documentation/_layouts/.+$
+docs/documentation/werf.*.yaml$
 site/LOCAL_DEV.md$
 site/_includes/getting_started/global/partials/getting-started-setup.js.liquid$
 site/_includes/header.html$
 site/_layouts/.+$
+site/werf.+.inc.yaml$
+docs/site/werf-.*.yaml$
 /images/.+\.ya?ml$
 /templates/.+\.ya?ml$
 openapi/values\.ya?ml$

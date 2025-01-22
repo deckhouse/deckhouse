@@ -58,7 +58,7 @@ shell:
   - go install github.com/go-task/task/v3/cmd/task@latest
   - cd /src/deckhouse-cli
   - task build:dist:linux:amd64
-  - mv ./dist/{{ .CandiVersionMap.d8.d8CliVersion }}/linux-amd64/d8 /d8
+  - mv ./dist/{{ .CandiVersionMap.d8.d8CliVersion }}/linux-amd64/bin/d8 /d8
   - mv /src/scripts/* /
   - chmod +x /d8 /install /uninstall
   - rm ~/.gitconfig # Prevent PRIVATE_REPO_TOKEN from leaking into the image layer

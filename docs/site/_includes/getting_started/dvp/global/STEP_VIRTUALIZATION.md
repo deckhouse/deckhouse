@@ -1,6 +1,5 @@
 Enable the virtualization module. In the parameter [.spec.settings.virtualMachineCIDRs](/products/virtualization-platform/reference/mc.html#virtualization) of the module, specify the subnets, IP addresses from which virtual machines will be assigned:
 
-{% snippetcut %}
 ```shell
 sudo -i d8 k create -f - <<EOF
 apiVersion: deckhouse.io/v1alpha1
@@ -23,4 +22,3 @@ spec:
   version: 1
 EOF
 ```
-{% endsnippetcut %}

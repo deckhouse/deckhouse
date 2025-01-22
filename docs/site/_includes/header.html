@@ -184,11 +184,9 @@
         </ul>
       </div>
       <div class="header__right-box">
-        {%- unless site.mode == "module" %}
-           {%- if page.lang == "ru" %}
-             <a href="/products/kubernetes-platform/documentation/v1/deckhouse-overview.html" class="button button--outline">Документация</a>
-           {%- endif %}
-        {%- endunless %}
+      {%- unless site.mode == "module" %}
+          <a href="/products/kubernetes-platform/documentation/v1/deckhouse-overview.html" class="button button--outline">{{ site.data.i18n.common['documentation_title'][page.lang] }}</a>
+      {%- endunless %}
         {%- if page.lang == "ru" %}
           <a class="lang-switcher" href="
             {%- if site.mode == 'module' %}/en
@@ -221,12 +219,9 @@
           </a>
       </div>
     </div>
-  </header>
-</div>
-{%- unless site.mode == "module" %}
-{%- if page.lang == "ru" %}
-  {%- assign l2MenuData = site.data.topnav-l2-products[page.lang] %}
-  {%- if l2MenuData %}
+    {%- unless site.mode == "module" %}
+    {%- assign l2MenuData = site.data.topnav-l2-products[page.lang] %}
+    {%- if l2MenuData %}
     {%- assign productCode = page.product_code | default: "kubernetes-platform" %}
     {%- assign _conditionProductURL = "/products/" | append: productCode | append: "/" %}
     {%- assign productMenuData = l2MenuData | where: "url", _conditionProductURL | first %}
@@ -240,16 +235,15 @@
           </svg>
           <span>{{ productName }}</span>
         </div>
-    {%- if page.lang == 'ru' %}
         <ul class="nav">
           {%- for item in productMenuData.items %}
             {%- if item.rel == "doc" %}{% assign itemClass='class="active"' %}{% else %}{% assign itemClass='' %}{% endif %}
             <li {{ itemClass }}><a href="{{ item.url }}"{% if item.target.size > 0 %} target="{{ item.target }}"{% endif %}>{{ item.title }}</a></li>
           {%- endfor %}
         </ul>
-    {%- endif %}
       </div>
     </div>
-  {%- endif %}
-{%- endif %}
-{%- endunless %}
+    {%- endif %}
+    {%- endunless %}
+  </header>
+</div>

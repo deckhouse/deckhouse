@@ -149,11 +149,10 @@ EOF
 {% endofftopic %}
 
 Create a new Policy based on the specification created above with `D8CloudProviderAWS` as a policy name:
-{% snippetcut %}
+
 ```shell
 aws iam create-policy --policy-name D8CloudProviderAWS --policy-document file://policy.json
 ```
-{% endsnippetcut %}
 
 > You will see the following:
 > ```yaml
@@ -174,11 +173,10 @@ aws iam create-policy --policy-name D8CloudProviderAWS --policy-document file://
   ```
 
 Create a new user:
-{% snippetcut %}
+
 ```shell
 aws iam create-user --user-name deckhouse
 ```
-{% endsnippetcut %}
 
 > You will see the following:
 > ```yaml
@@ -194,11 +192,10 @@ aws iam create-user --user-name deckhouse
   ```
 
 You need to allow access to the API and remember your `AccessKeyId` + `SecretAccessKey` values:
-{% snippetcut %}
+
 ```shell
 aws iam create-access-key --user-name deckhouse
 ```
-{% endsnippetcut %}
 
 > You will see the following:
 > ```yaml
@@ -214,8 +211,7 @@ aws iam create-access-key --user-name deckhouse
   ```
 
 Attach the specified `Policy` to the specified `User`:
-{% snippetcut %}
+
 ```shell
 aws iam attach-user-policy --user-name username --policy-arn arn:aws:iam::123:policy/D8CloudProviderAWS
 ```
-{% endsnippetcut %}

@@ -12,7 +12,7 @@ Adding a master node to a static or hybrid cluster has no difference from adding
 
 <div id='how-do-i-add-a-master-nodes-to-a-cloud-cluster-single-master-to-a-multi-master'></div>
 
-## How do I add a master nodes to a cloud cluster?
+## How do I add master nodes to a cloud cluster?
 
 The following describes the conversion of a single-master cluster into a multi-master.
 
@@ -464,7 +464,7 @@ spec:
       basicAuditPolicyEnabled: false
 ```
 
-### How stream audit log to stdout instead of files?
+### How to stream audit log to stdout instead of files?
 
 Set the [apiserver.auditLog.output](configuration.html#parameters-apiserver-auditlog) parameter to `Stdout`.
 
@@ -933,3 +933,22 @@ When there is 5-10% (random value from the range) of time left before the certif
 To ensure that kubelet has time to install the certificate before it expires, we recommend setting the certificate lifetime to more than 1 hour. The time is set using the `--cluster-signing-duration` argument in the `/etc/kubernetes/manifests/kube-controller-manager.yaml` manifest. By default, this value is 1 year (8760 hours).
 
 If the client certificate lifetime has expired, kubelet will not be able to make requests to kube-apiserver and will not be able to renew certificates. In this case, the node will be marked as `NotReady` and recreated.
+
+## How to manually update control plane component certificates?
+
+There may be a situation when the cluster's master nodes are powered off for an extended period. During this time, the control plane component certificates may expire. After the nodes are powered back on, the certificates will not update automatically and must be renewed manually.
+
+Control plane component certificates are updated using the `kubeadm` utility.
+To update the certificates, do the following on each master node:
+
+1. Find the `kubeadm` utility on the master node and create a symbolic link using the following command:
+
+   ```shell
+   ln -s $(find /var/lib/containerd -name kubeadm -type f -executable -print) /usr/bin/kubeadm
+   ```
+
+2. Update the certificates:
+
+   ```shell
+   kubeadm certs renew all
+   ```

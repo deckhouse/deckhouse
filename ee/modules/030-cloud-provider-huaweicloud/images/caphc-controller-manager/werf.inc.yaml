@@ -4,12 +4,13 @@ fromImage: common/distroless
 docker:
   ENTRYPOINT: ["/caphc-controller-manager"]
 import:
-  - artifact: {{ .ModuleName }}/{{ .ImageName }}-artifact
+  - image: {{ .ModuleName }}/{{ .ImageName }}-artifact
     add: /caphc-controller-manager
     to: /caphc-controller-manager
     before: setup
 ---
-artifact: {{ .ModuleName }}/{{ .ImageName }}-artifact
+image: {{ .ModuleName }}/{{ .ImageName }}-artifact
+final: false
 from: {{ $.Images.BASE_GOLANG_22_ALPINE_DEV }}
 mount:
   - fromPath: ~/go-pkg-cache

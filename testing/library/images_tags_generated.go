@@ -22,7 +22,8 @@ var DefaultImagesDigests = map[string]interface{}{
 		"certManagerWebhook":    "imageHash-certManager-certManagerWebhook",
 	},
 	"chrony": map[string]interface{}{
-		"chrony": "imageHash-chrony-chrony",
+		"chrony":         "imageHash-chrony-chrony",
+		"chronyExporter": "imageHash-chrony-chronyExporter",
 	},
 	"ciliumHubble": map[string]interface{}{
 		"relay":      "imageHash-ciliumHubble-relay",
@@ -173,6 +174,7 @@ var DefaultImagesDigests = map[string]interface{}{
 	"common": map[string]interface{}{
 		"alpine":                    "imageHash-common-alpine",
 		"checkKernelVersion":        "imageHash-common-checkKernelVersion",
+		"coredns":                   "imageHash-common-coredns",
 		"csiExternalAttacher127":    "imageHash-common-csiExternalAttacher127",
 		"csiExternalAttacher128":    "imageHash-common-csiExternalAttacher128",
 		"csiExternalAttacher129":    "imageHash-common-csiExternalAttacher129",
@@ -264,10 +266,10 @@ var DefaultImagesDigests = map[string]interface{}{
 		"web":         "imageHash-documentation-web",
 	},
 	"extendedMonitoring": map[string]interface{}{
-		"certExporter":               "imageHash-extendedMonitoring-certExporter",
 		"eventsExporter":             "imageHash-extendedMonitoring-eventsExporter",
 		"extendedMonitoringExporter": "imageHash-extendedMonitoring-extendedMonitoringExporter",
 		"imageAvailabilityExporter":  "imageHash-extendedMonitoring-imageAvailabilityExporter",
+		"x509CertificateExporter":    "imageHash-extendedMonitoring-x509CertificateExporter",
 	},
 	"ingressNginx": map[string]interface{}{
 		"controller110":         "imageHash-ingressNginx-controller110",
@@ -276,6 +278,7 @@ var DefaultImagesDigests = map[string]interface{}{
 		"kruiseStateMetrics":    "imageHash-ingressNginx-kruiseStateMetrics",
 		"kubeRbacProxy":         "imageHash-ingressNginx-kubeRbacProxy",
 		"nginxExporter":         "imageHash-ingressNginx-nginxExporter",
+		"nginxStaticArtifact":   "imageHash-ingressNginx-nginxStaticArtifact",
 		"protobufExporter":      "imageHash-ingressNginx-protobufExporter",
 		"proxyFailover":         "imageHash-ingressNginx-proxyFailover",
 		"proxyFailoverIptables": "imageHash-ingressNginx-proxyFailoverIptables",
@@ -299,7 +302,6 @@ var DefaultImagesDigests = map[string]interface{}{
 		"keepalived": "imageHash-keepalived-keepalived",
 	},
 	"kubeDns": map[string]interface{}{
-		"coredns":                           "imageHash-kubeDns-coredns",
 		"stsPodsHostsAppenderInitContainer": "imageHash-kubeDns-stsPodsHostsAppenderInitContainer",
 		"stsPodsHostsAppenderWebhook":       "imageHash-kubeDns-stsPodsHostsAppenderWebhook",
 	},
@@ -323,10 +325,10 @@ var DefaultImagesDigests = map[string]interface{}{
 		"lokiSrcArtifact": "imageHash-loki-lokiSrcArtifact",
 	},
 	"metallb": map[string]interface{}{
-		"controller":     "imageHash-metallb-controller",
-		"l2lbController": "imageHash-metallb-l2lbController",
-		"l2lbSpeaker":    "imageHash-metallb-l2lbSpeaker",
-		"speaker":        "imageHash-metallb-speaker",
+		"l2lbController":    "imageHash-metallb-l2lbController",
+		"l2lbSpeaker":       "imageHash-metallb-l2lbSpeaker",
+		"metallbController": "imageHash-metallb-metallbController",
+		"metallbSpeaker":    "imageHash-metallb-metallbSpeaker",
 	},
 	"monitoringKubernetes": map[string]interface{}{
 		"ebpfExporter":                      "imageHash-monitoringKubernetes-ebpfExporter",
@@ -394,7 +396,6 @@ var DefaultImagesDigests = map[string]interface{}{
 		"mimir":                       "imageHash-prometheus-mimir",
 		"mimirSrcArtifact":            "imageHash-prometheus-mimirSrcArtifact",
 		"prometheus":                  "imageHash-prometheus-prometheus",
-		"prometheuspp":                "imageHash-prometheus-prometheuspp",
 		"promxy":                      "imageHash-prometheus-promxy",
 		"promxySrcArtifact":           "imageHash-prometheus-promxySrcArtifact",
 		"trickster":                   "imageHash-prometheus-trickster",
@@ -447,7 +448,7 @@ var DefaultImagesDigests = map[string]interface{}{
 		"kubelet12912":              "imageHash-registrypackages-kubelet12912",
 		"kubelet1308":               "imageHash-registrypackages-kubelet1308",
 		"kubelet1314":               "imageHash-registrypackages-kubelet1314",
-		"kubernetesCni140":          "imageHash-registrypackages-kubernetesCni140",
+		"kubernetesCni162":          "imageHash-registrypackages-kubernetesCni162",
 		"lsblk2402":                 "imageHash-registrypackages-lsblk2402",
 		"netcat110481":              "imageHash-registrypackages-netcat110481",
 		"nvmeCli211":                "imageHash-registrypackages-nvmeCli211",
