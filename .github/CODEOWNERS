@@ -33,7 +33,7 @@
 303-prometheus-*/               @vladimirGuryanov @lazovskiy
 340-extended-monitoring/        @vladimirGuryanov @lazovskiy
 340-monitoring-*/               @vladimirGuryanov @lazovskiy
-350-node-local-dns/             @name212 @sprait
+350-node-local-dns/             @apolovov
 380-metallb/                    @apolovov
 400-descheduler/                @RomanenkoDenys @name212 @sprait
 402-ingress-nginx/              @apolovov
@@ -45,7 +45,7 @@
 470-chrony/                     @name212 @sprait
 491-containerized-data-importer @fl64
 500-basic-auth/                 @nabokihms
-500-openvpn/                    @name212 @sprait
+500-openvpn/                    @apolovov
 500-cilium-hubble/              @apolovov
 500-dashboard/                  @shvgn
 500-upmeter/                    @shvgn
