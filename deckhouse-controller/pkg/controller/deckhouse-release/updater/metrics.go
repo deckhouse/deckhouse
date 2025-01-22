@@ -17,32 +17,28 @@ limitations under the License.
 package d8updater
 
 import (
-	"github.com/flant/shell-operator/pkg/metric_storage"
+	metricstorage "github.com/flant/shell-operator/pkg/metric_storage"
 
-	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
+	"github.com/deckhouse/deckhouse/go_lib/updater"
 )
 
-const metricReleasesGroup = "d8_releases"
+const d8ReleaseBlockedMetricName = "d8_release_info"
 
-func newMetricUpdater(metricStorage *metric_storage.MetricStorage) *metricUpdater {
-	return &metricUpdater{
+func newMetricsUpdater(metricStorage *metricstorage.MetricStorage) *metricsUpdater {
+	return &metricsUpdater{
 		metricStorage: metricStorage,
 	}
 }
 
-type metricUpdater struct {
-	metricStorage *metric_storage.MetricStorage
+type metricsUpdater struct {
+	metricStorage *metricstorage.MetricStorage
 }
 
-func (mu metricUpdater) WaitingManual(release *v1alpha1.DeckhouseRelease, totalPendingManualReleases float64) {
-	mu.metricStorage.GaugeSet(
-		"d8_module_release_waiting_manual",
-		totalPendingManualReleases,
-		map[string]string{
-			"name": release.GetName(),
-		})
+func (mu *metricsUpdater) UpdateReleaseMetric(name string, metricLabels updater.MetricLabels) {
+	mu.PurgeReleaseMetric(name)
+	mu.metricStorage.Grouped().GaugeSet(name, d8ReleaseBlockedMetricName, 1, metricLabels)
 }
 
-func (mu metricUpdater) ReleaseBlocked(name, reason string) {
-	mu.metricStorage.Grouped().GaugeSet(metricReleasesGroup, "d8_release_blocked", 1, map[string]string{"name": name, "reason": reason})
+func (mu *metricsUpdater) PurgeReleaseMetric(name string) {
+	mu.metricStorage.Grouped().ExpireGroupMetricByName(name, d8ReleaseBlockedMetricName)
 }

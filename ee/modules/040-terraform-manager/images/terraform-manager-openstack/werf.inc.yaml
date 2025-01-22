@@ -4,12 +4,13 @@ git:
 - add: /{{ .ModulePath }}candi/cloud-providers/openstack
   to: /deckhouse/candi/cloud-providers/openstack
 import:
-- artifact: terraform-provider-openstack
+- image: terraform-provider-openstack
   add: /terraform-provider-openstack
   to: /plugins/registry.terraform.io/{{ .TF.openstack.namespace }}/{{ .TF.openstack.type }}/{{ .TF.openstack.version }}/linux_amd64/terraform-provider-openstack
   before: setup
 ---
-artifact: terraform-provider-openstack
+image: terraform-provider-openstack
+final: false
 from: {{ $.Images.BASE_GOLANG_20_ALPINE }}
 mount:
   - fromPath: ~/go-pkg-cache
@@ -22,7 +23,8 @@ git:
         - '**/*'
 shell:
   beforeInstall:
-    - apk add --no-cache make patch git bash
+  - apk add --no-cache make patch git bash openssh-client
+  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
   install:
     - mkdir /src
     - export GOPROXY={{ $.GOPROXY }}

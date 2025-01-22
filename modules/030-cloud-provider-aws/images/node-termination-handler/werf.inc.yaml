@@ -2,27 +2,29 @@
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: common/distroless
 import:
-  - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+  - image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
     add: /src/build/node-termination-handler
     to: /node-termination-handler
     before: setup
 docker:
   ENTRYPOINT: ["/node-termination-handler"]
 ---
-artifact: {{ .ModuleName }}/{{ .ImageName }}-artifact
+image: {{ .ModuleName }}/{{ .ImageName }}-artifact
+final: false
 from: {{ .Images.BASE_GOLANG_20_ALPINE }}
 mount:
   - fromPath: ~/go-pkg-cache
     to: /go/pkg
 shell:
   beforeInstall:
-  - | 
+  - |
     apk upgrade --available --no-cache && \
-    apk add --no-cache ca-certificates git make 
+    apk add --no-cache ca-certificates git make openssh-client
   install:
   - export GO_VERSION=${GOLANG_VERSION}
   - export GOPROXY={{ $.GOPROXY }}
   - mkdir -p /src
+  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
   - git clone --depth 1 --branch v1.5.0 {{ $.SOURCE_REPO }}/aws/aws-node-termination-handler.git /src
   - cd /src
   - make build

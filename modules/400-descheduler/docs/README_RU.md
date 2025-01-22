@@ -1,59 +1,111 @@
 ---
 title: "Модуль descheduler"
+description: "Модуль descheduler Deckhouse Kubernetes Platform. Каждые 15 минут анализирует состояние кластера и выполняет вытеснение подов, соответствующих условиям, описанным в активных стратегиях."
 ---
 
-Модуль запускает в кластере [descheduler](https://github.com/kubernetes-incubator/descheduler/) с набором [стратегий](#стратегии), заданных в custom resource `Descheduler`.
+Каждые 15 минут модуль анализирует состояние кластера и выполняет вытеснение подов, соответствующих условиям, описанным в активных [стратегиях](#стратегии). Вытесненные поды вновь проходят процесс планирования с учетом текущего состояния кластера. Это позволяет перераспределить рабочие нагрузки в соответствие с выбранной стратегией.
 
-descheduler каждые 15 минут вытесняет Pod'ы, которые удовлетворяют включенным в custom resource `Descheduler` стратегиям. Это приводит к принудительному запуску процесса шедулинга в отношении вытесненных подов.
+Модуль основан на проекте [descheduler](https://github.com/kubernetes-sigs/descheduler).
 
-## Особенности работы descheduler
+## Особенности работы модуля
 
-* При вытеснении подов с нагруженного узла учитывается класс приоритета (ознакомьтесь с модулем [priority-class](../001-priority-class/)).
-* Поды с [priorityClassName](../001-priority-class/) `system-cluster-critical` или `system-node-critical` (*критичные* поды) не вытесняются.
-* Поды без контроллера или с контроллером DaemonSet не вытесняются.
-* Поды с local storage не вытесняются.
-* Best-effort-поды вытесняются раньше, чем Burstable и Guaranteed.
-* Учитывается [Pod Disruption Budget](https://kubernetes.io/docs/concepts/workloads/pods/disruptions/): если вытеснение пода приведет к нарушению условий PDB, то под не вытесняется.
+* Модуль может учитывать класс приоритета пода (параметр [spec.priorityClassThreshold](cr.html#descheduler-v1alpha2-spec-priorityclassthreshold)), ограничивая работу только подами, у которых класс приоритета ниже заданного порога;
+* Модуль не вытесняет под в следующих случаях:
+  * под находится в пространстве имен `d8-*` или `kube-system`;
+  * под имеет [priorityClassName](../priority-class/) `system-cluster-critical` или `system-node-critical`;
+  * под связан с локальным хранилищем;
+  * под связан с [DaemonSet](https://kubernetes.io/docs/concepts/workloads/controllers/daemonset/);
+  * вытеснение пода нарушит [Pod Disruption Budget (PDB)](https://kubernetes.io/docs/concepts/workloads/pods/disruptions/);
+  * нет доступных узлов для запуска вытесненного пода.
+* Поды с классом приоритета `Best effort` вытесняются раньше, чем поды с классами `Burstable` и `Guaranteed`.
+
+Для фильтрации подов и узлов модуль использует механизм `labelSelector` Kubernetes:
+
+* `podLabelSelector` — ограничивает поды по меткам;
+* `namespaceLabelSelector` — фильтрует поды по пространствам имен.
+* `nodeLabelSelector` — выбирает узлы по меткам.
 
 ## Стратегии
 
-Включить, выключить, настроить стратегии можно в custom resource [`Descheduler`](cr.html).
-
 ### HighNodeUtilization
 
-Данная стратегия находит ненагруженные узлы и вытесняет с них поды в надежде что эти поды будут компактно распределены по меньшему количеству узлов. Эта стратегия должна использоваться со стратегией планировщика `MostRequestedPriority`.
+{% alert level="info" %}
+Концентрирует нагрузку на меньшем числе узлов. Требует настройку планировщика и включение автоматического масштабирования.
+
+Чтобы использовать `HighNodeUtilization`, необходимо явно указать профиль планировщика [high-node-utilization](../control-plane-manager/faq.html#профили-планировщика) для каждого пода (этот профиль не может быть установлен как профиль по умолчанию).
+{% endalert %}
+
+Стратегия определяет *недостаточно нагруженные узлы* и вытесняет с них поды, чтобы распределить их компактнее, на меньшем числе узлов.
+
+**Недостаточно нагруженный узел** — узел, использование ресурсов которого меньше **всех** пороговых значений, заданных в секции параметров [strategies.highNodeUtilization.thresholds](cr.html#descheduler-v1alpha2-spec-strategies-highnodeutilization-thresholds).
+
+Стратегия включается параметром [spec.strategies.highNodeUtilization.enabled](cr.html#descheduler-v1alpha2-spec-strategies-highnodeutilization-enabled).
+
+{% alert level="warning" %}
+В GKE нельзя настроить конфигурацию планировщика по умолчанию, но можно использовать стратегию `optimize-utilization` или развернуть второй пользовательский планировщик.
+{% endalert %}
+
+{% alert level="warning" %}
+Использование ресурсов узла учитывает [extended-ресурсы](https://kubernetes.io/docs/tasks/configure-pod-container/extended-resource/) и рассчитывается на основе запросов и лимитов подов ([requests and limits](https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/#requests-and-limits)), а не их фактического потребления. Такой подход обеспечивает согласованность с работой kube-scheduler, который использует аналогичный принцип при размещении подов на узлах. Это означает, что метрики использования ресурсов, отображаемые Kubelet (или командами вроде `kubectl top`), могут отличаться от расчетных показателей, так как Kubelet и связанные инструменты отображают данные о реальном потреблении ресурсов.
+{% endalert %}
 
 ### LowNodeUtilization
 
-Данная стратегия находит нагруженные и ненагруженные узлы в кластере по CPU/памяти/подам (в процентах) и при наличии и тех и других вытесняет поды с нагруженных узлов в надежде что поды будут запущены на ненагруженных узлах. Данная стратегия учитывает не реально потребленные ресурсы на узле, а реквесты у подов.
+{% alert level="info" %}
+Более равномерно нагружает узлы.
+{% endalert %}
 
-### PodLifeTime
+Стратегия выявляет *недостаточно нагруженные узлы* и вытесняет поды с других, *избыточно нагруженных узлов*. Стратегия предполагает, что пересоздание вытесненных подов произойдет на недостаточно нагруженных узлах (при обычном поведении планировщика).
 
-Эта стратегия гарантирует, что поды в состоянии Pending старше 24 часов будут удалены с узлов.
+**Недостаточно нагруженный узел** — узел, использование ресурсов которого меньше **всех** пороговых значений, заданных в секции параметров [strategies.lowNodeUtilization.thresholds](cr.html#descheduler-v1alpha2-spec-strategies-lownodeutilization-thresholds).
+
+**Избыточно нагруженный узел** — узел, использование ресурсов которого больше **хотя бы одного** из пороговых значений, заданных в секции параметров [strategies.lowNodeUtilization.targetThresholds](cr.html#descheduler-v1alpha2-spec-strategies-lownodeutilization-targetthresholds).
+
+Узлы с использованием ресурсов в диапазоне между `thresholds` и `targetThresholds` считаются оптимально используемыми. Поды на таких узлах вытесняться не будут.
+
+Стратегия включается параметром [spec.strategies.lowNodeUtilization.enabled](cr.html#descheduler-v1alpha2-spec-strategies-lownodeutilization-enabled).
+
+{% alert level="warning" %}
+Использование ресурсов узла учитывает [extended-ресурсы](https://kubernetes.io/docs/tasks/configure-pod-container/extended-resource/) и рассчитывается на основе запросов и лимитов подов ([requests and limits](https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/#requests-and-limits)), а не их фактического потребления. Такой подход обеспечивает согласованность с работой kube-scheduler, который использует аналогичный принцип при размещении подов на узлах. Это означает, что метрики использования ресурсов, отображаемые Kubelet (или командами вроде `kubectl top`), могут отличаться от расчетных показателей, так как Kubelet и связанные инструменты отображают данные о реальном потреблении ресурсов.
+{% endalert %}
 
 ### RemoveDuplicates
 
-Данная стратегия следит за тем, чтобы на одном узле не было запущенно более одного пода одного контроллера (RS, RC, Deploy, Job). Если таких подов два на одном узле, descheduler убивает один под.
+{% alert level="info" %}
+Предотвращает запуск нескольких подов одного контроллера (ReplicaSet, ReplicationController, StatefulSet) или заданий (Job) на одном узле.
+{% endalert %}
 
-К примеру, у нас есть 3 узла (один из них более нагружен), и мы хотим выкатить 6 реплик приложения. Так как один из узлов перегружен, scheduler привяжет к нагруженному узлу 0 или 1 под. Остальные реплики поедут на другие узлы, и в таком случае descheduler будет каждые 15 минут прибивать «лишние» поды на ненагруженных узлах и надеяться, что scheduler привяжет их к этому нагруженному узлу.
+Стратегия следит за тем, чтобы на одном узле не находилось больше одного пода ReplicaSet, ReplicationController, StatefulSet или подов одного задания (Job). Если таких подов два или больше, модуль вытесняет лишние поды, чтобы они лучше распределились по кластеру.
 
-### RemovePodsHavingTooManyRestarts
+Описанная ситуация может возникнуть, если некоторые узлы кластеры вышли из строя по каким-либо причинам, и поды с них были перемещены на другие узлы. Как только вышедшие из строя узлы снова станут доступны для приема нагрузки, эту стратегию можно будет использовать для выселения дублирующих подов с других узлов.
 
-Эта стратегия гарантирует, что поды, имеющие больше 100 перезапусков контейнеров (включая init-контейнеры), будут удалены с узлов.
+Стратегия включается параметром [strategies.removeDuplicates.enabled](cr.html#descheduler-v1alpha2-spec-strategies-removeduplicates-enabled).
 
 ### RemovePodsViolatingInterPodAntiAffinity
 
-Данная стратегия следит за тем, чтобы все «нарушители» anti-affinity были удалены. В какой ситуации может быть нарушен InterPodAntiAffinity, нам самим придумать не удалось, а в официальной документации по descheduler написано что-то недостаточно убедительное:
-> This strategy makes sure that Pods violating interpod anti-affinity are removed from nodes. For example, if there is podA on node and podB and podC (running on same node) have anti-affinity rules which prohibit them to run on the same node, then podA will be evicted from the node so that podB and podC could run. This issue could happen, when the anti-affinity rules for Pods B, C are created when they are already running on node.
+{% alert level="info" %}
+Вытесняет поды, нарушающие [правила inter-pod affinity и anti-affinity](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#inter-pod-affinity-and-anti-affinity).
+{% endalert %}
+
+Стратегия гарантирует, что поды, нарушающие [правила inter-pod affinity и anti-affinity](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#inter-pod-affinity-and-anti-affinity), будут удалены с узлов.
+
+Например, если на узле находится **Под1**, а также **Под2** и **Под3**, имеющие правила anti-affinity, которые запрещают им работать на одном узле с подом **Под1**, то **Под1** будет вытеснен с узла, чтобы **Под2** и **Под3** смогли работать. Такая ситуация может возникнуть, когда правила inter-pod affinity для **Под2** и **Под3** создаются когда поды уже запущены на узле.
+
+Стратегия включается параметром [strategies.removePodsViolatingInterPodAntiAffinity.enabled](cr.html#descheduler-v1alpha2-spec-strategies-removepodsviolatinginterpodantiaffinity-enabled).
 
 ### RemovePodsViolatingNodeAffinity
 
-Данная стратегия отвечает за кейс, когда под был привязан к узлу по условиям (`requiredDuringSchedulingIgnoredDuringExecution`), но потом узел перестал им удовлетворять. Тогда descheduler увидит это и сделает все, чтобы под переехал туда, где он будет удовлетворять условиям.
+{% alert level="info" %}
+Вытесняет поды, нарушающие [правила node affinity](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#node-affinity).
+{% endalert %}
 
-### RemovePodsViolatingNodeTaints
+Стратегия гарантирует, что все поды, которые нарушают [правила node affinity](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#node-affinity), в конечном счете будут удалены с узлов.
 
-Эта стратегия гарантирует, что поды, нарушающие NoSchedule на узлах, будут удалены. Например, есть под, имеющий toleration и запущенный на узле с соответствующим taint. Если taint на узле будет изменен или удален, под будет вытеснен с узла.
+По сути, в зависимости от настроек параметра [strategies.removePodsViolatingNodeAffinity.nodeAffinityType](cr.html#descheduler-v1alpha2-spec-strategies-removepodsviolatingnodeaffinity-nodeaffinitytype),  
+стратегия превращает правило `requiredDuringSchedulingIgnoredDuringExecution` node affinity пода в правило `requiredDuringSchedulingRequiredDuringExecution`, а правило `preferredDuringSchedulingIgnoredDuringExecution` в правило `preferredDuringSchedulingPreferredDuringExecution`.
 
-### RemovePodsViolatingTopologySpreadConstraint
+Пример для `nodeAffinityType: requiredDuringSchedulingIgnoredDuringExecution`. Есть под, который был назначен на узел, соответствующий правилу `requiredDuringSchedulingIgnoredDuringExecution` node affinity на момент размещения. Если со временем этот узел перестанет удовлетворять правилу node affinity, и если появится другой доступный узел, соответствующий этому правилу, стратегия вытеснит под с узла, на который он был изначально назначен.
 
-Эта стратегия гарантирует, что поды, нарушающие [Pod Topology Spread Constraints](https://kubernetes.io/docs/concepts/workloads/pods/pod-topology-spread-constraints/), будут вытеснены с узлов.
+Пример для `nodeAffinityType: preferredDuringSchedulingIgnoredDuringExecution`. Есть под, который был назначен на узел, т.к. на момент размещения отсутствовали другие узлы, удовлетворяющие правилу `preferredDuringSchedulingIgnoredDuringExecution` node affinity. Если со временем в кластере появится доступный узел, соответствующий этому правилу, стратегия вытеснит под с узла, на который он был изначально назначен.
+
+Стратегия включается параметром [strategies.removePodsViolatingNodeAffinity.enabled](cr.html#descheduler-v1alpha2-spec-strategies-removepodsviolatingnodeaffinity-enabled).

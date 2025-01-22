@@ -26,6 +26,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/utils/ptr"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -59,17 +60,18 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 					"rbac.deckhouse.io/automated": "true",
 				},
 			},
-			FilterFunc: filterUseBinding,
+			ExecuteHookOnEvents:          ptr.To(false),
+			ExecuteHookOnSynchronization: ptr.To(false),
+			FilterFunc:                   filterUseBinding,
 		},
 	},
 }, syncBindings)
 
 type filteredUseBinding struct {
-	Name        string           `json:"name"`
-	Namespace   string           `json:"namespace"`
-	RelatedWith string           `json:"related_with"`
-	RoleName    string           `json:"role_name"`
-	Subjects    []rbacv1.Subject `json:"subjects"`
+	Name      string           `json:"name"`
+	Namespace string           `json:"namespace"`
+	RoleName  string           `json:"role_name"`
+	Subjects  []rbacv1.Subject `json:"subjects"`
 }
 
 func filterUseBinding(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
@@ -78,11 +80,10 @@ func filterUseBinding(obj *unstructured.Unstructured) (go_hook.FilterResult, err
 		return nil, err
 	}
 	return &filteredUseBinding{
-		Name:        binding.Name,
-		Namespace:   binding.Namespace,
-		RelatedWith: binding.Labels["rbac.deckhouse.io/related-with"],
-		RoleName:    binding.RoleRef.Name,
-		Subjects:    binding.Subjects,
+		Name:      binding.Name,
+		Namespace: binding.Namespace,
+		RoleName:  binding.RoleRef.Name,
+		Subjects:  binding.Subjects,
 	}, nil
 }
 
@@ -127,7 +128,7 @@ func syncBindings(input *go_hook.HookInput) error {
 	for _, snap := range input.Snapshots["manageBindings"] {
 		binding := snap.(*filteredManageBinding)
 		role, namespaces := roleAndNamespacesByBinding(input.Snapshots["manageRoles"], binding.RoleName)
-		useBindingName := fmt.Sprintf("d8:use:binding:%s", binding.Name)
+		useBindingName := fmt.Sprintf("d8:use:%s:binding:%s", role, binding.Name)
 		for namespace := range namespaces {
 			input.PatchCollector.Create(createBinding(binding, role, namespace), object_patch.UpdateIfExists())
 			expected[useBindingName] = true
@@ -137,7 +138,7 @@ func syncBindings(input *go_hook.HookInput) error {
 	// delete excess use bindings
 	for _, snap := range input.Snapshots["useBindings"] {
 		existing := snap.(*filteredUseBinding)
-		if _, ok := expected[existing.RoleName]; !ok {
+		if _, ok := expected[existing.Name]; !ok {
 			input.PatchCollector.Delete("rbac.authorization.k8s.io/v1", "RoleBinding", existing.Namespace, existing.Name)
 		}
 	}
@@ -166,16 +167,17 @@ func roleAndNamespacesByBinding(manageRoles []go_hook.FilterResult, roleName str
 	for _, snap := range manageRoles {
 		role := snap.(*filteredManageRole)
 		if matchAggregationRule(found.Rule, role.Labels) {
-			if namespace, ok := role.Labels["rbac.deckhouse.io/namespace"]; ok {
-				namespaces[namespace] = true
+			if role.Rule == nil {
+				if namespace, ok := role.Labels["rbac.deckhouse.io/namespace"]; ok {
+					namespaces[namespace] = true
+				}
+				continue
 			}
-			if role.Rule != nil {
-				for _, nestedSnap := range manageRoles {
-					nested := nestedSnap.(*filteredManageRole)
-					if matchAggregationRule(role.Rule, nested.Labels) {
-						if namespace, ok := nested.Labels["rbac.deckhouse.io/namespace"]; ok {
-							namespaces[namespace] = true
-						}
+			for _, nestedSnap := range manageRoles {
+				nested := nestedSnap.(*filteredManageRole)
+				if matchAggregationRule(role.Rule, nested.Labels) {
+					if namespace, ok := nested.Labels["rbac.deckhouse.io/namespace"]; ok {
+						namespaces[namespace] = true
 					}
 				}
 			}
@@ -206,12 +208,14 @@ func createBinding(binding *filteredManageBinding, useRoleName string, namespace
 			APIVersion: "rbac.authorization.k8s.io/v1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      fmt.Sprintf("d8:use:binding:%s", binding.Name),
+			Name:      fmt.Sprintf("d8:use:%s:binding:%s", useRoleName, binding.Name),
 			Namespace: namespace,
-			Labels: map[string]string{
-				"heritage":                       "deckhouse",
-				"rbac.deckhouse.io/automated":    "true",
+			Annotations: map[string]string{
 				"rbac.deckhouse.io/related-with": binding.Name,
+			},
+			Labels: map[string]string{
+				"heritage":                    "deckhouse",
+				"rbac.deckhouse.io/automated": "true",
 			},
 		},
 		RoleRef: rbacv1.RoleRef{

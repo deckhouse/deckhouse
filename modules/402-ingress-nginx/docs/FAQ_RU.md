@@ -192,6 +192,10 @@ spec:
     - 192.168.0.0/24
 ```
 
+{% alert level="warning" %}
+Для работы необходимо включить параметр [`svcSourceRangeCheck`](../cni-cilium/configuration.html#parameters-svcsourcerangecheck) в модуле cni-cilium.
+{% endalert %}
+
 ## Как добавить дополнительные поля для логирования в nginx-controller?
 
 ```yaml
@@ -208,8 +212,9 @@ spec:
 
 ## Как включить HorizontalPodAutoscaling для IngressNginxController?
 
-> **Важно!** Режим HPA возможен только для контроллеров с inlet'ом `LoadBalancer` или `LoadBalancerWithProxyProtocol`.
-> **Важно!** Режим HPA возможен только при `minReplicas` != `maxReplicas`, в противном случае deployment `hpa-scaler` не создается.
+> **Важно.** Режим HPA возможен только для контроллеров с inlet'ом `LoadBalancer` или `LoadBalancerWithProxyProtocol`.
+>
+> **Важно.** Режим HPA возможен только при `minReplicas` != `maxReplicas`, в противном случае deployment `hpa-scaler` не создается.
 
 HPA выставляется с помощью аттрибутов `minReplicas` и `maxReplicas` в [IngressNginxController CR](cr.html#ingressnginxcontroller).
 

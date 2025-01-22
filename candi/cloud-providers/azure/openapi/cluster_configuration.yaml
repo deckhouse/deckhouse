@@ -13,6 +13,8 @@ apiVersions:
       ```shell
       kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller edit provider-cluster-configuration
       ```
+
+      > After updating the node parameters, you need to run the [dhctl converge](../../deckhouse-faq.html#changing-the-configuration) command to apply the changes.
     x-doc-search: |
       ProviderClusterConfiguration
     x-unsafe-rules: [deleteZones]
@@ -52,13 +54,13 @@ apiVersions:
         description: |
           The way resources are located in the cloud.
 
-          Read [more](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-azure/layouts.html) about possible provider layouts.
+          Read [more](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/cloud-provider-azure/layouts.html) about possible provider layouts.
         type: string
         enum: [Standard]
         x-unsafe: true
       standard:
         description: |
-          Settings for the [`Standard`](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-azure/layouts.html#standard) layout.
+          Settings for the [`Standard`](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/cloud-provider-azure/layouts.html#standard) layout.
         type: object
         properties:
           natGatewayPublicIpCount:
@@ -137,7 +139,7 @@ apiVersions:
 
           Virtual Network (VNet) service endpoint provides secure and direct connectivity to Azure services over an optimized route over the Azure backbone network.
           Endpoints allow you to secure your critical Azure service resources to only your virtual networks. Service Endpoints enables private IP addresses in the VNet to reach the endpoint of an Azure service without needing a public IP address on the VNet.
-          
+
           More information about Service Endpoints can be found in the [official documentation](https://learn.microsoft.com/en-us/azure/virtual-network/virtual-network-service-endpoints-overview).
         type: array
         items:
@@ -149,7 +151,6 @@ apiVersions:
 
           > **Warning.** After changing the parameters of the section, you need to run `dhctl converge` for the changes to take effect.
         required: [replicas, instanceClass]
-        x-unsafe-rules: [updateMasterImage]
         properties:
           replicas:
             description: |
@@ -158,7 +159,6 @@ apiVersions:
               It is important to have an odd number of masters to ensure a quorum.
             type: integer
             minimum: 1
-            x-unsafe-rules: [updateReplicas]
           zones:
             description: |
               A list of zones where master nodes can be created.
@@ -176,7 +176,7 @@ apiVersions:
             uniqueItems: true
           instanceClass:
             description: |
-              Partial contents of the [AzureInstanceClass](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-azure/cr.html#azureinstanceclass) fields.
+              Partial contents of the [AzureInstanceClass](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/cloud-provider-azure/cr.html#azureinstanceclass) fields.
             type: object
             required: [machineSize, urn]
             properties:
@@ -342,7 +342,7 @@ apiVersions:
                         type: string
             instanceClass:
               description: |
-                Partial contents of the fields of the [AzureInstanceClass](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-azure/cr.html#azureinstanceclass).
+                Partial contents of the fields of the [AzureInstanceClass](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/cloud-provider-azure/cr.html#azureinstanceclass).
               required: [machineSize, urn]
               type: object
               properties:
@@ -363,7 +363,7 @@ apiVersions:
           type: string
       provider:
         description: |
-          [Parameters](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-azure/environment.html) for connecting to the Azure API.
+          [Parameters](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/cloud-provider-azure/environment.html) for connecting to the Azure API.
         type: object
         additionalProperties: false
         required: [subscriptionId, clientId, clientSecret, tenantId, location]

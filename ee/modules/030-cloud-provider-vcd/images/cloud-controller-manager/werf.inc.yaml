@@ -5,14 +5,15 @@
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $version | replace "." "-" }}
 fromImage: common/distroless
 import:
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
   add: /src/bin/cloud-provider-for-cloud-director
   to: /cloud-provider-for-cloud-director
   before: setup
 docker:
   ENTRYPOINT: ["/cloud-provider-for-cloud-director"]
 ---
-artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
+image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
+final: false
 from: {{ $.Images.BASE_GOLANG_20_BUSTER }}
 git:
   - add: /{{ $.ModulePath }}modules/030-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
@@ -33,6 +34,7 @@ shell:
   - export GO_VERSION=${GOLANG_VERSION}
   - export GOPROXY={{ $.GOPROXY }}
   - mkdir -p /src
+  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
   - git clone --depth 1 --branch {{ $value.ccm.vcd }} {{ $.SOURCE_REPO }}/vmware/cloud-provider-for-cloud-director.git /src
   - cd /src
   - git apply /patches/{{ $version }}/*.patch --verbose

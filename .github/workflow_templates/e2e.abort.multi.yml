@@ -73,12 +73,10 @@ on:
       layout:
         description: 'Cloud provider layout which was tested'
         required: true
-      cri:
-        description: 'CRI which was tested'
-        required: true
-      k8s_version:
-        description: 'CRI which was tested'
-        required: true
+      test_config:
+        description: 'JSON string of parameters which was tested'
+        required: false
+        default: '{"cri":"Containerd","ver":"1.29","edition":"FE"}'
       # needs for run correct installer image for abort
       installer_image_path:
         description: 'Installer image without host'

@@ -127,7 +127,6 @@ spec:
             value: "info"
           - name: LOG_TYPE
             value: "json"
-          {{- include "helm_lib_envs_for_proxy" . | nindent 10 }}
         volumeMounts:
           - mountPath: /db
             name: data

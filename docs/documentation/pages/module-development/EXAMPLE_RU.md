@@ -6,7 +6,7 @@ lang: ru
 
 {% raw %}
 
-Пример создания модуля `hello-world-module` на основе [шаблона модуля](https://github.com/deckhouse/modules-template/) и адаптации Helm-чарта [hello-world](https://github.com/giantswarm/hello-world-app).
+Пример создания модуля `helloworld` на основе [шаблона модуля](https://github.com/deckhouse/modules-template/) и адаптации Helm-чарта [hello-world](https://github.com/giantswarm/hello-world-app).
 
 ## Подготовка исходного кода модуля и сборка
 
@@ -18,20 +18,20 @@ lang: ru
 1. Сделайте форк или скопируйте [репозиторий шаблона модуля](https://github.com/deckhouse/modules-template/).
 
    ```shell
-   git clone git@github.com:deckhouse/modules-template.git hello-world-module \
-     && cd hello-world-module
+   git clone git@github.com:deckhouse/modules-template.git helloworld \
+     && cd helloworld
    ```
 
-1. Укажите имя модуля в файле `Chart.yaml`.
+1. Укажите имя модуля в файле `module.yaml`.
 
-   В примере будет использоваться имя модуля `hello-world-module`, но вы можете выбрать свое.
+   В примере будет использоваться имя модуля `helloworld`, но вы можете выбрать свое, заменив `helloworld` в командах и в названии вашего репозитория.
 
    > Обратите внимание, что в некоторых местах в примере имя модуля может быть записано в разных форматах — *kebab-case* или *camelCase*. Если вы используете свое имя модуля, то учитывайте изменение формата имени модуля в приводимых командах.
 
-   Выполните следующую команду, чтобы указать имя модуля в файле `Chart.yaml`, либо отредактируйте его вручную:
+   Выполните следующую команду, чтобы указать имя модуля в файле `module.yaml`, либо отредактируйте его вручную:
 
    ```shell
-   sed -Ei 's/^name:(.*)/name: hello-world-module/g' Chart.yaml
+   sed -i -e 's/^name:.*$/name: helloworld/' module.yaml
    ```
 
 1. Склонируйте исходный код чарта [hello-world](https://github.com/giantswarm/hello-world-app) во временную директорию.
@@ -45,14 +45,15 @@ lang: ru
    ```shell
    rm -rf templates/*
    cp -fR .tmp-chart/helm/hello-world/templates/* templates/
+   cp .tmp-chart/helm/hello-world/values.yaml values.yaml
    ```
 
-1. Замените в шаблонах чарта путь `.Values` на `.Values.helloWorld`.
+1. Замените в шаблонах чарта путь `.Values` на `.Values.helloworld`.
 
    > Это архитектурная особенность [addon-operator](https://github.com/flant/addon-operator), ей необходимо следовать для обращения к values модуля.
 
    ```shell
-   sed -i -e 's/.Values/.Values.helloWorldModule/g' $(find templates/ -type f)
+   sed -i -e 's/.Values/.Values.helloworld/g' $(find templates/ -type f)
    ```
 
 1. Добавьте OpenAPI-схему настроек модуля.
@@ -60,7 +61,12 @@ lang: ru
    Параметры модуля указываются в OpenAPI-схеме в директории [openapi](../structure/#openapi). Выполните следующую команду, чтобы преобразовать JSON-схему параметров чарта в OpenAPI-схему модуля:
 
    ```shell
-   yq -P .tmp-chart/helm/hello-world/values.schema.json > openapi/config-values.yaml
+   jq 'walk(
+      if type == "object" and .type == "object" and (keys | length) == 1
+      then . + {additionalProperties: true}
+      else .
+      end
+   )' .tmp-chart/helm/hello-world/values.schema.json > openapi/config-values.yaml
    ```
 
 1. Опишите правило сборки образа контейнера приложения.
@@ -69,19 +75,19 @@ lang: ru
 
    ```shell
    rm -rf images/*
-   mkdir images/hello-world-module
-   echo "FROM quay.io/giantswarm/helloworld:0.2.0" > images/hello-world-module/Dockerfile
+   mkdir images/helloworld
+   echo "FROM quay.io/giantswarm/helloworld:0.2.0" > images/helloworld/Dockerfile
    ```
 
 1. Замените образ в манифесте Deployment на хелпер библиотеки Deckhouse Kubernetes Platform. Это позволит использовать актуальный content-based-тэг образа.
 
    ```shell
-   sed -Ei 's/image\:(.*)/image: {{ include "helm_lib_module_image" (list . "helloWorldModule") }}/g' templates/deployment.yaml
+   sed -Ei 's/image\:(.*)/image: {{ include "helm_lib_module_image" (list . "helloworld") }}/g' templates/deployment.yaml
    ```
 
 1. Удалите хуки модуля, CRD и временные файлы.
 
-   Пример не использует хуки и СustomResourceDefinition. Выполните следующие команды, чтобы очистить папки `hooks` и `crds`:
+   Пример не использует хуки и CustomResourceDefinition. Выполните следующие команды, чтобы очистить папки `hooks` и `crds`:
 
    ```shell
    rm -rf hooks/
@@ -131,7 +137,7 @@ lang: ru
 
 ## Подключение модуля в кластере
 
-Пример подключения модуля `hello-world-module` в кластере Deckhouse Kubernetes Platform.
+Пример подключения модуля `helloworld` в кластере Deckhouse Kubernetes Platform.
 
 1. Создайте токен доступа в репозитории GitHub с правами для работы с GitHub Packages.
 1. Сгенерируйте строку аутентификации для доступа к GitHub Packages container registry в формате [dockerconfigjson](https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/#registry-secret-existing-credentials), указав имя пользователя (или организации) GitHub и токен доступа:
@@ -169,40 +175,52 @@ lang: ru
 
 1. Посмотрите список доступных модулей:
 
-   ```shell
-   kubectl  get ms ghcr -o jsonpath='{.status.modules[*].name}'
+   ```console
+   $ kubectl get module
+   NAME       WEIGHT   SOURCE   PHASE       ENABLED   READY
+   ...
+   helloworld                   Available   False     False     
+   ...
    ```
 
-   В списке должен быть только модуль `hello-world-module`.
+1. Создайте ресурс [ModuleUpdatePolicy](../../cr.html#moduleupdatepolicy), определяющий политику обновления модуля.
 
-1. Создайте ресурc [ModuleUpdatePolicy](../../cr.html#moduleupdatepolicy), определяющий политику обновления модуля.
-
-   Выполните следующую команду, чтобы создать политику обновления для модуля `hello-world-module` с каналом обновления *Alpha* и режимом обновления *Auto*:
+   Выполните следующую команду, чтобы создать политику обновления с каналом обновления *Alpha* и режимом обновления *Auto*:
 
    ```shell
    kubectl apply -f - <<EOF
-   apiVersion: deckhouse.io/v1alpha1
+   apiVersion: deckhouse.io/v1alpha2
    kind: ModuleUpdatePolicy
    metadata:
-     name: hello-world-module
+     name: helloworld-policy
    spec:
-     moduleReleaseSelector:
-       labelSelector:
-         matchLabels:
-           source: ghcr
      releaseChannel: Alpha
      update:
        mode: Auto
    EOF
    ```
 
-1. Проверьте ресурс *ModuleSource* (в статусе не должно содержаться ошибок и должны быть перечислены доступные модули):
+1. Создайте ModuleConfig, где укажите источник модуля (параметр `source`), политику обновления (параметр `updatePolicy`) и установите параметр `enabled` в `true`:
+
+   ```shell
+   kubectl apply -f - <<EOF
+      apiVersion: deckhouse.io/v1alpha1
+      kind: ModuleConfig
+      metadata:
+        name: helloworld
+      spec:
+         enabled: true
+         source: ghcr
+         updatePolicy: helloworld-policy
+   ```
+
+1. Проверьте ModuleSource (в статусе не должно содержаться ошибок и должны быть перечислены доступные модули):
 
    ```shell
    kubectl get ms ghcr -o yaml
    ```
 
-1. Убедитесь, что были созданы новые ресурсы [ModuleRelease](../../cr.html#modulerelease) для модуля:
+1. Убедитесь, что были созданы новые объекты [ModuleRelease](../../cr.html#modulerelease) для модуля:
 
    ```shell
    kubectl get mr
@@ -213,19 +231,13 @@ lang: ru
    ```console
    $ kubectl get mr
    NAME                                PHASE        UPDATE POLICY        TRANSITIONTIME   MESSAGE
-   hello-world-module-v0.0.1           Deployed     hello-world-module   22m            
+   helloworld-v0.0.1                   Deployed     helloworld-policy    22m            
    ```
 
 1. В случае успешной установки релизов дождитесь перезапуска пода Deckhouse Kubernetes Platform.
 
    ```shell
    kubectl -n d8-system get pod -l app=deckhouse
-   ```
-
-1. Включите модуль, выполнив следующую команду:
-
-   ```shell
-   kubectl -ti -n d8-system exec svc/deckhouse-leader -c deckhouse -- deckhouse-controller module enable hello-world-module
    ```
 
    Через некоторое время объекты модуля появятся в кластере.
@@ -241,5 +253,18 @@ lang: ru
    ```shell
    kubectl -n d8-system exec svc/deckhouse-leader -c deckhouse -- deckhouse-controller queue list
    ```
+
+## Миграция ModuleUpdatePolicy на версию v1alpha2
+
+Если в кластере существует ModuleUpdatePolicy версии v1alpha1, то необходимо выполнить следующие шаги по миграции на версию v1alpha2:
+
+Если в кластере в каком-либо ModuleUpdatePolicy версии v1alpha1 определен `moduleReleaseSelector`, то для всех модулей, которые подходят под этот селектор, в системе мониторинга будут гореть алерты [ModuleHasDeprecatedUpdatePolicy](../../alerts.html#monitoring-deckhouse-modulehasdeprecatedupdatepolicy). В этом случае выполните следующие шаги по миграции на версию v1alpha2 ModuleUpdatePolicy:
+- Укажите политику обновления для соответствующих модулей в параметре `properties.updatePolicy` moduleConfig.
+- Выполните следующую команду, указав необходимый ModuleUpdatePolicy:
+
+  ```shell
+  kubectl patch moduleupdatepolicies.v1alpha1.deckhouse.io <MUP_NAME> --type='json' \
+    -p='[{"op": "replace", "path": "/spec/moduleReleaseSelector/labelSelector/matchLabels", "value": {"": ""}}]'
+  ```
 
 {% endraw %}

@@ -26,9 +26,6 @@ chat_script_url:
   en: "https://crm.flant.ru/upload/crm/site_button/loader_2_qurrbf.js"
   ru: "https://crm.flant.ru/upload/crm/site_button/loader_3_20bbbd.js"
 
-assets:
-  precompile: ['**/*.*']
-
 social_links:
   ru:
     telegram: https://t.me/deckhouse_ru
@@ -43,21 +40,28 @@ exclude:
 - vendor
 - Gemfile.lock
 - Gemfile
-- backend
+- backends
 - '*.sh'
 - '*.yml'
 - '*.yaml'
-- docker-compose.yml
-- modules_make_data
-- modules_menu_skip
+- docker-compose*.yml
+- _tools/
+
 
 highlighter: rouge
 feedback_disable: true
 
 plugins:
-  - jekyll-assets
   - jekyll-regex-replace
   - jekyll_include_plugin
+  - jekyll_asset_pipeline
+
+asset_pipeline:
+  bundle: true
+  compress: true
+  output_path: assets
+  #display_path: nil
+  gzip: false
 
 markdown: kramdown
 kramdown:
@@ -82,6 +86,8 @@ defaults:
       sidebar: main
       multilang: true
       comparable: true
+      product_code: kubernetes-platform
+      search_bage_enabled: true
       lang: en
   - scope:
       path: "pages/includes"
@@ -97,6 +103,26 @@ defaults:
     values:
       toc_in_sidebar: true
       toc: false
+      layout: guide
+      search_bage_enabled: false
+  - scope:
+      path: "pages/virtualization-platform"
+    values:
+      toc_in_sidebar: false
+      toc: false
+      product_code: virtualization-platform
+      documentation_state: develop
+      search_bage_enabled: true
+      sidebar: virtualization-platform
+      sitemap_include: false
+  - scope:
+      path: "pages/virtualization-platform/guides"
+      type: "pages"
+    values:
+      toc_in_sidebar: true
+      toc: false
+      sitemap_include: false
+      layout: guide
   - scope:
       path: "modules_ru"
       type: "pages"
@@ -113,6 +139,12 @@ defaults:
     values:
       d8Revision: ee
   - scope:
+      path: "*/030-cloud-provider-dynamix"
+      type: "pages"
+    values:
+      d8Revision: ee
+      featureStatus: experimental
+  - scope:
       path: "*/030-cloud-provider-vcd"
       type: "pages"
     values:
@@ -127,12 +159,6 @@ defaults:
       path: "*/031-ceph-csi"
       type: "pages"
     values:
-      featureStatus: deprecated
-  - scope:
-      path: "*/381-l2-load-balancer"
-      type: "pages"
-    values:
-      d8Revision: ee
       featureStatus: deprecated
   - scope:
       path: "*/500-operator-trivy"
@@ -181,6 +207,12 @@ defaults:
       type: "pages"
     values:
       featureStatus: experimental
+  - scope:
+      path: "*/610-service-with-healthchecks"
+      type: "pages"
+    values:
+      featureStatus: experimental
+      d8Revision: ee
   - scope:
       path: "*/160-multitenancy-manager"
       type: "pages"

@@ -1,7 +1,7 @@
 {% assign revision=include.revision %}
 
-{% if revision == 'ee' %}
-{% include getting_started/global/EE_ACCESS.md %}
+{% if revision != "ce" %}
+{% include getting_started/global/EE_ACCESS.md revision=revision %}
 <div class="dimmer-block-content{% if page.ee_only %} disabled{% endif %}">
 {% endif %}
 
@@ -21,37 +21,59 @@
 {%- endif %}
 
 Create the `config.yml` file.
-{% capture includePath %}_includes/getting_started/{{ page.platform_code }}/partials/config.yml{% if include.layout.size > 0 %}.{{ include.layout }}{% endif %}.{{ revision }}.inc{% endcapture %}
-{% snippetcut name="config.yml" selector="config-yml" %}
+{% capture includePath %}_includes/getting_started/{{ page.platform_code }}/partials/config.yml{% if include.layout.size > 0 %}.{{ include.layout }}{% endif %}.{% if revision != "ce" %}{{ "other" }}{% else %}{{ revision }}{% endif %}.inc{% endcapture %}
+<div markdown="1">
 {% include_file "{{ includePath }}" syntax="yaml" %}
-{% endsnippetcut %}
-
+</div>
 {%- if page.platform_type == 'existing' %}
 {% offtopic title="About nodeSelector, taints and tolerations..." %}
-You can control on which nodes the Deckhouse core components will run by setting  `nodeSelector`/`tolerations` in the `configOverrides.deckhouse` parameter of the installation configuration. You can also specify cluster node taints in the `configOverrides.global.modules.placement.customTolerationKeys` array so that Deckhouse can automatically add the appropriate `toleration` to its components.
+You can control which nodes the Deckhouse kernel will run on by using the `spec.setting.nodeSelector` parameter in the ModuleConfig `deckhouse` of the installation configuration.
 
-> Below is an example of setting `nodeSelector`/`tolerations` for the `deckhouse` module and specifying tolerations for other Deckhouse components in the `customTolerationKeys` array (do not copy this example without adapting it to your configuration as the values will be different):
+> Example of specifying a `nodeSelector` for the 'deckhouse` module for the rest of the Deckhouse components to work (do not copy this example without changing your configuration, because you will have other values):
 > ```yaml
-> deckhouse:
->   configOverrides:
->     # ...
->     deckhouse:
->       tolerations:
->         - key: dedicated.deckhouse.io
->           operator: Exists
->     # ...
->     global:
->       modules:
->         # ...
->         placement:
->           customTolerationKeys:
->           - SystemLoad
->           - app.kubernetes.io/instance
+> apiVersion: deckhouse.io/v1alpha1
+> kind: ModuleConfig
+> metadata:
+>   name: deckhouse
+>   spec:
+>     version: 1
+>     enabled: true
+>   settings:
+>     nodeSelector:
+>       node-role.kubernetes.io/master: master
+> ```
+
+Also, you can list the necessary cluster node taints in ModuleConfig `global` in the array `spec.modules.placement.customTolerationKeys` so that Deckhouse automatically specifies the appropriate tolerance for its components.
+
+> Example of specifying `customTolerationKeys` for the 'deckhouse` module and the list of tolerations in the `customTolerationKeys` array for the rest of the Deckhouse components to work (do not copy this example without changing your configuration, because you will have other values):
+> ```yaml
+> apiVersion: deckhouse.io/v1alpha1
+> kind: ModuleConfig
+> metadata:
+>   name: global
+> spec:
+>   settings:
+>     modules:
+>       placement:
+>         customTolerationKeys:
+>         - Systemload
+>         - kubernetes.io/instance
 > ```
 {% endofftopic %}
 {% endif %}
 </div>
 
-{% if revision == 'ee' %}
+<script>
+  $(document).ready(function() {
+    document.getElementById('block_layout_{{ revision }}').querySelectorAll('span').forEach(element => {
+      element.textContent = element.textContent.replace('<REVISION>', '{{ revision }}');
+    })
+    document.getElementById('block_layout_{{ revision }}').querySelectorAll('.dimmer-block-content div .snippetcut .snippetcut__raw').forEach(element => {
+      element.textContent = element.textContent.replace('<REVISION>', '{{ revision }}');
+    })
+  });
+</script>
+
+{% if revision != "ce" %}
 </div>
 {% endif %}

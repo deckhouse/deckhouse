@@ -1,4 +1,5 @@
-<link rel="stylesheet" type="text/css" href='{{ assets["supported_versions.css"].digest_path | true_relative_url }}' />
+{% capture asset_url %}{%- css_asset_tag supported_versions %}[_assets/css/supported_versions.css]{% endcss_asset_tag %}{% endcapture %}
+<link rel="stylesheet" type="text/css" href='{{ asset_url | strip_newlines  | true_relative_url }}' />
 
 {%- assign osVersions = site.data.supported_versions.bashible | sort %}
 {%- assign k8sVersions = site.data.supported_versions.k8s  %}
@@ -7,6 +8,7 @@
 {%- assign supported_img_url = '/images/icons/supported.svg' %}
 {%- assign partially_supported_img_url = '/images/icons/intermediate.svg' %}
 {%- assign notes_img_url = '/images/icons/note.svg' %}
+{%- assign not_supported_img_url = '/images/icons/not_supported.svg' %}
 
 ## Linux
 
@@ -14,34 +16,39 @@
 
 <div markdown="0">
 <table class="supported_versions">
-<thead>
-    <tr>
+<thead class="versioning-table">
+    <tr class="header-row">
       <th class="name" style="white-space: nowrap;">{{site.data.i18n.common['linux_distro'][page.lang] }}</th>
       <th class="versions" style="white-space: nowrap;">{{ site.data.i18n.common['versions_supported'][page.lang] | capitalize }}</th>
       {%- if page.lang == 'ru' %}
-      <th style="text-align: center; white-space: nowrap;" colspan="2">{{ site.data.i18n.common['redactions'][page.lang] | capitalize }}</th>
+      <th style="text-align: center; white-space: nowrap;" colspan="3">{{ site.data.i18n.common['redactions'][page.lang] | capitalize }}</th>
       {% else %}
       <th style="text-align: center; white-space: nowrap;">{{ site.data.i18n.common['redactions'][page.lang] | capitalize }}</th>
       {%- endif %}
       <th style="text-align: center;">{{ site.data.i18n.common['notes'][page.lang] | capitalize }}</th>
     </tr>
+    <tr class="sub-header">
+      <td></td>
+      <td></td>
+      {%- if page.lang == 'ru' %}
+        <td style="text-align: center; width: 170px; font-weight: bold; padding: 0 10px;">CE</td>
+        <td style="text-align: center; width: 170px; font-weight: bold; padding: 0 10px;">CSE Lite, CSE Pro</td>
+        <td style="text-align: center; width: 170px; white-space: nowrap; font-weight: bold; padding: 0 10px;">BE, SE, SE+, EE</td>
+      {%- else %}
+        <td style="text-align: center; width: 170px; font-weight: bold; padding: 0 10px;">CE, BE, SE, EE</td>
+      {%- endif %}
+      <td></td>
+    </tr>
 </thead>
 <tbody>
-<tr>
-  <td></td>
-  <td></td>
-  {%- if page.lang == 'ru' %}
-  <td style="text-align: center; width: 170px; font-size: 16px; font-weight: bold; padding: 0 10px;">CE</td>
-  {%- endif %}
-  <td style="text-align: center; width: 170px; font-size: 16px; font-weight: bold; padding: 0 10px;">{% if page.lang == 'en' %}CE, {% endif %}BE, SE, EE</td>
-  <td></td>
-</tr>
 {%- for osItem in osVersions %}
 {%- assign osKey = osItem[0] %}
 {%- assign osName = site.data.supported_versions.osDistributions[osKey].name | default: osKey  %}
 {%- if site.data.supported_versions.osDistributions[osKey][langSupportKey] and site.data.supported_versions.osDistributions[osKey][langSupportKey] != "true" %}{% continue %}{% endif %}
+{% if site.data.supported_versions.osDistributions[osKey]['cse_support'] %}
+{% assign comma_counter = 1 %}
 <tr>
-  <td class="name">
+  <td class="name" rowspan="2">
     <span>
       {%- if site.data.supported_versions.osDistributions[osKey].url %}
         <a href="{{ site.data.supported_versions.osDistributions[osKey].url }}" target="_blank">{{ osName }}</a>
@@ -52,26 +59,106 @@
   <td class="versions">
 {%- for osData in osItem[1] %}
 {%- assign osVersion = osData[0] %}
+  {%- assign exclude = false %}
+  {%- for excludedVersion in site.data.supported_versions.osDistributions[osKey]['cse_support']['versions'] %}
+    {%- if excludedVersion == osVersion %}{%- assign exclude = true %}{%- endif %}
+  {%- endfor %}
+  {%- if exclude == true %}
 {{ osVersion }}{% if site.data.supported_versions.osDistributions[osKey]['versions'][osVersion] %} ({{ site.data.supported_versions.osDistributions[osKey]['versions'][osVersion]['name'] }}){% endif %}
-{%- unless forloop.last %},{% endunless %}
+    {%- if comma_counter < site.data.supported_versions.osDistributions[osKey]['cse_support']['versions'].size %},{%- endif %}
+    {%- assign comma_counter = comma_counter | plus: 1 %}
+  {%- endif %}
 {%- endfor %}
   </td>
   {%- if page.lang == 'ru' %}
   <td style="text-align: center; width: 170px;">
     {% if site.data.supported_versions.osDistributions[osKey]['ru_support'] == "true" %}
-      <img src="{{ partially_supported_img_url }}" data-tippy-content="Работоспособность в Community Edition не гарантируется.">
+      <img src="{{ partially_supported_img_url }}" data-tippy-content="{{ site.data.i18n.common['note_ce_notguaranteed'][page.lang] }}">
     {% else %}
       <img src="{{ supported_img_url }}">
     {% endif %}
   </td>
+  <td style="text-align: center; width: 170px;">
+    <img src="{{ supported_img_url }}">
+  </td>
   {%- endif %}
   <td style="text-align: center; width: 170px;"><img src="{{ supported_img_url }}"></td>
   <td style="text-align: center;">
-    {% if site.data.supported_versions.osDistributions[osKey]['note_content'] %}
-      <img src="{{ notes_img_url }}" data-tippy-content="{{ site.data.supported_versions.osDistributions[osKey]['note_content'][page.lang] }}">
+    {% if site.data.supported_versions.osDistributions[osKey]['cse_support']['note_content'] %}
+      <img src="{{ notes_img_url }}" data-tippy-content="{{ site.data.supported_versions.osDistributions[osKey]['cse_support']['note_content'][page.lang] }}">
     {% endif %}
   </td>
 </tr>
+  <tr>
+    <td class="versions">
+{%- for osData in osItem[1] %}
+  {%- assign osVersion = osData[0] %}
+  {%- assign exclude = false %}
+  {%- for excludedVersion in site.data.supported_versions.osDistributions[osKey]['cse_support']['versions'] %}
+    {%- if excludedVersion == osVersion %}{%- assign exclude = true %}{%- endif %}
+  {%- endfor %}
+  {%- if exclude != true %}
+    {{ osVersion }}{% if site.data.supported_versions.osDistributions[osKey]['versions'][osVersion] %} ({{ site.data.supported_versions.osDistributions[osKey]['versions'][osVersion]['name'] }}){% endif %}
+    {%- unless forloop.last %},{% endunless %}
+  {%- endif %}
+{%- endfor %}
+    </td>
+    <td style="text-align: center; width: 170px;">
+      {% if site.data.supported_versions.osDistributions[osKey]['ru_support'] == "true" %}
+        <img src="{{ partially_supported_img_url }}" data-tippy-content="Работоспособность в Community Edition не гарантируется.">
+      {% else %}
+        <img src="{{ supported_img_url }}">
+      {% endif %}
+    </td>
+    <td style="text-align: center; width: 170px;"><img src="{{ not_supported_img_url }}"></td>
+    <td style="text-align: center; width: 170px;"><img src="{{ supported_img_url }}"></td>
+    <td style="text-align: center;">
+      {% if site.data.supported_versions.osDistributions[osKey]['note_content'] %}
+        <img src="{{ notes_img_url }}" data-tippy-content="{{ site.data.supported_versions.osDistributions[osKey]['note_content'][page.lang] }}">
+      {% endif %}
+    </td>
+  </tr>
+{% else %}
+  <tr>
+    <td class="name">
+    <span>
+      {%- if site.data.supported_versions.osDistributions[osKey].url %}
+        <a href="{{ site.data.supported_versions.osDistributions[osKey].url }}" target="_blank">{{ osName }}</a>
+      {%- else %}{{ osName }}
+      {%- endif %}
+    </span>
+    </td>
+    <td class="versions">
+      {%- for osData in osItem[1] %}
+        {%- assign osVersion = osData[0] %}
+        {{ osVersion }}{% if site.data.supported_versions.osDistributions[osKey]['versions'][osVersion] %} ({{ site.data.supported_versions.osDistributions[osKey]['versions'][osVersion]['name'] }}){% endif %}
+        {%- unless forloop.last %},{% endunless %}
+      {%- endfor %}
+    </td>
+    {%- if page.lang == 'ru' %}
+      <td style="text-align: center; width: 170px;">
+        {% if site.data.supported_versions.osDistributions[osKey]['ru_support'] == "true" %}
+          <img src="{{ partially_supported_img_url }}" data-tippy-content="Работоспособность в Community Edition не гарантируется.">
+        {% else %}
+          <img src="{{ supported_img_url }}">
+        {% endif %}
+      </td>
+      <td style="text-align: center; width: 170px;">
+        {% if site.data.supported_versions.osDistributions[osKey]['cse_support'] == "true" %}
+          <img src="{{ supported_img_url }}">
+        {% else %}
+          <img src="{{ not_supported_img_url }}">
+        {% endif %}
+      </td>
+    {%- endif %}
+    <td style="text-align: center; width: 170px;"><img src="{{ supported_img_url }}"></td>
+    <td style="text-align: center;">
+      {% if site.data.supported_versions.osDistributions[osKey]['note_content'] %}
+        <img src="{{ notes_img_url }}" data-tippy-content="{{ site.data.supported_versions.osDistributions[osKey]['note_content'][page.lang] }}">
+      {% endif %}
+    </td>
+  </tr>
+{% endif %}
 {%- endfor %}
 </tbody>
 </table>
@@ -128,7 +215,7 @@ Deckhouse should work with any container registry supporting Bearer authenticati
 {%- if page.lang == 'ru' %}
 Container registry, с которыми Deckhouse гарантированно работает
 {%- else %}
-Сontainer registries that Deckhouse is guaranteed to work with
+Container registries that Deckhouse is guaranteed to work with
 {%- endif %}
 </th></tr>
 </thead>
@@ -153,7 +240,7 @@ $(document).ready(function () {
         interactive: true,
         interactiveDebounce: 10,
         maxWidth: 600,
-        theme: 'custom',
+        theme: 'light',
         allowHTML: true,
         arrow: false,
         content: `{{ registry[1].additionalInfo[page.lang] }}`
@@ -162,15 +249,4 @@ $(document).ready(function () {
 {%- endfor %}
 });
 
-$(document).ready(function () {
-  tippy('[data-tippy-content]', {
-    interactive: true,
-    placement: 'left',
-    interactiveDebounce: 75,
-    maxWidth: 900,
-    theme: 'comparison',
-    allowHTML: true,
-    arrow: false,
-  });
-});
 </script>

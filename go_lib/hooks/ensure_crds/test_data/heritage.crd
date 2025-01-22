@@ -11,3 +11,5 @@ spec:
     plural: deschedulers
     singular: descheduler
   scope: Cluster
+  versions:
+    - name: v1

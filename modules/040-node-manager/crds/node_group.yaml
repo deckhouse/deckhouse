@@ -187,13 +187,13 @@ spec:
 
                     By default, it corresponds to the version selected for the cluster globally (see installation documentation) or to the current version of the control plane (if the global version is not defined).
                   type: string
-                  x-doc-examples: ["1.27"]
+                  x-doc-examples: ["1.29"]
                   enum:
-                    - "1.26"
                     - "1.27"
                     - "1.28"
                     - "1.29"
                     - "1.30"
+                    - "1.31"
                 cri:
                   type: object
                   description: |
@@ -324,6 +324,8 @@ spec:
                             - AzureInstanceClass
                             - VCDInstanceClass
                             - ZvirtInstanceClass
+                            - DynamixInstanceClass
+                            - HuaweiCloudInstanceClass
                         name:
                           description: |
                             The name of the required `InstanceClass` object (e.g., `finland-medium`).
@@ -959,6 +961,8 @@ spec:
                             - AzureInstanceClass
                             - VCDInstanceClass
                             - ZvirtInstanceClass
+                            - DynamixInstanceClass
+                            - HuaweiCloudInstanceClass
                         name:
                           description: |
                             The name of the required `InstanceClass` object (e.g., `finland-medium`).
@@ -1561,6 +1565,9 @@ spec:
                   description: |
                     Parameter for provisioning static machines to the cluster.
                   type: object
+                  x-kubernetes-validations:
+                    - message: "spec.staticInstances.labelSelector is immutable and cannot be changed once set"
+                      rule: "!has(oldSelf.labelSelector) || self.labelSelector == oldSelf.labelSelector"
                   properties:
                     labelSelector:
                       description: A label selector is a label query over a set
@@ -1749,6 +1756,8 @@ spec:
                             - AzureInstanceClass
                             - VCDInstanceClass
                             - ZvirtInstanceClass
+                            - DynamixInstanceClass
+                            - HuaweiCloudInstanceClass
                         name:
                           description: |
                             The name of the required `InstanceClass` object (e.g., `finland-medium`).
@@ -2147,14 +2156,17 @@ spec:
                       enum:
                         - "Watchdog"
                       description: |
-                        Supported fencing modes:
-                        * Watchdog - use watchdog kernel module for fencing.
+                        Fencing supports a single mode: `Watchdog`. In this mode, the watchdog kernel module (watchdog timer) is used.
 
-                        The Watchdog implementation includes two main components:
+                        The Watchdog implementation includes the following components:
 
-                        1. Fencing-agent is a DaemonSet that is deployed on a specific group of nodes (nodegroup). Once started, the agent activates Watchdog and sets a special label `node-manager.deckhouse.io/fencing-enabled` on the node where it is functioning. The agent regularly checks if the Kubernetes API is available. If the API is available, the agent sends a signal to Watchdog, which resets the watchdog timer. The agent also monitors special service labels on the node and, depending on their presence, enables or disables the Watchdog. A softdog kernel module with certain parameters (`soft_margin=60` and `soft_panic=1`) is used as Watchdog. This means that the watchdog timeout time is 60 seconds. After this time expires, kernel-panic occurs and the node remains in this state until the user reboots it.
+                        - Fencing-agent — a DaemonSet that is deployed on a specific group of nodes (NodeGroups).
 
-                        2. Fencing-controller - A controller that monitors all nodes with the `node-manager.deckhouse.io/fencing-enabled` label set. If any node becomes unavailable for more than 60 seconds, the controller removes all pods from that node and then removes the node itself.
+                          Once started, the agent activates Watchdog and sets a special label `node-manager.deckhouse.io/fencing-enabled` on the node where it is functioning. The agent regularly checks if the Kubernetes API is available. If the API is available, the agent sends a signal to Watchdog, which resets the watchdog timer. The agent also monitors special service labels on the node and, depending on their presence, enables or disables the Watchdog.
+
+                          A softdog kernel module with parameters `soft_margin=60` and `soft_panic=1` is used as Watchdog. This means that the timeout period of the watchdog timer is 60 seconds. After this time expires, kernel-panic occurs and the node remains in this state until the user reboots it.
+
+                        - Fencing-controller — a controller that monitors all nodes with the `node-manager.deckhouse.io/fencing-enabled` label. If any node becomes unavailable for more than 60 seconds, the controller removes all pods from that node and then removes the node itself.
 
 
               oneOf:

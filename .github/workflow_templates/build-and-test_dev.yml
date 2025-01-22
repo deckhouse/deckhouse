@@ -86,6 +86,16 @@ jobs:
       - run: |
           echo Enable ${{ needs.pull_request_info.outputs.edition }}
 
+  enable_se_plus:
+    if: ${{ needs.pull_request_info.outputs.edition == 'SE-plus' }}
+    name: Enable SE-plus
+    needs:
+      - pull_request_info
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          echo Enable ${{ needs.pull_request_info.outputs.edition }}
+
   go_generate:
     name: Go Generate
     needs:
@@ -137,13 +147,21 @@ jobs:
       - pull_request_info
 {!{ tmpl.Exec "tests_before_build_template" (slice $ctx "unit") | strings.Indent 4 }!}
 
-  matrix_tests:
+  tests_python_webhooks:
     if: ${{ needs.pull_request_info.outputs.changes_not_markdown == 'true' }}
-    name: Matrix tests
+    name: Tests python webhooks
     needs:
       - git_info
       - pull_request_info
-{!{ tmpl.Exec "tests_before_build_template" (slice $ctx "matrix") | strings.Indent 4 }!}
+{!{ tmpl.Exec "tests_webhooks_template" (slice $ctx) | strings.Indent 4 }!}
+
+  tests_dmt_lint:
+    if: ${{ needs.pull_request_info.outputs.changes_not_markdown == 'true' }}
+    name: Tests DMT lint
+    needs:
+    - git_info
+    - pull_request_info
+{!{ tmpl.Exec "tests_dmt_lint" (slice $ctx) | strings.Indent 4 }!}
 
   dhctl_tests:
     if: ${{ needs.pull_request_info.outputs.changes_not_markdown == 'true' }}
@@ -204,19 +222,19 @@ jobs:
       - openapi_test_cases
       - golangci_lint
       - dhctl_tests
-      - matrix_tests
       - tests
-    runs-on: [ self-hosted, regular ]
+    runs-on: ubuntu-latest
     steps:
-    - name: Set commit status after e2e run
-      id: set_e2e_requirement_status
-      uses: {!{ index (ds "actions") "actions/github-script" }!}
-      env:
-        STATUS_TARGET_COMMIT: ${{needs.git_info.outputs.github_sha}}
-        PR_LABELS: ${{ needs.pull_request_info.outputs.labels }}
-      with:
-        github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
-        script: |
-          const e2eStatus = require('./.github/scripts/js/e2e-commit-status');
+{!{ tmpl.Exec "checkout_step" . | strings.Indent 6 }!}
+      - name: Set commit status after e2e run
+        id: set_e2e_requirement_status
+        uses: {!{ index (ds "actions") "actions/github-script" }!}
+        env:
+          STATUS_TARGET_COMMIT: ${{needs.git_info.outputs.github_sha}}
+          PR_LABELS: ${{ needs.pull_request_info.outputs.labels }}
+        with:
+          github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+          script: |
+            const e2eStatus = require('./.github/scripts/js/e2e-commit-status');
 
-          await e2eStatus.setInitialStatus({github, context, core});
+            await e2eStatus.setInitialStatus({github, context, core});

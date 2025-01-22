@@ -23,30 +23,58 @@ import (
 
 	"github.com/Masterminds/semver/v3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
 const (
-	PhasePending         = "Pending"
-	PhasePolicyUndefined = "PolicyUndefined"
-	PhaseDeployed        = "Deployed"
-	PhaseSuperseded      = "Superseded"
-	PhaseSuspended       = "Suspended"
-	PhaseSkipped         = "Skipped"
+	ModuleReleaseResource        = "modulereleases"
+	ModuleReleaseKind            = "ModuleRelease"
+	ModuleReleasePhasePending    = "Pending"
+	ModuleReleasePhaseDeployed   = "Deployed"
+	ModuleReleasePhaseSuperseded = "Superseded"
+	ModuleReleasePhaseSuspended  = "Suspended"
+	ModuleReleasePhaseSkipped    = "Skipped"
+
+	ModuleReleaseAnnotationApplyNow = "release.deckhouse.io/apply-now"
+
+	ModuleReleaseAnnotationRegistrySpecChanged = "modules.deckhouse.io/registry-spec-changed"
+
+	ModuleReleaseLabelUpdatePolicy = "modules.deckhouse.io/update-policy"
+
+	ModuleReleaseFinalizerExistOnFs = "modules.deckhouse.io/exist-on-fs"
+
+	ModuleReleaseLabelStatus          = "status"
+	ModuleReleaseLabelSource          = "source"
+	ModuleReleaseLabelModule          = "module"
+	ModuleReleaseLabelReleaseChecksum = "release-checksum"
 )
 
 var (
 	ModuleReleaseGVR = schema.GroupVersionResource{
 		Group:    SchemeGroupVersion.Group,
 		Version:  SchemeGroupVersion.Version,
-		Resource: "modulereleases",
+		Resource: ModuleReleaseResource,
 	}
 	ModuleReleaseGVK = schema.GroupVersionKind{
 		Group:   SchemeGroupVersion.Group,
 		Version: SchemeGroupVersion.Version,
-		Kind:    "ModuleRelease",
+		Kind:    ModuleReleaseKind,
 	}
 )
+
+var _ runtime.Object = (*ModuleRelease)(nil)
+
+// +k8s:deepcopy-gen=true
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+// ModuleReleaseList is a list of ModuleRelease resources
+type ModuleReleaseList struct {
+	metav1.TypeMeta `json:",inline"`
+	metav1.ListMeta `json:"metadata"`
+
+	Items []ModuleRelease `json:"items"`
+}
 
 // +genclient
 // +genclient:nonNamespaced
@@ -83,6 +111,20 @@ func (mr *ModuleRelease) GetApplyAfter() *time.Time {
 }
 
 func (mr *ModuleRelease) GetRequirements() map[string]string {
+	requirements := make(map[string]string)
+
+	if len(mr.Spec.Requirements.ModuleReleasePlatformRequirements.Deckhouse) > 0 {
+		requirements[DeckhouseRequirementFieldName] = mr.Spec.Requirements.ModuleReleasePlatformRequirements.Deckhouse
+	}
+
+	if len(mr.Spec.Requirements.ModuleReleasePlatformRequirements.Kubernetes) > 0 {
+		requirements[KubernetesRequirementFieldName] = mr.Spec.Requirements.ModuleReleasePlatformRequirements.Kubernetes
+	}
+
+	return requirements
+}
+
+func (mr *ModuleRelease) GetModuleReleaseRequirements() *ModuleReleaseRequirements {
 	return mr.Spec.Requirements
 }
 
@@ -111,7 +153,7 @@ func (mr *ModuleRelease) GetForce() bool {
 }
 
 func (mr *ModuleRelease) GetApplyNow() bool {
-	return mr.Annotations["release.deckhouse.io/apply-now"] == "true"
+	return mr.Annotations[ModuleReleaseAnnotationApplyNow] == "true"
 }
 
 func (mr *ModuleRelease) SetApprovedStatus(val bool) {
@@ -169,8 +211,6 @@ func (mr *ModuleRelease) GetWeight() uint32 {
 	return mr.Spec.Weight
 }
 
-type Changelog map[string]any
-
 func (c Changelog) DeepCopy() Changelog {
 	if c == nil {
 		return nil
@@ -190,14 +230,24 @@ func (c Changelog) DeepCopy() Changelog {
 	return out
 }
 
+type ModuleReleaseRequirements struct {
+	ModuleReleasePlatformRequirements `json:",inline"`
+	ParentModules                     map[string]string `json:"modules,omitempty"`
+}
+
+type ModuleReleasePlatformRequirements struct {
+	Deckhouse  string `json:"deckhouse,omitempty"`
+	Kubernetes string `json:"kubernetes,omitempty"`
+}
+
 type ModuleReleaseSpec struct {
 	ModuleName string          `json:"moduleName"`
 	Version    *semver.Version `json:"version,omitempty"`
 	Weight     uint32          `json:"weight,omitempty"`
 
-	ApplyAfter   *metav1.Time      `json:"applyAfter,omitempty"`
-	Requirements map[string]string `json:"requirements,omitempty"`
-	Changelog    Changelog         `json:"changelog,omitempty"`
+	ApplyAfter   *metav1.Time               `json:"applyAfter,omitempty"`
+	Requirements *ModuleReleaseRequirements `json:"requirements,omitempty"`
+	Changelog    Changelog                  `json:"changelog,omitempty"`
 }
 
 type ModuleReleaseStatus struct {
@@ -207,26 +257,4 @@ type ModuleReleaseStatus struct {
 	Message        string          `json:"message"`
 	Size           uint32          `json:"size"`
 	PullDuration   metav1.Duration `json:"pullDuration"`
-}
-
-type moduleReleaseKind struct{}
-
-func (in *ModuleReleaseStatus) GetObjectKind() schema.ObjectKind {
-	return &moduleReleaseKind{}
-}
-
-func (f *moduleReleaseKind) SetGroupVersionKind(_ schema.GroupVersionKind) {}
-func (f *moduleReleaseKind) GroupVersionKind() schema.GroupVersionKind {
-	return ModuleReleaseGVK
-}
-
-// +k8s:deepcopy-gen=true
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-
-// ModuleReleaseList is a list of ModuleRelease resources
-type ModuleReleaseList struct {
-	metav1.TypeMeta `json:",inline"`
-	metav1.ListMeta `json:"metadata"`
-
-	Items []ModuleRelease `json:"items"`
 }

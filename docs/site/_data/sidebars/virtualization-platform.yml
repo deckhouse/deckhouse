@@ -1,0 +1,364 @@
+# Next lines are for local build only
+entries:
+  folders:
+    - title:
+        en: Overview
+        ru: Введение
+      url: /virtualization-platform/documentation/
+    - title:
+        en: Administration
+        ru: Администрирование
+      folders:
+        - title:
+            en: Overview
+            ru: Введение
+          url: /virtualization-platform/documentation/admin/overview.html
+        - title:
+            en: Platform editions
+            ru: Редакции платформы
+          url: /virtualization-platform/documentation/admin/editions.html
+        - title:
+            en: Update channels
+            ru: Каналы обновлений
+          url: /virtualization-platform/documentation/admin/release-channels.html
+          folders:
+        - title:
+            en: Requirements
+            ru: Требования
+          url: /virtualization-platform/documentation/admin/install/requirements.html
+            # - title:
+            #     en: Setup scenarios
+            #     ru: Сценарии установки
+            #   url: /virtualization-platform/documentation/admin/install/scenarios.html
+        - title:
+            en: Installation steps
+            ru: Порядок установки
+          folders:
+                - title:
+                    en: Installation overview
+                    ru: Обзор установки
+                  url: /virtualization-platform/documentation/admin/install/steps/overview.html
+                - title:
+                    en: Planning and preparing
+                    ru: Планирование и подготовка
+                  url: /virtualization-platform/documentation/admin/install/steps/prepare.html
+                - title:
+                    en: Install
+                    ru: Установка базовой платформы
+                  url: /virtualization-platform/documentation/admin/install/steps/base-cluster.html
+                - title:
+                    en: Initial access configuration
+                    ru: Первичная настройка доступа
+                  url: /virtualization-platform/documentation/admin/install/steps/access.html
+                - title:
+                    en: Adding nodes
+                    ru: Добавление узлов
+                  url: /virtualization-platform/documentation/admin/install/steps/nodes.html
+                - title:
+                    en: Set up storage
+                    ru: Настройка хранилища
+                  url: /virtualization-platform/documentation/admin/install/steps/storage.html
+                - title:
+                    en: Set up virtualization
+                    ru: Настройка виртуализации
+                  url: /virtualization-platform/documentation/admin/install/steps/virtualization.html
+                - title:
+                    en: Set up Ingress and DNS
+                    ru: Настройка Ingress и DNS
+                  url: /virtualization-platform/documentation/admin/install/steps/ingress.html
+        - title:
+            en: Platform configuration
+            ru: Настройка платформы
+          folders:
+            - title:
+                en: Node management
+                ru: Управление узлами
+              folders:
+                - title:
+                    en: Node groups
+                    ru: Группы узлов
+                  url: /virtualization-platform/documentation/admin/platform-management/node-management/node-group.html
+                - title:
+                    en: Adding and removing a node
+                    ru: Добавление и удаление узла
+                  url: /virtualization-platform/documentation/admin/platform-management/node-management/adding-node.html
+                - title:
+                    en: Node сonfiguration
+                    ru: Настройка узлов
+                  folders:
+                    - title:
+                        en: Node configuration
+                        ru: Конфигурация узлов
+                      url: /virtualization-platform/documentation/admin/platform-management/node-management/configuration.html
+                    - title:
+                        en: OS configuration
+                        ru: Настройка ОС
+                      url: /virtualization-platform/documentation/admin/platform-management/node-management/os.html
+                    - title:
+                        en: Containerd configuration
+                        ru: Настройка containerd
+                      url: /virtualization-platform/documentation/admin/platform-management/node-management/containerd.html
+                    - title:
+                        en: Advanced configuration
+                        ru: Расширенные настройки
+                      url: /virtualization-platform/documentation/admin/platform-management/node-management/advanced.html
+            - title:
+                en: Control plane
+                ru: Управляющий слой
+              folders:
+                - title:
+                    en: Components
+                    ru: Компоненты
+                  folders:
+                    - title:
+                        en: Description
+                        ru: Описание
+                      url: /virtualization-platform/documentation/admin/platform-management/control-plane-settings/control-plane-components.html
+                    - title:
+                        en: Working with etcd
+                        ru: Работа с etcd
+                      url: /virtualization-platform/documentation/admin/platform-management/control-plane-settings/etcd.html
+                    - title:
+                        en: Scheduler
+                        ru: Планировщик
+                      url: /virtualization-platform/documentation/admin/platform-management/control-plane-settings/scheduler.html
+                    - title:
+                        en: Auditing
+                        ru: Аудит
+                      url: /virtualization-platform/documentation/admin/platform-management/control-plane-settings/audit.html
+                - title:
+                    en: Master nodes
+                    ru: Master-узлы
+                  url: /virtualization-platform/documentation/admin/platform-management/control-plane-settings/masters.html
+                - title:
+                    en: Components placement
+                    ru: Размещение компонентов
+                  url: /virtualization-platform/documentation/admin/platform-management/control-plane-settings/placement-management.html
+            - title:
+                en: Network management
+                ru: Управление сетью
+              folders:
+                - title:
+                    en: VM Networks
+                    ru: Сети виртуальных машин
+                  url: /virtualization-platform/documentation/admin/platform-management/network/vm-network.html
+                - title:
+                    en: Setup Ingress
+                    ru: Настройка Ingress
+                  url: /virtualization-platform/documentation/admin/platform-management/network/ingress.html
+                - title:
+                    en: Egress
+                    ru: Управление исходящим трафиком
+                  url: /virtualization-platform/documentation/admin/platform-management/network/egress.html
+                - title:
+                    en: Routing
+                    ru: Настройка маршрутизации
+                  url: /virtualization-platform/documentation/admin/platform-management/network/routing.html
+                - title:
+                    en: DNS settings
+                    ru: Настройка DNS
+                  url: /virtualization-platform/documentation/admin/platform-management/network/dns.html
+                - title:
+                    en: NTP settings
+                    ru: Настройка NTP
+                  url: /virtualization-platform/documentation/admin/platform-management/network/ntp.html
+            - title:
+                en: Storage management
+                ru: Управление хранилищами
+              folders:
+                - title:
+                    en: Supported storages
+                    ru: Поддерживаемые хранилища
+                  folders:
+                    - title:
+                        en: SDS
+                        ru: Программно определяемые
+                      folders:
+                        - title:
+                            en: Local storage based on LVM
+                            ru: Локальные на основе LVM
+                          url: /virtualization-platform/documentation/admin/platform-management/storage/sds/lvm-local.html
+                        - title:
+                            en: Replicated storage based on LVM
+                            ru: Реплицируемые на основе LVM
+                          url: /virtualization-platform/documentation/admin/platform-management/storage/sds/lvm-replicated.html
+                    - title:
+                        en: External
+                        ru: Внешние
+                      folders:
+                        - title:
+                            en: Yadro
+                            ru: Yadro
+                          url: /virtualization-platform/documentation/admin/platform-management/storage/external/yadro.html
+                        - title:
+                            en: NFS storage
+                            ru: NFS-хранилище
+                          url: /virtualization-platform/documentation/admin/platform-management/storage/external/nfs.html
+                        - title:
+                            en: CEPH storage
+                            ru: CEPH-хранилище
+                          url: /virtualization-platform/documentation/admin/platform-management/storage/external/ceph.html
+            - title:
+                en: Virtualization
+                ru: Виртуализация
+              folders:
+                - title:
+                    en: Reliability
+                    ru: Механизмы обеспечения надежности
+                  url: /virtualization-platform/documentation/admin/platform-management/virtualization/reliability.html
+                - title:
+                    en: Virtual Machine Classes
+                    ru: Классы виртуальных машин
+                  url: /virtualization-platform/documentation/admin/platform-management/virtualization/virtual-machine-classes.html
+                - title:
+                    en: Cluster Images
+                    ru: Кластерные образы
+                  url: /virtualization-platform/documentation/admin/platform-management/virtualization/cluster-images.html
+            - title:
+                en: Monitoring
+                ru: Мониторинг
+              folders:
+                - title:
+                    en: Node monitoring
+                    ru: Мониторинг узлов
+                  url: /virtualization-platform/documentation/admin/platform-management/monitoring/node.html
+            - title:
+                en: Access control
+                ru: Разграничение доступа
+              folders:
+                - title:
+                    en: Role model
+                    ru: Ролевая модель
+                  url: /virtualization-platform/documentation/admin/platform-management/access-control/role-model.html
+                - title:
+                    en: User management
+                    ru: Управление пользователями
+                  url: /virtualization-platform/documentation/admin/platform-management/access-control/user-management.html
+                - title:
+                    en: Projects
+                    ru: Проекты
+                  url: /virtualization-platform/documentation/admin/platform-management/access-control/projects.html
+        - title:
+            en: Platform update
+            ru: Обновление платформы
+          folders:
+            - title:
+                en: Platform update
+                ru: Обновление платформы
+              url: /virtualization-platform/documentation/admin/update/update.html
+            - title:
+                en: Manual update mode
+                ru: Ручной режим обновления
+              url: /virtualization-platform/documentation/admin/update/manual-update-mode.html
+        - title:
+            en: Removing the platform
+            ru: Удаление платформы
+          url: /virtualization-platform/documentation/admin/removing/removing.html
+    - title:
+        en: Using
+        ru: Использование
+      folders:
+        - title:
+            en: Overview
+            ru: Введение
+          url: /virtualization-platform/documentation/user/overview.html
+        - title:
+            en: Configuring access to the project
+            ru: Настройка доступа к проекту
+          url: /virtualization-platform/documentation/user/project-access.html
+        - title:
+            en: Resource management
+            ru: Управление ресурсами
+          folders:
+            - title:
+                en: Images
+                ru: Образы
+              url: /virtualization-platform/documentation/user/resource-management/images.html
+            - title:
+                en: Disks
+                ru: Диски
+              url: /virtualization-platform/documentation/user/resource-management/disks.html
+            - title:
+                en: Virtual machines
+                ru: Виртуальные машины
+              url: /virtualization-platform/documentation/user/resource-management/virtual-machines.html
+            - title:
+                en: Snapshots
+                ru: Снимки
+              url: /virtualization-platform/documentation/user/resource-management/snapshots.html
+        - title:
+            en: Network
+            ru: Сеть
+          folders:
+            - title:
+                en: Network Policies
+                ru: Сетевые политики
+              url: /virtualization-platform/documentation/user/network/network-policies.html
+            - title:
+                en: Public Access to a VM
+                ru: Публичный доступ к ВМ
+              url: /virtualization-platform/documentation/user/network/vm-publishing.html
+    #- title:
+    #    en: Architecture
+    #    ru: Архитектура
+    #  folders:
+    #    - title:
+    #        en: Functional specifications
+    #        ru: Функциональные характеристики
+    #      url: /virtualization-platform/documentation/architecture/functional-specifications.html
+    #    - title:
+    #        en: Overall architecture
+    #        ru: Общая архитектура
+    #      url: /virtualization-platform/documentation/architecture/overall-architecture.html
+    #    - title:
+    #        en: Scheme of interaction of the platform components
+    #        ru: Схема взаимодействия компонентов платформы
+    #      url: /virtualization-platform/documentation/architecture/scheme.html
+    #    - title:
+    #        en: Used ports
+    #        ru: Используемые порты
+    #      url: /virtualization-platform/documentation/architecture/used-ports.html
+    #    - title:
+    #        en: Table
+    #        ru: Таблица
+    #      url: /virtualization-platform/documentation/architecture/table.html
+    - title:
+        en: Reference
+        ru: Справка
+      folders:
+        #- title:
+        #    en: Modules
+        #    ru: Модули
+        #  url: /virtualization-platform/reference/modules.html
+        - title:
+            en: Modules settings
+            ru: Настройки модулей
+          url: /virtualization-platform/reference/mc.html
+        - title:
+            en: Custom Resources
+            ru: Custom Resources
+          url: /virtualization-platform/reference/cr/
+        - title:
+            en: Console utilities
+            ru: Консольные утилиты
+          folders:
+            #- title:
+            #    en: dhctl
+            #    ru: dhctl
+            #  url: /virtualization-platform/documentation/reference/console-utilities/dhctl.html
+            - title:
+                en: d8 (Deckhouse CLI)
+                ru: d8 (Deckhouse CLI)
+              url: /virtualization-platform/reference/console-utilities/d8.html
+    #- title:
+    #    en: DVP editions
+    #    ru: Список  DVP
+    #  folders:
+    #    - title:
+    #        en: Configuration module
+    #        ru: Конфигурации модуля
+    #      url: /virtualization-platform/documentation/dvp-editions/changelog.html
+    #- title:
+    #    en: FAQ
+    #    ru: FAQ
+    #  url: /virtualization-platform/documentation/faq.html

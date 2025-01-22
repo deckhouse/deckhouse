@@ -1,10 +1,24 @@
-{{- $version := "8.2.1" }}
+{{- $version := "8.9.1" }}
 {{- $image_version := $version | replace "." "-" }}
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
+final: false
+fromImage: common/src-artifact
+git:
+- add: /{{ $.ModulePath }}/modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
+  to: /src/scripts
+  stageDependencies:
+    install:
+    - '**/*'
+shell:
+  install:
+  - git clone --depth 1 --branch curl-{{ $version | replace "." "_"}} {{ $.SOURCE_REPO }}/curl/curl.git /src/curl
+  - rm -rf /src/curl/.git
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
 from: {{ $.Images.BASE_SCRATCH }}
 import:
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
   add: /
   to: /
   includePaths:
@@ -17,9 +31,16 @@ docker:
     distro: all
     version: all
     curl: {{ $version }}
+  USER: 64535
 ---
-artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
-from: {{ $.Images.BASE_ALPINE_DEV }}
+image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
+final: false
+from: {{ $.Images.BASE_ALPINE }}
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
+  add: /src
+  to: /src
+  before: setup
 git:
   - add: /{{ $.ModulePath }}modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
     to: /
@@ -27,13 +48,16 @@ git:
       setup:
       - '**/*'
 shell:
+  beforeInstall:
+  {{- include "alpine packages proxy" . | nindent 2 }}
+  - apk add --no-cache make autoconf automake clang libtool gettext-dev binutils g++ openssl openssl-dev libssh2-dev libgcrypt ssl_client libssh2-static libcrypto3 openssl-libs-static zlib-static libgcc clang-libs gettext-libs
   setup:
   - export CC=clang
-  - git clone --depth 1 --branch curl-{{ $version | replace "." "_"}} {{ $.SOURCE_REPO }}/curl/curl.git
-  - cd /curl
+  - cd /src/curl
   - autoreconf -fi
   - LDFLAGS="-static" PKG_CONFIG="pkg-config --static" ./configure --disable-shared --enable-static --disable-ldap --enable-ipv6 --enable-unix-sockets --with-ssl --with-libssh2
   - make -j4 V=1 LDFLAGS="-static -all-static"
   - strip src/curl
   - mv src/curl /d8-curl
+  - mv /src/scripts/* /
   - chmod +x /d8-curl /install /uninstall

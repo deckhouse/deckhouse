@@ -51,7 +51,7 @@ spec:
   retention: {{ .Values.prometheus.retentionDays }}d
   retentionSize: {{ .Values.prometheus.internal.prometheusMain.retentionGigabytes }}GB
   image: {{ include "helm_lib_module_image" (list . "prometheus") }}
-  version: v2.45.2
+  version: v2.55.1
   enableRemoteWriteReceiver: true
   enableFeatures:
   - memory-snapshot-on-shutdown # https://ganeshvernekar.com/blog/prometheus-tsdb-snapshot-on-shutdown/
@@ -204,6 +204,11 @@ spec:
     {{- if .spec.customAuthToken }}
     headers:
       X-Auth-Token: {{ .spec.customAuthToken }}
+    {{- end }}
+    {{- if .spec.headers }}
+      {{- range $key, $value := .spec.headers }}
+      {{ $key }}: {{ $value | quote }}
+      {{- end }}
     {{- end }}
     {{- if .spec.writeRelabelConfigs }}
     writeRelabelConfigs:

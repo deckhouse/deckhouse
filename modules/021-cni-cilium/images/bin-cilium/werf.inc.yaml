@@ -4,7 +4,8 @@
 # Build cilium-agent binaries
 # Based on https://github.com/cilium/cilium/blob/v1.14.14/images/cilium/Dockerfile (builder stage)
 ---
-artifact: {{ $.ModuleName }}/cilium-artifact
+image: {{ $.ModuleName }}/cilium-artifact
+final: false
 fromImage: {{ $.ModuleName }}/base-cilium-dev
 git:
 - add: /{{ $.ModulePath }}modules/021-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
@@ -13,7 +14,7 @@ git:
     install:
       - '**/*'
 import:
-- artifact: {{ $.ModuleName }}/llvm-artifact
+- image: {{ $.ModuleName }}/llvm-artifact
   add: /usr/local/bin/
   to: /usr/local/bin
   before: install
@@ -21,15 +22,15 @@ import:
   - clang
   - llc
   - llvm-objcopy
-- artifact: {{ $.ModuleName }}/bpftool-artifact
+- image: {{ $.ModuleName }}/bpftool-artifact
   add: /usr/local/bin/bpftool
   to: /usr/local/bin/bpftool
   before: install
-- artifact: {{ $.ModuleName }}/cni-plugins-artifact
+- image: {{ $.ModuleName }}/cni-plugins-artifact
   add: /out/linux/amd64/bin/loopback
   to: /cni/loopback
   before: install
-- artifact: {{ $.ModuleName }}/gops-artifact
+- image: {{ $.ModuleName }}/gops-artifact
   add: /out/linux/amd64/bin/gops
   to: /bin/gops
   before: install
@@ -39,6 +40,7 @@ mount:
 shell:
   beforeInstall:
   - mkdir -p /go/src/github.com/cilium/cilium
+  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
   - git clone --depth 1 --branch v{{ $ciliumVersion }} {{ $.SOURCE_REPO }}/cilium/cilium.git /go/src/github.com/cilium/cilium
   setup:
   - export GOROOT=/usr/local/go GOPATH=/go
@@ -49,8 +51,10 @@ shell:
   - export GO_VERSION=${GOLANG_VERSION} GOPROXY={{ $.GOPROXY }}
   - export GOOS=linux GOARCH=amd64 CGO_ENABLED=0
   - cd /go/src/github.com/cilium/cilium
-  - find /patches -name '*.patch' | xargs git apply --verbose
+  - git apply /patches/*.patch --verbose
   - go mod tidy && go mod vendor && go mod verify
+  # git-adding files from patches to force build script take them into account
+  - git add .
   - make PKG_BUILD=1 SKIP_DOCS=true DESTDIR=/tmp/install build-container install-container-binary
   - make PKG_BUILD=1 SKIP_DOCS=true DESTDIR=/tmp/install install-bash-completion licenses-all
   - mv LICENSE.all /tmp/install/LICENSE.all

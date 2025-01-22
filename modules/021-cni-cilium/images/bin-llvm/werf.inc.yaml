@@ -12,10 +12,12 @@
 # and https://github.com/cilium/image-tools/blob/063fa0d879d9560b85b6134c48ece08e672fa057/images/compilers/install-deps.sh
 # #####################################################################
 ---
-artifact: {{ $.ModuleName }}/llvm-artifact
+image: {{ $.ModuleName }}/llvm-artifact
+final: false
 fromImage: {{ $.ModuleName }}/base-cilium-dev
 shell:
   beforeInstall:
+  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
   - git clone --branch "{{ $llvmRev }}" {{ $.SOURCE_REPO }}/llvm/llvm-project.git /src/llvm
   - cd /src/llvm
   - git config --global user.email "builder@deckhouse.io"

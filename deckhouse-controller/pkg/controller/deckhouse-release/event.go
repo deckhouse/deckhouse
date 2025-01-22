@@ -106,7 +106,7 @@ func (rp releasePhasePredicate) Create(ev event.CreateEvent) bool {
 	}
 
 	switch ev.Object.(*v1alpha1.DeckhouseRelease).Status.Phase {
-	case v1alpha1.PhaseSkipped, v1alpha1.PhaseSuperseded, v1alpha1.PhaseSuspended, v1alpha1.PhaseDeployed:
+	case v1alpha1.ModuleReleasePhaseSkipped, v1alpha1.ModuleReleasePhaseSuperseded, v1alpha1.ModuleReleasePhaseSuspended, v1alpha1.ModuleReleasePhaseDeployed:
 		return false
 	}
 	return true
@@ -124,7 +124,7 @@ func (rp releasePhasePredicate) Update(ev event.UpdateEvent) bool {
 	}
 
 	switch ev.ObjectNew.(*v1alpha1.DeckhouseRelease).Status.Phase {
-	case v1alpha1.PhaseSkipped, v1alpha1.PhaseSuperseded, v1alpha1.PhaseSuspended, v1alpha1.PhaseDeployed:
+	case v1alpha1.ModuleReleasePhaseSkipped, v1alpha1.ModuleReleasePhaseSuperseded, v1alpha1.ModuleReleasePhaseSuspended, v1alpha1.ModuleReleasePhaseDeployed:
 		return false
 	}
 	return true

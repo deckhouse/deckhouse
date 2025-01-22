@@ -4,20 +4,36 @@ spec:
       schema:
         openAPIV3Schema:
           description: |
-            Отображает базовую информацию о модуле Deckhouse.
+            Описывает состояние модуля в кластере. Объект `Module` будет создан автоматически после настройки источника модулей ([ModuleSource](#modulesource)) и успешной синхронизации.
 
-            Ресурс предназначен **только для получения информации** о модуле, его нельзя изменить (ресурс только для чтения).
           properties:
             properties:
               properties:
                 weight:
                   description: |
                     _Вес_ (приоритет) модуля.
-                state:
-                  description: 'Состояние модуля (включен или выключен).'
+                availableSources:
+                  description: Доступные источники для скачивания модуля.
                 source:
-                  description: 'Имя ModuleSource, если модуль скачан из него (иначе пусто).'
+                  description: Источник из которого скачен модуль (иначе пусто).
+                releaseChannel:
+                  description: Релизный канал модуля.
+                updatePolicy:
+                  description: Имя политики обновления модуля.
                 stage: 
-                  description: 'Текущая стадия жизненного цикла модуля.'
+                  description: Текущая стадия жизненного цикла модуля.
+                version:
+                  description: Версия модуля.
+                requirements:
+                  description: Зависимости модуля — набор условий, которые должны выполняться чтобы Deckhouse Kubernetes Platform (DKP) мог запустить модуль.
+                  properties:
+                    deckhouse:
+                      description: Требование к версии Deckhouse.
+                    kubernetes:
+                      description: Требование к версии Kubernetes.
+                    bootstrapped:
+                      description: Требование к статусу установки кластера (только для встроенных модулей DKP).
+                    modules:
+                      description: Список других включенных модулей, которые необходимы для работы модуля.
                 description:
-                  description: 'Описание модуля.'
+                  description: Описание модуля.

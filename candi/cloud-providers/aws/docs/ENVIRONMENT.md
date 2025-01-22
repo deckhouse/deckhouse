@@ -95,6 +95,11 @@ First, prepare a JSON file with the configuration of the necessary privileges:
                 "ec2:CreateVpcPeeringConnection",
                 "ec2:DeleteVpcPeeringConnection",
                 "ec2:AcceptVpcPeeringConnection",
+                "ec2:CreateNetworkInterface",
+                "ec2:DescribeNetworkInterfaceAttribute",
+                "ec2:ModifyNetworkInterfaceAttribute",
+                "ec2:DeleteNetworkInterface",
+                "ec2:DescribeNetworkInterfaces",                
                 "elasticloadbalancing:AddTags",
                 "elasticloadbalancing:ApplySecurityGroupsToLoadBalancer",
                 "elasticloadbalancing:AttachLoadBalancerToSubnets",
@@ -185,7 +190,7 @@ Save credentials (`Access key ID` and `Secret access key`).
 >
 > If there is no access to the region, then you will receive the following message (may differ):
 >
-> ![Enable region](../../images/030-cloud-provider-aws/region_enable.png)
+> ![Enable region](../../images/cloud-provider-aws/region_enable.png)
 >
 > In this case, click `Continue` to enable the region.
 

@@ -2,4 +2,4 @@
   link: https://github.com/kubernetes-sigs/metrics-server
   description: A scalable, efficient source of container resource metrics for Kubernetes built-in autoscaling pipelines.
   logo: /images/logos/kubernetes.svg
-  licence: Apache License 2.0
+  license: Apache License 2.0

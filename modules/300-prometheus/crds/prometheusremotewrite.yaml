@@ -5,6 +5,7 @@ metadata:
   labels:
     heritage: deckhouse
     module: prometheus
+    backup.deckhouse.io/cluster-config: "true"
 spec:
   group: deckhouse.io
   scope: Cluster
@@ -56,6 +57,16 @@ spec:
                 customAuthToken:
                   type: string
                   description: Custom token sent as a value of the X-Auth-Token header.
+                headers:
+                  description: |
+                    HTTP headers to include in the request.
+                  type: object
+                  properties:
+                    X-Scope-OrgID:
+                      description: |
+                        The `X-Scope-OrgID` header specifying the tenant ID.
+                      type: string
+                  required: ["X-Scope-OrgID"]
                 writeRelabelConfigs:
                   description: |
                     The list of remote write relabel configurations.

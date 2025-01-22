@@ -2,15 +2,15 @@
 title: "Cloud provider — Yandex Cloud"
 ---
 
-Взаимодействие с облачными ресурсами провайдера [Yandex Cloud](https://cloud.yandex.ru/) осуществляется с помощью модуля `cloud-provider-yandex`. Он предоставляет возможность модулю [управления узлами](../../modules/040-node-manager/) использовать ресурсы Yandex Cloud при заказе узлов для описанной [группы узлов](../../modules/040-node-manager/cr.html#nodegroup).
+Взаимодействие с облачными ресурсами провайдера [Yandex Cloud](https://cloud.yandex.ru/) осуществляется с помощью модуля `cloud-provider-yandex`. Он предоставляет возможность модулю [управления узлами](../../modules/node-manager/) использовать ресурсы Yandex Cloud при заказе узлов для описанной [группы узлов](../../modules/node-manager/cr.html#nodegroup).
 
 Функционал модуля `cloud-provider-yandex`:
 - Управляет ресурсами Yandex Cloud с помощью модуля `cloud-controller-manager`:
   * Создает сетевые маршруты для сети `PodNetwork` на стороне Yandex Cloud.
   * Актуализирует метаданные Yandex Cloud Instances и Kubernetes Nodes. Удаляет из Kubernetes узлы, которых уже нет в Yandex Cloud.
 - Заказывает диски в Yandex Cloud с помощью компонента `CSI storage`.
-- Регистрируется в модуле [node-manager](../../modules/040-node-manager/), чтобы [YandexInstanceClass'ы](cr.html#yandexinstanceclass) можно было использовать при описании [NodeGroup](../../modules/040-node-manager/cr.html#nodegroup).
-- Включает необходимый CNI (использует [simple bridge](../../modules/035-cni-simple-bridge/)).
+- Регистрируется в модуле [node-manager](../../modules/node-manager/), чтобы [YandexInstanceClass'ы](cr.html#yandexinstanceclass) можно было использовать при описании [NodeGroup](../../modules/node-manager/cr.html#nodegroup).
+- Включает необходимый CNI (использует [simple bridge](../../modules/cni-simple-bridge/)).
 
 ## Интеграция с Yandex Cloud
 
@@ -35,11 +35,11 @@ title: "Cloud provider — Yandex Cloud"
 
 1. В консоли Yandex Cloud выберите сервис Virtual Private Cloud и перейдите в раздел *Группы безопасности*. У вас должна отображаться одна группа безопасности с пометкой `Default`.
 
-    ![Группа безопасности по умолчанию](../../images/030-cloud-provider-yandex/sg-ru-default.png)
+    ![Группа безопасности по умолчанию](../../images/cloud-provider-yandex/sg-ru-default.png)
 
 1. Создайте правила согласно [инструкции Yandex Cloud](https://cloud.yandex.ru/ru/docs/managed-kubernetes/operations/connect/security-groups#rules-internal).
 
-    ![Правила для группы безопасности](../../images/030-cloud-provider-yandex/sg-ru-rules.png)
+    ![Правила для группы безопасности](../../images/cloud-provider-yandex/sg-ru-rules.png)
 
 1. Удалите правило, разрешающее любой **входящий** трафик (на скриншоте выше оно уже удалено), и сохраните изменения.
 
@@ -212,7 +212,7 @@ title: "Cloud provider — Yandex Cloud"
    - `<URL_ЗАПИСИ_МЕТРИК>` — URL со страницы Yandex Monitoring/Prometheus/Запись метрик.
    - `<API_КЛЮЧ>` — API-ключ, созданный на предыдущем шаге. Например, `AQVN1HHJReSrfo9jU3aopsXrJyfq_UHs********`.
 
-   Также вы можете указать дополнительные параметры в соответствии с [документацией](../../modules/300-prometheus/cr.html#prometheusremotewrite).
+   Также вы можете указать дополнительные параметры в соответствии с [документацией](../../modules/prometheus/cr.html#prometheusremotewrite).
 
 Подробнее с данной функциональностью можно ознакомиться в [документации Yandex Cloud](https://cloud.yandex.ru/ru/docs/monitoring/operations/prometheus/ingestion/remote-write).
 
@@ -247,6 +247,6 @@ title: "Cloud provider — Yandex Cloud"
    - `<URL_ЧТЕНИЕ_МЕТРИК_ЧЕРЕЗ_GRAFANA>` — URL со страницы Yandex Monitoring/Prometheus/Чтение метрик через Grafana.
    - `<API_КЛЮЧ>` — API-ключ, созданный на предыдущем шаге. Например, `AQVN1HHJReSrfo9jU3aopsXrJyfq_UHs********`.
 
-   Также вы можете указать дополнительные параметры в соответствии с [документацией](../../modules/300-prometheus/cr.html#grafanaadditionaldatasource).
+   Также вы можете указать дополнительные параметры в соответствии с [документацией](../../modules/prometheus/cr.html#grafanaadditionaldatasource).
 
 Подробнее с данной функциональностью можно ознакомиться в [документации Yandex Cloud](https://cloud.yandex.ru/ru/docs/monitoring/operations/prometheus/querying/grafana).

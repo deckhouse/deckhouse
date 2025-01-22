@@ -1,0 +1,107 @@
+<script type="text/javascript">const responseFromLicense = {{ site.data.license.response | jsonify }}; const pageLang = '{{ page.lang }}';</script>
+<script type="text/javascript" src='{% javascript_asset_tag getting-started %}[_assets/js/getting-started.js]{% endjavascript_asset_tag %}'></script>
+{% if page.platform_code == "bm-private" -%}
+  <script type="text/javascript" src='{% javascript_asset_tag getting-started-private %}[_assets/js/getting-started-private.js]{% endjavascript_asset_tag %}'></script>
+  {%- include getting_started/global/partials/NOTICES.liquid %}
+{% endif %}
+<script type="text/javascript" src='{% javascript_asset_tag getting-started-install %}[_assets/js/getting-started-install.js]{% endjavascript_asset_tag %}'></script>
+<script type="text/javascript" src='{% javascript_asset_tag bcrypt %}[_assets/js/bcrypt.js]{% endjavascript_asset_tag %}'></script>
+
+
+<span style="display: none" id="platform_code">{{page.platform_code}}</span>
+
+{%- assign layout = site.data.getting_started.dvp_data.installTypes[page.platform_code].layout %}
+{% unless page.ee_only == true or page.platform_code == "bm-private" -%}
+{% if page.lang == 'ru' %}
+#### Выберите редакцию Deckhouse Virtualization Platform
+{% else %}
+#### Select the Deckhouse Virtualization Platform revision
+{% endif %}
+<div class="tabs">
+    {%- for revision in site.data.getting_started.dvp_data.global.revisions %}
+        <a id='tab_layout_{{ revision }}' href="javascript:void(0)" class="tabs__btn tabs__btn_revision{% if revision == 'ce' %} active{% endif %}"
+        onclick="openTabAndSaveStatus(event, 'tabs__btn_revision', 'tabs__content_revision', 'block_layout_{{ revision }}', 'dhctl-revision', '{{ revision }}');
+                 openTabAndSaveStatus(event, 'tabs__btn_revision', 'tabs__content_other', 'block_other_{{ revision }}');
+                 toggleDisabled('tab_layout_{{ revision }}', '[license-token-ee]');" >
+        {{ site.data.i18n[revision] }}
+        </a>
+    {%- endfor %}
+</div>
+{%- endunless %}
+
+{%- for revision in site.data.getting_started.dvp_data.global.revisions %}
+{%- if page.ee_only == true and revision == 'ce' %}{% continue %}{% endif %}
+{%- if page.ce_only == true and revision == 'ee' %}{% continue %}{% endif %}
+{% assign layoutCode = '' | append: layout.code %}
+<div id='block_layout_{{ revision }}' class="tabs__content tabs__content_revision{% if revision == 'ce' or page.ee_only == true %} active{% endif %}" markdown="1">
+    {% if page.lang == 'ru' %}
+    {% include getting_started/dvp/global/partials/INSTALL_CONFIG_RU.liquid revision=revision layout=layoutCode %}
+    {% else %}
+    {% include getting_started/dvp/global/partials/INSTALL_CONFIG.liquid revision=revision layout=layoutCode %}
+    {% endif %}
+</div>
+{%- endfor %}
+
+{% if page.platform_code == 'yandex' %}
+  <div class="warning alert__wrap">
+    <svg class="alert__icon icon--warning">
+      <use xlink:href="/images/sprite.svg#warning-icon"></use>
+    </svg>
+    <div>
+      {% if page.lang == 'ru' %}
+      <p>Подсеть, указанная в <code>nodeNetworkCIDR</code>, будет автоматически разбита на три равные части для использования в трех зонах Yandex Cloud.<br>Убедитесь, что выбранной размерности подсети хватит для вашего кластера.</p>
+      {% else %}
+        <p>The subnet specified in <code>nodeNetworkCIDR</code> will be automatically split into three equal parts for use in three Yandex Cloud zones.<br>Make sure that the selected subnet dimension is sufficient for your cluster.</p>
+      {% endif %}
+    </div>
+  </div>
+{% endif %}
+
+<div class="dimmer-block-content common" markdown="1">
+
+</div>
+
+{%- for revision in site.data.getting_started.dvp_data.global.revisions %}
+{%- if revision =='ce' and page.ee_only == true %}{% continue %}{% endif %}
+
+{% if revision == 'ee' %}
+<div class="dimmer-block-content">
+{% endif %}
+
+<div id='block_other_{{ revision }}' class="tabs__content tabs__content_other{% if revision == 'ce' or page.ee_only == true %} active{% endif %}" markdown="1">
+{% if page.lang == 'ru' %}
+{% include getting_started/dvp/global/partials/INSTALL_OTHER_RU.liquid revision=revision %}
+{% else %}
+{% include getting_started/dvp/global/partials/INSTALL_OTHER.liquid revision=revision %}
+{% endif %}
+</div>
+{% if revision == 'ee' %}
+</div>
+{% endif %}
+
+{% endfor %}
+
+<script>
+$(document).ready(function() {
+  $.cookie('lang', '{{ page.lang }}');
+  $('#enter-license-key-ee').click((e)=> {
+    e.preventDefault();
+    let licenseToken = $('[license-token-ee]').val().trim();
+    getLicenseToken(licenseToken, 'ee')
+  });
+
+  $('[license-token-ee]').keypress((e) => {
+      const keycode = (event.keyCode ? event.keyCode : event.which);
+      let licenseToken = $('[license-token-ee]').val().trim();
+      if (keycode == '13') {
+        getLicenseToken(licenseToken, 'ee')
+      }
+  });
+
+  triggerBlockOnItemContent('[license-token-ee]', '.dimmer-block-content', {% if page.ee_only != true %}true{% endif %});
+
+  generate_password(true);
+  replace_snippet_password();
+  sessionStorage.setItem('dhctl-revision','{% if page.ee_only == true %}ee{% else %}ce{% endif %}');
+});
+</script>

@@ -12,7 +12,8 @@
 # and https://packages.altlinux.org/ru/p10/srpms/iptables/specfiles/2623143627906179825
 # #####################################################################
 ---
-artifact: {{ $.ModuleName }}/iptables-artifact
+image: {{ $.ModuleName }}/iptables-artifact
+final: false
 fromImage: {{ $.ModuleName }}/base-cilium-dev
 shell:
   beforeInstall:
@@ -20,6 +21,7 @@ shell:
     - apt-get install -y libpcap-devel
     - apt-get autoclean && apt-get clean
   install:
+    - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
     - git clone -b v{{ $version }} --depth 1  {{ $.SOURCE_REPO }}/netfilter/iptables /src
   setup:
     - cd /src

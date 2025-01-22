@@ -20,7 +20,6 @@ import (
 	"crypto/x509"
 	"errors"
 	"fmt"
-	"net"
 	"net/http"
 	"net/url"
 	"regexp"
@@ -31,7 +30,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh/frontend"
 )
 
 var (
@@ -72,7 +70,7 @@ func (pc *Checker) CheckRegistryAccessThroughProxy() error {
 		return nil
 	}
 
-	if tryToSkippingCheck(pc.metaConfig.Registry.Address, noProxyAddresses) {
+	if shouldSkipProxyCheck(pc.metaConfig.Registry.Address, noProxyAddresses) {
 		log.DebugLn("Registry address found in proxy.noProxy list, skipping check")
 		return nil
 	}
@@ -110,91 +108,6 @@ Please check connectivity from the control-plane node to the proxy and from the 
 	return nil
 }
 
-func tryToSkippingCheck(registryAddress string, noProxyAddresses []string) bool {
-	for _, noProxyAddress := range noProxyAddresses {
-		if registryAddress == noProxyAddress {
-			return true
-		}
-
-		registryIPAddr, _ := net.ResolveIPAddr("ip", registryAddress)
-		if registryIPAddr == nil {
-			continue
-		}
-
-		noProxyAddressIPAddr, _ := net.ResolveIPAddr("ip", noProxyAddress)
-		if noProxyAddressIPAddr != nil {
-			if noProxyAddressIPAddr.IP.Equal(registryIPAddr.IP) {
-				return true
-			}
-
-			continue
-		}
-
-		_, noProxyIPNet, _ := net.ParseCIDR(noProxyAddress)
-		if noProxyIPNet != nil && noProxyIPNet.Contains(registryIPAddr.IP) {
-			return true
-		}
-	}
-
-	return false
-}
-
-func buildHTTPClientWithLocalhostProxy(proxyUrl *url.URL) *http.Client {
-	localhostProxy := proxyUrl
-	localhostProxy.Host = net.JoinHostPort("localhost", ProxyTunnelPort)
-	return &http.Client{
-		Transport: &http.Transport{
-			Proxy:             http.ProxyURL(localhostProxy),
-			DisableKeepAlives: true,
-		},
-	}
-}
-
-func getProxyFromMetaConfig(metaConfig *config.MetaConfig) (*url.URL, []string, error) {
-	proxyConfig, err := metaConfig.EnrichProxyData()
-	switch {
-	case err != nil:
-		return nil, nil, err
-	case proxyConfig == nil:
-		return nil, nil, nil
-	}
-
-	var proxyAddrClause any
-	if proxyAddr, hasHTTPSProxy := proxyConfig["httpsProxy"]; hasHTTPSProxy {
-		proxyAddrClause = proxyAddr
-	} else if proxyAddr, hasHTTPProxy := proxyConfig["httpProxy"]; hasHTTPProxy {
-		proxyAddrClause = proxyAddr
-	} else {
-		return nil, nil, fmt.Errorf("%w: no proxy address was given", ErrBadProxyConfig)
-	}
-
-	noProxyClause, hasNoProxy := proxyConfig["noProxy"]
-	var noProxyAddresses []string
-	if hasNoProxy {
-		addrs, isStringSlice := noProxyClause.([]string)
-		if !isStringSlice {
-			return nil, nil, fmt.Errorf("proxy.noProxy is not a set of addresses")
-		}
-		noProxyAddresses = addrs
-	}
-
-	proxyAddr, proxyAddrIsString := proxyAddrClause.(string)
-	if !proxyAddrIsString {
-		return nil, nil, fmt.Errorf(
-			`%w: malformed proxy address: "%v"`,
-			ErrBadProxyConfig,
-			proxyAddr,
-		)
-	}
-
-	proxyUrl, err := url.Parse(proxyAddr)
-	if err != nil {
-		return nil, nil, fmt.Errorf(`%s: %w`, ErrBadProxyConfig, err)
-	}
-
-	return proxyUrl, noProxyAddresses, nil
-}
-
 func checkResponseIsFromDockerRegistry(resp *http.Response) error {
 	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusUnauthorized {
 		return fmt.Errorf(
@@ -215,16 +128,6 @@ func checkResponseIsFromDockerRegistry(resp *http.Response) error {
 	}
 
 	return nil
-}
-
-func setupSSHTunnelToProxyAddr(sshCl *ssh.Client, proxyUrl *url.URL) (*frontend.Tunnel, error) {
-	tunnel := strings.Join([]string{ProxyTunnelPort, proxyUrl.Hostname(), proxyUrl.Port()}, ":")
-	tun := sshCl.Tunnel("L", tunnel)
-	err := tun.Up()
-	if err != nil {
-		return nil, err
-	}
-	return tun, nil
 }
 
 func (pc *Checker) CheckRegistryCredentials() error {

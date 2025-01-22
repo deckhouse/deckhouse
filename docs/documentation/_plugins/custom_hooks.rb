@@ -73,9 +73,9 @@ Jekyll::Hooks.register :site, :post_read do |site|
   ]
 
   site.pages.each do |page|
-    if page.url.match?(%r{/modules/[0-9]+-[^/]+/$}) || pageSuffixes.any? { |suffix| page.name.end_with?(suffix) }
+    if page.url.match?(%r{/modules/([0-9]+-)?[^/]+/$}) || pageSuffixes.any? { |suffix| page.name.end_with?(suffix) }
     then
-      moduleKebabCase = page.url.sub(%r{(.*)?/modules/[0-9]+-([^/]+)/.*$},'\2')
+      moduleKebabCase = page.url.sub(%r{(.*)?/modules/([0-9]+-)?([^/]+)/.*$},'\3')
       moduleSnakeCase = moduleKebabCase.gsub(/-[a-z]/,&:upcase).gsub(/-/,'')
       page.data['module-kebab-name'] = moduleKebabCase
       page.data['module-snake-name'] = moduleSnakeCase

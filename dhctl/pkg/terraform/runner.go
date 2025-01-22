@@ -36,7 +36,10 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 )
 
-var cloudProvidersDir = "/deckhouse/candi/cloud-providers/"
+var (
+	dhctlPath         = "/"
+	cloudProvidersDir = "/deckhouse/candi/cloud-providers/"
+)
 
 const (
 	deckhouseClusterStateSuffix = "-dhctl.*.tfstate"
@@ -66,7 +69,6 @@ type ChangeActionSettings struct {
 	AutoDismissDestructive bool
 	AutoApprove            bool
 	SkipChangesOnDeny      bool
-	LogToBuffer            bool
 }
 
 type Runner struct {
@@ -92,6 +94,8 @@ type Runner struct {
 	confirm func() *input.Confirmation
 	stopped bool
 
+	logger log.Logger
+
 	// Atomic flag to check weather terraform is running. Do not manually change its values.
 	// Odd number - terraform is running
 	// Even number - runner is in standby mode
@@ -111,6 +115,7 @@ func NewRunner(provider, prefix, layout, step string, stateCache state.Cache) *R
 		stateCache:        stateCache,
 		changeSettings:    ChangeActionSettings{},
 		terraformExecutor: &CMDExecutor{},
+		logger:            log.GetDefaultLogger(),
 	}
 
 	var destinations []SaverDestination
@@ -229,9 +234,13 @@ func (r *Runner) withTerraformExecutor(t Executor) *Runner {
 	return r
 }
 
-func (r *Runner) WithCatchOutput(flag bool) *Runner {
-	r.changeSettings.LogToBuffer = flag
+func (r *Runner) WithLogger(logger log.Logger) *Runner {
+	r.logger = logger
 	return r
+}
+
+func (r *Runner) GetLogger() log.Logger {
+	return r.logger
 }
 
 func (r *Runner) switchTerraformIsRunning() {
@@ -258,7 +267,7 @@ func (r *Runner) Init() error {
 		}
 
 		if hasState {
-			log.InfoF("Cached Terraform state found:\n\t%s\n\n", r.statePath)
+			r.logger.LogInfoF("Cached Terraform state found:\n\t%s\n\n", r.statePath)
 			if !r.allowedCachedState {
 				var isConfirm bool
 				switch app.UseTfCache {
@@ -287,7 +296,7 @@ func (r *Runner) Init() error {
 				err := fs.WriteContentIfNeed(r.statePath, stateData)
 				if err != nil {
 					err := fmt.Errorf("can't write terraform state for runner %s: %s", r.step, err)
-					log.ErrorLn(err)
+					r.logger.LogErrorLn(err)
 					return err
 				}
 			}
@@ -299,10 +308,10 @@ func (r *Runner) Init() error {
 		r.WithState(nil)
 	}
 
-	return log.Process("default", "terraform init ...", func() error {
+	return r.logger.LogProcess("default", "terraform init ...", func() error {
 		args := []string{
 			"init",
-			fmt.Sprintf("-plugin-dir=%s/plugins", strings.TrimRight(os.Getenv("PWD"), "/")),
+			fmt.Sprintf("-plugin-dir=%s/plugins", strings.TrimRight(dhctlPath, "/")),
 			"-get-plugins=false",
 			"-no-color",
 			"-input=false",
@@ -382,13 +391,13 @@ func (r *Runner) Apply() error {
 		return ErrRunnerStopped
 	}
 
-	return log.Process("default", "terraform apply ...", func() error {
+	return r.logger.LogProcess("default", "terraform apply ...", func() error {
 		skip, err := r.isSkipChanges()
 		if err != nil {
 			return err
 		}
 		if skip {
-			log.InfoLn("Skip terraform apply.")
+			r.logger.LogInfoLn("Skip terraform apply.")
 			return nil
 		}
 
@@ -435,7 +444,7 @@ func (r *Runner) Plan(opts PlanOptions) error {
 		return ErrRunnerStopped
 	}
 
-	return log.Process("default", "terraform plan ...", func() error {
+	return r.logger.LogProcess("default", "terraform plan ...", func() error {
 		tmpFile, err := os.CreateTemp(app.TmpDirName, r.step+deckhousePlanSuffix)
 		if err != nil {
 			return fmt.Errorf("can't create temp file for plan: %w", err)
@@ -515,7 +524,7 @@ func (r *Runner) Destroy() error {
 	}
 
 	if r.changeSettings.AutoDismissDestructive {
-		log.InfoLn("terraform destroy skipped")
+		r.logger.LogInfoLn("terraform destroy skipped")
 		return nil
 	}
 
@@ -544,7 +553,7 @@ func (r *Runner) Destroy() error {
 		return err
 	}
 
-	return log.Process("default", "terraform destroy ...", func() error {
+	return r.logger.LogProcess("default", "terraform destroy ...", func() error {
 		err := r.stateSaver.Start(r)
 		if err != nil {
 			return err
@@ -581,7 +590,7 @@ func (r *Runner) ResourcesQuantityInState() int {
 
 	data, err := os.ReadFile(r.statePath)
 	if err != nil {
-		log.ErrorLn(err)
+		r.logger.LogErrorLn(err)
 		return 0
 	}
 
@@ -590,7 +599,7 @@ func (r *Runner) ResourcesQuantityInState() int {
 	}
 	err = json.Unmarshal(data, &st)
 	if err != nil {
-		log.ErrorLn(err)
+		r.logger.LogErrorLn(err)
 		return 0
 	}
 
@@ -621,14 +630,6 @@ func (r *Runner) GetTerraformExecutor() Executor {
 	return r.terraformExecutor
 }
 
-func (r *Runner) IsLogToBuffer() bool {
-	return r.changeSettings.LogToBuffer
-}
-
-func (r *Runner) GetLog() []string {
-	return r.terraformExecutor.GetStdout()
-}
-
 // Stop interrupts the current runner command and sets
 // a flag to prevent executions of next runner commands.
 func (r *Runner) Stop() {
@@ -654,9 +655,9 @@ func (r *Runner) execTerraform(args ...string) (int, error) {
 
 	r.switchTerraformIsRunning()
 	defer r.switchTerraformIsRunning()
-
-	exitCode, err := r.terraformExecutor.Exec(r.changeSettings.LogToBuffer, args...)
-	log.InfoF("Terraform runner %q process exited.\n", r.step)
+	r.terraformExecutor.SetExecutorLogger(r.logger)
+	exitCode, err := r.terraformExecutor.Exec(args...)
+	r.logger.LogInfoF("Terraform runner %q process exited.\n", r.step)
 
 	return exitCode, err
 }
@@ -749,5 +750,6 @@ func buildTerraformPath(provider, layout, step string) string {
 }
 
 func InitGlobalVars(pwd string) {
+	dhctlPath = pwd
 	cloudProvidersDir = pwd + "/deckhouse/candi/cloud-providers/"
 }

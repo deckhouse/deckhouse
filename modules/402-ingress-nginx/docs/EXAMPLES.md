@@ -99,7 +99,7 @@ spec:
 
 {% endraw %}
 
-## An example for Bare metal (MetalLB Load Balancer)
+## An example for Bare metal (MetalLB BGP LoadBalancer)
 
 {% alert level="warning" %}This feature is available in Enterprise Edition only.{% endalert %}
 
@@ -123,7 +123,7 @@ In the case of using MetalLB, its speaker Pods must be run on the same Nodes as 
 
 The controller must receive real IP addresses of clients — therefore its Service is created with the parameter `externalTrafficPolicy: Local` (disabling cross–node SNAT), and to satisfy this parameter the MetalLB speaker announce this Service only from those Nodes where the target Pods are running.
 
-So for the current example [metallb module configuration](../380-metallb/configuration.html) should be like this:
+So for the current example [metallb module configuration](../metallb/configuration.html) should be like this:
 
 ```yaml
 metallb:
@@ -136,34 +136,36 @@ metallb:
       value: frontend
 ```
 
-## An example for Bare metal (with L2LoadBalancer)
+## An example for Bare metal (MetalLB L2 LoadBalancer)
 
 {% alert level="warning" %}This feature is available in Enterprise Edition only.{% endalert %}
 
-1. Enable the `l2-load-balancer` module:
+1. Enable the `metallb` module:
 
    ```yaml
    apiVersion: deckhouse.io/v1alpha1
    kind: ModuleConfig
    metadata:
-     name: l2-load-balancer
+     name: metallb
    spec:
      enabled: true
-     version: 1
+     version: 2
    ```
 
-1. Deploy the _L2LoadBalancer_ resource:
+1. Deploy the _MetalLoadBalancerClass_ resource:
 
    ```yaml
    apiVersion: network.deckhouse.io/v1alpha1
-   kind: L2LoadBalancer
+   kind: MetalLoadBalancerClass
    metadata:
      name: ingress
    spec:
      addressPool:
-     - 192.168.2.100-192.168.2.150
+       - 192.168.2.100-192.168.2.150
+     isDefault: false
      nodeSelector:
-       node-role.kubernetes.io/loadbalancer: ""
+       node-role.kubernetes.io/loadbalancer: "" # node-balancer selector
+     type: L2
    ```
 
 1. Deploy the _IngressNginxController_ resource:
@@ -172,16 +174,15 @@ metallb:
    apiVersion: deckhouse.io/v1
    kind: IngressNginxController
    metadata:
-    name: main
+     name: main
    spec:
      ingressClass: nginx
      inlet: LoadBalancer
      loadBalancer:
+       loadBalancerClass: ingress
        annotations:
-         # The name of _L2LoadBalancer_ resource.
-         network.deckhouse.io/l2-load-balancer-name: ingress
-         # The number of addresses that will be allocated from the pool described in _L2LoadBalancer_.
-         network.deckhouse.io/l2-load-balancer-external-ips-count: "3"
+       # The number of addresses that will be allocated from the pool described in _MetalLoadBalancerClass_.
+       network.deckhouse.io/l2-load-balancer-external-ips-count: "3"
    ```
 
 1. The platform will create a service with the type `LoadBalancer`, to which a specified number of addresses will be assigned:

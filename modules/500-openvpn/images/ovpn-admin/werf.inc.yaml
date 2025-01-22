@@ -10,31 +10,32 @@ git:
     install:
       - '**/*'
 import:
-- artifact: {{ .ModuleName }}/{{ .ImageName }}-backend-artifact
+- image: {{ .ModuleName }}/{{ .ImageName }}-backend-artifact
   add: /src/ovpn-admin
   to: /app/ovpn-admin
   before: setup
-- artifact: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
   add: /src/version
   to: /app/version
   before: setup
-- artifact: {{ .ModuleName }}/openvpn-artifact
+- image: {{ .ModuleName }}/openvpn-artifact
   add: /src/openvpn/src/openvpn/openvpn
   to: /usr/sbin/openvpn
   before: setup
-- artifact: {{ .ModuleName }}/{{ .ImageName }}-frontend-artifact
+- image: {{ .ModuleName }}/{{ .ImageName }}-frontend-artifact
   add: /src/frontend/static
   to: /app/frontend/static
   before: setup
-- artifact: {{ .ModuleName }}/{{ .ImageName }}-binaries-artifact
+- image: {{ .ModuleName }}/{{ .ImageName }}-binaries-artifact
   add: /relocate
   to: /
   before: setup
 docker:
   WORKDIR: /app
 ---
-artifact: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
-fromArtifact: common/src-artifact
+image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+final: false
+fromImage: common/src-artifact
 git:
 - add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/patches
   to: /patches
@@ -46,15 +47,17 @@ git:
 shell:
   install:
   - cd /src
-  - git clone {{ .SOURCE_REPO }}/flant/ovpn-admin.git .
+  - git clone {{ .SOURCE_REPO }}/palark/ovpn-admin.git .
   - git checkout {{ $gitCommit }}
   - git apply /patches/*.patch --verbose
+  - rm -rf .git
   - echo {{ $gitCommit }} > version
 ---
-artifact: {{ .ModuleName }}/{{ .ImageName }}-backend-artifact
+image: {{ .ModuleName }}/{{ .ImageName }}-backend-artifact
+final: false
 from: {{ .Images.BASE_GOLANG_23_ALPINE }}
 import:
-- artifact: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
   add: /src
   to: /src
   before: install
@@ -70,10 +73,11 @@ shell:
   - chown -R 64535:64535 /src
   - chmod 0755 /src/ovpn-admin
 ---
-artifact: {{ .ModuleName }}/{{ .ImageName }}-frontend-artifact
+image: {{ .ModuleName }}/{{ .ImageName }}-frontend-artifact
+final: false
 from: {{ .Images.BASE_NODE_16_ALPINE }}
 import:
-- artifact: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
   add: /src
   to: /src
   before: install
@@ -84,10 +88,11 @@ shell:
   - npm install
   - npm run build
 ---
-artifact: {{ .ModuleName }}/{{ .ImageName }}-binaries-artifact
-fromArtifact: common/relocate-artifact
+image: {{ .ModuleName }}/{{ .ImageName }}-binaries-artifact
+final: false
+fromImage: common/relocate-artifact
 import:
-- artifact: {{ .ModuleName }}/openssl-artifact
+- image: {{ .ModuleName }}/openssl-artifact
   add: /openssl
   to: /openssl
   before: install

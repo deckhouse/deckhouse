@@ -84,6 +84,8 @@ spec:
           value: "true"
         - name: ISTIO_MULTIROOT_MESH
           value: "true"
+        - name: ENABLE_ENHANCED_RESOURCE_SCOPING
+          value: "true"
   {{- if $.Values.istio.enableHTTP10 }}
         - name: PILOT_HTTP10
           value: "1"
@@ -113,7 +115,7 @@ spec:
     rootNamespace: d8-{{ $.Chart.Name }}
     trustDomain: {{ $.Values.global.discovery.clusterDomain | quote }}
     accessLogFile: /dev/stdout
-    
+
     # The rules below exclude upmeter-related namespaces from istiod's point of view.
     # So, upmeter's events used to affect the traffic between control-plane and data-plane will be reduced.
     discoverySelectors:
@@ -270,6 +272,14 @@ spec:
               securityContext:
                 seccompProfile:
                   type: RuntimeDefault
+              livenessProbe:
+                httpGet:
+                  path: /healthz/ready
+                  port: 15021
+                initialDelaySeconds: 10
+                periodSeconds: 2
+                timeoutSeconds: 3
+                failureThreshold: 30
 {{- if ($.Values.global.enabledModules | has "cni-cilium") }}
         d8-check-kernel-version: |
           spec:

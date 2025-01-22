@@ -18,7 +18,7 @@
   - '040-node-manager/crds/staticcontrolplane.yaml'
   - '040-node-manager/crds/staticmachine*.yaml'
   - '110-istio/crds/istio'
-  includePaths: ['*/docs/','*/openapi/','*/crds/', '*/oss.yaml']
+  includePaths: ['*/docs/','*/openapi/*.yaml','*/crds/', '*/oss.yaml']
 - add: /modules
   to: /srv/jekyll-data/documentation/_data/bundles/raw/ce
   owner: jekyll
@@ -46,7 +46,7 @@
   group: jekyll
   stageDependencies:
     setup: ['**/*']
-{{- if or (eq .Edition "BE") (eq .Edition "SE") (eq .Edition "EE") (eq .Edition "FE") (eq .Mode "development") }}
+{{- if or (eq .Edition "BE") (eq .Edition "SE-plus") (eq .Edition "SE") (eq .Edition "EE") (eq .Edition "FE") (eq .Mode "development") }}
 - add: /ee/be/modules
   to: /srv/jekyll-data/documentation/_data/bundles/raw/be
   owner: jekyll
@@ -60,10 +60,10 @@
   group: jekyll
   stageDependencies:
     setup: ['**/*']
-  includePaths: ['*/docs/','*/openapi/','*/crds/', '*/oss.yaml']
+  includePaths: ['*/docs/','*/openapi/*.yaml','*/crds/', '*/oss.yaml']
   excludePaths: ['*/openapi/values.yaml', '*/openapi/*-tests.yaml', '*/docs/internal/']
 {{- end }}
-{{- if or (eq .Edition "SE") (eq .Edition "EE") (eq .Edition "FE") (eq .Mode "development") }}
+{{- if or (eq .Edition "SE") (eq .Edition "SE-plus") (eq .Edition "EE") (eq .Edition "FE") (eq .Mode "development") }}
 - add: /ee/se/modules
   to: /srv/jekyll-data/documentation/_data/bundles/raw/se
   owner: jekyll
@@ -77,7 +77,22 @@
   group: jekyll
   stageDependencies:
     setup: ['**/*']
-  includePaths: ['*/docs/','*/openapi/','*/crds/', '*/oss.yaml']
+  includePaths: ['*/docs/','*/openapi/*.yaml','*/crds/', '*/oss.yaml']
+  excludePaths: ['*/openapi/values.yaml', '*/openapi/*-tests.yaml', '*/docs/internal/']
+- add: /ee/se-plus/modules
+  to: /srv/jekyll-data/documentation/_data/bundles/raw/se-plus
+  owner: jekyll
+  group: jekyll
+  stageDependencies:
+    setup: ['**/*']
+  includePaths: ['values-*.yaml']
+- add: /ee/se-plus/modules
+  to: /src/se-plus/modules
+  owner: jekyll
+  group: jekyll
+  stageDependencies:
+    setup: ['**/*']
+  includePaths: ['*/docs/','*/openapi/*.yaml','*/crds/', '*/oss.yaml']
   excludePaths: ['*/openapi/values.yaml', '*/openapi/*-tests.yaml', '*/docs/internal/']
 {{- end }}
 {{- if or (eq .Edition "EE") (eq .Edition "FE") (eq .Mode "development") }}
@@ -94,7 +109,7 @@
   group: jekyll
   stageDependencies:
     setup: ['**/*']
-  includePaths: ['*/docs/','*/openapi/','*/crds/', '*/oss.yaml']
+  includePaths: ['*/docs/','*/openapi/*.yaml','*/crds/', '*/oss.yaml']
   excludePaths: ['*/openapi/values.yaml', '*/openapi/*-tests.yaml', '*/docs/internal/', '160-multitenancy-manager/crds/projecttypes.yaml', '160-multitenancy-manager/crds/doc-ru-projecttypes.yaml']
 - add: /ee/candi/cloud-providers/openstack/openapi
   to: /src/ee/modules/030-cloud-provider-openstack/crds
@@ -110,15 +125,29 @@
   includePaths: ['*cluster_configuration.yaml']
   stageDependencies:
     setup: ['**/*']
-- add: /ee/candi/cloud-providers/vsphere/openapi
-  to: /src/ee/modules/030-cloud-provider-vsphere/crds
+- add: /ee/se-plus/candi/cloud-providers/vsphere/openapi
+  to: /src/se-plus/modules/030-cloud-provider-vsphere/crds
   owner: jekyll
   group: jekyll
   includePaths: ['*instance_class.yaml']
   stageDependencies:
     setup: ['**/*']
-- add: /ee/candi/cloud-providers/vsphere/openapi
-  to: /src/ee/modules/030-cloud-provider-vsphere/openapi
+- add: /ee/candi/cloud-providers/dynamix/openapi
+  to: /src/ee/modules/030-cloud-provider-dynamix/crds
+  owner: jekyll
+  group: jekyll
+  includePaths: ['*instance_class.yaml']
+  stageDependencies:
+    setup: ['**/*']
+- add: /ee/se-plus/candi/cloud-providers/vsphere/openapi
+  to: /src/se-plus/modules/030-cloud-provider-vsphere/openapi
+  owner: jekyll
+  group: jekyll
+  includePaths: ['*cluster_configuration.yaml']
+  stageDependencies:
+    setup: ['**/*']
+- add: /ee/candi/cloud-providers/dynamix/openapi
+  to: /src/ee/modules/030-cloud-provider-dynamix/openapi
   owner: jekyll
   group: jekyll
   includePaths: ['*cluster_configuration.yaml']
@@ -138,15 +167,15 @@
   includePaths: ['*cluster_configuration.yaml']
   stageDependencies:
     setup: ['**/*']
-- add: /ee/candi/cloud-providers/zvirt/openapi
-  to: /src/ee/modules/030-cloud-provider-zvirt/crds
+- add: /ee/se-plus/candi/cloud-providers/zvirt/openapi
+  to: /src/se-plus/modules/030-cloud-provider-zvirt/crds
   owner: jekyll
   group: jekyll
   includePaths: ['*instance_class.yaml']
   stageDependencies:
     setup: ['**/*']
-- add: /ee/candi/cloud-providers/zvirt/openapi
-  to: /src/ee/modules/030-cloud-provider-zvirt/openapi
+- add: /ee/se-plus/candi/cloud-providers/zvirt/openapi
+  to: /src/se-plus/modules/030-cloud-provider-zvirt/openapi
   owner: jekyll
   group: jekyll
   includePaths: ['*cluster_configuration.yaml']
@@ -220,8 +249,15 @@
   includePaths: ['LAYOUTS*.md','ENVIRONMENT*.md','CLUSTER_CONFIGURATION*.md']
   stageDependencies:
     setup: ['**/*']
-- add: /ee/candi/cloud-providers/vsphere/docs
-  to: /src/ee/modules/030-cloud-provider-vsphere/docs
+- add: /ee/se-plus/candi/cloud-providers/vsphere/docs
+  to: /src/se-plus/modules/030-cloud-provider-vsphere/docs
+  owner: jekyll
+  group: jekyll
+  includePaths: ['LAYOUTS*.md','ENVIRONMENT*.md','CLUSTER_CONFIGURATION*.md']
+  stageDependencies:
+    setup: ['**/*']
+- add: /ee/candi/cloud-providers/dynamix/docs
+  to: /src/ee/modules/030-cloud-provider-dynamix/docs
   owner: jekyll
   group: jekyll
   includePaths: ['LAYOUTS*.md','ENVIRONMENT*.md','CLUSTER_CONFIGURATION*.md']
@@ -234,8 +270,8 @@
   includePaths: ['LAYOUTS*.md','ENVIRONMENT*.md','CLUSTER_CONFIGURATION*.md']
   stageDependencies:
     setup: ['**/*']
-- add: /ee/candi/cloud-providers/zvirt/docs
-  to: /src/ee/modules/030-cloud-provider-zvirt/docs
+- add: /ee/se-plus/candi/cloud-providers/zvirt/docs
+  to: /src/se-plus/modules/030-cloud-provider-zvirt/docs
   owner: jekyll
   group: jekyll
   includePaths: ['LAYOUTS*.md','ENVIRONMENT*.md','CLUSTER_CONFIGURATION*.md']

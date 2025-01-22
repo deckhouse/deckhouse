@@ -96,6 +96,11 @@ description: "Настройка AWS для работы облачного пр
                 "ec2:CreateVpcPeeringConnection",
                 "ec2:DeleteVpcPeeringConnection",
                 "ec2:AcceptVpcPeeringConnection",
+                "ec2:CreateNetworkInterface",
+                "ec2:DescribeNetworkInterfaceAttribute",
+                "ec2:ModifyNetworkInterfaceAttribute",
+                "ec2:DeleteNetworkInterface",
+                "ec2:DescribeNetworkInterfaces",                
                 "elasticloadbalancing:AddTags",
                 "elasticloadbalancing:ApplySecurityGroupsToLoadBalancer",
                 "elasticloadbalancing:AttachLoadBalancerToSubnets",
@@ -186,7 +191,7 @@ description: "Настройка AWS для работы облачного пр
 >
 > Если доступа к региону нет, вы получите следующее сообщение (может отличаться):
 >
-> ![Разрешить использование региона](../../images/030-cloud-provider-aws/region_enable.png)
+> ![Разрешить использование региона](../../images/cloud-provider-aws/region_enable.png)
 >
 > В этом случае нажмите `Continue`, чтобы разрешить использование региона.
 

@@ -19,7 +19,7 @@ package helpers
 import (
 	"sync"
 
-	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
 	"github.com/deckhouse/deckhouse/go_lib/hooks/update"
 	"github.com/deckhouse/deckhouse/go_lib/updater"
 )
@@ -91,12 +91,12 @@ func (c *DeckhouseSettingsContainer) Get() *DeckhouseSettings {
 	return c.settings
 }
 
-func NewModuleUpdatePolicySpecContainer(spec *v1alpha1.ModuleUpdatePolicySpec) *ModuleUpdatePolicySpecContainer {
+func NewModuleUpdatePolicySpecContainer(spec *v1alpha2.ModuleUpdatePolicySpec) *ModuleUpdatePolicySpecContainer {
 	return &ModuleUpdatePolicySpecContainer{spec: spec}
 }
 
 type ModuleUpdatePolicySpecContainer struct {
-	spec *v1alpha1.ModuleUpdatePolicySpec
+	spec *v1alpha2.ModuleUpdatePolicySpec
 	lock sync.Mutex
 }
 
@@ -109,7 +109,7 @@ func (c *ModuleUpdatePolicySpecContainer) Set(settings *DeckhouseSettings) {
 	c.spec.Update.Windows = settings.Update.Windows
 }
 
-func (c *ModuleUpdatePolicySpecContainer) Get() *v1alpha1.ModuleUpdatePolicySpec {
+func (c *ModuleUpdatePolicySpecContainer) Get() *v1alpha2.ModuleUpdatePolicySpec {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 

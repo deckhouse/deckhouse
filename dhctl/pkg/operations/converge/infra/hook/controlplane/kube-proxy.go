@@ -86,6 +86,8 @@ func (c *KubeProxyChecker) IsReady(nodeName string) (bool, error) {
 
 	if c.input != nil {
 		sshClient = ssh.NewClient(session.NewSession(*c.input), c.privateKeys)
+		// Avoid starting a new ssh agent
+		sshClient.InitializeNewAgent = false
 	} else {
 		sshClient = ssh.NewClientFromFlags()
 	}
@@ -96,7 +98,7 @@ func (c *KubeProxyChecker) IsReady(nodeName string) (bool, error) {
 			return false, fmt.Errorf("Not found external ip for node %s", nodeName)
 		}
 
-		sshClient.Settings.SetAvailableHosts([]string{ip})
+		sshClient.Settings.SetAvailableHosts([]session.Host{{Host: ip, Name: nodeName}})
 	}
 
 	var err error

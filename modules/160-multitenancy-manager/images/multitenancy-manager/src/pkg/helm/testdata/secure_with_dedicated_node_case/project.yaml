@@ -1,0 +1,27 @@
+apiVersion: deckhouse.io/v1alpha2
+kind: Project
+metadata:
+  name: test
+spec:
+  description: This is an example from the Deckhouse documentation.
+  parameters:
+    securityScanningEnabled: false
+    extendedMonitoringEnabled: true
+    administrators:
+      - name: user@gmail.com
+        subject: User
+    dedicatedNodes:
+      nodeSelector:
+        node-role/gpu-shared: ""
+    runtimeAuditEnabled: true
+    networkPolicy: Isolated
+    resourceQuota:
+      limits:
+        memory: 20Gi
+      requests:
+        cpu: 2
+        memory: 10Gi
+    allowedGIDs:
+      max: 100
+      min: 10
+  projectTemplateName: secure-with-dedicated-nodes

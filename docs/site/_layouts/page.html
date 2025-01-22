@@ -2,30 +2,29 @@
 layout: sidebar
 ---
 <div class="docs">
+    <div class="docs__wrap-title">
+        <h1 class="docs__title">{{ page.title }}</h1>
+        {%- if page.comparable and site.mode != 'module' %}
+        <div class="btn-group compare">
+            <a href='{{ page.url | prepend: "compare" | true_relative_url }}' class="btn btn_o" target="_blank">
+                Compare
+            </a>
+        </div>
+        <script>
+            $(document).ready(function(){
+                if (window.location.hostname.match(/flant.com|localhost/)) {
+                    $('.compare').addClass('active');
+                }
+                // Shows warning the viewing documentation about unreleased version
+                if (window.location.pathname.indexOf('/latest/') !== -1) {
+                  console.log("Latest");
+                  $('#notice-latest-doc-version-block').addClass('active');
+                }
+            });
 
-    <h1 class="docs__title">{{ page.title }}</h1>
-
-    {%- if page.simple_map == true %}
-
-    <script>
-        $(document).ready ( function(){
-            $('.box{{page.box_number}}').addClass('active');
-        });
-    </script>
-
-    {%- include custom/{{page.map_name}}.html %}
-
-    {%- elsif page.complex_map == true %}
-
-    <script>
-        $(document).ready ( function(){
-            $('.modalButton{{page.box_number}}').addClass('active');
-        });
-    </script>
-
-    {%- include custom/{{page.map_name}}.html %}
-
-    {%- endif %}
+        </script>
+        {%- endif %}
+    </div>
 
     <div class="post-content">
 
@@ -36,6 +35,18 @@ layout: sidebar
         {%- unless page.toc == false %}
         {%- include toc.html %}
         {%- endunless %}
+
+        {%- unless jekyll.environment == "production" %}
+
+        {%- if site.github_editme_path %}
+
+        <a target="_blank" href="https://github.com/{{site.github_editme_path}}/_pages/{{page.folder}}/{{page.url | remove: "/" | append: ".md"}}" class="btn btn-default githubEditButton" role="button"><i class="fa fa-github fa-lg"></i> Edit me</a>
+        {%- endif %}
+
+        {%- endunless %}
+
+        {%- include warning-version.html %}
+        {%- include module-webiface-notice.liquid %}
 
     {{content}}
 

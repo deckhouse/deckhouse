@@ -23,3 +23,4 @@ Patch build.go to display useful information in Help popup menu.
 ### Copy bundled plugins
 
 Copy bundled plugins from $BUNDLED_PLUGINS_PATH if $GF_INSTALL_PLUGINS is set or BUNDLED_PLUGINS_PATH is not equal to GF_PATHS_PLUGINS.
+

@@ -6,6 +6,7 @@ metadata:
     heritage: deckhouse
     module: prometheus
     app: grafana
+    backup.deckhouse.io/cluster-config: "true"
 spec:
   group: deckhouse.io
   scope: Cluster

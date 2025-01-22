@@ -12,7 +12,8 @@
 # and https://github.com/cilium/proxy/blob/39a2a56bbd5b3a591f69dbca51d3e30ef97e0e51/.github/workflows/build-envoy-images-release.yaml
 # #####################################################################
 ---
-artifact: {{ $.ModuleName }}/cilium-envoy-artifact
+image: {{ $.ModuleName }}/cilium-envoy-artifact
+final: false
 fromImage: {{ $.ModuleName }}/base-cilium-dev
 mount:
 - fromPath: ~/go-pkg-cache
@@ -38,6 +39,7 @@ shell:
   - chmod -R a+w /tmp
   #
   - mkdir -p /cilium/proxy
+  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
   - git clone {{ $.SOURCE_REPO }}/cilium/proxy.git /cilium/proxy
   - cd /cilium/proxy
   - git checkout {{ $ciliumProxyRev }}

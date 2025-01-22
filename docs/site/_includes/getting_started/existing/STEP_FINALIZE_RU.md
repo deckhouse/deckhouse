@@ -1,6 +1,5 @@
-<script type="text/javascript" src='{{ assets["getting-started.js"].digest_path }}'></script>
-<script type="text/javascript" src='{{ assets["getting-started-access.js"].digest_path }}'></script>
-
+<script type="text/javascript" src='{% javascript_asset_tag getting-started %}[_assets/js/getting-started.js]{% endjavascript_asset_tag %}'></script>
+<script type="text/javascript" src='{% javascript_asset_tag getting-started-access %}[_assets/js/getting-started-access.js]{% endjavascript_asset_tag %}'></script>
 Для того чтобы получить доступ к веб-интерфейсам компонентов Deckhouse, нужно:
 - настроить работу DNS
 - указать в параметрах Deckhouse [шаблон DNS-имен](../../documentation/v1/deckhouse-configure-global.html#parameters-modules-publicdomaintemplate)
@@ -10,7 +9,7 @@
 Чтобы упростить настройку, далее будет использоваться сервис [sslip.io](https://sslip.io/).
 
 Выполните следующую команду, чтобы настроить [шаблон DNS-имен](../../documentation/v1/deckhouse-configure-global.html#parameters-modules-publicdomaintemplate) сервисов Deckhouse на использование *sslip.io* (укажите публичный IP-адрес узла, где запущен Ingress-контролллер):
-{% snippetcut %}
+<div markdown="1">
 {% raw %}
 ```shell
 BALANCER_IP=<INGRESS_CONTROLLER_IP> 
@@ -19,7 +18,7 @@ kubectl patch mc global --type merge \
 echo "Domain template is '$(kubectl get mc global -o=jsonpath='{.spec.settings.modules.publicDomainTemplate}')'."
 ```
 {% endraw %}
-{% endsnippetcut %}
+</div>
 
 Команда также выведет установленный шаблон DNS-имен. Пример вывода:
 ```text
@@ -37,11 +36,9 @@ Domain template is '%s.1.2.3.4.sslip.io'.
 {% include getting_started/global/partials/DNS_OPTIONS_RU.liquid %}
 
 Затем, выполните следующую команду, чтобы изменить шаблон DNS-имен в параметрах Deckhouse:
-<div markdown="0">
-{% snippetcut %}
+<div markdown="1">
 ```shell
 kubectl patch mc global --type merge -p "{\"spec\": {\"settings\":{\"modules\":{\"publicDomainTemplate\":\"${DOMAIN_TEMPLATE}\"}}}}"
 ```
-{% endsnippetcut %}
 </div>
 {% endofftopic %}

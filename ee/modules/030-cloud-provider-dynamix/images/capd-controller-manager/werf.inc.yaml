@@ -1,0 +1,32 @@
+---
+image: {{ .ModuleName }}/{{ .ImageName }}
+fromImage: common/distroless
+docker:
+  ENTRYPOINT: ["/capd-controller-manager"]
+import:
+- image: {{ .ModuleName }}/{{ .ImageName }}-artifact
+  add: /capd-controller-manager
+  to: /capd-controller-manager
+  before: setup
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-artifact
+final: false
+from: {{ $.Images.BASE_GOLANG_22_ALPINE_DEV }}
+mount:
+  - fromPath: ~/go-pkg-cache
+    to: /go/pkg
+shell:
+  beforeInstall:
+  - apk add --no-cache git openssh-client
+  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
+  install:
+    - export VERSION=v0.2.0
+    - export COMMON_VERSION=v0.2.0
+    - git clone --depth 1 --branch ${VERSION} {{ $.CLOUD_PROVIDERS_SOURCE_REPO }}/dynamix/capd-controller-manager.git /src
+    - git clone --depth 1 --branch ${COMMON_VERSION} {{ $.CLOUD_PROVIDERS_SOURCE_REPO }}/dynamix/dynamix-common.git /dynamix-common
+    - cd /src
+    - export GOPROXY={{ $.GOPROXY }}
+    - go mod download
+    - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -o /capd-controller-manager cmd/main.go
+    - chown 64535:64535 /capd-controller-manager
+    - chmod 0700 /capd-controller-manager

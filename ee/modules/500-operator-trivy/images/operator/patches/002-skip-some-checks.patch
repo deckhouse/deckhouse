@@ -1,5 +1,5 @@
 diff --git a/pkg/configauditreport/controller/helper.go b/pkg/configauditreport/controller/helper.go
-index a9fcaa89..06fb835e 100644
+index 09f23e3..e2381bf 100644
 --- a/pkg/configauditreport/controller/helper.go
 +++ b/pkg/configauditreport/controller/helper.go
 @@ -3,6 +3,7 @@ package controller
@@ -9,19 +9,19 @@ index a9fcaa89..06fb835e 100644
 +	"regexp"
  	"strings"
  
- 	"github.com/aquasecurity/defsec/pkg/scan"
-@@ -50,7 +51,9 @@ func evaluate(ctx context.Context, policies *policy.Policies, resource client.Ob
- 		}
+ 	"github.com/aquasecurity/trivy-operator/pkg/apis/aquasecurity/v1alpha1"
+@@ -55,6 +56,10 @@ func evaluate(ctx context.Context, policies *policy.Policies, resource client.Ob
  
  		id := policies.GetResultID(result)
--
+ 
 +		if skipCheck(id, resource) {
 +			continue
 +		}
++
  		// record only misconfig failed checks
  		if cd.ReportRecordFailedChecksOnly() && result.Status() == scan.StatusPassed {
  			continue
-@@ -106,3 +109,71 @@ func hasInfraReport(ctx context.Context, node *corev1.Node, infraReadWriter infr
+@@ -114,3 +119,71 @@ func hasInfraReport(ctx context.Context, node *corev1.Node, infraReadWriter infr
  	}
  	return report != nil, nil
  }

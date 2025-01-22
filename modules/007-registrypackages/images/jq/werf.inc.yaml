@@ -1,11 +1,10 @@
-{{- $version := "1.6" }}
+{{- $version := .CandiVersionMap.jq.version }}
 {{- $image_version := $version | replace "." "-" }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
 from: {{ $.Images.BASE_SCRATCH }}
-git:
 import:
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
   add: /
   to: /
   includePaths:
@@ -19,7 +18,8 @@ docker:
     version: all
     jq: {{ $version }}
 ---
-artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
+image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
+final: false
 from: {{ $.Images.BASE_ALPINE }}
 git:
 - add: /{{ $.ModulePath }}modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
@@ -31,7 +31,7 @@ git:
     setup:
     - '**/*'
 import:
-- artifact: jq
+- image: common/jq-artifact
   add: /usr/bin/jq
   to: /jq
   before: setup

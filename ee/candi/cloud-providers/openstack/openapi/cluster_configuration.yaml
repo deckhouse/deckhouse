@@ -13,6 +13,8 @@ apiVersions:
       ```shell
       kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller edit provider-cluster-configuration
       ```
+
+      > After updating the node parameters, you need to run the [dhctl converge](../../deckhouse-faq.html#changing-the-configuration) command to apply the changes.
     x-doc-search: |
       ProviderClusterConfiguration
     x-unsafe-rules: [deleteZones]
@@ -104,9 +106,8 @@ apiVersions:
         description: |
           The definition of the master's NodeGroup.
 
-          > Caution! After changing the parameters of the section, you need to run `dhctl converge` for the changes to take effect.
+          > Caution. After changing the parameters of the section, you need to run `dhctl converge` command for the changes to take effect.
         x-doc-required: true
-        x-unsafe-rules: [updateMasterImage]
         additionalProperties: false
         required: [replicas, instanceClass, volumeTypeMap]
         properties:
@@ -115,10 +116,9 @@ apiVersions:
             minimum: 1
             description: |
               The number of master nodes to create. It is important to have an odd number of masters to ensure a quorum.
-            x-unsafe-rules: [updateReplicas]
           instanceClass:
             description: |
-              Partial contents of the fields of the [OpenStackInstanceClass](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-openstack/cr.html#openstackinstanceclass).
+              Partial contents of the fields of the [OpenStackInstanceClass](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/cloud-provider-openstack/cr.html#openstackinstanceclass).
             type: object
             required: [flavorName, imageName]
             additionalProperties: false
@@ -128,7 +128,7 @@ apiVersions:
                 description: |
                   Flavor of OpenStack servers.
 
-                  Get a list of all available flavors: `openstack flavor list`.
+                  To get a list of all available flavors, run the command: `openstack flavor list`.
 
                   For all non-master nodes it is advisable to use flavor's with a local disk. If cloud provider supports local disks they are usually faster and cheaper. The disadvantage of using such flavors is the inability to migrate nodes between hypervisors.
 
@@ -147,7 +147,7 @@ apiVersions:
                 description: |
                   The size of a root disk (in gigabytes).
 
-                  This parameter also has influence on type of volume that will be used for root disk; the ["How to use rootDiskSize and when it is preferred"](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-openstack/faq.html#how-to-use-rootdisksize-and-when-it-is-preferred) section describes how to use it.
+                  This parameter also has influence on type of volume that will be used for root disk; the ["How to use rootDiskSize and when it is preferred"](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/cloud-provider-openstack/faq.html#how-to-use-rootdisksize-and-when-it-is-preferred) section describes how to use it.
                 type: integer
               etcdDiskSizeGb:
                 description: |
@@ -201,7 +201,7 @@ apiVersions:
           serverGroup:
             type: object
             description: |
-              The ServerGroup object groups instances together. The instances in the group are placed on the same hypervisor (affinity) or different hypervisors (anti-affinity). This allows you to increase the fault tolerance of the cluster.
+              Object groups instances together. The instances in the group are placed on the same hypervisor (affinity) or different hypervisors (anti-affinity). This allows you to increase the fault tolerance of the cluster.
             required: [policy]
             properties:
               policy:
@@ -279,7 +279,7 @@ apiVersions:
                   description: |
                     The same as the `.spec.taints` field of the [Node](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#taint-v1-core) object.
 
-                    **Caution!** Only the `effect`, `key`, `values`  fields are available.
+                    **Caution.** Only the `effect`, `key`, `values`  fields are available.
                   x-doc-examples:
                   - - effect: NoExecute
                       key: ship-class
@@ -297,7 +297,7 @@ apiVersions:
                         type: string
             instanceClass:
               description: |
-                Partial contents of the fields of the [OpenStackInstanceClass](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-openstack/cr.html#openstackinstanceclass).
+                Partial contents of the fields of the [OpenStackInstanceClass](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/cloud-provider-openstack/cr.html#openstackinstanceclass).
               required: [flavorName, imageName, mainNetwork]
               additionalProperties: false
               type: object
@@ -318,16 +318,16 @@ apiVersions:
                 mainNetwork:
                   type: string
                   description: |
-                    Path to the network that VirtualMachines' primary NICs will connect to (default gateway).
-                    Get a list of all available networks: `openstack network list`.
+                    Path to the network that VirtualMachines primary NICs will connect to (default gateway).
+                    To get a list of all available networks, run the command: `openstack network list`.
                   x-doc-required: true
                 additionalNetworks:
                   type: array
                   items:
                     type: string
                   description: |
-                    Paths to networks that VirtualMachines' secondary NICs will connect to.
-                    Get a list of all available networks: `openstack network list`.
+                    Paths to networks that VirtualMachines secondary NICs will connect to.
+                    To get a list of all available networks, run the command: `openstack network list`.
                   example:
                     - "BGP-network-VLAN-3894"
                     - "External-VLAN-3699"
@@ -336,7 +336,7 @@ apiVersions:
                   items:
                     type: string
                   description: |
-                    A list of `mainNetwork` and `additionalNetworks` in which `SecurityGroups` and `AllowedAddressPairs` on ports **CANNOT** be configured.
+                    A list of `mainNetwork` and `additionalNetworks` in which `SecurityGroups` and `AllowedAddressPairs` on ports **cannot be configured**.
                 floatingIPPools:
                   type: array
                   items:
@@ -360,7 +360,7 @@ apiVersions:
 
                 If the value specified in `replicas` exceeds the number of elements in the dictionary, the nodes whose number exceeds the length of the dictionary get the values starting from the beginning of the dictionary. For example, if `replicas: 5`, then worker-0, worker-2, worker-4 will have the `fast-eu-1a` disk type, while worker-1, worker-3 will have the `fast-eu-1b` disk type.
 
-                > **Caution!** Limits by availability zones works only when using the `zones` parameter (`nodeGroups.zones`). If `zones` parameter is not specified, all availability zones will be used.
+                > **Caution.** Limits by availability zones works only when using the `zones` parameter (`nodeGroups.zones`). If `zones` parameter is not specified, all availability zones will be used.
 
                 Useful commands:
                 - `openstack availability zone list` — get list of availability zones.
@@ -391,12 +391,12 @@ apiVersions:
         description: |
           The way resources are located in the cloud.
 
-          Read [more](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-openstack/layouts.html) about possible provider layouts.
+          Read [more](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/cloud-provider-openstack/layouts.html) about possible provider layouts.
         type: string
         x-unsafe: true
       standard:
         description: |
-          Settings for the [`Standard`](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-openstack/layouts.html#standard) layout.
+          Settings for the [`Standard`](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/cloud-provider-openstack/layouts.html#standard) layout.
         type: object
         additionalProperties: false
         required: [internalNetworkCIDR, internalNetworkDNSServers, externalNetworkName]
@@ -416,7 +416,7 @@ apiVersions:
                   Root disk type.
               instanceClass:
                 description: |
-                  Partial contents of the fields of the [OpenStackInstanceClass](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-openstack/cr.html#openstackinstanceclass).
+                  Partial contents of the fields of the [OpenStackInstanceClass](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/cloud-provider-openstack/cr.html#openstackinstanceclass).
                 type: object
                 properties:
                   flavorName:
@@ -424,7 +424,7 @@ apiVersions:
                     description: |
                       Flavor of OpenStack servers.
 
-                      Get a list of all available flavors: `openstack flavor list`.
+                      To get a list of all available flavors, run the command: `openstack flavor list`.
                     x-doc-required: true
                   imageName:
                     description: |
@@ -439,7 +439,7 @@ apiVersions:
                     description: |
                       The size of a root disk (in gigabytes).
 
-                      This parameter also has influence on type of volume that will be used for root disk; the ["How to use rootDiskSize and when it is preferred"](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-openstack/faq.html#how-to-use-rootdisksize-and-when-it-is-preferred) section describes how to use it.
+                      This parameter also has influence on type of volume that will be used for root disk; the ["How to use rootDiskSize and when it is preferred"](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/cloud-provider-openstack/faq.html#how-to-use-rootdisksize-and-when-it-is-preferred) section describes how to use it.
                     type: integer
                     default: 50
                   additionalTags:
@@ -466,18 +466,18 @@ apiVersions:
               pattern: '^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$'
           internalNetworkSecurity: &internalNetworkSecurity
             description: |
-              Defines whether [SecurityGroups](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-openstack/faq.html#how-to-check-whether-the-provider-supports-securitygroups) and [AllowedAddressPairs](https://docs.openstack.org/developer/dragonflow/specs/allowed_address_pairs.html) must be configured for ports of the internal network.
+              Defines whether [SecurityGroups](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/cloud-provider-openstack/faq.html#how-to-check-whether-the-provider-supports-securitygroups) and [AllowedAddressPairs](https://docs.openstack.org/developer/dragonflow/specs/allowed_address_pairs.html) must be configured for ports of the internal network.
             type: boolean
             default: true
           externalNetworkName: &externalNetworkName
             description: |
               The name of the network for external connections.
-              Get a list of all available networks: `openstack network list`.
+              To get a list of all available networks, run the command: `openstack network list`.
             type: string
             x-unsafe: true
       standardWithNoRouter:
         description: |
-          Settings for the [`StandardWithNoRouter`](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-openstack/layouts.html#standardwithnorouter) layout.
+          Settings for the [`StandardWithNoRouter`](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/cloud-provider-openstack/layouts.html#standardwithnorouter) layout.
         type: object
         additionalProperties: false
         required: [internalNetworkCIDR, externalNetworkName]
@@ -496,7 +496,7 @@ apiVersions:
       simple:
         type: object
         description: |
-          Settings for the [`Simple`](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-openstack/layouts.html#simple) layout.
+          Settings for the [`Simple`](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/cloud-provider-openstack/layouts.html#simple) layout.
         additionalProperties: false
         required: [externalNetworkName]
         properties:
@@ -510,16 +510,16 @@ apiVersions:
               * `DirectRouting` — nodes are directly routed (SecurityGroups are disabled in this mode).
               * `VXLAN` — direct routing does NOT work between nodes, VXLAN must be used (SecurityGroups are disabled in this mode).
 
-              > **Caution!** After changing this parameter, you need to run `dhctl converge`.
+              > **Caution.** After changing this parameter, you need to run `dhctl converge` command for the changes to take effect.
 
-              > **Caution!** All cluster nodes must be rebooted after switching work mode from/to VXLAN.
+              > **Caution.** All cluster nodes must be rebooted after switching work mode from/to VXLAN.
             type: string
             enum: [VXLAN, DirectRouting]
             default: VXLAN
       simpleWithInternalNetwork:
         type: object
         description: |
-          Settings for the [`SimpleWithInternalNetwork`](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-openstack/layouts.html#simplewithinternalnetwork) layout.
+          Settings for the [`SimpleWithInternalNetwork`](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/cloud-provider-openstack/layouts.html#simplewithinternalnetwork) layout.
         additionalProperties: false
         required: [internalSubnetName]
         properties:
@@ -532,12 +532,12 @@ apiVersions:
               Sets the traffic mode for the network that the pods use to communicate with each other (usually, it is an internal network; however, there can be exceptions):
               * `DirectRouting` — nodes are directly routed (SecurityGroups are disabled in this mode).
               * `DirectRoutingWithPortSecurityEnabled` — direct routing is enabled between the nodes, but only if  the range of addresses of the internal network is explicitly allowed in OpenStack for Ports:
-                * **Caution!** Make sure that the `username` can edit `AllowedAddressPairs` on Ports connected to the `internalNetworkName` network. Usually, an OpenStack user doesn't have such a privilege if the network has the `shared` flag set.
+                * **Caution.** Make sure that the `username` can edit `AllowedAddressPairs` on Ports connected to the `internalNetworkName` network. Usually, an OpenStack user doesn't have such a privilege if the network has the `shared` flag set.
               * `VXLAN` — direct routing does NOT work between nodes, VXLAN must be used (`SecurityGroups` are disabled in this mode).
 
-              > **Caution!** After changing this parameter, you need to run `dhctl converge`.
+              > **Caution.** After changing this parameter, you need to run `dhctl converge` command for the changes to take effect.
 
-              > **Caution!** All cluster nodes must be rebooted after switching work mode from/to VXLAN.
+              > **Caution.** All cluster nodes must be rebooted after switching work mode from/to VXLAN.
             type: string
             enum: [VXLAN, DirectRouting, DirectRoutingWithPortSecurityEnabled]
             default: DirectRoutingWithPortSecurityEnabled
@@ -552,9 +552,9 @@ apiVersions:
             default: true
       provider:
         description: |
-          Contains [settings to connect](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-openstack/environment.html) to the OpenStack API.
+          Contains [settings to connect](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/cloud-provider-openstack/environment.html) to the OpenStack API.
 
-          These settings are the same as those in the `connection` field of the [cloud-provider-openstack](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-openstack/configuration.html#parameters) module.
+          These settings are the same as those in the `connection` field of the [cloud-provider-openstack](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/cloud-provider-openstack/configuration.html#parameters) module.
         type: object
         additionalProperties: false
         properties:
@@ -569,7 +569,7 @@ apiVersions:
             x-doc-examples:
               - |
                 ```yaml
-                caCert:
+                caCert: |
                   -----BEGIN CERTIFICATE-----
                   MIIFyDCCBLCgAwIBAgIQBwDIWH1asdaKNaALUa4NUzANBgkqhkiG9w0BAQsFADBc
                   ...

@@ -2,15 +2,16 @@
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
 import:
-- artifact: {{ .ModuleName }}/{{ .ImageName }}-artifact
+- image: {{ .ModuleName }}/{{ .ImageName }}-artifact
   add: /relocate
   to: /
   before: setup
 docker:
   ENTRYPOINT: ["/usr/sbin/pmacctd"]
 ---
-artifact: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
-fromArtifact: common/src-artifact
+image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+final: false
+fromImage: common/src-artifact
 shell:
   install:
   - cd /src
@@ -22,11 +23,13 @@ shell:
       url = {{ .SOURCE_REPO }}/msune/libcdada.git
     EOF
   - git submodule update --init
+  - rm -rf /src/.git
 ---
-artifact: {{ .ModuleName }}/{{ .ImageName }}-artifact
-fromArtifact: common/relocate-artifact
+image: {{ .ModuleName }}/{{ .ImageName }}-artifact
+final: false
+fromImage: common/relocate-artifact
 import:
-- artifact: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
   add: /src
   to: /src
   before: install

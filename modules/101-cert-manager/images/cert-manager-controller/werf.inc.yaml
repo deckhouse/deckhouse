@@ -1,34 +1,58 @@
-{{- $version := "1.12.3" }}
+{{- $version := "1.16.2" }}
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: common/distroless
 import:
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
-  add: /build/cert-manager/_bin/server/controller-linux-amd64
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
+  add: /controller-linux-amd64
   to: /bin/cert-manager-controller
   before: setup
 docker:
   ENTRYPOINT: ["/bin/cert-manager-controller"]
 ---
-artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
-from: {{ $.Images.BASE_GOLANG_19_BULLSEYE }}
+image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+fromImage: common/src-artifact
+final: false
 git:
 - add: /{{ $.ModulePath }}modules/101-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
   to: /patches
   stageDependencies:
     install:
     - '**/*'
+shell:
+  install:
+  - git clone -b "v{{ $version }}" --single-branch --depth=1 {{ $.SOURCE_REPO }}/jetstack/cert-manager.git /src
+  - cd /src
+  - git apply /patches/*.patch --verbose
+  - git describe --tags --always --match='v*' --abbrev=14 --dirty > VERSION
+  - git describe --tags --always --match='v*' --abbrev=0 | grep -q '-' && echo true || echo false > IS_PRERELEASE
+  - git rev-parse HEAD > GITCOMMIT
+  - git show -s --format=%ct HEAD > GITEPOCH
+  - rm -rf /src/.git
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
+from: {{ $.Images.BASE_GOLANG_23_BULLSEYE }}
+final: false
+import:
+- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+  add: /src
+  to: /src
+  before: install
+- image: common/jq-artifact
+  add: /usr/bin/jq
+  to: /usr/bin/jq
+  before: install
 mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
 shell:
   beforeInstall:
-  - apt update
-  - apt install patch jq -y
+  {{- include "debian packages proxy" . | nindent 2 }}
+  - apt-get install -y rsync
   install:
-  - mkdir /build
-  - cd /build
-  - git clone -b "v{{ $version }}" --single-branch --depth=1 {{ $.SOURCE_REPO }}/jetstack/cert-manager.git
-  - cd /build/cert-manager
-  - git apply /patches/*.patch --verbose
+  - export GOPROXY={{ $.GOPROXY }} GOOS=linux GOARCH=amd64 CGO_ENABLED=0
+  - cd /src
   - export RELEASE_VERSION="v{{ $version }}-flant"
-  - GOPROXY={{ $.GOPROXY }} make CTR=jq _bin/server/controller-linux-amd64 _bin/server/acmesolver-linux-amd64 _bin/server/webhook-linux-amd64 _bin/server/cainjector-linux-amd64
+  - make VERSION="$(cat VERSION)" IS_PRERELEASE="$(cat IS_PRERELEASE)" GITCOMMIT="$(cat GITCOMMIT)" GITEPOCH="$(cat GITEPOCH)" CTR=jq _bin/server/controller-linux-amd64 _bin/server/acmesolver-linux-amd64 _bin/server/webhook-linux-amd64 _bin/server/cainjector-linux-amd64
+  - cp _bin/server/controller-linux-amd64 _bin/server/acmesolver-linux-amd64 _bin/server/webhook-linux-amd64 _bin/server/cainjector-linux-amd64 /
+  - chown 64535:64535 /controller-linux-amd64 /acmesolver-linux-amd64 /webhook-linux-amd64 /cainjector-linux-amd64
+  - chmod 700 /controller-linux-amd64 /acmesolver-linux-amd64 /webhook-linux-amd64 /cainjector-linux-amd64

@@ -1,32 +1,46 @@
+{{- range $key, $value := .CandiVersionMap.k8s }}
+  {{- $version := toString $key }}
+  {{- if $value.csi.gcp }}
 ---
-image: {{ $.ModuleName }}/{{ $.ImageName }}
+image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $version | replace "." "-" }}
 fromImage: common/distroless
 import:
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
   add: /src/bin/gce-pd-csi-driver
   to: /gce-pd-csi-driver
   before: setup
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
   add: /relocate
   to: /
   before: install
   includePaths:
   - '**/*'
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
   add: /lib64
   to: /lib64
   before: install
   includePaths:
   - 'libresolv*'
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
   add: /lib/udev/scsi_id
   to: /lib/udev_containerized/scsi_id
   before: setup
+    {{- if semverCompare ">=1.31" $version }}
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
+  add: /src/deploy/kubernetes/udev/google_nvme_id
+  to: /lib/udev_containerized/google_nvme_id
+  before: setup
+    {{- end }}
 docker:
   ENTRYPOINT: ["/gce-pd-csi-driver"]
 ---
-artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
+final: false
+    {{- if semverCompare ">=1.31" $version }}
+from: {{ $.Images.BASE_GOLANG_22_BULLSEYE_DEV }}
+    {{- else if semverCompare ">=1.27" $version }}
 from: {{ $.Images.BASE_GOLANG_20_BULLSEYE_DEV }}
+    {{- end }}
 mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
@@ -35,13 +49,17 @@ shell:
   - export GO_VERSION=${GOLANG_VERSION}
   - export GOPROXY={{ $.GOPROXY }}
   - mkdir -p /src
-  - git clone --depth 1 --branch v1.3.3 {{ $.SOURCE_REPO }}/kubernetes-sigs/gcp-compute-persistent-disk-csi-driver.git /src
+  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
+  - git clone --depth 1 --branch {{ $value.csi.gcp }} {{ $.SOURCE_REPO }}/kubernetes-sigs/gcp-compute-persistent-disk-csi-driver.git /src
   - cd /src
-  - GCE_PD_CSI_STAGING_VERSION=v1.3.3 make gce-pd-driver
+  - GCE_PD_CSI_STAGING_VERSION={{ $value.csi.gcp }} make gce-pd-driver
+ {{- end }}
+{{- end }}
 ---
 {{- $csiBinaries := "/bin/chmod /bin/mount /bin/mkdir /bin/rmdir /bin/umount /bin/findmnt /bin/lsblk /sbin/badblocks /sbin/blockdev /sbin/blk* /sbin/btrfs* /sbin/dumpe2fs /sbin/e2* /sbin/findfs /sbin/fsck* /sbin/fsfreeze /sbin/fstrim /sbin/mke2fs /sbin/mkfs* /sbin/resize2fs /sbin/xfs_repair /usr/sbin/nvme /usr/sbin/parted /usr/sbin/xfs*" }}
 ---
-artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+final: false
 from: {{ $.Images.BASE_ALT_DEV }}
 shell:
   setup:

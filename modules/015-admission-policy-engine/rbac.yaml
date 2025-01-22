@@ -1,5 +1,5 @@
 module: admission-policy-engine
-scopes:
+subsystems:
   - security
 allowedResources:
   - group: templates.gatekeeper.sh

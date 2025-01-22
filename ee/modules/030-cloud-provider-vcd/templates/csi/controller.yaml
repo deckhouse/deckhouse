@@ -9,6 +9,7 @@
   valueFrom:
     fieldRef:
       fieldPath: spec.nodeName
+{{- include "helm_lib_envs_for_proxy" . }}
 {{- end }}
 
 {{- define "csi_controller_volumes" }}
@@ -40,6 +41,7 @@
   valueFrom:
     fieldRef:
       fieldPath: spec.nodeName
+{{- include "helm_lib_envs_for_proxy" . }}
 {{- end }}
 
 {{- define "csi_node_volumes" }}
@@ -68,8 +70,9 @@ vcdCsiPluginLegacy
 {{- end }}
 {{- end }}
 
-{{- $csiControllerImage := include "helm_lib_module_image_no_fail" (list . (include "csi_node_image_name" .)) }}
-
+{{- $kubernetesSemVer := semver .Values.global.discovery.kubernetesVersion }}
+{{- $csiImageName := join "" (list (include "csi_node_image_name" .) $kubernetesSemVer.Major $kubernetesSemVer.Minor ) }}
+{{- $csiControllerImage := include "helm_lib_module_image_no_fail" (list . $csiImageName) }}
 {{- if $csiControllerImage }}
 
   {{- $csiControllerConfig := dict }}

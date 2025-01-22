@@ -66,7 +66,8 @@
 # #####################################################################
 # Binaries artifact for distroless agent (based on Ubuntu)
 ---
-artifact: {{ $.ModuleName }}/agent-binaries-artifact
+image: {{ $.ModuleName }}/agent-binaries-artifact
+final: false
 fromImage: {{ $.ModuleName }}/base-cilium-dev
 git:
 - add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}
@@ -78,26 +79,26 @@ git:
     install:
     - "**/*.sh"
 import:
-- artifact: {{ $.ModuleName }}/llvm-artifact
+- image: {{ $.ModuleName }}/llvm-artifact
   add: /usr/local/bin/
   to: /usr/local/bin
   before: install
   includePaths:
   - clang
   - llc
-- artifact: {{ $.ModuleName }}/bpftool-artifact
+- image: {{ $.ModuleName }}/bpftool-artifact
   add: /usr/local/bin/bpftool
   to: /usr/local/bin/bpftool
   before: install
-- artifact: {{ $.ModuleName }}/cni-plugins-artifact
+- image: {{ $.ModuleName }}/cni-plugins-artifact
   add: /out/linux/amd64/bin/loopback
   to: /cni/loopback
   before: install
-- artifact: {{ $.ModuleName }}/gops-artifact
+- image: {{ $.ModuleName }}/gops-artifact
   add: /out/linux/amd64/bin/gops
   to: /bin/gops
   before: install
-- artifact: registrypackages/iptables-artifact-{{ $iptables_image_version }}
+- image: registrypackages/iptables-artifact-{{ $iptables_image_version }}
   add: /
   to: /sbin
   includePaths:
@@ -108,7 +109,7 @@ import:
   add: /iptables-wrapper
   to: /usr/sbin/iptables-wrapper
   before: install
-- artifact: {{ $.ModuleName }}/cilium-artifact
+- image: {{ $.ModuleName }}/cilium-artifact
   add: /tmp/install
   to: /
   before: install
@@ -121,7 +122,7 @@ import:
   - opt/cni/bin/cilium-cni
   - usr/bin/cilium*
   - var/lib/cilium/bpf
-- artifact: {{ $.ModuleName }}/cilium-envoy-artifact
+- image: {{ $.ModuleName }}/cilium-envoy-artifact
   add: /tmp/install/usr
   to: /usr
   before: install
@@ -129,11 +130,11 @@ import:
   - bin/cilium-envoy
   - bin/cilium-envoy-starter
   - lib/libcilium.so
-- artifact: {{ $.ModuleName }}/hubble-artifact
+- image: {{ $.ModuleName }}/hubble-artifact
   add: /hubble
   to: /usr/bin/hubble
   before: install
-- artifact: {{ $.ModuleName }}/hubble-artifact
+- image: {{ $.ModuleName }}/hubble-artifact
   add: /bash_completion
   to: /etc/bash_completion.d/hubble
   before: install
@@ -141,7 +142,7 @@ import:
   add: /pause
   to: /pause
   before: install
-- artifact: jq
+- image: common/jq-artifact
   add: /usr/bin/jq
   to: /usr/bin/jq
   before: install
@@ -226,7 +227,7 @@ shell:
 image: {{ $.ModuleName }}/agent-distroless
 fromImage: common/distroless
 import:
-- artifact: {{ $.ModuleName }}/agent-binaries-artifact
+- image: {{ $.ModuleName }}/agent-binaries-artifact
   add: /relocate
   to: /
   before: install

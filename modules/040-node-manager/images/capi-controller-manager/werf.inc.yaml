@@ -3,21 +3,38 @@
 image: {{ .ModuleName }}/capi-controller-manager
 fromImage: common/distroless
 import:
-- artifact: {{ .ModuleName }}/capi-artifact
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
   add: /capi-controller-manager
   to: /capi-controller-manager
   before: setup
+docker:
+  USER: 64535
 ---
-artifact: {{ $.ModuleName }}/capi-artifact
-from: {{ $.Images.BASE_GOLANG_21_ALPINE_DEV }}
+image: {{ .ModuleName }}/{{ $.ImageName }}-src-artifact
+fromImage: common/src-artifact
+final: false
+shell:
+  install:
+  - git clone --depth 1 --branch v{{ $version }} {{ $.SOURCE_REPO }}/kubernetes-sigs/cluster-api.git /src
+  - rm -rf /src/.git
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
+final: false
+import:
+- image: {{ .ModuleName }}/{{ $.ImageName }}-src-artifact
+  add: /src
+  to: /src
+  before: install
 mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
 shell:
+  beforeInstall:
+  {{- include "alpine packages proxy" . | nindent 2 }}
+  - apk add --no-cache make bash git
   install:
-  - mkdir /src
   - export GOPROXY={{ $.GOPROXY }}
-  - git clone --depth 1 --branch v{{ $version }} {{ $.SOURCE_REPO }}/kubernetes-sigs/cluster-api.git /src
   - cd /src
   - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 make managers LDFLAGS="-s -w -extldflags \"-static\""
   - mv /src/bin/manager /capi-controller-manager

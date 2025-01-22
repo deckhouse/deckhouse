@@ -41,20 +41,27 @@ import json
 import ssl
 
 try:
-    from urllib.request import urlopen, Request
+    from urllib.request import urlopen, Request, HTTPError
 except ImportError as e:
-    from urllib2 import urlopen, Request
+    from urllib2 import urlopen, Request, HTTPError
 
 ssl.match_hostname = lambda cert, hostname: True
 request = Request(sys.argv[1], headers={'Authorization': 'Bearer ' + sys.argv[2]})
-response = urlopen(request, cafile='/var/lib/bashible/ca.crt')
+try:
+    response = urlopen(request, cafile='/var/lib/bashible/ca.crt')
+except HTTPError as e:
+    if e.getcode() == 401:
+        sys.stderr.write("Bootstrap-token compiled in this bootstrap.sh script is expired. Looks like more than 4 hours passed from the time it's been issued.\n")
+        sys.exit(2)
+    sys.stderr.write("Access to {} return HTTP Error {}: {}".format(sys.argv[2], e.getcode(), e.read()[:255]))
+    sys.exit(1)
 data = json.loads(response.read())
 sys.stdout.write(data["bootstrap"])
 EOF
 }
 
 function get_phase2() {
-  bootstrap_ng_name="common.{{ $ng.name }}"
+  bootstrap_ng_name="{{ $ng.name }}"
   token="$(<${BOOTSTRAP_DIR}/bootstrap-token)"
   check_python
   while true; do
@@ -62,6 +69,10 @@ function get_phase2() {
       url="https://${server}/apis/bashible.deckhouse.io/v1alpha1/bootstrap/${bootstrap_ng_name}"
       if eval "${python_binary}" - "${url}" "${token}" <<< "$(load_phase2_script)"; then
         return 0
+      else
+        if [ $? -eq 2 ]; then
+          return 1
+        fi
       fi
       >&2 echo "failed to get bootstrap ${bootstrap_ng_name} from $url"
     done

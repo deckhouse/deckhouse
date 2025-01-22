@@ -22,73 +22,138 @@ spec:
         openAPIV3Schema:
           type: object
           description: |
-            Shows basic information about the Deckhouse module.
+            Describes the module's status in the cluster. The `Module` object is created automatically after configuring the [ModuleSource](#modulesource) and successfully completing synchronization.
 
-            This resource is intended **only for getting information** about the module and cannot be changed (read-only).
           properties:
             properties:
               type: object
               properties:
+                availableSources:
+                  type: array
+                  description: Available sources for downloading the module.
+                  items:
+                    type: string
                 weight:
                   type: integer
-                  description: 'Module weight (priority).'
-                state:
-                  type: string
-                  description: 'Module state.'
-                  enum:
-                    - Enabled
-                    - Disabled
+                  description: Module _weight_ (priority).
                 source:
                   type: string
-                  description: 'ModuleSource name of the module if provided by one (otherwise empty).'
+                  description: Source the module was downloaded from (otherwise will be blank).
                 stage:
                   type: string
-                  description: 'The current stage of the module life cycle.'
-                  enum:
-                    - Sandbox
-                    - Incubating
-                    - Graduated
-                    - Deprecated
+                  description: Current stage of the module lifecycle.
+                version:
+                  type: string
+                  description: Module version.
+                releaseChannel:
+                  type: string
+                  description: Module release channel.
+                updatePolicy:
+                  type: string
+                  description: Module update policy.
                 description:
                   type: string
-                  description: 'Module description.'
+                  description: Module description.
+                requirements:
+                  type: object
+                  x-kubernetes-preserve-unknown-fields: true
+                  description: Module dependencies, a set of requirements that must be met for Deckhouse Kubernetes Platform (DKP) to run the module.
+                  properties:
+                    deckhouse:
+                      type: string
+                      description: Required Deckhouse version.
+                    kubernetes:
+                      type: string
+                      description: Required Kubernetes version.
+                    bootstrapped:
+                      type: string
+                      description: Required cluster installation status (for built-in DKP modules only).
+                    modules:
+                      type: object
+                      description: A list of other enabled modules required for the module.
+                      additionalProperties:
+                        type: string
             status:
               type: object
               properties:
-                status:
+                phase:
                   type: string
-                  description: "Module state explanation, version warning or last error"
-                message:
-                  type: string
-                  description: "Additional information"
+                  description: Module phase.
+                  enum:
+                    - Available
+                    - Downloading
+                    - DownloadingError
+                    - Reconciling
+                    - Installing
+                    - HooksDisabled
+                    - WaitSyncTasks
+                    - Downloaded
+                    - Conflict
+                    - Ready
+                    - Error
+                    # TODO(ipaqsa): delete after 1.68
+                    - Pending
+                    - Enqueued
+                    - NotInstalled
                 hooksState:
                   type: string
-                  description: "Hooks status report"
+                  description: Hooks status report.
+                conditions:
+                  x-kubernetes-patch-strategy: merge
+                  x-kubernetes-patch-merge-key: type
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      type:
+                        type: string
+                      status:
+                        type: string
+                      message:
+                        type: string
+                      reason:
+                        type: string
+                      lastTransitionTime:
+                        format: date-time
+                        type: string
+                      lastProbeTime:
+                        format: date-time
+                        type: string
       subresources:
         status: {}
       additionalPrinterColumns:
-        - name: weight
+        - name: Weight
           jsonPath: .properties.weight
           type: integer
-          description: 'Module weight (priority).'
-        - name: state
-          jsonPath: .properties.state
+          description: Module _weight_ (priority).
+        - name: Release channel
+          jsonPath: .properties.releaseChannel
+          description: Release channel of the module.
           type: string
-          description: 'Module state. Enabled or Disabled.'
-        - name: source
+          priority: 1
+        - name: Source
           jsonPath: .properties.source
           type: string
-          description: 'ModuleSource name of the module if provided by one (otherwise empty).'
-        - name: stage
-          jsonPath: .properties.stage
+          description: Source of the module it provided by one.
+        - name: Version
+          jsonPath: .properties.version
           type: string
-          description: 'The current stage of the module life cycle'
-        - name: Status
-          type: string
-          description: "Module state explanation or last error"
-          jsonPath: .status.status
-        - name: Message
-          type: string
-          description: "Additional information"
-          jsonPath: .status.message
+          description: Module version.
           priority: 1
+        - name: Phase
+          jsonPath: .status.phase
+          type: string
+          description: Module phase.
+        - name: Enabled
+          jsonPath: .status.conditions[?(@.type=='EnabledByModuleManager')].status
+          description: Module`s enabled status.
+          type: string
+        - name: Disabled Message
+          jsonPath: .status.conditions[?(@.type=='EnabledByModuleManager')].message
+          description: Module`s enabled information.
+          type: string
+          priority: 1
+        - name: Ready
+          jsonPath: .status.conditions[?(@.type=='IsReady')].status
+          description: Module`s ready status.
+          type: string

@@ -44,11 +44,19 @@ const labels = {
   'e2e/use/k8s/1.28': { type: 'e2e-use', ver: '1.28' },
   'e2e/use/k8s/1.29': { type: 'e2e-use', ver: '1.29' },
   'e2e/use/k8s/1.30': { type: 'e2e-use', ver: '1.30' },
-  'e2e/use/k8s/1.31': { type: 'e2e-use', ver: '1.31' },	
+  'e2e/use/k8s/1.31': { type: 'e2e-use', ver: '1.31' },
   'e2e/use/k8s/automatic': { type: 'e2e-use', ver: 'Automatic' },
 
   // E2E: use multimaster configuration
   'e2e/use/multimaster': { type: 'e2e-use', multimaster: true },
+
+  // E2E: edition
+  'e2e/use/edition/ce': { type: 'e2e-use', edition: 'CE' },
+  'e2e/use/edition/ee': { type: 'e2e-use', edition: 'EE' },
+  'e2e/use/edition/be': { type: 'e2e-use', edition: 'BE' },
+  'e2e/use/edition/se': { type: 'e2e-use', edition: 'SE' },
+  'e2e/use/edition/se+': { type: 'e2e-use', edition: 'SE-plus' },
+  'e2e/use/edition/fe': { type: 'e2e-use', edition: 'FE' },
 
   // Allow running workflows for external PRs.
   'status/ok-to-test': { type: 'ok-to-test' },
@@ -61,7 +69,11 @@ const labels = {
   'edition/ce': { type: 'edition', edition: 'CE' },
   'edition/ee': { type: 'edition', edition: 'EE' },
   'edition/be': { type: 'edition', edition: 'BE' },
-  'edition/se': { type: 'edition', edition: 'SE' }
+  'edition/se': { type: 'edition', edition: 'SE' },
+  'edition/se+': { type: 'edition', edition: 'SE-plus' },
+
+  // Enable operator-trivy to get CIS benchmark report
+  'e2e/use/cis': { type: 'e2e-use', cis: true }
 };
 module.exports.knownLabels = labels;
 
@@ -148,7 +160,9 @@ module.exports.knownKubernetesVersions = kubernetesVersions;
 
 module.exports.e2eDefaults = {
   criName: 'Containerd',
+  edition: 'FE',
   multimaster: false,
+  cis: false
 }
 
 const editions = [
@@ -156,6 +170,7 @@ const editions = [
   'EE',
   'FE',
   'BE',
-  'SE'
+  'SE',
+  'SE-plus'
 ];
 module.exports.knownEditions = editions;

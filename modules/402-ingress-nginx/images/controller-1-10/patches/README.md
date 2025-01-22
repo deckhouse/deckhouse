@@ -1,5 +1,10 @@
 ## Patches
 
+### gomod
+
+Go mod patches for ingress-nginx-controller
+Collected with
+
 ### Healthcheck
 
 After catching SIGTERM, ingress stops responding to the readiness probe.
@@ -61,3 +66,7 @@ Build nginx for controller on ALT Linux.
 ### http3
 
 Add HTTP/3 support.
+
+### new metrics
+
+This patch adds worker max connections, worker processes and worker max open files metrics.

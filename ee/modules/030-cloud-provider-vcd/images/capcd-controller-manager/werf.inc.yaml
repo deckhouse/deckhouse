@@ -5,14 +5,15 @@
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $version | replace "." "-" }}
 fromImage: common/distroless
 import:
-  - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
+  - image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
     add: /cluster-api-provider-cloud-director
     to: /cluster-api-provider-cloud-director
     before: setup
 docker:
   ENTRYPOINT: ["/cluster-api-provider-cloud-director"]
 ---
-artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
+image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
+final: false
 from: {{ $.Images.BASE_GOLANG_20_BUSTER }}
 git:
   - add: /{{ $.ModulePath }}modules/030-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
@@ -29,6 +30,7 @@ shell:
   install:
     - export GO_VERSION=${GOLANG_VERSION}
     - export GOPROXY={{ $.GOPROXY }}
+    - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
     - git clone --depth 1 --branch {{ $value.clusterApi.vcd }} {{ $.SOURCE_REPO }}/vmware/cluster-api-provider-cloud-director /src
     - cd /src
     - git apply /patches/*.patch --verbose

@@ -21,14 +21,12 @@ You'll need the vSphere CLI — [govc](https://github.com/vmware/govmomi/tree/ma
 
 After the installation is complete, set the environment variables required to work with vCenter:
 
-{% snippetcut %}
 ```shell
 export GOVC_URL=example.com
 export GOVC_USERNAME=<username>@vsphere.local
 export GOVC_PASSWORD=<password>
 export GOVC_INSECURE=1
 ```
-{% endsnippetcut %}
 
 ### Creating tags and tag categories
 
@@ -36,39 +34,31 @@ Instead of "regions" and "zones", VMware vSphere provides `Datacenter` and `Clus
 
 Create a tag category using the following commands:
 
-{% snippetcut %}
 ```shell
 govc tags.category.create -d "Kubernetes Region" k8s-region
 govc tags.category.create -d "Kubernetes Zone" k8s-zone
 ```
-{% endsnippetcut %}
 
 Create tags in each category. If you intend to use multiple "zones" (`Cluster`), create a tag for each one of them:
 
-{% snippetcut %}
 ```shell
 govc tags.create -d "Kubernetes Region" -c k8s-region test-region
 govc tags.create -d "Kubernetes Zone Test 1" -c k8s-zone test-zone-1
 govc tags.create -d "Kubernetes Zone Test 2" -c k8s-zone test-zone-2
 ```
-{% endsnippetcut %}
 
 Attach the "region" tag to `Datacenter`:
 
-{% snippetcut %}
 ```shell
 govc tags.attach -c k8s-region test-region /<DatacenterName>
 ```
-{% endsnippetcut %}
 
 Attach "zone" tags to `Cluster` objects:
 
-{% snippetcut %}
 ```shell
 govc tags.attach -c k8s-zone test-zone-1 /<DatacenterName>/host/<ClusterName1>
 govc tags.attach -c k8s-zone test-zone-2 /<DatacenterName>/host/<ClusterName2>
 ```
-{% endsnippetcut %}
 
 #### Datastore configuration
 
@@ -78,7 +68,6 @@ For dynamic `PersistentVolume` provisioning, a `Datastore` must be available on 
 
 Assign the "region" and "zone" tags to the `Datastore` objects to automatically create a `StorageClass` in the Kubernetes cluster:
 
-{% snippetcut %}
 ```shell
 govc tags.attach -c k8s-region test-region /<DatacenterName>/datastore/<DatastoreName1>
 govc tags.attach -c k8s-zone test-zone-1 /<DatacenterName>/datastore/<DatastoreName1>
@@ -86,34 +75,29 @@ govc tags.attach -c k8s-zone test-zone-1 /<DatacenterName>/datastore/<DatastoreN
 govc tags.attach -c k8s-region test-region /<DatacenterName>/datastore/<DatastoreName2>
 govc tags.attach -c k8s-zone test-zone-2 /<DatacenterName>/datastore/<DatastoreName2>
 ```
-{% endsnippetcut %}
 
 ### Creating and assigning a role
 
 {% alert %}
 We've intentionally skipped User creation since there are many ways to authenticate a user in the vSphere.
 
-This all-encompassing Role should be enough for all Deckhouse components. For a detailed list of privileges, refer to the [documentation](/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-vsphere/configuration.html#list-of-required-privileges). If you need a more granular Role, please contact your Deckhouse support.
+This all-encompassing Role should be enough for all Deckhouse components. For a detailed list of privileges, refer to the [documentation](/products/kubernetes-platform/documentation/v1/modules/cloud-provider-vsphere/configuration.html#list-of-required-privileges). If you need a more granular Role, please contact your Deckhouse support.
 {% endalert %}
 
 Create a role with the corresponding permissions:
 
-{% snippetcut %}
 ```shell
 govc role.create deckhouse \
    Cns.Searchable Datastore.AllocateSpace Datastore.Browse Datastore.FileManagement \
    Global.GlobalTag Global.SystemTag Network.Assign StorageProfile.View \
    $(govc role.ls Admin | grep -F -e 'Folder.' -e 'InventoryService.' -e 'Resource.' -e 'VirtualMachine.')
 ```
-{% endsnippetcut %}
 
 Assign the role to a user on the `vCenter` object:
 
-{% snippetcut %}
 ```shell
 govc permissions.set -principal <username>@vsphere.local -role deckhouse /
 ```
-{% endsnippetcut %}
 
 ### Preparing a virtual machine image
 
@@ -124,4 +108,4 @@ It is recommended to use a pre-built cloud image/OVA file provided by the OS ven
 * [**CentOS**](https://cloud.centos.org/)
 * [**Rocky Linux**](https://rockylinux.org/alternative-images/) (*Generic Cloud / OpenStack* section)
 
-If you need to use your own image, please refer to the [documentation](/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-vsphere/environment.html#virtual-machine-image-requirements).
+If you need to use your own image, please refer to the [documentation](/products/kubernetes-platform/documentation/v1/modules/cloud-provider-vsphere/environment.html#virtual-machine-image-requirements).

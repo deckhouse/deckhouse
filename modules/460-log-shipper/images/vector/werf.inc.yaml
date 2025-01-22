@@ -1,35 +1,57 @@
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
-from: {{ $.Images.BASE_ALT_P11 }}
+fromImage: common/alt-p11
 import:
-  - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-reloader-artifact
-    add: /src/reloader
+  - image: {{ $.ModuleName }}/{{ $.ImageName }}-reloader-artifact
+    add: /reloader
     to: /usr/bin/reloader
     before: install
-  - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+  - image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
     add: /relocate
     to: /
     before: install
 docker:
   ENTRYPOINT: ["/usr/bin/vector"]
 ---
-artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
-from: {{ $.Images.BASE_ALT_P11 }}
+image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+fromImage: common/src-artifact
+final: false
 git:
-- add: /{{ $.ModulePath }}modules/460-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
-  to: /patches
+- add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/reloader
+  to: /src/reloader
+  includePaths:
+  - '**/*'
   stageDependencies:
     install:
     - '**/*'
 shell:
+  install:
+  - git clone --depth 1 --branch v0.43.1 {{ .SOURCE_REPO }}/vectordotdev/vector.git /src/vector
+  - rm -rf /src/vector/website /src/vector/scripts/integration
+  - rm -rf /src/vector/.git
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-artifact
+fromImage: common/alt-p11-artifact
+final: false
+import:
+- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+  add: /src/vector
+  to: /src
+  before: install
+shell:
   beforeInstall:
-  - apt-get update
+  {{- include "alt packages proxy" . | nindent 2 }}
   - apt-get install -y build-essential git openssl-devel wget perl-IPC-Cmd protobuf-compiler libsasl2-devel unzip zlib-devel rust rust-cargo
   install:
   - export CARGO_NET_GIT_FETCH_WITH_CLI=true
-  - git clone --depth 1 --branch v0.40.1 {{ $.SOURCE_REPO }}/vectordotdev/vector.git
-  - cd /vector
-  - git apply /patches/*.patch --verbose
+  - cd /src
+{{- if $.CargoProxy }}
+  - echo '[source.crates-io]' >> .cargo/config.toml
+  - echo 'replace-with = "crates-io-mirror"' >> .cargo/config.toml
+  - echo '[registries.crates-io-mirror]' >> .cargo/config.toml
+  - echo 'index = "sparse+http://{{ $.CargoProxy }}/index/"' >> .cargo/config.toml
+{{- end }}
+  - git config --global url."{{ $.SOURCE_REPO }}".insteadOf https://github.com
   - |
     cargo build \
     --release \
@@ -41,25 +63,21 @@ shell:
   - cp target/release/vector /relocate/usr/bin/vector
   - cp -pr /etc/pki /relocate/etc
 ---
-artifact: {{ $.ModuleName }}/{{ $.ImageName }}-reloader-artifact
-from: {{ $.Images.BASE_GOLANG_22_ALPINE_DEV }}
-git:
-- add: /{{ $.ModulePath }}modules/460-{{ $.ModuleName }}/images/{{ $.ImageName }}/reloader
+image: {{ $.ModuleName }}/{{ $.ImageName }}-reloader-artifact
+from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
+final: false
+import:
+- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+  add: /src/reloader
   to: /src
-  includePaths:
-  - '**/*.go'
-  - '**/*.mod'
-  - '**/*.sum'
-  stageDependencies:
-    install:
-    - '**/*.go'
-    - 'go.mod'
-    - 'go.sum'
+  before: install
 mount:
   - fromPath: ~/go-pkg-cache
     to: /go/pkg
 shell:
   install:
   - cd /src
-  - export GOPROXY={{ .GOPROXY }} GOOS=linux GOARCH=amd64 CGO_ENABLED=0
-  - go build -ldflags="-s -w" -o reloader main.go
+  - export GOPROXY={{ .GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64
+  - go build -ldflags="-s -w" -o /reloader main.go
+  - chown 64535:64535 /reloader
+  - chmod 755 /reloader

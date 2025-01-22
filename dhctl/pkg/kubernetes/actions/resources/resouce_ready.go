@@ -17,6 +17,7 @@ package resources
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -35,6 +36,23 @@ type resourceReadinessChecker struct {
 	logger log.Logger
 
 	attempt int
+
+	waitingConditionAttempts int
+}
+
+// kind should be in lower case!
+var kindsToAttempts = map[string]int{
+	// in some cases deckhouse controller doesn't have time for set status field, and we have Ready nodegroup whe it is not Ready
+	"nodegroup": 5,
+}
+
+func resourceName(r *template.Resource) string {
+	result := r.GVK.String() + " '"
+	if r.Object.GetNamespace() != "" {
+		result = result + r.Object.GetNamespace() + "/"
+	}
+
+	return result + r.Object.GetName() + "'"
 }
 
 func (c *resourceReadinessChecker) IsReady() (bool, error) {
@@ -52,8 +70,15 @@ func (c *resourceReadinessChecker) IsReady() (bool, error) {
 
 	c.logger.LogInfoF("Checking if resource %s is ready...\n", name)
 
+	expectedAttempts := 1
+	kind := strings.ToLower(c.resource.GVK.Kind)
+	if attempts, ok := kindsToAttempts[kind]; ok {
+		log.DebugF("Found custom attempts %d for kind\n", attempts, c.resource.GVK.Kind)
+		expectedAttempts = attempts
+	}
+
 	// wait some attempts for set statuses in the resources
-	if c.attempt < 1 {
+	if c.attempt < expectedAttempts {
 		logNotReadyYet()
 		c.logger.LogDebugF("Skip resource % readiness checking for waiting set status\n", name)
 		return false, nil
@@ -80,7 +105,7 @@ func (c *resourceReadinessChecker) IsReady() (bool, error) {
 		return false, nil
 	}
 
-	ready := checkObjectReadiness(objectInCluster, name, c.logger)
+	ready := c.checkObjectReadiness(objectInCluster, name)
 
 	if ready {
 		c.logger.LogInfoF("Resource %s is ready!\n", name)
@@ -99,16 +124,9 @@ func (c *resourceReadinessChecker) Single() bool {
 	return false
 }
 
-func resourceName(r *template.Resource) string {
-	result := r.GVK.String() + " '"
-	if r.Object.GetNamespace() != "" {
-		result = result + r.Object.GetNamespace() + "/"
-	}
+func (c *resourceReadinessChecker) checkObjectReadiness(object *unstructured.Unstructured, resourceName string) bool {
+	logger := c.logger
 
-	return result + r.Object.GetName() + "'"
-}
-
-func checkObjectReadiness(object *unstructured.Unstructured, resourceName string, logger log.Logger) bool {
 	status, ok := object.Object["status"].(map[string]interface{})
 	if !ok {
 		logger.LogDebugF("Resource %s do not have 'status' key. Resource ready!\n", resourceName)
@@ -118,12 +136,12 @@ func checkObjectReadiness(object *unstructured.Unstructured, resourceName string
 	// static instance case
 	currentStatus, ok := status["currentStatus"].(map[string]interface{})
 	if ok {
-		logger.LogDebugF("Found currentStatus field. Looks like StaticInstance resource\n", resourceName)
+		logger.LogDebugF("Found currentStatus field. Looks like %s StaticInstance resource\n", resourceName)
 		phase, ok := currentStatus["phase"].(string)
 		if ok {
-			logger.LogDebugF("Found currentStatus.phase field. Looks like StaticInstance resource\n", resourceName)
+			logger.LogDebugF("Found currentStatus.phase field. Looks like %s is StaticInstance resource\n", resourceName)
 			res := phase == "Running"
-			logger.LogDebugF("Found currentStatus.phase is %v. \n", resourceName, res)
+			logger.LogDebugF("Found for %s currentStatus.phase is %v. \n", resourceName, res)
 			return res
 		}
 	}
@@ -134,23 +152,57 @@ func checkObjectReadiness(object *unstructured.Unstructured, resourceName string
 		return true
 	}
 
+	isTrue := func(conditionMap map[string]interface{}, t string, indx int) bool {
+		stat, ok := conditionMap["status"].(string)
+		if !ok {
+			logger.LogDebugF("Resource %s condition %d status is not string. Skip. Resource ready!\n", resourceName, indx)
+			return true
+		}
+
+		res := stat == "True"
+
+		logger.LogDebugF("Resource %s found `%s` condition: %v", resourceName, t, res)
+
+		return res
+	}
+
+	// We only expect two conditions: Ready and Available. This will work well with most resources, such as NodeGroup Deployment ApiService.
+	// But we won't consider Job here, since conditions only appear after completion and error, and we don't want to complicate the detection logic yet.
 	for indx, condition := range conditions {
 		conditionMap, ok := condition.(map[string]interface{})
 		if !ok {
 			logger.LogDebugF("Resource %s condition %d is not map. Skip. Resource ready!\n", resourceName, indx)
-			continue
+			return true
 		}
 
-		if conditionMap["type"] == "Ready" {
-			res := conditionMap["status"] == "True"
-			logger.LogDebugF("Resource %s found ready condition: %v", resourceName, res)
-			return res
+		tp, ok := conditionMap["type"].(string)
+		if !ok {
+			logger.LogDebugF("Resource %s condition %d type is not string. Skip. Resource ready!\n", resourceName, indx)
+			return true
+		}
+
+		switch tp {
+		// Pod, NodeGroup and thousands them
+		case "Ready":
+			return isTrue(conditionMap, "Ready", indx)
+		// Deployment, APIService
+		case "Available":
+			return isTrue(conditionMap, "Available", indx)
 		}
 	}
 
-	logger.LogDebugF("Resource %s ready condition not found", resourceName)
+	c.waitingConditionAttempts++
+	const attemptsLimit = 5
 
-	return false
+	if c.waitingConditionAttempts <= attemptsLimit {
+		logger.LogDebugF("Resource %s support conditions not found. Attempt %d/%d", resourceName, c.waitingConditionAttempts, attemptsLimit)
+		return false
+	}
+
+	// We think so because each CRD can have its own Ready condition for the resource,
+	// and we will not be able to cover them all, so we simply accept the resource as is.
+	logger.LogDebugF("Resource %s support condition not found. Attempts limit exceeded. We believe that the resource is ready", resourceName)
+	return true
 }
 
 func tryToGetResourceIsReadyChecker(

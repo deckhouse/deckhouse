@@ -13,6 +13,8 @@ apiVersions:
       ```shell
       kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller edit provider-cluster-configuration
       ```
+
+      > After updating the node parameters, you need to run the [dhctl converge](../../deckhouse-faq.html#changing-the-configuration) command to apply the changes.
     x-doc-search: |
       ProviderClusterConfiguration
     x-unsafe-rules: [deleteZones]
@@ -98,7 +100,6 @@ apiVersions:
           Parameters of the master's NodeGroup.
 
           > Caution! After changing the parameters of the section, you need to run `dhctl converge` for the changes to take effect.
-        x-unsafe-rules: [updateMasterImage]
         properties:
           replicas:
             type: integer
@@ -107,7 +108,6 @@ apiVersions:
               The number of master nodes to create.
 
               It is important to have an odd number of masters to ensure a quorum.
-            x-unsafe-rules: [updateReplicas]
           additionalNetworkTags:
             description: |
               The list of additional tags.
@@ -132,7 +132,7 @@ apiVersions:
           instanceClass:
             type: object
             required: [machineType, image]
-            description: Partial contents of the [GCPInstanceClass](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-gcp/cr.html#gcpinstanceclass) fields.
+            description: Partial contents of the [GCPInstanceClass](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/cloud-provider-gcp/cr.html#gcpinstanceclass) fields.
             properties:
               machineType: &instanceClassMachineType
                 type: string
@@ -232,7 +232,7 @@ apiVersions:
             instanceClass:
               required: [machineType, image]
               type: object
-              description: Partial contents of the [GCPInstanceClass](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-gcp/cr.html#gcpinstanceclass) fields.
+              description: Partial contents of the [GCPInstanceClass](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/cloud-provider-gcp/cr.html#gcpinstanceclass) fields.
               properties:
                 machineType: *instanceClassMachineType
                 image: *instanceClassImage
@@ -251,9 +251,9 @@ apiVersions:
         description: |
           The way resources are located in the cloud.
 
-          `Standard` - set [Cloud NAT](https://cloud.google.com/nat/docs/overview#benefits) mode. [More info...](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-gcp/layouts.html#standard)
+          `Standard` - set [Cloud NAT](https://cloud.google.com/nat/docs/overview#benefits) mode. [More info...](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/cloud-provider-gcp/layouts.html#standard)
 
-          `WithoutNAT` - a dedicated VPC is created for the cluster. All cluster nodes have public IP addresses. [More info...](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-gcp/layouts.html#withoutnat)
+          `WithoutNAT` - a dedicated VPC is created for the cluster. All cluster nodes have public IP addresses. [More info...](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/cloud-provider-gcp/layouts.html#withoutnat)
         x-unsafe: true
       standard:
         type: object
