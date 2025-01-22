@@ -1,5 +1,5 @@
 ---
-{{- $istioPilotVersion := "1.21.6" }}
+{{- $istioVersion := "1.21.6" }}
 ---
 # Based on https://github.com/istio/istio/blob/1.21.6/pilot/docker/Dockerfile.pilot
 image: {{ .ModuleName }}/{{ .ImageName }}
@@ -42,7 +42,7 @@ import:
 shell:
   setup:
   - cd /src/istio/
-  - echo {{ $istioPilotVersion }} > version
+  - echo {{ $istioVersion }} > version
   - export GOPROXY={{ $.GOPROXY }}
   - GOOS=linux GOARCH=amd64 LDFLAGS='-extldflags -static -s -w' common/scripts/gobuild.sh /src/istio/out/ -tags=agent,disable_pgv /src/istio/pilot/cmd/pilot-discovery/
   - chmod 0700 /src/istio/out/pilot-discovery
@@ -59,5 +59,5 @@ git:
     - '**/*'
 shell:
   install:
-  - git clone --depth 1 --branch {{ $istioProxyVersion }} {{ $.SOURCE_REPO }}/istio/istio.git /src/istio/
+  - git clone --depth 1 --branch {{ $istioVersion }} {{ $.SOURCE_REPO }}/istio/istio.git /src/istio/
   - rm -rf /src/istio/.git

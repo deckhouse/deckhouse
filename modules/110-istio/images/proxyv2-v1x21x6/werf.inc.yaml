@@ -1,6 +1,6 @@
 ---
-{{- $istioProxyVersion := "1.21.6" }}
-{{- $istioImageVersion := (printf "v%s" (replace "." "x" $istioProxyVersion)) }} # 1.21.6 -> v1x21x6
+{{- $istioVersion := "1.21.6" }}
+{{- $istioImageVersion := (printf "v%s" (replace "." "x" $istioVersion)) }} # 1.21.6 -> v1x21x6
 {{- $istioProxyCacheRev := "v1.21.6-5c3dc559371181d5baa4a7533c36f2370fc97581-alt-v1" }}
 {{- $istioProxyDepsRev := "v1.21.6-5c3dc559371181d5baa4a7533c36f2370fc97581-alt-v1" }}
 {{- $llvmRev := "llvmorg-14.0.6" }}
@@ -54,7 +54,7 @@ shell:
 docker:
   ENV:
     ISTIO_META_ISTIO_PROXY_SHA: "istio-proxy:78bd2d9b284978e170a49cd13decd5f952544489"
-    ISTIO_META_ISTIO_VERSION: "{{ $istioProxyVersion }}"
+    ISTIO_META_ISTIO_VERSION: "{{ $istioVersion }}"
   WORKDIR: "/"
   USER: 1337
   ENTRYPOINT: ["/usr/local/bin/pilot-agent"]
@@ -73,7 +73,7 @@ mount:
 shell:
   install:
   - cd /src/istio/
-  - echo {{ $istioProxyVersion }} > version
+  - echo {{ $istioVersion }} > version
   - export GOPROXY={{ $.GOPROXY }} GOOS=linux GOARCH=amd64
   - export LDFLAGS='-extldflags -static -s -w'
   - common/scripts/gobuild.sh /tmp/istio/out/ -tags=agent,disable_pgv /src/istio/pilot/cmd/pilot-agent
@@ -244,10 +244,10 @@ git:
     - '**/*'
 shell:
   install:
-  - git clone --depth 1 --branch {{ $istioProxyVersion }} {{ $.SOURCE_REPO }}/istio/proxy.git /src/proxy
+  - git clone --depth 1 --branch {{ $istioVersion }} {{ $.SOURCE_REPO }}/istio/proxy.git /src/proxy
   - git clone --branch "{{ $llvmRev }}" {{ $.SOURCE_REPO }}/llvm/llvm-project.git /src/llvm
   - rm -rf /src/llvm/.git
-  - git clone --depth 1 --branch {{ $istioProxyVersion }} {{ $.SOURCE_REPO }}/istio/istio.git /src/istio/
+  - git clone --depth 1 --branch {{ $istioVersion }} {{ $.SOURCE_REPO }}/istio/istio.git /src/istio/
   #- git apply --verbose /patches/*.patch
   - rm -rf /src/istio/.git
 ---

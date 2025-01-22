@@ -1,5 +1,5 @@
 ---
-{{- $istioCniVersion := "1.21.6" }}
+{{- $istioVersion := "1.21.6" }}
 ---
 # Based on https://github.com/istio/istio/blob/1.21.6/cni/deployments/kubernetes/Dockerfile.install-cni
 image: {{ .ModuleName }}/{{ .ImageName }}
@@ -35,9 +35,9 @@ shell:
   - apk add --no-cache openssh-client
   install:
   - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
-  - git clone --depth 1 --branch {{ $istioCniVersion }} {{ $.SOURCE_REPO }}/istio/istio.git /tmp/istio/
+  - git clone --depth 1 --branch {{ $istioVersion }} {{ $.SOURCE_REPO }}/istio/istio.git /tmp/istio/
   - cd /tmp/istio/
-  - echo {{ $istioCniVersion }} > version
+  - echo {{ $istioVersion }} > version
   - export GOPROXY={{ $.GOPROXY }}
   - GOOS=linux GOARCH=amd64 LDFLAGS='-extldflags -static -s -w' common/scripts/gobuild.sh /tmp/istio/out/ -tags=agent,disable_pgv /tmp/istio/cni/cmd/install-cni/
   - GOOS=linux GOARCH=amd64 LDFLAGS='-extldflags -static -s -w' common/scripts/gobuild.sh /tmp/istio/out/ -tags=agent,disable_pgv /tmp/istio/cni/cmd/istio-cni/
