@@ -124,6 +124,7 @@ shell:
   # - chown -R 1337:1337 /tmp/bazel-deps
   #
   - cd /src/llvm/llvm
+  - env
   - |
     cmake \
     -GNinja \
