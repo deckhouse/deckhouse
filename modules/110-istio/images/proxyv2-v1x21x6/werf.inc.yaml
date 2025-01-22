@@ -123,7 +123,7 @@ shell:
   # - git clone --depth 1 --branch {{ $istioProxyDepsRev }} {{ .SOURCE_REPO }}/istio/envoy-build-deps.git /tmp/bazel-deps
   # - chown -R 1337:1337 /tmp/bazel-deps
   #
-  - cd /src/llvm
+  - cd /src/llvm/llvm
   - |
     cmake \
     -GNinja \
