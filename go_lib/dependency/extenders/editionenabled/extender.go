@@ -15,6 +15,7 @@
 package editionenabled
 
 import (
+	"fmt"
 	"sync"
 
 	"github.com/flant/addon-operator/pkg/module_manager/scheduler/extenders"
@@ -67,5 +68,14 @@ func (e *Extender) IsTerminator() bool {
 
 // Filter implements Extender interface, it is used by scheduler in addon-operator
 func (e *Extender) Filter(name string, _ map[string]string) (*bool, error) {
-	return e.edition.IsAvailable(d8edition.Embedded, name), nil
+	available := e.edition.IsEnabled(d8edition.Embedded, name)
+	if available == nil {
+		e.logger.Warnf("the '%s' module skipped", name)
+		return nil, nil
+	}
+	if *available {
+		e.logger.Debugf("the '%s' module enabled in the '%s' edition", name, e.edition.String())
+		return available, nil
+	}
+	return available, fmt.Errorf("disabled in the '%s' edition", e.edition.String())
 }

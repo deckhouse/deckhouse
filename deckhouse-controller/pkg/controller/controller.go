@@ -299,6 +299,7 @@ func (c *DeckhouseController) Start(ctx context.Context) error {
 		return fmt.Errorf("parse edition: %w", err)
 	}
 
+	c.logger.Infof("deckhouse bundle/edition is %s", edition.String())
 	editionavailable.Instance().SetEdition(edition)
 	editionenabled.Instance().SetEdition(edition)
 

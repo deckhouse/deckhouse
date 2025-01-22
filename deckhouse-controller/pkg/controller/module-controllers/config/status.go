@@ -19,6 +19,7 @@ package config
 import (
 	"context"
 	"fmt"
+	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders/editionenabled"
 	"strconv"
 	"time"
 
@@ -199,9 +200,21 @@ func (r *reconciler) refreshModuleStatus(module *v1alpha1.Module) {
 		}
 
 	case editionavailable.Name:
-		reason = v1alpha1.ModuleReasonEditionExtender
-		message = v1alpha1.ModuleMessageEditionExtender
 		module.Status.Phase = v1alpha1.ModulePhaseNotAvailable
+		reason = v1alpha1.ModuleReasonEditionAvailableExtender
+		_, errMsg := editionavailable.Instance().Filter(module.Name, map[string]string{})
+		message = v1alpha1.ModuleMessageEditionAvailableExtender
+		if errMsg != nil {
+			message += ": " + errMsg.Error()
+		}
+
+	case editionenabled.Name:
+		reason = v1alpha1.ModuleReasonEditionEnabledExtender
+		_, errMsg := editionenabled.Instance().Filter(module.Name, map[string]string{})
+		message = v1alpha1.ModuleMessageEditionEnabledExtender
+		if errMsg != nil {
+			message += ": " + errMsg.Error()
+		}
 
 	case kubeconfig.Name:
 		reason = v1alpha1.ModuleReasonModuleConfig

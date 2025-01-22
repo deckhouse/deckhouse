@@ -21,8 +21,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/yaml"
 
@@ -116,87 +114,4 @@ func (e *Edition) IsEnabled(sourceName, moduleName string) *bool {
 		}
 	}
 	return nil
-}
-
-func (e *Edition) SyncModules(ctx context.Context, cli client.Client) error {
-	modules := new(v1alpha1.ModuleList)
-	if err := cli.List(ctx, modules); err != nil {
-		return fmt.Errorf("list modules: %w", err)
-	}
-
-	for _, module := range modules.Items {
-		if err := e.syncModule(ctx, cli, &module); err != nil {
-			return fmt.Errorf("sync '%s' module: %w", module.Name, err)
-		}
-	}
-
-	return nil
-}
-
-func (e *Edition) syncModule(ctx context.Context, cli client.Client, module *v1alpha1.Module) error {
-	var editionModule *Module
-	var availableSource string
-	if module.Properties.Source == "" {
-		for _, available := range module.Properties.AvailableSources {
-			if source, ok := e.Modules[available]; ok {
-				if mod, ok := source[module.Name]; ok {
-					editionModule = &mod
-					availableSource = available
-					break
-				}
-			}
-		}
-	} else {
-		if source, ok := e.Modules[strings.ToLower(module.Properties.Source)]; ok {
-			if mod, ok := source[module.Name]; ok {
-				editionModule = &mod
-			}
-		}
-	}
-	if editionModule == nil || editionModule.Enabled == nil {
-		// the embedded module is not present in the edition, it should be removed
-		if editionModule == nil && module.IsEmbedded() {
-			return cli.Delete(ctx, module)
-		}
-		return nil
-	}
-
-	if module.Name == deckhouseConfig {
-		return nil
-	}
-
-	config := new(v1alpha1.ModuleConfig)
-	if err := cli.Get(ctx, client.ObjectKey{Name: module.Name}, config); err != nil {
-		if !apierrors.IsNotFound(err) {
-			return fmt.Errorf("get the module config: %w", err)
-		}
-		config = &v1alpha1.ModuleConfig{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: v1alpha1.SchemeGroupVersion.String(),
-				Kind:       v1alpha1.ModuleConfigKind,
-			},
-			ObjectMeta: metav1.ObjectMeta{
-				Name: module.Name,
-			},
-			Spec: v1alpha1.ModuleConfigSpec{
-				Source:  availableSource,
-				Enabled: editionModule.Enabled,
-			},
-		}
-		return cli.Create(ctx, config)
-	}
-
-	if *config.Spec.Enabled == *editionModule.Enabled {
-		return nil
-	}
-
-	for _, field := range config.ManagedFields {
-		if field.Subresource == "" && field.Manager != "deckhouse-controller" {
-			return nil
-		}
-	}
-
-	config.Spec.Enabled = editionModule.Enabled
-
-	return cli.Update(ctx, config)
 }
