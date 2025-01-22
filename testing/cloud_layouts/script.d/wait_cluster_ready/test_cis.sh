@@ -16,7 +16,7 @@ export LANG=C
 set -Eeuo pipefail
 testRunAttempts=5
 for ((i=1; i<=$testRunAttempts; i++)); do
-  if kubectl get clustercompliancereports.aquasecurity.github.io cis; then
+  if kubectl get clustercompliancereports.aquasecurity.github.io cis > /dev/null; then
     break
   else
     sleep 30
@@ -40,7 +40,7 @@ for ((i=1; i<=$testRunAttempts; i++)); do
     >&2 echo "CIS report is ready"
     break
   else
-    >&2 echo "Still not ready. Attemption: #$i"
+    >&2 echo "CIS report is still not ready. Attemption: #$i"
     sleep 20
   fi
 done
