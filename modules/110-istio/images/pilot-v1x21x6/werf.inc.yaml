@@ -1,5 +1,6 @@
 ---
 {{- $istioVersion := "1.21.6" }}
+{{- $istioImageVersion := (printf "v%s" (replace "." "x" $istioVersion)) }} {{- /* 1.21.6 -> v1x21x6 */}}
 ---
 # Based on https://github.com/istio/istio/blob/1.21.6/pilot/docker/Dockerfile.pilot
 image: {{ .ModuleName }}/{{ .ImageName }}
@@ -35,7 +36,7 @@ mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
 import:
-- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+- image: {{ .ModuleName }}/common-{{ $istioImageVersion }}-src-artifact
   add: /src/istio
   to: /src/istio
   before: setup
@@ -47,17 +48,3 @@ shell:
   - GOOS=linux GOARCH=amd64 LDFLAGS='-extldflags -static -s -w' common/scripts/gobuild.sh /src/istio/out/ -tags=agent,disable_pgv /src/istio/pilot/cmd/pilot-discovery/
   - chmod 0700 /src/istio/out/pilot-discovery
   - chown 1337:1337 /src/istio/out/pilot-discovery
----
-image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
-fromImage: common/src-artifact
-final: false
-git:
-- add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/patches
-  to: /patches
-  stageDependencies:
-    install:
-    - '**/*'
-shell:
-  install:
-  - git clone --depth 1 --branch {{ $istioVersion }} {{ $.SOURCE_REPO }}/istio/istio.git /src/istio/
-  - rm -rf /src/istio/.git

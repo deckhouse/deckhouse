@@ -13,7 +13,7 @@
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/alt-p11
 import:
-- image: {{ .ModuleName }}/pilot-{{ $istioImageVersion }}-src-artifact
+- image: {{ .ModuleName }}/common-{{ $istioImageVersion }}-src-artifact
   add: /src/istio/tools/packaging/common/envoy_bootstrap.json
   to: /var/lib/istio/envoy/envoy_bootstrap_tmpl.json
   owner: 1337

@@ -44,6 +44,7 @@ shell:
   - GOOS=linux GOARCH=amd64 LDFLAGS='-extldflags -static -s -w' common/scripts/gobuild.sh /tmp/istio/out/ -tags=agent,disable_pgv /tmp/istio/operator/cmd/operator/
   - chmod 0700 /tmp/istio/out/operator
   - chown 1337:1337 /tmp/istio/out/operator
+#TODO src from common-{{istioImageVersion}}
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-binary-artifact
 final: false
