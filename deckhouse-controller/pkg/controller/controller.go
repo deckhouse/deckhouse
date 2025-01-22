@@ -271,8 +271,9 @@ func NewDeckhouseController(ctx context.Context, version string, operator *addon
 
 		deckhouseConfigCh: deckhouseConfigCh,
 
-		settings: settingsContainer,
-		logger:   logger,
+		embeddedPolicy: embeddedPolicy,
+		settings:       settingsContainer,
+		logger:         logger,
 	}, nil
 }
 

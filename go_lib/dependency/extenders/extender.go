@@ -17,7 +17,6 @@ limitations under the License.
 package extenders
 
 import (
-	"github.com/deckhouse/deckhouse/pkg/log"
 	"slices"
 
 	"github.com/Masterminds/semver/v3"
@@ -29,6 +28,7 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders/editionavailable"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders/kubernetesversion"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders/moduledependency"
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 func IsExtendersField(field string) bool {
