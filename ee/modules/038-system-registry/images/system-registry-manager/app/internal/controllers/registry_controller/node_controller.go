@@ -536,7 +536,6 @@ func (nc *nodeController) contructStaticPodConfig(
 			AuthKey:                string(authKey),
 			DistributionCert:       string(pki.EncodeCertificate(nodePKI.Distribution.Cert)),
 			DistributionKey:        string(distributionKey),
-			UpstreamRegistryCACert: moduleConfig.Settings.Proxy.CA,
 		},
 		Mirrorer: staticpod.Mirrorer{
 			UserPuller: staticpod.User{
@@ -564,6 +563,8 @@ func (nc *nodeController) contructStaticPodConfig(
 	if moduleConfig.Settings.Mode == state.RegistryModeProxy {
 		host, path := getRegistryAddressAndPathFromImagesRepo(moduleConfig.Settings.Proxy.ImagesRepo)
 
+		config.PKI.UpstreamRegistryCACert = moduleConfig.Settings.Proxy.CA
+	
 		config.Registry.Upstream = staticpod.UpstreamRegistry{
 			Scheme:   strings.ToLower(moduleConfig.Settings.Proxy.Scheme),
 			Host:     host,
