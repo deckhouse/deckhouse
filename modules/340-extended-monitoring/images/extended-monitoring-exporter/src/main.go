@@ -53,19 +53,8 @@ var (
 )
 
 var (
-	timeHealthz      = time.Now()
-	timeOut          = int64(60)
-	kubeClient       *kubernetes.Clientset
-	kubeMetadata     metadata.Interface
-	reg              = prometheus.NewRegistry()
-	nodeThresholdMap = map[string]float64{
-		"disk-bytes-warning":             70,
-		"disk-bytes-critical":            80,
-		"disk-inodes-warning":            90,
-		"disk-inodes-critical":           95,
-		"load-average-per-core-warning":  3,
-		"load-average-per-core-critical": 10,
-	}
+	timeHealthz = time.Now()
+	timeOut     = int64(60)
 )
 
 func ListResources(ctx context.Context, client metadata.Interface, resource schema.GroupVersionResource, option metav1.ListOptions, namespace string) *metav1.PartialObjectMetadataList {
@@ -106,20 +95,36 @@ func thresholdLabel(labels map[string]string, threshold string, i float64) float
 func thresholdMetric(
 	ctx context.Context,
 	client metadata.Interface, maps map[string]float64,
-	namespasce metav1.PartialObjectMetadata,
+	labels map[string]string,
+	namespasce string,
 	resource schema.GroupVersionResource,
 	enabled *prometheus.CounterVec,
 	threshold *prometheus.CounterVec) {
 	for key, value := range maps {
-		maps[key] = thresholdLabel(namespasce.Labels, key, value)
+		maps[key] = thresholdLabel(labels, key, value)
 	}
-	for _, pod := range ListResources(ctx, client, resource, options, namespasce.Name).Items {
+	for _, pod := range ListResources(ctx, client, resource, options, namespasce).Items {
 		e := enabledLabel(pod.Labels)
-		enabled.WithLabelValues(namespasce.Name, pod.Name).Add(e)
+		enabled.WithLabelValues(namespasce, pod.Name).Add(e)
 		if e == 1 {
 			for key, value := range maps {
-				threshold.WithLabelValues(namespasce.Name, pod.Name, key).Add(thresholdLabel(pod.Labels, key, value))
+				threshold.WithLabelValues(namespasce, pod.Name, key).Add(thresholdLabel(pod.Labels, key, value))
 			}
+		}
+	}
+}
+
+func register(r *prometheus.Registry, c prometheus.Collector) {
+	err := r.Register(c)
+	if err != nil {
+		if err.Error() == "duplicate metrics collector registration attempted" {
+			r.Unregister(c)
+			err = r.Register(c)
+			if err != nil {
+				log.Fatal(err.Error())
+			}
+		} else {
+			log.Fatal(err.Error())
 		}
 	}
 }
@@ -183,6 +188,14 @@ func recordMetrics(ctx context.Context, client metadata.Interface, registry *pro
 		[]string{"namespace", "cronjob"},
 	)
 	// node
+	nodeThresholdMap := map[string]float64{
+		"disk-bytes-warning":             70,
+		"disk-bytes-critical":            80,
+		"disk-inodes-warning":            90,
+		"disk-inodes-critical":           95,
+		"load-average-per-core-warning":  3,
+		"load-average-per-core-critical": 10,
+	}
 	for _, node := range ListResources(ctx, client, resourceNodes, options, "").Items {
 		enabled := enabledLabel(node.Labels)
 		nodeEnabled.WithLabelValues(node.Name).Add(enabled)
@@ -206,42 +219,42 @@ func recordMetrics(ctx context.Context, client metadata.Interface, registry *pro
 				"disk-inodes-critical":          90,
 				"container-throttling-warning":  25,
 				"container-throttling-critical": 50,
-			}, namespasce, resourcePods, podEnabled, podThreshold)
+			}, namespasce.Labels, namespasce.Name, resourcePods, podEnabled, podThreshold)
 			// ingress
 			thresholdMetric(ctx, client, map[string]float64{
 				"5xx-warning":  10,
 				"5xx-critical": 20,
-			}, namespasce, resourceIngresses, ingressEnabled, ingressThreshold)
+			}, namespasce.Labels, namespasce.Name, resourceIngresses, ingressEnabled, ingressThreshold)
 			// deployment
 			thresholdMetric(ctx, client, map[string]float64{
 				"replicas-not-ready": 0,
-			}, namespasce, resourceDeployments, deploymentEnabled, deploymentThreshold)
+			}, namespasce.Labels, namespasce.Name, resourceDeployments, deploymentEnabled, deploymentThreshold)
 			// daemonset
 			thresholdMetric(ctx, client, map[string]float64{
 				"replicas-not-ready": 0,
-			}, namespasce, resourceDaemonsets, daemonsetEnabled, daemonsetThreshold)
+			}, namespasce.Labels, namespasce.Name, resourceDaemonsets, daemonsetEnabled, daemonsetThreshold)
 			// statefulset
 			thresholdMetric(ctx, client, map[string]float64{
 				"replicas-not-ready": 0,
-			}, namespasce, resourceStatefulsets, statefulsetEnabled, statefulsetThreshold)
+			}, namespasce.Labels, namespasce.Name, resourceStatefulsets, statefulsetEnabled, statefulsetThreshold)
 			// cronjob (one cronjobEnabled)
-			thresholdMetric(ctx, client, map[string]float64{}, namespasce, resourceCronjobs, cronjobEnabled, cronjobEnabled)
+			thresholdMetric(ctx, client, map[string]float64{}, namespasce.Labels, namespasce.Name, resourceCronjobs, cronjobEnabled, cronjobEnabled)
 		}
 	}
-	registry.MustRegister(nodeEnabled)
-	registry.MustRegister(nodeThreshold)
-	registry.MustRegister(namespacesEnabled)
-	registry.MustRegister(podEnabled)
-	registry.MustRegister(podThreshold)
-	registry.MustRegister(ingressEnabled)
-	registry.MustRegister(ingressThreshold)
-	registry.MustRegister(deploymentEnabled)
-	registry.MustRegister(deploymentThreshold)
-	registry.MustRegister(daemonsetEnabled)
-	registry.MustRegister(daemonsetThreshold)
-	registry.MustRegister(statefulsetEnabled)
-	registry.MustRegister(statefulsetThreshold)
-	registry.MustRegister(cronjobEnabled)
+	register(registry, namespacesEnabled)
+	register(registry, nodeEnabled)
+	register(registry, nodeThreshold)
+	register(registry, podEnabled)
+	register(registry, podThreshold)
+	register(registry, ingressEnabled)
+	register(registry, ingressThreshold)
+	register(registry, deploymentEnabled)
+	register(registry, deploymentThreshold)
+	register(registry, daemonsetEnabled)
+	register(registry, daemonsetThreshold)
+	register(registry, statefulsetEnabled)
+	register(registry, statefulsetThreshold)
+	register(registry, cronjobEnabled)
 }
 
 func main() {
@@ -249,14 +262,15 @@ func main() {
 	if err != nil {
 		log.Fatalf("Error kubernetes config: %v\n", err)
 	}
-	kubeClient, err = kubernetes.NewForConfig(config)
+	kubeClient, err := kubernetes.NewForConfig(config)
 	if err != nil {
 		log.Fatalf("Error getting kubernetes config: %v\n", err)
 	}
-	kubeMetadata, err = metadata.NewForConfig(config)
+	kubeMetadata, err := metadata.NewForConfig(config)
 	if err != nil {
 		log.Fatal(err)
 	}
+	reg := prometheus.NewRegistry()
 	handler := promhttp.HandlerFor(
 		reg,
 		promhttp.HandlerOpts{
@@ -264,16 +278,13 @@ func main() {
 		})
 	go func() {
 		for {
-			// local := prometheus.NewRegistry()
-			// recordMetrics(context.Background(), kubeMetadata, local)
-			// *reg = *local
 			recordMetrics(context.Background(), kubeMetadata, reg)
 			timeHealthz = time.Now()
 			time.Sleep(intervalRecordMetrics)
 		}
 	}()
 
-	http.HandleFunc("/ready", func(w http.ResponseWriter, r *http.Request) {
+	http.HandleFunc("/ready", func(w http.ResponseWriter, _ *http.Request) {
 		_, err := kubeClient.ServerVersion()
 		if err != nil {
 			http.Error(w, "Error", http.StatusInternalServerError)
@@ -283,7 +294,7 @@ func main() {
 			_, _ = w.Write([]byte("ok"))
 		}
 	})
-	http.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
+	http.HandleFunc("/healthz", func(w http.ResponseWriter, _ *http.Request) {
 		if time.Since(timeHealthz) > timeOutHealthz {
 			log.Printf("Fail if metrics were last collected more than %v", timeOutHealthz)
 			http.Error(w, "Error", http.StatusInternalServerError)
