@@ -12,6 +12,7 @@ rules:
   - /etcd/metrics
   {{- if (include "isSystemRegistryEnabled" $) }}
   - /distribution/metrics
+  - /auth/metrics
   {{- end }}
   verbs:
   - get

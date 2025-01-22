@@ -88,4 +88,7 @@ spec:
             {{- if (include "isSystemRegistryEnabled" $) }}
             - upstream: http://127.0.0.1:5002/metrics
               path: /distribution/metrics
+            - upstream: https://127.0.0.1:5051/metrics
+              upstreamInsecureSkipVerify: true
+              path: /auth/metrics
             {{- end }}
