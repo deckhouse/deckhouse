@@ -1,0 +1,66 @@
+{%- assign severity = site.data.severity_table.severity  %}
+<table>
+  <tr>
+    <th style="white-space: nowrap;">{{ severity['likelihood'][page.lang] }} / {{ severity['impact'][page.lang] }}</th>
+    <th>{{ severity['impact']['deadly'][page.lang] }}</th>
+    <th>{{ severity['impact']['catastrophic'][page.lang] }}</th>
+    <th>{{ severity['impact']['critical'][page.lang] }}</th>
+    <th>{{ severity['impact']['marginal'][page.lang] }}</th>
+    <th>{{ severity['impact']['negligible'][page.lang] }}</th>
+  </tr>
+  <tr>
+    <td>{{ severity['likelihood']['certain'][page.lang] }}</td>
+    <td style="text-align: center;">S1</td>
+    <td style="text-align: center;">S2</td>
+    <td style="text-align: center;">S3</td>
+    <td style="text-align: center;">S4</td>
+    <td style="text-align: center;">S5</td>
+  </tr>
+  <tr>
+    <td>{{ severity['likelihood']['likely'][page.lang] }}</td>
+    <td style="text-align: center;">S2</td>
+    <td style="text-align: center;">S3</td>
+    <td style="text-align: center;">S4</td>
+    <td style="text-align: center;">S5</td>
+    <td style="text-align: center;">S6</td>
+  </tr>
+  <tr>
+    <td>{{ severity['likelihood']['possible'][page.lang] }}</td>
+    <td style="text-align: center;">S3</td>
+    <td style="text-align: center;">S4</td>
+    <td style="text-align: center;">S5</td>
+    <td style="text-align: center;">S6</td>
+    <td style="text-align: center;">S7</td>
+  </tr>
+  <tr>
+    <td>{{ severity['likelihood']['unlikely'][page.lang] }}</td>
+    <td style="text-align: center;">S4</td>
+    <td style="text-align: center;">S5</td>
+    <td style="text-align: center;">S6</td>
+    <td style="text-align: center;">S7</td>
+    <td style="text-align: center;">S8</td>
+  </tr>
+  <tr>
+    <td>{{ severity['likelihood']['rare'][page.lang] }}</td>
+    <td style="text-align: center;">S5</td>
+    <td style="text-align: center;">S6</td>
+    <td style="text-align: center;">S7</td>
+    <td style="text-align: center;">S8</td>
+    <td style="text-align: center;">S9</td>
+  </tr>
+</table>
+
+{% if page.lang == "ru" %}Здесь:{% else %}Here:{% endif %}
+* {{ severity['likelihood'][page.lang] }}:
+  * {{ severity['likelihood']['certain'][page.lang] }} – {{ severity['likelihood']['certain']['note'][page.lang] }};
+  * {{ severity['likelihood']['likely'][page.lang] }} – {{ severity['likelihood']['likely']['note'][page.lang] }};
+  * {{ severity['likelihood']['possible'][page.lang] }} – {{ severity['likelihood']['possible']['note'][page.lang] }};
+  * {{ severity['likelihood']['unlikely'][page.lang] }} – {{ severity['likelihood']['unlikely']['note'][page.lang] }};
+  * {{ severity['likelihood']['rare'][page.lang] }} – {{ severity['likelihood']['rare']['note'][page.lang] }}.
+* {{ severity['impact'][page.lang] }}:
+  * {{ severity['impact']['deadly'][page.lang] }} – {{ severity['impact']['deadly']['note'][page.lang] }};
+  * {{ severity['impact']['catastrophic'][page.lang] }} – {{ severity['impact']['catastrophic']['note'][page.lang] }};
+  * {{ severity['impact']['critical'][page.lang] }} – {{ severity['impact']['critical']['note'][page.lang] }};
+  * {{ severity['impact']['marginal'][page.lang] }} – {{ severity['impact']['marginal']['note'][page.lang] }};
+  * {{ severity['impact']['negligible'][page.lang] }} – {{ severity['impact']['negligible']['note'][page.lang] }}.
+

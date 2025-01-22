@@ -1,0 +1,67 @@
+severity:
+  likelihood:
+    en: "Likelihood"
+    ru: "Вероятность"
+    certain:
+      en: "Сertain"
+      ru: "Определённый"
+      note:
+        en: "the incident <b>has already</b> occurred"
+        ru: "инцидент <b>уже</b> произошёл"
+    likely:
+      en: "Likely"
+      ru: "Cкорее всего"
+      note:
+        en: "the incident almost happened"
+        ru: "инцидент почти произошёл"
+    possible:
+      en: "Possible"
+      ru: "Возможный"
+      note:
+        en: "incident average chances of occurrence"
+        ru: "инцидент имеет средние шансы на появление"
+    unlikely:
+      en: "Unlikely"
+      ru: "Маловероятный"
+      note:
+        en: "the incident has a small chance of happening"
+        ru: "инцидент имеет небольшой шанс произойти"
+    rare:
+      en: "Rare"
+      ru: "Редкий"
+      note:
+        en: "the possibility of an incident is virtually eliminated"
+        ru: "вероятность инцидента практически исключена"
+  impact:
+    en: "Impact"
+    ru: "Влияние"
+    deadly:
+      en: "Deadly"
+      ru: "Фатальный"
+      note:
+        en: "complete loss of a system component that will take a long time to recover. The components are critical for the health of the entire system. Catastrophic data loss for an indefinite period"
+        ru: "полная потеря компонента системы, восстановление которого займёт длительный срок. Компоненты критичен для здоровья всей системы. Катастрофическая потеря данных на наопределённый срок"
+    catastrophic:
+      en: "Catastrophic"
+      ru: "Катастрофический"
+      note:
+        en: "all or almost all users of the system noticed the glitch"
+        ru: "все или почти все пользователи системы заметили сбой"
+    critical:
+      en: "Critical"
+      ru: "Критический"
+      note:
+        en: "a significant percentage of users report problems with the system"
+        ru: "существенный процент пользователей отмечает проблемы с системой"
+    marginal:
+      en: "Marginal"
+      ru: "Минимальный"
+      note:
+        en: "a minimal percentage of users experience periodic or permanent crashes."
+        ru: "минимальный процент пользователей видит периодичские или постоянные сбои"
+    negligible:
+      en: "Negligible"
+      ru: "Незначительный"
+      note:
+        en: "diagnostic information, users do not notice any anomalies in the system operation"
+        ru: "диагностическая информация, пользователи не замечают каких-либо аномалий в работе системы"
