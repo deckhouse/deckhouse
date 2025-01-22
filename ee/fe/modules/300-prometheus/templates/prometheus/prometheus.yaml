@@ -91,7 +91,7 @@ spec:
     - "walpp"
     {{- end }}
     volumeMounts:
-    - name: prometheus-main-db
+    - name: prometheus-longterm-db
       mountPath: /prometheus
       subPath: prometheus-db
       securityContext:
