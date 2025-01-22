@@ -76,8 +76,8 @@ shell:
   install:
   - cd /src/istio/
   - echo {{ $istioProxyVersion }} > version
-  - export GOPROXY={{ $.GOPROXY }} GOOS=linux GOARCH=amd64 
-  - export LDFLAGS='-extldflags -static -s -w' 
+  - export GOPROXY={{ $.GOPROXY }} GOOS=linux GOARCH=amd64
+  - export LDFLAGS='-extldflags -static -s -w'
   - common/scripts/gobuild.sh /tmp/istio/out/ -tags=agent,disable_pgv /tmp/istio/pilot/cmd/pilot-agent
   #
   - chmod 0555 /tmp/istio/out/pilot-agent
@@ -246,11 +246,9 @@ final: false
 git:
 - add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/patches
   to: /patches
-  includePaths:
-  - '**/*.patch'
   stageDependencies:
     install:
-    - '**/*.patch'
+    - '**/*'
 shell:
   install:
   - git clone --depth 1 --branch {{ $istioProxyVersion }} {{ $.SOURCE_REPO }}/istio/proxy.git /src/proxy
