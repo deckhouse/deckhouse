@@ -1,14 +1,145 @@
 ---
 title: "Cloud provider — Huawei Cloud: подготовка окружения"
-description: "Настройка Huawei Cloud для работы облачного провайдера Deckhouse."
+description: "Настройка окружения Huawei Cloud для работы облачного провайдера Deckhouse."
 ---
 
 {% include notice_envinronment.liquid %}
 
-Чтобы Deckhouse мог управлять ресурсами в облаке OpenStack, ему необходимо подключиться к OpenStack API.  
-Перечень API-сервисов OpenStack, доступ до которых необходим для развертывания, доступен в разделе [настройки](./configuration.html#список-необходимых-сервисов-openstack).  
-Доступы пользователя, необходимые для подключения к OpenStack API, находятся в openrc-файле (OpenStack RC file).
+Для взаимодействия с ресурсами в облаке Huawei Cloud компоненты Deckhouse используют API Huawei Cloud. Для настройки этого подключения требуется создать пользователя в сервисе Huawei Cloud IAM и назначить ему соответствующие права доступа.
 
-Информация о получении openrc-файла с помощью стандартного веб-интерфейса OpenStack и о способах его использования доступна в [документации OpenStack](https://docs.openstack.org/ocata/admin-guide/common/cli-set-environment-variables-using-openstack-rc.html#download-and-source-the-openstack-rc-file).
+## Настройка IAM через веб-интерфейс
 
-Если вы используете OpenStack API cloud-провайдера, интерфейс получения openrc-файла может быть другим.
+Для настройки IAM через веб-интерфейс сначала создайте новую группу пользователей и назначьте ей необходимые права. Для этого выполните следующие шаги:
+
+1. Перейдите в раздел «Identity and Access Management (IAM)».
+1. Откройте страницу «User Groups» и нажмите «Create User Group».
+1. В поле «Name» укажите имя группы (например, `deckhouse`).
+1. Нажмите «OK» для создания группы.
+1. Выберите созданную группу из списка.
+1. На вкладке «Permissions» нажмите «Authorize».
+1. Укажите следующие политики: «ECS Admin», «VPC Administrator», «NAT Admin», «DEW KeypairFullAccess».
+1. Нажмите «Next», затем «OK» и завершите настройку, нажав «Finish».
+
+Добавьте нового пользователя. Для этого выполните следующие шаги:
+
+1. Перейдите на страницу «Users» в разделе IAM и нажмите «Create User».
+1. В поле «Username» введите имя пользователя (например, `deckhouse`).
+1. Установите «Access type» в значение «Programmatic access» и убедитесь, что «Management console access» отключен.
+1. Выберите «Access key» в качестве «Credential Type».
+1. Нажмите «Next».
+1. Выберите ранее созданную группу пользователей.
+1. Нажмите «Create», чтобы завершить создание пользователя.
+1. Нажмите «OK», чтобы загрузить `Access Key ID` и `Secret Access Key`. Убедитесь, что вы сохранили эти данные в надёжном месте, так как они понадобятся для доступа к API.
+
+## JSON-политики
+
+Далее приведено содержание политик в формате JSON:
+
+- Политика «ECS Admin»:
+
+  ```json
+  {
+  "Version": "1.1",
+  "Statement": [
+  {
+      "Action": [
+      "ecs:*:*",
+      "evs:*:get",
+      "evs:*:list",
+      "evs:volumes:create",
+      "evs:volumes:delete",
+      "evs:volumes:attach",
+      "evs:volumes:detach",
+      "evs:volumes:manage",
+      "evs:volumes:update",
+      "evs:volumes:use",
+      "evs:volumes:uploadImage",
+      "evs:snapshots:create",
+      "vpc:*:get",
+      "vpc:*:list",
+      "vpc:networks:create",
+      "vpc:networks:update",
+      "vpc:subnets:update",
+      "vpc:subnets:create",
+      "vpc:ports:*",
+      "vpc:routers:get",
+      "vpc:routers:update",
+      "vpc:securityGroups:*",
+      "vpc:securityGroupRules:*",
+      "vpc:floatingIps:*",
+      "vpc:publicIps:*",
+      "ims:images:create",
+      "ims:images:delete",
+      "ims:images:get",
+      "ims:images:list",
+      "ims:images:update",
+      "ims:images:upload"
+      ],
+      "Effect": "Allow"
+  }
+  ]
+  }
+  ```
+
+- Политика «VPC Administrator»:
+
+  ```json
+  {
+      "Version": "1.1",
+      "Statement": [
+          {
+              "Action": [
+                  "vpc:vpcs:*",
+                  "vpc:routers:*",
+                  "vpc:networks:*",
+                  "vpc:subnets:*",
+                  "vpc:ports:*",
+                  "vpc:privateIps:*",
+                  "vpc:peerings:*",
+                  "vpc:routes:*",
+                  "vpc:lbaas:*",
+                  "vpc:vpns:*",
+                  "ecs:*:get",
+                  "ecs:*:list",
+                  "elb:*:get",
+                  "elb:*:list"
+              ],
+              "Effect": "Allow"
+          }
+      ]
+  }
+  ```
+
+- Политика «NAT Admin»:
+
+  ```json
+  {
+      "Version": "1.1",
+      "Statement": [
+          {
+              "Action": [
+                  "nat:*:*",
+                  "vpc:*:*"
+              ],
+              "Effect": "Allow"
+          }
+      ]
+  }
+  ```
+
+- Политика «DEW KeypairFullAccess»:
+
+  ```json
+  {
+      "Version": "1.1",
+      "Statement": [
+          {
+              "Action": [
+                  "kps:domainKeypairs:*",
+                  "ecs:serverKeypairs:*"
+              ],
+              "Effect": "Allow"
+          }
+      ]
+  }
+  ```
