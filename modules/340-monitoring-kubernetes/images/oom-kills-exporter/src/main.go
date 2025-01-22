@@ -128,14 +128,14 @@ func main() {
 	local.MustRegister(klogOomkill)
 
 	go func() {
-		log.Print("Starting prometheus metrics")
-		http.HandleFunc("/ready", func(w http.ResponseWriter, _ *http.Request) {
-			w.WriteHeader(http.StatusOK)
-			_, _ = w.Write([]byte("ok"))
-		})
-		http.Handle("/metrics", handler)
-		log.Fatal(http.ListenAndServe("127.0.0.1:4205", nil))
+		dmesgWatcher(sleepG, local, klogOomkill)
 	}()
 
-	dmesgWatcher(sleepG, local, klogOomkill)
+	log.Print("Starting prometheus metrics")
+	http.HandleFunc("/ready", func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte("ok"))
+	})
+	http.Handle("/metrics", handler)
+	log.Fatal(http.ListenAndServe("127.0.0.1:4205", nil))
 }
