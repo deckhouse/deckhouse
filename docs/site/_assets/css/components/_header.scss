@@ -177,6 +177,7 @@ html {
           visibility: visible;
           opacity: 1;
           transition: .2s;
+          z-index: 11;
 
           a {
             color: $ntrl-700;
