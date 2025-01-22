@@ -264,9 +264,10 @@ func main() {
 		})
 	go func() {
 		for {
-			local := prometheus.NewRegistry()
-			recordMetrics(context.Background(), kubeMetadata, local)
-			*reg = *local
+			// local := prometheus.NewRegistry()
+			// recordMetrics(context.Background(), kubeMetadata, local)
+			// *reg = *local
+			recordMetrics(context.Background(), kubeMetadata, reg)
 			timeHealthz = time.Now()
 			time.Sleep(intervalRecordMetrics)
 		}
