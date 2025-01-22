@@ -115,6 +115,7 @@ shell:
   - cd /src/proxy
   - sed -i '/^build --enable_platform_specific_config/a build --linkopt=-L/opt/libcxx/lib'          envoy.bazelrc
   - sed -i '/^build --enable_platform_specific_config/a build --linkopt=-Wl,-rpath,/opt/libcxx/lib' envoy.bazelrc
+  - sed -i 's|build:libc++ --action_env=BAZEL_LINKOPTS=-lm:-pthread|build:libc++ --action_env=BAZEL_LINKOPTS=-lm:-lpthread|' envoy.bazelrc
   - sed -i 's|ENVOY_SHA = "94aa5f7f82fb543e7fbc011ea398ac12cc396817"|ENVOY_SHA = "5c3dc559371181d5baa4a7533c36f2370fc97581"|' WORKSPACE
   - sed -i 's|ENVOY_SHA256 = "092784be59d19e99343afc095c1a65eca916b0b3f218d48545a6f0d43cdd5885"|ENVOY_SHA256 = "17f36c4267570e64123e3f08cdf8fc9442634572c5dc87f3f4192d953a4d29bf"|' WORKSPACE
   #
