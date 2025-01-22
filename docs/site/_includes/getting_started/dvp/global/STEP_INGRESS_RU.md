@@ -3,18 +3,16 @@
 Убедитесь, что под Kruise controller manager запустился и находится в статусе `Running`.
   Выполните на **master-узле** следующую команду:
 
-{% snippetcut %}
 ```shell
 sudo -i d8 k -n d8-ingress-nginx get po -l app=kruise
 ```
-{% endsnippetcut %}
 
 
 Настройте Ingress-контроллер и DNS.
 
 <ol>
   <li><p><strong>Установка Ingress-контроллера</strong></p>
-{% snippetcut %}
+<div markdown="1">
 ```shell
 sudo -i d8 k apply -f - <<EOF
 # Параметры контроллера NGINX Ingress.
@@ -40,15 +38,15 @@ spec:
     operator: Exists
 EOF
 ```
-{% endsnippetcut %}
+</div>
 <p>
 Запуск Ingress-контроллера после завершения установки Deckhouse может занять какое-то время. Прежде чем продолжить убедитесь что Ingress-контроллер запустился (выполните на <code>master-узле</code>):</p>
 
-{% snippetcut %}
+<div markdown="1">
 ```shell
 sudo -i d8 k -n d8-ingress-nginx get po -l app=controller
 ```
-{% endsnippetcut %}
+</div>
 
 <p>Дождитесь перехода подов Ingress-контроллера в статус <code>Running</code>.</p>
 
@@ -97,7 +95,7 @@ upmeter.example.com</code>
     </ul>
   </li>
   <li><p>Если вы <strong>не</strong> имеете под управлением DNS-сервер: добавьте статические записи соответствия имен конкретных сервисов публичному IP-адресу узла, на котором работает Ingress-контроллер.</p><p>Например, на персональном Linux-компьютере, с которого необходим доступ к сервисам Deckhouse, выполните следующую команду (укажите ваш публичный IP-адрес в переменной <code>PUBLIC_IP</code>) для добавления записей в файл <code>/etc/hosts</code> (для Windows используйте файл <code>%SystemRoot%\system32\drivers\etc\hosts</code>):</p>
-{% snippetcut selector="example-hosts" %}
+<div markdown="1">
 ```bash
 export PUBLIC_IP="<PUBLIC_IP>"
 sudo -E bash -c "cat <<EOF >> /etc/hosts
@@ -118,7 +116,7 @@ $PUBLIC_IP upmeter.example.com
 EOF
 "
 ```
-{% endsnippetcut %}
+</div>
 </li>
 </ul>
 </li>

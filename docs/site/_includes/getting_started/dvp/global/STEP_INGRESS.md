@@ -3,18 +3,15 @@
 Make sure the Kruise controller manager is `Running`.
   Run the following command on the **master node**:
 
-{% snippetcut %}
 ```shell
 sudo d8 k -n d8-ingress-nginx get po -l app=kruise
 ```
-{% endsnippetcut %}
-
 
 Set up the Ingress controller and DNS.
 
 <ol>
   <li><p><strong>Setting up an Ingress controller</strong></p>
-{% snippetcut %}
+<div markdown="1">
 ```shell
 sudo d8 k apply -f - <<EOF
 # The parameters of the NGINX Ingress controller.
@@ -40,16 +37,14 @@ spec:
     operator: Exists
 EOF
 ```
-{% endsnippetcut %}
+</div>
 <p>
 It may take some time to start the Ingress controller after installing Deckhouse. Make sure the Ingress controller has started before continuing (run on the <code>master</code> node):</p>
-
-{% snippetcut %}
+<div markdown="1">
 ```shell
 sudo d8 k -n d8-ingress-nginx get po -l app=controller
 ```
-{% endsnippetcut %}
-
+</div>
 <p>Wait for the Ingress controller pods to switch to <code>Running</code> state.</p>
 
 {% offtopic title="Example of the output..." %}
@@ -93,7 +88,7 @@ upmeter.example.com</code>
     </ul>
   </li>
   <li><p>If you <strong>don't have a DNS server</strong>: on your PC add static entries (specify your public IP address in the <code>PUBLIC_IP</code>variable) that match the names of specific services to the public IP to the <code>/etc/hosts</code> file for Linux (<code>%SystemRoot%\system32\drivers\etc\hosts</code> for Windows):</p>
-{% snippetcut selector="example-hosts" %}
+<div markdown="1">
 ```bash
 export PUBLIC_IP="<PUT_PUBLIC_IP_HERE>"
 sudo -E bash -c "cat <<EOF >> /etc/hosts
@@ -114,7 +109,7 @@ $PUBLIC_IP upmeter.example.com
 EOF
 "
 ```
-{% endsnippetcut %}
+</div>
 </li>
 </ul>
 </li>

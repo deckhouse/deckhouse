@@ -46,11 +46,11 @@
   <p>Make the following steps to add records to the <code>/etc/hosts</code> file <b>on Linux</b>, from which you need access to Deckhouse services (<b>the PC</b>)</p>
 <ul>
 <li><p>{% if page.platform_code != 'existing' %}<b>[On the PC]</b>{% endif %} Specify the DNS name template used in the <code>DOMAIN_TEMPLATE</code> variable (e.g., <code>%s.kube.company.my</code>):
-{% snippetcut %}
+<div markdown="1">
 ```shell
 DOMAIN_TEMPLATE='<DOMAIN_TEMPLATE>'
 ```
-{% endsnippetcut %}
+</div>
 </p></li>
 {% if page.platform_code != 'vsphere' and page.platform_code != 'existing' %}
 <li><p><b>[On the master node]</b> Get the IP of the load balancer:
@@ -58,19 +58,19 @@ DOMAIN_TEMPLATE='<DOMAIN_TEMPLATE>'
 </li>
 {%- endif -%}
 <li><p>{% if page.platform_code != 'existing' %}<b>[On the PC]</b>{% endif %} Specify the load balancer IP used in the <code>BALANCER_IP</code> variable:
-{% snippetcut %}
+<div markdown="1">
 ```shell
 BALANCER_IP='<BALANCER_IP>'
 ```
-{% endsnippetcut %}
+</div>
 </p>
 </li>
 <li><p>{% if page.platform_code != 'existing' %}<b>[On the PC]</b>{% endif %} Add records to the <code>/etc/hosts</code> file:</p>
-{% snippetcut %}
+<div markdown="1">
 ```shell
 for i in api argocd dashboard documentation dex grafana hubble istio istio-api-proxy kubeconfig openvpn-admin prometheus status upmeter; do echo "${BALANCER_IP}  ${DOMAIN_TEMPLATE} "| sed "s/%s/$i/"; done  | sudo bash -c "cat >>/etc/hosts"
 ```
-{% endsnippetcut %}
+</div>
 </li>
 </ul></li>
 </ul>

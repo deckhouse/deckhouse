@@ -23,10 +23,7 @@
 
 Создайте файл `config.yml`.
 {% capture includePath %}_includes/getting_started/dvp/{{ page.platform_code }}/partials/config.ru.yml{% if include.layout.size > 0 %}.{{ include.layout }}{% endif %}.{{ revision }}.inc{% endcapture %}
-{% snippetcut name="config.yml" selector="config-yml" %}
 {% include_file "{{ includePath }}" syntax="yaml" %}
-{% endsnippetcut %}
-
 {%- if page.platform_type == 'existing' %}
 {% offtopic title="Про nodeSelector, taints и tolerations..." %}
 Управлять тем, на каких узлах будет запускаться ядро Deckhouse, можно с помощью указания `nodeSelector`/`tolerations` в параметре `configOverrides.deckhouse` конфигурации установки. Также, вы можете перечислить необходимые taint'ы узлов кластера в массиве `configOverrides.global.modules.placement.customTolerationKeys`, чтобы Deckhouse автоматически указывал соответствующие `toleration` своим компонентам.

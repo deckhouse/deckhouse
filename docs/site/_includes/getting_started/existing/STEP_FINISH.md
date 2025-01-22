@@ -17,19 +17,15 @@ Access to the documentation is restricted via the basic authentication mechanism
   
   - For Deckhouse 1.46 or newer:
 
-    {% snippetcut %}
-```bash
-kubectl -n d8-system exec svc/deckhouse-leader -c deckhouse -- sh -c "deckhouse-controller module values documentation -o json | jq -r '.internal.auth.password'"
-```
-{% endsnippetcut %}
+    ```bash
+    kubectl -n d8-system exec svc/deckhouse-leader -c deckhouse -- sh -c "deckhouse-controller module values documentation -o json | jq -r '.internal.auth.password'"
+    ```
 
   - For Deckhouse 1.45 or older:
 
-    {% snippetcut %}
-```bash
-kubectl -n d8-system exec svc/deckhouse-leader -c deckhouse -- sh -c "deckhouse-controller module values deckhouse-web -o json | jq -r '.deckhouseWeb.internal.auth.password'"
-```
-{% endsnippetcut %}
+    ```bash
+    kubectl -n d8-system exec svc/deckhouse-leader -c deckhouse -- sh -c "deckhouse-controller module values deckhouse-web -o json | jq -r '.deckhouseWeb.internal.auth.password'"
+    ```
 
   {% offtopic title="Sample output..." %}
 ```

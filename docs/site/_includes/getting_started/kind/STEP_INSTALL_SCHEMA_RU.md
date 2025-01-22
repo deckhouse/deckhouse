@@ -24,18 +24,14 @@ Deckhouse будет установлен в **минимальной** конф
 
 Развертывание кластера Kubernetes и установка в него Deckhouse выполняются с помощью [Shell-скрипта](https://github.com/deckhouse/deckhouse/blob/main/tools/kind-d8.sh):
 - Выполните следующую команду для установки Deckhouse **Community Edition**:
-  {% snippetcut selector="kind-install" %}
 ```shell
 bash -c "$(curl -Ls https://raw.githubusercontent.com/deckhouse/deckhouse/main/tools/kind-d8.sh)"
 ```
-  {% endsnippetcut %}
 - Либо выполните следующую команду для установки Deckhouse **Enterprise Edition**, указав лицензионный ключ:
-  {% snippetcut selector="kind-install" %}
 ```shell
  echo <LICENSE_KEY> | docker login -u license-token --password-stdin registry.deckhouse.io
 bash -c "$(curl -Ls https://raw.githubusercontent.com/deckhouse/deckhouse/main/tools/kind-d8.sh)" -- --key <LICENSE_KEY>
 ```
-  {% endsnippetcut %}
 
 По окончании установки инсталлятор выведет пароль пользователя `admin` для доступа в Grafana, которая будет доступна по адресу [http://grafana.127.0.0.1.sslip.io](http://grafana.127.0.0.1.sslip.io).
 
@@ -63,8 +59,6 @@ Good luck!
 {% endofftopic %}
 
 Пароль пользователя `admin` для Grafana также можно узнать выполнив команду:
-{% snippetcut selector="kind-get-password" %}
 ```shell
 kubectl -n d8-system exec svc/deckhouse-leader -c deckhouse -- sh -c "deckhouse-controller module values prometheus -o json | jq -r '.internal.auth.password'"
 ```
-{% endsnippetcut %}

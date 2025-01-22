@@ -1091,6 +1091,7 @@ a.comparison-table__module-proprietaryOkmeter::after {
 }
 
 .docs pre {
+    position: relative;
     font-family: 'Source Code Pro', monospace;
     border-radius: 4px;
     padding: 10px;
@@ -1101,6 +1102,26 @@ a.comparison-table__module-proprietaryOkmeter::after {
     line-height: 1.428571429;
     word-break: break-all;
     word-wrap: break-word;
+
+    .icon--copy {
+        cursor: pointer;
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        width: 25px;
+        height: 24px;
+        background: url(/images/copy.svg) center/contain no-repeat;
+        opacity: 0;
+        transition: opacity .25s;
+    
+        &.show {
+            opacity: .75;
+      
+            &:hover {
+                opacity: 1;
+            }
+        }
+    }
 }
 
 .docs pre code {

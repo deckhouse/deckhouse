@@ -45,11 +45,11 @@
   <p>Для добавления записей в файл <code>/etc/hosts</code> на <b>на Linux-компьютере</b> с которого необходим доступ к сервисам Deckhouse (далее — <b>ПК</b>), выполните следующие шаги:</p>
 <ul>
 <li><p>{% if page.platform_code != 'existing' %}<b>[Выполните на ПК]</b> {% endif %}Укажите используемый шаблон DNS-имен в переменной <code>DOMAIN_TEMPLATE</code> (например, <code>%s.kube.company.my</code>):
-{% snippetcut %}
+<div markdown="1">
 ```shell
 DOMAIN_TEMPLATE='<DOMAIN_TEMPLATE>'
 ```
-{% endsnippetcut %}
+</div>
 </p></li>
 {% if page.platform_code != 'vsphere' and page.platform_code != 'existing' %}
 <li><p><b>[Выполните на master-узле]</b> Определите IP-адрес балансировщика:
@@ -57,19 +57,19 @@ DOMAIN_TEMPLATE='<DOMAIN_TEMPLATE>'
 </li>
 {%- endif -%}
 <li><p>{% if page.platform_code != 'existing' %}<b>[Выполните на ПК]</b> {% endif %}Укажите IP-адрес балансировщика в переменной <code>BALANCER_IP</code>:
-{% snippetcut %}
+<div markdown="1">
 ```shell
 BALANCER_IP='<BALANCER_IP>'
 ```
-{% endsnippetcut %}
+</div>
 </p>
 </li>
 <li><p>{% if page.platform_code != 'existing' %}<b>[Выполните на ПК]</b> {% endif %}Добавьте записи в файл <code>/etc/hosts</code>:</p>
-{% snippetcut %}
+<div markdown="1">
 ```shell
 for i in api argocd dashboard documentation dex grafana hubble istio istio-api-proxy kubeconfig openvpn-admin prometheus status upmeter; do echo "${BALANCER_IP}  ${DOMAIN_TEMPLATE} "| sed "s/%s/$i/"; done  | sudo bash -c "cat >>/etc/hosts"
 ```
-{% endsnippetcut %}
+</div>
 </li>
 </ul></li>
 </ul>
