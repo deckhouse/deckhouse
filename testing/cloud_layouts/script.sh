@@ -438,11 +438,6 @@ function run-test() {
   wait_deckhouse_ready || return $?
   wait_cluster_ready || return $?
 
-  if [[ $CIS_ENABLED == "true" ]]; then
-    REPORT=$(get_cis_report)
-    >&2 echo $REPORT
-  fi
-
   if [[ -n ${SWITCH_TO_IMAGE_TAG} ]]; then
     test_requirements || return $?
     change_deckhouse_image "${SWITCH_TO_IMAGE_TAG}" || return $?
@@ -1060,6 +1055,12 @@ function wait_cluster_ready() {
     fi
   done
 
+  if [[ $CIS_ENABLED == "true" ]]; then
+    testCisScript=$(cat "$(pwd)/deckhouse/testing/cloud_layouts/script.d/wait_cluster_ready/test_cis.sh")
+    REPORT=$($ssh_command -i "$ssh_private_key_path" $ssh_bastion "$ssh_user@$master_ip" sudo su -c /bin/bash <<<"${testCisScript}")
+    >&2 echo $REPORT
+  fi
+
   if [[ $test_failed == "true" ]] ; then
     return 1
   fi
@@ -1119,44 +1120,6 @@ function chmod_dirs_for_cleanup() {
     chmod -f -R 777 "/deckhouse/testing" || true
     chmod -f -R 777 /tmp || true
   fi
-}
-
-function get_cis_report() {
-  # Check if LAYOUT_STATIC_BASTION_IP is set and not empty
-  if [[ -n "$LAYOUT_STATIC_BASTION_IP" ]]; then
-    ssh_bastion="-J $ssh_user@$LAYOUT_STATIC_BASTION_IP"
-    >&2 echo "Using static bastion at $LAYOUT_STATIC_BASTION_IP"
-  else
-    ssh_bastion=""
-  fi
-  $ssh_command -i "$ssh_private_key_path" $ssh_bastion "$ssh_user@$master_ip" sudo su -c /bin/bash <<ENDSSH
-export PATH="/opt/deckhouse/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
-export LANG=C
-set -Eeuo pipefail
-testRunAttempts=20
-for ((i=1; i<=$testRunAttempts; i++)); do
-  FAILED=$(kubectl get clustercompliancereports.aquasecurity.github.io cis -o wide --no-headers 2>/dev/null | awk '{print $4}')
-  PASSED=$(kubectl get clustercompliancereports.aquasecurity.github.io cis -o wide --no-headers 2>/dev/null | awk '{print $3}')
-  CRAR=$(kubectl get clusterrbacassessmentreports.aquasecurity.github.io |wc -l)
-  if [[ -z $FAILED ]]
-    then
-      FAILED=0
-  fi
-  if [[ -z $PASSED ]]
-    then
-      PASSED=0
-  fi
-  if [[ $PASSED && "$(($PASSED+$FAILED))" -gt '100' && $CRAR -gt 290 ]]; then
-    >&2 echo "CIS report is ready"
-    break
-  else
-    >&2 echo "Still not ready. Attemption: #$i"
-    sleep 20
-  fi
-done
-kubectl get clustercompliancereports.aquasecurity.github.io cis -o yaml | sed 's#cron: 0 \*/6 \* \* \*#cron: "*/5 * * * *"#' | kubectl apply -f - > /dev/null
-kubectl get clustercompliancereports.aquasecurity.github.io cis -o json |jq '.status.detailReport.results | map(select(.checks | map(.success) | all | not))'
-ENDSSH
 }
 
 function main() {
