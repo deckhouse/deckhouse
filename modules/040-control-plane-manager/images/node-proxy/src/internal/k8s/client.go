@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"time"
 
 	log "github.com/sirupsen/logrus"
 	"k8s.io/client-go/kubernetes"
@@ -18,7 +19,9 @@ import (
 func (c *Client) checkConnection(clientset *kubernetes.Clientset, host string) error {
 	healthzURL := "/healthz"
 	req := clientset.RESTClient().Get().AbsPath(healthzURL)
-	result := req.Do(context.TODO())
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	result := req.Do(ctx)
 
 	if result.Error() != nil {
 		return fmt.Errorf("request to %s%s failed: %v", host, healthzURL, result.Error())

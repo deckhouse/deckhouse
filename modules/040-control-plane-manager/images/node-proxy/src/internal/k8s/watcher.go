@@ -4,6 +4,7 @@ package k8s
 import (
 	"context"
 	"fmt"
+	"time"
 
 	log "github.com/sirupsen/logrus"
 	v1 "k8s.io/api/core/v1"
@@ -27,7 +28,9 @@ func (c *Client) ForceSync(backend config.Backend, updates chan<- BackendUpdate)
 	namespace := backend.K8S.Namespace
 	endpointName := backend.K8S.EndpointName
 
-	ep, err := c.client.CoreV1().Endpoints(namespace).Get(context.TODO(), endpointName, metav1.GetOptions{})
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	ep, err := c.client.CoreV1().Endpoints(namespace).Get(ctx, endpointName, metav1.GetOptions{})
 	if errors.IsNotFound(err) {
 		log.Errorf("Endpoint %s in namespace %s not found\n", endpointName, namespace)
 		return err
