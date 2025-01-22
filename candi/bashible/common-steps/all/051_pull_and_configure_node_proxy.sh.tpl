@@ -18,23 +18,57 @@ cd /etc/kubernetes/node-proxy
 
 
 function get_node_proxy_cert() {
-  # Kubectl exist
-  if type kubectl >/dev/null 2>&1 && test -f /etc/kubernetes/kubelet.conf; then
-    bb-log-info "Trying to get node-proxy certificate using kubectl"
-    kubectl get secret -n kube-system node-proxy -o jsonpath='{.data.haproxy\.pem}' | base64 -d > haproxy.pem
-    return $?
-  fi
 
-  # Kubectl does not exist
-  for server in {{ .normal.apiserverEndpoints | join " " }}; do
-    bb-log-info "Trying to get certificate from $server"
-    if d8-curl -sS --fail -X GET "https://$server/api/v1/namespaces/kube-system/secrets/node-proxy" \
-      -H "Authorization: Bearer $(</var/lib/bashible/bootstrap-token)" \
-      --cacert "$BOOTSTRAP_DIR/ca.crt" | jq -r '.data["haproxy.pem"]' | base64 -d > haproxy.pem; then
-      return 0
+  # kubectl exist
+  if type kubectl >/dev/null 2>&1 && test -f /etc/kubernetes/kubelet.conf; then
+    bb-log-info "Trying to get node-proxy certificates using kubectl"
+    
+    if ! secret_json=$(kubectl get secret -n kube-system node-proxy -o json 2>/dev/null); then
+      bb-log-error "Failed to get secret using kubectl"
+      return 1
     fi
+    #  haproxy.pem
+    if ! echo "$secret_json" | jq -r '.data["haproxy.pem"]' | base64 -d > haproxy.pem; then
+      bb-log-error "Failed to extract haproxy.pem from kubectl secret"
+      return 1
+    fi
+    #  ca.crt
+    if ! echo "$secret_json" | jq -r '.data["ca.crt"]' | base64 -d > ca.crt; then
+      bb-log-error "Failed to extract ca.crt from kubectl secret"
+      return 1
+    fi
+
+    bb-log-info "Successfully retrieved certificates using kubectl"
+    return 0
+  fi
+  # kubectl does not exist
+  for server in {{ .normal.apiserverEndpoints | join " " }}; do
+    bb-log-info "Trying to get certificates from $server"
+    
+    if ! response=$(d8-curl -sS --fail -X GET "https://$server/api/v1/namespaces/kube-system/secrets/node-proxy" \
+      -H "Authorization: Bearer $(</var/lib/bashible/bootstrap-token)" \
+      --cacert "$BOOTSTRAP_DIR/ca.crt"); then
+      bb-log-error "Request to $server failed"
+      continue
+    fi
+
+    #  haproxy.pem
+    if ! echo "$response" | jq -r '.data["haproxy.pem"]' | base64 -d > haproxy.pem; then
+      bb-log-error "Failed to extract haproxy.pem from $server response"
+      continue
+    fi
+
+    # ca.crt
+    if ! echo "$response" | jq -r '.data["ca.crt"]' | base64 -d > ca.crt; then
+      bb-log-error "Failed to extract ca.crt from $server response"
+      continue
+    fi
+
+    bb-log-info "Successfully retrieved certificates from $server"
+    return 0
   done
-  bb-log-error "All attempts to get certificate failed"
+
+  bb-log-error "All attempts to get certificates failed"
   return 1
 }
 
@@ -59,7 +93,6 @@ else
 
   if [ ! -f /etc/kubernetes/node-proxy/haproxy.pem ] || [ $exit_code -ne 0 ]; then
     bb-log-error "Node-proxy certificate verification failed, fetching new certificate"
-    cp /etc/kubernetes/pki/ca.crt /etc/kubernetes/node-proxy/ca.crt
     rm -f /etc/kubernetes/node-proxy/haproxy.pem
     get_node_proxy_cert || exit 1
   fi

@@ -60,7 +60,7 @@ roleRef:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: health-user-role
+  name: health-user-role # TODO need to rename, need to move to right place
 rules:
   - apiGroups:
       - ""
