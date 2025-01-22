@@ -110,7 +110,6 @@ shell:
   - export GO_VERSION=${GOLANG_VERSION} GOPROXY={{ $.GOPROXY }}
   - export GOOS=linux GOARCH=amd64 CGO_ENABLED=0
   - export BAZEL_VERSION="6.3.2" USE_BAZEL_VERSION="6.3.2"
-  - export BAZEL_BUILD_OPTS="--disk_cache=/tmp/bazel-cache --nofetch"
   - cd /src/proxy
   - sed -i '/^build --enable_platform_specific_config/a build --linkopt=-L/opt/libcxx/lib'          envoy.bazelrc
   - sed -i '/^build --enable_platform_specific_config/a build --linkopt=-Wl,-rpath,/opt/libcxx/lib' envoy.bazelrc
@@ -123,7 +122,7 @@ shell:
   - tar -zxf /tmp/bazel-deps/external.tar.gz -C ${BAZEL_OUTPUT_BASE}/external
   - rm -rf /tmp/bazel-deps
   #
-  - bazel build --stamp --config=release //:envoy
+  - bazel build --disk_cache=/tmp/bazel-cache --nofetch --stamp --config=release //:envoy
   setup:
   # - strip /src/proxy/bazel-bin/envoy
 ---
