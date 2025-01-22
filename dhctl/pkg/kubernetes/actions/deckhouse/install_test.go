@@ -227,9 +227,24 @@ func TestDeckhouseInstallWithModuleConfigs(t *testing.T) {
 		"bundle": "Minimal",
 	})
 
+	mc3 := &config.ModuleConfig{}
+	mc3.SetGroupVersionKind(schema.GroupVersionKind{
+		Group:   config.ModuleConfigGroup,
+		Version: config.ModuleConfigVersion,
+		Kind:    config.ModuleConfigKind,
+	})
+	mc3.SetName("cni-cilium")
+	mc3.Spec.Enabled = ptr.To(true)
+	mc3.Spec.Version = 1
+	mc3.Spec.Settings = config.SettingsValues(map[string]interface{}{
+		"tunnelMode":       "Disabled",
+		"masqueradeMode":   "BPF",
+		"createNodeRoutes": true,
+	})
+
 	_, err = CreateDeckhouseManifests(fakeClient, &config.DeckhouseInstaller{
 		DevBranch:     "pr1111",
-		ModuleConfigs: []*config.ModuleConfig{mc1, mc2},
+		ModuleConfigs: []*config.ModuleConfig{mc1, mc2, mc3},
 	})
 
 	require.NoError(t, err)
@@ -280,7 +295,7 @@ func TestDeckhouseInstallWithModuleConfigsReturnsResults(t *testing.T) {
 			mcs, err := fakeClient.Dynamic().Resource(config.ModuleConfigGVR).List(context.TODO(), metav1.ListOptions{})
 			require.NoError(t, err)
 
-			require.Len(t, mcs.Items, 2)
+			require.Len(t, mcs.Items, 1)
 
 			require.NotContains(t, mcs.Items[0].Object["spec"].(map[string]interface{})["settings"], "releaseChannel")
 		})
@@ -317,9 +332,9 @@ func TestDeckhouseInstallWithModuleConfigsReturnsResults(t *testing.T) {
 			mcs, err := fakeClient.Dynamic().Resource(config.ModuleConfigGVR).List(context.TODO(), metav1.ListOptions{})
 			require.NoError(t, err)
 
-			require.Len(t, mcs.Items, 2)
+			require.Len(t, mcs.Items, 1)
 
-			require.NotContains(t, mcs.Items[1].Object["spec"].(map[string]interface{})["settings"].(map[string]interface{})["modules"], "https")
+			require.NotContains(t, mcs.Items[0].Object["spec"].(map[string]interface{})["settings"].(map[string]interface{})["modules"], "https")
 		})
 	})
 
@@ -345,7 +360,7 @@ func TestDeckhouseInstallWithModuleConfigsReturnsResults(t *testing.T) {
 			mcs, err := fakeClient.Dynamic().Resource(config.ModuleConfigGVR).List(context.TODO(), metav1.ListOptions{})
 			require.NoError(t, err)
 
-			require.Len(t, mcs.Items, 2)
+			require.Len(t, mcs.Items, 1)
 		})
 	})
 
@@ -386,7 +401,7 @@ func TestDeckhouseInstallWithModuleConfigsReturnsResults(t *testing.T) {
 			mcs, err := fakeClient.Dynamic().Resource(config.ModuleConfigGVR).List(context.TODO(), metav1.ListOptions{})
 			require.NoError(t, err)
 
-			require.Len(t, mcs.Items, 3)
+			require.Len(t, mcs.Items, 2)
 		})
 	})
 }
