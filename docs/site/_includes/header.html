@@ -219,11 +219,9 @@
           </a>
       </div>
     </div>
-  </header>
-</div>
-{%- unless site.mode == "module" %}
-  {%- assign l2MenuData = site.data.topnav-l2-products[page.lang] %}
-  {%- if l2MenuData %}
+    {%- unless site.mode == "module" %}
+    {%- assign l2MenuData = site.data.topnav-l2-products[page.lang] %}
+    {%- if l2MenuData %}
     {%- assign productCode = page.product_code | default: "kubernetes-platform" %}
     {%- assign _conditionProductURL = "/products/" | append: productCode | append: "/" %}
     {%- assign productMenuData = l2MenuData | where: "url", _conditionProductURL | first %}
@@ -245,5 +243,7 @@
         </ul>
       </div>
     </div>
-  {%- endif %}
-{%- endunless %}
+    {%- endif %}
+    {%- endunless %}
+  </header>
+</div>
