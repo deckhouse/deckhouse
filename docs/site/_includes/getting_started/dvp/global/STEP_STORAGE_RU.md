@@ -2,7 +2,6 @@
 
 Включите модуль программно-определяемого хранилища sds-replicated-volume. Выполните на **master-узле** следующие команды:
 
-{% snippetcut %}
 ```shell
 sudo -i d8 k create -f - <<EOF
 ---
@@ -23,28 +22,22 @@ spec:
   enabled: true
 EOF
 ```
-{% endsnippetcut %}
 
 Дождитесь, пока модуль включится, для этого можете использовать следующую команду:
 
-{% snippetcut %}
 ```sheel
 sudo -i d8 k wait module sds-replicated-volume --for='jsonpath={.status.status}=Ready' --timeout=1200s
 ```
-{% endsnippetcut %}
 
 Объедините доступные на узлах блочные устройства в группы томов LVM. Чтобы получить доступные блочные устройства, выполните команду:
 
-{% snippetcut %}
 ```shell
 sudo -i d8 k get blockdevices.storage.deckhouse.io
 ```
-{% endsnippetcut %}
 
 Чтобы объединить блочные устройства на одном узле, необходимо создать группу томов LVM с помощью ресурса [LVMVolumeGroup](/products/virtualization-platform/reference/cr/lvmvolumegroup.html).
 Для создания ресурса LVMVolumeGroup на узле выполните следующую команду, предварительно заменив имена узла и блочных устройств на свои:
 
-{% snippetcut %}
 ```shell
 sudo -i d8 k apply -f - <<EOF
 apiVersion: storage.deckhouse.io/v1alpha1
@@ -71,15 +64,12 @@ spec:
   #     size: 70%
 EOF
 ```
-{% endsnippetcut %}
 
 Дождитесь, когда созданный ресурс LVMVolumeGroup перейдет в состояние `Operational`:
 
-{% snippetcut %}
 ```shell
 sudo -i d8 k get lvg vg-on-worker-0 -w
 ```
-{% endsnippetcut %}
 
 Пример вывода:
 
@@ -90,7 +80,6 @@ vg-on-worker-0   1/1         True                    Ready   worker-0   360484Mi
 
 Создайте пул LVM-томов:
 
-{% snippetcut %}
 ```bash
 sudo -i d8 k apply -f - <<EOF
  apiVersion: storage.deckhouse.io/v1alpha1
@@ -103,15 +92,12 @@ sudo -i d8 k apply -f - <<EOF
      - name: vg-on-dvp-worker
 EOF
 ```
-{% endsnippetcut %}
 
 Дождитесь, когда созданный ресурс ReplicatedStoragePool перейдет в состояние `Completed`:
 
-{% snippetcut %}
 ```shell
 sudo -i d8 k get rsp data -w
 ```
-{% endsnippetcut %}
 
 Пример вывода:
 
@@ -122,7 +108,6 @@ sds-pool     Completed   LVM    87d
 
 Создайте StorageClass:
 
-{% snippetcut %}
 ```bash
 sudo -i d8 k apply -f - <<EOF
  ---
@@ -137,21 +122,16 @@ sudo -i d8 k apply -f - <<EOF
    topology: Ignored
 EOF
 ```
-{% endsnippetcut %}
 
 Проверьте, что ресурсы StorageClass появились в кластере:
 
-{% snippetcut %}
 ```bash
 sudo -i d8 k get storageclass
 ```
-{% endsnippetcut %}
 
 Установите StorageClass как используемый в кластере по умолчанию (укажите имя StorageClass):
 
-{% snippetcut %}
 ```shell
 DEFAULT_STORAGE_CLASS=replicated-storage-class
 sudo -i d8 k patch mc global --type='json' -p='[{"op": "replace", "path": "/spec/settings/defaultClusterStorageClass", "value": "'"$DEFAULT_STORAGE_CLASS"'"}]'
 ```
-{% endsnippetcut %}
