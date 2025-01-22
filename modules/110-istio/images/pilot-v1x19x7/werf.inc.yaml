@@ -12,8 +12,8 @@ import:
   group: 1337
   after: setup
 - image: {{ .ModuleName }}/{{ .ImageName }}-binary-artifact
-  add: /var/lib/istio/envoy/
-  to: /var/lib/istio/envoy/
+  add: /var/lib/istio/envoy
+  to: /var/lib/istio/envoy
   includePaths:
   - envoy_bootstrap_tmpl.json
   - gcp_envoy_bootstrap_tmpl.json

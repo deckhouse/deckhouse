@@ -12,8 +12,8 @@ import:
   group: 1337
   after: setup
 - image: {{ .ModuleName }}/{{ .ImageName }}-binary-artifact
-  add: /var/lib/istio/manifests/
-  to: /var/lib/istio/manifests/
+  add: /var/lib/istio/manifests
+  to: /var/lib/istio/manifests
   owner: 1337
   group: 1337
   after: setup
