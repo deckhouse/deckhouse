@@ -132,8 +132,8 @@ shell:
     -DLLVM_USE_LINKER=lld \
     -DLLVM_USE_SANITIZER=Thread \
     -DCMAKE_BUILD_TYPE=Release \
-    -DCMAKE_C_COMPILER=clang \
-    -DCMAKE_CXX_COMPILER=clang++ \
+    -DCMAKE_C_COMPILER=/usr/bin/clang \
+    -DCMAKE_CXX_COMPILER=/usr/bin/clang++ \
     -DCMAKE_INSTALL_PREFIX="/opt/libcxx"
   - ninja install-cxx install-cxxabi
 
