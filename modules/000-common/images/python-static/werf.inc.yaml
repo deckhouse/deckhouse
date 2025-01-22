@@ -56,7 +56,7 @@ shell:
   install:
   - cd /src
   - ./configure LDFLAGS="-L/usr/lib/x86_64-linux-gnu" --disable-shared --prefix=/opt/python-static --enable-loadable-sqlite-extensions --enable-optimizations --with-ensurepip=install
-  - make LDFLAGS="-static" LINKFORSHARED=" " -j ${BUILD_THREADS}
+  - make LDFLAGS="-L/usr/lib/x86_64-linux-gnu" LINKFORSHARED=" " -j ${BUILD_THREADS}
   - make install -j 4
   - chown -R 64535:64535 /opt/python-static
   - chmod 0755 /opt/python-static/bin/python3
