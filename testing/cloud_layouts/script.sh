@@ -1055,12 +1055,6 @@ function wait_cluster_ready() {
     fi
   done
 
-  if [[ $CIS_ENABLED == "true" ]]; then
-    testCisScript=$(cat "$(pwd)/deckhouse/testing/cloud_layouts/script.d/wait_cluster_ready/test_cis.sh")
-    REPORT=$($ssh_command -i "$ssh_private_key_path" $ssh_bastion "$ssh_user@$master_ip" sudo su -c /bin/bash <<<"${testCisScript}")
-    >&2 echo $REPORT
-  fi
-
   if [[ $test_failed == "true" ]] ; then
     return 1
   fi
@@ -1096,6 +1090,12 @@ function wait_cluster_ready() {
 
   if [[ $test_failed == "true" ]] ; then
       return 1
+  fi
+
+  if [[ $CIS_ENABLED == "true" ]]; then
+    testCisScript=$(cat "$(pwd)/deckhouse/testing/cloud_layouts/script.d/wait_cluster_ready/test_cis.sh")
+    REPORT=$($ssh_command -i "$ssh_private_key_path" $ssh_bastion "$ssh_user@$master_ip" sudo su -c /bin/bash <<<"${testCisScript}")
+    >&2 echo $REPORT
   fi
 
   write_deckhouse_logs

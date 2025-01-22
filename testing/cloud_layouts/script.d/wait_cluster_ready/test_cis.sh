@@ -14,6 +14,14 @@
 export PATH="/opt/deckhouse/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 export LANG=C
 set -Eeuo pipefail
+testRunAttempts=5
+for ((i=1; i<=$testRunAttempts; i++)); do
+  if kubectl get clustercompliancereports.aquasecurity.github.io cis; then
+    break
+  else
+    sleep 30
+  fi
+done
 kubectl get clustercompliancereports.aquasecurity.github.io cis -o yaml | sed 's#cron: 0 \*/6 \* \* \*#cron: "*/5 * * * *"#' | kubectl apply -f - > /dev/null
 testRunAttempts=20
 for ((i=1; i<=$testRunAttempts; i++)); do
