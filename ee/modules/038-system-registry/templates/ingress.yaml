@@ -1,4 +1,5 @@
-{{- if and (.Values.global.modules.publicDomainTemplate) (.Values.global.enabledModules | has "cert-manager") }}
+{{- if eq .Values.systemRegistry.mode "Detached" }}
+  {{- if and (.Values.global.modules.publicDomainTemplate) (.Values.global.enabledModules | has "cert-manager") }}
 ---
 apiVersion: networking.k8s.io/v1
 kind: Ingress
@@ -15,9 +16,9 @@ metadata:
       proxy_ssl_certificate_key /etc/nginx/ssl/client.key;
       proxy_ssl_protocols TLSv1.2;
       proxy_ssl_session_reuse on;
-  {{- if .Values.systemRegistry.whitelistSourceRanges }}
+    {{- if .Values.systemRegistry.whitelistSourceRanges }}
     nginx.ingress.kubernetes.io/whitelist-source-range: {{ .Values.systemRegistry.whitelistSourceRanges | join "," }}
-  {{- end }}
+    {{- end }}
 spec:
   ingressClassName: {{ include "helm_lib_module_ingress_class" . | quote }}
   rules:
@@ -43,5 +44,6 @@ spec:
   - hosts:
     - {{ include "helm_lib_module_public_domain" (list . "embedded-registry") }}
     secretName: {{ include "helm_lib_module_https_secret_name" (list . "embedded-registry-ingress-tls") }}
+  {{- end }}
   {{- end }}
 {{- end }}

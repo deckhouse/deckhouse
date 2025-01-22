@@ -6,6 +6,8 @@
           using the hook "https/copy_custom_certificate.go"
         - creates a similar secret named "embedded-registry-ingress-tls-customcertificate" in the "d8-system" namespace
 */ -}}
-{{- if .Values.global.enabledModules | has "cert-manager" }}
+{{- if eq .Values.systemRegistry.mode "Detached" }}
+  {{- if .Values.global.enabledModules | has "cert-manager" }}
 {{- include "helm_lib_module_https_copy_custom_certificate" (list . "d8-system" "embedded-registry-ingress-tls") -}}
+  {{- end }}
 {{- end }}

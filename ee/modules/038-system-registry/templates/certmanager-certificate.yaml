@@ -5,8 +5,9 @@
         - creates a certificate using cert-manager
           issuerRef.name = "https.certManager.clusterIssuerName"
 */ -}}
-{{- if and (.Values.global.modules.publicDomainTemplate) (.Values.global.enabledModules | has "cert-manager") }}
-  {{- if eq (include "helm_lib_module_https_mode" .) "CertManager" }}
+{{- if eq .Values.systemRegistry.mode "Detached" }}
+  {{- if and (.Values.global.modules.publicDomainTemplate) (.Values.global.enabledModules | has "cert-manager") }}
+    {{- if eq (include "helm_lib_module_https_mode" .) "CertManager" }}
 ---
 apiVersion: cert-manager.io/v1
 kind: Certificate
@@ -23,5 +24,6 @@ spec:
   issuerRef:
     name: {{ include "helm_lib_module_https_cert_manager_cluster_issuer_name" . }}
     kind: ClusterIssuer
+    {{- end }}
   {{- end }}
 {{- end }}
