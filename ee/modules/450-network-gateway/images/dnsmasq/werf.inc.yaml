@@ -1,4 +1,4 @@
-{{- $binaries := "/lib64/libz.so* /lib64/libexpat.so* /usr/lib64/libffi.so* /lib64/libcrypto.so* /lib64/libssl.so* /usr/sbin/dnsmasq /lib64/libnss_*" }}
+{{- $binaries := "/lib64/libz.so* /lib64/libexpat.so* /usr/lib64/libffi.so* /lib64/libcrypto.so* /lib64/libssl.so* /usr/lib64/libsqlite3.so* /usr/sbin/dnsmasq /lib64/libnss_*" }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
 final: false
@@ -17,7 +17,7 @@ import:
 shell:
   install:
     - apt-get update
-    - apt-get install -y dnsmasq git
+    - apt-get install -y dnsmasq git libsqlite3-devel
     - git clone --depth 1 {{ .SOURCE_REPO }}/python-modules/wheels /wheels
     - /opt/python-static/bin/pip3 install -f file:///wheels --no-index -r requirements.txt
     - rm -rf /wheels
