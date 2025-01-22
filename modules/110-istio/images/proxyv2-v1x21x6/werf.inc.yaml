@@ -112,7 +112,6 @@ shell:
   - export GOOS=linux GOARCH=amd64 CGO_ENABLED=0
   - ln -s -f /usr/lib/llvm-14.0/bin/clang /usr/bin/clang
   - ln -s -f /usr/lib/llvm-14.0/bin/clang++ /usr/bin/clang++
-  - ln -s -f /usr/lib/llvm-14.0/bin/l /usr/bin/clang++
   - ln -s -f /usr/lib/llvm-14.0/bin/ld.lld /usr/bin/ld.lld
 
   setup:
@@ -124,7 +123,6 @@ shell:
   # - chown -R 1337:1337 /tmp/bazel-deps
   #
   - cd /src/llvm/llvm
-  - env
   - |
     cmake \
     -GNinja \
