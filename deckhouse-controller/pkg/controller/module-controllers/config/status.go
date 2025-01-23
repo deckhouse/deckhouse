@@ -19,7 +19,6 @@ package config
 import (
 	"context"
 	"fmt"
-	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders/editionenabled"
 	"strconv"
 	"time"
 
@@ -39,6 +38,7 @@ import (
 	bootstrappedextender "github.com/deckhouse/deckhouse/go_lib/dependency/extenders/bootstrapped"
 	d7sversionextender "github.com/deckhouse/deckhouse/go_lib/dependency/extenders/deckhouseversion"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders/editionavailable"
+	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders/editionenabled"
 	k8sversionextender "github.com/deckhouse/deckhouse/go_lib/dependency/extenders/kubernetesversion"
 	moduledependencyextender "github.com/deckhouse/deckhouse/go_lib/dependency/extenders/moduledependency"
 )
@@ -209,6 +209,7 @@ func (r *reconciler) refreshModuleStatus(module *v1alpha1.Module) {
 		}
 
 	case editionenabled.Name:
+		module.Status.Phase = v1alpha1.ModulePhaseDownloaded
 		reason = v1alpha1.ModuleReasonEditionEnabledExtender
 		_, errMsg := editionenabled.Instance().Filter(module.Name, map[string]string{})
 		message = v1alpha1.ModuleMessageEditionExtender
