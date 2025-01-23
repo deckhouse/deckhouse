@@ -1,0 +1,78 @@
+diff --git a/discovery/kubernetes/endpointslice.go b/discovery/kubernetes/endpointslice.go
+index 7a70255c1..260538d4d 100644
+--- a/discovery/kubernetes/endpointslice.go
++++ b/discovery/kubernetes/endpointslice.go
+@@ -268,6 +268,7 @@ const (
+ 	endpointSliceEndpointZoneLabel                  = metaLabelPrefix + "endpointslice_endpoint_zone"
+ 	endpointSliceEndpointHostnameLabel              = metaLabelPrefix + "endpointslice_endpoint_hostname"
+ 	endpointSliceEndpointNodenameLabel              = metaLabelPrefix + "endpointslice_endpoint_node_name"
++	endpointSliceEndpointNodeGroupLabel             = metaLabelPrefix + "endpointslice_endpoint_node_group"
+ 	endpointSliceAddressTargetKindLabel             = metaLabelPrefix + "endpointslice_address_target_kind"
+ 	endpointSliceAddressTargetNameLabel             = metaLabelPrefix + "endpointslice_address_target_name"
+ 	endpointSliceEndpointTopologyLabelPrefix        = metaLabelPrefix + "endpointslice_endpoint_topology_"
+@@ -342,6 +343,14 @@ func (e *EndpointSlice) buildEndpointSlice(eps endpointSliceAdaptor) *targetgrou
+ 
+ 		if ep.nodename() != nil {
+ 			target[endpointSliceEndpointNodenameLabel] = lv(*ep.nodename())
++
++			if node, exists, err := e.nodeInf.GetStore().GetByKey(*ep.nodename()); err == nil && exists {
++				if n, ok := node.(*apiv1.Node); ok {
++					if group, ok := n.Labels["node.deckhouse.io/group"]; ok {
++						target[endpointSliceEndpointNodeGroupLabel] = lv(group)
++					}
++				}
++			}
+ 		}
+ 
+ 		if ep.zone() != nil {
+diff --git a/discovery/kubernetes/node.go b/discovery/kubernetes/node.go
+index 74d87e22c..999c0097e 100644
+--- a/discovery/kubernetes/node.go
++++ b/discovery/kubernetes/node.go
+@@ -160,6 +160,7 @@ func nodeSourceFromName(name string) string {
+ const (
+ 	nodeProviderIDLabel = metaLabelPrefix + "node_provider_id"
+ 	nodeAddressPrefix   = metaLabelPrefix + "node_address_"
++	nodeGroupLabel      = metaLabelPrefix + "node_group"
+ )
+ 
+ func nodeLabels(n *apiv1.Node) model.LabelSet {
+@@ -168,6 +169,9 @@ func nodeLabels(n *apiv1.Node) model.LabelSet {
+ 
+ 	ls[nodeProviderIDLabel] = lv(n.Spec.ProviderID)
+ 
++	if group, ok := n.Labels["node.deckhouse.io/group"]; ok {
++		ls[nodeGroupLabel] = lv(group)
++	}
+ 	addObjectMetaLabels(ls, n.ObjectMeta, RoleNode)
+ 
+ 	return ls
+diff --git a/discovery/kubernetes/pod.go b/discovery/kubernetes/pod.go
+index 02990e415..ac98a0429 100644
+--- a/discovery/kubernetes/pod.go
++++ b/discovery/kubernetes/pod.go
+@@ -192,6 +192,7 @@ const (
+ 	podReadyLabel                 = metaLabelPrefix + "pod_ready"
+ 	podPhaseLabel                 = metaLabelPrefix + "pod_phase"
+ 	podNodeNameLabel              = metaLabelPrefix + "pod_node_name"
++	podNodeGroupLabel             = metaLabelPrefix + "pod_node_group"
+ 	podHostIPLabel                = metaLabelPrefix + "pod_host_ip"
+ 	podUID                        = metaLabelPrefix + "pod_uid"
+ 	podControllerKind             = metaLabelPrefix + "pod_controller_kind"
+@@ -265,6 +266,14 @@ func (p *Pod) buildPod(pod *apiv1.Pod) *targetgroup.Group {
+ 	tg.Labels[namespaceLabel] = lv(pod.Namespace)
+ 	if p.withNodeMetadata {
+ 		tg.Labels = addNodeLabels(tg.Labels, p.nodeInf, p.logger, &pod.Spec.NodeName)
++
++		if node, exists, err := p.nodeInf.GetStore().GetByKey(pod.Spec.NodeName); err == nil && exists {
++			if n, ok := node.(*apiv1.Node); ok {
++				if nodeGroup, ok := n.Labels["node.deckhouse.io/group"]; ok {
++					tg.Labels[podNodeGroupLabel] = lv(nodeGroup)
++				}
++			}
++		}
+ 	}
+ 
+ 	containers := append(pod.Spec.Containers, pod.Spec.InitContainers...)
+-- 
+2.47.0
