@@ -60,6 +60,24 @@ spec:
       - name: emb-reg-dist
         containerPort: 5001
         hostPort: 5001
+      - name: emb-reg-debug
+        containerPort: 5002
+    livenessProbe:
+      httpGet:
+        path: /
+        port: emb-reg-dist
+        scheme: HTTPS
+        {{- /*
+          # use default host == PodIP && HostIP, because hostNetwork
+        */}}
+    readinessProbe:
+      httpGet:
+        path: /
+        port: emb-reg-dist
+        scheme: HTTPS
+        {{- /*
+          # use default host == PodIP && HostIP, because hostNetwork
+        */}}
     volumeMounts:
       - mountPath: /data
         name: distribution-data-volume
@@ -70,6 +88,29 @@ spec:
   - name: auth
     image: {{ .Images.Auth }}
     imagePullPolicy: IfNotPresent
+    ports:
+      - name: emb-reg-auth
+        containerPort: 5051
+    livenessProbe:
+      httpGet:
+        path: /
+        port: emb-reg-auth
+        scheme: HTTPS
+        host: 127.0.0.1
+        {{- /*
+          # can use host: 127.0.0.1, because hostNetwork
+          # https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#http-probes
+        */}}
+    readinessProbe:
+      httpGet:
+        path: /
+        port: emb-reg-auth
+        scheme: HTTPS
+        host: 127.0.0.1
+        {{- /*
+          # can use host: 127.0.0.1, because hostNetwork
+          # https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#http-probes
+        */}}
     args:
       - -logtostderr
       - /config/config.yaml
