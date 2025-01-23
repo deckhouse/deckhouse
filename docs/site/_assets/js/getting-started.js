@@ -83,7 +83,14 @@ function update_domain_parameters() {
       $(this)[0].innerText = content.replace('admin@deckhouse.io', 'admin@' + dhctlDomain.replace(/%s[^.]*./, ''));
     }
   });
-}
+
+  // update user-yml snippet
+  $('[user-yml]').each(function (index) {
+    let content = ($(this)[0]) ? $(this)[0].textContent : null;
+    if (content && content.length > 0 && dhctlDomain) {
+      $(this)[0].textContent = content.replace(/admin@deckhouse.io/g, 'admin@' + dhctlDomain.replace(/%s[^.]*./, ''));
+    }
+  });
 
 function update_parameter(sourceDataName, searchKey, replacePattern, value = null, snippetSelector = '', multilineIndent = 0) {
   var objectToModify, sourceData;
