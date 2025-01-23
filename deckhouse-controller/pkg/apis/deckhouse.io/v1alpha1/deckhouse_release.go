@@ -40,6 +40,9 @@ const (
 	DeckhouseReleaseAnnotationForce                 = "release.deckhouse.io/force"
 	DeckhouseReleaseAnnotationSuspended             = "release.deckhouse.io/suspended"
 	DeckhouseReleaseAnnotationNotificationTimeShift = "release.deckhouse.io/notification-time-shift"
+	DeckhouseReleaseAnnotationDryrun                = "dryrun"
+	DeckhouseReleaseAnnotationTriggeredByDryrun     = "triggered_by_dryrun"
+	DeckhouseReleaseAnnotationCurrentRestored       = "release.deckhouse.io/current-restored"
 
 	// TODO: remove in entire code
 	DeckhouseReleaseAnnotationCooldown = "release.deckhouse.io/cooldown"
@@ -164,6 +167,21 @@ func (in *DeckhouseRelease) GetMessage() string {
 
 func (in *DeckhouseRelease) GetNotificationShift() bool {
 	v, ok := in.Annotations[DeckhouseReleaseAnnotationNotificationTimeShift]
+	return ok && v == "true"
+}
+
+func (in *DeckhouseRelease) GetDryRun() bool {
+	v, ok := in.Annotations[DeckhouseReleaseAnnotationDryrun]
+	return ok && v == "true"
+}
+
+func (in *DeckhouseRelease) GetTriggeredByDryRun() bool {
+	v, ok := in.Annotations[DeckhouseReleaseAnnotationTriggeredByDryrun]
+	return ok && v == "true"
+}
+
+func (in *DeckhouseRelease) GetCurrentRestored() bool {
+	v, ok := in.Annotations[DeckhouseReleaseAnnotationCurrentRestored]
 	return ok && v == "true"
 }
 

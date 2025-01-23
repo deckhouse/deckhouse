@@ -69,6 +69,7 @@ type ReleaseInfo struct {
 }
 
 var ErrReleasePhaseIsNotPending = errors.New("release phase is not pending")
+var ErrReleaseIsAlreadyDeployed = errors.New("release is already deployed")
 
 // CalculatePendingReleaseOrder calculate task with information about current reconcile
 //
@@ -118,6 +119,11 @@ func (p *TaskCalculator) CalculatePendingReleaseOrder(ctx context.Context, dr *v
 			return &Task{
 				TaskType: Skip,
 			}, nil
+		}
+
+		// if we patch between reconcile start and calculating
+		if deployedReleaseInfo.Version.Equal(dr.GetVersion()) {
+			return nil, ErrReleaseIsAlreadyDeployed
 		}
 	}
 

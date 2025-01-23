@@ -43,6 +43,8 @@ import (
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
+var testDeckhouseVersion = "v1.15.0"
+
 func setupFakeController(
 	t *testing.T,
 	filename, values string,
@@ -94,13 +96,14 @@ func setupControllerSettings(
 	dc := dependency.NewDependencyContainer()
 
 	rec := &deckhouseReleaseReconciler{
-		client:         cl,
-		dc:             dc,
-		logger:         log.NewNop(),
-		moduleManager:  stubModulesManager{},
-		updateSettings: helpers.NewDeckhouseSettingsContainer(ds),
-		metricStorage:  metricstorage.NewMetricStorage(context.Background(), "", true, log.NewNop()),
-		metricsUpdater: d8updater.NewMetricsUpdater(metricstorage.NewMetricStorage(context.Background(), "", true, log.NewNop())),
+		client:           cl,
+		deckhouseVersion: testDeckhouseVersion,
+		dc:               dc,
+		logger:           log.NewNop(),
+		moduleManager:    stubModulesManager{},
+		updateSettings:   helpers.NewDeckhouseSettingsContainer(ds),
+		metricStorage:    metricstorage.NewMetricStorage(context.Background(), "", true, log.NewNop()),
+		metricsUpdater:   d8updater.NewMetricsUpdater(metricstorage.NewMetricStorage(context.Background(), "", true, log.NewNop())),
 	}
 	rec.clusterUUID = rec.getClusterUUID(context.Background())
 

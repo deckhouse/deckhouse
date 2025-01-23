@@ -23,6 +23,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log/slog"
 	"path"
 	"regexp"
 	"sort"
@@ -55,9 +56,6 @@ const (
 
 func (r *deckhouseReleaseReconciler) checkDeckhouseReleaseLoop(ctx context.Context) {
 	wait.UntilWithContext(ctx, func(ctx context.Context) {
-		if r.updateSettings.Get().ReleaseChannel == "" {
-			return
-		}
 		err := r.checkDeckhouseRelease(ctx)
 		if err != nil {
 			r.logger.Errorf("check Deckhouse release: %s", err)
@@ -67,7 +65,7 @@ func (r *deckhouseReleaseReconciler) checkDeckhouseReleaseLoop(ctx context.Conte
 
 func (r *deckhouseReleaseReconciler) checkDeckhouseRelease(ctx context.Context) error {
 	if r.updateSettings.Get().ReleaseChannel == "" {
-		r.logger.Debug("Release channel does not set.")
+		r.logger.Debug("Release channel isn't set.")
 		return nil
 	}
 
@@ -112,6 +110,34 @@ func (r *deckhouseReleaseReconciler) checkDeckhouseRelease(ctx context.Context) 
 		return err
 	}
 
+	var (
+		releases               v1alpha1.DeckhouseReleaseList
+		currentDeployedRelease *v1alpha1.DeckhouseRelease
+	)
+	err = r.client.List(ctx, &releases)
+	if err != nil {
+		return fmt.Errorf("get deckhouse releases: %w", err)
+	}
+
+	pointerReleases := make([]*v1alpha1.DeckhouseRelease, 0, len(releases.Items))
+	for _, r := range releases.Items {
+		if r.GetPhase() == v1alpha1.DeckhouseReleasePhaseDeployed {
+			// no deployed release was found or there is more than one deployed release (get the latest)
+			if currentDeployedRelease == nil || r.GetVersion().GreaterThan(currentDeployedRelease.GetVersion()) {
+				currentDeployedRelease = &r
+			}
+		}
+		pointerReleases = append(pointerReleases, &r)
+	}
+	sort.Sort(sort.Reverse(updater.ByVersion[*v1alpha1.DeckhouseRelease](pointerReleases)))
+
+	// restore current deployed release if no deployed releases found
+	if currentDeployedRelease == nil {
+		if err := r.restoreCurrentDeployedRelease(ctx, releaseChecker, r.deckhouseVersion); err != nil {
+			return fmt.Errorf("restore current deployed release: %w", err)
+		}
+	}
+
 	// no new image found
 	if newImageHash == "" {
 		return nil
@@ -131,18 +157,6 @@ func (r *deckhouseReleaseReconciler) checkDeckhouseRelease(ctx context.Context) 
 		return fmt.Errorf("parse semver: %w", err)
 	}
 	r.releaseVersionImageHash = newImageHash
-
-	var releases v1alpha1.DeckhouseReleaseList
-	err = r.client.List(ctx, &releases)
-	if err != nil {
-		return fmt.Errorf("get deckhouse releases: %w", err)
-	}
-
-	pointerReleases := make([]*v1alpha1.DeckhouseRelease, 0, len(releases.Items))
-	for _, r := range releases.Items {
-		pointerReleases = append(pointerReleases, &r)
-	}
-	sort.Sort(sort.Reverse(updater.ByVersion[*v1alpha1.DeckhouseRelease](pointerReleases)))
 	r.metricStorage.Grouped().ExpireGroupMetrics(metricUpdatingFailedGroup)
 
 	for _, release := range pointerReleases {
@@ -234,14 +248,48 @@ func (r *deckhouseReleaseReconciler) checkDeckhouseRelease(ctx context.Context) 
 		}
 	}
 
-	// if there are no releases in the cluster, we apply the latest release
-	if len(pointerReleases) == 0 {
-		err = r.createRelease(ctx, releaseChecker, cooldownUntil, notificationShiftTime)
-		if err != nil {
-			return fmt.Errorf("create release %s: %w", releaseChecker.releaseMetadata.Version, err)
+	return nil
+}
+
+func (r *deckhouseReleaseReconciler) restoreCurrentDeployedRelease(ctx context.Context, releaseChecker *DeckhouseReleaseChecker, tag string) error {
+	var releaseMetadata *ReleaseMetadata
+
+	if image, err := releaseChecker.registryClient.Image(ctx, tag); err != nil {
+		r.logger.Warn("couldn't get current deployed release's image from registry", slog.String("image", tag), log.Err(err))
+	} else {
+		if releaseMetadata, err = releaseChecker.fetchReleaseMetadata(image); err != nil {
+			r.logger.Warn("couldn't fetch current deployed release's image metadata", slog.String("image", tag), log.Err(err))
 		}
 	}
-	return nil
+
+	release := &v1alpha1.DeckhouseRelease{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "DeckhouseRelease",
+			APIVersion: "deckhouse.io/v1alpha1",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name: tag,
+			Annotations: map[string]string{
+				v1alpha1.DeckhouseReleaseAnnotationIsUpdating:      "false",
+				v1alpha1.DeckhouseReleaseAnnotationNotified:        "false",
+				v1alpha1.DeckhouseReleaseAnnotationCurrentRestored: "true",
+			},
+			Labels: map[string]string{
+				"heritage": "deckhouse",
+			},
+		},
+		Spec: v1alpha1.DeckhouseReleaseSpec{
+			Version: tag,
+		},
+		Approved: true,
+	}
+
+	if releaseMetadata != nil {
+		release.Spec.Requirements = releaseMetadata.Requirements
+		release.Spec.ChangelogLink = fmt.Sprintf("https://github.com/deckhouse/deckhouse/releases/tag/%s", releaseMetadata.Version)
+	}
+
+	return client.IgnoreAlreadyExists(r.client.Create(ctx, release))
 }
 
 func (r *deckhouseReleaseReconciler) createRelease(ctx context.Context, releaseChecker *DeckhouseReleaseChecker,
@@ -285,6 +333,9 @@ func (r *deckhouseReleaseReconciler) createRelease(ctx context.Context, releaseC
 			Annotations: map[string]string{
 				v1alpha1.DeckhouseReleaseAnnotationIsUpdating: "false",
 				v1alpha1.DeckhouseReleaseAnnotationNotified:   "false",
+			},
+			Labels: map[string]string{
+				"heritage": "deckhouse",
 			},
 		},
 		Spec: v1alpha1.DeckhouseReleaseSpec{

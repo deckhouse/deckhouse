@@ -28,6 +28,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/Masterminds/semver/v3"
 	aoapp "github.com/flant/addon-operator/pkg/app"
 	metricstorage "github.com/flant/shell-operator/pkg/metric_storage"
 	"github.com/gofrs/uuid/v5"
@@ -62,9 +63,6 @@ const (
 	deckhouseNamespace          = "d8-system"
 	deckhouseDeployment         = "deckhouse"
 	deckhouseRegistrySecretName = "deckhouse-registry"
-
-	deckhouseReleaseAnnotationDryrun            = "dryrun"
-	deckhouseReleaseAnnotationTriggeredByDryrun = "triggered_by_dryrun"
 )
 
 const defaultCheckInterval = 15 * time.Second
@@ -84,12 +82,19 @@ type deckhouseReleaseReconciler struct {
 
 	registrySecret *utils.DeckhouseRegistrySecret
 	metricsUpdater updater.MetricsUpdater
+
+	deckhouseVersion string
 }
 
 func NewDeckhouseReleaseController(ctx context.Context, mgr manager.Manager, dc dependency.Container,
 	moduleManager moduleManager, updateSettings *helpers.DeckhouseSettingsContainer, metricStorage *metricstorage.MetricStorage,
-	preflightCountDown *sync.WaitGroup, logger *log.Logger,
+	preflightCountDown *sync.WaitGroup, deckhouseVersion string, logger *log.Logger,
 ) error {
+	parsedVersion, err := semver.NewVersion(deckhouseVersion)
+	if err != nil {
+		return fmt.Errorf("parse deckhouse version: %w", err)
+	}
+
 	r := &deckhouseReleaseReconciler{
 		client:             mgr.GetClient(),
 		dc:                 dc,
@@ -98,14 +103,14 @@ func NewDeckhouseReleaseController(ctx context.Context, mgr manager.Manager, dc 
 		updateSettings:     updateSettings,
 		metricStorage:      metricStorage,
 		preflightCountDown: preflightCountDown,
+		deckhouseVersion:   fmt.Sprintf("v%d.%d.%d", parsedVersion.Major(), parsedVersion.Minor(), parsedVersion.Patch()),
 
 		metricsUpdater: d8updater.NewMetricsUpdater(metricStorage),
 	}
 
 	// Add Preflight Check
-	err := mgr.Add(manager.RunnableFunc(r.PreflightCheck))
-	if err != nil {
-		return err
+	if err = mgr.Add(manager.RunnableFunc(r.PreflightCheck)); err != nil {
+		return fmt.Errorf("add a runnable function: %w", err)
 	}
 	r.preflightCountDown.Add(1)
 
@@ -206,8 +211,13 @@ func (r *deckhouseReleaseReconciler) createOrUpdateReconcile(ctx context.Context
 	switch dr.Status.Phase {
 	// these phases should be ignored by predicate, but let's check it
 	case "":
+		// set current restored release as deployed
+		if dr.GetCurrentRestored() {
+			return res, r.proceedRestoredRelease(ctx, dr)
+		}
+
 		// initial state
-		dr.Status.Phase = v1alpha1.ModuleReleasePhasePending
+		dr.Status.Phase = v1alpha1.DeckhouseReleasePhasePending
 		dr.Status.TransitionTime = metav1.NewTime(r.dc.GetClock().Now().UTC())
 		if err := r.client.Status().Update(ctx, dr); err != nil {
 			return res, err
@@ -215,11 +225,11 @@ func (r *deckhouseReleaseReconciler) createOrUpdateReconcile(ctx context.Context
 
 		return ctrl.Result{Requeue: true}, nil // process to the next phase
 
-	case v1alpha1.ModuleReleasePhaseSkipped, v1alpha1.ModuleReleasePhaseSuperseded, v1alpha1.ModuleReleasePhaseSuspended:
+	case v1alpha1.DeckhouseReleasePhaseSkipped, v1alpha1.DeckhouseReleasePhaseSuperseded, v1alpha1.DeckhouseReleasePhaseSuspended:
 		r.logger.Debug("release phase", slog.String("phase", dr.Status.Phase))
 		return res, nil
 
-	case v1alpha1.ModuleReleasePhaseDeployed:
+	case v1alpha1.DeckhouseReleasePhaseDeployed:
 		return r.reconcileDeployedRelease(ctx, dr)
 	}
 
@@ -249,6 +259,19 @@ func (r *deckhouseReleaseReconciler) patchManualRelease(ctx context.Context, dr 
 	err := r.client.Status().Patch(ctx, drCopy, client.MergeFrom(dr))
 	if err != nil {
 		return fmt.Errorf("patch approved status: %w", err)
+	}
+
+	return nil
+}
+
+func (r *deckhouseReleaseReconciler) proceedRestoredRelease(ctx context.Context, dr *v1alpha1.DeckhouseRelease) error {
+	dr.Status.Approved = true
+	dr.Status.Phase = v1alpha1.DeckhouseReleasePhaseDeployed
+	dr.Status.TransitionTime = metav1.NewTime(r.dc.GetClock().Now().UTC())
+	dr.Status.Message = "Release object was restored"
+
+	if err := r.client.Status().Update(ctx, dr); err != nil {
+		return err
 	}
 
 	return nil
@@ -571,7 +594,7 @@ func (r *deckhouseReleaseReconciler) ApplyRelease(ctx context.Context, dr *v1alp
 
 // runReleaseDeploy
 //
-// 1) bump deckhouse deployment (retry if error)
+// 1) bump deckhouse deployment (retry if error) if the dryrun annotations isn't set (stop deploying in the opposite case)
 // 2) bump previous deployment status superseded (retry if error)
 // 3) bump release annotations (retry if error)
 // 3) bump release status to deployed (retry if error)
@@ -644,8 +667,7 @@ func (r *deckhouseReleaseReconciler) bumpDeckhouseDeployment(ctx context.Context
 	}
 
 	// dryrun for testing purpose
-	val, ok := dr.GetAnnotations()[deckhouseReleaseAnnotationDryrun]
-	if ok && val == "true" {
+	if dr.GetDryRun() {
 		go func() {
 			r.logger.Debug("dryrun start soon...")
 
@@ -673,7 +695,7 @@ func (r *deckhouseReleaseReconciler) bumpDeckhouseDeployment(ctx context.Context
 					continue
 				}
 
-				if release.Status.Phase != v1alpha1.ModuleReleasePhasePending {
+				if release.Status.Phase != v1alpha1.DeckhouseReleasePhasePending {
 					continue
 				}
 
@@ -683,7 +705,7 @@ func (r *deckhouseReleaseReconciler) bumpDeckhouseDeployment(ctx context.Context
 						release.Annotations = make(map[string]string, 1)
 					}
 
-					release.Annotations[deckhouseReleaseAnnotationTriggeredByDryrun] = dr.GetName()
+					release.Annotations[v1alpha1.DeckhouseReleaseAnnotationTriggeredByDryrun] = dr.GetName()
 
 					return nil
 				})
