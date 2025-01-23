@@ -26,7 +26,7 @@ import:
   group: 1337
   after: setup
 - image: {{ .ModuleName }}/{{ .ImageName }}-agent-artifact
-  add: /src/istio/out/pilot-agent
+  add: /src/proxy/out/pilot-agent
   to: /usr/local/bin/pilot-agent
   owner: 1337
   group: 1337
@@ -76,10 +76,10 @@ shell:
   - echo {{ $istioVersion }} > version
   - export GOPROXY={{ $.GOPROXY }} GOOS=linux GOARCH=amd64
   - export LDFLAGS='-extldflags -static -s -w'
-  - common/scripts/gobuild.sh /tmp/istio/out/ -tags=agent,disable_pgv /src/istio/pilot/cmd/pilot-agent
+  - common/scripts/gobuild.sh /src/istio/out/ -tags=agent,disable_pgv /src/istio/pilot/cmd/pilot-agent
   #
-  - chmod 0555 /tmp/istio/out/pilot-agent
-  - chown 1337:1337 /tmp/istio/out/pilot-agent
+  - chmod 0555 /src/istio/out/pilot-agent
+  - chown 1337:1337 /src/istio/out/pilot-agent
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-build-envoy-artifact
 fromImage: {{ $.ModuleName }}/{{ .ImageName }}-build-image-artifact
@@ -122,7 +122,7 @@ shell:
   - rm -rf /tmp/bazel-deps
   #
   - bazel build --disk_cache=/tmp/bazel-cache --nofetch --stamp --config=release //:envoy
-  - echo test-cache
+# TODO remove /root/.cache and /tmp/bazel-cache to speed up further uploading to registry
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-build-libcxx-artifact
 fromImage: {{ $.ModuleName }}/{{ .ImageName }}-build-image-artifact
