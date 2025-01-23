@@ -213,15 +213,7 @@ func (r *deckhouseReleaseReconciler) createOrUpdateReconcile(ctx context.Context
 	case "":
 		// set current restored release as deployed
 		if dr.GetCurrentRestored() {
-			dr.Status.Approved = true
-			dr.Status.Phase = v1alpha1.DeckhouseReleasePhaseDeployed
-			dr.Status.TransitionTime = metav1.NewTime(r.dc.GetClock().Now().UTC())
-			dr.Status.Message = "Release object was restored"
-			if err := r.client.Status().Update(ctx, dr); err != nil {
-				return res, err
-			}
-
-			return ctrl.Result{}, nil
+			return res, r.proceedRestoredRelease(ctx, dr)
 		}
 
 		// initial state
@@ -267,6 +259,19 @@ func (r *deckhouseReleaseReconciler) patchManualRelease(ctx context.Context, dr 
 	err := r.client.Status().Patch(ctx, drCopy, client.MergeFrom(dr))
 	if err != nil {
 		return fmt.Errorf("patch approved status: %w", err)
+	}
+
+	return nil
+}
+
+func (r *deckhouseReleaseReconciler) proceedRestoredRelease(ctx context.Context, dr *v1alpha1.DeckhouseRelease) error {
+	dr.Status.Approved = true
+	dr.Status.Phase = v1alpha1.DeckhouseReleasePhaseDeployed
+	dr.Status.TransitionTime = metav1.NewTime(r.dc.GetClock().Now().UTC())
+	dr.Status.Message = "Release object was restored"
+
+	if err := r.client.Status().Update(ctx, dr); err != nil {
+		return err
 	}
 
 	return nil
@@ -662,8 +667,7 @@ func (r *deckhouseReleaseReconciler) bumpDeckhouseDeployment(ctx context.Context
 	}
 
 	// dryrun for testing purpose
-	dryrun := dr.GetDryRun()
-	if dryrun {
+	if dr.GetDryRun() {
 		go func() {
 			r.logger.Debug("dryrun start soon...")
 
