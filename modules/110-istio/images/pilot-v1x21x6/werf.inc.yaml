@@ -7,7 +7,7 @@ image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
-  add: /tmp/istio/out/pilot-discovery
+  add: /src/istio/out/pilot-discovery
   to: /usr/local/bin/pilot-discovery
   owner: 1337
   group: 1337
