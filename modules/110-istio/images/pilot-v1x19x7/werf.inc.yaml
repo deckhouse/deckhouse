@@ -13,11 +13,14 @@ import:
   group: 1337
   after: setup
 - image: {{ .ModuleName }}/common-{{ $istioImageVersion }}-src-artifact
-  add: /src/istio/tools/packaging/common/
-  to: /var/lib/istio/envoy/
-  includePaths:
-  - envoy_bootstrap_tmpl.json
-  - gcp_envoy_bootstrap_tmpl.json
+  add: /src/istio/tools/packaging/common/envoy_bootstrap.json
+  to: /var/lib/istio/envoy/envoy_bootstrap_tmpl.json
+  owner: 1337
+  group: 1337
+  after: setup
+- image: {{ .ModuleName }}/common-{{ $istioImageVersion }}-src-artifact
+  add: /src/istio/tools/packaging/common/gcp_envoy_bootstrap.json
+  to: /var/lib/istio/envoy/gcp_envoy_bootstrap_tmpl.json
   owner: 1337
   group: 1337
   after: setup
