@@ -10,7 +10,7 @@ docker:
   ENTRYPOINT: ["/api-proxy"]
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
-from: {{ .Images.BASE_GOLANG_16_ALPINE_DEV }}
+from: {{ .Images.BASE_GOLANG_16_ALPINE }}
 final: false
 git:
 - add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}
