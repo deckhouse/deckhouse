@@ -39,7 +39,7 @@ git:
 shell:
   install:
     - cd /src
-    - sed -i -e 's#/deckhouse/go_lib/cloud-data#/src/go_lib/cloud-data#g' go.mod
+    - sed -i -e 's# /deckhouse/go_lib/cloud-data# /src/go_lib/cloud-data#g' go.mod
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
 final: false
