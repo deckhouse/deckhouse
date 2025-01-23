@@ -8,6 +8,7 @@ import:
   after: setup
 shell:
   beforeInstall:
+  {{- include "alt packages proxy" . | nindent 2 }}
   - apt-get update && apt-get install -y curl
   - apt-get clean
   - rm -rf  /var/log/*log /var/lib/apt/lists/* /var/log/apt/* /var/lib/dpkg/*-old /var/cache/debconf/*-old
@@ -15,7 +16,31 @@ docker:
   ENTRYPOINT: ["/metadata-exporter"]
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
-from: {{ .Images.BASE_GOLANG_16_ALPINE }}
+from: {{ .Images.BASE_GOLANG_23_ALPINE }}
+final: false
+import:
+- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+  add: /src
+  to: /src
+  before: install
+mount:
+- fromPath: ~/go-pkg-cache
+  to: /go/pkg
+shell:
+  beforeInstall:
+  {{- include "alpine packages proxy" . | nindent 2 }}
+  - apk add --no-cache bash git binutils
+  install:
+  - cd /src
+  - go mod download
+  setup:
+  - cd /src
+  - export GOOS=linux GOARCH=amd64 CGO_ENABLED=0
+  - go build -ldflags="-s -w" -o /src/metadata-exporter main.go
+  - chmod 0500 /src/metadata-exporter
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+fromImage: common/src-artifact
 final: false
 git:
 - add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}
@@ -29,14 +54,6 @@ git:
     - go.sum
     setup:
     - "*.go"
-mount:
-- fromPath: ~/go-pkg-cache
-  to: /go/pkg
 shell:
   install:
   - cd /src
-  - go mod download
-  setup:
-  - cd /src
-  - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o /src/metadata-exporter main.go
-  - chmod 0500 /src/metadata-exporter

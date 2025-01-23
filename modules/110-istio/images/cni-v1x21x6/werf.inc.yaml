@@ -37,11 +37,17 @@ mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
 shell:
+  beforeInstall:
+  {{- include "alpine packages proxy" . | nindent 2 }}
+  - apk add --no-cache bash git binutils
   install:
   - cd /src/istio/
   - echo {{ $istioVersion }} > version
-  - export GOPROXY={{ $.GOPROXY }}
-  - GOOS=linux GOARCH=amd64 LDFLAGS='-extldflags -static -s -w' common/scripts/gobuild.sh /src/istio/out/ -tags=agent,disable_pgv /src/istio/cni/cmd/install-cni/
-  - GOOS=linux GOARCH=amd64 LDFLAGS='-extldflags -static -s -w' common/scripts/gobuild.sh /src/istio/out/ -tags=agent,disable_pgv /src/istio/cni/cmd/istio-cni/
+  - export GOPROXY={{ $.GOPROXY }} GOOS=linux GOARCH=amd64 
+  - export LDFLAGS='-extldflags -static -s -w'
+  - common/scripts/gobuild.sh /src/istio/out/ -tags=agent,disable_pgv /src/istio/cni/cmd/install-cni/
+  - common/scripts/gobuild.sh /src/istio/out/ -tags=agent,disable_pgv /src/istio/cni/cmd/istio-cni/
+  - strip /src/istio/out/install-cni
+  - strip /src/istio/out/istio-cni
   - chmod 0700 /src/istio/out/install-cni /src/istio/out/istio-cni
   - chown 1337:1337 /src/istio/out/istio-cni

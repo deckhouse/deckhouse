@@ -10,7 +10,31 @@ docker:
   ENTRYPOINT: ["/api-proxy"]
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
-from: {{ .Images.BASE_GOLANG_16_ALPINE }}
+from: {{ .Images.BASE_GOLANG_23_ALPINE }}
+final: false
+import:
+- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+  add: /src
+  to: /src
+  before: install
+mount:
+- fromPath: ~/go-pkg-cache
+  to: /go/pkg
+shell:
+  beforeInstall:
+  {{- include "alpine packages proxy" . | nindent 2 }}
+  - apk add --no-cache bash git binutils
+  install:
+  - cd /src
+  - go mod download
+  setup:
+  - cd /src
+  - export GOOS=linux GOARCH=amd64 CGO_ENABLED=0
+  - go build -ldflags="-s -w" -o /src/api-proxy main.go
+  - chmod 0500 /src/api-proxy
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+fromImage: common/src-artifact
 final: false
 git:
 - add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}
@@ -24,14 +48,6 @@ git:
     - go.sum
     setup:
     - "*.go"
-mount:
-- fromPath: ~/go-pkg-cache
-  to: /go/pkg
 shell:
   install:
   - cd /src
-  - go mod download
-  setup:
-  - cd /src
-  - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o /src/api-proxy main.go
-  - chmod 0500 /src/api-proxy
