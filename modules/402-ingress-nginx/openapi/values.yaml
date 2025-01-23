@@ -12,9 +12,9 @@ properties:
         type: object
         default: {}
         x-required-for-helm:
-          - ca
-          - key
-          - cert
+        - ca
+        - key
+        - cert
         properties:
           ca:
             type: string
@@ -26,17 +26,17 @@ properties:
             type: string
             x-examples: [ "testcrt" ]
       nginxAuthTLS:
-        type: ['null', array]
+        type: [ 'null', array ]
         default: []
         items:
           type: object
           properties:
             controllerName:
               type: string
-              x-examples: ["test"]
+              x-examples: [ "test" ]
             ingressClass:
               type: string
-              x-examples: ["nginx"]
+              x-examples: [ "nginx" ]
               pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
             data:
               type: object
@@ -44,39 +44,39 @@ properties:
               properties:
                 cert:
                   type: string
-                  x-examples: ["---certificate-string---"]
+                  x-examples: [ "---certificate-string---" ]
                 key:
                   type: string
-                  x-examples: ["---key-string---"]
+                  x-examples: [ "---key-string---" ]
                 ca:
                   type: string
-                  x-examples: ["---certificate-string---"]
+                  x-examples: [ "---certificate-string---" ]
       ingressControllers:
-        type: ['null', array]
+        type: [ 'null', array ]
         default: []
         items:
           type: object
           properties:
             name:
               type: string
-              x-examples: ["test"]
+              x-examples: [ "test" ]
             spec:
               type: object
               default: {}
               x-required-for-helm:
-                - ingressClass
-                - inlet
+              - ingressClass
+              - inlet
               properties:
                 ingressClass:
                   type: string
-                  x-examples: ["nginx"]
+                  x-examples: [ "nginx" ]
                   pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
                 inlet:
                   type: string
-                  x-examples: ["HostWithFailover"]
+                  x-examples: [ "HostWithFailover" ]
                 controllerVersion:
                   type: string
-                  x-examples: ["1.9", "1.10"]
+                  x-examples: [ "1.9", "1.10" ]
                 enableIstioSidecar:
                   type: boolean
                 waitLoadBalancerOnTerminating:
@@ -89,33 +89,33 @@ properties:
                   type: boolean
                   default: false
                 nodeSelector:
-                    type: object
-                    additionalProperties:
-                      type: string
-                    description: |
-                      The same as the `spec.nodeSelector` pod parameter in Kubernetes.
+                  type: object
+                  additionalProperties:
+                    type: string
+                  description: |
+                    The same as the `spec.nodeSelector` pod parameter in Kubernetes.
 
-                      If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/products/kubernetes-platform/documentation/v1/#advanced-scheduling).
+                    If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/products/kubernetes-platform/documentation/v1/#advanced-scheduling).
                 tolerations:
-                    type: array
-                    description: |
-                      The same as `spec.tolerations` for the Kubernetes pod.
+                  type: array
+                  description: |
+                    The same as `spec.tolerations` for the Kubernetes pod.
 
-                      Use [automatic](https://deckhouse.io/products/kubernetes-platform/documentation/v1/#advanced-scheduling) if not specified. Set `false` to turn off automatic.
-                    items:
-                      type: object
-                      properties:
-                        effect:
-                          type: string
-                        key:
-                          type: string
-                        operator:
-                          type: string
-                        tolerationSeconds:
-                          type: integer
-                          format: int64
-                        value:
-                          type: string
+                    Use [automatic](https://deckhouse.io/products/kubernetes-platform/documentation/v1/#advanced-scheduling) if not specified. Set `false` to turn off automatic.
+                  items:
+                    type: object
+                    properties:
+                      effect:
+                        type: string
+                      key:
+                        type: string
+                      operator:
+                        type: string
+                      tolerationSeconds:
+                        type: integer
+                        format: int64
+                      value:
+                        type: string
                 loadBalancer:
                   type: object
                   default: {}
@@ -211,6 +211,8 @@ properties:
                   properties:
                     maxmindLicenseKey:
                       type: string
+                    maxmindAccountID:
+                      type: integer
                     maxmindEditionIDs:
                       type: array
                       items:
@@ -236,7 +238,7 @@ properties:
                   properties:
                     mode:
                       type: string
-                      x-examples: ["VPA", "Static"]
+                      x-examples: [ "VPA", "Static" ]
                     vpa:
                       type: object
                       default: {}
@@ -249,7 +251,7 @@ properties:
                           properties:
                             max:
                               type: string
-                              x-examples: ["200m"]
+                              x-examples: [ "200m" ]
                             min:
                               type: string
                         memory:
@@ -260,14 +262,14 @@ properties:
                               type: string
                             min:
                               type: string
-                              x-examples: ["100Mi"]
+                              x-examples: [ "100Mi" ]
                     static:
                       type: object
                       default: {}
                       properties:
                         cpu:
                           type: string
-                          x-examples: ["100m"]
+                          x-examples: [ "100m" ]
                         memory:
                           type: string
                 customErrors:
