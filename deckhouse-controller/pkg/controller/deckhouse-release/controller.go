@@ -654,9 +654,8 @@ func (r *deckhouseReleaseReconciler) bumpDeckhouseDeployment(ctx context.Context
 	}
 
 	// dryrun for testing purpose
-	val, ok := dr.GetAnnotations()[v1alpha1.DeckhouseReleaseAnnotationDryrun]
-	if ok && val == "true" {
-		dryrun = true
+	dryrun = dr.GetDryRun()
+	if dryrun {
 		go func() {
 			r.logger.Debug("dryrun start soon...")
 

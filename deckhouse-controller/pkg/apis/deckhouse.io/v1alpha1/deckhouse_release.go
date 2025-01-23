@@ -169,6 +169,16 @@ func (in *DeckhouseRelease) GetNotificationShift() bool {
 	return ok && v == "true"
 }
 
+func (in *DeckhouseRelease) GetDryRun() bool {
+	v, ok := in.Annotations[DeckhouseReleaseAnnotationDryrun]
+	return ok && v == "true"
+}
+
+func (in *DeckhouseRelease) GetTriggeredByDryRun() bool {
+	v, ok := in.Annotations[DeckhouseReleaseAnnotationTriggeredByDryrun]
+	return ok && v == "true"
+}
+
 func (in *DeckhouseRelease) GetModuleName() string {
 	return ""
 }
