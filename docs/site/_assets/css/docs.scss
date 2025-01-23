@@ -1842,6 +1842,17 @@ select#contact-select {
     margin: 14px 0;
   }
 
+  #ingress-nginx-deprecatedgeoipversion + .alertslist__summary-body {
+    p {
+      code {
+        display: inline-block;
+        max-width: 100%;
+        overflow-x: auto;
+        white-space: nowrap;
+      }
+    }
+  }
+
   .alertslist__badge {
     display: inline-flex;
     align-items: center;
