@@ -205,7 +205,7 @@ func extractDocumentation(image v1.Image) ([]byte, error) {
 
 func extractVersionFromImage(releaseImage v1.Image) (string, error) {
 	// exactly local type
-	type versionJson struct {
+	type versionJSON struct {
 		Version string `json:"version"`
 	}
 
@@ -232,7 +232,7 @@ func extractVersionFromImage(releaseImage v1.Image) (string, error) {
 				return "", err
 			}
 
-			v := versionJson{}
+			v := versionJSON{}
 			if err := json.Unmarshal(buf.Bytes(), &v); err != nil {
 				return "", err
 			}
@@ -244,11 +244,12 @@ func extractVersionFromImage(releaseImage v1.Image) (string, error) {
 	}
 }
 
-func filterReleaseChannelsFromTags(tags []string) (releaseChannels []string) {
+func filterReleaseChannelsFromTags(tags []string) []string {
+	releaseChannels := make([]string, 0)
 	for _, tag := range tags {
 		if _, ok := releaseChannelsTags[tag]; ok {
 			releaseChannels = append(releaseChannels, tag)
 		}
 	}
-	return
+	return releaseChannels
 }
