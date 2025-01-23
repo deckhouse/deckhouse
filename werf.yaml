@@ -52,7 +52,7 @@ cleanup:
 {{- end }}
 
 {{- $_ := set . "CandiVersionMap" $versionMap }}
-
+---
 # k8sVersions and kubectlForBaseComponents 
 {{- $keys := list }}
 {{- range $key, $value := .CandiVersionMap.k8s }}
