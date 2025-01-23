@@ -56,7 +56,7 @@ require (
 	github.com/deckhouse/deckhouse/go_lib/cloud-data v0.0.0
 	github.com/deckhouse/deckhouse/go_lib/dependency/k8s/drain v0.0.0-00010101000000-000000000000
 	github.com/deckhouse/deckhouse/pkg/log v0.0.0-20241219045931-ca7514dfb873
-	github.com/deckhouse/module-sdk v0.1.1-0.20250116112031-b450dbc3d54f
+	github.com/deckhouse/module-sdk v0.1.1-0.20250123063508-23477139b92f
 	github.com/ettle/strcase v0.2.0
 	github.com/evanphx/json-patch v5.7.0+incompatible
 	github.com/fsnotify/fsnotify v1.7.0
@@ -98,6 +98,7 @@ require (
 	github.com/avelino/slugify v0.0.0-20180501145920-855f152bd774 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/blang/semver/v4 v4.0.0 // indirect
+	github.com/caarlos0/env/v11 v11.2.2 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/chai2010/gettext-go v1.0.2 // indirect
 	github.com/containerd/containerd v1.7.20 // indirect
