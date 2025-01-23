@@ -32,7 +32,7 @@ import:
   group: 1337
   after: setup
 - image: {{ .ModuleName }}/{{ .ImageName }}-build-envoy-artifact
-  add: /src/proxy/bazel-bin/envoy
+  add: /src/proxy/bin/envoy
   to: /usr/local/bin/envoy
   owner: 1337
   group: 1337
@@ -122,6 +122,8 @@ shell:
   - rm -rf /tmp/bazel-deps
   #
   - bazel build --disk_cache=/tmp/bazel-cache --nofetch --stamp --config=release //:envoy
+  - mkdir /src/proxy/bin
+  - mv /src/proxy/bazel-bin/envoy /src/proxy/bin/
   - rm -rf /root/.cache /tmp/bazel-cache
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-build-libcxx-artifact
