@@ -25,7 +25,7 @@ git:
         - go.sum
         - "**/*.go"
   - add: /go_lib/cloud-data
-    to: /deckhouse/go_lib/cloud-data
+    to: /src/go_lib/cloud-data
     excludePaths:
       - "**/*.md"
       - "**/*.yaml"
@@ -38,14 +38,15 @@ git:
 shell:
   install:
     - cd /src
+    - sed -i -e 's# /deckhouse/go_lib/cloud-data# /src/go_lib/cloud-data#g' go.mod
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
 final: false
 from: {{ .Images.BASE_GOLANG_23_ALPINE }}
 import:
   - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
-    add: /deckhouse/go_lib/cloud-data
-    to: /deckhouse/go_lib/cloud-data
+    add: /src
+    to: /src
     before: install
 mount:
   - fromPath: ~/go-pkg-cache
