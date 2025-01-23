@@ -63,7 +63,7 @@ import:
 shell:
   beforeInstall:
   {{- include "alt packages proxy" . | nindent 2 }}
-  - apt-get update && apt-get install -y ca-certificates
+  - apt-get update && apt-get install -y ca-certificates curl
   - update-ca-trust
   - apt-get clean
   - rm -rf  /var/log/*log /var/lib/apt/lists/* /var/log/apt/* /var/lib/dpkg/*-old /var/cache/debconf/*-old
