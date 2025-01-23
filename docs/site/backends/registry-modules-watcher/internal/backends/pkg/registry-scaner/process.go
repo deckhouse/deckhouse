@@ -23,9 +23,10 @@ import (
 	"io"
 	"strings"
 
-	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"k8s.io/klog"
+
+	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
 )
 
 func (s *registryscaner) processRegistries(ctx context.Context) {

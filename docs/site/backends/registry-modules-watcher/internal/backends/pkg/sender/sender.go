@@ -23,10 +23,9 @@ import (
 	"strings"
 	"time"
 
-	"registry-modules-watcher/internal/backends"
-
 	"github.com/cenkalti/backoff"
 	"k8s.io/klog"
+	"registry-modules-watcher/internal/backends"
 )
 
 const maxElapsedTime = 15 // minutes
