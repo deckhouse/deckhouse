@@ -10,8 +10,8 @@ import:
   add: /src/istio/out/operator
   to: /usr/local/bin/operator
   after: setup
-- image: {{ .ModuleName }}/{{ .ImageName }}-binary-artifact
-  add: /var/lib/istio/manifests
+- image: {{ .ModuleName }}/common-{{ $istioImageVersion }}-src-artifact
+  add: /src/istio/manifests
   to: /var/lib/istio/manifests
   after: setup
 docker:
@@ -42,8 +42,3 @@ shell:
   - strip /src/istio/out/operator
   - chmod 0700 /src/istio/out/operator
   - chown 1337:1337 /src/istio/out/operator
-#TODO src from common-istioImageVersion
----
-image: {{ .ModuleName }}/{{ .ImageName }}-binary-artifact
-final: false
-from: istio/operator:1.21.6@sha256:436ac8dd5913cb82bdad5f3975a853fa76e73d0cd92d05f6f7fd78c0a32f1332

@@ -36,7 +36,7 @@ import:
 - image: {{ .ModuleName }}/common-{{ $istioImageVersion }}-src-artifact
   add: /src/istio
   to: /src/istio
-  before: setup
+  before: install
 mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
@@ -44,7 +44,7 @@ shell:
   beforeInstall:
   {{- include "alpine packages proxy" . | nindent 2 }}
   - apk add --no-cache bash git binutils
-  install:
+  setup:
   - cd /src/istio/
   - echo {{ $istioVersion }} > version
   - export GOPROXY={{ $.GOPROXY }} GOOS=linux GOARCH=amd64

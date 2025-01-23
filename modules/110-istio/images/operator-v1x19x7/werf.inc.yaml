@@ -12,8 +12,8 @@ import:
   owner: 1337
   group: 1337
   after: setup
-- image: {{ .ModuleName }}/{{ .ImageName }}-binary-artifact
-  add: /var/lib/istio/manifests
+- image: {{ .ModuleName }}/common-{{ $istioImageVersion }}-src-artifact
+  add: /src/istio/manifests
   to: /var/lib/istio/manifests
   owner: 1337
   group: 1337
@@ -46,8 +46,3 @@ shell:
   - strip /src/istio/out/operator
   - chmod 0700 /src/istio/out/operator
   - chown 1337:1337 /src/istio/out/operator
-#TODO src from common-istioImageVersion
----
-image: {{ .ModuleName }}/{{ .ImageName }}-binary-artifact
-final: false
-from: istio/operator:1.19.7@sha256:f7f371476a2224fe55ff4e7c8b31773e2c048da255bb634075666f88fa7cb990
