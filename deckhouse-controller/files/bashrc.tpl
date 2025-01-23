@@ -10,12 +10,15 @@ else
 fi
 
 case "$kubernetes_version" in
-  {{ index .k8sVersions 0 }}.* | {{ index .k8sVersions 1 }}.* | {{ index .k8sVersions 2 }}.* )
+{{ $lens := len .k8sVersions }}
+  {{ index .k8sVersions 0 }}.* {{ if gt $lens 1 }}| {{ index .k8sVersions 1 }}.* {{ end }}{{ if gt $lens 2 }}| {{ index .k8sVersions 2 }}.* {{ end }})
     kubectl_version="{{ index .kubectlForBaseComponents 0 }}"
     ;;
-  {{ index .k8sVersions 3 }}.* | {{ index .k8sVersions 4 }}.* {{ if gt (len .k8sVersions) 5 }}| {{ index .k8sVersions 5 }}.* {{ end }})
+{{- if gt $lens 3 }}
+  {{ index .k8sVersions 3 }}.* {{ if gt $lens 4 }}| {{ index .k8sVersions 4 }}.* {{ end }}{{ if gt $lens 5 }}| {{ index .k8sVersions 5 }}.* {{ end }})
     kubectl_version="{{ index .kubectlForBaseComponents 1 }}"
     ;;
+{{- end }}
 esac
 
 eval "$(kubectl-${kubectl_version} completion bash)"

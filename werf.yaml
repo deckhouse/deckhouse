@@ -53,13 +53,28 @@ cleanup:
 
 {{- $_ := set . "CandiVersionMap" $versionMap }}
 ---
-# k8sVersions and kubectlForBaseComponents 
+# k8sVersions
 {{- $keys := list }}
 {{- range $key, $value := .CandiVersionMap.k8s }}
   {{- $keys = append $keys $key }}
 {{- end }}
 {{- $_ := set . "k8sVersions" $keys }}
-{{- $_ := set . "kubectlForBaseComponents" (list (index $keys 1) (index $keys 4)) }}
+---
+# kubectlForBaseComponents
+{{- $lens := len .k8sVersions }}
+{{- $result := list }}
+{{- if gt $lens 4 }}
+  {{- $result = list (index .k8sVersions 1) (index .k8sVersions 4) }}
+{{- else if eq $lens 4 }}
+  {{- $result = list (index .k8sVersions 1) (index .k8sVersions 3) }}
+{{- else if eq $lens 3 }}
+  {{- $result = list (index .k8sVersions 1) }}
+{{- else if eq $lens 2 }}
+  {{- $result = list (index .k8sVersions 1) }}
+{{- else if eq $lens 1 }}
+  {{- $result = list (index .k8sVersions 0) }}
+{{- end }}
+{{- $_ := set . "kubectlForBaseComponents" $result }}
 ---
 # Terraform Versions
 {{- $_ := set . "TF" (.Files.Get "candi/terraform_versions.yml" | fromYaml) }}
