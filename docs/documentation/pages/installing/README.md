@@ -37,9 +37,7 @@ Before installation, ensure the following:
 
 ## Preparing the Configuration
 
-Before starting the Deckhouse installation, you need to prepare the configuration files:
-
-[Installation configuration YAML file](#installation-config). This file contains the main parameters for configuring Deckhouse, including information about cluster components, network settings, and integrations, as well as a description of resources to be created after installation (node settings and Ingress controller).
+Before starting the Deckhouse installation, you need to prepare the [configuration YAML file](#installation-config). This file contains the main parameters for configuring Deckhouse, including information about cluster components, network settings, and integrations, as well as a description of resources to be created after installation (node settings and Ingress controller).
 
 Make sure that the configuration files meet the requirements of your infrastructure and include all the necessary parameters for a correct deployment.
 
