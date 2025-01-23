@@ -211,8 +211,21 @@ func (r *deckhouseReleaseReconciler) createOrUpdateReconcile(ctx context.Context
 	switch dr.Status.Phase {
 	// these phases should be ignored by predicate, but let's check it
 	case "":
+		// set current restored release as deployed
+		if dr.GetCurrentRestored() {
+			dr.Status.Approved = true
+			dr.Status.Phase = v1alpha1.DeckhouseReleasePhaseDeployed
+			dr.Status.TransitionTime = metav1.NewTime(r.dc.GetClock().Now().UTC())
+			dr.Status.Message = "Release object was restored"
+			if err := r.client.Status().Update(ctx, dr); err != nil {
+				return res, err
+			}
+
+			return ctrl.Result{Requeue: false}, nil
+		}
+
 		// initial state
-		dr.Status.Phase = v1alpha1.ModuleReleasePhasePending
+		dr.Status.Phase = v1alpha1.DeckhouseReleasePhasePending
 		dr.Status.TransitionTime = metav1.NewTime(r.dc.GetClock().Now().UTC())
 		if err := r.client.Status().Update(ctx, dr); err != nil {
 			return res, err
@@ -220,11 +233,11 @@ func (r *deckhouseReleaseReconciler) createOrUpdateReconcile(ctx context.Context
 
 		return ctrl.Result{Requeue: true}, nil // process to the next phase
 
-	case v1alpha1.ModuleReleasePhaseSkipped, v1alpha1.ModuleReleasePhaseSuperseded, v1alpha1.ModuleReleasePhaseSuspended:
+	case v1alpha1.DeckhouseReleasePhaseSkipped, v1alpha1.DeckhouseReleasePhaseSuperseded, v1alpha1.DeckhouseReleasePhaseSuspended:
 		r.logger.Debug("release phase", slog.String("phase", dr.Status.Phase))
 		return res, nil
 
-	case v1alpha1.ModuleReleasePhaseDeployed:
+	case v1alpha1.DeckhouseReleasePhaseDeployed:
 		return r.reconcileDeployedRelease(ctx, dr)
 	}
 
@@ -583,13 +596,9 @@ func (r *deckhouseReleaseReconciler) ApplyRelease(ctx context.Context, dr *v1alp
 func (r *deckhouseReleaseReconciler) runReleaseDeploy(ctx context.Context, dr *v1alpha1.DeckhouseRelease, deployedReleaseInfo *d8updater.ReleaseInfo) error {
 	r.logger.Info("applying release", slog.String("name", dr.GetName()))
 
-	dryrun, err := r.bumpDeckhouseDeployment(ctx, dr)
+	err := r.bumpDeckhouseDeployment(ctx, dr)
 	if err != nil {
 		return fmt.Errorf("deploy release: %w", err)
-	}
-
-	if dryrun {
-		return nil
 	}
 
 	if deployedReleaseInfo != nil {
@@ -642,19 +651,18 @@ func (r *deckhouseReleaseReconciler) runReleaseDeploy(ctx context.Context, dr *v
 
 var ErrDeploymentContainerIsNotFound = errors.New("deployment container is not found")
 
-func (r *deckhouseReleaseReconciler) bumpDeckhouseDeployment(ctx context.Context, dr *v1alpha1.DeckhouseRelease) (bool /* dryrun? */, error) {
-	var dryrun bool
+func (r *deckhouseReleaseReconciler) bumpDeckhouseDeployment(ctx context.Context, dr *v1alpha1.DeckhouseRelease) error {
 	key := client.ObjectKey{Namespace: deckhouseNamespace, Name: deckhouseDeployment}
 
 	depl := new(appsv1.Deployment)
 
 	err := r.client.Get(ctx, key, depl)
 	if err != nil {
-		return dryrun, fmt.Errorf("get deployment %s: %w", key, err)
+		return fmt.Errorf("get deployment %s: %w", key, err)
 	}
 
 	// dryrun for testing purpose
-	dryrun = dr.GetDryRun()
+	dryrun := dr.GetDryRun()
 	if dryrun {
 		go func() {
 			r.logger.Debug("dryrun start soon...")
@@ -705,10 +713,10 @@ func (r *deckhouseReleaseReconciler) bumpDeckhouseDeployment(ctx context.Context
 			}
 		}()
 
-		return dryrun, nil
+		return nil
 	}
 
-	return dryrun, ctrlutils.UpdateWithRetry(ctx, r.client, depl, func() error {
+	return ctrlutils.UpdateWithRetry(ctx, r.client, depl, func() error {
 		if len(depl.Spec.Template.Spec.Containers) == 0 {
 			return ErrDeploymentContainerIsNotFound
 		}

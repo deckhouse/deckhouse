@@ -270,9 +270,9 @@ func (r *deckhouseReleaseReconciler) restoreCurrentDeployedRelease(ctx context.C
 		ObjectMeta: metav1.ObjectMeta{
 			Name: tag,
 			Annotations: map[string]string{
-				v1alpha1.DeckhouseReleaseAnnotationIsUpdating: "false",
-				v1alpha1.DeckhouseReleaseAnnotationNotified:   "false",
-				v1alpha1.DeckhouseReleaseAnnotationDryrun:     "true",
+				v1alpha1.DeckhouseReleaseAnnotationIsUpdating:      "false",
+				v1alpha1.DeckhouseReleaseAnnotationNotified:        "false",
+				v1alpha1.DeckhouseReleaseAnnotationCurrentRestored: "true",
 			},
 			Labels: map[string]string{
 				"heritage": "deckhouse",
@@ -289,27 +289,7 @@ func (r *deckhouseReleaseReconciler) restoreCurrentDeployedRelease(ctx context.C
 		release.Spec.ChangelogLink = fmt.Sprintf("https://github.com/deckhouse/deckhouse/releases/tag/%s", releaseMetadata.Version)
 	}
 
-	if err := r.client.Create(ctx, release); err != nil {
-		// proceed with patching only if the object was created by the execution
-		if apierrors.IsAlreadyExists(err) {
-			return nil
-		}
-		return fmt.Errorf("create current deployed release: %w", err)
-	}
-
-	patchBytes, _ := json.Marshal(map[string]interface{}{
-		"status": map[string]interface{}{
-			"approved":       true,
-			"phase":          v1alpha1.DeckhouseReleasePhaseDeployed,
-			"transitionTime": r.dc.GetClock().Now().UTC(),
-			"message":        "Release object was restored",
-		},
-	})
-	if err := r.client.Status().Patch(ctx, release, client.RawPatch(types.MergePatchType, patchBytes)); err != nil {
-		return fmt.Errorf("patch current deployed release: %w", err)
-	}
-
-	return nil
+	return client.IgnoreAlreadyExists(r.client.Create(ctx, release))
 }
 
 func (r *deckhouseReleaseReconciler) createRelease(ctx context.Context, releaseChecker *DeckhouseReleaseChecker,
