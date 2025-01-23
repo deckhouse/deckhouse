@@ -1,12 +1,13 @@
 ---
 {{- $istioOperatorVersion := "1.19.7" }}
+{{- $istioImageVersion := (printf "v%s" (replace "." "x" $istioVersion)) }} {{- /* 1.19.7 -> v1x19x7 */}}
 ---
 # Based on https://github.com/istio/istio/blob/1.19.7/operator/docker/Dockerfile.operator
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
-  add: /tmp/istio/out/operator
+  add: /src/istio/out/operator
   to: /usr/local/bin/operator
   owner: 1337
   group: 1337
@@ -23,7 +24,12 @@ docker:
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
 final: false
-from: {{ .Images.BASE_GOLANG_23_ALPINE_DEV }}
+from: {{ .Images.BASE_GOLANG_23_ALPINE }}
+import:
+- image: {{ .ModuleName }}/common-{{ $istioImageVersion }}-src-artifact
+  add: /src/istio
+  to: /src/istio
+  before: install
 git:
 - add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/patches
   to: /patches
@@ -37,17 +43,18 @@ mount:
   to: /go/pkg
 shell:
   beforeInstall:
-  - apk add --no-cache openssh-client
+  {{- include "alpine packages proxy" . | nindent 2 }}
+  - apk add --no-cache bash git binutils
   install:
-  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
-  - git clone --depth 1 --branch {{ $istioOperatorVersion }} {{ $.SOURCE_REPO }}/istio/istio.git /tmp/istio/
-  - cd /tmp/istio/
-  - find /patches -name '*.patch' | xargs git apply --verbose
+  - cd /src/istio/
   - echo {{ $istioOperatorVersion }} > version
-  - export GOPROXY={{ $.GOPROXY }}
-  - GOOS=linux GOARCH=amd64 LDFLAGS='-extldflags -static -s -w' common/scripts/gobuild.sh /tmp/istio/out/ -tags=agent,disable_pgv /tmp/istio/operator/cmd/operator/
-  - chmod 0700 /tmp/istio/out/operator
-  - chown 1337:1337 /tmp/istio/out/operator
+  - export GOPROXY={{ $.GOPROXY }} GOOS=linux GOARCH=amd64 
+  - export LDFLAGS='-extldflags -static -s -w'
+  - common/scripts/gobuild.sh /src/istio/out/ -tags=agent,disable_pgv /src/istio/operator/cmd/operator/
+  - strip /src/istio/out/operator
+  - chmod 0700 /src/istio/out/operator
+  - chown 1337:1337 /src/istio/out/operator
+#TODO src from common-istioImageVersion
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-binary-artifact
 final: false

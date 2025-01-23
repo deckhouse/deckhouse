@@ -1,5 +1,6 @@
 ---
 {{- $istioProxyVersion := "1.19.7" }}
+{{- $istioImageVersion := (printf "v%s" (replace "." "x" $istioVersion)) }} {{- /* 1.19.7 -> v1x19x7 */}}
 ---
 # Based on https://github.com/istio/istio/blob/1.19.7/docker/Dockerfile.base
 #      and https://github.com/istio/istio/blob/1.19.7/pilot/docker/Dockerfile.proxyv2
@@ -7,14 +8,14 @@ image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/alt-p11
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-build-agent-artifact
-  add: /tmp/istio/out/pilot-agent
+  add: /src/istio/out/pilot-agent
   to: /usr/local/bin/pilot-agent
   owner: 1337
   group: 1337
   after: setup
-- image: {{ .ModuleName }}/{{ .ImageName }}-binary-artifact
-  add: /var/lib/istio/envoy
-  to: /var/lib/istio/envoy
+- image: {{ .ModuleName }}/common-{{ $istioImageVersion }}-src-artifact
+  add: /src/istio/tools/packaging/common/
+  to: /var/lib/istio/envoy/
   includePaths:
   - envoy_bootstrap_tmpl.json
   - gcp_envoy_bootstrap_tmpl.json
@@ -53,20 +54,21 @@ from: istio/proxyv2:1.19.7@sha256:680eac0faff1835f994ba9047750d7cfe989e868324a93
 final: false
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-build-agent-artifact
-from: {{ .Images.BASE_GOLANG_23_ALPINE_DEV }}
+from: {{ .Images.BASE_GOLANG_23_ALPINE }}
 final: false
 mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
 shell:
   beforeInstall:
-  - apk add --no-cache openssh-client
+  {{- include "alpine packages proxy" . | nindent 2 }}
+  - apk add --no-cache bash git binutils
   install:
-  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
-  - git clone --depth 1 --branch {{ $istioProxyVersion }} {{ $.SOURCE_REPO }}/istio/istio.git /tmp/istio/
-  - cd /tmp/istio/
+  - cd /src/istio/
   - echo {{ $istioProxyVersion }} > version
-  - export GOPROXY={{ $.GOPROXY }}
-  - GOOS=linux GOARCH=amd64 LDFLAGS='-extldflags -static -s -w' common/scripts/gobuild.sh /tmp/istio/out/ -tags=agent,disable_pgv /tmp/istio/pilot/cmd/pilot-agent/
-  - chmod 0555 /tmp/istio/out/pilot-agent
-  - chown 1337:1337 /tmp/istio/out/pilot-agent
+  - export GOPROXY={{ $.GOPROXY }} GOOS=linux GOARCH=amd64 
+  - export LDFLAGS='-extldflags -static -s -w'
+  - common/scripts/gobuild.sh /src/istio/out/ -tags=agent,disable_pgv /src/istio/pilot/cmd/pilot-agent/
+  - strip /src/istio/out/pilot-agent
+  - chmod 0555 /src/istio/out/pilot-agent
+  - chown 1337:1337 /src/istio/out/pilot-agent
