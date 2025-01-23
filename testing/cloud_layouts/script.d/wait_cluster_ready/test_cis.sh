@@ -22,7 +22,8 @@ for ((i=1; i<=$testRunAttempts; i++)); do
     sleep 30
   fi
 done
-kubectl get clustercompliancereports.aquasecurity.github.io cis -o yaml | sed 's#cron: 0 \*/6 \* \* \*#cron: "*/5 * * * *"#' | kubectl apply -f - > /dev/null
+kubectl get clustercompliancereports.aquasecurity.github.io cis -o yaml | sed 's#cron: 0 \*/6 \* \* \*#cron: "*/2 * * * *"#' | kubectl apply -f - > /dev/null
+sleep 60
 testRunAttempts=20
 for ((i=1; i<=$testRunAttempts; i++)); do
   FAILED=$(kubectl get clustercompliancereports.aquasecurity.github.io cis -o wide --no-headers 2>/dev/null | awk '{print $4}')
