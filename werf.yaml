@@ -32,12 +32,12 @@ cleanup:
 
 ---
 # Base Images
-{{- $_ := set . "Images" (.Files.Get "candi/image_versions.yml" | fromYaml) }}
-  {{- range $k, $v := .Images }}
-    {{ $baseImagePath := (printf "%s%s" $.Images.REGISTRY_PATH (trimSuffix "/" $v)) }}
-    {{- if ne $k "REGISTRY_PATH" }}
-      {{- $_ := set $.Images $k $baseImagePath }}
-    {{- end }}
+{{- $_ := set . "Images" (.Files.Get "candi/image_versions.yml" | fromYaml) -}}
+  {{- range $k, $v := .Images -}}
+    {{ $baseImagePath := (printf "%s%s" $.Images.REGISTRY_PATH (trimSuffix "/" $v)) -}}
+    {{- if ne $k "REGISTRY_PATH" -}}
+      {{- $_ := set $.Images $k $baseImagePath -}}
+    {{- end -}}
   {{- end }}
 ---
 # Version Map
@@ -53,7 +53,13 @@ cleanup:
 
 {{- $_ := set . "CandiVersionMap" $versionMap }}
 
-{{- $_ := set . "kubectlForBaseComponents" (list "1.27" "1.30") }}
+# k8sVersions and kubectlForBaseComponents 
+{{- $keys := list }}
+{{- range $key, $value := .CandiVersionMap.k8s }}
+  {{- $keys = append $keys $key }}
+{{- end }}
+{{- $_ := set . "k8sVersions" $keys }}
+{{- $_ := set . "kubectlForBaseComponents" (list (index $keys 1) (index $keys 4)) }}
 ---
 # Terraform Versions
 {{- $_ := set . "TF" (.Files.Get "candi/terraform_versions.yml" | fromYaml) }}
@@ -80,9 +86,9 @@ cleanup:
 # render ssh-static
 {{ include "ssh_static_artifact" (dict "Images" .Images "SOURCE_REPO" .SOURCE_REPO) }}
 ---
-{{ include "common_base_image" (dict "rootContext" . "k8sVersions" .kubectlForBaseComponents "CandiVersionMap" $.CandiVersionMap "prefix" "") }}
+{{ include "common_base_image" (dict "rootContext" . "k8sVersions" .k8sVersions "kubectlForBaseComponents" .kubectlForBaseComponents "CandiVersionMap" $.CandiVersionMap "prefix" "") }}
 ---
-{{ include "base_for_go_image" (dict "rootContext" . "k8sVersions" .kubectlForBaseComponents "CandiVersionMap" $.CandiVersionMap "prefix" "") }}
+{{ include "base_for_go_image" (dict "rootContext" . "k8sVersions" .k8sVersions "kubectlForBaseComponents" .kubectlForBaseComponents "CandiVersionMap" $.CandiVersionMap "prefix" "") }}
 ---
 {{ include "dhctl_src_artifact" (dict "gitPrefix" "") }}
 ---

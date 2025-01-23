@@ -1,6 +1,6 @@
 # base components imports
 # . is dict have keys:
-#   k8sVersions - list versions k8s to kubectl import
+#   kubectlForBaseComponents - list versions k8s to kubectl import
 #   CandiVersionMap - dict CandiVersionMap from werf.yaml
 {{- define "base components imports" }}
 {{- $context := . -}}
@@ -13,7 +13,7 @@
   add: /usr/local/bin/semver
   to: /usr/local/bin/semver
   before: setup
-  {{- range $k8sVersion := $context.k8sVersions }}
+  {{- range $k8sVersion := $context.kubectlForBaseComponents }}
     {{- $image_version := printf "%s.%d" $k8sVersion (index $context.CandiVersionMap "k8s" $k8sVersion "patch") | replace "." "-" }}
 - image: common/kubernetes-artifact-{{ $image_version }}
   add: /src/_output/bin/kubectl
@@ -25,26 +25,29 @@
 
 
 # base components
-# . is list with indexes:
-#   0 - parent context
-#   1 - Files.Get prefix
+# . is dict have keys:
+#   Files - copy Files.Get
+#   prefix - Files.Get prefix
+#   kubectlForBaseComponents - list versions k8s to kubectl import
+#   k8sVersions - list versions k8s
 {{- define "base components" }}
-{{- $context := index . 0 -}}
-{{- $prefix := index . 1 -}}
+{{- $context := . -}}
 
 - |
   # Install kubectl wrapper
   cat <<"EOD" > /usr/local/bin/kubectl
-  {{- $context.Files.Get (printf "%sdeckhouse-controller/files/kubectl_wrapper.sh" $prefix) | nindent 2 }}
+  {{- tpl ($context.Files.Get (printf "%sdeckhouse-controller/files/kubectl_wrapper.sh.tpl" $context.prefix))
+        (dict "kubectlForBaseComponents" $context.kubectlForBaseComponents "k8sVersions" $context.k8sVersions) | nindent 2 -}}
   EOD
   chmod +x /usr/local/bin/kubectl
   # Shell comfort: inputrc
   cat <<"EOD" > /etc/inputrc
-  {{- $context.Files.Get (printf "%sdeckhouse-controller/files/inputrc" $prefix) | nindent 2 }}
+  {{- $context.Files.Get (printf "%sdeckhouse-controller/files/inputrc" $context.prefix) | nindent 2 }}
   EOD
   # Shell comfort: bashrc
   cat <<"EOD" > /etc/bashrc
-  {{- $context.Files.Get (printf "%sdeckhouse-controller/files/bashrc" $prefix) | nindent 2 }}
+  {{- tpl ($context.Files.Get (printf "%sdeckhouse-controller/files/bashrc.tpl" $context.prefix))
+        (dict "kubectlForBaseComponents" $context.kubectlForBaseComponents "k8sVersions" $context.k8sVersions) | nindent 2 -}}
   EOD
   # Shell comfort: add bashrc for root
   rm -f /root/.bashrc
@@ -56,7 +59,7 @@
   mkdir -p /etc/vim/
   # Shell comfort: vimrc.local
   cat <<"EOD" > /etc/vim/vimrc.local
-  {{- $context.Files.Get (printf "%sdeckhouse-controller/files/vimrc.local" $prefix) | nindent 2 }}
+  {{- $context.Files.Get (printf "%sdeckhouse-controller/files/vimrc.local" $context.prefix) | nindent 2 }}
   EOD
 
 {{- end }}
@@ -66,7 +69,8 @@
 # . is dict have keys:
 #   rootContext - root context contains .Files
 #   prefix - Files.Get prefix
-#   k8sVersions - list versions k8s to kubectl import
+#   kubectlForBaseComponents - list versions k8s to kubectl import
+#   k8sVersions - list versions k8s
 #   CandiVersionMap - dict CandiVersionMap from werf.yaml
 #    - dict CandiVersionMap from werf.yaml
 {{- define "common_base_image" }}
@@ -100,7 +104,7 @@ import:
   - etc/bashrc.d/bash_completion.sh
   - usr/share/bash-completion
   - usr/bin/vim-console
-{{ include "base components imports" (dict "k8sVersions" $context.k8sVersions "CandiVersionMap" $context.CandiVersionMap ) }}
+{{ include "base components imports" (dict "kubectlForBaseComponents" $context.kubectlForBaseComponents "CandiVersionMap" $context.CandiVersionMap) }}
 
 - image: common/distroless
   add: /etc/ssl
@@ -114,7 +118,7 @@ import:
 
 shell:
   beforeInstall:
-  {{- include "base components" (list $context.rootContext $context.prefix) | nindent 2 }}
+  {{- include "base components" (dict "Files" $context.rootContext.Files "prefix" $context.prefix "kubectlForBaseComponents" $context.rootContext.kubectlForBaseComponents "k8sVersions" $context.rootContext.k8sVersions) | nindent 2 }}
 
 docker:
   ENV:
@@ -126,7 +130,7 @@ docker:
 # . is dict have keys:
 #   rootContext - root context contains .Files
 #   prefix - Files.Get prefix
-#   k8sVersions - list versions k8s to kubectl import
+#   kubectlForBaseComponents - list versions k8s to kubectl import
 #   CandiVersionMap - dict CandiVersionMap from werf.yaml
 {{- define "base_for_go_image" }}
 {{- $context := . -}}
@@ -134,10 +138,10 @@ docker:
 image: base-for-go
 fromImage: common/alt-p11-artifact
 import:
-{{ include "base components imports" (dict "k8sVersions" $context.k8sVersions "CandiVersionMap" $context.CandiVersionMap ) }}
+{{ include "base components imports" (dict "kubectlForBaseComponents" $context.kubectlForBaseComponents "CandiVersionMap" $context.CandiVersionMap) }}
 shell:
   beforeInstall:
   - apt-get install -y golang make git gcc
-  {{- include "base components" (list $context.rootContext $context.prefix) | nindent 2 }}
+  {{- include "base components" (dict "Files" $context.rootContext.Files "prefix" $context.prefix "kubectlForBaseComponents" $context.kubectlForBaseComponents "k8sVersions" $context.k8sVersions) | nindent 2 }}
 
 {{- end }}

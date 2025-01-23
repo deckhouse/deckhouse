@@ -6,15 +6,15 @@ source /etc/bashrc.d/bash_completion.sh
 if [ -s /tmp/kubectl_version ]; then
  kubernetes_version="$(cat /tmp/kubectl_version)"
 else
- kubectl_version="1.27"
+ kubectl_version="{{ index .kubectlForBaseComponents 0 }}"
 fi
 
 case "$kubernetes_version" in
-  1.26.* | 1.27.* | 1.28.* )
-    kubectl_version="1.27"
+  {{ index .k8sVersions 0 }}.* | {{ index .k8sVersions 1 }}.* | {{ index .k8sVersions 2 }}.* )
+    kubectl_version="{{ index .kubectlForBaseComponents 0 }}"
     ;;
-  1.29.* | 1.30.* | 1.31.* )
-    kubectl_version="1.30"
+  {{ index .k8sVersions 3 }}.* | {{ index .k8sVersions 4 }}.* {{ if gt (len .k8sVersions) 5 }}| {{ index .k8sVersions 5 }}.* {{ end }})
+    kubectl_version="{{ index .kubectlForBaseComponents 1 }}"
     ;;
 esac
 

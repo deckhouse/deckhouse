@@ -20,15 +20,15 @@ if [ -s /tmp/kubectl_version ]; then
  kubernetes_version="$(cat /tmp/kubectl_version)"
 else
  # Workaround for running kubectl before global hook global-hooks/discovery/kubernetes_version running
- kubernetes_version="$(/usr/local/bin/kubectl-1.25 version -o json 2>/dev/null | jq -r '.serverVersion.gitVersion | ltrimstr("v")')"
+ kubernetes_version="$(/usr/local/bin/kubectl-{{ index .kubectlForBaseComponents 0 }} version -o json 2>/dev/null | jq -r '.serverVersion.gitVersion | ltrimstr("v")')"
 fi
 
 case "$kubernetes_version" in
-  1.26.* | 1.27.* | 1.28.* )
-    kubectl_version="1.27"
+  {{ index .k8sVersions 0 }}.* | {{ index .k8sVersions 1 }}.* | {{ index .k8sVersions 2 }}.* )
+    kubectl_version="{{ index .kubectlForBaseComponents 0 }}"
     ;;
-  1.29.* | 1.30.* | 1.31.* )
-    kubectl_version="1.30"
+  {{ index .k8sVersions 3 }}.* | {{ index .k8sVersions 4 }}.* {{ if gt (len .k8sVersions) 5 }}| {{ index .k8sVersions 5 }}.* {{ end }})
+    kubectl_version="{{ index .kubectlForBaseComponents 1 }}"
     ;;
   *)
     >&2 echo "ERROR: unsupported kubernetes version $kubernetes_version"
