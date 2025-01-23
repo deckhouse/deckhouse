@@ -48,16 +48,31 @@ function __main__() {
   docker pull "$IMAGE:$TAG"
   digests=$(docker run --rm "$IMAGE:$TAG" cat /deckhouse/modules/images_digests.json)
 
-  HTML_TEMP=$(mktemp -d)
   IMAGE_REPORT_NAME="deckhouse::$(echo "$IMAGE:$TAG" | sed 's/^.*\/\(.*\)/\1/')"
-  mkdir -p out/
-  htmlReportHeader > out/d8-images.html
-  trivyGetHTMLReportPartForImage -l "$IMAGE_REPORT_NAME" -i "$IMAGE" -t "$TAG" -s "$SEVERITY" --ignore out/.trivyignore >> out/d8-images.html
+  mkdir -p out/json
+
+  date_iso=$(date -I)
 
   for module in $(jq -rc 'to_entries[]' <<< "$digests"); do
     MODULE_NAME=$(jq -rc '.key' <<< "$module")
+    touch out/${MODULE_NAME}_report
     echo "=============================================="
     echo "🛰 Module: $MODULE_NAME"
+
+    # Get codeowners to fill defectDojo tags
+    CODEOWNERS_MODULE_NAME=$(echo $MODULE_NAME|sed -s 's/[A-Z]/-&/g')
+    codeowner_tags=""
+    while IFS="\n" read -r line; do
+      # 'sed' will cut "/" before folder name if exist, 'cut' will get dirname that will be used as regexp for current module_name
+      if echo ${CODEOWNERS_MODULE_NAME} | grep -i -q "$(echo $line| sed 's/^\///'|cut -d '/' -f 1)"; then
+        for owner_name in $(echo "${line#*@}"); do
+          codeowner_tags="${codeowner_tags},codeowner:${owner_name#*@}"
+        done
+        break
+      else
+        codeowner_tags=",codeowner:RomanenkoDenys" # Set default codeowner in case if not found in CODEOWNERS file
+      fi
+    done < .github/CODEOWNERS
 
     for module_image in $(jq -rc '.value | to_entries[]' <<<"$module"); do
       IMAGE_NAME=$(jq -rc '.key' <<< "$module_image")
@@ -70,12 +85,47 @@ function __main__() {
 
       IMAGE_HASH="$(jq -rc '.value' <<< "$module_image")"
       IMAGE_REPORT_NAME="$MODULE_NAME::$IMAGE_NAME"
-      trivyGetHTMLReportPartForImage  -l "$IMAGE_REPORT_NAME" -i "$IMAGE@$IMAGE_HASH" -s "$SEVERITY" --ignore out/.trivyignore >> out/d8-images.html
+
+      # Output reports per images
+      trivyGetJSONReportPartForImage -l "$IMAGE_REPORT_NAME" -i "$IMAGE@$IMAGE_HASH" -s "$SEVERITY" --ignore "out/.trivyignore" --output "out/json/d8_${MODULE_NAME}_${IMAGE_NAME}_report.json"
+      echo ""
+      echo " Uploading trivy CVE report for image ${IMAGE_NAME} of ${MODULE_NAME} module"
+      echo ""
+      curl -s -X POST \
+        http://${DEFECTDOJO_HOST}/api/v2/reimport-scan/ \
+        -H "accept: application/json" \
+        -H "Content-Type: multipart/form-data"  \
+        -H "Authorization: Token ${DEFECTDOJO_API_TOKEN}" \
+        -F "auto_create_context=True" \
+        -F "minimum_severity=Info" \
+        -F "active=true" \
+        -F "verified=true" \
+        -F "scan_type=Trivy Scan" \
+        -F "close_old_findings=false" \
+        -F "push_to_jira=false" \
+        -F "file=@out/json/d8_${MODULE_NAME}_${IMAGE_NAME}_report.json" \
+        -F "product_type_name=Deckhouse images" \
+        -F "product_name=Deckhouse" \
+        -F "scan_date=${date_iso}" \
+        -F "engagement_name=CVE Test: Deckhouse Images" \
+        -F "service=${MODULE_NAME}" \
+        -F "group_by=component_name+component_version" \
+        -F "lead=1" \
+        -F "deduplication_on_engagement=false" \
+        -F "tags=deckhouse_image,module:${MODULE_NAME},image:${IMAGE_NAME},branch:${TAG}${codeowner_tags}" \
+        -F "test_title=[${MODULE_NAME}]: ${IMAGE_NAME}:${TAG}" \
+        -F "version=${TAG}" \
+        -F "engagement_end_date=${date_iso}" \
+        -F "build_id=${IMAGE_HASH}" \
+        -F "commit_hash=${GITHUB_SHA}" \
+        -F "branch_tag=${TAG}" \
+        -F "apply_tags_to_findings=true" \
+      > /dev/null
+
     done
+
   done
 
-  rm -r "$HTML_TEMP"
-  htmlReportFooter >> out/d8-images.html
 }
 
 __main__
