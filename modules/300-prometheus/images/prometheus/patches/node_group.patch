@@ -1,5 +1,17 @@
+From 2c625fd66843c86c511a84c855d601a188b5a5ce Mon Sep 17 00:00:00 2001
+From: Yaroslav Kavokin <yaroslav.kavokin@flant.com>
+Date: Thu, 23 Jan 2025 12:37:25 +0300
+Subject: [PATCH] Add K8SD Node metaLabel node_group
+
+Signed-off-by: Yaroslav Kavokin <yaroslav.kavokin@flant.com>
+---
+ discovery/kubernetes/endpointslice.go | 35 +++++++++++++++++++++++++++
+ discovery/kubernetes/node.go          |  4 +++
+ discovery/kubernetes/pod.go           |  9 +++++++
+ 3 files changed, 48 insertions(+)
+
 diff --git a/discovery/kubernetes/endpointslice.go b/discovery/kubernetes/endpointslice.go
-index 7a70255c1..4a78052e1 100644
+index 7a70255c1..b28dc3b04 100644
 --- a/discovery/kubernetes/endpointslice.go
 +++ b/discovery/kubernetes/endpointslice.go
 @@ -268,6 +268,7 @@ const (
@@ -10,17 +22,41 @@ index 7a70255c1..4a78052e1 100644
  	endpointSliceAddressTargetKindLabel             = metaLabelPrefix + "endpointslice_address_target_kind"
  	endpointSliceAddressTargetNameLabel             = metaLabelPrefix + "endpointslice_address_target_name"
  	endpointSliceEndpointTopologyLabelPrefix        = metaLabelPrefix + "endpointslice_endpoint_topology_"
-@@ -342,6 +343,16 @@ func (e *EndpointSlice) buildEndpointSlice(eps endpointSliceAdaptor) *targetgrou
+@@ -342,6 +343,40 @@ func (e *EndpointSlice) buildEndpointSlice(eps endpointSliceAdaptor) *targetgrou
  
  		if ep.nodename() != nil {
  			target[endpointSliceEndpointNodenameLabel] = lv(*ep.nodename())
 +
 +			if e.withNodeMetadata {
-+				if node, exists, err := e.nodeInf.GetStore().GetByKey(*ep.nodename()); err == nil && exists {
-+					if n, ok := node.(*apiv1.Node); ok {
-+						if group, ok := n.Labels["node.deckhouse.io/group"]; ok {
-+							target[endpointSliceEndpointNodeGroupLabel] = lv(group)
++				level.Debug(e.logger).Log("msg", "withNodeMetadata is enabled, starting to process node metadata")
++
++				// Attempting to retrieve the node by key
++				node, exists, err := e.nodeInf.GetStore().GetByKey(*ep.nodename())
++				if err != nil {
++					level.Error(e.logger).Log("msg", "failed to get node by key", "key", *ep.nodename(), "err", err)
++				} else {
++					if exists {
++						level.Debug(e.logger).Log("msg", "node found in store", "key", *ep.nodename())
++
++						// Verifying if the node object is of the correct type
++						if n, ok := node.(*apiv1.Node); ok {
++							level.Debug(e.logger).Log("msg", "node type assertion succeeded", "nodeName", n.Name)
++
++							// Checking if the node has the specific label
++							if group, ok := n.Labels["node.deckhouse.io/group"]; ok {
++								level.Debug(e.logger).Log("msg", "node has group label", "nodeName", n.Name, "group", group)
++
++								// Assigning the group label value to the target map
++								target[endpointSliceEndpointNodeGroupLabel] = lv(group)
++								level.Debug(e.logger).Log("msg", "node group label added to target", "nodeName", n.Name, "labelKey", endpointSliceEndpointNodeGroupLabel)
++							} else {
++								level.Debug(e.logger).Log("msg", "node does not have the group label", "nodeName", n.Name)
++							}
++						} else {
++							level.Error(e.logger).Log("msg", "node type assertion failed", "key", *ep.nodename(), "actualType", fmt.Sprintf("%T", node))
 +						}
++					} else {
++						level.Debug(e.logger).Log("msg", "node does not exist in store", "key", *ep.nodename())
 +					}
 +				}
 +			}
