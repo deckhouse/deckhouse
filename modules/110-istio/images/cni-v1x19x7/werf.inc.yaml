@@ -26,7 +26,7 @@ docker:
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
 final: false
-from: {{ .Images.BASE_GOLANG_23_ALPINE_DEV }}
+from: {{ .Images.BASE_GOLANG_23_ALPINE }}
 mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
