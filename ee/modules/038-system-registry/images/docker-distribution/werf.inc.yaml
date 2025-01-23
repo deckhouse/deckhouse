@@ -4,7 +4,7 @@
 ---
 artifact: "{{ $.ModuleName }}/{{ $.ImageName }}-artifact"
 from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
-fromCacheVersion: 2025012102
+fromCacheVersion: 2025012301
 mount:
   - fromPath: ~/go-pkg-cache
     to: /go/pkg
