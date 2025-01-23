@@ -84,17 +84,6 @@ spec:
     - "--v=2"
     - "--logtostderr=true"
     - "--stale-cache-interval=1h30m"
-    lifecycle:
-      preStop:
-        {{- if semverCompare ">=1.30" .Values.global.clusterConfiguration.kubernetesVersion }}
-        sleep:
-          seconds: {{ mul (include "toSeconds" .Values.prometheus.scrapeInterval) 2 }}
-        {{- else }}
-        exec:
-          command:
-          - sleep
-          - {{ mul (include "toSeconds" .Values.prometheus.scrapeInterval) 2 }}
-        {{- end }}
     ports:
     - containerPort: 9090
       name: https
@@ -152,6 +141,7 @@ spec:
 {{- end }}
   scrapeInterval: {{ .Values.prometheus.scrapeInterval | default "30s"}}
   evaluationInterval: {{ .Values.prometheus.scrapeInterval | default "30s" }}
+  minReadySeconds: {{ mul (include "toSeconds" .Values.prometheus.scrapeInterval) 2 }}
   # Empty field because when scraping metrics via the Federation API,
   # labels from externalLabels are being added,
   # which makes the series in long-term storage and regular Prometheus different
