@@ -1,5 +1,5 @@
 ---
-title: "The upmeter module: faq"
+title: "The upmeter module: FAQ"
 type:
   - instruction
 ---
