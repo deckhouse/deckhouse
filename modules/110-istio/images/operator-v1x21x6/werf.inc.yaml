@@ -26,14 +26,6 @@ import:
   add: /src/istio
   to: /src/istio
   before: install
-git:
-- add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/patches
-  to: /patches
-  includePaths:
-  - '**/*.patch'
-  stageDependencies:
-    install:
-    - '**/*.patch'
 mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
