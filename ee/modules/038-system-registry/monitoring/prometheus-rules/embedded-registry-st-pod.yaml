@@ -1,0 +1,134 @@
+- name: d8.embedded-registry-static-pods.state
+  rules:
+    - alert: D8EmbeddedRegistryPodIsNotReady
+      expr: |-
+        min by (pod, namespace, node, created_by_kind, created_by_name) (
+            kube_pod_status_ready{condition="true",namespace="d8-system",pod=~"^(system|embedded)-registry.+"}
+          * on (namespace, pod) group_left(node, created_by_kind, created_by_name)
+            kube_pod_info{created_by_kind="Node"}
+        ) != 1
+      for: 2m
+      labels:
+        severity_level: "8"
+        d8_module: embedded-registry
+        d8_component: static-pod
+      annotations:
+        plk_protocol_version: "1"
+        plk_markup_format: "markdown"
+        plk_labels_as_annotations: "pod"
+        plk_create_group_if_not_exists__d8_embedded_registry_health: "D8EmbeddedRegistryHealth,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes"
+        plk_grouped_by__d8_embedded_registry_health: "D8EmbeddedRegistryHealth,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes"
+        summary: The {{ $labels.namespace }}/{{ $labels.pod }} Pod is NOT Ready.
+        description: |
+          The recommended course of action:
+          1. View the status of the Pod and try to figure out why it is not running: `kubectl -n d8-system describe pod/{{ $labels.pod }}`
+
+    - alert: D8EmbeddedRegistryPodIsNotRunning
+      expr: |-
+        min by (pod, namespace, node, created_by_kind, created_by_name) (
+            kube_pod_status_phase{phase="Running", pod=~"^(system|embedded)-registry.+"}
+          * on (namespace, pod) group_left(node, created_by_kind, created_by_name)
+            kube_pod_info{created_by_kind="Node"}
+        ) != 1
+      for: 2m
+      labels:
+        severity_level: "8"
+        d8_module: embedded-registry
+        d8_component: static-pod
+      annotations:
+        plk_protocol_version: "1"
+        plk_markup_format: "markdown"
+        plk_labels_as_annotations: "pod"
+        plk_create_group_if_not_exists__d8_embedded_registry_health: "D8EmbeddedRegistryHealth,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes"
+        plk_grouped_by__d8_embedded_registry_health: "D8EmbeddedRegistryHealth,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes"
+        summary: The {{ $labels.namespace }}/{{ $labels.pod }} Pod is NOT Running.
+        description: |
+          The recommended course of action:
+          1. View the status of the Pod and try to figure out why it is not running: `kubectl -n d8-system describe pod/{{ $labels.pod }}`
+
+    - alert: D8EmbeddedRegistryPodIsTargetDown
+      expr: |
+        label_replace(
+          up{job=~"^system-registry-(distribution|auth)$"},
+          "host_ip",
+          "$1",
+          "instance",
+          "([^:]+):.*"
+        )
+        * on (host_ip) group_left (pod, node)
+          kube_pod_info{created_by_kind="Node",namespace="d8-system",job="kube-state-metrics",pod=~"^system-registry-.*$"}
+        == 0 unless on (job) ALERTS{alertname=~".+TargetDown"}
+      for: 2m
+      labels:
+        severity_level: "7"
+        d8_module: embedded-registry
+        d8_component: static-pod
+      annotations:
+        plk_protocol_version: "1"
+        plk_markup_format: "markdown"
+        plk_labels_as_annotations: "pod"
+        plk_create_group_if_not_exists__d8_embedded_registry_health: "D8EmbeddedRegistryHealth,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes"
+        plk_grouped_by__d8_embedded_registry_health: "D8EmbeddedRegistryHealth,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes"
+        summary: The {{ $labels.namespace }}/{{ $labels.pod }} Pod target is down
+        description: |
+          The recommended course of action:
+          1. Check the Pod status: `kubectl -n d8-system get pod/{{ $labels.pod }}`
+          2. Or check the Pod logs: `kubectl -n d8-system logs pod/{{ $labels.pod }}`
+
+    - alert: D8EmbeddedRegistryPodIsTargetDown
+      expr: |
+        label_replace(
+          up{job=~"^system-registry-(distribution|auth)$"},
+          "host_ip",
+          "$1",
+          "instance",
+          "([^:]+):.*"
+        )
+        * on (host_ip) group_left (pod, node)
+          kube_pod_info{created_by_kind="Node",namespace="d8-system",job="kube-state-metrics",pod=~"^system-registry-.*$"}
+        == 0 unless on (job) ALERTS{alertname=~".+TargetDown"}
+      for: 10m
+      labels:
+        severity_level: "6"
+        d8_module: embedded-registry
+        d8_component: static-pod
+      annotations:
+        plk_protocol_version: "1"
+        plk_markup_format: "markdown"
+        plk_labels_as_annotations: "pod"
+        plk_create_group_if_not_exists__d8_embedded_registry_health: "D8EmbeddedRegistryHealth,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes"
+        plk_grouped_by__d8_embedded_registry_health: "D8EmbeddedRegistryHealth,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes"
+        summary: The {{ $labels.namespace }}/{{ $labels.pod }} Pod target is down
+        description: |
+          The recommended course of action:
+          1. Check the Pod status: `kubectl -n d8-system get pod/{{ $labels.pod }}`
+          2. Or check the Pod logs: `kubectl -n d8-system logs pod/{{ $labels.pod }}`
+
+    - alert: D8EmbeddedRegistryPodIsTargetDown
+      expr: |
+        label_replace(
+          up{job=~"^system-registry-(distribution|auth)$"},
+          "host_ip",
+          "$1",
+          "instance",
+          "([^:]+):.*"
+        )
+        * on (host_ip) group_left (pod, node)
+          kube_pod_info{created_by_kind="Node",namespace="d8-system",job="kube-state-metrics",pod=~"^system-registry-.*$"}
+        == 0 unless on (job) ALERTS{alertname=~".+TargetDown"}
+      for: 20m
+      labels:
+        severity_level: "5"
+        d8_module: embedded-registry
+        d8_component: static-pod
+      annotations:
+        plk_protocol_version: "1"
+        plk_markup_format: "markdown"
+        plk_labels_as_annotations: "pod"
+        plk_create_group_if_not_exists__d8_embedded_registry_health: "D8EmbeddedRegistryHealth,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes"
+        plk_grouped_by__d8_embedded_registry_health: "D8EmbeddedRegistryHealth,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes"
+        summary: The {{ $labels.namespace }}/{{ $labels.pod }} Pod target is down
+        description: |
+          The recommended course of action:
+          1. Check the Pod status: `kubectl -n d8-system get pod/{{ $labels.pod }}`
+          2. Or check the Pod logs: `kubectl -n d8-system logs pod/{{ $labels.pod }}`
