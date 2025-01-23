@@ -32,7 +32,6 @@ spec:
         maxAllowed:
           cpu: 50m
           memory: 100Mi
-      {{- include "helm_lib_vpa_kube_rbac_proxy_resources" . | nindent 6 }}
       - containerName: promxy
         minAllowed:
           {{- include "promxy_resources" . | nindent 10 }}
