@@ -6,7 +6,7 @@ type:
 
 ## Why can't `upmeter-probe-*` pods be placed in the cluster, why are some pods constantly deleted?
 
-The module implements tests for the availability of the functionality of some kubernetes controllers.
+The module implements tests for the availability of the functionality of some Kubernetes controllers.
 
 The tests are performed by creating and deleting temporary pods.
 
