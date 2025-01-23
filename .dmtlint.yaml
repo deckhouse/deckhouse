@@ -207,7 +207,6 @@ linters-settings:
       - monitoring-applications:/applications/grafana/placeholder
       - monitoring-applications:/applications/minio/placeholder
       - monitoring-applications:/applications/nginx/placeholder
-      - monitoring-applications:/applications/trickster/placeholder
     skip-oss-checks:
       - basic-auth
       - cloud-provider-aws

@@ -10,12 +10,6 @@
   logo: https://grafana.com/static/img/about/grafana_logo_swirl_fullcolor.jpg
   license: GNU Affero General Public License v3.0
 
-- name: Trickster
-  link: https://github.com/trickstercache/trickster
-  description: A HTTP reverse proxy/cache for http applications and a dashboard query accelerator for time series databases.
-  logo: https://raw.githubusercontent.com/trickstercache/trickster/master/docs/images/logos/trickster-logo.svg
-  license: Apache License 2.0
-
 - name: Mimir
   link: https://github.com/grafana/mimir
   description: A HTTP reverse proxy/cache for http applications and a dashboard query accelerator for time series databases.
