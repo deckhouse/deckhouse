@@ -49,14 +49,14 @@
     - alert: D8EmbeddedRegistryPodIsTargetDown
       expr: |
         label_replace(
-          up{job=~"^system-registry-(distribution|auth)$"},
+          up{job=~"^(system|embedded)-registry-(distribution|auth)$"},
           "host_ip",
           "$1",
           "instance",
           "([^:]+):.*"
         )
         * on (host_ip) group_left (pod, node)
-          kube_pod_info{created_by_kind="Node",namespace="d8-system",job="kube-state-metrics",pod=~"^system-registry-.*$"}
+          kube_pod_info{created_by_kind="Node",namespace="d8-system",pod=~"^(system|embedded)-registry.+"}
         == 0 unless on (job) ALERTS{alertname=~".+TargetDown"}
       for: 2m
       labels:
@@ -78,14 +78,14 @@
     - alert: D8EmbeddedRegistryPodIsTargetDown
       expr: |
         label_replace(
-          up{job=~"^system-registry-(distribution|auth)$"},
+          up{job=~"^(system|embedded)-registry-(distribution|auth)$"},
           "host_ip",
           "$1",
           "instance",
           "([^:]+):.*"
         )
         * on (host_ip) group_left (pod, node)
-          kube_pod_info{created_by_kind="Node",namespace="d8-system",job="kube-state-metrics",pod=~"^system-registry-.*$"}
+          kube_pod_info{created_by_kind="Node",namespace="d8-system",pod=~"^(system|embedded)-registry.+"}
         == 0 unless on (job) ALERTS{alertname=~".+TargetDown"}
       for: 10m
       labels:
@@ -107,14 +107,14 @@
     - alert: D8EmbeddedRegistryPodIsTargetDown
       expr: |
         label_replace(
-          up{job=~"^system-registry-(distribution|auth)$"},
+          up{job=~"^(system|embedded)-registry-(distribution|auth)$"},
           "host_ip",
           "$1",
           "instance",
           "([^:]+):.*"
         )
         * on (host_ip) group_left (pod, node)
-          kube_pod_info{created_by_kind="Node",namespace="d8-system",job="kube-state-metrics",pod=~"^system-registry-.*$"}
+          kube_pod_info{created_by_kind="Node",namespace="d8-system",pod=~"^(system|embedded)-registry.+"}
         == 0 unless on (job) ALERTS{alertname=~".+TargetDown"}
       for: 20m
       labels:
