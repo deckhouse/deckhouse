@@ -188,7 +188,7 @@ Features of the configurations listed in the table above:
   </tbody>
 </table>
 
-* The parameters of Worker nodes are largely dictated by the nature of the workload running on the node(s), the table lists the minimum requirements.
+* The parameters of worker nodes are largely dictated by the nature of the workload running on the node(s), the table lists the minimum requirements.
 * Note that all nodes require high performance disks (400+ IOPS).
 
 ### Single master node cluster
