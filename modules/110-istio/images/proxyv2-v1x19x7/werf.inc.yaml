@@ -56,6 +56,10 @@ final: false
 image: {{ .ModuleName }}/{{ .ImageName }}-build-agent-artifact
 from: {{ .Images.BASE_GOLANG_23_ALPINE }}
 final: false
+- image: {{ .ModuleName }}/common-{{ $istioImageVersion }}-src-artifact
+  add: /src/istio
+  to: /src/istio
+  before: install
 mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
