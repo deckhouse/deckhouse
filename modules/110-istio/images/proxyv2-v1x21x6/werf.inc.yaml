@@ -7,6 +7,14 @@
 {{- $goVersion := "1.23.1" }}
 {{- $protocVersion := "22.3" }}
 {{- $bazelVersions := "6.3.2" }}
+{{- $iptables_version := "1.8.9" }}
+{{- $iptables_image_version := $iptables_version | replace "." "-" }}
+{{- $source := "https://github.com" }}
+{{- $sourceraw := "https://raw.githubusercontent.com" }}
+{{- if $.DistroPackagesProxy }}
+  {{- $source = printf "http://%s/repository/github-com" $.DistroPackagesProxy }}
+  {{- $sourceraw = printf "http://%s/repository/githubusercontent" $.DistroPackagesProxy }}
+{{- end }}
 ---
 # Based on https://github.com/istio/istio/blob/1.21.6/docker/Dockerfile.base
 #      and https://github.com/istio/istio/blob/1.21.6/pilot/docker/Dockerfile.proxyv2
@@ -37,17 +45,28 @@ import:
   owner: 1337
   group: 1337
   after: setup
+- image: {{ .ModuleName }}/{{ .ImageName }}-binaries-artifact
+  add: /relocate
+  to: /
+  before: setup
+- image: registrypackages/iptables-artifact-{{ $iptables_image_version }}
+  add: /
+  to: /sbin
+  includePaths:
+  - xtables-legacy-multi
+  - xtables-nft-multi
+  before: setup
+- image: common/iptables-wrapper
+  add: /iptables-wrapper
+  to: /sbin/iptables-wrapper
+  before: setup
 shell:
   beforeInstall:
-  # Rebuild and need self builded iptables
-  - |
-    apt-get update && \
-    apt-get install -y ca-certificates iptables iproute2
+  {{- include "alt packages proxy" . | nindent 2 }}
+  - apt-get update && apt-get install -y ca-certificates iproute2
   - update-ca-trust
   - apt-get clean
   - rm -rf  /var/log/*log /var/lib/apt/lists/* /var/log/apt/* /var/lib/dpkg/*-old /var/cache/debconf/*-old
-  - update-alternatives --set iptables /usr/sbin/iptables-legacy
-  - update-alternatives --set ip6tables /usr/sbin/ip6tables-legacy
   install:
   - useradd -m --uid 1337 istio-proxy
   - echo istio-proxy ALL=NOPASSWD:ALL | tee -a /etc/sudoers
@@ -59,8 +78,10 @@ docker:
   USER: 1337
   ENTRYPOINT: ["/usr/local/bin/pilot-agent"]
 ---
+#=====================================================================================================
+---
 image: {{ .ModuleName }}/{{ .ImageName }}-agent-artifact
-from: {{ .Images.BASE_GOLANG_23_ALPINE_DEV }}
+from: {{ .Images.BASE_GOLANG_23_ALPINE }}
 final: false
 import:
 - image: {{ .ModuleName }}/common-{{ $istioImageVersion }}-src-artifact
@@ -71,12 +92,17 @@ mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
 shell:
+  beforeInstall:
+  {{- include "alpine packages proxy" . | nindent 2 }}
+  - apk add --no-cache bash git binutils
   install:
   - cd /src/istio/
   - echo {{ $istioVersion }} > version
   - export GOPROXY={{ $.GOPROXY }} GOOS=linux GOARCH=amd64
   - export LDFLAGS='-extldflags -static -s -w'
   - common/scripts/gobuild.sh /src/istio/out/ -tags=agent,disable_pgv /src/istio/pilot/cmd/pilot-agent
+  #
+  - strip /src/istio/out/pilot-agent
   #
   - chmod 0555 /src/istio/out/pilot-agent
   - chown 1337:1337 /src/istio/out/pilot-agent
@@ -152,7 +178,32 @@ shell:
   - ninja install-cxx install-cxxabi
   - rm -rf /opt/libcxx/include
 ---
+image: {{ .ModuleName }}/{{ .ImageName }}-binaries-artifact
+fromImage: common/relocate-artifact
+final: false
+shell:
+  install:
+  - mkdir -p /relocate/sbin
+  - |
+    for cmd in iptables iptables-save iptables-restore ip6tables ip6tables-save ip6tables-restore; do
+      ln -f -s /sbin/iptables-wrapper "/relocate/sbin/${cmd}"
+    done
+    # broken symlinks are not imported from the artifact
+    touch /sbin/iptables-wrapper
+  - |
+    for mode in legacy nft; do
+      for basecmd in iptables ip6tables; do
+        for cmd in ${basecmd}-${mode} ${basecmd}-${mode}-save ${basecmd}-${mode}-restore; do
+          ln -sf /sbin/xtables-${mode}-multi "/relocate/sbin/${cmd}"
+        done
+      done
+    done
+---
 #=====================================================================================================
+---
+image: {{ .ModuleName }}/golang-artifact
+from: {{ .Images.BASE_GOLANG_23_ALPINE }}
+final: false
 ---
 image: {{ $.ModuleName }}/{{ .ImageName }}-build-image-artifact
 fromImage: common/alt-p11-artifact
@@ -160,6 +211,11 @@ final: false
 mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
+import:
+- image: {{ .ModuleName }}/golang-artifact
+  add: /usr/local/go
+  to: /usr/local/go
+  before: install
 shell:
   beforeInstall:
   - export DEBIAN_FRONTEND=noninteractive TZ=Etc/UTC
@@ -181,7 +237,7 @@ shell:
   # for debug
   - apt-get install -y strace vim-console
   - |
-    apt-get update && apt-get install -y \
+    apt-get install -y \
     sudo \
     libcap-devel libpcap-devel \
     clang14.0 clang14.0-tools lld14.0 llvm14.0-devel \
@@ -195,15 +251,13 @@ shell:
   - ln -s -f /usr/lib/llvm-14.0/bin/clang++ /usr/bin/clang++
   - ln -s -f /usr/lib/llvm-14.0/bin/ld.lld /usr/bin/ld.lld
   # Install Go
-  - curl -sfL https://go.dev/dl/go{{ $goVersion }}.linux-amd64.tar.gz -o go.tar.gz
-  - rm -rf /usr/local/go && tar -C /usr/local -xzf go.tar.gz && rm go.tar.gz
   - export GOROOT=/usr/local/go GOPATH=/go
   - export PATH=${PATH}:${GOROOT}/bin:${GOPATH}/bin
   - export GOOS=linux GOARCH=amd64 CGO_ENABLED=0
   - export GO_VERSION=${GOLANG_VERSION} GOPROXY={{ $.GOPROXY }}
   - go version
   # Install protoc and plugins
-  - curl --fail --show-error --silent --location "https://github.com/protocolbuffers/protobuf/releases/download/v{{ $protocVersion }}/protoc-{{ $protocVersion }}-linux-x86_64.zip" --output /tmp/protoc.zip
+  - curl --fail --show-error --silent --location "{{ $source }}/protocolbuffers/protobuf/releases/download/v{{ $protocVersion }}/protoc-{{ $protocVersion }}-linux-x86_64.zip" --output /tmp/protoc.zip
   - unzip /tmp/protoc.zip -x readme.txt -d /usr/local && rm /tmp/protoc.zip
   - chmod o+rx /usr/local/bin/protoc && chmod o+rX -R /usr/local/include/google/
   # 8ba23be9613c672d40ae261d2a1335d639bdd59b == tag: cmd/protoc-gen-go-grpc/v1.3.0
@@ -214,14 +268,14 @@ shell:
   # Install multiversion bazel
   - bazel_versions=({{ $bazelVersions }})
   # install bazel wrapper script in the path, it automatically recognises `.bazelversion` and `USE_BAZEL_VERSIONS`, if neither are set it picks latest
-  - curl --fail --show-error --silent --location https://raw.githubusercontent.com/bazelbuild/bazel/${bazel_versions[-1]}/scripts/packages/bazel.sh --output /usr/local/bin/bazel
+  - curl --fail --show-error --silent --location "{{ $sourceraw }}/bazelbuild/bazel/refs/tags/${bazel_versions[-1]}/scripts/packages/bazel.sh" --output /usr/local/bin/bazel
   - chmod +x /usr/local/bin/bazel
   - |
     for bazel_version in ${bazel_versions[@]} ; do
       # instead of using installer script, download binaries directly, as installer script doesn't append version suffix,
       # so for multiple versions to be usable files will need to moved around, which would be more tedious
       long_binary_name="bazel-${bazel_version}-linux-x86_64"
-      curl --fail --show-error --silent --location https://github.com/bazelbuild/bazel/releases/download/${bazel_version}/${long_binary_name} --output "/usr/local/bin/${long_binary_name}"
+      curl --fail --show-error --silent --location {{ $source }}/bazelbuild/bazel/releases/download/${bazel_version}/${long_binary_name} --output "/usr/local/bin/${long_binary_name}"
       chmod +x "/usr/local/bin/${long_binary_name}"
       USE_BAZEL_VERSION="${bazel_version}" bazel version # to extract all binaries properly
     done
@@ -261,3 +315,4 @@ shell:
   - mkdir -p /tmp/bazel-deps
   - git clone --depth 1 --branch {{ $istioProxyDepsRev }} {{ .SOURCE_REPO }}/istio/envoy-build-deps.git /tmp/bazel-deps
   - rm -rf /tmp/bazel-deps/.git
+---
