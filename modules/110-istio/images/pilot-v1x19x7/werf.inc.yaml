@@ -1,5 +1,5 @@
 ---
-{{- $istioPilotiVersion := "1.19.7" }}
+{{- $istioVersion := "1.19.7" }}
 {{- $istioImageVersion := (printf "v%s" (replace "." "x" $istioVersion)) }} {{- /* 1.19.7 -> v1x19x7 */}}
 ---
 # Based on https://github.com/istio/istio/blob/1.19.7/pilot/docker/Dockerfile.pilot
@@ -46,7 +46,7 @@ shell:
   - apk add --no-cache bash git binutils
   install:
   - cd /src/istio/
-  - echo {{ $istioPilotiVersion }} > version
+  - echo {{ $istioVersion }} > version
   - export GOPROXY={{ $.GOPROXY }} GOOS=linux GOARCH=amd64
   - export LDFLAGS='-extldflags -static -s -w'
   - common/scripts/gobuild.sh /src/istio/out/ -tags=agent,disable_pgv /src/istio/pilot/cmd/pilot-discovery/
