@@ -62,10 +62,11 @@ func (c *Cache) ResetRange() {
 }
 
 // GetRange returns a list of module versions from the current State
-func (c *Cache) GetRange() (versions []backends.Version) {
+func (c *Cache) GetRange() []backends.Version {
 	c.m.RLock()
 	defer c.m.RUnlock()
 
+	versions := []backends.Version{}
 	state := c.GetState()
 	for _, version := range c.stateSnap {
 		if !contain(state, version) {
@@ -84,14 +85,14 @@ func (c *Cache) GetRange() (versions []backends.Version) {
 	return versions
 }
 
-func (c *Cache) GetState() (versions []backends.Version) {
+func (c *Cache) GetState() []backends.Version {
 	c.m.RLock()
 	defer c.m.RUnlock()
 
+	versions := []backends.Version{}
 	for registry, modules := range c.val {
 		for module, moduleData := range modules {
 			for version, data := range moduleData.versions {
-
 				releaseChannels := []string{}
 				for releaseChannel := range data.ReleaseChannels {
 					releaseChannels = append(releaseChannels, releaseChannel)
@@ -195,7 +196,7 @@ func (c *Cache) syncReleaseChannels(registry, module, releaseChannel string) {
 			for versionKey, version := range m.versions {
 				delete(version.ReleaseChannels, releaseChannel)
 				if len(version.ReleaseChannels) == 0 {
-					delete(m.versions, versionNum(versionKey))
+					delete(m.versions, versionKey)
 				}
 			}
 		}
@@ -207,7 +208,6 @@ func contain(versions []backends.Version, version backends.Version) bool {
 		if val.Registry == version.Registry &&
 			val.Module == version.Module &&
 			val.Version == version.Version {
-
 			sort.Strings(val.ReleaseChannels)
 			sort.Strings(version.ReleaseChannels)
 			if strings.Join(val.ReleaseChannels, "") == strings.Join(version.ReleaseChannels, "") {

@@ -81,7 +81,7 @@ func (s *registryscaner) Subscribe(ctx context.Context, scanInterval time.Durati
 				s.processRegistries(ctx)
 				state := s.cache.GetRange()
 				if len(state) > 0 {
-					klog.V(3).Infof("new versions in registry found")
+					klog.V(3).Infof("module versions changed in registry")
 					s.updateHandler(state)
 					s.cache.ResetRange()
 				}

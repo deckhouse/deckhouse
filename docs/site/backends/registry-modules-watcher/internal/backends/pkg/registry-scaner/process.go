@@ -23,8 +23,8 @@ import (
 	"io"
 	"strings"
 
-	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
+	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"k8s.io/klog"
 )
 
@@ -85,7 +85,7 @@ func (s *registryscaner) processReleaseChannels(ctx context.Context, registry, m
 	}
 }
 
-func (s *registryscaner) processVersion(ctx context.Context, registry, module, version, releaseChannel string) {
+func (s *registryscaner) processVersion(_ context.Context, registry, module, version, releaseChannel string) {
 	image, err := s.registryClients[registry].Image(module, version)
 	if err != nil {
 		klog.Error(err)
