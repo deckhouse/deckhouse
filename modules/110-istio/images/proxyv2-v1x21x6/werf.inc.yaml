@@ -85,7 +85,7 @@ image: {{ .ModuleName }}/{{ .ImageName }}-build-envoy-artifact
 fromImage: {{ $.ModuleName }}/{{ .ImageName }}-build-image-artifact
 final: false
 import:
-- image: {{ .ModuleName }}/common-{{ $istioImageVersion }}-src-artifact
+- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
   add: /src/proxy
   to: /src/proxy
   before: install
@@ -247,9 +247,6 @@ shell:
   - git clone --depth 1 --branch {{ $istioVersion }} {{ $.SOURCE_REPO }}/istio/proxy.git /src/proxy
   - git clone --branch "{{ $llvmRev }}" {{ $.SOURCE_REPO }}/llvm/llvm-project.git /src/llvm
   - rm -rf /src/llvm/.git
-  - git clone --depth 1 --branch {{ $istioVersion }} {{ $.SOURCE_REPO }}/istio/istio.git /src/istio/
-  #- git apply --verbose /patches/*.patch
-  - rm -rf /src/istio/.git
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-basel-artifact
 fromImage: common/src-artifact
