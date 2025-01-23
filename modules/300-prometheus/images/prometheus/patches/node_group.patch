@@ -1,5 +1,5 @@
 diff --git a/discovery/kubernetes/endpointslice.go b/discovery/kubernetes/endpointslice.go
-index 7a70255c1..260538d4d 100644
+index 7a70255c1..4a78052e1 100644
 --- a/discovery/kubernetes/endpointslice.go
 +++ b/discovery/kubernetes/endpointslice.go
 @@ -268,6 +268,7 @@ const (
@@ -10,15 +10,17 @@ index 7a70255c1..260538d4d 100644
  	endpointSliceAddressTargetKindLabel             = metaLabelPrefix + "endpointslice_address_target_kind"
  	endpointSliceAddressTargetNameLabel             = metaLabelPrefix + "endpointslice_address_target_name"
  	endpointSliceEndpointTopologyLabelPrefix        = metaLabelPrefix + "endpointslice_endpoint_topology_"
-@@ -342,6 +343,14 @@ func (e *EndpointSlice) buildEndpointSlice(eps endpointSliceAdaptor) *targetgrou
+@@ -342,6 +343,16 @@ func (e *EndpointSlice) buildEndpointSlice(eps endpointSliceAdaptor) *targetgrou
  
  		if ep.nodename() != nil {
  			target[endpointSliceEndpointNodenameLabel] = lv(*ep.nodename())
 +
-+			if node, exists, err := e.nodeInf.GetStore().GetByKey(*ep.nodename()); err == nil && exists {
-+				if n, ok := node.(*apiv1.Node); ok {
-+					if group, ok := n.Labels["node.deckhouse.io/group"]; ok {
-+						target[endpointSliceEndpointNodeGroupLabel] = lv(group)
++			if e.withNodeMetadata {
++				if node, exists, err := e.nodeInf.GetStore().GetByKey(*ep.nodename()); err == nil && exists {
++					if n, ok := node.(*apiv1.Node); ok {
++						if group, ok := n.Labels["node.deckhouse.io/group"]; ok {
++							target[endpointSliceEndpointNodeGroupLabel] = lv(group)
++						}
 +					}
 +				}
 +			}
