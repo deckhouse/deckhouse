@@ -32,7 +32,6 @@ mount:
 shell:
   install:
   - cd /src/istio/
-  - find /patches -name '*.patch' | xargs git apply --verbose
   - echo {{ $istioVersion }} > version
   - export GOPROXY={{ $.GOPROXY }}
   - GOOS=linux GOARCH=amd64 LDFLAGS='-extldflags -static -s -w' common/scripts/gobuild.sh /src/istio/out/ -tags=agent,disable_pgv /src/istio/operator/cmd/operator/
