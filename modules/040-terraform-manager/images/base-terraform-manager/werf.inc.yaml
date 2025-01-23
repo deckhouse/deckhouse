@@ -6,11 +6,11 @@ docker:
   ENV:
     PATH: "/root:/"
 import:
-- artifact: dhctl # from main werf.yaml
+- image: dhctl # from main werf.yaml
   add: /dhctl/bin/dhctl
   to: /dhctl
   before: setup
-- artifact: terraform
+- image: terraform
   add: /terraform/terraform
   to: /root/terraform
   before: setup

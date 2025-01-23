@@ -6,7 +6,7 @@ import:
   add: /kube-rbac-proxy
   to: /kube-rbac-proxy
   before: setup
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
   add: /relocate/bin/true
   to: /bin/true
   before: setup
@@ -20,7 +20,8 @@ docker:
 ---
 {{- $binaries := "/bin/true" }}
 ---
-artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+final: false
 from: {{ $.Images.BASE_ALT_DEV }}
 shell:
  setup:

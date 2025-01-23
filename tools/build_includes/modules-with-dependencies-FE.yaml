@@ -1046,6 +1046,11 @@
   stageDependencies:
     setup:
         - '**/*'
+- add: /ee/fe/modules/300-prometheus/templates/prometheus/longterm/prometheus.yaml
+  to: /deckhouse/modules/300-prometheus/templates/prometheus/longterm/prometheus.yaml
+  stageDependencies:
+    setup:
+        - '**/*'
 - add: /ee/fe/modules/340-monitoring-applications
   to: /deckhouse/modules/340-monitoring-applications
   excludePaths:
