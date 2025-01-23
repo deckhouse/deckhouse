@@ -63,7 +63,7 @@ image: {{ .ModuleName }}/{{ .ImageName }}-agent-artifact
 from: {{ .Images.BASE_GOLANG_23_ALPINE_DEV }}
 final: false
 import:
-- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+- image: {{ .ModuleName }}/common-{{ $istioImageVersion }}-src-artifact
   add: /src/istio
   to: /src/istio
   before: install
