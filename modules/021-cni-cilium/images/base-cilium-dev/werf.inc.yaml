@@ -4,13 +4,11 @@
 {{- $bazelVersions := "3.7.0 3.7.1 3.7.2 6.3.2" }}
 #
 {{- $source := "https://github.com" }}
+{{- $sourceraw := "https://raw.githubusercontent.com" }}
 {{- if $.DistroPackagesProxy }}
   {{- $source = printf "http://%s/repository/github-com" $.DistroPackagesProxy }}
-{{- end }}
-  {{- $sourceraw := "https://raw.githubusercontent.com" }}
-  {{- if $.DistroPackagesProxy }}
   {{- $sourceraw = printf "http://%s/repository/githubusercontent" $.DistroPackagesProxy }}
-  {{- end }}
+{{- end }}
 
 ---
 # #####################################################################
