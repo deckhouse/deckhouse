@@ -22,7 +22,7 @@ severity:
         ru: "инцидент имеет средние шансы на появление"
     unlikely:
       en: "Unlikely"
-      ru: "Маловероятный"
+      ru: "Маловероятно"
       note:
         en: "the incident has a small chance of happening"
         ru: "инцидент имеет небольшой шанс произойти"
