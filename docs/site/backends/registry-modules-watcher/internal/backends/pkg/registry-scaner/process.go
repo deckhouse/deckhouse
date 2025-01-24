@@ -82,32 +82,34 @@ func (s *registryscaner) processReleaseChannels(ctx context.Context, registry, m
 			continue
 		}
 
-		s.cache.SetReleaseChecksum(registry, module, releaseChannel, releaseDigest.String())
-
 		version, err := extractVersionFromImage(releaseImage)
 		if err != nil {
 			klog.Error(err)
 			continue
 		}
 
-		s.processVersion(ctx, registry, module, version, releaseChannel)
+		if err := s.processVersion(ctx, registry, module, version, releaseChannel); err == nil {
+			s.cache.SetReleaseChecksum(registry, module, releaseChannel, releaseDigest.String())
+		}
 	}
 }
 
-func (s *registryscaner) processVersion(_ context.Context, registry, module, version, releaseChannel string) {
+func (s *registryscaner) processVersion(_ context.Context, registry, module, version, releaseChannel string) error {
 	image, err := s.registryClients[registry].Image(module, version)
 	if err != nil {
 		klog.Error(err)
-		return
+		return err
 	}
 
 	tarFile, err := extractDocumentation(image)
 	if err != nil {
 		klog.Error(err)
-		return
+		return err
 	}
 
 	s.cache.SetTar(registry, module, version, releaseChannel, tarFile)
+
+	return nil
 }
 
 func extractDocumentation(image v1.Image) ([]byte, error) {
