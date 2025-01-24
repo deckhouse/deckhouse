@@ -1,6 +1,8 @@
 modules:
   admission-policy-engine:
     available: true
+  basic-auth:
+    available: false
   ceph-csi:
     available: true
   cert-manager:
@@ -111,6 +113,8 @@ modules:
       managed: true
   loki:
     available: true
+  monitoring-applications:
+    available: false
   monitoring-custom:
     available: true
     enabled:

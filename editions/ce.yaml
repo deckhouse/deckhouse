@@ -4,6 +4,8 @@ modules:
     enabled:
       default: true
       managed: true
+  basic-auth:
+    available: false
   ceph-csi:
     available: true
   cert-manager:
@@ -114,6 +116,8 @@ modules:
       managed: true
   loki:
     available: true
+  monitoring-applications:
+    available: false
   monitoring-custom:
     available: true
     enabled:
@@ -152,6 +156,8 @@ modules:
     available: false
   network-policy-engine:
     available: true
+  node-local-dns:
+    available: false
   node-manager:
     available: true
     enabled:
