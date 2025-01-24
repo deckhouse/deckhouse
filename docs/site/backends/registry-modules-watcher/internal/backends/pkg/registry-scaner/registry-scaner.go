@@ -18,10 +18,11 @@ import (
 	"context"
 	"time"
 
-	v1 "github.com/google/go-containerregistry/pkg/v1"
-	"k8s.io/klog"
 	"registry-modules-watcher/internal/backends"
 	"registry-modules-watcher/internal/backends/pkg/registry-scaner/cache"
+
+	v1 "github.com/google/go-containerregistry/pkg/v1"
+	"k8s.io/klog"
 )
 
 type Client interface {
@@ -47,7 +48,7 @@ var releaseChannelsTags = map[string]string{
 }
 
 // New
-func New(registryClients ...Client) *registryscaner {
+func New(registryClients ...Client) *registryscaner { //nolint:revive  // as is
 	registryscaner := registryscaner{
 		registryClients: make(map[string]Client),
 		cache:           cache.New(),
@@ -82,7 +83,9 @@ func (s *registryscaner) Subscribe(ctx context.Context, scanInterval time.Durati
 				state := s.cache.GetRange()
 				if len(state) > 0 {
 					klog.V(3).Infof("module versions changed in registry")
-					s.updateHandler(state)
+					if err := s.updateHandler(state); err != nil {
+						klog.Errorf("updateHandler error: %v", err)
+					}
 					s.cache.ResetRange()
 				}
 

@@ -203,6 +203,25 @@ func (c *Cache) syncReleaseChannels(registry, module, releaseChannel string) {
 	}
 }
 
+func (c *Cache) GetModules(registry string) []string {
+	var modules []string
+	r, ok := c.val[registryName(registry)]
+	if ok {
+		for m := range r {
+			modules = append(modules, string(m))
+		}
+	}
+
+	return modules
+}
+
+func (c *Cache) DeleteModule(registry string, module string) {
+	r, ok := c.val[registryName(registry)]
+	if ok {
+		delete(r, moduleName(module))
+	}
+}
+
 func contain(versions []backends.Version, version backends.Version) bool {
 	for _, val := range versions {
 		if val.Registry == version.Registry &&

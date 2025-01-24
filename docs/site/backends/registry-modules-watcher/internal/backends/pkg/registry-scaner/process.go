@@ -21,6 +21,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"slices"
 	"strings"
 
 	v1 "github.com/google/go-containerregistry/pkg/v1"
@@ -52,6 +53,13 @@ func (s *registryscaner) processModules(ctx context.Context, registry Client, mo
 		}
 
 		s.processReleaseChannels(ctx, registry.Name(), module, filterReleaseChannelsFromTags(tags))
+	}
+
+	// remove deleted modules from cache
+	for _, m := range s.cache.GetModules(registry.Name()) {
+		if !slices.Contains(modules, m) {
+			s.cache.DeleteModule(registry.Name(), m)
+		}
 	}
 }
 
