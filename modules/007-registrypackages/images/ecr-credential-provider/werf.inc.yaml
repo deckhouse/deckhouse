@@ -21,7 +21,7 @@ imageSpec:
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
 final: false
 {{- if semverCompare ">=1.32" $version }}
-from: {{ $.Images.BASE_GOLANG_22_BULLSEYE }}
+from: {{ $.Images.BASE_GOLANG_23_BULLSEYE }}
 {{- else if semverCompare ">=1.30" $version }}
 from: {{ $.Images.BASE_GOLANG_22_BULLSEYE }}
 {{- else }}
