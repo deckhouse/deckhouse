@@ -46,3 +46,4 @@ shell:
   - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o /trivy ./cmd/trivy/main.go
   - chown 64535:64535 /trivy
   - chmod 0700 /trivy
+
