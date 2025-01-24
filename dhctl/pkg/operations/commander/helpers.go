@@ -79,7 +79,7 @@ func ConstructManagedByCommanderConfigMapTask(commanderUUID uuid.UUID, kubeCl *c
 		UpdateFunc: func(manifest interface{}) error {
 			existingCm, err := kubeCl.CoreV1().ConfigMaps(manifests.CommanderUUIDCmNamespace).Get(context.TODO(), manifests.CommanderUUIDCm, metav1.GetOptions{})
 			if err != nil {
-				return fmt.Errorf("unable to get existing cm: %w", err)
+				return fmt.Errorf("unable to get existing cm %q: %w", manifests.CommanderUUIDCm, err)
 			}
 
 			shouldUpdate, err := doCheckShouldUpdateCommanderUUID(existingCm, commanderUUID)
