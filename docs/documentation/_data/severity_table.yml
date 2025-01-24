@@ -16,7 +16,7 @@ severity:
         ru: "инцидент почти произошёл"
     possible:
       en: "Possible"
-      ru: "Возможный"
+      ru: "Возможно"
       note:
         en: "incident average chances of occurrence"
         ru: "инцидент имеет средние шансы на появление"
