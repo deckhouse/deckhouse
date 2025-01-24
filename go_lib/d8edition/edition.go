@@ -81,7 +81,7 @@ func Parse(ctx context.Context, cli client.Client) (*Edition, error) {
 	parsed.Bundle = strings.ToLower(strings.TrimSpace(parsed.Bundle))
 	parsed.Edition = strings.ToLower(strings.TrimSpace(parsed.Edition)) + ".yaml"
 
-	content, err := os.ReadFile(filepath.Join(editionsPath, parsed.Bundle, parsed.Edition))
+	content, err := os.ReadFile(filepath.Join(editionsPath, parsed.Edition))
 	if err != nil {
 		return nil, fmt.Errorf("read the '%s/%s' edition file: %w", parsed.Bundle, parsed.Edition, err)
 	}
