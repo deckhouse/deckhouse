@@ -12,7 +12,7 @@ severity:
       en: "Likely"
       ru: "Вероятно"
       note:
-        en: "the incident almost happened"
+        en: "the incident almost occurred"
         ru: "инцидент почти произошёл"
     possible:
       en: "Possible"
