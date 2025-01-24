@@ -69,6 +69,10 @@ docker:
   USER: 1337
   ENTRYPOINT: ["/usr/local/bin/pilot-agent"]
 ---
+image: {{ .ModuleName }}/{{ .ImageName }}-binary-artifact
+from: istio/proxyv2:1.19.7@sha256:680eac0faff1835f994ba9047750d7cfe989e868324a933a38d6a6cb80779b33
+final: false
+---
 image: {{ .ModuleName }}/{{ .ImageName }}-build-agent-artifact
 from: {{ .Images.BASE_GOLANG_23_ALPINE }}
 final: false
