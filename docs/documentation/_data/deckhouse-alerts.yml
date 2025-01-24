@@ -1373,7 +1373,7 @@ alerts:
       module: control-plane-manager
       edition: ce
       description: |-
-        Current kubernetes version "{{ $labels.k8s_version }}" is deprecated, and its support will be removed within 6 months
+        The current Kubernetes version "{{ $labels.k8s_version }}" is deprecated, and its support will be removed in upcoming releases.
 
         Please migrate to the next kubernetes version (at least 1.28)
 
@@ -3644,21 +3644,6 @@ alerts:
       summary: |
         Count of unavailable replicas in StatefulSet {{$labels.namespace}}/{{$labels.statefulset}} above threshold.
       severity: "6"
-      markupFormat: markdown
-    - name: KubernetesVersionEndOfLife
-      sourceFile: modules/040-control-plane-manager/monitoring/prometheus-rules/control-plane-manager.yaml
-      moduleUrl: 040-control-plane-manager
-      module: control-plane-manager
-      edition: ce
-      description: |-
-        Current kubernetes version "{{ $labels.k8s_version }}" support will be removed in the next Deckhouse release (1.58).
-
-        Please migrate to the next kubernetes version (at least 1.24) as soon as possible.
-
-        Check how to update the Kubernetes version in the cluster here - https://deckhouse.io/documentation/deckhouse-faq.html#how-do-i-upgrade-the-kubernetes-version-in-a-cluster
-      summary: |
-        Kubernetes version &quot;{{ $labels.k8s_version }}&quot; has reached End Of Life.
-      severity: "4"
       markupFormat: markdown
     - name: KubeStateMetricsDown
       sourceFile: modules/340-monitoring-kubernetes/monitoring/prometheus-rules/generic/kube-state-metrics.yaml
