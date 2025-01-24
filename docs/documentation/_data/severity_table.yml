@@ -49,7 +49,7 @@ severity:
         ru: "все или почти все пользователи системы заметили сбой"
     critical:
       en: "Critical"
-      ru: "Критический"
+      ru: "Критические"
       note:
         en: "a significant percentage of users report problems with the system"
         ru: "существенный процент пользователей отмечает проблемы с системой"
