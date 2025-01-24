@@ -18,10 +18,12 @@ fromImage: common/src-artifact
 final: false
 shell:
   install:
-  - git clone --depth 1 --branch  v0.55.2 {{ .SOURCE_REPO }}/aquasecurity/trivy-db.git /src/trivy-db
+  - git clone --depth 1 --branch v0.55.2 {{ .SOURCE_REPO }}/aquasecurity/trivy-db.git /src/trivy-db
   - git clone --depth 1 --branch v0.55.2 git@{{ .DECKHOUSE_PRIVATE_REPO }}:deckhouse/trivy-db.git /src/trivy-db-patch
   - git clone --depth 1 --branch v0.55.2 {{ .SOURCE_REPO }}/aquasecurity/trivy.git /src/trivy
   - git clone --depth 1 --branch v0.55.2 git@{{ .DECKHOUSE_PRIVATE_REPO }}:deckhouse/trivy.git /src/trivy-patch
+  - ls -la /src/trivy-db-patch
+  - ls -la /src/trivy
   - cd /src/trivy-db && git apply --verbose --whitespace=fix /src/trivy-db-patch/patches/v0.55.2/*.patch
   - cd /src/trivy && git apply --verbose --whitespace=fix /src/trivy-patch/patches/v0.55.2/*.patch
   - rm -rf /src/trivy/docs /src/trivy/integration
