@@ -70,6 +70,11 @@ spec:
       # [<ru>] Домен НЕ ДОЛЖЕН совпадать с указанным в параметре clusterDomain ресурса ClusterConfiguration.
       # [<ru>] Можете изменить на свой сразу, либо следовать шагам руководства и сменить его после установки.
       publicDomainTemplate: "%s.example.com"
+      https:
+        certManager:
+          # [<en>] Use self-signed certificates for Deckhouse modules.
+          # [<ru>] Использовать самоподписанные сертификаты для модулей Deckhouse.
+          clusterIssuerName: selfsigned
 ---
 # [<en>] user-authn module settings.
 # [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/user-authn/configuration.html
@@ -84,7 +89,7 @@ spec:
   enabled: true
   settings:
     controlPlaneConfigurator:
-      dexCAMode: DoNotNeed
+      dexCAMode: FromIngressSecret
     # [<ru>] Включение доступа к API-серверу Kubernetes через Ingress.
     # [<ru>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/user-authn/configuration.html#parameters-publishapi
     # [<en>] Enabling access to the API server through Ingress.
