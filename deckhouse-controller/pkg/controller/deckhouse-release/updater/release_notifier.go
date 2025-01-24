@@ -21,7 +21,6 @@ import (
 	"context"
 	"crypto/tls"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"net/http"
 	"time"
@@ -50,8 +49,6 @@ type WebhookData struct {
 	Message   string `json:"message"`
 }
 
-var ErrFailedToSendReleaseNotification = errors.New("release blocked, failed to send release notification")
-
 // SendPatchReleaseNotification sending patch notification (only if notification config has release type "All")
 func (u *ReleaseNotifier) SendPatchReleaseNotification(ctx context.Context, dr *v1alpha1.DeckhouseRelease, applyTime time.Time, metricLabels updater.MetricLabels) error {
 	if dr.GetNotified() {
@@ -65,7 +62,7 @@ func (u *ReleaseNotifier) SendPatchReleaseNotification(ctx context.Context, dr *
 		if err != nil {
 			metricLabels.SetTrue(updater.NotificationNotSent)
 
-			return ErrFailedToSendReleaseNotification
+			return fmt.Errorf("send release notification: %w", err)
 		}
 	}
 
@@ -84,7 +81,7 @@ func (u *ReleaseNotifier) SendMinorReleaseNotification(ctx context.Context, dr *
 		if err != nil {
 			metricLabels.SetTrue(updater.NotificationNotSent)
 
-			return ErrFailedToSendReleaseNotification
+			return fmt.Errorf("send release notification: %w", err)
 		}
 	}
 
@@ -107,7 +104,7 @@ func (u *ReleaseNotifier) sendReleaseNotification(ctx context.Context, dr *v1alp
 
 	err := sendWebhookNotification(ctx, u.settings.NotificationConfig, data)
 	if err != nil {
-		return fmt.Errorf("send release notification failed: %w", err)
+		return fmt.Errorf("send webhook notification: %w", err)
 	}
 
 	return nil

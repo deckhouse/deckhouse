@@ -493,6 +493,10 @@ func (r *deckhouseReleaseReconciler) PreApplyReleaseCheck(ctx context.Context, d
 	return ErrPreApplyCheckIsFailed
 }
 
+const (
+	msgReleaseIsBlockedByNotification = "Release is blocked, failed to send release notification"
+)
+
 // DeployTimeCalculate calculate time for release deploy
 //
 // If patch, calculate by checking this conditions:
@@ -528,8 +532,10 @@ func (r *deckhouseReleaseReconciler) DeployTimeCalculate(ctx context.Context, dr
 
 		notifyErr := releaseNotifier.SendPatchReleaseNotification(ctx, dr, deployTimeResult.ReleaseApplyAfterTime, metricLabels)
 		if notifyErr != nil {
+			r.logger.Warn("send [patch] release notification", log.Err(notifyErr))
+
 			return &d8updater.DeployTimeReason{
-				Message:               notifyErr.Error(),
+				Message:               msgReleaseIsBlockedByNotification,
 				ReleaseApplyAfterTime: deployTimeResult.ReleaseApplyAfterTime,
 			}
 		}
@@ -562,8 +568,10 @@ func (r *deckhouseReleaseReconciler) DeployTimeCalculate(ctx context.Context, dr
 
 	notifyErr := releaseNotifier.SendMinorReleaseNotification(ctx, dr, deployTimeResult.ReleaseApplyAfterTime, metricLabels)
 	if notifyErr != nil {
+		r.logger.Warn("send minor release notification", log.Err(notifyErr))
+
 		return &d8updater.DeployTimeReason{
-			Message:               notifyErr.Error(),
+			Message:               msgReleaseIsBlockedByNotification,
 			ReleaseApplyAfterTime: deployTimeResult.ReleaseApplyAfterTime,
 		}
 	}
