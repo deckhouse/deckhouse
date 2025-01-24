@@ -100,6 +100,7 @@ shell:
   - echo {{ $istioVersion }} > version
   - export GOPROXY={{ $.GOPROXY }} GOOS=linux GOARCH=amd64
   - export LDFLAGS='-extldflags -static -s -w'
+  - go mod tidy
   - common/scripts/gobuild.sh /src/istio/out/ -tags=agent,disable_pgv /src/istio/pilot/cmd/pilot-agent
   #
   - strip /src/istio/out/pilot-agent
@@ -136,6 +137,7 @@ shell:
   - export GOOS=linux GOARCH=amd64 CGO_ENABLED=0
   - export BAZEL_VERSION="6.3.2" USE_BAZEL_VERSION="6.3.2"
   - cd /src/proxy
+  - go mod tidy
   - sed -i '/^build --enable_platform_specific_config/a build --linkopt=-L/opt/libcxx/lib'          envoy.bazelrc
   - sed -i '/^build --enable_platform_specific_config/a build --linkopt=-Wl,-rpath,/opt/libcxx/lib' envoy.bazelrc
   - sed -i 's|build:libc++ --action_env=BAZEL_LINKOPTS=-lm:-pthread|build:libc++ --action_env=BAZEL_LINKOPTS=-lm:-lpthread|' envoy.bazelrc
@@ -306,8 +308,17 @@ git:
 shell:
   install:
   - git clone --depth 1 --branch {{ $istioVersion }} {{ $.SOURCE_REPO }}/istio/proxy.git /src/proxy
+  - cd /src/proxy/
+  - find /patches -name '*.patch' | xargs git apply --verbose
+
   - git clone --branch "{{ $llvmRev }}" {{ $.SOURCE_REPO }}/llvm/llvm-project.git /src/llvm
   - rm -rf /src/llvm/.git
+
+  # getting rid of unused vulnerable code
+  - rm -rf /src/llvm/llvm/utils/git
+  - rm -rf /src/llvm/mlir/utils/vscode
+  - rm -rf /src/llvm/third-party/benchmark/*.
+  - touch /src/llvm/third-party/benchmark/placeholder.txt
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-basel-artifact
 fromImage: common/src-artifact
