@@ -28,9 +28,9 @@ html {
     justify-content: space-between;
     font-size: 12px;
 
-    @include min-w(m) {
-      padding-top: 24px;
-      padding-bottom: 24px;
+    @include min-w(xl) {
+      padding-top: 1rem;
+      padding-bottom: 1rem;
     }
   }
 
@@ -49,37 +49,42 @@ html {
 
     img, svg {
       display: block;
-      height: 40px;
+      height: 32px;
       width: auto;
 
+      @include min-w(s) {
+        height: 40px;
+      }
+
+      @include min-w(l) {
+        height: 24px;
+      }
+
       @include min-w(xl) {
+        height: 36px;
+      }
+
+      @include min-w(xxl) {
+        height: 43px;
+      }
+
+      @include min-w(xxxl) {
         height: 52px;
       }
     }
-  }
-
-  &__left-box {
-    display: flex;
-    gap: 4rem;
-    align-items: center;
   }
 
   &__nav {
     &.nav {
       display: none;
 
-      @include min-w(l) {
-        display: flex;
-        gap: 12px 16px;
-      }
-
       @include min-w(xl) {
         display: flex;
-        gap: 12px 24px;
+        gap: .75rem 1rem;
       }
 
       @include min-w(xxl) {
-        gap: 12px 32px;
+        gap: .75rem 1.25rem;
       }
     }
 
@@ -95,8 +100,27 @@ html {
       }
     }
 
+    .header__navigation-item {
+      > a {
+        font-size: .875em;
+    
+        @include min-w(xl) {
+          font-size: 14px;
+        }
+    
+        @include min-w(xxl) {
+          font-size: 15px;
+        }
+    
+        @include min-w(xxxl) {
+          font-size: 16px;
+        }
+      }
+    }
+
     .sub-menu {
       display: flex;
+      margin: 0;
       padding: 1.5rem;
       min-width: 180px;
       gap: .6rem;
@@ -118,6 +142,7 @@ html {
 
       &_products {
         display: grid;
+        margin: 0;
         gap: 1.5rem;
         grid-template-columns: repeat(2, 300px);
 
@@ -131,6 +156,15 @@ html {
           align-items: center;
           grid-template-columns: 20px 1fr;
           white-space: wrap;
+
+          @include min-w(xl) {
+            font-size: 1em;
+          }
+
+          @include min-w(xxl) {
+            font-size: 1rem;
+          }
+
 
           &:hover {
             span {
@@ -181,6 +215,10 @@ html {
 
           a {
             color: $ntrl-700;
+
+            &:hover {
+              color: $primary-700;
+            }
           }
         }
       }
@@ -196,7 +234,13 @@ html {
         transition: .15s;
 
         @include min-w(xl) {
-          margin-left: 8px;
+          margin-left: .3rem;
+          width: 10px;
+          height: 7px;
+        }
+
+        @include min-w(xxl) {
+          margin-left: .5rem;
           width: 12px;
           height: 8px;
         }
@@ -212,16 +256,27 @@ html {
     }
   }
 
+  &__left-box {
+    display: flex;
+    gap: 1.5rem;
+    align-items: center;
+
+    @include min-w(xxl) {
+      gap: 2.5rem;
+    }
+  }
+
   &__right-box {
     display: flex;
-    gap: 1rem;
-
-    @include min-w(xl) {
-      gap: 1.5rem;
-    }
+    gap: .5rem;
+    align-items: center;
 
     @include max-w(l) {
       display: none;
+    }
+
+    @include min-w(xl) {
+      gap: 1rem;
     }
 
     .header__nav {
@@ -232,12 +287,38 @@ html {
       }
     }
 
-    .button {
+    .button, .lang-switcher {
+      display: flex;
+      align-items: center;
       font-size: .875rem;
 
-      @include min-w(m) {
-        padding: .5rem 1rem;
+      @include min-w(l) {
+        padding: .25rem .4rem;
+        font-size: .635rem;
       }
+
+      @include min-w(xl) {
+        padding: .5rem .625rem;
+        font-size: .75rem;
+      }
+
+      @include min-w(xxl) {
+        padding: .5rem .75rem;
+        font-size: .875rem;
+      }
+
+      @include min-w(xxxl) {
+        padding: .625rem 1rem;
+      }
+    }
+  }
+
+  &__buttons {
+    display: flex;
+    gap: .5rem;
+
+    @include min-w(xxxl) {
+      gap: 1rem;
     }
   }
 
@@ -270,11 +351,10 @@ html {
   .lang-switcher {
     position: relative;
     display: flex;
-    padding: .5rem .125rem;
-    width: 1.25rem;
-    gap: .5rem;
+    padding: .125rem;
+    width: .9rem;
+    gap: .6rem;
     align-items: center;
-    font-size: .875rem;
     font-weight: 500;
     line-height: 1.5;
     text-transform: uppercase;
@@ -283,6 +363,16 @@ html {
     border-top: transparent solid 2px;
     overflow: hidden;
     color: $primary-700;
+
+    @include min-w(xl) {
+      width: 1.1rem;
+      gap: .5rem;
+    }
+
+    @include min-w(xxl) {
+      width: 1.25rem;
+      font-size: .875rem;
+    }
 
     &:hover {
       span {
@@ -385,18 +475,6 @@ html {
     }
   }
 
-  a {
-    font-size: .875em;
-
-    @include min-w(xl) {
-      font-size: 1em;
-    }
-
-    @include min-w(xxl) {
-      font-size: 16px;
-    }
-  }
-
   &__product-menu {
     padding: 1.25rem 0;
     background-color: #F6FAFE;
@@ -419,14 +497,19 @@ html {
       align-items: center;
       font-weight: 600;
       color: $ntrl-800;
+      font-size: 16px;
 
-      @include min-w(l) {
-        font-size: 1.125rem;
+      @include min-w(xxl) {
+        font-size: 1.2rem;
       }
 
       svg {
-        width: 1.5rem;
-        height: 1.5rem;
+        width: 1.25rem;
+
+        @include min-w(xl) {
+          width: 1.5rem;
+          height: 1.5rem;
+        }
       }
     }
 
@@ -434,8 +517,8 @@ html {
       flex-wrap: wrap;
       gap: 1.15rem 1.5rem;
 
-      @include min-w(l) {
-        gap: 2rem;
+      @include min-w(xxl) {
+        gap: .75rem 1rem;
       }
 
       li {
@@ -452,12 +535,6 @@ html {
             height: 100%;
             background-color: $primary-100;
             border-radius: 2rem;
-          }
-        }
-
-        &:not(.active) {
-          a:hover {
-            color: $primary-700;
           }
         }
 
