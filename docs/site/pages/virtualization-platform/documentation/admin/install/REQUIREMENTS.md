@@ -3,6 +3,10 @@ title: "Requirements"
 permalink: en/virtualization-platform/documentation/admin/install/requirements.html
 ---
 
+{% alert level="warning" %}
+Platform components must be installed on physical servers (baremetal servers). For demonstration purposes, installation on virtual machines is allowed, but in this case it is necessary that the nested virtualization function is activated on virtual machines. It is important to emphasize that no technical support is provided for this scenario, which involves the use of virtual machines.
+{% endalert %}
+
 ## Hardware Requirements
 
 1. A dedicated **machine for installation**.
@@ -73,13 +77,24 @@ permalink: en/virtualization-platform/documentation/admin/install/requirements.h
 
    Depending on the chosen storage solution, additional resources may be required. For details, refer to the section [Storage Management](/products/virtualization-platform/documentation/admin/platform-management/storage/sds/lvm-local.html).
 
-## Supported OS
+## Supported OS for platform nodes
 
 | Linux distribution          | Supported versions              |
 | --------------------------- | ------------------------------- |
 | CentOS                      | 7, 8, 9                         |
 | Debian                      | 10, 11, 12                      |
 | Ubuntu                      | 20.04, 22.04, 24.04      |
+
+## Supported guest operating systems
+
+The virtualization platform supports operating systems running on x86 and x86_64 architectures as guest operating systems. In order for paravirtualization mode to function successfully, the appropriate virtio drivers must be installed to ensure efficient communication between the virtual machine and the hypervisor.
+
+A successful startup of the operating system is determined by the correct installation and booting of the system, the smooth functioning of all major components such as networking and storage, and the absence of failures or errors.
+
+## Supported virtual machine configurations
+
+Maximum number of cores supported: `254`
+Maximum amount of RAM: `1024 GB`
 
 ## Supported Storage Systems
 
