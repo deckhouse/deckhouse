@@ -1,5 +1,6 @@
 - name: d8.embedded-registry-manager.state
   rules:
+    # Manager && StaticPod Manager
     - alert: D8EmbeddedRegistryManagerPodIsNotReady
       expr: |-
         min by (pod, namespace, node, created_by_kind, created_by_name) (
@@ -27,6 +28,7 @@
           2. View the status of the Pod: `kubectl -n {{ $labels.namespace }} describe pod/{{ $labels.pod }}`
           3. View the logs of the Pod: `kubectl -n {{ $labels.namespace }} logs pod/{{ $labels.pod }}`
 
+    # Manager && StaticPod Manager
     - alert: D8EmbeddedRegistryManagerPodIsNotRunning
       expr: |-
         min by (pod, namespace, node, created_by_kind, created_by_name) (
@@ -53,3 +55,45 @@
           1. Retrieve details of the {{ $labels.created_by_kind }}: `kubectl -n {{ $labels.namespace }} describe {{ $labels.created_by_kind }}/{{ $labels.created_by_name }}`
           2. View the status of the Pod: `kubectl -n {{ $labels.namespace }} describe pod/{{ $labels.pod }}`
           3. View the logs of the Pod: `kubectl -n {{ $labels.namespace }} logs pod/{{ $labels.pod }}`
+
+    # Manager
+    - alert: D8EmbeddedRegistryManagerPodIsNotExist
+      expr: |-
+        absent(kube_pod_status_phase{namespace="d8-system",phase="Running",pod=~"^(embedded|system)-registry-manager.*"})
+      for: 2m
+      labels:
+        severity_level: "5"
+        d8_module: embedded-registry
+        d8_component: manager
+      annotations:
+        plk_protocol_version: "1"
+        plk_markup_format: "markdown"
+        plk_create_group_if_not_exists__d8_embedded_registry_manager_health: "D8EmbeddedRegistryManagerHealth,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+        plk_grouped_by__d8_embedded_registry_manager_health: "D8EmbeddedRegistryManagerHealth,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+        summary: The d8-system/system-registry-manager Pod is NOT Exist.
+        description: |
+          The d8-system/system-registry-manager Pod is NOT Exist.
+
+          The recommended course of action:
+          1. Retrieve details of the Daemonset: `kubectl -n d8-system describe Daemonset/system-registry-manager`
+
+    # StaticPod Manager
+    - alert: D8EmbeddedRegistryManagerPodIsNotExist
+      expr: |-
+        absent(kube_pod_status_phase{namespace="d8-system",phase="Running",pod=~"^(embedded|system)-registry-staticpod-manager.*"})
+      for: 2m
+      labels:
+        severity_level: "5"
+        d8_module: embedded-registry
+        d8_component: manager
+      annotations:
+        plk_protocol_version: "1"
+        plk_markup_format: "markdown"
+        plk_create_group_if_not_exists__d8_embedded_registry_manager_health: "D8EmbeddedRegistryManagerHealth,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+        plk_grouped_by__d8_embedded_registry_manager_health: "D8EmbeddedRegistryManagerHealth,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+        summary: The d8-system/system-registry-staticpod-manager Pod is NOT Exist.
+        description: |
+          The d8-system/system-registry-staticpod-manager Pod is NOT Exist.
+
+          The recommended course of action:
+          1. Retrieve details of the Daemonset: `kubectl -n d8-system describe Daemonset/system-registry-staticpod-manager`
