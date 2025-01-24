@@ -55,7 +55,7 @@ severity:
         ru: "существенный процент пользователей отмечает проблемы с системой"
     marginal:
       en: "Marginal"
-      ru: "Минимальный"
+      ru: "Минимальные"
       note:
         en: "a minimal percentage of users experience periodic or permanent crashes."
         ru: "минимальный процент пользователей видит периодичские или постоянные сбои"
