@@ -10,7 +10,7 @@ severity:
         ru: "инцидент <b>уже</b> произошёл"
     likely:
       en: "Likely"
-      ru: "Cкорее всего"
+      ru: "Вероятно"
       note:
         en: "the incident almost happened"
         ru: "инцидент почти произошёл"
