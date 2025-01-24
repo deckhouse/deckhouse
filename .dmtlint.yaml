@@ -278,6 +278,7 @@ linters-settings:
       - "d8-kube-dns-sts-pods-hosts-appender-webhook:webhook"
       - "caps-controller-manager:caps-controller-manager"
       - "standby-holder-name:reserve-resources"
+      - "trivy-server:chown-volume-data"
   monitoring:
     skip-module-checks:
       - "extended-monitoring"
