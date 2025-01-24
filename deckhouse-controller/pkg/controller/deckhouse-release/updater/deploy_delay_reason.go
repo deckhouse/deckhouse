@@ -46,7 +46,7 @@ var deployDelayReasonsStr = map[deployDelayReason]string{
 
 const (
 	cooldownDelayMsg              = "in cooldown"
-	canaryDelayReasonMsg          = "postponed by canary process"
+	canaryDelayReasonMsg          = "postponed"
 	waitingManualApprovalTemplate = "waiting for the '%s: \"true\"' annotation"
 	outOfWindowMsg                = "waiting for the update window"
 	notificationDelayMsg          = "postponed by notification"
