@@ -9,7 +9,7 @@ Alerts are grouped by modules. To the right of the alert name, there are icons i
 
 For each alert, a summary is provided, and if available, the detailed alert description can be viewed by expanding it.
 
-## What is Severity?
+## Alert severity
 
 The alerts contain the Severity parameter, which means the level of criticality. Its value varies from `S1` to `S9` and can be interpreted as follows:
 
