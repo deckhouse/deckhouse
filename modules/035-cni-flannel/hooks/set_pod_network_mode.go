@@ -17,70 +17,20 @@ limitations under the License.
 package hooks
 
 import (
-	"encoding/json"
-	"fmt"
-
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
-	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
-	v1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
 type FlannelConfig struct {
 	PodNetworkMode string `json:"podNetworkMode"`
 }
 
-func applyCNIConfigurationSecretFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	secret := &v1.Secret{}
-	err := sdk.FromUnstructured(obj, secret)
-	if err != nil {
-		return nil, fmt.Errorf("cannot convert incoming object to Secret: %v", err)
-	}
-
-	var flannelConfig FlannelConfig
-	flannelConfigJSON, ok := secret.Data["flannel"]
-	if ok {
-		err = json.Unmarshal(flannelConfigJSON, &flannelConfig)
-		if err != nil {
-			return nil, fmt.Errorf("cannot unmarshal flannel config json: %v", err)
-		}
-	}
-
-	return flannelConfig, nil
-}
-
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	OnBeforeHelm: &go_hook.OrderedConfig{Order: 10},
-	Queue:        "/modules/cni-flannel",
-	Kubernetes: []go_hook.KubernetesConfig{
-		{
-			Name:       "cni_configuration_secret",
-			ApiVersion: "v1",
-			Kind:       "Secret",
-			NamespaceSelector: &types.NamespaceSelector{
-				NameSelector: &types.NameSelector{
-					MatchNames: []string{"kube-system"},
-				},
-			},
-			NameSelector: &types.NameSelector{
-				MatchNames: []string{"d8-cni-configuration"},
-			},
-			FilterFunc: applyCNIConfigurationSecretFilter,
-		},
-	},
+	OnStartup: &go_hook.OrderedConfig{Order: 10},
+	Queue:     "/modules/cni-flannel",
 }, setPodNetworkMode)
 
 func setPodNetworkMode(input *go_hook.HookInput) error {
-	cniConfigurationSecrets, ok := input.Snapshots["cni_configuration_secret"]
-	var flannelConfig FlannelConfig
-	if ok && len(cniConfigurationSecrets) > 0 {
-		flannelConfig, ok = cniConfigurationSecrets[0].(FlannelConfig)
-		if !ok {
-			return fmt.Errorf("cannot convert Kubernetes Secret to FlannelConfig")
-		}
-	}
-
 	var podNetworkMode = "host-gw"
 
 	if input.ConfigValues.Exists("cniFlannel.podNetworkMode") {
@@ -92,10 +42,6 @@ func setPodNetworkMode(input *go_hook.HookInput) error {
 		case "VXLAN":
 			podNetworkMode = "vxlan"
 		}
-	}
-
-	if flannelConfig.PodNetworkMode != "" {
-		podNetworkMode = flannelConfig.PodNetworkMode
 	}
 
 	input.Values.Set("cniFlannel.internal.podNetworkMode", podNetworkMode)
