@@ -66,17 +66,17 @@ export VAULT_ADDR=https://secretstoreexample.com
 {{< /alert >}}
 
 > В этом руководстве мы приводим два вида примерных команд:
->   * команда с использованием консольной версии Stronghold ([Как получить бинарный файл stronghold](#как-получить-бинарный-файл-stronghold));
+>   * команда с использованием консольной версии `stronghold` ([Как получить бинарный файл stronghold](#как-получить-бинарный-файл-stronghold));
 >   * команда с использованием curl для выполнения прямых запросов в API secrets store.
 
 Для использования инструкций по инжектированию секретов из примеров ниже вам понадобится:
 
-1. Создать в Stronghold секрет типа kv2 по пути `demo-kv/myapp-secret` и поместить туда значения `DB_USER` и `DB_PASS`.
-2. При необходимости добавляем путь аутентификации (authPath) для аутентификации и авторизации в Stronghold с помощью Kubernetes API удалённого кластера
-3. Создать в Stronghold политику `myapp-ro-policy`, разрешающую чтение секретов по пути `demo-kv/myapp-secret`.
-4. Создать в Stronghold роль `myapp-role` для сервис-аккаунта `myapp-sa` в неймспейсе `myapp-namespace` и привязать к ней созданную ранее политику.
-5. Создать в кластере неймспейс `myapp-namespace`.
-6. Создать в созданном неймспейсе сервис-аккаунт `myapp-sa`.
+1. Создать в `stronghold` секрет типа kv2 по пути `demo-kv/myapp-secret` и поместить туда значения `DB_USER` и `DB_PASS`.
+2. При необходимости добавляем путь аутентификации (authPath) для аутентификации и авторизации в `stronghold` с помощью Kubernetes API удалённого кластера
+3. Создать в `stronghold` политику `myapp-ro-policy`, разрешающую чтение секретов по пути `demo-kv/myapp-secret`.
+4. Создать в `stronghold` роль `myapp-role` для сервис-аккаунта `myapp-sa` в пространстве имён `myapp-namespace` и привязать к ней созданную ранее политику.
+5. Создать в кластере пространство имён `myapp-namespace`.
+6. Создать в созданном пространстве имён сервис-аккаунт `myapp-sa`.
 
 Пример команд, с помощью которых можно подготовить окружение
 
@@ -123,7 +123,7 @@ export VAULT_ADDR=https://secretstoreexample.com
     ${VAULT_ADDR}/v1/demo-kv/data/myapp-secret
   ```
 
-* По умолчанию метод аутентификации в Stronghold через Kubernetes API кластера, на котором запущен сам Stronghold, – включён и настроен под именем `kubernetes_local`. Если требуется настроить доступ через удалённые кластера, задаём путь аутентификации (`authPath`) и включаем аутентификацию и авторизацию в Stronghold с помощью Kubernetes API для каждого кластера:
+* По умолчанию метод аутентификации в `stronghold` через Kubernetes API кластера, на котором запущен сам Stronghold, – включён и настроен под именем `kubernetes_local`. Если требуется настроить доступ через удалённые кластера, задаём путь аутентификации (`authPath`) и включаем аутентификацию и авторизацию в `stronghold` с помощью Kubernetes API для каждого кластера:
 
   ```bash
   stronghold auth enable -path=remote-kube-1 kubernetes
@@ -152,7 +152,7 @@ export VAULT_ADDR=https://secretstoreexample.com
     ${VAULT_ADDR}/v1/auth/remote-kube-1/config
   ```
 
-* Создаём в Stronghold политику с названием `myapp-ro-policy`, разрешающую чтение секрета `myapp-secret`:
+* Создаём в `stronghold` политику с названием `myapp-ro-policy`, разрешающую чтение секрета `myapp-secret`:
 
   ```bash
   stronghold policy write myapp-ro-policy - <<EOF
@@ -218,7 +218,7 @@ export VAULT_ADDR=https://secretstoreexample.com
 Рекомендованное значение TTL для токена Kubernetes составляет 10m.
 {{< /alert >}}
 
-Эти настройки позволяют любому поду из пространства имён `myapp-namespace` из обоих K8s-кластеров, который использует ServiceAccount `myapp-sa`, аутентифицироваться и авторизоваться в Stronghold для чтения секретов согласно политике `myapp-ro-policy`.
+Эти настройки позволяют любому поду из пространства имён `myapp-namespace` из обоих K8s-кластеров, который использует ServiceAccount `myapp-sa`, аутентифицироваться и авторизоваться в `stronghold` для чтения секретов согласно политике `myapp-ro-policy`.
 
 * Создадим namespace и ServiceAccount в указанном namespace:
   ```bash
@@ -226,13 +226,13 @@ export VAULT_ADDR=https://secretstoreexample.com
   kubectl -n myapp-namespace create serviceaccount myapp-sa
   ```
 
-## Как разрешить ServiceAccount авторизоваться в Stronghold?
+## Как разрешить ServiceAccount авторизоваться в stronghold?
 
-Для авторизации в Stronghold Pod использует токен, сгенерированный для своего ServiceAccount'а. Для того чтобы Stronghold мог проверить валидность предоставляемых данных `ServiceAccount`, используемый сервисом Stronghold должен иметь разрешение на действия `get`, `list` и `watch`  для endpoints `tokenreviews.authentication.k8s.io` и `subjectaccessreviews.authorization.k8s.io`. Для этого также можно использовать clusterRole `system:auth-delegator`.
+Для авторизации в `stronghold` под использует токен, сгенерированный для своего ServiceAccount'а. Для того чтобы `stronghold` мог проверить валидность предоставляемых данных `ServiceAccount`, используемый сервисом `stronghold` должен иметь разрешение на действия `get`, `list` и `watch`  для endpoints `tokenreviews.authentication.k8s.io` и `subjectaccessreviews.authorization.k8s.io`. Для этого также можно использовать clusterRole `system:auth-delegator`.
 
 Stronghold может использовать различные авторизационные данные для осуществления запросов в API Kubernetes:
-1. Использовать токен приложения, которое пытается авторизоваться в Stronghold. В этом случае для каждого сервиса, авторизующегося в Stronghold, требуется в используемом ServiceAccount'е иметь clusterRole `system:auth-delegator` (либо права на API представленные выше).
-2. Использовать статичный токен отдельно созданного специально для Stronghold `ServiceAccount` у которого имеются необходимые права. Настройка Stronghold для такого случая подробно описана в [документации Vault](https://developer.hashicorp.com/vault/docs/auth/kubernetes#continue-using-long-lived-tokens).
+1. Использовать токен приложения, которое пытается авторизоваться в `stronghold`. В этом случае для каждого сервиса, авторизующегося в Stronghold, требуется в используемом ServiceAccount'е иметь clusterRole `system:auth-delegator` (либо права на API представленные выше).
+2. Использовать статичный токен отдельно созданного специально для `stronghold` `ServiceAccount` у которого имеются необходимые права. Настройка `stronghold` для такого случая подробно описана в [документации Vault](https://developer.hashicorp.com/vault/docs/auth/kubernetes#continue-using-long-lived-tokens).
 
 ## Инжектирование переменных окружения
 
@@ -439,7 +439,7 @@ kubectl -n myapp-namespace delete pod myapp3 --force
 
 ### Функция авторотации
 
-Функция авторотации секретов в модуле secret-store-integration включена по умолчанию. Каждые две минуты модуль опрашивает Stronghold и синхронизирует секреты в примонтированном файле в случае его изменения.
+Функция авторотации секретов в модуле `secret-store-integration` включена по умолчанию. Каждые две минуты модуль опрашивает `stronghold` и синхронизирует секреты в примонтированном файле в случае его изменения.
 
 Есть два варианта следить за изменениями файла с секретом в поде. Первый - следить за временем изменения примонтированного файла, реагируя на его изменение. Второй - использовать inotify API, который предоставляет механизм для подписки на события файловой системы. Inotify является частью ядра Linux. После обнаружения изменений есть большое количество вариантов реагирования на событие изменения в зависимости от используемой архитектуры приложения и используемого языка программирования. Самый простой — заставить K8s перезапустить под, перестав отвечать на liveness-пробу.
 

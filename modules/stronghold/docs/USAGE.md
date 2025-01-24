@@ -36,7 +36,7 @@ kubectl -n d8-system exec deploy/deckhouse -c deckhouse -it -- deckhouse-control
 
 ### ATTENTION!
 
-When the module is disabled, all Stronghold containers will be deleted, as well as the `stronghold-keys` secret
+When the module is disabled, all `stronghold` containers will be deleted, as well as the `stronghold-keys` secret
 with root and unseal keys from the namespace `d8-stronghold`. In this case, the sevice data will not be deleted from the nodes.
 You can enable the module again and recreate a copy of the `stronghold-keys` secret in the `d8-stronghold` namespace,
 then access to the data will be restored.
@@ -47,23 +47,23 @@ on all master nodes of the cluster.
 ## How to access the service
 
 Access to the service is provided through inlets. Currently, only one inlet, Ingress, is available.
-The web interface address for Stronghold is formed as follows: in the template [publicDomainTemplate](../../../documentation/v1/deckhouse-configure-global.html#parameters-modules-publicdomaintemplate) of the Deckhouse global configuration parameter, the `%s` placeholder is replaced with `stronghold` keyword.
+The web interface address for `stronghold` is formed as follows: in the template [publicDomainTemplate](../../../documentation/v1/deckhouse-configure-global.html#parameters-modules-publicdomaintemplate) of the Deckhouse global configuration parameter, the `%s` placeholder is replaced with `stronghold` keyword.
 
-For example, if `publicDomainTemplate` is set to `%s-kube.mycompany.tld`, than the Stronghold web interface will be accessible at the address `stronghold-kube.cmycompany.tld`.
+For example, if `publicDomainTemplate` is set to `%s-kube.mycompany.tld`, than the `stronghold` web interface will be accessible at the address `stronghold-kube.cmycompany.tld`.
 
 ## how to use Data Storage. Operating Modes
 
-The data stored in Stronghold is encrypted. To decrypt the storage data, an encryption key is required. The encryption key is also stored with the data (as part of key bundles), but it is encrypted with another encryption key known as the root key.
+The data stored in `stronghold` is encrypted. To decrypt the storage data, an encryption key is required. The encryption key is also stored with the data (as part of key bundles), but it is encrypted with another encryption key known as the root key.
 
-To decrypt Stronghold data, it is necessary to decrypt the encryption key, which requires the root key. Unsealing the storage is the process of gaining access to this root key. The root key is stored along with all other storage data but is encrypted with another mechanism: the unseal key.
+To decrypt `stronghold` data, it is necessary to decrypt the encryption key, which requires the root key. Unsealing the storage is the process of gaining access to this root key. The root key is stored along with all other storage data but is encrypted with another mechanism: the unseal key.
 
-In the current version of the module, there is only the `Automatic` mode, in which the storage is automatically initialized during the first module launch. During the initialization process, the unlocking key and root token are both placed into the `stronghold-keys` secret in the `d8-stronghold` namespace in the Kubernetes cluster. After the initialization, the module automatically unseals the nodes of the Stronghold cluster.
-In the automatic mode, in the event of a restart of Stronghold nodes, the storage will also be automatically unsealed without manual intervention.
+In the current version of the module, there is only the `Automatic` mode, in which the storage is automatically initialized during the first module launch. During the initialization process, the unlocking key and root token are both placed into the `stronghold-keys` secret in the `d8-stronghold` namespace in the Kubernetes cluster. After the initialization, the module automatically unseals the nodes of the `stronghold` cluster.
+In the automatic mode, in the event of a restart of `stronghold` nodes, the storage will also be automatically unsealed without manual intervention.
 
 ## Access Management
 
-The role named `deckhouse_administrators` is created after storage initialization using the `Automatic` mode of the Stronghold module. This role is granted access to the web interface through OIDC authentication via [Dex](https://deckhouse.ru/documentation/v1/modules/150-user-authn/).
-Additionally, the automatic connection of the current Deckhouse cluster to Stronghold is configured. This is necessary for the operation of the [secrets-store-integration](../../secrets-store-integration/) module.
+The role named `deckhouse_administrators` is created after storage initialization using the `Automatic` mode of the `stronghold` module. This role is granted access to the web interface through OIDC authentication via [Dex](https://deckhouse.ru/documentation/v1/modules/150-user-authn/).
+Additionally, the automatic connection of the current Deckhouse cluster to `stronghold` is configured. This is necessary for the operation of the [secrets-store-integration](../../secrets-store-integration/) module.
 
 To provide access to the users with the `admins` group membership (group membership is conveyed from the used IdP or LDAP via Dex), you need to specify this group in the `administrators` array in the ModuleConfig:
 
@@ -103,7 +103,7 @@ spec:
         name: securityoperator@mycompany.tld
 ```
 
-If needed, you can create users in Stronghold with different access rights to secrets using the built-in storage mechanisms.
+If needed, you can create users in `stronghold` with different access rights to secrets using the built-in storage mechanisms.
 
 ## Running with a self-signed certificate
 

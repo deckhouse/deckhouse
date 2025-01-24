@@ -26,6 +26,11 @@ LinkTitle: "Механизм секретов KV"
 
 ```shell
 vault secrets enable -path=kv kv
+```
+
+Пример ответа:
+
+```txt
 Success! Enabled the kv secrets engine at: kv/
 ```
 
@@ -41,6 +46,11 @@ vault secrets enable kv
 
 ```shell
 vault secrets list
+```
+
+Пример ответа:
+
+```txt
 Path Type Accessor Description
 ---- ---- -------- -----------
 cubbyhole/ cubbyhole cubbyhole_78189996 per-token private secret storage
@@ -50,9 +60,9 @@ secret/ kv kv_4b990c45 key/value secret storage
 sys/ system system_adff0898 system endpoints used for control, policy and debugging
 ```
 
-Это подтверждает наличие на сервере stronghold пяти активных механизмов управления секретами. Можно увидеть тип такого механизма, соответствующий путь и необязательное описание (или «n/a», если оно не указано). При выполнении вышеуказанной команды с флагом `-detailed ` становится доступной информация о версии KV системы управления секретами, а также многое другое.
+Это подтверждает наличие на сервере `stronghold` пяти активных механизмов управления секретами. Можно увидеть тип такого механизма, соответствующий путь и необязательное описание (или «n/a», если оно не указано). При выполнении вышеуказанной команды с флагом `-detailed ` становится доступной информация о версии KV системы управления секретами, а также многое другое.
 
-_Путь sys/ соответствует бэкенду системы. Эти пути взаимодействуют с основной системой Stronghold и не являются обязательными для новичков._
+_Путь sys/ соответствует бэкенду системы. Эти пути взаимодействуют с основной системой модуля `stronghold` и не являются обязательными для новичков._
 
 Потратьте несколько минут на чтение и запись некоторых данных в новый KV-механизм управления секретами, расположенный по адресу `kv/`. Ниже приведены несколько примеров для старта.
 
@@ -60,6 +70,11 @@ _Путь sys/ соответствует бэкенду системы. Эти 
 
 ```shell
 vault kv put kv/hello target=world
+```
+
+Пример ответа:
+
+```txt
 Success! Data written to: kv/hello
 ```
 
@@ -67,6 +82,11 @@ Success! Data written to: kv/hello
 
 ```shell
 vault kv get kv/hello
+```
+
+Пример ответа:
+
+```txt
 ===== Data =====
 Key Value
 --- -----
@@ -77,6 +97,11 @@ target world
 
 ```shell
 vault kv put kv/my-secret value="s3c(eT"
+```
+
+Пример ответа:
+
+```txt
 Success! Data written to: kv/my-secret
 ```
 
@@ -84,6 +109,11 @@ Success! Data written to: kv/my-secret
 
 ```shell
 vault kv get kv/my-secret
+```
+
+Пример ответа:
+
+```txt
 ==== Data ====
 Key Value
 --- -----
@@ -94,6 +124,11 @@ value s3c(eT
 
 ```shell
 vault kv delete kv/my-secret
+```
+
+Пример ответа:
+
+```txt
 Success! Data deleted (if it existed) at: kv/my-secret
 ```
 
@@ -101,6 +136,11 @@ Success! Data deleted (if it existed) at: kv/my-secret
 
 ```shell
 vault kv list kv/
+```
+
+Пример ответа:
+
+```txt
 Keys
 ----
 hello
@@ -108,10 +148,15 @@ hello
 
 ### Отключение механизма секретов
 
-Если необходимость в механизме управления секретами отпадает, его можно отключить. При отключении такого механизма все секреты удаляются, а соответствующие данные и настройки Deckhouse Stronghold уничтожаются.
+Если необходимость в механизме управления секретами отпадает, его можно отключить. При отключении такого механизма все секреты удаляются, а соответствующие данные и настройки модуля `stronghold` уничтожаются.
 
 ```shell
 vault secrets disable kv/
+```
+
+Пример ответа:
+
+```txt
 Success! Disabled the secrets engine (if it existed) at: kv/
 ```
 
@@ -129,14 +174,14 @@ Success! Disabled the secrets engine (if it existed) at: kv/
 
 Доступные подкоманды перечислены в следующей таблице:
 
-| Подкоманда        | kv v1 | kv v2 | Описание                                                                       |
+| Подкоманда        | kv v1 | kv v2 | Описание                                                                             |
 |-------------------|-------|-------|--------------------------------------------------------------------------------------|
 | delete            | x     | x     | Удаление версий секретов, хранящихся в K/V                                           |
 | destroy           |       | x     | Постоянное удаление одной или нескольких версий секретов                             |
 | enable-versioning |       | x     | Включение версионности для существующего хранилища K/V v1                            |
 | get               | x     | x     | Получение данных                                                                     |
 | list              | x     | x     | Перечислить данные или секреты                                                       |
-| metadata          |       | x     | Взаимодействие с хранилищем ключей-значений Stronghold                           |
+| metadata          |       | x     | Взаимодействие с хранилищем ключей-значений `stronghold`                               |
 | patch             |       | x     | Обновление секретов без перезаписи существующих секретов                             |
 | put               | x     | x     | Установка или обновление секретов (при этом происходит замена существующих секретов) |
 | rollback          |       | x     | Откат к предыдущей версии секретов                                                   |
@@ -150,7 +195,17 @@ Success! Disabled the secrets engine (if it existed) at: kv/
 
 ```shell
 vault kv -help
+```
+
+Пример ответа:
+
+```txt
 Usage: vault kv <subcommand> [options] [args]
+```
+
+Пример ответа:
+
+```txt
 This command has subcommands for interacting with Stronghold's key-value
 store. Here are some simple examples, and more detailed examples are
 available in the subcommands or the documentation.
@@ -195,6 +250,11 @@ vault kv put -help
 
 ```shell
 vault kv put -mount=secret hello foo=world
+```
+
+Пример ответа:
+
+```txt
 == Secret Path ==
 secret/data/hello
 ======= Metadata =======
@@ -207,12 +267,17 @@ destroyed false
 version 1
 ```
 
-Важно, чтобы путь монтирования к механизму секретов KV v2 был указан с параметром `-mount=secret`, иначе данный пример не будет работать. Путь монтирования `secret` (который был автоматически задан при запуске сервера Deckhouse Stronghold в режиме `-dev`) - это место, где можно читать и записывать произвольные секреты.
+Важно, чтобы путь монтирования к механизму секретов KV v2 был указан с параметром `-mount=secret`, иначе данный пример не будет работать. Путь монтирования `secret` (который был автоматически задан при запуске сервера `stronghold` в режиме `-dev`) - это место, где можно читать и записывать произвольные секреты.
 
 С помощью kv put можно записывать несколько фрагментов данных.
 
 ```shell
 vault kv put -mount=secret hello foo=world excited=yes
+```
+
+Пример ответа:
+
+```txt
 == Secret Path ==
 secret/data/hello
 ======= Metadata =======
@@ -227,7 +292,7 @@ version 2
 
 
 >Обратите внимание, что версия теперь равна 2.
-В примерах этого руководства для отправки секретов в Stronghold используется ввод &lt;ключ>=&lt;значение>. Однако отправка данных в составе команды CLI часто попадает в историю оболочки в незашифрованном виде.
+В примерах этого руководства для отправки секретов в `stronghold` используется ввод &lt;ключ>=&lt;значение>. Однако отправка данных в составе команды CLI часто попадает в историю оболочки в незашифрованном виде.
 
 ### Чтение секрета
 
@@ -235,6 +300,11 @@ Cекреты могут быть получены с помощью _vault kv g
 
 ```shell
 vault kv get -mount=secret hello
+```
+
+Пример ответа:
+
+```txt
 == Secret Path ==
 secret/data/hello
 ======= Metadata =======
@@ -252,12 +322,17 @@ excited yes
 foo world
 ```
 
-Deckhouse Stronghold возвращает последнюю версию (в данном случае версию 2) секретов по адресу `secret/hello`.
+Модуль `stronghold` возвращает последнюю версию (в данном случае версию 2) секретов по адресу `secret/hello`.
 
 Чтобы вывести только значение заданного поля, используйте флаг -field=&lt;имя_ключа>.
 
 ```shell
 vault kv get -mount=secret -field=excited hello
+```
+
+Пример ответа:
+
+```txt
 yes
 ```
 
@@ -265,6 +340,11 @@ yes
 
 ```shell
 vault kv get -mount=secret -format=json hello | jq -r .data.data.excited
+```
+
+Пример ответа:
+
+```txt
 yes
 ```
 
@@ -274,6 +354,11 @@ yes
 
 ```shell
 vault kv delete -mount=secret hello
+```
+
+Пример ответа:
+
+```txt
 Success! Data deleted (if it existed) at: secret/data/hello
 ```
 
@@ -281,6 +366,11 @@ Success! Data deleted (if it existed) at: secret/data/hello
 
 ```shell
 vault kv get -mount=secret hello
+```
+
+Пример ответа:
+
+```txt
 == Secret Path ==
 secret/data/hello
 ======= Metadata =======
@@ -297,6 +387,11 @@ version 2
 
 ```shell
 vault kv undelete -mount=secret -versions=2 hello
+```
+
+Пример ответа:
+
+```txt
 Success! Data written to: secret/undelete/hello
 ```
 
@@ -304,6 +399,11 @@ Success! Data written to: secret/undelete/hello
 
 ```shell
 vault kv get -mount=secret hello
+```
+
+Пример ответа:
+
+```txt
 ======= Metadata =======
 Key Value
 --- -----

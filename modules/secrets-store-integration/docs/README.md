@@ -3,7 +3,7 @@ title: "The secrets-store-integration module"
 description: "The secrets-store-integration module integrates secret stores and applications in K8s clusters"
 ---
 
-The secrets-store-integration module delivers secrets to the application pods in the Kubernetes
+The `secrets-store-integration` module delivers secrets to the application pods in the Kubernetes
 cluster by mounting multiple secrets, keys, and certificates stored in external secret stores.
 
 Secrets are mounted into pods as volumes using the CSI driver implementation.
@@ -80,7 +80,7 @@ There are several ways to deliver secrets to an application from a vault-compati
 
 > *Status:* the most secure option. Recommended if you can access the application and modify it.
 
-The application accesses the Stronghold API and retrieves the secret over HTTPS using the SA authorization token.
+The application accesses the `stronghold` API and retrieves the secret over HTTPS using the SA authorization token.
 
 #### Pros:
 
@@ -88,7 +88,7 @@ The application accesses the Stronghold API and retrieves the secret over HTTPS 
 
 #### Cons:
 
-- The application will need to be modified for it to work with Stronghold.
+- The application will need to be modified for it to work with `stronghold`.
 - You would have to re-implement secret access in each application, and if the library is updated, you would have to rebuild all the applications.
 - The application must support TLS and certificate validation.
 - No caching is available. When the application restarts, it will have to re-request the secret straight from the storage.
