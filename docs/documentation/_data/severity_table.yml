@@ -28,7 +28,7 @@ severity:
         ru: "инцидент имеет небольшой шанс произойти"
     rare:
       en: "Rare"
-      ru: "Редкий"
+      ru: "Редко"
       note:
         en: "the possibility of an incident is virtually eliminated"
         ru: "вероятность инцидента практически исключена"
