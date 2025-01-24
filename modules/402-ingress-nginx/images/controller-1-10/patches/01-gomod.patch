@@ -1,5 +1,5 @@
 diff --git a/go.mod b/go.mod
-index a65a385..d8622e8 100644
+index a65a3855c..6ddb5908e 100644
 --- a/go.mod
 +++ b/go.mod
 @@ -15,7 +15,7 @@ require (
@@ -26,7 +26,7 @@ index a65a385..d8622e8 100644
  	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
  	github.com/golang/protobuf v1.5.4 // indirect
 -	github.com/gomarkdown/markdown v0.0.0-20231222211730-1d6d20845b47 // indirect
-+	github.com/gomarkdown/markdown v0.0.0-20240729212818-a2a9c4f76ef5 // indirect
++	github.com/gomarkdown/markdown v0.0.0-20241205020045-f7e15b2f3e62 // indirect
  	github.com/google/btree v1.1.2 // indirect
  	github.com/google/gnostic-models v0.6.8 // indirect
  	github.com/google/go-cmp v0.6.0 // indirect
@@ -49,10 +49,10 @@ index a65a385..d8622e8 100644
  	golang.org/x/tools v0.24.0 // indirect
  	google.golang.org/genproto/googleapis/rpc v0.0.0-20240528184218-531527333157 // indirect
 diff --git a/go.sum b/go.sum
-index 197c94c..fbd9e05 100644
+index 197c94cf1..ba8d12f45 100644
 --- a/go.sum
 +++ b/go.sum
-@@ -72,8 +72,8 @@ github.com/golang/protobuf v1.4.2/go.mod h1:oDoupMAO8OvCJWAcko0GGGIgR6R6ocIYbsSw
+@@ -72,8 +72,10 @@ github.com/golang/protobuf v1.4.2/go.mod h1:oDoupMAO8OvCJWAcko0GGGIgR6R6ocIYbsSw
  github.com/golang/protobuf v1.5.4 h1:i7eJL8qZTpSEXOPTxNKhASYpMn+8e5Q6AdndVa1dWek=
  github.com/golang/protobuf v1.5.4/go.mod h1:lnTiLA8Wa4RWRcIUkrtSVa5nRhsEGBg48fD6rSs7xps=
  github.com/gomarkdown/markdown v0.0.0-20210514010506-3b9f47219fe7/go.mod h1:aii0r/K0ZnHv7G0KF7xy1v0A7s2Ljrb5byB7MO5p6TU=
@@ -60,10 +60,12 @@ index 197c94c..fbd9e05 100644
 -github.com/gomarkdown/markdown v0.0.0-20231222211730-1d6d20845b47/go.mod h1:JDGcbDT52eL4fju3sZ4TeHGsQwhG9nbDV21aMyhwPoA=
 +github.com/gomarkdown/markdown v0.0.0-20240729212818-a2a9c4f76ef5 h1:8QWUW69MXlNdZXnDnD9vEQ1BL8/mm1FTiSesKKHYivk=
 +github.com/gomarkdown/markdown v0.0.0-20240729212818-a2a9c4f76ef5/go.mod h1:JDGcbDT52eL4fju3sZ4TeHGsQwhG9nbDV21aMyhwPoA=
++github.com/gomarkdown/markdown v0.0.0-20241205020045-f7e15b2f3e62 h1:pbAFUZisjG4s6sxvRJvf2N7vhpCvx2Oxb3PmS6pDO1g=
++github.com/gomarkdown/markdown v0.0.0-20241205020045-f7e15b2f3e62/go.mod h1:JDGcbDT52eL4fju3sZ4TeHGsQwhG9nbDV21aMyhwPoA=
  github.com/google/btree v1.1.2 h1:xf4v41cLI2Z6FxbKm+8Bu+m8ifhj15JuZ9sa0jZCMUU=
  github.com/google/btree v1.1.2/go.mod h1:qOPhT0dTNdNzV6Z/lhRX0YXUafgPLFUh+gZMl761Gm4=
  github.com/google/gnostic-models v0.6.8 h1:yo/ABAfM5IMRsS1VnXjTBvUb61tFIHozhlYvRgGre9I=
-@@ -164,8 +164,8 @@ github.com/onsi/gomega v1.7.1/go.mod h1:XdKZgCCFLUoM/7CFJVPcG8C1xQ1AJ0vpAezJrB7J
+@@ -164,8 +166,8 @@ github.com/onsi/gomega v1.7.1/go.mod h1:XdKZgCCFLUoM/7CFJVPcG8C1xQ1AJ0vpAezJrB7J
  github.com/onsi/gomega v1.10.1/go.mod h1:iN09h71vgCQne3DLsj+A5owkum+a2tYe+TOCB1ybHNo=
  github.com/onsi/gomega v1.34.1 h1:EUMJIKUjM8sKjYbtxQI9A4z2o+rruxnzNvpknOXie6k=
  github.com/onsi/gomega v1.34.1/go.mod h1:kU1QgUvBDLXBJq618Xvm2LUX6rSAfRaFRTcdOeDLwwY=
@@ -74,7 +76,7 @@ index 197c94c..fbd9e05 100644
  github.com/opencontainers/runtime-spec v1.2.0 h1:z97+pHb3uELt/yiAWD691HNHQIF07bE7dzrbT927iTk=
  github.com/opencontainers/runtime-spec v1.2.0/go.mod h1:jwyrGlmzljRJv/Fgzds9SsS/C5hL+LL3ko9hs6T5lQ0=
  github.com/peterbourgon/diskv v2.0.1+incompatible h1:UBdAOUP5p4RWqPBg048CAvpKN+vxiaj6gdUUzhl4XmI=
-@@ -228,8 +228,8 @@ golang.org/dl v0.0.0-20190829154251-82a15e2f2ead/go.mod h1:IUMfjQLJQd4UTqG1Z90te
+@@ -228,8 +230,8 @@ golang.org/dl v0.0.0-20190829154251-82a15e2f2ead/go.mod h1:IUMfjQLJQd4UTqG1Z90te
  golang.org/x/crypto v0.0.0-20190308221718-c2843e01d9a2/go.mod h1:djNgcEr1/C05ACkg1iLfiJU5Ep61QUkGW8qpdssI0+w=
  golang.org/x/crypto v0.0.0-20191011191535-87dc89f01550/go.mod h1:yigFU9vqHzYiE8UmvKecakEJjdnWj3jj499lnFckfCI=
  golang.org/x/crypto v0.0.0-20200622213623-75b288015ac9/go.mod h1:LzIPMQfyMNhhGPhUkYOs5KpL4U8rLKemX1yGLhDgUto=
@@ -85,7 +87,7 @@ index 197c94c..fbd9e05 100644
  golang.org/x/exp v0.0.0-20240719175910-8a7402abbf56 h1:2dVuKD2vS7b0QIHQbpyTISPd0LeHDbnYEryqj5Q1ug8=
  golang.org/x/exp v0.0.0-20240719175910-8a7402abbf56/go.mod h1:M4RDyNAINzryxdtnbRXRL/OHtkFuWGRjvuhBJpk2IlY=
  golang.org/x/mod v0.2.0/go.mod h1:s0Qsj1ACt9ePp/hMypM3fl4fZqREWJwdYDEqhRiZZUA=
-@@ -242,16 +242,16 @@ golang.org/x/net v0.0.0-20190620200207-3b0461eec859/go.mod h1:z5CRVTTTmAJ677TzLL
+@@ -242,16 +244,16 @@ golang.org/x/net v0.0.0-20190620200207-3b0461eec859/go.mod h1:z5CRVTTTmAJ677TzLL
  golang.org/x/net v0.0.0-20200226121028-0de0cce0169b/go.mod h1:z5CRVTTTmAJ677TzLLGU+0bjPO0LkuOLi4/5GtJWs/s=
  golang.org/x/net v0.0.0-20200520004742-59133d7f0dd7/go.mod h1:qpuaurCH72eLCgpAm/N6yyVIVM9cpaDIP3A8BGJEC5A=
  golang.org/x/net v0.0.0-20201021035429-f5854403a974/go.mod h1:sp8m0HH+o8qH0wwXwYZr8TS3Oi6o0r6Gce1SSxlDquU=
@@ -106,7 +108,7 @@ index 197c94c..fbd9e05 100644
  golang.org/x/sys v0.0.0-20180909124046-d0be0721c37e/go.mod h1:STP8DvDyc/dI5b8T5hshtkjS+E42TnysNCUPdjciGhY=
  golang.org/x/sys v0.0.0-20190215142949-d0b11bdaac8a/go.mod h1:STP8DvDyc/dI5b8T5hshtkjS+E42TnysNCUPdjciGhY=
  golang.org/x/sys v0.0.0-20190412213103-97732733099d/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
-@@ -266,14 +266,14 @@ golang.org/x/sys v0.0.0-20220520151302-bc2c85ada10a/go.mod h1:oPkhp1MJrh7nUepCBc
+@@ -266,14 +268,14 @@ golang.org/x/sys v0.0.0-20220520151302-bc2c85ada10a/go.mod h1:oPkhp1MJrh7nUepCBc
  golang.org/x/sys v0.0.0-20220715151400-c0bba94af5f8/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
  golang.org/x/sys v0.0.0-20220811171246-fbc7d0a398ab/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
  golang.org/x/sys v0.6.0/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
@@ -128,7 +130,7 @@ index 197c94c..fbd9e05 100644
  golang.org/x/time v0.5.0/go.mod h1:3BpzKBy/shNhVucY/MWOyx10tF3SFh9QdLuxbVysPQM=
  golang.org/x/tools v0.0.0-20180917221912-90fa682c2a6e/go.mod h1:n7NCudcB/nEzxVGmLbDWY5pfWTLqBcC2KZ6jyYvM4mQ=
 diff --git a/images/kube-webhook-certgen/rootfs/go.mod b/images/kube-webhook-certgen/rootfs/go.mod
-index 52746eb..bad82fb 100644
+index 52746ebd9..bad82fb8c 100644
 --- a/images/kube-webhook-certgen/rootfs/go.mod
 +++ b/images/kube-webhook-certgen/rootfs/go.mod
 @@ -38,11 +38,11 @@ require (
@@ -148,7 +150,7 @@ index 52746eb..bad82fb 100644
  	google.golang.org/appengine v1.6.8 // indirect
  	google.golang.org/protobuf v1.34.1 // indirect
 diff --git a/images/kube-webhook-certgen/rootfs/go.sum b/images/kube-webhook-certgen/rootfs/go.sum
-index 8ce13c6..d18aa4a 100644
+index 8ce13c672..d18aa4a94 100644
 --- a/images/kube-webhook-certgen/rootfs/go.sum
 +++ b/images/kube-webhook-certgen/rootfs/go.sum
 @@ -107,8 +107,8 @@ golang.org/x/net v0.0.0-20200226121028-0de0cce0169b/go.mod h1:z5CRVTTTmAJ677TzLL
@@ -188,7 +190,7 @@ index 8ce13c6..d18aa4a 100644
  golang.org/x/time v0.5.0/go.mod h1:3BpzKBy/shNhVucY/MWOyx10tF3SFh9QdLuxbVysPQM=
  golang.org/x/tools v0.0.0-20180917221912-90fa682c2a6e/go.mod h1:n7NCudcB/nEzxVGmLbDWY5pfWTLqBcC2KZ6jyYvM4mQ=
 diff --git a/magefiles/go.mod b/magefiles/go.mod
-index 8e146d7..4af3289 100644
+index 8e146d70e..4af328995 100644
 --- a/magefiles/go.mod
 +++ b/magefiles/go.mod
 @@ -28,7 +28,7 @@ require (
@@ -201,7 +203,7 @@ index 8e146d7..4af3289 100644
  	google.golang.org/protobuf v1.33.0 // indirect
  	gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c // indirect
 diff --git a/magefiles/go.sum b/magefiles/go.sum
-index 16bc846..8684d47 100644
+index 16bc8460f..8684d4701 100644
 --- a/magefiles/go.sum
 +++ b/magefiles/go.sum
 @@ -89,8 +89,8 @@ golang.org/x/crypto v0.0.0-20190308221718-c2843e01d9a2/go.mod h1:djNgcEr1/C05ACk
