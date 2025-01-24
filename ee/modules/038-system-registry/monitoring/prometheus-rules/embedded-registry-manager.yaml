@@ -8,7 +8,7 @@
           * on (namespace, pod) group_left(node, created_by_kind, created_by_name)
             kube_pod_info{created_by_kind!="Node"}
         ) != 1
-      for: 2m
+      for: 3m
       labels:
         severity_level: "5"
         d8_module: embedded-registry
@@ -36,7 +36,7 @@
           * on (namespace, pod) group_left(node, created_by_kind, created_by_name)
             kube_pod_info{created_by_kind!="Node"}
         ) != 1
-      for: 2m
+      for: 3m
       labels:
         severity_level: "5"
         d8_module: embedded-registry
@@ -60,7 +60,7 @@
     - alert: D8EmbeddedRegistryManagerPodIsNotExist
       expr: |-
         absent(kube_pod_status_phase{namespace="d8-system",phase="Running",pod=~"^(embedded|system)-registry-manager.*"})
-      for: 2m
+      for: 3m
       labels:
         severity_level: "5"
         d8_module: embedded-registry
@@ -81,7 +81,7 @@
     - alert: D8EmbeddedRegistryManagerPodIsNotExist
       expr: |-
         absent(kube_pod_status_phase{namespace="d8-system",phase="Running",pod=~"^(embedded|system)-registry-staticpod-manager.*"})
-      for: 2m
+      for: 3m
       labels:
         severity_level: "5"
         d8_module: embedded-registry

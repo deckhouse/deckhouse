@@ -8,7 +8,7 @@
           * on (namespace, pod) group_left(node)
             kube_pod_info{created_by_kind="Node"}
         ) != 1
-      for: 2m
+      for: 3m
       labels:
         severity_level: "5"
         d8_module: embedded-registry
@@ -26,8 +26,10 @@
           The recommended course of action:
           1. View the status of the Pod: `kubectl -n {{`{{ $labels.namespace }}`}} describe pod/{{`{{ $labels.pod }}`}}`
           2. View the logs of the Pod: `kubectl -n {{`{{ $labels.namespace }}`}} logs pod/{{`{{ $labels.pod }}`}}`
-          3. View the registry manager logs `kubectl -n d8-system logs pod/system-registry-manager-*`
-          4. View the registry static pod manager logs `kubectl -n d8-system logs pod/system-registry-staticpod-manager-*`
+          3. View the logs of the registry manager
+            - `kubectl -n d8-system logs pod/system-registry-manager-*`
+            - `kubectl -n d8-system logs $(kubectl -n d8-system get lease/embedded-registry-manager-leader -o jsonpath='{.spec.holderIdentity}' | awk -F_ '{print $1}') -f`
+          4. View the logs of the registry static pod manager `kubectl -n d8-system logs pod/system-registry-staticpod-manager-*`
 
     - alert: D8EmbeddedRegistryPodIsNotRunning
       expr: |-
@@ -36,7 +38,7 @@
           * on (namespace, pod) group_left(node)
             kube_pod_info{created_by_kind="Node"}
         ) != 1
-      for: 2m
+      for: 3m
       labels:
         severity_level: "5"
         d8_module: embedded-registry
@@ -54,13 +56,15 @@
           The recommended course of action:
           1. View the status of the Pod: `kubectl -n {{`{{ $labels.namespace }}`}} describe pod/{{`{{ $labels.pod }}`}}`
           2. View the logs of the Pod: `kubectl -n {{`{{ $labels.namespace }}`}} logs pod/{{`{{ $labels.pod }}`}}`
-          3. View the registry manager logs `kubectl -n d8-system logs pod/system-registry-manager-*`
-          4. View the registry static pod manager logs `kubectl -n d8-system logs pod/system-registry-staticpod-manager-*`
+          3. View the logs of the registry manager
+            - `kubectl -n d8-system logs pod/system-registry-manager-*`
+            - `kubectl -n d8-system logs $(kubectl -n d8-system get lease/embedded-registry-manager-leader -o jsonpath='{.spec.holderIdentity}' | awk -F_ '{print $1}') -f`
+          4. View the logs of the registry static pod manager `kubectl -n d8-system logs pod/system-registry-staticpod-manager-*`
 
     - alert: D8EmbeddedRegistryPodIsNotExist
       expr: |-
         absent(kube_pod_status_phase{phase="Running",namespace="d8-system", pod=~"^(embedded|system)-registry-.*", pod!~"^(embedded|system)-registry-.*manager.*"})
-      for: 2m
+      for: 3m
       labels:
         severity_level: "5"
         d8_module: embedded-registry
@@ -75,8 +79,10 @@
           The d8-system/system-registry-<node-name> Static Pod is NOT Exist.
 
           The recommended course of action:
-          1. View the registry manager logs `kubectl -n d8-system logs pod/system-registry-manager-*`
-          2. View the registry static pod manager logs `kubectl -n d8-system logs pod/system-registry-staticpod-manager-*`
+          1. View the logs of the registry manager
+            - `kubectl -n d8-system logs pod/system-registry-manager-*`
+            - `kubectl -n d8-system logs $(kubectl -n d8-system get lease/embedded-registry-manager-leader -o jsonpath='{.spec.holderIdentity}' | awk -F_ '{print $1}') -f`
+          2. View the logs of the registry static pod manager `kubectl -n d8-system logs pod/system-registry-staticpod-manager-*`
 
     - alert: D8EmbeddedRegistryPodIsTargetDown
       expr: |
@@ -90,7 +96,7 @@
         * on (host_ip) group_left (pod, node, namespace)
           kube_pod_info{created_by_kind="Node",namespace="d8-system",pod=~"^(system|embedded)-registry.+"}
         == 0 unless on (job) ALERTS{alertname=~".+TargetDown"}
-      for: 2m
+      for: 3m
       labels:
         severity_level: "7"
         d8_module: embedded-registry
@@ -108,8 +114,10 @@
           The recommended course of action:
           1. View the status of the Pod: `kubectl -n {{`{{ $labels.namespace }}`}} describe pod/{{`{{ $labels.pod }}`}}`
           2. View the logs of the Pod: `kubectl -n {{`{{ $labels.namespace }}`}} logs pod/{{`{{ $labels.pod }}`}}`
-          3. View the registry manager logs `kubectl -n d8-system logs pod/system-registry-manager-*`
-          4. View the registry static pod manager logs `kubectl -n d8-system logs pod/system-registry-staticpod-manager-*`
+          3. View the logs of the registry manager
+            - `kubectl -n d8-system logs pod/system-registry-manager-*`
+            - `kubectl -n d8-system logs $(kubectl -n d8-system get lease/embedded-registry-manager-leader -o jsonpath='{.spec.holderIdentity}' | awk -F_ '{print $1}') -f`
+          4. View the logs of the registry static pod manager `kubectl -n d8-system logs pod/system-registry-staticpod-manager-*`
 
     - alert: D8EmbeddedRegistryPodIsTargetDown
       expr: |
@@ -141,8 +149,10 @@
           The recommended course of action:
           1. View the status of the Pod: `kubectl -n {{`{{ $labels.namespace }}`}} describe pod/{{`{{ $labels.pod }}`}}`
           2. View the logs of the Pod: `kubectl -n {{`{{ $labels.namespace }}`}} logs pod/{{`{{ $labels.pod }}`}}`
-          3. View the registry manager logs `kubectl -n d8-system logs pod/system-registry-manager-*`
-          4. View the registry static pod manager logs `kubectl -n d8-system logs pod/system-registry-staticpod-manager-*`
+          3. View the logs of the registry manager
+            - `kubectl -n d8-system logs pod/system-registry-manager-*`
+            - `kubectl -n d8-system logs $(kubectl -n d8-system get lease/embedded-registry-manager-leader -o jsonpath='{.spec.holderIdentity}' | awk -F_ '{print $1}') -f`
+          4. View the logs of the registry static pod manager `kubectl -n d8-system logs pod/system-registry-staticpod-manager-*`
 
     - alert: D8EmbeddedRegistryPodIsTargetDown
       expr: |
@@ -174,8 +184,10 @@
           The recommended course of action:
           1. View the status of the Pod: `kubectl -n {{`{{ $labels.namespace }}`}} describe pod/{{`{{ $labels.pod }}`}}`
           2. View the logs of the Pod: `kubectl -n {{`{{ $labels.namespace }}`}} logs pod/{{`{{ $labels.pod }}`}}`
-          3. View the registry manager logs `kubectl -n d8-system logs pod/system-registry-manager-*`
-          4. View the registry static pod manager logs `kubectl -n d8-system logs pod/system-registry-staticpod-manager-*`
+          3. View the logs of the registry manager
+            - `kubectl -n d8-system logs pod/system-registry-manager-*`
+            - `kubectl -n d8-system logs $(kubectl -n d8-system get lease/embedded-registry-manager-leader -o jsonpath='{.spec.holderIdentity}' | awk -F_ '{print $1}') -f`
+          4. View the logs of the registry static pod manager `kubectl -n d8-system logs pod/system-registry-staticpod-manager-*`
 {{- else }}
 []
 {{- end }}
