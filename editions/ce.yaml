@@ -50,8 +50,6 @@ modules:
     enabled:
       default: true
       managed: true
-  dashboard-provisioner:
-    available: true
   deckhouse:
     available: true
     enabled:
@@ -68,8 +66,6 @@ modules:
     enabled:
       default: true
       managed: true
-  discovery:
-    available: false
   documentation:
     available: true
     enabled:
@@ -102,8 +98,6 @@ modules:
     available: true
     enabled:
       default: true
-  loader:
-    available: false
   local-path-provisioner:
     available: true
     enabled:
