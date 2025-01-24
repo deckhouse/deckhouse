@@ -40,7 +40,7 @@ severity:
       ru: "Разрушительные"
       note:
         en: "complete loss of a system component that will take a long time to recover. The components are critical for the health of the entire system. Catastrophic data loss for an indefinite period"
-        ru: "полная потеря компонента системы, восстановление которого займёт длительный срок. Компоненты критичен для здоровья всей системы. Катастрофическая потеря данных на наопределённый срок"
+        ru: "полная потеря компонента системы, восстановление которого займёт длительный срок. Компонент критичен для здоровья всей системы. Катастрофическая потеря данных на неопределённый срок"
     catastrophic:
       en: "Catastrophic"
       ru: "Катастрофический"
