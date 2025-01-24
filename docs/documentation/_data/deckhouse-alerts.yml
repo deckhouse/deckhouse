@@ -900,18 +900,49 @@ alerts:
         Prometheus is unable to scrape Dex metrics.
       severity: "6"
       markupFormat: markdown
+    - name: D8EmbeddedRegistryManagerPodIsNotExist
+      sourceFile: ee/modules/038-system-registry/monitoring/prometheus-rules/embedded-registry-manager.yaml
+      moduleUrl: 038-system-registry
+      module: system-registry
+      edition: ee
+      description: |
+        The d8-system/system-registry-manager Pod is NOT Exist.
+
+        The recommended course of action:
+        1. Retrieve details of the Daemonset: `kubectl -n d8-system describe Daemonset/system-registry-manager`
+      summary: |
+        The d8-system/system-registry-manager Pod is NOT Exist.
+      severity: "5"
+      markupFormat: markdown
+    - name: D8EmbeddedRegistryManagerPodIsNotExist
+      sourceFile: ee/modules/038-system-registry/monitoring/prometheus-rules/embedded-registry-manager.yaml
+      moduleUrl: 038-system-registry
+      module: system-registry
+      edition: ee
+      description: |
+        The d8-system/system-registry-staticpod-manager Pod is NOT Exist.
+
+        The recommended course of action:
+        1. Retrieve details of the Daemonset: `kubectl -n d8-system describe Daemonset/system-registry-staticpod-manager`
+      summary: |
+        The d8-system/system-registry-staticpod-manager Pod is NOT Exist.
+      severity: "5"
+      markupFormat: markdown
     - name: D8EmbeddedRegistryManagerPodIsNotReady
       sourceFile: ee/modules/038-system-registry/monitoring/prometheus-rules/embedded-registry-manager.yaml
       moduleUrl: 038-system-registry
       module: system-registry
       edition: ee
       description: |
+        The {{ $labels.namespace }}/{{ $labels.pod }} Pod is NOT Ready.
+
         The recommended course of action:
-        1. Retrieve details of the {{ $labels.created_by_kind }}: `kubectl -n d8-system describe {{ $labels.created_by_kind }}/{{ $labels.created_by_name }}`
-        2. View the status of the Pod and try to figure out why it is not running: `kubectl -n d8-system describe pod/{{ $labels.pod }}`
+        1. Retrieve details of the {{ $labels.created_by_kind }}: `kubectl -n {{ $labels.namespace }} describe {{ $labels.created_by_kind }}/{{ $labels.created_by_name }}`
+        2. View the status of the Pod: `kubectl -n {{ $labels.namespace }} describe pod/{{ $labels.pod }}`
+        3. View the logs of the Pod: `kubectl -n {{ $labels.namespace }} logs pod/{{ $labels.pod }}`
       summary: |
         The {{ $labels.namespace }}/{{ $labels.pod }} Pod is NOT Ready.
-      severity: "8"
+      severity: "5"
       markupFormat: markdown
     - name: D8EmbeddedRegistryManagerPodIsNotRunning
       sourceFile: ee/modules/038-system-registry/monitoring/prometheus-rules/embedded-registry-manager.yaml
@@ -919,74 +950,114 @@ alerts:
       module: system-registry
       edition: ee
       description: |
+        The {{ $labels.namespace }}/{{ $labels.pod }} Pod is NOT Running.
+
         The recommended course of action:
-        1. Retrieve details of the {{ $labels.created_by_kind }}: `kubectl -n d8-system describe {{ $labels.created_by_kind }}/{{ $labels.created_by_name }}`
-        2. View the status of the Pod and try to figure out why it is not running: `kubectl -n d8-system describe pod/{{ $labels.pod }}`
+        1. Retrieve details of the {{ $labels.created_by_kind }}: `kubectl -n {{ $labels.namespace }} describe {{ $labels.created_by_kind }}/{{ $labels.created_by_name }}`
+        2. View the status of the Pod: `kubectl -n {{ $labels.namespace }} describe pod/{{ $labels.pod }}`
+        3. View the logs of the Pod: `kubectl -n {{ $labels.namespace }} logs pod/{{ $labels.pod }}`
       summary: |
         The {{ $labels.namespace }}/{{ $labels.pod }} Pod is NOT Running.
-      severity: "8"
+      severity: "5"
+      markupFormat: markdown
+    - name: D8EmbeddedRegistryPodIsNotExist
+      sourceFile: ee/modules/038-system-registry/monitoring/prometheus-rules/embedded-registry-st-pod.tpl
+      moduleUrl: 038-system-registry
+      module: system-registry
+      edition: ee
+      description: |
+        The d8-system/system-registry-<node-name> Static Pod is NOT Exist.
+
+        The recommended course of action:
+        1. View the registry manager logs `kubectl -n d8-system logs pod/system-registry-manager-*`
+        2. View the registry static pod manager logs `kubectl -n d8-system logs pod/system-registry-staticpod-manager-*`
+      summary: |
+        The d8-system/system-registry- Static Pod is NOT Exist.
+      severity: "5"
       markupFormat: markdown
     - name: D8EmbeddedRegistryPodIsNotReady
-      sourceFile: ee/modules/038-system-registry/monitoring/prometheus-rules/embedded-registry-st-pod.yaml
+      sourceFile: ee/modules/038-system-registry/monitoring/prometheus-rules/embedded-registry-st-pod.tpl
       moduleUrl: 038-system-registry
       module: system-registry
       edition: ee
       description: |
+        The {{ $labels.namespace }}/{{ $labels.pod }} Pod is NOT Ready.
+
         The recommended course of action:
-        1. View the status of the Pod and try to figure out why it is not running: `kubectl -n d8-system describe pod/{{ $labels.pod }}`
+        1. View the status of the Pod: `kubectl -n {{ $labels.namespace }} describe pod/{{ $labels.pod }}`
+        2. View the logs of the Pod: `kubectl -n {{ $labels.namespace }} logs pod/{{ $labels.pod }}`
+        3. View the registry manager logs `kubectl -n d8-system logs pod/system-registry-manager-*`
+        4. View the registry static pod manager logs `kubectl -n d8-system logs pod/system-registry-staticpod-manager-*`
       summary: |
         The {{ $labels.namespace }}/{{ $labels.pod }} Pod is NOT Ready.
-      severity: "8"
+      severity: "5"
       markupFormat: markdown
     - name: D8EmbeddedRegistryPodIsNotRunning
-      sourceFile: ee/modules/038-system-registry/monitoring/prometheus-rules/embedded-registry-st-pod.yaml
+      sourceFile: ee/modules/038-system-registry/monitoring/prometheus-rules/embedded-registry-st-pod.tpl
       moduleUrl: 038-system-registry
       module: system-registry
       edition: ee
       description: |
+        The {{ $labels.namespace }}/{{ $labels.pod }} Pod is NOT Running.
+
         The recommended course of action:
-        1. View the status of the Pod and try to figure out why it is not running: `kubectl -n d8-system describe pod/{{ $labels.pod }}`
+        1. View the status of the Pod: `kubectl -n {{ $labels.namespace }} describe pod/{{ $labels.pod }}`
+        2. View the logs of the Pod: `kubectl -n {{ $labels.namespace }} logs pod/{{ $labels.pod }}`
+        3. View the registry manager logs `kubectl -n d8-system logs pod/system-registry-manager-*`
+        4. View the registry static pod manager logs `kubectl -n d8-system logs pod/system-registry-staticpod-manager-*`
       summary: |
         The {{ $labels.namespace }}/{{ $labels.pod }} Pod is NOT Running.
-      severity: "8"
-      markupFormat: markdown
-    - name: D8EmbeddedRegistryPodIsTargetDown
-      sourceFile: ee/modules/038-system-registry/monitoring/prometheus-rules/embedded-registry-st-pod.yaml
-      moduleUrl: 038-system-registry
-      module: system-registry
-      edition: ee
-      description: |
-        The recommended course of action:
-        1. Check the Pod status: `kubectl -n d8-system get pod/{{ $labels.pod }}`
-        2. Or check the Pod logs: `kubectl -n d8-system logs pod/{{ $labels.pod }}`
-      summary: |
-        The {{ $labels.namespace }}/{{ $labels.pod }} Pod target is down
       severity: "5"
       markupFormat: markdown
     - name: D8EmbeddedRegistryPodIsTargetDown
-      sourceFile: ee/modules/038-system-registry/monitoring/prometheus-rules/embedded-registry-st-pod.yaml
+      sourceFile: ee/modules/038-system-registry/monitoring/prometheus-rules/embedded-registry-st-pod.tpl
       moduleUrl: 038-system-registry
       module: system-registry
       edition: ee
       description: |
+        The {{ $labels.namespace }}/{{ $labels.pod }} Pod target is down.
+
         The recommended course of action:
-        1. Check the Pod status: `kubectl -n d8-system get pod/{{ $labels.pod }}`
-        2. Or check the Pod logs: `kubectl -n d8-system logs pod/{{ $labels.pod }}`
+        1. View the status of the Pod: `kubectl -n {{ $labels.namespace }} describe pod/{{ $labels.pod }}`
+        2. View the logs of the Pod: `kubectl -n {{ $labels.namespace }} logs pod/{{ $labels.pod }}`
+        3. View the registry manager logs `kubectl -n d8-system logs pod/system-registry-manager-*`
+        4. View the registry static pod manager logs `kubectl -n d8-system logs pod/system-registry-staticpod-manager-*`
       summary: |
-        The {{ $labels.namespace }}/{{ $labels.pod }} Pod target is down
+        The {{ $labels.namespace }}/{{ $labels.pod }} Pod target is down.
+      severity: "5"
+      markupFormat: markdown
+    - name: D8EmbeddedRegistryPodIsTargetDown
+      sourceFile: ee/modules/038-system-registry/monitoring/prometheus-rules/embedded-registry-st-pod.tpl
+      moduleUrl: 038-system-registry
+      module: system-registry
+      edition: ee
+      description: |
+        The {{ $labels.namespace }}/{{ $labels.pod }} Pod target is down.
+
+        The recommended course of action:
+        1. View the status of the Pod: `kubectl -n {{ $labels.namespace }} describe pod/{{ $labels.pod }}`
+        2. View the logs of the Pod: `kubectl -n {{ $labels.namespace }} logs pod/{{ $labels.pod }}`
+        3. View the registry manager logs `kubectl -n d8-system logs pod/system-registry-manager-*`
+        4. View the registry static pod manager logs `kubectl -n d8-system logs pod/system-registry-staticpod-manager-*`
+      summary: |
+        The {{ $labels.namespace }}/{{ $labels.pod }} Pod target is down.
       severity: "6"
       markupFormat: markdown
     - name: D8EmbeddedRegistryPodIsTargetDown
-      sourceFile: ee/modules/038-system-registry/monitoring/prometheus-rules/embedded-registry-st-pod.yaml
+      sourceFile: ee/modules/038-system-registry/monitoring/prometheus-rules/embedded-registry-st-pod.tpl
       moduleUrl: 038-system-registry
       module: system-registry
       edition: ee
       description: |
+        The {{ $labels.namespace }}/{{ $labels.pod }} Pod target is down.
+
         The recommended course of action:
-        1. Check the Pod status: `kubectl -n d8-system get pod/{{ $labels.pod }}`
-        2. Or check the Pod logs: `kubectl -n d8-system logs pod/{{ $labels.pod }}`
+        1. View the status of the Pod: `kubectl -n {{ $labels.namespace }} describe pod/{{ $labels.pod }}`
+        2. View the logs of the Pod: `kubectl -n {{ $labels.namespace }} logs pod/{{ $labels.pod }}`
+        3. View the registry manager logs `kubectl -n d8-system logs pod/system-registry-manager-*`
+        4. View the registry static pod manager logs `kubectl -n d8-system logs pod/system-registry-staticpod-manager-*`
       summary: |
-        The {{ $labels.namespace }}/{{ $labels.pod }} Pod target is down
+        The {{ $labels.namespace }}/{{ $labels.pod }} Pod target is down.
       severity: "7"
       markupFormat: markdown
     - name: D8EtcdDatabaseHighFragmentationRatio
