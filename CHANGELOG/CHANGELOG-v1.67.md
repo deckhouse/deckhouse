@@ -94,6 +94,7 @@
  - **[node-manager]** Tune CAPS sync period. [#11384](https://github.com/deckhouse/deckhouse/pull/11384)
  - **[node-manager]** Fix the key usage with cert-authority. [#10718](https://github.com/deckhouse/deckhouse/pull/10718)
  - **[node-manager]** no_proxy/http_proxy tuning, `bb-set-proxy/bb-unset-proxy` functions. [#10676](https://github.com/deckhouse/deckhouse/pull/10676)
+ - **[operator-trivy]** Add chowning init container to the trivy-server. [#11671](https://github.com/deckhouse/deckhouse/pull/11671)
  - **[prometheus]** Excluded unwanted labels from `D8CNIMisconfigured` alert. [#11301](https://github.com/deckhouse/deckhouse/pull/11301)
  - **[prometheus]** Fixes for D8CNIMisconfigured alerts — renamed group and typos fixed. [#11259](https://github.com/deckhouse/deckhouse/pull/11259)
  - **[prometheus]** Rename targets for alerts and docs fixes. [#11243](https://github.com/deckhouse/deckhouse/pull/11243)
@@ -120,6 +121,7 @@
     You will now receive alerts if not all parameters are clearly specified in the CNI `moduleConfigs`.
  - **[cni-simple-bridge]** Adding pre-migration compatibility checks for CNI configurations. [#10640](https://github.com/deckhouse/deckhouse/pull/10640)
     You will now receive alerts if not all parameters are clearly specified in the CNI `moduleConfigs`.
+ - **[control-plane-manager]** Update D8KubernetesVersionIsDeprecated alert to set k8s v1.27 deprecated. [#11687](https://github.com/deckhouse/deckhouse/pull/11687)
  - **[dashboard]** Updated to 7.10.0 [#10301](https://github.com/deckhouse/deckhouse/pull/10301)
     Dashboard module works only via HTTPS and no longer supports the "Basic" HTTP authentication scheme.
  - **[deckhouse-controller]** Update the drain mechanism in the copied code. [#10578](https://github.com/deckhouse/deckhouse/pull/10578)
@@ -135,6 +137,7 @@
  - **[istio]** Enabling the use of self hosted certificates for metadata decrypt and excluding certificate verification in Istio Multicluster and Federation. [#10740](https://github.com/deckhouse/deckhouse/pull/10740)
  - **[node-manager]** Rewrite NodeGroup convesion webhook on Python. [#10777](https://github.com/deckhouse/deckhouse/pull/10777)
  - **[operator-trivy]** Use local policies. [#10799](https://github.com/deckhouse/deckhouse/pull/10799)
+ - **[prometheus]** Add init container and switcher for prom longterm. [#11658](https://github.com/deckhouse/deckhouse/pull/11658)
  - **[prometheus]** Add init container and switcher for prom image. [#11085](https://github.com/deckhouse/deckhouse/pull/11085)
     Prometheus will be restarted.
  - **[user-authz]** Replace manage capabilities and scopes. [#10810](https://github.com/deckhouse/deckhouse/pull/10810)
