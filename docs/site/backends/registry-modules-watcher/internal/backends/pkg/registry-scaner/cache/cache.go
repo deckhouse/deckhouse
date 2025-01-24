@@ -204,6 +204,9 @@ func (c *Cache) syncReleaseChannels(registry, module, releaseChannel string) {
 }
 
 func (c *Cache) GetModules(registry string) []string {
+	c.m.RLock()
+	defer c.m.RUnlock()
+
 	var modules []string
 	r, ok := c.val[registryName(registry)]
 	if ok {
@@ -216,6 +219,9 @@ func (c *Cache) GetModules(registry string) []string {
 }
 
 func (c *Cache) DeleteModule(registry string, module string) {
+	c.m.Lock()
+	defer c.m.Unlock()
+
 	r, ok := c.val[registryName(registry)]
 	if ok {
 		delete(r, moduleName(module))
