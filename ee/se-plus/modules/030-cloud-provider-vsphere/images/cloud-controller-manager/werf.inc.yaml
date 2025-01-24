@@ -15,13 +15,7 @@ imageSpec:
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
 final: false
-    {{- if semverCompare ">=1.30" $version }}
-from: {{ $.Images.BASE_GOLANG_22_ALPINE_DEV }}
-    {{- else if semverCompare "=1.29" $version }}
-from: {{ $.Images.BASE_GOLANG_21_ALPINE_DEV }}
-    {{- else if semverCompare ">=1.28" $version }}
-from: {{ $.Images.BASE_GOLANG_20_ALPINE_DEV }}
-    {{- end }}
+from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
 git:
 - add: /{{ $.ModulePath }}modules/030-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
   to: /patches
