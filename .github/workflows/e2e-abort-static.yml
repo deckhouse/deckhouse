@@ -83,6 +83,7 @@ jobs:
       run_containerd_1_29: ${{ steps.check.outputs.run_containerd_1_29 }}
       run_containerd_1_30: ${{ steps.check.outputs.run_containerd_1_30 }}
       run_containerd_1_31: ${{ steps.check.outputs.run_containerd_1_31 }}
+      run_containerd_1_32: ${{ steps.check.outputs.run_containerd_1_32 }}
       run_containerd_automatic: ${{ steps.check.outputs.run_containerd_automatic }}
       edition: ${{ steps.check.outputs.edition }}
       multimaster: ${{ steps.check.outputs.multimaster }}
@@ -2415,12 +2416,12 @@ jobs:
 
   last_comment:
     name: Update comment on finish
-    needs: ["started_at","run_containerd_1_26","run_containerd_1_27","run_containerd_1_28","run_containerd_1_29","run_containerd_1_30","run_containerd_1_31","run_containerd_automatic"]
+    needs: ["started_at","run_containerd_1_26","run_containerd_1_27","run_containerd_1_28","run_containerd_1_29","run_containerd_1_30","run_containerd_1_31","run_containerd_1_32","run_containerd_automatic"]
     if: ${{ always() }}
     runs-on: ubuntu-latest
     env:
       JOB_NAMES: |
-        {"run_containerd_1_26":"destroy cluster: Static, Containerd, Kubernetes 1.26","run_containerd_1_27":"destroy cluster: Static, Containerd, Kubernetes 1.27","run_containerd_1_28":"destroy cluster: Static, Containerd, Kubernetes 1.28","run_containerd_1_29":"destroy cluster: Static, Containerd, Kubernetes 1.29","run_containerd_1_30":"destroy cluster: Static, Containerd, Kubernetes 1.30","run_containerd_1_31":"destroy cluster: Static, Containerd, Kubernetes 1.31","run_containerd_automatic":"destroy cluster: Static, Containerd, Kubernetes Automatic"}
+        {"run_containerd_1_26":"destroy cluster: Static, Containerd, Kubernetes 1.26","run_containerd_1_27":"destroy cluster: Static, Containerd, Kubernetes 1.27","run_containerd_1_28":"destroy cluster: Static, Containerd, Kubernetes 1.28","run_containerd_1_29":"destroy cluster: Static, Containerd, Kubernetes 1.29","run_containerd_1_30":"destroy cluster: Static, Containerd, Kubernetes 1.30","run_containerd_1_31":"destroy cluster: Static, Containerd, Kubernetes 1.31","run_containerd_1_32":"destroy cluster: Static, Containerd, Kubernetes 1.32","run_containerd_automatic":"destroy cluster: Static, Containerd, Kubernetes Automatic"}
     steps:
 
       # <template: checkout_step>

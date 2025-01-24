@@ -4207,12 +4207,12 @@ jobs:
 
   last_comment:
     name: Update comment on finish
-    needs: ["started_at","git_info","run_containerd_1_26","run_containerd_1_27","run_containerd_1_28","run_containerd_1_29","run_containerd_1_30","run_containerd_1_31","run_containerd_Automatic"]
+    needs: ["started_at","git_info","run_containerd_1_26","run_containerd_1_27","run_containerd_1_28","run_containerd_1_29","run_containerd_1_30","run_containerd_1_31","run_containerd_1_32","run_containerd_Automatic"]
     if: ${{ always() }}
     runs-on: ubuntu-latest
     env:
       JOB_NAMES: |
-        {"run_containerd_1_26":"e2e: GCP, Containerd, Kubernetes 1.26","run_containerd_1_27":"e2e: GCP, Containerd, Kubernetes 1.27","run_containerd_1_28":"e2e: GCP, Containerd, Kubernetes 1.28","run_containerd_1_29":"e2e: GCP, Containerd, Kubernetes 1.29","run_containerd_1_30":"e2e: GCP, Containerd, Kubernetes 1.30","run_containerd_1_31":"e2e: GCP, Containerd, Kubernetes 1.31","run_containerd_Automatic":"e2e: GCP, Containerd, Kubernetes Automatic"}
+        {"run_containerd_1_26":"e2e: GCP, Containerd, Kubernetes 1.26","run_containerd_1_27":"e2e: GCP, Containerd, Kubernetes 1.27","run_containerd_1_28":"e2e: GCP, Containerd, Kubernetes 1.28","run_containerd_1_29":"e2e: GCP, Containerd, Kubernetes 1.29","run_containerd_1_30":"e2e: GCP, Containerd, Kubernetes 1.30","run_containerd_1_31":"e2e: GCP, Containerd, Kubernetes 1.31","run_containerd_1_32":"e2e: GCP, Containerd, Kubernetes 1.32","run_containerd_Automatic":"e2e: GCP, Containerd, Kubernetes Automatic"}
     steps:
 
       # <template: checkout_step>
