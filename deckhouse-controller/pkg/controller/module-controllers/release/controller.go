@@ -500,7 +500,7 @@ func (r *reconciler) handlePendingRelease(ctx context.Context, release *v1alpha1
 	if releaseUpdater.PredictedReleaseIsPatch() {
 		// patch release does not respect update windows or ManualMode
 		if err = releaseUpdater.ApplyPredictedRelease(); err != nil {
-			r.log.Errorf("failed to apply predicted release: %v", err.Error())
+			r.log.Warn("failed to apply predicted release", log.Err(err))
 			return r.wrapApplyReleaseError(err), nil
 		}
 
