@@ -28,10 +28,6 @@ docker:
   USER: 1337
   ENTRYPOINT: ["/usr/local/bin/pilot-discovery"]
 ---
-image: {{ .ModuleName }}/{{ .ImageName }}-binary-artifact
-final: false
-from: istio/pilot:1.19.7@sha256:c5feddb54bdc58ddb8b5ed462547b4a673f2b9c5163fe42cec0c0f0115c4c360
----
 image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
 from: {{ .Images.BASE_GOLANG_23_ALPINE }}
 final: false
