@@ -1,0 +1,121 @@
+#
+# THIS FILE IS GENERATED, PLEASE DO NOT EDIT.
+#
+
+# Copyright 2025 Flant JSC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+name: Validations / Pull Request Changes
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, milestoned, demilestoned, edited]
+
+# Cancel in-progress jobs for the same PR (pull_request_target event) or for the same branch (push event).
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check-pr-changes:
+    name: Validate Pull Request Changes
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3.5.2
+    - uses: actions/setup-node@v3
+      with:
+        node-version: '20.x'
+    - run: npm install yaml marked
+    - name: Check pr changes
+      uses: actions/github-script@v6.4.1
+      with:
+        script: |
+          const marked = require('marked');
+          const { find } = require('./.github/scripts/js/changelog-find-sections.js');
+          const { validatePullRequestChangelog } = require('./.github/scripts/js/validate-pr-changes.js');
+
+          /* ---------------------------------------------------------------------------- */
+          const rootDirs = [
+            ".",
+            "modules",
+            "ee/modules",
+            "ee/be/modules",
+            "ee/se/modules",
+            "ee/fe/modules"
+          ]
+          const excludePatterns = [
+            "^\\.",
+            "CHANGELOG",
+            "^ee$",
+            "^modules$"
+          ]
+
+          let allowedSections = find(rootDirs, excludePatterns);
+          allowedSections = allowedSections.concat(['ci', 'dependabot', 'testing', 'tools'])
+
+
+          /**
+          *
+          * @param {string} markdownString
+          * @param {string} header
+          * @returns {string}
+          */
+          function findSectionInMarkdown(markdownString, header) {
+            const tokens = marked.lexer(markdownString);
+            const headerIndex = tokens.findIndex(
+                (token) => token.type === 'heading' && token.text.toLowerCase() === header.toLowerCase()
+            );
+
+            if (headerIndex === -1) return null;
+
+            let result;
+            for (let i = headerIndex + 1; i < tokens.length; i++) {
+                if (tokens[i].lang === 'changes') {
+                  result = tokens[i].text;
+                  break;
+                }
+            }
+
+            return result;
+          }
+
+          /**
+          *
+          * @param {string} owner
+          * @param {string} repo
+          * @param {number} pullRequestID
+          */
+          async function getPR(owner, repo, pullRequestID) {
+            try {
+                const { data } = await github.rest.pulls.get({
+                  owner: owner,
+                  repo: repo,
+                  pull_number: pullRequestID,
+                });
+
+                return data.body;
+            } catch (error) {
+                console.error(error);
+            }
+          }
+
+          const [owner, repo] = [context.repo.owner, context.repo.repo];
+          const pullRequestID = context.issue.number;
+          const prBody = await getPR(owner, repo, pullRequestID);
+          const changelogEntries = findSectionInMarkdown(prBody, 'Changelog entries');
+
+          try {
+            validatePullRequestChangelog(changelogEntries, allowedSections);
+          } catch(error) {
+            throw(error);
+          }
