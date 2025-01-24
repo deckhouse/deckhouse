@@ -57,7 +57,7 @@ severity:
       en: "Marginal"
       ru: "Минимальные"
       note:
-        en: "a minimal percentage of users experience periodic or permanent crashes."
+        en: "a minimal percentage of users experience periodic or permanent failures"
         ru: "минимальный процент пользователей видит периодичские или постоянные сбои"
     negligible:
       en: "Negligible"
