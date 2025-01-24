@@ -68,7 +68,7 @@ func (e *Extender) IsTerminator() bool {
 
 // Filter implements Extender interface, it is used by scheduler in addon-operator
 func (e *Extender) Filter(name string, _ map[string]string) (*bool, error) {
-	available := e.edition.IsAvailable(d8edition.Embedded, name)
+	available := e.edition.IsAvailable(name)
 	if available == nil {
 		e.logger.Debugf("the '%s' module skipped", name)
 		return nil, nil

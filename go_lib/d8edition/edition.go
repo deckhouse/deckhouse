@@ -21,6 +21,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/yaml"
 
@@ -29,17 +30,15 @@ import (
 )
 
 const (
-	path = "/deckhouse/editions"
+	editionsPath = "/deckhouse/editions"
 
 	deckhouseConfig = "deckhouse"
-
-	Embedded = "embedded"
 )
 
 type Edition struct {
-	Name    string                       `yaml:"-"`
-	Bundle  string                       `yaml:"-"`
-	Modules map[string]map[string]Module `json:"modules" yaml:"modules"`
+	Name    string             `json:"-"`
+	Bundle  string             `json:"-"`
+	Modules map[string]*Module `json:"modules"`
 }
 
 type Config struct {
@@ -48,8 +47,8 @@ type Config struct {
 }
 
 type Module struct {
-	Available *bool `json:"available" yaml:"available"`
-	Enabled   *bool `json:"enabled" yaml:"enabled,omitempty"`
+	Available *bool           `json:"available,omitempty"`
+	Enabled   map[string]bool `json:"enabled,omitempty"`
 }
 
 func Parse(ctx context.Context, cli client.Client) (*Edition, error) {
@@ -72,7 +71,7 @@ func Parse(ctx context.Context, cli client.Client) (*Edition, error) {
 
 	if parsed.Bundle == "" || parsed.Edition == "" {
 		parsed.Bundle = "default"
-		parsed.Edition = "FE"
+		parsed.Edition = "CE"
 	}
 
 	edition := new(Edition)
@@ -82,7 +81,7 @@ func Parse(ctx context.Context, cli client.Client) (*Edition, error) {
 	parsed.Bundle = strings.ToLower(strings.TrimSpace(parsed.Bundle))
 	parsed.Edition = strings.ToLower(strings.TrimSpace(parsed.Edition)) + ".yaml"
 
-	content, err := os.ReadFile(filepath.Join(path, parsed.Bundle, parsed.Edition))
+	content, err := os.ReadFile(filepath.Join(editionsPath, parsed.Bundle, parsed.Edition))
 	if err != nil {
 		return nil, fmt.Errorf("read the '%s/%s' edition file: %w", parsed.Bundle, parsed.Edition, err)
 	}
@@ -98,19 +97,17 @@ func (e *Edition) String() string {
 	return fmt.Sprintf("%s/%s", e.Bundle, e.Name)
 }
 
-func (e *Edition) IsAvailable(sourceName, moduleName string) *bool {
-	if source, ok := e.Modules[sourceName]; ok {
-		if module, ok := source[moduleName]; ok {
-			return module.Available
-		}
+func (e *Edition) IsAvailable(moduleName string) *bool {
+	if module := e.Modules[moduleName]; module != nil {
+		return module.Available
 	}
 	return nil
 }
 
-func (e *Edition) IsEnabled(sourceName, moduleName string) *bool {
-	if source, ok := e.Modules[sourceName]; ok {
-		if module, ok := source[moduleName]; ok {
-			return module.Enabled
+func (e *Edition) IsEnabled(moduleName string) *bool {
+	if module := e.Modules[moduleName]; module != nil {
+		if enabled, ok := module.Enabled[e.Bundle]; ok {
+			return ptr.To(enabled)
 		}
 	}
 	return nil

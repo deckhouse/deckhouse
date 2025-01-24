@@ -1,0 +1,231 @@
+modules:
+  admission-policy-engine:
+    available: true
+  basic-auth:
+    available: false
+  ceph-csi:
+    available: true
+  cert-manager:
+    available: true
+    enabled:
+      default: true
+      managed: true
+  chrony:
+    available: true
+  cilium-hubble:
+    available: true
+    enabled:
+      default: false
+  cloud-provider-aws:
+    available: true
+  cloud-provider-azure:
+    available: true
+  cloud-provider-dynamix:
+    available: true
+  cloud-provider-gcp:
+    available: true
+  cloud-provider-huaweicloud:
+    available: true
+  cloud-provider-openstack:
+    available: true
+  cloud-provider-vcd:
+    available: true
+  cloud-provider-yandex:
+    available: true
+  cni-cilium:
+    available: true
+  cni-flannel:
+    available: true
+  cni-simple-bridge:
+    available: true
+  control-plane-manager:
+    available: true
+    enabled:
+      default: true
+  dashboard:
+    available: true
+    enabled:
+      default: true
+      managed: true
+  dashboard-provisioner:
+    available: true
+  deckhouse:
+    available: true
+    enabled:
+      default: true
+      managed: true
+      minimal: true
+  deckhouse-tools:
+    available: true
+    enabled:
+      default: true
+      managed: true
+  descheduler:
+    available: true
+    enabled:
+      default: true
+      managed: true
+  discovery:
+    available: true
+  documentation:
+    available: true
+    enabled:
+      default: true
+      managed: true
+  extended-monitoring:
+    available: true
+    enabled:
+      default: true
+      managed: true
+  flow-schema:
+    available: true
+    enabled:
+      default: true
+      managed: true
+  ingress-nginx:
+    available: true
+    enabled:
+      default: true
+      managed: true
+  istio:
+    available: true
+  keepalived:
+    available: true
+  kube-dns:
+    available: true
+    enabled:
+      default: true
+  kube-proxy:
+    available: true
+    enabled:
+      default: true
+  loader:
+    available: true
+  local-path-provisioner:
+    available: true
+    enabled:
+      default: true
+      managed: true
+  log-shipper:
+    available: true
+    enabled:
+      default: true
+      managed: true
+  loki:
+    available: true
+  monitoring-applications:
+    available: false
+  monitoring-custom:
+    available: true
+    enabled:
+      default: true
+      managed: true
+  monitoring-deckhouse:
+    available: true
+    enabled:
+      default: true
+      managed: true
+  monitoring-kubernetes:
+    available: true
+    enabled:
+      default: true
+      managed: true
+  monitoring-kubernetes-control-plane:
+    available: true
+    enabled:
+      default: true
+  monitoring-ping:
+    available: true
+    enabled:
+      default: true
+      managed: true
+  multitenancy-manager:
+    available: true
+    enabled:
+      default: true
+      managed: true
+  namespace-configurator:
+    available: true
+    enabled:
+      default: true
+      managed: true
+  network-gateway:
+    available: true
+  network-policy-engine:
+    available: true
+  node-local-dns:
+    available: true
+    enabled:
+      default: true
+  node-manager:
+    available: true
+  okmeter:
+    available: true
+  openvpn:
+    available: true
+  operator-prometheus:
+    available: true
+    enabled:
+      default: true
+      managed: true
+  operator-trivy:
+    available: true
+  pod-reloader:
+    available: true
+    enabled:
+      default: true
+      managed: true
+  priority-class:
+    available: true
+    enabled:
+      default: true
+  prometheus:
+    available: true
+  prometheus-metrics-adapter:
+    available: true
+    enabled:
+      default: true
+      managed: true
+  prometheus-pushgateway:
+    available: true
+  registry-packages-proxy:
+    available: true
+    enabled:
+      default: true
+  runtime-audit-engine:
+    available: true
+  secret-copier:
+    available: true
+    enabled:
+      default: true
+      managed: true
+  service-with-healthchecks:
+    available: true
+  snapshot-controller:
+    available: true
+    enabled:
+      default: true
+      managed: true
+  static-routing-manager:
+    available: true
+  terraform-manager:
+    available: true
+    enabled:
+      default: true
+  upmeter:
+    available: true
+    enabled:
+      default: true
+      managed: true
+  user-authn:
+    available: true
+  user-authz:
+    available: true
+    enabled:
+      default: true
+      managed: true
+  vertical-pod-autoscaler:
+    available: true
+    enabled:
+      default: true
+      managed: true
