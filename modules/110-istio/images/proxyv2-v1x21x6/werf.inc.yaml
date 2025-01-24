@@ -308,6 +308,11 @@ shell:
   - git clone --depth 1 --branch {{ $istioVersion }} {{ $.SOURCE_REPO }}/istio/proxy.git /src/proxy
   - git clone --branch "{{ $llvmRev }}" {{ $.SOURCE_REPO }}/llvm/llvm-project.git /src/llvm
   - rm -rf /src/llvm/.git
+
+  # getting rid of unused vulnerable code
+  - rm -rf /src/llvm/llvm/utils
+  - rm -rf /src/llvm/mlir/utils
+  - rm -rf /src/llvm/third-party
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-basel-artifact
 fromImage: common/src-artifact

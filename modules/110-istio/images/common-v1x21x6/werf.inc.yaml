@@ -16,3 +16,6 @@ shell:
   - cd /src/istio/
   - find /patches -name '*.patch' | xargs git apply --verbose
   - rm -rf /src/istio/.git
+
+  # getting rid of unused vulnerable code
+  - rm -rf /src/istio/samples
