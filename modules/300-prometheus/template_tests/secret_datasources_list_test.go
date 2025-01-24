@@ -135,9 +135,9 @@ internal:
 			Expect(additionalDataSourcesExists).To(BeFalse())
 		},
 
-		Entry("High availability and longterm enabled", true, 1, 4, 5),
+		Entry("High availability and longterm enabled", true, 1, 3, 5),
 		Entry("High availability enabled, longterm disabled", true, 0, 3, 6),
-		Entry("High availability disabled, longterm enabled", false, 1, 2, 3),
+		Entry("High availability disabled, longterm enabled", false, 1, 1, 3),
 		Entry("High availability and longterm disabled", false, 0, 1, 4),
 	)
 
