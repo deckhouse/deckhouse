@@ -30,7 +30,7 @@ severity:
       en: "Rare"
       ru: "Редко"
       note:
-        en: "the possibility of an incident is virtually eliminated"
+        en: "the probability of an incident occurring is nearly zero"
         ru: "вероятность инцидента практически исключена"
   impact:
     en: "Impact"
