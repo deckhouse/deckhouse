@@ -11,7 +11,7 @@ For each alert, a summary is provided, and if available, the detailed alert desc
 
 ## Alert severity
 
-The alerts contain the Severity parameter, which means the level of criticality. Its value varies from `S1` to `S9` and can be interpreted as follows:
+Alert descriptions contain the Severity (S) parameter, which indicates the level of criticality. Its value varies from `S1` to `S9` and can be interpreted as follows:
 
 * `S1` — maximum level, critical failure/crash (immediate action required);
 * `S2` — high level, close to maximum, possible accident (rapid response required);
