@@ -14,10 +14,32 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package main
+package conversion
 
-//go:generate go run ./helm_generate/ authz-generate-roles
+import (
+	"flag"
+)
 
-//go:generate go run ./helm_generate/ alert-templates
+type Conversion struct {
+	fs *flag.FlagSet
+}
 
-//go:generate go run ./helm_generate/ conversion
+func NewConversion() *Conversion {
+	ic := &Conversion{
+		fs: flag.NewFlagSet("conversion", flag.ContinueOnError),
+	}
+
+	return ic
+}
+
+func (ic *Conversion) Name() string {
+	return ic.fs.Name()
+}
+
+func (ic *Conversion) Init(args []string) error {
+	return ic.fs.Parse(args)
+}
+
+func (ic *Conversion) Run() error {
+	return run()
+}
