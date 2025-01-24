@@ -317,8 +317,9 @@ shell:
   # getting rid of unused vulnerable code
   - rm -rf /src/llvm/llvm/utils/git
   - rm -rf /src/llvm/mlir/utils/vscode
-  - rm -rf /src/llvm/third-party/benchmark/*.
-  - touch /src/llvm/third-party/benchmark/placeholder.txt
+  - rm -rf /src/llvm/third-party/benchmark
+  - mkdir  /src/llvm/third-party/benchmark
+  - touch  /src/llvm/third-party/benchmark/placeholder.txt
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-basel-artifact
 fromImage: common/src-artifact
