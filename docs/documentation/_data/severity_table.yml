@@ -61,7 +61,7 @@ severity:
         ru: "минимальный процент пользователей видит периодичские или постоянные сбои"
     negligible:
       en: "Negligible"
-      ru: "Незначительный"
+      ru: "Несущественные"
       note:
         en: "diagnostic information, users do not notice any anomalies in the system operation"
         ru: "диагностическая информация, пользователи не замечают каких-либо аномалий в работе системы"
