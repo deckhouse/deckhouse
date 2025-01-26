@@ -16,7 +16,6 @@ function __config__() {
       - name: ingressgateway_service
         apiVersion: v1
         kind: Service
-        group: main-lb
         keepFullObjectsInMemory: false
         namespace:
           nameSelector:
@@ -36,7 +35,6 @@ EOF
       - name: ingressgateway_service
         apiVersion: v1
         kind: Service
-        group: main-np
         keepFullObjectsInMemory: false
         namespace:
           nameSelector:
