@@ -24,7 +24,7 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
-  name: metadata-exporter
+  name: alliance:metadata-exporter
   namespace: d8-{{ $.Chart.Name }}
   {{- include "helm_lib_module_labels" (list . (dict "app" "metadata-exporter")) | nindent 2 }}
 rules:
@@ -69,7 +69,7 @@ subjects:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
-  name: metadata-exporter
+  name: alliance:metadata-exporter
   namespace: d8-{{ $.Chart.Name }}
   {{- include "helm_lib_module_labels" (list . (dict "app" "metadata-exporter")) | nindent 2 }}
 roleRef:

@@ -91,7 +91,7 @@ EOF
           matchNames: [metadata-exporter-ingressgateway-advertise]
         jqFilter: |
           {
-            "ingressGatewaysArray": (.data."ingressgateways-array.json" | fromjson))
+            "ingressGatewaysArray": (.data."ingressgateways-array.json" | fromjson)
           }
 EOF
   fi

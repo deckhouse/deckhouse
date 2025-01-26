@@ -75,12 +75,13 @@ properties:
         properties:
           advertise:
             type: array
-            description: TODO
+            description: The actual addresses that will be announced to remote clusters for organizing intercluster application requests. If not specified, the addresses will be discovered automatically.
             x-doc-d8Revision: ee
             default: []
-            x-examples: [[]]
+            x-examples: [[{"ip": "172.16.0.5", "port": 15443}]]
             items:
               type: object
+              required: ["ip", "port"]
               properties:
                 ip:
                   type: string
