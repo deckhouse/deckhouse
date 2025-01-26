@@ -20,7 +20,8 @@ shell:
   install:
   - echo AAAAA----TEST---AAAAAA
   - echo {{ .trivyVersion }}
-  - echo BBBBB----TEST---BBBBBB  - git clone --depth 1 --branch {{ .trivyVersion }} {{ .SOURCE_REPO }}/aquasecurity/trivy-db.git /src/trivy-db
+  - echo BBBBB----TEST---BBBBBB 
+  - git clone --depth 1 --branch {{ .trivyVersion }} {{ .SOURCE_REPO }}/aquasecurity/trivy-db.git /src/trivy-db
   - git clone --depth 1 --branch {{ .trivyVersion }} git@{{ .DECKHOUSE_PRIVATE_REPO }}:deckhouse/trivy-db.git /src/trivy-db-patch
   - git clone --depth 1 --branch {{ .trivyVersion }} {{ .SOURCE_REPO }}/aquasecurity/trivy.git /src/trivy
   - git clone --depth 1 --branch {{ .trivyVersion }} git@{{ .DECKHOUSE_PRIVATE_REPO }}:deckhouse/trivy.git /src/trivy-patch
@@ -48,4 +49,3 @@ shell:
   - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o /trivy ./cmd/trivy/main.go
   - chown 64535:64535 /trivy
   - chmod 0700 /trivy
-
