@@ -102,7 +102,7 @@ EOF
 
 function __main__() {
   if context::jq -e '.snapshots.ingressgateway_advertise | length == 1' > /dev/null; then
-    context::jq '.snapshots.ingressgateway_advertise[0].filterResult' > /metadata/ingressgateways-array.json
+    context::jq '.snapshots.ingressgateway_advertise[0].filterResult.ingressGatewaysArray' > /metadata/ingressgateways-array.json
   elif [ "$INLET" == "LoadBalancer" ]; then
     context::jq '
       [
