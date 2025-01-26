@@ -75,7 +75,7 @@ metadata:
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
-  name: metadata-exporter
+  name: alliance:metadata-exporter
 subjects:
 - kind: ServiceAccount
   name: alliance-metadata-exporter
