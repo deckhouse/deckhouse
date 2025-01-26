@@ -14,6 +14,7 @@ function __config__() {
       configVersion: v1
       kubernetes:
       - name: ingressgateway_service
+        group: main
         apiVersion: v1
         kind: Service
         keepFullObjectsInMemory: false
@@ -33,6 +34,7 @@ EOF
       configVersion: v1
       kubernetes:
       - name: ingressgateway_service
+        group: main
         apiVersion: v1
         kind: Service
         keepFullObjectsInMemory: false
@@ -46,6 +48,7 @@ EOF
             "port": (.spec.ports[] | select(.name == "tls") | .nodePort)
           }
       - name: pods
+        group: main
         apiVersion: v1
         kind: Pod
         keepFullObjectsInMemory: false
@@ -60,6 +63,7 @@ EOF
             "nodeName": .spec.nodeName
           }
       - name: nodes
+        group: main
         apiVersion: v1
         kind: Node
         keepFullObjectsInMemory: false
@@ -79,6 +83,7 @@ EOF
   if [ -n "$INLET" ]; then
     cat << EOF
       - name: ingressgateway_advertise
+        group: main
         apiVersion: v1
         kind: ConfigMap
         keepFullObjectsInMemory: false
