@@ -1,0 +1,13 @@
+{{- if or .Values.istio.federation.enabled .Values.istio.multicluster.enabled }}
+  {{- if .Values.istio.alliance.ingressGateway.advertise }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: metadata-exporter-ingressgateway-advertise
+  namespace: d8-{{ $.Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "metadata-exporter")) | nindent 2 }}
+data:
+  ingressgateways-array.json: {{ .Values.istio.alliance.ingressGateway.advertise | toJson | quote }}
+  {{- end }}
+{{- end }}

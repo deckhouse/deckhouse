@@ -50,7 +50,6 @@ EOF
       - name: pods
         apiVersion: v1
         kind: Pod
-        group: main-np
         keepFullObjectsInMemory: false
         namespace:
           nameSelector:
@@ -65,7 +64,6 @@ EOF
       - name: nodes
         apiVersion: v1
         kind: Node
-        group: main-np
         keepFullObjectsInMemory: false
         jqFilter: |
           {
@@ -79,23 +77,42 @@ EOF
           }
 EOF
   fi
+
+  if [ -n "$INLET" ]; then
+    cat << EOF
+      - name: ingressgateway_advertise
+        apiVersion: v1
+        kind: ConfigMap
+        keepFullObjectsInMemory: false
+        namespace:
+          nameSelector:
+            matchNames: [d8-istio]
+        nameSelector:
+          matchNames: [metadata-exporter-ingressgateway-advertise]
+        jqFilter: |
+          {
+            "ingressGatewaysArray": (.data."ingressgateways-array.json" | fromjson))
+          }
+EOF
+  fi
 }
 
-function __on_group::main-lb() {
-  context::jq '
-    [
-      .snapshots.ingressgateway_service[].filterResult | select(.address and .port) | {"address": .address, "port": .port}
-    ]' > /metadata/ingressgateways-array.json
-
-}
-
-function __on_group::main-np() {
-  context::jq '
-    .snapshots.ingressgateway_service[0].filterResult.port as $port |
-    [.snapshots.pods[].filterResult.nodeName] as $pod_nodes |
-    [
+function __main__() {
+  if context::jq -e '.snapshots.ingressgateway_advertise | length == 1' > /dev/null; then
+    context::jq '.snapshots.ingressgateway_advertise[0].filterResult' > /metadata/ingressgateways-array.json
+  elif [ "$INLET" == "LoadBalancer" ]; then
+    context::jq '
+      [
+        .snapshots.ingressgateway_service[].filterResult | select(.address and .port) | {"address": .address, "port": .port}
+      ]' > /metadata/ingressgateways-array.json
+  elif [ "$INLET" == "NodePort" ]; then
+    context::jq '
+      .snapshots.ingressgateway_service[0].filterResult.port as $port |
+      [.snapshots.pods[].filterResult.nodeName] as $pod_nodes |
+      [
         .snapshots.nodes[].filterResult | select(.isActive) | .name as $name | select($pod_nodes | index($name)) | {"address": .address, "port": $port}
-    ]' > /metadata/ingressgateways-array.json
+      ]' > /metadata/ingressgateways-array.json
+  fi
 }
 
 hook::run "$@"
