@@ -73,6 +73,23 @@ properties:
         x-doc-d8Revision: ee
         default: {}
         properties:
+          advertise:
+            type: array
+            description: TODO
+            x-doc-d8Revision: ee
+            default: []
+            x-examples: [[]]
+            items:
+              type: object
+              properties:
+                ip:
+                  type: string
+                  example: "172.16.0.5"
+                  pattern: '^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$'
+                port:
+                  type: integer
+                  minimum: 1024
+                  maximum: 65535
           inlet:
             type: string
             enum: [LoadBalancer, NodePort]
