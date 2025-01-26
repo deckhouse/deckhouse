@@ -18,9 +18,6 @@ fromImage: common/src-artifact
 final: false
 shell:
   install:
-  - echo AAAAA----TEST---AAAAAA
-  - echo {{ .trivyVersion }}
-  - echo BBBBB----TEST---BBBBBB 
   - git clone --depth 1 --branch {{ .trivyVersion }} {{ .SOURCE_REPO }}/aquasecurity/trivy-db.git /src/trivy-db
   - git clone --depth 1 --branch {{ .trivyVersion }} git@{{ .DECKHOUSE_PRIVATE_REPO }}:deckhouse/trivy-db.git /src/trivy-db-patch
   - git clone --depth 1 --branch {{ .trivyVersion }} {{ .SOURCE_REPO }}/aquasecurity/trivy.git /src/trivy
