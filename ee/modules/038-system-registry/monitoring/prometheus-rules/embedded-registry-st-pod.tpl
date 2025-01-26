@@ -74,9 +74,9 @@
         plk_markup_format: "markdown"
         plk_create_group_if_not_exists__d8_embedded_registry_health: "D8EmbeddedRegistryHealth,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
         plk_grouped_by__d8_embedded_registry_health: "D8EmbeddedRegistryHealth,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
-        summary: The d8-system/system-registry-<node-name> Pod is NOT Running.
+        summary: The d8-system/system-registry-(node-name) Pod is NOT Running.
         description: |
-          The d8-system/system-registry-<node-name>  Pod is NOT Running.
+          The d8-system/system-registry-(node-name)  Pod is NOT Running.
 
           The recommended course of action:
           1. View the logs of the registry manager

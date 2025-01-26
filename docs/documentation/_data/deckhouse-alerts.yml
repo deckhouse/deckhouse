@@ -985,7 +985,7 @@ alerts:
       module: system-registry
       edition: ee
       description: |
-        The d8-system/system-registry-<node-name>  Pod is NOT Running.
+        The d8-system/system-registry-(node-name)  Pod is NOT Running.
 
         The recommended course of action:
         1. View the logs of the registry manager
@@ -993,7 +993,7 @@ alerts:
           - `kubectl -n d8-system logs $(kubectl -n d8-system get lease/embedded-registry-manager-leader -o jsonpath='{.spec.holderIdentity}' | awk -F_ '{print $1}') -f`
         2. View the logs of the registry static pod manager `kubectl -n d8-system logs pod/system-registry-staticpod-manager-*`
       summary: |
-        The d8-system/system-registry- Pod is NOT Running.
+        The d8-system/system-registry-(node-name) Pod is NOT Running.
       severity: "5"
       markupFormat: markdown
     - name: D8EmbeddedRegistryPodIsNotRunning
