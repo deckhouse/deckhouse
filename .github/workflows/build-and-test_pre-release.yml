@@ -1379,8 +1379,9 @@ jobs:
     # </template: tests_template>
 
 
-  deploy_release_doc_prod_sel:
-    name: (Prod) Deploy release documentation
+  deploy_release_doc_prod_old:
+    name: (Prod OLD) Deploy release documentation
+    continue-on-error: true
     needs:
       - git_info
       - doc_web_build
@@ -1452,7 +1453,7 @@ jobs:
           echo "DOC_VERSION=${CI_COMMIT_REF_NAME/release-/v}" >> $GITHUB_ENV
       # </template: doc_release_version_template>
       # <template: deploy_doc_template>
-      - name: Deploy documentation to preproduction
+      - name: Deploy documentation to oldproduction
         uses: werf/actions/converge@43075e4ab81952b181d33e125ef15b9c060a782e
         with:
           channel: ${{env.WERF_CHANNEL}}
@@ -1483,7 +1484,7 @@ jobs:
           retries: 3
           script: |
             const statusConfig = 'job,one-line';
-            const name = '(Prod) Deploy release documentation';
+            const name = '(Prod OLD) Deploy release documentation';
             const needsContext = JSON.parse(process.env.NEEDS_CONTEXT);
             const jobContext = JSON.parse(process.env.JOB_CONTEXT);
             const stepsContext = JSON.parse(process.env.STEPS_CONTEXT);
@@ -1504,6 +1505,7 @@ jobs:
 
   deploy_release_doc_stage:
     name: (Stage) Deploy release documentation
+    continue-on-error: true
     needs:
       - git_info
       - doc_web_build

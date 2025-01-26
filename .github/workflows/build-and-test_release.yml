@@ -3793,7 +3793,7 @@ jobs:
           echo "DOC_VERSION=${CI_COMMIT_TAG:-latest}" >> $GITHUB_ENV
       # </template: doc_version_template>
       # <template: deploy_site_template>
-      - name: Deploy site to preproduction
+      - name: Deploy site to oldproduction
         uses: werf/actions/converge@43075e4ab81952b181d33e125ef15b9c060a782e
         with:
           channel: ${{env.WERF_CHANNEL}}
@@ -3901,7 +3901,7 @@ jobs:
           echo "DOC_VERSION=${CI_COMMIT_TAG:-latest}" >> $GITHUB_ENV
       # </template: doc_version_template>
       # <template: deploy_doc_template>
-      - name: Deploy documentation to preproduction
+      - name: Deploy documentation to oldproduction
         uses: werf/actions/converge@43075e4ab81952b181d33e125ef15b9c060a782e
         with:
           channel: ${{env.WERF_CHANNEL}}
