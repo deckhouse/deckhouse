@@ -193,14 +193,17 @@ steps:
 {!{- $kubeConfig := "${{ secrets.KUBECONFIG_BASE64_DEV }}" -}!}
 {!{- $dcName := "dev" -}!}
 {!{- $repo := "${{ steps.check_dev_registry.outputs.web_registry_path }}" -}!}
-{!{- if or (eq $env "production") (eq $env "oldproduction") -}!}
+{!{- if eq $env "production" -}!}
   {!{- $repo = "${{ steps.check_readonly_registry.outputs.web_registry_path }}" -}!}
   {!{- $url = "deckhouse.io" -}!}
   {!{- $urlRu = "deckhouse.ru" -}!}
-  {!{- $kubeConfig = "${{ secrets.KUBECONFIG_BASE64_PROD }}" -}!}
-  {!{- $dcName = "prod-eu" -}!}
+  {!{- $kubeConfig = "${{ secrets.KUBECONFIG_BASE64_PROD_25 }}" -}!}
+  {!{- $dcName = "prod-25" -}!}
 {!{- end -}!}
 {!{- if eq $env "oldproduction" -}!}
+  {!{- $repo = "${{ steps.check_readonly_registry.outputs.web_registry_path }}" -}!}
+  {!{- $url = "deckhouse.io" -}!}
+  {!{- $urlRu = "deckhouse.ru" -}!}
   {!{- $ns = "deckhouse-web-production" -}!}
   {!{- $webEnv = "web-production" -}!}
   {!{- $kubeConfig = "${{ secrets.KUBECONFIG_BASE64_PROD_SEL }}" -}!}
@@ -236,14 +239,17 @@ steps:
 {!{- $kubeConfig := "${{ secrets.KUBECONFIG_BASE64_DEV }}" -}!}
 {!{- $dcName := "dev" -}!}
 {!{- $repo := "${{ steps.check_dev_registry.outputs.web_registry_path }}" -}!}
-{!{- if or (eq $env "production") (eq $env "oldproduction") -}!}
+{!{- if eq $env "production" -}!}
   {!{- $repo = "${{ steps.check_readonly_registry.outputs.web_registry_path }}" -}!}
   {!{- $url = "deckhouse.io" -}!}
   {!{- $urlRu = "deckhouse.ru" -}!}
-  {!{- $kubeConfig = "${{ secrets.KUBECONFIG_BASE64_PROD }}" -}!}
-  {!{- $dcName = "prod-eu" -}!}
+  {!{- $kubeConfig = "${{ secrets.KUBECONFIG_BASE64_PROD_25 }}" -}!}
+  {!{- $dcName = "prod-25" -}!}
 {!{- end -}!}
 {!{- if eq $env "oldproduction" -}!}
+  {!{- $repo = "${{ steps.check_readonly_registry.outputs.web_registry_path }}" -}!}
+  {!{- $url = "deckhouse.io" -}!}
+  {!{- $urlRu = "deckhouse.ru" -}!}
   {!{- $ns = "deckhouse-web-production" -}!}
   {!{- $webEnv = "web-production" -}!}
   {!{- $kubeConfig = "${{ secrets.KUBECONFIG_BASE64_PROD_SEL }}" -}!}
