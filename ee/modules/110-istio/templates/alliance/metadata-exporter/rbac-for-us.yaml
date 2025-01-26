@@ -15,9 +15,38 @@ metadata:
 rules:
 - apiGroups: [""]
   resources:
-  - services
-  - pods
   - nodes
+  verbs:
+  - get
+  - list
+  - watch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: metadata-exporter
+  namespace: d8-{{ $.Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "metadata-exporter")) | nindent 2 }}
+rules:
+- apiGroups: [""]
+  resources:
+  - services
+  resourceNames: ["ingressgateway"]
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups: [""]
+  resources:
+  - configmaps
+  resourceNames: ["metadata-exporter-ingressgateway-advertise"]
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups: [""]
+  resources:
+  - pods
   verbs:
   - get
   - list
@@ -36,4 +65,18 @@ subjects:
 - kind: ServiceAccount
   name: alliance-metadata-exporter
   namespace: d8-{{ $.Chart.Name }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: metadata-exporter
+  namespace: d8-{{ $.Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "metadata-exporter")) | nindent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: metadata-exporter
+subjects:
+- kind: ServiceAccount
+  name: alliance-metadata-exporter
 {{- end }}
