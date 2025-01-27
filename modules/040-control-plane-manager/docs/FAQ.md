@@ -224,8 +224,6 @@ The steps described below must be performed from the first in order of the maste
      --ssh-host <MASTER-NODE-0-HOST> --ssh-host <MASTER-NODE-1-HOST> --ssh-host <MASTER-NODE-2-HOST>
    ```
 
-
-
 1. Select the master node to update (enter its name):
 
    ```bash
