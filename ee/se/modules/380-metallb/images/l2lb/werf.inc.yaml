@@ -11,8 +11,10 @@ git:
 shell:
   install:
   - cd /src
-  - git clone -b v0.14.8 {{ $.SOURCE_REPO }}/metallb/metallb.git . && rm -rf /src/.git
+  - git clone -b v0.14.8 {{ $.SOURCE_REPO }}/metallb/metallb.git .
   - git apply /patches/*.patch --verbose
+  - rm -rf e2etest
+  - rm -rf /src/.git
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
 from: {{ .Images.BASE_GOLANG_23_ALPINE }}

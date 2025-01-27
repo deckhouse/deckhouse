@@ -5,7 +5,7 @@ git:
 - add: /{{ .ModulePath }}candi/cloud-providers/vcd
   to: /deckhouse/candi/cloud-providers/vcd
 import:
-- artifact: terraform-provider-vcd-artifact
+- image: terraform-provider-vcd-artifact
   add: /terraform-provider-vcd
   to: /plugins/registry.terraform.io/{{ .TF.vcd.namespace }}/{{ .TF.vcd.type }}/{{ .TF.vcd.version }}/linux_amd64/terraform-provider-vcd
   before: setup

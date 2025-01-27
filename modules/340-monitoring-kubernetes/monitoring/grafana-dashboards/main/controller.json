@@ -24,7 +24,7 @@
   "editable": false,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 1,
-  "id": 106,
+  "id": 29,
   "links": [],
   "liveNow": false,
   "panels": [
@@ -622,7 +622,6 @@
         "y": 0
       },
       "id": 2,
-      "links": [],
       "options": {
         "cellHeight": "sm",
         "footer": {
@@ -636,7 +635,7 @@
         "showHeader": true,
         "sortBy": []
       },
-      "pluginVersion": "10.2.2",
+      "pluginVersion": "10.4.5",
       "targets": [
         {
           "datasource": {
@@ -1008,7 +1007,6 @@
         "y": 7
       },
       "id": 53,
-      "links": [],
       "options": {
         "alignValue": "left",
         "legend": {
@@ -1141,7 +1139,6 @@
         "y": 15
       },
       "id": 107,
-      "links": [],
       "options": {
         "legend": {
           "calcs": [],
@@ -1290,7 +1287,6 @@
         "y": 19
       },
       "id": 6,
-      "links": [],
       "options": {
         "legend": {
           "calcs": [
@@ -1463,7 +1459,6 @@
         "y": 19
       },
       "id": 7,
-      "links": [],
       "options": {
         "legend": {
           "calcs": [
@@ -1617,7 +1612,6 @@
         "y": 28
       },
       "id": 59,
-      "links": [],
       "options": {
         "legend": {
           "calcs": [
@@ -1756,7 +1750,6 @@
         "y": 28
       },
       "id": 64,
-      "links": [],
       "options": {
         "legend": {
           "calcs": [
@@ -1894,7 +1887,6 @@
         "y": 36
       },
       "id": 31,
-      "links": [],
       "options": {
         "legend": {
           "calcs": [
@@ -2447,7 +2439,6 @@
         "y": 44
       },
       "id": 15,
-      "links": [],
       "options": {
         "legend": {
           "calcs": [],
@@ -2632,7 +2623,6 @@
         "y": 44
       },
       "id": 16,
-      "links": [],
       "options": {
         "legend": {
           "calcs": [],
@@ -2817,7 +2807,6 @@
         "y": 53
       },
       "id": 63,
-      "links": [],
       "options": {
         "legend": {
           "calcs": [],
@@ -2954,7 +2943,6 @@
         "y": 53
       },
       "id": 75,
-      "links": [],
       "options": {
         "legend": {
           "calcs": [],
@@ -3385,7 +3373,7 @@
             "axisBorderShow": false,
             "axisCenteredZero": false,
             "axisColorMode": "text",
-            "axisLabel": "",
+            "axisLabel": "bits/sec",
             "axisPlacement": "auto",
             "barAlignment": 0,
             "drawStyle": "line",
@@ -3434,7 +3422,7 @@
               }
             ]
           },
-          "unit": "Bps"
+          "unit": "bps"
         },
         "overrides": [
           {
@@ -3476,7 +3464,6 @@
         "y": 64
       },
       "id": 41,
-      "links": [],
       "options": {
         "legend": {
           "calcs": [
@@ -3501,7 +3488,7 @@
             "uid": "$ds_prometheus"
           },
           "editorMode": "code",
-          "expr": "max(kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller=\"$controller\", pod=~\"$pod\"}) by(pod)\n* on(pod)\nmax(kube_pod_info{host_network=\"false\", namespace=\"$namespace\", pod=~\"$pod\"}) by(pod)\n* on(pod)\nsum by (pod) (rate(container_network_receive_bytes_total{node=~\"$node\", namespace=\"$namespace\", pod=~\"$pod\"}[$__rate_interval]))",
+          "expr": "max(kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller=\"$controller\", pod=~\"$pod\"}) by(pod)\n* on(pod)\nmax(kube_pod_info{host_network=\"false\", namespace=\"$namespace\", pod=~\"$pod\"}) by(pod)\n* on(pod)\nsum by (pod) (rate(container_network_receive_bytes_total{node=~\"$node\", namespace=\"$namespace\", pod=~\"$pod\"}[$__rate_interval]) * 8 )",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{ pod }}",
@@ -3546,7 +3533,7 @@
             "axisBorderShow": false,
             "axisCenteredZero": false,
             "axisColorMode": "text",
-            "axisLabel": "",
+            "axisLabel": "bits/sec",
             "axisPlacement": "auto",
             "barAlignment": 0,
             "drawStyle": "line",
@@ -3595,7 +3582,7 @@
               }
             ]
           },
-          "unit": "Bps"
+          "unit": "bps"
         },
         "overrides": [
           {
@@ -3637,7 +3624,6 @@
         "y": 64
       },
       "id": 57,
-      "links": [],
       "options": {
         "legend": {
           "calcs": [
@@ -3662,7 +3648,7 @@
             "uid": "$ds_prometheus"
           },
           "editorMode": "code",
-          "expr": "max(kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller=\"$controller\", pod=~\"$pod\"}) by(pod)\n* on(pod)\nmax(kube_pod_info{host_network=\"false\", namespace=\"$namespace\", pod=~\"$pod\"}) by(pod)\n* on(pod)\nsum by (pod) (rate(container_network_transmit_bytes_total{node=~\"$node\", namespace=\"$namespace\", pod=~\"$pod\"}[$__rate_interval]))",
+          "expr": "max(kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller=\"$controller\", pod=~\"$pod\"}) by(pod)\n* on(pod)\nmax(kube_pod_info{host_network=\"false\", namespace=\"$namespace\", pod=~\"$pod\"}) by(pod)\n* on(pod)\nsum by (pod) (rate(container_network_transmit_bytes_total{node=~\"$node\", namespace=\"$namespace\", pod=~\"$pod\"}[$__rate_interval])*8)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{ pod }}",
@@ -3809,7 +3795,6 @@
         "y": 74
       },
       "id": 43,
-      "links": [],
       "options": {
         "legend": {
           "calcs": [
@@ -3947,7 +3932,6 @@
         "y": 74
       },
       "id": 58,
-      "links": [],
       "options": {
         "legend": {
           "calcs": [
@@ -4107,7 +4091,6 @@
         "y": 83
       },
       "id": 82,
-      "links": [],
       "options": {
         "legend": {
           "calcs": [
@@ -4242,7 +4225,6 @@
         "y": 83
       },
       "id": 84,
-      "links": [],
       "options": {
         "legend": {
           "calcs": [
@@ -4379,7 +4361,6 @@
         "y": 90
       },
       "id": 83,
-      "links": [],
       "options": {
         "legend": {
           "calcs": [
@@ -4715,7 +4696,6 @@
         "y": 99
       },
       "id": 86,
-      "links": [],
       "options": {
         "cellHeight": "sm",
         "footer": {
@@ -4728,7 +4708,7 @@
         },
         "showHeader": true
       },
-      "pluginVersion": "10.2.2",
+      "pluginVersion": "10.4.5",
       "targets": [
         {
           "expr": "max by (namespace, persistentvolumeclaim, storageclass) (\n  kube_persistentvolumeclaim_info{namespace=\"$namespace\"}\n) \nand on (namespace, persistentvolumeclaim) \nmax by (namespace, persistentvolumeclaim) (\n  kube_pod_spec_volumes_persistentvolumeclaims_info{namespace=\"$namespace\", pod=~\"$pod\"}\n  * on (namespace, pod) group_left(controller)\n  kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller=~\"$controller\", pod=~\"$pod\"} \n)",
@@ -4900,12 +4880,11 @@
       },
       "gridPos": {
         "h": 7,
-        "w": 12,
+        "w": 24,
         "x": 0,
         "y": 108
       },
       "id": 89,
-      "links": [],
       "options": {
         "legend": {
           "calcs": [
@@ -4971,7 +4950,7 @@
     }
   ],
   "refresh": "30s",
-  "schemaVersion": 38,
+  "schemaVersion": 39,
   "tags": [
     "main"
   ],
@@ -5196,6 +5175,6 @@
   "timezone": "",
   "title": "Namespace / Controller",
   "uid": "IRPuf4ymk1",
-  "version": 6,
+  "version": 1,
   "weekStart": ""
 }

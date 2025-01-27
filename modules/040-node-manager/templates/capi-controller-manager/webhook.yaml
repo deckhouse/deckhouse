@@ -218,7 +218,6 @@ apiVersion: admissionregistration.k8s.io/v1
 kind: ValidatingWebhookConfiguration
 metadata:
   annotations:
-    cert-manager.io/inject-ca-from: d8-cloud-instance-manager/capi-serving-cert
   {{- include "helm_lib_module_labels" (list . (dict "app" "capi-controller-manager")) | nindent 2 }}
   name: capi-validating-webhook-configuration
 webhooks:

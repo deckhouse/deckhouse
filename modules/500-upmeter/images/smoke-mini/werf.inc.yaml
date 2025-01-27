@@ -1,5 +1,6 @@
 ---
-artifact: {{ .ModuleName }}/build-smoke-mini-artifact
+image: {{ .ModuleName }}/build-smoke-mini-artifact
+final: false
 from: {{ .Images.BASE_GOLANG_20_ALPINE }}
 git:
 - add: /{{ $.ModulePath }}modules/500-{{ $.ModuleName }}/images/{{ $.ImageName }}/
@@ -26,7 +27,7 @@ shell:
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
 import:
-- artifact: {{ .ModuleName }}/build-smoke-mini-artifact
+- image: {{ .ModuleName }}/build-smoke-mini-artifact
   add: /src/smoke-mini
   to: /smoke-mini
   before: setup

@@ -194,11 +194,15 @@ $(document).ready(function(){
 
   if (tables.length === 0) {
     return;
-  }
+  };
 
   tables.each((_, table) => {
-    $(table).wrap("<div class='table-wrapper'></div>")
-  })
+    if($(table).hasClass('table__small')) {
+      $(table).wrap("<div class='table-wrapper table-wrapper__small'></div>");
+    } else {
+      $(table).wrap("<div class='table-wrapper'></div>");
+    }
+  });
 });
 
 $(document).ready(function(){
@@ -304,4 +308,97 @@ document.addEventListener('DOMContentLoaded', () => {
 
 window.addEventListener("load", function() {
   openDiagram()
+});
+
+document.addEventListener('DOMContentLoaded', function () {
+  const pre = document.querySelectorAll('pre');
+
+  let lang = document.documentElement.lang;
+
+  if (lang.length === 0) {
+    if (window.location.href.includes("deckhouse.ru") || window.location.href.includes("ru.localhost")) {
+      lang = "ru"
+    } else {
+      lang = "en"
+    }
+  }
+  const textTooltip = {
+    en: {
+      copy: 'Copy',
+      copied: 'Copied!',
+      error: 'Error!'
+    },
+    ru: {
+      copy: 'Копировать',
+      copied: 'Скопировано!',
+      error: 'Ошибка!'
+    }
+  };
+  const texts = textTooltip[lang];
+
+  if (pre.length) {
+    pre.forEach((el) => {
+      el.addEventListener('mouseenter', () => {
+        if (el.querySelector('.icon--copy') &&
+          !el.querySelector('.icon--copy').classList.contains('show')) {
+          el.querySelector('.icon--copy').classList.add('show');
+          return;
+        };
+
+        const copyBtn = document.createElement('div');
+        copyBtn.classList.add('icon--copy');
+
+        el.prepend(copyBtn);
+
+        const copyBtnTippy = tippy(el.querySelector('.icon--copy'), {
+          placement: 'left',
+          arrow: false,
+          animation: 'scale',
+          theme: 'light',
+          content: texts.copy,
+          hideOnClick: false,
+          delay: [300, 50],
+          offset: [0, 10],
+          duration: [300],
+        });
+
+        el.querySelector('.icon--copy').addEventListener('click', () => {
+          const code = el.querySelector('code');
+          if (!code) return;
+
+          navigator.clipboard.writeText(code.textContent).then(r => {
+            copyBtnTippy.setContent(texts.copied);
+
+            setTimeout(() => {
+              copyBtnTippy.hide()
+            }, 1000);
+          }, () => {
+            copyBtnTippy.setContent(texts.error);
+
+            setTimeout(() => {
+              copyBtnTippy.hide()
+            }, 1000);
+          });
+        });
+
+        setTimeout(() => {
+          el.querySelector('.icon--copy').classList.add('show')
+        }, 0);
+      });
+
+      el.addEventListener('mouseleave', (e) => {
+        if (!el.querySelector('.icon--copy')) {
+          return;
+        };
+
+        el.querySelector('.icon--copy').classList.remove('show');
+
+        setTimeout(() => {
+          if (!el.querySelector('.icon--copy').classList.contains('show')) {
+            el.querySelector('.icon--copy').remove();
+          };
+        }, 300);
+      });
+    });
+  };
 });

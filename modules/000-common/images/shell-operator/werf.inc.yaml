@@ -1,4 +1,4 @@
-{{- $shellOperatorVersion := "v1.5.1"}}
+{{- $shellOperatorVersion := "v1.5.3"}}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: common/alt-p11-artifact
@@ -57,6 +57,11 @@ shell:
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
 from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
 final: false
+mount:
+- fromPath: ~/go-pkg-cache
+  to: /go/pkg
+- from: tmp_dir
+  to: /root/.cache/go-build
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
   add: /src
