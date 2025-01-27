@@ -1,3 +1,12 @@
+{{- define "check_bgp_pool_exists" }}
+  {{- $bgpPoolExists := false }}
+  {{- range $ipaddressPool := .Values.metallb.addressPools }}
+    {{- if eq $ipaddressPool.protocol "bgp" }}
+      {{- $bgpPoolExists = true }}
+    {{- end }}
+  {{- end }}
+{{- end }}
+
 {{- define "bgpadvertisement_template" }}
   {{- $context :=  index . 0 }}
   {{- $ipaddressPool :=  index . 1 }}

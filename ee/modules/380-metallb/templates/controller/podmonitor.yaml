@@ -1,10 +1,4 @@
-{{- $bgpPoolExists := false }}
-{{- range $ipaddressPool := .Values.metallb.addressPools }}
-  {{- if eq $ipaddressPool.protocol "bgp" }}
-    {{- $bgpPoolExists = true }}
-  {{- end }}
-{{- end }}
-
+{{- include "check_bgp_pool_exists" . }}
 {{- if $bgpPoolExists }}
   {{- if (.Values.global.enabledModules | has "operator-prometheus") }}
 ---
