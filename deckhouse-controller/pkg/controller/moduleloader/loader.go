@@ -19,9 +19,9 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
-	"maps"
 	"os"
 	"path/filepath"
+	"reflect"
 	"regexp"
 	"strconv"
 	"strings"
@@ -309,7 +309,7 @@ func (l *Loader) ensureModule(ctx context.Context, def *moduletypes.Definition, 
 						Description:  def.Description,
 						Stage:        def.Stage,
 						Source:       v1alpha1.ModuleSourceEmbedded,
-						Requirements: def.Requirements,
+						Requirements: def.GetRequirements(),
 					},
 				}
 				l.log.Debugf("the '%s' embedded module not found, create it", def.Name)
@@ -334,8 +334,8 @@ func (l *Loader) ensureModule(ctx context.Context, def *moduletypes.Definition, 
 				needsUpdate = true
 			}
 
-			if !maps.Equal(module.Properties.Requirements, def.Requirements) {
-				module.Properties.Requirements = def.Requirements
+			if !reflect.DeepEqual(module.Properties.Requirements, def.Requirements) {
+				module.Properties.Requirements = def.GetRequirements()
 				needsUpdate = true
 			}
 

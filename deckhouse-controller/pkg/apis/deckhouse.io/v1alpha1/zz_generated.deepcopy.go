@@ -482,7 +482,13 @@ func (in *ModuleProperties) DeepCopyInto(out *ModuleProperties) {
 		*out = make([]string, len(*in))
 		copy(*out, *in)
 	}
-	in.Requirements.DeepCopyInto(&out.Requirements)
+	if in.Requirements != nil {
+		in, out := &in.Requirements, &out.Requirements
+		*out = make(map[string]string, len(*in))
+		for key, val := range *in {
+			(*out)[key] = val
+		}
+	}
 	return
 }
 
@@ -664,7 +670,13 @@ func (in *ModuleReleaseSpec) DeepCopyInto(out *ModuleReleaseSpec) {
 		in, out := &in.ApplyAfter, &out.ApplyAfter
 		*out = (*in).DeepCopy()
 	}
-	in.Requirements.DeepCopyInto(&out.Requirements)
+	if in.Requirements != nil {
+		in, out := &in.Requirements, &out.Requirements
+		*out = make(map[string]string, len(*in))
+		for key, val := range *in {
+			(*out)[key] = val
+		}
+	}
 	out.Changelog = in.Changelog.DeepCopy()
 	return
 }
