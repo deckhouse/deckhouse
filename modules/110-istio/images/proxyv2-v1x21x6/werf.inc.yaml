@@ -183,6 +183,7 @@ shell:
     -DLLVM_CCACHE_MAXSIZE="0" \
     -DCMAKE_INSTALL_PREFIX="/opt/libcxx" /src/llvm/llvm
   setup:
+  - export CCACHE_DIR="/tmp/ccache-dir"
   - cd /tmp/
   - ccache --show-stats -v || true
   - ninja install-cxx install-cxxabi
