@@ -11,7 +11,7 @@ memory: 30Mi
 {{- end }}
 
 {{- if $bgpPoolExists }}
-{{- if ($.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+  {{- if ($.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
 ---
 apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
@@ -35,7 +35,7 @@ spec:
         cpu: 20m
         memory: 60Mi
     {{- include "helm_lib_vpa_kube_rbac_proxy_resources" . | nindent 4 }}
-{{- end }}
+  {{- end }}
 ---
 apiVersion: apps/v1
 kind: DaemonSet
@@ -60,9 +60,9 @@ spec:
         {{- .Values.metallb.speaker.nodeSelector | toYaml | nindent 8 }}
       {{- include "helm_lib_tolerations" (tuple . "any-node" "with-storage-problems") | nindent 6 }}
 
-  {{- if .Values.metallb.speaker.tolerations }}
+        {{- if .Values.metallb.speaker.tolerations }}
         {{- .Values.metallb.speaker.tolerations | toYaml | nindent 6 }}
-  {{- end }}
+        {{- end }}
       imagePullSecrets:
         - name: deckhouse-registry
       volumes:
@@ -136,9 +136,9 @@ spec:
           resources:
             requests:
               {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 14 }}
-{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+              {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
               {{- include "speaker_resources" . | nindent 14 }}
-  {{- end }}
+              {{- end }}
         - name: kube-rbac-proxy
           {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" . | nindent 10 }}
           image: {{ include "helm_lib_module_common_image" (list $ "kubeRbacProxy") }}
@@ -171,9 +171,9 @@ spec:
           resources:
             requests:
               {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 14 }}
-{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+              {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
               {{- include "helm_lib_container_kube_rbac_proxy_resources" . | nindent 14 }}
-  {{- end }}
+              {{- end }}
       hostNetwork: true
       dnsPolicy: ClusterFirstWithHostNet
       serviceAccountName: speaker
