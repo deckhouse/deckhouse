@@ -5,7 +5,7 @@ index 541e5fc..5704ac1 100644
 @@ -146,6 +146,10 @@ func (i *instances) CurrentNodeName(ctx context.Context, hostName string) (types
  func (i *instances) InstanceExistsByProviderID(ctx context.Context, providerID string) (bool, error) {
  	klog.Infof("instances.InstanceExistsByProviderID() called with provider ID [%s]", providerID)
- 
+
 +	if providerID == "static://" {
 +		return true, nil
 +	}

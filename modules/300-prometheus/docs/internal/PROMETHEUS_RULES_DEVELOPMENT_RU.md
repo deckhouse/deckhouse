@@ -10,7 +10,7 @@ search: Разработка правил Prometheus, prometheus alerting rules
 * Правила в Prometheus делятся на два типа:
   * recording rules ([официальная документация](https://prometheus.io/docs/prometheus/latest/configuration/recording_rules/)) — позволяют выполнить предварительный расчет PromQL-выражения и сохранить результат в новую метрику (обычно это необходимо для ускорения работы Grafana или других правил).
   * alerting rules ([официальная документация](https://prometheus.io/docs/prometheus/latest/configuration/alerting_rules/))— позволяют отправлять уведомления на основании результата выполнения PromQL выражения.
-* Все правила распределены по модулям и лежат в каталоге [monitoring/prometheus-rules](https://github.com/deckhouse/deckhouse/tree/main/modules/300-prometheus/monitoring/prometheus-rules/)`. Правила делятся на три категории:
+* Все правила распределены по модулям и лежат в каталоге [monitoring/prometheus-rules](https://github.com/deckhouse/deckhouse/tree/main/modules/prometheus/monitoring/prometheus-rules/)`. Правила делятся на три категории:
   * в `coreos` лежат правила, происходящие из репозитория prometheus-operator (местами сильно нами поправленные),
   * в `kubernetes` лежат наши правила, касаемые мониторинга самого kubernetes (самой платформы — control plane, NGINX Ingress, Prometheus, etc) и мониторинг "объектов" в kubernetes (Pod'ы, CronJob'ы, место на диске и пр.).
   * в `applications` лежат правила для мониторинга приложений (таких, как redis, mongo и пр.)

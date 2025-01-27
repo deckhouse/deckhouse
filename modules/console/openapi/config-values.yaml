@@ -52,9 +52,9 @@ properties:
         description: |
           An array of user groups that can access the web UI.
 
-          This parameter is used if the [user-authn](../../../platform/modules/150-user-authn/) module is enabled or the `externalAuthentication` parameter is set.
+          This parameter is used if the [user-authn](/modules/150-user-authn/) module is enabled or the `externalAuthentication` parameter is set.
 
-          **Caution!** Note that you must add those groups to the appropriate field in the DexProvider config if this module is used together with the [user-authn](../../../platform/modules/150-user-authn/) one.
+          **Caution!** Note that you must add those groups to the appropriate field in the DexProvider config if this module is used together with the [user-authn](/modules/150-user-authn/) one.
       whitelistSourceRanges:
         type: array
         items:

@@ -10,7 +10,7 @@
   <a href="https://releases.deckhouse.io"><img src="https://img.shields.io/badge/releases-releases.deckhouse.io-blueviolet" alt="Releases"></a>
 </p>
 
-[Deckhouse](https://deckhouse.io/) is an Open Source platform for managing Kubernetes clusters in a fully automatic and uniform fashion. It allows you to create homogeneous Kubernetes clusters anywhere and fully manages them. It supplies all the add-ons you need for auto-scaling, observability, security, and service mesh. It comes in Enterprise Edition (EE) and Community Edition (CE).
+Deckhouse is an Open Source platform for managing Kubernetes clusters in a fully automatic and uniform fashion. It allows you to create homogeneous Kubernetes clusters anywhere and fully manages them. It supplies all the add-ons you need for auto-scaling, observability, security, and service mesh. It comes in Enterprise Edition (EE) and Community Edition (CE).
 
 # Main features
 
@@ -35,7 +35,7 @@ While Deckhouse Platform CE is available free as an Open Source, EE is a commerc
 
 EE brings many additional features that extend the basic functionality provided in CE. They include OpenStack & vSphere integration, Istio service mesh, multitenancy, enterprise-level security, BGP support, instant autoscaling, local DNS caching, and selectable timeframe for the platform's upgrades.
 
-Deckhouse Platform CE is freely available for everyone. Deckhouse Platform EE can be accessed via 30-days tokens issued via [Deckhouse website](https://deckhouse.io/).
+Deckhouse Platform CE is freely available for everyone. Deckhouse Platform EE can be accessed via 30-days tokens issued via Deckhouse website.
 
 # Architecture
 
@@ -46,7 +46,7 @@ Deckhouse Platform follows the upstream version of Kubernetes, using that as a b
 
 # Trying Deckhouse
 
-Please, refer to the project's [Getting started](https://deckhouse.io/products/kubernetes-platform/gs/) to begin your journey with Deckhouse Platform. Choose the cloud provider or bare-metal option for your infrastructure and follow the relevant step-by-step instructions to deploy your first Deckhouse Kubernetes cluster.
+Please, refer to the project's Getting started to begin your journey with Deckhouse Platform. Choose the cloud provider or bare-metal option for your infrastructure and follow the relevant step-by-step instructions to deploy your first Deckhouse Kubernetes cluster.
 
 If anything works in an unexpected manner or you have any questions, feel free to contact us via GitHub Issues / Discussions or reach a wider [community of Deckhouse users](#online-community) in Telegram and other resources.
 

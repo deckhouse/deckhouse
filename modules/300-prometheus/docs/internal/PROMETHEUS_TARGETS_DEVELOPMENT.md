@@ -86,7 +86,7 @@ At the same time, the proxy listens on 0.0.0.0 and intercepts all external traff
 
 The proxy only needs permissions to create `TokenReview` and `SubjectAccessReview` to authenticate and authorize users using kube-apiserver.
 
-Our clusters have a [built-in **d8-rbac-proxy** ClusterRole](https://github.com/deckhouse/deckhouse/blob/main/modules/002-deckhouse/templates/common/rbac/kube-rbac-proxy.yaml) that is ideal for this kind of situation.
+Our clusters have a [built-in **d8-rbac-proxy** ClusterRole](https://github.com/deckhouse/deckhouse/blob/main/modules/deckhouse/templates/common/rbac/kube-rbac-proxy.yaml) that is ideal for this kind of situation.
 You don't need to create it yourself! You just need to attach it to the ServiceAccount of your Deployment.
 
 ```yaml

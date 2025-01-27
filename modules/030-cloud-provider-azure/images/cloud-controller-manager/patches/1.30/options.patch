@@ -7,7 +7,7 @@ index e7c9d2231..75adb78e5 100644
  	ServiceController  *cpoptions.ServiceControllerOptions
  	NodeIPAMController *NodeIPAMControllerOptions
 +	NodeController     *cpoptions.NodeControllerOptions
- 
+
  	SecureServing  *apiserveroptions.SecureServingOptionsWithLoopback
  	Authentication *apiserveroptions.DelegatingAuthenticationOptions
 @@ -93,6 +94,9 @@ func NewCloudControllerManagerOptions() (*CloudControllerManagerOptions, error)
@@ -25,7 +25,7 @@ index e7c9d2231..75adb78e5 100644
  	o.ServiceController.AddFlags(fss.FlagSet("service controller"))
  	o.NodeIPAMController.AddFlags(fss.FlagSet("node ipam controller"))
 +	o.NodeController.AddFlags(fss.FlagSet("node controller"))
- 
+
  	o.SecureServing.AddFlags(fss.FlagSet("secure serving"))
  	o.Authentication.AddFlags(fss.FlagSet("authentication"))
 @@ -169,6 +174,9 @@ func (o *CloudControllerManagerOptions) ApplyTo(c *cloudcontrollerconfig.Config,

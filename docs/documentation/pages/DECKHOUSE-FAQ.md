@@ -184,7 +184,7 @@ Possible options for action if something went wrong:
   ```
 
 - [Collect debugging information](modules/deckhouse/faq.html#how-to-collect-debug-info) and contact technical support.
-- Ask for help from the [community](https://deckhouse.io/community/about.html).
+- Ask for help from the community.
 {% endalert %}
 
 ### How do I know that a new version is available for the cluster?
@@ -1063,7 +1063,7 @@ Follow this steps to switch a Deckhouse Enterprise Edition to Community Edition 
    kubectl -n d8-system exec svc/deckhouse-leader -c deckhouse -- kubectl -n d8-system set image deployment/deckhouse deckhouse=registry.deckhouse.io/deckhouse/ce:<DECKHOUSE_VERSION>
    ```
 
-1. Wait for the Deckhouse pod to become `Ready` and for [all the queued jobs to complete](https://deckhouse.io/products/kubernetes-platform/documentation/latest/deckhouse-faq.html#how-to-check-the-job-queue-in-deckhouse). If an `ImagePullBackOff` error is generated in the process, wait for the pod to be restarted automatically.
+1. Wait for the Deckhouse pod to become `Ready` and for all the queued jobs to complete. If an `ImagePullBackOff` error is generated in the process, wait for the pod to be restarted automatically.
 
    Use the following command to check the Deckhouse pod's status:
 
@@ -1121,7 +1121,7 @@ Follow this steps to switch a Deckhouse Enterprise Edition to Community Edition 
 
 ### How to switch Deckhouse CE to EE?
 
-You will need a valid license key (you can [request a trial license key](https://deckhouse.io/products/enterprise_edition.html) if necessary).
+You will need a valid license key (you can request a trial license key if necessary).
 
 {% alert %}
 The instruction implies using the public address of the container registry: `registry.deckhouse.io`. If you use a different container registry address, change the commands or use [the instruction](#how-do-i-configure-deckhouse-to-use-a-third-party-registry) for switching Deckhouse to using a third-party registry.
@@ -1320,7 +1320,7 @@ Follow this steps to switch a Deckhouse Community Edition to Enterprise Edition 
    kubectl -n d8-system exec svc/deckhouse-leader -c deckhouse -- kubectl -n d8-system set image deployment/deckhouse deckhouse=registry.deckhouse.ru/deckhouse/ee:<DECKHOUSE_VERSION>
    ```
 
-1. Wait for the Deckhouse pod to become `Ready` and for [all the queued jobs to complete](https://deckhouse.io/products/kubernetes-platform/documentation/latest/deckhouse-faq.html#how-to-check-the-job-queue-in-deckhouse). If an `ImagePullBackOff` error is generated in the process, wait for the pod to be restarted automatically.
+1. Wait for the Deckhouse pod to become `Ready` and for all the queued jobs to complete. If an `ImagePullBackOff` error is generated in the process, wait for the pod to be restarted automatically.
 
    Use the following command to check the Deckhouse pod's status:
 
@@ -1375,7 +1375,7 @@ Follow this steps to switch a Deckhouse Community Edition to Enterprise Edition 
 
 ### How to Switch Deckhouse EE to SE?
 
-You will need a valid license key. You can [request a trial license key](https://deckhouse.io/products/kubernetes-platform) if necessary.
+You will need a valid license key. You can request a trial license key if necessary.
 
 {% alert level="info" %}
 - The instruction implies using the public address of the container registry: `registry.deckhouse.io`. If you use a different container registry address, change the commands or use [the instruction](#how-do-i-configure-deckhouse-to-use-a-third-party-registry) for switching Deckhouse to using a third-party registry.

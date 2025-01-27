@@ -10,14 +10,14 @@ diff --git a/internal/ovirt/resource_ovirt_vm.go b/internal/ovirt/resource_ovirt
 +++ b/internal/ovirt/resource_ovirt_vm.go	(date 1710344245301)
 @@ -1,7 +1,9 @@
  package ovirt
- 
+
  import (
 +	"bytes"
  	"context"
 +	"encoding/xml"
  	"fmt"
  	"strings"
- 
+
 @@ -668,7 +670,12 @@
  		useInit = true
  	}
@@ -30,4 +30,4 @@ diff --git a/internal/ovirt/resource_ovirt_vm.go b/internal/ovirt/resource_ovirt
 +		vmInitScript = buf.String()
  		useInit = true
  	}
- 
+

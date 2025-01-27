@@ -22,4 +22,4 @@ The following parameters serve as a basis for scaling:
 
 ## How does it work?
 
-This module registers `k8s-prometheus-adapter` as an external API service that extends the capabilities of the Kubernetes API. When some Kubernetes component (VPA, HPA) needs information about the resources consumed, it requests the Kubernetes API, which, in turn, proxies that request to the adapter. The adapter figures out (using its [configuration file](https://github.com/deckhouse/deckhouse/blob/main/modules/301-prometheus-metrics-adapter/templates/config-map.yaml)) how to calculate the metric and sends a request to Prometheus.
+This module registers `k8s-prometheus-adapter` as an external API service that extends the capabilities of the Kubernetes API. When some Kubernetes component (VPA, HPA) needs information about the resources consumed, it requests the Kubernetes API, which, in turn, proxies that request to the adapter. The adapter figures out (using its [configuration file](https://github.com/deckhouse/deckhouse/blob/main/modules/prometheus-metrics-adapter/templates/config-map.yaml)) how to calculate the metric and sends a request to Prometheus.

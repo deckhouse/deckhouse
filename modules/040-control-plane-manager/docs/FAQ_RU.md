@@ -596,7 +596,7 @@ rm -r ./kubernetes ./etcd-backup.snapshot
 Рекомендуем хранить резервные копии снимков состояния кластера etcd, а также резервную копию директории `/etc/kubernetes/` в зашифрованном виде вне кластера Deckhouse.
 Для этого вы можете использовать сторонние инструменты резервного копирования файлов, например [Restic](https://restic.net/), [Borg](https://borgbackup.readthedocs.io/en/stable/), [Duplicity](https://duplicity.gitlab.io/) и т.д.
 
-О возможных вариантах восстановления состояния кластера из снимка etcd вы можете узнать [в документации](https://github.com/deckhouse/deckhouse/blob/main/modules/040-control-plane-manager/docs/internal/ETCD_RECOVERY.md).
+О возможных вариантах восстановления состояния кластера из снимка etcd вы можете узнать [в документации](https://github.com/deckhouse/deckhouse/blob/main/modules/control-plane-manager/docs/internal/ETCD_RECOVERY.md).
 
 ### Как выполнить полное восстановление состояния кластера из резервной копии etcd?
 

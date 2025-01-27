@@ -5,7 +5,7 @@ index af8217e..e9e5f2d 100644
 @@ -4613,6 +4613,12 @@ func (c *Cloud) updateInstanceSecurityGroupsForLoadBalancer(lb *elb.LoadBalancer
  	c.sortELBSecurityGroupList(lbSecurityGroupIDs, annotations)
  	loadBalancerSecurityGroupID := lbSecurityGroupIDs[0]
- 
+
 +	var deleteSecurityGroupID bool
 +	// we shouldn't delete Ingress SG rule, if it allows access
 +	// from configured "ElbSecurityGroup", so that we won't disrupt access to Nodes from other ELBs

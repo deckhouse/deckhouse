@@ -14,7 +14,7 @@ description: "Описание схем размещения и взаимоде
 * Если master не имеет публичного IP-адреса, для установки и доступа в кластер необходим дополнительный инстанс с публичным IP-адресом (например, bastion-хост).
 * Между VPC кластера и другими VPC можно настроить пиринговое соединение.
 
-![resources](https://docs.google.com/drawings/d/e/2PACX-1vR1oHqbXPJPYxUXwpkRGM6VPpZaNc8WoGH-N0Zqb9GexSc-NQDvsGiXe_Hc-Z1fMQWBRawuoy8FGENt/pub?w=989&amp;h=721)
+
 <!--- Исходник: https://docs.google.com/drawings/d/1VTAoz6-65q7m99KA933e1phWImirxvb9-OLH9DRtWPE/edit --->
 
 Пример конфигурации схемы размещения:
@@ -85,7 +85,7 @@ provider:
 * Для кластера создается отдельная VPC, все узлы кластера имеют публичные IP-адреса.
 * Между VPC кластера и другими VPC можно настроить пиринговое соединение.
 
-![resources](https://docs.google.com/drawings/d/e/2PACX-1vTq2Jlx4k8OXt4acHeW6NvqABsZIPSDoOldDiGERYHWHmmKykSjXZ_ADvKecCC1L8Jjq4143uv5GWDR/pub?w=989&amp;h=721)
+
 <!--- Исходник: https://docs.google.com/drawings/d/1uhWbQFiycsFkG9D1vNbJNrb33Ih4YMdCxvOX5maW5XQ/edit --->
 
 Пример конфигурации схемы размещения:

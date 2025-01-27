@@ -13,7 +13,7 @@ description: "Описание схем размещения и взаимоде
 > Если провайдер не поддерживает SecurityGroups, все приложения, запущенные на узлах с Floating IP, будут доступны по белому IP-адресу.
 > Например, `kube-apiserver` на master-узлах будет доступен на порту 6443. Чтобы избежать этого, рекомендуется использовать схему размещения [SimpleWithInternalNetwork](#simplewithinternalnetwork), либо [Standard](#standard) с bastion-узлом.
 
-![resources](https://docs.google.com/drawings/d/e/2PACX-1vSTIcQnxcwHsgANqHE5Ry_ZcetYX2lTFdDjd3Kip5cteSbUxwRjR3NigwQzyTMDGX10_Avr_mizOB5o/pub?w=960&h=720)
+
 <!--- Исходник: https://docs.google.com/drawings/d/1hjmDn2aJj3ru3kBR6Jd6MAW3NWJZMNkend_K43cMN0w/edit --->
 
 Пример конфигурации схемы размещения:
@@ -118,7 +118,7 @@ virtual IP создается в публичной сети, он все рав
 > **Внимание!**
 > В данной конфигурации необходимо явно указывать название внутренней сети в `additionalNetworks` при создании `OpenStackInstanceClass` в кластере.
 
-![resources](https://docs.google.com/drawings/d/e/2PACX-1vR9Vlk22tZKpHgjOeQO2l-P0hyAZiwxU6NYGaLUsnv-OH0so8UXNnvrkNNiAROMHVI9iBsaZpfkY-kh/pub?w=960&h=720)
+
 <!--- Исходник: https://docs.google.com/drawings/d/1gkuJhyGza0bXB2lcjdsQewWLEUCjqvTkkba-c5LtS_E/edit --->
 
 Пример конфигурации схемы размещения:
@@ -202,7 +202,7 @@ Master-узел и узлы кластера подключаются к сущ�
 сети без роутера, соответственно, нельзя заказать балансировщик с Floating IP. Если заказывать internal loadbalancer, у которого
 virtual IP создается в публичной сети, он все равно доступен только с узлов кластера.
 
-![resources](https://docs.google.com/drawings/d/e/2PACX-1vTZbaJg7oIvoh2hkEW-DKbqeujhOiJtv_JSvfvDfXE9-mX_p6uggoY1Z9N2EAJ79c7IMfQC9ttQAmaP/pub?w=960&h=720)
+
 <!--- Исходник: https://docs.google.com/drawings/d/1l-vKRNA1NBPIci3Ya8r4dWL5KA9my7_wheFfMR38G10/edit --->
 
 Пример конфигурации схемы размещения:
@@ -281,7 +281,7 @@ Master-узел и узлы кластера подключаются к сущ�
 > В данной схеме размещения не происходит управление `SecurityGroups`, а подразумевается, что они были ранее созданы.
 > Для настройки политик безопасности необходимо явно указывать `additionalSecurityGroups` в `OpenStackClusterConfiguration` для masterNodeGroup и других nodeGroups, а также `additionalSecurityGroups` при создании `OpenStackInstanceClass` в кластере.
 
-![resources](https://docs.google.com/drawings/d/e/2PACX-1vQOcYZPtHBqMtlNx9PDcMrqI0WEwRssL-oXONnrOoKNaIx1fcEODo9dK2zOoF1wbKeKJlhphFTuefB-/pub?w=960&h=720)
+
 <!--- Исходник: https://docs.google.com/drawings/d/1H9HGOn4abpmZwIhpwwdZSSO9izvyOZakG8HpmmzZZEo/edit --->
 
 Пример конфигурации схемы размещения:

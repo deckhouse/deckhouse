@@ -1,9 +1,9 @@
 basic-auth
-cert-manager
 cloud-provider-aws
 cloud-provider-azure
 cloud-provider-gcp
 cloud-provider-openstack
+cloud-provider-huaweicloud
 cloud-provider-vcd
 cloud-provider-vsphere
 cloud-provider-yandex
@@ -30,3 +30,5 @@ prometheus-pushgateway
 static-routing-manager
 terraform-manager
 upmeter
+service-with-healthchecks
+ceph-csi

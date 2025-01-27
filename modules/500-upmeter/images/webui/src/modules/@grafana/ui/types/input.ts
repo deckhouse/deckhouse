@@ -1,4 +1,4 @@
-﻿export interface ValidationRule {
+export interface ValidationRule {
   rule: (valueToValidate: string) => boolean;
   errorMessage: string;
 }

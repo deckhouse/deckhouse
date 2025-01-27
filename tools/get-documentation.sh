@@ -8,6 +8,19 @@ if [ $? -ne 0 ]; then
   exit 1
 fi
 
+
+# Remove external links
+# (../)+platform/modules/ -> /modules/
+# modules/[0-9]+- -> modules/
+# Удалить картинки на внешние ресурсы  -  \!\[([^\[\]]+)\]\(http[^\)]+\)
+# Удалить разделы про обновление DKP в FAQ и переключение между редакциями
+# github/gitlab
+# Cloud
+# enterprise
+# edition
+
+
+
 echo "Created the temporary directory $_TMPDIR"
 
 source $(~/bin/trdl use werf 1.2 beta);
@@ -23,11 +36,11 @@ export OBSERVABILITY_SOURCE_REPO=""
 export STRONGHOLD_PULL_TOKEN=""
 export DECKHOUSE_PRIVATE_REPO=""
 
-werf build documentation/web --env EE
+werf build documentation/web --env EE --dev
 docker stop d8-doc-ee &>/dev/null
 docker rm d8-doc-ee &>/dev/null
 
-docker create --name d8-doc-ee $(werf stage image documentation/web --env EE)
+docker create --name d8-doc-ee $(werf stage image documentation/web --env EE --dev)
 if [ $? -ne 0 ]; then
   echo "Error creating container!"
   exit 1

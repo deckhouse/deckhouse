@@ -3,7 +3,7 @@ index ac4b09a..5574862 100644
 --- a/cmd/ovirt-csi-driver/ovirt-csi-driver.go
 +++ b/cmd/ovirt-csi-driver/ovirt-csi-driver.go
 @@ -9,7 +9,7 @@ import (
- 
+
  	"github.com/ovirt/csi-driver/internal/ovirt"
  	"github.com/ovirt/csi-driver/pkg/service"
 -	ovirtclient "github.com/ovirt/go-ovirt-client/v2"
@@ -78,13 +78,13 @@ index df687ae..4119b3f 100644
 +++ b/internal/ovirt/ovirt.go
 @@ -6,7 +6,7 @@ import (
  	"path/filepath"
- 
+
  	kloglogger "github.com/ovirt/go-ovirt-client-log-klog/v2"
 -	ovirtclient "github.com/ovirt/go-ovirt-client/v2"
 +	ovirtclient "github.com/ovirt/go-ovirt-client/v3"
  	"gopkg.in/yaml.v2"
  )
- 
+
 @@ -31,7 +31,7 @@ func NewClient() (ovirtclient.Client, error) {
  		tls.CACertsFromFile(ovirtConfig.CAFile)
  	}
@@ -100,7 +100,7 @@ index d522cef..3760c51 100644
 +++ b/pkg/service/controller.go
 @@ -5,7 +5,7 @@ import (
  	"strconv"
- 
+
  	"github.com/container-storage-interface/spec/lib/go/csi"
 -	ovirtclient "github.com/ovirt/go-ovirt-client/v2"
 +	ovirtclient "github.com/ovirt/go-ovirt-client/v3"
@@ -117,7 +117,7 @@ index d522cef..3760c51 100644
  		msg := fmt.Errorf("error while finding disk %s by name, error: %w", diskName, err)
  		klog.Errorf(msg.Error())
 @@ -94,7 +94,8 @@ func (c *ControllerService) CreateVolume(ctx context.Context, req *csi.CreateVol
- 
+
  func (c *ControllerService) createDisk(
  	ctx context.Context, diskName string, storageDomainName string,
 -	size int64, thinProvisioning bool) (ovirtclient.Disk, error) {
@@ -129,7 +129,7 @@ index d522cef..3760c51 100644
 @@ -117,23 +118,23 @@ func (c *ControllerService) createDisk(
  	}
  	imageFormat := handleCreateVolumeImageFormat(sd.StorageType(), thinProvisioning)
- 
+
 -	disk, err := c.ovirtClient.CreateDisk(
 +	disk, err := c.ovirtClient.WithContext(ctx).CreateDisk(
  		sd.ID(),
@@ -145,7 +145,7 @@ index d522cef..3760c51 100644
  	return disk, nil
 -
  }
- 
+
  func handleCreateVolumeImageFormat(
  	storageType ovirtclient.StorageDomainType,
 -	thinProvisioning bool) ovirtclient.ImageFormat {
@@ -155,7 +155,7 @@ index d522cef..3760c51 100644
  	// is a non file storage type (for example ISCSI)
  	if !isFileDomain(storageType) && thinProvisioning {
 @@ -153,7 +154,7 @@ func (c *ControllerService) DeleteVolume(ctx context.Context, req *csi.DeleteVol
- 
+
  	// idempotence first - see if disk already exists, ovirt creates disk by name(alias in ovirt as well)
  	// Check if a disk with the same name already exist
 -	_, err := c.ovirtClient.GetDisk(vId, ovirtclient.ContextStrategy(ctx))
@@ -166,14 +166,14 @@ index d522cef..3760c51 100644
 @@ -164,7 +165,7 @@ func (c *ControllerService) DeleteVolume(ctx context.Context, req *csi.DeleteVol
  		return nil, msg
  	}
- 
+
 -	err = c.ovirtClient.RemoveDisk(vId, ovirtclient.ContextStrategy(ctx))
 +	err = c.ovirtClient.WithContext(ctx).RemoveDisk(vId)
  	if err != nil {
  		msg := fmt.Errorf("failed removing disk %s by id, error: %w", vId, err)
  		klog.Errorf(msg.Error())
 @@ -176,7 +177,8 @@ func (c *ControllerService) DeleteVolume(ctx context.Context, req *csi.DeleteVol
- 
+
  // ControllerPublishVolume takes a volume, which is an oVirt disk, and attaches it to a node, which is an oVirt VM.
  func (c *ControllerService) ControllerPublishVolume(
 -	ctx context.Context, req *csi.ControllerPublishVolumeRequest) (*csi.ControllerPublishVolumeResponse, error) {
@@ -208,7 +208,7 @@ index d522cef..3760c51 100644
  		klog.Errorf(msg.Error())
 @@ -293,7 +295,7 @@ func (c *ControllerService) ControllerExpandVolume(ctx context.Context, req *csi
  	newSize := capRange.GetRequiredBytes()
- 
+
  	klog.Infof("Expanding volume %v to %v bytes.", volumeID, newSize)
 -	disk, err := c.ovirtClient.GetDisk(volumeID, ovirtclient.ContextStrategy(ctx))
 +	disk, err := c.ovirtClient.WithContext(ctx).GetDisk(volumeID)
@@ -223,7 +223,7 @@ index d522cef..3760c51 100644
 +			NodeExpansionRequired: false,
 +		}, nil
  	}
- 
+
  	params := ovirtclient.UpdateDiskParams()
 @@ -320,7 +323,7 @@ func (c *ControllerService) ControllerExpandVolume(ctx context.Context, req *csi
  	if err != nil {
@@ -242,20 +242,20 @@ index d522cef..3760c51 100644
 +		NodeExpansionRequired: nodeExpansionRequired,
 +	}, nil
  }
- 
+
  func (c *ControllerService) isNodeExpansionRequired(
 diff --git a/pkg/service/controller_test.go b/pkg/service/controller_test.go
 index fb55c28..976a48e 100644
 --- a/pkg/service/controller_test.go
 +++ b/pkg/service/controller_test.go
 @@ -6,7 +6,7 @@ import (
- 
+
  	"github.com/container-storage-interface/spec/lib/go/csi"
  	"github.com/ovirt/csi-driver/pkg/service"
 -	ovirtclient "github.com/ovirt/go-ovirt-client/v2"
 +	ovirtclient "github.com/ovirt/go-ovirt-client/v3"
  )
- 
+
  func TestVolumeCreation(t *testing.T) {
 diff --git a/pkg/service/driver.go b/pkg/service/driver.go
 index 16a3a53..a5791f4 100644
@@ -263,7 +263,7 @@ index 16a3a53..a5791f4 100644
 +++ b/pkg/service/driver.go
 @@ -1,7 +1,7 @@
  package service
- 
+
  import (
 -	ovirtclient "github.com/ovirt/go-ovirt-client/v2"
 +	ovirtclient "github.com/ovirt/go-ovirt-client/v3"
@@ -277,7 +277,7 @@ index ed6de01..d773551 100644
 @@ -3,7 +3,7 @@ package service
  import (
  	"fmt"
- 
+
 -	ovirtclient "github.com/ovirt/go-ovirt-client/v2"
 +	ovirtclient "github.com/ovirt/go-ovirt-client/v3"
  	"github.com/pkg/errors"
@@ -319,12 +319,12 @@ index 3bb32ad..7327bf0 100644
 +++ b/pkg/service/helper_test.go
 @@ -4,7 +4,7 @@ import (
  	"testing"
- 
+
  	ovirtclientlog "github.com/ovirt/go-ovirt-client-log/v3"
 -	ovirtclient "github.com/ovirt/go-ovirt-client/v2"
 +	ovirtclient "github.com/ovirt/go-ovirt-client/v3"
  )
- 
+
  func getMockHelper(t *testing.T) ovirtclient.TestHelper {
 diff --git a/pkg/service/identity.go b/pkg/service/identity.go
 index 42c5f56..054c067 100644
@@ -341,7 +341,7 @@ index 42c5f56..054c067 100644
  	"google.golang.org/grpc/status"
 @@ -46,8 +46,8 @@ func (i *IdentityService) GetPluginCapabilities(context.Context, *csi.GetPluginC
  }
- 
+
  // Probe checks the state of the connection to ovirt-engine
 -func (i *IdentityService) Probe(_ context.Context, _ *csi.ProbeRequest) (*csi.ProbeResponse, error) {
 -	err := i.ovirtClient.Test()
@@ -355,7 +355,7 @@ index 115b5c7..8d6a1c6 100644
 --- a/pkg/service/node.go
 +++ b/pkg/service/node.go
 @@ -12,7 +12,7 @@ import (
- 
+
  	"github.com/container-storage-interface/spec/lib/go/csi"
  	volumemanager "github.com/ovirt/csi-driver/pkg/utils"
 -	ovirtclient "github.com/ovirt/go-ovirt-client/v2"
@@ -365,14 +365,14 @@ index 115b5c7..8d6a1c6 100644
  	"google.golang.org/grpc/status"
 @@ -174,7 +174,6 @@ func (n *NodeService) NodeGetVolumeStats(_ context.Context, req *csi.NodeGetVolu
  	}
- 
+
  	isBlock, err := volumemanager.IsBlockDevice(req.VolumePath)
 -
  	if err != nil {
  		return nil, status.Errorf(codes.Internal, "Failed to determine whether %s is block device: %v", req.VolumePath, err)
  	}
 @@ -197,7 +196,6 @@ func (n *NodeService) NodeGetVolumeStats(_ context.Context, req *csi.NodeGetVolu
- 
+
  	// We assume filesystem presence on volume as raw block device is ruled out and try to get fs stats
  	available, capacity, used, inodesFree, inodes, inodesUsed, err := volumemanager.StatFS(req.VolumePath)
 -

@@ -594,7 +594,7 @@ and without rejoin the remaining nodes into the new cluster.
 We recommend encrypting etcd snapshot backups as well as backup of the directory `/etc/kubernetes/` and saving them outside the Deckhouse cluster.
 You can use one of third-party files backup tools, for example: [Restic](https://restic.net/), [Borg](https://borgbackup.readthedocs.io/en/stable/), [Duplicity](https://duplicity.gitlab.io/), etc.
 
-You can see [documentation](https://github.com/deckhouse/deckhouse/blob/main/modules/040-control-plane-manager/docs/internal/ETCD_RECOVERY.md) for learn about etcd disaster recovery procedures from snapshots.
+You can see [documentation](https://github.com/deckhouse/deckhouse/blob/main/modules/control-plane-manager/docs/internal/ETCD_RECOVERY.md) for learn about etcd disaster recovery procedures from snapshots.
 
 ### How do perform a full recovery of the cluster state from an etcd backup?
 

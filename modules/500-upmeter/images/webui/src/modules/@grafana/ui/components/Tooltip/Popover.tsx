@@ -1,4 +1,4 @@
-﻿import React, { PureComponent } from 'react';
+import React, { PureComponent } from 'react';
 import * as PopperJS from 'popper.js';
 import { Manager, Popper as ReactPopper, PopperArrowProps } from 'react-popper';
 import { Portal } from '../Portal/Portal';

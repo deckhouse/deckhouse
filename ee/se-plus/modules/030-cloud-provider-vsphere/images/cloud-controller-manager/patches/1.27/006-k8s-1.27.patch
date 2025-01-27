@@ -4,35 +4,35 @@ index 32368273..8dfabbf6 100644
 +++ b/cmd/vsphere-cloud-controller-manager/main.go
 @@ -80,7 +80,7 @@ func main() {
  	}
- 
+
  	fs := command.Flags()
 -	namedFlagSets := ccmOptions.Flags(app.ControllerNames(app.DefaultInitFuncConstructors), app.ControllersDisabledByDefault.List())
 +	namedFlagSets := ccmOptions.Flags(app.ControllerNames(app.DefaultInitFuncConstructors), app.ControllersDisabledByDefault.List(), app.AllWebhooks, app.DisabledByDefaultWebhooks)
  	verflag.AddFlags(namedFlagSets.FlagSet("global"))
  	globalflag.AddGlobalFlags(namedFlagSets.FlagSet("global"), command.Name())
- 
+
 @@ -150,7 +150,7 @@ func main() {
  		verflag.PrintAndExitIfRequested()
  		cliflag.PrintFlags(cmd.Flags())
- 
+
 -		c, err := ccmOptions.Config(app.ControllerNames(app.DefaultInitFuncConstructors), app.ControllersDisabledByDefault.List())
 +		c, err := ccmOptions.Config(app.ControllerNames(app.DefaultInitFuncConstructors), app.ControllersDisabledByDefault.List(), app.AllWebhooks, app.DisabledByDefaultWebhooks)
  		if err != nil {
  			// explicitly ignore the error by Fprintf, exiting anyway
  			_, _ = fmt.Fprintf(os.Stderr, "%v\n", err)
 @@ -176,6 +176,8 @@ func main() {
- 
+
  		cloud := initializeCloud(completedConfig, cloudProvider)
  		controllerInitializers = app.ConstructControllerInitializers(app.DefaultInitFuncConstructors, completedConfig, cloud)
 +		webhookConfig := make(map[string]app.WebhookConfig)
 +		webhookHandlers := app.NewWebhookHandlers(webhookConfig, completedConfig, cloud)
- 
+
  		// initialize a notifier for cloud config update
  		cloudConfig := completedConfig.ComponentConfig.KubeCloudShared.CloudProvider.CloudConfigFile
 @@ -188,7 +190,7 @@ func main() {
  			_ = watch.Close() // ignore explicitly when the watch closes
  		}(watch)
- 
+
 -		if err := app.Run(completedConfig, cloud, controllerInitializers, stop); err != nil {
 +		if err := app.Run(completedConfig, cloud, controllerInitializers, webhookHandlers, stop); err != nil {
  			// explicitly ignore the error by Fprintf, exiting anyway due to app error
@@ -44,10 +44,10 @@ index 551260f6..36dd4e9f 100644
 +++ b/go.mod
 @@ -1,6 +1,6 @@
  module k8s.io/cloud-provider-vsphere
- 
+
 -go 1.19
 +go 1.20
- 
+
  require (
  	github.com/fsnotify/fsnotify v1.6.0
 @@ -18,14 +18,14 @@ require (
@@ -71,7 +71,7 @@ index 551260f6..36dd4e9f 100644
 +	sigs.k8s.io/controller-runtime v0.15.0
  	sigs.k8s.io/yaml v1.3.0
  )
- 
+
 @@ -33,6 +33,7 @@ require (
  	github.com/Azure/go-ansiterm v0.0.0-20230124172434-306776ec8161 // indirect
  	github.com/NYTimes/gziphandler v1.1.1 // indirect
@@ -628,12 +628,12 @@ index 53842f0d..f39b81fd 100644
 @@ -19,6 +19,8 @@ package util
  import (
  	"context"
- 
+
 +	"k8s.io/apimachinery/pkg/runtime/schema"
 +
  	"k8s.io/apimachinery/pkg/api/meta"
  	"k8s.io/apimachinery/pkg/runtime"
- 
+
 @@ -112,3 +114,13 @@ func (w *FakeClientWrapper) Status() client.StatusWriter {
  func (w *FakeClientWrapper) SubResource(subResource string) client.SubResourceClient {
  	return w.fakeClient.SubResource(subResource)
@@ -654,10 +654,10 @@ index c5ab0052..b8d58b9a 100644
 +++ b/hack/tools/go.mod
 @@ -1,6 +1,6 @@
  module tools
- 
+
 -go 1.19
 +go 1.20
- 
+
  require (
  	github.com/onsi/ginkgo v1.16.4
 diff --git a/test/e2e/go.mod b/test/e2e/go.mod
@@ -666,10 +666,10 @@ index f0a3ce8e..13c92e37 100644
 +++ b/test/e2e/go.mod
 @@ -1,18 +1,18 @@
  module k8s.io/cloud-provider-vsphere/test/e2e
- 
+
 -go 1.19
 +go 1.20
- 
+
  require (
  	github.com/onsi/ginkgo v1.16.5
 -	github.com/onsi/gomega v1.20.1
@@ -689,7 +689,7 @@ index f0a3ce8e..13c92e37 100644
 +	sigs.k8s.io/cluster-api v1.4.2
 +	sigs.k8s.io/cluster-api/test v1.4.2
  )
- 
+
  require (
 @@ -20,66 +20,67 @@ require (
  	github.com/BurntSushi/toml v1.1.0 // indirect

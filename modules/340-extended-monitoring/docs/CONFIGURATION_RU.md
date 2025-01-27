@@ -45,7 +45,7 @@ Non-namespaced Kubernetes-объекты не нуждаются в лейбла
 
 > **Важно!** Эти лейблы **не** действуют для тех разделов, в которых расположены `imagefs` (по умолчанию — `/var/lib/docker`) и `nodefs` (по умолчанию — `/var/lib/kubelet`).
 Для этих разделов пороги настраиваются полностью автоматически согласно [eviction thresholds в kubelet](https://kubernetes.io/docs/tasks/administer-cluster/out-of-resource/).
-Значения по умолчанию см. [тут](https://github.com/kubernetes/kubernetes/blob/743e4fba6339237cc8d5c11413f76ea54b4cc3e8/pkg/kubelet/apis/config/v1beta1/defaults_linux.go#L22-L27), подробнее см. [экспортер](https://github.com/deckhouse/deckhouse/blob/main/modules/340-monitoring-kubernetes/images/kubelet-eviction-thresholds-exporter/).
+Значения по умолчанию см. [тут](https://github.com/kubernetes/kubernetes/blob/743e4fba6339237cc8d5c11413f76ea54b4cc3e8/pkg/kubelet/apis/config/v1beta1/defaults_linux.go#L22-L27), подробнее см. [экспортер](https://github.com/deckhouse/deckhouse/blob/main/modules/monitoring-kubernetes/images/kubelet-eviction-thresholds-exporter/).
 
 #### Namespaced Kubernetes-объекты
 

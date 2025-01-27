@@ -112,23 +112,6 @@
   includePaths: ['*/docs/','*/openapi/*.yaml','*/crds/', '*/oss.yaml']
   excludePaths: ['*/openapi/values.yaml', '*/openapi/*-tests.yaml', '*/docs/internal/', '160-multitenancy-manager/crds/projecttypes.yaml', '160-multitenancy-manager/crds/doc-ru-projecttypes.yaml']
 {{- end }}
-{{- if or (eq .Edition "FE") (eq .Mode "development")  }}
-- add: /ee/fe/modules
-  to: /srv/jekyll-data/documentation/_data/bundles/raw/fe
-  owner: jekyll
-  group: jekyll
-  stageDependencies:
-    setup: ['**/*']
-  includePaths: ['values-*.yaml']
-- add: /ee/fe/modules
-  to: /src/fe/modules
-  owner: jekyll
-  group: jekyll
-  stageDependencies:
-    setup: ['**/*']
-  includePaths: ['*/docs/','*/openapi/','*/crds/', '*/oss.yaml']
-  excludePaths: ['*/openapi/values.yaml', '*/openapi/*-tests.yaml''*/docs/internal/']
-{{- end }}
 # CRDs
 - add: /candi/version_map.yml
   to: /srv/jekyll-data/documentation/_data/version_map.yml

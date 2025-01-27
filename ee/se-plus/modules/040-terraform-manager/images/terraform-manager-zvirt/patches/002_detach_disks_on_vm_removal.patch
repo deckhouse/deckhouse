@@ -9,7 +9,7 @@ diff --git a/internal/ovirt/resource_ovirt_vm.go b/internal/ovirt/resource_ovirt
 --- a/internal/ovirt/resource_ovirt_vm.go	(revision eb82784548e140d2948a9600ac0b52c938151ba6)
 +++ b/internal/ovirt/resource_ovirt_vm.go	(date 1711713686988)
 @@ -748,7 +748,56 @@
- 
+
  func (p *provider) vmDelete(ctx context.Context, data *schema.ResourceData, _ interface{}) diag.Diagnostics {
  	client := p.client.WithContext(ctx)
 -	if err := client.RemoveVM(ovirtclient.VMID(data.Id())); err != nil {

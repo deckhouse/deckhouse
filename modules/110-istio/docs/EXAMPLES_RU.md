@@ -645,7 +645,7 @@ annotations:
   * Одна глобальная, обслуживает namespace'ы или поды без явного указания версии (label у namespace `istio-injection: enabled`). Настраивается параметром [globalVersion](configuration.html#parameters-globalversion).
   * Остальные — дополнительные, обслуживают namespace'ы или поды с явным указанием версии (label у namespace или пода `istio.io/rev: v1x21`). Настраиваются параметром [additionalVersions](configuration.html#parameters-additionalversions).
 * Istio заявляет обратную совместимость между data plane и control plane в диапазоне двух минорных версий:
-![Istio data-plane and control-plane compatibility](https://istio.io/latest/blog/2021/extended-support/extended_support.png)
+
 * Алгоритм обновления (для примера, на версию `1.21`):
   * Добавить желаемую версию в параметр модуля [additionalVersions](configuration.html#parameters-additionalversions) (`additionalVersions: ["1.21"]`).
   * Дождаться появления соответствующего пода `istiod-v1x21-xxx-yyy` в namespace `d8-istio`.

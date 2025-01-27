@@ -16,7 +16,7 @@ mount:
     to: /go/pkg
 shell:
   beforeInstall:
-  - | 
+  - |
     apk upgrade --available --no-cache && \
     apk add --no-cache ca-certificates git make openssh-client
   install:

@@ -62,7 +62,7 @@ In the automatic mode, in the event of a restart of `stronghold` nodes, the stor
 
 ## Access Management
 
-The role named `deckhouse_administrators` is created after storage initialization using the `Automatic` mode of the `stronghold` module. This role is granted access to the web interface through OIDC authentication via [Dex](https://deckhouse.ru/documentation/v1/modules/150-user-authn/).
+The role named `deckhouse_administrators` is created after storage initialization using the `Automatic` mode of the `stronghold` module. This role is granted access to the web interface through OIDC authentication via [Dex](https://deckhouse.ru/documentation/v1/modules/user-authn/).
 Additionally, the automatic connection of the current Deckhouse cluster to `stronghold` is configured. This is necessary for the operation of the [secrets-store-integration](../../secrets-store-integration/) module.
 
 To provide access to the users with the `admins` group membership (group membership is conveyed from the used IdP or LDAP via Dex), you need to specify this group in the `administrators` array in the ModuleConfig:

@@ -45,7 +45,7 @@ Non-namespaced Kubernetes objects do not need labels on the namespace, and monit
 
 > **Caution!** These labels **do not** apply to `imagefs` (`/var/lib/docker` by default) and `nodefs` (`/var/lib/kubelet` by default) volumes.
 The thresholds for these volumes are configured completely automatically according to the kubelet's [eviction thresholds](https://kubernetes.io/docs/tasks/administer-cluster/out-of-resource/).
-The default values are available [here](https://github.com/kubernetes/kubernetes/blob/743e4fba6339237cc8d5c11413f76ea54b4cc3e8/pkg/kubelet/apis/config/v1beta1/defaults_linux.go#L22-L27); for more info, see the [exporter](https://github.com/deckhouse/deckhouse/blob/main/modules/340-monitoring-kubernetes/images/kubelet-eviction-thresholds-exporter/).
+The default values are available [here](https://github.com/kubernetes/kubernetes/blob/743e4fba6339237cc8d5c11413f76ea54b4cc3e8/pkg/kubelet/apis/config/v1beta1/defaults_linux.go#L22-L27); for more info, see the [exporter](https://github.com/deckhouse/deckhouse/blob/main/modules/monitoring-kubernetes/images/kubelet-eviction-thresholds-exporter/).
 
 #### Namespaced Kubernetes objects
 

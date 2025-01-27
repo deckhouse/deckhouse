@@ -3,9 +3,9 @@ index 8cd71fd..de4bf47 100644
 --- a/go.mod
 +++ b/go.mod
 @@ -2,24 +2,30 @@ module sigs.k8s.io/vsphere-csi-driver
- 
+
  go 1.12
- 
+
 +replace (
 +	bitbucket.org/ww/goautoneg => github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822
 +	k8s.io/cloud-provider-vsphere v0.2.1 => github.com/flant/cloud-provider-vsphere v0.2.2-0.20200403085758-92ef9ea7f6ed
@@ -440,7 +440,7 @@ index 34496de..b7edd11 100644
 -
  	vTypes "sigs.k8s.io/vsphere-csi-driver/pkg/csi/types"
  )
- 
+
 +var volumeResizeRequired = NewRwMap()
 +
  type controller struct {
@@ -449,7 +449,7 @@ index 34496de..b7edd11 100644
 @@ -313,6 +314,12 @@ func (c *controller) ControllerPublishVolume(
  		return nil, status.Errorf(codes.Internal, msg)
  	}
- 
+
 +	if ok := volumeResizeRequired.VolIdExists(req.VolumeId); ok {
 +		msg := "Resize required, not publishing."
 +		log.Error(msg)
@@ -460,9 +460,9 @@ index 34496de..b7edd11 100644
  	if err != nil {
  		msg := fmt.Sprintf("WhichVCandDCByFCDId(%s) failed. Err: %v", req.VolumeId, err)
 @@ -322,9 +329,9 @@ func (c *controller) ControllerPublishVolume(
- 
+
  	fcd := discoveryInfo.FCDInfo
- 
+
 -	vm, err := discoveryInfo.DataCenter.GetVMByDNSName(ctx, req.NodeId)
 +	vm, err := discoveryInfo.DataCenter.GetVMByUUID(ctx, req.NodeId)
  	if err != nil {
@@ -470,11 +470,11 @@ index 34496de..b7edd11 100644
 +		log.Errorf("GetVMByUUID(%s) failed. Err: %v", req.NodeId, err)
  		return nil, err
  	}
- 
+
 @@ -384,9 +391,9 @@ func (c *controller) ControllerUnpublishVolume(
- 
+
  	fcd := discoveryInfo.FCDInfo
- 
+
 -	vm, err := discoveryInfo.DataCenter.GetVMByDNSName(ctx, req.NodeId)
 +	vm, err := discoveryInfo.DataCenter.GetVMByUUID(ctx, req.NodeId)
  	if err != nil {
@@ -482,11 +482,11 @@ index 34496de..b7edd11 100644
 +		log.Errorf("GetVMByUUID(%s) failed. Err: %v", req.NodeId, err)
  		return nil, err
  	}
- 
+
 @@ -484,6 +491,59 @@ func (c *controller) ListVolumes(
  	return resp, nil
  }
- 
+
 +func (c *controller) ControllerExpandVolume(
 +	ctx context.Context,
 +	req *csi.ControllerExpandVolumeRequest) (
@@ -626,7 +626,7 @@ index 53d6b9f..ba2c8dc 100644
 +++ b/pkg/csi/service/node.go
 @@ -17,19 +17,26 @@ limitations under the License.
  package service
- 
+
  import (
 +	"bytes"
  	"fmt"
@@ -636,7 +636,7 @@ index 53d6b9f..ba2c8dc 100644
  	"path/filepath"
 +	"regexp"
  	"strings"
- 
+
 +	"golang.org/x/sys/unix"
 +	"k8s.io/utils/exec"
 +
@@ -648,13 +648,13 @@ index 53d6b9f..ba2c8dc 100644
  	"google.golang.org/grpc/codes"
  	"google.golang.org/grpc/status"
 +	"k8s.io/kubernetes/pkg/volume/util/fs"
- 
+
  	"sigs.k8s.io/vsphere-csi-driver/pkg/csi/service/fcd"
  )
 @@ -40,6 +47,10 @@ const (
  	dmiDir      = "/sys/class/dmi"
  )
- 
+
 +var (
 +	kernelVersionRegex = regexp.MustCompile(`\d+\.\d+\.\d+`)
 +)
@@ -665,7 +665,7 @@ index 53d6b9f..ba2c8dc 100644
 @@ -338,7 +349,51 @@ func (s *service) NodeGetVolumeStats(
  	req *csi.NodeGetVolumeStatsRequest) (
  	*csi.NodeGetVolumeStatsResponse, error) {
- 
+
 -	return nil, nil
 +	target := req.GetVolumePath()
 +	if err := verifyTargetDir(target); err != nil {
@@ -713,7 +713,7 @@ index 53d6b9f..ba2c8dc 100644
 +
 +	return &csi.NodeExpandVolumeResponse{CapacityBytes: req.GetCapacityRange().GetRequiredBytes()}, nil
  }
- 
+
  func (s *service) NodeGetCapabilities(
 @@ -355,6 +410,20 @@ func (s *service) NodeGetCapabilities(
  					},
@@ -739,16 +739,16 @@ index 53d6b9f..ba2c8dc 100644
 @@ -364,7 +433,7 @@ func (s *service) NodeGetInfo(
  	req *csi.NodeGetInfoRequest) (
  	*csi.NodeGetInfoResponse, error) {
- 
+
 -	id, err := os.Hostname()
 +	id, err := getSystemUUID()
  	if err != nil {
  		return nil, status.Errorf(codes.Internal,
  			"Unable to retrieve Node ID, err: %s", err)
 @@ -728,7 +797,12 @@ func getSystemUUID() (string, error) {
- 
+
  	id := strings.TrimSpace(string(idb))
- 
+
 -	return convertUUID(id), nil
 +	uuid, err := convertUUID(id)
 +	if err != nil {
@@ -757,12 +757,12 @@ index 53d6b9f..ba2c8dc 100644
 +
 +	return uuid, nil
  }
- 
+
  func getDiskID(volID string, pubCtx map[string]string) (string, error) {
 @@ -754,15 +828,51 @@ func getDiskID(volID string, pubCtx map[string]string) (string, error) {
  	return diskID, nil
  }
- 
+
 -func convertUUID(id string) string {
 -	// convert UUID to vSphere format
 -	uuid := fmt.Sprintf("%s%s%s%s-%s%s-%s%s-%s-%s",
@@ -818,7 +818,7 @@ index 53d6b9f..ba2c8dc 100644
 +
 +	return strings.ToLower(id), nil
  }
- 
+
  func getDevFromMount(target string) (*Device, error) {
 diff --git a/pkg/csi/service/node_test.go b/pkg/csi/service/node_test.go
 index 8ead7c5..9ccd279 100644
@@ -851,4 +851,4 @@ index cbfb10c..8a54858 100644
 +		}
  	}
  }
- 
+

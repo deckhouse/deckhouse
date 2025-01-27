@@ -5,7 +5,7 @@ index ca56321..49c4ca2 100644
 @@ -321,6 +321,13 @@ var backendProtocolMapping = map[string]string{
  	"tcp":   "ssl",
  }
- 
+
 +var backendProtocolToAwsEnumMapping = map[string]string{
 +	"tcp":   elbv2.ProtocolEnumTcp,
 +	"tls":   elbv2.ProtocolEnumTls,
@@ -19,7 +19,7 @@ index ca56321..49c4ca2 100644
 @@ -4051,7 +4058,7 @@ func (c *Cloud) EnsureLoadBalancer(ctx context.Context, clusterName string, apiS
  			continue
  		}
- 
+
 -		if isNLB(annotations) {
 +		if isNLB(annotations) || isNone(annotations) {
  			portMapping := nlbPortMapping{
@@ -28,7 +28,7 @@ index ca56321..49c4ca2 100644
 @@ -4063,6 +4070,12 @@ func (c *Cloud) EnsureLoadBalancer(ctx context.Context, clusterName string, apiS
  				return nil, err
  			}
- 
+
 +			if isNone(annotations) {
 +				portMapping.HealthCheckConfig.Protocol = elbv2.ProtocolEnumHttp
 +				portMapping.HealthCheckConfig.Port = "10256" // ProxyHealthzPort
@@ -41,7 +41,7 @@ index ca56321..49c4ca2 100644
 @@ -4074,6 +4087,19 @@ func (c *Cloud) EnsureLoadBalancer(ctx context.Context, clusterName string, apiS
  				}
  			}
- 
+
 +			if isNone(annotations) {
 +				instanceProtocol := annotations[ServiceAnnotationLoadBalancerBEProtocol]
 +				if instanceProtocol == "" {
@@ -61,7 +61,7 @@ index ca56321..49c4ca2 100644
 @@ -4107,6 +4133,57 @@ func (c *Cloud) EnsureLoadBalancer(ctx context.Context, clusterName string, apiS
  		internalELB = true
  	}
- 
+
 +	if isNone(annotations) {
 +		if path, healthCheckNodePort := servicehelpers.GetServiceHealthCheckPathPort(apiService); path != "" {
 +			for i := range v2Mappings {
@@ -148,13 +148,13 @@ index ca56321..49c4ca2 100644
 +			}, true, nil
 +		}
 +	}
- 
+
  	if isNLB(service.Annotations) {
  		lb, err := c.describeLoadBalancerv2(loadBalancerName)
 @@ -4697,6 +4802,26 @@ func (c *Cloud) EnsureLoadBalancerDeleted(ctx context.Context, clusterName strin
  	}
  	loadBalancerName := c.GetLoadBalancerName(ctx, clusterName, service)
- 
+
 +	if isNone(service.Annotations) {
 +		for i, _ := range service.Spec.Ports {
 +			tgNameWithSuffix := generateTgName(loadBalancerName, strconv.Itoa(i))
@@ -192,7 +192,7 @@ index ca56321..49c4ca2 100644
 @@ -5247,6 +5376,10 @@ func getInitialAttachDetachDelay(status string) time.Duration {
  	return volumeAttachmentStatusInitialDelay
  }
- 
+
 +func generateTgName(prefix, suffix string) string {
 +	return prefix[0:32-1-len(suffix)] + "-" + suffix
 +}
@@ -207,7 +207,7 @@ index c39ea3d..7f90505 100644
 @@ -87,6 +87,13 @@ func isLBExternal(annotations map[string]string) bool {
  	return false
  }
- 
+
 +func isNone(annotations map[string]string) bool {
 +	if annotations[ServiceAnnotationLoadBalancerType] == "none" {
 +		return true
@@ -221,7 +221,7 @@ index c39ea3d..7f90505 100644
 @@ -137,6 +144,21 @@ func getKeyValuePropertiesFromAnnotation(annotations map[string]string, annotati
  	return additionalTags
  }
- 
+
 +func (c *Cloud) describeTargetGroup(tgName string) (*elbv2.TargetGroup, error) {
 +	response, err := c.elbv2.DescribeTargetGroups(&elbv2.DescribeTargetGroupsInput{})
 +	if err != nil {
@@ -242,7 +242,7 @@ index c39ea3d..7f90505 100644
  	loadBalancer, err := c.describeLoadBalancerv2(loadBalancerName)
 @@ -576,7 +598,7 @@ func (c *Cloud) deleteListenerV2(listener *elbv2.Listener) error {
  }
- 
+
  // ensureTargetGroup creates a target group with a set of instances.
 -func (c *Cloud) ensureTargetGroup(targetGroup *elbv2.TargetGroup, serviceName types.NamespacedName, mapping nlbPortMapping, instances []string, vpcID string, tags map[string]string) (*elbv2.TargetGroup, error) {
 +func (c *Cloud) ensureTargetGroup(targetGroup *elbv2.TargetGroup, serviceName types.NamespacedName, mapping nlbPortMapping, instances []string, vpcID string, tags map[string]string, tgName ...string) (*elbv2.TargetGroup, error) {
@@ -252,7 +252,7 @@ index c39ea3d..7f90505 100644
 @@ -597,6 +619,10 @@ func (c *Cloud) ensureTargetGroup(targetGroup *elbv2.TargetGroup, serviceName ty
  			// HealthCheckTimeoutSeconds:  Currently not configurable, 6 seconds for HTTP, 10 for TCP/HTTPS
  		}
- 
+
 +		if len(tgName) > 0 {
 +			input.Name = aws.String(tgName[0])
 +		}
@@ -263,7 +263,7 @@ index c39ea3d..7f90505 100644
 @@ -626,6 +652,21 @@ func (c *Cloud) ensureTargetGroup(targetGroup *elbv2.TargetGroup, serviceName ty
  		return tg, nil
  	}
- 
+
 +	{
 +		if *targetGroup.Protocol != mapping.TrafficProtocol {
 +			_, err := c.elbv2.DeleteTargetGroup(&elbv2.DeleteTargetGroupInput{TargetGroupArn: targetGroup.TargetGroupArn})

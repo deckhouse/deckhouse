@@ -68,7 +68,7 @@ spec:
 
 Чтобы аутентифицировать и авторизовывать пользователей с помощью kube-apiserver, у прокси должны быть права на создание `TokenReview` и `SubjectAccessReview`.
 
-В наших кластерах [уже есть готовая ClusterRole](https://github.com/deckhouse/deckhouse/blob/main/modules/002-deckhouse/templates/common/rbac/kube-rbac-proxy.yaml) — **d8-rbac-proxy**.
+В наших кластерах [уже есть готовая ClusterRole](https://github.com/deckhouse/deckhouse/blob/main/modules/deckhouse/templates/common/rbac/kube-rbac-proxy.yaml) — **d8-rbac-proxy**.
 Создавать ее самостоятельно не нужно! Нужно только прикрепить ее к Service Account'у вашего Deployment'а.
 {% raw %}
 

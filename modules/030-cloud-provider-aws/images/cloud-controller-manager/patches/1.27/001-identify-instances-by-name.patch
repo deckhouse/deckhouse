@@ -13,10 +13,10 @@ index a6e2597..39dab8f 100644
 +	}
  	return types.NodeName(aws.StringValue(i.PrivateDnsName))
  }
- 
+
 @@ -5028,7 +5033,19 @@ func (c *Cloud) findInstanceByNodeName(nodeName types.NodeName) (*ec2.Instance,
  	}
- 
+
  	if len(instances) == 0 {
 -		return nil, nil
 +		filters := []*ec2.Filter{
