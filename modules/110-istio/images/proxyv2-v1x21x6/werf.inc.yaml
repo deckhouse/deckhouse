@@ -164,8 +164,11 @@ import:
   before: install
 shell:
   install:
+  - export CCACHE_DIR="/tmp/ccache-dir"
   - mkdir -p /opt/libcxx
   - cd /tmp/
+  - ccache --zero-stats || true
+  - ccache --show-stats -v || true
   - |
     cmake \
     -GNinja \
@@ -174,10 +177,16 @@ shell:
     -DCMAKE_BUILD_TYPE=Release \
     -DCMAKE_C_COMPILER=clang \
     -DCMAKE_CXX_COMPILER=clang++ \
+    -DLLVM_INCLUDE_BENCHMARKS=OFF \
+    -DLLVM_CCACHE_BUILD="ON" \
+    -DLLVM_CCACHE_DIR="/tmp/ccache-dir" \
+    -DLLVM_CCACHE_MAXSIZE="0" \
     -DCMAKE_INSTALL_PREFIX="/opt/libcxx" /src/llvm/llvm
   setup:
   - cd /tmp/
+  - ccache --show-stats -v || true
   - ninja install-cxx install-cxxabi
+  - ccache --show-stats -v || true
   - rm -rf /opt/libcxx/include
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-binaries-artifact
