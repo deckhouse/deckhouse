@@ -1,12 +1,12 @@
 # [<en>] General cluster parameters.
 # [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/installing/configuration.html#clusterconfiguration
-# [<ru>] Секция с общими параметрами кластера.
+# [<ru>] Общие параметры кластера.
 # [<ru>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/installing/configuration.html#clusterconfiguration
 apiVersion: deckhouse.io/v1
 kind: ClusterConfiguration
 clusterType: Cloud
 cloud:
-  provider: OpenStack
+  provider: HuaweiCloud
   # [<en>] A prefix of objects that are created in the cloud during the installation.
   # [<en>] You might consider changing this.
   # [<ru>] Префикс объектов, создаваемых в облаке при установке.
@@ -21,18 +21,22 @@ serviceSubnetCIDR: 10.222.0.0/16
 kubernetesVersion: "Automatic"
 clusterDomain: "cluster.local"
 ---
-# [<en>] Section for bootstrapping the Deckhouse cluster.
+# [<en>] Settings for the bootstrapping the Deckhouse cluster
 # [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/installing/configuration.html#initconfiguration
-# [<ru>] Секция первичной инициализации кластера Deckhouse.
+# [<ru>] Настройки первичной инициализации кластера Deckhouse.
 # [<ru>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/installing/configuration.html#initconfiguration
 apiVersion: deckhouse.io/v1
 kind: InitConfiguration
 deckhouse:
-  imagesRepo: registry.deckhouse.io/deckhouse/ee
+  imagesRepo: registry.deckhouse.ru/deckhouse/ee
   # [<en>] A special string with your token to access Docker registry (generated automatically for your license token).
   # [<ru>] Строка с ключом для доступа к Docker registry (сгенерировано автоматически для вашего токена доступа).
   registryDockerCfg: <YOUR_ACCESS_STRING_IS_HERE>
 ---
+# [<en>] Deckhouse module settings.
+# [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/002-deckhouse/configuration.html
+# [<ru>] Настройки модуля deckhouse.
+# [<ru>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/002-deckhouse/configuration.html
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
@@ -45,6 +49,10 @@ spec:
     releaseChannel: Stable
     logLevel: Info
 ---
+# [<en>] Global Deckhouse settings.
+# [<en>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/deckhouse-configure-global.html#parameters
+# [<ru>] Глобальные настройки Deckhouse.
+# [<ru>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/deckhouse-configure-global.html#%D0%BF%D0%B0%D1%80%D0%B0%D0%BC%D0%B5%D1%82%D1%80%D1%8B
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
@@ -63,6 +71,10 @@ spec:
       # [<ru>] Можете изменить на свой сразу, либо следовать шагам руководства и сменить его после установки.
       publicDomainTemplate: "%s.example.com"
 ---
+# [<en>] user-authn module settings.
+# [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/150-user-authn/configuration.html
+# [<ru>] Настройки модуля user-authn.
+# [<ru>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/150-user-authn/configuration.html
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
@@ -85,16 +97,13 @@ spec:
           kubeconfigGeneratorMasterCA: ""
 ---
 # [<en>] Cloud provider settings.
-# [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-openstack/cluster_configuration.html
-# [<ru>] Настройки облачного провайдера..
-# [<ru>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-openstack/cluster_configuration.html
+# [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-huaweicloud/cluster_configuration.html
+# [<ru>] Настройки облачного провайдера.
+# [<ru>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-huaweicloud/cluster_configuration.html
 apiVersion: deckhouse.io/v1
-kind: OpenStackClusterConfiguration
+kind: HuaweiCloudClusterConfiguration
 layout: Standard
 standard:
-  # [<en>] Network name for external communication.
-  # [<ru>] Имя сети для внешнего взаимодействия.
-  externalNetworkName: *!CHANGE_EXT_NET*
   # [<en>] Addressing for the internal network of the cluster nodes.
   # [<ru>] Адресация для внутренней сети узлов кластера.
   internalNetworkCIDR: 192.168.198.0/24
@@ -108,26 +117,36 @@ standard:
   # [<en>] A flag that determines whether SecurityGroups and AllowedAddressPairs should be configured on internal network ports.
   # [<ru>] Флаг, который определяет необходимо ли настраивать SecurityGroups и AllowedAddressPairs на портах внутренней сети.
   internalNetworkSecurity: true
-# [<en>] OpenStack API access parameters
-# [<ru>] параметры доступа к OpenStack API
+  # [<en>] Enable Elastic IP for the master nodes.
+  # [<ru>] Включите Elastic IP для мастер узлов.
+  enableEIP: true
+# [<en>] HuaweiCloud API access parameters
+# [<ru>] параметры доступа к HuaweiCloud API
 provider:
-  authURL: *!CHANGE_API_URL*
-  # [<en>] You might consider changing this.
-  # [<ru>] Возможно, захотите изменить.
-  domainName: users
-  # [<en>] OS_USER_DOMAIN_NAME variable from the openrc file.
-  # [<ru>] Переменная OS_USER_DOMAIN_NAME из файла openrc.
-  password: *!CHANGE_PASSWORD*
-  # [<en>] You might consider changing this.
-  # [<ru>] Возможно, захотите изменить.
-  region: RegionOne
-  # [<en>] You might need to specify tenantName instead of tenantID.
-  # [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration-provider-tenantname
-  # [<ru>] Возможно вам нужно указать tenantName вместо tenantID.
-  # [<ru>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration-provider-tenantname
-  # tenantName: PROJECT_NAME
-  tenantID: *!CHANGE_PROJECT_ID*
-  username: *!CHANGE_USERNAME*
+  # [<en>] The endpoint of the cloud provider.
+  # [<ru>] Конечная точка поставщика облачных услуг.
+  cloud: "<Endpoint>"
+  # [<en>] The Huawei Cloud region where the cluster will be deployed.
+  # [<ru>] Регион Huawei Cloud, в котором будет развернут кластер.
+  region: "<Region>"
+  # [<en>] The Huawei Cloud access key.
+  # [<ru>] Ключ доступа к облаку Huawei Cloud.
+  accessKey: "<Access key>"
+  # [<en>] The Huawei Cloud secret key.
+  # [<ru>] Секретный ключ облака Huawei Cloud.
+  secretKey: "<Secret key>"
+  # [<en>] Trust self-signed SSL certificates.
+  # [<ru>] Доверять самоподписанным SSL-сертификатам.
+  insecure: false
+  # [<en>] The identity authentication URL.
+  # [<ru>] URL-адрес аутентификации личности.
+  authURL: "<Auth URL>"
+  # [<en>] The account name of IAM to scope to.
+  # [<ru>] Имя учетной записи IAM для охвата.
+  domainName: "<Domain Name>"
+  # [<en>] The project ID.
+  # [<ru>] Идентификатор проекта.
+  projectID: "<Project ID>"
 masterNodeGroup:
   replicas: 1
   # [<en>] Disk type array.
@@ -152,6 +171,9 @@ masterNodeGroup:
     # [<en>] Disk size for the root FS.
     # [<ru>] Размер диска для корневой ФС.
     rootDiskSize: 40
+    # [<en>] The type of a root disk.
+    # [<ru>] Тип root-диска.
+    rootDiskType: SSD
 # [<en>] Public SSH key for accessing cloud nodes.
 # [<en>] This key will be added to the user on created nodes (the user name depends on the image used).
 # [<ru>] Публичная часть SSH-ключа для доступа к узлам облака.

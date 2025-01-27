@@ -1,7 +1,6 @@
-![resources](https://docs.google.com/drawings/d/e/2PACX-1vSTIcQnxcwHsgANqHE5Ry_ZcetYX2lTFdDjd3Kip5cteSbUxwRjR3NigwQzyTMDGX10_Avr_mizOB5o/pub?w=960&h=720)
-<!--- Source: https://docs.google.com/drawings/d/1hjmDn2aJj3ru3kBR6Jd6MAW3NWJZMNkend_K43cMN0w/edit --->
+![resources](https://docs.google.com/drawings/d/e/2PACX-1vSUznz9tfsUtLqC7r2nHHndLdbTYN5LIwFnP68-pxZY1wZaIrG6Mxj0kvyIZV-jKDDidp8sfB0UMTdz/pub?w=812&h=655)
+<!--- Source: https://docs.google.com/drawings/d/1sB_V7NhDiit8Gok2pq_8syQknCdC4GicpG3L2YF5QIU/edit --->
 
-In this scheme, an internal cluster network is created with a gateway to the public network; the nodes do not have public IP addresses. Note that the floating IP is assigned to the master node.
-
-> **Caution!**
-> If the provider does not support SecurityGroups, all applications running on nodes with floating IPs assigned will be available at a public IP. For example, kube-apiserver on master nodes will be available on port 6443. To avoid this, we recommend using the SimpleWithInternalNetwork placement strategy.
+* An internal cluster network is created with a gateway to the public network.
+* The elastic IP can be assigned to the master node.
+* Nodes managed by the Cluster API do not have public IP addresses.
