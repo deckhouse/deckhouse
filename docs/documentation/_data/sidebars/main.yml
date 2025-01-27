@@ -18,6 +18,30 @@ entries:
             ru: Custom Resources
           url: /cr.html
         - title:
+            en: Security software settings
+            ru: Настройка ПО безопасности
+          folders:
+            - title:
+                en: SIEM
+                ru: SIEM
+              folders:
+                - title:
+                    en: KUMA
+                    ru: KUMA
+                  url: /security/kuma.html
+            - title:
+                en: Security scanners
+                ru: Сканеры безопасности
+              folders:
+                - title:
+                    en: Common settings
+                    ru: Общие настройки
+                  url: /security_software_setup.html
+                - title:
+                    en: KESL
+                    ru: KESL
+                  url: /security/kesl.html
+        - title:
             en: FAQ
             ru: FAQ
           url: /deckhouse-faq.html
@@ -356,6 +380,10 @@ entries:
                     en: Custom Resources
                     ru: Custom Resources
                   url: /modules/log-shipper/cr.html
+            - title:
+                en: Examples
+                ru: Примеры
+              url: /modules/log-shipper/examples.html
         - title:
             en: monitoring-custom
             ru: monitoring-custom
