@@ -29,12 +29,12 @@ import (
 	"github.com/bep/logg"
 	"github.com/bep/overlayfs"
 	"github.com/gohugoio/hugo/common/htime"
+	"github.com/gohugoio/hugo/common/hugo"
 	"github.com/gohugoio/hugo/common/loggers"
 	"github.com/gohugoio/hugo/common/paths"
 	"github.com/gohugoio/hugo/config"
 	"github.com/gohugoio/hugo/config/allconfig"
 	"github.com/gohugoio/hugo/deps"
-	"github.com/gohugoio/hugo/helpers"
 	"github.com/gohugoio/hugo/hugofs"
 	"github.com/gohugoio/hugo/hugolib"
 	"github.com/spf13/afero"
@@ -79,8 +79,8 @@ func (c *command) PreRun() error {
 		return err
 	}
 
-	c.commonConfigs = lazycache.New[int32, *commonConfig](lazycache.Options{MaxEntries: 5})
-	c.hugoSites = lazycache.New[int32, *hugolib.HugoSites](lazycache.Options{MaxEntries: 5})
+	c.commonConfigs = lazycache.New[int32, *commonConfig](lazycache.Options[int32, *commonConfig]{MaxEntries: 5})
+	c.hugoSites = lazycache.New[int32, *hugolib.HugoSites](lazycache.Options[int32, *hugolib.HugoSites]{MaxEntries: 5})
 
 	return nil
 }
@@ -260,7 +260,7 @@ func (c *command) ConfigFromProvider(key int32, cfg config.Provider) (*commonCon
 
 func (c *command) HugFromConfig(conf *commonConfig) (*hugolib.HugoSites, error) {
 	h, _, err := c.hugoSites.GetOrCreate(c.configVersionID.Load(), func(key int32) (*hugolib.HugoSites, error) {
-		depsCfg := deps.DepsCfg{Configs: conf.configs, Fs: conf.fs, LogOut: c.logger.Out(), LogLevel: c.logger.Level()}
+		depsCfg := deps.DepsCfg{Configs: conf.configs, Fs: conf.fs, StdOut: c.logger.StdOut(), LogLevel: c.logger.Level()}
 		return hugolib.NewHugoSites(depsCfg)
 	})
 	return h, err
@@ -284,22 +284,22 @@ func (c *command) createLogger(running bool) (loggers.Logger, error) {
 		}
 	} else {
 		if c.flags.Verbose {
-			helpers.Deprecated("--verbose", "use --logLevel info", false)
+			hugo.Deprecate("--verbose", "use --logLevel", "info")
 			level = logg.LevelInfo
 		}
 
 		if c.flags.Debug {
-			helpers.Deprecated("--debug", "use --logLevel debug", false)
+			hugo.Deprecate("--debug", "use --logLevel", "debug")
 			level = logg.LevelDebug
 		}
 	}
 
 	optsLogger := loggers.Options{
-		Distinct:    true,
-		Level:       level,
-		Stdout:      c.Out,
-		Stderr:      c.Out,
-		StoreErrors: running,
+		DistinctLevel: level,
+		Level:         level,
+		StdOut:        c.Out,
+		StdErr:        c.Out,
+		StoreErrors:   running,
 	}
 
 	return loggers.New(optsLogger), nil
