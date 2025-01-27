@@ -194,7 +194,7 @@ func (r *reconciler) ensureModuleRelease(ctx context.Context, sourceUID types.UI
 			},
 		}
 		if meta.ModuleDefinition != nil {
-			release.Spec.Requirements = meta.ModuleDefinition.GetRequirements()
+			release.Spec.Requirements = meta.ModuleDefinition.Requirements
 		}
 
 		// if it's a first release for a Module, we have to install it immediately
