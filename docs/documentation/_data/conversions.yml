@@ -1,13 +1,11 @@
-150-user-authn:
-    - version: 2
-340-extended-monitoring:
-    - version: 2
 cilium-hubble:
     - version: 2
 dashboard:
     - version: 2
     - version: 3
 descheduler:
+    - version: 2
+extended-monitoring:
     - version: 2
 istio:
     - version: 2
@@ -25,3 +23,5 @@ prometheus:
 upmeter:
     - version: 2
     - version: 3
+user-authn:
+    - version: 2

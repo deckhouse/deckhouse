@@ -22,6 +22,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"strings"
 	"tools/helm_generate/helper"
 
 	"gopkg.in/yaml.v3"
@@ -32,6 +33,7 @@ const (
 )
 
 var regexVersionFile = regexp.MustCompile("v([1-9]|[1-9][0-9]|[1-9][0-9][0-9]).yaml")
+var moduleWeight = regexp.MustCompile("[0-9][0-9][0-9]-")
 
 type module struct {
 	Name string
@@ -150,8 +152,10 @@ func parseModules(deckhouseRoot string, folder string) []module {
 	files, _ := os.ReadDir(filepath.Join(deckhouseRoot, folder))
 	for _, file := range files {
 		if file.IsDir() {
+			weight := moduleWeight.Find([]byte(file.Name()))
+
 			md := module{
-				Name: file.Name(),
+				Name: strings.TrimLeft(file.Name(), string(weight)),
 				Path: filepath.Join(folder, file.Name()),
 			}
 
