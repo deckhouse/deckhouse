@@ -672,13 +672,7 @@ func (in *ModuleReleaseSpec) DeepCopyInto(out *ModuleReleaseSpec) {
 		in, out := &in.ApplyAfter, &out.ApplyAfter
 		*out = (*in).DeepCopy()
 	}
-	if in.Requirements != nil {
-		in, out := &in.Requirements, &out.Requirements
-		*out = make(map[string]string, len(*in))
-		for key, val := range *in {
-			(*out)[key] = val
-		}
-	}
+	in.Requirements.DeepCopyInto(&out.Requirements)
 	out.Changelog = in.Changelog.DeepCopy()
 	return
 }
