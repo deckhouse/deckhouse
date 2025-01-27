@@ -1,27 +1,27 @@
-040-node-manager:
-    - version: 2
-110-istio:
-    - version: 2
 150-user-authn:
     - version: 2
-300-prometheus:
+340-extended-monitoring:
+    - version: 2
+cilium-hubble:
+    - version: 2
+dashboard:
+    - version: 2
+    - version: 3
+descheduler:
+    - version: 2
+istio:
+    - version: 2
+metallb:
+    - version: 2
+node-manager:
+    - version: 2
+openvpn:
+    - version: 2
+prometheus:
     - version: 2
       description:
         en: todo en
         ru: todo ru
-340-extended-monitoring:
-    - version: 2
-380-metallb:
-    - version: 2
-400-descheduler:
-    - version: 2
-500-cilium-hubble:
-    - version: 2
-500-dashboard:
-    - version: 2
-    - version: 3
-500-openvpn:
-    - version: 2
-500-upmeter:
+upmeter:
     - version: 2
     - version: 3

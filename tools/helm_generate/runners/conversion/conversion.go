@@ -38,6 +38,10 @@ type module struct {
 	Path string
 }
 
+type moduleFile struct {
+	Name string `yaml:"name"`
+}
+
 type conversion struct {
 	Version     *int         `yaml:"version,omitempty"`
 	Description *description `yaml:"description,omitempty"`
@@ -72,6 +76,11 @@ func run() error {
 			continue
 		}
 
+		_, ok := result[module.Name]
+		if ok {
+			panic("duplicate module name, probably we have collisions")
+		}
+
 		filepath.Walk(folder, func(path string, info fs.FileInfo, _ error) error {
 			if !regexVersionFile.MatchString(filepath.Base(path)) {
 				return nil
@@ -88,14 +97,14 @@ func run() error {
 				return fmt.Errorf("yaml decode: %w", err)
 			}
 
-			mods, ok := result[module.Name]
+			conversions, ok := result[module.Name]
 			if !ok {
-				mods = make([]conversion, 0, 1)
+				conversions = make([]conversion, 0, 1)
 			}
 
-			mods = append(mods, *c)
+			conversions = append(conversions, *c)
 
-			result[module.Name] = mods
+			result[module.Name] = conversions
 
 			return nil
 		})
@@ -117,74 +126,55 @@ func run() error {
 	return nil
 }
 
-func modules(deckhouseRoot string) (modules []module) {
+func modules(deckhouseRoot string) []module {
+	modules := make([]module, 0)
+
 	// ce modules
-	files, _ := os.ReadDir(filepath.Join(deckhouseRoot, "modules"))
-	for _, file := range files {
-		if file.IsDir() {
-			md := module{
-				Name: file.Name(),
-				Path: filepath.Join("modules", file.Name()),
-			}
-			modules = append(modules, md)
-		}
-	}
-
+	modules = append(modules, parseModules(deckhouseRoot, "modules")...)
 	// ee modules
-	files, _ = os.ReadDir(filepath.Join(deckhouseRoot, "ee/modules"))
-	for _, file := range files {
-		if file.IsDir() {
-			md := module{
-				Name: file.Name(),
-				Path: filepath.Join("ee/modules", file.Name()),
-			}
-			modules = append(modules, md)
-		}
-	}
-
+	modules = append(modules, parseModules(deckhouseRoot, "ee/modules")...)
 	// be modules
-	files, _ = os.ReadDir(filepath.Join(deckhouseRoot, "ee/be/modules"))
-	for _, file := range files {
-		if file.IsDir() {
-			md := module{
-				Name: file.Name(),
-				Path: filepath.Join("ee/be/modules", file.Name()),
-			}
-			modules = append(modules, md)
-		}
-	}
-
+	modules = append(modules, parseModules(deckhouseRoot, "ee/be/modules")...)
 	// fe modules
-	files, _ = os.ReadDir(filepath.Join(deckhouseRoot, "ee/fe/modules"))
-	for _, file := range files {
-		if file.IsDir() {
-			md := module{
-				Name: file.Name(),
-				Path: filepath.Join("ee/fe/modules", file.Name()),
-			}
-			modules = append(modules, md)
-		}
-	}
-
+	modules = append(modules, parseModules(deckhouseRoot, "ee/fe/modules")...)
 	// se modules
-	files, _ = os.ReadDir(filepath.Join(deckhouseRoot, "ee/se/modules"))
-	for _, file := range files {
-		if file.IsDir() {
-			md := module{
-				Name: file.Name(),
-				Path: filepath.Join("ee/se/modules", file.Name()),
-			}
-			modules = append(modules, md)
-		}
-	}
+	modules = append(modules, parseModules(deckhouseRoot, "ee/se/modules")...)
+	modules = append(modules, parseModules(deckhouseRoot, "ee/se-plus/modules")...)
 
-	files, _ = os.ReadDir(filepath.Join(deckhouseRoot, "ee/se-plus/modules"))
+	return modules
+}
+
+func parseModules(deckhouseRoot string, folder string) []module {
+	modules := make([]module, 0)
+
+	files, _ := os.ReadDir(filepath.Join(deckhouseRoot, folder))
 	for _, file := range files {
 		if file.IsDir() {
 			md := module{
 				Name: file.Name(),
-				Path: filepath.Join("ee/se-plus/modules", file.Name()),
+				Path: filepath.Join(folder, file.Name()),
 			}
+
+			// if we found module.yaml in folder - parse name from it
+			moduleFilePath := filepath.Join(deckhouseRoot, folder, file.Name(), "module.yaml")
+			_, err := os.Stat(moduleFilePath)
+			if err == nil {
+				f, err := os.OpenFile(moduleFilePath, os.O_RDONLY, 0666)
+				if err != nil {
+					panic(err)
+				}
+
+				mf := new(moduleFile)
+				err = yaml.NewDecoder(f).Decode(&mf)
+				if err != nil {
+					panic(err)
+				}
+
+				if mf.Name != "" {
+					md.Name = mf.Name
+				}
+			}
+
 			modules = append(modules, md)
 		}
 	}
