@@ -23,16 +23,15 @@ import (
 	"syscall"
 	"time"
 
+	"k8s.io/client-go/kubernetes"
+	_ "k8s.io/client-go/plugin/pkg/client/auth/oidc"
+	"k8s.io/client-go/rest"
+	"k8s.io/klog"
 	"registry-modules-watcher/internal/backends"
 	registryscaner "registry-modules-watcher/internal/backends/pkg/registry-scaner"
 	"registry-modules-watcher/internal/backends/pkg/sender"
 	"registry-modules-watcher/internal/watcher"
 	registryclient "registry-modules-watcher/pkg/registry-client"
-
-	"k8s.io/client-go/kubernetes"
-	_ "k8s.io/client-go/plugin/pkg/client/auth/oidc"
-	"k8s.io/client-go/rest"
-	"k8s.io/klog"
 )
 
 /*

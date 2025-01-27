@@ -15,6 +15,7 @@
 package cache
 
 import (
+	"slices"
 	"sort"
 	"strings"
 	"sync"
@@ -225,6 +226,41 @@ func (c *Cache) DeleteModule(registry string, module string) {
 	r, ok := c.val[registryName(registry)]
 	if ok {
 		delete(r, moduleName(module))
+	}
+}
+
+func (c *Cache) GetReleaseChannels(registry, module string) []string {
+	c.m.RLock()
+	defer c.m.RUnlock()
+
+	var releaseChannels []string
+	r, ok := c.val[registryName(registry)]
+	if ok {
+		m, ok := r[moduleName(module)]
+		if ok {
+			for _, m := range m.versions {
+				for releaseChannel := range m.ReleaseChannels {
+					releaseChannels = append(releaseChannels, releaseChannel)
+				}
+			}
+		}
+	}
+
+	return slices.Compact(releaseChannels)
+}
+
+func (c *Cache) DeleteReleaseChannel(registry, module, releaseChannel string) {
+	c.m.Lock()
+	defer c.m.Unlock()
+
+	r, ok := c.val[registryName(registry)]
+	if ok {
+		m, ok := r[moduleName(module)]
+		if ok {
+			for _, m := range m.versions {
+				delete(m.ReleaseChannels, releaseChannel)
+			}
+		}
 	}
 }
 

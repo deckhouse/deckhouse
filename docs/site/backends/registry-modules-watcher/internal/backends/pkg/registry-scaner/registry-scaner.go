@@ -18,11 +18,10 @@ import (
 	"context"
 	"time"
 
-	"registry-modules-watcher/internal/backends"
-	"registry-modules-watcher/internal/backends/pkg/registry-scaner/cache"
-
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"k8s.io/klog"
+	"registry-modules-watcher/internal/backends"
+	"registry-modules-watcher/internal/backends/pkg/registry-scaner/cache"
 )
 
 type Client interface {
