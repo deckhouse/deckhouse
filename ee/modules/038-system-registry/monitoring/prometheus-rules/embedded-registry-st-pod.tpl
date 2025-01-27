@@ -19,9 +19,9 @@
         plk_labels_as_annotations: "pod,namespace,node"
         plk_create_group_if_not_exists__d8_embedded_registry_health: "D8EmbeddedRegistryHealth,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
         plk_grouped_by__d8_embedded_registry_health: "D8EmbeddedRegistryHealth,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
-        summary: The {{`{{ $labels.namespace }}`}}/{{`{{ $labels.pod }}`}} Pod is NOT Ready.
+        summary: The {{`{{ $labels.namespace }}`}}/{{`{{ $labels.pod }}`}} static Pod is NOT Ready.
         description: |
-          The {{`{{ $labels.namespace }}`}}/{{`{{ $labels.pod }}`}} Pod is NOT Ready.
+          The {{`{{ $labels.namespace }}`}}/{{`{{ $labels.pod }}`}} static Pod is NOT Ready.
 
           The recommended course of action:
           1. View the status of the Pod: `kubectl -n {{`{{ $labels.namespace }}`}} describe pod/{{`{{ $labels.pod }}`}}`
@@ -49,9 +49,9 @@
         plk_labels_as_annotations: "pod,namespace,node"
         plk_create_group_if_not_exists__d8_embedded_registry_health: "D8EmbeddedRegistryHealth,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
         plk_grouped_by__d8_embedded_registry_health: "D8EmbeddedRegistryHealth,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
-        summary: The {{`{{ $labels.namespace }}`}}/{{`{{ $labels.pod }}`}} Pod is NOT Running.
+        summary: The {{`{{ $labels.namespace }}`}}/{{`{{ $labels.pod }}`}} static Pod is NOT Running.
         description: |
-          The {{`{{ $labels.namespace }}`}}/{{`{{ $labels.pod }}`}} Pod is NOT Running.
+          The {{`{{ $labels.namespace }}`}}/{{`{{ $labels.pod }}`}} static Pod is NOT Running.
 
           The recommended course of action:
           1. View the status of the Pod: `kubectl -n {{`{{ $labels.namespace }}`}} describe pod/{{`{{ $labels.pod }}`}}`
@@ -74,15 +74,17 @@
         plk_markup_format: "markdown"
         plk_create_group_if_not_exists__d8_embedded_registry_health: "D8EmbeddedRegistryHealth,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
         plk_grouped_by__d8_embedded_registry_health: "D8EmbeddedRegistryHealth,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
-        summary: The d8-system/system-registry-(node-name) Pod is NOT Running.
+        summary: The d8-system/system-registry-(node-name) static Pod is NOT Running.
         description: |
-          The d8-system/system-registry-(node-name)  Pod is NOT Running.
+          The d8-system/system-registry-(node-name) static Pod is NOT Running.
 
           The recommended course of action:
-          1. View the logs of the registry manager
+          1. View the status of the Pod: `kubectl -n d8-system describe pod/system-registry-(node-name)`
+          2. View the logs of the Pod: `kubectl -n d8-system logs pod/system-registry-(node-name)`
+          3. View the logs of the registry manager
             - `kubectl -n d8-system logs pod/system-registry-manager-*`
             - `kubectl -n d8-system logs $(kubectl -n d8-system get lease/embedded-registry-manager-leader -o jsonpath='{.spec.holderIdentity}' | awk -F_ '{print $1}') -f`
-          2. View the logs of the registry static pod manager `kubectl -n d8-system logs pod/system-registry-staticpod-manager-*`
+          4. View the logs of the registry static pod manager `kubectl -n d8-system logs pod/system-registry-staticpod-manager-*`
 
     - alert: D8EmbeddedRegistryPodIsTargetDown
       expr: |
@@ -107,9 +109,9 @@
         plk_labels_as_annotations: "pod,namespace,node"
         plk_create_group_if_not_exists__d8_embedded_registry_health: "D8EmbeddedRegistryHealth,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
         plk_grouped_by__d8_embedded_registry_health: "D8EmbeddedRegistryHealth,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
-        summary: The {{`{{ $labels.namespace }}`}}/{{`{{ $labels.pod }}`}} Pod target is down.
+        summary: The {{`{{ $labels.namespace }}`}}/{{`{{ $labels.pod }}`}} static Pod target is down.
         description: |
-          The {{`{{ $labels.namespace }}`}}/{{`{{ $labels.pod }}`}} Pod target is down.
+          The {{`{{ $labels.namespace }}`}}/{{`{{ $labels.pod }}`}} static Pod target is down.
 
           The recommended course of action:
           1. View the status of the Pod: `kubectl -n {{`{{ $labels.namespace }}`}} describe pod/{{`{{ $labels.pod }}`}}`
