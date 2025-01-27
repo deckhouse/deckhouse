@@ -416,7 +416,7 @@ func (e *executor) executeEdition(editionName string) {
 		if bi.SkipModules == nil || !*bi.SkipModules {
 			writeSettingsModules.Prefix = prefix
 			writeSettingsModules.Dir = "modules"
-			writeSettingsModules.StageDependencies = stageDependencies
+			writeSettingsModules.StageDependencies = stageDependenciesFile
 
 			writeSettingsExcludeFileName.Prefix = prefix
 			writeSettingsExcludeFileName.Dir = "modules"
