@@ -32,7 +32,7 @@
 
     const sectionClasses = '.post-content h2, .post-content h3';
     const sections = $(sectionClasses);
-        const visibleOffset = 20;
+    const visibleOffset = 20;
     const nav = $('.toc-sidebar');
     const navHeight = $('.header').outerHeight();
 
@@ -57,7 +57,15 @@
         }
       });
     });
-  });
+
+    $(window).on('load', function() {
+      const target = decodeURI(window.location.hash);
+
+      $('html, body').animate({
+        scrollTop: $(target).offset().top - 162
+      }, 0);
+    });
+});
 
 </script>
 
