@@ -137,7 +137,7 @@ internal:
 
 		Entry("High availability and longterm enabled", true, 1, 4, 5),
 		Entry("High availability enabled, longterm disabled", true, 0, 3, 6),
-		Entry("High availability disabled, longterm enabled", false, 1, 2, 3),
+		Entry("High availability disabled, longterm enabled", false, 1, 3, 3),
 		Entry("High availability and longterm disabled", false, 0, 2, 4),
 	)
 
