@@ -17,11 +17,6 @@ import (
 	"node-proxy-sidecar/internal/haproxy"
 )
 
-type BackendUpdate struct {
-	Backend config.Backend
-	Servers []haproxy.Server
-}
-
 func (c *Client) ForceSync(backend config.Backend, updates chan<- BackendUpdate) error {
 	log.Infof("ForceSync started for backend: %s ", backend.Name)
 

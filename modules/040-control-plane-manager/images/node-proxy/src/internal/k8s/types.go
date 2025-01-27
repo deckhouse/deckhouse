@@ -1,6 +1,11 @@
 package k8s
 
-import "k8s.io/client-go/kubernetes"
+import (
+	"k8s.io/client-go/kubernetes"
+
+	config "node-proxy-sidecar/internal/config"
+	"node-proxy-sidecar/internal/haproxy"
+)
 
 type Endpoint struct {
 	Name      string
@@ -10,4 +15,9 @@ type Endpoint struct {
 
 type Client struct {
 	client *kubernetes.Clientset
+}
+
+type BackendUpdate struct {
+	Backend config.Backend
+	Servers []haproxy.Server
 }
