@@ -26,14 +26,29 @@ type DisableOptions struct {
 }
 
 type DeckhouseModuleDefinition struct {
-	Name         string            `yaml:"name"`
-	Weight       uint32            `yaml:"weight,omitempty"`
-	Tags         []string          `yaml:"tags"`
-	Stage        string            `yaml:"stage"`
-	Description  string            `yaml:"description"`
-	Requirements map[string]string `json:"requirements"`
+	Name         string                 `yaml:"name"`
+	Weight       uint32                 `yaml:"weight,omitempty"`
+	Tags         []string               `yaml:"tags"`
+	Stage        string                 `yaml:"stage"`
+	Description  string                 `yaml:"description"`
+	Requirements map[string]interface{} `json:"requirements"`
 
 	DisableOptions DisableOptions `yaml:"disable"`
 
 	Path string `yaml:"-"`
+}
+
+func (d *DeckhouseModuleDefinition) GetRequirements() map[string]string {
+	requirements := make(map[string]string)
+	if len(d.Requirements) == 0 {
+		return requirements
+	}
+
+	for key, raw := range d.Requirements {
+		if value, ok := raw.(string); ok {
+			requirements[key] = value
+		}
+	}
+
+	return requirements
 }
