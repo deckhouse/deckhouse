@@ -19,9 +19,7 @@ exit_code=0
 cd /src/en
 echo "Checking links (EN)"
 
-curl https://deckhouse.io/products/kubernete-platform/documentation/v1/installing/
-
-htmlproofer --allow_missing_href --allow-hash-href --ignore-missing-alt --ignore-empty-alt --check_external_hash \
+htmlproofer --allow_missing_href --allow-hash-href --ignore-missing-alt --ignore-empty-alt --check_external_hash --check_internal_hash \
        --ignore-urls '/^(.+deckhouse\.io)?\/privacy-policy(\/|\.html)$/,/^(.+deckhouse\.(io|ru))?\/security-policy\.html/,/^(.+deckhouse\.(io|ru))?\/products\/kubernetes-platform\/modules\/.*$/,/^(.+deckhouse\.(io|ru))?\/modules\/.*$/,/\.sslip\.io/,/^\/[^/.]+\.(svg|png|webmanifest|ico)$/,/^\/downloads\/deckhouse-cli.+\//,/\/(terms-of-service|success-stories|deckhouse-vs-kaas|services|tech-support|security|cookie-policy|community|regulations|license-rules|license|security-policy|webinars|news|education-license|partners-program|how-to-buy|moving-from-openshift|partnership-products|academy|)\/.*/,/^\/products\/(delivery-kit|stronghold|commander|observability-platform)\//,/^\/products\/enterprise_edition\.html/,/^\/products\/kubernetes-platform\/pricing\/.*/,/localhost/,/https\:\/\/t.me/,/docs-prv\.pcisecuritystandards\.org/,/gitlab.com\/profile/,/dash.cloudflare.com\/profile/,/example.com/,/vmware.com/,/.slack.com/,/habr.com/,/flant.ru/,/bcrypt-generator.com/,/candi\/bashible\/bashbooster/,/..\/..\/compare\//,/compare\/ru\//,/compare\/en\//,/\.yml$/,/\.yaml$/,/\.tmpl$/,/\.tpl$/,/^\/products\/kubernetes-platform\/$/,/^\/products\/virtualization-platform\/$/' \
        --swap-urls "https\:\/\/deckhouse\.io\/guides\/:/products/kubernetes-platform/guides/,https\:\/\/deckhouse\.io\/gs\/:/products/kubernetes-platform/gs/,https\:\/\/deckhouse\.io\/:/,\/documentation\/latest\/:/documentation/,\/documentation\/v1\/:/documentation/" \
        --ignore-files "404.html" --ignore-status-codes "0,429" .
@@ -30,7 +28,7 @@ if [ $? -ne 0 ]; then exit_code=$?; fi
 
 cd /src/ru
 echo -e "\n\nChecking links (RU)"
-htmlproofer --allow_missing_href --allow-hash-href --ignore-missing-alt --ignore-empty-alt --check_external_hash \
+htmlproofer --allow_missing_href --allow-hash-href --ignore-missing-alt --ignore-empty-alt --check_external_hash --check_internal_hash \
        --allow_missing_href --allow-hash-href --ignore-missing-alt --ignore-empty-alt \
        --ignore-urls '/^(.+deckhouse\.io)?\/privacy-policy(\/|\.html)$/,/^(.+deckhouse\.(io|ru))?\/security-policy\.html/,/^(.+deckhouse\.(io|ru))?\/products\/kubernetes-platform\/modules\/.*$/,/^(.+deckhouse\.(io|ru))?\/modules\/.*$/,/\.sslip\.io/,/^\/[^/.]+\.(svg|png|webmanifest|ico)$/,/^\/downloads\/deckhouse-cli.+\//,/\/(terms-of-service|success-stories|deckhouse-vs-kaas|services|tech-support|security|cookie-policy|community|regulations|license-rules|license|security-policy|webinars|news|education-license|partners-program|how-to-buy|moving-from-openshift|partnership-products|academy|)\/.*/,/^\/products\/(delivery-kit|stronghold|commander|observability-platform)\//,/^\/products\/enterprise_edition\.html/,/^\/products\/kubernetes-platform\/pricing\/.*/,/localhost/,/https\:\/\/t.me/,/docs-prv\.pcisecuritystandards\.org/,/gitlab.com\/profile/,/dash.cloudflare.com\/profile/,/example.com/,/vmware.com/,/.slack.com/,/habr.com/,/flant.ru/,/bcrypt-generator.com/,/candi\/bashible\/bashbooster/,/..\/..\/compare\//,/compare\/ru\//,/compare\/en\//,/\.yml$/,/\.yaml$/,/\.tmpl$/,/\.tpl$/,/^\/products\/kubernetes-platform\/$/,/^\/products\/virtualization-platform\/$/' \
        --swap-urls "https\:\/\/deckhouse\.io\/guides\/:/products/kubernetes-platform/guides/,https\:\/\/deckhouse\.io\/gs\/:/products/kubernetes-platform/gs/,https\:\/\/deckhouse\.io\/:/,\/documentation\/latest\/:/documentation/,\/documentation\/v1\/:/documentation/" \
