@@ -84,7 +84,7 @@ shell:
   - export GO_VERSION=${GOLANG_VERSION} GOPROXY={{ $.GOPROXY }}
   - export GOOS=linux GOARCH=amd64 CGO_ENABLED=0
   - cd /cilium/proxy
-  - go mod tidy && go mod vendor && go mod verify
+  - go mod vendor && go mod verify
   - sudo -u cilium PATH=${PATH} make -C proxylib all
   - sudo -u cilium PATH=${PATH} mkdir -p /tmp/install/usr/lib
   - mv proxylib/libcilium.so /tmp/install/usr/lib/libcilium.so

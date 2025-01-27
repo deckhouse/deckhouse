@@ -3,17 +3,12 @@ image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
 fromImage: common/src-artifact
 final: false
 git:
-- add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}
+- add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/src
   to: /src
-  excludePaths:
-  - "**/*.md"
-  - "**/*.yaml"
+  # Forces a rebuild when source files are modified.
   stageDependencies:
     install:
-    - go.mod
-    - go.sum
-    setup:
-    - "**/*.go"
+    - '**/*'
 shell:
   install:
   - cd /src

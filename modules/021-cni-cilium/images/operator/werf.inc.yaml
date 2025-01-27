@@ -23,7 +23,7 @@ shell:
   - export GOPROXY={{ $.GOPROXY }}
   - export GOOS=linux GOARCH=amd64
   - cd /src/cilium
-  - go mod tidy && go mod vendor && go mod verify
+  - go mod vendor && go mod verify
   - make DESTDIR=/out/linux/amd64 build-container-operator install-container-binary-operator
   - chown 64535:64535 /out/linux/amd64/usr/bin/cilium-operator
   - chmod 0700 /out/linux/amd64/usr/bin/cilium-operator
