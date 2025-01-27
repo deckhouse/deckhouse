@@ -1,9 +1,9 @@
 # [<en>] Section containing the parameters of instance class for worker nodes.
-# [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-openstack/cr.html
+# [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-huaweicloud/cr.html
 # [<ru>] Секция, описывающая параметры инстанс-класса для узлов c компонентами, обеспечивающими рабочую нагрузку.
-# [<ru>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-openstack/cr.html
+# [<ru>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-huaweicloud/cr.html
 apiVersion: deckhouse.io/v1
-kind: OpenStackInstanceClass
+kind: HuaweiCloudInstanceClass
 metadata:
   name: worker
 spec:
@@ -12,7 +12,12 @@ spec:
   # [<en>] You might consider changing this.
   # [<ru>] Возможно, захотите изменить.
   flavorName: Standard-2-4-50
+  # [<en>] The size of a root disk in gigabytes.
+  # [<ru>] Размер root-диска. Значение указывается в гигабайтах.
   rootDiskSize: 30
+  # [<en>] The type of a root disk.
+  # [<ru>] Тип root-диска.
+  rootDiskType: SSD
   # [<en>] VM image in use.
   # [<ru>] Используемый образ виртуальной машины.
   # [<en>] You might consider changing this.
@@ -30,7 +35,7 @@ metadata:
 spec:
   cloudInstances:
     classReference:
-      kind: OpenStackInstanceClass
+      kind: HuaweiCloudInstanceClass
       name: worker
     # [<en>] The maximum number of instances for the group in each zone (used by the autoscaler).
     # [<en>] You might consider changing this.
