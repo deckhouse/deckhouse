@@ -707,7 +707,7 @@ After deleting the virtual machine, `the vmip` resource will persist and can be 
 
 ```yaml
 spec:
-  virtualMachineIPAdressName: linux-vm-7prpx
+  virtualMachineIPAddressName: linux-vm-7prpx
 ```
 
 Even if the `vmip` resource is deleted, it remains leased to the current project/namespace for another 10 minutes, and there is an option to re-lease it upon request:
