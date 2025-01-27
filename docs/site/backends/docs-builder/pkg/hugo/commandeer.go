@@ -284,12 +284,12 @@ func (c *command) createLogger(running bool) (loggers.Logger, error) {
 		}
 	} else {
 		if c.flags.Verbose {
-			hugo.Deprecate("--verbose", "use --logLevel", "info")
+			hugo.Deprecate("--verbose", "use --logLevel", "v0.119.0")
 			level = logg.LevelInfo
 		}
 
 		if c.flags.Debug {
-			hugo.Deprecate("--debug", "use --logLevel", "debug")
+			hugo.Deprecate("--debug", "use --logLevel", "v0.119.0")
 			level = logg.LevelDebug
 		}
 	}
