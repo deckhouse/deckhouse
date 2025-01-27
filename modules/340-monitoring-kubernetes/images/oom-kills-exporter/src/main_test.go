@@ -20,7 +20,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// Тест checkMetricExistenceByLabels
 func TestCheckMetricExistenceByLabels(t *testing.T) {
 	registry := prometheus.NewRegistry()
 	counter := prometheus.NewCounterVec(prometheus.CounterOpts{Name: "test_metric"}, []string{"task_memcg"})
@@ -36,7 +35,6 @@ func TestCheckMetricExistenceByLabels(t *testing.T) {
 	assert.False(t, exists, "Metric with non-existent labels should not exist")
 }
 
-// Тест getContainerIDFromLog
 func TestGetContainerIDFromLog(t *testing.T) {
 	line := "oom-kill:constraint=CONSTRAINT_MEMCG,nodemask=(null),cpuset=id,mems_allowed=0,task_memcg=/kubepods/burstable/pod123/contanerID"
 	assert.Equal(t, "/kubepods/burstable/pod123/contanerID", getContainerIDFromLog(line), "Should extract correct task_memcg")
