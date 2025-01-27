@@ -166,8 +166,9 @@ The general procedure for working with static nodes when using CAPS is as follow
 1. **Preparing resources.**
 
    Before bringing a bare-metal server or virtual machine under the CAPS management, the following preliminary steps may be necessary:
+
    - Preparing the storage system, adding mount points, and so on.
-   - Installing OS-specific packages. For example, installing the `ceph-common` package if the server uses CEPH volumes.
+   - Installing OS-specific packages.
    - Configuring the network connectivity. For example, between the server and cluster nodes.
    - Configuring the SSH access to the server, creating a user with the root-level access via `sudo`. A good practice is to create a separate user and unique keys for each server.
 

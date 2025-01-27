@@ -39,7 +39,7 @@ lang: ru
 1. Выполните предварительную настройку нового узла в соответствии с особенностями вашего окружения:
 
 - добавьте необходимые точки монтирования в файл `/etc/fstab` (NFS, Ceph и т. д.);
-- установите необходимые пакеты (например, `ceph-common`);
+- установите необходимые пакеты;
 - настройте сетевую связность между новым узлом и остальными узлами кластера.
 
 1. Подключитесь на новый узел по SSH и выполните следующую команду, вставив полученную в п.2 Base64-строку:
@@ -336,7 +336,8 @@ bash /var/lib/bashible/cleanup_static_node.sh --yes-i-am-sane-and-i-understand-w
 
 StaticInstance, находящийся в состоянии `Pending`, можно удалять без каких-либо проблем.
 
-Чтобы удалить StaticInstance находящийся в любом состоянии, отличном от `Pending` (`Running`, `Cleaning`, `Bootstrapping`):
+Чтобы удалить StaticInstance, находящийся в любом состоянии отличном от `Pending` (`Running`, `Cleaning`, `Bootstrapping`):
+
 1. Добавьте лейбл `"node.deckhouse.io/allow-bootstrap": "false"` в StaticInstance.
 1. Дождитесь, пока StaticInstance перейдет в статус `Pending`.
 1. Удалите StaticInstance.
