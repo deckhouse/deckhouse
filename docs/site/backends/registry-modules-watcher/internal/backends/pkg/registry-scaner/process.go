@@ -70,7 +70,6 @@ func (s *registryscaner) processModules(ctx context.Context, registry Client, mo
 	}
 }
 
-// TODO: process removed tags from release channels
 func (s *registryscaner) processReleaseChannels(ctx context.Context, registry, module string, releaseChannels []string) {
 	for _, releaseChannel := range releaseChannels {
 		releaseImage, err := s.registryClients[registry].ReleaseImage(module, releaseChannel)
