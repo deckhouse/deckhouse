@@ -42,7 +42,7 @@ shell:
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
 import:
-- artifact: {{ .ModuleName }}/{{ .ImageName }}-artifact-{{ $version | replace "." "-" }}
+- image: {{ .ModuleName }}/{{ .ImageName }}-artifact-{{ $version | replace "." "-" }}
   add: /operator
   to: /bin/operator
   before: setup
