@@ -5,7 +5,7 @@ description: "Настройка GCP для работы облачного пр
 
 {% include notice_envinronment.liquid %}
 
-Чтобы Deckhouse мог управлять ресурсами, в Google Cloud необходимо создать service account. Далее представлена краткая последовательность действий по созданию service account. Если вам необходима более подробная инструкция, вы можете найти ее [в документации провайдера](https://cloud.google.com/iam/docs/service-accounts).
+Чтобы Deckhouse мог управлять ресурсами, в Google Cloud необходимо создать service account. Далее представлена краткая последовательность действий по созданию service account. Если вам необходима более подробная инструкция, вы можете найти ее в документации провайдера.
 
 {% alert level="warning" %}
 **Внимание!** Созданный `service account key` невозможно восстановить, только удалить и создать новый.
@@ -13,7 +13,7 @@ description: "Настройка GCP для работы облачного пр
 
 ## Настройка через Google Cloud Console
 
-Перейдите [по ссылке](https://console.cloud.google.com/iam-admin/serviceaccounts), выберите проект и создайте новый service account (также можно выбрать уже существующий).
+Перейдите по ссылке, выберите проект и создайте новый service account (также можно выбрать уже существующий).
 
 Созданному service account'у должны быть присвоены несколько необходимых ролей:
 
@@ -23,9 +23,9 @@ Service Account User
 Network Management Admin
 ```
 
-Роли можно присвоить на этапе создания service account'а либо изменить [на этой странице](https://console.cloud.google.com/iam-admin/iam).
+Роли можно присвоить на этапе создания service account'а либо изменить на этой странице.
 
-Чтобы получить `service account key` в JSON-формате, [на странице](https://console.cloud.google.com/iam-admin/serviceaccounts) в колонке Actions нажмите  на три вертикальные точки и выберите `Manage keys`. Затем нажмите `Add key` -> `Create new key` -> `Key type` -> `JSON`.
+Чтобы получить `service account key` в JSON-формате, на странице в колонке Actions нажмите  на три вертикальные точки и выберите `Manage keys`. Затем нажмите `Add key` -> `Create new key` -> `Key type` -> `JSON`.
 
 ## Настройка через gcloud CLI
 

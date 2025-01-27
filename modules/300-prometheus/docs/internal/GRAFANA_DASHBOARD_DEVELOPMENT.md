@@ -5,7 +5,7 @@ type:
 search: making Grafana graphs
 ---
 
-1. The [GrafanaDashboardDefinition](cr.html#grafanadashboarddefinition) custom resource allows you to create Grafana dashboards. The [shell-operator](https://github.com/flant/shell-operator) sidecar container runs along with the main container in the Grafana Pod and monitors that resource. The hook creates/deletes/edits the specific dashboard in response to a corresponding event using some special mechanism.
+1. The [GrafanaDashboardDefinition](cr.html#grafanadashboarddefinition) custom resource allows you to create Grafana dashboards. The shell-operator sidecar container runs along with the main container in the Grafana Pod and monitors that resource. The hook creates/deletes/edits the specific dashboard in response to a corresponding event using some special mechanism.
 2. In modules, dashboard manifests are located at `<module_root>/monitoring/grafana-dashboards/`. They are automatically converted to [GrafanaDashboardDefinition](cr.html#grafanadashboarddefinition) CRs, while:
    * each subdirectory in the above directory corresponds to a Folder in Grafana,
    * and each file corresponds to a Dashboard in Grafana.

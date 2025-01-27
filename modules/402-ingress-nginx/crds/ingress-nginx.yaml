@@ -113,17 +113,17 @@ spec:
                   description: |
                     The same as in the pods' `spec.nodeSelector` parameter in Kubernetes.
 
-                    If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/products/kubernetes-platform/documentation/v1/#advanced-scheduling).
+                    If the parameter is omitted or `false`, it will be determined [automatically](/#advanced-scheduling).
 
                     **Format**: the standard `nodeSelector` list. Instance pods inherit this field as is.
                 tolerations:
                   type: array
                   description: |
-                    [The same](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/) as in the pods' `spec.tolerations` parameter in Kubernetes;
+                    The same as in the pods' `spec.tolerations` parameter in Kubernetes;
 
-                    If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/products/kubernetes-platform/documentation/v1/#advanced-scheduling).
+                    If the parameter is omitted or `false`, it will be determined [automatically](/#advanced-scheduling).
 
-                    **Format**: the standard [toleration](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/) list. Instance pods inherit this field as is.
+                    **Format**: the standard toleration list. Instance pods inherit this field as is.
                   items:
                     type: object
                     properties:
@@ -147,18 +147,6 @@ spec:
                   description: |
                     A section of parameters of the `LoadBalancer` inlet.
                   properties:
-                    sourceRanges:
-                      type: array
-                      description: |
-                        IP ranges (CIDR) that are allowed to access the load balancer.
-
-                        > **Caution.** The cloud provider may not support this option or ignore it.
-                        > Providers supporting the option: _AWS_, _GCP_, _Azure_.
-                        > Providers ignoring the option: _YandexCloud_.
-                        > For other cloud providers, the behavior may depend on the specifics of the cloud implementation. Testing is recommended before use of the option in production.
-                      items:
-                        type: string
-                        pattern: '^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/(3[0-2]|[1-2][0-9]|[0-9]))$'
                     annotations:
                       type: object
                       x-kubernetes-preserve-unknown-fields: true
@@ -193,18 +181,6 @@ spec:
                   description: |
                     A section of parameters of the `LoadBalancerWithProxyProtocol` inlet.
                   properties:
-                    sourceRanges:
-                      type: array
-                      description: |
-                        IP ranges (CIDR) that are allowed to access the load balancer.
-
-                        > **Caution.** The cloud provider may not support this option or ignore it.
-                        > Providers supporting the option: _AWS_, _GCP_, _Azure_.
-                        > Providers ignoring the option: _YandexCloud_.
-                        > For other cloud providers, the behavior may depend on the specifics of the cloud implementation. Testing is recommended before use of the option in production.
-                      items:
-                        type: string
-                        pattern: '^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/(3[0-2]|[1-2][0-9]|[0-9]))$'
                     annotations:
                       type: object
                       description: |
@@ -298,7 +274,7 @@ spec:
 
                     Regardless of the inlet type, the source IP address gets always verified (the `original_address` field in logs) (the address that the connection was established from) and not the "address of the client" that can be passed in some inlets via headers or using the proxy protocol.
 
-                    This parameter is implemented using the [map module](https://nginx.org/en/docs/http/ngx_http_map_module.html). If the source address is not in the list of allowed addresses, nginx closes the connection immediately using HTTP code 444.
+                    This parameter is implemented using the map module. If the source address is not in the list of allowed addresses, nginx closes the connection immediately using HTTP code 444.
 
                     By default, the connection to the controller can be made from any address.
                   items:
@@ -307,7 +283,7 @@ spec:
                 hsts:
                   type: boolean
                   description: |
-                    Determines whether hsts is enabled. [Read more...](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Strict-Transport-Security)).
+                    Determines whether hsts is enabled. Read more...).
                   default: false
                 hstsOptions:
                   type: object
@@ -336,13 +312,13 @@ spec:
                       description: |
                         A license key to download the GeoIP2 database.
 
-                        If the key is set, the module downloads the GeoIP2 database every time the controller is started. Click [here](https://blog.maxmind.com/2019/12/18/significant-changes-to-accessing-and-using-geolite2-databases/) to learn more about obtaining a license key.
+                        If the key is set, the module downloads the GeoIP2 database every time the controller is started. Click here to learn more about obtaining a license key.
                     maxmindEditionIDs:
                       type: array
                       description: |
                         A list of database editions to download at startup.
 
-                        [More info...](https://dev.maxmind.com/geoip/geolite2-free-geolocation-data)
+
                       default: ["GeoLite2-City", "GeoLite2-ASN"]
                       items:
                         type: string
@@ -362,7 +338,7 @@ spec:
                   description: |
                     Enable old TLS protocol versions and legacy cipher suites.
 
-                    Also, this options enables legacy cipher suites to support legacy libraries and software: [OWASP Cipher String 'C' ](https://cheatsheetseries.owasp.org/cheatsheets/TLS_Cipher_String_Cheat_Sheet.html). Learn more [here](https://github.com/deckhouse/deckhouse/blob/main/modules/ingress-nginx/templates/controller/configmap.yaml).
+                    Also, this options enables legacy cipher suites to support legacy libraries and software: OWASP Cipher String 'C' . Learn more here.
 
                     By default, only TLSv1.2 and the newest cipher suites are enabled.
                 disableHTTP2:
@@ -376,7 +352,7 @@ spec:
                   description: |
                     The section with the Ingress controller parameters.
 
-                    You can specify [any supported parameter](https://kubernetes.github.io/ingress-nginx/user-guide/nginx-configuration/configmap/) in it in the `key: value (string)` format.
+                    You can specify any supported parameter in it in the `key: value (string)` format.
 
                     > **Caution.** An erroneous option may lead to the failure of the ingress controller;
 
@@ -492,9 +468,9 @@ spec:
                 underscoresInHeaders:
                   type: boolean
                   description: |
-                    Determines whether underscores are allowed in headers. Learn [more...](https://nginx.org/en/docs/http/ngx_http_core_module.html#underscores_in_headers).
+                    Determines whether underscores are allowed in headers. Learn .
 
-                    [This tutorial](https://docs.nginx.com/#missing-disappearing-http-headers) sheds light on why you should not enable it without careful consideration.
+                    This tutorial sheds light on why you should not enable it without careful consideration.
                   default: false
                 minReplicas:
                   type: integer
@@ -511,7 +487,7 @@ spec:
                 defaultSSLCertificate:
                   description: |
                     This certificate is used:
-                    - for `catch-all` server requests (here, "catch-all server" refers to the nginx [server directive](https://nginx.org/en/docs/http/ngx_http_core_module.html#server). Requests for which there is no corresponding Ingress resource end up on the `catch-all` server.
+                    - for `catch-all` server requests (here, "catch-all server" refers to the nginx server directive. Requests for which there is no corresponding Ingress resource end up on the `catch-all` server.
                     - for Ingress resources that do not have a `secretName` specified in the `tls` section.
 
                     By default, a self-signed certificate is used.
@@ -703,17 +679,17 @@ spec:
                   description: |
                     The same as in the pods' `spec.nodeSelector` parameter in Kubernetes.
 
-                    If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/products/kubernetes-platform/documentation/v1/#advanced-scheduling).
+                    If the parameter is omitted or `false`, it will be determined [automatically](/#advanced-scheduling).
 
                     **Format**: the standard `nodeSelector` list. Instance pods inherit this field as is.
                 tolerations:
                   type: array
                   description: |
-                    [The same](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/) as in the pods' `spec.tolerations` parameter in Kubernetes;
+                    The same as in the pods' `spec.tolerations` parameter in Kubernetes;
 
-                    If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/products/kubernetes-platform/documentation/v1/#advanced-scheduling).
+                    If the parameter is omitted or `false`, it will be determined [automatically](/#advanced-scheduling).
 
-                    **Format**: the standard [toleration](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/) list. Instance pods inherit this field as is.
+                    **Format**: the standard toleration list. Instance pods inherit this field as is.
                   items:
                     type: object
                     properties:
@@ -737,18 +713,6 @@ spec:
                   description: |
                     A section of parameters of the `LoadBalancer` inlet.
                   properties:
-                    sourceRanges:
-                      type: array
-                      description: |
-                        IP ranges (CIDR) that are allowed to access the load balancer.
-
-                        > **Caution.** The cloud provider may not support this option or ignore it.
-                        > Providers supporting the option: _AWS_, _GCP_, _Azure_.
-                        > Providers ignoring the option: _YandexCloud_.
-                        > For other cloud providers, the behavior may depend on the specifics of the cloud implementation. Testing is recommended before use of the option in production.
-                      items:
-                        type: string
-                        pattern: '^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/(3[0-2]|[1-2][0-9]|[0-9]))$'
                     annotations:
                       type: object
                       x-kubernetes-preserve-unknown-fields: true
@@ -783,18 +747,6 @@ spec:
                   description: |
                     A section of parameters of the `LoadBalancerWithProxyProtocol` inlet.
                   properties:
-                    sourceRanges:
-                      type: array
-                      description: |
-                        IP ranges (CIDR) that are allowed to access the load balancer.
-
-                        > **Caution.** The cloud provider may not support this option or ignore it.
-                        > Providers supporting the option: _AWS_, _GCP_, _Azure_.
-                        > Providers ignoring the option: _YandexCloud_.
-                        > For other cloud providers, the behavior may depend on the specifics of the cloud implementation. Testing is recommended before use of the option in production.
-                      items:
-                        type: string
-                        pattern: '^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/(3[0-2]|[1-2][0-9]|[0-9]))$'
                     annotations:
                       type: object
                       description: |
@@ -815,18 +767,6 @@ spec:
                   description: |
                     A section of parameters of the `LoadBalancerWithSSLPassthrough` inlet.
                   properties:
-                    sourceRanges:
-                      type: array
-                      description: |
-                        IP ranges (CIDR) that are allowed to access the load balancer.
-
-                        > **Caution.** The cloud provider may not support this option or ignore it.
-                        > Providers supporting the option: _AWS_, _GCP_, _Azure_.
-                        > Providers ignoring the option: _Yandex Cloud_.
-                        > For other cloud providers, the behavior may depend on the specifics of the cloud implementation. Testing is recommended before use of the option in production.
-                      items:
-                        type: string
-                        pattern: '^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/(3[0-2]|[1-2][0-9]|[0-9]))$'
                     annotations:
                       type: object
                       description: |
@@ -949,7 +889,7 @@ spec:
 
                     Regardless of the inlet type, the source IP address gets always verified (the `original_address` field in logs) (the address that the connection was established from) and not the "address of the client" that can be passed in some inlets via headers or using the proxy protocol.
 
-                    This parameter is implemented using the [map module](https://nginx.org/en/docs/http/ngx_http_map_module.html). If the source address is not in the list of allowed addresses, nginx closes the connection immediately using HTTP code 444.
+                    This parameter is implemented using the map module. If the source address is not in the list of allowed addresses, nginx closes the connection immediately using HTTP code 444.
 
                     By default, the connection to the controller can be made from any address.
                   items:
@@ -958,7 +898,7 @@ spec:
                 hsts:
                   type: boolean
                   description: |
-                    Determines whether hsts is enabled. [Read more...](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Strict-Transport-Security).
+                    Determines whether hsts is enabled. Read more....
                   default: false
                 hstsOptions:
                   type: object
@@ -987,13 +927,13 @@ spec:
                       description: |
                         A license key to download the GeoIP2 database.
 
-                        If the key is set, the module downloads the GeoIP2 database every time the controller is started. Click [here](https://blog.maxmind.com/2019/12/18/significant-changes-to-accessing-and-using-geolite2-databases/) to learn more about obtaining a license key.
+                        If the key is set, the module downloads the GeoIP2 database every time the controller is started. Click here to learn more about obtaining a license key.
                     maxmindEditionIDs:
                       type: array
                       description: |
                         A list of database editions to download at startup.
 
-                        [More info...](https://dev.maxmind.com/geoip/geolite2-free-geolocation-data)
+
                       default: ["GeoLite2-City", "GeoLite2-ASN"]
                       items:
                         type: string
@@ -1013,7 +953,7 @@ spec:
                   description: |
                     Enable old TLS protocol versions and legacy cipher suites.
 
-                    Also, this options enables legacy cipher suites to support legacy libraries and software: [OWASP Cipher String 'C' ](https://cheatsheetseries.owasp.org/cheatsheets/TLS_Cipher_String_Cheat_Sheet.html). Learn more [here](https://github.com/deckhouse/deckhouse/blob/main/modules/402-ingress-nginx/templates/controller/configmap.yaml).
+                    Also, this options enables legacy cipher suites to support legacy libraries and software: OWASP Cipher String 'C' . Learn more here.
 
                     By default, only TLSv1.2 and the newest cipher suites are enabled.
                 disableHTTP2:
@@ -1034,7 +974,7 @@ spec:
                   description: |
                     The section with the Ingress controller parameters.
 
-                    You can specify [any supported parameter](https://kubernetes.github.io/ingress-nginx/user-guide/nginx-configuration/configmap/) in it in the `key: value (string)` format.
+                    You can specify any supported parameter in it in the `key: value (string)` format.
 
                     > **Caution.** An erroneous option may lead to the failure of the ingress controller;
 
@@ -1150,9 +1090,9 @@ spec:
                 underscoresInHeaders:
                   type: boolean
                   description: |
-                    Determines whether underscores are allowed in headers. Learn [more...](https://nginx.org/en/docs/http/ngx_http_core_module.html#underscores_in_headers).
+                    Determines whether underscores are allowed in headers. Learn .
 
-                    [This tutorial](https://docs.nginx.com/#missing-disappearing-http-headers) sheds light on why you should not enable it without careful consideration.
+                    This tutorial sheds light on why you should not enable it without careful consideration.
                   default: false
                 minReplicas:
                   type: integer
@@ -1169,7 +1109,7 @@ spec:
                 defaultSSLCertificate:
                   description: |
                     This certificate is used:
-                    - for `catch-all` server requests (here, "catch-all server" refers to the nginx [server directive](https://nginx.org/en/docs/http/ngx_http_core_module.html#server). Requests for which there is no corresponding Ingress resource end up on the `catch-all` server.
+                    - for `catch-all` server requests (here, "catch-all server" refers to the nginx server directive. Requests for which there is no corresponding Ingress resource end up on the `catch-all` server.
                     - for Ingress resources that do not have a `secretName` specified in the `tls` section.
 
                     By default, a self-signed certificate is used.

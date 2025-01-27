@@ -101,7 +101,6 @@ spec:
 
 ## Пример для bare metal (балансировщик MetalLB в режиме BGP LoadBalancer)
 
-{% alert level="warning" %}Доступно только в Enterprise Edition.{% endalert %}
 
 ```yaml
 apiVersion: deckhouse.io/v1
@@ -138,7 +137,6 @@ metallb:
 
 ## Пример для bare metal (балансировщик MetalLB в режиме L2 LoadBalancer)
 
-{% alert level="warning" %}Доступно только в Enterprise Edition.{% endalert %}
 
 1. Включите модуль `metallb`:
 

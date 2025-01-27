@@ -5,8 +5,8 @@ React TimePicker
 [![NPM version][npm-image]][npm-url]
 [![build status][travis-image]][travis-url]
 [![Test coverage][codecov-image]][codecov-url]
-[![Dependencies](https://img.shields.io/david/react-component/time-picker.svg?style=flat-square)](https://david-dm.org/react-component/time-picker)
-[![DevDependencies](https://img.shields.io/david/dev/react-component/time-picker.svg?style=flat-square)](https://david-dm.org/react-component/time-picker?type=dev)
+[!Dependencies](https://david-dm.org/react-component/time-picker)
+[!DevDependencies](https://david-dm.org/react-component/time-picker?type=dev)
 [![npm download][download-image]][download-url]
 
 [npm-image]: http://img.shields.io/npm/v/rc-time-picker.svg?style=flat-square

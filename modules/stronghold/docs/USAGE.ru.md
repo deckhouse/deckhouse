@@ -74,10 +74,10 @@ kubectl -n d8-system exec deploy/deckhouse -c deckhouse -it -- deckhouse-control
 
 ## Управление доступами
 
-В автоматическом режиме `Automatic` в `stronghold` после инициализации хранилища создается роль `deckhouse_administrators`, для которой включается доступ к веб-интерфейсу через OIDC аутентификацию [Dex](https://deckhouse.ru/documentation/v1/modules/user-authn/).
+В автоматическом режиме `Automatic` в `stronghold` после инициализации хранилища создается роль `deckhouse_administrators`, для которой включается доступ к веб-интерфейсу через OIDC аутентификацию [Dex](/modules/user-authn/).
 Также настраивается автоматическое подключение текущего кластера Deckhouse к Stronghold для работы модуля [secrets-store-integration](../../secrets-store-integration/).
 
-Для того, чтоб выдать пользователям, находящимся в группе `admins` (членство в группе передаётся из используемого IdP или LDAP с помощью [Dex](https://deckhouse.ru/documentation/v1/modules/user-authn/)), нужно указать эту группу в массиве `administrators` в `ModuleConfig`:
+Для того, чтоб выдать пользователям, находящимся в группе `admins` (членство в группе передаётся из используемого IdP или LDAP с помощью [Dex](/modules/user-authn/)), нужно указать эту группу в массиве `administrators` в `ModuleConfig`:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -169,7 +169,7 @@ spec:
 3. Проверьте, что Ingress контроллер обрабатывает запросы на ваш поддомен `stronghold.mycompany.tld`. Снова в браузере, либо командой `curl -kL` открываем https://stronghold.mycompany.tld. Вернётся ошибка 404.
 
 #### ClusterIssuer с самоподписанным центром сертификации
-Эта опция подходит, если вы хотите использовать свой самоподписанный Центр сертификации. В качестве примера мы будем использовать уже созданный `ClusterIssuer` ресурс **selfsigned**. Для добавления Issuer или ClusterIssuer со своим самоподписанным Центром сертификации, воспользуйтесь [официальной документацией](https://cert-manager.io/docs/configuration/ca/)
+Эта опция подходит, если вы хотите использовать свой самоподписанный Центр сертификации. В качестве примера мы будем использовать уже созданный `ClusterIssuer` ресурс **selfsigned**. Для добавления Issuer или ClusterIssuer со своим самоподписанным Центром сертификации, воспользуйтесь официальной документацией
 
 > Для этого способа подойдут как наличие публичного доменного имени, так и доступ только из внутренней сети.
 

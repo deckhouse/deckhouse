@@ -32,9 +32,9 @@ properties:
     properties:
       externalAuthentication:
         description: |
-          Параметры для подключения внешней аутентификации (используется механизм NGINX Ingress [external-auth](https://kubernetes.github.io/ingress-nginx/examples/auth/external-auth/), работающий на основе модуля NGINX [auth_request](https://nginx.org/en/docs/http/ngx_http_auth_request_module.html).
+          Параметры для подключения внешней аутентификации (используется механизм NGINX Ingress external-auth, работающий на основе модуля NGINX auth_request.
 
-          > Внешняя аутентификация включается автоматически, если включен модуль [user-authn](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/user-authn/).
+          > Внешняя аутентификация включается автоматически, если включен модуль [user-authn](/modules/user-authn/).
         properties:
           authURL:
             description: URL сервиса аутентификации. Если пользователь прошел аутентификацию, сервис должен возвращать код ответа HTTP 200.
@@ -44,9 +44,9 @@ properties:
         description: |
           Массив групп, пользователям которых позволен доступ в Grafana и Prometheus.
 
-          Используется, если включен модуль [user-authn](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/user-authn/) или параметр `externalAuthentication`.
+          Используется, если включен модуль [user-authn](/modules/user-authn/) или параметр `externalAuthentication`.
 
-          **Внимание!** При использовании совместно с модулем [user-authn](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/user-authn/) необходимо также добавить разрешенные группы в соответствующее поле в [настройках](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/user-authn/cr.html#dexprovider) DexProvider.
+          **Внимание!** При использовании совместно с модулем [user-authn](/modules/user-authn/) необходимо также добавить разрешенные группы в соответствующее поле в [настройках](/modules/user-authn/cr.html#dexprovider) DexProvider.
       whitelistSourceRanges:
         description: Список адресов в формате CIDR, которым разрешено проходить авторизацию в Grafana и Prometheus.
       satisfyAny:
@@ -61,7 +61,7 @@ properties:
         description: Использование по умолчанию пользовательской темной темы.
       customPlugins:
         description: |
-          Список дополнительных [plug-in'ов](https://grafana.com/grafana/plugins) для Grafana.
+          Список дополнительных plug-in'ов для Grafana.
 
           Необходимо указать в качестве значения список имен плагинов из официального репозитория.
 
@@ -93,7 +93,7 @@ properties:
       Допускается использование значений переменных окружения контейнера `config-reloader` в качестве значений меток,
       например:
       * `HOSTNAME`/`POD_NAME` — содержит наименование пода (например, `prometheus-main-0`, `prometheus-main-1` и т. д.);
-      * `SHARD` — содержит номер [шарда](https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/user-guides/shards-and-replicas.md).
+      * `SHARD` — содержит номер шарда.
   https:
     description: |
       Тип сертификата, используемого для Grafana/Prometheus.
@@ -106,7 +106,7 @@ properties:
           - `Disabled` — Grafana/Prometheus будут работать только по HTTP;
           - `CertManager` — Grafana/Prometheus будут работать по HTTPS и заказывать сертификат с помощью ClusterIssuer, заданного в параметре `certManager.clusterIssuerName`.
           - `CustomCertificate` — Grafana/Prometheus будут работать по HTTPS, используя сертификат из namespace `d8-system`.
-          - `OnlyInURI` — Grafana/Prometheus будут работать по HTTP (подразумевая, что перед ними стоит внешний балансировщик, который терминирует HTTPS) и все ссылки в [user-authn](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/user-authn/) будут генерироваться с HTTPS-схемой. Балансировщик должен обеспечивать перенаправление с HTTP на HTTPS.
+          - `OnlyInURI` — Grafana/Prometheus будут работать по HTTP (подразумевая, что перед ними стоит внешний балансировщик, который терминирует HTTPS) и все ссылки в [user-authn](/modules/user-authn/) будут генерироваться с HTTPS-схемой. Балансировщик должен обеспечивать перенаправление с HTTP на HTTPS.
       certManager:
         properties:
           clusterIssuerName:
@@ -120,7 +120,7 @@ properties:
             description: |
               Имя Secret'а в namespace `d8-system`, который будет использоваться для Grafana/Prometheus.
 
-              Secret должен быть в формате [kubernetes.io/tls](https://kubernetes.github.io/ingress-nginx/user-guide/tls/#tls-secrets).
+              Secret должен быть в формате kubernetes.io/tls.
   vpa:
     description: |
       Настройки VPA для подов.
@@ -165,12 +165,12 @@ properties:
     description: |
       Структура, аналогичная `spec.nodeSelector` пода Kubernetes.
 
-      Если значение не указано или указано `false`, будет использоваться [автоматика](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
+      Если значение не указано или указано `false`, будет использоваться [автоматика](/#выделение-узлов-под-определенный-вид-нагрузки).
   longtermNodeSelector:
     description: |
       Структура, аналогичная `spec.nodeSelector` пода Kubernetes.
 
-      Если значение не указано или указано `false`, будет использоваться [автоматика](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
+      Если значение не указано или указано `false`, будет использоваться [автоматика](/#выделение-узлов-под-определенный-вид-нагрузки).
   longtermPodAntiAffinity:
     type: string
     description: |
@@ -182,13 +182,13 @@ properties:
     description: |
       Структура, аналогичная `spec.tolerations` пода Kubernetes.
 
-      Если значение не указано или указано `false`, будет использоваться [автоматика](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
+      Если значение не указано или указано `false`, будет использоваться [автоматика](/#выделение-узлов-под-определенный-вид-нагрузки).
   longtermTolerations:
     type: array
     description: |
       Структура, аналогичная `spec.tolerations` пода Kubernetes.
 
-      Если значение не указано или указано `false`, будет использоваться [автоматика](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
+      Если значение не указано или указано `false`, будет использоваться [автоматика](/#выделение-узлов-под-определенный-вид-нагрузки).
   mainMaxDiskSizeGigabytes:
     description: |
       Устарел и будет удален. Ни на что не влияет.

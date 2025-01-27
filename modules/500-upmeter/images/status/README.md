@@ -6,7 +6,7 @@ Upmeter is a Kubernetes statuspage. This project is the webpage that shows clust
 
 ## Development
 
-This project is based on the template for [Svelte](https://svelte.dev) apps. It lives
+This project is based on the template for Svelte apps. It lives
 at https://github.com/sveltejs/template.
 
 Start the dev mode

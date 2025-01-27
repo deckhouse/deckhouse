@@ -3,12 +3,12 @@ title: "Модуль cni-cilium"
 description: Модуль cni-cilium Deckhouse обеспечивает работу сети в кластере Kubernetes с помощью Cilium.
 ---
 
-Модуль `cni-cilium` обеспечивает работу сети в кластере. Основан на проекте [Cilium](https://cilium.io/).
+Модуль `cni-cilium` обеспечивает работу сети в кластере. Основан на проекте Cilium.
 
 ## Ограничения
 
 1. Сервисы с типом `NodePort` и `LoadBalancer` несовместимы с hostNetwork-эндпойнтами в LB-режиме `DSR`. Переключитесь на режим `SNAT`, если это требуется.
-2. `HostPort` поды связываются только [с одним IP-адресом](https://github.com/deckhouse/deckhouse/issues/3035). Если в ОС есть несколько интерфейсов/IP, Cilium выберет один, предпочитая «серые» «белым».
+2. `HostPort` поды связываются только с одним IP-адресом. Если в ОС есть несколько интерфейсов/IP, Cilium выберет один, предпочитая «серые» «белым».
 3. Требования к ядру:
    * ядро Linux версии не ниже `5.7` для работы модуля `cni-cilium` и его совместной работы с модулями [istio](../istio/), [openvpn](../openvpn/), [node-local-dns]({% if site.d8Revision == 'CE' %}{{ site.urls.ru}}/products/kubernetes-platform/documentation/v1/modules/{% else %}..{% endif %}/node-local-dns/).
 4. Совместимость с ОС:
@@ -18,7 +18,7 @@ description: Модуль cni-cilium Deckhouse обеспечивает рабо
    * Astra Linux:
      * несовместим с изданием «Смоленск».
    * CentOS:
-     * для версий 7 и 8 необходимо новое ядро из [репозитория](https://elrepo.org).
+     * для версий 7 и 8 необходимо новое ядро из репозитория.
 
 ## Обработка внешнего трафика в разных режимах работы `bpfLB` (замена kube-proxy от Cilium)
 
@@ -70,7 +70,7 @@ description: Модуль cni-cilium Deckhouse обеспечивает рабо
          node-role.kubernetes.io/control-plane: ""
    ```
 
-В случае, если CiliumClusterwideNetworkPolicies не будут использованы, Control plane может некорректно работать до одной минуты во время перезагрузки `cilium-agent`-подов. Это происходит из-за [сброса Conntrack-таблицы](https://github.com/cilium/cilium/issues/19367). Привязка к entity `kube-apiserver` позволяет обойти баг.
+В случае, если CiliumClusterwideNetworkPolicies не будут использованы, Control plane может некорректно работать до одной минуты во время перезагрузки `cilium-agent`-подов. Это происходит из-за сброса Conntrack-таблицы. Привязка к entity `kube-apiserver` позволяет обойти баг.
 
 ## Смена режима работы Cilium
 
@@ -81,8 +81,6 @@ description: Модуль cni-cilium Deckhouse обеспечивает рабо
 Cilium полностью заменяет собой функционал модуля `kube-proxy`, поэтому `kube-proxy` автоматически отключается при включении модуля `cni-cilium`.
 
 ## Использование Egress Gateway
-
-{% alert level="warning" %} Функция доступна только в Enterprise Edition {% endalert %}
 
 ### Базовый режим
 

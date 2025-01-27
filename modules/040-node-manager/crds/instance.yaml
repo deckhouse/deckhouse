@@ -37,31 +37,18 @@ spec:
                       description: Node name
                 classReference:
                   description: |
-                    The reference to the `InstanceClass` object. It is unique for each `cloud-provider-*` module.
+                    The reference to the `InstanceClass` object.
                   type: object
                   properties:
                     kind:
-                      description: |
-                        The object type (e.g., `OpenStackInstanceClass`). The object type is specified in the documentation of the corresponding `cloud-provider-` module.
                       type: string
-                      enum:
-                        - OpenStackInstanceClass
-                        - GCPInstanceClass
-                        - VsphereInstanceClass
-                        - AWSInstanceClass
-                        - YandexInstanceClass
-                        - AzureInstanceClass
-                        - VCDInstanceClass
-                        - ZvirtInstanceClass
-                        - DynamixInstanceClass
-                        - HuaweiCloudInstanceClass
                     name:
                       description: |
                         The name of the required `InstanceClass` object (e.g., `finland-medium`).
                       type: string
                 machineRef:
                   type: object
-                  description: Reference to instance in the cloud.
+                  description: Reference to instance
                   properties:
                     apiVersion:
                       type: string

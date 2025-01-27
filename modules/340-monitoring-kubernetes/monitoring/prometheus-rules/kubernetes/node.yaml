@@ -117,7 +117,7 @@
 
         If cgroupDriver is set to systemd then reboot is required to roll back to cgroupfs driver. Please, drain and reboot the node.
 
-        You can check this [issue](https://github.com/deckhouse/deckhouse/issues/2152) for extra information.
+        You can check this issue for extra information.
 
   - alert: NodeTCPMemoryExhaust
     expr: max by (node) (node_sockstat_TCP_mem_bytes > node_sysctl_net_ipv4_tcp_mem{index="2"} * 4096 * 0.90)

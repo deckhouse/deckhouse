@@ -23,7 +23,7 @@ spec:
         openAPIV3Schema:
           type: object
           description: |
-            Resource for including 'remote_write' data from the local Prometheus into a separate longterm storage (E.g: [VictoriaMetrics](https://github.com/VictoriaMetrics/VictoriaMetrics)).
+            Resource for including 'remote_write' data from the local Prometheus into a separate longterm storage (E.g: VictoriaMetrics).
 
             A cluster can have any number of such resources.
           required:
@@ -71,7 +71,7 @@ spec:
                   description: |
                     The list of remote write relabel configurations.
 
-                    For example, if you need to remove unnecessary metrics or perform [data relabeling](https://prometheus.io/docs/prometheus/latest/configuration/configuration/#metric_relabel_configs).
+                    For example, if you need to remove unnecessary metrics or perform data relabeling.
                   type: array
                   items:
                     type: object

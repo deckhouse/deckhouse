@@ -141,4 +141,4 @@
         The `grafana-dashboard-definitions-custom` ConfigMap was found in the `d8-monitoring` namespace. This means that the deprecated method of registering custom dashboards in Grafana is being used.
 
         **This method is no longer used!**
-        Please, use the custom [GrafanaDashboardDefinition](https://github.com/deckhouse/deckhouse/blob/main/modules/300-prometheus/docs/internal/GRAFANA_DASHBOARD_DEVELOPMENT.md) resource instead.
+        Please, use the custom GrafanaDashboardDefinition resource instead.

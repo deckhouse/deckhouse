@@ -41,7 +41,7 @@ We will add Grafana dashboard in the future for viewing metrics.
 
 ## Emulating a Falco event
 
-You can use the [event-generator](https://github.com/falcosecurity/event-generator) CLI utility to generate a Falco events.
+You can use the event-generator CLI utility to generate a Falco events.
 
 `event-generator` can generate a variety of suspect actions(syscalls, k8s audit events, ...).
 
@@ -51,11 +51,11 @@ Use the following command to run all events with the Pod in Kubernetes cluster:
 kubectl run falco-event-generator --image=falcosecurity/event-generator run
 ```
 
-If you need to implement an action, use this [guide](https://github.com/falcosecurity/event-generator/blob/main/events/README.md).
+If you need to implement an action, use this guide.
 
 ## Emulating a Falcosidekick event
 
-You can use the [Falcosidekick](https://github.com/falcosecurity/falcosidekick) `/test` HTTP endpoint to send a test event to all enabled outputs.
+You can use the Falcosidekick `/test` HTTP endpoint to send a test event to all enabled outputs.
 
 - Get a list of Pods in `d8-runtime-audit-engine` namespace:
 

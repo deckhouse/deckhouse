@@ -33,16 +33,16 @@ spec:
                       description: Имя узла
                 classReference:
                   description: |
-                    Ссылка на объект `InstanceClass`. Уникален для каждого модуля `cloud-provider-*`.
+                    Ссылка на объект `InstanceClass`.
                   properties:
                     kind:
                       description: |
-                        Тип объекта (например, `OpenStackInstanceClass`). Тип объекта указан в документации соответствующего модуля облачного провайдера.
+                        Тип объекта.
                     name:
                       description: |
                         Имя нужного `InstanceClass`-объекта (например, `finland-medium`).
                 machineRef:
-                  description: Ссылка на объект узла облачного провайдера.
+                  description: Ссылка на объект узла.
                   properties:
                     apiVersion:
                       description: Используемая версия API Kubernetes.

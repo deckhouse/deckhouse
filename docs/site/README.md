@@ -80,9 +80,8 @@ Some tips:
 
 ### Dependencies
 - Jekyll 4+
-- [Jekyll Asset Pipeline](https://github.com/matthodan/jekyll-asset-pipeline)
-- [Jekyll Regex Replace](https://github.com/joshdavenport/jekyll-regex-replace]
-- [Jekyll Include Plugin](https://github.com/flant/jekyll_include_plugin)
+- Jekyll Asset Pipeline
+- Jekyll Regex Replace
 
 ## Running a site with the documentation locally
 
@@ -90,7 +89,7 @@ Some tips:
 
 - Clone repo firstly.
 - Free 80 port to bind.
-- Install [werf](https://werf.io/getting_started/).
+- Install werf.
 
 ### Starting and stopping a site with the documentation locally — the first method
 
@@ -140,7 +139,7 @@ Some tips:
 
 > Instructions may be outdated!
 
-There is the `docs/site/werf-debug.yaml` file to compile and the `docs/site/docker-compose-debug.yml` file to run the backend with [delve](https://github.com/go-delve/delve) debugger.
+There is the `docs/site/werf-debug.yaml` file to compile and the `docs/site/docker-compose-debug.yml` file to run the backend with delve debugger.
 
 Run from the docs/site directory of the project (or run docs/site/backend/debug.sh):
 

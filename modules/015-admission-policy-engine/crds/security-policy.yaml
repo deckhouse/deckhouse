@@ -341,7 +341,7 @@ spec:
                                 description: Max ID value.
                     readOnlyRootFilesystem:
                       type: boolean
-                      description: If set to true, only the pods with the read-only root filesystem across all containers will be permitted to run. See the [Kubernetes documentation](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#securitycontext-v1-core) for more details.
+                      description: If set to true, only the pods with the read-only root filesystem across all containers will be permitted to run. See the Kubernetes documentation for more details.
                     automountServiceAccountToken:
                       type: boolean
                       description: Allows pods to run with `automountServiceAccountToken` enabled.
@@ -442,7 +442,7 @@ spec:
                       description: |
                         List of policies to verify container images signatures.
 
-                        Container images must be signed using [Cosign](https://docs.sigstore.dev/cosign/key_management/signing_with_self-managed_keys/#:~:text=To%20generate%20a%20key%20pair,prompted%20to%20provide%20a%20password.&text=Alternatively%2C%20you%20can%20use%20the,%2C%20ECDSA%2C%20and%20ED25519%20keys).
+                        Container images must be signed using Cosign.
                       items:
                         type: object
                         required: ["publicKeys", "reference"]
@@ -500,7 +500,7 @@ spec:
                           description: |
                             Specifies the label selector to filter namespaces.
 
-                            You can get more info in [the documentation](https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/).
+                            You can get more info in the documentation.
                           anyOf:
                             - required: [ matchLabels ]
                             - required: [ matchExpressions ]
@@ -544,7 +544,7 @@ spec:
                       description: |
                         Specifies the label selector to filter Pods with.
 
-                        You can get more into [here](https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/).
+                        You can get more into here.
                       anyOf:
                         - required:
                             - matchLabels

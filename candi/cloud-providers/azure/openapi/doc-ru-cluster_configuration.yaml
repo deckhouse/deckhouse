@@ -20,14 +20,13 @@ apiVersions:
         description: |
           Название схемы размещения.
 
-          [Подробнее](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/cloud-provider-azure/layouts.html) о возможных схемах размещения провайдера.
       standard:
         description: |
-          Настройки для схемы размещения [Standard](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/cloud-provider-azure/layouts.html#standard).
+          Настройки для схемы размещения [Standard](/modules/cloud-provider-azure/layouts.html#standard).
         properties:
           natGatewayPublicIpCount:
             description: |
-              Количество IP-адресов для [NAT Gateway](https://docs.microsoft.com/en-us/azure/virtual-network/nat-overview) ([тарификация](https://azure.microsoft.com/en-us/pricing/details/virtual-network/)).
+              Количество IP-адресов для NAT Gateway (тарификация).
 
               NAT Gateway не используется, если установлено `0`.
       sshPublicKey:
@@ -40,7 +39,7 @@ apiVersions:
           По умолчанию `*`.
       vNetCIDR:
         description: |
-          Адресное пространство [виртуальной сети](https://learn.microsoft.com/ru-ru/azure/virtual-network/virtual-network-vnet-plan-design-arm#virtual-networks) в формате [CIDR](https://ru.wikipedia.org/wiki/%D0%91%D0%B5%D1%81%D0%BA%D0%BB%D0%B0%D1%81%D1%81%D0%BE%D0%B2%D0%B0%D1%8F_%D0%B0%D0%B4%D1%80%D0%B5%D1%81%D0%B0%D1%86%D0%B8%D1%8F).
+          Адресное пространство виртуальной сети в формате CIDR.
 
           Виртуальная сеть — это виртуальная изолированная часть общедоступной сети Azure. Каждая виртуальная сеть выделена для вашей подписки.
 
@@ -53,14 +52,14 @@ apiVersions:
             description: Список DNS-серверов.
       subnetCIDR:
         description: |
-          [Подсеть](https://learn.microsoft.com/ru-ru/azure/virtual-network/virtual-network-vnet-plan-design-arm#subnets) из адресного пространства `vNetCIDR`, в которой будут работать узлы кластера.
+          Подсеть из адресного пространства `vNetCIDR`, в которой будут работать узлы кластера.
 
           Виртуальную сеть можно сегментировать на одну или несколько подсетей в пределах ограничений.
       peeredVNets:
         description: |
           Массив VNet, с которыми будет объединена сеть кластера.
 
-          ServiceAccount должен иметь доступ ко всем перечисленным VNet. Если доступа нет, пиринговое соединение необходимо [настраивать вручную](https://docs.microsoft.com/en-us/azure/virtual-network/virtual-network-peering-overview).
+          ServiceAccount должен иметь доступ ко всем перечисленным VNet. Если доступа нет, пиринговое соединение необходимо настраивать вручную.
         items:
           properties:
             resourceGroupName:
@@ -75,7 +74,7 @@ apiVersions:
 
           Service Endpoints для виртуальной сети позволяют прямо и безопасно подключаться к сервисам Azure по оптимизированному маршруту через магистральную сеть Azure. Они позволяют ограничить пределами отдельных виртуальных сетей доступ к критически важным ресурсам сервисов Azure. Через Service Endpoints приватные IP-адреса в виртуальной сети могут подключаться к эндпоинтам сервисов Azure, не используя публичный IP-адрес в виртуальной сети.
 
-          Больше информации можно найти в [официальной документации](https://learn.microsoft.com/ru-ru/azure/virtual-network/virtual-network-service-endpoints-overview).
+          Больше информации можно найти в официальной документации.
       masterNodeGroup:
         description: |
           Спецификация для описания NodeGroup master-узлов.
@@ -91,19 +90,19 @@ apiVersions:
             description: |
               Список зон, в которых допустимо создавать master-узлы.
 
-              Доступные зоны для выбранного типа инстанса можно посмотреть с помощью [Azure CLI](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli):
+              Доступные зоны для выбранного типа инстанса можно посмотреть с помощью Azure CLI:
               ```shell
               az vm list-skus -l westeurope -o table
               ```
           instanceClass:
             description: |
-              Частичное содержимое полей [AzureInstanceClass](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/cloud-provider-azure/cr.html#azureinstanceclass).
+              Частичное содержимое полей [AzureInstanceClass](/modules/cloud-provider-azure/cr.html#azureinstanceclass).
             properties: &instanceClassProperties_ru
               machineSize:
                 description: |
                   Тип заказываемых инстансов.
 
-                  Узнать все доступные типы в регионе можно с помощью [Azure CLI](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli):
+                  Узнать все доступные типы в регионе можно с помощью Azure CLI:
 
                   ```shell
                   az vm list-sizes --location westeurope -o table
@@ -112,9 +111,9 @@ apiVersions:
                 description: |
                   Образ виртуальной машины, который будет использоваться для инстанса.
 
-                  Подробнее про образы виртуальных машин можно прочитать в [официальной документации](https://docs.microsoft.com/en-us/azure/virtual-machines/linux/cli-ps-findimage).
+                  Подробнее про образы виртуальных машин можно прочитать в официальной документации.
 
-                  Получить `urn` образа c помощью [Azure CLI](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli) (столбец №4):
+                  Получить `urn` образа c помощью Azure CLI (столбец №4):
 
                   ```shell
                   az vm image list --location westeurope --publisher Canonical --all --sku 20_04-lts -o table
@@ -123,7 +122,7 @@ apiVersions:
 
                   По умолчанию используется образ из `AzureCloudDiscoveryData` — образ, из которого был создан мастер-узел при развертывании кластера.
 
-                  Список поддерживаемых Deckhouse ОС и их версий можно найти в [документации](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/supported_versions.html) (учитывайте используемую версию Deckhouse).
+                  Список поддерживаемых Deckhouse ОС и их версий можно найти в [документации](/supported_versions.html) (учитывайте используемую версию Deckhouse).
               enableExternalIP:
                 description: |
                   Разрешение назначения внешнего IP-адреса для инстанса.
@@ -136,7 +135,7 @@ apiVersions:
                 description: |
                   Тип создаваемых дисков (root-диска и диска для etcd).
 
-                  Список доступных типов дисков можно посмотреть с помощью [Azure CLI](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli):
+                  Список доступных типов дисков можно посмотреть с помощью Azure CLI:
 
                   ```shell
                   az vm list-skus -l westeurope --zone
@@ -166,7 +165,7 @@ apiVersions:
               description: |
                 Список зон, в которых допустимо создавать узлы.
 
-                Доступные зоны для выбранного типа инстанса можно посмотреть с помощью [Azure CLI](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli):
+                Доступные зоны для выбранного типа инстанса можно посмотреть с помощью Azure CLI:
 
                 ```shell
                 az vm list-skus -l westeurope -o table
@@ -179,20 +178,20 @@ apiVersions:
                   description: |
                     Список лейблов, которые будут прикреплены ко всем ресурсам кластера (если ресурсы это поддерживают).
 
-                    Аналогично стандартному [полю](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta) `metadata.labels`.
+                    Аналогично стандартному полю `metadata.labels`.
 
                     Если поменять лейблы в рабочем кластере, после применения изменений необходимо пересоздать все машины.
                 annotations:
                   description: |
-                    Аналогично стандартному [полю](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta) `metadata.annotations`.
+                    Аналогично стандартному полю `metadata.annotations`.
                 taints:
                   description: |
-                    Аналогично полю `.spec.taints` из объекта [Node](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#taint-v1-core).
+                    Аналогично полю `.spec.taints` из объекта Node.
 
                     > **Внимание.** Доступны только поля `effect`, `key`, `values`.
             instanceClass:
               description: |
-                Частичное содержимое полей [AzureInstanceClass](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/cloud-provider-azure/cr.html#azureinstanceclass).
+                Частичное содержимое полей [AzureInstanceClass](/modules/cloud-provider-azure/cr.html#azureinstanceclass).
               properties:
                 <<: *instanceClassProperties_ru
       tags:
@@ -202,11 +201,11 @@ apiVersions:
           Если поменять теги в рабочем кластере, после применения изменений необходимо пересоздать все машины.
       provider:
         description: |
-          [Параметры подключения](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/cloud-provider-azure/environment.html) к API Azure.
+          [Параметры подключения](/modules/cloud-provider-azure/environment.html) к API Azure.
         properties:
           location:
             description: |
-              Имя географического региона, в котором будут созданы все ресурсы. Получение списка доступных локаций через [Azure CLI](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli):
+              Имя географического региона, в котором будут созданы все ресурсы. Получение списка доступных локаций через Azure CLI:
 
               ```shell
               az account list-locations -o table
@@ -221,7 +220,7 @@ apiVersions:
             description: |
               Секрет (secret) клиента.
 
-              Помните о сроке действия секрета. По умолчанию он действителен один год. Чтобы создать service account с большим сроком действия секрета, обратитесь к [официальной документации](https://learn.microsoft.com/en-us/azure/app-service/configure-ssl-app-service-certificate?tabs=portal#renew-an-app-service-certificate).
+              Помните о сроке действия секрета. По умолчанию он действителен один год. Чтобы создать service account с большим сроком действия секрета, обратитесь к официальной документации.
           tenantId:
             description: |
               Идентификатор tenant'а.

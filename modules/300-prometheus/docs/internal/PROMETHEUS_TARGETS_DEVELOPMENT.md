@@ -30,7 +30,7 @@ All Pod-oriented labels have a label with the Pod name (generally, it is called 
 
 We strongly recommend configuring metric exporters so that only authenticated and authorized users can access them.
 
-For this, you can use the [kube-rbac-proxy](https://github.com/brancz/kube-rbac-proxy) Kubernetes proxy. It is written in Go and can authenticate the user with `TokenReview` or a client certificate.
+For this, you can use the kube-rbac-proxy Kubernetes proxy. It is written in Go and can authenticate the user with `TokenReview` or a client certificate.
 Authorization is performed using `SubjectAccessReview` according to the RBAC rules defined for the user.
 
 #### Below is an example of the Deployment of a secure exporter
@@ -86,7 +86,7 @@ At the same time, the proxy listens on 0.0.0.0 and intercepts all external traff
 
 The proxy only needs permissions to create `TokenReview` and `SubjectAccessReview` to authenticate and authorize users using kube-apiserver.
 
-Our clusters have a [built-in **d8-rbac-proxy** ClusterRole](https://github.com/deckhouse/deckhouse/blob/main/modules/deckhouse/templates/common/rbac/kube-rbac-proxy.yaml) that is ideal for this kind of situation.
+Our clusters have a built-in **d8-rbac-proxy** ClusterRole that is ideal for this kind of situation.
 You don't need to create it yourself! You just need to attach it to the ServiceAccount of your Deployment.
 
 ```yaml

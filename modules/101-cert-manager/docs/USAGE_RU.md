@@ -28,7 +28,7 @@ spec:
 * можно заказать сертификат с дополнительными именами (как в примере);
 * можно валидировать разные домены, входящие в один сертификат, через разные Ingress-контроллеры.
 
-Подробнее можно прочитать [в документации cert-manager](https://cert-manager.io/docs/tutorials/acme/http-validation/).
+Подробнее можно прочитать в документации cert-manager.
 
 ## Заказ wildcard-сертификата с DNS в Cloudflare
 
@@ -57,7 +57,7 @@ spec:
 
    После этого Deckhouse автоматически создаст ClusterIssuer и Secret для Cloudflare в namespace `d8-cert-manager`.
 
-   * Конфигурация с помощью [APIToken](https://cert-manager.io/docs/configuration/acme/dns01/cloudflare/#api-tokens) является рекомендуемой и более безопасной.
+   * Конфигурация с помощью APIToken является рекомендуемой и более безопасной.
 
 3. Создаем Certificate с проверкой с помощью провайдера Cloudflare. Данная возможность появится только при указании настройки `cloudflareGlobalAPIKey` и `cloudflareEmail` в Deckhouse:
 
@@ -107,7 +107,7 @@ spec:
 
 1. Создаем пользователя с необходимыми правами.
 
-   * Заходим на [страницу управления политиками](https://console.aws.amazon.com/iam/home?region=us-east-2#/policies). Создаем политику с такими правами:
+   * Заходим на страницу управления политиками. Создаем политику с такими правами:
 
      ```json
      {
@@ -132,7 +132,7 @@ spec:
      }
      ```
 
-   * Заходим на [страницу управления пользователями](https://console.aws.amazon.com/iam/home?region=us-east-2#/users). Создаем пользователя с созданной ранее политикой.
+   * Заходим на страницу управления пользователями. Создаем пользователя с созданной ранее политикой.
 
 2. Редактируем [настройки модуля cert-manager](configuration.html) и добавляем такую секцию:
 
@@ -166,7 +166,7 @@ spec:
 
 1. Создаем ServiceAccount с необходимой ролью:
 
-   * Заходим на [страницу управления политиками](https://console.cloud.google.com/iam-admin/serviceaccounts).
+   * Заходим на страницу управления политиками.
    * Выбираем нужный проект.
    * Создаем ServiceAccount с желаемым названием, например `dns01-solver`.
    * Заходим в созданный ServiceAccount.

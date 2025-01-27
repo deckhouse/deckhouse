@@ -254,5 +254,5 @@ If StorageClass with the name `local-storage-class` is shown, then the configura
 
 ## System requirements and recommendations
 
-- Use the stock kernels provided with the [supported distributions](https://deckhouse.io/documentation/v1/supported_versions.html#linux).
+- Use the stock kernels provided with the [supported distributions](/supported_versions.html#linux).
 - Do not use another SDS (Software defined storage) to provide disks to Deckhouse SDS.

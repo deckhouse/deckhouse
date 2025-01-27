@@ -5,7 +5,7 @@ search: autoscaler, HorizontalPodAutoscaler
 
 {% raw %}
 
-Note that only HPA (Horizontal Pod Autoscaling) with [apiVersion: autoscaling/v2](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.23/#objectmetricsource-v2-autoscaling), whose support has been available since Kubernetes v1.12, is discussed below.
+Note that only HPA (Horizontal Pod Autoscaling) with apiVersion: autoscaling/v2, whose support has been available since Kubernetes v1.12, is discussed below.
 
 Configuring HPA requires:
 * defining what is being scaled (`.spec.scaleTargetRef`);
@@ -17,9 +17,9 @@ Metrics in terms of HPA are of three types:
 * [custom](#scaling-based-on-custom-metrics) — of type (`.spec.metrics[].type`) "Pods" or "Object";
 * [external](#using-external-metrics-in-hpa) — of type (`.spec.metrics[].type`) "External".
 
-**Caution!** [By default,](https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/#default-behavior) HPA uses different approaches for scaling:
-* If the metrics [indicate](https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/#algorithm-details) that scaling **up** is required, it is done immediately (`spec.behavior.scaleUp.stabilizationWindowSeconds` = 0). The only limitation is the rate of increase: pods can double in 15 seconds, but if there are less than 4 pods, 4 new pods will be added.
-* If the metrics [indicate](https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/#algorithm-details) that scaling **down** is required, it happens within 5 minutes (`spec.behavior.scaleUp.stabilizationWindowSeconds` = 300): suggestions for a new number of replicas are calculated, then the largest value is selected. There is no limit on the number of pods to be removed at once.
+**Caution!** By default, HPA uses different approaches for scaling:
+* If the metrics indicate that scaling **up** is required, it is done immediately (`spec.behavior.scaleUp.stabilizationWindowSeconds` = 0). The only limitation is the rate of increase: pods can double in 15 seconds, but if there are less than 4 pods, 4 new pods will be added.
+* If the metrics indicate that scaling **down** is required, it happens within 5 minutes (`spec.behavior.scaleUp.stabilizationWindowSeconds` = 300): suggestions for a new number of replicas are calculated, then the largest value is selected. There is no limit on the number of pods to be removed at once.
 
 If metrics are subject to fluctuations that result in a surge of unnecessary application replicas, the following approaches are used:
 * Wrapping the metric with an aggregation function (e. g., `avg_over_time()`) if the metric is defined by a PromQL query. For more details, see. [example](#using-volatile-custom-metrics).
@@ -318,7 +318,7 @@ spec:
 
 The `prometheus-metrics-adapter` module supports the `externalRules` mechanism. It allows you to define custom PromQL queries and register them as metrics.
 
-A universal rule that allows you to create your own metrics without customization in `prometheus-metrics-adapter` has been added in the installation examples — "any metric in Prometheus with the name `kube_adapter_metric_<name>` will be registered in the API under the name `<name>`". Then, you just need to write an exporter that will export such a metric or create a [recording rule](https://prometheus.io/docs/prometheus/latest/configuration/recording_rules/) in Prometheus that will aggregate your metric based on other metrics.
+A universal rule that allows you to create your own metrics without customization in `prometheus-metrics-adapter` has been added in the installation examples — "any metric in Prometheus with the name `kube_adapter_metric_<name>` will be registered in the API under the name `<name>`". Then, you just need to write an exporter that will export such a metric or create a recording rule in Prometheus that will aggregate your metric based on other metrics.
 
 Below is an example of _CustomPrometheusRules_:
 
@@ -387,7 +387,7 @@ To install an exporter to integrate with SQS:
 
 That's it, you have integrated the cluster. In case you need to configure autoscaling for just one application (in a single namespace), we recommend installing the exporter together with that application and using `NamespaceMetrics`.
 
-The following is an example of an exporter (e. g., [sqs-exporter](https://github.com/ashiddo11/sqs-exporter)) to retrieve metrics from Amazon SQS if:
+The following is an example of an exporter (e. g., sqs-exporter) to retrieve metrics from Amazon SQS if:
 * a `send_forum_message` queue is running in Amazon SQS;
 * scaling is done when the number of messages in that queue exceeds 42.
 

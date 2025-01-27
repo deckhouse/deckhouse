@@ -10,7 +10,7 @@ spec:
                   description: |
                     Имя Ingress-gateway класса для обслуживания Istio ingressgateway controller.
 
-                    Значение данного параметра используется в качестве селектора лейблов ресурса [Gateway](https://istio.io/latest/docs/reference/config/networking/gateway/).
+                    Значение данного параметра используется в качестве селектора лейблов ресурса Gateway.
 
                     Пример лейбла ресурса Gateway: `istio.deckhouse.io/ingress-gateway-class: <ingressGatewayClass value>`
                 inlet:
@@ -34,7 +34,7 @@ spec:
 
                     Если значение не указано или указано `false`, будет использоваться [автоматика](../../#выделение-узлов-под-определенный-вид-нагрузки).
 
-                    **Формат**: стандартный список [toleration](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/). Поды инстанса унаследуют это поле как есть.
+                    **Формат**: стандартный список toleration. Поды инстанса унаследуют это поле как есть.
                 loadBalancer:
                   description: |
                     Секция настроек для inlet'а `LoadBalancer`.

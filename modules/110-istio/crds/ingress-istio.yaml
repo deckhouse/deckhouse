@@ -30,8 +30,8 @@ spec:
                 ingressGatewayClass:
                   type: string
                   description: |
-                    Ingress gateway class is used by application [Gateway](https://istio.io/latest/docs/reference/config/networking/gateway/) resources for identifying the right Ingress gateway setup.
-                    
+                    Ingress gateway class is used by application Gateway resources for identifying the right Ingress gateway setup.
+
                     The identification is organized by setting the spec.selector: `istio.deckhouse.io/ingress-gateway-class: <ingressGatewayClass value>`.
                   x-doc-examples: ['istio']
                   pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?$'
@@ -59,11 +59,11 @@ spec:
                 tolerations:
                   type: array
                   description: |
-                    [The same](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/) as in the pods' `spec.tolerations` parameter in Kubernetes;
+                    The same as in the pods' `spec.tolerations` parameter in Kubernetes;
 
                     If the parameter is omitted or `false`, it will be determined [automatically](../../#advanced-scheduling).
 
-                    **Format**: the standard [toleration](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/) list. Instance pods inherit this field as is.
+                    **Format**: the standard toleration list. Instance pods inherit this field as is.
                   items:
                     type: object
                     properties:

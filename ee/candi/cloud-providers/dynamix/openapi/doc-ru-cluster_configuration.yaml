@@ -83,7 +83,7 @@ apiVersions:
                   description: |
                     Список лейблов, которые будут прикреплены ко всем ресурсам кластера (если они это поддерживают).
 
-                    Аналогично стандартному [полю](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta) `metadata.labels`.
+                    Аналогично стандартному полю `metadata.labels`.
                     Если поменять лейблы в рабочем кластере, после применения изменений необходимо пересоздать все машины.
                   x-doc-example: |
                     ```yaml
@@ -93,7 +93,7 @@ apiVersions:
                     ```
                 annotations:
                   description: |
-                    Аналогично стандартному [полю](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta) `metadata.annotations`.
+                    Аналогично стандартному полю `metadata.annotations`.
                   x-doc-example: |
                     ```yaml
                     annotations:
@@ -101,7 +101,7 @@ apiVersions:
                     ```
                 taints:
                   description: |
-                    Аналогично полю `.spec.taints` из объекта [Node](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#taint-v1-core).
+                    Аналогично полю `.spec.taints` из объекта Node.
                     > **Внимание!** Доступны только поля `effect`, `key`, `values`.
                   x-doc-example: |
                     ```yaml
@@ -124,7 +124,7 @@ apiVersions:
       layout:
         description: |
           Название схемы размещения.
-          [Подробнее](layouts.html) о возможных схемах размещения провайдера.
+           о возможных схемах размещения провайдера.
       provider:
         type: object
         additionalProperties: false

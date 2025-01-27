@@ -9,17 +9,13 @@ webIfaces:
 Модуль отвечает за единую систему аутентификации, интегрированную с Kubernetes и веб-интерфейсами, используемыми в других модулях, например, Grafana и Dashboard.
 
 Модуль состоит из следующих компонентов:
-- [`dex`](https://github.com/dexidp/dex) — федеративный OpenID Connect провайдер, поддерживающий работу со статическими пользователями и с возможностью подключения к различным внешним провайдерам аутентификации, например, SAML, GitLab, GitHub.
-- `kubeconfig-generator` (он же [`dex-k8s-authenticator`](https://github.com/mintel/dex-k8s-authenticator)) — веб-приложение, генерирующее команды для настройки локального `kubectl` после аутентификации в Dex;
-- `dex-authenticator` (он же [`oauth2-proxy`](https://github.com/oauth2-proxy/oauth2-proxy)) — приложение, получающее запросы от компонента NGINX Ingress (через модуль auth_request) и выполняющее их авторизацию с помощью сервиса Dex.
+- `dex` — федеративный OpenID Connect провайдер, поддерживающий работу со статическими пользователями и с возможностью подключения к различным внешним провайдерам аутентификации.
+- `kubeconfig-generator` (он же `dex-k8s-authenticator`) — веб-приложение, генерирующее команды для настройки локального `kubectl` после аутентификации в Dex;
+- `dex-authenticator` (он же `oauth2-proxy`) — приложение, получающее запросы от компонента NGINX Ingress (через модуль auth_request) и выполняющее их авторизацию с помощью сервиса Dex.
 
 Управление статическими пользователями осуществляется с помощью custom ресурс [_User_](cr.html#user), в котором хранится вся информация о пользователе, включая его пароль.
 
 Поддерживаются следующие внешние провайдеры/протоколы аутентификации:
-- GitHub;
-- GitLab;
-- BitBucket Cloud;
-- Crowd;
 - LDAP;
 - OIDC.
 
@@ -29,7 +25,7 @@ webIfaces:
 
 ### Базовая аутентификация в API Kubernetes
 
-[Базовая аутентификация](https://en.wikipedia.org/wiki/Basic_access_authentication) в API Kubernetes на данный момент доступна только для провайдера Crowd (с включением параметра [`enableBasicAuth`](cr.html#dexprovider-v1-spec-crowd-enablebasicauth)).
+Базовая аутентификация в API Kubernetes на данный момент доступна только для провайдера Crowd (с включением параметра [`enableBasicAuth`](cr.html#dexprovider-v1-spec-crowd-enablebasicauth)).
 
 > К API Kubernetes можно подключаться и [через другие поддерживаемые внешние провайдеры](#веб-интерфейс-для-генерации-готовых-kubeconfig-файлов).
 

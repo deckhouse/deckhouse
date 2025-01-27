@@ -64,7 +64,7 @@ properties:
       admissionPlugins:
         type: array
         description: |
-          List of enabled additional [admission plugins](https://kubernetes.io/docs/reference/access-authn-authz/admission-controllers).
+          List of enabled additional admission plugins.
 
           **Note**, that in addition to the admission plugins enabled by default in Kubernetes, the following admission plugins are also always enabled:
           - `ExtendedResourceToleration`
@@ -82,7 +82,7 @@ properties:
               cacheSize: 2000
             ```
 
-          > Note that th `PodNodeSelector` admission plugin [does not require](https://github.com/kubernetes/kubernetes/blob/f0ea54070bec90dd829b7054117d670f9f90839f/plugin/pkg/admission/podnodeselector/admission.go#L74-L97) specifiying a global configuration, it relies on annotated Namespaces.
+          > Note that th `PodNodeSelector` admission plugin does not require specifiying a global configuration, it relies on annotated Namespaces.
         x-examples:
           - ["AlwaysPullImages", "NamespaceAutoProvision"]
         items:
@@ -103,7 +103,7 @@ properties:
       certSANs:
         type: array
         description: |
-          Array of [SANs](https://en.wikipedia.org/wiki/Subject_Alternative_Name), with which the API server certificate will be generated.
+          Array of SANs, with which the API server certificate will be generated.
 
           In addition to the passed list, the following list is always used:
           * `kubernetes`;
@@ -125,7 +125,7 @@ properties:
         description: |
           Optional authentication parameters for Kubernetes API clients.
 
-          By default, they are taken from [user-authn](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/user-authn/) module ConfigMap.
+          By default, they are taken from [user-authn](/modules/user-authn/) module ConfigMap.
         properties:
           oidcIssuerURL:
             type: string
@@ -169,7 +169,7 @@ properties:
         description: |
           Optional authorization parameters for Kubernetes API clients.
 
-          By default, they are taken from [user-authz](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/user-authz/) module ConfigMap.
+          By default, they are taken from [user-authz](/modules/user-authz/) module ConfigMap.
         properties:
           webhookURL:
             type: string
@@ -248,7 +248,7 @@ properties:
         type: boolean
         default: false
         description: |
-          Enables [encrypting secret data at rest](https://kubernetes.io/docs/tasks/administer-cluster/encrypt-data/).
+          Enables encrypting secret data at rest.
 
           Generates `kube-system/d8-secret-encryption-key` Secret with encryption key.
           > **Note!** This mode cannot be disabled!
@@ -259,7 +259,7 @@ properties:
     properties:
       maxDbSize:
         description: |
-          [quota-backend-bytes](https://etcd.io/docs/v3.5/dev-guide/limit/#storage-size-limit) parameter.
+          quota-backend-bytes parameter.
           Deckhouse automatically manages the `quota-backend-bytes` parameter.
           If the `maxDbSize` parameter is set, deckhouse will use this value for the `quota-backend-bytes` etcd parameter.
 

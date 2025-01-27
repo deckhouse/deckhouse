@@ -110,5 +110,5 @@ spec:
 
 If you need more examples of rules, you can follow the links below:
 
-- [falco rules repository](https://github.com/falcosecurity/rules/blob/32b635394c40a56f8bdeb334c60a46e2edd9908c/rules/application_rules.yaml)
-- [artifacthub falco rules](https://artifacthub.io/packages/search?kind=1&sort=relevance&page=1)
+- falco rules repository
+- artifacthub falco rules

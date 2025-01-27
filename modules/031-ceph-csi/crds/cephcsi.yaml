@@ -79,7 +79,7 @@ spec:
                             description: |
                               The reclaim policy for a Persistent Volume.
 
-                              [More info...](https://kubernetes.io/docs/concepts/storage/persistent-volumes/#reclaiming)
+
                             type: string
                             enum:
                               - Delete
@@ -89,7 +89,7 @@ spec:
                             description: |
                               Allows the users to resize the volume by editing the corresponding PVC object.
 
-                              [More info...](https://kubernetes.io/docs/concepts/storage/storage-classes/#allow-volume-expansion)
+
                             type: boolean
                             default: true
                           mountOptions:

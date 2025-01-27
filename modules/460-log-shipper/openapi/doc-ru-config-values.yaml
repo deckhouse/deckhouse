@@ -7,12 +7,12 @@ properties:
     description: |
       Структура, аналогичная `spec.nodeSelector` пода Kubernetes.
 
-      Если значение не указано или указано `false`, будет использоваться [автоматика](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
+      Если значение не указано или указано `false`, будет использоваться [автоматика](/#выделение-узлов-под-определенный-вид-нагрузки).
   tolerations:
     description: |
       Структура, аналогичная `spec.tolerations` пода Kubernetes.
 
-      Если значение не указано или указано `false`, будет использоваться [автоматика](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
+      Если значение не указано или указано `false`, будет использоваться [автоматика](/#выделение-узлов-под-определенный-вид-нагрузки).
   resourcesRequests:
     description: |
       Настройки максимальных значений CPU и памяти, которые может запросить под при выборе узла (CPU requests, memory requests).
@@ -23,7 +23,7 @@ properties:
         description: |
           Режим управления запросами ресурсов (requests):
           - `Static` — классический, с помощью явного указания ограничения. Настраивается в секции параметров [static](#parameters-resourcesrequests-static);
-          - `VPA` — с помощью [VPA](https://github.com/kubernetes/design-proposals-archive/blob/main/autoscaling/vertical-pod-autoscaler.md). Настраивается в секции параметров [vpa](#parameters-resourcesrequests-vpa).
+          - `VPA` — с помощью VPA. Настраивается в секции параметров [vpa](#parameters-resourcesrequests-vpa).
       vpa:
         description: |
           Настройка управления ресурсами в режиме `VPA`.

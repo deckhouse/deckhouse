@@ -5,7 +5,7 @@ description: "Deckhouse Kubernetes Platform, the descheduler module. Every 15 mi
 
 Every 15 minutes, the module analyzes the cluster state and performs pod eviction according to the conditions described in the active [strategies](#strategies). Evicted pods go through the scheduling process again, considering the current state of the cluster. This helps redistribute workloads according to the chosen strategy.
  
-The module is based on the [descheduler](https://github.com/kubernetes-sigs/descheduler) project.
+The module is based on the descheduler project.
 
 ## Features of the module
 
@@ -14,8 +14,8 @@ The module is based on the [descheduler](https://github.com/kubernetes-sigs/desc
   * a pod is in the `d8-*` or `kube-system` namespaces;
   * a pod has a [priorityClassName](../priority-class/) `system-cluster-critical` or `system-node-critical`;
   * a pod is associated with a local storage;
-  * a pod is associated with a [DaemonSet](https://kubernetes.io/docs/concepts/workloads/controllers/daemonset/);
-  * pod eviction will violate [Pod Disruption Budget (PDB)](https://kubernetes.io/docs/concepts/workloads/pods/disruptions/);
+  * a pod is associated with a DaemonSet;
+  * pod eviction will violate Pod Disruption Budget (PDB);
   * there are no available nodes to run the evicted pod.
 * Pods with the `Best effort` priority class are evicted before those with `Burstable` and `Guaranteed`.
 
@@ -46,7 +46,7 @@ In GKE, you cannot configure the default scheduler, but you can use the `optimiz
 {% endalert %}
 
 {% alert level="warning" %}
-Node resource usage takes into account [extended resources](https://kubernetes.io/docs/tasks/configure-pod-container/extended-resource/) and is calculated based on pod requests and limits ([requests and limits](https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/#requests-and-limits)), not actual consumption. This approach ensures consistency with the kube-scheduler, which uses a similar principle when scheduling pods on nodes. This means that resource usage metrics displayed by Kubelet (or tools like `kubectl top`) might differ from calculated metrics, as Kubelet and related tools show actual resource consumption.
+Node resource usage takes into account extended resources and is calculated based on pod requests and limits (requests and limits), not actual consumption. This approach ensures consistency with the kube-scheduler, which uses a similar principle when scheduling pods on nodes. This means that resource usage metrics displayed by Kubelet (or tools like `kubectl top`) might differ from calculated metrics, as Kubelet and related tools show actual resource consumption.
 {% endalert %}
 
 ### LowNodeUtilization
@@ -66,7 +66,7 @@ Nodes with resource usage in the range between `thresholds` and `targetThreshold
 The strategy is enabled by the parameter [spec.strategies.lowNodeUtilization.enabled](cr.html#descheduler-v1alpha2-spec-strategies-lownodeutilization-enabled).
 
 {% alert level="warning" %}
-Node resource usage takes into account [extended resources](https://kubernetes.io/docs/tasks/configure-pod-container/extended-resource/) and is calculated based on pod requests and limits ([requests and limits](https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/#requests-and-limits)), not actual consumption. This approach ensures consistency with the kube-scheduler, which uses a similar principle when scheduling pods on nodes. This means that resource usage metrics displayed by Kubelet (or tools like `kubectl top`) might differ from calculated metrics, as Kubelet and related tools show actual resource consumption.
+Node resource usage takes into account extended resources and is calculated based on pod requests and limits (requests and limits), not actual consumption. This approach ensures consistency with the kube-scheduler, which uses a similar principle when scheduling pods on nodes. This means that resource usage metrics displayed by Kubelet (or tools like `kubectl top`) might differ from calculated metrics, as Kubelet and related tools show actual resource consumption.
 {% endalert %}
 
 ### RemoveDuplicates
@@ -84,10 +84,10 @@ The strategy is enabled by the parameter [strategies.removeDuplicates.enabled](c
 ### RemovePodsViolatingInterPodAntiAffinity
 
 {% alert level="info" %}
-Evicts pods violating [inter-pod affinity and anti-affinity rules](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#inter-pod-affinity-and-anti-affinity) to ensure compliance.
+Evicts pods violating inter-pod affinity and anti-affinity rules to ensure compliance.
 {% endalert %}
 
-The strategy ensures that pods violating [inter-pod affinity and anti-affinity rules](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#inter-pod-affinity-and-anti-affinity) are evicted from nodes.
+The strategy ensures that pods violating inter-pod affinity and anti-affinity rules are evicted from nodes.
 
 For example, if there is **podA** on a node and **podB** and **podC** (running on the same node) have anti-affinity rules which prohibit them to run on the same node, then **podA** will be evicted from the node so that **podB** and **podC** could run. This issue could happen, when the anti-affinity rules for **podB** and **podC** are created when they are already running on node.
 
@@ -96,10 +96,10 @@ The strategy is enabled by the parameter [spec.strategies.highNodeUtilization.en
 ### RemovePodsViolatingNodeAffinity
 
 {% alert level="info" %}
-Evicts pods violating [node affinity rules](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#node-affinity) to ensure compliance.
+Evicts pods violating node affinity rules to ensure compliance.
 {% endalert %}
 
-The strategy makes sure all pods violating [node affinity](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#node-affinity) are eventually removed from nodes.
+The strategy makes sure all pods violating node affinity are eventually removed from nodes.
 
 Essentially, depending on the settings of the parameter [strategies.removePodsViolatingNodeAffinity.nodeAffinityType](cr.html#descheduler-v1alpha2-spec-strategies-removepodsviolatingnodeaffinity-nodeaffinitytype), the strategy temporarily implement the rule `requiredDuringSchedulingIgnoredDuringExecution` of the pod's node affinity as the rule `requiredDuringSchedulingRequiredDuringExecution`, and the rule `preferredDuringSchedulingIgnoredDuringExecution` as the rule `preferredDuringSchedulingPreferredDuringExecution`.
 

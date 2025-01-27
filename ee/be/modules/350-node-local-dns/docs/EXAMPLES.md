@@ -19,4 +19,4 @@ spec:
       image: nginx
 ```
 
-[Here](https://kubernetes.io/docs/concepts/services-networking/dns-pod-service/#pod-s-dns-config) you can learn more about DNS configuring.
+Here you can learn more about DNS configuring.

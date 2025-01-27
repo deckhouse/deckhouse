@@ -15,7 +15,7 @@ properties:
     description: |
       Tolerations for DHCP Pods and iptables managers.
 
-      [The same](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/) as in the Pods' `spec.tolerations` parameter in Kubernetes. The instance's Pods inherit this field as is.
+      The same as in the Pods' `spec.tolerations` parameter in Kubernetes. The instance's Pods inherit this field as is.
     items:
       type: object
       properties:

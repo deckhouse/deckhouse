@@ -17,7 +17,7 @@ description: "Подготовка окружения VMware Cloud Director дл
 * _Catalog_
 
 Organization, VirtualDataCenter, StoragePolicy, SizingPolicy, EdgeRouter и Catalog должны быть предоставлены вашим поставщиком услуг VMware Cloud Director.
-Также в тенанте нужно выдать следующие права на изменение параметров ВМ (используйте [инструкцию](https://kb.vmware.com/s/article/92067)):
+Также в тенанте нужно выдать следующие права на изменение параметров ВМ (используйте инструкцию):
 
 * _guestinfo.metadata_
 * _guestinfo.metadata.encoding_
@@ -166,7 +166,7 @@ _Network type_ должен быть _Routed_:
 
 ### Подготовка шаблона из OVA-файла
 
-Скачайте [OVA-файл](https://cloud-images.ubuntu.com/jammy/):
+Скачайте OVA-файл:
 
 ![Настройка шаблона, шаг 1](../../images/cloud-provider-vcd/template/Screenshot.png)
 

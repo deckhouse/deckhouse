@@ -11,7 +11,7 @@ This module provides CSI that manages volumes based on `NFS`. The module allows 
 ## System requirements and recommendations
 
 ### Requirements
-- Stock kernels shipped with the [supported distributions](https://deckhouse.io/documentation/v1/supported_versions.html#linux).
+- Stock kernels shipped with the [supported distributions](/supported_versions.html#linux).
 - Presence of a deployed and configured NFS server.
 
 ## Quickstart guide

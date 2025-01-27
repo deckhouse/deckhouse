@@ -4,7 +4,7 @@ title: "The istio module: examples"
 
 ## Circuit Breaker
 
-The `outlierDetection` settings in the [DestinationRule](istio-cr.html#destinationrule) custom resource help to determine whether some endpoints do not behave as expected. Refer to the [Envoy documentation](https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/upstream/outlier) for more details on the Outlier Detection algorithm.
+The `outlierDetection` settings in the [DestinationRule](istio-cr.html#destinationrule) custom resource help to determine whether some endpoints do not behave as expected. Refer to the Envoy documentation for more details on the Outlier Detection algorithm.
 
 Example:
 
@@ -53,7 +53,7 @@ spec:
 
 ## Locality Failover
 
-> Read [the main documentation](https://istio.io/latest/docs/tasks/traffic-management/locality-load-balancing/failover/) if you need.
+> Read the main documentation if you need.
 
 Istio allows you to configure a priority-based locality (geographic location) failover between endpoints. Istio uses node labels with the appropriate hierarchy to define the zone:
 

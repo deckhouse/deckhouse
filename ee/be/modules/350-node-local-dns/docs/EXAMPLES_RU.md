@@ -19,4 +19,4 @@ spec:
       image: nginx
 ```
 
-[Подробнее](https://kubernetes.io/docs/concepts/services-networking/dns-pod-service/#pod-s-dns-config) про настройку DNS.
+Подробнее про настройку DNS.

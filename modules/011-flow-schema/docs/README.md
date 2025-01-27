@@ -2,7 +2,7 @@
 title: "The flow-schema module"
 ---
 
-The module deploys [FlowSchema and PriorityLevelConfiguration](https://kubernetes.io/docs/concepts/cluster-administration/flow-control/) to prevent API overloading.
+The module deploys FlowSchema and PriorityLevelConfiguration to prevent API overloading.
 
 
 `FlowSchema` sets `PriorityLevel` for `list` requests from all service accounts in Deckhouse namespaces (having label `heritage: deckhouse`) to the following apiGroups:

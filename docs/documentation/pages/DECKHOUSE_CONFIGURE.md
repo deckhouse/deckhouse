@@ -3,7 +3,7 @@ title: "How to configure?"
 permalink: en/
 ---
 
-Deckhouse consists of the Deckhouse operator and modules. A module is a bundle of Helm chart, [Addon-operator](https://github.com/flant/addon-operator/) hooks, commands for building module components (Deckhouse components) and other files.
+Deckhouse consists of the Deckhouse operator and modules. A module is a bundle of Helm chart, Addon-operator hooks, commands for building module components (Deckhouse components) and other files.
 
 <div markdown="0" style="height: 0;" id="deckhouse-configuration"></div>
 
@@ -70,7 +70,7 @@ Changes are applied automatically once the resource configuration is saved.
 
 ## Configuring the module
 
-> Deckhouse uses [addon-operator](https://github.com/flant/addon-operator/) when working with modules. Please refer to its documentation to learn how Deckhouse works with [modules](https://github.com/flant/addon-operator/blob/main/docs/src/MODULES.md), [module hooks](https://github.com/flant/addon-operator/blob/main/docs/src/HOOKS.md) and [module parameters](https://github.com/flant/addon-operator/blob/main/docs/src/VALUES.md). We would appreciate it if you *star* the project.
+> Deckhouse uses addon-operator when working with modules. Please refer to its documentation to learn how Deckhouse works with modules, module hooks and module parameters. We would appreciate it if you *star* the project.
 
 The module is configured using the `ModuleConfig` custom resource , whose name is the same as the module name (in kebab-case). The `ModuleConfig` custom resource has the following fields:
 

@@ -4,7 +4,7 @@ title: "The loki module"
 
 The module implements log storage.
 
-The module uses the [Grafana Loki](https://grafana.com/oss/loki/) project.
+The module uses the Grafana Loki project.
 
 The module deploys log storage based on Grafana Loki, configures the [log-shipper](../log-shipper/) module to use the loki module if necessary, and adds the corresponding data source to Grafana.
 

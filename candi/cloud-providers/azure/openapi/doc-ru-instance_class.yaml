@@ -4,7 +4,7 @@ spec:
       schema: &schema
         openAPIV3Schema:
           description: |
-            Параметры группы Azure Instances, которые будет использовать `machine-controller-manager` (модуль [node-manager](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/node-manager/)).
+            Параметры группы Azure Instances, которые будет использовать `machine-controller-manager` (модуль [node-manager](/modules/node-manager/)).
 
             На этот ресурс ссылается ресурс `CloudInstanceClass` модуля `node-manager`.
           properties:
@@ -14,7 +14,7 @@ spec:
                   description: |
                     Тип заказываемых инстансов.
 
-                    Список всех доступных типов в регионе можно посмотреть с помощью [Azure CLI](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli):
+                    Список всех доступных типов в регионе можно посмотреть с помощью Azure CLI:
                     ```shell
                     az vm list-sizes --location westeurope -o table
                     ```
@@ -36,15 +36,15 @@ spec:
                   description: |
                     Образ виртуальной машины, который будет использоваться для инстанса.
 
-                    Подробнее про образы виртуальных машин можно посмотреть [в официальной документации](https://docs.microsoft.com/en-us/azure/virtual-machines/linux/cli-ps-findimage).
+                    Подробнее про образы виртуальных машин можно посмотреть в официальной документации.
 
-                    Последнюю доступную версию образа можно получить c помощью [Azure CLI](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli):
+                    Последнюю доступную версию образа можно получить c помощью Azure CLI:
                       - `az vm image show --urn Canonical:UbuntuServer:18.04-LTS:latest --location westeurope`;
                       - `az vm image show --urn Canonical:0001-com-ubuntu-server-focal:20_04-lts:latest --location westeurope`.
 
                     По умолчанию используется образ из `AzureCloudDiscoveryData` (образ, из которого был создан мастер-узел при развертывании кластера).
 
-                    Список поддерживаемых ОС и их версий можно найти в [документации](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/supported_versions.html) (учитывайте используемую версию Deckhouse).
+                    Список поддерживаемых ОС и их версий можно найти в [документации](/supported_versions.html) (учитывайте используемую версию Deckhouse).
                 diskSizeGb:
                   description: |
                     Размер root-диска. Значение указывается в `ГиБ`.
@@ -52,7 +52,7 @@ spec:
                   description: |
                     Тип созданного диска.
 
-                    Список доступных типов дисков можно посмотреть с помощью [Azure CLI](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli):
+                    Список доступных типов дисков можно посмотреть с помощью Azure CLI:
                     ```shell
                     az vm list-skus -l westeurope --zone`
                     ```

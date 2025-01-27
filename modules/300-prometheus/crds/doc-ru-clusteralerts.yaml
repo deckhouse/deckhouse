@@ -35,7 +35,7 @@ spec:
                     Необязательный параметр.
                 labels:
                   description: |
-                    Аналогично стандартному [полю](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta) `metadata.labels`.
+                    Аналогично стандартному полю `metadata.labels`.
                 annotations:
                   description: |
-                    Аналогично стандартному [полю](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta) `metadata.annotations`.
+                    Аналогично стандартному полю `metadata.annotations`.

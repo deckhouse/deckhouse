@@ -18,7 +18,7 @@ description: "Configuring VMware vSphere for Deckhouse cloud provider operation.
 
 ### Installing govc
 
-You'll need the vSphere CLI — [govc](https://github.com/vmware/govmomi/tree/master/govc#installation) — to proceed with the rest of the guide.
+You'll need the vSphere CLI — govc — to proceed with the rest of the guide.
 
 After the installation is complete, set the environment variables required to work with vCenter:
 
@@ -104,10 +104,10 @@ govc permissions.set -principal <username>@vsphere.local -role deckhouse /
 
 It is recommended to use a pre-built cloud image/OVA file provided by the OS vendor to create a `Template`:
 
-* [**Ubuntu**](https://cloud-images.ubuntu.com/)
-* [**Debian**](https://cloud.debian.org/images/cloud/)
-* [**CentOS**](https://cloud.centos.org/)
-* [**Rocky Linux**](https://rockylinux.org/alternative-images/) (*Generic Cloud / OpenStack* section)
+* **Ubuntu**
+* **Debian**
+* **CentOS**
+* **Rocky Linux** (*Generic Cloud / OpenStack* section)
 
 #### Virtual machine image requirements
 
@@ -115,7 +115,7 @@ Deckhouse uses `cloud-init` to configure a virtual machine after startup. To do 
 
 * `open-vm-tools`
 * `cloud-init`
-* [`cloud-init-vmware-guestinfo`](https://github.com/vmware-archive/cloud-init-vmware-guestinfo#installation) (if the `cloud-init` version lower than 21.3 is used)
+* `cloud-init-vmware-guestinfo` (if the `cloud-init` version lower than 21.3 is used)
 
 Also, after the virtual machine is started, the following services associated with these packages must be started:
 
@@ -127,7 +127,7 @@ To add SSH keys to user's authorized keys, the `default_user` parameter must be 
 
 {% alert level="warning" %}
 Deckhouse creates virtual machine disks of the `eagerZeroedThick` type, however, the disk type of the created VMs will be changed without any notice to match the `VM Storage Policy` as configured in vSphere.
-You can read more in the [documentation](https://github.com/hashicorp/terraform-provider-vsphere/blob/main/website/docs/r/virtual_machine.html.markdown#virtual-disk-provisioning-policies).
+You can read more in the documentation.
 {% endalert %}
 
 {% alert %}

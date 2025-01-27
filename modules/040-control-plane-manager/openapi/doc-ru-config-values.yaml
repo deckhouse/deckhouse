@@ -30,7 +30,7 @@ properties:
               Этот вариант полезен при переходе от одного API издателя к другому.
       admissionPlugins:
         description: |
-          Список включенных дополнительных [admission-плагинов](https://kubernetes.io/docs/reference/access-authn-authz/admission-controllers).
+          Список включенных дополнительных admission-плагинов.
 
           **Обратите внимание**, что, помимо включенных по умолчанию в Kubernetes admission-плагинов, также всегда включены (без возможности отключения) следующие admission-плагины:
           - `ExtendedResourceToleration`;
@@ -48,7 +48,7 @@ properties:
               cacheSize: 2000
             ```
 
-          > Admission-плагин `PodNodeSelector` [не требует](https://github.com/kubernetes/kubernetes/blob/f0ea54070bec90dd829b7054117d670f9f90839f/plugin/pkg/admission/podnodeselector/admission.go#L74-L97) указания глобальной конфигурации, он использует только аннотации на пространстве имен (namespace'ах).
+          > Admission-плагин `PodNodeSelector` не требует указания глобальной конфигурации, он использует только аннотации на пространстве имен (namespace'ах).
       bindToWildcard:
         description: |
           Прослушивание на `0.0.0.0`.
@@ -56,7 +56,7 @@ properties:
           По умолчанию API-сервер слушает на hostIP, который обычно соответствует Internal-адресу узла, но это зависит от типа кластера (Static или Cloud) и выбранной схемы размещения (layout).
       certSANs:
         description: |
-          Массив строк, список дополнительных [SANs](https://en.wikipedia.org/wiki/Subject_Alternative_Name), с которыми будет сгенерирован сертификат API-сервера.
+          Массив строк, список дополнительных SANs, с которыми будет сгенерирован сертификат API-сервера.
 
           Кроме переданного списка, всегда используется и следующий список:
           * `kubernetes`;
@@ -71,7 +71,7 @@ properties:
         description: |
           Опциональные параметры аутентификации клиентов Kubernetes API.
 
-          По умолчанию используются данные из ConfigMap, устанавливаемого модулем [user-authn](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/user-authn/).
+          По умолчанию используются данные из ConfigMap, устанавливаемого модулем [user-authn](/modules/user-authn/).
         properties:
           oidcIssuerURL:
             description: |
@@ -97,7 +97,7 @@ properties:
         description: |
           Параметры авторизации клиентов Kubernetes API.
 
-          По умолчанию используются данные из ConfigMap, устанавливаемого модулем [user-authz](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/user-authz/).
+          По умолчанию используются данные из ConfigMap, устанавливаемого модулем [user-authz](/modules/user-authz/).
         properties:
           webhookURL:
             description: |
@@ -112,12 +112,10 @@ properties:
           annotations:
             description: |
               Аннотации, которые будут проставлены сервису для гибкой настройки балансировщика.
-              > **Внимание!** Модуль не учитывает особенности указания аннотаций в различных облаках. Если аннотации для заказа LoadBalancer'а применяются только при создании сервиса, для обновления подобных параметров вам необходимо будет удалить и добавить параметр `apiserver.loadBalancer`.
           sourceRanges:
             description: |
               Список CIDR, которым разрешен доступ к API.
 
-              Облачный провайдер может не поддерживать данную опцию и игнорировать ее.
           port:
             description: |
               Внешний порт TCP-балансировщика.
@@ -139,7 +137,7 @@ properties:
               Путь к директории. Действует только в случае `output: "File"`.
       encryptionEnabled:
         description: |
-          Включает режим [encrypting secret data at rest](https://kubernetes.io/docs/tasks/administer-cluster/encrypt-data/).
+          Включает режим encrypting secret data at rest.
 
           Генерирует Secret `kube-system/d8-secret-encryption-key`, содержащий ключ шифрования.
           > **Важно!** Этот режим нельзя отключить!
@@ -149,7 +147,7 @@ properties:
     properties:
       maxDbSize:
         description: |
-          [quota-backend-bytes](https://etcd.io/docs/v3.5/dev-guide/limit/#storage-size-limit) параметр.
+          quota-backend-bytes параметр.
           Deckhouse автоматически управляет `quota-backend-bytes` параметром.
           Если параметр `maxDbSize` установлен, Deckhouse будет использовать это значение для параметра `quota-backend-bytes` etcd.
 

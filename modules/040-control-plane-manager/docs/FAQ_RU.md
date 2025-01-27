@@ -10,181 +10,6 @@ title: "Управление control plane: FAQ"
 
 Добавление master-узла в статический или гибридный кластер ничем не отличается от добавления обычного узла в кластер. Воспользуйтесь для этого соответствующими [примерами](../node-manager/examples.html#добавление-статического-узла-в-кластер). Все необходимые действия по настройке компонентов control plane кластера на новом узле будут выполнены автоматически, дождитесь их завершения — появления master-узлов в статусе `Ready`.
 
-<div id='как-добавить-master-узлы-в-облачном-кластере-single-master-в-multi-master'></div>
-
-## Как добавить master-узлы в облачном кластере?
-
-Далее описана конвертация кластера с одним master-узлом в мультимастерный кластер.
-
-> Перед добавлением узлов убедитесь в наличии необходимых квот.
->
-> Важно иметь нечетное количество master-узлов для обеспечения кворума.
-
-1. Сделайте [резервную копию `etcd`](faq.html#резервное-копирование-и-восстановление-etcd) и папки `/etc/kubernetes`.
-1. Скопируйте полученный архив за пределы кластера (например, на локальную машину).
-1. Убедитесь, что в кластере нет [алертов](../prometheus/faq.html#как-получить-информацию-об-алертах-в-кластере), которые могут помешать созданию новых master-узлов.
-1. Убедитесь, что [очередь Deckhouse пуста](../../deckhouse-faq.html#как-проверить-очередь-заданий-в-deckhouse).
-1. **На локальной машине** запустите контейнер установщика Deckhouse соответствующей редакции и версии (измените адрес container registry при необходимости):
-
-   ```bash
-   DH_VERSION=$(kubectl -n d8-system get deployment deckhouse -o jsonpath='{.metadata.annotations.core\.deckhouse\.io\/version}') \
-   DH_EDITION=$(kubectl -n d8-system get deployment deckhouse -o jsonpath='{.metadata.annotations.core\.deckhouse\.io\/edition}' | tr '[:upper:]' '[:lower:]' ) \
-   docker run --pull=always -it -v "$HOME/.ssh/:/tmp/.ssh/" \
-     registry.deckhouse.io/deckhouse/${DH_EDITION}/install:${DH_VERSION} bash
-   ```
-
-1. **В контейнере с инсталлятором** выполните следующую команду, чтобы проверить состояние перед началом работы:
-
-   ```bash
-   dhctl terraform check --ssh-agent-private-keys=/tmp/.ssh/<SSH_KEY_FILENAME> --ssh-user=<USERNAME> --ssh-host <MASTER-NODE-0-HOST>
-   ```
-
-   Ответ должен сообщить, что Terraform не нашел расхождений и изменений не требуется.
-
-1. **В контейнере с инсталлятором** выполните следующую команду и укажите требуемое количество master-узлов в параметре `masterNodeGroup.replicas`:
-
-   ```bash
-   dhctl config edit provider-cluster-configuration --ssh-agent-private-keys=/tmp/.ssh/<SSH_KEY_FILENAME> --ssh-user=<USERNAME> \
-     --ssh-host <MASTER-NODE-0-HOST>
-   ```
-
-   > Для **Yandex Cloud**, при использовании внешних адресов на master-узлах, количество элементов массива в параметре [masterNodeGroup.instanceClass.externalIPAddresses](../cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration-masternodegroup-instanceclass-externalipaddresses) должно равняться количеству master-узлов. При использовании значения `Auto` (автоматический заказ публичных IP-адресов), количество элементов в массиве все равно должно соответствовать количеству master-узлов.
-   >
-   > Например, при трех master-узлах (`masterNodeGroup.replicas: 3`) и автоматическом заказе адресов, параметр `masterNodeGroup.instanceClass.externalIPAddresses` будет выглядеть следующим образом:
-   >
-   > ```bash
-   > externalIPAddresses:
-   > - "Auto"
-   > - "Auto"
-   > - "Auto"
-   > ```
-
-1. **В контейнере с инсталлятором** выполните следующую команду для запуска масштабирования:
-
-   ```bash
-   dhctl converge --ssh-agent-private-keys=/tmp/.ssh/<SSH_KEY_FILENAME> --ssh-user=<USERNAME> --ssh-host <MASTER-NODE-0-HOST>
-   ```
-
-1. Дождитесь появления необходимого количества master-узлов в статусе `Ready` и готовности всех экземпляров `control-plane-manager`:
-
-   ```bash
-   kubectl -n kube-system wait pod --timeout=10m --for=condition=ContainersReady -l app=d8-control-plane-manager
-   ```
-
-<div id='как-удалить-master-узел'></div>
-<div id='как-уменьшить-число-master-узлов-в-облачном-кластере-multi-master-в-single-master'></div>
-
-## Как уменьшить число master-узлов в облачном кластере?
-
-Далее описана конвертация мультимастерного кластера в кластер с одним master-узлом.
-
-{% alert level="warning" %}
-Описанные ниже шаги необходимо выполнять с первого по порядку master-узла кластера (master-0). Это связано с тем, что кластер всегда масштабируется по порядку: например, невозможно удалить узлы master-0 и master-1, оставив master-2.
-{% endalert %}
-
-1. Сделайте [резервную копию `etcd`](faq.html#резервное-копирование-и-восстановление-etcd) и папки `/etc/kubernetes`.
-1. Скопируйте полученный архив за пределы кластера (например, на локальную машину).
-1. Убедитесь, что в кластере нет [алертов](../prometheus/faq.html#как-получить-информацию-об-алертах-в-кластере), которые могут помешать обновлению master-узлов.
-1. Убедитесь, что [очередь Deckhouse пуста](../../deckhouse-faq.html#как-проверить-очередь-заданий-в-deckhouse).
-1. **На локальной машине** запустите контейнер установщика Deckhouse соответствующей редакции и версии (измените адрес container registry при необходимости):
-
-   ```bash
-   DH_VERSION=$(kubectl -n d8-system get deployment deckhouse -o jsonpath='{.metadata.annotations.core\.deckhouse\.io\/version}') \
-   DH_EDITION=$(kubectl -n d8-system get deployment deckhouse -o jsonpath='{.metadata.annotations.core\.deckhouse\.io\/edition}' | tr '[:upper:]' '[:lower:]' ) \
-   docker run --pull=always -it -v "$HOME/.ssh/:/tmp/.ssh/" \
-     registry.deckhouse.io/deckhouse/${DH_EDITION}/install:${DH_VERSION} bash
-   ```
-
-1. **В контейнере с инсталлятором** выполните следующую команду и укажите `1` в параметре `masterNodeGroup.replicas`:
-
-   ```bash
-   dhctl config edit provider-cluster-configuration --ssh-agent-private-keys=/tmp/.ssh/<SSH_KEY_FILENAME> \
-     --ssh-user=<USERNAME> --ssh-host <MASTER-NODE-0-HOST>
-   ```
-
-   > Для **Yandex Cloud** при использовании внешних адресов на master-узлах количество элементов массива в параметре [masterNodeGroup.instanceClass.externalIPAddresses](../cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration-masternodegroup-instanceclass-externalipaddresses) должно равняться количеству master-узлов. При использовании значения `Auto` (автоматический заказ публичных IP-адресов) количество элементов в массиве все равно должно соответствовать количеству master-узлов.
-   >
-   > Например, при одном master-узле (`masterNodeGroup.replicas: 1`) и автоматическом заказе адресов параметр `masterNodeGroup.instanceClass.externalIPAddresses` будет выглядеть следующим образом:
-   >
-   > ```yaml
-   > externalIPAddresses:
-   > - "Auto"
-   > ```
-
-1. Снимите следующие лейблы с удаляемых master-узлов:
-   * `node-role.kubernetes.io/control-plane`
-   * `node-role.kubernetes.io/master`
-   * `node.deckhouse.io/group`
-
-   Команда для снятия лейблов:
-
-   ```bash
-   kubectl label node <MASTER-NODE-N-NAME> node-role.kubernetes.io/control-plane- node-role.kubernetes.io/master- node.deckhouse.io/group-
-   ```
-
-1. Убедитесь, что удаляемые master-узлы пропали из списка узлов кластера etcd:
-
-   ```bash
-   kubectl -n kube-system exec -ti $(kubectl -n kube-system get pod -l component=etcd,tier=control-plane -o name | head -n1) -- \
-   etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
-   --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key \
-   --endpoints https://127.0.0.1:2379/ member list -w table
-   ```
-
-1. Выполните `drain` для удаляемых узлов:
-
-   ```bash
-   kubectl drain <MASTER-NODE-N-NAME> --ignore-daemonsets --delete-emptydir-data
-   ```
-
-1. Выключите виртуальные машины, соответствующие удаляемым узлам, удалите инстансы соответствующих узлов из облака и подключенные к ним диски (`kubernetes-data-master-<N>`).
-
-1. Удалите в кластере поды, оставшиеся на удаленных узлах:
-
-   ```bash
-   kubectl delete pods --all-namespaces --field-selector spec.nodeName=<MASTER-NODE-N-NAME> --force
-   ```
-
-1. Удалите в кластере объекты `Node` удаленных узлов:
-
-   ```bash
-   kubectl delete node <MASTER-NODE-N-NAME>
-   ```
-
-1. **В контейнере с инсталлятором** выполните следующую команду для запуска масштабирования:
-
-   ```bash
-   dhctl converge --ssh-agent-private-keys=/tmp/.ssh/<SSH_KEY_FILENAME> --ssh-user=<USERNAME> --ssh-host <MASTER-NODE-0-HOST>
-   ```
-
-## Как убрать роль master-узла, сохранив узел?
-
-1. Сделайте [резервную копию etcd](faq.html#резервное-копирование-и-восстановление-etcd) и папки `/etc/kubernetes`.
-1. Скопируйте полученный архив за пределы кластера (например, на локальную машину).
-1. Убедитесь, что в кластере нет [алертов](../prometheus/faq.html#как-получить-информацию-об-алертах-в-кластере), которые могут помешать обновлению master-узлов.
-1. Убедитесь, что [очередь Deckhouse пуста](../../deckhouse-faq.html#как-проверить-очередь-заданий-в-deckhouse).
-1. Снимите лейблы `node.deckhouse.io/group: master` и `node-role.kubernetes.io/control-plane: ""`.
-1. Убедитесь, что удаляемый master-узел пропал из списка узлов кластера:
-
-   ```bash
-   kubectl -n kube-system exec -ti $(kubectl -n kube-system get pod -l component=etcd,tier=control-plane -o name | head -n1) -- \
-   etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
-   --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key \
-   --endpoints https://127.0.0.1:2379/ member list -w table
-   ```
-
-1. Зайдите на узел и выполните следующие команды:
-
-   ```shell
-   rm -f /etc/kubernetes/manifests/{etcd,kube-apiserver,kube-scheduler,kube-controller-manager}.yaml
-   rm -f /etc/kubernetes/{scheduler,controller-manager}.conf
-   rm -f /etc/kubernetes/authorization-webhook-config.yaml
-   rm -f /etc/kubernetes/admin.conf /root/.kube/config
-   rm -rf /etc/kubernetes/deckhouse
-   rm -rf /etc/kubernetes/pki/{ca.key,apiserver*,etcd/,front-proxy*,sa.*}
-   rm -rf /var/lib/etcd/member/
-   ```
-
 <div id='как-изменить-образ-ос-в-multi-master-кластере'></div>
 
 ## Как изменить образ ОС в мультимастерном кластере?
@@ -248,7 +73,7 @@ title: "Управление control plane: FAQ"
    kubectl drain ${NODE} --ignore-daemonsets --delete-emptydir-data
    ```
 
-1. Выключите виртуальную машину, соответствующую узлу, удалите инстанс узла из облака и подключенные к нему диски (`kubernetes-data`).
+1. Выключите виртуальную машину, соответствующую узлу, удалите инстанс узла и подключенные к нему диски (`kubernetes-data`).
 
 1. Удалите в кластере поды, оставшиеся на удаляемом узле:
 
@@ -301,9 +126,9 @@ title: "Управление control plane: FAQ"
 
 ## Как изменить образ ОС в кластере с одним master-узлом?
 
-1. Преобразуйте кластер с одним master-узлом в мультимастерный в соответствии с [инструкцией](#как-добавить-master-узлы-в-облачном-кластере-single-master-в-multi-master).
+1. Преобразуйте кластер с одним master-узлом в мультимастерный.
 1. Обновите master-узлы в соответствии с [инструкцией](#как-изменить-образ-ос-в-multi-master-кластере).
-1. Преобразуйте мультимастерный кластер в кластер с одним master-узлом в соответствии с [инструкцией](#как-уменьшить-число-master-узлов-в-облачном-кластере)
+1. Преобразуйте мультимастерный кластер в кластер с одним master-узлом.
 
 <div id='как-посмотреть-список-memberов-в-etcd'></div>
 
@@ -322,7 +147,7 @@ etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
 --endpoints https://127.0.0.1:2379/ member list -w table
 ```
 
-**Внимание.** Последний параметр в таблице вывода показывает, что узел находится в состоянии [`learner`](https://etcd.io/docs/v3.5/learning/design-learner/), а не в состоянии `leader`.
+**Внимание.** Последний параметр в таблице вывода показывает, что узел находится в состоянии `learner`, а не в состоянии `leader`.
 
 ### Вариант 2
 
@@ -368,7 +193,7 @@ $(echo -n $ENDPOINTS_STRING) endpoint status -w table
 
 Этот способ может понадобиться, если использование параметра `--force-new-cluster` не восстанавливает работу etcd. Это может произойти, если converge master-узлов прошел неудачно, в результате чего новый master-узел был создан на старом диске etcd, изменил свой адрес в локальной сети, а другие master-узлы отсутствуют. Этот метод стоит использовать если контейнер etcd находится в бесконечном цикле перезапуска, а в его логах появляется ошибка: `panic: unexpected removal of unknown remote peer`.
 
-1. Установите утилиту [etcdutl](https://github.com/etcd-io/etcd/releases).
+1. Установите утилиту etcdutl.
 1. С текущего локального снапшота базы etcd (`/var/lib/etcd/member/snap/db`) выполните создание нового снапшота:
 
    ```shell
@@ -442,9 +267,9 @@ $(echo -n $ENDPOINTS_STRING) endpoint status -w table
    ```
 
    С подробной информацией по настройке содержимого файла `audit-policy.yaml` можно ознакомиться:
-   * [В официальной документации Kubernetes](https://kubernetes.io/docs/tasks/debug/debug-cluster/audit/#audit-policy);
-   * [В статье на Habr](https://habr.com/ru/company/flant/blog/468679/);
-   * [В коде скрипта-генератора, используемого в GCE](https://github.com/kubernetes/kubernetes/blob/0ef45b4fcf7697ea94b96d1a2fe1d9bffb692f3a/cluster/gce/gci/configure-helper.sh#L722-L862).
+   * В официальной документации Kubernetes;
+   * В статье на Habr;
+   * В коде скрипта-генератора, используемого в GCE.
 
 ### Как исключить встроенные политики аудита?
 
@@ -588,15 +413,15 @@ rm -r ./kubernetes ./etcd-backup.snapshot
 
 Рекомендуем сделать резервную копию директории `/etc/kubernetes`, в которой находятся:
 
-* манифесты и конфигурация компонентов [control-plane](https://kubernetes.io/docs/concepts/overview/components/#control-plane-components);
-* [PKI кластера Kubernetes](https://kubernetes.io/docs/setup/best-practices/certificates/).
+* манифесты и конфигурация компонентов control-plane;
+* PKI кластера Kubernetes.
 
 Данная директория поможет быстро восстановить кластер при полной потере control-plane узлов без создания нового кластера и без повторного присоединения узлов в новый кластер.
 
 Рекомендуем хранить резервные копии снимков состояния кластера etcd, а также резервную копию директории `/etc/kubernetes/` в зашифрованном виде вне кластера Deckhouse.
-Для этого вы можете использовать сторонние инструменты резервного копирования файлов, например [Restic](https://restic.net/), [Borg](https://borgbackup.readthedocs.io/en/stable/), [Duplicity](https://duplicity.gitlab.io/) и т.д.
+Для этого вы можете использовать сторонние инструменты резервного копирования файлов, например Restic, Borg, Duplicity и т.д.
 
-О возможных вариантах восстановления состояния кластера из снимка etcd вы можете узнать [в документации](https://github.com/deckhouse/deckhouse/blob/main/modules/control-plane-manager/docs/internal/ETCD_RECOVERY.md).
+О возможных вариантах восстановления состояния кластера из снимка etcd вы можете узнать в документации.
 
 ### Как выполнить полное восстановление состояния кластера из резервной копии etcd?
 
@@ -618,7 +443,7 @@ rm -r ./kubernetes ./etcd-backup.snapshot
 
    Должен отобразиться корректный вывод `etcdctl version` без ошибок.
 
-   Также вы можете загрузить исполняемый файл [etcdctl](https://github.com/etcd-io/etcd/releases) на сервер (желательно, чтобы версия `etcdctl` была такая же, как и версия etcd в кластере):
+   Также вы можете загрузить исполняемый файл etcdctl на сервер (желательно, чтобы версия `etcdctl` была такая же, как и версия etcd в кластере):
 
    ```shell
    wget "https://github.com/etcd-io/etcd/releases/download/v3.5.16/etcd-v3.5.16-linux-amd64.tar.gz"
@@ -673,7 +498,7 @@ rm -r ./kubernetes ./etcd-backup.snapshot
 
 1. Включите режим High Availability (HA) с помощью глобального параметра [highAvailability](../../deckhouse-configure-global.html#parameters-highavailability). Это необходимо для сохранения хотя бы одной реплики Prometheus и его PVC, поскольку в режиме кластера с одним master-узлом HA по умолчанию отключён.
 
-1. Переведите кластер в режим с одним master-узлом в соответствии с [инструкцией](#как-уменьшить-число-master-узлов-в-облачном-кластере) для облачных кластеров, или самостоятельно выведите статические master-узлы из кластера.
+1. Переведите кластер в режим с одним master-узлом или самостоятельно выведите статические master-узлы из кластера.
 
 1. На оставшемся единственном master-узле выполните шаги по восстановлению etcd из резервной копии в соответствии с [инструкцией](#восстановление-кластера-single-master) для кластера с одним master-узлом.
 
@@ -691,7 +516,7 @@ rm -r ./kubernetes ./etcd-backup.snapshot
    kubectl -n d8-system exec svc/deckhouse-leader -c deckhouse -- deckhouse-controller queue main
    ```
 
-1. Переведите кластер обратно в режим мультимастерного в соответствии с [инструкцией](#как-добавить-master-узлы-в-облачном-кластере-single-master-в-multi-master) для облачных кластеров или [инструкцией](#как-добавить-master-узел-в-статическом-или-гибридном-кластере) для статических или гибридных кластеров.
+1. Переведите кластер обратно в режим мультимастерного кластера в соответствии с [инструкцией](#как-добавить-master-узел-в-статическом-или-гибридном-кластере) для статических кластеров.
 
 ### Как восстановить объект Kubernetes из резервной копии etcd?
 
@@ -705,7 +530,7 @@ rm -r ./kubernetes ./etcd-backup.snapshot
 
 В следующем примере `etcd-backup.snapshot` — [резервная копия](#как-сделать-бэкап-etcd-вручную) etcd (snapshot), `infra-production` — пространство имен, в котором нужно восстановить объекты.
 
-* Для выгрузки бинарных данных из etcd потребуется утилита [auger](https://github.com/etcd-io/auger/tree/main). Ее можно собрать из исходного кода на любой машине с Docker (на узлах кластера это сделать невозможно).
+* Для выгрузки бинарных данных из etcd потребуется утилита auger. Ее можно собрать из исходного кода на любой машине с Docker (на узлах кластера это сделать невозможно).
 
   ```shell
   git clone -b v1.0.1 --depth 1 https://github.com/etcd-io/auger
@@ -832,10 +657,10 @@ rm -r ./kubernetes ./etcd-backup.snapshot
 Примеры плагинов:
 
 * **ImageLocality** — отдает предпочтение узлам, на которых уже есть образы контейнеров, которые используются в запускаемом поде. Фаза: `Scoring`.
-* **TaintToleration** — реализует механизм [taints and tolerations](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/). Фазы: `Filtering`, `Scoring`.
+* **TaintToleration** — реализует механизм taints and tolerations. Фазы: `Filtering`, `Scoring`.
 * **NodePorts** — проверяет, есть ли у узла свободные порты, необходимые для запуска пода. Фаза: `Filtering`.
 
-С полным списком плагинов можно ознакомиться в [документации Kubernetes](https://kubernetes.io/docs/reference/scheduling/config/#scheduling-plugins).
+С полным списком плагинов можно ознакомиться в документации Kubernetes.
 
 ### Логика работы
 
@@ -883,7 +708,7 @@ Node 1, Node 5, Node 2, Node 6, Node 3, Node 4
 
 Обратите внимание, что с целью оптимизации выбираются не все попадающие под условия узлы, а только их часть. По умолчанию функция выбора количества узлов линейная. Для кластера из ≤50 узлов будут выбраны 100% узлов, для кластера из 100 узлов — 50%, а для кластера из 5000 узлов — 10%. Минимальное значение — 5% при количестве узлов более 5000. Таким образом, при настройках по умолчанию узел может не попасть в список возможных узлов для запуска.
 
-Эту логику можно изменить (см. подробнее про параметр `percentageOfNodesToScore` в [документации Kubernetes](https://kubernetes.io/docs/reference/config-api/kube-scheduler-config.v1/)), но Deckhouse не дает такой возможности.
+Эту логику можно изменить (см. подробнее про параметр `percentageOfNodesToScore` в документации Kubernetes), но Deckhouse не дает такой возможности.
 
 После того как были выбраны узлы, соответствующие условиям фильтрации, запускается фаза `Scoring`. Каждый плагин анализирует список отфильтрованных узлов и назначает оценку (score) каждому узлу. Оценки от разных плагинов суммируются. На этой фазе оцениваются доступные ресурсы на узлах: `pod capacity`, `affinity`, `volume provisioning` и другие. По итогам этой фазы выбирается узел с наибольшей оценкой. Если сразу несколько узлов получили максимальную оценку, узел выбирается случайным образом.
 
@@ -891,16 +716,16 @@ Node 1, Node 5, Node 2, Node 6, Node 3, Node 4
 
 #### Документация
 
-* [Общее описание scheduler](https://kubernetes.io/docs/concepts/scheduling-eviction/kube-scheduler/).
-* [Система плагинов](https://kubernetes.io/docs/reference/scheduling/config/#scheduling-plugins).
-* [Подробности фильтрации узлов](https://kubernetes.io/docs/concepts/scheduling-eviction/scheduler-perf-tuning/).
-* [Исходный код scheduler](https://github.com/kubernetes/kubernetes/tree/master/cmd/kube-scheduler).
+* Общее описание scheduler.
+* Система плагинов.
+* Подробности фильтрации узлов.
+* Исходный код scheduler.
 
 <div id='как-изменитьрасширить-логику-работы-планировщика'></div>
 
 ### Как изменить или расширить логику работы планировщика
 
-Для изменения логики работы планировщика можно использовать [механизм плагинов расширения](https://github.com/kubernetes/enhancements/blob/master/keps/sig-scheduling/624-scheduling-framework/README.md).
+Для изменения логики работы планировщика можно использовать механизм плагинов расширения.
 
 Каждый плагин представляет собой вебхук, отвечающий следующим требованиям:
 
@@ -917,22 +742,22 @@ Node 1, Node 5, Node 2, Node 6, Node 3, Node 4
 
 ## Как происходит ротация сертификатов kubelet?
 
-С настройкой и включением ротации сертификатов kubelet вы можете ознакомиться в официальной документации [Kubernetes](https://kubernetes.io/docs/tasks/tls/certificate-rotation/).
+С настройкой и включением ротации сертификатов kubelet вы можете ознакомиться в официальной документации Kubernetes.
 
 В файле `/var/lib/kubelet/config.yaml` хранится конфигурация kubelet и указывается путь к сертификату (`tlsCertFile`) и закрытому ключу (`tlsPrivateKeyFile`).
 
 В kubelet реализована следующая логика работы с серверными сертификатами:
 
 * Если `tlsCertFile` и `tlsPrivateKeyFile` не пустые, то kubelet будет использовать их как сертификат и ключ по умолчанию.
-  * При запросе клиента в kubelet API с указанием IP-адреса (например [https://10.1.1.2:10250/](https://10.1.1.2:10250/)), для установления соединения по TLS-протоколу будет использован закрытый ключ по умолчанию (`tlsPrivateKeyFile`). В данном случае ротация сертификатов не будет работать.
-  * При запросе клиента в kubelet API с указанием названия хоста (например [https://k8s-node:10250/](https://k8s-node:10250/)), для установления соединения по TLS-протоколу будет использован динамически сгенерированный закрытый ключ из директории `/var/lib/kubelet/pki/`. В данном случае ротация сертификатов будет работать.
+  * При запросе клиента в kubelet API с указанием IP-адреса (например https://10.1.1.2:10250/), для установления соединения по TLS-протоколу будет использован закрытый ключ по умолчанию (`tlsPrivateKeyFile`). В данном случае ротация сертификатов не будет работать.
+  * При запросе клиента в kubelet API с указанием названия хоста (например https://k8s-node:10250/), для установления соединения по TLS-протоколу будет использован динамически сгенерированный закрытый ключ из директории `/var/lib/kubelet/pki/`. В данном случае ротация сертификатов будет работать.
 * Если `tlsCertFile` и `tlsPrivateKeyFile` пустые, то для установления соединения по TLS-протоколу будет использован динамически сгенерированный закрытый ключ из директории `/var/lib/kubelet/pki/`. В данном случае ротация сертификатов будет работать.
 
 Поскольку в Deckhouse Kubernetes Platform для запросов в kubelet API используются IP-адреса, то в конфигурации kubelet поля `tlsCertFile` и `tlsPrivateKeyFile` не используются, а используется динамический сертификат, который kubelet генерирует самостоятельно. Также в модуле `operator-trivy` отключены проверки CIS benchmark `AVD-KCV-0088` и `AVD-KCV-0089`, которые отслеживают, были ли переданы аргументы `--tls-cert-file` и `--tls-private-key-file` для kubelet.
 
 Kubelet использует клиентский TLS сертификат(`/var/lib/kubelet/pki/kubelet-client-current.pem`), при помощи которого может запросить у kube-apiserver новый клиентский сертификат или новый серверный сертификат(`/var/lib/kubelet/pki/kubelet-server-current.pem`).
 
-Когда до истечения времени жизни сертификата остается 5-10% (случайное значение из диапазона) времени, kubelet запрашивает у kube-apiserver новый сертификат. С описанием алгоритма ознакомьтесь в официальной документации [Kubernetes](https://kubernetes.io/docs/reference/access-authn-authz/kubelet-tls-bootstrapping/#bootstrap-initialization).
+Когда до истечения времени жизни сертификата остается 5-10% (случайное значение из диапазона) времени, kubelet запрашивает у kube-apiserver новый сертификат. С описанием алгоритма ознакомьтесь в официальной документации Kubernetes.
 
 Чтобы kubelet успел установить сертификат до его истечения, рекомендуем устанавливать время жизни сертификатов более, чем 1 час. Время устанавливается с помощью аргумента `--cluster-signing-duration` в манифесте `/etc/kubernetes/manifests/kube-controller-manager.yaml`. По умолчанию это значение равно 1 году (8760 часов).
 

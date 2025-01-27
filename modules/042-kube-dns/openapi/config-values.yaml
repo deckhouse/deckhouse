@@ -13,7 +13,7 @@ properties:
     type: string
     description: |
       The mode of the transport protocol for communicating with the upstream DNS server:
-      - `PreferUDP` — UDP is used, even if the original request came over TCP. Note that if the DNS response from the upstream DNS server exceeds 512 bytes and has been truncated and marked with the TC bit ([RFC 1035](https://datatracker.ietf.org/doc/html/rfc1035.html#section-4.2.1)), then it will be resent over TCP ([RFC 5966](https://datatracker.ietf.org/doc/html/rfc5966)). The request will not be resent over TCP if there are other UDP issues.
+      - `PreferUDP` — UDP is used, even if the original request came over TCP. Note that if the DNS response from the upstream DNS server exceeds 512 bytes and has been truncated and marked with the TC bit (RFC 1035), then it will be resent over TCP (RFC 5966). The request will not be resent over TCP if there are other UDP issues.
       - `ForceTCP` — Always uses TCP, even if the original request is over UDP.
       - `KeepOriginal` — Uses the same protocol (TCP or UDP) as the original request.
     enum: [PreferUDP, ForceTCP, KeepOriginal]
@@ -72,7 +72,7 @@ properties:
           type: string
           description: |
             The mode of the transport protocol for communicating with the upstream DNS server:
-            - `PreferUDP` — UDP is used, even if the original request came over TCP. Note that if the DNS response from the upstream DNS server exceeds 512 bytes and has been truncated and marked with the TC bit ([RFC 1035](https://datatracker.ietf.org/doc/html/rfc1035.html#section-4.2.1)), then it will be resent over TCP ([RFC 5966](https://datatracker.ietf.org/doc/html/rfc5966)). The request will not be resent over TCP if there are other UDP issues.
+            - `PreferUDP` — UDP is used, even if the original request came over TCP. Note that if the DNS response from the upstream DNS server exceeds 512 bytes and has been truncated and marked with the TC bit (RFC 1035), then it will be resent over TCP (RFC 5966). The request will not be resent over TCP if there are other UDP issues.
             - `ForceTCP` — Always uses TCP, even if the original request is over UDP.
             - `KeepOriginal` — Uses the same protocol (TCP or UDP) as the original request.
           enum: [PreferUDP, ForceTCP, KeepOriginal]

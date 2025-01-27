@@ -59,9 +59,9 @@ spec:
                         This is used to check the validity of the parameters that are passed when creating a new project.
                 resourcesTemplate:
                   description: |
-                    A template that defines resources in the [`go template`](https://pkg.go.dev/text/template) format to be created when setting up a new project.
+                    A template that defines resources in the `go template` format to be created when setting up a new project.
 
-                    Templates are fully compatible with all [`helm` functions](https://helm.sh/docs/chart_template_guide/function_list/).
+                    Templates are fully compatible with all `helm` functions.
 
                     Read more about [creating an isolated Environment...](usage.html#creating-a-project)
 

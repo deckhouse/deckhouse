@@ -5,7 +5,7 @@ description: Описание возможностей сбора логов в 
 
 Модуль разворачивает агенты `log-shipper` для сборки логов на узлы кластера.
 Предназначение этих агентов — с минимальными изменениями отправить логи дальше из кластера.
-Каждый агент — это отдельный [vector](https://vector.dev/), конфигурацию для которого сгенерировал Deckhouse.
+Каждый агент — это отдельный vector, конфигурацию для которого сгенерировал Deckhouse.
 
 ![log-shipper architecture](../../images/log-shipper/log_shipper_architecture.svg)
 <!-- Исходник картинок: https://docs.google.com/drawings/d/1cOm5emdfPqWp9NT1UrB__TTL31lw7oCgh0VicQH-ouc/edit -->

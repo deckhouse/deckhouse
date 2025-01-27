@@ -6,7 +6,7 @@ spec:
       schema: &schema
         openAPIV3Schema:
           description: |
-            Описывает параметры группы GCP Instances, которые будет использовать `machine-controller-manager` (модуль [node-manager](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/node-manager/)).
+            Описывает параметры группы GCP Instances, которые будет использовать `machine-controller-manager` (модуль [node-manager](/modules/node-manager/)).
 
             На этот ресурс ссылается ресурс `CloudInstanceClass` модуля `node-manager`.
           properties:
@@ -18,7 +18,7 @@ spec:
 
                     **Внимание!** Следует убедиться, что указанный тип есть во всех зонах, перечисленных в параметре `zones`.
 
-                    GCP [позволяет указывать](https://cloud.google.com/compute/docs/instances/creating-instance-with-custom-machine-type#create) нестандартное количество CPU и RAM, например: `custom-8-40960` или `n2-custom-8-40960`.
+                    GCP позволяет указывать нестандартное количество CPU и RAM, например: `custom-8-40960` или `n2-custom-8-40960`.
                 capacity:
                   description: |
                     Устарело: параметр больше не используется. Для переданного типа инстанса Deckhouse использует параметры, полученные из облака.
@@ -37,9 +37,9 @@ spec:
                   description: |
                     Образ, который будет использоваться в заказанных инстансах.
 
-                    Список доступных образов можно найти в [документации провайдера](https://cloud.google.com/compute/docs/images#ubuntu).
+                    Список доступных образов можно найти в документации провайдера.
 
-                    Список поддерживаемых Deckhouse ОС и их версий можно найти в [документации Deckhouse](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/supported_versions.html) (учитывайте используемую версию Deckhouse).
+                    Список поддерживаемых Deckhouse ОС и их версий можно найти в [документации Deckhouse](/supported_versions.html) (учитывайте используемую версию Deckhouse).
                 preemptible:
                   description: |
                     Необходимость заказа preemptible-инстансов (прерываемых виртуальных машин).
@@ -55,11 +55,11 @@ spec:
                   description: |
                     Список дополнительных тегов.
 
-                    Теги, например, позволяют применять к инстансам правила firewall. Подробно про network tags можно прочитать [в официальной документации](https://cloud.google.com/vpc/docs/add-remove-network-tags).
+                    Теги, например, позволяют применять к инстансам правила firewall. Подробно про network tags можно прочитать в официальной документации.
                 additionalLabels:
                   description: |
                     Список дополнительных лейблов.
 
-                    Подробно про лейблы можно прочитать [в официальной документации](https://cloud.google.com/resource-manager/docs/creating-managing-labels).
+                    Подробно про лейблы можно прочитать в официальной документации.
     - name: v1
       schema: *schema

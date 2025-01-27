@@ -336,7 +336,7 @@ echo "Data migration completed"
 
 ## How to Create Volume Snapshots?
 
-You can read more about snapshots [here](https://kubernetes.io/docs/concepts/storage/volume-snapshots/).
+You can read more about snapshots here.
 
 ### Step 1: Enabling the snapshot-controller
 

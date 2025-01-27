@@ -16,7 +16,7 @@ spec:
         openAPIV3Schema:
           type: object
           description: |
-            Parameters of a group of GCP Instances used by `machine-controller-manager` (the [node-manager](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/node-manager/) module).
+            Parameters of a group of GCP Instances used by `machine-controller-manager` (the [node-manager](/modules/node-manager/) module).
 
             The `CloudInstanceClass` resource of the `node-manager` module refers to this resource.
           required:
@@ -33,7 +33,7 @@ spec:
 
                     **Caution!** Make sure that this type is present in all zones specified in the `zones` parameter.
 
-                    GCP [lets you](https://cloud.google.com/compute/docs/instances/creating-instance-with-custom-machine-type#create) specify a custom amount of resources (CPU and RAM), e.g., `custom-8-40960` or `n2-custom-8-40960`.
+                    GCP lets you specify a custom amount of resources (CPU and RAM), e.g., `custom-8-40960` or `n2-custom-8-40960`.
                   x-doc-examples: ['n1-standard-4']
                   type: string
                 capacity:
@@ -66,9 +66,9 @@ spec:
                   description: |
                     Image to use while provisioning GCP servers.
 
-                    You can find a list of available images in the [provider documentation](https://cloud.google.com/compute/docs/images#ubuntu).
+                    You can find a list of available images in the provider documentation.
 
-                    The list of OS and their versions supported by Deckhouse can be found in the [Deckhouse documentation](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/supported_versions.html) (take into account the Deckhouse version used).
+                    The list of OS and their versions supported by Deckhouse can be found in the [Deckhouse documentation](/supported_versions.html) (take into account the Deckhouse version used).
                   x-doc-examples: ["https://www.googleapis.com/compute/v1/projects/ubuntu-os-cloud/global/images/ubuntu-1804-bionic-v20190911"]
                   x-doc-required: false
                   type: string
@@ -96,7 +96,7 @@ spec:
                   description: |
                     The list of additional tags.
 
-                    For example, you can use tags to apply firewall rules to instances. The detailed description of network tags is available in the [official documentation](https://cloud.google.com/vpc/docs/add-remove-network-tags).
+                    For example, you can use tags to apply firewall rules to instances. The detailed description of network tags is available in the official documentation.
                   type: array
                   items:
                     type: string
@@ -105,7 +105,7 @@ spec:
                   description: |
                     Additional labels.
 
-                    [More info...](https://cloud.google.com/resource-manager/docs/creating-managing-labels)
+
                   x-doc-examples:
                   - project: cms-production
                     severity: critical

@@ -7,11 +7,11 @@ webIfaces:
 - name: grafana
 ---
 
-Устанавливает и полностью настраивает [Prometheus](https://prometheus.io/), настраивает сбор метрик со многих распространенных приложений, а также предоставляет необходимый минимальный набор alert'ов для Prometheus и dashboard Grafana.
+Устанавливает и полностью настраивает Prometheus, настраивает сбор метрик со многих распространенных приложений, а также предоставляет необходимый минимальный набор alert'ов для Prometheus и dashboard Grafana.
 
 Если используется StorageClass с поддержкой автоматического расширения (`allowVolumeExpansion: true`), при нехватке места на диске для данных Prometheus его емкость будет увеличена.
 
-Ресурсы CPU и memory автоматически выставляются при пересоздании пода на основе истории потребления, благодаря модулю [Vertical Pod Autoscaler](../../modules/vertical-pod-autoscaler/). Также, благодаря кэшированию запросов к Prometheus с помощью [Trickster](https://github.com/trickstercache/trickster), потребление памяти Prometheus сильно сокращается.
+Ресурсы CPU и memory автоматически выставляются при пересоздании пода на основе истории потребления, благодаря модулю [Vertical Pod Autoscaler](../../modules/vertical-pod-autoscaler/). Также, благодаря кэшированию запросов к Prometheus с помощью Trickster, потребление памяти Prometheus сильно сокращается.
 
 Поддерживается как pull-, так и push-модель получения метрик.
 
@@ -64,11 +64,8 @@ Deckhouse позволяет гибко настроить алертинг на
 
 Deckhouse поддерживает отправку алертов с помощью `Alertmanager`:
 - по протоколу SMTP;
-- в PagerDuty;
-- в Slack;
 - в Telegram;
-- посредством Webhook;
-- по любым другим каналам, поддерживаемым в Alertmanager.
+- посредством Webhook.
 
 ## Включенные модули
 
@@ -95,4 +92,4 @@ Deckhouse может интегрироваться с большим колич
 | Название                       | Описание|
 |--------------------------------|--------------------------------------------------------------------------|
 | **Alertmanagers**              | Alertmanager'ы могут быть подключены к Prometheus и Grafana и находиться как в кластере Deckhouse, так и за его пределами.|
-| **Long-term metrics storages** | Используя протокол `remote write`, возможно отсылать метрики из Deckhouse в большое количество хранилищ, включающее [Cortex](https://www.cortex.io/), [Thanos](https://thanos.io/), [VictoriaMetrics](https://victoriametrics.com/products/open-source/).|
+| **Long-term metrics storages** | Используя протокол `remote write`, возможно отсылать метрики из Deckhouse в большое количество хранилищ, включающее Cortex, Thanos, VictoriaMetrics.|

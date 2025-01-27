@@ -132,11 +132,11 @@ metadata:
 
 ### How to understand what changes the update contains and how it will affect the cluster?
 
-You can find all the information about Deckhouse versions in the list of [Deckhouse releases](https://github.com/deckhouse/deckhouse/releases).
+You can find all the information about Deckhouse versions in the list of Deckhouse releases.
 
-Summary information about important changes, component version updates, and which components in the cluster will be restarted during the update process can be found in the description of the zero patch version of the release. For example, [v1.46.0](https://github.com/deckhouse/deckhouse/releases/tag/v1.46.0) for the v1.46 Deckhouse release.
+Summary information about important changes, component version updates, and which components in the cluster will be restarted during the update process can be found in the description of the zero patch version of the release. For example, v1.46.0 for the v1.46 Deckhouse release.
 
-A detailed list of changes can be found in the Changelog, which is referenced in each [release](https://github.com/deckhouse/deckhouse/releases).
+A detailed list of changes can be found in the Changelog, which is referenced in each release.
 
 ### How do I understand that the cluster is being updated?
 
@@ -397,7 +397,7 @@ When interacting with a `docker` repository located in Nexus (e. g. executing `d
 Using the `URL` value from the Nexus repository options is **not acceptable**
 {% endalert %}
 
-The following requirements must be met if the [Nexus](https://github.com/sonatype/nexus-public) repository manager is used:
+The following requirements must be met if the Nexus repository manager is used:
 
 * Docker **proxy** repository must be pre-created (*Administration* -> *Repository* -> *Repositories*):
   * `Maximum metadata age` for the created repository must be set to `0`.
@@ -409,7 +409,7 @@ The following requirements must be met if the [Nexus](https://github.com/sonatyp
 
 **Configuration**:
 
-* Create a docker **proxy** repository (*Administration* -> *Repository* -> *Repositories*) pointing to the [Deckhouse registry](https://registry.deckhouse.io/):
+* Create a docker **proxy** repository (*Administration* -> *Repository* -> *Repositories*) pointing to the Deckhouse registry:
   ![Create docker proxy repository](images/registry/nexus/nexus-repository.png)
 
 * Fill in the fields on the Create page as follows:
@@ -440,7 +440,7 @@ Thus, Deckhouse images will be available at `https://<NEXUS_HOST>:<REPOSITORY_PO
 
 ### Tips for configuring Harbor
 
-You need to use the Proxy Cache feature of a [Harbor](https://github.com/goharbor/harbor).
+You need to use the Proxy Cache feature of a Harbor.
 
 * Create a Registry:
   * `Administration -> Registries -> New Endpoint`.
@@ -468,7 +468,7 @@ This feature is only available in Standard Edition (SE), Enterprise Edition (EE)
 {% endalert %}
 
 {% alert level="info" %}
-Check [releases.deckhouse.io](https://releases.deckhouse.io) for the current status of the release channels.
+Check releases.deckhouse.io for the current status of the release channels.
 {% endalert %}
 
 1. [Download and install the Deckhouse CLI tool](deckhouse-cli/).
@@ -507,7 +507,7 @@ Check [releases.deckhouse.io](https://releases.deckhouse.io) for the current sta
     - `HTTP_PROXY`/`HTTPS_PROXY` — URL of the proxy server for HTTP(S) requests to hosts that are not listed in the variable `$NO_PROXY`;
     - `NO_PROXY` — comma-separated list of hosts to exclude from proxying. Supported value formats include IP addresses (`1.2.3.4`), CIDR notations (`1.2.3.4/8`), domains, and the asterisk character (`*`).  The IP addresses and domain names can also include a literal port number (`1.2.3.4:80`). The domain name matches that name and all the subdomains. The domain name with a leading `.` matches subdomains only. For example, `foo.com` matches `foo.com` and `bar.foo.com`; `.y.com` matches `x.y.com` but does not match `y.com`. A single asterisk `*` indicates that no proxying should be done;
     - `SSL_CERT_FILE` — path to the SSL certificate. If the variable is set, system certificates are not used;
-    - `SSL_CERT_DIR` — list of directories to search for SSL certificate files, separated by a colon. If set, system certificates are not used. [See more...](https://www.openssl.org/docs/man1.0.2/man1/c_rehash.html);
+    - `SSL_CERT_DIR` — list of directories to search for SSL certificate files, separated by a colon. If set, system certificates are not used. See more...;
     - `TMPDIR (*nix)`/`TMP (Windows)` — path to a temporary directory to use for image pulling and pushing. All processing is done in this directory, so make sure there is enough free disk space to accommodate the entire bundle you are downloading;
     - `MIRROR_BYPASS_ACCESS_CHECKS` — set to `1` to skip validation of registry credentials;
 

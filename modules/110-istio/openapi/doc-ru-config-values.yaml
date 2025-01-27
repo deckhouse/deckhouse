@@ -36,7 +36,7 @@ properties:
           inlet:
             description: |
               Способ публикации ingressgateway:
-              - `LoadBalancer` — рекомендуется в случае, если площадка облачная и поддерживает LB;
+              - `LoadBalancer` — рекомендуется в случае, если площадка поддерживает LB;
               - `NodePort` — для площадок без LB.
           nodePort:
             description: Специальные настройки для ingressgateway с инлетом `NodePort`.
@@ -177,7 +177,7 @@ properties:
         description: Корневой сертификат в формате PEM на случай, если `cert` — промежуточный сертификат.
   proxyConfig:
     description: |
-      Централизованная настройка [ProxyConfig](https://istio.io/latest/docs/reference/config/istio.mesh.v1alpha1/#ProxyConfig).
+      Централизованная настройка ProxyConfig.
     properties:
       holdApplicationUntilProxyStarts:
         description: |
@@ -202,14 +202,14 @@ properties:
         description: |
           Опциональный селектор для компонента istiod. Структура, аналогичная `spec.nodeSelector` пода Kubernetes.
 
-          Если значение не указано или указано `false`, будет использоваться [автоматика](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
+          Если значение не указано или указано `false`, будет использоваться [автоматика](/#выделение-узлов-под-определенный-вид-нагрузки).
       tolerations:
         description: |
           Опциональные tolerations для компонента istiod.
 
           Структура, аналогичная `spec.tolerations` пода Kubernetes.
 
-          Если значение не указано или указано `false`, будет использоваться [автоматика](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
+          Если значение не указано или указано `false`, будет использоваться [автоматика](/#выделение-узлов-под-определенный-вид-нагрузки).
       replicasManagement:
         description: |
           Настройки управления репликами и горизонтальным масштабированием istiod.
@@ -219,7 +219,7 @@ properties:
               Режим работы с репликами:
               - `Standard` — режим управления репликами и масштабированием в соответствии с глобальным режимом отказоустойчивости (параметр [highAvailability](../../deckhouse-configure-global.html#parameters-highavailability));
               - `Static` — режим, где количество реплик указывается явно (параметр [static.replicas](#parameters-controlplane-replicasmanagement-static-replicas));
-              - `HPA` — режим, где количество реплик рассчитывается автоматически с помощью [HPA](https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/) на основе загрузки CPU. Настраивается в секции параметров [hpa](#parameters-controlplane-replicasmanagement-hpa).
+              - `HPA` — режим, где количество реплик рассчитывается автоматически с помощью HPA на основе загрузки CPU. Настраивается в секции параметров [hpa](#parameters-controlplane-replicasmanagement-hpa).
           static:
             description: |
               Параметры управления репликами и масштабированием в режиме Static.
@@ -256,7 +256,7 @@ properties:
             description: |
               Режим управления ресурсами:
               - `Static` — с помощью прямого указания запросов/ограничений (requests/limits). Настраивается в секции параметров [static](#parameters-controlplane-resourcesmanagement-static);
-              - `VPA` — с помощью [VPA](https://github.com/kubernetes/design-proposals-archive/blob/main/autoscaling/vertical-pod-autoscaler.md). Настраивается в секции параметров [vpa](#parameters-controlplane-resourcesmanagement-vpa).
+              - `VPA` — с помощью VPA. Настраивается в секции параметров [vpa](#parameters-controlplane-resourcesmanagement-vpa).
           vpa:
             description: |
               Параметры управления ресурсами в режиме VPA.
@@ -335,14 +335,14 @@ properties:
 
       Структура, аналогичная `spec.nodeSelector` пода Kubernetes.
 
-      Если значение не указано или указано `false`, будет использоваться [автоматика](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
+      Если значение не указано или указано `false`, будет использоваться [автоматика](/#выделение-узлов-под-определенный-вид-нагрузки).
   tolerations:
     description: |
       Опциональные tolerations для компонентов istio-operator, metadata-exporter и Kiali.
 
       Структура, аналогичная `spec.tolerations` пода Kubernetes.
 
-      Если значение не указано или указано `false`, будет использоваться [автоматика](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
+      Если значение не указано или указано `false`, будет использоваться [автоматика](/#выделение-узлов-под-определенный-вид-нагрузки).
   https:
     description: |
       Тип сертификата, используемого для публичных веб-интерфейсов модуля.
@@ -354,7 +354,7 @@ properties:
           Режим работы HTTPS:
           - `CertManager` — Kiali/metadata-exporter (including SPIFFE endpoint)/api-proxy будут работать по HTTPS и заказывать сертификат с помощью ClusterIssuer заданном в параметре `certManager.clusterIssuerName`.
           - `CustomCertificate` — Kiali/metadata-exporter (including SPIFFE endpoint)/api-proxy будут работать по HTTPS, используя сертификат из namespace `d8-system`.
-          - `OnlyInURI` — Kiali/metadata-exporter (including SPIFFE endpoint)/api-proxy будут работать по HTTP (подразумевая, что перед ними стоит внешний балансировщик, который терминирует HTTPS) и все ссылки в [user-authn](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/user-authn/) будут генерироваться с HTTPS-схемой. Балансировщик должен обеспечивать перенаправление с HTTP на HTTPS.
+          - `OnlyInURI` — Kiali/metadata-exporter (including SPIFFE endpoint)/api-proxy будут работать по HTTP (подразумевая, что перед ними стоит внешний балансировщик, который терминирует HTTPS) и все ссылки в [user-authn](/modules/user-authn/) будут генерироваться с HTTPS-схемой. Балансировщик должен обеспечивать перенаправление с HTTP на HTTPS.
 
           **Важно!** В отличие от остальных модулей, istio не поддерживает работу без использования HTTPS (`mode: Disabled`).
       certManager:
@@ -370,7 +370,7 @@ properties:
             description: |
               Имя Secret'а в namespace `d8-system`, который будет использоваться для Kiali/metadata-exporter (including SPIFFE endpoint)/api-proxy.
 
-              Secret должен быть в формате [kubernetes.io/tls](https://kubernetes.github.io/ingress-nginx/user-guide/tls/#tls-secrets).
+              Secret должен быть в формате kubernetes.io/tls.
   highAvailability:
     description: |
       Ручное управление режимом отказоустойчивости.
@@ -381,9 +381,9 @@ properties:
     properties:
       externalAuthentication:
         description: |
-          Параметры для подключения внешней аутентификации (используется механизм NGINX Ingress [external-auth](https://kubernetes.github.io/ingress-nginx/examples/auth/external-auth/), работающий на основе модуля Nginx [auth_request](https://nginx.org/en/docs/http/ngx_http_auth_request_module.html).
+          Параметры для подключения внешней аутентификации (используется механизм NGINX Ingress external-auth, работающий на основе модуля Nginx auth_request.
 
-          > Внешняя аутентификация включается автоматически, если включен модуль [user-authn](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/user-authn/).
+          > Внешняя аутентификация включается автоматически, если включен модуль [user-authn](/modules/user-authn/).
         properties:
           authURL:
             description: URL сервиса аутентификации. Если пользователь прошел аутентификацию, сервис должен возвращать код ответа HTTP 200.
@@ -393,9 +393,9 @@ properties:
         description: |
           Массив групп, пользователям которых позволен доступ в публичные веб-интерфейсы модуля.
 
-          Используется, если включен модуль [user-authn](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/user-authn/) или параметр `externalAuthentication`.
+          Используется, если включен модуль [user-authn](/modules/user-authn/) или параметр `externalAuthentication`.
 
-          **Внимание!** При использовании совместно с модулем [user-authn](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/user-authn/) необходимо также добавить разрешенные группы в соответствующее поле в [настройках](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/user-authn/cr.html#dexprovider) DexProvider.
+          **Внимание!** При использовании совместно с модулем [user-authn](/modules/user-authn/) необходимо также добавить разрешенные группы в соответствующее поле в [настройках](/modules/user-authn/cr.html#dexprovider) DexProvider.
       whitelistSourceRanges:
         description: Список адресов в формате CIDR, которым разрешено проходить авторизацию в публичные веб-интерфейсы модуля.
       satisfyAny:

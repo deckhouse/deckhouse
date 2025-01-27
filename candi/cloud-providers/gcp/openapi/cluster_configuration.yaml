@@ -80,7 +80,7 @@ apiVersions:
 
           Note that you have to re-create all the machines to add new tags if tags were modified in the running cluster.
 
-          You can learn more about the labels in the [official documentation](https://cloud.google.com/resource-manager/docs/creating-managing-labels).
+          You can learn more about the labels in the official documentation.
 
           Format — `key: value`.
         additionalProperties:
@@ -90,7 +90,7 @@ apiVersions:
         description: |
           A list of GCP VPC networks to peer with the cluster network.
 
-          The service account must have access to all the VPCs listed. You have to configure the peering connection [manually](https://cloud.google.com/vpc/docs/using-vpc-peering#gcloud) if no access is available.
+          The service account must have access to all the VPCs listed. You have to configure the peering connection manually if no access is available.
         items:
           type: string
       masterNodeGroup:
@@ -112,7 +112,7 @@ apiVersions:
             description: |
               The list of additional tags.
 
-              For example, you can use tags to apply firewall rules to instances. The detailed description of network tags is available in the [official documentation](https://cloud.google.com/vpc/docs/add-remove-network-tags).
+              For example, you can use tags to apply firewall rules to instances. The detailed description of network tags is available in the official documentation.
             type: array
             items:
               type: string
@@ -121,7 +121,7 @@ apiVersions:
             description: |
               Additional labels.
 
-              [More info...](https://cloud.google.com/resource-manager/docs/creating-managing-labels).
+              .
             x-doc-example: |
               ```yaml
               project: cms-production
@@ -132,7 +132,7 @@ apiVersions:
           instanceClass:
             type: object
             required: [machineType, image]
-            description: Partial contents of the [GCPInstanceClass](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/cloud-provider-gcp/cr.html#gcpinstanceclass) fields.
+            description: Partial contents of the [GCPInstanceClass](/modules/cloud-provider-gcp/cr.html#gcpinstanceclass) fields.
             properties:
               machineType: &instanceClassMachineType
                 type: string
@@ -142,16 +142,16 @@ apiVersions:
 
                   > **Caution!** Make sure that this type is present in all zones specified in the `zones` parameter.
 
-                  GCP [lets you](https://cloud.google.com/compute/docs/instances/creating-instance-with-custom-machine-type#create) specify a custom amount of resources (CPU and RAM), e.g., `custom-8-40960` or `n2-custom-8-40960`.
+                  GCP lets you specify a custom amount of resources (CPU and RAM), e.g., `custom-8-40960` or `n2-custom-8-40960`.
               image: &instanceClassImage
                 type: string
                 example: projects/ubuntu-os-cloud/global/images/ubuntu-1804-bionic-v20190911
                 description: |
                   Image to use while provisioning GCP servers.
 
-                  You can find a list of available images in the [provider documentation](https://cloud.google.com/compute/docs/images#ubuntu).
+                  You can find a list of available images in the provider documentation.
 
-                  The list of OS and their versions supported by Deckhouse can be found in the [Deckhouse documentation](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/supported_versions.html) (take into account the Deckhouse version used).
+                  The list of OS and their versions supported by Deckhouse can be found in the [Deckhouse documentation](/supported_versions.html) (take into account the Deckhouse version used).
               diskSizeGb: &instanceClassDiskSizeGb
                 description: Instance disk size in gibibytes.
                 example: 50
@@ -232,7 +232,7 @@ apiVersions:
             instanceClass:
               required: [machineType, image]
               type: object
-              description: Partial contents of the [GCPInstanceClass](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/cloud-provider-gcp/cr.html#gcpinstanceclass) fields.
+              description: Partial contents of the [GCPInstanceClass](/modules/cloud-provider-gcp/cr.html#gcpinstanceclass) fields.
               properties:
                 machineType: *instanceClassMachineType
                 image: *instanceClassImage
@@ -251,9 +251,9 @@ apiVersions:
         description: |
           The way resources are located in the cloud.
 
-          `Standard` - set [Cloud NAT](https://cloud.google.com/nat/docs/overview#benefits) mode. [More info...](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/cloud-provider-gcp/layouts.html#standard)
+          `Standard` - set Cloud NAT mode. [More info...](/modules/cloud-provider-gcp/layouts.html#standard)
 
-          `WithoutNAT` - a dedicated VPC is created for the cluster. All cluster nodes have public IP addresses. [More info...](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/cloud-provider-gcp/layouts.html#withoutnat)
+          `WithoutNAT` - a dedicated VPC is created for the cluster. All cluster nodes have public IP addresses. [More info...](/modules/cloud-provider-gcp/layouts.html#withoutnat)
         x-unsafe: true
       standard:
         type: object
@@ -287,7 +287,7 @@ apiVersions:
             description: |
               A key to the Service Account with Project Admin privileges (`service account key`) in the JSON format.
 
-              [How to create it](https://cloud.google.com/iam/docs/creating-managing-service-account-keys#creating_service_account_keys) a `service account key`.
+              How to create it a `service account key`.
       zones:
         type: array
         description: A limited set of zones in which nodes can be created.

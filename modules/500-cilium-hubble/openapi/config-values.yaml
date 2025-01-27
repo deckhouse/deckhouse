@@ -19,13 +19,13 @@ properties:
     description: |
       The same as the `spec.nodeSelector` pod parameter in Kubernetes.
 
-      If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/products/kubernetes-platform/documentation/v1/#advanced-scheduling).
+      If the parameter is omitted or `false`, it will be determined [automatically](/#advanced-scheduling).
   tolerations:
     type: array
     description: |
       The same as `spec.tolerations` for the Kubernetes Pod.
 
-      If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/products/kubernetes-platform/documentation/v1/#advanced-scheduling).
+      If the parameter is omitted or `false`, it will be determined [automatically](/#advanced-scheduling).
     items:
       type: object
       properties:
@@ -48,9 +48,9 @@ properties:
       externalAuthentication:
         type: object
         description: |
-          Parameters to enable external authentication based on the NGINX Ingress [external-auth](https://kubernetes.github.io/ingress-nginx/examples/auth/external-auth/) mechanism that uses the Nginx [auth_request](https://nginx.org/en/docs/http/ngx_http_auth_request_module.html) module.
+          Parameters to enable external authentication based on the NGINX Ingress external-auth mechanism that uses the Nginx auth_request module.
 
-          > External authentication is enabled automatically if the [user-authn](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/user-authn/) module is enabled.
+          > External authentication is enabled automatically if the [user-authn](/modules/user-authn/) module is enabled.
         properties:
           authURL:
             type: string
@@ -69,7 +69,7 @@ properties:
 
           This parameter is used if the `user-authn` module is enabled or the `externalAuthentication` parameter is set.
 
-          **Caution!** Note that you must add those groups to the appropriate field in the DexProvider config if this module is used together with the [user-authn](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/user-authn/) one.
+          **Caution!** Note that you must add those groups to the appropriate field in the DexProvider config if this module is used together with the [user-authn](/modules/user-authn/) one.
       whitelistSourceRanges:
         type: array
         items:
@@ -129,5 +129,5 @@ properties:
             description: |
               The name of the secret in the `d8-system` namespace to use with the Hubble web UI.
 
-              This secret must have the [kubernetes.io/tls](https://kubernetes.github.io/ingress-nginx/user-guide/tls/#tls-secrets) format.
+              This secret must have the kubernetes.io/tls format.
 

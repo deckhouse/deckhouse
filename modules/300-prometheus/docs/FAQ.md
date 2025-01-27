@@ -79,7 +79,7 @@ spec:
 The `CustomPrometheusRules` resource allows you to add alerts.
 
 Parameters:
-- `groups` — is the only parameter where you need to define alert groups. The structure of the groups is similar to [that of prometheus-operator](https://github.com/prometheus-operator/prometheus-operator/blob/ed9e365370603345ec985b8bfb8b65c242262497/Documentation/api.md#rulegroup).
+- `groups` — is the only parameter where you need to define alert groups. The structure of the groups is similar to that of prometheus-operator.
 
 An example:
 
@@ -105,9 +105,9 @@ spec:
 
 The `GrafanaAdditionalDatasource` allows you to provision additional Grafana data sources.
 
-A detailed description of the resource parameters is available in the [Grafana documentation](https://grafana.com/docs/grafana/latest/administration/provisioning/#example-datasource-config-file).
+A detailed description of the resource parameters is available in the Grafana documentation.
 
-See the datasource type in the documentation for the specific [datasource](https://grafana.com/docs/grafana/latest/datasources/).
+See the datasource type in the documentation for the specific datasource.
 
 An example:
 
@@ -182,7 +182,7 @@ Do the following to set up application metrics protection via the `kube-rbac-pro
            name: rbac-proxy-test
    ```
 
-   > Get more information on authorization attributes in the [Kubernetes documentation](https://kubernetes.io/docs/reference/access-authn-authz/authorization).
+   > Get more information on authorization attributes in the Kubernetes documentation.
 
 3. Create `Service` and `Deployment` for your application with the `kube-rbac-proxy` as a sidecar container:
 
@@ -477,11 +477,11 @@ route:
       receiver: blackhole
 ```
 
-A detailed description of all parameters can be found in the [official documentation](https://prometheus.io/docs/alerting/latest/configuration/#configuration-file).
+A detailed description of all parameters can be found in the official documentation.
 
 ## Why can't different scrape Intervals be set for individual targets?
 
-The Prometheus developer Brian Brazil provides, probably, the most [comprehensive answer](https://www.robustperception.io/keep-it-simple-scrape_interval-id) to this question.
+The Prometheus developer Brian Brazil provides, probably, the most comprehensive answer to this question.
 In short, different scrapeIntervals are likely to cause the following complications:
 * Increasing configuration complexity;
 * Problems with writing queries and creating graphs;

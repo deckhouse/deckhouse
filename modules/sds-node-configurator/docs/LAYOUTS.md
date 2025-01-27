@@ -5,7 +5,7 @@ description: "Sds-module configuration scenarios using sds-node-configurator"
 ---
 
 {{< alert level="warning" >}}
-The module's functionality is guaranteed only when using stock kernels provided with [supported distributions](https://deckhouse.io/documentation/v1/supported_versions.html#linux).
+The module's functionality is guaranteed only when using stock kernels provided with [supported distributions](/supported_versions.html#linux).
 
 The module may work with other kernels or distributions, but this is not guaranteed.
 {{< /alert >}}

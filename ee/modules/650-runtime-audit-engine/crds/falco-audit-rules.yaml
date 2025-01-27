@@ -45,7 +45,7 @@ spec:
 
                   These rules help detect threats at runtime by observing the behavior of your applications and containers.
 
-                  Refer to [the Falco documentation](https://falco.org/docs/rules/) and [reference](https://falco.org/docs/reference/rules/) for more details.
+                  Refer to the Falco documentation and reference for more details.
                 items:
                   type: object
                   oneOf:

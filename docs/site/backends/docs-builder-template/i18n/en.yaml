@@ -22,7 +22,7 @@ moduleLinkTitleSETUP: Setup
 moduleLinkTitleFAQ: FAQ
 moduleLinkTitleCRD: Custom Resources
 moduleLinkTitleCR: Custom Resources
-module_is_available_in_ee_only: The module is available only in Deckhouse Enterprise Edition.
+module_is_available_in_ee_only: The module is available in Deckhouse Platform Certified Security Edition.
 module_alert_experimental: The functionality of the module might significantly change. Compatibility with future versions is not guaranteed.
 module_alert_preview: The functionality of the module might change, but the main features will remain. Compatibility with future versions is guaranteed, but might require additional migration steps.
 module_alert_deprecated: The module is deprecated.

@@ -4,28 +4,28 @@ properties:
     description: |
       Структура, аналогичная `spec.nodeSelector` пода Kubernetes.
 
-      Если значение не указано или указано `false`, будет использоваться [автоматика](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
+      Если значение не указано или указано `false`, будет использоваться [автоматика](/#выделение-узлов-под-определенный-вид-нагрузки).
   tolerations:
     description: |
       Структура, аналогичная `spec.tolerations` пода Kubernetes.
 
-      Если значение не указано или указано `false`, будет использоваться [автоматика](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
+      Если значение не указано или указано `false`, будет использоваться [автоматика](/#выделение-узлов-под-определенный-вид-нагрузки).
   cloudflareAPIToken:
     description: |
-      [API Tokens](https://cert-manager.io/docs/configuration/acme/dns01/cloudflare/#api-tokens) позволяют использовать ключи, привязанные к определенным DNS-зонам.
+      API Tokens позволяют использовать ключи, привязанные к определенным DNS-зонам.
 
       Рекомендуется использовать API Tokens для более высокой безопасности, поскольку они имеют более строгие разрешения и могут быть легко отозваны.
 
       Способ проверки того, что домены, указанные в ресурсе Certificate, для которых заказывается сертификат,
       находятся под управлением `cert-manager` у DNS-провайдера Cloudflare. Проверка происходит путем добавления специальных
-      TXT-записей для домена [ACME DNS01 Challenge Provider](https://cert-manager.io/docs/configuration/acme/dns01/).
+      TXT-записей для домена ACME DNS01 Challenge Provider.
   cloudflareGlobalAPIKey:
     description: |
       Cloudflare Global API key для управления DNS-записями.
 
       Способ проверки того, что домены, указанные в ресурсе Certificate, для которых заказывается сертификат,
       находятся под управлением `cert-manager` у DNS-провайдера Cloudflare. Проверка происходит путем добавления специальных
-      TXT-записей для домена [ACME DNS01 Challenge Provider](https://cert-manager.io/docs/configuration/acme/dns01/).
+      TXT-записей для домена ACME DNS01 Challenge Provider.
   cloudflareEmail:
     description: |
       Почтовый ящик проекта, на который выдавались доступы для управления Cloudflare.
@@ -33,7 +33,7 @@ properties:
     description: |
       Access Key ID пользователя с необходимыми правами.
 
-      [Amazon Route53 IAM Policy](https://cert-manager.io/docs/configuration/acme/dns01/route53/)
+      Amazon Route53 IAM Policy
       для управления доменными записями домена.
   route53SecretAccessKey:
     description: |

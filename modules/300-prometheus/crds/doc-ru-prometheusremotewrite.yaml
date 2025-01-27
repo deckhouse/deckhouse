@@ -4,7 +4,7 @@ spec:
       schema: &schema
         openAPIV3Schema:
           description: |
-            Ресурс для включения `remote_write` данных из локального Prometheus в отдельный longterm storage (например, [VictoriaMetrics](https://github.com/VictoriaMetrics/VictoriaMetrics)).
+            Ресурс для включения `remote_write` данных из локального Prometheus в отдельный longterm storage (например, VictoriaMetrics).
 
             Таких ресурсов в кластере может быть любое количество.
           properties:
@@ -35,7 +35,7 @@ spec:
                   description: |
                     Параметры для relabel'инга данных для отправки.
 
-                    Например, если необходимо удалить лишние метрики или произвести [релейбл данных](https://prometheus.io/docs/prometheus/latest/configuration/configuration/#metric_relabel_configs).
+                    Например, если необходимо удалить лишние метрики или произвести релейбл данных.
                   items:
                     properties:
                       action:

@@ -13,7 +13,7 @@ properties:
 
       The StorageClass to use with all Deckhouse Kubernetes Platform components (Prometheus, Grafana, OpenVPN, etc.).
 
-        * If the value is not specified, the [default StorageClass](https://kubernetes.io/docs/concepts/storage/storage-classes/#default-storageclass) set in the cluster is used.
+        * If the value is not specified, the default StorageClass set in the cluster is used.
         * Use this parameter only in exceptional circumstances.
         * This parameter is applied during module activation.
   defaultClusterStorageClass:
@@ -48,7 +48,7 @@ properties:
         type: string
         default: nginx
         description: |
-          The class of the Ingress controller ([Ingress class](https://kubernetes.io/docs/concepts/services-networking/ingress/#ingress-class)) used for Deckhouse modules.
+          The class of the Ingress controller (Ingress class) used for Deckhouse modules.
         x-examples: [ "nginx" ]
         pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
       publicDomainTemplate:
@@ -64,9 +64,9 @@ properties:
           **Do not use** DNS names (nor do create Ingress resources) that match this template to avoid conflicts with the Ingress resources created by Deckhouse.
 
           **Pay attention to the following:**
-          - Domain must be different from [clusterDomain](https://deckhouse.io/products/kubernetes-platform/documentation/v1/installing/configuration.html#clusterconfiguration-clusterdomain)!**
-          - Domain used in the template must not match the domain specified in the [clusterDomain](https://deckhouse.io/products/kubernetes-platform/documentation/v1/installing/configuration.html#clusterconfiguration-clusterdomain) parameter. For example, if `clusterDomain` is set to `cluster.local` (the default value), `publicDomainTemplate` cannot be set to `%s.cluster.local`.
-          - Domain used in the template should not match the domain specified in the [clusterDomain](https://deckhouse.io/products/kubernetes-platform/documentation/v1/installing/configuration.html#clusterconfiguration-clusterdomain) parameter and the internal service network zone. For example, if clusterDomain is set to cluster.local (default value) and the service network zone is ru-central1.internal, then publicDomainTemplate cannot be %s.cluster.local or %s.ru-central1.internal.
+          - Domain must be different from [clusterDomain](/installing/configuration.html#clusterconfiguration-clusterdomain)!**
+          - Domain used in the template must not match the domain specified in the [clusterDomain](/installing/configuration.html#clusterconfiguration-clusterdomain) parameter. For example, if `clusterDomain` is set to `cluster.local` (the default value), `publicDomainTemplate` cannot be set to `%s.cluster.local`.
+          - Domain used in the template should not match the domain specified in the [clusterDomain](/installing/configuration.html#clusterconfiguration-clusterdomain) parameter and the internal service network zone. For example, if clusterDomain is set to cluster.local (default value) and the service network zone is ru-central1.internal, then publicDomainTemplate cannot be %s.cluster.local or %s.ru-central1.internal.
           - If this parameter is omitted, no Ingress resources will be created.
         x-doc-examples: [ "%s.kube.company.my", "kube-%s.company.my" ]
         x-examples: [ "%s.kube.company.my" ]
@@ -113,7 +113,7 @@ properties:
               The HTTPS usage mode:
               * `CertManager` — Deckhouse modules use HTTPS and get a certificate from the ClusterIssuer defined in the `certManager.clusterIssuerName` parameter;
               * `CustomCertificate` — Deckhouse modules use HTTPS using the certificate from the `d8-system` namespace;
-              * `Disabled` — Deckhouse modules use HTTP only (some modules may not work, e.g., [user-authn](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/user-authn/));
+              * `Disabled` — Deckhouse modules use HTTP only (some modules may not work, e.g., [user-authn](/modules/user-authn/));
               * `OnlyInURI` — Deckhouse modules use HTTP in the expectation that an HTTPS load balancer runs in front of them and terminates HTTPS. Load balancer should provide a redirect from HTTP to HTTPS.
             default: CertManager
             enum:
@@ -133,7 +133,7 @@ properties:
                 description: |
                   Name of a `ClusterIssuer` to use for Deckhouse modules.
 
-                  The [cert-manager](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/cert-manager/) module offers the following `ClusterIssuer`: `letsencrypt`, `letsencrypt-staging`, `selfsigned`, `clouddns`, `cloudflare`, `digitalocean`, `route53`. Also, you can use your own `ClusterIssuer`.
+                  The [cert-manager](/modules/cert-manager/) module offers the following `ClusterIssuer`: `letsencrypt`, `letsencrypt-staging`, `selfsigned`, `clouddns`, `cloudflare`, `digitalocean`, `route53`. Also, you can use your own `ClusterIssuer`.
           customCertificate:
             type: object
             additionalProperties: false
@@ -143,13 +143,13 @@ properties:
                 description: |
                   The name of the secret in the `d8-system` namespace to use with Deckhouse modules.
 
-                  This secret must have the [kubernetes.io/tls](https://kubernetes.github.io/ingress-nginx/user-guide/tls/#tls-secrets) format.
+                  This secret must have the kubernetes.io/tls format.
                 default: "false"
       resourcesRequests:
         description: |
           The amount of resources (CPU and memory) allocated to Deckhouse components running on each node of the cluster (usually these are DaemonSets, for example, `cni-flannel`, `monitoring-ping`).
 
-          [More](https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/#resource-units-in-kubernetes) about resource units in Kubernetes.
+          More about resource units in Kubernetes.
         type: object
         default: {}
         additionalProperties: false
@@ -182,6 +182,6 @@ properties:
         description: |
           The StorageClass to use with all Deckhouse Kubernetes Platform components (Prometheus, Grafana, OpenVPN, etc.).
 
-            * If the value is not specified, the [default StorageClass](https://kubernetes.io/docs/concepts/storage/storage-classes/#default-storageclass) set in the cluster is used.
+            * If the value is not specified, the default StorageClass set in the cluster is used.
             * Use this parameter only in exceptional circumstances.
             * This parameter is applied during module activation.

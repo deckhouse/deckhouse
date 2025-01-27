@@ -19,9 +19,9 @@
            * 'kubectl -n d8-chrony exec <POD_NAME> -- /opt/chrony-static/bin/chronyc sources'
         3. Correct the time synchronization problems:
            * correct network problems:
-             - provide availability to upstream time synchronization servers defined in the module [configuration](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/chrony/configuration.html);
+             - provide availability to upstream time synchronization servers defined in the module [configuration](/modules/chrony/configuration.html);
              - eliminate large packet loss and excessive latency to upstream time synchronization servers.
-           * Modify NTP servers list defined in the module [configuration](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/chrony/configuration.html).
+           * Modify NTP servers list defined in the module [configuration](/modules/chrony/configuration.html).
       summary: NTP daemon on node {{$labels.node}} have not synchronized time for too long.
 
   - alert: NodeTimeOutOfSync

@@ -78,7 +78,7 @@ spec:
 Для добавления алертов существует специальный ресурс — `CustomPrometheusRules`.
 
 Параметры:
-- `groups` — единственный параметр, в котором необходимо описать группы алертов. Структура групп полностью совпадает [с аналогичной в prometheus-operator](https://github.com/prometheus-operator/prometheus-operator/blob/ed9e365370603345ec985b8bfb8b65c242262497/Documentation/api.md#rulegroup).
+- `groups` — единственный параметр, в котором необходимо описать группы алертов. Структура групп полностью совпадает с аналогичной в prometheus-operator.
 
 Пример:
 
@@ -104,7 +104,7 @@ spec:
 
 Для подключения дополнительных data source к Grafana существует специальный ресурс — `GrafanaAdditionalDatasource`.
 
-Параметры ресурса подробно описаны [в документации к Grafana](https://grafana.com/docs/grafana/latest/administration/provisioning/#example-datasource-config-file). Тип ресурса смотрите в документации по конкретному [datasource](https://grafana.com/docs/grafana/latest/datasources/).
+Параметры ресурса подробно описаны в документации к Grafana. Тип ресурса смотрите в документации по конкретному datasource.
 
 Пример:
 
@@ -179,7 +179,7 @@ spec:
            name: rbac-proxy-test
    ```
 
-   > Более подробную информацию по атрибутам можно найти [в документации Kubernetes](https://kubernetes.io/docs/reference/access-authn-authz/authorization).
+   > Более подробную информацию по атрибутам можно найти в документации Kubernetes.
 
 3. Создайте `Service` и `Deployment` для вашего приложения, где `kube-rbac-proxy` займет позицию sidecar-контейнера:
 
@@ -474,11 +474,11 @@ route:
       receiver: blackhole
 ```
 
-С подробным описанием всех параметров можно ознакомиться [в официальной документации](https://prometheus.io/docs/alerting/latest/configuration/#configuration-file).
+С подробным описанием всех параметров можно ознакомиться в официальной документации.
 
 ## Почему нельзя установить разный scrapeInterval для отдельных таргетов?
 
-Наиболее [полный ответ](https://www.robustperception.io/keep-it-simple-scrape_interval-id) на этот вопрос дает разработчик Prometheus Brian Brazil.
+Наиболее полный ответ на этот вопрос дает разработчик Prometheus Brian Brazil.
 Если коротко, разные scrapeInterval'ы принесут следующие проблемы:
 * увеличение сложности конфигурации;
 * проблемы при написании запросов и создании графиков;

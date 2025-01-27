@@ -237,22 +237,21 @@ spec:
                       description: |
                         Request additional info about the authenticated user.
 
-                        Learn more [here](https://openid.net/specs/openid-connect-core-1_0.html#UserInfo)...
                       default: false
                     userIDKey:
                       type: string
                       default: 'sub'
                       description: |
-                        The [claim](https://openid.net/specs/openid-connect-core-1_0.html#Claims) to use as the user id.
+                        The claim to use as the user id.
                     userNameKey:
                       type: string
                       default: 'name'
                       description: |
-                        The [claim](https://openid.net/specs/openid-connect-core-1_0.html#Claims) to use as the user name.
+                        The claim to use as the user name.
                     claimMapping:
                       type: object
                       description: |
-                        Some providers return non-standard claims (eg. mail). Claim mappings are hints for Dex how to map claims to [standard OIDC claims](https://openid.net/specs/openid-connect-core-1_0.html#Claims).
+                        Some providers return non-standard claims (eg. mail). Claim mappings are hints for Dex how to map claims to standard OIDC claims.
 
                         Dex can only map a non-standard claim to a standard one if it's not included in the id_token returned by OIDC provider.
                       properties:
@@ -260,17 +259,17 @@ spec:
                           type: string
                           default: email
                           description: |
-                            The [claim](https://openid.net/specs/openid-connect-core-1_0.html#Claims) to use as the user email.
+                            The claim to use as the user email.
                         groups:
                           type: string
                           default: groups
                           description: |
-                            The [claim](https://openid.net/specs/openid-connect-core-1_0.html#Claims) to use as the user groups.
+                            The claim to use as the user groups.
                         preferred_username:
                           type: string
                           default: preferred_username
                           description: |
-                            The [claim](https://openid.net/specs/openid-connect-core-1_0.html#Claims) to use as the user preferred username.
+                            The claim to use as the user preferred username.
                     claimMappingOverride:
                       type: boolean
                       description: |
@@ -282,7 +281,7 @@ spec:
                       type: array
                       default: ["openid", "profile", "email", "groups", "offline_access"]
                       description: |
-                        List of [additional scopes](https://github.com/dexidp/website/blob/main/content/docs/configuration/custom-scopes-claims-clients.md) to request in token response.
+                        List of additional scopes to request in token response.
                       items:
                         type: string
                     promptType:
@@ -317,7 +316,7 @@ spec:
                         Enables basic authorization for the Kubernetes API server.
 
                         The username and password of the user from the application created in OIDC are used as credentials for basic authorization (you can enable it only if there is just one provider of the OIDC/Crowd type).
-                        Works **only** if the [publishAPI](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/user-authn/configuration.html#parameters-publishapi) parameter is enabled.
+                        Works **only** if the [publishAPI](/modules/user-authn/configuration.html#parameters-publishapi) parameter is enabled.
 
                         Authorization and group data obtained from an IdP are stored in the cache for 10 seconds.
                 ldap: &ldap
@@ -346,7 +345,7 @@ spec:
                       default: false
                       description: |
                         When connecting to the server, connect using the ldap:// protocol then issue
-                        a [StartTLS](https://www.digitalocean.com/community/tutorials/how-to-encrypt-openldap-connections-using-starttls) command. If unspecified, connections will use the ldaps:// protocol
+                        a StartTLS command. If unspecified, connections will use the ldaps:// protocol
                     usernamePrompt:
                       type: string
                       default: 'LDAP username'
@@ -389,7 +388,7 @@ spec:
                     userSearch:
                       type: object
                       required: ['baseDN', 'username', 'idAttr', 'emailAttr']
-                      description: 'User search maps a username and password entered by a user to a LDAP entry. [Details...](https://github.com/dexidp/dex/blob/3b7292a08fd2c61900f5e6c67f3aa2ee81827dea/Documentation/connectors/ldap.md#example-mapping-a-schema-to-a-search-config)'
+                      description: 'User search maps a username and password entered by a user to a LDAP entry. '
                       properties:
                         baseDN:
                           type: string
@@ -425,7 +424,7 @@ spec:
                     groupSearch:
                       type: object
                       required: ['baseDN', 'userMatchers', 'nameAttr']
-                      description: 'Group search queries for groups given a user entry. [Details](https://github.com/dexidp/dex/blob/3b7292a08fd2c61900f5e6c67f3aa2ee81827dea/Documentation/connectors/ldap.md#example-mapping-a-schema-to-a-search-config)'
+                      description: 'Group search queries for groups given a user entry. '
                       properties:
                         baseDN:
                           type: string

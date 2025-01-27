@@ -85,7 +85,7 @@ spec:
                           description: |
                             Specifies the label selector to filter namespaces from which logs should be collected.
 
-                            You can get more into [here](https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/).
+                            You can get more into here.
                           anyOf:
                           - required: [matchLabels]
                           - required: [matchExpressions]
@@ -132,7 +132,7 @@ spec:
                       description: |
                         Specifies the label selector to filter Pods with.
 
-                        You can get more into [here](https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/).
+                        You can get more into here.
                       anyOf:
                         - required:
                             - matchLabels

@@ -6,7 +6,7 @@ spec:
           description: |
             Описывает параметры хранилища логов, к которому можно подключить бесконечное количество источников.
 
-            `metadata.name` задаёт имя upstream'а, который будет использоваться в ресурсе [ClusterLoggingConfig](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/log-shipper/cr.html#clusterloggingconfig).
+            `metadata.name` задаёт имя upstream'а, который будет использоваться в ресурсе [ClusterLoggingConfig](/modules/log-shipper/cr.html#clusterloggingconfig).
           properties:
             spec:
               properties:
@@ -163,7 +163,7 @@ spec:
                         В каком формате закодировать сообщение.
                     keyField:
                       description: |
-                        Позволяет задать поле [key_field](https://vector.dev/docs/reference/configuration/sinks/kafka/#key_field).
+                        Позволяет задать поле key_field.
                     sasl:
                       description: Конфигурация аутентификации SASL для взаимодействия с Kafka.
                       properties:
@@ -344,7 +344,7 @@ spec:
                     - node;
                     - pod_owner.
 
-                    [Подробнее о путях к полям...](https://vector.dev/docs/reference/configuration/field-path-notation/)
+
                 buffer:
                   description: Параметры буфера.
                   properties:
@@ -362,8 +362,8 @@ spec:
                             Вы можете указать размер как простое целое число или как число с одним из следующих суффиксов: `E`, `P`, `T`, `G`, `M`, `k`, `Ei`, `Pi`, `Ti`, `Gi`, `Mi`, `Ki`.
 
                             Подробнее об указании ресурсов:
-                            - [количество kubernetes](https://kubernetes.io/docs/reference/kubernetes-api/common-definitions/quantity/);
-                            - [единицы ресурсов памяти](https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/#meaning-of-memory).
+                            - количество kubernetes;
+                            - единицы ресурсов памяти.
                     memory:
                       properties:
                         maxEvents:

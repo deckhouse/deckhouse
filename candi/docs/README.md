@@ -44,16 +44,16 @@ For validation and values defaulting, each configuration object has its OpenAPI 
 
 | Kind                           | Description        |  OpenAPI path       |
 | ------------------------------ | ------------------ | ------------------ |
-| ClusterConfiguration           | Basic Kubernetes cluster configuration | [candi/openapi/cluster_configuration.yaml](https://github.com/deckhouse/deckhouse/blob/main/candi/openapi/cluster_configuration.yaml) |
-| InitConfiguration              | Required only for Deckhouse installation | [candi/openapi/init_configuration.yaml](https://github.com/deckhouse/deckhouse/blob/main/candi/openapi/init_configuration.yaml)|
-| StaticClusterConfiguration     | Bare metal specific configuration | [candi/openapi/static_cluster_configuration.yaml](https://github.com/deckhouse/deckhouse/blob/main/candi/openapi/static_cluster_configuration.yaml)|
-| OpenStackClusterConfiguration  | OpenStack specific configuration | [candi/cloud-providers/openstack/openapi/openapi/cluster_configuration.yaml](https://github.com/deckhouse/deckhouse/blob/main/ee/candi/cloud-providers/openstack/openapi/cluster_configuration.yaml) |
-| AWSClusterConfiguration        | AWS specific configuration | [candi/cloud-providers/aws/openapi/openapi/cluster_configuration.yaml](https://github.com/deckhouse/deckhouse/blob/main/candi/cloud-providers/aws/openapi/cluster_configuration.yaml) |
-| GCPClusterConfiguration        | GCP specific configuration | [candi/cloud-providers/gcp/openapi/openapi/cluster_configuration.yaml](https://github.com/deckhouse/deckhouse/blob/main/candi/cloud-providers/gcp/openapi/cluster_configuration.yaml) |
-| vSphereClusterConfiguration    | vSphere specific configuration | [candi/cloud-providers/vsphere/openapi/openapi/cluster_configuration.yaml](https://github.com/deckhouse/deckhouse/blob/main/ee/se-plus/candi/cloud-providers/vsphere/openapi/cluster_configuration.yaml) |
-| YandexClusterConfiguration     | Yandex Cloud specific configuration | [candi/cloud-providers/yandex/openapi/openapi/cluster_configuration.yaml](https://github.com/deckhouse/deckhouse/blob/main/candi/cloud-providers/yandex/openapi/cluster_configuration.yaml) |
-| BashibleTemplateData           | Bashible Bundle compiling settings (only for dhctl render bashible-bunble) | [candi/bashible/openapi.yaml](https://github.com/deckhouse/deckhouse/blob/main/candi/bashible/openapi.yaml) |
-| KubeadmConfigTemplateData      | Kubeadm config compiling settings (only for dhctl render kubeadm-config) | [candi/control-plane-kubeadm/openapi.yaml](https://github.com/deckhouse/deckhouse/blob/main/candi/control-plane-kubeadm/openapi.yaml)|
+| ClusterConfiguration           | Basic Kubernetes cluster configuration | candi/openapi/cluster_configuration.yaml |
+| InitConfiguration              | Required only for Deckhouse installation | candi/openapi/init_configuration.yaml|
+| StaticClusterConfiguration     | Bare metal specific configuration | candi/openapi/static_cluster_configuration.yaml|
+| OpenStackClusterConfiguration  | OpenStack specific configuration | candi/cloud-providers/openstack/openapi/openapi/cluster_configuration.yaml |
+| AWSClusterConfiguration        | AWS specific configuration | candi/cloud-providers/aws/openapi/openapi/cluster_configuration.yaml |
+| GCPClusterConfiguration        | GCP specific configuration | candi/cloud-providers/gcp/openapi/openapi/cluster_configuration.yaml |
+| vSphereClusterConfiguration    | vSphere specific configuration | candi/cloud-providers/vsphere/openapi/openapi/cluster_configuration.yaml |
+| YandexClusterConfiguration     | Yandex Cloud specific configuration | candi/cloud-providers/yandex/openapi/openapi/cluster_configuration.yaml |
+| BashibleTemplateData           | Bashible Bundle compiling settings (only for dhctl render bashible-bunble) | candi/bashible/openapi.yaml |
+| KubeadmConfigTemplateData      | Kubeadm config compiling settings (only for dhctl render kubeadm-config) | candi/control-plane-kubeadm/openapi.yaml|
 
 ### Bootstrap
 
@@ -63,11 +63,11 @@ Bootstrap process with [dhctl](../../dhctl/docs/README.md) consists of several s
 
 There are three variants of terraforming:
 * `base-infrastructure` — creates basic cluster components: networks, routers, SSH key pairs, etc.
-  * dhctl discovers through terraform [output](https://www.terraform.io/docs/configuration/outputs.html):
+  * dhctl discovers through terraform output:
     * `cloud_discovery_data` — the information for the cloud provider module to work correctly, will be saved in the secret `d8-provider-cluster-configuration` in namespace `kube-system`.
 
 * `master-node` — creates a master node.
-  * dhctl discovers through terraform [output](https://www.terraform.io/docs/configuration/outputs.html):
+  * dhctl discovers through terraform output:
     * `master_ip_address_for_ssh` — external master ip address to connect to the node.
     * `node_internal_ip_address` — internal address to bind control plane components.
     * `kubernetes_data_device_path` — device name for storing Kubernetes data (etcd and manifests).

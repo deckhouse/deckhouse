@@ -78,9 +78,9 @@ spec:
 
 The example demonstrates the configuration of checking the repository address in the `image` field for all Pods created in the namespace having the `security.deckhouse.io/pod-policy : restricted`  label. A Pod will not be created if the address in the `image` field of the Pod does not start with `mycompany.registry.com`.
 
-The [Gatekeeper documentation](https://open-policy-agent.github.io/gatekeeper/website/docs/howto) may find more info about templates and policy language.
+The Gatekeeper documentation may find more info about templates and policy language.
 
-Find more examples of checks for policy extension in the [Gatekeeper Library](https://github.com/open-policy-agent/gatekeeper-library/tree/master/src/general).
+Find more examples of checks for policy extension in the Gatekeeper Library.
 
 ## What if there are multiple policies (operational or security) that are applied to the same object?
 
@@ -136,14 +136,14 @@ Then, in order to fulfill the requirements of the above security policies, the f
 
 {% alert level="warning" %}This feature is available in Enterprise Edition only.{% endalert %}
 
-The module implements a function for checking the signatures of container images signed using [Cosign](https://docs.sigstore.dev/cosign/key_management/signing_with_self-managed_keys/#:~:text=To%20generate%20a%20key%20pair,prompted%20to%20provide%20a%20password.&text=Alternatively%2C%20you%20can%20use%20the,%2C%20ECDSA%2C%20and%20ED25519%20keys). Checking the signatures of container images allows you to ensure their integrity (that the image has not been modified since its creation) and authenticity (that the image was created by a trusted source). You can enable container image signature verification in the cluster using the [policies.verifyImageSignatures](cr.html#securitypolicy-v1alpha1-spec-policies-verifyimagesignatures) parameter of the SecurityPolicy resource.
+The module implements a function for checking the signatures of container images signed using Cosign. Checking the signatures of container images allows you to ensure their integrity (that the image has not been modified since its creation) and authenticity (that the image was created by a trusted source). You can enable container image signature verification in the cluster using the [policies.verifyImageSignatures](cr.html#securitypolicy-v1alpha1-spec-policies-verifyimagesignatures) parameter of the SecurityPolicy resource.
 
 {% offtopic title="How to sign an image..." %}
 Steps to sign an image:
 - Generate keys: `cosign generate-key-pair`
 - Sign the image: `cosign sign --key <key> <image>`
 
-For more information on working with Cosign, you can check the [documentation](https://docs.sigstore.dev/cosign/key_management).
+For more information on working with Cosign, you can check the documentation.
 {% endofftopic %}
 
 Example of SecurityPolicy for configuring the signature verification of container images:

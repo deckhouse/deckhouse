@@ -418,8 +418,8 @@ You cannot use the `deckhouse.io` domain in `labels` and `taints` keys of the `N
 
 There are two ways to solve this problem:
 
-1. You can set labels to `NodeGroup`'s `spec.nodeTemplate.labels`, to use them in the `Pod`'s [spec.nodeSelector](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/) or [spec.affinity.nodeAffinity](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#node-affinity) parameters. In this case, you select nodes that the scheduler will use for running the target application.
-2. You cat set taints to `NodeGroup`'s `spec.nodeTemplate.taints` and then remove them via the `Pod`'s [spec.tolerations](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/) parameter. In this case, you disallow running applications on these nodes unless those applications are explicitly allowed.
+1. You can set labels to `NodeGroup`'s `spec.nodeTemplate.labels`, to use them in the `Pod`'s spec.nodeSelector or spec.affinity.nodeAffinity parameters. In this case, you select nodes that the scheduler will use for running the target application.
+2. You cat set taints to `NodeGroup`'s `spec.nodeTemplate.taints` and then remove them via the `Pod`'s spec.tolerations parameter. In this case, you disallow running applications on these nodes unless those applications are explicitly allowed.
 
 {% alert level="info" %}
 Deckhouse tolerates the `dedicated` by default, so we recommend using the `dedicated` key with any `value` for taints on your dedicated nodes.️
@@ -1171,7 +1171,7 @@ status:
 
 ## How do I make werf ignore the Ready conditions in a node group?
 
-[werf](https://werf.io) checks the ```Ready``` status of resources and, if available, waits for the value to become ```True```.
+werf checks the ```Ready``` status of resources and, if available, waits for the value to become ```True```.
 
 Creating (updating) a [nodeGroup](cr.html#nodegroup) resource in a cluster can take a significant amount of time to create the required number of nodes. When deploying such a resource in a cluster using werf (e.g., as part of a CI/CD process), deployment may terminate when resource readiness timeout is exceeded. To make werf ignore the nodeGroup status, the following `nodeGroup` annotations must be added:
 

@@ -11,13 +11,7 @@ spec:
                 nodeType:
                   description: |
                     Тип узлов, которые представляет эта группа:
-                    - `Cloud` — узлы для этой группы будут автоматически создаваться (и удаляться) в настроенном облачном провайдере;
-                    - `Static` — статический узел, размещенный на железном сервере или виртуальной машине. Узел не управляется
-                      cloud-controller-manager'ом, даже если включен один из облачных провайдеров;
-                    - `Hybrid` — статический узел (созданный вручную или любыми внешними инструментами), размещенный в том же облаке, с
-                      которым настроена интеграция у одного из облачных провайдеров. На таком узле работает CSI и такой узел
-                      управляется cloud-controller-manager'ом: объект `Node` автоматически обогащается информацией о зоне и регионе по
-                      данным, полученным от облака; при удалении узла из облака соответствующий ему объект `Node` будет удален в Kubernetes.
+                    - `Static` — статический узел, размещенный на железном сервере или виртуальной машине.
                 kubernetesVersion:
                   description: |
                     Желаемая минорная версия Kubernetes.
@@ -39,7 +33,7 @@ spec:
                             Максимальное количество параллельных потоков загрузки для каждой операции pull.
                 cloudInstances:
                   description: |
-                    Параметры заказа облачных виртуальных машин.
+                    Параметры заказа виртуальных машин.
 
                     > **Внимание!** Допустимо использовать только совместно с `nodeType: CloudEphemeral`.
                   properties:
@@ -110,13 +104,13 @@ spec:
                   properties:
                     labels:
                       description: |
-                        Аналогично стандартному [полю](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta) `metadata.labels`.
+                        Аналогично стандартному полю `metadata.labels`.
                     annotations:
                       description: |
-                        Аналогично стандартному [полю](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta) `metadata.annotations`.
+                        Аналогично стандартному полю `metadata.annotations`.
                     taints:
                       description: |
-                        Аналогично полю `.spec.taints` из объекта [Node](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#taint-v1-core).
+                        Аналогично полю `.spec.taints` из объекта Node.
 
                         > **Внимание!** Доступны только поля `effect`, `key`, `value`.
                 static:
@@ -169,7 +163,7 @@ spec:
 
                             **Внимание!** Данная настройка игнорируется (узлам будет выдано разрешение без предварительного выгона подов с узлов):
                             - для nodeGroup `master` с единственным узлом;
-                            - для [выделенного под запуск Deckhouse](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/deckhouse-faq.html#как-запускать-deckhouse-на-произвольном-узле) узла, если этот узел в группе узлов единственно рабочий (Ready).
+                            - для [выделенного под запуск Deckhouse](/deckhouse-faq.html#как-запускать-deckhouse-на-произвольном-узле) узла, если этот узел в группе узлов единственно рабочий (Ready).
                         windows:
                           description: |
                             Список окон disruption-обновлений узлов.
@@ -235,13 +229,8 @@ spec:
                 nodeType:
                   description: |
                     Тип узлов, которые представляет эта группа:
-                    - `Cloud` — узлы для этой группы будут автоматически создаваться (и удаляться) в настроенном облачном провайдере;
                     - `Static` — статический узел, размещенный на железном сервере или виртуальной машине. Узел не управляется
                       cloud-controller-manager'ом, даже если включен один из облачных провайдеров;
-                    - `Hybrid` — статический узел (созданный вручную или любыми внешними инструментами), размещенный в том же облаке, с
-                      которым настроена интеграция у одного из облачных провайдеров. На таком узле работает CSI и такой узел
-                      управляется cloud-controller-manager'ом: объект `Node` автоматически обогащается информацией о зоне и регионе по
-                      данным, полученным от облака; при удалении узла из облака соответствующий ему объект `Node` будет удален в Kubernetes.
                 cri:
                   description: |
                     Параметры container runtime.
@@ -353,13 +342,13 @@ spec:
                   properties:
                     labels:
                       description: |
-                        Аналогично стандартному [полю](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta) `metadata.labels`.
+                        Аналогично стандартному полю `metadata.labels`.
                     annotations:
                       description: |
-                        Аналогично стандартному [полю](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta) `metadata.annotations`.
+                        Аналогично стандартному полю `metadata.annotations`.
                     taints:
                       description: |
-                        Аналогично полю `.spec.taints` из объекта [Node](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#taint-v1-core).
+                        Аналогично полю `.spec.taints` из объекта Node.
 
                         > **Внимание!** Доступны только поля `effect`, `key`, `value`.
                 chaos:
@@ -405,7 +394,7 @@ spec:
 
                             **Внимание!** Данная настройка игнорируется (узлам будет выдано разрешение без предварительного выгона подов с узлов):
                             - для nodeGroup `master` с единственным узлом;
-                            - для [выделенного под запуск Deckhouse](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/deckhouse-faq.html#как-запускать-deckhouse-на-произвольном-узле) узла, если этот узел в группе узлов единственно рабочий (Ready).
+                            - для [выделенного под запуск Deckhouse](/deckhouse-faq.html#как-запускать-deckhouse-на-произвольном-узле) узла, если этот узел в группе узлов единственно рабочий (Ready).
                         windows:
                           description: |
                             Список окон disruption-обновлений узлов.
@@ -457,20 +446,10 @@ spec:
                 nodeType:
                   description: |
                     Тип узлов, которые представляет эта группа:
-                    - `CloudEphemeral` — узлы для этой группы будут автоматически создаваться (и удаляться) в настроенном облачном провайдере;
-                    - `CloudPermanent` — узлы этой группы берутся из `ProviderClusterConfiguration` и создаются/удаляются через dhctl;
-                    - `CloudStatic` — узел, созданный *вручную или любыми внешними инструментами*, размещенный в том же облаке, с
-                      которым настроена интеграция у одного из облачных провайдеров. На таком узле работает CSI и такой узел
-                      управляется cloud-controller-manager'ом: объект `Node` автоматически обогащается информацией о зоне и регионе по
-                      данным, полученным от облака; при удалении узла из облака, соответствующий ему объект `Node` будет
-                      удален в Kubernetes;
                     - `Static` — статический узел, размещенный на физическом сервере или виртуальной машине. Узел не управляется
                       cloud-controller-manager'ом, даже если включен один из облачных провайдеров.
                   type: string
                   enum:
-                    - CloudEphemeral
-                    - CloudPermanent
-                    - CloudStatic
                     - Static
                 cri:
                   type: object
@@ -620,13 +599,13 @@ spec:
                   properties:
                     labels:
                       description: |
-                        Аналогично стандартному [полю](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta) `metadata.labels`.
+                        Аналогично стандартному полю `metadata.labels`.
                     annotations:
                       description: |
-                        Аналогично стандартному [полю](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta) `metadata.annotations`.
+                        Аналогично стандартному полю `metadata.annotations`.
                     taints:
                       description: |
-                        Аналогично полю `.spec.taints` из объекта [Node](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#taint-v1-core).
+                        Аналогично полю `.spec.taints` из объекта Node.
 
                         > **Внимание!** Доступны только поля `effect`, `key`, `value`.
                 chaos:
@@ -672,7 +651,7 @@ spec:
 
                             **Внимание!** Данная настройка игнорируется (узлам будет выдано разрешение без предварительного выгона подов с узлов):
                             - для nodeGroup `master` с единственным узлом;
-                            - для [выделенного под запуск Deckhouse](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/deckhouse-faq.html#как-запускать-deckhouse-на-произвольном-узле) узла, если этот узел в группе узлов единственно рабочий (Ready).
+                            - для [выделенного под запуск Deckhouse](/deckhouse-faq.html#как-запускать-deckhouse-на-произвольном-узле) узла, если этот узел в группе узлов единственно рабочий (Ready).
                         windows:
                           description: |
                             Список окон disruption-обновлений узлов.
@@ -729,7 +708,7 @@ spec:
                       description: |
                         Управление резервированием ресурсов для системных служб на узле.
 
-                        Больше информации в [документации Kubernetes](https://kubernetes.io/docs/tasks/administer-cluster/reserve-compute-resources/#system-reserved).
+                        Больше информации в документации Kubernetes.
                       properties:
                         mode:
                           description: |
@@ -749,9 +728,9 @@ spec:
 
                         Менеджер топологии позволяет планировщику Kubernetes учитывать данные о топологии ресурсов при планировании подов.
 
-                        В кластере с [NUMA](https://ru.wikipedia.org/wiki/Non-Uniform_Memory_Access)-узлами менеджер топологии может повысить производительность приложения, размещая контейнеры пода на том NUMA-узле, который эффективней работает с ресурсами.
+                        В кластере с NUMA-узлами менеджер топологии может повысить производительность приложения, размещая контейнеры пода на том NUMA-узле, который эффективней работает с ресурсами.
 
-                        Дополнительная информация в [документации Kubernetes](https://kubernetes.io/docs/tasks/administer-cluster/topology-manager/).
+                        Дополнительная информация в документации Kubernetes.
                       properties:
                         enabled:
                           description: |
@@ -771,7 +750,7 @@ spec:
                             - `Restricted` — для каждого контейнера пода определяется предпочтительный NUMA-узел. Если предпочтительные узлы для планирования пода отсутствуют, то новый под не будет запланирован на узел, а уже запущенный под будет остановлен.
                             - `SingleNumaNode` — для каждого контейнера пода определяется предпочтительный NUMA-узел. Если нет NUMA-узла, предпочтительного для **всех контейнеров пода**, то новый под не будет запланирован, а уже запущенный под будет остановлен.
 
-                            Больше информации читайте в [документации Kubernetes](https://kubernetes.io/docs/tasks/administer-cluster/topology-manager/#topology-manager-policies).
+                            Больше информации читайте в документации Kubernetes.
                 update:
                   properties:
                     maxConcurrent:

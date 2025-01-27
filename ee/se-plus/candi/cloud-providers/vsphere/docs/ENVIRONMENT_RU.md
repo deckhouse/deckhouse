@@ -18,7 +18,7 @@ description: "Настройка VMware vSphere для работы облачн
 
 ### Установка govc
 
-Для дальнейшей конфигурации vSphere вам понадобится vSphere CLI — [govc](https://github.com/vmware/govmomi/tree/master/govc#installation).
+Для дальнейшей конфигурации vSphere вам понадобится vSphere CLI — govc.
 
 После установки задайте переменные окружения для работы с vCenter:
 
@@ -106,10 +106,10 @@ govc permissions.set -principal <username>@vsphere.local -role deckhouse /
 
 Для создания шаблона виртуальной машины (`Template`) рекомендуется использовать готовый cloud-образ/OVA-файл, предоставляемый вендором ОС:
 
-* [**Ubuntu**](https://cloud-images.ubuntu.com/)
-* [**Debian**](https://cloud.debian.org/images/cloud/)
-* [**CentOS**](https://cloud.centos.org/)
-* [**Rocky Linux**](https://rockylinux.org/alternative-images/) (секция *Generic Cloud / OpenStack*)
+* **Ubuntu**
+* **Debian**
+* **CentOS**
+* **Rocky Linux** (секция *Generic Cloud / OpenStack*)
 
 {% alert %}
 Если вы планируете использовать дистрибутив отечественной ОС, обратитесь к вендору ОС для получения образа/OVA-файла.
@@ -121,7 +121,7 @@ Deckhouse использует `cloud-init` для настройки вирту
 
 * `open-vm-tools`
 * `cloud-init`
-* [`cloud-init-vmware-guestinfo`](https://github.com/vmware-archive/cloud-init-vmware-guestinfo#installation) (если используется версия `cloud-init` ниже 21.3)
+* `cloud-init-vmware-guestinfo` (если используется версия `cloud-init` ниже 21.3)
 
 Также после запуска виртуальной машины должны быть запущены следующие службы, связанные с этими пакетами:
 
@@ -133,7 +133,7 @@ Deckhouse использует `cloud-init` для настройки вирту
 
 {% alert %}
 Deckhouse создаёт диски виртуальных машин с типом `eagerZeroedThick`, но тип дисков созданных ВМ будет изменён без уведомления, согласно настроенным в vSphere `VM Storage Policy`.
-Подробнее можно прочитать в [документации](https://github.com/hashicorp/terraform-provider-vsphere/blob/main/website/docs/r/virtual_machine.html.markdown#virtual-disk-provisioning-policies).
+Подробнее можно прочитать в документации.
 {% endalert %}
 
 {% alert %}

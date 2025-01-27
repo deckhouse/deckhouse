@@ -8,9 +8,9 @@ search: Developing Prometheus rules, prometheus alerting rules
 ## General information
 
 * The rules in Prometheus are divided into two types:
-  * recording rules (the [official documentation](https://prometheus.io/docs/prometheus/latest/configuration/recording_rules/)) — allow you to precompute the PromQL expression and save the result to a new metric (it is useful if you need to speed up Grafana or the calculation of other rules).
-  * alerting rules (the [official documentation](https://prometheus.io/docs/prometheus/latest/configuration/alerting_rules/)) — allow you to define alert conditions based on the result of the PromQL expression.
-* All the rules are divided according to the module and are located in the [monitoring/prometheus-rules](https://github.com/deckhouse/deckhouse/tree/main/modules/prometheus/monitoring/prometheus-rules/)`. The rules are divided into three categories:
+  * recording rules (the official documentation) — allow you to precompute the PromQL expression and save the result to a new metric (it is useful if you need to speed up Grafana or the calculation of other rules).
+  * alerting rules (the official documentation) — allow you to define alert conditions based on the result of the PromQL expression.
+* All the rules are divided according to the module and are located in the monitoring/prometheus-rules`. The rules are divided into three categories:
   * `coreos` stores rules originating from the prometheus-operator (some of them are modified by us);
   * `kubernetes` stores our rules related to Kubernetes monitoring (the platform — control plane, NGINX Ingress, Prometheus, etc) and monitoring of objects in Kubernetes (Pods, CronJobs, disk space, etc.);
   * `applications` stores rules for monitoring applications (e.g., redis, mongo, etc.).
@@ -49,7 +49,7 @@ The rules in Prometheus are divided into groups (take a look at any rules file a
 
 The name of the metric (even if it seems unique), might cease to be unique at any time — someone can add the custom application with metrics with the same name to one of the clusters. In this case, your rules will fail. Happily, the job label is controlled very strictly (thanks to servicemonitors), which is why the `metric's name` + `job` pair is guaranteed to be unique. Therefore, **always add the job name** to all requests for all rules!
 
-For example, the `nginx_filterzone_responses_total` metric is the standard one ([nginx-vts-exporter](https://github.com/hnlq715/nginx-vts-exporter) exports it). If you do not specify the job name explicitly, then any custom application that exports these metrics will break all ingress-nginx graphs and alerts.
+For example, the `nginx_filterzone_responses_total` metric is the standard one (nginx-vts-exporter exports it). If you do not specify the job name explicitly, then any custom application that exports these metrics will break all ingress-nginx graphs and alerts.
 
 ```text
 sum(nginx_filterzone_responses_total{job="nginx-ingress-controller", server_zone="request_time_hist"}) by (job, namespace, scheme, server_name)

@@ -6,7 +6,7 @@
 
 ## Examine issues
 
-Before going any deeper, look for possible [issues](https://github.com/deckhouse/deckhouse/issues?q=is%3Aissue+is%3Aopen+cilium) in the deckhouse project. If you can't find an issue, try looking for symptoms in the [upstream](https://github.com/cilium/cilium/issues) repository.
+Before going any deeper, look for possible issues in the deckhouse project. If you can't find an issue, try looking for symptoms in the upstream repository.
 
 ## Packets are not properly forwarded
 

@@ -34,8 +34,8 @@ All following commands are assumed to be executed from the Pod's shell.
 
 ### See pipelines as a graph
 
-* Execute the `vector graph` command to get the output of logs pipelines topology in the [DOT format](https://graphviz.org/doc/info/lang.html).
-* Put the output to [webgraphviz](https://www.webgraphviz.com/) os similar service to render the graph.
+* Execute the `vector graph` command to get the output of logs pipelines topology in the DOT format.
+* Put the output to webgraphviz os similar service to render the graph.
 
 Example of the graph output for a single pipeline in ASCII format:
 
@@ -89,7 +89,7 @@ Transformed logs that are received at the input of the next channel components i
 vector tap 'transform/*'
 ```
 
-You can then use the `vector vrl` interactive console to debug [VRL](https://vector.dev/docs/reference/vrl/) message remap rules.
+You can then use the `vector vrl` interactive console to debug VRL message remap rules.
 
 Example of a program on VRL:
 
@@ -101,7 +101,7 @@ del(.test2)
 
 ## How to add a new source/sink support for log-shipper?
 
-Vector in the `log-shipper` module has been built with the limited number of enabled [features](https://doc.rust-lang.org/cargo/reference/features.html) (to improve building speed and decrease the size of the final binary).
+Vector in the `log-shipper` module has been built with the limited number of enabled features (to improve building speed and decrease the size of the final binary).
 
 You can see a list of all supported features by executing the `vector list` command.
 

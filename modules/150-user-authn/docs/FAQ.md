@@ -9,7 +9,7 @@ title: "The user-authn module: FAQ"
 To enable Dex authentication for your application, follow these steps:
 1. Create a [DexAuthenticator](cr.html#dexauthenticator) custom resource.
 
-   Creating `DexAuthenticator` in a cluster results in an [oauth2-proxy](https://github.com/oauth2-proxy/oauth2-proxy) instance being created. The latter is connected to Dex. Once the `DexAuthenticator` custom resource becomes available, the necessary Deployment, Service, Ingress, Secret objects will be created in the specified namespace.
+   Creating `DexAuthenticator` in a cluster results in an oauth2-proxy instance being created. The latter is connected to Dex. Once the `DexAuthenticator` custom resource becomes available, the necessary Deployment, Service, Ingress, Secret objects will be created in the specified namespace.
 
    An example of the `DexAuthenticator` custom resource:
 

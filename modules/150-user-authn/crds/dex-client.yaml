@@ -52,7 +52,6 @@ spec:
                   description: |
                     OAuth2 client IDs that allowed cross authentication with the current client.
 
-                    [Details...](https://developers.google.com/identity/protocols/CrossClientAuth)
                   items:
                     type: string
     - name: v1

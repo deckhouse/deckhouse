@@ -5,7 +5,7 @@ title: "Модуль istio: примеры"
 ## Circuit Breaker
 
 Для выявления проблемных эндпоинтов используются настройки `outlierDetection` в custom resource [DestinationRule](istio-cr.html#destinationrule).
-Более подробно алгоритм Outlier Detection описан в [документации Envoy](https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/upstream/outlier).
+Более подробно алгоритм Outlier Detection описан в документации Envoy.
 
 Пример:
 
@@ -54,7 +54,7 @@ spec:
 
 ## Locality Failover
 
-> При необходимости ознакомьтесь с [основной документацией](https://istio.io/latest/docs/tasks/traffic-management/locality-load-balancing/failover/).
+> При необходимости ознакомьтесь с основной документацией.
 
 Istio позволяет настроить приоритетный географический фейловер между эндпоинтами. Для определения зоны Istio использует лейблы узлов с соответствующей иерархией:
 
@@ -563,8 +563,6 @@ spec:
 
 ## Устройство федерации из двух кластеров с помощью custom resource IstioFederation
 
-> Доступно только в редакции Enterprise Edition.
-
 Cluster A:
 
 ```yaml
@@ -590,8 +588,6 @@ spec:
 ```
 
 ## Устройство мультикластера из двух кластеров с помощью ресурса IstioMulticluster
-
-> Доступно только в редакции Enterprise Edition.
 
 Cluster A:
 
@@ -665,7 +661,5 @@ kubectl get pods -A -o json | jq --arg revision "v1x21" \
 ```
 
 ### Автоматическое обновление data plane Istio
-
-> Доступно только в редакции Enterprise Edition.
 
 Для автоматизации обновления istio-sidecar'ов установите лейбл `istio.deckhouse.io/auto-upgrade="true"` на `Namespace` либо на отдельный ресурс — `Deployment`, `DaemonSet` или `StatefulSet`.

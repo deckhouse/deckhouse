@@ -6,7 +6,7 @@ spec:
           description: |
             Ресурс для подключения дополнительных datasource к Grafana.
 
-            Параметры ресурса подробно описаны [в документации к Grafana](https://grafana.com/docs/grafana/latest/administration/provisioning/#example-datasource-config-file).
+            Параметры ресурса подробно описаны в документации к Grafana.
           properties:
             spec:
               properties:
@@ -21,7 +21,7 @@ spec:
                 database:
                   description: Имя БД (если используется).
                 withCredentials:
-                  description: Включение/отключение флага [withCredentials](https://developer.mozilla.org/ru/docs/Web/API/XMLHttpRequest/withCredentials) (влияет на формирование заголовков).
+                  description: Включение/отключение флага withCredentials (влияет на формирование заголовков).
                 basicAuth:
                   description: Включить/выключить использование базовой авторизации.
                 basicAuthUser:
@@ -36,7 +36,7 @@ spec:
           description: |
             Ресурс для подключения дополнительных datasource к Grafana.
 
-            Параметры ресурса подробно описаны [в документации к Grafana](https://grafana.com/docs/grafana/latest/administration/provisioning/#example-datasource-config-file).
+            Параметры ресурса подробно описаны в документации к Grafana.
           properties:
             spec:
               properties:
@@ -51,7 +51,7 @@ spec:
                 database:
                   description: Имя БД (если используется).
                 withCredentials:
-                  description: Включение/отключение флага [withCredentials](https://developer.mozilla.org/ru/docs/Web/API/XMLHttpRequest/withCredentials) (влияет на формирование заголовков).
+                  description: Включение/отключение флага withCredentials (влияет на формирование заголовков).
                 basicAuth:
                   description: Включить/выключить использование базовой авторизации.
                 basicAuthUser:

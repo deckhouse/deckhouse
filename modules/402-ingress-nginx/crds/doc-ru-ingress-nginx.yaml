@@ -66,16 +66,16 @@ spec:
                   description: |
                     Как в `spec.nodeSelector` у подов.
 
-                    Если значение не указано или указано `false`, будет использоваться [автоматика](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
+                    Если значение не указано или указано `false`, будет использоваться [автоматика](/#выделение-узлов-под-определенный-вид-нагрузки).
 
                     **Формат**: стандартный список `nodeSelector`. Поды инстанса унаследуют это поле как есть.
                 tolerations:
                   description: |
                     Как в `spec.tolerations` у подов.
 
-                    Если значение не указано или указано `false`, будет использоваться [автоматика](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
+                    Если значение не указано или указано `false`, будет использоваться [автоматика](/#выделение-узлов-под-определенный-вид-нагрузки).
 
-                    **Формат**: стандартный список [toleration](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/). Поды инстанса унаследуют это поле как есть.
+                    **Формат**: стандартный список toleration. Поды инстанса унаследуют это поле как есть.
                 loadBalancer:
                   description: |
                     Секция настроек для inlet'а `LoadBalancer`.
@@ -181,12 +181,12 @@ spec:
 
                     Независимо от inlet'а всегда проверяется непосредственный адрес (в логах содержится в поле `original_address`), с которого производится подключение, а не «адрес клиента», который может передаваться в некоторых inlet'ах через заголовки или с использованием `proxy protocol`.
 
-                    Параметр реализован с помощью [map module](https://nginx.org/en/docs/http/ngx_http_map_module.html), и если адрес, с которого непосредственно производится подключение, не разрешен – NGINX закрывает соединение (используя return 444).
+                    Параметр реализован с помощью map module, и если адрес, с которого непосредственно производится подключение, не разрешен – NGINX закрывает соединение (используя return 444).
 
                     **По умолчанию** к контроллеру можно подключаться с любых адресов.
                 hsts:
                   description: |
-                    Включен ли `HSTS`. [Подробнее...](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Strict-Transport-Security).
+                    Включен ли `HSTS`. .
                 hstsOptions:
                   description: |
                     Параметры HTTP Strict Transport Security.
@@ -210,15 +210,15 @@ spec:
                       description: |
                         Лицензионный ключ для скачивания базы данных GeoIP2.
 
-                        Указание ключа в конфигурации включает скачивание базы GeoIP2 при каждом старте контроллера. [Подробнее](https://blog.maxmind.com/2019/12/18/significant-changes-to-accessing-and-using-geolite2-databases/) о получении ключа.
+                        Указание ключа в конфигурации включает скачивание базы GeoIP2 при каждом старте контроллера.  о получении ключа.
                     maxmindEditionIDs:
                       description: |
                         Список ревизий баз данных, которые будут скачаны при старте.
 
-                        [Подробнее...](https://dev.maxmind.com/geoip/geolite2-free-geolocation-data)
+
                 legacySSL:
                   description: |
-                    Включены ли старые версии TLS. Также опция разрешает legacy cipher suites для поддержки старых библиотек и программ: [OWASP Cipher String 'C' ](https://cheatsheetseries.owasp.org/cheatsheets/TLS_Cipher_String_Cheat_Sheet.html). Подробнее [здесь](https://github.com/deckhouse/deckhouse/blob/main/modules/ingress-nginx/templates/controller/configmap.yaml).
+                    Включены ли старые версии TLS. Также опция разрешает legacy cipher suites для поддержки старых библиотек и программ: OWASP Cipher String 'C' . Подробнее здесь.
 
                     **По умолчанию** включены только TLSv1.2 и самые новые cipher suites.
                 disableHTTP2:
@@ -226,7 +226,7 @@ spec:
                     Выключить ли HTTP/2.
                 config:
                   description: |
-                    Секция настроек Ingress-контроллера, в которую в формате `ключ: значение(строка)` можно записать [любые возможные опции](https://kubernetes.github.io/ingress-nginx/user-guide/nginx-configuration/configmap/).
+                    Секция настроек Ingress-контроллера, в которую в формате `ключ: значение(строка)` можно записать любые возможные опции.
 
                     > **Внимание.** Ошибка в указании опций может привести к отказу в работе Ingress-контроллера.
 
@@ -300,9 +300,9 @@ spec:
                   description: |
                     Разрешены ли нижние подчеркивания в заголовках.
 
-                    [Подробнее...](https://nginx.org/en/docs/http/ngx_http_core_module.html#underscores_in_headers).
+                    .
 
-                    [Почему](https://docs.nginx.com/#missing-disappearing-http-headers) не стоит бездумно это включать.
+                    Почему не стоит бездумно это включать.
                 minReplicas:
                   description: |
                     Минимальное количество реплик `LoadBalancer` и `LoadBalancerWithProxyProtocol` для HPA.
@@ -312,7 +312,7 @@ spec:
                 defaultSSLCertificate:
                   description: |
                     Сертификат, который используется:
-                    - при запросах на `catch-all`-сервер (подразумевается [директива server](https://nginx.org/en/docs/http/ngx_http_core_module.html#server) nginx). На `catch-all`-сервер попадают запросы, для которых нет соответствующего Ingress-ресурса;
+                    - при запросах на `catch-all`-сервер (подразумевается директива server nginx). На `catch-all`-сервер попадают запросы, для которых нет соответствующего Ingress-ресурса;
                     - для Ingress–ресурсов, в которых не задан `secretName` в секции `tls`.
 
                     По умолчанию используется самоподписанный сертификат.
@@ -425,16 +425,16 @@ spec:
                   description: |
                     Как в `spec.nodeSelector` у подов.
 
-                    Если значение не указано или указано `false`, будет использоваться [автоматика](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
+                    Если значение не указано или указано `false`, будет использоваться [автоматика](/#выделение-узлов-под-определенный-вид-нагрузки).
 
                     **Формат**: стандартный список `nodeSelector`. Поды инстанса унаследуют это поле как есть.
                 tolerations:
                   description: |
                     Как в `spec.tolerations` у подов.
 
-                    Если значение не указано или указано `false`, будет использоваться [автоматика](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
+                    Если значение не указано или указано `false`, будет использоваться [автоматика](/#выделение-узлов-под-определенный-вид-нагрузки).
 
-                    **Формат**: стандартный список [toleration](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/). Поды инстанса унаследуют это поле как есть.
+                    **Формат**: стандартный список toleration. Поды инстанса унаследуют это поле как есть.
                 loadBalancer:
                   description: |
                     Секция настроек для inlet'а `LoadBalancer`.
@@ -578,12 +578,12 @@ spec:
 
                     Независимо от inlet'а всегда проверяется непосредственный адрес (в логах содержится в поле `original_address`), с которого производится подключение, а не «адрес клиента», который может передаваться в некоторых inlet'ах через заголовки или с использованием `proxy protocol`.
 
-                    Параметр реализован с помощью [map module](https://nginx.org/en/docs/http/ngx_http_map_module.html), и если адрес, с которого непосредственно производится подключение, не разрешен – NGINX закрывает соединение (используя return 444).
+                    Параметр реализован с помощью map module, и если адрес, с которого непосредственно производится подключение, не разрешен – NGINX закрывает соединение (используя return 444).
 
                     **По умолчанию** к контроллеру можно подключаться с любых адресов.
                 hsts:
                   description: |
-                    Включен ли `HSTS`. [Подробнее...](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Strict-Transport-Security).
+                    Включен ли `HSTS`. .
                 hstsOptions:
                   description: |
                     Параметры HTTP Strict Transport Security.
@@ -607,15 +607,15 @@ spec:
                       description: |
                         Лицензионный ключ для скачивания базы данных GeoIP2.
 
-                        Указание ключа в конфигурации включает скачивание базы GeoIP2 при каждом старте контроллера. [Подробнее](https://blog.maxmind.com/2019/12/18/significant-changes-to-accessing-and-using-geolite2-databases/) о получении ключа.
+                        Указание ключа в конфигурации включает скачивание базы GeoIP2 при каждом старте контроллера.  о получении ключа.
                     maxmindEditionIDs:
                       description: |
                         Список ревизий баз данных, которые будут скачаны при старте.
 
-                        [Подробнее...](https://dev.maxmind.com/geoip/geolite2-free-geolocation-data)
+
                 legacySSL:
                   description: |
-                    Включены ли старые версии TLS. Также опция разрешает legacy cipher suites для поддержки старых библиотек и программ: [OWASP Cipher String 'C' ](https://cheatsheetseries.owasp.org/cheatsheets/TLS_Cipher_String_Cheat_Sheet.html). Подробнее [здесь](https://github.com/deckhouse/deckhouse/blob/main/modules/402-ingress-nginx/templates/controller/configmap.yaml).
+                    Включены ли старые версии TLS. Также опция разрешает legacy cipher suites для поддержки старых библиотек и программ: OWASP Cipher String 'C' . Подробнее здесь.
 
                     **По умолчанию** включены только TLSv1.2 и самые новые cipher suites.
                 disableHTTP2:
@@ -628,7 +628,7 @@ spec:
                     **HTTP/3 доступен только в контролере версии 1.10.**
                 config:
                   description: |
-                    Секция настроек Ingress-контроллера, в которую в формате `ключ: значение(строка)` можно записать [любые возможные опции](https://kubernetes.github.io/ingress-nginx/user-guide/nginx-configuration/configmap/).
+                    Секция настроек Ingress-контроллера, в которую в формате `ключ: значение(строка)` можно записать любые возможные опции.
 
                     > **Внимание.** Ошибка в указании опций может привести к отказу в работе Ingress-контроллера.
 
@@ -702,9 +702,9 @@ spec:
                   description: |
                     Разрешены ли нижние подчеркивания в заголовках.
 
-                    [Подробнее...](https://nginx.org/en/docs/http/ngx_http_core_module.html#underscores_in_headers).
+                    .
 
-                    [Почему](https://docs.nginx.com/#missing-disappearing-http-headers) нужно внимательно включать разрешение для нижних подчеркиваний в заголовках.
+                    Почему нужно внимательно включать разрешение для нижних подчеркиваний в заголовках.
                 minReplicas:
                   description: |
                     Минимальное количество реплик `LoadBalancer`, `LoadBalancerWithProxyProtocol` и `LoadBalancerWithSSLPassthrough` для HPA.
@@ -714,7 +714,7 @@ spec:
                 defaultSSLCertificate:
                   description: |
                     Сертификат, который используется:
-                    - при запросах на `catch-all`-сервер (подразумевается [директива server](https://nginx.org/en/docs/http/ngx_http_core_module.html#server) nginx). На `catch-all`-сервер попадают запросы, для которых нет соответствующего Ingress-ресурса;
+                    - при запросах на `catch-all`-сервер (подразумевается директива server nginx). На `catch-all`-сервер попадают запросы, для которых нет соответствующего Ingress-ресурса;
                     - для Ingress–ресурсов, в которых не задан `secretName` в секции `tls`.
 
                     По умолчанию используется самоподписанный сертификат.

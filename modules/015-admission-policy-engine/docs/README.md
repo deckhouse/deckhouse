@@ -3,7 +3,7 @@ title: "The admission-policy-engine module"
 description: Deckhouse admission-policy-engine module enforces the security policies in a Kubernetes cluster according to the Kubernetes Pod Security Standards.
 ---
 
-This module enforces the security policies in the cluster according to the Kubernetes [Pod Security Standards](https://kubernetes.io/docs/concepts/security/pod-security-standards/) using the [Gatekeeper](https://open-policy-agent.github.io/gatekeeper/website/docs/) solution.
+This module enforces the security policies in the cluster according to the Kubernetes Pod Security Standards using the Gatekeeper solution.
 
 The Pod Security Standards define three different policies to broadly cover the security spectrum. These policies are cumulative and range from highly-permissive to highly-restrictive.
 
@@ -16,7 +16,7 @@ List of policies available for use:
 - `Baseline` — Minimally restrictive policy which prevents known privilege escalations. Allows for the default (minimally specified) Pod configuration;
 - `Restricted` — Heavily restricted policy. Follows the most current Pod hardening best practices.
 
-You can read more about each policy variety in the [Kubernetes documentation](https://kubernetes.io/docs/concepts/security/pod-security-standards/#profile-details).
+You can read more about each policy variety in the Kubernetes documentation.
 
 The type of cluster policy to use by default is determined based on the following criteria:
 - If a Deckhouse version **lower than v1.55** is being installed, the `Privileged` default policy is applied to all non-system namespaces;
@@ -164,4 +164,4 @@ The module allows you to use the [Gatekeeper Custom Resources](gatekeeper-cr.htm
 - [ModifySet](gatekeeper-cr.html#modifyset) — adds or removes entries from a list, such as the arguments to a container.
 - [AssignImage](gatekeeper-cr.html#assignimage) — to change the `image` parameter of the resource.
 
-You can read more about the available options in the [gatekeeper](https://open-policy-agent.github.io/gatekeeper/website/docs/mutation/) documentation.
+You can read more about the available options in the gatekeeper documentation.

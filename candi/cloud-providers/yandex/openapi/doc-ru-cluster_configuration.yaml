@@ -33,7 +33,7 @@ apiVersions:
               Список зон, в которых допустимо создавать узлы.
           instanceClass:
             description: |
-              Частичное содержимое полей [YandexInstanceClass](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/cloud-provider-yandex/cr.html#yandexinstanceclass).
+              Частичное содержимое полей [YandexInstanceClass](/modules/cloud-provider-yandex/cr.html#yandexinstanceclass).
             properties: &instanceClassProperties_ru
               platform:
                 description: |
@@ -57,7 +57,7 @@ apiVersions:
                 description: |
                   Размер диска для etcd. Значение указывается в `ГиБ`.
 
-                  При изменении этого параметра необходимо вручную расширить каждый диск для etcd в интерфейсе Yandex Cloud (причина такого поведения — в [issue](https://github.com/yandex-cloud/terraform-provider-yandex/issues/226)).
+                  При изменении этого параметра необходимо вручную расширить каждый диск для etcd в интерфейсе Yandex Cloud (причина такого поведения — в issue).
               externalIPAddresses:
                 description: |
                   Список внешних IP-адресов, перечисленных в порядке зон, в которых будут создаваться узлы.
@@ -126,25 +126,25 @@ apiVersions:
                   description: |
                     Список лейблов, которые будут прикреплены ко всем ресурсам кластера (если они это поддерживают).
 
-                    Аналогично стандартному [полю](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta) `metadata.labels`.
+                    Аналогично стандартному полю `metadata.labels`.
 
                     Если поменять теги в рабочем кластере, после применения изменений необходимо пересоздать все машины.
                 annotations:
                   description: |
-                    Аналогично стандартному [полю](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta) `metadata.annotations`.
+                    Аналогично стандартному полю `metadata.annotations`.
                 taints:
                   description: |
-                    Аналогично полю `.spec.taints` из объекта [Node](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#taint-v1-core).
+                    Аналогично полю `.spec.taints` из объекта Node.
 
                     > **Внимание!** Доступны только поля `effect`, `key`, `values`.
             instanceClass:
               description: |
-                Частичное содержимое полей [YandexInstanceClass](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/cloud-provider-yandex/cr.html#yandexinstanceclass).
+                Частичное содержимое полей [YandexInstanceClass](/modules/cloud-provider-yandex/cr.html#yandexinstanceclass).
               properties:
                 <<: *instanceClassProperties_ru
                 coreFraction:
                   description: |
-                    Базовый уровень производительности каждого ядра CPU у создаваемых инстансов. [Подробнее...](https://cloud.yandex.ru/docs/compute/concepts/performance-levels)
+                    Базовый уровень производительности каждого ядра CPU у создаваемых инстансов.
       existingNetworkID:
         description: |
           ID существующей VPC Network.
@@ -165,7 +165,7 @@ apiVersions:
         description: |
           Список DHCP-опций, которые будут установлены на все подсети.
 
-          [Возможные проблемы](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/cloud-provider-yandex/faq.html#проблемы-dhcpoptions-и-пути-их-решения) при использовании.
+          [Возможные проблемы](/modules/cloud-provider-yandex/faq.html#проблемы-dhcpoptions-и-пути-их-решения) при использовании.
         properties:
           domainName:
             description: |
@@ -177,10 +177,10 @@ apiVersions:
         description: |
           Название схемы размещения.
 
-          [Подробнее](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/cloud-provider-yandex/layouts.html) о возможных схемах размещения провайдера.
+           о возможных схемах размещения провайдера.
       withNATInstance:
         description: |
-          Настройки для схемы размещения [`WithNATInstance`](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/cloud-provider-yandex/layouts.html#withnatinstance).
+          Настройки для схемы размещения [`WithNATInstance`](/modules/cloud-provider-yandex/layouts.html#withnatinstance).
         properties:
           exporterAPIKey:
             description: |
@@ -188,11 +188,11 @@ apiVersions:
 
               - Если значение ключа — пустая строка, экспортер не будет развернут в кластере.
               - Если значение ключа — `Auto`, Deckhouse создаст service account c ролью `monitoring.viewer` и API-ключ для него. Для основного service account'а требуется роль `admin`.
-              - Любое другое значение ключа считается допустимым API-ключем. Используйте [инструкцию](https://cloud.yandex.ru/docs/iam/operations/api-key/create) для создания API-ключа.
+              - Любое другое значение ключа считается допустимым API-ключем. Используйте инструкцию для создания API-ключа.
                 Service account'у, для которого будет создан ключ, необходимо назначить роль `monitoring.viewer`.
           natInstanceExternalAddress:
             description: |
-              Внешний [зарезервированный IP-адрес](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/cloud-provider-yandex/faq.html#как-зарезервировать-публичный-ip-адрес) или адрес из `externalSubnetID` при указании опции.
+              Внешний [зарезервированный IP-адрес](/modules/cloud-provider-yandex/faq.html#как-зарезервировать-публичный-ip-адрес) или адрес из `externalSubnetID` при указании опции.
           natInstanceInternalAddress:
             description: |
               Лучше не использовать эту опцию, а использовать автоматически назначаемые адреса.
@@ -215,7 +215,7 @@ apiVersions:
                   Количество оперативной памяти (в мегабайтах) у создаваемого NAT-инстанса.
       provider:
         description: |
-          [Параметры подключения](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/cloud-provider-yandex/environment.html) к API Yandex Cloud.
+          [Параметры подключения](/modules/cloud-provider-yandex/environment.html) к API Yandex Cloud.
         properties:
           cloudID:
             description: |

@@ -35,7 +35,7 @@ spec:
                           description: |
                             Фильтр по меткам пространств имен, с которых нужно собирать логи.
 
-                            Подробнее про выражения можно узнать [в документации](https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/).
+                            Подробнее про выражения можно узнать в документации.
                           properties:
                             matchLabels:
                               description: Список меток, которые должно иметь пространство имен, чтобы подпадать под условие фильтра.
@@ -53,7 +53,7 @@ spec:
                       description: |
                         Задает фильтр по меткам пода.
 
-                        Подробнее про выражения можно узнать [в документации](https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/).
+                        Подробнее про выражения можно узнать в документации.
                       properties:
                         matchLabels:
                           description: Список меток, которые должен иметь под, чтобы подпадать под условие фильтра.

@@ -41,7 +41,7 @@ kubectl -n d8-monitoring exec -it prometheus-main-0 prometheus -- \
 
 ## Эмуляция события Falco
 
-Вы можете использовать утилиту [event-generator](https://github.com/falcosecurity/event-generator) для генерации событий Falco.
+Вы можете использовать утилиту event-generator для генерации событий Falco.
 
 `event-generator` может генерировать различные подозрительные действия (syscalls, k8s audit events и др.).
 
@@ -51,11 +51,11 @@ kubectl -n d8-monitoring exec -it prometheus-main-0 prometheus -- \
 kubectl run falco-event-generator --image=falcosecurity/event-generator run
 ```
 
-Если вам нужно реализовать действие, воспользуйтесь [руководством](https://github.com/falcosecurity/event-generator/blob/main/events/README.md).
+Если вам нужно реализовать действие, воспользуйтесь руководством.
 
 ## Эмуляция события Falcosidekick
 
-Вы можете использовать [Falcosidekick](https://github.com/falcosecurity/falcosidekick) `/test` HTTP endpoint для отправки тестового события во все включенные выходы.
+Вы можете использовать Falcosidekick `/test` HTTP endpoint для отправки тестового события во все включенные выходы.
 
 - Получите список подов в пространстве имен `d8-runtime-audit-engine`:
 

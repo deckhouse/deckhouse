@@ -6,7 +6,7 @@ title: "The istio module: Custom Resources (by istio.io)"
 
 ### DestinationRule
 
-[Reference](https://istio.io/v1.19/docs/reference/config/networking/destination-rule/).
+Reference.
 
 Allows you to:
 * Define a strategy for balancing traffic between service endpoints:
@@ -20,7 +20,7 @@ Allows you to:
 
 ### VirtualService
 
-[Reference](https://istio.io/v1.19/docs/reference/config/networking/virtual-service/).
+Reference.
 
 Using VirtualService is optional; regular services fit just fine if their capabilities match your requirements.
 
@@ -39,7 +39,7 @@ Allows you to configure request routing:
 
 ### ServiceEntry
 
-[Reference](https://istio.io/v1.19/docs/reference/config/networking/service-entry/).
+Reference.
 
 It is similar to Endpoints + Service in vanilla Kubernetes. Informs Istio about the existence of an external service and lets you redefine its address.
 
@@ -53,13 +53,13 @@ There are two authentication methods:
 
 ### PeerAuthentication
 
-[Reference](https://istio.io/v1.19/docs/reference/config/security/peer_authentication/).
+Reference.
 
 Allows you to define the mTLS strategy for an individual NS. Defines how traffic will be tunneled (or not) to the sidecar. Each mTLS request can automatically identify the source and allows you to use it in the authorization rules.
 
 ### RequestAuthentication
 
-[Reference](https://istio.io/v1.19/docs/reference/config/security/request_authentication/).
+Reference.
 
 Allows you to configure JWT authentication for requests.
 
@@ -69,7 +69,7 @@ Allows you to configure JWT authentication for requests.
 
 ### AuthorizationPolicy
 
-[Reference](https://istio.io/v1.19/docs/reference/config/security/authorization-policy/).
+Reference.
 
 Enables and defines access control to the workload. The `AuthorizationPolicy` custom resource supports both ALLOW and DENY rules. The following decision-making algorithm is used if at least one policy is defined for a workload:
 
@@ -88,7 +88,7 @@ The following arguments are used in the decision-making algorithm:
   * Host
   * port
   * URI
-* [conditions](https://istio.io/v1.19/docs/reference/config/security/conditions/#supported-conditions):
+* conditions:
   * HTTP-headers
   * source arguments
   * destination arguments
@@ -96,6 +96,6 @@ The following arguments are used in the decision-making algorithm:
 
 ### Sidecar
 
-[Reference](https://istio.io/v1.19/docs/reference/config/networking/sidecar/)
+Reference
 
 This resource limits the number of services for which information is transmitted to the istio-proxy sidecar.

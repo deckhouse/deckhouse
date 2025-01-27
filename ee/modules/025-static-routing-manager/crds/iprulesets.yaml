@@ -134,7 +134,7 @@ spec:
                             - `ICMP` — 1
                             - `TCP` — 6
                             - `UDP` — 17
-                            All available values can be found [at the link](https://www.iana.org/assignments/protocol-numbers/protocol-numbers .xhtml), or in the /etc/protocols file on the node.
+                            All available values can be found at the link, or in the /etc/protocols file on the node.
                         sportRange:
                           type: object
                           required:

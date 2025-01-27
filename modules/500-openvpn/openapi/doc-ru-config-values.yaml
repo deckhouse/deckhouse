@@ -6,7 +6,7 @@ properties:
 
       Поддерживаются следующие inlet'ы:
       * `ExternalIP` — когда имеются узлы с публичными IP-адресами. Используется в комбинации с параметром `externalIP`;
-      * `LoadBalancer` — для всех облачных провайдеров и их схем размещения, в которых поддерживается заказ LoadBalancer'ов;
+      * `LoadBalancer` — для всех схем размещения, в которых поддерживается заказ LoadBalancer'ов;
       * `HostPort` — порт сервера OpenVPN будет доступен на узле, на котором находится под. За выбор порта отвечает параметр `hostPort`;
       * `Direct` — для нестандартных случаев. В пространстве имен `d8-openvpn` необходимо создать сервис с именем `openvpn-external`, который отправляет трафик в под с лейблом `app: openvpn` на порт с именем `ovpn-tcp` (или просто 1194). Из этого сервиса парсится `externalIP`, IP-адрес балансировщика или его host. Если ничего этого нет, необходимо указать параметр `externalHost`.
   loadBalancer:
@@ -63,9 +63,9 @@ properties:
     properties:
       externalAuthentication:
         description: |
-          Параметры для подключения внешней аутентификации (используется механизм NGINX Ingress [external-auth](https://kubernetes.github.io/ingress-nginx/examples/auth/external-auth/), работающий на основе модуля Nginx [auth_request](https://nginx.org/en/docs/http/ngx_http_auth_request_module.html).
+          Параметры для подключения внешней аутентификации (используется механизм NGINX Ingress external-auth, работающий на основе модуля Nginx auth_request.
 
-          > Внешняя аутентификация включается автоматически, если включен модуль [user-authn](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/user-authn/).
+          > Внешняя аутентификация включается автоматически, если включен модуль [user-authn](/modules/user-authn/).
         properties:
           authURL:
             description: |
@@ -77,9 +77,9 @@ properties:
         description: |
           Массив групп, пользователям которых позволен доступ в панель администратора OpenVPN.
 
-          Используется, если включен модуль [user-authn](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/user-authn/) или параметр [externalAuthentication](#parameters-auth-externalauthentication).
+          Используется, если включен модуль [user-authn](/modules/user-authn/) или параметр [externalAuthentication](#parameters-auth-externalauthentication).
 
-          > **Внимание!** При использовании совместно с модулем user-authn необходимо также добавить разрешенные группы в соответствующее поле в настройках [DexProvider](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/user-authn/cr.html#dexprovider).
+          > **Внимание!** При использовании совместно с модулем user-authn необходимо также добавить разрешенные группы в соответствующее поле в настройках [DexProvider](/modules/user-authn/cr.html#dexprovider).
       whitelistSourceRanges:
         description: |
           Список адресов в формате CIDR, которым разрешено проходить аутентификацию для доступа в OpenVPN.
@@ -105,7 +105,7 @@ properties:
           * `CertManager` — панель администратора OpenVPN будет работать по HTTPS, самостоятельно заказывая сертификат с помощью ClusterIssuer, заданного в параметре `certManager.clusterIssuerName`;
           * `CustomCertificate` — панель администратора OpenVPN будет работать по HTTPS, используя сертификат из пространства имен `d8-system`;
           * `Disabled` — панель администратора OpenVPN будет работать только по HTTP;
-          * `OnlyInURI` — панель администратора OpenVPN будет работать по HTTP (подразумевая, что перед ней стоит внешний HTTPS-балансировщик, который терминирует HTTPS) и все ссылки в [user-authn](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/user-authn/) будут генерироваться с HTTPS-схемой. Балансировщик должен обеспечивать перенаправление с HTTP на HTTPS.
+          * `OnlyInURI` — панель администратора OpenVPN будет работать по HTTP (подразумевая, что перед ней стоит внешний HTTPS-балансировщик, который терминирует HTTPS) и все ссылки в [user-authn](/modules/user-authn/) будут генерироваться с HTTPS-схемой. Балансировщик должен обеспечивать перенаправление с HTTP на HTTPS.
       certManager:
         properties:
           clusterIssuerName:
@@ -117,7 +117,7 @@ properties:
         properties:
           secretName:
             description: |
-              Имя Secret'а в пространстве имен `d8-system`, который будет использоваться для панели администратора OpenVPN (данный Secret должен быть в формате [kubernetes.io/tls](https://kubernetes.github.io/ingress-nginx/user-guide/tls/#tls-secrets)).
+              Имя Secret'а в пространстве имен `d8-system`, который будет использоваться для панели администратора OpenVPN (данный Secret должен быть в формате kubernetes.io/tls).
   highAvailability:
     description: |
       Ручное управление режимом отказоустойчивости.
@@ -127,12 +127,12 @@ properties:
     description: |
       Структура, аналогичная `spec.nodeSelector` пода Kubernetes.
 
-      Если значение не указано или указано `false`, будет использоваться [автоматика](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
+      Если значение не указано или указано `false`, будет использоваться [автоматика](/#выделение-узлов-под-определенный-вид-нагрузки).
   tolerations:
     description: |
       Структура, аналогичная `spec.tolerations` пода Kubernetes.
 
-      Если значение не указано или указано `false`, будет использоваться [автоматика](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
+      Если значение не указано или указано `false`, будет использоваться [автоматика](/#выделение-узлов-под-определенный-вид-нагрузки).
   pmacctEnabled:
     description: |
       Включить логирование пользовательской активности через VPN в JSON-формате.

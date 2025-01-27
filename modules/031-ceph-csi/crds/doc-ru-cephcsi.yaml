@@ -40,13 +40,9 @@ spec:
                           reclaimPolicy:
                             description: |
                               Политика возврата для Persistent Volume.
-
-                              [Подробнее...](https://kubernetes.io/docs/concepts/storage/persistent-volumes/#reclaiming)
                           allowVolumeExpansion:
                             description: |
                               Включает возможность изменять размер тома, редактируя соответствующий объект PersistentVolumeClaim.
-
-                              [Подробнее...](https://kubernetes.io/docs/concepts/storage/storage-classes/#allow-volume-expansion)
                           mountOptions:
                             description: |
                               Список опций монтирования.

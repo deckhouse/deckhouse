@@ -11,7 +11,7 @@ Follow these steps to restore from a backup:
 
 1. If necessary restore etcd-server access keys and certificates into `/etc/kubernetes` directory.
 
-1. Upload [etcdctl](https://github.com/etcd-io/etcd/releases) to the server (best if it has the same version as the etcd version on the server).
+1. Upload etcdctl to the server (best if it has the same version as the etcd version on the server).
 
    ```shell
    wget "https://github.com/etcd-io/etcd/releases/download/v3.5.4/etcd-v3.5.4-linux-amd64.tar.gz"
@@ -104,7 +104,7 @@ On another (two) nodes do the following:
 On the selected node do the following:
 1. If necessary restore etcd-server access keys and certificates into `/etc/kubernetes` directory.
 
-1. Upload [etcdctl](https://github.com/etcd-io/etcd/releases) to the server (best if it has the same version as the etcd version on the server).
+1. Upload etcdctl to the server (best if it has the same version as the etcd version on the server).
 
    ```shell
    wget "https://github.com/etcd-io/etcd/releases/download/v3.5.4/etcd-v3.5.4-linux-amd64.tar.gz"
@@ -127,7 +127,7 @@ On the selected node do the following:
    ```
 
 1. Remove the `--force-new-cluster` flag from the `/etc/kubernetes/manifests/etcd.yaml` manifest after successful up etcd.
-1. Set [HA-mode](https://deckhouse.io/products/kubernetes-platform/documentation/v1/deckhouse-configure-global.html#parameters-highavailability) for prevent removing HA-mode (for example we can lose one prometheus replica and data for lost replica).
+1. Set [HA-mode](/deckhouse-configure-global.html#parameters-highavailability) for prevent removing HA-mode (for example we can lose one prometheus replica and data for lost replica).
 1. Remove control-plane role label from nodes objects expect selected (recover in current time).
 
    ```shell
@@ -193,7 +193,7 @@ Perform the following steps to restore the quorum in the etcd cluster:
 1. Add the `--force-new-cluster` flag to the `/etc/kubernetes/manifests/etcd.yaml` manifest on the running node.
 1. Wait for etcd to start.
 1. Remove the `--force-new-cluster` flag from the `/etc/kubernetes/manifests/etcd.yaml` manifest.
-1. Set [HA-mode](https://deckhouse.io/products/kubernetes-platform/documentation/v1/deckhouse-configure-global.html#parameters-highavailability) for prevent removing HA-mode (for example we can lose one prometheus replica and data for lost replica).
+1. Set [HA-mode](/deckhouse-configure-global.html#parameters-highavailability) for prevent removing HA-mode (for example we can lose one prometheus replica and data for lost replica).
 1. Remove control-plane role label from nodes objects expect selected (recover in current time).
 
    ```shell
@@ -304,13 +304,13 @@ main.main()
         /go/src/go.etcd.io/etcd/release/etcd/server/main.go:32 +0x45
 ```
 
-This [issue](https://github.com/etcd-io/etcd/issues/11949) suggests that such an error can also occur after etcd has been terminated incorrectly.
+This issue suggests that such an error can also occur after etcd has been terminated incorrectly.
 
 ### Solving the problem - First method
 
 First method works on the single and multi-master environments both.
 
-The solution is based on this [issue](https://github.com/etcd-io/etcd/issues/11949#issuecomment-1029906679) and involves the following steps on affected nodes:
+The solution is based on this issue and involves the following steps on affected nodes:
 
 1. Stop etcd.
 
@@ -366,7 +366,7 @@ This method can be used if the first one has failed.
 
 Do the following:
 
-1. Upload [etcdctl](https://github.com/etcd-io/etcd/releases) to the server (best if it has the same version as the etcd version on the server).
+1. Upload etcdctl to the server (best if it has the same version as the etcd version on the server).
 
    ```shell
    wget "https://github.com/etcd-io/etcd/releases/download/v3.5.4/etcd-v3.5.4-linux-amd64.tar.gz"
@@ -478,7 +478,7 @@ ETCDCTL_API=3 etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kuber
 
 ##### If this error affect > 1 nodes
 
-1. Upload [etcdctl](https://github.com/etcd-io/etcd/releases) to the server (best if it has the same version as the etcd version on the server).
+1. Upload etcdctl to the server (best if it has the same version as the etcd version on the server).
 
    ```shell
    wget "https://github.com/etcd-io/etcd/releases/download/v3.5.4/etcd-v3.5.4-linux-amd64.tar.gz"
@@ -532,7 +532,7 @@ On another (two) nodes do the following:
 
 On the selected node do the following:
 
-1. Upload [etcdctl](https://github.com/etcd-io/etcd/releases) to the server (best if it has the same version as the etcd version on the server).
+1. Upload etcdctl to the server (best if it has the same version as the etcd version on the server).
 
    ```shell
    wget "https://github.com/etcd-io/etcd/releases/download/v3.5.4/etcd-v3.5.4-linux-amd64.tar.gz"
@@ -576,7 +576,7 @@ On the selected node do the following:
      --endpoints https://127.0.0.1:2379/ defrag --command-timeout=60s
    ```
 
-1. Set [HA-mode](https://deckhouse.io/products/kubernetes-platform/documentation/v1/deckhouse-configure-global.html#parameters-highavailability) for prevent removing HA-mode (for example we can lose one prometheus replica and data for lost replica).
+1. Set [HA-mode](/deckhouse-configure-global.html#parameters-highavailability) for prevent removing HA-mode (for example we can lose one prometheus replica and data for lost replica).
 1. Remove control-plane role label from nodes objects expect selected (recover in current time).
 
    ```shell

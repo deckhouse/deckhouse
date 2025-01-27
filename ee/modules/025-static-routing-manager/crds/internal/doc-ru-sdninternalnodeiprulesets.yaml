@@ -62,7 +62,7 @@ spec:
                               - `ICMP` - 1
                               - `TCP` - 6
                               - `UDP` - 17
-                              Все доступные значения можно найти [по ссылке](https://www.iana.org/assignments/protocol-numbers/protocol-numbers.xhtml), или в файле /etc/protocols на узле.
+                              Все доступные значения можно найти по ссылке, или в файле /etc/protocols на узле.
                           sportRange:
                             description: |
                               Диапазон портов источника.

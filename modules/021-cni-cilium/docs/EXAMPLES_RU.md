@@ -4,8 +4,6 @@ title: "Модуль cni-cilium: примеры"
 
 ## Egress Gateway
 
-{% alert level="warning" %} Функция доступна только в Enterprise Edition {% endalert %}
-
 ### Принцип работы
 
 Для настройки egress-шлюза необходимо настроить два ресурса:

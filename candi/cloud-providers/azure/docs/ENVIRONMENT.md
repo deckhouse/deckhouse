@@ -6,13 +6,13 @@ description: "Configuring Azure for Deckhouse cloud provider operation."
 {% include notice_envinronment.liquid %}
 
 {% alert level="warning" %}
-**Caution!** Only [regions](https://docs.microsoft.com/en-us/azure/availability-zones/az-region) where `Availability Zones` are available are supported.
+**Caution!** Only regions where `Availability Zones` are available are supported.
 {% endalert %}
 
-To rule the Microsoft Azure cloud, you need an account and at least a single [Subscription connected to id](https://docs.microsoft.com/en-us/azure/cost-management-billing/manage/create-subscription).
+To rule the Microsoft Azure cloud, you need an account and at least a single Subscription connected to id.
 
 You have to create a service account with Microsoft Azure so that Deckhouse can manage cloud resources:
-1. Install the [Azure CLI](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli), login and get Subscription ID:
+1. Install the Azure CLI, login and get Subscription ID:
 
    ```shell
    export SUBSCRIPTION_ID=$(az login | jq -r '.[0].id')
@@ -35,7 +35,7 @@ You have to create a service account with Microsoft Azure so that Deckhouse can 
    }
    ```
 
-   > By default, service account will be created with a secret (used in the [clientSecret](cluster_configuration.html#azureclusterconfiguration-provider-clientsecret) parameter of the `AzureClusterConfiguration` resource) validity period of one year without automatic renewal. Refer to the [official documentation](https://learn.microsoft.com/en-us/azure/app-service/configure-ssl-app-service-certificate?tabs=portal#renew-an-app-service-certificate) to create a service account with a longer secret expiration date.
+   > By default, service account will be created with a secret (used in the [clientSecret](cluster_configuration.html#azureclusterconfiguration-provider-clientsecret) parameter of the `AzureClusterConfiguration` resource) validity period of one year without automatic renewal. Refer to the official documentation to create a service account with a longer secret expiration date.
 
 You have to be logged in for further work with the `az` tool. Use the service account username, password, and tenant to log in:
 

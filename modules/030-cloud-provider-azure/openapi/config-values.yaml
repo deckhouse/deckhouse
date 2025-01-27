@@ -45,7 +45,7 @@ properties:
               description: |
                 Azure disk storage account type.
 
-                Check out [Azure documentation](https://docs.microsoft.com/en-us/azure/storage/common/storage-account-overview#types-of-storage-accounts) for more information.
+                Check out Azure documentation for more information.
             cachingMode:
               type: string
               enum:
@@ -55,7 +55,7 @@ properties:
               description: |
                 String value that corresponds to the desired caching mode. If expected disk size is more than 4 TiB, you have to set `cachineMode: None`.
 
-                Check out [Azure documentation](https://docs.microsoft.com/en-us/azure/virtual-machines/premium-storage-performance#disk-caching) for more information.
+                Check out Azure documentation for more information.
             diskIOPSReadWrite:
               type: number
               description: |
@@ -82,4 +82,4 @@ properties:
                   - key: key2
                     value: val2
               description: |
-                Azure disk [tags](https://cloud-provider-azure.sigs.k8s.io/topics/tagging-resources/).
+                Azure disk tags.

@@ -54,18 +54,18 @@ apiVersions:
         description: |
           The way resources are located in the cloud.
 
-          Read [more](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/cloud-provider-azure/layouts.html) about possible provider layouts.
+          Read [more](/modules/cloud-provider-azure/layouts.html) about possible provider layouts.
         type: string
         enum: [Standard]
         x-unsafe: true
       standard:
         description: |
-          Settings for the [`Standard`](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/cloud-provider-azure/layouts.html#standard) layout.
+          Settings for the [`Standard`](/modules/cloud-provider-azure/layouts.html#standard) layout.
         type: object
         properties:
           natGatewayPublicIpCount:
             description: |
-              The number of IP addresses for the [NAT Gateway](https://docs.microsoft.com/en-us/azure/virtual-network/nat-overview) ([pricing](https://azure.microsoft.com/en-us/pricing/details/virtual-network/)).
+              The number of IP addresses for the NAT Gateway (pricing).
               `NAT Gateway` is not used if the value is `0`.
             type: integer
             x-doc-default: 0
@@ -83,7 +83,7 @@ apiVersions:
           By default, `*`.
       vNetCIDR:
         description: |
-          An address space of the [virtual network](https://learn.microsoft.com/en-us/azure/virtual-network/virtual-network-vnet-plan-design-arm#virtual-networks) in the [CIDR](https://en.wikipedia.org/wiki/Classless_Inter-Domain_Routing) format.
+          An address space of the virtual network in the CIDR format.
 
           A virtual network is a virtual, isolated portion of the Azure public network. Each virtual network is dedicated to your subscription.
 
@@ -108,7 +108,7 @@ apiVersions:
               pattern: '^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$'
       subnetCIDR:
         description: |
-          A [subnet](https://learn.microsoft.com/en-us/azure/virtual-network/virtual-network-vnet-plan-design-arm#subnets) from the `vNetCIDR` address space for cluster nodes.
+          A subnet from the `vNetCIDR` address space for cluster nodes.
 
           A virtual network can be segmented into one or more subnets up to the limits.
         type: string
@@ -119,7 +119,7 @@ apiVersions:
         description: |
           An array of `VNets` to merge with the cluster network.
 
-          The service account must have access to all the `VNets` listed above. You have to configure the peering connection [manually ](https://docs.microsoft.com/en-us/azure/virtual-network/virtual-network-peering-overview) if no access is available.
+          The service account must have access to all the `VNets` listed above. You have to configure the peering connection manually  if no access is available.
         type: array
         items:
           type: object
@@ -140,7 +140,7 @@ apiVersions:
           Virtual Network (VNet) service endpoint provides secure and direct connectivity to Azure services over an optimized route over the Azure backbone network.
           Endpoints allow you to secure your critical Azure service resources to only your virtual networks. Service Endpoints enables private IP addresses in the VNet to reach the endpoint of an Azure service without needing a public IP address on the VNet.
 
-          More information about Service Endpoints can be found in the [official documentation](https://learn.microsoft.com/en-us/azure/virtual-network/virtual-network-service-endpoints-overview).
+          More information about Service Endpoints can be found in the official documentation.
         type: array
         items:
           type: string
@@ -163,7 +163,7 @@ apiVersions:
             description: |
               A list of zones where master nodes can be created.
 
-              You can browse a list of zones available for the selected instance type using the [Azure CLI](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli):
+              You can browse a list of zones available for the selected instance type using the Azure CLI:
 
               ```shell
               az vm list-skus -l westeurope -o table
@@ -176,7 +176,7 @@ apiVersions:
             uniqueItems: true
           instanceClass:
             description: |
-              Partial contents of the [AzureInstanceClass](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/cloud-provider-azure/cr.html#azureinstanceclass) fields.
+              Partial contents of the [AzureInstanceClass](/modules/cloud-provider-azure/cr.html#azureinstanceclass) fields.
             type: object
             required: [machineSize, urn]
             properties:
@@ -184,7 +184,7 @@ apiVersions:
                 description: |
                   The type of instances to provision.
 
-                  Getting a list of available types for the specific region using the [Azure CLI](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli):
+                  Getting a list of available types for the specific region using the Azure CLI:
 
                   ```shell
                   az vm list-sizes --location westeurope -o table
@@ -195,9 +195,9 @@ apiVersions:
                 description: |
                   The VM image to use for an instance.
 
-                  More information about virtual machine images can be found in the [official documentation](https://docs.microsoft.com/en-us/azure/virtual-machines/linux/cli-ps-findimage).
+                  More information about virtual machine images can be found in the official documentation.
 
-                  Getting the urn with [Azure CLI](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli) (column #4):
+                  Getting the urn with Azure CLI (column #4):
                   ```shell
                   az vm image list --location westeurope --publisher Canonical --all --sku 20_04-lts -o table
                   az vm image list --location westeurope --publisher OpenLogic --all --sku 7.5 -o table
@@ -205,7 +205,7 @@ apiVersions:
 
                   By default, the image specified in `AzureCloudDiscoveryData` is used (the master of the cluster is based on this image).
 
-                  The list of OS and their versions supported by Deckhouse can be found in the [documentation](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/supported_versions.html) (take into account the Deckhouse version used).
+                  The list of OS and their versions supported by Deckhouse can be found in the [documentation](/supported_versions.html) (take into account the Deckhouse version used).
                 type: string
               enableExternalIP: &instanceClassEnableExternalIP
                 description: |
@@ -224,7 +224,7 @@ apiVersions:
                 description: |
                   The type of the volumes to create.
 
-                  You can view a list of available volume types using the [Azure CLI](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli):
+                  You can view a list of available volume types using the Azure CLI:
 
                   ```shell
                   az vm list-skus -l westeurope --zone
@@ -273,7 +273,7 @@ apiVersions:
               description: |
                 A list of zones where static nodes can be created;
 
-                You can browse a list of zones available for the selected instance type using the [Azure CLI](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli):
+                You can browse a list of zones available for the selected instance type using the Azure CLI:
 
                 ```shell
                 az vm list-skus -l westeurope -o table
@@ -292,7 +292,7 @@ apiVersions:
                   description: |
                     A list of labels to attach to cluster resources.
 
-                    The same as the `metadata.labels` standard [field](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta).
+                    The same as the `metadata.labels` standard field.
 
                     Note that you have to re-create all the machines to add new tags if tags were modified in the running cluster.
 
@@ -308,7 +308,7 @@ apiVersions:
                     type: string
                 annotations:
                   description: |
-                    The same as the `metadata.annotations` standard [field](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta).
+                    The same as the `metadata.annotations` standard field.
                   x-doc-example: |
                     ```yaml
                     annotations:
@@ -319,7 +319,7 @@ apiVersions:
                     type: string
                 taints:
                   description: |
-                    The same as the `.spec.taints` field of the [Node](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#taint-v1-core) object.
+                    The same as the `.spec.taints` field of the Node object.
 
                     > **Warning.** Only the `effect`, `key`, `values`  fields are available.
                   x-doc-example: |
@@ -342,7 +342,7 @@ apiVersions:
                         type: string
             instanceClass:
               description: |
-                Partial contents of the fields of the [AzureInstanceClass](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/cloud-provider-azure/cr.html#azureinstanceclass).
+                Partial contents of the fields of the [AzureInstanceClass](/modules/cloud-provider-azure/cr.html#azureinstanceclass).
               required: [machineSize, urn]
               type: object
               properties:
@@ -363,14 +363,14 @@ apiVersions:
           type: string
       provider:
         description: |
-          [Parameters](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/cloud-provider-azure/environment.html) for connecting to the Azure API.
+          [Parameters](/modules/cloud-provider-azure/environment.html) for connecting to the Azure API.
         type: object
         additionalProperties: false
         required: [subscriptionId, clientId, clientSecret, tenantId, location]
         properties:
           location:
             description: |
-              The name of the geo location to create all the resources. Getting available locations from [Azure CLI](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli):
+              The name of the geo location to create all the resources. Getting available locations from Azure CLI:
               ```shell
               az account list-locations -o table
               ```
@@ -389,7 +389,7 @@ apiVersions:
             description: |
               The client's secret.
 
-              Keep in mind the expiration date of the secret. By default, it is valid for one year. Refer to the [official documentation](https://learn.microsoft.com/en-us/azure/app-service/configure-ssl-app-service-certificate?tabs=portal#renew-an-app-service-certificate) to create a service account with a longer secret expiration date.
+              Keep in mind the expiration date of the secret. By default, it is valid for one year. Refer to the official documentation to create a service account with a longer secret expiration date.
             type: string
           tenantId:
             description: |

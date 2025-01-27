@@ -18,7 +18,7 @@ which is the most common target for attackers, against modern cyber threats.
 To work with KUMA, you **must enable** the [log-shipper](../modules/log-shipper/) module.
 {% endalert %}
 
-To send data to [KUMA](https://support.kaspersky.com/help/kuma/1.5/en-US/217694.htm), configure the following resources in DKP:
+To send data to KUMA, configure the following resources in DKP:
 
 - [`ClusterLogDestination`](../modules/log-shipper/cr.html#clusterlogdestination)
 - [`ClusterLoggingConfig`](../modules/log-shipper/cr.html#clusterloggingconfig)

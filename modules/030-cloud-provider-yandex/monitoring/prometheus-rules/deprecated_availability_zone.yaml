@@ -18,7 +18,7 @@
           You should migrate your Nodes, Disks and LoadBalancers to `ru-central1-a`, `ru-central1-b` or `ru-central1-d` (introduced in v1.56).
           To check which Nodes should be migrated, use `kubectl get node -l "topology.kubernetes.io/zone=ru-central1-c"` command.
 
-          You can use [Yandex Migration Guide](https://cloud.yandex.com/en/docs/overview/concepts/zone-migration) (mostly applicable to the `ru-central1-d' zone only).
+          You can use Yandex Migration Guide (mostly applicable to the `ru-central1-d' zone only).
 
           **IMPORTANT** You cannot migrate public IP addresses between zones. Check out the Yandex Migration Guide for details.
     - alert: NATInstanceWithDeprecatedAvailabilityZone

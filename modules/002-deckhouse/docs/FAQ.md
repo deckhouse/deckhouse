@@ -46,7 +46,7 @@ We always appreciate helping users with debugging complex issues. Please follow 
      > deckhouse-debug-$(date +"%Y_%m_%d").tar.gz
    ```
 
-2. Send the archive to the [Deckhouse team](https://github.com/deckhouse/deckhouse/issues/new/choose) for further debugging.
+2. Send the archive to the Deckhouse team for further debugging.
 
 Data that will be collected:
 * Deckhouse queue state
@@ -80,7 +80,7 @@ Run the following command:
 kubectl -n <namespace_name> debug -it <pod_name> --image=ubuntu <container_name>
 ```
 
-More info in [official documentation](https://kubernetes.io/docs/tasks/debug/debug-application/debug-running-pod/#ephemeral-container).
+More info in official documentation.
 
 ## How to debug node problems with ephemeral containers?
 
@@ -90,4 +90,4 @@ Run the following command:
 kubectl debug node/mynode -it --image=ubuntu
 ```
 
-More info in [official documentation](https://kubernetes.io/docs/tasks/debug/debug-application/debug-running-pod/#node-shell-session).
+More info in official documentation.

@@ -32,7 +32,7 @@ properties:
     description: |
       Опции Loki, доступные для изменения.
 
-      Подробнее о настройки Loki читайте в [документации Loki](https://grafana.com/docs/loki/v2.9.x/configure/).
+      Подробнее о настройки Loki читайте в документации Loki.
 
       > Внимание! Ошибочные  настройки могут привести к неработоспособности Loki.
     properties:
@@ -74,12 +74,12 @@ properties:
     description: |
       Структура, аналогичная `spec.nodeSelector` пода Kubernetes.
 
-      Если значение не указано или указано `false`, будет использоваться [автоматика](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
+      Если значение не указано или указано `false`, будет использоваться [автоматика](/#выделение-узлов-под-определенный-вид-нагрузки).
   tolerations:
     description: |
       Структура, аналогичная `spec.tolerations` пода Kubernetes.
 
-      Если значение не указано или указано `false`, будет использоваться [автоматика](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
+      Если значение не указано или указано `false`, будет использоваться [автоматика](/#выделение-узлов-под-определенный-вид-нагрузки).
   resourcesManagement:
     description: |
       Настройки запросов (requests) и ограничений (limits) использования CPU и памяти подами Loki.
@@ -88,7 +88,7 @@ properties:
         description: |
           Режим управления ресурсами:
           - `Static` — классический, с помощью указания запросов/ограничений (requests/limits). Настраивается в секции параметров [static](#parameters-resourcesmanagement-static);
-          - `VPA` — с помощью [VPA](https://github.com/kubernetes/design-proposals-archive/blob/main/autoscaling/vertical-pod-autoscaler.md). Настраивается в секции параметров [vpa](#parameters-resourcesmanagement-vpa).
+          - `VPA` — с помощью VPA. Настраивается в секции параметров [vpa](#parameters-resourcesmanagement-vpa).
       vpa:
         description: |
           Настройка управления ресурсами в режиме `VPA`.

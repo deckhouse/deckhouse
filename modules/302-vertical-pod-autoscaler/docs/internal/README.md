@@ -100,5 +100,5 @@ If Pods should be present on every node, add label `workload-resource-policy.dec
 * At the moment container resources is set with values from `minAllowed`. It leads to possible node overprovision. Perhaps it would be more correct to use `maxAllowed` values.
 * Values for `minAllowed` and `maxAllowed` set manually, perhaps that we need to determine one thing and calculate the other. For example, determine `minAllowed` and set `maxAllowed` as `minAllowed` X 2.
 * Perhaps we should think of another mechanism for setting values `minAllowed`, for example, a separate file in which the yaml-structure will be collected data on the resources of all containers of all modules.
-* [Issue #2084](https://github.com/deckhouse/deckhouse/issues/2084).
+* Issue #2084.
 

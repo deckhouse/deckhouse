@@ -8,7 +8,7 @@ properties:
     description: |
       The same as in the pods' `spec.nodeSelector` parameter in Kubernetes.
 
-      If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/products/kubernetes-platform/documentation/v1/#advanced-scheduling).
+      If the parameter is omitted or `false`, it will be determined [automatically](/#advanced-scheduling).
     x-examples:
     - { "has-gpu": "true" }
 
@@ -16,7 +16,7 @@ properties:
     description: |
       The same as in the pods' `spec.tolerations` parameter in Kubernetes.
 
-      If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/products/kubernetes-platform/documentation/v1/#advanced-scheduling).
+      If the parameter is omitted or `false`, it will be determined [automatically](/#advanced-scheduling).
     type: array
     items:
       type: object
@@ -39,14 +39,14 @@ properties:
     type: string
     x-examples: ["token"]
     description: |
-      [API Tokens](https://cert-manager.io/docs/configuration/acme/dns01/cloudflare/#api-tokens) allow application-scoped keys bound to specific DNS zones.
+      API Tokens allow application-scoped keys bound to specific DNS zones.
 
       API Tokens are recommended for higher security, since they have more restrictive permissions and are more easily revocable.
 
       It allows you to verify that domains specified
       in the Certificate resource are managed by `cert-manager` and kept by the Cloudflare DNS provider.
       Verification is performed by adding special TXT records for
-      the [ACME DNS01 Challenge Provider](https://cert-manager.io/docs/configuration/acme/dns01/) domain.
+      the ACME DNS01 Challenge Provider domain.
 
   cloudflareGlobalAPIKey:
     type: string
@@ -57,7 +57,7 @@ properties:
       in the Certificate resource are managed by `cert-manager` and kept by the Cloudflare DNS provider.
 
       Verification is performed by adding special TXT records for
-      the [ACME DNS01 Challenge Provider](https://cert-manager.io/docs/configuration/acme/dns01/) domain.
+      the ACME DNS01 Challenge Provider domain.
     x-examples: ["key"]
 
   cloudflareEmail:
@@ -71,7 +71,7 @@ properties:
     type: string
     description: |
       The Access Key ID of the user with the attached
-      [Amazon Route53 IAM Policy](https://cert-manager.io/docs/configuration/acme/dns01/route53/)
+      Amazon Route53 IAM Policy
       for managing domain records.
     x-examples: ["key_id"]
 

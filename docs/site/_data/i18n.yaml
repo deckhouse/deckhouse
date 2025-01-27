@@ -14,7 +14,7 @@ soon:
   en: "soon..."
   ru: "скоро..."
 ce: Community Edition
-ee: Enterprise Edition
+ee: Certified Security Edition
 
 common:
   of:
@@ -238,6 +238,6 @@ features:
     en: This feature requires an <a href="https://okmeter.io">Okmeter</a> license.
     ru: Для этого компонента требуется лицензия <a href="https://okmeter.io">Okmeter</a>.
   ee:
-    en: This feature is available in Enterprise Edition only.
-    ru: Доступно только в Enterprise Edition.
+    en: This feature is available in Deckhouse Platform Certified Security Edition.
+    ru: Доступно в Deckhouse Platform Certified Security Edition.
 

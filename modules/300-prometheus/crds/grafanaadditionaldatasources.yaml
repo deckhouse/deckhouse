@@ -26,7 +26,7 @@ spec:
           description: |
             The resource for connecting additional datasources to Grafana.
 
-            The resource parameters are described in details in the [Grafana documentation](https://grafana.com/docs/grafana/latest/administration/provisioning/#example-datasource-config-file).
+            The resource parameters are described in details in the Grafana documentation.
           required:
             - spec
           properties:
@@ -55,7 +55,7 @@ spec:
                   description: Database name (if used).
                 withCredentials:
                   type: boolean
-                  description: Enable/disable with credentials headers ([details...](https://developer.mozilla.org/en-US/docs/Web/API/XMLHttpRequest/withCredentials)).
+                  description: Enable/disable with credentials headers .
                 basicAuth:
                   type: boolean
                   description: Enable/disable basic auth.
@@ -79,7 +79,7 @@ spec:
           description: |
             The resource for connecting additional datasources to Grafana.
 
-            The resource parameters are described in details in the [Grafana documentation](https://grafana.com/docs/grafana/latest/administration/provisioning/#example-datasource-config-file).
+            The resource parameters are described in details in the Grafana documentation.
           required:
             - spec
           properties:
@@ -108,7 +108,7 @@ spec:
                   description: Database name (if used).
                 withCredentials:
                   type: boolean
-                  description: Enable/disable with credentials headers ([details...](https://developer.mozilla.org/en-US/docs/Web/API/XMLHttpRequest/withCredentials)).
+                  description: Enable/disable with credentials headers .
                 basicAuth:
                   type: boolean
                   description: Enable/disable basic auth.

@@ -13,20 +13,15 @@ title: "Модуль multitenancy-manager: примеры использован
   * выбор профиля безопасности;
   * настройка администраторов проекта.
 
-    Описание шаблона [в GitHub](https://github.com/deckhouse/deckhouse/blob/main/modules/multitenancy-manager/images/multitenancy-manager/default/default.yaml#L2).
-
 - `secure` — включает все возможности шаблона `default`, а также дополнительные функции:
   * настройка допустимых для проекта UID/GID;
   * правила аудита обращения Linux-пользователей проекта к ядру;
   * сканирование запускаемых образов контейнеров на наличие известных уязвимостей (CVE).
 
-  Описание шаблона [в GitHub](https://github.com/deckhouse/deckhouse/blob/main/modules/multitenancy-manager/images/multitenancy-manager/default/secure.yaml).
 
 - `secure-with-dedicated-nodes` — включает все возможности шаблона `secure`, а также дополнительные функции:
   * определение селектора узла для всех подов в проекте: если под создан, селектор узла пода будет автоматически **заменён** на селектор узла проекта;
   * определение стандартных tolerations для всех подов в проекте: если под создан, стандартные значения tolerations **добавляются** к нему автоматически.
-
-  Описание шаблона [в GitHub](https://github.com/deckhouse/deckhouse/blob/main/modules/multitenancy-manager/images/multitenancy-manager/default/secure-with-dedicated-nodes.yaml).
 
 Чтобы перечислить все доступные параметры для шаблона проекта, выполните команду:
 
@@ -90,7 +85,7 @@ kubectl get projecttemplates <ИМЯ_ШАБЛОНА_ПРОЕКТА> -o jsonpath=
 
    > Необходимо изменить не только шаблон, но и схему входных параметров под него.
    >
-   > Шаблоны для проектов поддерживают все [функции шаблонизации Helm](https://helm.sh/docs/chart_template_guide/function_list/).
+   > Шаблоны для проектов поддерживают все функции шаблонизации Helm.
 4. Измените имя шаблона в поле `.metadata.name`.
 5. Примените полученный шаблон командой:
 

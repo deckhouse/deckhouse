@@ -9,29 +9,6 @@ description: Примеры управления узлами кластера K
 
 <span id="пример-описания-nodegroup"></span>
 
-### Облачные узлы
-
-```yaml
-apiVersion: deckhouse.io/v1
-kind: NodeGroup
-metadata:
-  name: test
-spec:
-  nodeType: CloudEphemeral
-  cloudInstances:
-    zones:
-      - eu-west-1a
-      - eu-west-1b
-    minPerZone: 1
-    maxPerZone: 2
-    classReference:
-      kind: AWSInstanceClass
-      name: test
-  nodeTemplate:
-    labels:
-      tier: test
-```
-
 ### Статические узлы
 
 <span id="пример-описания-статической-nodegroup"></span>
@@ -78,34 +55,6 @@ spec:
 <span id="пример-описания-статичной-nodegroup"></span>
 
 Добавление статического узла можно выполнить вручную или с помощью Cluster API Provider Static.
-
-### Вручную
-
-Чтобы добавить новый статический узел (выделенная ВМ, bare-metal-сервер и т. п.) в кластер вручную, выполните следующие шаги:
-
-1. Для [CloudStatic-узлов](../node-manager/cr.html#nodegroup-v1-spec-nodetype) в облачных провайдерах, перечисленных ниже, выполните описанные в документации шаги:
-   - [Для AWS](../cloud-provider-aws/faq.html#добавление-cloudstatic-узлов-в-кластер)
-   - [Для GCP](../cloud-provider-gcp/faq.html#добавление-cloudstatic-узлов-в-кластер)
-   - [Для YC](../cloud-provider-yandex/faq.html#добавление-cloudstatic-узлов-в-кластер)
-1. Используйте существующий или создайте новый ресурс [NodeGroup](cr.html#nodegroup) ([пример](#статические-узлы) NodeGroup с именем `worker`). Параметр [nodeType](cr.html#nodegroup-v1-spec-nodetype) в ресурсе NodeGroup для статических узлов должен быть `Static` или `CloudStatic`.
-1. Получите код скрипта в кодировке Base64 для добавления и настройки узла.
-
-   Пример получения кода скрипта в кодировке Base64 для добавления узла в NodeGroup `worker`:
-
-   ```shell
-   NODE_GROUP=worker
-   kubectl -n d8-cloud-instance-manager get secret manual-bootstrap-for-${NODE_GROUP} -o json | jq '.data."bootstrap.sh"' -r
-   ```
-
-1. Выполните предварительную настройку нового узла в соответствии с особенностями вашего окружения. Например:
-   - добавьте необходимые точки монтирования в файл `/etc/fstab` (NFS, Ceph и т. д.);
-   - установите необходимые пакеты (например, `ceph-common`);
-   - настройте сетевую связанность между новым узлом и остальными узлами кластера.
-1. Зайдите на новый узел по SSH и выполните следующую команду, вставив полученную в п. 3 Base64-строку:
-
-   ```shell
-   echo <Base64-КОД-СКРИПТА> | base64 -d | bash
-   ```
 
 ### С помощью Cluster API Provider Static
 

@@ -28,7 +28,7 @@ Here:
 * you can issue a certificate with multiple DNS names (as in the example above),
 * you can validate different domains that are part of the same certificate using different Ingress controllers.
 
-Read more in the [cert-manager documentation](https://cert-manager.io/docs/tutorials/acme/http-validation/).
+Read more in the cert-manager documentation.
 
 ## Issuing a DNS wildcard certificate using Cloudflare
 
@@ -57,7 +57,7 @@ Read more in the [cert-manager documentation](https://cert-manager.io/docs/tutor
 
    After that, Deckhouse will automatically create ClusterIssuer and Secret for Cloudflare in the `d8-cert-manager` namespace.
 
-   * Configuration with [APIToken](https://cert-manager.io/docs/configuration/acme/dns01/cloudflare/#api-tokens) is more secure and recommended for use.
+   * Configuration with APIToken is more secure and recommended for use.
 
 3. Create a Certificate with validation via Cloudflare. Note that you must specify `cloudflareGlobalAPIKey` and `cloudflareEmail` in Deckhouse beforehand:
 
@@ -107,7 +107,7 @@ Read more in the [cert-manager documentation](https://cert-manager.io/docs/tutor
 
 1. Create a user with the appropriate permissions.
 
-   * For this, go to the policy [management page](https://console.aws.amazon.com/iam/home?region=us-east-2#/policies) and create a policy as follows:
+   * For this, go to the policy management page and create a policy as follows:
 
      ```json
      {
@@ -132,7 +132,7 @@ Read more in the [cert-manager documentation](https://cert-manager.io/docs/tutor
      }
      ```
 
-   * Go to the [user management page](https://console.aws.amazon.com/iam/home?region=us-east-2#/users) and create a user with the above policy.
+   * Go to the user management page and create a user with the above policy.
 
 2. Edit the [cert-manager module configuration](configuration.html) and add the following parameters:
 
@@ -166,7 +166,7 @@ Read more in the [cert-manager documentation](https://cert-manager.io/docs/tutor
 
 1. Create a service account with the appropriate role:
 
-   * Go to the [policy management page](https://console.cloud.google.com/iam-admin/serviceaccounts).
+   * Go to the policy management page.
    * Select your project.
    * Create a service account with the desired name (e.g., `dns01-solver`).
    * Switch to the service account created.

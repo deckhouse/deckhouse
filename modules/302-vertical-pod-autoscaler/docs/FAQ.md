@@ -97,4 +97,4 @@ resources:
     cpu: 1168m
 ```
 
-To limit the maximum amount of resources, set the `maxAllowed` parameter in the object specification or use the [Limit Range](https://kubernetes.io/docs/tasks/administer-cluster/manage-resources/memory-default-namespace/) Kubernetes object.
+To limit the maximum amount of resources, set the `maxAllowed` parameter in the object specification or use the Limit Range Kubernetes object.

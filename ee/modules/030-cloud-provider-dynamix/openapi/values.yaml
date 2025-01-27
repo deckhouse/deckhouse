@@ -165,7 +165,7 @@ properties:
                       description: |
                         A list of labels to attach to cluster resources.
 
-                        The same as the `metadata.labels` standard [field](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta).
+                        The same as the `metadata.labels` standard field.
                       x-examples:
                         - environment: production
                           app: warp-drive-ai
@@ -174,7 +174,7 @@ properties:
                     annotations:
                       type: object
                       description: |
-                        The same as the `metadata.annotations` standard [field](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta).
+                        The same as the `metadata.annotations` standard field.
                       x-examples:
                         - ai.fleet.com/discombobulate: "true"
                       additionalProperties:
@@ -182,7 +182,7 @@ properties:
                     taints:
                       type: array
                       description: |
-                        The same as the `.spec.taints` field of the [Node](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#taint-v1-core) object.
+                        The same as the `.spec.taints` field of the Node object.
 
                         > **Caution!** Only the `effect`, `key`, `values`  fields are available.
                       x-examples:
@@ -225,7 +225,7 @@ properties:
             description: |
               The way resources are located in the cloud.
 
-              Read [more](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/cloud-provider-dynamix/layouts.html) about possible provider layouts.
+              Read [more](/modules/cloud-provider-dynamix/layouts.html) about possible provider layouts.
             x-unsafe: true
           provider:
             type: object

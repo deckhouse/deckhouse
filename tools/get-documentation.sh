@@ -11,14 +11,23 @@ fi
 
 # Remove external links
 # (../)+platform/modules/ -> /modules/
+# (../)+platform/ -> /
 # modules/[0-9]+- -> modules/
 # Удалить картинки на внешние ресурсы  -  \!\[([^\[\]]+)\]\(http[^\)]+\)
 # Удалить разделы про обновление DKP в FAQ и переключение между редакциями
+# (https://deckhouse.(ru|io)/documentation/v1/modules/   -> /modules/
+# (https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/   -> /modules/
+# в AlertmanagerConfig customAlertmanagerConfig удалить лишние ресиверы
 # github/gitlab
 # Cloud
 # enterprise
 # edition
-
+# slack
+# openapispec
+# типы узлов
+# nodeGroup - параметры обновлений облаков, бандлов
+# ingress - sourceRanges
+# standby
 
 
 echo "Created the temporary directory $_TMPDIR"

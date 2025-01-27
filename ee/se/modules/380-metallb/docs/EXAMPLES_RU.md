@@ -2,7 +2,7 @@
 title: "The MetalLB module: примеры"
 ---
 
-Metallb можно использовать в статических кластерах (bare metal), когда нет возможности воспользоваться балансировщиком от облачного провайдера. Metallb может работать в режимах L2 LoadBalancer или BGP LoadBalancer.
+Metallb можно использовать в статических кластерах (bare metal), когда нет возможности воспользоваться балансировщиком провайдера. Metallb может работать в режимах L2 LoadBalancer или BGP LoadBalancer.
 
 ## Пример использования MetalLB в режиме L2 LoadBalancer
 

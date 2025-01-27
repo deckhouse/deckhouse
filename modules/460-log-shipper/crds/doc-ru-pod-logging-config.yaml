@@ -14,7 +14,7 @@ spec:
                   description: |
                     Задает фильтр по меткам пода.
 
-                    Подробнее про выражения можно узнать [в документации](https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/).
+                    Подробнее про выражения можно узнать в документации.
                   properties:
                     matchLabels:
                       description: Список меток, которые должен иметь под, чтобы подпадать под условие фильтра.

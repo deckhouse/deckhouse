@@ -12,13 +12,13 @@ properties:
     description: |
       The same as in the Pods' `spec.nodeSelector` parameter in Kubernetes.
 
-      If the parameter is omitted or `false`, `nodeSelector` will be determined [automatically](https://deckhouse.io/products/kubernetes-platform/documentation/v1/#advanced-scheduling).
+      If the parameter is omitted or `false`, `nodeSelector` will be determined [automatically](/#advanced-scheduling).
   tolerations:
     type: array
     description: |
       The same as in the Pods' `spec.tolerations` parameter in Kubernetes;
 
-      If the parameter is omitted or `false`, `tolerations` will be determined [automatically](https://deckhouse.io/products/kubernetes-platform/documentation/v1/#advanced-scheduling).
+      If the parameter is omitted or `false`, `tolerations` will be determined [automatically](/#advanced-scheduling).
     items:
       type: object
       properties:
@@ -79,7 +79,7 @@ properties:
         description: |
           Resource request management mode:
           - `Static` is a classic one. In it, you explicitly specify requests. The parameters of this mode are defined in the [static](#parameters-resourcesrequests-static) parameter section;
-          - `VPA` mode uses [VPA](https://github.com/kubernetes/design-proposals-archive/blob/main/autoscaling/vertical-pod-autoscaler.md). You can configure this mode by modifying parameters in the [vpa](#parameters-resourcesrequests-vpa) parameter section.
+          - `VPA` mode uses VPA. You can configure this mode by modifying parameters in the [vpa](#parameters-resourcesrequests-vpa) parameter section.
         enum: ["VPA", "Static"]
         default: "VPA"
       vpa:

@@ -32,11 +32,11 @@ spec:
 
 ## Запись данных Prometheus в longterm storage
 
-У Prometheus есть поддержка remote_write данных из локального Prometheus в отдельный longterm storage (например, [VictoriaMetrics](https://github.com/VictoriaMetrics/VictoriaMetrics)). В Deckhouse поддержка данного механизма реализована с помощью custom resource `PrometheusRemoteWrite`.
+У Prometheus есть поддержка remote_write данных из локального Prometheus в отдельный longterm storage (например, VictoriaMetrics). В Deckhouse поддержка данного механизма реализована с помощью custom resource `PrometheusRemoteWrite`.
 
 {% endraw -%}
 {% alert level="info" %}
-Для VictoriaMetrics подробную информацию о способах передачи данные в vmagent можно получить в [документации](https://docs.victoriametrics.com/vmagent/index.html#how-to-push-data-to-vmagent) VictoriaMetrics.
+Для VictoriaMetrics подробную информацию о способах передачи данные в vmagent можно получить в документации VictoriaMetrics.
 {% endalert %}
 {% raw %}
 
@@ -140,7 +140,7 @@ Deckhouse **не гарантирует** сохранение работосп�
 
 ## Подключение стороннего приложения к Prometheus
 
-Подключение к Prometheus защищено с помощью [kube-rbac-proxy](https://github.com/brancz/kube-rbac-proxy). Для подключения понадобится создать `ServiceAccount` с необходимыми правами.
+Подключение к Prometheus защищено с помощью kube-rbac-proxy. Для подключения понадобится создать `ServiceAccount` с необходимыми правами.
 
 ```yaml
 ---
@@ -244,72 +244,6 @@ spec:
       repeatInterval: 12h
 ```
 
-Поля `token` в Secret'е и `chatID` в ресурсе `CustomAlertmanager` необходимо поставить свои. [Подробнее](https://core.telegram.org/bots) о Telegram API.
-
-## Пример отправки алертов в Slack с фильтром
-
-```yaml
-apiVersion: deckhouse.io/v1alpha1
-kind: CustomAlertmanager
-metadata:
-  name: slack
-spec:
-  internal:
-    receivers:
-    - name: devnull
-    - name: slack
-      slackConfigs:
-      - apiURL:
-          key: apiURL
-          name: slack-apiurl
-        channel: {{ dig .Values.werf.env .Values.slack.channel._default .Values.slack.channel }} 
-        fields:
-        - short: true
-          title: Severity
-          value: '{{`{{  .CommonLabels.severity_level }}`}}'
-        - short: true
-          title: Status
-          value: '{{`{{ .Status }}`}}'
-        - title: Summary
-          value: '{{`{{ range .Alerts }}`}}{{`{{ .Annotations.summary }}`}} {{`{{ end }}`}}'
-        - title: Description
-          value: '{{`{{ range .Alerts }}`}}{{`{{ .Annotations.description }}`}} {{`{{ end }}`}}'
-        - title: Labels
-          value: '{{`{{ range .Alerts }}`}} {{`{{ range .Labels.SortedPairs }}`}}{{`{{ printf "%s:
-            %s\n" .Name .Value }}`}}{{`{{ end }}`}}{{`{{ end }}`}}'
-        - title: Links
-          value: '{{`{{ (index .Alerts 0).GeneratorURL }}`}}'
-        title: '{{`{{ .CommonLabels.alertname }}`}}'
-    route:
-      groupBy:
-      - '...'  
-      receiver: devnull
-      routes:
-        - matchers:
-          - matchType: =~
-            name: severity_level
-            value: "^[4-9]$"
-          receiver: slack
-      repeatInterval: 12h
-  type: Internal
-```
-
-## Пример отправки алертов в Opsgenie
-
-```yaml
-- name: opsgenie
-        opsgenieConfigs:
-          - apiKey:
-              key: data
-              name: opsgenie
-            description: |
-              {{ range .Alerts }}{{ .Annotations.summary }} {{ end }}
-              {{ range .Alerts }}{{ .Annotations.description }} {{ end }}
-            message: '{{ .CommonLabels.alertname }}'
-            priority: P1
-            responders:
-              - id: team_id
-                type: team
-```
+Поля `token` в Secret'е и `chatID` в ресурсе `CustomAlertmanager` необходимо поставить свои. Подробнее о Telegram API.
 
 {% endraw %}

@@ -30,7 +30,7 @@ apiVersions:
               description: Список зон, в которых допустимо создавать узлы.
             instanceClass:
               description: |
-                Частичное содержимое полей [VsphereInstanceClass](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/cloud-provider-vsphere/cr.html#vsphereinstanceclass).
+                Частичное содержимое полей [VsphereInstanceClass](/modules/cloud-provider-vsphere/cr.html#vsphereinstanceclass).
               properties: &instanceClassProperties
                 numCPUs:
                   description: |
@@ -93,7 +93,7 @@ apiVersions:
                   properties:
                     nestedHardwareVirtualization:
                       description: |
-                        Включение [Hardware Assisted Virtualization](https://docs.vmware.com/en/VMware-vSphere/6.5/com.vmware.vsphere.vm_admin.doc/GUID-2A98801C-68E8-47AF-99ED-00C63E4857F6.html) на созданных виртуальных машинах.
+                        Включение Hardware Assisted Virtualization на созданных виртуальных машинах.
                     cpuShares:
                       description: |
                         Относительная величина CPU Shares для создаваемых виртуальных машин.
@@ -131,20 +131,20 @@ apiVersions:
                     description: |
                       Список лейблов, которые будут прикреплены ко всем ресурсам кластера (если они это поддерживают).
 
-                      Аналогично стандартному [полю](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta) `metadata.labels`.
+                      Аналогично стандартному полю `metadata.labels`.
                   annotations:
                     description: |
-                      Аналогично стандартному [полю](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta) `metadata.annotations`.
+                      Аналогично стандартному полю `metadata.annotations`.
                   taints:
                     description: |
-                      Аналогично полю `.spec.taints` из объекта [Node](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#taint-v1-core).
+                      Аналогично полю `.spec.taints` из объекта Node.
 
                       > **Внимание!** Доступны только поля `effect`, `key`, `values`.
               zones:
                 description: Список зон, в которых допустимо создавать узлы.
               instanceClass:
                 description: |
-                  Частичное содержимое полей [VsphereInstanceClass](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/cloud-provider-vsphere/cr.html#vsphereinstanceclass).
+                  Частичное содержимое полей [VsphereInstanceClass](/modules/cloud-provider-vsphere/cr.html#vsphereinstanceclass).
                 properties:
                   <<: *instanceClassProperties
         sshPublicKey:
@@ -197,7 +197,7 @@ apiVersions:
           description: |
             Название схемы размещения.
 
-            [Подробнее](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/cloud-provider-vsphere/layouts.html) о возможных схемах размещения провайдера.
+            [Подробнее](/modules/cloud-provider-vsphere/layouts.html) о возможных схемах размещения провайдера.
         provider:
           description: Параметры подключения к vCenter.
           properties:

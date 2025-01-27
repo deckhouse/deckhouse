@@ -16,7 +16,7 @@ spec:
         openAPIV3Schema:
           type: object
           description: |
-            Parameters of a group of Yandex Instances used by `machine-controller-manager` (the [node-manager](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/node-manager/) module).
+            Parameters of a group of Yandex Instances used by `machine-controller-manager` (the [node-manager](/modules/node-manager/) module).
 
             The `NodeGroup` resource of the `node-manager` module [refers](../node-manager/cr.html#nodegroup-v1-spec-cloudinstances-classreference) to this resource.
           required:
@@ -35,7 +35,7 @@ spec:
                   type: integer
                 coreFraction:
                   description: |
-                    Percent of reserved CPU capacity on a Yandex Compute Instance. [Details...](https://cloud.yandex.com/en/docs/compute/concepts/performance-levels)
+                    Percent of reserved CPU capacity on a Yandex Compute Instance.
                   x-doc-examples: [20]
                   x-doc-default: 100
                   enum: [ 5,20,50,100 ]
@@ -60,21 +60,21 @@ spec:
                   type: string
                 platformID:
                   description: |
-                    Paltform ID. [List of available platforms...](https://cloud.yandex.com/en-ru/docs/compute/concepts/vm-platforms)
+                    Paltform ID. List of available platforms...
                   x-doc-default: standard-v2
                   type: string
                 preemptible:
                   description: |
                     Should a provisioned Yandex Compute Instance be preemptible.
 
-                    For more information about preemptible virtual machines, read the [provider's documentation](https://cloud.yandex.com/en/docs/compute/concepts/preemptible-vm).
+                    For more information about preemptible virtual machines, read the provider's documentation.
                   type: boolean
                   x-doc-default: false
                 diskType:
                   description: |
                     Instance disk type.
 
-                    For more information about possible disk types, read the [provider's documentation](https://cloud.yandex.com/en-ru/docs/compute/concepts/disk#disks_types).
+                    For more information about possible disk types, read the provider's documentation.
                   x-doc-examples: ["network-hdd"]
                   x-doc-default: "network-hdd"
                   type: string
@@ -135,7 +135,7 @@ spec:
         openAPIV3Schema:
           type: object
           description: |
-            Parameters of a group of Yandex Instances used by `machine-controller-manager` (the [node-manager](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/node-manager/) module).
+            Parameters of a group of Yandex Instances used by `machine-controller-manager` (the [node-manager](/modules/node-manager/) module).
 
             The `NodeGroup` resource of the `node-manager` module [refers](../node-manager/cr.html#nodegroup-v1-spec-cloudinstances-classreference) to this resource.
           required:
@@ -154,7 +154,7 @@ spec:
                   type: integer
                 coreFraction:
                   description: |
-                    Percent of reserved CPU capacity on a Yandex Compute Instance. [Details...](https://cloud.yandex.com/en/docs/compute/concepts/performance-levels)
+                    Percent of reserved CPU capacity on a Yandex Compute Instance.
                   x-doc-examples: [20]
                   x-doc-default: 100
                   enum: [ 5,20,50,100 ]
@@ -179,19 +179,19 @@ spec:
                   type: string
                 platformID:
                   description: |
-                    Paltform ID. [List of available platforms...](https://cloud.yandex.com/en-ru/docs/compute/concepts/vm-platforms)
+                    Paltform ID. List of available platforms...
                   x-doc-default: standard-v3
                   type: string
                 preemptible:
                   description: |
                     Should a provisioned Yandex Compute Instance be preemptible.
 
-                    For more information about preemptible virtual machines, read the [provider's documentation](https://cloud.yandex.com/en/docs/compute/concepts/preemptible-vm).
+                    For more information about preemptible virtual machines, read the provider's documentation.
                   type: boolean
                   x-doc-default: false
                 diskType:
                   description: |
-                    Instance [disk type](https://cloud.yandex.com/en-ru/docs/compute/concepts/disk#disks_types).
+                    Instance disk type.
 
                     Size of `network-ssd-nonreplicated` and `network-ssd-io-m3` disks must be a multiple of 93 GB.
                   x-doc-examples: ["network-hdd"]
@@ -247,7 +247,7 @@ spec:
                     - SoftwareAccelerated
                   default: Standard
                   description: |
-                    Network type: `Standard` or [`SoftwareAccelerated`](https://cloud.yandex.com/en/docs/vpc/concepts/software-accelerated-network).
+                    Network type: `Standard` or `SoftwareAccelerated`.
             status:
               type: object
               properties:

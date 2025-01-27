@@ -25,20 +25,20 @@ properties:
               description: |
                 The number of I/O operations per second per GB for `io1` and `io2` volume types (this parameter is `3` for `gp2` volumes):
                   * **Caution!** If the iopsPerGB value multiplied by the target volume's size is less than 100 or more than 64000, the creation of such a volume will fail.
-                  * You can find a detailed description of the volume types and their IOPS in the [official documentation](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ebs-volume-types.html).
+                  * You can find a detailed description of the volume types and their IOPS in the official documentation.
             iops:
               type: string
               description: |
                 I/O operations per second for `gp3` volume type:
                   * Allowed values: from `3000` to `16000`.
-                  * If empty, it will set to 3000 as documented [here](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ebs-volume-types.html).
+                  * If empty, it will set to 3000 as documented here.
                   * Changing doesn't apply to existing volumes. You can modify them manually through AWS Console.
             throughput:
               type: string
               description: |
                 Throughput in MiB/s for `gp3` volume type:
                   * Allowed values: from `125` to `1000`.
-                  * If empty, it will set to 125 as documented [here](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ebs-volume-types.html).
+                  * If empty, it will set to 125 as documented here.
                   * Changing doesn't apply to existing volumes. You can modify them manually through AWS Console.
           oneOf:
             - properties:

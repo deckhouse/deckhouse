@@ -44,7 +44,7 @@ The `ClusterIssuers` in standard delivery set that issue certificates via Let's 
    * `letsencrypt-staging`
 
 In this way, an additional `ClusterIssuer` may be required in the following cases:
-1. Certificates need to be issued in a CA other than Let's Encrypt (including a private one). Supported CAs are available [in the `cert-manager` documentation](https://cert-manager.io/docs/configuration/)
+1. Certificates need to be issued in a CA other than Let's Encrypt (including a private one). Supported CAs are available in the `cert-manager` documentation
 2. Certificates need to be issued via Let's Encrypt using the `DNS-01` method via a third-party provider.
 
 ### How to add an additional `ClusterIssuer` using Let's Encrypt and `DNS-01` verification method?
@@ -52,13 +52,13 @@ In this way, an additional `ClusterIssuer` may be required in the following case
 To verify domain ownership via Let's Encrypt using the `DNS-01` method, you need to configure the ability to create TXT records in a public DNS.
 
 `cert-manager` has support for mechanisms for creating TXT records in some popular DNS: `AzureDNS`, `Cloudflare`, `Google Cloud DNS`, etc.  
-The full list is available [in the `cert-manager` documentation](https://cert-manager.io/docs/configuration/acme/dns01/).
+The full list is available in the `cert-manager` documentation.
 
 The module automatically creates `ClusterIssuer` of supported cloud providers when filling in the module settings related to the cloud used.  
 If necessary, you can create such `ClusterIssuer` yourself.
 
 An example of using AWS Route53 is available in the section [How to protect `cert-manager` credentials](#how-to-secure-cert-manager-credentials).  
-The list of all possible `ClusterIssuer`s that can be created is available in the [module templates](https://github.com/deckhouse/deckhouse/tree/main/modules/cert-manager/templates/cert-manager).
+The list of all possible `ClusterIssuer`s that can be created is available in the module templates.
 
 Using third-party DNS providers is implemented via the `webhook` method.  
 
@@ -67,7 +67,7 @@ When using this method, you need to place a service that will process the hook a
 
 As an example, let's consider using the `Yandex Cloud DNS` service.
 
-1. To process the webhook, first place the `Yandex Cloud DNS ACME webhook` service in the cluster according to the [official documentation](https://github.com/yandex-cloud/cert-manager-webhook-yandex)  
+1. To process the webhook, first place the `Yandex Cloud DNS ACME webhook` service in the cluster according to the official documentation  
 
 1. Then, create the `ClusterIssuer` resource:
 
@@ -103,7 +103,7 @@ As an example, let's consider using the `Yandex Cloud DNS` service.
 
 ## How to add an additional `Issuer` and `ClusterIssuer` using HashiCorp Vault to issue certificates?
 
-You can use [this manual](https://learn.hashicorp.com/tutorials/vault/kubernetes-cert-manager?in=vault/kubernetes) for configuring certificate issuance using Vault.
+You can use this manual for configuring certificate issuance using Vault.
 
 After configuring PKI and enabling Kubernetes [authorization](../../modules/user-authz/), you have to:
 - Create a service account and copy its secret reference:
@@ -226,7 +226,7 @@ For example, to issue certificates for all Deckhouse components, specify the `Cl
 
 If you don't want to store credentials in the Deckhouse configuration (security reasons, for example), feel free to create
 your own ClusterIssuer / Issuer.
-For example, you can create your own `ClusterIssuer` for a [route53](https://aws.amazon.com/route53/) service in this way:
+For example, you can create your own `ClusterIssuer` for a route53 service in this way:
 - Create a Secret with credentials:
 
   ```shell
@@ -397,4 +397,4 @@ Suppose `cert-manager` gets the following error when trying to provide a certifi
 CAA record does not match issuer
 ```
 
-In this case, you have to check the `CAA (Certificate Authority Authorization)` DNS record of the domain for which the certificate is intended. For Let's Encrypt certificates, the domain must have the `issue "letsencrypt.org"` CAA record. You can read more about CAA [in the Let's Encrypt documentation](https://letsencrypt.org/docs/caa/).
+In this case, you have to check the `CAA (Certificate Authority Authorization)` DNS record of the domain for which the certificate is intended. For Let's Encrypt certificates, the domain must have the `issue "letsencrypt.org"` CAA record. You can read more about CAA in the Let's Encrypt documentation.

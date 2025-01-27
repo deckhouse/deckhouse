@@ -2,7 +2,7 @@
 title: "The ingress-nginx module"
 ---
 
-Installs and manages the [NGINX Ingress controller](https://github.com/kubernetes/ingress-nginx) using Custom Resources. The module installs the Ingress controller in the HA mode if there is more than one node. In doing so, it takes into account all the aspects of cloud / bare metal infrastructure and various types of Kubernetes clusters.
+Installs and manages the NGINX Ingress controller using Custom Resources. The module installs the Ingress controller in the HA mode if there is more than one node. In doing so, it takes into account all the aspects of cloud / bare metal infrastructure and various types of Kubernetes clusters.
 
 The module supports running and configuring several NGINX Ingress controllers simultaneously (one of the controllers is the **primary** one; you can create as many **additional** controllers as you want). This approach allows you to separate extranet and intranet Ingress resources of applications.
 

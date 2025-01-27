@@ -62,7 +62,7 @@ properties:
 
       The same as `spec.tolerations` for the Kubernetes pod.
 
-      If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/products/kubernetes-platform/documentation/v1/#advanced-scheduling).
+      If the parameter is omitted or `false`, it will be determined [automatically](/#advanced-scheduling).
     items:
       type: object
       properties:
@@ -95,7 +95,7 @@ properties:
 
       The same as `spec.nodeSelector` for the Kubernetes pod.
 
-      If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/products/kubernetes-platform/documentation/v1/#advanced-scheduling).
+      If the parameter is omitted or `false`, it will be determined [automatically](/#advanced-scheduling).
   disableSBOMGeneration:
     type: boolean
     default: false
@@ -136,12 +136,12 @@ properties:
 
       If it is necessary to specify a certificate with an intermediate certificate, the chain is specified without additional line breaks.
     items:
-      type: object   
+      type: object
       properties:
         name:
           type: string
         ca:
-          type: string       
+          type: string
     x-doc-examples:
     - |
       ```yaml

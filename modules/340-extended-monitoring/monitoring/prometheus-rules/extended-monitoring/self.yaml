@@ -17,7 +17,7 @@
           * CPU overloads and throttling of containers
           * 500 errors on ingress
           * Replicas quantity of controllers (alerts about the insufficient amount of replicas of  Deployment, StatefulSet, DaemonSet)
-          * And [others](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/extended-monitoring/)
+          * And [others](/modules/extended-monitoring/)
 
         To debug, execute the following commands:
           1. `kubectl -n d8-monitoring describe deploy extended-monitoring-exporter`

@@ -10,7 +10,7 @@ Both of them we use to explicitly define what networks are external/internal to 
 This patch allows setting multiple values separated with a comma in InternalNetworkName and ExternalNetworkName parameters in Nodes configuration section.
 Both of them we use to explicitly define what networks are external/internal to properly provide IP Addresses in the status of Node objects.
 
-Based on [PR#524](https://github.com/kubernetes/cloud-provider-vsphere/pull/524).
+Based on PR#524.
 
 > Consider sending PR with our changes to the upstream.
 

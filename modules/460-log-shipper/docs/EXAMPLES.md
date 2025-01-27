@@ -132,7 +132,7 @@ Path `/loki/api/v1/push` has to be removed from the previously used Loki URL.
 
 ## Working with Grafana Cloud
 
-This documentation expects that you have [created API key](https://grafana.com/docs/grafana-cloud/reference/create-api-key/).
+This documentation expects that you have created API key.
 
 ![Grafana cloud API key](../../images/log-shipper/grafana_cloud.png)
 

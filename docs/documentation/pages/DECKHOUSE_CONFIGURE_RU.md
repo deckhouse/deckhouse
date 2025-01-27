@@ -4,7 +4,7 @@ permalink: ru/
 lang: ru
 ---
 
-Deckhouse состоит из оператора Deckhouse и модулей. Модуль — это набор из Helm-чарта, хуков [Addon-operator'а](https://github.com/flant/addon-operator/), правил сборки компонентов модуля (компонентов Deckhouse) и других файлов.
+Deckhouse состоит из оператора Deckhouse и модулей. Модуль — это набор из Helm-чарта, хуков Addon-operator'а, правил сборки компонентов модуля (компонентов Deckhouse) и других файлов.
 
 <div markdown="0" style="height: 0;" id="конфигурация-deckhouse"></div>
 
@@ -71,7 +71,7 @@ kubectl edit moduleconfig/upmeter
 
 ## Настройка модуля
 
-> При работе с модулями Deckhouse использует проект [addon-operator](https://github.com/flant/addon-operator/). Ознакомьтесь с его документацией, если хотите понять, как Deckhouse работает с [модулями](https://github.com/flant/addon-operator/blob/main/docs/src/MODULES.md), [хуками модулей](https://github.com/flant/addon-operator/blob/main/docs/src/HOOKS.md) и [параметрами модулей](https://github.com/flant/addon-operator/blob/main/docs/src/VALUES.md). Будем признательны, если поставите проекту *звезду*.
+> При работе с модулями Deckhouse использует проект addon-operator. Ознакомьтесь с его документацией, если хотите понять, как Deckhouse работает с модулями, хуками модулей и параметрами модулей. Будем признательны, если поставите проекту *звезду*.
 
 Модуль настраивается с помощью ресурса `ModuleConfig`, имя которого совпадает с именем модуля (в kebab-case). `ModuleConfig` имеет следующие поля:
 
@@ -156,23 +156,6 @@ user-authn   false     1         12h
 </tbody>
 </table>
 
-### Особенности работы с набором модулей Minimal
-
-{% alert level="warning" %}
-**Обратите внимание,** что в наборе модулей `Minimal` не включен ряд базовых модулей (например, модуль работы с CNI).
-
-Deckhouse с набором модулей `Minimal` без включения базовых модулей сможет работать только в уже развернутом кластере.
-{% endalert %}
-
-Для установки Deckhouse с набором модулей `Minimal` включите как минимум следующие модули, указав их в конфигурационном файле установщика:
-
-* cni-cilium или другой модуль управления CNI (при необходимости);
-* control-plane-manager;
-* kube-dns;
-* terraform-manager, в случае развертывания облачного кластера;
-* node-manager;
-* registry-packages-proxy;
-* модуль облачного провайдера (например, `cloud-provider-aws` для AWS), в случае развертывания облачного кластера).
 
 ## Управление размещением компонентов Deckhouse
 

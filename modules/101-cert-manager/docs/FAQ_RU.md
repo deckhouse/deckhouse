@@ -22,7 +22,7 @@ title: "Модуль cert-manager: FAQ"
 Чтобы издать сертификаты на доменное имя через Let's Encrypt, сервис требует осуществить подтверждение владения доменом.
 `Cert-manager` поддерживает несколько методов для такого подтверждения при использовании `ACME`(Automated Certificate Management Environment):
 * `HTTP-01` — `cert-manager` создаст временный Pod в кластере, который будет слушать на определенном URL для подтверждения владения доменом. Для его работы необходимо иметь возможность направлять внешний трафик на этот Pod, обычно через `Ingress`.
-* `DNS-01` —  `cert-manager` делает TXT-запись в DNS для подтверждения владения доменом. У `cert-manager` есть встроенная поддержка популярных провайдеров DNS: AWS Route53, Google Cloud DNS, Cloudflare и т.д. Полный перечень доступен [в документации cert-manager](https://cert-manager.io/docs/configuration/acme/dns01/).
+* `DNS-01` —  `cert-manager` делает TXT-запись в DNS для подтверждения владения доменом. У `cert-manager` есть встроенная поддержка популярных провайдеров DNS: AWS Route53, Google Cloud DNS, Cloudflare и т.д. Полный перечень доступен в документации cert-manager.
 
 {% alert level="danger" %}
 Метод `HTTP-01` не поддерживает выпуск wildcard сертификатов.
@@ -41,7 +41,7 @@ title: "Модуль cert-manager: FAQ"
    * `letsencrypt-staging`
 
 Таким образом, дополнительный `ClusterIssuer` может потребоваться в случаях издания сертификатов:
-1. В удостоверяющем центре (УЦ), отличном от Let's Encrypt (в т.ч. в приватном). Поддерживаемые УЦ доступны [в документации `cert-manager`](https://cert-manager.io/docs/configuration/acme/dns01/)
+1. В удостоверяющем центре (УЦ), отличном от Let's Encrypt (в т.ч. в приватном). Поддерживаемые УЦ доступны в документации `cert-manager`
 2. Через Let's Encrypt с помощью метода `DNS-01` через сторонний провайдер.
 
 ### Как добавить дополнительный `ClusterIssuer`, использующий Let's Encrypt и метод подтверждения `DNS-01`?
@@ -49,13 +49,10 @@ title: "Модуль cert-manager: FAQ"
 Для подтверждения владения доменом через Let's Encrypt с помощью метода `DNS-01` требуется настроить возможность создания TXT-записей в публичном DNS.
 
 У `cert-manager` есть поддержка механизмов для создания TXT-записей в некоторых популярных DNS: `AzureDNS`, `Cloudflare`, `Google Cloud DNS` и т.д.  
-Полный перечень доступен [в документации `cert-manager`](https://cert-manager.io/docs/configuration/acme/dns01/).
-
-Модуль автоматически создает `ClusterIssuer` поддерживаемых cloud-провайдеров, при заполнении настроек модуля связанных с используемым облаком.  
-При необходимости можно создать такие `ClusterIssuer` самостоятельно.  
+Полный перечень доступен в документации `cert-manager`.
 
 Пример использования AWS Route53 доступен в разделе [Как защитить учетные данные `cert-manager`](#как-защитить-учетные-данные-cert-manager).  
-Актуальный перечень всех возможных для создания `ClusterIssuer` доступен в [шаблонах модуля](https://github.com/deckhouse/deckhouse/tree/main/modules/cert-manager/templates/cert-manager).
+Актуальный перечень всех возможных для создания `ClusterIssuer` доступен в шаблонах модуля.
 
 Использование сторонних DNS-провайдеров реализуется через метод `webhook`.  
 Когда `cert-manager` выполняет вызов `ACME` `DNS01`, он отправляет запрос на вебхук-сервер, который затем выполняет нужные операции для обновления записи DNS.  
@@ -63,7 +60,7 @@ title: "Модуль cert-manager: FAQ"
 
 В качестве примера рассмотрим использование сервиса `Yandex Cloud DNS`.
 
-1. Для обработки вебхука предварительно разместите в кластере сервис `Yandex Cloud DNS ACME webhook` согласно [официальной документации](https://github.com/yandex-cloud/cert-manager-webhook-yandex).
+1. Для обработки вебхука предварительно разместите в кластере сервис `Yandex Cloud DNS ACME webhook` согласно официальной документации.
 
 1. Затем создайте ресурс `ClusterIssuer`:
 
@@ -99,7 +96,7 @@ title: "Модуль cert-manager: FAQ"
 
 ### Как добавить дополнительный `Issuer` и `ClusterIssuer`, использующий HashiСorp Vault для выпуска сертификатов?
 
-Для выпуска сертификатов с помощью HashiСorp Vault, можете использовать [инструкцию](https://learn.hashicorp.com/tutorials/vault/kubernetes-cert-manager?in=vault/kubernetes).
+Для выпуска сертификатов с помощью HashiСorp Vault, можете использовать инструкцию.
 
 После конфигурации PKI и [включения авторизации](../../modules/user-authz/) в Kubernetes, нужно:
 - Создать `ServiceAccount` и скопировать ссылку на его `Secret`:
@@ -224,7 +221,7 @@ title: "Модуль cert-manager: FAQ"
 Если вы не хотите хранить учетные данные конфигурации Deckhouse (например, по соображениям безопасности), можете создать
 свой собственный `ClusterIssuer` / `Issuer`.
 
-Пример создания собственного `ClusterIssuer` для сервиса [route53](https://aws.amazon.com/route53/):
+Пример создания собственного `ClusterIssuer` для сервиса route53:
 - Создайте Secret с учетными данными:
 
   ```shell
@@ -398,4 +395,4 @@ CAA record does not match issuer
 
 то необходимо проверить `CAA (Certificate Authority Authorization)` DNS-запись у домена, для которого заказывается сертификат.
 Если вы хотите использовать Let’s Encrypt-сертификаты, у домена должна быть CAA-запись: `issue "letsencrypt.org"`.
-Подробнее про CAA можно почитать [в документации Let’s Encrypt](https://letsencrypt.org/docs/caa/).
+Подробнее про CAA можно почитать в документации Let’s Encrypt.

@@ -2,7 +2,7 @@
 title: "Модуль operator-prometheus"
 ---
 
-Модуль устанавливает [prometheus operator](https://github.com/coreos/prometheus-operator), который позволяет создавать и автоматизированно управлять инсталляциями [Prometheus](https://prometheus.io/).
+Модуль устанавливает prometheus operator, который позволяет создавать и автоматизированно управлять инсталляциями Prometheus.
 
 <!-- Исходник картинок: https://docs.google.com/drawings/d/1KMgawZD4q7jEYP-_g6FvUeJUaT3edro_u6_RsI3ZVvQ/edit -->
 
@@ -21,7 +21,7 @@ title: "Модуль operator-prometheus"
 ### Что делает Prometheus?
 
 В целом, сервер Prometheus делает две ключевых вещи — **собирает метрики** и **выполняет правила**:
-* Для каждого *target'а* (цель для мониторинга), каждый `scrape_interval`, делает HTTP запрос на этот *target*, получает в ответ метрики в [своем формате](https://github.com/prometheus/docs/blob/master/content/docs/instrumenting/exposition_formats.md#text-format-details), которые сохраняет к себе в базу
+* Для каждого *target'а* (цель для мониторинга), каждый `scrape_interval`, делает HTTP запрос на этот *target*, получает в ответ метрики в своем формате, которые сохраняет к себе в базу
 * Каждый `evaluation_interval` обрабатывает *rules*, на основании чего:
   * или шлет алерты
   * или записывает (себе же в базу) новые метрики (результат выполнения *rule'а*)
@@ -120,10 +120,10 @@ title: "Модуль operator-prometheus"
 ### Что делает Prometheus Operator?
 
 * С помощью механизма CRD (Custom Resource Definitions) определяет четыре custom ресурса:
-  * [prometheus](https://github.com/coreos/prometheus-operator/blob/master/Documentation/api.md#prometheus) — определяет инсталляцию (кластер) Prometheus
-  * [servicemonitor](https://github.com/coreos/prometheus-operator/blob/master/Documentation/api.md#servicemonitor) — определяет, как "мониторить" (собирать метрики) набор сервисов
-  * [alertmanager](https://github.com/coreos/prometheus-operator/blob/master/Documentation/api.md#alertmanager) — определяет кластер Alertmanager'ов
-  * [prometheusrule](https://github.com/coreos/prometheus-operator/blob/master/Documentation/api.md#prometheusrule) — определяет список Prometheus rules
+  * prometheus — определяет инсталляцию (кластер) Prometheus
+  * servicemonitor — определяет, как "мониторить" (собирать метрики) набор сервисов
+  * alertmanager — определяет кластер Alertmanager'ов
+  * prometheusrule — определяет список Prometheus rules
 * Следит за ресурсами `prometheus` и генерирует для каждого:
   * StatefulSet (с самим Prometheus'ом)
   * Secret с `prometheus.yaml` (конфиг Prometheus'а) и `configmaps.json` (конфиг для `prometheus-config-reloader`)
@@ -135,7 +135,7 @@ title: "Модуль operator-prometheus"
 
 * Два контейнера:
   * `prometheus` — сам Prometheus
-  * `prometheus-config-reloader` — [обвязка](https://github.com/coreos/prometheus-operator/tree/master/cmd/prometheus-config-reloader), которая:
+  * `prometheus-config-reloader` — обвязка, которая:
     * следит за изменениями `prometheus.yaml` и, при необходимости, вызывает reload конфигурации Prometheus'у (специальным HTTP-запросом, см. [подробнее ниже](#как-обрабатываются-service-monitorы))
     * следит за PrometheusRule'ами (см. [подробнее ниже](#как-обрабатываются-custome-resources-с-ruleами)) и по необходимости скачивает их и перезапускает Prometheus
 * Pod использует три volume:
@@ -147,9 +147,9 @@ title: "Модуль operator-prometheus"
 
 ![Как обрабатываются Service Monitor'ы](../../images/operator-prometheus/servicemonitors.png)
 
-* **(1)** Prometheus Operator читает (а также следит за добавлением/удалением/изменением) Service Monitor'ы (какие именно Service Monitor'ы — указано в самом ресурсе `prometheus`, см. подробней [официальную документацию](https://github.com/coreos/prometheus-operator/blob/master/Documentation/api.md#prometheusspec)).
+* **(1)** Prometheus Operator читает (а также следит за добавлением/удалением/изменением) Service Monitor'ы (какие именно Service Monitor'ы — указано в самом ресурсе `prometheus`, см. подробней официальную документацию).
 * **(2)** Для каждого Service Monitor'а, если в нем НЕ указан конкретный список namespace'ов (указано `any: true`), Prometheus Operator вычисляет (обращаясь к API Kubernetes) список namespace'ов, в которых есть Service'ы (подходящие под указанные в Service Monitor'е label'ы).
-* **(3)** На основании прочитанных ресурсов `servicemonitor` (см. [официальную документацию](https://github.com/coreos/prometheus-operator/blob/master/Documentation/api.md#servicemonitorspec)) и на основании вычисленных namespace'ов Prometheus Operator генерирует часть конфига (секцию `scrape_configs`) и сохраняет конфиг в соответствующий Secret.
+* **(3)** На основании прочитанных ресурсов `servicemonitor` (см. официальную документацию) и на основании вычисленных namespace'ов Prometheus Operator генерирует часть конфига (секцию `scrape_configs`) и сохраняет конфиг в соответствующий Secret.
 * **(4)** Штатными средствами самого Kubernetes данные из секрета прилетают в Pod (файл `prometheus.yaml` обновляется).
 * **(5)** Изменение файла замечает `prometheus-config-reloader`, который по HTTP отправляет запрос Prometheus'у на перезагрузку.
 * **(6)** Prometheus перечитывает конфиг и видит изменения в scrape_configs, которые обрабатывает уже согласно своей логике работы (см. подробнее выше).

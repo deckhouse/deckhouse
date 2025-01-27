@@ -3,12 +3,12 @@ title: "The cni-cilium module"
 description: The cni-cilium module provides networking in a cluster using the Cilium module.
 ---
 
-The `cni-cilium module` provides a network in a cluster. It is based on the [Cilium](https://cilium.io/) project.
+The `cni-cilium module` provides a network in a cluster. It is based on the Cilium project.
 
 ## Limitations
 
 1. Services with type `NodePort` and `LoadBalancer` are incompatible with hostNetwork endpoints in LB mode `DSR`. Switch to `SNAT` mode if it is required.
-2. `HostPort` pods only bind to [one IP address](https://github.com/deckhouse/deckhouse/issues/3035). If the OS has multiple ultiple interfaces/IP, Cilium will choose one, preferring `private` to `public`.
+2. `HostPort` pods only bind to one IP address. If the OS has multiple ultiple interfaces/IP, Cilium will choose one, preferring `private` to `public`.
 3. Kernel requirements:
    * Linux kernel version not lower than `5.7` for the `cni-cilium` module to work and work together with the [istio](../istio/), [openvpn](../openvpn/) or [node-local-dns]({% if site.d8Revision == 'CE' %}{{ site.urls.ru}}/products/kubernetes-platform/documentation/v1/modules/{% else %}..{% endif %}/node-local-dns/) modules.
 4. OS compatibility:
@@ -16,7 +16,7 @@ The `cni-cilium module` provides a network in a cluster. It is based on the [Cil
       * incompatible with version 18.04;
       * HWE kernel installation required for working with version 20.04.
     * CentOS:
-      * for versions 7 and 8, a new kernel from the [repository](https://elrepo.org) is required.
+      * for versions 7 and 8, a new kernel from the repository is required.
 
 ## Handling external traffic in different `bpfLB` modes (replacing kube-proxy from Cilium)
 
@@ -69,7 +69,7 @@ To use CiliumClusterwideNetworkPolicies, apply:
          node-role.kubernetes.io/control-plane: ""
    ```
 
-If CiliumClusterwideNetworkPolicies are not used, the control plane may work incorrectly for up to a minute during the reboot of `cilium-agent` pods. This occurs due to [Conntrack table reset](https://github.com/cilium/cilium/issues/19367). Binding to the `kube-apiserver` entity helps to bypass the bug.
+If CiliumClusterwideNetworkPolicies are not used, the control plane may work incorrectly for up to a minute during the reboot of `cilium-agent` pods. This occurs due to Conntrack table reset. Binding to the `kube-apiserver` entity helps to bypass the bug.
 
 ## Changing Cilium Operation Mode
 

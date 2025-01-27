@@ -232,7 +232,7 @@ export VAULT_ADDR=https://secretstoreexample.com
 
 Stronghold может использовать различные авторизационные данные для осуществления запросов в API Kubernetes:
 1. Использовать токен приложения, которое пытается авторизоваться в `stronghold`. В этом случае для каждого сервиса, авторизующегося в Stronghold, требуется в используемом ServiceAccount'е иметь clusterRole `system:auth-delegator` (либо права на API представленные выше).
-2. Использовать статичный токен отдельно созданного специально для `stronghold` `ServiceAccount` у которого имеются необходимые права. Настройка `stronghold` для такого случая подробно описана в [документации Vault](https://developer.hashicorp.com/vault/docs/auth/kubernetes#continue-using-long-lived-tokens).
+2. Использовать статичный токен отдельно созданного специально для `stronghold` `ServiceAccount` у которого имеются необходимые права. Настройка `stronghold` для такого случая подробно описана в документации Vault.
 
 ## Инжектирование переменных окружения
 
@@ -508,7 +508,7 @@ for {
 
 ### Официальный сайт Deckhouse Kubernetes Platform
 
-Перейдите на официальный сайт и воспользуйтесь [инструкцией](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/deckhouse-cli/#как-установить-deckhouse-cli)
+Перейдите на официальный сайт и воспользуйтесь [инструкцией](/deckhouse-cli/#как-установить-deckhouse-cli)
 
 ### Субдомен вашей Deckhouse Kubernetes Platform
 

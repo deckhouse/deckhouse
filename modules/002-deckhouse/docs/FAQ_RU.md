@@ -46,7 +46,7 @@ kubectl logs job.batch/kube-bench
      > deckhouse-debug-$(date +"%Y_%m_%d").tar.gz
    ```
 
-2. Отправьте получившийся архив [команде Deckhouse](https://github.com/deckhouse/deckhouse/issues/new/choose) для дальнейшего расследования.
+2. Отправьте получившийся архив команде Deckhouse для дальнейшего расследования.
 
 Данные, которые будут собраны:
 * состояние очереди Deckhouse;
@@ -80,7 +80,7 @@ kubectl logs job.batch/kube-bench
 kubectl -n <namespace_name> debug -it <pod_name> --image=ubuntu <container_name>
 ```
 
-Подробнее можно почитать в [официальной документации](https://kubernetes.io/docs/tasks/debug/debug-application/debug-running-pod/#ephemeral-container).
+Подробнее можно почитать в официальной документации.
 
 ## Как отлаживать проблемы на узлах с помощью ephemeral containers?
 
@@ -90,4 +90,4 @@ kubectl -n <namespace_name> debug -it <pod_name> --image=ubuntu <container_name>
 kubectl debug node/mynode -it --image=ubuntu
 ```
 
-Подробнее можно почитать в [официальной документации](https://kubernetes.io/docs/tasks/debug/debug-application/debug-running-pod/#node-shell-session).
+Подробнее можно почитать в официальной документации.

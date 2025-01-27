@@ -146,7 +146,7 @@ spec:
                                 description: Максимальное значение диапазона.
                     readOnlyRootFilesystem:
                       description: |
-                        Если установлен в `true`, разрешает запуск только тех подов, у всех контейнеров которых корневая файловая система доступна только для чтения (в поле `securityContext` установлено `readOnlyRootFilesystem: true`). Подробнее в [документации Kubernetes](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#securitycontext-v1-core).
+                        Если установлен в `true`, разрешает запуск только тех подов, у всех контейнеров которых корневая файловая система доступна только для чтения (в поле `securityContext` установлено `readOnlyRootFilesystem: true`). Подробнее в документации Kubernetes.
                     automountServiceAccountToken:
                       description: Разрешает запускать поды с автоматическим монтированием токена сервисного аккаунта.
                     seccompProfiles:
@@ -179,7 +179,7 @@ spec:
                       description: |
                         Список политик проверки подписи образов контейнеров.
 
-                        Образы контейнеров должны быть подписаны с помощью инструмента [Cosign](https://docs.sigstore.dev/cosign/key_management/signing_with_self-managed_keys/#:~:text=To%20generate%20a%20key%20pair,prompted%20to%20provide%20a%20password.&text=Alternatively%2C%20you%20can%20use%20the,%2C%20ECDSA%2C%20and%20ED25519%20keys).
+                        Образы контейнеров должны быть подписаны с помощью инструмента Cosign.
                       type: array
                       items:
                         type: object
@@ -216,19 +216,19 @@ spec:
                           description: |
                             Указывает селектор меток для фильтрации пространств имен.
 
-                            Подробнее в [документации Kubernetes](https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/).
+                            Подробнее в документации Kubernetes.
                           properties:
                             matchLabels:
                               description: Список лейблов, которые должно иметь пространство имен.
                             matchExpressions:
-                              description: Список [условий](https://kubernetes.io/ru/docs/concepts/overview/working-with-objects/labels/#ресурсы-поддерживающие-условия-набора) лейблов для пространств имен.
+                              description: Список условий лейблов для пространств имен.
                     labelSelector:
                       description: |
                         Указывает селектор лейблов для фильтрации подов.
 
-                        Подробнее в [документации Kubernetes](https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/).
+                        Подробнее в документации Kubernetes.
                       properties:
                         matchLabels:
                           description: Список лейблов, которые должен иметь под.
                         matchExpressions:
-                          description: Список [условий](https://kubernetes.io/ru/docs/concepts/overview/working-with-objects/labels/#ресурсы-поддерживающие-условия-набора) лейблов для подов.
+                          description: Список условий лейблов для подов.

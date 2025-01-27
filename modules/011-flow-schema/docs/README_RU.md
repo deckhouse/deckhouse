@@ -2,7 +2,7 @@
 title: "Модуль flow-schema"
 ---
 
-Модуль применяет [FlowSchema and PriorityLevelConfiguration](https://kubernetes.io/docs/concepts/cluster-administration/flow-control/) для предотвращения перегрузки API.
+Модуль применяет FlowSchema and PriorityLevelConfiguration для предотвращения перегрузки API.
 
 `FlowSchema` устанавливает `PriorityLevel` для `list`-запросов от всех сервис-аккаунтов в пространствах имен Deckhouse (у которых установлен label `heritage: deckhouse`) к следующим apiGroup:
 * `v1` (Pod, Secret, ConfigMap, Node и т. д.). Это помогает в случае большого количества основных ресурсов в кластере (например, Secret'ов или подов).

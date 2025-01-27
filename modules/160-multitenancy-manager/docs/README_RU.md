@@ -11,8 +11,8 @@ description: Мультитенантность и проекты в Kubernetes.
 ## Для чего это нужно?
 
 Стандартный ресурс `Namespace`, который используется для логического разделения ресурсов в Kubernetes, не предоставляет необходимых функций, поэтому не является изолированным окружением:
-* [Потребление ресурсов подами](https://kubernetes.io/docs/concepts/policy/resource-quotas/) по умолчанию не ограничено;
-* [Сетевое взаимодействие](https://kubernetes.io/docs/concepts/services-networking/network-policies/) с другими подами по умолчанию работает из любой точки кластера;
+* Потребление ресурсов подами по умолчанию не ограничено;
+* Сетевое взаимодействие с другими подами по умолчанию работает из любой точки кластера;
 * Неограниченный доступ к ресурсам узла: адресное пространство, сетевое пространство, смонтированные директории хоста.
 
 Возможности настройки пространств имен `Namespace` не полностью соответствуют современным требованиям к разработке. По умолчанию для `Namespace` не включены следующие функции:
@@ -37,13 +37,13 @@ description: Мультитенантность и проекты в Kubernetes.
 
 ### Создание проекта
 
-Для создания проекта используются [ресурсы](https://kubernetes.io/docs/concepts/extend-kubernetes/api-extension/custom-resources/):
+Для создания проекта используются ресурсы:
 * [ProjectTemplate](cr.html#projecttemplate) — ресурс, который описывает шаблон проекта. При помощи него задается список ресурсов, которые будут созданы в проекте, а также схема параметров, которые можно передать при создании проекта;
 * [Project](cr.html#project) — ресурс, который описывает конкретный проект.
 
 При создании ресурса [Project](cr.html#project) из определенного [ProjectTemplate](cr.html#projecttemplate) происходит следующее:
 1. Переданные [параметры](cr.html#project-v1alpha2-spec-parameters) валидируются по OpenAPI-спецификации (параметр [openAPI](cr.html#projecttemplate-v1alpha1-spec-parametersschema) ресурса [ProjectTemplate](cr.html#projecttemplate));
-1. Выполняется рендеринг [шаблона для ресурсов](cr.html#projecttemplate-v1alpha1-spec-resourcestemplate) с помощью [Helm](https://helm.sh/docs/). Значения для рендеринга берутся из параметра [parameters](cr.html#project-v1alpha2-spec-parameters) ресурса [Project](cr.html#project);
+1. Выполняется рендеринг [шаблона для ресурсов](cr.html#projecttemplate-v1alpha1-spec-resourcestemplate) с помощью Helm. Значения для рендеринга берутся из параметра [parameters](cr.html#project-v1alpha2-spec-parameters) ресурса [Project](cr.html#project);
 1. Cоздается `Namespace` с именем, которое совпадает c именем [Project](cr.html#project);
 1. По очереди создаются все ресурсы, описанные в шаблоне.
 

@@ -9,18 +9,18 @@ spec:
             description: |-
               Определяет версионированную схему представления этого объекта. Серверы должны преобразовывать распознанные схемы в последнее внутреннее значение и могут отклонять нераспознанные значения.
 
-              Больше информации [в документации](https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources).
+              Больше информации в документации.
           kind:
             description: |-
               Значение, представляющее REST-ресурс, который описывает данный объект. Серверы могут определить его из конечной точки, к которой клиент отправляет запросы. Не может быть изменено. Используется в CamelCase.
 
-              Больше информации [в документации](https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds).
+              Больше информации в документации.
           metadata:
           spec:
             description: |-
               Спецификация чекпоинта.
 
-              Больше информации [в документации](https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#spec-and-status).
+              Больше информации в документации.
             properties:
               containerName:
                 description: |-

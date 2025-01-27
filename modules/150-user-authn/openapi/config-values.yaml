@@ -106,7 +106,7 @@ properties:
     description: |
       Manually enable the high availability mode.
 
-      By default, Deckhouse automatically decides whether to enable the HA mode. Click [here](https://deckhouse.io/products/kubernetes-platform/documentation/v1/deckhouse-configure-global.html#parameters) to learn more about the HA mode for modules.
+      By default, Deckhouse automatically decides whether to enable the HA mode. Click [here](/deckhouse-configure-global.html#parameters) to learn more about the HA mode for modules.
   nodeSelector:
     type: object
     additionalProperties:
@@ -115,7 +115,7 @@ properties:
     description: |
       The same as in the Pods' `spec.nodeSelector` parameter in Kubernetes.
 
-      If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/products/kubernetes-platform/documentation/v1/#advanced-scheduling).
+      If the parameter is omitted or `false`, it will be determined [automatically](/#advanced-scheduling).
   tolerations:
     type: array
     items:
@@ -141,7 +141,7 @@ properties:
     description: |
       The same as in the Pods' `spec.tolerations` parameter in Kubernetes;
 
-      If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/products/kubernetes-platform/documentation/v1/#advanced-scheduling).
+      If the parameter is omitted or `false`, it will be determined [automatically](/#advanced-scheduling).
   ingressClass:
     type: string
     pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
@@ -196,12 +196,12 @@ properties:
             description: |
               The name of the Secret in the `d8-system` namespace to use with Dex/kubeconfig-generator.
 
-              This Secret must have the [kubernetes.io/tls](https://kubernetes.github.io/ingress-nginx/user-guide/tls/#tls-secrets) format.
+              This Secret must have the kubernetes.io/tls format.
             default: "false"
   controlPlaneConfigurator:
     type: object
     default: {}
-    description: 'Parameters of the [control-plane-manager](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/control-plane-manager/) module.'
+    description: 'Parameters of the [control-plane-manager](/modules/control-plane-manager/) module.'
     properties:
       enabled:
         type: boolean

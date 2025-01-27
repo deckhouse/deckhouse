@@ -19,7 +19,7 @@ This module:
 
 ## Architecture
 
-The module is based on the [Falco](https://falco.org/) system. 
+The module is based on the Falco system. 
 Deckhouse deploys Falco agents (which run as a DaemonSet) on every node. The agents then start consuming kernel / kube audit events.
 
 ![Falco DaemonSet](../../images/runtime-audit-engine/falco_daemonset.svg)
@@ -37,7 +37,7 @@ There are four different containers in a single agent Pod:
 
 1. `falco` — collects events, enriches them with metadata and sends them to stdout.
 2. `rules-loader` — collects ([FalcoAuditRules](cr.html#falcoauditrules)) CRs from Kubernetes and saves them in a shared directory (empty dir).
-3. `falcosidekick` — it takes a `Falco` events and forward them to different outputs in a fan-out way. By default, it exports events as metrics on which alerts can be generated. [Falcosidekick source code](https://github.com/falcosecurity/falcosidekick).
+3. `falcosidekick` — it takes a `Falco` events and forward them to different outputs in a fan-out way. By default, it exports events as metrics on which alerts can be generated. Falcosidekick source code.
 4. `kube-rbac-proxy` — protects the `falcosidekick` metric's endpoint.
 
 ## Audit Rules
@@ -45,7 +45,7 @@ There are four different containers in a single agent Pod:
 The event collection itself is a low-yielding activity because the amount of data coming from the Linux kernel is too large to be analyzed by a human.
 Rules address this problem by collecting events according to certain pattens that can help in detecting suspicious activities.
 
-The main part of a rule is a conditional expression (which uses the [conditions syntax](https://falco.org/docs/rules/conditions/)).
+The main part of a rule is a conditional expression (which uses the conditions syntax).
 
 ### Embedded rules
 
@@ -58,7 +58,7 @@ There is a built-in set of rules that cannot be disabled. It helps to identify p
 ### Custom audit rules
 
 Users can use a `FalcoAuditRules` CRD to add custom security audit rules. 
-Each Falco agent Pod has a sidecar container running [shell-operator](https://github.com/flant/shell-operator).
+Each Falco agent Pod has a sidecar container running shell-operator.
 This sidecar reads rules from the custom resources, converts them to Falco rules and saves Falco rules in the Pod's `/etc/falco/rules.d/` directory.
 Falco automatically reloads the configuration when a new rule becomes available.
 
@@ -75,7 +75,7 @@ The module uses the eBPF Falco driver to ingest syscall data. It is better suite
 The eBPF driver has the following requirements:
 * The eBPF probe may not work for every system.
 * Linux kernel version >= 5.8.
-* Enabled [eBPF](https://www.kernel.org/doc/html/v5.8/bpf/btf.html). Check with the command `ls -lah /sys/kernel/btf/vmlinux`, or find `CONFIG_DEBUG_INFO_BTF=y` in the list of kernel build parameters.
+* Enabled eBPF. Check with the command `ls -lah /sys/kernel/btf/vmlinux`, or find `CONFIG_DEBUG_INFO_BTF=y` in the list of kernel build parameters.
 
 > eBPF probes may not work on some systems.
 
@@ -85,7 +85,7 @@ Falco agents are running on every node. Therefore, the resource consumption of e
 
 ## Kubernetes Audit Webhook
 
-[Webhook audit mode](https://kubernetes.io/docs/tasks/debug/debug-cluster/audit/#webhook-backend) should be configured to collect audit events of `kube-apiserver`. 
+Webhook audit mode should be configured to collect audit events of `kube-apiserver`. 
 If the [control-plane-manager](../control-plane-manager/) module is enabled, settings will be automatically applied when the `runtime-audit-engine` module is enabled.
 
 You can manually configure the webhook for Kubernetes clusters with a control plane that is not controlled by Deckhouse:

@@ -52,10 +52,6 @@ spec:
           type: integer
           description: Maximum amount of instances in the group.
           jsonPath: .status.max
-        - name: Standby
-          type: integer
-          description: Number of overprovisioned instances in the group.
-          jsonPath: .status.standby
         - name: Status
           type: string
           description: Status message about group handling.
@@ -109,9 +105,6 @@ spec:
                 upToDate:
                   type: integer
                   description: Number of up-to-date nodes in the group.
-                standby:
-                  type: integer
-                  description: Number of overprovisioned instances in the group.
                 error:
                   type: string
                   description: "Error message about possible problems with the group handling."
@@ -168,19 +161,11 @@ spec:
                 nodeType:
                   description: |
                     The type of nodes this group provides.
-                    - `Cloud` — nodes for this group will be automatically created (and deleted) in the cloud of the specified cloud provider;
                     - `Static` — a static node hosted on a bare metal or virtual machine. The cloud-controller-manager does not manage the
                       node even of one of the cloud providers is enabled;
-                    - `Hybrid` — a static node (created manually or using any external tools) hosted in the cloud integrated with
-                      one of the cloud provider. This node has the CSI running, and it is managed by the
-                      cloud-controller-manager: the Node object automatically gets the information about the zone and region
-                      based on the cloud data; if a node gets deleted from the cloud, its corresponding Node object
-                      will be deleted in Kubernetes.
                   type: string
                   enum:
-                    - Cloud
                     - Static
-                    - Hybrid
                 kubernetesVersion:
                   description: |
                     The desired minor version of Kubernetes.
@@ -190,10 +175,7 @@ spec:
                   x-doc-examples: ["1.29"]
                   enum:
                     - "1.27"
-                    - "1.28"
                     - "1.29"
-                    - "1.30"
-                    - "1.31"
                 cri:
                   type: object
                   description: |
@@ -223,113 +205,6 @@ spec:
                           description: |
                             Set the max concurrent downloads for each pull.
                           x-doc-default: 3
-                cloudInstances:
-                  description: |
-                    Parameter for provisioning the cloud-based VMs.
-
-                    > **Caution!** Can only be used together with `nodeType: CloudEphemeral`.
-                  type: object
-                  required:
-                    - classReference
-                    - minPerZone
-                    - maxPerZone
-                  properties:
-                    zones:
-                      description: |
-                        List of availability zones to create instances in.
-
-                        The default value depends on the cloud provider selected and usually corresponds to all zones of the region being used.
-                      x-doc-examples: [[Helsinki, Espoo, Tampere]]
-                      type: array
-                      items:
-                        type: string
-                    minPerZone:
-                      description: |
-                        The minimum number of instances for the group in each zone.
-
-                        This value is used in the `MachineDeployment` object and as a lower bound in cluster-autoscaler.
-                      type: integer
-                      minimum: 0
-                    maxPerZone:
-                      description: |
-                        The maximum number of instances for the group in each zone.
-
-                        This value is used as the upper bound in cluster-autoscaler.
-
-                        With a value of 0, you need to set capacity for some `InstanceClass`. Get more details in the description of the necessary `InstanceClass`.
-                      type: integer
-                      minimum: 0
-                    maxUnavailablePerZone:
-                      description: |
-                        The maximum number of unavailable instances (during rollout) in the group in each zone.
-                      type: integer
-                      x-doc-default: 0
-                      minimum: 0
-                    maxSurgePerZone:
-                      description: |
-                        The maximum number of instances to rollout simultaneously in the group in each zone.
-                      type: integer
-                      x-doc-default: 1
-                      minimum: 0
-                    standby:
-                      description: |
-                        The summary number of overprovisioned nodes for this `NodeGroup` all zones.
-
-                        An overprovisioned node is a cluster node on which resources are reserved that are available at any time for scaling. The presence of such a node allows the cluster autoscaler not to wait for node initialization (which may take several minutes), but to immediately place a load on it.
-
-                        The value can be an absolute number (for example, 2) or a percentage of desired nodes (for example, 10%). If a percentage is specified, the absolute number is calculated based on the percentage of the maximum number of nodes (the [maxPerZone](#nodegroup-v1-spec-cloudinstances-maxperzone) parameter) rounded down, but not less than one.
-                      pattern: "^[0-9]+%?$"
-                      x-kubernetes-int-or-string: true
-                    standbyHolder:
-                      description: |
-                        Amount of reserved resources.
-
-                        Used to determine whether to order [overprovisioned nodes](#nodegroup-v1alpha1-spec-cloudinstances-standby).
-                      type: object
-                      properties:
-                        notHeldResources:
-                          description: |
-                            Describes the resources that will not be held (consumed) by the standby holder.
-                          type: object
-                          properties:
-                            cpu:
-                              description: |
-                                Describes the amount of CPU that will not be held by standby holder on Nodes from this NodeGroup.
-
-                                The value can be an absolute number of cpus (for example, 2) as well as a milli representation (for example, 1500m).
-                              pattern: "^[0-9]+m?$"
-                              x-kubernetes-int-or-string: true
-                            memory:
-                              description: |
-                                Describes the amount of memory that will not be held by standby holder on Nodes from this NodeGroup.
-
-                                The value can be an absolute number of bytes (for example, 128974848) as well as a fixed-point number using one of memory suffixes: G, Gi, M, Mi.
-                              pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|K|Ei|Pi|Ti|Gi|Mi|Ki)?$'
-                              x-kubernetes-int-or-string: true
-                    classReference:
-                      description: |
-                        The reference to the `InstanceClass` object. It is unique for each `cloud-provider-*` module.
-                      type: object
-                      properties:
-                        kind:
-                          description: |
-                            The object type (e.g., `OpenStackInstanceClass`). The object type is specified in the documentation of the corresponding `cloud-provider-` module.
-                          type: string
-                          enum:
-                            - OpenStackInstanceClass
-                            - GCPInstanceClass
-                            - VsphereInstanceClass
-                            - AWSInstanceClass
-                            - YandexInstanceClass
-                            - AzureInstanceClass
-                            - VCDInstanceClass
-                            - ZvirtInstanceClass
-                            - DynamixInstanceClass
-                            - HuaweiCloudInstanceClass
-                        name:
-                          description: |
-                            The name of the required `InstanceClass` object (e.g., `finland-medium`).
-                          type: string
                 nodeTemplate:
                   description: |
                     Specification of some of the fields that will be maintained in all nodes of the group.
@@ -351,7 +226,7 @@ spec:
                         type: string
                       x-kubernetes-preserve-unknown-fields: true
                       description: |
-                        Similar to the standard `metadata.labels` [field](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#objectmeta-v1-meta).
+                        Similar to the standard `metadata.labels` field.
                       x-doc-examples:
                         - environment: production
                           app: warp-drive-ai
@@ -361,13 +236,13 @@ spec:
                         type: string
                       x-kubernetes-preserve-unknown-fields: true
                       description: |
-                        Similar to the standard `metadata.annotations` [field](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#objectmeta-v1-meta).
+                        Similar to the standard `metadata.annotations` field.
                       x-doc-examples:
                         - ai.fleet.com/discombobulate: "true"
                     taints:
                       type: array
                       description: |
-                        Similar to the `.spec.taints` field of the [Node](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#taint-v1-core) object.
+                        Similar to the `.spec.taints` field of the Node object.
 
                         **Caution!** Only `effect`, `key`, `value` fields are available.
                       x-doc-examples:
@@ -418,7 +293,7 @@ spec:
                     period:
                       type: string
                       description: |
-                        The time interval to use for the chaos monkey (can be specified in the [Go format](https://golang.org/pkg/time/#ParseDuration)).
+                        The time interval to use for the chaos monkey (can be specified in the Go format).
                       pattern: "^[0-9]+[mh]{1}$"
                       x-doc-default: 6h
                 operatingSystem:
@@ -475,7 +350,7 @@ spec:
 
                             **Caution!** This setting ignores (nodes will be approved without draining Pods):
                             - for the nodeGroup `master` with a single node;
-                            - for a single `ready` node in a nodeGroup [picked out](https://deckhouse.io/products/kubernetes-platform/documentation/v1/deckhouse-faq.html#how-do-i-run-deckhouse-on-a-particular-node) for Deckhouse placement.
+                            - for a single `ready` node in a nodeGroup [picked out](/deckhouse-faq.html#how-do-i-run-deckhouse-on-a-particular-node) for Deckhouse placement.
                         windows:
                           type: array
                           description: |
@@ -667,10 +542,6 @@ spec:
           type: integer
           description: Maximum amount of instances in the group.
           jsonPath: .status.max
-        - name: Standby
-          type: integer
-          description: Number of overprovisioned instances in the group.
-          jsonPath: .status.standby
         - name: Status
           type: string
           description: Status message about group handling.
@@ -724,9 +595,6 @@ spec:
                 upToDate:
                   type: integer
                   description: Number of up-to-date nodes in the group.
-                standby:
-                  type: integer
-                  description: Number of overprovisioned instances in the group.
                 error:
                   type: string
                   description: "Error message about possible problems with the group handling."
@@ -782,7 +650,6 @@ spec:
                 nodeType:
                   description: |
                     The type of nodes this group provides.
-                    - `Cloud` — nodes for this group will be automatically created (and deleted) in the cloud of the specified cloud provider;
                     - `Static` — a static node hosted on a bare metal or virtual machine. The cloud-controller-manager does not manage the
                       node even of one of the cloud providers is enabled;
                     - `Hybrid` — a static node (created manually or using any external tools) hosted in the cloud integrated with
@@ -792,9 +659,7 @@ spec:
                       will be deleted in Kubernetes.
                   type: string
                   enum:
-                    - Cloud
                     - Static
-                    - Hybrid
                 cri:
                   type: object
                   description: |
@@ -862,111 +727,6 @@ spec:
                     - properties:
                         type:
                           enum: [NotManaged]
-                cloudInstances:
-                  description: |
-                    Parameter for provisioning the cloud-based VMs.
-
-                    > **Caution!** Can only be used together with `nodeType: CloudEphemeral`.
-                  type: object
-                  required:
-                    - classReference
-                    - minPerZone
-                    - maxPerZone
-                  properties:
-                    zones:
-                      description: |
-                        List of availability zones to create instances in.
-
-                        The default value depends on the cloud provider selected and usually corresponds to all zones of the region being used.
-                      x-doc-examples: [[Helsinki, Espoo, Tampere]]
-                      type: array
-                      items:
-                        type: string
-                    minPerZone:
-                      description: |
-                        The minimum number of instances for the group in each zone.
-
-                        This value is used in the `MachineDeployment` object and as a lower bound in cluster-autoscaler.
-                      type: integer
-                      minimum: 0
-                    maxPerZone:
-                      description: |
-                        The maximum number of instances for the group in each zone.
-
-                        This value is used as the upper bound in cluster-autoscaler.
-                      type: integer
-                      minimum: 0
-                    maxUnavailablePerZone:
-                      description: |
-                        The maximum number of unavailable instances (during rollout) in the group in each zone.
-                      type: integer
-                      x-doc-default: 0
-                      minimum: 0
-                    maxSurgePerZone:
-                      description: |
-                        The maximum number of instances to rollout simultaneously in the group in each zone.
-                      type: integer
-                      x-doc-default: 1
-                      minimum: 0
-                    standby:
-                      description: |
-                        The summary number of overprovisioned nodes for this `NodeGroup` in all [zones](#nodegroup-v1alpha2-spec-cloudinstances-zones).
-
-                        An overprovisioned node is a cluster node on which resources are reserved that are available at any time for scaling. The presence of such a node allows the cluster autoscaler not to wait for node initialization (which may take several minutes), but to immediately place a load on it.
-
-                        The value can be an absolute number (for example, 2) or a percentage of desired nodes (for example, 10%). If a percentage is specified, the absolute number is calculated based on the percentage of the maximum number of nodes (the [maxPerZone](#nodegroup-v1alpha2-spec-cloudinstances-maxperzone) parameter) rounded down, but not less than one.
-                      pattern: "^[0-9]+%?$"
-                      x-kubernetes-int-or-string: true
-                    standbyHolder:
-                      description: |
-                        Amount of reserved resources.
-
-                        Used to determine whether to order [overprovisioned nodes](#nodegroup-v1alpha2-spec-cloudinstances-standby).
-                      type: object
-                      properties:
-                        notHeldResources:
-                          description: |
-                            Describes the resources that will not be held (consumed) by the standby holder.
-                          type: object
-                          properties:
-                            cpu:
-                              description: |
-                                Describes the amount of CPU that will not be held by standby holder on Nodes from this NodeGroup.
-
-                                The value can be an absolute number of cpus (for example, 2) as well as a milli representation (for example, 1500m).
-                              pattern: "^[0-9]+m?$"
-                              x-kubernetes-int-or-string: true
-                            memory:
-                              description: |
-                                Describes the amount of memory that will not be held by standby holder on Nodes from this NodeGroup.
-
-                                The value can be an absolute number of bytes (for example, 128974848) as well as a fixed-point number using one of memory suffixes: G, Gi, M, Mi.
-                              pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|K|Ei|Pi|Ti|Gi|Mi|Ki)?$'
-                              x-kubernetes-int-or-string: true
-                    classReference:
-                      description: |
-                        The reference to the `InstanceClass` object. It is unique for each `cloud-provider-*` module.
-                      type: object
-                      properties:
-                        kind:
-                          description: |
-                            The object type (e.g., `OpenStackInstanceClass`). The object type is specified in the documentation of the corresponding `cloud-provider-` module.
-                          type: string
-                          enum:
-                            - OpenStackInstanceClass
-                            - GCPInstanceClass
-                            - VsphereInstanceClass
-                            - AWSInstanceClass
-                            - YandexInstanceClass
-                            - AzureInstanceClass
-                            - VCDInstanceClass
-                            - ZvirtInstanceClass
-                            - DynamixInstanceClass
-                            - HuaweiCloudInstanceClass
-                        name:
-                          description: |
-                            The name of the required `InstanceClass` object (e.g., `finland-medium`).
-                          type: string
                 nodeTemplate:
                   description: |
                     Specification of some of the fields that will be maintained in all nodes of the group.
@@ -988,7 +748,7 @@ spec:
                         type: string
                       x-kubernetes-preserve-unknown-fields: true
                       description: |
-                        Similar to the standard `metadata.labels` [field](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#objectmeta-v1-meta).
+                        Similar to the standard `metadata.labels` field.
                       x-doc-examples:
                         - environment: production
                           app: warp-drive-ai
@@ -998,13 +758,13 @@ spec:
                         type: string
                       x-kubernetes-preserve-unknown-fields: true
                       description: |
-                        Similar to the standard `metadata.annotations` [field](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#objectmeta-v1-meta).
+                        Similar to the standard `metadata.annotations` field.
                       x-doc-examples:
                         - ai.fleet.com/discombobulate: "true"
                     taints:
                       type: array
                       description: |
-                        Similar to the `.spec.taints` field of the [Node](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#taint-v1-core) object.
+                        Similar to the `.spec.taints` field of the Node object.
 
                         **Caution!** Only `effect`, `key`, `value` fields are available.
                       x-doc-examples:
@@ -1045,7 +805,7 @@ spec:
                     period:
                       type: string
                       description: |
-                        The time interval to use for the chaos monkey (can be specified in the [Go format](https://golang.org/pkg/time/#ParseDuration)).
+                        The time interval to use for the chaos monkey (can be specified in the Go format).
                       pattern: "^[0-9]+[mh]{1}$"
                       x-doc-default: 6h
                 operatingSystem:
@@ -1100,7 +860,7 @@ spec:
 
                             **Caution!** This setting ignores (nodes will be approved without draining Pods):
                             - for the nodeGroup `master` with a single node;
-                            - for a single `ready` node in a nodeGroup [picked out](https://deckhouse.io/products/kubernetes-platform/documentation/v1/deckhouse-faq.html#how-do-i-run-deckhouse-on-a-particular-node) for Deckhouse placement.
+                            - for a single `ready` node in a nodeGroup [picked out](/deckhouse-faq.html#how-do-i-run-deckhouse-on-a-particular-node) for Deckhouse placement.
                         windows:
                           type: array
                           description: |
@@ -1273,10 +1033,6 @@ spec:
           type: integer
           description: Maximum amount of instances in the group.
           jsonPath: .status.max
-        - name: Standby
-          type: integer
-          description: Number of overprovisioned instances in the group.
-          jsonPath: .status.standby
         - name: Status
           type: string
           description: Status message about group handling.
@@ -1305,37 +1061,6 @@ spec:
           type: object
           description: |
             Describes the runtime parameters of the node group.
-          x-doc-examples:
-          - |
-              ```yaml
-              # NodeGroup for cloud nodes in AWS.
-              apiVersion: deckhouse.io/v1
-              kind: NodeGroup
-              metadata:
-                name: test
-              spec:
-                nodeType: CloudEphemeral
-                cloudInstances:
-                  zones:
-                    - eu-west-1a
-                    - eu-west-1b
-                  minPerZone: 1
-                  maxPerZone: 2
-                  classReference:
-                    kind: AWSInstanceClass
-                    name: test
-                nodeTemplate:
-                  labels:
-                    tier: test
-              ---
-              # NodeGroup for static nodes on bare metal servers (or VMs).
-              apiVersion: deckhouse.io/v1
-              kind: NodeGroup
-              metadata:
-                name: worker
-              spec:
-                nodeType: Static
-              ```
           required:
             - spec
           properties:
@@ -1375,9 +1100,6 @@ spec:
                 upToDate:
                   type: integer
                   description: Number of up-to-date nodes in the group.
-                standby:
-                  type: integer
-                  description: Number of overprovisioned instances in the group.
                 error:
                   type: string
                   description: "Error message about possible problems with the group handling."
@@ -1480,20 +1202,10 @@ spec:
                 nodeType:
                   description: |
                     The type of nodes this group provides:
-                    - `CloudEphemeral` — nodes for this group will be automatically created (and deleted) in the cloud of the specified cloud provider;
-                    - `CloudPermanent` — nodes from ProviderClusterConfiguration will be created via dhctl;
-                    - `CloudStatic` — a static node (created manually or using any external tools) hosted in the cloud integrated with
-                      one of the cloud providers. This node has the CSI running, and it is managed by the
-                      cloud-controller-manager: the `Node` object automatically gets the information about the zone and region
-                      based on the cloud data; if a node gets deleted from the cloud, its corresponding Node object
-                      will be deleted in Kubernetes;
                     - `Static` — a static node hosted on a bare metal or virtual machine. The cloud-controller-manager does not manage the
                       node even if one of the cloud providers is enabled.
                   type: string
                   enum:
-                    - CloudEphemeral
-                    - CloudPermanent
-                    - CloudStatic
                     - Static
                 cri:
                   type: object
@@ -1632,133 +1344,6 @@ spec:
                       type: integer
                       minimum: 0
                       default: 0
-                cloudInstances:
-                  description: |
-                    Parameter for provisioning the cloud-based VMs.
-
-                    > **Caution!** Can only be used together with `nodeType: CloudEphemeral`.
-                  type: object
-                  required:
-                    - classReference
-                    - minPerZone
-                    - maxPerZone
-                  properties:
-                    quickShutdown:
-                      description: Lowers CloudEphemeral machine drain timeout to 5 minutes.
-                      type: boolean
-                    zones:
-                      description: |
-                        List of availability zones to create instances in.
-
-                        The default value depends on the cloud provider selected and usually corresponds to all zones of the region being used.
-                      x-doc-examples: [[Helsinki, Espoo, Tampere]]
-                      type: array
-                      items:
-                        type: string
-                    minPerZone:
-                      description: |
-                        The minimum number of instances for the group in each zone.
-
-                        This value is used in the `MachineDeployment` object and as a lower bound in cluster-autoscaler.
-                      type: integer
-                      minimum: 0
-                    maxPerZone:
-                      description: |
-                        The maximum number of instances for the group in each zone.
-
-                        This value is used as the upper bound in cluster-autoscaler.
-                      type: integer
-                      minimum: 0
-                    priority:
-                      type: integer
-                      description: |
-                        Priority of the node group.
-
-                        When scaling a cluster, the autoscaler will first select node groups with a higher priority set. If several node groups have the same priority, the autoscaler randomly selects a group of them.
-
-                        Using priorities can be convenient to prefer ordering cheaper nodes (for example, spot instances) over more expensive ones.
-                    maxUnavailablePerZone:
-                      description: |
-                        The maximum number of unavailable instances (during rollout) in the group in each zone.
-                      type: integer
-                      x-doc-default: 0
-                      minimum: 0
-                    maxSurgePerZone:
-                      description: |
-                        The maximum number of instances to rollout simultaneously in the group in each zone.
-                      type: integer
-                      x-doc-default: 1
-                      minimum: 0
-                    standby:
-                      description: |
-                        The summary number of overprovisioned nodes for this `NodeGroup` in all [zones](#nodegroup-v1-spec-cloudinstances-zones).
-
-                        An overprovisioned node is a cluster node on which resources are reserved that are available at any time for scaling. The presence of such a node allows the cluster autoscaler not to wait for node initialization (which may take several minutes), but to immediately place a load on it.
-
-                        The value can be an absolute number (for example, 2) or a percentage of desired nodes (for example, 10%). If a percentage is specified, the absolute number is calculated based on the percentage of the maximum number of nodes (the [maxPerZone](#nodegroup-v1-spec-cloudinstances-maxperzone) parameter) rounded down, but not less than one.
-                      pattern: "^[0-9]+%?$"
-                      x-kubernetes-int-or-string: true
-                    standbyHolder:
-                      description: |
-                        Amount of reserved resources.
-
-                        Used to determine whether to order [overprovisioned nodes](#nodegroup-v1-spec-cloudinstances-standby).
-                      type: object
-                      properties:
-                        overprovisioningRate:
-                          type: integer
-                          minimum: 1
-                          maximum: 80
-                          x-doc-default: 50
-                          description: |
-                            Percentage of reserved resources calculated from the capacity of a node of a `NodeGroup`.
-                        notHeldResources:
-                          deprecated: true
-                          x-doc-deprecated: true
-                          description: |
-                            Deprecated: the parameter is no longer used. Use the `overprovisioningRate` parameter.
-
-                            Describes the resources that will not be held (consumed) by the standby holder.
-                          type: object
-                          properties:
-                            cpu:
-                              description: |
-                                Describes the amount of CPU that will not be held by standby holder on Nodes from this NodeGroup.
-
-                                The value can be an absolute number of cpus (for example, 2) as well as a milli representation (for example, 1500m).
-                              pattern: "^[0-9]+m?$"
-                              x-kubernetes-int-or-string: true
-                            memory:
-                              description: |
-                                Describes the amount of memory that will not be held by standby holder on Nodes from this NodeGroup.
-
-                                The value can be an absolute number of bytes (for example, 128974848) as well as a fixed-point number using one of memory suffixes: G, Gi, M, Mi.
-                              pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|K|Ei|Pi|Ti|Gi|Mi|Ki)?$'
-                              x-kubernetes-int-or-string: true
-                    classReference:
-                      description: |
-                        The reference to the `InstanceClass` object. It is unique for each `cloud-provider-*` module.
-                      type: object
-                      properties:
-                        kind:
-                          description: |
-                            The object type (e.g., `OpenStackInstanceClass`). The object type is specified in the documentation of the corresponding `cloud-provider-` module.
-                          type: string
-                          enum:
-                            - OpenStackInstanceClass
-                            - GCPInstanceClass
-                            - VsphereInstanceClass
-                            - AWSInstanceClass
-                            - YandexInstanceClass
-                            - AzureInstanceClass
-                            - VCDInstanceClass
-                            - ZvirtInstanceClass
-                            - DynamixInstanceClass
-                            - HuaweiCloudInstanceClass
-                        name:
-                          description: |
-                            The name of the required `InstanceClass` object (e.g., `finland-medium`).
-                          type: string
                 nodeTemplate:
                   description: |
                     Specification of some of the fields that will be maintained in all nodes of the group.
@@ -1780,7 +1365,7 @@ spec:
                         type: string
                       x-kubernetes-preserve-unknown-fields: true
                       description: |
-                        Similar to the standard `metadata.labels` [field](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#objectmeta-v1-meta).
+                        Similar to the standard `metadata.labels` field.
                       x-doc-examples:
                       - environment: production
                         app: warp-drive-ai
@@ -1790,13 +1375,13 @@ spec:
                         type: string
                       x-kubernetes-preserve-unknown-fields: true
                       description: |
-                        Similar to the standard `metadata.annotations` [field](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#objectmeta-v1-meta).
+                        Similar to the standard `metadata.annotations` field.
                       x-doc-examples:
                       - ai.fleet.com/discombobulate: "true"
                     taints:
                       type: array
                       description: |
-                        Similar to the `.spec.taints` field of the [Node](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#taint-v1-core) object.
+                        Similar to the `.spec.taints` field of the Node object.
 
                         **Caution!** Only `effect`, `key`, `value` fields are available.
                       x-doc-examples:
@@ -1895,7 +1480,7 @@ spec:
 
                             **Caution!** This setting ignores (nodes will be approved without draining Pods):
                             - for the nodeGroup `master` with a single node;
-                            - for a single `ready` node in a nodeGroup [picked out](https://deckhouse.io/products/kubernetes-platform/documentation/v1/deckhouse-faq.html#how-do-i-run-deckhouse-on-a-particular-node) for Deckhouse placement.
+                            - for a single `ready` node in a nodeGroup [picked out](/deckhouse-faq.html#how-do-i-run-deckhouse-on-a-particular-node) for Deckhouse placement.
                         windows:
                           type: array
                           description: |
@@ -2044,7 +1629,7 @@ spec:
                       description: |
                         Management of resource reservation for system daemons on a node.
 
-                        More info in the [Kubernetes documentation](https://kubernetes.io/docs/tasks/administer-cluster/reserve-compute-resources/#system-reserved).
+                        More info in the Kubernetes documentation.
                       properties:
                         mode:
                           type: string
@@ -2091,9 +1676,9 @@ spec:
 
                         The topology manager allows the Kubernetes scheduler to take resource topology data into account when scheduling pods.
 
-                        In a cluster with [NUMA](https://en.wikipedia.org/wiki/Non-Uniform_Memory_Access) nodes, the topology manager can improve application performance by aligning workloads with NUMA nodes that are more resource-efficient.
+                        In a cluster with NUMA nodes, the topology manager can improve application performance by aligning workloads with NUMA nodes that are more resource-efficient.
 
-                        For more information, see the [Kubernetes documentation](https://kubernetes.io/docs/tasks/administer-cluster/topology-manager/).
+                        For more information, see the Kubernetes documentation.
                       properties:
                         enabled:
                           type: boolean
@@ -2122,7 +1707,7 @@ spec:
                             - `Restricted` — a preferred NUMA node is defined for each pod container. If there are no preferred nodes available, a new pod will not be scheduled to a node while an already running pod will be stopped.
                             - `SingleNumaNode` — a preferred NUMA node is defined for each pod container. If there is no NUMA node available that suits **all pod containers**, a new pod will not be scheduled while an already running pod will be stopped.
 
-                            More information can be found in [the Kubernetes documentation](https://kubernetes.io/docs/tasks/administer-cluster/topology-manager/#topology-manager-policies).
+                            More information can be found in the Kubernetes documentation.
                           enum:
                             - None
                             - BestEffort

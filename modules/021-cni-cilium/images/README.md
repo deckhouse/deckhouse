@@ -6,7 +6,7 @@
   - based on `BASE_ALT` image
   - includes `(!!! loaded from internet)`:
     - packages from repo: p10
-    - binaries of go (1.21.5) from [go.dev](https://go.dev)
+    - binaries of go (1.21.5) from go.dev
     - binaries and plugins of protoc (22.3) from github releases
     - binaries of bazel and wrapper shell-scripts from github releases
       - 3.7.0, 3.7.1, 3.7.2, 6.1.0
@@ -89,7 +89,7 @@
 ## How to search for target commits for image-tools
 
 1. Cloning localy https://github.com/cilium/image-tools and go to it
-2. You need to find the tag of the required image from original base dockerfiles(e.g. [here](https://github.com/cilium/cilium/blob/v1.14.5/images/runtime/Dockerfile#L8-L10)) and write it to the `IMAGE_TAG` variable, for example
+2. You need to find the tag of the required image from original base dockerfiles(e.g. here) and write it to the `IMAGE_TAG` variable, for example
    ```
    IMAGE_TAG=a8c542efc076b62ba683e7699c0013adb6955f0f
    ```
@@ -101,7 +101,7 @@
 
 ## Original Building Container Images
 
-In general, the original description is [here](https://github.com/cilium/cilium/blob/v1.14.5/Documentation/contributing/development/images.rst) and [here](https://docs.cilium.io/en/v1.14/contributing/development/images/), but it may not be accurate
+In general, the original description is here and here, but it may not be accurate
 
 ### At the time of writing the instructions, the dependency was something like this:
 

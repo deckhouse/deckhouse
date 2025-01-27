@@ -77,7 +77,7 @@ apiVersions:
                   description: |
                     Список лейблов, которые будут прикреплены ко всем ресурсам кластера (если они это поддерживают).
 
-                    Аналогично стандартному [полю](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta) `metadata.labels`.
+                    Аналогично стандартному полю `metadata.labels`.
 
                     Если поменять лейблы в рабочем кластере, после применения изменений необходимо пересоздать все машины.
                   x-doc-example: |
@@ -88,7 +88,7 @@ apiVersions:
                     ```
                 annotations:
                   description: |
-                    Аналогично стандартному [полю](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta) `metadata.annotations`.
+                    Аналогично стандартному полю `metadata.annotations`.
                   x-doc-example: |
                     ```yaml
                     annotations:
@@ -96,7 +96,7 @@ apiVersions:
                     ```
                 taints:
                   description: |
-                    Аналогично полю `.spec.taints` из объекта [Node](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#taint-v1-core).
+                    Аналогично полю `.spec.taints` из объекта Node.
 
                     > **Внимание!** Доступны только поля `effect`, `key`, `values`.
                   x-doc-example: |
@@ -108,14 +108,14 @@ apiVersions:
                     ```
             instanceClass:
               description: |
-                Частичное содержимое полей [ZvirtInstanceClass](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/cloud-provider-zvirt/cr.html#zvirtinstanceclass).
+                Частичное содержимое полей [ZvirtInstanceClass](/modules/cloud-provider-zvirt/cr.html#zvirtinstanceclass).
               properties:
                 <<: *instanceClassProperties_ru
       layout:
         description: |
           Название схемы размещения.
 
-          [Подробнее](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/cloud-provider-zvirt/layouts.html)  о возможных схемах размещения провайдера.
+          [Подробнее](/modules/cloud-provider-zvirt/layouts.html)  о возможных схемах размещения провайдера.
       provider:
         description: Параметры для подключения к Zvirt.
         properties:

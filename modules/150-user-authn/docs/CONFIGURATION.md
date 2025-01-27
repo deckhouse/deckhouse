@@ -4,7 +4,7 @@ title: "The user-authn module: configuration"
 
 <!-- SCHEMA -->
 
-The creation of the [`DexAuthenticator`](cr.html#dexauthenticator) Custom Resource leads to the automatic deployment of [oauth2-proxy](https://github.com/oauth2-proxy/oauth2-proxy) to your application's namespace and connecting it to Dex.
+The creation of the [`DexAuthenticator`](cr.html#dexauthenticator) Custom Resource leads to the automatic deployment of oauth2-proxy to your application's namespace and connecting it to Dex.
 
 **Caution!** Since using OpenID Connect over HTTP poses a significant threat to security (the fact that Kubernetes API server doesn't support OICD over HTTP confirms that), this module can only be installed if HTTPS is enabled (to do this, set the `https.mode` parameter to the value other than `Disabled` either at the cluster level or in the module).
 

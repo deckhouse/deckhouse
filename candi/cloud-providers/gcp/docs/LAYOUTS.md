@@ -7,7 +7,7 @@ Two layouts are supported. Below is more information about each of them.
 
 ## Standard
 
-* A separate VPC with [Cloud NAT](https://cloud.google.com/nat/docs/overview) is created for the cluster.
+* A separate VPC with Cloud NAT is created for the cluster.
 * Nodes in the cluster do not have public IP addresses.
 * Public IP addresses can be allocated to master and static nodes:
   * In this case, one-to-one NAT is used to translate the public IP address to the node's IP address (note that CloudNAT is not used in such a case).

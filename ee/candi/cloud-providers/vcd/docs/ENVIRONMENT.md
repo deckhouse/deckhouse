@@ -17,7 +17,7 @@ description: "Configuring VMware Cloud Director for Deckhouse cloud provider ope
 * _Catalog_
 
 Organization, VirtualDataCenter, StoragePolicy, SizingPolicy, EdgeRouter, and Catalog must be provided by your VMware Cloud Director service provider.
-Also, in the tenant, you will need to grant the following rights to able to modify the VM parameters (refer to the [instruction](https://kb.vmware.com/s/article/92067)):
+Also, in the tenant, you will need to grant the following rights to able to modify the VM parameters (refer to the instruction):
 
 * _guestinfo.metadata_
 * _guestinfo.metadata.encoding_
@@ -166,7 +166,7 @@ Those fixes are essential for CloudPermanent nodes to be provisioned correctly a
 
 ### Making a template from an OVA file
 
-Download the [OVA file](https://cloud-images.ubuntu.com/jammy/):
+Download the OVA file:
 
 ![Setting up the template, step 1](../../images/cloud-provider-vcd/template/Screenshot.png)
 

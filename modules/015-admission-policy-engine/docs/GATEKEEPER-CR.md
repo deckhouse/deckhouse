@@ -5,16 +5,16 @@ title: "The admission-policy-engine module: Custom Resources (by Gatekeeper)"
 ## Mutation Custom Resources
 
 {% alert level="info" %}
-The `reinvocationPolicy: IfNeeded` is used in MutatingWebhookConfiguration. More details [in the Kubernetes documentation.](https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/#reinvocation-policy)
+The `reinvocationPolicy: IfNeeded` is used in MutatingWebhookConfiguration. More details in the Kubernetes documentation.
 {% endalert %}  
 
-[Reference](https://open-policy-agent.github.io/gatekeeper/website/docs/mutation/#mutation-crds)
+Reference
 
 Provide a configurable set of policies for modifying Kubernetes resources at the time they are deployed.
 
 ### AssignMetadata
 
-[Reference](https://open-policy-agent.github.io/gatekeeper/website/docs/mutation/#assignmetadata)
+Reference
 
 Allows you to modify the `Metadata` section of a resource.
 At the moment, Gatekeeper only allows **adding** `labels` and `annotations` objects. Modification of existing objects is not provided.
@@ -38,7 +38,7 @@ spec:
 ### Assign
 
 <!-- 
-[Reference](https://open-policy-agent.github.io/gatekeeper/website/docs/mutation/#assignmetadata) 
+Reference 
 There is no link in the Gatekeeper documentation for this CR
 -->
 
@@ -70,7 +70,7 @@ spec:
 
 ### ModifySet
 
-[Reference](https://open-policy-agent.github.io/gatekeeper/website/docs/mutation/#modifyset)
+Reference
 
 Allows you to add and remove items from a list, such as arguments for running a container.
 New values are added to the end of the list.
@@ -97,7 +97,7 @@ spec:
 
 ### AssignImage
 
-[Reference](https://open-policy-agent.github.io/gatekeeper/website/docs/mutation/#assignimage)
+Reference
 
 Allows you to make changes to the `image` parameter of a resource.
 

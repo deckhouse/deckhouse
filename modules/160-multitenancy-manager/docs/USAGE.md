@@ -14,20 +14,20 @@ The following project templates are included in the Deckhouse Kubernetes Platfor
   * choice of security profile;
   * project administrators setup.
 
-  Template description on [GitHub](https://github.com/deckhouse/deckhouse/blob/main/modules/multitenancy-manager/images/multitenancy-manager/default/default.yaml#L2).
+  Template description on GitHub.
 
 - `secure` — includes all the capabilities of the `default` template and additional features:
   * setting up permissible UID/GID for the project;
   * audit rules for project users' access to the Linux kernel;
   * scanning of launched container images for CVE presence.
 
-  Template description on [GitHub](https://github.com/deckhouse/deckhouse/blob/main/modules/multitenancy-manager/images/multitenancy-manager/default/secure.yaml).
+  Template description on GitHub.
 
 - `secure-with-dedicated-nodes` — includes all the capabilities of the `secure` template and additional features:
   * defining the node selector for all the pods in the project: if a pod is created, the node selector pod will be **substituted** with the project's node selector automatically;
   * defining the default toleration for all the pods in the project: if a pod is created, the default toleration will be **added** to the pod automatically.
 
-  Template description on [GitHub](https://github.com/deckhouse/deckhouse/blob/main/modules/multitenancy-manager/images/multitenancy-manager/default/secure-with-dedicated-nodes.yaml).
+  Template description on GitHub.
 
 To list all available parameters for a project template, execute the command:
 
@@ -91,7 +91,7 @@ To create your own template:
 
    > It is necessary to change not only the template, but also the scheme of input parameters for it.
    >
-   > Project templates support all [Helm templating functions](https://helm.sh/docs/chart_template_guide/function_list/).
+   > Project templates support all Helm templating functions.
 
 4. Change the template name in the `.metadata.name` field.
 5. Apply your new template with the command:

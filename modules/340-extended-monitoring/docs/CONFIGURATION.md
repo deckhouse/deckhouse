@@ -44,8 +44,8 @@ Non-namespaced Kubernetes objects do not need labels on the namespace, and monit
 | load-average-per-core-critical          | int           | 10             |
 
 > **Caution!** These labels **do not** apply to `imagefs` (`/var/lib/docker` by default) and `nodefs` (`/var/lib/kubelet` by default) volumes.
-The thresholds for these volumes are configured completely automatically according to the kubelet's [eviction thresholds](https://kubernetes.io/docs/tasks/administer-cluster/out-of-resource/).
-The default values are available [here](https://github.com/kubernetes/kubernetes/blob/743e4fba6339237cc8d5c11413f76ea54b4cc3e8/pkg/kubelet/apis/config/v1beta1/defaults_linux.go#L22-L27); for more info, see the [exporter](https://github.com/deckhouse/deckhouse/blob/main/modules/monitoring-kubernetes/images/kubelet-eviction-thresholds-exporter/).
+The thresholds for these volumes are configured completely automatically according to the kubelet's eviction thresholds.
+The default values are available here; for more info, see the exporter.
 
 #### Namespaced Kubernetes objects
 
@@ -71,7 +71,7 @@ The default values are available [here](https://github.com/kubernetes/kubernetes
 |------------------------|---------------|---------------|
 | replicas-not-ready     | int (count)   | 0             |
 
-The threshold implies the number of unavailable replicas **in addition** to [maxUnavailable](https://kubernetes.io/docs/concepts/workloads/controllers/deployment/#max-unavailable). This threshold will be triggered if the number of unavailable replicas is greater than `maxUnavailable` by the amount specified. Suppose `replicas-not-ready` is 0. In this case, the threshold will be triggered if the number of unavailable replicas is greater than `maxUnavailable`. If `replicas-not-ready` is set to 1, then the threshold will be triggered if the number of unavailable replicas is greater than `maxUnavailable` + 1. This way, you can fine-tune this parameter for specific Deployments (that may be unavailable) in the namespace with the extended monitoring enabled to avoid getting excessive alerts.
+The threshold implies the number of unavailable replicas **in addition** to maxUnavailable. This threshold will be triggered if the number of unavailable replicas is greater than `maxUnavailable` by the amount specified. Suppose `replicas-not-ready` is 0. In this case, the threshold will be triggered if the number of unavailable replicas is greater than `maxUnavailable`. If `replicas-not-ready` is set to 1, then the threshold will be triggered if the number of unavailable replicas is greater than `maxUnavailable` + 1. This way, you can fine-tune this parameter for specific Deployments (that may be unavailable) in the namespace with the extended monitoring enabled to avoid getting excessive alerts.
 
 ##### StatefulSet
 
@@ -79,7 +79,7 @@ The threshold implies the number of unavailable replicas **in addition** to [max
 |------------------------|---------------|---------------|
 | replicas-not-ready     | int (count)   | 0             |
 
-The threshold implies the number of unavailable replicas **in addition** to [maxUnavailable](https://kubernetes.io/docs/concepts/workloads/controllers/deployment/#max-unavailable) (see the comments on [Deployment](#deployment)).
+The threshold implies the number of unavailable replicas **in addition** to maxUnavailable (see the comments on [Deployment](#deployment)).
 
 ##### DaemonSet
 
@@ -87,7 +87,7 @@ The threshold implies the number of unavailable replicas **in addition** to [max
 |------------------------|---------------|---------------|
 | replicas-not-ready     | int (count)   | 0             |
 
-The threshold implies the number of unavailable replicas **in addition** to [maxUnavailable](https://kubernetes.io/docs/concepts/workloads/controllers/deployment/#max-unavailable) (see the comments on [Deployment](#deployment)).
+The threshold implies the number of unavailable replicas **in addition** to maxUnavailable (see the comments on [Deployment](#deployment)).
 
 ##### CronJob
 

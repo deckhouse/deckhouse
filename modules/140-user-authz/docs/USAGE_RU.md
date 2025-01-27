@@ -244,9 +244,9 @@ spec:
     name: some-group-name
   accessLevel: PrivilegedUser
   portForwarding: true
-  # Опция доступна только при включенном режиме enableMultiTenancy (версия Enterprise Edition).
+  # Опция доступна только при включенном режиме enableMultiTenancy.
   allowAccessToSystemNamespaces: false
-  # Опция доступна только при включенном режиме enableMultiTenancy (версия Enterprise Edition).
+  # Опция доступна только при включенном режиме enableMultiTenancy.
   namespaceSelector:
     labelSelector:
       matchExpressions:
@@ -313,12 +313,12 @@ spec:
        name: gitlab-runner-deploy
        namespace: d8-service-accounts
      accessLevel: SuperAdmin
-     # Опция доступна только при включенном режиме enableMultiTenancy (версия Enterprise Edition).
+     # Опция доступна только при включенном режиме enableMultiTenancy.
      allowAccessToSystemNamespaces: true      
    EOF
    ```
 
-   Если в конфигурации Deckhouse включён режим мультитенантности (параметр [enableMultiTenancy](configuration.html#parameters-enablemultitenancy), доступен только в Enterprise Edition), настройте доступные для ServiceAccount пространства имён (параметр [namespaceSelector](cr.html#clusterauthorizationrule-v1-spec-namespaceselector)).
+   Если в конфигурации Deckhouse включён режим мультитенантности (параметр [enableMultiTenancy](configuration.html#parameters-enablemultitenancy)), настройте доступные для ServiceAccount пространства имён (параметр [namespaceSelector](cr.html#clusterauthorizationrule-v1-spec-namespaceselector)).
 
 1. Определите значения переменных (они будут использоваться далее), выполнив следующие команды (**подставьте свои значения**):
 
@@ -479,7 +479,7 @@ spec:
 
 Режим multi-tenancy, позволяющий ограничивать доступ к пространству имён, включается параметром [enableMultiTenancy](configuration.html#parameters-enablemultitenancy) модуля.
 
-Работа в режиме multi-tenancy требует включения [плагина авторизации Webhook](https://kubernetes.io/docs/reference/access-authn-authz/webhook/) и выполнения настройки `kube-apiserver`. Все необходимые для работы режима multi-tenancy действия **выполняются автоматически** модулем [control-plane-manager](../../modules/control-plane-manager/), никаких ручных действий не требуется.
+Работа в режиме multi-tenancy требует включения плагина авторизации Webhook и выполнения настройки `kube-apiserver`. Все необходимые для работы режима multi-tenancy действия **выполняются автоматически** модулем [control-plane-manager](../../modules/control-plane-manager/), никаких ручных действий не требуется.
 
 Изменения манифеста `kube-apiserver`, которые произойдут после включения режима multi-tenancy:
 

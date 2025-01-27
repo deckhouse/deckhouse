@@ -13,19 +13,19 @@ spec:
             description: |-
               Определяет версионированную схему этого представления объекта. Серверы должны преобразовывать распознанные схемы в последнее внутреннее значение и могут отклонять нераспознанные значения.
 
-              Больше информации [в документации](https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources).
+              Больше информации в документации.
             type: string
           kind:
             description: |-
               Значение, представляющее REST-ресурс, который описывает данный объект. Серверы могут определить его из конечной точки, к которой клиент отправляет запросы. Не может быть изменено. Используется в CamelCase.
 
-              Больше информации [в документации](https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds).
+              Больше информации в документации.
             type: string
           spec:
             description: |-
               Описание поведения автоскейлера.
 
-              Больше информации [в документации](https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#spec-and-status).
+              Больше информации в документации.
             properties:
               recommenders:
                 description: |-
@@ -85,12 +85,12 @@ spec:
                     description: |-
                       Тип связанного объекта.
 
-                      Больше информации [в документации](https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds).
+                      Больше информации в документации.
                   name:
                     description: |-
                       Имя связанного объекта.
 
-                      Больше информации [в документации](https://kubernetes.io/docs/user-guide/identifiers#names).
+                      Больше информации в документации.
                 type: object
               updatePolicy:
                 description: |-
@@ -119,7 +119,7 @@ spec:
                     description: |-
                       Режим работы контроллера VPA.
 
-                      - `Auto` — режимы `Auto` и `Recreate` выполняют одинаковую функцию. Этот режим зарезервирован для [обновления ресурсов пода](https://github.com/kubernetes/design-proposals-archive/blob/main/autoscaling/vertical-pod-autoscaler.md#in-place-updates) в Kubernetes.
+                      - `Auto` — режимы `Auto` и `Recreate` выполняют одинаковую функцию. Этот режим зарезервирован для обновления ресурсов пода в Kubernetes.
                       - `Recreate` — позволяет VPA изменять требования к ресурсам работающих подов (т.е. перезапускать их в процессе работы). Этот режим может привести к временной недоступности сервиса (из-за перезапуска), если у вас только одна реплика (replicas: 1). В этом режиме VPA не пересоздаёт поды, которые не были созданы контроллером.
                       - `Initial` — VPA изменяет ресурсы подов только при их запуске (но не во время работы подов).
                       - `Off` — VPA не предпринимает никаких действий для обновления запросов ресурсов для работающих контейнеров. Автоскейлер рассчитывает рекомендации и сохраняет их в поле статуса объекта VPA. Вы можете просмотреть рекомендации VPA с помощью следующей команды: `kubectl describe vpa <vpa-name>`.

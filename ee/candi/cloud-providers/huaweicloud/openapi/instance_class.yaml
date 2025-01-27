@@ -16,7 +16,7 @@ spec:
         openAPIV3Schema:
           type: object
           description: |
-            Huawei Cloud server group parameters used by `machine-controller-manager` (the [node-manager](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/node-manager/) module).
+            Huawei Cloud server group parameters used by `machine-controller-manager` (the [node-manager](/modules/node-manager/) module).
 
             The CloudInstanceClass resource of the `node-manager` module refers to this resource.
           required:
@@ -44,7 +44,7 @@ spec:
 
                     Use this command to get a list of available images: `huaweicloud image list`.
 
-                    For the list of operating systems and specific versions supported by Deckhouse, refer to [Supported Kubernetes and OS versions](https://deckhouse.io/products/kubernetes-platform/documentation/v1/supported_versions.html) (take into account the Deckhouse version you use).
+                    For the list of operating systems and specific versions supported by Deckhouse, refer to [Supported Kubernetes and OS versions](/supported_versions.html) (take into account the Deckhouse version you use).
 
                     **By default**, either the `HuaweiCloudCloudDiscoveryData` value or `instances.imageName` is used.
                   x-doc-required: false
@@ -54,7 +54,7 @@ spec:
                   description: |
                     The size of a root disk in gigabytes.
 
-                    This parameter also affects the type of a root disk. For details on how to use it, refer to [How to use rootDiskSize and when it is preferred](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/cloud-provider-huaweicloud/faq.html#how-to-use-rootdisksize-and-when-it-is-preferred).
+                    This parameter also affects the type of a root disk. For details on how to use it, refer to [How to use rootDiskSize and when it is preferred](/modules/cloud-provider-huaweicloud/faq.html#how-to-use-rootdisksize-and-when-it-is-preferred).
                   x-doc-examples: [20]
                   type: integer
                   x-doc-required: false

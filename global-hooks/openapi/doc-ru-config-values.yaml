@@ -6,7 +6,7 @@ properties:
 
       Имя StorageClass, который будет использоваться для всех компонентов Deckhouse Kubernetes Platform (Prometheus, Grafana, OpenVPN и т. д.).
 
-        * Если значение не указано, то используется [StorageClass по умолчанию](https://kubernetes.io/docs/concepts/storage/storage-classes/#default-storageclass), установленный в кластере.
+        * Если значение не указано, то используется StorageClass по умолчанию, установленный в кластере.
         * Этот параметр имеет смысл использовать только в исключительных ситуациях.
         * Этот параметр применяется в процессе включения модуля.
   defaultClusterStorageClass:
@@ -20,7 +20,6 @@ properties:
       Если значение не указано, фактический StorageClass используемый в кластере по умолчанию будет определяться в следующем порядке:
 
        * StorageClass в кластере, имеющий default-аннотацию (`storageclass.kubernetes.io/is-default-class='true'`);
-       * Первый (по алфавиту) StorageClass из создаваемых модулем облачного провайдера (если какой-либо модуль облачного провайдера используется).
   highAvailability:
     description: |
       Параметр глобального включения *режима отказоустойчивости* для модулей, которые его поддерживают.
@@ -32,7 +31,7 @@ properties:
     properties:
       ingressClass:
         description: |
-          Класс Ingress-контроллера ([Ingress class](https://kubernetes.io/docs/concepts/services-networking/ingress/#ingress-class)), используемый для модулей Deckhouse.
+          Класс Ingress-контроллера (Ingress class), используемый для модулей Deckhouse.
       publicDomainTemplate:
         description: |
           Шаблон DNS-имен c ключом `%s` в качестве динамической части строки.
@@ -43,8 +42,8 @@ properties:
 
           **Обратите внимание:**
           - Нельзя использовать в кластере DNS-имена (создавать соответствующие Ingress-ресурсы), подпадающие под указанный шаблон. Это может вызвать пересечения с создаваемыми Deckhouse Ingress-ресурсами.
-          - Домен, используемый в шаблоне, не должен совпадать с доменом, указанным в параметре [clusterDomain](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/installing/configuration.html#clusterconfiguration-clusterdomain). Например, если `clusterDomain` установлен в `cluster.local` (значение по умолчанию), то `publicDomainTemplate` не может быть `%s.cluster.local`.
-          - Домен, используемый в шаблоне, не должен совпадать с доменом, указанным в параметре [clusterDomain](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/installing/configuration.html#clusterconfiguration-clusterdomain) и внутренней сервисной зоне сети. Например, если clusterDomain установлен в cluster.local (по умолчанию), а сервисная зона сети — ru-central1.internal, то publicDomainTemplate не может быть %s.cluster.local или %s.ru-central1.internal.
+          - Домен, используемый в шаблоне, не должен совпадать с доменом, указанным в параметре [clusterDomain](/installing/configuration.html#clusterconfiguration-clusterdomain). Например, если `clusterDomain` установлен в `cluster.local` (значение по умолчанию), то `publicDomainTemplate` не может быть `%s.cluster.local`.
+          - Домен, используемый в шаблоне, не должен совпадать с доменом, указанным в параметре [clusterDomain](/installing/configuration.html#clusterconfiguration-clusterdomain) и внутренней сервисной зоне сети. Например, если clusterDomain установлен в cluster.local (по умолчанию), а сервисная зона сети — ru-central1.internal, то publicDomainTemplate не может быть %s.cluster.local или %s.ru-central1.internal.
           - Если параметр не указан, Ingress-ресурсы создаваться не будут.
       placement:
         description: |
@@ -64,7 +63,7 @@ properties:
               Режим работы HTTPS:
               * `CertManager` — модули Deckhouse будут работать по HTTPS, самостоятельно заказывая сертификат с помощью ClusterIssuer, указанного в параметре `certManager.clusterIssuerName`;
               * `CustomCertificate` — модули Deckhouse будут работать по HTTPS, используя сертификат из пространства имен `d8-system`;
-              * `Disabled` — модули Deckhouse будут работать только по HTTP (некоторые модули могут не работать, например [user-authn](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/user-authn/));
+              * `Disabled` — модули Deckhouse будут работать только по HTTP (некоторые модули могут не работать, например [user-authn](/modules/user-authn/));
               * `OnlyInURI` — модули Deckhouse будут работать по HTTP, подразумевая, что перед ними стоит внешний HTTPS-балансировщик, который терминирует HTTPS. Балансировщик должен обеспечивать перенаправление с HTTP на HTTPS.
           certManager:
             properties:
@@ -72,23 +71,22 @@ properties:
                 description: |
                   Имя `ClusterIssuer`, используемого модулями Deckhouse.
 
-                  В модуле [cert-manager](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/cert-manager/) доступны следующие `ClusterIssuer`: `letsencrypt`, `letsencrypt-staging`, `selfsigned`, `clouddns`, `cloudflare`, `digitalocean`, `route53`. Также вы можете использовать свой `ClusterIssuer`.
+                  В модуле [cert-manager](/modules/cert-manager/) доступны следующие `ClusterIssuer`: `letsencrypt`, `letsencrypt-staging`, `selfsigned`, `clouddns`, `cloudflare`, `digitalocean`, `route53`. Также вы можете использовать свой `ClusterIssuer`.
           customCertificate:
             properties:
               secretName:
                 description: |
                   Имя Secret'а в пространстве имен `d8-system`, который будет использоваться модулями Deckhouse.
 
-                  Указанный Secret должен быть в формате [kubernetes.io/tls](https://kubernetes.github.io/ingress-nginx/user-guide/tls/#tls-secrets).
+                  Указанный Secret должен быть в формате kubernetes.io/tls.
       resourcesRequests:
         description: |
           Количество ресурсов (CPU и памяти), выделяемых для работы компонентов Deckhouse, работающих на каждом узле кластера (обычно это DaemonSet'ы, например `cni-flannel`, `monitoring-ping`).
 
-          [Подробнее](https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/#resource-units-in-kubernetes) про единицы измерения ресурсов.
         properties:
           controlPlane:
             description: |
-              Количество ресурсов (CPU и памяти), выделяемых для компонентов control plane, работающих на каждом master-узле кластера. Не работает для not-managed-облаков (например, GKE).
+              Количество ресурсов (CPU и памяти), выделяемых для компонентов control plane, работающих на каждом master-узле кластера.
             properties:
               cpu:
                 description: |
@@ -100,6 +98,6 @@ properties:
         description: |
           Имя StorageClass, который будет использоваться для всех компонентов Deckhouse Kubernetes Platform (Prometheus, Grafana, OpenVPN и т. д.).
 
-            * Если значение не указано, то используется [StorageClass по умолчанию](https://kubernetes.io/docs/concepts/storage/storage-classes/#default-storageclass), установленный в кластере.
+            * Если значение не указано, то используется StorageClass по умолчанию, установленный в кластере.
             * Этот параметр имеет смысл использовать только в исключительных ситуациях.
             * Этот параметр применяется в процессе включения модуля.

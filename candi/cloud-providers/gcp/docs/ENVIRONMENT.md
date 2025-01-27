@@ -5,7 +5,7 @@ description: "Configuring GCP for Deckhouse cloud provider operation."
 
 {% include notice_envinronment.liquid %}
 
-You need to create a service account so that Deckhouse can manage resources in the Google Cloud. Below is a brief sequence of steps to create a service account. If you need detailed instructions, you can find them in the [provider's documentation](https://cloud.google.com/iam/docs/service-accounts).
+You need to create a service account so that Deckhouse can manage resources in the Google Cloud. Below is a brief sequence of steps to create a service account. If you need detailed instructions, you can find them in the provider's documentation.
 
 {% alert level="warning" %}
 **Note!** The created `service account key` cannot be restored, you can only delete and create a new one.
@@ -13,7 +13,7 @@ You need to create a service account so that Deckhouse can manage resources in t
 
 ## Setup using Google Cloud Console
 
-Follow this [link](https://console.cloud.google.com/iam-admin/serviceaccounts), select your project and create a new service account or select an existing one.
+Follow this link, select your project and create a new service account or select an existing one.
 
 The account must be assigned several necessary roles:
 
@@ -23,9 +23,9 @@ Service Account User
 Network Management Admin
 ```
 
-You can add roles when creating a service account or edit them [here](https://console.cloud.google.com/iam-admin/iam).
+You can add roles when creating a service account or edit them here.
 
-To create a `service account key` in JSON format, click on [three vertical dots](https://console.cloud.google.com/iam-admin/serviceaccounts) in the Actions column and select `Manage keys`. Next, click on `Add key` -> `Create new key` -> `Key type` -> `JSON`.
+To create a `service account key` in JSON format, click on three vertical dots in the Actions column and select `Manage keys`. Next, click on `Add key` -> `Create new key` -> `Key type` -> `JSON`.
 
 ## Setup using gcloud CLI
 

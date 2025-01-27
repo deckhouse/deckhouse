@@ -76,7 +76,7 @@ If the target version (set in the [kubernetesVersion](../../installing/configura
 
 ## Auditing
 
-Kubernetes [Auditing](https://kubernetes.io/docs/tasks/debug/debug-cluster/audit/) can help you if you need to keep track of operations in your Namespaces or troubleshoot the cluster. You can configure it by setting the appropriate [Audit Policy](https://kubernetes.io/docs/tasks/debug/debug-cluster/audit/#audit-policy). As the result you will have the log file `/var/log/kube-audit/audit.log` containing audit events according to the configured Policy.
+Kubernetes Auditing can help you if you need to keep track of operations in your Namespaces or troubleshoot the cluster. You can configure it by setting the appropriate Audit Policy. As the result you will have the log file `/var/log/kube-audit/audit.log` containing audit events according to the configured Policy.
 
 By default, in a cluster with Deckhouse, a basic policy is created for logging events:
 - related to the creation, deletion, and changing of resources;

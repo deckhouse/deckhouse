@@ -39,10 +39,6 @@ kubectl get moduleconfigs user-authn -o yaml
 ### Как установить Deckhouse из стороннего registry?
 
 {% alert level="warning" %}
-Доступно только в Enterprise Edition.
-{% endalert %}
-
-{% alert level="warning" %}
 Deckhouse поддерживает работу только с Bearer token-схемой авторизации в container registry.
 
 Протестирована и гарантируется работа со следующими container registry:
@@ -110,7 +106,7 @@ echo "$MYRESULTSTRING"
 Использование значения `URL` из параметров репозитория Nexus **недопустимо**
 {% endalert %}
 
-При использовании менеджера репозиториев [Nexus](https://github.com/sonatype/nexus-public) должны быть выполнены следующие требования:
+При использовании менеджера репозиториев Nexus должны быть выполнены следующие требования:
 
 * Создан **проксирующий** репозиторий Docker (*Administration* -> *Repository* -> *Repositories*):
   * Параметр `Maximum metadata age` для репозитория должен быть установлен в `0`.
@@ -122,7 +118,7 @@ echo "$MYRESULTSTRING"
 
 **Настройка**:
 
-* Создайте **проксирующий** репозиторий Docker (*Administration* -> *Repository* -> *Repositories*), указывающий на [Deckhouse registry](https://registry.deckhouse.ru/):
+* Создайте **проксирующий** репозиторий Docker (*Administration* -> *Repository* -> *Repositories*), указывающий на Deckhouse registry:
   ![Создание проксирующего репозитория Docker](images/registry/nexus/nexus-repository.png)
 
 * Заполните поля страницы создания репозитория следующим образом:
@@ -131,10 +127,10 @@ echo "$MYRESULTSTRING"
   * `Remote storage` должно иметь значение `https://registry.deckhouse.ru/`.
   * `Auto blocking enabled` и `Not found cache enabled` могут быть выключены для отладки; в противном случае их следует включить.
   * `Maximum Metadata Age` должно быть равно `0`.
-  * Если планируется использовать Deckhouse Enterprise Edition, флажок `Authentication` должен быть включен, а связанные поля должны быть заполнены следующим образом:
+  * Флажок `Authentication` должен быть включен, а связанные поля должны быть заполнены следующим образом:
     * `Authentication Type` должно иметь значение `Username`.
     * `Username` должно иметь значение `license-token`.
-    * `Password` должно содержать ключ лицензии Deckhouse Enterprise Edition.
+    * `Password` должно содержать ключ лицензии Deckhouse Platform Certified Security Edition.
 
   ![Пример настроек репозитория 1](images/registry/nexus/nexus-repo-example-1.png)
   ![Пример настроек репозитория 2](images/registry/nexus/nexus-repo-example-2.png)
@@ -153,14 +149,14 @@ echo "$MYRESULTSTRING"
 
 ### Особенности настройки Harbor
 
-Необходимо использовать такой функционал [Harbor](https://github.com/goharbor/harbor), как Proxy Cache.
+Необходимо использовать такой функционал Harbor, как Proxy Cache.
 
 * Настройте Registry:
   * `Administration -> Registries -> New Endpoint`.
   * `Provider`: `Docker Registry`.
   * `Name` — укажите любое, на ваше усмотрение.
   * `Endpoint URL`: `https://registry.deckhouse.ru`.
-  * Укажите `Access ID` и `Access Secret` для Deckhouse Enterprise Edition.
+  * Укажите `Access ID` и `Access Secret`.
 
   ![Настройка Registry](images/registry/harbor/harbor1.png)
 
@@ -175,14 +171,6 @@ echo "$MYRESULTSTRING"
 В результате образы Deckhouse будут доступны, например, по следующему адресу: `https://your-harbor.com/d8s/deckhouse/ee:{d8s-version}`.
 
 ### Ручная загрузка образов в изолированный приватный registry
-
-{% alert level="warning" %}
-Доступно только в Standard Edition (SE), Enterprise Edition (EE) и Certified Security Edition (CSE).
-{% endalert %}
-
-{% alert level="info" %}
-О текущем статусе версий на каналах обновлений можно узнать на [releases.deckhouse.ru](https://releases.deckhouse.ru).
-{% endalert %}
 
 1. [Скачайте и установите утилиту Deckhouse CLI](deckhouse-cli/).
 
@@ -220,7 +208,7 @@ echo "$MYRESULTSTRING"
    - `HTTP_PROXY`/`HTTPS_PROXY` — URL прокси-сервера для запросов к HTTP(S) хостам, которые не указаны в списке хостов в переменной `$NO_PROXY`;
    - `NO_PROXY` — список хостов, разделенных запятыми, которые следует исключить из проксирования. Каждое значение может быть представлено в виде IP-адреса (`1.2.3.4`), CIDR (`1.2.3.4/8`), домена или символа (`*`). IP-адреса и домены также могут включать номер порта (`1.2.3.4:80`). Доменное имя соответствует как самому себе, так и всем поддоменам. Доменное имя начинающееся с `.`, соответствует только поддоменам. Например, `foo.com` соответствует `foo.com` и `bar.foo.com`; `.y.com` соответствует `x.y.com`, но не соответствует `y.com`. Символ `*` отключает проксирование;
    - `SSL_CERT_FILE` — указывает путь до сертификата SSL. Если переменная установлена, системные сертификаты не используются;
-   - `SSL_CERT_DIR` — список каталогов, разделенный двоеточиями. Определяет, в каких каталогах искать файлы сертификатов SSL. Если переменная установлена, системные сертификаты не используются. [Подробнее...](https://www.openssl.org/docs/man1.0.2/man1/c_rehash.html);
+   - `SSL_CERT_DIR` — список каталогов, разделенный двоеточиями. Определяет, в каких каталогах искать файлы сертификатов SSL. Если переменная установлена, системные сертификаты не используются. Подробнее...;
    - `TMPDIR (*nix)`/`TMP (Windows)` — путь к директории для временных файлов, который будет использоваться во время операций загрузки и выгрузки образов. Вся обработка выполняется в этом каталоге. Он должен иметь достаточное количество свободного дискового пространства, чтобы вместить весь загружаемый пакет образов;
    - `MIRROR_BYPASS_ACCESS_CHECKS` — установите для этого параметра значение `1`, чтобы отключить проверку корректности переданных учетных данных для registry;
 
@@ -375,10 +363,6 @@ echo "$MYRESULTSTRING"
 
 ### Как переключить работающий кластер Deckhouse на использование стороннего registry?
 
-{% alert level="warning" %}
-Использование registry отличных от `registry.deckhouse.io` и `registry.deckhouse.ru` доступно только в Enterprise Edition.
-{% endalert %}
-
 Для переключения кластера Deckhouse на использование стороннего registry выполните следующие действия:
 
 * Выполните команду `deckhouse-controller helper change-registry` из пода Deckhouse с параметрами нового registry.
@@ -453,10 +437,6 @@ echo "$MYRESULTSTRING"
 * Если вы хотите отключить автоматические обновления у уже установленного Deckhouse, ознакомьтесь с документацией [по закреплению релиза](modules/deckhouse/#закрепление-релиза].
 
 ### Использование proxy-сервера
-
-{% alert level="warning" %}
-Доступно только в Enterprise Edition.
-{% endalert %}
 
 {% offtopic title="Пример шагов по настройке proxy-сервера на базе Squid..." %}
 * Подготовьте сервер (или виртуальную машину). Сервер должен быть доступен с необходимых узлов кластера, и у него должен быть выход в интернет.
@@ -534,16 +514,6 @@ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-con
 ```
 
 После сохранения изменений Deckhouse приведет конфигурацию кластера к измененному состоянию. В зависимости от размеров кластера это может занять какое-то время.
-
-### Как изменить конфигурацию облачного провайдера в кластере?
-
-Настройки используемого облачного провайдера в облачном или гибридном кластере хранятся в структуре `<PROVIDER_NAME>ClusterConfiguration`, где `<PROVIDER_NAME>` — название/код провайдера. Например, для провайдера OpenStack структура будет называться [OpenStackClusterConfiguration]({% if site.mode == 'module' and site.d8Revision == 'CE' %}{{ site.urls[page.lang] }}/products/kubernetes-platform/documentation/v1/{% endif %}modules/cloud-provider-openstack/cluster_configuration.html).
-
-Независимо от используемого облачного провайдера его настройки можно изменить с помощью следующей команды:
-
-```shell
-kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller edit provider-cluster-configuration
-```
 
 ### Как изменить конфигурацию статического кластера?
 

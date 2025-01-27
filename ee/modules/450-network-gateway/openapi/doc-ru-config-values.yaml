@@ -8,7 +8,7 @@ properties:
     description: |
       Toleration'ы для подов c DHCP и с настройщиками iptables.
 
-      Стандартный список [toleration](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/). Поды инстанса унаследуют это поле как есть.
+      Стандартный список toleration. Поды инстанса унаследуют это поле как есть.
   subnet:
     description: |
       Адрес локальной подсети, которую должен обслуживать шлюз.

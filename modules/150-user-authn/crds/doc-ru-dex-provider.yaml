@@ -164,28 +164,28 @@ spec:
                       description: |
                         Запрашивать дополнительные данные об успешно подключенном пользователе.
 
-                        [Подробнее...](https://openid.net/specs/openid-connect-core-1_0.html#UserInfo)
+
                     userIDKey:
                       description: |
-                        [Claim](https://openid.net/specs/openid-connect-core-1_0.html#Claims), который будет использован для получения ID пользователя.
+                        Claim, который будет использован для получения ID пользователя.
                     userNameKey:
                       description: |
-                        [Claim](https://openid.net/specs/openid-connect-core-1_0.html#Claims), который будет использован для получения имени пользователя.
+                        Claim, который будет использован для получения имени пользователя.
                     claimMapping:
                       description: |
-                        Некоторые провайдеры возвращают нестандартные claim'ы (например, mail). Claim mappings помогают Dex преобразовать их в [стандартные claim'ы OIDC](https://openid.net/specs/openid-connect-core-1_0.html#Claims).
+                        Некоторые провайдеры возвращают нестандартные claim'ы (например, mail). Claim mappings помогают Dex преобразовать их в стандартные claim'ы OIDC.
 
                         Dex может преобразовать нестандартный claim в стандартный, только если id_token, полученный от OIDC-провайдера, не содержит аналогичный стандартный claim.
                       properties:
                         email:
                           description: |
-                            [Claim](https://openid.net/specs/openid-connect-core-1_0.html#Claims), который будет использован для получения email пользователя.
+                            Claim, который будет использован для получения email пользователя.
                         groups:
                           description: |
-                            [Claim](https://openid.net/specs/openid-connect-core-1_0.html#Claims), который будет использован для получения групп пользователя.
+                            Claim, который будет использован для получения групп пользователя.
                         preferred_username:
                           description: |
-                            [Claim](https://openid.net/specs/openid-connect-core-1_0.html#Claims), который будет использован для получения предпочтительного имени пользователя.
+                            Claim, который будет использован для получения предпочтительного имени пользователя.
                     claimMappingOverride:
                       description: |
                         Если включено, сопоставление claim'ов (`claimMapping`) будет переопределять стандартные claim'ы OIDC.
@@ -193,7 +193,7 @@ spec:
                         По умолчанию сопоставление claim'ов будет использоваться только в том случае, если стандартные claim'ы OIDC отсутствуют, например, если в id_token нет claim'а `email`, будет использоваться `claimMapping.email`.
                     scopes:
                       description: |
-                        Список [полей](https://github.com/dexidp/website/blob/main/content/docs/configuration/custom-scopes-claims-clients.md) для включения в ответ при запросе токена.
+                        Список полей для включения в ответ при запросе токена.
                     promptType:
                       description: |
                         Определяет — должен ли Issuer запрашивать подтверждение и давать подсказки при аутентификации.
@@ -211,7 +211,7 @@ spec:
 
                         В качестве credentials для basic-авторизации указываются логин и пароль пользователя из приложения, созданного в OIDC (возможно включить при указании только одного провайдера с типом OIDC/Crowd).
 
-                        Работает **только** при включенном параметре [publishAPI](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/user-authn/configuration.html#parameters-publishapi).
+                        Работает **только** при включенном параметре [publishAPI](/modules/user-authn/configuration.html#parameters-publishapi).
 
                         Полученные от IdP данные авторизации и групп сохраняются в кэш на 10 секунд.
                 ldap: &ldap
@@ -226,7 +226,7 @@ spec:
                         Подключаться к каталогу LDAP не по защищенному порту.
                     startTLS:
                       description: |
-                        Использовать [STARTTLS](https://www.digitalocean.com/community/tutorials/how-to-encrypt-openldap-connections-using-starttls) для шифрования.
+                        Использовать STARTTLS для шифрования.
                     usernamePrompt:
                       description: |
                         Строка, которая будет отображаться возле поля для имени пользователя в форме ввода логина и пароля.
@@ -247,7 +247,6 @@ spec:
                         Настройки фильтров пользователей, которые помогают сначала отфильтровать директории, в которых будет производиться поиск пользователей,
                         а затем найти пользователя по полям (его имени, адресу электронной почты или отображаемому имени).
 
-                        [Подробнее](https://github.com/dexidp/dex/blob/3b7292a08fd2c61900f5e6c67f3aa2ee81827dea/Documentation/connectors/ldap.md#example-mapping-a-schema-to-a-search-config) о процессе фильтрации...
                       properties:
                         baseDN:
                           description: 'Откуда будет начат поиск пользователей.'
@@ -270,7 +269,6 @@ spec:
                       description: |
                         Настройки фильтра для поиска групп для указанного пользователя.
 
-                        [Подробнее](https://github.com/dexidp/dex/blob/3b7292a08fd2c61900f5e6c67f3aa2ee81827dea/Documentation/connectors/ldap.md#example-mapping-a-schema-to-a-search-config) о процессе фильтрации...
                       properties:
                         baseDN:
                           description: 'Откуда будет начат поиск групп'

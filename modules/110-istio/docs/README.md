@@ -7,7 +7,7 @@ webIfaces:
 
 ## Compatibility table for supported versions
 
-| Istio version | [K8S versions supported by Istio](https://istio.io/latest/docs/releases/supported-releases/#support-status-of-istio-releases) |          Status in D8          |
+| Istio version | K8S versions supported by Istio |          Status in D8          |
 |:-------------:|:-----------------------------------------------------------------------------------------------------------------------------:|:------------------------------:|
 |     1.21      |                                                1.26, 1.27, 1.28, 1.29, 1.30, 1.31                                                | Supported |
 |     1.19      |                                                    1.25<sup>*</sup>, 1.26, 1.27, 1.28                                                     |           Deprecated and will be deleted            |
@@ -16,7 +16,7 @@ webIfaces:
 
 ## What issues does Istio help to resolve?
 
-[Istio](https://istio.io/) is a framework for managing network traffic on a centralized basis that implements the Service Mesh approach.
+Istio is a framework for managing network traffic on a centralized basis that implements the Service Mesh approach.
 
 Among other things, Istio solves the following tasks in a transparent for applications way:
 
@@ -187,7 +187,7 @@ The istiod controller and sidecar-proxy containers export their own metrics that
 
 The main purpose of the activation is to add a sidecar container to the application Pods so that Istio can manage the traffic.
 
-The sidecar-injector is a recommended way to add sidecars. Istio can inject sidecar containers into user Pods using the [Admission Webhook](https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/) mechanism. You can configure it using labels and annotations:
+The sidecar-injector is a recommended way to add sidecars. Istio can inject sidecar containers into user Pods using the Admission Webhook mechanism. You can configure it using labels and annotations:
 
 * A label attached to a namespace allows the sidecar-injector to identify a group of Pods to inject sidecar containers into:
   * `istio-injection=enabled` — use the global version of Istio (`spec.settings.globalVersion` in `ModuleConfig`);

@@ -32,11 +32,11 @@ spec:
 
 ## Writing Prometheus data to the longterm storage
 
-Prometheus supports remote_write'ing data from the local Prometheus to a separate longterm storage (e.g., [VictoriaMetrics](https://github.com/VictoriaMetrics/VictoriaMetrics)). In Deckhouse, this mechanism is implemented using the `PrometheusRemoteWrite` custom resource.
+Prometheus supports remote_write'ing data from the local Prometheus to a separate longterm storage (e.g., VictoriaMetrics). In Deckhouse, this mechanism is implemented using the `PrometheusRemoteWrite` custom resource.
 
 {% endraw -%}
 {% alert level="info" %}
-For VictoriaMetrics detailed information about how to send data to vmagent can be found in the VictoriaMetrics [documentation](https://docs.victoriametrics.com/vmagent/index.html#how-to-push-data-to-vmagent).
+For VictoriaMetrics detailed information about how to send data to vmagent can be found in the VictoriaMetrics documentation.
 {% endalert %}
 {% raw %}
 
@@ -140,7 +140,7 @@ Deckhouse does **not guarantee** the functionality of this connection method due
 
 ## Connecting an external app to Prometheus
 
-The connection to Prometheus is protected using [kube-rbac-proxy](https://github.com/brancz/kube-rbac-proxy). To connect, you need to create a `ServiceAccount` with the necessary permissions.
+The connection to Prometheus is protected using kube-rbac-proxy. To connect, you need to create a `ServiceAccount` with the necessary permissions.
 
 ```yaml
 ---
@@ -244,7 +244,7 @@ spec:
       repeatInterval: 12h
 ```
 
-The fields `token` in the Secret and `chatID` in the `CustomAlertmanager` custom resource must be set on your own. [Read more](https://core.telegram.org/bots) about Telegram API.
+The fields `token` in the Secret and `chatID` in the `CustomAlertmanager` custom resource must be set on your own. Read more about Telegram API.
 
 ## Example of sending alerts to Slack with a filter
 
