@@ -200,7 +200,7 @@ func (l *Loader) processModuleDefinition(def *moduletypes.Definition) (*modulety
 	}
 
 	// load constrains
-	if err = extenders.AddConstraints(def.Name, def.Requirements); err != nil {
+	if err = extenders.AddConstraints(def.Name, def.GetRequirements()); err != nil {
 		return nil, fmt.Errorf("load constraints for the %q module: %w", def.Name, err)
 	}
 
@@ -309,7 +309,7 @@ func (l *Loader) ensureModule(ctx context.Context, def *moduletypes.Definition, 
 						Description:  def.Description,
 						Stage:        def.Stage,
 						Source:       v1alpha1.ModuleSourceEmbedded,
-						Requirements: def.Requirements,
+						Requirements: def.GetRequirements(),
 					},
 				}
 				l.log.Debugf("the '%s' embedded module not found, create it", def.Name)
@@ -334,8 +334,8 @@ func (l *Loader) ensureModule(ctx context.Context, def *moduletypes.Definition, 
 				needsUpdate = true
 			}
 
-			if !maps.Equal(module.Properties.Requirements, def.Requirements) {
-				module.Properties.Requirements = def.Requirements
+			if !maps.Equal(module.Properties.Requirements, def.GetRequirements()) {
+				module.Properties.Requirements = def.GetRequirements()
 				needsUpdate = true
 			}
 
