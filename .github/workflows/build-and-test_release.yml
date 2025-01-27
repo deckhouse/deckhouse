@@ -3740,8 +3740,9 @@ jobs:
       # </template: update_comment_on_finish>
 
 
-  deploy_latest_web_site_prod_sel:
+  deploy_latest_web_site_prod:
     name: (Prod) Deploy latest site
+    continue-on-error: true
     needs:
       - git_info
       - doc_web_build
@@ -3793,11 +3794,11 @@ jobs:
           echo "DOC_VERSION=${CI_COMMIT_TAG:-latest}" >> $GITHUB_ENV
       # </template: doc_version_template>
       # <template: deploy_site_template>
-      - name: Deploy site to preproduction
+      - name: Deploy site to production
         uses: werf/actions/converge@43075e4ab81952b181d33e125ef15b9c060a782e
         with:
           channel: ${{env.WERF_CHANNEL}}
-          kube-config-base64-data: "${{ secrets.KUBECONFIG_BASE64_PROD_SEL }}"
+          kube-config-base64-data: "${{ secrets.KUBECONFIG_BASE64_PROD_25 }}"
           env: web-production
         env:
           WERF_REPO: ${{ steps.check_readonly_registry.outputs.web_registry_path }}
@@ -3810,7 +3811,7 @@ jobs:
           WERF_SET_URL_RU: "global.url_ru=deckhouse.ru"
           WERF_SET_WEB_ENV: "web.env=web-production"
           WERF_SET_DOMAIN_MAP: "global.domain_map=eyJlbiIgOiAiZGVja2hvdXNlLmlvIiwgInJ1IiA6ICJkZWNraG91c2UucnUifQ=="
-          WERF_SET_DCNAME: "web.dc_name=prod-sel"
+          WERF_SET_DCNAME: "web.dc_name=prod-25"
           DOC_API_KEY: "${{secrets.DOC_API_KEY}}"
           DOC_API_URL: "${{vars.DOC_API_URL}}"
           WERF_SET_MODULE_WATCHER_AUTHS: "global.moduleWatcherAuths=${{ secrets.MODULE_WATCHER_AUTHS }}"
@@ -3848,8 +3849,118 @@ jobs:
       # </template: update_comment_on_finish>
 
 
-  deploy_latest_web_doc_prod_sel:
+  deploy_latest_web_site_prod_old:
+    name: (Prod OLD) Deploy latest site
+    continue-on-error: true
+    needs:
+      - git_info
+      - doc_web_build
+      - main_web_build
+    if: ${{ needs.git_info.outputs.ci_commit_ref_name == 'main' && github.repository == 'deckhouse/deckhouse' }}
+    runs-on: [self-hosted, regular]
+    steps:
+
+      # <template: started_at_output>
+      - name: Job started timestamp
+        id: started_at
+        run: |
+          unixTimestamp=$(date +%s)
+          echo "started_at=${unixTimestamp}" >> $GITHUB_OUTPUT
+      # </template: started_at_output>
+
+      # <template: checkout_full_step>
+      - name: Checkout sources
+        uses: actions/checkout@v3.5.2
+        with:
+          fetch-depth: 0
+      # </template: checkout_full_step>
+
+      # <template: login_readonly_registry_step>
+      - name: Check readonly registry credentials
+        id: check_readonly_registry
+        env:
+          HOST: ${{secrets.DECKHOUSE_REGISTRY_READ_HOST}}
+        run: |
+          if [[ -n $HOST ]]; then
+            echo "has_credentials=true" >> $GITHUB_OUTPUT
+            echo "web_registry_path=${{secrets.DECKHOUSE_REGISTRY_READ_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
+          fi
+      - name: Login to readonly registry
+        uses: docker/login-action@v2.1.0
+        if: ${{ steps.check_readonly_registry.outputs.has_credentials == 'true' }}
+        with:
+          registry: ${{ secrets.DECKHOUSE_REGISTRY_READ_HOST }}
+          username: ${{ secrets.DECKHOUSE_REGISTRY_READ_USER }}
+          password: ${{ secrets.DECKHOUSE_REGISTRY_READ_PASSWORD }}
+          logout: false
+      # </template: login_readonly_registry_step>
+
+      # <template: doc_version_template>
+      - name: Set documentation version
+        env:
+          CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
+        run: |
+          echo "DOC_VERSION=${CI_COMMIT_TAG:-latest}" >> $GITHUB_ENV
+      # </template: doc_version_template>
+      # <template: deploy_site_template>
+      - name: Deploy site to oldproduction
+        uses: werf/actions/converge@43075e4ab81952b181d33e125ef15b9c060a782e
+        with:
+          channel: ${{env.WERF_CHANNEL}}
+          kube-config-base64-data: "${{ secrets.KUBECONFIG_BASE64_PROD_SEL }}"
+          env: web-production
+        env:
+          WERF_REPO: ${{ steps.check_readonly_registry.outputs.web_registry_path }}
+          WERF_DIR: "docs/site"
+          WERF_RELEASE: "deckhouse-site"
+          WERF_NAMESPACE: deckhouse-web-production
+          WERF_SET_DOC_VERSION: "global.doc_version=${{ env.DOC_VERSION }}"
+          WERF_SET_ACTIVE_RELEASE: "global.active_release=v1"
+          WERF_SET_URL: "global.url=deckhouse.io"
+          WERF_SET_URL_RU: "global.url_ru=deckhouse.ru"
+          WERF_SET_WEB_ENV: "web.env=web-production"
+          WERF_SET_DOMAIN_MAP: "global.domain_map=eyJlbiIgOiAiZGVja2hvdXNlLmlvIiwgInJ1IiA6ICJkZWNraG91c2UucnUifQ=="
+          WERF_SET_DCNAME: "web.dc_name=prod-sel"
+          DOC_API_KEY: "${{secrets.DOC_API_KEY}}"
+          DOC_API_URL: "${{vars.DOC_API_URL}}"
+          WERF_SET_MODULE_WATCHER_AUTHS: "global.moduleWatcherAuths=${{ secrets.MODULE_WATCHER_AUTHS }}"
+      # </template: deploy_site_template>
+      # <template: update_comment_on_finish>
+      - name: Update comment on finish
+        id: update_comment_on_finish
+        if: ${{ always() && github.event_name == 'workflow_dispatch' && !!github.event.inputs.issue_number }}
+        env:
+          NEEDS_CONTEXT: ${{ toJSON(needs) }}
+          JOB_CONTEXT: ${{ toJSON(job) }}
+          STEPS_CONTEXT: ${{ toJSON(steps) }}
+        uses: actions/github-script@v6.4.1
+        with:
+          github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+          retries: 3
+          script: |
+            const statusConfig = 'job,one-line';
+            const name = '(Prod OLD) Deploy latest site';
+            const needsContext = JSON.parse(process.env.NEEDS_CONTEXT);
+            const jobContext = JSON.parse(process.env.JOB_CONTEXT);
+            const stepsContext = JSON.parse(process.env.STEPS_CONTEXT);
+            let jobNames = null
+            if (process.env.JOB_NAMES) {
+              jobNames = JSON.parse(process.env.JOB_NAMES);
+            }
+
+            core.info(`needsContext: ${JSON.stringify(needsContext)}`);
+            core.info(`jobContext: ${JSON.stringify(jobContext)}`);
+            core.info(`stepsContext: ${JSON.stringify(stepsContext)}`);
+            core.info(`jobNames: ${JSON.stringify(jobNames)}`);
+
+            const ci = require('./.github/scripts/js/ci');
+            return await ci.updateCommentOnFinish({github, context, core, statusConfig, name, needsContext, jobContext, stepsContext, jobNames});
+      # </template: update_comment_on_finish>
+
+
+  deploy_latest_web_doc_prod:
     name: (Prod) Deploy latest doc
+    continue-on-error: true
     needs:
       - git_info
       - doc_web_build
@@ -3901,11 +4012,11 @@ jobs:
           echo "DOC_VERSION=${CI_COMMIT_TAG:-latest}" >> $GITHUB_ENV
       # </template: doc_version_template>
       # <template: deploy_doc_template>
-      - name: Deploy documentation to preproduction
+      - name: Deploy documentation to production
         uses: werf/actions/converge@43075e4ab81952b181d33e125ef15b9c060a782e
         with:
           channel: ${{env.WERF_CHANNEL}}
-          kube-config-base64-data: "${{ secrets.KUBECONFIG_BASE64_PROD_SEL }}"
+          kube-config-base64-data: "${{ secrets.KUBECONFIG_BASE64_PROD_25 }}"
           env: web-production
         env:
           WERF_REPO: ${{ steps.check_readonly_registry.outputs.web_registry_path }}
@@ -3916,7 +4027,7 @@ jobs:
           WERF_SET_URL: "global.url=deckhouse.io"
           WERF_SET_URL_RU: "global.url_ru=deckhouse.ru"
           WERF_SET_WEB_ENV: "web.env=web-production"
-          WERF_SET_DCNAME: "web.dc_name=prod-sel"
+          WERF_SET_DCNAME: "web.dc_name=prod-25"
       # </template: deploy_doc_template>
       # <template: update_comment_on_finish>
       - name: Update comment on finish
@@ -3950,6 +4061,110 @@ jobs:
             return await ci.updateCommentOnFinish({github, context, core, statusConfig, name, needsContext, jobContext, stepsContext, jobNames});
       # </template: update_comment_on_finish>
 
+
+  deploy_latest_web_doc_prod_old:
+    name: (Prod OLD) Deploy latest doc
+    continue-on-error: true
+    needs:
+      - git_info
+      - doc_web_build
+      - main_web_build
+    if: ${{ needs.git_info.outputs.ci_commit_ref_name == 'main' && github.repository == 'deckhouse/deckhouse' }}
+    runs-on: [self-hosted, regular]
+    steps:
+
+      # <template: started_at_output>
+      - name: Job started timestamp
+        id: started_at
+        run: |
+          unixTimestamp=$(date +%s)
+          echo "started_at=${unixTimestamp}" >> $GITHUB_OUTPUT
+      # </template: started_at_output>
+
+      # <template: checkout_full_step>
+      - name: Checkout sources
+        uses: actions/checkout@v3.5.2
+        with:
+          fetch-depth: 0
+      # </template: checkout_full_step>
+
+      # <template: login_readonly_registry_step>
+      - name: Check readonly registry credentials
+        id: check_readonly_registry
+        env:
+          HOST: ${{secrets.DECKHOUSE_REGISTRY_READ_HOST}}
+        run: |
+          if [[ -n $HOST ]]; then
+            echo "has_credentials=true" >> $GITHUB_OUTPUT
+            echo "web_registry_path=${{secrets.DECKHOUSE_REGISTRY_READ_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
+          fi
+      - name: Login to readonly registry
+        uses: docker/login-action@v2.1.0
+        if: ${{ steps.check_readonly_registry.outputs.has_credentials == 'true' }}
+        with:
+          registry: ${{ secrets.DECKHOUSE_REGISTRY_READ_HOST }}
+          username: ${{ secrets.DECKHOUSE_REGISTRY_READ_USER }}
+          password: ${{ secrets.DECKHOUSE_REGISTRY_READ_PASSWORD }}
+          logout: false
+      # </template: login_readonly_registry_step>
+
+      # <template: doc_version_template>
+      - name: Set documentation version
+        env:
+          CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
+        run: |
+          echo "DOC_VERSION=${CI_COMMIT_TAG:-latest}" >> $GITHUB_ENV
+      # </template: doc_version_template>
+      # <template: deploy_doc_template>
+      - name: Deploy documentation to oldproduction
+        uses: werf/actions/converge@43075e4ab81952b181d33e125ef15b9c060a782e
+        with:
+          channel: ${{env.WERF_CHANNEL}}
+          kube-config-base64-data: "${{ secrets.KUBECONFIG_BASE64_PROD_SEL }}"
+          env: web-production
+        env:
+          WERF_REPO: ${{ steps.check_readonly_registry.outputs.web_registry_path }}
+          WERF_DIR: "docs/documentation"
+          WERF_RELEASE: "deckhouse-doc-${{ env.DOC_VERSION }}"
+          WERF_NAMESPACE: deckhouse-web-production
+          WERF_SET_DOC_VERSION: "global.doc_version=${{ env.DOC_VERSION }}"
+          WERF_SET_URL: "global.url=deckhouse.io"
+          WERF_SET_URL_RU: "global.url_ru=deckhouse.ru"
+          WERF_SET_WEB_ENV: "web.env=web-production"
+          WERF_SET_DCNAME: "web.dc_name=prod-sel"
+      # </template: deploy_doc_template>
+      # <template: update_comment_on_finish>
+      - name: Update comment on finish
+        id: update_comment_on_finish
+        if: ${{ always() && github.event_name == 'workflow_dispatch' && !!github.event.inputs.issue_number }}
+        env:
+          NEEDS_CONTEXT: ${{ toJSON(needs) }}
+          JOB_CONTEXT: ${{ toJSON(job) }}
+          STEPS_CONTEXT: ${{ toJSON(steps) }}
+        uses: actions/github-script@v6.4.1
+        with:
+          github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+          retries: 3
+          script: |
+            const statusConfig = 'job,one-line';
+            const name = '(Prod OLD) Deploy latest doc';
+            const needsContext = JSON.parse(process.env.NEEDS_CONTEXT);
+            const jobContext = JSON.parse(process.env.JOB_CONTEXT);
+            const stepsContext = JSON.parse(process.env.STEPS_CONTEXT);
+            let jobNames = null
+            if (process.env.JOB_NAMES) {
+              jobNames = JSON.parse(process.env.JOB_NAMES);
+            }
+
+            core.info(`needsContext: ${JSON.stringify(needsContext)}`);
+            core.info(`jobContext: ${JSON.stringify(jobContext)}`);
+            core.info(`stepsContext: ${JSON.stringify(stepsContext)}`);
+            core.info(`jobNames: ${JSON.stringify(jobNames)}`);
+
+            const ci = require('./.github/scripts/js/ci');
+            return await ci.updateCommentOnFinish({github, context, core, statusConfig, name, needsContext, jobContext, stepsContext, jobNames});
+      # </template: update_comment_on_finish>
+
   last_comment:
     name: Update comment on finish
     needs:
@@ -3965,8 +4180,10 @@ jobs:
       - build_se_plus
       - doc_web_build
       - main_web_build
-      - deploy_latest_web_site_prod_sel
-      - deploy_latest_web_doc_prod_sel
+      - deploy_latest_web_site_prod
+      - deploy_latest_web_site_prod_old
+      - deploy_latest_web_doc_prod
+      - deploy_latest_web_doc_prod_old
       - tests
       - dhctl_tests
       - golangci_lint
@@ -3976,7 +4193,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       JOB_NAMES: |
-        {"build_be":"Build BE","build_ce":"Build CE","build_ee":"Build EE","build_fe":"Build FE","build_se":"Build SE","build_se_plus":"Build SE-plus","deploy_latest_web_doc_prod_sel":"(Prod) Deploy latest doc","deploy_latest_web_site_prod_sel":"(Prod) Deploy latest site","dhctl_tests":"Dhctl Tests","doc_web_build":"Doc web build","go_generate":"Go Generate","golangci_lint":"GolangCI Lint","main_web_build":"Main web build","openapi_test_cases":"OpenAPI Test Cases","tests":"Tests","tests_dmt_lint":"DMT lint","tests_python_webhooks":"Tests python webhooks","validators":"Validators","web_links_test":"Web links test","workflow_render":"Render workflow"}
+        {"build_be":"Build BE","build_ce":"Build CE","build_ee":"Build EE","build_fe":"Build FE","build_se":"Build SE","build_se_plus":"Build SE-plus","deploy_latest_web_doc_prod":"(Prod) Deploy latest doc","deploy_latest_web_doc_prod_old":"(Prod OLD) Deploy latest doc","deploy_latest_web_site_prod":"(Prod) Deploy latest site","deploy_latest_web_site_prod_old":"(Prod OLD) Deploy latest site","dhctl_tests":"Dhctl Tests","doc_web_build":"Doc web build","go_generate":"Go Generate","golangci_lint":"GolangCI Lint","main_web_build":"Main web build","openapi_test_cases":"OpenAPI Test Cases","tests":"Tests","tests_dmt_lint":"DMT lint","tests_python_webhooks":"Tests python webhooks","validators":"Validators","web_links_test":"Web links test","workflow_render":"Render workflow"}
     steps:
 
       # <template: checkout_step>
