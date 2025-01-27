@@ -84,7 +84,7 @@ resource "aws_instance" "node" {
 
 resource "aws_eip" "eip" {
   count = var.associate_public_ip_address ? 1 : 0
-  network_border_group = data.aws_availability_zone.node_az.group_name
+  network_border_group = data.aws_availability_zone.node_az.network_border_group
   vpc = true
   tags = merge(var.tags, {
     Name = "${var.prefix}-${var.node_group.name}-${var.node_index}"
