@@ -85,6 +85,9 @@ common:
   documentation_title:
     en: Documentation
     ru: Документация
+  contact_us_button:
+    en: Contact us
+    ru: Свяжитесь с нами
   coming_soon:
     en: "coming soon..."
     ru: "скоро..."

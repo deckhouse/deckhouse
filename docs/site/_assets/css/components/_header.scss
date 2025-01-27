@@ -80,7 +80,7 @@ transition: .2s ease-in-out;
 
     @include min-w(xl) {
       display: flex;
-      gap: .75rem 1rem;
+      gap: .75rem .95rem;
     }
 
     @include min-w(xxl) {
@@ -226,7 +226,7 @@ transition: .2s ease-in-out;
     > a:after {
       content: '';
       display: inline-block;
-      margin-bottom: 2px;
+      margin-bottom: .125px;
       margin-left: 5px;
       width: 8px;
       height: 5px;
@@ -276,7 +276,7 @@ transition: .2s ease-in-out;
   }
 
   @include min-w(xl) {
-    gap: 1rem;
+    gap: 1.1rem;
   }
 
   .header__nav {
@@ -315,7 +315,7 @@ transition: .2s ease-in-out;
 
 &__buttons {
   display: flex;
-  gap: .5rem;
+  gap: .65rem;
 
   @include min-w(xxxl) {
     gap: 1rem;
@@ -365,7 +365,7 @@ transition: .2s ease-in-out;
   color: $primary-700;
 
   @include min-w(xl) {
-    width: 1.1rem;
+    width: 1.4rem;
     gap: .5rem;
   }
 
@@ -483,7 +483,7 @@ transition: .2s ease-in-out;
 
   .container {
     display: flex;
-    gap: 1.25rem 2rem;
+    gap: 1.25rem 2.1rem;
     flex-direction: column;
 
     @include min-w(l) {
@@ -517,8 +517,8 @@ transition: .2s ease-in-out;
     flex-wrap: wrap;
     gap: 1.15rem 1.5rem;
 
-    @include min-w(xxl) {
-      gap: .75rem 1rem;
+    @include min-w(xl) {
+      gap: .75rem 1.3rem;
     }
 
     li {
