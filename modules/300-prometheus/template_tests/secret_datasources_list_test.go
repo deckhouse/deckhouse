@@ -67,7 +67,7 @@ discovery:
 	getPrometheusValues := func(longtermRetentionDays int) string {
 		return fmt.Sprintf(`
 longtermRetentionDays: %d
-scrapeInterval: 10s
+scrapeInterval: 5m
 auth: {}
 vpa: {}
 grafana: {}
