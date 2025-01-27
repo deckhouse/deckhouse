@@ -15,7 +15,7 @@ https://kubernetes.io/docs/reference/command-line-tools-reference/feature-gates/
 apiVersion: kubeadm.k8s.io/v1beta3
 kind: ClusterConfiguration
 kubernetesVersion: {{ printf "%s.%s" (.clusterConfiguration.kubernetesVersion | toString ) (index .k8s .clusterConfiguration.kubernetesVersion "patch" | toString) }}
-controlPlaneEndpoint: "127.0.0.1:6445"
+controlPlaneEndpoint: "127.0.0.1:3994"
 networking:
   serviceSubnet: {{ .clusterConfiguration.serviceSubnetCIDR | quote }}
   podSubnet: {{ .clusterConfiguration.podSubnetCIDR | quote }}

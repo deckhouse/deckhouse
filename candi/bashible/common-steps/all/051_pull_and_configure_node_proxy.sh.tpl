@@ -140,7 +140,10 @@ spec:
   - name: sidecar
     image: {{ printf "%s%s@%s" $.registry.address $.registry.path (index $.images.controlPlaneManager "nodeProxy") }}
     imagePullPolicy: IfNotPresent
-    command: ["/bin/node-proxy-sidecar", "--config=/config/discovery.yaml", "--api-host=10.241.44.17:6443"]
+    command: 
+      - "/bin/node-proxy-sidecar"
+      - "--config=/config/discovery.yaml"
+      - {{ printf "--api-host=%s" (join "," .normal.apiserverEndpoints) }}
     volumeMounts:
       - name: certs
         mountPath: /etc/kubernetes/node-proxy

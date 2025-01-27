@@ -24,7 +24,7 @@ current-context: kubelet-bootstrap@default
 clusters:
 - cluster:
     certificate-authority-data: $(cat /var/lib/bashible/ca.crt | base64 -w0)
-    server: https://127.0.0.1:6445/
+    server: https://127.0.0.1:3994/
   name: default
 contexts:
 - context:
