@@ -13,7 +13,7 @@ Supports the following operating modes:
 
 In Layer 2 mode, one or more nodes take responsibility for providing the service within the local network. From the network’s perspective, it appears as if each of these nodes has multiple IP addresses assigned to its network interface. Technically, this is achieved by the module responding to ARP requests for IPv4 services and NDP requests for IPv6 services. The primary advantage of Layer 2 mode is its versatility: it works in any Ethernet network without requiring specialized hardware.
 
-## Principle of operation compared to L2 mode in MetalLB module
+## Advantages of the module over the classic MetalLB
 
 MetalLB in L2 mode allows ordering _Service_ with `LoadBalancer` type, the operation of which is based on the fact that balancing nodes simulate ARP-responses from the "public" IP in a peering network. This mode has a significant limitation — only one balancing node handles all the incoming traffic of this service at a time. Therefore:
 
