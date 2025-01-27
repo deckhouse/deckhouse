@@ -52,6 +52,7 @@ func (s *registryscaner) processModules(ctx context.Context, registry Client, mo
 			continue
 		}
 
+		// remove deleted release channels from cache
 		releaseTags := filterReleaseChannelsFromTags(tags)
 		for _, r := range s.cache.GetReleaseChannels(registry.Name(), module) {
 			if !slices.Contains(releaseTags, r) {
