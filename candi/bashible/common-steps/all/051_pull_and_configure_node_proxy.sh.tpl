@@ -161,3 +161,5 @@ spec:
 EOF
 
 bb-unset-proxy
+
+grep -q ":6445" /etc/kubernetes/admin.conf && sed -i 's/6445/3994/' /etc/kubernetes/admin.conf

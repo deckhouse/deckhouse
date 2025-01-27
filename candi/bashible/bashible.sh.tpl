@@ -171,7 +171,7 @@ function main() {
   export REGISTRY_AUTH="$(base64 -d <<< "{{ .registry.auth | default "" }}")"
 {{- end }}
 {{- if .packagesProxy }}
-  if [ ! -f /etc/kubernetes/manifests/node-proxy.yaml ] ; then
+  if [ -f /etc/kubernetes/manifests/node-proxy.yaml ] ; then
     export PACKAGES_PROXY_ADDRESSES="127.0.0.1:3995"
   else
     export PACKAGES_PROXY_ADDRESSES="{{ .packagesProxy.addresses | join "," }}"
