@@ -29,8 +29,8 @@ shell:
   - cd /src
   - go mod download
   setup:
-  - export GOOS=linux GOARCH=amd64
-  - export CGO_ENABLED=0
+  - export GOOS=linux GOARCH=amd64 CGO_ENABLED=0
+  - export GO_VERSION=${GOLANG_VERSION} GOPROXY={{ $.GOPROXY }}
   - cd /src
   - go build -ldflags="-s -w" -o safe-agent-updater .
   - chown 64535:64535 /src/safe-agent-updater
