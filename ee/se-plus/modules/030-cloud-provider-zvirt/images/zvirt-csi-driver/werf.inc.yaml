@@ -2,6 +2,14 @@
   {{- $version := toString $key }}
   {{- $image_version := $version | replace "." "-" }}
   {{- if $value.csi.zvirt }}
+    {{- $src_version := toString $value.csi.zvirt }}
+    {{- $patches := (printf "/%smodules/%s-%s/images/%s" $.ModulePath $.ModulePriority $.ModuleName $.ImageName) }}
+    {{- $patch := false }}
+    {{- range $path, $_ := $.Files.Glob (printf "%s/*" $patches) }}
+      {{- if contains $src_version $path }}
+        {{- $patch = true }}
+      {{- end }}
+    {{- end }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
 fromImage: common/distroless
@@ -33,21 +41,22 @@ docker:
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
 final: false
 fromImage: common/src-artifact
+    {{- if $patch }}
 git:
-  - add: /{{ $.ModulePath }}modules/030-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
-    to: /patches
-    includePaths:
-      - '**/*.patch'
-    stageDependencies:
-      install:
-        - '**/*.patch'
+- add: {{ $patches }}/patches/{{ $src_version }}
+  to: /patches
+  stageDependencies:
+    install:
+    - '**/*'
+    {{- end }}
 shell:
   install:
-    - git clone --depth 1 --branch {{ $value.csi.zvirt }} {{ $.SOURCE_REPO }}/openshift/ovirt-csi-driver.git /src
-    - cd /src
-    - find /patches -name '*.patch' | xargs git apply --verbose
-    - rm -rf vendor
-    - rm -rf .git
+  - cd /src
+  - git clone --depth 1 --branch {{ $value.csi.zvirt }} {{ $.SOURCE_REPO }}/openshift/ovirt-csi-driver.git .
+  {{- if $patch }}
+  - git apply /patches/*.patch --verbose
+  {{- end }}
+  - rm -rf vendor .git
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
 final: false
