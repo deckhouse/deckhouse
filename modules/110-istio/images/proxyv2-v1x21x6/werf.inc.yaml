@@ -120,19 +120,18 @@ import:
   add: /opt/libcxx
   to: /opt/libcxx
   before: install
-- image: {{ .ModuleName }}/{{ .ImageName }}-basel-artifact
-  add: /tmp/bazel-cache
-  to: /tmp/bazel-cache
-  before: install
-- image: {{ .ModuleName }}/{{ .ImageName }}-basel-artifact
-  add: /tmp/bazel-deps
-  to: /tmp/bazel-deps
-  before: install
 mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
 shell:
   install:
+  - mkdir -p /tmp/bazel-cache
+  - git clone --depth 1 --branch {{ $istioProxyCacheRev }} {{ $.SOURCE_REPO }}/istio/envoy-build-cache.git /tmp/bazel-cache
+  - rm -rf /tmp/bazel-cache/.git
+  - mkdir -p /tmp/bazel-deps
+  - git clone --depth 1 --branch {{ $istioProxyDepsRev }} {{ .SOURCE_REPO }}/istio/envoy-build-deps.git /tmp/bazel-deps
+  - rm -rf /tmp/bazel-deps/.git
+  #
   - export GO_VERSION=${GOLANG_VERSION} GOPROXY={{ $.GOPROXY }}
   - export GOOS=linux GOARCH=amd64 CGO_ENABLED=0
   - export BAZEL_VERSION="6.3.2" USE_BAZEL_VERSION="6.3.2"
@@ -164,8 +163,11 @@ import:
   before: install
 shell:
   install:
+  - export CCACHE_DIR="/tmp/ccache-dir"
   - mkdir -p /opt/libcxx
   - cd /tmp/
+  - ccache --zero-stats || true
+  - ccache --show-stats -v || true
   - |
     cmake \
     -GNinja \
@@ -174,10 +176,19 @@ shell:
     -DCMAKE_BUILD_TYPE=Release \
     -DCMAKE_C_COMPILER=clang \
     -DCMAKE_CXX_COMPILER=clang++ \
+    -DLLVM_INCLUDE_BENCHMARKS=OFF \
+    -DLLVM_CCACHE_BUILD="ON" \
+    -DLLVM_CCACHE_DIR="/tmp/ccache-dir" \
+    -DLLVM_CCACHE_MAXSIZE="0" \
     -DCMAKE_INSTALL_PREFIX="/opt/libcxx" /src/llvm/llvm
   setup:
+  - export CCACHE_DIR="/tmp/ccache-dir"
   - cd /tmp/
+  - ccache --show-stats -v || true
   - ninja install-cxx install-cxxabi
+  - ccache --show-stats -v || true
+  #
+  - rm -rf /src/llvm
   - rm -rf /opt/libcxx/include
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-binaries-artifact
@@ -317,18 +328,6 @@ shell:
   # getting rid of unused vulnerable code
   - rm -rf /src/llvm/llvm/utils/git
   - rm -rf /src/llvm/mlir/utils/vscode
-  - rm -rf /src/llvm/third-party/benchmark/*.
+  - rm -rf /src/llvm/third-party/benchmark && mkdir /src/llvm/third-party/benchmark
   - touch /src/llvm/third-party/benchmark/placeholder.txt
----
-image: {{ .ModuleName }}/{{ .ImageName }}-basel-artifact
-fromImage: common/src-artifact
-final: false
-shell:
-  install:
-  - mkdir -p /tmp/bazel-cache
-  - git clone --depth 1 --branch {{ $istioProxyCacheRev }} {{ $.SOURCE_REPO }}/istio/envoy-build-cache.git /tmp/bazel-cache
-  - rm -rf /tmp/bazel-cache/.git
-  - mkdir -p /tmp/bazel-deps
-  - git clone --depth 1 --branch {{ $istioProxyDepsRev }} {{ .SOURCE_REPO }}/istio/envoy-build-deps.git /tmp/bazel-deps
-  - rm -rf /tmp/bazel-deps/.git
 ---
