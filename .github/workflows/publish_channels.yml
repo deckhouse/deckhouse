@@ -28,7 +28,7 @@ jobs:
         WERF_DIR: "ci"
 
   deploy_channels_cm_prod_old:
-    name: [OLD] Deploy to production
+    name: "[OLD] Deploy to production"
     runs-on: [self-hosted, regular]
     steps:
     - name: Checkout code
