@@ -132,7 +132,8 @@ The steps described below must be performed from the first in order of the maste
 1. Make sure that the master nodes to be deleted are no longer listed as etcd cluster members:
 
    ```bash
-   kubectl -n kube-system exec -ti $(kubectl -n kube-system get pod -l component=etcd,tier=control-plane -o name | head -n1) -- \
+   kubectl -n kube-system exec -ti \
+   $(kubectl -n kube-system get pod -l component=etcd,tier=control-plane -o json | jq -r '.items[] | select( .status.conditions[] | select(.type == "ContainersReady" and .status == "True")) | .metadata.name' | head -n1) -- \
    etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
    --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key \
    --endpoints https://127.0.0.1:2379/ member list -w table
@@ -223,7 +224,7 @@ The steps described below must be performed from the first in order of the maste
      --ssh-host <MASTER-NODE-0-HOST> --ssh-host <MASTER-NODE-1-HOST> --ssh-host <MASTER-NODE-2-HOST>
    ```
 
-Repeat the steps below for **each master node one by one**, starting with the node with the highest number (suffix 2) and ending with the node with the lowest number (suffix 0).
+
 
 1. Select the master node to update (enter its name):
 
@@ -241,42 +242,25 @@ Repeat the steps below for **each master node one by one**, starting with the no
 1. Make sure that the node is no longer listed as an etcd cluster member:
 
    ```bash
-   kubectl -n kube-system exec -ti $(kubectl -n kube-system get pod -l component=etcd,tier=control-plane -o name | head -n1) -- \
+   kubectl -n kube-system exec -ti \
+   $(kubectl -n kube-system get pod -l component=etcd,tier=control-plane -o json | jq -r '.items[] | select( .status.conditions[] | select(.type == "ContainersReady" and .status == "True")) | .metadata.name' | head -n1) -- \
    etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
    --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key \
    --endpoints https://127.0.0.1:2379/ member list -w table
    ```
 
-1. Drain the node:
-
-   ```bash
-   kubectl drain ${NODE} --ignore-daemonsets --delete-emptydir-data
-   ```
-
-1. Shut down the virtual machine associated with the node, remove the node instance from the cloud and the disks connected to it (`kubernetes-data`).
-
-1. In the cluster, delete the Pods remaining on the node being deleted:
-
-   ```bash
-   kubectl delete pods --all-namespaces --field-selector spec.nodeName=${NODE} --force
-   ```
-
-1. In the cluster, delete the `Node` object for the node being deleted:
-
-   ```bash
-   kubectl delete node ${NODE}
-   ```
-
-1. **In the installer container**, run the following command to create the updated node:
+1. **In the installer container**, run the following command to perform nodes upgrade:
 
     You should read carefully what converge is going to do when it asks for approval.
 
-    If converge requests approval for another master node, it should be skipped by saying `no`.
+    In the process, one by one in reverse order (2,1,0). The nodes will be replaced with new nodes with confirmation on each node.
 
    ```bash
    dhctl converge --ssh-agent-private-keys=/tmp/.ssh/<SSH_KEY_FILENAME> --ssh-user=<USERNAME> \
      --ssh-host <MASTER-NODE-0-HOST> --ssh-host <MASTER-NODE-1-HOST> --ssh-host <MASTER-NODE-2-HOST>
    ```
+
+Repeat the steps below for **each master node one by one**, starting with the node with the highest number (suffix 2) and ending with the node with the lowest number (suffix 0).
 
 1. **On the newly created node**, check the systemd-unit log for the `bashible.service`. Wait until the node configuration is complete (you will see a message `nothing to do` in the log):
 
@@ -287,7 +271,8 @@ Repeat the steps below for **each master node one by one**, starting with the no
 1. Make sure the node is listed as an etcd cluster member:
 
    ```bash
-   kubectl -n kube-system exec -ti $(kubectl -n kube-system get pod -l component=etcd,tier=control-plane -o name | head -n1) -- \
+   kubectl -n kube-system exec -ti \
+   $(kubectl -n kube-system get pod -l component=etcd,tier=control-plane -o json | jq -r '.items[] | select( .status.conditions[] | select(.type == "ContainersReady" and .status == "True")) | .metadata.name' | head -n1) -- \
    etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
    --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key \
    --endpoints https://127.0.0.1:2379/ member list -w table
@@ -317,7 +302,8 @@ Use the `etcdctl member list` command.
 Example:
 
 ```shell
-kubectl -n kube-system exec -ti $(kubectl -n kube-system get pod -l component=etcd,tier=control-plane -o name | head -n1) -- \
+kubectl -n kube-system exec -ti \
+$(kubectl -n kube-system get pod -l component=etcd,tier=control-plane -o json | jq -r '.items[] | select( .status.conditions[] | select(.type == "ContainersReady" and .status == "True")) | .metadata.name' | head -n1) -- \
 etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
 --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key \
 --endpoints https://127.0.0.1:2379/ member list -w table

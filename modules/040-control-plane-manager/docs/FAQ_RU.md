@@ -167,7 +167,8 @@ title: "Управление control plane: FAQ"
 1. Убедитесь, что удаляемый master-узел пропал из списка узлов кластера:
 
    ```bash
-   kubectl -n kube-system exec -ti $(kubectl -n kube-system get pod -l component=etcd,tier=control-plane -o name | head -n1) -- \
+   kubectl -n kube-system exec -ti \
+   $(kubectl -n kube-system get pod -l component=etcd,tier=control-plane -o json | jq -r '.items[] | select( .status.conditions[] | select(.type == "ContainersReady" and .status == "True")) | .metadata.name' | head -n1) -- \
    etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
    --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key \
    --endpoints https://127.0.0.1:2379/ member list -w table
@@ -218,60 +219,18 @@ title: "Управление control plane: FAQ"
      --ssh-host <MASTER-NODE-0-HOST> --ssh-host <MASTER-NODE-1-HOST> --ssh-host <MASTER-NODE-2-HOST>
    ```
 
-Следующие действия **выполняйте поочередно на каждом** master-узле, начиная с узла с наивысшим номером (с суффиксом 2) и заканчивая узлом с наименьшим номером (с суффиксом 0).
-
-1. Выберите master-узел для обновления (укажите его название):
-
-   ```bash
-   NODE="<MASTER-NODE-N-NAME>"
-   ```
-
-1. Выполните следующую команду для снятия лейблов `node-role.kubernetes.io/control-plane`, `node-role.kubernetes.io/master`, `node.deckhouse.io/group` с узла:
-
-   ```bash
-   kubectl label node ${NODE} \
-     node-role.kubernetes.io/control-plane- node-role.kubernetes.io/master- node.deckhouse.io/group-
-   ```
-
-1. Убедитесь, что узел пропал из списка узлов кластера:
-
-   ```bash
-   kubectl -n kube-system exec -ti $(kubectl -n kube-system get pod -l component=etcd,tier=control-plane -o name | head -n1) -- \
-   etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
-   --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key \
-   --endpoints https://127.0.0.1:2379/ member list -w table
-   ```
-
-1. Выполните `drain` для узла:
-
-   ```bash
-   kubectl drain ${NODE} --ignore-daemonsets --delete-emptydir-data
-   ```
-
-1. Выключите виртуальную машину, соответствующую узлу, удалите инстанс узла из облака и подключенные к нему диски (`kubernetes-data`).
-
-1. Удалите в кластере поды, оставшиеся на удаляемом узле:
-
-   ```bash
-   kubectl delete pods --all-namespaces --field-selector spec.nodeName=${NODE} --force
-   ```
-
-1. Удалите в кластере объект `Node` удаленного узла:
-
-   ```bash
-   kubectl delete node ${NODE}
-   ```
-
-1. **В контейнере с инсталлятором** выполните следующую команду, чтобы создать обновлённый узел:
+1. **В контейнере с инсталлятором** выполните следующую команду, чтобы провести обновление узлов:
 
    Внимательно изучите действия, которые планирует выполнить converge, когда запрашивает подтверждение.
 
-   Если converge запрашивает подтверждение для другого master-узла, выберите `no`, чтобы пропустить его.
+   В процессе по очереди в обратном порядке (2,1,0). Будет проведена замена узлов на новые с потверждением на каждом узле.
 
    ```bash
    dhctl converge --ssh-agent-private-keys=/tmp/.ssh/<SSH_KEY_FILENAME> --ssh-user=<USERNAME> \
      --ssh-host <MASTER-NODE-0-HOST> --ssh-host <MASTER-NODE-1-HOST> --ssh-host <MASTER-NODE-2-HOST>
    ```
+
+   Следующие действия **выполняйте поочередно на каждом** master-узле, начиная с узла с наивысшим номером (с суффиксом 2) и заканчивая узлом с наименьшим номером (с суффиксом 0).
 
 1. **На созданном узле** откройте журнал systemd-юнита `bashible.service`. Дождитесь окончания настройки узла — в журнале должно появиться сообщение `nothing to do`:
 
@@ -279,10 +238,11 @@ title: "Управление control plane: FAQ"
    journalctl -fu bashible.service
    ```
 
-1. Проверьте, что узел отобразился в списке узлов кластера:
+1. Проверьте, что узел etcd отобразился в списке узлов кластера:
 
    ```bash
-   kubectl -n kube-system exec -ti $(kubectl -n kube-system get pod -l component=etcd,tier=control-plane -o name | head -n1) -- \
+   kubectl -n kube-system exec -ti \
+   $(kubectl -n kube-system get pod -l component=etcd,tier=control-plane -o json | jq -r '.items[] | select( .status.conditions[] | select(.type == "ContainersReady" and .status == "True")) | .metadata.name' | head -n1) -- \
    etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
    --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key \
    --endpoints https://127.0.0.1:2379/ member list -w table
@@ -292,7 +252,7 @@ title: "Управление control plane: FAQ"
 
    ```bash
    kubectl -n kube-system wait pod --timeout=10m --for=condition=ContainersReady \
-     -l app=d8-control-plane-manager --field-selector spec.nodeName=${NODE}
+     -l app=d8-control-plane-manager --field-selector spec.nodeName=<MASTER-NODE-N-NAME>
    ```
 
 1. Перейдите к обновлению следующего узла.
@@ -316,7 +276,8 @@ title: "Управление control plane: FAQ"
 Пример:
 
 ```shell
-kubectl -n kube-system exec -ti $(kubectl -n kube-system get pod -l component=etcd,tier=control-plane -o name | head -n1) -- \
+kubectl -n kube-system exec -ti \
+$(kubectl -n kube-system get pod -l component=etcd,tier=control-plane -o json | jq -r '.items[] | select( .status.conditions[] | select(.type == "ContainersReady" and .status == "True")) | .metadata.name' | head -n1) -- \
 etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
 --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key \
 --endpoints https://127.0.0.1:2379/ member list -w table
