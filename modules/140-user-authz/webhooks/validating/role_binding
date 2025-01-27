@@ -38,6 +38,9 @@ kubernetes:
 kubernetesValidating:
 - name: role-validating.deckhouse.io
   group: main
+  matchConditions:
+  - expression: ("system:apiserver" != request.userInfo.username)
+    name: exclude-kube-apiserver
   rules:
   - apiGroups:   ["rbac.authorization.k8s.io"]
     apiVersions: ["*"]
