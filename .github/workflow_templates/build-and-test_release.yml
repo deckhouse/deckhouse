@@ -289,10 +289,11 @@ jobs:
 {!{ tmpl.Exec "tests_template" (slice $ctx "validators" "build_fe") | strings.Indent 4 }!}
 {!{ tmpl.Exec "update_comment_on_finish" (slice "job,one-line" $jobNames.validators) | strings.Indent 6 }!}
 
-{!{/* Autodeploy site to production (SEL) env on push to the main branch. */}!}
-{!{- $jobNames = coll.Merge $jobNames (dict "deploy_latest_web_site_prod_sel" "(Prod) Deploy latest site") }!}
-  deploy_latest_web_site_prod_sel:
-    name: {!{ $jobNames.deploy_latest_web_site_prod_sel }!}
+{!{/* Autodeploy site to the production env on push to the main branch. */}!}
+{!{- $jobNames = coll.Merge $jobNames (dict "deploy_latest_web_site_prod" "(Prod) Deploy latest site") }!}
+  deploy_latest_web_site_prod:
+    name: {!{ $jobNames.deploy_latest_web_site_prod }!}
+    continue-on-error: true
     needs:
       - git_info
       - doc_web_build
@@ -304,13 +305,14 @@ jobs:
 {!{ tmpl.Exec "checkout_full_step" $ctx | strings.Indent 6}!}
 {!{ tmpl.Exec "login_readonly_registry_step" $ctx | strings.Indent 6 }!}
 {!{ tmpl.Exec "doc_version_template" | strings.Indent 6 }!}
-{!{ tmpl.Exec "deploy_site_template" "preproduction" | strings.Indent 6 }!}
-{!{ tmpl.Exec "update_comment_on_finish" (slice "job,one-line" $jobNames.deploy_latest_web_site_prod_sel) | strings.Indent 6 }!}
+{!{ tmpl.Exec "deploy_site_template" "production" | strings.Indent 6 }!}
+{!{ tmpl.Exec "update_comment_on_finish" (slice "job,one-line" $jobNames.deploy_latest_web_site_prod) | strings.Indent 6 }!}
 
-{!{/* Autodeploy docs to production (SEL) env on push to the main branch. */}!}
-{!{- $jobNames = coll.Merge $jobNames (dict "deploy_latest_web_doc_prod_sel" "(Prod) Deploy latest doc") }!}
-  deploy_latest_web_doc_prod_sel:
-    name: {!{ $jobNames.deploy_latest_web_doc_prod_sel }!}
+{!{/* Autodeploy site to the OLD production env on push to the main branch. */}!}
+{!{- $jobNames = coll.Merge $jobNames (dict "deploy_latest_web_site_prod_old" "(Prod OLD) Deploy latest site") }!}
+  deploy_latest_web_site_prod_old:
+    name: {!{ $jobNames.deploy_latest_web_site_prod_old }!}
+    continue-on-error: true
     needs:
       - git_info
       - doc_web_build
@@ -322,8 +324,46 @@ jobs:
 {!{ tmpl.Exec "checkout_full_step" $ctx | strings.Indent 6}!}
 {!{ tmpl.Exec "login_readonly_registry_step" $ctx | strings.Indent 6 }!}
 {!{ tmpl.Exec "doc_version_template" | strings.Indent 6 }!}
-{!{ tmpl.Exec "deploy_doc_template" "preproduction" | strings.Indent 6 }!}
-{!{ tmpl.Exec "update_comment_on_finish" (slice "job,one-line" $jobNames.deploy_latest_web_doc_prod_sel) | strings.Indent 6 }!}
+{!{ tmpl.Exec "deploy_site_template" "oldproduction" | strings.Indent 6 }!}
+{!{ tmpl.Exec "update_comment_on_finish" (slice "job,one-line" $jobNames.deploy_latest_web_site_prod_old) | strings.Indent 6 }!}
+
+{!{/* Autodeploy docs to the production env on push to the main branch. */}!}
+{!{- $jobNames = coll.Merge $jobNames (dict "deploy_latest_web_doc_prod" "(Prod) Deploy latest doc") }!}
+  deploy_latest_web_doc_prod:
+    name: {!{ $jobNames.deploy_latest_web_doc_prod }!}
+    continue-on-error: true
+    needs:
+      - git_info
+      - doc_web_build
+      - main_web_build
+    if: ${{ needs.git_info.outputs.ci_commit_ref_name == 'main' && github.repository == 'deckhouse/deckhouse' }}
+    runs-on: [self-hosted, regular]
+    steps:
+{!{ tmpl.Exec "started_at_output" . | strings.Indent 6 }!}
+{!{ tmpl.Exec "checkout_full_step" $ctx | strings.Indent 6}!}
+{!{ tmpl.Exec "login_readonly_registry_step" $ctx | strings.Indent 6 }!}
+{!{ tmpl.Exec "doc_version_template" | strings.Indent 6 }!}
+{!{ tmpl.Exec "deploy_doc_template" "production" | strings.Indent 6 }!}
+{!{ tmpl.Exec "update_comment_on_finish" (slice "job,one-line" $jobNames.deploy_latest_web_doc_prod) | strings.Indent 6 }!}
+
+{!{/* Autodeploy docs to the OLD production env on push to the main branch. */}!}
+{!{- $jobNames = coll.Merge $jobNames (dict "deploy_latest_web_doc_prod_old" "(Prod OLD) Deploy latest doc") }!}
+  deploy_latest_web_doc_prod_old:
+    name: {!{ $jobNames.deploy_latest_web_doc_prod_old }!}
+    continue-on-error: true
+    needs:
+      - git_info
+      - doc_web_build
+      - main_web_build
+    if: ${{ needs.git_info.outputs.ci_commit_ref_name == 'main' && github.repository == 'deckhouse/deckhouse' }}
+    runs-on: [self-hosted, regular]
+    steps:
+{!{ tmpl.Exec "started_at_output" . | strings.Indent 6 }!}
+{!{ tmpl.Exec "checkout_full_step" $ctx | strings.Indent 6}!}
+{!{ tmpl.Exec "login_readonly_registry_step" $ctx | strings.Indent 6 }!}
+{!{ tmpl.Exec "doc_version_template" | strings.Indent 6 }!}
+{!{ tmpl.Exec "deploy_doc_template" "oldproduction" | strings.Indent 6 }!}
+{!{ tmpl.Exec "update_comment_on_finish" (slice "job,one-line" $jobNames.deploy_latest_web_doc_prod_old) | strings.Indent 6 }!}
 
   last_comment:
     name: Update comment on finish
@@ -340,8 +380,10 @@ jobs:
       - build_se_plus
       - doc_web_build
       - main_web_build
-      - deploy_latest_web_site_prod_sel
-      - deploy_latest_web_doc_prod_sel
+      - deploy_latest_web_site_prod
+      - deploy_latest_web_site_prod_old
+      - deploy_latest_web_doc_prod
+      - deploy_latest_web_doc_prod_old
       - tests
       - dhctl_tests
       - golangci_lint

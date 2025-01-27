@@ -1373,7 +1373,7 @@ alerts:
       module: control-plane-manager
       edition: ce
       description: |-
-        Current kubernetes version "{{ $labels.k8s_version }}" is deprecated, and its support will be removed within 6 months
+        The current Kubernetes version "{{ $labels.k8s_version }}" is deprecated, and its support will be removed in upcoming releases.
 
         Please migrate to the next kubernetes version (at least 1.28)
 
@@ -2820,10 +2820,16 @@ alerts:
       description: |-
         There is an IngressNginxController and/or an Ingress object that utilize(s) Nginx GeoIPv1 module's variables. The module is deprecated and its support is discontinued from Ingess Nginx Controller of version 1.10 and higher. It's recommend to upgrade your configuration to use [GeoIPv2 module](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/ingress-nginx/cr.html#ingressnginxcontroller-v1-spec-geoip2).
         Use the following command to get the list of the IngressNginxControllers that contain GeoIPv1 variables:
-        `kubectl  get ingressnginxcontrollers.deckhouse.io -o json | jq '.items[] | select(..|strings | test("\\$geoip_(country_(code3|code|name)|area_code|city_continent_code|city_country_(code3|code|name)|dma_code|latitude|longitude|region|region_name|city|postal_code|org)([^_a-zA-Z0-9]|$)+")) | .metadata.name'`
+
+        ```shell
+        kubectl  get ingressnginxcontrollers.deckhouse.io -o json | jq '.items[] | select(..|strings | test("\\$geoip_(country_(code3|code|name)|area_code|city_continent_code|city_country_(code3|code|name)|dma_code|latitude|longitude|region|region_name|city|postal_code|org)([^_a-zA-Z0-9]|$)+")) | .metadata.name'
+        ```
 
         Use the following command to get the list of the Ingress objects that contain GeoIPv1 variables:
-        `kubectl  get ingress -A -o json | jq '.items[] | select(..|strings | test("\\$geoip_(country_(code3|code|name)|area_code|city_continent_code|city_country_(code3|code|name)|dma_code|latitude|longitude|region|region_name|city|postal_code|org)([^_a-zA-Z0-9]|$)+")) | "\(.metadata.namespace)/\(.metadata.name)"' | sort | uniq`
+
+        ```shell
+        kubectl  get ingress -A -o json | jq '.items[] | select(..|strings | test("\\$geoip_(country_(code3|code|name)|area_code|city_continent_code|city_country_(code3|code|name)|dma_code|latitude|longitude|region|region_name|city|postal_code|org)([^_a-zA-Z0-9]|$)+")) | "\(.metadata.namespace)/\(.metadata.name)"' | sort | uniq
+        ```
       summary: |
         Deprecated GeoIP version 1 is being used in the cluster.
       severity: "9"
@@ -3628,21 +3634,6 @@ alerts:
       summary: |
         Count of unavailable replicas in StatefulSet {{$labels.namespace}}/{{$labels.statefulset}} above threshold.
       severity: "6"
-      markupFormat: markdown
-    - name: KubernetesVersionEndOfLife
-      sourceFile: modules/040-control-plane-manager/monitoring/prometheus-rules/control-plane-manager.yaml
-      moduleUrl: 040-control-plane-manager
-      module: control-plane-manager
-      edition: ce
-      description: |-
-        Current kubernetes version "{{ $labels.k8s_version }}" support will be removed in the next Deckhouse release (1.58).
-
-        Please migrate to the next kubernetes version (at least 1.24) as soon as possible.
-
-        Check how to update the Kubernetes version in the cluster here - https://deckhouse.io/documentation/deckhouse-faq.html#how-do-i-upgrade-the-kubernetes-version-in-a-cluster
-      summary: |
-        Kubernetes version &quot;{{ $labels.k8s_version }}&quot; has reached End Of Life.
-      severity: "4"
       markupFormat: markdown
     - name: KubeStateMetricsDown
       sourceFile: modules/340-monitoring-kubernetes/monitoring/prometheus-rules/generic/kube-state-metrics.yaml
