@@ -333,7 +333,7 @@ func (c *moduleSourceReconciler) createModuleRelease(ctx context.Context, ms *v1
 		},
 	}
 	if result.ModuleDefinition != nil {
-		rl.Spec.Requirements = result.ModuleDefinition.Requirements
+		rl.Spec.Requirements = result.ModuleDefinition.GetRequirements()
 	}
 
 	err := c.client.Create(ctx, rl)
