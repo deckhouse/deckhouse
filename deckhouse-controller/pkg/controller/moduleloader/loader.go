@@ -309,7 +309,7 @@ func (l *Loader) ensureModule(ctx context.Context, def *moduletypes.Definition, 
 						Description:  def.Description,
 						Stage:        def.Stage,
 						Source:       v1alpha1.ModuleSourceEmbedded,
-						Requirements: def.GetRequirements(),
+						Requirements: def.Requirements,
 					},
 				}
 				l.log.Debugf("the '%s' embedded module not found, create it", def.Name)
@@ -334,8 +334,8 @@ func (l *Loader) ensureModule(ctx context.Context, def *moduletypes.Definition, 
 				needsUpdate = true
 			}
 
-			if !maps.Equal(module.Properties.Requirements, def.GetRequirements()) {
-				module.Properties.Requirements = def.GetRequirements()
+			if !maps.Equal(module.Properties.Requirements, def.Requirements) {
+				module.Properties.Requirements = def.Requirements
 				needsUpdate = true
 			}
 

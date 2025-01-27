@@ -17,6 +17,7 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"maps"
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
@@ -133,15 +134,26 @@ type Module struct {
 }
 
 type ModuleProperties struct {
-	Weight           uint32            `json:"weight,omitempty"`
-	Source           string            `json:"source,omitempty"`
-	ReleaseChannel   string            `json:"releaseChannel,omitempty"`
-	Stage            string            `json:"stage,omitempty"`
-	Description      string            `json:"description,omitempty"`
-	Version          string            `json:"version,omitempty"`
-	UpdatePolicy     string            `json:"updatePolicy,omitempty"`
-	AvailableSources []string          `json:"availableSources,omitempty"`
-	Requirements     map[string]string `json:"requirements,omitempty"`
+	Weight           uint32       `json:"weight,omitempty"`
+	Source           string       `json:"source,omitempty"`
+	ReleaseChannel   string       `json:"releaseChannel,omitempty"`
+	Stage            string       `json:"stage,omitempty"`
+	Description      string       `json:"description,omitempty"`
+	Version          string       `json:"version,omitempty"`
+	UpdatePolicy     string       `json:"updatePolicy,omitempty"`
+	AvailableSources []string     `json:"availableSources,omitempty"`
+	Requirements     Requirements `json:"requirements,omitempty"`
+}
+
+type Requirements map[string]interface{}
+
+func (r *Requirements) DeepCopy() *Requirements {
+	clone := maps.Clone(*r)
+	return &clone
+}
+
+func (r Requirements) DeepCopyInto(out *Requirements) {
+	*out = *r.DeepCopy()
 }
 
 type ModuleStatus struct {

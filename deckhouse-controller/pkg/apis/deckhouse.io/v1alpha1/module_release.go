@@ -18,7 +18,6 @@ package v1alpha1
 
 import (
 	"encoding/json"
-	"maps"
 	"strconv"
 	"time"
 
@@ -112,18 +111,7 @@ func (mr *ModuleRelease) GetApplyAfter() *time.Time {
 }
 
 func (mr *ModuleRelease) GetRequirements() map[string]string {
-	requirements := make(map[string]string)
-	if len(mr.Spec.Requirements) == 0 {
-		return requirements
-	}
-
-	for key, raw := range mr.Spec.Requirements {
-		if value, ok := raw.(string); ok {
-			requirements[key] = value
-		}
-	}
-
-	return requirements
+	return mr.Spec.Requirements
 }
 
 func (mr *ModuleRelease) GetChangelogLink() string {
@@ -235,20 +223,9 @@ type ModuleReleaseSpec struct {
 	Version    *semver.Version `json:"version,omitempty"`
 	Weight     uint32          `json:"weight,omitempty"`
 
-	ApplyAfter   *metav1.Time `json:"applyAfter,omitempty"`
-	Requirements Requirements `json:"requirements,omitempty"`
-	Changelog    Changelog    `json:"changelog,omitempty"`
-}
-
-type Requirements map[string]interface{}
-
-func (r *Requirements) DeepCopy() *Requirements {
-	clone := maps.Clone(*r)
-	return &clone
-}
-
-func (r Requirements) DeepCopyInto(out *Requirements) {
-	*out = *r.DeepCopy()
+	ApplyAfter   *metav1.Time      `json:"applyAfter,omitempty"`
+	Requirements map[string]string `json:"requirements,omitempty"`
+	Changelog    Changelog         `json:"changelog,omitempty"`
 }
 
 type ModuleReleaseStatus struct {
