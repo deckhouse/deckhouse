@@ -16,6 +16,10 @@
 
 exit_code=0
 
+gem uninstall html-proofer -v 5.0.9
+gem install html-proofer -v 4.0.0
+htmlproofer --version
+
 cd /src/en
 echo "Checking links (EN)"
 htmlproofer --allow_missing_href --allow-hash-href --ignore-missing-alt --ignore-empty-alt --log-level :debug \
