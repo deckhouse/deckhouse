@@ -56,7 +56,7 @@
             Important! Existing LoadBalancer Services of the Deckhouse were migrated automatically, but the new ones won't.
 
     - alert: D8MetallbIgnoredLayer2PoolsAreUsed
-      expr: d8_metallb_not_supported_service_annotations_detected == 1
+      expr: d8_metallb_ignored_layer2_pools_are_used == 1
       for: 1m
       labels:
         severity_level: "7"
