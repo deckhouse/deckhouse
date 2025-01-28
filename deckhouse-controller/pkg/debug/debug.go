@@ -135,8 +135,8 @@ func createTarball() *bytes.Buffer {
 		},
 		{
 			File: "mcm-logs.txt",
-			Cmd:  "bash",
-			Args: []string{"-c", `kubectl get modules node-manager -o json | jq -r 'select(.status.phase == "Ready") | "kubectl -n d8-cloud-instance-manager logs -l app=machine-controller-manager --tail=3000 -c controller"' | bash`},
+			Cmd:  "kubectl",
+			Args: []string{"-n", "d8-cloud-instance-manager", "logs", "-l", "app=machine-controller-manager", "--tail=3000", "-c", "controller", "--ignore-errors=true"},
 		},
 		{
 			File: "ccm-logs.txt",
@@ -150,23 +150,23 @@ func createTarball() *bytes.Buffer {
 		},
 		{
 			File: "vpa-admission-controller-logs.txt",
-			Cmd:  "bash",
-			Args: []string{"-c", `kubectl get modules vertical-pod-autoscaler -o json | jq -r 'select(.status.phase == "Ready") | "kubectl -n kube-system logs -l app=vpa-admission-controller --tail=3000 -c admission-controller"' | bash`},
+			Cmd:  "kubectl",
+			Args: []string{"-n", "kube-system", "logs", "-l", "app=vpa-admission-controller", "--tail=3000", "-c", "admission-controller", "--ignore-errors=true"},
 		},
 		{
 			File: "vpa-recommender-logs.txt",
-			Cmd:  "bash",
-			Args: []string{"-c", `kubectl get modules vertical-pod-autoscaler -o json | jq -r 'select(.status.phase == "Ready") | "kubectl -n kube-system logs -l app=vpa-recommender --tail=3000 -c recommender"' | bash`},
+			Cmd:  "kubectl",
+			Args: []string{"-n", "kube-system", "logs", "-l", "app=vpa-recommender", "--tail=3000", "-c", "recommender", "--ignore-errors=true"},
 		},
 		{
 			File: "vpa-updater-logs.txt",
-			Cmd:  "bash",
-			Args: []string{"-c", `kubectl get modules vertical-pod-autoscaler -o json | jq -r 'select(.status.phase == "Ready") | "kubectl -n kube-system logs -l app=vpa-updater --tail=3000 -c updater"' | bash`},
+			Cmd:  "kubectl",
+			Args: []string{"-n", "kube-system", "logs", "-l", "app=vpa-updater", "--tail=3000", "-c", "updater", "--ignore-errors=true"},
 		},
 		{
 			File: "prometheus-logs.txt",
-			Cmd:  "bash",
-			Args: []string{"-c", `kubectl get modules prometheus -o json | jq -r 'select(.status.phase == "Ready") | "kubectl -n d8-monitoring logs -l prometheus=main --tail=3000 -c prometheus"' | bash`},
+			Cmd:  "kubectl",
+			Args: []string{"-n", "d8-monitoring", "logs", "-l", "prometheus=main", "--tail=3000", "-c", "prometheus", "--ignore-errors=true"},
 		},
 		{
 			File: "terraform-check.json",
@@ -181,7 +181,7 @@ func createTarball() *bytes.Buffer {
 		{
 			File: "pods.txt",
 			Cmd:  "bash",
-			Args: []string{"-c", `kubectl get pod -A -owide | grep -Pv '\s+([1-9]+[\d]*)\/\1\s+' | grep -v 'Completed\|Evicted' | grep -E "^(d8-|kube-system)"`},
+			Args: []string{"-c", `kubectl get pod -A -owide | grep -Pv '\s+([1-9]+[\d]*)\/\1\s+' | grep -v 'Completed\|Evicted' | grep -E "^(d8-|kube-system)" || true`},
 		},
 		{
 			File: "cluster-authorization-rules.json",
