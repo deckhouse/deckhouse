@@ -14,5 +14,5 @@ shell:
   install:
   - git clone --depth 1 --branch {{ $istioVersion }} {{ $.SOURCE_REPO }}/istio/istio.git /src/istio/
   - cd /src/istio/
-  - find /patches -name '*.patch' | xargs git apply --verbose
+  - git apply --verbose /patches/*.patch
   - rm -rf /src/istio/.git
