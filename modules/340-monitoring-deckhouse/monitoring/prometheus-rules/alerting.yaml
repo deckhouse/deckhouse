@@ -204,7 +204,7 @@
 
         Please specify the proper update policy in the module config to continue get updates:
         ```
-        kubectl patch mc '{{ $labels.moduleName }}' --type=merge -p '{"spec": {"updatePolicy": '{{ $labels.updatePolicy }}'}}'
+        kubectl patch mc {{ $labels.moduleName }} --type=merge -p '{"spec": {"updatePolicy": "{{ $labels.updatePolicy }}" }}'
         ```
       summary: |
         The '{{ $labels.moduleName }}' module has a deprecated module update policy.
