@@ -141,32 +141,32 @@ func createTarball() *bytes.Buffer {
 		{
 			File: "ccm-logs.txt",
 			Cmd:  "bash",
-			Args: []string{"-c", "kubectl -n $(kubectl get ns -o custom-columns=NAME:metadata.name | grep d8-cloud-provider) logs -l app=cloud-controller-manager --tail=3000"},
+			Args: []string{"-c", `kubectl get modules -o json | jq -r '.items[] | select(.properties.state == "Enabled" and (.metadata.name | test("^cloud-provider"))) | "kubectl -n d8-"+.metadata.name+" logs -l app=cloud-controller-manager --tail=3000"' | bash`},
 		},
 		{
 			File: "cluster-autoscaler-logs.txt",
-			Cmd:  "kubectl",
-			Args: []string{"-n", "d8-cloud-instance-manager", "logs", "-l", "app=cluster-autoscaler", "--tail", "3000", "-c", "cluster-autoscaler"},
+			Cmd:  "bash",
+			Args: []string{"-c", `kubectl get modules -o json | jq -r '.items[] | select(.properties.state == "Enabled" and .metadata.name == "node-manager") | "kubectl -n d8-cloud-instance-manager logs -l app=cluster-autoscaler --tail=3000 -c cluster-autoscaler"' | bash`},
 		},
 		{
 			File: "vpa-admission-controller-logs.txt",
-			Cmd:  "kubectl",
-			Args: []string{"-n", "kube-system", "logs", "-l", "app=vpa-admission-controller", "--tail", "3000", "-c", "admission-controller"},
+			Cmd:  "bash",
+			Args: []string{"-c", `kubectl get modules -o json | jq -r '.items[] | select(.properties.state == "Enabled" and .metadata.name == "vertical-pod-autoscaler") | "kubectl -n kube-system logs -l app=vpa-admission-controller --tail=3000 -c admission-controller"' | bash`},
 		},
 		{
 			File: "vpa-recommender-logs.txt",
-			Cmd:  "kubectl",
-			Args: []string{"-n", "kube-system", "logs", "-l", "app=vpa-recommender", "--tail", "3000", "-c", "recommender"},
+			Cmd:  "bash",
+			Args: []string{"-c", `kubectl get modules -o json | jq -r '.items[] | select(.properties.state == "Enabled" and .metadata.name == "vertical-pod-autoscaler") | "kubectl -n kube-system logs -l app=vpa-recommender --tail=3000 -c recommender"' | bash`},
 		},
 		{
 			File: "vpa-updater-logs.txt",
-			Cmd:  "kubectl",
-			Args: []string{"-n", "kube-system", "logs", "-l", "app=vpa-updater", "--tail", "3000", "-c", "updater"},
+			Cmd:  "bash",
+			Args: []string{"-c", `kubectl get modules -o json | jq -r '.items[] | select(.properties.state == "Enabled" and .metadata.name == "vertical-pod-autoscaler") | "kubectl -n kube-system logs -l app=vpa-updater --tail=3000 -c updater"' | bash`},
 		},
 		{
 			File: "prometheus-logs.txt",
-			Cmd:  "kubectl",
-			Args: []string{"-n", "d8-monitoring", "logs", "-l", "prometheus=main", "--tail", "3000", "-c", "prometheus"},
+			Cmd:  "bash",
+			Args: []string{"-c", `kubectl get modules -o json | jq -r '.items[] | select(.properties.state == "Enabled" and .metadata.name == "prometheus") | "kubectl -n d8-monitoring logs -l prometheus=main --tail=3000 -c prometheus"' | bash`},
 		},
 		{
 			File: "terraform-check.json",
