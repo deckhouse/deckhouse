@@ -4,8 +4,7 @@
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-files
 final: false
-from: {{ $.Images.BASE_ALPINE_DEV }}
-fromCacheVersion: 20250122
+fromImage: common/src-artifact
 git:
 - add: /{{ $.ModulePath }}modules/300-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
   to: /patches
@@ -15,15 +14,14 @@ git:
     install:
     - '**/*.patch'
 shell:
-  beforeInstall:
-  - apk add --no-cache openssh-client
   install:
   - mkdir -p /usr/src/app
   - cd /usr/src/app
-  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
   - git clone --depth 1 --branch v{{ $grafanaVersion }} {{ $.SOURCE_REPO }}/grafana/grafana.git .
   - git clone --depth 1 --branch v{{ $grafanaVersion }} {{ $.SOURCE_REPO }}/grafana/grafana-deps.git /grafana-public
+  - git clone --depth 1 {{ $.SOURCE_REPO }}/grafana/grafana-plugins.git /grafana-plugins
   - find /patches -name '*.patch' -exec git apply {} \;
+  - rm -rf /usr/src/app/.git /grafana-public/.git /grafana-plugins/.git
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-go-builder
 final: false
@@ -38,7 +36,7 @@ import:
   before: install
 shell:
   beforeInstall:
-  - apt-get update
+  {{- include "debian packages proxy" . | nindent 2 }}
   - apt-get -y --no-install-recommends install gcc musl musl-tools
   install:
   - export GOPROXY={{ $.GOPROXY }} CGO_ENABLED=1 GOOS=linux GOARCH=amd64 CC=/usr/bin/musl-gcc
@@ -83,6 +81,10 @@ import:
   add: /usr/src/app/conf
   to: /usr/share/grafana/conf
   before: install
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-files
+  add: /grafana-plugins
+  to: /grafana-plugins
+  before: install
 git:
 - add: /{{ $.ModulePath }}modules/300-{{ $.ModuleName }}/images/{{ $.ImageName }}/grafana_home_dashboard.json
   to: /usr/share/grafana/public/dashboards/grafana_home_dashboard.json
@@ -95,12 +97,7 @@ git:
     install:
     - '**/*'
 shell:
-  beforeInstall:
-  - apt-get update
-  - DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends openssh-client
-  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
   install:
-  - git clone --depth 1 {{ $.SOURCE_REPO }}/grafana/grafana-plugins.git /grafana-plugins
   - |
     export PATH="/usr/share/grafana/bin:$PATH" \
     GF_PATHS_CONFIG="/etc/grafana/grafana.ini" \
