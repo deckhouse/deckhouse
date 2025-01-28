@@ -68,10 +68,10 @@
         - patches in src of istio for fix CVE
         - binaries pilot-agent *(built from src)*
 
-#### Building envoy for proxy-v1x21x6 
+#### Building envoy for proxy-v1x21x6
 
   - `build-image-artifact` image based on `common/alt-p11-artifact` image
-    - based on `cni-cilium/base-cilium-dev` adapted for the current envoy build (e.g. llvm and bazel versions)     
+    - based on `cni-cilium/base-cilium-dev` adapted for the current envoy build (e.g. llvm and bazel versions)
   - `build-libcxx-artifact` image based on `build-image-artifact` image (for build libcxxabi and libcxx)
     - This library needs for build envoy. libcxxabi and libcxx from AltLinux:P11 are not compatible with our build.
     - includes:
@@ -86,7 +86,7 @@
       - some patches:
         - using the self-built `libcxxabi` and `libcxxx` libraries,
         - in `WORKSPACE` we change `ENVOY_SHA` and `ENVOY_SHA256` which are links to the envoy repository version 1.29.12. Because the original tag is broken.
-        - `BAZEL_LINKOPTS=-lm:-pthread` -> `BAZEL_LINKOPTS=-lm:-lpthread` in `envoy.bazelrc` *(fix to specify the correct path to the libcxx libraries and use lpthread, not pthread)*
+        - `BAZEL_LINKOPTS=-lm:-pthread` -> `BAZEL_LINKOPTS=-lm:-lpthread` in `envoy.bazelrc` *(???)*
         - use bazel build options `--config=release` and target `//:envoy`. We found this method in ProwCI in repository istio/proxy. ([Original build job from Istio ProwCI](https://prow.istio.io/view/gs/istio-prow/pr-logs/pull/istio_release-builder/1944/build-warning_release-builder_release-1.21/1837269285437706240))
       - binaries envoy *(built from src)*
-      
+
