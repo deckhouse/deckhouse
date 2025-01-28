@@ -13,12 +13,11 @@ image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 final: false
 fromImage: common/src-artifact
 git:
-  - add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}
+  - add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/src
     to:  /src
     excludePaths:
       - "**/*.md"
       - "**/*.yaml"
-      - hack
     stageDependencies:
       install:
         - go.mod
@@ -29,7 +28,6 @@ git:
     excludePaths:
       - "**/*.md"
       - "**/*.yaml"
-      - hack
     stageDependencies:
       install:
         - go.mod
