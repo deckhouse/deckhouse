@@ -82,6 +82,13 @@ Metallb можно использовать в статических класт
            key: dedicated.deckhouse.io
            operator: Equal
            value: frontend
+       nodeSelector:
+         node-role.deckhouse.io/metallb: ""
+       tolerations:
+       - effect: NoExecute
+         key: dedicated.deckhouse.io
+         operator: Equal
+         value: frontend    
    ```
 
 1. Установите приложение (nginx) и опубликуйте на порту `8080`:

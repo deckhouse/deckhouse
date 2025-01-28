@@ -80,7 +80,14 @@ Below is a small step-by-step guide on how to enable the metallb module, create 
          - effect: NoExecute
            key: dedicated.deckhouse.io
            operator: Equal
-           value: metallb
+           value: frontend
+       nodeSelector:
+         node-role.deckhouse.io/metallb: ""
+       tolerations:
+       - effect: NoExecute
+         key: dedicated.deckhouse.io
+         operator: Equal
+         value: frontend    
    ```
 
 1. Deploy the application (nginx) and Service on port `8080`:
