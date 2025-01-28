@@ -1,34 +1,29 @@
 diff --git a/staging/src/k8s.io/apiserver/plugin/pkg/authenticator/token/oidc/oidc.go b/staging/src/k8s.io/apiserver/plugin/pkg/authenticator/token/oidc/oidc.go
-index 1aa2f7abff5..8fa3df30527 100644
+index 1aa2f7abff5..14649b7ee91 100644
 --- a/staging/src/k8s.io/apiserver/plugin/pkg/authenticator/token/oidc/oidc.go
 +++ b/staging/src/k8s.io/apiserver/plugin/pkg/authenticator/token/oidc/oidc.go
-@@ -301,6 +301,31 @@ func New(opts Options) (*Authenticator, error) {
+@@ -34,6 +34,7 @@ import (
+ 	"encoding/json"
+ 	"fmt"
+ 	"io/ioutil"
++	orignet "net"
+ 	"net/http"
+ 	"reflect"
+ 	"strings"
+@@ -301,6 +302,18 @@ func New(opts Options) (*Authenticator, error) {
  		go wait.PollImmediateUntil(10*time.Second, func() (done bool, err error) {
  			provider, err := oidc.NewProvider(ctx, opts.JWTAuthenticator.Issuer.URL)
  			if err != nil {
 +				t := time.Now()
 +				fmt.Println("current time: ", t.String())
 +
-+				roots, err := x509.SystemCertPool()
++				ips, err := orignet.LookupIP("dex.89.169.152.64.sslip.io")
 +				if err != nil {
-+					klog.Errorf("failed loading system cert pool: %v", err)
++					klog.Errorf("failed Lookup: %v", err)
 +				}
 +
-+				// Перебираем и выводим сертификаты
-+				for _, cert := range roots.Subjects() {
-+					klog.Errorf("Subject: %s\n", cert)
-+				}
-+
-+				wellKnown := strings.TrimSuffix(opts.JWTAuthenticator.Issuer.URL, "/") + "/.well-known/openid-configuration"
-+				req, err := http.NewRequest("GET", wellKnown, nil)
-+				if err != nil {
-+					klog.Errorf("failed new request: %v", err)
-+				}
-+				resp, err := client.Do(req)
-+				if err != nil {
-+					klog.Errorf("failed doRequest: %v", err)
-+				} else {
-+					defer resp.Body.Close()
++				for _, ip := range ips {
++					klog.Errorf("%s %s\n", "dex.89.169.152.64.sslip.io", ip.String())
 +				}
 +
  				klog.Errorf("oidc authenticator: initializing plugin: %v", err)
