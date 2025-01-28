@@ -19,6 +19,10 @@ import:
   add: /src/jq/jq
   to: /usr/local/bin/jq
   before: setup
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+  add: /opt/python-static
+  to: /opt/python-static
+  before: setup
 {{- $k8sVersion := "1.27" }}
 {{- $image_version := printf "%s.%d" $k8sVersion (index $.CandiVersionMap "k8s" $k8sVersion "patch") | replace "." "-" }}
 - image: common/kubernetes-artifact-{{ $image_version }}
@@ -31,6 +35,8 @@ import:
   before: setup
 docker:
   ENTRYPOINT: ["tini", "--", "/shell-operator"]
+  ENV:
+    PATH: "/opt/python-static/bin:$PATH"
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 fromImage: common/src-artifact
@@ -63,6 +69,10 @@ mount:
 - from: tmp_dir
   to: /root/.cache/go-build
 import:
+- image: common/python-static-artifact
+  add: /opt/python-static
+  to: /opt/python-static
+  before: setup
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
   add: /src
   to: /src
