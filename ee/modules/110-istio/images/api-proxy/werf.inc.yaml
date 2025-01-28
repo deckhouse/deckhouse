@@ -39,15 +39,9 @@ final: false
 git:
 - add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/src
   to: /src
-  excludePaths:
-  - "*/*.md"
-  - "*/*.yaml"
   stageDependencies:
     install:
-    - src/go.mod
-    - srcgo.sum
-    setup:
-    - "src/*.go"
+    - "**/*"
 shell:
   install:
   - cd /src
