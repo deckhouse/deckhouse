@@ -1,0 +1,17 @@
+deckhouse-controller:
+  fixes:
+    - summary: add CA to registry requests in helper
+      pull_request: https://github.com/deckhouse/deckhouse/pull/11735
+docs:
+  fixes:
+    - summary: Fix typos in DVP virtual machines documentation.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/11750
+istio:
+  fixes:
+    - summary: CRDs for 1.21 version moved to correct path
+      pull_request: https://github.com/deckhouse/deckhouse/pull/11738
+multitenancy-manager:
+  fixes:
+    - summary: Fixed links and duplication of information about bundles.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/11706
+
