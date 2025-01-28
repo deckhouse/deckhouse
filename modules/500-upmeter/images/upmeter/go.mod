@@ -1,13 +1,13 @@
 module d8.io/upmeter
 
-go 1.21
+go 1.23
 
 require (
 	github.com/flant/kube-client v0.0.6
 	github.com/gogo/protobuf v1.3.2
 	github.com/golang-migrate/migrate/v4 v4.14.1
 	github.com/golang/snappy v0.0.3
-	github.com/mattn/go-sqlite3 v1.14.6
+	github.com/mattn/go-sqlite3 v1.14.24
 	github.com/onsi/gomega v1.19.0
 	github.com/prometheus/prometheus v2.5.0+incompatible
 	github.com/sirupsen/logrus v1.8.1

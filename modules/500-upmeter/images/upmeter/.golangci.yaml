@@ -6,6 +6,7 @@ issues:
     - ST1005.*
     - "should not use dot imports"
     - "don't use an underscore in package name"
+    - "printf: non-constant format string in call to"
 
 linters-settings:
   gci:
@@ -18,7 +19,7 @@ linters-settings:
   golint:
     min-confidence: 0
   errcheck:
-    ignore: fmt:.*,[rR]ead|[wW]rite|[cC]lose,io:Copy
+    exclude-functions: fmt:.*,[rR]ead|[wW]rite|[cC]lose,io:Copy
 
 linters:
   disable-all: true
