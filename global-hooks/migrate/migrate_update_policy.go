@@ -56,10 +56,11 @@ func mupFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	if mup.Spec.ModuleReleaseSelector.LabelSelector == nil {
 		return nil, nil
 	}
-	return &filteredMup{LabelSelector: mup.Spec.ModuleReleaseSelector.LabelSelector}, nil
+	return &filteredMup{Name: mup.Name, LabelSelector: mup.Spec.ModuleReleaseSelector.LabelSelector}, nil
 }
 
 type filteredMup struct {
+	Name          string
 	LabelSelector *metav1.LabelSelector
 }
 
@@ -112,7 +113,8 @@ func fireMupAlerts(input *go_hook.HookInput) error {
 
 			if selector.Matches(labelsSet) {
 				input.MetricsCollector.Set("d8_deprecated_update_policy", 1.0, map[string]string{
-					"moduleName": module.Name,
+					"moduleName":   module.Name,
+					"updatePolicy": policy.Name,
 				}, metrics.WithGroup("d8_update_policy"))
 				continue
 			}
