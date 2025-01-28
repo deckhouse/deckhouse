@@ -1642,6 +1642,17 @@ alerts:
         MetalLB running on a stale configuration, because the latest config failed to load.
       severity: "4"
       markupFormat: markdown
+    - name: D8MetallbIgnoredLayer2PoolsAreUsed
+      sourceFile: ee/se/modules/380-metallb/monitoring/prometheus-rules/services.yaml
+      moduleUrl: 380-metallb
+      module: metallb
+      edition: se
+      description: |
+        In ModuleConfig version 2, addressPool '{{$labels.name}}' of type “layer2” are ignored. They should be removed from the configuration.
+      summary: |
+        D8 MetalLB uses ignored layer2 pools
+      severity: "7"
+      markupFormat: markdown
     - name: D8MetallbNotSupportedServiceAnnotationsDetected
       sourceFile: ee/se/modules/380-metallb/monitoring/prometheus-rules/services.yaml
       moduleUrl: 380-metallb

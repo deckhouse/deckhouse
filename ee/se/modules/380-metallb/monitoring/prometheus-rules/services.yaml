@@ -54,3 +54,18 @@
             `metallb.universe.tf/loadBalancerIPs` — use `network.deckhouse.io/load-balancer-ips: <ip>` instead.
 
             Important! Existing LoadBalancer Services of the Deckhouse were migrated automatically, but the new ones won't.
+
+    - alert: D8MetallbIgnoredLayer2PoolsAreUsed
+      expr: d8_metallb_not_supported_service_annotations_detected == 1
+      for: 1m
+      labels:
+        severity_level: "7"
+        tier: application
+      annotations:
+        plk_markup_format: "markdown"
+        plk_protocol_version: "1"
+        plk_create_group_if_not_exists__d8_metallb_settings_outdated: D8MetallbIgnoredLayer2PoolsAreUsedGroup,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes
+        plk_grouped_by__d8_metallb_settings_outdated: D8MetallbIgnoredLayer2PoolsAreUsedGroup,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes
+        summary: D8 MetalLB uses ignored `layer2` pools
+        description: |
+          In ModuleConfig version 2, addressPool '{{$labels.name}}' of type “layer2” are ignored. They should be removed from the configuration.
