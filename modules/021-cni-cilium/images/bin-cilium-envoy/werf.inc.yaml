@@ -80,7 +80,7 @@ shell:
   - groupadd -f -g 1337 cilium && useradd -m -g cilium -u 1337 cilium
   - chmod -R a+w /tmp
   - chown -R 1337:1337 /cilium/proxy
-  beforeSetup:
+  setup:
   - export GO_VERSION=${GOLANG_VERSION} GOPROXY={{ $.GOPROXY }}
   - export GOOS=linux GOARCH=amd64 CGO_ENABLED=0
   - cd /cilium/proxy
@@ -88,7 +88,7 @@ shell:
   - sudo -u cilium PATH=${PATH} make -C proxylib all
   - sudo -u cilium PATH=${PATH} mkdir -p /tmp/install/usr/lib
   - mv proxylib/libcilium.so /tmp/install/usr/lib/libcilium.so
-  setup:
+  #
   - export TARGETARCH=amd64 ARCH="x86_64"
   - export BAZEL_VERSION="6.3.2" USE_BAZEL_VERSION="6.3.2"
   - export BAZEL_BUILD_OPTS="--disk_cache=/tmp/bazel-cache --nofetch"
