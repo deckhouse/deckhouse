@@ -49,6 +49,14 @@
                 }
             });
         });
+
+        $(window).on('load', function() {
+            const target = decodeURI(window.location.hash);
+
+            $('html, body').animate({
+                scrollTop: $(target).offset().top - 162
+            }, 0);
+        });
     });
 
 </script>
