@@ -145,8 +145,8 @@ func createTarball() *bytes.Buffer {
 		},
 		{
 			File: "cluster-autoscaler-logs.txt",
-			Cmd:  "bash",
-			Args: []string{"-c", `kubectl get modules node-manager -o json | jq -r 'select(.status.phase == "Ready") | "kubectl -n d8-cloud-instance-manager logs -l app=cluster-autoscaler --tail=3000 -c cluster-autoscaler"' | bash`},
+			Cmd:  "kubectl",
+			Args: []string{"-n", "d8-cloud-instance-manager", "logs", "-l", "app=cluster-autoscaler", "--tail=3000", "-c", "cluster-autoscaler", "--ignore-errors=true"},
 		},
 		{
 			File: "vpa-admission-controller-logs.txt",
