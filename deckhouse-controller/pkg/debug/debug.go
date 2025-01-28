@@ -179,7 +179,7 @@ func createTarball() *bytes.Buffer {
 			Args: []string{"-c", `kubectl get clusteralerts.deckhouse.io -o json | jq '.items[]'`},
 		},
 		{
-			File: "pods.txt",
+			File: "bad-pods.txt",
 			Cmd:  "bash",
 			Args: []string{"-c", `kubectl get pod -A -owide | grep -Pv '\s+([1-9]+[\d]*)\/\1\s+' | grep -v 'Completed\|Evicted' | grep -E "^(d8-|kube-system)" || true`},
 		},
