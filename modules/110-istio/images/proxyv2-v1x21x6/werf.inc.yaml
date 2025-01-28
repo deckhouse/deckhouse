@@ -309,7 +309,7 @@ shell:
   install:
   - git clone --depth 1 --branch {{ $istioVersion }} {{ $.SOURCE_REPO }}/istio/proxy.git /src/proxy
   - cd /src/proxy/
-  - find /patches -name '*.patch' | xargs git apply --verbose
+  - git apply --verbose /patches/*.patch
 
   - git clone --branch "{{ $llvmRev }}" {{ $.SOURCE_REPO }}/llvm/llvm-project.git /src/llvm
   - rm -rf /src/llvm/.git
