@@ -171,7 +171,7 @@ func createTarball() *bytes.Buffer {
 		{
 			File: "terraform-check.json",
 			Cmd:  "bash",
-			Args: []string{"-c", `kubectl get modules terraform-manager -o json | jq -r 'select(.status.phase == "Ready") | "kubectl exec deploy/terraform-state-exporter -- dhctl terraform check --logger-type json -o json" | bash | jq -c '.terraform_plan[]?.variables.providerClusterConfiguration.value.provider = "REDACTED"'`},
+			Args: []string{"-c", `kubectl get modules terraform-manager -o json | jq -r 'select(.status.phase == "Ready") | "kubectl -n d8-system exec deploy/terraform-state-exporter -- dhctl terraform check --logger-type json -o json"' | bash | jq -c '.terraform_plan[]?.variables.providerClusterConfiguration.value.provider = "REDACTED"'`},
 		},
 		{
 			File: "alerts.json",
