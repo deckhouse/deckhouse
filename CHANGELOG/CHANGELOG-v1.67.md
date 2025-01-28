@@ -95,7 +95,6 @@
  - **[node-manager]** Tune CAPS sync period. [#11384](https://github.com/deckhouse/deckhouse/pull/11384)
  - **[node-manager]** Fix the key usage with cert-authority. [#10718](https://github.com/deckhouse/deckhouse/pull/10718)
  - **[node-manager]** no_proxy/http_proxy tuning, `bb-set-proxy/bb-unset-proxy` functions. [#10676](https://github.com/deckhouse/deckhouse/pull/10676)
- - **[operator-trivy]** Add chowning init container to the trivy-server. [#11671](https://github.com/deckhouse/deckhouse/pull/11671)
  - **[prometheus]** Excluded unwanted labels from `D8CNIMisconfigured` alert. [#11301](https://github.com/deckhouse/deckhouse/pull/11301)
  - **[prometheus]** Fixes for D8CNIMisconfigured alerts — renamed group and typos fixed. [#11259](https://github.com/deckhouse/deckhouse/pull/11259)
  - **[prometheus]** Rename targets for alerts and docs fixes. [#11243](https://github.com/deckhouse/deckhouse/pull/11243)
