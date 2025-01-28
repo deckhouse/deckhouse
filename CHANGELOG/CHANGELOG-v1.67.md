@@ -85,6 +85,7 @@
  - **[docs]** Fix priority-class module documentation. [#10897](https://github.com/deckhouse/deckhouse/pull/10897)
  - **[docs]** Add required NetworkInterface AWS policies. [#10842](https://github.com/deckhouse/deckhouse/pull/10842)
  - **[helm_lib]** Updated helm_lib to 1.37.1, which should fix issue [#10950](https://github.com/deckhouse/deckhouse/pull/10950)
+ - **[istio]** CRDs for 1.21 version moved to correct path [#11738](https://github.com/deckhouse/deckhouse/pull/11738)
  - **[istio]** Fixes for Federation/Multicluster metadata-exporter and for istio-operator. [#11150](https://github.com/deckhouse/deckhouse/pull/11150)
  - **[istio]** Fixed `IngressIstioController` CRD docs rendering. [#10581](https://github.com/deckhouse/deckhouse/pull/10581)
  - **[metallb]** Fix overlapping networks in IPAddressPools. [#11579](https://github.com/deckhouse/deckhouse/pull/11579)
