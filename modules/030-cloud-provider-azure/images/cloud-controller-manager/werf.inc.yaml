@@ -2,6 +2,7 @@
 {{- range $key, $value := .CandiVersionMap.k8s }}
   {{- $version := toString $key }}
   {{- $image_version := toString $key | replace "." "-" }}
+  {{- $patches := (printf "/%smodules/%s-%s/images/%s" $.ModulePath $.ModulePriority $.ModuleName $.ImageName) }}
   {{- if $value.ccm.azure }}
     {{- $patches := (printf "/%smodules/%s-%s/images/%s" $.ModulePath $.ModulePriority $.ModuleName $.ImageName) }}
     {{- $patch := false }}
@@ -14,55 +15,53 @@
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
 fromImage: common/distroless
 import:
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
-  add: /src/bin/azure-cloud-controller-manager
-  to: /usr/local/bin/azure-cloud-controller-manager
-  before: setup
-imageSpec:
-  config:
-    entrypoint: ["/usr/local/bin/azure-cloud-controller-manager"]
+  - image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
+    add: /src/bin/azure-cloud-controller-manager
+    to: /usr/local/bin/azure-cloud-controller-manager
+    before: setup
+  - image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
+    add: /lib/ld-musl-x86_64.so.1
+    to: /lib/ld-musl-x86_64.so.1
+    before: setup
+docker:
+  ENTRYPOINT: ["/usr/local/bin/azure-cloud-controller-manager"]
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
 final: false
 fromImage: common/src-artifact
-{{- if $patch }}
 git:
-- add: {{ $patches }}/patches/{{ $version }}
-  to: /patches
-  stageDependencies:
-    install:
-      - '**/*'
-{{- end }}
+  - add: /{{ $patches }}/patches/{{ $version }}
+    to: /patches
+    stageDependencies:
+      install:
+        - '**/*'
 shell:
-  beforeInstall:
-    - apk add --no-cache make bash git mercurial patch rsync gcc musl-dev build-base
   install:
-  - git clone --depth 1 --branch {{ $value.ccm.azure }}  {{ $.SOURCE_REPO }}/kubernetes-sigs/cloud-provider-azure.git /src
-  - cd /src
-  {{- if $patch}}
-  - git apply /patches/*.patch --verbose
-  {{- end}}
-  - rm -rf vendor .git
+    - git clone --depth 1 --branch {{ $value.ccm.azure }}  {{ $.SOURCE_REPO }}/kubernetes-sigs/cloud-provider-azure.git /src
+    - cd /src
+    - git apply /patches/*.patch --verbose
+    - rm -rf .git
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
 final: false
 from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
 import:
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
-  add: /src
-  to: /src
-  before: install
+  - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
+    add: /src
+    to: /src
+    before: install
 mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
 shell:
+  beforeInstall:
+  {{- include "alpine packages proxy" $ | nindent 2 }}
+  - apk add --no-cache make bash gcc musl-dev build-base
   install:
   - cd /src
-  - export GOPROXY={{ $.GOPROXY }}
-  - go mod download
-  setup:
-  - cd /src
-  - go build -a -o bin/azure-cloud-controller-manager ./cmd/cloud-controller-manager
+  - hack/pkg-config.sh > .pkg_config
+  - export VERSION={{ $value.ccm.azure }}
+  - make bin/azure-cloud-controller-manager
   - chown 64535:64535 /src/bin/azure-cloud-controller-manager
   - chmod 0755 /src/bin/azure-cloud-controller-manager
   {{- end }}
