@@ -1,5 +1,5 @@
 warnings-only:
-  - images
+- images
 linters-settings:
   probes:
     probes-excludes:
