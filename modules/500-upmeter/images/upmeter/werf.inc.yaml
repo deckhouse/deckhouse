@@ -26,7 +26,7 @@ shell:
   - GOPROXY={{ $.GOPROXY }} CGO_ENABLED=1 GOOS=linux GOARCH=amd64 go build -ldflags "-s -w -linkmode external -extldflags '-static'" -o upmeter ./cmd/upmeter
   - chown 64535:64535 upmeter
   - chmod 0700 upmeter
-  - GOPROXY={{ $.GOPROXY }} CGO_ENABLED=1 GOOS=linux GOARCH=amd64 go install -ldflags "-s -w -linkmode external -extldflags '-static'" -tags 'sqlite3' github.com/golang-migrate/migrate/v4/cmd/migrate@v4.15
+  - GOPROXY={{ $.GOPROXY }} CGO_ENABLED=1 GOOS=linux GOARCH=amd64 go install -ldflags "-s -w -linkmode external -extldflags '-static'" -tags 'sqlite3' github.com/golang-migrate/migrate/v4/cmd/migrate@vv4.18.2
   - mv $(go env GOPATH)/bin/migrate migrate
   - chown 64535:64535 migrate
   - chmod 0700 migrate
