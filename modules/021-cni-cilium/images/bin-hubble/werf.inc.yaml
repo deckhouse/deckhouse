@@ -47,4 +47,5 @@ shell:
   - cp /src/hubble/hubble /hubble
   - strip /hubble
   - /hubble completion bash > /bash_completion
+  - rm -rf src/hubble/vendor
 ---

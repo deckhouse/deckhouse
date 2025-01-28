@@ -111,3 +111,4 @@ shell:
   - sudo -u cilium PATH=${PATH} make bazel-bin/cilium-envoy-starter bazel-bin/cilium-envoy
   - sudo -u cilium PATH=${PATH} ./bazel/get_workspace_status
   - sudo -u cilium PATH=${PATH} make install
+  - rm -rf /cilium/proxy/vendor

@@ -67,4 +67,5 @@ shell:
   - make PKG_BUILD=1 SKIP_DOCS=true DESTDIR=/tmp/install install-bash-completion licenses-all
   - mv LICENSE.all /tmp/install/LICENSE.all
   - cp -t /tmp/install images/cilium/init-container.sh plugins/cilium-cni/install-plugin.sh plugins/cilium-cni/cni-uninstall.sh
+  - rm -rf /src/cilium/vendor
 ---

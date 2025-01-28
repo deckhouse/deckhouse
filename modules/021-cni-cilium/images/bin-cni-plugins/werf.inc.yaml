@@ -46,4 +46,5 @@ shell:
   - mkdir -p /out/linux/amd64/bin
   - cp -f /src/plugins/bin/* /out/linux/amd64/bin
   - strip /out/linux/amd64/bin/*
+  - rm -rf /src/plugins/vendor
 ---
