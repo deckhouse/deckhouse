@@ -100,7 +100,7 @@ shell:
   - echo {{ $istioVersion }} > version
   - export GOPROXY={{ $.GOPROXY }} GOOS=linux GOARCH=amd64
   - export LDFLAGS='-extldflags -static -s -w'
-  - go mod tidy
+  - go mod vendor
   - common/scripts/gobuild.sh /src/istio/out/ -tags=agent,disable_pgv /src/istio/pilot/cmd/pilot-agent
   #
   - strip /src/istio/out/pilot-agent
