@@ -48,3 +48,6 @@ git:
     - go.sum
     setup:
     - "*.go"
+shell:
+  install:
+  - cd /src
