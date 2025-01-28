@@ -136,7 +136,7 @@ func createTarball() *bytes.Buffer {
 		{
 			File: "mcm-logs.txt",
 			Cmd:  "bash",
-			Args: []string{"-c", `kubectl get modules node-manager -o json | jq -r '.items[] | select(.status.phase == "Ready") | "kubectl -n d8-cloud-instance-manager logs -l app=machine-controller-manager --tail=3000 -c controller"' | bash`},
+			Args: []string{"-c", `kubectl get modules node-manager -o json | jq -r 'select(.status.phase == "Ready") | "kubectl -n d8-cloud-instance-manager logs -l app=machine-controller-manager --tail=3000 -c controller"' | bash`},
 		},
 		{
 			File: "ccm-logs.txt",
@@ -146,32 +146,32 @@ func createTarball() *bytes.Buffer {
 		{
 			File: "cluster-autoscaler-logs.txt",
 			Cmd:  "bash",
-			Args: []string{"-c", `kubectl get modules node-manager -o json | jq -r '.items[] | select(.status.phase == "Ready") | "kubectl -n d8-cloud-instance-manager logs -l app=cluster-autoscaler --tail=3000 -c cluster-autoscaler"' | bash`},
+			Args: []string{"-c", `kubectl get modules node-manager -o json | jq -r 'select(.status.phase == "Ready") | "kubectl -n d8-cloud-instance-manager logs -l app=cluster-autoscaler --tail=3000 -c cluster-autoscaler"' | bash`},
 		},
 		{
 			File: "vpa-admission-controller-logs.txt",
 			Cmd:  "bash",
-			Args: []string{"-c", `kubectl get modules vertical-pod-autoscaler -o json | jq -r '.items[] | select(.status.phase == "Ready") | "kubectl -n kube-system logs -l app=vpa-admission-controller --tail=3000 -c admission-controller"' | bash`},
+			Args: []string{"-c", `kubectl get modules vertical-pod-autoscaler -o json | jq -r 'select(.status.phase == "Ready") | "kubectl -n kube-system logs -l app=vpa-admission-controller --tail=3000 -c admission-controller"' | bash`},
 		},
 		{
 			File: "vpa-recommender-logs.txt",
 			Cmd:  "bash",
-			Args: []string{"-c", `kubectl get modules vertical-pod-autoscaler -o json | jq -r '.items[] | select(.status.phase == "Ready") | "kubectl -n kube-system logs -l app=vpa-recommender --tail=3000 -c recommender"' | bash`},
+			Args: []string{"-c", `kubectl get modules vertical-pod-autoscaler -o json | jq -r 'select(.status.phase == "Ready") | "kubectl -n kube-system logs -l app=vpa-recommender --tail=3000 -c recommender"' | bash`},
 		},
 		{
 			File: "vpa-updater-logs.txt",
 			Cmd:  "bash",
-			Args: []string{"-c", `kubectl get modules vertical-pod-autoscaler -o json | jq -r '.items[] | select(.status.phase == "Ready") | "kubectl -n kube-system logs -l app=vpa-updater --tail=3000 -c updater"' | bash`},
+			Args: []string{"-c", `kubectl get modules vertical-pod-autoscaler -o json | jq -r 'select(.status.phase == "Ready") | "kubectl -n kube-system logs -l app=vpa-updater --tail=3000 -c updater"' | bash`},
 		},
 		{
 			File: "prometheus-logs.txt",
 			Cmd:  "bash",
-			Args: []string{"-c", `kubectl get modules prometheus -o json | jq -r '.items[] | select(.status.phase == "Ready") | "kubectl -n d8-monitoring logs -l prometheus=main --tail=3000 -c prometheus"' | bash`},
+			Args: []string{"-c", `kubectl get modules prometheus -o json | jq -r 'select(.status.phase == "Ready") | "kubectl -n d8-monitoring logs -l prometheus=main --tail=3000 -c prometheus"' | bash`},
 		},
 		{
 			File: "terraform-check.json",
 			Cmd:  "bash",
-			Args: []string{"-c", `kubectl exec deploy/terraform-state-exporter -- dhctl terraform check --logger-type json -o json | jq -c '.terraform_plan[]?.variables.providerClusterConfiguration.value.provider = "REDACTED"'`},
+			Args: []string{"-c", `kubectl get modules terraform-manager -o json | jq -r 'select(.status.phase == "Ready") | "kubectl exec deploy/terraform-state-exporter -- dhctl terraform check --logger-type json -o json" | bash | jq -c '.terraform_plan[]?.variables.providerClusterConfiguration.value.provider = "REDACTED"'`},
 		},
 		{
 			File: "alerts.json",
