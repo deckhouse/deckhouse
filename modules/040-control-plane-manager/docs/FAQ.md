@@ -251,7 +251,7 @@ The steps described below must be performed from the first in order of the maste
 
     You should read carefully what converge is going to do when it asks for approval.
 
-    In the process, one by one in reverse order (2,1,0). The nodes will be replaced with new nodes with confirmation on each node.
+    When the command is executed, the nodes will be replaced by new nodes with confirmation on each node. The replacement will be performed one by one in reverse order (2,1,0).
 
    ```bash
    dhctl converge --ssh-agent-private-keys=/tmp/.ssh/<SSH_KEY_FILENAME> --ssh-user=<USERNAME> \
