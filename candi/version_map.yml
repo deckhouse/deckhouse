@@ -34,7 +34,7 @@ k8s:
       aws: v1.28.0
       azure: v1.17.0
       gcp: v1.3.3
-      yandex: v0.12.0
+      yandex: bump-deps
       vcd: 1.6.0
       zvirt: release-4.19
       vsphere: v3.0.3
@@ -62,7 +62,7 @@ k8s:
       aws: v1.28.0
       azure: v1.17.0
       gcp: v1.3.3
-      yandex: v0.12.0
+      yandex: bump-deps
       vcd: 1.6.0
       zvirt: release-4.19
       vsphere: v3.0.3
@@ -90,7 +90,7 @@ k8s:
       aws: v1.28.0
       azure: v1.17.0
       gcp: v1.3.3
-      yandex: v0.12.0
+      yandex: bump-deps
       vcd: 1.6.0
       zvirt: release-4.19
       vsphere: v3.0.3
@@ -118,7 +118,7 @@ k8s:
       aws: v1.28.0
       azure: v1.17.0
       gcp: v1.3.3
-      yandex: v0.12.0
+      yandex: bump-deps
       vcd: 1.6.0
       zvirt: release-4.19
       vsphere: v3.0.3
@@ -146,7 +146,7 @@ k8s:
       aws: v1.35.0
       azure: v1.30.4
       gcp: v1.15.1
-      yandex: v0.13.0
+      yandex: bump-deps
       vcd: 1.6.0
       zvirt: release-4.19
       vsphere: v3.0.3
