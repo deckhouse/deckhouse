@@ -11,6 +11,7 @@ shell:
   {{- include "alt packages proxy" . | nindent 2 }}
   - apt-get update && apt-get install -y curl
   - apt-get clean
+  - find /var/lib/apt/ /var/cache/apt/ -type f -delete
   - rm -rf  /var/log/*log /var/lib/apt/lists/* /var/log/apt/* /var/lib/dpkg/*-old /var/cache/debconf/*-old
 docker:
   ENTRYPOINT: ["/metadata-exporter"]
