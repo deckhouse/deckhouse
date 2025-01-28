@@ -1,5 +1,4 @@
-{{- include "check_bgp_pool_exists" . }}
-{{- if $bgpPoolExists }}
+{{- if eq (include "is_bgp_pool_exists" .) "true" }}
 ---
 apiVersion: policy/v1
 kind: PodDisruptionBudget

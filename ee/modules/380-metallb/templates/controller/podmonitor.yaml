@@ -1,5 +1,4 @@
-{{- include "check_bgp_pool_exists" . }}
-{{- if $bgpPoolExists }}
+{{- if eq (include "is_bgp_pool_exists" .) "true" }}
   {{- if (.Values.global.enabledModules | has "operator-prometheus") }}
 ---
 apiVersion: monitoring.coreos.com/v1

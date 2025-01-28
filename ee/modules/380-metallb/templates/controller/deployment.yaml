@@ -3,8 +3,7 @@ cpu: 10m
 memory: 30Mi
 {{- end }}
 
-{{- include "check_bgp_pool_exists" . }}
-{{- if $bgpPoolExists }}
+{{- if eq (include "is_bgp_pool_exists" .) "true" }}
   {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
 ---
 apiVersion: autoscaling.k8s.io/v1
