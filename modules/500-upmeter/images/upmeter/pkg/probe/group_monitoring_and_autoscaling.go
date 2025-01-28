@@ -195,17 +195,6 @@ func initMonitoringAndAutoscaling(access kubernetes.Access, nodeLister node.List
 				Endpoint: "https://prometheus.d8-monitoring:9090/api/v1/query",
 				Metric:   "kubelet_node_name",
 			},
-		}, {
-			group:  groupMonitoringAndAutoscaling,
-			probe:  "key-metrics-present",
-			check:  "kubelet",
-			period: 15 * time.Second,
-			config: checker.MetricPresentInPrometheus{
-				Access:   access,
-				Timeout:  5 * time.Second,
-				Endpoint: "https://prometheus.d8-monitoring:9090/api/v1/query",
-				Metric:   "kubelet_node_name",
-			},
 		},
 	}
 }
