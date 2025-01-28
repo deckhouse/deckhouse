@@ -103,11 +103,11 @@ func (d *Definition) GetRequirements() map[string]string {
 	}
 
 	for key, raw := range d.Requirements {
-		if value, ok := raw.(string); ok {
-			requirements[key] = value
-		}
-		if value, ok := raw.(bool); ok {
-			requirements[key] = strconv.FormatBool(value)
+		switch v := raw.(type) {
+		case string:
+			requirements[key] = v
+		case bool:
+			requirements[key] = strconv.FormatBool(v)
 		}
 	}
 
