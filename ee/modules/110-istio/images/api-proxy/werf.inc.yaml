@@ -40,14 +40,14 @@ git:
 - add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/src
   to: /src
   excludePaths:
-  - "*.md"
-  - "*.yaml"
+  - "*/*.md"
+  - "*/*.yaml"
   stageDependencies:
     install:
-    - go.mod
-    - go.sum
+    - src/go.mod
+    - srcgo.sum
     setup:
-    - "*.go"
+    - "src/*.go"
 shell:
   install:
   - cd /src
