@@ -273,7 +273,11 @@
   to: /deckhouse/modules/380-metallb/images/metallb
   stageDependencies:
     setup:
+<<<<<<< HEAD
         - '**/*'
+=======
+        - '**/*.go'
+>>>>>>> 62e948ee3a (go)
 - add: /ee/modules/380-metallb/templates/controller
   to: /deckhouse/modules/380-metallb/templates/controller
   stageDependencies:

@@ -37,7 +37,7 @@ properties:
     type: object
     required: ["nodeSelector"]
     description: |
-      Parameters of the `speaker` component, which announces services (using `bgp` or `layer2` (LVS) routing protocol) and routes application traffic to its node.
+      Settings for the `speaker` component that implements the publishing protocol and forwards application service traffic to its node.
     properties:
       nodeSelector:
         type: object
@@ -74,8 +74,6 @@ properties:
       A list of external BGP routers to use with the module.
 
       Format — a data array similar to that of [MetalLB's](https://metallb.universe.tf/configuration/#bgp-configuration).
-
-      The parameter is optional if only the `layer2` mode is used to announce services.
     items:
       type: object
       required: ["peer-address", "peer-asn", "my-asn"]
@@ -178,15 +176,13 @@ properties:
         name:
           type: string
           description: |
-            The name of the pool (you can specify it using the service annotation as follows: `metallb.universe.tf/address-pool: <name>`). It should conform to RFC 1123: dot-separated parts in lowercase, consists of alphanumeric characters, '-'. Each part must start and end with an alphanumeric character.
+            The name of the pool. It should conform to RFC 1123: dot-separated parts in lowercase, consists of alphanumeric characters, '-'. Each part must start and end with an alphanumeric character.
           pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
         protocol:
           type: string
           description: |
             The protocol used by the speaker to announce services.
-          enum:
-            - bgp
-            - layer2
+          default: bgp
         addresses:
           type: array
           description: |
