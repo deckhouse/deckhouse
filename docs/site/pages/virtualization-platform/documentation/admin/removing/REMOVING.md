@@ -36,7 +36,7 @@ To delete a cluster, several steps need to be followed:
    where:
    - `<MOUNT_OPTIONS>` — the options for mounting files into the installer container, such as SSH access keys;
    - `<DECKHOUSE_REVISION>` — [edition](../editions.html) of the platform (e.g., `ee` — for Enterprise Edition, `ce` — for Community Edition, etc.)
-   - `<RELEASE_CHANNEL>` — [update channel](../release-channels.html) of the platform in kebab-case. It should match the one set in `config.yaml` during the [installation of DVP](../install/steps/install.html):
+   - `<RELEASE_CHANNEL>` — [update channel](../release-channels.html) of the platform in kebab-case:
      - `alpha` — for the *Alpha* update channel;
      - `beta` — for the *Beta* update channel;
      - `early-access` — for the *Early Access* update channel;

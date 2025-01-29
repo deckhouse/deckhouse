@@ -99,6 +99,21 @@
       }
     }
 
+    &--contact {
+        position: relative;
+        border: 2px solid transparent;
+        border-radius: 1px;
+        overflow: hidden;
+        @include bg-color($primary-700);
+        font-weight: 500;
+        letter-spacing: .01em;
+        line-height: 1.5;
+        @include color($white);
+        text-transform: uppercase;
+        text-decoration: none;
+        transition: .2s;
+    }
+
   &_card {
         display: flex;
         transition: all .25s ease;

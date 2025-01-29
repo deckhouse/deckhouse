@@ -13,6 +13,7 @@
 # limitations under the License.
 
 # There is issue that blkid hangs on nodes with kernel 5.x.x version because of floppy drive presence.
+# https://bugs.launchpad.net/ubuntu/+source/util-linux/+bug/1044111
 # We don't need floppy drive on kubernetes nodes so we disable it for good.
 if [[ -f /etc/modprobe.d/blacklist-floppy.conf ]]; then
   return 0
@@ -26,8 +27,8 @@ if lsmod | grep floppy -q ; then
   elif command -v make-initrd >/dev/null 2>&1; then
     make-initrd
   else
-    bb-log-error "update-initramfs or make-initrd not found!"
-    exit 1
+    bb-log-warning "update-initramfs or make-initrd not found. If you observe the ‘blkid’ hang problem, try to update initramfs without the floppy module."
+    exit 0
   fi
 
   bb-flag-set reboot
