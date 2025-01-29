@@ -16,17 +16,37 @@ limitations under the License.
 
 package models
 
+import "strconv"
+
 const (
 	ModuleDefinitionFile = "module.yaml"
 )
 
 type DeckhouseModuleDefinition struct {
-	Name         string            `yaml:"name"`
-	Weight       uint32            `yaml:"weight,omitempty"`
-	Tags         []string          `yaml:"tags"`
-	Stage        string            `yaml:"stage"`
-	Description  string            `yaml:"description"`
-	Requirements map[string]string `json:"requirements"`
+	Name         string                 `yaml:"name"`
+	Weight       uint32                 `yaml:"weight,omitempty"`
+	Tags         []string               `yaml:"tags"`
+	Stage        string                 `yaml:"stage"`
+	Description  string                 `yaml:"description"`
+	Requirements map[string]interface{} `json:"requirements"`
 
 	Path string `yaml:"-"`
+}
+
+func (d *DeckhouseModuleDefinition) GetRequirements() map[string]string {
+	requirements := make(map[string]string)
+	if len(d.Requirements) == 0 {
+		return requirements
+	}
+
+	for key, raw := range d.Requirements {
+		switch v := raw.(type) {
+		case string:
+			requirements[key] = v
+		case bool:
+			requirements[key] = strconv.FormatBool(v)
+		}
+	}
+
+	return requirements
 }
