@@ -4,7 +4,7 @@
       expr: max(cniMisconfigured{}) by(cni, module) == 1
       for: 5m
       labels:
-        severity_level: "3"
+        severity_level: "5"
         tier: cluster
       annotations:
         plk_markup_format: "markdown"
