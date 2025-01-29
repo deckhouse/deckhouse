@@ -21,7 +21,7 @@ spec:
                     IP-адрес сервера (виртуальной машины) для подключения.
                 credentialsRef:
                   description: |
-                    Ссылка на ресурс [SSHCredentials](cr.html#sshcredentials).
+                    Ссылка на ресурс [SSHCredentials](../../../kubernetes-platform/documentation/v1/modules/node-manager/cr.html#sshcredentials).
                   properties:
                     apiVersion:
                       description: Версия API ресурса.
