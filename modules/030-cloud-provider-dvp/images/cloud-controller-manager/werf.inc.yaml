@@ -13,7 +13,14 @@ artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
 from: {{ $.Images.BASE_GOLANG_23_BULLSEYE }}
 git:
 - add: /{{ $.ModulePath }}modules/030-{{ $.ModuleName }}/images/{{ $.ImageName }}/src
-  to:  /src
+  to:  /src/ccm/src
+  stageDependencies:
+    install:
+      - go.mod
+      - go.sum
+      - "**/*.go"
+- add: /{{ $.ModulePath }}modules/030-{{ $.ModuleName }}/images/dvp-common
+  to:  /src/dvp-common
   stageDependencies:
     install:
       - go.mod
@@ -26,8 +33,8 @@ shell:
   install:
     - export GO_VERSION=${GOLANG_VERSION}
     - export GOPROXY={{ $.GOPROXY }}
-    - cd /src
-    - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags "-s -w " -o /dvp-cloud-controller-manager cmd/cloud-controller-manager/cloud-controller-manager.go
+    - cd /src/ccm/src
+    - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags "-s -w " -o /dvp-cloud-controller-manager cmd/dvp-cloud-controller-manager/main.go
     - chown 64535:64535 /dvp-cloud-controller-manager
     - chmod 0755 /dvp-cloud-controller-manager
 
