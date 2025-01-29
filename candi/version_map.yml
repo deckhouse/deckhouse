@@ -146,7 +146,7 @@ k8s:
       aws: v1.38.1
       azure: v1.31.2
       gcp: v1.15.3
-      yandex: v0.12.0
+      yandex: v0.13.0
       vcd: 1.6.0
       zvirt: release-4.20
       vsphere: v3.0.3
