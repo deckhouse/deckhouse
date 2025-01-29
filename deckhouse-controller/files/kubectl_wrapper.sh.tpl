@@ -20,17 +20,17 @@ if [ -s /tmp/kubectl_version ]; then
  kubernetes_version="$(cat /tmp/kubectl_version)"
 else
  # Workaround for running kubectl before global hook global-hooks/discovery/kubernetes_version running
- kubernetes_version="$(/usr/local/bin/kubectl-{{ index .kubectlForBaseComponents 0 }} version -o json 2>/dev/null | jq -r '.serverVersion.gitVersion | ltrimstr("v")')"
+ kubernetes_version="$(/usr/local/bin/kubectl-{{ index (index . 0) "kubectl" }} version -o json 2>/dev/null | jq -r '.serverVersion.gitVersion | ltrimstr("v")')"
 fi
 
 case "$kubernetes_version" in
-{{ $lens := len .k8sVersions }}
-  {{ index .k8sVersions 0 }}.* {{ if gt $lens 1 }}| {{ index .k8sVersions 1 }}.* {{ end }}{{ if gt $lens 2 }}| {{ index .k8sVersions 2 }}.* {{ end }})
-    kubectl_version="{{ index .kubectlForBaseComponents 0 }}"
-    ;;
-{{- if gt $lens 3 }}
-  {{ index .k8sVersions 3 }}.* {{ if gt $lens 4 }}| {{ index .k8sVersions 4 }}.* {{ end }}{{ if gt $lens 5 }}| {{ index .k8sVersions 5 }}.* {{ end }})
-    kubectl_version="{{ index .kubectlForBaseComponents 1 }}"
+{{- range . }}
+  {{- $versions := list }}
+  {{- range .version }}
+    {{- $versions = append $versions (printf "%s.*" .) }}
+  {{- end }}
+  {{ join " | " $versions }} )
+    kubectl_version="{{ .kubectl }}"
     ;;
 {{- end }}
   *)
