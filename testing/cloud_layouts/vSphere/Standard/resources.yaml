@@ -6,7 +6,7 @@ metadata:
 spec:
   numCPUs: 4
   memory: 8192
-  rootDiskSize: 20
+  rootDiskSize: 40
   mainNetwork: DPortGroup-lab-vms
   datastore: SPB-5/vsan-spb-5-datastore
 ---
