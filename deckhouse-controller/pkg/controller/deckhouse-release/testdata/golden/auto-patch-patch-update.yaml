@@ -20,9 +20,11 @@ kind: DeckhouseRelease
 metadata:
   annotations:
     release.deckhouse.io/approved: "true"
+    release.deckhouse.io/isUpdating: "false"
+    release.deckhouse.io/notified: "true"
   creationTimestamp: null
   name: v1.26.3
-  resourceVersion: "1000"
+  resourceVersion: "1001"
 spec:
   version: v1.26.3
 status:

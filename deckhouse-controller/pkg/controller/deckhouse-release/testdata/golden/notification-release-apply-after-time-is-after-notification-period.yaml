@@ -20,6 +20,7 @@ kind: DeckhouseRelease
 metadata:
   annotations:
     release.deckhouse.io/isUpdating: "false"
+    release.deckhouse.io/notification-time-shift: "true"
     release.deckhouse.io/notified: "true"
   creationTimestamp: null
   name: v1.36.0
@@ -29,7 +30,7 @@ spec:
   version: v1.36.0
 status:
   approved: false
-  message: Release is postponed by canary process until 11 Nov 22 23:23 UTC
+  message: Release is postponed by notification until 11 Nov 22 23:23 UTC
   phase: Pending
   transitionTime: null
 ---

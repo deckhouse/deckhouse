@@ -41,6 +41,10 @@ type NotificationConfig struct {
 	ReleaseType             ReleaseType     `json:"releaseType"`
 }
 
+func (cfg *NotificationConfig) IsEmpty() bool {
+	return cfg != nil && *cfg == NotificationConfig{}
+}
+
 type Auth struct {
 	Basic *BasicAuth `json:"basic,omitempty"`
 	Token *string    `json:"bearerToken,omitempty"`
