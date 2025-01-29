@@ -18,6 +18,7 @@ import (
 	"errors"
 	"fmt"
 	"path/filepath"
+	"strconv"
 
 	addonmodules "github.com/flant/addon-operator/pkg/module_manager/models/modules"
 	addonutils "github.com/flant/addon-operator/pkg/utils"
@@ -32,12 +33,12 @@ const (
 )
 
 type Definition struct {
-	Name         string            `yaml:"name"`
-	Weight       uint32            `yaml:"weight,omitempty"`
-	Tags         []string          `yaml:"tags"`
-	Stage        string            `yaml:"stage"`
-	Description  string            `yaml:"description"`
-	Requirements map[string]string `json:"requirements"`
+	Name         string                 `yaml:"name"`
+	Weight       uint32                 `yaml:"weight,omitempty"`
+	Tags         []string               `yaml:"tags"`
+	Stage        string                 `yaml:"stage"`
+	Description  string                 `yaml:"description"`
+	Requirements map[string]interface{} `json:"requirements"`
 
 	DisableOptions DisableOptions `yaml:"disable"`
 
@@ -93,4 +94,22 @@ func (d *Definition) Validate(values addonutils.Values, logger *log.Logger) erro
 	}
 
 	return nil
+}
+
+func (d *Definition) GetRequirements() map[string]string {
+	requirements := make(map[string]string)
+	if len(d.Requirements) == 0 {
+		return requirements
+	}
+
+	for key, raw := range d.Requirements {
+		switch v := raw.(type) {
+		case string:
+			requirements[key] = v
+		case bool:
+			requirements[key] = strconv.FormatBool(v)
+		}
+	}
+
+	return requirements
 }
