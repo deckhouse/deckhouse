@@ -1,7 +1,7 @@
 apiVersion: deckhouse.io/v1alpha1
 kind: NodeGroupConfiguration
 metadata:
-  name: kubelet-rotator
+  name: kubelet-rotator.sh
 spec:
   weight: 200
   bundles:
@@ -9,6 +9,17 @@ spec:
   nodeGroups:
   - "master"
   content: |
+
+    function kubectl_exec() {
+      kubectl --request-timeout 60s --kubeconfig=/etc/kubernetes/kubelet.conf ${@}
+    }
+
+    LABELS_FROM_ANNOTATION="$(kubectl_exec get no "$D8_NODE_HOSTNAME" -o json | jq -r '.metadata.annotations."node.deckhouse.io/kubelet-rotation-ready"')"
+    if [[ $LABELS_FROM_ANNOTATION != "null" ]]
+      then
+        exit 0
+    fi
+
     CA_CRT="/etc/kubernetes/pki/ca.crt"
     CA_KEY="/etc/kubernetes/pki/ca.key"
     CA_CRT_BUNDLE="/etc/kubernetes/pki/ca-bundle.crt"
@@ -113,3 +124,5 @@ spec:
     sed -i "s|clientCAFile: .*|clientCAFile: $CA_CRT_BUNDLE|" /var/lib/kubelet/config.yaml
 
     systemctl restart kubelet
+
+    kubectl_exec annotate node "${D8_NODE_HOSTNAME}" --overwrite node.deckhouse.io/kubelet-rotation-ready="$(date -u +"%Y-%m-%dT%H:%M:%S.%6NZ")"
