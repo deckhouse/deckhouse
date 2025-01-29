@@ -76,21 +76,6 @@
   </div>
 {% endif %}
 
-<div class="dimmer-block-content common" markdown="1">
-
-{% if page.platform_type == 'cloud' %}
-{% if page.lang == 'ru' %}
-Создайте файл `resources.yml`.
-{% else %}
-Create the `resources.yml` file.
-{% endif %}
-
-{% capture includePath %}_includes/getting_started/{{ page.platform_code }}/partials/resources.yml.minimal.inc{% endcapture %}
-{% include_file "{{ includePath }}" syntax="yaml" %}
-{% endif %}
-
-</div>
-
 {%- for revision in site.data.getting_started.dkp_data.global.revisions %}
 {%- if revision =='ce' and page.ee_only == true %}{% continue %}{% endif %}
 {%- if revision =='be' and page.ee_only == true %}{% continue %}{% endif %}
