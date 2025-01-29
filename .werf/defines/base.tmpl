@@ -13,7 +13,7 @@
   add: /usr/local/bin/semver
   to: /usr/local/bin/semver
   before: setup
-  {{- range $k8s := $context.k8sVersion }}
+  {{- range $k8s := $context.k8sVersions }}
     {{- $image_version := printf "%s.%d" $k8s.kubectl (index $context.CandiVersionMap "k8s" $k8s.kubectl "patch") | replace "." "-" }}
 - image: common/kubernetes-artifact-{{ $image_version }}
   add: /src/_output/bin/kubectl
