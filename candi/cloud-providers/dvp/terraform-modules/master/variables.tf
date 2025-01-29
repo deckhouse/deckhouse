@@ -172,6 +172,7 @@ locals {
       "dvp.deckhouse.io/cluster-prefix" = var.prefix
       "dvp.deckhouse.io/cluster-uuid"   = var.cluster_uuid
       "dvp.deckhouse.io/node-group"     = "master"
+      "dvp.deckhouse.io/hostname"       = var.hostname
     },
     var.additional_labels
   )
