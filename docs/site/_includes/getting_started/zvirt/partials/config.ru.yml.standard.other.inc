@@ -97,9 +97,9 @@ spec:
           kubeconfigGeneratorMasterCA: ""
 ---
 # [<en>] Cloud provider settings.
-# [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/cloud-provider-openstack/cluster_configuration.html
+# [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/cloud-provider-zvirt/cluster_configuration.html
 # [<ru>] Настройки облачного провайдера.
-# [<ru>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/cloud-provider-openstack/cluster_configuration.html
+# [<ru>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/cloud-provider-zvirt/cluster_configuration.html
 apiVersion: deckhouse.io/v1
 kind: ZvirtClusterConfiguration
 layout: Standard
@@ -146,11 +146,11 @@ masterNodeGroup:
     # [<en>] Storage domain ID.
     # [<ru>] Идентификатор домена хранения.
     storageDomainID: *!CHANGE_STORAGE_DOMAIN_ID*
-    ---
-    # [<en>] Section containing the parameters of instance class for worker nodes.
-# [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/cloud-provider-openstack/cr.html
+---
+# [<en>] Section containing the parameters of instance class for worker nodes.
+# [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/cloud-provider-zvirt/cr.html
 # [<ru>] Секция, описывающая параметры инстанс-класса для узлов c компонентами, обеспечивающими рабочую нагрузку.
-# [<ru>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/cloud-provider-openstack/cr.html
+# [<ru>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/cloud-provider-zvirt/cr.html
 apiVersion: deckhouse.io/v1
 kind: ZvirtInstanceClass
 metadata:
