@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"fmt"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook/metrics"
 	"github.com/flant/addon-operator/sdk"
@@ -112,6 +113,7 @@ func fireMupAlerts(input *go_hook.HookInput) error {
 			}
 
 			if selector.Matches(labelsSet) {
+				fmt.Printf("[HOOK_DEBUG] update policy '%s'\n", policy.Name)
 				input.MetricsCollector.Set("d8_deprecated_update_policy", 1.0, map[string]string{
 					"moduleName":   module.Name,
 					"updatePolicy": policy.Name,
