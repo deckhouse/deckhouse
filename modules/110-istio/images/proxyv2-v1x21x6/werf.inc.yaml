@@ -136,7 +136,7 @@ shell:
   - export GOOS=linux GOARCH=amd64 CGO_ENABLED=0
   - export BAZEL_VERSION="6.3.2" USE_BAZEL_VERSION="6.3.2"
   - cd /src/proxy
-  - go mod tidy
+  - go mod download
   - sed -i '/^build --enable_platform_specific_config/a build --linkopt=-L/opt/libcxx/lib'          envoy.bazelrc
   - sed -i '/^build --enable_platform_specific_config/a build --linkopt=-Wl,-rpath,/opt/libcxx/lib' envoy.bazelrc
   - sed -i 's|build:libc++ --action_env=BAZEL_LINKOPTS=-lm:-pthread|build:libc++ --action_env=BAZEL_LINKOPTS=-lm:-lpthread|' envoy.bazelrc
