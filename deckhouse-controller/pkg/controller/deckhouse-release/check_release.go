@@ -23,6 +23,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log/slog"
 	"path"
 	"regexp"
 	"sort"
@@ -55,9 +56,6 @@ const (
 
 func (r *deckhouseReleaseReconciler) checkDeckhouseReleaseLoop(ctx context.Context) {
 	wait.UntilWithContext(ctx, func(ctx context.Context) {
-		if r.updateSettings.Get().ReleaseChannel == "" {
-			return
-		}
 		err := r.checkDeckhouseRelease(ctx)
 		if err != nil {
 			r.logger.Errorf("check Deckhouse release: %s", err)
@@ -67,7 +65,7 @@ func (r *deckhouseReleaseReconciler) checkDeckhouseReleaseLoop(ctx context.Conte
 
 func (r *deckhouseReleaseReconciler) checkDeckhouseRelease(ctx context.Context) error {
 	if r.updateSettings.Get().ReleaseChannel == "" {
-		r.logger.Debug("Release channel does not set.")
+		r.logger.Debug("Release channel isn't set.")
 		return nil
 	}
 
@@ -90,17 +88,16 @@ func (r *deckhouseReleaseReconciler) checkDeckhouseRelease(ctx context.Context) 
 		imagesRegistry string
 	)
 	if registrySecret != nil {
-		drs, _ := utils.ParseDeckhouseRegistrySecret(registrySecret.Data)
 		rconf := &utils.RegistryConfig{
-			DockerConfig: drs.DockerConfig,
-			Scheme:       drs.Scheme,
-			CA:           drs.CA,
+			DockerConfig: registrySecret.DockerConfig,
+			Scheme:       registrySecret.Scheme,
+			CA:           registrySecret.CA,
 			UserAgent:    r.clusterUUID,
 		}
 
 		opts = utils.GenerateRegistryOptions(rconf, r.logger)
 
-		imagesRegistry = drs.ImageRegistry
+		imagesRegistry = registrySecret.ImageRegistry
 	}
 
 	releaseChecker, err := NewDeckhouseReleaseChecker(opts, r.logger, r.dc, r.moduleManager, imagesRegistry, releaseChannelName)
@@ -111,6 +108,34 @@ func (r *deckhouseReleaseReconciler) checkDeckhouseRelease(ctx context.Context) 
 	newImageHash, err := releaseChecker.FetchReleaseMetadata(r.releaseVersionImageHash)
 	if err != nil {
 		return err
+	}
+
+	var (
+		releases               v1alpha1.DeckhouseReleaseList
+		currentDeployedRelease *v1alpha1.DeckhouseRelease
+	)
+	err = r.client.List(ctx, &releases)
+	if err != nil {
+		return fmt.Errorf("get deckhouse releases: %w", err)
+	}
+
+	pointerReleases := make([]*v1alpha1.DeckhouseRelease, 0, len(releases.Items))
+	for _, r := range releases.Items {
+		if r.GetPhase() == v1alpha1.DeckhouseReleasePhaseDeployed {
+			// no deployed release was found or there is more than one deployed release (get the latest)
+			if currentDeployedRelease == nil || r.GetVersion().GreaterThan(currentDeployedRelease.GetVersion()) {
+				currentDeployedRelease = &r
+			}
+		}
+		pointerReleases = append(pointerReleases, &r)
+	}
+	sort.Sort(sort.Reverse(updater.ByVersion[*v1alpha1.DeckhouseRelease](pointerReleases)))
+
+	// restore current deployed release if no deployed releases found
+	if currentDeployedRelease == nil {
+		if err := r.restoreCurrentDeployedRelease(ctx, releaseChecker, r.deckhouseVersion); err != nil {
+			return fmt.Errorf("restore current deployed release: %w", err)
+		}
 	}
 
 	// no new image found
@@ -132,18 +157,6 @@ func (r *deckhouseReleaseReconciler) checkDeckhouseRelease(ctx context.Context) 
 		return fmt.Errorf("parse semver: %w", err)
 	}
 	r.releaseVersionImageHash = newImageHash
-
-	var releases v1alpha1.DeckhouseReleaseList
-	err = r.client.List(ctx, &releases)
-	if err != nil {
-		return fmt.Errorf("get deckhouse releases: %w", err)
-	}
-
-	pointerReleases := make([]*v1alpha1.DeckhouseRelease, 0, len(releases.Items))
-	for _, r := range releases.Items {
-		pointerReleases = append(pointerReleases, &r)
-	}
-	sort.Sort(sort.Reverse(updater.ByVersion[*v1alpha1.DeckhouseRelease](pointerReleases)))
 	r.metricStorage.Grouped().ExpireGroupMetrics(metricUpdatingFailedGroup)
 
 	for _, release := range pointerReleases {
@@ -151,7 +164,7 @@ func (r *deckhouseReleaseReconciler) checkDeckhouseRelease(ctx context.Context) 
 		// GT
 		case release.GetVersion().GreaterThan(newSemver):
 			// cleanup versions which are older than current version in a specified channel and are in a Pending state
-			if release.Status.Phase == v1alpha1.ModuleReleasePhasePending {
+			if release.Status.Phase == v1alpha1.DeckhouseReleasePhasePending {
 				err = r.client.Delete(ctx, release, client.PropagationPolicy(metav1.DeletePropagationBackground))
 				if err != nil {
 					return fmt.Errorf("delete old release: %w", err)
@@ -162,7 +175,7 @@ func (r *deckhouseReleaseReconciler) checkDeckhouseRelease(ctx context.Context) 
 		case release.GetVersion().Equal(newSemver):
 			r.logger.Debugf("Release with version %s already exists", release.GetVersion())
 			switch release.Status.Phase {
-			case v1alpha1.ModuleReleasePhasePending, "":
+			case v1alpha1.DeckhouseReleasePhasePending, "":
 				if releaseChecker.releaseMetadata.Suspend {
 					patch := client.RawPatch(types.MergePatchType, buildSuspendAnnotation(releaseChecker.releaseMetadata.Suspend))
 					err := r.client.Patch(ctx, release, patch)
@@ -176,7 +189,7 @@ func (r *deckhouseReleaseReconciler) checkDeckhouseRelease(ctx context.Context) 
 					}
 				}
 
-			case v1alpha1.ModuleReleasePhaseSuspended:
+			case v1alpha1.DeckhouseReleasePhaseSuspended:
 				if !releaseChecker.releaseMetadata.Suspend {
 					patch := client.RawPatch(types.MergePatchType, buildSuspendAnnotation(releaseChecker.releaseMetadata.Suspend))
 					err := r.client.Patch(ctx, release, patch)
@@ -235,14 +248,48 @@ func (r *deckhouseReleaseReconciler) checkDeckhouseRelease(ctx context.Context) 
 		}
 	}
 
-	// if there are no releases in the cluster, we apply the latest release
-	if len(pointerReleases) == 0 {
-		err = r.createRelease(ctx, releaseChecker, cooldownUntil, notificationShiftTime)
-		if err != nil {
-			return fmt.Errorf("create release %s: %w", releaseChecker.releaseMetadata.Version, err)
+	return nil
+}
+
+func (r *deckhouseReleaseReconciler) restoreCurrentDeployedRelease(ctx context.Context, releaseChecker *DeckhouseReleaseChecker, tag string) error {
+	var releaseMetadata *ReleaseMetadata
+
+	if image, err := releaseChecker.registryClient.Image(ctx, tag); err != nil {
+		r.logger.Warn("couldn't get current deployed release's image from registry", slog.String("image", tag), log.Err(err))
+	} else {
+		if releaseMetadata, err = releaseChecker.fetchReleaseMetadata(image); err != nil {
+			r.logger.Warn("couldn't fetch current deployed release's image metadata", slog.String("image", tag), log.Err(err))
 		}
 	}
-	return nil
+
+	release := &v1alpha1.DeckhouseRelease{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "DeckhouseRelease",
+			APIVersion: "deckhouse.io/v1alpha1",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name: tag,
+			Annotations: map[string]string{
+				v1alpha1.DeckhouseReleaseAnnotationIsUpdating:      "false",
+				v1alpha1.DeckhouseReleaseAnnotationNotified:        "false",
+				v1alpha1.DeckhouseReleaseAnnotationCurrentRestored: "true",
+			},
+			Labels: map[string]string{
+				"heritage": "deckhouse",
+			},
+		},
+		Spec: v1alpha1.DeckhouseReleaseSpec{
+			Version: tag,
+		},
+		Approved: true,
+	}
+
+	if releaseMetadata != nil {
+		release.Spec.Requirements = releaseMetadata.Requirements
+		release.Spec.ChangelogLink = fmt.Sprintf("https://github.com/deckhouse/deckhouse/releases/tag/%s", releaseMetadata.Version)
+	}
+
+	return client.IgnoreAlreadyExists(r.client.Create(ctx, release))
 }
 
 func (r *deckhouseReleaseReconciler) createRelease(ctx context.Context, releaseChecker *DeckhouseReleaseChecker,
@@ -284,8 +331,11 @@ func (r *deckhouseReleaseReconciler) createRelease(ctx context.Context, releaseC
 		ObjectMeta: metav1.ObjectMeta{
 			Name: releaseChecker.releaseMetadata.Version,
 			Annotations: map[string]string{
-				"release.deckhouse.io/isUpdating": "false",
-				"release.deckhouse.io/notified":   "false",
+				v1alpha1.DeckhouseReleaseAnnotationIsUpdating: "false",
+				v1alpha1.DeckhouseReleaseAnnotationNotified:   "false",
+			},
+			Labels: map[string]string{
+				"heritage": "deckhouse",
 			},
 		},
 		Spec: v1alpha1.DeckhouseReleaseSpec{
@@ -300,13 +350,13 @@ func (r *deckhouseReleaseReconciler) createRelease(ctx context.Context, releaseC
 	}
 
 	if releaseChecker.releaseMetadata.Suspend {
-		release.ObjectMeta.Annotations["release.deckhouse.io/suspended"] = "true"
+		release.ObjectMeta.Annotations[v1alpha1.DeckhouseReleaseAnnotationSuspended] = "true"
 	}
 	if cooldownUntil != nil {
-		release.ObjectMeta.Annotations["release.deckhouse.io/cooldown"] = cooldownUntil.UTC().Format(time.RFC3339)
+		release.ObjectMeta.Annotations[v1alpha1.DeckhouseReleaseAnnotationCooldown] = cooldownUntil.UTC().Format(time.RFC3339)
 	}
 	if notificationShiftTime != nil {
-		release.ObjectMeta.Annotations["release.deckhouse.io/notification-time-shift"] = "true"
+		release.ObjectMeta.Annotations[v1alpha1.DeckhouseReleaseAnnotationNotificationTimeShift] = "true"
 	}
 
 	return client.IgnoreAlreadyExists(r.client.Create(ctx, release))
@@ -649,7 +699,7 @@ func buildSuspendAnnotation(suspend bool) []byte {
 	p := map[string]interface{}{
 		"metadata": map[string]interface{}{
 			"annotations": map[string]interface{}{
-				"release.deckhouse.io/suspended": annotationValue,
+				v1alpha1.DeckhouseReleaseAnnotationSuspended: annotationValue,
 			},
 		},
 	}

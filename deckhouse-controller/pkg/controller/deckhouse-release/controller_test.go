@@ -240,8 +240,11 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 		mup.Update.Windows = update.Windows{{From: "8:00", To: "8:01"}}
 
 		suite.setupController("patch-out-of-update-window.yaml", initValues, mup)
-		dr := suite.getDeckhouseRelease("v1.25.1")
+		dr := suite.getDeckhouseRelease("v1.26.0")
 		_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
+		require.NoError(suite.T(), err)
+		dr = suite.getDeckhouseRelease("v1.25.1")
+		_, err = suite.ctr.createOrUpdateReconcile(ctx, dr)
 		require.NoError(suite.T(), err)
 	})
 
@@ -286,8 +289,11 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 		mup.Update.Mode = updater.ModeManual.String()
 
 		suite.setupController("auto-deploy-patch-release-in-manual-mode.yaml", initValues, mup)
-		dr := suite.getDeckhouseRelease("v1.25.1")
+		dr := suite.getDeckhouseRelease("v1.26.0")
 		_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
+		require.NoError(suite.T(), err)
+		dr = suite.getDeckhouseRelease("v1.25.1")
+		_, err = suite.ctr.createOrUpdateReconcile(ctx, dr)
 		require.NoError(suite.T(), err)
 	})
 
@@ -355,9 +361,113 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 	})
 
 	suite.Run("Few patch releases", func() {
+		dependency.TestDC.HTTPClient.DoMock.
+			Expect(&http.Request{}).
+			Return(&http.Response{
+				StatusCode: http.StatusInternalServerError,
+			}, errors.New("some internal error"))
+
 		suite.setupController("few-patch-releases.yaml", initValues, embeddedMUP)
-		dr := suite.getDeckhouseRelease("v1.32.0")
+		dr := suite.getDeckhouseRelease("v1.31.1")
 		_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
+		require.NoError(suite.T(), err)
+		dr = suite.getDeckhouseRelease("v1.31.2")
+		_, err = suite.ctr.createOrUpdateReconcile(ctx, dr)
+		require.NoError(suite.T(), err)
+		dr = suite.getDeckhouseRelease("v1.31.3")
+		_, err = suite.ctr.createOrUpdateReconcile(ctx, dr)
+		require.NoError(suite.T(), err)
+		dr = suite.getDeckhouseRelease("v1.32.0")
+		_, err = suite.ctr.createOrUpdateReconcile(ctx, dr)
+		require.NoError(suite.T(), err)
+	})
+
+	suite.Run("few minor releases", func() {
+		dependency.TestDC.HTTPClient.DoMock.
+			Expect(&http.Request{}).
+			Return(&http.Response{
+				StatusCode: http.StatusOK,
+			}, nil)
+
+		suite.setupController("few-minor-releases.yaml", initValues, embeddedMUP)
+		dr := suite.getDeckhouseRelease("v1.31.0")
+		_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
+		require.NoError(suite.T(), err)
+		dr = suite.getDeckhouseRelease("v1.32.0")
+		_, err = suite.ctr.createOrUpdateReconcile(ctx, dr)
+		require.NoError(suite.T(), err)
+
+		dependency.TestDC.HTTPClient.DoMock.
+			Expect(&http.Request{}).
+			Return(&http.Response{
+				StatusCode: http.StatusInternalServerError,
+			}, errors.New("some internal error"))
+
+		dr = suite.getDeckhouseRelease("v1.33.0")
+		_, err = suite.ctr.createOrUpdateReconcile(ctx, dr)
+		require.NoError(suite.T(), err)
+		dr = suite.getDeckhouseRelease("v1.34.0")
+		_, err = suite.ctr.createOrUpdateReconcile(ctx, dr)
+		require.NoError(suite.T(), err)
+		dr = suite.getDeckhouseRelease("v1.35.0")
+		_, err = suite.ctr.createOrUpdateReconcile(ctx, dr)
+		require.NoError(suite.T(), err)
+	})
+
+	suite.Run("few minor releases with version more than one from deployed", func() {
+		dependency.TestDC.HTTPClient.DoMock.
+			Expect(&http.Request{}).
+			Return(&http.Response{
+				StatusCode: http.StatusOK,
+			}, nil)
+
+		suite.setupController("few-minor-releases-version-more-than-one.yaml", initValues, embeddedMUP)
+		dr := suite.getDeckhouseRelease("v1.33.0")
+		_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
+		require.NoError(suite.T(), err)
+		dr = suite.getDeckhouseRelease("v1.34.0")
+		_, err = suite.ctr.createOrUpdateReconcile(ctx, dr)
+		require.NoError(suite.T(), err)
+
+		dependency.TestDC.HTTPClient.DoMock.
+			Expect(&http.Request{}).
+			Return(&http.Response{
+				StatusCode: http.StatusInternalServerError,
+			}, errors.New("some internal error"))
+
+		dr = suite.getDeckhouseRelease("v1.33.0")
+		_, err = suite.ctr.createOrUpdateReconcile(ctx, dr)
+		require.NoError(suite.T(), err)
+		dr = suite.getDeckhouseRelease("v1.34.0")
+		_, err = suite.ctr.createOrUpdateReconcile(ctx, dr)
+		require.NoError(suite.T(), err)
+		dr = suite.getDeckhouseRelease("v1.35.0")
+		_, err = suite.ctr.createOrUpdateReconcile(ctx, dr)
+		require.NoError(suite.T(), err)
+	})
+
+	suite.Run("forced through few minor releases", func() {
+		dependency.TestDC.HTTPClient.DoMock.
+			Expect(&http.Request{}).
+			Return(&http.Response{
+				StatusCode: http.StatusInternalServerError,
+			}, errors.New("some internal error"))
+
+		suite.setupController("forced-few-minor-releases.yaml", initValues, embeddedMUP)
+		dr := suite.getDeckhouseRelease("v1.31.0")
+		_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
+		require.NoError(suite.T(), err)
+		dr = suite.getDeckhouseRelease("v1.32.0")
+		_, err = suite.ctr.createOrUpdateReconcile(ctx, dr)
+		require.NoError(suite.T(), err)
+		dr = suite.getDeckhouseRelease("v1.33.0")
+		_, err = suite.ctr.createOrUpdateReconcile(ctx, dr)
+		require.NoError(suite.T(), err)
+		dr = suite.getDeckhouseRelease("v1.34.0")
+		_, err = suite.ctr.createOrUpdateReconcile(ctx, dr)
+		require.NoError(suite.T(), err)
+		dr = suite.getDeckhouseRelease("v1.35.0")
+		_, err = suite.ctr.createOrUpdateReconcile(ctx, dr)
 		require.NoError(suite.T(), err)
 	})
 
@@ -376,8 +486,11 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 
 	suite.Run("Forced release", func() {
 		suite.setupController("forced-release.yaml", initValues, embeddedMUP)
-		dr := suite.getDeckhouseRelease("v1.31.1")
+		dr := suite.getDeckhouseRelease("v1.31.0")
 		_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
+		require.NoError(suite.T(), err)
+		dr = suite.getDeckhouseRelease("v1.31.1")
+		_, err = suite.ctr.createOrUpdateReconcile(ctx, dr)
 		require.NoError(suite.T(), err)
 	})
 
@@ -397,8 +510,11 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 
 	suite.Run("Suspend release", func() {
 		suite.setupController("suspend-release.yaml", initValues, embeddedMUP)
-		dr := suite.getDeckhouseRelease("v1.25.2")
+		dr := suite.getDeckhouseRelease("v1.25.1")
 		_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
+		require.NoError(suite.T(), err)
+		dr = suite.getDeckhouseRelease("v1.25.2")
+		_, err = suite.ctr.createOrUpdateReconcile(ctx, dr)
 		require.NoError(suite.T(), err)
 	})
 
@@ -746,8 +862,11 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 			}, nil)
 
 		suite.setupController("auto-patch-mode.yaml", initValues, mup)
-		dr := suite.getDeckhouseRelease("v1.26.3")
+		dr := suite.getDeckhouseRelease("v1.26.2")
 		_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
+		require.NoError(suite.T(), err)
+		dr = suite.getDeckhouseRelease("v1.26.3")
+		_, err = suite.ctr.createOrUpdateReconcile(ctx, dr)
 		require.NoError(suite.T(), err)
 	})
 

@@ -24,6 +24,30 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
+const (
+	DeckhouseReleasePhasePending    = "Pending"
+	DeckhouseReleasePhaseDeployed   = "Deployed"
+	DeckhouseReleasePhaseSuperseded = "Superseded"
+	DeckhouseReleasePhaseSuspended  = "Suspended"
+	DeckhouseReleasePhaseSkipped    = "Skipped"
+
+	DeckhouseReleaseApprovalAnnotation              = "release.deckhouse.io/approved"
+	DeckhouseReleaseAnnotationIsUpdating            = "release.deckhouse.io/isUpdating"
+	DeckhouseReleaseAnnotationNotified              = "release.deckhouse.io/notified"
+	DeckhouseReleaseAnnotationApplyNow              = "release.deckhouse.io/apply-now"
+	DeckhouseReleaseAnnotationApplyAfter            = "release.deckhouse.io/applyAfter"
+	DeckhouseReleaseAnnotationDisruptionApproved    = "release.deckhouse.io/disruption-approved"
+	DeckhouseReleaseAnnotationForce                 = "release.deckhouse.io/force"
+	DeckhouseReleaseAnnotationSuspended             = "release.deckhouse.io/suspended"
+	DeckhouseReleaseAnnotationNotificationTimeShift = "release.deckhouse.io/notification-time-shift"
+	DeckhouseReleaseAnnotationDryrun                = "dryrun"
+	DeckhouseReleaseAnnotationTriggeredByDryrun     = "triggered_by_dryrun"
+	DeckhouseReleaseAnnotationCurrentRestored       = "release.deckhouse.io/current-restored"
+
+	// TODO: remove in entire code
+	DeckhouseReleaseAnnotationCooldown = "release.deckhouse.io/cooldown"
+)
+
 var DeckhouseReleaseGVK = schema.GroupVersionKind{
 	Group:   SchemeGroupVersion.Group,
 	Version: SchemeGroupVersion.Version,
@@ -69,9 +93,10 @@ func (in *DeckhouseRelease) GetChangelogLink() string {
 	return in.Spec.ChangelogLink
 }
 
+// TODO: remove cooldown from entire code
 func (in *DeckhouseRelease) GetCooldownUntil() *time.Time {
 	cooldown := new(time.Time)
-	if v, ok := in.Annotations["release.deckhouse.io/cooldown"]; ok {
+	if v, ok := in.Annotations[DeckhouseReleaseAnnotationCooldown]; ok {
 		cd, err := time.Parse(time.RFC3339, v)
 		if err == nil {
 			cooldown = &cd
@@ -86,7 +111,7 @@ func (in *DeckhouseRelease) GetDisruptions() []string {
 }
 
 func (in *DeckhouseRelease) GetDisruptionApproved() bool {
-	v, ok := in.Annotations["release.deckhouse.io/disruption-approved"]
+	v, ok := in.Annotations[DeckhouseReleaseAnnotationDisruptionApproved]
 	return ok && v == "true"
 }
 
@@ -95,12 +120,22 @@ func (in *DeckhouseRelease) GetPhase() string {
 }
 
 func (in *DeckhouseRelease) GetForce() bool {
-	v, ok := in.Annotations["release.deckhouse.io/force"]
+	v, ok := in.Annotations[DeckhouseReleaseAnnotationForce]
 	return ok && v == "true"
 }
 
 func (in *DeckhouseRelease) GetApplyNow() bool {
-	v, ok := in.Annotations["release.deckhouse.io/apply-now"]
+	v, ok := in.Annotations[DeckhouseReleaseAnnotationApplyNow]
+	return ok && v == "true"
+}
+
+func (in *DeckhouseRelease) GetIsUpdating() bool {
+	v, ok := in.Annotations[DeckhouseReleaseAnnotationIsUpdating]
+	return ok && v == "true"
+}
+
+func (in *DeckhouseRelease) GetNotified() bool {
+	v, ok := in.Annotations[DeckhouseReleaseAnnotationNotified]
 	return ok && v == "true"
 }
 
@@ -113,7 +148,7 @@ func (in *DeckhouseRelease) SetApprovedStatus(val bool) {
 }
 
 func (in *DeckhouseRelease) GetSuspend() bool {
-	v, ok := in.Annotations["release.deckhouse.io/suspended"]
+	v, ok := in.Annotations[DeckhouseReleaseAnnotationSuspended]
 	return ok && v == "true"
 }
 
@@ -123,11 +158,7 @@ func (in *DeckhouseRelease) GetManuallyApproved() bool {
 	}
 
 	v, ok := in.Annotations[DeckhouseReleaseApprovalAnnotation]
-	if ok {
-		return v == "true"
-	}
-
-	return in.Approved
+	return ok && v == "true"
 }
 
 func (in *DeckhouseRelease) GetMessage() string {
@@ -135,7 +166,22 @@ func (in *DeckhouseRelease) GetMessage() string {
 }
 
 func (in *DeckhouseRelease) GetNotificationShift() bool {
-	v, ok := in.Annotations["release.deckhouse.io/notification-time-shift"]
+	v, ok := in.Annotations[DeckhouseReleaseAnnotationNotificationTimeShift]
+	return ok && v == "true"
+}
+
+func (in *DeckhouseRelease) GetDryRun() bool {
+	v, ok := in.Annotations[DeckhouseReleaseAnnotationDryrun]
+	return ok && v == "true"
+}
+
+func (in *DeckhouseRelease) GetTriggeredByDryRun() bool {
+	v, ok := in.Annotations[DeckhouseReleaseAnnotationTriggeredByDryrun]
+	return ok && v == "true"
+}
+
+func (in *DeckhouseRelease) GetCurrentRestored() bool {
+	v, ok := in.Annotations[DeckhouseReleaseAnnotationCurrentRestored]
 	return ok && v == "true"
 }
 
