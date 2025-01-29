@@ -54,8 +54,9 @@ type FederationPrivateMetadata struct {
 	PublicServices *[]struct {
 		Hostname string `json:"hostname"`
 		Ports    []struct {
-			Name string `json:"name"`
-			Port uint   `json:"port"`
+			Name     string `json:"name"`
+			Port     uint   `json:"port"`
+			Protocol string `json:"protocol"`
 		} `json:"ports"`
 	} `json:"publicServices"`
 }
