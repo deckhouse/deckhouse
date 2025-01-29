@@ -60,7 +60,7 @@ spec:
    "orgId": 1,
    "type": "test",
    "url": "/abc",
-   "uuid": "test",
+   "uid": "test",
    "version": 1
 }]`))
 			})
@@ -104,7 +104,7 @@ spec:
    "orgId": 1,
    "type": "test",
    "url": "/def",
-   "uuid": "test",
+   "uid": "test",
    "version": 1
 }]`))
 				})
@@ -148,7 +148,7 @@ spec:
    "orgId": 1,
    "type": "test",
    "url": "/abc",
-   "uuid": "test",
+   "uid": "test",
    "version": 1
 },{
    "access": "direct",
@@ -158,7 +158,7 @@ spec:
    "orgId": 1,
    "type": "test-next",
    "url": "/def",
-   "uuid": "test-next",
+   "uid": "test-next",
    "version": 1
 }]`))
 		})
