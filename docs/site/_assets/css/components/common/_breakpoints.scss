@@ -5,6 +5,7 @@ $m: 728;
 $l: 1024;
 $xl: 1200;
 $xxl: 1440;
+$xxxl: 1664;
 
 @mixin min-w($breakpoint) {
   @if ($breakpoint == xxs) {
