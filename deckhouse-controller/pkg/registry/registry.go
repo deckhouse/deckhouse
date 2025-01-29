@@ -341,7 +341,10 @@ func getDeckhouseRegistry(ctx context.Context) (string, string, *utils.RegistryC
 		return "", "", nil, fmt.Errorf("list ModuleSource got an error: %w", err)
 	}
 
-	drs, _ := utils.ParseDeckhouseRegistrySecret(secret.Data)
+	drs, err := utils.ParseDeckhouseRegistrySecret(secret.Data)
+	if errors.Is(err, utils.ErrImageRegistryFieldIsNotFound) {
+		drs.ImageRegistry = drs.Address + drs.Path
+	}
 
 	var discoverySecret corev1.Secret
 	key := types.NamespacedName{Namespace: "d8-system", Name: "deckhouse-discovery"}
@@ -360,6 +363,7 @@ func getDeckhouseRegistry(ctx context.Context) (string, string, *utils.RegistryC
 		DockerConfig: drs.DockerConfig,
 		Scheme:       drs.Scheme,
 		UserAgent:    string(clusterUUID),
+		CA:           drs.CA,
 	}
 
 	return drs.ImageRegistry, releaseChannel, rconf, nil

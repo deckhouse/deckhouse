@@ -27,13 +27,16 @@ const (
 )
 
 func NewReleaseMetricLabels(release v1alpha1.Release) MetricLabels {
-	labels := make(map[string]string, 6)
-	labels[ManualApprovalRequired] = "false"
-	labels[DisruptionApprovalRequired] = "false"
-	labels[RequirementsNotMet] = "false"
-	labels[ReleaseQueueDepth] = "nil"
+	labels := make(MetricLabels, 6)
+
 	labels["name"] = release.GetName()
-	labels[NotificationNotSent] = "false"
+
+	labels.SetFalse(ManualApprovalRequired)
+	labels.SetFalse(DisruptionApprovalRequired)
+	labels.SetFalse(RequirementsNotMet)
+	labels.SetFalse(NotificationNotSent)
+
+	labels[ReleaseQueueDepth] = "nil"
 
 	if _, ok := release.(*v1alpha1.ModuleRelease); ok {
 		labels["moduleName"] = release.GetModuleName()
@@ -42,7 +45,15 @@ func NewReleaseMetricLabels(release v1alpha1.Release) MetricLabels {
 	return labels
 }
 
-type MetricsUpdater[R v1alpha1.Release] interface {
+func (ml MetricLabels) SetTrue(key string) {
+	ml[key] = "true"
+}
+
+func (ml MetricLabels) SetFalse(key string) {
+	ml[key] = "false"
+}
+
+type MetricsUpdater interface {
 	UpdateReleaseMetric(string, MetricLabels)
 	PurgeReleaseMetric(string)
 }

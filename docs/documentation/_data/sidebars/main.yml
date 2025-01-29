@@ -1182,6 +1182,10 @@ entries:
                         en: Custom Resources
                         ru: Custom Resources
                       url: /modules/upmeter/cr.html
+                - title:
+                    en: FAQ
+                    ru: FAQ
+                  url: /modules/upmeter/faq.html
     - title:
         en: Autoscaling & Managing resources
         ru: Масштабирование и управление ресурсами

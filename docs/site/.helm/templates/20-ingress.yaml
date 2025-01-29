@@ -45,7 +45,7 @@ spec:
   - host: {{ .URL }}
     http:
       paths:
-{{- if or (eq $.Values.web.dc_name "prod-sel") (eq $.Values.web.env "web-test" ) }}
+{{- if or (eq $.Values.web.dc_name "prod-sel") (eq $.Values.web.dc_name "prod-25") (eq $.Values.web.env "web-test" ) }}
       - path: /images
         pathType: Prefix
         backend:
