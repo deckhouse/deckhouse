@@ -35,9 +35,8 @@ description: "Настройка окружения Huawei Cloud для рабо
 
 Далее приведено содержание политик в формате JSON:
 
-- Политика «ECS Admin»:
-
-  ```json
+{% offtopic title="Политика «ECS Admin»" %}
+```json
   {
   "Version": "1.1",
   "Statement": [
@@ -79,11 +78,11 @@ description: "Настройка окружения Huawei Cloud для рабо
   }
   ]
   }
-  ```
+```
+{% endofftopic %}
 
-- Политика «VPC Administrator»:
-
-  ```json
+{% offtopic title="Политика «VPC Administrator»" %}
+```json
   {
       "Version": "1.1",
       "Statement": [
@@ -108,11 +107,11 @@ description: "Настройка окружения Huawei Cloud для рабо
           }
       ]
   }
-  ```
+```
+{% endofftopic %}
 
-- Политика «NAT Admin»:
-
-  ```json
+{% offtopic title="Политика «NAT Admin»" %}
+```json
   {
       "Version": "1.1",
       "Statement": [
@@ -125,11 +124,11 @@ description: "Настройка окружения Huawei Cloud для рабо
           }
       ]
   }
-  ```
+```
+{% endofftopic %}
 
-- Политика «DEW KeypairFullAccess»:
-
-  ```json
+{% offtopic title="Политика «DEW KeypairFullAccess»" %}
+```json
   {
       "Version": "1.1",
       "Statement": [
@@ -142,4 +141,5 @@ description: "Настройка окружения Huawei Cloud для рабо
           }
       ]
   }
-  ```
+```
+{% endofftopic %}

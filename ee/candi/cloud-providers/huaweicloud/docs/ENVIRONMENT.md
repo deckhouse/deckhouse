@@ -35,9 +35,8 @@ Then add a new user. Follow these steps:
 
 Below are the contents of the policies in JSON format:
 
-- ECS Admin policy:
-
-  ```json
+{% offtopic title="ECS Admin policy" %}
+```json
   {
   "Version": "1.1",
   "Statement": [
@@ -79,11 +78,11 @@ Below are the contents of the policies in JSON format:
   }
   ]
   }
-  ```
+```
+{% endofftopic %}
 
-- VPC Administrator policy:
-
-  ```json
+{% offtopic title="VPC Administrator policy" %}
+```json
   {
       "Version": "1.1",
       "Statement": [
@@ -108,11 +107,11 @@ Below are the contents of the policies in JSON format:
           }
       ]
   }
-  ```
+```
+{% endofftopic %}
 
-- NAT Admin policy:
-
-  ```json
+{% offtopic title="NAT Admin policy" %}
+```json
   {
       "Version": "1.1",
       "Statement": [
@@ -125,11 +124,11 @@ Below are the contents of the policies in JSON format:
           }
       ]
   }
-  ```
+```
+{% endofftopic %}
 
-- DEW KeypairFullAccess policy:
-
-  ```json
+{% offtopic title="DEW KeypairFullAccess policy" %}
+```json
   {
       "Version": "1.1",
       "Statement": [
@@ -142,4 +141,5 @@ Below are the contents of the policies in JSON format:
           }
       ]
   }
-  ```
+```
+{% endofftopic %}
