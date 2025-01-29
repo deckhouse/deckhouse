@@ -4,7 +4,7 @@
 
 ## Настройка IAM через веб-интерфейс
 
-Для настройки IAM через веб-интерфейс сначала создайте новую группу пользователей и назначьте ей необходимые права. Для этого выполните следующие шаги:
+Для настройки IAM через веб-интерфейс создайте новую группу пользователей и назначьте ей необходимые права. Для этого выполните следующие шаги:
 
 1. Перейдите в раздел «Identity and Access Management (IAM)».
 1. Откройте страницу «User Groups» и нажмите «Create User Group».
@@ -30,8 +30,8 @@
 
 Далее приведено содержание политик в формате JSON:
 
-> Политика «ECS Admin»:
-> ```json
+{% offtopic title="Политика «ECS Admin»" %}
+```json
   {
   "Version": "1.1",
   "Statement": [
@@ -73,10 +73,11 @@
   }
   ]
   }
-  ```
+```
+{% endofftopic %}
 
-> Политика «VPC Administrator»:
-> ```json
+{% offtopic title="Политика «VPC Administrator»" %}
+```json
   {
       "Version": "1.1",
       "Statement": [
@@ -101,10 +102,11 @@
           }
       ]
   }
-  ```
+```
+{% endofftopic %}
 
-> Политика «NAT Admin»:
-> ```json
+{% offtopic title="Политика «NAT Admin»" %}
+```json
   {
       "Version": "1.1",
       "Statement": [
@@ -117,10 +119,11 @@
           }
       ]
   }
-  ```
+```
+{% endofftopic %}
 
-> Политика «DEW KeypairFullAccess»:
->  ```json
+{% offtopic title="Политика «DEW KeypairFullAccess»" %}
+```json
   {
       "Version": "1.1",
       "Statement": [
@@ -133,4 +136,5 @@
           }
       ]
   }
-  ```
+```
+{% endofftopic %}
