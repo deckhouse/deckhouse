@@ -20,9 +20,6 @@ spec:
   containers:
     - name: kube-apiserver
       image: {{ printf "%s%s@%s" $.registry.address $.registry.path (index $.images.controlPlaneManager $imageWithVersion) }}
-      env:
-      - name: GODEBUG
-        value: "http2debug=1"
     {{- end }}
   {{- end }}
 {{- end }}
