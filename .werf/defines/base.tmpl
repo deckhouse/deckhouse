@@ -64,7 +64,7 @@
 
 # common-base image
 # . is dict have keys:
-#   rootContext - root context contains .Files
+#   Files - .Files.Get
 #   prefix - Files.Get prefix
 #   k8sVersions - list of dict versions k8s
 #   CandiVersionMap - dict CandiVersionMap from werf.yaml
@@ -114,7 +114,7 @@ import:
 
 shell:
   beforeInstall:
-  {{- include "base components" (dict "Files" $context.rootContext.Files "prefix" $context.prefix "k8sVersions" $context.rootContext.k8sVersions) | nindent 2 }}
+  {{- include "base components" (dict "Files" $context.Files "prefix" $context.prefix "k8sVersions" $context.k8sVersions) | nindent 2 }}
 
 docker:
   ENV:
@@ -124,7 +124,7 @@ docker:
 
 # base-for-go image
 # . is dict have keys:
-#   rootContext - root context contains .Files
+#   Files - .Files.Get
 #   prefix - Files.Get prefix
 #   k8sVersions - list of dict versions k8s
 #   CandiVersionMap - dict CandiVersionMap from werf.yaml
@@ -138,6 +138,6 @@ import:
 shell:
   beforeInstall:
   - apt-get install -y golang make git gcc
-  {{- include "base components" (dict "Files" $context.rootContext.Files "prefix" $context.prefix "k8sVersions" $context.k8sVersions) | nindent 2 }}
+  {{- include "base components" (dict "Files" $context.Files "prefix" $context.prefix "k8sVersions" $context.k8sVersions) | nindent 2 }}
 
 {{- end }}

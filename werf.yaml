@@ -109,9 +109,9 @@ cleanup:
 # render ssh-static
 {{ include "ssh_static_artifact" (dict "Images" .Images "SOURCE_REPO" .SOURCE_REPO) }}
 ---
-{{ include "common_base_image" (dict "rootContext" . "k8sVersions" .k8sVersions "CandiVersionMap" $.CandiVersionMap "prefix" "") }}
+{{ include "common_base_image" (dict "Files" .Files "k8sVersions" .k8sVersions "CandiVersionMap" $.CandiVersionMap "prefix" "") }}
 ---
-{{ include "base_for_go_image" (dict "rootContext" . "k8sVersions" .k8sVersions "CandiVersionMap" $.CandiVersionMap "prefix" "") }}
+{{ include "base_for_go_image" (dict "Files" .Files "k8sVersions" .k8sVersions "CandiVersionMap" $.CandiVersionMap "prefix" "") }}
 ---
 {{ include "dhctl_src_artifact" (dict "gitPrefix" "") }}
 ---
