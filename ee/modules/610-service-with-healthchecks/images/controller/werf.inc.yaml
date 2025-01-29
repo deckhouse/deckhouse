@@ -2,7 +2,7 @@
 image: {{ $.ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
 import:
-  - artifact: {{ $.ModuleName }}/service-with-healthchecks-build-artifact
+  - image: {{ $.ModuleName }}/service-with-healthchecks-build-artifact
     add: /controller
     to: /controller
     before: install

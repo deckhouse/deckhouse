@@ -126,8 +126,8 @@ func (k *kubeAPI) PatchReleaseAnnotations(ctx context.Context, release *v1alpha1
 
 func (k *kubeAPI) PatchReleaseApplyAfter(release *v1alpha1.ModuleRelease, applyTime time.Time) error {
 	return k.PatchReleaseAnnotations(context.TODO(), release, map[string]any{
-		"release.deckhouse.io/notification-time-shift": "true",
-		"release.deckhouse.io/applyAfter":              applyTime.Format(time.RFC3339),
+		v1alpha1.DeckhouseReleaseAnnotationNotificationTimeShift: "true",
+		v1alpha1.DeckhouseReleaseAnnotationApplyAfter:            applyTime.Format(time.RFC3339),
 	})
 }
 
@@ -222,7 +222,7 @@ func (k *kubeAPI) SaveReleaseData(ctx context.Context, release *v1alpha1.ModuleR
 
 	return k.PatchReleaseAnnotations(ctx, release, map[string]interface{}{
 		// "release.deckhouse.io/isUpdating": strconv.FormatBool(data.IsUpdating), // I don't think we need this flag for ModuleReleases
-		"release.deckhouse.io/notified": strconv.FormatBool(data.Notified),
+		v1alpha1.DeckhouseReleaseAnnotationNotified: strconv.FormatBool(data.Notified),
 	})
 }
 

@@ -1,21 +1,34 @@
 ---
-artifact: {{ $.ModuleName }}/service-with-healthchecks-build-artifact
-from: {{ $.Images.BASE_GOLANG_22_ALPINE }}
+image: {{ .ModuleName }}/service-with-healthchecks-src-artifact
+fromImage: common/src-artifact
+final: false
 git:
-- add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}
-  to: /src
-  excludePaths:
-  - "**/*.md"
-  - "**/*.yaml"
-  stageDependencies:
-    install:
-    - go.mod
-    - go.sum
-    setup:
-    - "**/*.go"
+  - add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}
+    to: /src
+    excludePaths:
+      - "**/*.md"
+      - "**/*.yaml"
+    stageDependencies:
+      install:
+        - go.mod
+        - go.sum
+      setup:
+        - "**/*.go"
+shell:
+  install:
+    - cd /src
+---
+image: {{ $.ModuleName }}/service-with-healthchecks-build-artifact
+final: false
+from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
 mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
+import:
+  - image: {{ .ModuleName }}/service-with-healthchecks-src-artifact
+    add: /src
+    to: /src
+    before: install
 shell:
   install:
   - cd /src

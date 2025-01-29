@@ -7,13 +7,12 @@
 
 <div markdown="1">
 Ниже сгенерированы рекомендованные настройки для установки Deckhouse Kubernetes Platform {{ site.data.i18n[revision] }}:
-- `config.yml` — файл первичной конфигурации кластера. Содержит параметры инсталлятора{% if page.platform_type == 'cloud' %}, параметры доступа облачного провайдера{% endif %} и начальные параметры кластера.
-{% if page.platform_type == 'cloud' %}- `resources.yml` — описание ресурсов для создания после установки (настройки узлов и Ingress-контроллера).{% endif %}
+- `config.yml` — файл первичной конфигурации кластера. Содержит параметры инсталлятора{% if page.platform_type == 'cloud' %}, параметры доступа облачного провайдера, описание ресурсов для создания после установки,{% endif %} и начальные параметры кластера.
 
 **Обратите внимание**:
 - <span class="mustChange">Так выделены параметры</span>, обязательные для самостоятельного заполнения.
 - <span class="mightChange">Так выделены параметры</span>, которые вы возможно захотите изменить.
-- Если вы запускаете инсталлятор под **Windows**, то убедитесь, что кодировка создаваемых YAML-файлов конфигурации UTF-8 (либо удалите примечания на русском языке).
+- Если вы запускаете инсталлятор под **Windows**, то убедитесь, что кодировка создаваемого YAML-файла конфигурации UTF-8 (либо удалите примечания на русском языке).
 {%- if page.platform_type == 'baremetal' %}
 - Выполнять установку необходимо с **[персонального компьютера](step2.html#что-необходимо-для-установки)**, имеющего SSH-доступ до узла, который будет **master-узлом** будущего кластера.
 {%- endif %}
@@ -23,10 +22,7 @@
 
 Создайте файл `config.yml`.
 {% capture includePath %}_includes/getting_started/{{ page.platform_code }}/partials/config.ru.yml{% if include.layout.size > 0 %}.{{ include.layout }}{% endif %}.{% if revision != "ce" %}{{ "other" }}{% else %}{{ revision }}{% endif %}.inc{% endcapture %}
-{% snippetcut name="config.yml" selector="config-yml" %}
 {% include_file "{{ includePath }}" syntax="yaml" %}
-{% endsnippetcut %}
-
 {%- if page.platform_type == 'existing' %}
 {% offtopic title="Про nodeSelector, taints и tolerations..." %}
 Управлять тем, на каких узлах будет запускаться ядро Deckhouse, можно с помощью параметра `spec.setting.nodeSelector` в ModuleConfig `deckhouse` в конфигурации установки.

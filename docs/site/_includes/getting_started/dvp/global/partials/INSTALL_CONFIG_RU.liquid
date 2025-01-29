@@ -7,8 +7,7 @@
 
 <div markdown="1">
 Ниже сгенерированы рекомендованные настройки для установки Deckhouse Virtualization Platform {% if revision == 'ee' %}Enterprise Edition{% else %}Community Edition{% endif %}:
-- `config.yml` — файл первичной конфигурации кластера. Содержит параметры инсталлятора{% if page.platform_type == 'cloud' %}, параметры доступа облачного провайдера{% endif %} и начальные параметры кластера.
-{% if page.platform_type == 'cloud' %}- `resources.yml` — описание ресурсов для создания после установки (настройки узлов и Ingress-контроллера).{% endif %}
+- `config.yml` — файл первичной конфигурации кластера. Содержит параметры инсталлятора{% if page.platform_type == 'cloud' %}, параметры доступа облачного провайдера, описание ресурсов для создания после установки (настройки узлов и Ingress-контроллера){% endif %} и начальные параметры кластера.
 
 **Обратите внимание**:
 - <span class="mustChange">Так выделены параметры</span>, обязательные для самостоятельного заполнения.
@@ -23,10 +22,7 @@
 
 Создайте файл `config.yml`.
 {% capture includePath %}_includes/getting_started/dvp/{{ page.platform_code }}/partials/config.ru.yml{% if include.layout.size > 0 %}.{{ include.layout }}{% endif %}.{{ revision }}.inc{% endcapture %}
-{% snippetcut name="config.yml" selector="config-yml" %}
 {% include_file "{{ includePath }}" syntax="yaml" %}
-{% endsnippetcut %}
-
 {%- if page.platform_type == 'existing' %}
 {% offtopic title="Про nodeSelector, taints и tolerations..." %}
 Управлять тем, на каких узлах будет запускаться ядро Deckhouse, можно с помощью указания `nodeSelector`/`tolerations` в параметре `configOverrides.deckhouse` конфигурации установки. Также, вы можете перечислить необходимые taint'ы узлов кластера в массиве `configOverrides.global.modules.placement.customTolerationKeys`, чтобы Deckhouse автоматически указывал соответствующие `toleration` своим компонентам.

@@ -5,13 +5,13 @@ kind: DeckhouseRelease
 metadata:
   creationTimestamp: null
   name: v1.31.0
-  resourceVersion: "1001"
+  resourceVersion: "1000"
 spec:
   version: v1.31.0
 status:
   approved: false
   message: ""
-  phase: Superseded
+  phase: Skipped
   transitionTime: "2019-10-17T15:33:00Z"
 ---
 apiVersion: deckhouse.io/v1alpha1
@@ -23,7 +23,7 @@ metadata:
     release.deckhouse.io/notified: "false"
   creationTimestamp: null
   name: v1.31.1
-  resourceVersion: "1002"
+  resourceVersion: "1001"
 spec:
   version: v1.31.1
 status:

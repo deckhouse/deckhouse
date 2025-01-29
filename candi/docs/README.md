@@ -37,7 +37,6 @@ kind: InitConfiguration
 deckhouse:
   imagesRepo: registry.example.com/deckhouse
   registryDockerCfg: edsfkslfklsdfkl==
-  releaseChannel: Alpha
 ```
 
 For validation and values defaulting, each configuration object has its OpenAPI specification.

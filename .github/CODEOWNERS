@@ -1,10 +1,13 @@
-.github/                        @name212
+.github/                        @name212 @RomanenkoDenys
+000-common/                     @name212 @sprait
+001-priority-class/             @name212 @sprait
 002-deckhouse/                  @yalosev @miklezzzz @ldmonster
 005-external-module-manager/    @yalosev @miklezzzz @ldmonster
 007-registrypackages/           @RomanenkoDenys @name212 @sprait
 011-flow-schema/                @name212 @sprait
 015-admission-policy-engine/    @yalosev @miklezzzz
 021-cni-cilium/                 @apolovov
+025-static-routing-manager/     @apolovov
 030-cloud-provider-*/           @aleksey-su
 031-local-path-provisioner/     @AleksZimin
 031-ceph-csi/                   @AleksZimin
@@ -30,7 +33,7 @@
 303-prometheus-*/               @vladimirGuryanov @lazovskiy
 340-extended-monitoring/        @vladimirGuryanov @lazovskiy
 340-monitoring-*/               @vladimirGuryanov @lazovskiy
-350-node-local-dns/             @name212 @sprait
+350-node-local-dns/             @apolovov
 380-metallb/                    @apolovov
 400-descheduler/                @RomanenkoDenys @name212 @sprait
 402-ingress-nginx/              @apolovov
@@ -41,13 +44,16 @@
 465-pod-reloader/               @name212 @sprait
 470-chrony/                     @name212 @sprait
 491-containerized-data-importer @fl64
-500-openvpn/                    @name212 @sprait
+500-basic-auth/                 @nabokihms
+500-openvpn/                    @apolovov
 500-cilium-hubble/              @apolovov
 500-dashboard/                  @shvgn
 500-upmeter/                    @shvgn
 500-okmeter/                    @vladimirGuryanov @lazovskiy @kolashtov
 500-operator-trivy/             @miklezzzz @yalosev
+600-secret-copier/              @nabokihms
 600-namespace-configurator/     @yalosev @miklezzzz
+610-service-with-healthchecks   @apolovov
 650-runtime-audit-engine/       @name212 @sprait
 800-deckhouse-tools/            @RomanenkoDenys @name212 @sprait
 810-documentation/              @z9r5

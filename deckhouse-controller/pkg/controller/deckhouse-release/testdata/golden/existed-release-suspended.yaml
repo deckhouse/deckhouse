@@ -1,5 +1,25 @@
 ---
 apiVersion: deckhouse.io/v1alpha1
+approved: true
+kind: DeckhouseRelease
+metadata:
+  annotations:
+    release.deckhouse.io/current-restored: "true"
+    release.deckhouse.io/isUpdating: "false"
+    release.deckhouse.io/notified: "false"
+  creationTimestamp: null
+  labels:
+    heritage: deckhouse
+  name: v1.15.0
+  resourceVersion: "1"
+spec:
+  version: v1.15.0
+status:
+  approved: false
+  message: ""
+  transitionTime: null
+---
+apiVersion: deckhouse.io/v1alpha1
 approved: false
 kind: DeckhouseRelease
 metadata:
