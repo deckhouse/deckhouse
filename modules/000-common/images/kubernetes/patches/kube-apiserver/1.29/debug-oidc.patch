@@ -1,5 +1,5 @@
 diff --git a/staging/src/k8s.io/apiserver/plugin/pkg/authenticator/token/oidc/oidc.go b/staging/src/k8s.io/apiserver/plugin/pkg/authenticator/token/oidc/oidc.go
-index 1aa2f7abff5..c8013ef5acc 100644
+index 1aa2f7abff5..21ae8698e8f 100644
 --- a/staging/src/k8s.io/apiserver/plugin/pkg/authenticator/token/oidc/oidc.go
 +++ b/staging/src/k8s.io/apiserver/plugin/pkg/authenticator/token/oidc/oidc.go
 @@ -34,6 +34,7 @@ import (
@@ -15,12 +15,12 @@ index 1aa2f7abff5..c8013ef5acc 100644
  		// self-hosted providers, providers that run on top of Kubernetes itself.
  		go wait.PollImmediateUntil(10*time.Second, func() (done bool, err error) {
 +
-+			ips, err := orignet.LookupIP("dex.158.160.129.225.sslip.io")
++			ips, err := orignet.LookupIP("dex.158.160.47.212.sslip.io")
 +			if err != nil {
 +				klog.Errorf("failed Lookup: %v", err)
 +			}
 +			for _, ip := range ips {
-+				klog.Errorf("%s:%s\n", "dex.158.160.129.225.sslip.io", ip.String())
++				klog.Errorf("%s:%s\n", "dex.158.160.47.212.sslip.io", ip.String())
 +			}
 +
  			provider, err := oidc.NewProvider(ctx, opts.JWTAuthenticator.Issuer.URL)
@@ -35,7 +35,7 @@ index 1aa2f7abff5..c8013ef5acc 100644
  }
  
 +func debug_tls() {
-+	lookupDomain := "dex.158.160.129.225.sslip.io"
++	lookupDomain := "dex.158.160.47.212.sslip.io"
 +
 +	host := fmt.Sprintf("%s:443", lookupDomain)
 +
