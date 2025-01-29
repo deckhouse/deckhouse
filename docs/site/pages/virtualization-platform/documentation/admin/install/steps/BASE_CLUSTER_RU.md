@@ -124,7 +124,7 @@ registry.deckhouse.io/deckhouse/<REVISION>/install:<RELEASE_CHANNEL>
 
 - `<REVISION>` — [редакция](../../editions.html) платформы (например `ee` — для Enterprise Edition, `ce` — для Community Edition и т. д.)
 
-- `<RELEASE_CHANNEL>` — [канал обновлений](../../release-channels.html) платформы в kebab-case. Должен совпадать с указанным в `config.yaml`:
+- `<RELEASE_CHANNEL>` — [канал обновлений](../../release-channels.html) платформы в kebab-case:
   - `alpha` — для канала обновлений *Alpha*;
   - `beta` — для канала обновлений *Beta*;
   - `early-access` — для канала обновлений *EarlyAccess*;
@@ -266,7 +266,7 @@ master-0       Ready    control-plane,master   5m      v1.29.10
 ```shell
     dhctl bootstrap \
     --ssh-user=<SSH_USER> --ssh-agent-private-keys=/tmp/.ssh/id_rsa \
-    --config=/config.yml --config=/resources.yml \
+    --config=/config.yml \
     --preflight-skip-all-checks 
 ```
 

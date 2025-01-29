@@ -13,7 +13,7 @@
 
 **Сгенерированные** на предыдущих шагах данные пользователя:
 - Логин — `admin@deckhouse.io`
-- Пароль — `<GENERATED_PASSWORD>` (вы также можете найти его в CustomResource `User` в файле `resource.yml`)
+- Пароль — `<GENERATED_PASSWORD>` (вы также можете найти его в CustomResource `User` в файле `config.yml`)
 
 Используйте их для доступа к веб-интерфейсу компонентов Deckhouse.
 </div>
