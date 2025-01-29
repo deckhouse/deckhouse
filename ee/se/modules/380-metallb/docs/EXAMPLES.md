@@ -133,7 +133,6 @@ metadata:
     metallb.universe.tf/allow-shared-ip: "key-to-share-1.2.3.4"
 spec:
   type: LoadBalancer
-  loadBalancerIP: 1.2.3.4
   ports:
     - name: dnstcp
       protocol: TCP
@@ -151,7 +150,6 @@ metadata:
     metallb.universe.tf/allow-shared-ip: "key-to-share-1.2.3.4"
 spec:
   type: LoadBalancer
-  loadBalancerIP: 1.2.3.4
   ports:
     - name: dnsudp
       protocol: UDP
