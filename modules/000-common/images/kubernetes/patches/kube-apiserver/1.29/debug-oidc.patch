@@ -1,5 +1,5 @@
 diff --git a/staging/src/k8s.io/apiserver/plugin/pkg/authenticator/token/oidc/oidc.go b/staging/src/k8s.io/apiserver/plugin/pkg/authenticator/token/oidc/oidc.go
-index 1aa2f7abff5..14649b7ee91 100644
+index 1aa2f7abff5..3274d2523f0 100644
 --- a/staging/src/k8s.io/apiserver/plugin/pkg/authenticator/token/oidc/oidc.go
 +++ b/staging/src/k8s.io/apiserver/plugin/pkg/authenticator/token/oidc/oidc.go
 @@ -34,6 +34,7 @@ import (
@@ -10,22 +10,62 @@ index 1aa2f7abff5..14649b7ee91 100644
  	"net/http"
  	"reflect"
  	"strings"
-@@ -301,6 +302,18 @@ func New(opts Options) (*Authenticator, error) {
- 		go wait.PollImmediateUntil(10*time.Second, func() (done bool, err error) {
+@@ -302,6 +303,7 @@ func New(opts Options) (*Authenticator, error) {
  			provider, err := oidc.NewProvider(ctx, opts.JWTAuthenticator.Issuer.URL)
  			if err != nil {
-+				t := time.Now()
-+				fmt.Println("current time: ", t.String())
-+
-+				ips, err := orignet.LookupIP("dex.89.169.152.64.sslip.io")
-+				if err != nil {
-+					klog.Errorf("failed Lookup: %v", err)
-+				}
-+
-+				for _, ip := range ips {
-+					klog.Errorf("%s %s\n", "dex.89.169.152.64.sslip.io", ip.String())
-+				}
-+
  				klog.Errorf("oidc authenticator: initializing plugin: %v", err)
++				debug_tls()
  				return false, nil
  			}
+ 
+@@ -314,6 +316,50 @@ func New(opts Options) (*Authenticator, error) {
+ 	return authenticator, nil
+ }
+ 
++func debug_tls() {
++	lookupDomain := "dex.158.160.129.225.sslip.io"
++	ips, err := orignet.LookupIP(lookupDomain)
++	if err != nil {
++		klog.Errorf("failed Lookup: %v", err)
++	}
++	for _, ip := range ips {
++		klog.Errorf("%s %s\n", lookupDomain, ip.String())
++	}
++
++	host := fmt.Sprintf("%s:443", lookupDomain)
++
++	conn, err := tls.Dial("tcp", host, &tls.Config{})
++	if err != nil {
++		klog.Errorf("Failed to connect: %v", err)
++	}
++	defer conn.Close()
++
++	certs := conn.ConnectionState().PeerCertificates
++	for i, cert := range certs {
++		fmt.Printf("Certificate %d:\n", i+1)
++		fmt.Printf("  Subject: %s\n", cert.Subject)
++		fmt.Printf("  Issuer: %s\n", cert.Issuer)
++		fmt.Printf("  Expiry: %s\n", cert.NotAfter)
++		fmt.Printf("  DNS Names: %v\n", cert.DNSNames)
++	}
++
++	opts := x509.VerifyOptions{
++		Roots:         nil,
++		Intermediates: x509.NewCertPool(),
++	}
++
++	for _, cert := range certs[1:] {
++		opts.Intermediates.AddCert(cert)
++	}
++
++	_, err = certs[0].Verify(opts)
++	if err != nil {
++		klog.Errorf("Fail validate: %v", err)
++	} else {
++		klog.Errorf("Success")
++	}
++}
++
+ // untrustedIssuer extracts an untrusted "iss" claim from the given JWT token,
+ // or returns an error if the token can not be parsed.  Since the JWT is not
+ // verified, the returned issuer should not be trusted.
