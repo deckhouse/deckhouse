@@ -159,4 +159,5 @@ The platform API provides an OpenAPI specification, which can be obtained via th
 ```bash
 d8 k get --raw /openapi/v2 > swagger.json
 ```
+
 This file can be used to view the documentation locally using tools such as Swagger UI or Redoc.
