@@ -9,6 +9,7 @@ require (
 	github.com/bep/lazycache v0.7.0
 	github.com/bep/logg v0.4.0
 	github.com/bep/overlayfs v0.9.2
+	github.com/deckhouse/deckhouse/pkg/log v0.0.0-20250130092654-022078e96d8d
 	github.com/gohugoio/hugo v0.142.0
 	github.com/spf13/afero v1.12.0
 	github.com/spf13/fsync v0.10.1
@@ -17,13 +18,13 @@ require (
 	k8s.io/api v0.32.1
 	k8s.io/apimachinery v0.32.1
 	k8s.io/client-go v0.32.1
-	k8s.io/klog/v2 v2.130.1
 	k8s.io/utils v0.0.0-20241104100929-3ea5e8cea738
 )
 
 require (
 	github.com/BurntSushi/locker v0.0.0-20171006230638-a6e239ea1c69 // indirect
 	github.com/BurntSushi/toml v1.4.0 // indirect
+	github.com/DataDog/gostackparse v0.7.0 // indirect
 	github.com/alecthomas/chroma/v2 v2.15.0 // indirect
 	github.com/armon/go-radix v1.0.1-0.20221118154546-54df44f2176c // indirect
 	github.com/bep/debounce v1.2.1 // indirect
@@ -119,6 +120,7 @@ require (
 	gopkg.in/evanphx/json-patch.v4 v4.12.0 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
+	k8s.io/klog/v2 v2.130.1 // indirect
 	k8s.io/kube-openapi v0.0.0-20241105132330-32ad38e42d3f // indirect
 	rsc.io/qr v0.2.0 // indirect
 	sigs.k8s.io/json v0.0.0-20241010143419-9aa6b5e7a4b3 // indirect
