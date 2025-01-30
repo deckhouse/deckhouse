@@ -55,6 +55,15 @@ func applyFederationMergeFilter(obj *unstructured.Unstructured) (go_hook.FilterR
 	var igs *[]eeCrd.FederationIngressGateways
 	var pss *[]eeCrd.FederationPublicServices
 	var p *eeCrd.AlliancePublicMetadata
+	protocolMap := map[string]string{
+		"https":    "TLS",
+		"tls":      "TLS",
+		"http":     "HTTP",
+		"http2":    "HTTP2",
+		"grpc":     "HTTP2",
+		"grpc-web": "HTTP2",
+	}
+	defaultProtocol := "TCP"
 
 	if federation.Status.MetadataCache.Private != nil {
 		if federation.Status.MetadataCache.Private.IngressGateways != nil {
@@ -71,14 +80,12 @@ func applyFederationMergeFilter(obj *unstructured.Unstructured) (go_hook.FilterR
 	if federation.Status.MetadataCache.Private != nil && federation.Status.MetadataCache.Private.PublicServices != nil {
 		for serviceIndex, publicService := range *federation.Status.MetadataCache.Private.PublicServices {
 			for portIndex, port := range publicService.Ports {
-				if strings.Contains(port.Name, "http") {
-					port.Protocol = "HTTP"
-				} else if strings.Contains(port.Name, "http2") || strings.Contains(port.Name, "grpc") || strings.Contains(port.Name, "grpc-web") {
-					port.Protocol = "HTTP2"
-				} else if !strings.Contains(port.Name, "tls") && !strings.Contains(port.Name, "https") {
-					port.Protocol = "TCP"
-				} else {
-					port.Protocol = "TLS"
+				port.Protocol = defaultProtocol
+				for keyword, protocol := range protocolMap {
+					if strings.Contains(port.Name, keyword) {
+						port.Protocol = protocol
+						break
+					}
 				}
 				(*federation.Status.MetadataCache.Private.PublicServices)[serviceIndex].Ports[portIndex] = port
 			}

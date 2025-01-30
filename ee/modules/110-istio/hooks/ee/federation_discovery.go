@@ -34,7 +34,6 @@ type IstioFederationDiscoveryCrdInfo struct {
 	ClusterUUID              string
 	TrustDomain              string
 	ClusterCA                string
-	PublicServices           *[]eeCrd.FederationPublicServices
 	EnableInsecureConnection bool
 	PublicMetadataEndpoint   string
 	PrivateMetadataEndpoint  string
@@ -109,6 +108,15 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 
 func federationDiscovery(input *go_hook.HookInput, dc dependency.Container) error {
 	input.MetricsCollector.Expire(federationMetricsGroup)
+	protocolMap := map[string]string{
+		"https":    "TLS",
+		"tls":      "TLS",
+		"http":     "HTTP",
+		"http2":    "HTTP2",
+		"grpc":     "HTTP2",
+		"grpc-web": "HTTP2",
+	}
+	defaultProtocol := "TCP"
 
 	if !input.Values.Get("istio.federation.enabled").Bool() {
 		return nil
@@ -210,14 +218,12 @@ func federationDiscovery(input *go_hook.HookInput, dc dependency.Container) erro
 		}
 		for serviceIndex, service := range *privateMetadata.PublicServices {
 			for portIndex, port := range service.Ports {
-				if strings.Contains(port.Name, "https") || strings.Contains(port.Name, "tls") {
-					port.Protocol = "TLS"
-				} else if strings.Contains(port.Name, "http") {
-					port.Protocol = "HTTP"
-				} else if strings.Contains(port.Name, "http2") || strings.Contains(port.Name, "grpc") || strings.Contains(port.Name, "grpc-web") {
-					port.Protocol = "HTTP2"
-				} else {
-					port.Protocol = "TCP"
+				port.Protocol = defaultProtocol
+				for keyword, protocol := range protocolMap {
+					if strings.Contains(port.Name, keyword) {
+						port.Protocol = protocol
+						break
+					}
 				}
 				(*privateMetadata.PublicServices)[serviceIndex].Ports[portIndex] = port
 			}
