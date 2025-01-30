@@ -17,7 +17,6 @@ package hugo
 import (
 	"errors"
 	"fmt"
-	"log/slog"
 	"os"
 	"path/filepath"
 	"strings"
@@ -288,8 +287,6 @@ func (b *hugoBuilder) loadConfig() error {
 	conf.configs.Base.Markup.DefaultMarkdownHandler = "goldmark"
 	// for v0.120.0 +
 	// conf.configs.Base.Markup.Goldmark.DuplicateResourceFiles = true
-
-	b.logger.Info("config", slog.Any("cfg", conf.configs.Base))
 
 	b.conf = conf
 
