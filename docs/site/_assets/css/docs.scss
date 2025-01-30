@@ -1090,8 +1090,11 @@ a.comparison-table__module-proprietaryOkmeter::after {
     border-radius: 4px;
 }
 
+.docs div.highlight {
+  position: relative;
+}
+
 .docs pre {
-    position: relative;
     font-family: 'Source Code Pro', monospace;
     border-radius: 4px;
     padding: 10px;

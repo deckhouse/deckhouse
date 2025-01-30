@@ -1,0 +1,49 @@
+Subject: [PATCH] remove pod mount path when NodeUnpublishVolume is called (#251)
+---
+Index: pkg/csi/node.go
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/pkg/csi/node.go b/pkg/csi/node.go
+--- a/pkg/csi/node.go	(revision 89ff1aeab1be77cdf6536f1e1002bdc58dde63f2)
++++ b/pkg/csi/node.go	(revision fd88d99f7fcc4739990c403f1969728ae49c45f9)
+@@ -369,15 +369,18 @@
+ 	if err != nil {
+ 		return nil, fmt.Errorf("unable to check if pod mount dir [%s] is mounted: [%v]", podMountDir, err)
+ 	}
+-	if !isDirMounted {
+-		klog.Infof("Pod mount dir [%s] is not mounted. Assuming already unmounted.", podMountDir)
+-		return &csi.NodeUnpublishVolumeResponse{}, nil
+-	}
+ 
+ 	klog.Infof("Attempting to unmount pod mount dir [%s].", podMountDir)
+-	if err = gofsutil.Unmount(ctx, podMountDir); err != nil {
+-		return nil, fmt.Errorf("unable to unmount pod mount dir [%s]: [%v]", podMountDir, err)
++	if isDirMounted {
++		if err = gofsutil.Unmount(ctx, podMountDir); err != nil {
++			return nil, fmt.Errorf("unable to unmount pod mount dir [%s]: [%v]", podMountDir, err)
++		}
+ 	}
++
++	klog.Infof("Attempting to remove pod mount dir [%s].", podMountDir)
++	if err := ns.rmdir(podMountDir); err != nil {
++		return nil, fmt.Errorf("failed to remove pod mount dir %v", podMountDir)
++	}
+ 
+ 	klog.Infof("NodeUnpublishVolume successful for disk [%s] at mount dir [%s]", diskName, podMountDir)
+ 	return &csi.NodeUnpublishVolumeResponse{}, nil
+@@ -642,3 +645,13 @@
+ 
+ 	return nil
+ }
++
++func (ns *nodeService) rmdir(path string) error {
++	klog.Infof("Deleting path %s", path)
++	err := os.Remove(path)
++	if os.IsNotExist(err) {
++		klog.Infof("%s does not exist", path)
++		return nil
++	}
++	return err
++}

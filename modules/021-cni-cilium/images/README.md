@@ -1,57 +1,60 @@
+# Manual for building the `cni-cilium` module
+
 ## How it built
 
-### Building BASE_CILIUM_DEV images (used for build other images and binaries, and contain all dependencies)
+### Building `base_cilium_dev` images (used for build other images and binaries, and contain all dependencies)
 
-- `BASE_CILIUM_DEV` - contain all dependencies from original images: runtime, builder, compilers, cilium-envoy, iptables
-  - based on `BASE_ALT` image
+- `base_cilium_dev` - contain all dependencies from original images: runtime, builder, compilers, cilium-envoy
+  - based on `common/alt-p11-artifact` image
   - includes `(!!! loaded from internet)`:
-    - packages from repo: p10
-    - binaries of go (1.21.5) from [go.dev](https://go.dev)
+    - packages from repo: p11
+    - binaries of go (1.23.1) from `BASE_GOLANG_23_ALPINE` image
     - binaries and plugins of protoc (22.3) from github releases
     - binaries of bazel and wrapper shell-scripts from github releases
-      - 3.7.0, 3.7.1, 3.7.2, 6.1.0
+      - 3.7.0 3.7.1 3.7.2 6.3.2
 
 ### Building utility binaries
+
 - `+` `hubble`
-  - based on `BASE_GOLANG_20_BULLSEYE_DEV` image
+  - based on `BASE_GOLANG_23_ALPINE` image
   - includes:
     - src of hubble *(loaded from fox)*
     - binaries hubble-cli *(built from src)*
 - `+` `gops`
-  - based on `BASE_GOLANG_21_ALPINE_DEV` image
+  - based on `BASE_GOLANG_23_ALPINE` image
   - includes:
     - src of gops *(loaded from fox)*
     - binaries of gops *(built from src)*
 - `+` `cni-plugins`
-  - based on `BASE_GOLANG_21_ALPINE_DEV` image
+  - based on `BASE_GOLANG_23_ALPINE` image
   - includes:
     - src of cni-plugins *(loaded from fox)*
     - binaries of cni-plugins *(built from src)*
 - `+` `bpftool`
-  - based on `BASE_CILIUM_DEV` image
+  - based on `base_cilium_dev` image
   - includes:
     - src of bpf-next *(loaded from fox)*
     - binaries bpftool *(built from src)*
 - `+` `llvm`
-  - based on `BASE_CILIUM_DEV` image
+  - based on `base_cilium_dev` image
   - includes:
     - src of llvm *(loaded from fox)*
     - build-cache of llvm *(loaded from fox)*
     - binaries llvm-10.0.0: clang, llc, llvm-objcopy *(built from src)*
 - `+` `iptables`
-  - based on `BASE_CILIUM_DEV` image
+  - based on `base_cilium_dev` image
   - includes:
     - src of iptables *(loaded from fox)*
     - binaries of iptables 1.8.8 *(built from src)*
 - `+` `cilium-envoy`
-  - based on `BASE_CILIUM_DEV` image
+  - based on `base_cilium_dev` image
   - includes:
     - src of cilium/proxy *(loaded from fox)*
     - src of envoyproxy/envoy *(loaded from fox)*
     - build-cache of cilium/proxy *(loaded from fox)*
     - binaries and libs of cilium-envoy *(built from src)*
 - `+` `cilium`
-  - based on `BASE_CILIUM_DEV` image
+  - based on `base_cilium_dev` image
   - includes:
     - binaries from image `llvm`
     - binaries from image `bpftool`
@@ -61,10 +64,10 @@
     - patches
     - binaries and shell-scripts of cilium *(built from src)*
 
-### Building an intermediate image for combining all binary files into one place and preparing the target file system.
+### Building an intermediate image for combining all binary files into one place and preparing the target file system
 
 - `agent-binaries-artifact`
-  - based on `BASE_CILIUM_DEV` image
+  - based on `base_cilium_dev` image
   - includes:
     - binaries from image `hubble`
     - binaries from image `llvm`
@@ -78,6 +81,7 @@
     - prepared all binaries, libs and scripts what required for running cilium-agent and stored in separate dir
 
 ### Building final images (used in helm-templates)
+
 - `agent-distroless` - the main image of cilium-agent
   - based on `distroless` image
   - includes prepared binaries, libs and scripts from image `agent-binaries-artifact`
@@ -88,24 +92,29 @@
 
 ## How to search for target commits for image-tools
 
-1. Cloning localy https://github.com/cilium/image-tools and go to it
-2. You need to find the tag of the required image from original base dockerfiles(e.g. [here](https://github.com/cilium/cilium/blob/v1.14.5/images/runtime/Dockerfile#L8-L10)) and write it to the `IMAGE_TAG` variable, for example
-   ```
+1. Cloning locally `https://github.com/cilium/image-tools` and go to it
+2. You need to find the tag of the required image from original base dockerfiles (e.g. [here](https://github.com/cilium/cilium/blob/v1.14.5/images/runtime/Dockerfile#L8-L10)) and write it to the `IMAGE_TAG` variable, for example
+
+   ```shell
    IMAGE_TAG=a8c542efc076b62ba683e7699c0013adb6955f0f
    ```
+
 3. Find all commits corresponding to this tag, for example
-   ```
+
+   ```shell
    git rev-list --all | git diff-tree --stdin --find-object=$IMAGE_TAG | grep -B1 -E "^:(\b\w+\b\s){3}$IMAGE_TAG"
    ```
+
 4. And select the most recent one (by date)
 
 ## Original Building Container Images
 
 In general, the original description is [here](https://github.com/cilium/cilium/blob/v1.14.5/Documentation/contributing/development/images.rst) and [here](https://docs.cilium.io/en/v1.14/contributing/development/images/), but it may not be accurate
 
-### At the time of writing the instructions, the dependency was something like this:
+### At the time of writing the instructions, the dependency was something like this
 
-**Building utility images (used for build other images and binaries)**
+#### Building utility images (used for build other images and binaries)
+
 - `compilers`
   - based on `UBUNTU`
   - includes:
@@ -132,7 +141,8 @@ In general, the original description is [here](https://github.com/cilium/cilium/
     - deb-packages from ubuntu package repository
     - go, protoc and bazel
 
-**Building utility binaries**
+#### Building utility binaries
+
 - `cilium-envoy`
   - based on `cilium-envoy-builder` image
   - includes:
@@ -149,7 +159,7 @@ In general, the original description is [here](https://github.com/cilium/cilium/
   - based on `UBUNTU` image
   - includes:
     - deb-packages from ubuntu package repository
-    - deb-packages from debiad package repository
+    - deb-packages from debian package repository
     - deb-packages iptables 1.8.8-1 *(built from src)*
 - `gops-cni`
   - based on `GO` image
@@ -165,7 +175,8 @@ In general, the original description is [here](https://github.com/cilium/cilium/
   - includes:
     - binaries, libs and scripts of cilium *(built from src)*
 
-**Building final images (used in helm-templates)**
+#### Building final images (used in helm-templates)
+
 - `cilium`
   - based on `runtime` image
   - includes:
@@ -175,8 +186,8 @@ In general, the original description is [here](https://github.com/cilium/cilium/
 
 ## original_build_way -> our_build_way
 
-- All dependencies are collected in one image (`BASE_CILIUM_DEV`)
+- All dependencies are collected in one image (`base_cilium_dev`)
 - All "non-common" binaries and packages build from sources
 - All common packages taken from ALTLinux
-- All utility images are based on `BASE_CILIUM_DEV` and are build in one pass (without complex multi-stage assemblies)
+- All utility images are based on `base_cilium_dev` and are build in one pass (without complex multi-stage assemblies)
 - Final image based on distroless
