@@ -60,7 +60,7 @@ func main() {
 		logger.Fatalf("new leases manager: %s", err)
 	}
 
-	h := v1.NewHandler(docs.NewService(src, dst, highAvailability, logger))
+	h := v1.NewHandler(docs.NewService(src, dst, highAvailability, logger), logger.Named("v1"))
 
 	srv := &http.Server{
 		Addr:    listenAddress,

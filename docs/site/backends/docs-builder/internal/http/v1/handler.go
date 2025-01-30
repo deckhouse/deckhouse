@@ -31,12 +31,13 @@ type DocsBuilderHandler struct {
 	logger *log.Logger
 }
 
-func NewHandler(docsService *docs.Service) *DocsBuilderHandler {
+func NewHandler(docsService *docs.Service, logger *log.Logger) *DocsBuilderHandler {
 	r := http.NewServeMux()
 
 	var h = &DocsBuilderHandler{
 		Handler:     r,
 		docsService: docsService,
+		logger:      logger,
 	}
 
 	r.HandleFunc("/readyz", h.handleReadyZ)
