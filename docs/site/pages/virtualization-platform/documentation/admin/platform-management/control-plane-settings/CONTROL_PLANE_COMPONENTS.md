@@ -157,6 +157,6 @@ Configuring audit policies is discussed in detail in the [Audit](audit.hmtl) sec
 The platform API provides an OpenAPI specification, which can be obtained via the `/openapi/v2` endpoint. To do this, run the command line:
 
 ```bash
-kubectl get --raw /openapi/v2 > swagger.json
+d8 k get --raw /openapi/v2 > swagger.json
 ```
 This file can be used to view the documentation locally using tools such as Swagger UI or Redoc.
