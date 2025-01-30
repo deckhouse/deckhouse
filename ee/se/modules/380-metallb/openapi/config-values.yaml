@@ -37,7 +37,7 @@ properties:
     type: object
     required: ["nodeSelector"]
     description: |
-      Settings for the `speaker` component that implements the publishing protocol and forwards application service traffic to its node.
+      Settings for the `speaker` component that implements the LoadBalancer's IPs publishing protocol for external infrastructure.
     properties:
       nodeSelector:
         type: object
