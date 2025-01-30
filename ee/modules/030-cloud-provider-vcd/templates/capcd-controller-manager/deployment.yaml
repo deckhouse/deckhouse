@@ -1,10 +1,30 @@
+{{- define "capcd_controller_manager_args" }}
+- "--leader-elect"
+{{- if semverCompare "<37.2" .Values.cloudProviderVcd.internal.discoveryData.vcdAPIVersion }}
+- "--metrics-bind-address=127.0.0.1:9446"
+{{- else }}
+- "--diagnostics-address=127.0.0.1:9446"
+- "--insecure-diagnostics"
+{{- end }}
+- "--health-probe-bind-address=:9445"
+{{- end }}
+
 {{- define "capcd_controller_manager_resources" }}
 cpu: 25m
 memory: 50Mi
 {{- end }}
 
 {{- $kubernetesSemVer := semver .Values.global.discovery.kubernetesVersion }}
-{{- $capcdImageName := join "" (list "capcdControllerManager" $kubernetesSemVer.Major $kubernetesSemVer.Minor ) }}
+
+{{- define "capcd_node_image_name" -}}
+{{- if semverCompare ">=37.2" .Values.cloudProviderVcd.internal.discoveryData.vcdAPIVersion -}}
+  capcdControllerManager
+{{- else -}}
+  capcdControllerManagerLegacy
+{{- end }}
+{{- end }}
+
+{{- $capcdImageName := join "" (list (include "capcd_node_image_name" .) $kubernetesSemVer.Major $kubernetesSemVer.Minor ) }}
 {{- $capcdImage := include "helm_lib_module_image_no_fail" (list . $capcdImageName) }}
 
 {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
@@ -99,9 +119,7 @@ spec:
             name: cert
             readOnly: true
         args:
-          - "--leader-elect"
-          - "--metrics-bind-address=127.0.0.1:9446"
-          - "--health-probe-bind-address=:9445"
+          {{- include "capcd_controller_manager_args" . | nindent 10 }}
         livenessProbe:
           httpGet:
             path: /healthz
