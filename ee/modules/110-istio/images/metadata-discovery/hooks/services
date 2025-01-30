@@ -23,7 +23,7 @@ function __config__() {
       jqFilter: |
         {
           "hostname": (.metadata.name + "." + .metadata.namespace + ".svc.$CLUSTER_DOMAIN"),
-          "ports": [.spec.ports[] | {"name": .name, "port": .port, "protocol": .protocol}]
+          "ports": [.spec.ports[] | {"name": .name, "port": .port}]
         }
 EOF
 }
