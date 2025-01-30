@@ -57,7 +57,7 @@ func initMonitoringAndAutoscaling(access kubernetes.Access, nodeLister node.List
 			},
 		}, {
 			group:  groupMonitoringAndAutoscaling,
-			probe:  "aggregating-proxy",
+			probe:  "metrics-proxy",
 			check:  "pod",
 			period: 10 * time.Second,
 			config: checker.AtLeastOnePodReady{
