@@ -42,8 +42,9 @@ index 1aa2f7abff5..21ae8698e8f 100644
 +	conn, err := tls.Dial("tcp", host, &tls.Config{})
 +	if err != nil {
 +		klog.Errorf("Failed to connect: %v", err)
-+	}
++	} else {
 +	defer conn.Close()
++	}
 +
 +	certs := conn.ConnectionState().PeerCertificates
 +	for i, cert := range certs {
