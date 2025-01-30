@@ -118,7 +118,7 @@ func (b *hugoBuilder) copyStaticTo(sourceFs *filesystems.SourceFilesystem) (uint
 	if syncer.Delete {
 		infol.Logf("removing all files from destination that don't exist in static dirs")
 
-		syncer.DeleteFilter = func(f fsync.FileInfo) bool {
+		syncer.DeleteFilter = func(f os.FileInfo) bool {
 			return f.IsDir() && strings.HasPrefix(f.Name(), ".")
 		}
 	}

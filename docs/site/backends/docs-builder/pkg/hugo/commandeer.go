@@ -80,8 +80,8 @@ func (c *command) PreRun() error {
 		return err
 	}
 
-	c.commonConfigs = lazycache.New[int32, *commonConfig](lazycache.Options[int32, *commonConfig]{MaxEntries: 5})
-	c.hugoSites = lazycache.New[int32, *hugolib.HugoSites](lazycache.Options[int32, *hugolib.HugoSites]{MaxEntries: 5})
+	c.commonConfigs = lazycache.New[int32, *commonConfig](lazycache.Options{MaxEntries: 5})
+	c.hugoSites = lazycache.New[int32, *hugolib.HugoSites](lazycache.Options{MaxEntries: 5})
 
 	return nil
 }
