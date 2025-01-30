@@ -3,9 +3,9 @@ title: "Requirements"
 permalink: en/virtualization-platform/documentation/admin/install/requirements.html
 ---
 
-{% alert level="warning" %}
-Platform components must be installed on physical servers (baremetal servers). For demonstration purposes, installation on virtual machines is allowed, but in this case it is necessary that the nested virtualization function is activated on virtual machines. It is important to emphasize that no technical support is provided for this scenario, which involves the use of virtual machines.
-{% endalert %}
+> **Warning.** The platform components must be deployed on physical servers (baremetal servers).
+>
+> Installation on virtual machines is allowed for demonstration purposes only, but nested virtualization must be activated. If the platform is deployed on virtual machines, technical support is not provided.
 
 ## Platform Limitations
 
@@ -14,7 +14,7 @@ The platform has the following limitations:
 - Maximum number of nodes: 1000.
 - Maximum number of virtual machines: 50000.
 
-The platform has no additional restrictions and is compatible with any hardware that is supported by [operating systems](#supported-os-for-platform-nodes) on which the platform can run.
+The platform has no additional restrictions and is compatible with any hardware that is supported by [operating systems](#supported-os-for-platform-nodes) on which it can be installed.
 
 ## Hardware Requirements
 
@@ -30,7 +30,7 @@ The platform has no additional restrictions and is compatible with any hardware 
 
 1. **Server for the master node**
 
-   There can be multiple servers running the cluster's control plane components, for example, 3. Initially, only one server is required for the installation, and additional servers can be added later via the node management mechanisms.
+   There can be multiple servers running the cluster's control plane components. Only one server is required for installation, while the remaining ones should be added later via the node management mechanisms.
 
    Requirements for a physical bare-metal server:
 
@@ -71,7 +71,7 @@ The platform has no additional restrictions and is compatible with any hardware 
        - At least 60 GB;
        - High-speed disk (400+ IOPS);
        - Additional disks for software-defined storage;
-   - OS [from the list of supported ones](#supported-os);
+   - OS [from the list of supported ones](#supported-os-for-platform-nodes);
      - Linux kernel version `5.7` or newer;
    - **Unique hostname** across all servers in the future cluster;
    - Network access:
@@ -96,9 +96,9 @@ The platform has no additional restrictions and is compatible with any hardware 
 
 ## Supported guest operating systems
 
-The virtualization platform supports operating systems running on x86 and x86_64 architectures as guest operating systems. In order for paravirtualization mode to function successfully, the appropriate virtio drivers must be installed to ensure efficient communication between the virtual machine and the hypervisor.
+The virtualization platform supports operating systems running on x86 and x86_64 architectures as guest operating systems. For paravirtualization mode to work properly, the appropriate virtio drivers must be installed to enable efficient communication between the virtual machine and the hypervisor.
 
-A successful startup of the operating system is determined by the correct installation and booting of the system, the smooth functioning of all major components such as networking and storage, and the absence of failures or errors.
+An operating system is considered successfully started if it is correctly installed and booted, all major components such as networking and storage operate stably, and there are no failures or errors.
 
 ## Supported virtual machine configurations
 

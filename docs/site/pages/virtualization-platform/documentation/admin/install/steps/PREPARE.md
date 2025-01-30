@@ -36,7 +36,7 @@ Before installation, you need to plan the parameters of the virtualization platf
    - Make sure that Intel-VT (vmx) or AMD-V (svm) virtualization support is enabled in the BIOS/UEFI on all cluster nodes.
 
 1. Install the operating system:
-   - Install one of the [supported operating systems](../requirements.html#supported-os) on each cluster node. Pay attention to the version and architecture of the system.
+   - Install one of the [supported operating systems](../requirements.html#supported-os-for-platform-nodes) on each cluster node. Pay attention to the version and architecture of the system.
 
 1. Check access to the container image registry:
    - Ensure that each node has access to a container image registry. By default, the installer uses the public registry `registry.deckhouse.io`. Configure network connectivity and the necessary security policies to access this repository.

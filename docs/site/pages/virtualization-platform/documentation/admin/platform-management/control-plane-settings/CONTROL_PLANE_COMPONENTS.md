@@ -62,7 +62,7 @@ The `control-plane-manager` module functions:
 - **Manage certificates** required for the components to operate, including renewal, release when changing the configuration, etc. Allows you to automatically maintain a secure control plane configuration and quickly add additional names (SAN) to organize secure access to the Kubernetes API.
 - **Configure components**. Automatically creates the necessary configurations and manifests of control plane components.
 - **Upgrade or downgrade components**. Maintains the same versions of components in the cluster.
-- **Manage the configuration of the etcd cluster** and its nodes. Scales etcd by the number of master nodes, migrates from a single-master cluster to a multi-cluster cluster and vice versa.
+- **Manage the configuration of the etcd cluster and its nodes**. Scales etcd by the number of master nodes, migrates from a single-master cluster to a multi-cluster cluster and vice versa.
 - **Configuring kubeconfig**. Ensures that kubectl always has an up-to-date configuration. Generates, extends, updates kubeconfig with cluster-admin rights and creates a symlink for the root user so that kubeconfig is used by default.
 - **Extending the scheduler** by connecting external plugins via webhooks. Managed by the [KubeSchedulerWebhookConfiguration](../../../../reference/cr/kubeschedulerwebhookconfiguration.html) resource. Allows you to use more complex logic when solving load planning problems in a cluster. For example:
 - placing data storage organization application pods closer to the data itself,
@@ -154,7 +154,7 @@ Configuring audit policies is discussed in detail in the [Audit](audit.hmtl) sec
 
 ### Platform API interfaces description
 
-The platform API provides an OpenAPI specification, which can be obtained via the `/openapi/v2` endpoint. To do this, run the command line:
+The platform API provides an OpenAPI specification, which can be obtained via the `/openapi/v2` endpoint. To do this, run the command:
 
 ```bash
 d8 k get --raw /openapi/v2 > swagger.json
