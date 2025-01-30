@@ -254,3 +254,12 @@
     done <<< "$HOST_KEYS"
 # </template: login_git_step>
 {!{- end -}!}
+
+{!{ define "python_setup_step" }!}
+# <template: python_setup_step>
+- name: Setup Python
+  uses: {!{ index (ds "actions") "setup-python" }!}
+  with:
+    python-version: '3.12.8'
+# </template: python_setup_step>
+{!{- end -}!}
