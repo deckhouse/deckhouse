@@ -6,12 +6,12 @@ This module implements the `LoadBalancer` mechanism for services in bare-metal c
 
 Supports the following operating modes:
 
-- **Layer 2 Mode (L2 LoadBalancer)** – introduces an improved load-balancing mechanism for bare-metal clusters (compared to the standard L2 mode in MetalLB), enabling the use of multiple IP addresses for cluster services.
-- **BGP Mode (BGP LoadBalancer)**  – fully based on the [MetalLB](https://metallb.universe.tf/) solution.
+- **Layer 2 Mode** – introduces an improved load-balancing mechanism for bare-metal clusters (compared to the standard L2 mode in MetalLB), enabling the use of multiple "public" IP addresses for cluster services.
+- **BGP Mode**  – fully based on the [MetalLB](https://metallb.universe.tf/) solution.
 
 ## Layer 2 mode
 
-In Layer 2 mode, one or more nodes take responsibility for providing the service within the local network. From the network’s perspective, it appears as if each of these nodes has multiple IP addresses assigned to its network interface. Technically, this is achieved by the module responding to ARP requests for IPv4 services and NDP requests for IPv6 services. The primary advantage of Layer 2 mode is its versatility: it works in any Ethernet network without requiring specialized hardware.
+In Layer 2 mode, one or more nodes take responsibility for providing the service within the "public" network. From the network’s perspective, it appears as if each of these nodes has multiple IP addresses assigned to its network interface. Technically, this is achieved by the module responding to ARP requests for IPv4 services and NDP requests for IPv6 services. The primary advantage of Layer 2 mode is its versatility: it works in any Ethernet network without requiring specialized hardware.
 
 ## Advantages of the module over the classic MetalLB
 
@@ -33,43 +33,50 @@ Thus:
 - The application will receive not a single, but several (according to the number of balancer nodes) "public" IPs. These IPs will need to be configured as A-records for the application's public domain. For further horizontal scaling, additional balancer nodes will need to be added, the corresponding _Service_ will be created automatically, you just need to add them to the list of A-records for the application domain.
 - If one of the balancer nodes fails, only part of the connections will fail over to the healthy node.
 
-## BGP mode
+## BGP Mode
 
-> Available in Enterprise Edition only.
+> Available only in Enterprise Edition.
 
-In BGP mode, each node in your cluster establishes a BGP peering session with your network routers and uses this peering session for advertising the IPs of the external cluster services.
-Assuming your routers are configured to support multipath, this enables true load balancing: the routes published by MetalLB are equivalent to each other, except for their nexthop. This means that routers will use all the nexthops together and load balance between them.
-Once packets arrive at a node, kube-proxy does the final hop of traffic routing, delivering packets to a particular Pod in the service.
+MetalLB in BGP mode provides an efficient and scalable way to expose `LoadBalancer` type _Services_ in Kubernetes clusters running on bare metal. By utilizing the standardized BGP protocol, MetalLB seamlessly integrates into existing network infrastructure and ensures high availability of _Services_.
 
-### Load-Balancing Behavior
+### How MetalLB Works in BGP Mode
 
-The exact load balancing behavior depends on your specific router model and configuration, but the general behavior is to balance per-connection based on the packet hash.
+In BGP mode, MetalLB establishes BGP sessions with routers (or Top-of-Rack switches) and announces the IP addresses of `LoadBalancer` type services to them. This is accomplished as follows:
 
-Per-connection means that all packets for a single TCP or UDP session will be routed to a single machine in your cluster. The traffic spreading happens only between different connections and not for packets within a single connection. This is good because spreading packets across multiple cluster nodes would result in poor behavior on several levels:
+Configuration:
 
-- Spreading the same connection over multiple paths would result in packet reordering on the wire, drastically impacting the end host's performance.
-- On-node traffic routing in Kubernetes is not guaranteed to be consistent across nodes. This means that two different nodes may decide to route packets for the same connection to different Pods, resulting in connection failures.
+- MetalLB is configured with a pool of IP addresses that it can assign to _Services_.
+- BGP session parameters are defined: the Autonomous System (AS) number of the Kubernetes cluster, the IP addresses of the routers (peers), the AS number of the peers, and optionally, authentication passwords.
+- For each IP address pool, specific announcement parameters can be set, such as community strings.
 
-Packet hashing allows high-performance routers to spread connections across multiple backends statelessly. For each packet, they extract some of the fields and use those as a “seed” to deterministically select one of the possible backends. If all the fields are the same, the same backend will be chosen. The exact hashing methods available depend on the router's hardware and software. Two typical options are 3-tuple and 5-tuple hashing. 3-tuple uses the protocol, the source and destination IPs as the key, meaning that all packets between two unique IPs will be routed to the same backend. 5-tuple hashing adds the source and destination ports to the mix, allowing different connections from the same clients to be distributed across the cluster.
+Establishing BGP Sessions:
 
-In general, it’s preferable to put as much entropy as possible into the packet hash, i.e., using more fields is usually a good thing. This is because increased entropy brings us closer to the “ideal” load-balancing state, where each node receives exactly the same number of packets. We can never achieve that ideal state because of the problems listed above, but at least we can try to spread the connections as evenly as possible to prevent hotspots from forming.
+- On each node of the Kubernetes cluster where MetalLB is running, the speaker component establishes BGP sessions with the specified routers.
+- Routing information is exchanged between MetalLB and the routers.
 
-### Limitations
+Assigning IP Addresses to _Services_:
 
-Using BGP as a load-balancing mechanism allows you to use standard router hardware rather than bespoke load balancers. However, it also has its disadvantages.
+- When a _Service_ of type `LoadBalancer` is created, MetalLB selects a free IP address from the configured pool and assigns it to the _Service_.
+- The controller component tracks changes to _Services_ and manages IP address assignments.
 
-The biggest one is that BGP-based load balancing does not react gracefully to changes in the backend set for an address. This means that when a cluster node goes down, all the active connections to your service are expected to fail (users will see the “Connection reset by peer” error message).
-BGP-based routers implement stateless load balancing. They assign a given packet to a specific next hop by hashing some fields in the packet header and using that hash as an index into the array of available backends.
+Announcing IP Addresses:
 
-The problem is that the hashes used in routers are usually not stable, so whenever the size of the backend set changes (e.g., when a node’s BGP session goes down), existing connections will be rehashed effectively at random. That means that most existing connections will suddenly be redirected to a different backend with no knowledge of the connection in question.
-The consequence is that whenever the IP→Node mapping gets changed for your service, you should expect to see a one-time hit with the active connections to the service being dropped. There’s no ongoing packet loss or blackholing, just a one-time clean break.
+- After an IP address is assigned, the speaker on the node elected as the leader for that _Service_ begins announcing the IP address over the established BGP sessions.
+- The routers receive this announcement and update their routing tables, directing traffic for that IP address to the node that announced it.
 
-Depending on what your services do, there are several mitigation strategies you can employ:
+Traffic Distribution:
 
-- Your BGP routers might provide the option to use a more stable ECMP hashing algorithm. This is sometimes called “resilient ECMP” or “resilient LAG”. This algorithm massively reduces the number of affected connections when the backend set gets changed.
-- Pin your service deployments to specific nodes to minimize the pool of nodes you must be “careful” about.
-- Schedule changes to your service deployments during “trough” times when most users sleep, and traffic is low.
-- Split each logical service into two Kubernetes services with different IPs and use DNS to gracefully migrate user traffic from one to the other prior to disrupting the “drained” service.
-- Add transparent retry logic on the client side to gracefully recover from sudden disconnections. This works especially well if your clients are things like mobile apps or rich single-page web apps.
-- Place your services behind an Ingress controller. The Ingress controller itself can use MetalLB to receive traffic, but having a stateful layer between BGP and your services means you can change your services without concern. You only have to be careful when modifying the deployment of the Ingress controller itself (e.g., when adding more NGINX Pods to scale up).
-- Accept that there will be occasional bursts of reset connections. For low-availability internal services, this may be acceptable as-is.
+- Routers use Equal-Cost Multi-Path (ECMP) or other load balancing algorithms to distribute traffic among nodes announcing the same _Service_ IP address.
+- Inside the Kubernetes cluster, traffic arriving at a node is forwarded to the _Services_ pods using the mechanisms of the employed CNI (iptables/IPVS, eBPF programs, etc.).
+
+### Advantages of Using BGP
+
+- **Standardized Protocol:** BGP is a widely used and well-established routing protocol.
+- **Flexibility and Scalability:** BGP allows you to integrate your Kubernetes cluster into your existing network infrastructure and scale your services.
+- **Load Distribution:** Using ECMP allows for efficient load distribution across cluster nodes.
+- **Fault Tolerance:** If a node announcing an IP address fails, routers automatically redirect traffic to other nodes announcing the same IP.
+
+### Disadvantages of Using BGP
+
+- **Configuration Complexity:** Configuring BGP can be more complex than configuring ARP/NDP announcements (in Layer 2 mode).
+- **Network Equipment Requirements:** Routers must support BGP and ECMP.

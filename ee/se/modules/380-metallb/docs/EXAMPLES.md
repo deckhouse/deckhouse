@@ -87,7 +87,7 @@ $ curl -s -o /dev/null -w "%{http_code}" 192.168.2.102:8000
 
 {% raw %}
 
-Enable the module and configure all the necessary parameters:
+Enable the module and configure all the necessary parameters<sup>*</sup>:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -112,6 +112,8 @@ spec:
         node-role.deckhouse.io/metallb: ""
   version: 2
 ```
+
+<sup>*</sup> — in future versions, BGP mode settings will be set via the _MetalLoadBalancerClass_ resource.
 
 Configure BGP peering on the network equipment.
 

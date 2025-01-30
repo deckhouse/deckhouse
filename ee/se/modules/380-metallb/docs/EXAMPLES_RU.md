@@ -2,7 +2,7 @@
 title: "The MetalLB module: примеры"
 ---
 
-Metallb можно использовать в статических кластерах (bare metal), когда нет возможности воспользоваться балансировщиком от облачного провайдера. Metallb может работать в режимах L2 LoadBalancer или BGP LoadBalancer.
+Metallb можно использовать в статических кластерах (bare-metal), когда нет возможности воспользоваться балансировщиком от облачного провайдера. Metallb может работать в режимах L2 LoadBalancer или BGP LoadBalancer.
 
 ## Пример использования MetalLB в режиме L2 LoadBalancer
 
@@ -87,7 +87,7 @@ $ curl -s -o /dev/null -w "%{http_code}" 192.168.2.102:8000
 
 {% raw %}
 
-Включите модуль и настройте все необходимые параметры:
+Включите модуль и настройте все необходимые параметры<sup>*</sup>:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -112,6 +112,8 @@ spec:
         node-role.deckhouse.io/metallb: ""
   version: 2
 ```
+
+<sup>*</sup> — в будущих версиях настройки режима BGP будут задаваться через ресурс _MetalLoadBalancerClass_.
 
 Настройте BGP-пиринг на сетевом оборудовании.
 

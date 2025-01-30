@@ -162,7 +162,7 @@ properties:
         password:
           type: string
           description: |
-            Authentication password for routers enforcing TCP MD5 authenticated sessions.
+            Authentication password for BGP-routers enforcing TCP MD5 authenticated sessions.
   addressPools:
     type: array
     default: []
@@ -182,6 +182,9 @@ properties:
           type: string
           description: |
             The protocol used by the speaker to announce services.
+          enum:
+            - bgp
+            - layer2
           default: bgp
         addresses:
           type: array
@@ -266,16 +269,3 @@ x-examples:
     speaker:
       nodeSelector:
         mylabel: "speaker"
-  - addressPools:
-      - name: my-pool-l2
-        protocol: layer2
-        addresses:
-          - 192.168.100.1-192.168.100.10
-          - 192.168.101.0/24
-    speaker:
-      nodeSelector:
-        mylabel: "speaker"
-      tolerations:
-        - key: dedicated
-          operator: Equal
-          value: speaker
