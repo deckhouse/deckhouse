@@ -125,6 +125,18 @@ func (c *ComputeService) GetVMByHostname(ctx context.Context, hostname string) (
 	return &instanceList.Items[0], nil
 }
 
+// func (c *ComputeService) GetVMByName(ctx context.Context, name string) (*v1alpha2.VirtualMachine, error) {
+// 	var instance v1alpha2.VirtualMachine
+//
+// 	if err := c.client.Get(ctx, types.NamespacedName{Name: name, Namespace: c.namespace}, &instance); err != nil {
+// 		if errors.IsNotFound(err) {
+// 			return nil, cloudprovider.InstanceNotFound
+// 		}
+// 		return nil, err
+// 	}
+// 	return &instance, nil
+// }
+
 func (c *ComputeService) GetVMByID(ctx context.Context, id string) (*v1alpha2.VirtualMachine, error) {
 	var (
 		instanceList v1alpha2.VirtualMachineList
