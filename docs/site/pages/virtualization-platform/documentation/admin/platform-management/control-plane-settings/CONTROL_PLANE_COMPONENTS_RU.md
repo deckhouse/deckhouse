@@ -151,3 +151,13 @@ lang: "ru"
 Отключить сбор логов по базовым политикам можно установив флаг [basicAuditPolicyEnabled](../../../../reference/mc.html#control-plane-manager-parameters-apiserver-basicauditpolicyenabled) в `false`.
 
 Настройка политик аудита подробно рассмотрена в разделе [Аудит](audit.html).
+
+### Описание интерфейсов API платформы
+
+API платформы предоставляет OpenAPI спецификацию, которую можно получить через эндпоинт `/openapi/v2`. Для этого выполните команду:
+
+```bash
+kubectl get --raw /openapi/v2 > swagger.json
+```
+
+Этот файл можно использовать для локального просмотра документации с помощью инструментов, таких как Swagger UI или Redoc.
