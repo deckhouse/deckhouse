@@ -118,7 +118,7 @@ standard:
   # [<ru>] Флаг, который определяет необходимо ли настраивать SecurityGroups и AllowedAddressPairs на портах внутренней сети.
   internalNetworkSecurity: true
   # [<en>] Enable Elastic IP for the master nodes.
-  # [<ru>] Включите Elastic IP для мастер узлов.
+  # [<ru>] Включите Elastic IP для master-узлов.
   enableEIP: true
 # [<en>] HuaweiCloud API access parameters
 # [<ru>] параметры доступа к HuaweiCloud API

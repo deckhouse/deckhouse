@@ -6,7 +6,7 @@ description: "Настройка окружения Huawei Cloud для рабо
 ## Standard
 
 * Создается внутренняя сеть кластера со шлюзом к публичной сети.
-* Elastic IP-адрес можно назначить мастер-узлу.
+* Elastic IP-адрес можно назначить master-узлу.
 * Узлы, управляемые Cluster API, не имеют публичных IP-адресов.
 
 ![resources](https://docs.google.com/drawings/d/e/2PACX-1vSUznz9tfsUtLqC7r2nHHndLdbTYN5LIwFnP68-pxZY1wZaIrG6Mxj0kvyIZV-jKDDidp8sfB0UMTdz/pub?w=812&h=655)
