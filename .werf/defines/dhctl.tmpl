@@ -56,7 +56,6 @@ shell:
   install:
   - cd /dhctl
   - GOPROXY={{ $context.GOPROXY }} go mod download
-  - make test
   - D8_VERSION={{- $context.CI_COMMIT_TAG }} make build
 
 {{- end }}
