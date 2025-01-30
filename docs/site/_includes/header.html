@@ -244,9 +244,9 @@
           </svg>
           <span>{{ productName }}</span>
         </div>
-        <ul class="nav">
+        <ul class="nav header__nav">
           {%- for item in productMenuData.items %}
-            {%- if item.rel == "doc" %}{% assign itemClass='class="active"' %}{% else %}{% assign itemClass='' %}{% endif %}
+            {%- if item.rel == "doc" %}{% assign itemClass='class="header__navigation-item active"' %}{% else %}{% assign itemClass='class="header__navigation-item"' %}{% endif %}
             <li {{ itemClass }}><a href="{{ item.url }}"{% if item.target.size > 0 %} target="{{ item.target }}"{% endif %}>{{ item.title }}</a></li>
           {%- endfor %}
         </ul>
