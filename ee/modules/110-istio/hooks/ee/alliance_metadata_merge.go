@@ -68,6 +68,23 @@ func applyFederationMergeFilter(obj *unstructured.Unstructured) (go_hook.FilterR
 		p = federation.Status.MetadataCache.Public
 	}
 
+	if federation.Status.MetadataCache.Private != nil && federation.Status.MetadataCache.Private.PublicServices != nil {
+		for serviceIndex, publicService := range *federation.Status.MetadataCache.Private.PublicServices {
+			for portIndex, port := range publicService.Ports {
+				if strings.Contains(port.Name, "http") {
+					port.Protocol = "HTTP"
+				} else if strings.Contains(port.Name, "http2") || strings.Contains(port.Name, "grpc") || strings.Contains(port.Name, "grpc-web") {
+					port.Protocol = "HTTP2"
+				} else if !strings.Contains(port.Name, "tls") && !strings.Contains(port.Name, "https") {
+					port.Protocol = "TCP"
+				} else {
+					port.Protocol = "TLS"
+				}
+				(*federation.Status.MetadataCache.Private.PublicServices)[serviceIndex].Ports[portIndex] = port
+			}
+		}
+	}
+
 	return IstioFederationMergeCrdInfo{
 		Name:             federation.GetName(),
 		TrustDomain:      federation.Spec.TrustDomain,
