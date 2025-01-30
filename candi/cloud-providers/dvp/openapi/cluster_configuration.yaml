@@ -126,7 +126,6 @@ apiVersions:
             additionalProperties: false
             required: [virtualMachine, rootDisk, etcdDisk]
             properties:
-
               virtualMachine: &instanceClassVirtualMachine
                 type: object
                 description: |
