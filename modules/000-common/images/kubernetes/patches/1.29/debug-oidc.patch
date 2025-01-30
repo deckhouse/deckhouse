@@ -1,5 +1,5 @@
 diff --git a/staging/src/k8s.io/apiserver/plugin/pkg/authenticator/token/oidc/oidc.go b/staging/src/k8s.io/apiserver/plugin/pkg/authenticator/token/oidc/oidc.go
-index 1aa2f7abff5..e8da62fdd80 100644
+index 1aa2f7abff5..40ea81a0b18 100644
 --- a/staging/src/k8s.io/apiserver/plugin/pkg/authenticator/token/oidc/oidc.go
 +++ b/staging/src/k8s.io/apiserver/plugin/pkg/authenticator/token/oidc/oidc.go
 @@ -34,6 +34,7 @@ import (
@@ -10,7 +10,15 @@ index 1aa2f7abff5..e8da62fdd80 100644
  	"net/http"
  	"reflect"
  	"strings"
-@@ -299,6 +300,16 @@ func New(opts Options) (*Authenticator, error) {
+@@ -240,6 +241,7 @@ func New(opts Options) (*Authenticator, error) {
+ 		if opts.CAContentProvider != nil {
+ 			// TODO(enj): make this reload CA data dynamically
+ 			roots, err = certutil.NewPoolFromBytes(opts.CAContentProvider.CurrentCABundleContent())
++			klog.Errorf("roots CABundle content: %v", roots)
+ 			if err != nil {
+ 				return nil, fmt.Errorf("Failed to read the CA contents: %v", err)
+ 			}
+@@ -299,6 +301,16 @@ func New(opts Options) (*Authenticator, error) {
  		// Asynchronously attempt to initialize the authenticator. This enables
  		// self-hosted providers, providers that run on top of Kubernetes itself.
  		go wait.PollImmediateUntil(10*time.Second, func() (done bool, err error) {
@@ -23,20 +31,37 @@ index 1aa2f7abff5..e8da62fdd80 100644
 +				klog.Errorf("%s:%s\n", "dex.158.160.47.212.sslip.io", ip.String())
 +			}
 +
-+			debug_tls()
++			debug_tls(ctx, opts)
  			provider, err := oidc.NewProvider(ctx, opts.JWTAuthenticator.Issuer.URL)
  			if err != nil {
  				klog.Errorf("oidc authenticator: initializing plugin: %v", err)
-@@ -314,6 +325,40 @@ func New(opts Options) (*Authenticator, error) {
+@@ -314,6 +326,57 @@ func New(opts Options) (*Authenticator, error) {
  	return authenticator, nil
  }
  
-+func debug_tls() {
++func debug_tls(ctx context.Context, opts Options) {
 +	lookupDomain := "dex.158.160.47.212.sslip.io"
++	myurl := strings.TrimSuffix(opts.JWTAuthenticator.Issuer.URL, "/") + "/.well-known/openid-configuration"
++	_, errmsg := http.NewRequest("GET", myurl, nil)
++	if errmsg != nil {
++		klog.Errorf("httpNewRequest failed: %v", errmsg)
++	}
 +
 +	host := fmt.Sprintf("%s:443", lookupDomain)
++	var roots *x509.CertPool
++	var err error
++	if opts.CAContentProvider != nil {
++		// TODO(enj): make this reload CA data dynamically
++		roots, err = certutil.NewPoolFromBytes(opts.CAContentProvider.CurrentCABundleContent())
++		klog.Errorf("debug_tls: roots CABundle content: %v", roots)
++		if err != nil {
++			klog.Errorf("debug_tls:Failed to read the CA contents: %v", err)
++		}
++	} else {
++		klog.Info("OIDC: No x509 certificates provided, will use host's root CA set")
++	}
 +
-+	conn, err := tls.Dial("tcp", host, &tls.Config{})
++	conn, err := tls.Dial("tcp", host, &tls.Config{RootCAs: roots})
 +	if err != nil {
 +		klog.Errorf("Failed to connect: %v", err)
 +	} else {
@@ -48,16 +73,16 @@ index 1aa2f7abff5..e8da62fdd80 100644
 +		klog.Errorf("Certificate %d:\n Subject: %s\n Issuer: %s\n Expiry: %s\n DNS Names: %v", i+1, cert.Subject, cert.Issuer, cert.NotAfter, cert.DNSNames)
 +	}
 +
-+	opts := x509.VerifyOptions{
++	opt := x509.VerifyOptions{
 +		Roots:         nil,
 +		Intermediates: x509.NewCertPool(),
 +	}
 +
 +	for _, cert := range certs[1:] {
-+		opts.Intermediates.AddCert(cert)
++		opt.Intermediates.AddCert(cert)
 +	}
 +
-+	_, err = certs[0].Verify(opts)
++	_, err = certs[0].Verify(opt)
 +	if err != nil {
 +		klog.Errorf("Fail validate: %v", err)
 +	} else {
