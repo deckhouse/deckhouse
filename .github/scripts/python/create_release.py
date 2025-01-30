@@ -1,4 +1,5 @@
 import os
+import semver
 import requests
 
 
@@ -7,8 +8,7 @@ REPO_OWNER = os.getenv("REPO_OWNER")
 REPO_NAME = os.getenv("REPO_NAME")
 ACCESS_TOKEN = os.getenv("ACCESS_TOKEN")
 TAG_NAME = os.getenv("TAG_NAME")
-RELEASE_BRANCH = os.getenv("RELEASE_BRANCH")
-RELEASE_NAME = os.getenv("RELEASE_NAME")
+RELEASE_NAME = f"{TAG_NAME} Deckhouse Kubernetes Platform"
 RELEASE_BODY = os.getenv("RELEASE_BODY")
 MILESTONE_TITLE = os.getenv("MILESTONE_TITLE")
 DRAFT = False
@@ -44,13 +44,14 @@ def create_github_release():
         "Authorization": f"Bearer {ACCESS_TOKEN}",
         "Accept": "application/vnd.github.v3+json"
     }
-
+    version = semver.VersionInfo.parse(TAG_NAME[1:])
+    release_branch =f"release-{version.major}.{version.minor}"
     url = f"{GITHUB_API_URL}/repos/{REPO_OWNER}/{REPO_NAME}/releases"
     data = {
         "tag_name": TAG_NAME,
-        "target_commitish": RELEASE_BRANCH,
+        "target_commitish": release_branch,
         "name": RELEASE_NAME,
-        "body": RELEASE_BODY,
+        "body": f"{RELEASE_BODY}",
         "draft": DRAFT,
         "prerelease": PRERELEASE
     }
@@ -61,7 +62,7 @@ def create_github_release():
         print(f"INFO: Release successfully created!")
         print(f"INFO: Release url {response.json().get('html_url')}")
     else:
-        raise Exception(f"ERROR: Failed to create release\nResponse code: {response.status_code}\n Error message: {response.json()}")
+        raise Exception(f"ERROR: Failed to create release\nResponse code: {response.status_code}\nError message: {response.json()}")
 
 
 if __name__ == "__main__":
