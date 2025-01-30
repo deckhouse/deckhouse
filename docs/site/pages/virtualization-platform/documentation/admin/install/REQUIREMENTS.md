@@ -14,6 +14,8 @@ The platform has the following limitations:
 - Maximum number of nodes: 1000.
 - Maximum number of virtual machines: 50000.
 
+The platform supports operation on any hardware that meets the requirements of the specified [operating systems](#supported-os-for-platform-nodes)
+
 ## Hardware Requirements
 
 1. A dedicated **machine for installation**.
@@ -41,7 +43,7 @@ The platform has the following limitations:
      - Disk space:
        - At least 60 GB;
        - High-speed disk (400+ IOPS).
-   - OS [from the list of supported ones](#supported-os):
+   - OS [from the list of supported ones](#supported-os-for-platform-nodes):
      - Linux kernel version `5.7` or newer.
    - **Unique hostname** across all servers in the future cluster;
    - Network access:
