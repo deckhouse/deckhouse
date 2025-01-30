@@ -62,7 +62,7 @@ properties:
         type: array
         default: []
         x-examples:
-        - [{"name": "aaa", "trustDomain": "bbb", "spiffeEndpoint": "ccc", "ingressGateways": [{"address": "1.2.3.4", "port": 1234}], "publicServices": [{"hostname": "zzz.xxx.ccc", "ports": [{"name": "ddd", "port": 2345}], "virtualIP": "3.4.5.6"}]}]
+        - [{"name": "aaa", "trustDomain": "bbb", "spiffeEndpoint": "ccc", "ingressGateways": [{"address": "1.2.3.4", "port": 1234}], "publicServices": [{"hostname": "zzz.xxx.ccc", "ports": [{"name": "ddd", "port": 2345, "protocol": "TCP"], "virtualIP": "3.4.5.6"}]}]
       multiclusters:
         type: array
         default: []
