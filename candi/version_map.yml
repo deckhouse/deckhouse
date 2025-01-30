@@ -131,7 +131,7 @@ k8s:
       livenessprobe: v2.14.0
   '1.32':
     status: preview
-    patch: 0
+    patch: 1
     bashible: *bashible
     clusterAutoscalerPatch: '0'
     crictlPatch: 0
