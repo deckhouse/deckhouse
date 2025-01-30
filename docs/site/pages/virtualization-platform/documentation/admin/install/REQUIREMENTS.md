@@ -14,7 +14,7 @@ The platform has the following limitations:
 - Maximum number of nodes: 1000.
 - Maximum number of virtual machines: 50000.
 
-The platform has no additional restrictions and is compatible with any hardware that is supported by [operating systems](#supported-os-for-platform-nodes) on which it can be installed.
+The platform has no other restrictions and is compatible with any hardware that is supported by [operating systems](#supported-os-for-platform-nodes) on which it can be installed.
 
 ## Hardware Requirements
 
@@ -30,7 +30,7 @@ The platform has no additional restrictions and is compatible with any hardware 
 
 1. **Server for the master node**
 
-   There can be multiple servers running the cluster's control plane components. Only one server is required for installation, while the remaining ones should be added later via the node management mechanisms.
+   There can be multiple servers running the cluster’s control plane components, but only one server is required at installation time. The others can be added later via node management mechanisms.
 
    Requirements for a physical bare-metal server:
 
@@ -47,17 +47,17 @@ The platform has no additional restrictions and is compatible with any hardware 
      - Linux kernel version `5.7` or newer.
    - **Unique hostname** across all servers in the future cluster;
    - Network access:
-     - HTTPS access to the container image registry at `registry.deckhouse.ru`;
+     - HTTPS access to the container image registry at `registry.deckhouse.io`;
      - Access to the package repositories of the chosen OS;
      - SSH key-based access from the **installation machine** (see p.1);
      - Network access from the **installation machine** (see p.1) on port `22322/TCP`.
    - Required software:
-     - The `cloud-utils` and `cloud-init` packages must be installed.
-   > **Warning.** The container runtime will be installed automatically, so the `containerd` and/or `docker` packages must not be pre-installed.
+     - The `cloud-utils` and `cloud-init` packages must be installed (package names may vary depending on the chosen OS).
+   > **Warning.** The container runtime will be installed automatically, so do not pre-install any `containerd` or `docker` packages.
 
 1. **Servers for worker nodes**
 
-   These are nodes where virtual machines will be run, so the servers must have enough resources to handle the planned number of virtual machines. Additional disks may be required if deploying a software-defined storage solution.
+   These nodes will run virtual machines, so the servers must have enough resources to handle the planned number of VMs. Additional disks may be required if you deploy a software-defined storage solution.
 
    Requirements for a physical bare-metal server:
 
@@ -75,12 +75,12 @@ The platform has no additional restrictions and is compatible with any hardware 
      - Linux kernel version `5.7` or newer;
    - **Unique hostname** across all servers in the future cluster;
    - Network access:
-     - HTTPS access to the container image registry at `registry.deckhouse.ru`;
+     - HTTPS access to the container image registry at `registry.deckhouse.io`;
      - Access to the package repositories of the chosen OS;
      - SSH key-based access from the **installation machine** (see p.1);
    - Required software:
      - The `cloud-utils` and `cloud-init` packages must be installed (package names may vary depending on the chosen OS).
-   > **Important.** The container runtime will be installed automatically, so the `containerd` and/or `docker` packages must not be installed.
+   > **Important.** The container runtime will be installed automatically, so do not pre-install any `containerd` or `docker` packages.
 
 1. **Storage hardware**
 
@@ -98,7 +98,7 @@ The platform has no additional restrictions and is compatible with any hardware 
 
 The virtualization platform supports operating systems running on x86 and x86_64 architectures as guest operating systems. For paravirtualization mode to work properly, the appropriate VirtIO drivers must be installed to enable efficient communication between the virtual machine and the hypervisor.
 
-An operating system is considered successfully started if it is correctly installed and booted, all major components such as networking and storage operate stably, and there are no failures or errors.
+An operating system is considered successfully started if it installs and boots correctly, all major components such as networking and storage operate stably, and there are no failures or errors.
 
 ## Supported virtual machine configurations
 
