@@ -22,6 +22,7 @@ import (
 
 	"github.com/deckhouse/virtualization/api/core/v1alpha2"
 	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	cloudprovider "k8s.io/cloud-provider"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -42,16 +43,17 @@ func NewComputeService(service *Service) *ComputeService {
 func (c *ComputeService) GetVMByName(ctx context.Context, name string) (*v1alpha2.VirtualMachine, error) {
 	var instanceList v1alpha2.VirtualMachineList
 
-	labels := map[string]string{
-		DVPVMHostnameLabel: name,
+	selector, err := labels.Parse(fmt.Sprintf("%s=%s", DVPVMHostnameLabel, name))
+	if err != nil {
+		return nil, err
 	}
 
-	opts := []client.ListOption{
-		client.InNamespace(c.namespace),
-		client.MatchingLabels(labels),
+	opts := &client.ListOptions{
+		Namespace:     c.namespace,
+		LabelSelector: selector,
 	}
 
-	if err := c.client.List(ctx, &instanceList, opts...); err != nil {
+	if err := c.client.List(ctx, &instanceList, opts); err != nil {
 		if errors.IsNotFound(err) {
 			return nil, cloudprovider.InstanceNotFound
 		}
@@ -69,12 +71,24 @@ func (c *ComputeService) GetVMByName(ctx context.Context, name string) (*v1alpha
 	return &instanceList.Items[0], nil
 }
 
+// func (c *ComputeService) GetVMByName(ctx context.Context, name string) (*v1alpha2.VirtualMachine, error) {
+// 	var instance v1alpha2.VirtualMachine
+//
+// 	if err := c.client.Get(ctx, types.NamespacedName{Name: name, Namespace: c.namespace}, &instance); err != nil {
+// 		if errors.IsNotFound(err) {
+// 			return nil, cloudprovider.InstanceNotFound
+// 		}
+// 		return nil, err
+// 	}
+// 	return &instance, nil
+// }
+
 func (c *ComputeService) GetVMByID(ctx context.Context, id string) (*v1alpha2.VirtualMachine, error) {
 	var (
 		instanceList v1alpha2.VirtualMachineList
 		instance     *v1alpha2.VirtualMachine
 	)
-	if err := c.client.List(ctx, &instanceList, client.InNamespace(c.namespace)); err != nil {
+	if err := c.client.List(ctx, &instanceList, &client.ListOptions{Namespace: c.namespace}); err != nil {
 		return nil, err
 	}
 
