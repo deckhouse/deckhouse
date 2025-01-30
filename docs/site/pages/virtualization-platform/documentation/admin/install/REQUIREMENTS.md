@@ -14,7 +14,7 @@ The platform has the following limitations:
 - Maximum number of nodes: 1000.
 - Maximum number of virtual machines: 50000.
 
-The platform supports operation on any hardware that meets the requirements of the specified [operating systems](#supported-os-for-platform-nodes)
+The platform has no additional restrictions and is compatible with any hardware that is supported by [operating systems](#supported-os-for-platform-nodes) on which the platform can run.
 
 ## Hardware Requirements
 
