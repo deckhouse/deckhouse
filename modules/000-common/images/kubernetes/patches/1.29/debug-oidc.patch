@@ -1,5 +1,5 @@
 diff --git a/staging/src/k8s.io/apiserver/plugin/pkg/authenticator/token/oidc/oidc.go b/staging/src/k8s.io/apiserver/plugin/pkg/authenticator/token/oidc/oidc.go
-index 1aa2f7abff5..21ae8698e8f 100644
+index 1aa2f7abff5..e8da62fdd80 100644
 --- a/staging/src/k8s.io/apiserver/plugin/pkg/authenticator/token/oidc/oidc.go
 +++ b/staging/src/k8s.io/apiserver/plugin/pkg/authenticator/token/oidc/oidc.go
 @@ -34,6 +34,7 @@ import (
@@ -10,7 +10,7 @@ index 1aa2f7abff5..21ae8698e8f 100644
  	"net/http"
  	"reflect"
  	"strings"
-@@ -299,9 +300,19 @@ func New(opts Options) (*Authenticator, error) {
+@@ -299,6 +300,16 @@ func New(opts Options) (*Authenticator, error) {
  		// Asynchronously attempt to initialize the authenticator. This enables
  		// self-hosted providers, providers that run on top of Kubernetes itself.
  		go wait.PollImmediateUntil(10*time.Second, func() (done bool, err error) {
@@ -23,14 +23,11 @@ index 1aa2f7abff5..21ae8698e8f 100644
 +				klog.Errorf("%s:%s\n", "dex.158.160.47.212.sslip.io", ip.String())
 +			}
 +
++			debug_tls()
  			provider, err := oidc.NewProvider(ctx, opts.JWTAuthenticator.Issuer.URL)
  			if err != nil {
  				klog.Errorf("oidc authenticator: initializing plugin: %v", err)
-+				debug_tls()
- 				return false, nil
- 			}
- 
-@@ -314,6 +325,39 @@ func New(opts Options) (*Authenticator, error) {
+@@ -314,6 +325,40 @@ func New(opts Options) (*Authenticator, error) {
  	return authenticator, nil
  }
  
@@ -43,7 +40,7 @@ index 1aa2f7abff5..21ae8698e8f 100644
 +	if err != nil {
 +		klog.Errorf("Failed to connect: %v", err)
 +	} else {
-+	defer conn.Close()
++		defer conn.Close()
 +	}
 +
 +	certs := conn.ConnectionState().PeerCertificates
