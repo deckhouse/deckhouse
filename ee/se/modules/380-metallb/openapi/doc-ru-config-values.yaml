@@ -67,7 +67,7 @@ properties:
             Формат — [`matchLabels` или `matchExpressions`](https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/#resources-that-support-set-based-requirements).
         password:
           description: |
-            Пароль аутентификации для маршрутизаторов, использующих TCP MD5-аутентифицированные сессии.
+            Пароль аутентификации для BGP-маршрутизаторов, использующих TCP MD5-аутентифицированные сессии.
   addressPools:
     description: |
       Список диапазонов IP, которые будут выдаваться сервисам.
