@@ -45,7 +45,7 @@ shell:
   install:
     - git clone --depth 1 --branch {{ $value.csi.zvirt }} {{ $.SOURCE_REPO }}/openshift/ovirt-csi-driver.git /src
     - cd /src
-    - find /patches -name '*.patch' | sort | xargs git apply --verbose
+    - git apply --verbose /patches/*.patch
     - rm -rf vendor
     - rm -rf .git
 ---
