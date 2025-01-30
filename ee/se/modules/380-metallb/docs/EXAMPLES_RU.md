@@ -121,7 +121,7 @@ spec:
 
 {% raw %}
 
-Для создания _Services_ с общими IP адресами необходимо добавить к ним аннотацию `network.deckhouse.io/allow-shared-ip`:
+Для создания _Services_ с общими IP адресами необходимо добавить к ним аннотацию `network.deckhouse.io/load-balancer-allow-shared-ip`:
 
 ```yaml
 apiVersion: v1
@@ -130,7 +130,7 @@ metadata:
   name: dns-service-tcp
   namespace: default
   annotations:
-    network.deckhouse.io/allow-shared-ip: "key-to-share-1.2.3.4"
+    network.deckhouse.io/load-balancer-allow-shared-ip: "key-to-share-1.2.3.4"
 spec:
   type: LoadBalancer
   ports:
@@ -147,7 +147,7 @@ metadata:
   name: dns-service-udp
   namespace: default
   annotations:
-    network.deckhouse.io/allow-shared-ip: "key-to-share-1.2.3.4"
+    network.deckhouse.io/load-balancer-allow-shared-ip: "key-to-share-1.2.3.4"
 spec:
   type: LoadBalancer
   ports:

@@ -101,6 +101,7 @@ func checkServicesForDeprecatedAnnotations(input *go_hook.HookInput) error {
 		"metallb.universe.tf/ip-allocated-from-pool",
 		"metallb.universe.tf/address-pool",
 		"metallb.universe.tf/loadBalancerIPs",
+		"metallb.universe.tf/allow-shared-ip",
 	}
 
 	serviceSnaps := input.Snapshots["services"]

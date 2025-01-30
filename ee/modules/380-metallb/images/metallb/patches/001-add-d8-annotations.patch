@@ -15,7 +15,7 @@ index c22a4c88..4db2d8cd 100644
  	if desiredLbIPsStr == "" && svc.Spec.LoadBalancerIP == "" {
  		return nil, "", nil
 diff --git a/internal/allocator/k8salloc/k8salloc.go b/internal/allocator/k8salloc/k8salloc.go
-index 64712c1b..fdadf902 100644
+index 64712c1b..b03b28ff 100644
 --- a/internal/allocator/k8salloc/k8salloc.go
 +++ b/internal/allocator/k8salloc/k8salloc.go
 @@ -22,7 +22,11 @@ func Ports(svc *v1.Service) []allocator.Port {
@@ -23,7 +23,7 @@ index 64712c1b..fdadf902 100644
  // SharingKey extracts the sharing key for a service.
  func SharingKey(svc *v1.Service) string {
 -	return svc.Annotations["metallb.universe.tf/allow-shared-ip"]
-+	sharingKey := svc.Annotations["network.deckhouse.io/allow-shared-ip"]
++	sharingKey := svc.Annotations["network.deckhouse.io/load-balancer-allow-shared-ip"]
 +	if sharingKey == "" {
 +		sharingKey = svc.Annotations["metallb.universe.tf/allow-shared-ip"]
 +	}
