@@ -1,5 +1,5 @@
 diff --git a/staging/src/k8s.io/apiserver/plugin/pkg/authenticator/token/oidc/oidc.go b/staging/src/k8s.io/apiserver/plugin/pkg/authenticator/token/oidc/oidc.go
-index 1aa2f7abff5..40ea81a0b18 100644
+index 1aa2f7abff5..3148bf07d22 100644
 --- a/staging/src/k8s.io/apiserver/plugin/pkg/authenticator/token/oidc/oidc.go
 +++ b/staging/src/k8s.io/apiserver/plugin/pkg/authenticator/token/oidc/oidc.go
 @@ -34,6 +34,7 @@ import (
@@ -35,7 +35,7 @@ index 1aa2f7abff5..40ea81a0b18 100644
  			provider, err := oidc.NewProvider(ctx, opts.JWTAuthenticator.Issuer.URL)
  			if err != nil {
  				klog.Errorf("oidc authenticator: initializing plugin: %v", err)
-@@ -314,6 +326,57 @@ func New(opts Options) (*Authenticator, error) {
+@@ -314,6 +326,60 @@ func New(opts Options) (*Authenticator, error) {
  	return authenticator, nil
  }
  
@@ -57,6 +57,9 @@ index 1aa2f7abff5..40ea81a0b18 100644
 +		if err != nil {
 +			klog.Errorf("debug_tls:Failed to read the CA contents: %v", err)
 +		}
++		for _, cert := range roots.Subjects() {
++			klog.Errorf("cert in roots: %s\n", cert)
++		}
 +	} else {
 +		klog.Info("OIDC: No x509 certificates provided, will use host's root CA set")
 +	}
@@ -66,27 +69,27 @@ index 1aa2f7abff5..40ea81a0b18 100644
 +		klog.Errorf("Failed to connect: %v", err)
 +	} else {
 +		defer conn.Close()
-+	}
 +
-+	certs := conn.ConnectionState().PeerCertificates
-+	for i, cert := range certs {
-+		klog.Errorf("Certificate %d:\n Subject: %s\n Issuer: %s\n Expiry: %s\n DNS Names: %v", i+1, cert.Subject, cert.Issuer, cert.NotAfter, cert.DNSNames)
-+	}
++		certs := conn.ConnectionState().PeerCertificates
++		for i, cert := range certs {
++			klog.Errorf("Certificate %d:\n Subject: %s\n Issuer: %s\n Expiry: %s\n DNS Names: %v", i+1, cert.Subject, cert.Issuer, cert.NotAfter, cert.DNSNames)
++		}
 +
-+	opt := x509.VerifyOptions{
-+		Roots:         nil,
-+		Intermediates: x509.NewCertPool(),
-+	}
++		opt := x509.VerifyOptions{
++			Roots:         nil,
++			Intermediates: x509.NewCertPool(),
++		}
 +
-+	for _, cert := range certs[1:] {
-+		opt.Intermediates.AddCert(cert)
-+	}
++		for _, cert := range certs[1:] {
++			opt.Intermediates.AddCert(cert)
++		}
 +
-+	_, err = certs[0].Verify(opt)
-+	if err != nil {
-+		klog.Errorf("Fail validate: %v", err)
-+	} else {
-+		klog.Errorf("Success")
++		_, err = certs[0].Verify(opt)
++		if err != nil {
++			klog.Errorf("Fail validate: %v", err)
++		} else {
++			klog.Errorf("Success")
++		}
 +	}
 +}
 +
