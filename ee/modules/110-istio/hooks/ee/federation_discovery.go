@@ -34,6 +34,7 @@ type IstioFederationDiscoveryCrdInfo struct {
 	ClusterUUID              string
 	TrustDomain              string
 	ClusterCA                string
+	PublicServices           *[]eeCrd.FederationPublicServices
 	EnableInsecureConnection bool
 	PublicMetadataEndpoint   string
 	PrivateMetadataEndpoint  string
@@ -206,6 +207,20 @@ func federationDiscovery(input *go_hook.HookInput, dc dependency.Container) erro
 			input.Logger.Warnf("bad private metadata format in endpoint %s for IstioFederation %s", federationInfo.PrivateMetadataEndpoint, federationInfo.Name)
 			federationInfo.SetMetricMetadataEndpointError(input.MetricsCollector, federationInfo.PrivateMetadataEndpoint, 1)
 			continue
+		}
+		for serviceIndex, service := range *privateMetadata.PublicServices {
+			for portIndex, port := range service.Ports {
+				if strings.Contains(port.Name, "https") || strings.Contains(port.Name, "tls") {
+					port.Protocol = "TLS"
+				} else if strings.Contains(port.Name, "http") {
+					port.Protocol = "HTTP"
+				} else if strings.Contains(port.Name, "http2") || strings.Contains(port.Name, "grpc") || strings.Contains(port.Name, "grpc-web") {
+					port.Protocol = "HTTP2"
+				} else {
+					port.Protocol = "TCP"
+				}
+				(*privateMetadata.PublicServices)[serviceIndex].Ports[portIndex] = port
+			}
 		}
 		federationInfo.SetMetricMetadataEndpointError(input.MetricsCollector, federationInfo.PrivateMetadataEndpoint, 0)
 		err = federationInfo.PatchMetadataCache(input.PatchCollector, "private", privateMetadata)
