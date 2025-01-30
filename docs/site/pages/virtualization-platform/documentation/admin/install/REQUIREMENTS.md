@@ -7,6 +7,13 @@ permalink: en/virtualization-platform/documentation/admin/install/requirements.h
 Platform components must be installed on physical servers (baremetal servers). For demonstration purposes, installation on virtual machines is allowed, but in this case it is necessary that the nested virtualization function is activated on virtual machines. It is important to emphasize that no technical support is provided for this scenario, which involves the use of virtual machines.
 {% endalert %}
 
+## Platform Limitations
+
+The platform has the following limitations:
+
+- Maximum number of nodes: 1000.
+- Maximum number of virtual machines: 50000.
+
 ## Hardware Requirements
 
 1. A dedicated **machine for installation**.
