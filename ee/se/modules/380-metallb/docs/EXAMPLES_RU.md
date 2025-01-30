@@ -121,7 +121,7 @@ spec:
 
 {% raw %}
 
-Для создания _Services_ с общими IP адресами необходимо добавить к ним аннотацию `metallb.universe.tf/allow-shared-ip`:
+Для создания _Services_ с общими IP адресами необходимо добавить к ним аннотацию `network.deckhouse.io/allow-shared-ip`:
 
 ```yaml
 apiVersion: v1
@@ -130,7 +130,7 @@ metadata:
   name: dns-service-tcp
   namespace: default
   annotations:
-    metallb.universe.tf/allow-shared-ip: "key-to-share-1.2.3.4"
+    network.deckhouse.io/allow-shared-ip: "key-to-share-1.2.3.4"
 spec:
   type: LoadBalancer
   ports:
@@ -147,7 +147,7 @@ metadata:
   name: dns-service-udp
   namespace: default
   annotations:
-    metallb.universe.tf/allow-shared-ip: "key-to-share-1.2.3.4"
+    network.deckhouse.io/allow-shared-ip: "key-to-share-1.2.3.4"
 spec:
   type: LoadBalancer
   ports:
@@ -159,7 +159,7 @@ spec:
     app: dns
 ```
 
-Для создания _Service_ с принудительно выбранным адресом в режиме L2 LoadBalancer, необходимо добавить аннотацию `network.deckhouse.io/load-balancer-ips`:
+Для создания _Service_ с принудительно выбранным адресом, необходимо добавить аннотацию `network.deckhouse.io/load-balancer-ips`:
 
 ```yaml
 apiVersion: v1
@@ -168,24 +168,6 @@ metadata:
   name: nginx
   annotations:
     network.deckhouse.io/load-balancer-ips: 192.168.217.217
-spec:
-  ports:
-  - port: 80
-    targetPort: 80
-  selector:
-    app: nginx
-  type: LoadBalancer
-```
-
-Для создания _Service_ с принудительно выбранным адресом в режиме BGP LoadBalancer, необходимо добавить аннотацию `metallb.universe.tf/loadBalancerIPs`:
-
-```yaml
-apiVersion: v1
-kind: Service
-metadata:
-  name: nginx
-  annotations:
-    b: 192.168.1.100
 spec:
   ports:
   - port: 80

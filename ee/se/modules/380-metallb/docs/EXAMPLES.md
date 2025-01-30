@@ -121,7 +121,7 @@ Configure BGP peering on the network equipment.
 
 {% raw %}
 
-To create a Services with shared IP addresses, you need to add the annotation `metallb.universe.tf/allow-shared-ip` to them:
+To create a Services with shared IP addresses, you need to add the annotation `network.deckhouse.io/allow-shared-ip` to them:
 
 ```yaml
 apiVersion: v1
@@ -130,7 +130,7 @@ metadata:
   name: dns-service-tcp
   namespace: default
   annotations:
-    metallb.universe.tf/allow-shared-ip: "key-to-share-1.2.3.4"
+    network.deckhouse.io/allow-shared-ip: "key-to-share-1.2.3.4"
 spec:
   type: LoadBalancer
   ports:
@@ -147,7 +147,7 @@ metadata:
   name: dns-service-udp
   namespace: default
   annotations:
-    metallb.universe.tf/allow-shared-ip: "key-to-share-1.2.3.4"
+    network.deckhouse.io/allow-shared-ip: "key-to-share-1.2.3.4"
 spec:
   type: LoadBalancer
   ports:
@@ -159,7 +159,7 @@ spec:
     app: dns
 ```
 
-To create a _Service_ with a forcibly selected address in L2 LoadBalancer mode, you need to add the annotation `network.deckhouse.io/load-balancer-ips`:
+To create a _Service_ with a forcibly selected address, you need to add the annotation `network.deckhouse.io/load-balancer-ips`:
 
 ```yaml
 apiVersion: v1
@@ -168,24 +168,6 @@ metadata:
   name: nginx
   annotations:
     network.deckhouse.io/load-balancer-ips: 192.168.217.217
-spec:
-  ports:
-  - port: 80
-    targetPort: 80
-  selector:
-    app: nginx
-  type: LoadBalancer
-```
-
-To create a _Service_ with a forcibly selected address in BGP LoadBalancer mode, you need to add the annotation `metallb.universe.tf/loadBalancerIPs`:
-
-```yaml
-apiVersion: v1
-kind: Service
-metadata:
-  name: nginx
-  annotations:
-    metallb.universe.tf/loadBalancerIPs: 192.168.1.100
 spec:
   ports:
   - port: 80
