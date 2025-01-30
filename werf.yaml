@@ -53,36 +53,8 @@ cleanup:
 
 {{- $_ := set . "CandiVersionMap" $versionMap }}
 ---
-# k8sVersions:
-# - version: ["1.27", "1.28", "1.29"]
-#   kubectl: "1.28"
-# - version: ["1.30"]
-#   kubectl: "1.30"
-{{- $keys := list }}
-{{- range $key, $value := .CandiVersionMap.k8s }}
-  {{- $keys = append $keys $key }}
-{{- end }}
-{{- $chunks := list }}
-{{- $chunk := list }}
-{{- range $i, $v := $keys }}
-  {{- $chunk = append $chunk $v }}
-  {{- if eq (mod (add $i 1) 3) 0 }}
-    {{- $kubectl := (index $chunk 1) }}
-    {{- if lt (len $chunk) 2 }}
-      {{- $kubectl = index $chunk 0 }}
-    {{- end }}
-    {{- $chunks = append $chunks (dict "version" $chunk "kubectl" $kubectl) }}
-    {{- $chunk = list }}
-  {{- end }}
-{{- end }}
-{{- if gt (len $chunk) 0 }}
-  {{- $kubectl := index $chunk 0 }}
-  {{- if ge (len $chunk) 2 }}
-    {{- $kubectl = index $chunk 1 }}
-  {{- end }}
-  {{- $chunks = append $chunks (dict "version" $chunk "kubectl" $kubectl) }}
-{{- end }}
-{{- $_ := set . "k8sVersions" $chunks }}
+# k8sVersions
+{{- include "k8s_versions" . }}
 ---
 # Terraform Versions
 {{- $_ := set . "TF" (.Files.Get "candi/terraform_versions.yml" | fromYaml) }}
