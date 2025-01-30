@@ -3,6 +3,10 @@ title: "Cloud provider — Azure: Layouts"
 description: "Schemes of placement and interaction of resources in Azure when working with the Deckhouse cloud provider."
 ---
 
+Before reading this document, make sure you are familiar with the [Cloud provider layout](/deckhouse/docs/documentation/pages/CLOUD-PROVIDER-LAYOUT.md).
+
+One layout is supported.
+
 > **Caution!** Only [regions](https://docs.microsoft.com/en-us/azure/availability-zones/az-region) where `Availability Zones` are available are supported.
 
 ## Standard
@@ -13,6 +17,9 @@ description: "Schemes of placement and interaction of resources in Azure when wo
 * Public IP addresses can be assigned to master nodes and nodes created by Terraform.
 * If the master does not have a public IP, then an additional instance with a public IP (aka bastion host) is required for installation tasks and access to the cluster. In this case, you will also need to configure peering between the cluster's VNet and bastion's VNet.
 * Peering can also be configured between the cluster VNet and other VNets.
+
+![resources](https://docs.google.com/drawings/d/e/2PACX-1vRFsmvb6DLYjWfp-2ho3fJ2K1jRCH3nKAda-K_kgDaH2cOKScD_qT4x7tK66IeZAQLfQiMEtgWw0b0a/pub?w=812&h=655)
+<!--- Source: https://docs.google.com/drawings/d/17AyZencz-V4vWe3YM5HdP-AltGCPKIHMRm_3AuVGcUg/edit --->
 
 Example of the layout configuration:
 

@@ -3,11 +3,17 @@ title: "Cloud provider - OpenStack: Layouts"
 description: "Schemes of placement and interaction of resources in OpenStack when working with the Deckhouse cloud provider."
 ---
 
-Four layouts are supported. Below is more information about each of them.
+Before reading this document, make sure you are familiar with the [Cloud provider layout](/deckhouse/docs/documentation/pages/CLOUD-PROVIDER-LAYOUT.md).
+
+Four layouts are supported.
 
 ## Standard
 
-In this scheme, an internal cluster network is created with a gateway to the public network; the nodes do not have public IP addresses. Note that the floating IP is assigned to the master node.
+**Recommended layout.**
+
+* An internal cluster network is created with a gateway to the public network.
+* The nodes do not have public IP addresses.
+* The floating IP is assigned to the master node.
 
 > **Caution!**
 > If the provider does not support SecurityGroups, all applications running on nodes with Floating IPs assigned will be available at a public IP. For example, `kube-apiserver` on master nodes will be available on port 6443. To avoid this, we recommend using the [SimpleWithInternalNetwork](#simplewithinternalnetwork) placement strategy or [Standard](#standard) strategy with bastion host.

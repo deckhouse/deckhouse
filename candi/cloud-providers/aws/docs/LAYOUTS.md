@@ -3,7 +3,9 @@ title: "Cloud provider — AWS: Layouts"
 description: "Schemes of placement and interaction of resources in AWS when working with the Deckhouse cloud provider."
 ---
 
-Two layouts are supported. Below is more information about each of them.
+Before reading this document, make sure you are familiar with the [Cloud provider layout](/deckhouse/docs/documentation/pages/CLOUD-PROVIDER-LAYOUT.md).
+
+Two layouts are supported.
 
 ## WithoutNAT
 
