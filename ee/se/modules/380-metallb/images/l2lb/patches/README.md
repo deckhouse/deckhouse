@@ -19,3 +19,7 @@ The controllers logic is rewritten to watch this new private resource.
 ## 003-l2lb-annotation-for-pools.path
 
 Add the ability to use only IPAddressPool with the annotation 'heritage=deckhouse'.
+
+## 004-l2lb-add-d8-annotations.patch
+
+Add support for D8 annotation.

@@ -1,0 +1,48 @@
+diff --git a/controller/service.go b/controller/service.go
+index 5af5a1fe..9ae37c1a 100644
+--- a/controller/service.go
++++ b/controller/service.go
+@@ -16,12 +16,13 @@ package main
+ 
+ import (
+ 	"fmt"
+-	"go.universe.tf/metallb/api/v1alpha1"
+ 	"net"
+ 	"reflect"
+ 	"sort"
+ 	"strings"
+ 
++	"go.universe.tf/metallb/api/v1alpha1"
++
+ 	"github.com/go-kit/log"
+ 	"github.com/go-kit/log/level"
+ 	v1 "k8s.io/api/core/v1"
+@@ -245,7 +246,10 @@ func (c *controller) isServiceAllocated(key string) bool {
+ 
+ func getDesiredLbIPs(svc *v1alpha1.SDNInternalL2LBService) ([]net.IP, ipfamily.Family, error) {
+ 	var desiredLbIPs []net.IP
+-	desiredLbIPsStr := svc.Annotations[AnnotationLoadBalancerIPs]
++	desiredLbIPsStr := svc.Annotations["network.deckhouse.io/load-balancer-ips"]
++	if desiredLbIPsStr == "" {
++		desiredLbIPsStr = svc.Annotations[AnnotationLoadBalancerIPs]
++	}
+ 
+ 	if desiredLbIPsStr == "" && svc.Spec.LoadBalancerIP == "" {
+ 		return nil, "", nil
+diff --git a/internal/allocator/k8salloc/k8salloc.go b/internal/allocator/k8salloc/k8salloc.go
+index 72cc9ed4..771e6fa2 100644
+--- a/internal/allocator/k8salloc/k8salloc.go
++++ b/internal/allocator/k8salloc/k8salloc.go
+@@ -23,7 +23,11 @@ func Ports(svc *v1alpha1.SDNInternalL2LBService) []allocator.Port {
+ 
+ // SharingKey extracts the sharing key for a service.
+ func SharingKey(svc *v1alpha1.SDNInternalL2LBService) string {
+-	return svc.Annotations["metallb.universe.tf/allow-shared-ip"]
++	sharingKey := svc.Annotations["network.deckhouse.io/allow-shared-ip"]
++	if sharingKey == "" {
++		sharingKey = svc.Annotations["metallb.universe.tf/allow-shared-ip"]
++	}
++	return sharingKey
+ }
+ 
+ // BackendKey extracts the backend key for a service.
