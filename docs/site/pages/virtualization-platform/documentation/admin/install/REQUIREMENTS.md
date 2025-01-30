@@ -3,9 +3,9 @@ title: "Requirements"
 permalink: en/virtualization-platform/documentation/admin/install/requirements.html
 ---
 
-> **Warning.** The platform components must be deployed on physical servers (baremetal servers).
+> **Warning.** The platform components must be deployed on physical servers (bare-metal servers).
 >
-> Installation on virtual machines is allowed for demonstration purposes only, but nested virtualization must be activated. If the platform is deployed on virtual machines, technical support is not provided.
+> Installation on virtual machines is allowed for demonstration purposes only, but nested virtualization must be enabled. If the platform is deployed on virtual machines, technical support will not be provided.
 
 ## Platform Limitations
 
@@ -96,7 +96,7 @@ The platform has no additional restrictions and is compatible with any hardware 
 
 ## Supported guest operating systems
 
-The virtualization platform supports operating systems running on x86 and x86_64 architectures as guest operating systems. For paravirtualization mode to work properly, the appropriate virtio drivers must be installed to enable efficient communication between the virtual machine and the hypervisor.
+The virtualization platform supports operating systems running on x86 and x86_64 architectures as guest operating systems. For paravirtualization mode to work properly, the appropriate VirtIO drivers must be installed to enable efficient communication between the virtual machine and the hypervisor.
 
 An operating system is considered successfully started if it is correctly installed and booted, all major components such as networking and storage operate stably, and there are no failures or errors.
 
