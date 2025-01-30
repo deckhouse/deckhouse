@@ -30,12 +30,12 @@ import (
 	"github.com/bep/overlayfs"
 	"github.com/deckhouse/deckhouse/pkg/log"
 	"github.com/gohugoio/hugo/common/htime"
-	"github.com/gohugoio/hugo/common/hugo"
 	"github.com/gohugoio/hugo/common/loggers"
 	"github.com/gohugoio/hugo/common/paths"
 	"github.com/gohugoio/hugo/config"
 	"github.com/gohugoio/hugo/config/allconfig"
 	"github.com/gohugoio/hugo/deps"
+	"github.com/gohugoio/hugo/helpers"
 	"github.com/gohugoio/hugo/hugofs"
 	"github.com/gohugoio/hugo/hugolib"
 	"github.com/spf13/afero"
@@ -263,7 +263,9 @@ func (c *command) ConfigFromProvider(key int32, cfg config.Provider) (*commonCon
 
 func (c *command) HugFromConfig(conf *commonConfig) (*hugolib.HugoSites, error) {
 	h, _, err := c.hugoSites.GetOrCreate(c.configVersionID.Load(), func(key int32) (*hugolib.HugoSites, error) {
-		depsCfg := deps.DepsCfg{Configs: conf.configs, Fs: conf.fs, StdOut: c.hugologger.StdOut(), LogLevel: c.hugologger.Level()}
+		depsCfg := deps.DepsCfg{Configs: conf.configs, Fs: conf.fs, LogOut: c.hugologger.Out(), LogLevel: c.hugologger.Level()}
+		// for v0.120.0 +
+		// depsCfg := deps.DepsCfg{Configs: conf.configs, Fs: conf.fs, StdOut: c.hugologger.StdOut(), LogLevel: c.hugologger.Level()}
 		return hugolib.NewHugoSites(depsCfg)
 	})
 	return h, err
@@ -287,22 +289,32 @@ func (c *command) createLogger(running bool) (loggers.Logger, error) {
 		}
 	} else {
 		if c.flags.Verbose {
-			hugo.Deprecate("--verbose", "use --logLevel", "v0.119.0")
+			helpers.Deprecated("--verbose", "use --logLevel info", false)
+			// for v0.120.0 +
+			// hugo.Deprecate("--verbose", "use --logLevel", "v0.119.0")
 			level = logg.LevelInfo
 		}
 
 		if c.flags.Debug {
-			hugo.Deprecate("--debug", "use --logLevel", "v0.119.0")
+			helpers.Deprecated("--debug", "use --logLevel debug", false)
+			// for v0.120.0 +
+			// hugo.Deprecate("--debug", "use --logLevel", "v0.119.0")
 			level = logg.LevelDebug
 		}
 	}
 
 	optsLogger := loggers.Options{
-		DistinctLevel: level,
-		Level:         level,
-		StdOut:        c.Out,
-		StdErr:        c.Out,
-		StoreErrors:   running,
+		// for v0.120.0 +
+		// DistinctLevel: level,
+		// Level:         level,
+		// StdOut:        c.Out,
+		// StdErr:        c.Out,
+		// StoreErrors:   running,
+		Distinct:    true,
+		Level:       level,
+		Stdout:      c.Out,
+		Stderr:      c.Out,
+		StoreErrors: running,
 	}
 
 	return loggers.New(optsLogger), nil

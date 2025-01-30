@@ -202,7 +202,6 @@ func (b *hugoBuilder) fullBuild(noBuildLock bool) error {
 	var cleanDestinationDir bool
 	b.withConf(func(conf *commonConfig) {
 		cleanDestinationDir = conf.configs.Base.CleanDestinationDir
-		conf.configs.Base.Markup.Goldmark.DuplicateResourceFiles = true
 	})
 	if cleanDestinationDir {
 		if err := copyStaticFunc(); err != nil {
@@ -287,7 +286,8 @@ func (b *hugoBuilder) loadConfig() error {
 	}
 
 	conf.configs.Base.Markup.DefaultMarkdownHandler = "goldmark"
-	conf.configs.Base.Markup.Goldmark.DuplicateResourceFiles = true
+	// for v0.120.0 +
+	// conf.configs.Base.Markup.Goldmark.DuplicateResourceFiles = true
 
 	b.logger.Info("config", slog.Any("cfg", conf.configs.Base))
 
