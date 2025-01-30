@@ -1,0 +1,77 @@
+#!/usr/bin/env bash
+
+# Copyright 2024 Flant JSC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+source /shell_lib.sh
+
+function config() {
+    cat <<EOF
+configVersion: v1
+kubernetes:
+  - name: provider_cluster_config
+    apiVersion: v1
+    kind: Secret
+    group: main
+    executeHookOnEvent: []
+    executeHookOnSynchronization: false
+    keepFullObjectsInMemory: false
+    namespace:
+      nameSelector:
+        matchNames: ["kube-system"]
+    nameSelector:
+      matchNames:
+        - d8-provider-cluster-configuration
+    jqFilter: |
+      {
+        "resourceName": (
+          .data."cloud-provider-cluster-configuration.yaml" // "e30=" 
+          | @base64d 
+          | match("kind: ([A-Za-z]+)ClusterConfiguration").captures[0].string
+          | sub("ClusterConfiguration$"; "")
+          | ascii_downcase + "instanceclasses"
+        )
+      }
+kubernetesValidating:
+ - name: instanceclass-in-nodegroups.deckhouse.io
+   group: main
+   rules:
+    - apiGroups: ["deckhouse.io"]
+      apiVersions: ["*"]
+      operations: ["DELETE"]
+      resources: ["$RESOURCE_NAME"]
+      scope: "Cluster"
+EOF
+}
+
+RESOURCE_NAME="$(context::jq -r '.snapshots.provider_cluster_config[0].filterResult.resourceName')"
+
+function main() {
+    classToDelete=$(context::jq -r '.review.request.name')
+    classKind=$(context::jq -r '.review.request.requestKind.kind')
+
+    if context::jq -e '.review.request.oldObject.status.nodeGroupConsumers | length > 0' >/dev/null; then
+        nodeGroups=$(context::jq -r '.review.request.oldObject.status.nodeGroupConsumers | join(", ")')
+        cat <<EOF > "$VALIDATING_RESPONSE_PATH"
+{"allowed":false, "message":"$classKind \"$classToDelete\" cannot be deleted because it is being used by NodeGroup: $nodeGroups"}
+EOF
+        return 0
+    fi
+
+    cat <<EOF > "$VALIDATING_RESPONSE_PATH"
+{"allowed":true}
+EOF
+}
+
+hook::run "$@"
