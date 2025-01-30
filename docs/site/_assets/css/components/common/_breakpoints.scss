@@ -36,6 +36,10 @@ $xxxl: 1664;
     @media screen and (min-width: #{$xxl}px) {
       @content
     }
+  } @else if ($breakpoint == xxxl) {
+    @media screen and (min-width: #{$xxxl}px) {
+      @content
+    }
   }
 }
 
@@ -66,6 +70,10 @@ $xxxl: 1664;
     }
   } @else if ($breakpoint == xxl) {
     @media screen and (max-width: #{$xxl - 1}px) {
+      @content
+    }
+  } @else if ($breakpoint == xxxl) {
+    @media screen and (max-width: #{$xxxl - 1}px) {
       @content
     }
   }
