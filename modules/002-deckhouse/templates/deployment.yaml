@@ -74,14 +74,12 @@ spec:
         kubectl.kubernetes.io/default-container: deckhouse
     spec:
       affinity:
-        {{- if and (include "helm_lib_ha_enabled" .) .Values.global.clusterIsBootstrapped }}
         podAntiAffinity:
           requiredDuringSchedulingIgnoredDuringExecution:
           - labelSelector:
               matchLabels:
                 app: deckhouse
             topologyKey: kubernetes.io/hostname
-        {{- end }}
         nodeAffinity:
           preferredDuringSchedulingIgnoredDuringExecution:
             - preference:
