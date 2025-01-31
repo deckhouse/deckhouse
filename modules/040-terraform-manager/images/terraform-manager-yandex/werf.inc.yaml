@@ -4,7 +4,7 @@ git:
 - add: /{{ .ModulePath }}candi/cloud-providers/yandex
   to: /deckhouse/candi/cloud-providers/yandex
 import:
-- artifact: terraform-provider-yandex
+- image: terraform-provider-yandex
   add: /terraform-provider-yandex
   to: /plugins/registry.terraform.io/{{ .TF.yandex.namespace }}/{{ .TF.yandex.type }}/{{ .TF.yandex.version }}/linux_amd64/terraform-provider-yandex
   before: setup

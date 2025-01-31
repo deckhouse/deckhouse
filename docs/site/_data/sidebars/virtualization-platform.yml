@@ -10,6 +10,10 @@ entries:
         ru: Администрирование
       folders:
         - title:
+            en: Overview
+            ru: Введение
+          url: /virtualization-platform/documentation/admin/overview.html
+        - title:
             en: Platform editions
             ru: Редакции платформы
           url: /virtualization-platform/documentation/admin/editions.html
@@ -51,13 +55,17 @@ entries:
                     ru: Добавление узлов
                   url: /virtualization-platform/documentation/admin/install/steps/nodes.html
                 - title:
-                    en: Setup storage
+                    en: Set up storage
                     ru: Настройка хранилища
                   url: /virtualization-platform/documentation/admin/install/steps/storage.html
                 - title:
-                    en: Setup virtualization
+                    en: Set up virtualization
                     ru: Настройка виртуализации
                   url: /virtualization-platform/documentation/admin/install/steps/virtualization.html
+                - title:
+                    en: Set up Ingress and DNS
+                    ru: Настройка Ingress и DNS
+                  url: /virtualization-platform/documentation/admin/install/steps/ingress.html
         - title:
             en: Platform configuration
             ru: Настройка платформы

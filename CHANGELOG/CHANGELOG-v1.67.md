@@ -72,6 +72,7 @@
  - **[descheduler]** Fix conversation from v1alpha1 to v1alpha2 (add nodeAffinityType default for removePodsViolatingNodeAffinity strategy). [#11223](https://github.com/deckhouse/deckhouse/pull/11223)
  - **[descheduler]** Fix and update descheduler. [#10361](https://github.com/deckhouse/deckhouse/pull/10361)
     descheduler pod will be restarted.
+ - **[dhctl]** Add validations settings for Huawei Cloud & Dynamix. [#11337](https://github.com/deckhouse/deckhouse/pull/11337)
  - **[dhctl]** Resource readiness fix. [#11018](https://github.com/deckhouse/deckhouse/pull/11018)
  - **[dhctl]** Fix the `master_ip_address_for_ssh` terraform output variable handling in converge. [#11039](https://github.com/deckhouse/deckhouse/pull/11039)
  - **[dhctl]** Fixed bootstrap on systems with umask `027`. [#10967](https://github.com/deckhouse/deckhouse/pull/10967)
@@ -84,14 +85,17 @@
  - **[docs]** Fix priority-class module documentation. [#10897](https://github.com/deckhouse/deckhouse/pull/10897)
  - **[docs]** Add required NetworkInterface AWS policies. [#10842](https://github.com/deckhouse/deckhouse/pull/10842)
  - **[helm_lib]** Updated helm_lib to 1.37.1, which should fix issue [#10950](https://github.com/deckhouse/deckhouse/pull/10950)
+ - **[istio]** CRDs for 1.21 version moved to correct path [#11738](https://github.com/deckhouse/deckhouse/pull/11738)
  - **[istio]** Fixes for Federation/Multicluster metadata-exporter and for istio-operator. [#11150](https://github.com/deckhouse/deckhouse/pull/11150)
  - **[istio]** Fixed `IngressIstioController` CRD docs rendering. [#10581](https://github.com/deckhouse/deckhouse/pull/10581)
+ - **[metallb]** Fix overlapping networks in IPAddressPools. [#11579](https://github.com/deckhouse/deckhouse/pull/11579)
  - **[metallb]** Fix metallb RBAC rules. [#11298](https://github.com/deckhouse/deckhouse/pull/11298)
  - **[metallb]** Fixed MetalLB migration issues and improved stability. [#11224](https://github.com/deckhouse/deckhouse/pull/11224)
  - **[multitenancy-manager]** Fix the 'secure' and 'secure_with_dedicated_nodes' project templates and add supporting default values. [#11096](https://github.com/deckhouse/deckhouse/pull/11096)
  - **[node-manager]** Tune CAPS sync period. [#11384](https://github.com/deckhouse/deckhouse/pull/11384)
  - **[node-manager]** Fix the key usage with cert-authority. [#10718](https://github.com/deckhouse/deckhouse/pull/10718)
  - **[node-manager]** no_proxy/http_proxy tuning, `bb-set-proxy/bb-unset-proxy` functions. [#10676](https://github.com/deckhouse/deckhouse/pull/10676)
+ - **[operator-trivy]** Add chowning init container to the trivy-server. [#11671](https://github.com/deckhouse/deckhouse/pull/11671)
  - **[prometheus]** Excluded unwanted labels from `D8CNIMisconfigured` alert. [#11301](https://github.com/deckhouse/deckhouse/pull/11301)
  - **[prometheus]** Fixes for D8CNIMisconfigured alerts — renamed group and typos fixed. [#11259](https://github.com/deckhouse/deckhouse/pull/11259)
  - **[prometheus]** Rename targets for alerts and docs fixes. [#11243](https://github.com/deckhouse/deckhouse/pull/11243)
@@ -118,6 +122,7 @@
     You will now receive alerts if not all parameters are clearly specified in the CNI `moduleConfigs`.
  - **[cni-simple-bridge]** Adding pre-migration compatibility checks for CNI configurations. [#10640](https://github.com/deckhouse/deckhouse/pull/10640)
     You will now receive alerts if not all parameters are clearly specified in the CNI `moduleConfigs`.
+ - **[control-plane-manager]** Update D8KubernetesVersionIsDeprecated alert to set k8s v1.27 deprecated. [#11687](https://github.com/deckhouse/deckhouse/pull/11687)
  - **[dashboard]** Updated to 7.10.0 [#10301](https://github.com/deckhouse/deckhouse/pull/10301)
     Dashboard module works only via HTTPS and no longer supports the "Basic" HTTP authentication scheme.
  - **[deckhouse-controller]** Update the drain mechanism in the copied code. [#10578](https://github.com/deckhouse/deckhouse/pull/10578)
@@ -133,6 +138,7 @@
  - **[istio]** Enabling the use of self hosted certificates for metadata decrypt and excluding certificate verification in Istio Multicluster and Federation. [#10740](https://github.com/deckhouse/deckhouse/pull/10740)
  - **[node-manager]** Rewrite NodeGroup convesion webhook on Python. [#10777](https://github.com/deckhouse/deckhouse/pull/10777)
  - **[operator-trivy]** Use local policies. [#10799](https://github.com/deckhouse/deckhouse/pull/10799)
+ - **[prometheus]** Add init container and switcher for prom longterm. [#11658](https://github.com/deckhouse/deckhouse/pull/11658)
  - **[prometheus]** Add init container and switcher for prom image. [#11085](https://github.com/deckhouse/deckhouse/pull/11085)
     Prometheus will be restarted.
  - **[user-authz]** Replace manage capabilities and scopes. [#10810](https://github.com/deckhouse/deckhouse/pull/10810)

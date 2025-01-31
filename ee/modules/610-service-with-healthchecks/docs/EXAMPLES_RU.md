@@ -9,7 +9,7 @@ description: "Примеры настройки балансировщика с 
 
 ### Создание виртуальной машины
 
-Создайте виртуальную машину `myvm` основываясь на примерах из [документации DVP](https://deckhouse.ru/products/kubernetes-platform/modules/virtualization/stable/user_guide.html).
+Создайте виртуальную машину `my-vm` основываясь на примерах из [документации DVP](https://deckhouse.ru/products/kubernetes-platform/modules/virtualization/stable/user_guide.html).
 
 В примере манифеста ниже добавлен лейбл `vm: my-vm` для дальнейшей идентификации в балансировщиках.
 
@@ -87,7 +87,7 @@ spec:
   healthcheck:
     probes:
     - mode: TCP
-      http:
+      tcp:
         targetPort: 2525
 ```
 

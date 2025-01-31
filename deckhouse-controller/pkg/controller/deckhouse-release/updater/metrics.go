@@ -24,21 +24,21 @@ import (
 
 const d8ReleaseBlockedMetricName = "d8_release_info"
 
-func newMetricsUpdater(metricStorage *metricstorage.MetricStorage) *metricsUpdater {
-	return &metricsUpdater{
+func NewMetricsUpdater(metricStorage *metricstorage.MetricStorage) *MetricsUpdater {
+	return &MetricsUpdater{
 		metricStorage: metricStorage,
 	}
 }
 
-type metricsUpdater struct {
+type MetricsUpdater struct {
 	metricStorage *metricstorage.MetricStorage
 }
 
-func (mu *metricsUpdater) UpdateReleaseMetric(name string, metricLabels updater.MetricLabels) {
+func (mu *MetricsUpdater) UpdateReleaseMetric(name string, metricLabels updater.MetricLabels) {
 	mu.PurgeReleaseMetric(name)
 	mu.metricStorage.Grouped().GaugeSet(name, d8ReleaseBlockedMetricName, 1, metricLabels)
 }
 
-func (mu *metricsUpdater) PurgeReleaseMetric(name string) {
+func (mu *MetricsUpdater) PurgeReleaseMetric(name string) {
 	mu.metricStorage.Grouped().ExpireGroupMetricByName(name, d8ReleaseBlockedMetricName)
 }

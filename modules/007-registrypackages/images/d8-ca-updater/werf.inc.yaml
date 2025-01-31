@@ -4,7 +4,7 @@
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
 from: {{ $.Images.BASE_SCRATCH }}
 import:
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
   add: /
   to: /
   includePaths:
@@ -20,7 +20,8 @@ docker:
     version: all
     d8-ca-updater: {{ $version }}
 ---
-artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
+image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
+final: false
 from: {{ $.Images.BASE_UBUNTU_DEV }}
 git:
   - add: /{{ $.ModulePath }}modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
@@ -38,7 +39,7 @@ shell:
     - mkdir /certs
     - mv /mk-ca-bundle.pl /ca-certificates/mozilla
     - cd ca-certificates/mozilla
-    - perl mk-ca-bundle.pl -n 
+    - perl mk-ca-bundle.pl -n
     - mv ca-bundle.crt /ca-bundle.crt
     - python3 certdata2pem.py
     - mv *.crt /certs/
