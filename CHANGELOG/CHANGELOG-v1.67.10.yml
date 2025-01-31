@@ -1,0 +1,24 @@
+cloud-provider-aws:
+  fixes:
+    - summary: AWS network_border_group fix.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/11744
+deckhouse:
+  fixes:
+    - summary: Fix module requirements parsing.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/11733
+docs:
+  features:
+    - summary: Added information about Severity in alerts.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/11664
+  fixes:
+    - summary: Update example in kube-dns FAQ.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/11829
+    - summary: Fix patch versions approval in Custom Resources.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/11768
+node-manager:
+  fixes:
+    - summary: >-
+        Script nodegroup-watchdog.sh for case, when softdog was already turned on, doesn't work
+        correct.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/11642
+
