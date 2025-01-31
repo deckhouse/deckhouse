@@ -91,7 +91,7 @@ apiVersions:
                   Список дополнительных label'ов.
 
                   Подробно про label'ы можно прочитать в [официальной документации](https://cloud.google.com/resource-manager/docs/creating-managing-labels).                  
-          zones:
+          zones: &NodeGroupZones_ru
             description: Список зон, в которых допустимо создавать статические-узлы.
       nodeGroups:
         description: Массив дополнительных NodeGroup для создания статических узлов (например, для выделенных фронтов или шлюзов).
@@ -124,8 +124,7 @@ apiVersions:
               description: Частичное содержимое полей [GCPInstanceClass](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/cloud-provider-gcp/cr.html#gcpinstanceclass).
               properties:
                 <<: *instanceClassProperties_ru
-            zones:
-              description: Список зон, в которых допустимо создавать узлы.
+            zones: *NodeGroupZones_ru
       layout:
         description: |
           Название схемы размещения.
@@ -150,5 +149,4 @@ apiVersions:
               Ключ к Service Account'у с правами Project Admin (`service account key`) в JSON-формате.
 
               [Как получить](https://cloud.google.com/iam/docs/creating-managing-service-account-keys#creating_service_account_keys) `service account key`.
-      zones:
-        description: Список зон, в которых допустимо создавать узлы.
+      zones: *NodeGroupZones_ru
