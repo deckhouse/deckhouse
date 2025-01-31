@@ -21,15 +21,13 @@ import (
 
 	"dvp-common/config"
 
+	"github.com/deckhouse/virtualization/api/core/v1alpha2"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-var (
-	ErrNotFound = errors.New("not found")
-	scheme      = runtime.NewScheme()
-)
+var ErrNotFound = errors.New("not found")
 
 type DVPCloudAPI struct {
 	Service        *Service
@@ -42,6 +40,12 @@ func NewDVPCloudAPI(config *config.CloudConfig) (*DVPCloudAPI, error) {
 		return nil, err
 	}
 	clientset, err := kubernetes.NewForConfig(clientConfig)
+	if err != nil {
+		return nil, err
+	}
+
+	scheme := runtime.NewScheme()
+	err = v1alpha2.AddToScheme(scheme)
 	if err != nil {
 		return nil, err
 	}
