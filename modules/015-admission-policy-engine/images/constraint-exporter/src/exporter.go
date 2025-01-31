@@ -142,6 +142,7 @@ func (e *Exporter) fetchConstraints(clientGVR controllerClient.Client) ([]gateke
 	}
 
 	allMetrics := make([]prometheus.Metric, 0)
+	klog.Info("Exporting constraints: ", constraints)
 	violationMetrics := gatekeeper.ExportViolations(constraints)
 	allMetrics = append(allMetrics, violationMetrics...)
 
