@@ -85,7 +85,7 @@ spec:
 	})
 
 	t.Run("Forbid to use configOverrides", func(t *testing.T) {
-		metaConfig := generateMetaConfigForDeckhouseConfigTest(t, map[string]interface{}{
+		metaConfig := generateMetaConfigForDeckhouseConfigTestWithErr(t, map[string]interface{}{
 			"configOverrides": `
 configOverrides:
   istioEnabled: false
@@ -105,7 +105,7 @@ configOverrides:
 	})
 
 	t.Run("Forbid to use releaseChannel", func(t *testing.T) {
-		metaConfig := generateMetaConfigForDeckhouseConfigTest(t, map[string]interface{}{
+		metaConfig := generateMetaConfigForDeckhouseConfigTestWithErr(t, map[string]interface{}{
 			"releaseChannel": "Beta",
 		})
 
@@ -114,7 +114,7 @@ configOverrides:
 	})
 
 	t.Run("Forbid to use bundle", func(t *testing.T) {
-		metaConfig := generateMetaConfigForDeckhouseConfigTest(t, map[string]interface{}{
+		metaConfig := generateMetaConfigForDeckhouseConfigTestWithErr(t, map[string]interface{}{
 			"bundle": "Default",
 		})
 
@@ -123,7 +123,7 @@ configOverrides:
 	})
 
 	t.Run("Forbid to use logLevel", func(t *testing.T) {
-		metaConfig := generateMetaConfigForDeckhouseConfigTest(t, map[string]interface{}{
+		metaConfig := generateMetaConfigForDeckhouseConfigTestWithErr(t, map[string]interface{}{
 			"logLevel": "Info",
 		})
 

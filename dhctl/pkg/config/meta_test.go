@@ -93,7 +93,6 @@ proxy:
 apiVersion: deckhouse.io/v1
 kind: InitConfiguration
 deckhouse:
-  releaseChannel: Stable
   # address of the registry where the installer image is located; in this case, the default value for Deckhouse CE is set
 {{- if .imagesRepo }}
   imagesRepo: {{ .imagesRepo }}
@@ -103,12 +102,17 @@ deckhouse:
   # a special string with parameters to access Docker registry
   registryDockerCfg: {{ .dockerCfg | b64enc }}
 {{- end }}
-  configOverrides:
-    prometheusMadisonIntegrationEnabled: false
-    global:
-      modules:
-        publicDomainTemplate: "%s.example.com"
-    nginxIngressEnabled: false
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: global
+spec:
+  version: 2
+  enabled: true
+  settings:
+    modules:
+      publicDomainTemplate: "%s.example.com"
 ---
 apiVersion: deckhouse.io/v1
 kind: YandexClusterConfiguration
