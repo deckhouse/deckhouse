@@ -32,7 +32,7 @@ import (
 	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
-	transformer "github.com/deckhouse/deckhouse/dhctl/pkg/values/validation/schema"
+	transformer "github.com/deckhouse/deckhouse/dhctl/pkg/config/schema"
 )
 
 type SchemaStore struct {
