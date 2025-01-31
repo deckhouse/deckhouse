@@ -7,8 +7,9 @@
 | {{ severity['likelihood']['possible'][page.lang] }}| S3 | S4| S5 | S6 | S7 |
 | {{ severity['likelihood']['unlikely'][page.lang] }} | S4 | S5 | S6 | S7 | S8 |
 | {{ severity['likelihood']['rare'][page.lang] }} | S5 | S6 | S7 | S8 | S9 |
+{: style="font-size:0.85rem"}
 
-{% if page.lang == "ru" %}Здесь:{% else %}Here:{% endif %}
+{{ site.data.i18n.common['here'][page.lang] | capitalize }}:
 * {{ severity['likelihood'][page.lang] }}:
   * {{ severity['likelihood']['certain'][page.lang] }} – {{ severity['likelihood']['certain']['note'][page.lang] }};
   * {{ severity['likelihood']['likely'][page.lang] }} – {{ severity['likelihood']['likely']['note'][page.lang] }};
