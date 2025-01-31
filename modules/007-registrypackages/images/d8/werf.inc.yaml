@@ -10,6 +10,8 @@ git:
     - '**/*'
 shell:
   install:
+  - git clone --depth 1 --branch v3.41.0 {{ $.SOURCE_REPO }}/go-task/task.git /src/task
+  - rm -rf /src/task/.git
   - git clone --depth 1 --branch {{ .CandiVersionMap.d8.d8CliVersion }} {{ $.SOURCE_REPO }}/deckhouse/deckhouse-cli.git /src/deckhouse-cli
 #  - rm -rf /src/deckhouse-cli/.git # https://github.com/deckhouse/deckhouse-cli/blob/main/Taskfile.yml#L9
 ---
@@ -55,7 +57,7 @@ shell:
   - export PRIVATE_REPO_TOKEN={{ $.STRONGHOLD_PULL_TOKEN }}
   - export GOPRIVATE={{ $.DECKHOUSE_PRIVATE_REPO }}
   - git config --global url."https://gitlab-ci-token:${PRIVATE_REPO_TOKEN}@${PRIVATE_REPO}/".insteadOf https://${PRIVATE_REPO}/
-  - go install github.com/go-task/task/v3/cmd/task@latest
+  - cd /src/task/cmd/task && go install
   - cd /src/deckhouse-cli
   - task build:dist:linux:amd64
   - mv ./dist/{{ .CandiVersionMap.d8.d8CliVersion }}/linux-amd64/bin/d8 /d8
