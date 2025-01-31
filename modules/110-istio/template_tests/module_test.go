@@ -352,7 +352,7 @@ neighbour-0:
 			Expect(se.Field("spec.ports").String()).To(MatchYAML(`
             - name: aaa
               number: 456
-			  protocol:
+              protocol:
             `))
 			Expect(se.Field("spec.endpoints").String()).To(MatchYAML(`
             - address: 1.1.1.1
