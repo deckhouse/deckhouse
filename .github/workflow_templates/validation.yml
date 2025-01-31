@@ -30,7 +30,9 @@ on:
   pull_request_target:
      types:
       - opened
+      - reopened
       - synchronize
+      - edited
 
 # Cancel in-progress jobs for the same PR (pull_request_target event) or for the same branch (push event).
 concurrency:
@@ -145,7 +147,54 @@ jobs:
 
   release_requirements_validation:
     name: Release Requirements Validation
-{!{ tmpl.Exec "validation_template" (slice $ctx "release_requirements") | strings.Indent 4 -}!}
+{!{ tmpl.Exec "validation_template" (slice $ctx "release_requirements") | strings.Indent 4 }!}
+
+  pull_request_changes_validation:
+    name: Pull Request Changes validation
+    runs-on: ubuntu-latest
+    needs:
+      - discover
+      - pull_request_info
+    steps:
+      - uses: {!{ index (ds "actions") "actions/checkout" }!}
+      - uses: {!{ index (ds "actions") "actions/setup-node" }!}
+        with:
+          node-version: '20.x'
+      - run: npm install yaml marked
+      - uses: {!{ index (ds "actions") "actions/github-script" }!}
+        with:
+          script: |
+            const { findIn } = require('./.github/scripts/js/parsers/modules-parser.js');
+            const { parseMarkdown, findSectionInMarkdown } = require('./.github/scripts/js/parsers/md-parser.js');
+            const { validatePullRequestChangelog } = require('./.github/scripts/js/validators/pr-changes-validator.js');
+            
+            const allowedModules = findIn('.');
+
+            /**
+            *
+            * @param {string} owner
+            * @param {string} repo
+            * @param {number} pullRequestID
+            */
+            async function getPR(owner, repo, pullRequestID) {
+              const { data } = await github.rest.pulls.get({
+                  owner: owner,
+                  repo: repo,
+                  pull_number: pullRequestID,
+              });
+
+              return data.body;
+            }
+
+            try {
+              const prBody = await getPR(context.repo.owner, context.repo.repo, context.issue.number);
+              const mdTokens = parseMarkdown(prBody);
+              const changelogEntries = findSectionInMarkdown(mdTokens, 'Changelog entries');
+              validatePullRequestChangelog(changelogEntries, allowedModules);
+            } catch(error) {
+              throw(error)
+            }
+            
 
 {!{/* Template for validation jobs. */}!}
 {!{ define "validation_template" }!}

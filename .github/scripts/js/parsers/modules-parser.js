@@ -11,24 +11,24 @@
 
 const fs = require('fs');
 
-const STATIC_MODULES = ['ci', 'dependabot', 'testing', 'tools']
+const STATIC_MODULES = ['ci', 'dependabot', 'testing', 'tools'];
 
 /**
- * 
+ *
  * @param {string} dirPath
  * @returns {boolean}
  */
 function isModule(dirPath) {
   /** @type {fs.Dirent[]} */
-  const files = fs.readdirSync(dirPath, {withFileTypes: true})
-  
+  const files = fs.readdirSync(dirPath, { withFileTypes: true });
+
   // Chart.yaml + images/ + hooks/
   let hasChartYaml = false;
   let hasImagesDir = false;
   let hasHooksDir = false;
 
   // Chart.yaml + openapi/
-  let hasOpenapiDir = false
+  let hasOpenapiDir = false;
 
   // go.mod + go.sum
   let hasGoMod = false;
@@ -40,7 +40,7 @@ function isModule(dirPath) {
     }
 
     if (file.name === 'Chart.yaml' && file.isFile()) {
-      hasChartYaml = true
+      hasChartYaml = true;
     }
 
     if (file.name === 'openapi' && file.isDirectory()) {
@@ -67,7 +67,6 @@ function isModule(dirPath) {
   return (hasChartYaml && hasImagesDir && hasHooksDir) || (hasGoSum && hasGoMod) || (hasChartYaml && hasOpenapiDir);
 }
 
-
 /**
  * @description Walk by dirs and find modules
  * @param {string} root
@@ -78,36 +77,36 @@ function walk(root) {
   let result = [];
 
   /** @type {fs.Dirent[]} */
-  const dirs = fs.readdirSync(root, {withFileTypes: true})
+  const dirs = fs.readdirSync(root, { withFileTypes: true });
 
-  sanitazeName = (name) => name.replace(/^\d+-/g, '')
-  
+  sanitazeName = (name) => name.replace(/^\d+-/g, '');
+
   for (const dir of dirs) {
-    const directoryPath = `${dir.parentPath}/${dir.name}`
+    const directoryPath = `${dir.parentPath}/${dir.name}`;
     if (dir.isDirectory()) {
       if (isModule(directoryPath)) {
-        result.push(sanitazeName(dir.name))
+        result.push(sanitazeName(dir.name));
       } else {
-        result = result.concat(walk(directoryPath))
+        result = result.concat(walk(directoryPath));
       }
     }
   }
 
-  return result
+  return result;
 }
 
 /**
- * 
+ *
  * @param {string} root directory path
  * @returns {string[]} name of the modules
  */
 function findIn(root = '.') {
-  let result = walk(root).concat(STATIC_MODULES)
+  let result = walk(root).concat(STATIC_MODULES);
 
-  result = result.filter(module => module !== 'src')
-  result.sort()
+  result = result.filter((module) => module !== 'src');
+  result.sort();
 
-  return [...new Set(result)]
+  return [...new Set(result)];
 }
 
 /**
@@ -115,8 +114,12 @@ function findIn(root = '.') {
  * node ./.github/scripts/js/parsers/modules-parser.js
  * or
  * node
- * node > 
+ * node > const { findIn }= require('./.github/scripts/js/parsers/modules-parser.js')
+ * node > findIn() or findIn('./modules')
  */
 module.exports = {
+  STATIC_MODULES,
+  isModule,
+  walk,
   findIn
-}
+};
