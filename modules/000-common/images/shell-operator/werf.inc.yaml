@@ -31,6 +31,9 @@ import:
   before: setup
 docker:
   ENTRYPOINT: ["tini", "--", "/shell-operator"]
+shell:
+  setup:
+  - find /var/lib/apt/ /var/cache/apt/ -type f -delete
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 fromImage: common/src-artifact

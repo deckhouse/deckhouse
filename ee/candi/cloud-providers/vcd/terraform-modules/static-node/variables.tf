@@ -37,6 +37,11 @@ variable "nodeGroupName" {
   type = string
 }
 
+variable "resourceManagementTimeout" {
+  type = string
+  default = "10m"
+}
+
 locals {
   prefix = var.clusterConfiguration.cloud.prefix
   vapp_name = var.providerClusterConfiguration.virtualApplicationName

@@ -17,6 +17,8 @@ package docs
 import (
 	"path/filepath"
 	"testing"
+
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 func TestAssembleErrorRegexp(t *testing.T) {
@@ -73,7 +75,10 @@ func TestParseModulePath(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.modulePath, func(t *testing.T) {
-			moduleName, channel := parseModulePath(test.modulePath)
+			svc := &Service{
+				logger: log.NewNop(),
+			}
+			moduleName, channel := svc.parseModulePath(test.modulePath)
 			if moduleName != test.moduleName {
 				t.Errorf("unexpected module name %q", moduleName)
 			}

@@ -22,6 +22,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/deckhouse/deckhouse/pkg/log"
 	"github.com/gohugoio/hugo/common/herrors"
 	"github.com/gohugoio/hugo/common/hugo"
 	"github.com/gohugoio/hugo/common/maps"
@@ -38,6 +39,8 @@ type hugoBuilder struct {
 
 	confmu sync.Mutex
 	conf   *commonConfig
+
+	logger *log.Logger
 }
 
 func (b *hugoBuilder) withConfE(fn func(conf *commonConfig) error) error {
@@ -89,7 +92,7 @@ func (b *hugoBuilder) copyStatic() (map[string]uint64, error) {
 }
 
 func (b *hugoBuilder) copyStaticTo(sourceFs *filesystems.SourceFilesystem) (uint64, error) {
-	infol := b.c.logger.InfoCommand("copy static")
+	infol := b.c.hugologger.InfoCommand("copy static")
 	publishDir := helpers.FilePathSeparator
 
 	if sourceFs.PublishFolder != "" {
@@ -115,7 +118,7 @@ func (b *hugoBuilder) copyStaticTo(sourceFs *filesystems.SourceFilesystem) (uint
 	if syncer.Delete {
 		infol.Logf("removing all files from destination that don't exist in static dirs")
 
-		syncer.DeleteFilter = func(f fsync.FileInfo) bool {
+		syncer.DeleteFilter = func(f os.FileInfo) bool {
 			return f.IsDir() && strings.HasPrefix(f.Name(), ".")
 		}
 	}
@@ -144,7 +147,7 @@ func (b *hugoBuilder) doWithPublishDirs(f func(sourceFs *filesystems.SourceFiles
 	staticFilesystems := h.BaseFs.SourceFilesystems.Static
 
 	if len(staticFilesystems) == 0 {
-		b.c.logger.Infoln("No static directories found to sync")
+		b.c.hugologger.Infoln("No static directories found to sync")
 		return langCount, nil
 	}
 
@@ -174,9 +177,9 @@ func (b *hugoBuilder) fullBuild(noBuildLock bool) error {
 		langCount map[string]uint64
 	)
 
-	b.c.logger.Println("Start building sites … ")
-	b.c.logger.Println(hugo.BuildVersionString())
-	b.c.logger.Println()
+	b.c.hugologger.Println("Start building sites … ")
+	b.c.hugologger.Println(hugo.BuildVersionString())
+	b.c.hugologger.Println()
 
 	copyStaticFunc := func() error {
 		cnt, err := b.copyStatic()
@@ -280,6 +283,10 @@ func (b *hugoBuilder) loadConfig() error {
 	if len(conf.configs.LoadingInfo.ConfigFiles) == 0 {
 		return errors.New("Unable to locate config file or config directory. Perhaps you need to create a new site.\nRun `hugo help new` for details.")
 	}
+
+	conf.configs.Base.Markup.DefaultMarkdownHandler = "goldmark"
+	// for v0.120.0 +
+	// conf.configs.Base.Markup.Goldmark.DuplicateResourceFiles = true
 
 	b.conf = conf
 

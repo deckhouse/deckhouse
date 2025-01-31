@@ -5,6 +5,7 @@ $m: 728;
 $l: 1024;
 $xl: 1200;
 $xxl: 1440;
+$xxxl: 1664;
 
 @mixin min-w($breakpoint) {
   @if ($breakpoint == xxs) {
@@ -33,6 +34,10 @@ $xxl: 1440;
     }
   } @else if ($breakpoint == xxl) {
     @media screen and (min-width: #{$xxl}px) {
+      @content
+    }
+  } @else if ($breakpoint == xxxl) {
+    @media screen and (min-width: #{$xxxl}px) {
       @content
     }
   }
@@ -65,6 +70,10 @@ $xxl: 1440;
     }
   } @else if ($breakpoint == xxl) {
     @media screen and (max-width: #{$xxl - 1}px) {
+      @content
+    }
+  } @else if ($breakpoint == xxxl) {
+    @media screen and (max-width: #{$xxxl - 1}px) {
       @content
     }
   }
