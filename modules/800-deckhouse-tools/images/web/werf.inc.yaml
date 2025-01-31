@@ -56,10 +56,16 @@ import:
     add: /task
     to: /usr/local/bin/task
     before: install
+mount:
+- fromPath: ~/go-pkg-cache
+  to: /go/pkg
+- from: tmp_dir
+  to: /root/.cache/go-build
 shell:
   beforeInstall:
     {{- include "debian packages proxy" . | nindent 4 }}
     - apt-get install -y libbtrfs-dev jq
+    - find /var/lib/apt/ /var/cache/apt/ -type f -delete
   install:
     - export GOPROXY={{ $.GOPROXY }}
     - export PRIVATE_REPO={{ $.DECKHOUSE_PRIVATE_REPO }}
@@ -82,6 +88,13 @@ import:
   add: /src/src
   to: /app
   before: setup
+mount:
+- from: tmp_dir
+  to: /app/node_modules
+- from: tmp_dir
+  to: /root/.npm/_cacache
+- from: tmp_dir
+  to: /tmp/node-complile-cache
 shell:
   setup:
   {{- include "node packages proxy" . | nindent 2 }}
