@@ -50,16 +50,6 @@ apiVersions:
               Количество создаваемых master-узлов.
 
               Для обеспечения кворума важно, чтобы оно было нечетным.
-          additionalNetworkTags:
-            description: |
-              Список дополнительных тегов.
-
-              К примеру, теги позволяют применять к инстансам правила firewall. Подробно про network tags можно прочитать в [официальной документации](https://cloud.google.com/vpc/docs/add-remove-network-tags).
-          additionalLabels:
-            description: |
-              Список дополнительных label'ов.
-
-              Подробно про label'ы можно прочитать в [официальной документации](https://cloud.google.com/resource-manager/docs/creating-managing-labels).
           instanceClass:
             description: Частичное содержимое полей [GCPInstanceClass](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/cloud-provider-gcp/cr.html#gcpinstanceclass).
             properties: &instanceClassProperties_ru
@@ -91,6 +81,16 @@ apiVersions:
                   `true` — узлы не имеют публичных адресов, доступ в интернет осуществляется через `CloudNAT`.
 
                   `false` — для узлов создаются статические публичные адреса, они же используются для One-to-One NAT.
+              additionalNetworkTags:
+                description: |
+                  Список дополнительных тегов.
+
+                  К примеру, теги позволяют применять к инстансам правила firewall. Подробно про network tags можно прочитать в [официальной документации](https://cloud.google.com/vpc/docs/add-remove-network-tags).
+              additionalLabels:
+                description: |
+                  Список дополнительных label'ов.
+
+                  Подробно про label'ы можно прочитать в [официальной документации](https://cloud.google.com/resource-manager/docs/creating-managing-labels).                  
           zones:
             description: Список зон, в которых допустимо создавать статические-узлы.
       nodeGroups:
