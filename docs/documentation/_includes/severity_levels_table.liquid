@@ -1,7 +1,7 @@
 {%- assign severity = site.data.severity_table.severity  %}
 
 | {{ severity['likelihood'][page.lang] }} / {{ severity['impact'][page.lang] }} | {{ severity['impact']['deadly'][page.lang] }} | {{ severity['impact']['catastrophic'][page.lang] }} | {{ severity['impact']['critical'][page.lang] }} | {{ severity['impact']['marginal'][page.lang] }} | {{ severity['impact']['negligible'][page.lang] }} |
-|-------------------------------------------------------------------------------|-----------------------------------------------|-----------------------------------------------------|-------------------------------------------------|-------------------------------------------------|---------------------------------------------------|
+|:---|:---:|:---:|:---:|:---:|:---:|
 | {{ severity['likelihood']['certain'][page.lang] }} | S1 | S2 | S3 | S4 | S5 |
 | {{ severity['likelihood']['likely'][page.lang] }} | S2 | S3 | S4 | S5 | S6 |
 | {{ severity['likelihood']['possible'][page.lang] }}| S3 | S4| S5 | S6 | S7 |
