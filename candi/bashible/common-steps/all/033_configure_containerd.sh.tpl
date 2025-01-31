@@ -23,12 +23,7 @@ bb-event-on 'containerd-config-file-changed' '_on_containerd_config_changed'
   {{- if hasKey .nodeGroup.cri "containerd" }}
     {{- $max_concurrent_downloads = .nodeGroup.cri.containerd.maxConcurrentDownloads | default $max_concurrent_downloads }}
   {{- end }}
-  {{- $sandbox_image := "registry.k8s.io/pause:3.2" }}
-  {{- if .images }}
-    {{- if .images.common.pause }}
-      {{- $sandbox_image = printf "%s%s@%s" .registry.address .registry.path .images.common.pause }}
-    {{- end }}
-  {{- end }}
+  {{- $sandbox_image = printf "%s%s@%s" $.registry.address $.registry.path (index $.images.common "pause") }}
 
 systemd_cgroup=true
 # Overriding cgroup type from external config file
