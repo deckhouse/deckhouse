@@ -108,27 +108,6 @@ apiVersions:
               The number of master nodes to create.
 
               It is important to have an odd number of masters to ensure a quorum.
-          additionalNetworkTags:
-            description: |
-              The list of additional tags.
-
-              For example, you can use tags to apply firewall rules to instances. The detailed description of network tags is available in the [official documentation](https://cloud.google.com/vpc/docs/add-remove-network-tags).
-            type: array
-            items:
-              type: string
-          additionalLabels:
-            type: object
-            description: |
-              Additional labels.
-
-              [More info...](https://cloud.google.com/resource-manager/docs/creating-managing-labels).
-            x-doc-example: |
-              ```yaml
-              project: cms-production
-              severity: critical
-              ```
-            additionalProperties:
-              type: string
           instanceClass:
             type: object
             required: [machineType, image]
@@ -173,6 +152,27 @@ apiVersions:
                   True means that nodes do not have public addresses and connect to the Internet over `CloudNAT`;
 
                   False means that static public addresses are created for nodes, they are also used for One-to-one NAT.;
+              additionalNetworkTags: &instanceClassAdditionalNetworkTags
+                description: |
+                  The list of additional tags.
+
+                  For example, you can use tags to apply firewall rules to instances. The detailed description of network tags is available in the [official documentation](https://cloud.google.com/vpc/docs/add-remove-network-tags).
+                type: array
+                items:
+                  type: string
+              additionalLabels: &instanceClassAdditionalLabels
+                type: object
+                description: |
+                  Additional labels.
+
+                  [More info...](https://cloud.google.com/resource-manager/docs/creating-managing-labels).
+                x-doc-example: |
+                  ```yaml
+                  project: cms-production
+                  severity: critical
+                  ```
+                additionalProperties:
+                  type: string
           zones:
             type: array
             description: A limited set of zones in which nodes can be created.
@@ -238,6 +238,8 @@ apiVersions:
                 image: *instanceClassImage
                 diskSizeGb: *instanceClassDiskSizeGb
                 disableExternalIP: *instanceClassDisableExternalIP
+                additionalNetworkTags: *instanceClassAdditionalNetworkTags
+                additionalLabels: *instanceClassAdditionalLabels
             zones:
               type: array
               description: A limited set of zones in which nodes can be created.
