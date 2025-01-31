@@ -5,14 +5,14 @@ kind: DeckhouseRelease
 metadata:
   creationTimestamp: null
   name: v1.31.0
-  resourceVersion: "999"
+  resourceVersion: "1000"
 spec:
   version: v1.31.0
 status:
   approved: false
   message: ""
-  phase: Deployed
-  transitionTime: null
+  phase: Superseded
+  transitionTime: "2019-10-17T15:33:00Z"
 ---
 apiVersion: deckhouse.io/v1alpha1
 approved: false
@@ -48,29 +48,35 @@ apiVersion: deckhouse.io/v1alpha1
 approved: false
 kind: DeckhouseRelease
 metadata:
+  annotations:
+    release.deckhouse.io/isUpdating: "true"
+    release.deckhouse.io/notified: "false"
   creationTimestamp: null
   name: v1.31.3
-  resourceVersion: "999"
+  resourceVersion: "1001"
 spec:
   version: v1.31.3
 status:
   approved: false
   message: ""
-  phase: Pending
-  transitionTime: null
+  phase: Deployed
+  transitionTime: "2019-10-17T15:33:00Z"
 ---
 apiVersion: deckhouse.io/v1alpha1
 approved: false
 kind: DeckhouseRelease
 metadata:
+  annotations:
+    release.deckhouse.io/isUpdating: "false"
+    release.deckhouse.io/notified: "true"
   creationTimestamp: null
   name: v1.32.0
-  resourceVersion: "1000"
+  resourceVersion: "1001"
 spec:
   version: v1.32.0
 status:
   approved: false
-  message: Awaiting for v1.31.3 release to be deployed
+  message: awaiting for Deckhouse v1.31.3 pod to be ready
   phase: Pending
   transitionTime: null
 ---
@@ -105,7 +111,7 @@ metadata:
   creationTimestamp: null
   name: deckhouse
   namespace: d8-system
-  resourceVersion: "999"
+  resourceVersion: "1000"
 spec:
   selector: null
   strategy: {}
@@ -114,7 +120,7 @@ spec:
       creationTimestamp: null
     spec:
       containers:
-      - image: my.registry.com/deckhouse:v1.25.0
+      - image: my.registry.com/deckhouse:v1.31.3
         name: deckhouse
         resources: {}
 status: {}

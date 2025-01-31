@@ -19,6 +19,7 @@ import (
 	"errors"
 	"fmt"
 	"os/exec"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -37,6 +38,8 @@ import (
 	tf "github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
+	v1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 type Destroyer interface {
@@ -112,7 +115,7 @@ func NewClusterDestroyer(params *Params) (*ClusterDestroyer, error) {
 
 	clusterInfra := infra.NewClusterInfraWithOptions(terraStateLoader, state.cache, params.TerraformContext, infra.ClusterInfraOptions{PhasedExecutionContext: pec})
 
-	staticDestroyer := NewStaticMastersDestroyer(wrapper.Client())
+	staticDestroyer := NewStaticMastersDestroyer(wrapper.Client(), []NodeIP{})
 
 	return &ClusterDestroyer{
 		state:           state,
@@ -163,6 +166,12 @@ func (d *ClusterDestroyer) DestroyCluster(autoApprove bool) error {
 	case config.CloudClusterType:
 		infraDestroyer = d.cloudClusterInfra
 	case config.StaticClusterType:
+		nodeIPs, err := d.GetMasterNodesIPs()
+		if err != nil {
+			return err
+		}
+
+		d.staticDestroyer.IPs = nodeIPs
 		infraDestroyer = d.staticDestroyer
 	default:
 		return fmt.Errorf("Unknown cluster type '%s'", clusterType)
@@ -211,13 +220,20 @@ func (d *ClusterDestroyer) DestroyCluster(autoApprove bool) error {
 	return d.PhasedExecutionContext.CompletePipeline(d.stateCache)
 }
 
-type StaticMastersDestroyer struct {
-	SSHClient *ssh.Client
+type NodeIP struct {
+	internalIP string
+	externalIP string
 }
 
-func NewStaticMastersDestroyer(c *ssh.Client) *StaticMastersDestroyer {
+type StaticMastersDestroyer struct {
+	SSHClient *ssh.Client
+	IPs       []NodeIP
+}
+
+func NewStaticMastersDestroyer(c *ssh.Client, ips []NodeIP) *StaticMastersDestroyer {
 	return &StaticMastersDestroyer{
 		SSHClient: c,
+		IPs:       ips,
 	}
 }
 
@@ -233,9 +249,60 @@ func (d *StaticMastersDestroyer) DestroyCluster(autoApprove bool) error {
 		log.WarnLn(l)
 	}
 
+	hostToExclude := ""
+	if len(d.IPs) > 0 {
+		file := frontend.NewFile(d.SSHClient.Settings)
+		bytes, err := file.DownloadBytes("/var/lib/bashible/discovered-node-ip")
+		if err != nil {
+
+			return err
+		}
+		hostToExclude = strings.TrimSpace(string(bytes))
+	}
+
+	var additionalMastersHosts []session.Host
+	for _, ip := range d.IPs {
+		ok := true
+		if ip.internalIP == hostToExclude {
+			ok = false
+		}
+		h := session.Host{Name: ip.internalIP, Host: ip.internalIP}
+		for _, host := range mastersHosts {
+			if host.Host == ip.externalIP || host.Host == ip.internalIP {
+				ok = false
+			}
+		}
+
+		if ok {
+			additionalMastersHosts = append(additionalMastersHosts, h)
+		}
+	}
+
 	cmd := "test -f /var/lib/bashible/cleanup_static_node.sh || exit 0 && bash /var/lib/bashible/cleanup_static_node.sh --yes-i-am-sane-and-i-understand-what-i-am-doing"
-	for _, host := range mastersHosts {
+
+	if len(additionalMastersHosts) > 0 {
 		settings := d.SSHClient.Settings.Copy()
+		settings.BastionHost = settings.AvailableHosts()[0].Host
+		settings.SetAvailableHosts(additionalMastersHosts)
+		err := processStaticHosts(additionalMastersHosts, settings, stdOutErrHandler, cmd)
+		if err != nil {
+
+			return err
+		}
+	}
+
+	err := processStaticHosts(mastersHosts, d.SSHClient.Settings, stdOutErrHandler, cmd)
+	if err != nil {
+
+		return err
+	}
+
+	return nil
+}
+
+func processStaticHosts(hosts []session.Host, s *session.Session, stdOutErrHandler func(l string), cmd string) error {
+	for _, host := range hosts {
+		settings := s.Copy()
 		settings.SetAvailableHosts([]session.Host{host})
 		err := retry.NewLoop(fmt.Sprintf("Clear master %s", host), 5, 10*time.Second).Run(func() error {
 			cmd := frontend.NewCommand(settings, cmd)
@@ -266,4 +333,49 @@ func (d *StaticMastersDestroyer) DestroyCluster(autoApprove bool) error {
 	}
 
 	return nil
+}
+
+func (d *ClusterDestroyer) GetMasterNodesIPs() ([]NodeIP, error) {
+	var nodeIPs []NodeIP
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	kubeCl, err := d.d8Destroyer.GetKubeClient()
+	if err != nil {
+		log.DebugF("Cannot get kubernetes client. Got error: %v", err)
+		return []NodeIP{}, err
+	}
+
+	var nodes *v1.NodeList
+	err = retry.NewLoop("Get control plane nodes from Kubernetes cluster", 5, 5*time.Second).Run(func() error {
+		nodes, err = kubeCl.CoreV1().Nodes().List(ctx, metav1.ListOptions{LabelSelector: "node-role.kubernetes.io/control-plane="})
+		if err != nil {
+			log.DebugF("Cannot get nodes. Got error: %v", err)
+			return err
+		}
+		return nil
+	})
+
+	if err != nil {
+		log.DebugF("Cannot get nodes after 5 attemts")
+		return []NodeIP{}, err
+	}
+
+	for _, node := range nodes.Items {
+		var ip NodeIP
+
+		for _, addr := range node.Status.Addresses {
+			if addr.Type == "InternalIP" {
+				ip.internalIP = addr.Address
+			}
+			if addr.Type == "ExternalIP" {
+				ip.externalIP = addr.Address
+			}
+		}
+
+		nodeIPs = append(nodeIPs, ip)
+	}
+
+	return nodeIPs, nil
 }

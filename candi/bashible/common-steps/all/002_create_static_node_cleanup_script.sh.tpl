@@ -71,6 +71,7 @@ rm -rf /var/log/pods
 rm -rf /var/log/containers
 rm -rf /var/lib/deckhouse
 rm -rf /var/lib/upmeter
+rm -rf /etc/sudoers.d/sudoers_flant_kubectl
 
 shutdown -r -t 5
 EOF

@@ -124,6 +124,7 @@ spec:
 			Expect(f.KubernetesResource("Secret", "d8-log-shipper", "d8-log-shipper-config").Exists()).To(BeFalse())
 		},
 		Entry("Simple pair", "simple-pair"),
+		Entry("Elasticsearch tls from secretRef", "elasticsearch-tls"),
 		Entry("One source with multiple dests", "multiple-dest"),
 		Entry("Multinamespace source with one destination", "one-dest"),
 		Entry("Namespaced source", "namespaced-source"),

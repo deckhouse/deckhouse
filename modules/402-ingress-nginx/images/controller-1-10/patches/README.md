@@ -70,3 +70,10 @@ Add HTTP/3 support.
 ### new metrics
 
 This patch adds worker max connections, worker processes and worker max open files metrics.
+
+### default backend fix
+
+Fixes the problem with the controller when Ingress specifies `Service` with the `ExternalName` type as the main backend, and the default backend (using an annotation `nginx.ingress.kubernetes.io/default-backend `) - with the ClusterIP type. You can see the detailed cases here:
+https://github.com/kubernetes/ingress-nginx/issues/12158
+https://github.com/kubernetes/ingress-nginx/issues/12173
+https://github.com/deckhouse/deckhouse/issues/9933
