@@ -14,7 +14,7 @@
 
 {{- if eq .cri "Containerd" }}
   {{- if and $.registry.registryMode (ne $.registry.registryMode "Direct") }}
-    {{- $sandbox_image = printf "%s%s@%s" $.registry.address $.registry.path (index $.images.common "pause") }}
+    {{- $sandbox_image := printf "%s%s@%s" $.registry.address $.registry.path (index $.images.common "pause") }}
 if [ "$FIRST_BASHIBLE_RUN" != "yes" ]; then
   if ! crictl images -v -o=json list | jq -r '.images[].repoDigests[]' | grep -q {{ $sandbox_image | quote }}; then
     crictl pull {{ $sandbox_image | quote }}
