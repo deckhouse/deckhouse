@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package d8updater
+package releaseupdater
 
 import (
 	"bytes"
@@ -26,14 +26,19 @@ import (
 	"time"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
-	"github.com/deckhouse/deckhouse/go_lib/updater"
+	"github.com/deckhouse/deckhouse/go_lib/libapi"
+)
+
+const (
+	SubjectDeckhouse = "Deckhouse"
+	SubjectModule    = "Module"
 )
 
 type ReleaseNotifier struct {
-	settings *updater.Settings
+	settings *Settings
 }
 
-func NewReleaseNotifier(settings *updater.Settings) *ReleaseNotifier {
+func NewReleaseNotifier(settings *Settings) *ReleaseNotifier {
 	return &ReleaseNotifier{
 		settings: settings,
 	}
@@ -50,17 +55,17 @@ type WebhookData struct {
 }
 
 // SendPatchReleaseNotification sending patch notification (only if notification config has release type "All")
-func (u *ReleaseNotifier) SendPatchReleaseNotification(ctx context.Context, dr *v1alpha1.DeckhouseRelease, applyTime time.Time, metricLabels updater.MetricLabels) error {
-	if dr.GetNotified() {
+func (u *ReleaseNotifier) SendPatchReleaseNotification(ctx context.Context, release v1alpha1.Release, applyTime time.Time, metricLabels MetricLabels) error {
+	if release.GetNotified() {
 		return nil
 	}
 
-	if !u.settings.NotificationConfig.IsEmpty() && u.settings.NotificationConfig.ReleaseType == updater.ReleaseTypeAll {
-		metricLabels.SetFalse(updater.NotificationNotSent)
+	if !u.settings.NotificationConfig.IsEmpty() && u.settings.NotificationConfig.ReleaseType == ReleaseTypeAll {
+		metricLabels.SetFalse(NotificationNotSent)
 
-		err := u.sendReleaseNotification(ctx, dr, applyTime)
+		err := u.sendReleaseNotification(ctx, release, applyTime)
 		if err != nil {
-			metricLabels.SetTrue(updater.NotificationNotSent)
+			metricLabels.SetTrue(NotificationNotSent)
 
 			return fmt.Errorf("send release notification: %w", err)
 		}
@@ -69,17 +74,17 @@ func (u *ReleaseNotifier) SendPatchReleaseNotification(ctx context.Context, dr *
 	return nil
 }
 
-func (u *ReleaseNotifier) SendMinorReleaseNotification(ctx context.Context, dr *v1alpha1.DeckhouseRelease, applyTime time.Time, metricLabels updater.MetricLabels) error {
-	if dr.GetNotified() {
+func (u *ReleaseNotifier) SendMinorReleaseNotification(ctx context.Context, release v1alpha1.Release, applyTime time.Time, metricLabels MetricLabels) error {
+	if release.GetNotified() {
 		return nil
 	}
 
 	if !u.settings.NotificationConfig.IsEmpty() {
-		metricLabels.SetFalse(updater.NotificationNotSent)
+		metricLabels.SetFalse(NotificationNotSent)
 
-		err := u.sendReleaseNotification(ctx, dr, applyTime)
+		err := u.sendReleaseNotification(ctx, release, applyTime)
 		if err != nil {
-			metricLabels.SetTrue(updater.NotificationNotSent)
+			metricLabels.SetTrue(NotificationNotSent)
 
 			return fmt.Errorf("send release notification: %w", err)
 		}
@@ -88,18 +93,18 @@ func (u *ReleaseNotifier) SendMinorReleaseNotification(ctx context.Context, dr *
 	return nil
 }
 
-func (u *ReleaseNotifier) sendReleaseNotification(ctx context.Context, dr *v1alpha1.DeckhouseRelease, applyTime time.Time) error {
+func (u *ReleaseNotifier) sendReleaseNotification(ctx context.Context, release v1alpha1.Release, applyTime time.Time) error {
 	if u.settings.NotificationConfig.WebhookURL == "" {
 		return nil
 	}
 
 	data := &WebhookData{
-		Version:       dr.GetVersion().String(),
-		Requirements:  dr.GetRequirements(),
-		ChangelogLink: dr.GetChangelogLink(),
+		Version:       release.GetVersion().String(),
+		Requirements:  release.GetRequirements(),
+		ChangelogLink: release.GetChangelogLink(),
 		ApplyTime:     applyTime.Format(time.RFC3339),
-		Subject:       updater.SubjectDeckhouse,
-		Message:       fmt.Sprintf("New Deckhouse Release %s is available. Release will be applied at: %s", dr.GetVersion().String(), applyTime.Format(time.RFC850)),
+		Subject:       u.settings.Subject,
+		Message:       fmt.Sprintf("New Deckhouse Release %s is available. Release will be applied at: %s", release.GetVersion().String(), applyTime.Format(time.RFC850)),
 	}
 
 	err := sendWebhookNotification(ctx, u.settings.NotificationConfig, data)
@@ -110,7 +115,7 @@ func (u *ReleaseNotifier) sendReleaseNotification(ctx context.Context, dr *v1alp
 	return nil
 }
 
-func sendWebhookNotification(ctx context.Context, config updater.NotificationConfig, data *WebhookData) error {
+func sendWebhookNotification(ctx context.Context, config NotificationConfig, data *WebhookData) error {
 	client := &http.Client{
 		Transport: &http.Transport{
 			TLSClientConfig: &tls.Config{InsecureSkipVerify: config.SkipTLSVerify},
@@ -163,4 +168,46 @@ func retry[T any](attempts int, sleep time.Duration, f func() (T, error)) (T, er
 	}
 
 	return result, fmt.Errorf("after %d attempts, last error: %s", attempts, err)
+}
+
+type ReleaseType string
+
+const (
+	ReleaseTypeMinor ReleaseType = "Minor"
+	ReleaseTypeAll   ReleaseType = "All"
+)
+
+type NotificationConfig struct {
+	WebhookURL              string          `json:"webhook"`
+	SkipTLSVerify           bool            `json:"tlsSkipVerify"`
+	MinimalNotificationTime libapi.Duration `json:"minimalNotificationTime"`
+	Auth                    *Auth           `json:"auth,omitempty"`
+	ReleaseType             ReleaseType     `json:"releaseType"`
+}
+
+func (cfg *NotificationConfig) IsEmpty() bool {
+	return cfg != nil && *cfg == NotificationConfig{}
+}
+
+type Auth struct {
+	Basic *BasicAuth `json:"basic,omitempty"`
+	Token *string    `json:"bearerToken,omitempty"`
+}
+
+type BasicAuth struct {
+	Username string `json:"username"`
+	Password string `json:"password"`
+}
+
+func (a *Auth) Fill(req *http.Request) {
+	if a == nil {
+		return
+	}
+	if a.Basic != nil {
+		req.SetBasicAuth(a.Basic.Username, a.Basic.Password)
+		return
+	}
+	if a.Token != nil {
+		req.Header.Set("Authorization", "Bearer "+*a.Token)
+	}
 }

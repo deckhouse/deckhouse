@@ -47,12 +47,11 @@ import (
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/ctrlutils"
-	d8updater "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/deckhouse-release/updater"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers"
+	releaseUpdater "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/releaseupdater"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
-	"github.com/deckhouse/deckhouse/go_lib/updater"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
@@ -66,6 +65,11 @@ const (
 )
 
 const defaultCheckInterval = 15 * time.Second
+
+type MetricsUpdater interface {
+	UpdateReleaseMetric(string, releaseUpdater.MetricLabels)
+	PurgeReleaseMetric(string)
+}
 
 type deckhouseReleaseReconciler struct {
 	client        client.Client
@@ -81,7 +85,7 @@ type deckhouseReleaseReconciler struct {
 	releaseVersionImageHash string
 
 	registrySecret *utils.DeckhouseRegistrySecret
-	metricsUpdater updater.MetricsUpdater
+	metricsUpdater MetricsUpdater
 
 	deckhouseVersion string
 }
@@ -105,7 +109,7 @@ func NewDeckhouseReleaseController(ctx context.Context, mgr manager.Manager, dc 
 		preflightCountDown: preflightCountDown,
 		deckhouseVersion:   fmt.Sprintf("v%d.%d.%d", parsedVersion.Major(), parsedVersion.Minor(), parsedVersion.Patch()),
 
-		metricsUpdater: d8updater.NewMetricsUpdater(metricStorage),
+		metricsUpdater: releaseUpdater.NewMetricsUpdater(metricStorage, releaseUpdater.D8ReleaseBlockedMetricName),
 	}
 
 	// Add Preflight Check
@@ -248,7 +252,7 @@ func (r *deckhouseReleaseReconciler) createOrUpdateReconcile(ctx context.Context
 }
 
 func (r *deckhouseReleaseReconciler) patchManualRelease(ctx context.Context, dr *v1alpha1.DeckhouseRelease) error {
-	if r.updateSettings.Get().Update.Mode != updater.ModeManual.String() {
+	if r.updateSettings.Get().Update.Mode != v1alpha1.UpdateModeManual.String() {
 		return nil
 	}
 
@@ -336,8 +340,9 @@ func (r *deckhouseReleaseReconciler) pendingReleaseReconcile(ctx context.Context
 		r.metricStorage.Grouped().GaugeSet(metricUpdatingGroup, "d8_is_updating", 1, map[string]string{"releaseChannel": r.updateSettings.Get().ReleaseChannel})
 	}
 
-	oCalc := d8updater.NewTaskCalculator(r.client, r.logger)
-	task, err := oCalc.CalculatePendingReleaseOrder(ctx, dr)
+	taskCalculator := releaseUpdater.NewDeckhouseReleaseTaskCalculator(r.client, r.logger)
+
+	task, err := taskCalculator.CalculatePendingReleaseTask(ctx, dr)
 	if err != nil {
 		return res, err
 	}
@@ -356,9 +361,9 @@ func (r *deckhouseReleaseReconciler) pendingReleaseReconcile(ctx context.Context
 	}
 
 	switch task.TaskType {
-	case d8updater.Process:
+	case releaseUpdater.Process:
 		// pass
-	case d8updater.Skip:
+	case releaseUpdater.Skip:
 		err := r.updateReleaseStatus(ctx, dr, &v1alpha1.DeckhouseReleaseStatus{
 			Phase:   v1alpha1.DeckhouseReleasePhaseSkipped,
 			Message: task.Message,
@@ -369,7 +374,7 @@ func (r *deckhouseReleaseReconciler) pendingReleaseReconcile(ctx context.Context
 		}
 
 		return res, nil
-	case d8updater.Await:
+	case releaseUpdater.Await:
 		err := r.updateReleaseStatus(ctx, dr, &v1alpha1.DeckhouseReleaseStatus{
 			Phase:   v1alpha1.DeckhouseReleasePhasePending,
 			Message: task.Message,
@@ -381,7 +386,7 @@ func (r *deckhouseReleaseReconciler) pendingReleaseReconcile(ctx context.Context
 		return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
 	}
 
-	checker, err := d8updater.NewRequirementsChecker(r.client, r.moduleManager.GetEnabledModuleNames(), r.logger)
+	checker, err := releaseUpdater.NewDeckhouseReleaseRequirementsChecker(r.client, r.moduleManager.GetEnabledModuleNames(), r.logger)
 	if err != nil {
 		updateErr := r.updateReleaseStatus(ctx, dr, &v1alpha1.DeckhouseReleaseStatus{
 			Phase:   v1alpha1.DeckhouseReleasePhasePending,
@@ -445,26 +450,37 @@ var ErrPreApplyCheckIsFailed = errors.New("pre apply check is failed")
 // PreApplyReleaseCheck checks final conditions before apply
 //
 // - Calculating deploy time (if zero - deploy)
-func (r *deckhouseReleaseReconciler) PreApplyReleaseCheck(ctx context.Context, dr *v1alpha1.DeckhouseRelease, task *d8updater.Task) error {
-	metricLabels := updater.NewReleaseMetricLabels(dr)
+func (r *deckhouseReleaseReconciler) PreApplyReleaseCheck(ctx context.Context, dr *v1alpha1.DeckhouseRelease, task *releaseUpdater.Task) error {
+	metricLabels := releaseUpdater.NewReleaseMetricLabels(dr)
 
-	dtr := r.DeployTimeCalculate(ctx, dr, task, metricLabels)
+	us := r.updateSettings.Get()
 
-	if metricLabels[updater.ManualApprovalRequired] == "true" {
-		metricLabels[updater.ReleaseQueueDepth] = strconv.Itoa(task.QueueDepth)
+	dus := &releaseUpdater.Settings{
+		NotificationConfig:     us.Update.NotificationConfig,
+		DisruptionApprovalMode: us.Update.DisruptionApprovalMode,
+		// if we have wrong mode - autopatch
+		Mode:    v1alpha1.ParseUpdateMode(us.Update.Mode),
+		Windows: us.Update.Windows,
+		Subject: releaseUpdater.SubjectDeckhouse,
+	}
+
+	timeResult := r.DeployTimeCalculate(ctx, dr, task, dus, metricLabels)
+
+	if metricLabels[releaseUpdater.ManualApprovalRequired] == "true" {
+		metricLabels[releaseUpdater.ReleaseQueueDepth] = strconv.Itoa(task.QueueDepth)
 	}
 
 	// if the predicted release has an index less than the number of awaiting releases
 	// calculate and set releaseDepthQueue label
 	r.metricsUpdater.UpdateReleaseMetric(dr.GetName(), metricLabels)
 
-	if dtr == nil {
+	if timeResult == nil {
 		return nil
 	}
 
 	err := r.updateReleaseStatus(ctx, dr, &v1alpha1.DeckhouseReleaseStatus{
 		Phase:   v1alpha1.DeckhouseReleasePhasePending,
-		Message: dtr.Message,
+		Message: timeResult.Message,
 	})
 	if err != nil {
 		r.logger.Warn("met release conditions status update ", slog.String("name", dr.GetName()), log.Err(err))
@@ -476,10 +492,10 @@ func (r *deckhouseReleaseReconciler) PreApplyReleaseCheck(ctx context.Context, d
 		}
 
 		dr.Annotations[v1alpha1.DeckhouseReleaseAnnotationIsUpdating] = "false"
-		dr.Annotations[v1alpha1.DeckhouseReleaseAnnotationNotified] = strconv.FormatBool(dtr.Notified)
+		dr.Annotations[v1alpha1.DeckhouseReleaseAnnotationNotified] = strconv.FormatBool(timeResult.Notified)
 
-		if !dtr.ReleaseApplyAfterTime.IsZero() {
-			dr.Spec.ApplyAfter = &metav1.Time{Time: dtr.ReleaseApplyAfterTime.UTC()}
+		if !timeResult.ReleaseApplyAfterTime.IsZero() {
+			dr.Spec.ApplyAfter = &metav1.Time{Time: timeResult.ReleaseApplyAfterTime.UTC()}
 
 			dr.Annotations[v1alpha1.DeckhouseReleaseAnnotationNotificationTimeShift] = "true"
 		}
@@ -497,6 +513,11 @@ const (
 	msgReleaseIsBlockedByNotification = "Release is blocked, failed to send release notification"
 )
 
+type TimeResult struct {
+	*releaseUpdater.ProcessedDeployTimeResult
+	Notified bool
+}
+
 // DeployTimeCalculate calculate time for release deploy
 //
 // If patch, calculate by checking this conditions:
@@ -511,21 +532,11 @@ const (
 // - Notify
 // - Window
 // - Manual Approved
-func (r *deckhouseReleaseReconciler) DeployTimeCalculate(ctx context.Context, dr *v1alpha1.DeckhouseRelease, task *d8updater.Task, metricLabels updater.MetricLabels) *d8updater.DeployTimeReason {
-	us := r.updateSettings.Get()
+func (r *deckhouseReleaseReconciler) DeployTimeCalculate(ctx context.Context, dr v1alpha1.Release, task *releaseUpdater.Task, us *releaseUpdater.Settings, metricLabels releaseUpdater.MetricLabels) *TimeResult {
+	releaseNotifier := releaseUpdater.NewReleaseNotifier(us)
+	timeChecker := releaseUpdater.NewDeployTimeService(r.dc, us, r.isDeckhousePodReady, r.logger)
 
-	dus := &updater.Settings{
-		NotificationConfig:     us.Update.NotificationConfig,
-		DisruptionApprovalMode: us.Update.DisruptionApprovalMode,
-		// if we have wrong mode - autopatch
-		Mode:    updater.ParseUpdateMode(us.Update.Mode),
-		Windows: us.Update.Windows,
-	}
-
-	releaseNotifier := d8updater.NewReleaseNotifier(dus)
-	timeChecker := d8updater.NewDeployTimeChecker(r.dc, dus, r.isDeckhousePodReady, r.logger)
-
-	var deployTimeResult *d8updater.DeployTimeResult
+	var deployTimeResult *releaseUpdater.DeployTimeResult
 
 	if task.IsPatch {
 		deployTimeResult = timeChecker.CalculatePatchDeployTime(dr, metricLabels)
@@ -534,33 +545,40 @@ func (r *deckhouseReleaseReconciler) DeployTimeCalculate(ctx context.Context, dr
 		if notifyErr != nil {
 			r.logger.Warn("send [patch] release notification", log.Err(notifyErr))
 
-			return &d8updater.DeployTimeReason{
-				Message:               msgReleaseIsBlockedByNotification,
-				ReleaseApplyAfterTime: deployTimeResult.ReleaseApplyAfterTime,
+			return &TimeResult{
+				ProcessedDeployTimeResult: &releaseUpdater.ProcessedDeployTimeResult{
+					Message:               msgReleaseIsBlockedByNotification,
+					ReleaseApplyAfterTime: deployTimeResult.ReleaseApplyAfterTime,
+				},
 			}
 		}
 
-		dtr := timeChecker.ProcessPatchReleaseDeployTime(dr, deployTimeResult)
-		if dtr != nil {
-			dtr.Notified = true
+		processedDTR := timeChecker.ProcessPatchReleaseDeployTime(dr, deployTimeResult)
+		if processedDTR == nil {
+			return nil
 		}
 
-		return dtr
+		return &TimeResult{
+			ProcessedDeployTimeResult: processedDTR,
+			Notified:                  true,
+		}
 	}
 
 	// for minor release we must check additional conditions
-	checker := d8updater.NewPreApplyChecker(dus, r.logger)
-	reasons := checker.MetRequirements(dr)
+	checker := releaseUpdater.NewPreApplyChecker(us, r.logger)
+	reasons := checker.MetRequirements(&dr)
 	if len(reasons) > 0 {
-		metricLabels.SetTrue(updater.DisruptionApprovalRequired)
+		metricLabels.SetTrue(releaseUpdater.DisruptionApprovalRequired)
 
 		msgs := make([]string, 0, len(reasons))
 		for _, reason := range reasons {
 			msgs = append(msgs, reason.Message)
 		}
 
-		return &d8updater.DeployTimeReason{
-			Message: fmt.Sprintf("release blocked, disruption approval required: %s", strings.Join(msgs, ", ")),
+		return &TimeResult{
+			ProcessedDeployTimeResult: &releaseUpdater.ProcessedDeployTimeResult{
+				Message: fmt.Sprintf("release blocked, disruption approval required: %s", strings.Join(msgs, ", ")),
+			},
 		}
 	}
 
@@ -570,23 +588,28 @@ func (r *deckhouseReleaseReconciler) DeployTimeCalculate(ctx context.Context, dr
 	if notifyErr != nil {
 		r.logger.Warn("send minor release notification", log.Err(notifyErr))
 
-		return &d8updater.DeployTimeReason{
-			Message:               msgReleaseIsBlockedByNotification,
-			ReleaseApplyAfterTime: deployTimeResult.ReleaseApplyAfterTime,
+		return &TimeResult{
+			ProcessedDeployTimeResult: &releaseUpdater.ProcessedDeployTimeResult{
+				Message:               msgReleaseIsBlockedByNotification,
+				ReleaseApplyAfterTime: deployTimeResult.ReleaseApplyAfterTime,
+			},
 		}
 	}
 
-	dtr := timeChecker.ProcessMinorReleaseDeployTime(ctx, dr, deployTimeResult, task.DeployedReleaseInfo)
-	if dtr != nil {
-		dtr.Notified = true
+	processedDTR := timeChecker.ProcessMinorReleaseDeployTime(ctx, dr, deployTimeResult, task.DeployedReleaseInfo)
+	if processedDTR == nil {
+		return nil
 	}
 
-	return dtr
+	return &TimeResult{
+		ProcessedDeployTimeResult: processedDTR,
+		Notified:                  true,
+	}
 }
 
 // ApplyRelease applies predicted release
-func (r *deckhouseReleaseReconciler) ApplyRelease(ctx context.Context, dr *v1alpha1.DeckhouseRelease, task *d8updater.Task) error {
-	var dri *d8updater.ReleaseInfo
+func (r *deckhouseReleaseReconciler) ApplyRelease(ctx context.Context, dr *v1alpha1.DeckhouseRelease, task *releaseUpdater.Task) error {
+	var dri *releaseUpdater.ReleaseInfo
 
 	if task != nil {
 		dri = task.DeployedReleaseInfo
@@ -606,7 +629,7 @@ func (r *deckhouseReleaseReconciler) ApplyRelease(ctx context.Context, dr *v1alp
 // 2) bump previous deployment status superseded (retry if error)
 // 3) bump release annotations (retry if error)
 // 3) bump release status to deployed (retry if error)
-func (r *deckhouseReleaseReconciler) runReleaseDeploy(ctx context.Context, dr *v1alpha1.DeckhouseRelease, deployedReleaseInfo *d8updater.ReleaseInfo) error {
+func (r *deckhouseReleaseReconciler) runReleaseDeploy(ctx context.Context, dr *v1alpha1.DeckhouseRelease, deployedReleaseInfo *releaseUpdater.ReleaseInfo) error {
 	r.logger.Info("applying release", slog.String("name", dr.GetName()))
 
 	err := r.bumpDeckhouseDeployment(ctx, dr)
@@ -781,7 +804,7 @@ func (r *deckhouseReleaseReconciler) tagUpdate(ctx context.Context, leaderPod *c
 	deckhouseContainerStatusIndex := getDeckhouseContainerStatusIndex(leaderPod.Status.ContainerStatuses)
 
 	if deckhouseContainerIndex == -1 {
-		r.logger.Warnf("Pod %s does not contain a deckhouse container", leaderPod.Name)
+		r.logger.Warn("pod does not contain a deckhouse container", slog.String("pod", leaderPod.GetName()))
 		return nil
 	}
 
@@ -794,7 +817,7 @@ func (r *deckhouseReleaseReconciler) tagUpdate(ctx context.Context, leaderPod *c
 	}
 
 	if deckhouseContainerStatusIndex == -1 {
-		r.logger.Warnf("Pod %s does not contain a deckhouse container status", leaderPod.Name)
+		r.logger.Warn("pod does not contain a deckhouse container status", slog.String("pod", leaderPod.GetName()))
 		return nil
 	}
 

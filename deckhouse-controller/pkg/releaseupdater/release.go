@@ -14,23 +14,21 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package updater
+package releaseupdater
 
-var ErrDeployConditionsNotMet = NewNotReadyForDeployError("deploy conditions not met")
+import (
+	"encoding/json"
 
-func NewNotReadyForDeployError(message string) *NotReadyForDeployError {
-	return &NotReadyForDeployError{message: message}
-}
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
+)
 
-type NotReadyForDeployError struct {
-	message string
-}
+// TODO: replace patch marshalling with controller-runtime patch
+type StatusPatch v1alpha1.DeckhouseReleaseStatus
 
-func (n *NotReadyForDeployError) Error() string {
-	message := "not ready for deploy"
-	if n.message != "" {
-		message += ": " + n.message
+func (sp StatusPatch) MarshalJSON() ([]byte, error) {
+	m := map[string]interface{}{
+		"status": v1alpha1.DeckhouseReleaseStatus(sp),
 	}
 
-	return message
+	return json.Marshal(m)
 }

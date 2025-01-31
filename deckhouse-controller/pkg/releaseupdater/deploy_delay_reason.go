@@ -14,46 +14,59 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package updater
+package releaseupdater
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 	"time"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 )
 
-type deployDelayReason byte
+type DeployDelayReason byte
 
 const (
-	noDelay             deployDelayReason = 0
-	cooldownDelayReason deployDelayReason = 1 << iota
+	noDelay             DeployDelayReason = 0
+	cooldownDelayReason DeployDelayReason = 1 << iota
 	canaryDelayReason
 	notificationDelayReason
 	outOfWindowReason
 	manualApprovalRequiredReason
 )
 
+var deployDelayReasonsStr = map[DeployDelayReason]string{
+	cooldownDelayReason:          "cooldownDelayReason",
+	canaryDelayReason:            "canaryDelayReason",
+	notificationDelayReason:      "notificationDelayReason",
+	outOfWindowReason:            "outOfWindowReason",
+	manualApprovalRequiredReason: "manualApprovalRequiredReason",
+}
+
 const (
 	cooldownDelayMsg              = "in cooldown"
-	canaryDelayReasonMsg          = "postponed by canary process"
+	canaryDelayReasonMsg          = "postponed"
 	waitingManualApprovalTemplate = "waiting for the '%s: \"true\"' annotation"
 	outOfWindowMsg                = "waiting for the update window"
 	notificationDelayMsg          = "postponed by notification"
 )
 
-func (r deployDelayReason) String() string {
+func (r DeployDelayReason) IsNoDelay() bool {
+	return r == noDelay
+}
+
+func (r DeployDelayReason) String() string {
 	reasons := r.splitReasons()
 	if len(reasons) != 0 {
-		return strings.Join(reasons, " and ")
+		return strings.Join(reasons, ", ")
 	}
 
 	return r.GoString()
 }
 
-func (r deployDelayReason) Message(release v1alpha1.Release, applyTime time.Time) string {
-	if r == noDelay {
+func (r DeployDelayReason) Message(release v1alpha1.Release, applyTime time.Time) string {
+	if r.IsNoDelay() {
 		return r.String()
 	}
 
@@ -61,51 +74,62 @@ func (r deployDelayReason) Message(release v1alpha1.Release, applyTime time.Time
 		reasons []string
 		b       strings.Builder
 	)
+
 	b.WriteString("Release is ")
+
 	if r.contains(cooldownDelayReason) {
 		reasons = append(reasons, cooldownDelayMsg)
 	}
+
 	if r.contains(canaryDelayReason) {
 		reasons = append(reasons, canaryDelayReasonMsg)
 	}
+
 	if r.contains(notificationDelayReason) {
 		reasons = append(reasons, notificationDelayMsg)
 	}
+
 	if r.contains(outOfWindowReason) {
 		reasons = append(reasons, outOfWindowMsg)
 	}
+
 	if r.contains(manualApprovalRequiredReason) {
 		waitingManualApprovalMsg := fmt.Sprintf(waitingManualApprovalTemplate, v1alpha1.GetReleaseApprovalAnnotation(release))
 		reasons = append(reasons, waitingManualApprovalMsg)
 	}
+
 	if len(reasons) != 0 {
 		b.WriteString(strings.Join(reasons, ", "))
+
 		if applyTime.IsZero() {
 			return b.String()
 		}
+
 		if r.contains(manualApprovalRequiredReason) {
 			b.WriteString(". After approval the release will be delayed")
 		}
+
 		b.WriteString(" until ")
 		b.WriteString(applyTime.Format(time.RFC822))
+
 		return b.String()
 	}
 
 	return r.GoString()
 }
 
-func (r deployDelayReason) add(flag deployDelayReason) deployDelayReason {
+func (r DeployDelayReason) add(flag DeployDelayReason) DeployDelayReason {
 	return r | flag
 }
 
-func (r deployDelayReason) contains(flag deployDelayReason) bool {
-	if flag == noDelay {
-		return r == noDelay
+func (r DeployDelayReason) contains(flag DeployDelayReason) bool {
+	if flag.IsNoDelay() {
+		return r.IsNoDelay()
 	}
 	return r&flag != 0
 }
 
-func (r deployDelayReason) GoString() string {
+func (r DeployDelayReason) GoString() string {
 	reasons := r.splitReasons()
 	if len(reasons) != 0 {
 		return strings.Join(reasons, "|")
@@ -114,32 +138,20 @@ func (r deployDelayReason) GoString() string {
 	return fmt.Sprintf("deployDelayReason(0b%b)", byte(r))
 }
 
-func (r deployDelayReason) splitReasons() []string {
-	if r == noDelay {
+func (r DeployDelayReason) splitReasons() []string {
+	if r.IsNoDelay() {
 		return []string{"noDelay"}
 	}
 
 	reasons := make([]string, 0)
 
-	if r.contains(cooldownDelayReason) {
-		reasons = append(reasons, "cooldownDelayReason")
+	for reason, str := range deployDelayReasonsStr {
+		if r.contains(reason) {
+			reasons = append(reasons, str)
+		}
 	}
 
-	if r.contains(canaryDelayReason) {
-		reasons = append(reasons, "canaryDelayReason")
-	}
-
-	if r.contains(notificationDelayReason) {
-		reasons = append(reasons, "notificationDelayReason")
-	}
-
-	if r.contains(outOfWindowReason) {
-		reasons = append(reasons, "outOfWindowReason")
-	}
-
-	if r.contains(manualApprovalRequiredReason) {
-		reasons = append(reasons, "manualApprovalRequiredReason")
-	}
+	slices.Sort(reasons)
 
 	return reasons
 }

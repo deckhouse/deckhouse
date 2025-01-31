@@ -26,6 +26,7 @@ import (
 	"log/slog"
 	"path"
 	"regexp"
+	"slices"
 	"sort"
 	"time"
 
@@ -46,7 +47,6 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
 	"github.com/deckhouse/deckhouse/go_lib/libapi"
-	"github.com/deckhouse/deckhouse/go_lib/updater"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
@@ -129,7 +129,11 @@ func (r *deckhouseReleaseReconciler) checkDeckhouseRelease(ctx context.Context) 
 		}
 		pointerReleases = append(pointerReleases, &r)
 	}
-	sort.Sort(sort.Reverse(updater.ByVersion[*v1alpha1.DeckhouseRelease](pointerReleases)))
+
+	// reverse sorting
+	slices.SortFunc(pointerReleases, func(a *v1alpha1.DeckhouseRelease, b *v1alpha1.DeckhouseRelease) int {
+		return -a.GetVersion().Compare(b.GetVersion())
+	})
 
 	// restore current deployed release if no deployed releases found
 	if currentDeployedRelease == nil {

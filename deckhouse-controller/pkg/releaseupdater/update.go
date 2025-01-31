@@ -1,5 +1,5 @@
 /*
-Copyright 2024 Flant JSC
+Copyright 2025 Flant JSC
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -14,21 +14,29 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package d8updater
+package releaseupdater
 
 import (
-	"encoding/json"
-
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
+	"github.com/deckhouse/deckhouse/go_lib/hooks/update"
 )
 
-// TODO: replace patch marshalling with controller-runtime patch
-type StatusPatch v1alpha1.DeckhouseReleaseStatus
+type Settings struct {
+	NotificationConfig     NotificationConfig
+	DisruptionApprovalMode string
+	Mode                   v1alpha1.UpdateMode
+	Windows                update.Windows
+	Subject                string
+}
 
-func (sp StatusPatch) MarshalJSON() ([]byte, error) {
-	m := map[string]interface{}{
-		"status": v1alpha1.DeckhouseReleaseStatus(sp),
+func (s *Settings) InDisruptionApprovalMode() bool {
+	if s.DisruptionApprovalMode == "" || s.DisruptionApprovalMode == v1alpha1.UpdateModeAuto.String() {
+		return false
 	}
 
-	return json.Marshal(m)
+	return true
+}
+
+func (s *Settings) InManualMode() bool {
+	return s.Mode == v1alpha1.UpdateModeManual
 }
