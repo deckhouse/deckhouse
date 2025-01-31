@@ -70,7 +70,7 @@ shell:
     - export GOPRIVATE={{ $.DECKHOUSE_PRIVATE_REPO }}
     - git config --global url."https://gitlab-ci-token:${PRIVATE_REPO_TOKEN}@${PRIVATE_REPO}/".insteadOf https://${PRIVATE_REPO}/
     - cd /src
-    - go mod download
+    - set -x
     - task build:dist:all
     - mkdir -p /app/files/d8-cli
     - mv dist/{{ .CandiVersionMap.d8.d8CliVersion }}/* /app/files/d8-cli
