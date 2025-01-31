@@ -77,7 +77,7 @@ metadata:
   name: serv_config_class
   namespace: nginx2
   annotations:
-    network.deckhouse.io/lb-allow-shared-ip: "6.6.6.6"
+    network.deckhouse.io/load-balancer-allow-shared-ip: "6.6.6.6"
     network.deckhouse.io/l2-load-balancer-external-ips-count: "2"
 spec:
   clusterIP: 2.3.4.5
