@@ -1476,7 +1476,7 @@
       "datasource": {
         "uid": "$ds_prometheus"
       },
-      "description": "Description: The number of requests that are routed to mutation webhook. Note that if here is no data, it means that there is no requests to mutation webhook.",
+      "description": "Description: The number of requests that are routed to mutation webhook.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -1552,7 +1552,7 @@
       "targets": [
         {
           "exemplar": false,
-          "expr": "sum by (mutation_status, pod) (rate(gatekeeper_mutation_request_count{namespace=~\"$namespace\"}[20m]))",
+          "expr": "sum by (mutation_status, pod) (rate(gatekeeper_mutation_request_count{namespace=~\"$namespace\"}[20m])) or vector(0)",
           "interval": "",
           "legendFormat": "{{mutation_status}}",
           "refId": "A"
@@ -1565,7 +1565,7 @@
       "datasource": {
         "uid": "$ds_prometheus"
       },
-      "description": "Description: The number of requests that are routed to validation webhook. Note that if here is no data, it means that there is no requests to validation webhook",
+      "description": "Description: The number of requests that are routed to validation webhook.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -1641,7 +1641,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "sum by (admission_status, pod) (rate(gatekeeper_validation_request_count[20m]))",
+          "expr": "sum by (admission_status, pod) (rate(gatekeeper_validation_request_count[20m])) or vector(0)",
           "interval": "",
           "legendFormat": "{{admission_status}}",
           "refId": "A"
