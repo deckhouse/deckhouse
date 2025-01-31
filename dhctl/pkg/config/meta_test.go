@@ -89,6 +89,7 @@ proxy:
     {{- end }}
   {{- end }}
 {{- end }}
+{{- if or .imagesRepo .dockerCfg }}
 ---
 apiVersion: deckhouse.io/v1
 kind: InitConfiguration
@@ -101,6 +102,7 @@ deckhouse:
 {{- if .dockerCfg }}
   # a special string with parameters to access Docker registry
   registryDockerCfg: {{ .dockerCfg | b64enc }}
+{{- end }}
 {{- end }}
 ---
 apiVersion: deckhouse.io/v1alpha1

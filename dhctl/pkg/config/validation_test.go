@@ -101,7 +101,6 @@ apiVersion: deckhouse.io/v1
 kind: InitConfiguration
 deckhouse:
   imagesRepo: registry.deckhouse.io/deckhouse/ce
-  releaseChannel: Alpha
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
@@ -140,13 +139,11 @@ apiVersion: deckhouse.io/v1
 kind: InitConfiguration
 deckhouse:
   imagesRepo: registry.deckhouse.io/deckhouse/ce
-  releaseChannel: Alpha
 ---
 apiVersion: deckhouse.io/v1
 kind: InitConfiguration
 deckhouse:
-  imagesRepo: registry.deckhouse.io/deckhouse/ce
-  releaseChannel: Stable`,
+  imagesRepo: registry.deckhouse.io/deckhouse/ce`,
 			errContains: `ValidationFailed: exactly one "InitConfiguration" required`,
 		},
 		"extra kinds": {
@@ -155,7 +152,6 @@ apiVersion: deckhouse.io/v1
 kind: InitConfiguration
 deckhouse:
   imagesRepo: registry.deckhouse.io/deckhouse/ce
-  releaseChannel: Alpha
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: ClusterConfiguration
