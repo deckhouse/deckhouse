@@ -39,6 +39,11 @@ variable "clusterUUID" {
   type = string
 }
 
+variable "resourceManagementTimeout" {
+  type    = string
+  default = "10m"
+}
+
 variable "systemRegistryEnable" {
   type    = bool
   default = false

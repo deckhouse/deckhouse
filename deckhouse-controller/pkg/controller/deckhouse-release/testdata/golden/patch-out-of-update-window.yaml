@@ -43,7 +43,7 @@ spec:
   version: v1.26.0
 status:
   approved: false
-  message: Awaiting for v1.25.1 release to be deployed
+  message: awaiting for v1.25.1 release to be deployed
   phase: Pending
   transitionTime: null
 ---

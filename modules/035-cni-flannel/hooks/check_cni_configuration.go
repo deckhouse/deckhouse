@@ -220,15 +220,21 @@ func checkCni(input *go_hook.HookInput) error {
 		// Secret d8-cni-configuration exist, key "cni" eq "flannel" and key "flannel" does not empty.
 		// Let's compare secret with module configuration.
 		switch cniSecret.flannel.PodNetworkMode {
-		case "HostGW", "VXLAN":
+		case "host-gw":
 			value, ok := input.ConfigValues.GetOk("cniFlannel.podNetworkMode")
-			if !ok || value.String() != cniSecret.flannel.PodNetworkMode {
-				desiredCNIModuleConfig.Spec.Settings["podNetworkMode"] = cniSecret.flannel.PodNetworkMode
+			if !ok || value.String() != "HostGW" {
+				desiredCNIModuleConfig.Spec.Settings["podNetworkMode"] = "HostGW"
+				needUpdateMC = true
+			}
+		case "vxlan":
+			value, ok := input.ConfigValues.GetOk("cniFlannel.podNetworkMode")
+			if !ok || value.String() != "VXLAN" {
+				desiredCNIModuleConfig.Spec.Settings["podNetworkMode"] = "VXLAN"
 				needUpdateMC = true
 			}
 		case "":
 			value, ok := input.ConfigValues.GetOk("cniFlannel.podNetworkMode")
-			if !ok || value.String() != "BPF" {
+			if !ok || value.String() != "HostGW" {
 				desiredCNIModuleConfig.Spec.Settings["podNetworkMode"] = "HostGW"
 				needUpdateMC = true
 			}

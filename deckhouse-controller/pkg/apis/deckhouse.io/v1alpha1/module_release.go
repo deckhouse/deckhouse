@@ -36,6 +36,8 @@ const (
 	ModuleReleasePhaseSuspended  = "Suspended"
 	ModuleReleasePhaseSkipped    = "Skipped"
 
+	ModuleReleaseApprovalAnnotation = "modules.deckhouse.io/approved"
+
 	ModuleReleaseAnnotationApplyNow = "release.deckhouse.io/apply-now"
 
 	ModuleReleaseAnnotationRegistrySpecChanged = "modules.deckhouse.io/registry-spec-changed"
@@ -112,6 +114,10 @@ func (mr *ModuleRelease) GetApplyAfter() *time.Time {
 
 func (mr *ModuleRelease) GetRequirements() map[string]string {
 	requirements := make(map[string]string)
+
+	if mr.Spec.Requirements == nil {
+		return requirements
+	}
 
 	if len(mr.Spec.Requirements.ModuleReleasePlatformRequirements.Deckhouse) > 0 {
 		requirements[DeckhouseRequirementFieldName] = mr.Spec.Requirements.ModuleReleasePlatformRequirements.Deckhouse

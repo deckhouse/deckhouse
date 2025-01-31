@@ -47,6 +47,11 @@ variable "network_types" {
   }
 }
 
+variable "resourceManagementTimeout" {
+  type = string
+  default = "10m"
+}
+
 locals {
   prefix                       = var.clusterConfiguration.cloud.prefix
   mng                          = var.providerClusterConfiguration.masterNodeGroup

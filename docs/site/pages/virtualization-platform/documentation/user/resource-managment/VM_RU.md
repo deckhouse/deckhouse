@@ -42,7 +42,7 @@ spec:
         - nginx
         - qemu-guest-agent
       run_cmd:
-        - systemctl daemon-relaod
+        - systemctl daemon-reload
         - systemctl enable --now nginx.service
         - systemctl enable --now qemu-guest-agent.service
       ssh_pwauth: True
@@ -432,7 +432,7 @@ spec:
 
 ![virtualMachineAndPodAffinity](/images/virtualization-platform/placement-vm-affinity.ru.png)
 
-В этом примере виртуальная машина будет размещена, если будет такая возможность (так как используется метка `preffered`), только на узлах на которых присутствует виртуальная машина с меткой `server` и значением `database`.
+В этом примере виртуальная машина будет размещена, если будет такая возможность (так как используется метка `preferred`), только на узлах на которых присутствует виртуальная машина с меткой `server` и значением `database`.
 
 ### Избежание совместного размещения — AntiAffinity
 
@@ -659,7 +659,7 @@ linux-vm-7prpx   10.66.10.14   Attached   linux-vm   12h
 
 По умолчанию IP-адрес для виртуальной машины назначается автоматически, из подсетей, определенных в модуле, и закрепляется за ней до её удаления. После удаления виртуальной машины ресурс `vmip` также удаляется, но IP-адрес временно остается закрепленным за проектом/пространством имен и может быть повторно запрошен.
 
-## Как запросить требуемый ip-адрес?
+## Как запросить требуемый IP-адрес?
 
 Создайте ресурс `vmip`:
 
@@ -679,7 +679,7 @@ EOF
 
 ```yaml
 spec:
-  virtualMachineIPAdressName: linux-vm-custom-ip
+  virtualMachineIPAddressName: linux-vm-custom-ip
 ```
 
 ## Как сохранить присвоенный виртуальной машине IP-адрес?
@@ -708,7 +708,7 @@ d8 k patch vmip linux-vm-7prpx --type=merge --patch '{"metadata":{"ownerReferenc
 
 ```yaml
 spec:
-  virtualMachineIPAdressName: linux-vm-7prpx
+  virtualMachineIPAddressName: linux-vm-7prpx
 ```
 
 Даже если ресурс `vmip` будет удален, он остается арендованным для текущего проекта/пространства имен еще 10 минут и существует возможность вновь его занять по запросу:

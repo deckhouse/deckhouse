@@ -475,6 +475,12 @@ func CreateDeckhouseManifests(kubeCl *client.KubernetesClient, cfg *config.Deckh
 
 	tasks = append(tasks, controllerDeploymentTask(kubeCl, cfg))
 
+	if cfg.Bundle == config.DefaultBundle {
+		if err := config.CheckOrSetupArbitaryCNIModuleConfig(cfg); err != nil {
+			return nil, err
+		}
+	}
+
 	result := &ManifestsResult{}
 
 	if err := config.CheckOrSetupSystemRegistryModuleConfig(cfg); err != nil {

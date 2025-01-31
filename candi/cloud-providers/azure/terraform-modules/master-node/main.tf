@@ -99,6 +99,12 @@ resource "azurerm_linux_virtual_machine" "master" {
       custom_data
     ]
   }
+
+  timeouts {
+    create = var.resourceManagementTimeout
+    delete = var.resourceManagementTimeout
+    update = var.resourceManagementTimeout
+  }
 }
 
 resource "azurerm_managed_disk" "kubernetes_data" {
@@ -110,6 +116,12 @@ resource "azurerm_managed_disk" "kubernetes_data" {
   create_option        = "Empty"
   disk_size_gb         = local.etcd_disk_size_gb
   tags                 = local.additional_tags
+
+  timeouts {
+    create = var.resourceManagementTimeout
+    delete = var.resourceManagementTimeout
+    update = var.resourceManagementTimeout
+  }
 }
 
 resource "azurerm_managed_disk" "system_registry_data" {

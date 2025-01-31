@@ -251,6 +251,12 @@ resource "aws_instance" "bastion" {
       ebs_optimized
     ]
   }
+
+  timeouts {
+    create = var.resourceManagementTimeout
+    delete = var.resourceManagementTimeout
+    update = var.resourceManagementTimeout
+  }
 }
 
 resource "aws_eip" "bastion" {

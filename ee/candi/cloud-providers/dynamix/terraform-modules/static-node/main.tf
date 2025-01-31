@@ -51,5 +51,10 @@ resource "decort_kvmvm" "node_vm" {
       cloud_init,
     ]
   }
-}
 
+  timeouts {
+    create = var.resourceManagementTimeout
+    delete = var.resourceManagementTimeout
+    update = var.resourceManagementTimeout
+  }
+}

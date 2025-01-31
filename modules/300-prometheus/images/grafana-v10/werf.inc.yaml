@@ -5,6 +5,7 @@
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-files
 final: false
 from: {{ $.Images.BASE_ALPINE_DEV }}
+fromCacheVersion: 20250122
 git:
 - add: /{{ $.ModulePath }}modules/300-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
   to: /patches

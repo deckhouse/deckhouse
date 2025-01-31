@@ -43,6 +43,12 @@ resource "aws_ebs_volume" "kubernetes_data" {
     Name = "${var.prefix}-kubernetes-data-${var.node_index}"
   })
   availability_zone = local.zone
+
+  timeouts {
+    create = var.resourceManagementTimeout
+    delete = var.resourceManagementTimeout
+    update = var.resourceManagementTimeout
+  }
 }
 
 resource "aws_ebs_volume" "system_registry_data" {
@@ -124,11 +130,17 @@ resource "aws_instance" "master" {
       volume_tags
     ]
   }
+
+  timeouts {
+    create = var.resourceManagementTimeout
+    delete = var.resourceManagementTimeout
+    update = var.resourceManagementTimeout
+  }
 }
 
 resource "aws_eip" "eip" {
   count = var.associate_public_ip_address ? 1 : 0
-  network_border_group = data.aws_availability_zone.master_az.group_name
+  network_border_group = data.aws_availability_zone.master_az.network_border_group
   vpc = true
   tags = merge(var.tags, {
     Name = "${var.prefix}-master-${var.node_index}"

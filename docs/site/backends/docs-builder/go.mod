@@ -7,6 +7,7 @@ require (
 	github.com/bep/lazycache v0.2.0
 	github.com/bep/logg v0.2.0
 	github.com/bep/overlayfs v0.6.0
+	github.com/deckhouse/deckhouse/pkg/log v0.0.0-20250130131024-4d287bfdbdbe
 	github.com/gohugoio/hugo v0.119.0
 	github.com/spf13/afero v1.9.5
 	github.com/spf13/fsync v0.9.0
@@ -15,7 +16,6 @@ require (
 	k8s.io/api v0.28.3
 	k8s.io/apimachinery v0.28.3
 	k8s.io/client-go v0.28.3
-	k8s.io/klog/v2 v2.100.1
 	k8s.io/utils v0.0.0-20240921022957-49e7df575cb6
 )
 
@@ -34,6 +34,7 @@ require (
 	github.com/AzureAD/microsoft-authentication-library-for-go v1.2.2 // indirect
 	github.com/BurntSushi/locker v0.0.0-20171006230638-a6e239ea1c69 // indirect
 	github.com/BurntSushi/toml v1.1.0 // indirect
+	github.com/DataDog/gostackparse v0.7.0 // indirect
 	github.com/PuerkitoBio/purell v1.1.1 // indirect
 	github.com/PuerkitoBio/urlesc v0.0.0-20170810143723-de5bf2ad4578 // indirect
 	github.com/alecthomas/chroma/v2 v2.9.1 // indirect
@@ -163,6 +164,7 @@ require (
 	google.golang.org/protobuf v1.33.0 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
+	k8s.io/klog/v2 v2.100.1 // indirect
 	k8s.io/kube-openapi v0.0.0-20230717233707-2695361300d9 // indirect
 	sigs.k8s.io/json v0.0.0-20221116044647-bc3834ca7abd // indirect
 	sigs.k8s.io/structured-merge-diff/v4 v4.2.3 // indirect

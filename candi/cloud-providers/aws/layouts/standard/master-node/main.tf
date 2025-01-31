@@ -24,5 +24,6 @@ module "master-node" {
   cloud_config = var.cloudConfig
   zones = local.zones
   tags = local.tags
+  resourceManagementTimeout = var.resourceManagementTimeout
   systemRegistryEnable = var.systemRegistryEnable
 }

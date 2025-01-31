@@ -224,5 +224,6 @@ resource "vsphere_virtual_machine" "master" {
       firmware,
     ]
   }
+
   wait_for_guest_net_routable = false
 }

@@ -115,4 +115,3 @@ resource "vcd_vapp_vm" "master" {
     "disk.EnableUUID"     = "1"
   }, length(var.cloudConfig) > 0 ? {"user-data" = var.cloudConfig} : {} )
 }
-
