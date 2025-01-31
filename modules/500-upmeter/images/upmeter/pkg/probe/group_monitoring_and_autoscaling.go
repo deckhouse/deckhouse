@@ -69,7 +69,7 @@ func initMonitoringAndAutoscaling(access kubernetes.Access, nodeLister node.List
 			},
 		}, {
 			group:  groupMonitoringAndAutoscaling,
-			probe:  "aggregating-proxy",
+			probe:  "metrics-proxy",
 			check:  "api",
 			period: 10 * time.Second,
 			config: checker.PrometheusApiAvailable{
