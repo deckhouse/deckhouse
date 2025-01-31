@@ -1,6 +1,6 @@
 relativeURLs: false
 params:
-mode: module
+ mode: module
 markup:
   defaultMarkdownHandler: goldmark
   goldmark:
