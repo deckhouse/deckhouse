@@ -20,15 +20,6 @@ properties:
           * - `VXLAN` - VxLAN encapsulation.
       tunnelPortVXLAN:
         type: number
-      masqueradeMode:
-        type: string
-        enum: ["Netfilter", "BPF"]
-        default: "BPF"
-        description: |
-          Cilium masquerade work mode.
-
-          * - `Netfilter` - use kernel Netfilter(iptables/nf_tables).
-          * - `BPF` - use cilium BPF.
       vmCIDRs:
         type: array
         description: |

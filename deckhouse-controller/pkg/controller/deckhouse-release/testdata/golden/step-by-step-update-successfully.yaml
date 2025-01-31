@@ -22,6 +22,8 @@ metadata:
     release.deckhouse.io/isUpdating: "false"
     release.deckhouse.io/notified: "false"
   creationTimestamp: null
+  labels:
+    heritage: deckhouse
   name: v1.32.3
   resourceVersion: "1"
 spec:
@@ -40,6 +42,8 @@ metadata:
     release.deckhouse.io/isUpdating: "false"
     release.deckhouse.io/notified: "false"
   creationTimestamp: null
+  labels:
+    heritage: deckhouse
   name: v1.33.1
   resourceVersion: "1"
 spec:

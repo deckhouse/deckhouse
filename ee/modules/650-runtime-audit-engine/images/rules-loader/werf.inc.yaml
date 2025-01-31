@@ -22,6 +22,10 @@ import:
   - usr/bin/
   - usr/share/
   before: install
+- image: {{ $.ModuleName }}/falco-falcoctl-artifact
+  add: /src/falcoctl
+  to: /usr/bin/falcoctl
+  before: install
 git:
 - add: /{{ $.ModulePath }}modules/650-{{ $.ModuleName }}/images/{{ $.ImageName }}/hooks
   to: /hooks
@@ -57,5 +61,5 @@ shell:
   - export SOURCE_REPO={{ .SOURCE_REPO }}
   - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
   - git clone --depth 1 {{ $.SOURCE_REPO }}/python-modules/wheels /wheels
-  - rm -rf /wheels/.git
   - /opt/python-static/bin/pip3 install -f file:///wheels --no-index -r requirements.txt
+  - rm -rf /wheels
