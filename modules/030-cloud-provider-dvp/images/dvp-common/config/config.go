@@ -52,12 +52,6 @@ func NewCloudConfig() (*CloudConfig, error) {
 }
 
 func (c *CloudConfig) GetKubernetesClientConfig() (*rest.Config, error) {
-	// TODO: remove base64 decoding
-	// decodedBytes, err := base64.StdEncoding.DecodeString(c.KubernetesConfigBase64)
-	// if err != nil {
-	// 	return nil, fmt.Errorf("unable to decode kubernetes config from base64 string: %w", err)
-	// }
-
 	kubeConfig, err := clientcmd.NewClientConfigFromBytes([]byte(c.KubernetesConfigBase64))
 	if err != nil {
 		return nil, fmt.Errorf("unable to load kubernetes config: %w", err)
