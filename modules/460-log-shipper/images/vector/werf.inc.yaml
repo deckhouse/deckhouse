@@ -1,3 +1,4 @@
+{{- $date := "2024-10-31" }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 from: {{ $.Images.BASE_ALT_P11 }}
@@ -23,6 +24,9 @@ git:
     - '**/*'
 shell:
   beforeInstall:
+  - sed -i "s|http://ftp.altlinux.org/pub/distributions/ALTLinux p11/branch/x86_64 classic|http://ftp.altlinux.org/pub/distributions/archive/p11/date/{{ $date | replace "-" "/" }}/ x86_64 classic|g" /etc/apt/sources.list.d/alt.list
+  - sed -i "s|http://ftp.altlinux.org/pub/distributions/ALTLinux p11/branch/x86_64-i586 classic|http://ftp.altlinux.org/pub/distributions/archive/p11/date/{{ $date | replace "-" "/" }}/ x86_64-i586 classic|g" /etc/apt/sources.list.d/alt.list
+  - sed -i "s|http://ftp.altlinux.org/pub/distributions/ALTLinux p11/branch/noarch classic|http://ftp.altlinux.org/pub/distributions/archive/p11/date/{{ $date | replace "-" "/" }}/ noarch classic|g" /etc/apt/sources.list.d/alt.list
   - apt-get update
   - apt-get install -y build-essential git openssl-devel wget perl-IPC-Cmd protobuf-compiler libsasl2-devel unzip zlib-devel rust rust-cargo
   install:
