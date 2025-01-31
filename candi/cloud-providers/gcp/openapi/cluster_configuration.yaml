@@ -173,7 +173,7 @@ apiVersions:
                   ```
                 additionalProperties:
                   type: string
-          zones:
+          zones: &NodeGroupZones
             type: array
             description: A limited set of zones in which nodes can be created.
             items:
@@ -221,14 +221,6 @@ apiVersions:
                         type: string
                       value:
                         type: string
-            additionalNetworkTags:
-              type: array
-              items:
-                type: string
-            additionalLabels:
-              type: object
-              additionalProperties:
-                type: string
             instanceClass:
               required: [machineType, image]
               type: object
@@ -240,13 +232,7 @@ apiVersions:
                 disableExternalIP: *instanceClassDisableExternalIP
                 additionalNetworkTags: *instanceClassAdditionalNetworkTags
                 additionalLabels: *instanceClassAdditionalLabels
-            zones:
-              type: array
-              description: A limited set of zones in which nodes can be created.
-              items:
-                type: string
-              minItems: 1
-              uniqueItems: true
+            zones: *NodeGroupZones
       layout:
         type: string
         enum: [Standard, WithoutNAT]
@@ -290,13 +276,7 @@ apiVersions:
               A key to the Service Account with Project Admin privileges (`service account key`) in the JSON format.
 
               [How to create it](https://cloud.google.com/iam/docs/creating-managing-service-account-keys#creating_service_account_keys) a `service account key`.
-      zones:
-        type: array
-        description: A limited set of zones in which nodes can be created.
-        items:
-          type: string
-        minItems: 1
-        uniqueItems: true
+      zones: *NodeGroupZones
     oneOf:
     - required: [layout]
       properties:
