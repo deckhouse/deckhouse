@@ -1,7 +1,7 @@
 #!/bin/bash
 
 unset TMPDIR
-_TMPDIR=$(mktemp -d -t)
+_TMPDIR=$(mktemp -d "${TMPDIR:-/tmp}/cse")
 
 if [ $? -ne 0 ]; then
   echo "Error creating temp directory!"
