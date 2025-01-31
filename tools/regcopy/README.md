@@ -5,6 +5,7 @@ A tool to sanitize and copy base images to the Deckhouse container registry.
 Usage: 
 ```sh
 regcopy <image>:<tag>
+go run . <image>:<tag>
 ```
 
 ### Purpose
