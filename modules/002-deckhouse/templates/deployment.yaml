@@ -73,7 +73,15 @@ spec:
         checksum/registry: {{ include (print $.Template.BasePath "/registry-secret.yaml") . | sha256sum }}
         kubectl.kubernetes.io/default-container: deckhouse
     spec:
-      {{- include "helm_lib_pod_anti_affinity_for_ha" (list . (dict "app" "deckhouse")) | nindent 6 }}
+      affinity:
+        {{- if and (include "helm_lib_ha_enabled" .) .Values.global.clusterIsBootstrapped }}
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchLabels:
+                app: deckhouse
+            topologyKey: kubernetes.io/hostname
+        {{- end }}
         nodeAffinity:
           preferredDuringSchedulingIgnoredDuringExecution:
             - preference:
