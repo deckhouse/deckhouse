@@ -33,7 +33,7 @@ Before installing the virtualization platform, you need to plan its parameters:
 ## Node Preparation
 
 1. Check virtualization support:
-   - Make sure that Intel-VT (vmx) or AMD-V (svm) virtualization support is enabled in the BIOS/UEFI on all cluster nodes.
+   - Make sure that Intel-VT (VMX) or AMD-V (SVM) virtualization support is enabled in the BIOS/UEFI on all cluster nodes.
 
 1. Install the operating system:
    - Install one of the [supported operating systems](../requirements.html#supported-os-for-platform-nodes) on each cluster node. Pay attention to the version and architecture of the system.

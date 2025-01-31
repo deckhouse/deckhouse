@@ -37,7 +37,7 @@ The platform has no other restrictions and is compatible with any hardware that 
    - Resources:
      - CPU:
        - x86_64 architecture;
-       - Support for Intel-VT (vmx) or AMD-V (svm) instructions;
+       - Support for Intel-VT (VMX) or AMD-V (SVM) instructions;
        - At least 4 cores.
      - RAM: At least 8 GB.
      - Disk space:
@@ -64,7 +64,7 @@ The platform has no other restrictions and is compatible with any hardware that 
    - Resources:
      - CPU:
        - x86_64 architecture;
-       - Support for Intel-VT (vmx) or AMD-V (svm) instructions;
+       - Support for Intel-VT (VMX) or AMD-V (SVM) instructions;
        - At least 4 cores;
      - RAM: At least 8 GB;
      - Disk space:

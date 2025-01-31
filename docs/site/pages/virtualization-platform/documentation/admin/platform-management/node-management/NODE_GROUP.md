@@ -342,8 +342,8 @@ Deckhouse will create new `MachineDeployment` objects and delete the old ones.
 The number of `MachineDeployment` objects ordered at the same time is determined by the `cloudInstances.maxSurgePerZone` parameter.
 
 During the disruption update, pods are evicted from the node.
-If a pod couldn't be evicted, the eviction attempt is retried every 20 seconds until a global timeout of 5 minutes is reached.
-After that, the pods that couldn't be evicted are removed.
+If a pod could not be evicted, the eviction attempt is retried every 20 seconds until a global timeout of 5 minutes is reached.
+After that, the pods that could not be evicted are removed.
 
 ## How do I allocate nodes to specific loads?
 
