@@ -234,6 +234,15 @@ import:
   add: /usr/local/go
   to: /usr/local/go
   before: install
+- image: cni-cilium/base-cilium-dev-src-artifact
+  add: /src
+  to: /src
+  includePaths:
+  - grpc-go
+  - protobuf-go
+  - protoc-gen-go-json
+  - protoc-gen-doc
+  before: install
 shell:
   beforeInstall:
   - export DEBIAN_FRONTEND=noninteractive TZ=Etc/UTC
@@ -278,11 +287,10 @@ shell:
   - curl --fail --show-error --silent --location "{{ $source }}/protocolbuffers/protobuf/releases/download/v{{ $protocVersion }}/protoc-{{ $protocVersion }}-linux-x86_64.zip" --output /tmp/protoc.zip
   - unzip /tmp/protoc.zip -x readme.txt -d /usr/local && rm /tmp/protoc.zip
   - chmod o+rx /usr/local/bin/protoc && chmod o+rX -R /usr/local/include/google/
-  # 8ba23be9613c672d40ae261d2a1335d639bdd59b == tag: cmd/protoc-gen-go-grpc/v1.3.0
-  - go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@8ba23be9613c672d40ae261d2a1335d639bdd59b
-  - go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.30.0
-  - go install github.com/mitchellh/protoc-gen-go-json@v1.1.0
-  - go install github.com/pseudomuto/protoc-gen-doc/cmd/protoc-gen-doc@v1.5.1
+  - cd /src/grpc-go/cmd/protoc-gen-go-grpc && go install
+  - cd /src/protobuf-go/cmd/protoc-gen-go && go install
+  - cd /src/protoc-gen-go-json && go install
+  - cd /src/protoc-gen-doc/cmd/protoc-gen-doc && go install
   # Install multiversion bazel
   - bazel_versions=({{ $bazelVersions }})
   # install bazel wrapper script in the path, it automatically recognises `.bazelversion` and `USE_BAZEL_VERSIONS`, if neither are set it picks latest
