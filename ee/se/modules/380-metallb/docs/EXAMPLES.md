@@ -2,7 +2,7 @@
 title: "The MetalLB module: examples"
 ---
 
-Metallb can be used in Static (Bare Metal) clusters when there is no option to use cloud load balancers. Metallb can work in L2 LoadBalancer or BGP modes LoadBalancer.
+Metallb can be used in Static (bare metal) clusters when there is no option to use cloud load balancers. Metallb can work in L2 LoadBalancer or BGP modes LoadBalancer.
 
 ## Example of MetalLB usage in L2 LoadBalancer mode
 
