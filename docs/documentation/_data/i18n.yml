@@ -65,6 +65,9 @@ common:
   for_example:
     en: for example
     ru: например
+  here:
+    en: "here"
+    ru: "здесь"
   dev_menu_message:
     en: "Menu is not generated in dev build mode"
     ru: "В режиме dev сборки меню не генерируется"
