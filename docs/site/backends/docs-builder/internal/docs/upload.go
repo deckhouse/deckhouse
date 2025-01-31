@@ -21,8 +21,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-
-	"k8s.io/klog/v2"
 )
 
 func (svc *Service) Upload(body io.ReadCloser, moduleName string, version string, channels []string) error {
@@ -36,7 +34,7 @@ func (svc *Service) Upload(body io.ReadCloser, moduleName string, version string
 	for {
 		header, err := reader.Next()
 		if err == io.EOF {
-			klog.Infof("EOF reading file")
+			svc.logger.Infof("EOF reading file")
 			break
 		}
 
@@ -54,11 +52,11 @@ func (svc *Service) Upload(body io.ReadCloser, moduleName string, version string
 			for _, channel := range channels {
 				path, ok := svc.getLocalPath(moduleName, channel, header.Name)
 				if !ok {
-					klog.Infof("skipping tree %v in %s", header.Name, moduleName)
+					svc.logger.Infof("skipping tree %v in %s", header.Name, moduleName)
 					continue
 				}
 
-				klog.Infof("creating dir %q", path)
+				svc.logger.Infof("creating dir %q", path)
 				if err := os.MkdirAll(path, 0700); err != nil {
 					return fmt.Errorf("mkdir %q failed: %w", path, err)
 				}
@@ -69,10 +67,10 @@ func (svc *Service) Upload(body io.ReadCloser, moduleName string, version string
 			for _, channel := range channels {
 				path, ok := svc.getLocalPath(moduleName, channel, header.Name)
 				if !ok {
-					klog.Infof("skipping file %v in %s", header.Name, moduleName)
+					svc.logger.Infof("skipping file %v in %s", header.Name, moduleName)
 					continue
 				}
-				klog.Infof("creating %s", path)
+				svc.logger.Infof("creating %s", path)
 
 				outFile, err := os.OpenFile(
 					path,

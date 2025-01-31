@@ -82,3 +82,8 @@ variable "nat_instance_ssh_key" {
 variable "labels" {
   type = map
 }
+
+variable "resourceManagementTimeout" {
+  type = string
+  default = "10m"
+}

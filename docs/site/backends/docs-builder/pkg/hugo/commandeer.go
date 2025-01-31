@@ -17,7 +17,7 @@ package hugo
 import (
 	"fmt"
 	"io"
-	"log"
+	stdlog "log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -28,20 +28,21 @@ import (
 	"github.com/bep/lazycache"
 	"github.com/bep/logg"
 	"github.com/bep/overlayfs"
+	"github.com/deckhouse/deckhouse/pkg/log"
 	"github.com/gohugoio/hugo/common/htime"
-	"github.com/gohugoio/hugo/common/hugo"
 	"github.com/gohugoio/hugo/common/loggers"
 	"github.com/gohugoio/hugo/common/paths"
 	"github.com/gohugoio/hugo/config"
 	"github.com/gohugoio/hugo/config/allconfig"
 	"github.com/gohugoio/hugo/deps"
+	"github.com/gohugoio/hugo/helpers"
 	"github.com/gohugoio/hugo/hugofs"
 	"github.com/gohugoio/hugo/hugolib"
 	"github.com/spf13/afero"
 )
 
 func (c *command) Run() error {
-	b := newHugoBuilder(c)
+	b := newHugoBuilder(c, c.logger)
 
 	if err := b.loadConfig(); err != nil {
 		return err
@@ -61,7 +62,7 @@ func (c *command) PreRun() error {
 		c.Out = io.Discard
 	}
 	// Used by mkcert (server).
-	log.SetOutput(c.Out)
+	stdlog.SetOutput(c.Out)
 
 	c.Printf = func(format string, v ...interface{}) {
 		if !c.flags.Quiet {
@@ -74,19 +75,19 @@ func (c *command) PreRun() error {
 		}
 	}
 	var err error
-	c.logger, err = c.createLogger(false)
+	c.hugologger, err = c.createLogger(false)
 	if err != nil {
 		return err
 	}
 
-	c.commonConfigs = lazycache.New[int32, *commonConfig](lazycache.Options[int32, *commonConfig]{MaxEntries: 5})
-	c.hugoSites = lazycache.New[int32, *hugolib.HugoSites](lazycache.Options[int32, *hugolib.HugoSites]{MaxEntries: 5})
+	c.commonConfigs = lazycache.New[int32, *commonConfig](lazycache.Options{MaxEntries: 5})
+	c.hugoSites = lazycache.New[int32, *hugolib.HugoSites](lazycache.Options{MaxEntries: 5})
 
 	return nil
 }
 
-func Build(flags Flags) error {
-	cmd := &command{flags: flags}
+func Build(flags Flags, logger *log.Logger) error {
+	cmd := &command{flags: flags, logger: logger}
 
 	err := cmd.PreRun()
 	if err != nil {
@@ -109,7 +110,7 @@ type command struct {
 	Println func(a ...interface{})
 	Out     io.Writer
 
-	logger loggers.Logger
+	hugologger loggers.Logger
 
 	// The main cache busting key for the caches below.
 	configVersionID atomic.Int32
@@ -120,6 +121,8 @@ type command struct {
 	hugoSites     *lazycache.Cache[int32, *hugolib.HugoSites]
 
 	flags Flags
+
+	logger *log.Logger
 }
 
 type Flags struct {
@@ -138,7 +141,7 @@ type Flags struct {
 }
 
 func (c *command) isVerbose() bool {
-	return c.logger.Level() <= logg.LevelInfo
+	return c.hugologger.Level() <= logg.LevelInfo
 }
 
 func (c *command) ConfigFromProvider(key int32, cfg config.Provider) (*commonConfig, error) {
@@ -176,7 +179,7 @@ func (c *command) ConfigFromProvider(key int32, cfg config.Provider) (*commonCon
 				Filename:    c.flags.CfgFile,
 				ConfigDir:   c.flags.CfgDir,
 				Environment: c.flags.Environment,
-				Logger:      c.logger,
+				Logger:      c.hugologger,
 			},
 		)
 		if err != nil {
@@ -260,7 +263,9 @@ func (c *command) ConfigFromProvider(key int32, cfg config.Provider) (*commonCon
 
 func (c *command) HugFromConfig(conf *commonConfig) (*hugolib.HugoSites, error) {
 	h, _, err := c.hugoSites.GetOrCreate(c.configVersionID.Load(), func(key int32) (*hugolib.HugoSites, error) {
-		depsCfg := deps.DepsCfg{Configs: conf.configs, Fs: conf.fs, StdOut: c.logger.StdOut(), LogLevel: c.logger.Level()}
+		depsCfg := deps.DepsCfg{Configs: conf.configs, Fs: conf.fs, LogOut: c.hugologger.Out(), LogLevel: c.hugologger.Level()}
+		// for v0.120.0 +
+		// depsCfg := deps.DepsCfg{Configs: conf.configs, Fs: conf.fs, StdOut: c.hugologger.StdOut(), LogLevel: c.hugologger.Level()}
 		return hugolib.NewHugoSites(depsCfg)
 	})
 	return h, err
@@ -284,22 +289,32 @@ func (c *command) createLogger(running bool) (loggers.Logger, error) {
 		}
 	} else {
 		if c.flags.Verbose {
-			hugo.Deprecate("--verbose", "use --logLevel", "v0.119.0")
+			helpers.Deprecated("--verbose", "use --logLevel info", false)
+			// for v0.120.0 +
+			// hugo.Deprecate("--verbose", "use --logLevel", "v0.119.0")
 			level = logg.LevelInfo
 		}
 
 		if c.flags.Debug {
-			hugo.Deprecate("--debug", "use --logLevel", "v0.119.0")
+			helpers.Deprecated("--debug", "use --logLevel debug", false)
+			// for v0.120.0 +
+			// hugo.Deprecate("--debug", "use --logLevel", "v0.119.0")
 			level = logg.LevelDebug
 		}
 	}
 
 	optsLogger := loggers.Options{
-		DistinctLevel: level,
-		Level:         level,
-		StdOut:        c.Out,
-		StdErr:        c.Out,
-		StoreErrors:   running,
+		// for v0.120.0 +
+		// DistinctLevel: level,
+		// Level:         level,
+		// StdOut:        c.Out,
+		// StdErr:        c.Out,
+		// StoreErrors:   running,
+		Distinct:    true,
+		Level:       level,
+		Stdout:      c.Out,
+		Stderr:      c.Out,
+		StoreErrors: running,
 	}
 
 	return loggers.New(optsLogger), nil
