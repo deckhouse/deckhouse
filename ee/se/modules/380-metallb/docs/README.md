@@ -15,7 +15,7 @@ In Layer 2 mode, one or more nodes take responsibility for providing the service
 
 ## Advantages of the module over the classic MetalLB
 
-MetalLB in L2 mode allows ordering _Service_ with `LoadBalancer` type, the operation of which is based on the fact that balancing nodes simulate ARP-responses from the "public" IP in a peering network. This mode has a significant limitation — only one balancing node handles all the incoming traffic of this service at a time. Therefore:
+MetalLB in L2 mode allows ordering Service with `LoadBalancer` type, the operation of which is based on the fact that balancing nodes simulate ARP-responses from the "public" IP in a peering network. This mode has a significant limitation — only one balancing node handles all the incoming traffic of this service at a time. Therefore:
 
 - The node selected as the leader for the "public" IP becomes a "bottleneck", with no possibility of horizontal scaling.
 - If the balancer node fails, all current connections will be dropped while switching to a new balancing node that will be selected as the leader.
@@ -23,21 +23,21 @@ MetalLB in L2 mode allows ordering _Service_ with `LoadBalancer` type, the opera
 <div data-presentation="../../presentations/metallb/basics_metallb_en.pdf"></div>
 <!--- Source: https://docs.google.com/presentation/d/18vcVJ1cY2yn19vBM_dTNW3hF0w9SE4S81VZc2P6fVFM/ --->
 
-This module helps to overcome these limitations. It introduces a new resource, _MetalLoadBalancerClass_, which allows associating a group of nodes with an IP address pool using a `nodeSelector`. Afterward, a standard _Service_ resource of type `LoadBalancer` can be created, specifying the name of the corresponding _MetalLoadBalancerClass_. Additionally, annotations can be used to define the required number of IP addresses for L2 advertisement.
+This module helps to overcome these limitations. It introduces a new resource, MetalLoadBalancerClass, which allows associating a group of nodes with an IP address pool using a `nodeSelector`. Afterward, a standard Service resource of type `LoadBalancer` can be created, specifying the name of the corresponding MetalLoadBalancerClass. Additionally, annotations can be used to define the required number of IP addresses for L2 advertisement.
 
 <div data-presentation="../../presentations/metallb/basics_metallb_l2balancer_en.pdf"></div>
 <!--- Source: https://docs.google.com/presentation/d/1FYbc7jUhvJFy8x592ihm644i0qpeQSJFUc4Ly2coWFQ/ --->
 
 Thus:
 
-- The application will receive not a single, but several (according to the number of balancer nodes) "public" IPs. These IPs will need to be configured as A-records for the application's public domain. For further horizontal scaling, additional balancer nodes will need to be added, the corresponding _Service_ will be created automatically, you just need to add them to the list of A-records for the application domain.
+- The application will receive not a single, but several (according to the number of balancer nodes) "public" IPs. These IPs will need to be configured as A-records for the application's public domain. For further horizontal scaling, additional balancer nodes will need to be added, the corresponding Service will be created automatically, you just need to add them to the list of A-records for the application domain.
 - If one of the balancer nodes fails, only part of the connections will fail over to the healthy node.
 
 ## BGP Mode
 
 > Available only in Enterprise Edition.
 
-MetalLB in BGP mode provides an efficient and scalable way to expose `LoadBalancer` type _Services_ in Kubernetes clusters running on bare metal. By utilizing the standardized BGP protocol, MetalLB seamlessly integrates into existing network infrastructure and ensures high availability of _Services_.
+MetalLB in BGP mode provides an efficient and scalable way to expose `LoadBalancer` type Services in Kubernetes clusters running on bare metal. By utilizing the standardized BGP protocol, MetalLB seamlessly integrates into existing network infrastructure and ensures high availability of Services.
 
 ### How MetalLB Works in BGP Mode
 
@@ -45,7 +45,7 @@ In BGP mode, MetalLB establishes BGP sessions with routers (or Top-of-Rack switc
 
 Configuration:
 
-- MetalLB is configured with a pool of IP addresses that it can assign to _Services_.
+- MetalLB is configured with a pool of IP addresses that it can assign to Services.
 - BGP session parameters are defined: the Autonomous System (AS) number of the Kubernetes cluster, the IP addresses of the routers (peers), the AS number of the peers, and optionally, authentication passwords.
 - For each IP address pool, specific announcement parameters can be set, such as community strings.
 
@@ -54,20 +54,20 @@ Establishing BGP Sessions:
 - On each node of the Kubernetes cluster where MetalLB is running, the speaker component establishes BGP sessions with the specified routers.
 - Routing information is exchanged between MetalLB and the routers.
 
-Assigning IP Addresses to _Services_:
+Assigning IP Addresses to Services:
 
-- When a _Service_ of type `LoadBalancer` is created, MetalLB selects a free IP address from the configured pool and assigns it to the _Service_.
-- The controller component tracks changes to _Services_ and manages IP address assignments.
+- When a Service of type `LoadBalancer` is created, MetalLB selects a free IP address from the configured pool and assigns it to the Service.
+- The controller component tracks changes to Services and manages IP address assignments.
 
 Announcing IP Addresses:
 
-- After an IP address is assigned, the speaker on the node elected as the leader for that _Service_ begins announcing the IP address over the established BGP sessions.
+- After an IP address is assigned, the speaker on the node elected as the leader for that Service begins announcing the IP address over the established BGP sessions.
 - The routers receive this announcement and update their routing tables, directing traffic for that IP address to the node that announced it.
 
 Traffic Distribution:
 
-- Routers use Equal-Cost Multi-Path (ECMP) or other load balancing algorithms to distribute traffic among nodes announcing the same _Service_ IP address.
-- Inside the Kubernetes cluster, traffic arriving at a node is forwarded to the _Services_ pods using the mechanisms of the employed CNI (iptables/IPVS, eBPF programs, etc.).
+- Routers use Equal-Cost Multi-Path (ECMP) or other load balancing algorithms to distribute traffic among nodes announcing the same Service IP address.
+- Inside the Kubernetes cluster, traffic arriving at a node is forwarded to the Service's pods using the mechanisms of the employed CNI (iptables/IPVS, eBPF programs, etc.).
 
 ### Advantages of Using BGP
 

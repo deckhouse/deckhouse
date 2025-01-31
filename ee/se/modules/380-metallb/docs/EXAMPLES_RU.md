@@ -26,7 +26,7 @@ spec:
 kubectl create deploy nginx --image=nginx
 ```
 
-Создайте ресурс _MetalLoadBalancerClass_:
+Создайте ресурс MetalLoadBalancerClass:
 
 ```yaml
 apiVersion: network.deckhouse.io/v1alpha1
@@ -42,7 +42,7 @@ spec:
   type: L2
 ```
 
-Создайте ресурс _Service_ со аннотацией и именем MetalLoadBalancerClass:
+Создайте ресурс Service со аннотацией и именем MetalLoadBalancerClass:
 
 ```yaml
 apiVersion: v1
@@ -113,13 +113,13 @@ spec:
   version: 2
 ```
 
-<sup>*</sup> — в будущих версиях настройки режима BGP будут задаваться через ресурс _MetalLoadBalancerClass_.
+<sup>*</sup> — в будущих версиях настройки режима BGP будут задаваться через ресурс MetalLoadBalancerClass.
 
 Настройте BGP-пиринг на сетевом оборудовании.
 
 {% endraw %}
 
-## Дополнительные примеры настроек для _Service_
+## Дополнительные примеры настроек для Service
 
 {% raw %}
 
@@ -161,7 +161,7 @@ spec:
     app: dns
 ```
 
-Для создания _Service_ с принудительно выбранным адресом, необходимо добавить аннотацию `network.deckhouse.io/load-balancer-ips`:
+Для создания Service с принудительно выбранным адресом, необходимо добавить аннотацию `network.deckhouse.io/load-balancer-ips`:
 
 ```yaml
 apiVersion: v1
@@ -179,7 +179,7 @@ spec:
   type: LoadBalancer
 ```
 
-Создание _Service_ и назначение ему _IPAddressPools_ возможно в режиме BGP LoadBalancer через аннотацию `metallb.universe.tf/address-pool`. Для режима L2 LoadBalancer необходимо использовать настройки _MetalLoadBalancerClass_ (см. выше).
+Создание Service и назначение ему _IPAddressPools_ возможно в режиме BGP LoadBalancer через аннотацию `metallb.universe.tf/address-pool`. Для режима L2 LoadBalancer необходимо использовать настройки MetalLoadBalancerClass (см. выше).
 
 ```yaml
 apiVersion: v1

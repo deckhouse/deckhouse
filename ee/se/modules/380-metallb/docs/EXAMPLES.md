@@ -26,7 +26,7 @@ Prepare the application to publish:
 kubectl create deploy nginx --image=nginx
 ```
 
-Deploy the _MetalLoadBalancerClass_ resource:
+Deploy the MetalLoadBalancerClass resource:
 
   ```yaml
 apiVersion: network.deckhouse.io/v1alpha1
@@ -42,7 +42,7 @@ spec:
   type: L2
 ```
 
-Deploy standard resource _Service_ with special annotation and MetalLoadBalancerClass name:
+Deploy standard resource Service with special annotation and MetalLoadBalancerClass name:
 
 ```yaml
 apiVersion: v1
@@ -113,13 +113,13 @@ spec:
   version: 2
 ```
 
-<sup>*</sup> — in future versions, BGP mode settings will be set via the _MetalLoadBalancerClass_ resource.
+<sup>*</sup> — in future versions, BGP mode settings will be set via the MetalLoadBalancerClass resource.
 
 Configure BGP peering on the network equipment.
 
 {% endraw %}
 
-## Additional configuration examples for _Service_
+## Additional configuration examples for Service
 
 {% raw %}
 
@@ -161,7 +161,7 @@ spec:
     app: dns
 ```
 
-To create a _Service_ with a forcibly selected address, you need to add the annotation `network.deckhouse.io/load-balancer-ips`:
+To create a Service with a forcibly selected address, you need to add the annotation `network.deckhouse.io/load-balancer-ips`:
 
 ```yaml
 apiVersion: v1
@@ -179,7 +179,7 @@ spec:
   type: LoadBalancer
 ```
 
-Creating a _Service_ and assigning it _IPAddressPools_ is possible in BGP LoadBalancer mode using the annotation `metallb.universe.tf/address-pool`. For L2 LoadBalancer mode, you need to use the _MetalLoadBalancerClass_ settings (see above).
+Creating a Service and assigning it _IPAddressPools_ is possible in BGP LoadBalancer mode using the annotation `metallb.universe.tf/address-pool`. For L2 LoadBalancer mode, you need to use the MetalLoadBalancerClass settings (see above).
 
 ```yaml
 apiVersion: v1
