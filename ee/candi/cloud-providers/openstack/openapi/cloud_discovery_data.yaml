@@ -40,6 +40,28 @@ apiVersions:
         uniqueItems: true
       instances:
         type: object
+        additionalProperties: false
+        properties:
+          sshKeyPairName:
+            type: string
+            minLength: 1
+          imageName:
+            type: string
+            minLength: 1
+          mainNetwork:
+            type: string
+            minLength: 1
+          additionalNetworks:
+            type: array
+            items:
+              type: string
+              minLength: 1
+            minItems: 1
+            uniqueItems: true
+          securityGroups:
+            type: array
+            items:
+              type: string
       loadBalancer:
         type: object
         additionalProperties: false
