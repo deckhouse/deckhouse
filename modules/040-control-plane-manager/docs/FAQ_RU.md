@@ -163,7 +163,17 @@ title: "Управление control plane: FAQ"
 1. Скопируйте полученный архив за пределы кластера (например, на локальную машину).
 1. Убедитесь, что в кластере нет [алертов](../prometheus/faq.html#как-получить-информацию-об-алертах-в-кластере), которые могут помешать обновлению master-узлов.
 1. Убедитесь, что [очередь Deckhouse пуста](../../deckhouse-faq.html#как-проверить-очередь-заданий-в-deckhouse).
-1. Снимите лейблы `node.deckhouse.io/group: master` и `node-role.kubernetes.io/control-plane: ""`.
+1. Снимите следующие лейблы:
+   * `node-role.kubernetes.io/control-plane`
+   * `node-role.kubernetes.io/master`
+   * `node.deckhouse.io/group`
+
+   Команда для снятия лейблов:
+
+   ```bash
+   kubectl label node <MASTER-NODE-N-NAME> node-role.kubernetes.io/control-plane- node-role.kubernetes.io/master- node.deckhouse.io/group-
+   ```
+
 1. Убедитесь, что удаляемый master-узел пропал из списка узлов кластера:
 
    ```bash

@@ -170,7 +170,17 @@ The steps described below must be performed from the first in order of the maste
 1. Transfer the archive to a server outside the cluster (e.g., on a local machine).
 1. Ensure there are no [alerts](../prometheus/faq.html#how-to-get-information-about-alerts-in-a-cluster) in the cluster that can prevent the update of the master nodes.
 1. Make sure that [Deckhouse queue is empty](../../deckhouse-faq.html#how-to-check-the-job-queue-in-deckhouse).
-1. Remove the `node.deckhouse.io/group: master` and `node-role.kubernetes.io/control-plane: ""` labels.
+1. Remove the following labels:
+   * `node-role.kubernetes.io/control-plane`
+   * `node-role.kubernetes.io/master`
+   * `node.deckhouse.io/group`
+
+   Use the following command to remove labels:
+
+   ```bash
+   kubectl label node <MASTER-NODE-N-NAME> node-role.kubernetes.io/control-plane- node-role.kubernetes.io/master- node.deckhouse.io/group-
+   ```
+
 1. Make sure that the master node to be deleted is no longer listed as a member of the etcd cluster:
 
    ```bash
