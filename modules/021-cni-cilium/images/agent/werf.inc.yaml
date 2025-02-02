@@ -249,14 +249,8 @@ import:
   add: /relocate
   to: /
   before: install
-docker:
-  ENV:
-    HUBBLE_SERVER: "unix:///var/run/cilium/hubble.sock"
-    INITSYSTEM: SYSTEMD
-    HUBBLE_COMPAT: legacy-json-output
-    PATH: "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
-    LANG: en_US.UTF-8
-    LANGUAGE: en_US:en
-    LC_ALL: en_US.UTF-8
-  WORKDIR: "/home/cilium"
-  CMD: ["/usr/bin/cilium"]
+imageSpec:
+  config:
+    env: { "HUBBLE_SERVER": "unix:///var/run/cilium/hubble.sock", "INITSYSTEM": "SYSTEMD", "HUBBLE_COMPAT": "legacy-json-output", "PATH": "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin", "LANG": "en_US.UTF-8", "LANGUAGE": "en_US:en", "LC_ALL": "en_US.UTF-8" }
+    workingDir: "/home/cilium"
+    cmd: ["/usr/bin/cilium"]

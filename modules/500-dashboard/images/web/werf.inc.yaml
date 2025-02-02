@@ -17,8 +17,9 @@ import:
   add: /src/modules/web/.dist/public/locale_conf.json
   to: /locale_conf.json
   before: setup
-docker:
-  ENTRYPOINT: ["/dashboard-web"]
+imageSpec:
+  config:
+    entrypoint: ["/dashboard-web"]
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
 final: false

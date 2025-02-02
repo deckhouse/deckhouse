@@ -10,9 +10,10 @@ import:
     add: /src/url-exec-prober
     to: /usr/local/bin/url-exec-prober
     before: setup
-docker:
-  ENTRYPOINT: [ "/bin/oauth2_proxy" ]
-  CMD: [ "--upstream=http://0.0.0.0:8080/", "--http-address=0.0.0.0:4180" ]
+imageSpec:
+  config:
+    entrypoint: [ "/bin/oauth2_proxy" ]
+    cmd: [ "--upstream=http://0.0.0.0:8080/", "--http-address=0.0.0.0:4180" ]
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-oauth2-proxy-src-artifact
 fromImage: common/src-artifact

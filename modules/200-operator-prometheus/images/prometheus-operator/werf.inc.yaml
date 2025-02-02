@@ -46,5 +46,6 @@ import:
   add: /operator
   to: /bin/operator
   before: setup
-docker:
-  ENTRYPOINT: ["/bin/operator"]
+imageSpec:
+  config:
+    entrypoint: ["/bin/operator"]

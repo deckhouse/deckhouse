@@ -19,6 +19,7 @@ import:
   add: /src/_output/bin/kube-controller-manager
   to: /usr/bin/kube-controller-manager
   before: setup
-docker:
-  ENTRYPOINT: ["/usr/bin/kube-controller-manager"]
+imageSpec:
+  config:
+    entrypoint: ["/usr/bin/kube-controller-manager"]
 {{- end }}

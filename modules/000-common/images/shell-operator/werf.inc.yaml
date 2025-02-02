@@ -29,8 +29,9 @@ import:
   add: /tini/tini-static
   to: /sbin/tini
   before: setup
-docker:
-  ENTRYPOINT: ["tini", "--", "/shell-operator"]
+imageSpec:
+  config:
+    entrypoint: ["tini", "--", "/shell-operator"]
 shell:
   setup:
   - find /var/lib/apt/ /var/cache/apt/ -type f -delete

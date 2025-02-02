@@ -6,8 +6,9 @@ import:
     add: /src/build/node-termination-handler
     to: /node-termination-handler
     before: setup
-docker:
-  ENTRYPOINT: ["/node-termination-handler"]
+imageSpec:
+  config:
+    entrypoint: ["/node-termination-handler"]
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 final: false

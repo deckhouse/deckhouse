@@ -18,8 +18,9 @@ import:
   add: /csi-snapshotter
   to: /csi-snapshotter
   before: setup
-docker:
-  ENTRYPOINT: ["/csi-snapshotter"]
+imageSpec:
+  config:
+    entrypoint: ["/csi-snapshotter"]
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $version | replace "." "-" }}
 fromImage: common/src-artifact

@@ -32,13 +32,11 @@ git:
   stageDependencies:
     install:
     - '**/*'
-docker:
-  ENV:
-    SHELL_OPERATOR_HOOKS_DIR: "/hooks"
-    LOG_TYPE: json
-    PYTHONPATH: "/hooks"
-  ENTRYPOINT: ["tini", "--", "/shell-operator"]
-  CMD: ["start"]
+imageSpec:
+  config:
+    env: { "SHELL_OPERATOR_HOOKS_DIR": "/hooks", "LOG_TYPE": "json", "PYTHONPATH": "/hooks" }
+    entrypoint: ["tini", "--", "/shell-operator"]
+    cmd: ["start"]
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-binary-artifact
 fromImage: common/alt-p11-artifact

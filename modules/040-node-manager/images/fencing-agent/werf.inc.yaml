@@ -34,6 +34,6 @@ import:
   add: /src/fencing-agent
   to: /fencing-agent
   before: setup
-docker:
-  USER: 64535
-  ENTRYPOINT: ["/fencing-agent"]
+imageSpec:
+  config:
+    entrypoint: ["/fencing-agent"]

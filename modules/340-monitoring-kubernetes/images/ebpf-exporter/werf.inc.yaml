@@ -106,5 +106,6 @@ import:
   includePaths:
   - '**/*.yaml'
   - '**/*.o'
-docker:
-  ENTRYPOINT: ["/usr/local/bin/entrypoint"]
+imageSpec:
+  config:
+    entrypoint: ["/usr/local/bin/entrypoint"]
