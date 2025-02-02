@@ -969,7 +969,7 @@ alerts:
           --endpoints https://127.0.0.1:2379/ defrag --command-timeout=30s
         ```
       summary: |
-        Etcd database size in use is less than 50% of the allocated storage.
+        etcd database size in use is less than 50% of the allocated storage.
       severity: "7"
       markupFormat: markdown
     - name: D8EtcdExcessiveDatabaseGrowth
@@ -982,7 +982,7 @@ alerts:
 
         To prevent disruptions, investigate the cause and take necessary action.
       summary: |
-        Etcd cluster database is growing rapidly.
+        etcd cluster database is growing rapidly.
       severity: "4"
       markupFormat: markdown
     - name: D8GrafanaDeploymentReplicasUnavailable
@@ -1433,7 +1433,7 @@ alerts:
           | 72 GB       | 8589934592 (8 GB)   |
           | ...         | ...                 |
       summary: |
-        Etcd database size is approaching the limit.
+        etcd database size is approaching the limit.
       severity: "3"
       markupFormat: markdown
     - name: D8KubernetesVersionIsDeprecated
@@ -4248,7 +4248,7 @@ alerts:
 
            > You can't migrate public IP addresses between zones. For details, refer to the migration guide.
       summary: |
-        Node group {{ $labels.node_group }} contains nodes in a deprecated availability zone.
+        NodeGroup {{ $labels.node_group }} contains nodes in a deprecated availability zone.
       severity: "9"
       markupFormat: markdown
     - name: NodeGroupReplicasUnavailable

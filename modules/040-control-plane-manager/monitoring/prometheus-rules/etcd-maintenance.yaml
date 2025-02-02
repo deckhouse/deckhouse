@@ -11,7 +11,7 @@
         plk_markup_format: "markdown"
         plk_create_group_if_not_exists__kube_etcd_malfunctioning: "KubeEtcdMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
         plk_grouped_by__kube_etcd_malfunctioning: "KubeEtcdMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
-        summary: Etcd database size is approaching the limit.
+        summary: etcd database size is approaching the limit.
         description: |
           The etcd database size on `{{ $labels.node }}` is nearing its size limit.
           This may be caused by a high number of events, such as pod evictions or the recent creation of numerous resources in the cluster.
@@ -27,7 +27,7 @@
               --key /etc/kubernetes/pki/etcd/ca.key \
               --endpoints https://127.0.0.1:2379/ defrag --command-timeout=30s
             ```
-          
+
           - Increase node memory. Starting from 24 GB, `quota-backend-bytes` will increase by 1 GB for every extra 8 GB of memory.
 
             Example:
@@ -78,7 +78,7 @@
           - Starting from 24 GB, `quota-backend-bytes` will increase by 1 GB for every extra 8 GB of memory.
 
             Example:
-          
+
             | Node memory | quota-backend-bytes |
             | ----------- | ------------------- |
             | 16 GB       | 2147483648 (2 GB)   |
@@ -101,7 +101,7 @@
       annotations:
         plk_protocol_version: "1"
         plk_markup_format: "markdown"
-        summary: Etcd cluster database is growing rapidly.
+        summary: etcd cluster database is growing rapidly.
         description: |
           Based on the growth rate observed over the last six hours, Deckhouse predicts that the etcd database will run out of disk space within one day on instance `{{ $labels.instance }}`.
 
@@ -117,7 +117,7 @@
       annotations:
         plk_protocol_version: "1"
         plk_markup_format: "markdown"
-        summary: Etcd database size in use is less than 50% of the allocated storage.
+        summary: etcd database size in use is less than 50% of the allocated storage.
         description: |
           The etcd database size in use on instance `{{ $labels.instance }}` is less than 50% of the allocated disk space, indicating potential fragmentation. Additionally, the total storage size exceeds 75% of the configured quota.
 

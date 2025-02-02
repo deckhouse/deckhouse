@@ -12,12 +12,12 @@
         plk_protocol_version: "1"
         plk_create_group_if_not_exists__cluster_has_node_groups_deprecation_alerts: "AvailabilityZonesDeprecationAlerts,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
         plk_grouped_by__cluster_has_node_groups_deprecation_alerts: "AvailabilityZonesDeprecationAlerts,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
-        summary: Node group `{{ $labels.node_group }}` contains nodes in a deprecated availability zone.
+        summary: NodeGroup `{{ $labels.node_group }}` contains nodes in a deprecated availability zone.
         description: |
           Certain nodes in the node group `{{ $labels.node_group }}` are located in the availability zone `ru-central1-c`, which has been deprecated by Yandex Cloud.
 
           Steps to troubleshoot:
-          
+
           1. Identify the nodes that need to be migrated by running the following command:
 
              ```bash
