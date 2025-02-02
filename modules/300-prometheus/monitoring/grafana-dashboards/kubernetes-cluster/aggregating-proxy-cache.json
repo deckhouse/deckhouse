@@ -20,11 +20,12 @@
   "fiscalYearStartMonth": 0,
   "gnetId": 37,
   "graphTooltip": 0,
-  "id": 33,
+  "id": 100,
   "links": [],
   "panels": [
     {
       "datasource": {
+        "type": "prometheus",
         "uid": "$ds_prometheus"
       },
       "fieldConfig": {
@@ -77,7 +78,7 @@
       "options": {
         "minVizHeight": 75,
         "minVizWidth": 75,
-        "orientation": "horizontal",
+        "orientation": "auto",
         "reduceOptions": {
           "calcs": [
             "lastNotNull"
@@ -95,9 +96,12 @@
           "datasource": {
             "uid": "$ds_prometheus"
           },
+          "editorMode": "code",
           "expr": "sum by (pod) (memcached_current_bytes{job=\"memcached\",namespace=\"d8-monitoring\"}) / sum by (pod) (memcached_limit_bytes{job=\"memcached\",namespace=\"d8-monitoring\"})",
           "format": "time_series",
           "intervalFactor": 1,
+          "legendFormat": "{{pod}}",
+          "range": true,
           "refId": "A",
           "step": 20
         }
@@ -107,6 +111,7 @@
     },
     {
       "datasource": {
+        "type": "prometheus",
         "uid": "$ds_prometheus"
       },
       "fieldConfig": {
@@ -180,7 +185,7 @@
           "showLegend": false
         },
         "tooltip": {
-          "mode": "single",
+          "mode": "multi",
           "sort": "none"
         }
       },
@@ -190,11 +195,13 @@
           "datasource": {
             "uid": "$ds_prometheus"
           },
+          "editorMode": "code",
           "expr": "sum by (pod) (rate (memcached_commands_total{job=\"memcached\",namespace=\"d8-monitoring\",status=\"hit\",command=\"get\"}[$__rate_interval])) / sum by (pod) (rate (memcached_commands_total{job=\"memcached\",namespace=\"d8-monitoring\", command=\"get\"}[$__rate_interval]\n))",
           "format": "time_series",
           "hide": false,
           "intervalFactor": 1,
-          "legendFormat": "Hit",
+          "legendFormat": "hit: {{pod}}",
+          "range": true,
           "refId": "A",
           "step": 5
         }
@@ -338,7 +345,7 @@
           "expr": "sum by (pod) (rate(memcached_items_evicted_total{job=\"memcached\",namespace=\"d8-monitoring\"}[$__rate_interval]))",
           "format": "time_series",
           "intervalFactor": 1,
-          "legendFormat": "evicts",
+          "legendFormat": "evicts: {{pod}}",
           "range": true,
           "refId": "A",
           "step": 5,
@@ -353,7 +360,7 @@
           "format": "time_series",
           "hide": true,
           "intervalFactor": 1,
-          "legendFormat": "reclaims",
+          "legendFormat": "reclaims: {{pod}}",
           "range": true,
           "refId": "B",
           "step": 5
@@ -364,6 +371,7 @@
     },
     {
       "datasource": {
+        "type": "prometheus",
         "uid": "$ds_prometheus"
       },
       "fieldConfig": {
@@ -430,9 +438,12 @@
           "datasource": {
             "uid": "$ds_prometheus"
           },
+          "editorMode": "code",
           "expr": "sum by (pod) (memcached_current_bytes{job=\"memcached\",namespace=\"d8-monitoring\"})",
           "format": "time_series",
           "intervalFactor": 1,
+          "legendFormat": "{{pod}}",
+          "range": true,
           "refId": "A",
           "step": 20
         }
@@ -442,6 +453,7 @@
     },
     {
       "datasource": {
+        "type": "prometheus",
         "uid": "$ds_prometheus"
       },
       "fieldConfig": {
@@ -508,9 +520,12 @@
           "datasource": {
             "uid": "$ds_prometheus"
           },
+          "editorMode": "code",
           "expr": "sum by (pod) (memcached_limit_bytes{job=\"memcached\",namespace=\"d8-monitoring\"})",
           "format": "time_series",
           "intervalFactor": 1,
+          "legendFormat": "{{pod}}",
+          "range": true,
           "refId": "A",
           "step": 20
         }
@@ -645,6 +660,7 @@
     },
     {
       "datasource": {
+        "type": "prometheus",
         "uid": "$ds_prometheus"
       },
       "fieldConfig": {
@@ -710,9 +726,12 @@
           "datasource": {
             "uid": "$ds_prometheus"
           },
+          "editorMode": "code",
           "expr": "sum by (pod) (memcached_items_evicted_total{job=\"memcached\",namespace=\"d8-monitoring\"})",
           "format": "time_series",
           "intervalFactor": 1,
+          "legendFormat": "{{pod}}",
+          "range": true,
           "refId": "A",
           "step": 20
         }
@@ -722,6 +741,7 @@
     },
     {
       "datasource": {
+        "type": "prometheus",
         "uid": "$ds_prometheus"
       },
       "fieldConfig": {
@@ -787,9 +807,12 @@
           "datasource": {
             "uid": "$ds_prometheus"
           },
+          "editorMode": "code",
           "expr": "sum by (pod) (memcached_items_reclaimed_total{job=\"memcached\",namespace=\"d8-monitoring\"})",
           "format": "time_series",
           "intervalFactor": 1,
+          "legendFormat": "{{pod}}",
+          "range": true,
           "refId": "A",
           "step": 20
         }
@@ -799,6 +822,7 @@
     },
     {
       "datasource": {
+        "type": "prometheus",
         "uid": "$ds_prometheus"
       },
       "fieldConfig": {
@@ -810,7 +834,7 @@
             "axisBorderShow": false,
             "axisCenteredZero": false,
             "axisColorMode": "text",
-            "axisLabel": "",
+            "axisLabel": "items count",
             "axisPlacement": "auto",
             "barAlignment": 0,
             "drawStyle": "line",
@@ -897,10 +921,12 @@
           "datasource": {
             "uid": "$ds_prometheus"
           },
+          "editorMode": "code",
           "expr": "sum by (pod) (memcached_current_items{job=\"memcached\",namespace=\"d8-monitoring\"})",
           "format": "time_series",
           "intervalFactor": 1,
-          "legendFormat": "count",
+          "legendFormat": "{{pod}}",
+          "range": true,
           "refId": "A",
           "step": 2,
           "target": ""
@@ -911,6 +937,7 @@
     },
     {
       "datasource": {
+        "type": "prometheus",
         "uid": "$ds_prometheus"
       },
       "fieldConfig": {
@@ -966,24 +993,11 @@
           },
           "unit": "bytes"
         },
-        "overrides": [
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "written"
-            },
-            "properties": [
-              {
-                "id": "custom.transform",
-                "value": "negative-Y"
-              }
-            ]
-          }
-        ]
+        "overrides": []
       },
       "gridPos": {
         "h": 7,
-        "w": 14,
+        "w": 12,
         "x": 0,
         "y": 16
       },
@@ -1011,23 +1025,13 @@
           "datasource": {
             "uid": "$ds_prometheus"
           },
-          "expr": "sum by (pod) (rate (memcached_read_bytes_total{job=\"memcached\",namespace=\"d8-monitoring\"}[$__rate_interval]))",
+          "editorMode": "code",
+          "expr": "sum(rate (memcached_read_bytes_total{job=\"memcached\",namespace=\"d8-monitoring\"}[$__rate_interval])) by(pod)",
           "format": "time_series",
           "intervalFactor": 1,
-          "legendFormat": "read",
+          "legendFormat": "{{pod}}",
+          "range": true,
           "refId": "A",
-          "step": 2,
-          "target": ""
-        },
-        {
-          "datasource": {
-            "uid": "$ds_prometheus"
-          },
-          "expr": "sum by (pod) (rate (memcached_written_bytes_total{job=\"memcached\",namespace=\"d8-monitoring\"}[$__rate_interval]))",
-          "format": "time_series",
-          "intervalFactor": 1,
-          "legendFormat": "written",
-          "refId": "B",
           "step": 2,
           "target": ""
         }
@@ -1037,6 +1041,7 @@
     },
     {
       "datasource": {
+        "type": "prometheus",
         "uid": "$ds_prometheus"
       },
       "fieldConfig": {
@@ -1049,6 +1054,110 @@
             "axisCenteredZero": false,
             "axisColorMode": "text",
             "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 2,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "bytes"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 12,
+        "x": 12,
+        "y": 16
+      },
+      "id": 17,
+      "options": {
+        "legend": {
+          "calcs": [
+            "mean",
+            "lastNotNull",
+            "max",
+            "sum"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "10.4.5",
+      "targets": [
+        {
+          "datasource": {
+            "uid": "$ds_prometheus"
+          },
+          "editorMode": "code",
+          "expr": "sum(rate (memcached_written_bytes_total{job=\"memcached\",namespace=\"d8-monitoring\"}[$__rate_interval])) by(pod)",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "{{pod}}",
+          "range": true,
+          "refId": "B",
+          "step": 2,
+          "target": ""
+        }
+      ],
+      "title": "Network",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "$ds_prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "count",
             "axisPlacement": "auto",
             "barAlignment": 0,
             "drawStyle": "line",
@@ -1093,44 +1202,13 @@
           },
           "unit": "short"
         },
-        "overrides": [
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "172.17.0.1:9150"
-            },
-            "properties": [
-              {
-                "id": "color",
-                "value": {
-                  "fixedColor": "#0A437C",
-                  "mode": "fixed"
-                }
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "count"
-            },
-            "properties": [
-              {
-                "id": "color",
-                "value": {
-                  "fixedColor": "#806EB7",
-                  "mode": "fixed"
-                }
-              }
-            ]
-          }
-        ]
+        "overrides": []
       },
       "gridPos": {
-        "h": 7,
-        "w": 10,
-        "x": 14,
-        "y": 16
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 23
       },
       "id": 4,
       "options": {
@@ -1155,10 +1233,12 @@
           "datasource": {
             "uid": "$ds_prometheus"
           },
+          "editorMode": "code",
           "expr": "sum by (pod) (memcached_current_connections{job=\"memcached\",namespace=\"d8-monitoring\"})",
           "format": "time_series",
           "intervalFactor": 1,
-          "legendFormat": "count",
+          "legendFormat": "{{pod}}",
+          "range": true,
           "refId": "A",
           "step": 5,
           "target": ""
@@ -1248,7 +1328,7 @@
         "h": 7,
         "w": 8,
         "x": 0,
-        "y": 23
+        "y": 31
       },
       "id": 3,
       "options": {
@@ -1259,7 +1339,7 @@
           "showLegend": false
         },
         "tooltip": {
-          "mode": "single",
+          "mode": "multi",
           "sort": "none"
         }
       },
@@ -1294,6 +1374,7 @@
     },
     {
       "datasource": {
+        "type": "prometheus",
         "uid": "$ds_prometheus"
       },
       "fieldConfig": {
@@ -1355,7 +1436,7 @@
         "h": 7,
         "w": 16,
         "x": 8,
-        "y": 23
+        "y": 31
       },
       "id": 2,
       "options": {
@@ -1379,10 +1460,12 @@
           "datasource": {
             "uid": "$ds_prometheus"
           },
-          "expr": "sum by (pod, command) (rate (memcached_commands_total{job=\"memcached\",namespace=\"d8-monitoring\"}[$__rate_interval]))",
+          "editorMode": "code",
+          "expr": "sum by (command) (rate (memcached_commands_total{job=\"memcached\",namespace=\"d8-monitoring\"}[$__rate_interval]))",
           "format": "time_series",
           "intervalFactor": 2,
           "legendFormat": "{{command}}",
+          "range": true,
           "refId": "A",
           "step": 4,
           "target": ""
@@ -1449,6 +1532,6 @@
   "timezone": "browser",
   "title": "Aggregating proxy cache",
   "uid": "uJCiKq0Sk",
-  "version": 1,
+  "version": 2,
   "weekStart": ""
 }
