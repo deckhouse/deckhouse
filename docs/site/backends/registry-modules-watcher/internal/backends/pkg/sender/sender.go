@@ -23,10 +23,9 @@ import (
 	"strings"
 	"time"
 
-	"registry-modules-watcher/internal/backends"
-
 	"github.com/cenkalti/backoff"
 	"k8s.io/klog"
+	"registry-modules-watcher/internal/backends"
 )
 
 const maxElapsedTime = 15 // minutes
@@ -114,7 +113,6 @@ func (s *sender) delete(_ context.Context, backend, moduleName string, releaseCh
 	}
 
 	return nil
-
 }
 
 func (s *sender) loadDocArchive(_ context.Context, url string, tarFile []byte) error {
@@ -146,7 +144,7 @@ func (s *sender) loadDocArchive(_ context.Context, url string, tarFile []byte) e
 	return nil
 }
 
-func (s *sender) build(ctx context.Context, url string) error {
+func (s *sender) build(_ context.Context, url string) error {
 	klog.V(2).Infof("send build url: %s", url)
 	req, err := http.NewRequest(http.MethodPost, url, nil)
 	if err != nil {

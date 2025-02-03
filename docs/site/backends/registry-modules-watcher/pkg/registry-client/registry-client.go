@@ -16,12 +16,12 @@ package registryclient
 
 import (
 	"fmt"
-	registryscaner "registry-modules-watcher/internal/backends/pkg/registry-scaner"
 
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
+	registryscaner "registry-modules-watcher/internal/backends/pkg/registry-scaner"
 )
 
 type registryOptions struct {
