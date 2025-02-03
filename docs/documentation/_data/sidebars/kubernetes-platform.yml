@@ -1,0 +1,333 @@
+# Next lines are for local build only
+entries:
+  folders:
+    - title:
+        en: Deckhouse Kubernetes Platform
+        ru: Deckhouse Kubernetes Platform
+      folders:
+        - title:
+            en: What is DKP
+            ru: Что такое DKP
+          url: /about.html
+# ------------- Administration -------------
+    - title:
+        en: Administration
+        ru: Администрирование
+      folders:
+        - title:
+            en: Overview
+            ru: Введение
+          url: /admin/administration-overview.html
+        - title:
+            en: Installation
+            ru: Установка
+          folders:
+            - title:
+                en: Preparing for installation
+                ru: Подготовка к установке
+              url: /admin/preparing-for-installation.html
+            - title:
+                en: Configuration files preparing 
+                ru: Подготовка файлов конфигурации
+              url: /admin/configuration-files-preparing.html
+            - title:
+                en: Platform installation
+                ru: Установка платформы
+              url: /admin/platform-installation.html
+            - title:
+                en: Possible problems and solutions
+                ru: Возможные проблемы и их решение
+              url: /admin/problems-and-solutions.html
+        - title:
+            en: Configuration
+            ru: Настройка
+          folders:
+            - title:
+                en: Access configuration
+                ru: Настройка доступа
+              folders:
+                - title:
+                    en: Overview 
+                    ru: Введение
+                  url: /admin/access-overview.html
+                - title:
+                    en: Подключение 
+                    ru: Connection
+                  url: /admin/connection.html
+                - title:
+                    en: Аутентификация 
+                    ru: Authentication
+                  url: /admin/authentication.html
+                - title:
+                    en: Авторизация 
+                    ru: Authorization
+                  url: /admin/authorization.html
+            - title:
+                en: Platform update
+                ru: Обновление платформы
+              url: /admin/platform-update.html
+            - title:
+                en: High reliability and availability
+                ru: Высокая надежность и доступность
+              url: /admin/high-reliability-and-availability.html
+            - title:
+                en: Platform resource management
+                ru: Управление ресурсами платформы
+              url: /admin/platform-resource-management.html
+            - title:
+                en: Platform scaling and node management
+                ru: Масштабирование платформы и управление узлами
+              url: /admin/platform-scaling-and-node-management.html
+            - title:
+                en: Network
+                ru: Сеть
+              folders:
+                - title:
+                    en: General network settings information in DKP
+                    ru: Общие сведения о настройках сети в DKP
+                  url: /admin/network-overview.html
+                - title:
+                    en: Internal network 
+                    ru: Внутренняя сеть
+                  folders:
+                    - title:
+                        en: Internal network configuration 
+                        ru: Настройка внутренней сети
+                      url: /admin/network-configuration.html
+                    - title:
+                        en: Encrypting traffic between nodes
+                        ru: Шифрование трафика между узлами
+                      url: /admin/encrypting-traffic-between-nodes.html
+                - title:
+                    en: Incoming traffic balancing
+                    ru: Балансировка входящего трафика
+                  folders:
+                    - title:
+                        en: TCP/UDP balancing 
+                        ru: Балансировка TCP/UDP
+                      url: /admin/tcp-udp-balancing.html
+                    - title:
+                        en: ALB
+                        ru: ALB
+                      url: /admin/alb.html
+                - title:
+                    en: ServiceMesh
+                    ru: ServiceMesh
+                  url: /admin/service-mesh.html
+                - title:
+                    en: Inter-cluster cooperation (alliance)
+                    ru: Межкластерное взаимодействие (альянс)
+                  url: /admin/inter-cluster-cooperation.html
+                - title:
+                    en: Outgoing traffic balancing
+                    ru: Балансировка исходящего трафика
+                  folders:
+                    - title:
+                        en: Overview
+                        ru: Введение
+                      url: /admin/egress.html
+                    - title:
+                        en: Egress
+                        ru: Egress
+                      url: /admin/egress.html
+                    - title:
+                        en: Istio
+                        ru: Istio
+                      url: /admin/istio-outgoing-balancing.html
+                - title:
+                    en: Network policies
+                    ru: Сетевые политики
+                  url: /admin/network-policies.html
+                - title:
+                    en: Other network configuration options
+                    ru: Другие возможности настройки сети
+                  url: /admin/other-network-configuration-options.html
+            - title:
+                en: Storage
+                ru: Хранение
+              folders:
+                - title:
+                    en: Overview 
+                    ru: Введение
+                  url: /admin/storage-overview.html
+            - title:
+                en: Platform security
+                ru: Безопасность платформы
+              folders:
+                - title:
+                    en: Overview 
+                    ru: Введение
+                  url: /admin/security-overview.html
+                - title:
+                    en: SIEM and security software 
+                    ru: SIEM и ПО безопасности
+                  url: /admin/siem-and-security-software.html
+                - title:
+                    en: Security policies
+                    ru: Политики безопасности
+                  url: /admin/security-policies.html
+                - title:
+                    en: Security events
+                    ru: События безопасности
+                  url: /admin/security-events.html
+                - title:
+                    en: Vulnerability scanning
+                    ru: Сканирование на уязвимости (operator-trivy)
+                  url: /admin/vulnerability-scanning.html
+            - title:
+                en: Platform monitoring
+                ru: Мониторинг платформы
+              folders:
+                - title:
+                    en: Overview 
+                    ru: Введение
+                  url: /admin/monitoring-overview.html
+            - title:
+                en: Platform journaling
+                ru: Журналирование платформы
+              folders:
+                - title:
+                    en: Overview 
+                    ru: Введение
+                  url: /admin/journaling-overview.html
+            - title:
+                en: Multitenancy
+                ru: Мультенантность
+              folders:
+                - title:
+                    en: Overview 
+                    ru: Введение
+                  url: /admin/multitenancy-overview.html
+# ------------- Using -------------
+    - title:
+        en: Using
+        ru: Использование
+      folders:
+        - title:
+            en: Overview
+            ru: Введение
+          url: /user/using-overview.html
+        - title:
+            en: Access to the platform
+            ru: Доступ к платформе
+          url: /user/access-platform.html
+        - title:
+            en: Network
+            ru: Сеть
+          url: /user/user-network.html
+        - title:
+            en: Interfaces
+            ru: Интерфейсы
+            folders:
+              - title:
+                  en: API 
+                  ru: API
+                url: /user/api.html
+              - title:
+                  en: CLI 
+                  ru: CLI
+                url: /user/cli.html
+              - title:
+                  en: IaC 
+                  ru: IaC
+                url: /user/iac.html
+              - title:
+                  en: WEB-interfaces 
+                  ru: WEB-интерфейсы
+                url: /user/web-interfaces.html
+        - title:
+            en: Multitenancy
+            ru: Мультитенантность
+          url: /user/multitenancy-user.html
+        - title:
+            en: Containerized applications
+            ru: Контейнеризированные приложения
+          folders:
+            - title:
+                en: Running applications on the platform 
+                ru: Запуск приложений на платформе
+              url: /user/running-containerized-applications.html
+            - title:
+                en: Migration from other platforms
+                ru: Переход с других платформ
+              url: /user/migration-from-other-platforms.html
+        - title:
+            en: Virtual machines
+            ru: Виртуальные машины
+          url: /user/virtual-machines.html
+        - title:
+            en: Network capabilities
+            ru: Сетевые возможности
+          folders:
+            - title:
+                en: Balancing and traffic management
+                ru: Балансировка и управление трафиком
+              url: /user/balancing-and-traffic-management.html
+            - title:
+                en: SSL certificate management
+                ru: Управление сертификатами (SSL)
+              url: /user/certificate-management.html
+            - title:
+                en: Istio-based service-mesh
+                ru: Service-mesh на базе Istio
+              url: /user/istio-based-service-mesh.html
+        - title:
+            en: Catastrophic resistance
+            ru: Катастрофоустойчивость
+          url: /user/catastrophic-resistance.html
+# ------------- Architecture -------------
+    - title:
+        en: Architecture
+        ru: Архитектура
+      folders:
+        - title:
+            en: Overview
+            ru: Введение
+          url: /architecture/architecture-overview.html
+        - title:
+            en: Installation
+            ru: Установка
+          url: /architecture/installation.html
+        - title:
+            en: Functional specifications
+            ru: Функциональные характеристики
+          url: /architecture/functional.html
+        - title:
+            en: Table
+            ru: Таблица (Мэгтона)
+          url: /architecture/functional-table.html
+# ------------- Reference -------------
+    - title:
+        en: Reference
+        ru: Справка
+      folders:
+        - title:
+            en: Overview
+            ru: Введение
+          url: /reference/reference-overview.html
+        - title:
+            en: Modules
+            ru: Модули (общая информация)
+          url: /reference/Modules.html
+        - title:
+            en: Modules configuration
+            ru: Конфигурация модулей
+          url: /reference/modules-configuration.html
+        - title:
+            en: Custom resources
+            ru: Кастомные ресурсы
+          url: /reference/custom-resources.html
+        - title:
+            en: Console utilities
+            ru: Консольные утилиты
+          url: /reference/console-utilities.html
+# ------------- Versions -------------
+    - title:
+        en: DKP versions overview
+        ru: Обзор версий DKP
+      url: /versions/versions-overview.html
+# ------------- FAQ -------------
+    - title:
+        en: FAQ
+        ru: Вопросы и ответы
+      url: /faq/faq-overview.html
