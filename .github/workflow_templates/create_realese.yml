@@ -20,6 +20,9 @@ on:
       tag_name:
         description: 'Tag name for the release (e.g., v1.0.0)'
         required: true
+env:
+  PYTHON_VERSION: '3.9'
+
 jobs:
   create-release:
     permissions: write-all
@@ -44,7 +47,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.9'
+          python-version: ${{ env.PYTHON_VERSION }}
       - name: Install dependencies
         run: pip install requests semver
       - name: Run Python release script

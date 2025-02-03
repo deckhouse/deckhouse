@@ -2,7 +2,7 @@
 # THIS FILE IS GENERATED, PLEASE DO NOT EDIT.
 #
 
-# Copyright 2022 Flant JSC
+# Copyright 2025 Flant JSC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -24,6 +24,9 @@ on:
       tag_name:
         description: 'Tag name for the release (e.g., v1.0.0)'
         required: true
+env:
+  PYTHON_VERSION: '3.9'
+
 jobs:
   create-release:
     permissions: write-all
@@ -53,7 +56,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.9'
+          python-version: ${{ env.PYTHON_VERSION }}
       - name: Install dependencies
         run: pip install requests semver
       - name: Run Python release script
