@@ -16,7 +16,7 @@ import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
   add: /src
   to: /src
-  before: setup
+  before: install
 shell:
   install:
   - apk add --no-cache python2 python3 vips make build-base
