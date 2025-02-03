@@ -25,7 +25,6 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, unhelmD8CNIConfiguration)
 
 func unhelmD8CNIConfiguration(input *go_hook.HookInput) error {
-
 	patch := map[string]any{
 		"metadata": map[string]any{
 			"annotations": map[string]any{
