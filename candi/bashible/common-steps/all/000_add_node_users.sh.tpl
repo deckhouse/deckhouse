@@ -183,7 +183,7 @@ function add_sudoer_group() {
         sudoersd_path="/etc/sudoers.d"
     fi
 
-    local sudoers_file="$sudoersd_path/$sudoers_filename"
+    local sudoers_file="${sudoersd_path}/${sudoers_filename}"
     
     if getent group $groupname >/dev/null
       then
@@ -199,13 +199,8 @@ function add_sudoer_group() {
 
     if [[ ! " ${groups[*]} " =~ [[:space:]]${groupname}[[:space:]] ]]
       then
-        if [[ ! -f $sudoers_file ]]
-          then
-            echo "# Group rules for deckhouse users" > $sudoers_file
-            echo "%${groupname} ALL=(ALL) ALL" >> $sudoers_file
-          else
-            echo "%${groupname} ALL=(ALL) ALL" >> $sudoers_file
-        fi
+        echo "# Group rules for deckhouse users" > $sudoers_file
+        echo "%${groupname} ALL=(ALL) ALL" >> $sudoers_file
     fi
 }
 
