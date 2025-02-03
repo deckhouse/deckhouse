@@ -14,7 +14,7 @@ git:
     - 'go.mod'
     - 'go.sum'
 ---
-image: {{ .ModuleName }}/build-smoke-mini-artifact
+image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
 final: false
 from: {{ .Images.BASE_GOLANG_23_ALPINE }}
 import:
@@ -35,7 +35,7 @@ shell:
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
 import:
-- image: {{ .ModuleName }}/build-smoke-mini-artifact
+- image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
   add: /src/smoke-mini
   to: /smoke-mini
   before: setup
