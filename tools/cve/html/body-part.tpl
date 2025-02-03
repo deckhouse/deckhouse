@@ -15,9 +15,11 @@
           {{- range .Vulnerabilities }}
         <tr class="severity-{{ escapeXML .Vulnerability.Severity }}">
           <td class="pkg-name">{{ escapeXML .PkgName }}</td>
+          {{- if ne (len .Vulnerabilities) 0 }}
           <td>
             <a href={{ escapeXML (index .Vulnerability.References 0) | printf "%q" }}>{{ escapeXML .VulnerabilityID }}</a>
           </td>
+          {{- end }}
           <td class="severity">{{ escapeXML .Vulnerability.Severity }}</td>
           <td class="pkg-version">{{ escapeXML .InstalledVersion }}</td>
           <td>{{ escapeXML .FixedVersion }}</td>
