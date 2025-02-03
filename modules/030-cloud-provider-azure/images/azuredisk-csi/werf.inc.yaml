@@ -24,9 +24,9 @@ final: false
 fromImage: common/src-artifact
 shell:
   install:
-    - git clone --depth 1 --branch {{ $value.csi.azure }} {{ $.SOURCE_REPO }}/kubernetes-sigs/azuredisk-csi-driver.git /src
-    - cd /src
-    - rm -rf .git
+  - git clone --depth 1 --branch {{ $value.csi.azure }} {{ $.SOURCE_REPO }}/kubernetes-sigs/azuredisk-csi-driver.git /src
+  - cd /src
+  - rm -rf .git
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
 final: false
@@ -41,6 +41,7 @@ mount:
   to: /go/pkg
 shell:
   beforeInstall:
+  {{- include "alpine packages proxy" . | nindent 2}}
   - apk add --no-cache make
   install:
   - cd /src
@@ -55,7 +56,7 @@ final: false
 fromImage: common/relocate-artifact
 shell:
   beforeInstall:
-    - apt-get update -y
-    - apt-get install -y e2fsprogs xfsprogs parted btrfs-progs
+  - apt-get update -y
+  - apt-get install -y e2fsprogs xfsprogs parted btrfs-progs
   install:
-    - /binary_replace.sh -i "{{ $csiBinaries }}" -o /relocate
+  - /binary_replace.sh -i "{{ $csiBinaries }}" -o /relocate

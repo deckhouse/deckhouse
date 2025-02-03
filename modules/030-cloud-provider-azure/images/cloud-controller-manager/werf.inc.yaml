@@ -3,14 +3,21 @@
   {{- $version := toString $key }}
   {{- $image_version := toString $key | replace "." "-" }}
   {{- if $value.ccm.azure }}
+    {{- $patches := (printf "/%smodules/%s-%s/images/%s" $.ModulePath $.ModulePriority $.ModuleName $.ImageName) }}
+    {{- $patch := false }}
+    {{- range $path, $_ := $.Files.Glob (printf "%s/*" $patches) }}
+      {{- if contains $version $path }}
+        {{- $patch = true }}
+      {{- end }}
+    {{- end }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
 fromImage: common/distroless
 import:
-  - image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
-    add: /src/bin/azure-cloud-controller-manager
-    to: /usr/local/bin/azure-cloud-controller-manager
-    before: setup
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
+  add: /src/bin/azure-cloud-controller-manager
+  to: /usr/local/bin/azure-cloud-controller-manager
+  before: setup
 imageSpec:
   config:
     entrypoint: ["/usr/local/bin/azure-cloud-controller-manager"]
@@ -18,19 +25,23 @@ imageSpec:
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
 final: false
 fromImage: common/src-artifact
+{{- if $patch }}
 git:
-  - add: /{{ $.ModulePath }}modules/030-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
-    to: /patches
-    stageDependencies:
-      install:
-        - '**/*'
+- add: {{ $patches }}/patches/{{ $version }}
+  to: /patches
+  stageDependencies:
+    install:
+      - '**/*'
+{{- end }}
 shell:
   install:
-    - wget https://github.com/kubernetes-sigs/cloud-provider-azure/archive/{{ $value.ccm.azure }}.tar.gz -O - | tar -xz --strip-components=1 -C /src/
-    - cd /src
-    - rm -rf .git
-    - test -d /patches/{{ $version }} && git apply /patches/{{ $version }}/*.patch --verbose
-    - hack/pkg-config.sh > .pkg_config
+  - git clone --depth 1 --branch {{ $value.ccm.azure }}  {{ $.SOURCE_REPO }}/kubernetes-sigs/cloud-provider-azure.git /src
+  - cd /src
+  - hack/pkg-config.sh > .pkg_config
+  {{- if $patch}}
+  - git apply /patches/*.patch --verbose
+  {{- end}}
+  - rm -rf vendor .git
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
 final: false
@@ -40,11 +51,10 @@ mount:
     to: /go/pkg
 shell:
   beforeInstall:
-    - apk add --no-cache make bash git mercurial patch rsync
+    {{- include "alpine packages proxy" . | nindent 2 }}
+    - apk add --no-cache make bash
   install:
-    - mkdir /src
     - cd /src
-
     - export VERSION={{ $value.ccm.azure }}
     - make bin/azure-cloud-controller-manager
     - chown 64535:64535 /src/bin/azure-cloud-controller-manager
