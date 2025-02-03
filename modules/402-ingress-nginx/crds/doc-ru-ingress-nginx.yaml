@@ -647,6 +647,22 @@ spec:
                 additionalLogFields:
                   description: |
                     Дополнительные поля, которые будут добавлены в логи nginx. Указываются в формате `ключ: значение(строка)`.
+                additionalImagePullSecrets:
+                  items:
+                    properties:
+                      name:
+                        description: Имя существующего секрерта в пространстве имен `d8-ingress-nginx`.
+                      dockerCfgJSON:
+                        description: Закодированное в base64 содержимое файла docker.json.
+                  description: |
+                    Перечень дополнительных секретов, содержащих учетные данные для доступа к сторонним container registry.
+                    Каждый элемент списка должен содержать или имя существующего секрета или учетная данные dockerCfgJSON.
+
+                    Если используется имя секрета, то указанный секрет должны быть предварительно развернут в
+                    пространстве имен `d8-ingress-nginx` и иметь тип `kubernetes.io/dockerconfigjson`.
+                    Подробности о создании секретов вы можете прочитать в [документации](https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/).
+
+                    Если указывается поле dockerCfgJSON, то оно должно быть закодированным в base64 содержимым файла docker.json.
                 resourcesRequests:
                   description: |
                     Настройки максимальных значений CPU и memory, которые может запросить под при выборе узла (если VPA выключен, максимальные значения становятся значениями по умолчанию).

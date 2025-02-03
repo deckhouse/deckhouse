@@ -1057,6 +1057,31 @@ spec:
                   additionalProperties:
                     type: string
                   x-kubernetes-preserve-unknown-fields: true
+                additionalImagePullSecrets:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      name:
+                        type: string
+                        description: Name of an existing secret in d8-ingress-nginx namespace
+                      dockerCfgJSON:
+                        type: string
+                        description: Base64 encoded docker config.json content
+                    x-kubernetes-validations:
+                    - rule: "has(self.name) != has(self.dockerCfgJSON)"
+                      message: Each item must contain either 'name' or 'dockerCfgJSON' field, but not both.
+                    - rule: "has(self.name) || has(self.dockerCfgJSON)"
+                      message: Each item must contain one of the following fields: 'name' or 'dockerCfgJSON'.
+                  description: |
+                    A list of image pull secrets. Each item can either reference an existing secret by name
+                    or provide docker registry credentials directly via dockerCfgJSON.
+
+                    When using name, the secret must be pre-deployed in the `d8-ingress-nginx` NS and have
+                    the `kubernetes.io/dockerconfigjson` type.
+                    For more information on creating secrets, please refer to the [documentation](https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/).
+
+                    When using dockerCfgJSON, provide the base64 encoded content of a docker config.json file.
                 resourcesRequests:
                   required: ['mode']
                   type: object

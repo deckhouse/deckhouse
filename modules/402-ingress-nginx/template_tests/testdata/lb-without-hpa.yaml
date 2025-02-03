@@ -6,5 +6,7 @@ spec:
   inlet: LoadBalancer
   ingressClass: nginx
   controllerVersion: "1.9"
+  additionalImagePullSecrets:
+  - dockerCfgJSON: eyJhdXRocyI6eyJyZWdpc3RyeS50ZXN0LmlvIjp7ImF1dGgiOiJkR1Z6ZERwMFpYTjAifX19
   maxReplicas: 3
   minReplicas: 3
