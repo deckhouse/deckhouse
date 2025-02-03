@@ -177,10 +177,10 @@ function add_sudoer_group() {
 
     if [[ -z $sudoersd_path ]]
       then
-        mkdir -p ${root}etc/sudoers.d
+        mkdir -p /etc/sudoers.d
         echo "" >> $path
-        echo "#includedir ${root}etc/sudoers.d" >> $path
-        sudoersd_path="${root}etc/sudoers.d"
+        echo "#includedir /etc/sudoers.d" >> $path
+        sudoersd_path="/etc/sudoers.d"
     fi
 
     local sudoers_file="$sudoersd_path/$sudoers_filename"
