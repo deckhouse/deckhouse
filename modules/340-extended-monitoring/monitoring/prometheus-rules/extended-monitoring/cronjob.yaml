@@ -31,6 +31,14 @@
       plk_create_group_if_not_exists__cron_job_failed: "CronJobFailedGroup,kubernetes=~kubernetes,namespace=~namespace,owner_name=~owner_name"
       plk_grouped_by__cron_job_failed: "CronJobFailedGroup,kubernetes=~kubernetes,namespace=~namespace,owner_name=~owner_name"
       summary: Job {{$labels.namespace}}/{{$labels.job_name}} failed in CronJob {{$labels.namespace}}/{{$labels.owner_name}}.
+      description: |
+        Print Job details: `kubectl -n {{$labels.namespace}} describe job {{$labels.job_name}}`
+
+        Check the Job status:
+        `kubectl -n {{$labels.namespace}} get job {{$labels.job_name}}`
+
+        Check the status of pods created by the Job:
+        `kubectl -n {{$labels.namespace}} get pods -l job-name={{$labels.job_name}}`
 
   - alert: CronJobPodsNotCreated
     expr: |
@@ -59,6 +67,14 @@
       plk_create_group_if_not_exists__cron_job_pods_not_created: "CronJobPodsNotCreatedGroup,kubernetes=~kubernetes,namespace=~namespace,owner_name=~owner_name"
       plk_grouped_by__cron_job_pods_not_created: "CronJobPodsNotCreatedGroup,kubernetes=~kubernetes,namespace=~namespace,owner_name=~owner_name"
       summary: CronJob {{$labels.namespace}}/{{$labels.job_name}} pods still not created.
+      description: |
+        Print Job details: `kubectl -n {{$labels.namespace}} describe job {{$labels.job_name}}`
+
+        Check the Job status:
+        `kubectl -n {{$labels.namespace}} get job {{$labels.job_name}}`
+
+        Check the status of pods created by the Job:
+        `kubectl -n {{$labels.namespace}} get pods -l job-name={{$labels.job_name}}`
 
   - alert: CronJobSchedulingError
     expr: |

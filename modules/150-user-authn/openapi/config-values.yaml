@@ -201,7 +201,7 @@ properties:
   controlPlaneConfigurator:
     type: object
     default: {}
-    description: 'Parameters of the [control-plane-manager](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/040-control-plane-manager/) module.'
+    description: 'Parameters of the [control-plane-manager](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/control-plane-manager/) module.'
     properties:
       enabled:
         type: boolean

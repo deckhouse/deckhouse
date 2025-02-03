@@ -58,7 +58,7 @@ data:
   dhcpd-cluster-domain: {{ .Values.global.discovery.clusterDomain | quote }}
   {{- end }}
 
-  {{- if eq .Values.cniCilium.internal.masqueradeMode "BPF" }}
+  {{- if eq .Values.cniCilium.masqueradeMode "BPF" }}
   enable-bpf-masquerade: "true"
   enable-ipv4-egress-gateway: "true"
     {{- if has .Values.cniCilium.internal.mode (list "Direct" "DirectWithNodeRoutes") }}

@@ -1,0 +1,66 @@
+@import "components/common/_variables.scss";
+
+.text {
+    line-height: 1.5;
+    a {
+        color: $color-alt;
+        &:hover {
+            text-decoration: none;
+        }
+    }
+    &_lead {
+        font-weight: $font-weight-bold;
+        line-height: 1.3;
+        font-size: $font-size-h1;
+        @media (min-width: $container-breakpoint-lg) {
+            font-size: $font-size-lead;
+        }
+    }
+    &_h1 {
+        font-size: $font-size-h2;
+        font-weight: $font-weight-bold;
+        line-height: 1.3;
+        @media (min-width: $container-breakpoint-lg) {
+            font-size: $font-size-h1;
+        }
+    }
+    &_h2 {
+        font-size: $font-size-h3;
+        font-weight: $font-weight-regular;
+        line-height: 1.3;
+        @media (min-width: $container-breakpoint-lg) {
+            font-size: $font-size-h2;
+        }
+    }
+    &_h3 {
+        font-size: $font-size-h3;
+        font-weight: $font-weight-bold;
+        line-height: 1.3;
+    }
+    &_base {
+        font-size: $font-size-base;
+        font-weight: $font-weight-regular;
+        line-height: 1.5;
+    }
+    &_big {
+        font-size: 18px;
+        font-weight: $font-weight-light;
+        line-height: 1.5;
+        @media (min-width: $container-breakpoint-lg) {
+            font-size: $font-size-h3;
+        }
+    }
+    &_alt {
+        color: $color-alt;
+    }
+    &_bold {
+        font-weight: bold;
+    }
+    &_small {
+        opacity: 0.6;
+        font-size: $font-size-small;
+    }
+    &_center {
+        text-align: center;
+    }
+}

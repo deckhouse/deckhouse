@@ -1,4 +1,5 @@
-<link rel="stylesheet" type="text/css" href='{{ assets["getting-started.css"].digest_path }}' />
+<link rel="stylesheet" type="text/css" href='{% css_asset_tag getting-started-css %}[_assets/css/getting-started.css]{% endcss_asset_tag %}' />
+
 
 {::options parse_block_html="false" /}
 

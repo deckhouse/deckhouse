@@ -53,7 +53,7 @@ properties:
         type: boolean
         default: false
         description: |
-          Включен ли certExporter.
+          Включен ли x509-certificate-exporter.
   nodeSelector:
     description: |
       Структура, аналогичная `spec.nodeSelector` пода Kubernetes.

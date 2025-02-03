@@ -29,7 +29,7 @@ type FilteredHelmWriter struct {
 
 var _ io.Writer = (*FilteredHelmWriter)(nil)
 
-func (w *FilteredHelmWriter) Write(p []byte) (n int, err error) {
+func (w *FilteredHelmWriter) Write(p []byte) (int, error) {
 	builder := strings.Builder{}
 
 	scanner := bufio.NewScanner(bytes.NewReader(p))

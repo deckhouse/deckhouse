@@ -101,7 +101,7 @@ Highlights:
 <!--
 ## Stages of specific module features @TODO
 
-The *ModuleConfig* resource allows you to control additional module options. These options can be marked as `Experimental`, `Preview`, `GA` or `Deprecated` in the `x-feature-stage` parameter in the OpenAPI schema `x-feature-stage: Experimental|Preview|GA|Deprecated` (the default value is `GA`).
+The ModuleConfig resource allows you to control additional module options. These options can be marked as `Experimental`, `Preview`, `GA` or `Deprecated` in the `x-feature-stage` parameter in the OpenAPI schema `x-feature-stage: Experimental|Preview|GA|Deprecated` (the default value is `GA`).
 
 A warning is shown when attempting to enable functions that have stages other than `GA`.
 
@@ -127,7 +127,7 @@ You can add new parameters without changing the version.
 
 To enable automatic conversion of module parameters from one version to another, you can include the appropriate [module conversions](../structure/#conversions). Conversions may be necessary when a parameter is renamed or moved to a different location in a new version of the OpenAPI specification.
 
-Please follow these recommendations when releasing a new version of the *CustomResourceDefinition* (CRD):
+Please follow these recommendations when releasing a new version of the CustomResourceDefinition (CRD):
 
 - Set `deprecated: true` for previous versions (read more in the [Kubernetes documentation](https://kubernetes.io/docs/tasks/extend-kubernetes/custom-resources/custom-resource-definition-versioning/#version-deprecation)).
 - The version that stores data in etcd ([storage version](https://kubernetes.io/docs/tasks/extend-kubernetes/custom-resources/custom-resource-definition-versioning/#upgrade-existing-objects-to-a-new-stored-version)) should not be changed earlier than two months after the new version has been released.

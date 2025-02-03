@@ -73,7 +73,7 @@ function annotate_node() {
     fi
     sleep 10
   done
-  echo "Succesful annotate node ${D8_NODE_HOSTNAME} with annotation ${@}"
+  echo "Successful annotate node ${D8_NODE_HOSTNAME} with annotation ${@}"
 }
 
 function get_secret() {

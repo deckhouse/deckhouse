@@ -52,7 +52,7 @@ The following Managed Kubernetes services are supported (note that some service 
 
 The following node types that can be worked with within a node group (resource [NodeGroup](cr.html#nodegroup)) are supported:
 - `CloudEphemeral` — such nodes are automatically ordered, created, and deleted in the configured cloud provider.
-- `CloudPermanent` — they differ in that their configuration is not taken from the custom resource [nodeGroup](cr.html#nodegroup), but from a special resource `<PROVIDER>ClusterConfiguration` (for example, [AWSClusterConfiguration](../030-cloud-provider-aws/cluster_configuration.html) for AWS). Also, an important difference is that to apply node configuration, you need to run `dhctl converge` (by running Deckhouse installer). An example of a CloudPermanent node of a cloud cluster is a cluster master node.
+- `CloudPermanent` — they differ in that their configuration is not taken from the custom resource [nodeGroup](cr.html#nodegroup), but from a special resource `<PROVIDER>ClusterConfiguration` (for example, [AWSClusterConfiguration](../cloud-provider-aws/cluster_configuration.html) for AWS). Also, an important difference is that to apply node configuration, you need to run `dhctl converge` (by running Deckhouse installer). An example of a CloudPermanent node of a cloud cluster is a cluster master node.
 - `CloudStatic` — a static node (created manually) hosted in the cloud integrated with one of the cloud providers. This node has the CSI running, and it is managed by the cloud-controller-manager. The `Node` object automatically gets the information about the cloud zone and region. Also, if a node gets deleted from the cloud, its corresponding Node object will be deleted in a cluster.
 - `Static` — a static node hosted on a bare metal or virtual machine. In the case of a cloud environment, the `cloud-controller-manager` does not manage the node even if one of the cloud providers is enabled. [Learn more about working with static nodes...](#working-with-static-nodes)
 
@@ -177,7 +177,7 @@ The workflow for dealing with static nodes when using Cluster API Provider Stati
 
    The following is a list of possible `StaticInstance` states and its associated servers (VMs) and cluster nodes:
    - `Pending`. The server is not configured and there is no associated node in the cluster.
-   - `Bootstraping`. The procedure for configuring the server (VM) and connecting the node to the cluster is in progress.
+   - `Bootstrapping`. The procedure for configuring the server (VM) and connecting the node to the cluster is in progress.
    - `Running`. The server is configured and the associated node is added to the cluster.
    - `Cleaning`. The procedure of cleaning up the server and disconnecting the node from the cluster is in progress.
 
@@ -341,11 +341,21 @@ rm /var/lib/bashible/configuration_checksum
 When writing your own scripts, it is important to consider the following features of their use in Deckhouse:
 
 1. Scripts in deckhouse are executed once every 4 hours or more often based on external triggers. Therefore, it is important to write scripts in such a way that they check the need for their changes in the system before performing actions, thereby not making changes every time they are launched.
-2. There are [built-in scripts](https://github.com/deckhouse/deckhouse/tree/main/candi/bashible/common-steps/node-group) that perform various actions, including installing and configuring services. This is important to consider when choosing the [priority](cr.html#nodegroupconfiguration-v1alpha1-spec-weight) of custom scripts. For example, if a script is planned to restart a service, then this script should be called after the service installation script, since otherwise it will not be able to execute when deploying a new node.
+2. There are [built-in scripts](https://github.com/deckhouse/deckhouse/tree/main/candi/bashible/common-steps/all) that perform various actions, including installing and configuring services. This is important to consider when choosing the [priority](cr.html#nodegroupconfiguration-v1alpha1-spec-weight) of custom scripts. For example, if a script is planned to restart a service, then this script should be called after the service installation script, since otherwise it will not be able to execute when deploying a new node.
 
 Useful features of some scripts:
 
-* [`032_configure_containerd.sh`](https://github.com/deckhouse/deckhouse/blob/main/candi/bashible/common-steps/node-group/032_configure_containerd.sh.tpl) - merges all configuration files of the `containerd` service located at `/etc/containerd/conf.d/*.toml`, and also **restarts** the service. It is important to note that the `/etc/containerd/conf.d/` directory is not created automatically, and that files in this directory should be created in scripts with a priority lower than `32`
+* [`032_configure_containerd.sh`](https://github.com/deckhouse/deckhouse/blob/main/candi/bashible/common-steps/all/032_configure_containerd.sh.tpl) - merges all configuration files of the `containerd` service located at `/etc/containerd/conf.d/*.toml`, and also **restarts** the service. It is important to note that the `/etc/containerd/conf.d/` directory is not created automatically, and that files in this directory should be created in scripts with a priority lower than `32`
+
+### Automatic installation of custom labels for nodes
+
+Custom labels can be set automatically for nodes. To do this, in the directory `/var/lib/node_labels` of the node, you need to create files containing the necessary labels in the format `key=value`. The file names can be any, the nesting of directories with files is not limited.
+
+This method works both for existing nodes in the cluster and during the addition of new nodes.
+
+{% alert level="warning" %}
+Please note that it is not possible to add labels used in DKP in this way. This method will only work with custom labels that do not overlap with those reserved for Deckhouse.
+{% endalert %}
 
 ## Chaos Monkey
 

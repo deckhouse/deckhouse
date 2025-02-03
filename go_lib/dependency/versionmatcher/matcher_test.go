@@ -25,31 +25,39 @@ import (
 )
 
 type testCase struct {
-	baseVersion string
-	name        string
-	constraint  string
-	error       error
+	baseVersion             string
+	name                    string
+	constraint              string
+	error                   error
+	moduleVersionConstraint *semver.Version
+	moduleVersionError      error
 }
 
 func TestExtender(t *testing.T) {
 	var testCases = []testCase{
 		{
-			baseVersion: "v0.0.0",
-			name:        "test1",
-			constraint:  "< v1.60.4",
-			error:       nil,
+			baseVersion:             "v0.0.0",
+			name:                    "test1",
+			constraint:              "< v1.60.4",
+			error:                   nil,
+			moduleVersionConstraint: semver.MustParse("v1.60.0"),
+			moduleVersionError:      nil,
 		},
 		{
-			baseVersion: "v1.60.5",
-			name:        "test2",
-			constraint:  "< v1.60.4",
-			error:       errors.New("1.60.5 is greater than or equal to v1.60.4"),
+			baseVersion:             "v1.60.5",
+			name:                    "test2",
+			constraint:              "< v1.60.4",
+			error:                   errors.New("1.60.5 is greater than or equal to v1.60.4"),
+			moduleVersionConstraint: semver.MustParse("v1.60.5"),
+			moduleVersionError:      errors.New("the '1.60.5' version doesn't satisfy the '<v1.60.4' constraint"),
 		},
 		{
-			baseVersion: "v1.60.5",
-			name:        "test2",
-			constraint:  "= v1.60.5",
-			error:       nil,
+			baseVersion:             "v1.60.5",
+			name:                    "test2",
+			constraint:              "= v1.60.5",
+			error:                   nil,
+			moduleVersionConstraint: semver.MustParse("v1.60.5"),
+			moduleVersionError:      nil,
 		},
 	}
 	for _, tc := range testCases {
@@ -64,11 +72,20 @@ func test(t *testing.T, tc testCase) {
 	matcher.ChangeBaseVersion(currentVersion)
 	err = matcher.AddConstraint(tc.name, tc.constraint)
 	require.NoError(t, err)
+	require.Equal(t, []string{tc.name}, matcher.GetConstraintsNames())
 	if err = matcher.Validate(tc.name); err != nil {
 		if tc.error == nil {
 			require.NoError(t, err)
 		} else {
 			require.Equal(t, tc.error.Error(), err.Error())
+		}
+	}
+
+	if err = matcher.ValidateModuleVersion(tc.name, tc.moduleVersionConstraint); err != nil {
+		if tc.error == nil {
+			require.NoError(t, err)
+		} else {
+			require.Equal(t, tc.moduleVersionError.Error(), err.Error())
 		}
 	}
 }

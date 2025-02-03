@@ -196,7 +196,7 @@ spec:
                     description: |-
                       Name of the referent.
 
-                      [More info](http://kubernetes.io/docs/user-guide/identifiers#names).
+                      [More info](https://kubernetes.io/docs/user-guide/identifiers#names).
                     type: string
                 required:
                 - kind

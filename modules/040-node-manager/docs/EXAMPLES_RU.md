@@ -3,9 +3,9 @@ title: "Управление узлами: примеры"
 description: Примеры управления узлами кластера Kubernetes. Примеры создания группы узлов. Примеры автоматизации выполнения произвольных настроек на узле.
 ---
 
-Ниже представлены несколько примеров описания `NodeGroup`, а также установки плагина cert-manager для kubectl и задания параметра sysctl.
+Ниже представлены несколько примеров описания NodeGroup, а также установки плагина cert-manager для `kubectl` и задания параметра `sysctl`.
 
-## Примеры описания `NodeGroup`
+## Примеры описания NodeGroup
 
 <span id="пример-описания-nodegroup"></span>
 
@@ -83,11 +83,11 @@ spec:
 
 Чтобы добавить новый статический узел (выделенная ВМ, bare-metal-сервер и т. п.) в кластер вручную, выполните следующие шаги:
 
-1. Для [CloudStatic-узлов](../040-node-manager/cr.html#nodegroup-v1-spec-nodetype) в облачных провайдерах, перечисленных ниже, выполните описанные в документации шаги:
-   - [Для AWS](../030-cloud-provider-aws/faq.html#добавление-cloudstatic-узлов-в-кластер)
-   - [Для GCP](../030-cloud-provider-gcp/faq.html#добавление-cloudstatic-узлов-в-кластер)
-   - [Для YC](../030-cloud-provider-yandex/faq.html#добавление-cloudstatic-узлов-в-кластер)
-1. Используйте существующий или создайте новый custom resource [NodeGroup](cr.html#nodegroup) ([пример](#статические-узлы) `NodeGroup` с именем `worker`). Параметр [nodeType](cr.html#nodegroup-v1-spec-nodetype) в custom resource NodeGroup для статических узлов должен быть `Static` или `CloudStatic`.
+1. Для [CloudStatic-узлов](../node-manager/cr.html#nodegroup-v1-spec-nodetype) в облачных провайдерах, перечисленных ниже, выполните описанные в документации шаги:
+   - [Для AWS](../cloud-provider-aws/faq.html#добавление-cloudstatic-узлов-в-кластер)
+   - [Для GCP](../cloud-provider-gcp/faq.html#добавление-cloudstatic-узлов-в-кластер)
+   - [Для YC](../cloud-provider-yandex/faq.html#добавление-cloudstatic-узлов-в-кластер)
+1. Используйте существующий или создайте новый ресурс [NodeGroup](cr.html#nodegroup) ([пример](#статические-узлы) NodeGroup с именем `worker`). Параметр [nodeType](cr.html#nodegroup-v1-spec-nodetype) в ресурсе NodeGroup для статических узлов должен быть `Static` или `CloudStatic`.
 1. Получите код скрипта в кодировке Base64 для добавления и настройки узла.
 
    Пример получения кода скрипта в кодировке Base64 для добавления узла в NodeGroup `worker`:
@@ -101,7 +101,7 @@ spec:
    - добавьте необходимые точки монтирования в файл `/etc/fstab` (NFS, Ceph и т. д.);
    - установите необходимые пакеты (например, `ceph-common`);
    - настройте сетевую связанность между новым узлом и остальными узлами кластера.
-1. Зайдите на новый узел по SSH и выполните следующую команду, вставив полученную в п. 2 Base64-строку:
+1. Зайдите на новый узел по SSH и выполните следующую команду, вставив полученную в п. 3 Base64-строку:
 
    ```shell
    echo <Base64-КОД-СКРИПТА> | base64 -d | bash
@@ -134,7 +134,7 @@ spec:
      ssh-keygen -t rsa -f caps-id -C "" -N ""
      ```
 
-     Публичный и приватный ключи пользователя `caps` будут сохранены в файлах `caps-id.pub` и `caps-id` в текущей папке на сервере.
+     Публичный и приватный ключи пользователя `caps` будут сохранены в файлах `caps-id.pub` и `caps-id` в текущей директории на сервере.
 
    * Добавьте полученный публичный ключ в файл `/home/caps/.ssh/authorized_keys` пользователя `caps`, выполнив в директории с ключами **на сервере** следующие команды:
 
@@ -187,7 +187,9 @@ spec:
    apiVersion: deckhouse.io/v1alpha1
    kind: StaticInstance
    metadata:
-     name: static-0
+     name: static-worker-1
+     labels:
+       role: worker
    spec:
      # Укажите IP-адрес сервера статического узла.
      address: "<SERVER-IP>"
@@ -196,6 +198,8 @@ spec:
        name: credentials
    EOF
    ```
+
+   > Поле `labelSelector` в ресурсе `NodeGroup` является неизменным. Чтобы обновить labelSelector, нужно создать новую NodeGroup и перенести в неё статические узлы, изменив их лейблы (labels).
 
 1. Создайте в кластере ресурс [NodeGroup](cr.html#nodegroup):
 
@@ -209,16 +213,21 @@ spec:
      nodeType: Static
      staticInstances:
        count: 1
+       labelSelector:
+         matchLabels:
+           role: worker
    EOF
    ```
 
-### С помощью Cluster API Provider Static и фильтрами в label selector
+### С помощью Cluster API Provider Static для нескольких групп узлов
 
 Пример использования фильтров в [label selector](cr.html#nodegroup-v1-spec-staticinstances-labelselector) StaticInstance, для группировки статических узлов и использования их в разных NodeGroup. В примере используются две группы узлов (`front` и `worker`), предназначенные для разных задач, которые должны содержать разные по характеристикам узлы — два сервера для группы `front` и один для группы `worker`.
 
 1. Подготовьте необходимые ресурсы (3 сервера или виртуальные машины) и создайте ресурс `SSHCredentials`, аналогично п.1 и п.2 [примера](#с-помощью-cluster-api-provider-static).
 
 1. Создайте в кластере два ресурса [NodeGroup](cr.html#nodegroup) (здесь и далее используйте `kubectl`, настроенный на управление кластером):
+
+   > Поле `labelSelector` в ресурсе `NodeGroup` является неизменным. Чтобы обновить labelSelector, нужно создать новую NodeGroup и перенести в неё статические узлы, изменив их лейблы (labels).
 
    ```shell
    kubectl create -f - <<EOF
@@ -289,6 +298,88 @@ spec:
        name: credentials
    EOF
    ```
+
+### Cluster API Provider Static: перемещение узлов между NodeGroup
+
+В данном разделе описывается процесс перемещения статических узлов между различными NodeGroup с использованием Cluster API Provider Static (CAPS). Процесс включает изменение конфигурации NodeGroup и обновление лейблов у соответствующих StaticInstance.
+
+#### Исходная конфигурация
+
+Предположим, что в кластере уже существует NodeGroup с именем `worker`, настроенный для управления одним статическим узлом с лейблом `role: worker`.
+
+`NodeGroup` worker:
+
+```yaml
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: worker
+spec:
+  nodeType: Static
+  staticInstances:
+    count: 1
+    labelSelector:
+      matchLabels:
+        role: worker
+```
+
+`StaticInstance` static-0:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: StaticInstance
+metadata:
+  name: static-worker-1
+  labels:
+    role: worker
+spec:
+  address: "192.168.1.100"
+  credentialsRef:
+    kind: SSHCredentials
+    name: credentials
+```
+
+#### Шаги по перемещению узла между `NodeGroup`
+
+{% alert level="warning" %}
+В процессе переноса узлов между NodeGroup будет выполнена очистка и повторный бутстрап узла, объект `Node` будет пересоздан.
+{% endalert %}
+
+##### 1. Создание новой `NodeGroup` для целевой группы узлов
+
+Создайте новый ресурс NodeGroup, например, с именем `front`, который будет управлять статическим узлом с лейблом `role: front`.
+
+```shell
+kubectl create -f - <<EOF
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: front
+spec:
+  nodeType: Static
+  staticInstances:
+    count: 1
+    labelSelector:
+      matchLabels:
+        role: front
+EOF
+```
+
+##### 2. Обновление лейбла у `StaticInstance`
+
+Измените лейбл `role` у существующего StaticInstance с `worker` на `front`. Это позволит новой NodeGroup `front` начать управлять этим узлом.
+
+```shell
+kubectl label staticinstance static-worker-1 role=front --overwrite
+```
+
+##### 3. Уменьшение количества статических узлов в исходной `NodeGroup`
+
+Обновите ресурс NodeGroup `worker`, уменьшив значение параметра `count` с `1` до `0`.
+
+```shell
+kubectl patch nodegroup worker -p '{"spec": {"staticInstances": {"count": 0}}}' --type=merge
+```
 
 ## Пример описания `NodeUser`
 
@@ -431,7 +522,7 @@ spec:
 {% endalert %}
 
 {% alert level="info" %}
-Пример `NodeGroupConfiguration` основан на функциях, заложенных в скрипте [032_configure_containerd.sh](./#особенности-написания-скриптов).
+Пример NodeGroupConfiguration основан на функциях, заложенных в скрипте [032_configure_containerd.sh](./#особенности-написания-скриптов).
 {% endalert %}
 
 ```yaml

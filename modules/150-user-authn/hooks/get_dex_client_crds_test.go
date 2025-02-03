@@ -127,7 +127,8 @@ spec:
   "annotations": {
     "test-annotation": "test-value",
     "new-annotation": "test-new-value"
-  }
+  },
+  "allowAccessToKubernetes": false
 }]`))
 			})
 
@@ -188,7 +189,62 @@ spec:
   "legacyID": "dex-client-opendistro:test",
   "legacyEncodedID": "mrsxqlldnruwk3tufvxxazlomruxg5dsn45hizltotf7fhheqqrcgji",
   "labels": {},
-  "annotations": {}
+  "annotations": {},
+  "allowAccessToKubernetes": false
+}]`))
+				})
+			})
+			Context("Should allow access to kubernetes api", func() {
+				BeforeEach(func() {
+					f.BindingContexts.Set(f.KubeStateSet(`
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: dex-client-opendistro
+  namespace: test
+  labels:
+    app: dex-client
+    name: credentials
+data:
+  clientSecret: dGVzdA==
+---
+apiVersion: deckhouse.io/v1
+kind: DexClient
+metadata:
+  name: opendistro
+  namespace: test
+  annotations:
+    dexclient.deckhouse.io/allow-access-to-kubernetes: "true"
+spec:
+  redirectURIs:
+  - https://opendistro.example.com/callback
+`))
+					f.RunHook()
+				})
+				It("Should update entry in internal values", func() {
+					Expect(f).To(ExecuteSuccessfully())
+					Expect(f.BindingContexts.Array()).ShouldNot(BeEmpty())
+
+					Expect(f.ValuesGet("userAuthn.internal.dexClientCRDs").String()).To(MatchJSON(`
+[{
+  "id": "dex-client-opendistro@test",
+  "encodedID": "mrsxqlldnruwk3tufvxxazlomruxg5dsn5ahizltotf7fhheqqrcgji",
+  "name": "opendistro",
+  "namespace": "test",
+  "spec": {
+    "redirectURIs": [
+      "https://opendistro.example.com/callback"
+    ]
+  },
+  "clientSecret": "test",
+  "legacyID": "dex-client-opendistro:test",
+  "legacyEncodedID": "mrsxqlldnruwk3tufvxxazlomruxg5dsn45hizltotf7fhheqqrcgji",
+  "labels": {},
+  "annotations": {
+    "dexclient.deckhouse.io/allow-access-to-kubernetes": "true"
+  },
+  "allowAccessToKubernetes": true
 }]`))
 				})
 			})
@@ -280,7 +336,8 @@ spec:
   "spec": {"redirectURIs": ["https://grafana.example.com/callback"]},
   "clientSecret": "test",
   "labels": {},
-  "annotations": {}
+  "annotations": {},
+  "allowAccessToKubernetes": false
 },
 {
   "id": "dex-client-opendistro@test",
@@ -297,7 +354,8 @@ spec:
   "annotations": {
     "test-annotation": "test-value",
     "new-annotation": "test-new-value"
-  }
+  },
+  "allowAccessToKubernetes": false
 }]`))
 		})
 	})

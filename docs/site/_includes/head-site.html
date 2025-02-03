@@ -9,33 +9,43 @@
 <meta name="theme-color" content="#ffffff">
 
 <!-- fonts -->
-{% asset font-awesome.min.css %}
-<style type="text/css">
- {% capture fonts_file %}
-   {% include fonts.css %}
- {% endcapture %}
- {{ fonts_file | scssify }}
-</style>
+<link href='
+{%- css_asset_tag fonts %}
+- _assets/css/font-awesome.min.css
+- _assets/css/fonts.css
+{% endcss_asset_tag -%}
+' rel='stylesheet' type='text/css' crossorigin="anonymous" />
 
 <!-- styles -->
-{% asset slick.css %}
-{% asset normalize.css %}
-{% asset syntax.css %}
-{% asset site.css %}
-{% asset tab.css %}
-{% asset submenu.css %}
-{% asset docs.css %}
-{% asset cards.css %}
-{% asset featherlight.min.css %}
+<link href='
+{%- css_asset_tag global %}
+- _assets/css/slick.css
+- _assets/css/normalize.css
+- _assets/css/syntax.css
+- _assets/css/tab.css
+- _assets/css/submenu.css
+- _assets/css/cards.css
+- _assets/css/site.scss
+- _assets/css/docs.scss
+{% endcss_asset_tag -%}
+' rel='stylesheet' type='text/css' crossorigin="anonymous" />
 
 <!-- scripts -->
-{% asset jquery.min.js %}
-{% asset jquery.cookie.min.js %}
-{% asset bootstrap.min.js %}
-{% asset slick.min.js %}
+<script type="text/javascript" src="
+{%- javascript_asset_tag jquery %}
+- _assets/js/jquery.min.js
+- _assets/js/jquery.cookie.min.js
+{% endjavascript_asset_tag -%}
+"></script>
+<script type="text/javascript" src="
+{%- javascript_asset_tag global %}
+- _assets/js/bootstrap.min.js
+- _assets/js/slick.min.js
+- _assets/js/popper.min.js
+- _assets/js/tippy-bundle.umd.min.js
+{% endjavascript_asset_tag -%}
+"></script>
 
-{% asset popper.min.js %}
-{% asset tippy-bundle.umd.min.js %}
 <script>
   $(document).ready(function() {
     tippy('[title]', {
@@ -66,16 +76,35 @@
   });
 </script>
 
-{% asset jquery.navgoco.min.js %}
-{% asset anchor.min.js %}
-{% asset toc.js %}
-{% asset details.js %}
-{% asset tab.js %}
-{% asset clipboard.min.js %}
-{% asset customscripts.js %}
-{% asset pdf.min.js %}
-{% asset pdf-slider.js %}
-{% asset popup-form.js %}
+<script type="text/javascript" src="
+{%- javascript_asset_tag global2 %}
+- _assets/js/jquery.navgoco.min.js
+- _assets/js/anchor.min.js
+- _assets/js/toc.js
+- _assets/js/details.js
+- _assets/js/tab.js
+- _assets/js/clipboard.min.js
+{% endjavascript_asset_tag -%}
+"></script>
+
+<script type="text/javascript" src="
+{%- javascript_asset_tag pdf %}
+- _assets/js/pdf.min.js
+- _assets/js/pdf-slider.js
+{% endjavascript_asset_tag -%}
+"></script>
+
+<script type="text/javascript" src="
+{%- javascript_asset_tag popup-form %}
+- _assets/js/popup-form.js
+{% endjavascript_asset_tag -%}
+"></script>
+<script type="text/javascript" src="
+{%- javascript_asset_tag customscripts %}
+- _assets/js/customscripts.js
+{% endjavascript_asset_tag -%}
+"></script>
+
 <script>
     $(document).ready(function() {
         // Initialize navgoco with default options
@@ -121,8 +150,8 @@
 </script>
 {% if page.datatable == true %}
 <!-- Include the standard DataTables bits -->
-{% asset jquery.dataTables.css %}
-{% asset jquery.dataTables.min.js %}
+<!-- asset jquery.dataTables.css -->
+<!-- asset jquery.dataTables.min.js -->
 <!-- First, this walks through the tables that occur between ...-begin
      and ...-end and add the "datatable" class to them.
      Then it invokes DataTable's standard initializer
@@ -161,27 +190,13 @@
 <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
 <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
 <!--[if lt IE 9]>
-{% asset html5shiv.js %}
-{% asset respond.min.js %}
+<script type="text/javascript" src="
+{%- javascript_asset_tag respond %}
+- _assets/js/html5shiv.js
+- _assets/js/respond.min.js
+{% endjavascript_asset_tag -%}
+"></script>
 <![endif]-->
-
- <script type="text/javascript">
-    $(document).ready(function () {
-
-        function getCookie (name) {
-            let value = '; ' + document.cookie;
-            let parts = value.split(`; ${name}=`);
-            if (parts.length == 2) return parts.pop().split(';').shift();
-        }
-
-        var token = getCookie('license-token') ? getCookie('license-token') : getCookie('demotoken');
-        if (token) {
-            window.yaParams = { "license-token": token };
-            ym(78422802, 'params', window.yaParams||{});
-        }
-
-    });
-</script>
 
 {%- unless site.mode == "module" %}
 {%- include counters-and-chat.liquid %}

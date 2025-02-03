@@ -1,6 +1,6 @@
 {%- include getting_started/global/partials/NOTICES_ENVIRONMENT.liquid %}
 
-Чтобы Deckhouse Kubernetes Platform смог управлять ресурсами в облаке {{ page.platform_name[page.lang] }}, необходимо создать IAM-аккаунт. Подробная инструкция по этому действию доступна в [документации](/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-aws/environment.html), а здесь мы представим краткую последовательность необходимых действий, выполняемых в консоли (выполняйте их на **персональном компьютере**).
+Чтобы Deckhouse Kubernetes Platform смог управлять ресурсами в облаке {{ page.platform_name[page.lang] }}, необходимо создать IAM-аккаунт. Подробная инструкция по этому действию доступна в [документации](/products/kubernetes-platform/documentation/v1/modules/cloud-provider-aws/environment.html), а здесь мы представим краткую последовательность необходимых действий, выполняемых в консоли (выполняйте их на **персональном компьютере**).
 
 При помощи следующей команды сохраните JSON-спецификацию:
 
@@ -149,11 +149,10 @@ EOF
 {% endofftopic %}
 
 Создайте на основе ранее созданной спецификации новую Policy с именем `D8CloudProviderAWS` и примечанием ARN, используя JSON-спецификацию из файла `policy.json`:
-{% snippetcut %}
+
 ```shell
 aws iam create-policy --policy-name D8CloudProviderAWS --policy-document file://policy.json
 ```
-{% endsnippetcut %}
 
 > В ответ отобразится следующий текст:
 > ```yaml
@@ -174,11 +173,10 @@ aws iam create-policy --policy-name D8CloudProviderAWS --policy-document file://
   ```
 
 Создайте нового пользователя:
-{% snippetcut %}
+
 ```shell
 aws iam create-user --user-name deckhouse
 ```
-{% endsnippetcut %}
 
 > В ответ отобразится следующий текст:
 > ```yaml
@@ -194,11 +192,10 @@ aws iam create-user --user-name deckhouse
   ```
 
 Разрешите доступ к API и сохраните пару `AccessKeyId` + `SecretAccessKey`:
-{% snippetcut %}
+
 ```shell
 aws iam create-access-key --user-name deckhouse
 ```
-{% endsnippetcut %}
 
 > В ответ отобразится следующий текст:
 > ```yaml
@@ -214,8 +211,7 @@ aws iam create-access-key --user-name deckhouse
   ```
 
 Объедините `User` и `Policy`:
-{% snippetcut %}
+
 ```shell
 aws iam attach-user-policy --user-name username --policy-arn arn:aws:iam::123:policy/D8CloudProviderAWS
 ```
-{% endsnippetcut %}

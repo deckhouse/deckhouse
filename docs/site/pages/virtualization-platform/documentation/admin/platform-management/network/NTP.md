@@ -40,7 +40,7 @@ EOF
    Module chrony disabled
    ```
 
-1. To enable NTP daemons on nodes, create [NodeGroupConfiguration](todo).
+1. To enable NTP daemons on nodes, create [NodeGroupConfiguration](../../../../reference/cr/nodegroupconfiguration.html).
    Below is an example configuration using systemd-timesyncd:
 
    ```yaml

@@ -30,8 +30,10 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	coordv1 "k8s.io/api/coordination/v1"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/util/retry"
 	"k8s.io/utils/ptr"
 	controllerruntime "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
@@ -56,8 +58,11 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/configtools"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders"
+	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders/moduledependency"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
+
+var DeckhouseVersion string
 
 const (
 	docsLeaseLabel = "deckhouse.io/documentation-builder-sync"
@@ -179,6 +184,23 @@ func NewDeckhouseController(ctx context.Context, version string, operator *addon
 	moduleEventCh := make(chan events.ModuleEvent, 350)
 	operator.ModuleManager.SetModuleEventsChannel(moduleEventCh)
 
+	// instantiate ModuleDependency extender
+	moduledependency.Instance().SetModulesVersionHelper(func(moduleName string) (string, error) {
+		module := new(v1alpha1.Module)
+		if err := retry.OnError(retry.DefaultRetry, apierrors.IsServiceUnavailable, func() error {
+			return runtimeManager.GetClient().Get(ctx, client.ObjectKey{Name: moduleName}, module)
+		}); err != nil {
+			return "", err
+		}
+
+		// set some version for the modules overridden by mpos
+		if module.CheckConditionTrue(v1alpha1.ModuleConditionIsOverridden) {
+			return "v2.0.0", nil
+		}
+
+		return module.GetVersion(), nil
+	})
+
 	// register extenders
 	for _, extender := range extenders.Extenders() {
 		if err = operator.ModuleManager.AddExtender(extender); err != nil {
@@ -205,7 +227,7 @@ func NewDeckhouseController(ctx context.Context, version string, operator *addon
 	loader := moduleloader.New(runtimeManager.GetClient(), version, operator.ModuleManager.ModulesDir, operator.ModuleManager.GlobalHooksDir, dc, embeddedPolicy, logger.Named("module-loader"))
 	operator.ModuleManager.SetModuleLoader(loader)
 
-	err = deckhouserelease.NewDeckhouseReleaseController(ctx, runtimeManager, dc, operator.ModuleManager, settingsContainer, operator.MetricStorage, preflightCountDown, logger.Named("deckhouse-release-controller"))
+	err = deckhouserelease.NewDeckhouseReleaseController(ctx, runtimeManager, dc, operator.ModuleManager, settingsContainer, operator.MetricStorage, preflightCountDown, DeckhouseVersion, logger.Named("deckhouse-release-controller"))
 	if err != nil {
 		return nil, fmt.Errorf("create deckhouse release controller: %w", err)
 	}

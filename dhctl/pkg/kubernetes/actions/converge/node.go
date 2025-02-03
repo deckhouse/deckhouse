@@ -18,7 +18,9 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
+	"maps"
 	"net"
+	"slices"
 	"strings"
 	"time"
 
@@ -45,11 +47,11 @@ var (
 const HideDeckhouseLogs = false
 const ShowDeckhouseLogs = true
 
-func GetCloudConfig(kubeCl *client.KubernetesClient, nodeGroupName string, showDeckhouseLogs bool, apiserverHosts ...string) (string, error) {
+func GetCloudConfig(kubeCl *client.KubernetesClient, nodeGroupName string, showDeckhouseLogs bool, logger log.Logger, apiserverHosts ...string) (string, error) {
 	var cloudData string
 
 	name := fmt.Sprintf("Waiting for %s cloud config️", nodeGroupName)
-	err := log.Process("default", name, func() error {
+	err := logger.LogProcess("default", name, func() error {
 		if showDeckhouseLogs {
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
@@ -111,27 +113,27 @@ func GetCloudConfig(kubeCl *client.KubernetesClient, nodeGroupName string, showD
 			return err
 		}
 
-		log.InfoLn("Cloud configuration found!")
+		logger.LogInfoLn("Cloud configuration found!")
 		return nil
 	})
 	return cloudData, err
 }
 
-func CreateNodeGroup(kubeCl *client.KubernetesClient, nodeGroupName string, data map[string]interface{}) error {
+func CreateNodeGroup(kubeCl *client.KubernetesClient, nodeGroupName string, logger log.Logger, data map[string]interface{}) error {
 	doc := unstructured.Unstructured{}
 	doc.SetUnstructuredContent(data)
 
-	return retry.NewLoop(fmt.Sprintf("Create NodeGroup %q", nodeGroupName), 45, 15*time.Second).Run(func() error {
+	return retry.NewLoop(fmt.Sprintf("Create NodeGroup %q", nodeGroupName), 45, 15*time.Second).WithLogger(logger).Run(func() error {
 		res, err := kubeCl.Dynamic().
 			Resource(nodeGroupResource).
 			Create(context.TODO(), &doc, metav1.CreateOptions{})
 		if err == nil {
-			log.InfoF("NodeGroup %q created\n", res.GetName())
+			logger.LogInfoF("NodeGroup %q created\n", res.GetName())
 			return nil
 		}
 
 		if errors.IsAlreadyExists(err) {
-			log.InfoF("Object %v, updating ... ", err)
+			logger.LogInfoF("Object %v, updating ... ", err)
 			content, err := doc.MarshalJSON()
 			if err != nil {
 				return err
@@ -142,7 +144,7 @@ func CreateNodeGroup(kubeCl *client.KubernetesClient, nodeGroupName string, data
 			if err != nil {
 				return err
 			}
-			log.InfoLn("OK!")
+			logger.LogInfoF("OK!")
 			return nil
 		}
 
@@ -224,9 +226,16 @@ func WaitForSingleNodeBecomeReady(kubeCl *client.KubernetesClient, nodeName stri
 	})
 }
 
-func WaitForNodesBecomeReady(kubeCl *client.KubernetesClient, nodeGroupName string, desiredReadyNodes int) error {
-	return retry.NewLoop(fmt.Sprintf("Waiting for NodeGroup %s to become Ready", nodeGroupName), 100, 20*time.Second).Run(func() error {
-		nodes, err := kubeCl.CoreV1().Nodes().List(context.TODO(), metav1.ListOptions{LabelSelector: "node.deckhouse.io/group=" + nodeGroupName})
+func WaitForNodesBecomeReady(kubeCl *client.KubernetesClient, nodeGroupsMap map[string]int) error {
+	ngsName := slices.Collect(maps.Keys(nodeGroupsMap))
+	return retry.NewLoop(fmt.Sprintf("Waiting for NodeGroups %v to become Ready", ngsName), 100, 20*time.Second).Run(func() error {
+		desiredReadyNodes := 0
+		for _, countNodes := range nodeGroupsMap {
+			desiredReadyNodes += countNodes
+		}
+		labelSel := fmt.Sprintf("node.deckhouse.io/group in (%s)", strings.Join(ngsName, ", "))
+
+		nodes, err := kubeCl.CoreV1().Nodes().List(context.TODO(), metav1.ListOptions{LabelSelector: labelSel})
 		if err != nil {
 			return err
 		}
@@ -387,9 +396,9 @@ func requestNodeExists(kubeCl *client.KubernetesClient, nodeName string) (bool, 
 	return true, err
 }
 
-func IsNodeExistsInCluster(kubeCl *client.KubernetesClient, nodeName string) (bool, error) {
+func IsNodeExistsInCluster(kubeCl *client.KubernetesClient, nodeName string, logger log.Logger) (bool, error) {
 	exists := false
-	err := retry.NewLoop(fmt.Sprintf("Checking node exists %s", nodeName), 5, 2*time.Second).Run(func() error {
+	err := retry.NewLoop(fmt.Sprintf("Checking node exists %s", nodeName), 5, 2*time.Second).WithLogger(logger).Run(func() error {
 		var err error
 		exists, err = requestNodeExists(kubeCl, nodeName)
 		return err

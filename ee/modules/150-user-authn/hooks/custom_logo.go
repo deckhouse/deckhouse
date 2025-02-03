@@ -45,6 +45,11 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, customLogoHandler)
 
 func customLogoHandler(input *go_hook.HookInput) error {
+	if !input.Values.Get("global.clusterIsBootstrapped").Bool() {
+		input.Logger.Info("Cluster is not yet bootstrapped, skipping custom logo")
+		return nil
+	}
+
 	snap := input.Snapshots["logo-cm"]
 	if len(snap) == 0 || snap[0] == nil {
 		input.Values.Set("userAuthn.internal.customLogo.enabled", false)

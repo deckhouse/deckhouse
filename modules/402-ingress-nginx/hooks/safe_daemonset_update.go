@@ -87,7 +87,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	},
 }, safeControllerUpdate)
 
-func safeControllerUpdate(input *go_hook.HookInput) (err error) {
+func safeControllerUpdate(input *go_hook.HookInput) error {
 	controllerPods := input.Snapshots["for_delete"]
 	if len(controllerPods) == 0 {
 		return nil

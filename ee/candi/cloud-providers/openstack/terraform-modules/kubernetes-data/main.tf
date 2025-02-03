@@ -9,11 +9,17 @@ resource "openstack_blockstorage_volume_v3" "kubernetes_data" {
   availability_zone = var.volume_zone
   enable_online_resize = true
   metadata = var.tags
+
   lifecycle {
     ignore_changes = [
       metadata,
       availability_zone,
     ]
+  }
+
+  timeouts {
+    create = var.resourceManagementTimeout
+    delete = var.resourceManagementTimeout
   }
 }
 

@@ -6,22 +6,21 @@ import:
   add: /pause
   to: /pause
   before: setup
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
   add: /src/kube-apiserver-healthcheck
   to: /usr/local/bin/kube-apiserver-healthcheck
   before: setup
 docker:
   ENTRYPOINT: ["/usr/local/bin/kube-apiserver-healthcheck"]
 ---
-artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
-from: {{ $.Images.BASE_GOLANG_22_ALPINE }}
-git:
-- add: /{{ $.ModulePath }}modules/040-{{ $.ModuleName }}/images/{{ $.ImageName }}/
+image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
+final: false
+import:
+- image: {{ .ModuleName }}/{{ $.ImageName }}-src-artifact
+  add: /src
   to: /src
-  includePaths:
-  - go.mod
-  - go.sum
-  - main.go
+  before: install
 mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
@@ -31,3 +30,14 @@ shell:
   - GOPROXY={{ env "GOPROXY" }} GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -o kube-apiserver-healthcheck main.go
   - chown 64535:64535 kube-apiserver-healthcheck
   - chmod 0700 kube-apiserver-healthcheck
+---
+image: {{ .ModuleName }}/{{ $.ImageName }}-src-artifact
+fromImage: common/src-artifact
+final: false
+git:
+- add: /{{ $.ModulePath }}modules/040-{{ $.ModuleName }}/images/{{ $.ImageName }}/
+  to: /src
+  includePaths:
+  - go.mod
+  - go.sum
+  - main.go

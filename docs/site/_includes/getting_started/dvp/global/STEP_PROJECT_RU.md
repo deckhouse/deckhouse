@@ -1,12 +1,11 @@
-<script type="text/javascript" src='{{ assets["getting-started.js"].digest_path }}'></script>
-<script type="text/javascript" src='{{ assets["getting-started-access.js"].digest_path }}'></script>
-<script type="text/javascript" src='{{ assets["bcrypt.js"].digest_path }}'></script>
+<script type="text/javascript" src='{% javascript_asset_tag getting-started %}[_assets/js/getting-started.js]{% endjavascript_asset_tag %}'></script>
+<script type="text/javascript" src='{% javascript_asset_tag getting-started-access %}[_assets/js/getting-started-access.js]{% endjavascript_asset_tag %}'></script>
+<script type="text/javascript" src='{% javascript_asset_tag bcrypt %}[_assets/js/bcrypt.js]{% endjavascript_asset_tag %}'></script>
 
 Создайте проект и администратора проекта (в примере используется проект `test-project` и пользователь `test-user@deckhouse.io`, измените их, если необходимо):
 
-{% snippetcut selector="project-rbac-yml" %}
-{% include_file "_includes/getting_started/dvp/{{ page.platform_code }}/partials/project-rbac.yml.inc" syntax="yaml" %}
-{% endsnippetcut %}
+{% capture includePath %}_includes/getting_started/dvp/{{ page.platform_code }}/partials/project-rbac.yml.inc{% endcapture %}
+{% include_file "{{ includePath }}" syntax="yaml" %}
 
 Откройте веб-интерфейс генерации файла kubeconfig, для удаленного доступа к API-серверу. Адрес веб-интерфейса формируется в соответствии с шаблоном DNS-имен, указанным в глобальном параметре [publicDomainTemplate](/products/virtualization-platform/reference/mc.html#parameters-modules-publicdomaintemplate). Например, если `publicDomainTemplate: %s.kube.my`, то веб-интерфейс будет доступен по адресу `kubeconfig.kube.my`.
  
@@ -18,7 +17,6 @@
 
 Создайте виртуальную машину:
 
-{% snippetcut %}
 ```yaml
 kubectl create -f - <<EOF
 ---
@@ -65,32 +63,27 @@ spec:
     size: 1Gi
 EOF
 ```
-{% endsnippetcut %}
 
 Выведите список виртуальных машин, чтобы увидеть статус виртуальной машины:
 
-{% snippetcut %}
 ```shell
 kubectl get vm -o wide
 ```
-{% endsnippetcut %}
 
 После успешного старта виртуальная машина должна перейти в статус `Running`.
 
 Пример вывода:
 ```console
-# kubectl get vm -o wide
+$ kubectl get vm -o wide
 NAME   PHASE     CORES   COREFRACTION   MEMORY   NEED RESTART   AGENT   MIGRATABLE   NODE           IPADDRESS     AGE
 vm     Running   1       100%           1Gi      False          False   True         virtlab-pt-1   10.66.10.19   6m18s
 ```
 
 Подключитесь к виртуальной машине, введите логин (в примере — `test-user@deckhouse.io`) и пароль:
 
-{% snippetcut %}
 ```shell
 d8 v console -n test-project vm
 ```
-{% endsnippetcut %}
 
 Поздравляем! Вы создали виртуальную машину и подключились к ней.
 

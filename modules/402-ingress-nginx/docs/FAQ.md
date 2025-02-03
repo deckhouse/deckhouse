@@ -212,8 +212,9 @@ spec:
 
 ## How to enable HorizontalPodAutoscaling for IngressNginxController?
 
-> **Note!** HPA mode is possible only for controllers with inlet: `LoadBalancer` or `LoadBalancerWithProxyProtocol`.
-> **Note!** HPA mode is possible only for `minReplicas` != `maxReplicas` otherwise deployment `hpa-scaler` will not be created.
+> **Note.** HPA mode is possible only for controllers with inlet: `LoadBalancer` or `LoadBalancerWithProxyProtocol`.
+>
+> **Note.** HPA mode is possible only for `minReplicas` != `maxReplicas` otherwise deployment `hpa-scaler` will not be created.
 
 HPA is set with attributes `minReplicas` and `maxReplicas` in a [IngressNginxController CR](cr.html#ingressnginxcontroller).
 

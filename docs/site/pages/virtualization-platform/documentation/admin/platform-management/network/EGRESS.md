@@ -82,9 +82,9 @@ EOF
 The nodes specified by `spec.nodeSelector` of the EgressGateway resource are evaluated and only the suitable ones are selected.
 A node is considered suitable if it meets the following conditions:
 
-1. The node's status is Ready.
+1. The node's status is `Ready`.
 1. The node isn't under maintenance, meaning it isn't cordoned.
-1. cilium-agent on the node is Ready.
+1. cilium-agent on the node is `Ready`.
 
 To check whether a node is suitable for inclusion to the Egress gateway group, run the following commands:
 

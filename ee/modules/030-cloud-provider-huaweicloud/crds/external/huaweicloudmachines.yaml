@@ -22,7 +22,7 @@ spec:
     - name: v1alpha1
       schema:
         openAPIV3Schema:
-          description: HuaweiCloudMachine is the Schema for the huaweicloudmachines
+          description: HuaweiCloudMachine is the schema for the huaweicloudmachines.
             API
           properties:
             apiVersion:
@@ -43,23 +43,23 @@ spec:
             metadata:
               type: object
             spec:
-              description: HuaweiCloudMachineSpec defines the desired state of HuaweiCloudMachine
+              description: HuaweiCloudMachineSpec defines the desired state of HuaweiCloudMachine.
               properties:
                 availabilityZone:
                   description: Specifies the availability zone in which to create the
                     instance.
                   type: string
                 flavorName:
-                  description: The flavor reference for the flavor for your server instance.
+                  description: The flavor reference for the flavor of your server instance.
                   type: string
                 id:
-                  description: ID is the UUID of the VM
+                  description: ID is the UUID of the virtual machine.
                   type: string
                 imageName:
                   description: The name of the image to use for your server instance.
                   type: string
                 providerID:
-                  description: ProviderID is the UUID of the VM, prefixed with 'huaweicloud://'
+                  description: ProviderID is the UUID of the virtual machine, prefixed with 'huaweicloud://'.
                     proto.
                   type: string
                 rootDiskSize:
@@ -79,12 +79,12 @@ spec:
                     - ESSD2
                   type: string
                 securityGroups:
-                  description: The UUID's of the security groups to assign to the instance
+                  description: The UUIDs of the security groups to assign to the instance.
                   items:
                     type: string
                   type: array
                 serverGroupID:
-                  description: The server group to assign the machine to
+                  description: The server group to assign the machine to.
                   type: string
                 subnets:
                   description: Specifies an array of one or more subnets to attach to
@@ -101,7 +101,7 @@ spec:
                 - subnets
               type: object
             status:
-              description: HuaweiCloudMachineStatus defines the observed state of HuaweiCloudMachine
+              description: HuaweiCloudMachineStatus defines the observed state of HuaweiCloudMachine.
               properties:
                 addresses:
                   description: Addresses holds a list of the host names, external IP
@@ -116,7 +116,7 @@ spec:
                         type: string
                       type:
                         description: Machine address type, one of Hostname, ExternalIP,
-                          InternalIP, ExternalDNS or InternalDNS.
+                          InternalIP, ExternalDNS, or InternalDNS.
                         type: string
                     required:
                       - address
@@ -124,21 +124,21 @@ spec:
                     type: object
                   type: array
                 conditions:
-                  description: Conditions defines current service state of the HuaweiCloudMachine.
+                  description: Conditions defines the current service state of the HuaweiCloudMachine.
                   items:
-                    description: Condition defines an observation of a Cluster API resource
+                    description: Conditions defines an observation of a Cluster API resource
                       operational state.
                     properties:
                       lastTransitionTime:
                         description: |-
-                          Last time the condition transitioned from one status to another.
-                          This should be when the underlying condition changed. If that is not known, then using the time when
-                          the API field changed is acceptable.
+                          The last time when the condition transitioned from one status to another.
+                          This should be when the underlying condition changed. If it's unknown, then it's acceptable to use the time when
+                          the API field was changed.
                         format: date-time
                         type: string
                       message:
                         description: |-
-                          A human readable message indicating details about the transition.
+                          A human-readable message indicating details about the transition.
                           This field may be empty.
                         type: string
                       reason:
@@ -154,12 +154,12 @@ spec:
                           The Severity field MUST be set only when Status=False.
                         type: string
                       status:
-                        description: Status of the condition, one of True, False, Unknown.
+                        description: The status of the condition, one of True, False, or Unknown.
                         type: string
                       type:
                         description: |-
-                          Type of condition in CamelCase or in foo.example.com/CamelCase.
-                          Many .condition.type values are consistent across resources like Available, but because arbitrary conditions
+                          The type of a condition in CamelCase or in foo.example.com/CamelCase.
+                          Many .condition.type values are consistent across resources like Available, but since arbitrary conditions
                           can be useful (see .node.status.conditions), the ability to deconflict is important.
                         type: string
                     required:
@@ -170,11 +170,11 @@ spec:
                   type: array
                 failureMessage:
                   description: FailureMessage will describe an error if something goes
-                    wrong during Machine lifecycle.
+                    wrong during a Machine lifecycle.
                   type: string
                 failureReason:
                   description: FailureReason will contain an error type if something
-                    goes wrong during Machine lifecycle.
+                    goes wrong during a Machine lifecycle.
                   type: string
                 ready:
                   description: Ready indicates the VM has been provisioned and is ready.

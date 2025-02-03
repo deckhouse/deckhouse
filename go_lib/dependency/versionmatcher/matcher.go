@@ -17,6 +17,7 @@ limitations under the License.
 package versionmatcher
 
 import (
+	"fmt"
 	"sync"
 
 	"github.com/Masterminds/semver/v3"
@@ -44,6 +45,7 @@ func (m *Matcher) AddConstraint(name, rawConstraint string) error {
 		return err
 	}
 	m.installed[name] = constraint
+
 	return nil
 }
 
@@ -53,7 +55,17 @@ func (m *Matcher) DeleteConstraint(name string) {
 
 func (m *Matcher) Has(name string) bool {
 	_, ok := m.installed[name]
+
 	return ok
+}
+
+func (m *Matcher) GetConstraintsNames() []string {
+	names := make([]string, 0, len(m.installed))
+	for name := range m.installed {
+		names = append(names, name)
+	}
+
+	return names
 }
 
 func (m *Matcher) Validate(name string) error {
@@ -64,6 +76,7 @@ func (m *Matcher) Validate(name string) error {
 	if _, errs := m.installed[name].Validate(m.baseVersion); len(errs) != 0 {
 		return errs[0]
 	}
+
 	return nil
 }
 
@@ -77,6 +90,7 @@ func (m *Matcher) ValidateBaseVersion(baseVersion string) (string, error) {
 			return module, errs[0]
 		}
 	}
+
 	return "", nil
 }
 
@@ -92,6 +106,7 @@ func (m *Matcher) ValidateConstraint(rawConstraint string) error {
 	if _, errs := constraint.Validate(m.baseVersion); len(errs) != 0 {
 		return errs[0]
 	}
+
 	return nil
 }
 
@@ -101,4 +116,18 @@ func (m *Matcher) ChangeBaseVersion(version *semver.Version) {
 		defer m.mtx.Unlock()
 	}
 	m.baseVersion = version
+}
+
+// ValidateModuleVersions ignores prerelease/metadata part when comparing versions
+func (m *Matcher) ValidateModuleVersion(name string, version *semver.Version) error {
+	constraint, found := m.installed[name]
+	if !found {
+		return nil
+	}
+
+	if !constraint.Check(version) {
+		return fmt.Errorf("the \"%s\" version does not satisfy the \"%s\" constraint", version.String(), constraint.String())
+	}
+
+	return nil
 }

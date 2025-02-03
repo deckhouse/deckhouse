@@ -1,14 +1,13 @@
 {% assign revision=include.revision %}
 
-{% if revision == 'ee' %}
-{% include getting_started/global/EE_ACCESS.md %}
-<div class="dimmer-block-content{% if page.ee_only %} TODOdisabled{% endif %}">
+{% if revision != "ce" %}
+{% include getting_started/global/EE_ACCESS.md revision=revision %}
+<div class="dimmer-block-content{% if page.ee_only %} disabled{% endif %}">
 {% endif %}
 
 <div markdown="1">
   The recommended settings for a Deckhouse Kubernetes Platform {% if revision == 'ee' %}Enterprise Edition{% else %}Community Edition{% endif %} installation are generated below:
-- `config.yml` — a file with the configuration needed to bootstrap the cluster. Contains the installer parameters, {% if page. platform_type== 'cloud' %}cloud provider related parameters (such as credentials, instance type, etc){% else %} access parameters{% endif %}, and the initial cluster parameters.
-{% if page.platform_type == 'cloud' %}- `resources.yml` — description of the resources that must be installed after the installation (nodes description, Ingress controller description, etc).{% endif %}
+- `config.yml` — a file with the configuration needed to bootstrap the cluster. Contains the installer parameters, {% if page. platform_type== 'cloud' %}cloud provider related parameters (such as credentials, instance type, etc), description of the resources that must be installed after the installation (nodes description, Ingress controller description, etc), access parameters{% endif %} and the initial cluster parameters.
 
 **Please pay attention to**:
 - <span class="mustChange">highlighted</span> parameters you *must* define.
@@ -21,11 +20,10 @@
 {%- endif %}
 
 Create the `config.yml` file.
-{% capture includePath %}_includes/getting_started/{{ page.platform_code }}/partials/config.yml{% if include.layout.size > 0 %}.{{ include.layout }}{% endif %}.{{ revision }}.inc{% endcapture %}
-{% snippetcut name="config.yml" selector="config-yml" %}
+{% capture includePath %}_includes/getting_started/{{ page.platform_code }}/partials/config.yml{% if include.layout.size > 0 %}.{{ include.layout }}{% endif %}.{% if revision != "ce" %}{{ "other" }}{% else %}{{ revision }}{% endif %}.inc{% endcapture %}
+<div markdown="1">
 {% include_file "{{ includePath }}" syntax="yaml" %}
-{% endsnippetcut %}
-
+</div>
 {%- if page.platform_type == 'existing' %}
 {% offtopic title="About nodeSelector, taints and tolerations..." %}
 You can control which nodes the Deckhouse kernel will run on by using the `spec.setting.nodeSelector` parameter in the ModuleConfig `deckhouse` of the installation configuration.
@@ -64,6 +62,17 @@ Also, you can list the necessary cluster node taints in ModuleConfig `global` in
 {% endif %}
 </div>
 
-{% if revision == 'ee' %}
+<script>
+  $(document).ready(function() {
+    document.getElementById('block_layout_{{ revision }}').querySelectorAll('span').forEach(element => {
+      element.textContent = element.textContent.replace('<REVISION>', '{{ revision }}');
+    })
+    document.getElementById('block_layout_{{ revision }}').querySelectorAll('.dimmer-block-content div .snippetcut .snippetcut__raw').forEach(element => {
+      element.textContent = element.textContent.replace('<REVISION>', '{{ revision }}');
+    })
+  });
+</script>
+
+{% if revision != "ce" %}
 </div>
 {% endif %}

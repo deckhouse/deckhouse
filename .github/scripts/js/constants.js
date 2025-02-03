@@ -45,6 +45,7 @@ const labels = {
   'e2e/use/k8s/1.29': { type: 'e2e-use', ver: '1.29' },
   'e2e/use/k8s/1.30': { type: 'e2e-use', ver: '1.30' },
   'e2e/use/k8s/1.31': { type: 'e2e-use', ver: '1.31' },
+  'e2e/use/k8s/1.32': { type: 'e2e-use', ver: '1.32' },
   'e2e/use/k8s/automatic': { type: 'e2e-use', ver: 'Automatic' },
 
   // E2E: use multimaster configuration
@@ -70,7 +71,10 @@ const labels = {
   'edition/ee': { type: 'edition', edition: 'EE' },
   'edition/be': { type: 'edition', edition: 'BE' },
   'edition/se': { type: 'edition', edition: 'SE' },
-  'edition/se+': { type: 'edition', edition: 'SE-plus' }
+  'edition/se+': { type: 'edition', edition: 'SE-plus' },
+
+  // Enable operator-trivy to get CIS benchmark report
+  'e2e/use/cis': { type: 'e2e-use', cis: true }
 };
 module.exports.knownLabels = labels;
 
@@ -159,6 +163,7 @@ module.exports.e2eDefaults = {
   criName: 'Containerd',
   edition: 'FE',
   multimaster: false,
+  cis: false
 }
 
 const editions = [

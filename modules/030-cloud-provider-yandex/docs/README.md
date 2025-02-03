@@ -2,15 +2,15 @@
 title: "Cloud provider — Yandex Cloud"
 ---
 
-The `cloud-provider-yandex` module is responsible for interacting with the [Yandex Cloud](https://cloud.yandex.com/en/) cloud resources. It allows the node manager module to use Yandex Cloud resources for provisioning nodes for the defined [node group](../../modules/040-node-manager/cr.html#nodegroup) (a group of nodes that are acted upon as if they were a single entity).
+The `cloud-provider-yandex` module is responsible for interacting with the [Yandex Cloud](https://cloud.yandex.com/en/) cloud resources. It allows the node manager module to use Yandex Cloud resources for provisioning nodes for the defined [node group](../../modules/node-manager/cr.html#nodegroup) (a group of nodes that are acted upon as if they were a single entity).
 
 The `cloud-provider-yandex` module:
 - Manages Yandex Cloud resources using the `cloud-controller-manager` (CCM) module:
   * The CCM module creates network routes for the `PodNetwork` network on the Yandex Cloud side.
   * The CCM module updates the Yandex Cloud Instances and Kubernetes Nodes metadata and deletes from Kubernetes nodes that no longer exist in Yandex Cloud.
 - Provisions disks in Yandex Cloud using the `CSI storage` component.
-- Registers with the [node-manager](../../modules/040-node-manager/) module so that [YandexInstanceClasses](cr.html#yandexinstanceclass) can be used when creating the [NodeGroup](../../modules/040-node-manager/cr.html#nodegroup).
-- Enables the necessary CNI plugin (using the [simple bridge](../../modules/035-cni-simple-bridge/)).
+- Registers with the [node-manager](../../modules/node-manager/) module so that [YandexInstanceClasses](cr.html#yandexinstanceclass) can be used when creating the [NodeGroup](../../modules/node-manager/cr.html#nodegroup).
+- Enables the necessary CNI plugin (using the [simple bridge](../../modules/cni-simple-bridge/)).
 
 ## Yandex Cloud integration
 
@@ -35,11 +35,11 @@ This section provides general guidelines for setting up a security group. Incorr
 
 1. In the Yandex Cloud console, select the Virtual Private Cloud service and navigate to the *Security Groups* section. You should see a single security group labeled `Default`.
 
-    ![The default security group](../../images/030-cloud-provider-yandex/sg-en-default.png)
+    ![The default security group](../../images/cloud-provider-yandex/sg-en-default.png)
 
 1. Create rules as described in [Yandex Cloud instructions](https://cloud.yandex.com/en/docs/managed-kubernetes/operations/connect/security-groups#rules-internal).
 
-    ![Rules for the security group](../../images/030-cloud-provider-yandex/sg-en-rules.png)
+    ![Rules for the security group](../../images/cloud-provider-yandex/sg-en-rules.png)
 
 1. Delete the rule that allows for any **inbound** traffic (in the screenshot above it has already been deleted), and save the changes.
 
@@ -212,7 +212,7 @@ This integration lets you use the [Yandex Managed Service for Prometheus](https:
    - `<URL_TO_WRITE_METRICS>` — URL from the Yandex Monitoring/Prometheus/Writing Metrics page.
    - `<API_KEY>` — the API key you created in the previous step, e.g., `AQVN1HHJRSrfo9jU3aopsXrJyfq_UHs********`.
 
-   You may also specify additional parameters; refer to the [documentation](../../modules/300-prometheus/cr.html#prometheusremotewrite).
+   You may also specify additional parameters; refer to the [documentation](../../modules/prometheus/cr.html#prometheusremotewrite).
 
 More details about this feature can be found in [Yandex Cloud documentation](https://cloud.yandex.com/en/docs/monitoring/operations/prometheus/ingestion/remote-write).
 
@@ -247,6 +247,6 @@ More details about this feature can be found in [Yandex Cloud documentation](htt
    - `<URL_READING_METRICS_WITH_GRAFANA>` — URL from the Yandex Monitoring/Prometheus/Reading Metrics with Grafana page.
    - `<API_KEY>` — the API key you created in the previous step, e.g., `AQVN1HHJReSrfo9jU3aopsXrJyfq_UHs********`.
 
-   You may also specify additional parameters; refer to the [documentation](../../modules/300-prometheus/cr.html#grafanaadditionaldatasource).
+   You may also specify additional parameters; refer to the [documentation](../../modules/prometheus/cr.html#grafanaadditionaldatasource).
 
 More details about this feature can be found in [Yandex Cloud documentation](https://cloud.yandex.com/en/docs/monitoring/operations/prometheus/querying/grafana).

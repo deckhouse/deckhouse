@@ -10,4 +10,4 @@ The creation of the [`DexAuthenticator`](cr.html#dexauthenticator) Custom Resour
 
 **Caution!** When this module is enabled, authentication in all web interfaces will be switched from HTTP Basic Auth to Dex (the latter, in turn, will use the external providers that you have defined). To configure kubectl, go to `https://kubeconfig.<modules.publicDomainTemplate>/`, log in to your external provider's account and copy the shell commands to your console.
 
-**Caution!** The API server requires [additional configuration](faq.html#configuring-kube-apiserver) to use authentication for dashboard and kubectl. The [control-plane-manager](../../modules/040-control-plane-manager/) module (enabled by default) automates this process.
+**Caution!** The API server requires [additional configuration](faq.html#configuring-kube-apiserver) to use authentication for dashboard and kubectl. The [control-plane-manager](../../modules/control-plane-manager/) module (enabled by default) automates this process.

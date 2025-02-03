@@ -120,7 +120,7 @@ func applyPodFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error
 	}, nil
 }
 
-func setDeckhouseReadyNodes(input *go_hook.HookInput) (err error) {
+func setDeckhouseReadyNodes(input *go_hook.HookInput) error {
 	pods := input.Snapshots["control-plane-pods"]
 	nodes := input.Snapshots["control-plane-nodes"]
 	if len(nodes) == 0 {

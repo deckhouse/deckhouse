@@ -14,7 +14,10 @@
 
 package terraform
 
-import "sync"
+import (
+	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	"sync"
+)
 
 func NewSingleShotRunner(runner *Runner) *SingleShotRunner {
 	return &SingleShotRunner{
@@ -68,4 +71,8 @@ func (r *SingleShotRunner) Stop() {
 	r.stop.Do(func() {
 		r.Runner.Stop()
 	})
+}
+
+func (r *SingleShotRunner) GetLogger() log.Logger {
+	return r.Runner.logger
 }

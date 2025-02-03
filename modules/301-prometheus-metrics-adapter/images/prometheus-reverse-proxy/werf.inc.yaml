@@ -1,0 +1,38 @@
+---
+image: {{ .ModuleName }}/{{ .ImageName }}
+fromImage: common/distroless
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+  add: /src/prometheus-reverse-proxy
+  to: /prometheus-reverse-proxy
+  before: setup
+docker:
+  ENTRYPOINT: [ "/prometheus-reverse-proxy" ]
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+fromImage: common/src-artifact
+final: false
+git:
+- add: /{{ $.ModulePath }}modules/301-{{ $.ModuleName }}/images/{{ $.ImageName }}/app
+  to: /src
+  stageDependencies:
+    install:
+    - '**/*'
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
+final: false
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+  add: /src
+  to: /src
+  before: install
+mount:
+- fromPath: ~/go-pkg-cache
+  to: /go/pkg
+shell:
+  install:
+  - cd /src
+  - GOPROXY={{ .GOPROXY }} GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" ./cmd/prometheus-reverse-proxy
+  - chown -R 64535:64535 /src/
+  - chmod 0700 /src/prometheus-reverse-proxy

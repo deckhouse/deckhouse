@@ -6,7 +6,7 @@ osDistributions:
     en_support: 'false'
     cse_support:
       versions:
-        - '8 СП'
+        - '8 СП (релиз 10)'
   astra:
     name: Astra Linux Special Edition
     url: https://astralinux.ru/products/astra-linux-special-edition/

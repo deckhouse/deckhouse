@@ -63,7 +63,7 @@ func (a *Agent) Start() error {
 	log.DebugLn("agent: run ssh-add for keys")
 	err = a.AddKeys(a.AgentSettings.PrivateKeys)
 	if err != nil {
-		return fmt.Errorf("add keys: %v", err)
+		return fmt.Errorf("agent error: %v", err)
 	}
 
 	return nil

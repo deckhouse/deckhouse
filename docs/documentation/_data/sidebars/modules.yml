@@ -1,7 +1,7 @@
 # Next lines are for local build only
 modules_items: &modules_items
-  - title: 002-deckhouse
-    url: /modules/002-deckhouse/
+  - title: deckhouse
+    url: /modules/deckhouse/
 
 entries:
 - title: Документация

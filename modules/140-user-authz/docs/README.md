@@ -26,7 +26,7 @@ The module creates special aggregated cluster roles (`ClusterRole`). By using th
   For example, you can use the `d8:manage:networking:manager` role in `ClusterRoleBinding` to allow a network administrator to configure *network* modules (such as `cni-cilium`, `ingress-nginx`, `istio`, etc.).
 - Manage access to *user* resources of modules within the namespace.
 
-  For example, the `d8:use:role:manager` role in `RoleBinding` enables deleting/creating/editing the [PodLoggingConfig](../460-log-shipper/cr.html#podloggingconfig) resource in the namespace. At the same time, it does not grant access to the cluster-wide [ClusterLoggingConfig](../460-log-shipper/cr.html#clusterloggingconfig) and [ClusterLogDestination](../460-log-shipper/cr.html#clusterlogdestination) resources of the `log-shipper` module, nor does it allow configuration of the `log-shipper` module itself.
+  For example, the `d8:use:role:manager` role in `RoleBinding` enables deleting/creating/editing the [PodLoggingConfig](../log-shipper/cr.html#podloggingconfig) resource in the namespace. At the same time, it does not grant access to the cluster-wide [ClusterLoggingConfig](../log-shipper/cr.html#clusterloggingconfig) and [ClusterLogDestination](../log-shipper/cr.html#clusterlogdestination) resources of the `log-shipper` module, nor does it allow configuration of the `log-shipper` module itself.
 
 The roles created by the module are divided into two classes:
 - [Use roles](#use-roles) — for assigning rights to users (such as application developers) **in a specific namespace**.
@@ -66,7 +66,7 @@ The manage role defines access rights:
 
 The manage role name format is `d8:manage:<SUBSYSTEM>:<ACCESS_LEVEL>`, where:
 - `SUBSYSTEM` is the role's subsystem. It can be one of the [subsystem](#subsystems-of-the-role-based-model), or `all`, for access across all subsystems;
-- `ACCESS_LEVEL` is the [access level](#access-levels-of-the-role-based-model).
+- `ACCESS_LEVEL` is the access level.
 
   Examples of manage roles:
   - `d8:manage:all:viewer` — access to view the configuration of all DKP modules (`moduleConfig` resource), their cluster-wide resources, their namespaced resources, and standard Kubernetes objects (except Secrets and RBAC resources) in all system namespaces (starting with `d8-` or `kube-`);

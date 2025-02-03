@@ -36,38 +36,6 @@
             ]
           },
           {
-            "title": "Documentation",
-            "url": "",
-            "target": "",
-            "rel": "",
-            "items": [
-              {
-                "title": "Getting started",
-                "url": "/gs/",
-                "target": "",
-                "rel": ""
-              },
-              {
-                "title": "Going to Production",
-                "url": "/guides/production.html",
-                "target": "",
-                "rel": ""
-              },
-              {
-                "title": "Platform",
-                "url": "/documentation/v1/deckhouse-overview.html",
-                "target": "",
-                "rel": ""
-              },
-              {
-                "title": "Modules",
-                "url": "/modules/",
-                "target": "",
-                "rel": ""
-              }
-            ]
-          },
-          {
             "title": "Success stories",
             "url": "/success-stories/",
             "target": "",
@@ -86,38 +54,20 @@
       {
         "items": [
           {
-            "title": "Решения",
+            "title": "Партнёры",
             "url": "",
             "target": "",
             "rel": "",
             "items": [
               {
-                "title": "Техническая поддержка",
-                "url": "/tech-support/",
+                "title": "Стать партнёром",
+                "url": "/become-partner/",
                 "target": "",
                 "rel": ""
               },
               {
-                "title": "Технологические партнёры",
-                "url": "/partnership-products/",
-                "target": "",
-                "rel": ""
-              },
-              {
-                "title": "Переезд с OpenShift",
-                "url": "/moving-from-openshift/",
-                "target": "",
-                "rel": ""
-              },
-              {
-                "title": "Безопасность",
-                "url": "/security/",
-                "target": "",
-                "rel": ""
-              },
-              {
-                "title": "Сравнение с KaaS",
-                "url": "/deckhouse-vs-kaas/",
+                "title": "Найти партнёра",
+                "url": "/partners/",
                 "target": "",
                 "rel": ""
               }
@@ -125,23 +75,21 @@
           },
           {
             "title": "Как купить",
-            "url": "",
+            "url": "/how-to-buy/",
             "target": "",
-            "rel": "",
-            "items": [
-              {
-                "title": "Контакты",
-                "url": "/how-to-buy/",
-                "target": "",
-                "rel": ""
-              },
-              {
-                "title": "Стать партнёром",
-                "url": "/how-to-buy/#partners",
-                "target": "",
-                "rel": ""
-              }
-            ]
+            "rel": ""
+          },
+          {
+            "title": "Обучение",
+            "url": "/academy/",
+            "target": "",
+            "rel": ""
+          },
+          {
+            "title": "Техподдержка",
+            "url": "/tech-support/",
+            "target": "",
+            "rel": ""
           },
           {
             "title": "Медиа-центр",
@@ -174,12 +122,6 @@
                 "rel": ""
               }
             ]
-          },
-          {
-            "title": "Обучение",
-            "url": "/academy/",
-            "target": "",
-            "rel": ""
           }
         ]
       }

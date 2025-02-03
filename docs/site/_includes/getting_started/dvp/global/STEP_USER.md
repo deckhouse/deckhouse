@@ -1,20 +1,21 @@
-<script type="text/javascript" src='{{ assets["getting-started.js"].digest_path }}'></script>
-<script type="text/javascript" src='{{ assets["getting-started-access.js"].digest_path }}'></script>
-<script type="text/javascript" src='{{ assets["bcrypt.js"].digest_path }}'></script>
+<script type="text/javascript" src='{% javascript_asset_tag getting-started %}[_assets/js/getting-started.js]{% endjavascript_asset_tag %}'></script>
+<script type="text/javascript" src='{% javascript_asset_tag getting-started-access %}[_assets/js/getting-started-access.js]{% endjavascript_asset_tag %}'></script>
+<script type="text/javascript" src='{% javascript_asset_tag bcrypt %}[_assets/js/bcrypt.js]{% endjavascript_asset_tag %}'></script>
 
 Create a user to access the cluster web interfaces:
 <ul>
 <li><p>Create on the <strong>master node</strong> the <code>user.yml</code> file containing the user account data and access rights:</p>
-{% snippetcut name="user.yml" selector="user-yml" %}
-{% include_file "_includes/getting_started/dvp/{{ page.platform_code }}/partials/user.yml.inc" syntax="yaml" %}
-{% endsnippetcut %}
+{% capture includePath %}_includes/getting_started/dvp/{{ page.platform_code }}/partials/user.yml.inc{% endcapture %}
+<div markdown="1">
+{% include_file "{{ includePath }}" syntax="yaml" %}
+</div>
 </li>
 <li><p>Apply it using the following command on the <strong>master node</strong>:</p>
-{% snippetcut %}
+<div markdown="1">
 ```shell
-sudo /opt/deckhouse/bin/kubectl create -f user.yml
+sudo -i d8 k create -f user.yml
 ```
-{% endsnippetcut %}
+</div>
 </li>
 </ul>
 

@@ -1,5 +1,5 @@
-<script type="text/javascript" src='{{ assets["getting-started.js"].digest_path }}'></script>
-<script type="text/javascript" src='{{ assets["getting-started-access.js"].digest_path }}'></script>
+<script type="text/javascript" src='{% javascript_asset_tag getting-started %}[_assets/js/getting-started.js]{% endjavascript_asset_tag %}'></script>
+<script type="text/javascript" src='{% javascript_asset_tag getting-started-access %}[_assets/js/getting-started-access.js]{% endjavascript_asset_tag %}'></script>
 
 To access the web interfaces of Deckhouse services, you need to:
 - configure DNS
@@ -10,7 +10,6 @@ The *DNS names template* is used to configure Ingress resources of system applic
 The guide will use [sslip.io](https://sslip.io/) to simplify configuration.
 
 Run the following command to configure [template for DNS names](../../documentation/v1/deckhouse-configure-global.html#parameters-modules-publicdomaintemplate) to use the *sslip.io* (specify the public IP address of the node where the Ingress controller is running):
-{% snippetcut %}
 {% raw %}
 ```shell
 BALANCER_IP=<INGRESS_CONTROLLER_IP> 
@@ -19,7 +18,6 @@ kubectl patch mc global --type merge \
 echo "Domain template is '$(kubectl get mc global -o=jsonpath='{.spec.settings.modules.publicDomainTemplate}')'."
 ```
 {% endraw %}
-{% endsnippetcut %}
 
 The command will also print the DNS name template set in the cluster. Example output:
 ```text
@@ -37,11 +35,9 @@ Instead of using *sslip.io*, you can use other options.
 {% include getting_started/global/partials/DNS_OPTIONS.liquid %}
 
 Then, run the following command to change the DNS name template:
-<div markdown="0">
-{% snippetcut %}
+<div markdown="1">
 ```shell
 kubectl patch mc global --type merge -p "{\"spec\": {\"settings\":{\"modules\":{\"publicDomainTemplate\":\"${DOMAIN_TEMPLATE}\"}}}}"
 ```
-{% endsnippetcut %}
 </div>
 {% endofftopic %}

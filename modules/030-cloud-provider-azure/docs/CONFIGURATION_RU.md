@@ -6,7 +6,7 @@ title: "Cloud provider — Azure: настройки"
 
 {% include module-alerts.liquid %}
 
-Количество и параметры процесса заказа машин в облаке настраиваются в custom resource [`NodeGroup`](../040-node-manager/cr.html#nodegroup) модуля `node-manager`, в котором также указывается название используемого для этой группы узлов инстанс-класса (параметр [cloudInstances.ClassReference](../040-node-manager/cr.html#nodegroup-v1-spec-cloudinstances-classreference)). Инстанс-класс для cloud провайдера Azure — это custom resource [`AzureInstanceClass`](cr.html#azureinstanceclass), в котором указываются конкретные параметры самих машин.
+Количество и параметры процесса заказа машин в облаке настраиваются в custom resource [`NodeGroup`](../node-manager/cr.html#nodegroup) модуля `node-manager`, в котором также указывается название используемого для этой группы узлов инстанс-класса (параметр [cloudInstances.ClassReference](../node-manager/cr.html#nodegroup-v1-spec-cloudinstances-classreference)). Инстанс-класс для cloud провайдера Azure — это custom resource [`AzureInstanceClass`](cr.html#azureinstanceclass), в котором указываются конкретные параметры самих машин.
 
 <div markdown="0" style="height: 0;" id="storage"></div>
 Модуль автоматически создает следующие StorageClass'ы:

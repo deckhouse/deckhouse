@@ -479,6 +479,7 @@ const setCRIAndVersionsFromLabels = ({ core, labels, kubernetesDefaultVersion })
   let cri = [];
   let multimaster = e2eDefaults.multimaster;
   let edition = "";
+  let cis = e2eDefaults.cis
 
   for (const label of labels) {
     const info = knownLabels[label.name];
@@ -501,6 +502,10 @@ const setCRIAndVersionsFromLabels = ({ core, labels, kubernetesDefaultVersion })
       core.info(`Detect '${label.name}': use Kubernetes multimaster configuration`);
       multimaster = true;
     }
+    if (info.cis) {
+      core.info(`Detect '${label.name}': use operator-trivy to get CIS Benchmark report`);
+      cis = true;
+    }
   }
 
   if (ver.length === 0) {
@@ -519,6 +524,7 @@ const setCRIAndVersionsFromLabels = ({ core, labels, kubernetesDefaultVersion })
   core.setCommandEcho(true);
   core.setOutput(`edition`, `${edition}`);
   core.setOutput(`multimaster`, `${multimaster}`);
+  core.setOutput(`cis`, `${cis}`);
   for (const out_cri of cri) {
     for (const out_ver of ver) {
       core.setOutput(`run_${out_cri}_${out_ver}`, 'true');

@@ -7,7 +7,7 @@ description: Описание возможностей сбора логов в 
 Предназначение этих агентов — с минимальными изменениями отправить логи дальше из кластера.
 Каждый агент — это отдельный [vector](https://vector.dev/), конфигурацию для которого сгенерировал Deckhouse.
 
-![log-shipper architecture](../../images/460-log-shipper/log_shipper_architecture.svg)
+![log-shipper architecture](../../images/log-shipper/log_shipper_architecture.svg)
 <!-- Исходник картинок: https://docs.google.com/drawings/d/1cOm5emdfPqWp9NT1UrB__TTL31lw7oCgh0VicQH-ouc/edit -->
 
 1. Deckhouse следит за ресурсами [ClusterLoggingConfig](cr.html#clusterloggingconfig), [ClusterLogDestination](cr.html#clusterlogdestination) и [PodLoggingConfig](cr.html#podloggingconfig).
@@ -23,7 +23,7 @@ description: Описание возможностей сбора логов в 
 
 Агенты шлют логи напрямую в хранилище, например в Loki или Elasticsearch.
 
-![log-shipper distributed](../../images/460-log-shipper/log_shipper_distributed.svg)
+![log-shipper distributed](../../images/log-shipper/log_shipper_distributed.svg)
 <!-- Исходник картинок: https://docs.google.com/drawings/d/1FFuPgpDHUGRdkMgpVWXxUXvfZTsasUhEh8XNz7JuCTQ/edit -->
 
 * Менее сложная схема для использования.
@@ -36,7 +36,7 @@ description: Описание возможностей сбора логов в 
 Агенты на узлах стараются отправить логи с узла максимально быстро с минимальным потреблением ресурсов.
 Сложные преобразования применяются на стороне агрегатора.
 
-![log-shipper centralized](../../images/460-log-shipper/log_shipper_centralized.svg)
+![log-shipper centralized](../../images/log-shipper/log_shipper_centralized.svg)
 <!-- Исходник картинок: https://docs.google.com/drawings/d/1TL-YUBk0CKSJuKtRVV44M9bnYMq6G8FpNRjxGxfeAhQ/edit -->
 
 * Меньше потребление ресурсов для приложений на узлах.
@@ -47,7 +47,7 @@ description: Описание возможностей сбора логов в 
 
 Главная задача данной архитектуры — как можно быстрее отправить логи в очередь сообщений, из которой они в служебном порядке будут переданы в долгосрочное хранилище для дальнейшего анализа.
 
-![log-shipper stream](../../images/460-log-shipper/log_shipper_stream.svg)
+![log-shipper stream](../../images/log-shipper/log_shipper_stream.svg)
 <!-- Исходник картинок: https://docs.google.com/drawings/d/1R7vbJPl93DZPdrkSWNGfUOh0sWEAKnCfGkXOvRvK3mQ/edit -->
 
 * Те же плюсы и минусы, что и у централизованной архитектуры, но добавляется еще одно промежуточное хранилище.
@@ -88,7 +88,7 @@ description: Описание возможностей сбора логов в 
 
 Существуют два фильтра, чтобы снизить количество отправляемых сообщений в хранилище, — `log filter` и `label filter`.
 
-![log-shipper pipeline](../../images/460-log-shipper/log_shipper_pipeline.svg)
+![log-shipper pipeline](../../images/log-shipper/log_shipper_pipeline.svg)
 <!-- Исходник картинок: https://docs.google.com/drawings/d/1SnC29zf4Tse4vlW_wfzhggAeTDY2o9wx9nWAZa_A6RM/edit -->
 
 Они запускаются сразу после объединения строк с помощью multiline parser'а.

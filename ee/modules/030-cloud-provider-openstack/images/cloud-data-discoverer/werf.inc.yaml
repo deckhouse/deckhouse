@@ -2,7 +2,7 @@
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: common/distroless
 import:
-  - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+  - image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
     add: /discoverer
     to: /discoverer
     before: setup
@@ -11,8 +11,8 @@ docker:
 ---
 {{ $discovererAbsPath := "/deckhouse/ee/modules/030-cloud-provider-openstack/images/cloud-data-discoverer" }}
 {{ $discovererRelPath := printf "%s/modules/030-cloud-provider-openstack/images/cloud-data-discoverer" .ModulePath }}
-artifact: {{ .ModuleName }}/{{ .ImageName }}-artifact
-fromCacheVersion: "2023-03-24.2"
+image: {{ .ModuleName }}/{{ .ImageName }}-artifact
+final: false
 from: {{ .Images.BASE_GOLANG_21_ALPINE }}
 shell:
   install:

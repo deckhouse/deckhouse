@@ -86,7 +86,7 @@ func NewNodeGroupController(
 
 func (c *NodeGroupController) Run() error {
 	// we hide deckhouse logs because we always have config
-	nodeCloudConfig, err := GetCloudConfig(c.client, c.name, HideDeckhouseLogs)
+	nodeCloudConfig, err := GetCloudConfig(c.client, c.name, HideDeckhouseLogs, log.GetDefaultLogger())
 	if err != nil {
 		return err
 	}
@@ -324,7 +324,7 @@ func (c *NodeGroupController) updateNodes() error {
 			}
 
 			// we hide deckhouse logs because we always have config
-			nodeCloudConfig, err := GetCloudConfig(c.client, c.name, HideDeckhouseLogs)
+			nodeCloudConfig, err := GetCloudConfig(c.client, c.name, HideDeckhouseLogs, log.GetDefaultLogger())
 			if err != nil {
 				return err
 			}

@@ -143,22 +143,12 @@ spec:
 {{- end }}
 {{- if not (.Values.global.enabledModules | has "cni-cilium" )}}
       - name: iptables-loop
-        {{- /*
-          UID: 0 GID:0 using for privilege access for iptables because using hostNetwork
-        */}}
-        securityContext:
-          allowPrivilegeEscalation: true
+        # containers messing with iptables and iptables-wrapper have to be run as root because iptables-legacy binary requires to be run as root (setsuid isn't an option).
+        {{- include "helm_lib_module_pod_security_context_run_as_user_root" . | nindent 8 }}
           capabilities:
             add:
-            - DAC_OVERRIDE
             - NET_RAW
             - NET_ADMIN
-            - NET_BIND_SERVICE
-            drop:
-            - ALL
-          runAsGroup: 0
-          runAsNonRoot: false
-          runAsUser: 0
         image: {{ include "helm_lib_module_image" (list . "iptablesLoop") }}
         env:
         - name: KUBE_DNS_SVC_IP

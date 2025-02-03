@@ -35,8 +35,8 @@ var terraformLogsMatcher = regexp.MustCompile(`(\s+\[(TRACE|DEBUG|INFO|WARN|ERRO
 
 type Executor interface {
 	Output(...string) ([]byte, error)
-	Exec(bool, ...string) (int, error)
-	GetStdout() []string
+	Exec(...string) (int, error)
+	SetExecutorLogger(logger log.Logger)
 	Stop()
 }
 
@@ -62,19 +62,19 @@ func terraformCmd(args ...string) *exec.Cmd {
 
 // CMDExecutor straightforward cmd executor which provides convenient output and handles quit signal.
 type CMDExecutor struct {
-	cmd         *exec.Cmd
-	stdoutSaved []string
+	cmd    *exec.Cmd
+	logger log.Logger
 }
 
 func (c *CMDExecutor) Output(args ...string) ([]byte, error) {
 	return terraformCmd(args...).Output()
 }
 
-func (c *CMDExecutor) GetStdout() []string {
-	return c.stdoutSaved
+func (c *CMDExecutor) SetExecutorLogger(logger log.Logger) {
+	c.logger = logger
 }
 
-func (c *CMDExecutor) Exec(catchLog bool, args ...string) (int, error) {
+func (c *CMDExecutor) Exec(args ...string) (int, error) {
 	c.cmd = terraformCmd(args...)
 
 	// Start terraform as a leader of the new process group to prevent
@@ -128,11 +128,7 @@ func (c *CMDExecutor) Exec(catchLog bool, args ...string) (int, error) {
 
 		s := bufio.NewScanner(stdout)
 		for s.Scan() {
-			if catchLog {
-				c.stdoutSaved = append(c.stdoutSaved, s.Text())
-			} else {
-				log.InfoLn(s.Text())
-			}
+			c.logger.LogInfoLn(s.Text())
 		}
 	}()
 
@@ -142,7 +138,7 @@ func (c *CMDExecutor) Exec(catchLog bool, args ...string) (int, error) {
 
 	exitCode := c.cmd.ProcessState.ExitCode() // 2 = exit code, if terraform plan has diff
 	if err != nil && exitCode != terraformHasChangesExitCode {
-		log.ErrorLn(err)
+		c.logger.LogErrorLn(err)
 		err = fmt.Errorf(errBuf.String())
 		if app.IsDebug {
 			err = fmt.Errorf("terraform has failed in DEBUG mode, search in the output above for an error")
@@ -174,17 +170,20 @@ type fakeResponse struct {
 	resp []byte
 }
 type fakeExecutor struct {
-	data map[string]fakeResponse
+	data   map[string]fakeResponse
+	logger log.Logger
 }
 
 func (f *fakeExecutor) Output(parts ...string) ([]byte, error) {
 	result := f.data[parts[0]]
 	return result.resp, result.err
 }
-func (f *fakeExecutor) Exec(_ bool, parts ...string) (int, error) {
+func (f *fakeExecutor) Exec(parts ...string) (int, error) {
 	result := f.data[parts[0]]
 	return result.code, result.err
 }
 func (f *fakeExecutor) Stop() {}
 
-func (f *fakeExecutor) GetStdout() []string { return nil }
+func (f *fakeExecutor) SetExecutorLogger(logger log.Logger) {
+	f.logger = logger
+}

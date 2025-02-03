@@ -30,7 +30,7 @@ reserved: true
 
 ## dhcpOptions-related problems and ways to address them
 
-Using DNS servers that differ from those provided by Yandex Cloud in the DHCP settings is a temporary solution. It will be abandoned after Yandex Cloud will introduce the Managed DNS service. To get around the restrictions described below, we recommend using `stubZones` from the [`kube-dns`](../042-kube-dns/) module.
+Using DNS servers that differ from those provided by Yandex Cloud in the DHCP settings is a temporary solution. It will be abandoned after Yandex Cloud will introduce the Managed DNS service. To get around the restrictions described below, we recommend using `stubZones` from the [`kube-dns`](../kube-dns/) module.
 
 ### Editing parameters
 
@@ -91,5 +91,5 @@ kubectl -n kube-system get secret d8-provider-cluster-configuration -o json | jq
 
    ```shell
    dhctl bootstrap --ssh-bastion-host=178.154.226.159 --ssh-bastion-user=yc-user \
-   --ssh-user=ubuntu --ssh-agent-private-keys=/tmp/.ssh/id_rsa --config=/config.yml --resources=/resources.yml
+   --ssh-user=ubuntu --ssh-agent-private-keys=/tmp/.ssh/id_rsa --config=/config.yml
    ```

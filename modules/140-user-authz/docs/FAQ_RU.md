@@ -16,7 +16,7 @@ title: "Модуль user-authz: FAQ"
 Используется [устаревшая ролевая модель](./#устаревшая-ролевая-модель).
 {% endalert %}
 
-Использовать параметры `namespaceSelector` или `limitNamespaces` (устарел) в кастомном ресурсе [`ClusterAuthorizationRule`](../../modules/140-user-authz/cr.html#clusterauthorizationrule).
+Использовать параметры `namespaceSelector` или `limitNamespaces` (устарел) в кастомном ресурсе [`ClusterAuthorizationRule`](../../modules/user-authz/cr.html#clusterauthorizationrule).
 
 ## Что, если два ClusterAuthorizationRules подходят для одного пользователя?
 

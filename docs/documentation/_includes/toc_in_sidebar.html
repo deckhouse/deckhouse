@@ -17,11 +17,11 @@
             }
         });
 
-      $toc.on('click', 'a', function () {
+        $toc.on('click', 'a', function () {
         const target = decodeURI($(this).attr('href'));
 
         $('html, body').animate({
-          scrollTop: $(target).offset().top - 105
+          scrollTop: $(target).offset().top - 162
         }, 300);
       });
 
@@ -55,6 +55,14 @@
                     nav.find('a[href="#' + encodeURI($(this).attr('id')) + '"]').addClass('active');
                 }
             });
+        });
+
+        $(window).on('load', function() {
+            const target = decodeURI(window.location.hash);
+
+            $('html, body').animate({
+                scrollTop: $(target).offset().top - 162
+            }, 0);
         });
     });
 

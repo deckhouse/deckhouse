@@ -6,13 +6,14 @@ lang: ru
 
 В этом разделе описаны зависимости, которые могут быть установлены для модуля.
 
-Зависимости — это набор условий (требований), которые должны выполняться, чтобы Deckhouse Kubernetes Platform (DKP) могла запустить модуль.
+Зависимости — это набор условий (требований), которые должны выполняться, чтобы Deckhouse Kubernetes Platform (DKP) мог запустить модуль.
 
 DKP поддерживает следующие зависимости для модуля:
 
 - [зависимость от версии Deckhouse Kubernetes Platform](#зависимость-от-версии-deckhouse-kubernetes-platform);
 - [зависимость от версии Kubernetes](#зависимость-от-версии-kubernetes);
 - [зависимость от статуса установки кластера](#зависимость-от-статуса-установки-кластера).
+- [зависимость от версии других модулей](##зависимость-от-версии-других-модулей).
 
 ### Зависимость от версии Deckhouse Kubernetes Platform
 
@@ -40,6 +41,11 @@ requirements:
 
    ```console
    root@dev-master-0:~# kubectl get mr
+   ```
+
+   Выводимая информация:
+
+   ```text
    NAME                     PHASE        UPDATE POLICY   TRANSITIONTIME   MESSAGE
    test-v0.8.3              Pending      test-alpha      2m30s            requirements are not satisfied: current deckhouse version is not suitable: 1.0.0 is less than or equal to v1.64.0 
    ```
@@ -51,6 +57,11 @@ requirements:
 
    ```console
    root@dev-master-0:~# kubectl get deckhousereleases.deckhouse.io
+   ```
+
+   Выводимая информация:
+
+   ```text
    NAME                     PHASE         TRANSITIONTIME   MESSAGE
    v1.73.3                  Skipped       74m
    v1.73.4                  Pending       2m13s            requirements of test are not satisfied: v1.73.4 deckhouse version is not suitable: v1.73.4 is greater than or equal to v1.73.4
@@ -63,7 +74,7 @@ requirements:
 
 Эта зависимость определяет минимальную или максимальную версию Kubernetes, с которой совместим модуль.
 
-Пример настройки зависимости в файле `module.yaml`:
+Пример настройки зависимости от Kubernetes 1.27 и выше в файле `module.yaml`:
 
 ```yaml
 name: test
@@ -85,6 +96,11 @@ requirements:
 
    ```console
    root@dev-master-0:~# kubectl get modulereleases.deckhouse.io
+   ```
+
+   Выводимая информация:
+
+   ```text
    NAME                          PHASE        UPDATE POLICY   TRANSITIONTIME   MESSAGE
    test-v0.8.2                   Pending      test-alpha      24m              requirements are not satisfied: current kubernetes version is not suitable: 1.29.6 is less than or equal to 1.29
    virtualization-v.0.0.0-dev4   Deployed      deckhouse      142d
@@ -97,6 +113,11 @@ requirements:
 
    ```console
    root@dev-master-0:~# kubectl -n d8-system exec -it deployment/deckhouse -c deckhouse -- deckhouse-controller edit cluster-configuration
+   ```
+
+   Выводимая информация:
+
+   ```text
    Save cluster-configuration back to the Kubernetes cluster
    Update cluster-configuration secret
    Attempt 1 of 5 |
@@ -114,6 +135,11 @@ requirements:
 
    ```console
    root@dev-master-0:~# kubectl get deckhousereleases.deckhouse.io
+   ```
+
+   Выводимая информация:
+
+   ```text
    NAME                     PHASE         TRANSITIONTIME   MESSAGE
    v1.73.3                  Pending       7s              requirements of test are not satisfied: 1.27 kubernetes version is not suitable: 1.27.0 is less than or equal to 1.28            
    ```
@@ -122,7 +148,7 @@ requirements:
 
 Эта зависимость указывает, что для запуска модуля требуется кластер, установка и настройка которого были завершены. Зависимость можно установить только для встроенных модулей DKP.
 
-Пример настройки зависимости в файле `module.yaml`:
+Пример настройки зависимости от статуса установки кластера в файле `module.yaml`:
 
 ```yaml
 name: ingress-nginx
@@ -135,3 +161,26 @@ requirements:
 ```
 
 Проверка выполняется только один раз — при первичном анализе модулей. Если установка и настройка кластера не завершены, модуль не будет включён.
+
+### Зависимость от версии других модулей
+
+Эта зависимость определяет список **включенных** модулей и их минимальные версии, которые необходимы для работы модуля. Версия встроенного модуля DKP считается равной версии DKP.
+
+Если необходимо указать, чтобы какой-то модуль был просто включен, не важно какой версии, то можно использовать следующий синтаксис (на примере модуля `user-authn`):
+
+```yaml
+requirements:
+  modules:
+    user-authn: ">= 0.0.0"
+```
+
+Пример настройки зависимости от трех модулей:
+
+```yaml
+name: hello-world
+requirements:
+  modules:
+    ingress-nginx: '> 1.67.0'
+    node-local-dns: '>= 0.0.0'
+    operator-trivy: '> v1.64.0'
+```

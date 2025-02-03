@@ -56,19 +56,19 @@ spec:
 
 ## Установка нужной версии ядра
 
-Узлы могут требовать определённой версии ядра Linux и NodeGroupConfiguration может помочь в этом случае. Для упрощения скрипта лучше использовать конструкции [bashbooster](http://www.bashbooster.net/).
+Узлы могут требовать определённой версии ядра Linux и NodeGroupConfiguration может помочь в этом случае. Для упрощения скрипта лучше использовать конструкции [Bash Booster](http://www.bashbooster.net/).
 
 Разные ОС требуют разных операций при смене версии ядра, поэтому далее приведены примеры для Debian и CentOS.
 
-В обоих примерах используется конструкция `bb-deckhouse-get-disruptive-update-approval` — расширение набора команд bashbooster от Deckhouse. Эта конструкция предотвращает перезагрузку узла, если требуется подтверждение перезагрузки путём добавления аннотации на узел.
+В обоих примерах используется конструкция `bb-deckhouse-get-disruptive-update-approval` — расширение набора команд Bash Booster от Deckhouse. Эта конструкция предотвращает перезагрузку узла, если её необходимо подтвердить, добавив аннотацию на узел.
 
-Помимо этого, используются следующие конструкции bashbooster:
+Помимо этого, используются следующие конструкции Bash Booster:
 
-- [bb-apt-install](http://www.bashbooster.net/#apt) для установки apt пакета и отправки события "bb-package-installed", если пакет был установлен;
-- [bb-yum-install](http://www.bashbooster.net/#yum) для установки apt пакета и отправки события "bb-package-installed", если пакет был установлен;
-- [bb-event-on](http://www.bashbooster.net/#event) для сигнализации, что нужна перезагрузка узла, если отправлено событие "bb-package-installed";
-- [bb-log-info](http://www.bashbooster.net/#log) для логирования;
-- [bb-flag-set](http://www.bashbooster.net/#flag) для сигнализации, что нужен перезапуск узла.
+- [`bb-apt-install`](http://www.bashbooster.net/#apt) для установки apt-пакета и отправки события `bb-package-installed`, если пакет был установлен;
+- [`bb-yum-install`](http://www.bashbooster.net/#yum) для установки yum-пакета и отправки события `bb-package-installed`, если пакет был установлен;
+- [`bb-event-on`](http://www.bashbooster.net/#event) для сигнализации, что нужна перезагрузка узла, если отправлено событие `bb-package-installed`;
+- [`bb-log-info`](http://www.bashbooster.net/#log) для логирования;
+- [`bb-flag-set`](http://www.bashbooster.net/#flag) для сигнализации, что нужен перезапуск узла.
 
 ### Для дистрибутивов, основанных на Debian
 
@@ -148,14 +148,14 @@ spec:
 Данный пример приведен для ОС Ubuntu.  
 Способ обновления хранилища сертификатов может отличаться в зависимости от ОС.
 
-При адаптации скрипта под другую ОС измените параметр [bundles](../../../reference/cr.html#nodegroupconfiguration-v1alpha1-spec-bundles).
+При адаптации скрипта под другую ОС измените параметр [bundles](../../../../reference/cr/nodegroup.html#nodegroupconfiguration-v1alpha1-spec-bundles).
 {% endalert %}
 
-Скрипт использует конструкции bashbooster:
+Скрипт использует следующие конструкции Bash Booster:
 
-- [bb-sync-file](http://www.bashbooster.net/#sync) для синхронизации содержимого файла и отправки события "ca-file-updated, если файл изменился;
-- [bb-event-on](http://www.bashbooster.net/#event) для запуска обновления сертификатов, если отправлено событие "ca-file-updated";
-- [bb-tmp-file](http://www.bashbooster.net/#tmp) для создания временных файлов и их удаления после выполнения скрипта.
+- [`bb-sync-file`](http://www.bashbooster.net/#sync) для синхронизации содержимого файла и отправки события `ca-file-updated`, если файл изменился;
+- [`bb-event-on`](http://www.bashbooster.net/#event) для запуска обновления сертификатов, если отправлено событие `ca-file-updated`;
+- [`bb-tmp-file`](http://www.bashbooster.net/#tmp) для создания временных файлов и их удаления после выполнения скрипта.
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1

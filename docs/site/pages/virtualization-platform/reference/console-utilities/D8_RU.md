@@ -42,6 +42,6 @@ Deckhouse CLI — это интерфейс командной строки дл
     </details>
     </div>
 
-## Как установить Deckhouse CLI?
+## Как установить Deckhouse CLI
 
 {% include d8-cli-install/main.liquid %}

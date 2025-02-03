@@ -6,14 +6,15 @@
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $version | replace "." "-" }}
 fromImage: common/distroless
 import:
-  - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
+  - image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
     add: /src/bin/azure-cloud-controller-manager
     to: /usr/local/bin/azure-cloud-controller-manager
     before: setup
 docker:
   ENTRYPOINT: ["/usr/local/bin/azure-cloud-controller-manager"]
 ---
-artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
+image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
+final: false
     {{- if semverCompare ">=1.31" $version }}
 from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
     {{- else if semverCompare "=1.30" $version }}

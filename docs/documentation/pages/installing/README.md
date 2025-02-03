@@ -6,7 +6,7 @@ description: |
 ---
 
 {% alert level="warning" %}
-This page is under active development and may contain incomplete information. Below is an overview of the Deckhouse installation process. For more detailed instructions, we recommend visiting the [Getting Started](/gs/) section, where step-by-step guides are available.
+This page is under active development and may contain incomplete information. Below is an overview of the Deckhouse installation process. For more detailed instructions, we recommend visiting the [Getting Started](/products/kubernetes-platform/gs/) section, where step-by-step guides are available.
 {% endalert %}
 
 The Deckhouse installer is available as a container image and is based on the [dhctl](<https://github.com{{ site.github_repo_path }}/tree/main/dhctl/>) utility, which is responsible for:
@@ -37,11 +37,7 @@ Before installation, ensure the following:
 
 ## Preparing the Configuration
 
-Before starting the Deckhouse installation, you need to prepare the configuration files:
-
-1. [Installation configuration YAML file](#installation-config). This file contains the main parameters for setting up Deckhouse, including information about cluster components, network settings, and integrations.
-
-1. [Additional resources YAML file](#additional-resource-config). This file is used to automatically create necessary resources after the successful installation of Deckhouse, such as custom modules, cluster node settings, or specific policies.
+Before starting the Deckhouse installation, you need to prepare the [configuration YAML file](#installation-config). This file contains the main parameters for configuring Deckhouse, including information about cluster components, network settings, and integrations, as well as a description of resources to be created after installation (node settings and Ingress controller).
 
 Make sure that the configuration files meet the requirements of your infrastructure and include all the necessary parameters for a correct deployment.
 
@@ -71,20 +67,28 @@ The installation configuration YAML file contains parameters for several resourc
    * Node group creation settings.
 
    List of cloud provider configuration resources:
-   * [AWSClusterConfiguration](../modules/030-cloud-provider-aws/cluster_configuration.html#awsclusterconfiguration) — Amazon Web Services;
-   * [AzureClusterConfiguration](../modules/030-cloud-provider-azure/cluster_configuration.html#azureclusterconfiguration) — Microsoft Azure;
-   * [GCPClusterConfiguration](../modules/030-cloud-provider-gcp/cluster_configuration.html#gcpclusterconfiguration) — Google Cloud Platform;
-   * [OpenStackClusterConfiguration](../modules/030-cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration) — OpenStack;
-   * [VsphereClusterConfiguration](../modules/030-cloud-provider-vsphere/cluster_configuration.html#vsphereclusterconfiguration) — VMware vSphere;
-   * [VCDClusterConfiguration](../modules/030-cloud-provider-vcd/cluster_configuration.html#vcdclusterconfiguration) — VMware Cloud Director;
-   * [YandexClusterConfiguration](../modules/030-cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration) — Yandex Cloud;
-   * [ZvirtClusterConfiguration](../modules/030-cloud-provider-zvirt/cluster_configuration.html#zvirtclusterconfiguration) — zVirt.
+   * [AWSClusterConfiguration](../modules/cloud-provider-aws/cluster_configuration.html#awsclusterconfiguration) — Amazon Web Services;
+   * [AzureClusterConfiguration](../modules/cloud-provider-azure/cluster_configuration.html#azureclusterconfiguration) — Microsoft Azure;
+   * [GCPClusterConfiguration](../modules/cloud-provider-gcp/cluster_configuration.html#gcpclusterconfiguration) — Google Cloud Platform;
+   * [OpenStackClusterConfiguration](../modules/cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration) — OpenStack;
+   * [VsphereClusterConfiguration](../modules/cloud-provider-vsphere/cluster_configuration.html#vsphereclusterconfiguration) — VMware vSphere;
+   * [VCDClusterConfiguration](../modules/cloud-provider-vcd/cluster_configuration.html#vcdclusterconfiguration) — VMware Cloud Director;
+   * [YandexClusterConfiguration](../modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration) — Yandex Cloud;
+   * [ZvirtClusterConfiguration](../modules/cloud-provider-zvirt/cluster_configuration.html#zvirtclusterconfiguration) — zVirt.
 
 1. `ModuleConfig` — a set of resources containing configuration parameters for [Deckhouse built-in modules](../).
 
    If the cluster is initially created with nodes dedicated to specific types of workloads (e.g., system nodes or monitoring nodes), it is recommended to explicitly set the `nodeSelector` parameter in the configuration of modules that use persistent storage volumes.
 
-   For example, for the `prometheus` module, the configuration is specified in the [nodeSelector](../modules/300-prometheus/configuration.html#parameters-nodeselector) parameter.
+   For example, for the `prometheus` module, the configuration is specified in the [nodeSelector](../modules/prometheus/configuration.html#parameters-nodeselector) parameter.
+
+1. `IngressNginxController` — deploying the Ingress controller.
+
+1. `NodeGroup` — creating additional node groups.
+
+1. `InstanceClass` — adding configuration resources.
+
+1. `ClusterAuthorizationRule`, `User` — setting up roles and users.
 
 {% offtopic title="An example of the installation config..." %}
 
@@ -170,28 +174,7 @@ spec:
   # settings:
   #   nodeSelector:
   #     node.deckhouse.io/group: monitoring
-```
-
-{% endofftopic %}
-
-### Additional resource config
-
-The additional resources YAML file contains Kubernetes resource manifests that the installer applies immediately after the successful installation of Deckhouse.
-
-This file is useful for performing additional cluster configurations, such as:
-
-* Deploying the Ingress controller;
-* Creating additional node groups;
-* Adding configuration resources;
-* Setting up roles and users.
-
-{% alert level="warning" %}
-The additional resources file cannot use [ModuleConfig](../) for **built-in** modules. To configure built-in modules, use the [installation configuration file](#installation-config).
-{% endalert %}
-
-{% offtopic title="An example of the resource config... " %}
-
-```yaml
+---
 apiVersion: deckhouse.io/v1
 kind: IngressNginxController
 metadata:
@@ -248,7 +231,7 @@ kind: ModuleConfig
 metadata:
   name: deckhouse-admin
 spec:
-  enabled: true
+  enabled: true  
 ```
 
 {% endofftopic %}
@@ -337,7 +320,7 @@ Where:
    - SSH access keys;
    - Configuration file;
    - Resource file, etc.
-1. `<RELEASE_CHANNEL>` — the [update channel](../modules/002-deckhouse/configuration.html#parameters-releasechannel) in kebab-case format, which must match the one specified in `config.yml`:
+1. `<RELEASE_CHANNEL>` — the [update channel](../modules/deckhouse/configuration.html#parameters-releasechannel) in kebab-case format:
    - `alpha` — for the Alpha update channel;
    - `beta` — for the Beta update channel;
    - `early-access` — for the Early Access update channel;
@@ -349,7 +332,6 @@ Here is an example of a command to run the installer container for Deckhouse CE:
 ```shell
 docker run -it --pull=always \
   -v "$PWD/config.yaml:/config.yaml" \
-  -v "$PWD/resources.yml:/resources.yml" \
   -v "$PWD/dhctl-tmp:/tmp/dhctl" \
   -v "$HOME/.ssh/:/tmp/.ssh/" registry.deckhouse.io/deckhouse/ce/install:stable bash
 ```
@@ -368,13 +350,12 @@ Example of running the Deckhouse installation with cloud cluster deployment:
 ```shell
 dhctl bootstrap \
   --ssh-user=<SSH_USER> --ssh-agent-private-keys=/tmp/.ssh/id_rsa \
-  --config=/config.yml --config=/resources.yml
+  --config=/config.yml
 ```
 
 Where:
 
 - `/config.yml` — the installation configuration file;
-- `/resources.yml` — the resource manifests file;
 - `<SSH_USER>` — the username for SSH connection to the server;
 - `--ssh-agent-private-keys` — the private SSH key file for SSH connection.
 
@@ -384,7 +365,7 @@ Where:
 ![Diagram of pre-installation checks execution](../images/installing/preflight-checks.png)
 {% endofftopic %}
 
-### List of checks performed by the installer before starting Deckhouse installation:
+List of checks performed by the installer before starting Deckhouse installation:
 
 1. General checks:
    - The values of the parameters [PublicDomainTemplate](../deckhouse-configure-global.html#parameters-modules-publicdomaintemplate) and [clusterDomain](configuration.html#clusterconfiguration-clusterdomain) do not match.
@@ -432,7 +413,7 @@ Example of using the preflight skip flag:
   ```shell
       dhctl bootstrap \
       --ssh-user=<SSH_USER> --ssh-agent-private-keys=/tmp/.ssh/id_rsa \
-      --config=/config.yml --config=/resources.yml \
+      --config=/config.yml \
       --preflight-skip-all-checks 
   ```
 

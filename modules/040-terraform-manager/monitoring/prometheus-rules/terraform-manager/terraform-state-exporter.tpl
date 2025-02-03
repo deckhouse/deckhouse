@@ -180,9 +180,9 @@
 
 {{- if (.Values.global.enabledModules | has "cloud-provider-aws") }}
 {{ if .Values.global.modules.publicDomainTemplate }}
-        Also, it can occur because of missing permissions for the following actions for the [Deckhouse IAM user]({{ include "helm_lib_module_uri_scheme" . }}://{{ include "helm_lib_module_public_domain" (list . "documentation") }}/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-aws/environment.html#json-policy) in AWS (the new requirements in Deckhouse 1.45):
+        Also, it can occur because of missing permissions for the following actions for the [Deckhouse IAM user]({{ include "helm_lib_module_uri_scheme" . }}://{{ include "helm_lib_module_public_domain" (list . "documentation") }}/products/kubernetes-platform/documentation/v1/modules/cloud-provider-aws/environment.html#json-policy) in AWS (the new requirements in Deckhouse 1.45):
 {{- else }}
-        Also, it can occur because of missing permissions for the following actions for the [Deckhouse IAM user](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-aws/environment.html#json-policy) in AWS (the new requirements in Deckhouse 1.45):
+        Also, it can occur because of missing permissions for the following actions for the [Deckhouse IAM user](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/cloud-provider-aws/environment.html#json-policy) in AWS (the new requirements in Deckhouse 1.45):
 {{- end }}
         1. `ec2:DescribeInstanceTypes`,
         2. `ec2:DescribeSecurityGroupRules`.
@@ -212,9 +212,9 @@
 
 {{- if (.Values.global.enabledModules | has "cloud-provider-aws") }}
 {{ if .Values.global.modules.publicDomainTemplate }}
-        Also, it can occur because of missing permissions for the following actions for the [Deckhouse IAM user]({{ include "helm_lib_module_uri_scheme" . }}://{{ include "helm_lib_module_public_domain" (list . "documentation") }}/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-aws/environment.html#json-policy) in AWS (the new requirements in Deckhouse 1.45):
+        Also, it can occur because of missing permissions for the following actions for the [Deckhouse IAM user]({{ include "helm_lib_module_uri_scheme" . }}://{{ include "helm_lib_module_public_domain" (list . "documentation") }}/products/kubernetes-platform/documentation/v1/modules/cloud-provider-aws/environment.html#json-policy) in AWS (the new requirements in Deckhouse 1.45):
 {{- else }}
-        Also, it can occur because of missing permissions for the following actions for the [Deckhouse IAM user](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-aws/environment.html#json-policy) in AWS (the new requirements in Deckhouse 1.45):
+        Also, it can occur because of missing permissions for the following actions for the [Deckhouse IAM user](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/cloud-provider-aws/environment.html#json-policy) in AWS (the new requirements in Deckhouse 1.45):
 {{- end }}
         1. `ec2:DescribeInstanceTypes`,
         2. `ec2:DescribeSecurityGroupRules`.

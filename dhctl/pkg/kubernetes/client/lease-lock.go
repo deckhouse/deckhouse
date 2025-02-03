@@ -25,13 +25,13 @@ import (
 	"sync"
 	"time"
 
-	log "github.com/sirupsen/logrus"
 	coordinationv1 "k8s.io/api/coordination/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	coordinationclientv1 "k8s.io/client-go/kubernetes/typed/coordination/v1"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 const lockUserInfoAnnotKey = "dhctl.deckhouse.io/lock-user-info"
@@ -145,8 +145,8 @@ func (l *LeaseLock) StopAutoRenew() {
 }
 
 func (l *LeaseLock) startAutoRenew() {
-	defer log.Debugln("lease autorenew stopped")
-	log.Debugln("lease autorenew started")
+	defer log.Debug("lease autorenew stopped")
+	log.Debug("lease autorenew started")
 
 	t := time.NewTicker(time.Duration(l.config.RenewEverySeconds) * time.Second)
 	defer t.Stop()

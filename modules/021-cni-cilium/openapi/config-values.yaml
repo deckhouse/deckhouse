@@ -22,6 +22,22 @@ properties:
       Create routes to Pods on other Nodes.
 
       All Nodes must be located in the same L2 domain.
+  masqueradeMode:
+    type: string
+    enum: ["Netfilter", "BPF"]
+    default: "BPF"
+    description: |
+      Cilium masquerade work mode for pods traffic leaving the cluster.
+      - `BPF` - use cilium BPF. Basic operation mode.
+
+        In this mode, masquerade will not be used if the destination IP address is within the `podSubnetCIDR` or `InternalIP`/`ExternalIP` of any of the cluster nodes.
+
+      - `Netfilter` - use kernel Netfilter(iptables/nf_tables).
+
+        In this mode, masquerade will not be used if the destination IP address is within the `podSubnetCIDR` or `InternalIP`/`ExternalIP` of any of the cluster nodes.
+
+      > In `BPF` mode, if `ExternalIP` other than `InternalIP` is specified for a cluster node, and that IP address is not currently assigned to any interface on the node, it will not be reachable from neighboring nodes from pods network.
+      > The `Netfilter` mode allows you to bypass this limitation, but some other features stop working, such as `EgressGateway``.
   tunnelMode:
     type: string
     enum: ["Disabled", "VXLAN"]
@@ -36,7 +52,7 @@ properties:
     type: boolean
     default: false
     description: |
-      For services of the `loadBalancer` type, enables checking the source IP for compliance with [loadBalancer.sourceRanges](../402-ingress-nginx/cr.html#ingressnginxcontroller-v1-spec-loadbalancer-sourceranges).
+      For services of the `loadBalancer` type, enables checking the source IP for compliance with [loadBalancer.sourceRanges](../ingress-nginx/cr.html#ingressnginxcontroller-v1-spec-loadbalancer-sourceranges).
       The check is not performed if access is made from within the cluster or the `sourceRanges` parameter is empty/not specified.
       Some cloud providers support filtering of incoming traffic based on the `sourceRanges` parameter in their loadBalancer implementations. In such cases, the [cilium documentation](https://docs.cilium.io/en/stable/network/kubernetes/kubeproxy-free/#loadbalancer-source-ranges-checks)
       recommends disabling the `svcSourceRangeCheck` option.

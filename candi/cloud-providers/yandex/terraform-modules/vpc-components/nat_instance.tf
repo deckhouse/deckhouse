@@ -153,6 +153,12 @@ resource "yandex_compute_instance" "nat_instance" {
     ]
   }
 
+  timeouts {
+    create = var.resourceManagementTimeout
+    delete = var.resourceManagementTimeout
+    update = var.resourceManagementTimeout
+  }
+
   metadata = {
     user-data = local.user_data
   }

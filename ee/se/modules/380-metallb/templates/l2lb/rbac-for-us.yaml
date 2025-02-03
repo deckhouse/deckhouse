@@ -1,0 +1,17 @@
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: d8:metallb:l2lb:rbac-proxy
+  {{- include "helm_lib_module_labels" (list . (dict "app" "metallb")) | nindent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: d8:rbac-proxy
+subjects:
+- kind: ServiceAccount
+  name: l2lb-speaker
+  namespace: d8-{{ .Chart.Name }}
+- kind: ServiceAccount
+  name: l2lb-controller
+  namespace: d8-{{ .Chart.Name }}

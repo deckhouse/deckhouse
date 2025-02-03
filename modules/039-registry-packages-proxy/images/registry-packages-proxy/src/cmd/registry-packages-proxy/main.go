@@ -43,7 +43,7 @@ func main() {
 	// init listener. Another listener is used in dhctl
 	listener, err := net.Listen("tcp", config.ListenAddress)
 	if err != nil {
-		logger.Fatal(err)
+		logger.Fatal(err.Error())
 	}
 	defer listener.Close()
 
@@ -53,12 +53,12 @@ func main() {
 	// init kube clients
 	client, err := app.InitClient(config)
 	if err != nil {
-		logger.Fatal(err)
+		logger.Fatal(err.Error())
 	}
 
 	dynamicClient, err := app.InitDynamicClient(config)
 	if err != nil {
-		logger.Fatal(err)
+		logger.Fatal(err.Error())
 	}
 
 	// watch resources
@@ -79,7 +79,7 @@ func main() {
 	}
 	rp := proxy.NewProxy(server, listener, watcher, logger, &registry.DefaultClient{}, opts...)
 	if err != nil {
-		logger.Fatal(err)
+		logger.Fatal(err.Error())
 	}
 
 	go rp.Serve()

@@ -18,8 +18,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -30,6 +32,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/downloader"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 // restoreAbsentModulesFromOverrides checks ModulePullOverrides and restore modules on the FS
@@ -137,13 +140,13 @@ func (l *Loader) restoreAbsentModulesFromOverrides(ctx context.Context) error {
 				return fmt.Errorf("create the '%s' module symlink: %w", mpo.Name, err)
 			}
 		} else {
-			dstDir, err := filepath.EvalSymlinks(moduleSymLink)
+			downloadedModulePath, err := filepath.EvalSymlinks(moduleSymLink)
 			if err != nil {
 				return fmt.Errorf("evaluate the '%s' module symlink %s: %w", mpo.Name, moduleSymLink, err)
 			}
 
 			// check if module symlink leads to current version
-			if filepath.Base(dstDir) != downloader.DefaultDevVersion {
+			if filepath.Base(downloadedModulePath) != downloader.DefaultDevVersion {
 				l.log.Infof("the '%s' module symlink is incorrect, restore it", mpo.Name)
 				if err = l.createModuleSymlink(mpo.Name, mpo.Spec.ImageTag, source, mpo.Status.Weight, true); err != nil {
 					return fmt.Errorf("create the '%s' module symlink: %w", mpo.Name, err)
@@ -162,17 +165,41 @@ func (l *Loader) restoreAbsentModulesFromOverrides(ctx context.Context) error {
 
 // restoreAbsentModulesFromReleases checks ModuleReleases with Deployed status and restore them on the FS
 func (l *Loader) restoreAbsentModulesFromReleases(ctx context.Context) error {
-	releases := new(v1alpha1.ModuleReleaseList)
-	if err := l.client.List(ctx, releases); err != nil {
+	releaseList := new(v1alpha1.ModuleReleaseList)
+	if err := l.client.List(ctx, releaseList); err != nil {
 		return fmt.Errorf("list releases: %w", err)
 	}
 
+	// sorting releases by version (to check previous deployed)
+	releases := releaseList.Items
+	slices.SortFunc(releases, func(a, b v1alpha1.ModuleRelease) int {
+		return a.GetVersion().Compare(b.GetVersion())
+	})
+
+	deployedReleases := make(map[string]v1alpha1.ModuleRelease)
+
 	// TODO: add labels to list only Deployed releases
-	for _, release := range releases.Items {
+	for _, release := range releases {
 		// ignore deleted release and not deployed
 		if release.Status.Phase != v1alpha1.ModuleReleasePhaseDeployed || !release.ObjectMeta.DeletionTimestamp.IsZero() {
 			continue
 		}
+
+		// if we already have deployed release - make it superseded
+		deployedRelease, ok := deployedReleases[release.Spec.ModuleName]
+		if ok {
+			updatedDeployedRelease := deployedRelease.DeepCopy()
+			updatedDeployedRelease.Status.Phase = v1alpha1.ModuleReleasePhaseSuperseded
+			updatedDeployedRelease.Status.Message = ""
+			updatedDeployedRelease.Status.TransitionTime = metav1.NewTime(l.dependencyContainer.GetClock().Now().UTC())
+
+			err := l.client.Status().Patch(ctx, updatedDeployedRelease, client.MergeFrom(&deployedRelease))
+			if err != nil {
+				l.log.Error("patch previous deployed module release", slog.String("name", release.GetName()), log.Err(err))
+			}
+		}
+
+		deployedReleases[release.Spec.ModuleName] = release
 
 		moduleVersion := "v" + release.Spec.Version.String()
 
@@ -196,8 +223,8 @@ func (l *Loader) restoreAbsentModulesFromReleases(ctx context.Context) error {
 		} else {
 			l.log.Debugf("set the '%s' version for the '%s' module", release.Spec.Version.String(), release.Spec.ModuleName)
 			err = utils.Update[*v1alpha1.Module](ctx, l.client, module, func(module *v1alpha1.Module) bool {
-				if module.Properties.Version != "v"+release.Spec.Version.String() {
-					module.Properties.Version = "v" + release.Spec.Version.String()
+				if module.Properties.Version != moduleVersion {
+					module.Properties.Version = moduleVersion
 					return true
 				}
 				return false
@@ -223,19 +250,19 @@ func (l *Loader) restoreAbsentModulesFromReleases(ctx context.Context) error {
 				return fmt.Errorf("create module symlink: %w", err)
 			}
 		} else {
-			dstDir, err := filepath.EvalSymlinks(moduleSymLink)
+			downloadedModulePath, err := filepath.EvalSymlinks(moduleSymLink)
 			if err != nil {
 				return fmt.Errorf("evaluate the '%s' module symlink %s: %w", release.Spec.ModuleName, moduleSymLink, err)
 			}
 
 			// skip overridden modules
-			if filepath.Base(dstDir) == downloader.DefaultDevVersion {
+			if filepath.Base(downloadedModulePath) == downloader.DefaultDevVersion {
 				l.log.Warnf("the '%s' module symlink is overridden, skip it", release.Spec.ModuleName)
 				continue
 			}
 
 			// check if module symlink leads to current version
-			if filepath.Base(dstDir) != moduleVersion {
+			if filepath.Base(downloadedModulePath) != moduleVersion {
 				l.log.Infof("the '%s' module symlink is incorrect, restore it", release.Spec.ModuleName)
 				if err = l.createModuleSymlink(release.Spec.ModuleName, moduleVersion, source, release.Spec.Weight, false); err != nil {
 					return fmt.Errorf("create the '%s' module symlink: %w", release.Spec.ModuleName, err)

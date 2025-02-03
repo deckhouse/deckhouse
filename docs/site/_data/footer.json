@@ -35,8 +35,8 @@
             "rel": ""
           },
           {
-            "title": "Delivery",
-            "url": "/products/delivery/",
+            "title": "Delivery Kit",
+            "url": "/products/delivery-kit/",
             "target": "",
             "rel": ""
           }
@@ -79,6 +79,30 @@
             "url": "/success-stories/",
             "target": "",
             "rel": ""
+          },
+          {
+            "title": "Community",
+            "url": "/community/",
+            "target": "",
+            "rel": ""
+          },
+          {
+            "title": "Documentation",
+            "url": "/products/kubernetes-platform/documentation/v1/deckhouse-overview.html",
+            "target": "",
+            "rel": ""
+          },
+          {
+            "title": "Getting started",
+            "url": "/products/kubernetes-platform/gs/",
+            "target": "",
+            "rel": ""
+          },
+          {
+            "title": "Blog",
+            "url": "https://blog.deckhouse.io/",
+            "target": "_blank",
+            "rel": ""
           }
         ]
       }
@@ -118,43 +142,25 @@
             "rel": ""
           },
           {
-            "title": "Delivery",
-            "url": "/products/delivery/",
+            "title": "Delivery Kit",
+            "url": "/products/delivery-kit/",
             "target": "",
             "rel": ""
           }
         ]
       },
       {
-        "title": "Решения",
+        "title": "Партнёры",
         "items": [
           {
-            "title": "Техническая поддержка",
-            "url": "/tech-support/",
+            "title": "Стать партнёром",
+            "url": "/become-partner/",
             "target": "",
             "rel": ""
           },
           {
-            "title": "Технологические партнёры",
-            "url": "/partnership-products/",
-            "target": "",
-            "rel": ""
-          },
-          {
-            "title": "Переезд с OpenShift",
-            "url": "/moving-from-openshift/",
-            "target": "",
-            "rel": ""
-          },
-          {
-            "title": "Безопасность",
-            "url": "/security/",
-            "target": "",
-            "rel": ""
-          },
-          {
-            "title": "Сравнение с KaaS",
-            "url": "/deckhouse-vs-kaas/",
+            "title": "Найти партнёра",
+            "url": "/partners/",
             "target": "",
             "rel": ""
           }
@@ -164,20 +170,14 @@
         "title": "Информация",
         "items": [
           {
-            "title": "Стать партнёром",
-            "url": "/how-to-buy/#partners",
+            "title": "Техподдержка",
+            "url": "/tech-support/",
             "target": "",
             "rel": ""
           },
           {
-            "title": "Партнёрская программа",
-            "url": "/partners-program/",
-            "target": "_blank",
-            "rel": ""
-          },
-          {
             "title": "Образовательная деятельность",
-            "url": "/education-license/",
+            "url": "/education-licence/",
             "target": "",
             "rel": ""
           },
@@ -196,7 +196,7 @@
           {
             "title": "Блог",
             "url": "https://blog.deckhouse.ru/",
-            "target": "_blank",
+            "target": "",
             "rel": ""
           },
           {

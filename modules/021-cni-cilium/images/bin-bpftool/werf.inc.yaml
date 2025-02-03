@@ -14,18 +14,29 @@
 # Corresponding commit is 063fa0d879d9560b85b6134c48ece08e672fa057 (https://github.com/cilium/image-tools/tree/063fa0d879d9560b85b6134c48ece08e672fa057)
 # #####################################################################
 ---
-artifact: {{ $.ModuleName }}/bpftool-artifact
-fromImage: {{ $.ModuleName }}/base-cilium-dev
+image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+fromImage: common/src-artifact
+final: false
 shell:
-  beforeInstall:
-  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
+  install:
   - git clone {{ $.SOURCE_REPO }}/bpf/bpf-next.git /src/linux
   - cd /src/linux
   - git checkout {{ $bpftoolRev }}
-  install:
+  - rm -rf /src/linux/.git
+---
+image: {{ .ModuleName }}/bpftool-artifact
+fromImage: {{ .ModuleName }}/base-cilium-dev
+final: false
+import:
+- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+  add: /src
+  to: /src
+  before: install
+shell:
+  beforeInstall:
   - update-alternatives --install /usr/bin/python python /usr/bin/python2 1
   - update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-13 2
-  setup:
+  install:
   - cd /src/linux/tools/bpf/bpftool
   - make -j "$(getconf _NPROCESSORS_ONLN)"
   - strip bpftool

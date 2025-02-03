@@ -1,0 +1,15 @@
+diff --git a/operator/pkg/helmreconciler/apply.go b/operator/pkg/helmreconciler/apply.go
+index 1073df5f14..793f1e8162 100644
+--- a/operator/pkg/helmreconciler/apply.go
++++ b/operator/pkg/helmreconciler/apply.go
+@@ -235,7 +235,9 @@ func (h *HelmReconciler) serverSideApply(obj *unstructured.Unstructured) error {
+ 	scope.Infof("using server side apply to update obj: %v", objectStr)
+ 	opts := []client.PatchOption{client.ForceOwnership, client.FieldOwner(fieldOwnerOperator)}
+ 	if err := h.client.Patch(context.TODO(), obj, client.Apply, opts...); err != nil {
+-		return fmt.Errorf("failed to update resource with server-side apply for obj %v: %v", objectStr, err)
++		if !kerrors.IsForbidden(err) {
++			return fmt.Errorf("failed to update resource with server-side apply for obj %v: %v", objectStr, err)
++		}
+ 	}
+ 	return nil
+ }

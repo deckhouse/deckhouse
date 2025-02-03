@@ -2,6 +2,12 @@
 cpu: 25m
 memory: 40Mi
 {{- end }}
+
+{{- $etcdQuotaBackendBytes := "" -}}
+{{- if hasKey .Values.controlPlaneManager.internal "etcdQuotaBackendBytes" -}}
+  {{- $etcdQuotaBackendBytes = .Values.controlPlaneManager.internal.etcdQuotaBackendBytes -}}
+{{- end -}}
+
 {{- if .Values.global.clusterIsBootstrapped }}
   {{- if hasKey .Values.controlPlaneManager.internal "mastersNode" }}
     {{- range $node := .Values.controlPlaneManager.internal.mastersNode }}
@@ -37,6 +43,9 @@ spec:
             {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" $ | nindent 12 }}
             image: {{ include "helm_lib_module_image" (list $ "etcdBackup") }}
             imagePullPolicy: IfNotPresent
+            env:
+            - name: ETCDQUOTA
+              value: {{ $etcdQuotaBackendBytes | default "2147483648" | quote }}
             resources:
               requests:
               {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 50 | nindent 16 }}

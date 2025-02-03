@@ -1,0 +1,143 @@
+# base components imports
+# . is dict have keys:
+#   k8sVersions - list versions k8s to kubectl import
+#   CandiVersionMap - dict CandiVersionMap from werf.yaml
+{{- define "base components imports" }}
+{{- $context := . -}}
+
+- image: common/tini-artifact
+  add: /tini/tini-static
+  to: /usr/bin/tini
+  before: setup
+- image: common/semver-artifact
+  add: /usr/local/bin/semver
+  to: /usr/local/bin/semver
+  before: setup
+  {{- range $k8sVersion := $context.k8sVersions }}
+    {{- $image_version := printf "%s.%d" $k8sVersion (index $context.CandiVersionMap "k8s" $k8sVersion "patch") | replace "." "-" }}
+- image: common/kubernetes-artifact-{{ $image_version }}
+  add: /src/_output/bin/kubectl
+  to: /usr/local/bin/kubectl-{{ $k8sVersion }}
+  before: setup
+  {{- end }}
+
+{{- end }}
+
+
+# base components
+# . is list with indexes:
+#   0 - parent context
+#   1 - Files.Get prefix
+{{- define "base components" }}
+{{- $context := index . 0 -}}
+{{- $prefix := index . 1 -}}
+
+- |
+  # Install kubectl wrapper
+  cat <<"EOD" > /usr/local/bin/kubectl
+  {{- $context.Files.Get (printf "%sdeckhouse-controller/files/kubectl_wrapper.sh" $prefix) | nindent 2 }}
+  EOD
+  chmod +x /usr/local/bin/kubectl
+  # Shell comfort: inputrc
+  cat <<"EOD" > /etc/inputrc
+  {{- $context.Files.Get (printf "%sdeckhouse-controller/files/inputrc" $prefix) | nindent 2 }}
+  EOD
+  # Shell comfort: bashrc
+  cat <<"EOD" > /etc/bashrc
+  {{- $context.Files.Get (printf "%sdeckhouse-controller/files/bashrc" $prefix) | nindent 2 }}
+  EOD
+  # Shell comfort: add bashrc for root
+  rm -f /root/.bashrc
+  ln -s /etc/bashrc /root/.bashrc
+  # Shell comfort: add bashrc for nobody
+  rm -f /.bashrc
+  ln -s /etc/bashrc /.bashrc
+  # Shell comfort: create /etc/vim
+  mkdir -p /etc/vim/
+  # Shell comfort: vimrc.local
+  cat <<"EOD" > /etc/vim/vimrc.local
+  {{- $context.Files.Get (printf "%sdeckhouse-controller/files/vimrc.local" $prefix) | nindent 2 }}
+  EOD
+
+{{- end }}
+
+
+# common-base image
+# . is dict have keys:
+#   rootContext - root context contains .Files
+#   prefix - Files.Get prefix
+#   k8sVersions - list versions k8s to kubectl import
+#   CandiVersionMap - dict CandiVersionMap from werf.yaml
+#    - dict CandiVersionMap from werf.yaml
+{{- define "common_base_image" }}
+{{- $context := . -}}
+
+image: common-base
+fromImage: common/alt-p11
+import:
+- image: dev-alt-artifact
+  add: /
+  to: /
+  before: setup
+  includePaths:
+  - usr/lib64/libz.so*
+  - usr/lib64/libexpat.so*
+  - usr/lib64/libssl.so.*
+  - usr/lib64/libcrypto.so.*
+  - usr/bin/openssl
+  - etc/pki
+  - usr/share/ca-certificates/ca-bundle.crt
+  - usr/bin/python3
+  - usr/bin/python3.12
+  - usr/lib/python3
+  - usr/lib64/python3
+  - usr/lib64/python3.12
+  - usr/lib64/libffi.so*
+  - usr/lib64/libb2.so*
+  - usr/share/vim
+  - etc/vim
+  - etc/bash_completion.d
+  - etc/bashrc.d/bash_completion.sh
+  - usr/share/bash-completion
+  - usr/bin/vim-console
+{{ include "base components imports" (dict "k8sVersions" $context.k8sVersions "CandiVersionMap" $context.CandiVersionMap ) }}
+
+- image: common/distroless
+  add: /etc/ssl
+  to: /etc/ssl
+  before: setup
+
+- image: registrypackages/d8-curl-artifact-8-9-1
+  add: /d8-curl
+  to: /usr/bin/curl
+  before: setup
+
+shell:
+  beforeInstall:
+  {{- include "base components" (list $context.rootContext $context.prefix) | nindent 2 }}
+
+docker:
+  ENV:
+    CRYPTOGRAPHY_OPENSSL_NO_LEGACY: "true"
+{{- end }}
+
+
+# base-for-go image
+# . is dict have keys:
+#   rootContext - root context contains .Files
+#   prefix - Files.Get prefix
+#   k8sVersions - list versions k8s to kubectl import
+#   CandiVersionMap - dict CandiVersionMap from werf.yaml
+{{- define "base_for_go_image" }}
+{{- $context := . -}}
+
+image: base-for-go
+fromImage: common/alt-p11-artifact
+import:
+{{ include "base components imports" (dict "k8sVersions" $context.k8sVersions "CandiVersionMap" $context.CandiVersionMap ) }}
+shell:
+  beforeInstall:
+  - apt-get install -y golang make git gcc
+  {{- include "base components" (list $context.rootContext $context.prefix) | nindent 2 }}
+
+{{- end }}

@@ -26,13 +26,18 @@ spec:
 EOF
 ```
 
-Wait for the `sds-node-configurator` module to reach the `Ready` state:
+Wait for the `sds-node-configurator` module to reach the `Ready` status.
+To check the status, run the following command:
 
 ```shell
 d8 k get modules sds-node-configurator -w
+```
 
-# NAME                    WEIGHT   STATE     SOURCE      STAGE   STATUS
-# sds-node-configurator   900      Enabled   deckhouse           Ready
+In the output, you should see information about the `sds-node-configurator` module:
+
+```console
+NAME                    WEIGHT   STATE     SOURCE      STAGE   STATUS
+sds-node-configurator   900      Enabled   deckhouse           Ready
 ```
 
 Then, to enable the `sds-local-volume` module with default settings, run the following command:
@@ -50,12 +55,17 @@ EOF
 ```
 
 This will launch service pods of the `sds-local-volume` components on all cluster nodes.
+To check the module status, run the following command:
 
 ```shell
 d8 k get modules sds-local-volume -w
+```
 
-# NAME               WEIGHT   STATE     SOURCE     STAGE   STATUS
-# sds-local-volume   920      Enabled   Embedded           Ready
+In the output, you should see information about the `sds-local-volume` module:
+
+```console
+NAME               WEIGHT   STATE     SOURCE     STAGE   STATUS
+sds-local-volume   920      Enabled   Embedded           Ready
 ```
 
 To verify that all pods in the `d8-sds-local-volume` and `d8-sds-node-configurator` namespaces are in the `Running` or `Completed` state and are deployed on all nodes where LVM resources are planned to be used, use the following commands:
@@ -84,14 +94,18 @@ To list available block devices, you can use the `BlockDevices` resource, which 
 
 ```shell
 d8 k get bd
+```
 
-# NAME                                           NODE       CONSUMABLE   SIZE           PATH
-# dev-ef4fb06b63d2c05fb6ee83008b55e486aa1161aa   worker-0   false        976762584Ki    /dev/nvme1n1
-# dev-0cfc0d07f353598e329d34f3821bed992c1ffbcd   worker-0   false        894006140416   /dev/nvme0n1p6
-# dev-7e4df1ddf2a1b05a79f9481cdf56d29891a9f9d0   worker-1   false        976762584Ki    /dev/nvme1n1
-# dev-b103062f879a2349a9c5f054e0366594568de68d   worker-1   false        894006140416   /dev/nvme0n1p6
-# dev-53d904f18b912187ac82de29af06a34d9ae23199   worker-2   false        976762584Ki    /dev/nvme1n1
-# dev-6c5abbd549100834c6b1668c8f89fb97872ee2b1   worker-2   false        894006140416   /dev/nvme0n1p6
+In the output, you should see a list of available block devices:
+
+```console
+NAME                                           NODE       CONSUMABLE   SIZE           PATH
+dev-ef4fb06b63d2c05fb6ee83008b55e486aa1161aa   worker-0   false        976762584Ki    /dev/nvme1n1
+dev-0cfc0d07f353598e329d34f3821bed992c1ffbcd   worker-0   false        894006140416   /dev/nvme0n1p6
+dev-7e4df1ddf2a1b05a79f9481cdf56d29891a9f9d0   worker-1   false        976762584Ki    /dev/nvme1n1
+dev-b103062f879a2349a9c5f054e0366594568de68d   worker-1   false        894006140416   /dev/nvme0n1p6
+dev-53d904f18b912187ac82de29af06a34d9ae23199   worker-2   false        976762584Ki    /dev/nvme1n1
+dev-6c5abbd549100834c6b1668c8f89fb97872ee2b1   worker-2   false        894006140416   /dev/nvme0n1p6
 ```
 
 In the example above, six block devices are available across three nodes.
@@ -130,28 +144,37 @@ EOF
 
 Details about the configuration options for the `LVMVolumeGroup` resource can be found in the [reference section](../../../../../reference/cr/lvmvolumegroup.html).
 
-Wait until the created `LVMVolumeGroup` resource transitions to the `Ready` state:
+Wait until the created `LVMVolumeGroup` resource transitions to the `Ready` phase.
+To check the resource phase, run the following command:
 
 ```shell
 d8 k get lvg vg-on-worker-0 -w
-
-# NAME             THINPOOLS   CONFIGURATION APPLIED   PHASE   NODE       SIZE       ALLOCATED SIZE   VG   AGE
-# vg-on-worker-0   1/1         True                    Ready   worker-0   360484Mi   30064Mi          vg   1h
 ```
 
-If the resource transitions to the `Ready` state, this indicates that an LVM volume group named `vg` has been created on node worker-0 using the block devices `/dev/nvme1n1` and `/dev/nvme0n1p6`.
+In the output, you should see information about the resource phase:
+
+```console
+NAME             THINPOOLS   CONFIGURATION APPLIED   PHASE   NODE       SIZE       ALLOCATED SIZE   VG   AGE
+vg-on-worker-0   1/1         True                    Ready   worker-0   360484Mi   30064Mi          vg   1h
+```
+
+If the resource transitions to the `Ready` phase, this indicates that an LVM volume group named `vg` has been created on node worker-0 using the block devices `/dev/nvme1n1` and `/dev/nvme0n1p6`.
 
 Next, you need to repeat the creation of `LVMVolumeGroup` resources for the remaining nodes (worker-1 and worker-2), modifying the resource name, node name, and block device names accordingly.
 
-Ensure that LVM volume groups are created on all nodes where they are intended for use:
+Ensure that LVM volume groups are created on all nodes where they are intended for use by running the following command:
 
 ```shell
 d8 k get lvg -w
+```
 
-# NAME             THINPOOLS   CONFIGURATION APPLIED   PHASE   NODE       SIZE       ALLOCATED SIZE   VG   AGE
-# vg-on-worker-0   0/0         True                    Ready   worker-0   360484Mi   30064Mi          vg   1h
-# vg-on-worker-1   0/0         True                    Ready   worker-1   360484Mi   30064Mi          vg   1h
-# vg-on-worker-2   0/0         True                    Ready   worker-2   360484Mi   30064Mi          vg   1h
+In the output, you should see a list of created volume groups:
+
+```console
+NAME             THINPOOLS   CONFIGURATION APPLIED   PHASE   NODE       SIZE       ALLOCATED SIZE   VG   AGE
+vg-on-worker-0   0/0         True                    Ready   worker-0   360484Mi   30064Mi          vg   1h
+vg-on-worker-1   0/0         True                    Ready   worker-1   360484Mi   30064Mi          vg   1h
+vg-on-worker-2   0/0         True                    Ready   worker-2   360484Mi   30064Mi          vg   1h
 ```
 
 ### Creating a StorageClass
@@ -188,18 +211,30 @@ spec:
 EOF
 ```
 
-Check that the created `LocalStorageClass` has transitioned to the `Created` state and the corresponding StorageClass has been generated:
+Check that the created `LocalStorageClass` has transitioned to the `Created` phase by running the following command:
 
 ```shell
 d8 k get lsc local-storage-class -w
+```
 
-# NAME                        PHASE     AGE
-# local-storage-class-thick   Created   1h
+In the output, you should see information about the created `LocalStorageClass`:
 
+```console
+NAME                        PHASE     AGE
+local-storage-class-thick   Created   1h
+```
+
+Check that the corresponding StorageClass has been generated by running the following command:
+
+```shell
 d8 k get sc local-storage-class
+```
 
-# NAME                        PROVISIONER                      RECLAIMPOLICY   VOLUMEBINDINGMODE      ALLOWVOLUMEEXPANSION   AGE
-# local-storage-class-thick   local.csi.storage.deckhouse.io   Delete          WaitForFirstConsumer   true                   1h
+In the output, you should see information about the generated StorageClass:
+
+```console
+NAME                        PROVISIONER                      RECLAIMPOLICY   VOLUMEBINDINGMODE      ALLOWVOLUMEEXPANSION   AGE
+local-storage-class-thick   local.csi.storage.deckhouse.io   Delete          WaitForFirstConsumer   true                   1h
 ```
 
 ### Thin type StorageClass
@@ -251,16 +286,28 @@ spec:
 EOF
 ```
 
-Check that the created `LocalStorageClass` has transitioned to the `Created` state and the corresponding StorageClass has been generated:
+Check that the created `LocalStorageClass` has transitioned to the `Created` phase by running the following command:
 
 ```shell
 d8 k get lsc local-storage-class -w
+```
 
-# NAME                       PHASE     AGE
-# local-storage-class-thin   Created   1h
+In the output, you should see information about the created `LocalStorageClass`:
 
+```console
+NAME                       PHASE     AGE
+local-storage-class-thin   Created   1h
+```
+
+Check that the corresponding StorageClass has been generated by running the following command:
+
+```shell
 d8 k get sc local-storage-class
+```
 
-# NAME                       PROVISIONER                      RECLAIMPOLICY   VOLUMEBINDINGMODE      ALLOWVOLUMEEXPANSION   AGE
-# local-storage-class-thin   local.csi.storage.deckhouse.io   Delete          WaitForFirstConsumer   true                   1h
+In the output, you should see information about the generated StorageClass:
+
+```console
+NAME                       PROVISIONER                      RECLAIMPOLICY   VOLUMEBINDINGMODE      ALLOWVOLUMEEXPANSION   AGE
+local-storage-class-thin   local.csi.storage.deckhouse.io   Delete          WaitForFirstConsumer   true                   1h
 ```

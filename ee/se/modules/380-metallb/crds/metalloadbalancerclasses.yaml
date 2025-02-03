@@ -64,24 +64,6 @@ spec:
                   type: object
                   description: |-
                     Allows restricting the list of nodes from which the announcement will occur. Specified as a set of labels for filtering nodes.
-                tolerations:
-                  type: array
-                  description: |-
-                    They are the same as the Pod's `spec.tolerations` parameter in Kubernetes.
-                  items:
-                    type: object
-                    properties:
-                      effect:
-                        type: string
-                      key:
-                        type: string
-                      operator:
-                        type: string
-                      tolerationSeconds:
-                        type: integer
-                        format: int64
-                      value:
-                        type: string
               type: object
             status:
               type: object

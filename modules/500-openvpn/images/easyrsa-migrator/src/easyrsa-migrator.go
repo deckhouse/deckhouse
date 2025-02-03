@@ -22,7 +22,7 @@ import (
 	"os"
 	"strings"
 
-	log "github.com/sirupsen/logrus"
+	"github.com/deckhouse/deckhouse/pkg/log"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -64,7 +64,7 @@ func main() {
 	config, _ := rest.InClusterConfig()
 	kubeClient, err := kubernetes.NewForConfig(config)
 	if err != nil {
-		log.Error(err)
+		log.Error(err.Error())
 	}
 
 	_, err = kubeClient.CoreV1().Secrets(namespace).Get(context.TODO(), easyrsaMigrated, metav1.GetOptions{})
@@ -75,16 +75,16 @@ func main() {
 
 	indexTxtFile, err := os.ReadFile(easyrsaDir + "/pki/index.txt")
 	if err != nil {
-		log.Error(err)
+		log.Error(err.Error())
 	}
 
 	caCertFile, err := os.ReadFile(fmt.Sprintf("%s/pki/ca.crt", easyrsaDir))
 	if err != nil {
-		log.Error(err)
+		log.Error(err.Error())
 	}
 	caKeyFile, err := os.ReadFile(fmt.Sprintf("%s/pki/private/ca.key", easyrsaDir))
 	if err != nil {
-		log.Error(err)
+		log.Error(err.Error())
 	}
 	data := map[string]string{
 		certFileName:    string(caCertFile),
@@ -107,11 +107,11 @@ func main() {
 
 	serverCertFile, err := os.ReadFile(fmt.Sprintf("%s/pki/issued/server.crt", easyrsaDir))
 	if err != nil {
-		log.Error(err)
+		log.Error(err.Error())
 	}
 	serverKeyFile, err := os.ReadFile(fmt.Sprintf("%s/pki/private/server.key", easyrsaDir))
 	if err != nil {
-		log.Error(err)
+		log.Error(err.Error())
 	}
 	data = map[string]string{
 		certFileName:    string(serverCertFile),
@@ -134,11 +134,11 @@ func main() {
 
 	taKeyFile, err := os.ReadFile(fmt.Sprintf("%s/pki/ta.key", easyrsaDir))
 	if err != nil {
-		log.Error(err)
+		log.Error(err.Error())
 	}
 	dhFile, err := os.ReadFile(fmt.Sprintf("%s/pki/dh.pem", easyrsaDir))
 	if err != nil {
-		log.Error(err)
+		log.Error(err.Error())
 	}
 	data = map[string]string{
 		"ta.key": string(taKeyFile),
@@ -171,23 +171,23 @@ func main() {
 
 		path := fmt.Sprintf("%s/pki/issued/%s.crt", easyrsaDir, cert.CommonName)
 		if !checkFileExists(path) {
-			log.Printf("file not found: %s", path)
+			log.Infof("file not found: %s", path)
 			path = fmt.Sprintf("%s/pki/revoked/certs_by_serial/%s.crt", easyrsaDir, cert.SerialNumber)
 		}
 		file, err := os.ReadFile(path)
 		if err != nil {
-			log.Error(err)
+			log.Error(err.Error())
 		}
 		s.cert = string(file)
 
 		path = fmt.Sprintf("%s/pki/private/%s.key", easyrsaDir, cert.CommonName)
 		if !checkFileExists(path) {
-			log.Printf("file not found: %s", path)
+			log.Infof("file not found: %s", path)
 			path = fmt.Sprintf("%s/pki/revoked/private_by_serial/%s.key", easyrsaDir, cert.SerialNumber)
 		}
 		file, err = os.ReadFile(path)
 		if err != nil {
-			log.Error(err)
+			log.Error(err.Error())
 		}
 		s.key = string(file)
 

@@ -68,7 +68,7 @@ spec:
             path: /readyz
             port: 9099
         command:
-        - "/bin/ratify"
+        - "/ratify"
         args:
         - "serve"
         - "--http"

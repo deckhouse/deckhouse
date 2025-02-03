@@ -1,6 +1,6 @@
 {{- define "controller_resources" }}
-cpu: 150m
-memory: 256Mi
+cpu: 30m
+memory: 70Mi
 {{- end }}
 
 {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
@@ -65,7 +65,6 @@ spec:
           {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 10 }}
           imagePullPolicy: 'IfNotPresent'
           args:
-            - /multitenancy-manager
             - --allow-orphan-namespaces={{ .Values.multitenancyManager.allowNamespacesWithoutProjects }}
           env:
             - name: HA_MODE

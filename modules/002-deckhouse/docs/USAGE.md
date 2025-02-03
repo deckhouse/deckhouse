@@ -2,38 +2,17 @@
 title: "The deckhouse module: usage"
 ---
 
-## Usage
-
-Below is a simple example of the module configuration:
-
-```yaml
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleConfig
-metadata:
-  name: deckhouse
-spec:
-  version: 1
-  settings:
-    logLevel: Debug
-    bundle: Minimal
-    releaseChannel: EarlyAccess
-```
-
-You can also configure additional parameters.
-
 ## Setting up the update mode
 
-Deckhouse will update as soon as a new release will be created if update windows are not set and the update mode is `Auto`.
-
-Patch versions (e.g. updates from `1.26.1` to `1.26.2`) are installed without confirmation and without taking into account update windows.
-
-{% alert %}
-You can also configure node disruption update window in custom resource [NodeGroup](../040-node-manager/cr.html#nodegroup) (the `disruptions.automatic.windows` parameter).
-{% endalert %}
+You can manage DKP updates in the following ways:
+- Using the [settings.update](configuration.html#parameters-update) ModuleConfig `deckhouse` parameter;
+- Using the [disruptions](../node-manager/cr.html#nodegroup-v1-spec-disruptions) NodeGroup parameters section.
 
 ### Update windows configuration
 
-You can configure the time when Deckhouse will install updates by using the [update.windows](configuration.html#parameters-update-windows) module configuration parameter.
+You can configure the time windows when Deckhouse will automatically install updates in the following ways:
+- in the [update.windows](configuration.html#parameters-update-windows) parameter of the `deckhouse` ModuleConfig for overall update management;
+- in the [disruptions.automatic.windows](../node-manager/cr.html#nodegroup-v1-spec-disruptions-automatic-windows) and [disruptions.rollingUpdate.windows](../node-manager/cr.html#nodegroup-v1-spec-disruptions-rollingupdate-windows) parameters of NodeGroup, for managing disruptive updates.
 
 An example of setting up two daily update windows — from 8 a.m. to 10 a.m. and from 8 p.m. to 10 p.m. (UTC):
 
@@ -74,55 +53,48 @@ spec:
             - Sat
 ```
 
+<div id="manual-disruption-update-confirmation"></div>
+
 ### Manual update confirmation
 
-If necessary, it is possible to enable manual confirmation of updates. This can be done as follows:
+Manual confirmation of Deckhouse version updates is provided in the following cases:
+- The Deckhouse update confirmation mode is enabled.
 
-```yaml
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleConfig
-metadata:
-  name: deckhouse
-spec:
-  version: 1
-  settings:
-    releaseChannel: Stable
-    update:
-      mode: Manual
-```
+  This means that the parameter [settings.update.mode](configuration.html#parameters-update-mode) in the ModuleConfig `deckhouse` is set to `Manual` (confirmation for both patch and minor versions of Deckhouse) or `AutoPatch` (confirmation for the minor version of Deckhouse).
+  
+  To confirm the update, it is necessary to execute the following command, specifying the required version of Deckhouse:
 
-In this mode, it will be necessary to confirm each minor Deckhouse updates (excluding patch versions).
+  ```shell
+  kubectl patch DeckhouseRelease v1.66.2 --type=merge -p='{"approved": true}'
+  ```
 
-Manual confirmation of the update to the version `v1.43.2`:
+- Disruptive updates confirmation is enabled.
 
-```shell
-kubectl patch DeckhouseRelease v1.43.2 --type=merge -p='{"approved": true}'
-```
+  This means that the parameter [update.disruptionApprovalMode](configuration.html#parameters-update-disruptionapprovalmode) in the `deckhouse` ModuleConfig is set to `Manual`. You can use the following command to set it to `Manual`:
+  
+  ```shell
+  kubectl patch mc deckhouse --type=merge -p='{"spec":{"update":{"disruptionApprovalMode":"Manual"}}}'
+  ```
 
-### Manual disruption update confirmation
+  To confirm a disruptive update, you need to set the annotation `release.deckhouse.io/disruption-approved=true` on the corresponding [DeckhouseRelease](../../cr.html#deckhouserelease) resource.
+  
+  Example:
 
-If necessary, it is possible to enable manual confirmation of disruptive updates (updates that change the default values or behavior). This can be done as follows:
+  ```shell
+  kubectl annotate DeckhouseRelease v1.66.2 release.deckhouse.io/disruption-approved=true
+  ```
 
-```yaml
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleConfig
-metadata:
-  name: deckhouse
-spec:
-  version: 1
-  settings:
-    releaseChannel: Stable
-    update:
-      disruptionApprovalMode: Manual
-```
+- If automatic application of potentially dangerous updates is disabled for a node group.
 
-In this mode, it will be necessary to confirm each minor disruptive update with the `release.deckhouse.io/disruption-approved=true` annotation on the [DeckhouseRelease](../../cr.html#deckhouserelease) resource.
+  This means that the corresponding NodeGroup has the parameter [spec.disruptions.approvalMode](../node-manager/cr.html#nodegroup-v1-spec-disruptions-approvalmode) set to `Manual`.
 
-An example of confirmation of a potentially dangerous Deckhouse minor update `v1.36.4`:
+  For updating **each** node in such a group, the node must have `update.node.deckhouse.io/disruption-approved=` annotation.
+  
+  Example:
 
-```shell
-kubectl annotate DeckhouseRelease v1.36.4 release.deckhouse.io/disruption-approved=true
-```
+  ```shell
+  kubectl annotate node ${NODE_1} update.node.deckhouse.io/disruption-approved=
+  ```
 
 ### Deckhouse update notification
 

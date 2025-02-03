@@ -12,11 +12,11 @@ search: grafana разработка графиков
 3. Если нужно добавить новый Folder, то просто создаём папку в каталоге `grafana-dashboards/` и добавляем туда хотя бы один JSON-манифест.
 4. Править Dashboard'ы в файлах не нужно (если только это не какая-то совсем простая правка), вместо этого:
    * Открываем Dashboard в Grafana:
-     * если это один из существующих — открываем его и [нажимаем кнопку Make editable](/docs/documentation/images/300-prometheus/grafana_make_editable.jpg);
+     * если это один из существующих — открываем его и [нажимаем кнопку Make editable](/docs/documentation/images/prometheus/grafana_make_editable.jpg);
      * если это новый — его необходимо просто создать (в любом Folder, это не важно, он потом переедет в тот, в который будет положен в репозитарии);
      * если это чужой готовый Dashboard — его можно импортировать в Grafana (там есть кнопка Import).
    * Меняем, меняем, меняем... до тех пор, пока не станем довольны Dashboard'ом. Лучше периодически нажимать на кнопку сохранить в Grafana чтобы, если браузер упадет, не потерять изменения.
-   * [Выгружаем Dashboard в JSON](/docs/documentation/images/300-prometheus/grafana_export.jpg) и сохраняем в файл (новый или существующий).
+   * [Выгружаем Dashboard в JSON](/docs/documentation/images/prometheus/grafana_export.jpg) и сохраняем в файл (новый или существующий).
 5. Можно менять название Dashboard'а, название файла, переносить файл между Folder'ами — все подцепится автоматически.
 6. Системные dashboard'ы должны хранится в ресурсах `GrafanaDashboardDefinition` с префиксом `d8` в имени.
 
@@ -71,14 +71,14 @@ search: grafana разработка графиков
 ### Prometheus должен выбираться
 
 В наших Grafana может быть доступно несколько Prometheus'ов (с разной степенью детализации данных и разным периодом хранения), а значит должна быть возможность удобного выбора сервера Prometheus. Чтобы это сделать, нужно:
-* [создать](/docs/documentation/images/300-prometheus/grafana_ds_prometheus_variable.jpg) переменную `$ds_prometheus`
-* в каждой панели [указать](/docs/documentation/images/300-prometheus/grafana_ds_prometheus_select_in_panel.jpg) именно `$ds_prometheus` в качестве data source, а не один из конкретных Prometheus'ов
+* [создать](/docs/documentation/images/prometheus/grafana_ds_prometheus_variable.jpg) переменную `$ds_prometheus`
+* в каждой панели [указать](/docs/documentation/images/prometheus/grafana_ds_prometheus_select_in_panel.jpg) именно `$ds_prometheus` в качестве data source, а не один из конкретных Prometheus'ов
 
 ### Graph Tooltip должен быть в режиме Shared crosshair
 
 Одна из важнейших возможностей, которую предоставляют графики — возможность визуального анализа корреляций. Но, чтобы проводить такой анализ — нужно сопоставлять одну точку во времени на разных графиках, и если графики все одного размера и показаны друг под другом — это не создает проблем, но делать все графики одного размера не всегда возможно (и всегда некрасиво).
 
-[Включайте](/docs/documentation/images/300-prometheus/grafana_graph_tooltip.jpg) Graph Tooltip всегда в режим Shared crosshair — он очень сильно помогает в визуальном анализе корреляций: стоит только навести мышь на один график, как на всех остальных появится полоса показывающая это время.
+[Включайте](/docs/documentation/images/prometheus/grafana_graph_tooltip.jpg) Graph Tooltip всегда в режим Shared crosshair — он очень сильно помогает в визуальном анализе корреляций: стоит только навести мышь на один график, как на всех остальных появится полоса показывающая это время.
 
 Использовать более навороченный режим Shared tooltip не рекомендуется, так как он перегружает лишней информацией.
 
@@ -99,7 +99,7 @@ search: grafana разработка графиков
 3. **всегда используйте Resolution 1/1**;
 4. **никогда не устанавливайте Min step**.
 
-    ![Точность данных и детализация](/docs/documentation/images/300-prometheus/grafana_accuracy.jpg)
+    ![Точность данных и детализация](/docs/documentation/images/prometheus/grafana_accuracy.jpg)
 
     **Объяснение деталей и причин:**
       <ul dir="auto">
@@ -161,9 +161,9 @@ search: grafana разработка графиков
 |-------------------------|---------------|-------------------------------|
 | ![connected][connected] | ![null][null] | ![null as zero][null as zero] |
 
-[connected]: /docs/documentation/images/300-prometheus/grafana_null_value_connected.jpg
-[null]: /docs/documentation/images/300-prometheus/grafana_null_value_null.jpg
-[null as zero]: /docs/documentation/images/300-prometheus/grafana_null_value_as_zero.jpg
+[connected]: /docs/documentation/images/prometheus/grafana_null_value_connected.jpg
+[null]: /docs/documentation/images/prometheus/grafana_null_value_null.jpg
+[null as zero]: /docs/documentation/images/prometheus/grafana_null_value_as_zero.jpg
 
 #### Точность значения должна соответствовать целям
 

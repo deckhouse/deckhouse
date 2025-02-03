@@ -2,7 +2,7 @@
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
 import:
-- artifact: {{ .ModuleName }}/vertical-pod-autoscaler-artifact
+- image: {{ .ModuleName }}/vertical-pod-autoscaler-artifact
   add: /admission-controller
   to: /admission-controller
   before: setup

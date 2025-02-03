@@ -6,6 +6,7 @@ permalink: en/virtualization-platform/documentation/user/overview.html
 This section is intended for users of the Deckhouse Virtualization Platform.
 
 The user guide includes the following sections:
+
 - [Project Access Settings](./project-access.html) —  process for connecting to the platform project.
 - [Resource Management](./resource-management/images.html) —  managing virtual machines, disks, images, and snapshots.
 - [Network](./network/network-policies.html) —  network policy management, traffic configuration, and publishing virtual machines.

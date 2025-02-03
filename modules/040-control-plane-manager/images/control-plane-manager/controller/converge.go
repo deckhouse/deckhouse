@@ -28,8 +28,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/deckhouse/deckhouse/pkg/log"
 	"github.com/otiai10/copy"
-	log "github.com/sirupsen/logrus"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -251,7 +251,7 @@ func waitPodIsReady(componentName string, checksum string) error {
 		pod, err := config.K8sClient.CoreV1().Pods("kube-system").Get(ctx, podName, metav1.GetOptions{})
 		cancel()
 		if err != nil {
-			log.Warn(err)
+			log.Warn(err.Error())
 		}
 
 		if tries > maxRetries {

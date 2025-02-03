@@ -106,9 +106,14 @@ type CommonTLSClientCert struct {
 
 type CommonTLSSpec struct {
 	CommonTLSClientCert `json:"clientCrt,omitempty"`
-	CAFile              string `json:"caFile,omitempty"`
-	VerifyHostname      *bool  `json:"verifyHostname,omitempty"`
-	VerifyCertificate   *bool  `json:"verifyCertificate,omitempty"`
+	SecretRef           *SecretRef `json:"secretRef,omitempty"`
+	CAFile              string     `json:"caFile,omitempty"`
+	VerifyHostname      *bool      `json:"verifyHostname,omitempty"`
+	VerifyCertificate   *bool      `json:"verifyCertificate,omitempty"`
+}
+
+type SecretRef struct {
+	Name string `json:"name,omitempty"`
 }
 
 type EncodingCodec = string

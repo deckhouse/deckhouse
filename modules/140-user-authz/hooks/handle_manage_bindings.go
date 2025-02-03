@@ -68,11 +68,10 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, syncBindings)
 
 type filteredUseBinding struct {
-	Name        string           `json:"name"`
-	Namespace   string           `json:"namespace"`
-	RelatedWith string           `json:"related_with"`
-	RoleName    string           `json:"role_name"`
-	Subjects    []rbacv1.Subject `json:"subjects"`
+	Name      string           `json:"name"`
+	Namespace string           `json:"namespace"`
+	RoleName  string           `json:"role_name"`
+	Subjects  []rbacv1.Subject `json:"subjects"`
 }
 
 func filterUseBinding(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
@@ -81,11 +80,10 @@ func filterUseBinding(obj *unstructured.Unstructured) (go_hook.FilterResult, err
 		return nil, err
 	}
 	return &filteredUseBinding{
-		Name:        binding.Name,
-		Namespace:   binding.Namespace,
-		RelatedWith: binding.Labels["rbac.deckhouse.io/related-with"],
-		RoleName:    binding.RoleRef.Name,
-		Subjects:    binding.Subjects,
+		Name:      binding.Name,
+		Namespace: binding.Namespace,
+		RoleName:  binding.RoleRef.Name,
+		Subjects:  binding.Subjects,
 	}, nil
 }
 
@@ -212,10 +210,12 @@ func createBinding(binding *filteredManageBinding, useRoleName string, namespace
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      fmt.Sprintf("d8:use:%s:binding:%s", useRoleName, binding.Name),
 			Namespace: namespace,
-			Labels: map[string]string{
-				"heritage":                       "deckhouse",
-				"rbac.deckhouse.io/automated":    "true",
+			Annotations: map[string]string{
 				"rbac.deckhouse.io/related-with": binding.Name,
+			},
+			Labels: map[string]string{
+				"heritage":                    "deckhouse",
+				"rbac.deckhouse.io/automated": "true",
 			},
 		},
 		RoleRef: rbacv1.RoleRef{

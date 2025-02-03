@@ -6,7 +6,7 @@ lang: ru
 
 Для создания виртуальной машины используется ресурс [VirtualMachine](../../../reference/cr/virtualmachine.html), его параметры позволяют сконфигурировать:
 
-- [класс виртуальной машины](../../admin/platform-management/virtualization/virtual_machine_classes.html);
+- [класс виртуальной машины](../../admin/platform-management/virtualization/virtual-machine-classes.html);
 - ресурсы, требуемые для работы виртуальной машины (процессор, память, диски и образы);
 - правила размещения виртуальной машины на узлах кластера;
 - настройки загрузчика и оптимальные параметры для гостевой ОС;
@@ -42,7 +42,7 @@ spec:
         - nginx
         - qemu-guest-agent
       run_cmd:
-        - systemctl daemon-relaod
+        - systemctl daemon-reload
         - systemctl enable --now nginx.service
         - systemctl enable --now qemu-guest-agent.service
       ssh_pwauth: True
@@ -144,7 +144,7 @@ d8 v ssh cloud@linux-vm --local-ssh
 Состоянием виртуальной машины можно управлять с помощью следующих методов:
 
 - Создание ресурса [VirtualMachineOperation](../../../reference/cr/virtualmachineoperation.html) (`vmop`).
-- Использование утилиты [`d8`](../../reference/console-utilities/d8.html) с соответствующей подкомандой.
+- Использование утилиты [`d8`](../../../reference/console-utilities/d8.html) с соответствующей подкомандой.
 
 Ресурс `VirtualMachineOperation` декларативно определяет действие, которое должно быть выполнено на виртуальной машине.
 
@@ -432,7 +432,7 @@ spec:
 
 ![virtualMachineAndPodAffinity](/images/virtualization-platform/placement-vm-affinity.ru.png)
 
-В этом примере виртуальная машина будет размещена, если будет такая возможность (так как используется метка `preffered`), только на узлах на которых присутствует виртуальная машина с меткой `server` и значением `database`.
+В этом примере виртуальная машина будет размещена, если будет такая возможность (так как используется метка `preferred`), только на узлах на которых присутствует виртуальная машина с меткой `server` и значением `database`.
 
 ### Избежание совместного размещения — AntiAffinity
 
@@ -565,7 +565,7 @@ linux-vm   Running   virtlab-pt-1   10.66.10.14   79m
 
 Виртуальная машина запущена на узле `virtlab-pt-1`.
 
-Для осуществления миграции виртуальной машины с одного узла на другой, с учетом требований к размещению виртуальной машины используется ресурс [VirtualMachineOperations](../../reference/cr/virtualmachineoperations.html) (`vmop`) с типом Evict.
+Для осуществления миграции виртуальной машины с одного узла на другой, с учетом требований к размещению виртуальной машины используется ресурс [VirtualMachineOperation](../../../reference/cr/virtualmachineoperation.html) (`vmop`) с типом Evict.
 
 ```yaml
 d8 k apply -f - <<EOF
@@ -607,7 +607,7 @@ d8 v evict <vm-name>
 
 Блок `.spec.settings.virtualMachineCIDRs` в конфигурации модуля virtualization задает список подсетей для назначения IP-адресов виртуальным машинам (общий пул IP-адресов). Все адреса в этих подсетях доступны для использования, за исключением первого (адрес сети) и последнего (широковещательный адрес).
 
-Ресурс [VirtualMachineIPAddressLease](../../../reference/cr/virtualmachineipaddressLease.html) (`vmipl`): кластерный ресурс, который управляет временным выделением IP-адресов из общего пула, указанного в `virtualMachineCIDRs`.
+Ресурс [VirtualMachineIPAddressLease](../../../reference/cr/virtualmachineipaddresslease.html) (`vmipl`): кластерный ресурс, который управляет временным выделением IP-адресов из общего пула, указанного в `virtualMachineCIDRs`.
 
 Чтобы посмотреть список временно выделенных IP-адресов (`vmipl`), используйте команду:
 
@@ -659,7 +659,7 @@ linux-vm-7prpx   10.66.10.14   Attached   linux-vm   12h
 
 По умолчанию IP-адрес для виртуальной машины назначается автоматически, из подсетей, определенных в модуле, и закрепляется за ней до её удаления. После удаления виртуальной машины ресурс `vmip` также удаляется, но IP-адрес временно остается закрепленным за проектом/пространством имен и может быть повторно запрошен.
 
-## Как запросить требуемый ip-адрес?
+## Как запросить требуемый IP-адрес?
 
 Создайте ресурс `vmip`:
 
@@ -679,7 +679,7 @@ EOF
 
 ```yaml
 spec:
-  virtualMachineIPAdressName: linux-vm-custom-ip
+  virtualMachineIPAddressName: linux-vm-custom-ip
 ```
 
 ## Как сохранить присвоенный виртуальной машине IP-адрес?
@@ -708,7 +708,7 @@ d8 k patch vmip linux-vm-7prpx --type=merge --patch '{"metadata":{"ownerReferenc
 
 ```yaml
 spec:
-  virtualMachineIPAdressName: linux-vm-7prpx
+  virtualMachineIPAddressName: linux-vm-7prpx
 ```
 
 Даже если ресурс `vmip` будет удален, он остается арендованным для текущего проекта/пространства имен еще 10 минут и существует возможность вновь его занять по запросу:

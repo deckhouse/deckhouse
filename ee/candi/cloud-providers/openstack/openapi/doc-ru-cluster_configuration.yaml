@@ -32,27 +32,27 @@ apiVersions:
           Если поменять теги в рабочем кластере, после применения изменений необходимо пересоздать все машины.
       zones:
         description: |
-          Глобальное ограничение набора зон, с которыми работает данный cloud-провайдер.
+          Глобальное ограничение набора зон, с которыми работает данный облачный провайдер.
       masterNodeGroup:
         description: |
           Спецификация для описания NodeGroup master-узлов.
 
-          > Внимание! После изменения параметров секции `masterNodeGroup` необходимо выполнить команду `dhctl converge`, чтобы изменения вступили в силу.
+          > Внимание. После изменения параметров секции `masterNodeGroup` необходимо выполнить команду `dhctl converge`, чтобы изменения вступили в силу.
         properties:
           replicas:
             description: |
-              Количество создаваемых master-узлов. Для обеспечения кворума важно, чтобы оно было нечетным.
+              Количество создаваемых master-узлов. Для обеспечения кворума важно, чтобы количество было нечетным.
           instanceClass:
             description: |
-              Частичное содержимое полей [OpenStackInstanceClass](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-openstack/cr.html#openstackinstanceclass).
+              Частичное содержимое полей [OpenStackInstanceClass](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/cloud-provider-openstack/cr.html#openstackinstanceclass).
             properties: &instanceClassProperties_ru
               flavorName:
                 description: |
                   Тип заказываемых виртуальных машин.
 
-                  Получить список всех доступных flavor'ов: `openstack flavor list`.
+                  Чтобы узнать список всех доступных flavor'ов, выполните команду: `openstack flavor list`.
 
-                  Для всех не master-узлов желательно использовать flavor'ы с локальным диском. Если в облаке поддерживаются локальные диски, они обычно быстрее и дешевле. Недостатком использования таких flavor'ов является невозможность миграции узлов между гипервизорами.
+                  Для всех узлов, кроме master, рекомендуется выбирать flavor'ы с локальным диском. Такие диски, как правило, обеспечивают более высокую производительность и меньшую стоимость. Однако их использование имеет ограничение — невозможность миграции узлов между гипервизорами.
 
                   Пример создания flavor'а: `openstack flavor create c4m8d50 --ram 8192 --disk 50 --vcpus 4`.
               imageName:
@@ -61,25 +61,25 @@ apiVersions:
 
                   Получить список всех доступных образов можно командой: `openstack image list`.
 
-                  Список поддерживаемых Deckhouse ОС и их версий можно найти в [документации](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/supported_versions.html) (учитывайте используемую версию Deckhouse).
+                  Список поддерживаемых Deckhouse ОС и их версий можно найти [в документации](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/supported_versions.html) (учитывайте используемую версию Deckhouse).
               rootDiskSize:
                 description: |
                   Размер root-диска. Значение указывается в гигабайтах.
 
-                  Параметр также влияет на тип диска. [Подробнее...](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-openstack/faq.html#как-использовать-rootdisksize-и-когда-он-предпочтителен)
+                  Параметр также влияет на тип диска. [Подробнее...](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/cloud-provider-openstack/faq.html#как-использовать-rootdisksize-и-когда-он-предпочтителен)
               etcdDiskSizeGb:
                 description: |
                   Размер диска для etcd. Значение указывается в гигабайтах.
               additionalSecurityGroups:
                 description: |
-                  Дополнительный список security groups, которые будут добавлены на заказанные инстансы соответствующего `OpenStackInstanceClass` в дополнение к указанным в конфигурации cloud-провайдера.
+                  Дополнительный список security groups, которые будут добавлены на заказанные инстансы соответствующего `OpenStackInstanceClass` в дополнение к указанным в конфигурации облачного провайдера.
 
-                  Используется для задания правил firewall по отношению к заказываемым инстансам.
+                  Используется для задания правил файрвола по отношению к заказываемым инстансам.
 
                   `SecurityGroups` могут не поддерживаться провайдером.
               additionalTags:
                 description: |
-                  Дополнительные теги, которые будут присвоены созданным инстансам в дополнение к указанным в конфигурации cloud-провайдера.
+                  Дополнительные теги, которые будут присвоены созданным инстансам в дополнение к указанным в конфигурации облачного провайдера.
           volumeTypeMap:
             description: |
               Словарь типов дисков для хранения данных etcd и конфигурационных файлов Kubernetes.
@@ -99,7 +99,7 @@ apiVersions:
               - `openstack volume type list` — получить список типов дисков.
           serverGroup:
             description: |
-              ServerGroup объединяет инстансы в группу. Инстансы в такой группе будут размещены на одном гипервизоре (affinity) или на разных гипервизорах (anti-affinity). Это позволяет повысить отказоустойчивость кластера.
+              Объединяет инстансы в группу. Инстансы в такой группе будут размещены на одном гипервизоре (affinity) или на разных гипервизорах (anti-affinity). Это позволяет повысить отказоустойчивость кластера.
             properties:
               policy:
                 description: |
@@ -131,7 +131,7 @@ apiVersions:
                   description: |
                     Список лейблов, которые будут прикреплены ко всем ресурсам кластера (если они это поддерживают).
 
-                    Аналогично стандартному [полю](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta) `metadata.labels`.
+                    Аналогично [стандартному полю](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta) `metadata.labels`.
 
                     Если поменять лейблы в рабочем кластере, после применения изменений необходимо пересоздать все машины.
                   x-doc-example: |
@@ -142,7 +142,7 @@ apiVersions:
                     ```
                 annotations:
                   description: |
-                    Аналогично стандартному [полю](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta) `metadata.annotations`.
+                    Аналогично [стандартному полю](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta) `metadata.annotations`.
                   x-doc-example: |
                     ```yaml
                     annotations:
@@ -152,7 +152,7 @@ apiVersions:
                   description: |
                     Аналогично полю `.spec.taints` из объекта [Node](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#taint-v1-core).
 
-                    > **Внимание!** Доступны только поля `effect`, `key`, `values`.
+                    > **Внимание.** Доступны только поля `effect`, `key`, `values`.
                   x-doc-example: |
                     ```yaml
                     taints:
@@ -162,7 +162,7 @@ apiVersions:
                     ```
             instanceClass:
               description: |
-                Частичное содержимое полей [OpenStackInstanceClass](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-openstack/cr.html#openstackinstanceclass).
+                Частичное содержимое полей [OpenStackInstanceClass](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/cloud-provider-openstack/cr.html#openstackinstanceclass).
               properties:
                 <<: *instanceClassProperties_ru
                 configDrive:
@@ -174,14 +174,14 @@ apiVersions:
                   description: |
                     Путь до сети, которая будет подключена к виртуальной машине как основная (шлюз по умолчанию).
 
-                    Получить список доступных сетей можно следующей командой: `openstack network list`.
+                    Получить список доступных сетей можно командой: `openstack network list`.
                 additionalNetworks:
                   description: |
                     Список сетей, которые будут подключены к инстансу.
-                    `openstack network list`
+                    Получить список доступных сетей можно командой: `openstack network list`.
                 networksWithSecurityDisabled:
                   description: |
-                    Список сетей из параметров `mainNetwork` и `additionalNetworks`, в которых **НЕЛЬЗЯ** настраивать `SecurityGroups` и `AllowedAddressPairs` на портах.
+                    Список сетей из параметров `mainNetwork` и `additionalNetworks`, в которых **запрещена** настройка `SecurityGroups` и `AllowedAddressPairs` на портах.
                 floatingIPPools:
                   description: |
                     Список сетей для заказа Floating IP для узлов.
@@ -196,7 +196,7 @@ apiVersions:
 
                 Если значение, указанное в `replicas`, превышает количество элементов в словаре, узлы, чьи номера превышают длину словаря, получают значения, начиная с начала словаря. Если для словаря из примера указано `replicas: 5`, с типом диска `fast-eu-1a` будут worker-0, worker-2 и worker-4, а с типом диска `fast-eu-1b` будут worker-1 и worker-3.
 
-                > **Внимание!** Ограничение по зонам доступности работает только при использовании параметра `zones` (`nodeGroups.zones`). Если параметр `zones` не задан, будут использованы все зоны доступности.
+                > **Внимание.** Ограничение по зонам доступности работает только при использовании параметра `zones` (`nodeGroups.zones`). Если параметр `zones` не задан, будут использованы все зоны доступности.
 
                 Полезные команды:
                 - `openstack availability zone list` — получить список зон доступности.
@@ -205,10 +205,10 @@ apiVersions:
         description: |
           Название схемы размещения.
 
-          [Подробнее](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-openstack/layouts.html) о возможных схемах размещения провайдера.
+          [Подробнее](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/cloud-provider-openstack/layouts.html) о возможных схемах размещения провайдера.
       standard:
         description: |
-          Настройки для схемы размещения [`Standard`](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-openstack/layouts.html#standard).
+          Настройки для схемы размещения [`Standard`](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/cloud-provider-openstack/layouts.html#standard).
         properties:
           bastion:
             description: |
@@ -222,27 +222,27 @@ apiVersions:
                   Тип корневого диска.
               instanceClass:
                 description: |
-                  Частичное содержимое полей [OpenStackInstanceClass](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-openstack/cr.html#openstackinstanceclass).
+                  Частичное содержимое полей [OpenStackInstanceClass](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/cloud-provider-openstack/cr.html#openstackinstanceclass).
                 properties:
                   flavorName:
                     description: |
                       Тип виртуальной машины.
 
-                      Получить список всех доступных flavor'ов можно с помощью команды: `openstack flavor list`.
+                      Чтобы узнать список всех доступных flavor'ов, выполните команду: `openstack flavor list`.
                   imageName:
                     description: |
                       Имя образа виртуальной машины, который будет использоваться для инстанса.
 
-                      Получить список всех доступных образов можно с помощью команды: `openstack image list`.
+                      Чтобы узнать список всех доступных образов, выполните команду: `openstack image list`.
 
                   rootDiskSize:
                     description: |
                       Размер root-диска. Значение указывается в гигабайтах.
 
-                      Параметр также влияет на тип диска. [Подробнее...](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-openstack/faq.html#как-использовать-rootdisksize-и-когда-он-предпочтителен)
+                      Параметр также влияет на тип диска. [Подробнее...](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/cloud-provider-openstack/faq.html#как-использовать-rootdisksize-и-когда-он-предпочтителен)
                   additionalTags:
                     description: |
-                      Дополнительные теги, которые будут присвоены созданному инстансу в дополнение к указанным в конфигурации cloud-провайдера.
+                      Дополнительные теги, которые будут присвоены созданному инстансу в дополнение к указанным в конфигурации облачного провайдера.
           internalNetworkCIDR: &internalNetworkCIDR_ru
             description: |
               Адресация для внутренней сети узлов кластера.
@@ -251,14 +251,14 @@ apiVersions:
               Список адресов рекурсивных DNS внутренней сети.
           internalNetworkSecurity: &internalNetworkSecurity_ru
             description: |
-              Флаг, который определяет необходимость настройки [SecurityGroups](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-openstack/faq.html#как-проверить-поддерживает-ли-провайдер-securitygroups) и [AllowedAddressPairs](https://docs.openstack.org/developer/dragonflow/specs/allowed_address_pairs.html) на портах внутренней сети.
+              Флаг, который определяет необходимость настройки [SecurityGroups](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/cloud-provider-openstack/faq.html#как-проверить-поддерживает-ли-провайдер-securitygroups) и [AllowedAddressPairs](https://docs.openstack.org/developer/dragonflow/specs/allowed_address_pairs.html) на портах внутренней сети.
           externalNetworkName: &externalNetworkName_ru
             description: |
               Имя сети для внешнего взаимодействия.
-              Получить список доступных сетей: `openstack network list`.
+              Получить список доступных сетей можно командой: `openstack network list`.
       standardWithNoRouter:
         description: |
-          Настройки для схемы размещения [`StandardWithNoRouter`](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-openstack/layouts.html#standardwithnorouter).
+          Настройки для схемы размещения [`StandardWithNoRouter`](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/cloud-provider-openstack/layouts.html#standardwithnorouter).
         properties:
           internalNetworkCIDR:
             <<: *internalNetworkCIDR_ru
@@ -271,7 +271,7 @@ apiVersions:
               Флаг, который указывает, включен ли DHCP в сети, указанной в качестве внешней.
       simple:
         description: |
-          Настройки для схемы размещения [`Simple`](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-openstack/layouts.html#simple).
+          Настройки для схемы размещения [`Simple`](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/cloud-provider-openstack/layouts.html#simple).
         properties:
           externalNetworkName:
             <<: *externalNetworkName_ru
@@ -281,14 +281,14 @@ apiVersions:
             description: |
               Определяет способ организации трафика в той сети, которая используется для коммуникации между подами (обычно это внутренняя сеть, но бывают исключения):
               * `DirectRouting` – между узлами работает прямая маршрутизация, в этом режиме отключены SecurityGroups.
-              * `VXLAN` – между узлами НЕ работает прямая маршрутизация, необходимо использовать VXLAN, в этом режиме отключены SecurityGroups.
+              * `VXLAN` – между узлами **не работает** прямая маршрутизация, необходимо использовать VXLAN, в этом режиме отключены SecurityGroups.
 
-              > **Внимание!** После изменения этого параметра необходимо выполнить `dhctl converge`.
+              > **Внимание.** После изменения этого параметра необходимо выполнить команду `dhctl converge`, чтобы изменения вступили в силу.
 
-              > **Внимание!** После переключения с/на VXLAN требуется перезагрузка всех узлов кластера.
+              > **Внимание.** После переключения с/на VXLAN требуется перезагрузка всех узлов кластера.
       simpleWithInternalNetwork:
         description: |
-          Настройки для схемы размещения [`SimpleWithInternalNetwork`](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-openstack/layouts.html#simplewithinternalnetwork).
+          Настройки для схемы размещения [`SimpleWithInternalNetwork`](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/cloud-provider-openstack/layouts.html#simplewithinternalnetwork).
         properties:
           internalSubnetName:
             description: |
@@ -298,12 +298,12 @@ apiVersions:
               Определяет способ организации трафика в той сети, которая используется для коммуникации между подами (обычно это внутренняя сеть, но бывают исключения):
               * `DirectRouting` — между узлами работает прямая маршрутизация, в этом режиме отключены SecurityGroups.
               * `DirectRoutingWithPortSecurityEnabled` — между узлами работает прямая маршрутизация, но только если в OpenStack явно разрешить на портах диапазон адресов, используемых во внутренней сети.
-                * **Внимание!** Убедитесь, что у `username` есть доступ на редактирование `AllowedAddressPairs` на портах, подключенных в сеть `internalNetworkName`. Обычно в OpenStack такого доступа нет, если сеть имеет флаг `shared`.
-              * `VXLAN` — между узлами **НЕ** работает прямая маршрутизация, необходимо использовать VXLAN, в этом режиме отключены SecurityGroups.
+                * **Внимание.** Убедитесь, что у `username` есть доступ на редактирование `AllowedAddressPairs` на портах, подключенных в сеть `internalNetworkName`. Обычно в OpenStack такого доступа нет, если сеть имеет флаг `shared`.
+              * `VXLAN` — между узлами **не работает** прямая маршрутизация, необходимо использовать VXLAN, в этом режиме отключены SecurityGroups.
 
-              > **Внимание!** После изменения этого параметра необходимо выполнить `dhctl converge`.
+              > **Внимание.** После изменения этого параметра необходимо выполнить команду `dhctl converge`, чтобы изменения вступили в силу.
 
-              > **Внимание!** После переключения с/на VXLAN требуется перезагрузка всех узлов кластера.
+              > **Внимание.** После переключения с/на VXLAN требуется перезагрузка всех узлов кластера.
           externalNetworkName:
             <<: *externalNetworkName_ru
           externalNetworkDHCP:
@@ -313,9 +313,9 @@ apiVersions:
               Флаг, который указывает, создавать ли Floating IP на master-узлах.
       provider:
         description: |
-          [Параметры подключения](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-openstack/environment.html) к API OpenStack.
+          [Параметры подключения](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/cloud-provider-openstack/environment.html) к API OpenStack.
 
-          Совпадают с параметрами, передаваемыми в поле `connection` в модуле [cloud-provider-openstack](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-openstack/configuration.html#параметры).
+          Совпадают с параметрами, передаваемыми в поле `connection` в модуле [cloud-provider-openstack](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/cloud-provider-openstack/configuration.html#параметры).
         properties:
           authURL:
             description: |

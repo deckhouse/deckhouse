@@ -17,7 +17,7 @@ Dashboards are only available for applications that were either discovered by au
 
 ## How do I collect application metrics?
 
-> The method of collecting metrics provided below is intended for cases when the application is in the list of [supported applications](configuration.html#parameters). If the target application is **not in the list** of [supported applications](configuration.html#parameters), you need to use a [different method](../300-prometheus/faq.html#how-do-I-collect-metrics-from-applications) to collect metrics via the [monitoring-custom](../340-monitoring-custom/) module.
+> The method of collecting metrics provided below is intended for cases when the application is in the list of [supported applications](configuration.html#parameters). If the target application is **not in the list** of [supported applications](configuration.html#parameters), you need to use a [different method](../prometheus/faq.html#how-do-I-collect-metrics-from-applications) to collect metrics via the [monitoring-custom](../monitoring-custom/) module.
 
 1. Attach the `prometheus.deckhouse.io/target` label to the Service you want to monitor. In the label, you must specify the name of the application from the [list](configuration.html#parameters).
 2. Set the `http-metrics` and `https-metrics` name to the port that will be used for collecting metrics in order to connect to it over HTTP or HTTPS, respectively.
@@ -28,4 +28,4 @@ If it is not feasible for some reason, use the following annotations: `prometheu
     * `prometheus.deckhouse.io/allow-unready-pod` — allows collecting metrics for pods in any state (by default, Prometheus scrapes metrics from the Ready pods only).
     * `prometheus.deckhouse.io/sample-limit` — sample limit for a Pod (refer to the table above to find out the default sample limit for an application).
 
-Click [here](../300-prometheus/faq.html) to learn more about application monitoring..
+Click [here](../prometheus/faq.html) to learn more about application monitoring..

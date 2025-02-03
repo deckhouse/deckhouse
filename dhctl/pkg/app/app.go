@@ -78,7 +78,7 @@ func GlobalFlags(cmd *kingpin.Application) {
 	cmd.Flag("logger-type", "Format logs output of a dhctl in different ways.").
 		Envar(configEnvName("LOGGER_TYPE")).
 		Default("pretty").
-		EnumVar(&LoggerType, "pretty", "simple", "json")
+		EnumVar(&LoggerType, "pretty", "json")
 	cmd.Flag("tmp-dir", "Set temporary directory for debug purposes.").
 		Envar(configEnvName("TMP_DIR")).
 		Default(TmpDirName).

@@ -11,7 +11,7 @@ description: "Описание схем размещения и взаимоде
 В данной схеме размещения узлы не будут иметь публичных IP-адресов, а будут выходить в интернет через NAT-шлюз (NAT Gateway) Yandex Cloud.
 {% endalert %}
 
-![Схема размещения Standard в Yandex Cloud](../../images/030-cloud-provider-yandex/layout-standard.png)
+![Схема размещения Standard в Yandex Cloud](../../images/cloud-provider-yandex/layout-standard.png)
 <!--- Исходник: https://docs.google.com/drawings/d/1WI8tu-QZYcz3DvYBNlZG4s5OKQ9JKyna7ESHjnjuCVQ/edit --->
 
 Пример конфигурации схемы размещения:
@@ -35,43 +35,51 @@ provider:
     "private_key": "-----BEGIN PRIVATE KEY-----\nMIIE....1ZPJeBLt+\n-----END PRIVATE KEY-----\n"
     }
 masterNodeGroup:
-  replicas: 1
+  replicas: 3
+  zones:
+  - ru-central1-a
+  - ru-central1-b
+  - ru-central1-d
+  instanceClass:
+    cores: 4
+    memory: 8192
+    imageID: <IMAGE_ID>
+    externalIPAddresses:
+    - "<ZONE_A_EXTERNAL_IP_MASTER_1>"
+    - "Auto"
+    - "Auto"
+    externalSubnetIDs:
+    - <ZONE_A_SUBNET_ID>
+    - <ZONE_B_SUBNET_ID>
+    - <ZONE_D_SUBNET_ID>
+    additionalLabels:
+      takes: priority
+nodeGroups:
+- name: worker
+  replicas: 2
   zones:
   - ru-central1-a
   - ru-central1-b
   instanceClass:
     cores: 4
     memory: 8192
-    imageID: testtest
-    externalIPAddresses:
-    - "198.51.100.5"
-    - "Auto"
-    externalSubnetID: <EXTERNAL_SUBNET_ID>
-    additionalLabels:
-      takes: priority
-nodeGroups:
-- name: worker
-  replicas: 1
-  zones:
-  - ru-central1-a
-  instanceClass:
-    cores: 4
-    memory: 8192
-    imageID: testtest
+    imageID: <IMAGE_ID>
     coreFraction: 50
     externalIPAddresses:
-    - "198.51.100.5"
     - "Auto"
-    externalSubnetID: <EXTERNAL_SUBNET_ID>
+    - "Auto"
+    externalSubnetIDs:
+    - <ZONE_A_SUBNET_ID>
+    - <ZONE_B_SUBNET_ID>
     additionalLabels:
-      toy: example
+      role: example
 labels:
   billing: prod
 dhcpOptions:
   domainName: test.local
   domainNameServers:
-  - 213.177.96.1
-  - 231.177.97.1
+  - <DNS_SERVER_1>
+  - <DNS_SERVER_2>
 ```
 
 ## WithoutNAT
@@ -80,7 +88,7 @@ dhcpOptions:
 
 > **Внимание!** В модуле `cloud-provider-yandex` пока нет поддержки групп безопасности (security group), поэтому все узлы кластера будут смотреть *наружу*.
 
-![Схема размещения WithoutNAT в Yandex Cloud](../../images/030-cloud-provider-yandex/layout-withoutnat.png)
+![Схема размещения WithoutNAT в Yandex Cloud](../../images/cloud-provider-yandex/layout-withoutnat.png)
 <!--- Исходник: https://docs.google.com/drawings/d/1I7M9DquzLNu-aTjqLx1_6ZexPckL__-501Mt393W1fw/edit --->
 
 Пример конфигурации схемы размещения:
@@ -101,40 +109,48 @@ provider:
     "private_key": "-----BEGIN PRIVATE KEY-----\nMIIE....1ZPJeBLt+\n-----END PRIVATE KEY-----\n"
     }    
 masterNodeGroup:
-  replicas: 1
+  replicas: 3
   instanceClass:
     cores: 4
     memory: 8192
     imageID: <IMAGE_ID>
     externalIPAddresses:
-    - "198.51.100.5"
     - "Auto"
-    externalSubnetID: <EXTERNAL_SUBNET_ID>
+    - "Auto"
+    - "Auto"
+    externalSubnetIDs:
+    - <ZONE_A_SUBNET_ID>
+    - <ZONE_B_SUBNET_ID>
+    - <ZONE_D_SUBNET_ID>
     zones:
     - ru-central1-a
     - ru-central1-b
+    - ru-central1-d
 nodeGroups:
 - name: worker
-  replicas: 1
+  replicas: 2
   instanceClass:
     cores: 4
     memory: 8192
-    imageID: testtest
+    imageID: <IMAGE_ID>
     coreFraction: 50
     externalIPAddresses:
-    - "198.51.100.5"
+    - "<ZONE_A_EXTERNAL_IP_WORKER_1>"
     - "Auto"
-    externalSubnetID: <EXTERNAL_SUBNET_ID>
+    externalSubnetIDs:
+    - <ZONE_A_SUBNET_ID>
+    - <ZONE_B_SUBNET_ID>
     zones:
     - ru-central1-a
+    - ru-central1-b
 sshPublicKey: "<SSH_PUBLIC_KEY>"
 nodeNetworkCIDR: 192.168.12.13/24
 existingNetworkID: <EXISTING_NETWORK_ID>
 dhcpOptions:
   domainName: test.local
   domainNameServers:
-  - 8.8.8.8
-  - 8.8.4.4
+  - <DNS_SERVER_1>
+  - <DNS_SERVER_2>
 ```
 
 ## WithNATInstance
@@ -149,7 +165,7 @@ dhcpOptions:
 
 Если IP-адрес NAT-инстанса не имеет значения, можно передать пустой объект `withNATInstance: {}`, тогда необходимые сети и динамический IP-адрес будут созданы автоматически.
 
-![Схема размещения WithNATInstance в Yandex Cloud](../../images/030-cloud-provider-yandex/layout-withnatinstance.png)
+![Схема размещения WithNATInstance в Yandex Cloud](../../images/cloud-provider-yandex/layout-withnatinstance.png)
 <!--- Исходник: https://docs.google.com/drawings/d/1oVpZ_ldcuNxPnGCkx0dRtcAdL7BSEEvmsvbG8Aif1pE/edit --->
 
 Пример конфигурации схемы размещения:
@@ -180,12 +196,10 @@ masterNodeGroup:
     memory: 8192
     imageID: <IMAGE_ID>
     externalIPAddresses:
-    - "1.1.1.1"
     - "Auto"
     externalSubnetID: <EXTERNAL_SUBNET_ID>
     zones:
     - ru-central1-a
-    - ru-central1-b
 nodeGroups:
 - name: worker
   replicas: 1
@@ -195,7 +209,6 @@ nodeGroups:
     imageID: <IMAGE_ID>
     coreFraction: 50
     externalIPAddresses:
-    - "1.1.1.1"
     - "Auto"
     externalSubnetID: <EXTERNAL_SUBNET_ID>
     zones:
@@ -206,6 +219,6 @@ existingNetworkID: <EXISTING_NETWORK_ID>
 dhcpOptions:
   domainName: test.local
   domainNameServers:
-  - 8.8.8.8
-  - 8.8.4.4
+  - <DNS_SERVER_1>
+  - <DNS_SERVER_2>
 ```

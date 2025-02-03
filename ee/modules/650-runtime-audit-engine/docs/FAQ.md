@@ -7,9 +7,9 @@ title: "The runtime-audit-engine module: FAQ"
 ## How to collect events
 
 Pods of `runtime-audit-engine` output all events to stdout.
-Those events can then be collected by [log-shipper-agents](../460-log-shipper/) and sent to any supported destination.
+Those events can then be collected by [log-shipper-agents](../log-shipper/) and sent to any supported destination.
 
-Below is an example [ClusterLoggingConfig](../460-log-shipper/cr.html#clusterloggingconfig) configuration for the `log-shipper` module:
+Below is an example [ClusterLoggingConfig](../log-shipper/cr.html#clusterloggingconfig) configuration for the `log-shipper` module:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -32,7 +32,7 @@ spec:
 
 ## How to create an alert
 
-All metrics are automatically collected by Prometheus. Add a [CustomPrometheusRule](../300-prometheus/cr.html#customprometheusrules) to enable alerts.
+All metrics are automatically collected by Prometheus. Add a [CustomPrometheusRule](../prometheus/cr.html#customprometheusrules) to enable alerts.
 
 Example:
 
@@ -71,7 +71,7 @@ The script for converting a Falco rules file into a [FalcoAuditRules](cr.html#fa
 
 ```shell
 git clone github.com/deckhouse/deckhouse
-cd deckhouse/ee/modules/650-runtime-audit-engine/hack/far-converter
+cd deckhouse/ee/modules/runtime-audit-engine/hack/far-converter
 go run main.go -input /path/to/falco/rule_example.yaml > ./my-rules-cr.yaml
 ```
 

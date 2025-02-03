@@ -57,12 +57,13 @@ func filterIngressName(obj *unstructured.Unstructured) (go_hook.FilterResult, er
 	return ingress.Name, nil
 }
 
-func deleteCrowdIngress(input *go_hook.HookInput) (err error) {
+func deleteCrowdIngress(input *go_hook.HookInput) error {
 	for _, snap := range input.Snapshots["crowd-proxy-ingress"] {
 		if snap == nil {
 			continue
 		}
 		input.PatchCollector.Delete("networking.k8s.io/v1", "Ingress", "d8-user-authn", snap.(string))
 	}
+
 	return nil
 }

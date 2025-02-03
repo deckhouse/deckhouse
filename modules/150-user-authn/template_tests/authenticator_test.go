@@ -165,7 +165,7 @@ var _ = Describe("Module :: user-authn :: helm template :: dex authenticator", f
 			Expect(oauth2proxyArgTest).Should(ContainElement("--cookie-refresh=2h20m4s"))
 			Expect(oauth2proxyArgTest).Should(ContainElement("--whitelist-domain=authenticator.example.com"))
 			Expect(oauth2proxyArgTest).Should(ContainElement("--whitelist-domain=authenticator-two.example.com"))
-			Expect(oauth2proxyArgTest).Should(ContainElement("--scope=groups email openid offline_access"))
+			Expect(oauth2proxyArgTest).Should(ContainElement("--scope=groups email openid profile offline_access"))
 
 			oauth2client2 := hec.KubernetesResource("OAuth2Client", "d8-user-authn", "justForTest2")
 			Expect(oauth2client2.Exists()).To(BeTrue())
@@ -208,7 +208,7 @@ var _ = Describe("Module :: user-authn :: helm template :: dex authenticator", f
 			Expect(oauth2proxyArgTest2).Should(ContainElement("--cookie-refresh=2h20m4s"))
 			Expect(oauth2proxyArgTest2).Should(ContainElement("--whitelist-domain=authenticator.com"))
 			Expect(oauth2proxyArgTest2).Should(ContainElement("--whitelist-domain=authenticator-two.com"))
-			Expect(oauth2proxyArgTest2).Should(ContainElement("--scope=groups email openid offline_access audience:server:client_id:kubernetes"))
+			Expect(oauth2proxyArgTest2).Should(ContainElement("--scope=groups email openid profile offline_access audience:server:client_id:kubernetes"))
 
 			deploymentTest3 := hec.KubernetesResource("Deployment", "d8-test", "test-3-dex-authenticator")
 			Expect(deploymentTest3.Exists()).To(BeTrue())

@@ -19,12 +19,11 @@ import (
 	"time"
 
 	v1 "k8s.io/api/coordination/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/klog"
-
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 const leaseLabel = "deckhouse.io/documentation-builder-sync"

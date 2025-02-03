@@ -6,11 +6,11 @@ description: Managing nodes of a Kubernetes cluster. Adding or removing nodes in
 
 ## How do I add a master nodes to a cloud cluster (single-master to a multi-master)?
 
-See [the control-plane-manager module FAQ.](../040-control-plane-manager/faq.html#how-do-i-add-a-master-nodes-to-a-cloud-cluster-single-master-to-a-multi-master)
+See [the control-plane-manager module FAQ.](../control-plane-manager/faq.html#how-do-i-add-a-master-nodes-to-a-cloud-cluster-single-master-to-a-multi-master)
 
 ## How do I reduce the number of master nodes in a cloud cluster (multi-master to single-master)?
 
-See [the control-plane-manager module FAQ.](../040-control-plane-manager/faq.html#how-do-i-reduce-the-number-of-master-nodes-in-a-cloud-cluster-multi-master-to-single-master)
+See [the control-plane-manager module FAQ.](../control-plane-manager/faq.html#how-do-i-reduce-the-number-of-master-nodes-in-a-cloud-cluster-multi-master-to-single-master)
 
 ## Static nodes
 
@@ -178,7 +178,7 @@ bash /var/lib/bashible/cleanup_static_node.sh --yes-i-am-sane-and-i-understand-w
 
 A `StaticInstance` that is in the `Pending` state can be deleted with no adverse effects.
 
-To delete a `StaticInstance` in any state other than `Pending` (`Runnig`, `Cleaning`, `Bootstraping`), you need to:
+To delete a `StaticInstance` in any state other than `Pending` (`Running`, `Cleaning`, `Bootstrapping`), you need to:
 
 1. Add the label `"node.deckhouse.io/allow-bootstrap": "false"` to the `StaticInstance`.
 1. Wait until the `StaticInstance` status becomes `Pending`.
@@ -613,6 +613,26 @@ When changing the CRI in the cluster, additional steps are required for the mast
 ## How to add node configuration step?
 
 Additional node configuration steps are set via the [NodeGroupConfiguration](cr.html#nodegroupconfiguration) custom resource.
+
+## How to automatically put custom labels on the node?
+
+1. On the node, create the directory `/var/lib/node_labels`.
+
+1. Create a file or files containing the necessary labels in it. The number of files can be any, as well as the number of subdirectories containing them.
+
+1. Add the necessary labels to the files in the `key=value` format. For example:
+
+   ```console
+   example-label=test
+   ```
+
+1. Save the files.
+
+When adding a node to the cluster, the labels specified in the files will be automatically affixed to the node.
+
+{% alert level="warning" %}
+Please note that it is not possible to add labels used in DKP in this way. This method will only work with custom labels that do not overlap with those reserved for Deckhouse.
+{% endalert %}
 
 ## How to use containerd with Nvidia GPU support?
 
