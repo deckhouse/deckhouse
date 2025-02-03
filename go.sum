@@ -171,6 +171,12 @@ github.com/felixge/httpsnoop v1.0.4 h1:NFTV2Zj1bL4mc9sqWACXbQFVBBg2W3GPvqp8/ESS2
 github.com/felixge/httpsnoop v1.0.4/go.mod h1:m8KPJKqk1gH5J9DgRY2ASl2lWCfGKXixSwevea8zH2U=
 github.com/flant/addon-operator v1.5.4-0.20250124161949-e76a82abaee4 h1:mj7EL8rXngz0lJC4+dnRthzT47C1Vc/FRu53axdahLk=
 github.com/flant/addon-operator v1.5.4-0.20250124161949-e76a82abaee4/go.mod h1:iu8AOxsmtJi8+LKIaGOREs6j55zDaIcy80CA86AXbc8=
+github.com/flant/addon-operator v1.5.4-0.20250131123309-41a3cadc6dc3 h1:diAmz3v0df3koEAZtlUH8hWRplsLGEdQS/Na5GOrf/A=
+github.com/flant/addon-operator v1.5.4-0.20250131123309-41a3cadc6dc3/go.mod h1:iu8AOxsmtJi8+LKIaGOREs6j55zDaIcy80CA86AXbc8=
+github.com/flant/addon-operator v1.5.4-0.20250131130259-1a691ae76137 h1:AieZHRI3OHaejSsme+9FA56U0jb5BrLXCM4spcpAA08=
+github.com/flant/addon-operator v1.5.4-0.20250131130259-1a691ae76137/go.mod h1:iu8AOxsmtJi8+LKIaGOREs6j55zDaIcy80CA86AXbc8=
+github.com/flant/addon-operator v1.5.4-0.20250131130350-a14efc5804d9 h1:wMYwx6QghOraGOvMKvDNrXuP9zDHrKYmfF1fghPJABY=
+github.com/flant/addon-operator v1.5.4-0.20250131130350-a14efc5804d9/go.mod h1:iu8AOxsmtJi8+LKIaGOREs6j55zDaIcy80CA86AXbc8=
 github.com/flant/go-openapi-validate v0.19.12-flant.1 h1:GuB9XEfiLHq3M7fafRLq1AWkndSY/+/5MX7ad1xJ/8A=
 github.com/flant/go-openapi-validate v0.19.12-flant.1/go.mod h1:Rzou8hA/CBw8donlS6WNEUQupNvUZ0waH08tGe6kAQ4=
 github.com/flant/kube-client v1.2.2 h1:27LBs+PKJEFnkQXjPU9eIps7a7iyI13AKcSYj897DCU=

@@ -242,6 +242,8 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 	}
 	metaConfig.UUID = clusterUUID
 
+	metaConfig.ResourceManagementTimeout = app.ResourceManagementTimeout
+
 	deckhouseInstallConfig, err := config.PrepareDeckhouseInstallConfig(metaConfig)
 	if err != nil {
 		return err

@@ -43,6 +43,12 @@ resource "aws_ebs_volume" "kubernetes_data" {
     Name = "${var.prefix}-kubernetes-data-${var.node_index}"
   })
   availability_zone = local.zone
+
+  timeouts {
+    create = var.resourceManagementTimeout
+    delete = var.resourceManagementTimeout
+    update = var.resourceManagementTimeout
+  }
 }
 
 resource "aws_volume_attachment" "kubernetes_data" {
@@ -103,6 +109,12 @@ resource "aws_instance" "master" {
       #TODO: remove ignore after we enable automatic converge for master nodes
       volume_tags
     ]
+  }
+
+  timeouts {
+    create = var.resourceManagementTimeout
+    delete = var.resourceManagementTimeout
+    update = var.resourceManagementTimeout
   }
 }
 
