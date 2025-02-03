@@ -19,8 +19,9 @@ git:
     - 'go.sum'
     - '**/*.sql'
 shell:
-- git clone --depth 1 --branch v{{ $migrateVersion }} {{ $.SOURCE_REPO }}/golang-migrate/migrate.git /src/migrate
-- rm -rf /src/migrate/.git
+  install:
+  - git clone --depth 1 --branch v{{ $migrateVersion }} {{ $.SOURCE_REPO }}/golang-migrate/migrate.git /src/migrate
+  - rm -rf /src/migrate/.git
 
 ---
 image: {{ .ModuleName }}/build-upmeter-artifact
