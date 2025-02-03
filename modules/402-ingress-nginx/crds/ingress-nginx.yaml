@@ -1057,6 +1057,16 @@ spec:
                   additionalProperties:
                     type: string
                   x-kubernetes-preserve-unknown-fields: true
+                additionalImagePullSecrets:
+                  type: array
+                  items:
+                    type: string
+                  description: |
+                    A list of names of additional secrets containing credentials for accessing a third-party container registry.
+
+                    These secrets must be pre-deployed in the `d8-ingress-nginx` NS and have the `kubernetes.io/dockerconfigjson` type.
+
+                    For more information on creating secrets, please refer to the [documentation](https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/).
                 resourcesRequests:
                   required: ['mode']
                   type: object

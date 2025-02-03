@@ -236,6 +236,10 @@ properties:
                 additionalLogFields:
                   type: object
                   additionalProperties: true
+                additionalImagePullSecrets:
+                  type: array
+                  items:
+                    type: string
                 resourcesRequests:
                   type: object
                   default: {}
