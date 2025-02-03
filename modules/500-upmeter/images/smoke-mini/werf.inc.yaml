@@ -1,9 +1,8 @@
 ---
-image: {{ .ModuleName }}/build-smoke-mini-artifact
-final: false
-from: {{ .Images.BASE_GOLANG_23_ALPINE }}
+image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+fromImage: common/src-artifact
 git:
-- add: /{{ $.ModulePath }}modules/500-{{ $.ModuleName }}/images/{{ $.ImageName }}/
+- add: /{{ $.ModulePath }}modules/500-{{ $.ModuleName }}/images/{{ $.ImageName }}/src
   to: /src
   includePaths:
   - '**/*.go'
@@ -14,6 +13,15 @@ git:
     - '**/*.go'
     - 'go.mod'
     - 'go.sum'
+---
+image: {{ .ModuleName }}/build-smoke-mini-artifact
+final: false
+from: {{ .Images.BASE_GOLANG_23_ALPINE }}
+import:
+- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+  add: /src
+  to: /smoke-mini
+  before: install
 mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg

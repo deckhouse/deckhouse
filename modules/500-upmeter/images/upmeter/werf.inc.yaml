@@ -1,52 +1,61 @@
+{{- $migrateVersion := "4.18.2" }}
 ---
-image: {{ .ModuleName }}/build-upmeter-artifact
-final: false
-from: {{ .Images.BASE_GOLANG_23_ALPINE }}
+image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+fromImage: common/src-artifact
 git:
-- add: /{{ $.ModulePath }}modules/500-{{ $.ModuleName }}/images/{{ $.ImageName }}/
-  to: /src
+- add: /{{ $.ModulePath }}modules/500-{{ $.ModuleName }}/images/{{ $.ImageName }}/src
+  to: /src/upmeter
   includePaths:
   - '**/*.go'
   - '**/*.mod'
   - '**/*.sum'
   - '**/*.sql'
+  excludePatchs:
+  - 'stress.sh'
   stageDependencies:
     install:
     - '**/*.go'
     - 'go.mod'
     - 'go.sum'
     - '**/*.sql'
+shell:
+- git clone --depth 1 --branch v{{ $migrateVersion }} {{ $.SOURCE_REPO }}/golang-migrate/migrate.git /src/migrate
+- rm -rf /src/migrate/.git
+
+---
+image: {{ .ModuleName }}/build-upmeter-artifact
+final: false
+from: {{ .Images.BASE_GOLANG_23_ALPINE }}
+import:
+- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+  add: /src
+  to: /src
+  before: install
 mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
 shell:
   install:
   - apk add --no-cache gcc musl-dev jq-dev oniguruma-dev curl
-  - cd /src
+  - cd /src/upmeter
   - GOPROXY={{ $.GOPROXY }} CGO_ENABLED=1 GOOS=linux GOARCH=amd64 go build -ldflags "-s -w -linkmode external -extldflags '-static'" -o upmeter ./cmd/upmeter
   - chown 64535:64535 upmeter
-  - chmod 0700 upmeter
-  - GOPROXY={{ $.GOPROXY }} CGO_ENABLED=1 GOOS=linux GOARCH=amd64 go install -ldflags "-s -w -linkmode external -extldflags '-static'" -tags 'sqlite3' github.com/golang-migrate/migrate/v4/cmd/migrate@v4.18.2
-  - mv $(go env GOPATH)/bin/migrate migrate
+  - chmod 0500 upmeter
+  # migrate build
+  - cd /src/migrate
+  - go mod tigy
+  - CGO_ENABLED=0 go build -a -o migrate -ldflags="-s -w -X main.Version=v{{ $migrateVersion }}" -tags "'sqlite3' ." ./cmd/migrate
   - chown 64535:64535 migrate
-  - chmod 0700 migrate
+  - chmod 0500 migrate
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
 import:
 - image: {{ .ModuleName }}/build-upmeter-artifact
-  add: /src/pkg/db/migrations/agent
-  to: /data/migrations/agent
-  before: setup
-- image: {{ .ModuleName }}/build-upmeter-artifact
-  add: /src/pkg/db/migrations/server
-  to: /data/migrations/server
-  before: setup
-- image: {{ .ModuleName }}/build-upmeter-artifact
-  add: /src/migrate
+  add: /src/migrate/migrate
   to: /migrate
   before: setup
 - image: {{ .ModuleName }}/build-upmeter-artifact
-  add: /src/upmeter
+  add: /src/upmeter/upmeter
   to: /upmeter
   before: setup
