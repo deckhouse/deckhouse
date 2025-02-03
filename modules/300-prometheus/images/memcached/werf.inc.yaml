@@ -24,6 +24,10 @@ import:
   add: /src
   to: /src
   before: install
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-promu-artifact
+  add: /promu/promu
+  to: /go/bin/promu
+  before: install
 mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
