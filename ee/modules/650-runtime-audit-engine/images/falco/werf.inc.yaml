@@ -88,6 +88,12 @@ import:
 mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
+- fromPath: ~/go-pkg-cache
+  to: /root/go/pkg
+- from: tmp_dir
+  to: /root/.cache/go-build
+- from: tmp_dir
+  to: /src/falco/build
 shell:
   beforeInstall:
   {{- include "alt packages proxy" . | nindent 2 }}
@@ -98,6 +104,7 @@ shell:
   - rm -f /usr/bin/x86_64-alt-linux-gcc /usr/bin/x86_64-alt-linux-g++
   - ln -s x86_64-alt-linux-gcc-12 /usr/bin/x86_64-alt-linux-gcc
   - ln -s x86_64-alt-linux-g++-12 /usr/bin/x86_64-alt-linux-g++
+  - find /var/lib/apt/ /var/cache/apt/ -type f -delete
   install:
   - cd /src/falco
   {{- if $.DistroPackagesProxy }}

@@ -1,7 +1,7 @@
 ---
 image: {{ .ModuleName }}/build-smoke-mini-artifact
 final: false
-from: {{ .Images.BASE_GOLANG_20_ALPINE }}
+from: {{ .Images.BASE_GOLANG_23_ALPINE }}
 git:
 - add: /{{ $.ModulePath }}modules/500-{{ $.ModuleName }}/images/{{ $.ImageName }}/
   to: /src
