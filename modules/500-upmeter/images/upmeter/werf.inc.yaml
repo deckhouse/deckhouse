@@ -1,6 +1,7 @@
 {{- $migrateVersion := "4.18.2" }}
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+final: false
 fromImage: common/src-artifact
 git:
 - add: /{{ $.ModulePath }}modules/500-{{ $.ModuleName }}/images/{{ $.ImageName }}/src
