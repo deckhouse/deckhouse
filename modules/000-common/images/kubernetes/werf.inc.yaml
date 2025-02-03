@@ -50,6 +50,12 @@ import:
 mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
+- from: tmp_dir
+  to: /root/.cache/go-build
+- from: tmp_dir
+  to: /src/_output/local/go
+- from: tmp_dir
+  to: /src/vendor
 shell:
   beforeInstall:
   {{- include "alpine packages proxy" $ | nindent 2 }}
