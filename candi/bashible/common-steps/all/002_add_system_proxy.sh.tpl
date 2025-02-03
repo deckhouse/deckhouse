@@ -30,6 +30,8 @@ bb-sync-file /etc/systemd/system.conf.d/proxy-default-environment.conf - << EOF
 [Manager]
 DefaultEnvironment="HTTP_PROXY=${HTTP_PROXY}" "http_proxy=${HTTP_PROXY}" "HTTPS_PROXY=${HTTPS_PROXY}" "https_proxy=${HTTPS_PROXY}" "NO_PROXY=${NO_PROXY}" "no_proxy=${NO_PROXY}"
 EOF
+#escape '%' character for systemd
+sed -i 's/%/%%/g' /etc/systemd/system.conf.d/proxy-default-environment.conf
 
   {{- if eq .cri "Containerd" }}
 mkdir -p /etc/systemd/system/containerd-deckhouse.service.d/
@@ -37,6 +39,8 @@ bb-sync-file /etc/systemd/system/containerd-deckhouse.service.d/proxy-environmen
 [Service]
 Environment="HTTP_PROXY=${HTTP_PROXY}" "http_proxy=${HTTP_PROXY}" "HTTPS_PROXY=${HTTPS_PROXY}" "https_proxy=${HTTPS_PROXY}" "NO_PROXY=${NO_PROXY}" "no_proxy=${NO_PROXY}"
 EOF
+#escape '%' character for systemd
+sed -i 's/%/%%/g' /etc/systemd/system/containerd-deckhouse.service.d/proxy-environment.conf
   {{- end }}
 
 bb-unset-proxy

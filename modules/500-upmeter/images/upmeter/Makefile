@@ -1,5 +1,5 @@
 # https://github.com/golangci/golangci-lint
-GOLANGCI_LINT_VERSION=1.58.0
+GOLANGCI_LINT_VERSION=1.63.4
 # https://github.com/mvdan/gofumpt
 GOFUMPT_VERSION=0.6.0
 

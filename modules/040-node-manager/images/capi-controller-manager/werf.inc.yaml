@@ -13,10 +13,18 @@ docker:
 image: {{ .ModuleName }}/{{ $.ImageName }}-src-artifact
 fromImage: common/src-artifact
 final: false
+git:
+- add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/patches
+  to: /patches
+  stageDependencies:
+    install:
+    - '**/*'
 shell:
   install:
   - git clone --depth 1 --branch v{{ $version }} {{ $.SOURCE_REPO }}/kubernetes-sigs/cluster-api.git /src
-  - rm -rf /src/.git
+  - cd /src
+  - git apply /patches/*.patch --verbose
+  - rm -rf .git hack test
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
 from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
@@ -36,7 +44,8 @@ shell:
   install:
   - export GOPROXY={{ $.GOPROXY }}
   - cd /src
-  - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 make managers LDFLAGS="-s -w -extldflags \"-static\""
+  - export CGO_ENABLED=0 GOOS=linux GOARCH=amd64
+  - go build -trimpath -ldflags "-s -w -extldflags \"-static\"" -o bin/manager sigs.k8s.io/cluster-api
   - mv /src/bin/manager /capi-controller-manager
   - chown 64535:64535 /capi-controller-manager
   - chmod 0700 /capi-controller-manager
