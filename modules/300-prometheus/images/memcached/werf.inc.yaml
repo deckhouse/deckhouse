@@ -25,7 +25,7 @@ import:
   to: /src
   before: install
 - image: {{ $.ModuleName }}/prometheus-promu-artifact
-  add: /promu/promu
+  add: /src/promu
   to: /go/bin/promu
   before: install
 mount:
