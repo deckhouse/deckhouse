@@ -64,14 +64,14 @@ func (s *sender) Send(ctx context.Context, listBackends map[string]struct{}, ver
 
 					continue
 				}
-				url := "http://" + backend + "/loadDocArchive/" + version.Module + "/" + version.Version + "?channels=" + strings.Join(version.ReleaseChannels, ",")
+				url := "http://" + backend + "/api/v1/doc/" + version.Module + "/" + version.Version + "?channels=" + strings.Join(version.ReleaseChannels, ",")
 				err := s.loadDocArchive(ctx, url, version.TarFile)
 				if err != nil {
 					klog.Errorf("send docs error: %v", err)
 				}
 			}
 
-			url := "http://" + backend + "/build"
+			url := "http://" + backend + "/api/v1/build"
 			err := s.build(ctx, url)
 			if err != nil {
 				klog.Errorf("build docs error: %v", err)
