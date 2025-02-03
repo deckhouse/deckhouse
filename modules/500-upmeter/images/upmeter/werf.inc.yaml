@@ -45,7 +45,6 @@ shell:
   - chmod 0500 upmeter
   # migrate build
   - cd /src/migrate
-  - go mod tigy
   - CGO_ENABLED=0 go build -a -o migrate -ldflags="-s -w -X main.Version=v{{ $migrateVersion }}" -tags "'sqlite3' ." ./cmd/migrate
   - chown 64535:64535 migrate
   - chmod 0500 migrate
