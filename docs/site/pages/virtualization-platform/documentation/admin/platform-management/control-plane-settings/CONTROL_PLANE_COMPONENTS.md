@@ -62,7 +62,7 @@ The `control-plane-manager` module functions:
 - **Manage certificates** required for the components to operate, including renewal, release when changing the configuration, etc. Allows you to automatically maintain a secure control plane configuration and quickly add additional names (SAN) to organize secure access to the Kubernetes API.
 - **Configure components**. Automatically creates the necessary configurations and manifests of control plane components.
 - **Upgrade or downgrade components**. Maintains the same versions of components in the cluster.
-- **Manage the configuration of the etcd cluster** and its nodes. Scales etcd by the number of master nodes, migrates from a single-master cluster to a multi-cluster cluster and vice versa.
+- **Manage the configuration of the etcd cluster and its nodes**. Scales etcd by the number of master nodes, migrates from a single-master cluster to a multi-master cluster and vice versa.
 - **Configuring kubeconfig**. Ensures that kubectl always has an up-to-date configuration. Generates, extends, updates kubeconfig with cluster-admin rights and creates a symlink for the root user so that kubeconfig is used by default.
 - **Extending the scheduler** by connecting external plugins via webhooks. Managed by the [KubeSchedulerWebhookConfiguration](../../../../reference/cr/kubeschedulerwebhookconfiguration.html) resource. Allows you to use more complex logic when solving load planning problems in a cluster. For example:
 - placing data storage organization application pods closer to the data itself,
@@ -85,11 +85,11 @@ The `control-plane-manager` module manages the lifecycle of control plane SSL ce
   - client certificate for connecting `kube-apiserver` to `kubelet` (`apiserver-kubelet-client.crt` and `apiserver-kubelet-client.key`);
   - client certificate for connecting `kube-apiserver` to `etcd` (`apiserver-etcd-client.crt` and `apiserver-etcd-client.key`);
   - client certificate for connecting `kube-apiserver` to extension API servers (`front-proxy-client.crt` and `front-proxy-client.key`);
-  - server certificate `etcd` (`etcd/server.crt` and `etcd/server.key`);
+  - server certificate for `etcd` (`etcd/server.crt` and `etcd/server.key`);
   - client certificate for connecting `etcd` to other cluster members (`etcd/peer.crt` and `etcd/peer.key`);
   - client certificate for connecting `kubelet` to `etcd` for healthchecks (`etcd/healthcheck-client.crt` and `etcd/healthcheck-client.key`).
 
-An additional SAN list can be added to certificates, this allows you to quickly and easily create additional "entry points" to the Kubernetes API.
+An additional SAN list can be added to certificates, which allows you to quickly and easily create additional "entry points" to the Kubernetes API.
 
 When changing certificates, the corresponding kubeconfig configuration is automatically updated.
 
@@ -151,3 +151,13 @@ By default, Deckhouse clusters have basic audit policies:
 You can disable basic policy logging by setting the [basicAuditPolicyEnabled](../../../../reference/mc.html#control-plane-manager-parameters-apiserver-basicauditpolicyenabled) flag to `false`.
 
 Configuring audit policies is discussed in detail in the [Audit](audit.hmtl) section.
+
+### Platform API interfaces description
+
+The platform API provides an OpenAPI specification, which can be obtained via the `/openapi/v2` endpoint. To do this, run the command:
+
+```bash
+d8 k get --raw /openapi/v2 > swagger.json
+```
+
+This file can be used to view the documentation locally using tools such as Swagger UI or Redoc.
