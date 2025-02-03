@@ -25,7 +25,7 @@ final: false
 fromImage: common/src-artifact
 {{- if $patch }}
 git:
-- add: {{ $patches }}/patches/{{ $src_version }}
+- add: {{ $patches }}/patches/{{ $version }}
   to: /patches
   stageDependencies:
     install:
