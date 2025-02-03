@@ -2,6 +2,13 @@
   {{- $version := toString $key }}
   {{- $image_version := toString $key | replace "." "-" }}
   {{- if $value.ccm.openstack }}
+    {{- $patches := (printf "/%smodules/%s-%s/images/%s" $.ModulePath $.ModulePriority $.ModuleName $.ImageName) }}
+    {{- $patch := false }}
+    {{- range $path, $_ := $.Files.Glob (printf "%s/*" $patches) }}
+      {{- if contains $version $path }}
+        {{- $patch = true }}
+      {{- end }}
+    {{- end }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
 fromImage: common/distroless
@@ -16,18 +23,22 @@ docker:
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
 final: false
 fromImage: common/src-artifact
+{{- if $patch }}
 git:
-- add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
+- add: {{ $patches }}/patches/{{ $src_version }}
   to: /patches
   stageDependencies:
     install:
       - '**/*'
+{{- end }}
 shell:
   install:
   - git clone --depth 1 --branch {{ $value.ccm.openstack }}  {{ $.SOURCE_REPO }}/kubernetes/cloud-provider-openstack.git /src
   - cd /src
-  - find /patches/{{ $version }} -name '*.patch' | xargs git apply --verbose
-  - rm -rf .git
+  {{- if $patch }}
+  - git apply /patches/*.patch --verbose
+  {{- end }}
+  - rm -rf vendor .git
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
 final: false
