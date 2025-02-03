@@ -175,7 +175,10 @@ apiVersions:
                   False means that static public addresses are created for nodes, they are also used for One-to-one NAT.;
           zones:
             type: array
-            description: A limited set of zones in which nodes can be created.
+            description: | 
+              A limited set of zones in which master nodes can be created.
+
+              The order in which zones are specified does not affect the order of node creation. Nodes will be placed in zones in alphabetical order: the first node will go to the zone that comes first alphabetically, the second node to the second zone, and so on. If the number of zones is less than the number of nodes, the distribution will restart from the beginning of the list after placing the node in the last zone alphabetically.
             items:
               type: string
             minItems: 1
@@ -240,7 +243,10 @@ apiVersions:
                 disableExternalIP: *instanceClassDisableExternalIP
             zones:
               type: array
-              description: A limited set of zones in which nodes can be created.
+              description: | 
+                A limited set of zones in which nodes can be created.
+
+                The order in which zones are specified does not affect the order of node creation. Nodes will be placed in zones in alphabetical order: the first node will go to the zone that comes first alphabetically, the second node to the second zone, and so on. If the number of zones is less than the number of nodes, the distribution will restart from the beginning of the list after placing the node in the last zone alphabetically.
               items:
                 type: string
               minItems: 1
