@@ -355,7 +355,6 @@ jobs:
           INITIAL_REF_SLUG: ${{ github.event.inputs.initial_ref_slug }}
           MANUAL_RUN: "true"
           MULTIMASTER: ${{ needs.check_e2e_labels.outputs.multimaster }}
-          WAIT_IMAGE_TIME: 300 # 5 minutes
         run: |
           # Calculate unique prefix for e2e test.
           # GITHUB_RUN_ID is a unique number for each workflow run.
@@ -852,7 +851,6 @@ jobs:
           INITIAL_REF_SLUG: ${{ github.event.inputs.initial_ref_slug }}
           MANUAL_RUN: "true"
           MULTIMASTER: ${{ needs.check_e2e_labels.outputs.multimaster }}
-          WAIT_IMAGE_TIME: 300 # 5 minutes
         run: |
           # Calculate unique prefix for e2e test.
           # GITHUB_RUN_ID is a unique number for each workflow run.
@@ -1349,7 +1347,6 @@ jobs:
           INITIAL_REF_SLUG: ${{ github.event.inputs.initial_ref_slug }}
           MANUAL_RUN: "true"
           MULTIMASTER: ${{ needs.check_e2e_labels.outputs.multimaster }}
-          WAIT_IMAGE_TIME: 300 # 5 minutes
         run: |
           # Calculate unique prefix for e2e test.
           # GITHUB_RUN_ID is a unique number for each workflow run.
@@ -1846,7 +1843,6 @@ jobs:
           INITIAL_REF_SLUG: ${{ github.event.inputs.initial_ref_slug }}
           MANUAL_RUN: "true"
           MULTIMASTER: ${{ needs.check_e2e_labels.outputs.multimaster }}
-          WAIT_IMAGE_TIME: 300 # 5 minutes
         run: |
           # Calculate unique prefix for e2e test.
           # GITHUB_RUN_ID is a unique number for each workflow run.
@@ -2343,7 +2339,6 @@ jobs:
           INITIAL_REF_SLUG: ${{ github.event.inputs.initial_ref_slug }}
           MANUAL_RUN: "true"
           MULTIMASTER: ${{ needs.check_e2e_labels.outputs.multimaster }}
-          WAIT_IMAGE_TIME: 300 # 5 minutes
         run: |
           # Calculate unique prefix for e2e test.
           # GITHUB_RUN_ID is a unique number for each workflow run.
@@ -2840,7 +2835,6 @@ jobs:
           INITIAL_REF_SLUG: ${{ github.event.inputs.initial_ref_slug }}
           MANUAL_RUN: "true"
           MULTIMASTER: ${{ needs.check_e2e_labels.outputs.multimaster }}
-          WAIT_IMAGE_TIME: 300 # 5 minutes
         run: |
           # Calculate unique prefix for e2e test.
           # GITHUB_RUN_ID is a unique number for each workflow run.
@@ -3337,7 +3331,6 @@ jobs:
           INITIAL_REF_SLUG: ${{ github.event.inputs.initial_ref_slug }}
           MANUAL_RUN: "true"
           MULTIMASTER: ${{ needs.check_e2e_labels.outputs.multimaster }}
-          WAIT_IMAGE_TIME: 300 # 5 minutes
         run: |
           # Calculate unique prefix for e2e test.
           # GITHUB_RUN_ID is a unique number for each workflow run.
@@ -3834,7 +3827,6 @@ jobs:
           INITIAL_REF_SLUG: ${{ github.event.inputs.initial_ref_slug }}
           MANUAL_RUN: "true"
           MULTIMASTER: ${{ needs.check_e2e_labels.outputs.multimaster }}
-          WAIT_IMAGE_TIME: 300 # 5 minutes
         run: |
           # Calculate unique prefix for e2e test.
           # GITHUB_RUN_ID is a unique number for each workflow run.
