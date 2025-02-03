@@ -23,10 +23,9 @@ import (
 	"strings"
 	"time"
 
-	"registry-modules-watcher/internal/backends"
-
 	"github.com/cenkalti/backoff"
 	"k8s.io/klog"
+	"registry-modules-watcher/internal/backends"
 )
 
 const maxElapsedTime = 15 // minutes
@@ -64,14 +63,14 @@ func (s *sender) Send(ctx context.Context, listBackends map[string]struct{}, ver
 
 					continue
 				}
-				url := "http://" + backend + "/loadDocArchive/" + version.Module + "/" + version.Version + "?channels=" + strings.Join(version.ReleaseChannels, ",")
+				url := "http://" + backend + "/api/v1/doc/" + version.Module + "/" + version.Version + "?channels=" + strings.Join(version.ReleaseChannels, ",")
 				err := s.loadDocArchive(ctx, url, version.TarFile)
 				if err != nil {
 					klog.Errorf("send docs error: %v", err)
 				}
 			}
 
-			url := "http://" + backend + "/build"
+			url := "http://" + backend + "/api/v1/build"
 			err := s.build(ctx, url)
 			if err != nil {
 				klog.Errorf("build docs error: %v", err)
@@ -114,7 +113,6 @@ func (s *sender) delete(_ context.Context, backend, moduleName string, releaseCh
 	}
 
 	return nil
-
 }
 
 func (s *sender) loadDocArchive(_ context.Context, url string, tarFile []byte) error {
@@ -146,7 +144,7 @@ func (s *sender) loadDocArchive(_ context.Context, url string, tarFile []byte) e
 	return nil
 }
 
-func (s *sender) build(ctx context.Context, url string) error {
+func (s *sender) build(_ context.Context, url string) error {
 	klog.V(2).Infof("send build url: %s", url)
 	req, err := http.NewRequest(http.MethodPost, url, nil)
 	if err != nil {
