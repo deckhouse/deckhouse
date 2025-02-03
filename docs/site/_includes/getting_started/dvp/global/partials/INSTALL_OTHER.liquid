@@ -1,6 +1,6 @@
 {% assign revision=include.revision %}
 
-Use a Docker image to install the **Deckhouse Virtualization Platform**. It is necessary to transfer configuration files to the container{%- if page.platform_type != 'existing' %} as well as SSH keys for accessing **the master node** (further, it is assumed that the SSH key `~/.ssh/id_rsa` is used){% endif %}.
+Use a Docker image to install the **Deckhouse Virtualization Platform**. It is necessary to transfer configuration file to the container{%- if page.platform_type != 'existing' %} as well as SSH keys for accessing **the master node** (further, it is assumed that the SSH key `~/.ssh/id_rsa` is used){% endif %}.
 {% if page.platform_code == 'bm-private' %}
 Log in on the **personal computer** to the container image registry you specified in the previous step.
 {%- endif %}
@@ -20,35 +20,29 @@ Run the installer on the **personal computer**.
 
 <div id='block_installer_linux_{{ revision }}' class="tabs__content tabs__content_installer_{{ revision }} active" markdown="1">
 <!-- Linux or macOS install, EE -->
-{% snippetcut selector="docker-run" %}
 ```shell
  echo <LICENSE_TOKEN> | docker login -u license-token --password-stdin registry.deckhouse.io
 docker run --pull=always {% if page.platform_code == "kind" %} --network host {% endif %}-it -v "$PWD/config.yml:/config.yml"{%- if page.platform_type != 'existing' %} -v "$HOME/.ssh/:/tmp/.ssh/"{% endif %}
 {%- if page.platform_type == "existing" or page.platform_code == "kind" %} \
   -v "$HOME/.kube/config:/kubeconfig"{% endif %}
 {%- if page.platform_type == "cloud" %} \
-  -v "$PWD/resources.yml:/resources.yml" -v "$PWD/dhctl-tmp:/tmp/dhctl"{% endif %} registry.deckhouse.io/deckhouse/ee/install:stable bash
+  -v "$PWD/dhctl-tmp:/tmp/dhctl"{% endif %} registry.deckhouse.io/deckhouse/ee/install:stable bash
 ```
-{% endsnippetcut %}
 </div>
 <div id='block_installer_windows_{{ revision }}' class="tabs__content tabs__content_installer_{{ revision }}" markdown="1">
 <!-- Windows install, EE -->
 Log in on the **personal computer** to the container image registry by providing the license key as a password:
-{% snippetcut selector="docker-login-windows" %}
 ```text
 docker login -u license-token registry.deckhouse.io
 ```
-{% endsnippetcut %}
 
 Run a container with the installer:
-{% snippetcut selector="docker-run-windows" %}
 ```text
 docker run --pull=always {% if page.platform_code == "kind" %} --network host {% endif %}-it -v "%cd%\config.yml:/config.yml"
 {%- if page.platform_type != 'existing' %} -v "%userprofile%\.ssh\:/tmp/.ssh/"{% endif %}
 {%- if page.platform_type == "existing" or page.platform_code == "kind" %} -v "%userprofile%\.kube\config:/kubeconfig"{% endif %}
-{%- if page.platform_type == "cloud" %} -v "%cd%\resources.yml:/resources.yml" -v "%cd%\dhctl-tmp:/tmp/dhctl" {% endif %} registry.deckhouse.io/deckhouse/ee/install:stable bash -c "chmod 400 /tmp/.ssh/id_rsa; bash"
+{%- if page.platform_type == "cloud" %} -v "%cd%\dhctl-tmp:/tmp/dhctl" {% endif %} registry.deckhouse.io/deckhouse/ee/install:stable bash -c "chmod 400 /tmp/.ssh/id_rsa; bash"
 ```
-{% endsnippetcut %}
 </div>
 {% else %}
 
@@ -63,30 +57,26 @@ docker run --pull=always {% if page.platform_code == "kind" %} --network host {%
 
 <div id='block_installer_linux_{{ revision }}' class="tabs__content tabs__content_installer_{{ revision }} active" markdown="1">
 <!-- Linux or macOS install, CE -->
-{% snippetcut selector="docker-run-ce" %}
 ```shell
 docker run --pull=always {% if page.platform_code == "kind" %} --network host {% endif %}-it -v "$PWD/config.yml:/config.yml"{%- if page.platform_type != 'existing' %} -v "$HOME/.ssh/:/tmp/.ssh/"{% endif %}
 {%- if page.platform_type == "existing" or page.platform_code == "kind" %} \
   -v "$HOME/.kube/config:/kubeconfig"{% endif %}
 {%- if page.platform_type == "cloud" %} \
-  -v "$PWD/resources.yml:/resources.yml" -v "$PWD/dhctl-tmp:/tmp/dhctl"{% endif %}
+  -v "$PWD/dhctl-tmp:/tmp/dhctl"{% endif %}
 {%- if page.platform_code == "bm-private" %} <IMAGES_REPO_URI>/install:stable
 {%- else %} registry.deckhouse.io/deckhouse/ce/install:stable{% endif %} bash
 ```
-{% endsnippetcut %}
 </div>
 <div id='block_installer_windows_{{ revision }}' class="tabs__content tabs__content_installer_{{ revision }}" markdown="1">
 <!-- Windows install, CE -->
-{% snippetcut selector="docker-run-windows-ce" %}
 ```text
 docker run --pull=always {% if page.platform_code == "kind" %} --network host {% endif %}-it -v "%cd%\config.yml:/config.yml"
 {%- if page.platform_type != 'existing' %} -v "%userprofile%\.ssh\:/tmp/.ssh/"{% endif %}
 {%- if page.platform_type == "existing" or page.platform_code == "kind" %} -v "%userprofile%\.kube\config:/kubeconfig" {% endif %}
-{%- if page.platform_type == "cloud" %} -v "%cd%\resources.yml:/resources.yml" -v "%cd%\dhctl-tmp:/tmp/dhctl" {% endif %}
+{%- if page.platform_type == "cloud" %} -v "%cd%\dhctl-tmp:/tmp/dhctl" {% endif %}
 {%- if page.platform_code == "bm-private" %} <IMAGES_REPO_URI>/install:stable
 {%- else %} registry.deckhouse.io/deckhouse/ce/install:stable{% endif %} bash -c "chmod 400 /tmp/.ssh/id_rsa; bash"
 ```
-{% endsnippetcut %}
 </div>
 {% endif %}
 
@@ -98,7 +88,6 @@ Notes:
 
 Now, to initiate the process of installation, you need to execute inside the container:
 
-{% snippetcut %}
 ```shell
 {%- if page.platform_type == "existing" or page.platform_code == "kind" %}
 dhctl bootstrap-phase install-deckhouse --kubeconfig=/kubeconfig --config=/config.yml
@@ -107,10 +96,9 @@ dhctl bootstrap --ssh-user=<username> --ssh-host=<master_ip> --ssh-agent-private
   --config=/config.yml \
   --ask-become-pass
 {%- elsif page.platform_type == "cloud" %}
-dhctl bootstrap --ssh-user={% if page.platform_code == "azure" %}azureuser{%- elsif page.platform_code == "gcp" %}user{%- else %}ubuntu{%- endif %} --ssh-agent-private-keys=/tmp/.ssh/id_rsa --config=/config.yml --config=/resources.yml
+dhctl bootstrap --ssh-user={% if page.platform_code == "azure" %}azureuser{%- elsif page.platform_code == "gcp" %}user{%- else %}ubuntu{%- endif %} --ssh-agent-private-keys=/tmp/.ssh/id_rsa --config=/config.yml
 {%- endif %}
 ```
-{% endsnippetcut %}
 
 {%- if page.platform_type == "baremetal" or page.platform_type == "cloud" %}
 {%- if page.platform_type == "baremetal" %}
@@ -165,24 +153,19 @@ After the installation is complete, the installer will output the IP of the **ma
 {%- if page.platform_code == "kind" %}
 
 It remains to create the Ingress controller configuration. Create the `ingress-nginx-controller` file.yml with the following content:
-{% snippetcut name="ingress-nginx-controller.yml" selector="ingress-nginx-controller-yml" %}
-{% include_file "_includes/getting_started/dvp/{{ page.platform_code }}/partials/ingress-nginx-controller.yml.inc" syntax="yaml" %}
-{% endsnippetcut %}
+{% capture includePath %}_includes/etting_started/dvp/{{ page.platform_code }}/partials/ingress-nginx-controller.yml.inc{% endcapture %}
+{% include_file "{{ includePath }}" syntax="yaml" %}
 <p>Apply the file using the command below:</p>
-{% snippetcut %}
 ```shell
 kubectl create -f ingress-nginx-controller.yml
 ```
-{% endsnippetcut %}
 
 It may take some time to start the Ingress controller.
 
 To check the status of the Ingress Controller Pod, run the following command:
-{% snippetcut %}
 ```shell
 kubectl -n d8-ingress-nginx get po
 ```
-{% endsnippetcut %}
 
 Wait for the Ingress controller Pod to switch to `Running` state.
 

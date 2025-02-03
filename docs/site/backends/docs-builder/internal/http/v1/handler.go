@@ -19,29 +19,29 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/deckhouse/deckhouse/pkg/log"
 	"github.com/flant/docs-builder/internal/docs"
-	"k8s.io/klog/v2"
 )
 
 type DocsBuilderHandler struct {
 	http.Handler
 
 	docsService *docs.Service
+
+	logger *log.Logger
 }
 
-func NewHandler(docsService *docs.Service) *DocsBuilderHandler {
+func NewHandler(docsService *docs.Service, logger *log.Logger) *DocsBuilderHandler {
 	r := http.NewServeMux()
 
 	var h = &DocsBuilderHandler{
 		Handler:     r,
 		docsService: docsService,
+		logger:      logger,
 	}
 
 	r.HandleFunc("/readyz", h.handleReadyZ)
 	r.HandleFunc("/healthz", h.handleHealthZ)
-
-	r.HandleFunc("POST /loadDocArchive/{moduleName}/{version}", h.handleUpload)
-	r.HandleFunc("POST /build", h.handleBuild)
 
 	r.HandleFunc("POST /api/v1/doc/{moduleName}/{version}", h.handleUpload)
 	r.HandleFunc("DELETE /api/v1/doc/{moduleName}", h.handleDelete)
@@ -76,11 +76,11 @@ func (h *DocsBuilderHandler) handleUpload(w http.ResponseWriter, r *http.Request
 	moduleName := r.PathValue("moduleName")
 	version := r.PathValue("version")
 
-	klog.Infof("loading %s %s: %s", moduleName, version, channels)
+	h.logger.Infof("loading %s %s: %s", moduleName, version, channels)
 
 	err := h.docsService.Upload(r.Body, moduleName, version, channels)
 	if err != nil {
-		klog.Error(err)
+		h.logger.Error("upload", log.Err(err))
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
@@ -91,7 +91,7 @@ func (h *DocsBuilderHandler) handleUpload(w http.ResponseWriter, r *http.Request
 func (h *DocsBuilderHandler) handleBuild(w http.ResponseWriter, r *http.Request) {
 	err := h.docsService.Build()
 	if err != nil {
-		klog.Error(err)
+		h.logger.Error("build", log.Err(err))
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
@@ -108,10 +108,10 @@ func (h *DocsBuilderHandler) handleDelete(w http.ResponseWriter, r *http.Request
 
 	moduleName := r.PathValue("moduleName")
 
-	klog.Infof("deleting %s: %s", moduleName, channels)
+	h.logger.Infof("deleting %s: %s", moduleName, channels)
 	err := h.docsService.Delete(moduleName, channels)
 	if err != nil {
-		klog.Error(err)
+		h.logger.Error("delete", log.Err(err))
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}

@@ -52,7 +52,7 @@ spec:
   retention: {{ .Values.prometheus.longtermRetentionDays }}d
   retentionSize: {{ .Values.prometheus.internal.prometheusLongterm.retentionGigabytes }}GB
   image: {{ include "helm_lib_module_image" (list . "prometheus") }}
-  version: v2.45.2
+  version: v2.55.1
   imagePullSecrets:
   - name: deckhouse-registry
   listenLocal: true

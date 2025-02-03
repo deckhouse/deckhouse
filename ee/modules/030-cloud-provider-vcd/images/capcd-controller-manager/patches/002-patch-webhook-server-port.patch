@@ -1,0 +1,48 @@
+Subject: [PATCH] patch webhookServer port
+---
+Index: main.go
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/main.go b/main.go
+--- a/main.go	(revision 79c0ed4e387552a992362f8025fd07cfaa1b253c)
++++ b/main.go	(revision c3ff38adf2c05071a05fe77f23247a804d87bee7)
+@@ -15,6 +15,7 @@
+
+ 	"github.com/spf13/pflag"
+ 	"sigs.k8s.io/controller-runtime/pkg/cache"
++	"sigs.k8s.io/controller-runtime/pkg/webhook"
+
+ 	"github.com/vmware/cluster-api-provider-cloud-director/release"
+
+@@ -51,6 +52,7 @@
+ 	syncPeriod           time.Duration
+ 	concurrency          int
+ 	diagnosticsOptions   flags.DiagnosticsOptions
++	port                 int
+ )
+
+ func init() {
+@@ -77,6 +79,8 @@
+ 		"The minimum interval at which watched resources are reconciled (e.g. 15m)")
+ 	fs.IntVar(&concurrency, "concurrency", 10,
+ 		"The number of VCD machines to process simultaneously")
++	fs.IntVar(&port, "port", 4201,
++		"Webhook server port")
+
+ 	flags.AddDiagnosticsOptions(fs, &diagnosticsOptions)
+
+@@ -109,7 +113,11 @@
+ 		LeaderElectionID:       "capvcd-controller-manager-leader-election",
+ 		Cache: cache.Options{
+ 			SyncPeriod: &syncPeriod,
+-		}})
++		},
++		WebhookServer: webhook.NewServer((webhook.Options{
++			Port: port,
++		})),
++	})
+ 	if err != nil {
+ 		setupLog.Error(err, "unable to start manager")
+ 		os.Exit(1)

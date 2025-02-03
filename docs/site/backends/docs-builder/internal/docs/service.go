@@ -20,7 +20,7 @@ import (
 	"regexp"
 	"sync/atomic"
 
-	"k8s.io/klog/v2"
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 var docConfValuesRegexp = regexp.MustCompile(`^openapi/doc-.*-config-values\.yaml$`)
@@ -36,13 +36,16 @@ type Service struct {
 	destDir              string
 	isReady              atomic.Bool
 	channelMappingEditor *channelMappingEditor
+
+	logger *log.Logger
 }
 
-func NewService(baseDir, destDir string, highAvailability bool) *Service {
+func NewService(baseDir, destDir string, highAvailability bool, logger *log.Logger) *Service {
 	svc := &Service{
 		baseDir:              baseDir,
 		destDir:              destDir,
 		channelMappingEditor: newChannelMappingEditor(baseDir),
+		logger:               logger,
 	}
 
 	if !highAvailability {
@@ -52,7 +55,7 @@ func NewService(baseDir, destDir string, highAvailability bool) *Service {
 	// prepare module directory
 	err := os.MkdirAll(filepath.Join(baseDir, modulesDir), 0700)
 	if err != nil {
-		klog.Error(err)
+		svc.logger.Error("mkdir all", log.Err(err))
 	}
 
 	return svc

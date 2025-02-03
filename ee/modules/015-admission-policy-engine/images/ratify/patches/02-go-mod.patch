@@ -1,7 +1,18 @@
 diff --git a/go.mod b/go.mod
-index 9531e39..192f6e8 100644
+index 9531e39..d4c36c2 100644
 --- a/go.mod
 +++ b/go.mod
+@@ -28,8 +28,8 @@ require (
+ 	github.com/golang/protobuf v1.5.4
+ 	github.com/google/go-containerregistry v0.20.2
+ 	github.com/gorilla/mux v1.8.1
+-	github.com/notaryproject/notation-core-go v1.1.0
+-	github.com/notaryproject/notation-go v1.2.1
++	github.com/notaryproject/notation-core-go v1.2.0-rc.2
++	github.com/notaryproject/notation-go v1.3.0-rc.2
+ 	github.com/notaryproject/notation-plugin-framework-go v1.0.0
+ 	github.com/open-policy-agent/cert-controller v0.8.0
+ 	github.com/open-policy-agent/frameworks/constraint v0.0.0-20230411224310-3f237e2710fa
 @@ -47,7 +47,7 @@ require (
  	go.opentelemetry.io/otel/exporters/prometheus v0.49.0
  	go.opentelemetry.io/otel/metric v1.28.0
@@ -11,6 +22,15 @@ index 9531e39..192f6e8 100644
  	google.golang.org/grpc v1.66.0
  	google.golang.org/protobuf v1.34.2
  	k8s.io/api v0.28.13
+@@ -109,7 +109,7 @@ require (
+ 	github.com/hashicorp/go-retryablehttp v0.7.7 // indirect
+ 	github.com/miekg/pkcs11 v1.1.1 // indirect
+ 	github.com/mozillazg/docker-credential-acr-helper v0.3.0 // indirect
+-	github.com/notaryproject/tspclient-go v0.2.0 // indirect
++	github.com/notaryproject/tspclient-go v1.0.0-rc.1 // indirect
+ 	github.com/nozzle/throttler v0.0.0-20180817012639-2ea982251481 // indirect
+ 	github.com/sagikazarmark/locafero v0.4.0 // indirect
+ 	github.com/sagikazarmark/slog-shim v0.1.0 // indirect
 @@ -171,7 +171,7 @@ require (
  	github.com/go-openapi/swag v0.23.0 // indirect
  	github.com/go-openapi/validate v0.24.0 // indirect
@@ -20,6 +40,15 @@ index 9531e39..192f6e8 100644
  	github.com/golang/glog v1.2.1 // indirect
  	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
  	github.com/golang/snappy v0.0.4 // indirect
+@@ -222,7 +222,7 @@ require (
+ 	github.com/titanous/rocacheck v0.0.0-20171023193734-afe73141d399 // indirect
+ 	github.com/transparency-dev/merkle v0.0.2 // indirect
+ 	github.com/vbatts/tar-split v0.11.5 // indirect
+-	github.com/veraison/go-cose v1.2.1 // indirect
++	github.com/veraison/go-cose v1.3.0 // indirect
+ 	github.com/x448/float16 v0.8.4 // indirect
+ 	github.com/xeipuuv/gojsonpointer v0.0.0-20190905194746-02993c407bfb // indirect
+ 	github.com/xeipuuv/gojsonreference v0.0.0-20180127040603-bd5ef7bd5415 // indirect
 @@ -234,14 +234,14 @@ require (
  	go.uber.org/atomic v1.11.0 // indirect
  	go.uber.org/multierr v1.11.0 // indirect
@@ -27,8 +56,9 @@ index 9531e39..192f6e8 100644
 -	golang.org/x/crypto v0.26.0
 +	golang.org/x/crypto v0.31.0
  	golang.org/x/exp v0.0.0-20240112132812-db7319d0e0e3 // indirect
- 	golang.org/x/mod v0.20.0 // indirect
+-	golang.org/x/mod v0.20.0 // indirect
 -	golang.org/x/net v0.28.0 // indirect
++	golang.org/x/mod v0.22.0 // indirect
 +	golang.org/x/net v0.33.0 // indirect
  	golang.org/x/oauth2 v0.22.0 // indirect
 -	golang.org/x/sys v0.23.0 // indirect
@@ -41,7 +71,7 @@ index 9531e39..192f6e8 100644
  	gomodules.xyz/jsonpatch/v2 v2.3.0 // indirect
  	gopkg.in/inf.v0 v0.9.1 // indirect
 diff --git a/go.sum b/go.sum
-index 2817a08..fef42c4 100644
+index 2817a08..5275e01 100644
 --- a/go.sum
 +++ b/go.sum
 @@ -331,8 +331,9 @@ github.com/gogo/protobuf v1.3.2 h1:Ov1cvc58UF3b5XjBnZv7+opcTcQFZebYjWzi34vdm4Q=
@@ -55,6 +85,38 @@ index 2817a08..fef42c4 100644
  github.com/golang-jwt/jwt/v5 v5.2.1 h1:OuVbFODueb089Lh128TAcimifWaLhJwVflnrgM17wHk=
  github.com/golang-jwt/jwt/v5 v5.2.1/go.mod h1:pqrtFR0X4osieyHYxtmOUWsAWrfe1Q5UVIyoH402zdk=
  github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b/go.mod h1:SBH7ygxi8pfUlaOkMMuAQtPIUF8ecWP5IEl/CR7VP2Q=
+@@ -516,14 +517,14 @@ github.com/mozillazg/docker-credential-acr-helper v0.3.0/go.mod h1:cZlu3tof523uj
+ github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 h1:C3w9PqII01/Oq1c1nUAm88MOHcQC9l5mIlSMApZMrHA=
+ github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822/go.mod h1:+n7T8mK8HuQTcFwEeznm/DIxMOiR9yIdICNftLE1DvQ=
+ github.com/niemeyer/pretty v0.0.0-20200227124842-a10e7caefd8e/go.mod h1:zD1mROLANZcx1PVRCS0qkT7pwLkGfwJo4zjcN/Tysno=
+-github.com/notaryproject/notation-core-go v1.1.0 h1:xCybcONOKcCyPNihJUSa+jRNsyQFNkrk0eJVVs1kWeg=
+-github.com/notaryproject/notation-core-go v1.1.0/go.mod h1:+6AOh41JPrnVLbW/19SJqdhVHwKgIINBO/np0e7nXJA=
+-github.com/notaryproject/notation-go v1.2.1 h1:fbCMBcvg1xttrisd5CyM60QDectGYYF701Us0M3cKN8=
+-github.com/notaryproject/notation-go v1.2.1/go.mod h1:re9V+TfuNRaUq5e3NuNcCJN53++sL2KbnJrjGyOUpgE=
++github.com/notaryproject/notation-core-go v1.2.0-rc.2 h1:0jOItalNwBNUhyuc5PPHQxO3jIZ5xRYq+IvRMQXNbuE=
++github.com/notaryproject/notation-core-go v1.2.0-rc.2/go.mod h1:7aIcavfywFvBQoYyfVFJB501kt7Etqyubrt5mhJBG2c=
++github.com/notaryproject/notation-go v1.3.0-rc.2 h1:uugL3kruAAWPMFoOhjcoPAhUnIqMF1pcc8nIlqOKpeU=
++github.com/notaryproject/notation-go v1.3.0-rc.2/go.mod h1:l7C6xVLPy5cBb+6MpsM9iLyFrVYxgS6+QjBdrl/KSY8=
+ github.com/notaryproject/notation-plugin-framework-go v1.0.0 h1:6Qzr7DGXoCgXEQN+1gTZWuJAZvxh3p8Lryjn5FaLzi4=
+ github.com/notaryproject/notation-plugin-framework-go v1.0.0/go.mod h1:RqWSrTOtEASCrGOEffq0n8pSg2KOgKYiWqFWczRSics=
+-github.com/notaryproject/tspclient-go v0.2.0 h1:g/KpQGmyk/h7j60irIRG1mfWnibNOzJ8WhLqAzuiQAQ=
+-github.com/notaryproject/tspclient-go v0.2.0/go.mod h1:LGyA/6Kwd2FlM0uk8Vc5il3j0CddbWSHBj/4kxQDbjs=
++github.com/notaryproject/tspclient-go v1.0.0-rc.1 h1:KcHxlqg6Adt4kzGLw012i0YMLlwGwToiR129c6IQ7Ys=
++github.com/notaryproject/tspclient-go v1.0.0-rc.1/go.mod h1:LGyA/6Kwd2FlM0uk8Vc5il3j0CddbWSHBj/4kxQDbjs=
+ github.com/nozzle/throttler v0.0.0-20180817012639-2ea982251481 h1:Up6+btDp321ZG5/zdSLo48H9Iaq0UQGthrhWC6pCxzE=
+ github.com/nozzle/throttler v0.0.0-20180817012639-2ea982251481/go.mod h1:yKZQO8QE2bHlgozqWDiRVqTFlLQSj30K/6SAK8EeYFw=
+ github.com/nxadm/tail v1.4.4/go.mod h1:kenIhsEOeOJmVchQTgglprH7qJGnHDVpk1VPCcaMI8A=
+@@ -690,8 +691,8 @@ github.com/transparency-dev/merkle v0.0.2 h1:Q9nBoQcZcgPamMkGn7ghV8XiTZ/kRxn1yCG
+ github.com/transparency-dev/merkle v0.0.2/go.mod h1:pqSy+OXefQ1EDUVmAJ8MUhHB9TXGuzVAT58PqBoHz1A=
+ github.com/vbatts/tar-split v0.11.5 h1:3bHCTIheBm1qFTcgh9oPu+nNBtX+XJIupG/vacinCts=
+ github.com/vbatts/tar-split v0.11.5/go.mod h1:yZbwRsSeGjusneWgA781EKej9HF8vme8okylkAeNKLk=
+-github.com/veraison/go-cose v1.2.1 h1:Gj4x20D0YP79J2+cK3anjGEMwIkg2xX+TKVVGUXwNAc=
+-github.com/veraison/go-cose v1.2.1/go.mod h1:t6V8WJzHm1PD5HNsuDjW3KLv577uWb6UTzbZGvdQHD8=
++github.com/veraison/go-cose v1.3.0 h1:2/H5w8kdSpQJyVtIhx8gmwPJ2uSz1PkyWFx0idbd7rk=
++github.com/veraison/go-cose v1.3.0/go.mod h1:df09OV91aHoQWLmy1KsDdYiagtXgyAwAl8vFeFn1gMc=
+ github.com/vmihailenco/msgpack/v4 v4.3.12/go.mod h1:gborTTJjAo/GWTqqRjrLCn9pgNN+NXzzngzBKDPIqw4=
+ github.com/vmihailenco/tagparser v0.1.1/go.mod h1:OeAg3pn3UbLjkWt+rN9oFYB6u/cQgqMEUPoW2WPyhdI=
+ github.com/x448/float16 v0.8.4 h1:qLwI1I70+NjRFUR3zs1JPUCgaCXSh3SW62uAKT1mSBM=
 @@ -780,8 +781,8 @@ golang.org/x/crypto v0.10.0/go.mod h1:o4eNf7Ede1fv+hwOwZsTHl9EsPFO6q6ZvYR8vYfY45
  golang.org/x/crypto v0.17.0/go.mod h1:gCAAfMLgwOJRpTjQ2zCCt2OcSfYMTeZVSRtQlPC7Nq4=
  golang.org/x/crypto v0.19.0/go.mod h1:Iy9bg/ha4yyC70EfRS8jz+B6ybOBKMaSxLj6P6oBDfU=
@@ -66,6 +128,17 @@ index 2817a08..fef42c4 100644
  golang.org/x/exp v0.0.0-20190121172915-509febef88a4/go.mod h1:CJ0aWSM057203Lf6IL+f9T1iT9GByDxfZKAQTCR3kQA=
  golang.org/x/exp v0.0.0-20240112132812-db7319d0e0e3 h1:hNQpMuAJe5CtcUqCXaWga3FHu+kQvCqcsoVaQgSV60o=
  golang.org/x/exp v0.0.0-20240112132812-db7319d0e0e3/go.mod h1:idGWGoKP1toJGkd5/ig9ZLuPcZBC3ewk7SzmH0uou08=
+@@ -792,8 +793,8 @@ golang.org/x/mod v0.2.0/go.mod h1:s0Qsj1ACt9ePp/hMypM3fl4fZqREWJwdYDEqhRiZZUA=
+ golang.org/x/mod v0.3.0/go.mod h1:s0Qsj1ACt9ePp/hMypM3fl4fZqREWJwdYDEqhRiZZUA=
+ golang.org/x/mod v0.6.0-dev.0.20220419223038-86c51ed26bb4/go.mod h1:jJ57K6gSWd91VN4djpZkiMVwK6gcyfeH4XE8wZrZaV4=
+ golang.org/x/mod v0.8.0/go.mod h1:iBbtSCu2XBx23ZKBPSOrRkjjQPZFPuis4dIYUhu/chs=
+-golang.org/x/mod v0.20.0 h1:utOm6MM3R3dnawAiJgn0y+xvuYRsm1RKM/4giyfDgV0=
+-golang.org/x/mod v0.20.0/go.mod h1:hTbmBsO62+eylJbnUtE2MGJUyE7QWk4xUqPFrRgJ+7c=
++golang.org/x/mod v0.22.0 h1:D4nJWe9zXqHOmWqj4VMOJhvzj7bEZg4wEYa759z1pH4=
++golang.org/x/mod v0.22.0/go.mod h1:6SkKJ3Xj0I0BrPOZoBy3bdMptDDU9oJrpohJ3eWZ1fY=
+ golang.org/x/net v0.0.0-20180724234803-3673e40ba225/go.mod h1:mL1N/T3taQHkDXs73rZJwtUhF3w3ftmwwsq0BUmARs4=
+ golang.org/x/net v0.0.0-20180826012351-8a410e7b638d/go.mod h1:mL1N/T3taQHkDXs73rZJwtUhF3w3ftmwwsq0BUmARs4=
+ golang.org/x/net v0.0.0-20180906233101-161cd47e91fd/go.mod h1:mL1N/T3taQHkDXs73rZJwtUhF3w3ftmwwsq0BUmARs4=
 @@ -823,8 +824,8 @@ golang.org/x/net v0.10.0/go.mod h1:0qNGK6F8kojg2nk9dLZ2mShWaEBan6FAoqfSigmmuDg=
  golang.org/x/net v0.11.0/go.mod h1:2L/ixqYpgIVXmeoSA/4Lu7BzTG4KIyPIryS4IsOd1oQ=
  golang.org/x/net v0.21.0/go.mod h1:bIjVDfnllIU7BJ2DNgfnXvpSvtn8VRwhlsaeUTyUS44=

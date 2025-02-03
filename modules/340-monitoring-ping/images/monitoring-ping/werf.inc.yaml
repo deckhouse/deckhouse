@@ -1,6 +1,6 @@
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
-fromArtifact: common/src-artifact
+fromImage: common/src-artifact
 final: false
 git:
 - add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/src
@@ -43,7 +43,7 @@ import:
   add: /src/monitoring-ping/requirements.txt
   to: /requirements.txt
   before: install
-- artifact: common/python-static
+- image: common/python-static
   add: /opt/python-static
   before: install
 shell:

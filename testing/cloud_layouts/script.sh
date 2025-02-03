@@ -336,7 +336,7 @@ function prepare_environment() {
         envsubst '${DECKHOUSE_DOCKERCFG} ${PREFIX} ${DEV_BRANCH} ${KUBERNETES_VERSION} ${CRI} ${VSPHERE_PASSWORD} ${VSPHERE_BASE_DOMAIN} ${MASTERS_COUNT}' \
         <"$cwd/configuration.tpl.yaml" >"$cwd/configuration.yaml"
 
-    ssh_user="ubuntu"
+    ssh_user="redos"
     ;;
 
 "VCD")

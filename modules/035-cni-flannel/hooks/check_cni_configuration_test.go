@@ -178,7 +178,7 @@ data:
 	Context("Cluster has cni secret, key `cni` eq `flannel`, but cni MC does not exist or it not explicitly enabled", func() {
 		BeforeEach(func() {
 			resources := []string{
-				cniSecretYAML(cni, `{"podNetworkMode": "VXLAN"}`),
+				cniSecretYAML(cni, `{"podNetworkMode": "vxlan"}`),
 			}
 			f.KubeStateSet(strings.Join(resources, "\n---\n"))
 			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
@@ -266,7 +266,7 @@ status:
 		BeforeEach(func() {
 			f.ConfigValuesSet("cniFlannel.podNetworkMode", "VXLAN")
 			resources := []string{
-				cniSecretYAML(cni, `{"podNetworkMode": "HostGW"}`),
+				cniSecretYAML(cni, `{"podNetworkMode": "host-gw"}`),
 				cniMCYAML(cniName, pointer.Bool(true), v1alpha1.SettingsValues{
 					"podNetworkMode": "VXLAN",
 				}),
@@ -307,7 +307,7 @@ status:
 		BeforeEach(func() {
 			f.ConfigValuesSet("cniFlannel.podNetworkMode", "HostGW")
 			resources := []string{
-				cniSecretYAML(cni, `{"podNetworkMode": "VXLAN"}`),
+				cniSecretYAML(cni, `{"podNetworkMode": "vxlan"}`),
 				cniMCYAML(cniName, pointer.Bool(true), v1alpha1.SettingsValues{
 					"podNetworkMode": "HostGW",
 				}),
@@ -349,7 +349,7 @@ status:
 		BeforeEach(func() {
 			f.ConfigValuesSet("cniFlannel.podNetworkMode", "VXLAN")
 			resources := []string{
-				cniSecretYAML(cni, `{"podNetworkMode": "HostGWv"}`),
+				cniSecretYAML(cni, `{"podNetworkMode": "HostGW"}`),
 				cniMCYAML(cniName, pointer.Bool(true), v1alpha1.SettingsValues{
 					"podNetworkMode": "VXLAN",
 				}),
@@ -367,7 +367,7 @@ status:
 			checkMetric(f.MetricsCollector.CollectedMetrics(), 1.0)
 			cm := f.KubernetesResource("ConfigMap", "d8-system", desiredCNIModuleConfigName)
 			Expect(cm.Exists()).To(BeFalse())
-			Expect(f.GoHookError.Error()).Should(ContainSubstring(`unknown flannel podNetworkMode HostGWv`))
+			Expect(f.GoHookError.Error()).Should(ContainSubstring(`unknown flannel podNetworkMode HostGW`))
 		})
 	})
 
@@ -375,7 +375,7 @@ status:
 		BeforeEach(func() {
 			f.ConfigValuesSet("cniFlannel.podNetworkMode", "VXLAN")
 			resources := []string{
-				cniSecretYAML(cni, `{"podNetworkMode": "VXLAN"}`),
+				cniSecretYAML(cni, `{"podNetworkMode": "vxlan"}`),
 				cniMCYAML(cniName, pointer.Bool(true), v1alpha1.SettingsValues{
 					"podNetworkMode": "VXLAN",
 				}),
