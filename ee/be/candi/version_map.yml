@@ -73,6 +73,6 @@ k8s:
       astra:
         !!merge <<: *astra
     clusterApi:
-      vcd: v1.2.0
+      vcd: v1.3.2
     ccm:
       vcd: 1.4.1
