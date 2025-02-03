@@ -1,6 +1,14 @@
 {{- range $key, $value := .CandiVersionMap.k8s }}
   {{- $image_version := toString $key | replace "." "-" }}
   {{- if $value.csi.openstack }}
+    {{- $src_version := toString $value.csi.openstack}}
+    {{- $patches := (printf "/%smodules/%s-%s/images/%s" $.ModulePath $.ModulePriority $.ModuleName $.ImageName) }}
+    {{- $patch := false }}
+    {{- range $path, $_ := $.Files.Glob (printf "%s/*" $patches) }}
+      {{- if contains $src_version $path }}
+        {{- $patch = true }}
+      {{- end }}
+    {{- end }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
 fromImage: common/distroless
@@ -21,10 +29,21 @@ docker:
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
 final: false
 fromImage: common/src-artifact
+{{- if $patch }}
+git:
+- add: {{ $patches }}/patches/{{ $src_version }}
+  to: /patches
+  stageDependencies:
+    install:
+      - '**/*'
+{{- end }}
 shell:
   install:
   - git clone --depth 1 --branch {{ $value.csi.openstack }} {{ $.SOURCE_REPO }}/kubernetes/cloud-provider-openstack.git /src
   - cd /src
+  {{- if $patch }}
+  - git apply /patches/*.patch --verbose
+  {{- end }}
   - rm -rf .git
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
