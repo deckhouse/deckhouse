@@ -7,7 +7,6 @@ FORMATTING_END = \033[0m
 FOCUS =
 
 MDLINTER_IMAGE = ghcr.io/igorshubovych/markdownlint-cli@sha256:2e22b4979347f70e0768e3fef1a459578b75d7966e4b1a6500712b05c5139476
-SPELLCHECKER_IMAGE = registry.deckhouse.io/base_images/hunspell:1.7.0-r1-alpine@sha256:f419f1dc5b55cd9c0038ece60612549e64333bb0a0e7d4764d45ed94336dec9c
 
 # Explicitly set architecture on arm, since werf currently does not support building of images for any other platform
 # besides linux/amd64 (e.g. relevant for mac m1).
@@ -233,6 +232,9 @@ cve-base-images: bin/trivy bin/jq ## Check CVE in our base images.
   ##~ Options: SEVERITY=CRITICAL,HIGH
 	./tools/cve/base-images.sh
 
+cve-base-images-check-default-user: bin/trivy bin/jq ## Check CVE in our base images.
+  ##~ Options: SEVERITY=CRITICAL,HIGH
+	./tools/cve/check-non-root.sh
 ##@ Documentation
 
 .PHONY: docs
