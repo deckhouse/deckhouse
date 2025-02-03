@@ -10,7 +10,7 @@ git:
   - '**/*.mod'
   - '**/*.sum'
   - '**/*.sql'
-  excludePatchs:
+  excludePaths:
   - 'stress.sh'
   stageDependencies:
     install:
