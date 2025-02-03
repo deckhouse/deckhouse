@@ -59,7 +59,6 @@ shell:
   - export PRIVATE_REPO_TOKEN={{ $.STRONGHOLD_PULL_TOKEN }}
   - export GOPRIVATE={{ $.DECKHOUSE_PRIVATE_REPO }}
   - git config --global url."https://gitlab-ci-token:${PRIVATE_REPO_TOKEN}@${PRIVATE_REPO}/".insteadOf https://${PRIVATE_REPO}/
-  - cd /src/task/cmd/task && go install
   - cd /src/deckhouse-cli
   - task build:dist:linux:amd64
   - mv ./dist/{{ .CandiVersionMap.d8.d8CliVersion }}/linux-amd64/bin/d8 /d8
