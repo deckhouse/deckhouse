@@ -475,21 +475,32 @@ a.comparison-table__module::after {
 
 .sidebar__badge {
   display: inline-flex;
-  vertical-align: middle;
-  font-size: 8px;
-  font-weight: 700;
-  line-height: 16px;
+  margin-right: 4px;
+  padding: 4px 5px;
+  border: 1px solid #bbb;
+  border-radius: 16px;
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 7px;
   letter-spacing: 1px;
-  color: #fff;
-  margin-right: 10px;
-  padding: 0 4px;
-  background: #0066FF;
-  border-radius: 4px;
+  color: $color-text-secondary;
+  text-transform: uppercase;
   white-space: nowrap;
+  background: $background-blue;
+
+  &:nth-child(2) {
+    margin-left: 10px;
+  }
 }
 
-.sidebar__badge:nth-child(2) {
-  margin-left: 10px;
+.sidebar__badge_ee {
+  padding: 3px 3px 4px 5px;
+  border: none;
+  font-weight: 400;
+  font-size: 12px;
+  text-align: center;
+  color: $white;
+  background-color: $color-text-secondary;
 }
 
 a.comparison-table__module {

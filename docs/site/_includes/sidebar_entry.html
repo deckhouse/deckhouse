@@ -48,19 +48,19 @@
     <a href="#">{{ entry.title[page.lang] }}
     {%- if entry.featureStatus %}<span class="sidebar__badge sidebar__badge_{{ entry.featureStatus }}" title="{{ site.data.i18n.features[entry.featureStatus][page.lang] | lstrip | strip_html | regex_replace: '.$', '' }}">
         {%- if entry.featureStatus == "experimental" %}
-          Experimental
+        Exp
         {%- elsif entry.featureStatus == "deprecated" %}
-          Deprecated
+          Dep
         {%- elsif entry.featureStatus == "temporaryDeprecated" %}
           Temporary deprecated
         {%- elsif entry.featureStatus == "proprietaryOkmeter" %}
-          Proprietary
+          Prop
         {%- else %}
           NEW!
         {%- endif %}
       </span>
     {%- endif %}
-    {%- if entry.d8Revision and entry.d8Revision != "ce" %}<span class="sidebar__badge sidebar__badge_{{ entry.d8Revision }}" title="{{ site.data.i18n.features[entry.d8Revision][page.lang] | strip_html | regex_replace: '.$', '' }}">EE Only</span>
+    {%- if entry.d8Revision and entry.d8Revision != "ce" %}<span class="sidebar__badge sidebar__badge_{{ entry.d8Revision }}" title="{{ site.data.i18n.features[entry.d8Revision][page.lang] | strip_html | regex_replace: '.$', '' }}">&#8381;</span>
     {%- endif %}
     </a>
     <ul class="sidebar__submenu">
