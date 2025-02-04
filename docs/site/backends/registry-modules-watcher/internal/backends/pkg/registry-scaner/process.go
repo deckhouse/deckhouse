@@ -27,8 +27,8 @@ import (
 
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 
-	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
 	"github.com/deckhouse/deckhouse/pkg/log"
+	"github.com/deckhouse/module-sdk/pkg/dependency/cr"
 )
 
 func (s *registryscaner) processRegistries(ctx context.Context) {
