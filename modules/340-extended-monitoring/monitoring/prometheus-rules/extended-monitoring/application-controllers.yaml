@@ -30,7 +30,7 @@
   - alert: KubernetesDeploymentReplicasUnavailable
     expr: |
       (
-        (kube_deployment_status_replicas_available == 0) * (kube_deployment_spec_replicas != 0)
+        (kube_deployment_status_replicas_available{deployment!~"standby-holder-.+"} == 0) * (kube_deployment_spec_replicas{deployment!~"standby-holder-.+"} != 0)
       )
       * on (namespace, deployment)
       (
@@ -50,6 +50,38 @@
         Count of available replicas in Deployment {{$labels.namespace}}/{{$labels.deployment}} is at zero.
 
         List of unavailable Pod(s): {{range $index, $result := (printf "(max by (namespace, pod) (kube_pod_status_ready{namespace=\"%s\", condition!=\"true\"} == 1)) * on (namespace, pod) kube_controller_pod{namespace=\"%s\", controller_type=\"Deployment\", controller_name=\"%s\"}" $labels.namespace $labels.namespace $labels.deployment | query)}}{{if not (eq $index 0)}}, {{ end }}{{ $result.Labels.pod }}{{ end }}
+
+  - alert: StandbyHolderDeploymentReplicasUnavailable
+    expr: |
+      (
+        (kube_deployment_status_replicas_available{deployment=~"standby-holder-.+"} == 0)
+        * (kube_deployment_spec_replicas{deployment=~"standby-holder-.+"} != 0)
+      )
+      * on (namespace, deployment)
+      (
+        max by (namespace, deployment) (extended_monitoring_deployment_threshold{threshold="replicas-not-ready"})
+      )
+      * on (namespace, node_group_name)
+      (
+        label_replace(d8_node_group_ready, "node_group_name", "$1", "deployment", "standby-holder-(.+)")
+        !=
+        label_replace(d8_node_group_max, "node_group_name", "$1", "deployment", "standby-holder-(.+)")
+      )
+    for: 5m
+    labels:
+      severity_level: "5"
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_create_group_if_not_exists__controllers_malfunctioning: "KubernetesControllersMalfunctioningInNamespace,prometheus=deckhouse,namespace={{ $labels.namespace }},kubernetes=~kubernetes"
+      plk_grouped_by__controllers_malfunctioning: "KubernetesControllersMalfunctioningInNamespace,prometheus=deckhouse,namespace={{ $labels.namespace }},kubernetes=~kubernetes"
+      summary: |-
+        Count of available replicas in Deployment {{$labels.namespace}}/{{$labels.deployment}} is at zero.
+      description: |-
+        Count of available replicas in Deployment {{$labels.namespace}}/{{$labels.deployment}} is at zero.
+
+        List of unavailable Pod(s): {{range $index, $result := (printf "(max by (namespace, pod) (kube_pod_status_ready{namespace=\"%s\", condition!=\"true\"} == 1)) * on (namespace, pod) kube_controller_pod{namespace=\"%s\", controller_type=\"Deployment\", controller_name=\"%s\"}" $labels.namespace $labels.namespace $labels.deployment | query)}}{{if not (eq $index 0)}}, {{ end }}{{ $result.Labels.pod }}{{ end }}
+
 
   - alert:  KubernetesDaemonSetReplicasUnavailable
     expr: |
