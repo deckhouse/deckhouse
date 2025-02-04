@@ -256,13 +256,29 @@ type Condition struct {
 	Message            string      `json:"message,omitempty"`
 }
 
-func NewCondition(condType, condStatus, condMessage string) *Condition {
-	return &Condition{
-		Type:               condType,
-		Status:             condStatus,
-		Message:            condMessage,
-		LastTransitionTime: metav1.Now(),
+func (p *Project) ClearConditions() {
+	p.Status.Conditions = []Condition{}
+}
+
+func (p *Project) SetCondition(condType, status, message string) {
+	for _, cond := range p.Status.Conditions {
+		if cond.Type == condType {
+			if cond.Status != status {
+				cond.Status = status
+			}
+			if cond.Message != message {
+				cond.Message = message
+			}
+			return
+		}
 	}
+
+	p.Status.Conditions = append(p.Status.Conditions, Condition{
+		Type:               condType,
+		Status:             status,
+		Message:            message,
+		LastTransitionTime: metav1.Now(),
+	})
 }
 
 func (c *Condition) DeepCopy() *Condition {

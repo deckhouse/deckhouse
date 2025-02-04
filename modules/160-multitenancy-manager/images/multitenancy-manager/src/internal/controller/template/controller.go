@@ -99,7 +99,7 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	// wait for init
 	r.init.Wait()
 
-	r.logger.Info("reconciling the template", "template", req.Name)
+	r.logger.Info("reconcile the template", "template", req.Name)
 	template := new(v1alpha1.ProjectTemplate)
 	if err := r.client.Get(ctx, req.NamespacedName, template); err != nil {
 		if apierrors.IsNotFound(err) {
@@ -112,11 +112,11 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 
 	// handle the project template deletion
 	if !template.DeletionTimestamp.IsZero() {
-		r.logger.Info("the template was deleted", "template", template.Name)
+		r.logger.Info("the template deleted", "template", template.Name)
 		return reconcile.Result{}, nil
 	}
 
 	// ensure template
-	r.logger.Info("ensuring the template", "template", template.Name)
+	r.logger.Info("ensure the template", "template", template.Name)
 	return r.templateManager.Handle(ctx, template)
 }

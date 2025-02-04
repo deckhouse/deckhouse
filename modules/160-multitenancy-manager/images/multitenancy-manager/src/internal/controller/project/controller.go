@@ -116,7 +116,7 @@ func (r *reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 	// wait for init
 	r.init.Wait()
 
-	r.logger.Info("reconciling the project", "project", req.Name)
+	r.logger.Info("reconcile the project", "project", req.Name)
 	project := new(v1alpha2.Project)
 	if err := r.client.Get(ctx, req.NamespacedName, project); err != nil {
 		if apierrors.IsNotFound(err) {
@@ -135,12 +135,12 @@ func (r *reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 
 	// handle the project deletion
 	if !project.DeletionTimestamp.IsZero() {
-		r.logger.Info("deleting the project", "project", project.Name)
+		r.logger.Info("delete the project", "project", project.Name)
 		return r.projectManager.Delete(ctx, project)
 	}
 
 	// ensure the project
-	r.logger.Info("ensuring the project", "project", project.Name)
+	r.logger.Info("ensure the project", "project", project.Name)
 	return r.projectManager.Handle(ctx, project)
 }
 
@@ -168,7 +168,6 @@ func (p customPredicate[T]) Update(e event.TypedUpdateEvent[T]) bool {
 }
 
 func (p customPredicate[T]) Delete(_ event.TypedDeleteEvent[T]) bool {
-	p.logger.Info("new project deletion event")
 	return true
 }
 

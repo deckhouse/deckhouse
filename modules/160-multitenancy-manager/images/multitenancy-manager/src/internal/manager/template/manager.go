@@ -49,7 +49,7 @@ func New(client client.Client, logger logr.Logger) *Manager {
 }
 
 func (m *Manager) Init(ctx context.Context, checker healthz.Checker, init *sync.WaitGroup, templatesPath string) error {
-	m.logger.Info("waiting until webhook server start")
+	m.logger.Info("wait until webhook server start")
 	check := func(ctx context.Context) (bool, error) {
 		if err := checker(nil); err != nil {
 			m.logger.Info("webhook server not startup yet")
@@ -62,12 +62,12 @@ func (m *Manager) Init(ctx context.Context, checker healthz.Checker, init *sync.
 	}
 	m.logger.Info("webhook server started")
 
-	m.logger.Info("ensuring default project templates")
+	m.logger.Info("ensure default project templates")
 	if err := m.ensureDefaultProjectTemplates(ctx, templatesPath); err != nil {
 		return fmt.Errorf("ensure default project templates: %w", err)
 	}
 
-	m.logger.Info("ensured default project templates")
+	m.logger.Info("default project templates ensured")
 	init.Done()
 
 	return nil
@@ -77,7 +77,7 @@ func (m *Manager) Handle(ctx context.Context, template *v1alpha1.ProjectTemplate
 	// validate project template
 	if err := validate.ProjectTemplate(template); err != nil {
 		if statusError := m.setTemplateStatus(ctx, template, err.Error(), false); statusError != nil {
-			m.logger.Error(statusError, "failed to update the template status")
+			m.logger.Error(statusError, "failed to update the template status", "template", template.Name)
 			return ctrl.Result{}, statusError
 		}
 		return ctrl.Result{}, nil
@@ -90,7 +90,7 @@ func (m *Manager) Handle(ctx context.Context, template *v1alpha1.ProjectTemplate
 		return ctrl.Result{Requeue: true}, nil
 	}
 	if len(projects) != 0 {
-		m.logger.Info("processing projects for the template", "template", template.Name, "projectsNum", len(projects))
+		m.logger.Info("process projects for the template", "template", template.Name, "projectsNum", len(projects))
 		for _, project := range projects {
 			err = retry.RetryOnConflict(retry.DefaultRetry, func() error {
 				if err = m.client.Get(ctx, client.ObjectKey{Name: project.Name}, project); err != nil {
@@ -113,7 +113,7 @@ func (m *Manager) Handle(ctx context.Context, template *v1alpha1.ProjectTemplate
 	}
 
 	// set ready
-	if err = m.setTemplateStatus(ctx, template, "The template is ready", true); err != nil {
+	if err = m.setTemplateStatus(ctx, template, "The template ready", true); err != nil {
 		m.logger.Error(err, "failed to update project status", "template", template.Name)
 		return ctrl.Result{}, err
 	}

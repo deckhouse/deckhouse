@@ -19,8 +19,6 @@ package project
 import (
 	"context"
 	"fmt"
-	"slices"
-
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/util/retry"
@@ -129,40 +127,15 @@ func (m *Manager) projectTemplateByName(ctx context.Context, name string) (*v1al
 	return template, nil
 }
 
-func (m *Manager) updateProjectStatus(ctx context.Context, project *v1alpha2.Project, state string, templateGeneration int64, condition *v1alpha2.Condition) error {
+func (m *Manager) updateProjectStatus(ctx context.Context, project *v1alpha2.Project) error {
 	return retry.OnError(retry.DefaultRetry, apierrors.IsServiceUnavailable, func() error {
 		return retry.RetryOnConflict(retry.DefaultRetry, func() error {
+			existingProject := new(v1alpha2.Project)
 			if err := m.client.Get(ctx, client.ObjectKey{Name: project.Name}, project); err != nil {
 				return fmt.Errorf("get the '%s' project: %w", project.Name, err)
 			}
 
-			if state != "" && project.Status.State != state {
-				project.Status.State = state
-				if state == v1alpha2.ProjectStateDeploying {
-					// clear conditions before reconcile
-					project.Status.Conditions = []v1alpha2.Condition{}
-				}
-			}
-
-			if project.Status.Namespaces == nil {
-				project.Status.Namespaces = []string{}
-			}
-
-			if !slices.Contains(project.Status.Namespaces, project.Name) {
-				project.Status.Namespaces = append(project.Status.Namespaces, project.Name)
-			}
-
-			if project.Status.ObservedGeneration != project.Generation {
-				project.Status.ObservedGeneration = project.Generation
-			}
-
-			if templateGeneration != 0 && project.Status.TemplateGeneration != templateGeneration {
-				project.Status.TemplateGeneration = templateGeneration
-			}
-
-			if condition != nil {
-				project.Status.Conditions = append(project.Status.Conditions, *condition)
-			}
+			existingProject.Status = project.Status
 
 			return m.client.Status().Update(ctx, project)
 		})
@@ -185,27 +158,22 @@ func (m *Manager) removeFinalizer(ctx context.Context, project *v1alpha2.Project
 }
 
 // prepareProject sets template label, finalizer and deletes sync require annotation
-func (m *Manager) prepareProject(ctx context.Context, project *v1alpha2.Project) error {
-	return retry.OnError(retry.DefaultRetry, apierrors.IsServiceUnavailable, func() error {
-		return retry.RetryOnConflict(retry.DefaultRetry, func() error {
-			if err := m.client.Get(ctx, client.ObjectKey{Name: project.Name}, project); err != nil {
-				return fmt.Errorf("get the '%s' project: %w", project.Name, err)
-			}
+func (m *Manager) prepareProject(project *v1alpha2.Project) {
+	// set deploying status
+	project.ClearConditions()
+	project.Status.ObservedGeneration = project.Generation
+	project.Status.State = v1alpha2.ProjectStateDeploying
 
-			if len(project.Labels) == 0 {
-				project.Labels = make(map[string]string, 1)
-			}
-			project.Labels[v1alpha2.ResourceLabelTemplate] = project.Spec.ProjectTemplateName
+	if len(project.Labels) == 0 {
+		project.Labels = make(map[string]string, 1)
+	}
+	project.Labels[v1alpha2.ResourceLabelTemplate] = project.Spec.ProjectTemplateName
 
-			if project.Annotations != nil {
-				delete(project.Annotations, v1alpha2.ProjectAnnotationRequireSync)
-			}
+	if project.Annotations != nil {
+		delete(project.Annotations, v1alpha2.ProjectAnnotationRequireSync)
+	}
 
-			if !controllerutil.ContainsFinalizer(project, v1alpha2.ProjectFinalizer) {
-				controllerutil.AddFinalizer(project, v1alpha2.ProjectFinalizer)
-			}
-
-			return m.client.Update(ctx, project)
-		})
-	})
+	if !controllerutil.ContainsFinalizer(project, v1alpha2.ProjectFinalizer) {
+		controllerutil.AddFinalizer(project, v1alpha2.ProjectFinalizer)
+	}
 }
