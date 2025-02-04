@@ -21,7 +21,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"os"
 	"path/filepath"
 	"strings"
@@ -30,6 +29,7 @@ import (
 	"github.com/fatih/structs"
 	"github.com/go-logr/logr"
 	"github.com/go-openapi/spec"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"helm.sh/helm/v3/pkg/action"
 	"helm.sh/helm/v3/pkg/chart"

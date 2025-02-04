@@ -42,7 +42,7 @@ import (
 func Test(t *testing.T) {
 	templates, err := parseHelmTemplates("../../templates")
 	assert.Nil(t, err)
-	for _, c := range []string{"secure_case", "secure_with_dedicated_node_case", "empty_case", "without_ns_case"} {
+	for _, c := range []string{"default_case", "secure_case", "secure_with_dedicated_node_case", "empty_case", "without_ns_case"} {
 		t.Run(c, func(t *testing.T) {
 			basePath := filepath.Join("./testdata", c)
 			assert.Nil(t, test(templates, basePath))
@@ -159,7 +159,6 @@ func render(templates map[string][]byte, project *v1alpha2.Project, projectTempl
 
 	rendered, err := engine.Render(ch, valuesToRender)
 	if err != nil {
-		fmt.Printf("failed to render chart: %v\n", err)
 		return nil, err
 	}
 
