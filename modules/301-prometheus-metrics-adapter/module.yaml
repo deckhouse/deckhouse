@@ -1,0 +1,7 @@
+name: prometheus-metrics-adapter
+weight: 301
+
+requirements:
+  bootstrapped: true
+  modules:
+    prometheus: ">= 0.0.0"

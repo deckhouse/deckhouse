@@ -2,3 +2,8 @@ name: prometheus
 weight: 300
 description: |
     The Prometheus monitoring module
+
+requirements:
+  bootstrapped: true
+  modules:
+    operator-prometheus: ">= 0.0.0"
