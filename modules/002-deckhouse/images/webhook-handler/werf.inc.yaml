@@ -116,7 +116,7 @@ import:
 shell:
   install:
   - apt-get update
-  - apt-get install -y python3-module-pip-run
+  - apt-get install -y python3-module-pip-run git
   - git clone --depth 1 {{ $.SOURCE_REPO }}/python-modules/wheels /wheels
   - pip3 install install -f file:///wheels --no-index -r /requirements.txt
   - rm -rf /wheels/.git
