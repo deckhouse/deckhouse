@@ -20,8 +20,10 @@ import (
 	"github.com/flant/shell-operator/pkg/kube/object_patch"
 )
 
+// it's important to run the hook before any cloud-provider try to deploy it's templates and consider to remove the d8-cni-configuration Secret which it used to handle
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	OnStartup: &go_hook.OrderedConfig{Order: 3},
+	Queue:     "main",
 }, unhelmD8CNIConfiguration)
 
 func unhelmD8CNIConfiguration(input *go_hook.HookInput) error {
