@@ -124,7 +124,7 @@ func (r *reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 			return reconcile.Result{}, nil
 		}
 		r.log.Error(err, "failed to get the project", "project", req.Name)
-		return reconcile.Result{Requeue: true}, nil
+		return reconcile.Result{}, err
 	}
 
 	// handle virtual projects

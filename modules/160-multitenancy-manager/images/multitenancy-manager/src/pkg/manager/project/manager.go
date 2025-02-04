@@ -90,14 +90,14 @@ func (m *Manager) Handle(ctx context.Context, project *v1alpha2.Project) (ctrl.R
 	// set deploying status
 	if err := m.updateProjectStatus(ctx, project, v1alpha2.ProjectStateDeploying, 0, nil); err != nil {
 		m.log.Error(err, "failed to set project status")
-		return ctrl.Result{Requeue: true}, nil
+		return ctrl.Result{}, err
 	}
 
 	// set template label, finalizer and delete sync require annotation
 	m.log.Info("preparing the project", "project", project.Name, "projectTemplate", project.Spec.ProjectTemplateName)
 	if err := m.prepareProject(ctx, project); err != nil {
 		m.log.Error(err, "failed to prepare project")
-		return ctrl.Result{Requeue: true}, nil
+		return ctrl.Result{}, err
 	}
 
 	// get a project template for the project
@@ -108,7 +108,7 @@ func (m *Manager) Handle(ctx context.Context, project *v1alpha2.Project) (ctrl.R
 		cond := v1alpha2.NewCondition(v1alpha2.ConditionTypeProjectTemplateFound, v1alpha2.ConditionTypeFalse, err.Error())
 		if statusErr := m.updateProjectStatus(ctx, project, v1alpha2.ProjectStateError, 0, cond); statusErr != nil {
 			m.log.Error(statusErr, "failed to set project status", "project", project.Name, "projectTemplate", project.Spec.ProjectTemplateName)
-			return ctrl.Result{Requeue: true}, nil
+			return ctrl.Result{}, statusErr
 		}
 		return ctrl.Result{}, nil
 	}
@@ -118,7 +118,7 @@ func (m *Manager) Handle(ctx context.Context, project *v1alpha2.Project) (ctrl.R
 		cond := v1alpha2.NewCondition(v1alpha2.ConditionTypeProjectTemplateFound, v1alpha2.ConditionTypeFalse, "The project template not found")
 		if statusErr := m.updateProjectStatus(ctx, project, v1alpha2.ProjectStateError, 0, cond); statusErr != nil {
 			m.log.Error(statusErr, "failed to set the project status", "project", project.Name, "projectTemplate", project.Spec.ProjectTemplateName)
-			return ctrl.Result{Requeue: true}, nil
+			return ctrl.Result{}, statusErr
 		}
 		return ctrl.Result{}, nil
 	}
@@ -127,7 +127,7 @@ func (m *Manager) Handle(ctx context.Context, project *v1alpha2.Project) (ctrl.R
 	cond := v1alpha2.NewCondition(v1alpha2.ConditionTypeProjectTemplateFound, v1alpha2.ConditionTypeTrue, "")
 	if statusErr := m.updateProjectStatus(ctx, project, "", projectTemplate.Generation, cond); statusErr != nil {
 		m.log.Error(statusErr, "failed to update the project status", "project", project.Name, "projectTemplate", project.Spec.ProjectTemplateName)
-		return ctrl.Result{Requeue: true}, nil
+		return ctrl.Result{}, statusErr
 	}
 
 	// validate the project against the project template
@@ -137,7 +137,7 @@ func (m *Manager) Handle(ctx context.Context, project *v1alpha2.Project) (ctrl.R
 		cond = v1alpha2.NewCondition(v1alpha2.ConditionTypeProjectValidated, v1alpha2.ConditionTypeFalse, err.Error())
 		if statusErr := m.updateProjectStatus(ctx, project, v1alpha2.ProjectStateError, projectTemplate.Generation, cond); statusErr != nil {
 			m.log.Error(statusErr, "failed to set the project status", "project", project.Name, "projectTemplate", projectTemplate.Name)
-			return ctrl.Result{Requeue: true}, nil
+			return ctrl.Result{}, statusErr
 		}
 		return ctrl.Result{}, nil
 	}
@@ -146,7 +146,7 @@ func (m *Manager) Handle(ctx context.Context, project *v1alpha2.Project) (ctrl.R
 	cond = v1alpha2.NewCondition(v1alpha2.ConditionTypeProjectValidated, v1alpha2.ConditionTypeTrue, "")
 	if statusErr := m.updateProjectStatus(ctx, project, "", projectTemplate.Generation, cond); statusErr != nil {
 		m.log.Error(statusErr, "failed to update the project status", "project", project.Name, "projectTemplate", project.Spec.ProjectTemplateName)
-		return ctrl.Result{Requeue: true}, nil
+		return ctrl.Result{}, statusErr
 	}
 
 	// upgrade project`s resources
@@ -158,7 +158,7 @@ func (m *Manager) Handle(ctx context.Context, project *v1alpha2.Project) (ctrl.R
 			cond = v1alpha2.NewCondition(v1alpha2.ConditionTypeProjectResourcesUpgraded, v1alpha2.ConditionTypeFalse, err.Error())
 			if statusErr := m.updateProjectStatus(ctx, project, v1alpha2.ProjectStateError, projectTemplate.Generation, cond); statusErr != nil {
 				m.log.Error(statusErr, "failed to set the project status", "project", project.Name, "projectTemplate", projectTemplate.Name)
-				return ctrl.Result{Requeue: true}, nil
+				return ctrl.Result{}, statusErr
 			}
 			return ctrl.Result{}, nil
 		}
@@ -169,7 +169,7 @@ func (m *Manager) Handle(ctx context.Context, project *v1alpha2.Project) (ctrl.R
 	cond = v1alpha2.NewCondition(v1alpha2.ConditionTypeProjectResourcesUpgraded, v1alpha2.ConditionTypeTrue, "")
 	if err = m.updateProjectStatus(ctx, project, v1alpha2.ProjectStateDeployed, projectTemplate.Generation, cond); err != nil {
 		m.log.Error(err, "failed to set the project status", "project", project.Name, "projectTemplate", projectTemplate.Name)
-		return ctrl.Result{Requeue: true}, nil
+		return ctrl.Result{}, err
 	}
 
 	m.log.Info("the project reconciled", "project", project.Name, "projectTemplate", projectTemplate.Name)
@@ -181,7 +181,7 @@ func (m *Manager) HandleVirtual(ctx context.Context, project *v1alpha2.Project) 
 	namespaces := new(corev1.NamespaceList)
 	if err := m.client.List(ctx, namespaces); err != nil {
 		m.log.Error(err, "failed to list namespaces", "project", project.Name)
-		return ctrl.Result{Requeue: true}, nil
+		return ctrl.Result{}, err
 	}
 
 	var involvedNamespaces []string
@@ -189,10 +189,13 @@ func (m *Manager) HandleVirtual(ctx context.Context, project *v1alpha2.Project) 
 		if _, ok := namespace.GetLabels()[v1alpha2.ResourceLabelProject]; ok {
 			continue
 		}
+
 		isDeckhouseNamespace := strings.HasPrefix(namespace.Name, DeckhouseNamespacePrefix) || strings.HasPrefix(namespace.Name, KubernetesNamespacePrefix)
+
 		if project.Name == DeckhouseProjectName && isDeckhouseNamespace {
 			involvedNamespaces = append(involvedNamespaces, namespace.Name)
 		}
+
 		if project.Name == DefaultProjectName && !isDeckhouseNamespace {
 			involvedNamespaces = append(involvedNamespaces, namespace.Name)
 		}
@@ -200,7 +203,7 @@ func (m *Manager) HandleVirtual(ctx context.Context, project *v1alpha2.Project) 
 
 	if err := m.updateVirtualProject(ctx, project, involvedNamespaces); err != nil {
 		m.log.Error(err, "failed to update the virtual project", "project", project.Name)
-		return ctrl.Result{Requeue: true}, nil
+		return ctrl.Result{}, err
 	}
 
 	m.log.Info("the virtual project reconciled", "project", project.Name)
@@ -213,13 +216,13 @@ func (m *Manager) Delete(ctx context.Context, project *v1alpha2.Project) (ctrl.R
 	if err := m.helmClient.Delete(ctx, project.Name); err != nil {
 		// TODO: add error to the project`s status
 		m.log.Error(err, "failed to delete the project", "project", project.Name)
-		return ctrl.Result{Requeue: true}, nil
+		return ctrl.Result{}, err
 	}
 
 	// remove finalizer
 	if err := m.removeFinalizer(ctx, project); err != nil {
 		m.log.Error(err, "failed to remove finalizer from the project", "project", project.Name)
-		return ctrl.Result{Requeue: true}, nil
+		return ctrl.Result{}, err
 	}
 
 	m.log.Info("successfully deleted the project", "project", project.Name)

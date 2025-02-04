@@ -21,6 +21,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"os"
 	"path/filepath"
 	"strings"
@@ -130,19 +131,24 @@ func (c *Client) DebugLog(format string, args ...interface{}) {
 
 // Upgrade upgrades resources
 func (c *Client) Upgrade(ctx context.Context, project *v1alpha2.Project, template *v1alpha1.ProjectTemplate) error {
-	ch, err := makeChart(c.templates, project.Name)
+	ch, err := buildChart(c.templates, project.Name)
 	if err != nil {
-		return fmt.Errorf("make chart: %w", err)
+		return fmt.Errorf("build chart: %w", err)
 	}
 
+	versions, err := c.discoverAPI()
+	if err != nil {
+		return fmt.Errorf("discover api: %w", err)
+	}
+
+	post := newPostRenderer(project.Name, template.Name, versions, c.logger)
 	values := buildValues(project, template)
 	hash := hashMD5(c.templates, values)
-	post := newPostRenderer(project.Name, template.Name, c.logger)
 
 	releases, err := action.NewHistory(c.conf).Run(project.Name)
 	if err != nil {
 		if errors.Is(err, driver.ErrReleaseNotFound) {
-			c.logger.Info("the release not found, installing it", "release", project.Name, "namespace", project.Name)
+			c.logger.Info("the release not found, install it", "release", project.Name, "namespace", project.Name)
 			install := action.NewInstall(c.conf)
 			install.ReleaseName = project.Name
 			install.Timeout = c.opts.Timeout
@@ -184,14 +190,38 @@ func (c *Client) Upgrade(ctx context.Context, project *v1alpha2.Project, templat
 	upgrade.PostRenderer = post
 
 	if _, err = upgrade.RunWithContext(ctx, project.Name, ch, values); err != nil {
-		return fmt.Errorf("upgrade the release: %s", err)
+		return fmt.Errorf("upgrade the release: %w", err)
 	}
 
 	c.logger.Info("the release upgraded", "release", project.Name, "namespace", project.Name)
 	return nil
 }
 
-func makeChart(templates map[string][]byte, releaseName string) (*chart.Chart, error) {
+// discoverAPI returns api versions, they will be used in the post renderer
+func (c *Client) discoverAPI() (map[string]struct{}, error) {
+	dc, err := c.conf.RESTClientGetter.ToDiscoveryClient()
+	if err != nil {
+		return nil, fmt.Errorf("get discovery client: %w", err)
+	}
+
+	dc.Invalidate()
+
+	var resources []*metav1.APIResourceList
+	if _, resources, err = dc.ServerGroupsAndResources(); err != nil {
+		return nil, fmt.Errorf("discover api: %w", err)
+	}
+
+	versions := make(map[string]struct{})
+	for _, resourcesList := range resources {
+		for _, resource := range resourcesList.APIResources {
+			versions[filepath.Join(resourcesList.GroupVersion, resource.Kind)] = struct{}{}
+		}
+	}
+
+	return versions, nil
+}
+
+func buildChart(templates map[string][]byte, releaseName string) (*chart.Chart, error) {
 	ch := &chart.Chart{
 		Metadata: &chart.Metadata{
 			Name:    releaseName,
@@ -305,7 +335,7 @@ func (c *Client) Delete(_ context.Context, releaseName string) error {
 
 // ValidateRender tests project render
 func (c *Client) ValidateRender(project *v1alpha2.Project, template *v1alpha1.ProjectTemplate) error {
-	ch, err := makeChart(c.templates, project.Name)
+	ch, err := buildChart(c.templates, project.Name)
 	if err != nil {
 		return fmt.Errorf("make chart: %w", err)
 	}
@@ -328,7 +358,7 @@ func (c *Client) ValidateRender(project *v1alpha2.Project, template *v1alpha1.Pr
 		buf.WriteString(file)
 	}
 
-	if _, err = newPostRenderer(project.Name, template.Name, c.logger).Run(buf); err != nil {
+	if _, err = newPostRenderer(project.Name, template.Name, nil, c.logger).Run(buf); err != nil {
 		return fmt.Errorf("post render: %w", err)
 	}
 

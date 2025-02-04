@@ -18,6 +18,7 @@ package helm
 
 import (
 	"bytes"
+	"fmt"
 	"strings"
 
 	"github.com/go-logr/logr"
@@ -33,14 +34,16 @@ import (
 type postRenderer struct {
 	projectName     string
 	projectTemplate string
-	log             logr.Logger
+	versions        map[string]struct{}
+	logger          logr.Logger
 }
 
-func newPostRenderer(projectName, projectTemplate string, log logr.Logger) *postRenderer {
+func newPostRenderer(projectName, projectTemplate string, versions map[string]struct{}, logger logr.Logger) *postRenderer {
 	return &postRenderer{
 		projectName:     projectName,
 		projectTemplate: projectTemplate,
-		log:             log.WithName("post-renderer"),
+		versions:        versions,
+		logger:          logger.WithName("post-renderer"),
 	}
 }
 
@@ -52,7 +55,7 @@ func (r *postRenderer) Run(renderedManifests *bytes.Buffer) (modifiedManifests *
 	for _, manifest := range releaseutil.SplitManifests(renderedManifests.String()) {
 		object := new(unstructured.Unstructured)
 		if err = yaml.Unmarshal([]byte(manifest), object); err != nil {
-			r.log.Info("failed to unmarshal manifest", "project", r.projectName, "manifest", manifest, "error", err.Error())
+			r.logger.Info("failed to unmarshal manifest", "project", r.projectName, "manifest", manifest, "error", err.Error())
 			return renderedManifests, err
 		}
 
@@ -74,12 +77,21 @@ func (r *postRenderer) Run(renderedManifests *bytes.Buffer) (modifiedManifests *
 		if object.GetKind() == "Namespace" {
 			// skip other namespaces
 			if object.GetName() != r.projectName {
-				r.log.Info("namespace is skipped during render project", "project", r.projectName, "namespace", object.GetName())
+				r.logger.Info("namespace is skipped during render project", "project", r.projectName, "namespace", object.GetName())
 				continue
 			}
 			coreFound = true
 		} else {
 			object.SetNamespace(r.projectName)
+		}
+
+		// skip resource that not present in the cluster
+		if r.versions != nil {
+			version := fmt.Sprintf("%s/%s", object.GetAPIVersion(), object.GetKind())
+			if _, ok := r.versions[version]; !ok {
+				r.logger.Info("the resource is skipped during render project", "resource", object.GetName(), "version", version)
+				continue
+			}
 		}
 
 		data, _ := yaml.Marshal(object.Object)
@@ -89,7 +101,7 @@ func (r *postRenderer) Run(renderedManifests *bytes.Buffer) (modifiedManifests *
 	buf := bytes.NewBuffer(nil)
 	// ensure core namespace
 	if !coreFound {
-		core := r.makeNamespace(r.projectName)
+		core := r.newNamespace(r.projectName)
 		buf.WriteString("\n---\n" + string(core))
 	}
 	buf.WriteString(builder.String())
@@ -97,7 +109,7 @@ func (r *postRenderer) Run(renderedManifests *bytes.Buffer) (modifiedManifests *
 	return buf, nil
 }
 
-func (r *postRenderer) makeNamespace(name string) []byte {
+func (r *postRenderer) newNamespace(name string) []byte {
 	obj := corev1.Namespace{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "v1",

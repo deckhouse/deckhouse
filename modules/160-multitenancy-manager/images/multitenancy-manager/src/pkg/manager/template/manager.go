@@ -78,7 +78,7 @@ func (m *Manager) Handle(ctx context.Context, template *v1alpha1.ProjectTemplate
 	if err := validate.ProjectTemplate(template); err != nil {
 		if statusError := m.setTemplateStatus(ctx, template, err.Error(), false); statusError != nil {
 			m.log.Error(statusError, "failed to update the template status")
-			return ctrl.Result{Requeue: true}, nil
+			return ctrl.Result{}, statusError
 		}
 		return ctrl.Result{}, nil
 	}
@@ -105,7 +105,7 @@ func (m *Manager) Handle(ctx context.Context, template *v1alpha1.ProjectTemplate
 			})
 			if err != nil {
 				m.log.Error(err, "failed to trigger the project", "template", template.Name, "project", project.Name)
-				return ctrl.Result{Requeue: true}, nil
+				return ctrl.Result{}, err
 			}
 		}
 	} else {
@@ -115,7 +115,7 @@ func (m *Manager) Handle(ctx context.Context, template *v1alpha1.ProjectTemplate
 	// set ready
 	if err = m.setTemplateStatus(ctx, template, "The template is ready", true); err != nil {
 		m.log.Error(err, "failed to update project status", "template", template.Name)
-		return ctrl.Result{Requeue: true}, nil
+		return ctrl.Result{}, err
 	}
 
 	m.log.Info("the template reconciled", "template", template.Name)

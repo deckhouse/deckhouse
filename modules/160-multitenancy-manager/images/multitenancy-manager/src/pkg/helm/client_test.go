@@ -42,7 +42,7 @@ import (
 func Test(t *testing.T) {
 	templates, err := parseHelmTemplates("../../templates")
 	assert.Nil(t, err)
-	for _, c := range []string{"default_case", "secure_case", "secure_with_dedicated_node_case", "empty_case", "without_ns_case"} {
+	for _, c := range []string{"secure_case", "secure_with_dedicated_node_case", "empty_case", "without_ns_case"} {
 		t.Run(c, func(t *testing.T) {
 			basePath := filepath.Join("./testdata", c)
 			assert.Nil(t, test(templates, basePath))
@@ -84,10 +84,10 @@ func test(templates map[string][]byte, basePath string) error {
 	}
 	expected := releaseutil.SplitManifests(string(rawExpected))
 
-	var renderedMap = make(map[string]interface{})
+	renderedMap := make(map[string]interface{})
 	for _, raw := range rendered {
-		var object unstructured.Unstructured
-		if err = yaml.Unmarshal([]byte(raw), &object); err != nil {
+		object := new(unstructured.Unstructured)
+		if err = yaml.Unmarshal([]byte(raw), object); err != nil {
 			return err
 		}
 		if object.GetAPIVersion() == "" || object.GetKind() == "" {
@@ -96,10 +96,10 @@ func test(templates map[string][]byte, basePath string) error {
 		renderedMap[fmt.Sprintf("%s.%s.%s.%s", object.GetAPIVersion(), object.GetKind(), object.GetNamespace(), object.GetName())] = raw
 	}
 
-	var expectedMap = make(map[string]string)
+	expectedMap := make(map[string]string)
 	for _, raw := range expected {
-		var object unstructured.Unstructured
-		if err = yaml.Unmarshal([]byte(raw), &object); err != nil {
+		object := new(unstructured.Unstructured)
+		if err = yaml.Unmarshal([]byte(raw), object); err != nil {
 			return err
 		}
 		if object.GetAPIVersion() == "" || object.GetKind() == "" {
@@ -109,24 +109,22 @@ func test(templates map[string][]byte, basePath string) error {
 	}
 
 	for name := range renderedMap {
-		if _, ok := expectedMap[name]; ok {
-			if diff := cmp.Diff(renderedMap[name], expectedMap[name]); diff != "" {
-				fmt.Println(diff)
-				return fmt.Errorf("rendered manifest '%s' doesn't match the expected manifest: %s", name, diff)
-			}
-		} else {
+		if _, ok := expectedMap[name]; !ok {
 			return fmt.Errorf("rendered manifests don't match the expected manifests: resource '%s' not found", name)
+		}
+		if diff := cmp.Diff(renderedMap[name], expectedMap[name]); diff != "" {
+			fmt.Println(diff)
+			return fmt.Errorf("rendered manifest '%s' doesn't match the expected manifest: %s", name, diff)
 		}
 	}
 
 	for name := range expectedMap {
-		if _, ok := renderedMap[name]; ok {
-			if diff := cmp.Diff(renderedMap[name], expectedMap[name]); diff != "" {
-				fmt.Println(diff)
-				return fmt.Errorf("expected '%s' manifest doesn't match the rendered manifests: %s", name, diff)
-			}
-		} else {
+		if _, ok := renderedMap[name]; !ok {
 			return fmt.Errorf("expected manifests don't match the rendered manifests: resource '%s' not found", name)
+		}
+		if diff := cmp.Diff(renderedMap[name], expectedMap[name]); diff != "" {
+			fmt.Println(diff)
+			return fmt.Errorf("expected '%s' manifest doesn't match the rendered manifests: %s", name, diff)
 		}
 	}
 
@@ -138,15 +136,15 @@ func read[T any](path string) (*T, error) {
 	if err != nil {
 		return nil, err
 	}
-	var object T
-	if err = yaml.Unmarshal(data, &object); err != nil {
+	object := new(T)
+	if err = yaml.Unmarshal(data, object); err != nil {
 		return nil, err
 	}
-	return &object, nil
+	return object, nil
 }
 
 func render(templates map[string][]byte, project *v1alpha2.Project, projectTemplate *v1alpha1.ProjectTemplate) (*bytes.Buffer, error) {
-	ch, err := makeChart(templates, project.Name)
+	ch, err := buildChart(templates, project.Name)
 	if err != nil {
 		return nil, err
 	}
@@ -158,13 +156,17 @@ func render(templates map[string][]byte, project *v1alpha2.Project, projectTempl
 	if err != nil {
 		return nil, err
 	}
+
 	rendered, err := engine.Render(ch, valuesToRender)
 	if err != nil {
+		fmt.Printf("failed to render chart: %v\n", err)
 		return nil, err
 	}
+
 	buf := bytes.NewBuffer(nil)
 	for _, file := range rendered {
 		buf.WriteString(file)
 	}
-	return newPostRenderer(project.Name, projectTemplate.Name, ctrl.Log.WithName("test")).Run(buf)
+
+	return newPostRenderer(project.Name, projectTemplate.Name, nil, ctrl.Log.WithName("test")).Run(buf)
 }

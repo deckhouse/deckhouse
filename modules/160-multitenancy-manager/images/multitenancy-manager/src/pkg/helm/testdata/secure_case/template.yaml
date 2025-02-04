@@ -6,6 +6,7 @@ metadata:
   labels:
     heritage: deckhouse
 spec:
+  description: Includes all the capabilities of the default template and additional features.
   parametersSchema:
     openAPIV3Schema:
       type: object
@@ -256,7 +257,7 @@ spec:
 
     {{- with .parameters.clusterLogDestinationName }}
     ---
-    # Refer to https://deckhouse.io/documentation/v1/modules/460-log-shipper/
+    # Refer to https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/460-log-shipper/
     apiVersion: deckhouse.io/v1alpha1
     kind: PodLoggingConfig
     metadata:
@@ -267,7 +268,7 @@ spec:
     {{- end }}
 
     ---
-    # Referer to https://deckhouse.io/documentation/v1/modules/015-admission-policy-engine/
+    # Referer to https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/015-admission-policy-engine/
     apiVersion: deckhouse.io/v1alpha1
     kind: OperationPolicy
     metadata:
@@ -283,12 +284,13 @@ spec:
           labelSelector:
             matchLabels:
               kubernetes.io/metadata.name: "{{ .projectName }}"
+
     {{- if .parameters.runtimeAuditEnabled }}
     {{- if or .parameters.allowedUIDs .parameters.allowedGIDs }}
     ---
     # Enable audit rules (create a falco audit rule to record some malicious activities of the pods in a given namespace).
     # As example send notifications when a shell is run in a container.
-    # Refer to https://deckhouse.io/documentation/v1/modules/650-runtime-audit-engine/examples.html
+    # Refer to https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/650-runtime-audit-engine/examples.html
     apiVersion: deckhouse.io/v1alpha1
     kind: FalcoAuditRules
     metadata:
@@ -322,13 +324,13 @@ spec:
           priority: Critical
           tags:
             - container_drift
-    {{ end }}
-    {{ end }}
+    {{- end }}
+    {{- end }}
 
     {{- if or .parameters.allowedUIDs .parameters.allowedGIDs }}
     ---
     # Allowed uids/gids with the SecurityPolicy
-    # Refer to https://deckhouse.io/documentation/v1/modules/015-admission-policy-engine/cr.html#securitypolicy
+    # Refer to https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/015-admission-policy-engine/cr.html#securitypolicy
     apiVersion: deckhouse.io/v1alpha1
     kind: SecurityPolicy
     metadata:

@@ -107,7 +107,7 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 			return reconcile.Result{}, nil
 		}
 		r.log.Error(err, "failed to get the template", "template", req.Name)
-		return reconcile.Result{Requeue: true}, nil
+		return reconcile.Result{}, err
 	}
 
 	// handle the project template deletion

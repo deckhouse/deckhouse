@@ -324,9 +324,9 @@ spec:
           priority: Critical
           tags:
             - container_drift
-    {{ end }}
-    {{ end }}
-    
+    {{- end }}
+    {{- end }}
+
     {{- if or .parameters.allowedUIDs .parameters.allowedGIDs }}
     ---
     # Allowed uids/gids with the SecurityPolicy
