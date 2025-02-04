@@ -42,7 +42,7 @@ spec:
   type: L2
 ```
 
-Создайте ресурс Service со аннотацией и именем MetalLoadBalancerClass:
+Создайте ресурс Service с аннотацией и именем MetalLoadBalancerClass:
 
 ```yaml
 apiVersion: v1
@@ -161,7 +161,7 @@ spec:
     app: dns
 ```
 
-Для создания Service с принудительно выбранным адресом, необходимо добавить аннотацию `network.deckhouse.io/load-balancer-ips`:
+Для создания Service с принудительно выбранным адресом необходимо добавить аннотацию `network.deckhouse.io/load-balancer-ips`:
 
 ```yaml
 apiVersion: v1
