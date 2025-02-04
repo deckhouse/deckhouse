@@ -16,100 +16,80 @@ mkdir -p /etc/kubernetes/manifests
 mkdir -p /etc/kubernetes/node-proxy
 cd /etc/kubernetes/node-proxy
 
-
-function get_node_proxy_cert() {
-
-  # kubectl exist
-  if type kubectl >/dev/null 2>&1 && test -f /etc/kubernetes/kubelet.conf; then
-    bb-log-info "Trying to get node-proxy certificates using kubectl"
-    
-    if ! secret_json=$(kubectl get secret -n kube-system node-proxy -o json 2>/dev/null); then
-      bb-log-error "Failed to get secret using kubectl"
+function wait_for_certificate() {
+  local csr_name="$1"
+  local key_file="$2"
+  local timeout=300
+  local interval=5
+  local elapsed=0
+  local cert=""
+  while true; do
+    cert=$(kubectl get csr "${csr_name}" -o jsonpath='{.status.certificate}' 2>/dev/null || true)
+    if [ -n "$cert" ]; then
+      echo "$cert" | base64 -d > cert.pem
+      break
+    fi
+    if [ "$elapsed" -ge "$timeout" ]; then
+      bb-log-error "Timeout waiting for certificate for CSR ${csr_name}"
       return 1
     fi
-    #  haproxy.pem
-    if ! echo "$secret_json" | jq -r '.data["haproxy.pem"]' | base64 -d > haproxy.pem; then
-      bb-log-error "Failed to extract haproxy.pem from kubectl secret"
-      return 1
-    fi
-    #  ca.crt
-    if ! echo "$secret_json" | jq -r '.data["ca.crt"]' | base64 -d > ca.crt; then
-      bb-log-error "Failed to extract ca.crt from kubectl secret"
-      return 1
-    fi
-
-    bb-log-info "Successfully retrieved certificates using kubectl"
-    return 0
-  fi
-  # kubectl does not exist
-  for server in {{ .normal.apiserverEndpoints | join " " }}; do
-    bb-log-info "Trying to get certificates from $server"
-    
-    if ! response=$(d8-curl -sS --fail -X GET "https://$server/api/v1/namespaces/kube-system/secrets/node-proxy" \
-      -H "Authorization: Bearer $(</var/lib/bashible/bootstrap-token)" \
-      --cacert "$BOOTSTRAP_DIR/ca.crt"); then
-      bb-log-error "Request to $server failed"
-      continue
-    fi
-
-    #  haproxy.pem
-    if ! echo "$response" | jq -r '.data["haproxy.pem"]' | base64 -d > haproxy.pem; then
-      bb-log-error "Failed to extract haproxy.pem from $server response"
-      continue
-    fi
-
-    # ca.crt
-    if ! echo "$response" | jq -r '.data["ca.crt"]' | base64 -d > ca.crt; then
-      bb-log-error "Failed to extract ca.crt from $server response"
-      continue
-    fi
-
-    bb-log-info "Successfully retrieved certificates from $server"
-    return 0
+    sleep "$interval"
+    elapsed=$((elapsed + interval))
   done
-
-  bb-log-error "All attempts to get certificates failed"
-  return 1
+  cat "$key_file" cert.pem > haproxy.pem
+  rm -f key.pem cert.pem health-user.csr
 }
 
-# Master nodes: generate certificate locally
+function get_node_proxy_cert() {
+  openssl genrsa -out key.pem 2048
+  openssl req -new -key key.pem -subj "/CN=health-user/O=health-group" -out health-user.csr
+  CSR_BASE64=$(base64 -w 0 health-user.csr)
+  csr_name="health-user-csr-$(hostname -s)"
+  cat <<EOF | kubectl apply -f -
+apiVersion: certificates.k8s.io/v1
+kind: CertificateSigningRequest
+metadata:
+  name: ${csr_name}
+spec:
+  request: ${CSR_BASE64}
+  signerName: kubernetes.io/kube-apiserver-client
+  usages:
+  - client auth
+EOF
+  wait_for_certificate "${csr_name}" "key.pem"
+}
+
 if [ -f /etc/kubernetes/pki/ca.key ]; then
   if ! openssl verify -CAfile /etc/kubernetes/pki/ca.crt haproxy.pem >/dev/null 2>&1; then
-    bb-log-info "Generating new node-proxy certificate"
     cp /etc/kubernetes/pki/ca.crt ca.crt
     openssl genrsa -out key.pem 2048
     openssl req -new -key key.pem -out key.csr -subj "/CN=health-user/O=health-group"
     openssl x509 -req -in key.csr -CA ca.crt -CAkey /etc/kubernetes/pki/ca.key -CAcreateserial -out cert.pem -days 3650 -sha256
     cat key.pem cert.pem > haproxy.pem
-    rm -f key.csr cert.pem key.pem
+    rm -f key.csr cert.pem key.pem ca.crt
   fi
-
-# Worker nodes: get certificate from secret
 else
   set +e
   openssl verify -CAfile /etc/kubernetes/pki/ca.crt /etc/kubernetes/node-proxy/haproxy.pem 2>/dev/null
   exit_code=$?
   set -e
-
   if [ ! -f /etc/kubernetes/node-proxy/haproxy.pem ] || [ $exit_code -ne 0 ]; then
-    bb-log-error "Node-proxy certificate verification failed, fetching new certificate"
     rm -f /etc/kubernetes/node-proxy/haproxy.pem
     get_node_proxy_cert || exit 1
   fi
 fi
 
-# Set permissions
 chown deckhouse:deckhouse -R /etc/kubernetes/node-proxy
 chmod 700 /etc/kubernetes/node-proxy
 chmod 600 /etc/kubernetes/node-proxy/*
 
 bb-set-proxy
 
-if crictl version >/dev/null 2>/dev/null; then
+if crictl version >/dev/null 2>&1; then
   crictl pull {{ printf "%s%s@%s" $.registry.address $.registry.path (index $.images.controlPlaneManager "nodeProxy") }}
 fi
 
-bb-sync-file /etc/kubernetes/manifests/node-proxy.yaml - << EOF
+bb-sync-file /etc/kubernetes/manifests/node-proxy.yaml - <<EOF
 apiVersion: v1
 kind: Pod
 metadata:
@@ -130,7 +110,7 @@ spec:
   - name: node-proxy
     image: {{ printf "%s%s@%s" $.registry.address $.registry.path (index $.images.controlPlaneManager "nodeProxy") }}
     imagePullPolicy: IfNotPresent
-    command: ["/bin/haproxy", "-W", "-db", "-f", "/config/config.cfg"]
+    command: ["/bin/haproxy", "-W", "-db", "-f", "/etc/kubernetes/node-proxy/config.cfg"]
     volumeMounts:
       - name: certs
         mountPath: /etc/kubernetes/node-proxy
@@ -140,7 +120,7 @@ spec:
   - name: sidecar
     image: {{ printf "%s%s@%s" $.registry.address $.registry.path (index $.images.controlPlaneManager "nodeProxy") }}
     imagePullPolicy: IfNotPresent
-    command: 
+    command:
       - "/bin/node-proxy-sidecar"
       - "--config=/config/discovery.yaml"
       - {{ printf "--api-host=%s" (join "," .normal.apiserverEndpoints) }}
@@ -161,5 +141,19 @@ spec:
 EOF
 
 bb-unset-proxy
+
+bb-sync-file /etc/kubernetes/node-proxy/rpp_backend_backend.cfg - <<'EOF'
+{{- if .packagesProxy }}
+{{- range $index, $addr := .packagesProxy.addresses }}
+server srv{{ add $index 1 }} {{ $addr }}
+{{- end }}
+{{- end }}
+EOF
+
+bb-sync-file /etc/kubernetes/node-proxy/kube_api_backend.cfg - <<'EOF'
+{{- range $index, $addr := .normal.apiserverEndpoints }}
+server srv{{ add $index 1 }} {{ $addr }}
+{{- end }}
+EOF
 
 grep -q ":6445" /etc/kubernetes/admin.conf && sed -i 's/6445/3994/' /etc/kubernetes/admin.conf
