@@ -26,5 +26,5 @@ upmeter:
 user-authn:
     - version: 2
       description:
-        en: Have to replace `publishAPI.enable` with `publishAPI.enabled`
+        en: Replace `publishAPI.enable` with `publishAPI.enabled`.
         ru: Необходимо заменить `publishAPI.enable` на `publishAPI.enabled`
