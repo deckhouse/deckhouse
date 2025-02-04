@@ -45,7 +45,7 @@ shell:
   - chmod 0700 upmeter
   # migrate build
   - cd /src/migrate
-  - GOPROXY={{ $.GOPROXY }} CGO_ENABLED=1 GOOS=linux GOARCH=amd64 go build -a -o migrate -ldflags="-s -w -X main.Version=v{{ $migrateVersion }} -linkmode external -extldflags '-static' -tags 'sqlite3' ." ./cmd/migrate
+  - GOPROXY={{ $.GOPROXY }} CGO_ENABLED=1 GOOS=linux GOARCH=amd64 go build -a -o migrate -ldflags="-s -w -X main.Version=v{{ $migrateVersion }} -linkmode external -extldflags '-static'" -tags 'sqlite3' . ./cmd/migrate
   - chown 64535:64535 migrate
   - chmod 0700 migrate
 ---
