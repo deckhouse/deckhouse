@@ -265,6 +265,7 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 		for _, available := range source.Status.AvailableModules {
 			if available.Name == moduleName {
 				availableModule = available
+				break
 			}
 		}
 
@@ -301,6 +302,9 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 			availableModules = append(availableModules, availableModule)
 			continue
 		}
+
+		// clear overridden
+		availableModule.Overridden = false
 
 		var cachedChecksum = availableModule.Checksum
 
