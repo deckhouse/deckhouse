@@ -109,7 +109,11 @@ entries:
                     - title:
                         en: ALB
                         ru: ALB
-                      url: /admin/alb.html
+                      folders:
+                        - title:
+                            en: Overview
+                            ru: Введение
+                          url: /admin/alb-overview.html
                 - title:
                     en: ServiceMesh
                     ru: ServiceMesh
