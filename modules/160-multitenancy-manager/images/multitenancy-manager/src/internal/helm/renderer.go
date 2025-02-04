@@ -81,17 +81,9 @@ func (r *postRenderer) Run(renderedManifests *bytes.Buffer) (modifiedManifests *
 			}
 		}
 
-		// inject multitenancy-manager and project labels
 		labels := object.GetLabels()
 		if len(labels) == 0 {
 			labels = make(map[string]string)
-		}
-
-		// inject project labels
-		if len(r.project.Spec.ResourceLabels) > 0 {
-			for k, v := range r.project.Spec.ResourceLabels {
-				labels[k] = v
-			}
 		}
 
 		// inject multitenancy-manager
@@ -100,20 +92,6 @@ func (r *postRenderer) Run(renderedManifests *bytes.Buffer) (modifiedManifests *
 		labels[v1alpha2.ResourceLabelTemplate] = r.project.Spec.ProjectTemplateName
 
 		object.SetLabels(labels)
-
-		// inject project annotations
-		if len(r.project.Spec.ResourceAnnotations) != 0 {
-			annotations := object.GetAnnotations()
-			if len(annotations) == 0 {
-				annotations = make(map[string]string)
-			}
-
-			for k, v := range r.project.Spec.ResourceAnnotations {
-				annotations[k] = v
-			}
-
-			object.SetAnnotations(annotations)
-		}
 
 		if object.GetKind() != "Namespace" {
 			object.SetNamespace(r.project.Name)
@@ -154,27 +132,14 @@ func (r *postRenderer) newNamespace(name string) []byte {
 			Kind:       "Namespace",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:   name,
-			Labels: make(map[string]string),
+			Name: name,
+			Labels: map[string]string{
+				v1alpha2.ResourceLabelHeritage: v1alpha2.ResourceHeritageMultitenancy,
+				v1alpha2.ResourceLabelProject:  r.project.Name,
+				v1alpha2.ResourceLabelTemplate: r.project.Spec.ProjectTemplateName,
+			},
 		},
 	}
-
-	// set project labels
-	if len(r.project.Spec.ResourceLabels) > 0 {
-		for k, v := range r.project.Spec.ResourceLabels {
-			obj.Labels[k] = v
-		}
-	}
-
-	obj.Labels[v1alpha2.ResourceLabelHeritage] = v1alpha2.ResourceHeritageMultitenancy
-	obj.Labels[v1alpha2.ResourceLabelProject] = r.project.Name
-	obj.Labels[v1alpha2.ResourceLabelTemplate] = r.project.Spec.ProjectTemplateName
-
-	// set project annotations
-	if len(r.project.Spec.ResourceAnnotations) > 0 {
-		obj.Annotations = r.project.Spec.ResourceAnnotations
-	}
-
 	data, _ := yaml.Marshal(obj)
 	return data
 }

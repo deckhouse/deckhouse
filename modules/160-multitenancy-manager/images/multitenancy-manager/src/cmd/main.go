@@ -74,7 +74,7 @@ func main() {
 	logger := ctrl.Log.WithName(controllerName)
 	ctrllog.SetLogger(zap.New(zap.Level(zapcore.Level(-4)), zap.StacktraceLevel(zapcore.PanicLevel)))
 
-	logger.Info(fmt.Sprintf("starting multitenancy-manager with %v allow orphan namespaces option", allowOrphanNamespaces))
+	logger.Info(fmt.Sprintf("start multitenancy-manager with %v allow orphan namespaces option", allowOrphanNamespaces))
 
 	// initialize runtime manager
 	runtimeManager, err := setupRuntimeManager(logger)

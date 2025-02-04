@@ -39,18 +39,6 @@ spec:
                 projectTemplateName:
                   description: |
                     Имя ресурса [ProjectTemplate](cr.html#projecttemplate), который определяет, какие ресурсы будут созданы в проекте.
-                resourceLabels:
-                  description: |
-                    Метки которые будут добавлены к каждому ресурсу созданному из этого проекта.
-                  type: object
-                  additionalProperties:
-                    type: string
-                resourceAnnotations:
-                  description: |
-                    Аннотации которые будут добавлены к каждому ресурсу созданному из этого проекта.
-                  type: object
-                  additionalProperties:
-                    type: string
                 parameters:
                   description: |
                     Значения, передаваемые в [шаблон ресурсов](cr.html#projecttemplate-v1alpha1-spec-resourcestemplate) при создании проекта.
