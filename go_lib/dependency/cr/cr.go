@@ -167,8 +167,6 @@ func (r *client) ListTags(ctx context.Context) ([]string, error) {
 		imageOptions = append(imageOptions, remote.WithContext(ctx))
 	}
 
-	imageOptions = append(imageOptions, remote.WithPageSize(250))
-
 	return remote.List(repo, imageOptions...)
 }
 
