@@ -371,7 +371,7 @@ index 15489c3f..4e1c5c09 100644
  		return ForAddresses(svc.Spec.ClusterIPs)
  	}
 diff --git a/internal/k8s/controllers/service_controller.go b/internal/k8s/controllers/service_controller.go
-index a804ee76..9391ac59 100644
+index a804ee76..8daadda4 100644
 --- a/internal/k8s/controllers/service_controller.go
 +++ b/internal/k8s/controllers/service_controller.go
 @@ -19,6 +19,8 @@ package controllers
@@ -414,7 +414,7 @@ index a804ee76..9391ac59 100644
  		return ctrl.Result{}, nil
  	}
  
-+	if service.Spec.ServiceRef == nil {
++	if service == nil {
 +		level.Error(r.Logger).Log("controller", "ServiceReconciler", "message", "serviceRef is not valid", "service", req.NamespacedName)
 +		return ctrl.Result{}, nil
 +	}
