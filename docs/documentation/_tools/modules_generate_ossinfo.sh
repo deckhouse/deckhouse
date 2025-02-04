@@ -17,11 +17,27 @@
 #
 # Copy files with information about the licenses used in modules to _data/ossinfo folder (jekyll will construct an array with this data)
 
+set -euo pipefail
+
 mkdir -p _data/ossinfo/
 
-for path in $(find $MODULES_DIR -iname oss.yaml -print); do
-  module_short_name=$(echo $path | sed -E 's#.+/(.+/[^/]+)$#\1#' | cut -d\/ -f-1 | cut -d- -f2-)
-  module_full_name=$(echo $path | sed -E 's#.+/(.+/[^/]+)$#\1#' | cut -d\/ -f-1)
-  cp -f $path _data/ossinfo/${module_short_name}.yaml
-  cat $path >> _data/ossinfo-cumulative.yaml
+> _data/ossinfo-cumulative.yaml
+
+declare -A seen_names=()
+
+for path in $(find "$MODULES_DIR" -iname oss.yaml -print); do
+  module_short_name=$(basename "$(dirname "$path")" | cut -d- -f2-)
+  cp -f "$path" "_data/ossinfo/${module_short_name}.yaml"
+
+  while IFS= read -r line; do
+    if [[ $line =~ ^[[:space:]]*-[[:space:]]name:[[:space:]] ]]; then
+      current_name=$(echo "$line" | sed -E 's/.*name:[[:space:]]*"?([^"]+)"?/\1/')
+      if [[ -z ${seen_names[$current_name]+x} ]]; then
+        seen_names[$current_name]=1
+        echo "$line" >> _data/ossinfo-cumulative.yaml
+      fi
+    else
+      echo "$line" >> _data/ossinfo-cumulative.yaml
+    fi
+  done < "$path"
 done
