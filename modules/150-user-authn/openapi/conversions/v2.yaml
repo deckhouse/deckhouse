@@ -3,4 +3,4 @@ conversions:
   - if .publishAPI.enable != null then .publishAPI.enabled = .publishAPI.enable | del(.publishAPI.enable) end
 description:
   ru: "Необходимо заменить `publishAPI.enable` на `publishAPI.enabled`"
-  en: "Have to replace `publishAPI.enable` with `publishAPI.enabled`"
+  en: "Replace `publishAPI.enable` with `publishAPI.enabled`."
