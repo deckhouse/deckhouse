@@ -29,19 +29,6 @@ import (
 	logContext "github.com/deckhouse/deckhouse/pkg/log/context"
 )
 
-// Extends default slog with new log levels
-type WrappedLogger struct {
-	*slog.Logger
-	opts *slog.HandlerOptions
-}
-
-func NewSlogLogger(w io.Writer, opts *slog.HandlerOptions) *WrappedLogger {
-	return &WrappedLogger{
-		Logger: slog.New(slog.NewJSONHandler(w, opts)),
-		opts:   opts,
-	}
-}
-
 var _ slog.Handler = (*SlogHandler)(nil)
 
 type SlogHandler struct {
