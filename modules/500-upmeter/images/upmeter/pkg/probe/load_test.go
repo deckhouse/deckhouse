@@ -105,7 +105,7 @@ func TestLoader_Probes(t *testing.T) {
 		{Group: "monitoring-and-autoscaling", Probe: "metrics-sources"},
 		{Group: "monitoring-and-autoscaling", Probe: "prometheus"},
 		{Group: "monitoring-and-autoscaling", Probe: "prometheus-metrics-adapter"},
-		{Group: "monitoring-and-autoscaling", Probe: "aggregating-proxy"},
+		{Group: "monitoring-and-autoscaling", Probe: "metrics-proxy"},
 		{Group: "monitoring-and-autoscaling", Probe: "vertical-pod-autoscaler"},
 		{Group: "synthetic", Probe: "access"},
 		{Group: "synthetic", Probe: "dns"},
