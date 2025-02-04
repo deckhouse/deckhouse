@@ -16,10 +16,9 @@ package registryscaner
 
 import (
 	"context"
-	"time"
-
 	"registry-modules-watcher/internal/backends"
 	"registry-modules-watcher/internal/backends/pkg/registry-scaner/cache"
+	"time"
 
 	"github.com/deckhouse/deckhouse/pkg/log"
 	v1 "github.com/google/go-containerregistry/pkg/v1"

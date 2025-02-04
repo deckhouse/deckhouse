@@ -20,15 +20,14 @@ import (
 	"log/slog"
 	"os"
 	"os/signal"
-	"strings"
-	"syscall"
-	"time"
-
 	"registry-modules-watcher/internal/backends"
 	registryscaner "registry-modules-watcher/internal/backends/pkg/registry-scaner"
 	"registry-modules-watcher/internal/backends/pkg/sender"
 	"registry-modules-watcher/internal/watcher"
 	registryclient "registry-modules-watcher/pkg/registry-client"
+	"strings"
+	"syscall"
+	"time"
 
 	"github.com/deckhouse/deckhouse/pkg/log"
 	"k8s.io/client-go/kubernetes"

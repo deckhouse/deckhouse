@@ -21,10 +21,9 @@ import (
 	"log/slog"
 	"net/http"
 	url2 "net/url"
+	"registry-modules-watcher/internal/backends"
 	"strings"
 	"time"
-
-	"registry-modules-watcher/internal/backends"
 
 	"github.com/cenkalti/backoff"
 	"github.com/deckhouse/deckhouse/pkg/log"
