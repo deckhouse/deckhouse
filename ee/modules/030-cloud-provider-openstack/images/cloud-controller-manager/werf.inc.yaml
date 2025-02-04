@@ -1,48 +1,67 @@
 {{- range $key, $value := .CandiVersionMap.k8s }}
   {{- $version := toString $key }}
+  {{- $image_version := toString $key | replace "." "-" }}
   {{- if $value.ccm.openstack }}
+  {{- $src_version := toString $value.ccm.openstack}}
+  {{- $patches := (printf "/%smodules/%s-%s/images/%s" $.ModulePath $.ModulePriority $.ModuleName $.ImageName) }}
+    {{- $patch := false }}
+    {{- range $path, $_ := $.Files.Glob (printf "%s/*" $patches) }}
+      {{- if contains $src_version $path }}
+        {{- $patch = true }}
+      {{- end }}
+    {{- end }}
 ---
-image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $version | replace "." "-" }}
+image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
 fromImage: common/distroless
 import:
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
   add: /src/openstack-cloud-controller-manager
   to: /bin/openstack-cloud-controller-manager
   before: setup
 docker:
   ENTRYPOINT: ["/bin/openstack-cloud-controller-manager"]
 ---
-image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
+image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
 final: false
-    {{- if semverCompare ">=1.30" $version }}
-from: {{ $.Images.BASE_GOLANG_22_BULLSEYE }}
-    {{- else if semverCompare "=1.29" $version }}
-from: {{ $.Images.BASE_GOLANG_21_BULLSEYE }}
-    {{- else if semverCompare ">=1.27" $version }}
-from: {{ $.Images.BASE_GOLANG_20_BUSTER }}
-    {{- end }}
+fromImage: common/src-artifact
+{{- if $patch }}
 git:
-- add: /{{ $.ModulePath }}modules/030-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
+- add: {{ $patches }}/patches/{{ $src_version }}
   to: /patches
   stageDependencies:
     install:
       - '**/*'
+{{- end }}
+shell:
+  install:
+  - git clone --depth 1 --branch {{ $value.ccm.openstack }}  {{ $.SOURCE_REPO }}/kubernetes/cloud-provider-openstack.git /src
+  - cd /src
+  {{- if $patch }}
+  - git apply /patches/*.patch --verbose
+  {{- end }}
+  - rm -rf vendor .git
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
+final: false
+from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
+  add: /src
+  to: /src
+  before: install
 mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
 shell:
   beforeInstall:
-  - apt update
-  - apt install git mercurial rsync patch -y
+  {{- include "alpine packages proxy" . | nindent 2 }}
+  - apk add --no-cache make
   install:
-  - mkdir /src
-  - wget https://github.com/kubernetes/cloud-provider-openstack/archive/{{ $value.ccm.openstack }}.tar.gz -O - | tar -xz --strip-components=1 -C /src/
   - cd /src
-  - git apply /patches/{{ $version }}/*.patch --verbose
-  - make VERSION={{ $value.ccm.openstack }} GIT_VERSION={{ $value.ccm.openstack }} openstack-cloud-controller-manager
-  {{- if semverCompare "<1.27" $version }}
-  - mv /src/openstack-cloud-controller-manager-amd64 /src/openstack-cloud-controller-manager
-  {{- end }}
+  - export GOPROXY={{ $.GOPROXY }}
+  - export VERSION={{ $value.ccm.openstack }}
+  - export GIT_VERSION={{ $value.ccm.openstack }}
+  - make openstack-cloud-controller-manager
   - chown 64535:64535 /src/openstack-cloud-controller-manager
   - chmod 0755 /src/openstack-cloud-controller-manager
   {{- end }}
