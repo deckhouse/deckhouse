@@ -2,6 +2,13 @@
   {{- $version := toString $key }}
   {{- $image_version := toString $key | replace "." "-" }}
   {{- if $value.ccm.gcp }}
+    {{- $patches := (printf "/%smodules/%s-%s/images/%s" $.ModulePath $.ModulePriority $.ModuleName $.ImageName) }}
+    {{- $patch := false }}
+    {{- range $path, $_ := $.Files.Glob (printf "%s/*" $patches) }}
+      {{- if contains $version $path }}
+        {{- $patch = true }}
+      {{- end }}
+    {{- end }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
 fromImage: common/distroless
@@ -17,11 +24,22 @@ imageSpec:
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
 final: false
 fromImage: common/src-artifact
+{{- if $patch }}
+git:
+  - add: {{ $patches }}/patches/{{ $version }}
+    to: /patches
+    stageDependencies:
+      install:
+        - '**/*'
+{{- end }}
 shell:
   install:
   - git clone --depth 1 --branch {{ $value.ccm.gcp }} {{ $.SOURCE_REPO }}/kubernetes/cloud-provider-gcp.git /src
   - cd /src
-  - rm -rf .git
+  {{- if $patch}}
+  - git apply /patches/*.patch --verbose
+  {{- end}}
+  - rm -rf .git vendor
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
 final: false

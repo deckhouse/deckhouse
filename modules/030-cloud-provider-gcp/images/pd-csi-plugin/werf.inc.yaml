@@ -2,6 +2,13 @@
   {{- $version := toString $key }}
   {{- $image_version := toString $key | replace "." "-" }}
   {{- if $value.csi.gcp }}
+    {{- $patches := (printf "/%smodules/%s-%s/images/%s" $.ModulePath $.ModulePriority $.ModuleName $.ImageName) }}
+    {{- $patch := false }}
+    {{- range $path, $_ := $.Files.Glob (printf "%s/*" $patches) }}
+      {{- if contains $version $path }}
+        {{- $patch = true }}
+      {{- end }}
+    {{- end }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
 fromImage: common/distroless
@@ -37,11 +44,22 @@ imageSpec:
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
 final: false
 fromImage: common/src-artifact
+{{- if $patch }}
+git:
+  - add: {{ $patches }}/patches/{{ $version }}
+    to: /patches
+    stageDependencies:
+      install:
+        - '**/*'
+{{- end }}
 shell:
   install:
   - git clone --depth 1 --branch {{ $value.csi.gcp }} {{ $.SOURCE_REPO }}/kubernetes-sigs/gcp-compute-persistent-disk-csi-driver.git /src
   - cd /src
-  - rm -rf .git
+  {{- if $patch}}
+  - git apply /patches/*.patch --verbose
+  {{- end}}
+  - rm -rf .git vendor
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
 final: false
@@ -55,17 +73,14 @@ mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
 shell:
-  beforeInstall:
-  {{- include "alpine packages proxy" . | nindent 2}}
-  - apk add --no-cache make
   install:
   - cd /src
   - export GOPROXY={{ $.GOPROXY }}
   - go mod download
   setup:
   - cd /src
-  - export GCE_PD_CSI_STAGING_VERSION={{ $value.csi.gcp }}
-  - make gce-pd-driver
+  - mkdir -p bin
+  - CGO_ENABLED=0 go build -ldflags "-extldflags=static -X main.version={{ $value.csi.gcp }}" -o bin/gce-pd-csi-driver ./cmd/gce-pd-csi-driver/
   {{- end }}
 {{- end }}
 ---

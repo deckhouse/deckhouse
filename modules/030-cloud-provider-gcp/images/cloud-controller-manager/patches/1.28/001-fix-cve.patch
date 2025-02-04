@@ -1,0 +1,28 @@
+diff --git a/go.mod b/go.mod
+index 8dafd52e..2f8becfb 100644
+--- a/go.mod
++++ b/go.mod
+@@ -38,7 +38,7 @@ require (
+ 	k8s.io/cloud-provider v0.28.10
+ 	k8s.io/cloud-provider-gcp/crd v0.0.0-20230608185813-17ff4d5f2987
+ 	k8s.io/cloud-provider-gcp/providers v0.0.0-00010101000000-000000000000
+-	k8s.io/kubernetes v1.28.10
++	k8s.io/kubernetes v1.28.12
+ )
+ 
+ require (
+diff --git a/go.sum b/go.sum
+index e0867d96..9367a5ab 100644
+--- a/go.sum
++++ b/go.sum
+@@ -1011,8 +1011,8 @@ k8s.io/kube-openapi v0.0.0-20230717233707-2695361300d9 h1:LyMgNKD2P8Wn1iAwQU5Ohx
+ k8s.io/kube-openapi v0.0.0-20230717233707-2695361300d9/go.mod h1:wZK2AVp1uHCp4VamDVgBP2COHZjqD1T68Rf0CM3YjSM=
+ k8s.io/kubelet v0.28.10 h1:HoXMtQ86e8rGxuunEl+gtqcwXKSbW/pwShedoEBB+XQ=
+ k8s.io/kubelet v0.28.10/go.mod h1:TOshivjtPcQl+YGobMYgDffqdkuZ9h2/Dc7FOoVK4D4=
+-k8s.io/kubernetes v1.28.10 h1:QYofnL3gNbarVLOVbOKkyrZc6iA0rLGj69azDZLTbNs=
+-k8s.io/kubernetes v1.28.10/go.mod h1:chlmcCDBnOA/y+572cw8dO0Rci1wiA8bm5+zhPdFLCk=
++k8s.io/kubernetes v1.28.12 h1:DtWB8ZjoYiN/PXD4qDXFppf9IouVUavn6r3S+3NMUkU=
++k8s.io/kubernetes v1.28.12/go.mod h1:chlmcCDBnOA/y+572cw8dO0Rci1wiA8bm5+zhPdFLCk=
+ k8s.io/metrics v0.28.10 h1:h5COGCpe8YEnBoKQunujzlo92kjzVKOCn9MM3h83UqQ=
+ k8s.io/metrics v0.28.10/go.mod h1:y6nHn5YlbzwLX73zh2umQWMPZCCncJql7sVJ4euRPu8=
+ k8s.io/utils v0.0.0-20230406110748-d93618cff8a2 h1:qY1Ad8PODbnymg2pRbkyMT/ylpTrCM8P2RJ0yroCyIk=
