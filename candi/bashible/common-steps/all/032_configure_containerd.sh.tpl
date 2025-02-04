@@ -17,6 +17,23 @@ _on_containerd_config_changed() {
   bb-flag-set containerd-need-restart
 }
 
+_get_sandbox_image_from_contained_config_toml() {
+  local config_toml_file=$1
+  local default_sandbox_image=$2
+
+  if [ -f "$config_toml_file" ]; then
+    sandbox_image_from_config_file=$(cat "$config_toml_file" | /opt/deckhouse/bin/yq -p toml -o json | /opt/deckhouse/bin/jq -r '.plugins."io.containerd.grpc.v1.cri".sandbox_image')
+
+    if [ -n "$sandbox_image_from_config_file" ] && [ "$sandbox_image_from_config_file" != "null" ]; then
+      echo "$sandbox_image_from_config_file"
+    else
+      echo "$default_sandbox_image"
+    fi
+  else
+    echo "$default_sandbox_image"
+  fi
+}
+
 bb-event-on 'containerd-config-file-changed' '_on_containerd_config_changed'
 
   {{- $max_concurrent_downloads := 3 }}
@@ -24,6 +41,15 @@ bb-event-on 'containerd-config-file-changed' '_on_containerd_config_changed'
     {{- $max_concurrent_downloads = .nodeGroup.cri.containerd.maxConcurrentDownloads | default $max_concurrent_downloads }}
   {{- end }}
   {{- $sandbox_image := printf "%s%s@%s" $.registry.address $.registry.path (index $.images.common "pause") }}
+
+sandbox_image={{ $sandbox_image | quote }}
+
+  {{- if and $.registry.registryMode (ne $.registry.registryMode "Direct") }}
+# Get the previous sandbox_image if registryMode != Direct for gracefull pull and update in configure_sandbox_image.sh step
+if [ "$FIRST_BASHIBLE_RUN" != "yes" ]; then
+  sandbox_image=$(_get_sandbox_image_from_contained_config_toml "/etc/containerd/deckhouse.toml" {{ $sandbox_image | quote }} )
+fi
+  {{- end }}
 
 systemd_cgroup=true
 # Overriding cgroup type from external config file
@@ -82,7 +108,7 @@ oom_score = 0
     stream_idle_timeout = "4h0m0s"
     enable_selinux = false
     selinux_category_range = 1024
-    sandbox_image = {{ $sandbox_image | quote }}
+    sandbox_image = "${sandbox_image}"
     stats_collect_period = 10
     systemd_cgroup = false
     enable_tls_streaming = false
@@ -256,7 +282,8 @@ EOF
 if ls /etc/containerd/conf.d/*.toml >/dev/null 2>/dev/null; then
   containerd_toml="$(toml-merge /etc/containerd/deckhouse.toml /etc/containerd/conf.d/*.toml -)"
 else
-  containerd_toml="$(cat /etc/containerd/deckhouse.toml)"
+  # Merge is used to standardize the file format since the pre-pull pause image step may be executed (configure_sandbox_image.sh).
+  containerd_toml="$(toml-merge /etc/containerd/deckhouse.toml -)"
 fi
 
 bb-sync-file /etc/containerd/config.toml - containerd-config-file-changed <<< "${containerd_toml}"

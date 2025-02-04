@@ -14,12 +14,19 @@
 
 {{- if eq .cri "Containerd" }}
   {{- if and $.registry.registryMode (ne $.registry.registryMode "Direct") }}
-    {{- $sandbox_image := printf "%s%s@%s" $.registry.address $.registry.path (index $.images.common "pause") }}
-if [ "$FIRST_BASHIBLE_RUN" != "yes" ]; then
-  repo_digests=$(crictl images -o json | jq -r '.images[].repoDigests[]?')
-  if ! echo "$repo_digests" | grep -q {{ $sandbox_image | quote }}; then
-    crictl pull {{ $sandbox_image | quote }}
+
+  # For configure_sandbox_image.sh step
+if bb-flag? containerd-need-restart; then
+  bb-log-warning "'containerd-need-restart' flag was set, restarting containerd."
+  if out=$(containerd config dump 2>&1); then
+      systemctl restart containerd-deckhouse.service
+  else
+      bb-log-error "'containerd config dump' return error: $out"
+      exit 1
   fi
+  bb-flag-set kubelet-need-restart
+  bb-flag-unset containerd-need-restart
 fi
+
   {{- end }}
 {{- end }}
