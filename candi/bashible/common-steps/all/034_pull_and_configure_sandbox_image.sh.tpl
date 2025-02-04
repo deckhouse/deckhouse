@@ -40,7 +40,8 @@ bb-sync-file /etc/containerd/deckhouse-sandbox-image.toml - << EOF
 EOF
 
 # Merge 'deckhouse.toml' with 'deckhouse-sandbox-image.toml' and save to 'deckhouse.toml', preserving header comments
-toml-merge /etc/containerd/deckhouse.toml /etc/containerd/deckhouse-sandbox-image.toml /etc/containerd/deckhouse.toml
+deckhouse_toml="$(toml-merge /etc/containerd/deckhouse.toml /etc/containerd/deckhouse-sandbox-image.toml -)"
+bb-sync-file /etc/containerd/deckhouse.toml - <<< "${deckhouse_toml}"
 
 # Check additional configs
 if ls /etc/containerd/conf.d/*.toml >/dev/null 2>/dev/null; then
