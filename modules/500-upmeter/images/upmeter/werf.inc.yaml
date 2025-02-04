@@ -42,12 +42,12 @@ shell:
   - cd /src/upmeter
   - GOPROXY={{ $.GOPROXY }} CGO_ENABLED=1 GOOS=linux GOARCH=amd64 go build -ldflags "-s -w -linkmode external -extldflags '-static'" -o upmeter ./cmd/upmeter
   - chown 64535:64535 upmeter
-  - chmod 0500 upmeter
+  - chmod 0700 upmeter
   # migrate build
   - cd /src/migrate
   - CGO_ENABLED=1 go build -a -o migrate -ldflags="-s -w -X main.Version=v{{ $migrateVersion }}" -tags "'sqlite3' ." ./cmd/migrate
   - chown 64535:64535 migrate
-  - chmod 0500 migrate
+  - chmod 0700 migrate
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
