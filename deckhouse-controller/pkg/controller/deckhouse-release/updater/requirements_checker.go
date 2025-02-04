@@ -234,9 +234,6 @@ func (c *deckhouseRequirementsCheck) Verify(dr *v1alpha1.DeckhouseRelease) error
 		passed, err := requirements.CheckRequirement(key, value, c.enabledModules)
 		if !passed {
 			msg := fmt.Sprintf("%q requirement for DeckhouseRelease %q not met: %s", key, dr.GetVersion(), err)
-			if errors.Is(err, requirements.ErrNotRegistered) {
-				msg = fmt.Sprintf("%q requirement is not registered", key)
-			}
 
 			return errors.New(msg)
 		}
