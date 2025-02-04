@@ -6,10 +6,6 @@ entries:
         ru: Введение
       url: /stronghold/documentation/
     - title:
-        en: Configuration
-        ru: Настройка
-      url: /stronghold/documentation/configuration.html
-    - title:
         en: Administration guide
         ru: Руководство администратора
       folders:
@@ -34,10 +30,6 @@ entries:
                 en: Requirements
                 ru: Требования
               url: /stronghold/documentation/admin/install/requirements.html
-            # - title:
-            #     en: Setup scenarios
-            #     ru: Сценарии установки
-            #   url: /stronghold/documentation/admin/install/scenarios.html
             - title:
                 en: Installation steps
                 ru: Порядок установки
@@ -182,6 +174,10 @@ entries:
             en: Removing the platform
             ru: Удаление платформы
           url: /stronghold/documentation/admin/removing/removing.html
+        - title:
+            en: Stronghold configuration
+            ru: Настройка Stronghold
+          url: /stronghold/documentation/configuration.html
     - title:
         en: User guide
         ru: Руководство пользователя
@@ -366,50 +362,10 @@ entries:
                     en: MySQL
                     ru: MySQL
                   url: /stronghold/documentation/user/secrets-engines/databases/mysql.html
-        # - title:
-        #     en: Network
-        #     ru: Сеть
-        #   folders:
-        #     - title:
-        #         en: Network Policies
-        #         ru: Сетевые политики
-        #       url: /stronghold/documentation/user/network/network-policies.html
-        #     - title:
-        #         en: Public Access to a VM
-        #         ru: Публичный доступ к ВМ
-        #       url: /stronghold/documentation/user/network/vm-publishing.html
-    #- title:
-    #    en: Architecture
-    #    ru: Архитектура
-    #  folders:
-    #    - title:
-    #        en: Functional specifications
-    #        ru: Функциональные характеристики
-    #      url: /stronghold/documentation/architecture/functional-specifications.html
-    #    - title:
-    #        en: Overall architecture
-    #        ru: Общая архитектура
-    #      url: /stronghold/documentation/architecture/overall-architecture.html
-    #    - title:
-    #        en: Scheme of interaction of the platform components
-    #        ru: Схема взаимодействия компонентов платформы
-    #      url: /stronghold/documentation/architecture/scheme.html
-    #    - title:
-    #        en: Used ports
-    #        ru: Используемые порты
-    #      url: /stronghold/documentation/architecture/used-ports.html
-    #    - title:
-    #        en: Table
-    #        ru: Таблица
-    #      url: /stronghold/documentation/architecture/table.html
     - title:
         en: Reference
         ru: Справка
       folders:
-        #- title:
-        #    en: Modules
-        #    ru: Модули
-        #  url: /stronghold/reference/modules.html
         - title:
             en: Modules settings
             ru: Настройки модулей
@@ -420,23 +376,7 @@ entries:
             en: Console utilities
             ru: Консольные утилиты
           folders:
-            #- title:
-            #    en: dhctl
-            #    ru: dhctl
-            #  url: /stronghold/documentation/reference/console-utilities/dhctl.html
             - title:
                 en: d8 (Deckhouse CLI)
                 ru: d8 (Deckhouse CLI)
               url: /stronghold/reference/console-utilities/d8.html
-    #- title:
-    #    en: DVP editions
-    #    ru: Список  DVP
-    #  folders:
-    #    - title:
-    #        en: Configuration module
-    #        ru: Конфигурации модуля
-    #      url: /stronghold/documentation/dvp-editions/changelog.html
-    #- title:
-    #    en: FAQ
-    #    ru: FAQ
-    #  url: /stronghold/documentation/faq.html

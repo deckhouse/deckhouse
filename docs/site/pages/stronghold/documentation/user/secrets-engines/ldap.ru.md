@@ -6,39 +6,25 @@ description: >-
   The LDAP secret engine manages LDAP entry passwords.
 ---
 
-{% alert level="warning" %}
 
-This engine can use external X.509 certificates as part of TLS or signature validation.
-   Verifying signatures against X.509 certificates that use SHA-1 is deprecated and is no longer
-   usable without a workaround. See the
-   [deprecation FAQ](/docs/deprecation/faq#q-what-is-the-impact-of-removing-support-for-x-509-certificates-with-signatures-that-use-sha-1)
-   for more information.
-{% endalert %}
-{% raw %}
+Механизм секретов LDAP обеспечивает управление учетными данными LDAP, а также динамическое создание учетных данных. Он поддерживает интеграцию с реализациями протокола LDAP v3, включая OpenLDAP, Active Directory и IBM Resource Access Control Facility (RACF).
 
-The LDAP secrets engine provides management of LDAP credentials as well as dynamic
-creation of credentials. It supports integration with implementations of the LDAP
-v3 protocol, including OpenLDAP, Active Directory, and IBM Resource Access Control
-Facility (RACF).
+Механизм секретов имеет три основные функции:
+- [Управление статическими учетными данными](#%D1%81%D1%82%D0%B0%D1%82%D0%B8%D1%87%D0%B5%D1%81%D0%BA%D0%B8%D0%B5-%D1%80%D0%BE%D0%BB%D0%B8)
+- [Управление динамическими учетными данными](#%D0%B4%D0%B8%D0%BD%D0%B0%D0%BC%D0%B8%D1%87%D0%B5%D1%81%D0%BA%D0%B8%D0%B5-%D1%80%D0%BE%D0%BB%D0%B8)
+- [Ротация паролей для списов учетных записей](#%D1%80%D0%BE%D1%82%D0%B0%D1%86%D0%B8%D1%8F-%D0%BF%D0%B0%D1%80%D0%BE%D0%BB%D0%B5%D0%B9-%D0%B4%D0%BB%D1%8F-%D1%81%D0%BF%D0%B8%D1%81%D0%BA%D0%BE%D0%B2-%D1%83%D1%87%D0%B5%D1%82%D0%BD%D1%8B%D1%85-%D0%B7%D0%B0%D0%BF%D0%B8%D1%81%D0%B5%D0%B9)
 
-The secrets engine has three primary features:
-- [Static Credentials](/docs/secrets/ldap#static-credentials)
-- [Dynamic Credentials](/docs/secrets/ldap#dynamic-credentials)
-- [Service Account Check-Out](/docs/secrets/ldap#service-account-check-out)
+## Настройка
 
-## Setup
-
-1. Enable the LDAP secret engine:
+1. Включите механизм секретов LDAP:
 
    ```sh
    $ d8 stronghold secrets enable ldap
    ```
 
-   By default, the secrets engine will mount at the name of the engine. To
-   enable the secrets engine at a different path, use the `-path` argument.
+   По умолчанию подключение произойдет по пусти `ldap`. Для подключения по другому пути используйте аргумент `-path`.
 
-2. Configure the credentials that Stronghold uses to communicate with LDAP
-   to generate passwords:
+2. Настройте учетные данные, которые Stronghold использует для подключения к LDAP для генерации паролей:
 
    ```sh
    $ d8 stronghold write ldap/config \
@@ -47,29 +33,28 @@ The secrets engine has three primary features:
        url=ldaps://138.91.247.105
    ```
 
-   Note: it's recommended a dedicated entry management account be created specifically for Stronghold.
+   Примечание: рекомендуется создать отдельную учетную запись специально для Stronghold.
 
-3. Rotate the root password so only Stronghold knows the credentials:
+3. Ротируйте пароль, чтобы он харнился только в Stronghold:
 
    ```sh
    $ d8 stronghold write -f ldap/rotate-root
    ```
 
-   Note: it's not possible to retrieve the generated password once rotated by Stronghold.
-   It's recommended a dedicated entry management account be created specifically for Stronghold.
+   Примечание: получить сгенерированный пароль после ротации в Stronghold невозможно.
 
-### Schemas
+### Схемы LDAP
 
-The LDAP Secret Engine supports three different schemas:
+Механизм секретов LDAP поддерживает три различные схемы:
 
-- `openldap` (default)
+- `openldap` (по умолчению)
 - `racf`
 - `ad`
 
 #### OpenLDAP
 
-By default, the LDAP Secret Engine assumes the entry password is stored in `userPassword`.
-There are many object classes that provide `userPassword` including for example:
+По умолчанию механизм секретов LDAP предполагает, что пароль для учетной записи хранится в `userPassword`.
+Существует множество классов объектов, которые имеют поле `userPassword`, включая, например:
 
 - `organization`
 - `organizationalUnit`
@@ -80,11 +65,9 @@ There are many object classes that provide `userPassword` including for example:
 
 #### Resource access control facility (RACF)
 
-For managing IBM's Resource Access Control Facility (RACF) security system, the secret
-engine must be configured to use the schema `racf`.
+Для управления системой безопасности IBM Resource Access Control Facility (RACF) механизм секретов должен быть настроен на использование схемы `racf`.
 
-Generated passwords must be 8 characters or less to support RACF. The length of the
-password can be configured using a [password policy](/docs/concepts/password-policies):
+Для поддержки RACF генерируемые пароли должны состоять из 8 символов или меньше. Длина пароля может быть настроена с помощью [политики паролей] (/docs/concepts/password-policies):
 
 ```bash
 $ d8 stronghold write ldap/config \
@@ -97,8 +80,7 @@ $ d8 stronghold write ldap/config \
 
 #### Active directory (AD)
 
-For managing Active Directory instances, the secret engine must be configured to use the
-schema `ad`.
+Для управления паролями в Active Directory механизм секретов должен быть настроен на использование схемы `ad`.
 
 ```bash
 $ d8 stronghold write ldap/config \
@@ -108,12 +90,12 @@ $ d8 stronghold write ldap/config \
 	schema=ad
 ```
 
-## Static credentials
+## Статические роли
 
-### Setup
+### Настройка
 
-1. Configure a static role that maps a name in Stronghold to an entry in LDAP.
-   Password rotation settings will be managed by this role.
+1. Настройте статическую роль, которая сопоставляет имя в Stronghold с записью в LDAP.
+   Настройки ротации паролей будут управляться этой ролью.
 
    ```sh
    $ d8 stronghold write ldap/static-role/lf-edge\
@@ -122,44 +104,38 @@ $ d8 stronghold write ldap/config \
        rotation_period="24h"
    ```
 
-2. Request credentials for the "stronghold" role:
+2. Запросите учетные данные для роли "stronghold":
 
    ```sh
    $ d8 stronghold read ldap/static-cred/lf-edge
    ```
 
-### Password rotation
+### Ротация паролей
 
-Passwords can be managed in two ways:
+Управление паролями может осуществляться двумя способами:
 
-- automatic time based rotation
-- manual rotation
+- автоматическая ротация по времени
+- ручная ротация
 
-### Auto password rotation
+### Автоматическая ротация паролей
 
-Passwords will automatically be rotated based on the `rotation_period` configured
-in the static role (minimum of 5 seconds). When requesting credentials for a static
-role, the response will include the time before the next rotation (`ttl`).
+Пароли будут автоматически сменяться в зависимости от `rotation_period`, настроенного в статической роли (минимум 5 секунд). При запросе учетных данных для статической роли в ответе будет указано время до следующей ротации (`ttl`).
 
-Auto-rotation is currently only supported for static roles. The `binddn` account used
-by Stronghold should be rotated using the `rotate-root` endpoint to generate a password
-only Stronghold will know.
+В настоящее время авторотация поддерживается только для статических ролей. Учетная запись `binddn`, используемая Stronghold, должна быть ротирована с помощью вызова `rotate-root`, чтобы сгенерировать пароль, который будет знать только Stronghold.
 
-### Manual rotation
+### Ручная ротация
 
-Static roles can be manually rotated using the `rotate-role` endpoint. When manually
-rotated the rotation period will start over.
+Пароли статической роли могут быть ротированы вручную с помощью вызова `rotate-role`. При ручной ротации период ротации начинается заново.
 
-### Deleting static roles
+### Удаление статических ролей
 
-Passwords are not rotated upon deletion of a static role. The password should be manually
-rotated prior to deleting the role or revoking access to the static role.
+При удалении статической роли пароли не сменяются. Пароль должен быть ротирован вручную перед удалением роли или отзывом доступа к статической роли.
 
-## Dynamic credentials
+## Динамические роли
 
-### Setup
+### Настройка
 
-Dynamic credentials can be configured by calling the `/role/:role_name` endpoint:
+Динамическую роль можно настроить с помощью вызова `/role/:role_name`:
 
 ```bash
 $ d8 stronghold write ldap/role/dynamic-role \
@@ -172,12 +148,11 @@ $ d8 stronghold write ldap/role/dynamic-role \
 
 {% endraw %}
 {% alert level="info" %}
-The `rollback_ldif` argument is optional, but recommended. The statements within `rollback_ldif` will be
-executed if the creation fails for any reason. This ensures any entities are removed in the event of a failure.
+Аргумент `rollback_ldif` необязателен, но рекомендуется. Операции, указанные в `rollback_ldif` будут выполнены, если создание по какой-либо причине завершится неудачей. Это поможет гарантировать, что все объекты будут удалены в случае неудачи.
 {% endalert %}
 {% raw %}
 
-To generate credentials:
+Чтобы сгенерировать учетные данные выполните:
 
 ```bash
 $ d8 stronghold read ldap/creds/dynamic-role
@@ -191,64 +166,49 @@ password               xWMjkIFMerYttEbzfnBVZvhRQGmhpAA0yeTya8fdmDB3LXDzGrjNEPV2b
 username               v_token_testrole_FfH2i1c4dO_1611952635
 ```
 
-The `distinguished_names` field is an array of DNs that are created from the `creation_ldif` statements. If more than
-one LDIF entry is included, the DN from each statement will be included in this field. Each entry in this field
-corresponds to a single LDIF statement. No de-duplication occurs and order is maintained.
+Поле `distinguished_names` представляет собой массив DN, созданных на основе `creation_ldif`. Если включено более одной записи LDIF, в это поле будут включены DN из каждого из . Каждая запись в этом поле соответствует одному LDIF-заявлению. Дедупликации не происходит, и порядок сохраняется.
 
-### LDIF entries
+### Записи LDIF
 
-User account management is provided through LDIF entries. The LDIF entries may be a base64-encoded version of the
-LDIF string. The string will be parsed and validated to ensure that it adheres to LDIF syntax. A good reference
-for proper LDIF syntax can be found [here](https://ldap.com/ldif-the-ldap-data-interchange-format/).
+Управление учетными записями пользователей осуществляется с помощью записей LDIF. Записи LDIF могут представлять собой base64-кодированную версию строки LDIF. Строка будет разобрана и проверена на соответствие синтаксису LDIF. Хороший справочник по правильному синтаксису LDIF можно найти [здесь](https://ldap.com/ldif-the-ldap-data-interchange-format/).
 
-Some important things to remember when crafting your LDIF entries:
+Некоторые важные моменты, которые следует помнить при создании записей LDIF:
 
-- There should not be any trailing spaces on any line, including empty lines
-- Each `modify` block needs to be preceded with an empty line
-- Multiple modifications for a `dn` can be defined in a single `modify` block. Each modification needs to close
-  with a single dash (`-`)
+- В конце строк не должно быть пробелов.
+- Каждый блок `modify` должен предваряться пустой строкой
+- Несколько модификаций для `dn` могут быть определены в одном блоке `modify`. Каждая модификация должна завершаться одним тире (`-`)
 
 ### Active directory (AD)
 
-For Active Directory, there are a few additional details that are important to remember:
+Для Active Directory есть несколько дополнительных деталей, которые важно помнить:
 
-To create a user programmatically in AD, you first `add` a user object and then `modify` that user to provide a
-password and enable the account.
+Чтобы программно создать пользователя в AD, сначала нужно выполнить добавление (`add`) объекта пользователя, и только затем изменить (`modufy`) этого пользователя, чтобы указать пароль и включить учетную запись.
 
-- Passwords in AD are set using the `unicodePwd` field. This must be proceeded by two (2) colons (`::`).
-- When setting a password programmatically in AD, the following criteria must be met:
+- Пароли в AD задаются с помощью поля `unicodePwd`. Перед ним должны стоять два (2) двоеточия (`::`).
+- При программной установке пароля в AD должны быть соблюдены следующие критерии:
 
-  - The password must be enclosed in double quotes (`" "`)
-  - The password must be in [`UTF16LE` format](https://docs.microsoft.com/en-us/openspecs/windows_protocols/ms-adts/6e803168-f140-4d23-b2d3-c3a8ab5917d2)
-  - The password must be `base64`-encoded
-  - Additional details can be found [here](https://docs.microsoft.com/en-us/troubleshoot/windows-server/identity/set-user-password-with-ldifde)
+  - Пароль должен быть заключен в двойные кавычки (`""`)
+  - Пароль должен быть в [формате `UTF16LE`](https://docs.microsoft.com/en-us/openspecs/windows_protocols/ms-adts/6e803168-f140-4d23-b2d3-c3a8ab5917d2)
+  - Пароль должен быть `base64`-кодирован
+  - Дополнительные сведения можно найти [здесь](https://docs.microsoft.com/en-us/troubleshoot/windows-server/identity/set-user-password-with-ldifde)
 
-- Once a user's password has been set, it can be enabled. AD uses the `userAccountControl` field for this purpose:
-  - To enable the account, set `userAccountControl` to `512`
-  - You will likely also want to disable AD's password expiration for this dynamic user account. The
-    `userAccountControl` value for this is: `65536`
-  - `userAccountControl` flags are cumulative, so to set both of the above two flags, add up the two values
-    (`512 + 65536 = 66048`): set `userAccountControl` to `66048`
-  - See [here](https://docs.microsoft.com/en-us/troubleshoot/windows-server/identity/useraccountcontrol-manipulate-account-properties#property-flag-descriptions)
-    for details on `userAccountControl` flags
+- После того как пароль пользователя установлен, его можно включить. Для этого в AD используется поле `userAccountControl`:
+  - Чтобы включить учетную запись, установите `userAccountControl` в `512`
+  - Скорее всего, вы также захотите отключить истечение срока действия пароля AD для этой динамической учетной записи пользователя. Значение `userAccountControl` для этого: `65536`
+  - Флаги `userAccountControl` являются кумулятивными, поэтому, чтобы установить оба вышеуказанных флага, сложите два значения (`512 + 65536 = 66048`): установите `userAccountControl` в `66048`.
+  - Более подробную информацию о флагах `userAccountControl` можно получить [здесь](https://docs.microsoft.com/en-us/troubleshoot/windows-server/identity/useraccountcontrol-manipulate-account-properties#property-flag-descriptions)
 
-`sAMAccountName` is a common field when working with AD users. It is used to provide compatibility with legacy
-Windows NT systems and has a limit of 20 characters. Keep this in mind when defining your `username_template`.
-See [here](https://docs.microsoft.com/en-us/windows/win32/adschema/a-samaccountname) for additional details.
+`sAMAccountName` - распространенное поле при работе с пользователями AD. Оно используется для обеспечения совместимости с устаревшими системами Windows NT и имеет ограничение в 20 символов. Имейте это в виду при определении шаблона `username_template`. Дополнительные сведения см. на [здесь](https://docs.microsoft.com/en-us/windows/win32/adschema/a-samaccountname).
 
-Since the default `username_template` is longer than 20 characters which follows the template of `v_{{.DisplayName}}_{{.RoleName}}_{{random 10}}_{{unix_time}}`, we recommend customising the `username_template` on the role configuration to generate accounts with names less than 20 characters. Please refer to the [username templating document](/docs/concepts/username-templating) for more information.
 
-With regard to adding dynamic users to groups, AD doesn't let you directly modify a user's `memberOf` attribute.
-The `member` attribute of a group and `memberOf` attribute of a user are
-[linked attributes](https://docs.microsoft.com/en-us/windows/win32/ad/linked-attributes). Linked attributes are
-forward link/back link pairs, with the forward link able to be modified. In the case of AD group membership, the
-group's `member` attribute is the forward link. In order to add a newly-created dynamic user to a group, we also
-need to issue a `modify` request to the desired group and update the group membership with the new user.
+Поскольку стандартный `username_template` длиннее 20 символов и соответствует шаблону `v_{{.DisplayName}}_{{.RoleName}}_{{random 10}}_{{unix_time}}`, мы рекомендуем настроить `username_template` в конфигурации роли, чтобы генерировать учетные записи с именами менее 20 символов.
 
-#### Active directory LDIF example
 
-The various `*_ldif` parameters are templates that use the [go template](https://golang.org/pkg/text/template/)
-language. A complete LDIF example for creating an Active Directory user account is provided here for reference:
+AD не позволяет напрямую изменять атрибут `memberOf` пользователя. Атрибут `member` группы и атрибут `memberOf` пользователя являются [связанными атрибутами](https://docs.microsoft.com/en-us/windows/win32/ad/linked-attributes). Связанные атрибуты представляют собой пары прямая ссылка/обратная ссылка, причем прямая ссылка может быть изменена. В случае членства в группе AD атрибут `member` группы является прямой ссылкой. Чтобы добавить вновь созданного динамического пользователя в группу, нам также необходимо отправить запрос `modify` в нужную группу и добавить туда пользователя.
+
+#### Пример LDIF для Active directory
+
+Различные параметры `*_ldif` представляют собой шаблоны, использующие язык [go template](https://golang.org/pkg/text/template/). Полный пример LDIF для создания учетной записи пользователя Active Directory приведен здесь для справки:
 
 ```ldif
 dn: CN={{.Username}},OU=Stronghold,DC=adtesting,DC=lab
@@ -276,19 +236,13 @@ member: CN={{.Username}},OU=Stronghold,DC=adtesting,DC=lab
 -
 ```
 
-## Service account Check-Out
+## Ротация паролей для списков учетных записей
 
-Service account check-out provides a library of service accounts that can be checked out
-by a person or by machines. Stronghold will automatically rotate the password each time a
-service account is checked in. Service accounts can be voluntarily checked in, or Stronghold
-will check them in when their lending period (or, "ttl", in Stronghold's language) ends.
+Stronghold может автоматически менять пароли для группы учетных записей. Операция по ротации пароля может быть выполнена вручную, или Stronghold выполнит ее, когда истечет TTL от предыдущей смены.
 
-The service account check-out functionality works with various [schemas](/api-docs/secret/ldap#schema),
-including OpenLDAP, Active Directory, and RACF. In the following usage example, the secrets
-engine is configured to manage a library of service accounts in an Active Directory instance.
+Функционал работает с различными [схемами](#%D1%81%D1%85%D0%B5%D0%BC%D1%8B-ldap), включая OpenLDAP, Active Directory и RACF. В следующем примере рассмотрим вариант с Active Directory.
 
-First we'll need to enable the LDAP secrets engine and tell it how to securely connect
-to an AD server.
+Сначала нам нужно включить механизм секретов LDAP и указать ему, как подключиться к серверу AD.
 
 ```shell-session
 $ d8 stronghold secrets enable ldap
@@ -301,7 +255,7 @@ $ d8 stronghold write ldap/config \
     userdn='dc=example,dc=com'
 ```
 
-Our next step is to designate a set of service accounts for check-out.
+Далее настроим список учетных записей, для которых требуется выполнинять ротацию пароля.
 
 ```shell-session
 $ d8 stronghold write ldap/library/accounting-team \
@@ -311,16 +265,9 @@ $ d8 stronghold write ldap/library/accounting-team \
     disable_check_in_enforcement=false
 ```
 
-In this example, the service account names of `fizz@example.com` and `buzz@example.com` have
-already been created on the remote AD server. They've been set aside solely for Stronghold to handle.
-The `ttl` is how long each check-out will last before Stronghold checks in a service account,
-rotating its password during check-in. The `max_ttl` is the maximum amount of time it can live
-if it's renewed. These default to `24h`, and both use [duration format strings](/docs/concepts/duration-format).
-Also by default, a service account must be checked in by the same Stronghold entity or client token that
-checked it out. However, if this behavior causes problems, set `disable_check_in_enforcement=true`.
+В этом примере имена учетных записей служб `fizz@example.com` и `buzz@example.com` уже были созданы на удаленном сервере AD. `ttl` - это время, через которое Stronghold повторно выполнить ротацию пароля учетной записи. `max_ttl` - максимальное время, которое может действовать пароль после ротации. По умолчанию значения обоихпараметров равны `24h`. Также по умолчанию учетная запись службы должна быть зарегистрирована тем же субъектом Stronghold или клиентским токеном, который выполняет ротацию. Однако если такое поведение вызывает проблемы, установите `disable_check_in_enforcement=true`.
 
-When a library of service accounts has been created, view their status at any time to see if they're
-available or checked out.
+После создания списка учетных записей вы можете в любой момент просмотреть их статус.
 
 ```shell-session
 $ d8 stronghold read ldap/library/accounting-team/status
@@ -330,7 +277,7 @@ buzz@example.com    map[available:true]
 fizz@example.com    map[available:true]
 ```
 
-To check out any service account that's available, simply execute:
+Чтобы выполнить ротацию паролей, просто выполните команду:
 
 ```shell-session
 $ d8 stronghold write -f ldap/library/accounting-team/check-out
@@ -343,8 +290,7 @@ password                ?@09AZKh03hBORZPJcTDgLfntlHqxLy29tcQjPVThzuwWAx/Twx4a2Zc
 service_account_name    fizz@example.com
 ```
 
-If the default `ttl` for the check-out is higher than needed, set the check-out to last
-for a shorter time by using:
+Если стандартное значение `ttl` больше, чем требуется, установите более короткое время время с помощью команды:
 
 ```shell-session
 $ d8 stronghold write ldap/library/accounting-team/check-out ttl=30m
@@ -357,23 +303,7 @@ password                ?@09AZerLLuJfEMbRqP+3yfQYDSq6laP48TCJRBJaJu/kDKLsq9WxL9s
 service_account_name    buzz@example.com
 ```
 
-This can be a nice way to say, "Although I _can_ have a check-out for 24 hours, if I
-haven't checked it in after 30 minutes, I forgot or I'm a dead instance, so you can just
-check it back in."
-
-If no service accounts are available for check-out, Stronghold will return a 400 Bad Request.
-
-```shell-session
-$ d8 stronghold write -f ldap/library/accounting-team/check-out
-Error writing data to ldap/library/accounting-team/check-out: Error making API request.
-
-URL: POST http://localhost:8200/v1/ldap/library/accounting-team/check-out
-Code: 400. Errors:
-
-* No service accounts available for check-out.
-```
-
-To extend a check-out, renew its lease.
+Вы можете продлить аренду паролей для набора учетных записей.
 
 ```shell-session
 $ d8 stronghold lease renew ldap/library/accounting-team/check-out/0C2wmeaDmsToVFc0zDiX9cMq
@@ -384,62 +314,15 @@ lease_duration     10h
 lease_renewable    true
 ```
 
-Renewing a check-out means its current password will live longer, since passwords are rotated
-anytime a password is _checked in_ either by a caller, or by Stronghold because the check-out `ttl`
-ends.
+В этом случае текущиие пароли для аккаунтов будет жить дольше, так как мы отрочим выполнение ротации.
 
-To check a service account back in for others to use, call:
+## Политика паролей LDAP
 
-```shell-session
-$ d8 stronghold write -f ldap/library/accounting-team/check-in
-Key          Value
----          -----
-check_ins    [fizz@example.com]
-```
+Механизм секретов LDAP не хэширует и не шифрует пароли перед изменением значений в LDAP. Такое поведение может привести к тому, что в LDAP будут храниться пароли в открытом виде.
 
-Most of the time this will just work, but if multiple service accounts are checked out by the same
-caller, Stronghold will need to know which one(s) to check in.
+Чтобы избежать хранения паролей в открытом виде, на сервере LDAP должна быть настроена политика паролей LDAP (ppolicy, не путать с политикой паролей Stronghold). Политика ppolicy может применять такие правила, как хэширование паролей по умолчанию.
 
-```shell-session
-$ d8 stronghold write ldap/library/accounting-team/check-in service_account_names=fizz@example.com
-Key          Value
----          -----
-check_ins    [fizz@example.com]
-```
-
-To perform a check-in, Stronghold verifies that the caller _should_ be able to check in a given service account.
-To do this, Stronghold looks for either the same entity ID
-used to check out the service account, or the same client token.
-
-If a caller is unable to check in a service account, or simply doesn't try,
-Stronghold will check it back in automatically when the `ttl` expires. However, if that is too long,
-service accounts can be forcibly checked in by a highly privileged user through:
-
-```shell-session
-$ d8 stronghold write -f ldap/library/manage/accounting-team/check-in
-Key          Value
----          -----
-check_ins    [fizz@example.com]
-```
-
-Or, alternatively, revoking the secret's lease has the same effect.
-
-```shell-session
-$ d8 stronghold lease revoke ldap/library/accounting-team/check-out/PvBVG0m7pEg2940Cb3Jw3KpJ
-All revocation operations queued successfully!
-```
-
-## LDAP password policy
-
-The LDAP secret engine does not hash or encrypt passwords prior to modifying
-values in LDAP. This behavior can cause plaintext passwords to be stored in LDAP.
-
-To avoid having plaintext passwords stored, the LDAP server should be configured
-with an LDAP password policy (ppolicy, not to be confused with an Stronghold password
-policy). A ppolicy can enforce rules such as hashing plaintext passwords by default.
-
-The following is an example of an LDAP password policy to enforce hashing on the
-data information tree (DIT) `dc=example,dc=com`:
+Ниже приведен пример политики паролей LDAP для применения хэширования для `dc=example,dc=com`:
 
 ```
 dn: cn=module{0},cn=config
@@ -457,9 +340,3 @@ olcPPolicyForwardUpdates: FALSE
 olcPPolicyHashCleartext: TRUE
 olcPPolicyUseLockout: TRUE
 ```
-
-## API
-
-The LDAP secrets engine has a full HTTP API. Please see the [LDAP secrets engine API docs](/api-docs/secret/ldap)
-for more details.
-{% endraw %}

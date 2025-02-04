@@ -9,7 +9,7 @@ documentation_state: prod
 {%- for module in modulesData %}
   {%- assign moduleConfigs = module[1]  %}
   {%- for moduleConfig in moduleConfigs %}
-<h2>{{ module[0] }}</h2>  
+<h2>{{ module[0] }}</h2>
 <div markdown="0">
    {{ moduleConfig[1] | format_module_configuration: module[0] }}
 </div>

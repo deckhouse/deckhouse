@@ -21,9 +21,9 @@ v3 protocol, including OpenLDAP, Active Directory, and IBM Resource Access Contr
 Facility (RACF).
 
 The secrets engine has three primary features:
-- [Static Credentials](/docs/secrets/ldap#static-credentials)
-- [Dynamic Credentials](/docs/secrets/ldap#dynamic-credentials)
-- [Service Account Check-Out](/docs/secrets/ldap#service-account-check-out)
+- [Static Credentials](#static-credentials)
+- [Dynamic Credentials](#dynamic-credentials)
+- [Service Account Check-Out](#service-account-check-out)
 
 ## Setup
 
