@@ -16,8 +16,8 @@
   {{- if and $.registry.registryMode (ne $.registry.registryMode "Direct") }}
 
 # Gracefull pull and update sandbox_image
-if [ "$FIRST_BASHIBLE_RUN" != "yes" ]; then
-  exit 0
+if [ "$FIRST_BASHIBLE_RUN" == "yes" ]; then
+  exit
 fi
 
 _on_containerd_config_changed() {
