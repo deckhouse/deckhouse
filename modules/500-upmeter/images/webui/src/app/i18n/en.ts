@@ -201,9 +201,9 @@ const langPack: LangPack = {
         reasonUnknown: REASON_APISERVER_UNAVAILABLE,
         reasonNodata: REASON_AGENTS_STOPPED,
       },
-      "aggregating-proxy": {
-        title: "Aggregating-proxy",
-        description: "An aggregating and caching proxy that reduces the load on Prometheus and aggregate both main in single datasource.",
+      "metrics-proxy": {
+        title: "Metrics Proxy",
+        description: "An aggregating and caching metrics proxy that reduces the load on Prometheus and aggregates both main Prometheus instances in single datasource.",
         reasonUp: "at least one Pod is in <code>Ready</code> state, and the aggregating proxy API responds correctly",
         reasonDown: "either no ready Pods present, or aggregating proxy responds with invalid data",
         reasonUnknown: REASON_APISERVER_UNAVAILABLE,
