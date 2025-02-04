@@ -46,18 +46,24 @@ shell:
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
 final: false
 from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
+  add: /src
+  to: /src
+  before: install
 mount:
-  - fromPath: ~/go-pkg-cache
-    to: /go/pkg
+- fromPath: ~/go-pkg-cache
+  to: /go/pkg
 shell:
-  beforeInstall:
-    {{- include "alpine packages proxy" . | nindent 2 }}
-    - apk add --no-cache make bash
   install:
-    - cd /src
-    - export VERSION={{ $value.ccm.azure }}
-    - make bin/azure-cloud-controller-manager
-    - chown 64535:64535 /src/bin/azure-cloud-controller-manager
-    - chmod 0755 /src/bin/azure-cloud-controller-manager
+  - cd /src
+  - export GOPROXY={{ $.GOPROXY }}
+  - go mod download
+  setup:
+  - cd /src
+  - export VERSION={{ $value.ccm.azure }}
+  - go build -a -o bin/azure-cloud-controller-manager $(shell cat .pkg_config) ./cmd/cloud-controller-manager
+  - chown 64535:64535 /src/bin/azure-cloud-controller-manager
+  - chmod 0755 /src/bin/azure-cloud-controller-manager
   {{- end }}
 {{- end }}
