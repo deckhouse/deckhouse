@@ -453,18 +453,7 @@ var ErrPreApplyCheckIsFailed = errors.New("pre apply check is failed")
 func (r *deckhouseReleaseReconciler) PreApplyReleaseCheck(ctx context.Context, dr *v1alpha1.DeckhouseRelease, task *releaseUpdater.Task) error {
 	metricLabels := releaseUpdater.NewReleaseMetricLabels(dr)
 
-	us := r.updateSettings.Get()
-
-	dus := &releaseUpdater.Settings{
-		NotificationConfig:     us.Update.NotificationConfig,
-		DisruptionApprovalMode: us.Update.DisruptionApprovalMode,
-		// if we have wrong mode - autopatch
-		Mode:    v1alpha1.ParseUpdateMode(us.Update.Mode),
-		Windows: us.Update.Windows,
-		Subject: releaseUpdater.SubjectDeckhouse,
-	}
-
-	timeResult := r.DeployTimeCalculate(ctx, dr, task, dus, metricLabels)
+	timeResult := r.DeployTimeCalculate(ctx, dr, task, metricLabels)
 
 	if metricLabels[releaseUpdater.ManualApprovalRequired] == "true" {
 		metricLabels[releaseUpdater.ReleaseQueueDepth] = strconv.Itoa(task.QueueDepth)
@@ -532,9 +521,20 @@ type TimeResult struct {
 // - Notify
 // - Window
 // - Manual Approved
-func (r *deckhouseReleaseReconciler) DeployTimeCalculate(ctx context.Context, dr v1alpha1.Release, task *releaseUpdater.Task, us *releaseUpdater.Settings, metricLabels releaseUpdater.MetricLabels) *TimeResult {
-	releaseNotifier := releaseUpdater.NewReleaseNotifier(us)
-	timeChecker := releaseUpdater.NewDeployTimeService(r.dc, us, r.isDeckhousePodReady, r.logger)
+func (r *deckhouseReleaseReconciler) DeployTimeCalculate(ctx context.Context, dr v1alpha1.Release, task *releaseUpdater.Task, metricLabels releaseUpdater.MetricLabels) *TimeResult {
+	us := r.updateSettings.Get()
+
+	dus := &releaseUpdater.Settings{
+		NotificationConfig:     us.Update.NotificationConfig,
+		DisruptionApprovalMode: us.Update.DisruptionApprovalMode,
+		// if we have wrong mode - autopatch
+		Mode:    v1alpha1.ParseUpdateMode(us.Update.Mode),
+		Windows: us.Update.Windows,
+		Subject: releaseUpdater.SubjectDeckhouse,
+	}
+
+	releaseNotifier := releaseUpdater.NewReleaseNotifier(dus)
+	timeChecker := releaseUpdater.NewDeployTimeService(r.dc, dus, r.isDeckhousePodReady, r.logger)
 
 	var deployTimeResult *releaseUpdater.DeployTimeResult
 
@@ -565,7 +565,7 @@ func (r *deckhouseReleaseReconciler) DeployTimeCalculate(ctx context.Context, dr
 	}
 
 	// for minor release we must check additional conditions
-	checker := releaseUpdater.NewPreApplyChecker(us, r.logger)
+	checker := releaseUpdater.NewPreApplyChecker(dus, r.logger)
 	reasons := checker.MetRequirements(&dr)
 	if len(reasons) > 0 {
 		metricLabels.SetTrue(releaseUpdater.DisruptionApprovalRequired)
