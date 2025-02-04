@@ -1,8 +1,14 @@
+Subject: [PATCH] patch
+---
+Index: go.mod
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
 diff --git a/go.mod b/go.mod
-index 6e0608b4..c78802bb 100644
---- a/go.mod
-+++ b/go.mod
-@@ -38,7 +38,7 @@ require (
+--- a/go.mod	(revision 3a4fb48dced16a0c29027bc6b678e3c816a06e83)
++++ b/go.mod	(revision dabf1a60bc8f6eb5e76724d59e8ccacaa01af090)
+@@ -38,7 +38,7 @@
  	k8s.io/cloud-provider v0.29.5
  	k8s.io/cloud-provider-gcp/crd v0.0.0-20231206221110-9fb2d417fa43
  	k8s.io/cloud-provider-gcp/providers v0.0.0-00010101000000-000000000000
@@ -11,11 +17,15 @@ index 6e0608b4..c78802bb 100644
  )
  
  require (
+Index: go.sum
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
 diff --git a/go.sum b/go.sum
-index 99d44201..2497ae9c 100644
---- a/go.sum
-+++ b/go.sum
-@@ -562,8 +562,8 @@ k8s.io/kube-openapi v0.0.0-20231010175941-2dd684a91f00 h1:aVUu9fTY98ivBPKR9Y5w/A
+--- a/go.sum	(revision 3a4fb48dced16a0c29027bc6b678e3c816a06e83)
++++ b/go.sum	(revision dabf1a60bc8f6eb5e76724d59e8ccacaa01af090)
+@@ -562,8 +562,8 @@
  k8s.io/kube-openapi v0.0.0-20231010175941-2dd684a91f00/go.mod h1:AsvuZPBlUDVuCdzJ87iajxtXuR9oktsTctW/R9wwouA=
  k8s.io/kubelet v0.29.5 h1:tYYyc2JcrDt8jFYTsKpgcIpp+S5a/nm85CY4liosprw=
  k8s.io/kubelet v0.29.5/go.mod h1:eWJR0OtRRkLwKEYjsQXcTyTZlSfgR3Py1xJVFa0ISTk=
