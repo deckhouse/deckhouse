@@ -43,7 +43,7 @@ index 09f23e3..e2381bf 100644
 +	case "KSV110", "AVD-KSV-0110":
 +		return getResourceTargetName(resource) == "default/service-kubernetes"
 +	}
-+	return checkForSystemNsAndIgnoringCheck(id, resource.GetNamespace())
++	return false
 +}
 +
 +func checkForSystemNsAndIgnoringCheck(id string, namespace string) bool {
