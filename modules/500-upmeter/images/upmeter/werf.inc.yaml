@@ -53,6 +53,14 @@ image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
+  add: /src/upmeter/pkg/db/migrations/agent
+  to: /data/migrations/agent
+  before: setup
+- image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
+  add: /src/upmeter/pkg/db/migrations/server
+  to: /data/migrations/server
+  before: setup
+- image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
   add: /src/migrate/migrate
   to: /migrate
   before: setup
