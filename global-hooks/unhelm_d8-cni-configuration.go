@@ -30,6 +30,7 @@ func unhelmD8CNIConfiguration(input *go_hook.HookInput) error {
 			"annotations": map[string]any{
 				"meta.helm.sh/release-name":      nil,
 				"meta.helm.sh/release-namespace": nil,
+				"helm.sh/resource-policy":        "keep",
 			},
 			"labels": map[string]interface{}{
 				"app.kubernetes.io/managed-by": nil,
