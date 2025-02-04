@@ -5,6 +5,10 @@ metadata:
 spec:
   description: This is an example from the Deckhouse documentation.
   projectTemplateName: default
+  resourceLabels:
+    mykey: myvalue
+  resourceAnnotations:
+    mykey: myvalue
   parameters:
     extendedMonitoringEnabled: true
     podSecurityProfile: Baseline

@@ -14,28 +14,6 @@ status: {}
 
 ---
 apiVersion: deckhouse.io/v1alpha1
-kind: OperationPolicy
-metadata:
-  labels:
-    heritage: multitenancy-manager
-    projects.deckhouse.io/project: test
-    projects.deckhouse.io/project-template: without_ns
-  name: required-requests-9f86d081
-  namespace: test
-spec:
-  match:
-    namespaceSelector:
-      labelSelector:
-        matchLabels:
-          kubernetes.io/metadata.name: test
-  policies:
-    requiredResources:
-      requests:
-      - cpu
-      - memory
-
----
-apiVersion: deckhouse.io/v1alpha1
 kind: AuthorizationRule
 metadata:
   labels:
@@ -110,3 +88,25 @@ spec:
   policyTypes:
   - Ingress
   - Egress
+
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: OperationPolicy
+metadata:
+  labels:
+    heritage: multitenancy-manager
+    projects.deckhouse.io/project: test
+    projects.deckhouse.io/project-template: without_ns
+  name: required-requests-9f86d081
+  namespace: test
+spec:
+  match:
+    namespaceSelector:
+      labelSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: test
+  policies:
+    requiredResources:
+      requests:
+      - cpu
+      - memory

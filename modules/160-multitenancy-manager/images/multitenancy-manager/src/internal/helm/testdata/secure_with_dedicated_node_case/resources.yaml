@@ -1,21 +1,5 @@
 
 ---
-apiVersion: deckhouse.io/v1alpha1
-kind: AuthorizationRule
-metadata:
-  labels:
-    heritage: multitenancy-manager
-    projects.deckhouse.io/project: test
-    projects.deckhouse.io/project-template: secure-with-dedicated-nodes
-  name: user-gmail.com
-  namespace: test
-spec:
-  accessLevel: Admin
-  subjects:
-  - kind: User
-    name: user@gmail.com
-
----
 apiVersion: v1
 kind: ResourceQuota
 metadata:
@@ -167,3 +151,19 @@ metadata:
     projects.deckhouse.io/project-template: secure-with-dedicated-nodes
     security.deckhouse.io/pod-policy: baseline
   name: test
+
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: AuthorizationRule
+metadata:
+  labels:
+    heritage: multitenancy-manager
+    projects.deckhouse.io/project: test
+    projects.deckhouse.io/project-template: secure-with-dedicated-nodes
+  name: user-gmail.com
+  namespace: test
+spec:
+  accessLevel: Admin
+  subjects:
+  - kind: User
+    name: user@gmail.com

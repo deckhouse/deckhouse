@@ -141,9 +141,6 @@ func (m *Manager) updateProjectStatus(ctx context.Context, project *v1alpha2.Pro
 				if state == v1alpha2.ProjectStateDeploying {
 					// clear conditions before reconcile
 					project.Status.Conditions = []v1alpha2.Condition{}
-					// clear resources
-					project.Status.Skipped = []v1alpha2.ResourceObject{}
-					project.Status.Rendered = []v1alpha2.ResourceObject{}
 				}
 			}
 

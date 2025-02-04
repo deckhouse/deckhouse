@@ -48,6 +48,10 @@ func newPostRenderer(project *v1alpha2.Project, versions map[string]struct{}, lo
 // Run post renderer which will remove all namespaces except the project one
 // or will add a project namespace if it does not exist in manifests
 func (r *postRenderer) Run(renderedManifests *bytes.Buffer) (modifiedManifests *bytes.Buffer, err error) {
+	// clear resources
+	r.project.Status.Rendered = []v1alpha2.ResourceObject{}
+	r.project.Status.Skipped = []v1alpha2.ResourceObject{}
+
 	var coreFound bool
 	builder := strings.Builder{}
 	for _, manifest := range releaseutil.SplitManifests(renderedManifests.String()) {
@@ -77,15 +81,32 @@ func (r *postRenderer) Run(renderedManifests *bytes.Buffer) (modifiedManifests *
 			}
 		}
 
-		// inject multitenancy-manager labels
+		// inject multitenancy-manager and project labels
 		labels := object.GetLabels()
 		if len(labels) == 0 {
-			labels = make(map[string]string, 3)
+			labels = make(map[string]string)
 		}
 		labels[v1alpha2.ResourceLabelHeritage] = v1alpha2.ResourceHeritageMultitenancy
 		labels[v1alpha2.ResourceLabelProject] = r.project.Name
 		labels[v1alpha2.ResourceLabelTemplate] = r.project.Spec.ProjectTemplateName
+		if len(r.project.Spec.ResourceLabels) != 0 {
+			for k, v := range r.project.Spec.ResourceLabels {
+				labels[k] = v
+			}
+		}
 		object.SetLabels(labels)
+
+		// inject project annotations
+		if len(r.project.Spec.ResourceAnnotations) != 0 {
+			annotations := object.GetAnnotations()
+			if len(annotations) == 0 {
+				annotations = map[string]string{}
+			}
+			for k, v := range r.project.Spec.ResourceAnnotations {
+				annotations[k] = v
+			}
+			object.SetAnnotations(annotations)
+		}
 
 		if object.GetKind() != "Namespace" {
 			object.SetNamespace(r.project.Name)
@@ -134,6 +155,19 @@ func (r *postRenderer) newNamespace(name string) []byte {
 			},
 		},
 	}
+
+	// set project labels
+	if len(r.project.Spec.ResourceLabels) > 0 {
+		for k, v := range r.project.Spec.ResourceLabels {
+			obj.Labels[k] = v
+		}
+	}
+
+	// set project annotations
+	if len(r.project.Spec.ResourceAnnotations) > 0 {
+		obj.Annotations = r.project.Spec.ResourceAnnotations
+	}
+
 	data, _ := yaml.Marshal(obj)
 	return data
 }

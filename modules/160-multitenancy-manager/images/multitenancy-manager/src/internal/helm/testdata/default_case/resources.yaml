@@ -1,10 +1,50 @@
 
 ---
+apiVersion: deckhouse.io/v1alpha1
+kind: AuthorizationRule
+metadata:
+  annotations:
+    mykey: myvalue
+  labels:
+    heritage: multitenancy-manager
+    mykey: myvalue
+    projects.deckhouse.io/project: test
+    projects.deckhouse.io/project-template: default
+  name: user-gmail.com
+  namespace: test
+spec:
+  accessLevel: Admin
+  subjects:
+  - kind: User
+    name: user@gmail.com
+
+---
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  annotations:
+    mykey: myvalue
+  labels:
+    heritage: multitenancy-manager
+    mykey: myvalue
+    projects.deckhouse.io/project: test
+    projects.deckhouse.io/project-template: default
+  name: all-pods
+  namespace: test
+spec:
+  hard:
+    limits.memory: 15Gi
+    requests.cpu: 1
+
+---
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
+  annotations:
+    mykey: myvalue
   labels:
     heritage: multitenancy-manager
+    mykey: myvalue
     projects.deckhouse.io/project: test
     projects.deckhouse.io/project-template: default
   name: isolated
@@ -49,8 +89,11 @@ spec:
 apiVersion: deckhouse.io/v1alpha1
 kind: OperationPolicy
 metadata:
+  annotations:
+    mykey: myvalue
   labels:
     heritage: multitenancy-manager
+    mykey: myvalue
     projects.deckhouse.io/project: test
     projects.deckhouse.io/project-template: default
   name: required-requests-9f86d081
@@ -71,41 +114,13 @@ spec:
 apiVersion: v1
 kind: Namespace
 metadata:
+  annotations:
+    mykey: myvalue
   labels:
     extended-monitoring.deckhouse.io/enabled: ""
     heritage: multitenancy-manager
+    mykey: myvalue
     projects.deckhouse.io/project: test
     projects.deckhouse.io/project-template: default
     security.deckhouse.io/pod-policy: baseline
   name: test
-
----
-apiVersion: deckhouse.io/v1alpha1
-kind: AuthorizationRule
-metadata:
-  labels:
-    heritage: multitenancy-manager
-    projects.deckhouse.io/project: test
-    projects.deckhouse.io/project-template: default
-  name: user-gmail.com
-  namespace: test
-spec:
-  accessLevel: Admin
-  subjects:
-  - kind: User
-    name: user@gmail.com
-
----
-apiVersion: v1
-kind: ResourceQuota
-metadata:
-  labels:
-    heritage: multitenancy-manager
-    projects.deckhouse.io/project: test
-    projects.deckhouse.io/project-template: default
-  name: all-pods
-  namespace: test
-spec:
-  hard:
-    limits.memory: 15Gi
-    requests.cpu: 1
