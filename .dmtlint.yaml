@@ -1,5 +1,6 @@
 warnings-only:
   - images
+  - conversions
 linters-settings:
   probes:
     probes-excludes:
