@@ -86,25 +86,32 @@ func (r *postRenderer) Run(renderedManifests *bytes.Buffer) (modifiedManifests *
 		if len(labels) == 0 {
 			labels = make(map[string]string)
 		}
-		labels[v1alpha2.ResourceLabelHeritage] = v1alpha2.ResourceHeritageMultitenancy
-		labels[v1alpha2.ResourceLabelProject] = r.project.Name
-		labels[v1alpha2.ResourceLabelTemplate] = r.project.Spec.ProjectTemplateName
-		if len(r.project.Spec.ResourceLabels) != 0 {
+
+		// inject project labels
+		if len(r.project.Spec.ResourceLabels) > 0 {
 			for k, v := range r.project.Spec.ResourceLabels {
 				labels[k] = v
 			}
 		}
+
+		// inject multitenancy-manager
+		labels[v1alpha2.ResourceLabelHeritage] = v1alpha2.ResourceHeritageMultitenancy
+		labels[v1alpha2.ResourceLabelProject] = r.project.Name
+		labels[v1alpha2.ResourceLabelTemplate] = r.project.Spec.ProjectTemplateName
+
 		object.SetLabels(labels)
 
 		// inject project annotations
 		if len(r.project.Spec.ResourceAnnotations) != 0 {
 			annotations := object.GetAnnotations()
 			if len(annotations) == 0 {
-				annotations = map[string]string{}
+				annotations = make(map[string]string)
 			}
+
 			for k, v := range r.project.Spec.ResourceAnnotations {
 				annotations[k] = v
 			}
+
 			object.SetAnnotations(annotations)
 		}
 
@@ -147,12 +154,8 @@ func (r *postRenderer) newNamespace(name string) []byte {
 			Kind:       "Namespace",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name: name,
-			Labels: map[string]string{
-				v1alpha2.ResourceLabelProject:  r.project.Name,
-				v1alpha2.ResourceLabelTemplate: r.project.Spec.ProjectTemplateName,
-				v1alpha2.ResourceLabelHeritage: v1alpha2.ResourceHeritageMultitenancy,
-			},
+			Name:   name,
+			Labels: make(map[string]string),
 		},
 	}
 
@@ -162,6 +165,10 @@ func (r *postRenderer) newNamespace(name string) []byte {
 			obj.Labels[k] = v
 		}
 	}
+
+	obj.Labels[v1alpha2.ResourceLabelHeritage] = v1alpha2.ResourceHeritageMultitenancy
+	obj.Labels[v1alpha2.ResourceLabelProject] = r.project.Name
+	obj.Labels[v1alpha2.ResourceLabelTemplate] = r.project.Spec.ProjectTemplateName
 
 	// set project annotations
 	if len(r.project.Spec.ResourceAnnotations) > 0 {

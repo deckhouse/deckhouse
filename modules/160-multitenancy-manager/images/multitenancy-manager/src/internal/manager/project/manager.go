@@ -164,6 +164,8 @@ func (m *Manager) Handle(ctx context.Context, project *v1alpha2.Project) (ctrl.R
 		}
 	}
 
+	m.logger.Info("DEBUG: length of rendered resources", len(project.Status.Rendered))
+
 	// set deployed status
 	m.logger.Info("setting deployed status for the project", "project", project.Name, "projectTemplate", projectTemplate.Name)
 	cond = v1alpha2.NewCondition(v1alpha2.ConditionTypeProjectResourcesUpgraded, v1alpha2.ConditionTypeTrue, "")
