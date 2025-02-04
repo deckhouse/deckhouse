@@ -32,3 +32,17 @@ func (sp StatusPatch) MarshalJSON() ([]byte, error) {
 
 	return json.Marshal(m)
 }
+
+type ByVersion[R v1alpha1.Release] []R
+
+func (a ByVersion[R]) Len() int {
+	return len(a)
+}
+
+func (a ByVersion[R]) Swap(i, j int) {
+	a[i], a[j] = a[j], a[i]
+}
+
+func (a ByVersion[R]) Less(i, j int) bool {
+	return a[i].GetVersion().LessThan(a[j].GetVersion())
+}

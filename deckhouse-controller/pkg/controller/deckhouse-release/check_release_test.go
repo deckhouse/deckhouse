@@ -22,7 +22,7 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"slices"
+	"sort"
 	"strconv"
 	"testing"
 
@@ -33,6 +33,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
+	releaseUpdater "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/releaseupdater"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 )
 
@@ -614,10 +615,7 @@ func TestSort(t *testing.T) {
 
 	releases := []*v1alpha1.DeckhouseRelease{s3, s4, s1, s5, s2}
 
-	// reverse sorting
-	slices.SortFunc(releases, func(a *v1alpha1.DeckhouseRelease, b *v1alpha1.DeckhouseRelease) int {
-		return -a.GetVersion().Compare(b.GetVersion())
-	})
+	sort.Sort(sort.Reverse(releaseUpdater.ByVersion[*v1alpha1.DeckhouseRelease](releases)))
 
 	for i, rl := range releases {
 		if rl.GetVersion().String() != "1.29."+strconv.FormatInt(int64(4-i), 10) {

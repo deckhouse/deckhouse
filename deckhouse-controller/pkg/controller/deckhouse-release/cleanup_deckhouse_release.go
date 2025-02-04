@@ -20,7 +20,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"slices"
+	"sort"
 	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -53,10 +53,7 @@ func (r *deckhouseReleaseReconciler) cleanupDeckhouseRelease(ctx context.Context
 		pointerReleases = append(pointerReleases, &release)
 	}
 
-	// reverse sorting
-	slices.SortFunc(pointerReleases, func(a *v1alpha1.DeckhouseRelease, b *v1alpha1.DeckhouseRelease) int {
-		return -a.GetVersion().Compare(b.GetVersion())
-	})
+	sort.Sort(sort.Reverse(releaseUpdater.ByVersion[*v1alpha1.DeckhouseRelease](pointerReleases)))
 
 	now := r.dc.GetClock().Now()
 

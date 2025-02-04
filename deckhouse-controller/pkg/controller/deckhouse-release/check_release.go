@@ -26,11 +26,17 @@ import (
 	"log/slog"
 	"path"
 	"regexp"
-	"slices"
 	"sort"
 	"time"
 
 	"github.com/Masterminds/semver/v3"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
+	releaseUpdater "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/releaseupdater"
+	"github.com/deckhouse/deckhouse/go_lib/dependency"
+	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
+	"github.com/deckhouse/deckhouse/go_lib/libapi"
+	"github.com/deckhouse/deckhouse/pkg/log"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/iancoleman/strcase"
 	"github.com/pkg/errors"
@@ -41,13 +47,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-
-	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
-	"github.com/deckhouse/deckhouse/go_lib/dependency"
-	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
-	"github.com/deckhouse/deckhouse/go_lib/libapi"
-	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 const (
@@ -130,10 +129,7 @@ func (r *deckhouseReleaseReconciler) checkDeckhouseRelease(ctx context.Context) 
 		pointerReleases = append(pointerReleases, &r)
 	}
 
-	// reverse sorting
-	slices.SortFunc(pointerReleases, func(a *v1alpha1.DeckhouseRelease, b *v1alpha1.DeckhouseRelease) int {
-		return -a.GetVersion().Compare(b.GetVersion())
-	})
+	sort.Sort(sort.Reverse(releaseUpdater.ByVersion[*v1alpha1.DeckhouseRelease](pointerReleases)))
 
 	// restore current deployed release if no deployed releases found
 	if currentDeployedRelease == nil {

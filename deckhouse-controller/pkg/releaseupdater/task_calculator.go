@@ -21,6 +21,7 @@ import (
 	"errors"
 	"fmt"
 	"slices"
+	"sort"
 	"strings"
 
 	"github.com/Masterminds/semver/v3"
@@ -105,9 +106,7 @@ func (p *TaskCalculator) CalculatePendingReleaseTask(ctx context.Context, releas
 		}, nil
 	}
 
-	slices.SortFunc(releases, func(a, b v1alpha1.Release) int {
-		return a.GetVersion().Compare(b.GetVersion())
-	})
+	sort.Sort(ByVersion[v1alpha1.Release](releases))
 
 	forcedReleaseInfo := p.getLatestForcedReleaseInfo(releases)
 
