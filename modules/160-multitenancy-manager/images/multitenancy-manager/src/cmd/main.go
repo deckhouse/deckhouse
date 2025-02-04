@@ -37,14 +37,14 @@ import (
 	metrics "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
-	"controller/pkg/apis/deckhouse.io/v1alpha1"
-	"controller/pkg/apis/deckhouse.io/v1alpha2"
-	projectcontroller "controller/pkg/controller/project"
-	templatecontroller "controller/pkg/controller/template"
-	"controller/pkg/helm"
-	namespacewebhook "controller/pkg/webhook/namespace"
-	projectwebhook "controller/pkg/webhook/project"
-	templatewebhook "controller/pkg/webhook/template"
+	"controller/apis/deckhouse.io/v1alpha1"
+	"controller/apis/deckhouse.io/v1alpha2"
+	projectcontroller "controller/internal/controller/project"
+	templatecontroller "controller/internal/controller/template"
+	"controller/internal/helm"
+	namespacewebhook "controller/internal/webhook/namespace"
+	projectwebhook "controller/internal/webhook/project"
+	templatewebhook "controller/internal/webhook/template"
 )
 
 var (

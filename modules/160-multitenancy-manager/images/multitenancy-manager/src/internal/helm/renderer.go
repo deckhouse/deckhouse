@@ -28,22 +28,20 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/yaml"
 
-	"controller/pkg/apis/deckhouse.io/v1alpha2"
+	"controller/apis/deckhouse.io/v1alpha2"
 )
 
 type postRenderer struct {
-	projectName     string
-	projectTemplate string
-	versions        map[string]struct{}
-	logger          logr.Logger
+	project  *v1alpha2.Project
+	versions map[string]struct{}
+	logger   logr.Logger
 }
 
-func newPostRenderer(projectName, projectTemplate string, versions map[string]struct{}, logger logr.Logger) *postRenderer {
+func newPostRenderer(project *v1alpha2.Project, versions map[string]struct{}, logger logr.Logger) *postRenderer {
 	return &postRenderer{
-		projectName:     projectName,
-		projectTemplate: projectTemplate,
-		versions:        versions,
-		logger:          logger.WithName("post-renderer"),
+		project:  project,
+		versions: versions,
+		logger:   logger.WithName("post-renderer"),
 	}
 }
 
@@ -55,7 +53,7 @@ func (r *postRenderer) Run(renderedManifests *bytes.Buffer) (modifiedManifests *
 	for _, manifest := range releaseutil.SplitManifests(renderedManifests.String()) {
 		object := new(unstructured.Unstructured)
 		if err = yaml.Unmarshal([]byte(manifest), object); err != nil {
-			r.logger.Info("failed to unmarshal manifest", "project", r.projectName, "manifest", manifest, "error", err.Error())
+			r.logger.Info("failed to unmarshal manifest", "project", r.project.Name, "manifest", manifest, "error", err.Error())
 			return renderedManifests, err
 		}
 
@@ -64,35 +62,47 @@ func (r *postRenderer) Run(renderedManifests *bytes.Buffer) (modifiedManifests *
 			continue
 		}
 
+		// skip resource that not present in the cluster
+		if r.versions != nil {
+			version := fmt.Sprintf("%s/%s", object.GetAPIVersion(), object.GetKind())
+			if _, ok := r.versions[version]; !ok {
+				r.project.Status.Skipped = append(r.project.Status.Skipped, v1alpha2.ResourceObject{
+					APIVersion: object.GetAPIVersion(),
+					Name:       object.GetName(),
+					Kind:       object.GetKind(),
+				})
+
+				r.logger.Info("the resource skipped during render project", "project", r.project.Name, "resource", object.GetName(), "version", version)
+				continue
+			}
+		}
+
 		// inject multitenancy-manager labels
 		labels := object.GetLabels()
 		if labels == nil {
 			labels = make(map[string]string, 1)
 		}
 		labels[v1alpha2.ResourceLabelHeritage] = v1alpha2.ResourceHeritageMultitenancy
-		labels[v1alpha2.ResourceLabelProject] = r.projectName
-		labels[v1alpha2.ResourceLabelTemplate] = r.projectTemplate
+		labels[v1alpha2.ResourceLabelProject] = r.project.Name
+		labels[v1alpha2.ResourceLabelTemplate] = r.project.Spec.ProjectTemplateName
 		object.SetLabels(labels)
 
-		if object.GetKind() == "Namespace" {
+		if object.GetKind() != "Namespace" {
+			object.SetNamespace(r.project.Name)
+		} else {
 			// skip other namespaces
-			if object.GetName() != r.projectName {
-				r.logger.Info("namespace is skipped during render project", "project", r.projectName, "namespace", object.GetName())
+			if object.GetName() != r.project.Name {
+				r.logger.Info("namespace skipped during render project", "project", r.project.Name, "namespace", object.GetName())
 				continue
 			}
 			coreFound = true
-		} else {
-			object.SetNamespace(r.projectName)
 		}
 
-		// skip resource that not present in the cluster
-		if r.versions != nil {
-			version := fmt.Sprintf("%s/%s", object.GetAPIVersion(), object.GetKind())
-			if _, ok := r.versions[version]; !ok {
-				r.logger.Info("the resource is skipped during render project", "project", r.projectName, "resource", object.GetName(), "version", version)
-				continue
-			}
-		}
+		r.project.Status.Rendered = append(r.project.Status.Rendered, v1alpha2.ResourceObject{
+			APIVersion: object.GetAPIVersion(),
+			Name:       object.GetName(),
+			Kind:       object.GetKind(),
+		})
 
 		data, _ := yaml.Marshal(object.Object)
 		builder.WriteString("\n---\n" + string(data))
@@ -101,7 +111,7 @@ func (r *postRenderer) Run(renderedManifests *bytes.Buffer) (modifiedManifests *
 	buf := bytes.NewBuffer(nil)
 	// ensure core namespace
 	if !coreFound {
-		core := r.newNamespace(r.projectName)
+		core := r.newNamespace(r.project.Name)
 		buf.WriteString("\n---\n" + string(core))
 	}
 	buf.WriteString(builder.String())
@@ -118,8 +128,8 @@ func (r *postRenderer) newNamespace(name string) []byte {
 		ObjectMeta: metav1.ObjectMeta{
 			Name: name,
 			Labels: map[string]string{
-				v1alpha2.ResourceLabelProject:  r.projectName,
-				v1alpha2.ResourceLabelTemplate: r.projectTemplate,
+				v1alpha2.ResourceLabelProject:  r.project.Name,
+				v1alpha2.ResourceLabelTemplate: r.project.Spec.ProjectTemplateName,
 				v1alpha2.ResourceLabelHeritage: v1alpha2.ResourceHeritageMultitenancy,
 			},
 		},

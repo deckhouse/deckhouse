@@ -31,9 +31,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 
-	"controller/pkg/apis/deckhouse.io/v1alpha2"
-	"controller/pkg/helm"
-	"controller/pkg/validate"
+	"controller/apis/deckhouse.io/v1alpha2"
+	"controller/internal/helm"
+	"controller/internal/validate"
 )
 
 const (

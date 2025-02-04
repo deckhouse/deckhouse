@@ -120,6 +120,30 @@ spec:
                 templateGeneration:
                   description: The last observed template`s generation
                   type: integer
+                renderedResources:
+                  description: List of resources successfully rendered.
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      apiVersion:
+                        type: string
+                      kind:
+                        type: string
+                      name:
+                        type: string
+                skippedResources:
+                  description: List of resources skipped during processing.
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      apiVersion:
+                        type: string
+                      kind:
+                        type: string
+                      name:
+                        type: string
                 conditions:
                   type: array
                   items:

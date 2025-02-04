@@ -53,6 +53,10 @@ spec:
                   description: Последний generation проекта.
                 templateGeneration:
                   description: Последний generation шаблона.
+                renderedResources:
+                  description: Список срендеренных ресурсов.
+                skippedResources:
+                  description: Список пропущенных ресурсов.
                 conditions:
                   type: array
                   items:

@@ -34,9 +34,9 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/yaml"
 
-	"controller/pkg/apis/deckhouse.io/v1alpha1"
-	"controller/pkg/apis/deckhouse.io/v1alpha2"
-	"controller/pkg/validate"
+	"controller/apis/deckhouse.io/v1alpha1"
+	"controller/apis/deckhouse.io/v1alpha2"
+	"controller/internal/validate"
 )
 
 func Test(t *testing.T) {
@@ -167,5 +167,5 @@ func render(templates map[string][]byte, project *v1alpha2.Project, projectTempl
 		buf.WriteString(file)
 	}
 
-	return newPostRenderer(project.Name, projectTemplate.Name, nil, ctrl.Log.WithName("test")).Run(buf)
+	return newPostRenderer(project, nil, ctrl.Log.WithName("test")).Run(buf)
 }

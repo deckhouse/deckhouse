@@ -41,19 +41,19 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	"controller/pkg/apis/deckhouse.io/v1alpha2"
-	"controller/pkg/helm"
-	projectmanager "controller/pkg/manager/project"
+	"controller/apis/deckhouse.io/v1alpha2"
+	"controller/internal/helm"
+	projectmanager "controller/internal/manager/project"
 )
 
 const controllerName = "d8-project-controller"
 
-func Register(runtimeManager manager.Manager, helmClient *helm.Client, log logr.Logger) error {
+func Register(runtimeManager manager.Manager, helmClient *helm.Client, logger logr.Logger) error {
 	r := &reconciler{
 		init:           new(sync.WaitGroup),
-		log:            log.WithName(controllerName),
+		logger:         logger.WithName(controllerName),
 		client:         runtimeManager.GetClient(),
-		projectManager: projectmanager.New(runtimeManager.GetClient(), helmClient, log),
+		projectManager: projectmanager.New(runtimeManager.GetClient(), helmClient, logger),
 	}
 
 	r.init.Add(1)
@@ -68,7 +68,7 @@ func Register(runtimeManager manager.Manager, helmClient *helm.Client, log logr.
 				Jitter:   0.1,
 			},
 			func(e error) bool {
-				log.Info("failed to init project manager - try to retry", "error", e.Error())
+				logger.Info("failed to init project manager - try to retry", "error", e.Error())
 				return true
 			},
 			func() error {
@@ -84,13 +84,13 @@ func Register(runtimeManager manager.Manager, helmClient *helm.Client, log logr.
 		return fmt.Errorf("create project controller: %w", err)
 	}
 
-	r.log.Info("initializing project controller")
+	r.logger.Info("initialize project controller")
 	return ctrl.NewControllerManagedBy(runtimeManager).
 		For(&v1alpha2.Project{}).
 		WithEventFilter(predicate.Or[client.Object](
 			predicate.AnnotationChangedPredicate{},
 			predicate.GenerationChangedPredicate{},
-			customPredicate[client.Object]{log: log})).
+			customPredicate[client.Object]{logger: logger})).
 		Watches(&corev1.Namespace{}, handler.EnqueueRequestsFromMapFunc(func(ctx context.Context, object client.Object) []reconcile.Request {
 			if _, ok := object.GetLabels()[v1alpha2.ResourceLabelTemplate]; ok {
 				return nil
@@ -109,53 +109,53 @@ type reconciler struct {
 	init           *sync.WaitGroup
 	projectManager *projectmanager.Manager
 	client         client.Client
-	log            logr.Logger
+	logger         logr.Logger
 }
 
 func (r *reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reconcile.Result, error) {
 	// wait for init
 	r.init.Wait()
 
-	r.log.Info("reconciling the project", "project", req.Name)
+	r.logger.Info("reconciling the project", "project", req.Name)
 	project := new(v1alpha2.Project)
 	if err := r.client.Get(ctx, req.NamespacedName, project); err != nil {
 		if apierrors.IsNotFound(err) {
-			r.log.Info("the project not found", "project", req.Name)
+			r.logger.Info("the project not found", "project", req.Name)
 			return reconcile.Result{}, nil
 		}
-		r.log.Error(err, "failed to get the project", "project", req.Name)
+		r.logger.Error(err, "failed to get the project", "project", req.Name)
 		return reconcile.Result{}, err
 	}
 
 	// handle virtual projects
 	if project.Spec.ProjectTemplateName == projectmanager.VirtualTemplate {
-		r.log.Info("reconcile the virtual project", "project", req.Name)
+		r.logger.Info("reconcile the virtual project", "project", req.Name)
 		return r.projectManager.HandleVirtual(ctx, project)
 	}
 
 	// handle the project deletion
 	if !project.DeletionTimestamp.IsZero() {
-		r.log.Info("deleting the project", "project", project.Name)
+		r.logger.Info("deleting the project", "project", project.Name)
 		return r.projectManager.Delete(ctx, project)
 	}
 
 	// ensure the project
-	r.log.Info("ensuring the project", "project", project.Name)
+	r.logger.Info("ensuring the project", "project", project.Name)
 	return r.projectManager.Handle(ctx, project)
 }
 
 type customPredicate[T metav1.Object] struct {
 	predicate.TypedFuncs[T]
-	log logr.Logger
+	logger logr.Logger
 }
 
 func (p customPredicate[T]) Update(e event.TypedUpdateEvent[T]) bool {
 	if isNil(e.ObjectOld) {
-		p.log.Error(nil, "update event has no old object to update", "event", e)
+		p.logger.Error(nil, "update event has no old object to update", "event", e)
 		return false
 	}
 	if isNil(e.ObjectNew) {
-		p.log.Error(nil, "update event has no new object for update", "event", e)
+		p.logger.Error(nil, "update event has no new object for update", "event", e)
 		return false
 	}
 
@@ -168,7 +168,7 @@ func (p customPredicate[T]) Update(e event.TypedUpdateEvent[T]) bool {
 }
 
 func (p customPredicate[T]) Delete(_ event.TypedDeleteEvent[T]) bool {
-	p.log.Info("new project deletion event")
+	p.logger.Info("new project deletion event")
 	return true
 }
 

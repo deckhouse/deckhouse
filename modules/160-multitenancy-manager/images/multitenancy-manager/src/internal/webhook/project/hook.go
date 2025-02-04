@@ -23,7 +23,7 @@ import (
 	"strings"
 
 	admissionv1 "k8s.io/api/admission/v1"
-	v1 "k8s.io/api/core/v1"
+	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -31,11 +31,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 	"sigs.k8s.io/yaml"
 
-	"controller/pkg/apis/deckhouse.io/v1alpha1"
-	"controller/pkg/apis/deckhouse.io/v1alpha2"
-	"controller/pkg/helm"
-	projectmanager "controller/pkg/manager/project"
-	"controller/pkg/validate"
+	"controller/apis/deckhouse.io/v1alpha1"
+	"controller/apis/deckhouse.io/v1alpha2"
+	"controller/internal/helm"
+	projectmanager "controller/internal/manager/project"
+	"controller/internal/validate"
 )
 
 func Register(runtimeManager manager.Manager, helmClient *helm.Client) {
@@ -64,7 +64,7 @@ func (v *validator) Handle(_ context.Context, req admission.Request) admission.R
 			return admission.Denied("Projects cannot start with 'd8-' or 'kube-'")
 		}
 
-		namespaces := new(v1.NamespaceList)
+		namespaces := new(corev1.NamespaceList)
 		if err := v.client.List(context.Background(), namespaces); err != nil {
 			return admission.Errored(http.StatusInternalServerError, err)
 		}

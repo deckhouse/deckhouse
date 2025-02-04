@@ -14,23 +14,23 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package v1alpha1
+package v1alpha2
 
 import (
-	deckhouse_io "controller/pkg/apis/deckhouse.io"
+	deckhouse_io "controller/apis/deckhouse.io"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
-const Version = "v1alpha1"
+const Version = "v1alpha2"
 
 // SchemeGroupVersion is group version used to register these objects
 var SchemeGroupVersion = schema.GroupVersion{Group: deckhouse_io.GroupName, Version: Version}
 
-// ProjectTemplateGVK is group version kind for ProjectTemplate
-var ProjectTemplateGVK = schema.GroupVersionKind{Group: deckhouse_io.GroupName, Version: Version, Kind: ProjectTemplateKind}
+// ProjectGVK is group version kind for Project
+var ProjectGVK = schema.GroupVersionKind{Group: deckhouse_io.GroupName, Version: Version, Kind: ProjectKind}
 
 // Kind takes an unqualified kind and returns back a Group qualified GroupKind
 func Kind(kind string) schema.GroupKind {
@@ -56,8 +56,8 @@ var (
 // Adds the list of known types to api.Scheme.
 func addKnownTypes(scheme *runtime.Scheme) error {
 	scheme.AddKnownTypes(SchemeGroupVersion,
-		&ProjectTemplate{},
-		&ProjectTemplateList{},
+		&Project{},
+		&ProjectList{},
 	)
 	metav1.AddToGroupVersion(scheme, SchemeGroupVersion)
 	return nil

@@ -147,6 +147,12 @@ type ProjectStatus struct {
 	// Used namespaces
 	Namespaces []string `json:"namespaces,omitempty"`
 
+	// Rendered resources
+	Rendered []ResourceObject `json:"renderedResources,omitempty"`
+
+	// Skipped resources
+	Skipped []ResourceObject `json:"skippedResources,omitempty"`
+
 	// Observed generation
 	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
 
@@ -185,6 +191,28 @@ func (p *ProjectStatus) DeepCopyInto(newObj *ProjectStatus) {
 	newObj.ObservedGeneration = p.ObservedGeneration
 	newObj.TemplateGeneration = p.TemplateGeneration
 	newObj.State = p.State
+}
+
+type ResourceObject struct {
+	APIVersion string `json:"apiVersion,omitempty"`
+	Kind       string `json:"kind,omitempty"`
+	Name       string `json:"name,omitempty"`
+}
+
+func (r *ResourceObject) DeepCopy() *ResourceObject {
+	if r == nil {
+		return nil
+	}
+	newObj := new(ResourceObject)
+	r.DeepCopyInto(newObj)
+	return newObj
+}
+
+func (r *ResourceObject) DeepCopyInto(newObj *ResourceObject) {
+	*newObj = *r
+	newObj.APIVersion = r.APIVersion
+	newObj.Kind = r.Kind
+	newObj.Name = r.Name
 }
 
 type Condition struct {

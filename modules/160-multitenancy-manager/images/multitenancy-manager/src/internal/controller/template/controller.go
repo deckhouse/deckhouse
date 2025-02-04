@@ -35,18 +35,18 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	"controller/pkg/apis/deckhouse.io/v1alpha1"
-	templatemanager "controller/pkg/manager/template"
+	"controller/apis/deckhouse.io/v1alpha1"
+	templatemanager "controller/internal/manager/template"
 )
 
 const controllerName = "d8-template-controller"
 
-func Register(runtimeManager manager.Manager, defaultPath string, log logr.Logger) error {
+func Register(runtimeManager manager.Manager, defaultPath string, logger logr.Logger) error {
 	r := &reconciler{
 		init:            new(sync.WaitGroup),
-		log:             log.WithName(controllerName),
+		logger:          logger.WithName(controllerName),
 		client:          runtimeManager.GetClient(),
-		templateManager: templatemanager.New(runtimeManager.GetClient(), log),
+		templateManager: templatemanager.New(runtimeManager.GetClient(), logger),
 	}
 
 	r.init.Add(1)
@@ -66,7 +66,7 @@ func Register(runtimeManager manager.Manager, defaultPath string, log logr.Logge
 				Jitter:   0.1,
 			},
 			func(e error) bool {
-				log.Info("failed to init template manager, try to retry", "error", e.Error())
+				logger.Info("failed to init template manager, try to retry", "error", e.Error())
 				return true
 			},
 			func() error {
@@ -77,7 +77,7 @@ func Register(runtimeManager manager.Manager, defaultPath string, log logr.Logge
 		return fmt.Errorf("init project manager: %w", err)
 	}
 
-	r.log.Info("initializing template controller")
+	r.logger.Info("initialize template controller")
 	return ctrl.NewControllerManagedBy(runtimeManager).
 		For(&v1alpha1.ProjectTemplate{}).
 		WithEventFilter(predicate.Or[client.Object](
@@ -92,31 +92,31 @@ type reconciler struct {
 	init            *sync.WaitGroup
 	templateManager *templatemanager.Manager
 	client          client.Client
-	log             logr.Logger
+	logger          logr.Logger
 }
 
 func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	// wait for init
 	r.init.Wait()
 
-	r.log.Info("reconciling the template", "template", req.Name)
+	r.logger.Info("reconciling the template", "template", req.Name)
 	template := new(v1alpha1.ProjectTemplate)
 	if err := r.client.Get(ctx, req.NamespacedName, template); err != nil {
 		if apierrors.IsNotFound(err) {
-			r.log.Info("the template not found", "template", req.Name)
+			r.logger.Info("the template not found", "template", req.Name)
 			return reconcile.Result{}, nil
 		}
-		r.log.Error(err, "failed to get the template", "template", req.Name)
+		r.logger.Error(err, "failed to get the template", "template", req.Name)
 		return reconcile.Result{}, err
 	}
 
 	// handle the project template deletion
 	if !template.DeletionTimestamp.IsZero() {
-		r.log.Info("the template was deleted", "template", template.Name)
+		r.logger.Info("the template was deleted", "template", template.Name)
 		return reconcile.Result{}, nil
 	}
 
 	// ensure template
-	r.log.Info("ensuring the template", "template", template.Name)
+	r.logger.Info("ensuring the template", "template", template.Name)
 	return r.templateManager.Handle(ctx, template)
 }
