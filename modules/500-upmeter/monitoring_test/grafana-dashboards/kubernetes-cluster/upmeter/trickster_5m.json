@@ -458,7 +458,7 @@
           "refId": "unknown"
         },
         {
-          "expr": "statustime{probe_ref=\"monitoring-and-autoscaling/aggregating-proxy\",status=\"nodata\"}",
+          "expr": "statustime{probe_ref=\"monitoring-and-autoscaling/metrics-proxy\",status=\"nodata\"}",
           "hide": false,
           "interval": "",
           "legendFormat": "{{status}}",
