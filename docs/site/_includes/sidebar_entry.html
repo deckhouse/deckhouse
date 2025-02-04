@@ -48,7 +48,7 @@
     <a href="#">{{ entry.title[page.lang] }}
     {%- if entry.featureStatus %}<span class="sidebar__badge sidebar__badge_{{ entry.featureStatus }}" title="{{ site.data.i18n.features[entry.featureStatus][page.lang] | lstrip | strip_html | regex_replace: '.$', '' }}">
         {%- if entry.featureStatus == "experimental" %}
-        Exp
+          Exp
         {%- elsif entry.featureStatus == "deprecated" %}
           Dep
         {%- elsif entry.featureStatus == "temporaryDeprecated" %}
