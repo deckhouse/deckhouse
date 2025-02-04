@@ -21,24 +21,27 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log/slog"
 	"slices"
 	"strings"
 
 	v1 "github.com/google/go-containerregistry/pkg/v1"
-	"k8s.io/klog"
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 func (s *registryscaner) processRegistries(ctx context.Context) {
-	klog.V(4).Info("start scanning registries")
+	s.logger.Info("start scanning registries")
+
 	for _, registry := range s.registryClients {
 		modules, err := registry.Modules()
 		if err != nil {
-			klog.Errorf("registry %v is unavailable. err: %v", registry.Name(), err)
+			s.logger.Error("registry is unavailable", slog.String("registry", registry.Name()), log.Err(err))
 			continue
 		}
-		klog.V(4).Infof("found modules: %v in %q", modules, registry.Name())
+
+		s.logger.Info("found modules", slog.Any("modules", modules), slog.String("registry", registry.Name()))
 
 		s.processModules(ctx, registry, modules)
 	}
@@ -48,7 +51,7 @@ func (s *registryscaner) processModules(ctx context.Context, registry Client, mo
 	for _, module := range modules {
 		tags, err := registry.ListTags(module)
 		if err != nil {
-			klog.Error(err)
+			s.logger.Error("list tags", log.Err(err))
 			continue
 		}
 
@@ -75,14 +78,14 @@ func (s *registryscaner) processReleaseChannels(ctx context.Context, registry, m
 	for _, releaseChannel := range releaseChannels {
 		releaseImage, err := s.registryClients[registry].ReleaseImage(module, releaseChannel)
 		if err != nil {
-			klog.Error(err)
+			s.logger.Error("get releae image", log.Err(err))
 			continue
 		}
 
 		// if the checksum for the release channel matches - skip processing of the release channel
 		releaseDigest, err := releaseImage.Digest()
 		if err != nil {
-			klog.Error(err)
+			s.logger.Error("get digest", log.Err(err))
 			continue
 		}
 		releaseChecksum, ok := s.cache.GetReleaseChecksum(registry, module, releaseChannel)
@@ -92,7 +95,7 @@ func (s *registryscaner) processReleaseChannels(ctx context.Context, registry, m
 
 		version, err := extractVersionFromImage(releaseImage)
 		if err != nil {
-			klog.Error(err)
+			s.logger.Error("extract version from image", log.Err(err))
 			continue
 		}
 
@@ -105,13 +108,13 @@ func (s *registryscaner) processReleaseChannels(ctx context.Context, registry, m
 func (s *registryscaner) processVersion(_ context.Context, registry, module, version, releaseChannel string) error {
 	image, err := s.registryClients[registry].Image(module, version)
 	if err != nil {
-		klog.Error(err)
+		s.logger.Error("get image", log.Err(err))
 		return err
 	}
 
-	tarFile, err := extractDocumentation(image)
+	tarFile, err := s.extractDocumentation(image)
 	if err != nil {
-		klog.Error(err)
+		s.logger.Error("extract documentation", log.Err(err))
 		return err
 	}
 
@@ -120,10 +123,10 @@ func (s *registryscaner) processVersion(_ context.Context, registry, module, ver
 	return nil
 }
 
-func extractDocumentation(image v1.Image) ([]byte, error) {
+func (s *registryscaner) extractDocumentation(image v1.Image) ([]byte, error) {
 	readCloser, err := cr.Extract(image)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("extract: %w", err)
 	}
 	defer readCloser.Close()
 
@@ -138,7 +141,7 @@ func extractDocumentation(image v1.Image) ([]byte, error) {
 		Mode:     0700,
 	})
 	if err != nil {
-		klog.Error(err)
+		s.logger.Error("write header", log.Err(err))
 		return nil, err
 	}
 
@@ -149,7 +152,7 @@ func extractDocumentation(image v1.Image) ([]byte, error) {
 		Mode:     0700,
 	})
 	if err != nil {
-		klog.Error(err)
+		s.logger.Error("write header", log.Err(err))
 		return nil, err
 	}
 
@@ -160,7 +163,7 @@ func extractDocumentation(image v1.Image) ([]byte, error) {
 		Mode:     0700,
 	})
 	if err != nil {
-		klog.Error(err)
+		s.logger.Error("write header", log.Err(err))
 		return nil, err
 	}
 
@@ -174,48 +177,49 @@ func extractDocumentation(image v1.Image) ([]byte, error) {
 			return nil, err
 		}
 
+		// TODO: short duplicate
 		if strings.Contains(hdr.Name, "docs/") {
 			buf := bytes.NewBuffer(nil)
 			if _, err := io.Copy(buf, tarReader); err != nil {
-				klog.Error(err)
+				s.logger.Error("copy", log.Err(err))
 			}
 
 			if err := tarWriter.WriteHeader(hdr); err != nil {
-				klog.Error(err)
+				s.logger.Error("write header", log.Err(err))
 			}
 
 			if _, err := tarWriter.Write(buf.Bytes()); err != nil {
-				klog.Error(err)
+				s.logger.Error("write", log.Err(err))
 			}
 		}
 
 		if strings.Contains(hdr.Name, "openapi/") {
 			buf := bytes.NewBuffer(nil)
 			if _, err := io.Copy(buf, tarReader); err != nil {
-				klog.Error(err)
+				s.logger.Error("copy", log.Err(err))
 			}
 
 			if err := tarWriter.WriteHeader(hdr); err != nil {
-				klog.Error(err)
+				s.logger.Error("write header", log.Err(err))
 			}
 
 			if _, err := tarWriter.Write(buf.Bytes()); err != nil {
-				klog.Error(err)
+				s.logger.Error("write", log.Err(err))
 			}
 		}
 
 		if strings.Contains(hdr.Name, "crds/") {
 			buf := bytes.NewBuffer(nil)
 			if _, err := io.Copy(buf, tarReader); err != nil {
-				klog.Error(err)
+				s.logger.Error("copy", log.Err(err))
 			}
 
 			if err := tarWriter.WriteHeader(hdr); err != nil {
-				klog.Error(err)
+				s.logger.Error("write header", log.Err(err))
 			}
 
 			if _, err := tarWriter.Write(buf.Bytes()); err != nil {
-				klog.Error(err)
+				s.logger.Error("write", log.Err(err))
 			}
 		}
 	}

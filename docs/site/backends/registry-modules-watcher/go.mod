@@ -7,15 +7,16 @@ toolchain go1.23.2
 require (
 	github.com/cenkalti/backoff v2.2.1+incompatible
 	github.com/deckhouse/deckhouse v0.0.0-20241106075338-9733ad4615ac
+	github.com/deckhouse/deckhouse/pkg/log v0.0.0-20250204065946-25630dc9d659  
 	github.com/google/go-containerregistry v0.20.2
 	github.com/stretchr/testify v1.9.0
 	k8s.io/api v0.29.8
 	k8s.io/apimachinery v0.29.8
 	k8s.io/client-go v0.29.8
-	k8s.io/klog v1.0.0
 )
 
 require (
+	github.com/DataDog/gostackparse v0.7.0 // indirect
 	github.com/containerd/stargz-snapshotter/estargz v0.14.3 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/docker/cli v27.1.1+incompatible // indirect
@@ -69,3 +70,4 @@ require (
 	sigs.k8s.io/structured-merge-diff/v4 v4.4.1 // indirect
 	sigs.k8s.io/yaml v1.4.0 // indirect
 )
+
