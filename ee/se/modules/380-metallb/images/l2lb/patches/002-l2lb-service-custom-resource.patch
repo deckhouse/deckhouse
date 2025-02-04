@@ -371,7 +371,7 @@ index 15489c3f..4e1c5c09 100644
  		return ForAddresses(svc.Spec.ClusterIPs)
  	}
 diff --git a/internal/k8s/controllers/service_controller.go b/internal/k8s/controllers/service_controller.go
-index a804ee76..4329b369 100644
+index a804ee76..1060e172 100644
 --- a/internal/k8s/controllers/service_controller.go
 +++ b/internal/k8s/controllers/service_controller.go
 @@ -19,6 +19,8 @@ package controllers
@@ -415,7 +415,7 @@ index a804ee76..4329b369 100644
  	}
  
 +	if service == nil {
-+		level.Error(r.Logger).Log("controller", "ServiceReconciler", "message", "service doesn't exist", "service", req.NamespacedName)
++		level.Info(r.Logger).Log("controller", "ServiceReconciler", "message", "service doesn't exist", "service", req.NamespacedName)
 +		return ctrl.Result{}, nil
 +	}
 +
