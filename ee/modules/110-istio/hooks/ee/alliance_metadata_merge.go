@@ -13,6 +13,7 @@ import (
 	"github.com/flant/addon-operator/sdk"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
+	eeCommon "github.com/deckhouse/deckhouse/ee/modules/110-istio/hooks/ee/common"
 	eeCrd "github.com/deckhouse/deckhouse/ee/modules/110-istio/hooks/ee/lib/crd"
 	"github.com/deckhouse/deckhouse/go_lib/jwt"
 	"github.com/deckhouse/deckhouse/modules/110-istio/hooks/lib"
@@ -55,41 +56,20 @@ func applyFederationMergeFilter(obj *unstructured.Unstructured) (go_hook.FilterR
 	var igs *[]eeCrd.FederationIngressGateways
 	var pss *[]eeCrd.FederationPublicServices
 	var p *eeCrd.AlliancePublicMetadata
-	protocolMap := map[string]string{
-		"https":    "TLS",
-		"tls":      "TLS",
-		"http":     "HTTP",
-		"http2":    "HTTP2",
-		"grpc":     "HTTP2",
-		"grpc-web": "HTTP2",
-	}
-	defaultProtocol := "TCP"
+	protocolMap := eeCommon.ProtocolMap
+	defaultProtocol := eeCommon.DefaultProtocol
 
 	if federation.Status.MetadataCache.Private != nil {
 		if federation.Status.MetadataCache.Private.IngressGateways != nil {
 			igs = federation.Status.MetadataCache.Private.IngressGateways
 		}
 		if federation.Status.MetadataCache.Private.PublicServices != nil {
+			updatePortProtocols(federation.Status.MetadataCache.Private.PublicServices, defaultProtocol, protocolMap)
 			pss = federation.Status.MetadataCache.Private.PublicServices
 		}
 	}
 	if federation.Status.MetadataCache.Public != nil {
 		p = federation.Status.MetadataCache.Public
-	}
-
-	if federation.Status.MetadataCache.Private != nil && federation.Status.MetadataCache.Private.PublicServices != nil {
-		for serviceIndex, publicService := range *federation.Status.MetadataCache.Private.PublicServices {
-			for portIndex, port := range publicService.Ports {
-				port.Protocol = defaultProtocol
-				for keyword, protocol := range protocolMap {
-					if strings.Contains(port.Name, keyword) {
-						port.Protocol = protocol
-						break
-					}
-				}
-				(*federation.Status.MetadataCache.Private.PublicServices)[serviceIndex].Ports[portIndex] = port
-			}
-		}
 	}
 
 	return IstioFederationMergeCrdInfo{

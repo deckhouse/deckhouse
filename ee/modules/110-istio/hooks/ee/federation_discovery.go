@@ -17,6 +17,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/utils/ptr"
 
+	eeCommon "github.com/deckhouse/deckhouse/ee/modules/110-istio/hooks/ee/common"
 	eeCrd "github.com/deckhouse/deckhouse/ee/modules/110-istio/hooks/ee/lib/crd"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/http"
@@ -108,15 +109,8 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 
 func federationDiscovery(input *go_hook.HookInput, dc dependency.Container) error {
 	input.MetricsCollector.Expire(federationMetricsGroup)
-	protocolMap := map[string]string{
-		"https":    "TLS",
-		"tls":      "TLS",
-		"http":     "HTTP",
-		"http2":    "HTTP2",
-		"grpc":     "HTTP2",
-		"grpc-web": "HTTP2",
-	}
-	defaultProtocol := "TCP"
+	protocolMap := eeCommon.ProtocolMap
+	defaultProtocol := eeCommon.DefaultProtocol
 
 	if !input.Values.Get("istio.federation.enabled").Bool() {
 		return nil
@@ -216,23 +210,27 @@ func federationDiscovery(input *go_hook.HookInput, dc dependency.Container) erro
 			federationInfo.SetMetricMetadataEndpointError(input.MetricsCollector, federationInfo.PrivateMetadataEndpoint, 1)
 			continue
 		}
-		for serviceIndex, service := range *privateMetadata.PublicServices {
-			for portIndex, port := range service.Ports {
-				port.Protocol = defaultProtocol
-				for keyword, protocol := range protocolMap {
-					if strings.Contains(port.Name, keyword) {
-						port.Protocol = protocol
-						break
-					}
-				}
-				(*privateMetadata.PublicServices)[serviceIndex].Ports[portIndex] = port
-			}
-		}
 		federationInfo.SetMetricMetadataEndpointError(input.MetricsCollector, federationInfo.PrivateMetadataEndpoint, 0)
 		err = federationInfo.PatchMetadataCache(input.PatchCollector, "private", privateMetadata)
 		if err != nil {
 			return err
 		}
+		updatePortProtocols(privateMetadata.PublicServices, defaultProtocol, protocolMap)
 	}
 	return nil
+}
+
+func updatePortProtocols(services *[]eeCrd.FederationPublicServices, defaultProtocol string, protocolMap map[string]string) {
+	for serviceIndex, service := range *services {
+		for portIndex, port := range service.Ports {
+			port.Protocol = defaultProtocol
+			for keyword, protocol := range protocolMap {
+				if strings.Contains(port.Name, keyword) {
+					port.Protocol = protocol
+					break
+				}
+			}
+			(*services)[serviceIndex].Ports[portIndex] = port
+		}
+	}
 }
