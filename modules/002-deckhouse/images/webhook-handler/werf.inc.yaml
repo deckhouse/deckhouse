@@ -117,6 +117,6 @@ shell:
   install:
   - apt-get update
   - apt-get install -y python3-module-pip-run git
-  - git clone --depth 1 {{ $.SOURCE_REPO }}/python-modules/wheels /wheels
+  - git clone -b "add-pyaml-alt-11" --depth 1 {{ $.SOURCE_REPO }}/python-modules/wheels /wheels
   - pip3 install -f file:///wheels --no-index -r /requirements.txt
   - rm -rf /wheels/.git
