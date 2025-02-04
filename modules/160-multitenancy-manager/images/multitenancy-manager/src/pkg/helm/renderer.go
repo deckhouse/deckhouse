@@ -89,7 +89,7 @@ func (r *postRenderer) Run(renderedManifests *bytes.Buffer) (modifiedManifests *
 		if r.versions != nil {
 			version := fmt.Sprintf("%s/%s", object.GetAPIVersion(), object.GetKind())
 			if _, ok := r.versions[version]; !ok {
-				r.logger.Info("the resource is skipped during render project", "resource", object.GetName(), "version", version)
+				r.logger.Info("the resource is skipped during render project", "project", r.projectName, "resource", object.GetName(), "version", version)
 				continue
 			}
 		}
