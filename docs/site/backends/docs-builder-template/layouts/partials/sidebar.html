@@ -69,7 +69,7 @@
             <li class="sidebar__item sidebar__item_parent{{ if $sidebarItem.isActive }} active{{ end }}">
                 <a href='#'>
                   {{- $sidebarItem.title }}
-                  {{- if ne $sidebarItem.d8Edition "ce" }}<span class="sidebar__badge sidebar__badge_{{ lower $sidebarItem.d8Edition }}">EE Only</span>{{ end }} 
+                  {{- if ne $sidebarItem.d8Edition "ce" }}<span class="sidebar__badge sidebar__badge_{{ lower $sidebarItem.d8Edition }}">EE Only</span>{{ end }}
                   {{- if $sidebarItem.moduleStatus -}}
                     <span class="sidebar__badge sidebar__badge_{{ lower $sidebarItem.moduleStatus }}" title='{{ (T (printf "module_alert_%s" (lower $sidebarItem.moduleStatus ))) }}'>{{ humanize $sidebarItem.moduleStatus }}</span>
                   {{ end }}
