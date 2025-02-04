@@ -42,11 +42,11 @@ func (m *Manager) ensureDefaultProjectTemplates(ctx context.Context, templatesPa
 
 	for _, file := range dir {
 		if file.IsDir() || !strings.HasSuffix(file.Name(), ".yaml") {
-			m.log.Info("skipping file as it's not a YAML file", "file", file.Name())
+			m.logger.Info("skipping file as it's not a YAML file", "file", file.Name())
 			continue
 		}
 
-		m.log.Info("reading file with project template", "file", file.Name())
+		m.logger.Info("reading file with project template", "file", file.Name())
 		projectTemplateBytes, err := os.ReadFile(filepath.Join(templatesPath, file.Name()))
 		if err != nil {
 			return fmt.Errorf("read the '%s' project template file: %w", file.Name(), err)
@@ -57,7 +57,7 @@ func (m *Manager) ensureDefaultProjectTemplates(ctx context.Context, templatesPa
 			return fmt.Errorf("unmarshal the '%s' project template file: %w", file.Name(), err)
 		}
 
-		m.log.Info("validating project template", "file", file.Name())
+		m.logger.Info("validating project template", "file", file.Name())
 		if err = validate.ProjectTemplate(projectTemplate); err != nil {
 			return fmt.Errorf("'%s' invalid project template file: %w", file.Name(), err)
 		}
@@ -71,7 +71,7 @@ func (m *Manager) ensureDefaultProjectTemplates(ctx context.Context, templatesPa
 }
 
 func (m *Manager) ensureProjectTemplate(ctx context.Context, projectTemplate *v1alpha1.ProjectTemplate) error {
-	m.log.Info("ensuring project template", "projectTemplate", projectTemplate.Name)
+	m.logger.Info("ensuring project template", "projectTemplate", projectTemplate.Name)
 	if err := m.client.Create(ctx, projectTemplate); err != nil {
 		if apierrors.IsAlreadyExists(err) {
 			err = retry.RetryOnConflict(retry.DefaultRetry, func() error {
@@ -84,7 +84,7 @@ func (m *Manager) ensureProjectTemplate(ctx context.Context, projectTemplate *v1
 				existingProjectTemplate.Labels = projectTemplate.Labels
 				existingProjectTemplate.Annotations = projectTemplate.Annotations
 
-				m.log.Info("project template already exists, try to update it", "projectTemplate", projectTemplate.Name)
+				m.logger.Info("project template already exists, try to update it", "projectTemplate", projectTemplate.Name)
 				return m.client.Update(ctx, existingProjectTemplate)
 			})
 			if err != nil {
@@ -95,7 +95,7 @@ func (m *Manager) ensureProjectTemplate(ctx context.Context, projectTemplate *v1
 		}
 	}
 
-	m.log.Info("successfully ensured project template", "projectTemplate", projectTemplate.Name)
+	m.logger.Info("successfully ensured project template", "projectTemplate", projectTemplate.Name)
 	return nil
 }
 

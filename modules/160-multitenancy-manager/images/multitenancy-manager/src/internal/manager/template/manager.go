@@ -38,21 +38,21 @@ import (
 
 type Manager struct {
 	client client.Client
-	log    logr.Logger
+	logger logr.Logger
 }
 
-func New(client client.Client, log logr.Logger) *Manager {
+func New(client client.Client, logger logr.Logger) *Manager {
 	return &Manager{
 		client: client,
-		log:    log.WithName("template-manager"),
+		logger: logger.WithName("template-manager"),
 	}
 }
 
-func (m *Manager) Init(ctx context.Context, checker healthz.Checker, init *sync.WaitGroup, defaultPath string) error {
-	m.log.Info("waiting until webhook server start")
+func (m *Manager) Init(ctx context.Context, checker healthz.Checker, init *sync.WaitGroup, templatesPath string) error {
+	m.logger.Info("waiting until webhook server start")
 	check := func(ctx context.Context) (bool, error) {
 		if err := checker(nil); err != nil {
-			m.log.Info("webhook server not startup yet")
+			m.logger.Info("webhook server not startup yet")
 			return false, nil
 		}
 		return true, nil
@@ -60,14 +60,14 @@ func (m *Manager) Init(ctx context.Context, checker healthz.Checker, init *sync.
 	if err := wait.PollUntilContextTimeout(ctx, time.Second, 10*time.Second, true, check); err != nil {
 		return fmt.Errorf("start webhook server: %w", err)
 	}
-	m.log.Info("webhook server started")
+	m.logger.Info("webhook server started")
 
-	m.log.Info("ensuring default project templates")
-	if err := m.ensureDefaultProjectTemplates(ctx, defaultPath); err != nil {
+	m.logger.Info("ensuring default project templates")
+	if err := m.ensureDefaultProjectTemplates(ctx, templatesPath); err != nil {
 		return fmt.Errorf("ensure default project templates: %w", err)
 	}
 
-	m.log.Info("ensured default project templates")
+	m.logger.Info("ensured default project templates")
 	init.Done()
 
 	return nil
@@ -77,7 +77,7 @@ func (m *Manager) Handle(ctx context.Context, template *v1alpha1.ProjectTemplate
 	// validate project template
 	if err := validate.ProjectTemplate(template); err != nil {
 		if statusError := m.setTemplateStatus(ctx, template, err.Error(), false); statusError != nil {
-			m.log.Error(statusError, "failed to update the template status")
+			m.logger.Error(statusError, "failed to update the template status")
 			return ctrl.Result{}, statusError
 		}
 		return ctrl.Result{}, nil
@@ -86,17 +86,17 @@ func (m *Manager) Handle(ctx context.Context, template *v1alpha1.ProjectTemplate
 	// process template`s projects
 	projects, err := m.projectsByTemplate(ctx, template)
 	if err != nil {
-		m.log.Error(err, "failed to get projects for the template", "template", template.Name)
+		m.logger.Error(err, "failed to get projects for the template", "template", template.Name)
 		return ctrl.Result{Requeue: true}, nil
 	}
 	if len(projects) != 0 {
-		m.log.Info("processing projects for the template", "template", template.Name, "projectsNum", len(projects))
+		m.logger.Info("processing projects for the template", "template", template.Name, "projectsNum", len(projects))
 		for _, project := range projects {
 			err = retry.RetryOnConflict(retry.DefaultRetry, func() error {
 				if err = m.client.Get(ctx, client.ObjectKey{Name: project.Name}, project); err != nil {
 					return fmt.Errorf("get the '%s' project: %w", project.Name, err)
 				}
-				m.log.Info("trigger the project to update", "template", template.Name, "project", project.Name)
+				m.logger.Info("trigger the project to update", "template", template.Name, "project", project.Name)
 				if project.Annotations == nil {
 					project.Annotations = map[string]string{}
 				}
@@ -104,20 +104,20 @@ func (m *Manager) Handle(ctx context.Context, template *v1alpha1.ProjectTemplate
 				return m.client.Update(ctx, project)
 			})
 			if err != nil {
-				m.log.Error(err, "failed to trigger the project", "template", template.Name, "project", project.Name)
+				m.logger.Error(err, "failed to trigger the project", "template", template.Name, "project", project.Name)
 				return ctrl.Result{}, err
 			}
 		}
 	} else {
-		m.log.Info("no projects found for the template", "template", template.Name)
+		m.logger.Info("no projects found for the template", "template", template.Name)
 	}
 
 	// set ready
 	if err = m.setTemplateStatus(ctx, template, "The template is ready", true); err != nil {
-		m.log.Error(err, "failed to update project status", "template", template.Name)
+		m.logger.Error(err, "failed to update project status", "template", template.Name)
 		return ctrl.Result{}, err
 	}
 
-	m.log.Info("the template reconciled", "template", template.Name)
+	m.logger.Info("the template reconciled", "template", template.Name)
 	return ctrl.Result{}, nil
 }

@@ -49,15 +49,15 @@ import (
 
 var (
 	// path to helm templates
-	templatesPath = "templates"
+	helmTemplatesPath = "helmlib"
 	// path to default project templates
-	defaultPath = "default"
+	templatesPath = "templates"
 	// helm release namespace
 	helmNamespace = "d8-multitenancy-manager"
 	// controller service account
 	serviceAccount = "system:serviceaccount:d8-multitenancy-manager:multitenancy-manager"
 	// list of service accounts allowed to create namespaces when allowNamespacesWithoutProjects is set to false
-	nsCreateAllowedServiceAccounts = []string{serviceAccount, "system:serviceaccount:d8-system:deckhouse", "system:serviceaccount:d8-upmeter:upmeter-agent"}
+	allowedServiceAccounts = []string{serviceAccount, "system:serviceaccount:d8-system:deckhouse", "system:serviceaccount:d8-upmeter:upmeter-agent"}
 )
 
 const (
@@ -71,30 +71,30 @@ func main() {
 	flag.Parse()
 
 	// setup logger
-	log := ctrl.Log.WithName(controllerName)
+	logger := ctrl.Log.WithName(controllerName)
 	ctrllog.SetLogger(zap.New(zap.Level(zapcore.Level(-4)), zap.StacktraceLevel(zapcore.PanicLevel)))
 
-	log.Info(fmt.Sprintf("starting multitenancy-manager with %v allow orphan namespaces option", allowOrphanNamespaces))
+	logger.Info(fmt.Sprintf("starting multitenancy-manager with %v allow orphan namespaces option", allowOrphanNamespaces))
 
 	// initialize runtime manager
-	runtimeManager, err := setupRuntimeManager(log)
+	runtimeManager, err := setupRuntimeManager(logger)
 	if err != nil {
 		panic(err)
 	}
 
 	// initialize helm client
-	helmClient, err := helm.New(helmNamespace, templatesPath, log)
+	helmClient, err := helm.New(helmNamespace, helmTemplatesPath, logger)
 	if err != nil {
 		panic(err)
 	}
 
 	// register project controller
-	if err = projectcontroller.Register(runtimeManager, helmClient, log); err != nil {
+	if err = projectcontroller.Register(runtimeManager, helmClient, logger); err != nil {
 		panic(err)
 	}
 
 	// register template controller
-	if err = templatecontroller.Register(runtimeManager, defaultPath, log); err != nil {
+	if err = templatecontroller.Register(runtimeManager, templatesPath, logger); err != nil {
 		panic(err)
 	}
 
@@ -106,7 +106,7 @@ func main() {
 
 	if !allowOrphanNamespaces {
 		// register namespace webhook
-		namespacewebhook.Register(runtimeManager, nsCreateAllowedServiceAccounts)
+		namespacewebhook.Register(runtimeManager, allowedServiceAccounts)
 	}
 
 	// start runtime manager
@@ -115,7 +115,7 @@ func main() {
 	}
 }
 
-func setupRuntimeManager(log logr.Logger) (ctrl.Manager, error) {
+func setupRuntimeManager(logger logr.Logger) (ctrl.Manager, error) {
 	addToScheme := []func(s *runtime.Scheme) error{
 		v1alpha1.AddToScheme,
 		v1alpha2.AddToScheme,
@@ -125,7 +125,7 @@ func setupRuntimeManager(log logr.Logger) (ctrl.Manager, error) {
 	scheme := runtime.NewScheme()
 	for _, add := range addToScheme {
 		if err := add(scheme); err != nil {
-			log.Error(err, "failed to add scheme to runtime manager")
+			logger.Error(err, "failed to add scheme to runtime manager")
 			return nil, err
 		}
 	}
@@ -149,15 +149,15 @@ func setupRuntimeManager(log logr.Logger) (ctrl.Manager, error) {
 
 	runtimeManager, err := ctrl.NewManager(ctrl.GetConfigOrDie(), managerOpts)
 	if err != nil {
-		log.Error(err, "unable to create runtime manager")
+		logger.Error(err, "unable to create runtime manager")
 		return nil, err
 	}
 	if err = runtimeManager.AddHealthzCheck("healthz", healthz.Ping); err != nil {
-		log.Error(err, "unable to set up health check")
+		logger.Error(err, "unable to set up health check")
 		return nil, err
 	}
 	if err = runtimeManager.AddReadyzCheck("readyz", healthz.Ping); err != nil {
-		log.Error(err, "unable to set up ready check")
+		logger.Error(err, "unable to set up ready check")
 		return nil, err
 	}
 	return runtimeManager, nil

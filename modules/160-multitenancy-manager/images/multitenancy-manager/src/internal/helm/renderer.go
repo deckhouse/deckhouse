@@ -79,8 +79,8 @@ func (r *postRenderer) Run(renderedManifests *bytes.Buffer) (modifiedManifests *
 
 		// inject multitenancy-manager labels
 		labels := object.GetLabels()
-		if labels == nil {
-			labels = make(map[string]string, 1)
+		if len(labels) == 0 {
+			labels = make(map[string]string, 3)
 		}
 		labels[v1alpha2.ResourceLabelHeritage] = v1alpha2.ResourceHeritageMultitenancy
 		labels[v1alpha2.ResourceLabelProject] = r.project.Name

@@ -41,7 +41,7 @@ import (
 
 const controllerName = "d8-template-controller"
 
-func Register(runtimeManager manager.Manager, defaultPath string, logger logr.Logger) error {
+func Register(runtimeManager manager.Manager, templatesPath string, logger logr.Logger) error {
 	r := &reconciler{
 		init:            new(sync.WaitGroup),
 		logger:          logger.WithName(controllerName),
@@ -70,7 +70,7 @@ func Register(runtimeManager manager.Manager, defaultPath string, logger logr.Lo
 				return true
 			},
 			func() error {
-				return r.templateManager.Init(ctx, runtimeManager.GetWebhookServer().StartedChecker(), r.init, defaultPath)
+				return r.templateManager.Init(ctx, runtimeManager.GetWebhookServer().StartedChecker(), r.init, templatesPath)
 			},
 		)
 	})); err != nil {

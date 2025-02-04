@@ -40,7 +40,7 @@ import (
 )
 
 func Test(t *testing.T) {
-	templates, err := parseHelmTemplates("../../templates")
+	templates, err := parseHelmTemplates("../../helmlib")
 	assert.Nil(t, err)
 	for _, c := range []string{"default_case", "secure_case", "secure_with_dedicated_node_case", "empty_case", "without_ns_case"} {
 		t.Run(c, func(t *testing.T) {

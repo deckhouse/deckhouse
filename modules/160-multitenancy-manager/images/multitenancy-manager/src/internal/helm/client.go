@@ -61,8 +61,8 @@ type options struct {
 }
 
 // New initializes helm client with secret backend storage in `namespace` arg namespace.
-func New(namespace, templatesPath string, log logr.Logger) (*Client, error) {
-	c := &Client{
+func New(namespace, templatesPath string, logger logr.Logger) (*Client, error) {
+	cli := &Client{
 		opts: &options{
 			HistoryMax: 3,
 			Timeout:    time.Duration(15 * float64(time.Second)),
@@ -70,23 +70,23 @@ func New(namespace, templatesPath string, log logr.Logger) (*Client, error) {
 		conf: &action.Configuration{
 			Capabilities: chartutil.DefaultCapabilities,
 		},
-		logger:    log.WithName("helm"),
+		logger:    logger.WithName("helm"),
 		templates: make(map[string][]byte),
 	}
 
-	c.logger.Info("initializing action config")
-	if err := c.initActionConfig(namespace); err != nil {
+	cli.logger.Info("initializing action config")
+	if err := cli.initActionConfig(namespace); err != nil {
 		return nil, fmt.Errorf("initialize action config: %w", err)
 	}
 
 	var err error
-	c.templates, err = parseHelmTemplates(templatesPath)
+	cli.templates, err = parseHelmTemplates(templatesPath)
 	if err != nil {
 		return nil, fmt.Errorf("parse helm templates: %w", err)
 	}
 
-	c.logger.Info("client initialized")
-	return c, nil
+	cli.logger.Info("client initialized")
+	return cli, nil
 }
 
 func parseHelmTemplates(templatesPath string) (map[string][]byte, error) {

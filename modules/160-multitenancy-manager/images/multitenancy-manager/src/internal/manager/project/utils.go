@@ -90,10 +90,10 @@ func (m *Manager) ensureVirtualProjects(ctx context.Context) error {
 }
 
 func (m *Manager) ensureProject(ctx context.Context, project *v1alpha2.Project) error {
-	m.log.Info("ensuring the project", "project", project.Name)
+	m.logger.Info("ensuring the project", "project", project.Name)
 	if err := m.client.Create(ctx, project); err != nil {
 		if apierrors.IsAlreadyExists(err) {
-			m.log.Info("the project already exists, try to update it")
+			m.logger.Info("the project already exists, try to update it")
 			err = retry.RetryOnConflict(retry.DefaultRetry, func() error {
 				existingProject := new(v1alpha2.Project)
 				if err = m.client.Get(ctx, client.ObjectKey{Name: project.Name}, existingProject); err != nil {
@@ -114,7 +114,7 @@ func (m *Manager) ensureProject(ctx context.Context, project *v1alpha2.Project) 
 		}
 	}
 
-	m.log.Info("successfully ensured the project", "project", project.Name)
+	m.logger.Info("successfully ensured the project", "project", project.Name)
 	return nil
 }
 

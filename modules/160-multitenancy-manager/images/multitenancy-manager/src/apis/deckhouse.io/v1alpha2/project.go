@@ -183,6 +183,20 @@ func (p *ProjectStatus) DeepCopyInto(newObj *ProjectStatus) {
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
 	}
+	if p.Skipped != nil {
+		in, out := &p.Skipped, &newObj.Skipped
+		*out = make([]ResourceObject, len(*in))
+		for i := range *in {
+			(*in)[i].DeepCopyInto(&(*out)[i])
+		}
+	}
+	if p.Rendered != nil {
+		in, out := &p.Rendered, &newObj.Rendered
+		*out = make([]ResourceObject, len(*in))
+		for i := range *in {
+			(*in)[i].DeepCopyInto(&(*out)[i])
+		}
+	}
 	if p.Namespaces != nil {
 		in, out := &p.Namespaces, &newObj.Namespaces
 		*out = make([]string, len(*in))

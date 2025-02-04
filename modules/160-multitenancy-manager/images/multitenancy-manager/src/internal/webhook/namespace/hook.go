@@ -32,14 +32,14 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
 
-func Register(runtimeManager manager.Manager, nsCreateAllowedServiceAccounts []string) {
-	hook := &webhook.Admission{Handler: &validator{client: runtimeManager.GetClient(), nsCreateAllowedServiceAccounts: nsCreateAllowedServiceAccounts}}
+func Register(runtimeManager manager.Manager, allowedServiceAccounts []string) {
+	hook := &webhook.Admission{Handler: &validator{client: runtimeManager.GetClient(), allowedServiceAccounts: allowedServiceAccounts}}
 	runtimeManager.GetWebhookServer().Register("/validate/v1/namespaces", hook)
 }
 
 type validator struct {
-	nsCreateAllowedServiceAccounts []string
-	client                         client.Client
+	allowedServiceAccounts []string
+	client                 client.Client
 }
 
 func (v *validator) Handle(_ context.Context, req admission.Request) admission.Response {
@@ -54,7 +54,7 @@ func (v *validator) Handle(_ context.Context, req admission.Request) admission.R
 	}
 
 	// other namespaces can be created only by deckhouse or multitenancy-manager
-	if !slices.Contains(v.nsCreateAllowedServiceAccounts, req.UserInfo.Username) {
+	if !slices.Contains(v.allowedServiceAccounts, req.UserInfo.Username) {
 		return admission.Denied(fmt.Sprintf("namespaces can be created only as a part of a project"))
 	}
 
