@@ -29,7 +29,7 @@ shell:
   install:
   - cd /src
   - autoreconf
-  - ./configure LDFLAGS="-static $(LDFLAGS)" --prefix=/
+  - ./configure LDFLAGS="-static $(LDFLAGS)" --prefix=
   - make --jobs=8
   - make DESTDIR=/ssh install
   - make clean
