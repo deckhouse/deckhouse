@@ -7,6 +7,8 @@ package ee
 
 import (
 	"encoding/json"
+	"maps"
+	"slices"
 	"strings"
 	"time"
 
@@ -17,7 +19,6 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/utils/ptr"
 
-	eeCommon "github.com/deckhouse/deckhouse/ee/modules/110-istio/hooks/ee/common"
 	eeCrd "github.com/deckhouse/deckhouse/ee/modules/110-istio/hooks/ee/lib/crd"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/http"
@@ -109,8 +110,6 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 
 func federationDiscovery(input *go_hook.HookInput, dc dependency.Container) error {
 	input.MetricsCollector.Expire(federationMetricsGroup)
-	protocolMap := eeCommon.ProtocolMap
-	defaultProtocol := eeCommon.DefaultProtocol
 
 	if !input.Values.Get("istio.federation.enabled").Bool() {
 		return nil
@@ -138,6 +137,16 @@ func federationDiscovery(input *go_hook.HookInput, dc dependency.Container) erro
 		var publicMetadata eeCrd.AlliancePublicMetadata
 		var privateMetadata eeCrd.FederationPrivateMetadata
 		var httpOption []http.Option
+		protocolMap := map[string]string{
+			"https":    "TLS",
+			"tls":      "TLS",
+			"http":     "HTTP",
+			"http2":    "HTTP2",
+			"grpc":     "HTTP2",
+			"grpc-web": "HTTP2",
+		}
+
+		defaultProtocol := "TCP"
 
 		if federationInfo.ClusterCA != "" {
 			caCerts := [][]byte{[]byte(federationInfo.ClusterCA)}
@@ -213,8 +222,6 @@ func federationDiscovery(input *go_hook.HookInput, dc dependency.Container) erro
 		federationInfo.SetMetricMetadataEndpointError(input.MetricsCollector, federationInfo.PrivateMetadataEndpoint, 0)
 		renewedPublicServices := updatePortProtocols(privateMetadata.PublicServices, defaultProtocol, protocolMap)
 		privateMetadata.PublicServices = &renewedPublicServices
-		//updatePortProtocols(privateMetadata.PublicServices, defaultProtocol, protocolMap)
-
 		err = federationInfo.PatchMetadataCache(input.PatchCollector, "private", privateMetadata)
 		if err != nil {
 			return err
@@ -225,10 +232,16 @@ func federationDiscovery(input *go_hook.HookInput, dc dependency.Container) erro
 
 func updatePortProtocols(services *[]eeCrd.FederationPublicServices, defaultProtocol string, protocolMap map[string]string) []eeCrd.FederationPublicServices {
 	resultServices := (*services)[:]
+	// We sort by length, since the value HTTP and HTTPS is present in MAPS, if we do without sorting, there will be a problem when HTTPS is assigned a protocol, not TLS.
+	keys := slices.Collect(maps.Keys(protocolMap))
+	slices.SortFunc(keys, func(a, b string) int {
+		return len(b) - len(a)
+	})
 	for serviceIndex, service := range resultServices {
 		for portIndex, port := range service.Ports {
 			port.Protocol = defaultProtocol
-			for keyword, protocol := range protocolMap {
+			for _, keyword := range keys {
+				protocol := protocolMap[keyword]
 				if strings.Contains(port.Name, keyword) {
 					port.Protocol = protocol
 					break
