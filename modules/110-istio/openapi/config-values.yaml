@@ -81,9 +81,9 @@ properties:
             x-examples: [[{"ip": "172.16.0.5", "port": 15443}]]
             items:
               type: object
-              required: ["ip", "port"]
+              required: ["address", "port"]
               properties:
-                ip:
+                address:
                   type: string
                   example: "172.16.0.5"
                   pattern: '^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$'

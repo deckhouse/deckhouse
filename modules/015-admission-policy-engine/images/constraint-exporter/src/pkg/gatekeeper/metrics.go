@@ -45,9 +45,14 @@ var (
 func ExportViolations(constraints []Constraint) []prometheus.Metric {
 	m := make([]prometheus.Metric, 0)
 	for _, c := range constraints {
-		for _, v := range c.Status.Violations {
-			metric := prometheus.MustNewConstMetric(ConstraintViolation, prometheus.GaugeValue, 1, c.Meta.Kind, c.Meta.Name, v.Kind, v.Name, v.Namespace, v.Message, v.EnforcementAction, c.Meta.SourceType)
+		if c.Status.TotalViolations == 0 {
+			metric := prometheus.MustNewConstMetric(ConstraintViolation, prometheus.GaugeValue, 0, c.Meta.Kind, c.Meta.Name, "", "", "", "", "", c.Meta.SourceType)
 			m = append(m, metric)
+		} else{
+			for _, v := range c.Status.Violations {
+				metric := prometheus.MustNewConstMetric(ConstraintViolation, prometheus.GaugeValue, 1, c.Meta.Kind, c.Meta.Name, v.Kind, v.Name, v.Namespace, v.Message, v.EnforcementAction, c.Meta.SourceType)
+				m = append(m, metric)
+			}
 		}
 	}
 	return m
