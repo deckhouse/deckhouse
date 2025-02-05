@@ -284,6 +284,7 @@ linters-settings:
       - "caps-controller-manager:caps-controller-manager"
       - "standby-holder-name:reserve-resources"
       - "trivy-server:chown-volume-data"
+      - "monitoring-kubernetes-control-plane"
   monitoring:
     skip-module-checks:
       - "extended-monitoring"
@@ -314,7 +315,6 @@ linters-settings:
       - "standby-holder-name"
       - "machine-controller-manager"
       - "control-plane-proxy"
-      - "monitoring-kubernetes-control-plane"
     skip-vpa-checks:
       - "d8-system:deckhouse"
       - "d8-cloud-instance-manager:node-manager"
