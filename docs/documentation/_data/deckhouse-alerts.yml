@@ -1662,7 +1662,7 @@ alerts:
         Annotation '{{$labels.annotation}}' is deprecated for Service '{{$labels.name}}' located in namespace '{{$labels.namespace}}'
         Service annotations below don't take effect now:
           `metallb.universe.tf/ip-allocated-from-pool` — just wipe it out.
-          `metallb.universe.tf/address-pool` — use `network.deckhouse.io/metal-load-balancer-class` annotation with corresponding MetalLoadBalancerClass reference.
+          `metallb.universe.tf/address-pool` — use `network.deckhouse.io/metal-load-balancer-class` annotation or `spec.loadBalancerClass` with corresponding MetalLoadBalancerClass reference.
           `metallb.universe.tf/loadBalancerIPs` — use `network.deckhouse.io/load-balancer-ips: <ip>` instead.
           `metallb.universe.tf/allow-shared-ip` — use `network.deckhouse.io/load-balancer-allow-shared-ip` instead.
 
