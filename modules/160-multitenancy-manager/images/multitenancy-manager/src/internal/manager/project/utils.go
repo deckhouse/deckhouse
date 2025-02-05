@@ -131,7 +131,7 @@ func (m *Manager) updateProjectStatus(ctx context.Context, project *v1alpha2.Pro
 	return retry.OnError(retry.DefaultRetry, apierrors.IsServiceUnavailable, func() error {
 		return retry.RetryOnConflict(retry.DefaultRetry, func() error {
 			existingProject := new(v1alpha2.Project)
-			if err := m.client.Get(ctx, client.ObjectKey{Name: project.Name}, project); err != nil {
+			if err := m.client.Get(ctx, client.ObjectKey{Name: project.Name}, existingProject); err != nil {
 				return fmt.Errorf("get the '%s' project: %w", project.Name, err)
 			}
 
