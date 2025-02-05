@@ -21,11 +21,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"slices"
 	"strings"
 
 	v1 "github.com/google/go-containerregistry/pkg/v1"
-	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
 	"k8s.io/klog"
+
+	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
 )
 
 func (s *registryscaner) processRegistries(ctx context.Context) {
@@ -50,7 +52,22 @@ func (s *registryscaner) processModules(ctx context.Context, registry Client, mo
 			continue
 		}
 
-		s.processReleaseChannels(ctx, registry.Name(), module, filterReleaseChannelsFromTags(tags))
+		// remove deleted release channels from cache
+		releaseTags := filterReleaseChannelsFromTags(tags)
+		for _, r := range s.cache.GetReleaseChannels(registry.Name(), module) {
+			if !slices.Contains(releaseTags, r) {
+				s.cache.DeleteReleaseChannel(registry.Name(), module, r)
+			}
+		}
+
+		s.processReleaseChannels(ctx, registry.Name(), module, releaseTags)
+	}
+
+	// remove deleted modules from cache
+	for _, m := range s.cache.GetModules(registry.Name()) {
+		if !slices.Contains(modules, m) {
+			s.cache.DeleteModule(registry.Name(), m)
+		}
 	}
 }
 
@@ -73,32 +90,34 @@ func (s *registryscaner) processReleaseChannels(ctx context.Context, registry, m
 			continue
 		}
 
-		s.cache.SetReleaseChecksum(registry, module, releaseChannel, releaseDigest.String())
-
 		version, err := extractVersionFromImage(releaseImage)
 		if err != nil {
 			klog.Error(err)
 			continue
 		}
 
-		s.processVersion(ctx, registry, module, version, releaseChannel)
+		if err := s.processVersion(ctx, registry, module, version, releaseChannel); err == nil {
+			s.cache.SetReleaseChecksum(registry, module, releaseChannel, releaseDigest.String())
+		}
 	}
 }
 
-func (s *registryscaner) processVersion(ctx context.Context, registry, module, version, releaseChannel string) {
+func (s *registryscaner) processVersion(_ context.Context, registry, module, version, releaseChannel string) error {
 	image, err := s.registryClients[registry].Image(module, version)
 	if err != nil {
 		klog.Error(err)
-		return
+		return err
 	}
 
 	tarFile, err := extractDocumentation(image)
 	if err != nil {
 		klog.Error(err)
-		return
+		return err
 	}
 
 	s.cache.SetTar(registry, module, version, releaseChannel, tarFile)
+
+	return nil
 }
 
 func extractDocumentation(image v1.Image) ([]byte, error) {
@@ -204,7 +223,7 @@ func extractDocumentation(image v1.Image) ([]byte, error) {
 
 func extractVersionFromImage(releaseImage v1.Image) (string, error) {
 	// exactly local type
-	type versionJson struct {
+	type versionJSON struct {
 		Version string `json:"version"`
 	}
 
@@ -231,7 +250,7 @@ func extractVersionFromImage(releaseImage v1.Image) (string, error) {
 				return "", err
 			}
 
-			v := versionJson{}
+			v := versionJSON{}
 			if err := json.Unmarshal(buf.Bytes(), &v); err != nil {
 				return "", err
 			}
@@ -243,11 +262,12 @@ func extractVersionFromImage(releaseImage v1.Image) (string, error) {
 	}
 }
 
-func filterReleaseChannelsFromTags(tags []string) (releaseChannels []string) {
+func filterReleaseChannelsFromTags(tags []string) []string {
+	releaseChannels := make([]string, 0)
 	for _, tag := range tags {
 		if _, ok := releaseChannelsTags[tag]; ok {
 			releaseChannels = append(releaseChannels, tag)
 		}
 	}
-	return
+	return releaseChannels
 }

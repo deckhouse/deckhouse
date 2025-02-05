@@ -99,9 +99,13 @@ alerts:
       module: cni-cilium
       edition: ce
       description: |
-        Check what's going on: `kubectl -n {{ $labels.namespace }} logs {{ $labels.pod }}`
+        For details, refer to the logs of the agent:
+
+        ```bash
+        kubectl -n {{ $labels.namespace }} logs {{ $labels.pod }}
+        ```
       summary: |
-        More than half of all known Endpoints are not ready in agent {{ $labels.namespace }}/{{ $labels.pod }}.
+        Over 50% of all known endpoints aren't ready in agent {{ $labels.namespace }}/{{ $labels.pod }}.
       severity: "4"
       markupFormat: markdown
     - name: CiliumAgentMapPressureCritical
@@ -109,9 +113,12 @@ alerts:
       moduleUrl: 021-cni-cilium
       module: cni-cilium
       edition: ce
-      description: We've reached resource limit of eBPF maps. Consult with vendor for possible remediation steps.
+      description: |
+        The eBPF map resource utilization limit has almost been reached.
+
+        Check with the vendor for potential remediation steps.
       summary: |
-        eBPF map {{ $labels.map_name }} is more than 90% full in agent {{ $labels.namespace }}/{{ $labels.pod }}.
+        eBPF map {{ $labels.map_name }} exceeds 90% utilization in agent {{ $labels.namespace }}/{{ $labels.pod }}.
       severity: "4"
       markupFormat: markdown
     - name: CiliumAgentMetricNotFound
@@ -120,15 +127,25 @@ alerts:
       module: cni-cilium
       edition: ce
       description: |
-        Use the following commands to check what's going on:
-        - `kubectl -n {{ $labels.namespace }} logs {{ $labels.pod }}`
-        - `kubectl -n {{ $labels.namespace }} exec -ti {{ $labels.pod }} cilium-health status`
+        Steps to troubleshoot:
 
-        We need to cross-check the metrics with the neighboring agent.
-        Also the absence of metrics is an indirect sign that new pods cannot be created on the node because of the inability to connect to the agent.
-        It is important to get a more specific way of determining the above situation and create a more accurate alert for the inability to connect new pods to the agent.
+        1. Check the logs of the agent:
+
+           ```bash
+           kubectl -n {{ $labels.namespace }} logs {{ $labels.pod }}
+           ```
+
+        1. Verify the agent's health status:
+
+           ```bash
+           kubectl -n {{ $labels.namespace }} exec -ti {{ $labels.pod }} cilium-health status
+           ```
+
+        1. Compare the metrics with those of a neighboring agent.
+
+        > Note that the absence of metrics can indirectly indicate that new pods can't be created on the node due to connectivity issues with the agent.
       summary: |
-        Some of the metrics are not coming from the agent {{ $labels.namespace }}/{{ $labels.pod }}.
+        Agent {{ $labels.namespace }}/{{ $labels.pod }} isn't sending some metrics.
       severity: "4"
       markupFormat: markdown
     - name: CiliumAgentPolicyImportErrors
@@ -137,7 +154,11 @@ alerts:
       module: cni-cilium
       edition: ce
       description: |
-        Check what's going on: `kubectl -n {{ $labels.namespace }} logs {{ $labels.pod }}`
+        For details, refer to the logs of the agent:
+
+        ```bash
+        kubectl -n {{ $labels.namespace }} logs {{ $labels.pod }}
+        ```
       summary: |
         Agent {{ $labels.namespace }}/{{ $labels.pod }} fails to import policies.
       severity: "4"
@@ -148,9 +169,13 @@ alerts:
       module: cni-cilium
       edition: ce
       description: |
-        Check what's going on: `kubectl -n {{ $labels.namespace }} logs {{ $labels.pod }}`
+        For details, refer to the logs of the agent:
+
+        ```bash
+        kubectl -n {{ $labels.namespace }} logs {{ $labels.pod }}
+        ```
       summary: |
-        Some node's health endpoints are not reachable by agent {{ $labels.namespace }}/{{ $labels.pod }}.
+        Agent {{ $labels.namespace }}/{{ $labels.pod }} can't reach some of the node health endpoints.
       severity: "4"
       markupFormat: markdown
     - name: ClusterHasOrphanedDisks
@@ -171,11 +196,16 @@ alerts:
       module: cni-cilium
       edition: ce
       description: |
-        There is non-standard VXLAN port in Cilium config: `{{$labels.port}}` does not fit the recommended range (4298 if the virtualization module enabled or 4299 for regular deckhouse setup).
+        The Cilium configuration specifies a non-standard VXLAN port `{{$labels.port}}`. This port falls outside the recommended range:
 
-        Consider configuring the `tunnel-port` parameter in `cilium-configmap` ConfigMap (`d8-cni-cilium` namespace) according the recommended range. If you know why you need the non-standard port, just ignore the alert.
+        - `4298`: When the virtualization module is enabled.
+        - `4299`: For a standard Deckhouse setup.
+
+        To resolve this issue, update the `tunnel-port` parameter in the `cilium-configmap` ConfigMap located in the `d8-cni-cilium` namespace to match the recommended range.
+
+        If you configured the non-standard port on purpose, ignore this alert.
       summary: |
-        There is non-standard VXLAN port in Cilium config
+        Cilium configuration uses a non-standard VXLAN port.
       severity: "4"
       markupFormat: markdown
     - name: CniCiliumOrphanEgressGatewayPolicyFound
@@ -184,11 +214,11 @@ alerts:
       module: cni-cilium
       edition: se-plus
       description: |
-        There is orphan EgressGatewayPolicy in the cluster: with the name: `{{$labels.name}}` which has irrelevant EgressGateway name.
+        The cluster contains an orphaned EgressGatewayPolicy named `{{$labels.name}}` with an irrelevant EgressGateway name.
 
-        It is recommended to check EgressGateway name in EgressGatewayPolicy resource: `{{$labels.egressgateway}}`
+        To resolve this issue, verify the EgressGateway name specified in the EgressGatewayPolicy resource `{{$labels.egressgateway}}` and update it as needed.
       summary: |
-        Found orphan EgressGatewayPolicy with irrelevant EgressGateway name
+        Orphaned EgressGatewayPolicy with an irrelevant EgressGateway name has been found.
       severity: "4"
       markupFormat: markdown
     - name: CPUStealHigh
@@ -566,11 +596,17 @@ alerts:
       module: cni-cilium
       edition: ce
       description: |
-        It is necessary to correct the settings in the CNI {{ $labels.cni }} ModuleConfig.
-        You can find the desired settings in the `d8-system/desired-cni-moduleconfig` configmap.
-        To do this, please run the following command: `kubectl -n d8-system get configmap desired-cni-moduleconfig -o yaml`.
+        Steps to troubleshoot:
+
+        1. Find the desired settings in the ConfigMap `d8-system/desired-cni-moduleconfig` by running the following command:
+
+           ```bash
+           kubectl -n d8-system get configmap desired-cni-moduleconfig -o yaml
+           ```
+
+        1. Update the conflicting settings in the CNI `{{ $labels.cni }}` ModuleConfig to match the desired configuration.
       summary: |
-        The settings from the secret d8-cni-configuration and the ModuleConfig contradict each other.
+        Settings in the secret d8-cni-configuration conflict with the ModuleConfig.
       severity: "5"
       markupFormat: markdown
     - name: D8CNIMisconfigured
@@ -579,11 +615,17 @@ alerts:
       module: cni-flannel
       edition: ce
       description: |
-        It is necessary to correct the settings in the CNI {{ $labels.cni }} ModuleConfig.
-        You can find the desired settings in the `d8-system/desired-cni-moduleconfig` configmap.
-        To do this, please run the following command: `kubectl -n d8-system get configmap desired-cni-moduleconfig -o yaml`.
+        Steps to troubleshoot:
+
+        1. Find the desired settings in the ConfigMap `d8-system/desired-cni-moduleconfig` by running the following command:
+
+           ```bash
+           kubectl -n d8-system get configmap desired-cni-moduleconfig -o yaml
+           ```
+
+        1. Update the conflicting settings in the CNI `{{ $labels.cni }}` ModuleConfig to match the desired configuration.
       summary: |
-        The settings from the secret d8-cni-configuration and the ModuleConfig contradict each other.
+        Settings in the secret d8-cni-configuration conflict with the ModuleConfig.
       severity: "5"
       markupFormat: markdown
     - name: D8CNIMisconfigured
@@ -592,11 +634,17 @@ alerts:
       module: cni-simple-bridge
       edition: ce
       description: |
-        It is necessary to correct the settings in the CNI {{ $labels.cni }} ModuleConfig.
-        You can find the desired settings in the `d8-system/desired-cni-moduleconfig` configmap.
-        To do this, please run the following command: `kubectl -n d8-system get configmap desired-cni-moduleconfig -o yaml`.
+        Steps to troubleshoot:
+
+        1. Find the desired settings in the ConfigMap `d8-system/desired-cni-moduleconfig` by running the following command:
+
+           ```bash
+           kubectl -n d8-system get configmap desired-cni-moduleconfig -o yaml
+           ```
+
+        1. Update the conflicting settings in the CNI `{{ $labels.cni }}` ModuleConfig to match the desired configuration.
       summary: |
-        The settings from the secret d8-cni-configuration and the ModuleConfig contradict each other.
+        Settings in the secret d8-cni-configuration conflict with the ModuleConfig.
       severity: "5"
       markupFormat: markdown
     - name: D8ControlPlaneManagerPodNotRunning
@@ -605,12 +653,15 @@ alerts:
       module: control-plane-manager
       edition: ce
       description: |-
-        Pod `d8-control-plane-manager` fails or not scheduled on Node {{ $labels.node }}
+        The `d8-control-plane-manager` pod is either failing or hasn't been scheduled on node `{{ $labels.node }}`.
 
-        Consider checking state of the `kube-system/d8-control-plane-manager` DaemonSet and its Pods:
-        `kubectl -n kube-system get daemonset,pod --selector=app=d8-control-plane-manager`
+        To resolve this issue, check the status of the `kube-system/d8-control-plane-manager` DaemonSet and its pods by running the following command:
+
+        ```bash
+        kubectl -n kube-system get daemonset,pod --selector=app=d8-control-plane-manager
+        ```
       summary: |
-        Controller Pod not running on Node {{ $labels.node }}
+        Controller pod isn't running on node {{ $labels.node }}.
       severity: "6"
       markupFormat: markdown
     - name: D8CustomPrometheusRuleFoundInCluster
@@ -906,13 +957,19 @@ alerts:
       module: control-plane-manager
       edition: ce
       description: |
-        The etcd database size in use on instance `{{ $labels.instance }}` is less than 50% of the actual allocated disk space, indicating potential fragmentation
+        The etcd database size in use on instance `{{ $labels.instance }}` is less than 50% of the allocated disk space, indicating potential fragmentation. Additionally, the total storage size exceeds 75% of the configured quota.
 
-        Possible solutions:
-        - You can do defragmentation. Use the following command:
-          `kubectl -n kube-system exec -ti etcd-{{ $labels.node }} -- /usr/bin/etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key --endpoints https://127.0.0.1:2379/ defrag --command-timeout=30s`
+        To resolve this issue, defragment the etcd database by running the following command:
+
+        ```bash
+        kubectl -n kube-system exec -ti etcd-{{ $labels.node }} -- /usr/bin/etcdctl \
+          --cacert /etc/kubernetes/pki/etcd/ca.crt \
+          --cert /etc/kubernetes/pki/etcd/ca.crt \
+          --key /etc/kubernetes/pki/etcd/ca.key \
+          --endpoints https://127.0.0.1:2379/ defrag --command-timeout=30s
+        ```
       summary: |
-        etcd database size in use is less than 50% of the actual allocated storage, indicating potential fragmentation, and the total storage size exceeds 75% of the configured quota.
+        etcd database size in use is less than 50% of the allocated storage.
       severity: "7"
       markupFormat: markdown
     - name: D8EtcdExcessiveDatabaseGrowth
@@ -921,11 +978,11 @@ alerts:
       module: control-plane-manager
       edition: ce
       description: |
-        Predicting that the etcd database will run out of disk space in the next 1 day on instance `{{ $labels.instance }}` based on 6h growth rate.
+        Based on the growth rate observed over the last six hours, Deckhouse predicts that the etcd database will run out of disk space within one day on instance `{{ $labels.instance }}`.
 
-        Please check and take action as it might be disruptive.
+        To prevent disruptions, investigate the cause and take necessary action.
       summary: |
-        etcd cluster database growing very fast.
+        etcd cluster database is growing rapidly.
       severity: "4"
       markupFormat: markdown
     - name: D8GrafanaDeploymentReplicasUnavailable
@@ -1345,26 +1402,38 @@ alerts:
       module: control-plane-manager
       edition: ce
       description: |
-        The size of the etcd database on `{{ $labels.node }}` has almost exceeded.
-        Possibly there are a lot of events (e.g. Pod evictions) or a high number of other resources are created in the cluster recently.
+        The etcd database size on `{{ $labels.node }}` is nearing its size limit.
+        This may be caused by a high number of events, such as pod evictions or the recent creation of numerous resources in the cluster.
 
         Possible solutions:
-        - You can do defragmentation. Use next command:
-        `kubectl -n kube-system exec -ti etcd-{{ $labels.node }} -- /usr/bin/etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key --endpoints https://127.0.0.1:2379/ defrag --command-timeout=30s`
-        - Increase node memory. Begin from 24 GB `quota-backend-bytes` will be increased on 1G every extra 8 GB node memory.
-          For example:
-          Node Memory  quota-backend-bytes
-          16GB         2147483648 (2GB)
-          24GB         3221225472 (3GB)
-          32GB         4294967296 (4GB)
-          40GB         5368709120 (5GB)
-          48GB         6442450944 (6GB)
-          56GB         7516192768 (7GB)
-          64GB         8589934592 (8GB)
-          72GB         8589934592 (8GB)
-          ....
+
+        - Defragment the etcd database by running the following command:
+
+          ```bash
+          kubectl -n kube-system exec -ti etcd-{{ $labels.node }} -- /usr/bin/etcdctl \
+            --cacert /etc/kubernetes/pki/etcd/ca.crt \
+            --cert /etc/kubernetes/pki/etcd/ca.crt \
+            --key /etc/kubernetes/pki/etcd/ca.key \
+            --endpoints https://127.0.0.1:2379/ defrag --command-timeout=30s
+          ```
+
+        - Increase node memory. Starting from 24 GB, `quota-backend-bytes` will increase by 1 GB for every extra 8 GB of memory.
+
+          Example:
+
+          | Node memory | quota-backend-bytes |
+          | ----------- | ------------------- |
+          | 16 GB       | 2147483648 (2 GB)   |
+          | 24 GB       | 3221225472 (3 GB)   |
+          | 32 GB       | 4294967296 (4 GB)   |
+          | 40 GB       | 5368709120 (5 GB)   |
+          | 48 GB       | 6442450944 (6 GB)   |
+          | 56 GB       | 7516192768 (7 GB)   |
+          | 64 GB       | 8589934592 (8 GB)   |
+          | 72 GB       | 8589934592 (8 GB)   |
+          | ...         | ...                 |
       summary: |
-        etcd db size is close to the limit
+        etcd database size is approaching the limit.
       severity: "3"
       markupFormat: markdown
     - name: D8KubernetesVersionIsDeprecated
@@ -1373,13 +1442,13 @@ alerts:
       module: control-plane-manager
       edition: ce
       description: |-
-        The current Kubernetes version "{{ $labels.k8s_version }}" is deprecated, and its support will be removed in upcoming releases.
+        The current Kubernetes version `{{ $labels.k8s_version }}` has been deprecated, and support for it will be removed in upcoming releases.
 
-        Please migrate to the next kubernetes version (at least 1.28)
+        To resolve this issue, migrate to Kubernetes version `1.28` or later.
 
-        Check how to update the Kubernetes version in the cluster here - https://deckhouse.io/documentation/deckhouse-faq.html#how-do-i-upgrade-the-kubernetes-version-in-a-cluster
+        Refer to the [Kubernetes upgrade guide](https://deckhouse.io/documentation/deckhouse-faq.html#how-do-i-upgrade-the-kubernetes-version-in-a-cluster) for instructions.
       summary: |
-        Kubernetes version &quot;{{ $labels.k8s_version }}&quot; is deprecated
+        Kubernetes version {{ $labels.k8s_version }} is deprecated.
       severity: "7"
       markupFormat: markdown
     - name: D8LogShipperAgentNotScheduledInCluster
@@ -1607,29 +1676,43 @@ alerts:
       module: control-plane-manager
       edition: ce
       description: |
-        Deckhouse can increase `quota-backend-bytes` only.
-        It happens when control-plane nodes memory was reduced.
-        If is true, you should set quota-backend-bytes manually with `controlPlaneManager.etcd.maxDbSize` configuration parameter.
-        Before set new value, please check current DB usage on every control-plane node:
+        When the control plane node memory is reduced, Deckhouse may suggest reducing `quota-backend-bytes`.
+        While Deckhouse is capable of automatically increasing this value, reducing it must be done manually.
+
+        To modify `quota-backend-bytes`, set the `controlPlaneManager.etcd.maxDbSize` parameter. Before setting a new value, check the current database usage on every control plane node by running:
+
         ```
-        for pod in $(kubectl get pod -n kube-system -l component=etcd,tier=control-plane -o name); do kubectl -n kube-system exec -ti "$pod" -- /usr/bin/etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key endpoint status -w json | jq --arg a "$pod" -r '.[0].Status.dbSize / 1024 / 1024 | tostring | $a + ": " + . + " MB"'; done
+        for pod in $(kubectl get pod -n kube-system -l component=etcd,tier=control-plane -o name); do
+          kubectl -n kube-system exec -ti "$pod" -- /usr/bin/etcdctl \
+            --cacert /etc/kubernetes/pki/etcd/ca.crt \
+            --cert /etc/kubernetes/pki/etcd/ca.crt \
+            --key /etc/kubernetes/pki/etcd/ca.key \
+            endpoint status -w json | jq --arg a "$pod" -r \
+            '.[0].Status.dbSize / 1024 / 1024 | tostring | $a + ": " + . + " MB"';
+        done
         ```
-        Recommendations:
-        - `controlPlaneManager.etcd.maxDbSize` maximum value is 8 GB.
-        - If control-plane nodes have less than 24 GB, use 2 GB for `controlPlaneManager.etcd.maxDbSize`.
-        - For >= 24GB increase value on 1GB every extra 8 GB.
-          Node Memory  quota-backend-bytes
-          16GB         2147483648 (2GB)
-          24GB         3221225472 (3GB)
-          32GB         4294967296 (4GB)
-          40GB         5368709120 (5GB)
-          48GB         6442450944 (6GB)
-          56GB         7516192768 (7GB)
-          64GB         8589934592 (8GB)
-          72GB         8589934592 (8GB)
-          ....
+
+        Things to note:
+
+        - The maximum value for `controlPlaneManager.etcd.maxDbSize` is 8 GB.
+        - If control plane nodes have less than 24 GB, set `controlPlaneManager.etcd.maxDbSize` to 2 GB.
+        - Starting from 24 GB, `quota-backend-bytes` will increase by 1 GB for every extra 8 GB of memory.
+
+          Example:
+
+          | Node memory | quota-backend-bytes |
+          | ----------- | ------------------- |
+          | 16 GB       | 2147483648 (2 GB)   |
+          | 24 GB       | 3221225472 (3 GB)   |
+          | 32 GB       | 4294967296 (4 GB)   |
+          | 40 GB       | 5368709120 (5 GB)   |
+          | 48 GB       | 6442450944 (6 GB)   |
+          | 56 GB       | 7516192768 (7 GB)   |
+          | 64 GB       | 8589934592 (8 GB)   |
+          | 72 GB       | 8589934592 (8 GB)   |
+          | ...         | ...                 |
       summary: |
-        Deckhouse considers that quota-backend-bytes should be reduced.
+        Deckhouse suggests reducing quota-backend-bytes.
       severity: "6"
       markupFormat: markdown
     - name: D8NginxIngressKruiseControllerPodIsRestartingTooOften
@@ -2529,9 +2612,9 @@ alerts:
       moduleUrl: 030-cloud-provider-yandex
       module: cloud-provider-yandex
       edition: ce
-      description: Nat-instance connections quota should be increased by Yandex technical support.
+      description: "The connection quota for the Yandex NAT instance has exceeded 85% utilization over the past 5 minutes. \n\nTo prevent potential issues, contact Yandex technical support and request an increase in the connection quota.\n"
       summary: |
-        Yandex nat-instance connections quota utilization is above 85% over the last 5 minutes.
+        Connection quota utilization of the Yandex NAT instance exceeds 85% over the last 5 minutes.
       severity: "4"
       markupFormat: markdown
     - name: DaemonSetAuthenticationFailure
@@ -3740,11 +3823,18 @@ alerts:
       module: documentation
       edition: ce
       description: |-
-        The module `deckhouse-web` was renamed to the `documentation`.
+        The `deckhouse-web` module has been renamed to `documentation`, and a new `documentation` ModuleConfig is generated automatically.
 
-        The new ModuleConfig `documentation` was generated automatically. Please, remove deprecated ModuleConfig `deckhouse-web` from the CI deploy process and delete it: `kubectl delete mc deckhouse-web`.
+        Steps to troubleshoot:
+
+        1. Remove the deprecated `deckhouse-web` ModuleConfig from the CI deployment process.
+        1. Delete it using the following command:
+
+           ```bash
+           kubectl delete mc deckhouse-web
+           ```
       summary: |
-        Deprecated ModuleConfig was found.
+        Deprecated deckhouse-web ModuleConfig detected.
       severity: "9"
       markupFormat: markdown
     - name: ModuleConfigObsoleteVersion
@@ -3803,84 +3893,81 @@ alerts:
       module: cloud-provider-yandex
       edition: ce
       description: |
-        Availability zone `ru-central1-c` is deprecated by Yandex.Cloud.
-        You should migrate your NAT Instance to `ru-central1-a` or `ru-central1-b` zone.
+        The NAT instance `{{ $labels.name }}` is located in the availability zone `ru-central1-c`, which has been deprecated by Yandex Cloud. To resolve this issue, migrate the NAT instance to either `ru-central1-a` or `ru-central1-b` by following the instructions below.
 
-        You can use the following instructions to migrate.
+        > The migration process involves irreversible changes and may result in a significant downtime. The duration typically depends on Yandex Cloud’s response time and can last several tens of minutes.
 
-        **IMPORTANT** The following actions are destructive changes and cause downtime (typically a several tens of minutes, also it depending on the response time of Yandex Cloud).
+        1. Migrate the NAT instance. To get `providerClusterConfiguration.withNATInstance`, run the following command:
 
-        1. Migrate NAT Instance.
+           ```bash
+           kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller module values -g cloud-provider-yandex -o json | jq -c | jq '.cloudProviderYandex.internal.providerClusterConfiguration.withNATInstance'
+           ```
 
-            Get `providerClusterConfiguration.withNATInstance`:
-            ```
-            kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller module values -g cloud-provider-yandex -o json | jq -c | jq '.cloudProviderYandex.internal.providerClusterConfiguration.withNATInstance'
-            ```
+           - If you specified `withNATInstance.natInstanceInternalAddress` and/or `withNATInstance.internalSubnetID` in `providerClusterConfiguration`, remove them using the following command:
 
-            1. If you specified `withNATInstance.natInstanceInternalAddress` and/or `withNATInstance.internalSubnetID` in providerClusterConfiguration, you need to remove them with the following command:
+             ```bash
+             kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller edit provider-cluster-configuration
+             ```
 
-                ```
-                kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller edit provider-cluster-configuration
-                ```
+           - If you specified `withNATInstance.externalSubnetID` and/or `withNATInstance.natInstanceExternalAddress` in `providerClusterConfiguration`, change them to the appropriate values.
 
-            1. If you specified `withNATInstance.externalSubnetID` and/or `withNATInstance.natInstanceExternalAddress` in providerClusterConfiguration, you need to change these to the appropriate values.
+             To get the address and subnet ID, use the Yandex Cloud Console or CLI.
 
-                You can get address and subnetID from Yandex.Cloud console or with CLI
+             To change `withNATInstance.externalSubnetID` and `withNATInstance.natInstanceExternalAddress`, run the following command:
 
-                Change `withNATInstance.externalSubnetID` and `withNATInstance.natInstanceExternalAddress` with the following command:
-                ```
-                kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller edit provider-cluster-configuration
-                ```
+             ```bash
+             kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller edit provider-cluster-configuration
+             ```
 
-        1. Run the appropriate edition and version of the Deckhouse installer container on the **local** machine (change the container registry address if necessary) and do converge.
+        1. Run the appropriate edition and version of the Deckhouse installer container on the **local** machine. You may have to change the container registry address to do that. After that, perform the converge.
 
-            1. Get edition and version of the Deckhouse:
+           - Get the appropriate edition and version of Deckhouse:
 
-                ```
-                DH_VERSION=$(kubectl -n d8-system get deployment deckhouse -o jsonpath='{.metadata.annotations.core\.deckhouse\.io\/version}')
-                DH_EDITION=$(kubectl -n d8-system get deployment deckhouse -o jsonpath='{.metadata.annotations.core\.deckhouse\.io\/edition}' | tr '[:upper:]' '[:lower:]')
-                echo "DH_VERSION=$DH_VERSION DH_EDITION=$DH_EDITION"
-                ```
+             ```bash
+             DH_VERSION=$(kubectl -n d8-system get deployment deckhouse -o jsonpath='{.metadata.annotations.core\.deckhouse\.io\/version}')
+             DH_EDITION=$(kubectl -n d8-system get deployment deckhouse -o jsonpath='{.metadata.annotations.core\.deckhouse\.io\/edition}' | tr '[:upper:]' '[:lower:]')
+             echo "DH_VERSION=$DH_VERSION DH_EDITION=$DH_EDITION"
+             ```
 
-            1. Run the installer:
+           - Run the installer:
 
-                ```
-                docker run --pull=always -it -v "$HOME/.ssh/:/tmp/.ssh/" registry.deckhouse.io/deckhouse/${DH_EDITION}/install:${DH_VERSION} bash
-                ```
+             ```bash
+             docker run --pull=always -it -v "$HOME/.ssh/:/tmp/.ssh/" registry.deckhouse.io/deckhouse/${DH_EDITION}/install:${DH_VERSION} bash
+             ```
 
-            1. Do converge:
+           - Perform the converge:
 
-                ```
-                dhctl converge --ssh-agent-private-keys=/tmp/.ssh/<SSH_KEY_FILENAME> --ssh-user=<USERNAME> --ssh-host <MASTER-NODE-0-HOST>
-                ```
+             ```bash
+             dhctl converge --ssh-agent-private-keys=/tmp/.ssh/<SSH_KEY_FILENAME> --ssh-user=<USERNAME> --ssh-host <MASTER-NODE-0-HOST>
+             ```
 
-        1. Update route table
+        1. Update the route table.
 
-            1. Get route table name
+           - Get the route table name:
 
-                ```
-                kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller module values -g cloud-provider-yandex -o json | jq -c | jq '.global.clusterConfiguration.cloud.prefix'
-                ```
+             ```bash
+             kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller module values -g cloud-provider-yandex -o json | jq -c | jq '.global.clusterConfiguration.cloud.prefix'
+             ```
 
-            1. Get NAT Instance name:
+           - Get the NAT instance name:
 
-                ```
-                kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller module values -g cloud-provider-yandex -o json | jq -c | jq '.cloudProviderYandex.internal.providerDiscoveryData.natInstanceName'
-                ```
+             ```bash
+             kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller module values -g cloud-provider-yandex -o json | jq -c | jq '.cloudProviderYandex.internal.providerDiscoveryData.natInstanceName'
+             ```
 
-            1. Get NAT Instance internal IP
+           - Get the NAT instance internal IP address:
 
-                ```
-                yc compute instance list | grep -e "INTERNAL IP" -e <NAT_INSTANCE_NAME_FROM_PREVIOUS_STEP>
-                ```
+             ```bash
+             yc compute instance list | grep -e "INTERNAL IP" -e <NAT_INSTANCE_NAME_FROM_PREVIOUS_STEP>
+             ```
 
-            1. Update route
+           - Update the route:
 
-                ```
-                yc vpc route-table update --name <ROUTE_TABLE_NAME_FROM_PREVIOUS_STEP> --route "destination=0.0.0.0/0,next-hop=<NAT_INSTANCE_INTERNAL_IP_FROM_PREVIOUS_STEP>"
-                ```
+             ```bash
+             yc vpc route-table update --name <ROUTE_TABLE_NAME_FROM_PREVIOUS_STEP> --route "destination=0.0.0.0/0,next-hop=<NAT_INSTANCE_INTERNAL_IP_FROM_PREVIOUS_STEP>"
+             ```
       summary: |
-        NAT Instance {{ $labels.name }} is in deprecated availability zone.
+        NAT instance {{ $labels.name }} is in a deprecated availability zone.
       severity: "9"
       markupFormat: markdown
     - name: NginxIngressConfigTestFailed
@@ -4147,15 +4234,21 @@ alerts:
       module: cloud-provider-yandex
       edition: ce
       description: |
-        Availability zone `ru-central1-c` is deprecated by Yandex.Cloud.
-        You should migrate your Nodes, Disks and LoadBalancers to `ru-central1-a`, `ru-central1-b` or `ru-central1-d` (introduced in v1.56).
-        To check which Nodes should be migrated, use `kubectl get node -l "topology.kubernetes.io/zone=ru-central1-c"` command.
+        Certain nodes in the node group `{{ $labels.node_group }}` are located in the availability zone `ru-central1-c`, which has been deprecated by Yandex Cloud.
 
-        You can use [Yandex Migration Guide](https://cloud.yandex.com/en/docs/overview/concepts/zone-migration) (mostly applicable to the `ru-central1-d' zone only).
+        Steps to troubleshoot:
 
-        **IMPORTANT** You cannot migrate public IP addresses between zones. Check out the Yandex Migration Guide for details.
+        1. Identify the nodes that need to be migrated by running the following command:
+
+           ```bash
+           kubectl get node -l "topology.kubernetes.io/zone=ru-central1-c"
+           ```
+
+        2. Migrate your nodes, disks, and load balancers to one of the supported zones: `ru-central1-a`, `ru-central1-b`, or `ru-central1-d`. Refer to the [Yandex migration guide](https://cloud.yandex.com/en/docs/overview/concepts/zone-migration) for detailed instructions.
+
+           > You can't migrate public IP addresses between zones. For details, refer to the migration guide.
       summary: |
-        NodeGroup {{ $labels.node_group }} contains Nodes with deprecated availability zone.
+        NodeGroup {{ $labels.node_group }} contains nodes in a deprecated availability zone.
       severity: "9"
       markupFormat: markdown
     - name: NodeGroupReplicasUnavailable

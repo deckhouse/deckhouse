@@ -34,7 +34,7 @@ spec:
                   description: |
                     Размер root-диска. Значение указывается в гигабайтах.
 
-                    Параметр также влияет на тип диска. Особенности применения параметра описаны в разделе [Как использовать rootDiskSize и когда он предпочтителен](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/cloud-provider-huaweicloud/faq.html#как-использовать-rootdisksize-и-когда-он-предпочтителен).
+                    Параметр также влияет на тип диска.
                 rootDiskType:
                   description: |
                     Тип root-диска.
