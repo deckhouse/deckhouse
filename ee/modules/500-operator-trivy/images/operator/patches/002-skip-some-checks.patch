@@ -66,10 +66,10 @@ index 09f23e3..44b4add 100644
 +		// `Enable docker/default seccomp profile in your pod definitions`
 +		// "KSV104", "AVD-KSV-0104",
 +		// `Apply Security Context to Your Pods and Containers`
-+		"KSV025", "AVD-KSV-0025", "KSV020", "AVD-KSV-0020", "KSV005", "AVD-KSV-0005", "KSV030", "AVD-KSV-0030",
++		// "KSV025", "AVD-KSV-0025", "KSV005", "AVD-KSV-0005", "KSV030", "AVD-KSV-0030",
 +	}
 +
-+	additionalIDs := []string{"KSV021", "AVD-KSV-0021"}
++	additionalIDs := []string{"KSV021", "AVD-KSV-0021", "KSV020", "AVD-KSV-0020"}
 +
 +	for _, check := range checkIDs {
 +		if check == id && isSystemNamespace(namespace) {
