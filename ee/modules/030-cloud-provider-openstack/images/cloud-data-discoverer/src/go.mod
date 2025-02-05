@@ -1,6 +1,6 @@
 module discoverer
 
-go 1.19
+go 1.23
 
 require (
 	github.com/alecthomas/kingpin v2.2.6+incompatible
@@ -68,4 +68,4 @@ require (
 	sigs.k8s.io/yaml v1.3.0 // indirect
 )
 
-replace github.com/deckhouse/deckhouse/go_lib/cloud-data => ../../../../../go_lib/cloud-data/
+replace github.com/deckhouse/deckhouse/go_lib/cloud-data => /deckhouse/go_lib/cloud-data

@@ -21,6 +21,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"os"
 	"path"
 	"path/filepath"
@@ -372,6 +373,8 @@ func (mdr *moduleDocumentationReconciler) getDocumentationFromModuleDir(modulePa
 			return err
 		}
 		defer f.Close()
+
+		mdr.logger.Warn("copy file", slog.String("path", file))
 
 		if _, err := io.Copy(tw, f); err != nil {
 			return err
