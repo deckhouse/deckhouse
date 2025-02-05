@@ -473,6 +473,10 @@ a.comparison-table__module::after {
     white-space: nowrap;
 }
 
+.sidebar__submenu-title {
+  margin-right: 10px;
+}
+
 .sidebar__badge {
   display: inline-flex;
   margin-right: 4px;
@@ -487,10 +491,6 @@ a.comparison-table__module::after {
   text-transform: uppercase;
   white-space: nowrap;
   background: $background-blue;
-
-  &:nth-child(2) {
-    margin-left: 10px;
-  }
 }
 
 .sidebar__badge_ee {

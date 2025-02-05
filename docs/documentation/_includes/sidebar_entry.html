@@ -40,7 +40,8 @@
 
 {%- if entry.folders %}
 <li class="{{ folder_entry_class }}">
-    <a href="#">{{ entry.title[page.lang] }}
+    <a href="#">
+      <span class="sidebar__submenu-title">{{ entry.title[page.lang] }}</span>
     {%- if entry.featureStatus %}<span class="sidebar__badge sidebar__badge_{{ entry.featureStatus }}" title="{{ site.data.i18n.features[entry.featureStatus][page.lang] | lstrip | strip_html | regex_replace: '.$', '' }}">
         {%- if entry.featureStatus == "experimental" %}
           Exp
