@@ -268,6 +268,8 @@ jobs:
         if: ${{ success() || cancelled() }}
         id: cleanup_cluster
         env:
+          COMMANDER_TOKEN: ${{secrets.E2E_COMMANDER_TOKEN}}
+          COMMANDER_HOST: ${{secrets.E2E_COMMANDER_HOST}}
           PROVIDER: Yandex.Cloud
           CRI: Containerd
           LAYOUT: WithoutNAT
@@ -289,8 +291,10 @@ jobs:
           REPOSITORY: ${{ github.repository }}
           DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
           GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+          COMMANDER_TOKEN: ${{secrets.E2E_COMMANDER_TOKEN}}
+          COMMANDER_HOST: ${{secrets.E2E_COMMANDER_HOST}}
         run: |
-          echo "Execute 'script.sh cleanup' via 'docker run', using environment:
+          echo "Execute 'script-commander.sh cleanup' via 'docker run', using environment:
             INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
             DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG}
             INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG}
@@ -333,7 +337,7 @@ jobs:
             -v ${TMP_DIR_PATH}:/tmp \
             -w /deckhouse \
           ${INSTALL_IMAGE_NAME} \
-          bash /deckhouse/testing/cloud_layouts/script.sh cleanup
+          bash /deckhouse/testing/cloud_layouts/script-commander.sh cleanup
 
         # </template: e2e_run_template>
 
@@ -560,6 +564,8 @@ jobs:
         if: ${{ success() || cancelled() }}
         id: cleanup_cluster
         env:
+          COMMANDER_TOKEN: ${{secrets.E2E_COMMANDER_TOKEN}}
+          COMMANDER_HOST: ${{secrets.E2E_COMMANDER_HOST}}
           PROVIDER: Yandex.Cloud
           CRI: Containerd
           LAYOUT: WithoutNAT
@@ -581,8 +587,10 @@ jobs:
           REPOSITORY: ${{ github.repository }}
           DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
           GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+          COMMANDER_TOKEN: ${{secrets.E2E_COMMANDER_TOKEN}}
+          COMMANDER_HOST: ${{secrets.E2E_COMMANDER_HOST}}
         run: |
-          echo "Execute 'script.sh cleanup' via 'docker run', using environment:
+          echo "Execute 'script-commander.sh cleanup' via 'docker run', using environment:
             INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
             DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG}
             INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG}
@@ -625,7 +633,7 @@ jobs:
             -v ${TMP_DIR_PATH}:/tmp \
             -w /deckhouse \
           ${INSTALL_IMAGE_NAME} \
-          bash /deckhouse/testing/cloud_layouts/script.sh cleanup
+          bash /deckhouse/testing/cloud_layouts/script-commander.sh cleanup
 
         # </template: e2e_run_template>
 
@@ -852,6 +860,8 @@ jobs:
         if: ${{ success() || cancelled() }}
         id: cleanup_cluster
         env:
+          COMMANDER_TOKEN: ${{secrets.E2E_COMMANDER_TOKEN}}
+          COMMANDER_HOST: ${{secrets.E2E_COMMANDER_HOST}}
           PROVIDER: Yandex.Cloud
           CRI: Containerd
           LAYOUT: WithoutNAT
@@ -873,8 +883,10 @@ jobs:
           REPOSITORY: ${{ github.repository }}
           DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
           GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+          COMMANDER_TOKEN: ${{secrets.E2E_COMMANDER_TOKEN}}
+          COMMANDER_HOST: ${{secrets.E2E_COMMANDER_HOST}}
         run: |
-          echo "Execute 'script.sh cleanup' via 'docker run', using environment:
+          echo "Execute 'script-commander.sh cleanup' via 'docker run', using environment:
             INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
             DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG}
             INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG}
@@ -917,7 +929,7 @@ jobs:
             -v ${TMP_DIR_PATH}:/tmp \
             -w /deckhouse \
           ${INSTALL_IMAGE_NAME} \
-          bash /deckhouse/testing/cloud_layouts/script.sh cleanup
+          bash /deckhouse/testing/cloud_layouts/script-commander.sh cleanup
 
         # </template: e2e_run_template>
 
@@ -1144,6 +1156,8 @@ jobs:
         if: ${{ success() || cancelled() }}
         id: cleanup_cluster
         env:
+          COMMANDER_TOKEN: ${{secrets.E2E_COMMANDER_TOKEN}}
+          COMMANDER_HOST: ${{secrets.E2E_COMMANDER_HOST}}
           PROVIDER: Yandex.Cloud
           CRI: Containerd
           LAYOUT: WithoutNAT
@@ -1165,8 +1179,10 @@ jobs:
           REPOSITORY: ${{ github.repository }}
           DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
           GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+          COMMANDER_TOKEN: ${{secrets.E2E_COMMANDER_TOKEN}}
+          COMMANDER_HOST: ${{secrets.E2E_COMMANDER_HOST}}
         run: |
-          echo "Execute 'script.sh cleanup' via 'docker run', using environment:
+          echo "Execute 'script-commander.sh cleanup' via 'docker run', using environment:
             INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
             DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG}
             INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG}
@@ -1209,7 +1225,7 @@ jobs:
             -v ${TMP_DIR_PATH}:/tmp \
             -w /deckhouse \
           ${INSTALL_IMAGE_NAME} \
-          bash /deckhouse/testing/cloud_layouts/script.sh cleanup
+          bash /deckhouse/testing/cloud_layouts/script-commander.sh cleanup
 
         # </template: e2e_run_template>
 
@@ -1436,6 +1452,8 @@ jobs:
         if: ${{ success() || cancelled() }}
         id: cleanup_cluster
         env:
+          COMMANDER_TOKEN: ${{secrets.E2E_COMMANDER_TOKEN}}
+          COMMANDER_HOST: ${{secrets.E2E_COMMANDER_HOST}}
           PROVIDER: Yandex.Cloud
           CRI: Containerd
           LAYOUT: WithoutNAT
@@ -1457,8 +1475,10 @@ jobs:
           REPOSITORY: ${{ github.repository }}
           DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
           GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+          COMMANDER_TOKEN: ${{secrets.E2E_COMMANDER_TOKEN}}
+          COMMANDER_HOST: ${{secrets.E2E_COMMANDER_HOST}}
         run: |
-          echo "Execute 'script.sh cleanup' via 'docker run', using environment:
+          echo "Execute 'script-commander.sh cleanup' via 'docker run', using environment:
             INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
             DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG}
             INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG}
@@ -1501,7 +1521,7 @@ jobs:
             -v ${TMP_DIR_PATH}:/tmp \
             -w /deckhouse \
           ${INSTALL_IMAGE_NAME} \
-          bash /deckhouse/testing/cloud_layouts/script.sh cleanup
+          bash /deckhouse/testing/cloud_layouts/script-commander.sh cleanup
 
         # </template: e2e_run_template>
 
@@ -1728,6 +1748,8 @@ jobs:
         if: ${{ success() || cancelled() }}
         id: cleanup_cluster
         env:
+          COMMANDER_TOKEN: ${{secrets.E2E_COMMANDER_TOKEN}}
+          COMMANDER_HOST: ${{secrets.E2E_COMMANDER_HOST}}
           PROVIDER: Yandex.Cloud
           CRI: Containerd
           LAYOUT: WithoutNAT
@@ -1749,8 +1771,10 @@ jobs:
           REPOSITORY: ${{ github.repository }}
           DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
           GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+          COMMANDER_TOKEN: ${{secrets.E2E_COMMANDER_TOKEN}}
+          COMMANDER_HOST: ${{secrets.E2E_COMMANDER_HOST}}
         run: |
-          echo "Execute 'script.sh cleanup' via 'docker run', using environment:
+          echo "Execute 'script-commander.sh cleanup' via 'docker run', using environment:
             INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
             DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG}
             INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG}
@@ -1793,7 +1817,7 @@ jobs:
             -v ${TMP_DIR_PATH}:/tmp \
             -w /deckhouse \
           ${INSTALL_IMAGE_NAME} \
-          bash /deckhouse/testing/cloud_layouts/script.sh cleanup
+          bash /deckhouse/testing/cloud_layouts/script-commander.sh cleanup
 
         # </template: e2e_run_template>
 
@@ -2020,6 +2044,8 @@ jobs:
         if: ${{ success() || cancelled() }}
         id: cleanup_cluster
         env:
+          COMMANDER_TOKEN: ${{secrets.E2E_COMMANDER_TOKEN}}
+          COMMANDER_HOST: ${{secrets.E2E_COMMANDER_HOST}}
           PROVIDER: Yandex.Cloud
           CRI: Containerd
           LAYOUT: WithoutNAT
@@ -2041,8 +2067,10 @@ jobs:
           REPOSITORY: ${{ github.repository }}
           DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
           GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+          COMMANDER_TOKEN: ${{secrets.E2E_COMMANDER_TOKEN}}
+          COMMANDER_HOST: ${{secrets.E2E_COMMANDER_HOST}}
         run: |
-          echo "Execute 'script.sh cleanup' via 'docker run', using environment:
+          echo "Execute 'script-commander.sh cleanup' via 'docker run', using environment:
             INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
             DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG}
             INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG}
@@ -2085,7 +2113,7 @@ jobs:
             -v ${TMP_DIR_PATH}:/tmp \
             -w /deckhouse \
           ${INSTALL_IMAGE_NAME} \
-          bash /deckhouse/testing/cloud_layouts/script.sh cleanup
+          bash /deckhouse/testing/cloud_layouts/script-commander.sh cleanup
 
         # </template: e2e_run_template>
 
@@ -2312,6 +2340,8 @@ jobs:
         if: ${{ success() || cancelled() }}
         id: cleanup_cluster
         env:
+          COMMANDER_TOKEN: ${{secrets.E2E_COMMANDER_TOKEN}}
+          COMMANDER_HOST: ${{secrets.E2E_COMMANDER_HOST}}
           PROVIDER: Yandex.Cloud
           CRI: Containerd
           LAYOUT: WithoutNAT
@@ -2333,8 +2363,10 @@ jobs:
           REPOSITORY: ${{ github.repository }}
           DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
           GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+          COMMANDER_TOKEN: ${{secrets.E2E_COMMANDER_TOKEN}}
+          COMMANDER_HOST: ${{secrets.E2E_COMMANDER_HOST}}
         run: |
-          echo "Execute 'script.sh cleanup' via 'docker run', using environment:
+          echo "Execute 'script-commander.sh cleanup' via 'docker run', using environment:
             INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
             DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG}
             INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG}
@@ -2377,7 +2409,7 @@ jobs:
             -v ${TMP_DIR_PATH}:/tmp \
             -w /deckhouse \
           ${INSTALL_IMAGE_NAME} \
-          bash /deckhouse/testing/cloud_layouts/script.sh cleanup
+          bash /deckhouse/testing/cloud_layouts/script-commander.sh cleanup
 
         # </template: e2e_run_template>
 
