@@ -1,0 +1,15 @@
+cni-flannel:
+  fixes:
+    - summary: >-
+        Fixed a bug in the `check_cni_configuration` hook that could cause the main queue in the
+        `deckhouse` to stop.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/11831
+deckhouse-controller:
+  fixes:
+    - summary: Skip DeckhouseRelease requirement if it's not registered.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/11902
+docs:
+  fixes:
+    - summary: Fix for removing master node labels to prevent rejoining the cluster.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/11858
+
