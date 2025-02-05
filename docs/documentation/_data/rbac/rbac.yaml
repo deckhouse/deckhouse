@@ -848,7 +848,7 @@ modules:
           - patch
           - delete
       use: null
-    namespace: ""
+    namespace: d8-system
     subsystems:
     - kubernetes
     - networking
@@ -1912,7 +1912,7 @@ modules:
           - patch
           - delete
       use: null
-    namespace: ""
+    namespace: d8-system
     subsystems:
     - kubernetes
   prometheus:
@@ -2577,6 +2577,7 @@ subsystems:
     - control-plane-manager
     - kube-dns
     namespaces:
+    - d8-system
     - kube-system
   networking:
     modules:
