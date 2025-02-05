@@ -14,16 +14,15 @@
 
 bb-set-proxy
 
-{{- define "is_containerd_cri_and_embedded_registry" }}
+{{- $is_containerd_cri_and_embedded_registry := "" }}
   {{- if eq $.cri "Containerd" }}
     {{- if and $.registry.registryMode (ne $.registry.registryMode "Direct") }}
       {{- $system_registry_address := $.systemRegistry.registryAddress | default "" }}
       {{- if eq $.registry.address $system_registry_address }}
-        {{- printf "%s" "true" -}}
+        {{- $is_containerd_cri_and_embedded_registry = "true" }}
       {{- end }}
     {{- end }}
   {{- end }}
-{{- end }}
 
 {{- $target_registry_address := $.registry.address }}
 
@@ -33,7 +32,7 @@ bb-set-proxy
 {{- $kubernetes_api_proxy_image_path := printf "%s@%s" $.registry.path (index $.images.controlPlaneManager "kubernetesApiProxy") }}
 {{- $target_kubernetes_api_proxy_image := printf "%s%s" $target_registry_address $kubernetes_api_proxy_image_path }}
 
-{{- if (include "is_containerd_cri_and_embedded_registry" .) }}
+{{- if $is_containerd_cri_and_embedded_registry }}
 
 # If embedded registry
 {{- $source_registry_port := "5001" }}
