@@ -114,6 +114,10 @@ entries:
                             en: Overview
                             ru: Введение
                           url: /admin/network/alb-overview.html
+                        - title:
+                            en: NGINX Ingress controller
+                            ru: NGINX Ingress controller
+                          url: /admin/network/alb-nginx.html
                 - title:
                     en: ServiceMesh
                     ru: ServiceMesh
