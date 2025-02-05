@@ -36,7 +36,7 @@ docker:
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-binaries-artifact
 final: false
-from: common/relocate-artifact
+fromImage: common/relocate-artifact
 git:
 - add: /{{ .ModulePath }}modules/035-{{ .ModuleName }}/images/{{ .ImageName }}/rootfs
   to: /relocate
