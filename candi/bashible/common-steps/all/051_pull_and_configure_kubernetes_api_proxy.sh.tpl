@@ -88,21 +88,20 @@ _get_local_images_list() {
   echo $repo_digests
 }
 
+discovered_node_ip="$(</var/lib/bashible/discovered-node-ip)"
+list_of_local_imgs=$(_get_local_images_list)
+target_registry_address={{ $target_registry_address | quote }}
+source_registry_addresses="127.0.0.1:{{- $source_registry_port -}},$discovered_node_ip:{{- $source_registry_port -}}"
+{{- if $source_registry_addresses }}
+source_registry_addresses="$source_registry_addresses,{{- $source_registry_addresses -}}"
+{{- end }}
+
 if [ "$FIRST_BASHIBLE_RUN" == "yes" ]; then
   # Pulling images from the embedded registry during the first node startup.  
   # Images are pulled from the following sources:  
   # - Local embedded registry (localhost)  
   # - Proxy embedded registry  
   # - Addresses of neighboring master nodes  
-
-  discovered_node_ip="$(</var/lib/bashible/discovered-node-ip)"
-  list_of_local_imgs=$(_get_local_images_list)
-  target_registry_address={{ $target_registry_address | quote }}
-  source_registry_addresses="127.0.0.1:{{- $source_registry_port -}},$discovered_node_ip:{{- $source_registry_port -}}"
-  {{- if $source_registry_addresses }}
-  source_registry_addresses="$source_registry_addresses,{{- $source_registry_addresses -}}"
-  {{- end }}
-
   if ! echo $list_of_local_imgs | grep -q {{ $target_sandbox_image | quote }}; then
     _pull_img_from_several_sources_and_re_tag {{ $sandbox_image_path | quote }} $target_registry_address $source_registry_addresses
   fi
@@ -111,7 +110,7 @@ if [ "$FIRST_BASHIBLE_RUN" == "yes" ]; then
     _pull_img_from_several_sources_and_re_tag {{ $kubernetes_api_proxy_image_path | quote }} $target_registry_address $source_registry_addresses
   fi
 else
-  # If it's not the first run, information from containerd (CRI) is used for pulling images.
+  # If it's not the first run, information from containerd (CRI) is used for pulling images.  
   if ! echo $list_of_local_imgs | grep -q {{ $target_sandbox_image | quote }}; then
     /opt/deckhouse/bin/crictl pull {{ $target_sandbox_image | quote }}
   fi
