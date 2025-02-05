@@ -129,7 +129,7 @@ func (r *reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 
 	// handle virtual projects
 	if project.Spec.ProjectTemplateName == projectmanager.VirtualTemplate {
-		r.logger.Info("reconcile the virtual project", "project", req.Name)
+		r.logger.Info("handle the virtual project", "project", req.Name)
 		return r.projectManager.HandleVirtual(ctx, project)
 	}
 

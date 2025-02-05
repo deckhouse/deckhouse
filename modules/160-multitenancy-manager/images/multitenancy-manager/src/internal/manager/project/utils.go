@@ -112,7 +112,7 @@ func (m *Manager) ensureProject(ctx context.Context, project *v1alpha2.Project) 
 		}
 	}
 
-	m.logger.Info("successfully ensured the project", "project", project.Name)
+	m.logger.Info("the project ensured", "project", project.Name)
 	return nil
 }
 
@@ -142,6 +142,29 @@ func (m *Manager) updateProjectStatus(ctx context.Context, project *v1alpha2.Pro
 	})
 }
 
+func (m *Manager) finishProject(ctx context.Context, project *v1alpha2.Project) error {
+	return retry.OnError(retry.DefaultRetry, apierrors.IsServiceUnavailable, func() error {
+		return retry.RetryOnConflict(retry.DefaultRetry, func() error {
+			if err := m.client.Get(ctx, client.ObjectKey{Name: project.Name}, project); err != nil {
+				return fmt.Errorf("get the '%s' project: %w", project.Name, err)
+			}
+
+			if len(project.Labels) == 0 {
+				project.Labels = make(map[string]string, 1)
+			}
+			project.Labels[v1alpha2.ResourceLabelTemplate] = project.Spec.ProjectTemplateName
+
+			delete(project.Annotations, v1alpha2.ProjectAnnotationRequireSync)
+
+			if !controllerutil.ContainsFinalizer(project, v1alpha2.ProjectFinalizer) {
+				controllerutil.AddFinalizer(project, v1alpha2.ProjectFinalizer)
+			}
+
+			return m.client.Status().Update(ctx, project)
+		})
+	})
+}
+
 func (m *Manager) removeFinalizer(ctx context.Context, project *v1alpha2.Project) error {
 	return retry.OnError(retry.DefaultRetry, apierrors.IsServiceUnavailable, func() error {
 		return retry.RetryOnConflict(retry.DefaultRetry, func() error {
@@ -155,25 +178,4 @@ func (m *Manager) removeFinalizer(ctx context.Context, project *v1alpha2.Project
 			return m.client.Update(ctx, project)
 		})
 	})
-}
-
-// prepareProject sets template label, finalizer and deletes sync require annotation
-func (m *Manager) prepareProject(project *v1alpha2.Project) {
-	// set deploying status
-	project.ClearConditions()
-	project.Status.ObservedGeneration = project.Generation
-	project.SetState(v1alpha2.ProjectStateDeploying)
-
-	if len(project.Labels) == 0 {
-		project.Labels = make(map[string]string, 1)
-	}
-	project.Labels[v1alpha2.ResourceLabelTemplate] = project.Spec.ProjectTemplateName
-
-	if project.Annotations != nil {
-		delete(project.Annotations, v1alpha2.ProjectAnnotationRequireSync)
-	}
-
-	if !controllerutil.ContainsFinalizer(project, v1alpha2.ProjectFinalizer) {
-		controllerutil.AddFinalizer(project, v1alpha2.ProjectFinalizer)
-	}
 }

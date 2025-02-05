@@ -79,7 +79,7 @@ func (m *Manager) Init(ctx context.Context, checker healthz.Checker, init *sync.
 		return fmt.Errorf("ensure virtual projects: %w", err)
 	}
 
-	m.logger.Info("virtual projects ensured")
+	m.logger.Info("the virtual projects ensured")
 	init.Done()
 
 	return nil
@@ -87,31 +87,32 @@ func (m *Manager) Init(ctx context.Context, checker healthz.Checker, init *sync.
 
 // Handle ensures project`s resources
 func (m *Manager) Handle(ctx context.Context, project *v1alpha2.Project) (ctrl.Result, error) {
-	// set template label, finalizer and delete sync require annotation
-	m.prepareProject(project)
+	// set deploying status
+	project.ClearConditions()
+	project.Status.ObservedGeneration = project.Generation
 
 	// get the project template for the project
-	m.logger.Info("get project template for project", "project", project.Name, "projectTemplate", project.Spec.ProjectTemplateName)
+	m.logger.Info("get the project template for project", "project", project.Name, "template", project.Spec.ProjectTemplateName)
 	projectTemplate, err := m.projectTemplateByName(ctx, project.Spec.ProjectTemplateName)
 	if err != nil {
-		m.logger.Error(err, "failed to get project template", "project", project.Name, "projectTemplate", project.Spec.ProjectTemplateName)
+		m.logger.Error(err, "failed to get project template", "project", project.Name, "template", project.Spec.ProjectTemplateName)
 		project.SetState(v1alpha2.ProjectStateError)
 		project.SetConditionFalse(v1alpha2.ProjectConditionProjectTemplateFound, err.Error())
-		if statusErr := m.updateProjectStatus(ctx, project); statusErr != nil {
-			m.logger.Error(statusErr, "failed to set project status", "project", project.Name, "projectTemplate", project.Spec.ProjectTemplateName)
-			return ctrl.Result{}, statusErr
+		if updateErr := m.updateProjectStatus(ctx, project); updateErr != nil {
+			m.logger.Error(updateErr, "failed to update project status", "project", project.Name, "template", project.Spec.ProjectTemplateName)
+			return ctrl.Result{}, updateErr
 		}
 		return ctrl.Result{}, nil
 	}
 
 	// check if the project template exists
 	if projectTemplate == nil {
-		m.logger.Info("the project template not found for the project", "project", project.Name, "projectTemplate", project.Spec.ProjectTemplateName)
+		m.logger.Info("the project template not found for the project", "project", project.Name, "template", project.Spec.ProjectTemplateName)
 		project.SetState(v1alpha2.ProjectStateError)
 		project.SetConditionFalse(v1alpha2.ProjectConditionProjectTemplateFound, "The project template not found")
-		if statusErr := m.updateProjectStatus(ctx, project); statusErr != nil {
-			m.logger.Error(statusErr, "failed to set the project status", "project", project.Name, "projectTemplate", project.Spec.ProjectTemplateName)
-			return ctrl.Result{}, statusErr
+		if updateErr := m.updateProjectStatus(ctx, project); updateErr != nil {
+			m.logger.Error(updateErr, "failed to update the project status", "project", project.Name, "template", project.Spec.ProjectTemplateName)
+			return ctrl.Result{}, updateErr
 		}
 		return ctrl.Result{}, nil
 	}
@@ -120,14 +121,14 @@ func (m *Manager) Handle(ctx context.Context, project *v1alpha2.Project) (ctrl.R
 	project.Status.TemplateGeneration = projectTemplate.Generation
 
 	// validate the project against the project template
-	m.logger.Info("validate the project spec", "project", project.Name, "projectTemplate", projectTemplate.Name)
+	m.logger.Info("validate the project spec", "project", project.Name, "template", projectTemplate.Name)
 	if err = validate.Project(project, projectTemplate); err != nil {
-		m.logger.Error(err, "failed to validate the project spec", "project", project.Name, "projectTemplate", projectTemplate.Name)
+		m.logger.Error(err, "failed to validate the project spec", "project", project.Name, "template", projectTemplate.Name)
 		project.SetState(v1alpha2.ProjectStateError)
 		project.SetConditionFalse(v1alpha2.ProjectConditionProjectValidated, err.Error())
-		if statusErr := m.updateProjectStatus(ctx, project); statusErr != nil {
-			m.logger.Error(statusErr, "failed to set the project status", "project", project.Name, "projectTemplate", projectTemplate.Name)
-			return ctrl.Result{}, statusErr
+		if updateErr := m.updateProjectStatus(ctx, project); updateErr != nil {
+			m.logger.Error(updateErr, "failed to update the project status", "project", project.Name, "template", projectTemplate.Name)
+			return ctrl.Result{}, updateErr
 		}
 		return ctrl.Result{}, nil
 	}
@@ -135,29 +136,35 @@ func (m *Manager) Handle(ctx context.Context, project *v1alpha2.Project) (ctrl.R
 	project.SetConditionTrue(v1alpha2.ProjectConditionProjectValidated)
 
 	// upgrade project`s resources
-	m.logger.Info("upgrade resources for the project", "project", project.Name, "projectTemplate", projectTemplate.Name)
+	m.logger.Info("upgrade resources for the project", "project", project.Name, "template", projectTemplate.Name)
 	if err = m.helmClient.Upgrade(ctx, project, projectTemplate); err != nil {
 		// to avoid helm flaky errors
-		m.logger.Info("failed to upgrade the project resources, try again", "project", project.Name, "projectTemplate", projectTemplate.Name)
-		if secondTry := m.helmClient.Upgrade(ctx, project, projectTemplate); secondTry != nil {
+		m.logger.Info("failed to upgrade the project resources, try again", "project", project.Name, "template", projectTemplate.Name)
+		if err = m.helmClient.Upgrade(ctx, project, projectTemplate); err != nil {
 			project.SetState(v1alpha2.ProjectStateError)
-			project.SetConditionFalse(v1alpha2.ProjectConditionProjectResourcesUpgraded, secondTry.Error())
-			if statusErr := m.updateProjectStatus(ctx, project); statusErr != nil {
-				m.logger.Error(statusErr, "failed to set the project status", "project", project.Name, "projectTemplate", projectTemplate.Name)
-				return ctrl.Result{}, statusErr
+			project.SetConditionFalse(v1alpha2.ProjectConditionProjectResourcesUpgraded, err.Error())
+			if updateErr := m.updateProjectStatus(ctx, project); updateErr != nil {
+				m.logger.Error(updateErr, "failed to update the project status", "project", project.Name, "template", projectTemplate.Name)
+				return ctrl.Result{}, updateErr
 			}
 			return ctrl.Result{}, nil
 		}
 	}
 
-	project.SetState(v1alpha2.ProjectStateDeployed)
-	project.SetConditionTrue(v1alpha2.ProjectConditionProjectResourcesUpgraded)
-	if err = m.updateProjectStatus(ctx, project); err != nil {
-		m.logger.Error(err, "failed to set the project status", "project", project.Name, "projectTemplate", projectTemplate.Name)
+	// add finalizer and remove labels
+	if err = m.finishProject(ctx, project); err != nil {
+		m.logger.Error(err, "failed to update the project", "project", project.Name, "template", projectTemplate.Name)
 		return ctrl.Result{}, err
 	}
 
-	m.logger.Info("the project reconciled", "project", project.Name, "projectTemplate", projectTemplate.Name)
+	project.SetState(v1alpha2.ProjectStateDeployed)
+	project.SetConditionTrue(v1alpha2.ProjectConditionProjectResourcesUpgraded)
+	if err = m.updateProjectStatus(ctx, project); err != nil {
+		m.logger.Error(err, "failed to update the project status", "project", project.Name, "template", projectTemplate.Name)
+		return ctrl.Result{}, err
+	}
+
+	m.logger.Info("the project reconciled", "project", project.Name, "template", projectTemplate.Name)
 	return ctrl.Result{}, nil
 }
 

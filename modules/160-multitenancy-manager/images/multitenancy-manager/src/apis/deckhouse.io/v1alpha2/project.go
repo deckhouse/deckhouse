@@ -23,9 +23,8 @@ import (
 )
 
 const (
-	ProjectStateError     = "Error"
-	ProjectStateDeploying = "Deploying"
-	ProjectStateDeployed  = "Deployed"
+	ProjectStateError    = "Error"
+	ProjectStateDeployed = "Deployed"
 
 	ProjectConditionProjectTemplateFound     = "ProjectTemplateFound"
 	ProjectConditionProjectValidated         = "Validated"
