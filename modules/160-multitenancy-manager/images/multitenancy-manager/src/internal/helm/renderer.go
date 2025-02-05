@@ -48,10 +48,6 @@ func newPostRenderer(project *v1alpha2.Project, versions map[string]struct{}, lo
 // Run post renderer which will remove all namespaces except the project one
 // or will add a project namespace if it does not exist in manifests
 func (r *postRenderer) Run(renderedManifests *bytes.Buffer) (modifiedManifests *bytes.Buffer, err error) {
-	// clear resources
-	r.project.Status.Rendered = []v1alpha2.ResourceObject{}
-	r.project.Status.Skipped = []v1alpha2.ResourceObject{}
-
 	var coreFound bool
 	builder := strings.Builder{}
 	for _, manifest := range releaseutil.SplitManifests(renderedManifests.String()) {
@@ -70,7 +66,7 @@ func (r *postRenderer) Run(renderedManifests *bytes.Buffer) (modifiedManifests *
 		if r.versions != nil {
 			version := fmt.Sprintf("%s/%s", object.GetAPIVersion(), object.GetKind())
 			if _, ok := r.versions[version]; !ok {
-				r.project.AddSkippedResource(object)
+				r.project.AddResource(object, false)
 				r.logger.Info("the resource skipped during render project", "project", r.project.Name, "resource", object.GetName(), "version", version)
 				continue
 			}
@@ -99,7 +95,7 @@ func (r *postRenderer) Run(renderedManifests *bytes.Buffer) (modifiedManifests *
 			coreFound = true
 		}
 
-		r.project.AddRenderedResource(object)
+		r.project.AddResource(object, true)
 
 		data, _ := yaml.Marshal(object.Object)
 		builder.WriteString("\n---\n" + string(data))

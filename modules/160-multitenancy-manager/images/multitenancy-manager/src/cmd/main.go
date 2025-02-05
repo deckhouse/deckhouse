@@ -130,7 +130,7 @@ func setupRuntimeManager(logger logr.Logger) (ctrl.Manager, error) {
 		}
 	}
 
-	managerOpts := manager.Options{
+	opts := manager.Options{
 		LeaderElection:          false,
 		Scheme:                  scheme,
 		GracefulShutdownTimeout: ptr.To(10 * time.Second),
@@ -142,12 +142,12 @@ func setupRuntimeManager(logger logr.Logger) (ctrl.Manager, error) {
 	}
 
 	if os.Getenv(haModeEnv) == "true" {
-		managerOpts.LeaderElection = true
-		managerOpts.LeaderElectionID = controllerName
-		managerOpts.LeaderElectionNamespace = helmNamespace
+		opts.LeaderElection = true
+		opts.LeaderElectionID = controllerName
+		opts.LeaderElectionNamespace = helmNamespace
 	}
 
-	runtimeManager, err := ctrl.NewManager(ctrl.GetConfigOrDie(), managerOpts)
+	runtimeManager, err := ctrl.NewManager(ctrl.GetConfigOrDie(), opts)
 	if err != nil {
 		logger.Error(err, "unable to create runtime manager")
 		return nil, err

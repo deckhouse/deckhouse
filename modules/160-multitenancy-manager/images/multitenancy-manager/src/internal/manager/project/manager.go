@@ -92,9 +92,11 @@ func (m *Manager) Handle(ctx context.Context, project *v1alpha2.Project) (ctrl.R
 		return ctrl.Result{}, err
 	}
 
-	// set deploying status
 	project.ClearConditions()
-	project.Status.ObservedGeneration = project.Generation
+	project.SetObservedGeneration(project.Generation)
+
+	// clear resources
+	project.Status.Resources = make(map[string]map[string][]v1alpha2.ResourceObject)
 
 	// get the project template for the project
 	m.logger.Info("get the project template for project", "project", project.Name, "template", project.Spec.ProjectTemplateName)
@@ -123,7 +125,7 @@ func (m *Manager) Handle(ctx context.Context, project *v1alpha2.Project) (ctrl.R
 	}
 
 	project.SetConditionTrue(v1alpha2.ProjectConditionProjectTemplateFound)
-	project.Status.TemplateGeneration = projectTemplate.Generation
+	project.SetTemplateGeneration(projectTemplate.Generation)
 
 	// validate the project against the project template
 	m.logger.Info("validate the project spec", "project", project.Name, "template", projectTemplate.Name)
