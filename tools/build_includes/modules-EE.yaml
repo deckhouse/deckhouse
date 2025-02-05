@@ -23,17 +23,17 @@
   to: /deckhouse/modules/140-user-authz/templates/webhook
   stageDependencies:
     setup:
-        - '**/*.go'
+        - '**/*'
 - add: /ee/be/modules/350-node-local-dns
   to: /deckhouse/modules/350-node-local-dns
   stageDependencies:
     setup:
-        - '**/*.go'
+        - '**/*'
 - add: /ee/se/modules/380-metallb
   to: /deckhouse/modules/380-metallb
   stageDependencies:
     setup:
-        - '**/*.go'
+        - '**/*'
 - add: /ee/se-plus/modules/021-cni-cilium/crds/doc-ru-egressgatewaypolicies.yaml
   to: /deckhouse/modules/021-cni-cilium/crds/doc-ru-egressgatewaypolicies.yaml
   stageDependencies:
@@ -58,32 +58,32 @@
   to: /deckhouse/modules/021-cni-cilium/crds/internal
   stageDependencies:
     setup:
-        - '**/*.go'
+        - '**/*'
 - add: /ee/se-plus/modules/021-cni-cilium/hooks/ee
   to: /deckhouse/modules/021-cni-cilium/hooks/ee
   stageDependencies:
     setup:
-        - '**/*.go'
+        - '**/*'
 - add: /ee/se-plus/modules/021-cni-cilium/images/egress-gateway-agent
   to: /deckhouse/modules/021-cni-cilium/images/egress-gateway-agent
   stageDependencies:
     setup:
-        - '**/*.go'
+        - '**/*'
 - add: /ee/se-plus/modules/021-cni-cilium/templates/egress-gateway-agent
   to: /deckhouse/modules/021-cni-cilium/templates/egress-gateway-agent
   stageDependencies:
     setup:
-        - '**/*.go'
+        - '**/*'
 - add: /ee/se-plus/modules/021-cni-cilium/templates/egress-gateway-instance
   to: /deckhouse/modules/021-cni-cilium/templates/egress-gateway-instance
   stageDependencies:
     setup:
-        - '**/*.go'
+        - '**/*'
 - add: /ee/se-plus/modules/021-cni-cilium/templates/egress-policy
   to: /deckhouse/modules/021-cni-cilium/templates/egress-policy
   stageDependencies:
     setup:
-        - '**/*.go'
+        - '**/*'
 - add: /ee/se-plus/modules/021-cni-cilium/monitoring/prometheus-rules/egressgatewaypolicies.yaml
   to: /deckhouse/modules/021-cni-cilium/monitoring/prometheus-rules/egressgatewaypolicies.yaml
   stageDependencies:
@@ -93,32 +93,32 @@
   to: /deckhouse/modules/030-cloud-provider-vsphere
   stageDependencies:
     setup:
-        - '**/*.go'
+        - '**/*'
 - add: /ee/se-plus/modules/030-cloud-provider-zvirt
   to: /deckhouse/modules/030-cloud-provider-zvirt
   stageDependencies:
     setup:
-        - '**/*.go'
+        - '**/*'
 - add: /ee/se-plus/modules/040-node-manager/cloud-providers/vsphere
   to: /deckhouse/modules/040-node-manager/cloud-providers/vsphere
   stageDependencies:
     setup:
-        - '**/*.go'
+        - '**/*'
 - add: /ee/se-plus/modules/040-node-manager/capi/zvirt
   to: /deckhouse/modules/040-node-manager/capi/zvirt
   stageDependencies:
     setup:
-        - '**/*.go'
+        - '**/*'
 - add: /ee/modules/015-admission-policy-engine/templates/trivy-provider
   to: /deckhouse/modules/015-admission-policy-engine/templates/trivy-provider
   stageDependencies:
     setup:
-        - '**/*.go'
+        - '**/*'
 - add: /ee/modules/015-admission-policy-engine/templates/ratify
   to: /deckhouse/modules/015-admission-policy-engine/templates/ratify
   stageDependencies:
     setup:
-        - '**/*.go'
+        - '**/*'
 - add: /ee/modules/015-admission-policy-engine/hooks/common_test.go
   to: /deckhouse/modules/015-admission-policy-engine/hooks/common_test.go
   stageDependencies:
@@ -138,72 +138,72 @@
   to: /deckhouse/modules/025-static-routing-manager
   stageDependencies:
     setup:
-        - '**/*.go'
+        - '**/*'
 - add: /ee/modules/030-cloud-provider-dynamix
   to: /deckhouse/modules/030-cloud-provider-dynamix
   stageDependencies:
     setup:
-        - '**/*.go'
+        - '**/*'
 - add: /ee/modules/030-cloud-provider-huaweicloud
   to: /deckhouse/modules/030-cloud-provider-huaweicloud
   stageDependencies:
     setup:
-        - '**/*.go'
+        - '**/*'
 - add: /ee/modules/030-cloud-provider-openstack
   to: /deckhouse/modules/030-cloud-provider-openstack
   stageDependencies:
     setup:
-        - '**/*.go'
+        - '**/*'
 - add: /ee/modules/030-cloud-provider-vcd
   to: /deckhouse/modules/030-cloud-provider-vcd
   stageDependencies:
     setup:
-        - '**/*.go'
+        - '**/*'
 - add: /ee/modules/040-node-manager/cloud-providers/openstack
   to: /deckhouse/modules/040-node-manager/cloud-providers/openstack
   stageDependencies:
     setup:
-        - '**/*.go'
+        - '**/*'
 - add: /ee/modules/040-node-manager/capi/dynamix
   to: /deckhouse/modules/040-node-manager/capi/dynamix
   stageDependencies:
     setup:
-        - '**/*.go'
+        - '**/*'
 - add: /ee/modules/040-node-manager/capi/huaweicloud
   to: /deckhouse/modules/040-node-manager/capi/huaweicloud
   stageDependencies:
     setup:
-        - '**/*.go'
+        - '**/*'
 - add: /ee/modules/040-node-manager/capi/vcd
   to: /deckhouse/modules/040-node-manager/capi/vcd
   stageDependencies:
     setup:
-        - '**/*.go'
+        - '**/*'
 - add: /ee/modules/110-istio/templates/alliance
   to: /deckhouse/modules/110-istio/templates/alliance
   stageDependencies:
     setup:
-        - '**/*.go'
+        - '**/*'
 - add: /ee/modules/110-istio/templates/control-plane-ee
   to: /deckhouse/modules/110-istio/templates/control-plane-ee
   stageDependencies:
     setup:
-        - '**/*.go'
+        - '**/*'
 - add: /ee/modules/110-istio/templates/federation
   to: /deckhouse/modules/110-istio/templates/federation
   stageDependencies:
     setup:
-        - '**/*.go'
+        - '**/*'
 - add: /ee/modules/110-istio/templates/multicluster
   to: /deckhouse/modules/110-istio/templates/multicluster
   stageDependencies:
     setup:
-        - '**/*.go'
+        - '**/*'
 - add: /ee/modules/110-istio/hooks/ee
   to: /deckhouse/modules/110-istio/hooks/ee
   stageDependencies:
     setup:
-        - '**/*.go'
+        - '**/*'
 - add: /ee/modules/110-istio/crds/doc-ru-istiofederation.yaml
   to: /deckhouse/modules/110-istio/crds/doc-ru-istiofederation.yaml
   stageDependencies:
@@ -273,12 +273,12 @@
   to: /deckhouse/modules/380-metallb/images/metallb
   stageDependencies:
     setup:
-        - '**/*.go'
+        - '**/*'
 - add: /ee/modules/380-metallb/templates/controller
   to: /deckhouse/modules/380-metallb/templates/controller
   stageDependencies:
     setup:
-        - '**/*.go'
+        - '**/*'
 - add: /ee/modules/380-metallb/templates/rbac-for-us.yaml
   to: /deckhouse/modules/380-metallb/templates/rbac-for-us.yaml
   stageDependencies:
@@ -288,7 +288,7 @@
   to: /deckhouse/modules/380-metallb/templates/speaker
   stageDependencies:
     setup:
-        - '**/*.go'
+        - '**/*'
 - add: /ee/modules/380-metallb/template_tests/bgp_test.go
   to: /deckhouse/modules/380-metallb/template_tests/bgp_test.go
   stageDependencies:
@@ -298,34 +298,34 @@
   to: /deckhouse/modules/380-metallb/monitoring/grafana-dashboards
   stageDependencies:
     setup:
-        - '**/*.go'
+        - '**/*'
 - add: /ee/modules/380-metallb/monitoring/prometheus-rules
   to: /deckhouse/modules/380-metallb/monitoring/prometheus-rules
   stageDependencies:
     setup:
-        - '**/*.go'
+        - '**/*'
 - add: /ee/modules/450-keepalived
   to: /deckhouse/modules/450-keepalived
   stageDependencies:
     setup:
-        - '**/*.go'
+        - '**/*'
 - add: /ee/modules/450-network-gateway
   to: /deckhouse/modules/450-network-gateway
   stageDependencies:
     setup:
-        - '**/*.go'
+        - '**/*'
 - add: /ee/modules/500-operator-trivy
   to: /deckhouse/modules/500-operator-trivy
   stageDependencies:
     setup:
-        - '**/*.go'
+        - '**/*'
 - add: /ee/modules/610-service-with-healthchecks
   to: /deckhouse/modules/610-service-with-healthchecks
   stageDependencies:
     setup:
-        - '**/*.go'
+        - '**/*'
 - add: /ee/modules/650-runtime-audit-engine
   to: /deckhouse/modules/650-runtime-audit-engine
   stageDependencies:
     setup:
-        - '**/*.go'
+        - '**/*'
