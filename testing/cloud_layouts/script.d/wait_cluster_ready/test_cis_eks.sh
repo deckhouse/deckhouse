@@ -15,6 +15,7 @@ export PATH="/opt/deckhouse/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bi
 export LANG=C
 set -Eeuo pipefail
 kubectl -n d8-system exec svc/deckhouse-leader -c deckhouse -- deckhouse-controller module enable operator-trivy > /dev/null
+kubectl label ns security-scanning.deckhouse.io/enabled="" --all > /dev/null
 testRunAttempts=5
 for ((i=1; i<=$testRunAttempts; i++)); do
   if kubectl get clustercompliancereports.aquasecurity.github.io cis > /dev/null; then
