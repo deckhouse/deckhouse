@@ -20,6 +20,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"slices"
 	"sort"
 	"strings"
@@ -89,6 +90,8 @@ var ErrReleaseIsAlreadyDeployed = errors.New("release is already deployed")
 // 1) find forced release. if current release has a lower version - skip
 // 2) find deployed release. if current release has a lower version - skip
 func (p *TaskCalculator) CalculatePendingReleaseTask(ctx context.Context, release v1alpha1.Release) (*Task, error) {
+	logger := p.log.With(slog.String("release", release.GetName()))
+
 	if release.GetPhase() != v1alpha1.DeckhouseReleasePhasePending {
 		return nil, ErrReleasePhaseIsNotPending
 	}
@@ -112,6 +115,10 @@ func (p *TaskCalculator) CalculatePendingReleaseTask(ctx context.Context, releas
 
 	// if we have a forced release
 	if forcedReleaseInfo != nil {
+		logger = logger.With(logger.WithGroup("forced_release").With(slog.String("name", forcedReleaseInfo.Name), slog.String("version", forcedReleaseInfo.Version.Original())))
+
+		logger.Debug("forced release found", slog.String("name", forcedReleaseInfo.Name), slog.String("version", forcedReleaseInfo.Version.Original()))
+
 		// if forced version is greater than the pending one, this pending release should be skipped
 		if forcedReleaseInfo.Version.GreaterThan(release.GetVersion()) {
 			return &Task{
@@ -124,6 +131,10 @@ func (p *TaskCalculator) CalculatePendingReleaseTask(ctx context.Context, releas
 
 	// if we have a deployed release
 	if deployedReleaseInfo != nil {
+		logger = logger.With(logger.WithGroup("deployed_release").With(slog.String("name", deployedReleaseInfo.Name), slog.String("version", deployedReleaseInfo.Version.Original())))
+
+		logger.Debug("deployed release found")
+
 		// if deployed version is greater than the pending one, this pending release should be skipped
 		if deployedReleaseInfo.Version.GreaterThan(release.GetVersion()) {
 			return &Task{
@@ -163,6 +174,8 @@ func (p *TaskCalculator) CalculatePendingReleaseTask(ctx context.Context, releas
 					msg = fmt.Sprintf("awaiting for v%s release to be deployed", prevRelease.GetVersion().String())
 				}
 
+				logger.Debug("release awaiting", slog.String("reason", msg))
+
 				return &Task{
 					TaskType:            Await,
 					Message:             msg,
@@ -173,14 +186,20 @@ func (p *TaskCalculator) CalculatePendingReleaseTask(ctx context.Context, releas
 			// here we have only Deployed phase releases in prevRelease
 			// it must await if deployed release has minor version more than one
 			if release.GetVersion().Minor()-1 > prevRelease.GetVersion().Minor() {
+				msg := fmt.Sprintf("minor version is greater than deployed %s by one", prevRelease.GetVersion().Original())
+
+				logger.Debug("release awaiting", slog.String("reason", msg))
+
 				return &Task{
 					TaskType:            Await,
-					Message:             fmt.Sprintf("minor version is greater than deployed %s by one", prevRelease.GetVersion().Original()),
+					Message:             msg,
 					DeployedReleaseInfo: deployedReleaseInfo,
 				}, nil
 			}
 		}
 	}
+
+	logger.With(slog.Bool("is_patch", isPatch), slog.Bool("is_latest", isLatestRelease))
 
 	// check next release
 	// patch calculate logic
@@ -196,6 +215,8 @@ func (p *TaskCalculator) CalculatePendingReleaseTask(ctx context.Context, releas
 		// 1.67.0 (Pending)
 		if release.GetVersion().Major() < nextRelease.GetVersion().Major() ||
 			release.GetVersion().Minor() < nextRelease.GetVersion().Minor() {
+			logger.Debug("processing")
+
 			return &Task{
 				TaskType:            Process,
 				IsPatch:             isPatch,
@@ -205,11 +226,15 @@ func (p *TaskCalculator) CalculatePendingReleaseTask(ctx context.Context, releas
 			}, nil
 		}
 
+		logger.Debug("skipping")
+
 		return &Task{
 			TaskType: Skip,
 			IsPatch:  isPatch,
 		}, nil
 	}
+
+	logger.Debug("processing")
 
 	// neighbours checks passed
 	// only minor/major releases must be here
