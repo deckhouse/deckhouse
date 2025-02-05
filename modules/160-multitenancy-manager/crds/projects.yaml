@@ -151,12 +151,15 @@ spec:
                     properties:
                       type:
                         type: string
-                      lastTransitionTime:
-                        format: date-time
-                        type: string
                       status:
                         type: string
                       message:
+                        type: string
+                      lastTransitionTime:
+                        format: date-time
+                        type: string
+                      lastProbeTime:
+                        format: date-time
                         type: string
                 state:
                   description: Brief description of the project status, such as Error, Deploying, Deployed, etc.

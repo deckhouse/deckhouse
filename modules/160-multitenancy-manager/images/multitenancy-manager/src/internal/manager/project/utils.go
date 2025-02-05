@@ -162,7 +162,7 @@ func (m *Manager) prepareProject(project *v1alpha2.Project) {
 	// set deploying status
 	project.ClearConditions()
 	project.Status.ObservedGeneration = project.Generation
-	project.Status.State = v1alpha2.ProjectStateDeploying
+	project.SetState(v1alpha2.ProjectStateDeploying)
 
 	if len(project.Labels) == 0 {
 		project.Labels = make(map[string]string, 1)

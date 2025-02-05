@@ -17,6 +17,7 @@ limitations under the License.
 package v1alpha2
 
 import (
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 )
@@ -26,13 +27,9 @@ const (
 	ProjectStateDeploying = "Deploying"
 	ProjectStateDeployed  = "Deployed"
 
-	ConditionTypeProjectTemplateFound     = "ProjectTemplateFound"
-	ConditionTypeProjectValidated         = "Validated"
-	ConditionTypeProjectResourcesUpgraded = "ResourcesUpgraded"
-
-	ConditionTypeTrue    = "True"
-	ConditionTypeFalse   = "False"
-	ConditionTypeUnknown = "Unknown"
+	ProjectConditionProjectTemplateFound     = "ProjectTemplateFound"
+	ProjectConditionProjectValidated         = "Validated"
+	ProjectConditionProjectResourcesUpgraded = "ResourcesUpgraded"
 
 	ProjectAnnotationRequireSync = "projects.deckhouse.io/require-sync"
 
@@ -54,6 +51,8 @@ const (
 	ProjectKind     = "Project"
 	ProjectResource = "projects"
 )
+
+var _ runtime.Object = &Project{}
 
 type ProjectList struct {
 	metav1.TypeMeta `json:",inline"`
@@ -166,6 +165,10 @@ type ProjectStatus struct {
 	State string `json:"state,omitempty"`
 }
 
+func (p *Project) SetState(state string) {
+	p.Status.State = state
+}
+
 func (p *ProjectStatus) DeepCopy() *ProjectStatus {
 	if p == nil {
 		return nil
@@ -221,7 +224,6 @@ func (r *ResourceObject) DeepCopy() *ResourceObject {
 	r.DeepCopyInto(newObj)
 	return newObj
 }
-
 func (r *ResourceObject) DeepCopyInto(newObj *ResourceObject) {
 	*newObj = *r
 	newObj.APIVersion = r.APIVersion
@@ -230,33 +232,69 @@ func (r *ResourceObject) DeepCopyInto(newObj *ResourceObject) {
 }
 
 type Condition struct {
+	// Type is the type of the condition.
+	// More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#pod-conditions
+	Type string `json:"type,omitempty"`
+	// Human-readable message indicating details about last transition.
+	// More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#pod-conditions
+	Message string `json:"message,omitempty"`
+	// Status is the status of the condition.
+	// Can be True, False, Unknown.
+	// More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#pod-conditions
+	Status corev1.ConditionStatus `json:"status,omitempty"`
+	// Timestamp of when the condition was last probed.
+	// More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#pod-conditions
+	LastProbeTime metav1.Time `json:"lastProbeTime,omitempty"`
+	// Last time the condition transitioned from one status to another.
+	// More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#pod-conditions
 	LastTransitionTime metav1.Time `json:"lastTransitionTime,omitempty"`
-	Type               string      `json:"type,omitempty"`
-	Status             string      `json:"status,omitempty"`
-	Message            string      `json:"message,omitempty"`
 }
 
 func (p *Project) ClearConditions() {
 	p.Status.Conditions = []Condition{}
 }
 
-func (p *Project) SetCondition(condType, status, message string) {
-	for _, cond := range p.Status.Conditions {
-		if cond.Type == condType {
-			if cond.Status != status {
-				cond.Status = status
+func (p *Project) SetConditionTrue(condName string) {
+	for idx, cond := range p.Status.Conditions {
+		if cond.Type == condName {
+			p.Status.Conditions[idx].LastProbeTime = metav1.Now()
+			if cond.Status == corev1.ConditionFalse {
+				p.Status.Conditions[idx].LastTransitionTime = metav1.Now()
+				p.Status.Conditions[idx].Status = corev1.ConditionTrue
+			}
+			p.Status.Conditions[idx].Message = ""
+			return
+		}
+	}
+
+	p.Status.Conditions = append(p.Status.Conditions, Condition{
+		Type:               condName,
+		Status:             corev1.ConditionTrue,
+		LastProbeTime:      metav1.Now(),
+		LastTransitionTime: metav1.Now(),
+	})
+}
+
+func (p *Project) SetConditionFalse(condName, message string) {
+	for idx, cond := range p.Status.Conditions {
+		if cond.Type == condName {
+			p.Status.Conditions[idx].LastProbeTime = metav1.Now()
+			if cond.Status == corev1.ConditionTrue {
+				p.Status.Conditions[idx].LastTransitionTime = metav1.Now()
+				p.Status.Conditions[idx].Status = corev1.ConditionFalse
 			}
 			if cond.Message != message {
-				cond.Message = message
+				p.Status.Conditions[idx].Message = message
 			}
 			return
 		}
 	}
 
 	p.Status.Conditions = append(p.Status.Conditions, Condition{
-		Type:               condType,
-		Status:             status,
+		Type:               condName,
+		Status:             corev1.ConditionFalse,
 		Message:            message,
+		LastProbeTime:      metav1.Now(),
 		LastTransitionTime: metav1.Now(),
 	})
 }
@@ -269,10 +307,10 @@ func (c *Condition) DeepCopy() *Condition {
 	c.DeepCopyInto(newObj)
 	return newObj
 }
-
 func (c *Condition) DeepCopyInto(newObj *Condition) {
 	*newObj = *c
 	c.LastTransitionTime.DeepCopyInto(&newObj.LastTransitionTime)
+	c.LastProbeTime.DeepCopyInto(&newObj.LastProbeTime)
 	newObj.Type = c.Type
 	newObj.Status = c.Status
 	newObj.Message = c.Message
