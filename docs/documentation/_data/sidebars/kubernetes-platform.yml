@@ -115,13 +115,37 @@ entries:
                             ru: Введение
                           url: /admin/network/alb-overview.html
                         - title:
-                            en: NGINX Ingress controller
-                            ru: NGINX Ingress controller
+                            en: ALB means NGINX Ingress controller
+                            ru: ALB средствами NGINX Ingress controller
                           url: /admin/network/alb-nginx.html
+                        - title:
+                            en: ALB means Istio
+                            ru: ALB средствами Istio
+                          url: /admin/network/alb-istio.html
                 - title:
                     en: ServiceMesh
                     ru: ServiceMesh
-                  url: /admin/network/service-mesh.html
+                  folders:
+                    - title:
+                        en: Overview
+                        ru: Введпние
+                      url: /admin/network/service-mesh-overview.html
+                    - title:
+                        en: mTLS
+                        ru: mTLS
+                      url: /admin/network/mTLS.html
+                    - title:
+                        en: CircuitBraker
+                        ru: CircuitBraker
+                      url: /admin/network/circuitbraker.html
+                    - title:
+                        en: Canary deploy
+                        ru: Canary deploy
+                      url: /admin/network/canary-deploy.html
+                    - title:
+                        en: gRPC balancing
+                        ru: Балансировка gRPC
+                      url: /admin/network/grpc-balancing.html
                 - title:
                     en: Inter-cluster cooperation (alliance)
                     ru: Межкластерное взаимодействие (альянс)
