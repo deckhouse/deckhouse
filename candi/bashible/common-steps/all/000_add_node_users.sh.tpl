@@ -168,16 +168,45 @@ function put_user_ssh_key() {
   fi
 }
 
+# $1 - group name
+function add_sudoer_group() {
+    local path="/etc/sudoers"
+    local groupname="$1"
+    sudoers_filename="30-deckhouse-nodeadmins"
+    local sudoersd_path=$(cat $path |egrep "[@#]includedir" |awk '{ print $2}')
+
+    if [[ -z $sudoersd_path ]]
+      then
+        mkdir -p /etc/sudoers.d
+        echo "" >> $path
+        echo "#includedir /etc/sudoers.d" >> $path
+        sudoersd_path="/etc/sudoers.d"
+    fi
+
+    local sudoers_file="${sudoersd_path}/${sudoers_filename}"
+    
+    if getent group $groupname >/dev/null
+      then
+	      continue
+      else
+        groupadd $groupname
+    fi
+
+    # Discover sudoer groups
+    groups=($(cat $path |egrep "^%[a-z][-a-zA-Z0-9._]*\s+.+" |awk '{print $1}' |cut -c2-))
+    additional_groups=$(cat $sudoersd_path/* |egrep "^%[a-z][-a-zA-Z0-9._]*\s+.+" |awk '{print $1}' |cut -c2-)
+    groups+=($additional_groups)
+
+    if [[ ! " ${groups[*]} " =~ [[:space:]]${groupname}[[:space:]] ]]
+      then
+        echo "# Group rules for deckhouse users" > $sudoers_file
+        echo "%${groupname} ALL=(ALL) ALL" >> $sudoers_file
+    fi
+}
+
 function main() {
-  if getent group sudo >/dev/null; then
-    sudo_group="sudo"
-  elif getent group wheel >/dev/null; then
-    sudo_group="wheel"
-  else
-    bb-log-error "Cannot find sudo group"
-    nodeuser_add_error "${user_name}" "Cannot find sudo group"
-    return
-  fi
+  sudo_group="nodeadmin"
+  add_sudoer_group $sudo_group
 
   main_group="100" # users
   home_base_path="/home/deckhouse"
