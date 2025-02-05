@@ -108,16 +108,26 @@ for ix in ${!LIST_OF_MODULES[*]}
 do
   MODULE_PATH=$(find ${PATH_TO_MODULES} -maxdepth 1 -type d -name "*${LIST_OF_MODULES[$ix]}" -print | sed 's|.*/||' )
   files=$(find "${PATH_TO_MODULES}/${MODULE_PATH}" -name "*.md" | sort -t '-' -k2)
-  for ixp in ${!PAGES_ORDER[*]}
-  do
-    for file in $files
-    do
-      if [[ $file == *"${PAGES_ORDER[ixp]}"* ]]; then
-        echo "\n### "$(getname $file) >> $PATH_TO_PDF_PAGE
-        echo "$(gettext $file)" >> $PATH_TO_PDF_PAGE
-      fi
-    done
-  done
+      for ixp in ${!PAGES_ORDER[*]}
+      do
+        for file in $files
+        do
+          if [[ $file == *"${PAGES_ORDER[ixp]}"* ]]; then
+            echo "\n### "$(getname $file) >> $PATH_TO_PDF_PAGE
+            if [[ $file == *""CR_RU.md""* ]]; then
+              schema_path="${PATH_TO_MODULES}/${MODULE_PATH}/crds"
+              module_path=$(echo $schema_path | cut -d\/ -f-2 )
+              module_file_name=$(echo $schema_path | awk -F\/ '{print $NF}')
+              module_name=$(echo $schema_path | cut -d\/ -f2 )
+              schema_path_relative=$(echo $schema_path | cut -d\/ -f3- | sed "s#\.yaml##; s#\.##g; s#\/#\.#g")
+              echo "   ...${module_name}/${module_file_name}"
+              echo "$(gettext $file)" | sed "/<!-- SCHEMA -->/i\{\% include module-configuration.liquid \%\}" ${module_path}/docs/CONFIGURATION.md >> $PATH_TO_PDF_PAGE
+            else
+              echo "$(gettext $file)" >> $PATH_TO_PDF_PAGE
+            fi
+          fi
+        done
+      done
 done
 
 echo "## Подсистема Deckhouse" >> $PATH_TO_PDF_PAGE
@@ -134,16 +144,26 @@ for ix in ${!LIST_OF_MODULES[*]}
 do
   MODULE_PATH=$(find ${PATH_TO_MODULES} -maxdepth 1 -type d -name "*${LIST_OF_MODULES[$ix]}" -print | sed 's|.*/||' )
   files=$(find "${PATH_TO_MODULES}/${MODULE_PATH}" -name "*.md" | sort -t '-' -k2)
-    for ixp in ${!PAGES_ORDER[*]}
-    do
-      for file in $files
+      for ixp in ${!PAGES_ORDER[*]}
       do
-        if [[ $file == *"${PAGES_ORDER[ixp]}"* ]]; then
-          echo "\n### "$(getname $file) >> $PATH_TO_PDF_PAGE
-          echo "$(gettext $file)" >> $PATH_TO_PDF_PAGE
-        fi
+        for file in $files
+        do
+          if [[ $file == *"${PAGES_ORDER[ixp]}"* ]]; then
+            echo "\n### "$(getname $file) >> $PATH_TO_PDF_PAGE
+            if [[ $file == *""CR_RU.md""* ]]; then
+              schema_path="${PATH_TO_MODULES}/${MODULE_PATH}/crds"
+              module_path=$(echo $schema_path | cut -d\/ -f-2 )
+              module_file_name=$(echo $schema_path | awk -F\/ '{print $NF}')
+              module_name=$(echo $schema_path | cut -d\/ -f2 )
+              schema_path_relative=$(echo $schema_path | cut -d\/ -f3- | sed "s#\.yaml##; s#\.##g; s#\/#\.#g")
+              echo "   ...${module_name}/${module_file_name}"
+              echo "$(gettext $file)" | sed "/<!-- SCHEMA -->/i\{\% include module-configuration.liquid \%\}" ${module_path}/docs/CONFIGURATION.md >> $PATH_TO_PDF_PAGE
+            else
+              echo "$(gettext $file)" >> $PATH_TO_PDF_PAGE
+            fi
+          fi
+        done
       done
-    done
 done
 
 echo "## Подсистема Мониторинг" >> $PATH_TO_PDF_PAGE
@@ -171,7 +191,17 @@ do
         do
           if [[ $file == *"${PAGES_ORDER[ixp]}"* ]]; then
             echo "\n### "$(getname $file) >> $PATH_TO_PDF_PAGE
-            echo "$(gettext $file)" >> $PATH_TO_PDF_PAGE
+            if [[ $file == *""CR_RU.md""* ]]; then
+              schema_path="${PATH_TO_MODULES}/${MODULE_PATH}/crds"
+              module_path=$(echo $schema_path | cut -d\/ -f-2 )
+              module_file_name=$(echo $schema_path | awk -F\/ '{print $NF}')
+              module_name=$(echo $schema_path | cut -d\/ -f2 )
+              schema_path_relative=$(echo $schema_path | cut -d\/ -f3- | sed "s#\.yaml##; s#\.##g; s#\/#\.#g")
+              echo "   ...${module_name}/${module_file_name}"
+              echo "$(gettext $file)" | sed "/<!-- SCHEMA -->/i\{\% include module-configuration.liquid \%\}" ${module_path}/docs/CONFIGURATION.md >> $PATH_TO_PDF_PAGE
+            else
+              echo "$(gettext $file)" >> $PATH_TO_PDF_PAGE
+            fi
           fi
         done
       done
@@ -202,7 +232,17 @@ do
         do
           if [[ $file == *"${PAGES_ORDER[ixp]}"* ]]; then
             echo "\n### "$(getname $file) >> $PATH_TO_PDF_PAGE
-            echo "$(gettext $file)" >> $PATH_TO_PDF_PAGE
+            if [[ $file == *""CR_RU.md""* ]]; then
+              schema_path="${PATH_TO_MODULES}/${MODULE_PATH}/crds"
+              module_path=$(echo $schema_path | cut -d\/ -f-2 )
+              module_file_name=$(echo $schema_path | awk -F\/ '{print $NF}')
+              module_name=$(echo $schema_path | cut -d\/ -f2 )
+              schema_path_relative=$(echo $schema_path | cut -d\/ -f3- | sed "s#\.yaml##; s#\.##g; s#\/#\.#g")
+              echo "   ...${module_name}/${module_file_name}"
+              echo "$(gettext $file)" | sed "/<!-- SCHEMA -->/i\{\% include module-configuration.liquid \%\}" ${module_path}/docs/CONFIGURATION.md >> $PATH_TO_PDF_PAGE
+            else
+              echo "$(gettext $file)" >> $PATH_TO_PDF_PAGE
+            fi
           fi
         done
       done
@@ -227,7 +267,6 @@ LIST_OF_MODULES=(
 for ix in ${!LIST_OF_MODULES[*]}
 do
   case ${LIST_OF_MODULES[$ix]} in
-    # shellcheck disable=SC1072
     operator-trivy)
       MODULE_PATH="ee/modules/500-operator-trivy"
       files=$(find "${MODULE_PATH}" -name "*.md" | sort -t '-' -k2)
@@ -294,7 +333,17 @@ do
         do
           if [[ $file == *"${PAGES_ORDER[ixp]}"* ]]; then
             echo "\n### "$(getname $file) >> $PATH_TO_PDF_PAGE
-            echo "$(gettext $file)" >> $PATH_TO_PDF_PAGE
+            if [[ $file == *""CR_RU.md""* ]]; then
+              schema_path="${PATH_TO_MODULES}/${MODULE_PATH}/crds"
+              module_path=$(echo $schema_path | cut -d\/ -f-2 )
+              module_file_name=$(echo $schema_path | awk -F\/ '{print $NF}')
+              module_name=$(echo $schema_path | cut -d\/ -f2 )
+              schema_path_relative=$(echo $schema_path | cut -d\/ -f3- | sed "s#\.yaml##; s#\.##g; s#\/#\.#g")
+              echo "   ...${module_name}/${module_file_name}"
+              echo "$(gettext $file)" | sed "/<!-- SCHEMA -->/i\{\% include module-configuration.liquid \%\}" ${module_path}/docs/CONFIGURATION.md >> $PATH_TO_PDF_PAGE
+            else
+              echo "$(gettext $file)" >> $PATH_TO_PDF_PAGE
+            fi
           fi
         done
       done
