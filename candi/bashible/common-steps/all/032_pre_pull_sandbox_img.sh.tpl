@@ -12,15 +12,25 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-{{- if eq .cri "Containerd" }}
-  {{- if and $.registry.registryMode (ne $.registry.registryMode "Direct") }}
-    {{ $system_registry_address := $.systemRegistry.registryAddress | default "" }}
-    {{- if eq $.registry.address $system_registry_address }}
-
-{{- $sandbox_image_path := printf "%s@%s" $.registry.path (index $.images.common "pause") }}
+{{- define "is_containerd_cri_and_embedded_registry" }}
+  {{- if eq $.cri "Containerd" }}
+    {{- if and $.registry.registryMode (ne $.registry.registryMode "Direct") }}
+      {{- $system_registry_address := $.systemRegistry.registryAddress | default "" }}
+      {{- if eq $.registry.address $system_registry_address }}
+        {{- printf "%s" "true" -}}
+      {{- end }}
+    {{- end }}
+  {{- end }}
+{{- end }}
 
 {{- $target_registry_address := $.registry.address }}
 
+{{- $sandbox_image_path := printf "%s@%s" $.registry.path (index $.images.common "pause") }}
+{{- $target_sandbox_image := printf "%s%s" $target_registry_address $sandbox_image_path }}
+
+{{- if (include "is_containerd_cri_and_embedded_registry" .) }}
+
+# If embedded registry
 {{- $source_registry_port := "5001" }}
 {{- $source_registry_addresses := $.systemRegistry.addresses | join "," }}
 {{- $source_registry_cacert_path := "" }}
@@ -31,8 +41,6 @@
 {{- if $.registry.auth }}
   {{- $source_registry_user_and_password = $.registry.auth | b64dec }}
 {{- end }}
-
-discovered_node_ip="$(</var/lib/bashible/discovered-node-ip)"
 
 _pull_img_from_source_and_re_tag() {
     local source_registry_image=$1
@@ -76,18 +84,23 @@ _get_local_images_list() {
 }
 
 if [ "$FIRST_BASHIBLE_RUN" != "yes" ]; then
-  sandbox_image_path={{ $sandbox_image_path | quote }}
+  # Pre-pulling the image from the embedded registry if the image is not present on the machine.  
+  # The image is pulled from the following sources:  
+  # - Local embedded registry (localhost)  
+  # - Proxy embedded registry  
+  # - Addresses of neighboring master nodes
+  
+  discovered_node_ip="$(</var/lib/bashible/discovered-node-ip)"
+  list_of_local_imgs=$(_get_local_images_list)
   target_registry_address={{ $target_registry_address | quote }}
-  target_sandbox_image="${target_registry_address}${sandbox_image_path}"
   source_registry_addresses="127.0.0.1:{{- $source_registry_port -}},$discovered_node_ip:{{- $source_registry_port -}}"
   {{- if $source_registry_addresses }}
   source_registry_addresses="$source_registry_addresses,{{- $source_registry_addresses -}}"
   {{- end }}
 
-  if ! _get_local_images_list | grep -q "$target_sandbox_image"; then
-    _pull_img_from_several_sources_and_re_tag $sandbox_image_path $target_registry_address $source_registry_addresses
+  if ! echo $list_of_local_imgs | grep -q {{ $target_sandbox_image | quote }}; then
+    _pull_img_from_several_sources_and_re_tag {{ $sandbox_image_path | quote }} $target_registry_address $source_registry_addresses
   fi
 fi
-    {{- end }}
-  {{- end }}
+
 {{- end }}

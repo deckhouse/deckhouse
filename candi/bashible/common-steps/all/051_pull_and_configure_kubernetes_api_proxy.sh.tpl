@@ -1,4 +1,4 @@
-# Copyright 2023 Flant JSC
+# Copyright 2024 Flant JSC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,77 +12,126 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-REGISTRY_CACERT_PATH="/opt/deckhouse/share/ca-certificates/registry-ca.crt"
-REGISTRY_MODE="{{ $.registry.registryMode | default ""  }}"
-REGISTRY_AUTH="$(base64 -d <<< "{{ $.registry.auth | default "" }}")"
-REGISTRY_CA_EXISTS={{ if and $.registry.ca (ne $.registry.ca "") }}true{{ else }}false{{ end }}
-
-mkdir -p /etc/kubernetes/manifests
-
 bb-set-proxy
 
-pull_and_re_tag_image() {
-    local PROXY_IMG_ADDRESS=$1
-    local ACTUAL_IMAGE_ADDRESS=$2
+{{- define "is_containerd_cri_and_embedded_registry" }}
+  {{- if eq $.cri "Containerd" }}
+    {{- if and $.registry.registryMode (ne $.registry.registryMode "Direct") }}
+      {{- $system_registry_address := $.systemRegistry.registryAddress | default "" }}
+      {{- if eq $.registry.address $system_registry_address }}
+        {{- printf "%s" "true" -}}
+      {{- end }}
+    {{- end }}
+  {{- end }}
+{{- end }}
 
-    if [ "$REGISTRY_CA_EXISTS" = true ]; then
-        /opt/deckhouse/bin/ctr --namespace=k8s.io images pull -u "$REGISTRY_AUTH" --tlscacert "$REGISTRY_CACERT_PATH" "$PROXY_IMG_ADDRESS" || return 1
-    else
-        /opt/deckhouse/bin/ctr --namespace=k8s.io images pull -u "$REGISTRY_AUTH" "$PROXY_IMG_ADDRESS" || return 1
-    fi
+{{- $target_registry_address := $.registry.address }}
 
-    /opt/deckhouse/bin/ctr --namespace=k8s.io image tag "$PROXY_IMG_ADDRESS" "$ACTUAL_IMAGE_ADDRESS" || return 1
-    /opt/deckhouse/bin/ctr --namespace=k8s.io image rm "$PROXY_IMG_ADDRESS" || return 1
+{{- $sandbox_image_path := printf "%s@%s" $.registry.path (index $.images.common "pause") }}
+{{- $target_sandbox_image := printf "%s%s" $target_registry_address $sandbox_image_path }}
+
+{{- $kubernetes_api_proxy_image_path := printf "%s@%s" $.registry.path (index $.images.controlPlaneManager "kubernetesApiProxy") }}
+{{- $target_kubernetes_api_proxy_image := printf "%s%s" $target_registry_address $sandbox_image_path }}
+
+{{- if (include "is_containerd_cri_and_embedded_registry" .) }}
+
+# If embedded registry
+{{- $source_registry_port := "5001" }}
+{{- $source_registry_addresses := $.systemRegistry.addresses | join "," }}
+{{- $source_registry_cacert_path := "" }}
+{{- if $.registry.ca }}
+  {{- $source_registry_cacert_path = "/opt/deckhouse/share/ca-certificates/registry-ca.crt" }}
+{{- end }}
+{{- $source_registry_user_and_password := "" }}
+{{- if $.registry.auth }}
+  {{- $source_registry_user_and_password = $.registry.auth | b64dec }}
+{{- end }}
+
+_pull_img_from_source_and_re_tag() {
+    local source_registry_image=$1
+    local target_registry_image=$2
+
+    /opt/deckhouse/bin/ctr \
+        --namespace=k8s.io \
+        images pull \
+        {{- if $source_registry_user_and_password }}
+        --user {{ $source_registry_user_and_password | quote }} \
+        {{- end }}
+        {{- if $source_registry_cacert_path }}
+        --tlscacert {{ $source_registry_cacert_path | quote }} \
+        {{- end }}
+        "$source_registry_image" || return 1
+    /opt/deckhouse/bin/ctr --namespace=k8s.io images tag "$source_registry_image" "$target_registry_image" || return 1
+    /opt/deckhouse/bin/ctr --namespace=k8s.io images rm "$source_registry_image" || return 1
 }
 
-pull_using_proxies() {
-    local IMAGE_PATH=$1
-    local REGISTRY_ACTUAL_ADDRESS=$2
-    local REGISTRY_PROXY_ADDRESSES=$3
+_pull_img_from_several_sources_and_re_tag() {
+    local image_path=$1
+    local target_registry_address=$2
+    local source_registry_addresses=$3
+    local target_registry_image="${target_registry_address}${image_path}"
 
-    local ACTUAL_IMAGE_ADDRESS="${REGISTRY_ACTUAL_ADDRESS}${IMAGE_PATH}"
-
-    IFS=',' read -ra PROXY_ADDR <<< "$REGISTRY_PROXY_ADDRESSES"
-    for REGISTRY_PROXY_ADDRESS in "${PROXY_ADDR[@]}"; do
-        local PROXY_IMG_ADDRESS="${REGISTRY_PROXY_ADDRESS}${IMAGE_PATH}"
-
-        if pull_and_re_tag_image "$PROXY_IMG_ADDRESS" "$ACTUAL_IMAGE_ADDRESS"; then
-            echo "The image '$ACTUAL_IMAGE_ADDRESS' was correctly pulling from '$PROXY_IMG_ADDRESS'"
+    IFS=',' read -ra source_registry_addresses_list <<< "$source_registry_addresses"
+    for source_registry_address in "${source_registry_addresses_list[@]}"; do
+        local source_registry_image="${source_registry_address}${image_path}"
+        if _pull_img_from_source_and_re_tag "$source_registry_image" "$target_registry_image"; then
+            echo "The image '$target_registry_image' was correctly pulled from '$source_registry_image'"
             return 0
         fi
     done
-
-    >&2 echo "Failed to pull image '$ACTUAL_IMAGE_ADDRESS' using addresses '$REGISTRY_PROXY_ADDRESSES'"
+    >&2 echo "Failed to pull image '$target_registry_image' using addresses '$source_registry_addresses'"
     exit 1
 }
 
-if crictl version >/dev/null 2>/dev/null; then
-  {{- $registryProxyAddresses := "" }}
-  {{- if $.systemRegistry.addresses }}
-    {{- $registryProxyAddresses = $.systemRegistry.addresses | join "," }}
+_get_local_images_list() {
+  repo_digests=$(/opt/deckhouse/bin/crictl images -o json | jq -r '.images[].repoDigests[]?')
+  echo $repo_digests
+}
+
+if [ "$FIRST_BASHIBLE_RUN" == "yes" ]; then
+  # Pulling images from the embedded registry during the first node startup.  
+  # Images are pulled from the following sources:  
+  # - Local embedded registry (localhost)  
+  # - Proxy embedded registry  
+  # - Addresses of neighboring master nodes  
+
+  discovered_node_ip="$(</var/lib/bashible/discovered-node-ip)"
+  list_of_local_imgs=$(_get_local_images_list)
+  target_registry_address={{ $target_registry_address | quote }}
+  source_registry_addresses="127.0.0.1:{{- $source_registry_port -}},$discovered_node_ip:{{- $source_registry_port -}}"
+  {{- if $source_registry_addresses }}
+  source_registry_addresses="$source_registry_addresses,{{- $source_registry_addresses -}}"
   {{- end }}
 
-  # Registry vars
-  REGISTRY_ACTUAL_ADDRESS="{{ $.registry.address }}"
-  REGISTRY_PROXY_ADDRESSES="{{ $registryProxyAddresses }}"
-  EMBEDDED_REGISTRY_ACTUAL_ADDRESS="{{ $.systemRegistry.registryAddress | default "" }}"
+  if ! echo $list_of_local_imgs | grep -q {{ $target_sandbox_image | quote }}; then
+    _pull_img_from_several_sources_and_re_tag {{ $sandbox_image_path | quote }} $target_registry_address $source_registry_addresses
+  fi
 
-  # Images refs
-  IMAGE_PATH_FOR_KUBERNETES_API_PROXY={{ printf "%s@%s" $.registry.path (index $.images.controlPlaneManager "kubernetesApiProxy") }}
-  IMAGE_PATH_FOR_PAUSE={{ printf "%s@%s" $.registry.path (index $.images.common "pause") }}
+  if ! echo $list_of_local_imgs | grep -q {{ $target_kubernetes_api_proxy_image | quote }}; then
+    _pull_img_from_several_sources_and_re_tag {{ $kubernetes_api_proxy_image_path | quote }} $target_registry_address $source_registry_addresses
+  fi
+else
+  # If it's not the first run, information from containerd (CRI) is used for pulling images.
+  if ! echo $list_of_local_imgs | grep -q {{ $target_sandbox_image | quote }}; then
+    /opt/deckhouse/bin/crictl pull {{ $target_sandbox_image | quote }}
+  fi
 
-  # Bootstrap for registry mode != "Direct" and embedded registry address == current registry address
-  if [ "$FIRST_BASHIBLE_RUN" == "yes" ] && [ -n "$REGISTRY_PROXY_ADDRESSES" ] && \
-    [ -n "$REGISTRY_MODE" ] && [ "$REGISTRY_MODE" != "Direct" ] && \
-    [ "$EMBEDDED_REGISTRY_ACTUAL_ADDRESS" == "$REGISTRY_ACTUAL_ADDRESS" ]; then
-    pull_using_proxies "$IMAGE_PATH_FOR_KUBERNETES_API_PROXY" "$REGISTRY_ACTUAL_ADDRESS" "$REGISTRY_PROXY_ADDRESSES"
-    pull_using_proxies "$IMAGE_PATH_FOR_PAUSE" "$REGISTRY_ACTUAL_ADDRESS" "$REGISTRY_PROXY_ADDRESSES"
-  else
-    /opt/deckhouse/bin/crictl pull "${REGISTRY_ACTUAL_ADDRESS}${IMAGE_PATH_FOR_KUBERNETES_API_PROXY}"
-    /opt/deckhouse/bin/crictl pull "${REGISTRY_ACTUAL_ADDRESS}${IMAGE_PATH_FOR_PAUSE}"
+  if ! echo $list_of_local_imgs | grep -q {{ $target_kubernetes_api_proxy_image | quote }}; then
+    /opt/deckhouse/bin/crictl pull {{ $target_kubernetes_api_proxy_image | quote }}
   fi
 fi
 
+{{- else }}
+
+# Use cri info for pulling images if crictl exist (for cri NotManaged or Containerd)
+if crictl version >/dev/null 2>/dev/null; then
+  crictl pull {{ $target_sandbox_image | quote }}
+  crictl pull {{ $target_kubernetes_api_proxy_image | quote }}
+fi
+
+{{- end }}
+
+mkdir -p /etc/kubernetes/manifests
 bb-sync-file /etc/kubernetes/manifests/kubernetes-api-proxy.yaml - << EOF
 apiVersion: v1
 kind: Pod
@@ -102,7 +151,7 @@ spec:
   shareProcessNamespace: true
   containers:
   - name: kubernetes-api-proxy
-    image: {{ printf "%s%s@%s" $.registry.address $.registry.path (index $.images.controlPlaneManager "kubernetesApiProxy") }}
+    image: {{ $target_kubernetes_api_proxy_image }}
     imagePullPolicy: IfNotPresent
     command: ["/opt/nginx-static/sbin/nginx", "-c", "/etc/nginx/config/nginx.conf", "-g", "daemon off;"]
     env:
@@ -114,7 +163,7 @@ spec:
     - mountPath: /tmp
       name: tmp
   - name: kubernetes-api-proxy-reloader
-    image: {{ printf "%s%s@%s" $.registry.address $.registry.path (index $.images.controlPlaneManager "kubernetesApiProxy") }}
+    image: {{ $target_kubernetes_api_proxy_image }}
     imagePullPolicy: IfNotPresent
     command: ["/kubernetes-api-proxy-reloader"]
     env:
