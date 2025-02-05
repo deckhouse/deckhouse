@@ -142,6 +142,7 @@ func (m *Manager) updateProjectStatus(ctx context.Context, project *v1alpha2.Pro
 	})
 }
 
+// finishProject sets template label and finalizer
 func (m *Manager) finishProject(ctx context.Context, project *v1alpha2.Project) error {
 	return retry.OnError(retry.DefaultRetry, apierrors.IsServiceUnavailable, func() error {
 		return retry.RetryOnConflict(retry.DefaultRetry, func() error {
@@ -160,7 +161,7 @@ func (m *Manager) finishProject(ctx context.Context, project *v1alpha2.Project) 
 				controllerutil.AddFinalizer(project, v1alpha2.ProjectFinalizer)
 			}
 
-			return m.client.Status().Update(ctx, project)
+			return m.client.Update(ctx, project)
 		})
 	})
 }
