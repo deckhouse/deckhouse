@@ -151,16 +151,16 @@ func (m *Manager) Handle(ctx context.Context, project *v1alpha2.Project) (ctrl.R
 		}
 	}
 
-	// add finalizer and remove labels
-	if err = m.finishProject(ctx, project); err != nil {
-		m.logger.Error(err, "failed to update the project", "project", project.Name, "template", projectTemplate.Name)
-		return ctrl.Result{}, err
-	}
-
 	project.SetState(v1alpha2.ProjectStateDeployed)
 	project.SetConditionTrue(v1alpha2.ProjectConditionProjectResourcesUpgraded)
 	if err = m.updateProjectStatus(ctx, project); err != nil {
 		m.logger.Error(err, "failed to update the project status", "project", project.Name, "template", projectTemplate.Name)
+		return ctrl.Result{}, err
+	}
+
+	// add finalizer and remove labels
+	if err = m.finishProject(ctx, project); err != nil {
+		m.logger.Error(err, "failed to update the project", "project", project.Name, "template", projectTemplate.Name)
 		return ctrl.Result{}, err
 	}
 
