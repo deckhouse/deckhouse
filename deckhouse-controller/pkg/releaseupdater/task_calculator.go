@@ -175,7 +175,7 @@ func (p *TaskCalculator) CalculatePendingReleaseTask(ctx context.Context, releas
 			if release.GetVersion().Minor()-1 > prevRelease.GetVersion().Minor() {
 				return &Task{
 					TaskType:            Await,
-					Message:             fmt.Sprintf("minor version is greater than deployed v%s by one", prevRelease.GetVersion().String()),
+					Message:             fmt.Sprintf("minor version is greater than deployed %s by one", prevRelease.GetVersion().Original()),
 					DeployedReleaseInfo: deployedReleaseInfo,
 				}, nil
 			}
