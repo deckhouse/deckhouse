@@ -631,7 +631,7 @@ func (r *reconciler) ApplyRelease(ctx context.Context, mr *v1alpha1.ModuleReleas
 
 // runReleaseDeploy
 //
-// 1) bump deckhouse deployment (retry if error) if the dryrun annotations isn't set (stop deploying in the opposite case)
+// 1) download module
 // 2) bump previous deployment status superseded (retry if error)
 // 3) bump release annotations (retry if error)
 // 3) bump release status to deployed (retry if error)
