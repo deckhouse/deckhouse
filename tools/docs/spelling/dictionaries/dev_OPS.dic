@@ -1,8 +1,9 @@
-2204
+2228
 1GB
 2GB
 5XX
 ACS
+AMD
 AMIs
 ANDed
 API
@@ -155,6 +156,7 @@ DRBD
 DRBDv
 DSL
 DSR
+dst
 DVP
 DaemonSet
 DaemonSets
@@ -193,6 +195,9 @@ Dryrun
 Dynamix
 EBS
 ECMP
+ECR
+EdgeRouter
+ee
 EE
 EKS
 EL7
@@ -502,6 +507,7 @@ RabbitMQ’s
 Rados
 Reddit
 Redis
+Redoc
 RegExp
 Regex
 RemoveDuplicates
@@ -544,6 +550,7 @@ SSO
 STARTTLS
 SVC
 SVG
+SVM
 SaaS
 SaaSUninstall
 SchedulingDisabled
@@ -586,6 +593,7 @@ Struct
 Subfolder
 SubjectAccessReview
 Syslog
+TATLIN
 TBH
 THENEWSTACK
 TLF
@@ -605,6 +613,7 @@ Tproger
 Trivy
 TrustDomain
 UDP
+UEFI
 UI
 UID
 UTC
@@ -618,6 +627,7 @@ VCD
 VK
 VLAN
 VM
+VMX
 VMs
 VMware
 VNC
@@ -637,9 +647,11 @@ VerticalPodAutoscaler
 VictorOps
 VictorOpsConfig
 VictoriaMetrics
+VirtIO
 VirtualDataCenter
 VirtualIPAddress
 VirtualMachine
+VirtualMachineClass
 VirtualMachines
 VirtualService
 Virtualization
@@ -668,6 +680,7 @@ WithNAT
 WithNATInstance
 WithoutNAT
 YC
+Yadro
 Yandex
 YandexClusterConfiguration
 YandexInstanceClass
@@ -906,6 +919,7 @@ hardcoded
 hasn
 hdd
 healthcheck
+healthchecks
 helmignore
 helthcheck
 hostIP
@@ -922,6 +936,7 @@ httpPort
 https
 hubble
 hyperconverged
+hypervisor
 hypervisors
 iTerm2
 idempotence
@@ -1111,10 +1126,16 @@ ovh
 ovirt
 ownerRef
 parametersSchema
+paravirtualization
 passphrase
 passwordHash
 pathPrefix
 permalink
+PersistentVolume
+PersistentVolumeClaim
+PersistentVolumeClaims
+PersistentVolumes
+perring
 php
 plaintext
 playbook
@@ -1293,6 +1314,7 @@ vpn
 vsphere
 webgraphviz
 webhook
+webhooks
 webinar
 webpack
 webpacker
@@ -1390,6 +1412,7 @@ zoneTagCategory
 ЦОД
 ЦОДах
 ЦОДов
+ЦП
 ЦС
 автомасштабирование
 автомасштабировании
@@ -1421,6 +1444,7 @@ zoneTagCategory
 ам
 ами
 апстрима
+архитектурах
 ассетами
 ассетов
 ассеты
@@ -1479,6 +1503,7 @@ zoneTagCategory
 валидируются
 вебхук
 вебхук
+вебхуки
 вендором
 вендору
 вендору
@@ -1490,6 +1515,7 @@ zoneTagCategory
 версионированной
 виртуализации
 виртуализации
+виртуализация
 включaл
 включал
 внутренного
@@ -1521,6 +1547,7 @@ zoneTagCategory
 гипервизорами
 гипервизорах
 гипервизорах
+гипервизором
 гиперконвергентной
 гиперконвергентной
 гитерминизм
@@ -1765,6 +1792,7 @@ zoneTagCategory
 мультикластер
 мультикластера
 мультикластерной
+мультикластерный
 мультикластером
 мультимастер
 мультимастерного
@@ -1805,6 +1833,7 @@ zoneTagCategory
 неподдерживаемых
 неподнимающийся
 неподнимающийся
+непринадлежности
 непубличного
 непубличного
 непубличный
@@ -1839,6 +1868,7 @@ zoneTagCategory
 п
 пайплайна
 пайплайнов
+паравиртуализации
 парсер
 парсера
 парсеров
@@ -1859,6 +1889,7 @@ zoneTagCategory
 перевыписывает
 перевыпуск
 перевыпуска
+перевыпускаются
 перевыпустить
 перегенерации
 перегенерация
@@ -1928,6 +1959,7 @@ zoneTagCategory
 примонтированные
 примонтированных
 примонтируем
+приоритизация
 проброс
 проинициализирован
 прокинуть
@@ -1956,6 +1988,7 @@ zoneTagCategory
 регистри
 редиректить
 резолвинга
+резолвится
 реквест
 реквеста
 реквестами

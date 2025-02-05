@@ -19,20 +19,19 @@ import (
 	"flag"
 	"os"
 	"os/signal"
+	"strings"
+	"syscall"
+	"time"
+
+	"k8s.io/client-go/kubernetes"
+	_ "k8s.io/client-go/plugin/pkg/client/auth/oidc"
+	"k8s.io/client-go/rest"
+	"k8s.io/klog"
 	"registry-modules-watcher/internal/backends"
 	registryscaner "registry-modules-watcher/internal/backends/pkg/registry-scaner"
 	"registry-modules-watcher/internal/backends/pkg/sender"
 	"registry-modules-watcher/internal/watcher"
 	registryclient "registry-modules-watcher/pkg/registry-client"
-	"strings"
-	"syscall"
-	"time"
-
-	"k8s.io/klog"
-
-	"k8s.io/client-go/kubernetes"
-	_ "k8s.io/client-go/plugin/pkg/client/auth/oidc"
-	"k8s.io/client-go/rest"
 )
 
 /*
@@ -92,6 +91,10 @@ func main() {
 
 		// TODO: some registry ping to check credentials
 		clients = append(clients, client)
+	}
+
+	if len(clients) == 0 {
+		klog.Fatal("no registries to watch")
 	}
 
 	registryScaner := registryscaner.New(clients...)
