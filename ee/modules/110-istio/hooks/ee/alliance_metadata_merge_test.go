@@ -109,7 +109,7 @@ status:
       ingressGateways:
       - {"address": "bbb", "port": 222}
       publicServices:
-      - {"hostname": "bbb", "ports": [{"name": "ppp", "port": 123, "protocol": TCP},{"name": "zzz", "port": 777, "protocol": TCP}]}
+      - {"hostname": "bbb", "ports": [{"name": "ppp", "port": 123, "protocol": TCP},{"name": "zzz", "port": 777, "protocol": TCP},{"name": "https-xxx", "port": 555, "protocol": TLS}]}
     public:
       clusterUUID: aaa-bbb-f3
       rootCA: abc-f3
@@ -314,7 +314,7 @@ status:
             "publicServices": [
               {
                 "hostname": "bbb",
-                "ports": [{"name": "ppp", "port": 123, "protocol": "TCP" },{"name": "zzz", "port": 777, "protocol": "TCP"}]
+                "ports": [{"name": "ppp", "port": 123, "protocol": "TCP" },{"name": "zzz", "port": 777, "protocol": "TCP"},{"name": "https-xxx", "port": 555, "protocol": TLS}]
               }
             ],
             "spiffeEndpoint": "https://some-proper-host/public/spiffe-bundle-endpoint",
