@@ -1,8 +1,8 @@
-<div class="button-group">
+<ul>
   {%- for guide in site.data.guides %}
-    <a class="button button_default button_guides_card" href="{{ guide.link }}">
-      <span class="name">{{ guide.name[page.lang] }}</span>
-      <span>{{ guide.description[page.lang] }}</span>
-    </a>
+    <li>
+      <a href="{{ guide.link }}"><span class="name">{{ guide.name[page.lang] }}</span></a><br />
+      <span>{{ guide.description[page.lang] }}</span> <strong>[{%for tag in guide.tags %}{{ tag }}{% unless forloop.last %}, {% endunless %}{% endfor %}]</strong>
+    </li>
   {% endfor %}
-</div>
+</ul>
