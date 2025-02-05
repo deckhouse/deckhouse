@@ -58,7 +58,7 @@ func (h *Handler) ModuleConfigChannelIsSet() bool {
 func (h *Handler) HandleEvent(moduleConfig *v1alpha1.ModuleConfig, op config.Op) {
 	kubeConfig := config.NewConfig()
 
-	values, err := h.valuesByModuleConfig(moduleConfig)
+	values, err := ValuesByModuleConfig(moduleConfig)
 	if err != nil {
 		h.configEventCh <- config.Event{Key: moduleConfig.Name, Config: kubeConfig, Err: err}
 		return
@@ -100,7 +100,7 @@ func (h *Handler) LoadConfig(ctx context.Context, _ ...string) (*config.KubeConf
 
 	kubeConfig := config.NewConfig()
 	for _, moduleConfig := range configs.Items {
-		values, err := h.valuesByModuleConfig(&moduleConfig)
+		values, err := ValuesByModuleConfig(&moduleConfig)
 		if err != nil {
 			return nil, err
 		}
@@ -132,7 +132,7 @@ func (h *Handler) LoadConfig(ctx context.Context, _ ...string) (*config.KubeConf
 	return kubeConfig, nil
 }
 
-func (h *Handler) valuesByModuleConfig(moduleConfig *v1alpha1.ModuleConfig) (utils.Values, error) {
+func ValuesByModuleConfig(moduleConfig *v1alpha1.ModuleConfig) (utils.Values, error) {
 	if moduleConfig.DeletionTimestamp != nil {
 		// ModuleConfig was deleted
 		return utils.Values{}, nil

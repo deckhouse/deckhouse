@@ -25,8 +25,11 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders/bootstrapped"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders/deckhouseversion"
+	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders/editionavailable"
+	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders/editionenabled"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders/kubernetesversion"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders/moduledependency"
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 func IsExtendersField(field string) bool {
@@ -38,12 +41,14 @@ func IsExtendersField(field string) bool {
 	}, field)
 }
 
-func Extenders() []extenders.Extender {
+func Extenders(logger *log.Logger) []extenders.Extender {
 	return []extenders.Extender{
 		kubernetesversion.Instance(),
 		deckhouseversion.Instance(),
 		bootstrapped.Instance(),
 		moduledependency.Instance(),
+		editionavailable.Instance().SetLogger(logger),
+		editionenabled.Instance().SetLogger(logger),
 	}
 }
 

@@ -80,6 +80,7 @@ spec:
                   type: string
                   description: Module phase.
                   enum:
+                    - Unavailable
                     - Available
                     - Downloading
                     - DownloadingError

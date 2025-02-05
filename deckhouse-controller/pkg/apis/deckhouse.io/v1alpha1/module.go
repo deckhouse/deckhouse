@@ -36,6 +36,7 @@ const (
 	ModuleConditionIsReady                = "IsReady"
 	ModuleConditionIsOverridden           = "IsOverridden"
 
+	ModulePhaseUnavailable      = "Unavailable"
 	ModulePhaseAvailable        = "Available"
 	ModulePhaseDownloading      = "Downloading"
 	ModulePhaseDownloadingError = "DownloadingError"
@@ -50,6 +51,8 @@ const (
 
 	ModuleReasonBundle                      = "Bundle"
 	ModuleReasonModuleConfig                = "ModuleConfig"
+	ModuleReasonEditionAvailableExtender    = "EditionAvailableExtender"
+	ModuleReasonEditionEnabledExtender      = "EditionEnabledExtender"
 	ModuleReasonDynamicGlobalHookExtender   = "DynamicGlobalHookExtender"
 	ModuleReasonEnabledScriptExtender       = "EnabledScriptExtender"
 	ModuleReasonDeckhouseVersionExtender    = "DeckhouseVersionExtender"
@@ -71,6 +74,7 @@ const (
 
 	ModuleMessageBundle                      = "turned off by bundle"
 	ModuleMessageModuleConfig                = "turned off by module config"
+	ModuleMessageEditionExtender             = "turned off by edition extender"
 	ModuleMessageDynamicGlobalHookExtender   = "turned off by global hook"
 	ModuleMessageEnabledScriptExtender       = "turned off by enabled script"
 	ModuleMessageDeckhouseVersionExtender    = "turned off by deckhouse version"

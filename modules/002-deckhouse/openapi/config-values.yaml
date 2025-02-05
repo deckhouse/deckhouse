@@ -17,6 +17,10 @@ properties:
       - `Managed` — the bundle aimed at clusters managed by cloud providers (e.g., Google Kubernetes Engine).
       - `Minimal` — the minimum possible bundle option (includes a single module — this one). **Note** that several basic modules are not included in the set of modules `Minimal` (for example, the CNI module). Deckhouse with the set of modules `Minimal` without the basic modules will be able to work only in an already deployed cluster.
     default: "Default"
+  edition:
+    type: string
+    enum: ["CE", "EE", "FE", "BE", "SE"]
+    x-examples: ["CE"]
   releaseChannel:
     type: string
     enum: ["Alpha", "Beta", "EarlyAccess", "Stable", "RockSolid"]

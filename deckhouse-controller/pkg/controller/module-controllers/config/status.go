@@ -37,6 +37,8 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/configtools/conversion"
 	bootstrappedextender "github.com/deckhouse/deckhouse/go_lib/dependency/extenders/bootstrapped"
 	d7sversionextender "github.com/deckhouse/deckhouse/go_lib/dependency/extenders/deckhouseversion"
+	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders/editionavailable"
+	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders/editionenabled"
 	k8sversionextender "github.com/deckhouse/deckhouse/go_lib/dependency/extenders/kubernetesversion"
 	moduledependencyextender "github.com/deckhouse/deckhouse/go_lib/dependency/extenders/moduledependency"
 )
@@ -197,6 +199,24 @@ func (r *reconciler) refreshModuleStatus(module *v1alpha1.Module) {
 			message = v1alpha1.ModuleMessageDisabled
 		}
 
+	case editionavailable.Name:
+		module.Status.Phase = v1alpha1.ModulePhaseUnavailable
+		reason = v1alpha1.ModuleReasonEditionAvailableExtender
+		_, errMsg := editionavailable.Instance().Filter(module.Name, map[string]string{})
+		message = v1alpha1.ModuleMessageEditionExtender
+		if errMsg != nil {
+			message += ": " + errMsg.Error()
+		}
+
+	case editionenabled.Name:
+		module.Status.Phase = v1alpha1.ModulePhaseDownloaded
+		reason = v1alpha1.ModuleReasonEditionEnabledExtender
+		_, errMsg := editionenabled.Instance().Filter(module.Name, map[string]string{})
+		message = v1alpha1.ModuleMessageEditionExtender
+		if errMsg != nil {
+			message += ": " + errMsg.Error()
+		}
+
 	case kubeconfig.Name:
 		reason = v1alpha1.ModuleReasonModuleConfig
 		message = v1alpha1.ModuleMessageModuleConfig
@@ -238,8 +258,8 @@ func (r *reconciler) refreshModuleStatus(module *v1alpha1.Module) {
 		}
 	}
 
-	// do not change phase of not installed module
-	if module.Status.Phase != v1alpha1.ModulePhaseAvailable {
+	// do not change phase of not installed module or unavailable module
+	if module.Status.Phase != v1alpha1.ModulePhaseAvailable && module.Status.Phase != v1alpha1.ModulePhaseUnavailable {
 		module.Status.Phase = v1alpha1.ModulePhaseDownloaded
 	}
 	module.SetConditionFalse(v1alpha1.ModuleConditionEnabledByModuleManager, reason, message)
