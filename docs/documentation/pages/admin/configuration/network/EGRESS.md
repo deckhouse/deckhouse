@@ -1,6 +1,6 @@
 ---
 title: "Egress Gateway configuring"
-permalink: en/admin/egress.html
+permalink: en/admin/network/egress.html
 ---
 
 Egress Gateway enables centralized management and control of outbound traffic and provides features such as encryption, routing and monitoring.

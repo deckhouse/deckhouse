@@ -1,6 +1,6 @@
 ---
 title: "Настройка Egress Gateway"
-permalink: ru/admin/egress.html
+permalink: ru/admin/network/egress.html
 lang: ru
 ---
 
