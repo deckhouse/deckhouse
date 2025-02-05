@@ -95,9 +95,6 @@ func (m *Manager) Handle(ctx context.Context, project *v1alpha2.Project) (ctrl.R
 	project.ClearConditions()
 	project.SetObservedGeneration(project.Generation)
 
-	// clear resources
-	project.Status.Resources = make(map[string]map[string][]v1alpha2.ResourceObject)
-
 	// get the project template for the project
 	m.logger.Info("get the project template for project", "project", project.Name, "template", project.Spec.ProjectTemplateName)
 	projectTemplate, err := m.projectTemplateByName(ctx, project.Spec.ProjectTemplateName)
