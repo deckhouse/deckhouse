@@ -1179,12 +1179,11 @@ Cilium полностью заменяет собой функционал мо�
 <!-- SCHEMA -->
 
 ### Модуль cni-cilium: Custom Resources
----
-title: "The cni-cilium module: configuration"
----
 
-{% include module-configuration.liquid %}
+ 
 <!-- SCHEMA -->
+#### {{ site.data.i18n.common['parameters'][page.lang] }}
+{{ site.data.schemas['cni-cilium'].config-values | format_module_configuration: moduleKebabName }}
 
 ### Модуль cni-cilium: примеры
 
@@ -1396,14 +1395,11 @@ kubectl -n d8-cni-cilium delete secret/hubble-basic-auth
 <!-- SCHEMA -->
 
 ### Управление control plane: Custom Resources
----
-title: "Managing control plane: configuration"
----
 
-Some cluster parameters that affect control plane management are derived from the [ClusterConfiguration](../../installing/configuration.html#clusterconfiguration) resource.
-
-{% include module-configuration.liquid %}
+ 
 <!-- SCHEMA -->
+#### {{ site.data.i18n.common['parameters'][page.lang] }}
+{{ site.data.schemas['control-plane-manager'].config-values | format_module_configuration: moduleKebabName }}
 
 ### Управление control plane: примеры
 
@@ -2347,16 +2343,11 @@ kubectl get --raw /debug/api_priority_and_fairness/dump_queues
 <!-- SCHEMA -->
 
 ### Модуль ingress-nginx: Custom Resources
----
-title: "The ingress-nginx module: configuration"
----
 
-> Pay attention to the global parameter [publicDomainTemplate](../../deckhouse-configure-global.html#parameters), if you are turning the module on. If the parameter is not specified, the Ingress resources for Deckhouse service components (dashboard, user-auth, grafana, upmeter, etc.) will not be created.
-
-Ingress controllers are configured using the [IngressNginxController](cr.html#ingressnginxcontroller) Custom Resource.
-
-{% include module-configuration.liquid %}
+ 
 <!-- SCHEMA -->
+#### {{ site.data.i18n.common['parameters'][page.lang] }}
+{{ site.data.schemas['ingress-nginx'].config-values | format_module_configuration: moduleKebabName }}
 
 ### Модуль ingress-nginx: пример
 
@@ -3180,58 +3171,113 @@ kubectl -n d8-istio delete secret/kiali-basic-auth
 > **Внимание!** Параметр `auth.password` больше не поддерживается.
 
 ### Модуль istio: Custom Resources
----
-title: "The istio module: configuration"
----
 
-{% include module-configuration.liquid %}
+ 
 <!-- SCHEMA -->
-
-## Authentication
-
-[user-authn](../user-authn/) module provides authentication by default. Also, externalAuthentication can be configured (see below).
-If these options are disabled, the module will use basic auth with the auto-generated password.
-
-Use kubectl to see password:
-
-```shell
-kubectl -n d8-system exec svc/deckhouse-leader -c deckhouse -- deckhouse-controller module values istio -o json | jq '.istio.internal.auth.password'
-```
-
-Delete the Secret to re-generate password:
-
-```shell
-kubectl -n d8-istio delete secret/kiali-basic-auth
-```
-
-> **Note!** The `auth.password` parameter is deprecated.
+#### {{ site.data.i18n.common['parameters'][page.lang] }}
+{{ site.data.schemas['istio'].config-values | format_module_configuration: moduleKebabName }}
 
 ### Модуль istio: Custom Resources (от istio.io)
----
-title: "The istio module: configuration"
----
 
-{% include module-configuration.liquid %}
-<!-- SCHEMA -->
+#### Маршрутизация
 
-## Authentication
+##### DestinationRule
 
-[user-authn](../user-authn/) module provides authentication by default. Also, externalAuthentication can be configured (see below).
-If these options are disabled, the module will use basic auth with the auto-generated password.
+Reference
 
-Use kubectl to see password:
+Позволяет:
+* Определить стратегию балансировки трафика между эндпоинтами сервиса:
+  * алгоритм балансировки (LEAST_CONN, ROUND_ROBIN, ...);
+  * признаки смерти эндпоинта и правила его выведения из балансировки;
+  * лимиты TCP-соединений и реквестов для эндпоинтов;
+  * Sticky Sessions;
+  * Circuit Breaker.
+* Определить альтернативные группы эндпоинтов для обработки трафика (применимо для Canary Deployments). При этом у каждой группы можно настроить свои стратегии балансировки.
+* Настройка TLS для исходящих запросов.
 
-```shell
-kubectl -n d8-system exec svc/deckhouse-leader -c deckhouse -- deckhouse-controller module values istio -o json | jq '.istio.internal.auth.password'
-```
+##### VirtualService
 
-Delete the Secret to re-generate password:
+Reference
 
-```shell
-kubectl -n d8-istio delete secret/kiali-basic-auth
-```
+Использование VirtualService опционально, классические сервисы продолжают работать, если вам достаточно их функционала.
 
-> **Note!** The `auth.password` parameter is deprecated.
+Позволяет настроить маршрутизацию запросов:
+* Аргументы для принятия решения о маршруте:
+  * Host;
+  * URI;
+  * вес.
+* Параметры итоговых направлений:
+  * новый хост;
+  * новый URI;
+  * если хост определен с помощью [DestinationRule](#destinationrule), можно направлять запросы на subset'ы;
+  * таймаут и настройки ретраев.
+
+> **Важно!** Istio должен знать о существовании `destination`, если вы используете внешний API, то зарегистрируйте его через [ServiceEntry](#serviceentry).
+
+##### ServiceEntry
+
+Reference
+
+Аналог Endpoints + Service из ванильного Kubernetes. Позволяет сообщить Istio о существовании внешнего сервиса или даже переопределить его адрес.
+
+#### Аутентификация
+
+Решает задачу «Кто сделал запрос?». Не путать с авторизацией, которая определяет, «разрешить ли аутентифицированному элементу делать что-то или нет».
+
+По факту есть два метода аутентификации:
+* mTLS;
+* JWT-токены.
+
+##### PeerAuthentication
+
+Reference
+
+Позволяет определить стратегию mTLS в отдельном NS — принимать или нет нешифрованные запросы. Каждый mTLS-запрос автоматически позволяет определить источник и использовать его в правилах авторизации.
+
+##### RequestAuthentication
+
+Reference
+
+Позволяет настроить JWT-аутентификацию для реквестов.
+
+#### Авторизация
+
+**Важно!** Авторизация без mTLS- или JWT-аутентификации не будет работать в полной мере. В этом случае будут доступны только простейшие аргументы для составления политик, такие как `source.ip` и `request.headers`.
+
+##### AuthorizationPolicy
+
+Reference.
+
+Включает и определяет контроль доступа к workload. Поддерживает как ALLOW-, так и DENY-правила. Как только у workload появляется хотя бы одна политика, начинает работать следующий приоритет:
+
+* Если запрос попадает под политику DENY — запретить запрос.
+* Если для данного приложения нет политик ALLOW — разрешить запрос.
+* Если запрос попадает под политику ALLOW — разрешить запрос.
+* Все остальные запросы — запретить.
+
+Аргументы для принятия решения об авторизации:
+* source:
+  * namespace;
+  * principal (читай — идентификатор юзера, полученный после аутентификации);
+  * IP.
+* destination:
+  * метод (GET, POST...);
+  * Host;
+  * порт;
+  * URI.
+* conditions:
+  * HTTP-заголовки
+  * аргументы source
+  * аргументы destination
+  * JWT-токены
+
+##### Sidecar
+
+Reference
+
+Данный ресурс позволяет ограничить количество сервисов, информация о которых будет передана в сайдкар istio-proxy.
+#### {{ site.data.i18n.common['parameters'][page.lang] }}
+{{ site.data.schemas['istio'].config-values | format_module_configuration: moduleKebabName }}
 
 ### Модуль istio: примеры
 
@@ -4246,13 +4292,11 @@ rm /var/lib/bashible/configuration_checksum
 <!-- SCHEMA -->
 
 ### Управление узлами: custom resources
----
-title: "Managing nodes: configuration"
-description: Settings of the Deckhouse module for managing Kubernetes cluster nodes.
----
 
-{% include module-configuration.liquid %}
+ 
 <!-- SCHEMA -->
+#### {{ site.data.i18n.common['parameters'][page.lang] }}
+{{ site.data.schemas['node-manager'].config-values | format_module_configuration: moduleKebabName }}
 
 ### Управление узлами: примеры
 
@@ -6016,15 +6060,11 @@ spec:
 Модуль не требует конфигурации.
 
 ### Модуль local-path-provisioner: custom resources
----
-title: "The local-path-provisioner module: configuration"
----
 
-{% include module-alerts.liquid %}
-
-{% include module-bundle.liquid %}
-
-The module does not require any configuration.
+ 
+<!-- SCHEMA -->
+#### {{ site.data.i18n.common['parameters'][page.lang] }}
+{{ site.data.schemas['local-path-provisioner'].config-values | format_module_configuration: moduleKebabName }}
 
 ### Модуль local-path-provisioner: примеры
 
@@ -6816,14 +6856,11 @@ Extra labels добавляются на этапе `Destination`, поэтом�
 <!-- SCHEMA -->
 
 ### Модуль log-shipper: Custom Resources
----
-title: "The log-shipper module: configuration"
----
 
-The module starts reading logs only if log-pipeline is created. Log-pipeline consists of [ClusterLoggingConfig](cr.html#clusterloggingconfig)/[PodLoggingConfig](cr.html#podloggingconfig) connected to [ClusterLogDestination](cr.html#clusterlogdestination).
-
-{% include module-configuration.liquid %}
+ 
 <!-- SCHEMA -->
+#### {{ site.data.i18n.common['parameters'][page.lang] }}
+{{ site.data.schemas['log-shipper'].config-values | format_module_configuration: moduleKebabName }}
 
 ### Модуль log-shipper: примеры
 
@@ -7965,47 +8002,11 @@ kubectl -n d8-monitoring delete secret/basic-auth
 * Размер дисков Prometheus можно изменить стандартным для Kubernetes способом (если в StorageClass это разрешено), отредактировав в PersistentVolumeClaim поле `.spec.resources.requests.storage`.
 
 ### Prometheus-мониторинг: custom resources
----
-title: "The Prometheus monitoring module: configuration"
-type:
-  — instruction
-search: prometheus
----
 
-The module does not require any configuration – it works right out-of-the-box.
-
-{% include module-configuration.liquid %}
+ 
 <!-- SCHEMA -->
-
-## Authentication
-
-[user-authn](/products/kubernetes-platform/documentation/v1/modules/user-authn/) module provides authentication by default. Also, externalAuthentication can be configured (see below).
-If these options are disabled, the module will use basic auth with the auto-generated password and the user `admin`.
-
-Use kubectl to see password:
-
-```shell
-kubectl -n d8-system exec svc/deckhouse-leader -c deckhouse -- deckhouse-controller module values prometheus -o json | jq '.internal.auth.password'
-```
-
-Delete the Secret to re-generate password:
-
-```shell
-kubectl -n d8-monitoring delete secret/basic-auth
-```
-
-> **Note!** The `auth.password` parameter is deprecated.
-
-## Notes
-
-* `retentionSize` for the `main` and `longterm` Prometheus is **calculated automatically; you cannot set this value manually!**
-  * The following calculation algorithm is used:
-    * `pvc_size * 0.85` — if the PVC exists;
-    * `10 GiB` — if there is no PVC and if the StorageClass supports resizing;
-    * `25 GiB` — if there is no PVC and if the StorageClass does not support resizing;
-  * If the `local-storage` is used, and you have to change the `retentionSize`, then you need to manually change the size of the PV and PVC. **Caution!** Note that the value from `.status.capacity.storage` PVC is used for the calculation since it reflects the actual size of the PV in the case of manual resizing.
-* `40 GiB` — size of PersistentVolumeClaim created by default.
-* You can change the size of Prometheus disks in the standard Kubernetes way (if the StorageClass permits this) by editing the `.spec.resources.requests.storage` field of the PersistentVolumeClaim resource.
+#### {{ site.data.i18n.common['parameters'][page.lang] }}
+{{ site.data.schemas['prometheus'].config-values | format_module_configuration: moduleKebabName }}
 
 ### Prometheus-мониторинг: FAQ
 
@@ -9009,14 +9010,11 @@ Extra labels добавляются на этапе `Destination`, поэтом�
 <!-- SCHEMA -->
 
 ### Модуль log-shipper: Custom Resources
----
-title: "The log-shipper module: configuration"
----
 
-The module starts reading logs only if log-pipeline is created. Log-pipeline consists of [ClusterLoggingConfig](cr.html#clusterloggingconfig)/[PodLoggingConfig](cr.html#podloggingconfig) connected to [ClusterLogDestination](cr.html#clusterlogdestination).
-
-{% include module-configuration.liquid %}
+ 
 <!-- SCHEMA -->
+#### {{ site.data.i18n.common['parameters'][page.lang] }}
+{{ site.data.schemas['log-shipper'].config-values | format_module_configuration: moduleKebabName }}
 
 ### Модуль log-shipper: примеры
 
@@ -10158,47 +10156,11 @@ kubectl -n d8-monitoring delete secret/basic-auth
 * Размер дисков Prometheus можно изменить стандартным для Kubernetes способом (если в StorageClass это разрешено), отредактировав в PersistentVolumeClaim поле `.spec.resources.requests.storage`.
 
 ### Prometheus-мониторинг: custom resources
----
-title: "The Prometheus monitoring module: configuration"
-type:
-  — instruction
-search: prometheus
----
 
-The module does not require any configuration – it works right out-of-the-box.
-
-{% include module-configuration.liquid %}
+ 
 <!-- SCHEMA -->
-
-## Authentication
-
-[user-authn](/products/kubernetes-platform/documentation/v1/modules/user-authn/) module provides authentication by default. Also, externalAuthentication can be configured (see below).
-If these options are disabled, the module will use basic auth with the auto-generated password and the user `admin`.
-
-Use kubectl to see password:
-
-```shell
-kubectl -n d8-system exec svc/deckhouse-leader -c deckhouse -- deckhouse-controller module values prometheus -o json | jq '.internal.auth.password'
-```
-
-Delete the Secret to re-generate password:
-
-```shell
-kubectl -n d8-monitoring delete secret/basic-auth
-```
-
-> **Note!** The `auth.password` parameter is deprecated.
-
-## Notes
-
-* `retentionSize` for the `main` and `longterm` Prometheus is **calculated automatically; you cannot set this value manually!**
-  * The following calculation algorithm is used:
-    * `pvc_size * 0.85` — if the PVC exists;
-    * `10 GiB` — if there is no PVC and if the StorageClass supports resizing;
-    * `25 GiB` — if there is no PVC and if the StorageClass does not support resizing;
-  * If the `local-storage` is used, and you have to change the `retentionSize`, then you need to manually change the size of the PV and PVC. **Caution!** Note that the value from `.status.capacity.storage` PVC is used for the calculation since it reflects the actual size of the PV in the case of manual resizing.
-* `40 GiB` — size of PersistentVolumeClaim created by default.
-* You can change the size of Prometheus disks in the standard Kubernetes way (if the StorageClass permits this) by editing the `.spec.resources.requests.storage` field of the PersistentVolumeClaim resource.
+#### {{ site.data.i18n.common['parameters'][page.lang] }}
+{{ site.data.schemas['prometheus'].config-values | format_module_configuration: moduleKebabName }}
 
 ### Prometheus-мониторинг: FAQ
 
@@ -11060,7 +11022,10 @@ spec:
 
 ### Модуль admission-policy-engine: custom resources
 
+ 
 <!-- SCHEMA -->
+#### {{ site.data.i18n.common['parameters'][page.lang] }}
+{{ site.data.schemas['admission-policy-engine'].config-values | format_module_configuration: moduleKebabName }}
 
 ### Модуль admission-policy-engine: Custom Resources (от Gatekeeper)
 
@@ -11187,6 +11152,8 @@ spec:
     - apiGroups: [ "*" ]
       kinds: [ "Pod" ]
 ```
+#### {{ site.data.i18n.common['parameters'][page.lang] }}
+{{ site.data.schemas['admission-policy-engine'].config-values | format_module_configuration: moduleKebabName }}
 
 ### Модуль admission-policy-engine: FAQ
 
@@ -11414,6 +11381,8 @@ spec:
 ### Модуль cert-manager: custom resources
 
 Для запроса сертификатов модуль использует стандартный custom resource cert-manager — Certificate.
+#### {{ site.data.i18n.common['parameters'][page.lang] }}
+{{ site.data.schemas['cert-manager'].config-values | format_module_configuration: moduleKebabName }}
 
 ### Модуль cert-manager: FAQ
 
@@ -11884,7 +11853,10 @@ CAA record does not match issuer
 
 ### Модуль multitenancy-manager: Custom Resources
 
+ 
 <!-- SCHEMA -->
+#### {{ site.data.i18n.common['parameters'][page.lang] }}
+{{ site.data.schemas['multitenancy-manager'].config-values | format_module_configuration: moduleKebabName }}
 
 ### Модуль operator-trivy
 
@@ -12017,7 +11989,10 @@ kubectl get clustercompliancereports.aquasecurity.github.io cis -ojson |
 
 ### Модуль user-authn: Custom Resources
 
+ 
 <!-- SCHEMA -->
+#### {{ site.data.i18n.common['parameters'][page.lang] }}
+{{ site.data.schemas['user-authn'].config-values | format_module_configuration: moduleKebabName }}
 
 ### Модуль user-authn: FAQ
 
@@ -12430,7 +12405,10 @@ kubectl get clusterrole -A -o jsonpath="{range .items[?(@.metadata.annotations.u
 
 ### Модуль user-authz: Custom Resources
 
+ 
 <!-- SCHEMA -->
+#### {{ site.data.i18n.common['parameters'][page.lang] }}
+{{ site.data.schemas['user-authz'].config-values | format_module_configuration: moduleKebabName }}
 
 ### Модуль user-authz: FAQ
 
@@ -12868,7 +12846,10 @@ Deckhouse запускает агенты Falco (объединены в DaemonS
 
 ### Модуль runtime-audit-engine: Custom Resources
 
+ 
 <!-- SCHEMA -->
+#### {{ site.data.i18n.common['parameters'][page.lang] }}
+{{ site.data.schemas['modules'].config-values | format_module_configuration: moduleKebabName }}
 
 ### Модуль runtime-audit-engine: примеры
 
@@ -13288,7 +13269,10 @@ bash -c "for file in $(ls /mnt/secrets); do export  $file=$(cat /mnt/secrets/$fi
 
 ### Модуль secrets-store-integration: Custom Resources
 
+ 
 <!-- SCHEMA -->
+#### {{ site.data.i18n.common['parameters'][page.lang] }}
+{{ site.data.schemas['secrets-store-integration'].config-values | format_module_configuration: moduleKebabName }}
 ## Подсистема Хранение данных
 
 ### Модуль snapshot-controller
@@ -13319,13 +13303,11 @@ CSI-драйверы в Deckhouse, которые поддерживают сн�
 <!-- SCHEMA -->
 
 ### Модуль csi-ceph: custom resources
----
-title: "The csi-ceph module: configuration"
-force_searchable: true
----
 
-{% include module-configuration.liquid %}
+ 
 <!-- SCHEMA -->
+#### {{ site.data.i18n.common['parameters'][page.lang] }}
+{{ site.data.schemas['csi-ceph'].config-values | format_module_configuration: moduleKebabName }}
 
 ### Модуль csi-ceph: примеры
 
@@ -13807,14 +13789,11 @@ kubectl -n d8-sds-local-volume get pod -owide
 <!-- SCHEMA -->
 
 ### Модуль sds-local-volume: Custom Resources
----
-title: "The sds-local-volume module: configuration"
-force_searchable: true
-description: The sds-local-volume Deckhouse Kubernetes Platform module's configuration.
----
 
-{% include module-configuration.liquid %}
+ 
 <!-- SCHEMA -->
+#### {{ site.data.i18n.common['parameters'][page.lang] }}
+{{ site.data.schemas['sds-local-volume'].config-values | format_module_configuration: moduleKebabName }}
 
 ### Модуль sds-local-volume: FAQ
 
@@ -14179,17 +14158,15 @@ echo "Data migration completed"
 <!-- SCHEMA -->
 
 ### Модуль sds-node-configurator: Custom Resources
----
-title: "The sds-node-configurator module: settings"
-description: "Settings of the sds-node-configurator module. Deckhouse Kubernetes Platform."
----
 
-The module is guaranteed to work only with stock kernels that are shipped with the [supported distributions](/supported_versions.html#linux).
+Работоспособность модуля гарантируется только при использовании стоковых ядер, поставляемых вместе с [поддерживаемыми дистрибутивами](/supported_versions.html#linux).
 
-The module may work with other kernels or distributions, but its stable operation and availability of all features is not guaranteed.
+Работоспособность модуля при использовании других ядер или дистрибутивов возможна, но не гарантируется.
 
-{% include module-configuration.liquid %}
+ 
 <!-- SCHEMA -->
+#### {{ site.data.i18n.common['parameters'][page.lang] }}
+{{ site.data.schemas['sds-node-configurator'].config-values | format_module_configuration: moduleKebabName }}
 
 ###  Модуль sds-node-configurator: FAQ
 {{< alert level="warning" >}}

@@ -1,5 +1,7 @@
 #!/bin/bash
 
+rm -rf /tmp/cse
+
 unset TMPDIR
 _TMPDIR=$(mktemp -d "${TMPDIR:-/tmp}/cse")
 

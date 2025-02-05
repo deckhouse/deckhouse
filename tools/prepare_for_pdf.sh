@@ -118,10 +118,13 @@ do
               schema_path="${PATH_TO_MODULES}/${MODULE_PATH}/crds"
               module_path=$(echo $schema_path | cut -d\/ -f-2 )
               module_file_name=$(echo $schema_path | awk -F\/ '{print $NF}')
-              module_name=$(echo $schema_path | cut -d\/ -f2 )
+              module_name=$(echo $schema_path | cut -d\/ -f2 | sed 's/^[0-9]*-*//')
               schema_path_relative=$(echo $schema_path | cut -d\/ -f3- | sed "s#\.yaml##; s#\.##g; s#\/#\.#g")
+              echo $module_name
               echo "   ...${module_name}/${module_file_name}"
-              echo "$(gettext $file)" | sed "/<!-- SCHEMA -->/i\{\% include module-configuration.liquid \%\}" ${module_path}/docs/CONFIGURATION.md >> $PATH_TO_PDF_PAGE
+              echo "$(gettext $file)" | sed "/<!-- SCHEMA -->/i\ " >> $PATH_TO_PDF_PAGE
+              echo "#### {{ site.data.i18n.common['parameters'][page.lang] }}" >> $PATH_TO_PDF_PAGE
+              echo "{{ site.data.schemas['${module_name}'].config-values | format_module_configuration: moduleKebabName }}" >> $PATH_TO_PDF_PAGE
             else
               echo "$(gettext $file)" >> $PATH_TO_PDF_PAGE
             fi
@@ -154,10 +157,13 @@ do
               schema_path="${PATH_TO_MODULES}/${MODULE_PATH}/crds"
               module_path=$(echo $schema_path | cut -d\/ -f-2 )
               module_file_name=$(echo $schema_path | awk -F\/ '{print $NF}')
-              module_name=$(echo $schema_path | cut -d\/ -f2 )
+              module_name=$(echo $schema_path | cut -d\/ -f2 | sed 's/^[0-9]*-*//')
               schema_path_relative=$(echo $schema_path | cut -d\/ -f3- | sed "s#\.yaml##; s#\.##g; s#\/#\.#g")
+              echo $module_name
               echo "   ...${module_name}/${module_file_name}"
-              echo "$(gettext $file)" | sed "/<!-- SCHEMA -->/i\{\% include module-configuration.liquid \%\}" ${module_path}/docs/CONFIGURATION.md >> $PATH_TO_PDF_PAGE
+              echo "$(gettext $file)" | sed "/<!-- SCHEMA -->/i\ " >> $PATH_TO_PDF_PAGE
+              echo "#### {{ site.data.i18n.common['parameters'][page.lang] }}" >> $PATH_TO_PDF_PAGE
+              echo "{{ site.data.schemas['${module_name}'].config-values | format_module_configuration: moduleKebabName }}" >> $PATH_TO_PDF_PAGE
             else
               echo "$(gettext $file)" >> $PATH_TO_PDF_PAGE
             fi
@@ -195,10 +201,13 @@ do
               schema_path="${PATH_TO_MODULES}/${MODULE_PATH}/crds"
               module_path=$(echo $schema_path | cut -d\/ -f-2 )
               module_file_name=$(echo $schema_path | awk -F\/ '{print $NF}')
-              module_name=$(echo $schema_path | cut -d\/ -f2 )
+              module_name=$(echo $schema_path | cut -d\/ -f2 | sed 's/^[0-9]*-*//')
               schema_path_relative=$(echo $schema_path | cut -d\/ -f3- | sed "s#\.yaml##; s#\.##g; s#\/#\.#g")
+              echo $module_name
               echo "   ...${module_name}/${module_file_name}"
-              echo "$(gettext $file)" | sed "/<!-- SCHEMA -->/i\{\% include module-configuration.liquid \%\}" ${module_path}/docs/CONFIGURATION.md >> $PATH_TO_PDF_PAGE
+              echo "$(gettext $file)" | sed "/<!-- SCHEMA -->/i\ " >> $PATH_TO_PDF_PAGE
+              echo "#### {{ site.data.i18n.common['parameters'][page.lang] }}" >> $PATH_TO_PDF_PAGE
+              echo "{{ site.data.schemas['${module_name}'].config-values | format_module_configuration: moduleKebabName }}" >> $PATH_TO_PDF_PAGE
             else
               echo "$(gettext $file)" >> $PATH_TO_PDF_PAGE
             fi
@@ -236,10 +245,13 @@ do
               schema_path="${PATH_TO_MODULES}/${MODULE_PATH}/crds"
               module_path=$(echo $schema_path | cut -d\/ -f-2 )
               module_file_name=$(echo $schema_path | awk -F\/ '{print $NF}')
-              module_name=$(echo $schema_path | cut -d\/ -f2 )
+              module_name=$(echo $schema_path | cut -d\/ -f2 | sed 's/^[0-9]*-*//')
               schema_path_relative=$(echo $schema_path | cut -d\/ -f3- | sed "s#\.yaml##; s#\.##g; s#\/#\.#g")
+              echo $module_name
               echo "   ...${module_name}/${module_file_name}"
-              echo "$(gettext $file)" | sed "/<!-- SCHEMA -->/i\{\% include module-configuration.liquid \%\}" ${module_path}/docs/CONFIGURATION.md >> $PATH_TO_PDF_PAGE
+              echo "$(gettext $file)" | sed "/<!-- SCHEMA -->/i\ " >> $PATH_TO_PDF_PAGE
+              echo "#### {{ site.data.i18n.common['parameters'][page.lang] }}" >> $PATH_TO_PDF_PAGE
+              echo "{{ site.data.schemas['${module_name}'].config-values | format_module_configuration: moduleKebabName }}" >> $PATH_TO_PDF_PAGE
             else
               echo "$(gettext $file)" >> $PATH_TO_PDF_PAGE
             fi
@@ -276,7 +288,20 @@ do
         do
           if [[ $file == *"${PAGES_ORDER[ixp]}"* ]]; then
             echo "\n### "$(getname $file) >> $PATH_TO_PDF_PAGE
-            echo "$(gettext $file)" >> $PATH_TO_PDF_PAGE
+              if [[ $file == *""CR_RU.md""* ]]; then
+                schema_path="${MODULE_PATH}/crds"
+                module_path=$(echo $schema_path | cut -d\/ -f-2 )
+                module_file_name=$(echo $schema_path | awk -F\/ '{print $NF}')
+                module_name=$(echo $schema_path | cut -d\/ -f2 | sed 's/^[0-9]*-*//')
+                schema_path_relative=$(echo $schema_path | cut -d\/ -f3- | sed "s#\.yaml##; s#\.##g; s#\/#\.#g")
+                echo $module_name
+                echo "   ...${module_name}/${module_file_name}"
+                echo "$(gettext $file)" | sed "/<!-- SCHEMA -->/i\ " >> $PATH_TO_PDF_PAGE
+                echo "#### {{ site.data.i18n.common['parameters'][page.lang] }}" >> $PATH_TO_PDF_PAGE
+                echo "{{ site.data.schemas['${module_name}'].config-values | format_module_configuration: moduleKebabName }}" >> $PATH_TO_PDF_PAGE
+              else
+                echo "$(gettext $file)" >> $PATH_TO_PDF_PAGE
+              fi
           fi
         done
       done
@@ -290,24 +315,50 @@ do
         do
           if [[ $file == *"${PAGES_ORDER[ixp]}"* ]]; then
             echo "\n### "$(getname $file) >> $PATH_TO_PDF_PAGE
-            echo "$(gettext $file)" >> $PATH_TO_PDF_PAGE
+              if [[ $file == *""CR_RU.md""* ]]; then
+                schema_path="${MODULE_PATH}/crds"
+                module_path=$(echo $schema_path | cut -d\/ -f-2 )
+                module_file_name=$(echo $schema_path | awk -F\/ '{print $NF}')
+                module_name=$(echo $schema_path | cut -d\/ -f2 | sed 's/^[0-9]*-*//')
+                schema_path_relative=$(echo $schema_path | cut -d\/ -f3- | sed "s#\.yaml##; s#\.##g; s#\/#\.#g")
+                echo $module_name
+                echo "   ...${module_name}/${module_file_name}"
+                echo "$(gettext $file)" | sed "/<!-- SCHEMA -->/i\ " >> $PATH_TO_PDF_PAGE
+                echo "#### {{ site.data.i18n.common['parameters'][page.lang] }}" >> $PATH_TO_PDF_PAGE
+                echo "{{ site.data.schemas['${module_name}'].config-values | format_module_configuration: moduleKebabName }}" >> $PATH_TO_PDF_PAGE
+              else
+                echo "$(gettext $file)" >> $PATH_TO_PDF_PAGE
+              fi
           fi
         done
       done
       ;;
     *)
       MODULE_PATH=$(find ${PATH_TO_MODULES} -maxdepth 1 -type d -name "*${LIST_OF_MODULES[$ix]}" -print | sed 's|.*/||' )
-      files=$(find "${PATH_TO_MODULES}/${MODULE_PATH}" -name "*.md" | sort -t '-' -k2)
-      for ixp in ${!PAGES_ORDER[*]}
-      do
-        for file in $files
-        do
-          if [[ $file == *"${PAGES_ORDER[ixp]}"* ]]; then
-            echo "\n### "$(getname $file) >> $PATH_TO_PDF_PAGE
-            echo "$(gettext $file)" >> $PATH_TO_PDF_PAGE
-          fi
-        done
-      done
+        files=$(find "${PATH_TO_MODULES}/${MODULE_PATH}" -name "*.md" | sort -t '-' -k2)
+            for ixp in ${!PAGES_ORDER[*]}
+            do
+              for file in $files
+              do
+                if [[ $file == *"${PAGES_ORDER[ixp]}"* ]]; then
+                  echo "\n### "$(getname $file) >> $PATH_TO_PDF_PAGE
+                  if [[ $file == *""CR_RU.md""* ]]; then
+                    schema_path="${PATH_TO_MODULES}/${MODULE_PATH}/crds"
+                    module_path=$(echo $schema_path | cut -d\/ -f-2 )
+                    module_file_name=$(echo $schema_path | awk -F\/ '{print $NF}')
+                    module_name=$(echo $schema_path | cut -d\/ -f2 | sed 's/^[0-9]*-*//')
+                    schema_path_relative=$(echo $schema_path | cut -d\/ -f3- | sed "s#\.yaml##; s#\.##g; s#\/#\.#g")
+                    echo $module_name
+                    echo "   ...${module_name}/${module_file_name}"
+                    echo "$(gettext $file)" | sed "/<!-- SCHEMA -->/i\ " >> $PATH_TO_PDF_PAGE
+                    echo "#### {{ site.data.i18n.common['parameters'][page.lang] }}" >> $PATH_TO_PDF_PAGE
+                    echo "{{ site.data.schemas['${module_name}'].config-values | format_module_configuration: moduleKebabName }}" >> $PATH_TO_PDF_PAGE
+                  else
+                    echo "$(gettext $file)" >> $PATH_TO_PDF_PAGE
+                  fi
+                fi
+              done
+            done
       ;;
     esac
 done
@@ -337,10 +388,13 @@ do
               schema_path="${PATH_TO_MODULES}/${MODULE_PATH}/crds"
               module_path=$(echo $schema_path | cut -d\/ -f-2 )
               module_file_name=$(echo $schema_path | awk -F\/ '{print $NF}')
-              module_name=$(echo $schema_path | cut -d\/ -f2 )
+              module_name=$(echo $schema_path | cut -d\/ -f2 | sed 's/^[0-9]*-*//')
               schema_path_relative=$(echo $schema_path | cut -d\/ -f3- | sed "s#\.yaml##; s#\.##g; s#\/#\.#g")
+              echo $module_name
               echo "   ...${module_name}/${module_file_name}"
-              echo "$(gettext $file)" | sed "/<!-- SCHEMA -->/i\{\% include module-configuration.liquid \%\}" ${module_path}/docs/CONFIGURATION.md >> $PATH_TO_PDF_PAGE
+              echo "$(gettext $file)" | sed "/<!-- SCHEMA -->/i\ " >> $PATH_TO_PDF_PAGE
+              echo "#### {{ site.data.i18n.common['parameters'][page.lang] }}" >> $PATH_TO_PDF_PAGE
+              echo "{{ site.data.schemas['${module_name}'].config-values | format_module_configuration: moduleKebabName }}" >> $PATH_TO_PDF_PAGE
             else
               echo "$(gettext $file)" >> $PATH_TO_PDF_PAGE
             fi
