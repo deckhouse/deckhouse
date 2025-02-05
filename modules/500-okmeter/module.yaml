@@ -4,4 +4,4 @@ subsystems:
     - observability
 namespace: d8-okmeter
 requirements:
-    bootstrapped: "true"
+    bootstrapped: true

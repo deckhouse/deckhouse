@@ -6,4 +6,4 @@ namespace: d8-operator-prometheus
 description: |
     This module installs the prometheus operator for creating Prometheus installations
 requirements:
-    bootstrapped: "true"
+    bootstrapped: true

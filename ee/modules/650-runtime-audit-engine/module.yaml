@@ -4,4 +4,4 @@ subsystems:
     - security
 namespace: d8-runtime-audit-engine
 requirements:
-    bootstrapped: "true"
+    bootstrapped: true

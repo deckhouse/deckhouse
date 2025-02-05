@@ -4,4 +4,4 @@ subsystems:
     - deckhouse
 namespace: d8-multitenancy-manager
 requirements:
-    bootstrapped: "true"
+    bootstrapped: true

@@ -6,6 +6,6 @@ namespace: d8-cni-cilium
 description: |
     The cilium-hubble module
 requirements:
-    bootstrapped: "true"
+    bootstrapped: true
     modules:
         cni-cilium: '>= 0.0.0'

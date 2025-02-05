@@ -6,4 +6,4 @@ namespace: d8-log-shipper
 description: |
     Collecting logs in the Kubernetes cluster
 requirements:
-    bootstrapped: "true"
+    bootstrapped: true

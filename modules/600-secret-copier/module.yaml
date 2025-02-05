@@ -3,4 +3,4 @@ weight: 600
 subsystems:
     - security
 requirements:
-    bootstrapped: "true"
+    bootstrapped: true

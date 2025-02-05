@@ -4,4 +4,4 @@ subsystems:
     - observability
 namespace: d8-dashboard
 requirements:
-    bootstrapped: "true"
+    bootstrapped: true

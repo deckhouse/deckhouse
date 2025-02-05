@@ -4,4 +4,4 @@ subsystems:
     - observability
 namespace: d8-upmeter
 requirements:
-    bootstrapped: "true"
+    bootstrapped: true

@@ -4,4 +4,4 @@ subsystems:
     - infrastructure
 namespace: d8-pod-reloader
 requirements:
-    bootstrapped: "true"
+    bootstrapped: true

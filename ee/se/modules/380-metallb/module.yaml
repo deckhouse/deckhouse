@@ -4,4 +4,4 @@ subsystems:
     - networking
 namespace: d8-metallb
 requirements:
-    bootstrapped: "true"
+    bootstrapped: true

@@ -4,4 +4,4 @@ subsystems:
     - security
 namespace: d8-operator-trivy
 requirements:
-    bootstrapped: "true"
+    bootstrapped: true

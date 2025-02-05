@@ -5,4 +5,4 @@ subsystems:
 description: |
     The module generates role-based access model objects, based on the standard Kubernetes RBAC mechanism.
 requirements:
-    bootstrapped: "true"
+    bootstrapped: true

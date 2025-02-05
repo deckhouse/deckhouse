@@ -4,4 +4,4 @@ subsystems:
     - networking
 namespace: d8-openvpn
 requirements:
-    bootstrapped: "true"
+    bootstrapped: true

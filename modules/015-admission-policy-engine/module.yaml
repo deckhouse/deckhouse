@@ -6,4 +6,4 @@ namespace: d8-admission-policy-engine
 description: |
     Admission policy engine module
 requirements:
-    bootstrapped: "true"
+    bootstrapped: true
