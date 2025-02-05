@@ -96,7 +96,7 @@ apiVersions:
             description: | 
               A limited set of zones in which master nodes can be created.
 
-              The order in which zones are specified does not affect the order of node creation. Nodes will be placed in zones in alphabetical order: the first node will go to the zone that comes first alphabetically, the second node to the second zone, and so on. If the number of zones is less than the number of nodes, the distribution will restart from the beginning of the list after placing the node in the last zone alphabetically.
+              The order in which zones are specified does not influence the sequence of node creation. Nodes are assigned to zones in alphabetical order: the first node is placed in the alphabetically first zone, the second node in the second zone, and so forth. If there are more nodes than zones, the assignment process restarts from the beginning of the zone list after placing a node in the last alphabetical zone.
           instanceClass:
             type: object
             additionalProperties: false
