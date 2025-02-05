@@ -1,0 +1,93 @@
+# Copyright 2024 Flant JSC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+{{- if eq .cri "Containerd" }}
+  {{- if and $.registry.registryMode (ne $.registry.registryMode "Direct") }}
+    {{ $system_registry_address := $.systemRegistry.registryAddress | default "" }}
+    {{- if eq $.registry.address $system_registry_address }}
+
+{{- $sandbox_image_path := printf "%s@%s" $.registry.path (index $.images.common "pause") }}
+
+{{- $target_registry_address := $.registry.address }}
+
+{{- $source_registry_port := "5001" }}
+{{- $source_registry_addresses := $.systemRegistry.addresses | join "," }}
+{{- $source_registry_cacert_path := "" }}
+{{- if $.registry.ca }}
+  {{- $source_registry_cacert_path = "/opt/deckhouse/share/ca-certificates/registry-ca.crt" }}
+{{- end }}
+{{- $source_registry_user_and_password := "" }}
+{{- if $.registry.auth }}
+  {{- $source_registry_user_and_password = $.registry.auth | b64dec }}
+{{- end }}
+
+discovered_node_ip="$(</var/lib/bashible/discovered-node-ip)"
+
+_pull_img_from_source_and_re_tag() {
+    local source_registry_image=$1
+    local target_registry_image=$2
+
+    /opt/deckhouse/bin/ctr \
+        --namespace=k8s.io \
+        images pull \
+        {{- if $source_registry_user_and_password }}
+        --user {{ $source_registry_user_and_password | quote }} \
+        {{- end }}
+        {{- if $source_registry_cacert_path }}
+        --tlscacert {{ $source_registry_cacert_path | quote }} \
+        {{- end }}
+        "$source_registry_image" || return 1
+    /opt/deckhouse/bin/ctr --namespace=k8s.io images tag "$source_registry_image" "$target_registry_image" || return 1
+    /opt/deckhouse/bin/ctr --namespace=k8s.io images rm "$source_registry_image" || return 1
+}
+
+_pull_img_from_several_sources_and_re_tag() {
+    local image_path=$1
+    local target_registry_address=$2
+    local source_registry_addresses=$3
+    local target_registry_image="${target_registry_address}${image_path}"
+
+    IFS=',' read -ra source_registry_addresses_list <<< "$source_registry_addresses"
+    for source_registry_address in "${source_registry_addresses_list[@]}"; do
+        local source_registry_image="${source_registry_address}${image_path}"
+        if _pull_img_from_source_and_re_tag "$source_registry_image" "$target_registry_image"; then
+            echo "The image '$target_registry_image' was correctly pulled from '$source_registry_image'"
+            return 0
+        fi
+    done
+    >&2 echo "Failed to pull image '$target_registry_image' using addresses '$source_registry_addresses'"
+    exit 1
+}
+
+_get_local_images_list() {
+  repo_digests=$(/opt/deckhouse/bin/crictl images -o json | jq -r '.images[].repoDigests[]?')
+  echo $repo_digests
+}
+
+if [ "$FIRST_BASHIBLE_RUN" != "yes" ]; then
+  sandbox_image_path={{ $sandbox_image_path | quote }}
+  target_registry_address={{ $target_registry_address | quote }}
+  target_sandbox_image="${target_registry_address}${sandbox_image_path}"
+  source_registry_addresses="127.0.0.1:{{- $source_registry_port -}},$discovered_node_ip:{{- $source_registry_port -}}"
+  {{- if $source_registry_addresses }}
+  source_registry_addresses="$source_registry_addresses,{{- $source_registry_addresses -}}"
+  {{- end }}
+
+  if ! _get_local_images_list | grep -q "$target_sandbox_image"; then
+    _pull_img_from_several_sources_and_re_tag $sandbox_image_path $target_registry_address $source_registry_addresses
+  fi
+fi
+    {{- end }}
+  {{- end }}
+{{- end }}
