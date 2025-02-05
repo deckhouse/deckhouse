@@ -64,6 +64,4 @@ git:
   - '**/*.sum'
   stageDependencies:
     install:
-    - '**/*.go'
-    - 'go.mod'
-    - 'go.sum'
+    - '**/*'
