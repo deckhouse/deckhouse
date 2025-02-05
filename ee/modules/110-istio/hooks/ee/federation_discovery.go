@@ -211,17 +211,21 @@ func federationDiscovery(input *go_hook.HookInput, dc dependency.Container) erro
 			continue
 		}
 		federationInfo.SetMetricMetadataEndpointError(input.MetricsCollector, federationInfo.PrivateMetadataEndpoint, 0)
+		renewedPublicServices := updatePortProtocols(privateMetadata.PublicServices, defaultProtocol, protocolMap)
+		privateMetadata.PublicServices = &renewedPublicServices
+		//updatePortProtocols(privateMetadata.PublicServices, defaultProtocol, protocolMap)
+
 		err = federationInfo.PatchMetadataCache(input.PatchCollector, "private", privateMetadata)
 		if err != nil {
 			return err
 		}
-		updatePortProtocols(privateMetadata.PublicServices, defaultProtocol, protocolMap)
 	}
 	return nil
 }
 
-func updatePortProtocols(services *[]eeCrd.FederationPublicServices, defaultProtocol string, protocolMap map[string]string) {
-	for serviceIndex, service := range *services {
+func updatePortProtocols(services *[]eeCrd.FederationPublicServices, defaultProtocol string, protocolMap map[string]string) []eeCrd.FederationPublicServices {
+	resultServices := (*services)[:]
+	for serviceIndex, service := range resultServices {
 		for portIndex, port := range service.Ports {
 			port.Protocol = defaultProtocol
 			for keyword, protocol := range protocolMap {
@@ -230,7 +234,8 @@ func updatePortProtocols(services *[]eeCrd.FederationPublicServices, defaultProt
 					break
 				}
 			}
-			(*services)[serviceIndex].Ports[portIndex] = port
+			resultServices[serviceIndex].Ports[portIndex] = port
 		}
 	}
+	return resultServices
 }
