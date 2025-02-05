@@ -31,7 +31,7 @@ bb-set-proxy
 {{- $target_sandbox_image := printf "%s%s" $target_registry_address $sandbox_image_path }}
 
 {{- $kubernetes_api_proxy_image_path := printf "%s@%s" $.registry.path (index $.images.controlPlaneManager "kubernetesApiProxy") }}
-{{- $target_kubernetes_api_proxy_image := printf "%s%s" $target_registry_address $sandbox_image_path }}
+{{- $target_kubernetes_api_proxy_image := printf "%s%s" $target_registry_address $kubernetes_api_proxy_image_path }}
 
 {{- if (include "is_containerd_cri_and_embedded_registry" .) }}
 
