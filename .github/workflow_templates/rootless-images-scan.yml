@@ -1,0 +1,66 @@
+{!{- $ctx := . }!}
+name: "Rootless images scan"
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+      pull_request_ref:
+        description: 'Pull request number (e.g., 123)'
+        required: false
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check_trigger:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ensure valid trigger
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" && -z "${{ github.event.inputs.pull_request_ref }}" ]]; then
+            echo "Manual runs must specify a pull request reference."
+            exit 1
+          fi
+      - name: Print trigger details
+        run: |
+          echo "Triggered by: ${{ github.event_name }}"
+          echo "Branch: ${{ github.ref }}"
+          echo "PR Reference: ${{ github.event.inputs.pull_request_ref }}"
+  determine_image_tag:
+    runs-on: ubuntu-latest
+    needs: check_trigger
+    outputs:
+      image_tag: ${{ steps.set_tag.outputs.image_tag }}
+    steps:
+      - name: Set image tag based on event type
+        id: set_tag
+        run: |
+          if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+            echo "image_tag=main" >> $GITHUB_OUTPUT
+          elif [[ -n "${{ github.event.inputs.pull_request_ref }}" ]]; then
+            PR_NUMBER=$(echo "${{ github.event.inputs.pull_request_ref }}")
+            echo "image_tag=pr$PR_NUMBER" >> $GITHUB_OUTPUT
+          else
+            echo "image_tag=unknown" >> $GITHUB_OUTPUT
+          fi
+  
+  scan_images:
+    runs-on: [ self-hosted, regular, selectel ]
+    needs: determine_image_tag
+    steps:
+{!{ tmpl.Exec "checkout_full_step"           $ctx | strings.Indent 6 }!}
+{!{ tmpl.Exec "login_dev_registry_step"      $ctx | strings.Indent 6 }!}
+{!{ tmpl.Exec "link_bin_step"                     | strings.Indent 6 }!}
+      - name: Running default user validation on ${{env.TAG}}
+        env:
+          TAG: ${{ needs.determine_image_tag.outputs.image_tag }}
+          IMAGE: "dev-registry.deckhouse.io/sys/deckhouse-oss"
+          TRIVY_TOKEN: ${{secrets.FOX_ACCESS_TOKEN}}
+          DECKHOUSE_PRIVATE_REPO: ${{secrets.DECKHOUSE_PRIVATE_REPO}}
+          TRIVY_PROJECT_ID: "2181"
+        run: |
+          echo "⚓️ 🏎 Running default user validation on ${TAG}..."
+          make cve-base-images-check-default-user
+{!{ tmpl.Exec "unlink_bin_step"                   | strings.Indent 6 }!}
