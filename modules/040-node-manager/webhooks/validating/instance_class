@@ -55,9 +55,9 @@ kubernetesValidating:
 EOF
 }
 
-RESOURCE_NAME="$(context::jq -r '.snapshots.provider_cluster_config[0].filterResult.resourceName')"
-
 function main() {
+    RESOURCE_NAME="$(context::jq -r '.snapshots.provider_cluster_config[0].filterResult.resourceName')"
+    
     classToDelete=$(context::jq -r '.review.request.name')
     classKind=$(context::jq -r '.review.request.requestKind.kind')
 
