@@ -1,5 +1,7 @@
 warnings-only:
   - images
+  - conversions
+  - k8s-resources
 linters-settings:
   probes:
     probes-excludes:

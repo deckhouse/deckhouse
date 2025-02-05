@@ -12,11 +12,11 @@ lang: ru
 
 `Immediate` — Диск создается сразу после создания ресурса (предполагается, что диск будет доступен для подключения к виртуальной машине на любом узле кластера).
 
-![Immediate](/images/virtualization-platform/vd-immediate.ru.png)
+![Immediate](/../../../../images/virtualization-platform/vd-immediate.ru.png)
 
 `WaitForFirstConsumer` — Диск создается только после того как будет подключен к виртуальной машине и будет создан на том узле, на котором будет запущена виртуальная машина.
 
-![WaitForFirstConsumer](/images/virtualization-platform/vd-wffc.ru.png)
+![WaitForFirstConsumer](/../../../../images/virtualization-platform/vd-wffc.ru.png)
 
 Режим доступа AccessMode:
 
@@ -25,14 +25,12 @@ lang: ru
 
 При создании диска контроллер самостоятельно определит наиболее оптимальные параметры поддерживаемые хранилищем.
 
-{% alert level="warning" %}
-Создать диски из ISO-образов — нельзя!
-{% endalert %}
+> **Внимание.** Создать диски из ISO-образов — нельзя!
 
 Чтобы узнать доступные варианты хранилищ на платформе, выполните следующую команду:
 
 ```bash
-kubectl get storageclass
+d8 k get storageclass
 ```
 
 Пример вывода команды:
@@ -47,6 +45,41 @@ linstor-thin-r2               replicated.csi.storage.deckhouse.io   Delete      
 linstor-thin-r3               replicated.csi.storage.deckhouse.io   Delete          WaitForFirstConsumer   true                   48d
 nfs-4-1-wffc                  nfs.csi.k8s.io                        Delete          WaitForFirstConsumer   true                   30d
 ```
+
+Маркер `(default)` рядом с названием класса указывает, что данный `StorageClass` будет использоваться по умолчанию, в случае если пользователь не указал название класса явно в создаваемом ресурсе.
+Если `StorageClass` по умолчанию в кластере отсутствует, то пользователь должен указать требуемый `StorageClass` в спецификации ресурса явно.
+Также Deckhouse Virtualization Platform позволяет задать индивидуальные настройки для хранения дисков и образов.
+
+### Настройки классов хранения для дисков
+
+Настройки классов хранения для дисков определяется в параметре `.spec.settings.virtualDisks` настроек модуля.
+Пример:
+
+```yaml
+spec:
+  ...
+  settings:
+    virtualDisks:
+       allowedStorageClassNames:
+       - sc-1
+       - sc-2
+       defaultStorageClassName: sc-1
+```
+
+- `allowedStorageClassNames` — (опционально) это список допустимых `StorageClass` для создания `VirtualDisk`, которые можно явно указать в спецификации ресурса.
+- `defaultStorageClassName` — (опционально) это `StorageClass`, используемый по умолчанию при создании `VirtualDisk`, если параметр `.spec.persistentVolumeClaim.storageClassName` не задан.
+
+### Тонкая настройка классов хранения для дисков
+
+При создании диска контроллер автоматически выберет наиболее оптимальные параметры, поддерживаемые хранилищем, на основании известных ему данных.
+Приоритеты настройки параметров `PersistentVolumeClaim` при создании диска посредством автоматического определения характеристик хранилища:
+
+- RWX + Block,
+- RWX + FileSystem,
+- RWO + Block,
+- RWO + FileSystem.
+
+Если хранилище неизвестно и его параметры невозможно определить автоматически, используется режим RWO + FileSystem.
 
 ### Создание пустого диска
 

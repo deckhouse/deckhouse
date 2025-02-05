@@ -18,7 +18,6 @@ package updater
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"sort"
 	"time"
@@ -708,10 +707,6 @@ func (u *Updater[R]) checkReleaseRequirements(rl R) bool {
 			passed, err := requirements.CheckRequirement(key, value, u.enabledModules)
 			if !passed {
 				msg := fmt.Sprintf("%q requirement for DeckhouseRelease %q not met: %s", key, rl.GetVersion(), err)
-				if errors.Is(err, requirements.ErrNotRegistered) {
-					u.logger.Error("check requirements", log.Err(err))
-					msg = fmt.Sprintf("%q requirement is not registered", key)
-				}
 				if err := u.updateStatus(rl, msg, PhasePending); err != nil {
 					u.logger.Error("update status", log.Err(err))
 				}

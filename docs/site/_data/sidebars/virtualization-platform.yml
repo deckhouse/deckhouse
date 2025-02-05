@@ -6,6 +6,10 @@ entries:
         ru: Введение
       url: /virtualization-platform/documentation/
     - title:
+        en: About the platform
+        ru: О платформе
+      url: /virtualization-platform/documentation/about.html
+    - title:
         en: Administration
         ru: Администрирование
       folders:
