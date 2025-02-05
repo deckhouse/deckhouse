@@ -3,12 +3,19 @@
     en: "Going to Production"
   link: "production.html"
   description:
-    ru: Руководство по подготовке кластера к работе в продакшене.
-    en: Guidelines for preparing a cluster for work in production.
+    ru: Что нужно не забыть и о чем нужно позаботиться при подготовке кластера к работе с реальными нагрузками.
+    en: What needs to be remembered and what should be taken care of when preparing the cluster for work with real workloads.
+  tags:
+    - baremetal
+    - cloud
+    - production
 - name:
     ru: "Аппаратные требования к узлам кластера на bare metal"
     en: "Hardware requirements for bare metal cluster nodes"
   link: "hardware-requirements.html"
   description:
-    ru: Руководство по аппаратным требованиям к узлам будущего кластера.
-    en: A guide to the hardware requirements for the nodes of the future cluster.
+    ru: Руководство поможет определить "железо" и рассчитать его параметры, при развертывании Deckhouse Kubernetes Platform на bare metal.
+    en: The guide will help determine the hardware and calculate its parameters when deploying the Deckhouse Kubernetes Platform on bare metal.
+  tags:
+    - baremetal
+    - production
