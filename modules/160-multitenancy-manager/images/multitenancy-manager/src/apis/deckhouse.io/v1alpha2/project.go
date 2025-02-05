@@ -19,7 +19,9 @@ package v1alpha2
 import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
+	"slices"
 )
 
 const (
@@ -210,9 +212,38 @@ func (p *ProjectStatus) DeepCopyInto(newObj *ProjectStatus) {
 }
 
 type ResourceObject struct {
-	APIVersion string `json:"apiVersion,omitempty"`
-	Kind       string `json:"kind,omitempty"`
-	Name       string `json:"name,omitempty"`
+	APIVersion string   `json:"apiVersion,omitempty"`
+	Names      []string `json:"name,omitempty"`
+}
+
+func (p *Project) AddRenderedResource(obj *unstructured.Unstructured) {
+	for _, resource := range p.Status.Rendered {
+		if resource.APIVersion == obj.GetAPIVersion()+"/"+obj.GetKind() {
+			if !slices.Contains(resource.Names, obj.GetName()) {
+				resource.Names = append(resource.Names, obj.GetName())
+			}
+			return
+		}
+	}
+	p.Status.Rendered = append(p.Status.Rendered, ResourceObject{
+		APIVersion: obj.GetAPIVersion() + "/" + obj.GetKind(),
+		Names:      []string{obj.GetName()},
+	})
+}
+
+func (p *Project) AddSkippedResource(obj *unstructured.Unstructured) {
+	for _, resource := range p.Status.Skipped {
+		if resource.APIVersion == obj.GetAPIVersion()+"/"+obj.GetKind() {
+			if !slices.Contains(resource.Names, obj.GetName()) {
+				resource.Names = append(resource.Names, obj.GetName())
+			}
+			return
+		}
+	}
+	p.Status.Skipped = append(p.Status.Skipped, ResourceObject{
+		APIVersion: obj.GetAPIVersion() + "/" + obj.GetKind(),
+		Names:      []string{obj.GetName()},
+	})
 }
 
 func (r *ResourceObject) DeepCopy() *ResourceObject {
@@ -226,8 +257,11 @@ func (r *ResourceObject) DeepCopy() *ResourceObject {
 func (r *ResourceObject) DeepCopyInto(newObj *ResourceObject) {
 	*newObj = *r
 	newObj.APIVersion = r.APIVersion
-	newObj.Kind = r.Kind
-	newObj.Name = r.Name
+	if r.Names != nil {
+		in, out := &r.Names, &newObj.Names
+		*out = make([]string, len(*in))
+		copy(*out, *in)
+	}
 }
 
 type Condition struct {

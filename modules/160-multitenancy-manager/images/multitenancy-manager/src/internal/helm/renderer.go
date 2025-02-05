@@ -70,12 +70,7 @@ func (r *postRenderer) Run(renderedManifests *bytes.Buffer) (modifiedManifests *
 		if r.versions != nil {
 			version := fmt.Sprintf("%s/%s", object.GetAPIVersion(), object.GetKind())
 			if _, ok := r.versions[version]; !ok {
-				r.project.Status.Skipped = append(r.project.Status.Skipped, v1alpha2.ResourceObject{
-					APIVersion: object.GetAPIVersion(),
-					Name:       object.GetName(),
-					Kind:       object.GetKind(),
-				})
-
+				r.project.AddSkippedResource(object)
 				r.logger.Info("the resource skipped during render project", "project", r.project.Name, "resource", object.GetName(), "version", version)
 				continue
 			}
@@ -104,11 +99,7 @@ func (r *postRenderer) Run(renderedManifests *bytes.Buffer) (modifiedManifests *
 			coreFound = true
 		}
 
-		r.project.Status.Rendered = append(r.project.Status.Rendered, v1alpha2.ResourceObject{
-			APIVersion: object.GetAPIVersion(),
-			Name:       object.GetName(),
-			Kind:       object.GetKind(),
-		})
+		r.project.AddRenderedResource(object)
 
 		data, _ := yaml.Marshal(object.Object)
 		builder.WriteString("\n---\n" + string(data))

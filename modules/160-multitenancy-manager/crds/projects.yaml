@@ -128,10 +128,10 @@ spec:
                     properties:
                       apiVersion:
                         type: string
-                      kind:
-                        type: string
-                      name:
-                        type: string
+                      names:
+                        type: array
+                        items:
+                          type: string
                 skippedResources:
                   description: List of resources skipped during processing.
                   type: array
@@ -140,10 +140,10 @@ spec:
                     properties:
                       apiVersion:
                         type: string
-                      kind:
-                        type: string
-                      name:
-                        type: string
+                      names:
+                        type: array
+                        items:
+                          type: string
                 conditions:
                   type: array
                   items:

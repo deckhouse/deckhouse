@@ -103,7 +103,7 @@ spec:
       name: container
   - rule:
       condition: "spawned_process  and container  and proc.is_exe_upper_layer=true
-        \n \n \nand user.gid >= 10  and user.gid <= 100 \n \nand k8s.ns.name=test\n"
+        \n \n \nand group.gid >= 10  and group.gid <= 100 \n \nand k8s.ns.name=test\n"
       desc: Detect if an executable not belonging to the base image of a container
         is being executed. The drop and execute pattern can be observed very often
         after an attacker gained an initial foothold. is_exe_upper_layer filter field

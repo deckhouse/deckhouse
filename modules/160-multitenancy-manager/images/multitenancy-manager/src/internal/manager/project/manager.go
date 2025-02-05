@@ -72,7 +72,6 @@ func (m *Manager) Init(ctx context.Context, checker healthz.Checker, init *sync.
 	if err := wait.PollUntilContextTimeout(ctx, time.Second, 10*time.Second, true, check); err != nil {
 		return fmt.Errorf("start webhook server: %w", err)
 	}
-	m.logger.Info("webhook server started")
 
 	m.logger.Info("ensure virtual projects")
 	if err := m.ensureVirtualProjects(ctx); err != nil {
@@ -87,6 +86,12 @@ func (m *Manager) Init(ctx context.Context, checker healthz.Checker, init *sync.
 
 // Handle ensures project`s resources
 func (m *Manager) Handle(ctx context.Context, project *v1alpha2.Project) (ctrl.Result, error) {
+	// add finalizer and remove labels
+	if err := m.prepareProject(ctx, project); err != nil {
+		m.logger.Error(err, "failed to update the project", "project", project.Name)
+		return ctrl.Result{}, err
+	}
+
 	// set deploying status
 	project.ClearConditions()
 	project.Status.ObservedGeneration = project.Generation
@@ -155,12 +160,6 @@ func (m *Manager) Handle(ctx context.Context, project *v1alpha2.Project) (ctrl.R
 	project.SetConditionTrue(v1alpha2.ProjectConditionProjectResourcesUpgraded)
 	if err = m.updateProjectStatus(ctx, project); err != nil {
 		m.logger.Error(err, "failed to update the project status", "project", project.Name, "template", projectTemplate.Name)
-		return ctrl.Result{}, err
-	}
-
-	// add finalizer and remove labels
-	if err = m.finishProject(ctx, project); err != nil {
-		m.logger.Error(err, "failed to update the project", "project", project.Name, "template", projectTemplate.Name)
 		return ctrl.Result{}, err
 	}
 

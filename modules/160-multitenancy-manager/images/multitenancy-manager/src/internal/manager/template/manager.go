@@ -60,7 +60,6 @@ func (m *Manager) Init(ctx context.Context, checker healthz.Checker, init *sync.
 	if err := wait.PollUntilContextTimeout(ctx, time.Second, 10*time.Second, true, check); err != nil {
 		return fmt.Errorf("start webhook server: %w", err)
 	}
-	m.logger.Info("webhook server started")
 
 	m.logger.Info("ensure default project templates")
 	if err := m.ensureDefaultProjectTemplates(ctx, templatesPath); err != nil {

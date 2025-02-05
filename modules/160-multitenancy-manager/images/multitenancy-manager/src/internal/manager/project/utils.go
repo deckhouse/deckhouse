@@ -142,8 +142,8 @@ func (m *Manager) updateProjectStatus(ctx context.Context, project *v1alpha2.Pro
 	})
 }
 
-// finishProject sets template label and finalizer
-func (m *Manager) finishProject(ctx context.Context, project *v1alpha2.Project) error {
+// prepareProject sets template label and finalizer
+func (m *Manager) prepareProject(ctx context.Context, project *v1alpha2.Project) error {
 	return retry.OnError(retry.DefaultRetry, apierrors.IsServiceUnavailable, func() error {
 		return retry.RetryOnConflict(retry.DefaultRetry, func() error {
 			if err := m.client.Get(ctx, client.ObjectKey{Name: project.Name}, project); err != nil {
