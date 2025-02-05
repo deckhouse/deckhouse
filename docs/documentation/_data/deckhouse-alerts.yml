@@ -1650,7 +1650,7 @@ alerts:
       description: |
         In ModuleConfig version 2, addressPool '{{$labels.name}}' of type “layer2” are ignored. They should be removed from the configuration.
       summary: |
-        D8 MetalLB uses ignored layer2 pools
+        The metallb module has obsolete layer2 pools configured.
       severity: "7"
       markupFormat: markdown
     - name: D8MetallbNotSupportedServiceAnnotationsDetected
