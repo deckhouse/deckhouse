@@ -123,25 +123,25 @@ entries:
                             ru: ALB средствами Istio
                           url: /admin/network/alb-istio.html
                 - title:
-                    en: ServiceMesh
-                    ru: ServiceMesh
+                    en: Service Mesh
+                    ru: Service Mesh
                   folders:
                     - title:
                         en: Overview
-                        ru: Введпние
+                        ru: Введение
                       url: /admin/network/service-mesh-overview.html
                     - title:
                         en: mTLS
                         ru: mTLS
-                      url: /admin/network/mTLS.html
+                      url: /admin/network/mtls.html
                     - title:
                         en: CircuitBraker
                         ru: CircuitBraker
                       url: /admin/network/circuitbraker.html
                     - title:
-                        en: Canary deploy
-                        ru: Canary deploy
-                      url: /admin/network/canary-deploy.html
+                        en: Canary deployment
+                        ru: Canary deployment
+                      url: /admin/network/canary-deployment.html
                     - title:
                         en: gRPC balancing
                         ru: Балансировка gRPC
@@ -149,7 +149,19 @@ entries:
                 - title:
                     en: Inter-cluster cooperation (alliance)
                     ru: Межкластерное взаимодействие (альянс)
-                  url: /admin/network/inter-cluster-cooperation.html
+                  folders: 
+                    - title:
+                        en: Overview
+                        ru: Введение
+                      url: /admin/network/inter-cluster-cooperation-overview.html 
+                    - title:
+                        en: Multicluster
+                        ru: Мультикластер
+                      url: /admin/network/multicluster.html
+                    - title:
+                        en: Federation
+                        ru: Федерация
+                      url: /admin/network/cluster-federation.html
                 - title:
                     en: Outgoing traffic balancing
                     ru: Балансировка исходящего трафика
