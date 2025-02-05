@@ -1,6 +1,6 @@
 ---
 title: "ALB means NGINX Ingress controller"
-permalink: en/admin/alb-nginx.html
+permalink: en/admin/network/alb-nginx.html
 ---
 
 The [ingress-nginx](ingress-nginx) module is used to implement ALB by means of [NGINX Ingress controller](https://github.com/kubernetes/ingress-nginx).

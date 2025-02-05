@@ -27,7 +27,7 @@ entries:
                 ru: Подготовка к установке
               url: /admin/preparing-for-installation.html
             - title:
-                en: Configuration files preparing 
+                en: Configuration files preparing
                 ru: Подготовка файлов конфигурации
               url: /admin/configuration-files-preparing.html
             - title:
@@ -47,19 +47,19 @@ entries:
                 ru: Настройка доступа
               folders:
                 - title:
-                    en: Overview 
+                    en: Overview
                     ru: Введение
                   url: /admin/access-overview.html
                 - title:
-                    en: Подключение 
+                    en: Подключение
                     ru: Connection
                   url: /admin/connection.html
                 - title:
-                    en: Аутентификация 
+                    en: Аутентификация
                     ru: Authentication
                   url: /admin/authentication.html
                 - title:
-                    en: Авторизация 
+                    en: Авторизация
                     ru: Authorization
                   url: /admin/authorization.html
             - title:
@@ -85,27 +85,27 @@ entries:
                 - title:
                     en: General network settings information in DKP
                     ru: Общие сведения о настройках сети в DKP
-                  url: /admin/network-overview.html
+                  url: /admin/network/overview.html
                 - title:
-                    en: Internal network 
+                    en: Internal network
                     ru: Внутренняя сеть
                   folders:
                     - title:
-                        en: Internal network configuration 
+                        en: Internal network configuration
                         ru: Настройка внутренней сети
-                      url: /admin/network-configuration.html
+                      url: /admin/network/configuration.html
                     - title:
                         en: Encrypting traffic between nodes
                         ru: Шифрование трафика между узлами
-                      url: /admin/encrypting-traffic-between-nodes.html
+                      url: /admin/network/encrypting-traffic.html
                 - title:
                     en: Incoming traffic balancing
                     ru: Балансировка входящего трафика
                   folders:
                     - title:
-                        en: TCP/UDP balancing 
+                        en: TCP/UDP balancing
                         ru: Балансировка TCP/UDP
-                      url: /admin/tcp-udp-balancing.html
+                      url: /admin/network/tcp-udp-balancing.html
                     - title:
                         en: ALB
                         ru: ALB
@@ -113,15 +113,15 @@ entries:
                         - title:
                             en: Overview
                             ru: Введение
-                          url: /admin/alb-overview.html
+                          url: /admin/network/alb-overview.html
                 - title:
                     en: ServiceMesh
                     ru: ServiceMesh
-                  url: /admin/service-mesh.html
+                  url: /admin/network/service-mesh.html
                 - title:
                     en: Inter-cluster cooperation (alliance)
                     ru: Межкластерное взаимодействие (альянс)
-                  url: /admin/inter-cluster-cooperation.html
+                  url: /admin/network/inter-cluster-cooperation.html
                 - title:
                     en: Outgoing traffic balancing
                     ru: Балансировка исходящего трафика
@@ -129,29 +129,29 @@ entries:
                     - title:
                         en: Overview
                         ru: Введение
-                      url: /admin/egress.html
+                      url: /admin/network/overview.html
                     - title:
                         en: Egress
                         ru: Egress
-                      url: /admin/egress.html
+                      url: /adminnetwork/egress.html
                     - title:
                         en: Istio
                         ru: Istio
-                      url: /admin/istio-outgoing-balancing.html
+                      url: /admin/network/istio-outgoing-balancing.html
                 - title:
                     en: Network policies
                     ru: Сетевые политики
-                  url: /admin/network-policies.html
+                  url: /admin/network/policies.html
                 - title:
                     en: Other network configuration options
                     ru: Другие возможности настройки сети
-                  url: /admin/other-network-configuration-options.html
+                  url: /admin/network/other.html
             - title:
                 en: Storage
                 ru: Хранение
               folders:
                 - title:
-                    en: Overview 
+                    en: Overview
                     ru: Введение
                   url: /admin/storage-overview.html
             - title:
@@ -159,11 +159,11 @@ entries:
                 ru: Безопасность платформы
               folders:
                 - title:
-                    en: Overview 
+                    en: Overview
                     ru: Введение
                   url: /admin/security-overview.html
                 - title:
-                    en: SIEM and security software 
+                    en: SIEM and security software
                     ru: SIEM и ПО безопасности
                   url: /admin/siem-and-security-software.html
                 - title:
@@ -183,7 +183,7 @@ entries:
                 ru: Мониторинг платформы
               folders:
                 - title:
-                    en: Overview 
+                    en: Overview
                     ru: Введение
                   url: /admin/monitoring-overview.html
             - title:
@@ -191,7 +191,7 @@ entries:
                 ru: Журналирование платформы
               folders:
                 - title:
-                    en: Overview 
+                    en: Overview
                     ru: Введение
                   url: /admin/journaling-overview.html
             - title:
@@ -199,7 +199,7 @@ entries:
                 ru: Мультенантность
               folders:
                 - title:
-                    en: Overview 
+                    en: Overview
                     ru: Введение
                   url: /admin/multitenancy-overview.html
 # ------------- Using -------------
@@ -224,19 +224,19 @@ entries:
             ru: Интерфейсы
             folders:
               - title:
-                  en: API 
+                  en: API
                   ru: API
                 url: /user/api.html
               - title:
-                  en: CLI 
+                  en: CLI
                   ru: CLI
                 url: /user/cli.html
               - title:
-                  en: IaC 
+                  en: IaC
                   ru: IaC
                 url: /user/iac.html
               - title:
-                  en: WEB-interfaces 
+                  en: WEB-interfaces
                   ru: WEB-интерфейсы
                 url: /user/web-interfaces.html
         - title:
@@ -248,7 +248,7 @@ entries:
             ru: Контейнеризированные приложения
           folders:
             - title:
-                en: Running applications on the platform 
+                en: Running applications on the platform
                 ru: Запуск приложений на платформе
               url: /user/running-containerized-applications.html
             - title:
