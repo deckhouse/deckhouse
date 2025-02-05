@@ -55,7 +55,7 @@ const (
 	maxConcurrentReconciles = 3
 	cacheSyncTimeout        = 3 * time.Minute
 
-	maxModulesLimit = 250
+	maxModulesLimit = 1500
 )
 
 var ErrSettingsNotChanged = errors.New("settings not changed")
