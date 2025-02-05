@@ -242,6 +242,8 @@ linters-settings:
       - cloud-provider-vcd
       - cloud-provider-zvirt
       - cloud-provider-vsphere
+      - monitoring-deckhouse
+      - monitoring-kubernetes-control-plane
   rbac:
     skip-check-wildcards:
       - "admission-policy-engine/templates/rbac-for-us.yaml":
@@ -311,6 +313,8 @@ linters-settings:
       - "prometheus-pp"
       - "standby-holder-name"
       - "machine-controller-manager"
+      - "control-plane-proxy"
+      - "monitoring-kubernetes-control-plane"
     skip-vpa-checks:
       - "d8-system:deckhouse"
       - "d8-cloud-instance-manager:node-manager"
