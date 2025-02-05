@@ -137,7 +137,7 @@ entries:
                     - title:
                         en: Egress
                         ru: Egress
-                      url: /adminnetwork/egress.html
+                      url: /admin/network/egress.html
                     - title:
                         en: Istio
                         ru: Istio
