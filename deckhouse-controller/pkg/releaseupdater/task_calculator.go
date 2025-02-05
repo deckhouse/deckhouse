@@ -156,6 +156,7 @@ func (p *TaskCalculator) CalculatePendingReleaseTask(ctx context.Context, releas
 			isPatch = false
 
 			// it must await if previous release has Deployed state
+			// truncate all not deployed phase releases
 			if prevRelease.GetPhase() != v1alpha1.DeckhouseReleasePhaseDeployed {
 				msg := prevRelease.GetMessage()
 				if !strings.Contains(msg, "awaiting") {
@@ -169,11 +170,12 @@ func (p *TaskCalculator) CalculatePendingReleaseTask(ctx context.Context, releas
 				}, nil
 			}
 
+			// here we have only Deployed phase releases in prevRelease
 			// it must await if deployed release has minor version more than one
-			if deployedReleaseInfo != nil && release.GetVersion().Minor()-1 > deployedReleaseInfo.Version.Minor() {
+			if release.GetVersion().Minor()-1 > prevRelease.GetVersion().Minor() {
 				return &Task{
 					TaskType:            Await,
-					Message:             fmt.Sprintf("minor version is more than deployed v%s by one", prevRelease.GetVersion().String()),
+					Message:             fmt.Sprintf("minor version is greater than deployed v%s by one", prevRelease.GetVersion().String()),
 					DeployedReleaseInfo: deployedReleaseInfo,
 				}, nil
 			}
