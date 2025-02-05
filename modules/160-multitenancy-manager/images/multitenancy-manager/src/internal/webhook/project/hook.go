@@ -85,8 +85,8 @@ func (v *validator) Handle(_ context.Context, req admission.Request) admission.R
 			}
 		}
 
-		// pass deploying or error projects
-		if project.Status.State == v1alpha2.ProjectStateDeploying || project.Status.State == v1alpha2.ProjectStateError {
+		// pass error projects
+		if project.Status.State == v1alpha2.ProjectStateError {
 			return admission.Allowed("").WithWarnings("The project skip validation due to the status")
 		}
 	}
