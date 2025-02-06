@@ -501,8 +501,6 @@ check_e2e_labels:
         KUBERNETES_VERSION: "{!{ $ctx.kubernetesVersion }!}"
 {!{- end }!}
         LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
-        COMMANDER_TOKEN: ${{secrets.E2E_COMMANDER_TOKEN}}
-        COMMANDER_HOST: ${{secrets.E2E_COMMANDER_HOST}}
         LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
         TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
         PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
@@ -739,8 +737,6 @@ check_e2e_labels:
       if: ${{ success() || cancelled() }}
       id: cleanup_cluster
       env:
-        COMMANDER_TOKEN: ${{secrets.E2E_COMMANDER_TOKEN}}
-        COMMANDER_HOST: ${{secrets.E2E_COMMANDER_HOST}}
         PROVIDER: {!{ $ctx.providerName }!}
         CRI: {!{ $ctx.criName }!}
         LAYOUT: {!{ $ctx.layout }!}
