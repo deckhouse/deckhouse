@@ -29,8 +29,8 @@ image: terraform-provider-yandex
 final: false
 from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
 mount:
-  - fromPath: ~/go-pkg-cache
-    to: /go/pkg
+- fromPath: ~/go-pkg-cache
+  to: /go/pkg
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
   add: /src
@@ -39,11 +39,11 @@ import:
 shell:
   beforeInstall:
   {{- include "alpine packages proxy" . | nindent 2 }}
-    - apk add --no-cache make bash
+  - apk add --no-cache make bash
   install:
-    - export GOPROXY={{ $.GOPROXY }}
-    - cd /src
-    - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 make build LDFLAGS="-s -w -extldflags \"-static\" -X github.com/yandex-cloud/terraform-provider-yandex/version.ProviderVersion={{ .TF.yandex.version }}"
-    - mv /go/bin/terraform-provider-yandex /terraform-provider-yandex
-    - chmod -R 755 /terraform-provider-yandex
-    - chown 64535:64535 /terraform-provider-yandex
+  - export GOPROXY={{ $.GOPROXY }}
+  - cd /src
+  - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 make build LDFLAGS="-s -w -extldflags \"-static\" -X github.com/yandex-cloud/terraform-provider-yandex/version.ProviderVersion={{ .TF.yandex.version }}"
+  - mv /go/bin/terraform-provider-yandex /terraform-provider-yandex
+  - chmod -R 755 /terraform-provider-yandex
+  - chown 64535:64535 /terraform-provider-yandex
