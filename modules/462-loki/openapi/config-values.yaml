@@ -121,6 +121,11 @@ properties:
         description: |
           Limit on the number of concurrent streams for gRPC calls.
         default: 100
+      allowDeleteLogs:
+        type: boolean
+        default: false
+        description: |
+          Allow logs deletion using /loki/api/v1/endpoints.
   nodeSelector:
     type: object
     additionalProperties:
