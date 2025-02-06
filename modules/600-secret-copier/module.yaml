@@ -1,6 +1,6 @@
 name: secret-copier
 weight: 600
 subsystems:
-    - security
+  - security
 requirements:
-    bootstrapped: true
+  bootstrapped: true

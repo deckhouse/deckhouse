@@ -1,5 +1,5 @@
 name: keepalived
 weight: 450
 subsystems:
-    - infrastructure
+  - infrastructure
 namespace: d8-keepalived

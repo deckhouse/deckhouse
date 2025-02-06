@@ -1,6 +1,6 @@
 name: priority-class
 weight: 1
 subsystems:
-    - kubernetes
+  - kubernetes
 namespace: d8-system
 

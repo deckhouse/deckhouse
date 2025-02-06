@@ -1,7 +1,7 @@
 name: pod-reloader
 weight: 465
 subsystems:
-    - infrastructure
+  - infrastructure
 namespace: d8-pod-reloader
 requirements:
-    bootstrapped: true
+  bootstrapped: true

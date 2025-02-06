@@ -1,5 +1,5 @@
 name: cni-cilium
 weight: 21
 subsystems:
-    - networking
+  - networking
 namespace: d8-cni-cilium

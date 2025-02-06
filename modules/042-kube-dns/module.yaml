@@ -1,6 +1,6 @@
 name: kube-dns
 weight: 42
 subsystems:
-    - kubernetes
-    - networking
+  - kubernetes
+  - networking
 namespace: kube-system

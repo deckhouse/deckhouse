@@ -2,4 +2,4 @@ name: namespace-configurator
 weight: 600
 
 requirements:
-    bootstrapped: true
+  bootstrapped: true

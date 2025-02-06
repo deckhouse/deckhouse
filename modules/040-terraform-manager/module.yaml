@@ -1,5 +1,5 @@
 name: terraform-manager
 weight: 40
 subsystems:
-    - infrastructure
+  - infrastructure
 namespace: d8-system

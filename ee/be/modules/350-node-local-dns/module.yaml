@@ -1,5 +1,5 @@
 name: node-local-dns
 weight: 350
 subsystems:
-    - networking
+  - networking
 namespace: kube-system

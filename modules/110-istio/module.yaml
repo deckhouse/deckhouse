@@ -1,10 +1,10 @@
 name: istio
 weight: 110
 subsystems:
-    - infrastructure
-    - networking
+  - infrastructure
+  - networking
 namespace: d8-istio
 description: |
-    Service Mesh
+  Service Mesh
 requirements:
-    bootstrapped: true
+  bootstrapped: true

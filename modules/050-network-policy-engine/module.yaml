@@ -1,5 +1,5 @@
 name: network-policy-engine
 weight: 50
 subsystems:
-    - networking
+  - networking
 namespace: d8-system

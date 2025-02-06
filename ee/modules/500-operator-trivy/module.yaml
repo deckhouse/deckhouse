@@ -1,7 +1,7 @@
 name: operator-trivy
 weight: 500
 subsystems:
-    - security
+  - security
 namespace: d8-operator-trivy
 requirements:
-    bootstrapped: true
+  bootstrapped: true

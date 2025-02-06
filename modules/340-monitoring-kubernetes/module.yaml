@@ -1,7 +1,7 @@
 name: monitoring-kubernetes
 weight: 340
 subsystems:
-    - observability
+  - observability
 namespace: d8-monitoring
 
 requirements:

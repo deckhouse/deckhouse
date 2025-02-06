@@ -1,9 +1,9 @@
 name: descheduler
 weight: 400
 subsystems:
-    - infrastructure
+  - infrastructure
 namespace: d8-descheduler
 description: |
-    The module runs a descheduler with strategies defined in a `Descheduler` custom resource.
+  The module runs a descheduler with strategies defined in a `Descheduler` custom resource.
 requirements:
-    bootstrapped: true
+  bootstrapped: true

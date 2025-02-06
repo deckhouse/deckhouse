@@ -1,6 +1,6 @@
 name: kube-proxy
 weight: 36
 subsystems:
-    - kubernetes
-    - networking
+  - kubernetes
+  - networking
 namespace: kube-system

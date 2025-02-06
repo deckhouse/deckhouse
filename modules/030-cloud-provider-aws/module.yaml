@@ -1,5 +1,5 @@
 name: cloud-provider-aws
 weight: 30
 subsystems:
-    - infrastructure
+  - infrastructure
 namespace: d8-cloud-provider-aws

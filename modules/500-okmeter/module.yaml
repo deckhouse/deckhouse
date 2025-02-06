@@ -1,7 +1,7 @@
 name: okmeter
 weight: 500
 subsystems:
-    - observability
+  - observability
 namespace: d8-okmeter
 requirements:
-    bootstrapped: true
+  bootstrapped: true

@@ -1,7 +1,7 @@
 name: prometheus-pushgateway
 weight: 303
 subsystems:
-    - observability
+  - observability
 namespace: kube-prometheus-pushgateway
 
 requirements:
