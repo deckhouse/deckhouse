@@ -45,7 +45,7 @@ git:
     - '**/*'
 shell:
   beforeInstall:
-    - apt-get install -y python3
+    - apt-get install -y python3 curl jq
   install:
     - /binary_replace.sh -i "{{ $simpleBridgeBinaries }}" -o /relocate
     - |
