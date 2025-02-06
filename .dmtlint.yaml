@@ -242,6 +242,8 @@ linters-settings:
       - cloud-provider-vcd
       - cloud-provider-zvirt
       - cloud-provider-vsphere
+      - monitoring-deckhouse
+      - monitoring-kubernetes-control-plane
   rbac:
     skip-check-wildcards:
       - "admission-policy-engine/templates/rbac-for-us.yaml":
@@ -282,6 +284,7 @@ linters-settings:
       - "caps-controller-manager:caps-controller-manager"
       - "standby-holder-name:reserve-resources"
       - "trivy-server:chown-volume-data"
+      - "control-plane-proxy:kube-rbac-proxy"
   monitoring:
     skip-module-checks:
       - "extended-monitoring"
@@ -311,6 +314,7 @@ linters-settings:
       - "prometheus-pp"
       - "standby-holder-name"
       - "machine-controller-manager"
+      - "control-plane-proxy"
     skip-vpa-checks:
       - "d8-system:deckhouse"
       - "d8-cloud-instance-manager:node-manager"

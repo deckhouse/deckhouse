@@ -1,0 +1,7 @@
+name: monitoring-deckhouse
+weight: 340
+
+requirements:
+  bootstrapped: true
+  modules:
+    prometheus: ">= 0.0.0"

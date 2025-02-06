@@ -1,0 +1,9 @@
+name: monitoring-ping
+weight: 340
+
+requirements:
+  bootstrapped: true
+  modules:
+    # node-exporter is required for this module to work because the exporter stores metrics as a text file on a node,
+    # which then be read by a node-exporter
+    monitoring-kubernetes: ">= 0.0.0"
