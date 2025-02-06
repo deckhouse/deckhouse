@@ -312,3 +312,10 @@ properties:
                   - type: number
                 description: |
                   Configuring memory limits.
+
+
+  allowDeleteLogs:
+    type: boolean
+    default: false
+    description: |
+      Allow logs deletion using /loki/api/v1/delete endpoints.

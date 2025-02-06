@@ -31,7 +31,7 @@ spec:
         app: {{ .Chart.Name }}
       annotations:
         checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
-        checksum/allowDeleteLogs: {{ .Values.loki.lokiConfig.allowDeleteLogs | sha256sum }}
+        checksum/allowDeleteLogs: {{ .Values.loki.allowDeleteLogs | quote }}
     spec:
       imagePullSecrets:
       - name: deckhouse-registry
@@ -48,7 +48,7 @@ spec:
         command: [ '/usr/bin/loki', '-config.file=/etc/loki/config.yaml' ]
         env:
           - name: ALLOW_DELETE_LOGS
-            value: "{{ .Values.loki.lokiConfig.allowDeleteLogs }}"
+            value: "{{ .Values.loki.allowDeleteLogs }}"
         volumeMounts:
           - name: config
             mountPath: /etc/loki/config.yaml

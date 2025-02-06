@@ -70,9 +70,6 @@ properties:
       grpcServerMaxConcurrentStreams:
         description: |
           Ограничение на количество одновременных потоков для вызовов gRPC.
-      allowDeleteLogs:
-        description: |
-          Включение / выключение эндпоинтов api для удаления логов.
   nodeSelector:
     description: |
       Структура, аналогичная `spec.nodeSelector` пода Kubernetes.
@@ -158,3 +155,7 @@ properties:
                 description: |
                   Настройка ограничений использования памяти (memory limits).
 
+
+  allowDeleteLogs:
+    description: |
+      Включение / выключение эндпоинтов api для удаления логов.
