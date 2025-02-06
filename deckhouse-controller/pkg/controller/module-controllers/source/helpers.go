@@ -188,7 +188,7 @@ func (r *reconciler) ensureModuleRelease(ctx context.Context, sourceUID types.UI
 			},
 			Spec: v1alpha1.ModuleReleaseSpec{
 				ModuleName: moduleName,
-				Version:    semver.MustParse(meta.ModuleVersion),
+				Version:    semver.MustParse(meta.ModuleVersion).String(),
 				Weight:     meta.ModuleWeight,
 				Changelog:  meta.Changelog,
 			},
@@ -235,7 +235,7 @@ func (r *reconciler) ensureModuleRelease(ctx context.Context, sourceUID types.UI
 
 	release.Spec = v1alpha1.ModuleReleaseSpec{
 		ModuleName: moduleName,
-		Version:    semver.MustParse(meta.ModuleVersion),
+		Version:    semver.MustParse(meta.ModuleVersion).String(),
 		Weight:     meta.ModuleWeight,
 		Changelog:  meta.Changelog,
 	}

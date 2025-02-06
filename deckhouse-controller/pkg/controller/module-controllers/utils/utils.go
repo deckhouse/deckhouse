@@ -38,8 +38,8 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers/reginjector"
+	releaseUpdater "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/releaseupdater"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
-	"github.com/deckhouse/deckhouse/go_lib/updater"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
@@ -353,24 +353,24 @@ func EnsureModuleDocumentation(
 }
 
 // GetNotificationConfig gets config from discovery secret
-func GetNotificationConfig(ctx context.Context, cli client.Client) (updater.NotificationConfig, error) {
+func GetNotificationConfig(ctx context.Context, cli client.Client) (releaseUpdater.NotificationConfig, error) {
 	secret := new(corev1.Secret)
 	if err := cli.Get(ctx, client.ObjectKey{Name: deckhouseDiscoverySecret, Namespace: deckhouseNamespace}, secret); err != nil {
-		return updater.NotificationConfig{}, fmt.Errorf("get secret: %w", err)
+		return releaseUpdater.NotificationConfig{}, fmt.Errorf("get secret: %w", err)
 	}
 
 	// TODO: remove this dependency
 	jsonSettings, ok := secret.Data["updateSettings.json"]
 	if !ok {
-		return updater.NotificationConfig{}, nil
+		return releaseUpdater.NotificationConfig{}, nil
 	}
 
 	var settings struct {
-		NotificationConfig updater.NotificationConfig `json:"notification"`
+		NotificationConfig releaseUpdater.NotificationConfig `json:"notification"`
 	}
 
 	if err := json.Unmarshal(jsonSettings, &settings); err != nil {
-		return updater.NotificationConfig{}, fmt.Errorf("unmarshal json: %w", err)
+		return releaseUpdater.NotificationConfig{}, fmt.Errorf("unmarshal json: %w", err)
 	}
 
 	return settings.NotificationConfig, nil

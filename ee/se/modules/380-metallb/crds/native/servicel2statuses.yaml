@@ -53,7 +53,7 @@ spec:
               description: ServiceL2StatusSpec defines the desired state of ServiceL2Status.
               type: object
             status:
-              description: MetalLBServiceL2Status defines the observed state of ServiceL2Status.
+              description: MetallbServiceL2Status defines the observed state of ServiceL2Status.
               properties:
                 interfaces:
                   description:

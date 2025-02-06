@@ -1,0 +1,5 @@
+name: cni-flannel
+weight: 35
+subsystems:
+  - networking
+namespace: d8-cni-flannel

@@ -8,6 +8,7 @@ metadata:
     rbac.deckhouse.io/aggregate-to-kubernetes-as: viewer
     rbac.deckhouse.io/kind: manage
     rbac.deckhouse.io/level: module
+    rbac.deckhouse.io/namespace: d8-system
   name: d8:manage:permission:module:priority-class:view
 rules:
 - apiGroups:
