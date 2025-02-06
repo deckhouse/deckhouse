@@ -147,6 +147,7 @@ func (l *Loop) Run(task func() error) error {
 				if l.ctx != nil {
 					select {
 					case <-l.ctx.Done():
+						l.logger.LogDebugF("ctx.Done() while %q: last error: %v", l.name, l.ctx.Err())
 						return fmt.Errorf("ctx.Done() while %q: last error: %v", l.name, l.ctx.Err())
 					case <-time.After(l.waitTime):
 					}
@@ -156,6 +157,7 @@ func (l *Loop) Run(task func() error) error {
 			}
 		}
 
+		l.logger.LogDebugF("Timeout while %q: last error: %v", l.name, err)
 		return fmt.Errorf("Timeout while %q: last error: %v", l.name, err)
 	}
 
