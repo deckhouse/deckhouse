@@ -268,8 +268,6 @@ jobs:
         if: ${{ success() || cancelled() }}
         id: cleanup_cluster
         env:
-          COMMANDER_TOKEN: ${{secrets.E2E_COMMANDER_TOKEN}}
-          COMMANDER_HOST: ${{secrets.E2E_COMMANDER_HOST}}
           PROVIDER: Azure
           CRI: Containerd
           LAYOUT: Standard
@@ -558,8 +556,6 @@ jobs:
         if: ${{ success() || cancelled() }}
         id: cleanup_cluster
         env:
-          COMMANDER_TOKEN: ${{secrets.E2E_COMMANDER_TOKEN}}
-          COMMANDER_HOST: ${{secrets.E2E_COMMANDER_HOST}}
           PROVIDER: Azure
           CRI: Containerd
           LAYOUT: Standard
@@ -848,8 +844,6 @@ jobs:
         if: ${{ success() || cancelled() }}
         id: cleanup_cluster
         env:
-          COMMANDER_TOKEN: ${{secrets.E2E_COMMANDER_TOKEN}}
-          COMMANDER_HOST: ${{secrets.E2E_COMMANDER_HOST}}
           PROVIDER: Azure
           CRI: Containerd
           LAYOUT: Standard
@@ -1138,8 +1132,6 @@ jobs:
         if: ${{ success() || cancelled() }}
         id: cleanup_cluster
         env:
-          COMMANDER_TOKEN: ${{secrets.E2E_COMMANDER_TOKEN}}
-          COMMANDER_HOST: ${{secrets.E2E_COMMANDER_HOST}}
           PROVIDER: Azure
           CRI: Containerd
           LAYOUT: Standard
@@ -1428,8 +1420,6 @@ jobs:
         if: ${{ success() || cancelled() }}
         id: cleanup_cluster
         env:
-          COMMANDER_TOKEN: ${{secrets.E2E_COMMANDER_TOKEN}}
-          COMMANDER_HOST: ${{secrets.E2E_COMMANDER_HOST}}
           PROVIDER: Azure
           CRI: Containerd
           LAYOUT: Standard
@@ -1718,8 +1708,6 @@ jobs:
         if: ${{ success() || cancelled() }}
         id: cleanup_cluster
         env:
-          COMMANDER_TOKEN: ${{secrets.E2E_COMMANDER_TOKEN}}
-          COMMANDER_HOST: ${{secrets.E2E_COMMANDER_HOST}}
           PROVIDER: Azure
           CRI: Containerd
           LAYOUT: Standard
@@ -2008,8 +1996,6 @@ jobs:
         if: ${{ success() || cancelled() }}
         id: cleanup_cluster
         env:
-          COMMANDER_TOKEN: ${{secrets.E2E_COMMANDER_TOKEN}}
-          COMMANDER_HOST: ${{secrets.E2E_COMMANDER_HOST}}
           PROVIDER: Azure
           CRI: Containerd
           LAYOUT: Standard
@@ -2298,8 +2284,6 @@ jobs:
         if: ${{ success() || cancelled() }}
         id: cleanup_cluster
         env:
-          COMMANDER_TOKEN: ${{secrets.E2E_COMMANDER_TOKEN}}
-          COMMANDER_HOST: ${{secrets.E2E_COMMANDER_HOST}}
           PROVIDER: Azure
           CRI: Containerd
           LAYOUT: Standard

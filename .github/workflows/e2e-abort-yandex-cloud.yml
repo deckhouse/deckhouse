@@ -268,8 +268,6 @@ jobs:
         if: ${{ success() || cancelled() }}
         id: cleanup_cluster
         env:
-          COMMANDER_TOKEN: ${{secrets.E2E_COMMANDER_TOKEN}}
-          COMMANDER_HOST: ${{secrets.E2E_COMMANDER_HOST}}
           PROVIDER: Yandex.Cloud
           CRI: Containerd
           LAYOUT: WithoutNAT
@@ -556,8 +554,6 @@ jobs:
         if: ${{ success() || cancelled() }}
         id: cleanup_cluster
         env:
-          COMMANDER_TOKEN: ${{secrets.E2E_COMMANDER_TOKEN}}
-          COMMANDER_HOST: ${{secrets.E2E_COMMANDER_HOST}}
           PROVIDER: Yandex.Cloud
           CRI: Containerd
           LAYOUT: WithoutNAT
@@ -844,8 +840,6 @@ jobs:
         if: ${{ success() || cancelled() }}
         id: cleanup_cluster
         env:
-          COMMANDER_TOKEN: ${{secrets.E2E_COMMANDER_TOKEN}}
-          COMMANDER_HOST: ${{secrets.E2E_COMMANDER_HOST}}
           PROVIDER: Yandex.Cloud
           CRI: Containerd
           LAYOUT: WithoutNAT
@@ -1132,8 +1126,6 @@ jobs:
         if: ${{ success() || cancelled() }}
         id: cleanup_cluster
         env:
-          COMMANDER_TOKEN: ${{secrets.E2E_COMMANDER_TOKEN}}
-          COMMANDER_HOST: ${{secrets.E2E_COMMANDER_HOST}}
           PROVIDER: Yandex.Cloud
           CRI: Containerd
           LAYOUT: WithoutNAT
@@ -1420,8 +1412,6 @@ jobs:
         if: ${{ success() || cancelled() }}
         id: cleanup_cluster
         env:
-          COMMANDER_TOKEN: ${{secrets.E2E_COMMANDER_TOKEN}}
-          COMMANDER_HOST: ${{secrets.E2E_COMMANDER_HOST}}
           PROVIDER: Yandex.Cloud
           CRI: Containerd
           LAYOUT: WithoutNAT
@@ -1708,8 +1698,6 @@ jobs:
         if: ${{ success() || cancelled() }}
         id: cleanup_cluster
         env:
-          COMMANDER_TOKEN: ${{secrets.E2E_COMMANDER_TOKEN}}
-          COMMANDER_HOST: ${{secrets.E2E_COMMANDER_HOST}}
           PROVIDER: Yandex.Cloud
           CRI: Containerd
           LAYOUT: WithoutNAT
@@ -1996,8 +1984,6 @@ jobs:
         if: ${{ success() || cancelled() }}
         id: cleanup_cluster
         env:
-          COMMANDER_TOKEN: ${{secrets.E2E_COMMANDER_TOKEN}}
-          COMMANDER_HOST: ${{secrets.E2E_COMMANDER_HOST}}
           PROVIDER: Yandex.Cloud
           CRI: Containerd
           LAYOUT: WithoutNAT
@@ -2284,8 +2270,6 @@ jobs:
         if: ${{ success() || cancelled() }}
         id: cleanup_cluster
         env:
-          COMMANDER_TOKEN: ${{secrets.E2E_COMMANDER_TOKEN}}
-          COMMANDER_HOST: ${{secrets.E2E_COMMANDER_HOST}}
           PROVIDER: Yandex.Cloud
           CRI: Containerd
           LAYOUT: WithoutNAT

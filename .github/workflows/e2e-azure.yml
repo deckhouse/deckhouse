@@ -447,8 +447,6 @@ jobs:
           LAYOUT: Standard
           KUBERNETES_VERSION: "1.27"
           LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
-          COMMANDER_TOKEN: ${{secrets.E2E_COMMANDER_TOKEN}}
-          COMMANDER_HOST: ${{secrets.E2E_COMMANDER_HOST}}
           LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
           TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
           PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
@@ -922,8 +920,6 @@ jobs:
           LAYOUT: Standard
           KUBERNETES_VERSION: "1.28"
           LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
-          COMMANDER_TOKEN: ${{secrets.E2E_COMMANDER_TOKEN}}
-          COMMANDER_HOST: ${{secrets.E2E_COMMANDER_HOST}}
           LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
           TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
           PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
@@ -1397,8 +1393,6 @@ jobs:
           LAYOUT: Standard
           KUBERNETES_VERSION: "1.29"
           LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
-          COMMANDER_TOKEN: ${{secrets.E2E_COMMANDER_TOKEN}}
-          COMMANDER_HOST: ${{secrets.E2E_COMMANDER_HOST}}
           LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
           TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
           PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
@@ -1872,8 +1866,6 @@ jobs:
           LAYOUT: Standard
           KUBERNETES_VERSION: "1.30"
           LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
-          COMMANDER_TOKEN: ${{secrets.E2E_COMMANDER_TOKEN}}
-          COMMANDER_HOST: ${{secrets.E2E_COMMANDER_HOST}}
           LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
           TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
           PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
@@ -2347,8 +2339,6 @@ jobs:
           LAYOUT: Standard
           KUBERNETES_VERSION: "1.31"
           LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
-          COMMANDER_TOKEN: ${{secrets.E2E_COMMANDER_TOKEN}}
-          COMMANDER_HOST: ${{secrets.E2E_COMMANDER_HOST}}
           LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
           TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
           PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
@@ -2822,8 +2812,6 @@ jobs:
           LAYOUT: Standard
           KUBERNETES_VERSION: "1.32"
           LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
-          COMMANDER_TOKEN: ${{secrets.E2E_COMMANDER_TOKEN}}
-          COMMANDER_HOST: ${{secrets.E2E_COMMANDER_HOST}}
           LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
           TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
           PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
@@ -3297,8 +3285,6 @@ jobs:
           LAYOUT: Standard
           KUBERNETES_VERSION: "Automatic"
           LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
-          COMMANDER_TOKEN: ${{secrets.E2E_COMMANDER_TOKEN}}
-          COMMANDER_HOST: ${{secrets.E2E_COMMANDER_HOST}}
           LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
           TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
           PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
