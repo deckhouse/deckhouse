@@ -120,11 +120,18 @@ do
               module_file_name=$(echo $schema_path | awk -F\/ '{print $NF}')
               module_name=$(echo $schema_path | cut -d\/ -f2 | sed 's/^[0-9]*-*//')
               schema_path_relative=$(echo $schema_path | cut -d\/ -f3- | sed "s#\.yaml##; s#\.##g; s#\/#\.#g")
-              echo $module_name
-              echo "   ...${module_name}/${module_file_name}"
               echo "$(gettext $file)" | sed "/<!-- SCHEMA -->/i\ " >> $PATH_TO_PDF_PAGE
               echo "#### {{ site.data.i18n.common['parameters'][page.lang] }}" >> $PATH_TO_PDF_PAGE
               echo "{{ site.data.schemas['${module_name}'].config-values | format_module_configuration: moduleKebabName }}" >> $PATH_TO_PDF_PAGE
+            elif [[ $file == *""CR_RU.md""* ]]; then
+              echo "#### {{ site.data.i18n.common['parameters'][page.lang] }}" >> $PATH_TO_PDF_PAGE
+              for schema_path in $(find "modules/$MODULE_PATH" -regex '^.*/crds/.*.yaml$' -print | grep -v '/crds/doc-ru-'| sort); do
+                module_path=$(echo $schema_path | cut -d\/ -f-2 )
+                module_file_name=$(echo $schema_path | awk -F\/ '{print $NF}')
+                module_name=$(echo $schema_path | cut -d\/ -f2 | sed 's/^[0-9]*-*//')
+                schema_path_relative=$(echo $schema_path | cut -d\/ -f3- | sed "s#\.yaml##; s#\.##g; s#\/#\.#g")
+                echo "{{ site.data.schemas.${module_name}.${schema_path_relative} | format_crd: \"${module_name}\" }}" >> $PATH_TO_PDF_PAGE
+              done
             else
               echo "$(gettext $file)" >> $PATH_TO_PDF_PAGE
             fi
@@ -159,11 +166,18 @@ do
               module_file_name=$(echo $schema_path | awk -F\/ '{print $NF}')
               module_name=$(echo $schema_path | cut -d\/ -f2 | sed 's/^[0-9]*-*//')
               schema_path_relative=$(echo $schema_path | cut -d\/ -f3- | sed "s#\.yaml##; s#\.##g; s#\/#\.#g")
-              echo $module_name
-              echo "   ...${module_name}/${module_file_name}"
               echo "$(gettext $file)" | sed "/<!-- SCHEMA -->/i\ " >> $PATH_TO_PDF_PAGE
               echo "#### {{ site.data.i18n.common['parameters'][page.lang] }}" >> $PATH_TO_PDF_PAGE
               echo "{{ site.data.schemas['${module_name}'].config-values | format_module_configuration: moduleKebabName }}" >> $PATH_TO_PDF_PAGE
+            elif [[ $file == *""CR_RU.md""* ]]; then
+              echo "#### {{ site.data.i18n.common['parameters'][page.lang] }}" >> $PATH_TO_PDF_PAGE
+              for schema_path in $(find "modules/$MODULE_PATH" -regex '^.*/crds/.*.yaml$' -print | grep -v '/crds/doc-ru-'| sort); do
+                module_path=$(echo $schema_path | cut -d\/ -f-2 )
+                module_file_name=$(echo $schema_path | awk -F\/ '{print $NF}')
+                module_name=$(echo $schema_path | cut -d\/ -f2 | sed 's/^[0-9]*-*//')
+                schema_path_relative=$(echo $schema_path | cut -d\/ -f3- | sed "s#\.yaml##; s#\.##g; s#\/#\.#g")
+                echo "{{ site.data.schemas.${module_name}.${schema_path_relative} | format_crd: \"${module_name}\" }}" >> $PATH_TO_PDF_PAGE
+              done
             else
               echo "$(gettext $file)" >> $PATH_TO_PDF_PAGE
             fi
@@ -203,11 +217,18 @@ do
               module_file_name=$(echo $schema_path | awk -F\/ '{print $NF}')
               module_name=$(echo $schema_path | cut -d\/ -f2 | sed 's/^[0-9]*-*//')
               schema_path_relative=$(echo $schema_path | cut -d\/ -f3- | sed "s#\.yaml##; s#\.##g; s#\/#\.#g")
-              echo $module_name
-              echo "   ...${module_name}/${module_file_name}"
               echo "$(gettext $file)" | sed "/<!-- SCHEMA -->/i\ " >> $PATH_TO_PDF_PAGE
               echo "#### {{ site.data.i18n.common['parameters'][page.lang] }}" >> $PATH_TO_PDF_PAGE
               echo "{{ site.data.schemas['${module_name}'].config-values | format_module_configuration: moduleKebabName }}" >> $PATH_TO_PDF_PAGE
+            elif [[ $file == *""CR_RU.md""* ]]; then
+              echo "#### {{ site.data.i18n.common['parameters'][page.lang] }}" >> $PATH_TO_PDF_PAGE
+              for schema_path in $(find "modules/$MODULE_PATH" -regex '^.*/crds/.*.yaml$' -print | grep -v '/crds/doc-ru-'| sort); do
+                module_path=$(echo $schema_path | cut -d\/ -f-2 )
+                module_file_name=$(echo $schema_path | awk -F\/ '{print $NF}')
+                module_name=$(echo $schema_path | cut -d\/ -f2 | sed 's/^[0-9]*-*//')
+                schema_path_relative=$(echo $schema_path | cut -d\/ -f3- | sed "s#\.yaml##; s#\.##g; s#\/#\.#g")
+                echo "{{ site.data.schemas.${module_name}.${schema_path_relative} | format_crd: \"${module_name}\" }}" >> $PATH_TO_PDF_PAGE
+              done
             else
               echo "$(gettext $file)" >> $PATH_TO_PDF_PAGE
             fi
@@ -247,11 +268,18 @@ do
               module_file_name=$(echo $schema_path | awk -F\/ '{print $NF}')
               module_name=$(echo $schema_path | cut -d\/ -f2 | sed 's/^[0-9]*-*//')
               schema_path_relative=$(echo $schema_path | cut -d\/ -f3- | sed "s#\.yaml##; s#\.##g; s#\/#\.#g")
-              echo $module_name
-              echo "   ...${module_name}/${module_file_name}"
               echo "$(gettext $file)" | sed "/<!-- SCHEMA -->/i\ " >> $PATH_TO_PDF_PAGE
               echo "#### {{ site.data.i18n.common['parameters'][page.lang] }}" >> $PATH_TO_PDF_PAGE
               echo "{{ site.data.schemas['${module_name}'].config-values | format_module_configuration: moduleKebabName }}" >> $PATH_TO_PDF_PAGE
+            elif [[ $file == *""CR_RU.md""* ]]; then
+              echo "#### {{ site.data.i18n.common['parameters'][page.lang] }}" >> $PATH_TO_PDF_PAGE
+              for schema_path in $(find "modules/$MODULE_PATH" -regex '^.*/crds/.*.yaml$' -print | grep -v '/crds/doc-ru-'| sort); do
+                module_path=$(echo $schema_path | cut -d\/ -f-2 )
+                module_file_name=$(echo $schema_path | awk -F\/ '{print $NF}')
+                module_name=$(echo $schema_path | cut -d\/ -f2 | sed 's/^[0-9]*-*//')
+                schema_path_relative=$(echo $schema_path | cut -d\/ -f3- | sed "s#\.yaml##; s#\.##g; s#\/#\.#g")
+                echo "{{ site.data.schemas.${module_name}.${schema_path_relative} | format_crd: \"${module_name}\" }}" >> $PATH_TO_PDF_PAGE
+              done
             else
               echo "$(gettext $file)" >> $PATH_TO_PDF_PAGE
             fi
@@ -294,11 +322,18 @@ do
                 module_file_name=$(echo $schema_path | awk -F\/ '{print $NF}')
                 module_name=$(echo $schema_path | cut -d\/ -f2 | sed 's/^[0-9]*-*//')
                 schema_path_relative=$(echo $schema_path | cut -d\/ -f3- | sed "s#\.yaml##; s#\.##g; s#\/#\.#g")
-                echo $module_name
-                echo "   ...${module_name}/${module_file_name}"
                 echo "$(gettext $file)" | sed "/<!-- SCHEMA -->/i\ " >> $PATH_TO_PDF_PAGE
                 echo "#### {{ site.data.i18n.common['parameters'][page.lang] }}" >> $PATH_TO_PDF_PAGE
                 echo "{{ site.data.schemas['${module_name}'].config-values | format_module_configuration: moduleKebabName }}" >> $PATH_TO_PDF_PAGE
+              elif [[ $file == *""CR_RU.md""* ]]; then
+                echo "#### {{ site.data.i18n.common['parameters'][page.lang] }}" >> $PATH_TO_PDF_PAGE
+                for schema_path in $(find "$MODULE_PATH" -regex '^.*/crds/.*.yaml$' -print | grep -v '/crds/doc-ru-'| sort); do
+                  module_path=$(echo $schema_path | cut -d\/ -f-2 )
+                  module_file_name=$(echo $schema_path | awk -F\/ '{print $NF}')
+                  module_name=$(echo $schema_path | cut -d\/ -f2 | sed 's/^[0-9]*-*//')
+                  schema_path_relative=$(echo $schema_path | cut -d\/ -f3- | sed "s#\.yaml##; s#\.##g; s#\/#\.#g")
+                  echo "{{ site.data.schemas.${module_name}.${schema_path_relative} | format_crd: \"${module_name}\" }}" >> $PATH_TO_PDF_PAGE
+                done
               else
                 echo "$(gettext $file)" >> $PATH_TO_PDF_PAGE
               fi
@@ -321,11 +356,18 @@ do
                 module_file_name=$(echo $schema_path | awk -F\/ '{print $NF}')
                 module_name=$(echo $schema_path | cut -d\/ -f2 | sed 's/^[0-9]*-*//')
                 schema_path_relative=$(echo $schema_path | cut -d\/ -f3- | sed "s#\.yaml##; s#\.##g; s#\/#\.#g")
-                echo $module_name
-                echo "   ...${module_name}/${module_file_name}"
                 echo "$(gettext $file)" | sed "/<!-- SCHEMA -->/i\ " >> $PATH_TO_PDF_PAGE
                 echo "#### {{ site.data.i18n.common['parameters'][page.lang] }}" >> $PATH_TO_PDF_PAGE
                 echo "{{ site.data.schemas['${module_name}'].config-values | format_module_configuration: moduleKebabName }}" >> $PATH_TO_PDF_PAGE
+              elif [[ $file == *""CR_RU.md""* ]]; then
+                echo "#### {{ site.data.i18n.common['parameters'][page.lang] }}" >> $PATH_TO_PDF_PAGE
+                for schema_path in $(find "$MODULE_PATH" -regex '^.*/crds/.*.yaml$' -print | grep -v '/crds/doc-ru-'| sort); do
+                  module_path=$(echo $schema_path | cut -d\/ -f-2 )
+                  module_file_name=$(echo $schema_path | awk -F\/ '{print $NF}')
+                  module_name=$(echo $schema_path | cut -d\/ -f2 | sed 's/^[0-9]*-*//' )
+                  schema_path_relative=$(echo $schema_path | cut -d\/ -f3- | sed "s#\.yaml##; s#\.##g; s#\/#\.#g")
+                  echo "{{ site.data.schemas.${module_name}.${schema_path_relative} | format_crd: \"${module_name}\" }}" >> $PATH_TO_PDF_PAGE
+                done
               else
                 echo "$(gettext $file)" >> $PATH_TO_PDF_PAGE
               fi
@@ -348,11 +390,18 @@ do
                     module_file_name=$(echo $schema_path | awk -F\/ '{print $NF}')
                     module_name=$(echo $schema_path | cut -d\/ -f2 | sed 's/^[0-9]*-*//')
                     schema_path_relative=$(echo $schema_path | cut -d\/ -f3- | sed "s#\.yaml##; s#\.##g; s#\/#\.#g")
-                    echo $module_name
-                    echo "   ...${module_name}/${module_file_name}"
                     echo "$(gettext $file)" | sed "/<!-- SCHEMA -->/i\ " >> $PATH_TO_PDF_PAGE
                     echo "#### {{ site.data.i18n.common['parameters'][page.lang] }}" >> $PATH_TO_PDF_PAGE
                     echo "{{ site.data.schemas['${module_name}'].config-values | format_module_configuration: moduleKebabName }}" >> $PATH_TO_PDF_PAGE
+                  elif [[ $file == *""CR_RU.md""* ]]; then
+                    echo "#### {{ site.data.i18n.common['parameters'][page.lang] }}" >> $PATH_TO_PDF_PAGE
+                    for schema_path in $(find "modules/$MODULE_PATH" -regex '^.*/crds/.*.yaml$' -print | grep -v '/crds/doc-ru-'| sort); do
+                      module_path=$(echo $schema_path | cut -d\/ -f-2 )
+                      module_file_name=$(echo $schema_path | awk -F\/ '{print $NF}')
+                      module_name=$(echo $schema_path | cut -d\/ -f2 | sed 's/^[0-9]*-*//')
+                      schema_path_relative=$(echo $schema_path | cut -d\/ -f3- | sed "s#\.yaml##; s#\.##g; s#\/#\.#g")
+                      echo "{{ site.data.schemas.${module_name}.${schema_path_relative} | format_crd: \"${module_name}\" }}" >> $PATH_TO_PDF_PAGE
+                    done
                   else
                     echo "$(gettext $file)" >> $PATH_TO_PDF_PAGE
                   fi
@@ -390,11 +439,18 @@ do
               module_file_name=$(echo $schema_path | awk -F\/ '{print $NF}')
               module_name=$(echo $schema_path | cut -d\/ -f2 | sed 's/^[0-9]*-*//')
               schema_path_relative=$(echo $schema_path | cut -d\/ -f3- | sed "s#\.yaml##; s#\.##g; s#\/#\.#g")
-              echo $module_name
-              echo "   ...${module_name}/${module_file_name}"
               echo "$(gettext $file)" | sed "/<!-- SCHEMA -->/i\ " >> $PATH_TO_PDF_PAGE
               echo "#### {{ site.data.i18n.common['parameters'][page.lang] }}" >> $PATH_TO_PDF_PAGE
               echo "{{ site.data.schemas['${module_name}'].config-values | format_module_configuration: moduleKebabName }}" >> $PATH_TO_PDF_PAGE
+            elif [[ $file == *""CR_RU.md""* ]]; then
+              echo "#### {{ site.data.i18n.common['parameters'][page.lang] }}" >> $PATH_TO_PDF_PAGE
+              for schema_path in $(find "modules/$MODULE_PATH" -regex '^.*/crds/.*.yaml$' -print | grep -v '/crds/doc-ru-'| sort); do
+                module_path=$(echo $schema_path | cut -d\/ -f-2 )
+                module_file_name=$(echo $schema_path | awk -F\/ '{print $NF}')
+                module_name=$(echo $schema_path | cut -d\/ -f2 | sed 's/^[0-9]*-*//' )
+                schema_path_relative=$(echo $schema_path | cut -d\/ -f3- | sed "s#\.yaml##; s#\.##g; s#\/#\.#g")
+                echo "{{ site.data.schemas.${module_name}.${schema_path_relative} | format_crd: \"${module_name}\" }}" >> $PATH_TO_PDF_PAGE
+              done
             else
               echo "$(gettext $file)" >> $PATH_TO_PDF_PAGE
             fi

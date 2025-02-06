@@ -1185,8 +1185,24 @@ Cilium полностью заменяет собой функционал мо�
 {{ site.data.schemas['cni-cilium'].config-values | format_module_configuration: moduleKebabName }}
 
 ### Модуль cni-cilium: Custom Resources
-
-<!-- SCHEMA -->
+#### {{ site.data.i18n.common['parameters'][page.lang] }}
+{{ site.data.schemas.cni-cilium.crds.cilium.ciliumbgppeeringpolicies | format_crd: "cni-cilium" }}
+{{ site.data.schemas.cni-cilium.crds.cilium.ciliumcidrgroups | format_crd: "cni-cilium" }}
+{{ site.data.schemas.cni-cilium.crds.cilium.ciliumclusterwideenvoyconfigs | format_crd: "cni-cilium" }}
+{{ site.data.schemas.cni-cilium.crds.cilium.ciliumclusterwidenetworkpolicies | format_crd: "cni-cilium" }}
+{{ site.data.schemas.cni-cilium.crds.cilium.ciliumegressgatewaypolicies | format_crd: "cni-cilium" }}
+{{ site.data.schemas.cni-cilium.crds.cilium.ciliumendpoints | format_crd: "cni-cilium" }}
+{{ site.data.schemas.cni-cilium.crds.cilium.ciliumendpointslices | format_crd: "cni-cilium" }}
+{{ site.data.schemas.cni-cilium.crds.cilium.ciliumenvoyconfigs | format_crd: "cni-cilium" }}
+{{ site.data.schemas.cni-cilium.crds.cilium.ciliumexternalworkloads | format_crd: "cni-cilium" }}
+{{ site.data.schemas.cni-cilium.crds.cilium.ciliumidentities | format_crd: "cni-cilium" }}
+{{ site.data.schemas.cni-cilium.crds.cilium.ciliuml2announcementpolicies | format_crd: "cni-cilium" }}
+{{ site.data.schemas.cni-cilium.crds.cilium.ciliumloadbalancerippools | format_crd: "cni-cilium" }}
+{{ site.data.schemas.cni-cilium.crds.cilium.ciliumlocalredirectpolicies | format_crd: "cni-cilium" }}
+{{ site.data.schemas.cni-cilium.crds.cilium.ciliumnetworkpolicies | format_crd: "cni-cilium" }}
+{{ site.data.schemas.cni-cilium.crds.cilium.ciliumnodeconfigs | format_crd: "cni-cilium" }}
+{{ site.data.schemas.cni-cilium.crds.cilium.ciliumnodes | format_crd: "cni-cilium" }}
+{{ site.data.schemas.cni-cilium.crds.cilium.ciliumpodippools | format_crd: "cni-cilium" }}
 
 ### Модуль cni-cilium: примеры
 
@@ -1403,8 +1419,8 @@ kubectl -n d8-cni-cilium delete secret/hubble-basic-auth
 {{ site.data.schemas['control-plane-manager'].config-values | format_module_configuration: moduleKebabName }}
 
 ### Управление control plane: Custom Resources
-
-<!-- SCHEMA -->
+#### {{ site.data.i18n.common['parameters'][page.lang] }}
+{{ site.data.schemas.control-plane-manager.crds.kube_scheduler_webhook_configuration | format_crd: "control-plane-manager" }}
 
 ### Управление control plane: примеры
 
@@ -2353,8 +2369,9 @@ kubectl get --raw /debug/api_priority_and_fairness/dump_queues
 {{ site.data.schemas['ingress-nginx'].config-values | format_module_configuration: moduleKebabName }}
 
 ### Модуль ingress-nginx: Custom Resources
-
-<!-- SCHEMA -->
+#### {{ site.data.i18n.common['parameters'][page.lang] }}
+{{ site.data.schemas.ingress-nginx.crds.ingress-nginx | format_crd: "ingress-nginx" }}
+{{ site.data.schemas.ingress-nginx.crds.kruise.crd_daemonsets | format_crd: "ingress-nginx" }}
 
 ### Модуль ingress-nginx: пример
 
@@ -3181,108 +3198,16 @@ kubectl -n d8-istio delete secret/kiali-basic-auth
 {{ site.data.schemas['istio'].config-values | format_module_configuration: moduleKebabName }}
 
 ### Модуль istio: Custom Resources
-
-<!-- SCHEMA -->
+#### {{ site.data.i18n.common['parameters'][page.lang] }}
+{{ site.data.schemas.istio.crds.ingress-istio | format_crd: "istio" }}
+{{ site.data.schemas.istio.crds.istio.121.crd-allgen | format_crd: "istio" }}
+{{ site.data.schemas.istio.crds.istio.121.crd-operator | format_crd: "istio" }}
 
 ### Модуль istio: Custom Resources (от istio.io)
-
-#### Маршрутизация
-
-##### DestinationRule
-
-Reference
-
-Позволяет:
-* Определить стратегию балансировки трафика между эндпоинтами сервиса:
-  * алгоритм балансировки (LEAST_CONN, ROUND_ROBIN, ...);
-  * признаки смерти эндпоинта и правила его выведения из балансировки;
-  * лимиты TCP-соединений и реквестов для эндпоинтов;
-  * Sticky Sessions;
-  * Circuit Breaker.
-* Определить альтернативные группы эндпоинтов для обработки трафика (применимо для Canary Deployments). При этом у каждой группы можно настроить свои стратегии балансировки.
-* Настройка TLS для исходящих запросов.
-
-##### VirtualService
-
-Reference
-
-Использование VirtualService опционально, классические сервисы продолжают работать, если вам достаточно их функционала.
-
-Позволяет настроить маршрутизацию запросов:
-* Аргументы для принятия решения о маршруте:
-  * Host;
-  * URI;
-  * вес.
-* Параметры итоговых направлений:
-  * новый хост;
-  * новый URI;
-  * если хост определен с помощью [DestinationRule](#destinationrule), можно направлять запросы на subset'ы;
-  * таймаут и настройки ретраев.
-
-> **Важно!** Istio должен знать о существовании `destination`, если вы используете внешний API, то зарегистрируйте его через [ServiceEntry](#serviceentry).
-
-##### ServiceEntry
-
-Reference
-
-Аналог Endpoints + Service из ванильного Kubernetes. Позволяет сообщить Istio о существовании внешнего сервиса или даже переопределить его адрес.
-
-#### Аутентификация
-
-Решает задачу «Кто сделал запрос?». Не путать с авторизацией, которая определяет, «разрешить ли аутентифицированному элементу делать что-то или нет».
-
-По факту есть два метода аутентификации:
-* mTLS;
-* JWT-токены.
-
-##### PeerAuthentication
-
-Reference
-
-Позволяет определить стратегию mTLS в отдельном NS — принимать или нет нешифрованные запросы. Каждый mTLS-запрос автоматически позволяет определить источник и использовать его в правилах авторизации.
-
-##### RequestAuthentication
-
-Reference
-
-Позволяет настроить JWT-аутентификацию для реквестов.
-
-#### Авторизация
-
-**Важно!** Авторизация без mTLS- или JWT-аутентификации не будет работать в полной мере. В этом случае будут доступны только простейшие аргументы для составления политик, такие как `source.ip` и `request.headers`.
-
-##### AuthorizationPolicy
-
-Reference.
-
-Включает и определяет контроль доступа к workload. Поддерживает как ALLOW-, так и DENY-правила. Как только у workload появляется хотя бы одна политика, начинает работать следующий приоритет:
-
-* Если запрос попадает под политику DENY — запретить запрос.
-* Если для данного приложения нет политик ALLOW — разрешить запрос.
-* Если запрос попадает под политику ALLOW — разрешить запрос.
-* Все остальные запросы — запретить.
-
-Аргументы для принятия решения об авторизации:
-* source:
-  * namespace;
-  * principal (читай — идентификатор юзера, полученный после аутентификации);
-  * IP.
-* destination:
-  * метод (GET, POST...);
-  * Host;
-  * порт;
-  * URI.
-* conditions:
-  * HTTP-заголовки
-  * аргументы source
-  * аргументы destination
-  * JWT-токены
-
-##### Sidecar
-
-Reference
-
-Данный ресурс позволяет ограничить количество сервисов, информация о которых будет передана в сайдкар istio-proxy.
+#### {{ site.data.i18n.common['parameters'][page.lang] }}
+{{ site.data.schemas.istio.crds.ingress-istio | format_crd: "istio" }}
+{{ site.data.schemas.istio.crds.istio.121.crd-allgen | format_crd: "istio" }}
+{{ site.data.schemas.istio.crds.istio.121.crd-operator | format_crd: "istio" }}
 
 ### Модуль istio: примеры
 
@@ -4300,8 +4225,26 @@ rm /var/lib/bashible/configuration_checksum
 {{ site.data.schemas['node-manager'].config-values | format_module_configuration: moduleKebabName }}
 
 ### Управление узлами: custom resources
-
-<!-- SCHEMA -->
+#### {{ site.data.i18n.common['parameters'][page.lang] }}
+{{ site.data.schemas.node-manager.crds.cluster | format_crd: "node-manager" }}
+{{ site.data.schemas.node-manager.crds.deckhousecontrolplane | format_crd: "node-manager" }}
+{{ site.data.schemas.node-manager.crds.extension-config | format_crd: "node-manager" }}
+{{ site.data.schemas.node-manager.crds.instance | format_crd: "node-manager" }}
+{{ site.data.schemas.node-manager.crds.instancetypescatalogs | format_crd: "node-manager" }}
+{{ site.data.schemas.node-manager.crds.machine-deployment | format_crd: "node-manager" }}
+{{ site.data.schemas.node-manager.crds.machine-health-check | format_crd: "node-manager" }}
+{{ site.data.schemas.node-manager.crds.machine-pools | format_crd: "node-manager" }}
+{{ site.data.schemas.node-manager.crds.machine-sets | format_crd: "node-manager" }}
+{{ site.data.schemas.node-manager.crds.machine | format_crd: "node-manager" }}
+{{ site.data.schemas.node-manager.crds.mcm | format_crd: "node-manager" }}
+{{ site.data.schemas.node-manager.crds.node_group | format_crd: "node-manager" }}
+{{ site.data.schemas.node-manager.crds.nodegroupconfiguration | format_crd: "node-manager" }}
+{{ site.data.schemas.node-manager.crds.nodeuser | format_crd: "node-manager" }}
+{{ site.data.schemas.node-manager.crds.sshcredentials | format_crd: "node-manager" }}
+{{ site.data.schemas.node-manager.crds.staticcluster | format_crd: "node-manager" }}
+{{ site.data.schemas.node-manager.crds.staticinstance | format_crd: "node-manager" }}
+{{ site.data.schemas.node-manager.crds.staticmachine | format_crd: "node-manager" }}
+{{ site.data.schemas.node-manager.crds.staticmachinetemplate | format_crd: "node-manager" }}
 
 ### Управление узлами: примеры
 
@@ -6070,8 +6013,8 @@ spec:
 {{ site.data.schemas['local-path-provisioner'].config-values | format_module_configuration: moduleKebabName }}
 
 ### Модуль local-path-provisioner: custom resources
-
-<!-- SCHEMA -->
+#### {{ site.data.i18n.common['parameters'][page.lang] }}
+{{ site.data.schemas.local-path-provisioner.crds.local_path_provisioner | format_crd: "local-path-provisioner" }}
 
 ### Модуль local-path-provisioner: примеры
 
@@ -6889,8 +6832,10 @@ Extra labels добавляются на этапе `Destination`, поэтом�
 {{ site.data.schemas['log-shipper'].config-values | format_module_configuration: moduleKebabName }}
 
 ### Модуль log-shipper: Custom Resources
-
-<!-- SCHEMA -->
+#### {{ site.data.i18n.common['parameters'][page.lang] }}
+{{ site.data.schemas.log-shipper.crds.cluster-log-destination | format_crd: "log-shipper" }}
+{{ site.data.schemas.log-shipper.crds.cluster-logging-config | format_crd: "log-shipper" }}
+{{ site.data.schemas.log-shipper.crds.pod-logging-config | format_crd: "log-shipper" }}
 
 ### Модуль log-shipper: примеры
 
@@ -8048,8 +7993,14 @@ kubectl -n d8-monitoring delete secret/basic-auth
 {{ site.data.schemas['prometheus'].config-values | format_module_configuration: moduleKebabName }}
 
 ### Prometheus-мониторинг: custom resources
-
-<!-- SCHEMA -->
+#### {{ site.data.i18n.common['parameters'][page.lang] }}
+{{ site.data.schemas.prometheus.crds.clusteralerts | format_crd: "prometheus" }}
+{{ site.data.schemas.prometheus.crds.customalertmanager | format_crd: "prometheus" }}
+{{ site.data.schemas.prometheus.crds.customprometheusrules | format_crd: "prometheus" }}
+{{ site.data.schemas.prometheus.crds.grafanaadditionaldatasources | format_crd: "prometheus" }}
+{{ site.data.schemas.prometheus.crds.grafanaalertschannel | format_crd: "prometheus" }}
+{{ site.data.schemas.prometheus.crds.grafanadashboarddefinition | format_crd: "prometheus" }}
+{{ site.data.schemas.prometheus.crds.prometheusremotewrite | format_crd: "prometheus" }}
 
 ### Prometheus-мониторинг: FAQ
 
@@ -9062,8 +9013,10 @@ Extra labels добавляются на этапе `Destination`, поэтом�
 {{ site.data.schemas['log-shipper'].config-values | format_module_configuration: moduleKebabName }}
 
 ### Модуль log-shipper: Custom Resources
-
-<!-- SCHEMA -->
+#### {{ site.data.i18n.common['parameters'][page.lang] }}
+{{ site.data.schemas.log-shipper.crds.cluster-log-destination | format_crd: "log-shipper" }}
+{{ site.data.schemas.log-shipper.crds.cluster-logging-config | format_crd: "log-shipper" }}
+{{ site.data.schemas.log-shipper.crds.pod-logging-config | format_crd: "log-shipper" }}
 
 ### Модуль log-shipper: примеры
 
@@ -10221,8 +10174,14 @@ kubectl -n d8-monitoring delete secret/basic-auth
 {{ site.data.schemas['prometheus'].config-values | format_module_configuration: moduleKebabName }}
 
 ### Prometheus-мониторинг: custom resources
-
-<!-- SCHEMA -->
+#### {{ site.data.i18n.common['parameters'][page.lang] }}
+{{ site.data.schemas.prometheus.crds.clusteralerts | format_crd: "prometheus" }}
+{{ site.data.schemas.prometheus.crds.customalertmanager | format_crd: "prometheus" }}
+{{ site.data.schemas.prometheus.crds.customprometheusrules | format_crd: "prometheus" }}
+{{ site.data.schemas.prometheus.crds.grafanaadditionaldatasources | format_crd: "prometheus" }}
+{{ site.data.schemas.prometheus.crds.grafanaalertschannel | format_crd: "prometheus" }}
+{{ site.data.schemas.prometheus.crds.grafanadashboarddefinition | format_crd: "prometheus" }}
+{{ site.data.schemas.prometheus.crds.prometheusremotewrite | format_crd: "prometheus" }}
 
 ### Prometheus-мониторинг: FAQ
 
@@ -11086,134 +11045,56 @@ spec:
 {{ site.data.schemas['admission-policy-engine'].config-values | format_module_configuration: moduleKebabName }}
 
 ### Модуль admission-policy-engine: custom resources
-
-<!-- SCHEMA -->
+#### {{ site.data.i18n.common['parameters'][page.lang] }}
+{{ site.data.schemas.admission-policy-engine.crds.native.assign-customresourcedefinition | format_crd: "admission-policy-engine" }}
+{{ site.data.schemas.admission-policy-engine.crds.native.assignimage-customresourcedefinition | format_crd: "admission-policy-engine" }}
+{{ site.data.schemas.admission-policy-engine.crds.native.assignmetadata-customresourcedefinition | format_crd: "admission-policy-engine" }}
+{{ site.data.schemas.admission-policy-engine.crds.native.config-customresourcedefinition | format_crd: "admission-policy-engine" }}
+{{ site.data.schemas.admission-policy-engine.crds.native.constraintpodstatus-customresourcedefinition | format_crd: "admission-policy-engine" }}
+{{ site.data.schemas.admission-policy-engine.crds.native.constrainttemplate-customresourcedefinition | format_crd: "admission-policy-engine" }}
+{{ site.data.schemas.admission-policy-engine.crds.native.constrainttemplatepodstatus-customresourcedefinition | format_crd: "admission-policy-engine" }}
+{{ site.data.schemas.admission-policy-engine.crds.native.expansiontemplate-customresourcedefinition | format_crd: "admission-policy-engine" }}
+{{ site.data.schemas.admission-policy-engine.crds.native.expansiontemplatepodstatus-customresourcedefinition | format_crd: "admission-policy-engine" }}
+{{ site.data.schemas.admission-policy-engine.crds.native.modifyset-customresourcedefinition | format_crd: "admission-policy-engine" }}
+{{ site.data.schemas.admission-policy-engine.crds.native.mutatorpodstatus-customresourcedefinition | format_crd: "admission-policy-engine" }}
+{{ site.data.schemas.admission-policy-engine.crds.native.provider-customresourcedefinition | format_crd: "admission-policy-engine" }}
+{{ site.data.schemas.admission-policy-engine.crds.operation-policy | format_crd: "admission-policy-engine" }}
+{{ site.data.schemas.admission-policy-engine.crds.ratify.certificatestore-customresourcedefinition | format_crd: "admission-policy-engine" }}
+{{ site.data.schemas.admission-policy-engine.crds.ratify.keymanagementprovider-customresourcedefinition | format_crd: "admission-policy-engine" }}
+{{ site.data.schemas.admission-policy-engine.crds.ratify.namespacedkeymanagementprovider-customresourcedefinition | format_crd: "admission-policy-engine" }}
+{{ site.data.schemas.admission-policy-engine.crds.ratify.namespacedpolicy-customresourcedefinition | format_crd: "admission-policy-engine" }}
+{{ site.data.schemas.admission-policy-engine.crds.ratify.namespacedstore-customresourcedefinition | format_crd: "admission-policy-engine" }}
+{{ site.data.schemas.admission-policy-engine.crds.ratify.namespacedverifier-customresourcedefinition | format_crd: "admission-policy-engine" }}
+{{ site.data.schemas.admission-policy-engine.crds.ratify.policy-customresourcedefinition | format_crd: "admission-policy-engine" }}
+{{ site.data.schemas.admission-policy-engine.crds.ratify.store-customresourcedefinition | format_crd: "admission-policy-engine" }}
+{{ site.data.schemas.admission-policy-engine.crds.ratify.verifier-customresourcedefinition | format_crd: "admission-policy-engine" }}
+{{ site.data.schemas.admission-policy-engine.crds.security-policy | format_crd: "admission-policy-engine" }}
 
 ### Модуль admission-policy-engine: Custom Resources (от Gatekeeper)
-
-#### Mutation Custom Resources
-
-{% alert level="info" %}
-Для мутационных хуков используется настройка `reinvocationPolicy: IfNeeded` в MutatingWebhookConfiguration. Подробнее в документации Kubernetes.
-{% endalert %}  
-
-Reference
-
-Представляют собой набор настраиваемых политик модификации ресурсов Kubernets в момент их создания.
-
-##### AssignMetadata
-
-Reference
-
-Позволяет изменять секцию `Metadata` ресурса.  
-На данный момент сервисом Gatekeeper разрешено только **добавление** объектов `lables` и `annotations`. Изменение существующих объектов не предусмотрено.
-
-Пример добавления label `owner` со значением `admin` во всех пространствах имен:
-  
-```yaml
-apiVersion: mutations.gatekeeper.sh/v1
-kind: AssignMetadata
-metadata:
-  name: demo-annotation-owner
-spec:
-  match:
-    scope: Namespaced
-  location: "metadata.labels.owner"
-  parameters:
-    assign:
-      value: "admin"
-```
-
-##### Assign
-
-<!-- 
-Reference 
-Отдельной ссылки в документации Gatekeeper на данный CR нет
--->
-
-Позволяет изменять поля, за пределом секции `Metadata`.
-
-Пример установки `imagePullPolicy` для всех контейнеров на `Always` во всех пространствах имен, кроме `system`:
-
-```yaml
-apiVersion: mutations.gatekeeper.sh/v1
-kind: Assign
-metadata:
-  name: demo-image-pull-policy
-spec:
-  applyTo:
-  - groups: [""]
-    kinds: ["Pod"]
-    versions: ["v1"]
-  match:
-    scope: Namespaced
-    kinds:
-    - apiGroups: ["*"]
-      kinds: ["Pod"]
-    excludedNamespaces: ["system"]
-  location: "spec.containers[name:*].imagePullPolicy"
-  parameters:
-    assign:
-      value: Always
-```
-
-##### ModifySet
-
-Reference
-
-Позволяет добавлять и удалять элементы из списка, например из списка аргументов для запуска контейнера.  
-Новые значения добавляются в конец списка.
-
-Пример удаления аргумента `--alsologtostderr` из всех контейнеров в поде:
-
-```yaml
-apiVersion: mutations.gatekeeper.sh/v1
-kind: ModifySet
-metadata:
-  name: remove-err-logging
-spec:
-  applyTo:
-  - groups: [""]
-    kinds: ["Pod"]
-    versions: ["v1"]
-  location: "spec.containers[name: *].args"
-  parameters:
-    operation: prune
-    values:
-      fromList:
-        - --alsologtostderr
-```
-
-##### AssignImage
-
-Reference
-
-Позволяет вносить изменения в параметр `image` ресурса.
-
-Пример изменения параметра `image` на значение `my.registry.io/repo/app@sha256:abcde67890123456789abc345678901a`:
-  
-```yaml
-apiVersion: mutations.gatekeeper.sh/v1alpha1
-kind: AssignImage
-metadata:
-  name: assign-container-image
-spec:
-  applyTo:
-  - groups: [ "" ]
-    kinds: [ "Pod" ]
-    versions: [ "v1" ]
-  location: "spec.containers[name:*].image"
-  parameters:
-    assignDomain: "my.registry.io"
-    assignPath: "repo/app"
-    assignTag: "@sha256:abcde67890123456789abc345678901a"
-  match:
-    source: "All"
-    scope: Namespaced
-    kinds:
-    - apiGroups: [ "*" ]
-      kinds: [ "Pod" ]
-```
+#### {{ site.data.i18n.common['parameters'][page.lang] }}
+{{ site.data.schemas.admission-policy-engine.crds.native.assign-customresourcedefinition | format_crd: "admission-policy-engine" }}
+{{ site.data.schemas.admission-policy-engine.crds.native.assignimage-customresourcedefinition | format_crd: "admission-policy-engine" }}
+{{ site.data.schemas.admission-policy-engine.crds.native.assignmetadata-customresourcedefinition | format_crd: "admission-policy-engine" }}
+{{ site.data.schemas.admission-policy-engine.crds.native.config-customresourcedefinition | format_crd: "admission-policy-engine" }}
+{{ site.data.schemas.admission-policy-engine.crds.native.constraintpodstatus-customresourcedefinition | format_crd: "admission-policy-engine" }}
+{{ site.data.schemas.admission-policy-engine.crds.native.constrainttemplate-customresourcedefinition | format_crd: "admission-policy-engine" }}
+{{ site.data.schemas.admission-policy-engine.crds.native.constrainttemplatepodstatus-customresourcedefinition | format_crd: "admission-policy-engine" }}
+{{ site.data.schemas.admission-policy-engine.crds.native.expansiontemplate-customresourcedefinition | format_crd: "admission-policy-engine" }}
+{{ site.data.schemas.admission-policy-engine.crds.native.expansiontemplatepodstatus-customresourcedefinition | format_crd: "admission-policy-engine" }}
+{{ site.data.schemas.admission-policy-engine.crds.native.modifyset-customresourcedefinition | format_crd: "admission-policy-engine" }}
+{{ site.data.schemas.admission-policy-engine.crds.native.mutatorpodstatus-customresourcedefinition | format_crd: "admission-policy-engine" }}
+{{ site.data.schemas.admission-policy-engine.crds.native.provider-customresourcedefinition | format_crd: "admission-policy-engine" }}
+{{ site.data.schemas.admission-policy-engine.crds.operation-policy | format_crd: "admission-policy-engine" }}
+{{ site.data.schemas.admission-policy-engine.crds.ratify.certificatestore-customresourcedefinition | format_crd: "admission-policy-engine" }}
+{{ site.data.schemas.admission-policy-engine.crds.ratify.keymanagementprovider-customresourcedefinition | format_crd: "admission-policy-engine" }}
+{{ site.data.schemas.admission-policy-engine.crds.ratify.namespacedkeymanagementprovider-customresourcedefinition | format_crd: "admission-policy-engine" }}
+{{ site.data.schemas.admission-policy-engine.crds.ratify.namespacedpolicy-customresourcedefinition | format_crd: "admission-policy-engine" }}
+{{ site.data.schemas.admission-policy-engine.crds.ratify.namespacedstore-customresourcedefinition | format_crd: "admission-policy-engine" }}
+{{ site.data.schemas.admission-policy-engine.crds.ratify.namespacedverifier-customresourcedefinition | format_crd: "admission-policy-engine" }}
+{{ site.data.schemas.admission-policy-engine.crds.ratify.policy-customresourcedefinition | format_crd: "admission-policy-engine" }}
+{{ site.data.schemas.admission-policy-engine.crds.ratify.store-customresourcedefinition | format_crd: "admission-policy-engine" }}
+{{ site.data.schemas.admission-policy-engine.crds.ratify.verifier-customresourcedefinition | format_crd: "admission-policy-engine" }}
+{{ site.data.schemas.admission-policy-engine.crds.security-policy | format_crd: "admission-policy-engine" }}
 
 ### Модуль admission-policy-engine: FAQ
 
@@ -11442,8 +11323,13 @@ spec:
 {{ site.data.schemas['cert-manager'].config-values | format_module_configuration: moduleKebabName }}
 
 ### Модуль cert-manager: custom resources
-
-Для запроса сертификатов модуль использует стандартный custom resource cert-manager — Certificate.
+#### {{ site.data.i18n.common['parameters'][page.lang] }}
+{{ site.data.schemas.cert-manager.crds.crd-certificaterequests | format_crd: "cert-manager" }}
+{{ site.data.schemas.cert-manager.crds.crd-certificates | format_crd: "cert-manager" }}
+{{ site.data.schemas.cert-manager.crds.crd-challenges | format_crd: "cert-manager" }}
+{{ site.data.schemas.cert-manager.crds.crd-clusterissuers | format_crd: "cert-manager" }}
+{{ site.data.schemas.cert-manager.crds.crd-issuers | format_crd: "cert-manager" }}
+{{ site.data.schemas.cert-manager.crds.crd-orders | format_crd: "cert-manager" }}
 
 ### Модуль cert-manager: FAQ
 
@@ -11916,8 +11802,9 @@ CAA record does not match issuer
 {{ site.data.schemas['multitenancy-manager'].config-values | format_module_configuration: moduleKebabName }}
 
 ### Модуль multitenancy-manager: Custom Resources
-
-<!-- SCHEMA -->
+#### {{ site.data.i18n.common['parameters'][page.lang] }}
+{{ site.data.schemas.multitenancy-manager.crds.projects | format_crd: "multitenancy-manager" }}
+{{ site.data.schemas.multitenancy-manager.crds.projecttemplate | format_crd: "multitenancy-manager" }}
 
 ### Модуль operator-trivy
 
@@ -12055,8 +11942,13 @@ kubectl get clustercompliancereports.aquasecurity.github.io cis -ojson |
 {{ site.data.schemas['user-authn'].config-values | format_module_configuration: moduleKebabName }}
 
 ### Модуль user-authn: Custom Resources
-
-<!-- SCHEMA -->
+#### {{ site.data.i18n.common['parameters'][page.lang] }}
+{{ site.data.schemas.user-authn.crds.dex-authenticator | format_crd: "user-authn" }}
+{{ site.data.schemas.user-authn.crds.dex-client | format_crd: "user-authn" }}
+{{ site.data.schemas.user-authn.crds.dex-provider | format_crd: "user-authn" }}
+{{ site.data.schemas.user-authn.crds.dex | format_crd: "user-authn" }}
+{{ site.data.schemas.user-authn.crds.group | format_crd: "user-authn" }}
+{{ site.data.schemas.user-authn.crds.user | format_crd: "user-authn" }}
 
 ### Модуль user-authn: FAQ
 
@@ -12471,8 +12363,9 @@ kubectl get clusterrole -A -o jsonpath="{range .items[?(@.metadata.annotations.u
 {{ site.data.schemas['user-authz'].config-values | format_module_configuration: moduleKebabName }}
 
 ### Модуль user-authz: Custom Resources
-
-<!-- SCHEMA -->
+#### {{ site.data.i18n.common['parameters'][page.lang] }}
+{{ site.data.schemas.user-authz.crds.authorizationrule | format_crd: "user-authz" }}
+{{ site.data.schemas.user-authz.crds.clusterauthorizationrule | format_crd: "user-authz" }}
 
 ### Модуль user-authz: FAQ
 
@@ -12912,8 +12805,8 @@ Deckhouse запускает агенты Falco (объединены в DaemonS
 {{ site.data.schemas['modules'].config-values | format_module_configuration: moduleKebabName }}
 
 ### Модуль runtime-audit-engine: Custom Resources
-
-<!-- SCHEMA -->
+#### {{ site.data.i18n.common['parameters'][page.lang] }}
+{{ site.data.schemas.modules.650-runtime-audit-engine.crds.falco-audit-rules | format_crd: "modules" }}
 
 ### Модуль runtime-audit-engine: примеры
 
@@ -13335,8 +13228,8 @@ bash -c "for file in $(ls /mnt/secrets); do export  $file=$(cat /mnt/secrets/$fi
 {{ site.data.schemas['secrets-store-integration'].config-values | format_module_configuration: moduleKebabName }}
 
 ### Модуль secrets-store-integration: Custom Resources
-
-<!-- SCHEMA -->
+#### {{ site.data.i18n.common['parameters'][page.lang] }}
+{{ site.data.schemas.secrets-store-integration.crds.secrets-store-import | format_crd: "secrets-store-integration" }}
 ## Подсистема Хранение данных
 
 ### Модуль snapshot-controller
@@ -13373,8 +13266,10 @@ CSI-драйверы в Deckhouse, которые поддерживают сн�
 {{ site.data.schemas['csi-ceph'].config-values | format_module_configuration: moduleKebabName }}
 
 ### Модуль csi-ceph: custom resources
-
-<!-- SCHEMA -->
+#### {{ site.data.i18n.common['parameters'][page.lang] }}
+{{ site.data.schemas.csi-ceph.crds.cephclusterauthentication | format_crd: "csi-ceph" }}
+{{ site.data.schemas.csi-ceph.crds.cephclusterconnection | format_crd: "csi-ceph" }}
+{{ site.data.schemas.csi-ceph.crds.cephstorageclass | format_crd: "csi-ceph" }}
 
 ### Модуль csi-ceph: примеры
 
@@ -13859,8 +13754,8 @@ kubectl -n d8-sds-local-volume get pod -owide
 {{ site.data.schemas['sds-local-volume'].config-values | format_module_configuration: moduleKebabName }}
 
 ### Модуль sds-local-volume: Custom Resources
-
-<!-- SCHEMA -->
+#### {{ site.data.i18n.common['parameters'][page.lang] }}
+{{ site.data.schemas.sds-local-volume.crds.localstorageclass | format_crd: "sds-local-volume" }}
 
 ### Модуль sds-local-volume: FAQ
 
@@ -14228,12 +14123,13 @@ echo "Data migration completed"
 {{ site.data.schemas['sds-node-configurator'].config-values | format_module_configuration: moduleKebabName }}
 
 ### Модуль sds-node-configurator: Custom Resources
-
-Работоспособность модуля гарантируется только при использовании стоковых ядер, поставляемых вместе с [поддерживаемыми дистрибутивами](/supported_versions.html#linux).
-
-Работоспособность модуля при использовании других ядер или дистрибутивов возможна, но не гарантируется.
-
-<!-- SCHEMA -->
+#### {{ site.data.i18n.common['parameters'][page.lang] }}
+{{ site.data.schemas.sds-node-configurator.crds.blockdevices | format_crd: "sds-node-configurator" }}
+{{ site.data.schemas.sds-node-configurator.crds.lvmlogicalvolume | format_crd: "sds-node-configurator" }}
+{{ site.data.schemas.sds-node-configurator.crds.lvmlogicalvolumesnapshot | format_crd: "sds-node-configurator" }}
+{{ site.data.schemas.sds-node-configurator.crds.lvmvolumegroup | format_crd: "sds-node-configurator" }}
+{{ site.data.schemas.sds-node-configurator.crds.lvmvolumegroupbackup | format_crd: "sds-node-configurator" }}
+{{ site.data.schemas.sds-node-configurator.crds.lvmvolumegroupset | format_crd: "sds-node-configurator" }}
 
 ###  Модуль sds-node-configurator: FAQ
 {{< alert level="warning" >}}
