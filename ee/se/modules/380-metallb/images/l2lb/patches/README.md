@@ -1,5 +1,9 @@
 # Patches
 
+## 000-update-go-libraries.patch
+
+Update golang libraries and dependencies.
+
 ## 001-l2lb-speaker-preferred-node.patch
 
 Add preferred L2 speaker node feature.
@@ -15,7 +19,3 @@ The controllers logic is rewritten to watch this new private resource.
 ## 003-l2lb-annotation-for-pools.path
 
 Add the ability to use only IPAddressPool with the annotation 'heritage=deckhouse'.
-
-## 004-update-go-libraries.patch
-
-Update golang.org/x/net and tidy.

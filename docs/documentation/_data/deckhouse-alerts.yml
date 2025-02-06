@@ -1597,49 +1597,49 @@ alerts:
         Prometheus is unable to scrape machine-controller-manager's metrics.
       severity: "8"
       markupFormat: markdown
-    - name: D8MetalLBBGPSessionDown
+    - name: D8MetallbBGPSessionDown
       sourceFile: ee/modules/380-metallb/monitoring/prometheus-rules/metallb.yaml
       moduleUrl: 380-metallb
       module: metallb
       edition: ee
       description: |
-        {{ $labels.job }} — MetalLB {{ $labels.container }} on {{ $labels.pod}} has BGP session {{ $labels.peer }} down.
+        {{ $labels.job }} — Metallb {{ $labels.container }} on {{ $labels.pod}} has BGP session {{ $labels.peer }} down.
         Details are in logs:
         ```
         kubectl -n d8-metallb logs daemonset/speaker -c speaker
         ```
       summary: |
-        MetalLB BGP session down.
+        Metallb BGP session down.
       severity: "4"
       markupFormat: markdown
-    - name: D8MetalLBConfigNotLoaded
+    - name: D8MetallbConfigNotLoaded
       sourceFile: ee/modules/380-metallb/monitoring/prometheus-rules/metallb.yaml
       moduleUrl: 380-metallb
       module: metallb
       edition: ee
       description: |
-        {{ $labels.job }} — MetalLB {{ $labels.container }} on {{ $labels.pod}} has not loaded.
+        {{ $labels.job }} — Metallb {{ $labels.container }} on {{ $labels.pod}} has not loaded.
         To figure out the problem, check controller logs:
         ```
         kubectl -n d8-metallb logs deploy/controller -c controller
         ```
       summary: |
-        MetalLB config not loaded.
+        Metallb config not loaded.
       severity: "4"
       markupFormat: markdown
-    - name: D8MetalLBConfigStale
+    - name: D8MetallbConfigStale
       sourceFile: ee/modules/380-metallb/monitoring/prometheus-rules/metallb.yaml
       moduleUrl: 380-metallb
       module: metallb
       edition: ee
       description: |
-        {{ $labels.job }} — MetalLB {{ $labels.container }} on {{ $labels.pod}} has run on a stale configuration, because the latest config failed to load.
+        {{ $labels.job }} — Metallb {{ $labels.container }} on {{ $labels.pod}} has run on a stale configuration, because the latest config failed to load.
         To figure out the problem, check controller logs:
         ```
         kubectl -n d8-metallb logs deploy/controller -c controller
         ```
       summary: |
-        MetalLB running on a stale configuration, because the latest config failed to load.
+        Metallb running on a stale configuration, because the latest config failed to load.
       severity: "4"
       markupFormat: markdown
     - name: D8MetallbNotSupportedServiceAnnotationsDetected
@@ -1651,13 +1651,25 @@ alerts:
         Annotation '{{$labels.annotation}}' is deprecated for Service '{{$labels.name}}' located in namespace '{{$labels.namespace}}'
         Service annotations below don't take effect now:
           `metallb.universe.tf/ip-allocated-from-pool` — just wipe it out.
-          `metallb.universe.tf/address-pool` — use `.spec.loadBalancerClass` parameter or `network.deckhouse.io/metal-load-balancer-class` annotation with corresponding MetalLoadBalancerClass reference.
+          `metallb.universe.tf/address-pool` — use `network.deckhouse.io/metal-load-balancer-class` annotation or `spec.loadBalancerClass` with corresponding MetalLoadBalancerClass reference.
           `metallb.universe.tf/loadBalancerIPs` — use `network.deckhouse.io/load-balancer-ips: <ip>` instead.
+          `metallb.universe.tf/allow-shared-ip` — use `network.deckhouse.io/load-balancer-shared-ip-key` instead.
 
           Important! Existing LoadBalancer Services of the Deckhouse were migrated automatically, but the new ones won't.
       summary: |
-        D8 MetalLB settings is outdated
+        The metallb settings is outdated.
       severity: "4"
+      markupFormat: markdown
+    - name: D8MetallbObsoleteLayer2PoolsAreUsed
+      sourceFile: ee/se/modules/380-metallb/monitoring/prometheus-rules/services.yaml
+      moduleUrl: 380-metallb
+      module: metallb
+      edition: se
+      description: |
+        In ModuleConfig version 2, addressPool '{{$labels.name}}' of type “layer2” are ignored. They should be removed from the configuration.
+      summary: |
+        The metallb module has obsolete layer2 pools configured.
+      severity: "7"
       markupFormat: markdown
     - name: D8MetallbUpdateMCVersionRequired
       sourceFile: ee/se/modules/380-metallb/monitoring/prometheus-rules/services.yaml
@@ -1665,9 +1677,9 @@ alerts:
       module: metallb
       edition: se
       description: |
-        ModuleConfig version for MetaLB needs to be increased
+        ModuleConfig version for metallb needs to be increased
       summary: |
-        D8 MetalLB settings is outdated
+        The metallb settings is outdated.
       severity: "5"
       markupFormat: markdown
     - name: D8NeedDecreaseEtcdQuotaBackendBytes
