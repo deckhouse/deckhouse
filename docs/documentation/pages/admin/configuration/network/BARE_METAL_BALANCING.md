@@ -43,8 +43,6 @@ Thus:
 
 ### Example of metallb usage in L2 LoadBalancer mode
 
-{% raw %}
-
 Enable the module:
 
 ```yaml
