@@ -44,6 +44,8 @@ git:
     install:
     - '**/*'
 shell:
+  beforeInstall:
+    - apt-get install -y python3
   install:
     - /binary_replace.sh -i "{{ $simpleBridgeBinaries }}" -o /relocate
     - |
