@@ -114,7 +114,7 @@ do
         do
           if [[ $file == *"${PAGES_ORDER[ixp]}"* ]]; then
             echo "\n### "$(getname $file) >> $PATH_TO_PDF_PAGE
-            if [[ $file == *""CR_RU.md""* ]]; then
+            if [[ $file == *""CONFIGURATION_RU.md""* ]]; then
               schema_path="${PATH_TO_MODULES}/${MODULE_PATH}/crds"
               module_path=$(echo $schema_path | cut -d\/ -f-2 )
               module_file_name=$(echo $schema_path | awk -F\/ '{print $NF}')
@@ -153,7 +153,7 @@ do
         do
           if [[ $file == *"${PAGES_ORDER[ixp]}"* ]]; then
             echo "\n### "$(getname $file) >> $PATH_TO_PDF_PAGE
-            if [[ $file == *""CR_RU.md""* ]]; then
+            if [[ $file == *""CONFIGURATION_RU.md""* ]]; then
               schema_path="${PATH_TO_MODULES}/${MODULE_PATH}/crds"
               module_path=$(echo $schema_path | cut -d\/ -f-2 )
               module_file_name=$(echo $schema_path | awk -F\/ '{print $NF}')
@@ -197,7 +197,7 @@ do
         do
           if [[ $file == *"${PAGES_ORDER[ixp]}"* ]]; then
             echo "\n### "$(getname $file) >> $PATH_TO_PDF_PAGE
-            if [[ $file == *""CR_RU.md""* ]]; then
+            if [[ $file == *""CONFIGURATION_RU.md""* ]]; then
               schema_path="${PATH_TO_MODULES}/${MODULE_PATH}/crds"
               module_path=$(echo $schema_path | cut -d\/ -f-2 )
               module_file_name=$(echo $schema_path | awk -F\/ '{print $NF}')
@@ -241,7 +241,7 @@ do
         do
           if [[ $file == *"${PAGES_ORDER[ixp]}"* ]]; then
             echo "\n### "$(getname $file) >> $PATH_TO_PDF_PAGE
-            if [[ $file == *""CR_RU.md""* ]]; then
+            if [[ $file == *""CONFIGURATION_RU.md""* ]]; then
               schema_path="${PATH_TO_MODULES}/${MODULE_PATH}/crds"
               module_path=$(echo $schema_path | cut -d\/ -f-2 )
               module_file_name=$(echo $schema_path | awk -F\/ '{print $NF}')
@@ -288,7 +288,7 @@ do
         do
           if [[ $file == *"${PAGES_ORDER[ixp]}"* ]]; then
             echo "\n### "$(getname $file) >> $PATH_TO_PDF_PAGE
-              if [[ $file == *""CR_RU.md""* ]]; then
+              if [[ $file == *""CONFIGURATION_RU.md""* ]]; then
                 schema_path="${MODULE_PATH}/crds"
                 module_path=$(echo $schema_path | cut -d\/ -f-2 )
                 module_file_name=$(echo $schema_path | awk -F\/ '{print $NF}')
@@ -315,7 +315,7 @@ do
         do
           if [[ $file == *"${PAGES_ORDER[ixp]}"* ]]; then
             echo "\n### "$(getname $file) >> $PATH_TO_PDF_PAGE
-              if [[ $file == *""CR_RU.md""* ]]; then
+              if [[ $file == *""CONFIGURATION_RU.md""* ]]; then
                 schema_path="${MODULE_PATH}/crds"
                 module_path=$(echo $schema_path | cut -d\/ -f-2 )
                 module_file_name=$(echo $schema_path | awk -F\/ '{print $NF}')
@@ -342,7 +342,7 @@ do
               do
                 if [[ $file == *"${PAGES_ORDER[ixp]}"* ]]; then
                   echo "\n### "$(getname $file) >> $PATH_TO_PDF_PAGE
-                  if [[ $file == *""CR_RU.md""* ]]; then
+                  if [[ $file == *""CONFIGURATION_RU.md""* ]]; then
                     schema_path="${PATH_TO_MODULES}/${MODULE_PATH}/crds"
                     module_path=$(echo $schema_path | cut -d\/ -f-2 )
                     module_file_name=$(echo $schema_path | awk -F\/ '{print $NF}')
@@ -384,7 +384,7 @@ do
         do
           if [[ $file == *"${PAGES_ORDER[ixp]}"* ]]; then
             echo "\n### "$(getname $file) >> $PATH_TO_PDF_PAGE
-            if [[ $file == *""CR_RU.md""* ]]; then
+            if [[ $file == *""CONFIGURATION_RU.md""* ]]; then
               schema_path="${PATH_TO_MODULES}/${MODULE_PATH}/crds"
               module_path=$(echo $schema_path | cut -d\/ -f-2 )
               module_file_name=$(echo $schema_path | awk -F\/ '{print $NF}')

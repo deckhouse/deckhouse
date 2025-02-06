@@ -1038,6 +1038,7 @@ spec:
 
 ### Модуль chrony: настройки
 
+ 
 <!-- SCHEMA -->
 
 #### Пример конфигурации
@@ -1056,6 +1057,8 @@ spec:
       - time.google.com
   version: 1
 ```
+#### {{ site.data.i18n.common['parameters'][page.lang] }}
+{{ site.data.schemas['chrony'].config-values | format_module_configuration: moduleKebabName }}
 
 ### Модуль chrony: FAQ
 
@@ -1176,14 +1179,14 @@ Cilium полностью заменяет собой функционал мо�
 
 ### Модуль cni-cilium: настройки
 
-<!-- SCHEMA -->
-
-### Модуль cni-cilium: Custom Resources
-
  
 <!-- SCHEMA -->
 #### {{ site.data.i18n.common['parameters'][page.lang] }}
 {{ site.data.schemas['cni-cilium'].config-values | format_module_configuration: moduleKebabName }}
+
+### Модуль cni-cilium: Custom Resources
+
+<!-- SCHEMA -->
 
 ### Модуль cni-cilium: примеры
 
@@ -1300,6 +1303,8 @@ kubectl -n d8-cni-cilium delete secret/hubble-basic-auth
 ```
 
 > **Внимание!** Параметр `auth.password` больше не поддерживается.
+#### {{ site.data.i18n.common['parameters'][page.lang] }}
+{{ site.data.schemas['cilium-hubble'].config-values | format_module_configuration: moduleKebabName }}
 
 ### Управление control plane
 
@@ -1392,14 +1397,14 @@ kubectl -n d8-cni-cilium delete secret/hubble-basic-auth
 
 Некоторые параметры кластера, влияющие на управление control plane, также берутся из ресурса [ClusterConfiguration](./installing/configuration.html#clusterconfiguration).
 
-<!-- SCHEMA -->
-
-### Управление control plane: Custom Resources
-
  
 <!-- SCHEMA -->
 #### {{ site.data.i18n.common['parameters'][page.lang] }}
 {{ site.data.schemas['control-plane-manager'].config-values | format_module_configuration: moduleKebabName }}
+
+### Управление control plane: Custom Resources
+
+<!-- SCHEMA -->
 
 ### Управление control plane: примеры
 
@@ -2226,6 +2231,8 @@ Kubelet использует клиентский TLS сертификат(`/var
 {% include module-bundle.liquid %}
 
 Модуль не имеет настроек.
+#### {{ site.data.i18n.common['parameters'][page.lang] }}
+{{ site.data.schemas['flow-schema'].config-values | format_module_configuration: moduleKebabName }}
 
 ### Модуль flow-schema: FAQ
 
@@ -2340,14 +2347,14 @@ kubectl get --raw /debug/api_priority_and_fairness/dump_queues
 
 Конфигурация Ingress-контроллеров выполняется с помощью Custom Resource [IngressNginxController](cr.html#ingressnginxcontroller).
 
-<!-- SCHEMA -->
-
-### Модуль ingress-nginx: Custom Resources
-
  
 <!-- SCHEMA -->
 #### {{ site.data.i18n.common['parameters'][page.lang] }}
 {{ site.data.schemas['ingress-nginx'].config-values | format_module_configuration: moduleKebabName }}
+
+### Модуль ingress-nginx: Custom Resources
+
+<!-- SCHEMA -->
 
 ### Модуль ingress-nginx: пример
 
@@ -3149,6 +3156,7 @@ istio-сайдкары также вносят задержку в сетевы�
 
 ### Модуль istio: настройки
 
+ 
 <!-- SCHEMA -->
 
 #### Аутентификация
@@ -3169,13 +3177,12 @@ kubectl -n d8-istio delete secret/kiali-basic-auth
 ```
 
 > **Внимание!** Параметр `auth.password` больше не поддерживается.
+#### {{ site.data.i18n.common['parameters'][page.lang] }}
+{{ site.data.schemas['istio'].config-values | format_module_configuration: moduleKebabName }}
 
 ### Модуль istio: Custom Resources
 
- 
 <!-- SCHEMA -->
-#### {{ site.data.i18n.common['parameters'][page.lang] }}
-{{ site.data.schemas['istio'].config-values | format_module_configuration: moduleKebabName }}
 
 ### Модуль istio: Custom Resources (от istio.io)
 
@@ -3276,8 +3283,6 @@ Reference.
 Reference
 
 Данный ресурс позволяет ограничить количество сервисов, информация о которых будет передана в сайдкар istio-proxy.
-#### {{ site.data.i18n.common['parameters'][page.lang] }}
-{{ site.data.schemas['istio'].config-values | format_module_configuration: moduleKebabName }}
 
 ### Модуль istio: примеры
 
@@ -4289,14 +4294,14 @@ rm /var/lib/bashible/configuration_checksum
 
 ### Управление узлами: настройки
 
-<!-- SCHEMA -->
-
-### Управление узлами: custom resources
-
  
 <!-- SCHEMA -->
 #### {{ site.data.i18n.common['parameters'][page.lang] }}
 {{ site.data.schemas['node-manager'].config-values | format_module_configuration: moduleKebabName }}
+
+### Управление узлами: custom resources
+
+<!-- SCHEMA -->
 
 ### Управление узлами: примеры
 
@@ -5932,7 +5937,10 @@ metadata:
 
 ### Модуль kube-dns: настройки
 
+ 
 <!-- SCHEMA -->
+#### {{ site.data.i18n.common['parameters'][page.lang] }}
+{{ site.data.schemas['kube-dns'].config-values | format_module_configuration: moduleKebabName }}
 
 ### Модуль kube-dns: примеры
 
@@ -6058,13 +6066,12 @@ spec:
 {% include module-bundle.liquid %}
 
 Модуль не требует конфигурации.
+#### {{ site.data.i18n.common['parameters'][page.lang] }}
+{{ site.data.schemas['local-path-provisioner'].config-values | format_module_configuration: moduleKebabName }}
 
 ### Модуль local-path-provisioner: custom resources
 
- 
 <!-- SCHEMA -->
-#### {{ site.data.i18n.common['parameters'][page.lang] }}
-{{ site.data.schemas['local-path-provisioner'].config-values | format_module_configuration: moduleKebabName }}
 
 ### Модуль local-path-provisioner: примеры
 
@@ -6146,7 +6153,10 @@ storageClass: localpath-system
 
 ### Модуль namespace-configurator: настройки
 
+ 
 <!-- SCHEMA -->
+#### {{ site.data.i18n.common['parameters'][page.lang] }}
+{{ site.data.schemas['namespace-configurator'].config-values | format_module_configuration: moduleKebabName }}
 
 ### Модуль namespace-configurator: примеры
 
@@ -6213,6 +6223,8 @@ spec:
 {% include module-bundle.liquid %}
 
 Модуль не имеет настроек.
+#### {{ site.data.i18n.common['parameters'][page.lang] }}
+{{ site.data.schemas['priority-class'].config-values | format_module_configuration: moduleKebabName }}
 ## Подсистема Deckhouse
 
 ### Модуль console
@@ -6269,7 +6281,10 @@ spec:
 
 ### Конфигурация
 
+ 
 <!-- SCHEMA -->
+#### {{ site.data.i18n.common['parameters'][page.lang] }}
+{{ site.data.schemas['console'].config-values | format_module_configuration: moduleKebabName }}
 
 ### Модуль deckhouse
 
@@ -6358,7 +6373,10 @@ spec:
 
 ### Модуль deckhouse: настройки
 
+ 
 <!-- SCHEMA -->
+#### {{ site.data.i18n.common['parameters'][page.lang] }}
+{{ site.data.schemas['deckhouse'].config-values | format_module_configuration: moduleKebabName }}
 
 ### Модуль deckhouse: FAQ
 
@@ -6476,7 +6494,10 @@ spec:
   version: 1
 ```
 
+ 
 <!-- SCHEMA -->
+#### {{ site.data.i18n.common['parameters'][page.lang] }}
+{{ site.data.schemas['deckhouse-tools'].config-values | format_module_configuration: moduleKebabName }}
 
 ### Модуль deckhouse-tools: примеры
 
@@ -6495,6 +6516,7 @@ spec:
 
 У модуля нет обязательных настроек.
 
+ 
 <!-- SCHEMA -->
 
 #### Аутентификация
@@ -6515,6 +6537,8 @@ kubectl -n d8-system delete secret/documentation-basic-auth
 ```
 
 > **Внимание!** Параметр `auth.password` больше не поддерживается.
+#### {{ site.data.i18n.common['parameters'][page.lang] }}
+{{ site.data.schemas['documentation'].config-values | format_module_configuration: moduleKebabName }}
 
 ### Модуль documentation: примеры
 
@@ -6555,6 +6579,7 @@ spec:
 
 ### Модуль extended-monitoring: настройки
 
+ 
 <!-- SCHEMA -->
 
 #### Как использовать `extended-monitoring-exporter`
@@ -6670,6 +6695,8 @@ Non-namespaced Kubernetes-объекты не нуждаются в лейбла
   max by (namespace, statefulset) (extended_monitoring_statefulset_threshold{threshold="replicas-not-ready"})
 )
 ```
+#### {{ site.data.i18n.common['parameters'][page.lang] }}
+{{ site.data.schemas['extended-monitoring'].config-values | format_module_configuration: moduleKebabName }}
 
 ### Модуль loki
 
@@ -6685,6 +6712,7 @@ Non-namespaced Kubernetes-объекты не нуждаются в лейбла
 
 ### Модуль loki: настройки
 
+ 
 <!-- SCHEMA -->
 
 #### Пример конфигурации
@@ -6702,6 +6730,8 @@ spec:
   enabled: true
   version: 1
 ```
+#### {{ site.data.i18n.common['parameters'][page.lang] }}
+{{ site.data.schemas['loki'].config-values | format_module_configuration: moduleKebabName }}
 
 ### Модуль loki: примеры
 
@@ -6853,14 +6883,14 @@ Extra labels добавляются на этапе `Destination`, поэтом�
 
 Модуль начинает чтение логов, только если создан pipeline в виде связанных между собой [ClusterLoggingConfig](cr.html#clusterloggingconfig)/[PodLoggingConfig](cr.html#podloggingconfig) и [ClusterLogDestination](cr.html#clusterlogdestination).
 
-<!-- SCHEMA -->
-
-### Модуль log-shipper: Custom Resources
-
  
 <!-- SCHEMA -->
 #### {{ site.data.i18n.common['parameters'][page.lang] }}
 {{ site.data.schemas['log-shipper'].config-values | format_module_configuration: moduleKebabName }}
+
+### Модуль log-shipper: Custom Resources
+
+<!-- SCHEMA -->
 
 ### Модуль log-shipper: примеры
 
@@ -7637,6 +7667,8 @@ spec:
 {% include module-alerts.liquid %}
 
 {% include module-bundle.liquid %}
+#### {{ site.data.i18n.common['parameters'][page.lang] }}
+{{ site.data.schemas['monitoring-custom'].config-values | format_module_configuration: moduleKebabName }}
 
 ### Модуль monitoring-kubernetes
 
@@ -7655,7 +7687,10 @@ spec:
 
 ### Модуль monitoring-kubernetes: настройки
 
+ 
 <!-- SCHEMA -->
+#### {{ site.data.i18n.common['parameters'][page.lang] }}
+{{ site.data.schemas['monitoring-kubernetes'].config-values | format_module_configuration: moduleKebabName }}
 
 ### Мониторинг control plane
 
@@ -7670,6 +7705,8 @@ spec:
 {% include module-alerts.liquid %}
 
 {% include module-bundle.liquid %}
+#### {{ site.data.i18n.common['parameters'][page.lang] }}
+{{ site.data.schemas['monitoring-kubernetes-control-plane'].config-values | format_module_configuration: moduleKebabName }}
 
 ### Модуль monitoring-ping
 
@@ -7690,7 +7727,10 @@ spec:
 
 У модуля нет обязательных настроек.
 
+ 
 <!-- SCHEMA -->
+#### {{ site.data.i18n.common['parameters'][page.lang] }}
+{{ site.data.schemas['monitoring-ping'].config-values | format_module_configuration: moduleKebabName }}
 
 ### Модуль operator-prometheus
 
@@ -7861,7 +7901,10 @@ spec:
 
 ### Модуль operator-prometheus: настройки
 
+ 
 <!-- SCHEMA -->
+#### {{ site.data.i18n.common['parameters'][page.lang] }}
+{{ site.data.schemas['operator-prometheus'].config-values | format_module_configuration: moduleKebabName }}
 
 ### Prometheus-operator: примеры конфигурации
 
@@ -7969,6 +8012,7 @@ Deckhouse может интегрироваться с большим колич
 
 Модуль не требует обязательной конфигурации (все работает из коробки).
 
+ 
 <!-- SCHEMA -->
 
 #### Аутентификация
@@ -8000,13 +8044,12 @@ kubectl -n d8-monitoring delete secret/basic-auth
   * Если используется `local-storage` и требуется изменить `retentionSize`, необходимо вручную изменить размер PV и PVC в нужную сторону. **Внимание!** Для расчета берется значение из `.status.capacity.storage` PVC, поскольку оно отражает реальный размер PV в случае ручного ресайза.
 * `40 GiB` — размер PersistentVolumeClaim создаваемого по умолчанию.
 * Размер дисков Prometheus можно изменить стандартным для Kubernetes способом (если в StorageClass это разрешено), отредактировав в PersistentVolumeClaim поле `.spec.resources.requests.storage`.
+#### {{ site.data.i18n.common['parameters'][page.lang] }}
+{{ site.data.schemas['prometheus'].config-values | format_module_configuration: moduleKebabName }}
 
 ### Prometheus-мониторинг: custom resources
 
- 
 <!-- SCHEMA -->
-#### {{ site.data.i18n.common['parameters'][page.lang] }}
-{{ site.data.schemas['prometheus'].config-values | format_module_configuration: moduleKebabName }}
 
 ### Prometheus-мониторинг: FAQ
 
@@ -8709,6 +8752,7 @@ spec:
 
 ### Модуль extended-monitoring: настройки
 
+ 
 <!-- SCHEMA -->
 
 #### Как использовать `extended-monitoring-exporter`
@@ -8824,6 +8868,8 @@ Non-namespaced Kubernetes-объекты не нуждаются в лейбла
   max by (namespace, statefulset) (extended_monitoring_statefulset_threshold{threshold="replicas-not-ready"})
 )
 ```
+#### {{ site.data.i18n.common['parameters'][page.lang] }}
+{{ site.data.schemas['extended-monitoring'].config-values | format_module_configuration: moduleKebabName }}
 
 ### Модуль loki
 
@@ -8839,6 +8885,7 @@ Non-namespaced Kubernetes-объекты не нуждаются в лейбла
 
 ### Модуль loki: настройки
 
+ 
 <!-- SCHEMA -->
 
 #### Пример конфигурации
@@ -8856,6 +8903,8 @@ spec:
   enabled: true
   version: 1
 ```
+#### {{ site.data.i18n.common['parameters'][page.lang] }}
+{{ site.data.schemas['loki'].config-values | format_module_configuration: moduleKebabName }}
 
 ### Модуль loki: примеры
 
@@ -9007,14 +9056,14 @@ Extra labels добавляются на этапе `Destination`, поэтом�
 
 Модуль начинает чтение логов, только если создан pipeline в виде связанных между собой [ClusterLoggingConfig](cr.html#clusterloggingconfig)/[PodLoggingConfig](cr.html#podloggingconfig) и [ClusterLogDestination](cr.html#clusterlogdestination).
 
-<!-- SCHEMA -->
-
-### Модуль log-shipper: Custom Resources
-
  
 <!-- SCHEMA -->
 #### {{ site.data.i18n.common['parameters'][page.lang] }}
 {{ site.data.schemas['log-shipper'].config-values | format_module_configuration: moduleKebabName }}
+
+### Модуль log-shipper: Custom Resources
+
+<!-- SCHEMA -->
 
 ### Модуль log-shipper: примеры
 
@@ -9791,6 +9840,8 @@ spec:
 {% include module-alerts.liquid %}
 
 {% include module-bundle.liquid %}
+#### {{ site.data.i18n.common['parameters'][page.lang] }}
+{{ site.data.schemas['monitoring-custom'].config-values | format_module_configuration: moduleKebabName }}
 
 ### Модуль monitoring-kubernetes
 
@@ -9809,7 +9860,10 @@ spec:
 
 ### Модуль monitoring-kubernetes: настройки
 
+ 
 <!-- SCHEMA -->
+#### {{ site.data.i18n.common['parameters'][page.lang] }}
+{{ site.data.schemas['monitoring-kubernetes'].config-values | format_module_configuration: moduleKebabName }}
 
 ### Мониторинг control plane
 
@@ -9824,6 +9878,8 @@ spec:
 {% include module-alerts.liquid %}
 
 {% include module-bundle.liquid %}
+#### {{ site.data.i18n.common['parameters'][page.lang] }}
+{{ site.data.schemas['monitoring-kubernetes-control-plane'].config-values | format_module_configuration: moduleKebabName }}
 
 ### Модуль monitoring-ping
 
@@ -9844,7 +9900,10 @@ spec:
 
 У модуля нет обязательных настроек.
 
+ 
 <!-- SCHEMA -->
+#### {{ site.data.i18n.common['parameters'][page.lang] }}
+{{ site.data.schemas['monitoring-ping'].config-values | format_module_configuration: moduleKebabName }}
 
 ### Модуль operator-prometheus
 
@@ -10015,7 +10074,10 @@ spec:
 
 ### Модуль operator-prometheus: настройки
 
+ 
 <!-- SCHEMA -->
+#### {{ site.data.i18n.common['parameters'][page.lang] }}
+{{ site.data.schemas['operator-prometheus'].config-values | format_module_configuration: moduleKebabName }}
 
 ### Prometheus-operator: примеры конфигурации
 
@@ -10123,6 +10185,7 @@ Deckhouse может интегрироваться с большим колич
 
 Модуль не требует обязательной конфигурации (все работает из коробки).
 
+ 
 <!-- SCHEMA -->
 
 #### Аутентификация
@@ -10154,13 +10217,12 @@ kubectl -n d8-monitoring delete secret/basic-auth
   * Если используется `local-storage` и требуется изменить `retentionSize`, необходимо вручную изменить размер PV и PVC в нужную сторону. **Внимание!** Для расчета берется значение из `.status.capacity.storage` PVC, поскольку оно отражает реальный размер PV в случае ручного ресайза.
 * `40 GiB` — размер PersistentVolumeClaim создаваемого по умолчанию.
 * Размер дисков Prometheus можно изменить стандартным для Kubernetes способом (если в StorageClass это разрешено), отредактировав в PersistentVolumeClaim поле `.spec.resources.requests.storage`.
+#### {{ site.data.i18n.common['parameters'][page.lang] }}
+{{ site.data.schemas['prometheus'].config-values | format_module_configuration: moduleKebabName }}
 
 ### Prometheus-мониторинг: custom resources
 
- 
 <!-- SCHEMA -->
-#### {{ site.data.i18n.common['parameters'][page.lang] }}
-{{ site.data.schemas['prometheus'].config-values | format_module_configuration: moduleKebabName }}
 
 ### Prometheus-мониторинг: FAQ
 
@@ -11018,14 +11080,14 @@ spec:
 
 ### Модуль admission-policy-engine: настройки
 
-<!-- SCHEMA -->
-
-### Модуль admission-policy-engine: custom resources
-
  
 <!-- SCHEMA -->
 #### {{ site.data.i18n.common['parameters'][page.lang] }}
 {{ site.data.schemas['admission-policy-engine'].config-values | format_module_configuration: moduleKebabName }}
+
+### Модуль admission-policy-engine: custom resources
+
+<!-- SCHEMA -->
 
 ### Модуль admission-policy-engine: Custom Resources (от Gatekeeper)
 
@@ -11152,8 +11214,6 @@ spec:
     - apiGroups: [ "*" ]
       kinds: [ "Pod" ]
 ```
-#### {{ site.data.i18n.common['parameters'][page.lang] }}
-{{ site.data.schemas['admission-policy-engine'].config-values | format_module_configuration: moduleKebabName }}
 
 ### Модуль admission-policy-engine: FAQ
 
@@ -11376,13 +11436,14 @@ spec:
 
 У модуля нет обязательных настроек.
 
+ 
 <!-- SCHEMA -->
+#### {{ site.data.i18n.common['parameters'][page.lang] }}
+{{ site.data.schemas['cert-manager'].config-values | format_module_configuration: moduleKebabName }}
 
 ### Модуль cert-manager: custom resources
 
 Для запроса сертификатов модуль использует стандартный custom resource cert-manager — Certificate.
-#### {{ site.data.i18n.common['parameters'][page.lang] }}
-{{ site.data.schemas['cert-manager'].config-values | format_module_configuration: moduleKebabName }}
 
 ### Модуль cert-manager: FAQ
 
@@ -11849,14 +11910,14 @@ CAA record does not match issuer
 
 У модуля нет обязательных настроек.
 
-<!-- SCHEMA -->
-
-### Модуль multitenancy-manager: Custom Resources
-
  
 <!-- SCHEMA -->
 #### {{ site.data.i18n.common['parameters'][page.lang] }}
 {{ site.data.schemas['multitenancy-manager'].config-values | format_module_configuration: moduleKebabName }}
+
+### Модуль multitenancy-manager: Custom Resources
+
+<!-- SCHEMA -->
 
 ### Модуль operator-trivy
 
@@ -11874,7 +11935,10 @@ kubectl label namespace default security-scanning.deckhouse.io/enabled=""
 
 ### Модуль operator-trivy: настройки
 
+ 
 <!-- SCHEMA -->
+#### {{ site.data.i18n.common['parameters'][page.lang] }}
+{{ site.data.schemas['modules'].config-values | format_module_configuration: moduleKebabName }}
 
 ### Модуль operator-trivy: FAQ
 {% raw %}
@@ -11976,6 +12040,7 @@ kubectl get clustercompliancereports.aquasecurity.github.io cis -ojson |
 
 ### Модуль user-authn: настройки
 
+ 
 <!-- SCHEMA -->
 
 Автоматический деплой oauth2-proxy в namespace вашего приложения и подключение его к Dex происходят при создании custom resource [`DexAuthenticator`](cr.html#dexauthenticator).
@@ -11986,13 +12051,12 @@ kubectl get clustercompliancereports.aquasecurity.github.io cis -ojson |
 Для настройки kubectl необходимо перейти по адресу `https://kubeconfig.<modules.publicDomainTemplate>/`, авторизоваться в настроенном внешнем провайдере и скопировать shell-команды к себе в консоль.
 
 **Важно!** Для работы аутентификации в dashboard и kubectl требуется [донастройка API-сервера](faq.html#настройка-kube-apiserver). Для автоматизации этого процесса реализован модуль [control-plane-manager](./modules/control-plane-manager/), который включен по умолчанию.
+#### {{ site.data.i18n.common['parameters'][page.lang] }}
+{{ site.data.schemas['user-authn'].config-values | format_module_configuration: moduleKebabName }}
 
 ### Модуль user-authn: Custom Resources
 
- 
 <!-- SCHEMA -->
-#### {{ site.data.i18n.common['parameters'][page.lang] }}
-{{ site.data.schemas['user-authn'].config-values | format_module_configuration: moduleKebabName }}
 
 ### Модуль user-authn: FAQ
 
@@ -12401,14 +12465,14 @@ kubectl get clusterrole -A -o jsonpath="{range .items[?(@.metadata.annotations.u
 
 Вся настройка прав доступа происходит с помощью [custom resources](cr.html).
 
-<!-- SCHEMA -->
-
-### Модуль user-authz: Custom Resources
-
  
 <!-- SCHEMA -->
 #### {{ site.data.i18n.common['parameters'][page.lang] }}
 {{ site.data.schemas['user-authz'].config-values | format_module_configuration: moduleKebabName }}
+
+### Модуль user-authz: Custom Resources
+
+<!-- SCHEMA -->
 
 ### Модуль user-authz: FAQ
 
@@ -12842,14 +12906,14 @@ Deckhouse запускает агенты Falco (объединены в DaemonS
 
 ### Модуль runtime-audit-engine: настройки
 
-<!-- SCHEMA -->
-
-### Модуль runtime-audit-engine: Custom Resources
-
  
 <!-- SCHEMA -->
 #### {{ site.data.i18n.common['parameters'][page.lang] }}
 {{ site.data.schemas['modules'].config-values | format_module_configuration: moduleKebabName }}
+
+### Модуль runtime-audit-engine: Custom Resources
+
+<!-- SCHEMA -->
 
 ### Модуль runtime-audit-engine: примеры
 
@@ -13265,14 +13329,14 @@ bash -c "for file in $(ls /mnt/secrets); do export  $file=$(cat /mnt/secrets/$fi
 
 Конфигурация Ingress-контроллеров выполняется с помощью Custom Resource [IngressNginxController](cr.html#ingressnginxcontroller).
 
-<!-- SCHEMA -->
-
-### Модуль secrets-store-integration: Custom Resources
-
  
 <!-- SCHEMA -->
 #### {{ site.data.i18n.common['parameters'][page.lang] }}
 {{ site.data.schemas['secrets-store-integration'].config-values | format_module_configuration: moduleKebabName }}
+
+### Модуль secrets-store-integration: Custom Resources
+
+<!-- SCHEMA -->
 ## Подсистема Хранение данных
 
 ### Модуль snapshot-controller
@@ -13290,7 +13354,10 @@ CSI-драйверы в Deckhouse, которые поддерживают сн�
 
 В общем случае конфигурация модуля не требуется.
 
+ 
 <!-- SCHEMA -->
+#### {{ site.data.i18n.common['parameters'][page.lang] }}
+{{ site.data.schemas['snapshot-controller'].config-values | format_module_configuration: moduleKebabName }}
 
 ### Модуль csi-ceph
 
@@ -13300,14 +13367,14 @@ CSI-драйверы в Deckhouse, которые поддерживают сн�
 
 ### Модуль csi-ceph: настройки
 
-<!-- SCHEMA -->
-
-### Модуль csi-ceph: custom resources
-
  
 <!-- SCHEMA -->
 #### {{ site.data.i18n.common['parameters'][page.lang] }}
 {{ site.data.schemas['csi-ceph'].config-values | format_module_configuration: moduleKebabName }}
+
+### Модуль csi-ceph: custom resources
+
+<!-- SCHEMA -->
 
 ### Модуль csi-ceph: примеры
 
@@ -13786,14 +13853,14 @@ kubectl -n d8-sds-local-volume get pod -owide
 
 ### Модуль sds-local-volume: настройки
 
-<!-- SCHEMA -->
-
-### Модуль sds-local-volume: Custom Resources
-
  
 <!-- SCHEMA -->
 #### {{ site.data.i18n.common['parameters'][page.lang] }}
 {{ site.data.schemas['sds-local-volume'].config-values | format_module_configuration: moduleKebabName }}
+
+### Модуль sds-local-volume: Custom Resources
+
+<!-- SCHEMA -->
 
 ### Модуль sds-local-volume: FAQ
 
@@ -14155,7 +14222,10 @@ echo "Data migration completed"
 
 Работоспособность модуля при использовании других ядер или дистрибутивов возможна, но не гарантируется.
 
+ 
 <!-- SCHEMA -->
+#### {{ site.data.i18n.common['parameters'][page.lang] }}
+{{ site.data.schemas['sds-node-configurator'].config-values | format_module_configuration: moduleKebabName }}
 
 ### Модуль sds-node-configurator: Custom Resources
 
@@ -14163,10 +14233,7 @@ echo "Data migration completed"
 
 Работоспособность модуля при использовании других ядер или дистрибутивов возможна, но не гарантируется.
 
- 
 <!-- SCHEMA -->
-#### {{ site.data.i18n.common['parameters'][page.lang] }}
-{{ site.data.schemas['sds-node-configurator'].config-values | format_module_configuration: moduleKebabName }}
 
 ###  Модуль sds-node-configurator: FAQ
 {{< alert level="warning" >}}
