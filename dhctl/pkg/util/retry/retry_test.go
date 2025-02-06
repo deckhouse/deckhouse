@@ -64,5 +64,5 @@ func TestLoop_Run_ContextTimeout(t *testing.T) {
 		return errors.New("error")
 	})
 	assert.Error(t, err)
-	assert.Equal(t, " ctx.Done() while \"test loop\": last error: context deadline exceeded", err.Error())
+	assert.Equal(t, "ctx.Done() while \"test loop\": last error: context deadline exceeded", err.Error())
 }
