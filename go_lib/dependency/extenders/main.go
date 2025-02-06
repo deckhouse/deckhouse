@@ -65,8 +65,8 @@ func AddConstraints(module string, requirements *v1alpha1.ModuleRequirements) er
 		}
 	}
 
-	if len(requirements.Bootstrapped) > 0 {
-		if err := bootstrapped.Instance().AddConstraint(module, requirements.Bootstrapped); err != nil {
+	if requirements.Bootstrapped {
+		if err := bootstrapped.Instance().AddConstraint(module); err != nil {
 			return err
 		}
 	}

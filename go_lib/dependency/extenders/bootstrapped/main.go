@@ -53,14 +53,8 @@ func Instance() *Extender {
 	return instance
 }
 
-func (e *Extender) AddConstraint(name string, value string) error {
-	parsed, err := strconv.ParseBool(value)
-	if err != nil {
-		e.logger.Debugf("adding installed constraint for the '%s' module failed", name)
-		return err
-	}
-
-	e.modules[name] = parsed
+func (e *Extender) AddConstraint(name string) error {
+	e.modules[name] = true
 	e.logger.Debugf("installed constraint for the '%s' module is added", name)
 
 	return nil

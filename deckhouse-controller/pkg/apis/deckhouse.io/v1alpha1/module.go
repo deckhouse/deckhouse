@@ -147,7 +147,7 @@ type ModuleRequirements struct {
 type ModulePlatformRequirements struct {
 	Deckhouse    string `json:"deckhouse,omitempty" yaml:"deckhouse,omitempty"`
 	Kubernetes   string `json:"kubernetes,omitempty" yaml:"kubernetes,omitempty"`
-	Bootstrapped string `json:"bootstrapped,omitempty" yaml:"bootstrapped,omitempty"`
+	Bootstrapped bool   `json:"bootstrapped,omitempty" yaml:"bootstrapped,omitempty"`
 }
 
 type ModuleProperties struct {
