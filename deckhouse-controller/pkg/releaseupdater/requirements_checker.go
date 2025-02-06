@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package d8updater
+package releaseupdater
 
 import (
 	"context"
@@ -31,7 +31,6 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders/kubernetesversion"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/requirements"
 	"github.com/deckhouse/deckhouse/go_lib/set"
-	"github.com/deckhouse/deckhouse/go_lib/updater"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
@@ -79,14 +78,14 @@ func (c *Checker[T]) MetRequirements(v *T) []NotMetReason {
 	return reasons
 }
 
-// NewRequirementsChecker returns DeckhouseRelease checker with this checks:
+// NewDeckhouseReleaseRequirementsChecker returns DeckhouseRelease checker with this checks:
 //
 // 1) deckhouse version check
 // 2) deckhouse requirements check
 // 3) deckhouse kubernetes version check
 //
 // for more checks information - look at extenders
-func NewRequirementsChecker(k8sclient client.Client, enabledModules []string, logger *log.Logger) (*Checker[v1alpha1.DeckhouseRelease], error) {
+func NewDeckhouseReleaseRequirementsChecker(k8sclient client.Client, enabledModules []string, logger *log.Logger) (*Checker[v1alpha1.DeckhouseRelease], error) {
 	k8sCheck, err := newKubernetesVersionCheck(k8sclient, enabledModules)
 	if err != nil {
 		return nil, err
@@ -242,12 +241,12 @@ func (c *deckhouseRequirementsCheck) Verify(dr *v1alpha1.DeckhouseRelease) error
 	return nil
 }
 
-// NewPreApplyChecker returns DeckhouseRelease checker with this checks:
+// NewPreApplyChecker returns Release checker with this checks:
 //
 // 1) disruption check
-func NewPreApplyChecker(settings *updater.Settings, logger *log.Logger) *Checker[v1alpha1.DeckhouseRelease] {
-	return &Checker[v1alpha1.DeckhouseRelease]{
-		fns: []Check[v1alpha1.DeckhouseRelease]{
+func NewPreApplyChecker(settings *Settings, logger *log.Logger) *Checker[v1alpha1.Release] {
+	return &Checker[v1alpha1.Release]{
+		fns: []Check[v1alpha1.Release]{
 			newDisruptionCheck(settings),
 		},
 		logger: logger,
@@ -256,11 +255,11 @@ func NewPreApplyChecker(settings *updater.Settings, logger *log.Logger) *Checker
 
 type disruptionCheck struct {
 	name     string
-	settings *updater.Settings
+	settings *Settings
 }
 
 // check: release disruptions (hard lock)
-func newDisruptionCheck(settings *updater.Settings) *disruptionCheck {
+func newDisruptionCheck(settings *Settings) *disruptionCheck {
 	return &disruptionCheck{
 		name:     "release disruption check",
 		settings: settings,
@@ -271,16 +270,55 @@ func (c *disruptionCheck) GetName() string {
 	return c.name
 }
 
-func (c *disruptionCheck) Verify(dr *v1alpha1.DeckhouseRelease) error {
+func (c *disruptionCheck) Verify(pointer *v1alpha1.Release) error {
+	release := *pointer
+
 	if !c.settings.InDisruptionApprovalMode() {
 		return nil
 	}
 
-	for _, key := range dr.GetDisruptions() {
+	for _, key := range release.GetDisruptions() {
 		hasDisruptionUpdate, reason := requirements.HasDisruption(key)
-		if hasDisruptionUpdate && !dr.GetDisruptionApproved() {
-			return fmt.Errorf("(`kubectl annotate DeckhouseRelease %s release.deckhouse.io/disruption-approved=true`): %s", dr.GetName(), reason)
+		if hasDisruptionUpdate && !release.GetDisruptionApproved() {
+			return fmt.Errorf("(`kubectl annotate DeckhouseRelease %s release.deckhouse.io/disruption-approved=true`): %s", release.GetName(), reason)
 		}
+	}
+
+	return nil
+}
+
+// NewModuleReleaseRequirementsChecker returns ModuleRelease checker with this checks:
+//
+// 1) module release requirements check
+//
+// for more checks information - look at extenders
+func NewModuleReleaseRequirementsChecker(logger *log.Logger) (*Checker[v1alpha1.ModuleRelease], error) {
+	return &Checker[v1alpha1.ModuleRelease]{
+		fns: []Check[v1alpha1.ModuleRelease]{
+			newModuleRequirementsCheck(),
+		},
+		logger: logger,
+	}, nil
+}
+
+type moduleRequirementsCheck struct {
+	name string
+}
+
+func newModuleRequirementsCheck() *moduleRequirementsCheck {
+	return &moduleRequirementsCheck{
+		name: "deckhouse requirements check",
+	}
+}
+
+func (c *moduleRequirementsCheck) GetName() string {
+	return c.name
+}
+
+func (c *moduleRequirementsCheck) Verify(mr *v1alpha1.ModuleRelease) error {
+	err := extenders.CheckModuleReleaseRequirements(mr.GetModuleName(), mr.GetName(), mr.GetVersion(), mr.GetModuleReleaseRequirements())
+	if err != nil {
+		return err
 	}
 
 	return nil

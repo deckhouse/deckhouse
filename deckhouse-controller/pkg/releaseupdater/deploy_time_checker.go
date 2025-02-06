@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package d8updater
+package releaseupdater
 
 import (
 	"context"
@@ -24,14 +24,13 @@ import (
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
-	"github.com/deckhouse/deckhouse/go_lib/updater"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
-type DeployTimeChecker struct {
+type DeployTimeService struct {
 	releaseNotifier *ReleaseNotifier
 
-	settings *updater.Settings
+	settings *Settings
 
 	now                   time.Time
 	deckhousePodReadyFunc func(ctx context.Context) bool
@@ -39,8 +38,8 @@ type DeployTimeChecker struct {
 	logger *log.Logger
 }
 
-func NewDeployTimeChecker(dc dependency.Container, settings *updater.Settings, deckhousePodReadyFunc func(ctx context.Context) bool, logger *log.Logger) *DeployTimeChecker {
-	return &DeployTimeChecker{
+func NewDeployTimeService(dc dependency.Container, settings *Settings, deckhousePodReadyFunc func(ctx context.Context) bool, logger *log.Logger) *DeployTimeService {
+	return &DeployTimeService{
 		releaseNotifier: NewReleaseNotifier(settings),
 
 		settings: settings,
@@ -52,18 +51,17 @@ func NewDeployTimeChecker(dc dependency.Container, settings *updater.Settings, d
 	}
 }
 
-type DeployTimeReason struct {
-	Reason                deployDelayReason
+type ProcessedDeployTimeResult struct {
+	Reason                DeployDelayReason
 	Message               string
 	ReleaseApplyAfterTime time.Time
-	Notified              bool
 }
 
 // ProcessPatchReleaseDeployTime
 // for patch release we check:
 // - No delay from calculated deploy time
-func (c *DeployTimeChecker) ProcessPatchReleaseDeployTime(dr *v1alpha1.DeckhouseRelease, res *DeployTimeResult) *DeployTimeReason {
-	if dr.GetApplyNow() || res.Reason.IsNoDelay() {
+func (c *DeployTimeService) ProcessPatchReleaseDeployTime(release v1alpha1.Release, res *DeployTimeResult) *ProcessedDeployTimeResult {
+	if release.GetApplyNow() || res.Reason.IsNoDelay() {
 		return nil
 	}
 
@@ -71,8 +69,8 @@ func (c *DeployTimeChecker) ProcessPatchReleaseDeployTime(dr *v1alpha1.Deckhouse
 		res.ReleaseApplyTime = time.Time{}
 	}
 
-	return &DeployTimeReason{
-		Message:               res.Reason.Message(dr, res.ReleaseApplyTime),
+	return &ProcessedDeployTimeResult{
+		Message:               res.Reason.Message(release, res.ReleaseApplyTime),
 		ReleaseApplyAfterTime: res.ReleaseApplyAfterTime,
 	}
 }
@@ -81,25 +79,25 @@ func (c *DeployTimeChecker) ProcessPatchReleaseDeployTime(dr *v1alpha1.Deckhouse
 // for minor release we check:
 // - Deckhouse pod is ready
 // - No delay from calculated deploy time
-func (c *DeployTimeChecker) ProcessMinorReleaseDeployTime(ctx context.Context, dr *v1alpha1.DeckhouseRelease, res *DeployTimeResult, dri *ReleaseInfo) *DeployTimeReason {
+func (c *DeployTimeService) ProcessMinorReleaseDeployTime(ctx context.Context, release v1alpha1.Release, res *DeployTimeResult, dri *ReleaseInfo) *ProcessedDeployTimeResult {
 	// check: Deckhouse pod is ready
 	if !c.deckhousePodReadyFunc(ctx) {
 		c.logger.Info("Deckhouse is not ready. Skipping upgrade")
 
 		if dri == nil {
-			return &DeployTimeReason{
+			return &ProcessedDeployTimeResult{
 				Message:               "can not find deployed version, awaiting",
 				ReleaseApplyAfterTime: res.ReleaseApplyAfterTime,
 			}
 		}
 
-		return &DeployTimeReason{
+		return &ProcessedDeployTimeResult{
 			Message:               fmt.Sprintf("awaiting for Deckhouse v%s pod to be ready", dri.Version.String()),
 			ReleaseApplyAfterTime: res.ReleaseApplyAfterTime,
 		}
 	}
 
-	if dr.GetApplyNow() || res.Reason.IsNoDelay() {
+	if release.GetApplyNow() || res.Reason.IsNoDelay() {
 		return nil
 	}
 
@@ -107,8 +105,8 @@ func (c *DeployTimeChecker) ProcessMinorReleaseDeployTime(ctx context.Context, d
 		res.ReleaseApplyTime = time.Time{}
 	}
 
-	return &DeployTimeReason{
-		Message:               res.Reason.Message(dr, res.ReleaseApplyTime),
+	return &ProcessedDeployTimeResult{
+		Message:               res.Reason.Message(release, res.ReleaseApplyTime),
 		ReleaseApplyAfterTime: res.ReleaseApplyAfterTime,
 	}
 }
@@ -116,15 +114,15 @@ func (c *DeployTimeChecker) ProcessMinorReleaseDeployTime(ctx context.Context, d
 type DeployTimeResult struct {
 	ReleaseApplyTime      time.Time
 	ReleaseApplyAfterTime time.Time
-	Reason                deployDelayReason
+	Reason                DeployDelayReason
 }
 
-func (c *DeployTimeChecker) checkCanary(dtr *DeployTimeResult, dr *v1alpha1.DeckhouseRelease) {
-	if dr.GetApplyAfter() != nil {
-		applyAfter := *dr.GetApplyAfter()
+func (c *DeployTimeService) checkCanary(dtr *DeployTimeResult, release v1alpha1.Release) {
+	if release.GetApplyAfter() != nil {
+		applyAfter := *release.GetApplyAfter()
 
 		if c.now.Before(applyAfter) {
-			c.logger.Warn("release is postponed by canary process, waiting", slog.String("name", dr.GetName()))
+			c.logger.Warn("release is postponed by canary process, waiting", slog.String("name", release.GetName()))
 
 			dtr.ReleaseApplyTime = applyAfter
 			dtr.Reason = dtr.Reason.add(canaryDelayReason)
@@ -132,8 +130,8 @@ func (c *DeployTimeChecker) checkCanary(dtr *DeployTimeResult, dr *v1alpha1.Deck
 	}
 }
 
-func (c *DeployTimeChecker) checkNotify(dtr *DeployTimeResult, dr *v1alpha1.DeckhouseRelease) {
-	if !dr.GetNotified() &&
+func (c *DeployTimeService) checkNotify(dtr *DeployTimeResult, release v1alpha1.Release) {
+	if !release.GetNotified() &&
 		c.settings.NotificationConfig.MinimalNotificationTime.Duration > 0 {
 		minApplyTime := c.now.Add(c.settings.NotificationConfig.MinimalNotificationTime.Duration)
 
@@ -147,28 +145,28 @@ func (c *DeployTimeChecker) checkNotify(dtr *DeployTimeResult, dr *v1alpha1.Deck
 	}
 }
 
-func (c *DeployTimeChecker) processManualApproved(dtr *DeployTimeResult, dr *v1alpha1.DeckhouseRelease, metricLabels updater.MetricLabels) {
-	c.logger.Info("release is waiting for manual approval", slog.String("name", dr.GetName()))
+func (c *DeployTimeService) processManualApproved(dtr *DeployTimeResult, release v1alpha1.Release, metricLabels MetricLabels) {
+	c.logger.Info("release is waiting for manual approval", slog.String("name", release.GetName()))
 
-	metricLabels.SetTrue(updater.ManualApprovalRequired)
+	metricLabels.SetTrue(ManualApprovalRequired)
 
 	dtr.ReleaseApplyTime = c.now
 	dtr.Reason = manualApprovalRequiredReason
 }
 
-func (c *DeployTimeChecker) processWindow(dtr *DeployTimeResult) {
+func (c *DeployTimeService) processWindow(dtr *DeployTimeResult) {
 	dtr.ReleaseApplyTime = c.settings.Windows.NextAllowedTime(dtr.ReleaseApplyTime)
 	dtr.Reason = dtr.Reason.add(outOfWindowReason)
 }
 
-func (c *DeployTimeChecker) checkCooldown(dtr *DeployTimeResult, dr *v1alpha1.DeckhouseRelease) {
+func (c *DeployTimeService) checkCooldown(dtr *DeployTimeResult, release v1alpha1.Release) {
 	// check: release cooldown
-	if dr.GetCooldownUntil() != nil {
-		cooldownUntil := *dr.GetCooldownUntil()
+	if release.GetCooldownUntil() != nil {
+		cooldownUntil := *release.GetCooldownUntil()
 		if c.now.Before(cooldownUntil) {
-			c.logger.Warn("release in cooldown", slog.String("name", dr.GetName()))
+			c.logger.Warn("release in cooldown", slog.String("name", release.GetName()))
 
-			dtr.ReleaseApplyTime = *dr.GetCooldownUntil()
+			dtr.ReleaseApplyTime = *release.GetCooldownUntil()
 			dtr.Reason = dtr.Reason.add(cooldownDelayReason)
 		}
 	}
@@ -183,25 +181,25 @@ func (c *DeployTimeChecker) checkCooldown(dtr *DeployTimeResult, dr *v1alpha1.De
 // 4) Manual approve (only in "Manual" mode)
 //
 // Notify reason must override any other reason
-func (c *DeployTimeChecker) CalculatePatchDeployTime(dr *v1alpha1.DeckhouseRelease, metricLabels updater.MetricLabels) *DeployTimeResult {
+func (c *DeployTimeService) CalculatePatchDeployTime(release v1alpha1.Release, metricLabels MetricLabels) *DeployTimeResult {
 	result := &DeployTimeResult{
 		Reason:           noDelay,
 		ReleaseApplyTime: c.now,
 	}
 
-	if dr.GetApplyNow() {
+	if release.GetApplyNow() {
 		return result
 	}
 
-	c.checkCanary(result, dr)
-	c.checkNotify(result, dr)
+	c.checkCanary(result, release)
+	c.checkNotify(result, release)
 
-	if c.settings.Mode == updater.ModeAutoPatch && !c.settings.Windows.IsAllowed(result.ReleaseApplyTime) {
+	if c.settings.Mode == v1alpha1.UpdateModeAutoPatch && !c.settings.Windows.IsAllowed(result.ReleaseApplyTime) {
 		c.processWindow(result)
 	}
 
-	if c.settings.Mode == updater.ModeManual && !dr.GetManuallyApproved() {
-		c.processManualApproved(result, dr, metricLabels)
+	if c.settings.Mode == v1alpha1.UpdateModeManual && !release.GetManuallyApproved() {
+		c.processManualApproved(result, release, metricLabels)
 	}
 
 	if !result.ReleaseApplyAfterTime.IsZero() {
@@ -223,30 +221,30 @@ func (c *DeployTimeChecker) CalculatePatchDeployTime(dr *v1alpha1.DeckhouseRelea
 // 4) Manual approve (in any mode, except "Auto")
 //
 // Notify reason must override any other reason
-func (c *DeployTimeChecker) CalculateMinorDeployTime(dr *v1alpha1.DeckhouseRelease, metricLabels updater.MetricLabels) *DeployTimeResult {
+func (c *DeployTimeService) CalculateMinorDeployTime(release v1alpha1.Release, metricLabels MetricLabels) *DeployTimeResult {
 	result := &DeployTimeResult{
 		Reason:           noDelay,
 		ReleaseApplyTime: c.now,
 	}
 
-	if dr.GetApplyNow() {
+	if release.GetApplyNow() {
 		return result
 	}
 
-	c.checkCooldown(result, dr)
+	c.checkCooldown(result, release)
 
 	if !c.settings.InManualMode() {
-		c.checkCanary(result, dr)
+		c.checkCanary(result, release)
 	}
 
-	c.checkNotify(result, dr)
+	c.checkNotify(result, release)
 
-	if c.settings.Mode == updater.ModeAuto && !c.settings.Windows.IsAllowed(result.ReleaseApplyTime) {
+	if c.settings.Mode == v1alpha1.UpdateModeAuto && !c.settings.Windows.IsAllowed(result.ReleaseApplyTime) {
 		c.processWindow(result)
 	}
 
-	if c.settings.Mode != updater.ModeAuto && !dr.GetManuallyApproved() {
-		c.processManualApproved(result, dr, metricLabels)
+	if c.settings.Mode != v1alpha1.UpdateModeAuto && !release.GetManuallyApproved() {
+		c.processManualApproved(result, release, metricLabels)
 	}
 
 	if !result.ReleaseApplyAfterTime.IsZero() {
