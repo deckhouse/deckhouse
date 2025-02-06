@@ -175,7 +175,7 @@ func (p *Project) SetTemplateGeneration(generation int64) {
 	p.Status.TemplateGeneration = generation
 }
 
-func (p *Project) AddResource(obj *unstructured.Unstructured, rendered bool) {
+func (p *Project) AddResource(obj *unstructured.Unstructured, installed bool) {
 	if p.Status.Resources == nil {
 		p.Status.Resources = make(map[string]map[string]ResourceKind)
 	}
@@ -188,14 +188,14 @@ func (p *Project) AddResource(obj *unstructured.Unstructured, rendered bool) {
 		if !slices.Contains(existing.Names, obj.GetName()) {
 			existing.Names = append(existing.Names, obj.GetName())
 		}
-		existing.Rendered = rendered
+		existing.Installed = installed
 		p.Status.Resources[obj.GetAPIVersion()][obj.GetKind()] = existing
 		return
 	}
 
 	p.Status.Resources[obj.GetAPIVersion()][obj.GetKind()] = ResourceKind{
-		Rendered: rendered,
-		Names:    []string{obj.GetName()},
+		Installed: installed,
+		Names:     []string{obj.GetName()},
 	}
 }
 
@@ -241,8 +241,8 @@ func (p *ProjectStatus) DeepCopyInto(newObj *ProjectStatus) {
 }
 
 type ResourceKind struct {
-	Rendered bool     `json:"rendered,omitempty"`
-	Names    []string `json:"names,omitempty"`
+	Installed bool     `json:"installed,omitempty"`
+	Names     []string `json:"names,omitempty"`
 }
 
 func (o *ResourceKind) DeepCopyInto(newObj *ResourceKind) {

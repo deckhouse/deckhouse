@@ -128,7 +128,7 @@ spec:
                     additionalProperties:
                       type: object
                       properties:
-                        rendered:
+                        installed:
                           type: boolean
                           description: Indicates if the resources were successfully rendered.
                         names:
