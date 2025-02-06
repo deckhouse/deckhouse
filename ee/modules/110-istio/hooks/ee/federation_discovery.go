@@ -231,7 +231,7 @@ func federationDiscovery(input *go_hook.HookInput, dc dependency.Container) erro
 }
 
 func updatePortProtocols(services *[]eeCrd.FederationPublicServices, defaultProtocol string, protocolMap map[string]string) []eeCrd.FederationPublicServices {
-	resultServices := (*services)[:]
+	resultServices := (*services)
 	// We sort by length, since the value HTTP and HTTPS is present in MAPS, if we do without sorting, there will be a problem when HTTPS is assigned a protocol, not TLS.
 	keys := slices.Collect(maps.Keys(protocolMap))
 	slices.SortFunc(keys, func(a, b string) int {
