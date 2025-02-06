@@ -72,28 +72,28 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "statustime{probe_ref=\"monitoring-and-autoscaling/trickster\",status=\"up\"}",
+          "expr": "statustime{probe_ref=\"monitoring-and-autoscaling/metrics-proxy\",status=\"up\"}",
           "hide": false,
           "interval": "",
           "legendFormat": "{{status}}",
           "refId": "up"
         },
         {
-          "expr": "statustime{probe_ref=\"monitoring-and-autoscaling/trickster\",status=\"unknown\"}",
+          "expr": "statustime{probe_ref=\"monitoring-and-autoscaling/metrics-proxy\",status=\"unknown\"}",
           "hide": false,
           "interval": "",
           "legendFormat": "{{status}}",
           "refId": "unknown"
         },
         {
-          "expr": "statustime{probe_ref=\"monitoring-and-autoscaling/trickster\",status=\"nodata\"}",
+          "expr": "statustime{probe_ref=\"monitoring-and-autoscaling/metrics-proxy\",status=\"nodata\"}",
           "hide": false,
           "interval": "",
           "legendFormat": "{{status}}",
           "refId": "nodata"
         },
         {
-          "expr": "statustime{probe_ref=\"monitoring-and-autoscaling/trickster\", status=\"down\"}",
+          "expr": "statustime{probe_ref=\"monitoring-and-autoscaling/metrics-proxy\", status=\"down\"}",
           "hide": false,
           "interval": "",
           "legendFormat": "{{status}}",
@@ -194,7 +194,7 @@
       "strokeWidth": 1,
       "targets": [
         {
-          "expr": "statustime{probe_ref=\"monitoring-and-autoscaling/trickster\"}",
+          "expr": "statustime{probe_ref=\"monitoring-and-autoscaling/metrics-proxy\"}",
           "interval": "",
           "legendFormat": "{{status}}",
           "refId": "A"
@@ -258,28 +258,28 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "statustime{probe_ref=\"monitoring-and-autoscaling/trickster\",status=\"up\"}",
+          "expr": "statustime{probe_ref=\"monitoring-and-autoscaling/metrics-proxy\",status=\"up\"}",
           "hide": false,
           "interval": "",
           "legendFormat": "{{status}}",
           "refId": "up"
         },
         {
-          "expr": "statustime{probe_ref=\"monitoring-and-autoscaling/trickster\",status=\"unknown\"}",
+          "expr": "statustime{probe_ref=\"monitoring-and-autoscaling/metrics-proxy\",status=\"unknown\"}",
           "hide": false,
           "interval": "",
           "legendFormat": "{{status}}",
           "refId": "unknown"
         },
         {
-          "expr": "statustime{probe_ref=\"monitoring-and-autoscaling/trickster\",status=\"nodata\"}",
+          "expr": "statustime{probe_ref=\"monitoring-and-autoscaling/metrics-proxy\",status=\"nodata\"}",
           "hide": false,
           "interval": "",
           "legendFormat": "{{status}}",
           "refId": "nodata"
         },
         {
-          "expr": "statustime{probe_ref=\"monitoring-and-autoscaling/trickster\", status=\"down\"}",
+          "expr": "statustime{probe_ref=\"monitoring-and-autoscaling/metrics-proxy\", status=\"down\"}",
           "hide": false,
           "interval": "",
           "legendFormat": "{{status}}",
@@ -380,7 +380,7 @@
       "strokeWidth": 1,
       "targets": [
         {
-          "expr": "statustime{probe_ref=\"monitoring-and-autoscaling/trickster\"}",
+          "expr": "statustime{probe_ref=\"monitoring-and-autoscaling/metrics-proxy\"}",
           "interval": "",
           "legendFormat": "{{status}}",
           "refId": "A"
@@ -444,28 +444,28 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "statustime{probe_ref=\"monitoring-and-autoscaling/trickster\",status=\"up\"}",
+          "expr": "statustime{probe_ref=\"monitoring-and-autoscaling/metrics-proxy\",status=\"up\"}",
           "hide": false,
           "interval": "",
           "legendFormat": "{{status}}",
           "refId": "up"
         },
         {
-          "expr": "statustime{probe_ref=\"monitoring-and-autoscaling/trickster\",status=\"unknown\"}",
+          "expr": "statustime{probe_ref=\"monitoring-and-autoscaling/metrics-proxy\",status=\"unknown\"}",
           "hide": false,
           "interval": "",
           "legendFormat": "{{status}}",
           "refId": "unknown"
         },
         {
-          "expr": "statustime{probe_ref=\"monitoring-and-autoscaling/trickster\",status=\"nodata\"}",
+          "expr": "statustime{probe_ref=\"monitoring-and-autoscaling/metrics-proxy\",status=\"nodata\"}",
           "hide": false,
           "interval": "",
           "legendFormat": "{{status}}",
           "refId": "nodata"
         },
         {
-          "expr": "statustime{probe_ref=\"monitoring-and-autoscaling/trickster\", status=\"down\"}",
+          "expr": "statustime{probe_ref=\"monitoring-and-autoscaling/metrics-proxy\", status=\"down\"}",
           "hide": false,
           "interval": "",
           "legendFormat": "{{status}}",
@@ -566,7 +566,7 @@
       "strokeWidth": 1,
       "targets": [
         {
-          "expr": "statustime{probe_ref=\"monitoring-and-autoscaling/trickster\"}",
+          "expr": "statustime{probe_ref=\"monitoring-and-autoscaling/metrics-proxy\"}",
           "interval": "",
           "legendFormat": "{{status}}",
           "refId": "A"
@@ -590,7 +590,7 @@
   },
   "timepicker": {},
   "timezone": "",
-  "title": "Upmeter, Trickster",
+  "title": "Upmeter, Metrics Proxy",
   "uid": "zmN1sFQGz",
   "version": 2
 }

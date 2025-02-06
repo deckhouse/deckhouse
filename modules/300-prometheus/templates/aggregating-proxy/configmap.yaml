@@ -38,6 +38,7 @@ data:
                 {{- else }}
                 - prometheus.d8-monitoring.svc.{{ .Values.global.discovery.clusterDomain }}.:9090
                 {{- end }}
+                - prometheus-longterm.d8-monitoring.svc.{{ .Values.global.discovery.clusterDomain }}.:9090
           ignore_error: false
           anti_affinity: 30s
           timeout: 30s

@@ -109,7 +109,7 @@ spec:
         image: {{ include "helm_lib_module_image" (list . "prometheusReverseProxy") }}
         env:
         - name: PROMETHEUS_URL
-          value: "https://trickster.d8-monitoring.svc.{{ .Values.global.discovery.clusterDomain }}"
+          value: "https://aggregating-proxy.d8-monitoring.svc.{{ .Values.global.discovery.clusterDomain }}"
         volumeMounts:
         - mountPath: /etc/prometheus-reverse-proxy/
           name: prometheus-metrics-adapter-config
