@@ -14,7 +14,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 set -e
-source tools/cve/trivy-wrapper.sh
 
 # ANSI escape codes for colors
 RED='\033[0;31m'
