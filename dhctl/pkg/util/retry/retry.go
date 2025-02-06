@@ -86,6 +86,20 @@ func NewSilentLoop(name string, attemptsQuantity int, wait time.Duration) *Loop 
 	}
 }
 
+// NewTeeLoggerLoop create Loop with features:
+// - it is "TeeLogger" loop — messages are output to a file.
+// - this loop is not interruptable by the signal watcher in tomb package.
+func NewTeeLoggerLoop(name string, attemptsQuantity int, wait time.Duration) *Loop {
+	return &Loop{
+		name:             name,
+		attemptsQuantity: attemptsQuantity,
+		waitTime:         wait,
+		logger:           log.GetTeeLogger(),
+		interruptable:    false,
+		showError:        true,
+	}
+}
+
 func (l *Loop) BreakIf(pred BreakPredicate) *Loop {
 	l.breakPredicate = pred
 	return l
@@ -147,9 +161,7 @@ func (l *Loop) Run(task func() error) error {
 				if l.ctx != nil {
 					select {
 					case <-l.ctx.Done():
-						err := fmt.Errorf("ctx.Done() while %q: last error: %v", l.name, l.ctx.Err())
-						l.logger.LogDebugF(err.Error())
-						return err
+						return fmt.Errorf("ctx.Done() while %q: last error: %v", l.name, l.ctx.Err())
 					case <-time.After(l.waitTime):
 					}
 				} else {
@@ -158,9 +170,7 @@ func (l *Loop) Run(task func() error) error {
 			}
 		}
 
-		errR := fmt.Errorf("Timeout while %q: last error: %v", l.name, err)
-		l.logger.LogDebugF(errR.Error())
-		return errR
+		return fmt.Errorf("Timeout while %q: last error: %v", l.name, err)
 	}
 
 	return l.logger.LogProcess("default", l.name, loopBody)

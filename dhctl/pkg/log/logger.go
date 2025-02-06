@@ -37,6 +37,7 @@ import (
 var (
 	defaultLogger Logger
 	emptyLogger   Logger = &SilentLogger{}
+	teeLogger     Logger = &TeeLogger{}
 )
 
 func init() {
@@ -549,6 +550,10 @@ func GetDefaultLogger() Logger {
 
 func GetSilentLogger() Logger {
 	return emptyLogger
+}
+
+func GetTeeLogger() Logger {
+	return teeLogger
 }
 
 type SilentLogger struct{}
