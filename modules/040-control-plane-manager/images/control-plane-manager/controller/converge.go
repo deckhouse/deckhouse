@@ -78,7 +78,7 @@ func convergeComponents() error {
 
 func convergeComponent(componentName string) error {
 	log.Infof("converge component %s", componentName)
-
+	etcd := EtcdClient{}
 	// remove checksum patch, if it was left from previous run
 	_ = os.Remove(filepath.Join(deckhousePath, "kubeadm", "patches", componentName+"999checksum.yaml"))
 
@@ -103,7 +103,6 @@ func convergeComponent(componentName string) error {
 	} else {
 		recreateConfig = true
 	}
-
 	if recreateConfig {
 		log.Infof("generate new manifest for %s", componentName)
 		if err := backupFile(filepath.Join(manifestsPath, componentName+".yaml")); err != nil {
@@ -116,7 +115,7 @@ func convergeComponent(componentName string) error {
 
 		_, err := os.Stat("/var/lib/etcd/member")
 		if componentName == "etcd" && err != nil {
-			if err := etcdJoinConverge(); err != nil {
+			if err := etcd.EtcdJoinConverge(); err != nil {
 				return err
 			}
 		} else {
@@ -141,6 +140,18 @@ func convergeComponent(componentName string) error {
 			return waitPodIsReady(componentName, checksum)
 		}
 		return err
+	}
+
+	if componentName == "etcd" {
+		etcd.client, err = etcd.NewEtcdClient()
+		if err != nil {
+			return err
+		}
+		defer etcd.client.Close()
+		err = etcd.PromoteMemberIfNeeded()
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil
