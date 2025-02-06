@@ -1185,7 +1185,6 @@ Cilium полностью заменяет собой функционал мо�
 {{ site.data.schemas['cni-cilium'].config-values | format_module_configuration: moduleKebabName }}
 
 ### Модуль cni-cilium: Custom Resources
-#### {{ site.data.i18n.common['parameters'][page.lang] }}
 {{ site.data.schemas.cni-cilium.crds.cilium.ciliumbgppeeringpolicies | format_crd: "cni-cilium" }}
 {{ site.data.schemas.cni-cilium.crds.cilium.ciliumcidrgroups | format_crd: "cni-cilium" }}
 {{ site.data.schemas.cni-cilium.crds.cilium.ciliumclusterwideenvoyconfigs | format_crd: "cni-cilium" }}
@@ -1419,7 +1418,6 @@ kubectl -n d8-cni-cilium delete secret/hubble-basic-auth
 {{ site.data.schemas['control-plane-manager'].config-values | format_module_configuration: moduleKebabName }}
 
 ### Управление control plane: Custom Resources
-#### {{ site.data.i18n.common['parameters'][page.lang] }}
 {{ site.data.schemas.control-plane-manager.crds.kube_scheduler_webhook_configuration | format_crd: "control-plane-manager" }}
 
 ### Управление control plane: примеры
@@ -2369,7 +2367,6 @@ kubectl get --raw /debug/api_priority_and_fairness/dump_queues
 {{ site.data.schemas['ingress-nginx'].config-values | format_module_configuration: moduleKebabName }}
 
 ### Модуль ingress-nginx: Custom Resources
-#### {{ site.data.i18n.common['parameters'][page.lang] }}
 {{ site.data.schemas.ingress-nginx.crds.ingress-nginx | format_crd: "ingress-nginx" }}
 {{ site.data.schemas.ingress-nginx.crds.kruise.crd_daemonsets | format_crd: "ingress-nginx" }}
 
@@ -3198,13 +3195,11 @@ kubectl -n d8-istio delete secret/kiali-basic-auth
 {{ site.data.schemas['istio'].config-values | format_module_configuration: moduleKebabName }}
 
 ### Модуль istio: Custom Resources
-#### {{ site.data.i18n.common['parameters'][page.lang] }}
 {{ site.data.schemas.istio.crds.ingress-istio | format_crd: "istio" }}
 {{ site.data.schemas.istio.crds.istio.121.crd-allgen | format_crd: "istio" }}
 {{ site.data.schemas.istio.crds.istio.121.crd-operator | format_crd: "istio" }}
 
 ### Модуль istio: Custom Resources (от istio.io)
-#### {{ site.data.i18n.common['parameters'][page.lang] }}
 {{ site.data.schemas.istio.crds.ingress-istio | format_crd: "istio" }}
 {{ site.data.schemas.istio.crds.istio.121.crd-allgen | format_crd: "istio" }}
 {{ site.data.schemas.istio.crds.istio.121.crd-operator | format_crd: "istio" }}
@@ -4225,7 +4220,6 @@ rm /var/lib/bashible/configuration_checksum
 {{ site.data.schemas['node-manager'].config-values | format_module_configuration: moduleKebabName }}
 
 ### Управление узлами: custom resources
-#### {{ site.data.i18n.common['parameters'][page.lang] }}
 {{ site.data.schemas.node-manager.crds.cluster | format_crd: "node-manager" }}
 {{ site.data.schemas.node-manager.crds.deckhousecontrolplane | format_crd: "node-manager" }}
 {{ site.data.schemas.node-manager.crds.extension-config | format_crd: "node-manager" }}
@@ -6013,7 +6007,6 @@ spec:
 {{ site.data.schemas['local-path-provisioner'].config-values | format_module_configuration: moduleKebabName }}
 
 ### Модуль local-path-provisioner: custom resources
-#### {{ site.data.i18n.common['parameters'][page.lang] }}
 {{ site.data.schemas.local-path-provisioner.crds.local_path_provisioner | format_crd: "local-path-provisioner" }}
 
 ### Модуль local-path-provisioner: примеры
@@ -6832,7 +6825,6 @@ Extra labels добавляются на этапе `Destination`, поэтом�
 {{ site.data.schemas['log-shipper'].config-values | format_module_configuration: moduleKebabName }}
 
 ### Модуль log-shipper: Custom Resources
-#### {{ site.data.i18n.common['parameters'][page.lang] }}
 {{ site.data.schemas.log-shipper.crds.cluster-log-destination | format_crd: "log-shipper" }}
 {{ site.data.schemas.log-shipper.crds.cluster-logging-config | format_crd: "log-shipper" }}
 {{ site.data.schemas.log-shipper.crds.pod-logging-config | format_crd: "log-shipper" }}
@@ -7993,7 +7985,6 @@ kubectl -n d8-monitoring delete secret/basic-auth
 {{ site.data.schemas['prometheus'].config-values | format_module_configuration: moduleKebabName }}
 
 ### Prometheus-мониторинг: custom resources
-#### {{ site.data.i18n.common['parameters'][page.lang] }}
 {{ site.data.schemas.prometheus.crds.clusteralerts | format_crd: "prometheus" }}
 {{ site.data.schemas.prometheus.crds.customalertmanager | format_crd: "prometheus" }}
 {{ site.data.schemas.prometheus.crds.customprometheusrules | format_crd: "prometheus" }}
@@ -9013,7 +9004,6 @@ Extra labels добавляются на этапе `Destination`, поэтом�
 {{ site.data.schemas['log-shipper'].config-values | format_module_configuration: moduleKebabName }}
 
 ### Модуль log-shipper: Custom Resources
-#### {{ site.data.i18n.common['parameters'][page.lang] }}
 {{ site.data.schemas.log-shipper.crds.cluster-log-destination | format_crd: "log-shipper" }}
 {{ site.data.schemas.log-shipper.crds.cluster-logging-config | format_crd: "log-shipper" }}
 {{ site.data.schemas.log-shipper.crds.pod-logging-config | format_crd: "log-shipper" }}
@@ -10174,7 +10164,6 @@ kubectl -n d8-monitoring delete secret/basic-auth
 {{ site.data.schemas['prometheus'].config-values | format_module_configuration: moduleKebabName }}
 
 ### Prometheus-мониторинг: custom resources
-#### {{ site.data.i18n.common['parameters'][page.lang] }}
 {{ site.data.schemas.prometheus.crds.clusteralerts | format_crd: "prometheus" }}
 {{ site.data.schemas.prometheus.crds.customalertmanager | format_crd: "prometheus" }}
 {{ site.data.schemas.prometheus.crds.customprometheusrules | format_crd: "prometheus" }}
@@ -11045,7 +11034,6 @@ spec:
 {{ site.data.schemas['admission-policy-engine'].config-values | format_module_configuration: moduleKebabName }}
 
 ### Модуль admission-policy-engine: custom resources
-#### {{ site.data.i18n.common['parameters'][page.lang] }}
 {{ site.data.schemas.admission-policy-engine.crds.native.assign-customresourcedefinition | format_crd: "admission-policy-engine" }}
 {{ site.data.schemas.admission-policy-engine.crds.native.assignimage-customresourcedefinition | format_crd: "admission-policy-engine" }}
 {{ site.data.schemas.admission-policy-engine.crds.native.assignmetadata-customresourcedefinition | format_crd: "admission-policy-engine" }}
@@ -11071,7 +11059,6 @@ spec:
 {{ site.data.schemas.admission-policy-engine.crds.security-policy | format_crd: "admission-policy-engine" }}
 
 ### Модуль admission-policy-engine: Custom Resources (от Gatekeeper)
-#### {{ site.data.i18n.common['parameters'][page.lang] }}
 {{ site.data.schemas.admission-policy-engine.crds.native.assign-customresourcedefinition | format_crd: "admission-policy-engine" }}
 {{ site.data.schemas.admission-policy-engine.crds.native.assignimage-customresourcedefinition | format_crd: "admission-policy-engine" }}
 {{ site.data.schemas.admission-policy-engine.crds.native.assignmetadata-customresourcedefinition | format_crd: "admission-policy-engine" }}
@@ -11323,7 +11310,6 @@ spec:
 {{ site.data.schemas['cert-manager'].config-values | format_module_configuration: moduleKebabName }}
 
 ### Модуль cert-manager: custom resources
-#### {{ site.data.i18n.common['parameters'][page.lang] }}
 {{ site.data.schemas.cert-manager.crds.crd-certificaterequests | format_crd: "cert-manager" }}
 {{ site.data.schemas.cert-manager.crds.crd-certificates | format_crd: "cert-manager" }}
 {{ site.data.schemas.cert-manager.crds.crd-challenges | format_crd: "cert-manager" }}
@@ -11802,7 +11788,6 @@ CAA record does not match issuer
 {{ site.data.schemas['multitenancy-manager'].config-values | format_module_configuration: moduleKebabName }}
 
 ### Модуль multitenancy-manager: Custom Resources
-#### {{ site.data.i18n.common['parameters'][page.lang] }}
 {{ site.data.schemas.multitenancy-manager.crds.projects | format_crd: "multitenancy-manager" }}
 {{ site.data.schemas.multitenancy-manager.crds.projecttemplate | format_crd: "multitenancy-manager" }}
 
@@ -11942,7 +11927,6 @@ kubectl get clustercompliancereports.aquasecurity.github.io cis -ojson |
 {{ site.data.schemas['user-authn'].config-values | format_module_configuration: moduleKebabName }}
 
 ### Модуль user-authn: Custom Resources
-#### {{ site.data.i18n.common['parameters'][page.lang] }}
 {{ site.data.schemas.user-authn.crds.dex-authenticator | format_crd: "user-authn" }}
 {{ site.data.schemas.user-authn.crds.dex-client | format_crd: "user-authn" }}
 {{ site.data.schemas.user-authn.crds.dex-provider | format_crd: "user-authn" }}
@@ -12363,7 +12347,6 @@ kubectl get clusterrole -A -o jsonpath="{range .items[?(@.metadata.annotations.u
 {{ site.data.schemas['user-authz'].config-values | format_module_configuration: moduleKebabName }}
 
 ### Модуль user-authz: Custom Resources
-#### {{ site.data.i18n.common['parameters'][page.lang] }}
 {{ site.data.schemas.user-authz.crds.authorizationrule | format_crd: "user-authz" }}
 {{ site.data.schemas.user-authz.crds.clusterauthorizationrule | format_crd: "user-authz" }}
 
@@ -12805,7 +12788,6 @@ Deckhouse запускает агенты Falco (объединены в DaemonS
 {{ site.data.schemas['modules'].config-values | format_module_configuration: moduleKebabName }}
 
 ### Модуль runtime-audit-engine: Custom Resources
-#### {{ site.data.i18n.common['parameters'][page.lang] }}
 {{ site.data.schemas.modules.650-runtime-audit-engine.crds.falco-audit-rules | format_crd: "modules" }}
 
 ### Модуль runtime-audit-engine: примеры
@@ -13228,7 +13210,6 @@ bash -c "for file in $(ls /mnt/secrets); do export  $file=$(cat /mnt/secrets/$fi
 {{ site.data.schemas['secrets-store-integration'].config-values | format_module_configuration: moduleKebabName }}
 
 ### Модуль secrets-store-integration: Custom Resources
-#### {{ site.data.i18n.common['parameters'][page.lang] }}
 {{ site.data.schemas.secrets-store-integration.crds.secrets-store-import | format_crd: "secrets-store-integration" }}
 ## Подсистема Хранение данных
 
@@ -13266,7 +13247,6 @@ CSI-драйверы в Deckhouse, которые поддерживают сн�
 {{ site.data.schemas['csi-ceph'].config-values | format_module_configuration: moduleKebabName }}
 
 ### Модуль csi-ceph: custom resources
-#### {{ site.data.i18n.common['parameters'][page.lang] }}
 {{ site.data.schemas.csi-ceph.crds.cephclusterauthentication | format_crd: "csi-ceph" }}
 {{ site.data.schemas.csi-ceph.crds.cephclusterconnection | format_crd: "csi-ceph" }}
 {{ site.data.schemas.csi-ceph.crds.cephstorageclass | format_crd: "csi-ceph" }}
@@ -13754,7 +13734,6 @@ kubectl -n d8-sds-local-volume get pod -owide
 {{ site.data.schemas['sds-local-volume'].config-values | format_module_configuration: moduleKebabName }}
 
 ### Модуль sds-local-volume: Custom Resources
-#### {{ site.data.i18n.common['parameters'][page.lang] }}
 {{ site.data.schemas.sds-local-volume.crds.localstorageclass | format_crd: "sds-local-volume" }}
 
 ### Модуль sds-local-volume: FAQ
@@ -14123,7 +14102,6 @@ echo "Data migration completed"
 {{ site.data.schemas['sds-node-configurator'].config-values | format_module_configuration: moduleKebabName }}
 
 ### Модуль sds-node-configurator: Custom Resources
-#### {{ site.data.i18n.common['parameters'][page.lang] }}
 {{ site.data.schemas.sds-node-configurator.crds.blockdevices | format_crd: "sds-node-configurator" }}
 {{ site.data.schemas.sds-node-configurator.crds.lvmlogicalvolume | format_crd: "sds-node-configurator" }}
 {{ site.data.schemas.sds-node-configurator.crds.lvmlogicalvolumesnapshot | format_crd: "sds-node-configurator" }}
