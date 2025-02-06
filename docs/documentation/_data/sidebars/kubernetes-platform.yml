@@ -105,7 +105,19 @@ entries:
                     - title:
                         en: TCP/UDP balancing
                         ru: Балансировка TCP/UDP
-                      url: /admin/network/tcp-udp-balancing.html
+                      folders:
+                        - title:
+                            en: Overview
+                            ru: Введение
+                          url: /admin/network/tcp-udp-balancing-overview.html
+                        - title:
+                            en: Balancing in Bare metal clusters
+                            ru: Балансировка в Bare metal кластерах
+                          url: /admin/network/bare-metal-balancing.html
+                        - title:
+                            en: Balancing in clusters on cloud platforms
+                            ru: Балансировка в кластерах на облачных платформах
+                          url: /admin/network/cloud-balancing.html
                     - title:
                         en: ALB
                         ru: ALB
@@ -135,9 +147,9 @@ entries:
                         ru: mTLS
                       url: /admin/network/mtls.html
                     - title:
-                        en: CircuitBraker
-                        ru: CircuitBraker
-                      url: /admin/network/circuitbraker.html
+                        en: Circuit Breaker
+                        ru: Circuit Breaker
+                      url: /admin/network/circuit-breaker.html
                     - title:
                         en: Canary deployment
                         ru: Canary deployment
@@ -169,7 +181,7 @@ entries:
                     - title:
                         en: Overview
                         ru: Введение
-                      url: /admin/network/overview.html
+                      url: /admin/network/outgoing-traffic-balancing.html
                     - title:
                         en: Egress
                         ru: Egress
@@ -181,11 +193,19 @@ entries:
                 - title:
                     en: Network policies
                     ru: Сетевые политики
-                  url: /admin/network/policies.html
+                  folders:
+                    - title:
+                        en: Overview
+                        ru: Введение
+                      url: /admin/network/network-policies-overview.html
                 - title:
                     en: Other network configuration options
                     ru: Другие возможности настройки сети
-                  url: /admin/network/other.html
+                  folders:
+                    - title:
+                        en: Overview
+                        ru: Введение
+                      url: /admin/network/other-network-configuration-options-overview.html
             - title:
                 en: Storage
                 ru: Хранение

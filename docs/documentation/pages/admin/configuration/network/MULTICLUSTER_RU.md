@@ -50,3 +50,37 @@ lang: ru
 <!--- Source: https://docs.google.com/presentation/d/1D3nuoC0okJQRCOY4teJ6p598Bd4JwPXZT5cdG0hW8Hc/ --->
 
 Для сборки мультикластера необходимо в каждом кластере создать набор ресурсов `IstioMulticluster`, которые описывают все остальные кластеры.
+
+<!-- перенесено с небольшими изменениями из https://deckhouse.ru/products/kubernetes-platform/documentation/latest/modules/istio/examples.html#%D1%83%D1%81%D1%82%D1%80%D0%BE%D0%B9%D1%81%D1%82%D0%B2%D0%BE-%D0%BC%D1%83%D0%BB%D1%8C%D1%82%D0%B8%D0%BA%D0%BB%D0%B0%D1%81%D1%82%D0%B5%D1%80%D0%B0-%D0%B8%D0%B7-%D0%B4%D0%B2%D1%83%D1%85-%D0%BA%D0%BB%D0%B0%D1%81%D1%82%D0%B5%D1%80%D0%BE%D0%B2-%D1%81-%D0%BF%D0%BE%D0%BC%D0%BE%D1%89%D1%8C%D1%8E-%D1%80%D0%B5%D1%81%D1%83%D1%80%D1%81%D0%B0-istiomulticluster -->
+
+### Пример устройства мультикластера из двух кластеров
+
+> Доступно только в редакции Enterprise Edition.
+
+Для устройства мультикластера средствами Istio используйте ресурс IstioMulticluster.
+
+Cluster A:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: IstioMulticluster
+metadata:
+  name: cluster-b
+spec:
+  metadataEndpoint: https://istio.k8s-b.example.com/metadata/
+```
+
+Cluster B:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: IstioMulticluster
+metadata:
+  name: cluster-a
+spec:
+  metadataEndpoint: https://istio.k8s-a.example.com/metadata/
+```
+
+## Мультикластер средствами Cilium
+
+Нужен контент

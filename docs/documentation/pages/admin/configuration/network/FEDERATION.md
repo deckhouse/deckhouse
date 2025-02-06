@@ -58,3 +58,35 @@ To establish a federation, you must:
   * In the other federation clusters, a corresponding `ServiceEntry` will be created for each `service`, leading to the `ingressgateway` of the original cluster.
 
 > It is important, that in these `services`, in the `.spec.ports` section, each port must have the `name` field filled.
+
+<!-- Transferred with minor modifications from https://deckhouse.io/products/kubernetes-platform/documentation/latest/modules/istio/#federation -->
+
+### Example of configuring a federation of two clusters
+
+> Available in Enterprise Edition only.
+
+Use custom resource IstioFederation to customize the federation using Istio tools.
+
+Cluster A:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: IstioFederation
+metadata:
+  name: cluster-b
+spec:
+  metadataEndpoint: https://istio.k8s-b.example.com/metadata/
+  trustDomain: cluster-b.local
+```
+
+Cluster B:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: IstioFederation
+metadata:
+  name: cluster-a
+spec:
+  metadataEndpoint: https://istio.k8s-a.example.com/metadata/
+  trustDomain: cluster-a.local
+```
