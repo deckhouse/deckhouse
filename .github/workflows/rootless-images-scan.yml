@@ -2,7 +2,19 @@
 # THIS FILE IS GENERATED, PLEASE DO NOT EDIT.
 #
 
-
+# Copyright 2025 Flant JSC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 name: "Rootless images scan"
 on:
   push:
@@ -13,6 +25,9 @@ on:
       pull_request_ref:
         description: 'Pull request number (e.g., 123)'
         required: false
+  pull_request:
+    types:
+      - labeled
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.number || github.ref }}
   cancel-in-progress: true
@@ -20,6 +35,8 @@ concurrency:
 jobs:
   check_trigger:
     runs-on: ubuntu-latest
+    outputs:
+      image_tag: ${{ steps.set_tag.outputs.image_tag }}
     steps:
       - name: Ensure valid trigger
         run: |
@@ -27,32 +44,39 @@ jobs:
             echo "Manual runs must specify a pull request reference."
             exit 1
           fi
-      - name: Print trigger details
-        run: |
-          echo "Triggered by: ${{ github.event_name }}"
-          echo "Branch: ${{ github.ref }}"
-          echo "PR Reference: ${{ github.event.inputs.pull_request_ref }}"
-  determine_image_tag:
-    runs-on: ubuntu-latest
-    needs: check_trigger
-    outputs:
-      image_tag: ${{ steps.set_tag.outputs.image_tag }}
-    steps:
+
+          if [[ "${{ github.event_name }}" == "pull_request" && "${{ github.event.action }}" == "labeled" ]]; then
+            LABEL="${{ github.event.label.name }}"
+            if [[ "$LABEL" == "rootless/scan" ]]; then
+                echo LABEL=$LABEL >> $GITHUB_ENV
+            fi
+          fi
       - name: Set image tag based on event type
         id: set_tag
         run: |
-          if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+          if [[ "${{ github.ref }}" == "refs/heads/main" && "${{ github.event_name }}" == "push" ]]; then
             echo "image_tag=main" >> $GITHUB_OUTPUT
+            echo "image_tag=main" >> $GITHUB_ENV
+          elif [[ $LABEL != "" ]]; then
+            echo "image_tag=pr${{ github.event.pull_request.number }}" >> $GITHUB_OUTPUT
+            echo "image_tag=pr${{ github.event.pull_request.number }}" >> $GITHUB_ENV
           elif [[ -n "${{ github.event.inputs.pull_request_ref }}" ]]; then
             PR_NUMBER=$(echo "${{ github.event.inputs.pull_request_ref }}")
             echo "image_tag=pr$PR_NUMBER" >> $GITHUB_OUTPUT
+            echo "image_tag=pr$PR_NUMBER" >> $GITHUB_ENV
           else
             echo "image_tag=unknown" >> $GITHUB_OUTPUT
+            echo "image_tag=unknown" >> $GITHUB_ENV
           fi
+      - name: Print trigger details
+        run: |
+          echo "Triggered by: ${{ github.event_name }}"
+          echo "Image tag: $image_tag"
 
   scan_images:
     runs-on: [ self-hosted, regular, selectel ]
-    needs: determine_image_tag
+    needs: check_trigger
+    if: ${{ needs.check_trigger.outputs.image_tag != 'unknown' }}
     steps:
 
       # <template: checkout_full_step>
@@ -90,7 +114,7 @@ jobs:
       # </template: link_bin_step>
       - name: Running default user validation on ${{env.TAG}}
         env:
-          TAG: ${{ needs.determine_image_tag.outputs.image_tag }}
+          TAG: ${{ needs.check_trigger.outputs.image_tag }}
           IMAGE: "dev-registry.deckhouse.io/sys/deckhouse-oss"
           TRIVY_TOKEN: ${{secrets.FOX_ACCESS_TOKEN}}
           DECKHOUSE_PRIVATE_REPO: ${{secrets.DECKHOUSE_PRIVATE_REPO}}

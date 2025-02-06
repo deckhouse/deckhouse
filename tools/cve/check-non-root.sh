@@ -107,7 +107,7 @@ function __main__() {
       check_user "$IMAGE_REPORT_NAME" "$IMAGE@$IMAGE_HASH"
     done
   done
-
+  exit_code=0
   # Print final report as a table
   echo ""
   echo "=============================================="
@@ -119,12 +119,15 @@ function __main__() {
   for entry in "${LOG_ENTRIES[@]}"; do
     if [[ $entry == ERROR* ]]; then
       echo -e "${RED}${entry}${NC}"
+      exit_code=1
     elif [[ $entry == WARNING* ]]; then
       echo -e "${YELLOW}${entry}${NC}"
+      exit_code=1
     else
       echo "$entry"
     fi
   done
+  exit $exit_code
 }
 
 __main__
