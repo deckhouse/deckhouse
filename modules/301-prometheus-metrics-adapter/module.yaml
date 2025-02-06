@@ -1,5 +1,8 @@
 name: prometheus-metrics-adapter
 weight: 301
+subsystems:
+  - observability
+namespace: d8-monitoring
 
 requirements:
   bootstrapped: true

@@ -1,5 +1,7 @@
 name: multitenancy-manager
 weight: 160
-
+subsystems:
+  - deckhouse
+namespace: d8-multitenancy-manager
 requirements:
   bootstrapped: true

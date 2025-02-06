@@ -1,5 +1,8 @@
 name: monitoring-custom
 weight: 340
+subsystems:
+  - observability
+namespace: d8-monitoring
 
 requirements:
   bootstrapped: true

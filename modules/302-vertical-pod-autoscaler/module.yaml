@@ -1,5 +1,8 @@
 name: vertical-pod-autoscaler
 weight: 302
+subsystems:
+  - infrastructure
+namespace: kube-system
 
 requirements:
   bootstrapped: true

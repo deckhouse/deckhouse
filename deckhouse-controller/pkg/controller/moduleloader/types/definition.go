@@ -35,12 +35,14 @@ const (
 type Definition struct {
 	Name         string                       `yaml:"name"`
 	Weight       uint32                       `yaml:"weight,omitempty"`
-	Tags         []string                     `yaml:"tags"`
-	Stage        string                       `yaml:"stage"`
-	Description  string                       `yaml:"description"`
+	Tags         []string                     `yaml:"tags,omitempty"`
+	Subsystems   []string                     `yaml:"subsystems,omitempty"`
+	Namespace    string                       `yaml:"namespace,omitempty"`
+	Stage        string                       `yaml:"stage,omitempty"`
+	Description  string                       `yaml:"description,omitempty"`
 	Requirements *v1alpha1.ModuleRequirements `yaml:"requirements,omitempty"`
 
-	DisableOptions DisableOptions `yaml:"disable"`
+	DisableOptions DisableOptions `yaml:"disable,omitempty"`
 
 	Path string `yaml:"-"`
 }
