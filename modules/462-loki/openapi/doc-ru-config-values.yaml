@@ -154,8 +154,6 @@ properties:
               memory:
                 description: |
                   Настройка ограничений использования памяти (memory limits).
-
-
   allowDeleteLogs:
     description: |
       Включение / выключение эндпоинтов api для удаления логов.
