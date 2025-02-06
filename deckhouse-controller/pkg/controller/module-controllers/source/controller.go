@@ -54,6 +54,8 @@ const (
 
 	maxConcurrentReconciles = 3
 	cacheSyncTimeout        = 3 * time.Minute
+
+	maxModulesLimit = 1500
 )
 
 var ErrSettingsNotChanged = errors.New("settings not changed")
@@ -223,6 +225,11 @@ func (r *reconciler) handleModuleSource(ctx context.Context, source *v1alpha1.Mo
 			return ctrl.Result{Requeue: true}, nil
 		}
 		return ctrl.Result{RequeueAfter: defaultScanInterval}, nil
+	}
+
+	// limit pulled module
+	if len(pulledModules) > maxModulesLimit {
+		pulledModules = pulledModules[:maxModulesLimit]
 	}
 
 	// remove the source from available sources in deleted modules
