@@ -371,7 +371,6 @@ function main() {
     "")
       >&2 echo "Empty command"
     ;;
-
     *)
       >&2 echo "Unknown command '${1}'"
       >&2 echo
