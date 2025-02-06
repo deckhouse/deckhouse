@@ -17,7 +17,7 @@ const (
 	memberLabelKey                = "l2-load-balancer.network.deckhouse.io/member"
 	metallbAllocatedPool          = "metallb.universe.tf/ip-allocated-from-pool"
 	l2LoadBalancerIPsAnnotate     = "network.deckhouse.io/load-balancer-ips"
-	lbAllowSharedIPAnnotate       = "network.deckhouse.io/load-balancer-allow-shared-ip"
+	lbAllowSharedIPAnnotate       = "network.deckhouse.io/load-balancer-shared-ip-key"
 	mlbcAnnotate                  = "network.deckhouse.io/metal-load-balancer-class"
 )
 

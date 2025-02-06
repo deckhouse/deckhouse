@@ -172,6 +172,7 @@ properties:
       Format — a data array similar to that of [MetalLB's](https://metallb.universe.tf/configuration/#advanced-address-pool-configuration).
     items:
       type: object
+      required: ["protocol", "name", "addresses"]
       properties:
         name:
           type: string
@@ -185,7 +186,6 @@ properties:
           enum:
             - bgp
             - layer2
-          default: bgp
         addresses:
           type: array
           description: |
@@ -199,7 +199,7 @@ properties:
           type: boolean
           default: true
           description: |
-            Auto-assign flag used to prevent MetalLB from automatic allocation for a pool.
+            Auto-assign flag used to prevent metallb from automatic allocation for a pool.
         avoid-buggy-ips:
           type: boolean
           default: false

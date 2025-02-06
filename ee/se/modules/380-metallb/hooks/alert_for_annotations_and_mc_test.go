@@ -46,14 +46,14 @@ spec:
 			metrics := f.MetricsCollector.CollectedMetrics()
 			found := false
 			for _, metric := range metrics {
-				if metric.Name == "d8_metallb_ignored_layer2_pools_are_used" {
+				if metric.Name == "d8_metallb_obsolete_layer2_pools_are_used" {
 					found = true
 					Expect(*metric.Value).To(Equal(float64(1)))
 					Expect(metric.Labels["name"]).To(Equal("frontend-pool"))
 				}
 			}
 			Expect(found).To(BeTrue(), "Expected to find "+
-				"'d8_metallb_ignored_layer2_pools_are_used' metric")
+				"'d8_metallb_obsolete_layer2_pools_are_used' metric")
 		})
 	})
 

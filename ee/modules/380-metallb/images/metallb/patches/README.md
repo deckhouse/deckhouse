@@ -6,4 +6,4 @@ Update golang libraries and dependencies.
 
 ## 001-metallb-add-d8-annotations.patch
 
-Add optional use of “network.deckhouse.io/load-balancer-ips” and “network.deckhouse.io/load-balancer-allow-shared-ip” annotations.
+Add optional use of “network.deckhouse.io/load-balancer-ips” and “network.deckhouse.io/load-balancer-shared-ip-key” annotations.

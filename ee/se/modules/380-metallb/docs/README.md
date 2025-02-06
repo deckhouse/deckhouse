@@ -37,34 +37,34 @@ Thus:
 
 > Available only in Enterprise Edition.
 
-MetalLB in BGP mode provides an efficient and scalable way to expose `LoadBalancer` type Services in Kubernetes clusters running on bare metal. By utilizing the standardized BGP protocol, MetalLB seamlessly integrates into existing network infrastructure and ensures high availability of Services.
+Metallb in BGP mode provides an efficient and scalable way to expose `LoadBalancer` type Services in Kubernetes clusters running on bare metal. By utilizing the standardized BGP protocol, metallb seamlessly integrates into existing network infrastructure and ensures high availability of Services.
 
-### How MetalLB Works in BGP Mode
+### How metallb Works in BGP Mode
 
-In BGP mode, MetalLB establishes BGP sessions with routers (or Top-of-Rack switches) and announces the IP addresses of `LoadBalancer` type services to them. This is accomplished as follows:
+In BGP mode, metallb establishes BGP sessions with routers (or Top-of-Rack switches) and announces the IP addresses of `LoadBalancer` type services to them. This is accomplished as follows:
 
-Configuration:
+Configuration.
 
-- MetalLB is configured with a pool of IP addresses that it can assign to Services.
+- Metallb is configured with a pool of IP addresses that it can assign to Services.
 - BGP session parameters are defined: the Autonomous System (AS) number of the Kubernetes cluster, the IP addresses of the routers (peers), the AS number of the peers, and optionally, authentication passwords.
 - For each IP address pool, specific announcement parameters can be set, such as community strings.
 
-Establishing BGP Sessions:
+Establishing BGP Sessions.
 
-- On each node of the Kubernetes cluster where MetalLB is running, the speaker component establishes BGP sessions with the specified routers.
-- Routing information is exchanged between MetalLB and the routers.
+- On each node of the Kubernetes cluster where metallb is running, the speaker component establishes BGP sessions with the specified routers.
+- Routing information is exchanged between metallb and the routers.
 
-Assigning IP Addresses to Services:
+Assigning IP Addresses to Services.
 
-- When a Service of type `LoadBalancer` is created, MetalLB selects a free IP address from the configured pool and assigns it to the Service.
+- When a Service of type `LoadBalancer` is created, metallb selects a free IP address from the configured pool and assigns it to the Service.
 - The controller component tracks changes to Services and manages IP address assignments.
 
-Announcing IP Addresses:
+Announcing IP Addresses.
 
 - After an IP address is assigned, the speaker on the node elected as the leader for that Service begins announcing the IP address over the established BGP sessions.
 - The routers receive this announcement and update their routing tables, directing traffic for that IP address to the node that announced it.
 
-Traffic Distribution:
+Traffic Distribution.
 
 - Routers use Equal-Cost Multi-Path (ECMP) or other load balancing algorithms to distribute traffic among nodes announcing the same Service IP address.
 - Inside the Kubernetes cluster, traffic arriving at a node is forwarded to the Service's pods using the mechanisms of the employed CNI (iptables/IPVS, eBPF programs, etc.).

@@ -1,10 +1,10 @@
 ---
-title: "The MetalLB module: examples"
+title: "The metallb module: examples"
 ---
 
 Metallb can be used in Static (bare metal) clusters when there is no option to use cloud load balancers. Metallb can work in L2 LoadBalancer or BGP modes LoadBalancer.
 
-## Example of MetalLB usage in L2 LoadBalancer mode
+## Example of metallb usage in L2 LoadBalancer mode
 
 {% raw %}
 
@@ -83,7 +83,7 @@ $ curl -s -o /dev/null -w "%{http_code}" 192.168.2.102:8000
 
 {% endraw %}
 
-## Example of MetalLB usage in BGP LoadBalancer mode
+## Example of metallb usage in BGP LoadBalancer mode
 
 {% raw %}
 
@@ -123,7 +123,7 @@ Configure BGP peering on the network equipment.
 
 {% raw %}
 
-To create a Services with shared IP addresses, you need to add the annotation `network.deckhouse.io/load-balancer-allow-shared-ip` to them:
+To create a Services with shared IP addresses, you need to add the annotation `network.deckhouse.io/load-balancer-shared-ip-key` to them:
 
 ```yaml
 apiVersion: v1
@@ -132,7 +132,7 @@ metadata:
   name: dns-service-tcp
   namespace: default
   annotations:
-    network.deckhouse.io/load-balancer-allow-shared-ip: "key-to-share-1.2.3.4"
+    network.deckhouse.io/load-balancer-shared-ip-key: "key-to-share-1.2.3.4"
 spec:
   type: LoadBalancer
   ports:
@@ -149,7 +149,7 @@ metadata:
   name: dns-service-udp
   namespace: default
   annotations:
-    network.deckhouse.io/load-balancer-allow-shared-ip: "key-to-share-1.2.3.4"
+    network.deckhouse.io/load-balancer-shared-ip-key: "key-to-share-1.2.3.4"
 spec:
   type: LoadBalancer
   ports:

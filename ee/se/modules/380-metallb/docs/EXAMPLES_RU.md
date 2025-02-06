@@ -1,10 +1,10 @@
 ---
-title: "The MetalLB module: примеры"
+title: "The metallb module: примеры"
 ---
 
 Metallb можно использовать в статических кластерах (bare metal), когда нет возможности воспользоваться балансировщиком от облачного провайдера. Metallb может работать в режимах L2 LoadBalancer или BGP LoadBalancer.
 
-## Пример использования MetalLB в режиме L2 LoadBalancer
+## Пример использования metallb в режиме L2 LoadBalancer
 
 {% raw %}
 
@@ -83,7 +83,7 @@ $ curl -s -o /dev/null -w "%{http_code}" 192.168.2.102:8000
 
 {% endraw %}
 
-## Пример использования MetalLB в режиме BGP LoadBalancer
+## Пример использования metallb в режиме BGP LoadBalancer
 
 {% raw %}
 
@@ -123,7 +123,7 @@ spec:
 
 {% raw %}
 
-Для создания _Services_ с общими IP адресами необходимо добавить к ним аннотацию `network.deckhouse.io/load-balancer-allow-shared-ip`:
+Для создания _Services_ с общими IP адресами необходимо добавить к ним аннотацию `network.deckhouse.io/load-balancer-shared-ip-key`:
 
 ```yaml
 apiVersion: v1
@@ -132,7 +132,7 @@ metadata:
   name: dns-service-tcp
   namespace: default
   annotations:
-    network.deckhouse.io/load-balancer-allow-shared-ip: "key-to-share-1.2.3.4"
+    network.deckhouse.io/load-balancer-shared-ip-key: "key-to-share-1.2.3.4"
 spec:
   type: LoadBalancer
   ports:
@@ -149,7 +149,7 @@ metadata:
   name: dns-service-udp
   namespace: default
   annotations:
-    network.deckhouse.io/load-balancer-allow-shared-ip: "key-to-share-1.2.3.4"
+    network.deckhouse.io/load-balancer-shared-ip-key: "key-to-share-1.2.3.4"
 spec:
   type: LoadBalancer
   ports:

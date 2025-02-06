@@ -78,9 +78,9 @@ func checkServicesForDeprecatedAnnotations(input *go_hook.HookInput) error {
 	if ok && mc.Spec.Version >= 2 {
 		for _, pool := range mc.Spec.Settings.AddressPools {
 			if pool.Protocol == "layer2" {
-				input.MetricsCollector.Set("d8_metallb_ignored_layer2_pools_are_used", 1,
+				input.MetricsCollector.Set("d8_metallb_obsolete_layer2_pools_are_used", 1,
 					map[string]string{"name": pool.Name},
-					metrics.WithGroup("D8MetallbIgnoredLayer2PoolsAreUsed"))
+					metrics.WithGroup("D8MetallbObsoleteLayer2PoolsAreUsed"))
 			}
 		}
 		return nil
