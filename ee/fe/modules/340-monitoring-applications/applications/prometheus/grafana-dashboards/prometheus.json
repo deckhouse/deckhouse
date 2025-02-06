@@ -48,11 +48,11 @@
   "fiscalYearStartMonth": 0,
   "gnetId": 3662,
   "graphTooltip": 0,
-  "id": 13,
+  "id": 39,
   "links": [],
   "panels": [
     {
-      "collapsed": true,
+      "collapsed": false,
       "datasource": {
         "type": "prometheus",
         "uid": "$ds_prometheus"
@@ -64,335 +64,7 @@
         "y": 0
       },
       "id": 34,
-      "panels": [
-        {
-          "datasource": {
-            "uid": "$ds_prometheus"
-          },
-          "description": "Percentage of uptime during the shown period.",
-          "fieldConfig": {
-            "defaults": {
-              "color": {
-                "mode": "thresholds"
-              },
-              "decimals": 3,
-              "mappings": [
-                {
-                  "options": {
-                    "match": "null",
-                    "result": {
-                      "text": "N/A"
-                    }
-                  },
-                  "type": "special"
-                }
-              ],
-              "thresholds": {
-                "mode": "absolute",
-                "steps": [
-                  {
-                    "color": "rgba(245, 54, 54, 0.9)",
-                    "value": null
-                  },
-                  {
-                    "color": "rgba(237, 129, 40, 0.89)",
-                    "value": 90
-                  },
-                  {
-                    "color": "rgba(50, 172, 45, 0.97)",
-                    "value": 99
-                  }
-                ]
-              },
-              "unit": "none"
-            },
-            "overrides": []
-          },
-          "gridPos": {
-            "h": 7,
-            "w": 6,
-            "x": 0,
-            "y": 1
-          },
-          "id": 2,
-          "maxDataPoints": 100,
-          "options": {
-            "colorMode": "value",
-            "graphMode": "none",
-            "justifyMode": "auto",
-            "orientation": "horizontal",
-            "reduceOptions": {
-              "calcs": [
-                "lastNotNull"
-              ],
-              "fields": "",
-              "values": false
-            },
-            "showPercentChange": false,
-            "textMode": "auto",
-            "wideLayout": true
-          },
-          "pluginVersion": "10.4.5",
-          "targets": [
-            {
-              "datasource": {
-                "uid": "$ds_prometheus"
-              },
-              "expr": "avg(avg_over_time(up{pod=~\"$pod\",job=\"prometheus\"}[$__range]) * 100)",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "legendFormat": "",
-              "refId": "A",
-              "step": 40
-            }
-          ],
-          "title": "Uptime",
-          "type": "stat"
-        },
-        {
-          "columns": [],
-          "datasource": {
-            "uid": "$ds_prometheus"
-          },
-          "description": "Servers which are DOWN RIGHT NOW! \nFIX THEM!!",
-          "fontSize": "100%",
-          "gridPos": {
-            "h": 7,
-            "w": 6,
-            "x": 6,
-            "y": 1
-          },
-          "hideTimeOverride": true,
-          "id": 25,
-          "scroll": true,
-          "showHeader": true,
-          "sort": {
-            "col": 0,
-            "desc": true
-          },
-          "styles": [
-            {
-              "alias": "Time",
-              "align": "auto",
-              "dateFormat": "YYYY-MM-DD HH:mm:ss",
-              "pattern": "Time",
-              "type": "hidden"
-            },
-            {
-              "alias": "",
-              "align": "auto",
-              "colors": [
-                "rgba(245, 54, 54, 0.9)",
-                "rgba(237, 129, 40, 0.89)",
-                "rgba(50, 172, 45, 0.97)"
-              ],
-              "dateFormat": "YYYY-MM-DD HH:mm:ss",
-              "decimals": 2,
-              "pattern": "/__name__|job|Value/",
-              "thresholds": [],
-              "type": "hidden",
-              "unit": "short"
-            },
-            {
-              "alias": "   ",
-              "align": "auto",
-              "colorMode": "cell",
-              "colors": [
-                "rgba(255, 0, 0, 0.9)",
-                "rgba(237, 129, 40, 0.89)",
-                "rgba(255, 0, 0, 0.97)"
-              ],
-              "dateFormat": "YYYY-MM-DD HH:mm:ss",
-              "decimals": 2,
-              "link": false,
-              "pattern": "pod",
-              "thresholds": [
-                "",
-                "",
-                ""
-              ],
-              "type": "string",
-              "unit": "short"
-            }
-          ],
-          "targets": [
-            {
-              "datasource": {
-                "uid": "$ds_prometheus"
-              },
-              "expr": "up{pod=~\"$pod\",job=\"prometheus\"} < 1",
-              "format": "table",
-              "intervalFactor": 1,
-              "refId": "A",
-              "step": 2
-            }
-          ],
-          "timeFrom": "1s",
-          "title": "Currently Down",
-          "transform": "table",
-          "type": "table-old"
-        },
-        {
-          "datasource": {
-            "uid": "$ds_prometheus"
-          },
-          "description": "Total number of time series in prometheus",
-          "fieldConfig": {
-            "defaults": {
-              "color": {
-                "mode": "thresholds"
-              },
-              "mappings": [
-                {
-                  "options": {
-                    "match": "null",
-                    "result": {
-                      "text": "N/A"
-                    }
-                  },
-                  "type": "special"
-                }
-              ],
-              "thresholds": {
-                "mode": "absolute",
-                "steps": [
-                  {
-                    "color": "rgba(50, 172, 45, 0.97)",
-                    "value": null
-                  },
-                  {
-                    "color": "rgba(237, 129, 40, 0.89)",
-                    "value": 1000000
-                  },
-                  {
-                    "color": "rgba(245, 54, 54, 0.9)",
-                    "value": 2000000
-                  }
-                ]
-              },
-              "unit": "none"
-            },
-            "overrides": []
-          },
-          "gridPos": {
-            "h": 7,
-            "w": 6,
-            "x": 12,
-            "y": 1
-          },
-          "id": 12,
-          "maxDataPoints": 100,
-          "options": {
-            "colorMode": "value",
-            "graphMode": "area",
-            "justifyMode": "auto",
-            "orientation": "horizontal",
-            "reduceOptions": {
-              "calcs": [
-                "lastNotNull"
-              ],
-              "fields": "",
-              "values": false
-            },
-            "showPercentChange": false,
-            "textMode": "auto",
-            "wideLayout": true
-          },
-          "pluginVersion": "10.4.5",
-          "targets": [
-            {
-              "datasource": {
-                "uid": "$ds_prometheus"
-              },
-              "expr": "sum(prometheus_tsdb_head_series{job=\"prometheus\",pod=~\"$pod\"})",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "refId": "B",
-              "step": 40
-            }
-          ],
-          "title": "Total Series",
-          "type": "stat"
-        },
-        {
-          "datasource": {
-            "uid": "$ds_prometheus"
-          },
-          "fieldConfig": {
-            "defaults": {
-              "color": {
-                "fixedColor": "rgb(31, 120, 193)",
-                "mode": "fixed"
-              },
-              "mappings": [
-                {
-                  "options": {
-                    "match": "null",
-                    "result": {
-                      "text": "N/A"
-                    }
-                  },
-                  "type": "special"
-                }
-              ],
-              "thresholds": {
-                "mode": "absolute",
-                "steps": [
-                  {
-                    "color": "green",
-                    "value": null
-                  },
-                  {
-                    "color": "red",
-                    "value": 80
-                  }
-                ]
-              },
-              "unit": "none"
-            },
-            "overrides": []
-          },
-          "gridPos": {
-            "h": 7,
-            "w": 6,
-            "x": 18,
-            "y": 1
-          },
-          "id": 14,
-          "maxDataPoints": 100,
-          "options": {
-            "colorMode": "none",
-            "graphMode": "area",
-            "justifyMode": "auto",
-            "orientation": "horizontal",
-            "reduceOptions": {
-              "calcs": [
-                "lastNotNull"
-              ],
-              "fields": "",
-              "values": false
-            },
-            "showPercentChange": false,
-            "textMode": "auto",
-            "wideLayout": true
-          },
-          "pluginVersion": "10.4.5",
-          "targets": [
-            {
-              "datasource": {
-                "uid": "$ds_prometheus"
-              },
-              "expr": "sum(prometheus_tsdb_head_chunks{job=\"prometheus\",pod=~\"$pod\"})",
-              "format": "time_series",
-              "intervalFactor": 1,
-              "refId": "B",
-              "step": 40
-            }
-          ],
-          "title": "Memory Chunks",
-          "type": "stat"
-        }
-      ],
+      "panels": [],
       "targets": [
         {
           "datasource": {
@@ -406,6 +78,412 @@
       "type": "row"
     },
     {
+      "datasource": {
+        "uid": "$ds_prometheus"
+      },
+      "description": "Percentage of uptime during the shown period.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "decimals": 3,
+          "mappings": [
+            {
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "N/A"
+                }
+              },
+              "type": "special"
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "rgba(245, 54, 54, 0.9)",
+                "value": null
+              },
+              {
+                "color": "rgba(237, 129, 40, 0.89)",
+                "value": 90
+              },
+              {
+                "color": "rgba(50, 172, 45, 0.97)",
+                "value": 99
+              }
+            ]
+          },
+          "unit": "none"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 6,
+        "x": 0,
+        "y": 1
+      },
+      "id": 2,
+      "maxDataPoints": 100,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "pluginVersion": "10.4.14",
+      "targets": [
+        {
+          "datasource": {
+            "uid": "$ds_prometheus"
+          },
+          "expr": "avg(avg_over_time(up{pod=~\"$pod\",job=\"prometheus\"}[$__range]) * 100)",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "",
+          "refId": "A",
+          "step": 40
+        }
+      ],
+      "title": "Uptime",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "uid": "$ds_prometheus"
+      },
+      "description": "Servers which are DOWN RIGHT NOW! \nFIX THEM!!",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "inspect": false
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Time"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Time"
+              },
+              {
+                "id": "custom.align"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "/__name__|job|Value/"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "short"
+              },
+              {
+                "id": "decimals",
+                "value": 2
+              },
+              {
+                "id": "custom.align"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "pod"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "   "
+              },
+              {
+                "id": "unit",
+                "value": "short"
+              },
+              {
+                "id": "decimals",
+                "value": 2
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-background"
+                }
+              },
+              {
+                "id": "custom.align"
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "rgba(255, 0, 0, 0.9)",
+                      "value": null
+                    },
+                    {
+                      "color": "rgba(237, 129, 40, 0.89)"
+                    },
+                    {
+                      "color": "rgba(255, 0, 0, 0.97)"
+                    },
+                    {}
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 6,
+        "x": 6,
+        "y": 1
+      },
+      "hideTimeOverride": true,
+      "id": 25,
+      "options": {
+        "cellHeight": "sm",
+        "footer": {
+          "countRows": false,
+          "fields": "",
+          "reducer": [
+            "sum"
+          ],
+          "show": false
+        },
+        "showHeader": true
+      },
+      "pluginVersion": "10.4.14",
+      "targets": [
+        {
+          "datasource": {
+            "uid": "$ds_prometheus"
+          },
+          "expr": "up{pod=~\"$pod\",job=\"prometheus\"} < 1",
+          "format": "table",
+          "intervalFactor": 1,
+          "refId": "A",
+          "step": 2
+        }
+      ],
+      "timeFrom": "1s",
+      "title": "Currently Down",
+      "transformations": [
+        {
+          "id": "merge",
+          "options": {
+            "reducers": []
+          }
+        }
+      ],
+      "type": "table"
+    },
+    {
+      "datasource": {
+        "uid": "$ds_prometheus"
+      },
+      "description": "Total number of time series in prometheus",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [
+            {
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "N/A"
+                }
+              },
+              "type": "special"
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "rgba(50, 172, 45, 0.97)",
+                "value": null
+              },
+              {
+                "color": "rgba(237, 129, 40, 0.89)",
+                "value": 1000000
+              },
+              {
+                "color": "rgba(245, 54, 54, 0.9)",
+                "value": 2000000
+              }
+            ]
+          },
+          "unit": "none"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 6,
+        "x": 12,
+        "y": 1
+      },
+      "id": 12,
+      "maxDataPoints": 100,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "pluginVersion": "10.4.14",
+      "targets": [
+        {
+          "datasource": {
+            "uid": "$ds_prometheus"
+          },
+          "expr": "sum(prometheus_tsdb_head_series{job=\"prometheus\",pod=~\"$pod\"})",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "refId": "B",
+          "step": 40
+        }
+      ],
+      "title": "Total Series",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "uid": "$ds_prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "rgb(31, 120, 193)",
+            "mode": "fixed"
+          },
+          "mappings": [
+            {
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "N/A"
+                }
+              },
+              "type": "special"
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "none"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 6,
+        "x": 18,
+        "y": 1
+      },
+      "id": 14,
+      "maxDataPoints": 100,
+      "options": {
+        "colorMode": "none",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "pluginVersion": "10.4.14",
+      "targets": [
+        {
+          "datasource": {
+            "uid": "$ds_prometheus"
+          },
+          "expr": "sum(prometheus_tsdb_head_chunks{job=\"prometheus\",pod=~\"$pod\"})",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "refId": "B",
+          "step": 40
+        }
+      ],
+      "title": "Memory Chunks",
+      "type": "stat"
+    },
+    {
       "collapsed": true,
       "datasource": {
         "type": "prometheus",
@@ -415,7 +493,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 1
+        "y": 8
       },
       "id": 35,
       "panels": [
@@ -444,8 +522,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "rgba(50, 172, 45, 0.97)",
-                    "value": null
+                    "color": "rgba(50, 172, 45, 0.97)"
                   },
                   {
                     "color": "rgba(237, 129, 40, 0.89)",
@@ -465,7 +542,7 @@
             "h": 6,
             "w": 4,
             "x": 0,
-            "y": 2
+            "y": 9
           },
           "id": 16,
           "maxDataPoints": 100,
@@ -485,7 +562,7 @@
             "textMode": "auto",
             "wideLayout": true
           },
-          "pluginVersion": "10.4.5",
+          "pluginVersion": "10.4.14",
           "targets": [
             {
               "datasource": {
@@ -526,8 +603,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "rgba(50, 172, 45, 0.97)",
-                    "value": null
+                    "color": "rgba(50, 172, 45, 0.97)"
                   },
                   {
                     "color": "rgba(237, 129, 40, 0.89)",
@@ -547,7 +623,7 @@
             "h": 6,
             "w": 4,
             "x": 4,
-            "y": 2
+            "y": 9
           },
           "id": 18,
           "maxDataPoints": 100,
@@ -567,7 +643,7 @@
             "textMode": "auto",
             "wideLayout": true
           },
-          "pluginVersion": "10.4.5",
+          "pluginVersion": "10.4.14",
           "targets": [
             {
               "datasource": {
@@ -608,8 +684,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "rgba(50, 172, 45, 0.97)",
-                    "value": null
+                    "color": "rgba(50, 172, 45, 0.97)"
                   },
                   {
                     "color": "rgba(237, 129, 40, 0.89)",
@@ -629,7 +704,7 @@
             "h": 6,
             "w": 4,
             "x": 8,
-            "y": 2
+            "y": 9
           },
           "id": 19,
           "maxDataPoints": 100,
@@ -649,7 +724,7 @@
             "textMode": "auto",
             "wideLayout": true
           },
-          "pluginVersion": "10.4.5",
+          "pluginVersion": "10.4.14",
           "targets": [
             {
               "datasource": {
@@ -690,8 +765,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "rgba(50, 172, 45, 0.97)",
-                    "value": null
+                    "color": "rgba(50, 172, 45, 0.97)"
                   },
                   {
                     "color": "rgba(237, 129, 40, 0.89)",
@@ -711,7 +785,7 @@
             "h": 6,
             "w": 4,
             "x": 12,
-            "y": 2
+            "y": 9
           },
           "id": 13,
           "maxDataPoints": 100,
@@ -731,7 +805,7 @@
             "textMode": "auto",
             "wideLayout": true
           },
-          "pluginVersion": "10.4.5",
+          "pluginVersion": "10.4.14",
           "targets": [
             {
               "datasource": {
@@ -772,8 +846,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "rgba(50, 172, 45, 0.97)",
-                    "value": null
+                    "color": "rgba(50, 172, 45, 0.97)"
                   },
                   {
                     "color": "rgba(237, 129, 40, 0.89)",
@@ -793,7 +866,7 @@
             "h": 6,
             "w": 8,
             "x": 16,
-            "y": 2
+            "y": 9
           },
           "id": 20,
           "maxDataPoints": 100,
@@ -813,7 +886,7 @@
             "textMode": "auto",
             "wideLayout": true
           },
-          "pluginVersion": "10.4.5",
+          "pluginVersion": "10.4.14",
           "targets": [
             {
               "datasource": {
@@ -852,7 +925,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 2
+        "y": 9
       },
       "id": 36,
       "panels": [
@@ -904,8 +977,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -921,7 +993,7 @@
             "h": 7,
             "w": 24,
             "x": 0,
-            "y": 3
+            "y": 10
           },
           "id": 33,
           "options": {
@@ -1185,7 +1257,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 3
+        "y": 10
       },
       "id": 37,
       "panels": [
@@ -1237,8 +1309,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -1254,7 +1325,7 @@
             "h": 7,
             "w": 12,
             "x": 0,
-            "y": 4
+            "y": 11
           },
           "id": 1,
           "options": {
@@ -1334,8 +1405,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -1351,7 +1421,7 @@
             "h": 7,
             "w": 12,
             "x": 12,
-            "y": 4
+            "y": 11
           },
           "id": 5,
           "options": {
@@ -1406,7 +1476,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 4
+        "y": 11
       },
       "id": 38,
       "panels": [
@@ -1457,8 +1527,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -1474,7 +1543,7 @@
             "h": 7,
             "w": 12,
             "x": 0,
-            "y": 5
+            "y": 12
           },
           "id": 3,
           "options": {
@@ -1552,8 +1621,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -1582,7 +1650,7 @@
             "h": 7,
             "w": 12,
             "x": 12,
-            "y": 5
+            "y": 12
           },
           "id": 32,
           "options": {
@@ -1648,7 +1716,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 5
+        "y": 12
       },
       "id": 39,
       "panels": [
@@ -1700,8 +1768,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -1733,7 +1800,7 @@
             "h": 7,
             "w": 24,
             "x": 0,
-            "y": 6
+            "y": 13
           },
           "id": 4,
           "options": {
@@ -1788,7 +1855,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 6
+        "y": 13
       },
       "id": 40,
       "panels": [
@@ -1857,7 +1924,7 @@
             "h": 7,
             "w": 12,
             "x": 0,
-            "y": 7
+            "y": 14
           },
           "id": 6,
           "options": {
@@ -1955,7 +2022,7 @@
             "h": 7,
             "w": 12,
             "x": 12,
-            "y": 7
+            "y": 14
           },
           "id": 21,
           "options": {
@@ -2010,7 +2077,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 7
+        "y": 14
       },
       "id": 41,
       "panels": [
@@ -2060,8 +2127,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -2077,7 +2143,7 @@
             "h": 7,
             "w": 12,
             "x": 0,
-            "y": 8
+            "y": 22
           },
           "id": 29,
           "options": {
@@ -2158,8 +2224,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -2175,7 +2240,7 @@
             "h": 7,
             "w": 12,
             "x": 12,
-            "y": 8
+            "y": 22
           },
           "id": 30,
           "options": {
@@ -2266,7 +2331,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 8
+        "y": 15
       },
       "id": 42,
       "panels": [
@@ -2318,8 +2383,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -2413,8 +2477,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -2509,8 +2572,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -2606,8 +2668,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -2700,7 +2761,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 9
+        "y": 16
       },
       "id": 43,
       "panels": [
@@ -2751,8 +2812,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -2768,7 +2828,7 @@
             "h": 7,
             "w": 24,
             "x": 0,
-            "y": 10
+            "y": 24
           },
           "id": 22,
           "options": {
@@ -2823,7 +2883,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 10
+        "y": 17
       },
       "id": 44,
       "panels": [
@@ -2874,8 +2934,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -2891,7 +2950,7 @@
             "h": 7,
             "w": 12,
             "x": 0,
-            "y": 11
+            "y": 25
           },
           "id": 23,
           "options": {
@@ -2972,8 +3031,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -2989,7 +3047,7 @@
             "h": 7,
             "w": 12,
             "x": 12,
-            "y": 11
+            "y": 25
           },
           "id": 24,
           "options": {
@@ -3044,7 +3102,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 11
+        "y": 18
       },
       "id": 45,
       "panels": [
@@ -3095,8 +3153,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -3112,7 +3169,7 @@
             "h": 7,
             "w": 24,
             "x": 0,
-            "y": 12
+            "y": 26
           },
           "id": 28,
           "options": {
@@ -3167,7 +3224,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 12
+        "y": 19
       },
       "id": 46,
       "panels": [
@@ -3220,8 +3277,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -3253,7 +3309,7 @@
             "h": 7,
             "w": 12,
             "x": 0,
-            "y": 13
+            "y": 27
           },
           "id": 26,
           "options": {
@@ -3540,8 +3596,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -3557,7 +3612,7 @@
             "h": 7,
             "w": 6,
             "x": 12,
-            "y": 13
+            "y": 27
           },
           "id": 9,
           "options": {
@@ -3638,8 +3693,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -3655,7 +3709,7 @@
             "h": 7,
             "w": 6,
             "x": 18,
-            "y": 13
+            "y": 27
           },
           "id": 7,
           "options": {
