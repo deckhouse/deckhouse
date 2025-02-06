@@ -7,7 +7,6 @@ package ee
 
 import (
 	"encoding/json"
-	"maps"
 	"slices"
 	"strings"
 	"time"
@@ -220,8 +219,7 @@ func federationDiscovery(input *go_hook.HookInput, dc dependency.Container) erro
 			continue
 		}
 		federationInfo.SetMetricMetadataEndpointError(input.MetricsCollector, federationInfo.PrivateMetadataEndpoint, 0)
-		renewedPublicServices := updatePortProtocols(privateMetadata.PublicServices, defaultProtocol, protocolMap)
-		privateMetadata.PublicServices = &renewedPublicServices
+		updatePortProtocols(privateMetadata.PublicServices, defaultProtocol, protocolMap)
 		err = federationInfo.PatchMetadataCache(input.PatchCollector, "private", privateMetadata)
 		if err != nil {
 			return err
@@ -230,25 +228,26 @@ func federationDiscovery(input *go_hook.HookInput, dc dependency.Container) erro
 	return nil
 }
 
-func updatePortProtocols(services *[]eeCrd.FederationPublicServices, defaultProtocol string, protocolMap map[string]string) []eeCrd.FederationPublicServices {
-	resultServices := (*services)
-	// We sort by length, since the value HTTP and HTTPS is present in MAPS, if we do without sorting, there will be a problem when HTTPS is assigned a protocol, not TLS.
-	keys := slices.Collect(maps.Keys(protocolMap))
-	slices.SortFunc(keys, func(a, b string) int {
-		return len(b) - len(a)
-	})
-	for serviceIndex, service := range resultServices {
+func updatePortProtocols(services *[]eeCrd.FederationPublicServices, defaultProtocol string, protocolMap map[string]string) {
+	keys := make([]string, 0, len(protocolMap))
+	for key := range protocolMap {
+		keys = append(keys, key)
+	}
+	slices.SortFunc(keys, func(a, b string) int { return len(b) - len(a) })
+	for serviceIndex := range *services {
+		service := &(*services)[serviceIndex]
 		for portIndex, port := range service.Ports {
 			port.Protocol = defaultProtocol
+			portNameParts := strings.SplitN(port.Name, "-", 2)
+			basePortName := portNameParts[0]
 			for _, keyword := range keys {
 				protocol := protocolMap[keyword]
-				if strings.Contains(port.Name, keyword) {
+				if strings.Contains(basePortName, keyword) {
 					port.Protocol = protocol
 					break
 				}
 			}
-			resultServices[serviceIndex].Ports[portIndex] = port
+			service.Ports[portIndex] = port
 		}
 	}
-	return resultServices
 }
