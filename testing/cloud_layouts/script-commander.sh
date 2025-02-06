@@ -378,6 +378,7 @@ function main() {
       >&2 echo "${usage}"
       exit 1
     ;;
+
   esac
   if [[ $exitCode == 0 ]]; then
     echo "E2E test: Success!"
