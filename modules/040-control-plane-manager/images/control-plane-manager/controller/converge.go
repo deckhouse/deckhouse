@@ -78,7 +78,7 @@ func convergeComponents() error {
 
 func convergeComponent(componentName string) error {
 	log.Infof("converge component %s", componentName)
-	etcd := EtcdClient{}
+	etcd := &EtcdClient{}
 	// remove checksum patch, if it was left from previous run
 	_ = os.Remove(filepath.Join(deckhousePath, "kubeadm", "patches", componentName+"999checksum.yaml"))
 

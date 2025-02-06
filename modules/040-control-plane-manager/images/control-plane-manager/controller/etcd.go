@@ -32,7 +32,6 @@ var etcdBackoff = wait.Backoff{
 
 type EtcdClient struct {
 	client *clientv3.Client
-	config *Config
 }
 
 func (c *EtcdClient) EtcdJoinConverge() error {
@@ -56,7 +55,7 @@ func (c *EtcdClient) CheckIfNodeIsLearner() (uint64, error) {
 	}
 
 	for _, m := range resp.Members {
-		if m.Name == c.config.NodeName {
+		if m.Name == config.NodeName {
 			log.Infof("[etcd] member: ID=%d Name=%q PeerURLs=%v IsLearner=%v",
 				m.ID, m.Name, m.PeerURLs, m.IsLearner)
 			return m.ID, nil
