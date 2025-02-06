@@ -251,7 +251,7 @@ function prepare_environment() {
   esac
 }
 
-function bootstrap() {
+function run-test() {
   local commander_host="$COMMANDER_HOST"
   local commander_token="$COMMANDER_TOKEN"
   local payload
@@ -360,8 +360,8 @@ function main() {
    exit 2
   fi
   case "${1}" in
-    bootstrap)
-      bootstrap || { exitCode=$? && >&2 echo "Cloud test failed or aborted." ;}
+    run-test)
+      run-test || { exitCode=$? && >&2 echo "Cloud test failed or aborted." ;}
     ;;
 
     cleanup)
