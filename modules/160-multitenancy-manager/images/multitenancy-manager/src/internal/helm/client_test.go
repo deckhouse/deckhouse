@@ -75,13 +75,6 @@ func test(templates map[string][]byte, basePath string) error {
 	}
 	rendered := releaseutil.SplitManifests(buf.String())
 
-	marshalled, err := yaml.Marshal(project)
-	if err != nil {
-		return err
-	}
-
-	os.WriteFile(filepath.Join(basePath, "test.yaml"), marshalled, 0644)
-
 	// uncomment for test and render rendered resources
 	//os.WriteFile(filepath.Join(basePath, "rendered.yaml"), buf.Bytes(), 0644)
 

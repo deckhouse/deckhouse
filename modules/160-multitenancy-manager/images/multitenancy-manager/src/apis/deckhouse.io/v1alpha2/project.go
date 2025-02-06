@@ -21,6 +21,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
+	"slices"
 )
 
 const (
@@ -147,7 +148,7 @@ type ProjectStatus struct {
 	Namespaces []string `json:"namespaces,omitempty"`
 
 	// Rendered resources
-	Resources map[string]map[string][]ResourceObject `json:"resources,omitempty"`
+	Resources map[string]map[string]ResourceKind `json:"resources,omitempty"`
 
 	// Observed generation
 	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
@@ -174,6 +175,30 @@ func (p *Project) SetTemplateGeneration(generation int64) {
 	p.Status.TemplateGeneration = generation
 }
 
+func (p *Project) AddResource(obj *unstructured.Unstructured, rendered bool) {
+	if p.Status.Resources == nil {
+		p.Status.Resources = make(map[string]map[string]ResourceKind)
+	}
+
+	if _, exists := p.Status.Resources[obj.GetAPIVersion()]; !exists {
+		p.Status.Resources[obj.GetAPIVersion()] = make(map[string]ResourceKind)
+	}
+
+	if existing, ok := p.Status.Resources[obj.GetAPIVersion()][obj.GetKind()]; ok {
+		if !slices.Contains(existing.Names, obj.GetName()) {
+			existing.Names = append(existing.Names, obj.GetName())
+		}
+		existing.Rendered = rendered
+		p.Status.Resources[obj.GetAPIVersion()][obj.GetKind()] = existing
+		return
+	}
+
+	p.Status.Resources[obj.GetAPIVersion()][obj.GetKind()] = ResourceKind{
+		Rendered: rendered,
+		Names:    []string{obj.GetName()},
+	}
+}
+
 func (p *ProjectStatus) DeepCopy() *ProjectStatus {
 	if p == nil {
 		return nil
@@ -197,46 +222,35 @@ func (p *ProjectStatus) DeepCopyInto(newObj *ProjectStatus) {
 		copy(*out, *in)
 	}
 	if p.Resources != nil {
-		newObj.Resources = make(map[string]map[string][]ResourceObject, len(p.Resources))
+		newObj.Resources = make(map[string]map[string]ResourceKind, len(p.Resources))
 		for outerKey, innerMap := range p.Resources {
-			if innerMap != nil {
-				newInnerMap := make(map[string][]ResourceObject, len(innerMap))
-				for innerKey, resourceSlice := range innerMap {
-					newInnerMap[innerKey] = append([]ResourceObject(nil), resourceSlice...)
-				}
-				newObj.Resources[outerKey] = newInnerMap
+			if innerMap == nil {
+				newObj.Resources[outerKey] = nil
+				continue
 			}
+
+			newInnerMap := make(map[string]ResourceKind, len(innerMap))
+			for innerKey, resourceKind := range innerMap {
+				var newResourceKind ResourceKind
+				resourceKind.DeepCopyInto(&newResourceKind)
+				newInnerMap[innerKey] = newResourceKind
+			}
+			newObj.Resources[outerKey] = newInnerMap
 		}
 	}
 }
 
-type ResourceObject struct {
-	Name     string `json:"name"`
-	Rendered bool   `json:"rendered,omitempty"`
+type ResourceKind struct {
+	Rendered bool     `json:"rendered,omitempty"`
+	Names    []string `json:"names,omitempty"`
 }
 
-func (p *Project) AddResource(obj *unstructured.Unstructured, rendered bool) {
-	if p.Status.Resources == nil {
-		p.Status.Resources = make(map[string]map[string][]ResourceObject)
-	}
-
-	if _, exists := p.Status.Resources[obj.GetAPIVersion()]; !exists {
-		p.Status.Resources[obj.GetAPIVersion()] = make(map[string][]ResourceObject)
-	}
-
-	p.Status.Resources[obj.GetAPIVersion()][obj.GetKind()] = append(
-		p.Status.Resources[obj.GetAPIVersion()][obj.GetKind()],
-		ResourceObject{
-			Name:     obj.GetName(),
-			Rendered: rendered,
-		},
-	)
-}
-
-func (o *ResourceObject) DeepCopyInto(newObj *ResourceObject) {
+func (o *ResourceKind) DeepCopyInto(newObj *ResourceKind) {
 	*newObj = *o
-	newObj.Rendered = o.Rendered
-	newObj.Name = o.Name
+	if o.Names != nil {
+		newObj.Names = make([]string, len(o.Names))
+		copy(newObj.Names, o.Names)
+	}
 }
 
 type Condition struct {

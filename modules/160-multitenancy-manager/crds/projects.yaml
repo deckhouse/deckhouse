@@ -126,16 +126,16 @@ spec:
                   additionalProperties:
                     type: object
                     additionalProperties:
-                      type: array
-                      items:
-                        type: object
-                        properties:
-                          name:
+                      type: object
+                      properties:
+                        rendered:
+                          type: boolean
+                          description: Indicates if the resources were successfully rendered.
+                        names:
+                          type: array
+                          description: List of resource names.
+                          items:
                             type: string
-                            description: Name of the resource.
-                          rendered:
-                            type: boolean
-                            description: Indicates if the resource was successfully rendered.
                 conditions:
                   type: array
                   items:

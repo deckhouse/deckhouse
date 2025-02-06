@@ -49,7 +49,7 @@ func newPostRenderer(project *v1alpha2.Project, versions map[string]struct{}, lo
 // or will add a project namespace if it does not exist in manifests
 func (r *postRenderer) Run(renderedManifests *bytes.Buffer) (modifiedManifests *bytes.Buffer, err error) {
 	// clear resources
-	r.project.Status.Resources = make(map[string]map[string][]v1alpha2.ResourceObject)
+	r.project.Status.Resources = make(map[string]map[string]v1alpha2.ResourceKind)
 
 	var coreFound bool
 	builder := strings.Builder{}
