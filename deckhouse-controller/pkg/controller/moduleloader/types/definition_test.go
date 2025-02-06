@@ -18,7 +18,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-
 	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v3"
 )
@@ -42,7 +41,7 @@ requirements:
 	err := yaml.Unmarshal([]byte(data), &m)
 	require.NoErrorf(t, err, "try unmarshal yaml\n%s", data)
 
-	//assert.True(t, m.Requirements.Bootstrapped)
+	// assert.True(t, m.Requirements.Bootstrapped)
 	assert.Equal(t, "testxxz", m.Name)
 	assert.Equal(t, uint32(340), m.Weight)
 	assert.Equal(t, "true", m.Requirements.Bootstrapped)
