@@ -305,14 +305,6 @@ jobs:
             MASTERS_COUNT=${MASTERS_COUNT}
           "
 
-          ls -lh $(pwd)/testing
-
-          dhctl_log_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
-          echo "DHCTL log file: $dhctl_log_file"
-
-          user_runner_id=$(id -u):$(id -g)
-          echo "user_runner_id $user_runner_id"
-
           docker run --rm \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
             -e PREFIX=${PREFIX} \
@@ -596,14 +588,6 @@ jobs:
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
           "
-
-          ls -lh $(pwd)/testing
-
-          dhctl_log_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
-          echo "DHCTL log file: $dhctl_log_file"
-
-          user_runner_id=$(id -u):$(id -g)
-          echo "user_runner_id $user_runner_id"
 
           docker run --rm \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
@@ -889,14 +873,6 @@ jobs:
             MASTERS_COUNT=${MASTERS_COUNT}
           "
 
-          ls -lh $(pwd)/testing
-
-          dhctl_log_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
-          echo "DHCTL log file: $dhctl_log_file"
-
-          user_runner_id=$(id -u):$(id -g)
-          echo "user_runner_id $user_runner_id"
-
           docker run --rm \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
             -e PREFIX=${PREFIX} \
@@ -1180,14 +1156,6 @@ jobs:
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
           "
-
-          ls -lh $(pwd)/testing
-
-          dhctl_log_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
-          echo "DHCTL log file: $dhctl_log_file"
-
-          user_runner_id=$(id -u):$(id -g)
-          echo "user_runner_id $user_runner_id"
 
           docker run --rm \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
@@ -1473,14 +1441,6 @@ jobs:
             MASTERS_COUNT=${MASTERS_COUNT}
           "
 
-          ls -lh $(pwd)/testing
-
-          dhctl_log_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
-          echo "DHCTL log file: $dhctl_log_file"
-
-          user_runner_id=$(id -u):$(id -g)
-          echo "user_runner_id $user_runner_id"
-
           docker run --rm \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
             -e PREFIX=${PREFIX} \
@@ -1764,14 +1724,6 @@ jobs:
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
           "
-
-          ls -lh $(pwd)/testing
-
-          dhctl_log_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
-          echo "DHCTL log file: $dhctl_log_file"
-
-          user_runner_id=$(id -u):$(id -g)
-          echo "user_runner_id $user_runner_id"
 
           docker run --rm \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
@@ -2057,14 +2009,6 @@ jobs:
             MASTERS_COUNT=${MASTERS_COUNT}
           "
 
-          ls -lh $(pwd)/testing
-
-          dhctl_log_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
-          echo "DHCTL log file: $dhctl_log_file"
-
-          user_runner_id=$(id -u):$(id -g)
-          echo "user_runner_id $user_runner_id"
-
           docker run --rm \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
             -e PREFIX=${PREFIX} \
@@ -2348,14 +2292,6 @@ jobs:
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
           "
-
-          ls -lh $(pwd)/testing
-
-          dhctl_log_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
-          echo "DHCTL log file: $dhctl_log_file"
-
-          user_runner_id=$(id -u):$(id -g)
-          echo "user_runner_id $user_runner_id"
 
           docker run --rm \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \

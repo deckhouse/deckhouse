@@ -125,35 +125,6 @@ run: |
 {!{- end }!}
   "
 
-  ls -lh $(pwd)/testing
-
-  dhctl_log_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
-  echo "DHCTL log file: $dhctl_log_file"
-
-  user_runner_id=$(id -u):$(id -g)
-  echo "user_runner_id $user_runner_id"
-
-
-{!{- if and (eq $script_arg "run-test") $run_from_issue_or_pr }!}
-  echo "Start waiting ssh connection string script"
-  comment_url="${GITHUB_API_SERVER}/repos/${REPOSITORY}/issues/comments/${COMMENT_ID}"
-  echo "Full comment url for updating ${comment_url}"
-
-  ssh_connect_str_file="${DHCTL_LOG_FILE}-ssh-connect_str-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
-  echo "ssh_connection_str_file=${ssh_connect_str_file}" >> $GITHUB_OUTPUT
-
-  bastion_ip_file=""
-  if [[ "${PROVIDER}" == "Static" ]] ; then
-    bastion_ip_file="${DHCTL_LOG_FILE}-ssh-bastion-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
-  elif [[ "${PROVIDER}" == "VCD" ]] ; then
-    bastion_ip_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
-  fi
-
-  echo "ssh_bastion_str_file=${bastion_ip_file}" >> $GITHUB_OUTPUT
-
-  $(pwd)/testing/cloud_layouts/wait-master-ssh-and-update-comment.sh "$dhctl_log_file" "$comment_url" "$ssh_connect_str_file" "$bastion_ip_file" > "${dhctl_log_file}-wait-log" 2>&1 &
-{!{ end }!}
-
 {!{- if eq $provider "eks" }!}
   chmod 755 $(pwd)/testing/cloud_layouts/{!{ $script_eks }!}
 
