@@ -2,6 +2,7 @@
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 fromImage: common/src-artifact
+fromCacheVersion: testttt
 git:
   - add: /modules/462-loki/images/{{ $.ImageName }}
     to: /
