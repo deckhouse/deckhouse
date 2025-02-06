@@ -201,7 +201,7 @@ func (l *Loader) restoreAbsentModulesFromReleases(ctx context.Context) error {
 
 		deployedReleases[release.Spec.ModuleName] = release
 
-		moduleVersion := "v" + release.Spec.Version.String()
+		moduleVersion := "v" + release.GetVersion().String()
 
 		// if ModulePullOverride exists, don't check and restore overridden release
 		exists, err := utils.ModulePullOverrideExists(ctx, l.client, release.Spec.ModuleName)
@@ -221,7 +221,7 @@ func (l *Loader) restoreAbsentModulesFromReleases(ctx context.Context) error {
 			}
 			l.log.Warnf("the '%s' module is missing, skip setting version", release.Spec.ModuleName)
 		} else {
-			l.log.Debugf("set the '%s' version for the '%s' module", release.Spec.Version.String(), release.Spec.ModuleName)
+			l.log.Debugf("set the '%s' version for the '%s' module", release.GetVersion().String(), release.Spec.ModuleName)
 			err = utils.Update[*v1alpha1.Module](ctx, l.client, module, func(module *v1alpha1.Module) bool {
 				if module.Properties.Version != moduleVersion {
 					module.Properties.Version = moduleVersion

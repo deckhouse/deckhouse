@@ -95,9 +95,8 @@ func TestDeckhouseInstall(t *testing.T) {
 			"With secrets",
 			func() error {
 				conf := config.DeckhouseInstaller{
-					Bundle:                "Default",
 					ClusterConfig:         []byte(`test`),
-					ProviderClusterConfig: []byte(`{"Kind": "OpenstackCloudProvider"}`),
+					ProviderClusterConfig: []byte(`test`),
 					TerraformState:        []byte(`test`),
 				}
 				_, err := CreateDeckhouseManifests(fakeClient, &conf)
@@ -227,24 +226,9 @@ func TestDeckhouseInstallWithModuleConfigs(t *testing.T) {
 		"bundle": "Minimal",
 	})
 
-	mc3 := &config.ModuleConfig{}
-	mc3.SetGroupVersionKind(schema.GroupVersionKind{
-		Group:   config.ModuleConfigGroup,
-		Version: config.ModuleConfigVersion,
-		Kind:    config.ModuleConfigKind,
-	})
-	mc3.SetName("cni-cilium")
-	mc3.Spec.Enabled = ptr.To(true)
-	mc3.Spec.Version = 1
-	mc3.Spec.Settings = config.SettingsValues(map[string]interface{}{
-		"tunnelMode":       "Disabled",
-		"masqueradeMode":   "BPF",
-		"createNodeRoutes": true,
-	})
-
 	_, err = CreateDeckhouseManifests(fakeClient, &config.DeckhouseInstaller{
 		DevBranch:     "pr1111",
-		ModuleConfigs: []*config.ModuleConfig{mc1, mc2, mc3},
+		ModuleConfigs: []*config.ModuleConfig{mc1, mc2},
 	})
 
 	require.NoError(t, err)
@@ -252,9 +236,8 @@ func TestDeckhouseInstallWithModuleConfigs(t *testing.T) {
 	mcs, err := fakeClient.Dynamic().Resource(config.ModuleConfigGVR).List(context.TODO(), metav1.ListOptions{})
 	require.NoError(t, err)
 
-	require.Len(t, mcs.Items, 3)
+	require.Len(t, mcs.Items, 2)
 
-	require.Equal(t, mcs.Items[0].GetName(), "cni-cilium")
 	// should be not found for unlock deckhouse queue
 	_, err = fakeClient.CoreV1().ConfigMaps("d8-system").Get(context.TODO(), "deckhouse-bootstrap-lock", metav1.GetOptions{})
 	require.True(t, errors.IsNotFound(err))

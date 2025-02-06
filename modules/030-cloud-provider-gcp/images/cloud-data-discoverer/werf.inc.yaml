@@ -9,7 +9,7 @@ import:
 docker:
   ENTRYPOINT: ["/discoverer"]
 ---
-{{ $discovererAbsPath := "/deckhouse/modules/030-cloud-provider-gcp/images/cloud-data-discoverer/" }}
+{{ $discovererAbsPath := "/deckhouse/modules/030-cloud-provider-gcp/images/cloud-data-discoverer" }}
 {{ $discovererRelPath := printf "%smodules/030-cloud-provider-gcp/images/cloud-data-discoverer/" .ModulePath }}
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
 final: false

@@ -11,5 +11,11 @@
         - '**/*'
 - add: /ee/se-plus/candi/cloud-providers/vsphere
   to: /deckhouse/candi/cloud-providers/vsphere
+  stageDependencies:
+    setup:
+        - '**/*'
 - add: /ee/se-plus/candi/cloud-providers/zvirt
   to: /deckhouse/candi/cloud-providers/zvirt
+  stageDependencies:
+    setup:
+        - '**/*'
