@@ -79,24 +79,10 @@ func NewSilentLoop(name string, attemptsQuantity int, wait time.Duration) *Loop 
 		name:             name,
 		attemptsQuantity: attemptsQuantity,
 		waitTime:         wait,
-		logger:           log.GetSilentLogger(),
+		logger:           log.GetDefaultLogger(),
 		// - this loop is not interruptable by the signal watcher in tomb package.
 		interruptable: false,
 		showError:     true,
-	}
-}
-
-// NewTeeLoggerLoop create Loop with features:
-// - it is "TeeLogger" loop — messages are output to a file.
-// - this loop is not interruptable by the signal watcher in tomb package.
-func NewTeeLoggerLoop(name string, attemptsQuantity int, wait time.Duration) *Loop {
-	return &Loop{
-		name:             name,
-		attemptsQuantity: attemptsQuantity,
-		waitTime:         wait,
-		logger:           log.GetTeeLogger(),
-		interruptable:    false,
-		showError:        true,
 	}
 }
 

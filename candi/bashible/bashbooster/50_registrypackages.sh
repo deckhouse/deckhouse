@@ -77,7 +77,7 @@ ssl._create_default_https_context = ssl._create_unverified_context
 url = 'https://{}/package?digest=$1&repository=${REPOSITORY}&path=${REPOSITORY_PATH}'.format(endpoint)
 request = Request(url, headers={'Authorization': 'Bearer ${PACKAGES_PROXY_TOKEN}'})
 try:
-    response = urlopen(request, timeout=300)
+    response = urlopen(request, timeout=10)
 except HTTPError as e:
     print("HTTP Error {}: {}".format(e.getcode(), e.read()[:255]))
     print('You can check via curl -v -k -H "Authorization: Bearer ${PACKAGES_PROXY_TOKEN}" "{}" > /dev/null'.format(url))
