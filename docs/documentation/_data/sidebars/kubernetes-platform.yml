@@ -103,6 +103,10 @@ entries:
                     ru: Балансировка входящего трафика
                   folders:
                     - title:
+                        en: Incoming traffic balancing
+                        ru: Балансировка входящего трафика
+                      url: /admin/network/incoming-traffic-balancing-overview.html
+                    - title:
                         en: TCP/UDP balancing
                         ru: Балансировка TCP/UDP
                       folders:
@@ -206,6 +210,10 @@ entries:
                         en: Overview
                         ru: Введение
                       url: /admin/network/other-network-configuration-options-overview.html
+                    - title:
+                        en: Management of static routes and ip rules on cluster nodes
+                        ru: Управление статичными маршрутами и правилами ip rule на узлах кластера
+                      url: /admin/network/management-of-static-routes.html
             - title:
                 en: Storage
                 ru: Хранение
