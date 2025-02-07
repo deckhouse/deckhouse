@@ -85,10 +85,9 @@ shopt -s inherit_errexit
 shopt -s failglob
 
 function prepare_environment() {
-    root_wd="${PWD}}/testing/cloud_layouts"
+    root_wd="${PWD}/testing/cloud_layouts"
     echo "$root_wd"
-    # shellcheck disable=SC2086
-    ls $root_wd
+    ls "$root_wd"
 
     if [[ -z "$PROVIDER" || ! -d "$root_wd/$PROVIDER" ]]; then
       >&2 echo "ERROR: Unknown provider \"$PROVIDER\""
