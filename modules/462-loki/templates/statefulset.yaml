@@ -31,7 +31,6 @@ spec:
         app: {{ .Chart.Name }}
       annotations:
         checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
-        checksum/allowDeleteLogs: {{ .Values.loki.allowDeleteLogs | quote }}
     spec:
       imagePullSecrets:
       - name: deckhouse-registry
