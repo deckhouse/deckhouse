@@ -310,18 +310,18 @@ jobs:
           "
           chmod 755 $(pwd)/testing/cloud_layouts/script_eks.sh
 
-          export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
-          export LAYOUT_AWS_ACCESS_KEY=${LAYOUT_AWS_ACCESS_KEY:-not_provided} \
-          export LAYOUT_AWS_SECRET_ACCESS_KEY=${LAYOUT_AWS_SECRET_ACCESS_KEY:-not_provided} \
-          export LAYOUT_AWS_DEFAULT_REGION=eu-central-1 \
-          export USER_RUNNER_ID=${user_runner_id} \
+          export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG}
+          export LAYOUT_AWS_ACCESS_KEY=${LAYOUT_AWS_ACCESS_KEY:-not_provided}
+          export LAYOUT_AWS_SECRET_ACCESS_KEY=${LAYOUT_AWS_SECRET_ACCESS_KEY:-not_provided}
+          export LAYOUT_AWS_DEFAULT_REGION=eu-central-1
+          export USER_RUNNER_ID=${user_runner_id}
           bash $(pwd)/testing/cloud_layouts/script_eks.sh cleanup
 
         # </template: e2e_run_template>
 
       - name: Remove failed cluster label
         if: ${{ success() }}
-        uses: actionsexportcosystem/action-remove-labels@v1
+        uses: actions-ecosystem/action-remove-labels@v1
         with:
           github_token: ${{ secrets.BOATSWAIN_GITHUB_TOKEN }}
           number: ${{ github.event.inputs.issue_number }}
@@ -585,18 +585,18 @@ jobs:
           "
           chmod 755 $(pwd)/testing/cloud_layouts/script_eks.sh
 
-          export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
-          export LAYOUT_AWS_ACCESS_KEY=${LAYOUT_AWS_ACCESS_KEY:-not_provided} \
-          export LAYOUT_AWS_SECRET_ACCESS_KEY=${LAYOUT_AWS_SECRET_ACCESS_KEY:-not_provided} \
-          export LAYOUT_AWS_DEFAULT_REGION=eu-central-1 \
-          export USER_RUNNER_ID=${user_runner_id} \
+          export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG}
+          export LAYOUT_AWS_ACCESS_KEY=${LAYOUT_AWS_ACCESS_KEY:-not_provided}
+          export LAYOUT_AWS_SECRET_ACCESS_KEY=${LAYOUT_AWS_SECRET_ACCESS_KEY:-not_provided}
+          export LAYOUT_AWS_DEFAULT_REGION=eu-central-1
+          export USER_RUNNER_ID=${user_runner_id}
           bash $(pwd)/testing/cloud_layouts/script_eks.sh cleanup
 
         # </template: e2e_run_template>
 
       - name: Remove failed cluster label
         if: ${{ success() }}
-        uses: actionsexportcosystem/action-remove-labels@v1
+        uses: actions-ecosystem/action-remove-labels@v1
         with:
           github_token: ${{ secrets.BOATSWAIN_GITHUB_TOKEN }}
           number: ${{ github.event.inputs.issue_number }}
@@ -860,18 +860,18 @@ jobs:
           "
           chmod 755 $(pwd)/testing/cloud_layouts/script_eks.sh
 
-          export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
-          export LAYOUT_AWS_ACCESS_KEY=${LAYOUT_AWS_ACCESS_KEY:-not_provided} \
-          export LAYOUT_AWS_SECRET_ACCESS_KEY=${LAYOUT_AWS_SECRET_ACCESS_KEY:-not_provided} \
-          export LAYOUT_AWS_DEFAULT_REGION=eu-central-1 \
-          export USER_RUNNER_ID=${user_runner_id} \
+          export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG}
+          export LAYOUT_AWS_ACCESS_KEY=${LAYOUT_AWS_ACCESS_KEY:-not_provided}
+          export LAYOUT_AWS_SECRET_ACCESS_KEY=${LAYOUT_AWS_SECRET_ACCESS_KEY:-not_provided}
+          export LAYOUT_AWS_DEFAULT_REGION=eu-central-1
+          export USER_RUNNER_ID=${user_runner_id}
           bash $(pwd)/testing/cloud_layouts/script_eks.sh cleanup
 
         # </template: e2e_run_template>
 
       - name: Remove failed cluster label
         if: ${{ success() }}
-        uses: actionsexportcosystem/action-remove-labels@v1
+        uses: actions-ecosystem/action-remove-labels@v1
         with:
           github_token: ${{ secrets.BOATSWAIN_GITHUB_TOKEN }}
           number: ${{ github.event.inputs.issue_number }}
@@ -1135,18 +1135,18 @@ jobs:
           "
           chmod 755 $(pwd)/testing/cloud_layouts/script_eks.sh
 
-          export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
-          export LAYOUT_AWS_ACCESS_KEY=${LAYOUT_AWS_ACCESS_KEY:-not_provided} \
-          export LAYOUT_AWS_SECRET_ACCESS_KEY=${LAYOUT_AWS_SECRET_ACCESS_KEY:-not_provided} \
-          export LAYOUT_AWS_DEFAULT_REGION=eu-central-1 \
-          export USER_RUNNER_ID=${user_runner_id} \
+          export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG}
+          export LAYOUT_AWS_ACCESS_KEY=${LAYOUT_AWS_ACCESS_KEY:-not_provided}
+          export LAYOUT_AWS_SECRET_ACCESS_KEY=${LAYOUT_AWS_SECRET_ACCESS_KEY:-not_provided}
+          export LAYOUT_AWS_DEFAULT_REGION=eu-central-1
+          export USER_RUNNER_ID=${user_runner_id}
           bash $(pwd)/testing/cloud_layouts/script_eks.sh cleanup
 
         # </template: e2e_run_template>
 
       - name: Remove failed cluster label
         if: ${{ success() }}
-        uses: actionsexportcosystem/action-remove-labels@v1
+        uses: actions-ecosystem/action-remove-labels@v1
         with:
           github_token: ${{ secrets.BOATSWAIN_GITHUB_TOKEN }}
           number: ${{ github.event.inputs.issue_number }}
@@ -1410,18 +1410,18 @@ jobs:
           "
           chmod 755 $(pwd)/testing/cloud_layouts/script_eks.sh
 
-          export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
-          export LAYOUT_AWS_ACCESS_KEY=${LAYOUT_AWS_ACCESS_KEY:-not_provided} \
-          export LAYOUT_AWS_SECRET_ACCESS_KEY=${LAYOUT_AWS_SECRET_ACCESS_KEY:-not_provided} \
-          export LAYOUT_AWS_DEFAULT_REGION=eu-central-1 \
-          export USER_RUNNER_ID=${user_runner_id} \
+          export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG}
+          export LAYOUT_AWS_ACCESS_KEY=${LAYOUT_AWS_ACCESS_KEY:-not_provided}
+          export LAYOUT_AWS_SECRET_ACCESS_KEY=${LAYOUT_AWS_SECRET_ACCESS_KEY:-not_provided}
+          export LAYOUT_AWS_DEFAULT_REGION=eu-central-1
+          export USER_RUNNER_ID=${user_runner_id}
           bash $(pwd)/testing/cloud_layouts/script_eks.sh cleanup
 
         # </template: e2e_run_template>
 
       - name: Remove failed cluster label
         if: ${{ success() }}
-        uses: actionsexportcosystem/action-remove-labels@v1
+        uses: actions-ecosystem/action-remove-labels@v1
         with:
           github_token: ${{ secrets.BOATSWAIN_GITHUB_TOKEN }}
           number: ${{ github.event.inputs.issue_number }}
@@ -1685,18 +1685,18 @@ jobs:
           "
           chmod 755 $(pwd)/testing/cloud_layouts/script_eks.sh
 
-          export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
-          export LAYOUT_AWS_ACCESS_KEY=${LAYOUT_AWS_ACCESS_KEY:-not_provided} \
-          export LAYOUT_AWS_SECRET_ACCESS_KEY=${LAYOUT_AWS_SECRET_ACCESS_KEY:-not_provided} \
-          export LAYOUT_AWS_DEFAULT_REGION=eu-central-1 \
-          export USER_RUNNER_ID=${user_runner_id} \
+          export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG}
+          export LAYOUT_AWS_ACCESS_KEY=${LAYOUT_AWS_ACCESS_KEY:-not_provided}
+          export LAYOUT_AWS_SECRET_ACCESS_KEY=${LAYOUT_AWS_SECRET_ACCESS_KEY:-not_provided}
+          export LAYOUT_AWS_DEFAULT_REGION=eu-central-1
+          export USER_RUNNER_ID=${user_runner_id}
           bash $(pwd)/testing/cloud_layouts/script_eks.sh cleanup
 
         # </template: e2e_run_template>
 
       - name: Remove failed cluster label
         if: ${{ success() }}
-        uses: actionsexportcosystem/action-remove-labels@v1
+        uses: actions-ecosystem/action-remove-labels@v1
         with:
           github_token: ${{ secrets.BOATSWAIN_GITHUB_TOKEN }}
           number: ${{ github.event.inputs.issue_number }}
@@ -1960,18 +1960,18 @@ jobs:
           "
           chmod 755 $(pwd)/testing/cloud_layouts/script_eks.sh
 
-          export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
-          export LAYOUT_AWS_ACCESS_KEY=${LAYOUT_AWS_ACCESS_KEY:-not_provided} \
-          export LAYOUT_AWS_SECRET_ACCESS_KEY=${LAYOUT_AWS_SECRET_ACCESS_KEY:-not_provided} \
-          export LAYOUT_AWS_DEFAULT_REGION=eu-central-1 \
-          export USER_RUNNER_ID=${user_runner_id} \
+          export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG}
+          export LAYOUT_AWS_ACCESS_KEY=${LAYOUT_AWS_ACCESS_KEY:-not_provided}
+          export LAYOUT_AWS_SECRET_ACCESS_KEY=${LAYOUT_AWS_SECRET_ACCESS_KEY:-not_provided}
+          export LAYOUT_AWS_DEFAULT_REGION=eu-central-1
+          export USER_RUNNER_ID=${user_runner_id}
           bash $(pwd)/testing/cloud_layouts/script_eks.sh cleanup
 
         # </template: e2e_run_template>
 
       - name: Remove failed cluster label
         if: ${{ success() }}
-        uses: actionsexportcosystem/action-remove-labels@v1
+        uses: actions-ecosystem/action-remove-labels@v1
         with:
           github_token: ${{ secrets.BOATSWAIN_GITHUB_TOKEN }}
           number: ${{ github.event.inputs.issue_number }}

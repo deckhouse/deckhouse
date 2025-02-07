@@ -304,15 +304,15 @@ jobs:
             MASTERS_COUNT=${MASTERS_COUNT}
           "
 
-            export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
-            export PROVIDER=${PROVIDER:-not_provided} \
-            export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-} \
-            export LAYOUT=${LAYOUT:-not_provided} \
-            export DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
-            export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
-            export LAYOUT_YANDEX_CLOUD_ID=${LAYOUT_YANDEX_CLOUD_ID:-not_provided} \
-            export LAYOUT_YANDEX_FOLDER_ID=${LAYOUT_YANDEX_FOLDER_ID:-not_provided} \
-            export LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON=${LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON:-not_provided} \
+            export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG}
+            export PROVIDER=${PROVIDER:-not_provided}
+            export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-}
+            export LAYOUT=${LAYOUT:-not_provided}
+            export DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})"
+            export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
+            export LAYOUT_YANDEX_CLOUD_ID=${LAYOUT_YANDEX_CLOUD_ID:-not_provided}
+            export LAYOUT_YANDEX_FOLDER_ID=${LAYOUT_YANDEX_FOLDER_ID:-not_provided}
+            export LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON=${LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON:-not_provided}
             export USER_RUNNER_ID=${user_runner_id} \
           bash $(pwd)/testing/cloud_layouts/script-commander.sh cleanup
 
@@ -320,7 +320,7 @@ jobs:
 
       - name: Remove failed cluster label
         if: ${{ success() }}
-        uses: actionsexportcosystem/action-remove-labels@v1
+        uses: actions-ecosystem/action-remove-labels@v1
         with:
           github_token: ${{ secrets.BOATSWAIN_GITHUB_TOKEN }}
           number: ${{ github.event.inputs.issue_number }}
@@ -578,15 +578,15 @@ jobs:
             MASTERS_COUNT=${MASTERS_COUNT}
           "
 
-            export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
-            export PROVIDER=${PROVIDER:-not_provided} \
-            export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-} \
-            export LAYOUT=${LAYOUT:-not_provided} \
-            export DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
-            export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
-            export LAYOUT_YANDEX_CLOUD_ID=${LAYOUT_YANDEX_CLOUD_ID:-not_provided} \
-            export LAYOUT_YANDEX_FOLDER_ID=${LAYOUT_YANDEX_FOLDER_ID:-not_provided} \
-            export LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON=${LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON:-not_provided} \
+            export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG}
+            export PROVIDER=${PROVIDER:-not_provided}
+            export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-}
+            export LAYOUT=${LAYOUT:-not_provided}
+            export DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})"
+            export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
+            export LAYOUT_YANDEX_CLOUD_ID=${LAYOUT_YANDEX_CLOUD_ID:-not_provided}
+            export LAYOUT_YANDEX_FOLDER_ID=${LAYOUT_YANDEX_FOLDER_ID:-not_provided}
+            export LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON=${LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON:-not_provided}
             export USER_RUNNER_ID=${user_runner_id} \
           bash $(pwd)/testing/cloud_layouts/script-commander.sh cleanup
 
@@ -594,7 +594,7 @@ jobs:
 
       - name: Remove failed cluster label
         if: ${{ success() }}
-        uses: actionsexportcosystem/action-remove-labels@v1
+        uses: actions-ecosystem/action-remove-labels@v1
         with:
           github_token: ${{ secrets.BOATSWAIN_GITHUB_TOKEN }}
           number: ${{ github.event.inputs.issue_number }}
@@ -852,15 +852,15 @@ jobs:
             MASTERS_COUNT=${MASTERS_COUNT}
           "
 
-            export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
-            export PROVIDER=${PROVIDER:-not_provided} \
-            export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-} \
-            export LAYOUT=${LAYOUT:-not_provided} \
-            export DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
-            export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
-            export LAYOUT_YANDEX_CLOUD_ID=${LAYOUT_YANDEX_CLOUD_ID:-not_provided} \
-            export LAYOUT_YANDEX_FOLDER_ID=${LAYOUT_YANDEX_FOLDER_ID:-not_provided} \
-            export LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON=${LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON:-not_provided} \
+            export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG}
+            export PROVIDER=${PROVIDER:-not_provided}
+            export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-}
+            export LAYOUT=${LAYOUT:-not_provided}
+            export DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})"
+            export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
+            export LAYOUT_YANDEX_CLOUD_ID=${LAYOUT_YANDEX_CLOUD_ID:-not_provided}
+            export LAYOUT_YANDEX_FOLDER_ID=${LAYOUT_YANDEX_FOLDER_ID:-not_provided}
+            export LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON=${LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON:-not_provided}
             export USER_RUNNER_ID=${user_runner_id} \
           bash $(pwd)/testing/cloud_layouts/script-commander.sh cleanup
 
@@ -868,7 +868,7 @@ jobs:
 
       - name: Remove failed cluster label
         if: ${{ success() }}
-        uses: actionsexportcosystem/action-remove-labels@v1
+        uses: actions-ecosystem/action-remove-labels@v1
         with:
           github_token: ${{ secrets.BOATSWAIN_GITHUB_TOKEN }}
           number: ${{ github.event.inputs.issue_number }}
@@ -1126,15 +1126,15 @@ jobs:
             MASTERS_COUNT=${MASTERS_COUNT}
           "
 
-            export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
-            export PROVIDER=${PROVIDER:-not_provided} \
-            export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-} \
-            export LAYOUT=${LAYOUT:-not_provided} \
-            export DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
-            export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
-            export LAYOUT_YANDEX_CLOUD_ID=${LAYOUT_YANDEX_CLOUD_ID:-not_provided} \
-            export LAYOUT_YANDEX_FOLDER_ID=${LAYOUT_YANDEX_FOLDER_ID:-not_provided} \
-            export LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON=${LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON:-not_provided} \
+            export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG}
+            export PROVIDER=${PROVIDER:-not_provided}
+            export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-}
+            export LAYOUT=${LAYOUT:-not_provided}
+            export DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})"
+            export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
+            export LAYOUT_YANDEX_CLOUD_ID=${LAYOUT_YANDEX_CLOUD_ID:-not_provided}
+            export LAYOUT_YANDEX_FOLDER_ID=${LAYOUT_YANDEX_FOLDER_ID:-not_provided}
+            export LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON=${LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON:-not_provided}
             export USER_RUNNER_ID=${user_runner_id} \
           bash $(pwd)/testing/cloud_layouts/script-commander.sh cleanup
 
@@ -1142,7 +1142,7 @@ jobs:
 
       - name: Remove failed cluster label
         if: ${{ success() }}
-        uses: actionsexportcosystem/action-remove-labels@v1
+        uses: actions-ecosystem/action-remove-labels@v1
         with:
           github_token: ${{ secrets.BOATSWAIN_GITHUB_TOKEN }}
           number: ${{ github.event.inputs.issue_number }}
@@ -1400,15 +1400,15 @@ jobs:
             MASTERS_COUNT=${MASTERS_COUNT}
           "
 
-            export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
-            export PROVIDER=${PROVIDER:-not_provided} \
-            export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-} \
-            export LAYOUT=${LAYOUT:-not_provided} \
-            export DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
-            export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
-            export LAYOUT_YANDEX_CLOUD_ID=${LAYOUT_YANDEX_CLOUD_ID:-not_provided} \
-            export LAYOUT_YANDEX_FOLDER_ID=${LAYOUT_YANDEX_FOLDER_ID:-not_provided} \
-            export LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON=${LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON:-not_provided} \
+            export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG}
+            export PROVIDER=${PROVIDER:-not_provided}
+            export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-}
+            export LAYOUT=${LAYOUT:-not_provided}
+            export DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})"
+            export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
+            export LAYOUT_YANDEX_CLOUD_ID=${LAYOUT_YANDEX_CLOUD_ID:-not_provided}
+            export LAYOUT_YANDEX_FOLDER_ID=${LAYOUT_YANDEX_FOLDER_ID:-not_provided}
+            export LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON=${LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON:-not_provided}
             export USER_RUNNER_ID=${user_runner_id} \
           bash $(pwd)/testing/cloud_layouts/script-commander.sh cleanup
 
@@ -1416,7 +1416,7 @@ jobs:
 
       - name: Remove failed cluster label
         if: ${{ success() }}
-        uses: actionsexportcosystem/action-remove-labels@v1
+        uses: actions-ecosystem/action-remove-labels@v1
         with:
           github_token: ${{ secrets.BOATSWAIN_GITHUB_TOKEN }}
           number: ${{ github.event.inputs.issue_number }}
@@ -1674,15 +1674,15 @@ jobs:
             MASTERS_COUNT=${MASTERS_COUNT}
           "
 
-            export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
-            export PROVIDER=${PROVIDER:-not_provided} \
-            export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-} \
-            export LAYOUT=${LAYOUT:-not_provided} \
-            export DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
-            export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
-            export LAYOUT_YANDEX_CLOUD_ID=${LAYOUT_YANDEX_CLOUD_ID:-not_provided} \
-            export LAYOUT_YANDEX_FOLDER_ID=${LAYOUT_YANDEX_FOLDER_ID:-not_provided} \
-            export LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON=${LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON:-not_provided} \
+            export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG}
+            export PROVIDER=${PROVIDER:-not_provided}
+            export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-}
+            export LAYOUT=${LAYOUT:-not_provided}
+            export DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})"
+            export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
+            export LAYOUT_YANDEX_CLOUD_ID=${LAYOUT_YANDEX_CLOUD_ID:-not_provided}
+            export LAYOUT_YANDEX_FOLDER_ID=${LAYOUT_YANDEX_FOLDER_ID:-not_provided}
+            export LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON=${LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON:-not_provided}
             export USER_RUNNER_ID=${user_runner_id} \
           bash $(pwd)/testing/cloud_layouts/script-commander.sh cleanup
 
@@ -1690,7 +1690,7 @@ jobs:
 
       - name: Remove failed cluster label
         if: ${{ success() }}
-        uses: actionsexportcosystem/action-remove-labels@v1
+        uses: actions-ecosystem/action-remove-labels@v1
         with:
           github_token: ${{ secrets.BOATSWAIN_GITHUB_TOKEN }}
           number: ${{ github.event.inputs.issue_number }}
@@ -1948,15 +1948,15 @@ jobs:
             MASTERS_COUNT=${MASTERS_COUNT}
           "
 
-            export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
-            export PROVIDER=${PROVIDER:-not_provided} \
-            export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-} \
-            export LAYOUT=${LAYOUT:-not_provided} \
-            export DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
-            export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
-            export LAYOUT_YANDEX_CLOUD_ID=${LAYOUT_YANDEX_CLOUD_ID:-not_provided} \
-            export LAYOUT_YANDEX_FOLDER_ID=${LAYOUT_YANDEX_FOLDER_ID:-not_provided} \
-            export LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON=${LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON:-not_provided} \
+            export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG}
+            export PROVIDER=${PROVIDER:-not_provided}
+            export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-}
+            export LAYOUT=${LAYOUT:-not_provided}
+            export DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})"
+            export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
+            export LAYOUT_YANDEX_CLOUD_ID=${LAYOUT_YANDEX_CLOUD_ID:-not_provided}
+            export LAYOUT_YANDEX_FOLDER_ID=${LAYOUT_YANDEX_FOLDER_ID:-not_provided}
+            export LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON=${LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON:-not_provided}
             export USER_RUNNER_ID=${user_runner_id} \
           bash $(pwd)/testing/cloud_layouts/script-commander.sh cleanup
 
@@ -1964,7 +1964,7 @@ jobs:
 
       - name: Remove failed cluster label
         if: ${{ success() }}
-        uses: actionsexportcosystem/action-remove-labels@v1
+        uses: actions-ecosystem/action-remove-labels@v1
         with:
           github_token: ${{ secrets.BOATSWAIN_GITHUB_TOKEN }}
           number: ${{ github.event.inputs.issue_number }}

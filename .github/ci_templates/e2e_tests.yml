@@ -127,66 +127,65 @@ run: |
 {!{- if eq $provider "eks" }!}
   chmod 755 $(pwd)/testing/cloud_layouts/{!{ $script_eks }!}
 
-  export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
-  export LAYOUT_AWS_ACCESS_KEY=${LAYOUT_AWS_ACCESS_KEY:-not_provided} \
-  export LAYOUT_AWS_SECRET_ACCESS_KEY=${LAYOUT_AWS_SECRET_ACCESS_KEY:-not_provided} \
-  export LAYOUT_AWS_DEFAULT_REGION=eu-central-1 \
-  export USER_RUNNER_ID=${user_runner_id} \
+  export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG}
+  export LAYOUT_AWS_ACCESS_KEY=${LAYOUT_AWS_ACCESS_KEY:-not_provided}
+  export LAYOUT_AWS_SECRET_ACCESS_KEY=${LAYOUT_AWS_SECRET_ACCESS_KEY:-not_provided}
+  export LAYOUT_AWS_DEFAULT_REGION=eu-central-1
+  export USER_RUNNER_ID=${user_runner_id}
   bash $(pwd)/testing/cloud_layouts/{!{ $script_eks }!} {!{ $script_arg }!}
 
   {!{- if eq $script_arg "run-test" }!}
-  export LAYOUT=${LAYOUT:-not_provided} \
-
-  export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
-  export LAYOUT_AWS_ACCESS_KEY=${LAYOUT_AWS_ACCESS_KEY:-not_provided} \
-  export LAYOUT_AWS_SECRET_ACCESS_KEY=${LAYOUT_AWS_SECRET_ACCESS_KEY:-not_provided} \
-  export LAYOUT_AWS_DEFAULT_REGION=eu-central-1 \
-  export KUBECONFIG=/tmp/eks-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}.kubeconfig \
-  export USER_RUNNER_ID=${user_runner_id} \
+  export LAYOUT=${LAYOUT:-not_provided}
+  export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG}
+  export LAYOUT_AWS_ACCESS_KEY=${LAYOUT_AWS_ACCESS_KEY:-not_provided}
+  export LAYOUT_AWS_SECRET_ACCESS_KEY=${LAYOUT_AWS_SECRET_ACCESS_KEY:-not_provided}
+  export LAYOUT_AWS_DEFAULT_REGION=eu-central-1
+  export KUBECONFIG=/tmp/eks-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}.kubeconfig
+  export USER_RUNNER_ID=${user_runner_id}
   {!{- if $run_from_issue_or_pr }!}
-  export CIS_ENABLED=${CIS_ENABLED} \
+  export CIS_ENABLED=${CIS_ENABLED}
   {!{- end }!}
   {!{- end }!}
 {!{- else }!}
 
-    export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
-    export PROVIDER=${PROVIDER:-not_provided} \
-    export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-} \
-    export LAYOUT=${LAYOUT:-not_provided} \
-    export DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
-    export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
+    export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG}
+    export PROVIDER=${PROVIDER:-not_provided}
+    export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-}
+    export LAYOUT=${LAYOUT:-not_provided}
+    export DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})"
+    export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
 {!{- if eq $provider "aws" }!}
-    export LAYOUT_AWS_ACCESS_KEY=${LAYOUT_AWS_ACCESS_KEY:-not_provided} \
-    export LAYOUT_AWS_SECRET_ACCESS_KEY=${LAYOUT_AWS_SECRET_ACCESS_KEY:-not_provided} \
+    export LAYOUT_AWS_ACCESS_KEY=${LAYOUT_AWS_ACCESS_KEY:-not_provided}
+    export LAYOUT_AWS_SECRET_ACCESS_KEY=${LAYOUT_AWS_SECRET_ACCESS_KEY:-not_provided}
 {!{- else if eq $provider "eks" }!}
-    export LAYOUT_AWS_ACCESS_KEY=${LAYOUT_AWS_ACCESS_KEY:-not_provided} \
-    export LAYOUT_AWS_SECRET_ACCESS_KEY=${LAYOUT_AWS_SECRET_ACCESS_KEY:-not_provided} \
+    export LAYOUT_AWS_ACCESS_KEY=${LAYOUT_AWS_ACCESS_KEY:-not_provided}
+    export LAYOUT_AWS_SECRET_ACCESS_KEY=${LAYOUT_AWS_SECRET_ACCESS_KEY:-not_provided}
 {!{- else if eq $provider "gcp" }!}
-    export LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON=${LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON:-not_provided} \
+    export LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON=${LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON:-not_provided}
 {!{- else if eq $provider "azure" }!}
-    export LAYOUT_AZURE_SUBSCRIPTION_ID=${LAYOUT_AZURE_SUBSCRIPTION_ID:-not_provided} \
-    export LAYOUT_AZURE_CLIENT_ID=${LAYOUT_AZURE_CLIENT_ID:-not_provided} \
-    export LAYOUT_AZURE_CLIENT_SECRET=${LAYOUT_AZURE_CLIENT_SECRET:-not_provided} \
-    export LAYOUT_AZURE_TENANT_ID=${LAYOUT_AZURE_TENANT_ID:-not_provided} \
+    export LAYOUT_AZURE_SUBSCRIPTION_ID=${LAYOUT_AZURE_SUBSCRIPTION_ID:-not_provided}
+    export LAYOUT_AZURE_CLIENT_ID=${LAYOUT_AZURE_CLIENT_ID:-not_provided}
+    export LAYOUT_AZURE_CLIENT_SECRET=${LAYOUT_AZURE_CLIENT_SECRET:-not_provided}
+    export LAYOUT_AZURE_TENANT_ID=${LAYOUT_AZURE_TENANT_ID:-not_provided}
 {!{- else if eq $provider "yandex-cloud" }!}
-    export LAYOUT_YANDEX_CLOUD_ID=${LAYOUT_YANDEX_CLOUD_ID:-not_provided} \
-    export LAYOUT_YANDEX_FOLDER_ID=${LAYOUT_YANDEX_FOLDER_ID:-not_provided} \
-    export LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON=${LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON:-not_provided} \
+    export LAYOUT_YANDEX_CLOUD_ID=${LAYOUT_YANDEX_CLOUD_ID:-not_provided}
+    export LAYOUT_YANDEX_FOLDER_ID=${LAYOUT_YANDEX_FOLDER_ID:-not_provided}
+    export LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON=${LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON:-not_provided}
 {!{- else if or (eq $provider "openstack") (eq $provider "static") }!}
-    export LAYOUT_OS_PASSWORD=${LAYOUT_OS_PASSWORD:-not_provided} \
+    export LAYOUT_OS_PASSWORD=${LAYOUT_OS_PASSWORD:-not_provided}
 {!{- else if eq $provider "vsphere" }!}
-    export LAYOUT_VSPHERE_PASSWORD=${LAYOUT_VSPHERE_PASSWORD:-not_provided} \
-    export LAYOUT_VSPHERE_BASE_DOMAIN=${LAYOUT_VSPHERE_BASE_DOMAIN:-not_provided} \
+    export LAYOUT_VSPHERE_PASSWORD=${LAYOUT_VSPHERE_PASSWORD:-not_provided}
+    export LAYOUT_VSPHERE_BASE_DOMAIN=${LAYOUT_VSPHERE_BASE_DOMAIN:-not_provided}
 {!{- else if eq $provider "vcd" }!}
-    export LAYOUT_VCD_PASSWORD=${LAYOUT_VCD_PASSWORD:-not_provided} \
-    export LAYOUT_VCD_USERNAME=${LAYOUT_VCD_USERNAME:-not_provided} \
-    export LAYOUT_VCD_SERVER=${LAYOUT_VCD_SERVER:-not_provided} \
-    export LAYOUT_VCD_ORG=${LAYOUT_VCD_ORG:-not_provided} \
-    export LAYOUT_STATIC_BASTION_IP=80.249.129.56 \
+    export LAYOUT_VCD_PASSWORD=${LAYOUT_VCD_PASSWORD:-not_provided}
+    export LAYOUT_VCD_USERNAME=${LAYOUT_VCD_USERNAME:-not_provided}
+    export LAYOUT_VCD_SERVER=${LAYOUT_VCD_SERVER:-not_provided}
+    export LAYOUT_VCD_ORG=${LAYOUT_VCD_ORG:-not_provided}
+    export LAYOUT_STATIC_BASTION_IP=80.249.129.56
 {!{- end }!}
     export USER_RUNNER_ID=${user_runner_id} \
 {!{- if and (eq $script_arg "run-test") $run_from_issue_or_pr }!}
-    export CIS_ENABLED=${CIS_ENABLED} \
+    export CIS_ENABLED=${CIS_ENABLED}
 {!{- end }!}
   bash $(pwd)/testing/cloud_layouts/{!{ $script }!} {!{ $script_arg }!}
 {!{- end }!}
@@ -405,13 +404,6 @@ check_e2e_labels:
         fi
         echo "Multimaster set ${MULTIMASTER}, MASTERS_COUNT set ${MASTERS_COUNT}"
 
-        # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
-        echo "⚓️ [$(date -u)] Pull 'dev/install' image '${SAFE_IMAGE_NAME}'."
-        docker pull "${INSTALL_IMAGE_NAME}"
-{!{- if eq $provider "eks" }!}
-        docker pull "${TERRAFORM_IMAGE_NAME}"
-{!{- end }!}
-
         IMAGE_INSTALL_PATH="/${INSTALL_IMAGE_NAME#*/}"
 
         echo '::echo::on'
@@ -534,17 +526,6 @@ check_e2e_labels:
           rm -rf "${TMPPATH}"
         else
           echo Not a directory.
-        fi
-        if [ -n $USER_RUNNER_ID ]; then
-          echo "Fix temp directories owner..."
-          chown -R $USER_RUNNER_ID "$(pwd)/testing" || true
-          chown -R $USER_RUNNER_ID "/deckhouse/testing" || true
-          chown -R $USER_RUNNER_ID /tmp || true
-        else
-          echo "Fix temp directories permissions..."
-          chmod -f -R 777 "$(pwd)/testing" || true
-          chmod -f -R 777 "/deckhouse/testing" || true
-          chmod -f -R 777 /tmp || true
         fi
 
 {!{- if coll.Has $ctx "manualRun" }!}
@@ -688,7 +669,7 @@ check_e2e_labels:
 
     - name: Remove failed cluster label
       if: ${{ success() }}
-      uses: actionsexportcosystem/action-remove-labels@v1
+      uses: actions-ecosystem/action-remove-labels@v1
       with:
         github_token: ${{ secrets.BOATSWAIN_GITHUB_TOKEN }}
         number: ${{ github.event.inputs.issue_number }}

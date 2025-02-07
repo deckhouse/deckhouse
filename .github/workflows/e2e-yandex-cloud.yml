@@ -420,10 +420,6 @@ jobs:
           fi
           echo "Multimaster set ${MULTIMASTER}, MASTERS_COUNT set ${MASTERS_COUNT}"
 
-          # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
-          echo "⚓️ [$(date -u)] Pull 'dev/install' image '${SAFE_IMAGE_NAME}'."
-          docker pull "${INSTALL_IMAGE_NAME}"
-
           IMAGE_INSTALL_PATH="/${INSTALL_IMAGE_NAME#*/}"
 
           echo '::echo::on'
@@ -481,17 +477,17 @@ jobs:
             CIS_ENABLED=${CIS_ENABLED}
           "
 
-            export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
-            export PROVIDER=${PROVIDER:-not_provided} \
-            export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-} \
-            export LAYOUT=${LAYOUT:-not_provided} \
-            export DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
-            export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
-            export LAYOUT_YANDEX_CLOUD_ID=${LAYOUT_YANDEX_CLOUD_ID:-not_provided} \
-            export LAYOUT_YANDEX_FOLDER_ID=${LAYOUT_YANDEX_FOLDER_ID:-not_provided} \
-            export LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON=${LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON:-not_provided} \
+            export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG}
+            export PROVIDER=${PROVIDER:-not_provided}
+            export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-}
+            export LAYOUT=${LAYOUT:-not_provided}
+            export DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})"
+            export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
+            export LAYOUT_YANDEX_CLOUD_ID=${LAYOUT_YANDEX_CLOUD_ID:-not_provided}
+            export LAYOUT_YANDEX_FOLDER_ID=${LAYOUT_YANDEX_FOLDER_ID:-not_provided}
+            export LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON=${LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON:-not_provided}
             export USER_RUNNER_ID=${user_runner_id} \
-            export CIS_ENABLED=${CIS_ENABLED} \
+            export CIS_ENABLED=${CIS_ENABLED}
           bash $(pwd)/testing/cloud_layouts/script-commander.sh run-test
 
         # </template: e2e_run_template>
@@ -557,15 +553,15 @@ jobs:
             MASTERS_COUNT=${MASTERS_COUNT}
           "
 
-            export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
-            export PROVIDER=${PROVIDER:-not_provided} \
-            export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-} \
-            export LAYOUT=${LAYOUT:-not_provided} \
-            export DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
-            export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
-            export LAYOUT_YANDEX_CLOUD_ID=${LAYOUT_YANDEX_CLOUD_ID:-not_provided} \
-            export LAYOUT_YANDEX_FOLDER_ID=${LAYOUT_YANDEX_FOLDER_ID:-not_provided} \
-            export LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON=${LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON:-not_provided} \
+            export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG}
+            export PROVIDER=${PROVIDER:-not_provided}
+            export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-}
+            export LAYOUT=${LAYOUT:-not_provided}
+            export DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})"
+            export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
+            export LAYOUT_YANDEX_CLOUD_ID=${LAYOUT_YANDEX_CLOUD_ID:-not_provided}
+            export LAYOUT_YANDEX_FOLDER_ID=${LAYOUT_YANDEX_FOLDER_ID:-not_provided}
+            export LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON=${LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON:-not_provided}
             export USER_RUNNER_ID=${user_runner_id} \
           bash $(pwd)/testing/cloud_layouts/script-commander.sh cleanup
 
@@ -603,17 +599,6 @@ jobs:
             rm -rf "${TMPPATH}"
           else
             echo Not a directory.
-          fi
-          if [ -n $USER_RUNNER_ID ]; then
-            echo "Fix temp directories owner..."
-            chown -R $USER_RUNNER_ID "$(pwd)/testing" || true
-            chown -R $USER_RUNNER_ID "/deckhouse/testing" || true
-            chown -R $USER_RUNNER_ID /tmp || true
-          else
-            echo "Fix temp directories permissions..."
-            chmod -f -R 777 "$(pwd)/testing" || true
-            chmod -f -R 777 "/deckhouse/testing" || true
-            chmod -f -R 777 /tmp || true
           fi
       # <template: update_comment_on_finish>
       - name: Update comment on finish
@@ -865,10 +850,6 @@ jobs:
           fi
           echo "Multimaster set ${MULTIMASTER}, MASTERS_COUNT set ${MASTERS_COUNT}"
 
-          # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
-          echo "⚓️ [$(date -u)] Pull 'dev/install' image '${SAFE_IMAGE_NAME}'."
-          docker pull "${INSTALL_IMAGE_NAME}"
-
           IMAGE_INSTALL_PATH="/${INSTALL_IMAGE_NAME#*/}"
 
           echo '::echo::on'
@@ -926,17 +907,17 @@ jobs:
             CIS_ENABLED=${CIS_ENABLED}
           "
 
-            export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
-            export PROVIDER=${PROVIDER:-not_provided} \
-            export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-} \
-            export LAYOUT=${LAYOUT:-not_provided} \
-            export DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
-            export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
-            export LAYOUT_YANDEX_CLOUD_ID=${LAYOUT_YANDEX_CLOUD_ID:-not_provided} \
-            export LAYOUT_YANDEX_FOLDER_ID=${LAYOUT_YANDEX_FOLDER_ID:-not_provided} \
-            export LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON=${LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON:-not_provided} \
+            export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG}
+            export PROVIDER=${PROVIDER:-not_provided}
+            export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-}
+            export LAYOUT=${LAYOUT:-not_provided}
+            export DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})"
+            export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
+            export LAYOUT_YANDEX_CLOUD_ID=${LAYOUT_YANDEX_CLOUD_ID:-not_provided}
+            export LAYOUT_YANDEX_FOLDER_ID=${LAYOUT_YANDEX_FOLDER_ID:-not_provided}
+            export LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON=${LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON:-not_provided}
             export USER_RUNNER_ID=${user_runner_id} \
-            export CIS_ENABLED=${CIS_ENABLED} \
+            export CIS_ENABLED=${CIS_ENABLED}
           bash $(pwd)/testing/cloud_layouts/script-commander.sh run-test
 
         # </template: e2e_run_template>
@@ -1002,15 +983,15 @@ jobs:
             MASTERS_COUNT=${MASTERS_COUNT}
           "
 
-            export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
-            export PROVIDER=${PROVIDER:-not_provided} \
-            export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-} \
-            export LAYOUT=${LAYOUT:-not_provided} \
-            export DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
-            export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
-            export LAYOUT_YANDEX_CLOUD_ID=${LAYOUT_YANDEX_CLOUD_ID:-not_provided} \
-            export LAYOUT_YANDEX_FOLDER_ID=${LAYOUT_YANDEX_FOLDER_ID:-not_provided} \
-            export LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON=${LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON:-not_provided} \
+            export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG}
+            export PROVIDER=${PROVIDER:-not_provided}
+            export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-}
+            export LAYOUT=${LAYOUT:-not_provided}
+            export DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})"
+            export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
+            export LAYOUT_YANDEX_CLOUD_ID=${LAYOUT_YANDEX_CLOUD_ID:-not_provided}
+            export LAYOUT_YANDEX_FOLDER_ID=${LAYOUT_YANDEX_FOLDER_ID:-not_provided}
+            export LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON=${LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON:-not_provided}
             export USER_RUNNER_ID=${user_runner_id} \
           bash $(pwd)/testing/cloud_layouts/script-commander.sh cleanup
 
@@ -1048,17 +1029,6 @@ jobs:
             rm -rf "${TMPPATH}"
           else
             echo Not a directory.
-          fi
-          if [ -n $USER_RUNNER_ID ]; then
-            echo "Fix temp directories owner..."
-            chown -R $USER_RUNNER_ID "$(pwd)/testing" || true
-            chown -R $USER_RUNNER_ID "/deckhouse/testing" || true
-            chown -R $USER_RUNNER_ID /tmp || true
-          else
-            echo "Fix temp directories permissions..."
-            chmod -f -R 777 "$(pwd)/testing" || true
-            chmod -f -R 777 "/deckhouse/testing" || true
-            chmod -f -R 777 /tmp || true
           fi
       # <template: update_comment_on_finish>
       - name: Update comment on finish
@@ -1310,10 +1280,6 @@ jobs:
           fi
           echo "Multimaster set ${MULTIMASTER}, MASTERS_COUNT set ${MASTERS_COUNT}"
 
-          # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
-          echo "⚓️ [$(date -u)] Pull 'dev/install' image '${SAFE_IMAGE_NAME}'."
-          docker pull "${INSTALL_IMAGE_NAME}"
-
           IMAGE_INSTALL_PATH="/${INSTALL_IMAGE_NAME#*/}"
 
           echo '::echo::on'
@@ -1371,17 +1337,17 @@ jobs:
             CIS_ENABLED=${CIS_ENABLED}
           "
 
-            export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
-            export PROVIDER=${PROVIDER:-not_provided} \
-            export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-} \
-            export LAYOUT=${LAYOUT:-not_provided} \
-            export DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
-            export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
-            export LAYOUT_YANDEX_CLOUD_ID=${LAYOUT_YANDEX_CLOUD_ID:-not_provided} \
-            export LAYOUT_YANDEX_FOLDER_ID=${LAYOUT_YANDEX_FOLDER_ID:-not_provided} \
-            export LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON=${LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON:-not_provided} \
+            export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG}
+            export PROVIDER=${PROVIDER:-not_provided}
+            export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-}
+            export LAYOUT=${LAYOUT:-not_provided}
+            export DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})"
+            export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
+            export LAYOUT_YANDEX_CLOUD_ID=${LAYOUT_YANDEX_CLOUD_ID:-not_provided}
+            export LAYOUT_YANDEX_FOLDER_ID=${LAYOUT_YANDEX_FOLDER_ID:-not_provided}
+            export LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON=${LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON:-not_provided}
             export USER_RUNNER_ID=${user_runner_id} \
-            export CIS_ENABLED=${CIS_ENABLED} \
+            export CIS_ENABLED=${CIS_ENABLED}
           bash $(pwd)/testing/cloud_layouts/script-commander.sh run-test
 
         # </template: e2e_run_template>
@@ -1447,15 +1413,15 @@ jobs:
             MASTERS_COUNT=${MASTERS_COUNT}
           "
 
-            export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
-            export PROVIDER=${PROVIDER:-not_provided} \
-            export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-} \
-            export LAYOUT=${LAYOUT:-not_provided} \
-            export DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
-            export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
-            export LAYOUT_YANDEX_CLOUD_ID=${LAYOUT_YANDEX_CLOUD_ID:-not_provided} \
-            export LAYOUT_YANDEX_FOLDER_ID=${LAYOUT_YANDEX_FOLDER_ID:-not_provided} \
-            export LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON=${LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON:-not_provided} \
+            export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG}
+            export PROVIDER=${PROVIDER:-not_provided}
+            export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-}
+            export LAYOUT=${LAYOUT:-not_provided}
+            export DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})"
+            export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
+            export LAYOUT_YANDEX_CLOUD_ID=${LAYOUT_YANDEX_CLOUD_ID:-not_provided}
+            export LAYOUT_YANDEX_FOLDER_ID=${LAYOUT_YANDEX_FOLDER_ID:-not_provided}
+            export LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON=${LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON:-not_provided}
             export USER_RUNNER_ID=${user_runner_id} \
           bash $(pwd)/testing/cloud_layouts/script-commander.sh cleanup
 
@@ -1493,17 +1459,6 @@ jobs:
             rm -rf "${TMPPATH}"
           else
             echo Not a directory.
-          fi
-          if [ -n $USER_RUNNER_ID ]; then
-            echo "Fix temp directories owner..."
-            chown -R $USER_RUNNER_ID "$(pwd)/testing" || true
-            chown -R $USER_RUNNER_ID "/deckhouse/testing" || true
-            chown -R $USER_RUNNER_ID /tmp || true
-          else
-            echo "Fix temp directories permissions..."
-            chmod -f -R 777 "$(pwd)/testing" || true
-            chmod -f -R 777 "/deckhouse/testing" || true
-            chmod -f -R 777 /tmp || true
           fi
       # <template: update_comment_on_finish>
       - name: Update comment on finish
@@ -1755,10 +1710,6 @@ jobs:
           fi
           echo "Multimaster set ${MULTIMASTER}, MASTERS_COUNT set ${MASTERS_COUNT}"
 
-          # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
-          echo "⚓️ [$(date -u)] Pull 'dev/install' image '${SAFE_IMAGE_NAME}'."
-          docker pull "${INSTALL_IMAGE_NAME}"
-
           IMAGE_INSTALL_PATH="/${INSTALL_IMAGE_NAME#*/}"
 
           echo '::echo::on'
@@ -1816,17 +1767,17 @@ jobs:
             CIS_ENABLED=${CIS_ENABLED}
           "
 
-            export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
-            export PROVIDER=${PROVIDER:-not_provided} \
-            export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-} \
-            export LAYOUT=${LAYOUT:-not_provided} \
-            export DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
-            export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
-            export LAYOUT_YANDEX_CLOUD_ID=${LAYOUT_YANDEX_CLOUD_ID:-not_provided} \
-            export LAYOUT_YANDEX_FOLDER_ID=${LAYOUT_YANDEX_FOLDER_ID:-not_provided} \
-            export LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON=${LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON:-not_provided} \
+            export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG}
+            export PROVIDER=${PROVIDER:-not_provided}
+            export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-}
+            export LAYOUT=${LAYOUT:-not_provided}
+            export DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})"
+            export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
+            export LAYOUT_YANDEX_CLOUD_ID=${LAYOUT_YANDEX_CLOUD_ID:-not_provided}
+            export LAYOUT_YANDEX_FOLDER_ID=${LAYOUT_YANDEX_FOLDER_ID:-not_provided}
+            export LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON=${LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON:-not_provided}
             export USER_RUNNER_ID=${user_runner_id} \
-            export CIS_ENABLED=${CIS_ENABLED} \
+            export CIS_ENABLED=${CIS_ENABLED}
           bash $(pwd)/testing/cloud_layouts/script-commander.sh run-test
 
         # </template: e2e_run_template>
@@ -1892,15 +1843,15 @@ jobs:
             MASTERS_COUNT=${MASTERS_COUNT}
           "
 
-            export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
-            export PROVIDER=${PROVIDER:-not_provided} \
-            export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-} \
-            export LAYOUT=${LAYOUT:-not_provided} \
-            export DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
-            export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
-            export LAYOUT_YANDEX_CLOUD_ID=${LAYOUT_YANDEX_CLOUD_ID:-not_provided} \
-            export LAYOUT_YANDEX_FOLDER_ID=${LAYOUT_YANDEX_FOLDER_ID:-not_provided} \
-            export LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON=${LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON:-not_provided} \
+            export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG}
+            export PROVIDER=${PROVIDER:-not_provided}
+            export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-}
+            export LAYOUT=${LAYOUT:-not_provided}
+            export DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})"
+            export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
+            export LAYOUT_YANDEX_CLOUD_ID=${LAYOUT_YANDEX_CLOUD_ID:-not_provided}
+            export LAYOUT_YANDEX_FOLDER_ID=${LAYOUT_YANDEX_FOLDER_ID:-not_provided}
+            export LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON=${LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON:-not_provided}
             export USER_RUNNER_ID=${user_runner_id} \
           bash $(pwd)/testing/cloud_layouts/script-commander.sh cleanup
 
@@ -1938,17 +1889,6 @@ jobs:
             rm -rf "${TMPPATH}"
           else
             echo Not a directory.
-          fi
-          if [ -n $USER_RUNNER_ID ]; then
-            echo "Fix temp directories owner..."
-            chown -R $USER_RUNNER_ID "$(pwd)/testing" || true
-            chown -R $USER_RUNNER_ID "/deckhouse/testing" || true
-            chown -R $USER_RUNNER_ID /tmp || true
-          else
-            echo "Fix temp directories permissions..."
-            chmod -f -R 777 "$(pwd)/testing" || true
-            chmod -f -R 777 "/deckhouse/testing" || true
-            chmod -f -R 777 /tmp || true
           fi
       # <template: update_comment_on_finish>
       - name: Update comment on finish
@@ -2200,10 +2140,6 @@ jobs:
           fi
           echo "Multimaster set ${MULTIMASTER}, MASTERS_COUNT set ${MASTERS_COUNT}"
 
-          # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
-          echo "⚓️ [$(date -u)] Pull 'dev/install' image '${SAFE_IMAGE_NAME}'."
-          docker pull "${INSTALL_IMAGE_NAME}"
-
           IMAGE_INSTALL_PATH="/${INSTALL_IMAGE_NAME#*/}"
 
           echo '::echo::on'
@@ -2261,17 +2197,17 @@ jobs:
             CIS_ENABLED=${CIS_ENABLED}
           "
 
-            export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
-            export PROVIDER=${PROVIDER:-not_provided} \
-            export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-} \
-            export LAYOUT=${LAYOUT:-not_provided} \
-            export DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
-            export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
-            export LAYOUT_YANDEX_CLOUD_ID=${LAYOUT_YANDEX_CLOUD_ID:-not_provided} \
-            export LAYOUT_YANDEX_FOLDER_ID=${LAYOUT_YANDEX_FOLDER_ID:-not_provided} \
-            export LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON=${LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON:-not_provided} \
+            export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG}
+            export PROVIDER=${PROVIDER:-not_provided}
+            export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-}
+            export LAYOUT=${LAYOUT:-not_provided}
+            export DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})"
+            export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
+            export LAYOUT_YANDEX_CLOUD_ID=${LAYOUT_YANDEX_CLOUD_ID:-not_provided}
+            export LAYOUT_YANDEX_FOLDER_ID=${LAYOUT_YANDEX_FOLDER_ID:-not_provided}
+            export LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON=${LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON:-not_provided}
             export USER_RUNNER_ID=${user_runner_id} \
-            export CIS_ENABLED=${CIS_ENABLED} \
+            export CIS_ENABLED=${CIS_ENABLED}
           bash $(pwd)/testing/cloud_layouts/script-commander.sh run-test
 
         # </template: e2e_run_template>
@@ -2337,15 +2273,15 @@ jobs:
             MASTERS_COUNT=${MASTERS_COUNT}
           "
 
-            export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
-            export PROVIDER=${PROVIDER:-not_provided} \
-            export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-} \
-            export LAYOUT=${LAYOUT:-not_provided} \
-            export DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
-            export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
-            export LAYOUT_YANDEX_CLOUD_ID=${LAYOUT_YANDEX_CLOUD_ID:-not_provided} \
-            export LAYOUT_YANDEX_FOLDER_ID=${LAYOUT_YANDEX_FOLDER_ID:-not_provided} \
-            export LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON=${LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON:-not_provided} \
+            export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG}
+            export PROVIDER=${PROVIDER:-not_provided}
+            export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-}
+            export LAYOUT=${LAYOUT:-not_provided}
+            export DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})"
+            export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
+            export LAYOUT_YANDEX_CLOUD_ID=${LAYOUT_YANDEX_CLOUD_ID:-not_provided}
+            export LAYOUT_YANDEX_FOLDER_ID=${LAYOUT_YANDEX_FOLDER_ID:-not_provided}
+            export LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON=${LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON:-not_provided}
             export USER_RUNNER_ID=${user_runner_id} \
           bash $(pwd)/testing/cloud_layouts/script-commander.sh cleanup
 
@@ -2383,17 +2319,6 @@ jobs:
             rm -rf "${TMPPATH}"
           else
             echo Not a directory.
-          fi
-          if [ -n $USER_RUNNER_ID ]; then
-            echo "Fix temp directories owner..."
-            chown -R $USER_RUNNER_ID "$(pwd)/testing" || true
-            chown -R $USER_RUNNER_ID "/deckhouse/testing" || true
-            chown -R $USER_RUNNER_ID /tmp || true
-          else
-            echo "Fix temp directories permissions..."
-            chmod -f -R 777 "$(pwd)/testing" || true
-            chmod -f -R 777 "/deckhouse/testing" || true
-            chmod -f -R 777 /tmp || true
           fi
       # <template: update_comment_on_finish>
       - name: Update comment on finish
@@ -2645,10 +2570,6 @@ jobs:
           fi
           echo "Multimaster set ${MULTIMASTER}, MASTERS_COUNT set ${MASTERS_COUNT}"
 
-          # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
-          echo "⚓️ [$(date -u)] Pull 'dev/install' image '${SAFE_IMAGE_NAME}'."
-          docker pull "${INSTALL_IMAGE_NAME}"
-
           IMAGE_INSTALL_PATH="/${INSTALL_IMAGE_NAME#*/}"
 
           echo '::echo::on'
@@ -2706,17 +2627,17 @@ jobs:
             CIS_ENABLED=${CIS_ENABLED}
           "
 
-            export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
-            export PROVIDER=${PROVIDER:-not_provided} \
-            export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-} \
-            export LAYOUT=${LAYOUT:-not_provided} \
-            export DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
-            export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
-            export LAYOUT_YANDEX_CLOUD_ID=${LAYOUT_YANDEX_CLOUD_ID:-not_provided} \
-            export LAYOUT_YANDEX_FOLDER_ID=${LAYOUT_YANDEX_FOLDER_ID:-not_provided} \
-            export LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON=${LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON:-not_provided} \
+            export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG}
+            export PROVIDER=${PROVIDER:-not_provided}
+            export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-}
+            export LAYOUT=${LAYOUT:-not_provided}
+            export DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})"
+            export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
+            export LAYOUT_YANDEX_CLOUD_ID=${LAYOUT_YANDEX_CLOUD_ID:-not_provided}
+            export LAYOUT_YANDEX_FOLDER_ID=${LAYOUT_YANDEX_FOLDER_ID:-not_provided}
+            export LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON=${LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON:-not_provided}
             export USER_RUNNER_ID=${user_runner_id} \
-            export CIS_ENABLED=${CIS_ENABLED} \
+            export CIS_ENABLED=${CIS_ENABLED}
           bash $(pwd)/testing/cloud_layouts/script-commander.sh run-test
 
         # </template: e2e_run_template>
@@ -2782,15 +2703,15 @@ jobs:
             MASTERS_COUNT=${MASTERS_COUNT}
           "
 
-            export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
-            export PROVIDER=${PROVIDER:-not_provided} \
-            export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-} \
-            export LAYOUT=${LAYOUT:-not_provided} \
-            export DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
-            export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
-            export LAYOUT_YANDEX_CLOUD_ID=${LAYOUT_YANDEX_CLOUD_ID:-not_provided} \
-            export LAYOUT_YANDEX_FOLDER_ID=${LAYOUT_YANDEX_FOLDER_ID:-not_provided} \
-            export LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON=${LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON:-not_provided} \
+            export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG}
+            export PROVIDER=${PROVIDER:-not_provided}
+            export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-}
+            export LAYOUT=${LAYOUT:-not_provided}
+            export DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})"
+            export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
+            export LAYOUT_YANDEX_CLOUD_ID=${LAYOUT_YANDEX_CLOUD_ID:-not_provided}
+            export LAYOUT_YANDEX_FOLDER_ID=${LAYOUT_YANDEX_FOLDER_ID:-not_provided}
+            export LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON=${LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON:-not_provided}
             export USER_RUNNER_ID=${user_runner_id} \
           bash $(pwd)/testing/cloud_layouts/script-commander.sh cleanup
 
@@ -2828,17 +2749,6 @@ jobs:
             rm -rf "${TMPPATH}"
           else
             echo Not a directory.
-          fi
-          if [ -n $USER_RUNNER_ID ]; then
-            echo "Fix temp directories owner..."
-            chown -R $USER_RUNNER_ID "$(pwd)/testing" || true
-            chown -R $USER_RUNNER_ID "/deckhouse/testing" || true
-            chown -R $USER_RUNNER_ID /tmp || true
-          else
-            echo "Fix temp directories permissions..."
-            chmod -f -R 777 "$(pwd)/testing" || true
-            chmod -f -R 777 "/deckhouse/testing" || true
-            chmod -f -R 777 /tmp || true
           fi
       # <template: update_comment_on_finish>
       - name: Update comment on finish
@@ -3090,10 +3000,6 @@ jobs:
           fi
           echo "Multimaster set ${MULTIMASTER}, MASTERS_COUNT set ${MASTERS_COUNT}"
 
-          # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
-          echo "⚓️ [$(date -u)] Pull 'dev/install' image '${SAFE_IMAGE_NAME}'."
-          docker pull "${INSTALL_IMAGE_NAME}"
-
           IMAGE_INSTALL_PATH="/${INSTALL_IMAGE_NAME#*/}"
 
           echo '::echo::on'
@@ -3151,17 +3057,17 @@ jobs:
             CIS_ENABLED=${CIS_ENABLED}
           "
 
-            export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
-            export PROVIDER=${PROVIDER:-not_provided} \
-            export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-} \
-            export LAYOUT=${LAYOUT:-not_provided} \
-            export DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
-            export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
-            export LAYOUT_YANDEX_CLOUD_ID=${LAYOUT_YANDEX_CLOUD_ID:-not_provided} \
-            export LAYOUT_YANDEX_FOLDER_ID=${LAYOUT_YANDEX_FOLDER_ID:-not_provided} \
-            export LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON=${LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON:-not_provided} \
+            export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG}
+            export PROVIDER=${PROVIDER:-not_provided}
+            export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-}
+            export LAYOUT=${LAYOUT:-not_provided}
+            export DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})"
+            export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
+            export LAYOUT_YANDEX_CLOUD_ID=${LAYOUT_YANDEX_CLOUD_ID:-not_provided}
+            export LAYOUT_YANDEX_FOLDER_ID=${LAYOUT_YANDEX_FOLDER_ID:-not_provided}
+            export LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON=${LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON:-not_provided}
             export USER_RUNNER_ID=${user_runner_id} \
-            export CIS_ENABLED=${CIS_ENABLED} \
+            export CIS_ENABLED=${CIS_ENABLED}
           bash $(pwd)/testing/cloud_layouts/script-commander.sh run-test
 
         # </template: e2e_run_template>
@@ -3227,15 +3133,15 @@ jobs:
             MASTERS_COUNT=${MASTERS_COUNT}
           "
 
-            export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
-            export PROVIDER=${PROVIDER:-not_provided} \
-            export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-} \
-            export LAYOUT=${LAYOUT:-not_provided} \
-            export DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
-            export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
-            export LAYOUT_YANDEX_CLOUD_ID=${LAYOUT_YANDEX_CLOUD_ID:-not_provided} \
-            export LAYOUT_YANDEX_FOLDER_ID=${LAYOUT_YANDEX_FOLDER_ID:-not_provided} \
-            export LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON=${LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON:-not_provided} \
+            export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG}
+            export PROVIDER=${PROVIDER:-not_provided}
+            export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-}
+            export LAYOUT=${LAYOUT:-not_provided}
+            export DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})"
+            export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
+            export LAYOUT_YANDEX_CLOUD_ID=${LAYOUT_YANDEX_CLOUD_ID:-not_provided}
+            export LAYOUT_YANDEX_FOLDER_ID=${LAYOUT_YANDEX_FOLDER_ID:-not_provided}
+            export LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON=${LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON:-not_provided}
             export USER_RUNNER_ID=${user_runner_id} \
           bash $(pwd)/testing/cloud_layouts/script-commander.sh cleanup
 
@@ -3273,17 +3179,6 @@ jobs:
             rm -rf "${TMPPATH}"
           else
             echo Not a directory.
-          fi
-          if [ -n $USER_RUNNER_ID ]; then
-            echo "Fix temp directories owner..."
-            chown -R $USER_RUNNER_ID "$(pwd)/testing" || true
-            chown -R $USER_RUNNER_ID "/deckhouse/testing" || true
-            chown -R $USER_RUNNER_ID /tmp || true
-          else
-            echo "Fix temp directories permissions..."
-            chmod -f -R 777 "$(pwd)/testing" || true
-            chmod -f -R 777 "/deckhouse/testing" || true
-            chmod -f -R 777 /tmp || true
           fi
       # <template: update_comment_on_finish>
       - name: Update comment on finish
