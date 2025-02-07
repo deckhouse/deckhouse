@@ -132,7 +132,8 @@ func (c *EtcdClient) MemberPromote(learnerID uint64) error {
 			log.Infof("[etcd] The learner was promoted as a voting member: %s", strconv.FormatUint(learnerID, 16))
 			return true, nil
 		}
-		log.Infof("[etcd] Promoting the learner %s failed: %v", strconv.FormatUint(learnerID, 16), err)
+		log.Infof("[etcd] Promoting the learner %s failed: %v", strconv.FormatUint(learnerID, 16))
+		fmt.Errorf("%w", err)
 		lastError = err
 		return false, nil
 	})
