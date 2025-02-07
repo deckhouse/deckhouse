@@ -292,7 +292,7 @@ spec:
     fsGroup: 64535
   {{- include "helm_lib_node_selector" (tuple . "monitoring") | nindent 2 }}
   {{- include "helm_lib_tolerations" (tuple . "monitoring" "without-storage-problems") | nindent 2 }}
-  {{- include "helm_lib_priority_class" (tuple . "cluster-low") | nindent 2 }}
+  {{- include "helm_lib_priority_class" (tuple . "cluster-medium") | nindent 2 }}
 {{- $storageClass := .Values.prometheus.internal.prometheusMain.effectiveStorageClass }}
 {{- if $storageClass }}
   storage:
