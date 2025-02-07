@@ -142,6 +142,7 @@ func convergeComponent(componentName string) error {
 		return err
 	}
 
+	// Handle the situation when etcd member remains in the learner state
 	if componentName == "etcd" {
 		etcd.client, err = etcd.NewEtcdClient()
 		if err != nil {

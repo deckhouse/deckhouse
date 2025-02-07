@@ -17,15 +17,15 @@ import (
 )
 
 const (
-	etcdTimeout         = 2 * time.Second
+	etcdTimeout         = 3 * time.Second
 	NotFoundID   uint64 = 0
 	etcdEndpoint        = "https://127.0.0.1:2379"
 )
 
-// Exponential backoff for etcd operations (up to ~200 seconds)
+// Exponential backoff for etcd operations (up to ~2 minutes )
 var etcdBackoff = wait.Backoff{
-	Steps:    18,
-	Duration: 100 * time.Millisecond,
+	Steps:    10,
+	Duration: 1 * time.Second,
 	Factor:   1.5,
 	Jitter:   0.1,
 }
