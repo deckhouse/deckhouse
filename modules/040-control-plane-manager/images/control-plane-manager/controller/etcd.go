@@ -33,9 +33,9 @@ import (
 )
 
 const (
-	etcdTimeout         = 3 * time.Second
-	NotFoundID   uint64 = 0
-	etcdEndpoint        = "https://127.0.0.1:2379"
+	etcdPromoteTimeout        = 3 * time.Second
+	NotFoundID         uint64 = 0
+	etcdEndpoint              = "https://127.0.0.1:2379"
 )
 
 var etcdBackoff = wait.Backoff{
@@ -104,10 +104,11 @@ func (c *EtcdClient) NewEtcdClient() (*clientv3.Client, error) {
 	}
 	// etcd client with backoff
 	cfg := clientv3.Config{
-		Endpoints:       []string{etcdEndpoint},
-		DialTimeout:     5 * time.Second,
-		TLS:             tlsConfig,
-		MaxUnaryRetries: 3,
+		Endpoints:          []string{etcdEndpoint},
+		DialTimeout:        5 * time.Second,
+		TLS:                tlsConfig,
+		MaxUnaryRetries:    10,
+		BackoffWaitBetween: 1 * time.Second,
 	}
 	return clientv3.New(cfg)
 }
@@ -143,7 +144,7 @@ func (c *EtcdClient) MemberPromote(learnerID uint64) error {
 
 	err = wait.ExponentialBackoff(etcdBackoff, func() (bool, error) {
 		attempts++
-		ctx, cancel := context.WithTimeout(context.Background(), etcdTimeout)
+		ctx, cancel := context.WithTimeout(context.Background(), etcdPromoteTimeout)
 		defer cancel()
 
 		_, err = c.client.MemberPromote(ctx, learnerID)
