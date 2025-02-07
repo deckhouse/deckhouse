@@ -22,7 +22,6 @@ const (
 	etcdEndpoint        = "https://127.0.0.1:2379"
 )
 
-// Exponential backoff for etcd operations (up to ~2 minutes )
 var etcdBackoff = wait.Backoff{
 	Steps:    10,
 	Duration: 1 * time.Second,
@@ -87,11 +86,12 @@ func (c *EtcdClient) NewEtcdClient() (*clientv3.Client, error) {
 	if err != nil {
 		return nil, err
 	}
-
+	// etcd client with backoff
 	cfg := clientv3.Config{
-		Endpoints:   []string{etcdEndpoint},
-		DialTimeout: 5 * time.Second,
-		TLS:         tlsConfig,
+		Endpoints:       []string{etcdEndpoint},
+		DialTimeout:     5 * time.Second,
+		TLS:             tlsConfig,
+		MaxUnaryRetries: 3,
 	}
 	return clientv3.New(cfg)
 }
