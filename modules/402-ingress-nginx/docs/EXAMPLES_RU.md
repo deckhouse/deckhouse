@@ -23,7 +23,7 @@ spec:
     value: frontend
 ```
 
-## Пример для bare metal (при использовании внешнего балансировщика, например Cloudflare, Qrator, Nginx+, Citrix ADC, Kemp и др.)
+## Пример для bare metal (при использовании внешнего балансировщика)
 
 ```yaml
 apiVersion: deckhouse.io/v1

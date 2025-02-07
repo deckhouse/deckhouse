@@ -89,7 +89,7 @@ spec:
               properties:
                 type:
                   type: string
-                  enum: ["Loki", "Logstash", "Vector", "Kafka", "Splunk", "Socket"]
+                  enum: ["Loki", "Logstash", "Vector", "Kafka", "Socket"]
                   description: Type of a log storage backend.
                 loki:
                   type: object
@@ -297,62 +297,6 @@ spec:
                           description: The SASL password.
                           x-doc-examples:
                             - "qwerty"
-                    tls:
-                      type: object
-                      description: Configures the TLS options for outgoing connections.
-                      properties:
-                        caFile:
-                          type: string
-                          description: Base64-encoded CA certificate in PEM format.
-                        clientCrt:
-                          type: object
-                          description: Configures the client certificate for outgoing connections.
-                          required:
-                            - crtFile
-                            - keyFile
-                          properties:
-                            crtFile:
-                              type: string
-                              description: |
-                                Base64-encoded certificate in PEM format.
-
-                                You must also set the `keyFile` parameter.
-                            keyFile:
-                              type: string
-                              format: password
-                              description: |
-                                Base64-encoded private key in PEM format (PKCS#8).
-
-                                You must also set the `crtFile` parameter.
-                            keyPass:
-                              type: string
-                              format: string
-                              description: Base64-encoded pass phrase used to unlock the encrypted key file.
-                        verifyHostname:
-                          type: boolean
-                          default: true
-                          description: Verifies that the name of the remote host matches the name specified in the remote host's TLS certificate.
-                        verifyCertificate:
-                          type: boolean
-                          default: true
-                          description: Validate the TLS certificate of the remote host.
-                splunk:
-                  type: object
-                  required:
-                  - token
-                  - endpoint
-                  properties:
-                    endpoint:
-                      type: string
-                      description: Base URL of the Splunk instance.
-                      x-doc-examples:
-                      - "https://http-inputs-hec.splunkcloud.com"
-                    token:
-                      type: string
-                      description: Default Splunk HEC token. If an event has a token set in its metadata, it will have priority over the one set here.
-                    index:
-                      type: string
-                      description: Index name to write events to.
                     tls:
                       type: object
                       description: Configures the TLS options for outgoing connections.

@@ -27,52 +27,6 @@ spec:
     endpoint: http://loki.loki:3100
 ```
 
-## Чтение логов подов из указанного namespace с указанным label и перенаправление одновременно в Loki и Elasticsearch
-
-Чтение логов подов из namespace `whispers` только с label `app=booking` и перенаправление одновременно в Loki и Elasticsearch:
-
-```yaml
-apiVersion: deckhouse.io/v1alpha1
-kind: ClusterLoggingConfig
-metadata:
-  name: whispers-booking-logs
-spec:
-  type: KubernetesPods
-  kubernetesPods:
-    namespaceSelector:
-      matchNames:
-        - whispers
-    labelSelector:
-      matchLabels:
-        app: booking
-  destinationRefs:
-  - loki-storage
-  - es-storage
----
-apiVersion: deckhouse.io/v1alpha1
-kind: ClusterLogDestination
-metadata:
-  name: loki-storage
-spec:
-  type: Loki
-  loki:
-    endpoint: http://loki.loki:3100
----
-apiVersion: deckhouse.io/v1alpha1
-kind: ClusterLogDestination
-metadata:
-  name: es-storage
-spec:
-  type: Elasticsearch
-  elasticsearch:
-    endpoint: http://192.168.1.1:9200
-    index: logs-%F
-    auth:
-      strategy: Basic
-      user: elastic
-      password: c2VjcmV0IC1uCg==
-```
-
 ## Создание source в namespace и чтение логов всех подов в этом NS с направлением их в Loki
 
 Следующий pipeline создает source в namespace `test-whispers`, читает логи всех подов в этом NS и пишет их в Loki:
@@ -130,36 +84,6 @@ spec:
 
 **Vector** сам добавит этот путь при работе с Loki.
 
-## Работа с Grafana Cloud
-
-Данная документация подразумевает, что у вас уже создан ключ API.
-
-Для начала вам потребуется закодировать в base64 ваш токен доступа к Grafana Cloud.
-
-![Grafana cloud API key](../../images/log-shipper/grafana_cloud.png)
-
-```bash
-echo -n "<YOUR-GRAFANACLOUD-TOKEN>" | base64 -w0
-```
-
-Затем нужно создать **ClusterLogDestination**
-
-```yaml
-apiVersion: deckhouse.io/v1alpha1
-kind: ClusterLogDestination
-metadata:
-  name: loki-storage
-spec:
-  loki:
-    auth:
-      password: PFlPVVItR1JBRkFOQUNMT1VELVRPS0VOPg==
-      strategy: Basic
-      user: "<YOUR-GRAFANACLOUD-USER>"
-    endpoint: <YOUR-GRAFANACLOUD-URL> # Например https://logs-prod-us-central1.grafana.net или https://logs-prod-eu-west-0.grafana.net
-  type: Loki
-```
-
-Теперь можно создать PodLogginConfig или ClusterPodLoggingConfig и отправлять логи в **Grafana Cloud**.
 
 ## Добавление Loki в Deckhouse Grafana
 
@@ -178,99 +102,6 @@ spec:
     timeInterval: 30s
   type: loki
   url: http://loki.loki:3100
-```
-
-## Поддержка Elasticsearch < 6.X
-
-Для Elasticsearch < 6.0 нужно включить поддержку doc_type индексов.
-Сделать это можно следующим образом:
-
-```yaml
-apiVersion: deckhouse.io/v1alpha1
-kind: ClusterLogDestination
-metadata:
-  name: es-storage
-spec:
-  type: Elasticsearch
-  elasticsearch:
-    endpoint: http://192.168.1.1:9200
-    docType: "myDocType" # Укажите значение здесь. Оно не должно начинаться с '_'.
-    auth:
-      strategy: Basic
-      user: elastic
-      password: c2VjcmV0IC1uCg==
-```
-
-## Шаблон индекса для Elasticsearch
-
-Существует возможность отправлять сообщения в определенные индексы на основе метаданных с помощью шаблонов индексов:
-
-```yaml
-apiVersion: deckhouse.io/v1alpha1
-kind: ClusterLogDestination
-metadata:
-  name: es-storage
-spec:
-  type: Elasticsearch
-  elasticsearch:
-    endpoint: http://192.168.1.1:9200
-    index: "k8s-{{ namespace }}-%F"
-```
-
-В приведенном выше примере для каждого пространства имен Kubernetes будет создан свой индекс в Elasticsearch.
-
-Эта функция также хорошо работает в комбинации с `extraLabels`:
-
-```yaml
-apiVersion: deckhouse.io/v1alpha1
-kind: ClusterLogDestination
-metadata:
-  name: es-storage
-spec:
-  type: Elasticsearch
-  elasticsearch:
-    endpoint: http://192.168.1.1:9200
-    index: "k8s-{{ service }}-{{ namespace }}-%F"
-  extraLabels:
-    service: "{{ service_name }}"
-```
-
-1. Если сообщение имеет формат JSON, поле `service_name` этого документа JSON перемещается на уровень метаданных.
-2. Новое поле метаданных `service` используется в шаблоне индекса.
-
-## Пример интеграции со Splunk
-
-Существует возможность отсылать события из Deckhouse в Splunk.
-
-1. Endpoint должен быть таким же, как имя вашего экземпляра Splunk с портом `8088` и без указания пути, например `https://prd-p-xxxxxx.splunkcloud.com:8088`.
-2. Чтобы добавить token для доступа, откройте пункт меню `Setting` -> `Data inputs`, добавьте новый `HTTP Event Collector` и скопируйте token.
-3. Укажите индекс Splunk для хранения логов, например `logs`.
-
-```yaml
-apiVersion: deckhouse.io/v1alpha1
-kind: ClusterLogDestination
-metadata:
-  name: splunk
-spec:
-  type: Splunk
-  splunk:
-    endpoint: https://prd-p-xxxxxx.splunkcloud.com:8088
-    token: xxxx-xxxx-xxxx
-    index: logs
-    tls:
-      verifyCertificate: false
-      verifyHostname: false
-```
-
-{% endraw %}
-{% alert -%}
-`destination` не поддерживает метки пода для индексирования. Рассмотрите возможность добавления нужных меток с помощью опции `extraLabels`.
-{%- endalert %}
-{% raw %}
-
-```yaml
-extraLabels:
-  pod_label_app: '{{ pod_labels.app }}'
 ```
 
 ## Простой пример Logstash
