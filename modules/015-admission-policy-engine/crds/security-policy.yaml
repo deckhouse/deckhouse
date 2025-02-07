@@ -394,9 +394,6 @@ spec:
                         enum:
                           - '*'
                           - none
-                          - awsElasticBlockStore
-                          - azureDisk
-                          - azureFile
                           - cephFS
                           - cinder
                           - configMap
@@ -406,7 +403,6 @@ spec:
                           - fc
                           - flexVolume
                           - flocker
-                          - gcePersistentDisk
                           - gitRepo
                           - glusterfs
                           - hostPath

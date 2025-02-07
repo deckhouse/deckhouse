@@ -35,58 +35,6 @@ properties:
     x-examples:
     - [{"key":"dedicated.deckhouse.io","operator":"Equal","value":"cert-manager"}]
 
-  cloudflareAPIToken:
-    type: string
-    x-examples: ["token"]
-    description: |
-      API Tokens allow application-scoped keys bound to specific DNS zones.
-
-      API Tokens are recommended for higher security, since they have more restrictive permissions and are more easily revocable.
-
-      It allows you to verify that domains specified
-      in the Certificate resource are managed by `cert-manager` and kept by the Cloudflare DNS provider.
-      Verification is performed by adding special TXT records for
-      the ACME DNS01 Challenge Provider domain.
-
-  cloudflareGlobalAPIKey:
-    type: string
-    description: |
-      The Cloudflare Global API key for managing DNS records
-
-      It allows you to verify that domains specified
-      in the Certificate resource are managed by `cert-manager` and kept by the Cloudflare DNS provider.
-
-      Verification is performed by adding special TXT records for
-      the ACME DNS01 Challenge Provider domain.
-    x-examples: ["key"]
-
-  cloudflareEmail:
-    type: string
-    format: email
-    description: |
-      The email used for accessing the Cloudflare platform.
-    x-examples: ["example@example.com"]
-
-  route53AccessKeyID:
-    type: string
-    description: |
-      The Access Key ID of the user with the attached
-      Amazon Route53 IAM Policy
-      for managing domain records.
-    x-examples: ["key_id"]
-
-  route53SecretAccessKey:
-    type: string
-    description: |
-      The Secret Access Key of the user with privileges to manage domain records.
-    x-examples: ["secret"]
-
-  digitalOceanCredentials:
-    type: string
-    description: |
-      The Access Token for the Digital Ocean API (you can create it in the  `API` section).
-    x-examples: ["creds"]
-
   cloudDNSServiceAccount:
     type: string
     format: byte
@@ -107,12 +55,6 @@ properties:
     default: false
     description: |
       Delete a secret with a certificate automatically if the corresponding Certificate resource was deleted from the cluster.
-    x-examples: [true, false]
-
-  disableLetsencrypt:
-    type: boolean
-    description: |
-      Disable `letsencrypt` and `letsencrypt-staging` ClusterIssuer objects (if set to `true`).
     x-examples: [true, false]
 
   maxConcurrentChallenges:

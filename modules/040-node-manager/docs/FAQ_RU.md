@@ -397,8 +397,6 @@ spec:
 
 Подробно о всех параметрах можно прочитать в описании кастомного ресурса [NodeGroup](cr.html#nodegroup).
 
-В случае изменения параметров `InstanceClass` или `instancePrefix` в конфигурации Deckhouse не будет происходить `RollingUpdate`. Deckhouse создаст новые `MachineDeployment`, а старые удалит. Количество заказываемых одновременно `MachineDeployment` определяется параметром `cloudInstances.maxSurgePerZone`.
-
 При обновлении, которое требует прерывания работы узла (disruption update), выполняется процесс вытеснения подов с узла. Если какой-либо под не может быть вытеснен, попытка повторяется каждые 20 секунд до достижения глобального таймаута в 5 минут. После истечения этого времени, поды, которые не удалось вытеснить, удаляются принудительно.
 
 ## Как выделить узлы под специфические нагрузки?
@@ -588,7 +586,7 @@ spec:
     mode: Disabled
   disruptions:
     approvalMode: Automatic
-  nodeType: CloudStatic
+  nodeType: Static
 ```
 
 Далее создайте NodeGroupConfiguration для NodeGroup `gpu` для конфигурации containerd:
@@ -990,144 +988,18 @@ spec:
   weight: 31
 ```
 
-## Как использовать NodeGroup с приоритетом?
-
-С помощью параметра [priority](cr.html#nodegroup-v1-spec-cloudinstances-priority) кастомного ресурса `NodeGroup` можно задавать порядок заказа узлов в кластере.
-Например, можно сделать так, чтобы сначала заказывались узлы типа *spot-node*, а если они закончились — обычные узлы.
-
-Пример создания двух `NodeGroup` с использованием узлов типа spot-node:
-
-```yaml
----
-apiVersion: deckhouse.io/v1
-kind: NodeGroup
-metadata:
-  name: worker-spot
-spec:
-  cloudInstances:
-    classReference:
-      kind: AWSInstanceClass
-      name: worker-spot
-    maxPerZone: 5
-    minPerZone: 0
-    priority: 50
-  nodeType: CloudEphemeral
----
-apiVersion: deckhouse.io/v1
-kind: NodeGroup
-metadata:
-  name: worker
-spec:
-  cloudInstances:
-    classReference:
-      kind: AWSInstanceClass
-      name: worker
-    maxPerZone: 5
-    minPerZone: 0
-    priority: 30
-  nodeType: CloudEphemeral
-```
-
-В приведенном выше примере, `cluster-autoscaler` сначала попытается заказать узел типа *_spot-node*. Если в течение 15 минут его не получится добавить в кластер, NodeGroup `worker-spot` будет поставлен на паузу (на 20 минут) и `cluster-autoscaler` начнет заказывать узлы из NodeGroup `worker`.
-Если через 30 минут в кластере возникнет необходимость развернуть еще один узел, `cluster-autoscaler` сначала попытается заказать узел из NodeGroup `worker-spot` и только потом — из NodeGroup `worker`.
-
-После того как NodeGroup `worker-spot` достигнет своего максимума (5 узлов в примере выше), узлы будут заказываться из NodeGroup `worker`.
-
-Шаблоны узлов (labels/taints) для NodeGroup `worker` и `worker-spot` должны быть одинаковыми, или как минимум подходить для той нагрузки, которая запускает процесс увеличения кластера.
-
 ## Как интерпретировать состояние группы узлов?
 
 **Ready** — группа узлов содержит минимально необходимое число запланированных узлов с состоянием `Ready` для всех зон.
-
-Пример 1. Группа узлов в состоянии `Ready`:
-
-```yaml
-apiVersion: deckhouse.io/v1
-kind: NodeGroup
-metadata:
-  name: ng1
-spec:
-  nodeType: CloudEphemeral
-  cloudInstances:
-    maxPerZone: 5
-    minPerZone: 1
-status:
-  conditions:
-  - status: "True"
-    type: Ready
----
-apiVersion: v1
-kind: Node
-metadata:
-  name: node1
-  labels:
-    node.deckhouse.io/group: ng1
-status:
-  conditions:
-  - status: "True"
-    type: Ready
-```
-
-Пример 2. Группа узлов в состоянии `Not Ready`:
-
-```yaml
-apiVersion: deckhouse.io/v1
-kind: NodeGroup
-metadata:
-  name: ng1
-spec:
-  nodeType: CloudEphemeral
-  cloudInstances:
-    maxPerZone: 5
-    minPerZone: 2
-status:
-  conditions:
-  - status: "False"
-    type: Ready
----
-apiVersion: v1
-kind: Node
-metadata:
-  name: node1
-  labels:
-    node.deckhouse.io/group: ng1
-status:
-  conditions:
-  - status: "True"
-    type: Ready
-```
 
 **Updating** — группа узлов содержит как минимум один узел, в котором присутствует аннотация с префиксом `update.node.deckhouse.io` (например, `update.node.deckhouse.io/waiting-for-approval`).
 
 **WaitingForDisruptiveApproval** — группа узлов содержит как минимум один узел, в котором присутствует аннотация `update.node.deckhouse.io/disruption-required` и
 отсутствует аннотация `update.node.deckhouse.io/disruption-approved`.
 
-**Scaling** — рассчитывается только для групп узлов с типом `CloudEphemeral`. Состояние `True` может быть в двух случаях:
-
-1. Когда число узлов меньше *желаемого числа узлов в группе, то есть когда нужно увеличить число узлов в группе*.
-1. Когда какой-то узел помечается к удалению или число узлов больше *желаемого числа узлов*, то есть когда нужно уменьшить число узлов в группе.
+**Error** — содержит последнюю ошибку, возникшую при создании узла в группе узлов.
 
 *Желаемое число узлов* — это сумма всех реплик, входящих в группу узлов.
-
-Пример. Желаемое число узлов равно 2:
-
-```yaml
-apiVersion: deckhouse.io/v1
-kind: NodeGroup
-metadata:
-  name: ng1
-spec:
-  nodeType: CloudEphemeral
-  cloudInstances:
-    maxPerZone: 5
-    minPerZone: 2
-status:
-...
-  desired: 2
-...
-```
-
-**Error** — содержит последнюю ошибку, возникшую при создании узла в группе узлов.
 
 ## Как заставить werf игнорировать состояние Ready в группе узлов?
 

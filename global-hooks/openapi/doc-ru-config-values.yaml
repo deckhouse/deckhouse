@@ -71,7 +71,7 @@ properties:
                 description: |
                   Имя `ClusterIssuer`, используемого модулями Deckhouse.
 
-                  В модуле [cert-manager](/modules/cert-manager/) доступны следующие `ClusterIssuer`: `letsencrypt`, `letsencrypt-staging`, `selfsigned`, `clouddns`, `cloudflare`, `digitalocean`, `route53`. Также вы можете использовать свой `ClusterIssuer`.
+                  В модуле [cert-manager](/modules/cert-manager/) доступны следующие `ClusterIssuer`: `letsencrypt`, `letsencrypt-staging`, `selfsigned`. Также вы можете использовать свой `ClusterIssuer`.
           customCertificate:
             properties:
               secretName:

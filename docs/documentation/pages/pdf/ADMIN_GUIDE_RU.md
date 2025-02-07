@@ -2283,14 +2283,7 @@ kubectl get --raw /debug/api_priority_and_fairness/dump_queues
 
 Трафик к nginx-ingress может быть отправлен несколькими способами:
 - напрямую без внешнего балансировщика;
-- через внешний LoadBalancer, в том числе поддерживаются:
-  - Qrator,
-  - Cloudflare,
-  - AWS LB,
-  - GCE LB,
-  - ACS LB,
-  - Yandex LB,
-  - OpenStack LB.
+- через внешний балансировщик.
 
 #### Терминация HTTPS
 
@@ -2792,23 +2785,6 @@ IngressNginxController разворачивается с помощью DaemonSe
 
 Начиная с версии 1.1 IngressNginxController, Deckhouse создает объект IngressClass самостоятельно. Если вы хотите использовать свой IngressClass,
 например с установленными IngressClassParameters, достаточно добавить к нему label `ingress-class.deckhouse.io/external: "true"`
-
-```yaml
-apiVersion: networking.k8s.io/v1
-kind: IngressClass
-metadata:
-  labels:
-    ingress-class.deckhouse.io/external: "true"
-  name: my-super-ingress
-spec:
-  controller: ingress-nginx.deckhouse.io/my-super-ingress
-  parameters:
-    apiGroup: elbv2.k8s.aws
-    kind: IngressClassParams
-    name: awesome-class-cfg
-```
-
-В таком случае, при указании данного IngressClass в CRD IngressNginxController, Deckhouse не будет создавать объект, а использует уже существующий.
 
 #### Как отключить сборку детализированной статистики Ingress-ресурсов?
 

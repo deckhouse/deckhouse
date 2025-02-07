@@ -9,7 +9,7 @@ directories:
     node: master
     description:
       en: only exists in clusters deployed in the cloud when a separate disk is used for the etcd database.
-      ru: существует только в кластерах, развернутых в облаке, когда используется отдельный диск для базы данных etcd.
+      ru: существует только когда используется отдельный диск для базы данных etcd.
   - path: /var/lib/etcd
     node: master
     description:

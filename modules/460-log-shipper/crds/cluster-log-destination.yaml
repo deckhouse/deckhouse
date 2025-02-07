@@ -89,7 +89,7 @@ spec:
               properties:
                 type:
                   type: string
-                  enum: ["Loki", "Elasticsearch", "Logstash", "Vector", "Kafka", "Splunk", "Socket"]
+                  enum: ["Loki", "Logstash", "Vector", "Kafka", "Splunk", "Socket"]
                   description: Type of a log storage backend.
                 loki:
                   type: object
@@ -192,132 +192,6 @@ spec:
                             Validate the TLS certificate of the remote host.
 
                             If set to `false`, the certificate is not checked in the Certificate Revocation Lists.
-                elasticsearch:
-                  type: object
-                  required:
-                    - endpoint
-                  properties:
-                    auth:
-                      type: object
-                      properties:
-                        strategy:
-                          enum: ["Basic", "AWS"]
-                          type: string
-                          default: "Basic"
-                          description: The authentication strategy to use.
-                        password:
-                          type: string
-                          format: password
-                          description: Base64-encoded Basic authentication password.
-                        awsAccessKey:
-                          type: string
-                          description: Base64-encoded AWS `ACCESS_KEY`.
-                        awsSecretKey:
-                          type: string
-                          description: Base64-encoded AWS `SECRET_KEY`.
-                        awsAssumeRole:
-                          type: string
-                          description: The ARN of an IAM role to assume at startup.
-                        user:
-                          type: string
-                          description: The Basic authentication user name.
-                        awsRegion:
-                          type: string
-                          description: AWS region for authentication.
-                      oneOf:
-                        - properties:
-                            strategy:
-                              enum: ["Basic"]
-                          allOf:
-                            - not:
-                                anyOf:
-                                  - required:
-                                      - awsAccessKey
-                                  - required:
-                                      - awsSecretKey
-                                  - required:
-                                      - awsAssumeRole
-                                  - required:
-                                      - awsRegion
-                            - required:
-                                - user
-                                - password
-                        - properties:
-                            strategy:
-                              enum: ["AWS"]
-                          allOf:
-                            - not:
-                                anyOf:
-                                  - required:
-                                      - user
-                                  - required:
-                                      - password
-                            - required:
-                                - awsAccessKey
-                                - awsSecretKey
-                    index:
-                      type: string
-                      description: Index name to write events to.
-                    pipeline:
-                      type: string
-                      description: Name of the pipeline to apply.
-                    endpoint:
-                      type: string
-                      description: Base URL of the Elasticsearch instance.
-                    dataStreamEnabled:
-                      type: boolean
-                      default: false
-                      description: |
-                        Use for storage indexes or datastreams (https://www.elastic.co/guide/en/elasticsearch/reference/master/data-streams.html).
-
-                        Datastream usage is better for logs and metrics storage but they works only for Elasticsearch >= 7.16.X.
-                    docType:
-                      type: string
-                      description: |
-                        The `doc_type` for your index data. This is only relevant for Elasticsearch <= 6.X.
-
-                        - For Elasticsearch >= 7.X you do not need this option since this version has removed `doc_type` mapping;
-                        - For Elasticsearch >= 6.X the recommended value is `_doc`, because using it will make it easy to upgrade to 7.X;
-                        - For Elasticsearch < 6.X you can't use a value starting with `_` or empty string. Use, for example, values like `logs`.
-                    tls:
-                      type: object
-                      description: Configures the TLS options for outgoing connections.
-                      properties:
-                        caFile:
-                          type: string
-                          description: Base64-encoded CA certificate in PEM format.
-                        clientCrt:
-                          type: object
-                          description: Configures the client certificate for outgoing connections.
-                          required:
-                            - crtFile
-                            - keyFile
-                          properties:
-                            crtFile:
-                              type: string
-                              description: |
-                                Base64-encoded certificate in PEM format.
-
-                                You must also set the `keyFile` parameter.
-                            keyFile:
-                              type: string
-                              format: password
-                              description: |
-                                Base64-encoded private key in PEM format (PKCS#8).
-
-                                You must also set the `crtFile` parameter.
-                            keyPass:
-                              type: string
-                              format: string
-                              description: Base64-encoded pass phrase used to unlock the encrypted key file.
-                        verifyHostname:
-                          type: boolean
-                          default: true
-                          description: Verifies that the name of the remote host matches the name specified in the remote host's TLS certificate.
-                        verifyCertificate:
-                          type: boolean
-                          default: true
-                          description: Validate the TLS certificate of the remote host. Specifically the issuer is checked but not CRLs (Certificate Revocation Lists).
                 logstash:
                   type: object
                   required:

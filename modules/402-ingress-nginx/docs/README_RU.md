@@ -10,14 +10,7 @@ title: "Модуль ingress-nginx"
 
 Трафик к nginx-ingress может быть отправлен несколькими способами:
 - напрямую без внешнего балансировщика;
-- через внешний LoadBalancer, в том числе поддерживаются:
-  - Qrator,
-  - Cloudflare,
-  - AWS LB,
-  - GCE LB,
-  - ACS LB,
-  - Yandex LB,
-  - OpenStack LB.
+- через внешний балансировщик.
 
 ## Терминация HTTPS
 

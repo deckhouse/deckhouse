@@ -5560,94 +5560,6 @@ spec:
                   description: Volume represents a named volume in a pod that may
                     be accessed by any container in the pod.
                   properties:
-                    awsElasticBlockStore:
-                      description: 'awsElasticBlockStore represents an AWS Disk resource
-                        that is attached to a kubelet''s host machine and then exposed
-                        to the pod. More info: https://kubernetes.io/docs/concepts/storage/volumes#awselasticblockstore'
-                      properties:
-                        fsType:
-                          description: 'fsType is the filesystem type of the volume
-                            that you want to mount. Tip: Ensure that the filesystem
-                            type is supported by the host operating system. Examples:
-                            "ext4", "xfs", "ntfs". Implicitly inferred to be "ext4"
-                            if unspecified. More info: https://kubernetes.io/docs/concepts/storage/volumes#awselasticblockstore
-                            TODO: how do we prevent errors in the filesystem from
-                            compromising the machine'
-                          type: string
-                        partition:
-                          description: 'partition is the partition in the volume that
-                            you want to mount. If omitted, the default is to mount
-                            by volume name. Examples: For volume /dev/sda1, you specify
-                            the partition as "1". Similarly, the volume partition
-                            for /dev/sda is "0" (or you can leave the property empty).'
-                          format: int32
-                          type: integer
-                        readOnly:
-                          description: 'readOnly value true will force the readOnly
-                            setting in VolumeMounts. More info: https://kubernetes.io/docs/concepts/storage/volumes#awselasticblockstore'
-                          type: boolean
-                        volumeID:
-                          description: 'volumeID is unique ID of the persistent disk
-                            resource in AWS (Amazon EBS volume). More info: https://kubernetes.io/docs/concepts/storage/volumes#awselasticblockstore'
-                          type: string
-                      required:
-                      - volumeID
-                      type: object
-                    azureDisk:
-                      description: azureDisk represents an Azure Data Disk mount on
-                        the host and bind mount to the pod.
-                      properties:
-                        cachingMode:
-                          description: 'cachingMode is the Host Caching mode: None,
-                            Read Only, Read Write.'
-                          type: string
-                        diskName:
-                          description: diskName is the Name of the data disk in the
-                            blob storage
-                          type: string
-                        diskURI:
-                          description: diskURI is the URI of data disk in the blob
-                            storage
-                          type: string
-                        fsType:
-                          description: fsType is Filesystem type to mount. Must be
-                            a filesystem type supported by the host operating system.
-                            Ex. "ext4", "xfs", "ntfs". Implicitly inferred to be "ext4"
-                            if unspecified.
-                          type: string
-                        kind:
-                          description: 'kind expected values are Shared: multiple
-                            blob disks per storage account  Dedicated: single blob
-                            disk per storage account  Managed: azure managed data
-                            disk (only in managed availability set). defaults to shared'
-                          type: string
-                        readOnly:
-                          description: readOnly Defaults to false (read/write). ReadOnly
-                            here will force the ReadOnly setting in VolumeMounts.
-                          type: boolean
-                      required:
-                      - diskName
-                      - diskURI
-                      type: object
-                    azureFile:
-                      description: azureFile represents an Azure File Service mount
-                        on the host and bind mount to the pod.
-                      properties:
-                        readOnly:
-                          description: readOnly defaults to false (read/write). ReadOnly
-                            here will force the ReadOnly setting in VolumeMounts.
-                          type: boolean
-                        secretName:
-                          description: secretName is the  name of secret that contains
-                            Azure Storage Account Name and Key
-                          type: string
-                        shareName:
-                          description: shareName is the azure share Name
-                          type: string
-                      required:
-                      - secretName
-                      - shareName
-                      type: object
                     cephfs:
                       description: cephFS represents a Ceph FS mount on the host that
                         shares a pod's lifetime
@@ -6318,40 +6230,6 @@ spec:
                           description: datasetUUID is the UUID of the dataset. This
                             is unique identifier of a Flocker dataset
                           type: string
-                      type: object
-                    gcePersistentDisk:
-                      description: 'gcePersistentDisk represents a GCE Disk resource
-                        that is attached to a kubelet''s host machine and then exposed
-                        to the pod. More info: https://kubernetes.io/docs/concepts/storage/volumes#gcepersistentdisk'
-                      properties:
-                        fsType:
-                          description: 'fsType is filesystem type of the volume that
-                            you want to mount. Tip: Ensure that the filesystem type
-                            is supported by the host operating system. Examples: "ext4",
-                            "xfs", "ntfs". Implicitly inferred to be "ext4" if unspecified.
-                            More info: https://kubernetes.io/docs/concepts/storage/volumes#gcepersistentdisk
-                            TODO: how do we prevent errors in the filesystem from
-                            compromising the machine'
-                          type: string
-                        partition:
-                          description: 'partition is the partition in the volume that
-                            you want to mount. If omitted, the default is to mount
-                            by volume name. Examples: For volume /dev/sda1, you specify
-                            the partition as "1". Similarly, the volume partition
-                            for /dev/sda is "0" (or you can leave the property empty).
-                            More info: https://kubernetes.io/docs/concepts/storage/volumes#gcepersistentdisk'
-                          format: int32
-                          type: integer
-                        pdName:
-                          description: 'pdName is unique name of the PD resource in
-                            GCE. Used to identify the disk in GCE. More info: https://kubernetes.io/docs/concepts/storage/volumes#gcepersistentdisk'
-                          type: string
-                        readOnly:
-                          description: 'readOnly here will force the ReadOnly setting
-                            in VolumeMounts. Defaults to false. More info: https://kubernetes.io/docs/concepts/storage/volumes#gcepersistentdisk'
-                          type: boolean
-                      required:
-                      - pdName
                       type: object
                     gitRepo:
                       description: 'gitRepo represents a git repository at a particular
@@ -7083,31 +6961,6 @@ spec:
                             are not using namespaces within StorageOS. Namespaces
                             that do not pre-exist within StorageOS will be created.
                           type: string
-                      type: object
-                    vsphereVolume:
-                      description: vsphereVolume represents a vSphere volume attached
-                        and mounted on kubelets host machine
-                      properties:
-                        fsType:
-                          description: fsType is filesystem type to mount. Must be
-                            a filesystem type supported by the host operating system.
-                            Ex. "ext4", "xfs", "ntfs". Implicitly inferred to be "ext4"
-                            if unspecified.
-                          type: string
-                        storagePolicyID:
-                          description: storagePolicyID is the storage Policy Based
-                            Management (SPBM) profile ID associated with the StoragePolicyName.
-                          type: string
-                        storagePolicyName:
-                          description: storagePolicyName is the storage Policy Based
-                            Management (SPBM) profile name.
-                          type: string
-                        volumePath:
-                          description: volumePath is the path that identifies vSphere
-                            volume vmdk
-                          type: string
-                      required:
-                      - volumePath
                       type: object
                   required:
                   - name

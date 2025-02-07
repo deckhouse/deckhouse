@@ -231,22 +231,6 @@ Notes:
 Since version 1.1 IngressNginxController Deckhouse creates an IngressClass object. If you want to use your own IngressClass
 with your customized IngressClassParameters, you need to add the label `ingress-class.deckhouse.io/external: "true"`
 
-```yaml
-apiVersion: networking.k8s.io/v1
-kind: IngressClass
-metadata:
-  labels:
-    ingress-class.deckhouse.io/external: "true"
-  name: my-super-ingress
-spec:
-  controller: ingress-nginx.deckhouse.io/my-super-ingress
-  parameters:
-    apiGroup: elbv2.k8s.aws
-    kind: IngressClassParams
-    name: awesome-class-cfg
-```
-
-In this case Deckhouse will not create an IngressClass object and will use your own.
 
 ## How to disable the collection of detailed Ingress resources statistics?
 

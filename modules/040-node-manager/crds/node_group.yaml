@@ -336,7 +336,6 @@ spec:
                       enum:
                         - Manual
                         - Automatic
-                        - RollingUpdate
                     automatic:
                       type: object
                       description: |
@@ -351,49 +350,6 @@ spec:
                             **Caution!** This setting ignores (nodes will be approved without draining Pods):
                             - for the nodeGroup `master` with a single node;
                             - for a single `ready` node in a nodeGroup [picked out](/deckhouse-faq.html#how-do-i-run-deckhouse-on-a-particular-node) for Deckhouse placement.
-                        windows:
-                          type: array
-                          description: |
-                            Time windows for node disruptive updates.
-                          items:
-                            type: object
-                            required:
-                              - from
-                              - to
-                            properties:
-                              from:
-                                type: string
-                                pattern: '^(?:\d|[01]\d|2[0-3]):[0-5]\d$'
-                                x-doc-examples: ["13:00"]
-                                description: |
-                                  Start time of disruptive update window (UTC timezone).
-                              to:
-                                type: string
-                                pattern: '^(?:\d|[01]\d|2[0-3]):[0-5]\d$'
-                                x-doc-examples: ["18:30"]
-                                description: |
-                                  End time of disruptive update window (UTC timezone).
-                              days:
-                                type: array
-                                description: |
-                                  Days of the week when node could be updated.
-                                x-doc-examples: [Mon, Wed]
-                                items:
-                                  type: string
-                                  description: Day of the week.
-                                  enum:
-                                    - Mon
-                                    - Tue
-                                    - Wed
-                                    - Thu
-                                    - Fri
-                                    - Sat
-                                    - Sun
-                    rollingUpdate:
-                      type: object
-                      description: |
-                        Additional parameters for the `RollingUpdate` mode.
-                      properties:
                         windows:
                           type: array
                           description: |
@@ -846,7 +802,6 @@ spec:
                       enum:
                         - Manual
                         - Automatic
-                        - RollingUpdate
                     automatic:
                       type: object
                       description: |
@@ -861,49 +816,6 @@ spec:
                             **Caution!** This setting ignores (nodes will be approved without draining Pods):
                             - for the nodeGroup `master` with a single node;
                             - for a single `ready` node in a nodeGroup [picked out](/deckhouse-faq.html#how-do-i-run-deckhouse-on-a-particular-node) for Deckhouse placement.
-                        windows:
-                          type: array
-                          description: |
-                            Time windows for node disruptive updates.
-                          items:
-                            type: object
-                            required:
-                              - from
-                              - to
-                            properties:
-                              from:
-                                type: string
-                                pattern: '^(?:\d|[01]\d|2[0-3]):[0-5]\d$'
-                                x-doc-examples: ["13:00"]
-                                description: |
-                                  Start time of disruptive update window (UTC timezone).
-                              to:
-                                type: string
-                                pattern: '^(?:\d|[01]\d|2[0-3]):[0-5]\d$'
-                                x-doc-examples: ["18:30"]
-                                description: |
-                                  End time of disruptive update window (UTC timezone).
-                              days:
-                                type: array
-                                description: |
-                                  Days of the week when node could be updated.
-                                x-doc-examples: [Mon, Wed]
-                                items:
-                                  type: string
-                                  description: Day of the week.
-                                  enum:
-                                    - Mon
-                                    - Tue
-                                    - Wed
-                                    - Thu
-                                    - Fri
-                                    - Sat
-                                    - Sun
-                    rollingUpdate:
-                      type: object
-                      description: |
-                        Additional parameters for the `RollingUpdate` mode.
-                      properties:
                         windows:
                           type: array
                           description: |
@@ -1466,7 +1378,6 @@ spec:
                       enum:
                         - Manual
                         - Automatic
-                        - RollingUpdate
                     automatic:
                       type: object
                       description: |
@@ -1481,49 +1392,6 @@ spec:
                             **Caution!** This setting ignores (nodes will be approved without draining Pods):
                             - for the nodeGroup `master` with a single node;
                             - for a single `ready` node in a nodeGroup [picked out](/deckhouse-faq.html#how-do-i-run-deckhouse-on-a-particular-node) for Deckhouse placement.
-                        windows:
-                          type: array
-                          description: |
-                            Time windows for node disruptive updates.
-                          items:
-                            type: object
-                            required:
-                              - from
-                              - to
-                            properties:
-                              from:
-                                type: string
-                                pattern: '^(?:\d|[01]\d|2[0-3]):[0-5]\d$'
-                                x-doc-examples: ["13:00"]
-                                description: |
-                                  Start time of disruptive update window (UTC timezone).
-                              to:
-                                type: string
-                                pattern: '^(?:\d|[01]\d|2[0-3]):[0-5]\d$'
-                                x-doc-examples: ["18:30"]
-                                description: |
-                                  End time of disruptive update window (UTC timezone).
-                              days:
-                                type: array
-                                description: |
-                                  Days of the week when node could be updated.
-                                x-doc-examples: [Mon, Wed]
-                                items:
-                                  type: string
-                                  description: Day of the week.
-                                  enum:
-                                    - Mon
-                                    - Tue
-                                    - Wed
-                                    - Thu
-                                    - Fri
-                                    - Sat
-                                    - Sun
-                    rollingUpdate:
-                      type: object
-                      description: |
-                        Additional parameters for the `RollingUpdate` mode.
-                      properties:
                         windows:
                           type: array
                           description: |
