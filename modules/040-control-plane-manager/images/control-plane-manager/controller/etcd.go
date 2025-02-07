@@ -58,7 +58,9 @@ func (c *EtcdClient) CheckIfNodeIsLearner() (uint64, error) {
 		if m.Name == config.NodeName {
 			log.Infof("[etcd] member: ID=%d Name=%q PeerURLs=%v IsLearner=%v",
 				m.ID, m.Name, m.PeerURLs, m.IsLearner)
-			return m.ID, nil
+			if m.IsLearner {
+				return m.ID, nil
+			}
 		}
 	}
 
