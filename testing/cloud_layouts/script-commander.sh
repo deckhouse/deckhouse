@@ -127,7 +127,7 @@ function prepare_environment() {
       >&2 echo 'DECKHOUSE_IMAGE_TAG environment variable is required.'
       return 1
     fi
-    DEV_BRANCH="${DECKHOUSE_IMAGE_TAG}"
+    BRANCH="${DECKHOUSE_IMAGE_TAG}"
 
     if [[ -z "$PREFIX" ]]; then
       # shellcheck disable=SC2016
@@ -278,7 +278,7 @@ payload="{
 
   echo "Bootstrap payload: ${payload}"
 
-  response=$(curl -f -X POST "https://${commander_host}/api/v1/clusters" \
+  response=$(curl -fs -X POST "https://${commander_host}/api/v1/clusters" \
     -H 'accept: application/json' \
     -H "X-Auth-Token: ${commander_token}" \
     -H 'Content-Type: application/json' \
