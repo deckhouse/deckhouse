@@ -57,16 +57,16 @@
         (kube_deployment_status_replicas_available{deployment=~"standby-holder-.+"} == 0)
         * (kube_deployment_spec_replicas{deployment=~"standby-holder-.+"} != 0)
       )
-      * on (namespace, deployment)
-      (
-        max by (namespace, deployment) (extended_monitoring_deployment_threshold{threshold="replicas-not-ready"})
-      )
-      * on (namespace, node_group_name)
-      (
-        label_replace(d8_node_group_ready, "node_group_name", "$1", "deployment", "standby-holder-(.+)")
-        !=
-        label_replace(d8_node_group_max, "node_group_name", "$1", "deployment", "standby-holder-(.+)")
-      )
+      * on(namespace, deployment) group_left(node_group_name)
+        label_replace(
+          kube_deployment_spec_replicas{deployment=~"standby-holder-.+"},
+          "node_group_name",
+          "$1",
+          "deployment",
+          "standby-holder-(.+)"
+        )
+      * on (node_group_name)
+        (d8_node_group_ready{node_group_name=~".+"} != d8_node_group_max{node_group_name=~".+"})
     for: 5m
     labels:
       severity_level: "5"
