@@ -282,7 +282,8 @@ payload="{
     -H 'accept: application/json' \
     -H "X-Auth-Token: ${commander_token}" \
     -H 'Content-Type: application/json' \
-    -d "$payload")
+    -d "$payload" \
+    -w "%{http_code}")
 
   http_code=$(echo "$response" | tail -n 1)
   response=$(echo "$response" | head -n -1)
