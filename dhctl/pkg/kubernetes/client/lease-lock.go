@@ -255,7 +255,7 @@ func (l *LeaseLock) tryRenew(lease *coordinationv1.Lease, force bool) (*coordina
 				return err
 			}
 			leaseTemp.Spec.RenewTime = now()
-			newLease, err = l.leasesCl.Update(context.TODO(), lease, metav1.UpdateOptions{})
+			newLease, err = l.leasesCl.Update(context.TODO(), leaseTemp, metav1.UpdateOptions{})
 			return err
 		}
 		return err
