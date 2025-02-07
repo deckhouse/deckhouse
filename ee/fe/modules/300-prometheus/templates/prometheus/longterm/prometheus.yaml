@@ -203,7 +203,7 @@ spec:
     {{- include "helm_lib_tolerations" (tuple . "monitoring" "without-storage-problems") | nindent 2 }}
   {{- end }}
 
-  {{- include "helm_lib_priority_class" (tuple . "cluster-medium") | nindent 2 }}
+  {{- include "helm_lib_priority_class" (tuple . "cluster-low") | nindent 2 }}
   {{- $storageClass := .Values.prometheus.internal.prometheusLongterm.effectiveStorageClass }}
   {{- if $storageClass }}
   storage:
