@@ -86,8 +86,6 @@ shopt -s failglob
 
 function prepare_environment() {
     root_wd="${PWD}/testing/cloud_layouts"
-    echo "$root_wd"
-    ls "$root_wd"
 
     if [[ -z "$PROVIDER" || ! -d "$root_wd/$PROVIDER" ]]; then
       >&2 echo "ERROR: Unknown provider \"$PROVIDER\""
@@ -278,7 +276,9 @@ payload="{
     }
 }"
 
-  response=$(curl -v -X POST "https://${commander_host}/api/v1/clusters" \
+  echo "Bootstrap payload: ${payload}"
+
+  response=$(curl -f -X POST "https://${commander_host}/api/v1/clusters" \
     -H 'accept: application/json' \
     -H "X-Auth-Token: ${commander_token}" \
     -H 'Content-Type: application/json' \
@@ -290,6 +290,8 @@ payload="{
     echo "$response" >&2
     return 1
   fi
+
+  echo "Bootstrap resuest response: ${response}"
 
   # Extract id and handle errors
   CLUSTER_ID=$(jq -r '.id' <<< "$response")
