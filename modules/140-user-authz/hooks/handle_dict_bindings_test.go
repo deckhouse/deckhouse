@@ -34,11 +34,11 @@ var _ = Describe("Modules :: user-authz :: hooks :: handle-dict-bindings ::", fu
 	Context("There`s UseBinding", func() {
 		BeforeEach(func() {
 			resources := []string{
-				useBinding("test", "test-ns", rbacv1.Subject{Kind: "Group", Name: "testGroup"}),
-				useBinding("test", "test-ns2", rbacv1.Subject{Kind: "ServiceAccount", Namespace: "test-ns2", Name: "testSa"}),
-				useBinding("test", "test-ns3", rbacv1.Subject{Kind: "User", Namespace: "test-ns3", Name: "testUser"}),
+				useBinding("test-ns", rbacv1.Subject{Kind: "Group", Name: "testGroup"}),
+				useBinding("test-ns2", rbacv1.Subject{Kind: "ServiceAccount", Namespace: "test-ns2", Name: "testSa"}),
+				useBinding("test-ns3", rbacv1.Subject{Kind: "User", Namespace: "test-ns3", Name: "testUser"}),
 
-				useBinding("test", "ns2", rbacv1.Subject{Kind: "ServiceAccount", Namespace: "ns2", Name: "testsa"}),
+				useBinding("ns2", rbacv1.Subject{Kind: "ServiceAccount", Namespace: "ns2", Name: "testsa"}),
 
 				dictBinding("d8:dict:sa:ns:testsa", rbacv1.Subject{Kind: "ServiceAccount", Namespace: "ns", Name: "testsa"}),
 				dictBinding("d8:dict:sa:ns2:testsa", rbacv1.Subject{Kind: "ServiceAccount", Namespace: "ns2", Name: "testsa"}),
@@ -73,14 +73,14 @@ var _ = Describe("Modules :: user-authz :: hooks :: handle-dict-bindings ::", fu
 	})
 })
 
-func useBinding(name, namespace string, subject rbacv1.Subject) string {
+func useBinding(namespace string, subject rbacv1.Subject) string {
 	binding := rbacv1.RoleBinding{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "rbac.authorization.k8s.io/v1",
 			Kind:       "RoleBinding",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
+			Name:      "test",
 			Namespace: namespace,
 		},
 		Subjects: []rbacv1.Subject{subject},
