@@ -35,12 +35,14 @@ const (
 type Definition struct {
 	Name         string                       `yaml:"name"`
 	Weight       uint32                       `yaml:"weight,omitempty"`
-	Tags         []string                     `yaml:"tags"`
-	Stage        string                       `yaml:"stage"`
-	Description  string                       `yaml:"description"`
+	Tags         []string                     `yaml:"tags,omitempty"`
+	Subsystems   []string                     `yaml:"subsystems,omitempty"`
+	Namespace    string                       `yaml:"namespace,omitempty"`
+	Stage        string                       `yaml:"stage,omitempty"`
+	Description  string                       `yaml:"description,omitempty"`
 	Requirements *v1alpha1.ModuleRequirements `yaml:"requirements,omitempty"`
 
-	DisableOptions DisableOptions `yaml:"disable"`
+	DisableOptions DisableOptions `yaml:"disable,omitempty"`
 
 	Path string `yaml:"-"`
 }
@@ -75,16 +77,19 @@ func (d *Definition) Validate(values addonutils.Values, logger *log.Logger) erro
 
 	err = dm.Validate()
 	// next we will need to record all validation errors except required (602).
-	var result, mErr *multierror.Error
+	var result error
+	var mErr *multierror.Error
 	if errors.As(err, &mErr) {
 		for _, me := range mErr.Errors {
 			var e *openapierrors.Validation
+
 			if errors.As(me, &e) {
 				if e.Code() == 602 {
 					continue
 				}
 			}
-			result = multierror.Append(result, me)
+
+			result = errors.Join(result, me)
 		}
 	}
 

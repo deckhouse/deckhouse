@@ -6,6 +6,7 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package cache
 
 import (
+	"errors"
 	"fmt"
 	"time"
 )
@@ -26,6 +27,10 @@ func Retry(fn retryable) error {
 		cont, err = fn()
 		if !cont || err == nil {
 			break
+		}
+
+		if errors.Is(err, ErrNotFound) {
+			return ErrNotFound
 		}
 
 		attempt++

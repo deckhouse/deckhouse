@@ -101,22 +101,18 @@ d8 k get modulereleases
 ```
 
 {% offtopic title="Scheme for using the releaseChannel parameter during installation and Platform operation" %}
-![Scheme for using the releaseChannel parameter during installation and Platform operation](/images/common/deckhouse-update-process.png)
+![Scheme for using the releaseChannel parameter during installation and Platform operation](/../../../../images/common/deckhouse-update-process.png)
 {% endofftopic %}
 
 To disable the platform update mechanism, remove the `.spec.settings.releaseChannel` parameter from the `deckhouse` module configuration. In this case, the platform does not check for updates, and patch-release updates are not performed.
 
-{% alert level="danger" %}
-Disabling automatic updates is highly discouraged. This will block updates to patch releases, which may include critical vulnerability and bug fixes.
-{% endalert %}
+> **Warning.** Disabling automatic updates is highly discouraged. This will block updates to patch releases, which may include critical vulnerability and bug fixes.
 
 ## Immediate Update Application
 
 To apply an update immediately, set the annotation `release.deckhouse.io/apply-now: "true"` on the corresponding [DeckhouseRelease](../../../reference/cr/deckhouserelease.html) resource.
 
-{% alert level="info" %}
-In this case, update windows, [canary-release](../../../reference/cr/deckhouserelease.html#deckhouserelease-v1alpha1-spec-applyafter) settings, and the [manual cluster update mode](../../reference/cr.html#parameters-update-disruptionapprovalmode) will be ignored. The update will be applied immediately after setting the annotation.
-{% endalert %}
+> In this case, update windows, [canary-release](../../../reference/cr/deckhouserelease.html#deckhouserelease-v1alpha1-spec-applyafter) settings, and the [manual cluster update mode](../../reference/cr.html#parameters-update-disruptionapprovalmode) will be ignored. The update will be applied immediately after setting the annotation.
 
 Example command to set the annotation for bypassing update windows for version `v1.56.2`:
 

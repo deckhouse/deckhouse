@@ -13,8 +13,6 @@ Virtual machine migration is a key feature in managing virtualized infrastructur
 
 ### Running migration of a virtual machine
 
-Below is an example of migrating a selected virtual machine.
-
 Before starting the migration, check the current status of the virtual machine with the following command:
 
 ```bash
@@ -39,9 +37,9 @@ kind: VirtualMachineOperation
 metadata:
   name: migrate-linux-vm-$(date +%s)
 spec:
-  # name of virtual machine
+  # Name of virtual machine.
   virtualMachineName: linux-vm
-  # operation
+  # Operation.
   type: Evict
 EOF
 ```
@@ -78,9 +76,9 @@ Where `<nodename>` is the name of the node on which maintenance will be performe
 
 This command performs several tasks:
 
-- Evacuates all pods from the specified node.
-- Ignores DaemonSets to avoid stopping critical services.
-- Deletes temporary data stored in emptyDir to free up node resources.
+- evacuates all pods from the specified node.
+- ignores DaemonSets to avoid stopping critical services.
+- deletes temporary data stored in `emptyDir` to free up node resources.
 
 If you only need to evict virtual machines from the node, you can use a more precise command with filtering by the label that corresponds to virtual machines. For this, run the following command:
 
@@ -88,16 +86,16 @@ If you only need to evict virtual machines from the node, you can use a more pre
 d8 k uncordon <nodename>
 ```
 
-![Maintenance mode, diagram](/images/virtualization-platform/drain.png)
+![Maintenance mode, diagram](/../../../../../images/virtualization-platform/drain.png)
 
-### Recovery after failure
+### Recovery after failure (ColdStandby)
 
 ColdStandby provides a mechanism to restore a virtual machine's operation in case of a node failure where it was running.
 
 To make this mechanism work, the following requirements must be met:
 
 - The virtual machine's launch policy (`.spec.runPolicy`) must be set to one of the following values: `AlwaysOnUnlessStoppedManually`, `AlwaysOn`.
-- The fencing mechanism should be enabled on the nodes where virtual machines are running [fencing](../../../../reference/cr/nodegroup.html#nodegroup-v1-spec-fencing-mode).
+- The [fencing](../../../../reference/cr/nodegroup.html#nodegroup-v1-spec-fencing-mode) mechanism should be enabled on the nodes where virtual machines are running [fencing](../../../../reference/cr/nodegroup.html#nodegroup-v1-spec-fencing-mode).
 
 How the ColdStandby mechanism works with an example:
 
@@ -108,4 +106,4 @@ How the ColdStandby mechanism works with an example:
 1. The controller removes the unavailable `workerA` node from the cluster.
 1. The virtual machine `linux-vm` is automatically started on another available node — `workerB`.
 
-![Failure recovery, diagram](/images/virtualization-platform/coldstandby.png)
+![Failure recovery, diagram](/../../../../../images/virtualization-platform/coldstandby.png)

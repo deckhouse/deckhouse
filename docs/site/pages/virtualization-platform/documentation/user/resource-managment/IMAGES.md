@@ -218,7 +218,7 @@ d8 k get vi some-image -o jsonpath="{.status.imageUploadURLs}"  | jq
 # }
 ```
 
-As an example, let's consider uploading the Cirros image:
+Download the Cirros image as an example:
 
 ```bash
 curl -L http://download.cirros-cloud.net/0.5.1/cirros-0.5.1-x86_64-disk.img -o cirros.img
@@ -267,3 +267,22 @@ spec:
       name: linux-vm-root
 EOF
 ```
+
+### Storage class settings for images
+
+Storage class settings for images are defined in the `.spec.settings.virtualImages` parameter of the module settings.
+Example:
+
+```yaml
+spec:
+...
+settings:
+virtualImages:
+allowedStorageClassNames:
+- sc-1
+- sc-2
+defaultStorageClassName: sc-1
+```
+
+`allowedStorageClassNames` — (optional) is a list of valid `StorageClass` for creating `VirtualImage`, which can be explicitly specified in the resource specification.
+`defaultStorageClassName` — (optional) is the `StorageClass` used by default when creating `VirtualImage`, if the `.spec.persistentVolumeClaim.storageClassName` parameter is not specified.

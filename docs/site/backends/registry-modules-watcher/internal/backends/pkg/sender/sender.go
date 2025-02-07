@@ -18,14 +18,15 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"log/slog"
 	"net/http"
 	url2 "net/url"
+	"registry-modules-watcher/internal/backends"
 	"strings"
 	"time"
 
 	"github.com/cenkalti/backoff"
-	"k8s.io/klog"
-	"registry-modules-watcher/internal/backends"
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 const maxElapsedTime = 15 // minutes
@@ -33,10 +34,12 @@ const maxRetries = 10
 
 type sender struct {
 	client *http.Client
+
+	logger *log.Logger
 }
 
 // New
-func New() *sender {
+func New(logger *log.Logger) *sender {
 	tr := &http.Transport{
 		MaxIdleConns:    10,
 		IdleConnTimeout: 30 * time.Second,
@@ -45,6 +48,7 @@ func New() *sender {
 
 	return &sender{
 		client: client,
+		logger: logger,
 	}
 }
 
@@ -58,22 +62,25 @@ func (s *sender) Send(ctx context.Context, listBackends map[string]struct{}, ver
 				if version.ToDelete {
 					err := s.delete(ctx, backend, version.Module, version.ReleaseChannels)
 					if err != nil {
-						klog.Errorf("send delete error: %v", err)
+						s.logger.Error("send delete", log.Err(err))
 					}
 
 					continue
 				}
+
 				url := "http://" + backend + "/api/v1/doc/" + version.Module + "/" + version.Version + "?channels=" + strings.Join(version.ReleaseChannels, ",")
+
 				err := s.loadDocArchive(ctx, url, version.TarFile)
 				if err != nil {
-					klog.Errorf("send docs error: %v", err)
+					s.logger.Error("send docs", log.Err(err))
 				}
 			}
 
 			url := "http://" + backend + "/api/v1/build"
+
 			err := s.build(ctx, url)
 			if err != nil {
-				klog.Errorf("build docs error: %v", err)
+				s.logger.Error("build docs", log.Err(err))
 			}
 			<-syncChan
 		}(backend)
@@ -101,7 +108,9 @@ func (s *sender) delete(_ context.Context, backend, moduleName string, releaseCh
 			return fmt.Errorf("client: error making http request: %s", err)
 		}
 
-		klog.V(2).Infof("Delete resp: %s", resp.Status)
+		// TODO: add >=300 status code handling
+		s.logger.Info("delete response", slog.Int("status_code", resp.StatusCode))
+
 		return nil
 	}
 
@@ -116,7 +125,7 @@ func (s *sender) delete(_ context.Context, backend, moduleName string, releaseCh
 }
 
 func (s *sender) loadDocArchive(_ context.Context, url string, tarFile []byte) error {
-	klog.V(2).Infof("send loadDoc url: %s", url)
+	s.logger.Info("send loadDoc", slog.String("url", url))
 	req, err := http.NewRequest(http.MethodPost, url, bytes.NewReader(tarFile))
 	if err != nil {
 		return fmt.Errorf("client: could not create request: %s", err)
@@ -130,7 +139,9 @@ func (s *sender) loadDocArchive(_ context.Context, url string, tarFile []byte) e
 			return fmt.Errorf("client: error making http request: %s", err)
 		}
 
-		klog.V(2).Infof("SendTars resp: %s", resp.Status)
+		// TODO: add >=300 status code handling
+		s.logger.Info("send archive response", slog.Int("status_code", resp.StatusCode))
+
 		return nil
 	}
 
@@ -145,7 +156,8 @@ func (s *sender) loadDocArchive(_ context.Context, url string, tarFile []byte) e
 }
 
 func (s *sender) build(_ context.Context, url string) error {
-	klog.V(2).Infof("send build url: %s", url)
+	s.logger.Info("send build", slog.String("url", url))
+
 	req, err := http.NewRequest(http.MethodPost, url, nil)
 	if err != nil {
 		return fmt.Errorf("client: could not create request: %s", err)
@@ -159,7 +171,9 @@ func (s *sender) build(_ context.Context, url string) error {
 			return fmt.Errorf("client: error making http request: %s", err)
 		}
 
-		klog.V(2).Info("SendBuild resp: ", resp.StatusCode)
+		// TODO: add >=300 status code handling
+		s.logger.Info("send build response", slog.Int("status_code", resp.StatusCode))
+
 		return nil
 	}
 

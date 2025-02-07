@@ -1,10 +1,10 @@
 ---
-title: "The MetalLB module: examples"
+title: "The metallb module: examples"
 ---
 
-Metallb can be used in Static (Bare Metal) clusters when there is no option to use cloud load balancers. Metallb can work in L2 LoadBalancer or BGP modes LoadBalancer.
+Metallb can be used in Static (bare metal) clusters when there is no option to use cloud load balancers. Metallb can work in L2 LoadBalancer or BGP modes LoadBalancer.
 
-## Example of MetalLB usage in L2 LoadBalancer mode
+## Example of metallb usage in L2 LoadBalancer mode
 
 {% raw %}
 
@@ -26,7 +26,7 @@ Prepare the application to publish:
 kubectl create deploy nginx --image=nginx
 ```
 
-Deploy the _MetalLoadBalancerClass_ resource:
+Deploy the MetalLoadBalancerClass resource:
 
   ```yaml
 apiVersion: network.deckhouse.io/v1alpha1
@@ -42,7 +42,7 @@ spec:
   type: L2
 ```
 
-Deploy standard resource _Service_ with special annotation and MetalLoadBalancerClass name:
+Deploy standard resource Service with special annotation and MetalLoadBalancerClass name:
 
 ```yaml
 apiVersion: v1
@@ -83,11 +83,11 @@ $ curl -s -o /dev/null -w "%{http_code}" 192.168.2.102:8000
 
 {% endraw %}
 
-## Example of MetalLB usage in BGP LoadBalancer mode
+## Example of metallb usage in BGP LoadBalancer mode
 
 {% raw %}
 
-Enable the module and configure all the necessary parameters:
+Enable the module and configure all the necessary parameters<sup>*</sup>:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -113,15 +113,17 @@ spec:
   version: 2
 ```
 
+<sup>*</sup> — in future versions, BGP mode settings will be set via the MetalLoadBalancerClass resource.
+
 Configure BGP peering on the network equipment.
 
 {% endraw %}
 
-## Additional configuration examples for _Service_
+## Additional configuration examples for Service
 
 {% raw %}
 
-To create a Services with shared IP addresses, you need to add the annotation `metallb.universe.tf/allow-shared-ip` to them:
+To create a Services with shared IP addresses, you need to add the annotation `network.deckhouse.io/load-balancer-shared-ip-key` to them:
 
 ```yaml
 apiVersion: v1
@@ -130,10 +132,9 @@ metadata:
   name: dns-service-tcp
   namespace: default
   annotations:
-    metallb.universe.tf/allow-shared-ip: "key-to-share-1.2.3.4"
+    network.deckhouse.io/load-balancer-shared-ip-key: "key-to-share-1.2.3.4"
 spec:
   type: LoadBalancer
-  loadBalancerIP: 1.2.3.4
   ports:
     - name: dnstcp
       protocol: TCP
@@ -148,10 +149,9 @@ metadata:
   name: dns-service-udp
   namespace: default
   annotations:
-    metallb.universe.tf/allow-shared-ip: "key-to-share-1.2.3.4"
+    network.deckhouse.io/load-balancer-shared-ip-key: "key-to-share-1.2.3.4"
 spec:
   type: LoadBalancer
-  loadBalancerIP: 1.2.3.4
   ports:
     - name: dnsudp
       protocol: UDP
@@ -161,7 +161,7 @@ spec:
     app: dns
 ```
 
-To create a _Service_ with a forcibly selected address in L2 LoadBalancer mode, you need to add the annotation `network.deckhouse.io/load-balancer-ips`:
+To create a Service with a forcibly selected address, you need to add the annotation `network.deckhouse.io/load-balancer-ips`:
 
 ```yaml
 apiVersion: v1
@@ -179,25 +179,7 @@ spec:
   type: LoadBalancer
 ```
 
-To create a _Service_ with a forcibly selected address in BGP LoadBalancer mode, you need to add the annotation `metallb.universe.tf/loadBalancerIPs`:
-
-```yaml
-apiVersion: v1
-kind: Service
-metadata:
-  name: nginx
-  annotations:
-    metallb.universe.tf/loadBalancerIPs: 192.168.1.100
-spec:
-  ports:
-  - port: 80
-    targetPort: 80
-  selector:
-    app: nginx
-  type: LoadBalancer
-```
-
-Creating a _Service_ and assigning it _IPAddressPools_ is possible in BGP LoadBalancer mode using the annotation `metallb.universe.tf/address-pool`. For L2 LoadBalancer mode, you need to use the _MetalLoadBalancerClass_ settings (see above).
+Creating a Service and assigning it _IPAddressPools_ is possible in BGP LoadBalancer mode using the annotation `metallb.universe.tf/address-pool`. For L2 LoadBalancer mode, you need to use the MetalLoadBalancerClass settings (see above).
 
 ```yaml
 apiVersion: v1

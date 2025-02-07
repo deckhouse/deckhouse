@@ -1,0 +1,11 @@
+name: monitoring-kubernetes-control-plane
+weight: 340
+subsystems:
+  - observability
+namespace: d8-monitoring
+
+requirements:
+  bootstrapped: true
+  modules:
+    prometheus: ">= 0.0.0"
+    control-plane-manager: ">= 0.0.0"

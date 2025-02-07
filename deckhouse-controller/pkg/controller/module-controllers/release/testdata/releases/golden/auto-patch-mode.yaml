@@ -1,10 +1,36 @@
 ---
 apiVersion: deckhouse.io/v1alpha1
+kind: ModuleSource
+metadata:
+  annotations:
+    modules.deckhouse.io/registry-spec-checksum: 38557e472e4e2bd8695fc58a255ec3dd
+  creationTimestamp: null
+  finalizers:
+  - modules.deckhouse.io/release-exists
+  name: foxtrot-suitable
+  resourceVersion: "999"
+spec:
+  registry:
+    ca: ""
+    dockerCfg: YXNiCg==
+    repo: dev-registry.deckhouse.io/team/foxtrot/modules
+    scheme: HTTPS
+status:
+  message: ""
+  modules:
+  - name: mcplay-suitable
+    policy: foxtrot-alpha-suitable
+  - name: parca-suitable
+    policy: foxtrot-alpha-suitable
+  modulesCount: 2
+  syncTime: "2024-05-03T21:05:05Z"
+---
+apiVersion: deckhouse.io/v1alpha1
 kind: ModuleRelease
 metadata:
   creationTimestamp: null
   name: parca-1.26.2
-  resourceVersion: "999"
+  resourceVersion: "1000"
 spec:
   moduleName: parca
   version: 1.26.2
@@ -12,19 +38,28 @@ spec:
 status:
   approved: true
   message: ""
-  phase: Deployed
+  phase: Superseded
   pullDuration: 0s
   size: 0
-  transitionTime: "2021-12-08T08:34:01Z"
+  transitionTime: "2019-10-17T15:33:00Z"
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleRelease
 metadata:
+  annotations:
+    modules.deckhouse.io/isUpdating: "true"
+    modules.deckhouse.io/notified: "false"
   creationTimestamp: null
   labels:
     modules.deckhouse.io/update-policy: ""
   name: parca-1.26.3
-  resourceVersion: "1001"
+  ownerReferences:
+  - apiVersion: deckhouse.io/v1alpha1
+    controller: true
+    kind: ModuleSource
+    name: foxtrot-suitable
+    uid: 71d2300f-700b-452a-896a-6a3805f9cef7
+  resourceVersion: "1003"
 spec:
   moduleName: parca
   version: 1.26.3
@@ -32,7 +67,7 @@ spec:
 status:
   approved: true
   message: ""
-  phase: Pending
+  phase: Deployed
   pullDuration: 0s
   size: 0
-  transitionTime: null
+  transitionTime: "2019-10-17T15:33:00Z"

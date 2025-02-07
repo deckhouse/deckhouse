@@ -4,7 +4,7 @@ memory: 30Mi
 {{- end }}
 
 {{- if and .Values.metallb.internal.l2loadbalancers (gt (len .Values.metallb.internal.l2loadbalancers) 0) }}
-{{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+  {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
 ---
 apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
@@ -28,7 +28,7 @@ spec:
         cpu: 20m
         memory: 60Mi
     {{- include "helm_lib_vpa_kube_rbac_proxy_resources" . | nindent 4 }}
-{{- end }}
+  {{- end }}
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -69,9 +69,9 @@ spec:
           resources:
             requests:
               {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 14 }}
-{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+              {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
               {{- include "controller_resources" . | nindent 14 }}
-{{- end }}
+              {{- end }}
         - name: kube-rbac-proxy
           {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 10 }}
           image: {{ include "helm_lib_module_common_image" (list $ "kubeRbacProxy") }}
@@ -104,9 +104,9 @@ spec:
           resources:
             requests:
               {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 14 }}
-{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+              {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
               {{- include "controller_resources" . | nindent 14 }}
-{{- end }}
+              {{- end }}
       serviceAccountName: l2lb-controller
       terminationGracePeriodSeconds: 0
 {{- end }}

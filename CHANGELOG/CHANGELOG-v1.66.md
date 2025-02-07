@@ -47,6 +47,7 @@
  - **[candi]** Change permissions for containerd dir. [#10133](https://github.com/deckhouse/deckhouse/pull/10133)
  - **[control-plane-manager]** Label `heritage: deckhouse` in namespace kube-system. [#10224](https://github.com/deckhouse/deckhouse/pull/10224)
  - **[deckhouse]** Fix module requirements parsing. [#11740](https://github.com/deckhouse/deckhouse/pull/11740)
+ - **[deckhouse-controller]** Skip DeckhouseRelease requirement if it's not registered. [#11908](https://github.com/deckhouse/deckhouse/pull/11908)
  - **[dhctl]** Fix panic during commander masters converge. [#11053](https://github.com/deckhouse/deckhouse/pull/11053)
  - **[dhctl]** Fix converge through bastion. [#10278](https://github.com/deckhouse/deckhouse/pull/10278)
  - **[dhctl]** Add human readable error on dhctl converge except [#10589](https://github.com/deckhouse/deckhouse/pull/10589)
