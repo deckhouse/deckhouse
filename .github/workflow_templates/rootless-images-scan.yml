@@ -20,12 +20,29 @@ on:
       - main
   workflow_dispatch:
     inputs:
-      pull_request_ref:
-        description: 'Pull request number (e.g., 123)'
+      issue_id:
+        description: 'ID of issue where label was set'
         required: false
+      issue_number:
+        description: 'Number of issue where label was set'
+        required: true
+      comment_id:
+        description: 'ID of comment in issue where to put workflow run status'
+        required: false
+      ci_commit_ref_name:
+        description: 'Git ref name for image tags'
+        required: false
+      pull_request_ref:
+        description: 'Git ref for checkout PR sources'
+        required: false
+      pull_request_sha:
+        description: 'Git SHA for restoring artifacts from cache'
+        required: false
+      pull_request_head_label:
+        description: 'Head label of pull request. e.g. my_repo:my_feature_branch'
+        required: false 
   pull_request:
     types:
-      - labeled
       - synchronize 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.number || github.ref }}
@@ -51,13 +68,10 @@ jobs:
             echo "image_tag=main" >> $GITHUB_OUTPUT
             echo "image_tag=main" >> $GITHUB_ENV
           elif [[ "${{ github.event_name }}" == "pull_request" ]]; then
-            LABELS_JSON='${{ toJson(github.event.pull_request.labels) }}'
-            if echo "$LABELS_JSON" | jq -e '.[] | select(.name=="security/rootless")' > /dev/null; then
-              echo "image_tag=pr${{ github.event.pull_request.number }}" >> $GITHUB_OUTPUT
-              echo "image_tag=pr${{ github.event.pull_request.number }}" >> $GITHUB_ENV
-            fi
-          elif [[ -n "${{ github.event.inputs.pull_request_ref }}" ]]; then
-            PR_NUMBER=$(echo "${{ github.event.inputs.pull_request_ref }}")
+            echo "image_tag=pr${{ github.event.pull_request.number }}" >> $GITHUB_OUTPUT
+            echo "image_tag=pr${{ github.event.pull_request.number }}" >> $GITHUB_ENV
+          elif [[ -n "${{ github.event.inputs.issue_number }}" ]]; then
+            PR_NUMBER=$(echo "${{ github.event.inputs.issue_number }}")
             echo "image_tag=pr$PR_NUMBER" >> $GITHUB_OUTPUT
             echo "image_tag=pr$PR_NUMBER" >> $GITHUB_ENV
           else
@@ -68,8 +82,6 @@ jobs:
         run: |
           echo "Triggered by: ${{ github.event_name }}"
           echo "Image tag: $image_tag"
-
-
   scan_images:
     runs-on: [ self-hosted, regular, selectel ]
     needs: check_trigger
