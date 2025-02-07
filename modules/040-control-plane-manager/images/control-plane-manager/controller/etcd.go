@@ -123,21 +123,24 @@ func (c *EtcdClient) MemberPromote(learnerID uint64) error {
 	log.Infof("[etcd] Promoting a learner as a voting member: %s", strconv.FormatUint(learnerID, 16))
 	var err error
 	var lastError error
+	attempts := 0
+
 	err = wait.ExponentialBackoff(etcdBackoff, func() (bool, error) {
+		attempts++
 		ctx, cancel := context.WithTimeout(context.Background(), etcdTimeout)
 		defer cancel()
 
 		_, err = c.client.MemberPromote(ctx, learnerID)
 		if err == nil {
-			log.Infof("[etcd] The learner was promoted as a voting member: %s", strconv.FormatUint(learnerID, 16))
+			log.Infof("[etcd] The learner was promoted as a voting member: %s after %d attempts", strconv.FormatUint(learnerID, 16), attempts)
 			return true, nil
 		}
-		log.Infof("[etcd] Promoting the learner %s failed: %v", strconv.FormatUint(learnerID, 16))
-		fmt.Errorf("%w", err)
+		log.Infof("[etcd] Promoting the learner %s failed on attempt %d: %v", strconv.FormatUint(learnerID, 16), attempts, err)
 		lastError = err
 		return false, nil
 	})
 	if err != nil {
+		log.Errorf("[etcd] Failed to promote learner %s after %d attempts: %v", strconv.FormatUint(learnerID, 16), attempts, lastError)
 		return lastError
 	}
 	return nil
