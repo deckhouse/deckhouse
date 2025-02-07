@@ -14,7 +14,6 @@
 export PATH="/opt/deckhouse/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 export LANG=C
 set -Eeuo pipefail
-kubectl label ns security-scanning.deckhouse.io/enabled="" --all > /dev/null
 testRunAttempts=5
 for ((i=1; i<=$testRunAttempts; i++)); do
   if kubectl get clustercompliancereports.aquasecurity.github.io cis > /dev/null; then

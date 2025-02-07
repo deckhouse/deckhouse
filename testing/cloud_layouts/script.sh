@@ -861,6 +861,7 @@ export PATH="/opt/deckhouse/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bi
 export LANG=C
 set -Eeuo pipefail
 kubectl -n d8-system exec svc/deckhouse-leader -c deckhouse -- deckhouse-controller module enable operator-trivy
+kubectl label ns security-scanning.deckhouse.io/enabled="" --all > /dev/null
 ENDSSH
         break
       else
@@ -947,6 +948,7 @@ export PATH="/opt/deckhouse/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bi
 export LANG=C
 set -Eeuo pipefail
 kubectl -n d8-system exec svc/deckhouse-leader -c deckhouse -- deckhouse-controller module enable operator-trivy
+kubectl label ns security-scanning.deckhouse.io/enabled="" --all > /dev/null
 ENDSSH
         break
       else
