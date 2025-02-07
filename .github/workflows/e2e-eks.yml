@@ -521,7 +521,7 @@ jobs:
 
       - name: Label pr if e2e failed
         if: ${{ (failure() || cancelled()) && needs.git_info.outputs.pr_number }}
-        uses: action-ecosystem/action-add-labels@v1
+        uses: actions-ecosystem/action-add-labels@v1
         with:
           github_token: ${{ secrets.BOATSWAIN_GITHUB_TOKEN }}
           number: ${{ needs.git_info.outputs.pr_number }}
@@ -974,7 +974,7 @@ jobs:
 
       - name: Label pr if e2e failed
         if: ${{ (failure() || cancelled()) && needs.git_info.outputs.pr_number }}
-        uses: action-ecosystem/action-add-labels@v1
+        uses: actions-ecosystem/action-add-labels@v1
         with:
           github_token: ${{ secrets.BOATSWAIN_GITHUB_TOKEN }}
           number: ${{ needs.git_info.outputs.pr_number }}
@@ -1427,7 +1427,7 @@ jobs:
 
       - name: Label pr if e2e failed
         if: ${{ (failure() || cancelled()) && needs.git_info.outputs.pr_number }}
-        uses: action-ecosystem/action-add-labels@v1
+        uses: actions-ecosystem/action-add-labels@v1
         with:
           github_token: ${{ secrets.BOATSWAIN_GITHUB_TOKEN }}
           number: ${{ needs.git_info.outputs.pr_number }}
@@ -1880,7 +1880,7 @@ jobs:
 
       - name: Label pr if e2e failed
         if: ${{ (failure() || cancelled()) && needs.git_info.outputs.pr_number }}
-        uses: action-ecosystem/action-add-labels@v1
+        uses: actions-ecosystem/action-add-labels@v1
         with:
           github_token: ${{ secrets.BOATSWAIN_GITHUB_TOKEN }}
           number: ${{ needs.git_info.outputs.pr_number }}
@@ -2333,7 +2333,7 @@ jobs:
 
       - name: Label pr if e2e failed
         if: ${{ (failure() || cancelled()) && needs.git_info.outputs.pr_number }}
-        uses: action-ecosystem/action-add-labels@v1
+        uses: actions-ecosystem/action-add-labels@v1
         with:
           github_token: ${{ secrets.BOATSWAIN_GITHUB_TOKEN }}
           number: ${{ needs.git_info.outputs.pr_number }}
@@ -2786,7 +2786,7 @@ jobs:
 
       - name: Label pr if e2e failed
         if: ${{ (failure() || cancelled()) && needs.git_info.outputs.pr_number }}
-        uses: action-ecosystem/action-add-labels@v1
+        uses: actions-ecosystem/action-add-labels@v1
         with:
           github_token: ${{ secrets.BOATSWAIN_GITHUB_TOKEN }}
           number: ${{ needs.git_info.outputs.pr_number }}
@@ -3239,7 +3239,7 @@ jobs:
 
       - name: Label pr if e2e failed
         if: ${{ (failure() || cancelled()) && needs.git_info.outputs.pr_number }}
-        uses: action-ecosystem/action-add-labels@v1
+        uses: actions-ecosystem/action-add-labels@v1
         with:
           github_token: ${{ secrets.BOATSWAIN_GITHUB_TOKEN }}
           number: ${{ needs.git_info.outputs.pr_number }}
