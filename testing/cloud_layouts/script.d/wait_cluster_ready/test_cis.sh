@@ -14,6 +14,7 @@
 export PATH="/opt/deckhouse/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 export LANG=C
 set -Eeuo pipefail
+kubectl label ns security-scanning.deckhouse.io/enabled="" --all > /dev/null
 testRunAttempts=5
 for ((i=1; i<=$testRunAttempts; i++)); do
   if kubectl get clustercompliancereports.aquasecurity.github.io cis > /dev/null; then
@@ -22,7 +23,7 @@ for ((i=1; i<=$testRunAttempts; i++)); do
     sleep 30
   fi
 done
-kubectl get clustercompliancereports.aquasecurity.github.io cis -o yaml | sed 's#cron: 0 \*/6 \* \* \*#cron: "*/2 * * * *"#' | kubectl apply -f - > /dev/null
+kubectl patch clustercompliancereports.aquasecurity.github.io cis --type='json' -p='[{"op": "replace", "path": "/spec/cron", "value": "*/2 * * * *"}]' > /dev/null
 sleep 60
 testRunAttempts=20
 for ((i=1; i<=$testRunAttempts; i++)); do
