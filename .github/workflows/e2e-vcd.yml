@@ -469,7 +469,7 @@ jobs:
           COMMANDER_HOST: ${{secrets.E2E_COMMANDER_HOST}}
           CIS_ENABLED: ${{ needs.check_e2e_labels.outputs.cis }}
         run: |
-          echo "Execute 'script-commander.sh run-test' via 'docker run', using environment:
+          echo "Execute 'script-commander.sh run-test' via 'shell', using environment:
             INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
             DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG}
             INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG}
@@ -483,32 +483,20 @@ jobs:
             CIS_ENABLED=${CIS_ENABLED}
           "
 
-          docker run --rm \
-            -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
-            -e PREFIX=${PREFIX} \
-            -e MASTERS_COUNT=${MASTERS_COUNT} \
-            -e DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG} \
-            -e INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG} \
-            -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
-            -e CRI=${CRI} \
-            -e PROVIDER=${PROVIDER:-not_provided} \
-            -e MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-} \
-            -e LAYOUT=${LAYOUT:-not_provided} \
-            -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
-            -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
-            -e LAYOUT_VCD_PASSWORD=${LAYOUT_VCD_PASSWORD:-not_provided} \
-            -e LAYOUT_VCD_USERNAME=${LAYOUT_VCD_USERNAME:-not_provided} \
-            -e LAYOUT_VCD_SERVER=${LAYOUT_VCD_SERVER:-not_provided} \
-            -e LAYOUT_VCD_ORG=${LAYOUT_VCD_ORG:-not_provided} \
-            -e LAYOUT_STATIC_BASTION_IP=80.249.129.56 \
-            -e USER_RUNNER_ID=${user_runner_id} \
-            -e CIS_ENABLED=${CIS_ENABLED} \
-            -v $(pwd)/testing:/deckhouse/testing \
-            -v $(pwd)/release.yaml:/deckhouse/release.yaml \
-            -v ${TMP_DIR_PATH}:/tmp \
-            -w /deckhouse \
-          ${INSTALL_IMAGE_NAME} \
-          bash /deckhouse/testing/cloud_layouts/script-commander.sh run-test
+            export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
+            export PROVIDER=${PROVIDER:-not_provided} \
+            export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-} \
+            export LAYOUT=${LAYOUT:-not_provided} \
+            export DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
+            export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
+            export LAYOUT_VCD_PASSWORD=${LAYOUT_VCD_PASSWORD:-not_provided} \
+            export LAYOUT_VCD_USERNAME=${LAYOUT_VCD_USERNAME:-not_provided} \
+            export LAYOUT_VCD_SERVER=${LAYOUT_VCD_SERVER:-not_provided} \
+            export LAYOUT_VCD_ORG=${LAYOUT_VCD_ORG:-not_provided} \
+            export LAYOUT_STATIC_BASTION_IP=80.249.129.56 \
+            export USER_RUNNER_ID=${user_runner_id} \
+            export CIS_ENABLED=${CIS_ENABLED} \
+          bash $(pwd)/testing/cloud_layouts/script-commander.sh run-test
 
         # </template: e2e_run_template>
       - name: Read connection string
@@ -526,7 +514,7 @@ jobs:
 
       - name: Label pr if e2e failed
         if: ${{ (failure() || cancelled()) && needs.git_info.outputs.pr_number }}
-        uses: actions-ecosystem/action-add-labels@v1
+        uses: actionsexportcosystem/action-add-labels@v1
         with:
           github_token: ${{ secrets.BOATSWAIN_GITHUB_TOKEN }}
           number: ${{ needs.git_info.outputs.pr_number }}
@@ -562,7 +550,7 @@ jobs:
           COMMANDER_TOKEN: ${{secrets.E2E_COMMANDER_TOKEN}}
           COMMANDER_HOST: ${{secrets.E2E_COMMANDER_HOST}}
         run: |
-          echo "Execute 'script-commander.sh cleanup' via 'docker run', using environment:
+          echo "Execute 'script-commander.sh cleanup' via 'shell', using environment:
             INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
             DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG}
             INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG}
@@ -575,31 +563,19 @@ jobs:
             MASTERS_COUNT=${MASTERS_COUNT}
           "
 
-          docker run --rm \
-            -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
-            -e PREFIX=${PREFIX} \
-            -e MASTERS_COUNT=${MASTERS_COUNT} \
-            -e DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG} \
-            -e INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG} \
-            -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
-            -e CRI=${CRI} \
-            -e PROVIDER=${PROVIDER:-not_provided} \
-            -e MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-} \
-            -e LAYOUT=${LAYOUT:-not_provided} \
-            -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
-            -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
-            -e LAYOUT_VCD_PASSWORD=${LAYOUT_VCD_PASSWORD:-not_provided} \
-            -e LAYOUT_VCD_USERNAME=${LAYOUT_VCD_USERNAME:-not_provided} \
-            -e LAYOUT_VCD_SERVER=${LAYOUT_VCD_SERVER:-not_provided} \
-            -e LAYOUT_VCD_ORG=${LAYOUT_VCD_ORG:-not_provided} \
-            -e LAYOUT_STATIC_BASTION_IP=80.249.129.56 \
-            -e USER_RUNNER_ID=${user_runner_id} \
-            -v $(pwd)/testing:/deckhouse/testing \
-            -v $(pwd)/release.yaml:/deckhouse/release.yaml \
-            -v ${TMP_DIR_PATH}:/tmp \
-            -w /deckhouse \
-          ${INSTALL_IMAGE_NAME} \
-          bash /deckhouse/testing/cloud_layouts/script-commander.sh cleanup
+            export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
+            export PROVIDER=${PROVIDER:-not_provided} \
+            export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-} \
+            export LAYOUT=${LAYOUT:-not_provided} \
+            export DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
+            export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
+            export LAYOUT_VCD_PASSWORD=${LAYOUT_VCD_PASSWORD:-not_provided} \
+            export LAYOUT_VCD_USERNAME=${LAYOUT_VCD_USERNAME:-not_provided} \
+            export LAYOUT_VCD_SERVER=${LAYOUT_VCD_SERVER:-not_provided} \
+            export LAYOUT_VCD_ORG=${LAYOUT_VCD_ORG:-not_provided} \
+            export LAYOUT_STATIC_BASTION_IP=80.249.129.56 \
+            export USER_RUNNER_ID=${user_runner_id} \
+          bash $(pwd)/testing/cloud_layouts/script-commander.sh cleanup
 
         # </template: e2e_run_template>
 
@@ -946,7 +922,7 @@ jobs:
           COMMANDER_HOST: ${{secrets.E2E_COMMANDER_HOST}}
           CIS_ENABLED: ${{ needs.check_e2e_labels.outputs.cis }}
         run: |
-          echo "Execute 'script-commander.sh run-test' via 'docker run', using environment:
+          echo "Execute 'script-commander.sh run-test' via 'shell', using environment:
             INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
             DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG}
             INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG}
@@ -960,32 +936,20 @@ jobs:
             CIS_ENABLED=${CIS_ENABLED}
           "
 
-          docker run --rm \
-            -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
-            -e PREFIX=${PREFIX} \
-            -e MASTERS_COUNT=${MASTERS_COUNT} \
-            -e DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG} \
-            -e INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG} \
-            -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
-            -e CRI=${CRI} \
-            -e PROVIDER=${PROVIDER:-not_provided} \
-            -e MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-} \
-            -e LAYOUT=${LAYOUT:-not_provided} \
-            -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
-            -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
-            -e LAYOUT_VCD_PASSWORD=${LAYOUT_VCD_PASSWORD:-not_provided} \
-            -e LAYOUT_VCD_USERNAME=${LAYOUT_VCD_USERNAME:-not_provided} \
-            -e LAYOUT_VCD_SERVER=${LAYOUT_VCD_SERVER:-not_provided} \
-            -e LAYOUT_VCD_ORG=${LAYOUT_VCD_ORG:-not_provided} \
-            -e LAYOUT_STATIC_BASTION_IP=80.249.129.56 \
-            -e USER_RUNNER_ID=${user_runner_id} \
-            -e CIS_ENABLED=${CIS_ENABLED} \
-            -v $(pwd)/testing:/deckhouse/testing \
-            -v $(pwd)/release.yaml:/deckhouse/release.yaml \
-            -v ${TMP_DIR_PATH}:/tmp \
-            -w /deckhouse \
-          ${INSTALL_IMAGE_NAME} \
-          bash /deckhouse/testing/cloud_layouts/script-commander.sh run-test
+            export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
+            export PROVIDER=${PROVIDER:-not_provided} \
+            export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-} \
+            export LAYOUT=${LAYOUT:-not_provided} \
+            export DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
+            export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
+            export LAYOUT_VCD_PASSWORD=${LAYOUT_VCD_PASSWORD:-not_provided} \
+            export LAYOUT_VCD_USERNAME=${LAYOUT_VCD_USERNAME:-not_provided} \
+            export LAYOUT_VCD_SERVER=${LAYOUT_VCD_SERVER:-not_provided} \
+            export LAYOUT_VCD_ORG=${LAYOUT_VCD_ORG:-not_provided} \
+            export LAYOUT_STATIC_BASTION_IP=80.249.129.56 \
+            export USER_RUNNER_ID=${user_runner_id} \
+            export CIS_ENABLED=${CIS_ENABLED} \
+          bash $(pwd)/testing/cloud_layouts/script-commander.sh run-test
 
         # </template: e2e_run_template>
       - name: Read connection string
@@ -1003,7 +967,7 @@ jobs:
 
       - name: Label pr if e2e failed
         if: ${{ (failure() || cancelled()) && needs.git_info.outputs.pr_number }}
-        uses: actions-ecosystem/action-add-labels@v1
+        uses: actionsexportcosystem/action-add-labels@v1
         with:
           github_token: ${{ secrets.BOATSWAIN_GITHUB_TOKEN }}
           number: ${{ needs.git_info.outputs.pr_number }}
@@ -1039,7 +1003,7 @@ jobs:
           COMMANDER_TOKEN: ${{secrets.E2E_COMMANDER_TOKEN}}
           COMMANDER_HOST: ${{secrets.E2E_COMMANDER_HOST}}
         run: |
-          echo "Execute 'script-commander.sh cleanup' via 'docker run', using environment:
+          echo "Execute 'script-commander.sh cleanup' via 'shell', using environment:
             INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
             DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG}
             INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG}
@@ -1052,31 +1016,19 @@ jobs:
             MASTERS_COUNT=${MASTERS_COUNT}
           "
 
-          docker run --rm \
-            -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
-            -e PREFIX=${PREFIX} \
-            -e MASTERS_COUNT=${MASTERS_COUNT} \
-            -e DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG} \
-            -e INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG} \
-            -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
-            -e CRI=${CRI} \
-            -e PROVIDER=${PROVIDER:-not_provided} \
-            -e MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-} \
-            -e LAYOUT=${LAYOUT:-not_provided} \
-            -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
-            -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
-            -e LAYOUT_VCD_PASSWORD=${LAYOUT_VCD_PASSWORD:-not_provided} \
-            -e LAYOUT_VCD_USERNAME=${LAYOUT_VCD_USERNAME:-not_provided} \
-            -e LAYOUT_VCD_SERVER=${LAYOUT_VCD_SERVER:-not_provided} \
-            -e LAYOUT_VCD_ORG=${LAYOUT_VCD_ORG:-not_provided} \
-            -e LAYOUT_STATIC_BASTION_IP=80.249.129.56 \
-            -e USER_RUNNER_ID=${user_runner_id} \
-            -v $(pwd)/testing:/deckhouse/testing \
-            -v $(pwd)/release.yaml:/deckhouse/release.yaml \
-            -v ${TMP_DIR_PATH}:/tmp \
-            -w /deckhouse \
-          ${INSTALL_IMAGE_NAME} \
-          bash /deckhouse/testing/cloud_layouts/script-commander.sh cleanup
+            export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
+            export PROVIDER=${PROVIDER:-not_provided} \
+            export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-} \
+            export LAYOUT=${LAYOUT:-not_provided} \
+            export DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
+            export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
+            export LAYOUT_VCD_PASSWORD=${LAYOUT_VCD_PASSWORD:-not_provided} \
+            export LAYOUT_VCD_USERNAME=${LAYOUT_VCD_USERNAME:-not_provided} \
+            export LAYOUT_VCD_SERVER=${LAYOUT_VCD_SERVER:-not_provided} \
+            export LAYOUT_VCD_ORG=${LAYOUT_VCD_ORG:-not_provided} \
+            export LAYOUT_STATIC_BASTION_IP=80.249.129.56 \
+            export USER_RUNNER_ID=${user_runner_id} \
+          bash $(pwd)/testing/cloud_layouts/script-commander.sh cleanup
 
         # </template: e2e_run_template>
 
@@ -1423,7 +1375,7 @@ jobs:
           COMMANDER_HOST: ${{secrets.E2E_COMMANDER_HOST}}
           CIS_ENABLED: ${{ needs.check_e2e_labels.outputs.cis }}
         run: |
-          echo "Execute 'script-commander.sh run-test' via 'docker run', using environment:
+          echo "Execute 'script-commander.sh run-test' via 'shell', using environment:
             INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
             DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG}
             INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG}
@@ -1437,32 +1389,20 @@ jobs:
             CIS_ENABLED=${CIS_ENABLED}
           "
 
-          docker run --rm \
-            -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
-            -e PREFIX=${PREFIX} \
-            -e MASTERS_COUNT=${MASTERS_COUNT} \
-            -e DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG} \
-            -e INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG} \
-            -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
-            -e CRI=${CRI} \
-            -e PROVIDER=${PROVIDER:-not_provided} \
-            -e MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-} \
-            -e LAYOUT=${LAYOUT:-not_provided} \
-            -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
-            -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
-            -e LAYOUT_VCD_PASSWORD=${LAYOUT_VCD_PASSWORD:-not_provided} \
-            -e LAYOUT_VCD_USERNAME=${LAYOUT_VCD_USERNAME:-not_provided} \
-            -e LAYOUT_VCD_SERVER=${LAYOUT_VCD_SERVER:-not_provided} \
-            -e LAYOUT_VCD_ORG=${LAYOUT_VCD_ORG:-not_provided} \
-            -e LAYOUT_STATIC_BASTION_IP=80.249.129.56 \
-            -e USER_RUNNER_ID=${user_runner_id} \
-            -e CIS_ENABLED=${CIS_ENABLED} \
-            -v $(pwd)/testing:/deckhouse/testing \
-            -v $(pwd)/release.yaml:/deckhouse/release.yaml \
-            -v ${TMP_DIR_PATH}:/tmp \
-            -w /deckhouse \
-          ${INSTALL_IMAGE_NAME} \
-          bash /deckhouse/testing/cloud_layouts/script-commander.sh run-test
+            export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
+            export PROVIDER=${PROVIDER:-not_provided} \
+            export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-} \
+            export LAYOUT=${LAYOUT:-not_provided} \
+            export DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
+            export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
+            export LAYOUT_VCD_PASSWORD=${LAYOUT_VCD_PASSWORD:-not_provided} \
+            export LAYOUT_VCD_USERNAME=${LAYOUT_VCD_USERNAME:-not_provided} \
+            export LAYOUT_VCD_SERVER=${LAYOUT_VCD_SERVER:-not_provided} \
+            export LAYOUT_VCD_ORG=${LAYOUT_VCD_ORG:-not_provided} \
+            export LAYOUT_STATIC_BASTION_IP=80.249.129.56 \
+            export USER_RUNNER_ID=${user_runner_id} \
+            export CIS_ENABLED=${CIS_ENABLED} \
+          bash $(pwd)/testing/cloud_layouts/script-commander.sh run-test
 
         # </template: e2e_run_template>
       - name: Read connection string
@@ -1480,7 +1420,7 @@ jobs:
 
       - name: Label pr if e2e failed
         if: ${{ (failure() || cancelled()) && needs.git_info.outputs.pr_number }}
-        uses: actions-ecosystem/action-add-labels@v1
+        uses: actionsexportcosystem/action-add-labels@v1
         with:
           github_token: ${{ secrets.BOATSWAIN_GITHUB_TOKEN }}
           number: ${{ needs.git_info.outputs.pr_number }}
@@ -1516,7 +1456,7 @@ jobs:
           COMMANDER_TOKEN: ${{secrets.E2E_COMMANDER_TOKEN}}
           COMMANDER_HOST: ${{secrets.E2E_COMMANDER_HOST}}
         run: |
-          echo "Execute 'script-commander.sh cleanup' via 'docker run', using environment:
+          echo "Execute 'script-commander.sh cleanup' via 'shell', using environment:
             INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
             DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG}
             INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG}
@@ -1529,31 +1469,19 @@ jobs:
             MASTERS_COUNT=${MASTERS_COUNT}
           "
 
-          docker run --rm \
-            -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
-            -e PREFIX=${PREFIX} \
-            -e MASTERS_COUNT=${MASTERS_COUNT} \
-            -e DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG} \
-            -e INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG} \
-            -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
-            -e CRI=${CRI} \
-            -e PROVIDER=${PROVIDER:-not_provided} \
-            -e MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-} \
-            -e LAYOUT=${LAYOUT:-not_provided} \
-            -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
-            -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
-            -e LAYOUT_VCD_PASSWORD=${LAYOUT_VCD_PASSWORD:-not_provided} \
-            -e LAYOUT_VCD_USERNAME=${LAYOUT_VCD_USERNAME:-not_provided} \
-            -e LAYOUT_VCD_SERVER=${LAYOUT_VCD_SERVER:-not_provided} \
-            -e LAYOUT_VCD_ORG=${LAYOUT_VCD_ORG:-not_provided} \
-            -e LAYOUT_STATIC_BASTION_IP=80.249.129.56 \
-            -e USER_RUNNER_ID=${user_runner_id} \
-            -v $(pwd)/testing:/deckhouse/testing \
-            -v $(pwd)/release.yaml:/deckhouse/release.yaml \
-            -v ${TMP_DIR_PATH}:/tmp \
-            -w /deckhouse \
-          ${INSTALL_IMAGE_NAME} \
-          bash /deckhouse/testing/cloud_layouts/script-commander.sh cleanup
+            export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
+            export PROVIDER=${PROVIDER:-not_provided} \
+            export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-} \
+            export LAYOUT=${LAYOUT:-not_provided} \
+            export DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
+            export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
+            export LAYOUT_VCD_PASSWORD=${LAYOUT_VCD_PASSWORD:-not_provided} \
+            export LAYOUT_VCD_USERNAME=${LAYOUT_VCD_USERNAME:-not_provided} \
+            export LAYOUT_VCD_SERVER=${LAYOUT_VCD_SERVER:-not_provided} \
+            export LAYOUT_VCD_ORG=${LAYOUT_VCD_ORG:-not_provided} \
+            export LAYOUT_STATIC_BASTION_IP=80.249.129.56 \
+            export USER_RUNNER_ID=${user_runner_id} \
+          bash $(pwd)/testing/cloud_layouts/script-commander.sh cleanup
 
         # </template: e2e_run_template>
 
@@ -1900,7 +1828,7 @@ jobs:
           COMMANDER_HOST: ${{secrets.E2E_COMMANDER_HOST}}
           CIS_ENABLED: ${{ needs.check_e2e_labels.outputs.cis }}
         run: |
-          echo "Execute 'script-commander.sh run-test' via 'docker run', using environment:
+          echo "Execute 'script-commander.sh run-test' via 'shell', using environment:
             INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
             DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG}
             INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG}
@@ -1914,32 +1842,20 @@ jobs:
             CIS_ENABLED=${CIS_ENABLED}
           "
 
-          docker run --rm \
-            -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
-            -e PREFIX=${PREFIX} \
-            -e MASTERS_COUNT=${MASTERS_COUNT} \
-            -e DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG} \
-            -e INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG} \
-            -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
-            -e CRI=${CRI} \
-            -e PROVIDER=${PROVIDER:-not_provided} \
-            -e MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-} \
-            -e LAYOUT=${LAYOUT:-not_provided} \
-            -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
-            -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
-            -e LAYOUT_VCD_PASSWORD=${LAYOUT_VCD_PASSWORD:-not_provided} \
-            -e LAYOUT_VCD_USERNAME=${LAYOUT_VCD_USERNAME:-not_provided} \
-            -e LAYOUT_VCD_SERVER=${LAYOUT_VCD_SERVER:-not_provided} \
-            -e LAYOUT_VCD_ORG=${LAYOUT_VCD_ORG:-not_provided} \
-            -e LAYOUT_STATIC_BASTION_IP=80.249.129.56 \
-            -e USER_RUNNER_ID=${user_runner_id} \
-            -e CIS_ENABLED=${CIS_ENABLED} \
-            -v $(pwd)/testing:/deckhouse/testing \
-            -v $(pwd)/release.yaml:/deckhouse/release.yaml \
-            -v ${TMP_DIR_PATH}:/tmp \
-            -w /deckhouse \
-          ${INSTALL_IMAGE_NAME} \
-          bash /deckhouse/testing/cloud_layouts/script-commander.sh run-test
+            export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
+            export PROVIDER=${PROVIDER:-not_provided} \
+            export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-} \
+            export LAYOUT=${LAYOUT:-not_provided} \
+            export DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
+            export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
+            export LAYOUT_VCD_PASSWORD=${LAYOUT_VCD_PASSWORD:-not_provided} \
+            export LAYOUT_VCD_USERNAME=${LAYOUT_VCD_USERNAME:-not_provided} \
+            export LAYOUT_VCD_SERVER=${LAYOUT_VCD_SERVER:-not_provided} \
+            export LAYOUT_VCD_ORG=${LAYOUT_VCD_ORG:-not_provided} \
+            export LAYOUT_STATIC_BASTION_IP=80.249.129.56 \
+            export USER_RUNNER_ID=${user_runner_id} \
+            export CIS_ENABLED=${CIS_ENABLED} \
+          bash $(pwd)/testing/cloud_layouts/script-commander.sh run-test
 
         # </template: e2e_run_template>
       - name: Read connection string
@@ -1957,7 +1873,7 @@ jobs:
 
       - name: Label pr if e2e failed
         if: ${{ (failure() || cancelled()) && needs.git_info.outputs.pr_number }}
-        uses: actions-ecosystem/action-add-labels@v1
+        uses: actionsexportcosystem/action-add-labels@v1
         with:
           github_token: ${{ secrets.BOATSWAIN_GITHUB_TOKEN }}
           number: ${{ needs.git_info.outputs.pr_number }}
@@ -1993,7 +1909,7 @@ jobs:
           COMMANDER_TOKEN: ${{secrets.E2E_COMMANDER_TOKEN}}
           COMMANDER_HOST: ${{secrets.E2E_COMMANDER_HOST}}
         run: |
-          echo "Execute 'script-commander.sh cleanup' via 'docker run', using environment:
+          echo "Execute 'script-commander.sh cleanup' via 'shell', using environment:
             INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
             DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG}
             INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG}
@@ -2006,31 +1922,19 @@ jobs:
             MASTERS_COUNT=${MASTERS_COUNT}
           "
 
-          docker run --rm \
-            -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
-            -e PREFIX=${PREFIX} \
-            -e MASTERS_COUNT=${MASTERS_COUNT} \
-            -e DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG} \
-            -e INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG} \
-            -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
-            -e CRI=${CRI} \
-            -e PROVIDER=${PROVIDER:-not_provided} \
-            -e MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-} \
-            -e LAYOUT=${LAYOUT:-not_provided} \
-            -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
-            -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
-            -e LAYOUT_VCD_PASSWORD=${LAYOUT_VCD_PASSWORD:-not_provided} \
-            -e LAYOUT_VCD_USERNAME=${LAYOUT_VCD_USERNAME:-not_provided} \
-            -e LAYOUT_VCD_SERVER=${LAYOUT_VCD_SERVER:-not_provided} \
-            -e LAYOUT_VCD_ORG=${LAYOUT_VCD_ORG:-not_provided} \
-            -e LAYOUT_STATIC_BASTION_IP=80.249.129.56 \
-            -e USER_RUNNER_ID=${user_runner_id} \
-            -v $(pwd)/testing:/deckhouse/testing \
-            -v $(pwd)/release.yaml:/deckhouse/release.yaml \
-            -v ${TMP_DIR_PATH}:/tmp \
-            -w /deckhouse \
-          ${INSTALL_IMAGE_NAME} \
-          bash /deckhouse/testing/cloud_layouts/script-commander.sh cleanup
+            export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
+            export PROVIDER=${PROVIDER:-not_provided} \
+            export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-} \
+            export LAYOUT=${LAYOUT:-not_provided} \
+            export DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
+            export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
+            export LAYOUT_VCD_PASSWORD=${LAYOUT_VCD_PASSWORD:-not_provided} \
+            export LAYOUT_VCD_USERNAME=${LAYOUT_VCD_USERNAME:-not_provided} \
+            export LAYOUT_VCD_SERVER=${LAYOUT_VCD_SERVER:-not_provided} \
+            export LAYOUT_VCD_ORG=${LAYOUT_VCD_ORG:-not_provided} \
+            export LAYOUT_STATIC_BASTION_IP=80.249.129.56 \
+            export USER_RUNNER_ID=${user_runner_id} \
+          bash $(pwd)/testing/cloud_layouts/script-commander.sh cleanup
 
         # </template: e2e_run_template>
 
@@ -2377,7 +2281,7 @@ jobs:
           COMMANDER_HOST: ${{secrets.E2E_COMMANDER_HOST}}
           CIS_ENABLED: ${{ needs.check_e2e_labels.outputs.cis }}
         run: |
-          echo "Execute 'script-commander.sh run-test' via 'docker run', using environment:
+          echo "Execute 'script-commander.sh run-test' via 'shell', using environment:
             INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
             DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG}
             INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG}
@@ -2391,32 +2295,20 @@ jobs:
             CIS_ENABLED=${CIS_ENABLED}
           "
 
-          docker run --rm \
-            -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
-            -e PREFIX=${PREFIX} \
-            -e MASTERS_COUNT=${MASTERS_COUNT} \
-            -e DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG} \
-            -e INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG} \
-            -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
-            -e CRI=${CRI} \
-            -e PROVIDER=${PROVIDER:-not_provided} \
-            -e MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-} \
-            -e LAYOUT=${LAYOUT:-not_provided} \
-            -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
-            -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
-            -e LAYOUT_VCD_PASSWORD=${LAYOUT_VCD_PASSWORD:-not_provided} \
-            -e LAYOUT_VCD_USERNAME=${LAYOUT_VCD_USERNAME:-not_provided} \
-            -e LAYOUT_VCD_SERVER=${LAYOUT_VCD_SERVER:-not_provided} \
-            -e LAYOUT_VCD_ORG=${LAYOUT_VCD_ORG:-not_provided} \
-            -e LAYOUT_STATIC_BASTION_IP=80.249.129.56 \
-            -e USER_RUNNER_ID=${user_runner_id} \
-            -e CIS_ENABLED=${CIS_ENABLED} \
-            -v $(pwd)/testing:/deckhouse/testing \
-            -v $(pwd)/release.yaml:/deckhouse/release.yaml \
-            -v ${TMP_DIR_PATH}:/tmp \
-            -w /deckhouse \
-          ${INSTALL_IMAGE_NAME} \
-          bash /deckhouse/testing/cloud_layouts/script-commander.sh run-test
+            export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
+            export PROVIDER=${PROVIDER:-not_provided} \
+            export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-} \
+            export LAYOUT=${LAYOUT:-not_provided} \
+            export DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
+            export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
+            export LAYOUT_VCD_PASSWORD=${LAYOUT_VCD_PASSWORD:-not_provided} \
+            export LAYOUT_VCD_USERNAME=${LAYOUT_VCD_USERNAME:-not_provided} \
+            export LAYOUT_VCD_SERVER=${LAYOUT_VCD_SERVER:-not_provided} \
+            export LAYOUT_VCD_ORG=${LAYOUT_VCD_ORG:-not_provided} \
+            export LAYOUT_STATIC_BASTION_IP=80.249.129.56 \
+            export USER_RUNNER_ID=${user_runner_id} \
+            export CIS_ENABLED=${CIS_ENABLED} \
+          bash $(pwd)/testing/cloud_layouts/script-commander.sh run-test
 
         # </template: e2e_run_template>
       - name: Read connection string
@@ -2434,7 +2326,7 @@ jobs:
 
       - name: Label pr if e2e failed
         if: ${{ (failure() || cancelled()) && needs.git_info.outputs.pr_number }}
-        uses: actions-ecosystem/action-add-labels@v1
+        uses: actionsexportcosystem/action-add-labels@v1
         with:
           github_token: ${{ secrets.BOATSWAIN_GITHUB_TOKEN }}
           number: ${{ needs.git_info.outputs.pr_number }}
@@ -2470,7 +2362,7 @@ jobs:
           COMMANDER_TOKEN: ${{secrets.E2E_COMMANDER_TOKEN}}
           COMMANDER_HOST: ${{secrets.E2E_COMMANDER_HOST}}
         run: |
-          echo "Execute 'script-commander.sh cleanup' via 'docker run', using environment:
+          echo "Execute 'script-commander.sh cleanup' via 'shell', using environment:
             INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
             DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG}
             INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG}
@@ -2483,31 +2375,19 @@ jobs:
             MASTERS_COUNT=${MASTERS_COUNT}
           "
 
-          docker run --rm \
-            -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
-            -e PREFIX=${PREFIX} \
-            -e MASTERS_COUNT=${MASTERS_COUNT} \
-            -e DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG} \
-            -e INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG} \
-            -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
-            -e CRI=${CRI} \
-            -e PROVIDER=${PROVIDER:-not_provided} \
-            -e MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-} \
-            -e LAYOUT=${LAYOUT:-not_provided} \
-            -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
-            -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
-            -e LAYOUT_VCD_PASSWORD=${LAYOUT_VCD_PASSWORD:-not_provided} \
-            -e LAYOUT_VCD_USERNAME=${LAYOUT_VCD_USERNAME:-not_provided} \
-            -e LAYOUT_VCD_SERVER=${LAYOUT_VCD_SERVER:-not_provided} \
-            -e LAYOUT_VCD_ORG=${LAYOUT_VCD_ORG:-not_provided} \
-            -e LAYOUT_STATIC_BASTION_IP=80.249.129.56 \
-            -e USER_RUNNER_ID=${user_runner_id} \
-            -v $(pwd)/testing:/deckhouse/testing \
-            -v $(pwd)/release.yaml:/deckhouse/release.yaml \
-            -v ${TMP_DIR_PATH}:/tmp \
-            -w /deckhouse \
-          ${INSTALL_IMAGE_NAME} \
-          bash /deckhouse/testing/cloud_layouts/script-commander.sh cleanup
+            export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
+            export PROVIDER=${PROVIDER:-not_provided} \
+            export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-} \
+            export LAYOUT=${LAYOUT:-not_provided} \
+            export DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
+            export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
+            export LAYOUT_VCD_PASSWORD=${LAYOUT_VCD_PASSWORD:-not_provided} \
+            export LAYOUT_VCD_USERNAME=${LAYOUT_VCD_USERNAME:-not_provided} \
+            export LAYOUT_VCD_SERVER=${LAYOUT_VCD_SERVER:-not_provided} \
+            export LAYOUT_VCD_ORG=${LAYOUT_VCD_ORG:-not_provided} \
+            export LAYOUT_STATIC_BASTION_IP=80.249.129.56 \
+            export USER_RUNNER_ID=${user_runner_id} \
+          bash $(pwd)/testing/cloud_layouts/script-commander.sh cleanup
 
         # </template: e2e_run_template>
 
@@ -2854,7 +2734,7 @@ jobs:
           COMMANDER_HOST: ${{secrets.E2E_COMMANDER_HOST}}
           CIS_ENABLED: ${{ needs.check_e2e_labels.outputs.cis }}
         run: |
-          echo "Execute 'script-commander.sh run-test' via 'docker run', using environment:
+          echo "Execute 'script-commander.sh run-test' via 'shell', using environment:
             INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
             DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG}
             INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG}
@@ -2868,32 +2748,20 @@ jobs:
             CIS_ENABLED=${CIS_ENABLED}
           "
 
-          docker run --rm \
-            -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
-            -e PREFIX=${PREFIX} \
-            -e MASTERS_COUNT=${MASTERS_COUNT} \
-            -e DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG} \
-            -e INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG} \
-            -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
-            -e CRI=${CRI} \
-            -e PROVIDER=${PROVIDER:-not_provided} \
-            -e MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-} \
-            -e LAYOUT=${LAYOUT:-not_provided} \
-            -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
-            -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
-            -e LAYOUT_VCD_PASSWORD=${LAYOUT_VCD_PASSWORD:-not_provided} \
-            -e LAYOUT_VCD_USERNAME=${LAYOUT_VCD_USERNAME:-not_provided} \
-            -e LAYOUT_VCD_SERVER=${LAYOUT_VCD_SERVER:-not_provided} \
-            -e LAYOUT_VCD_ORG=${LAYOUT_VCD_ORG:-not_provided} \
-            -e LAYOUT_STATIC_BASTION_IP=80.249.129.56 \
-            -e USER_RUNNER_ID=${user_runner_id} \
-            -e CIS_ENABLED=${CIS_ENABLED} \
-            -v $(pwd)/testing:/deckhouse/testing \
-            -v $(pwd)/release.yaml:/deckhouse/release.yaml \
-            -v ${TMP_DIR_PATH}:/tmp \
-            -w /deckhouse \
-          ${INSTALL_IMAGE_NAME} \
-          bash /deckhouse/testing/cloud_layouts/script-commander.sh run-test
+            export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
+            export PROVIDER=${PROVIDER:-not_provided} \
+            export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-} \
+            export LAYOUT=${LAYOUT:-not_provided} \
+            export DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
+            export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
+            export LAYOUT_VCD_PASSWORD=${LAYOUT_VCD_PASSWORD:-not_provided} \
+            export LAYOUT_VCD_USERNAME=${LAYOUT_VCD_USERNAME:-not_provided} \
+            export LAYOUT_VCD_SERVER=${LAYOUT_VCD_SERVER:-not_provided} \
+            export LAYOUT_VCD_ORG=${LAYOUT_VCD_ORG:-not_provided} \
+            export LAYOUT_STATIC_BASTION_IP=80.249.129.56 \
+            export USER_RUNNER_ID=${user_runner_id} \
+            export CIS_ENABLED=${CIS_ENABLED} \
+          bash $(pwd)/testing/cloud_layouts/script-commander.sh run-test
 
         # </template: e2e_run_template>
       - name: Read connection string
@@ -2911,7 +2779,7 @@ jobs:
 
       - name: Label pr if e2e failed
         if: ${{ (failure() || cancelled()) && needs.git_info.outputs.pr_number }}
-        uses: actions-ecosystem/action-add-labels@v1
+        uses: actionsexportcosystem/action-add-labels@v1
         with:
           github_token: ${{ secrets.BOATSWAIN_GITHUB_TOKEN }}
           number: ${{ needs.git_info.outputs.pr_number }}
@@ -2947,7 +2815,7 @@ jobs:
           COMMANDER_TOKEN: ${{secrets.E2E_COMMANDER_TOKEN}}
           COMMANDER_HOST: ${{secrets.E2E_COMMANDER_HOST}}
         run: |
-          echo "Execute 'script-commander.sh cleanup' via 'docker run', using environment:
+          echo "Execute 'script-commander.sh cleanup' via 'shell', using environment:
             INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
             DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG}
             INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG}
@@ -2960,31 +2828,19 @@ jobs:
             MASTERS_COUNT=${MASTERS_COUNT}
           "
 
-          docker run --rm \
-            -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
-            -e PREFIX=${PREFIX} \
-            -e MASTERS_COUNT=${MASTERS_COUNT} \
-            -e DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG} \
-            -e INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG} \
-            -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
-            -e CRI=${CRI} \
-            -e PROVIDER=${PROVIDER:-not_provided} \
-            -e MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-} \
-            -e LAYOUT=${LAYOUT:-not_provided} \
-            -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
-            -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
-            -e LAYOUT_VCD_PASSWORD=${LAYOUT_VCD_PASSWORD:-not_provided} \
-            -e LAYOUT_VCD_USERNAME=${LAYOUT_VCD_USERNAME:-not_provided} \
-            -e LAYOUT_VCD_SERVER=${LAYOUT_VCD_SERVER:-not_provided} \
-            -e LAYOUT_VCD_ORG=${LAYOUT_VCD_ORG:-not_provided} \
-            -e LAYOUT_STATIC_BASTION_IP=80.249.129.56 \
-            -e USER_RUNNER_ID=${user_runner_id} \
-            -v $(pwd)/testing:/deckhouse/testing \
-            -v $(pwd)/release.yaml:/deckhouse/release.yaml \
-            -v ${TMP_DIR_PATH}:/tmp \
-            -w /deckhouse \
-          ${INSTALL_IMAGE_NAME} \
-          bash /deckhouse/testing/cloud_layouts/script-commander.sh cleanup
+            export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
+            export PROVIDER=${PROVIDER:-not_provided} \
+            export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-} \
+            export LAYOUT=${LAYOUT:-not_provided} \
+            export DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
+            export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
+            export LAYOUT_VCD_PASSWORD=${LAYOUT_VCD_PASSWORD:-not_provided} \
+            export LAYOUT_VCD_USERNAME=${LAYOUT_VCD_USERNAME:-not_provided} \
+            export LAYOUT_VCD_SERVER=${LAYOUT_VCD_SERVER:-not_provided} \
+            export LAYOUT_VCD_ORG=${LAYOUT_VCD_ORG:-not_provided} \
+            export LAYOUT_STATIC_BASTION_IP=80.249.129.56 \
+            export USER_RUNNER_ID=${user_runner_id} \
+          bash $(pwd)/testing/cloud_layouts/script-commander.sh cleanup
 
         # </template: e2e_run_template>
 
@@ -3331,7 +3187,7 @@ jobs:
           COMMANDER_HOST: ${{secrets.E2E_COMMANDER_HOST}}
           CIS_ENABLED: ${{ needs.check_e2e_labels.outputs.cis }}
         run: |
-          echo "Execute 'script-commander.sh run-test' via 'docker run', using environment:
+          echo "Execute 'script-commander.sh run-test' via 'shell', using environment:
             INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
             DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG}
             INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG}
@@ -3345,32 +3201,20 @@ jobs:
             CIS_ENABLED=${CIS_ENABLED}
           "
 
-          docker run --rm \
-            -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
-            -e PREFIX=${PREFIX} \
-            -e MASTERS_COUNT=${MASTERS_COUNT} \
-            -e DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG} \
-            -e INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG} \
-            -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
-            -e CRI=${CRI} \
-            -e PROVIDER=${PROVIDER:-not_provided} \
-            -e MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-} \
-            -e LAYOUT=${LAYOUT:-not_provided} \
-            -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
-            -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
-            -e LAYOUT_VCD_PASSWORD=${LAYOUT_VCD_PASSWORD:-not_provided} \
-            -e LAYOUT_VCD_USERNAME=${LAYOUT_VCD_USERNAME:-not_provided} \
-            -e LAYOUT_VCD_SERVER=${LAYOUT_VCD_SERVER:-not_provided} \
-            -e LAYOUT_VCD_ORG=${LAYOUT_VCD_ORG:-not_provided} \
-            -e LAYOUT_STATIC_BASTION_IP=80.249.129.56 \
-            -e USER_RUNNER_ID=${user_runner_id} \
-            -e CIS_ENABLED=${CIS_ENABLED} \
-            -v $(pwd)/testing:/deckhouse/testing \
-            -v $(pwd)/release.yaml:/deckhouse/release.yaml \
-            -v ${TMP_DIR_PATH}:/tmp \
-            -w /deckhouse \
-          ${INSTALL_IMAGE_NAME} \
-          bash /deckhouse/testing/cloud_layouts/script-commander.sh run-test
+            export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
+            export PROVIDER=${PROVIDER:-not_provided} \
+            export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-} \
+            export LAYOUT=${LAYOUT:-not_provided} \
+            export DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
+            export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
+            export LAYOUT_VCD_PASSWORD=${LAYOUT_VCD_PASSWORD:-not_provided} \
+            export LAYOUT_VCD_USERNAME=${LAYOUT_VCD_USERNAME:-not_provided} \
+            export LAYOUT_VCD_SERVER=${LAYOUT_VCD_SERVER:-not_provided} \
+            export LAYOUT_VCD_ORG=${LAYOUT_VCD_ORG:-not_provided} \
+            export LAYOUT_STATIC_BASTION_IP=80.249.129.56 \
+            export USER_RUNNER_ID=${user_runner_id} \
+            export CIS_ENABLED=${CIS_ENABLED} \
+          bash $(pwd)/testing/cloud_layouts/script-commander.sh run-test
 
         # </template: e2e_run_template>
       - name: Read connection string
@@ -3388,7 +3232,7 @@ jobs:
 
       - name: Label pr if e2e failed
         if: ${{ (failure() || cancelled()) && needs.git_info.outputs.pr_number }}
-        uses: actions-ecosystem/action-add-labels@v1
+        uses: actionsexportcosystem/action-add-labels@v1
         with:
           github_token: ${{ secrets.BOATSWAIN_GITHUB_TOKEN }}
           number: ${{ needs.git_info.outputs.pr_number }}
@@ -3424,7 +3268,7 @@ jobs:
           COMMANDER_TOKEN: ${{secrets.E2E_COMMANDER_TOKEN}}
           COMMANDER_HOST: ${{secrets.E2E_COMMANDER_HOST}}
         run: |
-          echo "Execute 'script-commander.sh cleanup' via 'docker run', using environment:
+          echo "Execute 'script-commander.sh cleanup' via 'shell', using environment:
             INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
             DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG}
             INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG}
@@ -3437,31 +3281,19 @@ jobs:
             MASTERS_COUNT=${MASTERS_COUNT}
           "
 
-          docker run --rm \
-            -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
-            -e PREFIX=${PREFIX} \
-            -e MASTERS_COUNT=${MASTERS_COUNT} \
-            -e DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG} \
-            -e INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG} \
-            -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
-            -e CRI=${CRI} \
-            -e PROVIDER=${PROVIDER:-not_provided} \
-            -e MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-} \
-            -e LAYOUT=${LAYOUT:-not_provided} \
-            -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
-            -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
-            -e LAYOUT_VCD_PASSWORD=${LAYOUT_VCD_PASSWORD:-not_provided} \
-            -e LAYOUT_VCD_USERNAME=${LAYOUT_VCD_USERNAME:-not_provided} \
-            -e LAYOUT_VCD_SERVER=${LAYOUT_VCD_SERVER:-not_provided} \
-            -e LAYOUT_VCD_ORG=${LAYOUT_VCD_ORG:-not_provided} \
-            -e LAYOUT_STATIC_BASTION_IP=80.249.129.56 \
-            -e USER_RUNNER_ID=${user_runner_id} \
-            -v $(pwd)/testing:/deckhouse/testing \
-            -v $(pwd)/release.yaml:/deckhouse/release.yaml \
-            -v ${TMP_DIR_PATH}:/tmp \
-            -w /deckhouse \
-          ${INSTALL_IMAGE_NAME} \
-          bash /deckhouse/testing/cloud_layouts/script-commander.sh cleanup
+            export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
+            export PROVIDER=${PROVIDER:-not_provided} \
+            export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-} \
+            export LAYOUT=${LAYOUT:-not_provided} \
+            export DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
+            export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
+            export LAYOUT_VCD_PASSWORD=${LAYOUT_VCD_PASSWORD:-not_provided} \
+            export LAYOUT_VCD_USERNAME=${LAYOUT_VCD_USERNAME:-not_provided} \
+            export LAYOUT_VCD_SERVER=${LAYOUT_VCD_SERVER:-not_provided} \
+            export LAYOUT_VCD_ORG=${LAYOUT_VCD_ORG:-not_provided} \
+            export LAYOUT_STATIC_BASTION_IP=80.249.129.56 \
+            export USER_RUNNER_ID=${user_runner_id} \
+          bash $(pwd)/testing/cloud_layouts/script-commander.sh cleanup
 
         # </template: e2e_run_template>
 
