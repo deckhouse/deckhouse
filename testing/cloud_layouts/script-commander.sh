@@ -85,7 +85,7 @@ shopt -s inherit_errexit
 shopt -s failglob
 
 function prepare_environment() {
-    root_wd="/deckhouse/testing/cloud_layouts"
+    root_wd="${PWD}}/testing/cloud_layouts"
 
     if [[ -z "$PROVIDER" || ! -d "$root_wd/$PROVIDER" ]]; then
       >&2 echo "ERROR: Unknown provider \"$PROVIDER\""

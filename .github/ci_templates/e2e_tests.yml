@@ -124,6 +124,9 @@ run: |
 {!{- end }!}
   "
 
+  dhctl_log_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
+  echo "DHCTL log file: $dhctl_log_file"
+
 {!{- if eq $provider "eks" }!}
   chmod 755 $(pwd)/testing/cloud_layouts/{!{ $script_eks }!}
 

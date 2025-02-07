@@ -477,6 +477,9 @@ jobs:
             CIS_ENABLED=${CIS_ENABLED}
           "
 
+          dhctl_log_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
+          echo "DHCTL log file: $dhctl_log_file"
+
             export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG}
             export PROVIDER=${PROVIDER:-not_provided}
             export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-}
@@ -552,6 +555,9 @@ jobs:
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
           "
+
+          dhctl_log_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
+          echo "DHCTL log file: $dhctl_log_file"
 
             export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG}
             export PROVIDER=${PROVIDER:-not_provided}
@@ -907,6 +913,9 @@ jobs:
             CIS_ENABLED=${CIS_ENABLED}
           "
 
+          dhctl_log_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
+          echo "DHCTL log file: $dhctl_log_file"
+
             export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG}
             export PROVIDER=${PROVIDER:-not_provided}
             export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-}
@@ -982,6 +991,9 @@ jobs:
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
           "
+
+          dhctl_log_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
+          echo "DHCTL log file: $dhctl_log_file"
 
             export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG}
             export PROVIDER=${PROVIDER:-not_provided}
@@ -1337,6 +1349,9 @@ jobs:
             CIS_ENABLED=${CIS_ENABLED}
           "
 
+          dhctl_log_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
+          echo "DHCTL log file: $dhctl_log_file"
+
             export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG}
             export PROVIDER=${PROVIDER:-not_provided}
             export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-}
@@ -1412,6 +1427,9 @@ jobs:
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
           "
+
+          dhctl_log_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
+          echo "DHCTL log file: $dhctl_log_file"
 
             export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG}
             export PROVIDER=${PROVIDER:-not_provided}
@@ -1767,6 +1785,9 @@ jobs:
             CIS_ENABLED=${CIS_ENABLED}
           "
 
+          dhctl_log_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
+          echo "DHCTL log file: $dhctl_log_file"
+
             export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG}
             export PROVIDER=${PROVIDER:-not_provided}
             export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-}
@@ -1842,6 +1863,9 @@ jobs:
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
           "
+
+          dhctl_log_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
+          echo "DHCTL log file: $dhctl_log_file"
 
             export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG}
             export PROVIDER=${PROVIDER:-not_provided}
@@ -2197,6 +2221,9 @@ jobs:
             CIS_ENABLED=${CIS_ENABLED}
           "
 
+          dhctl_log_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
+          echo "DHCTL log file: $dhctl_log_file"
+
             export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG}
             export PROVIDER=${PROVIDER:-not_provided}
             export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-}
@@ -2272,6 +2299,9 @@ jobs:
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
           "
+
+          dhctl_log_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
+          echo "DHCTL log file: $dhctl_log_file"
 
             export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG}
             export PROVIDER=${PROVIDER:-not_provided}
@@ -2627,6 +2657,9 @@ jobs:
             CIS_ENABLED=${CIS_ENABLED}
           "
 
+          dhctl_log_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
+          echo "DHCTL log file: $dhctl_log_file"
+
             export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG}
             export PROVIDER=${PROVIDER:-not_provided}
             export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-}
@@ -2702,6 +2735,9 @@ jobs:
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
           "
+
+          dhctl_log_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
+          echo "DHCTL log file: $dhctl_log_file"
 
             export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG}
             export PROVIDER=${PROVIDER:-not_provided}
@@ -3057,6 +3093,9 @@ jobs:
             CIS_ENABLED=${CIS_ENABLED}
           "
 
+          dhctl_log_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
+          echo "DHCTL log file: $dhctl_log_file"
+
             export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG}
             export PROVIDER=${PROVIDER:-not_provided}
             export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-}
@@ -3132,6 +3171,9 @@ jobs:
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
           "
+
+          dhctl_log_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
+          echo "DHCTL log file: $dhctl_log_file"
 
             export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG}
             export PROVIDER=${PROVIDER:-not_provided}
