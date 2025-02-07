@@ -466,7 +466,7 @@ func (r *reconciler) handlePendingRelease(ctx context.Context, release *v1alpha1
 			return res, fmt.Errorf("apply forced release: %w", err)
 		}
 
-		modulesChangedReason = "a new module release found"
+		modulesChangedReason = "a new module release deployed"
 
 		// stop requeue because we restart deckhouse (deployment)
 		return ctrl.Result{}, nil
@@ -548,7 +548,7 @@ func (r *reconciler) handlePendingRelease(ctx context.Context, release *v1alpha1
 		return res, fmt.Errorf("apply predicted release: %w", err)
 	}
 
-	modulesChangedReason = "a new module release found"
+	modulesChangedReason = "a new module release deployed"
 
 	return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
 }
