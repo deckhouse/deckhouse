@@ -79,7 +79,7 @@ func NewSilentLoop(name string, attemptsQuantity int, wait time.Duration) *Loop 
 		name:             name,
 		attemptsQuantity: attemptsQuantity,
 		waitTime:         wait,
-		logger:           log.GetDefaultLogger(),
+		logger:           log.GetSilentLogger(),
 		// - this loop is not interruptable by the signal watcher in tomb package.
 		interruptable: false,
 		showError:     true,
@@ -141,6 +141,9 @@ func (l *Loop) Run(task func() error) error {
 				errorMsg = "\tError: %v\n\n"
 			}
 			l.logger.LogInfoF(errorMsg, err)
+			if ! l.interruptable {
+				l.logger.LogDebugF(errorMsg, err)
+			}
 
 			// Do not waitTime after the last iteration.
 			if i < l.attemptsQuantity {
