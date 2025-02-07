@@ -214,6 +214,26 @@ entries:
                         en: Management of static routes and ip rules on cluster nodes
                         ru: Управление статичными маршрутами и правилами ip rule на узлах кластера
                       url: /admin/network/management-of-static-routes.html
+                    - title:
+                        en: Managing DNS in a Kubernetes cluster
+                        ru: Управление DNS в кластере Kubernetes
+                      url: /admin/network/dns-management-in-cluster.html
+                    - title:
+                        en: Kube-proxy configuration
+                        ru: Настройка kube-proxy
+                      url: /admin/network/kube-proxy-configuration.html
+                    - title:
+                        en: Building a network gateway from Kubernetes nodes
+                        ru: Постройка сетевого шлюза из Kubernetes-узлов
+                      url: /admin/network/building-network-gateway-from-nodes.html
+                    - title:
+                        en: ServiceWithHealthcheck balancer
+                        ru: Балансировщик ServiceWithHealthcheck
+                      url: /admin/network/service-with-healthcheck.html
+                    - title:
+                        en: Ensuring high availability and fault tolerance (keepalived)
+                        ru: Обеспечение высокой доступности и отказоустойчивости (keepalived)
+                      url: /admin/network/keepalived.html
             - title:
                 en: Storage
                 ru: Хранение
