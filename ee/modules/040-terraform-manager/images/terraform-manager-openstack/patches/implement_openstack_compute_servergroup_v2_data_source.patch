@@ -1,6 +1,6 @@
 diff --git a/openstack/data_source_openstack_compute_servergroup_v2.go b/openstack/data_source_openstack_compute_servergroup_v2.go
 new file mode 100644
-index 00000000..d88c5058
+index 00000000..b20c48ee
 --- /dev/null
 +++ b/openstack/data_source_openstack_compute_servergroup_v2.go
 @@ -0,0 +1,69 @@
@@ -11,7 +11,7 @@ index 00000000..d88c5058
 +	"log"
 +
 +	"github.com/gophercloud/gophercloud/openstack/compute/v2/extensions/servergroups"
-+	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
++	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 +)
 +
 +func dataSourceComputeServerGroupV2() *schema.Resource {
@@ -39,7 +39,7 @@ index 00000000..d88c5058
 +		return fmt.Errorf("Error creating OpenStack compute client: %s", err)
 +	}
 +
-+	allPages, err := servergroups.List(computeClient).AllPages()
++	allPages, err := servergroups.List(computeClient, nil).AllPages()
 +	if err != nil {
 +		return fmt.Errorf("Error retrieving openstack_compute_servergroup_v2: %s", err)
 +	}
@@ -58,7 +58,7 @@ index 00000000..d88c5058
 +			break
 +		}
 +	}
-+	
++
 +	if sg == nil {
 +		return fmt.Errorf("Server group not found")
 +	}
@@ -85,3 +85,4 @@ index 03a3193b..bd457a04 100644
  			"openstack_containerinfra_nodegroup_v1":              dataSourceContainerInfraNodeGroupV1(),
  			"openstack_containerinfra_clustertemplate_v1":        dataSourceContainerInfraClusterTemplateV1(),
  			"openstack_containerinfra_cluster_v1":                dataSourceContainerInfraCluster(),
+
