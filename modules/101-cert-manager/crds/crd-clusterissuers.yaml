@@ -184,7 +184,7 @@ spec:
                                     description: The API group name that should be used when POSTing ChallengePayload resources to the webhook apiserver. This should be the same as the GroupName specified in the webhook provider implementation.
                                     type: string
                                   solverName:
-                                    description: The name of the solver to use, as defined in the webhook provider implementation. This will typically be the name of the provider, e.g. 'cloudflare'.
+                                    description: The name of the solver to use, as defined in the webhook provider implementation. This will typically be the name of the provider.
                                     type: string
                           http01:
                             description: Configures cert-manager to attempt to complete authorizations by performing the HTTP01 challenge flow. It is not possible to obtain certificates for wildcard domain names (e.g. `*.example.com`) using the HTTP01 challenge mechanism.

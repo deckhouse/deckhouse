@@ -42,10 +42,6 @@ description: "Модуль descheduler Deckhouse Kubernetes Platform. Кажды
 Стратегия включается параметром [spec.strategies.highNodeUtilization.enabled](cr.html#descheduler-v1alpha2-spec-strategies-highnodeutilization-enabled).
 
 {% alert level="warning" %}
-В GKE нельзя настроить конфигурацию планировщика по умолчанию, но можно использовать стратегию `optimize-utilization` или развернуть второй пользовательский планировщик.
-{% endalert %}
-
-{% alert level="warning" %}
 Использование ресурсов узла учитывает extended-ресурсы и рассчитывается на основе запросов и лимитов подов (requests and limits), а не их фактического потребления. Такой подход обеспечивает согласованность с работой kube-scheduler, который использует аналогичный принцип при размещении подов на узлах. Это означает, что метрики использования ресурсов, отображаемые Kubelet (или командами вроде `kubectl top`), могут отличаться от расчетных показателей, так как Kubelet и связанные инструменты отображают данные о реальном потреблении ресурсов.
 {% endalert %}
 
