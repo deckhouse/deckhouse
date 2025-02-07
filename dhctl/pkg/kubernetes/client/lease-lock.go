@@ -245,7 +245,7 @@ func (l *LeaseLock) tryRenew(lease *coordinationv1.Lease, force bool) (*coordina
 	var newLease *coordinationv1.Lease
 
 	renewRetries := l.config.RenewRetries()
-	err := retry.NewTeeLoggerLoop("try to renew", renewRetries, l.config.RetryWaitDuration).Run(func() error {
+	err := retry.NewLoop("try to renew", renewRetries, l.config.RetryWaitDuration).Run(func() error {
 		var err error
 		lease.Spec.RenewTime = now()
 		newLease, err = l.leasesCl.Update(context.TODO(), lease, metav1.UpdateOptions{})
