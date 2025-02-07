@@ -81,7 +81,7 @@ func (s *SSH) Cmd() *exec.Cmd {
 		"-o", "UserKnownHostsFile=/dev/null",
 		"-o", "GlobalKnownHostsFile=/dev/null",
 		"-o", "ServerAliveInterval=1",
-		"-o", "ServerAliveCountMax=30",
+		"-o", "ServerAliveCountMax=3600",
 		"-o", "ConnectTimeout=15",
 		"-o", "PasswordAuthentication=no",
 	}
