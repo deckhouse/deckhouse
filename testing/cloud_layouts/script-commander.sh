@@ -278,15 +278,20 @@ payload="{
 
   echo "Bootstrap payload: ${payload}"
 
-  response=$(curl -fs -X POST "https://${commander_host}/api/v1/clusters" \
+  response=$(curl -X POST "https://${commander_host}/api/v1/clusters" \
     -H 'accept: application/json' \
     -H "X-Auth-Token: ${commander_token}" \
     -H 'Content-Type: application/json' \
     -d "$payload")
 
-  # Check for errors from curl
-  if [[ $? -ne 0 ]]; then
-    echo "Error: curl failed" >&2
+  http_code=$(echo "$response" | tail -n 1)
+  response=$(echo "$response" | head -n -1)
+
+  echo "HTTP Code: ${http_code}"
+
+  # Check for HTTP errors
+  if [[ ${http_code} -ge 400 ]]; then
+    echo "Error: HTTP error ${http_code}" >&2
     echo "$response" >&2
     return 1
   fi
