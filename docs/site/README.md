@@ -145,7 +145,7 @@ Some tips:
   "></script>
   ```
 
-- Here is an example of how to include a CSS assets:
+- Here is an example of how to include CSS assets:
 
   ```liquid
   <link href='
@@ -171,7 +171,7 @@ Some tips:
 
 ### Jekyll data
 
-Some data is stored in the `_data` directory of a Jekyll project, but some data is generated from the repo by the scripts or by jekyll hooks. Here are some data structures, which are used in the Jekyll projects. 
+Some data is stored in the `_data` directory of a Jekyll project, but some data is generated from the repo by the scripts or by Jekyll hooks. Here are some data structures, which are used in the Jekyll projects. 
 
 - (documentation) `site.data.bundles.raw.[<EDITION>]`. Added in the werf.yaml to build the followings data (in `docs/documentation/_plugins/custom_hooks.rb`):
   - `site.data.bundles.byModule` — list of bundles for each module. Example: 
@@ -241,8 +241,8 @@ Some data is stored in the `_data` directory of a Jekyll project, but some data 
  
   The data is filled in the `werf-web.inc.yaml`.
   
-  - `editionFullyAvailable` - he list of editions, where the module is available without restrictions. Used for overriding computed values. Takes precedence over `excludeModules` and `includeModules` from the `site.data.editions` file (see below).
-  - `editionRestrictions` - The list of editions, where the module is available with restrictions. Used for overriding computed values. Takes precedence over `excludeModules` and `includeModules` from the `site.data.editions` file (see below). Takes precedence over `editionFullyAvailable`.
+  - `editionFullyAvailable` - the list of editions, where the module available without restrictions. Used for overriding computed values. Takes precedence over `excludeModules` and `includeModules` from the `site.data.editions` file (see below). The `editionFullyAvailable` for a module can be set in the `docs/documentation/_data/modules/modules-addition.json` file.
+  - `editionRestrictions` - The list of editions, where the module is available with restrictions. Used for overriding computed values. Takes precedence over `excludeModules` and `includeModules` from the `site.data.editions` file (see below). Takes precedence over `editionFullyAvailable`. The `editionRestrictions` for a module can be set in the `docs/documentation/_data/modules/modules-addition.json` file.
   - `editions` — The list of editions, where the module is available **with or without** restrictions. 
   
   ```text
@@ -279,8 +279,10 @@ Some data is stored in the `_data` directory of a Jekyll project, but some data 
   ```
 - `site.data.editions`
 
-   - `docs/documentation/_data/editions-addition.json` - the data from the file is merged into the data from the `/editions.yaml` file. 
-   - Each edition data can include both filters - `excludeModules` and `includeModules`. In this case, the module will be added to edition if it its name is in the `includeModules` and does not in the `excludeModules`. 
+  - `docs/documentation/_data/editions-addition.json` - the data from the file is merged with the data from the `/editions.yaml` file. 
+  - Each edition in the file can include both filters - `excludeModules` and `includeModules`. In this case, the module will be added to edition if its name is in the `includeModules` and does not in the `excludeModules`.
+  - `docs/documentation/_data/modules-addition.json` - 
+  
 
   ```json
   {
@@ -487,4 +489,4 @@ Some data is stored in the `_data` directory of a Jekyll project, but some data 
       ]
     }
   }
-  ```  
+  ```
