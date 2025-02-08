@@ -39,9 +39,9 @@ spec:
                 resourceLabels:
                   description: |
                     Метки которые будут применены ко всем ресурсам созданным для этого проекта.
-                  resourceAnnotations:
-                    description: |
-                      Аннотации которые будут применены ко всем ресурсам созданным для этого проекта.
+                resourceAnnotations:
+                  description: |
+                    Аннотации которые будут применены ко всем ресурсам созданным для этого проекта.
                 projectTemplateName:
                   description: |
                     Имя ресурса [ProjectTemplate](cr.html#projecttemplate), который определяет, какие ресурсы будут созданы в проекте.
