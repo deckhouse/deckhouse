@@ -452,7 +452,6 @@
     transform: rotate(-180deg);
 }
 
-.sidebar__item_hot > a::after,
 .sidebar .sidebar__item_ee > a::after,
 .sidebar .sidebar__item_proprietaryOkmeter > a::after,
 .sidebar .sidebar__item_experimental > a::after,
@@ -477,7 +476,28 @@ a.comparison-table__module::after {
   margin-right: 10px;
 }
 
+// The version used before DKP ~1.68
 .sidebar__badge {
+  display: inline-flex;
+  vertical-align: middle;
+  font-size: 8px;
+  font-weight: 700;
+  line-height: 16px;
+  letter-spacing: 1px;
+  color: #fff;
+  margin-right: 10px;
+  padding: 0 4px;
+  background: #0066FF;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+
+.sidebar__badge:nth-child(2) {
+  margin-left: 10px;
+}
+
+// The version used after DKP ~1.68
+.sidebar__badge_v2 {
   display: inline-flex;
   margin-right: 4px;
   padding: 4px 5px;
@@ -493,7 +513,7 @@ a.comparison-table__module::after {
   background: $background-blue;
 }
 
-.sidebar__badge_ee {
+.sidebar__badge_commercial {
   padding: 3px 3px 4px 5px;
   border: none;
   font-weight: 400;
@@ -507,10 +527,6 @@ a.comparison-table__module {
     position: relative;
     display: inline-flex;
     align-items: center;
-}
-
-.sidebar__item_hot > a::after {
-    content: 'NEW!';
 }
 
 .sidebar .sidebar__item_experimental > a::after,
@@ -849,7 +865,7 @@ a.comparison-table__module-proprietaryOkmeter::after {
         padding-left: 32px;
     }
 }
-  
+
 .docs .resources__prop_description > ol > li::before {
     content: none;
 }
@@ -1127,10 +1143,10 @@ a.comparison-table__module-proprietaryOkmeter::after {
         background: url(/images/copy.svg) center/contain no-repeat;
         opacity: 0;
         transition: opacity .25s;
-    
+
         &.show {
             opacity: .75;
-      
+
             &:hover {
                 opacity: 1;
             }
@@ -1227,14 +1243,14 @@ a.comparison-table__module-proprietaryOkmeter::after {
     table {
         th, td {
             padding: 1em 1.5em;
-            border-bottom: 1px solid #C4CAD4;  
+            border-bottom: 1px solid #C4CAD4;
         }
     }
 
     .table-wrapper__small {
         table {
             th, td {
-                padding: 1em 1.2em; 
+                padding: 1em 1.2em;
             }
         }
     }

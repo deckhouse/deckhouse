@@ -145,7 +145,7 @@ Some tips:
   "></script>
   ```
 
-- Here is an example of how to include a CSS assets:
+- Here is an example of how to include CSS assets:
 
   ```liquid
   <link href='
@@ -171,7 +171,7 @@ Some tips:
 
 ### Jekyll data
 
-Some data is stored in the `_data` directory of a Jekyll project, but some data is generated from the repo by the scripts or by jekyll hooks. Here are some data structures, which are used in the Jekyll projects. 
+Some data is stored in the `_data` directory of a Jekyll project, but some data is generated from the repo by the scripts or by Jekyll hooks. Here are some data structures, which are used in the Jekyll projects. 
 
 - (documentation) `site.data.bundles.raw.[<EDITION>]`. Added in the werf.yaml to build the followings data (in `docs/documentation/_plugins/custom_hooks.rb`):
   - `site.data.bundles.byModule` — list of bundles for each module. Example: 
@@ -208,7 +208,7 @@ Some data is stored in the `_data` directory of a Jekyll project, but some data 
   {
     "module-name": {
       "path": "path to the documentation on the site",  <-- null, if the module don't have documentation
-      "editionMinimumAvailable": "<EDITION>" <-- the "smallest" edition, where module is available. It is computed from the repo folder structure.
+      "editionMinimumAvailable": "<EDITION>" <-- the "smallest" edition, where module is available. It is computed from the repo folder structure. **Don't use it in logic.** It seems to be deprecated in the future.
     }
   }
   ```
@@ -241,26 +241,26 @@ Some data is stored in the `_data` directory of a Jekyll project, but some data 
  
   The data is filled in the `werf-web.inc.yaml`.
   
-  - `editionFullyAvailable` - he list of editions, where the module is available without restrictions. Used for overriding computed values. Takes precedence over `excludeModules` and `includeModules` from the `site.data.editions` file (see below).
-  - `editionRestrictions` - The list of editions, where the module is available with restrictions. Used for overriding computed values. Takes precedence over `excludeModules` and `includeModules` from the `site.data.editions` file (see below). Takes precedence over `editionFullyAvailable`.
+  - `editionFullyAvailable` - the list of editions, where the module available without restrictions. Used for overriding computed values. Takes precedence over `excludeModules` and `includeModules` from the `site.data.editions` file (see below). The `editionFullyAvailable` for a module can be set in the `docs/documentation/_data/modules/modules-addition.json` file. Better don't use it in logic (but you can use it for adding editions to the module). 
+  - `editionsWithRestrictions` - The list of editions, where the module is available with restrictions. Used for overriding computed values. Takes precedence over `excludeModules` and `includeModules` from the `site.data.editions` file (see below). Takes precedence over `editionFullyAvailable`. The `editionsWithRestrictions` for a module can be set in the `docs/documentation/_data/modules/modules-addition.json` file.
   - `editions` — The list of editions, where the module is available **with or without** restrictions. 
   
   ```text
   {
     "<module-kebab-name>": {
-    "editionMinimumAvailable": "<EDITION>",  <-- the "smallest" edition, where module is available. It is computed from the repo folder structure.
+    "editionMinimumAvailable": "<EDITION>",  <-- the "smallest" edition according to the edition weight (_data/modules/editions-weight.yml), where module is available. It is computed from the module folder of the repo (_tools/modules_list.sh), can be specified in the `_data/modules/modules-addition.json`. **Don't use it in logic.** It seems to be deprecated in the future. Use editions array instead. 
     "editions": [],  <-- list of editions, where the module is available with restrictions or without restrictions
-    "external": "true|false", <-- true if the module installs from the modulesource
-    "path": "modules/<module-kebab-name>/",  <-- path to module documentation on the site (on null)
-    "editionRestrictions": [ <-- editions, where the module is available with restrictions
+    "external": "true|false", <-- Optional, true if the module installs from the modulesource
+    "path": "modules/<module-kebab-name>/",  <-- Optional, path to module documentation on the site.
+    "editionsWithRestrictions": [ <-- editions, where the module is available with restrictions
       "se",
       "se-plus",
       "cse-lite"
     ],
-    "editionRestrictionsComment": { <-- comments for restrictions. `all` - for all editions
+    "editionsWithRestrictionsComments": { <-- comments for restrictions. `all` - for all editions
       "all": {
         "en": "Restriction on working with BGP",
-        "ru": "Ограничение на работу с BGP"
+        "ru": "Restriction on working with BGP"
       }
     },
     "editionFullyAvailable": [ <-- list of editions, where the module is available without restrictions. Used for overriding computed values.
@@ -275,12 +275,14 @@ Some data is stored in the `_data` directory of a Jekyll project, but some data 
         "title": "SecurityPolicy: verifyImageSignatures"
       }
     }
-  },
+  }
   ```
 - `site.data.editions`
 
-   - `docs/documentation/_data/editions-addition.json` - the data from the file is merged into the data from the `/editions.yaml` file. 
-   - Each edition data can include both filters - `excludeModules` and `includeModules`. In this case, the module will be added to edition if it its name is in the `includeModules` and does not in the `excludeModules`. 
+  - `docs/documentation/_data/modules/editions-addition.json` - the data from the file is merged with the data from the `/editions.yaml` file. 
+  - Each edition in the file can include both filters - `excludeModules` and `includeModules`. In this case, the module will be added to edition if its name is in the `includeModules` and does not in the `excludeModules`.
+  - `docs/documentation/_data/modules-addition.json` - 
+  
 
   ```json
   {
@@ -487,4 +489,4 @@ Some data is stored in the `_data` directory of a Jekyll project, but some data 
       ]
     }
   }
-  ```  
+  ```

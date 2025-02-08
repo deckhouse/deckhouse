@@ -1,3 +1,4 @@
+require_relative "utils"
 
 module Jekyll
   module CustomFilters
@@ -18,17 +19,7 @@ module Jekyll
     STRIP_HTML_TAGS = /<.*?>/m
 
     def true_relative_url(path)
-        if !path.instance_of? String
-            return "unexpected argument #{path}"
-            raise "true_relative_url filter failed: unexpected argument #{path}"
-        end
-
-        # remove first slash if exist
-        page_path_relative = @context.registers[:page]["url"].gsub(%r!^/!, "")
-        page_depth = page_path_relative.scan(%r!/!).count - 1
-        prefix = ""
-        page_depth.times{ prefix = prefix + "../" }
-        prefix + path.sub(%r!^/!, "./")
+        getTrueRelativeUrl(path)
     end
 
     def endswith(text, query)

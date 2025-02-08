@@ -1,6 +1,5 @@
 # Next lines are for local build only
 entries:
-  folders:
     - title:
         en: Overview
         ru: Введение в документацию
@@ -180,6 +179,7 @@ entries:
             - title:
                 en: Amazon Web Services
                 ru: Amazon Web Services
+              moduleName: cloud-provider-aws
               folders:
                 - title:
                     en: Description
@@ -224,6 +224,7 @@ entries:
             - title:
                 en: Google Cloud Platform
                 ru: Google Cloud Platform
+              moduleName: cloud-provider-gcp
               folders:
                 - title:
                     en: Description
@@ -268,6 +269,7 @@ entries:
             - title:
                 en: Microsoft Azure
                 ru: Microsoft Azure
+              moduleName: cloud-provider-azure
               folders:
                 - title:
                     en: Description
@@ -308,7 +310,7 @@ entries:
             - title:
                 en: OpenStack
                 ru: OpenStack
-              d8Revision: ee
+              moduleName: cloud-provider-openstack
               folders:
                 - title:
                     en: Description
@@ -353,7 +355,7 @@ entries:
             - title:
                 en: Huawei Cloud
                 ru: Huawei Cloud
-              d8Revision: ee
+              moduleName: cloud-provider-huaweicloud
               folders:
                 - title:
                     en: Description
@@ -390,7 +392,7 @@ entries:
             - title:
                 en: VMware Cloud Director
                 ru: VMware Cloud Director
-              d8Revision: ee
+              moduleName: cloud-provider-vcd
               featureStatus: experimental
               folders:
                 - title:
@@ -436,7 +438,7 @@ entries:
             - title:
                 en: VMware vSphere
                 ru: VMware vSphere
-              d8Revision: ee
+              moduleName: cloud-provider-vsphere
               folders:
                 - title:
                     en: Description
@@ -481,6 +483,7 @@ entries:
             - title:
                 en: Yandex Cloud
                 ru: Yandex Cloud
+              moduleName: cloud-provider-yandex
               folders:
                 - title:
                     en: Description
@@ -525,7 +528,7 @@ entries:
             - title:
                 en: zVirt
                 ru: zVirt
-              d8Revision: ee
+              moduleName: cloud-provider-zvirt
               featureStatus: experimental
               folders:
                 - title:
@@ -567,7 +570,7 @@ entries:
             - title:
                 en: Dynamix
                 ru: Базис.DynamiX
-              d8Revision: ee
+              moduleName: cloud-provider-dynamix
               featureStatus: experimental
               folders:
                 - title:
@@ -605,6 +608,7 @@ entries:
         - title:
             en: Control plane management
             ru: Управление control plane
+          moduleName: control-plane-manager
           folders:
             - title:
                 en: Description
@@ -633,6 +637,7 @@ entries:
         - title:
             en: Node management
             ru: Управление узлами
+          moduleName: node-manager
           folders:
             - title:
                 en: Description
@@ -665,7 +670,6 @@ entries:
             - title:
                 en: node-local-dns
                 ru: node-local-dns
-              d8Revision: ee
               folders:
                 - title:
                     en: Description
@@ -855,7 +859,6 @@ entries:
             - title:
                 en: keepalived
                 ru: keepalived
-              d8Revision: ee
               folders:
                 - title:
                     en: Description
@@ -884,7 +887,6 @@ entries:
             - title:
                 en: metallb
                 ru: metallb
-              d8Revision: ee
               folders:
                 - title:
                     en: Description
@@ -942,7 +944,6 @@ entries:
             - title:
                 en: network-gateway
                 ru: network-gateway
-              d8Revision: ee
               folders:
                 - title:
                     en: Description
@@ -956,7 +957,6 @@ entries:
                 en: service-with-healthchecks
                 ru: service-with-healthchecks
               featureStatus: experimental
-              d8Revision: ee
               moduleName: service-with-healthchecks
               folders:
                 - title:
@@ -982,7 +982,6 @@ entries:
             - title:
                 en: static-routing-manager
                 ru: static-routing-manager
-              d8Revision: ee
               folders:
                 - title:
                     en: Description
@@ -1012,6 +1011,7 @@ entries:
             en: Prometheus & Grafana
             ru: Prometheus & Grafana
           url: /modules/prometheus/
+          moduleName: prometheus
           folders:
             - title:
                 en: Description
@@ -1040,6 +1040,7 @@ entries:
         - title:
             en: Monitoring your applications
             ru: Мониторинг вашего приложения
+          moduleName: monitoring-custom
           folders:
             - title:
                 en: Description
@@ -1052,6 +1053,7 @@ entries:
         - title:
             en: Network monitoring
             ru: Мониторинг сети
+          moduleName: monitoring-ping
           folders:
             - title:
                 en: Description
@@ -1068,6 +1070,7 @@ entries:
         - title:
             en: Cluster monitoring
             ru: Мониторинг кластера
+          moduleName: monitoring-kubernetes
           folders:
             - title:
                 en: Description
@@ -1080,6 +1083,7 @@ entries:
         - title:
             en: Control plane monitoring
             ru: Мониторинг control plane
+          moduleName: monitoring-kubernetes-control-plane
           folders:
             - title:
                 en: Description
@@ -1092,6 +1096,7 @@ entries:
         - title:
             en: Extended monitoring
             ru: Расширенный мониторинг
+          moduleName: extended-monitoring
           folders:
             - title:
                 en: Description
@@ -1108,6 +1113,7 @@ entries:
             - title:
                 en: Logs shipment
                 ru: Доставка логов
+              moduleName: log-shipper
               folders:
                 - title:
                     en: Description
@@ -1141,6 +1147,7 @@ entries:
             - title:
                 en: Short-term storage
                 ru: Кратковременное хранение
+              moduleName: loki
               featureStatus: experimental
               folders:
                 - title:
@@ -1178,6 +1185,7 @@ entries:
             - title:
                 en: okmeter
                 ru: okmeter
+              moduleName: okmeter
               featureStatus: proprietaryOkmeter
               folders:
                 - title:
@@ -1195,6 +1203,7 @@ entries:
             - title:
                 en: prometheus-pushgateway
                 ru: prometheus-pushgateway
+              moduleName: prometheus-pushgateway
               folders:
                 - title:
                     en: Description
@@ -1211,6 +1220,7 @@ entries:
             - title:
                 en: upmeter
                 ru: upmeter
+              moduleName: upmeter
               folders:
                 - title:
                     en: Description
@@ -1243,6 +1253,7 @@ entries:
         - title:
             en: Priority classes
             ru: Priority classes
+          moduleName: priority-class
           folders:
             - title:
                 en: Description
@@ -1255,6 +1266,7 @@ entries:
         - title:
             en: Scaling by any metric
             ru: Масштабирование по метрикам
+          moduleName: prometheus-metrics-adapter
           folders:
             - title:
                 en: Description
@@ -1279,6 +1291,7 @@ entries:
         - title:
             en: Vertical Pod autoscaler
             ru: Вертикальное масштабирование
+          moduleName: vertical-pod-autoscaler
           folders:
             - title:
                 en: Description
@@ -1311,6 +1324,7 @@ entries:
             - title:
                 en: descheduler
                 ru: descheduler
+              moduleName: descheduler
               featureStatus: experimental
               folders:
                 - title:
@@ -1336,6 +1350,7 @@ entries:
             - title:
                 en: flow-schema
                 ru: flow-schema
+              moduleName: flow-schema
               folders:
                 - title:
                     en: Description
@@ -1352,6 +1367,7 @@ entries:
             - title:
                 en: pod-reloader
                 ru: pod-reloader
+              moduleName: pod-reloader
               folders:
                 - title:
                     en: Description
@@ -1372,6 +1388,7 @@ entries:
         - title:
             en: User authentication
             ru: User authentication
+          moduleName: user-authn
           folders:
             - title:
                 en: Description
@@ -1400,6 +1417,7 @@ entries:
         - title:
             en: User authorization
             ru: User authorization
+          moduleName: user-authz
           folders:
             - title:
                 en: Description
@@ -1453,6 +1471,7 @@ entries:
         - title:
             en: Admission Policy
             ru: Политики безопасности
+          moduleName: admission-policy-engine
           folders:
             - title:
                 en: Description
@@ -1482,7 +1501,6 @@ entries:
             en: Audit
             ru: Аудит
           moduleName: runtime-audit-engine
-          d8Revision: ee
           featureStatus: experimental
           folders:
             - title:
@@ -1520,6 +1538,7 @@ entries:
             - title:
                 en: cert-manager
                 ru: cert-manager
+              moduleName: cert-manager
               folders:
                 - title:
                     en: Description
@@ -1548,6 +1567,7 @@ entries:
             - title:
                 en: network-policy-engine
                 ru: network-policy-engine
+              moduleName: network-policy-engine
               folders:
                 - title:
                     en: Description
@@ -1564,7 +1584,7 @@ entries:
             - title:
                 en: operator-trivy
                 ru: operator-trivy
-              d8Revision: ee
+              moduleName: operator-trivy
               featureStatus: experimental
               folders:
                 - title:
@@ -1586,6 +1606,7 @@ entries:
         - title:
             en: ceph-csi
             ru: ceph-csi
+          moduleName: ceph-csi
           featureStatus: deprecated
           folders:
             - title:
@@ -1615,6 +1636,7 @@ entries:
         - title:
             en: local-path-provisioner
             ru: local-path-provisioner
+          moduleName: local-path-provisioner
           folders:
             - title:
                 en: Description
@@ -1643,6 +1665,7 @@ entries:
         - title:
             en: snapshot-controller
             ru: snapshot-controller
+          moduleName: snapshot-controller
           folders:
             - title:
                 en: Description
@@ -1663,6 +1686,7 @@ entries:
         - title:
             en: chrony
             ru: chrony
+          moduleName: chrony
           folders:
             - title:
                 en: Description
@@ -1679,6 +1703,7 @@ entries:
         - title:
             en: namespace-configurator
             ru: namespace-configurator
+          moduleName: namespace-configurator
           folders:
             - title:
                 en: Description
