@@ -124,7 +124,8 @@
       "network-gateway",
       "operator-trivy",
       "runtime-audit-engine",
-      "static-routing-manager"
+      "static-routing-manager",
+      "virtualization"
     ],
     "includeModules": [
       "cloud-provider-vsphere",
