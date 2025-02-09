@@ -3,10 +3,6 @@
 {%- assign item_entry_class = include.item_entry_class %}
 {%- assign entry_title = '' %}
 
-{%- if entry.hot == true %}
-    {%- assign item_entry_class = item_entry_class | append: ' sidebar__item_hot' %}
-{%- endif %}
-
 {%- assign skip_item = false %}
 {%- if entry.d8Revision == 'ee' and site.d8Revision == 'CE' %}
 {%- assign skip_item = true %}

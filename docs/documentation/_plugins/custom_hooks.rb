@@ -7,28 +7,28 @@ require 'json'
 #  "module-kebab-name": "<feature_status>",
 #  ...
 # }
-def parse_module_data(input, site)
-    if input.has_key?("featureStatus")
-       featureStatus = input["featureStatus"]
-       if input.has_key?("moduleName")
-         moduleName = input["moduleName"]
-       elsif input["title"].is_a?(Hash) && input["title"].has_key?('en')
-         moduleName = input["title"]['en']
-       else
-         moduleName = input["title"]
-       end
-       if ! site.data["modulesFeatureStatus"]
-          site.data["modulesFeatureStatus"] = {}
-       end
-       site.data["modulesFeatureStatus"][moduleName] = featureStatus
-    else
-      if input.has_key?("folders")
-        input["folders"].each do |item|
-          parse_module_data(item, site)
-        end
-      end
-    end
-end
+# def parse_module_data(input, site)
+#     if input.has_key?("featureStatus")
+#        featureStatus = input["featureStatus"]
+#        if input.has_key?("moduleName")
+#          moduleName = input["moduleName"]
+#        elsif input["title"].is_a?(Hash) && input["title"].has_key?('en')
+#          moduleName = input["title"]['en']
+#        else
+#          moduleName = input["title"]
+#        end
+#        if ! site.data["modulesFeatureStatus"]
+#           site.data["modulesFeatureStatus"] = {}
+#        end
+#        site.data["modulesFeatureStatus"][moduleName] = featureStatus
+#     else
+#       if input.has_key?("folders")
+#         input["folders"].each do |item|
+#           parse_module_data(item, site)
+#         end
+#       end
+#     end
+# end
 
 ##
 Jekyll::Hooks.register :site, :pre_render do |site|
@@ -65,7 +65,7 @@ Jekyll::Hooks.register :site, :pre_render do |site|
   site.data['bundles']['bundleNames'] = bundleNames.sort
   site.data['bundles']['bundleModules'] = bundlesModules
 
-  parse_module_data(site.data["sidebars"]["main"]["entries"], site)
+  #parse_module_data(site.data["sidebars"]["main"]["entries"], site)
 
   _editionsFullList = site.data['modules']['editions-weight'].keys
   # Automatically fill editions, except for CSE, since their CSE needs to be specified explicitly.

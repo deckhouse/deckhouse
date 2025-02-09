@@ -248,7 +248,7 @@ Some data is stored in the `_data` directory of a Jekyll project, but some data 
   ```text
   {
     "<module-kebab-name>": {
-    "editionMinimumAvailable": "<EDITION>",  <-- the "smallest" edition, where module is available. It is computed from the repo folder structure.
+    "editionMinimumAvailable": "<EDITION>",  <-- the "smallest" edition according to the edition weight (_data/modules/editions-weight.yml), where module is available. It is computed from the module folder of the repo (_tools/modules_list.sh), can be specified in the `_data/modules/modules-addition.json`. **Don't use it in logic.** Use editions array instead.
     "editions": [],  <-- list of editions, where the module is available with restrictions or without restrictions
     "external": "true|false", <-- true if the module installs from the modulesource
     "path": "modules/<module-kebab-name>/",  <-- path to module documentation on the site (on null)
