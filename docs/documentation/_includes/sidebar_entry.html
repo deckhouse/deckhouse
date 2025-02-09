@@ -5,6 +5,7 @@
 {%- assign entry_title = '' %}
 {%- assign skip_item = false %}
 {%- assign external_url = '' %}
+{%- assign avail_in_commercial_editions_only = false %}
 
 {%- if include.not_avail_in_this_edition %}
   {% assign not_avail_in_this_edition = include.not_avail_in_this_edition %}
@@ -26,6 +27,9 @@
 {%- if site.data.modules.all[module_name] %}
   {%- unless site.data.modules.all[module_name].editions contains doc_edition %}
     {%- assign not_avail_in_this_edition = true %}
+  {%- endunless %}
+  {%- unless site.data.modules.all[module_name].editions contains 'ce' %}
+    {%- assign avail_in_commercial_editions_only = true %}
   {%- endunless %}
 {%- endif %}
 {%- endunless %}
@@ -57,7 +61,7 @@
 <li class="{{ folder_entry_class }}">
     <a href="#">
       <span class="sidebar__submenu-title">{{ entry.title[page.lang] }}</span>
-    {%- if entry.featureStatus %}<span class="sidebar__badge sidebar__badge_{{ entry.featureStatus }}" title="{{ site.data.i18n.features[entry.featureStatus][page.lang] | lstrip | strip_html | regex_replace: '.$', '' }}">
+    {%- if entry.featureStatus %}<span class="sidebar__badge sidebar__badge_{{ entry.featureStatus }}" title="{{ site.data.i18n.features[entry.featureStatus][page.lang] | lstrip | strip_html | regex_replace: '\.$', '' }}">
         {%- if entry.featureStatus == "experimental" %}
           Exp
         {%- elsif entry.featureStatus == "deprecated" %}
@@ -71,12 +75,23 @@
         {%- endif %}
       </span>
     {%- endif %}
-    {%- if entry.d8Revision and entry.d8Revision != "ce" %}<span class="sidebar__badge sidebar__badge_{{ entry.d8Revision }}" title="{{ site.data.i18n.features[entry.d8Revision][page.lang] | strip_html | regex_replace: '.$', '' }}">&#8381;</span>
+    site.mode {{site.mode}},not_avail_in_this_edition-{{not_avail_in_this_edition}},
+    {%- if site.mode != 'module' and avail_in_commercial_editions_only %}1{% assign show_currency_badge=true %}{%endif%}
+    {%- if doc_edition == 'ce' and avail_in_commercial_editions_only %}2{% assign show_currency_badge=true %}{%endif%}
+    {%- if site.mode == 'module' and not_avail_in_this_edition %}3{% assign show_currency_badge=true %}{%endif%}
+    {%- if show_currency_badge %}
+    <span class="sidebar__badge sidebar__badge_commercial"
+      title="{%- if site.mode == 'module' and not_avail_in_this_edition %}
+               {{- site.data.i18n.features['notAvailableInThisEdition'][page.lang] | strip_html | regex_replace: '\.$', '' }}
+             {%- else %}
+               {{- site.data.i18n.features['commercial'][page.lang] | strip_html | regex_replace: '\.$', '' }}
+             {%- endif -%}"
+      >{{ site.data.i18n.features['currency_sign'][page.lang] }}</span>
     {%- endif %}
     </a>
     <ul class="sidebar__submenu">
-        {%- for entry in entry.folders %}
-        {%- include sidebar_entry.html entry=entry folder_entry_class="sidebar__submenu-item sidebar__submenu-item_parent" item_entry_class="sidebar__submenu-item" not_avail_in_this_edition=not_avail_in_this_edition %}
+        {%- for entry_folder_item in entry.folders %}
+        {%- include sidebar_entry.html entry=entry_folder_item folder_entry_class="sidebar__submenu-item sidebar__submenu-item_parent" item_entry_class="sidebar__submenu-item" not_avail_in_this_edition=not_avail_in_this_edition %}
         {%- endfor %}
     </ul>
 </li>

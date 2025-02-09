@@ -267,6 +267,9 @@ comparison:
     ru: "Есть ограничения  функциональности"
 
 features:
+  currency_sign:
+    en: "&#36;"
+    ru: "&#8381;"
   experimental:
     en: The functionality of the module might significantly change. Compatibility with future versions is not guaranteed.
     ru: Функциональность модуля может сильно измениться. Совместимость с будущими версиями не гарантируется
@@ -285,3 +288,9 @@ features:
   ee:
     en: This feature is available in Enterprise Edition only.
     ru: Доступно только в Enterprise Edition.
+  commercial:
+    en: Available in commercial editions.
+    ru: Доступно в коммерческих редакциях.
+  notAvailableInThisEdition:
+    en: Available in other commercial editions.
+    ru: Доступно в других коммерческих редакциях.
