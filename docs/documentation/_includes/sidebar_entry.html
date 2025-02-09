@@ -1,9 +1,22 @@
 {%- assign entry = include.entry %}
+{%- assign doc_edition = site.d8Revision | downcase %}
 {%- assign folder_entry_class = include.folder_entry_class %}
 {%- assign item_entry_class = include.item_entry_class %}
 {%- assign entry_title = '' %}
 
+{%- if entry.moduleName %}
+  {%- assign module_name = entry.moduleName %}
+{%- else %}
+  {%- assign module_name = entry.title[page.lang] %}
+{%- endif %}
+
 {%- assign skip_item = false %}
+{%- if site.data.modules.all.editions contains doc_edition %}
+{{ module_name }} in {{doc_edition}}
+{%- else %}
+  {%- assign skip_item = true %}
+{%- endif %}
+
 {%- if entry.d8Revision == 'ee' and site.d8Revision == 'CE' %}
 {%- assign skip_item = true %}
 {%- elsif entry.d8Revision == 'fe' and site.d8Revision == 'CE' %}
@@ -15,6 +28,9 @@
 {%- unless entry.title[page.lang] %}
   {%- assign skip_item = true %}
 {%- endunless %}
+
+<!--  REMOVE -->
+{% if skip_item %}SKIPPED:{{ entry.title[page.lang] }}{% endif %}
 
 {%- unless skip_item %}
 

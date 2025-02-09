@@ -312,7 +312,6 @@ entries:
                 en: OpenStack
                 ru: OpenStack
               moduleName: cloud-provider-openstack
-              d8Revision: ee
               folders:
                 - title:
                     en: Description
@@ -358,7 +357,6 @@ entries:
                 en: Huawei Cloud
                 ru: Huawei Cloud
               moduleName: cloud-provider-huaweicloud
-              d8Revision: ee
               folders:
                 - title:
                     en: Description
@@ -396,7 +394,6 @@ entries:
                 en: VMware Cloud Director
                 ru: VMware Cloud Director
               moduleName: cloud-provider-vcd
-              d8Revision: ee
               featureStatus: experimental
               folders:
                 - title:
@@ -442,7 +439,6 @@ entries:
             - title:
                 en: VMware vSphere
                 ru: VMware vSphere
-              d8Revision: ee
               moduleName: cloud-provider-vsphere
               folders:
                 - title:
@@ -534,7 +530,6 @@ entries:
                 en: zVirt
                 ru: zVirt
               moduleName: cloud-provider-zvirt
-              d8Revision: ee
               featureStatus: experimental
               folders:
                 - title:
@@ -577,7 +572,6 @@ entries:
                 en: Dynamix
                 ru: Базис.DynamiX
               moduleName: cloud-provider-dynamix
-              d8Revision: ee
               featureStatus: experimental
               folders:
                 - title:
@@ -677,7 +671,6 @@ entries:
             - title:
                 en: node-local-dns
                 ru: node-local-dns
-              d8Revision: ee
               folders:
                 - title:
                     en: Description
@@ -867,7 +860,6 @@ entries:
             - title:
                 en: keepalived
                 ru: keepalived
-              d8Revision: ee
               folders:
                 - title:
                     en: Description
@@ -896,7 +888,6 @@ entries:
             - title:
                 en: metallb
                 ru: metallb
-              d8Revision: ee
               folders:
                 - title:
                     en: Description
@@ -954,7 +945,6 @@ entries:
             - title:
                 en: network-gateway
                 ru: network-gateway
-              d8Revision: ee
               folders:
                 - title:
                     en: Description
@@ -968,7 +958,6 @@ entries:
                 en: service-with-healthchecks
                 ru: service-with-healthchecks
               featureStatus: experimental
-              d8Revision: ee
               moduleName: service-with-healthchecks
               folders:
                 - title:
@@ -994,7 +983,6 @@ entries:
             - title:
                 en: static-routing-manager
                 ru: static-routing-manager
-              d8Revision: ee
               folders:
                 - title:
                     en: Description
@@ -1514,7 +1502,6 @@ entries:
             en: Audit
             ru: Аудит
           moduleName: runtime-audit-engine
-          d8Revision: ee
           featureStatus: experimental
           folders:
             - title:
@@ -1599,7 +1586,6 @@ entries:
                 en: operator-trivy
                 ru: operator-trivy
               moduleName: operator-trivy
-              d8Revision: ee
               featureStatus: experimental
               folders:
                 - title:
