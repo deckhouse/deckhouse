@@ -3,34 +3,32 @@
 {%- assign folder_entry_class = include.folder_entry_class %}
 {%- assign item_entry_class = include.item_entry_class %}
 {%- assign entry_title = '' %}
-
-{%- if entry.moduleName %}
-  {%- assign module_name = entry.moduleName %}
-{%- else %}
-  {%- assign module_name = entry.title[page.lang] %}
-{%- endif %}
-
 {%- assign skip_item = false %}
-{%- if site.data.modules.all.editions contains doc_edition %}
-{{ module_name }} in {{doc_edition}}
-{%- else %}
-  {%- assign skip_item = true %}
-{%- endif %}
+{%- assign external_url = '' %}
 
-{%- if entry.d8Revision == 'ee' and site.d8Revision == 'CE' %}
-{%- assign skip_item = true %}
-{%- elsif entry.d8Revision == 'fe' and site.d8Revision == 'CE' %}
-{%- assign skip_item = true %}
-{%- elsif entry.d8Revision == 'fe' and site.d8Revision == 'EE' %}
-{%- assign skip_item = true %}
+{%- if include.not_avail_in_this_edition %}
+  {% assign not_avail_in_this_edition = include.not_avail_in_this_edition %}
+{%- else %}
+  {%- assign not_avail_in_this_edition = false %}
 {%- endif %}
 
 {%- unless entry.title[page.lang] %}
   {%- assign skip_item = true %}
 {%- endunless %}
 
-<!--  REMOVE -->
-{% if skip_item %}SKIPPED:{{ entry.title[page.lang] }}{% endif %}
+{%- unless skip_item %}
+{%- if entry.moduleName %}
+  {%- assign module_name = entry.moduleName %}
+{%- else %}
+  {%- assign module_name = entry.title[page.lang] %}
+{%- endif %}
+
+{%- if site.data.modules.all[module_name] %}
+  {%- unless site.data.modules.all[module_name].editions contains doc_edition %}
+    {%- assign not_avail_in_this_edition = true %}
+  {%- endunless %}
+{%- endif %}
+{%- endunless %}
 
 {%- unless skip_item %}
 
@@ -39,7 +37,7 @@
 {%- assign page_url_parts = page.url | split: '/' -%}
 {%- assign page_url_last_parts = page_url_parts | last -%}
 {%- if page_url_last_parts == "index.html" -%}
-{%- assign length = page_url_parts.size | minus: 2 -%}
+    {%- assign length = page_url_parts.size | minus: 2 -%}
     {%- for i in (0..length) %}
         {%- unless page_url_parts[i].title %}
         {%- continue %}
@@ -50,6 +48,11 @@
     {%- assign page_url = page.url %}
 {%- endif %}
 
+{%- if not_avail_in_this_edition and site.mode == 'module' %}
+    {%- unless entry.external_url %}
+       {%- assign external_url = entry.url | prepend: site.canonical_url_prefix_documentation | prepend: site.urls[page.lang] %}
+    {%- endunless %}
+{%- endif %}
 {%- if entry.folders %}
 <li class="{{ folder_entry_class }}">
     <a href="#">
@@ -73,12 +76,14 @@
     </a>
     <ul class="sidebar__submenu">
         {%- for entry in entry.folders %}
-        {%- include sidebar_entry.html entry=entry folder_entry_class="sidebar__submenu-item sidebar__submenu-item_parent" item_entry_class="sidebar__submenu-item" %}
+        {%- include sidebar_entry.html entry=entry folder_entry_class="sidebar__submenu-item sidebar__submenu-item_parent" item_entry_class="sidebar__submenu-item" not_avail_in_this_edition=not_avail_in_this_edition %}
         {%- endfor %}
     </ul>
 </li>
 {%- elsif entry.external_url %}
-<li class="{{ item_entry_class }}"><a href="{{ entry.external_url }}" target="_blank">{{ entry.title[page.lang] }}</a></li>
+<li class="{{ item_entry_class }}"><a href="{{ entry.external_url }}" target="_blank">{{ entry.title[page.lang] }} ↗</a></li>
+{%- elsif external_url.size > 0 %}
+<li class="{{ item_entry_class }}"><a href="{{ external_url }}" target="_blank">{{ entry.title[page.lang] }} ↗</a></li>
 {%- elsif page_url == entry.url or page_url == entry_with_lang %}
 <li class="{{ item_entry_class }} active"><a href="{{ entry.url | true_relative_url }}">{{ entry.title[page.lang] }}</a></li>
 {%- else %}
