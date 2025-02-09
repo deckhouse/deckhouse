@@ -1,6 +1,26 @@
 {
+  "ce": {
+    "name": "CE",
+    "title": "Community Edition"
+  },
+  "be": {
+    "name": "BE",
+    "title": "Basic Edition"
+  },
+  "se": {
+    "name": "SE",
+    "title": "Standard Edition"
+  },
+  "ee": {
+    "name": "EE",
+    "title": "Enterprise Edition"
+  },
+  "fe": {
+    "name": "FE"
+  },
   "cse-lite": {
-    "name": "CSE Lite",
+    "name": "CSE Lite (1.64)",
+    "title": "Certified Security Edition Lite (1.64)",
     "languages": [
       "ru"
     ],
@@ -37,7 +57,8 @@
     ]
   },
   "cse-pro": {
-    "name": "CSE Pro",
+    "name": "CSE Pro (1.64)",
+    "title": "Certified Security Edition Pro (1.64)",
     "languages": [
       "ru"
     ],
@@ -87,6 +108,7 @@
       "ru"
     ],
     "name": "SE+",
+    "title": "Standard Edition+",
     "excludeModules": [
       "cloud-provider-dynamix",
       "cloud-provider-openstack",

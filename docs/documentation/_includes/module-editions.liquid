@@ -6,7 +6,7 @@
 Available in:
 {%-  for edition in editions %}
 {%- if edition == "fe" %}{%  continue %}{% endif %}
- {{ edition }}
+ {{ site.data.modules.editions-addition[edition].name }}
  {%- if editionRestrictions contains edition %}{{ site.i18n.comparison['module_has_restrictions'][page.lang] }}{%  endif %}
 {%- unless forloop.last %}, {% endunless %}
 {%-  endfor %}

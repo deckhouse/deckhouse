@@ -76,6 +76,8 @@
       </span>
     {%- endif %}
     site.mode {{site.mode}},not_avail_in_this_edition-{{not_avail_in_this_edition}},
+    avail_in_commercial_editions_only-{{avail_in_commercial_editions_only}}
+    {% assign show_currency_badge=false %}
     {%- if site.mode != 'module' and avail_in_commercial_editions_only %}1{% assign show_currency_badge=true %}{%endif%}
     {%- if doc_edition == 'ce' and avail_in_commercial_editions_only %}2{% assign show_currency_badge=true %}{%endif%}
     {%- if site.mode == 'module' and not_avail_in_this_edition %}3{% assign show_currency_badge=true %}{%endif%}
@@ -90,8 +92,8 @@
     {%- endif %}
     </a>
     <ul class="sidebar__submenu">
-        {%- for entry_folder_item in entry.folders %}
-        {%- include sidebar_entry.html entry=entry_folder_item folder_entry_class="sidebar__submenu-item sidebar__submenu-item_parent" item_entry_class="sidebar__submenu-item" not_avail_in_this_edition=not_avail_in_this_edition %}
+        {%- for entry in entry.folders %}
+        {%- include sidebar_entry.html entry=entry folder_entry_class="sidebar__submenu-item sidebar__submenu-item_parent" item_entry_class="sidebar__submenu-item" not_avail_in_this_edition=not_avail_in_this_edition %}
         {%- endfor %}
     </ul>
 </li>
