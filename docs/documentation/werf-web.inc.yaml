@@ -145,7 +145,7 @@ shell:
         {{- if eq .Mode "development" }}
         JEKYLL_ENV=development jekyll build -d /app/_site/ --config _config.yml,/tmp/_config_additional.yml --profile -t
         {{- else }}
-        JEKYLL_ENV=production jekyll build -d /app/_site/ --config _config.yml,/tmp/_config_additional.yml
+        JEKYLL_ENV=production jekyll build -d /app/_site/ --config _config.yml,/tmp/_config_additional.yml -t
         {{- end }}
 {{ else }}
         JEKYLL_ENV=production jekyll build -d /app/_site/documentation/ --config _config.yml,/tmp/_config_additional.yml
