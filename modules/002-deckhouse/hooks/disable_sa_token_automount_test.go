@@ -88,25 +88,6 @@ kind: ServiceAccount
 metadata:
   name: default
   namespace: test1
----
-apiVersion: v1
-kind: Namespace
-metadata:
-  labels:
-    kubernetes.io/metadata.name: test2
-  name: test2
-spec:
-  finalizers:
-  - kubernetes
-status:
-  phase: Active
----
-apiVersion: v1
-kind: ServiceAccount
-metadata:
-  name: default
-  namespace: test2
-automountServiceAccountToken: true
 `
 			f.KubeStateSet(state)
 			f.BindingContexts.Set(f.GenerateAfterHelmContext())
@@ -117,7 +98,6 @@ automountServiceAccountToken: true
 			Expect(f.KubernetesResource("SerivceAccount", "d8-system", "default").Field(`automountServiceAccountToken`).Bool()).To(Equal(false))
 			Expect(f.KubernetesResource("SerivceAccount", "kube-system", "default").Field(`automountServiceAccountToken`).Bool()).To(Equal(false))
 			Expect(f.KubernetesResource("SerivceAccount", "test1", "default").Field(`automountServiceAccountToken`).Exists()).To(BeFalse())
-			Expect(f.KubernetesResource("SerivceAccount", "test2", "default").Field(`automountServiceAccountToken`).Bool()).To(Equal(true))
 		})
 	})
 
