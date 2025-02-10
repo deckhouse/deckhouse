@@ -38,10 +38,10 @@ function findSectionInMarkdown(tokens, header, searchField, searchValue) {
   // looking for the first token after the header with the specified field and value
   for (let i = headerIndex + 1; i < tokens.length; i++) {
     const token = tokens[i];
-    
+
     // stop the search at the next title
     if (token.type === 'heading') break;
-    
+
     if (token[searchField] === searchValue) {
       return token.text;
     }

@@ -625,7 +625,7 @@ jobs:
             try {
               const prBody = await getPR(context.repo.owner, context.repo.repo, context.issue.number);
               const mdTokens = parseMarkdown(prBody);
-              const changelogEntries = findSectionInMarkdown(mdTokens, 'Changelog entries');
+              const changelogEntries = findSectionInMarkdown(mdTokens, 'Changelog entries', 'lang', 'changes');
               validatePullRequestChangelog(changelogEntries, allowedModules);
             } catch(error) {
               throw(error)
