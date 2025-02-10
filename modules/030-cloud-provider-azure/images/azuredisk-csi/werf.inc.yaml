@@ -15,8 +15,9 @@ import:
   before: install
   includePaths:
   - '**/*'
-docker:
-  ENTRYPOINT: ["/azurediskplugin"]
+imageSpec:
+  config:
+    entrypoint: ["/azurediskplugin"]
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
 final: false

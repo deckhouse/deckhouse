@@ -65,8 +65,7 @@ import:
     add: /src/memcached_exporter
     to: /usr/bin/memcached_exporter
     before: install
-docker:
-  EXPOSE:
-    - "9150"
-  ENTRYPOINT:
-    - "/usr/bin/memcached_exporter"
+imageSpec:
+  config:
+    entrypoint: ["/usr/bin/memcached_exporter"]
+    expose: ["9150"]

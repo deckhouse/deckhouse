@@ -23,8 +23,9 @@ import:
   before: install
   includePaths:
   - '**/*'
-docker:
-  ENTRYPOINT: ["/bin/cinder-csi-plugin"]
+imageSpec:
+  config:
+    entrypoint: ["/bin/cinder-csi-plugin"]
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
 final: false

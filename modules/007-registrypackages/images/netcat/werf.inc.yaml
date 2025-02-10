@@ -26,12 +26,9 @@ import:
   - install
   - uninstall
   before: setup
-docker:
-  LABEL:
-    distro: all
-    version: all
-    nc: {{ $version }}
-  USER: 64535
+imageSpec:
+  config:
+    labels: {"distro": "all", "version": "all", "nc": "{{ $version }}" }
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
 final: false

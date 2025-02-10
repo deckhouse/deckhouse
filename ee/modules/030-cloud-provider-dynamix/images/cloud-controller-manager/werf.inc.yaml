@@ -6,8 +6,9 @@ import:
     add: /dynamix-cloud-controller-manager
     to: /dynamix-cloud-controller-manager
     before: setup
-docker:
-  ENTRYPOINT: ["/dynamix-cloud-controller-manager"]
+imageSpec:
+  config:
+    entrypoint: ["/dynamix-cloud-controller-manager"]
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
 final: false

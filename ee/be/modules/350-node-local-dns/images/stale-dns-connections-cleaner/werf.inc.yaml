@@ -51,5 +51,6 @@ import:
   add: /src/stale-dns-connections-cleaner
   to: /stale-dns-connections-cleaner
   before: install
-docker:
-  ENTRYPOINT: ["/stale-dns-connections-cleaner"]
+imageSpec:
+  config:
+    entrypoint: ["/stale-dns-connections-cleaner"]

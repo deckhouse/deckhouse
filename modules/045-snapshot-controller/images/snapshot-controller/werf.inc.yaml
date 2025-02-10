@@ -1,14 +1,14 @@
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: common/distroless
-fromCacheVersion: 2025011301
 import:
   - image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
     add: /snapshot-controller
     to: /snapshot-controller
     before: setup
-docker:
-  ENTRYPOINT: ["/snapshot-controller"]
+imageSpec:
+  config:
+    entrypoint: ["/snapshot-controller"]
 
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact

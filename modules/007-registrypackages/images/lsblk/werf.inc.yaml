@@ -12,11 +12,9 @@ import:
   - install
   - uninstall
   before: setup
-docker:
-  LABEL:
-    distro: all
-    version: all
-    lsblk: {{ $version }}
+imageSpec:
+  config:
+    labels: {"distro": "all", "version": "all", "lsblk": "{{ $version }}" }
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
 final: false

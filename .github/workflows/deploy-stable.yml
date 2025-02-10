@@ -41,7 +41,7 @@ on:
 env:
 
   # <template: werf_envs>
-  WERF_CHANNEL: "ea"
+  WERF_CHANNEL: "alpha"
   WERF_ENV: "FE"
   TEST_TIMEOUT: "15m"
   # Use fixed string 'sys/deckhouse-oss' for repo name. ${CI_PROJECT_PATH} is not available here in GitHub.

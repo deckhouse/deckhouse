@@ -14,9 +14,10 @@ import:
   add: /src/istio/manifests
   to: /var/lib/istio/manifests
   after: setup
-docker:
-  USER: "1337:1337"
-  ENTRYPOINT: ["/usr/local/bin/operator"]
+imageSpec:
+  config:
+    user: "1337:1337"
+    entrypoint: ["/usr/local/bin/operator"]
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
 final: false

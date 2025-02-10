@@ -24,9 +24,10 @@ import:
   owner: 1337
   group: 1337
   after: setup
-docker:
-  USER: 1337
-  ENTRYPOINT: ["/usr/local/bin/pilot-discovery"]
+imageSpec:
+  config:
+    user: "1337:1337"
+    entrypoint: ["/usr/local/bin/pilot-discovery"]
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
 from: {{ .Images.BASE_GOLANG_23_ALPINE }}

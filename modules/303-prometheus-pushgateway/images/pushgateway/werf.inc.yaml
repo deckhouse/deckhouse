@@ -52,9 +52,9 @@ import:
   add: /empty
   to: /pushgateway
   before: setup
-docker:
-  EXPOSE:
-  - "9091"
-  WORKDIR: "/pushgateway"
-  ENTRYPOINT:
-  - "/bin/pushgateway"
+imageSpec:
+  config:
+    entrypoint: ["/bin/pushgateway"]
+    expose: ["9091"]
+    workingDir: "/pushgateway"
+

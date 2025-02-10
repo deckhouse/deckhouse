@@ -9,8 +9,9 @@ import:
     add: /src/gcp-cloud-controller-manager
     to: /usr/local/bin/cloud-controller-manager
     before: setup
-docker:
-  ENTRYPOINT: ["/usr/local/bin/cloud-controller-manager"]
+imageSpec:
+  config:
+    entrypoint: ["/usr/local/bin/cloud-controller-manager"]
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
 final: false
