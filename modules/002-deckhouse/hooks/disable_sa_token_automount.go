@@ -121,7 +121,7 @@ func disableDefaultSATokenAutomount(input *go_hook.HookInput, dc dependency.Cont
 	}
 
 	for _, s := range sa {
-		if s.(SA).AutomountServiceAccountToken {
+		if s.(*SA).AutomountServiceAccountToken {
 			err = updateSA(k8, s.(*SA))
 			if err != nil {
 				return fmt.Errorf("can't update ServiceAccount: %v", err)
