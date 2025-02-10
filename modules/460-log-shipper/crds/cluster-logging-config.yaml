@@ -72,26 +72,12 @@ spec:
                       format: duration
                       pattern: '^([0-9]+h([0-9]+m)?|[0-9]+m)$'
                     namespaceSelector:
-                      oneOf:
-                      - required: [matchNames]
-                      - required: [excludeNames]
-                      - required: [labelSelector]
                       type: object
                       description: |
                         Specifies the namespace selector to filter Pods with.
 
-                        The filter can use one of the three available ways to set the condition (parameters `matchNames`, `excludeNames`, `labelSelector`)
+                        The filter uses the `labelSelector` parameter to determine the namespaces from which logs should be collected.
                       properties:
-                        matchNames:
-                          type: array
-                          description: A list of namespaces from whose pods logs should be collected.
-                          items:
-                            type: string
-                        excludeNames:
-                          type: array
-                          description: A list of namespaces, from the pods of which you need to exclude the collection of logs, but collect from the rest.
-                          items:
-                            type: string
                         labelSelector:
                           type: object
                           description: |
@@ -99,8 +85,8 @@ spec:
 
                             You can get more into [here](https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/).
                           anyOf:
-                          - required: [matchLabels]
-                          - required: [matchExpressions]
+                            - required: [matchLabels]
+                            - required: [matchExpressions]
                           properties:
                             matchLabels:
                               type: object
@@ -112,11 +98,11 @@ spec:
                               type: array
                               description: List of label expressions that a namespace should have to qualify for the filter condition.
                               x-doc-examples:
-                              - - key: tier
-                                  operator: In
-                                  values:
-                                  - production
-                                  - staging
+                                - - key: tier
+                                    operator: In
+                                    values:
+                                      - production
+                                      - staging
                               items:
                                 type: object
                                 required:
