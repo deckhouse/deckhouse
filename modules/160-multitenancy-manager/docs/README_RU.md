@@ -25,7 +25,7 @@ description: Мультитенантность и проекты в Kubernetes.
 Функционал проектов позволяет решить эти проблемы.
 
 {% alert level="warning" %}
-Модуль `secret-copier` [не может использоваться совместно](https://deckhouse.ru/products/kubernetes-platform/documentation/latest/modules/secret-copier/) с `multitenancy-manager`.
+Модуль `secret-copier` [не может использоваться совместно](../secret-copier/) с модулем `multitenancy-manager`.
 {% endalert %}
 
 ## Преимущества модуля
