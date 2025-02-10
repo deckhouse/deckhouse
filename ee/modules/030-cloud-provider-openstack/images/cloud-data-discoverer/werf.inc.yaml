@@ -7,7 +7,8 @@ import:
   to: /discoverer
   before: setup
 imageSpec:
-  entrypoint: ["/discoverer"]
+  config:
+    entrypoint: ["/discoverer"]
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 final: false
