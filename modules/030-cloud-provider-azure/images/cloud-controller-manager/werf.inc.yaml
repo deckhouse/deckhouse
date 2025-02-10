@@ -23,8 +23,9 @@ import:
     add: /lib/ld-musl-x86_64.so.1
     to: /lib/ld-musl-x86_64.so.1
     before: setup
-docker:
-  ENTRYPOINT: ["/usr/local/bin/azure-cloud-controller-manager"]
+imageSpec:
+  config:
+    entrypoint: ["/usr/local/bin/azure-cloud-controller-manager"]
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
 final: false
