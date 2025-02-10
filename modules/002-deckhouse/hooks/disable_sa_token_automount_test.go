@@ -93,7 +93,7 @@ apiVersion: v1
 kind: Namespace
 metadata:
   labels:
-    kubernetes.io/metadata.name: test1
+    kubernetes.io/metadata.name: test2
   name: test2
 spec:
   finalizers:
