@@ -263,16 +263,16 @@ payload="{
     \"cluster_template_version_id\": \"${cluster_template_version_id}\",
     \"values\": {
         \"branch\": \"${BRANCH}\",
-        \"prefix\": \"${PREFIX}\",
+        \"prefix\": \"a${PREFIX}\",
         \"kubernetesVersion\": \"${KUBERNETES_VERSION}\",
         \"defaultCRI\": \"${CRI}\",
-        \"master_count\": ${MASTERS_COUNT},
-        \"cloud_id\": \"${CLOUD_ID}\",
-        \"folder_id\": \"${FOLDER_ID}\",
-        \"service_account_json\": ${SERVICE_ACCOUNT_JSON},
+        \"masterCount\": ${MASTERS_COUNT},
+        \"cloudId\": \"${CLOUD_ID}\",
+        \"folderId\": \"${FOLDER_ID}\",
+        \"serviceAccountJson\": ${SERVICE_ACCOUNT_JSON},
         \"sshPrivateKey\": \"${SSH_KEY}\",
         \"sshUser\": \"${ssh_user}\",
-        \"deckhouse_dockercfg\": \"${DECKHOUSE_DOCKERCFG}\"
+        \"deckhouseDockercfg\": \"${DECKHOUSE_DOCKERCFG}\"
     }
 }"
 
