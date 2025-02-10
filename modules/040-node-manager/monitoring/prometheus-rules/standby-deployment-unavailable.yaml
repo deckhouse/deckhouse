@@ -22,7 +22,7 @@
             "standby-holder-(.+)"
           )
       * on (node_group_name)
-        d8_node_group_standby{node_group_name=~".+"}
+        d8_node_group_standby{node_group_name=~".+"} > 0
     for: 5m
     labels:
       severity_level: "5"
