@@ -85,7 +85,7 @@ func applySAFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error)
 		sa.AutomountServiceAccountToken = ptr.To(true)
 	}
 
-	return SA{
+	return &SA{
 		Name:                         sa.Name,
 		Namespace:                    sa.Namespace,
 		AutomountServiceAccountToken: *sa.AutomountServiceAccountToken,
@@ -122,7 +122,6 @@ func disableDefaultSATokenAutomount(input *go_hook.HookInput, dc dependency.Cont
 
 	for _, s := range sa {
 		if s.(SA).AutomountServiceAccountToken {
-			fmt.Println(s)
 			err = updateSA(k8, s.(*SA))
 			if err != nil {
 				return fmt.Errorf("can't update ServiceAccount: %v", err)
