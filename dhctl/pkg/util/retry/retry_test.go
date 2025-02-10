@@ -15,7 +15,6 @@
 package retry
 
 import (
-	"context"
 	"errors"
 	"testing"
 	"time"
@@ -67,16 +66,4 @@ func TestLoop_Run_BreakIfPredicate(t *testing.T) {
 	})
 	assert.Error(t, err)
 	assert.Equal(t, "Timeout while \"test loop\": last error: break error", err.Error())
-}
-
-func TestLoop_Run_ContextTimeout(t *testing.T) {
-	log.InitLogger("json")
-	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
-	defer cancel()
-	loop := NewLoop("test loop", 3, 2*time.Second).WithContext(ctx)
-	err := loop.Run(func() error {
-		return errors.New("error")
-	})
-	assert.Error(t, err)
-	assert.Equal(t, "ctx.Done() while \"test loop\": last error: context deadline exceeded", err.Error())
 }

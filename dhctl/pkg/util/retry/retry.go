@@ -15,7 +15,6 @@
 package retry
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"time"
@@ -54,7 +53,6 @@ type Loop struct {
 	logger           log.Logger
 	interruptable    bool
 	showError        bool
-	ctx              context.Context
 }
 
 // NewLoop create Loop with features:
@@ -93,11 +91,6 @@ func (l *Loop) BreakIf(pred BreakPredicate) *Loop {
 
 func (l *Loop) WithInterruptable(flag bool) *Loop {
 	l.interruptable = flag
-	return l
-}
-
-func (l *Loop) WithContext(ctx context.Context) *Loop {
-	l.ctx = ctx
 	return l
 }
 
@@ -141,21 +134,13 @@ func (l *Loop) Run(task func() error) error {
 				errorMsg = "\tError: %v\n\n"
 			}
 			l.logger.LogInfoF(errorMsg, err)
-			if ! l.interruptable {
+			if !l.interruptable {
 				l.logger.LogDebugF(errorMsg, err)
 			}
 
 			// Do not waitTime after the last iteration.
 			if i < l.attemptsQuantity {
-				if l.ctx != nil {
-					select {
-					case <-l.ctx.Done():
-						return fmt.Errorf("ctx.Done() while %q: last error: %v", l.name, l.ctx.Err())
-					case <-time.After(l.waitTime):
-					}
-				} else {
-					time.Sleep(l.waitTime)
-				}
+				time.Sleep(l.waitTime)
 			}
 		}
 
