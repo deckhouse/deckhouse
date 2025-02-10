@@ -56,6 +56,10 @@ spec:
     - containerName: istio-proxy
       mode: "Off"
       {{- end }}
+      {{- if $geoIP2.maxmindLicenseKey }}
+    - containerName: geoip-updater
+      mode: "Off"
+      {{- end }}
     {{- else }}
   updatePolicy:
     updateMode: "Off"
@@ -380,6 +384,15 @@ spec:
             memory: 100Mi
             cpu: 50m
             {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
+        livenessProbe:
+          failureThreshold: 10
+          httpGet:
+            path: /healthz
+            port: 8789
+            scheme: HTTP
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          timeoutSeconds: 5
         volumeMounts:
           - mountPath: /chroot/etc/ingress-controller/geoip/
             name: geoip-data

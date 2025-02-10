@@ -28,7 +28,7 @@ type Server struct {
 
 func NewHealthcheckServer(addr string) *Server {
 	mux := http.NewServeMux()
-	mux.HandleFunc("/health", Health)
+	mux.HandleFunc("/healthz", Health)
 
 	server := &http.Server{
 		Addr:    addr,

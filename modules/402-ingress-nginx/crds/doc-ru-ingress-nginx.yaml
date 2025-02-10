@@ -210,6 +210,7 @@ spec:
                     description: |
                       Лицензионный ключ для скачивания базы данных GeoIP2.
 
+                      Указание ключа в конфигурации включает скачивание базы GeoIP2 при каждом старте контроллера. [Подробнее](https://blog.maxmind.com/2019/12/18/significant-changes-to-accessing-and-using-geolite2-databases/) о получении ключа.
                   maxmindEditionIDs:
                     description: |
                       Список ревизий баз данных, которые будут скачаны при старте.
@@ -610,11 +611,11 @@ spec:
                     description: |
                       Лицензионный ключ для скачивания базы данных GeoIP2.
 
+                      Указание ключа в конфигурации включает скачивание базы GeoIP2 при каждом старте контроллера. [Подробнее](https://blog.maxmind.com/2019/12/18/significant-changes-to-accessing-and-using-geolite2-databases/) о получении ключа.
                   maxmindAccountID:
                     description: |
                       Идентификатор аккаунта для скачивания базы данных GeoIP2.
 
-                      Указание ключа в конфигурации включает скачивание базы GeoIP2 при каждом старте контроллера. [Подробнее](https://blog.maxmind.com/2019/12/18/significant-changes-to-accessing-and-using-geolite2-databases/) о получении ключа.
                   maxmindEditionIDs:
                     description: |
                       Список ревизий баз данных, которые будут скачаны при старте.
