@@ -320,6 +320,9 @@ payload="{
     if [ "in_sync" != "$cluster_status" ]; then
       return 0
     fi
+    if [ "creation_failed" != "$cluster_status" ]; then
+      return 1
+    fi
     if [[ $i -lt $testRunAttempts ]]; then
       >&2 echo -n "  Cluster not ready. Attempt $i/$testRunAttempts failed. Sleep for $sleep seconds..."
       sleep $sleep
