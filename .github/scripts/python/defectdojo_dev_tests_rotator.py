@@ -32,7 +32,7 @@ current_date=datetime.now().date()
 
 def get_old_tests():
     engage_id = requests.get(defectdojo_api_url+"engagements", headers=headers, params={"name": defectdojo_deckhouse_images_engagement}).json()["results"][0]["id"]
-    old_dev_tests = requests.get(defectdojo_api_url+"tests", headers=headers, params={"engagement": engage_id, "not_tag": "main"}).json()["results"]
+    old_dev_tests = requests.get(defectdojo_api_url+"tests", headers=headers, params={"engagement": engage_id, "limit": "10000", "not_tag": "main"}).json()["results"]
     return old_dev_tests
 
 def remove_old_tests(old_dev_tests):
