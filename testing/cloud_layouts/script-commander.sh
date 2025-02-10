@@ -148,7 +148,7 @@ function prepare_environment() {
     # shellcheck disable=SC2016
     CLOUD_ID="$(base64 -d <<< "$LAYOUT_YANDEX_CLOUD_ID")"
     FOLDER_ID="$(base64 -d <<< "$LAYOUT_YANDEX_FOLDER_ID")"
-    SERVICE_ACCOUNT_JSON="$(base64 -d <<< "$LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON")"
+    SERVICE_ACCOUNT_JSON=$LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON
     ssh_user="redos"
     cluster_template_version_id="6a47d23a-e16f-4e7a-bf57-a65f7c05e8ae"
     ;;
