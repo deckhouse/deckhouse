@@ -44,7 +44,7 @@ final: false
 shell:
   install:
   - git clone --depth 1 --branch cmd/protoc-gen-go-grpc/v1.3.0 {{ $.SOURCE_REPO }}/grpc/grpc-go.git /src/grpc-go
-  - rm -rf /src/grpc-go/.git
+  - rm -rf /src/grpc-go/.git /src/grpc-go/examples /src/grpc-go/gcp /src/grpc-go/security /src/grpc-go/stats /src/grpc-go/test
   - git clone --depth 1 --branch v1.30.0 {{ $.SOURCE_REPO }}/protocolbuffers/protobuf-go.git /src/protobuf-go
   - rm -rf /src/protobuf-go/.git
   - git clone --depth 1 --branch v1.1.0 {{ $.SOURCE_REPO }}/mitchellh/protoc-gen-go-json.git /src/protoc-gen-go-json
