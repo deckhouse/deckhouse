@@ -22,7 +22,7 @@ The configuration capabilities of `Namespace` do not fully meet modern developme
 The functionality of projects allows addressing these issues.
 
 {% alert level="warning" %}
-The `secret-copier` module [cannot be used together](https://deckhouse.io/products/kubernetes-platform/documentation/latest/modules/secret-copier/) with `multitenancy-manager` module.
+The `secret-copier` module [cannot be used together](../secret-copier/) with `multitenancy-manager` module.
 {% endalert %}
 
 ## Advantages of the module
