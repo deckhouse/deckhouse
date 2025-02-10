@@ -74,6 +74,7 @@ import:
   add: /entrypoint
   to: /entrypoint
   before: setup
-docker:
-  ENTRYPOINT: ["/tini", "--"]
-  CMD: ["/entrypoint"]
+imageSpec:
+  config:
+    entrypoint: ["/tini", "--"]
+    cmd: ["/entrypoint"]

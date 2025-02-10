@@ -10,8 +10,9 @@ import:
   add: /src/OPATH/trickster
   to: /usr/local/bin/trickster
   before: setup
-docker:
-  ENTRYPOINT: ["entrypoint"]
+imageSpec:
+  config:
+    entrypoint: ["entrypoint"]
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
 final: false

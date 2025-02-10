@@ -41,5 +41,6 @@ import:
   add: /src/exporter
   to: /exporter
   before: setup
-docker:
-  ENTRYPOINT: ["/exporter"]
+imageSpec:
+  config:
+    entrypoint: ["/exporter"]

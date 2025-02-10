@@ -31,5 +31,6 @@ import:
   add: /src/smoke-mini
   to: /smoke-mini
   before: setup
-docker:
-  ENTRYPOINT: ["/smoke-mini"]
+imageSpec:
+  config:
+    entrypoint: ["/smoke-mini"]

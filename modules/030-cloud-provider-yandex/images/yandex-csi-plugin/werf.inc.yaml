@@ -15,8 +15,9 @@ import:
   before: install
   includePaths:
   - '**/*'
-docker:
-  ENTRYPOINT: ["/bin/yandex-csi-driver"]
+imageSpec:
+  config:
+    entrypoint: ["/bin/yandex-csi-driver"]
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
 final: false

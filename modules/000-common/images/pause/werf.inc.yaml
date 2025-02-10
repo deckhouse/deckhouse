@@ -6,8 +6,9 @@ import:
   add: /pause-linux-amd64
   to: /pause
   before: setup
-docker:
-  ENTRYPOINT: ["/pause"]
+imageSpec:
+  config:
+    entrypoint: ["/pause"]
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 fromImage: common/src-artifact

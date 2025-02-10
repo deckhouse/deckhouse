@@ -24,5 +24,6 @@ import:
   add: /reloader
   to: /reloader
   before: setup
-docker:
-  ENTRYPOINT: ["/reloader"]
+imageSpec:
+  config:
+    entrypoint: ["/reloader"]

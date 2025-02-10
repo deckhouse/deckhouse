@@ -55,9 +55,9 @@ import:
   add: /src/server/public
   to: /app
   before: install
-docker:
-  USER: 64535
-  ENTRYPOINT: [ "/opt/nginx-static/sbin/nginx", "-g", "daemon off;" ]
+imageSpec:
+  config:
+    entrypoint: [ "/opt/nginx-static/sbin/nginx", "-g", "daemon off;" ]
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-backend
 fromImage: common/distroless
@@ -66,6 +66,6 @@ import:
   add: /src/backend/backend
   to: /usr/local/bin/hubble-ui-backend
   before: install
-docker:
-  USER: 64535
-  ENTRYPOINT: ["/usr/local/bin/hubble-ui-backend"]
+imageSpec:
+  config:
+    entrypoint: ["/usr/local/bin/hubble-ui-backend"]

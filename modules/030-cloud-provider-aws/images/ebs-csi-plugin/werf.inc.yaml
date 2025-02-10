@@ -15,8 +15,9 @@ import:
   before: install
   includePaths:
   - '**/*'
-docker:
-  ENTRYPOINT: ["/bin/aws-ebs-csi-driver"]
+imageSpec:
+  config:
+    entrypoint: ["/bin/aws-ebs-csi-driver"]
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
 final: false
