@@ -7,7 +7,7 @@
 - apt-get update -y
 - apt-get dist-upgrade -y
 - find /var/cache/apt/ -type f -delete
-- rm -rf /var/log/*log /var/lib/apt/lists/* /var/log/apt/* /var/lib/dpkg/*-old /var/cache/debconf/*-old
+- rm -rf /var/log/*log /var/log/apt/* /var/lib/dpkg/*-old /var/cache/debconf/*-old
 {{- end }}
 
 {{- define "debian packages proxy" }}
