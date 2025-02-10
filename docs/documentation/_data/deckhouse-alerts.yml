@@ -4755,9 +4755,9 @@ alerts:
       severity: "7"
       markupFormat: markdown
     - name: StandbyHolderDeploymentReplicasUnavailable
-      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/extended-monitoring/application-controllers.yaml
-      moduleUrl: 340-extended-monitoring
-      module: extended-monitoring
+      sourceFile: modules/040-node-manager/monitoring/prometheus-rules/standby-deployment-unavailable.yaml
+      moduleUrl: 040-node-manager
+      module: node-manager
       edition: ce
       description: Count of available replicas in Deployment standby-holder-{{$labels.node_group_name}} in namespace d8-cloud-instance-manager is at zero.
       summary: |
