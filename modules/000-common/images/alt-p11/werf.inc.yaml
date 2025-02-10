@@ -14,11 +14,6 @@ shell:
   {{- include "alt packages proxy" . | nindent 2 }}
   # ssh auth to 3p repos
   - echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
-  # upgrade via proxy to desired date
-  - apt-get dist-upgrade -y
-  - find /var/lib/apt/ /var/cache/apt/ -type f -delete
-  - rm -rf /var/log/*log /var/lib/apt/lists/* /var/log/apt/* /var/lib/dpkg/*-old /var/cache/debconf/*-old
-  - mkdir -p /var/lib/apt/lists/partial
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
 from: {{ .Images.BASE_ALT_P11 }}
@@ -28,13 +23,8 @@ shell:
   {{- include "alt archive repos" . | nindent 2 }}
   - cp /etc/apt/sources.list.d/alt.list /etc/apt/sources.list.d/alt.list.orig
   {{- include "alt packages proxy" . | nindent 2 }}
-  # upgrade via proxy to desired date
-  - apt-get dist-upgrade -y
   # return original repos
-  - cp /etc/apt/sources.list.d/alt.list.orig /etc/apt/sources.list.d/alt.list
-  - find /var/lib/apt/ /var/cache/apt/ -type f -delete
-  - rm -rf /var/log/*log /var/lib/apt/lists/* /var/log/apt/* /var/lib/dpkg/*-old /var/cache/debconf/*-old
-  - mkdir -p /var/lib/apt/lists/partial
+  - mv /etc/apt/sources.list.d/alt.list.orig /etc/apt/sources.list.d/alt.list
 imageSpec:
   config:
     user: "64535:64535"
