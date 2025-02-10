@@ -31,7 +31,6 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/pkg/log"
 	"github.com/deckhouse/deckhouse/testing/controller/testclient"
-	"github.com/deckhouse/deckhouse/testing/flags"
 )
 
 var defaultLogOutput = os.Stderr
@@ -71,10 +70,6 @@ func (suite *Suite) SetupNoLock(initObjects []client.Object, opts ...SuiteOption
 		TimeFunc: func(_ time.Time) time.Time {
 			return dependency.TestDC.GetClock().Now()
 		},
-	}
-
-	if flags.Verbose || flags.Run != nil {
-		loggerOpts.Level = slog.LevelDebug
 	}
 
 	logger := log.NewLogger(loggerOpts)

@@ -36,6 +36,14 @@ spec:
                 weight:
                   type: integer
                   description: Module _weight_ (priority).
+                namespace:
+                  type: string
+                  description: Module namespace.
+                subsystems:
+                  type: array
+                  description: Module subsystems.
+                  items:
+                    type: string
                 source:
                   type: string
                   description: Source the module was downloaded from (otherwise will be blank).

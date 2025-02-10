@@ -1,6 +1,0 @@
-module: ceph-csi
-subsystems:
-  - storage
-  - infrastructure
-crds:
-  - modules/031-ceph-csi/crds/*.yaml

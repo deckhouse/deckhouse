@@ -18,3 +18,8 @@ localAPIEndpoint:
 ```
 
 > Consider finding a way to do it without patching the `kubeadm` or make a PR to the upstream.
+
+### fix-mount-hostaliases.patch
+
+Fixes a bug where pods with hostNetwork ignored host aliases (k8s < 1.32):
+> https://github.com/kubernetes/kubernetes/pull/126460

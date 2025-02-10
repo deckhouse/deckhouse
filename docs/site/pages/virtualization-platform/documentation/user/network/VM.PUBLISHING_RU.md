@@ -35,7 +35,7 @@ metadata:
 spec:
   type: NodePort
   selector:
-    # Метка, по которой сервис определяет на какую виртуальную машину направлять трафик.
+    # Лейбл, по которому сервис определяет на какую виртуальную машину направлять трафик.
     app: nginx
   ports:
     - protocol: TCP
@@ -45,7 +45,7 @@ spec:
 EOF
 ```
 
-![NodePort](/images/virtualization-platform/lb-nodeport.ru.png)
+![NodePort](/../../../../images/virtualization-platform/lb-nodeport.ru.png)
 
 ### Использование сервиса LoadBalancer
 
@@ -60,7 +60,7 @@ metadata:
 spec:
   type: LoadBalancer
   selector:
-    # Метка, по которой сервис определяет на какую виртуальную машину направлять трафик.
+    # Лейбл, по которому сервис определяет на какую виртуальную машину направлять трафик.
     app: nginx
   ports:
     - protocol: TCP
@@ -69,13 +69,11 @@ spec:
 EOF
 ```
 
-![LoadBalancer](/images/virtualization-platform/lb-loadbalancer.ru.png)
+![LoadBalancer](/../../../../images/virtualization-platform/lb-loadbalancer.ru.png)
 
 ### Использование сервисов с активными проверками
 
-{% alert level="warning" %}
-Находится на стадии тестирования. Будет доступно в ближайших версиях.
-{% endalert %}
+> **Внимание.** Находится на стадии тестирования. Будет доступно в ближайших версиях.
 
 Ресурс `ServiceWithHealthchecks` позволяет настраивать для сервиса активные проверки на заданные TCP-порты. Если проверки для виртуальных машин не будут успешными, эти машины не будут включены в балансировку трафика.
 

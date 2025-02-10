@@ -49,7 +49,7 @@ func TestExtender(t *testing.T) {
 			constraint:              "< v1.60.4",
 			error:                   errors.New("1.60.5 is greater than or equal to v1.60.4"),
 			moduleVersionConstraint: semver.MustParse("v1.60.5"),
-			moduleVersionError:      errors.New("the '1.60.5' version doesn't satisfy the '<v1.60.4' constraint"),
+			moduleVersionError:      errors.New("the 'v1.60.5' version does not satisfy the '<v1.60.4' constraint"),
 		},
 		{
 			baseVersion:             "v1.60.5",

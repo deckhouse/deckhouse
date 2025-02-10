@@ -13,6 +13,10 @@
       plk_protocol_version: "1"
       summary: APF flow schema `d8-serviceaccounts` has rejected API requests.
       description: |
-        To show APF schema queue requests, use the expr `apiserver_flowcontrol_current_inqueue_requests{flow_schema="d8-serviceaccounts"}`.
-
-        Attention: This is an experimental alert!
+        > This alert is experimental.
+        
+        To display the APF schema queue requests, use the following expression:
+        
+        ```promql
+        apiserver_flowcontrol_current_inqueue_requests{flow_schema="d8-serviceaccounts"}
+        ```

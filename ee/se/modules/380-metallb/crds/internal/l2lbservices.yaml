@@ -202,16 +202,6 @@ spec:
                     This field can only be set when creating or updating a Service to type 'LoadBalancer'.
                     Once set, it can not be changed. This field will be wiped when a service is updated to a non 'LoadBalancer' type.
                   type: string
-                loadBalancerIP:
-                  description: |-
-                    Only applies to Service Type: LoadBalancer.
-                    This feature depends on whether the underlying cloud-provider supports specifying
-                    the loadBalancerIP when a load balancer is created.
-                    This field will be ignored if the cloud-provider does not support the feature.
-                    Deprecated: This field was under-specified and its meaning varies across implementations.
-                    Using it is non-portable and it may not support dual-stack.
-                    Users are encouraged to use implementation-specific annotations when available.
-                  type: string
                 loadBalancerSourceRanges:
                   description: |-
                     If specified and supported by the platform, this will restrict traffic through the cloud-provider
@@ -343,11 +333,13 @@ spec:
                     More info: https://kubernetes.io/docs/concepts/services-networking/service/#virtual-ips-and-service-proxies
                   type: string
                 sessionAffinityConfig:
-                  description: sessionAffinityConfig contains the configurations of
+                  description:
+                    sessionAffinityConfig contains the configurations of
                     session affinity.
                   properties:
                     clientIP:
-                      description: clientIP contains the configurations of Client IP
+                      description:
+                        clientIP contains the configurations of Client IP
                         based session affinity.
                       properties:
                         timeoutSeconds:
@@ -387,16 +379,17 @@ spec:
                 conditions:
                   description: Current service state
                   items:
-                    description: "Condition contains details for one aspect of the current
-                    state of this API Resource.\n---\nThis struct is intended for
-                    direct use as an array at the field path .status.conditions.  For
-                    example,\n\n\n\ttype FooStatus struct{\n\t    // Represents the
-                    observations of a foo's current state.\n\t    // Known .status.conditions.type
-                    are: \"Available\", \"Progressing\", and \"Degraded\"\n\t    //
-                    +patchMergeKey=type\n\t    // +patchStrategy=merge\n\t    // +listType=map\n\t
-                    \   // +listMapKey=type\n\t    Conditions []metav1.Condition `json:\"conditions,omitempty\"
-                    patchStrategy:\"merge\" patchMergeKey:\"type\" protobuf:\"bytes,1,rep,name=conditions\"`\n\n\n\t
-                    \   // other fields\n\t}"
+                    description: |-
+                      "Condition contains details for one aspect of the current
+                      state of this API Resource.\n---\nThis struct is intended for
+                      direct use as an array at the field path .status.conditions.  For
+                      example,\n\n\n\ttype FooStatus struct{\n\t    // Represents the
+                      observations of a foo's current state.\n\t    // Known .status.conditions.type
+                      are: \"Available\", \"Progressing\", and \"Degraded\"\n\t    //
+                      +patchMergeKey=type\n\t    // +patchStrategy=merge\n\t    // +listType=map\n\t
+                      \   // +listMapKey=type\n\t    Conditions []metav1.Condition `json:\"conditions,omitempty\"
+                      patchStrategy:\"merge\" patchMergeKey:\"type\" protobuf:\"bytes,1,rep,name=conditions\"`\n\n\n\t
+                      \   // other fields\n\t}"
                     properties:
                       lastTransitionTime:
                         description: |-
@@ -510,7 +503,8 @@ spec:
                                   pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
                                   type: string
                                 port:
-                                  description: Port is the port number of the service
+                                  description:
+                                    Port is the port number of the service
                                     port of which status is recorded here
                                   format: int32
                                   type: integer

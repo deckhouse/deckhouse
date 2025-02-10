@@ -18,12 +18,12 @@ import (
 	"context"
 	"time"
 
+	"github.com/deckhouse/deckhouse/pkg/log"
 	v1 "k8s.io/api/coordination/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
-	"k8s.io/klog"
 )
 
 const leaseLabel = "deckhouse.io/documentation-builder-sync"
@@ -32,12 +32,14 @@ const resyncTimeout = time.Minute
 type watcher struct {
 	kClient   *kubernetes.Clientset
 	namespace string
+	logger    *log.Logger
 }
 
-func New(kClient *kubernetes.Clientset, namespace string) *watcher {
+func New(kClient *kubernetes.Clientset, namespace string, logger *log.Logger) *watcher {
 	return &watcher{
 		kClient:   kClient,
 		namespace: namespace,
+		logger:    logger,
 	}
 }
 
@@ -58,7 +60,7 @@ func (w *watcher) Watch(ctx context.Context, addHandler, deleteHandler func(back
 		AddFunc: func(obj interface{}) {
 			lease, ok := obj.(*v1.Lease)
 			if !ok {
-				klog.Error("cast object to lease error")
+				w.logger.Error("cast object to lease error")
 				return
 			}
 
@@ -70,12 +72,12 @@ func (w *watcher) Watch(ctx context.Context, addHandler, deleteHandler func(back
 				}
 			}
 
-			klog.Error(`lease "holderIdentity" is empty`)
+			w.logger.Error(`lease "holderIdentity" is empty`)
 		},
 		DeleteFunc: func(obj interface{}) {
 			lease, ok := obj.(*v1.Lease)
 			if !ok {
-				klog.Error("cast object to lease error")
+				w.logger.Error("cast object to lease error")
 				return
 			}
 
@@ -87,7 +89,7 @@ func (w *watcher) Watch(ctx context.Context, addHandler, deleteHandler func(back
 				}
 			}
 
-			klog.Error(`lease "holderIdentity" is empty`)
+			w.logger.Error(`lease "holderIdentity" is empty`)
 		},
 	})
 
@@ -95,6 +97,6 @@ func (w *watcher) Watch(ctx context.Context, addHandler, deleteHandler func(back
 
 	// Wait for the first sync of the informer cache, should not take long
 	if !cache.WaitForCacheSync(ctx.Done(), informer.HasSynced) {
-		klog.Fatalf("unable to sync caches: %v", ctx.Err())
+		w.logger.Fatal("unable to sync caches", log.Err(ctx.Err()))
 	}
 }

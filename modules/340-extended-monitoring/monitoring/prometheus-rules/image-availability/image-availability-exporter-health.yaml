@@ -15,11 +15,23 @@
       plk_create_group_if_not_exists__d8_image_availability_exporter_malfunctioning: "D8ImageAvailabilityExporterMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
       plk_grouped_by__d8_image_availability_exporter_malfunctioning: "D8ImageAvailabilityExporterMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
       plk_ignore_labels: "job"
+      summary: Prometheus can't scrape metrics of `image-availability-exporter`.
       description: |
-        Check the Pod status: `kubectl -n d8-monitoring get pod -l app=image-availability-exporter`
+        Deckhouse has detected that Prometheus is unable to scrape metrics of `image-availability-exporter`.
+        
+        Steps to resolve:
 
-        Or check the Pod logs: `kubectl -n d8-monitoring logs -l app=image-availability-exporter -c image-availability-exporter`
-      summary: Prometheus cannot scrape the image-availability-exporter metrics.
+        1. Check the pod status:
+        
+           ```bash
+           kubectl -n d8-monitoring get pod -l app=image-availability-exporter
+           ```
+
+        1. Check the pod logs:
+        
+           ```bash
+           kubectl -n d8-monitoring logs -l app=image-availability-exporter -c image-availability-exporter
+           ```
 
   - alert: D8ImageAvailabilityExporterTargetAbsent
     expr: absent(up{job="image-availability-exporter"}) == 1
@@ -35,11 +47,23 @@
       plk_ignore_labels: "job"
       plk_create_group_if_not_exists__d8_image_availability_exporter_malfunctioning: "D8ImageAvailabilityExporterMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
       plk_grouped_by__d8_image_availability_exporter_malfunctioning: "D8ImageAvailabilityExporterMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      summary: The `image-availability-exporter` target is missing from Prometheus.
       description: |
-        Check the Pod status: `kubectl -n d8-monitoring get pod -l app=image-availability-exporter`
+        Deckhouse has detected that the `image-availability-exporter` target is missing from Prometheus.
+        
+        Steps to resolve:
 
-        Or check the Pod logs: `kubectl -n d8-monitoring logs -l app=image-availability-exporter -c image-availability-exporter`
-      summary: There is no `image-availability-exporter` target in Prometheus.
+        1. Check the pod status:
+        
+           ```bash
+           kubectl -n d8-monitoring get pod -l app=image-availability-exporter
+           ```
+
+        1. Check the pod logs:
+        
+           ```bash
+           kubectl -n d8-monitoring logs -l app=image-availability-exporter -c image-availability-exporter
+           ```
 
   - alert: D8ImageAvailabilityExporterPodIsNotReady
     expr: min by (pod) (kube_pod_status_ready{condition="true", namespace="d8-monitoring", pod=~"image-availability-exporter-.*"}) != 1
@@ -55,13 +79,23 @@
       plk_labels_as_annotations: "pod"
       plk_create_group_if_not_exists__d8_image_availability_exporter_malfunctioning: "D8ImageAvailabilityExporterMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
       plk_grouped_by__d8_image_availability_exporter_malfunctioning: "D8ImageAvailabilityExporterMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
-      summary: The image-availability-exporter Pod is NOT Ready.
+      summary: The `image-availability-exporter` pod is not ready.
       description: |
-        The images listed in the `image` field are not checked for availability in the container registry.
+        Deckhouse has detected that the `image-availability-exporter` pod is not ready. As a result, the images listed in the `image` field aren't checked for availability in the container registry.
 
-        The recommended course of action:
-        1. Retrieve details of the Deployment: `kubectl -n d8-monitoring describe deploy image-availability-exporter`
-        2. View the status of the Pod and try to figure out why it is not running: `kubectl -n d8-monitoring describe pod -l app=image-availability-exporter`
+        Steps to resolve:
+
+        1. Retrieve the deployment details:
+
+           ```bash
+           kubectl -n d8-monitoring describe deploy image-availability-exporter
+           ```
+
+        2. Check the pod status and investigate why it isn't `Ready`:
+        
+           ```bash
+           kubectl -n d8-monitoring describe pod -l app=image-availability-exporter
+           ```
 
   - alert: D8ImageAvailabilityExporterPodIsNotRunning
     expr: absent(kube_pod_status_phase{namespace="d8-monitoring",phase="Running",pod=~"image-availability-exporter-.*"})
@@ -76,13 +110,23 @@
       plk_markup_format: "markdown"
       plk_create_group_if_not_exists__d8_image_availability_exporter_malfunctioning: "D8ImageAvailabilityExporterMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
       plk_grouped_by__d8_image_availability_exporter_malfunctioning: "D8ImageAvailabilityExporterMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
-      summary: The image-availability-exporter Pod is NOT Running.
+      summary: The `image-availability-exporter` pod is not running.
       description: |
-        The images listed in the `image` field are not checked for availability in the container registry.
+        Deckhouse has detected that the `image-availability-exporter` pod is not running. As a result, the images listed in the `image` field aren't checked for availability in the container registry.
 
-        The recommended course of action:
-        1. Retrieve details of the Deployment: `kubectl -n d8-monitoring describe deploy image-availability-exporter`
-        2. View the status of the Pod and try to figure out why it is not running: `kubectl -n d8-monitoring describe pod -l app=image-availability-exporter`
+        Steps to resolve:
+
+        1. Retrieve the deployment details:
+
+           ```bash
+           kubectl -n d8-monitoring describe deploy image-availability-exporter
+           ```
+
+        2. Check the pod status and investigate why it isn't running:
+        
+           ```bash
+           kubectl -n d8-monitoring describe pod -l app=image-availability-exporter
+           ```
 
 - name: d8.extended-monitoring.image-availability-exporter.malfunctioning
   rules:
@@ -101,8 +145,12 @@
       plk_markup_format: "markdown"
       plk_create_group_if_not_exists__d8_image_availability_exporter_malfunctioning: "D8ImageAvailabilityExporterMalfunctioningGroup,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
       plk_grouped_by__d8_image_availability_exporter_malfunctioning: "D8ImageAvailabilityExporterMalfunctioningGroup,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      summary: The `image-availability-exporter` has crashed.
       description: |
-        The `image-availability-exporter` failed to perform any checks for the availability of images in the registry for over 20 minutes.
+        The `image-availability-exporter` has failed to perform any image availability checks in the container registry for over 20 minutes.
 
-        You need to analyze its logs: `kubectl -n d8-monitoring logs -l app=image-availability-exporter -c image-availability-exporter`
-      summary: image-availability-exporter has crashed.
+        To investigate the issue, review the exporter's logs:
+        
+        ```bash
+        kubectl -n d8-monitoring logs -l app=image-availability-exporter -c image-availability-exporter
+        ```

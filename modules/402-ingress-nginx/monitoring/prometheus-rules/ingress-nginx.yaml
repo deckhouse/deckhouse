@@ -16,14 +16,25 @@
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: markdown
+      summary: Configuration test failed on NGINX Ingress `{{ $labels.controller_namespace }}/{{ $labels.controller }}`.
       description: |-
-        The configuration testing (nginx -t) of the {{ $labels.controller }} Ingress controller in the {{ $labels.controller_namespace }} Namespace has failed.
+        The configuration test (`nginx -t`) for the `{{ $labels.controller }}` Ingress controller in the `{{ $labels.controller_namespace }}` namespace has failed.
 
-        The recommended course of action:
-        1. Check controllers logs: `kubectl -n {{ $labels.controller_namespace }} logs {{ $labels.controller_pod }} -c controller`;
-        2. Find the newest Ingress in the cluster: `kubectl get ingress --all-namespaces --sort-by="metadata.creationTimestamp"`;
-        3. Probably, there is an error in configuration-snippet or server-snippet.
-      summary: Config test failed on NGINX Ingress {{ $labels.controller }} in the {{ $labels.controller_namespace }} Namespace.
+        Steps to resolve:
+
+        1. Check the controller logs:
+
+           ```bash
+           kubectl -n {{ $labels.controller_namespace }} logs {{ $labels.controller_pod }} -c controller
+           ```
+
+        2. Find the most recently created Ingress in the cluster:
+
+           ```bash
+           kubectl get ingress --all-namespaces --sort-by="metadata.creationTimestamp"
+           ```
+
+        3. Check for errors in the `configuration-snippet` or `server-snippet` annotations.
   - alert: NginxIngressSslWillExpire
     expr: count by (secret_name, job, controller, class, host, namespace) (nginx_ingress_controller_ssl_expire_time_seconds < (time() + (14 * 24 * 3600)))
     for: 1h
@@ -32,10 +43,16 @@
     annotations:
       plk_markup_format: "markdown"
       plk_protocol_version: "1"
+      summary: Certificate is expiring soon.
       description: |-
-        SSL certificate for {{ $labels.host }} in {{ $labels.namespace }} will expire in less than 2 weeks.
-        You can verify the certificate with the `kubectl -n {{ $labels.namespace }} get secret {{ $labels.secret_name }} -o json | jq -r '.data."tls.crt" | @base64d' | openssl x509 -noout -alias -subject -issuer -dates` command.
-      summary: Certificate expires soon.
+        The SSL certificate for {{ $labels.host }} in the `{{ $labels.namespace }}` namespace will expire in less than two weeks.
+
+        To verify the certificate, run the following command:
+
+        ```bash
+        kubectl -n {{ $labels.namespace }} get secret {{ $labels.secret_name }} -o json | jq -r '.data."tls.crt" | @base64d' | openssl x509 -noout -alias -subject -issuer -dates
+        ```
+
   - alert: NginxIngressSslExpired
     expr: count by (secret_name, job, controller, class, host, namespace) (nginx_ingress_controller_ssl_expire_time_seconds < time())
     for: 1m
@@ -44,12 +61,17 @@
     annotations:
       plk_markup_format: "markdown"
       plk_protocol_version: "1"
-      description: |-
-        SSL certificate for {{ $labels.host }} in {{ $labels.namespace }} has expired.
-        You can verify the certificate with the `kubectl -n {{ $labels.namespace }} get secret {{ $labels.secret_name }} -o json | jq -r '.data."tls.crt" | @base64d' | openssl x509 -noout -alias -subject -issuer -dates` command.
-
-        https://{{ $labels.host }} version of site doesn't work!
       summary: Certificate has expired.
+      description: |-
+        The SSL certificate for {{ $labels.host }} in the `{{ $labels.namespace }}` namespace has expired.
+
+        To verify the certificate, run the following command:
+
+        ```bash
+        kubectl -n {{ $labels.namespace }} get secret {{ $labels.secret_name }} -o json | jq -r '.data."tls.crt" | @base64d' | openssl x509 -noout -alias -subject -issuer -dates
+        ```
+
+        The site at `https://{{ $labels.host }}` is not accessible.
   - alert: NginxIngressProtobufExporterHasErrors
     expr: sum by (type, node, controller) (increase(protobuf_exporter_errors_total[5m])) > 0
     for: 10m
@@ -58,12 +80,15 @@
     annotations:
       plk_markup_format: "markdown"
       plk_protocol_version: "1"
+      summary: The Ingress NGINX sidecar container with `protobuf_exporter` has `{{ $labels.type }}` errors.
       description: |-
-        The Ingress Nginx sidecar container with `protobuf_exporter` has {{ $labels.type }} errors.
+        Deckhouse has detected that the Ingress NGINX sidecar container with `protobuf_exporter` has {{ $labels.type }} errors.
 
-        Please, check Ingress controller's logs:
-        `kubectl -n d8-ingress-nginx logs $(kubectl -n d8-ingress-nginx get pods -l app=controller,name={{ $labels.controller }} -o wide | grep {{ $labels.node }} | awk '{print $1}') -c protobuf-exporter`.
-      summary: The Ingress Nginx sidecar container with `protobuf_exporter` has {{ $labels.type }} errors.
+        To resolve the issue, check the Ingress controller's logs:
+
+        ```bash
+        kubectl -n d8-ingress-nginx logs $(kubectl -n d8-ingress-nginx get pods -l app=controller,name={{ $labels.controller }} -o wide | grep {{ $labels.node }} | awk '{print $1}') -c protobuf-exporter
+        ```
 
   - alert: NginxIngressPodIsRestartingTooOften
     expr: |
@@ -71,14 +96,14 @@
     labels:
       severity_level: "4"
     annotations:
+      summary: Too many NGINX Ingress restarts detected.
       description: |-
-        The number of restarts in the last hour: {{ $value }}.
+        {{ $value }} NGINX Ingress controller restarts detected in the last hour.
+
         Excessive NGINX Ingress restarts indicate that something is wrong. Normally, it should be up and running all the time.
       plk_labels_as_annotations: "pod"
       plk_markup_format: "markdown"
       plk_protocol_version: "1"
-      summary: Too many NGINX Ingress restarts have been detected.
-
   - alert: D8NginxIngressKruiseControllerPodIsRestartingTooOften
     expr: |
       max by (pod) (increase(kube_pod_container_status_restarts_total{namespace="d8-ingress-nginx",pod=~"kruise-controller-manager-.+"}[1h]) and kube_pod_container_status_restarts_total{namespace="d8-ingress-nginx",pod=~"kruise-controller-manager-.+"}) > 10
@@ -90,18 +115,31 @@
       plk_labels_as_annotations: "pod"
       plk_markup_format: "markdown"
       plk_protocol_version: "1"
-      summary: Too many kruise controller restarts have been detected in d8-ingress-nginx namespace.
+      summary: Too many Kruise controller restarts detected.
       description: |-
-        The number of restarts in the last hour: {{ $value }}.
-        Excessive kruise controller restarts indicate that something is wrong. Normally, it should be up and running all the time.
+        {{ $value }} Kruise controller restarts detected in the last hour.
 
-        The recommended course of action:
-        1. Check any events regarding kruise-controller-manager in d8-ingress-nginx namespace
-        in case there were some issues there related to the nodes the manager runs on or memory shortage (OOM):  `kubectl -n d8-ingress-nginx get events | grep kruise-controller-manager`
-        2. Analyze the controller's pods' descriptions to check which containers were restarted
-        and what were the possible reasons (exit codes, etc.): `kubectl -n d8-ingress-nginx describe pod -lapp=kruise,control-plane=controller-manager`
-        3. In case `kruise` container was restarted, list relevant logs of the container to check
-        if there were some meaningful errors there: `kubectl -n d8-ingress-nginx logs -lapp=kruise,control-plane=controller-manager -c kruise`
+        Excessive Kruise controller restarts indicate that something is wrong. Normally, it should be up and running all the time.
+
+        Steps to resolve:
+
+        1. Check events associated with `kruise-controller-manager` in the `d8-ingress-nginx` namespace. Look for issues related to node failures or memory shortages (OOM events):
+
+           ```bash
+           kubectl -n d8-ingress-nginx get events | grep kruise-controller-manager
+           ```
+
+        2. Analyze the controller's pod descriptions to identify restarted containers and possible causes. Pay attention to exit codes and other details:
+
+           ```bash
+           kubectl -n d8-ingress-nginx describe pod -lapp=kruise,control-plane=controller-manager
+           ```
+
+        3. In case the `kruise` container has restarted, get a list of relevant container logs to identify any meaningful errors:
+
+           ```bash
+           kubectl -n d8-ingress-nginx logs -lapp=kruise,control-plane=controller-manager -c kruise
+           ```
 
   - alert: NginxIngressDaemonSetReplicasUnavailable
     expr: kruise_daemonset_status_number_unavailable{namespace="d8-ingress-nginx"} > 0
@@ -115,16 +153,21 @@
       plk_create_group_if_not_exists__controllers_malfunctioning: "NginxIngressControllersMalfunctioning,prometheus=deckhouse,daemonset={{ $labels.daemonset }},kubernetes=~kubernetes"
       plk_grouped_by__controllers_malfunctioning: "NginxIngressControllersMalfunctioning,prometheus=deckhouse,daemonset={{ $labels.daemonset }},kubernetes=~kubernetes"
       summary: |-
-        Some replicas of NGINX Ingress DaemonSet {{$labels.namespace}}/{{$labels.daemonset}} are unavailable.
+        Some replicas of NGINX Ingress DaemonSet `{{$labels.namespace}}/{{$labels.daemonset}}` are unavailable.
       description: |-
-        Some replicas of NGINX Ingress DaemonSet {{$labels.namespace}}/{{$labels.daemonset}} are unavailable.
-        Currently at: {{ .Value }} unavailable replica(s)
+        Deckhouse has detected that some replicas of NGINX Ingress DaemonSet `{{$labels.namespace}}/{{$labels.daemonset}}` are unavailable.
 
-        List of unavailable Pod(s): {{range $index, $result := (printf "(max by (namespace, pod) (kube_pod_status_ready{namespace=\"%s\", condition!=\"true\"} == 1)) * on (namespace, pod) kube_controller_pod{namespace=\"%s\", controller_type=\"DaemonSet\", controller_name=\"%s\"}" $labels.namespace $labels.namespace $labels.daemonset | query)}}{{if not (eq $index 0)}}, {{ end }}{{ $result.Labels.pod }}{{ end }}
+        Current number: {{ .Value }} unavailable replica(s).
 
-        This command might help figuring out problematic nodes given you are aware where the DaemonSet should be scheduled in the first place (using label selector for pods might be of help, too):
+        List of unavailable pods:
 
+        ```text
+        {{range $index, $result := (printf "(max by (namespace, pod) (kube_pod_status_ready{namespace=\"%s\", condition!=\"true\"} == 1)) * on (namespace, pod) kube_controller_pod{namespace=\"%s\", controller_type=\"DaemonSet\", controller_name=\"%s\"}" $labels.namespace $labels.namespace $labels.daemonset | query)}}{{if not (eq $index 0)}}, {{ end }}{{ $result.Labels.pod }}{{ end }}
         ```
+
+        If you know where the DaemonSet should be scheduled, run the command below to identify the problematic nodes. Use a label selector for pods, if needed.
+
+        ```bash
         kubectl -n {{$labels.namespace}} get pod -ojson | jq -r '.items[] | select(.metadata.ownerReferences[] | select(.name =="{{$labels.daemonset}}")) | select(.status.phase != "Running" or ([ .status.conditions[] | select(.type == "Ready" and .status == "False") ] | length ) == 1 ) | .spec.affinity.nodeAffinity.requiredDuringSchedulingIgnoredDuringExecution.nodeSelectorTerms[].matchFields[].values[]'
         ```
 
@@ -140,15 +183,19 @@
       plk_create_group_if_not_exists__controllers_malfunctioning: "NginxIngressControllersMalfunctioning,prometheus=deckhouse,daemonset={{ $labels.daemonset }},kubernetes=~kubernetes"
       plk_grouped_by__controllers_malfunctioning: "NginxIngressControllersMalfunctioning,prometheus=deckhouse,daemonset={{ $labels.daemonset }},kubernetes=~kubernetes"
       summary: |-
-        Count of available replicas in NGINX Ingress DaemonSet {{$labels.namespace}}/{{$labels.daemonset}} is at zero.
+        No available replicas remaining in NGINX Ingress DaemonSet `{{$labels.namespace}}/{{$labels.daemonset}}`.
       description: |-
-        Count of available replicas in NGINX Ingress DaemonSet {{$labels.namespace}}/{{$labels.daemonset}} is at zero.
+        Deckhouse has detected that there are no available replicas remaining in NGINX Ingress DaemonSet `{{$labels.namespace}}/{{$labels.daemonset}}`.
 
-        List of unavailable Pod(s): {{range $index, $result := (printf "(max by (namespace, pod) (kube_pod_status_ready{namespace=\"%s\", condition!=\"true\"} == 1)) * on (namespace, pod) kube_controller_pod{namespace=\"%s\", controller_type=\"DaemonSet\", controller_name=\"%s\"}" $labels.namespace $labels.namespace $labels.daemonset | query)}}{{if not (eq $index 0)}}, {{ end }}{{ $result.Labels.pod }}{{ end }}
+        List of unavailable pods:
 
-        This command might help figuring out problematic nodes given you are aware where the DaemonSet should be scheduled in the first place (using label selector for pods might be of help, too):
-
+        ```text
+        {{range $index, $result := (printf "(max by (namespace, pod) (kube_pod_status_ready{namespace=\"%s\", condition!=\"true\"} == 1)) * on (namespace, pod) kube_controller_pod{namespace=\"%s\", controller_type=\"DaemonSet\", controller_name=\"%s\"}" $labels.namespace $labels.namespace $labels.daemonset | query)}}{{if not (eq $index 0)}}, {{ end }}{{ $result.Labels.pod }}{{ end }}
         ```
+
+        If you know where the DaemonSet should be scheduled, run the command below to identify the problematic nodes. Use a label selector for pods, if needed.
+
+        ```bash
         kubectl -n {{$labels.namespace}} get pod -ojson | jq -r '.items[] | select(.metadata.ownerReferences[] | select(.name =="{{$labels.daemonset}}")) | select(.status.phase != "Running" or ([ .status.conditions[] | select(.type == "Ready" and .status == "False") ] | length ) == 1 ) | .spec.affinity.nodeAffinity.requiredDuringSchedulingIgnoredDuringExecution.nodeSelectorTerms[].matchFields[].values[]'
         ```
 
@@ -164,13 +211,23 @@
       plk_create_group_if_not_exists__controllers_malfunctioning: "NginxIngressControllersMalfunctioning,prometheus=deckhouse,daemonset={{ $labels.daemonset }},kubernetes=~kubernetes"
       plk_grouped_by__controllers_malfunctioning: "NginxIngressControllersMalfunctioning,prometheus=deckhouse,daemonset={{ $labels.daemonset }},kubernetes=~kubernetes"
       summary: |-
-        There are {{ .Value }} outdated Pods in the {{ $labels.namespace }}/{{ $labels.daemonset }} Ingress Nginx DaemonSet for the last 20 minutes.
+        There were {{ .Value }} outdated pods in NGINX Ingress DaemonSet `{{ $labels.namespace }}/{{ $labels.daemonset }}` over the last 20 minutes.
       description: |-
-        There are {{ .Value }} outdated Pods in the {{ $labels.namespace }}/{{ $labels.daemonset }} Ingress Nginx DaemonSet for the last 20 minutes.
+        Deckhouse has detected {{ .Value }} outdated pods in NGINX Ingress DaemonSet `{{ $labels.namespace }}/{{ $labels.daemonset }}` over the last 20 minutes.
 
-        The recommended course of action:
-        1. Check the DaemonSet's status: `kubectl -n {{ $labels.namespace }} get ads {{ $labels.daemonset }}`
-        2. Analyze the DaemonSet's description: `kubectl -n {{ $labels.namespace }} describe ads {{ $labels.daemonset }}`
-        3. If the `Number of Nodes Scheduled with Up-to-date Pods` parameter does not match
-        `Current Number of Nodes Scheduled`, check the pertinent Ingress Nginx Controller's 'nodeSelector' and 'toleration' settings,
-        and compare them to the relevant nodes' 'labels' and 'taints' settings
+        Steps to resolve:
+
+        1. Check the DaemonSet's status:
+
+           ```bash
+           kubectl -n {{ $labels.namespace }} get ads {{ $labels.daemonset }}
+           ```
+
+        2. Analyze the DaemonSet's description:
+
+           ```bash
+           kubectl -n {{ $labels.namespace }} describe ads {{ $labels.daemonset }}
+           ```
+
+        3. If the parameter `Number of Nodes Scheduled with Up-to-date Pods` does not match
+        `Current Number of Nodes Scheduled`, check the 'nodeSelector' and 'toleration' settings of the corresponding NGINX Ingress Controller and compare them to the 'labels' and 'taints' settings of the relevant nodes.

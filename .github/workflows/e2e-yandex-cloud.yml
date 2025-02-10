@@ -532,6 +532,15 @@ jobs:
           bash /deckhouse/testing/cloud_layouts/script.sh run-test
 
         # </template: e2e_run_template>
+  # </template: e2e_tests_create_debug_logs>
+      - name: Create Deckhouse debug logs
+        id: e2e_tests_create_debug_logs
+        if: failure()
+        uses: ./.github/actions/upload-d8-debug-logs
+        with:
+          sshloginfile: ${{ steps.e2e_test_run.outputs.ssh_connection_str_file }}
+          sshkey: ${{ secrets.LAYOUT_SSH_KEY }}
+  # </template: e2e_tests_create_debug_logs>
       - name: Read connection string
         if: ${{ failure() || cancelled() }}
         id: check_stay_failed_cluster
@@ -1031,6 +1040,15 @@ jobs:
           bash /deckhouse/testing/cloud_layouts/script.sh run-test
 
         # </template: e2e_run_template>
+  # </template: e2e_tests_create_debug_logs>
+      - name: Create Deckhouse debug logs
+        id: e2e_tests_create_debug_logs
+        if: failure()
+        uses: ./.github/actions/upload-d8-debug-logs
+        with:
+          sshloginfile: ${{ steps.e2e_test_run.outputs.ssh_connection_str_file }}
+          sshkey: ${{ secrets.LAYOUT_SSH_KEY }}
+  # </template: e2e_tests_create_debug_logs>
       - name: Read connection string
         if: ${{ failure() || cancelled() }}
         id: check_stay_failed_cluster
@@ -1530,6 +1548,15 @@ jobs:
           bash /deckhouse/testing/cloud_layouts/script.sh run-test
 
         # </template: e2e_run_template>
+  # </template: e2e_tests_create_debug_logs>
+      - name: Create Deckhouse debug logs
+        id: e2e_tests_create_debug_logs
+        if: failure()
+        uses: ./.github/actions/upload-d8-debug-logs
+        with:
+          sshloginfile: ${{ steps.e2e_test_run.outputs.ssh_connection_str_file }}
+          sshkey: ${{ secrets.LAYOUT_SSH_KEY }}
+  # </template: e2e_tests_create_debug_logs>
       - name: Read connection string
         if: ${{ failure() || cancelled() }}
         id: check_stay_failed_cluster
@@ -2029,6 +2056,15 @@ jobs:
           bash /deckhouse/testing/cloud_layouts/script.sh run-test
 
         # </template: e2e_run_template>
+  # </template: e2e_tests_create_debug_logs>
+      - name: Create Deckhouse debug logs
+        id: e2e_tests_create_debug_logs
+        if: failure()
+        uses: ./.github/actions/upload-d8-debug-logs
+        with:
+          sshloginfile: ${{ steps.e2e_test_run.outputs.ssh_connection_str_file }}
+          sshkey: ${{ secrets.LAYOUT_SSH_KEY }}
+  # </template: e2e_tests_create_debug_logs>
       - name: Read connection string
         if: ${{ failure() || cancelled() }}
         id: check_stay_failed_cluster
@@ -2528,6 +2564,15 @@ jobs:
           bash /deckhouse/testing/cloud_layouts/script.sh run-test
 
         # </template: e2e_run_template>
+  # </template: e2e_tests_create_debug_logs>
+      - name: Create Deckhouse debug logs
+        id: e2e_tests_create_debug_logs
+        if: failure()
+        uses: ./.github/actions/upload-d8-debug-logs
+        with:
+          sshloginfile: ${{ steps.e2e_test_run.outputs.ssh_connection_str_file }}
+          sshkey: ${{ secrets.LAYOUT_SSH_KEY }}
+  # </template: e2e_tests_create_debug_logs>
       - name: Read connection string
         if: ${{ failure() || cancelled() }}
         id: check_stay_failed_cluster
@@ -3027,6 +3072,15 @@ jobs:
           bash /deckhouse/testing/cloud_layouts/script.sh run-test
 
         # </template: e2e_run_template>
+  # </template: e2e_tests_create_debug_logs>
+      - name: Create Deckhouse debug logs
+        id: e2e_tests_create_debug_logs
+        if: failure()
+        uses: ./.github/actions/upload-d8-debug-logs
+        with:
+          sshloginfile: ${{ steps.e2e_test_run.outputs.ssh_connection_str_file }}
+          sshkey: ${{ secrets.LAYOUT_SSH_KEY }}
+  # </template: e2e_tests_create_debug_logs>
       - name: Read connection string
         if: ${{ failure() || cancelled() }}
         id: check_stay_failed_cluster
@@ -3526,6 +3580,15 @@ jobs:
           bash /deckhouse/testing/cloud_layouts/script.sh run-test
 
         # </template: e2e_run_template>
+  # </template: e2e_tests_create_debug_logs>
+      - name: Create Deckhouse debug logs
+        id: e2e_tests_create_debug_logs
+        if: failure()
+        uses: ./.github/actions/upload-d8-debug-logs
+        with:
+          sshloginfile: ${{ steps.e2e_test_run.outputs.ssh_connection_str_file }}
+          sshkey: ${{ secrets.LAYOUT_SSH_KEY }}
+  # </template: e2e_tests_create_debug_logs>
       - name: Read connection string
         if: ${{ failure() || cancelled() }}
         id: check_stay_failed_cluster
@@ -4025,6 +4088,15 @@ jobs:
           bash /deckhouse/testing/cloud_layouts/script.sh run-test
 
         # </template: e2e_run_template>
+  # </template: e2e_tests_create_debug_logs>
+      - name: Create Deckhouse debug logs
+        id: e2e_tests_create_debug_logs
+        if: failure()
+        uses: ./.github/actions/upload-d8-debug-logs
+        with:
+          sshloginfile: ${{ steps.e2e_test_run.outputs.ssh_connection_str_file }}
+          sshkey: ${{ secrets.LAYOUT_SSH_KEY }}
+  # </template: e2e_tests_create_debug_logs>
       - name: Read connection string
         if: ${{ failure() || cancelled() }}
         id: check_stay_failed_cluster

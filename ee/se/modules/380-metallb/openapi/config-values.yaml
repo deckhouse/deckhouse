@@ -37,7 +37,7 @@ properties:
     type: object
     required: ["nodeSelector"]
     description: |
-      Parameters of the `speaker` component, which announces services (using `bgp` or `layer2` (LVS) routing protocol) and routes application traffic to its node.
+      Settings for the `speaker` component that implements the LoadBalancer's IPs publishing protocol for external infrastructure.
     properties:
       nodeSelector:
         type: object
@@ -74,8 +74,6 @@ properties:
       A list of external BGP routers to use with the module.
 
       Format — a data array similar to that of [MetalLB's](https://metallb.universe.tf/configuration/#bgp-configuration).
-
-      The parameter is optional if only the `layer2` mode is used to announce services.
     items:
       type: object
       required: ["peer-address", "peer-asn", "my-asn"]
@@ -164,7 +162,7 @@ properties:
         password:
           type: string
           description: |
-            Authentication password for routers enforcing TCP MD5 authenticated sessions.
+            Authentication password for BGP-routers enforcing TCP MD5 authenticated sessions.
   addressPools:
     type: array
     default: []
@@ -174,11 +172,12 @@ properties:
       Format — a data array similar to that of [MetalLB's](https://metallb.universe.tf/configuration/#advanced-address-pool-configuration).
     items:
       type: object
+      required: ["protocol", "name", "addresses"]
       properties:
         name:
           type: string
           description: |
-            The name of the pool (you can specify it using the service annotation as follows: `metallb.universe.tf/address-pool: <name>`). It should conform to RFC 1123: dot-separated parts in lowercase, consists of alphanumeric characters, '-'. Each part must start and end with an alphanumeric character.
+            The name of the pool. It should conform to RFC 1123: dot-separated parts in lowercase, consists of alphanumeric characters, '-'. Each part must start and end with an alphanumeric character.
           pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
         protocol:
           type: string
@@ -200,7 +199,7 @@ properties:
           type: boolean
           default: true
           description: |
-            Auto-assign flag used to prevent MetalLB from automatic allocation for a pool.
+            Auto-assign flag used to prevent metallb from automatic allocation for a pool.
         avoid-buggy-ips:
           type: boolean
           default: false
@@ -270,16 +269,3 @@ x-examples:
     speaker:
       nodeSelector:
         mylabel: "speaker"
-  - addressPools:
-      - name: my-pool-l2
-        protocol: layer2
-        addresses:
-          - 192.168.100.1-192.168.100.10
-          - 192.168.101.0/24
-    speaker:
-      nodeSelector:
-        mylabel: "speaker"
-      tolerations:
-        - key: dedicated
-          operator: Equal
-          value: speaker

@@ -21,6 +21,7 @@ import (
 	"path/filepath"
 	"runtime/pprof"
 	"runtime/trace"
+	"slices"
 	"strings"
 	"time"
 
@@ -39,6 +40,243 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/cache"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/tomb"
 )
+
+var (
+	allowedCommands []string
+	commandList     = []Command{
+		{
+			Name:       "server",
+			Help:       "Start dhctl as GRPC server.",
+			DefineFunc: commands.DefineServerCommand,
+		},
+		{
+			Name:       "_server",
+			Help:       "Start dhctl as GRPC server. Single threaded version.",
+			DefineFunc: commands.DefineSingleThreadedServerCommand,
+		},
+		{
+			Name:       "bootstrap",
+			Help:       "Bootstrap cluster.",
+			DefineFunc: bootstrap.DefineBootstrapCommand,
+		},
+		{
+			Name: "bootstrap-phase",
+			Help: "Commands to run a single phase of the bootstrap process.",
+		},
+		{
+			Name:       "execute-bashible-bundle",
+			Help:       "Prepare Master node and install Kubernetes.",
+			DefineFunc: bootstrap.DefineBootstrapExecuteBashibleCommand,
+			Parrent:    "bootstrap-phase",
+		},
+		{
+			Name:       "create-resources",
+			Help:       "Create resources in Kubernetes cluster.",
+			DefineFunc: bootstrap.DefineCreateResourcesCommand,
+			Parrent:    "bootstrap-phase",
+		},
+		{
+			Name:       "install-deckhouse",
+			Help:       "Install deckhouse and wait for its readiness.",
+			DefineFunc: bootstrap.DefineBootstrapInstallDeckhouseCommand,
+			Parrent:    "bootstrap-phase",
+		},
+		{
+			Name:       "abort",
+			Help:       "Delete every node, which was created during bootstrap process.",
+			DefineFunc: bootstrap.DefineBootstrapAbortCommand,
+			Parrent:    "bootstrap-phase",
+		},
+		{
+			Name:       "base-infra",
+			Help:       "Create base infrastructure for Cloud Kubernetes cluster.",
+			DefineFunc: bootstrap.DefineBaseInfrastructureCommand,
+			Parrent:    "bootstrap-phase",
+		},
+		{
+			Name:       "exec-post-bootstrap",
+			Help:       "Test scp upload and ssh run uploaded script.",
+			DefineFunc: bootstrap.DefineExecPostBootstrapScript,
+			Parrent:    "bootstrap-phase",
+		},
+		{
+			Name:       "converge",
+			Help:       "Converge kubernetes cluster.",
+			DefineFunc: commands.DefineConvergeCommand,
+		},
+		{
+			Name:       "converge-periodical",
+			Help:       "Start service for periodical run converge.",
+			DefineFunc: commands.DefineAutoConvergeCommand,
+		},
+		{
+			Name: "lock",
+			Help: "Converge cluster lock",
+		},
+		{
+			Name:       "release",
+			Help:       "Release converge lock fully. It's remove converge lease lock from cluster regardless of owner. Be careful",
+			DefineFunc: commands.DefineReleaseConvergeLockCommand,
+			Parrent:    "lock",
+		},
+		{
+			Name:       "destroy",
+			Help:       "Destroy Kubernetes cluster.",
+			DefineFunc: commands.DefineDestroyCommand,
+		},
+		{
+			Name: "terraform",
+			Help: "Terraform commands.",
+		},
+		{
+			Name:       "converge-exporter",
+			Help:       "Run terraform converge exporter.",
+			DefineFunc: commands.DefineTerraformConvergeExporterCommand,
+			Parrent:    "terraform",
+		},
+		{
+			Name:       "check",
+			Help:       "Check differences between state of Kubernetes cluster and Terraform state.",
+			DefineFunc: commands.DefineTerraformCheckCommand,
+			Parrent:    "terraform",
+		},
+		{
+			Name: "config",
+			Help: "Load, edit and save various dhctl configurations.",
+		},
+		{
+			Name:    "parse",
+			Help:    "Parse, validate and output configurations.",
+			Parrent: "config",
+		},
+		{
+			Name:       "cluster-configuration",
+			Help:       "Parse configuration and print it.",
+			DefineFunc: commands.DefineCommandParseClusterConfiguration,
+			Parrent:    "parse",
+		},
+		{
+			Name:       "cloud-discovery-data",
+			Help:       "Parse cloud discovery data and print it.",
+			DefineFunc: commands.DefineCommandParseCloudDiscoveryData,
+			Parrent:    "parse",
+		},
+		{
+			Name:    "render",
+			Help:    "Render transitional configurations.",
+			Parrent: "config",
+		},
+		{
+			Name:       "bashible-bundle",
+			Help:       "Render bashible bundle.",
+			DefineFunc: commands.DefineRenderBashibleBundle,
+			Parrent:    "render",
+		},
+		{
+			Name:       "kubeadm-config",
+			Help:       "Render kubeadm config.",
+			DefineFunc: commands.DefineRenderKubeadmConfig,
+			Parrent:    "render",
+		},
+		{
+			Name:       "master-bootstrap-scripts",
+			Help:       "Render master bootstrap scripts.",
+			DefineFunc: commands.DefineRenderMasterBootstrap,
+			Parrent:    "render",
+		},
+		{
+			Name:    "edit",
+			Help:    "Change configuration files in Kubernetes cluster conveniently and safely.",
+			Parrent: "config",
+			DefineFunc: func(cmd *kingpin.CmdClause) *kingpin.CmdClause {
+				commands.DefineEditCommands(cmd /* wConnFlags */, true)
+				return nil
+			},
+		},
+		{
+			Name: "test",
+			Help: "Commands to test the parts of bootstrap and converge process.",
+		},
+		{
+			Name:       "ssh-connection",
+			Help:       "Test connection via ssh.",
+			DefineFunc: commands.DefineTestSSHConnectionCommand,
+			Parrent:    "test",
+		},
+		{
+			Name:       "kubernetes-api-connection",
+			Help:       "Test connection to kubernetes api via ssh or directly.",
+			DefineFunc: commands.DefineTestKubernetesAPIConnectionCommand,
+			Parrent:    "test",
+		},
+		{
+			Name:       "scp",
+			Help:       "Test scp file operations.",
+			DefineFunc: commands.DefineTestSCPCommand,
+			Parrent:    "test",
+		},
+		{
+			Name:       "upload-exec",
+			Help:       "Test scp upload and ssh run uploaded script.",
+			DefineFunc: commands.DefineTestUploadExecCommand,
+			Parrent:    "test",
+		},
+		{
+			Name:       "bashible-bundle",
+			Help:       "Test upload and execute a bundle.",
+			DefineFunc: commands.DefineTestBundle,
+			Parrent:    "test",
+		},
+		{
+			Name:    "control-plane",
+			Help:    "Commands to test control plane nodes.",
+			Parrent: "test",
+		},
+		{
+			Name:       "manager",
+			Help:       "Test control plane manager is ready.",
+			DefineFunc: commands.DefineTestControlPlaneManagerReadyCommand,
+			Parrent:    "control-plane",
+		},
+		{
+			Name:       "node",
+			Help:       "Test control plane node is ready.",
+			DefineFunc: commands.DefineTestControlPlaneNodeReadyCommand,
+			Parrent:    "control-plane",
+		},
+		{
+			Name:    "deckhouse",
+			Help:    "Install and uninstall deckhouse.",
+			Parrent: "test",
+		},
+		{
+			Name:       "create-deployment",
+			Help:       "Install deckhouse after terraform is applied successful.",
+			DefineFunc: commands.DefineDeckhouseCreateDeployment,
+			Parrent:    "deckhouse",
+		},
+		{
+			Name:       "remove-deployment",
+			Help:       "Delete deckhouse deployment.",
+			DefineFunc: commands.DefineDeckhouseRemoveDeployment,
+			Parrent:    "deckhouse",
+		},
+		{
+			Name:       "deployment-ready",
+			Help:       "Wait while deployment is ready.",
+			DefineFunc: commands.DefineWaitDeploymentReadyCommand,
+			Parrent:    "deckhouse",
+		},
+	}
+)
+
+type Command struct {
+	Name       string
+	Help       string
+	DefineFunc func(cmd *kingpin.CmdClause) *kingpin.CmdClause
+	Parrent    string
+	cmd        *kingpin.CmdClause
+}
 
 func main() {
 	_ = os.Mkdir(app.TmpDirName, 0o755)
@@ -62,77 +300,9 @@ func main() {
 		return nil
 	})
 
-	commands.DefineServerCommand(kpApp)
-	commands.DefineSingleThreadedServerCommand(kpApp)
-
-	bootstrap.DefineBootstrapCommand(kpApp)
-	bootstrapPhaseCmd := kpApp.Command("bootstrap-phase", "Commands to run a single phase of the bootstrap process.")
-	{
-		bootstrap.DefineBootstrapExecuteBashibleCommand(bootstrapPhaseCmd)
-		bootstrap.DefineBootstrapInstallDeckhouseCommand(bootstrapPhaseCmd)
-		bootstrap.DefineCreateResourcesCommand(bootstrapPhaseCmd)
-		bootstrap.DefineBootstrapAbortCommand(bootstrapPhaseCmd)
-		bootstrap.DefineBaseInfrastructureCommand(bootstrapPhaseCmd)
-		bootstrap.DefineExecPostBootstrapScript(bootstrapPhaseCmd)
-	}
-
-	commands.DefineConvergeCommand(kpApp)
-	commands.DefineAutoConvergeCommand(kpApp)
-
-	lockCmd := kpApp.Command("lock", "Converge cluster lock")
-	{
-		commands.DefineReleaseConvergeLockCommand(lockCmd)
-	}
-
-	commands.DefineDestroyCommand(kpApp)
-
-	terraformCmd := kpApp.Command("terraform", "Terraform commands.")
-	{
-		commands.DefineTerraformConvergeExporterCommand(terraformCmd)
-		commands.DefineTerraformCheckCommand(terraformCmd)
-	}
-
-	configCmd := kpApp.Command("config", "Load, edit and save various dhctl configurations.")
-	{
-		parseCmd := configCmd.Command("parse", "Parse, validate and output configurations.")
-		{
-			commands.DefineCommandParseClusterConfiguration(kpApp, parseCmd)
-			commands.DefineCommandParseCloudDiscoveryData(kpApp, parseCmd)
-		}
-
-		renderCmd := configCmd.Command("render", "Render transitional configurations.")
-		{
-			commands.DefineRenderBashibleBundle(renderCmd)
-			commands.DefineRenderKubeadmConfig(renderCmd)
-			commands.DefineRenderMasterBootstrap(renderCmd)
-		}
-
-		editCmd := configCmd.Command("edit", "Change configuration files in Kubernetes cluster conveniently and safely.")
-		{
-			commands.DefineEditCommands(editCmd /* wConnFlags */, true)
-		}
-	}
-
-	testCmd := kpApp.Command("test", "Commands to test the parts of bootstrap and converge process.")
-	{
-		commands.DefineTestSSHConnectionCommand(testCmd)
-		commands.DefineTestKubernetesAPIConnectionCommand(testCmd)
-		commands.DefineTestSCPCommand(testCmd)
-		commands.DefineTestUploadExecCommand(testCmd)
-		commands.DefineTestBundle(testCmd)
-
-		controlPlaneCmd := testCmd.Command("control-plane", "Commands to test control plane nodes.")
-		{
-			commands.DefineTestControlPlaneManagerReadyCommand(controlPlaneCmd)
-			commands.DefineTestControlPlaneNodeReadyCommand(controlPlaneCmd)
-		}
-	}
-
-	deckhouseCmd := testCmd.Command("deckhouse", "Install and uninstall deckhouse.")
-	{
-		commands.DefineDeckhouseCreateDeployment(deckhouseCmd)
-		commands.DefineDeckhouseRemoveDeployment(deckhouseCmd)
-		commands.DefineWaitDeploymentReadyCommand(deckhouseCmd)
+	err := registerCommands(kpApp)
+	if err != nil {
+		panic(err)
 	}
 
 	runApplication(kpApp)
@@ -295,6 +465,12 @@ func initGlobalVars() {
 		panic(err)
 	}
 
+	commandsEnv := os.Getenv("DHCTL_CLI_ALLOWED_COMMANDS")
+
+	if len(commandsEnv) > 0 {
+		allowedCommands = strings.Split(commandsEnv, ", ")
+	}
+
 	// set relative path to config and template files
 	config.InitGlobalVars(dhctlPath)
 	commands.InitGlobalVars(dhctlPath)
@@ -302,4 +478,113 @@ func initGlobalVars() {
 	terraform.InitGlobalVars(dhctlPath)
 	manifests.InitGlobalVars(dhctlPath)
 	template.InitGlobalVars(dhctlPath)
+}
+
+func checkCommand(name string, allowedCommands []string) (bool, []string) {
+	if len(allowedCommands) == 0 || slices.Index(allowedCommands, name) != -1 {
+		return true, []string{}
+	}
+
+	for _, cm := range allowedCommands {
+		c := strings.Split(cm, " ")
+		if c[0] == name {
+			return true, c
+		}
+	}
+
+	return false, []string{}
+}
+
+func checkSubcommand(name string, subcommands []string) bool {
+	ex, _ := checkCommand(name, subcommands)
+	if len(subcommands) == 2 && subcommands[1] == "*" || ex {
+		return true
+	}
+
+	return false
+}
+
+func getParrentIndex(commandList []Command, name string) (int, error) {
+	for i, cmd := range commandList {
+		if name == cmd.Name {
+			return i, nil
+		}
+	}
+
+	return -1, fmt.Errorf("parrent command %s not found in command list", name)
+}
+
+func getNestingDepth(cmd Command, commands []Command) (Command, int) {
+	depth := 0
+	visited := make(map[string]bool)
+	topLevel := cmd
+
+	for {
+		found := false
+		for _, c := range commands {
+			if c.Name == cmd.Parrent && !visited[c.Name] {
+				visited[c.Name] = true
+				cmd = c
+				depth++
+				topLevel = cmd
+				found = true
+				break
+			}
+		}
+
+		if !found || cmd.Parrent == "" {
+			break
+		}
+	}
+
+	return topLevel, depth
+}
+
+func initParrent(parrentCmdIndex int, kpApp *kingpin.Application) *kingpin.CmdClause {
+	var pcmd *kingpin.CmdClause
+
+	if commandList[parrentCmdIndex].cmd == nil {
+		pcmd = kpApp.Command(commandList[parrentCmdIndex].Name, commandList[parrentCmdIndex].Help)
+		commandList[parrentCmdIndex].cmd = pcmd
+	} else {
+		pcmd = commandList[parrentCmdIndex].cmd
+	}
+	return pcmd
+}
+
+func registerCommands(kpApp *kingpin.Application) error {
+	for i, command := range commandList {
+		firstNode, depth := getNestingDepth(command, commandList)
+		if depth == 0 {
+			allowed, _ := checkCommand(command.Name, allowedCommands)
+			if allowed {
+				cmd := kpApp.Command(command.Name, command.Help)
+				commandList[i].cmd = cmd
+
+				if command.DefineFunc != nil {
+					command.DefineFunc(cmd)
+				}
+			}
+		} else {
+			parrentCmdIndex, err := getParrentIndex(commandList, command.Parrent)
+			if err != nil {
+				return err
+			}
+
+			allowed, subcommands := checkCommand(firstNode.Name, allowedCommands)
+
+			if allowed && checkSubcommand(command.Name, subcommands) {
+				pcmd := initParrent(parrentCmdIndex, kpApp)
+
+				cmd := pcmd.Command(command.Name, command.Help)
+				commandList[i].cmd = cmd
+
+				if command.DefineFunc != nil {
+					command.DefineFunc(cmd)
+				}
+			}
+		}
+	}
+
+	return nil
 }

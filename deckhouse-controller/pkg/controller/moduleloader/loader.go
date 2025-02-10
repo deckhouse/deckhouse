@@ -318,58 +318,32 @@ func (l *Loader) ensureModule(ctx context.Context, def *moduletypes.Definition, 
 				}
 			}
 
-			var needsUpdate bool
-			if module.Properties.Weight != def.Weight {
-				module.Properties.Weight = def.Weight
-				needsUpdate = true
-			}
-
-			if module.Properties.Description != def.Description {
-				module.Properties.Description = def.Description
-				needsUpdate = true
-			}
-
-			if module.Properties.Stage != def.Stage {
-				module.Properties.Stage = def.Stage
-				needsUpdate = true
-			}
-
-			if !reflect.DeepEqual(module.Properties.Requirements, def.Requirements) {
-				module.Properties.Requirements = def.Requirements
-				needsUpdate = true
-			}
+			module.Properties.Requirements = def.Requirements
+			module.Properties.Subsystems = def.Subsystems
+			module.Properties.Namespace = def.Namespace
+			module.Properties.Weight = def.Weight
+			module.Properties.Description = def.Description
+			module.Properties.Stage = def.Stage
 
 			if embedded {
 				// set deckhouse release channel to embedded modules
-				if module.Properties.ReleaseChannel != l.embeddedPolicy.Get().ReleaseChannel {
-					module.Properties.ReleaseChannel = l.embeddedPolicy.Get().ReleaseChannel
-					needsUpdate = true
-				}
+				module.Properties.ReleaseChannel = l.embeddedPolicy.Get().ReleaseChannel
 
 				// set deckhouse version to embedded modules
-				if module.Properties.Version != l.version {
-					module.Properties.Version = l.version
-					needsUpdate = true
-				}
+				module.Properties.Version = l.version
 
 				// set embedded source to embedded modules
 				// TODO(ipaqsa): it is needed for migration, can be removed after 1.68
-				if module.Properties.Source != v1alpha1.ModuleSourceEmbedded {
-					module.Properties.Source = v1alpha1.ModuleSourceEmbedded
-					needsUpdate = true
-				}
+				module.Properties.Source = v1alpha1.ModuleSourceEmbedded
 			}
 
 			// TODO(ipaqsa): it is needed for migration, can be removed after 1.68
-			if !embedded && module.IsEmbedded() {
+			if module.IsEmbedded() && !embedded {
 				module.Properties.Source = ""
-				needsUpdate = true
 			}
 
-			if needsUpdate {
-				if err := l.client.Update(ctx, module); err != nil {
-					return err
-				}
+			if !reflect.DeepEqual(def, module) {
+				return l.client.Update(ctx, module)
 			}
 
 			return nil
