@@ -74,6 +74,6 @@
     DEFECTDOJO_DEV_TESTS_ROTATION_DAYS: 7
   shell: bash
   run: |
-    python .github/scripts/python/defectdojo_dev_tests_rotator.py
+    python ./.github/scripts/python/defectdojo_dev_tests_rotator.py
 # </template: defectdojo_dev_tests_rotator>
 {!{- end -}!}
