@@ -179,6 +179,7 @@ func (r *runner) convergeTerraNodes(ctx *context.Context, metaConfig *config.Met
 	}
 
 	var nodeGroupsWithStateInCluster []string
+	var nodeGroupsWithoutStateInCluster []config.TerraNodeGroupSpec
 
 	for _, group := range terraNodeGroups {
 		// Skip if node group terraform state exists, we will update node group state below
@@ -186,9 +187,12 @@ func (r *runner) convergeTerraNodes(ctx *context.Context, metaConfig *config.Met
 			nodeGroupsWithStateInCluster = append(nodeGroupsWithStateInCluster, group.Name)
 			continue
 		}
-		if err := createPreviouslyNotExistedNodeGroup(ctx, group, metaConfig); err != nil {
-			return err
-		}
+
+		nodeGroupsWithoutStateInCluster = append(nodeGroupsWithoutStateInCluster, group)
+	}
+
+	if err := operations.ParallelCreateNodeGroup(ctx.KubeClient(), metaConfig, nodeGroupsWithoutStateInCluster, ctx.Terraform()); err != nil {
+		return err
 	}
 
 	for _, nodeGroupName := range utils.SortNodeGroupsStateKeys(nodesState, nodeGroupsWithStateInCluster) {
@@ -336,31 +340,4 @@ func (r *runner) updateClusterState(ctx *context.Context, metaConfig *config.Met
 	}
 
 	return ctx.CompleteExecutionPhase(nil)
-}
-
-func createPreviouslyNotExistedNodeGroup(ctx *context.Context, group config.TerraNodeGroupSpec, metaConfig *config.MetaConfig) error {
-	return log.Process("converge", fmt.Sprintf("Add NodeGroup %s (replicas: %v)️", group.Name, group.Replicas), func() error {
-		err := entity.CreateNodeGroup(ctx.KubeClient(), group.Name, metaConfig.NodeGroupManifest(group))
-		if err != nil {
-			return err
-		}
-
-		nodeCloudConfig, err := entity.GetCloudConfig(ctx.KubeClient(), group.Name, global.ShowDeckhouseLogs)
-		if err != nil {
-			return err
-		}
-
-		var nodesIndexToCreate []int
-
-		for i := 0; i < group.Replicas; i++ {
-			nodesIndexToCreate = append(nodesIndexToCreate, i)
-		}
-
-		_, err = operations.ParallelBootstrapAdditionalNodes(ctx.KubeClient(), metaConfig, nodesIndexToCreate, "static-node", group.Name, nodeCloudConfig, true, ctx.Terraform())
-		if err != nil {
-			return err
-		}
-
-		return entity.WaitForNodesBecomeReady(ctx.KubeClient(), group.Name, group.Replicas)
-	})
 }

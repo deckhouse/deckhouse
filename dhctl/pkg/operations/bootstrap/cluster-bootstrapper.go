@@ -580,14 +580,11 @@ func bootstrapAdditionalNodesForCloudCluster(kubeCl *client.KubernetesClient, me
 	}
 
 	return log.Process("bootstrap", "Waiting for Node Groups are ready", func() error {
+		// TODO check that is correct
 		if err := entity.WaitForNodesBecomeReady(kubeCl, map[string]int{"master": metaConfig.MasterNodeGroupSpec.Replicas}); err != nil {
 			return err
 		}
-		for _, terraNodeGroup := range terraNodeGroups {
-			if err := entity.WaitForNodesBecomeReady(kubeCl, terraNodeGroup.Name, terraNodeGroup.Replicas); err != nil {
-				return err
-			}
-		}
+
 		return nil
 	})
 }

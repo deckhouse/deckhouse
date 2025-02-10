@@ -725,7 +725,7 @@ func InstallDeckhouse(kubeCl *client.KubernetesClient, config *config.DeckhouseI
 
 func BootstrapTerraNodes(kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig, terraNodeGroups []config.TerraNodeGroupSpec, terraformContext *terraform.TerraformContext) error {
 	return log.Process("bootstrap", "Create CloudPermanent NG", func() error {
-		return converge.ParallelCreateNodeGroup(kubeCl, metaConfig, terraNodeGroups, terraformContext)
+		return operations.ParallelCreateNodeGroup(kubeCl, metaConfig, terraNodeGroups, terraformContext)
 	})
 }
 

@@ -18,7 +18,6 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
-	"strings"
 	"sync"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
@@ -81,7 +80,7 @@ func BootstrapAdditionalNode(kubeCl *client.KubernetesClient, cfg *config.MetaCo
 	return nil
 }
 
-func BootstrapAdditionalNodeForParallelRun(kubeCl *client.KubernetesClient, cfg *config.MetaConfig, index int, step, nodeGroupName, cloudConfig string, isConverge bool, terraformContext *terraform.TerraformContext, buff *bytes.Buffer, saveLogToBuffer bool) error {
+func BootstrapAdditionalNodeForParallelRun(kubeCl *client.KubernetesClient, cfg *config.MetaConfig, index int, step, nodeGroupName, cloudConfig string, isConverge bool, terraformContext *terraform.TerraformContext, runnerLogger log.Logger) error {
 	nodeName := NodeName(cfg, nodeGroupName, index)
 	nodeGroupSettings := cfg.FindTerraNodeGroup(nodeGroupName)
 	// TODO pass cache as argument or better refact func
@@ -115,7 +114,16 @@ func BootstrapAdditionalNodeForParallelRun(kubeCl *client.KubernetesClient, cfg 
 	return nil
 }
 
-func ParallelBootstrapAdditionalNodes(kubeCl *client.KubernetesClient, cfg *config.MetaConfig, nodesIndexToCreate []int, step, nodeGroupName, cloudConfig string, isConverge bool, terraformContext *terraform.TerraformContext, ngLogger log.Logger, saveLogToBuffer bool) ([]string, error) {
+func ParallelBootstrapAdditionalNodes(
+	kubeCl *client.KubernetesClient,
+	cfg *config.MetaConfig,
+	nodesIndexToCreate []int,
+	step, nodeGroupName, cloudConfig string,
+	isConverge bool,
+	terraformContext *terraform.TerraformContext,
+	ngLogger log.Logger,
+	saveLogToBuffer bool,
+) ([]string, error) {
 
 	var (
 		nodesToWait []string
@@ -156,7 +164,17 @@ func ParallelBootstrapAdditionalNodes(kubeCl *client.KubernetesClient, cfg *conf
 			if i == 0 && !saveLogToBuffer {
 				nodeLogger = ngLogger
 			}
-			err := BootstrapAdditionalNodeForParallelRun(kubeCl, cfg, indexCandidate, step, nodeGroupName, cloudConfig, true, terraformContext, nodeLogger)
+			err := BootstrapAdditionalNodeForParallelRun(
+				kubeCl,
+				cfg,
+				indexCandidate,
+				step,
+				nodeGroupName,
+				cloudConfig,
+				true,
+				terraformContext,
+				nodeLogger,
+			)
 
 			resultsChan <- checkResult{
 				name:        candidateName,
@@ -227,7 +245,7 @@ func ParallelCreateNodeGroup(kubeCl *client.KubernetesClient, metaConfig *config
 					ngLogger = currentLogger.CreateBufferLogger(&buffNGLog)
 				}
 
-				err := CreateNodeGroup(kubeCl, group.Name, ngLogger, metaConfig.NodeGroupManifest(group))
+				err := entity.CreateNodeGroup(kubeCl, group.Name, ngLogger, metaConfig.NodeGroupManifest(group))
 				if err != nil {
 					resultsChan <- checkResult{
 						name:    group.Name,
@@ -237,7 +255,7 @@ func ParallelCreateNodeGroup(kubeCl *client.KubernetesClient, metaConfig *config
 					return
 				}
 
-				nodeCloudConfig, err := GetCloudConfig(kubeCl, group.Name, ShowDeckhouseLogs, ngLogger)
+				nodeCloudConfig, err := entity.GetCloudConfig(kubeCl, group.Name, global.ShowDeckhouseLogs, ngLogger)
 				if err != nil {
 					resultsChan <- checkResult{
 						name:    group.Name,
@@ -284,7 +302,7 @@ func ParallelCreateNodeGroup(kubeCl *client.KubernetesClient, metaConfig *config
 			currentPLogger.LogProcessEnd()
 		}
 
-		return WaitForNodesBecomeReady(kubeCl, ngWaitMap)
+		return entity.WaitForNodesBecomeReady(kubeCl, ngWaitMap)
 	})
 }
 

@@ -202,7 +202,7 @@ func (c *MasterNodeGroupController) addNodes(ctx *context.Context) error {
 		}
 
 		// we hide deckhouse logs because we always have config
-		nodeCloudConfig, err := entity.GetCloudConfig(ctx.KubeClient(), c.name, global.HideDeckhouseLogs, nodeInternalIPList...)
+		nodeCloudConfig, err := entity.GetCloudConfig(ctx.KubeClient(), c.name, global.HideDeckhouseLogs, log.GetDefaultLogger(), nodeInternalIPList...)
 		if err != nil {
 			return err
 		}
@@ -336,7 +336,7 @@ func (c *MasterNodeGroupController) deleteNodes(ctx *context.Context, nodesToDel
 	title := fmt.Sprintf("Delete Nodes from NodeGroup %s (replicas: %v)", global.MasterNodeGroupName, c.desiredReplicas)
 	return log.Process("converge", title, func() error {
 		return c.deleteRedundantNodes(ctx, c.state.Settings, nodesToDeleteInfo, func(nodeName string) terraform.InfraActionHook {
-			return controlplane.NewHookForDestroyPipeline(ctx, nodeName)
+			return controlplane.NewHookForDestroyPipeline(ctx, nodeName, ctx.CommanderMode())
 		})
 	})
 }
