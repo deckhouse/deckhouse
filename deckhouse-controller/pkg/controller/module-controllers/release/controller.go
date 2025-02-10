@@ -326,6 +326,7 @@ func (r *reconciler) handleDeployedRelease(ctx context.Context, release *v1alpha
 		if err := r.client.Update(ctx, release); err != nil {
 			r.log.Error("failed to update module release", slog.String("release", release.GetName()), log.Err(err))
 		}
+
 		return ctrl.Result{Requeue: true}, nil
 	}
 
@@ -465,6 +466,8 @@ func (r *reconciler) handlePendingRelease(ctx context.Context, release *v1alpha1
 			return res, fmt.Errorf("apply forced release: %w", err)
 		}
 
+		modulesChangedReason = "a new module release deployed"
+
 		// stop requeue because we restart deckhouse (deployment)
 		return ctrl.Result{}, nil
 	}
@@ -544,6 +547,8 @@ func (r *reconciler) handlePendingRelease(ctx context.Context, release *v1alpha1
 	if err != nil {
 		return res, fmt.Errorf("apply predicted release: %w", err)
 	}
+
+	modulesChangedReason = "a new module release deployed"
 
 	return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
 }
@@ -732,19 +737,33 @@ func (r *reconciler) runReleaseDeploy(ctx context.Context, release *v1alpha1.Mod
 		}
 	}
 
+	backoff := &wait.Backoff{
+		Steps: 6,
+		// magic number
+		Duration: 20 * time.Millisecond,
+		Factor:   1.0,
+		Jitter:   0.1,
+	}
+
 	err = ctrlutils.UpdateWithRetry(ctx, r.client, release, func() error {
 		annotations := map[string]string{
 			v1alpha1.ModuleReleaseAnnotationIsUpdating: "true",
 			v1alpha1.ModuleReleaseAnnotationNotified:   "false",
 		}
 
-		if release.Annotations == nil {
+		if len(release.Annotations) == 0 {
 			release.Annotations = make(map[string]string, 2)
 		}
 
 		for k, v := range annotations {
 			release.Annotations[k] = v
 		}
+
+		if len(release.ObjectMeta.Labels) == 0 {
+			release.ObjectMeta.Labels = make(map[string]string, 1)
+		}
+
+		release.ObjectMeta.Labels[v1alpha1.ModuleReleaseLabelStatus] = strings.ToLower(v1alpha1.ModuleReleasePhaseDeployed)
 
 		if release.GetApplyNow() {
 			delete(release.Annotations, v1alpha1.ModuleReleaseAnnotationApplyNow)
@@ -757,8 +776,10 @@ func (r *reconciler) runReleaseDeploy(ctx context.Context, release *v1alpha1.Mod
 		release.Status.Size = downloadStatistic.Size
 		release.Status.PullDuration = metav1.Duration{Duration: downloadStatistic.PullDuration}
 
+		controllerutil.AddFinalizer(release, v1alpha1.ModuleReleaseFinalizerExistOnFs)
+
 		return nil
-	})
+	}, ctrlutils.WithRetryOnConflictBackoff(backoff))
 	if err != nil {
 		return fmt.Errorf("update with retry: %w", err)
 	}
@@ -803,8 +824,16 @@ func (r *reconciler) PreApplyReleaseCheck(ctx context.Context, mr *v1alpha1.Modu
 		r.log.Warn("met release conditions status update ", slog.String("release", mr.GetName()), log.Err(err))
 	}
 
+	backoff := &wait.Backoff{
+		Steps: 6,
+		// magic number
+		Duration: 20 * time.Millisecond,
+		Factor:   1.0,
+		Jitter:   0.1,
+	}
+
 	err = ctrlutils.UpdateWithRetry(ctx, r.client, mr, func() error {
-		if mr.Annotations == nil {
+		if len(mr.Annotations) == 0 {
 			mr.Annotations = make(map[string]string, 2)
 		}
 
@@ -818,7 +847,7 @@ func (r *reconciler) PreApplyReleaseCheck(ctx context.Context, mr *v1alpha1.Modu
 		}
 
 		return nil
-	})
+	}, ctrlutils.WithRetryOnConflictBackoff(backoff))
 	if err != nil {
 		r.log.Warn("met release conditions resource update ", slog.String("release", mr.GetName()), log.Err(err))
 	}
@@ -927,6 +956,14 @@ func (r *reconciler) DeployTimeCalculate(ctx context.Context, mr v1alpha1.Releas
 func (r *reconciler) updateReleaseStatus(ctx context.Context, mr *v1alpha1.ModuleRelease, status *v1alpha1.ModuleReleaseStatus) error {
 	r.log.Debug("refresh release status", slog.String("release", mr.GetName()))
 
+	backoff := &wait.Backoff{
+		Steps: 6,
+		// magic number
+		Duration: 20 * time.Millisecond,
+		Factor:   1.0,
+		Jitter:   0.1,
+	}
+
 	return ctrlutils.UpdateStatusWithRetry(ctx, r.client, mr, func() error {
 		if mr.GetPhase() != status.Phase {
 			mr.Status.TransitionTime = metav1.NewTime(r.dependencyContainer.GetClock().Now().UTC())
@@ -936,7 +973,7 @@ func (r *reconciler) updateReleaseStatus(ctx context.Context, mr *v1alpha1.Modul
 		mr.Status.Message = status.Message
 
 		return nil
-	})
+	}, ctrlutils.WithRetryOnConflictBackoff(backoff))
 }
 
 // deleteRelease deletes the module from filesystem
