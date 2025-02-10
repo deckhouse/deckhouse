@@ -22,7 +22,7 @@ shell:
   install:
   - git clone --depth 1 --branch {{ .TF.decort.version }} {{ $.SOURCE_REPO }}/BASIS/terraform-provider-decort.git /src
   - cd /src
-  - git apply /patches/*.patch --verbose
+  # - git apply /patches/*.patch --verbose
   - rm -rf .git
 ---
 image: terraform-provider-decort
