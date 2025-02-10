@@ -30,7 +30,7 @@
   - alert: KubernetesDeploymentReplicasUnavailable
     expr: |
       (
-        (kube_deployment_status_replicas_available{deployment!~"standby-holder-.+"} == 0) * (kube_deployment_spec_replicas{deployment!~"standby-holder-.+"} != 0)
+        (kube_deployment_status_replicas_available == 0) * (kube_deployment_spec_replicas != 0)
       )
       * on (namespace, deployment)
       (
