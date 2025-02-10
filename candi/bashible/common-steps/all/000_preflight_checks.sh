@@ -23,4 +23,5 @@ else
     bb-log-error "containerd.service is enabled on $HOSTNAME. Deckhouse use only containerd-deckhouse.service. Please disable/uninstall containerd.service to avoid further conflicts."
     exit 1
   fi
+fi
 {{- end }}
