@@ -18,9 +18,10 @@ import:
   owner: 1337
   group: 1337
   after: setup
-docker:
-  USER: "1337:1337"
-  ENTRYPOINT: ["/usr/local/bin/operator"]
+imageSpec:
+  config:
+    user: "1337:1337"
+    entrypoint: ["/usr/local/bin/operator"]
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
 final: false
@@ -40,7 +41,7 @@ shell:
   install:
   - cd /src/istio/
   - echo {{ $istioVersion }} > version
-  - export GOPROXY={{ $.GOPROXY }} GOOS=linux GOARCH=amd64 
+  - export GOPROXY={{ $.GOPROXY }} GOOS=linux GOARCH=amd64
   - export LDFLAGS='-extldflags -static -s -w'
   - common/scripts/gobuild.sh /src/istio/out/ -tags=agent,disable_pgv /src/istio/operator/cmd/operator/
   - strip /src/istio/out/operator

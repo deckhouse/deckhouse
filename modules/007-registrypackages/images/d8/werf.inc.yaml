@@ -24,12 +24,9 @@ import:
   - install
   - uninstall
   before: setup
-docker:
-  LABEL:
-    distro: all
-    version: all
-    d8: {{ .CandiVersionMap.d8.d8CliVersion }}
-  USER: 64535
+imageSpec:
+  config:
+    labels: { "distro": "all", "version": "all", "d8": "{{ .CandiVersionMap.d8.d8CliVersion }}" }
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
 final: false

@@ -11,11 +11,12 @@ import:
     to: /templates
     before: setup
   - image: {{ $.ModuleName }}/{{ $.ImageName }}-multitenancy-manager-src-artifact
-    add: /src/default
-    to: /default
+    add: /src/helmlib
+    to: /helmlib
     before: setup
-docker:
-  ENTRYPOINT: [ "/multitenancy-manager" ]
+imageSpec:
+  config:
+    entrypoint: [ "/multitenancy-manager" ]
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-multitenancy-manager-src-artifact
 fromImage: common/src-artifact
@@ -27,17 +28,17 @@ git:
       - '**/*.go'
       - '**/go.mod'
       - '**/go.sum'
-      - '**/default/*.yaml'
+      - '**/helmlib/*.yaml'
+      - '**/helmlib/*.tpl'
       - '**/templates/*.yaml'
-      - '**/templates/*.tpl'
     stageDependencies:
       install:
         - '**/*.go'
         - '**/go.mod'
         - '**/go.sum'
-        - '**/default/*.yaml'
+        - '**/helmlib/*.yaml'
+        - '**/helmlib/*.tpl'
         - '**/templates/*.yaml'
-        - '**/templates/*.tpl'
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-multitenancy-manager-artifact
 from: {{ $.Images.BASE_GOLANG_23_ALPINE }}

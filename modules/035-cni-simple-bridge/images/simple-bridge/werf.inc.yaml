@@ -25,8 +25,9 @@ import:
   add: /iptables-wrapper
   to: /sbin/iptables-wrapper
   before: setup
-docker:
-  ENTRYPOINT: ["/sbin/iptables-wrapper"]
+imageSpec:
+  config:
+    entrypoint: ["/sbin/iptables-wrapper"]
 ---
 {{ $simpleBridgeBinaries := "/bin/awk /bin/cat /bin/rm /bin/echo /usr/bin/tee /bin/sleep /bin/hostname /usr/bin/python3 /usr/bin/curl /usr/bin/jq /bin/bash /bin/grep /sbin/ip /usr/sbin/bridge" }}
 ---

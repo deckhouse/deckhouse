@@ -1,5 +1,9 @@
 ## Patches
 
+### Go.mod patch
+
+Update deps.
+
 ### Cookie refresh
 
 There is a problem when we are using nonpersistent Redis for session storage. If Redis was killed or flushed, the user should be authenticated again. That makes oauth2 proxy to be stateful application (or sort of).

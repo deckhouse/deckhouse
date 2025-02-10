@@ -6,8 +6,9 @@ import:
   add: /src/prometheus-reverse-proxy
   to: /prometheus-reverse-proxy
   before: setup
-docker:
-  ENTRYPOINT: [ "/prometheus-reverse-proxy" ]
+imageSpec:
+  config:
+    entrypoint: [ "/prometheus-reverse-proxy" ]
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 fromImage: common/src-artifact

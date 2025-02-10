@@ -22,8 +22,9 @@ import:
   add: /lib/udev/scsi_id
   to: /lib/udev/scsi_id
   before: setup
-docker:
-  ENTRYPOINT: ["/dynamix-csi-driver"]
+imageSpec:
+  config:
+    entrypoint: ["/dynamix-csi-driver"]
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
 final: false

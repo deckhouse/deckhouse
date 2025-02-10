@@ -15,13 +15,12 @@
       severity_level: "5"
     annotations:
       plk_protocol_version: "1"
-      description: |-
-        URL {{$labels.vhost}}{{$labels.location}} on Ingress {{$labels.ingress}} with Service name "{{$labels.service}}" and port "{{$labels.service_port}}" has more than {{ printf "extended_monitoring_ingress_threshold{threshold=\"5xx-warning\", namespace=\"%s\", ingress=\"%s\"}" $labels.namespace $labels.ingress | query | first | value }}% 5xx responses from backend.
-
-        Currently at: {{ .Value }}%
       summary: |-
-        URL {{$labels.vhost}}{{$labels.location}} on Ingress {{$labels.ingress}} has more than {{ printf "extended_monitoring_ingress_threshold{threshold=\"5xx-warning\", namespace=\"%s\", ingress=\"%s\"}" $labels.namespace $labels.ingress | query | first | value }}% 5xx responses from backend.
+        URL {{$labels.vhost}}{{$labels.location}} on Ingress `{{$labels.ingress}}` has more than {{ printf "extended_monitoring_ingress_threshold{threshold=\"5xx-warning\", namespace=\"%s\", ingress=\"%s\"}" $labels.namespace $labels.ingress | query | first | value }}% of `5xx` responses from the backend.
+      description: |-
+        Deckhouse has detected that URL {{$labels.vhost}}{{$labels.location}} on Ingress `{{$labels.ingress}}`, using service `{{$labels.service}}` on port {{$labels.service_port}}, has more than {{ printf "extended_monitoring_ingress_threshold{threshold=\"5xx-warning\", namespace=\"%s\", ingress=\"%s\"}" $labels.namespace $labels.ingress | query | first | value }}% of `5xx` responses from the backend.
 
+        Current rate of `5xx` responses: {{ .Value }}%
   - alert: IngressResponses5xx
     expr: |
       (
@@ -37,9 +36,9 @@
       severity_level: "4"
     annotations:
       plk_protocol_version: "1"
-      description: |-
-        URL {{$labels.vhost}}{{$labels.location}} on Ingress {{$labels.ingress}} with Service name "{{$labels.service}}" and port "{{$labels.service_port}}" has more than {{ printf "extended_monitoring_ingress_threshold{threshold=\"5xx-critical\", namespace=\"%s\", ingress=\"%s\"}" $labels.namespace $labels.ingress | query | first | value }}% 5xx responses from backend.
-
-        Currently at: {{ .Value }}%
       summary: |-
-        URL {{$labels.vhost}}{{$labels.location}} on Ingress {{$labels.ingress}} has more than {{ printf "extended_monitoring_ingress_threshold{threshold=\"5xx-critical\", namespace=\"%s\", ingress=\"%s\"}" $labels.namespace $labels.ingress | query | first | value }}% 5xx responses from backend.
+        URL {{$labels.vhost}}{{$labels.location}} on Ingress `{{$labels.ingress}}` has more than {{ printf "extended_monitoring_ingress_threshold{threshold=\"5xx-critical\", namespace=\"%s\", ingress=\"%s\"}" $labels.namespace $labels.ingress | query | first | value }}% of `5xx` responses from the backend.
+      description: |-
+        Deckhouse has detected that URL {{$labels.vhost}}{{$labels.location}} on Ingress `{{$labels.ingress}}`, using service `{{$labels.service}}` on port {{$labels.service_port}} has more than {{ printf "extended_monitoring_ingress_threshold{threshold=\"5xx-critical\", namespace=\"%s\", ingress=\"%s\"}" $labels.namespace $labels.ingress | query | first | value }}% of `5xx` responses from the backend.
+
+        Current rate of `5xx` responses: {{ .Value }}%

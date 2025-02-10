@@ -69,5 +69,6 @@ import:
   - xtables-legacy-multi
   - xtables-nft-multi
   before: setup
-docker:
-  ENTRYPOINT: ["/failover"]
+imageSpec:
+  config:
+    entrypoint: ["/failover"]

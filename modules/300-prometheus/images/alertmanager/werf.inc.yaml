@@ -7,9 +7,9 @@ import:
     add: /src/alertmanager
     to: /bin/alertmanager
     before: setup
-docker:
-  ENTRYPOINT: ["/bin/alertmanager"]
-
+imageSpec:
+  config:
+    entrypoint: ["/bin/alertmanager"]
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 fromImage: common/src-artifact

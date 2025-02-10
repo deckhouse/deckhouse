@@ -728,6 +728,10 @@ entries:
                 en: Configuration
                 ru: Настройки
               url: /modules/openvpn/configuration.html
+            - title:
+                en: FAQ
+                ru: FAQ
+              url: /modules/openvpn/faq.html
     - title:
         en: Network
         ru: Сеть

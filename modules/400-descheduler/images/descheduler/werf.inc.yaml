@@ -45,5 +45,6 @@ import:
     add: /descheduler
     to: /descheduler
     before: setup
-docker:
-  ENTRYPOINT: ["/descheduler"]
+imageSpec:
+  config:
+    entrypoint: ["/descheduler"]
