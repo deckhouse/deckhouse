@@ -117,7 +117,7 @@ automountServiceAccountToken: true
 			Expect(f.KubernetesResource("SerivceAccount", "d8-system", "default").Field(`automountServiceAccountToken`).Bool()).To(Equal(false))
 			Expect(f.KubernetesResource("SerivceAccount", "kube-system", "default").Field(`automountServiceAccountToken`).Bool()).To(Equal(false))
 			Expect(f.KubernetesResource("SerivceAccount", "test1", "default").Field(`automountServiceAccountToken`).Exists()).To(BeFalse())
-			Expect(f.KubernetesResource("SerivceAccount", "test1", "default").Field(`automountServiceAccountToken`).Bool()).To(Equal(true))
+			Expect(f.KubernetesResource("SerivceAccount", "test2", "default").Field(`automountServiceAccountToken`).Bool()).To(Equal(true))
 		})
 	})
 
