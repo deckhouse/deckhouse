@@ -19,9 +19,11 @@ if [[ "$FIRST_BASHIBLE_RUN" == "yes" ]]; then
     exit 1
   fi
 else
-  if systemctl is-enabled containerd >/dev/null 2>&1; then
-    bb-log-error "containerd.service is enabled on $HOSTNAME. Deckhouse use only containerd-deckhouse.service. Please disable/uninstall containerd.service to avoid further conflicts."
-    exit 1
+  if systemctl list-unit-files containerd.service >/dev/null 2>&1; then
+    if systemctl is-enabled containerd >/dev/null 2>&1 || systemctl is-active containerd >/dev/null 2>&1; then
+      bb-log-error "containerd.service is enabled or running on $HOSTNAME. Deckhouse use only containerd-deckhouse.service. Please disable/stop/uninstall containerd.service to avoid further conflicts."
+      exit 1
+    fi
   fi
 fi
 {{- end }}
