@@ -17,7 +17,6 @@ limitations under the License.
 package hooks
 
 import (
-	"context"
 	"fmt"
 	"time"
 
@@ -28,9 +27,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/utils/ptr"
-
-	"github.com/deckhouse/deckhouse/go_lib/dependency"
-	"github.com/deckhouse/deckhouse/go_lib/dependency/k8s"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -65,7 +61,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			FilterFunc: applySAFilter,
 		},
 	},
-}, dependency.WithExternalDependencies(disableDefaultSATokenAutomount))
+}, disableDefaultSATokenAutomount)
 
 type SA struct {
 	Name                         string
@@ -92,40 +88,15 @@ func applySAFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error)
 	}, nil
 }
 
-func updateSA(k8 k8s.Client, sa *SA) error {
-	s := &v1.ServiceAccount{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "v1",
-			Kind:       "ServiceAccount",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      sa.Name,
-			Namespace: sa.Namespace,
-		},
-		AutomountServiceAccountToken: ptr.To(false),
-	}
-
-	if _, err := k8.CoreV1().ServiceAccounts(sa.Namespace).Update(context.TODO(), s, metav1.UpdateOptions{}); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func disableDefaultSATokenAutomount(input *go_hook.HookInput, dc dependency.Container) error {
+func disableDefaultSATokenAutomount(input *go_hook.HookInput) error {
 	sa := input.Snapshots["default-sa"]
-
-	k8, err := dc.GetK8sClient()
-	if err != nil {
-		return fmt.Errorf("can't init Kubernetes client: %v", err)
-	}
 
 	for _, s := range sa {
 		if s.(*SA).AutomountServiceAccountToken {
-			err = updateSA(k8, s.(*SA))
-			if err != nil {
-				return fmt.Errorf("can't update ServiceAccount: %v", err)
+			automountPatch := map[string]interface{}{
+				"automountServiceAccountToken": false,
 			}
+			input.PatchCollector.MergePatch(automountPatch, "v1", "ServiceAccount", s.(*SA).Namespace, s.(*SA).Name)
 		}
 	}
 
