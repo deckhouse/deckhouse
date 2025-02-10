@@ -27,12 +27,12 @@ Update go.mod and tidy.
 
 ## 005-ebpf-dhcp-server.patch
 
-Added DHCP server(ebpf-implementation) for pods
+Added DHCP server for pods (ebpf implementation).
 
 ## 006-add-pod-prioroty-managment.patch
 
-Added label allows you to control priority of pods sharing single IP4 address in cluster
+Added a `network.deckhouse.io/pod-common-ip-priority` label allows you to share a single IP between  several Pods and to switch the actual owner.
 
 ## 007-fix-restoring-cep-for-dead-local-endpoint.patch
 
-Fixed bug when agent restoring cep for dead local endpoint
+Fixed bug when agent uses CiliumEndpoint cache for dead local endpoints.
