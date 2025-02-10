@@ -60,11 +60,11 @@ The `control-plane` nodes are scaled automatically using the `node-role.kubernet
 
 **Patch versions** of control plane components (i.e. within the minor version, for example, from `1.27.3` to `1.27.5`) are upgraded automatically together with the Deckhouse version updates. You can't manage patch version upgrades.
 
-Upgrading **minor versions** of control plane components (e.g. from `1.26.*` to `1.28.*`) can be managed using the [`kubernetesVersion`](../../installing/configuration.html#clusterconfiguration-kubernetesversion) parameter. It specifies the automatic update mode (if set to `Automatic`) or the desired minor version of the control plane. The default control plane version (to use with `kubernetesVersion: Automatic`) as well as a list of supported Kubernetes versions can be found in [the documentation](../../supported_versions.html#kubernetes).
+Upgrading **minor versions** of control plane components (e.g. from `1.26.*` to `1.28.*`) can be managed using the `kubernetesVersion` parameter. It specifies the automatic update mode (if set to `Automatic`) or the desired minor version of the control plane. The default control plane version (to use with `kubernetesVersion: Automatic`) as well as a list of supported Kubernetes versions can be found in [the documentation](../../supported_versions.html#kubernetes).
 
 The control plane upgrade is performed in a safe way for both single-master and multi-master clusters. The API server may be temporarily unavailable during the upgrade. At the same time, it does not affect the operation of applications in the cluster and can be performed without scheduling a maintenance window.
 
-If the target version (set in the [kubernetesVersion](../../installing/configuration.html#clusterconfiguration-kubernetesversion) parameter) does not match the current control plane version in the cluster, a smart strategy for changing component versions is applied:
+If the target version (set in the kubernetesVersion parameter) does not match the current control plane version in the cluster, a smart strategy for changing component versions is applied:
 - General remarks
   - Updating in different NodeGroups is performed in parallel. Within each NodeGroup, nodes are updated sequentially, one at a time.
 - When upgrading:

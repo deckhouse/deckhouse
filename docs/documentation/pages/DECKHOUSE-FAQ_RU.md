@@ -246,7 +246,7 @@ echo "$MYRESULTSTRING"
 
    При запуске установщика используйте не официальное публичное хранилище образов Deckhouse, а хранилище в которое ранее были загружены образы Deckhouse. Для примера выше адрес запуска установщика будет иметь вид `corp.company.com:5000/sys/deckhouse/install:stable`, вместо `registry.deckhouse.ru/deckhouse/ee/install:stable`.
 
-   В ресурсе [InitConfiguration](installing/configuration.html#initconfiguration) при установке также используйте адрес вашего хранилища и данные авторизации (параметры [imagesRepo](installing/configuration.html#initconfiguration-deckhouse-imagesrepo), [registryDockerCfg](installing/configuration.html#initconfiguration-deckhouse-registrydockercfg) или [шаг 3]({% if site.mode == 'module' %}{{ site.urls[page.lang] }}{% endif %}/products/kubernetes-platform/gs/bm-private/step3.html) руководства по быстрому старту).
+   В ресурсе InitConfiguration или [шаг 3]({% if site.mode == 'module' %}{{ site.urls[page.lang] }}{% endif %}/products/kubernetes-platform/gs/bm-private/step3.html) руководства по быстрому старту).
 
    После завершения установки примените сгенерированные во время загрузки манифесты [DeckhouseReleases](cr.html#deckhouserelease) к вашему кластеру, используя [Deckhouse CLI](deckhouse-cli/):
 
@@ -476,7 +476,7 @@ echo "$MYRESULTSTRING"
 
 {% endofftopic %}
 
-Для настройки Deckhouse на использование proxy используйте параметр [proxy](installing/configuration.html#clusterconfiguration-proxy) ресурса `ClusterConfiguration`.
+Для настройки Deckhouse на использование proxy используйте параметр proxy ресурса `ClusterConfiguration`.
 
 Пример:
 
@@ -505,7 +505,7 @@ proxy:
 
 ### Как изменить конфигурацию кластера?
 
-Общие параметры кластера хранятся в структуре [ClusterConfiguration](installing/configuration.html#clusterconfiguration).
+Общие параметры кластера хранятся в структуре ClusterConfiguration.
 
 Чтобы изменить общие параметры кластера, выполните команду:
 
@@ -517,7 +517,7 @@ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-con
 
 ### Как изменить конфигурацию статического кластера?
 
-Настройки статического кластера хранятся в структуре [StaticClusterConfiguration](installing/configuration.html#staticclusterconfiguration).
+Настройки статического кластера хранятся в структуре StaticClusterConfiguration.
 
 Чтобы изменить параметры статического кластера, выполните команду:
 
@@ -535,7 +535,7 @@ kubectl -n d8-system exec -it svc/deckhouse-leader -c deckhouse -- deckhouse-con
 
 ### Как обновить версию Kubernetes в кластере?
 
-Чтобы обновить версию Kubernetes в кластере, измените параметр [kubernetesVersion](installing/configuration.html#clusterconfiguration-kubernetesversion) в структуре [ClusterConfiguration](installing/configuration.html#clusterconfiguration), выполнив следующие шаги:
+Чтобы обновить версию Kubernetes в кластере, измените параметр kubernetesVersion, выполнив следующие шаги:
 1. Выполните команду:
 
    ```shell

@@ -724,9 +724,6 @@ entries:
                 ru: Описание
               url: /modules/stronghold/
             - title:
-                ru: Справка
-                en: Reference
-            - title:
                 ru: Настройки
                 en: Configuration
               url: /modules/stronghold/configuration.html

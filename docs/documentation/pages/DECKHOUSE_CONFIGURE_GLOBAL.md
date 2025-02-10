@@ -11,7 +11,7 @@ The [publicDomainTemplate](#parameters-modules-publicdomaintemplate) parameter d
 
 You can use the sslip.io service (or similar) for testing if wildcard DNS records are unavailable to you for some reason.
 
-Domain used in the template must not match the domain specified in the [clusterDomain](installing/configuration.html#clusterconfiguration-clusterdomain) parameter. For example, if `clusterDomain` is set to `cluster.local` (the default value), `publicDomainTemplate` cannot be set to `%s.cluster.local`.
+Domain used in the template must not match the domain specified in the clusterDomain parameter. For example, if `clusterDomain` is set to `cluster.local` (the default value), `publicDomainTemplate` cannot be set to `%s.cluster.local`.
 {% endalert %}
 
 Example of the `ModuleConfig/global`:

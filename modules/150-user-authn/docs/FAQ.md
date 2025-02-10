@@ -53,7 +53,7 @@ To enable Dex authentication for your application, follow these steps:
    - `nginx.ingress.kubernetes.io/auth-url: https://<NAME>-dex-authenticator.<NS>.svc.{{ C_DOMAIN }}/dex-authenticator/auth`, where:
       - `NAME` — the value of the `metadata.name` parameter of the `DexAuthenticator` resource;
       - `NS` — the value of the `metadata.namespace` parameter of the `DexAuthenticator` resource;
-      - `C_DOMAIN` — the cluster domain (the [clusterDomain](../../installing/configuration.html#clusterconfiguration-clusterdomain) parameter of the `ClusterConfiguration` resource).
+      - `C_DOMAIN` — the cluster domain (the clusterDomain parameter of the `ClusterConfiguration` resource).
 
    Below is an example of annotations added to an application's Ingress resource so that it can be connected to Dex:
 
