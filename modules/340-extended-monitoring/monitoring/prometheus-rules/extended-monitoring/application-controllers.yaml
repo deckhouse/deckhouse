@@ -80,8 +80,8 @@
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
-      plk_create_group_if_not_exists__controllers_malfunctioning: "KubernetesControllersMalfunctioningInNamespace,prometheus=deckhouse,namespace={{ $labels.namespace }},kubernetes=~kubernetes"
-      plk_grouped_by__controllers_malfunctioning: "KubernetesControllersMalfunctioningInNamespace,prometheus=deckhouse,namespace={{ $labels.namespace }},kubernetes=~kubernetes"
+      plk_create_group_if_not_exists__controllers_malfunctioning: "KubernetesControllersMalfunctioningInNamespace,prometheus=deckhouse,node_group_name={{ $labels.node_group_name }},kubernetes=~kubernetes"
+      plk_grouped_by__controllers_malfunctioning: "KubernetesControllersMalfunctioningInNamespace,prometheus=deckhouse,node_group_name={{ $labels.node_group_name }},kubernetes=~kubernetes"
       summary: |-
         Count of available replicas in Deployment standby-holder-{{$labels.node_group_name}} in namespace d8-cloud-instance-manager is at zero.
       description: |-
