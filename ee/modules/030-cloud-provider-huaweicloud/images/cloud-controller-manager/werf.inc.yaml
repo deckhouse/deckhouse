@@ -14,17 +14,17 @@ image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 final: false
 fromImage: common/src-artifact
 git:
-  - add: /{{ $.ModulePath }}modules/030-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
-    to: /patches
-    stageDependencies:
-      install:
-        - '**/*'
+- add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
+  to: /patches
+  stageDependencies:
+    install:
+    - '**/*'
 shell:
   install:
-    - git clone --depth 1 --branch v0.26.9 {{ $.SOURCE_REPO }}/kubernetes-sigs/cloud-provider-huaweicloud.git /src
-    - cd /src
-    - git apply /patches/*.patch --verbose
-    - rm -rf .git
+  - git clone --depth 1 --branch v0.26.9 {{ $.SOURCE_REPO }}/kubernetes-sigs/cloud-provider-huaweicloud.git /src
+  - cd /src
+  - git apply /patches/*.patch --verbose
+  - rm -rf .git vendor
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
 final: false

@@ -33,11 +33,18 @@ imageSpec:
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 final: false
 fromImage: common/src-artifact
+git:
+- add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
+  to: /patches
+  stageDependencies:
+    install:
+    - '**/*'
 shell:
   install:
   - export VERSION="evs-0.1.11"
   - git clone --depth 1 --branch ${VERSION} {{ $.SOURCE_REPO }}/huaweicloud/huaweicloud-csi-driver /src
   - cd /src
+  - git apply /patches/*.patch --verbose
   - rm -rf .git vendor
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
