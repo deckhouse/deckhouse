@@ -269,7 +269,7 @@ payload="{
         \"master_count\": ${MASTERS_COUNT},
         \"cloud_id\": \"${CLOUD_ID}\",
         \"folder_id\": \"${FOLDER_ID}\",
-        \"service_account_json\": \"${SERVICE_ACCOUNT_JSON}\",
+        \"service_account_json\": ${SERVICE_ACCOUNT_JSON},
         \"sshPrivateKey\": \"${SSH_KEY}\",
         \"sshUser\": \"${ssh_user}\",
         \"deckhouse_dockercfg\": \"${DECKHOUSE_DOCKERCFG}\"
@@ -287,8 +287,6 @@ payload="{
 
   http_code=$(echo "$response" | tail -n 1)
   response=$(echo "$response" | head -n -1)
-
-  echo "HTTP Code: ${http_code}"
 
   # Check for HTTP errors
   if [[ ${http_code} -ge 400 ]]; then
