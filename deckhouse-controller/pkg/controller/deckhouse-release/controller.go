@@ -476,7 +476,7 @@ func (r *deckhouseReleaseReconciler) PreApplyReleaseCheck(ctx context.Context, d
 	}
 
 	err = ctrlutils.UpdateWithRetry(ctx, r.client, dr, func() error {
-		if dr.Annotations == nil {
+		if len(dr.Annotations) == 0 {
 			dr.Annotations = make(map[string]string, 2)
 		}
 
@@ -653,7 +653,7 @@ func (r *deckhouseReleaseReconciler) runReleaseDeploy(ctx context.Context, dr *v
 			v1alpha1.DeckhouseReleaseAnnotationNotified:   "false",
 		}
 
-		if dr.Annotations == nil {
+		if len(dr.Annotations) == 0 {
 			dr.Annotations = make(map[string]string, 2)
 		}
 
@@ -732,7 +732,7 @@ func (r *deckhouseReleaseReconciler) bumpDeckhouseDeployment(ctx context.Context
 
 				// update releases to trigger their requeue
 				err := ctrlutils.UpdateWithRetry(ctxwt, r.client, release, func() error {
-					if release.Annotations == nil {
+					if len(release.Annotations) == 0 {
 						release.Annotations = make(map[string]string, 1)
 					}
 
@@ -974,7 +974,7 @@ func (r *deckhouseReleaseReconciler) reconcileDeployedRelease(ctx context.Contex
 
 	if r.isDeckhousePodReady(ctx) {
 		err := ctrlutils.UpdateWithRetry(ctx, r.client, dr, func() error {
-			if dr.Annotations == nil {
+			if len(dr.Annotations) == 0 {
 				dr.Annotations = make(map[string]string, 2)
 			}
 
