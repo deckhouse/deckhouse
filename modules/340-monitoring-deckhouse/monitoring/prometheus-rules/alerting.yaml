@@ -202,6 +202,7 @@
       description: |
         The '{{ $labels.moduleName }}' module has a deprecated module update policy, the policy selector does not work, and the module will use deckhouse update policy.
 
-        Please specify the proper update policy in the module configuration to continue get updates.
+        Please specify the update policy for the corresponding module in the ModuleConfig `spec.updatePolicy` parameter.
+        Execute the following command to delete deprecated fields: `kubectl patch moduleupdatepolicies.v1alpha1.deckhouse.io '{{ $labels.moduleName }}' --type='json' -p='[{"op": "replace", "path": "/spec/moduleReleaseSelector/labelSelector/matchLabels", "value": {"": ""}}]'`.
       summary: |
         The '{{ $labels.moduleName }}' module has a deprecated module update policy.
