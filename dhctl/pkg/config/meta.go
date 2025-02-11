@@ -659,18 +659,17 @@ func (m *MetaConfig) LoadInstallerVersion() error {
 }
 
 func (m *MetaConfig) GetReplicasByNodeGroupName(nodeGroupName string) int {
-	replicas := 0
-	if nodeGroupName != global.MasterNodeGroupName {
-		for _, group := range m.GetTerraNodeGroups() {
-			if group.Name == nodeGroupName {
-				replicas = group.Replicas
-				break
-			}
-		}
-	} else {
-		replicas = m.MasterNodeGroupSpec.Replicas
+	if nodeGroupName == global.MasterNodeGroupName {
+		return m.MasterNodeGroupSpec.Replicas
 	}
-	return replicas
+
+	for _, group := range m.GetTerraNodeGroups() {
+		if group.Name == nodeGroupName {
+			return group.Replicas
+		}
+	}
+
+	return 0
 }
 
 func (r *RegistryData) ConvertToMap() map[string]interface{} {

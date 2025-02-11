@@ -35,13 +35,13 @@ import (
 )
 
 type HookForDestroyPipeline struct {
-	getter            kubernetes.KubeClientGetter
+	getter            kubernetes.KubeClientProvider
 	nodeToDestroy     string
 	oldMasterIPForSSH string
 	commanderMode     bool
 }
 
-func NewHookForDestroyPipeline(getter kubernetes.KubeClientGetter, nodeToDestroy string, commanderMode bool) *HookForDestroyPipeline {
+func NewHookForDestroyPipeline(getter kubernetes.KubeClientProvider, nodeToDestroy string, commanderMode bool) *HookForDestroyPipeline {
 	return &HookForDestroyPipeline{
 		getter:        getter,
 		nodeToDestroy: nodeToDestroy,

@@ -70,7 +70,7 @@ type Statistics struct {
 	TerraformPlan []terraform.TerraformPlan `json:"terraform_plan,omitempty"`
 }
 
-type NodeGroupGroupOptions struct {
+type NodeGroupOptions struct {
 	Name            string
 	LayoutStep      string
 	CloudConfig     string
@@ -152,7 +152,7 @@ func checkClusterState(kubeCl *client.KubernetesClient, metaConfig *config.MetaC
 	return terraform.CheckBaseInfrastructurePipeline(baseRunner, "Kubernetes cluster")
 }
 
-func checkAbandonedNodeState(kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig, nodeGroup *NodeGroupGroupOptions, nodeGroupState *state.NodeGroupTerraformState, nodeName string, terraformContext *terraform.TerraformContext, opts CheckStateOptions) (int, terraform.TerraformPlan, *terraform.PlanDestructiveChanges, error) {
+func checkAbandonedNodeState(kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig, nodeGroup *NodeGroupOptions, nodeGroupState *state.NodeGroupTerraformState, nodeName string, terraformContext *terraform.TerraformContext, opts CheckStateOptions) (int, terraform.TerraformPlan, *terraform.PlanDestructiveChanges, error) {
 	nodeIndex, err := config.GetIndexFromNodeName(nodeName)
 	if err != nil {
 		return terraform.PlanHasNoChanges, nil, nil, fmt.Errorf("can't extract index from terraform state secret (%v), skip %s", err, nodeName)
@@ -199,7 +199,7 @@ func checkAbandonedNodeState(kubeCl *client.KubernetesClient, metaConfig *config
 	return terraform.CheckPipeline(nodeRunner, nodeName, terraform.PlanOptions{Destroy: true})
 }
 
-func checkNodeState(kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig, nodeGroup *NodeGroupGroupOptions, nodeName string, terraformContext *terraform.TerraformContext, opts CheckStateOptions) (int, terraform.TerraformPlan, *terraform.PlanDestructiveChanges, error) {
+func checkNodeState(kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig, nodeGroup *NodeGroupOptions, nodeName string, terraformContext *terraform.TerraformContext, opts CheckStateOptions) (int, terraform.TerraformPlan, *terraform.PlanDestructiveChanges, error) {
 	nodeIndex, err := config.GetIndexFromNodeName(nodeName)
 	if err != nil {
 		return terraform.PlanHasNoChanges, nil, nil, fmt.Errorf("can't extract index from terraform state secret (%v), skip %s", err, nodeName)
@@ -352,7 +352,7 @@ func CheckState(kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig, 
 				continue
 			}
 
-			nodeGroup := NodeGroupGroupOptions{
+			nodeGroup := NodeGroupOptions{
 				Name:            nodeGroupName,
 				LayoutStep:      layoutStep,
 				DesiredReplicas: replicas,
@@ -389,7 +389,7 @@ func CheckState(kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig, 
 			}
 		}
 
-		nodeGroup := NodeGroupGroupOptions{
+		nodeGroup := NodeGroupOptions{
 			Name:            nodeGroupName,
 			LayoutStep:      layoutStep,
 			DesiredReplicas: replicas,

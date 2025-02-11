@@ -191,12 +191,16 @@ func (r *runner) convergeTerraNodes(ctx *context.Context, metaConfig *config.Met
 		nodeGroupsWithoutStateInCluster = append(nodeGroupsWithoutStateInCluster, group)
 	}
 
+	log.DebugF("NodeGroups for creating %v\n", nodeGroupsWithoutStateInCluster)
+
 	if err := operations.ParallelCreateNodeGroup(ctx.KubeClient(), metaConfig, nodeGroupsWithoutStateInCluster, ctx.Terraform()); err != nil {
 		return err
 	}
 
 	for _, nodeGroupName := range utils.SortNodeGroupsStateKeys(nodesState, nodeGroupsWithStateInCluster) {
 		ngState := nodesState[nodeGroupName]
+
+		log.DebugF("NodeGroup for converge %v", nodeGroupName)
 
 		rr := controller.NewNodeGroupControllerRunner(nodeGroupName, ngState, r.excludedNodes)
 		err := rr.Run(ctx)
@@ -242,6 +246,8 @@ func (r *runner) convergeDeckhouseConfiguration(ctx *context.Context, commanderU
 }
 
 func (r *runner) converge(ctx *context.Context) error {
+	log.DebugF("Converge start\n")
+	defer log.DebugF("Converge finisher\n")
 	metaConfig, err := ctx.MetaConfig()
 	if err != nil {
 		return err

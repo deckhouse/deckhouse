@@ -61,9 +61,11 @@ func ConnectToKubernetesAPI(nodeInterface node.Interface) (*client.KubernetesCli
 	return kubeCl, nil
 }
 
-type KubeClientGetter interface {
+type KubeClientProvider interface {
 	KubeClient() *client.KubernetesClient
 }
+
+var _ KubeClientProvider = &SimpleKubeClientGetter{}
 
 type SimpleKubeClientGetter struct {
 	kubeCl *client.KubernetesClient

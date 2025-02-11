@@ -37,14 +37,14 @@ import (
 
 type HookForUpdatePipeline struct {
 	*Checker
-	kubeGetter        kubernetes.KubeClientGetter
+	kubeGetter        kubernetes.KubeClientProvider
 	nodeToConverge    string
 	oldMasterIPForSSH string
 	commanderMode     bool
 }
 
 func NewHookForUpdatePipeline(
-	kubeGetter kubernetes.KubeClientGetter,
+	kubeGetter kubernetes.KubeClientProvider,
 	nodeToHostForChecks map[string]string,
 	clusterUUID string,
 	commanderMode bool,
@@ -79,8 +79,8 @@ func NewHookForUpdatePipeline(
 	checker := NewChecker(nodeToHostForChecks, checkers, "", DefaultConfirm)
 
 	return &HookForUpdatePipeline{
-		Checker:    checker,
-		kubeGetter: kubeGetter,
+		Checker:       checker,
+		kubeGetter:    kubeGetter,
 		commanderMode: commanderMode,
 	}
 }

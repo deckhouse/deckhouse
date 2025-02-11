@@ -14,12 +14,12 @@
 
 package global
 
-const MasterNodeGroupName = "master"
-
-const HideDeckhouseLogs = false
-const ShowDeckhouseLogs = true
-
 const (
+	ShowDeckhouseLogs = true
+	HideDeckhouseLogs = false
+
+	MasterNodeGroupName = "master"
+
 	ConvergeNodeUserName = "d8-dhctl-converger"
 	ConvergeNodeUserUID  = 64536
 )

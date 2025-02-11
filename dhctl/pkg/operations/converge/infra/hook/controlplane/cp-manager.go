@@ -32,10 +32,10 @@ import (
 var ErrControlPlaneIsNotReady = errors.New("Control plane is not ready\n")
 
 type ManagerReadinessChecker struct {
-	getter kubernetes.KubeClientGetter
+	getter kubernetes.KubeClientProvider
 }
 
-func NewManagerReadinessChecker(getter kubernetes.KubeClientGetter) *ManagerReadinessChecker {
+func NewManagerReadinessChecker(getter kubernetes.KubeClientProvider) *ManagerReadinessChecker {
 	return &ManagerReadinessChecker{
 		getter: getter,
 	}

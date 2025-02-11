@@ -49,12 +49,15 @@ func (s *KubeClientSwitcher) SwitchToNodeUser(nodesState map[string][]byte) erro
 		return nil
 	}
 
+	log.DebugLn("Start switching to node user")
+
 	convergeState, err := s.ctx.ConvergeState()
 	if err != nil {
 		return err
 	}
 
 	if convergeState.NodeUserCredentials == nil {
+		log.DebugLn("Generate node user")
 		nodeUser, nodeUserCredentials, err := generateNodeUser()
 		if err != nil {
 			return fmt.Errorf("failed to generate NodeUser: %w", err)
@@ -79,12 +82,16 @@ func (s *KubeClientSwitcher) SwitchToNodeUser(nodesState map[string][]byte) erro
 }
 
 func (s *KubeClientSwitcher) replaceKubeClient(convergeState *State, state map[string][]byte) (err error) {
+	log.DebugLn("Starting replacing kube client")
+
 	tmpDir := filepath.Join(app.CacheDir, "converge")
 
 	err = os.MkdirAll(tmpDir, 0o755)
 	if err != nil {
 		return fmt.Errorf("failed to create cache directory for NodeUser: %w", err)
 	}
+
+	log.DebugLn("Tempdir created for kubeclient")
 
 	privateKeyPath := filepath.Join(tmpDir, "id_rsa_converger")
 
@@ -98,6 +105,8 @@ func (s *KubeClientSwitcher) replaceKubeClient(convergeState *State, state map[s
 		return fmt.Errorf("failed to write private key for NodeUser: %w", err)
 	}
 
+	log.DebugLn("Private key written")
+
 	kubeCl := s.ctx.KubeClient()
 
 	sshCl := kubeCl.NodeInterfaceAsSSHClient()
@@ -110,6 +119,8 @@ func (s *KubeClientSwitcher) replaceKubeClient(convergeState *State, state map[s
 	for nodeName, stateBytes := range state {
 		statePath := filepath.Join(tmpDir, fmt.Sprintf("%s.tfstate", nodeName))
 
+		log.DebugF("for extracting statePath: %s", statePath)
+
 		err := os.WriteFile(statePath, stateBytes, 0o644)
 		if err != nil {
 			return fmt.Errorf("failed to write terraform state: %w", err)
@@ -118,18 +129,23 @@ func (s *KubeClientSwitcher) replaceKubeClient(convergeState *State, state map[s
 		ipAddress, err := terraform.GetMasterIPAddressForSSH(statePath)
 		if err != nil {
 			log.WarnF("failed to get master IP address: %s", err)
-
 			continue
 		}
 
 		settings.AddAvailableHosts(session.Host{Host: ipAddress, Name: nodeName})
+
+		log.DebugF("extracted ip address %s and node name: %s", ipAddress, nodeName)
 	}
 
 	if s.lockRunner != nil {
 		s.lockRunner.Stop()
 	}
 
+	log.DebugLn("Stopping kube proxies for replacing kube client")
+
 	kubeCl.KubeProxy.StopAll()
+
+	log.DebugLn("Create new ssh client for replacing kube client")
 
 	newSSHClient := ssh.NewClient(session.NewSession(session.Input{
 		User:           convergeState.NodeUserCredentials.Name,
@@ -149,23 +165,31 @@ func (s *KubeClientSwitcher) replaceKubeClient(convergeState *State, state map[s
 		return fmt.Errorf("failed to start SSH client: %w", err)
 	}
 
+	log.DebugLn("ssh client started for replacing kube client")
+
 	err = newSSHClient.Agent.AddKeys(newSSHClient.PrivateKeys)
 	if err != nil {
 		return fmt.Errorf("failed to add keys to ssh agent: %w", err)
 	}
+
+	log.DebugLn("private keys added for replacing kube client")
 
 	newKubeClient, err := kubernetes.ConnectToKubernetesAPI(ssh.NewNodeInterfaceWrapper(newSSHClient))
 	if err != nil {
 		return fmt.Errorf("failed to connect to Kubernetes API: %w", err)
 	}
 
+	log.DebugLn("connected to kube API for replacing kube client")
+
 	s.ctx.setKubeClient(newKubeClient)
 
 	if s.lockRunner != nil {
+		log.DebugLn("starting reset lock after replacing kube client")
 		err := s.lockRunner.ResetLock()
 		if err != nil {
 			return fmt.Errorf("failed to reset lock: %w", err)
 		}
+		log.DebugLn("lock was reset after replacing kube client")
 	}
 
 	return nil

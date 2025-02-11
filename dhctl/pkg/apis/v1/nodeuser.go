@@ -17,7 +17,7 @@ limitations under the License.
 package v1
 
 import (
-	v2 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
@@ -29,9 +29,9 @@ var NodeUserGVK = schema.GroupVersionResource{
 
 // NodeUser is an system user on nodes.
 type NodeUser struct {
-	v2.TypeMeta   `json:",inline"`
-	v2.ObjectMeta `json:"metadata,omitempty"`
-	Spec          NodeUserSpec `json:"spec"`
+	metav1.TypeMeta   `json:",inline"`
+	metav1.ObjectMeta `json:"metadata,omitempty"`
+	Spec              NodeUserSpec `json:"spec"`
 }
 
 type NodeUserSpec struct {

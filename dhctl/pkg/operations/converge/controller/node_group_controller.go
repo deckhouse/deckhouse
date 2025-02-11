@@ -83,10 +83,16 @@ func (c *NodeGroupController) Run(ctx *context.Context) error {
 		return err
 	}
 
+	log.DebugF("nodes to delete %v\n", len(nodesToDeleteInfo))
+
+	log.DebugF("starting update nodes\n")
+
 	err = c.updateNodes(ctx)
 	if err != nil {
 		return err
 	}
+
+	log.DebugF("starting delete nodes\n")
 
 	err = c.tryDeleteNodes(ctx, nodesToDeleteInfo)
 	if err != nil {
@@ -97,6 +103,9 @@ func (c *NodeGroupController) Run(ctx *context.Context) error {
 	if err != nil {
 		return err
 	}
+
+	log.DebugF("starting converge node template\n")
+
 	if groupSpec != nil {
 		return c.tryUpdateNodeTemplate(ctx, groupSpec.NodeTemplate)
 	}
@@ -331,6 +340,11 @@ func (c *NodeGroupController) updateNodes(ctx *context.Context) error {
 			// - some nodes cannot be converged for some reason, but other nodes must be converged
 			// - after making a plan, before converging a node, we get confirmation from user for start converge
 			allErrs = multierror.Append(allErrs, fmt.Errorf("%s: %w", nodeName, err))
+
+			// in commander mode returns immediately, because we can break all master nodes
+			if ctx.CommanderMode() {
+				break
+			}
 		}
 	}
 
@@ -339,6 +353,7 @@ func (c *NodeGroupController) updateNodes(ctx *context.Context) error {
 
 func getNodesToDeleteInfo(desiredReplicas int, state map[string][]byte) ([]nodeToDeleteInfo, error) {
 	if desiredReplicas >= len(state) {
+		log.DebugF("desired replicas >= in state. skip nodes info\n")
 		return nil, nil
 	}
 
@@ -360,6 +375,7 @@ func getNodesToDeleteInfo(desiredReplicas int, state map[string][]byte) ([]nodeT
 		count--
 
 		if count == desiredReplicas {
+			log.DebugF("stopping getting deletes nodes info. count %v\n", count)
 			break
 		}
 	}

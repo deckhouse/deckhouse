@@ -84,7 +84,7 @@ func NewLockUserInfo(additional string) *LockUserInfo {
 }
 
 type LeaseLock struct {
-	getter kubernetes.KubeClientGetter
+	getter kubernetes.KubeClientProvider
 	config LeaseLockConfig
 
 	lockLease   sync.Mutex
@@ -92,7 +92,7 @@ type LeaseLock struct {
 	lease       *coordinationv1.Lease
 }
 
-func NewLeaseLock(getter kubernetes.KubeClientGetter, config LeaseLockConfig) *LeaseLock {
+func NewLeaseLock(getter kubernetes.KubeClientProvider, config LeaseLockConfig) *LeaseLock {
 	return &LeaseLock{
 		getter:      getter,
 		config:      config,

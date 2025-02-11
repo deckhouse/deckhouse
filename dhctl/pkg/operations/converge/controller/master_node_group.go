@@ -90,14 +90,19 @@ func (c *MasterNodeGroupController) Run(ctx *context.Context) error {
 
 	c.desiredReplicas = metaConfig.GetReplicasByNodeGroupName(c.name)
 
+	log.DebugF("Desired replicas for masters %v\n", c.desiredReplicas)
+
 	c.convergeState, err = ctx.ConvergeState()
 	if err != nil {
 		return err
 	}
 
 	if ctx.ChangesSettings().AutoDismissDestructive {
+		log.DebugF("AutoDismissDestructive run normal\n")
 		return c.runWithReplicas(ctx, metaConfig.MasterNodeGroupSpec.Replicas)
 	}
+
+	log.DebugF("run with destructive changes\n")
 
 	return c.run(ctx)
 }
@@ -109,12 +114,15 @@ func (c *MasterNodeGroupController) run(ctx *context.Context) (err error) {
 	}
 
 	if c.convergeState.Phase == phases.ScaleToMultiMasterPhase {
+		log.DebugF("scale to multi master\n")
 		replicas := 3
 
 		err = c.runWithReplicas(ctx, replicas)
 		if err != nil {
 			return fmt.Errorf("failed to converge with 3 replicas: %w", err)
 		}
+
+		log.DebugF("to multi master scaled. saving state...\n")
 
 		c.convergeState.Phase = phases.ScaleToSingleMasterPhase
 
@@ -125,6 +133,8 @@ func (c *MasterNodeGroupController) run(ctx *context.Context) (err error) {
 	}
 
 	if c.convergeState.Phase == phases.ScaleToSingleMasterPhase {
+		log.DebugF("scale to single master\n")
+
 		replicas := 1
 
 		err := c.runWithReplicas(ctx, replicas)
@@ -134,10 +144,14 @@ func (c *MasterNodeGroupController) run(ctx *context.Context) (err error) {
 
 		c.convergeState.Phase = ""
 
+		log.DebugF("to single master scaled. saving state...\n")
+
 		err = ctx.SetConvergeState(c.convergeState)
 		if err != nil {
 			return fmt.Errorf("failed to set converge state: %w", err)
 		}
+
+		log.DebugF("converge master nodegroup finished\n")
 
 		return nil
 	}
@@ -146,6 +160,8 @@ func (c *MasterNodeGroupController) run(ctx *context.Context) (err error) {
 }
 
 func (c *MasterNodeGroupController) runWithReplicas(ctx *context.Context, replicas int) error {
+	log.DebugF("run with replicas %v\n", c.desiredReplicas)
+
 	c.desiredReplicas = replicas
 	c.nodeToHost = nil
 
@@ -260,6 +276,8 @@ func (c *MasterNodeGroupController) updateNode(ctx *context.Context, nodeName st
 				log.InfoLn("Aborted")
 				return nil
 			}
+
+			log.DebugF("Destructive change single master. Scale to multimaster and converge\n")
 
 			c.convergeState.Phase = phases.ScaleToMultiMasterPhase
 

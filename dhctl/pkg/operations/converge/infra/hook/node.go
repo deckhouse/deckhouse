@@ -72,10 +72,10 @@ func IsNodeReady(checkers []NodeChecker, nodeName, sourceCommandName string) (bo
 }
 
 type KubeNodeReadinessChecker struct {
-	getter kubernetes.KubeClientGetter
+	getter kubernetes.KubeClientProvider
 }
 
-func NewKubeNodeReadinessChecker(getter kubernetes.KubeClientGetter) *KubeNodeReadinessChecker {
+func NewKubeNodeReadinessChecker(getter kubernetes.KubeClientProvider) *KubeNodeReadinessChecker {
 	return &KubeNodeReadinessChecker{
 		getter: getter,
 	}

@@ -211,10 +211,10 @@ var (
 )
 
 type ClusterStateSaver struct {
-	getter kubernetes.KubeClientGetter
+	getter kubernetes.KubeClientProvider
 }
 
-func NewClusterStateSaver(getter kubernetes.KubeClientGetter) *ClusterStateSaver {
+func NewClusterStateSaver(getter kubernetes.KubeClientProvider) *ClusterStateSaver {
 	return &ClusterStateSaver{
 		getter: getter,
 	}
@@ -255,13 +255,13 @@ func (s *ClusterStateSaver) SaveState(outputs *terraform.PipelineOutputs) error 
 }
 
 type NodeStateSaver struct {
-	getter            kubernetes.KubeClientGetter
+	getter            kubernetes.KubeClientProvider
 	nodeName          string
 	nodeGroup         string
 	nodeGroupSettings []byte
 }
 
-func NewNodeStateSaver(getter kubernetes.KubeClientGetter, nodeName, nodeGroup string, nodeGroupSettings []byte) *NodeStateSaver {
+func NewNodeStateSaver(getter kubernetes.KubeClientProvider, nodeName, nodeGroup string, nodeGroupSettings []byte) *NodeStateSaver {
 	return &NodeStateSaver{
 		getter:            getter,
 		nodeName:          nodeName,
