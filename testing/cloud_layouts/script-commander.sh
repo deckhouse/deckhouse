@@ -105,11 +105,6 @@ function prepare_environment() {
       bootstrap_log="$cwd/bootstrap.log"
     fi
 
-    ssh_private_key_path="$cwd/sshkey"
-    rm -f "$ssh_private_key_path"
-    base64 -d <<< "$SSH_KEY" > "$ssh_private_key_path"
-    chmod 0600 "$ssh_private_key_path"
-
     if [[ -z "$KUBERNETES_VERSION" ]]; then
       # shellcheck disable=SC2016
       >&2 echo 'KUBERNETES_VERSION environment variable is required.'
@@ -257,6 +252,9 @@ function run-test() {
   local payload
   local response
   local cluster_id
+
+  #debug
+  echo $SSH_KEY | base64 -d
 
 payload="{
     \"name\": \"${PREFIX}\",
