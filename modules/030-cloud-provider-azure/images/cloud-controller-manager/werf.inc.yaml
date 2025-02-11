@@ -37,7 +37,6 @@ shell:
   install:
   - git clone --depth 1 --branch {{ $value.ccm.azure }}  {{ $.SOURCE_REPO }}/kubernetes-sigs/cloud-provider-azure.git /src
   - cd /src
-  - hack/pkg-config.sh > .pkg_config
   {{- if $patch}}
   - git apply /patches/*.patch --verbose
   {{- end}}
@@ -61,8 +60,7 @@ shell:
   - go mod download
   setup:
   - cd /src
-  - export VERSION={{ $value.ccm.azure }}
-  - go build -a -o bin/azure-cloud-controller-manager $(shell cat .pkg_config) ./cmd/cloud-controller-manager
+  - go build -a -o bin/azure-cloud-controller-manager ./cmd/cloud-controller-manager
   - chown 64535:64535 /src/bin/azure-cloud-controller-manager
   - chmod 0755 /src/bin/azure-cloud-controller-manager
   {{- end }}
