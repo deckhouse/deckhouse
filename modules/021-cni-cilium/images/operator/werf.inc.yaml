@@ -36,5 +36,6 @@ import:
   add: /out/linux/amd64/usr/bin/cilium-operator
   to: /usr/bin/cilium-operator
   before: install
-docker:
-  ENTRYPOINT: ["/usr/bin/cilium-operator"]
+imageSpec:
+  config:
+    entrypoint: ["/usr/bin/cilium-operator"]

@@ -9,8 +9,9 @@ import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-artifact
   add: /dashboard-api
   before: setup
-docker:
-  ENTRYPOINT: ["/dashboard-api"]
+imageSpec:
+  config:
+    entrypoint: ["/dashboard-api"]
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
 final: false

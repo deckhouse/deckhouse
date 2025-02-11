@@ -31,8 +31,9 @@ import:
   to: /lib/udev_containerized/google_nvme_id
   before: setup
     {{- end }}
-docker:
-  ENTRYPOINT: ["/gce-pd-csi-driver"]
+imageSpec:
+  config:
+    entrypoint: ["/gce-pd-csi-driver"]
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
 final: false

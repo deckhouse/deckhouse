@@ -6,8 +6,9 @@ import:
   add: /src/node_exporter
   to: /bin/node_exporter
   before: setup
-docker:
-  ENTRYPOINT: ["/bin/node_exporter"]
+imageSpec:
+  config:
+    entrypoint: ["/bin/node_exporter"]
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
 fromImage: common/src-artifact

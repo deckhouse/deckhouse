@@ -6,8 +6,9 @@ import:
   add: /src/check-kernel-version
   to: /check-kernel-version
   before: setup
-docker:
-  ENTRYPOINT: [ "/check-kernel-version" ]
+imageSpec:
+  config:
+    entrypoint: [ "/check-kernel-version" ]
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
 fromImage: common/src-artifact

@@ -6,8 +6,9 @@ import:
     add: /discoverer
     to: /discoverer
     before: setup
-docker:
-  ENTRYPOINT: ["/discoverer"]
+imageSpec:
+  config:
+    entrypoint: ["/discoverer"]
 ---
 {{ $discovererAbsPath := "/deckhouse/modules/030-cloud-provider-azure/images/cloud-data-discoverer" }}
 {{ $discovererRelPath := printf "%smodules/030-cloud-provider-azure/images/cloud-data-discoverer" .ModulePath }}

@@ -6,8 +6,9 @@ import:
     add: /node-collector
     to: /usr/local/bin/node-collector
     before: setup
-docker:
-  ENTRYPOINT: [ "/usr/local/bin/node-collector" ]
+imageSpec:
+  config:
+    entrypoint: [ "/usr/local/bin/node-collector" ]
 shell:
   setup:
   - apt-get update

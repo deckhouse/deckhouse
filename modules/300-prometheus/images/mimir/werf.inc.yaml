@@ -44,5 +44,6 @@ import:
     add: /src/mimir
     to: /bin/mimir
     after: setup
-docker:
-  ENTRYPOINT: ["/bin/mimir"]
+imageSpec:
+  config:
+    entrypoint: ["/bin/mimir"]

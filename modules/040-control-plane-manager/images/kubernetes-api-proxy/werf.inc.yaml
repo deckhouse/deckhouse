@@ -6,8 +6,9 @@ import:
   add: /src/kubernetes-api-proxy-reloader
   to: /kubernetes-api-proxy-reloader
   before: install
-docker:
-  ENTRYPOINT: ["/opt/nginx-static/sbin/nginx", "-g", "daemon off;"]
+imageSpec:
+  config:
+    entrypoint: ["/opt/nginx-static/sbin/nginx", "-g", "daemon off;"]
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
 from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
