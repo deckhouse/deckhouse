@@ -19,7 +19,7 @@ cleanup:
       last: 1
   # keep 10 release builds
   - references:
-      tag: /v[0-9]+\.[0-9]+\.[0-9]+/
+      tag: /.*/
       limit:
         last: 10
     imagesPerReference:
