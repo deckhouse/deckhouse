@@ -9,8 +9,9 @@ import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-artifact
   add: /dashboard-auth
   before: setup
-docker:
-  ENTRYPOINT: ["/dashboard-auth"]
+imageSpec:
+  config:
+    entrypoint: ["/dashboard-auth"]
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
 final: false

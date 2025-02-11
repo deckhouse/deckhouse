@@ -22,18 +22,20 @@ kind: ModuleRelease
 metadata:
   annotations:
     modules.deckhouse.io/approved: "true"
+    modules.deckhouse.io/isUpdating: "false"
+    modules.deckhouse.io/notified: "true"
   creationTimestamp: null
   labels:
     modules.deckhouse.io/update-policy: ""
   name: parca-1.26.3
-  resourceVersion: "1001"
+  resourceVersion: "1003"
 spec:
   moduleName: parca
   version: 1.26.3
   weight: 900
 status:
   approved: true
-  message: ""
+  message: Release is waiting for the update window until 18 Oct 19 10:00 UTC
   phase: Pending
   pullDuration: 0s
   size: 0

@@ -16,6 +16,14 @@ spec:
                   description: Доступные источники для скачивания модуля.
                 source:
                   description: Источник из которого скачен модуль (иначе пусто).
+                namespace:
+                  type: string
+                  description: Пространство имен в котором работает модуль.
+                subsystems:
+                  type: array
+                  description: Подсистемы в которые входит модуль.
+                  items:
+                    type: string
                 releaseChannel:
                   description: Релизный канал модуля.
                 updatePolicy:

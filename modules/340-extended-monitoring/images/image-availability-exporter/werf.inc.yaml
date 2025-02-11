@@ -1,4 +1,4 @@
-{{ $imageAvailabilityExporterVersion := "0.11.0" }}
+{{ $imageAvailabilityExporterVersion := "0.12.0" }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 fromImage: common/src-artifact
@@ -42,6 +42,6 @@ import:
     add: /src/k8s-image-availability-exporter
     to: /k8s-image-availability-exporter
     before: setup
-docker:
-  ENTRYPOINT:
-    - "/k8s-image-availability-exporter"
+imageSpec:
+  config:
+    entrypoint: ["/k8s-image-availability-exporter"]

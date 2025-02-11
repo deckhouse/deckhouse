@@ -14,11 +14,9 @@ import:
   - install
   - uninstall
   before: setup
-docker:
-  LABEL:
-    distro: all
-    version: all
-    d8-ca-updater: {{ $version }}
+imageSpec:
+  config:
+    labels: {"distro": "all", "version": "all", "d8-ca-updater": "{{ $version }}" }
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
 final: false

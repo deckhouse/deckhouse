@@ -1,0 +1,5 @@
+name: local-path-provisioner
+weight: 31
+subsystems:
+  - infrastructure
+namespace: d8-local-path-provisioner

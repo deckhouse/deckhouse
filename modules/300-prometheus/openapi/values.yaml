@@ -154,7 +154,7 @@ properties:
                   type: boolean
                 name:
                   type: string
-                uuid:
+                uid:
                   type: string
                 orgId:
                   type: integer
@@ -189,7 +189,7 @@ properties:
                 access: proxy
                 url: /graphite-1
                 name: testtesttest
-                uuid: testtesttest
+                uid: testtesttest
                 orgId: 1
                 editable: false
                 version: 1

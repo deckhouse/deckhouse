@@ -43,6 +43,7 @@ data:
 
       ssi on;
       gzip off;
+      port_in_redirect off;
 
       map $uri $lang {
         "~^/ru/"      "ru";

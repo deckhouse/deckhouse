@@ -38,7 +38,7 @@ func filterGrafanaDSCRD(obj *unstructured.Unstructured) (go_hook.FilterResult, e
 
 	spec["orgId"] = 1
 	spec["name"] = obj.GetName()
-	spec["uuid"] = obj.GetName()
+	spec["uid"] = obj.GetName()
 	spec["isDefault"] = false
 	spec["version"] = 1
 	spec["editable"] = false

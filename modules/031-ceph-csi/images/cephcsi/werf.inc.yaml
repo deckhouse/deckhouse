@@ -22,5 +22,6 @@ import:
     add: /relocate
     to: /
     before: setup
-docker:
-  ENTRYPOINT: ["/cephcsi"]
+imageSpec:
+  config:
+    entrypoint: ["/cephcsi"]

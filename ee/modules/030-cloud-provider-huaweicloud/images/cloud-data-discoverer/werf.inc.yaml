@@ -6,8 +6,9 @@ import:
     add: /discoverer
     to: /discoverer
     before: setup
-docker:
-  ENTRYPOINT: ["/discoverer"]
+imageSpec:
+  config:
+    entrypoint: ["/discoverer"]
 ---
 {{ $discovererRelPath := printf "%s/modules/030-cloud-provider-huaweicloud/images/cloud-data-discoverer" .ModulePath }}
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact

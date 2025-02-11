@@ -1,0 +1,81 @@
+{!{ define "cve_tests_base_images" }!}
+# <template: cve_tests_base_images>
+- name: Run base images CVE tests on ${{env.TAG}}
+  env:
+    TRIVY_TOKEN: ${{secrets.FOX_ACCESS_TOKEN}}
+    DEFECTDOJO_API_TOKEN: ${{secrets.DEFECTDOJO_API_TOKEN}}
+    DEFECTDOJO_HOST: ${{secrets.DEFECTDOJO_HOST}}
+    DECKHOUSE_PRIVATE_REPO: ${{secrets.DECKHOUSE_PRIVATE_REPO}}
+    TRIVY_PROJECT_ID: "2181"
+    TRIVY_DB_URL: ${{secrets.DECKHOUSE_REGISTRY_HOST}}/deckhouse/fe/security/trivy-db:2 
+    TRIVY_JAVA_DB_URL: ${{secrets.DECKHOUSE_REGISTRY_HOST}}/deckhouse/fe/security/trivy-java-db:1
+    TRIVY_POLICY_URL: ${{secrets.DECKHOUSE_REGISTRY_HOST}}/deckhouse/fe/security/trivy-bdu:1
+  run: |
+    echo "⚓️ 🏎 Running CVE tests on ${TAG}..."
+    make cve-base-images
+# </template: cve_tests_base_images>
+{!{- end -}!}
+
+{!{ define "cve_tests_deckhouse_images" }!}
+# <template: cve_tests_deckhouse_images>
+- name: Run Deckhouse images CVE tests on ${{env.TAG}}
+  env:
+    TRIVY_TOKEN: ${{secrets.FOX_ACCESS_TOKEN}}
+    DEFECTDOJO_API_TOKEN: ${{secrets.DEFECTDOJO_API_TOKEN}}
+    DEFECTDOJO_HOST: ${{secrets.DEFECTDOJO_HOST}}
+    DECKHOUSE_PRIVATE_REPO: ${{secrets.DECKHOUSE_PRIVATE_REPO}}
+    TRIVY_PROJECT_ID: "2181"
+    TRIVY_DB_URL: ${{secrets.DECKHOUSE_REGISTRY_HOST}}/deckhouse/fe/security/trivy-db:2 
+    TRIVY_JAVA_DB_URL: ${{secrets.DECKHOUSE_REGISTRY_HOST}}/deckhouse/fe/security/trivy-java-db:1
+    TRIVY_POLICY_URL: ${{secrets.DECKHOUSE_REGISTRY_HOST}}/deckhouse/fe/security/trivy-bdu:1
+  run: |
+    echo "⚓️ 🏎 Running Deckhouse images CVE tests on ${TAG}..."
+    make cve-report
+# </template: cve_tests_deckhouse_images>
+{!{- end -}!}
+
+{!{ define "cve_tests_upload_reports_artifacts" }!}
+# <template: cve_tests_upload_reports_artifacts>
+- name: Archive report artifacts
+  if: success()
+  run: |
+    tar -zcvf out/trivy_json_reports.tar.gz out/json
+- name: Create fail artifact
+  if: failure()
+  run: |
+    echo "Trivy tests for ${TAG} have failed." > "out/${TAG}_test-failed.txt"
+- name: Upload report artifacts
+  if: success()
+  uses: {!{ index (ds "actions") "actions/upload-artifact" }!}
+  with:
+    name: cve-reports
+    path: |
+      out/trivy_json_reports.tar.gz
+- name: Upload fail artifact
+  if: failure()
+  uses: {!{ index (ds "actions") "actions/upload-artifact" }!}
+  with:
+    name: cve-reports
+    path: |
+      out/${{ env.TAG }}_test-failed.txt
+# </template: cve_tests_upload_reports_artifacts>
+{!{- end -}!}
+
+{!{ define "defectdojo_dev_tests_rotator" }!}
+# <template: defectdojo_dev_tests_rotator>
+- name: Set up Python
+  uses: actions/setup-python@v4
+  with:
+    python-version: ${{ env.PYTHON_VERSION }}
+- name: Install dependencies
+  run: pip install requests
+- name: DefectDojo rotate dev tests
+  env:
+    DEFECTDOJO_API_TOKEN: ${{secrets.DEFECTDOJO_API_TOKEN}}
+    DEFECTDOJO_HOST: ${{secrets.DEFECTDOJO_HOST}}
+    DEFECTDOJO_DEV_TESTS_ROTATION_DAYS: 7
+  shell: bash
+  run: |
+    python .github/scripts/python/defectdojo_dev_tests_rotator.py
+# </template: defectdojo_dev_tests_rotator>
+{!{- end -}!}

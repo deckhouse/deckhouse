@@ -53,5 +53,6 @@ import:
   add: /iptables-wrapper
   to: /iptables-wrapper
   before: setup
-docker:
-  ENTRYPOINT: ["/opt/bin/kube-router"]
+imageSpec:
+  config:
+    entrypoint: ["/opt/bin/kube-router"]

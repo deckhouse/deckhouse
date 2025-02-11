@@ -50,10 +50,9 @@ import:
     - cluster-autoscaler
     - VERSION
     before: setup
-docker:
-  ENV:
-    container: docker
-  ENTRYPOINT: ["/cluster-autoscaler"]
-  USER: 64535
+imageSpec:
+  config:
+    env: { "container": "docker" }
+    entrypoint: ["/cluster-autoscaler"]
   {{- end }}
 {{- end }}

@@ -65,10 +65,10 @@ git:
   stageDependencies:
     install:
       - '**/*'
-docker:
-  ENV:
-    PYTHONPATH: /frameworks/python
-  ENTRYPOINT: ["/entrypoint.sh"]
+imageSpec:
+  config:
+    env: {"PYTHONPATH": "/frameworks/python"}
+    entrypoint: ["/entrypoint.sh"]
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-label-converter-src-artifact
 final: false
