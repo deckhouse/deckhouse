@@ -1,5 +1,13 @@
 # Changelog v1.65
 
+## [MALFORMED]
+
+
+ - #9966 unknown section "cloud-provider-vsphere"
+ - #9966 unknown section "cloud-provider-zvirt"
+ - #10035 unknown section "cloud-provider-zvirt"
+ - #10236 unknown section "cloud-provider-zvirt"
+
 ## Know before update
 
 
@@ -65,8 +73,6 @@
  - **[cloud-provider-aws]** revert "Added the ability to specify your IAM role" [#10435](https://github.com/deckhouse/deckhouse/pull/10435)
  - **[cloud-provider-vcd]** Fix vCloudDirector catalogs sharing. [#9802](https://github.com/deckhouse/deckhouse/pull/9802)
  - **[cloud-provider-yandex]** Add support a hybrid cluster in yandex CSI driver [#9861](https://github.com/deckhouse/deckhouse/pull/9861)
- - **[cloud-provider-zvirt]** Add to the instance a status about zvirtinstance. [#10236](https://github.com/deckhouse/deckhouse/pull/10236)
- - **[cloud-provider-zvirt]** 401 Unauthorized error fixed in zvirt csi-node. [#10035](https://github.com/deckhouse/deckhouse/pull/10035)
  - **[cni-cilium]** Fixed `excludedCIDRs` option in EgressGatewayPolicies [#10493](https://github.com/deckhouse/deckhouse/pull/10493)
  - **[cni-cilium]** Disable the metrics server in the "egress-gateway-agent" because we don't use it. [#10208](https://github.com/deckhouse/deckhouse/pull/10208)
     The pods of the egress-gateway-agent will be restarted.
@@ -79,6 +85,7 @@
  - **[control-plane-manager]** Fixed free space sufficiency detection for etcd-backup [#10426](https://github.com/deckhouse/deckhouse/pull/10426)
  - **[control-plane-manager]** Seamless change of clusterDomain. [#9739](https://github.com/deckhouse/deckhouse/pull/9739)
  - **[control-plane-manager]** Automatically regenerate kubeconfig for control plane components if validation fails, preventing crashes. [#9445](https://github.com/deckhouse/deckhouse/pull/9445)
+ - **[deckhouse]** Fix module requirements parsing. [#11741](https://github.com/deckhouse/deckhouse/pull/11741)
  - **[deckhouse]** Fix extenders message logs. [#10212](https://github.com/deckhouse/deckhouse/pull/10212)
  - **[deckhouse]** Fix for scaling down of webhook-handler deployment when ha mode is disabled [#9978](https://github.com/deckhouse/deckhouse/pull/9978)
  - **[deckhouse-controller]** Fix deployed module release detection in the ModuleReleaseController. [#10256](https://github.com/deckhouse/deckhouse/pull/10256)
