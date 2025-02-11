@@ -1,0 +1,612 @@
+diff --git a/pkg/loki/loki.go b/pkg/loki/loki.go
+index 05c057ea38a4af597eadb9f91ffe82156711fe5f..d94d8b00c535e5b370dbea6283190f8227cb59d7 100644
+--- a/pkg/loki/loki.go
++++ b/pkg/loki/loki.go
+@@ -8,6 +8,7 @@ import (
+ 	"net/http"
+ 	"os"
+ 	rt "runtime"
++	"strconv"
+ 	"time"
+
+ 	"go.uber.org/atomic"
+@@ -259,6 +260,10 @@ func (c *Config) Validate() error {
+ 		return err
+ 	}
+
++	if err := AdjustForForceExpiration(c); err != nil {
++		return err
++	}
++
+ 	// Honor the legacy scalable deployment topology
+ 	if c.LegacyReadTarget {
+ 		if c.isModuleEnabled(Backend) {
+@@ -269,6 +274,17 @@ func (c *Config) Validate() error {
+ 	return nil
+ }
+
++func AdjustForForceExpiration(c *Config) error {
++	if c.CompactorConfig.ForceExpirationThreshold.Val() > 0 {
++		err := c.CompactorConfig.ForceExpirationApproxChunkSize.Set(strconv.Itoa(c.Ingester.TargetChunkSize))
++		if err != nil {
++			return err
++		}
++		c.CompactorConfig.ForceExpirationThresholdDir = c.Common.Storage.FSConfig.ChunksDirectory
++	}
++	return nil
++}
++
+ // AdjustForTimeoutsMigration will adjust Loki timeouts configuration to be in accordance with the next major release.
+ //
+ // We're preparing to unify the querier:engine:timeout and querier:query_timeout into a single timeout named limits_config:query_timeout.
+diff --git a/pkg/storage/stores/indexshipper/compactor/compactor.go b/pkg/storage/stores/indexshipper/compactor/compactor.go
+index 3c8b85ec3a503f4e55e6d9f9519d50be095565e4..782a640199a5467c532fba2077644b236cdedfd4 100644
+--- a/pkg/storage/stores/indexshipper/compactor/compactor.go
++++ b/pkg/storage/stores/indexshipper/compactor/compactor.go
+@@ -34,6 +34,10 @@ import (
+ 	"github.com/grafana/loki/pkg/validation"
+ )
+
++import (
++	util_flagext "github.com/grafana/loki/pkg/util/flagext"
++)
++
+ // Here is how the generic compactor works:
+ // 1. Find the index type from table name using schemaPeriodForTable.
+ // 2. Find the registered IndexCompactor for the index type.
+@@ -94,6 +98,10 @@ type Config struct {
+
+ 	// Deprecated
+ 	DeletionMode string `yaml:"deletion_mode" doc:"deprecated|description=Use deletion_mode per tenant configuration instead."`
++
++	ForceExpirationThresholdDir    string                `yaml:"force_expiration_threshold_dir"`
++	ForceExpirationThreshold       util_flagext.ByteSize `yaml:"force_expiration_threshold_bytes"`
++	ForceExpirationApproxChunkSize util_flagext.ByteSize `yaml:"__" doc:"hidden"`
+ }
+
+ // RegisterFlags registers flags.
+@@ -184,6 +192,9 @@ type Compactor struct {
+
+ 	// one for each object store
+ 	storeContainers map[string]storeContainer
++
++	forceExpirationCheckerManager *retention.ForceExpirationCheckerManager
++	forceExpirationHook           *forceExpirationHook
+ }
+
+ type storeContainer struct {
+@@ -363,7 +374,20 @@ func (c *Compactor) initDeletes(objectClient client.ObjectClient, r prometheus.R
+ 		r,
+ 	)
+
+-	c.expirationChecker = newExpirationChecker(retention.NewExpirationChecker(limits), c.deleteRequestsManager)
++	//c.expirationChecker = newExpirationChecker(retention.NewExpirationChecker(limits), c.deleteRequestsManager)
++	ec := newExpirationChecker(retention.NewExpirationChecker(limits), c.deleteRequestsManager)
++	cm := retention.NewForceExpirationCheckerManager(ec)
++	c.expirationChecker = cm.GetExpirationChecker()
++	c.forceExpirationCheckerManager = cm
++
++	if c.cfg.RetentionEnabled {
++		var feh *forceExpirationHook
++		feh, err = newForceExpirationHook(c, r)
++		if err != nil {
++			return fmt.Errorf("failed to create force expiration hook: %w", err)
++		}
++		c.forceExpirationHook = feh
++	}
+ 	return nil
+ }
+
+@@ -518,6 +542,10 @@ func (c *Compactor) runCompactions(ctx context.Context) {
+ 			applyRetention = true
+ 		}
+
++		if applyRetention && c.forceExpirationHook != nil {
++			c.forceExpirationHook.apply(ctx)
++		}
++
+ 		err := c.RunCompaction(ctx, applyRetention)
+ 		if err != nil {
+ 			level.Error(util_log.Logger).Log("msg", "failed to run compaction", "err", err)
+diff --git a/pkg/storage/stores/indexshipper/compactor/force_expiration.go b/pkg/storage/stores/indexshipper/compactor/force_expiration.go
+new file mode 100644
+index 0000000000000000000000000000000000000000..3ca63099c270e469ce48b2fa6bbd499431939a67
+--- /dev/null
++++ b/pkg/storage/stores/indexshipper/compactor/force_expiration.go
+@@ -0,0 +1,327 @@
++package compactor
++
++import (
++	"context"
++	"fmt"
++	"os"
++	"path/filepath"
++	"strings"
++	"time"
++	"unsafe"
++
++	"github.com/go-kit/log/level"
++	"github.com/prometheus/client_golang/prometheus"
++	"github.com/prometheus/client_golang/prometheus/promauto"
++
++	"github.com/grafana/loki/pkg/storage/stores/indexshipper/compactor/deletion"
++	"github.com/grafana/loki/pkg/storage/stores/indexshipper/compactor/retention"
++	shipper_storage "github.com/grafana/loki/pkg/storage/stores/indexshipper/storage"
++	util_flagext "github.com/grafana/loki/pkg/util/flagext"
++	util_log "github.com/grafana/loki/pkg/util/log"
++)
++
++type forceExpirationHook struct {
++	approxChunkSize      util_flagext.ByteSize
++	dirUsageThreshold    util_flagext.ByteSize
++	dirUsageThresholdDir string
++
++	c  *Compactor
++	cm *retention.ForceExpirationCheckerManager
++	m  *forceExpirationHookMetrics
++}
++
++func newForceExpirationHook(c *Compactor, r prometheus.Registerer) (*forceExpirationHook, error) {
++	if c.cfg.ForceExpirationApproxChunkSize.Val() == 0 {
++		return nil, fmt.Errorf("force expiration approx chunk size not set")
++	}
++	if c.cfg.ForceExpirationThreshold.Val() == 0 {
++		return nil, fmt.Errorf("force expiration threshold not set")
++	}
++	if c.cfg.ForceExpirationThresholdDir == "" {
++		return nil, fmt.Errorf("force expiration threshold dir not set")
++	}
++	h := &forceExpirationHook{
++		approxChunkSize:      c.cfg.ForceExpirationApproxChunkSize,
++		dirUsageThreshold:    c.cfg.ForceExpirationThreshold,
++		dirUsageThresholdDir: c.cfg.ForceExpirationThresholdDir,
++		c:                    c,
++		cm:                   c.forceExpirationCheckerManager,
++		m:                    newForceExpirationHookMetrics(r),
++	}
++	h.m.dirUsageThresholdBytes.WithLabelValues(h.dirUsageThresholdDir).Set(float64(h.dirUsageThreshold.Val()))
++	return h, nil
++}
++
++func (h *forceExpirationHook) apply(ctx context.Context) {
++	exceeded, bytesToDelete := h.isDirUsageThresholdExceeded()
++	if !exceeded {
++		return
++	}
++
++	_ = level.Info(util_log.Logger).Log(
++		"msg", "applying force expiration",
++		"approximate chunk size", h.approxChunkSize,
++		"threshold", h.dirUsageThreshold.String(),
++		"threshold dir", h.dirUsageThresholdDir,
++	)
++
++	expiredChunks := make([]string, 0)
++	expiredChunksSize := int64(0)
++
++	for _, sc := range h.c.storeContainers {
++		sc.indexStorageClient.RefreshIndexTableNamesCache(ctx)
++		tables, err := h.listTables(ctx, sc.indexStorageClient)
++		if err != nil {
++			_ = level.Error(util_log.Logger).Log(
++				"msg", "failed to list index tables for store container",
++				"err", err,
++			)
++			continue
++		}
++		if len(tables) == 0 {
++			_ = level.Info(util_log.Logger).Log(
++				"msg", "indexes may not be created yet",
++			)
++			continue
++		}
++		_ = level.Info(util_log.Logger).Log(
++			"msg", "found stored tables",
++			"tables", strings.Join(tables, ","),
++		)
++		for _, tableName := range tables {
++			bytesToDeleteRemainder := bytesToDelete - expiredChunksSize
++			if bytesToDeleteRemainder <= 0 {
++				break
++			}
++			var (
++				tableCompactedIndex CompactedIndex
++			)
++			tableCompactedIndex, err = h.loadTableCompactedIndex(ctx, tableName)
++			if err != nil {
++				_ = level.Error(util_log.Logger).Log(
++					"msg", "failed to load table compacted index",
++					"table", tableName,
++					"err", err,
++				)
++				continue
++			}
++			var (
++				tableExpiredChunks     []string
++				tableExpiredChunksSize int64
++			)
++			tableExpiredChunks, tableExpiredChunksSize, err = h.evaluateExpiredChunks(ctx, tableCompactedIndex, bytesToDeleteRemainder)
++			if err != nil {
++				_ = level.Error(util_log.Logger).Log(
++					"msg", "failed to evaluate expired chunks",
++					"table", tableName,
++					"err", err,
++				)
++				continue
++			}
++			expiredChunks = append(expiredChunks, tableExpiredChunks...)
++			expiredChunksSize += tableExpiredChunksSize
++			_ = level.Info(util_log.Logger).Log(
++				"msg", "processed table",
++				"chunks count", len(tableExpiredChunks),
++				"chunks size", util_flagext.ByteSize(tableExpiredChunksSize).String(),
++			)
++		}
++	}
++
++	if expiredChunksSize == 0 {
++		_ = level.Info(util_log.Logger).Log(
++			"msg", "force expiration skipped, no chunks indexed to expire yet",
++		)
++		return
++	}
++
++	affected := h.cm.UpdateChunkIds(expiredChunks)
++	h.m.expiredChunksCount.Add(float64(affected))
++	h.m.expiredChunksSizeBytes.Add(float64(expiredChunksSize))
++
++	_ = level.Info(util_log.Logger).Log(
++		"msg", "force expiration applied",
++		"total chunks expired", len(expiredChunks),
++		"total chunks expired size", util_flagext.ByteSize(expiredChunksSize).String(),
++	)
++	return
++}
++
++func (h *forceExpirationHook) listTables(ctx context.Context, indexStorageClient shipper_storage.Client) ([]string, error) {
++	tables, err := indexStorageClient.ListTables(ctx)
++	if err != nil {
++		return nil, err
++	}
++	filteredTables := make([]string, 0, len(tables))
++	for _, tableName := range tables {
++		if tableName == deletion.DeleteRequestsTableName {
++			continue
++		}
++		filteredTables = append(filteredTables, tableName)
++	}
++	sortTablesByRange(filteredTables)
++	return filteredTables, nil
++}
++
++func (h *forceExpirationHook) loadTableCompactedIndex(ctx context.Context, tableName string) (CompactedIndex, error) {
++	schemaCfg, ok := schemaPeriodForTable(h.c.schemaConfig, tableName)
++	if !ok {
++		return nil, fmt.Errorf("no schema period found for table %s", tableName)
++	}
++	indexCompactor, ok := h.c.indexCompactors[schemaCfg.IndexType]
++	if !ok {
++		return nil, fmt.Errorf("index processor not found for index type %s", schemaCfg.IndexType)
++	}
++	sc, ok := h.c.storeContainers[schemaCfg.ObjectType]
++	if !ok {
++		return nil, fmt.Errorf("index store client not found for %s", schemaCfg.ObjectType)
++	}
++	t, err := newTable(ctx, filepath.Join(h.c.cfg.WorkingDirectory, tableName), sc.indexStorageClient, indexCompactor,
++		schemaCfg, sc.tableMarker, h.c.expirationChecker, h.c.cfg.UploadParallelism)
++	if err != nil {
++		return nil, err
++	}
++	indexFiles, usersWithPerUserIndex, err := t.indexStorageClient.ListFiles(t.ctx, t.name, false)
++	if err != nil {
++		return nil, err
++	}
++	if len(indexFiles) == 0 && len(usersWithPerUserIndex) == 0 {
++		return nil, fmt.Errorf("no common index files and user index found")
++	}
++	is, err := newCommonIndexSet(ctx, t.name, t.baseCommonIndexSet, t.workingDirectory, t.logger)
++	if err != nil {
++		return nil, err
++	}
++	sourceFiles := is.ListSourceFiles()
++	if len(sourceFiles) != 1 {
++		return nil, fmt.Errorf("too many source files in index set to open compacted index file")
++	}
++	downloadedAt, err := is.GetSourceFile(sourceFiles[0])
++	if err != nil {
++		return nil, err
++	}
++	return indexCompactor.OpenCompactedIndexFile(ctx,
++		downloadedAt, tableName, is.userID, filepath.Join(is.workingDir, is.userID), schemaCfg, is.logger)
++}
++
++func (h *forceExpirationHook) evaluateExpiredChunks(ctx context.Context, tableCompactedIndex CompactedIndex, bytesToDelete int64) ([]string, int64, error) {
++	var chunksToDelete = make([]string, 0)
++	var bytesDeleted int64
++
++	forEachErr := tableCompactedIndex.ForEachChunk(ctx, func(ce retention.ChunkEntry) (bool, error) {
++		//userID := unsafeGetString(ce.UserID)
++		chunkID := unsafeGetString(ce.ChunkID)
++		chunksToDelete = append(chunksToDelete, strings.Clone(chunkID))
++		bytesDeleted = bytesDeleted + int64(h.approxChunkSize.Val())
++		if bytesDeleted >= bytesToDelete {
++			return false, nil
++		}
++		return true, nil
++	})
++	tciCloseErr := tableCompactedIndex.Close()
++	if tciCloseErr != nil {
++		_ = level.Error(util_log.Logger).Log(
++			"msg", "failed to close compacted index, may lock db operations",
++			"err", tciCloseErr,
++		)
++		return nil, 0, tciCloseErr
++	}
++	if forEachErr != nil {
++		return nil, 0, forEachErr
++	}
++	return chunksToDelete, bytesDeleted, nil
++}
++
++// threshold evaluation
++
++func (h *forceExpirationHook) isDirUsageThresholdExceeded() (exceeded bool, bytesToDelete int64) {
++	ts := time.Now()
++	ds, err := evaluateDirSize(h.dirUsageThresholdDir)
++	if err != nil {
++		_ = level.Error(util_log.Logger).Log(
++			"msg", "failed to evaluate dir size",
++			"err", err,
++		)
++		return false, 0
++	}
++	evaluationDuration := time.Since(ts)
++
++	h.m.dirUsageEvaluationDuration.WithLabelValues(h.dirUsageThresholdDir).Observe(evaluationDuration.Seconds())
++	h.m.dirUsageBytes.WithLabelValues(h.dirUsageThresholdDir).Set(float64(ds))
++
++	isExceeded := ds >= int64(h.dirUsageThreshold.Val())
++	if isExceeded {
++		bytesToDelete = ds - int64(h.dirUsageThreshold.Val())
++		_ = level.Info(util_log.Logger).Log(
++			"msg", "disk usage threshold exceeded",
++			"threshold", h.dirUsageThreshold.String(),
++			"current usage", util_flagext.ByteSize(ds).String(),
++			"to delete", util_flagext.ByteSize(bytesToDelete).String(),
++		)
++	}
++	return isExceeded, bytesToDelete
++}
++
++// dir size
++
++func evaluateDirSize(path string) (int64, error) {
++	var size int64
++	err := filepath.Walk(path, func(_ string, info os.FileInfo, err error) error {
++		if err != nil {
++			return err
++		}
++		if !info.IsDir() {
++			size += info.Size()
++		}
++		return err
++	})
++	return size, err
++}
++
++// helper functions
++
++func unsafeGetString(buf []byte) string {
++	return *((*string)(unsafe.Pointer(&buf)))
++}
++
++// metrics
++
++type forceExpirationHookMetrics struct {
++	expiredChunksCount         prometheus.Counter
++	expiredChunksSizeBytes     prometheus.Counter
++	dirUsageThresholdBytes     *prometheus.GaugeVec
++	dirUsageBytes              *prometheus.GaugeVec
++	dirUsageEvaluationDuration *prometheus.HistogramVec
++}
++
++func newForceExpirationHookMetrics(r prometheus.Registerer) *forceExpirationHookMetrics {
++	m := forceExpirationHookMetrics{
++		expiredChunksCount: promauto.With(r).NewCounter(prometheus.CounterOpts{
++			Namespace: "force_expiration_hook",
++			Name:      "expired_chunks_count",
++			Help:      "Number of currently expired chunks.",
++		}),
++		expiredChunksSizeBytes: promauto.With(r).NewCounter(prometheus.CounterOpts{
++			Namespace: "force_expiration_hook",
++			Name:      "expired_chunks_size_bytes",
++			Help:      "Size (in bytes) of all expired chunks.",
++		}),
++		dirUsageThresholdBytes: promauto.With(r).NewGaugeVec(prometheus.GaugeOpts{
++			Namespace: "force_expiration_hook",
++			Name:      "dir_usage_threshold_bytes",
++			Help:      "dir usage threshold (in bytes)",
++		}, []string{"working_dir"}),
++		dirUsageBytes: promauto.With(r).NewGaugeVec(prometheus.GaugeOpts{
++			Namespace: "force_expiration_hook",
++			Name:      "dir_usage_bytes",
++			Help:      "Current dir usage (in bytes)",
++		}, []string{"working_dir"}),
++		dirUsageEvaluationDuration: promauto.With(r).NewHistogramVec(prometheus.HistogramOpts{
++			Namespace: "force_expiration_hook",
++			Name:      "dir_usage_evaluation_duration",
++			Help:      "Time took to evaluate dir usage",
++			Buckets:   prometheus.DefBuckets,
++		}, []string{"working_dir"}),
++	}
++	return &m
++}
+diff --git a/pkg/storage/stores/indexshipper/compactor/index_set.go b/pkg/storage/stores/indexshipper/compactor/index_set.go
+index 2224afa296a63874394df4472ba703e337d29887..84ce81f774e33215066a4901c0e0ddfd0ced53a5 100644
+--- a/pkg/storage/stores/indexshipper/compactor/index_set.go
++++ b/pkg/storage/stores/indexshipper/compactor/index_set.go
+@@ -48,6 +48,8 @@ type CompactedIndex interface {
+ 	// ToIndexFile is used to convert the CompactedIndex to an IndexFile for uploading to the object store.
+ 	// Once the IndexFile is uploaded using Index.Reader, the file is closed using Index.Close and removed from disk using Index.Path.
+ 	ToIndexFile() (index.Index, error)
++	// Close is same as Cleanup() but without file removal
++	Close() error
+ }
+
+ // indexSet helps with doing operations on a set of index files belonging to a single user or common index files shared by users.
+diff --git a/pkg/storage/stores/indexshipper/compactor/retention/force_expiration.go b/pkg/storage/stores/indexshipper/compactor/retention/force_expiration.go
+new file mode 100644
+index 0000000000000000000000000000000000000000..6c4ad29e5620fc6e2c99b6123d5a5da189eb7e42
+--- /dev/null
++++ b/pkg/storage/stores/indexshipper/compactor/retention/force_expiration.go
+@@ -0,0 +1,105 @@
++package retention
++
++import (
++	"sync"
++
++	"github.com/prometheus/common/model"
++
++	"github.com/grafana/loki/pkg/util/filter"
++)
++
++// wrapping
++
++type ForceExpirationCheckerManager struct {
++	forceExpirationChecker *ForceExpirationChecker
++}
++
++func NewForceExpirationCheckerManager(internalExpirationChecker ExpirationChecker) *ForceExpirationCheckerManager {
++	ec := &ForceExpirationChecker{
++		internalExpirationChecker: internalExpirationChecker,
++		expiredChunkIds:           make(map[string]struct{}),
++	}
++	return &ForceExpirationCheckerManager{
++		forceExpirationChecker: ec,
++	}
++}
++
++func (m *ForceExpirationCheckerManager) UpdateChunkIds(chunkIds []string) (affected int) {
++	return m.forceExpirationChecker.UpdateChunkIds(chunkIds)
++}
++
++func (m *ForceExpirationCheckerManager) IsChunkExists(chunkId string) bool {
++	return m.forceExpirationChecker.IsChunkExists(chunkId)
++}
++
++func (m *ForceExpirationCheckerManager) GetExpirationChecker() ExpirationChecker {
++	return m.forceExpirationChecker
++}
++
++// expiration checker
++
++type ForceExpirationChecker struct {
++	internalExpirationChecker ExpirationChecker
++
++	expiredChunkIds map[string]struct{}
++	mu              sync.RWMutex
++}
++
++// caching
++
++func (f *ForceExpirationChecker) UpdateChunkIds(chunkIds []string) (affected int) {
++	toReplace := make(map[string]struct{}, len(chunkIds))
++	for _, chunkId := range chunkIds {
++		toReplace[chunkId] = struct{}{}
++	}
++
++	f.mu.RLock()
++	for k := range toReplace {
++		_, ok := f.expiredChunkIds[k]
++		if !ok {
++			affected++
++		}
++	}
++	f.mu.RUnlock()
++
++	f.mu.Lock()
++	f.expiredChunkIds = toReplace
++	f.mu.Unlock()
++	return affected
++}
++
++func (f *ForceExpirationChecker) IsChunkExists(chunkId string) bool {
++	f.mu.RLock()
++	defer f.mu.RUnlock()
++
++	_, ok := f.expiredChunkIds[chunkId]
++	return ok
++}
++
++// interface implementation
++
++func (f *ForceExpirationChecker) Expired(ref ChunkEntry, now model.Time) (bool, filter.Func) {
++	_, ok := f.expiredChunkIds[unsafeGetString(ref.ChunkID)]
++	if ok {
++		return true, nil
++	}
++	return f.internalExpirationChecker.Expired(ref, now)
++}
++func (f *ForceExpirationChecker) IntervalMayHaveExpiredChunks(interval model.Interval, userID string) bool {
++	return f.internalExpirationChecker.IntervalMayHaveExpiredChunks(interval, userID)
++}
++func (f *ForceExpirationChecker) MarkPhaseStarted() {
++	f.internalExpirationChecker.MarkPhaseStarted()
++}
++func (f *ForceExpirationChecker) MarkPhaseFailed() {
++	f.internalExpirationChecker.MarkPhaseFailed()
++}
++func (f *ForceExpirationChecker) MarkPhaseTimedOut() {
++	f.internalExpirationChecker.MarkPhaseTimedOut()
++}
++func (f *ForceExpirationChecker) MarkPhaseFinished() {
++	f.internalExpirationChecker.MarkPhaseFinished()
++}
++func (f *ForceExpirationChecker) DropFromIndex(ref ChunkEntry, tableEndTime model.Time, now model.Time) bool {
++	return f.internalExpirationChecker.DropFromIndex(ref, tableEndTime, now)
++}
+diff --git a/pkg/storage/stores/shipper/index/compactor/compacted_index.go b/pkg/storage/stores/shipper/index/compactor/compacted_index.go
+index 557b49fbc2b6e0fb5b2aba5db6776da1adf92ea6..19b5305156b24c938a52b71384265bcf7ed40314 100644
+--- a/pkg/storage/stores/shipper/index/compactor/compacted_index.go
++++ b/pkg/storage/stores/shipper/index/compactor/compacted_index.go
+@@ -206,6 +206,25 @@ func (c *CompactedIndex) Cleanup() {
+ 	}
+ }
+
++func (c *CompactedIndex) Close() error {
++	if c.compactedFile == nil {
++		return nil
++	}
++
++	if c.boltdbTx != nil {
++		if err := c.boltdbTx.Commit(); err != nil {
++			level.Error(c.logger).Log("msg", "failed commit boltdb transaction", "err", err)
++			return err
++		}
++	}
++
++	if err := c.compactedFile.Close(); err != nil {
++		level.Error(c.logger).Log("msg", "failed to close compacted index file", "err", err)
++		return err
++	}
++	return nil
++}
++
+ type chunkIndexer struct {
+ 	bucket    *bbolt.Bucket
+ 	scfg      config.SchemaConfig
+diff --git a/pkg/storage/stores/tsdb/compactor.go b/pkg/storage/stores/tsdb/compactor.go
+index e6cf35e5cd0385d778f8740cbc9ebb5b42c8baa4..9752d9386a7e4a77c9c7b211bec82dabe41a4703 100644
+--- a/pkg/storage/stores/tsdb/compactor.go
++++ b/pkg/storage/stores/tsdb/compactor.go
+@@ -353,6 +353,10 @@ func (c *compactedIndex) CleanupSeries(_ []byte, lbls labels.Labels) error {
+
+ func (c *compactedIndex) Cleanup() {}
+
++func (c *compactedIndex) Close() error {
++	return nil
++}
++
+ // ToIndexFile creates an indexFile from the chunksmetas stored in the builder.
+ // Before building the index, it takes care of the lined up updates i.e deletes and adding of new chunks.
+ func (c *compactedIndex) ToIndexFile() (index_shipper.Index, error) {
