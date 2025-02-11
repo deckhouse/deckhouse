@@ -254,7 +254,7 @@ function run-test() {
   local cluster_id
 
   #debug
-  echo $SSH_KEY | base64 -d
+  echo ${SSH_KEY} | base64 -d
 
 payload="{
     \"name\": \"${PREFIX}\",
