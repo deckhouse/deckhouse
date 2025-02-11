@@ -749,11 +749,11 @@ func (d *TeeLogger) NewSilentLogger() *SilentLogger {
 }
 
 func (d *TeeLogger) LogProcess(msg, t string, run func() error) error {
-	d.writeToFile(fmt.Sprintf("Start process %s", t))
+	d.writeToFile(fmt.Sprintf("Start process %s\n", t))
 
 	err := d.l.LogProcess(msg, t, run)
 
-	d.writeToFile(fmt.Sprintf("End process %s", t))
+	d.writeToFile(fmt.Sprintf("End process %s\n", t))
 
 	return err
 }
