@@ -1,12 +1,8 @@
-Index: README.md
-IDEA additional info:
-Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
-<+>UTF-8
-===================================================================
 diff --git a/README.md b/README.md
---- a/README.md	(revision fa09bd61bfd7fd1b6312aac131a1f65e5cf01296)
-+++ b/README.md	(revision c094da33d0a5c86fb230fbc8db951542868e461f)
-@@ -56,6 +56,7 @@
+index ce09dca7..cfe900b7 100644
+--- a/README.md
++++ b/README.md
+@@ -56,6 +56,7 @@ Usage of _output/kube-rbac-proxy:
        --secure-listen-address string                The address the kube-rbac-proxy HTTPs server should listen on.
        --skip_headers                                If true, avoid header prefixes in the log messages
        --skip_log_headers                            If true, avoid headers when opening log files
@@ -14,48 +10,67 @@ diff --git a/README.md b/README.md
        --stderrthreshold severity                    logs at or above this threshold go to stderr (default 2)
        --tls-cert-file string                        File containing the default x509 Certificate for HTTPS. (CA cert, if any, concatenated after server cert)
        --tls-cipher-suites strings                   Comma-separated list of cipher suites for the server. Values are from tls package constants (https://golang.org/pkg/crypto/tls/#pkg-constants). If omitted, the default Go cipher suites will be used
-Index: main.go
-IDEA additional info:
-Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
-<+>UTF-8
-===================================================================
 diff --git a/main.go b/main.go
---- a/main.go	(revision fa09bd61bfd7fd1b6312aac131a1f65e5cf01296)
-+++ b/main.go	(revision c094da33d0a5c86fb230fbc8db951542868e461f)
-@@ -63,6 +63,7 @@
+index 6812e746..15e5f25e 100644
+--- a/main.go
++++ b/main.go
+@@ -52,6 +52,8 @@ import (
+ 	rbac_proxy_tls "github.com/brancz/kube-rbac-proxy/pkg/tls"
+ )
+ 
++var kubeClientDefaultTimeout = 5 * time.Second
++
+ type config struct {
+ 	insecureListenAddress string
+ 	secureListenAddress   string
+@@ -63,6 +65,7 @@ type config struct {
  	kubeconfigLocation    string
  	allowPaths            []string
  	ignorePaths           []string
 +	staleCacheTTL         time.Duration
  }
-
+ 
  type tlsConfig struct {
-@@ -107,6 +108,7 @@
+@@ -107,6 +110,7 @@ func main() {
  	flagset.StringVar(&configFileName, "config-file", "", "Configuration file to configure kube-rbac-proxy.")
  	flagset.StringSliceVar(&cfg.allowPaths, "allow-paths", nil, "Comma-separated list of paths against which kube-rbac-proxy matches the incoming request. If the request doesn't match, kube-rbac-proxy responds with a 404 status code. If omitted, the incoming request path isn't checked. Cannot be used with --ignore-paths.")
  	flagset.StringSliceVar(&cfg.ignorePaths, "ignore-paths", nil, "Comma-separated list of paths against which kube-rbac-proxy will proxy without performing an authentication or authorization check. Cannot be used with --allow-paths.")
 +	flagset.DurationVar(&cfg.staleCacheTTL, "stale-cache-interval", 0*time.Minute, "The interval to keep auth request review results for in case of unavailability of kube-apiserver.")
-
+ 
  	// TLS flags
  	flagset.StringVar(&cfg.tls.certFile, "tls-cert-file", "", "File containing the default x509 Certificate for HTTPS. (CA cert, if any, concatenated after server cert)")
-@@ -206,7 +208,7 @@
+@@ -206,7 +210,7 @@ func main() {
  		sarAuthorizer,
  	)
-
+ 
 -	auth, err := proxy.New(kubeClient, cfg.auth, authorizer, authenticator)
 +	auth, err := proxy.New(kubeClient, cfg.auth, authorizer, authenticator, cfg.staleCacheTTL)
-
+ 
  	if err != nil {
  		klog.Fatalf("Failed to create rbac-proxy: %v", err)
-Index: pkg/proxy/cache.go
-IDEA additional info:
-Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
-<+>UTF-8
-===================================================================
+@@ -413,6 +417,9 @@ func initKubeConfig(kcLocation string) *rest.Config {
+ 		if err != nil {
+ 			klog.Fatalf("unable to build rest config based on provided path to kubeconfig file: %v", err)
+ 		}
++
++		kubeConfig.Timeout = kubeClientDefaultTimeout
++
+ 		return kubeConfig
+ 	}
+ 
+@@ -421,5 +428,7 @@ func initKubeConfig(kcLocation string) *rest.Config {
+ 		klog.Fatalf("cannot find Service Account in pod to build in-cluster rest config: %v", err)
+ 	}
+ 
++	kubeConfig.Timeout = kubeClientDefaultTimeout
++
+ 	return kubeConfig
+ }
 diff --git a/pkg/proxy/cache.go b/pkg/proxy/cache.go
 new file mode 100644
---- /dev/null	(revision c094da33d0a5c86fb230fbc8db951542868e461f)
-+++ b/pkg/proxy/cache.go	(revision c094da33d0a5c86fb230fbc8db951542868e461f)
+index 00000000..08a77ca9
+--- /dev/null
++++ b/pkg/proxy/cache.go
 @@ -0,0 +1,65 @@
 +/*
 +Copyright 2017 Frederic Branczyk All rights reserved.
@@ -122,26 +137,22 @@ new file mode 100644
 +func (*fakeCache) Add(_ string, _ *authenticator.Response)      {}
 +func (*fakeCache) Remove(_ string)                              {}
 +func (*fakeCache) Get(_ string) (*authenticator.Response, bool) { return nil, false }
-Index: pkg/proxy/proxy.go
-IDEA additional info:
-Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
-<+>UTF-8
-===================================================================
 diff --git a/pkg/proxy/proxy.go b/pkg/proxy/proxy.go
---- a/pkg/proxy/proxy.go	(revision fa09bd61bfd7fd1b6312aac131a1f65e5cf01296)
-+++ b/pkg/proxy/proxy.go	(revision c094da33d0a5c86fb230fbc8db951542868e461f)
-@@ -22,6 +22,7 @@
+index aaac103c..988fd632 100644
+--- a/pkg/proxy/proxy.go
++++ b/pkg/proxy/proxy.go
+@@ -22,6 +22,7 @@ import (
  	"net/http"
  	"strings"
  	"text/template"
 +	"time"
-
+ 
  	"github.com/brancz/kube-rbac-proxy/pkg/authn"
  	"github.com/brancz/kube-rbac-proxy/pkg/authz"
-@@ -32,6 +33,12 @@
+@@ -32,6 +33,12 @@ import (
  	"k8s.io/klog/v2"
  )
-
+ 
 +// Prefixes to differentiate authentication methods to save them to the same cache
 +var (
 +	tokenPrefix       = "token:"
@@ -151,7 +162,7 @@ diff --git a/pkg/proxy/proxy.go b/pkg/proxy/proxy.go
  // Config holds proxy authorization and authentication settings
  type Config struct {
  	Authentication *authn.AuthnConfig
-@@ -45,17 +52,29 @@
+@@ -45,17 +52,29 @@ type kubeRBACProxy struct {
  	authorizer.Authorizer
  	// authorizerAttributesGetter implements retrieving authorization attributes for a respective request.
  	authorizerAttributesGetter *krpAuthorizerAttributesGetter
@@ -161,7 +172,7 @@ diff --git a/pkg/proxy/proxy.go b/pkg/proxy/proxy.go
 +	// StaleCache for caching auth response
 +	StaleCache authResponseCache
  }
-
+ 
 -func new(authenticator authenticator.Request, authorizer authorizer.Authorizer, config Config) *kubeRBACProxy {
 -	return &kubeRBACProxy{authenticator, authorizer, newKubeRBACProxyAuthorizerAttributesGetter(config.Authorization), config}
 +func new(authenticator authenticator.Request, authorizer authorizer.Authorizer, config Config, staleCacheTTL time.Duration) *kubeRBACProxy {
@@ -177,19 +188,19 @@ diff --git a/pkg/proxy/proxy.go b/pkg/proxy/proxy.go
 +	}
 +	return &proxy
  }
-
+ 
  // New creates an authenticator, an authorizer, and a matching authorizer attributes getter compatible with the kube-rbac-proxy
 -func New(client clientset.Interface, config Config, authorizer authorizer.Authorizer, authenticator authenticator.Request) (*kubeRBACProxy, error) {
 -	return new(authenticator, authorizer, config), nil
 +func New(_ clientset.Interface, config Config, authorizer authorizer.Authorizer, authenticator authenticator.Request, staleCacheTTL time.Duration) (*kubeRBACProxy, error) {
 +	return new(authenticator, authorizer, config, staleCacheTTL), nil
  }
-
+ 
  // Handle authenticates the client and authorizes the request.
-@@ -67,24 +86,37 @@
+@@ -67,24 +86,37 @@ func (h *kubeRBACProxy) Handle(w http.ResponseWriter, req *http.Request) bool {
  		req = req.WithContext(ctx)
  	}
-
+ 
 +	userIdentity := tokenPrefix + getTokenFromRequest(req)
 +
  	// Authenticate
@@ -210,7 +221,7 @@ diff --git a/pkg/proxy/proxy.go b/pkg/proxy/proxy.go
 +		h.StaleCache.Remove(userIdentity)
  		return false
  	}
-
+ 
 +	// If no token was specified in request, use the user name (cn) from x509 authentication instead with the prefix
 +	if userIdentity == tokenPrefix {
 +		userIdentity = certificatePrefix + u.User.GetName()
@@ -226,8 +237,8 @@ diff --git a/pkg/proxy/proxy.go b/pkg/proxy/proxy.go
 +		h.StaleCache.Remove(userIdentity)
  		return false
  	}
-
-@@ -92,19 +124,33 @@
+ 
+@@ -92,19 +124,33 @@ func (h *kubeRBACProxy) Handle(w http.ResponseWriter, req *http.Request) bool {
  		// Authorize
  		authorized, reason, err := h.Authorize(ctx, attrs)
  		if err != nil {
@@ -258,14 +269,14 @@ diff --git a/pkg/proxy/proxy.go b/pkg/proxy/proxy.go
  			return false
  		}
  	}
-
+ 
 +	// cache successfully authorized responses only
 +	h.StaleCache.Add(userIdentity, u)
 +
  	if h.Config.Authentication.Header.Enabled {
  		// Seemingly well-known headers to tell the upstream about user's identity
  		// so that the upstream can achieve the original goal of delegating RBAC authn/authz to kube-rbac-proxy
-@@ -210,6 +256,11 @@
+@@ -210,6 +256,11 @@ func (n krpAuthorizerAttributesGetter) GetRequestAttributes(u user.Info, r *http
  		}
  		allAttrs = append(allAttrs, attrs)
  	}
@@ -276,8 +287,8 @@ diff --git a/pkg/proxy/proxy.go b/pkg/proxy/proxy.go
 +
  	return allAttrs
  }
-
-@@ -265,3 +316,15 @@
+ 
+@@ -265,3 +316,15 @@ func templateWithValue(templateString, value string) string {
  	}
  	return out.String()
  }
@@ -293,16 +304,12 @@ diff --git a/pkg/proxy/proxy.go b/pkg/proxy/proxy.go
 +	}
 +	return parts[1]
 +}
-Index: pkg/proxy/proxy_test.go
-IDEA additional info:
-Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
-<+>UTF-8
-===================================================================
 diff --git a/pkg/proxy/proxy_test.go b/pkg/proxy/proxy_test.go
---- a/pkg/proxy/proxy_test.go	(revision fa09bd61bfd7fd1b6312aac131a1f65e5cf01296)
-+++ b/pkg/proxy/proxy_test.go	(revision c094da33d0a5c86fb230fbc8db951542868e461f)
-@@ -18,10 +18,12 @@
-
+index d5afc362..0e596e25 100644
+--- a/pkg/proxy/proxy_test.go
++++ b/pkg/proxy/proxy_test.go
+@@ -18,10 +18,12 @@ package proxy
+ 
  import (
  	"context"
 +	"fmt"
@@ -311,31 +318,31 @@ diff --git a/pkg/proxy/proxy_test.go b/pkg/proxy/proxy_test.go
  	"strings"
  	"testing"
 +	"time"
-
+ 
  	"github.com/brancz/kube-rbac-proxy/pkg/authn"
  	"github.com/brancz/kube-rbac-proxy/pkg/authz"
-@@ -49,7 +51,7 @@
+@@ -49,7 +51,7 @@ func TestProxyWithOIDCSupport(t *testing.T) {
  	}
-
+ 
  	fakeUser := user.DefaultInfo{Name: "Foo Bar", Groups: []string{"foo-bars"}}
 -	authenticator := fakeOIDCAuthenticator(t, &fakeUser)
 +	fakeAuth := fakeAuthenticator(&fakeUser)
-
+ 
  	scenario := setupTestScenario()
  	for _, v := range scenario {
-@@ -57,7 +59,7 @@
+@@ -57,7 +59,7 @@ func TestProxyWithOIDCSupport(t *testing.T) {
  		t.Run(v.description, func(t *testing.T) {
-
+ 
  			w := httptest.NewRecorder()
 -			proxy, err := New(kc, cfg, v.authorizer, authenticator)
 +			proxy, err := New(kc, cfg, v.authorizer, fakeAuth, 0)
-
+ 
  			if err != nil {
  				t.Fatalf("Failed to instantiate test proxy. Details : %s", err.Error())
-@@ -237,6 +239,103 @@
+@@ -237,6 +239,103 @@ func TestGeneratingAuthorizerAttributes(t *testing.T) {
  	}
  }
-
+ 
 +func TestProxyCacheSupport(t *testing.T) {
 +	kc := testclient.NewSimpleClientset()
 +	cfg := Config{
@@ -436,10 +443,10 @@ diff --git a/pkg/proxy/proxy_test.go b/pkg/proxy/proxy_test.go
  func createRequest(queryParams, headers map[string]string) *http.Request {
  	r := httptest.NewRequest("GET", "/accounts", nil)
  	if queryParams != nil {
-@@ -296,13 +395,16 @@
+@@ -296,13 +395,16 @@ func fakeJWTRequest(method, path, token string) *http.Request {
  	return req
  }
-
+ 
 -func fakeOIDCAuthenticator(t *testing.T, fakeUser *user.DefaultInfo) authenticator.Request {
 -
 +func fakeAuthenticator(fakeUser *user.DefaultInfo) authenticator.Request {
@@ -448,20 +455,19 @@ diff --git a/pkg/proxy/proxy_test.go b/pkg/proxy/proxy_test.go
 +		switch token {
 +		case "INVALID":
  			return nil, false, nil
--		}
--		return &authenticator.Response{User: fakeUser}, true, nil
 +		case "ERROR":
 +			return nil, false, fmt.Errorf("error occured while authenticating")
 +		default:
 +			return &authenticator.Response{User: fakeUser}, true, nil
-+		}
+ 		}
+-		return &authenticator.Response{User: fakeUser}, true, nil
  	}))
  	return auth
  }
-@@ -319,6 +421,14 @@
+@@ -319,6 +421,14 @@ func (a approver) Authorize(ctx context.Context, auth authorizer.Attributes) (au
  	return authorizer.DecisionAllow, "user allowed", nil
  }
-
+ 
 +type failer struct{}
 +
 +func (e failer) Authorize(ctx context.Context, auth authorizer.Attributes) (authorized authorizer.Decision, reason string, err error) {
