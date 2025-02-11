@@ -1,10 +1,10 @@
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
-docker:
-  ENTRYPOINT: ["/dhctl"]
-  ENV:
-    PATH: "/root:/"
+imageSpec:
+  config:
+    env: { "PATH": "/root:/" }
+    entrypoint: ["/dhctl"]
 import:
 - image: dhctl # from main werf.yaml
   add: /dhctl/bin/dhctl

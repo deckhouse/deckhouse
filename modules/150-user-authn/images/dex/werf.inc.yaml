@@ -10,8 +10,9 @@ import:
     add: /web
     to: /web
     before: setup
-docker:
-  ENTRYPOINT: ["/usr/local/bin/dex", "serve", "/etc/dex/config.docker.yaml"]
+imageSpec:
+  config:
+    entrypoint: ["/usr/local/bin/dex", "serve", "/etc/dex/config.docker.yaml"]
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-dex-src-artifact
 fromImage: common/src-artifact

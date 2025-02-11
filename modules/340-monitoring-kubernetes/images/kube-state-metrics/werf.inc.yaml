@@ -6,8 +6,9 @@ import:
   add: /src/kube-state-metrics
   to: /bin/kube-state-metrics
   before: setup
-docker:
-  ENTRYPOINT: ["/bin/kube-state-metrics"]
+imageSpec:
+  config:
+    entrypoint: ["/bin/kube-state-metrics"]
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
 fromImage: common/src-artifact

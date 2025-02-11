@@ -45,6 +45,6 @@ import:
    add: /tmp/manager
    to: /manager
    before: setup
-docker:
-  ENTRYPOINT: ["/manager"]
-  USER: 64535
+imageSpec:
+  config:
+    entrypoint: ["/manager"]

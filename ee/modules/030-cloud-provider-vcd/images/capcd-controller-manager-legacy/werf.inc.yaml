@@ -26,8 +26,9 @@ import:
     add: /cluster-api-provider-cloud-director
     to: /cluster-api-provider-cloud-director
     before: setup
-docker:
-  ENTRYPOINT: ["/cluster-api-provider-cloud-director"]
+imageSpec:
+  config:
+    entrypoint: ["/cluster-api-provider-cloud-director"]
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
 final: false

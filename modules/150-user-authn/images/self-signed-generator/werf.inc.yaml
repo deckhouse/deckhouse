@@ -6,8 +6,9 @@ import:
     add: /src/self-signed-generator
     to: /self-signed-generator
     before: setup
-docker:
-  ENTRYPOINT: [ "/self-signed-generator" ]
+imageSpec:
+  config:
+    entrypoint: [ "/self-signed-generator" ]
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-self-signed-generator-src-artifact
 fromImage: common/src-artifact

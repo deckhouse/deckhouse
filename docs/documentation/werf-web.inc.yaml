@@ -12,8 +12,9 @@ import:
   add: /app/_site
   to: /app
   before: setup
-docker:
-  ENTRYPOINT: [ "nginx", "-e", "/dev/stderr", "-g", "daemon off;" ]
+imageSpec:
+  config:
+    entrypoint: [ "nginx", "-e", "/dev/stderr", "-g", "daemon off;" ]
 {{ else }}
 fromImage: common/nginx-static
 import:
@@ -27,8 +28,9 @@ import:
   - search-index.json
   - '*/sitemap*.xml'
   - '*/robots.txt'
-docker:
-  ENTRYPOINT: [ "/opt/nginx-static/sbin/nginx", "-e", "/dev/stderr", "-g", "daemon off;" ]
+imageSpec:
+  config:
+    entrypoint: [ "/opt/nginx-static/sbin/nginx", "-e", "/dev/stderr", "-g", "daemon off;" ]
 {{ end }}
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}/static

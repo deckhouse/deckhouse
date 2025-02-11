@@ -28,12 +28,12 @@ k8s:
       yandex: v0.31.0
       aws: v1.27.1
       vsphere: 4e80a0c86d2ae8a1b843b4ba9e5ac31707758912
-      azure: v1.27.11
-      gcp: ccm/v27.1.0
+      azure: v1.27.21
+      gcp: ccm/v27.14.0
     csi:
       aws: v1.28.0
-      azure: v1.17.0
-      gcp: v1.3.3
+      azure: v1.27.1
+      gcp: v1.10.18
       yandex: v0.14.0
       vcd: 1.6.0
       zvirt: release-4.19
@@ -56,12 +56,12 @@ k8s:
       yandex: v0.31.0
       aws: v1.28.1
       vsphere: v1.28.0
-      azure: v1.28.3
-      gcp: ccm/v27.1.6
+      azure: v1.28.13
+      gcp: ccm/v28.10.0
     csi:
       aws: v1.28.0
-      azure: v1.17.0
-      gcp: v1.3.3
+      azure: v1.28.11
+      gcp: v1.12.13
       yandex: v0.14.0
       vcd: 1.6.0
       zvirt: release-4.19
@@ -84,12 +84,12 @@ k8s:
       yandex: v0.31.0
       aws: v1.29.1
       vsphere: v1.29.0
-      azure: v1.29.0
-      gcp: ccm/v29.0.0
+      azure: v1.29.11
+      gcp: ccm/v29.5.1
     csi:
       aws: v1.28.0
-      azure: v1.17.0
-      gcp: v1.3.3
+      azure: v1.29.12
+      gcp: v1.12.13
       yandex: v0.14.0
       vcd: 1.6.0
       zvirt: release-4.19
@@ -112,12 +112,12 @@ k8s:
       yandex: v0.31.0
       aws: v1.30.1
       vsphere: v1.30.1
-      azure: v1.30.2
-      gcp: ccm/v29.0.1
+      azure: v1.30.7
+      gcp: ccm/v30.1.4
     csi:
       aws: v1.28.0
-      azure: v1.17.0
-      gcp: v1.3.3
+      azure: v1.30.7
+      gcp: v1.15.4
       yandex: v0.14.0
       vcd: 1.6.0
       zvirt: release-4.19
@@ -141,11 +141,11 @@ k8s:
       aws: v1.31.0
       vsphere: v1.31.0
       azure: v1.31.1
-      gcp: ccm/v30.1.0
+      gcp: ccm/v30.1.4
     csi:
       aws: v1.35.0
-      azure: v1.30.4
-      gcp: v1.15.1
+      azure: v1.31.2
+      gcp: v1.15.4
       yandex: v0.14.0
       vcd: 1.6.0
       zvirt: release-4.19

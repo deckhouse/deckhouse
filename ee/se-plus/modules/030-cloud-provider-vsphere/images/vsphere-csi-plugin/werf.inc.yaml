@@ -15,8 +15,9 @@ import:
   before: install
   includePaths:
   - '**/*'
-docker:
-  ENTRYPOINT: ["/bin/vsphere-csi"]
+imageSpec:
+  config:
+    entrypoint: ["/bin/vsphere-csi"]
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
 final: false

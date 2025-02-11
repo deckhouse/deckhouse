@@ -1,10 +1,9 @@
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
-docker:
-  ENV:
-    WORKDIR: /
-    ENTRYPOINT: "/machine-controller-manager"
-    USER: 64535
+imageSpec:
+  config:
+    env: { "WORKDIR": "/" }
+    entrypoint: ["/machine-controller-manager"]
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-artifact
   add: /src/machine-controller-manager

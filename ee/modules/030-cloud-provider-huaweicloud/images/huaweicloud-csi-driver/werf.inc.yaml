@@ -26,8 +26,9 @@ import:
   add: /lib/udev/scsi_id
   to: /lib/udev/scsi_id
   before: setup
-docker:
-  ENTRYPOINT: ["/evs-csi-plugin"]
+imageSpec:
+  config:
+    entrypoint: ["/evs-csi-plugin"]
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
 final: false

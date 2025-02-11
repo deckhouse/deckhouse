@@ -7,8 +7,6 @@ import:
   add: /capi-controller-manager
   to: /capi-controller-manager
   before: setup
-docker:
-  USER: 64535
 ---
 image: {{ .ModuleName }}/{{ $.ImageName }}-src-artifact
 fromImage: common/src-artifact

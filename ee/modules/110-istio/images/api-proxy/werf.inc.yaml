@@ -6,8 +6,9 @@ import:
   add: /src/api-proxy
   to: /api-proxy
   after: setup
-docker:
-  ENTRYPOINT: ["/api-proxy"]
+imageSpec:
+  config:
+    entrypoint: ["/api-proxy"]
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
 from: {{ .Images.BASE_GOLANG_23_ALPINE }}

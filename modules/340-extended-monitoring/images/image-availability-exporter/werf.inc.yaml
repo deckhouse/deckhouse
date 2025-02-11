@@ -42,6 +42,6 @@ import:
     add: /src/k8s-image-availability-exporter
     to: /k8s-image-availability-exporter
     before: setup
-docker:
-  ENTRYPOINT:
-    - "/k8s-image-availability-exporter"
+imageSpec:
+  config:
+    entrypoint: ["/k8s-image-availability-exporter"]

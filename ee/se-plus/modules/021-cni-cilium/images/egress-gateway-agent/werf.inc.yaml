@@ -5,8 +5,9 @@ import:
     add: /egress-gateway-agent
     to: /egress-gateway-agent
     before: setup
-docker:
-  ENTRYPOINT: ["/egress-gateway-agent"]
+imageSpec:
+  config:
+    entrypoint: ["/egress-gateway-agent"]
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
 fromImage: common/src-artifact

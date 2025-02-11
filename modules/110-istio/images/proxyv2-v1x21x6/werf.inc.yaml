@@ -70,13 +70,12 @@ shell:
   install:
   - useradd -m --uid 1337 istio-proxy
   - echo istio-proxy ALL=NOPASSWD:ALL | tee -a /etc/sudoers
-docker:
-  ENV:
-    ISTIO_META_ISTIO_PROXY_SHA: "istio-proxy:78bd2d9b284978e170a49cd13decd5f952544489"
-    ISTIO_META_ISTIO_VERSION: "{{ $istioVersion }}"
-  WORKDIR: "/"
-  USER: 1337
-  ENTRYPOINT: ["/usr/local/bin/pilot-agent"]
+imageSpec:
+  config:
+    user: "1337:1337"
+    env: { "ISTIO_META_ISTIO_PROXY_SHA": "istio-proxy:78bd2d9b284978e170a49cd13decd5f952544489", "ISTIO_META_ISTIO_VERSION": "{{ $istioVersion }}" }
+    workingDir: "/"
+    entrypoint: ["/usr/local/bin/pilot-agent"]
 ---
 #=====================================================================================================
 ---
@@ -305,13 +304,9 @@ shell:
       chmod +x "/usr/local/bin/${long_binary_name}"
       USE_BAZEL_VERSION="${bazel_version}" bazel version # to extract all binaries properly
     done
-docker:
-  ENV:
-    GOROOT: "/usr/local/go"
-    GOPATH: "/go"
-    PATH: "${PATH}:${GOROOT}/bin:${GOPATH}/bin"
-    GOOS: "linux"
-    GOARCH: "amd64"
+imageSpec:
+  config:
+    env: {"GOROOT": "/usr/local/go", "GOPATH": "/go", "PATH": "${PATH}:${GOROOT}/bin:${GOPATH}/bin", "GOOS": "linux", "GOARCH": "amd64"}
 ---
 #=====================================================================================================
 ---
