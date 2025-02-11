@@ -53,6 +53,7 @@ spec:
       {{- include "helm_lib_priority_class" (tuple . "system-cluster-critical") | nindent 6 }}
       {{- include "helm_lib_module_pod_security_context_run_as_user_nobody" . | nindent 6 }}
       serviceAccountName: alliance-ingressgateway
+      automountServiceAccountToken: true
   {{- if $.Values.istio.alliance.ingressGateway.nodeSelector }}
       nodeSelector:
         {{- $.Values.istio.alliance.ingressGateway.nodeSelector | toYaml | nindent 8 }}
