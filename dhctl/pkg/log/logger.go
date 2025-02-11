@@ -587,34 +587,34 @@ func (d *SilentLogger) CreateBufferLogger(buffer *bytes.Buffer) Logger {
 
 func (d *SilentLogger) LogProcess(_, t string, run func() error) error {
 	err := run()
-	if d.t != nil {
-	}
 	return err
 }
 
 func (d *SilentLogger) FlushAndClose() error {
-	if d.t != nil {
-	}
 	return nil
 }
 
 func (d *SilentLogger) LogInfoF(format string, a ...interface{}) {
 	if d.t != nil {
+		d.t.writeToFile(fmt.Sprintf(format, a...))
 	}
 }
 
 func (d *SilentLogger) LogInfoLn(a ...interface{}) {
 	if d.t != nil {
+		d.t.writeToFile(fmt.Sprintln(a...))
 	}
 }
 
 func (d *SilentLogger) LogErrorF(format string, a ...interface{}) {
 	if d.t != nil {
+		d.t.writeToFile(fmt.Sprintf(format, a...))
 	}
 }
 
 func (d *SilentLogger) LogErrorLn(a ...interface{}) {
 	if d.t != nil {
+		d.t.writeToFile(fmt.Sprintln(a...))
 	}
 }
 
@@ -632,36 +632,43 @@ func (d *SilentLogger) LogDebugLn(a ...interface{}) {
 
 func (d *SilentLogger) LogSuccess(l string) {
 	if d.t != nil {
+		d.t.writeToFile(l)
 	}
 }
 
 func (d *SilentLogger) LogFail(l string) {
 	if d.t != nil {
+		d.t.writeToFile(l)
 	}
 }
 
 func (d *SilentLogger) LogFailRetry(l string) {
 	if d.t != nil {
+		d.t.writeToFile(l)
 	}
 }
 
 func (d *SilentLogger) LogWarnLn(a ...interface{}) {
 	if d.t != nil {
+		d.t.writeToFile(fmt.Sprintln(a...))
 	}
 }
 
 func (d *SilentLogger) LogWarnF(format string, a ...interface{}) {
 	if d.t != nil {
+		d.t.writeToFile(fmt.Sprintf(format, a...))
 	}
 }
 
 func (d *SilentLogger) LogJSON(content []byte) {
 	if d.t != nil {
+		d.t.writeToFile(string(content))
 	}
 }
 
 func (d *SilentLogger) Write(content []byte) (int, error) {
 	if d.t != nil {
+		d.t.writeToFile(string(content))
 	}
 	return len(content), nil
 }
