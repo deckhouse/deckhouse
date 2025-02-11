@@ -12,9 +12,9 @@ shell:
   beforeInstall:
   {{- include "alt archive repos" . | nindent 2 }}
   {{- include "alt packages proxy" . | nindent 2 }}
+  {{- include "alt dist upgrade" . | nindent 2 }}
   # ssh auth to 3p repos
   - echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
-  - apt-get install -y apt apt-https bash5 libapt rootfiles sh5 vim-minimal
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
 from: {{ .Images.BASE_ALT_P11 }}
@@ -22,6 +22,10 @@ final: false
 shell:
   beforeInstall:
   {{- include "alt archive repos" . | nindent 2 }}
-  - apt-get install -y apt apt-https bash5 libapt rootfiles sh5 vim-minimal
+  - cp /etc/apt/sources.list.d/alt.list /etc/apt/sources.list.d/alt.list.orig
+  {{- include "alt packages proxy" . | nindent 2 }}
+  {{- include "alt dist upgrade" . | nindent 2 }}
+  # return original repos
+  - mv /etc/apt/sources.list.d/alt.list.orig /etc/apt/sources.list.d/alt.list
 docker:
   USER: 64535
