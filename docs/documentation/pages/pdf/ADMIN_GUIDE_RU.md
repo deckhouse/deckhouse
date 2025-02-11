@@ -2367,64 +2367,6 @@ kubectl get --raw /debug/api_priority_and_fairness/dump_queues
 
 {% raw %}
 
-#### Пример для AWS (Network Load Balancer)
-
-При создании балансировщика будут использованы все доступные в кластере зоны.
-
-В каждой зоне балансировщик получает публичный IP. Если в зоне есть инстанс с Ingress-контроллером, A-запись с IP-адресом балансировщика из этой зоны автоматически добавляется к доменному имени балансировщика.
-
-Если в зоне не остается инстансов с Ingress-контроллером, тогда IP автоматически убирается из DNS.
-
-В том случае, если в зоне всего один инстанс с Ingress-контроллером, при перезапуске пода IP-адрес балансировщика этой зоны будет временно исключен из DNS.
-
-```yaml
-apiVersion: deckhouse.io/v1
-kind: IngressNginxController
-metadata:
- name: main
-spec:
-  ingressClass: nginx
-  inlet: LoadBalancer
-  loadBalancer:
-    annotations:
-      service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
-```
-
-#### Пример для GCP / Yandex Cloud / Azure
-
-```yaml
-apiVersion: deckhouse.io/v1
-kind: IngressNginxController
-metadata:
- name: main
-spec:
-  ingressClass: nginx
-  inlet: LoadBalancer
-```
-
-{% endraw %}
-
-{% alert level="warning" %}
-В GCP на узлах должна присутствовать аннотация, разрешающая принимать подключения на внешние адреса для сервисов с типом NodePort.
-{% endalert %}
-
-{% raw %}
-
-#### Пример для OpenStack
-
-```yaml
-apiVersion: deckhouse.io/v1
-kind: IngressNginxController
-metadata:
-  name: main-lbwpp
-spec:
-  inlet: LoadBalancerWithProxyProtocol
-  ingressClass: nginx
-  loadBalancerWithProxyProtocol:
-    annotations:
-      loadbalancer.openstack.org/proxy-protocol: "true"
-      loadbalancer.openstack.org/timeout-member-connect: "2000"
-```
 
 #### Пример для bare metal
 
@@ -5073,8 +5015,6 @@ spec:
 
 Подробно о всех параметрах можно прочитать в описании кастомного ресурса [NodeGroup](cr.html#nodegroup).
 
-В случае изменения параметров `InstanceClass` или `instancePrefix` в конфигурации Deckhouse не будет происходить `RollingUpdate`. Deckhouse создаст новые `MachineDeployment`, а старые удалит. Количество заказываемых одновременно `MachineDeployment` определяется параметром `cloudInstances.maxSurgePerZone`.
-
 При обновлении, которое требует прерывания работы узла (disruption update), выполняется процесс вытеснения подов с узла. Если какой-либо под не может быть вытеснен, попытка повторяется каждые 20 секунд до достижения глобального таймаута в 5 минут. После истечения этого времени, поды, которые не удалось вытеснить, удаляются принудительно.
 
 #### Как выделить узлы под специфические нагрузки?
@@ -5264,7 +5204,7 @@ spec:
     mode: Disabled
   disruptions:
     approvalMode: Automatic
-  nodeType: CloudStatic
+  nodeType: Static
 ```
 
 Далее создайте NodeGroupConfiguration для NodeGroup `gpu` для конфигурации containerd:
@@ -5666,144 +5606,18 @@ spec:
   weight: 31
 ```
 
-#### Как использовать NodeGroup с приоритетом?
-
-С помощью параметра [priority](cr.html#nodegroup-v1-spec-cloudinstances-priority) кастомного ресурса `NodeGroup` можно задавать порядок заказа узлов в кластере.
-Например, можно сделать так, чтобы сначала заказывались узлы типа *spot-node*, а если они закончились — обычные узлы.
-
-Пример создания двух `NodeGroup` с использованием узлов типа spot-node:
-
-```yaml
----
-apiVersion: deckhouse.io/v1
-kind: NodeGroup
-metadata:
-  name: worker-spot
-spec:
-  cloudInstances:
-    classReference:
-      kind: AWSInstanceClass
-      name: worker-spot
-    maxPerZone: 5
-    minPerZone: 0
-    priority: 50
-  nodeType: CloudEphemeral
----
-apiVersion: deckhouse.io/v1
-kind: NodeGroup
-metadata:
-  name: worker
-spec:
-  cloudInstances:
-    classReference:
-      kind: AWSInstanceClass
-      name: worker
-    maxPerZone: 5
-    minPerZone: 0
-    priority: 30
-  nodeType: CloudEphemeral
-```
-
-В приведенном выше примере, `cluster-autoscaler` сначала попытается заказать узел типа *_spot-node*. Если в течение 15 минут его не получится добавить в кластер, NodeGroup `worker-spot` будет поставлен на паузу (на 20 минут) и `cluster-autoscaler` начнет заказывать узлы из NodeGroup `worker`.
-Если через 30 минут в кластере возникнет необходимость развернуть еще один узел, `cluster-autoscaler` сначала попытается заказать узел из NodeGroup `worker-spot` и только потом — из NodeGroup `worker`.
-
-После того как NodeGroup `worker-spot` достигнет своего максимума (5 узлов в примере выше), узлы будут заказываться из NodeGroup `worker`.
-
-Шаблоны узлов (labels/taints) для NodeGroup `worker` и `worker-spot` должны быть одинаковыми, или как минимум подходить для той нагрузки, которая запускает процесс увеличения кластера.
-
 #### Как интерпретировать состояние группы узлов?
 
 **Ready** — группа узлов содержит минимально необходимое число запланированных узлов с состоянием `Ready` для всех зон.
-
-Пример 1. Группа узлов в состоянии `Ready`:
-
-```yaml
-apiVersion: deckhouse.io/v1
-kind: NodeGroup
-metadata:
-  name: ng1
-spec:
-  nodeType: CloudEphemeral
-  cloudInstances:
-    maxPerZone: 5
-    minPerZone: 1
-status:
-  conditions:
-  - status: "True"
-    type: Ready
----
-apiVersion: v1
-kind: Node
-metadata:
-  name: node1
-  labels:
-    node.deckhouse.io/group: ng1
-status:
-  conditions:
-  - status: "True"
-    type: Ready
-```
-
-Пример 2. Группа узлов в состоянии `Not Ready`:
-
-```yaml
-apiVersion: deckhouse.io/v1
-kind: NodeGroup
-metadata:
-  name: ng1
-spec:
-  nodeType: CloudEphemeral
-  cloudInstances:
-    maxPerZone: 5
-    minPerZone: 2
-status:
-  conditions:
-  - status: "False"
-    type: Ready
----
-apiVersion: v1
-kind: Node
-metadata:
-  name: node1
-  labels:
-    node.deckhouse.io/group: ng1
-status:
-  conditions:
-  - status: "True"
-    type: Ready
-```
 
 **Updating** — группа узлов содержит как минимум один узел, в котором присутствует аннотация с префиксом `update.node.deckhouse.io` (например, `update.node.deckhouse.io/waiting-for-approval`).
 
 **WaitingForDisruptiveApproval** — группа узлов содержит как минимум один узел, в котором присутствует аннотация `update.node.deckhouse.io/disruption-required` и
 отсутствует аннотация `update.node.deckhouse.io/disruption-approved`.
 
-**Scaling** — рассчитывается только для групп узлов с типом `CloudEphemeral`. Состояние `True` может быть в двух случаях:
-
-1. Когда число узлов меньше *желаемого числа узлов в группе, то есть когда нужно увеличить число узлов в группе*.
-1. Когда какой-то узел помечается к удалению или число узлов больше *желаемого числа узлов*, то есть когда нужно уменьшить число узлов в группе.
+**Error** — содержит последнюю ошибку, возникшую при создании узла в группе узлов.
 
 *Желаемое число узлов* — это сумма всех реплик, входящих в группу узлов.
-
-Пример. Желаемое число узлов равно 2:
-
-```yaml
-apiVersion: deckhouse.io/v1
-kind: NodeGroup
-metadata:
-  name: ng1
-spec:
-  nodeType: CloudEphemeral
-  cloudInstances:
-    maxPerZone: 5
-    minPerZone: 2
-status:
-...
-  desired: 2
-...
-```
-
-**Error** — содержит последнюю ошибку, возникшую при создании узла в группе узлов.
 
 #### Как заставить werf игнорировать состояние Ready в группе узлов?
 
@@ -6380,7 +6194,7 @@ kubectl debug node/mynode -it --image=ubuntu
 
 ### Модуль deckhouse-tools
 
-Этот модуль создает веб-интерфейс со ссылками на скачивание утилит Deckhouse (в настоящее время – [Deckhouse CLI](./deckhouse-cli/) под различные операционные системы).
+Этот модуль создает веб-интерфейс со ссылками на скачивание утилиты Deckhouse CLI под различные операционные системы.
 
 Адрес веб-интерфейса формируется в соответствии с шаблоном [publicDomainTemplate](./deckhouse-configure-global.html#parameters-modules-publicdomaintemplate) глобального параметра конфигурации Deckhouse (ключ `%s` заменяется на `tools`).
 
@@ -6753,10 +6567,6 @@ spec:
 |--------------|-------------------------------------------|
 | `node_group` | metadata.labels[].node.deckhouse.io/group |
 
-{% alert -%}
-Для Splunk поля `pod_labels` не экспортируются, потому что это вложенный объект, который не поддерживается самим Splunk.
-{%- endalert %}
-
 ##### File
 
 Единственный лейбл — это `host`, в котором записан hostname сервера.
@@ -6827,52 +6637,6 @@ spec:
     endpoint: http://loki.loki:3100
 ```
 
-#### Чтение логов подов из указанного namespace с указанным label и перенаправление одновременно в Loki и Elasticsearch
-
-Чтение логов подов из namespace `whispers` только с label `app=booking` и перенаправление одновременно в Loki и Elasticsearch:
-
-```yaml
-apiVersion: deckhouse.io/v1alpha1
-kind: ClusterLoggingConfig
-metadata:
-  name: whispers-booking-logs
-spec:
-  type: KubernetesPods
-  kubernetesPods:
-    namespaceSelector:
-      matchNames:
-        - whispers
-    labelSelector:
-      matchLabels:
-        app: booking
-  destinationRefs:
-  - loki-storage
-  - es-storage
----
-apiVersion: deckhouse.io/v1alpha1
-kind: ClusterLogDestination
-metadata:
-  name: loki-storage
-spec:
-  type: Loki
-  loki:
-    endpoint: http://loki.loki:3100
----
-apiVersion: deckhouse.io/v1alpha1
-kind: ClusterLogDestination
-metadata:
-  name: es-storage
-spec:
-  type: Elasticsearch
-  elasticsearch:
-    endpoint: http://192.168.1.1:9200
-    index: logs-%F
-    auth:
-      strategy: Basic
-      user: elastic
-      password: c2VjcmV0IC1uCg==
-```
-
 #### Создание source в namespace и чтение логов всех подов в этом NS с направлением их в Loki
 
 Следующий pipeline создает source в namespace `test-whispers`, читает логи всех подов в этом NS и пишет их в Loki:
@@ -6930,6 +6694,7 @@ spec:
 
 **Vector** сам добавит этот путь при работе с Loki.
 
+
 #### Добавление Loki в Deckhouse Grafana
 
 Вы можете работать с Loki из встроенной в Deckhouse Grafana. Достаточно добавить [**GrafanaAdditionalDatasource**](./modules/prometheus/cr.html#grafanaadditionaldatasource).
@@ -6947,99 +6712,6 @@ spec:
     timeInterval: 30s
   type: loki
   url: http://loki.loki:3100
-```
-
-#### Поддержка Elasticsearch < 6.X
-
-Для Elasticsearch < 6.0 нужно включить поддержку doc_type индексов.
-Сделать это можно следующим образом:
-
-```yaml
-apiVersion: deckhouse.io/v1alpha1
-kind: ClusterLogDestination
-metadata:
-  name: es-storage
-spec:
-  type: Elasticsearch
-  elasticsearch:
-    endpoint: http://192.168.1.1:9200
-    docType: "myDocType" # Укажите значение здесь. Оно не должно начинаться с '_'.
-    auth:
-      strategy: Basic
-      user: elastic
-      password: c2VjcmV0IC1uCg==
-```
-
-#### Шаблон индекса для Elasticsearch
-
-Существует возможность отправлять сообщения в определенные индексы на основе метаданных с помощью шаблонов индексов:
-
-```yaml
-apiVersion: deckhouse.io/v1alpha1
-kind: ClusterLogDestination
-metadata:
-  name: es-storage
-spec:
-  type: Elasticsearch
-  elasticsearch:
-    endpoint: http://192.168.1.1:9200
-    index: "k8s-{{ namespace }}-%F"
-```
-
-В приведенном выше примере для каждого пространства имен Kubernetes будет создан свой индекс в Elasticsearch.
-
-Эта функция также хорошо работает в комбинации с `extraLabels`:
-
-```yaml
-apiVersion: deckhouse.io/v1alpha1
-kind: ClusterLogDestination
-metadata:
-  name: es-storage
-spec:
-  type: Elasticsearch
-  elasticsearch:
-    endpoint: http://192.168.1.1:9200
-    index: "k8s-{{ service }}-{{ namespace }}-%F"
-  extraLabels:
-    service: "{{ service_name }}"
-```
-
-1. Если сообщение имеет формат JSON, поле `service_name` этого документа JSON перемещается на уровень метаданных.
-2. Новое поле метаданных `service` используется в шаблоне индекса.
-
-#### Пример интеграции со Splunk
-
-Существует возможность отсылать события из Deckhouse в Splunk.
-
-1. Endpoint должен быть таким же, как имя вашего экземпляра Splunk с портом `8088` и без указания пути, например `https://prd-p-xxxxxx.splunkcloud.com:8088`.
-2. Чтобы добавить token для доступа, откройте пункт меню `Setting` -> `Data inputs`, добавьте новый `HTTP Event Collector` и скопируйте token.
-3. Укажите индекс Splunk для хранения логов, например `logs`.
-
-```yaml
-apiVersion: deckhouse.io/v1alpha1
-kind: ClusterLogDestination
-metadata:
-  name: splunk
-spec:
-  type: Splunk
-  splunk:
-    endpoint: https://prd-p-xxxxxx.splunkcloud.com:8088
-    token: xxxx-xxxx-xxxx
-    index: logs
-    tls:
-      verifyCertificate: false
-      verifyHostname: false
-```
-
-{% endraw %}
-{% alert -%}
-`destination` не поддерживает метки пода для индексирования. Рассмотрите возможность добавления нужных меток с помощью опции `extraLabels`.
-{%- endalert %}
-{% raw %}
-
-```yaml
-extraLabels:
-  pod_label_app: '{{ pod_labels.app }}'
 ```
 
 #### Простой пример Logstash
@@ -8901,10 +8573,6 @@ spec:
 |--------------|-------------------------------------------|
 | `node_group` | metadata.labels[].node.deckhouse.io/group |
 
-{% alert -%}
-Для Splunk поля `pod_labels` не экспортируются, потому что это вложенный объект, который не поддерживается самим Splunk.
-{%- endalert %}
-
 ##### File
 
 Единственный лейбл — это `host`, в котором записан hostname сервера.
@@ -8975,52 +8643,6 @@ spec:
     endpoint: http://loki.loki:3100
 ```
 
-#### Чтение логов подов из указанного namespace с указанным label и перенаправление одновременно в Loki и Elasticsearch
-
-Чтение логов подов из namespace `whispers` только с label `app=booking` и перенаправление одновременно в Loki и Elasticsearch:
-
-```yaml
-apiVersion: deckhouse.io/v1alpha1
-kind: ClusterLoggingConfig
-metadata:
-  name: whispers-booking-logs
-spec:
-  type: KubernetesPods
-  kubernetesPods:
-    namespaceSelector:
-      matchNames:
-        - whispers
-    labelSelector:
-      matchLabels:
-        app: booking
-  destinationRefs:
-  - loki-storage
-  - es-storage
----
-apiVersion: deckhouse.io/v1alpha1
-kind: ClusterLogDestination
-metadata:
-  name: loki-storage
-spec:
-  type: Loki
-  loki:
-    endpoint: http://loki.loki:3100
----
-apiVersion: deckhouse.io/v1alpha1
-kind: ClusterLogDestination
-metadata:
-  name: es-storage
-spec:
-  type: Elasticsearch
-  elasticsearch:
-    endpoint: http://192.168.1.1:9200
-    index: logs-%F
-    auth:
-      strategy: Basic
-      user: elastic
-      password: c2VjcmV0IC1uCg==
-```
-
 #### Создание source в namespace и чтение логов всех подов в этом NS с направлением их в Loki
 
 Следующий pipeline создает source в namespace `test-whispers`, читает логи всех подов в этом NS и пишет их в Loki:
@@ -9078,36 +8700,6 @@ spec:
 
 **Vector** сам добавит этот путь при работе с Loki.
 
-#### Работа с Grafana Cloud
-
-Данная документация подразумевает, что у вас уже создан ключ API.
-
-Для начала вам потребуется закодировать в base64 ваш токен доступа к Grafana Cloud.
-
-![Grafana cloud API key](./images/log-shipper/grafana_cloud.png)
-
-```bash
-echo -n "<YOUR-GRAFANACLOUD-TOKEN>" | base64 -w0
-```
-
-Затем нужно создать **ClusterLogDestination**
-
-```yaml
-apiVersion: deckhouse.io/v1alpha1
-kind: ClusterLogDestination
-metadata:
-  name: loki-storage
-spec:
-  loki:
-    auth:
-      password: PFlPVVItR1JBRkFOQUNMT1VELVRPS0VOPg==
-      strategy: Basic
-      user: "<YOUR-GRAFANACLOUD-USER>"
-    endpoint: <YOUR-GRAFANACLOUD-URL> # Например https://logs-prod-us-central1.grafana.net или https://logs-prod-eu-west-0.grafana.net
-  type: Loki
-```
-
-Теперь можно создать PodLogginConfig или ClusterPodLoggingConfig и отправлять логи в **Grafana Cloud**.
 
 #### Добавление Loki в Deckhouse Grafana
 
@@ -9126,99 +8718,6 @@ spec:
     timeInterval: 30s
   type: loki
   url: http://loki.loki:3100
-```
-
-#### Поддержка Elasticsearch < 6.X
-
-Для Elasticsearch < 6.0 нужно включить поддержку doc_type индексов.
-Сделать это можно следующим образом:
-
-```yaml
-apiVersion: deckhouse.io/v1alpha1
-kind: ClusterLogDestination
-metadata:
-  name: es-storage
-spec:
-  type: Elasticsearch
-  elasticsearch:
-    endpoint: http://192.168.1.1:9200
-    docType: "myDocType" # Укажите значение здесь. Оно не должно начинаться с '_'.
-    auth:
-      strategy: Basic
-      user: elastic
-      password: c2VjcmV0IC1uCg==
-```
-
-#### Шаблон индекса для Elasticsearch
-
-Существует возможность отправлять сообщения в определенные индексы на основе метаданных с помощью шаблонов индексов:
-
-```yaml
-apiVersion: deckhouse.io/v1alpha1
-kind: ClusterLogDestination
-metadata:
-  name: es-storage
-spec:
-  type: Elasticsearch
-  elasticsearch:
-    endpoint: http://192.168.1.1:9200
-    index: "k8s-{{ namespace }}-%F"
-```
-
-В приведенном выше примере для каждого пространства имен Kubernetes будет создан свой индекс в Elasticsearch.
-
-Эта функция также хорошо работает в комбинации с `extraLabels`:
-
-```yaml
-apiVersion: deckhouse.io/v1alpha1
-kind: ClusterLogDestination
-metadata:
-  name: es-storage
-spec:
-  type: Elasticsearch
-  elasticsearch:
-    endpoint: http://192.168.1.1:9200
-    index: "k8s-{{ service }}-{{ namespace }}-%F"
-  extraLabels:
-    service: "{{ service_name }}"
-```
-
-1. Если сообщение имеет формат JSON, поле `service_name` этого документа JSON перемещается на уровень метаданных.
-2. Новое поле метаданных `service` используется в шаблоне индекса.
-
-#### Пример интеграции со Splunk
-
-Существует возможность отсылать события из Deckhouse в Splunk.
-
-1. Endpoint должен быть таким же, как имя вашего экземпляра Splunk с портом `8088` и без указания пути, например `https://prd-p-xxxxxx.splunkcloud.com:8088`.
-2. Чтобы добавить token для доступа, откройте пункт меню `Setting` -> `Data inputs`, добавьте новый `HTTP Event Collector` и скопируйте token.
-3. Укажите индекс Splunk для хранения логов, например `logs`.
-
-```yaml
-apiVersion: deckhouse.io/v1alpha1
-kind: ClusterLogDestination
-metadata:
-  name: splunk
-spec:
-  type: Splunk
-  splunk:
-    endpoint: https://prd-p-xxxxxx.splunkcloud.com:8088
-    token: xxxx-xxxx-xxxx
-    index: logs
-    tls:
-      verifyCertificate: false
-      verifyHostname: false
-```
-
-{% endraw %}
-{% alert -%}
-`destination` не поддерживает метки пода для индексирования. Рассмотрите возможность добавления нужных меток с помощью опции `extraLabels`.
-{%- endalert %}
-{% raw %}
-
-```yaml
-extraLabels:
-  pod_label_app: '{{ pod_labels.app }}'
 ```
 
 #### Простой пример Logstash
@@ -11273,136 +10772,6 @@ spec:
 
 #### Как добавить дополнительный `ClusterIssuer`?
 
-##### В каких случаях требуется дополнительный `ClusterIssuer`?
-
-В стандартной поставке присутствуют `ClusterIssuer`, издающие либо сертификаты из доверенного публичного удостоверяющего центра Let's Encrypt, либо самоподписанные сертификаты.
-
-Чтобы издать сертификаты на доменное имя через Let's Encrypt, сервис требует осуществить подтверждение владения доменом.
-`Cert-manager` поддерживает несколько методов для такого подтверждения при использовании `ACME`(Automated Certificate Management Environment):
-* `HTTP-01` — `cert-manager` создаст временный Pod в кластере, который будет слушать на определенном URL для подтверждения владения доменом. Для его работы необходимо иметь возможность направлять внешний трафик на этот Pod, обычно через `Ingress`.
-* `DNS-01` —  `cert-manager` делает TXT-запись в DNS для подтверждения владения доменом. У `cert-manager` есть встроенная поддержка популярных провайдеров DNS: AWS Route53, Google Cloud DNS, Cloudflare и т.д. Полный перечень доступен в документации cert-manager.
-
-{% alert level="danger" %}
-Метод `HTTP-01` не поддерживает выпуск wildcard сертификатов.
-{% endalert %}
-
-Поставляемые `ClusterIssuers`, издающие сертификаты через Let's Encrypt, делятся на два типа:
-1. `ClusterIssuer,` специфичные для используемого cloud-провайдера.  
-Добавляются автоматически, при заполнении [настроек модуля](./configuration.html) связанных с cloud-провайдером. Поддерживают метод `DNS-01`.
-1. `ClusterIssuer` использующие метод `HTTP-01`.  
-   Добавляются автоматически, если их создание не отключено в [настройках модуля](./configuration.html#parameters-disableletsencrypt).
-   * `letsencrypt`
-   * `letsencrypt-staging`
-
-Таким образом, дополнительный `ClusterIssuer` может потребоваться в случаях издания сертификатов:
-1. В удостоверяющем центре (УЦ), отличном от Let's Encrypt (в т.ч. в приватном). Поддерживаемые УЦ доступны в документации `cert-manager`
-2. Через Let's Encrypt с помощью метода `DNS-01` через сторонний провайдер.
-
-##### Как добавить дополнительный `ClusterIssuer`, использующий Let's Encrypt и метод подтверждения `DNS-01`?
-
-Для подтверждения владения доменом через Let's Encrypt с помощью метода `DNS-01` требуется настроить возможность создания TXT-записей в публичном DNS.
-
-У `cert-manager` есть поддержка механизмов для создания TXT-записей в некоторых популярных DNS: `AzureDNS`, `Cloudflare`, `Google Cloud DNS` и т.д.  
-Полный перечень доступен в документации `cert-manager`.
-
-Использование сторонних DNS-провайдеров реализуется через метод `webhook`.  
-Когда `cert-manager` выполняет вызов `ACME` `DNS01`, он отправляет запрос на вебхук-сервер, который затем выполняет нужные операции для обновления записи DNS.  
-При использовании данного метода требуется разместить сервис, который будет обрабатывать хук и осуществлять создание TXT-записи в DNS-провайдере.
-
-В качестве примера рассмотрим использование сервиса `Yandex Cloud DNS`.
-
-1. Для обработки вебхука предварительно разместите в кластере сервис `Yandex Cloud DNS ACME webhook` согласно официальной документации.
-
-1. Затем создайте ресурс `ClusterIssuer`:
-
-   ```yaml
-   apiVersion: cert-manager.io/v1
-   kind: ClusterIssuer
-   metadata:
-     name: yc-clusterissuer
-     namespace: default
-   spec:
-     acme:
-       # Вы должны заменить этот адрес электронной почты на свой собственный.
-       # Let's Encrypt будет использовать его, чтобы связаться с вами по поводу истекающих
-       # сертификатов и вопросов, связанных с вашей учетной записью.
-       email: your@email.com
-       server: https://acme-staging-v02.api.letsencrypt.org/directory
-       privateKeySecretRef:
-         # Ресурс секретов, который будет использоваться для хранения закрытого ключа аккаунта.
-         name: secret-ref
-       solvers:
-         - dns01:
-             webhook:
-               config:
-                 # Идентификатор папки, в которой расположена DNS-зона
-                 folder: <your folder ID>
-                 # Это секрет, используемый для доступа к учетной записи сервиса
-                 serviceAccountSecretRef:
-                   name: cert-manager-secret
-                   key: iamkey.json
-               groupName: acme.cloud.yandex.com
-               solverName: yandex-cloud-dns
-   ```
-
-##### Как добавить дополнительный `Issuer` и `ClusterIssuer`, использующий HashiСorp Vault для выпуска сертификатов?
-
-Для выпуска сертификатов с помощью HashiСorp Vault, можете использовать инструкцию.
-
-После конфигурации PKI и [включения авторизации](./modules/user-authz/) в Kubernetes, нужно:
-- Создать `ServiceAccount` и скопировать ссылку на его `Secret`:
-
-  ```shell
-  kubectl create serviceaccount issuer
-  
-  ISSUER_SECRET_REF=$(kubectl get serviceaccount issuer -o json | jq -r ".secrets[].name")
-  ```
-
-- Создать `Issuer`:
-
-  ```shell
-  kubectl apply -f - <<EOF
-  apiVersion: cert-manager.io/v1
-  kind: Issuer
-  metadata:
-    name: vault-issuer
-    namespace: default
-  spec:
-    vault:
-      # Если Vault разворачивался по вышеуказанной инструкции, в этом месте в инструкции опечатка.
-      server: http://vault.default.svc.cluster.local:8200
-      # Указывается на этапе конфигурации PKI. 
-      path: pki/sign/example-dot-com 
-      auth:
-        kubernetes:
-          mountPath: /v1/auth/kubernetes
-          role: issuer
-          secretRef:
-            name: $ISSUER_SECRET_REF
-            key: token
-  EOF
-  ```
-
-- Создать ресурс `Certificate` для получения TLS-сертификата, подписанного CA Vault:
-
-  ```shell
-  kubectl apply -f - <<EOF
-  apiVersion: cert-manager.io/v1
-  kind: Certificate
-  metadata:
-    name: example-com
-    namespace: default
-  spec:
-    secretName: example-com-tls
-    issuerRef:
-      name: vault-issuer
-    # Домены указываются на этапе конфигурации PKI в Vault.
-    commonName: www.example.com 
-    dnsNames:
-    - www.example.com
-  EOF
-  ```
-
 ##### Как добавить `ClusterIssuer`, использующий свой или промежуточный CA для заказа сертификатов?
 
 Для использования собственного или промежуточного CA:
@@ -11467,70 +10836,6 @@ spec:
     version: 1
   ```
 
-#### Как защитить учетные данные `cert-manager`?
-
-Если вы не хотите хранить учетные данные конфигурации Deckhouse (например, по соображениям безопасности), можете создать
-свой собственный `ClusterIssuer` / `Issuer`.
-
-Пример создания собственного `ClusterIssuer` для сервиса route53:
-- Создайте Secret с учетными данными:
-
-  ```shell
-  kubectl apply -f - <<EOF
-  apiVersion: v1
-  kind: Secret
-  type: Opaque
-  metadata:
-    name: route53
-    namespace: default
-  data:
-    secret-access-key: {{ "MY-AWS-ACCESS-KEY-TOKEN" | b64enc | quote }}
-  EOF
-  ```
-
-- Создайте простой `ClusterIssuer` со ссылкой на этот Secret:
-
-  ```shell
-  kubectl apply -f - <<EOF
-  apiVersion: cert-manager.io/v1
-  kind: ClusterIssuer
-  metadata:
-    name: route53
-    namespace: default
-  spec:
-    acme:
-      server: https://acme-v02.api.letsencrypt.org/directory
-      privateKeySecretRef:
-        name: route53-tls-key
-      solvers:
-      - dns01:
-          route53:
-            region: us-east-1
-            accessKeyID: {{ "MY-AWS-ACCESS-KEY-ID" }}
-            secretAccessKeySecretRef:
-              name: route53
-              key: secret-access-key
-  EOF
-  ```
-
-- Закажите сертификаты как обычно, используя созданный `ClusterIssuer`:
-
-  ```shell
-  kubectl apply -f - <<EOF
-  apiVersion: cert-manager.io/v1
-  kind: Certificate
-  metadata:
-    name: example-com
-    namespace: default
-  spec:
-    secretName: example-com-tls
-    issuerRef:
-      name: route53
-    commonName: www.example.com 
-    dnsNames:
-    - www.example.com
-  EOF
-  ```
 
 #### Работает ли старая аннотация TLS-acme?
 
@@ -11587,44 +10892,6 @@ spec:
     - www.example.com                        # Дополнительный домен.
     - admin.example.com                      # Еще один дополнительный домен.
     secretName: example-com-tls              # Имя для Certificate и Secret.
-```
-
-#### Как посмотреть состояние сертификата?
-
-```shell
-kubectl -n default describe certificate example-com
-...
-Status:
-  Acme:
-    Authorizations:
-      Account:  https://acme-v01.api.letsencrypt.org/acme/reg/22442061
-      Domain:   example.com
-      Uri:      https://acme-v01.api.letsencrypt.org/acme/challenge/qJA9MGCZnUnVjAgxhoxONvDnKAsPatRILJ4n0lJ7MMY/4062050823
-      Account:  https://acme-v01.api.letsencrypt.org/acme/reg/22442061
-      Domain:   admin.example.com
-      Uri:      https://acme-v01.api.letsencrypt.org/acme/challenge/pW2tFKLBDTll2Gx8UBqmEl846x5W-YpBs8a4HqstJK8/4062050808
-      Account:  https://acme-v01.api.letsencrypt.org/acme/reg/22442061
-      Domain:   www.example.com
-      Uri:      https://acme-v01.api.letsencrypt.org/acme/challenge/LaZJMM9_OKcTYbEThjT3oLtwgpkNfbHVdl8Dz-yypx8/4062050792
-  Conditions:
-    Last Transition Time:  2018-04-02T18:01:04Z
-    Message:               Certificate issued successfully
-    Reason:                CertIssueSuccess
-    Status:                True
-    Type:                  Ready
-Events:
-  Type     Reason                 Age                 From                     Message
-  ----     ------                 ----                ----                     -------
-  Normal   PrepareCertificate     1m                cert-manager-controller  Preparing certificate with issuer
-  Normal   PresentChallenge       1m                cert-manager-controller  Presenting http-01 challenge for domain example.com
-  Normal   PresentChallenge       1m                cert-manager-controller  Presenting http-01 challenge for domain www.example.com
-  Normal   PresentChallenge       1m                cert-manager-controller  Presenting http-01 challenge for domain admin.example.com
-  Normal   SelfCheck              1m                cert-manager-controller  Performing self-check for domain admin.example.com
-  Normal   SelfCheck              1m                cert-manager-controller  Performing self-check for domain example.com
-  Normal   SelfCheck              1m                cert-manager-controller  Performing self-check for domain www.example.com
-  Normal   ObtainAuthorization    55s               cert-manager-controller  Obtained authorization for domain example.com
-  Normal   ObtainAuthorization    54s               cert-manager-controller  Obtained authorization for domain admin.example.com
-  Normal   ObtainAuthorization    53s               cert-manager-controller  Obtained authorization for domain www.example.com
 ```
 
 #### Как получить список сертификатов?
@@ -12016,94 +11283,9 @@ kubectl get clustercompliancereports.aquasecurity.github.io cis -ojson |
 
 ### Модуль user-authz
 
-Модуль отвечает за генерацию объектов ролевой модели доступа, основанной на базе стандартного механизма RBAC Kubernetes. Модуль создает набор кластерных ролей (`ClusterRole`), подходящий для большинства задач по управлению доступом пользователей и групп.
+Модуль отвечает за генерацию объектов ролевой модели доступа.
 
-{% alert level="warning" %}
-С версии Deckhouse Kubernetes Platform v1.64 в модуле реализована новая модель ролевого доступа. Старая модель ролевого доступа продолжит работать, но в будущем перестанет поддерживаться.
-
-Функциональность старой и новой моделей ролевого доступа несовместимы. Автоматическая конвертация ресурсов невозможна.
-{% endalert %}
-
-{% alert level="warning" %}
-Документация модуля подразумевает использование [новой ролевой модели](#новая-ролевая-модель), если не указано иное.
-{% endalert %}
-
-#### Новая ролевая модель
-
-В отличие от [устаревшей ролевой модели](#устаревшая-ролевая-модель) DKP, новая ролевая модель не использует ресурсы `ClusterAuthorizationRule` и `AuthorizationRule`. Вся настройка прав доступа выполняется стандартным для RBAC Kubernetes способом: с помощью создания ресурсов `RoleBinding` или `ClusterRoleBinding`, с указанием в них одной из подготовленных модулем `user-authz` ролей.
-
-Модуль создаёт специальные агрегированные кластерные роли (`ClusterRole`). Используя эти роли в `RoleBinding` или `ClusterRoleBinding` можно решать следующие задачи:
-- Управлять доступом к модулям определённой [подсистеме](#подсистемы-ролевой-модели) применения.
-
-  Например, чтобы дать возможность пользователю, выполняющему функции сетевого администратора, настраивать *сетевые* модули (например, `cni-cilium`, `ingress-nginx`, `istio` и т. д.), можно использовать в `ClusterRoleBinding` роль `d8:manage:networking:manager`.
-- Управлять доступом к *пользовательским* ресурсам модулей в рамках пространства имён.
-
-  Например, использование роли `d8:use:role:manager` в `RoleBinding`, позволит удалять/создавать/редактировать ресурс [PodLoggingConfig](./log-shipper/cr.html#podloggingconfig) в пространстве имён, но не даст доступа к cluster-wide-ресурсам [ClusterLoggingConfig](./log-shipper/cr.html#clusterloggingconfig) и [ClusterLogDestination](./log-shipper/cr.html#clusterlogdestination) модуля `log-shipper`, а также не даст возможность настраивать сам модуль `log-shipper`.
-
-Роли, создаваемые модулем, делятся на два класса:
-- [Use-роли](#use-роли) — для назначения прав пользователям (например, разработчикам приложений) **в конкретном пространстве имён**.
-- [Manage-роли](#manage-роли) — для назначения прав администраторам.
-
-##### Use-роли
-
-{% alert level="warning" %}
-Use-роль можно использовать только в ресурсе `RoleBinding`.
-{% endalert %}
-
-Use-роли предназначены для назначения прав пользователю **в конкретном пространстве имён**. Под пользователями понимаются, например, разработчики, которые используют настроенный администратором кластер для развёртывания своих приложений. Таким пользователям не нужно управлять модулями DKP или кластером, но им нужно иметь возможность, например, создавать свои Ingress-ресурсы, настраивать аутентификацию приложений и сбор логов с приложений.
-
-Use-роль определяет права на доступ к namespaced-ресурсам модулей и стандартным namespaced-ресурсам Kubernetes (`Pod`, `Deployment`, `Secret`, `ConfigMap` и т. п.).
-
-Модуль создаёт следующие use-роли:
-- `d8:use:role:viewer` — позволяет в конкретном пространстве имён просматривать стандартные ресурсы Kubernetes, кроме секретов и ресурсов RBAC, а также выполнять аутентификацию в кластере;
-- `d8:use:role:user` — дополнительно к роли `d8:use:role:viewer` позволяет в конкретном пространстве имён просматривать секреты и ресурсы RBAC, подключаться к подам, удалять поды (но не создавать или изменять их), выполнять `kubectl port-forward` и `kubectl proxy`, изменять количество реплик контроллеров;
-- `d8:use:role:manager` — дополнительно к роли `d8:use:role:user` позволяет в конкретном пространстве имён управлять ресурсами модулей (например, `Certificate`, `PodLoggingConfig` и т. п.) и стандартными namespaced-ресурсами Kubernetes (`Pod`, `ConfigMap`, `CronJob` и т. п.);
-- `d8:use:role:admin` — дополнительно к роли `d8:use:role:manager` позволяет в конкретном пространстве имён управлять ресурсами `ResourceQuota`, `ServiceAccount`, `Role`, `RoleBinding`, `NetworkPolicy`.
-
-##### Manage-роли
-
-{% alert level="warning" %}
-Manage-роль не дает доступа к пространству имён пользовательских приложений.
-
-Manage-роль определяет доступ только к системным пространствам имён (начинающимся с `d8-` или `kube-`), и только к тем из них, в которых работают модули соответствующей подсистемы роли.
-{% endalert %}
-
-Manage-роли предназначены для назначения прав на управление всей платформой или её частью ([подсистемой](#подсистемы-ролевой-модели)), но не самими приложениями пользователей. С помощью manage-роли можно, например, дать возможность администратору безопасности управлять модулями, ответственными за функции безопасности кластера. Тогда администратор безопасности сможет настраивать аутентификацию, авторизацию, политики безопасности и т. п., но не сможет управлять остальными функциями кластера (например, настройками сети и мониторинга) и изменять настройки в пространстве имён приложений пользователей.
-
-Manage-роль определяет права на доступ:
-- к cluster-wide-ресурсам Kubernetes;
-- к управлению модулями DKP (ресурсы `moduleConfig`) в рамках [подсистемы](#подсистемы-ролевой-модели) роли, или всеми модулями DKP для роли `d8:manage:all:*`;
-- к управлению cluster-wide-ресурсами модулей DKP в рамках [подсистемы](#подсистемы-ролевой-модели) роли или всеми ресурсами модулей DKP для роли `d8:manage:all:*`;
-- к системным пространствам имён (начинающимся с `d8-` или `kube-`), в которых работают модули [подсистемы](#подсистемы-ролевой-модели) роли, или ко всем системным пространствам имён для роли `d8:manage:all:*`.
-  
-Формат названия manage-роли — `d8:manage:<SUBSYSTEM>:<ACCESS_LEVEL>`, где:
-- `SUBSYSTEM` — подсистема роли. Может быть либо одной из подсистем [списка](#подсистемы-ролевой-модели), либо `all` для доступа в рамках всех подсистем;
-- `ACCESS_LEVEL` — уровень доступа.
-
-  Примеры manage-ролей:
-  - `d8:manage:all:viewer` — доступ на просмотр конфигурации всех модулей DKP (ресурсы `moduleConfig`), их cluster-wide-ресурсов, их namespaced-ресурсов и стандартных объектов Kubernetes (кроме секретов и ресурсов RBAC) во всех системных пространствах имён (начинающихся с `d8-` или `kube-`);
-  - `d8:manage:all:manager` — аналогично роли `d8:manage:all:viewer`, только доступ на уровне `admin`, т. е. просмотр/создание/изменение/удаление конфигурации всех модулей DKP (ресурсы `moduleConfig`), их cluster-wide-ресурсов, их namespaced-ресурсов и стандартных объектов Kubernetes во всех системных пространствах имён (начинающихся с `d8-` или `kube-`);
-  - `d8:manage:observability:viewer` — доступ на просмотр конфигурации модулей DKP (ресурсы `moduleConfig`) из подсистемы `observability`, их cluster-wide-ресурсов, их namespaced-ресурсов и стандартных объектов Kubernetes (кроме секретов и ресурсов RBAC) в системных пространствах имён `d8-log-shipper`, `d8-monitoring`, `d8-okmeter`, `d8-operator-prometheus`, `d8-upmeter`, `kube-prometheus-pushgateway`.
-
-Модуль предоставляет два уровня доступа для администратора:
-- `viewer` — позволяет просматривать стандартные ресурсы Kubernetes, конфигурацию модулей (ресурсы `moduleConfig`), cluster-wide-ресурсы модулей и namespaced-ресурсы модулей в пространстве имен модуля;
-- `manager` — дополнительно к роли `viewer` позволяет управлять стандартными ресурсами Kubernetes, конфигурацией модулей (ресурсы `moduleConfig`), cluster-wide-ресурсами модулей и namespaced-ресурсами модулей в пространстве имен модуля;
-
-##### Подсистемы ролевой модели
-
-Каждый модуль DKP принадлежит определённой подсистемы. Для каждой подсистемы существует набор ролей с разными уровнями доступа. Роли обновляются автоматически при включении или отключении модуля.
-
-Например, для подсистемы `networking` существуют следующие manage-роли, которые можно использовать в `ClusterRoleBinding`:
-- `d8:manage:networking:viewer`
-- `d8:manage:networking:manager`
-
-Подсистема роли ограничивает её действие всеми системными (начинающимися с `d8-` или `kube-`) пространствами имён кластера (подсистема `all`) или теми пространствами имён, в которых работают модули подсистемы (см. таблицу состава подсистем).
-
-Таблица состава подсистем ролевой модели.
-
-{% include rbac/rbac-subsystems-list.liquid %}
-
-#### Устаревшая ролевая модель
+#### Ролевая модель
 
 Особенности:
 - Реализует role-based-подсистему сквозной авторизации, расширяя функционал стандартного механизма RBAC.
@@ -12294,11 +11476,7 @@ kubectl get clusterrole -A -o jsonpath="{range .items[?(@.metadata.annotations.u
 
 Чтобы ограничить права пользователя конкретными пространствами имён, используйте в `RoleBinding` [use-роль](./#use-роли) с соответствующим уровнем доступа. [Пример...](usage.html#пример-назначения-административных-прав-пользователю-в-рамках-пространства-имён)
 
-##### Как ограничить права пользователю конкретными пространствами имён (устаревшая ролевая модель)
-
-{% alert level="warning" %}
-Используется [устаревшая ролевая модель](./#устаревшая-ролевая-модель).
-{% endalert %}
+##### Как ограничить права пользователю конкретными пространствами имён
 
 Использовать параметры `namespaceSelector` или `limitNamespaces` (устарел) в кастомном ресурсе [`ClusterAuthorizationRule`](./modules/user-authz/cr.html#clusterauthorizationrule).
 
@@ -12348,252 +11526,6 @@ spec:
 * Опции `namespaceSelector` будут объединены так, что `Jane Doe` будет иметь доступ в пространства имён, помеченные меткой `env` со значением `review`, `stage` или `prod`.
 
 > **Note!** Если есть правило без опции `namespaceSelector` и без опции `limitNamespaces` (устаревшая), это значит, что доступ разрешён во все пространства имён, кроме системных, что повлияет на результат вычисления доступных пространств имён для пользователя.
-
-#### Как расширить роли или создать новую?
-
-[Новая ролевая модель](./#новая-ролевая-модель) построена на принципе агрегации, она собирает более мелкие роли в более обширные,
-тем самым предоставляя лёгкие способы расширения модели собственными ролями.
-
-##### Создание новой роли подсистемы
-
-Предположим, что текущие подсистемы не подходят под ролевое распределение в компании и требуется создать новую [подсистему](./#подсистемы-ролевой-модели),
-которая будет включать в себя роли из подсистемы `deckhouse`, подсистемы `kubernetes` и модуля user-authn.
-
-Для решения этой задачи создайте следующую роль:
-
-```yaml
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRole
-metadata:
-  name: custom:manage:mycustom:manager
-  labels:
-    rbac.deckhouse.io/use-role: admin
-    rbac.deckhouse.io/kind: manage
-    rbac.deckhouse.io/level: subsystem
-    rbac.deckhouse.io/subsystem: custom
-    rbac.deckhouse.io/aggregate-to-all-as: manager
-aggregationRule:
-  clusterRoleSelectors:
-    - matchLabels:
-        rbac.deckhouse.io/kind: manage
-        rbac.deckhouse.io/aggregate-to-deckhouse-as: manager
-    - matchLabels:
-        rbac.deckhouse.io/kind: manage
-        rbac.deckhouse.io/aggregate-to-kubernetes-as: manager
-    - matchLabels:
-        rbac.deckhouse.io/kind: manage
-        module: user-authn
-rules: []
-```
-
-В начале указаны лейблы для новой роли:
-
-- показывает, какую роль хук должен использовать при создании use ролей:
-
-  ```yaml
-  rbac.deckhouse.io/use-role: admin
-  ```
-
-- показывает, что роль должна обрабатываться как manage-роль:
-
-  ```yaml
-  rbac.deckhouse.io/kind: manage
-  ```
-
-  > Этот лейбл должен быть обязательно указан!
-
-- показывает, что роль является ролью подсистемы, и обрабатываться будет соответственно:
-
-  ```yaml
-  rbac.deckhouse.io/level: subsystem
-  ```
-
-- указывает подсистему, за которую отвечает роль:
-
-  ```yaml
-  rbac.deckhouse.io/subsystem: custom
-  ```
-
-- позволяет `manage:all`-роли сагрегировать эту роль:
-
-  ```yaml
-  rbac.deckhouse.io/aggregate-to-all-as: manager
-  ```
-
-Далее указаны селекторы, именно они реализуют агрегацию:
-
-- агрегирует роль менеджера из подсистемы `deckhouse`:
-
-  ```yaml
-  rbac.deckhouse.io/kind: manage
-  rbac.deckhouse.io/aggregate-to-deckhouse-as: manager
-  ```
-
-- агрерирует все правила от модуля user-authn:
-
-  ```yaml
-   rbac.deckhouse.io/kind: manage
-   module: user-authn
-  ```
-
-Таким образом роль получает права от подсистем `deckhouse`, `kubernetes` и от модуля user-authn.
-
-Особенности:
-
-* ограничений на имя роли нет, но для читаемости лучше использовать этот стиль;
-* use-роли будут созданы в пространстве имён агрегированных подсистем и модуля, тип роли выбран лейблом.
-
-##### Расширение пользовательской роли
-
-Например, в кластере появился новый кластерный (пример для manage-роли) CRD-объект — MySuperResource, и нужно дополнить собственную роль из примера выше правами на взаимодействие с этим ресурсом.
-
-Первым делом нужно дополнить роль новым селектором:
-
-```yaml
-rbac.deckhouse.io/kind: manage
-rbac.deckhouse.io/aggregate-to-custom-as: manager
-```
-
-Этот селектор позволит агрегировать роли к новой подсистеме через указание этого лейбла. После добавления нового селектора роль будет выглядеть так:
-
- ```yaml
- apiVersion: rbac.authorization.k8s.io/v1
- kind: ClusterRole
- metadata:
-   name: custom:manage:mycustom:manager
-   labels:
-     rbac.deckhouse.io/use-role: admin
-     rbac.deckhouse.io/kind: manage
-     rbac.deckhouse.io/level: subsystem
-     rbac.deckhouse.io/subsystem: custom
-     rbac.deckhouse.io/aggregate-to-all-as: manager
- aggregationRule:
-   clusterRoleSelectors:
-     - matchLabels:
-         rbac.deckhouse.io/kind: manage
-         rbac.deckhouse.io/aggregate-to-deckhouse-as: manager
-     - matchLabels:
-         rbac.deckhouse.io/kind: manage
-         rbac.deckhouse.io/aggregate-to-kubernetes-as: manager
-     - matchLabels:
-         rbac.deckhouse.io/kind: manage
-         module: user-authn
-     - matchLabels:
-         rbac.deckhouse.io/kind: manage
-         rbac.deckhouse.io/aggregate-to-custom-as: manager
- rules: []
- ```
-
- Далее нужно создать новую роль, в которой следует определить права для нового ресурса. Например, только чтение:
-
- ```yaml
- apiVersion: rbac.authorization.k8s.io/v1
- kind: ClusterRole
- metadata:
-   labels:
-     rbac.deckhouse.io/aggregate-to-custom-as: manager
-     rbac.deckhouse.io/kind: manage
-   name: custom:manage:permission:mycustom:superresource:view
- rules:
- - apiGroups:
-   - mygroup.io
-   resources:
-   - mysuperresources
-   verbs:
-   - get
-   - list
-   - watch
- ```
-
-Роль дополнит своими правами роль подсистемы, дав права на просмотр нового объекта.
-
-Особенности:
-
-* ограничений на имя роли нет, но для читаемости лучше использовать этот стиль.
-
-##### Расширение существующих manage subsystem-ролей
-
-Если необходимо расширить существующую роль, нужно выполнить те же шаги, что и в пункте выше, но изменив лейблы и название роли.
-
-Пример для расширения роли менеджера из подсистемы `deckhouse`(`d8:manage:deckhouse:manager`):
-
-```yaml
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRole
-metadata:
-  labels:
-    rbac.deckhouse.io/aggregate-to-deckhouse-as: manager
-    rbac.deckhouse.io/kind: manage
-  name: custom:manage:permission:mycustommodule:superresource:view
-rules:
-- apiGroups:
-  - mygroup.io
-  resources:
-  - mysuperresources
-  verbs:
-  - get
-  - list
-  - watch
-```
-
-Таким образом новая роль расширит роль `d8:manage:deckhouse`.
-
-##### Расширение manage subsystem-ролей с добавлением нового пространства имён
-
-Если необходимо добавить новое пространство имён (для создания в нём use-роли с помощью хука), потребуется добавить лишь один лейбл:
-
-```yaml
-"rbac.deckhouse.io/namespace": namespace
-```
-
-Этот лейбл сообщает хуку, что в этом пространстве имён нужно создать use-роль:
-
- ```yaml
- apiVersion: rbac.authorization.k8s.io/v1
- kind: ClusterRole
- metadata:
-   labels:
-     rbac.deckhouse.io/aggregate-to-deckhouse-as: manager
-     rbac.deckhouse.io/kind: manage
-     rbac.deckhouse.io/namespace: namespace
-   name: custom:manage:permission:mycustom:superresource:view
- rules:
- - apiGroups:
-   - mygroup.io
-   resources:
-   - mysuperresources
-   verbs:
-   - get
-   - list
-   - watch
- ```
-
-Хук мониторит `ClusterRoleBinding` и при создании биндинга ходит по всем manage-ролям, чтобы найти все сагрерированные роли с помощью проверки правила агрегации. Затем он берёт пространство имён из лейбла `rbac.deckhouse.io/namespace` и создает use-роль в этом пространстве имён.
-
-##### Расширение существующих use-ролей
-
-Если ресурс принадлежит пространству имён, необходимо расширить use-роль вместо manage-роли. Разница лишь в лейблах и имени:
-
- ```yaml
- apiVersion: rbac.authorization.k8s.io/v1
- kind: ClusterRole
- metadata:
-   labels:
-     rbac.deckhouse.io/aggregate-to-kubernetes-as: user
-     rbac.deckhouse.io/kind: use
-   name: custom:use:capability:mycustom:superresource:view
- rules:
- - apiGroups:
-   - mygroup.io
-   resources:
-   - mysuperresources
-   verbs:
-   - get
-   - list
-   - watch
- ```
-
-Эта роль дополнит роль `d8:use:role:user:kubernetes`.
 
 ### Модуль runtime-audit-engine
 
