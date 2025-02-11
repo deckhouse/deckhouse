@@ -1,0 +1,13 @@
+deckhouse:
+  fixes:
+    - summary: return `helm_lib_envs_for_proxy` template to deckhouse deployment.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/11921
+deckhouse-controller:
+  fixes:
+    - summary: ValidatingAdmissionPolicy for exclude-restartedAt
+      pull_request: https://github.com/deckhouse/deckhouse/pull/11931
+docs:
+  fixes:
+    - summary: Add info about zones behaviour at cloud providers
+      pull_request: https://github.com/deckhouse/deckhouse/pull/11883
+
