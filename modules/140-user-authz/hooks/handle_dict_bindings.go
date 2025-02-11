@@ -87,10 +87,12 @@ func ensureDictBindings(input *go_hook.HookInput) error {
 		if binding == nil {
 			continue
 		}
+
 		parsed := binding.(*filteredUseBinding)
-		if parsed.Subjects == nil {
+		if len(parsed.Subjects) == 0 {
 			continue
 		}
+
 		for _, subject := range parsed.Subjects {
 			subjects[stringBySubject(subject)] = subject
 		}
@@ -100,31 +102,36 @@ func ensureDictBindings(input *go_hook.HookInput) error {
 		if binding == nil {
 			continue
 		}
+
 		parsed := binding.(*filteredManageBinding)
 		if parsed.Subjects == nil {
 			continue
 		}
-		if _, ok := subjects[stringBySubject(parsed.Subjects[0])]; !ok {
+
+		subjectString := stringBySubject(parsed.Subjects[0])
+
+		if _, ok := subjects[subjectString]; !ok {
 			input.PatchCollector.Delete("rbac.authorization.k8s.io/v1", "ClusterRoleBinding", "", parsed.Name)
 		}
-		delete(subjects, stringBySubject(parsed.Subjects[0]))
+
+		delete(subjects, subjectString)
 	}
 
-	for name, subject := range subjects {
-		input.PatchCollector.Create(createDictBinding(name, subject), object_patch.IgnoreIfExists())
+	for _, subject := range subjects {
+		input.PatchCollector.Create(createDictBinding(subject), object_patch.IgnoreIfExists())
 	}
 
 	return nil
 }
 
-func createDictBinding(name string, subject rbacv1.Subject) *rbacv1.RoleBinding {
+func createDictBinding(subject rbacv1.Subject) *rbacv1.RoleBinding {
 	return &rbacv1.RoleBinding{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "ClusterRoleBinding",
 			APIVersion: "rbac.authorization.k8s.io/v1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name: fmt.Sprintf("d8:dict:%s", name),
+			GenerateName: "d8:dict:",
 			Labels: map[string]string{
 				"heritage":                    "deckhouse",
 				"rbac.deckhouse.io/automated": "true",
