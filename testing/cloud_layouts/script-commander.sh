@@ -253,13 +253,13 @@ function run-test() {
   local response
   local cluster_id
 
-cluster_template_version_id=$(curl -s -X 'GET' \
-  "https://${commander_host}/api/v1/cluster_templates/${cluster_template_id}?without_archived=true" \
-  -H 'accept: application/json' \
-  -H "X-Auth-Token: ${commander_token}" |
-  jq -r 'del(.cluster_template_versions).current_cluster_template_version_id')
+  cluster_template_version_id=$(curl -s -X 'GET' \
+    "https://${commander_host}/api/v1/cluster_templates/${cluster_template_id}?without_archived=true" \
+    -H 'accept: application/json' \
+    -H "X-Auth-Token: ${commander_token}" |
+    jq -r 'del(.cluster_template_versions).current_cluster_template_version_id')
 
-payload="{
+  payload="{
     \"name\": \"${PREFIX}\",
     \"cluster_template_version_id\": \"${cluster_template_version_id}\",
     \"values\": {
@@ -275,7 +275,7 @@ payload="{
         \"sshUser\": \"${ssh_user}\",
         \"deckhouseDockercfg\": \"${DECKHOUSE_DOCKERCFG}\"
     }
-}"
+  }"
 
   echo "Bootstrap payload: ${payload}"
 
@@ -313,24 +313,25 @@ payload="{
   sleep=30
   for ((i=1; i<=testRunAttempts; i++)); do
     cluster_status="$(curl -s -X 'GET' \
-      "https://${COMMANDER_HOST}/api/v1/clusters/${cluster_id}" \
+      "https://${commander_host}/api/v1/clusters/${cluster_id}" \
       -H 'accept: application/json' \
-      -H "X-Auth-Token: ${COMMANDER_TOKEN}" |
-      jq -r '.status')"
+      -H "X-Auth-Token: ${commander_token}" |
+      jq -r '.[0].status')"
     >&2 echo "Check Cluster ready..."
-    if [ "in_sync" != "$cluster_status" ]; then
+    if [ "in_sync" = "$cluster_status" ]; then
       return 0
-    fi
-    if [ "creation_failed" != "$cluster_status" ]; then
+    elif [ "creation_failed" = "$cluster_status" ]; then
       return 1
+    else
+      echo "  Cluster status: $cluster_status"
     fi
     if [[ $i -lt $testRunAttempts ]]; then
       >&2 echo -n "  Cluster not ready. Attempt $i/$testRunAttempts failed. Sleep for $sleep seconds..."
       sleep $sleep
     else
       >&2 echo -n "  Cluster not ready. Attempt $i/$testRunAttempts failed."
+      return 1
     fi
-    return 1
   done
 }
 
