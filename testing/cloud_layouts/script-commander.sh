@@ -145,7 +145,7 @@ function prepare_environment() {
     FOLDER_ID="$(base64 -d <<< "$LAYOUT_YANDEX_FOLDER_ID")"
     SERVICE_ACCOUNT_JSON=$LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON
     ssh_user="redos"
-    cluster_template_version_id="6a47d23a-e16f-4e7a-bf57-a65f7c05e8ae"
+    cluster_template_id="6a47d23a-e16f-4e7a-bf57-a65f7c05e8ae"
     ;;
 
   "GCP")
@@ -253,8 +253,11 @@ function run-test() {
   local response
   local cluster_id
 
-  #debug
-  echo ${SSH_KEY} | base64 -d
+cluster_template_version_id=$(curl -s -X 'GET' \
+  "https://${commander_host}/api/v1/cluster_templates/${cluster_template_id}?without_archived=true" \
+  -H 'accept: application/json' \
+  -H "X-Auth-Token: ${commander_token}" |
+  jq -r 'del(.cluster_template_versions).current_cluster_template_version_id')
 
 payload="{
     \"name\": \"${PREFIX}\",
