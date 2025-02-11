@@ -3,17 +3,9 @@
 ## [MALFORMED]
 
 
- - #8969 unknown section "cloud-provider-vsphere"
- - #8969 unknown section "cloud-provider-zvirt"
- - #9257 unknown section "cloud-provider-vsphere"
  - #9289 unknown section "flant-integration"
- - #9347 unknown section "cloud-provider-vsphere"
- - #9347 unknown section "cloud-provider-zvirt"
  - #9573 unknown section "delivery"
- - #9667 unknown section "cloud-provider-zvirt"
  - #9768 unknown section "l2-load-balancer"
- - #9900 unknown section "cloud-provider-vsphere"
- - #9900 unknown section "cloud-provider-zvirt"
 
 ## Know before update
 
@@ -29,6 +21,7 @@
  - **[candi]** Stricter permissions (0700/0600) applied to kubelet configuration and PKI files to improve security. [#9494](https://github.com/deckhouse/deckhouse/pull/9494)
  - **[candi]** Add new module `deckhouse-tools`. [#9140](https://github.com/deckhouse/deckhouse/pull/9140)
  - **[candi]** Added debugging information in case of error in bb-package-fetch-blob. [#9018](https://github.com/deckhouse/deckhouse/pull/9018)
+ - **[cloud-provider-zvirt]** Allow Zvirt volume expansion. [#9667](https://github.com/deckhouse/deckhouse/pull/9667)
  - **[control-plane-manager]** Stricter permissions (0700/0600) applied to kubelet configuration and PKI files to improve security. [#9868](https://github.com/deckhouse/deckhouse/pull/9868)
  - **[control-plane-manager]** Stricter permissions (0700/0600) applied to kubelet configuration and PKI files to improve security. [#9494](https://github.com/deckhouse/deckhouse/pull/9494)
  - **[control-plane-manager]** Added ability to connect kube-scheduler extenders. [#9303](https://github.com/deckhouse/deckhouse/pull/9303)
@@ -96,9 +89,14 @@
  - **[cloud-provider-openstack]** Minimize RBAC permissions by removing the wildcard("*") from ClusterRole rules. [#8969](https://github.com/deckhouse/deckhouse/pull/8969)
  - **[cloud-provider-vcd]** Canceling migration from d8-cni-configuration secret to proper CNI module configs. [#9900](https://github.com/deckhouse/deckhouse/pull/9900)
  - **[cloud-provider-vcd]** Minimize RBAC permissions by removing the wildcard("*") from ClusterRole rules. [#8969](https://github.com/deckhouse/deckhouse/pull/8969)
+ - **[cloud-provider-vsphere]** Canceling migration from d8-cni-configuration secret to proper CNI module configs. [#9900](https://github.com/deckhouse/deckhouse/pull/9900)
+ - **[cloud-provider-vsphere]** Update `VolumeSnapshotClass.apiVersion` from `v1beta1` to `v1`. [#9257](https://github.com/deckhouse/deckhouse/pull/9257)
+ - **[cloud-provider-vsphere]** Minimize RBAC permissions by removing the wildcard("*") from ClusterRole rules. [#8969](https://github.com/deckhouse/deckhouse/pull/8969)
  - **[cloud-provider-yandex]** Canceling migration from d8-cni-configuration secret to proper CNI module configs. [#9900](https://github.com/deckhouse/deckhouse/pull/9900)
  - **[cloud-provider-yandex]** Skipping migration `diskSizeGB` for dev branch. [#9365](https://github.com/deckhouse/deckhouse/pull/9365)
  - **[cloud-provider-yandex]** Minimize RBAC permissions by removing the wildcard("*") from ClusterRole rules. [#8969](https://github.com/deckhouse/deckhouse/pull/8969)
+ - **[cloud-provider-zvirt]** Canceling migration from d8-cni-configuration secret to proper CNI module configs. [#9900](https://github.com/deckhouse/deckhouse/pull/9900)
+ - **[cloud-provider-zvirt]** Minimize RBAC permissions by removing the wildcard("*") from ClusterRole rules. [#8969](https://github.com/deckhouse/deckhouse/pull/8969)
  - **[cni-cilium]** Disabling the upload of the service image `base-cilium-dev` to the final container registry. [#9987](https://github.com/deckhouse/deckhouse/pull/9987)
     All cilium-agent pods will be restarted.
  - **[cni-cilium]** Wiping unwanted iptables-legacy rules. [#9971](https://github.com/deckhouse/deckhouse/pull/9971)
@@ -198,7 +196,11 @@
     While previously you could use ModuleConfig`cni-cilium` without settings (only to enable module `cni-cilium`) to bootstrap a cluster, now you must specify the settings explicitly in the module configuration.
  - **[cloud-provider-vcd]** Migration from `d8-cni-configuration` secret to proper CNI module configs. [#9347](https://github.com/deckhouse/deckhouse/pull/9347)
     While previously you could use ModuleConfig`cni-cilium` without settings (only to enable module `cni-cilium`) to bootstrap a cluster, now you must specify the settings explicitly in the module configuration.
+ - **[cloud-provider-vsphere]** Migration from `d8-cni-configuration` secret to proper CNI module configs. [#9347](https://github.com/deckhouse/deckhouse/pull/9347)
+    While previously you could use ModuleConfig`cni-cilium` without settings (only to enable module `cni-cilium`) to bootstrap a cluster, now you must specify the settings explicitly in the module configuration.
  - **[cloud-provider-yandex]** Migration from `d8-cni-configuration` secret to proper CNI module configs. [#9347](https://github.com/deckhouse/deckhouse/pull/9347)
+    While previously you could use ModuleConfig`cni-cilium` without settings (only to enable module `cni-cilium`) to bootstrap a cluster, now you must specify the settings explicitly in the module configuration.
+ - **[cloud-provider-zvirt]** Migration from `d8-cni-configuration` secret to proper CNI module configs. [#9347](https://github.com/deckhouse/deckhouse/pull/9347)
     While previously you could use ModuleConfig`cni-cilium` without settings (only to enable module `cni-cilium`) to bootstrap a cluster, now you must specify the settings explicitly in the module configuration.
  - **[cni-cilium]** Migration from `d8-cni-configuration` secret to proper CNI module configs. [#9347](https://github.com/deckhouse/deckhouse/pull/9347)
  - **[cni-cilium]** Enable internal TLS authentication between Ingress controller and Hubble UI. [#9298](https://github.com/deckhouse/deckhouse/pull/9298)
