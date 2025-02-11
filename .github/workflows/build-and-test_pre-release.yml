@@ -777,7 +777,7 @@ jobs:
       # </template: login_rw_registry_step>
       - name: Run tests
         env:
-          TESTS_IMAGE_NAME: "registry.deckhouse.io/base_images/golang:1.23.5-bullseye@sha256:edaac1356114ebb16d15dccf3aa55a53b2ad358c698019aa6434d2497a63bf6e"
+          TESTS_IMAGE_NAME: "registry.deckhouse.io/base_images/golang:1.23.6-bullseye@sha256:fad5b33791a319ba1c910a03a33575ea34fc8e142695a64be9a1a228e74af11e"
         run: |
           # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
           echo "Tests image name: '${TESTS_IMAGE_NAME}'" | tr '[:lower:]' '[:upper:]'
