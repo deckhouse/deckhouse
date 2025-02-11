@@ -1,0 +1,13 @@
+linter-settings:
+  container:
+    exclude-rules:
+      resources:
+        - kind: DaemonSet
+          name: d8-control-plane-manager
+          container: image-holder-etcd
+      security-context:
+        - kind: DaemonSet
+          name: d8-control-plane-manager
+          container: image-holder-etcd
+      service-port:
+        - d8-control-plane-apiserver

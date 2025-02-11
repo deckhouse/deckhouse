@@ -1,0 +1,18 @@
+linter-settings:
+  container:
+    exclude-rules:
+      security-context:
+        - kind: Deployment
+          name: d8-kube-dns-sts-pods-hosts-appender-webhook
+      service-port:
+        - d8-kube-dns-sts-pods-hosts-appender-webhook
+  probes:
+    exclude-rules:
+      liveness:
+        - kind: Deployment
+          name: d8-kube-dns
+          container: kube-rbac-proxy
+      readiness:
+        - kind: Deployment
+          name: d8-kube-dns
+          container: kube-rbac-proxy

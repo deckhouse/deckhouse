@@ -1,0 +1,26 @@
+linter-settings:
+  container:
+    exclude-rules:
+      read-only-root-filesystem:
+        - kind: Deployment
+          name: terraform-auto-converger
+          container: converger
+        - kind: Deployment
+          name: terraform-state-exporter
+          container: exporter
+  probes:
+    exclude-rules:
+      liveness:
+        - kind: Deployment
+          name: terraform-auto-converger
+          container: kube-rbac-proxy
+        - kind: Deployment
+          name: terraform-state-exporter
+          container: kube-rbac-proxy
+      readiness:
+        - kind: Deployment
+          name: terraform-auto-converger
+          container: kube-rbac-proxy
+        - kind: Deployment
+          name: terraform-state-exporter
+          container: kube-rbac-proxy
