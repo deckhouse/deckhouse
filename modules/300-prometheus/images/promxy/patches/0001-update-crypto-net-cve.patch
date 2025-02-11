@@ -1,5 +1,5 @@
 diff --git a/go.mod b/go.mod
-index d3a81405..75e12683 100644
+index fcc2b29c..7ea60b29 100644
 --- a/go.mod
 +++ b/go.mod
 @@ -17,7 +17,7 @@ require (
@@ -11,7 +11,7 @@ index d3a81405..75e12683 100644
  	github.com/prometheus/prometheus v1.8.2-0.20210707132820-dc8f50559534
  	github.com/sirupsen/logrus v1.9.3
  	github.com/stretchr/testify v1.8.4
-@@ -44,11 +44,12 @@ require (
+@@ -44,7 +44,7 @@ require (
  	github.com/alecthomas/units v0.0.0-20211218093645-b94a6e3cc137 // indirect
  	github.com/armon/go-metrics v0.4.1 // indirect
  	github.com/asaskevich/govalidator v0.0.0-20210307081110-f21760c49a8d // indirect
@@ -20,12 +20,7 @@ index d3a81405..75e12683 100644
  	github.com/beorn7/perks v1.0.1 // indirect
  	github.com/cespare/xxhash/v2 v2.2.0 // indirect
  	github.com/cncf/xds/go v0.0.0-20230607035331-e9ce68804cb4 // indirect
- 	github.com/containerd/log v0.1.0 // indirect
-+	github.com/coreos/go-systemd/v22 v22.4.0 // indirect
- 	github.com/davecgh/go-spew v1.1.1 // indirect
- 	github.com/dennwc/varint v1.0.0 // indirect
- 	github.com/digitalocean/godo v1.82.0 // indirect
-@@ -67,19 +68,18 @@ require (
+@@ -67,17 +67,16 @@ require (
  	github.com/go-logfmt/logfmt v0.5.1 // indirect
  	github.com/go-logr/logr v1.2.4 // indirect
  	github.com/go-logr/stdr v1.2.2 // indirect
@@ -47,12 +42,9 @@ index d3a81405..75e12683 100644
  	github.com/go-resty/resty/v2 v2.1.1-0.20191201195748-d7b97669fe48 // indirect
 -	github.com/go-stack/stack v1.8.1 // indirect
  	github.com/go-zookeeper/zk v1.0.3 // indirect
--	github.com/golang-jwt/jwt/v4 v4.5.0 // indirect
-+	github.com/golang-jwt/jwt/v4 v4.5.1 // indirect
+ 	github.com/golang-jwt/jwt/v4 v4.5.1 // indirect
  	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
- 	github.com/golang/protobuf v1.5.3 // indirect
- 	github.com/google/gnostic v0.5.7-v3refs // indirect
-@@ -100,7 +100,7 @@ require (
+@@ -100,7 +99,7 @@ require (
  	github.com/hashicorp/go-multierror v1.1.1 // indirect
  	github.com/hashicorp/go-retryablehttp v0.7.7 // indirect
  	github.com/hashicorp/go-rootcerts v1.0.2 // indirect
@@ -61,7 +53,7 @@ index d3a81405..75e12683 100644
  	github.com/hashicorp/nomad/api v0.0.0-20230404200950-434f7a1745c6 // indirect
  	github.com/hashicorp/serf v0.9.7 // indirect
  	github.com/hetznercloud/hcloud-go v1.35.0 // indirect
-@@ -126,7 +126,7 @@ require (
+@@ -126,7 +125,7 @@ require (
  	github.com/opencontainers/go-digest v1.0.0 // indirect
  	github.com/opencontainers/image-spec v1.0.2 // indirect
  	github.com/pmezard/go-difflib v1.0.0 // indirect
@@ -70,7 +62,7 @@ index d3a81405..75e12683 100644
  	github.com/prometheus/common/sigv4 v0.1.0 // indirect
  	github.com/prometheus/procfs v0.9.0 // indirect
  	github.com/rogpeppe/go-internal v1.12.0 // indirect
-@@ -134,7 +134,7 @@ require (
+@@ -134,7 +133,7 @@ require (
  	github.com/shurcooL/httpfs v0.0.0-20190707220628-8d4bc4ba7749 // indirect
  	github.com/spf13/pflag v1.0.5 // indirect
  	github.com/vultr/govultr/v2 v2.17.2 // indirect
@@ -79,7 +71,7 @@ index d3a81405..75e12683 100644
  	go.opencensus.io v0.24.0 // indirect
  	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.44.0 // indirect
  	go.opentelemetry.io/otel v1.18.0 // indirect
-@@ -143,15 +143,15 @@ require (
+@@ -143,15 +142,15 @@ require (
  	go.opentelemetry.io/otel/sdk v1.18.0 // indirect
  	go.opentelemetry.io/otel/trace v1.18.0 // indirect
  	go.uber.org/goleak v1.1.12 // indirect
@@ -101,8 +93,14 @@ index d3a81405..75e12683 100644
  	golang.org/x/tools v0.21.1-0.20240508182429-e35e4ccd0d2d // indirect
  	google.golang.org/api v0.128.0 // indirect
  	google.golang.org/appengine v1.6.7 // indirect
+@@ -178,3 +177,5 @@ replace github.com/prometheus/prometheus => github.com/jacksontj/prometheus v1.8
+ replace github.com/golang/glog => github.com/kubermatic/glog-gokit v0.0.0-20181129151237-8ab7e4c2d352
+ 
+ replace k8s.io/klog => github.com/simonpasquier/klog-gokit/v3 v3.0.0
++
++replace github.com/prometheus/exporter-toolkit => github.com/prometheus/exporter-toolkit v0.7.3
 diff --git a/go.sum b/go.sum
-index 28cca9e9..81a40c1e 100644
+index 737e6fe5..ba686867 100644
 --- a/go.sum
 +++ b/go.sum
 @@ -95,20 +95,17 @@ github.com/asaskevich/govalidator v0.0.0-20200907205600-7a23bdc65eef/go.mod h1:W
@@ -128,16 +126,7 @@ index 28cca9e9..81a40c1e 100644
  github.com/cespare/xxhash/v2 v2.2.0 h1:DC2CZ1Ep5Y4k3ZQ899DldepgrayRUGE6BBZ/cd9Cj44=
  github.com/cespare/xxhash/v2 v2.2.0/go.mod h1:VGX0DQ3Q6kWi7AoAeZDth3/j3BFtOZR5XLFGgcrjCOs=
  github.com/chzyer/logex v1.1.10/go.mod h1:+Ywpsq7O8HXn0nuIou7OrIPyXbp3wmkHB+jjWRnGsAI=
-@@ -128,6 +125,8 @@ github.com/cncf/xds/go v0.0.0-20230607035331-e9ce68804cb4 h1:/inchEIKaYC1Akx+H+g
- github.com/cncf/xds/go v0.0.0-20230607035331-e9ce68804cb4/go.mod h1:eXthEFrGJvWHgFFCl3hGmgk+/aYT6PnTQLykKQRLhEs=
- github.com/containerd/log v0.1.0 h1:TCJt7ioM2cr/tfR8GPbGf9/VRAX8D2B4PjzCpfX540I=
- github.com/containerd/log v0.1.0/go.mod h1:VRRf09a7mHDIRezVKTRCrOq78v577GXq3bSa3EhrzVo=
-+github.com/coreos/go-systemd/v22 v22.4.0 h1:y9YHcjnjynCd/DVbg5j9L/33jQM3MxJlbj/zWskzfGU=
-+github.com/coreos/go-systemd/v22 v22.4.0/go.mod h1:Y58oyj3AT4RCenI/lSvhwexgC+NSVTIJ3seZv2GcEnc=
- github.com/creack/pty v1.1.9/go.mod h1:oKZEueFk5CKHvIhNR5MUki03XCEU+Q6VDXinZuGJ33E=
- github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
- github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
-@@ -144,7 +143,6 @@ github.com/docker/docker v25.0.6+incompatible h1:5cPwbwriIcsua2REJe8HqQV+6WlWc1b
+@@ -144,7 +141,6 @@ github.com/docker/docker v25.0.6+incompatible h1:5cPwbwriIcsua2REJe8HqQV+6WlWc1b
  github.com/docker/docker v25.0.6+incompatible/go.mod h1:eEKB0N0r5NX/I1kEveEz05bcu8tLC/8azJZsviup8Sk=
  github.com/docker/go-connections v0.4.0 h1:El9xVISelRB7BuFusrZozjnkIM5YnzCViNKohAFqRJQ=
  github.com/docker/go-connections v0.4.0/go.mod h1:Gbd7IOopHjR8Iph03tsViu4nIes5XhDvyHbTtUxmeec=
@@ -145,7 +134,7 @@ index 28cca9e9..81a40c1e 100644
  github.com/docker/go-units v0.5.0 h1:69rxXcBk27SvSaaxTtLh/8llcHD8vYHT7WSdRZ/jvr4=
  github.com/docker/go-units v0.5.0/go.mod h1:fgPhTUdO+D/Jk86RDLlptpiXQzgHJF7gydDDbaIK4Dk=
  github.com/docopt/docopt-go v0.0.0-20180111231733-ee0de3bc6815/go.mod h1:WwZ+bS3ebgob9U8Nd0kOddGdZWjyMGR8Wziv+TBNwSE=
-@@ -170,7 +168,6 @@ github.com/evanphx/json-patch v4.12.0+incompatible h1:4onqiflcdA9EOZ4RxV643DvftH
+@@ -170,7 +166,6 @@ github.com/evanphx/json-patch v4.12.0+incompatible h1:4onqiflcdA9EOZ4RxV643DvftH
  github.com/evanphx/json-patch v4.12.0+incompatible/go.mod h1:50XU6AFN0ol/bzJsmQLiYLvXMP4fmwYFNcr97nuDLSk=
  github.com/fatih/color v1.7.0/go.mod h1:Zm6kSWBoL9eyXnKyktHP6abPY2pDugNf5KwzbycvMj4=
  github.com/fatih/color v1.9.0/go.mod h1:eQcE1qtQxscV5RaZvpXrrb8Drkc3/DdQ+uUYCNjL+zU=
@@ -153,7 +142,7 @@ index 28cca9e9..81a40c1e 100644
  github.com/fatih/color v1.13.0/go.mod h1:kLAiJbzzSOZDVNGyDpeOxJ47H46qBXwg5ILebYFFOfk=
  github.com/fatih/color v1.16.0 h1:zmkK9Ngbjj+K0yRhTVONQh1p/HknKYSlNT+vZCzyokM=
  github.com/fatih/color v1.16.0/go.mod h1:fL2Sau1YI5c0pdGEVCbKQbLXB6edEj1ZgiY4NijnWvE=
-@@ -192,7 +189,6 @@ github.com/go-kit/kit v0.9.0/go.mod h1:xBxKIO96dXMWWy0MnWVtmwkA9/13aqxPnvrjFYMA2
+@@ -192,7 +187,6 @@ github.com/go-kit/kit v0.9.0/go.mod h1:xBxKIO96dXMWWy0MnWVtmwkA9/13aqxPnvrjFYMA2
  github.com/go-kit/kit v0.12.0 h1:e4o3o3IsBfAKQh5Qbbiqyfu97Ku7jrO/JbohvztANh4=
  github.com/go-kit/kit v0.12.0/go.mod h1:lHd+EkCZPIwYItmGDDRdhinkzX2A1sj+M9biaEaizzs=
  github.com/go-kit/log v0.1.0/go.mod h1:zbhenjAZHb184qTLMA9ZjW7ThYL0H2mk7Q6pNt4vbaY=
@@ -161,7 +150,7 @@ index 28cca9e9..81a40c1e 100644
  github.com/go-kit/log v0.2.1 h1:MRVx0/zhvdseW+Gza6N9rVzU/IVzaeE1SFI4raAhmBU=
  github.com/go-kit/log v0.2.1/go.mod h1:NwTd00d/i8cPZ3xOwwiv2PO5MOcx78fFErGNcVmBjv0=
  github.com/go-logfmt/logfmt v0.3.0/go.mod h1:Qt1PoO58o5twSAckw1HlFXLmHsOX5/0LbT9GBnD5lWE=
-@@ -208,12 +204,14 @@ github.com/go-logr/logr v1.2.4 h1:g01GSCwiDw2xSZfjJ2/T9M+S6pFdcNtFYsp+Y43HYDQ=
+@@ -208,12 +202,14 @@ github.com/go-logr/logr v1.2.4 h1:g01GSCwiDw2xSZfjJ2/T9M+S6pFdcNtFYsp+Y43HYDQ=
  github.com/go-logr/logr v1.2.4/go.mod h1:jdQByPbusPIv2/zmleS9BjJVeZ6kBagPoEUsqbVz/1A=
  github.com/go-logr/stdr v1.2.2 h1:hSWxHoqTgW2S2qGc0LTAI563KZ5YKYRhT3MFKZMbjag=
  github.com/go-logr/stdr v1.2.2/go.mod h1:mMo/vtBO5dYbehREoey6XUKy/eSumjCCveDpRre4VKE=
@@ -178,7 +167,7 @@ index 28cca9e9..81a40c1e 100644
  github.com/go-openapi/jsonpointer v0.19.3/go.mod h1:Pl9vOtqEWErmShwVjC8pYs9cog34VGT37dQOVbmoatg=
  github.com/go-openapi/jsonpointer v0.19.5/go.mod h1:Pl9vOtqEWErmShwVjC8pYs9cog34VGT37dQOVbmoatg=
  github.com/go-openapi/jsonpointer v0.19.6 h1:eCs3fxoIi3Wh6vtgmLTOjdhSpiqphQ+DaPn38N2ZdrE=
-@@ -221,34 +219,31 @@ github.com/go-openapi/jsonpointer v0.19.6/go.mod h1:osyAmYz/mB/C3I+WsTTSgw1ONzaL
+@@ -221,34 +217,31 @@ github.com/go-openapi/jsonpointer v0.19.6/go.mod h1:osyAmYz/mB/C3I+WsTTSgw1ONzaL
  github.com/go-openapi/jsonreference v0.19.3/go.mod h1:rjx6GuL8TTa9VaixXglHmQmIL98+wF9xc8zWvFonSJ8=
  github.com/go-openapi/jsonreference v0.19.5/go.mod h1:RdybgQwPxbL4UEjuAruzK1x3nE69AqPYEJeo/TWfEeg=
  github.com/go-openapi/jsonreference v0.19.6/go.mod h1:diGHMEHg2IqXZGKxqyvWdfWU/aim5Dprw5bqpKkTvns=
@@ -223,25 +212,16 @@ index 28cca9e9..81a40c1e 100644
  github.com/go-zookeeper/zk v1.0.3 h1:7M2kwOsc//9VeeFiPtf+uSJlVpU66x9Ba5+8XK7/TDg=
  github.com/go-zookeeper/zk v1.0.3/go.mod h1:nOB03cncLtlp4t+UAkGSV+9beXP/akpekBwL+UX1Qcw=
  github.com/gobuffalo/attrs v0.0.0-20190224210810-a9411de4debd/go.mod h1:4duuawTqi2wkkpB4ePgWMaai6/Kc6WEz83bhFwpHzj0=
-@@ -275,14 +270,14 @@ github.com/gobuffalo/packd v0.1.0/go.mod h1:M2Juc+hhDXf/PnmBANFCqx4DM3wRbgDvnVWe
+@@ -275,8 +268,6 @@ github.com/gobuffalo/packd v0.1.0/go.mod h1:M2Juc+hhDXf/PnmBANFCqx4DM3wRbgDvnVWe
  github.com/gobuffalo/packr/v2 v2.0.9/go.mod h1:emmyGweYTm6Kdper+iywB6YK5YzuKchGtJQZ0Odn4pQ=
  github.com/gobuffalo/packr/v2 v2.2.0/go.mod h1:CaAwI0GPIAv+5wKLtv8Afwl+Cm78K/I/VCm/3ptBN+0=
  github.com/gobuffalo/syncx v0.0.0-20190224160051-33c29581e754/go.mod h1:HhnNqWY95UYwwW3uSASeV7vtgYkT2t16hJgV3AEPUpw=
 -github.com/goccy/go-yaml v1.9.5/go.mod h1:U/jl18uSupI5rdI2jmuCswEA2htH9eXfferR3KfscvA=
 -github.com/gofrs/uuid v4.2.0+incompatible/go.mod h1:b2aQJv3Z4Fp6yNu3cdSllBxTCLRxnplIgP/c0N/04lM=
-+github.com/godbus/dbus/v5 v5.0.4/go.mod h1:xhWf0FNVPg57R7Z0UbKHbJfkEywrmjJnf7w5xrFpKfA=
  github.com/gogo/protobuf v1.1.1/go.mod h1:r8qH/GZQm5c6nD/R0oafs1akxWv10x8SbQlK7atdtwQ=
  github.com/gogo/protobuf v1.3.2 h1:Ov1cvc58UF3b5XjBnZv7+opcTcQFZebYjWzi34vdm4Q=
  github.com/gogo/protobuf v1.3.2/go.mod h1:P1XiOD3dCwIKUDQYPy72D8LYyHL2YPYrpS2s69NZV8Q=
- github.com/golang-jwt/jwt/v4 v4.0.0/go.mod h1:/xlHOz8bRuivTWchD4jCa+NbatV+wEUSzwAxVc6locg=
--github.com/golang-jwt/jwt/v4 v4.5.0 h1:7cYmW1XlMY7h7ii7UhUyChSgS5wUJEnm9uZVTGqOWzg=
- github.com/golang-jwt/jwt/v4 v4.5.0/go.mod h1:m21LjoU+eqJr34lmDMbreY2eSTRJ1cv77w39/MY0Ch0=
-+github.com/golang-jwt/jwt/v4 v4.5.1 h1:JdqV9zKUdtaa9gdPlywC3aeoEsR681PlKC+4F5gQgeo=
-+github.com/golang-jwt/jwt/v4 v4.5.1/go.mod h1:m21LjoU+eqJr34lmDMbreY2eSTRJ1cv77w39/MY0Ch0=
- github.com/golang/groupcache v0.0.0-20190702054246-869f871628b6/go.mod h1:cIg4eruTrX1D+g88fzRXU5OdNfaM+9IcxsU14FzY7Hc=
- github.com/golang/groupcache v0.0.0-20191227052852-215e87163ea7/go.mod h1:cIg4eruTrX1D+g88fzRXU5OdNfaM+9IcxsU14FzY7Hc=
- github.com/golang/groupcache v0.0.0-20200121045136-8c9f03a8e57e/go.mod h1:cIg4eruTrX1D+g88fzRXU5OdNfaM+9IcxsU14FzY7Hc=
-@@ -426,13 +421,15 @@ github.com/hashicorp/go-uuid v1.0.2 h1:cfejS+Tpcp13yd5nYHWDI6qVCny6wyX2Mt5SGur2I
+@@ -427,13 +418,15 @@ github.com/hashicorp/go-uuid v1.0.2 h1:cfejS+Tpcp13yd5nYHWDI6qVCny6wyX2Mt5SGur2I
  github.com/hashicorp/go-uuid v1.0.2/go.mod h1:6SBZvOh/SIDV7/2o3Jml5SYk/TvGqwFJ/bN7x4byOro=
  github.com/hashicorp/golang-lru v0.5.0/go.mod h1:/m3WP610KZHVQ1SGc6re/UDhFvYD7pJ4Ao+sR/qLZy8=
  github.com/hashicorp/golang-lru v0.5.1/go.mod h1:/m3WP610KZHVQ1SGc6re/UDhFvYD7pJ4Ao+sR/qLZy8=
@@ -259,7 +239,7 @@ index 28cca9e9..81a40c1e 100644
  github.com/hashicorp/nomad/api v0.0.0-20230404200950-434f7a1745c6 h1:sMxTQz68r0l1PlXYiXsuwag9So7WtVMuL71T3Ghx2WM=
  github.com/hashicorp/nomad/api v0.0.0-20230404200950-434f7a1745c6/go.mod h1:bKUb1ytds5KwUioHdvdq9jmrDqCThv95si0Ub7iNeBg=
  github.com/hashicorp/serf v0.9.7 h1:hkdgbqizGQHuU5IPqYM1JdSMV8nKfpuOnZYXssk9muY=
-@@ -494,8 +491,6 @@ github.com/kr/text v0.2.0 h1:5Nx0Ya0ZqY2ygV366QzturHI13Jq95ApcVaJBhpS+AY=
+@@ -495,8 +488,6 @@ github.com/kr/text v0.2.0 h1:5Nx0Ya0ZqY2ygV366QzturHI13Jq95ApcVaJBhpS+AY=
  github.com/kr/text v0.2.0/go.mod h1:eLer722TekiGuMkidMxC/pM04lWEeraHUUmBw8l2grE=
  github.com/kubermatic/glog-gokit v0.0.0-20181129151237-8ab7e4c2d352 h1:IwAUUBomA7q2TedTHQ3ebjwXVp8aHwi453m7AFn0vCk=
  github.com/kubermatic/glog-gokit v0.0.0-20181129151237-8ab7e4c2d352/go.mod h1:WUD00rCUd6ntFOOuzJbT/MRrM+6X0Zufa6wWYBcf4zY=
@@ -268,7 +248,7 @@ index 28cca9e9..81a40c1e 100644
  github.com/linode/linodego v1.8.0 h1:7B2UaWu6C48tZZZrtINWRElAcwzk4TLnL9USjKf3xm0=
  github.com/linode/linodego v1.8.0/go.mod h1:heqhl91D8QTPVm2k9qZHP78zzbOdTFLXE9NJc3bcc50=
  github.com/mailru/easyjson v0.0.0-20190614124828-94de47d64c63/go.mod h1:C1wdFJiN94OJF2b5HbByQZoLdCWB1Yqtg26g4irojpc=
-@@ -508,7 +503,6 @@ github.com/markbates/safe v1.0.1/go.mod h1:nAqgmRi7cY2nqMc92/bSEeQA+R4OheNU2T1kN
+@@ -509,7 +500,6 @@ github.com/markbates/safe v1.0.1/go.mod h1:nAqgmRi7cY2nqMc92/bSEeQA+R4OheNU2T1kN
  github.com/mattn/go-colorable v0.0.9/go.mod h1:9vuHe8Xs5qXnSaW/c/ABM9alt+Vo+STaOChaDxuIBZU=
  github.com/mattn/go-colorable v0.1.4/go.mod h1:U0ppj6V5qS13XJ6of8GYAs25YV2eR4EVcfRqFIhoBtE=
  github.com/mattn/go-colorable v0.1.6/go.mod h1:u6P/XSegPjTcexA+o6vUJrdnUu04hMope9wVRipJSqc=
@@ -276,7 +256,7 @@ index 28cca9e9..81a40c1e 100644
  github.com/mattn/go-colorable v0.1.9/go.mod h1:u6P/XSegPjTcexA+o6vUJrdnUu04hMope9wVRipJSqc=
  github.com/mattn/go-colorable v0.1.12/go.mod h1:u5H1YNBxpqRaxsYJYSkiCWKzEfiAb1Gb520KVy5xxl4=
  github.com/mattn/go-colorable v0.1.13 h1:fFA4WZxdEF4tXPZVKMLwD8oUnCTTo08duU7wxecdEvA=
-@@ -540,7 +534,6 @@ github.com/mitchellh/mapstructure v0.0.0-20160808181253-ca63d7c062ee/go.mod h1:F
+@@ -541,7 +531,6 @@ github.com/mitchellh/mapstructure v0.0.0-20160808181253-ca63d7c062ee/go.mod h1:F
  github.com/mitchellh/mapstructure v1.1.2/go.mod h1:FVVH3fgwuzCH5S8UJGiWEs2h04kUh9fWfEaFds41c1Y=
  github.com/mitchellh/mapstructure v1.3.3/go.mod h1:bFUtVrKA4DC2yAKiSyO/QUcy7e+RRV2QTWOzhPopBRo=
  github.com/mitchellh/mapstructure v1.4.1/go.mod h1:bFUtVrKA4DC2yAKiSyO/QUcy7e+RRV2QTWOzhPopBRo=
@@ -284,7 +264,7 @@ index 28cca9e9..81a40c1e 100644
  github.com/mitchellh/mapstructure v1.5.0 h1:jeMsZIYE/09sWLaz43PL7Gy6RuMjD2eJVyuac5Z2hdY=
  github.com/mitchellh/mapstructure v1.5.0/go.mod h1:bFUtVrKA4DC2yAKiSyO/QUcy7e+RRV2QTWOzhPopBRo=
  github.com/moby/spdystream v0.2.0/go.mod h1:f7i0iNDQJ059oMTcWxx8MA/zKFIuD/lY+0GqbN2Wy8c=
-@@ -565,7 +558,6 @@ github.com/mwitkow/go-conntrack v0.0.0-20190716064945-2f068394615f/go.mod h1:qRW
+@@ -566,7 +555,6 @@ github.com/mwitkow/go-conntrack v0.0.0-20190716064945-2f068394615f/go.mod h1:qRW
  github.com/mxk/go-flowrate v0.0.0-20140419014527-cca7078d478f/go.mod h1:ZdcZmHo+o7JKHSa8/e818NopupXU1YMK5fe1lsApnBw=
  github.com/niemeyer/pretty v0.0.0-20200227124842-a10e7caefd8e/go.mod h1:zD1mROLANZcx1PVRCS0qkT7pwLkGfwJo4zjcN/Tysno=
  github.com/nxadm/tail v1.4.4/go.mod h1:kenIhsEOeOJmVchQTgglprH7qJGnHDVpk1VPCcaMI8A=
@@ -292,7 +272,7 @@ index 28cca9e9..81a40c1e 100644
  github.com/oklog/ulid v1.3.1 h1:EGfNDEx6MqHz8B3uNV6QAib1UR2Lm97sHi3ocA6ESJ4=
  github.com/oklog/ulid v1.3.1/go.mod h1:CirwcVhetQ6Lv90oh/F+FBtV6XMibvdAFo93nm5qn4U=
  github.com/onsi/ginkgo v0.0.0-20170829012221-11459a886d9c/go.mod h1:lLunBs/Ym6LB5Z9jYTR76FiuTmxDTDusOGeTQH+WWjE=
-@@ -584,7 +576,6 @@ github.com/opencontainers/go-digest v1.0.0 h1:apOUWs51W5PlhuyGyz9FCeeBIOUDA/6nW8
+@@ -585,7 +573,6 @@ github.com/opencontainers/go-digest v1.0.0 h1:apOUWs51W5PlhuyGyz9FCeeBIOUDA/6nW8
  github.com/opencontainers/go-digest v1.0.0/go.mod h1:0JzlMkj0TRzQZfJkVvzbP0HBR3IKzErnv2BNG4W4MAM=
  github.com/opencontainers/image-spec v1.0.2 h1:9yCKha/T5XdGtO0q9Q9a6T5NUCsTn/DrBg0D7ufOcFM=
  github.com/opencontainers/image-spec v1.0.2/go.mod h1:BtxoFyWECRxE4U/7sNtV5W15zMzWCbyJoFRP3s7yZA0=
@@ -300,7 +280,7 @@ index 28cca9e9..81a40c1e 100644
  github.com/pascaldekloe/goe v0.0.0-20180627143212-57f6aae5913c/go.mod h1:lzWF7FIEvWOWxwDKqyGYQf6ZUaNfKdP144TG7ZOy1lc=
  github.com/pascaldekloe/goe v0.1.0 h1:cBOtyMzM9HTpWjXfbbunk26uA6nG3a8n06Wieeh0MwY=
  github.com/pascaldekloe/goe v0.1.0/go.mod h1:lzWF7FIEvWOWxwDKqyGYQf6ZUaNfKdP144TG7ZOy1lc=
-@@ -598,14 +589,13 @@ github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZb
+@@ -599,14 +586,13 @@ github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZb
  github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
  github.com/posener/complete v1.1.1/go.mod h1:em0nMJCgc9GFtwrmVmEMR/ZL6WyhyjMBndrE9hABlRI=
  github.com/posener/complete v1.2.3/go.mod h1:WZIdtGGp+qx0sLrYKtIRAruyNpv6hFCicSgv7Sy7s/s=
@@ -317,7 +297,7 @@ index 28cca9e9..81a40c1e 100644
  github.com/prometheus/client_golang v1.15.1-0.20230416124134-0392dffd0e08 h1:MHrJHIS8Iw0rI/cD0jv2O3C8m0T0x99L+5r7CO1qE6I=
  github.com/prometheus/client_golang v1.15.1-0.20230416124134-0392dffd0e08/go.mod h1:e9yaBhRPU2pPNsZwE+JdQl0KEt1N9XgF6zxWmaC0xOk=
  github.com/prometheus/client_model v0.0.0-20180712105110-5c3871d89910/go.mod h1:MbSGuTsp3dbXC40dX6PRTWyKYBIrTGTE9sqQNg2J8bo=
-@@ -619,20 +609,17 @@ github.com/prometheus/common v0.9.1/go.mod h1:yhUN8i9wzaXS3w1O07YhxHEBxD+W35wd8b
+@@ -620,12 +606,10 @@ github.com/prometheus/common v0.9.1/go.mod h1:yhUN8i9wzaXS3w1O07YhxHEBxD+W35wd8b
  github.com/prometheus/common v0.10.0/go.mod h1:Tlit/dnDKsSWFlCLTWaA1cyBgKHSMdTB80sz/V91rCo=
  github.com/prometheus/common v0.26.0/go.mod h1:M7rCNAaPfAosfx8veZJCuw84e35h3Cfd9VFqTh1DIvc=
  github.com/prometheus/common v0.29.0/go.mod h1:vu+V0TpY+O6vW9J44gczi3Ap/oXXR10b+M/gUGO4Hls=
@@ -327,12 +307,10 @@ index 28cca9e9..81a40c1e 100644
  github.com/prometheus/common/sigv4 v0.1.0 h1:qoVebwtwwEhS85Czm2dSROY5fTo2PAPEVdDeppTwGX4=
  github.com/prometheus/common/sigv4 v0.1.0/go.mod h1:2Jkxxk9yYvCkE5G1sQT7GuEXm57JrvHu9k5YwTjsNtI=
 -github.com/prometheus/exporter-toolkit v0.7.1/go.mod h1:ZUBIj498ePooX9t/2xtDjeQYwvRpiPP2lh5u4iblj2g=
--github.com/prometheus/exporter-toolkit v0.7.3 h1:IYBn0CTGi/nYxstdTUKysuSofUNJ3DQW3FmZ/Ub6rgU=
--github.com/prometheus/exporter-toolkit v0.7.3/go.mod h1:ZUBIj498ePooX9t/2xtDjeQYwvRpiPP2lh5u4iblj2g=
-+github.com/prometheus/exporter-toolkit v0.8.2 h1:sbJAfBXQFkG6sUkbwBun8MNdzW9+wd5YfPYofbmj0YM=
-+github.com/prometheus/exporter-toolkit v0.8.2/go.mod h1:00shzmJL7KxcsabLWcONwpyNEuWhREOnFqZW7vadFS0=
+ github.com/prometheus/exporter-toolkit v0.7.3 h1:IYBn0CTGi/nYxstdTUKysuSofUNJ3DQW3FmZ/Ub6rgU=
+ github.com/prometheus/exporter-toolkit v0.7.3/go.mod h1:ZUBIj498ePooX9t/2xtDjeQYwvRpiPP2lh5u4iblj2g=
  github.com/prometheus/procfs v0.0.0-20181005140218-185b4288413d/go.mod h1:c3At6R/oaqEKCNdg8wHV1ftS6bRYblBhIjjI8uT2IGk=
- github.com/prometheus/procfs v0.0.2/go.mod h1:TjEm7ze935MbeOT/UhFTIMYKhuLP4wbCsTZCD3I8kEA=
+@@ -633,7 +617,6 @@ github.com/prometheus/procfs v0.0.2/go.mod h1:TjEm7ze935MbeOT/UhFTIMYKhuLP4wbCsT
  github.com/prometheus/procfs v0.0.8/go.mod h1:7Qr8sr6344vo1JqZ6HhLceV9o3AJ1Ff+GxbHq6oeK9A=
  github.com/prometheus/procfs v0.1.3/go.mod h1:lV6e/gmhEcM9IjHGsFOCxxuZ+z1YqCvr4OA4YeYWdaU=
  github.com/prometheus/procfs v0.6.0/go.mod h1:cz+aTbrPOrUb4q7XlbU9ygM+/jj0fzG6c1xBZuNvfVA=
@@ -340,7 +318,7 @@ index 28cca9e9..81a40c1e 100644
  github.com/prometheus/procfs v0.9.0 h1:wzCHvIvM5SxWqYvwgVL7yJY8Lz3PKn49KQtpgMYJfhI=
  github.com/prometheus/procfs v0.9.0/go.mod h1:+pB4zwohETzFnmlpe6yd2lSc+0/46IYZRB/chUwxUZY=
  github.com/rogpeppe/fastuuid v1.2.0/go.mod h1:jVj6XXZzXRy/MSR5jhDC/2q6DgLz+nrA6LYCDYWNEvQ=
-@@ -641,7 +628,6 @@ github.com/rogpeppe/go-internal v1.2.2/go.mod h1:M8bDsm7K2OlrFYOpmOWEs/qY81heoFR
+@@ -642,7 +625,6 @@ github.com/rogpeppe/go-internal v1.2.2/go.mod h1:M8bDsm7K2OlrFYOpmOWEs/qY81heoFR
  github.com/rogpeppe/go-internal v1.3.0/go.mod h1:M8bDsm7K2OlrFYOpmOWEs/qY81heoFRclV5y23lUDJ4=
  github.com/rogpeppe/go-internal v1.12.0 h1:exVL4IDcn6na9z1rAb56Vxr+CgyK3nn3O+epU5NdKM8=
  github.com/rogpeppe/go-internal v1.12.0/go.mod h1:E+RYuTGaKKdloAfM02xzb0FW3Paa99yedzYV+kq4uf4=
@@ -348,7 +326,7 @@ index 28cca9e9..81a40c1e 100644
  github.com/ryanuber/columnize v0.0.0-20160712163229-9b3edd62028f/go.mod h1:sm1tb6uqfes/u+d4ooFouqFdy9/2g9QGwK3SQygK0Ts=
  github.com/ryanuber/columnize v2.1.0+incompatible/go.mod h1:sm1tb6uqfes/u+d4ooFouqFdy9/2g9QGwK3SQygK0Ts=
  github.com/scaleway/scaleway-sdk-go v1.0.0-beta.9 h1:0roa6gXKgyta64uqh52AQG3wzZXH21unn+ltzQSXML0=
-@@ -652,7 +638,6 @@ github.com/shoenig/test v0.6.2 h1:tdq+WGnznwE5xcOMXkqqXuudK75RkSGBazBGcP1lX6w=
+@@ -653,7 +635,6 @@ github.com/shoenig/test v0.6.2 h1:tdq+WGnznwE5xcOMXkqqXuudK75RkSGBazBGcP1lX6w=
  github.com/shoenig/test v0.6.2/go.mod h1:byHiCGXqrVaflBLAMq/srcZIHynQPQgeyvkvXnjqq0k=
  github.com/shurcooL/httpfs v0.0.0-20190707220628-8d4bc4ba7749 h1:bUGsEnyNbVPw06Bs80sCeARAlK8lhwqGyi6UT8ymuGk=
  github.com/shurcooL/httpfs v0.0.0-20190707220628-8d4bc4ba7749/go.mod h1:ZY1cvUeJuFPAdZ/B6v7RHavJWZn2YPVFQ1OSXhCGOkg=
@@ -356,7 +334,7 @@ index 28cca9e9..81a40c1e 100644
  github.com/simonpasquier/klog-gokit/v3 v3.0.0 h1:J0QrVhAULISHWN05PeXX/xMqJBjnpl2fAuO8uHdQGsA=
  github.com/simonpasquier/klog-gokit/v3 v3.0.0/go.mod h1:+WRhGy707Lp2Q4r727m9Oc7FxazOHgW76FIyCr23nus=
  github.com/sirupsen/logrus v1.2.0/go.mod h1:LxeOpSwHxABJmUn/MG1IvRgCAasNZTLOkJPxbbu5VWo=
-@@ -664,7 +649,6 @@ github.com/sirupsen/logrus v1.7.0/go.mod h1:yWOB1SBYBC5VeMP7gHvWumXLIWorT60ONWic
+@@ -665,7 +646,6 @@ github.com/sirupsen/logrus v1.7.0/go.mod h1:yWOB1SBYBC5VeMP7gHvWumXLIWorT60ONWic
  github.com/sirupsen/logrus v1.9.3 h1:dueUQJ1C2q9oE3F7wvmSGAaVtTmUizReu6fjN8uqzbQ=
  github.com/sirupsen/logrus v1.9.3/go.mod h1:naHLuLoDiP4jHNo9R0sCBMtWGeIprob74mVsIT4qYEQ=
  github.com/spf13/afero v1.2.2/go.mod h1:9ZxEEn6pIJ8Rxe320qSDBk6AsU0r9pR7Q4OcevTdifk=
@@ -364,7 +342,7 @@ index 28cca9e9..81a40c1e 100644
  github.com/spf13/cobra v0.0.3/go.mod h1:1l0Ry5zgKvJasoi3XT1TypsSe7PqH0Sj9dhYf7v3XqQ=
  github.com/spf13/pflag v1.0.3/go.mod h1:DYY7MBk1bdzusC3SYhjObp+wFpr4gzcvqqNjLnInEg4=
  github.com/spf13/pflag v1.0.5 h1:iy+VFUOCP1a+8yFto/drg2CJ5u0yRoB7fZw3DKv/JXA=
-@@ -695,20 +679,21 @@ github.com/vultr/govultr/v2 v2.17.2 h1:gej/rwr91Puc/tgh+j33p/BLR16UrIPnSr+AIwYWZ
+@@ -696,20 +676,21 @@ github.com/vultr/govultr/v2 v2.17.2 h1:gej/rwr91Puc/tgh+j33p/BLR16UrIPnSr+AIwYWZ
  github.com/vultr/govultr/v2 v2.17.2/go.mod h1:ZFOKGWmgjytfyjeyAdhQlSWwTjh2ig+X49cAp50dzXI=
  github.com/xdg-go/pbkdf2 v1.0.0/go.mod h1:jrpuAogTd400dnrH08LKmI/xc1MbPOebTwRqcT5RDeI=
  github.com/xdg-go/scram v1.0.2/go.mod h1:1WAq6h33pAW+iRreB34OORO2Nf7qel3VV3fjBj+hCSs=
@@ -390,7 +368,7 @@ index 28cca9e9..81a40c1e 100644
  go.opencensus.io v0.21.0/go.mod h1:mSImk1erAIZhrmZN+AvHh14ztQfjbGwt4TtuofqLduU=
  go.opencensus.io v0.22.0/go.mod h1:+kGneAE2xo2IficOXnaByMWTGM9T73dGwxeWcUqIpI8=
  go.opencensus.io v0.22.2/go.mod h1:yxeiOL68Rb0Xd1ddK5vPZ/oVn4vY4Ynel7k9FzqtOIw=
-@@ -735,7 +720,6 @@ go.opentelemetry.io/otel/trace v1.18.0/go.mod h1:T2+SGJGuYZY3bjj5rgh/hN7KIrlpWC5
+@@ -736,7 +717,6 @@ go.opentelemetry.io/otel/trace v1.18.0/go.mod h1:T2+SGJGuYZY3bjj5rgh/hN7KIrlpWC5
  go.opentelemetry.io/proto/otlp v0.7.0/go.mod h1:PqfVotwruBrMGOCsRd/89rSnXhoiJIqeYNgFYFoEGnI=
  go.opentelemetry.io/proto/otlp v1.0.0 h1:T0TX0tmXU8a3CbNXzEKGeU5mIVOdf0oykP+u2lIVU/I=
  go.opentelemetry.io/proto/otlp v1.0.0/go.mod h1:Sy6pihPLfYHkr3NkUbEhGHFhINUSI/v80hjKIs5JXpM=
@@ -398,12 +376,12 @@ index 28cca9e9..81a40c1e 100644
  go.uber.org/atomic v1.10.0 h1:9qC72Qh0+3MqyJbAn8YU5xVq1frD8bn3JtD2oXtafVQ=
  go.uber.org/atomic v1.10.0/go.mod h1:LUxbIzbOniOlMKjJjyPfpl4v+PKK2cNJn91OQbhoJI0=
  go.uber.org/goleak v1.1.12 h1:gZAh5/EyT/HQwlpkCy6wTpqfH9H8Lz8zbm3dZh+OyzA=
-@@ -750,17 +734,16 @@ golang.org/x/crypto v0.0.0-20191011191535-87dc89f01550/go.mod h1:yigFU9vqHzYiE8U
+@@ -751,17 +731,17 @@ golang.org/x/crypto v0.0.0-20191011191535-87dc89f01550/go.mod h1:yigFU9vqHzYiE8U
  golang.org/x/crypto v0.0.0-20200302210943-78000ba7a073/go.mod h1:LzIPMQfyMNhhGPhUkYOs5KpL4U8rLKemX1yGLhDgUto=
  golang.org/x/crypto v0.0.0-20200622213623-75b288015ac9/go.mod h1:LzIPMQfyMNhhGPhUkYOs5KpL4U8rLKemX1yGLhDgUto=
  golang.org/x/crypto v0.0.0-20201002170205-7f63de1d35b0/go.mod h1:LzIPMQfyMNhhGPhUkYOs5KpL4U8rLKemX1yGLhDgUto=
 -golang.org/x/crypto v0.0.0-20201216223049-8b5274cf687f/go.mod h1:jdWPYTVW3xRLrWPugEBEK3UY2ZEsg3UU495nc5E+M+I=
--golang.org/x/crypto v0.0.0-20210616213533-5ff15b29337e/go.mod h1:GvvjBRRGRdwPK5ydBHafDWAxML/pGHZbMvKqRZ5+Abc=
+ golang.org/x/crypto v0.0.0-20210616213533-5ff15b29337e/go.mod h1:GvvjBRRGRdwPK5ydBHafDWAxML/pGHZbMvKqRZ5+Abc=
  golang.org/x/crypto v0.0.0-20210921155107-089bfa567519/go.mod h1:GvvjBRRGRdwPK5ydBHafDWAxML/pGHZbMvKqRZ5+Abc=
  golang.org/x/crypto v0.0.0-20211202192323-5770296d904e/go.mod h1:IxCIyHEi3zRg3s0A5j5BB6A9Jmi73HwBIUl50j+osU4=
  golang.org/x/crypto v0.0.0-20220214200702-86341886e292/go.mod h1:IxCIyHEi3zRg3s0A5j5BB6A9Jmi73HwBIUl50j+osU4=
@@ -419,7 +397,7 @@ index 28cca9e9..81a40c1e 100644
  golang.org/x/exp v0.0.0-20190121172915-509febef88a4/go.mod h1:CJ0aWSM057203Lf6IL+f9T1iT9GByDxfZKAQTCR3kQA=
  golang.org/x/exp v0.0.0-20190306152737-a1d7652674e8/go.mod h1:CJ0aWSM057203Lf6IL+f9T1iT9GByDxfZKAQTCR3kQA=
  golang.org/x/exp v0.0.0-20190510132918-efd6b22b2522/go.mod h1:ZjyILWgesfNpC6sMxTJOJm9Kp84zZh5NQWvqDGG3Qr8=
-@@ -799,7 +782,6 @@ golang.org/x/mod v0.3.0/go.mod h1:s0Qsj1ACt9ePp/hMypM3fl4fZqREWJwdYDEqhRiZZUA=
+@@ -800,7 +780,6 @@ golang.org/x/mod v0.3.0/go.mod h1:s0Qsj1ACt9ePp/hMypM3fl4fZqREWJwdYDEqhRiZZUA=
  golang.org/x/mod v0.4.0/go.mod h1:s0Qsj1ACt9ePp/hMypM3fl4fZqREWJwdYDEqhRiZZUA=
  golang.org/x/mod v0.4.1/go.mod h1:s0Qsj1ACt9ePp/hMypM3fl4fZqREWJwdYDEqhRiZZUA=
  golang.org/x/mod v0.4.2/go.mod h1:s0Qsj1ACt9ePp/hMypM3fl4fZqREWJwdYDEqhRiZZUA=
@@ -427,7 +405,7 @@ index 28cca9e9..81a40c1e 100644
  golang.org/x/mod v0.6.0-dev.0.20220419223038-86c51ed26bb4/go.mod h1:jJ57K6gSWd91VN4djpZkiMVwK6gcyfeH4XE8wZrZaV4=
  golang.org/x/mod v0.8.0/go.mod h1:iBbtSCu2XBx23ZKBPSOrRkjjQPZFPuis4dIYUhu/chs=
  golang.org/x/mod v0.17.0 h1:zY54UmvipHiNd+pm+m0x9KhZ9hl1/7QNMyxXbc6ICqA=
-@@ -848,16 +830,15 @@ golang.org/x/net v0.0.0-20210410081132-afb366fc7cd1/go.mod h1:9tjilg8BloeKEkVJvy
+@@ -849,16 +828,15 @@ golang.org/x/net v0.0.0-20210410081132-afb366fc7cd1/go.mod h1:9tjilg8BloeKEkVJvy
  golang.org/x/net v0.0.0-20210421230115-4e50805a0758/go.mod h1:72T/g9IO56b78aLF+1Kcs5dz7/ng1VjMUvfKvpfy+jM=
  golang.org/x/net v0.0.0-20210525063256-abc453219eb5/go.mod h1:9nx3DQGgdP8bBQD5qxJ1jj9UTztislL4KSBs9R2vV5Y=
  golang.org/x/net v0.0.0-20210726213435-c6fcb2dbf985/go.mod h1:9nx3DQGgdP8bBQD5qxJ1jj9UTztislL4KSBs9R2vV5Y=
@@ -447,7 +425,7 @@ index 28cca9e9..81a40c1e 100644
  golang.org/x/oauth2 v0.0.0-20180821212333-d2e6202438be/go.mod h1:N/0e6XlmueqKjAGxoOufVs8QHGRruUQn6yWY3a++T0U=
  golang.org/x/oauth2 v0.0.0-20190226205417-e64efc72b421/go.mod h1:gOpvHmFTYa4IltrdGE7lF6nIHvwfUNPOp7c8zoXwtLw=
  golang.org/x/oauth2 v0.0.0-20190604053449-0f29369cfe45/go.mod h1:gOpvHmFTYa4IltrdGE7lF6nIHvwfUNPOp7c8zoXwtLw=
-@@ -887,8 +868,8 @@ golang.org/x/sync v0.0.0-20201207232520-09787c993a3a/go.mod h1:RxMgew5VJxzue5/jJ
+@@ -888,8 +866,8 @@ golang.org/x/sync v0.0.0-20201207232520-09787c993a3a/go.mod h1:RxMgew5VJxzue5/jJ
  golang.org/x/sync v0.0.0-20210220032951-036812b2e83c/go.mod h1:RxMgew5VJxzue5/jJTE5uejpjVlOe/izrB70Jof72aM=
  golang.org/x/sync v0.0.0-20220722155255-886fb9371eb4/go.mod h1:RxMgew5VJxzue5/jJTE5uejpjVlOe/izrB70Jof72aM=
  golang.org/x/sync v0.1.0/go.mod h1:RxMgew5VJxzue5/jJTE5uejpjVlOe/izrB70Jof72aM=
@@ -458,7 +436,7 @@ index 28cca9e9..81a40c1e 100644
  golang.org/x/sys v0.0.0-20180823144017-11551d06cbcc/go.mod h1:STP8DvDyc/dI5b8T5hshtkjS+E42TnysNCUPdjciGhY=
  golang.org/x/sys v0.0.0-20180830151530-49385e6e1522/go.mod h1:STP8DvDyc/dI5b8T5hshtkjS+E42TnysNCUPdjciGhY=
  golang.org/x/sys v0.0.0-20180905080454-ebe1bf3edb33/go.mod h1:STP8DvDyc/dI5b8T5hshtkjS+E42TnysNCUPdjciGhY=
-@@ -956,9 +937,7 @@ golang.org/x/sys v0.0.0-20210615035016-665e8c7367d1/go.mod h1:oPkhp1MJrh7nUepCBc
+@@ -957,9 +935,7 @@ golang.org/x/sys v0.0.0-20210615035016-665e8c7367d1/go.mod h1:oPkhp1MJrh7nUepCBc
  golang.org/x/sys v0.0.0-20210616094352-59db8d763f22/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
  golang.org/x/sys v0.0.0-20210630005230-0f9fa26af87c/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
  golang.org/x/sys v0.0.0-20210927094055-39ccf1dd6fa6/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
@@ -468,7 +446,7 @@ index 28cca9e9..81a40c1e 100644
  golang.org/x/sys v0.0.0-20220209214540-3681064d5158/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
  golang.org/x/sys v0.0.0-20220412211240-33da011f77ad/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
  golang.org/x/sys v0.0.0-20220503163025-988cb79eb6c6/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
-@@ -966,20 +945,21 @@ golang.org/x/sys v0.0.0-20220520151302-bc2c85ada10a/go.mod h1:oPkhp1MJrh7nUepCBc
+@@ -967,20 +943,21 @@ golang.org/x/sys v0.0.0-20220520151302-bc2c85ada10a/go.mod h1:oPkhp1MJrh7nUepCBc
  golang.org/x/sys v0.0.0-20220715151400-c0bba94af5f8/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
  golang.org/x/sys v0.0.0-20220722155257-8c9f86f7a55f/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
  golang.org/x/sys v0.0.0-20220811171246-fbc7d0a398ab/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
@@ -495,7 +473,7 @@ index 28cca9e9..81a40c1e 100644
  golang.org/x/text v0.0.0-20170915032832-14c0d48ead0c/go.mod h1:NqM8EUOU14njkJ3fqMW+pc6Ldnwhi/IjpwHt7yyuwOQ=
  golang.org/x/text v0.3.0/go.mod h1:NqM8EUOU14njkJ3fqMW+pc6Ldnwhi/IjpwHt7yyuwOQ=
  golang.org/x/text v0.3.1-0.20180807135948-17ff2d5776d2/go.mod h1:NqM8EUOU14njkJ3fqMW+pc6Ldnwhi/IjpwHt7yyuwOQ=
-@@ -990,11 +970,12 @@ golang.org/x/text v0.3.5/go.mod h1:5Zoc/QRtKVWzQhOtBMvqHzDpF6irO9z98xDceosuGiQ=
+@@ -991,11 +968,12 @@ golang.org/x/text v0.3.5/go.mod h1:5Zoc/QRtKVWzQhOtBMvqHzDpF6irO9z98xDceosuGiQ=
  golang.org/x/text v0.3.6/go.mod h1:5Zoc/QRtKVWzQhOtBMvqHzDpF6irO9z98xDceosuGiQ=
  golang.org/x/text v0.3.7/go.mod h1:u+2+/6zg+i71rQMx5EYifcz6MCKuco9NR6JIITiCfzQ=
  golang.org/x/text v0.3.8/go.mod h1:E6s5w1FMmriuDzIBO73fBruAKo1PCIq6d2Q6DHfQ8WQ=
@@ -510,7 +488,7 @@ index 28cca9e9..81a40c1e 100644
  golang.org/x/time v0.0.0-20181108054448-85acf8d2951c/go.mod h1:tRJNPiyCQ0inRvYxbN9jk5I+vvW/OXSQhTDSoE431IQ=
  golang.org/x/time v0.0.0-20190308202827-9d24e82272b4/go.mod h1:tRJNPiyCQ0inRvYxbN9jk5I+vvW/OXSQhTDSoE431IQ=
  golang.org/x/time v0.0.0-20191024005414-555d28b269f0/go.mod h1:tRJNPiyCQ0inRvYxbN9jk5I+vvW/OXSQhTDSoE431IQ=
-@@ -1057,7 +1038,6 @@ golang.org/x/tools v0.0.0-20210106214847-113979e3529a/go.mod h1:emZCQorbCU4vsT4f
+@@ -1058,7 +1036,6 @@ golang.org/x/tools v0.0.0-20210106214847-113979e3529a/go.mod h1:emZCQorbCU4vsT4f
  golang.org/x/tools v0.1.0/go.mod h1:xkSsbof2nBLbhDlRMhhhyNLN/zl3eTqcnHD5viDpcZ0=
  golang.org/x/tools v0.1.5/go.mod h1:o0xws9oXOQQZyjljx8fwUC0k7L1pTE6eaCbjGeHmOkk=
  golang.org/x/tools v0.1.6-0.20210726203631-07bc1bf47fb2/go.mod h1:o0xws9oXOQQZyjljx8fwUC0k7L1pTE6eaCbjGeHmOkk=
@@ -518,7 +496,7 @@ index 28cca9e9..81a40c1e 100644
  golang.org/x/tools v0.1.12/go.mod h1:hNGJHUnrk76NpqgfD5Aqm5Crs+Hm0VOH/i9J2+nxYbc=
  golang.org/x/tools v0.6.0/go.mod h1:Xwgl3UAJ/d3gWutnCtw505GrjyAbvKui8lOU390QaIU=
  golang.org/x/tools v0.21.1-0.20240508182429-e35e4ccd0d2d h1:vU5i/LfpvrRCpgM/VPfJLg5KjxD3E+hfT1SH+d9zLwg=
-@@ -1194,7 +1174,6 @@ gopkg.in/inf.v0 v0.9.1 h1:73M5CoZyi3ZLMOyDlQh031Cx6N9NDJ2Vvfl76EDAgDc=
+@@ -1195,7 +1172,6 @@ gopkg.in/inf.v0 v0.9.1 h1:73M5CoZyi3ZLMOyDlQh031Cx6N9NDJ2Vvfl76EDAgDc=
  gopkg.in/inf.v0 v0.9.1/go.mod h1:cWUDdTG/fYaXco+Dcufb5Vnc6Gp2YChqWtbxRZE0mXw=
  gopkg.in/ini.v1 v1.66.4 h1:SsAcf+mM7mRZo2nJNGt8mZCjG8ZRaNGMURJw7BsIST4=
  gopkg.in/ini.v1 v1.66.4/go.mod h1:pNLf8WUiyNEtQjuu5G5vTm06TEv9tsIgeAvK8hOrP4k=
@@ -58464,86 +58442,6 @@ index ac3b93b1..00000000
 -	}
 -	return cs
 -}
-diff --git a/vendor/github.com/golang-jwt/jwt/v4/parser.go b/vendor/github.com/golang-jwt/jwt/v4/parser.go
-index c0a6f692..9dd36e5a 100644
---- a/vendor/github.com/golang-jwt/jwt/v4/parser.go
-+++ b/vendor/github.com/golang-jwt/jwt/v4/parser.go
-@@ -36,19 +36,21 @@ func NewParser(options ...ParserOption) *Parser {
- 	return p
- }
- 
--// Parse parses, validates, verifies the signature and returns the parsed token.
--// keyFunc will receive the parsed token and should return the key for validating.
-+// Parse parses, validates, verifies the signature and returns the parsed token. keyFunc will
-+// receive the parsed token and should return the key for validating.
- func (p *Parser) Parse(tokenString string, keyFunc Keyfunc) (*Token, error) {
- 	return p.ParseWithClaims(tokenString, MapClaims{}, keyFunc)
- }
- 
--// ParseWithClaims parses, validates, and verifies like Parse, but supplies a default object implementing the Claims
--// interface. This provides default values which can be overridden and allows a caller to use their own type, rather
--// than the default MapClaims implementation of Claims.
-+// ParseWithClaims parses, validates, and verifies like Parse, but supplies a default object
-+// implementing the Claims interface. This provides default values which can be overridden and
-+// allows a caller to use their own type, rather than the default MapClaims implementation of
-+// Claims.
- //
--// Note: If you provide a custom claim implementation that embeds one of the standard claims (such as RegisteredClaims),
--// make sure that a) you either embed a non-pointer version of the claims or b) if you are using a pointer, allocate the
--// proper memory for it before passing in the overall claims, otherwise you might run into a panic.
-+// Note: If you provide a custom claim implementation that embeds one of the standard claims (such
-+// as RegisteredClaims), make sure that a) you either embed a non-pointer version of the claims or
-+// b) if you are using a pointer, allocate the proper memory for it before passing in the overall
-+// claims, otherwise you might run into a panic.
- func (p *Parser) ParseWithClaims(tokenString string, claims Claims, keyFunc Keyfunc) (*Token, error) {
- 	token, parts, err := p.ParseUnverified(tokenString, claims)
- 	if err != nil {
-@@ -85,12 +87,17 @@ func (p *Parser) ParseWithClaims(tokenString string, claims Claims, keyFunc Keyf
- 		return token, &ValidationError{Inner: err, Errors: ValidationErrorUnverifiable}
- 	}
- 
-+	// Perform validation
-+	token.Signature = parts[2]
-+	if err := token.Method.Verify(strings.Join(parts[0:2], "."), token.Signature, key); err != nil {
-+		return token, &ValidationError{Inner: err, Errors: ValidationErrorSignatureInvalid}
-+	}
-+
- 	vErr := &ValidationError{}
- 
- 	// Validate Claims
- 	if !p.SkipClaimsValidation {
- 		if err := token.Claims.Valid(); err != nil {
--
- 			// If the Claims Valid returned an error, check if it is a validation error,
- 			// If it was another error type, create a ValidationError with a generic ClaimsInvalid flag set
- 			if e, ok := err.(*ValidationError); !ok {
-@@ -98,22 +105,14 @@ func (p *Parser) ParseWithClaims(tokenString string, claims Claims, keyFunc Keyf
- 			} else {
- 				vErr = e
- 			}
-+			return token, vErr
- 		}
- 	}
- 
--	// Perform validation
--	token.Signature = parts[2]
--	if err = token.Method.Verify(strings.Join(parts[0:2], "."), token.Signature, key); err != nil {
--		vErr.Inner = err
--		vErr.Errors |= ValidationErrorSignatureInvalid
--	}
--
--	if vErr.valid() {
--		token.Valid = true
--		return token, nil
--	}
-+	// No errors so far, token is valid.
-+	token.Valid = true
- 
--	return token, vErr
-+	return token, nil
- }
- 
- // ParseUnverified parses the token but doesn't validate the signature.
 diff --git a/vendor/github.com/hashicorp/golang-lru/LICENSE b/vendor/github.com/hashicorp/golang-lru/LICENSE
 index be2cc4df..0e5d580e 100644
 --- a/vendor/github.com/hashicorp/golang-lru/LICENSE
@@ -59773,315 +59671,6 @@ index f7124eca..18b77584 100644
  // MarshalBinary interface implementation
  func (m *VersionInfo) MarshalBinary() ([]byte, error) {
  	if m == nil {
-diff --git a/vendor/github.com/prometheus/exporter-toolkit/web/tls_config.go b/vendor/github.com/prometheus/exporter-toolkit/web/tls_config.go
-index 328c5e0e..47bbca17 100644
---- a/vendor/github.com/prometheus/exporter-toolkit/web/tls_config.go
-+++ b/vendor/github.com/prometheus/exporter-toolkit/web/tls_config.go
-@@ -16,16 +16,18 @@ package web
- import (
- 	"crypto/tls"
- 	"crypto/x509"
-+	"errors"
- 	"fmt"
--	"io/ioutil"
- 	"net"
- 	"net/http"
-+	"os"
- 	"path/filepath"
- 
-+	"github.com/coreos/go-systemd/v22/activation"
- 	"github.com/go-kit/log"
- 	"github.com/go-kit/log/level"
--	"github.com/pkg/errors"
- 	config_util "github.com/prometheus/common/config"
-+	"golang.org/x/sync/errgroup"
- 	"gopkg.in/yaml.v2"
- )
- 
-@@ -34,47 +36,53 @@ var (
- )
- 
- type Config struct {
--	TLSConfig  TLSStruct                     `yaml:"tls_server_config"`
--	HTTPConfig HTTPStruct                    `yaml:"http_server_config"`
-+	TLSConfig  TLSConfig                     `yaml:"tls_server_config"`
-+	HTTPConfig HTTPConfig                    `yaml:"http_server_config"`
- 	Users      map[string]config_util.Secret `yaml:"basic_auth_users"`
- }
- 
--type TLSStruct struct {
-+type TLSConfig struct {
- 	TLSCertPath              string     `yaml:"cert_file"`
- 	TLSKeyPath               string     `yaml:"key_file"`
- 	ClientAuth               string     `yaml:"client_auth_type"`
- 	ClientCAs                string     `yaml:"client_ca_file"`
--	CipherSuites             []cipher   `yaml:"cipher_suites"`
--	CurvePreferences         []curve    `yaml:"curve_preferences"`
--	MinVersion               tlsVersion `yaml:"min_version"`
--	MaxVersion               tlsVersion `yaml:"max_version"`
-+	CipherSuites             []Cipher   `yaml:"cipher_suites"`
-+	CurvePreferences         []Curve    `yaml:"curve_preferences"`
-+	MinVersion               TLSVersion `yaml:"min_version"`
-+	MaxVersion               TLSVersion `yaml:"max_version"`
- 	PreferServerCipherSuites bool       `yaml:"prefer_server_cipher_suites"`
- }
- 
-+type FlagConfig struct {
-+	WebListenAddresses *[]string
-+	WebSystemdSocket   *bool
-+	WebConfigFile      *string
-+}
-+
- // SetDirectory joins any relative file paths with dir.
--func (t *TLSStruct) SetDirectory(dir string) {
-+func (t *TLSConfig) SetDirectory(dir string) {
- 	t.TLSCertPath = config_util.JoinDir(dir, t.TLSCertPath)
- 	t.TLSKeyPath = config_util.JoinDir(dir, t.TLSKeyPath)
- 	t.ClientCAs = config_util.JoinDir(dir, t.ClientCAs)
- }
- 
--type HTTPStruct struct {
-+type HTTPConfig struct {
- 	HTTP2  bool              `yaml:"http2"`
- 	Header map[string]string `yaml:"headers,omitempty"`
- }
- 
- func getConfig(configPath string) (*Config, error) {
--	content, err := ioutil.ReadFile(configPath)
-+	content, err := os.ReadFile(configPath)
- 	if err != nil {
- 		return nil, err
- 	}
- 	c := &Config{
--		TLSConfig: TLSStruct{
-+		TLSConfig: TLSConfig{
- 			MinVersion:               tls.VersionTLS12,
- 			MaxVersion:               tls.VersionTLS13,
- 			PreferServerCipherSuites: true,
- 		},
--		HTTPConfig: HTTPStruct{HTTP2: true},
-+		HTTPConfig: HTTPConfig{HTTP2: true},
- 	}
- 	err = yaml.UnmarshalStrict(content, c)
- 	if err == nil {
-@@ -92,8 +100,8 @@ func getTLSConfig(configPath string) (*tls.Config, error) {
- 	return ConfigToTLSConfig(&c.TLSConfig)
- }
- 
--// ConfigToTLSConfig generates the golang tls.Config from the TLSStruct config.
--func ConfigToTLSConfig(c *TLSStruct) (*tls.Config, error) {
-+// ConfigToTLSConfig generates the golang tls.Config from the TLSConfig struct.
-+func ConfigToTLSConfig(c *TLSConfig) (*tls.Config, error) {
- 	if c.TLSCertPath == "" && c.TLSKeyPath == "" && c.ClientAuth == "" && c.ClientCAs == "" {
- 		return nil, errNoTLSConfig
- 	}
-@@ -109,7 +117,7 @@ func ConfigToTLSConfig(c *TLSStruct) (*tls.Config, error) {
- 	loadCert := func() (*tls.Certificate, error) {
- 		cert, err := tls.LoadX509KeyPair(c.TLSCertPath, c.TLSKeyPath)
- 		if err != nil {
--			return nil, errors.Wrap(err, "failed to load X509KeyPair")
-+			return nil, fmt.Errorf("failed to load X509KeyPair: %w", err)
- 		}
- 		return &cert, nil
- 	}
-@@ -147,7 +155,7 @@ func ConfigToTLSConfig(c *TLSStruct) (*tls.Config, error) {
- 
- 	if c.ClientCAs != "" {
- 		clientCAPool := x509.NewCertPool()
--		clientCAFile, err := ioutil.ReadFile(c.ClientCAs)
-+		clientCAFile, err := os.ReadFile(c.ClientCAs)
- 		if err != nil {
- 			return nil, err
- 		}
-@@ -177,22 +185,54 @@ func ConfigToTLSConfig(c *TLSStruct) (*tls.Config, error) {
- 	return cfg, nil
- }
- 
--// ListenAndServe starts the server on the given address. Based on the file
--// tlsConfigPath, TLS or basic auth could be enabled.
--func ListenAndServe(server *http.Server, tlsConfigPath string, logger log.Logger) error {
--	listener, err := net.Listen("tcp", server.Addr)
--	if err != nil {
--		return err
-+// ServeMultiple starts the server on the given listeners. The FlagConfig is
-+// also passed on to Serve.
-+func ServeMultiple(listeners []net.Listener, server *http.Server, flags *FlagConfig, logger log.Logger) error {
-+	errs := new(errgroup.Group)
-+	for _, l := range listeners {
-+		l := l
-+		errs.Go(func() error {
-+			return Serve(l, server, flags, logger)
-+		})
-+	}
-+	return errs.Wait()
-+}
-+
-+// ListenAndServe starts the server on addresses given in WebListenAddresses in
-+// the FlagConfig or instead uses systemd socket activated listeners if
-+// WebSystemdSocket in the FlagConfig is true. The FlagConfig is also passed on
-+// to ServeMultiple.
-+func ListenAndServe(server *http.Server, flags *FlagConfig, logger log.Logger) error {
-+	if *flags.WebSystemdSocket {
-+		level.Info(logger).Log("msg", "Listening on systemd activated listeners instead of port listeners.")
-+		listeners, err := activation.Listeners()
-+		if err != nil {
-+			return err
-+		}
-+		if len(listeners) < 1 {
-+			return errors.New("no socket activation file descriptors found")
-+		}
-+		return ServeMultiple(listeners, server, flags, logger)
- 	}
--	defer listener.Close()
--	return Serve(listener, server, tlsConfigPath, logger)
-+	listeners := make([]net.Listener, 0, len(*flags.WebListenAddresses))
-+	for _, address := range *flags.WebListenAddresses {
-+		listener, err := net.Listen("tcp", address)
-+		if err != nil {
-+			return err
-+		}
-+		defer listener.Close()
-+		listeners = append(listeners, listener)
-+	}
-+	return ServeMultiple(listeners, server, flags, logger)
- }
- 
--// Server starts the server on the given listener. Based on the file
--// tlsConfigPath, TLS or basic auth could be enabled.
--func Serve(l net.Listener, server *http.Server, tlsConfigPath string, logger log.Logger) error {
-+// Server starts the server on the given listener. Based on the file path
-+// WebConfigFile in the FlagConfig, TLS or basic auth could be enabled.
-+func Serve(l net.Listener, server *http.Server, flags *FlagConfig, logger log.Logger) error {
-+	level.Info(logger).Log("msg", "Listening on", "address", l.Addr().String())
-+	tlsConfigPath := *flags.WebConfigFile
- 	if tlsConfigPath == "" {
--		level.Info(logger).Log("msg", "TLS is disabled.", "http2", false)
-+		level.Info(logger).Log("msg", "TLS is disabled.", "http2", false, "address", l.Addr().String())
- 		return server.Serve(l)
- 	}
- 
-@@ -225,10 +265,10 @@ func Serve(l net.Listener, server *http.Server, tlsConfigPath string, logger log
- 			server.TLSNextProto = make(map[string]func(*http.Server, *tls.Conn, http.Handler))
- 		}
- 		// Valid TLS config.
--		level.Info(logger).Log("msg", "TLS is enabled.", "http2", c.HTTPConfig.HTTP2)
-+		level.Info(logger).Log("msg", "TLS is enabled.", "http2", c.HTTPConfig.HTTP2, "address", l.Addr().String())
- 	case errNoTLSConfig:
- 		// No TLS config, back to plain HTTP.
--		level.Info(logger).Log("msg", "TLS is disabled.", "http2", false)
-+		level.Info(logger).Log("msg", "TLS is disabled.", "http2", false, "address", l.Addr().String())
- 		return server.Serve(l)
- 	default:
- 		// Invalid TLS config.
-@@ -269,9 +309,9 @@ func Validate(tlsConfigPath string) error {
- 	return err
- }
- 
--type cipher uint16
-+type Cipher uint16
- 
--func (c *cipher) UnmarshalYAML(unmarshal func(interface{}) error) error {
-+func (c *Cipher) UnmarshalYAML(unmarshal func(interface{}) error) error {
- 	var s string
- 	err := unmarshal((*string)(&s))
- 	if err != nil {
-@@ -279,27 +319,27 @@ func (c *cipher) UnmarshalYAML(unmarshal func(interface{}) error) error {
- 	}
- 	for _, cs := range tls.CipherSuites() {
- 		if cs.Name == s {
--			*c = (cipher)(cs.ID)
-+			*c = (Cipher)(cs.ID)
- 			return nil
- 		}
- 	}
- 	return errors.New("unknown cipher: " + s)
- }
- 
--func (c cipher) MarshalYAML() (interface{}, error) {
-+func (c Cipher) MarshalYAML() (interface{}, error) {
- 	return tls.CipherSuiteName((uint16)(c)), nil
- }
- 
--type curve tls.CurveID
-+type Curve tls.CurveID
- 
--var curves = map[string]curve{
--	"CurveP256": (curve)(tls.CurveP256),
--	"CurveP384": (curve)(tls.CurveP384),
--	"CurveP521": (curve)(tls.CurveP521),
--	"X25519":    (curve)(tls.X25519),
-+var curves = map[string]Curve{
-+	"CurveP256": (Curve)(tls.CurveP256),
-+	"CurveP384": (Curve)(tls.CurveP384),
-+	"CurveP521": (Curve)(tls.CurveP521),
-+	"X25519":    (Curve)(tls.X25519),
- }
- 
--func (c *curve) UnmarshalYAML(unmarshal func(interface{}) error) error {
-+func (c *Curve) UnmarshalYAML(unmarshal func(interface{}) error) error {
- 	var s string
- 	err := unmarshal((*string)(&s))
- 	if err != nil {
-@@ -312,7 +352,7 @@ func (c *curve) UnmarshalYAML(unmarshal func(interface{}) error) error {
- 	return errors.New("unknown curve: " + s)
- }
- 
--func (c *curve) MarshalYAML() (interface{}, error) {
-+func (c *Curve) MarshalYAML() (interface{}, error) {
- 	for s, curveid := range curves {
- 		if *c == curveid {
- 			return s, nil
-@@ -321,16 +361,16 @@ func (c *curve) MarshalYAML() (interface{}, error) {
- 	return fmt.Sprintf("%v", c), nil
- }
- 
--type tlsVersion uint16
-+type TLSVersion uint16
- 
--var tlsVersions = map[string]tlsVersion{
--	"TLS13": (tlsVersion)(tls.VersionTLS13),
--	"TLS12": (tlsVersion)(tls.VersionTLS12),
--	"TLS11": (tlsVersion)(tls.VersionTLS11),
--	"TLS10": (tlsVersion)(tls.VersionTLS10),
-+var tlsVersions = map[string]TLSVersion{
-+	"TLS13": (TLSVersion)(tls.VersionTLS13),
-+	"TLS12": (TLSVersion)(tls.VersionTLS12),
-+	"TLS11": (TLSVersion)(tls.VersionTLS11),
-+	"TLS10": (TLSVersion)(tls.VersionTLS10),
- }
- 
--func (tv *tlsVersion) UnmarshalYAML(unmarshal func(interface{}) error) error {
-+func (tv *TLSVersion) UnmarshalYAML(unmarshal func(interface{}) error) error {
- 	var s string
- 	err := unmarshal((*string)(&s))
- 	if err != nil {
-@@ -343,7 +383,7 @@ func (tv *tlsVersion) UnmarshalYAML(unmarshal func(interface{}) error) error {
- 	return errors.New("unknown TLS version: " + s)
- }
- 
--func (tv *tlsVersion) MarshalYAML() (interface{}, error) {
-+func (tv *TLSVersion) MarshalYAML() (interface{}, error) {
- 	for s, v := range tlsVersions {
- 		if *tv == v {
- 			return s, nil
-@@ -356,6 +396,6 @@ func (tv *tlsVersion) MarshalYAML() (interface{}, error) {
- // tlsConfigPath, TLS or basic auth could be enabled.
- //
- // Deprecated: Use ListenAndServe instead.
--func Listen(server *http.Server, tlsConfigPath string, logger log.Logger) error {
--	return ListenAndServe(server, tlsConfigPath, logger)
-+func Listen(server *http.Server, flags *FlagConfig, logger log.Logger) error {
-+	return ListenAndServe(server, flags, logger)
- }
-diff --git a/vendor/github.com/prometheus/exporter-toolkit/web/web-config.yml b/vendor/github.com/prometheus/exporter-toolkit/web/web-config.yml
-index 7d40d9b7..984aa0db 100644
---- a/vendor/github.com/prometheus/exporter-toolkit/web/web-config.yml
-+++ b/vendor/github.com/prometheus/exporter-toolkit/web/web-config.yml
-@@ -3,4 +3,3 @@
- tls_server_config:
-   cert_file: server.crt
-   key_file: server.key
--
 diff --git a/vendor/go.mongodb.org/mongo-driver/bson/bson.go b/vendor/go.mongodb.org/mongo-driver/bson/bson.go
 index 95ffc107..a0d81858 100644
 --- a/vendor/go.mongodb.org/mongo-driver/bson/bson.go
@@ -81487,7 +81076,7 @@ index 6a66aea5..2a7cf70d 100644
  this software without specific prior written permission.
  
 diff --git a/vendor/modules.txt b/vendor/modules.txt
-index c14c0460..db21509d 100644
+index 851558ee..f9d7cc93 100644
 --- a/vendor/modules.txt
 +++ b/vendor/modules.txt
 @@ -49,7 +49,7 @@ github.com/armon/go-metrics
@@ -81499,17 +81088,7 @@ index c14c0460..db21509d 100644
  ## explicit; go 1.11
  github.com/aws/aws-sdk-go/aws
  github.com/aws/aws-sdk-go/aws/awserr
-@@ -107,6 +107,9 @@ github.com/cncf/xds/go/xds/annotations/v3
- github.com/cncf/xds/go/xds/core/v3
- # github.com/containerd/log v0.1.0
- ## explicit; go 1.20
-+# github.com/coreos/go-systemd/v22 v22.4.0
-+## explicit; go 1.12
-+github.com/coreos/go-systemd/v22/activation
- # github.com/davecgh/go-spew v1.1.1
- ## explicit
- github.com/davecgh/go-spew/spew
-@@ -196,7 +199,7 @@ github.com/go-logr/logr/funcr
+@@ -196,7 +196,7 @@ github.com/go-logr/logr/funcr
  # github.com/go-logr/stdr v1.2.2
  ## explicit; go 1.16
  github.com/go-logr/stdr
@@ -81518,7 +81097,7 @@ index c14c0460..db21509d 100644
  ## explicit; go 1.13
  github.com/go-openapi/analysis
  github.com/go-openapi/analysis/internal/debug
-@@ -205,7 +208,7 @@ github.com/go-openapi/analysis/internal/flatten/operations
+@@ -205,7 +205,7 @@ github.com/go-openapi/analysis/internal/flatten/operations
  github.com/go-openapi/analysis/internal/flatten/replace
  github.com/go-openapi/analysis/internal/flatten/schutils
  github.com/go-openapi/analysis/internal/flatten/sortref
@@ -81527,7 +81106,7 @@ index c14c0460..db21509d 100644
  ## explicit; go 1.14
  github.com/go-openapi/errors
  # github.com/go-openapi/jsonpointer v0.19.6
-@@ -215,27 +218,24 @@ github.com/go-openapi/jsonpointer
+@@ -215,27 +215,24 @@ github.com/go-openapi/jsonpointer
  ## explicit; go 1.13
  github.com/go-openapi/jsonreference
  github.com/go-openapi/jsonreference/internal
@@ -81559,16 +81138,7 @@ index c14c0460..db21509d 100644
  # github.com/go-zookeeper/zk v1.0.3
  ## explicit; go 1.13
  github.com/go-zookeeper/zk
-@@ -245,7 +245,7 @@ github.com/gogo/protobuf/gogoproto
- github.com/gogo/protobuf/proto
- github.com/gogo/protobuf/protoc-gen-gogo/descriptor
- github.com/gogo/protobuf/sortkeys
--# github.com/golang-jwt/jwt/v4 v4.5.0
-+# github.com/golang-jwt/jwt/v4 v4.5.1
- ## explicit; go 1.16
- github.com/golang-jwt/jwt/v4
- # github.com/golang/glog v1.1.0 => github.com/kubermatic/glog-gokit v0.0.0-20181129151237-8ab7e4c2d352
-@@ -372,7 +372,7 @@ github.com/hashicorp/go-retryablehttp
+@@ -372,7 +369,7 @@ github.com/hashicorp/go-retryablehttp
  # github.com/hashicorp/go-rootcerts v1.0.2
  ## explicit; go 1.12
  github.com/hashicorp/go-rootcerts
@@ -81577,7 +81147,7 @@ index c14c0460..db21509d 100644
  ## explicit; go 1.12
  github.com/hashicorp/golang-lru/simplelru
  # github.com/hashicorp/nomad/api v0.0.0-20230404200950-434f7a1745c6
-@@ -470,8 +470,8 @@ github.com/pkg/errors
+@@ -470,8 +467,8 @@ github.com/pkg/errors
  # github.com/pmezard/go-difflib v1.0.0
  ## explicit
  github.com/pmezard/go-difflib/difflib
@@ -81588,18 +81158,16 @@ index c14c0460..db21509d 100644
  github.com/prometheus/alertmanager/api/v2/models
  # github.com/prometheus/client_golang v1.15.1-0.20230416124134-0392dffd0e08
  ## explicit; go 1.17
-@@ -499,8 +499,8 @@ github.com/prometheus/common/version
+@@ -499,7 +496,7 @@ github.com/prometheus/common/version
  # github.com/prometheus/common/sigv4 v0.1.0
  ## explicit; go 1.15
  github.com/prometheus/common/sigv4
 -# github.com/prometheus/exporter-toolkit v0.7.3
--## explicit; go 1.14
-+# github.com/prometheus/exporter-toolkit v0.8.2
-+## explicit; go 1.17
++# github.com/prometheus/exporter-toolkit v0.8.2 => github.com/prometheus/exporter-toolkit v0.7.3
+ ## explicit; go 1.14
  github.com/prometheus/exporter-toolkit/web
  # github.com/prometheus/procfs v0.9.0
- ## explicit; go 1.18
-@@ -612,8 +612,8 @@ github.com/stretchr/testify/require
+@@ -612,8 +609,8 @@ github.com/stretchr/testify/require
  # github.com/vultr/govultr/v2 v2.17.2
  ## explicit; go 1.17
  github.com/vultr/govultr/v2
@@ -81610,7 +81178,7 @@ index c14c0460..db21509d 100644
  go.mongodb.org/mongo-driver/bson
  go.mongodb.org/mongo-driver/bson/bsoncodec
  go.mongodb.org/mongo-driver/bson/bsonoptions
-@@ -673,7 +673,7 @@ go.uber.org/atomic
+@@ -673,7 +670,7 @@ go.uber.org/atomic
  ## explicit; go 1.13
  go.uber.org/goleak
  go.uber.org/goleak/internal/stack
@@ -81619,7 +81187,7 @@ index c14c0460..db21509d 100644
  ## explicit; go 1.20
  golang.org/x/crypto/bcrypt
  golang.org/x/crypto/blowfish
-@@ -692,7 +692,7 @@ golang.org/x/exp/maps
+@@ -692,7 +689,7 @@ golang.org/x/exp/maps
  # golang.org/x/mod v0.17.0
  ## explicit; go 1.18
  golang.org/x/mod/semver
@@ -81628,7 +81196,7 @@ index c14c0460..db21509d 100644
  ## explicit; go 1.18
  golang.org/x/net/bpf
  golang.org/x/net/context
-@@ -721,19 +721,19 @@ golang.org/x/oauth2/google/internal/externalaccount
+@@ -721,19 +718,19 @@ golang.org/x/oauth2/google/internal/externalaccount
  golang.org/x/oauth2/internal
  golang.org/x/oauth2/jws
  golang.org/x/oauth2/jwt
@@ -81652,3 +81220,8 @@ index c14c0460..db21509d 100644
  ## explicit; go 1.18
  golang.org/x/text/secure/bidirule
  golang.org/x/text/transform
+@@ -1164,3 +1161,4 @@ sigs.k8s.io/yaml
+ # github.com/prometheus/prometheus => github.com/jacksontj/prometheus v1.8.1-0.20230330151148-3f6bd0d411b6
+ # github.com/golang/glog => github.com/kubermatic/glog-gokit v0.0.0-20181129151237-8ab7e4c2d352
+ # k8s.io/klog => github.com/simonpasquier/klog-gokit/v3 v3.0.0
++# github.com/prometheus/exporter-toolkit => github.com/prometheus/exporter-toolkit v0.7.3
