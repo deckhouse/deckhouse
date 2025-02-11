@@ -115,6 +115,7 @@ Scheme of Deckhouse installation in a private environment:<br />
    - [supported OS](/products/kubernetes-platform/documentation/v1/supported_versions.html)
    - Linux kernel version >= `5.7`
    - **Unique hostname** within servers (virtual machines) of the cluster
+   - the presence of one of the following package managers: (`apt`/`apt-get`, `yum`, or `rpm`).  **Important** — RedOS does not include `yum` by default, so you may need to install it separately if required.
    {% if page.platform_code == "bm-private" %}
    - access to a proxy registry or to a private container image registry containing Deckhouse images
    - access to the default OS package repositories (via a proxy server or an internal package repository server);
