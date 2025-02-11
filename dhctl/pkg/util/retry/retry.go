@@ -112,7 +112,7 @@ func (l *Loop) WithShowError(flag bool) *Loop {
 func (l *Loop) Run(task func() error) error {
 	prefix := ""
 	if !l.interruptable {
-		prefix = fmt.Sprintf("[%d] \"%s\" ", l.startID, l.name)
+		prefix = fmt.Sprintf("[%d][%s] ", l.startID, l.name)
 	}
 
 	setupTests(&l.attemptsQuantity, &l.waitTime)
