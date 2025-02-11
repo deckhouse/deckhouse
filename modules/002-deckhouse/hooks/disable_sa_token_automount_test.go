@@ -52,6 +52,12 @@ metadata:
   namespace: d8-system
 ---
 apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: deckhouse
+  namespace: d8-system
+---
+apiVersion: v1
 kind: Namespace
 metadata:
   labels:
@@ -67,6 +73,7 @@ status:
 ---
 apiVersion: v1
 kind: ServiceAccount
+automountServiceAccountToken: true
 metadata:
   name: default
   namespace: kube-system
@@ -114,9 +121,17 @@ automountServiceAccountToken: true
 		})
 		It("Should set automountServiceAccountToken to false on ns with label heritage set to deckhouse", func() {
 			Expect(f).To(ExecuteSuccessfully())
+			// Check if automountServiceAccountToken field for d8-system/default exists and set to 'false'
+			Expect(f.KubernetesResource("ServiceAccount", "d8-system", "default").Field(`automountServiceAccountToken`).Exists()).To(BeTrue())
 			Expect(f.KubernetesResource("ServiceAccount", "d8-system", "default").Field(`automountServiceAccountToken`).Bool()).To(Equal(false))
+			// Check if automountServiceAccountToken field for d8-system/deckhouse not exists
+			Expect(f.KubernetesResource("ServiceAccount", "d8-system", "deckhouse").Field(`automountServiceAccountToken`).Exists()).To(BeFalse())
+			// Check if automountServiceAccountToken field for kube-system/default is set to 'false'
 			Expect(f.KubernetesResource("ServiceAccount", "kube-system", "default").Field(`automountServiceAccountToken`).Bool()).To(Equal(false))
+			// Check if automountServiceAccountToken field for test1/default not exists
 			Expect(f.KubernetesResource("ServiceAccount", "test1", "default").Field(`automountServiceAccountToken`).Exists()).To(BeFalse())
+			// Check if automountServiceAccountToken field for test2/default exists and set to 'true'
+			Expect(f.KubernetesResource("ServiceAccount", "test2", "default").Field(`automountServiceAccountToken`).Exists()).To(BeTrue())
 			Expect(f.KubernetesResource("ServiceAccount", "test2", "default").Field(`automountServiceAccountToken`).Bool()).To(Equal(true))
 		})
 	})
