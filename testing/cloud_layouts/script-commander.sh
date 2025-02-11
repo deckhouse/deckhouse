@@ -264,10 +264,10 @@ payload="{
         \"prefix\": \"a${PREFIX}\",
         \"kubernetesVersion\": \"${KUBERNETES_VERSION}\",
         \"defaultCRI\": \"${CRI}\",
-        \"masterCount\": ${MASTERS_COUNT},
+        \"masterCount\": \"${MASTERS_COUNT}\",
         \"cloudId\": \"${CLOUD_ID}\",
         \"folderId\": \"${FOLDER_ID}\",
-        \"serviceAccountJson\": ${SERVICE_ACCOUNT_JSON},
+        \"serviceAccountJson\": \"${SERVICE_ACCOUNT_JSON}\",
         \"sshPrivateKey\": \"${SSH_KEY}\",
         \"sshUser\": \"${ssh_user}\",
         \"deckhouseDockercfg\": \"${DECKHOUSE_DOCKERCFG}\"
