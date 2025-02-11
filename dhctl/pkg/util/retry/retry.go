@@ -17,6 +17,7 @@ package retry
 import (
 	"errors"
 	"fmt"
+	"math/rand"
 	"time"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
@@ -53,6 +54,7 @@ type Loop struct {
 	logger           log.Logger
 	interruptable    bool
 	showError        bool
+	startID          int
 }
 
 // NewLoop create Loop with features:
@@ -66,6 +68,7 @@ func NewLoop(name string, attemptsQuantity int, wait time.Duration) *Loop {
 		logger:           log.GetDefaultLogger(),
 		interruptable:    true,
 		showError:        true,
+		startID:          rand.Int(),
 	}
 }
 
@@ -81,6 +84,7 @@ func NewSilentLoop(name string, attemptsQuantity int, wait time.Duration) *Loop 
 		// - this loop is not interruptable by the signal watcher in tomb package.
 		interruptable: false,
 		showError:     true,
+		startID:       rand.Int(),
 	}
 }
 
@@ -106,6 +110,11 @@ func (l *Loop) WithShowError(flag bool) *Loop {
 
 // Run retries a task function until it succeeded or break task retries if break predicate returns true
 func (l *Loop) Run(task func() error) error {
+	prefix := ""
+	if !l.interruptable {
+		prefix = fmt.Sprintf("[%d] ", l.startID)
+	}
+
 	setupTests(&l.attemptsQuantity, &l.waitTime)
 
 	loopBody := func() error {
@@ -119,24 +128,21 @@ func (l *Loop) Run(task func() error) error {
 			// Run task and return if everything is ok.
 			err = task()
 			if err == nil {
-				l.logger.LogSuccess("Succeeded!\n")
+				l.logger.LogSuccess(prefix + "Succeeded!\n")
 				return nil
 			}
 
 			if l.breakPredicate != nil && l.breakPredicate(err) {
-				l.logger.LogDebugF("Client break loop with %v\n", err)
+				l.logger.LogDebugF(prefix+"Client break loop with %v\n", err)
 				return err
 			}
 
-			l.logger.LogFailRetry(fmt.Sprintf(attemptMessage, i, l.attemptsQuantity, l.name, l.waitTime))
+			l.logger.LogFailRetry(fmt.Sprintf(prefix+attemptMessage, i, l.attemptsQuantity, l.name, l.waitTime))
 			errorMsg := "\t%v\n\n"
 			if l.showError {
 				errorMsg = "\tError: %v\n\n"
 			}
-			l.logger.LogInfoF(errorMsg, err)
-			if !l.interruptable {
-				l.logger.LogDebugF(errorMsg, err)
-			}
+			l.logger.LogInfoF(prefix+errorMsg, err)
 
 			// Do not waitTime after the last iteration.
 			if i < l.attemptsQuantity {
