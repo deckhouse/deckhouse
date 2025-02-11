@@ -948,6 +948,72 @@ jobs:
 
     # </template: web_build_template>
 
+  security_scan_images:
+    name: Security scan images
+    if: contains(github.event.pull_request.labels.*.name, 'security/rootless')
+    runs-on: [ self-hosted, regular, selectel ]
+    needs:
+      - git_info
+      - pull_request_info
+      - build_deckhouse
+    # <template: security_scan_template>
+    steps:
+
+      # <template: checkout_full_step>
+      - name: Checkout sources
+        uses: actions/checkout@v3.5.2
+        with:
+          fetch-depth: 0
+          ref: ${{ needs.pull_request_info.outputs.ref }}
+      # </template: checkout_full_step>
+
+      # <template: login_dev_registry_step>
+      - name: Check dev registry credentials
+        id: check_dev_registry
+        env:
+          HOST: ${{secrets.DECKHOUSE_DEV_REGISTRY_HOST}}
+        run: |
+          if [[ -n $HOST ]]; then
+            echo "has_credentials=true" >> $GITHUB_OUTPUT
+            echo "web_registry_path=${{secrets.DECKHOUSE_DEV_REGISTRY_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
+          fi
+      - name: Login to dev registry
+        uses: docker/login-action@v2.1.0
+        if: ${{ steps.check_dev_registry.outputs.has_credentials == 'true' }}
+        with:
+          registry: ${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}
+          username: ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
+          password: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
+          logout: false
+      # </template: login_dev_registry_step>
+
+      # <template: link_bin_step>
+      - name: Link binary cache
+        id: link_bin_step
+        run: |
+          ln -s ~/deckhouse-bin-cache bin
+      # </template: link_bin_step>
+      - name: Running default user validation on ${{env.TAG}}
+        env:
+          TAG: ${{needs.pull_request_info.outputs.ref_slug}}
+          IMAGE: "dev-registry.deckhouse.io/sys/deckhouse-oss"
+          TRIVY_TOKEN: ${{secrets.FOX_ACCESS_TOKEN}}
+          DECKHOUSE_PRIVATE_REPO: ${{secrets.DECKHOUSE_PRIVATE_REPO}}
+          TRIVY_PROJECT_ID: "2181"
+        run: |
+          echo "⚓️ 🏎 Running default user validation on ${TAG}..."
+          make cve-base-images-check-default-user
+
+      # <template: unlink_bin_step>
+      - name: Unlink binary cache
+        id: unlink_bin_step
+        if: always()
+        run: |
+          rm bin
+      # </template: unlink_bin_step>
+    # </template: security_scan_template>
+
+
   tests:
     if: ${{ needs.pull_request_info.outputs.changes_not_markdown == 'true' }}
     name: Tests

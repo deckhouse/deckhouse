@@ -139,6 +139,16 @@ jobs:
       - pull_request_info
 {!{ tmpl.Exec "web_build_template" (slice $ctx "main" "dev") | strings.Indent 4 }!}
 
+  security_scan_images:
+    name: Security scan images
+    if: contains(github.event.pull_request.labels.*.name, 'security/rootless')
+    runs-on: [ self-hosted, regular, selectel ]
+    needs:
+      - git_info
+      - pull_request_info
+      - build_deckhouse
+{!{ tmpl.Exec "security_scan_template" (slice $ctx "pr") | strings.Indent 4 }!}
+
   tests:
     if: ${{ needs.pull_request_info.outputs.changes_not_markdown == 'true' }}
     name: Tests

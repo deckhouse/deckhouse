@@ -1,0 +1,25 @@
+{!{ define "security_scan_template" }!}
+{!{- $ctx := index . 0 -}!}
+{!{- $scanType := index . 1 -}!}
+# <template: security_scan_template>
+steps:
+  {!{ tmpl.Exec "checkout_full_step" $ctx | strings.Indent 2 }!}
+  {!{ tmpl.Exec "login_dev_registry_step" $ctx | strings.Indent 2 }!}
+  {!{ tmpl.Exec "link_bin_step"                     | strings.Indent 2 }!}
+  - name: Running default user validation on ${{env.TAG}}
+    env:
+{!{- if (eq $scanType "pr") }!}
+      TAG: ${{needs.pull_request_info.outputs.ref_slug}}
+{!{- else }!}
+      TAG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
+{!{- end }!}
+      IMAGE: "dev-registry.deckhouse.io/sys/deckhouse-oss"
+      TRIVY_TOKEN: ${{secrets.FOX_ACCESS_TOKEN}}
+      DECKHOUSE_PRIVATE_REPO: ${{secrets.DECKHOUSE_PRIVATE_REPO}}
+      TRIVY_PROJECT_ID: "2181"
+    run: |
+      echo "⚓️ 🏎 Running default user validation on ${TAG}..."
+      make cve-base-images-check-default-user
+  {!{ tmpl.Exec "unlink_bin_step"                   | strings.Indent 2 }!}
+# </template: security_scan_template>
+{!{ end }!}

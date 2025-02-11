@@ -1042,8 +1042,8 @@ module.exports.runWorkflowForPullRequest = async ({ github, context, core, ref }
     }
     if (labelType === 'security') {
         if (labelInfo.security === 'rootless' && event.action === 'labeled') {
-          command.workflows = ['rootless-images-scan.yml'];
-          command.triggerWorkflowDispatch = true;
+          command.workflows = ['build-and-test_dev.yml'];
+          command.rerunWorkflow = true;
         }
     }
   } finally {
