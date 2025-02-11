@@ -1,0 +1,28 @@
+linter-settings:
+  oss:
+    disable: true
+  container:
+    exclude-rules:
+      read-only-root-filesystem:
+        - kind: DaemonSet
+          name: d8-kube-proxy
+          container: kube-proxy
+        - kind: DaemonSet
+          name: d8-kube-proxy
+          container: nodeport-bind-address
+  probes:
+    exclude-rules:
+      liveness:
+        - kind: DaemonSet
+          name: d8-kube-proxy
+          container: kube-proxy
+        - kind: DaemonSet
+          name: d8-kube-proxy
+          container: kube-rbac-proxy
+      readiness:
+        - kind: DaemonSet
+          name: d8-kube-proxy
+          container: kube-proxy
+        - kind: DaemonSet
+          name: d8-kube-proxy
+          container: kube-rbac-proxy

@@ -1,0 +1,4 @@
+linter-settings:
+  monitoring:
+    monitoring-rules:
+      disable: true

@@ -1,0 +1,23 @@
+linter-settings:
+  oss:
+    disable: true
+  container:
+    exclude-rules:
+      read-only-root-filesystem:
+        - kind: DaemonSet
+          name: simple-bridge
+          container: simple-bridge
+  probes:
+    exclude-rules:
+      liveness:
+        - kind: DaemonSet
+          name: flannel
+          container: simple-bridge
+      readiness:
+        - kind: DaemonSet
+          name: flannel
+          container: simple-bridge
+  license:
+    exclude-rules:
+      files:
+        - /images/simple-bridge/rootfs/bin/simple-bridge

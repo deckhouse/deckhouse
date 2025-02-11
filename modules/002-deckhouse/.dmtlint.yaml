@@ -1,0 +1,25 @@
+linter-settings:
+  container:
+    exclude-rules:
+      read-only-root-filesystem:
+        - kind: Deployment
+          name: deckhouse
+          container: init-downloaded-modules
+  rbac:
+    exclude-rules:
+      wildcards:
+        - kind: ClusterRole
+          name: d8:deckhouse:webhook-handler
+      placement:
+        - kind: ClusterRole
+          name: d8:rbac-proxy
+  probes:
+    exclude-rules:
+      liveness:
+        - kind: Deployment
+          name: deckhouse
+          container: deckhouse
+      readiness:
+        - kind: Deployment
+          name: webhook-handler
+          container: handler
