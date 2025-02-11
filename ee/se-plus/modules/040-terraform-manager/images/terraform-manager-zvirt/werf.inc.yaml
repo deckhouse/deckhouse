@@ -41,7 +41,6 @@ shell:
   {{- include "alpine packages proxy" . | nindent 2 }}
   - apk add --no-cache make bash
   install:
-  - mkdir /src
   - export GOPROXY={{ $.GOPROXY }}
   - cd /src
   - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 make build LDFLAGS="-s -w -extldflags \"-static\" -X main.version={{ .TF.ovirt.version }} -X main.commit=00000000"
