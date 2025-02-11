@@ -47,3 +47,4 @@ data:
       retention_enabled: true
       retention_delete_delay: 1h
       retention_delete_worker_count: 150
+      force_expiration_threshold: {{ .Values.maxDiskUsageMegabytes }}MB

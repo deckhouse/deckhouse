@@ -37,6 +37,13 @@ properties:
       and `diskSizeGigabytes` values.
     x-doc-default: 2
     default: 2
+  maxDiskUsageMegabytes:
+    type: integer
+    description: >
+      This value will be used as a threshold to start deleting old chunks during Loki's compaction.
+      Default value is 0 (keep old chunks)
+    x-doc-default: 0
+    default: 0
   retentionPeriodHours:
     type: integer
     description: |

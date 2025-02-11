@@ -40,7 +40,7 @@ index 05c057ea38a4af597eadb9f91ffe82156711fe5f..d94d8b00c535e5b370dbea6283190f82
  //
  // We're preparing to unify the querier:engine:timeout and querier:query_timeout into a single timeout named limits_config:query_timeout.
 diff --git a/pkg/storage/stores/indexshipper/compactor/compactor.go b/pkg/storage/stores/indexshipper/compactor/compactor.go
-index 3c8b85ec3a503f4e55e6d9f9519d50be095565e4..782a640199a5467c532fba2077644b236cdedfd4 100644
+index 3c8b85ec3a503f4e55e6d9f9519d50be095565e4..4b3fd25e60e856d4e4ca2b9270b43d5605951dfc 100644
 --- a/pkg/storage/stores/indexshipper/compactor/compactor.go
 +++ b/pkg/storage/stores/indexshipper/compactor/compactor.go
 @@ -34,6 +34,10 @@ import (
@@ -60,7 +60,7 @@ index 3c8b85ec3a503f4e55e6d9f9519d50be095565e4..782a640199a5467c532fba2077644b23
  	DeletionMode string `yaml:"deletion_mode" doc:"deprecated|description=Use deletion_mode per tenant configuration instead."`
 +
 +	ForceExpirationThresholdDir    string                `yaml:"force_expiration_threshold_dir"`
-+	ForceExpirationThreshold       util_flagext.ByteSize `yaml:"force_expiration_threshold_bytes"`
++	ForceExpirationThreshold       util_flagext.ByteSize `yaml:"force_expiration_threshold"`
 +	ForceExpirationApproxChunkSize util_flagext.ByteSize `yaml:"__" doc:"hidden"`
  }
 
@@ -110,10 +110,10 @@ index 3c8b85ec3a503f4e55e6d9f9519d50be095565e4..782a640199a5467c532fba2077644b23
  			level.Error(util_log.Logger).Log("msg", "failed to run compaction", "err", err)
 diff --git a/pkg/storage/stores/indexshipper/compactor/force_expiration.go b/pkg/storage/stores/indexshipper/compactor/force_expiration.go
 new file mode 100644
-index 0000000000000000000000000000000000000000..3ca63099c270e469ce48b2fa6bbd499431939a67
+index 0000000000000000000000000000000000000000..30d12421fa6e18fc839a6a594638527a5b7beeee
 --- /dev/null
 +++ b/pkg/storage/stores/indexshipper/compactor/force_expiration.go
-@@ -0,0 +1,327 @@
+@@ -0,0 +1,336 @@
 +package compactor
 +
 +import (
@@ -147,13 +147,10 @@ index 0000000000000000000000000000000000000000..3ca63099c270e469ce48b2fa6bbd4994
 +}
 +
 +func newForceExpirationHook(c *Compactor, r prometheus.Registerer) (*forceExpirationHook, error) {
-+	if c.cfg.ForceExpirationApproxChunkSize.Val() == 0 {
++	if c.cfg.ForceExpirationThreshold.Val() > 0 && c.cfg.ForceExpirationApproxChunkSize.Val() == 0 {
 +		return nil, fmt.Errorf("force expiration approx chunk size not set")
 +	}
-+	if c.cfg.ForceExpirationThreshold.Val() == 0 {
-+		return nil, fmt.Errorf("force expiration threshold not set")
-+	}
-+	if c.cfg.ForceExpirationThresholdDir == "" {
++	if c.cfg.ForceExpirationThreshold.Val() > 0 && c.cfg.ForceExpirationThresholdDir == "" {
 +		return nil, fmt.Errorf("force expiration threshold dir not set")
 +	}
 +	h := &forceExpirationHook{
@@ -169,6 +166,10 @@ index 0000000000000000000000000000000000000000..3ca63099c270e469ce48b2fa6bbd4994
 +}
 +
 +func (h *forceExpirationHook) apply(ctx context.Context) {
++	if h.dirUsageThreshold.Val() == 0 {
++		return
++	}
++
 +	exceeded, bytesToDelete := h.isDirUsageThresholdExceeded()
 +	if !exceeded {
 +		return
@@ -252,7 +253,9 @@ index 0000000000000000000000000000000000000000..3ca63099c270e469ce48b2fa6bbd4994
 +	}
 +
 +	affected := h.cm.UpdateChunkIds(expiredChunks)
-+	h.m.expiredChunksCount.Add(float64(affected))
++
++	h.m.expiredChunksCount.Add(float64(len(expiredChunks)))
++	h.m.expiredChunksIncrement.Add(float64(affected))
 +	h.m.expiredChunksSizeBytes.Add(float64(expiredChunksSize))
 +
 +	_ = level.Info(util_log.Logger).Log(
@@ -404,6 +407,7 @@ index 0000000000000000000000000000000000000000..3ca63099c270e469ce48b2fa6bbd4994
 +
 +type forceExpirationHookMetrics struct {
 +	expiredChunksCount         prometheus.Counter
++	expiredChunksIncrement     prometheus.Counter
 +	expiredChunksSizeBytes     prometheus.Counter
 +	dirUsageThresholdBytes     *prometheus.GaugeVec
 +	dirUsageBytes              *prometheus.GaugeVec
@@ -416,6 +420,11 @@ index 0000000000000000000000000000000000000000..3ca63099c270e469ce48b2fa6bbd4994
 +			Namespace: "force_expiration_hook",
 +			Name:      "expired_chunks_count",
 +			Help:      "Number of currently expired chunks.",
++		}),
++		expiredChunksIncrement: promauto.With(r).NewCounter(prometheus.CounterOpts{
++			Namespace: "force_expiration_hook",
++			Name:      "expired_chunks_increment",
++			Help:      "Number of expired chunks since last iteration.",
 +		}),
 +		expiredChunksSizeBytes: promauto.With(r).NewCounter(prometheus.CounterOpts{
 +			Namespace: "force_expiration_hook",
