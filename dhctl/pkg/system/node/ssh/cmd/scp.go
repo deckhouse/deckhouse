@@ -94,7 +94,7 @@ func (s *SCP) SCP() *SCP {
 		"-o", "GlobalKnownHostsFile=/dev/null",
 		"-o", "PasswordAuthentication=no",
 		"-o", "ServerAliveInterval=1",
-		"-o", "ServerAliveCountMax=3600 ",
+		"-o", "ServerAliveCountMax=3600",
 		"-o", "ConnectTimeout=15",
 	}
 
