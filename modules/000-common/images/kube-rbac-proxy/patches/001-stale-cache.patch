@@ -128,10 +128,10 @@ index 00000000..08a77ca9
 +func (*fakeCache) Remove(_ string)                              {}
 +func (*fakeCache) Get(_ string) (*authenticator.Response, bool) { return nil, false }
 diff --git a/pkg/proxy/proxy.go b/pkg/proxy/proxy.go
-index aaac103c..3b5bba19 100644
+index aaac103c..f30567ab 100644
 --- a/pkg/proxy/proxy.go
 +++ b/pkg/proxy/proxy.go
-@@ -18,10 +18,12 @@ package proxy
+@@ -18,10 +18,13 @@ package proxy
  
  import (
  	"bytes"
@@ -139,12 +139,13 @@ index aaac103c..3b5bba19 100644
  	"fmt"
  	"net/http"
  	"strings"
++	"sync"
  	"text/template"
 +	"time"
  
  	"github.com/brancz/kube-rbac-proxy/pkg/authn"
  	"github.com/brancz/kube-rbac-proxy/pkg/authz"
-@@ -32,6 +34,12 @@ import (
+@@ -32,6 +35,13 @@ import (
  	"k8s.io/klog/v2"
  )
  
@@ -152,12 +153,13 @@ index aaac103c..3b5bba19 100644
 +var (
 +	tokenPrefix       = "token:"
 +	certificatePrefix = "certificate:"
++	maxBackoffDelay = 5 * time.Minute
 +)
 +
  // Config holds proxy authorization and authentication settings
  type Config struct {
  	Authentication *authn.AuthnConfig
-@@ -45,46 +53,73 @@ type kubeRBACProxy struct {
+@@ -45,38 +55,96 @@ type kubeRBACProxy struct {
  	authorizer.Authorizer
  	// authorizerAttributesGetter implements retrieving authorization attributes for a respective request.
  	authorizerAttributesGetter *krpAuthorizerAttributesGetter
@@ -166,6 +168,10 @@ index aaac103c..3b5bba19 100644
  	Config Config
 +	// StaleCache for caching auth response
 +	StaleCache authResponseCache
++
++	backoffMu           sync.Mutex
++    backoffUntil        time.Time
++    currentBackoffDelay time.Duration
  }
  
 -func new(authenticator authenticator.Request, authorizer authorizer.Authorizer, config Config) *kubeRBACProxy {
@@ -177,6 +183,7 @@ index aaac103c..3b5bba19 100644
 +		authorizerAttributesGetter: newKubeRBACProxyAuthorizerAttributesGetter(config.Authorization),
 +		Config:                     config,
 +		StaleCache:                 &fakeCache{},
++		currentBackoffDelay: 3 * time.Second,
 +	}
 +	if staleCacheTTL > 0*time.Second {
 +		proxy.StaleCache = newLRUTokenCache(staleCacheTTL)
@@ -201,38 +208,73 @@ index aaac103c..3b5bba19 100644
  	if len(h.Config.Authentication.Token.Audiences) > 0 {
  		ctx = authenticator.WithAudiences(ctx, h.Config.Authentication.Token.Audiences)
 -		req = req.WithContext(ctx)
- 	}
-+	req = req.WithContext(ctx)
-+
-+	userIdentity := tokenPrefix + getTokenFromRequest(req)
- 
- 	// Authenticate
- 	u, ok, err := h.AuthenticateRequest(req)
- 	if err != nil {
+-	}
+-
+-	// Authenticate
+-	u, ok, err := h.AuthenticateRequest(req)
+-	if err != nil {
 -		klog.Errorf("Unable to authenticate the request due to an error: %v", err)
 -		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 -		return false
-+		u, ok = h.StaleCache.Get(userIdentity)
-+		if !ok {
-+			klog.Errorf("Unable to authenticate the request due to an error: %v", err)
-+			http.Error(w, "Unauthorized", http.StatusUnauthorized)
-+			return false
-+		}
  	}
- 	if !ok {
- 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
-+		h.StaleCache.Remove(userIdentity)
- 		return false
- 	}
- 
+-	if !ok {
+-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+-		return false
++	req = req.WithContext(ctx)
++
++	userIdentity := tokenPrefix + getTokenFromRequest(req)
++
++    h.backoffMu.Lock()
++    inBackoff := time.Now().Before(h.backoffUntil)
++    h.backoffMu.Unlock()
++    var u *authenticator.Response
++    var ok bool
++    var err error
++
++    if inBackoff {
++        klog.V(2).Info("Backoff activated: using cache")
++        u, ok = h.StaleCache.Get(userIdentity)
++        if !ok {
++			klog.Errorf("Backoff activated: no cached data for  %s", userIdentity)
++            http.Error(w, "Unauthorized", http.StatusUnauthorized)
++            return false
++        }
++    } else {
++        u, ok, err = h.AuthenticateRequest(req)
++        if err != nil {
++            h.backoffMu.Lock()
++            h.backoffUntil = time.Now().Add(h.currentBackoffDelay)
++            klog.Errorf("Authentication error: %v. Set backoff to %v", err, h.backoffUntil)
++			h.currentBackoffDelay *= 2
++			if h.currentBackoffDelay > maxBackoffDelay {
++				h.currentBackoffDelay = maxBackoffDelay
++			}
++            h.backoffMu.Unlock()
++
++            u, ok = h.StaleCache.Get(userIdentity)
++            if !ok {
++                http.Error(w, "Unauthorized", http.StatusUnauthorized)
++                return false
++            }
++        } else if !ok {
++            http.Error(w, "Unauthorized", http.StatusUnauthorized)
++            h.StaleCache.Remove(userIdentity)
++            return false
++        } else {
++            h.backoffMu.Lock()
++            h.currentBackoffDelay = 3 * time.Second
++            h.backoffUntil = time.Time{}
++            h.backoffMu.Unlock()
++        }
++    }
++
 +	// If no token was specified in request, use the user name (cn) from x509 authentication instead with the prefix
 +	if userIdentity == tokenPrefix {
 +		userIdentity = certificatePrefix + u.User.GetName()
-+	}
-+
+ 	}
+ 
  	// Get authorization attributes
- 	allAttrs := h.authorizerAttributesGetter.GetRequestAttributes(u.User, req)
- 	if len(allAttrs) == 0 {
+@@ -85,6 +153,8 @@ func (h *kubeRBACProxy) Handle(w http.ResponseWriter, req *http.Request) bool {
  		msg := "Bad Request. The request or configuration is malformed."
  		klog.V(2).Info(msg)
  		http.Error(w, msg, http.StatusBadRequest)
@@ -241,7 +283,7 @@ index aaac103c..3b5bba19 100644
  		return false
  	}
  
-@@ -92,19 +127,33 @@ func (h *kubeRBACProxy) Handle(w http.ResponseWriter, req *http.Request) bool {
+@@ -92,19 +162,33 @@ func (h *kubeRBACProxy) Handle(w http.ResponseWriter, req *http.Request) bool {
  		// Authorize
  		authorized, reason, err := h.Authorize(ctx, attrs)
  		if err != nil {
@@ -279,7 +321,7 @@ index aaac103c..3b5bba19 100644
  	if h.Config.Authentication.Header.Enabled {
  		// Seemingly well-known headers to tell the upstream about user's identity
  		// so that the upstream can achieve the original goal of delegating RBAC authn/authz to kube-rbac-proxy
-@@ -210,6 +259,11 @@ func (n krpAuthorizerAttributesGetter) GetRequestAttributes(u user.Info, r *http
+@@ -210,6 +294,11 @@ func (n krpAuthorizerAttributesGetter) GetRequestAttributes(u user.Info, r *http
  		}
  		allAttrs = append(allAttrs, attrs)
  	}
@@ -291,7 +333,7 @@ index aaac103c..3b5bba19 100644
  	return allAttrs
  }
  
-@@ -265,3 +319,15 @@ func templateWithValue(templateString, value string) string {
+@@ -265,3 +354,15 @@ func templateWithValue(templateString, value string) string {
  	}
  	return out.String()
  }
