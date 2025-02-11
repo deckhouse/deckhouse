@@ -12077,6 +12077,1858 @@ bash -c "for file in $(ls /mnt/secrets); do export  $file=$(cat /mnt/secrets/$fi
 
 ### Модуль secrets-store-integration: Custom Resources
 {{ site.data.schemas.secrets-store-integration.crds.secrets-store-import | format_crd: "secrets-store-integration" }}
+
+### Модуль stronghold
+
+Модуль `stronghold` обеспечивает безопасное хранение и управление жизненным циклом конфиденциальных данных. Хранилище секретной информации реализовано в формате key-value и совместимо с Hashicorp Vault API.
+
+`stronghold` предоставляет доступ к данным и управляется через:
+
+* Веб-интерфейс, доступный по адресу `https://stronghold.your-cluster-domain.tld/ui`
+* API, доступный по адресу `https://stronghold.your-cluster-domain.tld/v1`
+
+Аутентификация и авторизация в `stronghold` может осуществляться:
+* по сервис-аккаунтам приложений кластеров Kubernetes;
+* по токенам;
+* по авторазиции через кластерный Dex/OIDC;
+* по вводу логина/пароля.
+
+Разграничение доступа к секретам внутри и снаружи `stronghold` настраивается с помощью гибкого набора политик.
+
+### Модуль stronghold: настройки
+
+ 
+<!-- SCHEMA -->
+#### {{ site.data.i18n.common['parameters'][page.lang] }}
+{{ site.data.schemas['stronghold'].config-values | format_module_configuration: moduleKebabName }}
+
+### Модуль stronghold: использование
+
+#### Включение модуля
+
+Включите модуль, применив `ModuleConfig`, как представлено ниже:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: stronghold
+spec:
+  enabled: true
+```
+
+или выполните команду:
+
+```shell
+kubectl -n d8-system exec deploy/deckhouse -c deckhouse -it -- deckhouse-controller module enable stronghold
+```
+
+По умолчению модуль запустится в режиме `Automatic` с инлетом `Ingress`.
+В текущей версии другие режимы и инлеты отсутствуют.
+
+#### Как выключить модуль
+
+Выключить модуль можно, установив в moduleconfig `stronghold` значение `enabled` на `false`
+Либо выполнив команду:
+
+```bash
+kubectl -n d8-system exec deploy/deckhouse -c deckhouse -it -- deckhouse-controller module disable stronghold
+```
+
+{{< alert level="danger" >}}
+ВНИМАНИЕ!
+При отключении модуля удалятся все контейнеры `stronghold` из пространства имён `d8-stronghold`, а так же секрет `stronghold-keys` с root и unseal ключами. При этом данные сервиса не удалятся с ноды. Вы можете включить модуль снова, создать и поместить в пространство имён `d8-stronghold` сохраненную копию секрета `stronghold-keys`, тогда доступ к данным будет восстановлен.
+{{< /alert >}}
+
+Если старые данные больше не нужны, нужно предварительно удалить каталог `/var/lib/deckhouse/stronghold`
+со всех мастер-нод кластера.
+
+#### Ручное распечатывание кластера
+
+Для ручного распечатывания кластера `stronghold`:
+1. Зайдите на мастер-ноду,
+2. [Подготовьте](#как-получить-бинарный-файл-stronghold) инструмент командной строки `stronghold` для работы,
+3. Установите переменные окружения:
+  ```shell
+  export VAULT_ADDR=https://`kubectl -n d8-stronghold get ingress stronghold -o jsonpath='{.spec.rules[0].host}'`
+  export VAULT_SKIP_VERIFY=true
+  ```
+4. Получите ключ из Secret `kubectl -n d8-stronghold get secret stronghold-keys -o jsonpath='{.data.unsealKey}' | base64 -d;echo`
+5. Выполните команду `stronghold operator unseal`
+6. Введите unseal-ключ.
+
+#### Получение доступа к сервису
+
+Доступ к сервису осуществляется через инлеты. Инлет - это источник входных данных для пода. В примере доступен один инлет - `Ingress`
+Адрес веб-интерфейса `stronghold` формируется следующим образом: в шаблоне [publicDomainTemplate](./documentation/v1/deckhouse-configure-global.html#parameters-modules-publicdomaintemplate) глобального параметра конфигурации Deckhouse ключ `%s` заменяется на `stronghold`.
+
+Например, если `publicDomainTemplate` установлен как `%s-kube.mycompany.tld`, веб-интерфейс `stronghold` будет доступен по адресу `stronghold-kube.cmycompany.tld`.
+
+#### Использование хранилища данных. Режимы работы
+
+Информация, содержащаяся в `stronghold`, защищена шифрованием. Для того чтобы раскрыть данные хранилища, нужен ключ шифрования. Этот ключ также сохраняется вместе с данными (в хранилище ключей), однако он зашифрован иным ключом шифрования, который известен как корневой ключ.
+
+Для раскрытия данных `stronghold` расшифрует ключ шифрования, требующий для этого корневой ключ. Доступ к корневому ключу можно получить с помощью процесса, называемого разблокировкой хранилища. Корневой ключ сохраняется вместе со всеми остальными данными хранилища, однако шифруется еще одной технологией: ключом разблокировки.
+
+В текущей версии модуля присутствует только режим `Automatic`, в котором при первом запуске модуля происходит автоматическая инициализация хранилища. В процессе инициализации ключ разблокирования и root-token помещаются в секрет `stronghold-keys` пространства имён kubernetes `d8-stronghold`. После инициализации модуль автоматически разблокирует ноды кластера Stronghold.
+В автоматическом режиме, при перезапуске узлов Stronghold, хранилище также будет автоматически разблокировано без вмешательства пользователя.
+
+#### Управление доступами
+
+В автоматическом режиме `Automatic` в `stronghold` после инициализации хранилища создается роль `deckhouse_administrators`, для которой включается доступ к веб-интерфейсу через OIDC аутентификацию [Dex](/modules/user-authn/).
+Также настраивается автоматическое подключение текущего кластера Deckhouse к Stronghold для работы модуля [secrets-store-integration](./secrets-store-integration/).
+
+Для того, чтоб выдать пользователям, находящимся в группе `admins` (членство в группе передаётся из используемого IdP или LDAP с помощью [Dex](/modules/user-authn/)), нужно указать эту группу в массиве `administrators` в `ModuleConfig`:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: stronghold
+spec:
+  enabled: true
+  version: 1
+  settings:
+    management:
+      mode: Automatic
+      administrators:
+      - type: Group
+        name: admins
+```
+
+Для того, чтоб выдать права `administrator` пользователям `manager` и `securityoperator`, можно использовать следующие параметры в `ModuleConfig`:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: stronghold
+spec:
+  enabled: true
+  version: 1
+  settings:
+    management:
+      mode: Automatic
+      administrators:
+      - type: User
+        name: manager@mycompany.tld
+      - type: User
+        name: securityoperator@mycompany.tld
+```
+
+Несмотря на то, что доступ можно выдавать конкретным пользователям индивидуально, при этом сами пользователи должны находиться в какой-либо группе из-за ограничений аутентификации через OIDC.
+
+В дальнейшем можно создать пользователей в `sronghold` с различными правами доступа к секретам с помощью встроенного механизма хранилища.
+
+#### Первый запуск
+Первый запуск подразумевает отсутствие папки `/var/lib/deckhouse/stronghold` в файловой системе узлов, на которых будут запускаться ноды *stronghold* (по умолчанию это master-узлы) и [отключенный модуль *stronghold*](#как-выключить-модуль).
+
+> Так же нужен опыт работы с утилитой `kubectl`
+
+Ниже приведены варианты организации доступа к модулю через [инлет Ingress](./documentation/v1/modules/ingress-nginx/) и далее процесс включения модуля и проверки работоспособности.
+
+##### Способы организации доступа через инлет Ingress
+
+###### ClusterIssuer LetsEncrypt
+Этот метод получения сертификата настроен по умолчанию. Однако, подойдёт только для сервисов доступных **из Интернета** (не для внутренних сетей). Выполните проверку доступности:
+1. Получите адрес платформы аутентификации командой: 
+    ```shell
+    kubectl -n d8-user-authn get ing dex
+    ```
+    
+    Пример ответа:
+    
+    ```txt
+    # Ожидаемый ответ
+    # NAME   CLASS   HOSTS               ADDRESS         PORTS     AGE
+    # dex    nginx   dex.mycompany.tld   34.85.243.109   80, 443   4d20h
+    ```
+    Под столбцом `HOSTS` наш проверяемый домен, а под `ADDRESS` – его IP адрес. Теперь нужно убедиться, что домен правильно резолвится на указанный IP адрес. Для этого выполните команду:
+    ```shell
+    nslookup dex.mycompany.tld 8.8.8.8
+    ```
+    
+    Пример ответа:
+    
+    ```txt
+    # Ожидаемый ответ
+    # ...
+    # Name:	dex.mycompany.tld
+    # Address: 34.85.243.109
+    # ...
+
+    # Либо
+    dig @8.8.8.8 dex.mycompany.tld
+    # Ожидаемый ответ
+    # ...
+    # ;; ANSWER SECTION:
+    # dex.mycompany.tld. 3600 IN A	34.85.243.109
+    # ...
+    ```
+    Если ответом стала ошибка с кодом `NXDOMAIN`, нужно настроить DNS пользователя.
+2. В браузере откройте https://dex.mycompany.tld/healthz, либо выполняем команду `curl -kL https://dex.mycompany.tld/healthz`. Должен вернуться ответ `Health check passed`.
+3. Проверьте, что Ingress контроллер обрабатывает запросы на ваш поддомен `stronghold.mycompany.tld`. Снова в браузере, либо командой `curl -kL` открываем https://stronghold.mycompany.tld. Вернётся ошибка 404.
+
+###### ClusterIssuer с самоподписанным центром сертификации
+Эта опция подходит, если вы хотите использовать свой самоподписанный Центр сертификации. В качестве примера мы будем использовать уже созданный `ClusterIssuer` ресурс **selfsigned**. Для добавления Issuer или ClusterIssuer со своим самоподписанным Центром сертификации, воспользуйтесь официальной документацией
+
+> Для этого способа подойдут как наличие публичного доменного имени, так и доступ только из внутренней сети.
+
+Отредактируйте настройки **global** модуля. Сделать это можно, например, командой `kubectl edit mc global`.
+Добавьте параметр `settings.modules.https.certManager.clusterIssuerName: selfsigned`. В результате конфигурация модуля должна выглядеть так:
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: global
+spec:
+  settings:
+    modules:
+      https:
+        certManager:
+          clusterIssuerName: selfsigned    # Единственный параметр, который нужно добавить
+      publicDomainTemplate: '%s.mycompany.tld'
+  version: 1
+```
+
+Далее отредактируйте настройки **user-authn** модуля. Выполняем команду `kubectl edit mc user-authn` и изменяем параметр `settings.controlPlaneConfigurator.dexCAMode` на `FromIngressSecret`:
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: user-authn
+spec:
+  enabled: true
+  settings:
+    controlPlaneConfigurator:
+      dexCAMode: FromIngressSecret    # Параметр, который нужно изменить
+  ...
+```
+
+Перед запуском модуля убедитесь, что ключевые сервисы доступны из **рабочей сети**.
+1. Получаем адрес платформы аутентификации командой: 
+    ```shell
+    kubectl -n d8-user-authn get ing dex
+    ```
+    
+    Пример ответа:
+    
+    ```txt
+    # Ожидаемый ответ
+    # NAME   CLASS   HOSTS               ADDRESS         PORTS     AGE
+    # dex    nginx   dex.mycompany.tld   34.85.243.109   80, 443   4d20h
+    ```
+    Под столбцом `HOSTS` наш проверяемый домен, а под `ADDRESS` – его IP адрес. Теперь нужно убедиться, что домен правильно резолвится на указанный IP адрес. Для этого выполните команду:
+    ```shell
+    nslookup dex.mycompany.tld
+    ```
+    
+    Пример ответа:
+    
+    ```txt
+    # Ожидаемый ответ
+    # ...
+    # Name:	dex.mycompany.tld
+    # Address: 34.85.243.109
+    # ...
+
+    # Либо
+    dig dex.mycompany.tld
+    # Ожидаемый ответ
+    # ...
+    # ;; ANSWER SECTION:
+    # dex.mycompany.tld. 3600 IN A	34.85.243.109
+    # ...
+    ```
+    Если ответом стала ошибка с кодом `NXDOMAIN`, нужно настроить DNS пользователя. Если домен не доступен из Интернета, дополнительно необходимо выполнить [дополнительный шаг](#не-резолвится-доменное-имя-dexmycompanytld)
+    > Как временное решение можно добавить следующую строку в файл `/etc/hosts` вашей Unix системы
+    > ```shell
+    > 34.85.243.109 dex.mycompany.tld stronghold.mycompany.tld
+    > ```
+2.  В браузере откройте https://dex.mycompany.tld/healthz, либо выполняем команду `curl -kL https://dex.mycompany.tld/healthz`. Должен вернуться ответ `Health check passed`.
+3. Проверьте, что Ingress-контроллер обрабатывает запросы на ваш поддомен `stronghold.mycompany.tld`. Снова в браузере, либо командой `curl -kL` откройте https://stronghold.mycompany.tld. Возвращается ошибка 404.
+
+###### Используя файл сертификата
+Нужно создать СА, сертификат, и подписать его созданым СА. Если уже есть СА, сертификат можно подписать существущим.
+Важно сделать сертификат с цепочкой (fullchain).
+
+Ниже представлен скрипт `createCertificate.sh`, который с помощью openssl создает нужную пару сертификат + ключ
+для домена `mycompany.tld` (`*.mycompany.tld`).
+
+```shell
+###!/bin/bash
+```
+
+Пример ответа:
+
+```txt
+set -e
+caName="MyOrg-RootCA"            # Имя CA (CN)
+publicDomain="mycompany.tld"     # Имя кластерного домена (см. publicDomainTemplate)
+certName="kubernetes"            # Имя сертификата для кластера (CN)
+
+mkdir -p "${caName}"
+cd "${caName}"
+
+[ ! -f "${caName}.key" ] && openssl genrsa -out "${caName}.key" 4096
+
+[ ! -f "${caName}.crt" ] &&  openssl req -x509 -new -nodes -key "${caName}.key" -sha256 -days 1826 -out "${caName}.crt" \
+   -subj "/CN=${caName}/O=MyOrganisation"
+
+openssl req -new -nodes -out ${certName}.csr -newkey rsa:4096 -keyout "${certName}.key" \
+  -subj "/CN=${certName}/O=MyOrganisation"
+
+### v3 ext file
+cat > "${certName}.v3.ext" << EOF
+authorityKeyIdentifier=keyid,issuer
+basicConstraints=CA:FALSE
+keyUsage = digitalSignature, nonRepudiation, keyEncipherment, dataEncipherment
+subjectAltName = @alt_names
+[alt_names]
+DNS.1 = ${publicDomain}
+DNS.2 = *.${publicDomain}
+EOF
+
+openssl x509 -req -in "${certName}.csr" -CA "${caName}.crt" -CAkey "${caName}.key" -CAcreateserial -out "${certName}.crt" -days 730 -sha256 -extfile "${certName}.v3.ext"
+
+cat "${certName}.crt" "${caName}.crt" > "${certName}_fullchain.crt"
+```
+
+Используя полученные файлы `kubernetes.key` и `kubernetes_fullchain.crt` нужно создать секрет в пространстве имён d8-system
+
+```shell
+kubectl -n d8-system create secret tls mycompany-wildcard-tls --cert=kubernetes_fullchain.crt --key=kubernetes.key
+```
+
+Для использования полученного сертификата в кластере нужно привести конфигурацию модуля `global` к такому виду.
+Сделать это можно например командой `kubectl edit mc global`
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: global
+spec:
+  settings:
+    modules:
+      https:
+        customCertificate:
+          secretName: mycompany-wildcard-tls    # Здесь указываем название объекта secret, содержащий fullchain сертификат и ключ.
+        mode: CustomCertificate                 # Меняем режим работы с tls для всех модулей.
+      publicDomainTemplate: '%s.mycompany.tld'
+```
+
+Так же требуется настроить модуль `user-authn`, включив в настройках `controlPlaneConfigurator.dexCAMode` в значение `FromIngressSecret`
+В этом случае CA будет получен из цепочки, которую мы поместили в файл `kubernetes_fullchain.crt`
+
+Пример
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: user-authn
+spec:
+  enabled: true
+  settings:
+    controlPlaneConfigurator:
+      dexCAMode: FromIngressSecret
+  ...
+```
+
+Перед запуском модуля убедимся, что ключевые сервисы доступны из **рабочей сети**.
+1. Получаем адрес платформы аутентификации командой: 
+    ```shell
+    kubectl -n d8-user-authn get ing dex
+    ```
+    
+    Пример ответа:
+    
+    ```txt
+    # Ожидаемый ответ
+    # NAME   CLASS   HOSTS               ADDRESS         PORTS     AGE
+    # dex    nginx   dex.mycompany.tld   34.85.243.109   80, 443   4d20h
+    ```
+    Под столбцом `HOSTS` проверяемый домен, а под `ADDRESS` – его IP адрес. Теперь нужно убедиться, что домен правильно резолвится на указанный IP адрес. Для этого выполните команду:
+    ```shell
+    nslookup dex.mycompany.tld
+    ```
+    
+    Пример ответа:
+    
+    ```txt
+    # Ожидаемый ответ.
+    # ...
+    # Name:	dex.mycompany.tld
+    # Address: 34.85.243.109
+    # ...
+
+    # Либо
+    dig dex.mycompany.tld
+    # Ожидаемый ответ.
+    # ...
+    # ;; ANSWER SECTION:
+    # dex.mycompany.tld. 3600 IN A	34.85.243.109
+    # ...
+    ```
+    Если ответом стала ошибка с кодом `NXDOMAIN`, нужно настроить DNS пользователя. Если домен не доступен из Интернета, дополнительно необходимо выполнить [дополнительный шаг](#не-резолвится-доменное-имя-dexmycompanytld)
+    > Как временное решение можно добавить следующую строку в файл `/etc/hosts` вашей Unix системы
+    > ```shell
+    > 34.85.243.109 dex.mycompany.tld stronghold.mycompany.tld
+    > ```
+2.  В браузере откройте https://dex.mycompany.tld/healthz, либо выполните команду `curl -kL https://dex.mycompany.tld/healthz`. Должен вернуться ответ `Health check passed`.
+3. Проверьте, что Ingress-контроллер обрабатывает запросы на ваш поддомен `stronghold.mycompany.tld`. Снова в браузере, либо командой `curl -kL` откройте https://stronghold.mycompany.tld. Возвращается ошибка 404.
+
+##### Не резолвится доменное имя dex.mycompany.tld
+Если ваш домен не резолвится через DNS и вы планируете использвать файл hosts, то для работы `dex` нужно добавить
+адрес балансировщика или IP фронт-ноды в кластерный DNS. В его роли можно использовать [модуль kube-dns](./documentation/v1/modules/kube-dns/), чтобы поды могли получить доступ к домену `dex.mycompany.tld` по имени.
+
+Пример получения IP для ингресса `nginx-load-balancer` с типом `LoadBlancer`
+
+```shell
+kubectl -n d8-ingress-nginx get svc nginx-load-balancer -o jsonpath='{ .spec.clusterIP }'
+```
+Допустим наш адрес `34.85.243.109`, тогда модуль-конфиг `kube-dns` будет выглядеть так
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: kube-dns
+spec:
+  version: 1
+  enabled: true
+  settings:
+    hosts:
+    - domain: dex.mycompany.tld
+      ip: 34.85.243.109
+```
+##### Включаем модуль
+После этого можно включить модуль `stronghold`, инициализация и настройка интеграции с `dex` произойдет автоматически.
+
+```shell
+kubectl -n d8-system exec deploy/deckhouse -c deckhouse -it -- deckhouse-controller module enable stronghold
+```
+
+После запуска модуля проследить:
+1. убедиться в наличии сертификата для домена `stronghold`.
+    `kubectl -n d8-stronhold get ingress-tls` (либо через Консоль)
+  В разделе [Трудности](#трудности) есть описания решений возможных проблем с отсутствием сертификата.
+2. Убедиться в доступности адреса https://stronghold.mycompany.tld/v1/sys/health
+3. Проверить соответствие Издателя сертификата с CA сертификатом (Опционально)
+
+##### Трудности
+
+###### Поды в состоянии ContainerCreating, объекта Secret с названием ingress-tls нет
+
+Проверьте статус пода `stronghold`:
+`kubectl -n d8-stronghold describe pod stronghold-0`
+Ищем строку:
+```log
+MountVolume.SetUp failed for volume "certificates" : secret "ingress-tls" not found
+```
+
+При использовании метода [ClusterIssuer с LetsEncrypt](#clusterissuer-letsencrypt) может возникнуть проблема с автоматическим созданием сертификата для домена `stronghold.mycompany.tld` центром сертификации LetsEncrypt.
+
+Получите список *CertificateRequest*
+
+```bash
+kubectl -n d8-stronghold get certificaterequest
+```
+Среди них есть объект, начинающийся с **stronghold-**, для примера это будет **stronghold-b5wc6**.
+
+Посмотрите его статус:
+```bash
+kubectl -n d8-stronghold describe certificaterequest stronghold-b5wc6
+```
+
+Одной из причин может быть ошибка `too many certificates already issued for mycompany.tld`, в особенности, если используется бесплатный dynDNS сервис наподобие `sslip.io` или `getmoss.site`. В таком случае нужно либо подождать, пока не пройдёт таймаут ограничения, либо сменить способ создания сертификата для домена `stronghold.mycompany.tld` (*ClusterIssuer* **selfsigned**, ручная подпись сертификата).
+
+При успешном завершении генерации сертификата в статусе *CertificateRequest* должны быть строчки:
+```log
+Message:               Certificate fetched from issuer successfully
+Reason:                Issued
+Status:                True
+Type:                  Ready
+```
+и наличествовать объект *Secret* типа `kubernetes.io/tls` с названием **ingress-tls**
+
+#### Как получить бинарный файл stronghold
+
+На мастер-ноде кластера необходимо выполнить следующие команды через `root` пользователя:
+```bash
+mkdir $HOME/bin
+sudo cp /proc/$(pidof stronghold)/root/usr/bin/stronghold bin && sudo chmod a+x bin/stronghold
+export PATH=$PATH:$HOME/bin
+```
+Команда `stronhold` готова к использованию.
+
+### Модуль stronghold: методы аутентификации
+
+#### Методы аутентификации
+
+Методы аутентификации это модули `stronghold`, которые в рамках обработки запроса в хранилище идентифицируют пользователя, выполняют аутентификацию и отвечают за назначение идентичности и набора политик пользователю. В большинстве случаев `stronghold` будет делегировать управление аутентификацией и принятие решений соответствующему настроенному внешнему методу аутентификации, таким, как JWT, OIDC, Kubernetes и LDAP. В качестве источников данных о пользователях с помощью указанных методов могут использоваться кластера Deckhouse Kubernetes Platform, Keycloak, Blitz Identity Provider, Active Directory и т.д. Наличие нескольких методов аутентификации позволяет вам использовать тот метод, который наиболее подходит для вашего использования `stronghold` и вашей организации. Возможно использование нескольких методов аутентификации одновременно.
+
+При использовании внешнего метода аутентификации, `stronghold` будет вызывать внешний сервис в момент аутентификации и для последующих продлений токенов. Если статус сущности изменится во внешней системе (например, учетная запись истекает или отключена), `stronghold` отклоняет запросы на продление токенов, связанных с этой сущностью. Однако существующие токены остаются действительными на первоначальный период выдачи, если они явно не отозваны в stronghold. Рекомендуем устанавливать соответствующие TTL для токенов при использовании любых внешних методов аутентификации.
+
+При отключении метода аутентификации, все пользователи, аутентифицированные с помощью этого метода, автоматически выйдут из системы.
+
+##### Включение/отключение методов аутентификации на примере AppRole
+
+Методы аутентификации могут быть включены и отключены с помощью UI, CLI или API.
+
+Включение с помощью CLI:
+
+```shell
+vault auth enable approle
+```
+
+При включении методы аутентификации аналогичны механизмам секретов: они монтируются в таблицу монтирования `stronghold` и могут быть доступны и настраиваться с использованием стандартного API для чтения/записи. Все методы аутентификации по умолчанию монтируются в поддиректории auth/ и выглядят как auth/<type>, например `auth/oidc/`. 
+
+Администраторы модуля `stronghold` с продвинутыми кейсами могут монтировать один метод аутентификации несколько раз, включая модуль с помощью CLI с отличным от стандартного путём:
+
+```shell
+vault auth enable -path=my-login approle
+```
+
+Включение с помощью UI:
+![Включение метода аутентификации](/images/stronghold/admin-guide-image1.ru.png)
+
+Выберите метод аутентификации:
+![Выбор метода аутентификации](/images/stronghold/admin-guide-image2.ru.png)
+
+Настройте и подтвердите включение метода аутентификации:
+![Настройка и подтверждение метода аутентификации](/images/stronghold/admin-guide-image3.ru.png)
+
+Для отключения метода аутентификации выберите метод:
+![Выбор метода аутентификации](/images/stronghold/admin-guide-image4.ru.png)
+
+Подтвердите удаление метода:
+![Подтверждение удаление метода](/images/stronghold/admin-guide-image5.ru.png)
+
+##### Метод аутентификации AppRole
+Метод аутентификации `approle` позволяет машинам или _приложениям_ аутентифицироваться с помощью определенных в `stronghold` _ролей_. Открытый дизайн `AppRole` позволяет использовать различные рабочие процессы и конфигурации для обработки большого количества приложений. Этот метод аутентификации ориентирован на автоматизированные рабочие процессы. Мы рекомендуем использовать `batch` токены с методом аутентификации `AppRole`.
+
+AppRole представляет собой набор политик и ограничений аутентификации, которые должны быть применены для получения токена с этими политиками. Область применения может быть как узкой, так и широкой. AppRole может быть создан для конкретной машины, для сервиса на этой машине, или сервиса, работающего на многих машинах. Требуемые учетные данные для успешной аутентификации зависят от ограничений, установленных для AppRole, связанного с этими учетными данными.
+
+###### Аутентификация с помощью CLI
+
+Путь по умолчанию - `/approle`. Если этот метод аутентификации был включен по другому пути, укажите нужный путь вместо пути по умолчанию.
+
+```shell
+vault write auth/approle/login \
+  role_id=db02de05-fa49-4055-059b-67221c5c2f63 \
+  secret_id=6a174c20-f6de-a63c-74d2-6018fcceff64
+
+Key                Value
+---                -----
+token              75b74ffd-842c-fd43-1386-f7d7006e520a
+token_accessor     4c29bc22-5c72-11a6-f778-2bc8f48cea0e
+token_duration     20m0s
+token_renewable    true
+token_policies     [default]
+```
+
+###### Аутентификация с помощью API
+
+Путь по умолчанию - `auth/approle/login`. При использовании другого пути, укажите нужный путь вместо пути по умолчанию.
+
+Пример запроса:
+
+```shell
+curl \
+  --header "X-Vault-Token: ${VAULT_TOKEN}" \
+  --request POST \
+  --data '{"role_id":"988a9df-...","secret_id":"37b74931..."}' \
+  ${VAULT_ADDR}/v1/auth/approle/login
+```
+
+Ответ API будет содержать токен в качестве значения `auth.client_token`:
+
+```json
+{
+  "auth": {
+    "renewable": true,
+    "lease_duration": 2764800,
+    "metadata": {},
+    "policies": ["default", "dev-policy", "test-policy"],
+    "accessor": "5d7fb475-07cb-4060-c2de-1ca3fcbf0c56",
+    "client_token": "98a4c7ab-b1fe-361b-ba0b-e307aacfd587"
+  }
+}
+```
+
+-> **Application Integration:** See the [Code Example](#code-example) section
+for a code snippet demonstrating the authentication with Vault using the
+AppRole auth method.
+
+###### Конфигурирование
+
+Методы аутентификации должны быть настроены заранее, прежде чем пользователи или машины смогут проходить аутентификацию. Эти шаги обычно выполняются оператором или инструментом управления конфигурацией.
+
+###### Конфигурирование через CLI
+
+1. Включите метод аутентификации AppRole:
+
+  ```shell
+  vault auth enable approle
+  ```
+
+1. Создайте именованную роль:
+
+  ```shell
+  vault write auth/approle/role/my-role \
+    token_type=batch \
+    secret_id_ttl=10m \
+    token_num_uses=10 \
+    token_ttl=20m \
+    token_max_ttl=30m \
+    secret_id_num_uses=40
+  ```
+
+**Примечание:** Если токен, выданный вашим approle, требует возможности создания дочерних токенов, вам необходимо установить значение token_num_uses равным 0.
+
+Для полного списка параметров конфигурации, пожалуйста, ознакомьтесь с [API](api_guide.html)
+документацией.
+
+
+1. Получите RoleID для AppRole:
+
+
+   ```shell
+   vault read auth/approle/role/my-role/role-id
+     role_id     db02de05-fa49-4055-059b-67221c5c2f63
+   ```
+
+1. Получите SecretID, выданный для AppRole:
+
+  ```shell
+  vault write -f auth/approle/role/my-role/secret-id
+    secret_id               6a174c20-f6de-a63c-74d2-6018fcceff64
+    secret_id_accessor      c454f7e5-996e-7230-6074-6ef26b7bcf86
+    secret_id_ttl           10m
+    secret_id_num_uses      40
+  ```
+
+###### Конфигурирование через API
+
+1. Включение метода аутентификации AppRole:
+
+  ```shell
+  curl \
+    --header "X-Vault-Token: ${VAULT_TOKEN}" \
+    --request POST \
+    --data '{"type": "approle"}' \
+    ${VAULT_ADDR}/v1/sys/auth/approle
+  ```
+
+1. Создайте AppRole с необходимым набором политик:
+
+  ```shell
+  curl \
+    --header "X-Vault-Token: ${VAULT_TOKEN}" \
+
+    --data '{"policies": "dev-policy,test-policy", "token_type": "batch"}' \
+    ${VAULT_ADDR}/v1/auth/approle/role/my-role
+  ```
+
+1. Получите идентификатор роли:
+
+  ```shell
+  curl \
+    --header "X-Vault-Token: ${VAULT_TOKEN}" \
+    ${VAULT_ADDR}/v1/auth/approle/role/my-role/role-id
+  ```
+
+  Пример ответа API:
+
+  ```json
+  {
+    "data": {
+    "role_id": "888a9dfd-ea69-4a53-6cb6-9d6b86474bba"
+    }
+  }
+  ```
+
+1. Создайте новый идентификатор секрета для роли:
+
+  ```shell
+  curl \
+    --header "X-Vault-Token: ${VAULT_TOKEN}" \
+    --request POST \
+    ${VAULT_ADDR}/v1/auth/approle/role/my-role/secret-id
+  ```
+
+  Пример ответа API:
+
+  ```json
+  {
+    "data": {
+      "secret_id_accessor": "65946873-1d96-a9d4-678c-9229f74386a5",
+      "secret_id": "37b24931-c4cd-d49a-9246-ccc62d682a25",
+      "secret_id_ttl": 600,
+      "secret_id_num_uses": 40
+    }
+  }
+  ```
+
+###### Учетные данные/Ограничения
+
+####### RoleID
+
+RoleID - это идентификатор, который выбирает AppRole, по которому оцениваются другие учетные данные. При аутентификации с использованием конечной точки входа этого метода аутентификации, RoleID является обязательным аргументом (через `role_id`) всегда. По умолчанию RoleID являются уникальными UUID, что позволяет им служить вторичными секретами для другой информации об учетных данных. Однако они могут быть установлены на определенные значения для сопоставления с информацией, полученной клиентом (например, доменное имя клиента).
+
+####### SecretID
+
+SecretID - это учетные данные, которые по умолчанию требуются для любого входа (через `secret_id`) и всегда должны быть секретными. (Для расширенного использования требование SecretID может быть отключено с помощью параметра `bind_secret_id` AppRole, позволяя машинам, знающим только RoleID или соответствующие другие ограничения, получить токен). SecretID может быть создан для AppRole либо путем генерации 128-битного полностью случайного UUID самим ролью (`Pull` режим), либо путем указания определенных пользовательских значений (`Push` режим). Аналогично токенам, у SecretID есть свойства, такие как ограничение использования, TTL и сроки действия.
+
+###### Режимы Pull и Push SecretID
+
+Если SecretID, используемый для входа, извлекается из AppRole, это работает в режиме Pull. Если клиент устанавливает "пользовательский" SecretID для AppRole, это называется режимом Push. Режим Push имитирует поведение устаревшего метода аутентификации App-ID; однако в большинстве случаев режим Pull является более предпочтительным подходом. Причина в том, что режим Push требует, чтобы некая другая система знала полный набор учетных данных клиента (RoleID и SecretID), чтобы создать запись, даже если они затем распространяются по разным путям. Однако в режиме Pull, хотя RoleID должен быть известен для его распространения клиенту, SecretID может быть сохранен в тайне от всех сторон, кроме конечного аутентифицирующего клиента с использованием [Response Wrapping](/vault/docs/concepts/response-wrapping).
+
+Режим Push доступен для совместимости с рабочим процессом App-ID, который в некоторых конкретных случаях предпочтителен, но в большинстве случаев режим Pull является более безопасным и предпочтительным.
+
+####### Дополнительные ограничения
+
+`role_id` - это обязательные учетные данные на конечной точке входа. AppRole, на который указывает `role_id`, будет иметь настроенные ограничения. Это определяет другие `required` учетные данные для входа. Ограничение `bind_secret_id` требует представления `secret_id` на конечной точке входа. В будущем этот метод аутентификации может поддерживать больше параметров ограничений для поддержки различных наборов приложений. Некоторые ограничения не потребуют учетных данных, но все равно будут применять ограничения для входа. Например, `secret_id_bound_cidrs` позволит только входы, приходящие с IP-адресов, принадлежащих настроенным CIDR-блокам на AppRole.
+
+###### API
+
+У метода аутентификации AppRole есть полный HTTP API. Пожалуйста, ознакомьтесь с [API](api_guide.html) документацией.
+
+##### Метод аутентификации JWT/OIDC
+
+Метод `jwt auth` может быть использован для аутентификации с помощью OIDC или путем предоставления JWT.
+
+Метод OIDC позволяет выполнять аутентификацию через настроенный провайдер OIDC с помощью веб-браузера пользователя. Этот метод может быть инициирован из пользовательского интерфейса модуля `stronghold` или из командной строки. В качестве альтернативы может быть предоставлен непосредственно JWT. JWT криптографически проверяется с помощью локально предоставленных ключей, либо, если настроен, для получения соответствующих ключей может быть использован сервис OIDC Discovery. Выбор метода настраивается для каждой роли.
+
+Оба метода позволяют дополнительно обрабатывать данные утверждений в JWT. В документе рассмотрены концепции, общие для обоих методов, а также примеры использования OIDC и JWT.
+
+###### Аутентификация в OIDC
+
+В данном разделе рассматривается настройка и использование ролей OIDC. Предполагается базовое знакомство с концепциями OIDC. Поток Authorization Code использует расширение Proof Key for Code Exchange (PKCE).
+
+Модуль `stronghold` включает два встроенных потока авторизации OIDC: пользовательский интерфейс `stronghold` UI и CLI с использованием логина vault.
+
+**Перенаправление URI**
+
+Важной частью конфигурации ролей OIDC является правильная настройка URI перенаправления. Это должно быть сделано как в Deckhouse Stronghold, так и в провайдере OIDC, причем эти настройки должны совпадать. URI перенаправления задаются для роли с помощью параметра `allowed_redirect_uris`. Для настройки потоков в модуле `stronghold` UI и CLI существуют различные URI перенаправления, поэтому в зависимости от установки необходимо настроить один или оба.
+
+**_CLI_**
+
+Если планируется поддержка аутентификации через `vault login -method=oidc`, необходимо задать URI перенаправления на localhost. Обычно это может быть: `http://localhost:8250/oidc/callback`. При необходимости при входе в систему через CLI можно указать другой хост и/или порт прослушивания, при этом URI с этим хостом/портом должен совпадать с одним из настроенных перенаправляемых URI. Эти же URI "localhost" должны быть добавлены и в провайдер.
+
+###### Интерфейс модуля stronghold
+
+Для входа в систему через модуль `stronghold` сам UI не требует настройки и конфигурируется автоматически при включении модуля `stronghold`.
+
+####### Вход в систему OIDC (Deckhouse Stronghold UI)
+
+Выберите метод входа в систему "OIDC".
+
+При необходимости введите имя роли.
+
+Нажмите кнопку "Войти с помощью провайдера OIDC" и завершите аутентификацию с помощью настроенного провайдера.
+
+####### Вход в систему OIDC (CLI)
+
+Для входа в систему CLI по умолчанию используется путь `/oidc_deckhouse`. Если данный метод аутентификации был включен по другому пути, укажите в CLI путь `-path=/my-path`.
+
+```shell
+vault login -method=oidc -path=oidc_deckhouse role=test
+Complete the login via your OIDC provider. Launching browser to:
+https://myco.auth0.com/authorize?redirect_uri=http%3A%2F%2Flocalhost%3A8400%2Foidc%2Fcallback&client_id=r3qXc2bix9eF...
+```
+
+Браузер откроется по сгенерированному URL-адресу для завершения входа в систему провайдера. URL может быть введен вручную, если браузер не может быть открыт автоматически.
+
+Автоматический запуск браузера по умолчанию на URL переключается при помощи `skip_browser` (по умолчанию: "false") при входе в систему.
+
+Слушатель обратного вызова может быть настроен с помощью следующих необязательных параметров. Обычно их установка не требуется:
+
+* mount (по умолчанию "oidc")
+* listenaddress (по умолчанию "localhost")
+* port (по умолчанию 8250)
+* callbackhost (по умолчанию "localhost")
+* callbackmethod (по умолчанию "http")
+* callbackport (по умолчанию - это значение, заданное для порта). Это значение используется в параметре `redirect_uri`, тогда как `port` - это порт сервера localhost, который принимает запросы. В некоторых случаях эти два параметра могут различаться.
+
+####### Конфигурация провайдера OIDC
+
+Способ аутентификации OIDC успешно протестирован с рядом провайдеров. Полное руководство по настройке приложений OAuth/OIDC не входит в документацию Deckhouse Stronghold.
+
+**Устранение неполадок в конфигурации OIDC**
+
+Некоторые советы по настройке OIDC представлены ниже:
+
+* Если параметр роли (например, `bound_claims`) требует значения карты (map), его нельзя установить отдельно с помощью CLI модуля `stronghold`. В таких случаях запишите конфигурацию в виде одного JSON-объекта:
+
+  ```shell
+  vault write auth/oidc/role/demo -<<EOF
+  {
+  "user_claim": "sub",
+  "bound_audiences": "abc123",
+  "role_type": "oidc",
+  "policies": "demo",
+  "ttl": "1h",
+  "bound_claims": { "groups": ["mygroup/mysubgroup"] }
+  }
+  EOF
+  ```
+
+* Проследите за выводом журнала модуля `stronghold`, в котором содержится важная информация о сбоях проверки OIDC.
+
+* Убедитесь, что URI перенаправления корректны в модуле `stronghold` и на провайдере. Они должны точно совпадать. Проверьте: http/https, 127.0.0.1/localhost, номера портов, наличие слэшей в конце.
+
+* Единственной конфигурацией утверждения, которая требуется для роли, является user_claim. Когда станет известно, что аутентификация работает, добавьте дополнительные привязки утверждений и копирование метаданных.
+
+* bound_audiences не является обязательным для ролей OIDC и обычно не требуется. Идентификаторы клиентов OIDC используют client_id для определения аудитории, и проверка OIDC предполагает это.
+
+* Уточните у провайдера диапазоны для получения необходимой информации. Часто требуется запрашивать диапазоны "профиль" и "группы", которые можно добавить, установив для роли значение `oidc_scopes="profile,groups"`.
+
+* Если в журналах появляются ошибки, связанные с заявками, внимательно изучите документацию поставщика, чтобы понять, как он называет и структурирует заявки. В зависимости от провайдера, сконструируйте простой запрос `curl implicit grant` для получения JWT, который можно просмотреть. 
+
+Пример декодирования JWT (в примере он расположен в поле `access_token` JSON-ответа) представлен ниже:
+
+  ```shell  
+  cat jwt.json | jq -r .access_token | cut -d. -f2 | base64 -D
+  ```
+
+* В модуле `stronghold` доступна ролевая опция `verbose_oidc_logging`, которая будет записывать полученный OIDC-токен в журналы сервера, если включено ведение журнала на уровне отладки. Это может быть полезно при отладке настройки провайдера и проверке того, что полученные претензии соответствуют ожиданиям. Поскольку данные утверждений записываются в журнал дословно и могут содержать конфиденциальную информацию, эту опцию не следует использовать в производстве.
+
+###### Аутентификация по JWT
+
+Способ аутентификации для ролей типа "jwt" проще, чем в OIDC, поскольку модулю `stronghold` требуется только проверить предоставленный JWT.
+
+####### Проверка JWT
+
+Подписи JWT будут проверяться по открытым ключам эмитента. Этот процесс может осуществляться тремя способами, но для одного бэкенда может быть настроен один метод:
+
+* Статические ключи. Набор открытых ключей хранится в конфигурации бэкенда.
+* JWKS. Настраивается URL-адрес JSON Web Key Set (JWKS) (и дополнительная цепочка сертификатов). Ключи извлекаются из конечной точки при аутентификации.
+* OIDC Discovery. Настраивается URL-адрес OIDC Discovery (и необязательная цепочка сертификатов). Ключи извлекаются из URL при аутентификации. Когда используются OIDC Discovery, то применяются критерии проверки OIDC (например, iss, aud и т.д.).
+
+Если необходимо использовать несколько методов, можно установить и сконфигурировать другой экземпляр бэкенда.
+
+####### Аутентификация JWT через CLI
+
+```shell
+vault write auth/<path-to-jwt-backend>/login role=demo jwt=...
+```
+
+Путь по умолчанию для бэкенда аутентификации JWT - `/jwt`, поэтому если вы используете бэкенд по умолчанию, то команда будет выглядеть так:
+
+```shell
+vault write auth/jwt/login role=demo jwt=...
+```
+
+Если бэкенд JWT auth использует другой путь, используйте его.
+
+####### Аутентификация JWT через API
+
+По умолчанию используется конечная точка `auth/jwt/login.` Если этот метод аутентификации был включен по другому пути, используйте это значение вместо `jwt`, как представлено на примере ниже:
+
+```shell
+curl \
+  --request POST \
+  --data '{"jwt": "your_jwt", "role": "demo"}' \
+  http://127.0.0.1:8200/v1/auth/jwt/login
+```
+
+В ответе, который представлен ниже, будет содержаться токен по адресу `auth.client_token`:
+
+```json
+{
+  "auth": {
+    "client_token": "38fe9691-e623-7238-f618-c94d4e7bc674",
+    "accessor": "78e87a38-84ed-2692-538f-ca8b9f400ab3",
+    "policies": ["default"],
+    "metadata": {
+      "role": "demo"
+    },
+    "lease_duration": 2764800,
+    "renewable": true
+  }
+}
+```
+
+###### Конфигурация
+
+Перед тем как проходить аутентификацию, необходимо настроить методы аутентификации. Эти шаги выполняются оператором или средством управления конфигурацией.
+
+1. Включите метод аутентификации JWT. Можно выбрать имя `jwt` или `oidc`. Бэкэнд будет монтироваться по выбранному имени.
+
+   ```shell
+   vault auth enable jwt
+   or
+   vault auth enable oidc
+   ```
+
+1. Для настройки модуля `sronghold` используйте конечную точку `/config.` Для поддержки ролей JWT необходимо наличие локальных ключей, URL JWKS или URL OIDC Discovery. Для ролей OIDC необходимо наличие OIDC Discovery URL, OIDC Client ID и OIDC Client Secret.
+
+   ```shell
+   vault write auth/jwt/config \
+      oidc_discovery_url="https://myco.auth0.com/" \
+      oidc_client_id="m5i8bj3iofytj" \
+      oidc_client_secret="f4ubv72nfiu23hnsj" \
+      default_role="demo"
+   ```
+
+   Если необходимо выполнить проверку JWT с помощью валидации JWT-токена, оставьте `oidc_client_id` и `oidc_client_secret` пустыми.
+
+   ```shell
+   vault write auth/jwt/config \
+      oidc_discovery_url="https://MYDOMAIN.eu.auth0.com/" \
+      oidc_client_id="" \
+      oidc_client_secret=""
+   ```
+
+1. Создайте именованную роль:
+
+   ```shell
+   vault write auth/jwt/role/demo \
+      allowed_redirect_uris="http://localhost:8250/oidc/callback" \
+      bound_subject="r3qX9DljwFIWhsiqwFiu38209F10atW6@clients" \
+      bound_audiences="https://vault.plugin.auth.jwt.test" \
+      user_claim="https://vault/user" \
+      groups_claim="https://vault/groups" \
+      policies=webapps \
+      ttl=1h
+   ```
+
+   Эта роль авторизует JWT с заданными утверждениями `subject` и `audience`, задает политику webapps и использует заданные утверждения `user/groups` для настройки псевдонимов Identity.
+
+####### Связанные параметры
+
+После того как JWT подтвержден, как правильно подписанный, без истекшего срока хранения, поток авторизации проверяет соответствие всех настроенных "связанных" параметров. В некоторых случаях существуют специальные параметры, например, `bound_subject`, которые должны совпадать с параметром sub в JWT. Роль также может настраиваться на проверку произвольных утверждений с помощью карты (map) `bound_claims`. Карта содержит набор утверждений и их необходимых значений. Например, параметр `bound_claims` может иметь следующее значение:
+
+```json
+{
+   "division": "Europe",
+   "department": "Engineering"
+}
+```
+
+Будут авторизованы только JWT, содержащие утверждения `division` и `department`, и соответствующие им значения `Europe` и `Engineering`. Если значение представляет собой список, то утверждение должно соответствовать одному из элементов списка. Чтобы ограничить авторизацию набором адресов электронной почты используйте следующее:
+
+```json
+{
+   "email": ["fred@example.com", "julie@example.com"]
+}
+```
+
+Связанные формулы могут быть опционально сконфигурированы с помощью globes. Globe - это определение шаблонов в тексте, которые могут быть заменены при выполнении операции. Например, если у пользователя есть glob `*.conf`, то при выполнении операции с этим glob все файлы с расширением `.conf` будут обработаны. Это полезно при автоматизации процессов, связанных с обработкой файлов.
+
+###### Утверждения как метаданные
+
+Данные из утверждений могут быть скопированы в результирующие метаданные токена аутентификации и псевдонима (alias) с помощью настройки `claim_mappings`. Этот параметр роли представляет собой карту элементов для копирования. Элементы карты имеют вид: "&lt;JWT claim>":"&lt;metadata key>". Предположим, что параметр `claim_mappings` имеет значение:
+
+```json
+{
+   "division": "organization",
+   "department": "department"
+}
+```
+
+Это указывает, что значение JWT-требования `division` должно копироваться в ключ метаданных `organization`. Значение утверждения JWT `department` также копируется в метаданные, но при этом сохраняется имя ключа. Если утверждение сконфигурировано в `claim_mappings`, то должно существовать и в JWT, иначе аутентификация завершится неудачей.
+
+_Примечание: имя ключа метаданных "role" зарезервировано и не может быть использовано для сопоставления утверждений._
+
+###### Спецификации утверждений и JSON-указатель
+
+Некоторые параметры (например, `bound_claims`, `groups_claim`, `claim_mappings`, `user_claim`) используются для указания на данные в JWT. Если нужный ключ находится на верхнем уровне JWT, то имя ключа может быть указано напрямую. Если же он вложен на более низком уровне, то можно использовать JSON-указатель.
+
+Предположим, что необходимо сослаться на следующие JSON-данные:
+
+```json
+{
+   "division": "North America",
+   "groups": {
+      "primary": "Engineering",
+      "secondary": "Software"
+   }
+}
+```
+
+Параметр `division` будет ссылаться на North America, поскольку это ключ верхнего уровня. Параметр `/groups/primary` использует синтаксис JSON Pointer для ссылки на Engineering на более низком уровне. В качестве селектора может быть использован любой допустимый указатель JSON Pointer.
+
+##### Метод аутентификации по токену (Token auth)
+
+Метод аутентификации по токену является встроенным и автоматически доступен по адресу `/auth/token`. Он позволяет пользователям проходить аутентификацию с помощью токена, а также создавать новые токены, отзывать секреты по токену и т.д.
+
+Когда любой другой метод аутентификации возвращает идентификатор, ядро модуля `stronghold` вызывает метод token для создания нового уникального токена для этого идентификатора.
+
+Хранилище токенов также может быть использовано в обход любого другого метода аутентификации: вы можете создавать токены напрямую, а также выполнять различные другие операции с токенами, такие как обновление и отзыв.
+
+###### Аутентификация
+
+**Через CLI**
+
+В этом примере пользователь выполняет вход в систему `vault`, используя токен: 
+
+```shell
+vault login token=<token>
+```
+
+В следующем примере пользователь выполняет вход в систему `vault` с использованием метода аутентификации `userpass`. Пользователь вводит свои учетные данные в формате `username=значение` и `password=значение`.
+
+```shell
+vault login -method=userpass \
+   username=mitchellh \
+   password=foo
+```
+
+**Через API**
+
+Токен задается непосредственно в виде заголовка для HTTP API. Заголовок должен иметь вид X-Vault-Token: &lt;token> или Authorization: Bearer &lt;token>.
+
+
+```shell
+curl \
+   --request POST \
+   --data '{"password": "foo"}' \
+   http://127.0.0.1:8200/v1/auth/userpass/login/mitchellh
+```
+
+В ответе будет содержаться токен по адресу `auth.client_token`, как представлено ниже в примере:
+
+```json
+{
+   "lease_id": "",
+   "renewable": false,
+   "lease_duration": 0,
+   "data": null,
+   "auth": {
+      "client_token": "c4f280f6-fdb2-18eb-89d3-589e2e834cdb",
+      "policies": ["admins"],
+      "metadata": {
+         "username": "mitchellh"
+      },
+      "lease_duration": 0,
+      "renewable": false
+   }
+}
+```
+
+##### Метод аутентификации по логину/паролю (Userpass auth)
+
+Метод авторизации userpass позволяет пользователям проходить аутентификацию в модуле `stronghold` с помощью комбинации имени пользователя и пароля.
+
+Комбинации имени пользователя и пароля конфигурируются непосредственно в методе `auth` с помощью пути `users/`. Этот метод не может считывать имена пользователей и пароли из внешнего источника.
+
+Все вводимые имена пользователей записываются в нижнем регистре, например, _Mary_ и _mary_ - это одна и та же запись.
+
+###### Конфигурация
+
+Перед тем как пользователи смогут проходить аутентификацию, необходимо предварительно настроить методы аутентификации. Эти шаги обычно выполняются оператором или средством управления конфигурацией.
+
+1. Включите метод аутентификации `userpass`, как представлено ниже:
+
+   ```shell
+   vault auth enable userpass
+   ```
+
+   Это позволяет включить метод аутентификации `userpass` по адресу `auth/userpass`. Чтобы включить его по другому пути, используйте флаг `-path`, как представлено ниже:
+
+   ```shell
+   vault auth enable -path=<path> userpass
+   ```
+
+1. Настройте метод на пользователей, которым разрешена аутентификация:
+
+   ```shell
+   vault write auth/<userpass:path>/users/mitchellh \
+      password=foo \
+      policies=admins
+   ```
+
+В результате создается новый пользователь `mitchellh` с паролем `foo`, который будет связан с политикой `admins`. Это единственная необходимая конфигурация.
+
+### Модуль stronghold: Механизм секретов KV
+
+#### Механизм секретов KV (key-value / ключ-значение)
+
+Механизм секретов `kv` представляет собой общее хранилище ключ-значение для хранения произвольных секретов в настроенном физическом хранилище для Stronghold. Этот механизм секретов может работать в двух режимах:
+
+* kv версии 1, для хранения одного значения для ключа
+* kv версии 2, с версионностью и возможностью хранения произвольно настроиваемового количества версий для каждого ключа.
+
+##### KV версия 1
+
+При использовании механизма секретов `kv` хранилища в режиме без поддержки версионирования, сохраняется только последнее обновленное значение ключа. Основным преимуществом использования данного режима является уменьшение занимаемого пространства на хранилище для каждого ключа, так как не сохраняются дополнительные метаданные и история изменений. Кроме того, операции запроса к механизму секретов, настроенному таким образом, являются более производительными, так как для каждого конкретного запроса требуется меньше обращений к хранилищу данных и не возникает блокировки при изменении значения ключа.
+
+##### KV версия 2
+
+При использовании версии 2 механизма секретов kv ключ может сохранять настраиваемое количество версий. По умолчанию это 10 версий. Метаданные и данные старых версий могут быть извлечены из каждой сохраненной версии. Кроме того, для предотвращения случайной перезаписи данных можно использовать операции Check-and-Set.
+
+При удалении версии данные, лежащие в ее основе, не удаляются, а помечаются как удаленные. Удаление версии может быть отменено. Для окончательного удаления данных версии можно использовать консольную команду destroy или отправить запрос в соответствующий путь API. Кроме того, все версии и метаданные для ключа могут быть удалены командой `delete` по метаданным или конечной точкой API. На каждую из этих операций можно наложить различные ACL, ограничивающие права на мягкое удаление, удаление без удаления или полное удаление данных.
+
+##### Включение механизма секретов
+
+Для начала работы с механизмом секретов KV, необходимо включить его по пути `kv`. Каждый путь полностью изолирован и не может взаимодействовать с другими путями. Например, механизм KV-секретов, включенный в foo, не может взаимодействовать с механизмом KV-секретов, включенным в bar.
+
+```shell
+vault secrets enable -path=kv kv
+```
+
+Пример ответа:
+
+```txt
+Success! Enabled the kv secrets engine at: kv/
+```
+
+Путь, по которому включен механизм секретов, по умолчанию равен имени механизма секретов. Таким образом, следующая команда эквивалентна выполнению приведенной выше команды.
+
+```shell
+vault secrets enable kv
+```
+
+Выполнение этой команды приведет к ошибке _path is already in use at kv/_.
+
+Чтобы проверить успешность операции и получить дополнительные сведения о механизме управления секретами, используйте команду `vault secrets list`:
+
+```shell
+vault secrets list
+```
+
+Пример ответа:
+
+```txt
+Path Type Accessor Description
+---- ---- -------- -----------
+cubbyhole/ cubbyhole cubbyhole_78189996 per-token private secret storage
+identity/ identity identity_ac07951e identity store
+kv/ kv kv_15087625 n/a
+secret/ kv kv_4b990c45 key/value secret storage
+sys/ system system_adff0898 system endpoints used for control, policy and debugging
+```
+
+Это подтверждает наличие на сервере `stronghold` пяти активных механизмов управления секретами. Можно увидеть тип такого механизма, соответствующий путь и необязательное описание (или «n/a», если оно не указано). При выполнении вышеуказанной команды с флагом `-detailed ` становится доступной информация о версии KV системы управления секретами, а также многое другое.
+
+_Путь sys/ соответствует бэкенду системы. Эти пути взаимодействуют с основной системой модуля `stronghold` и не являются обязательными для новичков._
+
+Потратьте несколько минут на чтение и запись некоторых данных в новый KV-механизм управления секретами, расположенный по адресу `kv/`. Ниже приведены несколько примеров для старта.
+
+Для создания секретов используйте команду `kv put`.
+
+```shell
+vault kv put kv/hello target=world
+```
+
+Пример ответа:
+
+```txt
+Success! Data written to: kv/hello
+```
+
+Для чтения секретов, хранящихся в пути kv/hello, используйте команду `kv get`, как представлено на примере:
+
+```shell
+vault kv get kv/hello
+```
+
+Пример ответа:
+
+```txt
+===== Data =====
+Key Value
+--- -----
+target world
+```
+
+Создайте секреты по пути `kv/my-secret`, как представлено на примере:
+
+```shell
+vault kv put kv/my-secret value="s3c(eT"
+```
+
+Пример ответа:
+
+```txt
+Success! Data written to: kv/my-secret
+```
+
+Читайте секреты по пути `kv/my-secret`, как представлено на примере:
+
+```shell
+vault kv get kv/my-secret
+```
+
+Пример ответа:
+
+```txt
+==== Data ====
+Key Value
+--- -----
+value s3c(eT
+```
+
+Удалите секреты по адресу `kv/my-secret`, как представлено на примере:
+
+```shell
+vault kv delete kv/my-secret
+```
+
+Пример ответа:
+
+```txt
+Success! Data deleted (if it existed) at: kv/my-secret
+```
+
+Перечислите существующие ключи на пути `kv`, как представлено на примере:
+
+```shell
+vault kv list kv/
+```
+
+Пример ответа:
+
+```txt
+Keys
+----
+hello
+```
+
+##### Отключение механизма секретов
+
+Если необходимость в механизме управления секретами отпадает, его можно отключить. При отключении такого механизма все секреты удаляются, а соответствующие данные и настройки модуля `stronghold` уничтожаются.
+
+```shell
+vault secrets disable kv/
+```
+
+Пример ответа:
+
+```txt
+Success! Disabled the secrets engine (if it existed) at: kv/
+```
+
+> Обратите внимание, вышеприведенная команда принимает в качестве аргумента путь к механизму управления секретами, а не тип механизма управления секретами. Любые попытки маршрутизации данных по исходному пути привели бы к ошибке, однако теперь по этому пути может быть включен другой механизм управления секретами.
+
+#### Управление секретами
+
+Механизм секретов Key/Value - это универсальное хранилище ключевых значений, используемое для хранения произвольных секретов в пределах настроенного физического хранилища Deckhouse Stronghold.
+
+Секреты, записанные в Deckhouse Stronghold, шифруются и затем записываются во внутреннее хранилище. Внутренний механизм хранения данных не имеет доступа к незашифрованным значениям и не обладает средствами, необходимыми для их расшифровки без использования Deckhouse Stronghold.
+
+Механизм секретов ключ/значение имеет версии 1 и 2. Разница в том, что v2 обеспечивает версионность секретов, а v1 - нет.
+
+Для взаимодействия с механизмом секретов K/V используйте команду `vault kv <подкоманда> [options] [args]`.
+
+Доступные подкоманды перечислены в следующей таблице:
+
+| Подкоманда        | kv v1 | kv v2 | Описание                                                                             |
+|-------------------|-------|-------|--------------------------------------------------------------------------------------|
+| delete            | x     | x     | Удаление версий секретов, хранящихся в K/V                                           |
+| destroy           |       | x     | Постоянное удаление одной или нескольких версий секретов                             |
+| enable-versioning |       | x     | Включение версионности для существующего хранилища K/V v1                            |
+| get               | x     | x     | Получение данных                                                                     |
+| list              | x     | x     | Перечислить данные или секреты                                                       |
+| metadata          |       | x     | Взаимодействие с хранилищем ключей-значений `stronghold`                               |
+| patch             |       | x     | Обновление секретов без перезаписи существующих секретов                             |
+| put               | x     | x     | Установка или обновление секретов (при этом происходит замена существующих секретов) |
+| rollback          |       | x     | Откат к предыдущей версии секретов                                                   |
+| undelete          |       | x     | Восстановление удаленной версии секретов                                             |
+
+##### Получение справки по командам
+
+Взаимодействовать с механизмом секретов ключ/значение можно с помощью команды `vault kv`.
+
+Получите справку по команде:
+
+```shell
+vault kv -help
+```
+
+Пример ответа:
+
+```txt
+Usage: vault kv <subcommand> [options] [args]
+```
+
+Пример ответа:
+
+```txt
+This command has subcommands for interacting with Stronghold's key-value
+store. Here are some simple examples, and more detailed examples are
+available in the subcommands or the documentation.
+Create or update the key named "foo" in the "secret" mount with the value
+"bar=baz":
+$ vault kv put -mount=secret foo bar=baz
+Read this value back:
+$ vault kv get -mount=secret foo
+Get metadata for the key:
+$ vault kv metadata get -mount=secret foo
+Get a specific version of the key:
+$ vault kv get -mount=secret -version=1 foo
+The deprecated path-like syntax can also be used, but this should be avoided
+for KV v2, as the fact that it is not actually the full API path to
+the secret (secret/data/foo) can cause confusion:
+$ vault kv get secret/foo
+Please see the individual subcommand help for detailed usage information.
+Subcommands:
+delete Deletes versions in the KV store
+destroy Permanently removes one or more versions in the KV store
+enable-versioning Turns on versioning for a KV store
+get Retrieves data from the KV store
+list List data or secrets
+metadata Interact with Stronghold's Key-Value storage
+patch Sets or updates data in the KV store without overwriting
+put Sets or updates data in the KV store
+rollback Rolls back to a previous version of data
+undelete Undeletes versions in the KV store
+```
+
+##### Записывание секрета
+
+Перед началом работы ознакомьтесь со справкой по команде:
+
+```shell
+vault kv put -help
+```
+
+В справке приведены примеры команд, а также необязательные параметры, которые можно использовать.
+
+Запишите ключ-значение `secret` в путь `hello`, с ключом `foo` и значением `world`, используя команду `vault kv put` против пути `mount path secret`, на котором установлен механизм управления секретами KV v2. Эта команда создаст новую версию секрета и заменит все ранее существовавшие данные по указанному пути, если они существуют.
+
+```shell
+vault kv put -mount=secret hello foo=world
+```
+
+Пример ответа:
+
+```txt
+== Secret Path ==
+secret/data/hello
+======= Metadata =======
+Key Value
+--- -----
+created_time 2022-06-15T19:36:54.389113Z
+custom_metadata <nil>
+deletion_time n/a
+destroyed false
+version 1
+```
+
+Важно, чтобы путь монтирования к механизму секретов KV v2 был указан с параметром `-mount=secret`, иначе данный пример не будет работать. Путь монтирования `secret` (который был автоматически задан при запуске сервера `stronghold` в режиме `-dev`) - это место, где можно читать и записывать произвольные секреты.
+
+С помощью kv put можно записывать несколько фрагментов данных.
+
+```shell
+vault kv put -mount=secret hello foo=world excited=yes
+```
+
+Пример ответа:
+
+```txt
+== Secret Path ==
+secret/data/hello
+======= Metadata =======
+Key Value
+--- -----
+created_time 2022-06-15T19:49:06.761365Z
+custom_metadata <nil>
+deletion_time n/a
+destroyed false
+version 2
+```
+
+
+>Обратите внимание, что версия теперь равна 2.
+В примерах этого руководства для отправки секретов в `stronghold` используется ввод &lt;ключ>=&lt;значение>. Однако отправка данных в составе команды CLI часто попадает в историю оболочки в незашифрованном виде.
+
+##### Чтение секрета
+
+Cекреты могут быть получены с помощью _vault kv get_.
+
+```shell
+vault kv get -mount=secret hello
+```
+
+Пример ответа:
+
+```txt
+== Secret Path ==
+secret/data/hello
+======= Metadata =======
+Key Value
+--- -----
+created_time 2022-01-15T01:40:09.888293Z
+custom_metadata <nil>
+deletion_time n/a
+destroyed false
+version 2
+===== Data =====
+Key Value
+--- -----
+excited yes
+foo world
+```
+
+Модуль `stronghold` возвращает последнюю версию (в данном случае версию 2) секретов по адресу `secret/hello`.
+
+Чтобы вывести только значение заданного поля, используйте флаг -field=&lt;имя_ключа>.
+
+```shell
+vault kv get -mount=secret -field=excited hello
+```
+
+Пример ответа:
+
+```txt
+yes
+```
+
+Необязательный JSON-вывод может быть очень полезен для скриптов. Например, с помощью jq можно получить значение извлеченного секрета:
+
+```shell
+vault kv get -mount=secret -format=json hello | jq -r .data.data.excited
+```
+
+Пример ответа:
+
+```txt
+yes
+```
+
+##### Удаление секрета
+
+Удалить секрет можно с помощью команды _vault kv delete_.
+
+```shell
+vault kv delete -mount=secret hello
+```
+
+Пример ответа:
+
+```txt
+Success! Data deleted (if it existed) at: secret/data/hello
+```
+
+Для проверки, попробуйте прочитать секрет, который только что удалили:
+
+```shell
+vault kv get -mount=secret hello
+```
+
+Пример ответа:
+
+```txt
+== Secret Path ==
+secret/data/hello
+======= Metadata =======
+Key Value
+--- -----
+created_time 2022-01-15T01:40:09.888293Z
+custom_metadata <nil>
+deletion_time 2022-01-15T01:40:41.786995Z
+destroyed false
+version 2
+```
+
+>На выходе отображаются только метаданные со временем удаления (deletion_time). Сами данные после удаления недоступны. Обратите внимание, что параметр `destroyed` со значением `false` указывает на возможность восстановления удаленных данных, если удаление произошло случайно.
+
+```shell
+vault kv undelete -mount=secret -versions=2 hello
+```
+
+Пример ответа:
+
+```txt
+Success! Data written to: secret/undelete/hello
+```
+
+Теперь данные восстановлены, как представлен на примере:
+
+```shell
+vault kv get -mount=secret hello
+```
+
+Пример ответа:
+
+```txt
+======= Metadata =======
+Key Value
+--- -----
+created_time 2022-01-15T01:40:09.888293Z
+custom_metadata <nil>
+deletion_time n/a
+destroyed false
+version 2
+===== Data =====
+Key Value
+--- -----
+excited yes
+foo world
+```
+
+### Модуль stronghold: механизм секретов PKI
+
+#### Механизм секретов PKI (Публичной инфраструктуры ключей / Public Key Infrastructure)
+
+Когда этот модуль секретов включен, экземпляр `stronghold` может работать в качестве сервера сертификационного центра (CA), генерируя динамические корневые и промежуточные сертификаты, а также подписывая сертификаты по запросу.
+
+Модуль секретов инфраструктуры открытых ключей (Public Key Infrastructure, сокращённо PKI) генерирует динамические сертификаты X.509. С этим механизмом секретов сервисы могут получать сертификаты без прохождения обычного ручного процесса создания закрытого ключа и CSR, подачи заявки в CA и ожидания завершения процесса верификации и подписания. Встроенные механизмы аутентификации и авторизации Vault обеспечивают функциональность верификации.
+
+Если поддерживать TTL относительно коротким, необходимость отзыва сертификатов становится менее вероятной, что позволяет держать CRL (certificate revocation list / лист отзыва сертификатов) коротким и помогает механизму секретов выдерживать большие рабочие нагрузки. Это, в свою очередь, позволяет каждому экземпляру запущенного приложения иметь уникальный сертификат, устраняя необходимость их совместного использования и связанные с этим проблемы отзыва и ротации.
+
+Кроме того, благодаря возможности обойтись без отзыва, этот механизм секретов позволяет использовать эфемерные сертификаты. Сертификаты могут извлекаться и храниться в памяти при запуске приложения и удаляться при завершении работы, никогда не записываясь на диск.
+
+#### Механизм секретов PKI - настройка и использование
+
+Эта секция содержит краткий обзор настройки и использования движка секретов PKI.
+
+##### Настройка
+
+Большинство механизмов секретов должно быть настроено заранее, чтобы они могли выполнять свои функции. Эти шаги обычно выполняются оператором или инструментом управления конфигурацией.
+
+1. Включите механизм секретов PKI:
+
+    ```shell
+    $ vault secrets enable pki
+    ```
+    
+    Пример ответа:
+    
+    ```txt
+    Success! Enabled the pki secrets engine at: pki/
+    ```
+
+    По умолчанию механизм секретов будет установлен с именем движка. Чтобы включить механизм секретов по другому пути, используйте аргумент `-path`.
+
+1. Увеличьте TTL, настроив механизм секретов. Значение по умолчанию в 30 дней может быть слишком коротким, поэтому увеличьте его до 1 года:
+
+    ```shell
+    $ vault secrets tune -max-lease-ttl=8760h pki
+    ```
+    
+    Пример ответа:
+    
+    ```txt
+    Success! Tuned the secrets engine at: pki/
+    ```
+
+    Обратите внимание, что отдельные роли могут ограничивать это значение до более короткого на основе каждого сертификата. Это лишь настраивает глобальное максимальное значение для этого механизма секретов.
+
+1. Настройте сертификат CA и приватный ключ. `stronghold` может использовать уже существующую пару ключей или сгенерировать собственный самоподписанный корневой сертификат. В общем случае, мы рекомендуем поддерживать ваш корневой CA вне `stronghold` и предоставлять `stronghold` подписанный промежуточный CA.
+
+    ```shell
+    $ vault write pki/root/generate/internal \
+    ```
+    
+    Пример ответа:
+    
+    ```txt
+        common_name=my-website.ru \
+        ttl=8760h
+
+    Key              Value
+    ---              -----
+    certificate      -----BEGIN CERTIFICATE-----...
+    expiration       1756317679
+    issuing_ca       -----BEGIN CERTIFICATE-----...
+    serial_number    fc:f1:fb:2c:6d:4d:99:1e:82:1b:08:0a:81:ed:61:3e:1d:fa:f5:29
+    ```
+
+    Возвращаемый сертификат является чисто информативным. Закрытый ключ безопасно хранится внутри Stronghold.
+
+1. Обновите местоположение CRL и выпускающие сертификаты. Эти значения могут быть обновлены в будущем.
+
+    ```shell
+    $ vault write pki/config/urls \
+    ```
+    
+    Пример ответа:
+    
+    ```txt
+        issuing_certificates="http://127.0.0.1:8200/v1/pki/ca" \
+        crl_distribution_points="http://127.0.0.1:8200/v1/pki/crl"
+    Success! Data written to: pki/config/urls
+    ```
+
+1. Настройте роль, которая сопоставляет имя в `stronghold` с процедурой генерации сертификата. Когда пользователи или машины генерируют учетные данные, они генерируются для этой роли:
+
+    ```shell
+    $ vault write pki/roles/example-dot-ru \
+    ```
+    
+    Пример ответа:
+    
+    ```txt
+        allowed_domains=my-website.ru \
+        allow_subdomains=true \
+        max_ttl=72h
+    Success! Data written to: pki/roles/example-dot-ru
+    ```
+
+##### Использование
+
+После того как механизм секретов настроен и у пользователя/машины есть Stronghold-токен с соответствующими правами, можно генерировать учетные данные.
+
+1.  Сгенерируйте новые учетные данные, записав их в путь `/issue` с именем роли:
+
+    ```shell
+    $ vault write pki/issue/example-dot-ru \
+    ```
+    
+    Пример ответа:
+    
+    ```txt
+        common_name=www.my-website.ru
+
+    Key                 Value
+    ---                 -----
+    certificate         -----BEGIN CERTIFICATE-----...
+    issuing_ca          -----BEGIN CERTIFICATE-----...
+    private_key         -----BEGIN RSA PRIVATE KEY-----...
+    private_key_type    rsa
+    serial_number       1d:2e:c6:06:45:18:60:0e:23:d6:c5:17:43:c0:fe:46:ed:d1:50:be
+    ```
+
+    Вывод будет включать динамически сгенерированный закрытый ключ и сертификат, который соответствует данной роли и истекает через 72 часа (как указано в нашем определении роли). Также возвращаются выпускающий CA и цепочка доверия для упрощения автоматизации.
+
+##### API
+
+У механизма секретов PKI есть полный HTTP API. Пожалуйста, ознакомьтесь с [API](api_guide.html) документацией.
+
+### Модуль stronghold: Руководство администратора
+
+#### Системные требования
+
+Поскольку профиль использования хранилища секретов у каждого клиента различен, эти рекомендации должны служить лишь отправной точкой. Все требования к ресурсам прямо пропорциональны операциям, выполняемым кластером.
+
+Следует рассмотреть два основных типа кластеров согласно их назначению:
+* **Небольшие кластеры**. Подходят для большинства начальных развертываний или для сред разработки и тестирования.
+* **Большие кластеры**. Производственные среды с постоянно высокой рабочей нагрузкой. Это может быть большое количество транзакций, большое количество секретов или комбинация того и другого.
+
+|  | Небольшой кластер | Большой кластер |
+| :--- | :--- | :--- |
+| Процессор | 4-8 ядер | 8-16 ядер |
+| Память | 8-16 Гб | 16-32 Гб |
+| Дисковый ввод-вывод | 3000+ оп/с | 3000+ оп/с |
+| Дисковый ввод-вывод | 70+ Мб/с | 200+ Мб/с |
+
+В зависимости от прогнозируемого количества и типа операций следует отталкиваться от следующих требований:
+|  | 4 ядра | 16 ядер |
+| :--- | :---  | :--- |
+| Авторизация (получение токена) | до 20 оп/с | до 100 оп/с |
+| Чтение ключа до 1кБ | до 500 оп/с | до 7000 оп/с |
+| Запись ключа | до 30 оп/с | до 150 оп/с |
+
+#### Установка и включение модуля
+
+**Термины и определения**
+
+| Термин | Определение |
+| :--- | :--- |
+| Инлет | Способ поступления входящего трафика. |
+| Бэкенд | Внутренняя часть, которая находится на сервере и скрыта от пользователей. |
+| Модуль | Средство логического разделения программного обеспечения на блока, каждый из которых выполняет определенную задачу. |
+| Механизм секретов | Хранилище ключей-значений, используемое для хранения произвольных секретов. |
+
+Примените `ModuleConfig`для включения модуля:
+
+```shell
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: stronghold
+spec:
+  enabled: true
+```
+
+или выполните команду:
+
+```shell
+kubectl -n d8-system exec deploy/deckhouse -c deckhouse -it -- deckhouse-controller module enable stronghold
+```
+
+По умолчанию, модуль запускается в режиме `Automatic` с инлетом `Ingress`. В текущей версии, другие режимы и инлеты не предусмотрены.
+
+Если установка Deckhouse выполнена в закрытом окружении, то с помощью секции параметров [https](configuration.html#parameters-https) можно настроить использование SSL-сертификатов..
+
+Доступ к интерфейсу модуля осуществляется через инлеты. В данный момент доступен один инлет - `Ingress.` Адрес веб-интерфейса модуля формируется следующим образом: в шаблоне [publicDomainTemplate](/deckhouse-configure-global.html#parameters-modules-publicdomaintemplate) глобального параметра конфигурации Deckhouse ключ `%s` заменяется на `stronghold`.
+
+Например, если `publicDomainTemplate` установлен как `%s-kube.company.my`, веб-интерфейс модуля `stronghold` будет доступен по адресу `stronghold-kube.company.my`.
+
+#### Получение токенов доступа
+
+Способы получения токенов доступа:
+
+- Root-токен из секрета `stronghold-keys` пространства имен `kubernetes d8-stronghold`. Пример команды получения root-токена:
+
+  ```shell
+  kubectl -n d8-stronghold get secret stronghold-keys -o json | jq -r .data.rootToken | base64 -d
+  ```
+
+- Токен доступа с полными правами через UI Deckhouse Admin.
+
+  - Создайте [статического пользователя](/modules/user-authn/cr.html#user) и [группу](/modules/user-authn/cr.html#group) в Deckhouse Kubernetes Platform, или настройте аутентификацию через [внешние системы](/modules/user-authn/) (OIDC-провайдеров).
+  - Добавьте пользователя в список администраторов модуля `stronghold`, используя параметр [management.administrators](configuration.html#parameters-management-administrators).
+  - Авторизуйтесь в веб-интерфейсе и получите токен. Для этого в навигационном меню нажмите [Кнопку авторизации](/images/stronghold/image1.ru.png) и в открывшемся меню нажмите на *Копировать токен*.
+
+- Токен доступа с полными правами через CLI.
+  - Создайте [статического пользователя](/modules/user-authn/cr.html#user) и [группу](/modules/user-authn/cr.html#group) в Deckhouse Kubernetes Platform, или настройте аутентификацию через [внешние системы](/modules/user-authn/) (OIDC-провайдеров).
+  - Добавьте пользователя в список администраторов модуля `stronghold`, используя параметр [management.administrators](configuration.html#parameters-management-administrators).
+  - Авторизуйтесь с помощью `vault login`, выполнив следующие команды (укажите актуальный адрес в `VAULT_ADDR`):
+
+    При аутентификации через внешние системы:
+
+    ```shell
+    export VAULT_ADDR=https://stronghold.demo.mydomain.tld/
+    vault login -method=oidc -path=oidc_deckhouse
+    ```
+
+    При аутентификации через статического пользователя, выполните:
+
+    ```shell
+    export VAULT_ADDR=https://stronghold.demo.mydomain.tld/
+    vault login
+    ```
+
+    Пример результата представлен ниже:
+
+    ```console
+    Waiting for OIDC authentication to complete...
+    WARNING! The VAULT_TOKEN environment variable is set! The value of this
+    variable will take precedence; if this is unwanted please unset VAULT_TOKEN or
+    update its value accordingly.
+
+    Success! You are now authenticated. The token information displayed below
+    is already stored in the token helper. You do NOT need to run "vault login"
+    again. Future Vault requests will automatically use this token.
+
+    Key                  Value
+    ---                  -----
+    token                hvs.XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+    token_accessor       XXXXXXXXXXXXXXXXXXXXXXXX
+    token_duration       768h
+    token_renewable      true
+    token_policies       ["default"]
+    identity_policies    ["admin"]
+    policies             ["admin" "default"]
+    token_meta_role      deckhouse_dex_authenticated
+    ```
+
+> Полные права токена доступа подразумевают подключение политики `deckhouse_administrators` следующего вида: `path "*" { capabilities = ["create", "read", "update", "delete", "list", "patch", "sudo"]}`. Политика `deckhouse_administrators` автоматически подключается пользователям, перечисленным в списке администраторов модуля `stronghold` (параметр [management.administrators](configuration.html#parameters-management-administrators)). Пользователям не входящим в список администраторов подключается политика `default`.
+
+Получив токен, выполните следующие команды, которые позволят работать с хранилищем:
+
+```shell
+export VAULT_TOKEN=hvs.CAESIPaA9shwUt9XIlvlu9FWhr6DyMgnP77bChDmb0mff6OcGh4KHGh2cy5maMz0UWgwdkZlMXlteENlUlhqNUlVeHg`
+export VAULT_ADDR=https://stronghold.demo.mydomain.tld/
+```
+
+#### Настройка параметров высокой доступности
+
+Если используется одна мастер нода (не рекомендуется для продуктивных сред), то модуль `stronghold` работает в неотказоустойчивом режиме.
+Распечаткой кластера занимается stronghold-automatic, используя ключи, сохраненные в кубернетес-секрете приинициализации кластера.
+Высокая доступность обеспечивается автоматически, если количество мастер-узлов кластера Deckhouse Kubernetes Platform составляет три и более.
+В этом режиме распечаткой кластера занимаются соседние ноды stronghold.
+
+#### Дополнительные разделы руководства администратора
+
+- [Методы аутентификации](admin_guide_auth_methods.html)
+- [Механизмы секретов](admin_guide_secret_engines.html)
+- [Механизм секретов KV](admin_guide_kv.html)
+- [Механизм секретов PKI](admin_guide_pki.html)
+
+### Модуль stronghold: механизмы секретов
+
+#### Механизмы секретов
+
+##### Механизм секретов KV (key-value / ключ-значение)
+
+- [Механизм секретов KV](admin_guide_kv.html)
+
+##### Механизм секретов PKI (Публичной инфраструктуры ключей / Public Key Infrastructure)
+
+- [Механизм секретов PKI](admin_guide_pki.html)
+
+##### Механизм секретов Identity
+
+Механизм секретов `Identity` - это решение для управления идентификацией в `stronghold`. Внутри системы хранятся клиенты, которые распознаются Deckhouse Stronghold. Каждый клиент называется сущностью. Сущность может иметь несколько псевдонимов (aliases). 
+
+Например, один пользователь, имеющий учетные записи на GitHub и LDAP, может быть сопоставлен с одной сущностью в Deckhouse Stronghold, имеющей два псевдонима: один типа GitHub, другой типа LDAP. При успешной аутентификации клиента через любой из бэкендов (кроме бэкенда Token), модуль `stronghold` создает новую сущность и прикрепляет к ней новый псевдоним, если соответствующая сущность еще не существует. Идентификатор сущности будет привязан к аутентифицированному токену. При использовании таких токенов их идентификаторы сущностей регистрируются в журнале аудита, что позволяет проследить за действиями конкретных пользователей.
+
+Хранилище идентификаторов позволяет операторам управлять сущностями в Deckhouse Stronghold. Можно создавать сущности и привязывать к ним псевдонимы с помощью ACL API. Для сущностей могут быть установлены политики, которые добавляют возможности токенам, привязанным к идентификаторам сущностей. Возможности, предоставляемые токенам через сущности, являются дополнением к существующим возможностям токена, а не заменой. Возможности токена, наследуемые от сущностей, вычисляются динамически во время запроса. Это обеспечивает гибкость в управлении доступом к уже выпущенным токенам.
+
+_ПРИМЕЧАНИЕ: Этот механизм секретов будет установлен по умолчанию. Этот механизм секретов нельзя отключить или переместить. Более подробный концептуальный обзор идентификации см. в документации по идентификации._
+
+##### Механизм секретов Cubbyhole
+
+Механизм секретов `cubbyhole` используется для хранения произвольных секретов в сконфигурированном физическом хранилище Vault, привязанном к токену. В `cubbyhole`пути распределены по токенам. Ни один токен не может получить доступ к cubbyhole другого токена. Когда срок действия токена истекает, его `cubbyhole` уничтожается.
+
+Также в отличие от движка секретов `kv`, поскольку время жизни `cubbyhole` связано со временем жизни токена аутентификации, не существует понятия TTL или интервала обновления для значений, содержащихся в `cubbyhole` токене.
+
+Запись в ключ в механизме секретов `cubbyhole` полностью заменит старое значение.
+
+###### Настройка
+
+Большинство секретных механизмов необходимо предварительно настроить, прежде чем они смогут выполнять свои функции. Эти шаги обычно выполняются оператором или инструментом управления конфигурацией.
+
+Механизм секретов `cubbyhole` включен по умолчанию. Его нельзя отключить, переместить или включить несколько раз.
+
+###### Использование
+
+После того как механизм секретов настроен и у пользователя есть токен Vault с соответствующими правами, который может генерировать учетные данные. Механизм секретов `cubbyhole` позволяет записывать ключи с произвольными значениями
+
+1. Запись произвольных данных:
+
+   ```shell
+   $ vault write cubbyhole/my-secret my-value=s3cr3t
+    ```
+    
+    Пример ответа:
+    
+    ```txt
+   Success! Data written to: cubbyhole/my-secret
+   ```
+
+1. Чтение произвольных данных:
+
+   ```shell
+   $ vault read cubbyhole/my-secret
+    ```
+    
+    Пример ответа:
+    
+    ```txt
+   
+    Key         Value
+   
+    ---         -----
+   
+    my-value    s3cr3t
+    ```
+
+### Модуль stronghold: Описание функциональных характеристик
+
+#### Общее описание
+
+Модуль `stronghold` - это программное обеспечение для управления доступом и защиты секретов в IT-инфраструктуре компании.
+
+Модуль `stronghold` предназначен для управления секретами, их хранения и распространения в безопасной и управляемой среде. Он позволяет организациям безопасно хранить и получать доступ к конфиденциальной информации, такой как пароли, ключи API, сертификаты и другие секреты, необходимые для работы приложений и сервисов. Модуль `stronghold` предоставляет централизованное управление и контроль над этими секретами, обеспечивая надежное и безопасное хранение, а также возможность аудита и мониторинга.
+
+Для хранения данных `stronghold` использует AES-256 GCM (Galois/Counter Mode) с 96-битным начальным вектором, что позволяет обеспечить одновременно конфиденциальность и целостность данных.
+
+Основные функциональные характеристики модуля `stronghold`:
+
+ Название функции                                                                                                                                                                                                                                                                                      | Результат                                                                                                                                  |
+|:------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|:-------------------------------------------------------------------------------------------------------------------------------------------|
+| Централизованное хранение секретов: модуль `stronghold` управляет всеми секретами в едином месте, обеспечивая их централизованное хранение и управление.                                                                                                                                              | Повышение эффективности и безопасности управления секретами, а также упрощение процесса доступа к ним для пользователей.                   |
+| Контроль доступа: `stronghold` предоставляет возможность настройки и управления доступом к секретам на основе ролей, политик и ACL (списков контроля доступа). Это позволяет определить, кто имеет доступ к каким секретам и какие операции с ними могут выполняться.                                 | Настроен контроль доступа к секретам, основанный на ролях, политиках и списках контроля доступа.                                           |
+| Шифрование данных: Все секреты, хранящиеся в модуле `stronghold`, шифруются на стороне клиента с использованием криптостойкого шифрования. Это гарантирует безопасность данных и предотвращает несанкционированный доступ к ним.                                                                      | Данные, хранящиеся в модуле `stronghold`, шифруются на стороне клиента.                                                                    |
+| Журналирование и мониторинг: модуль `stronghold` предоставляет возможности для аудита, мониторинга и журналирования всех операций с секретами. Это позволяет отслеживать, кто, когда и какие действия выполнял с секретами.                                                                          | Производится мониторинг и логирование приложений, работающих на кластере, в соответствии с настройками пользователя с ролью администратор. |
+| Интеграция с другими инструментами: модуль `stronghold` может интегрироваться с различными инструментами и платформами, такими как контейнеры, системы управления исходным кодом и т. д. Это позволяет использовать модуль `stronghold` в составе существующей инфраструктуры. | Расширение функциональности и возможность работать вместе с другими программными продуктами.                                               |
+
+Модуль `stronghold` обеспечивает безопасное управление секретами в IT-инфраструктуре компании для защиты от несанкционированного доступа и минимизации рисков утечек конфиденциальной информации.
+
+#### Модули stronghold
+
+Описание модулей находится в дополнительных разделах руководства администратора
+
+- [Методы аутентификации](admin_guide_auth_methods.html)
+- [Механизмы секретов](admin_guide_secret_engines.html)
 ## Подсистема Хранение данных
 
 ### Модуль snapshot-controller
