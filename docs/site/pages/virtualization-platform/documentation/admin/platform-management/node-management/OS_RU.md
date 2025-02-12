@@ -148,7 +148,7 @@ spec:
 Данный пример приведен для ОС Ubuntu.  
 Способ обновления хранилища сертификатов может отличаться в зависимости от ОС.
 
-При адаптации скрипта под другую ОС измените параметр [bundles](../../../../reference/cr/nodegroup.html#nodegroupconfiguration-v1alpha1-spec-bundles).
+При адаптации скрипта под другую ОС измените параметры [bundles](../../../../reference/cr/nodegroupconfiguration.html#nodegroupconfiguration-v1alpha1-spec-bundles) и [content](../../../../reference/cr/nodegroupconfiguration.html#nodegroupconfiguration-v1alpha1-spec-content).
 {% endalert %}
 
 Скрипт использует следующие конструкции Bash Booster:

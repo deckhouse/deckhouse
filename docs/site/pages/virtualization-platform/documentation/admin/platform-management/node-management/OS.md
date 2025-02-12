@@ -155,7 +155,7 @@ You can add a root certificate as a NodeGroupConfiguration resource.
 The following example is for Ubuntu OS.
 The method of adding certificates to the store may differ depending on the OS.
 
-To adapt the script to a different OS, modify the [`bundles`](../../../../reference/cr/nodegroup.html#nodegroupconfiguration-v1alpha1-spec-bundles) parameter.
+To adapt the script to a different OS, modify the [`bundles`](../../../../reference/cr/nodegroupconfiguration.html#nodegroupconfiguration-v1alpha1-spec-bundles) and [content](../../../../reference/cr/nodegroupconfiguration.html#nodegroupconfiguration-v1alpha1-spec-content) parameters.
 {% endalert %}
 
 The script uses the following Bash Booster functions:

@@ -243,6 +243,17 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 
 // handleRelease handles releases
 func (r *reconciler) handleRelease(ctx context.Context, release *v1alpha1.ModuleRelease) (ctrl.Result, error) {
+	res, err := r.preHandleCheck(ctx, release)
+	if err != nil {
+		r.log.Error("failed to update module release before handling", slog.String("release", release.GetName()), log.Err(err))
+
+		return ctrl.Result{Requeue: true}, nil
+	}
+
+	if !res.IsZero() {
+		return res, nil
+	}
+
 	switch release.GetPhase() {
 	case "":
 		release.Status.Phase = v1alpha1.ModuleReleasePhasePending
@@ -285,6 +296,28 @@ func (r *reconciler) handleRelease(ctx context.Context, release *v1alpha1.Module
 
 	// process only pending releases
 	return r.handlePendingRelease(ctx, release)
+}
+
+func (r *reconciler) preHandleCheck(ctx context.Context, release *v1alpha1.ModuleRelease) (ctrl.Result, error) {
+	// pre-handling check for important values
+	if _, ok := release.Labels[v1alpha1.ModuleReleaseLabelModule]; !ok {
+		err := ctrlutils.UpdateWithRetry(ctx, r.client, release, func() error {
+			if len(release.ObjectMeta.Labels) == 0 {
+				release.ObjectMeta.Labels = make(map[string]string, 1)
+			}
+
+			release.ObjectMeta.Labels[v1alpha1.ModuleReleaseLabelModule] = release.GetModuleName()
+
+			return nil
+		})
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+
+		return ctrl.Result{Requeue: true}, nil
+	}
+
+	return ctrl.Result{}, nil
 }
 
 // handleDeployedRelease handles deployed releases
