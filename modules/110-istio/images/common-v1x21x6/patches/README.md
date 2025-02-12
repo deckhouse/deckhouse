@@ -13,4 +13,4 @@ Fix CVE
 Fix use expfmt library in pilot-agent. This library used for format metrics.
 
 > [!WARNING]
-> **After update istio to version 1.22.X need delete this patch!**
+> **After update istio to version 1.22.X and above need delete this patch!**
