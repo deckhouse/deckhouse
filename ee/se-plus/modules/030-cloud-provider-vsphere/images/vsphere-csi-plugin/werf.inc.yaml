@@ -41,7 +41,9 @@ git:
 shell:
   install:
   - git clone --depth 1 --branch {{ $value.csi.vsphere }} {{ $.SOURCE_REPO }}/kubernetes-sigs/vsphere-csi-driver.git /src
+  - git clone --depth 1 --branch v0.2.0 {{ $.SOURCE_REPO }}/gofsutil.git /src/gofsutil
   - cd /src
+  - sed -i -e 's# ../gofsutil#/src/gofsutil#g' go.mod
   {{- if $patch}}
   - git apply /patches/*.patch --verbose
   {{- end}}
@@ -60,12 +62,12 @@ mount:
   to: /go/pkg
 shell:
   install:
+  - cd /src/gofsutil
+  - go mod init deckhouse/3p/gofsutil
   - cd /src
   - export GOPROXY={{ $.GOPROXY }}
   - go mod download
   setup:
-  #- git clone --depth 1 --branch v0.2.0 {{ $.SOURCE_REPO }}/gofsutil.git /gofsutil
-  #- cd /gofsutil && go mod init deckhouse/3p/gofsutil
   - cd /src
   - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o vsphere-csi cmd/vsphere-csi/main.go
   {{- end }}

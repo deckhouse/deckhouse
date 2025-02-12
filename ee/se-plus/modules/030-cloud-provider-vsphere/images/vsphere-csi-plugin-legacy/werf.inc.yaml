@@ -27,9 +27,10 @@ git:
       - '**/*'
 shell:
   install:
-  - git clone --depth 1 --branch v0.2.1 {{ $.SOURCE_REPO }}/flant/vsphere-csi-driver.git /src
+  - git clone {{ $.SOURCE_REPO }}/flant/vsphere-csi-driver.git /src
   - git clone --depth 1 --branch v0.2.1 {{ $.SOURCE_REPO }}/flant/cloud-provider-vsphere.git /src/ccm
   - cd /src
+  - git checkout 6189afc2522d83a96d3857110c61478710110347
   - git apply /patches/csi/*.patch --verbose
   - rm -rf .git vendor
   - cd /src/ccm

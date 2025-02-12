@@ -14,7 +14,7 @@ image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
 fromImage: common/distroless
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
-  add: /src/.build/bin/vsphere-cloud-controller-manager.linux_amd64
+  add: /vsphere-cloud-controller-manager
   to: /bin/vsphere-cloud-controller-manager
   before: setup
 imageSpec:
@@ -58,9 +58,9 @@ shell:
   - go mod download
   setup:
   - cd /src
-  - export GOPROXY={{ $.GOPROXY }}
-  - go build VERSION={{ $value.ccm.vsphere }}
-  - chown 64535:64535 /src/.build/bin/vsphere-cloud-controller-manager.linux_amd64
-  - chmod 0755 /src/.build/bin/vsphere-cloud-controller-manager.linux_amd64
+  - export VERSION={{ $value.ccm.vsphere }}
+  - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags "-s -w -X version.Version=${VERSION}" -o /vsphere-cloud-controller-manager ./cmd/vsphere-cloud-controller-manager/main.go
+  - chown 64535:64535 /vsphere-cloud-controller-manager
+  - chmod 0755 /vsphere-cloud-controller-manager
   {{- end }}
 {{- end }}
