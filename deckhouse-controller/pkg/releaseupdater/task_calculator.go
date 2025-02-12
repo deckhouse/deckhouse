@@ -270,21 +270,6 @@ func getFirstReleaseInfoByPhase(releases []v1alpha1.Release, phase string) *Rele
 	}
 }
 
-// filterReleasesByModuleName
-// filter only releases, that match type
-// deckhouse release does not have module name, so it returns ""
-func filterReleasesByModuleName(releases []v1alpha1.Release, moduleName string) []v1alpha1.Release {
-	filteredReleases := make([]v1alpha1.Release, 0, 1)
-
-	for _, release := range releases {
-		if release.GetModuleName() == moduleName {
-			filteredReleases = append(filteredReleases, release)
-		}
-	}
-
-	return filteredReleases
-}
-
 // getLatestForcedReleaseInfo
 // releases slice must be sorted asc
 func getLatestForcedReleaseInfo(releases []v1alpha1.Release) *ReleaseInfo {
