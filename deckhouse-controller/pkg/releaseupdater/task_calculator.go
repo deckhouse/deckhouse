@@ -109,9 +109,11 @@ func (p *TaskCalculator) CalculatePendingReleaseTask(ctx context.Context, releas
 		}, nil
 	}
 
+	releases = filterReleasesByModuleName(releases, release.GetModuleName())
+
 	sort.Sort(ByVersion[v1alpha1.Release](releases))
 
-	forcedReleaseInfo := p.getLatestForcedReleaseInfo(releases)
+	forcedReleaseInfo := getLatestForcedReleaseInfo(releases)
 
 	// if we have a forced release
 	if forcedReleaseInfo != nil {
@@ -127,7 +129,7 @@ func (p *TaskCalculator) CalculatePendingReleaseTask(ctx context.Context, releas
 		}
 	}
 
-	deployedReleaseInfo := p.getFirstReleaseInfoByPhase(releases, v1alpha1.DeckhouseReleasePhaseDeployed)
+	deployedReleaseInfo := getFirstReleaseInfoByPhase(releases, v1alpha1.DeckhouseReleasePhaseDeployed)
 
 	// if we have a deployed release
 	if deployedReleaseInfo != nil {
@@ -253,7 +255,7 @@ func (p *TaskCalculator) listReleases(ctx context.Context) ([]v1alpha1.Release, 
 
 // getFirstReleaseInfoByPhase
 // releases slice must be sorted asc
-func (p *TaskCalculator) getFirstReleaseInfoByPhase(releases []v1alpha1.Release, phase string) *ReleaseInfo {
+func getFirstReleaseInfoByPhase(releases []v1alpha1.Release, phase string) *ReleaseInfo {
 	idx := slices.IndexFunc(releases, func(a v1alpha1.Release) bool {
 		return a.GetPhase() == phase
 	})
@@ -270,9 +272,24 @@ func (p *TaskCalculator) getFirstReleaseInfoByPhase(releases []v1alpha1.Release,
 	}
 }
 
+// filterReleasesByModuleName
+// filter only releases, that match type
+// deckhouse release does not have module name, so it returns ""
+func filterReleasesByModuleName(releases []v1alpha1.Release, moduleName string) []v1alpha1.Release {
+	filteredReleases := make([]v1alpha1.Release, 0, 1)
+
+	for _, release := range releases {
+		if release.GetModuleName() == moduleName {
+			filteredReleases = append(filteredReleases, release)
+		}
+	}
+
+	return filteredReleases
+}
+
 // getLatestForcedReleaseInfo
 // releases slice must be sorted asc
-func (p *TaskCalculator) getLatestForcedReleaseInfo(releases []v1alpha1.Release) *ReleaseInfo {
+func getLatestForcedReleaseInfo(releases []v1alpha1.Release) *ReleaseInfo {
 	for _, release := range slices.Backward(releases) {
 		if !release.GetForce() {
 			continue
