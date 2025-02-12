@@ -33,7 +33,6 @@ shell:
   install:
   - cd /src
   - export GOPROXY={{ $.GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64
-  - go mod download
   - go build -o machine-controller-manager cmd/machine-controller-manager/controller_manager.go
   - chown 64535:64535 machine-controller-manager
   - chmod 0700 machine-controller-manager
