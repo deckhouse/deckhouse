@@ -25,7 +25,9 @@ The module uses the eBPF Falco driver to ingest syscall data. It is better suite
 The eBPF driver has the following requirements:
 * The eBPF probe may not work for every system.
 * Linux kernel version >= 5.8.
-* Enabled [eBPF](https://www.kernel.org/doc/html/v5.8/bpf/btf.html). Check with the command `ls -lah /sys/kernel/btf/vmlinux`, or find `grep -E "CONFIG_DEBUG_INFO_BTF=(y|m)" /boot/config-*` in the list of kernel build parameters.
+* Enabled [eBPF](https://www.kernel.org/doc/html/v5.8/bpf/btf.html). You can verify it as follows:
+  - Run `ls -lah /sys/kernel/btf/vmlinux` — if the file exists, BTF support is enabled.
+  - Run `grep -E "CONFIG_DEBUG_INFO_BTF=(y|m)" /boot/config-*` — the parameter must be set for eBPF to function properly.
 
 > eBPF probes may not work on some systems.
 
