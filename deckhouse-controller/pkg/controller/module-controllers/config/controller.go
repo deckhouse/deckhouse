@@ -104,7 +104,7 @@ func RegisterController(
 			CreateFunc: func(_ event.CreateEvent) bool {
 				return true
 			},
-			UpdateFunc: func(updateEvent event.UpdateEvent) bool { return false },
+			UpdateFunc: func(_ event.UpdateEvent) bool { return false },
 			DeleteFunc: func(_ event.DeleteEvent) bool {
 				return false
 			},
