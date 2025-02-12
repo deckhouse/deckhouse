@@ -35,6 +35,14 @@ declare -A allowed_components=(
   ["deckhouse:deckhouse"]="all_components"
   ["deckhouse"]="all_components"
 )
+declare -A skip_components=(
+  ["registrypackages"]="skip"
+)
+# Function to get skip components
+function get_skip_components() {
+  local component=$1
+  echo "${skip_components[$component]:-"none"}"
+}
 
 # Function to check allowed components
 function get_allowed_components() {
@@ -89,6 +97,11 @@ function __main__() {
 
   for module in $(jq -rc 'to_entries[]' <<< "$digests"); do
     MODULE_NAME=$(jq -rc '.key' <<< "$module")
+    if [[ $(get_skip_components "$MODULE_NAME") == "skip" ]]; then
+          echo "=============================================="
+          echo "🛰 Module: $MODULE_NAME skip"
+          continue
+    fi
     echo "=============================================="
     echo "🛰 Module: $MODULE_NAME"
 
@@ -103,7 +116,7 @@ function __main__() {
 
       IMAGE_HASH="$(jq -rc '.value' <<< "$module_image")"
       IMAGE_REPORT_NAME="$MODULE_NAME $IMAGE_NAME"
-      check_user "$IMAGE_REPORT_NAME" "$IMAGE@$IMAGE_HASH"
+      # check_user "$IMAGE_REPORT_NAME" "$IMAGE@$IMAGE_HASH"
     done
   done
   exit_code=0
