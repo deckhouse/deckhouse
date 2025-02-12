@@ -99,7 +99,7 @@ func RegisterController(
 		For(&v1alpha1.ModuleConfig{}).
 		WithEventFilter(predicate.Or(predicate.GenerationChangedPredicate{}, predicate.AnnotationChangedPredicate{})).
 		Watches(&v1alpha1.Module{}, ctrlhandler.EnqueueRequestsFromMapFunc(func(_ context.Context, obj client.Object) []reconcile.Request {
-			return []reconcile.Request{{NamespacedName: client.ObjectKey{Name: obj.(*v1alpha1.Module).Properties.Source}}}
+			return []reconcile.Request{{NamespacedName: client.ObjectKey{Name: obj.(*v1alpha1.Module).Name}}}
 		}), builder.WithPredicates(predicate.Funcs{
 			CreateFunc: func(_ event.CreateEvent) bool {
 				return true
