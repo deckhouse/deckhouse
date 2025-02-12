@@ -112,6 +112,7 @@ func fireMupAlerts(input *go_hook.HookInput) error {
 			}
 
 			if selector.Matches(labelsSet) {
+				input.Logger.Debugf("[DEBUG HOOK] update policy %s", policy.Name)
 				input.MetricsCollector.Set("d8_deprecated_update_policy", 1.0, map[string]string{
 					"moduleName":   module.Name,
 					"updatePolicy": policy.Name,
