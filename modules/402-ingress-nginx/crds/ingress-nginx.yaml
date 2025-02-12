@@ -1202,7 +1202,7 @@ spec:
                   description: |
                     Custom additional annotations for Ingress controller pods.
 
-                    > **Caution.** The usage of this parameter is not recommended — the backward compatibility or operability of the ingress controller that uses this option is not guaranteed.
+                    > **Caution.** The usage of this parameter is not recommended — the backward compatibility or operability of the Ingress controller that uses this option is not guaranteed.
                   additionalProperties:
                     type: string
               oneOf:
