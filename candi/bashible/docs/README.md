@@ -75,7 +75,7 @@ clusterBootstrap:
   clusterDNSAddress: 10.222.0.10
   clusterDomain: cluster.local
   nodeIP: 192.168.199.23
-kubernetesVersion: "1.27"
+kubernetesVersion: "1.28"
 cri: "Containerd"
 nodeGroup:
   cloudInstances:
