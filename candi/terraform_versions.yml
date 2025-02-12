@@ -33,7 +33,7 @@ gcp:
 openstack:
   namespace: terraform-provider-openstack
   type: openstack
-  version: 1.32.0
+  version: 1.54.1
   artifact: terraform-provider-openstack
   artifactBinary: terraform-provider-openstack
   destinationBinary: terraform-provider-openstack
