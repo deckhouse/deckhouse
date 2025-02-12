@@ -23,7 +23,6 @@ This module:
 
 The module uses the eBPF Falco driver to ingest syscall data. It is better suited for environments where loading a kernel module is prohibited or unsupported, such as GKE, EKS, and other managed Kubernetes solutions.
 The eBPF driver has the following requirements:
-* The eBPF probe may not work for every system.
 * Linux kernel version >= 5.8.
 * Enabled [eBPF](https://www.kernel.org/doc/html/v5.8/bpf/btf.html). You can verify it as follows:
   - Run `ls -lah /sys/kernel/btf/vmlinux` — if the file exists, BTF support is enabled.
