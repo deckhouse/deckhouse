@@ -8,7 +8,7 @@ Fix Istio Operator healt status
 
 Fix CVE
 
-## 003-server_test_fmtText.patch
+## 003-server_fmtText.patch
 
 Fix use expfmt library in pilot-agent. This library used for format metrics.
 
