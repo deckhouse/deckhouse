@@ -1,18 +1,16 @@
 diff --git a/go.mod b/go.mod
-index d6c10ee83f..f6478524e5 100644
+index d6c10ee83f..6906992055 100644
 --- a/go.mod
 +++ b/go.mod
-@@ -1,6 +1,8 @@
+@@ -1,6 +1,6 @@
  module istio.io/istio
  
 -go 1.21
-+go 1.22
-+
-+toolchain go1.23.1
++go 1.23
  
  // Client-go does not handle different versions of mergo due to some breaking changes - use the matching version
  replace github.com/imdario/mergo => github.com/imdario/mergo v0.3.5
-@@ -60,12 +62,12 @@ require (
+@@ -60,12 +60,12 @@ require (
  	github.com/openshift/api v0.0.0-20240111155829-b6df9ba0be95
  	github.com/pires/go-proxyproto v0.7.0
  	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2
@@ -28,7 +26,7 @@ index d6c10ee83f..f6478524e5 100644
  	github.com/ryanuber/go-glob v1.0.0
  	github.com/spaolacci/murmur3 v1.1.0
  	github.com/spf13/cobra v1.8.0
-@@ -87,11 +89,11 @@ require (
+@@ -87,11 +87,11 @@ require (
  	go.opentelemetry.io/proto/otlp v1.0.0
  	go.uber.org/atomic v1.11.0
  	go.uber.org/zap v1.26.0
@@ -44,7 +42,7 @@ index d6c10ee83f..f6478524e5 100644
  	golang.org/x/time v0.5.0
  	gomodules.xyz/jsonpatch/v2 v2.4.0
  	google.golang.org/api v0.155.0
-@@ -190,7 +192,6 @@ require (
+@@ -190,7 +190,6 @@ require (
  	github.com/mailru/easyjson v0.7.7 // indirect
  	github.com/mattn/go-colorable v0.1.13 // indirect
  	github.com/mattn/go-runewidth v0.0.15 // indirect
@@ -52,7 +50,7 @@ index d6c10ee83f..f6478524e5 100644
  	github.com/mdlayher/netlink v1.7.2 // indirect
  	github.com/mdlayher/socket v0.5.0 // indirect
  	github.com/mitchellh/go-wordwrap v1.0.1 // indirect
-@@ -210,8 +211,7 @@ require (
+@@ -210,8 +209,7 @@ require (
  	github.com/peterbourgon/diskv v2.0.1+incompatible // indirect
  	github.com/pkg/errors v0.9.1 // indirect
  	github.com/planetscale/vtprotobuf v0.5.1-0.20231212170721-e7d721933795 // indirect
@@ -62,7 +60,7 @@ index d6c10ee83f..f6478524e5 100644
  	github.com/rivo/uniseg v0.4.4 // indirect
  	github.com/rogpeppe/go-internal v1.12.0 // indirect
  	github.com/russross/blackfriday/v2 v2.1.0 // indirect
-@@ -234,13 +234,13 @@ require (
+@@ -234,13 +232,13 @@ require (
  	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.46.1 // indirect
  	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.46.1 // indirect
  	go.starlark.net v0.0.0-20231121155337-90ade8b19d09 // indirect
