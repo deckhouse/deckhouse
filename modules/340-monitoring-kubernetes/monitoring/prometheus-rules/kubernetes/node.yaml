@@ -32,7 +32,7 @@
 
         The recommended course of action:
         1. Find the Node exporter Pod for this Node: `kubectl -n d8-monitoring get pod -l app=node-exporter -o json | jq -r ".items[] | select(.spec.nodeName==\"{{$labels.node}}\") | .metadata.name"`;
-        2. Describe the Node exporter Pod: `kubectl -n d8-monitoring describe pod <pod_name>`;
+        2. Describe the Node exporter Pod: `kubectl -n d8-monitoring describe pod <POD_NAME>`;
         3. Check that kubelet is running on the {{ $labels.node }} node.
 
   - alert: NodeConntrackTableFull

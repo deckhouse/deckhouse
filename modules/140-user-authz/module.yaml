@@ -1,7 +1,8 @@
 name: user-authz
 weight: 140
+subsystems:
+  - security
 description: |
   The module generates role-based access model objects, based on the standard Kubernetes RBAC mechanism.
-
 requirements:
   bootstrapped: true

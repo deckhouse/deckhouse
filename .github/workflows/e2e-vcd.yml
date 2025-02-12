@@ -57,7 +57,7 @@ on:
 env:
 
   # <template: werf_envs>
-  WERF_CHANNEL: "ea"
+  WERF_CHANNEL: "alpha"
   WERF_ENV: "FE"
   TEST_TIMEOUT: "15m"
   # Use fixed string 'sys/deckhouse-oss' for repo name. ${CI_PROJECT_PATH} is not available here in GitHub.
@@ -197,7 +197,7 @@ jobs:
         with:
           script: |
             const provider = 'vcd';
-            const kubernetesDefaultVersion = '1.29';
+            const kubernetesDefaultVersion = '1.30';
 
             const ci = require('./.github/scripts/js/ci');
             return await ci.checkE2ELabels({github, context, core, provider, kubernetesDefaultVersion});
@@ -312,7 +312,7 @@ jobs:
 
       # <template: werf_install_step>
       - name: Install werf CLI
-        uses: werf/actions/install@43075e4ab81952b181d33e125ef15b9c060a782e
+        uses: werf/actions/install@v2
         with:
           channel: ${{env.WERF_CHANNEL}}
       # </template: werf_install_step>
@@ -536,6 +536,15 @@ jobs:
           bash /deckhouse/testing/cloud_layouts/script.sh run-test
 
         # </template: e2e_run_template>
+  # </template: e2e_tests_create_debug_logs>
+      - name: Create Deckhouse debug logs
+        id: e2e_tests_create_debug_logs
+        if: failure()
+        uses: ./.github/actions/upload-d8-debug-logs
+        with:
+          sshloginfile: ${{ steps.e2e_test_run.outputs.ssh_connection_str_file }}
+          sshkey: ${{ secrets.LAYOUT_SSH_KEY }}
+  # </template: e2e_tests_create_debug_logs>
       - name: Read connection string
         if: ${{ failure() || cancelled() }}
         id: check_stay_failed_cluster
@@ -819,7 +828,7 @@ jobs:
 
       # <template: werf_install_step>
       - name: Install werf CLI
-        uses: werf/actions/install@43075e4ab81952b181d33e125ef15b9c060a782e
+        uses: werf/actions/install@v2
         with:
           channel: ${{env.WERF_CHANNEL}}
       # </template: werf_install_step>
@@ -1043,6 +1052,15 @@ jobs:
           bash /deckhouse/testing/cloud_layouts/script.sh run-test
 
         # </template: e2e_run_template>
+  # </template: e2e_tests_create_debug_logs>
+      - name: Create Deckhouse debug logs
+        id: e2e_tests_create_debug_logs
+        if: failure()
+        uses: ./.github/actions/upload-d8-debug-logs
+        with:
+          sshloginfile: ${{ steps.e2e_test_run.outputs.ssh_connection_str_file }}
+          sshkey: ${{ secrets.LAYOUT_SSH_KEY }}
+  # </template: e2e_tests_create_debug_logs>
       - name: Read connection string
         if: ${{ failure() || cancelled() }}
         id: check_stay_failed_cluster
@@ -1326,7 +1344,7 @@ jobs:
 
       # <template: werf_install_step>
       - name: Install werf CLI
-        uses: werf/actions/install@43075e4ab81952b181d33e125ef15b9c060a782e
+        uses: werf/actions/install@v2
         with:
           channel: ${{env.WERF_CHANNEL}}
       # </template: werf_install_step>
@@ -1550,6 +1568,15 @@ jobs:
           bash /deckhouse/testing/cloud_layouts/script.sh run-test
 
         # </template: e2e_run_template>
+  # </template: e2e_tests_create_debug_logs>
+      - name: Create Deckhouse debug logs
+        id: e2e_tests_create_debug_logs
+        if: failure()
+        uses: ./.github/actions/upload-d8-debug-logs
+        with:
+          sshloginfile: ${{ steps.e2e_test_run.outputs.ssh_connection_str_file }}
+          sshkey: ${{ secrets.LAYOUT_SSH_KEY }}
+  # </template: e2e_tests_create_debug_logs>
       - name: Read connection string
         if: ${{ failure() || cancelled() }}
         id: check_stay_failed_cluster
@@ -1833,7 +1860,7 @@ jobs:
 
       # <template: werf_install_step>
       - name: Install werf CLI
-        uses: werf/actions/install@43075e4ab81952b181d33e125ef15b9c060a782e
+        uses: werf/actions/install@v2
         with:
           channel: ${{env.WERF_CHANNEL}}
       # </template: werf_install_step>
@@ -2057,6 +2084,15 @@ jobs:
           bash /deckhouse/testing/cloud_layouts/script.sh run-test
 
         # </template: e2e_run_template>
+  # </template: e2e_tests_create_debug_logs>
+      - name: Create Deckhouse debug logs
+        id: e2e_tests_create_debug_logs
+        if: failure()
+        uses: ./.github/actions/upload-d8-debug-logs
+        with:
+          sshloginfile: ${{ steps.e2e_test_run.outputs.ssh_connection_str_file }}
+          sshkey: ${{ secrets.LAYOUT_SSH_KEY }}
+  # </template: e2e_tests_create_debug_logs>
       - name: Read connection string
         if: ${{ failure() || cancelled() }}
         id: check_stay_failed_cluster
@@ -2340,7 +2376,7 @@ jobs:
 
       # <template: werf_install_step>
       - name: Install werf CLI
-        uses: werf/actions/install@43075e4ab81952b181d33e125ef15b9c060a782e
+        uses: werf/actions/install@v2
         with:
           channel: ${{env.WERF_CHANNEL}}
       # </template: werf_install_step>
@@ -2564,6 +2600,15 @@ jobs:
           bash /deckhouse/testing/cloud_layouts/script.sh run-test
 
         # </template: e2e_run_template>
+  # </template: e2e_tests_create_debug_logs>
+      - name: Create Deckhouse debug logs
+        id: e2e_tests_create_debug_logs
+        if: failure()
+        uses: ./.github/actions/upload-d8-debug-logs
+        with:
+          sshloginfile: ${{ steps.e2e_test_run.outputs.ssh_connection_str_file }}
+          sshkey: ${{ secrets.LAYOUT_SSH_KEY }}
+  # </template: e2e_tests_create_debug_logs>
       - name: Read connection string
         if: ${{ failure() || cancelled() }}
         id: check_stay_failed_cluster
@@ -2847,7 +2892,7 @@ jobs:
 
       # <template: werf_install_step>
       - name: Install werf CLI
-        uses: werf/actions/install@43075e4ab81952b181d33e125ef15b9c060a782e
+        uses: werf/actions/install@v2
         with:
           channel: ${{env.WERF_CHANNEL}}
       # </template: werf_install_step>
@@ -3071,6 +3116,15 @@ jobs:
           bash /deckhouse/testing/cloud_layouts/script.sh run-test
 
         # </template: e2e_run_template>
+  # </template: e2e_tests_create_debug_logs>
+      - name: Create Deckhouse debug logs
+        id: e2e_tests_create_debug_logs
+        if: failure()
+        uses: ./.github/actions/upload-d8-debug-logs
+        with:
+          sshloginfile: ${{ steps.e2e_test_run.outputs.ssh_connection_str_file }}
+          sshkey: ${{ secrets.LAYOUT_SSH_KEY }}
+  # </template: e2e_tests_create_debug_logs>
       - name: Read connection string
         if: ${{ failure() || cancelled() }}
         id: check_stay_failed_cluster
@@ -3354,7 +3408,7 @@ jobs:
 
       # <template: werf_install_step>
       - name: Install werf CLI
-        uses: werf/actions/install@43075e4ab81952b181d33e125ef15b9c060a782e
+        uses: werf/actions/install@v2
         with:
           channel: ${{env.WERF_CHANNEL}}
       # </template: werf_install_step>
@@ -3578,6 +3632,15 @@ jobs:
           bash /deckhouse/testing/cloud_layouts/script.sh run-test
 
         # </template: e2e_run_template>
+  # </template: e2e_tests_create_debug_logs>
+      - name: Create Deckhouse debug logs
+        id: e2e_tests_create_debug_logs
+        if: failure()
+        uses: ./.github/actions/upload-d8-debug-logs
+        with:
+          sshloginfile: ${{ steps.e2e_test_run.outputs.ssh_connection_str_file }}
+          sshkey: ${{ secrets.LAYOUT_SSH_KEY }}
+  # </template: e2e_tests_create_debug_logs>
       - name: Read connection string
         if: ${{ failure() || cancelled() }}
         id: check_stay_failed_cluster
@@ -3861,7 +3924,7 @@ jobs:
 
       # <template: werf_install_step>
       - name: Install werf CLI
-        uses: werf/actions/install@43075e4ab81952b181d33e125ef15b9c060a782e
+        uses: werf/actions/install@v2
         with:
           channel: ${{env.WERF_CHANNEL}}
       # </template: werf_install_step>
@@ -4085,6 +4148,15 @@ jobs:
           bash /deckhouse/testing/cloud_layouts/script.sh run-test
 
         # </template: e2e_run_template>
+  # </template: e2e_tests_create_debug_logs>
+      - name: Create Deckhouse debug logs
+        id: e2e_tests_create_debug_logs
+        if: failure()
+        uses: ./.github/actions/upload-d8-debug-logs
+        with:
+          sshloginfile: ${{ steps.e2e_test_run.outputs.ssh_connection_str_file }}
+          sshkey: ${{ secrets.LAYOUT_SSH_KEY }}
+  # </template: e2e_tests_create_debug_logs>
       - name: Read connection string
         if: ${{ failure() || cancelled() }}
         id: check_stay_failed_cluster

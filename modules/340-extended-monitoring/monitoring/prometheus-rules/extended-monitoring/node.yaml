@@ -22,17 +22,26 @@
       plk_markup_format: "markdown"
       plk_create_group_if_not_exists__node_disk_usage: "NodeDiskUsage,tier=cluster,prometheus=deckhouse,node={{ $labels.node }},kubernetes=~kubernetes"
       plk_grouped_by__node_disk_usage: "NodeDiskUsage,tier=cluster,prometheus=deckhouse,node={{ $labels.node }},kubernetes=~kubernetes"
-      description: |-
-        Node disk "{{$labels.device}}" on mountpoint "{{$labels.mountpoint}}" is using more than {{ printf "extended_monitoring_node_threshold{threshold=\"disk-bytes-warning\", node=\"%s\"}" $labels.node | query | first | value }}% of the storage capacity.
-        Currently at: {{ .Value }}%
-
-        Retrieve the disk usage info on the node: `ncdu -x {{$labels.mountpoint}}'
-
-        If the output shows high disk usage in the /var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/ directory, use the following command to show the pods with the highest usage:
-        `crictl stats -o json | jq '.stats[] | select((.writableLayer.usedBytes.value | tonumber) > 1073741824) | { meta: .attributes.labels, diskUsage: ((.writableLayer.usedBytes.value | tonumber) / 1073741824 * 100 | round / 100 | tostring + " GiB")}'`
       summary: |-
-        Node disk "{{$labels.device}}" on mountpoint "{{$labels.mountpoint}}" is using more than {{ printf "extended_monitoring_node_threshold{threshold=\"disk-bytes-warning\", node=\"%s\"}" $labels.node | query | first | value }}% of the storage capacity.
-        Currently at: {{ .Value }}%
+        Node disk `{{$labels.device}}` on mount point `{{$labels.mountpoint}}` is using more than {{ printf "extended_monitoring_node_threshold{threshold=\"disk-bytes-warning\", node=\"%s\"}" $labels.node | query | first | value }}% of its storage capacity.
+      description: |-
+        Deckhouse has detected that node disk `{{$labels.device}}` on mount point `{{$labels.mountpoint}}` is using more than {{ printf "extended_monitoring_node_threshold{threshold=\"disk-bytes-warning\", node=\"%s\"}" $labels.node | query | first | value }}% of its storage capacity.
+
+        Current storage usage: {{ .Value }}%
+
+        Steps to resolve:
+
+        1. Retrieve disk usage information on the node:
+
+           ```bash
+           ncdu -x {{$labels.mountpoint}}
+           ```
+
+        1. If the output shows high disk usage in the `/var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/` directory, identify the pods with the highest usage:
+
+           ```bash
+           crictl stats -o json | jq '.stats[] | select((.writableLayer.usedBytes.value | tonumber) > 1073741824) | { meta: .attributes.labels, diskUsage: ((.writableLayer.usedBytes.value | tonumber) / 1073741824 * 100 | round / 100 | tostring + " GiB")}'
+           ```
 
   - alert: NodeDiskBytesUsage
     expr: |
@@ -57,8 +66,25 @@
       plk_create_group_if_not_exists__node_disk_usage: "NodeDiskUsage,tier=cluster,prometheus=deckhouse,node={{ $labels.node }},kubernetes=~kubernetes"
       plk_grouped_by__node_disk_usage: "NodeDiskUsage,tier=cluster,prometheus=deckhouse,node={{ $labels.node }},kubernetes=~kubernetes"
       summary: |-
-        Node disk "{{$labels.device}}" on mountpoint "{{$labels.mountpoint}}" is using more than {{ printf "extended_monitoring_node_threshold{threshold=\"disk-bytes-critical\", node=\"%s\"}" $labels.node | query | first | value }}% of storage capacity.
-        Currently at: {{ .Value }}%
+        Node disk `{{$labels.device}}` on mount point `{{$labels.mountpoint}}` is using more than {{ printf "extended_monitoring_node_threshold{threshold=\"disk-bytes-critical\", node=\"%s\"}" $labels.node | query | first | value }}% of its storage capacity.
+      description: |-
+        Deckhouse has detected that node disk `{{$labels.device}}` on mount point `{{$labels.mountpoint}}` is using more than {{ printf "extended_monitoring_node_threshold{threshold=\"disk-bytes-critical\", node=\"%s\"}" $labels.node | query | first | value }}% of its storage capacity.
+
+        Current storage usage: {{ .Value }}%
+
+        Steps to resolve:
+
+        1. Retrieve disk usage information on the node:
+
+           ```bash
+           ncdu -x {{$labels.mountpoint}}
+           ```
+
+        1. If the output shows high disk usage in the `/var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/` directory, identify the pods with the highest usage:
+
+           ```bash
+           crictl stats -o json | jq '.stats[] | select((.writableLayer.usedBytes.value | tonumber) > 1073741824) | { meta: .attributes.labels, diskUsage: ((.writableLayer.usedBytes.value | tonumber) / 1073741824 * 100 | round / 100 | tostring + " GiB")}'
+           ```
 
   - alert: NodeDiskInodesUsage
     expr: |
@@ -83,9 +109,11 @@
       plk_create_group_if_not_exists__node_disk_usage: "NodeDiskUsage,tier=cluster,prometheus=deckhouse,node={{ $labels.node }},kubernetes=~kubernetes"
       plk_grouped_by__node_disk_usage: "NodeDiskUsage,tier=cluster,prometheus=deckhouse,node={{ $labels.node }},kubernetes=~kubernetes"
       summary: |-
-        Node disk "{{$labels.device}}" on mountpoint "{{$labels.mountpoint}}" is using more than {{ printf "extended_monitoring_node_threshold{threshold=\"disk-inodes-warning\", node=\"%s\"}" $labels.node | query | first | value }}% of storage capacity.
-        Currently at: {{ .Value }}%
+        Node disk `{{$labels.device}}` on mount point `{{$labels.mountpoint}}` is using more than {{ printf "extended_monitoring_node_threshold{threshold=\"disk-inodes-warning\", node=\"%s\"}" $labels.node | query | first | value }}% of its storage capacity.
+      description: |-
+        Deckhouse has detected that node disk `{{$labels.device}}` on mount point `{{$labels.mountpoint}}` is using more than {{ printf "extended_monitoring_node_threshold{threshold=\"disk-inodes-warning\", node=\"%s\"}" $labels.node | query | first | value }}% of its storage capacity.
 
+        Current storage usage: {{ .Value }}%
   - alert: NodeDiskInodesUsage
     expr: |
       (
@@ -94,7 +122,7 @@
           /
           node_filesystem_files
         ) * 100
-      ) 
+      )
       > on (node) group_left()
       (
         max by (node) (extended_monitoring_node_threshold{threshold="disk-inodes-critical"})
@@ -109,9 +137,11 @@
       plk_create_group_if_not_exists__node_disk_usage: "NodeDiskUsage,tier=cluster,prometheus=deckhouse,node={{ $labels.node }},kubernetes=~kubernetes"
       plk_grouped_by__node_disk_usage: "NodeDiskUsage,tier=cluster,prometheus=deckhouse,node={{ $labels.node }},kubernetes=~kubernetes"
       summary: |-
-        Node disk "{{$labels.device}}" on mountpoint "{{$labels.mountpoint}}" is using more than {{ printf "extended_monitoring_node_threshold{threshold=\"disk-inodes-critical\", node=\"%s\"}" $labels.node | query | first | value }}% of storage capacity.
-        Currently at: {{ .Value }}%
+        Node disk `{{$labels.device}}` on mount point `{{$labels.mountpoint}}` is using more than {{ printf "extended_monitoring_node_threshold{threshold=\"disk-inodes-critical\", node=\"%s\"}" $labels.node | query | first | value }}% of its storage capacity.
+      description: |-
+        Deckhouse has detected that node disk `{{$labels.device}}` on mount point `{{$labels.mountpoint}}` is using more than {{ printf "extended_monitoring_node_threshold{threshold=\"disk-inodes-critical\", node=\"%s\"}" $labels.node | query | first | value }}% of its storage capacity.
 
+        Current storage usage: {{ .Value }}%
   - alert: LoadAverageHigh
     expr: >-
       (
@@ -127,11 +157,16 @@
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
+      summary: Average load on node `{{ $labels.node }}` is too high.
       description: |-
-        For the last 30 minutes, the load average on the {{ $labels.node }} Node has been higher or equal to {{ printf "extended_monitoring_node_threshold{threshold=\"load-average-per-core-warning\", node=\"%s\"}" $labels.node | query | first | value }} per core. There are more processes in the queue than the CPU can handle; probably, some process has created too many threads or child processes, or the CPU is overloaded.
-      summary: >
-        The load average on the {{ $labels.node }} Node is too high.
+        Over the last 30 minutes, the average load on node `{{ $labels.node }}` has been higher than or equal to {{ printf "extended_monitoring_node_threshold{threshold=\"load-average-per-core-warning\", node=\"%s\"}" $labels.node | query | first | value }} per core.
 
+        There are more processes in the queue than the CPU can handle.
+
+        Possible causes:
+
+        - A process has created too many threads or child processes.
+        - The CPU is overloaded.
   - alert: LoadAverageHigh
     expr: >-
       (
@@ -147,7 +182,13 @@
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
+      summary: Average load on node `{{ $labels.node }}` is too high.
       description: |-
-        For the last 5 minutes, the load average on the {{ $labels.node }} Node has been higher than {{ printf "extended_monitoring_node_threshold{threshold=\"load-average-per-core-critical\", node=\"%s\"}" $labels.node | query | first | value }} per core. There are more processes in the queue than the CPU can handle; probably, some process has created too many threads or child processes, or the CPU is overloaded.
-      summary: >
-        The load average on the {{ $labels.node }} Node is too high.
+        Over the last 5 minutes, the average load on node `{{ $labels.node }}` has been higher than {{ printf "extended_monitoring_node_threshold{threshold=\"load-average-per-core-critical\", node=\"%s\"}" $labels.node | query | first | value }} per core.
+
+        There are more processes in the queue than the CPU can handle.
+
+        Possible causes:
+
+        - A process has created too many threads or child processes.
+        - The CPU is overloaded.

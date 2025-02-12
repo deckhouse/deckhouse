@@ -11,15 +11,17 @@
         plk_protocol_version: "1"
         plk_create_group_if_not_exists__d8_istio_multicluster_remote_api_host_failed: D8IstioMulticlusterRemoteAPIHostFailed,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes
         plk_grouped_by__d8_istio_multicluster_remote_api_host_failed: D8IstioMulticlusterRemoteAPIHostFailed,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes
+        summary: Multicluster remote API host health check failed.
         description: |
-          Remote api host `{{$labels.api_host}}` for IstioMulticluster `{{$labels.multicluster_name}}` has failed healthcheck by d8 monitoring hook.
+          The remote API host `{{$labels.api_host}}` for IstioMulticluster `{{$labels.multicluster_name}}` has failed the health check performed by the Deckhouse monitoring hook.
 
-          Reproducing (run from deckhouse pod):
-          ```
+          To reproduce the request (run from the `d8-system/deckhouse` pod), run the following:
+
+          ```bash
           TOKEN="$(deckhouse-controller module values istio -o json | jq -r --arg ah {{$labels.api_host}} '.internal.multiclusters[]| select(.apiHost == $ah)| .apiJWT ')"
           curl -H "Authorization: Bearer $TOKEN" https://{{$labels.api_host}}/version
           ```
-        summary: Multicluster remote api host failed
+
     - alert: D8IstioMulticlusterMetadataEndpointDoesntWork
       expr: max by (multicluster_name, endpoint) (d8_istio_multicluster_metadata_endpoints_fetch_error_count == 1)
       for: 5m
@@ -31,18 +33,22 @@
         plk_protocol_version: "1"
         plk_create_group_if_not_exists__d8_istio_multicluster_metadata_endpoint_failed: D8IstioMulticlusterMetadataEndpointFailed,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes
         plk_grouped_by__d8_istio_multicluster_metadata_endpoint_failed: D8IstioMulticlusterMetadataEndpointFailed,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes
+        summary: Multicluster metadata endpoint failed.
         description: |
-          Metadata endpoint `{{$labels.endpoint}}` for IstioMulticluster `{{$labels.multicluster_name}}` has failed to fetch by d8 hook.
-          Reproducing request to public endpoint:
-          ```
+          The metadata endpoint `{{$labels.endpoint}}` for IstioMulticluster `{{$labels.multicluster_name}}` has failed to fetch via the Deckhouse hook.
+
+          To reproduce the request to the public endpoint, run the following command:
+
+          ```bash
           curl {{$labels.endpoint}}
           ```
-          Reproducing request to private endpoints (run from deckhouse pod):
-          ```
+
+          To reproduce the request to private endpoints (run from the `d8-system/deckhouse` pod), run the following:
+
+          ```bash
           KEY="$(deckhouse-controller module values istio -o json | jq -r .internal.remoteAuthnKeypair.priv)"
           LOCAL_CLUSTER_UUID="$(deckhouse-controller module values -g istio -o json | jq -r .global.discovery.clusterUUID)"
           REMOTE_CLUSTER_UUID="$(kubectl get istiomulticluster {{$labels.multicluster_name}} -o json | jq -r .status.metadataCache.public.clusterUUID)"
           TOKEN="$(deckhouse-controller helper gen-jwt --private-key-path <(echo "$KEY") --claim iss=d8-istio --claim sub=$LOCAL_CLUSTER_UUID --claim aud=$REMOTE_CLUSTER_UUID --claim scope=private-multicluster --ttl 1h)"
           curl -H "Authorization: Bearer $TOKEN" {{$labels.endpoint}}
           ```
-        summary: Multicluster metadata endpoint failed

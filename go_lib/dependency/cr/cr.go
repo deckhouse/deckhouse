@@ -42,7 +42,7 @@ import (
 //go:generate minimock -i Client -o cr_mock.go
 
 const (
-	defaultTimeout = 90 * time.Second
+	defaultTimeout = 120 * time.Second
 )
 
 type Client interface {

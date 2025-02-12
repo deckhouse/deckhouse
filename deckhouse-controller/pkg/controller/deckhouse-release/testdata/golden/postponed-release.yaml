@@ -18,15 +18,18 @@ apiVersion: deckhouse.io/v1alpha1
 approved: false
 kind: DeckhouseRelease
 metadata:
+  annotations:
+    release.deckhouse.io/isUpdating: "false"
+    release.deckhouse.io/notified: "true"
   creationTimestamp: null
   name: v1.25.1
-  resourceVersion: "1000"
+  resourceVersion: "1001"
 spec:
   applyAfter: "2222-11-11T23:23:23Z"
   version: v1.25.1
 status:
   approved: false
-  message: Release is postponed by canary process until 11 Nov 22 23:23 UTC
+  message: Release is postponed until 11 Nov 22 23:23 UTC
   phase: Pending
   transitionTime: null
 ---

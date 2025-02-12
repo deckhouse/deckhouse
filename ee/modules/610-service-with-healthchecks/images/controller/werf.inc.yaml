@@ -6,6 +6,6 @@ import:
     add: /controller
     to: /controller
     before: install
-docker:
-  USER: 64535
-  ENTRYPOINT: ["/controller"]
+imageSpec:
+  config:
+    entrypoint: ["/controller"]

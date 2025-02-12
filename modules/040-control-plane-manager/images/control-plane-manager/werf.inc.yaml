@@ -16,8 +16,9 @@ import:
   add: /src/controller
   to: /controller
   before: install
-docker:
-  ENTRYPOINT: ["/controller"]
+imageSpec:
+  config:
+    entrypoint: ["/controller"]
 {{- end }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact

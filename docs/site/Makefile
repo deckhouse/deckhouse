@@ -5,19 +5,29 @@ endif
 
 all: up
 
-network:
+registry:
+		@if ! docker ps | grep -q registry ; then \
+			docker rm -f registry 2>/dev/null 1>/dev/null; \
+			docker run -d -p 5000:5000 --restart=always --name registry registry:2 ; \
+		fi
+
+.PHONY:
+registry-down:
+		docker rm -f registry; docker volume prune -fa
+
+network: registry
 		docker network inspect deckhouse 2>&1 1>/dev/null || docker network create deckhouse
 
 up: network
-		werf compose up --follow --docker-compose-command-options='-d --force-recreate' --env local
+		werf compose up --follow --docker-compose-command-options='-d --force-recreate' --env local --repo localhost:5000/docs
 
 down:
 		docker rm -f site-site-1 site-front-1 site_site_1 site_front_1 2>/dev/null; docker network rm deckhouse
 
 dev: network
-		werf compose up --follow --docker-compose-command-options='-d --force-recreate' --dev --env development
+		werf compose up --follow --docker-compose-command-options='-d --force-recreate' --dev --env development --repo localhost:5000/docs
 
 debug: network
-		werf compose up --config werf-debug.yaml --follow --docker-compose-command-options='-d --force-recreate' --docker-compose-options='-f docker-compose-debug.yml'  --dev --env development
+		werf compose up --config werf-debug.yaml --follow --docker-compose-command-options='-d --force-recreate' --docker-compose-options='-f docker-compose-debug.yml'  --dev --env development --repo localhost:5000/docs
 
 .PHONY: up dev

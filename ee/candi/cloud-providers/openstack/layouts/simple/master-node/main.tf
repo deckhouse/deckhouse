@@ -62,11 +62,17 @@ resource "openstack_blockstorage_volume_v3" "master" {
   volume_type = local.volume_type
   availability_zone = module.volume_zone.zone
   enable_online_resize = true
+
   lifecycle {
     ignore_changes = [
       metadata,
       availability_zone,
     ]
+  }
+
+  timeouts {
+    create = var.resourceManagementTimeout
+    delete = var.resourceManagementTimeout
   }
 }
 
@@ -99,6 +105,12 @@ resource "openstack_compute_instance_v2" "master" {
     ignore_changes = [
       user_data,
     ]
+  }
+
+  timeouts {
+    create = var.resourceManagementTimeout
+    delete = var.resourceManagementTimeout
+    update = var.resourceManagementTimeout
   }
 
   metadata = local.metadata_tags

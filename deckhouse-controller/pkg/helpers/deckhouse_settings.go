@@ -20,18 +20,18 @@ import (
 	"sync"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
+	releaseUpdater "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/releaseupdater"
 	"github.com/deckhouse/deckhouse/go_lib/hooks/update"
-	"github.com/deckhouse/deckhouse/go_lib/updater"
 )
 
 // DeckhouseSettings is an openapi spec for deckhouse settings, it's not a part of DeckhouseReleaseSpec but rather
 // it's a part of DeckhouseReleaseController
 type DeckhouseSettings struct {
 	Update struct {
-		Mode                   string                     `json:"mode"`
-		DisruptionApprovalMode string                     `json:"disruptionApprovalMode"`
-		Windows                update.Windows             `json:"windows"`
-		NotificationConfig     updater.NotificationConfig `json:"notification"`
+		Mode                   string                            `json:"mode"`
+		DisruptionApprovalMode string                            `json:"disruptionApprovalMode"`
+		Windows                update.Windows                    `json:"windows"`
+		NotificationConfig     releaseUpdater.NotificationConfig `json:"notification"`
 	} `json:"update"`
 	ReleaseChannel string `json:"releaseChannel"`
 }

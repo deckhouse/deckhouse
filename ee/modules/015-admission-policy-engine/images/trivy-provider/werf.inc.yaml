@@ -6,9 +6,9 @@ import:
     add: /trivy_provider
     to: /trivy_provider
     before: setup
-docker:
-  ENTRYPOINT: [ "/trivy_provider" ]
-  USER: deckhouse:deckhouse
+imageSpec:
+  config:
+    entrypoint: [ "/trivy_provider" ]
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 fromImage: operator-trivy/trivy-src-artifact

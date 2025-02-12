@@ -10,7 +10,7 @@
           2. The absence of Machines in the list that have been in Pending status for more than a couple of minutes means that Machines are continuously being created and deleted because of some error:
           `kubectl -n d8-cloud-instance-manager get machine`;
           3. Refer to the Machine description if the logs do not include error messages and the Machine continues to be Pending:
-          `kubectl -n d8-cloud-instance-manager get machine <machine_name> -o json | jq .status.bootstrapStatus`;
+          `kubectl -n d8-cloud-instance-manager get machine <MACHINE_NAME> -o json | jq .status.bootstrapStatus`;
           4. The output similar to the one below means that you have to use nc to examine the bootstrap logs:
              ```json
              {

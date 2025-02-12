@@ -10,7 +10,7 @@ require (
 	github.com/cloudflare/cfssl v1.5.0
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc
 	github.com/fatih/color v1.13.0 // indirect
-	github.com/flant/addon-operator v1.5.4-0.20250124161949-e76a82abaee4
+	github.com/flant/addon-operator v1.5.4-0.20250131130350-a14efc5804d9
 	github.com/flant/kube-client v1.2.2
 	github.com/flant/shell-operator v1.5.3
 	github.com/go-openapi/spec v0.19.8
@@ -27,7 +27,7 @@ require (
 	github.com/onsi/gomega v1.36.2
 	github.com/otiai10/copy v1.14.0
 	github.com/pkg/errors v0.9.1
-	github.com/sirupsen/logrus v1.9.3
+	github.com/sirupsen/logrus v1.9.3 // indirect
 	github.com/spaolacci/murmur3 v1.1.0
 	github.com/square/go-jose/v3 v3.0.0-20200630053402-0a67ce9b0693
 	github.com/stretchr/testify v1.10.0
@@ -254,7 +254,7 @@ replace github.com/deckhouse/deckhouse/go_lib/cloud-data => ./go_lib/cloud-data
 
 replace github.com/deckhouse/deckhouse/pkg/log => ./pkg/log
 
-replace github.com/deckhouse/deckhouse/egress-gateway-agent => ./ee/se-plus/modules/021-cni-cilium/images/egress-gateway-agent
+replace github.com/deckhouse/deckhouse/egress-gateway-agent => ./ee/se-plus/modules/021-cni-cilium/images/egress-gateway-agent/src
 
 // Remove 'in body' from errors, fix for Go 1.16 (https://github.com/go-openapi/validate/pull/138).
 replace github.com/go-openapi/validate => github.com/flant/go-openapi-validate v0.19.12-flant.1

@@ -48,8 +48,9 @@ import:
   add: /controller
   to: /controller
   before: setup
-docker:
-  ENTRYPOINT: ["/controller"]
+imageSpec:
+  config:
+    entrypoint: ["/controller"]
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-speaker
 fromImage: common/distroless
@@ -58,5 +59,6 @@ import:
   add: /speaker
   to: /speaker
   before: setup
-docker:
-  ENTRYPOINT: ["/speaker"]
+imageSpec:
+  config:
+    entrypoint: ["/speaker"]

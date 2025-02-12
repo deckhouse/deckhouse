@@ -14,8 +14,12 @@
       plk_create_group_if_not_exists__d8istio_operator_malfunctioning: "D8IstioOperatorMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
       plk_grouped_by__d8istio_operator_malfunctioning: "D8IstioOperatorMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
       plk_labels_as_annotations: "revision"
-      summary: istio-operator is unable to reconcile istio control-plane setup.
+      summary: The `istio-operator` is unable to reconcile Istio control plane setup.
       description: |
-        There is some error in istio-operator reconcilation loop. Please check the logs out:
+        Deckhouse has detected an error in the `istio-operator` reconciliation loop.
 
-        ```kubectl -n d8-istio logs -l app=operator,revision={{$labels.revision}}```
+        To investigate the issue, check the operator logs:
+
+        ```bash
+        kubectl -n d8-istio logs -l app=operator,revision={{$labels.revision}}
+        ```

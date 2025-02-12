@@ -18,7 +18,7 @@ apiVersion: deckhouse.io/v1alpha1
 kind: ModuleRelease
 metadata:
   annotations:
-    release.deckhouse.io/apply-now: "true"
+    modules.deckhouse.io/apply-now: "true"
     a: b
   finalizers:
     - modules.deckhouse.io/exist-on-fs

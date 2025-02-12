@@ -84,7 +84,9 @@ apiVersions:
             minimum: 1
           zones:
             description: |
-              A limited set of zones in which nodes can be created.
+              A limited set of zones in which master nodes can be created.
+
+              The order in which zones are specified does not influence the sequence of node creation. Nodes are assigned to zones in alphabetical order: the first node is placed in the alphabetically first zone, the second node in the second zone, and so forth. If there are more nodes than zones, the assignment process restarts from the beginning of the zone list after placing a node in the last alphabetical zone.
             x-doc-required: false
             type: array
             items:
@@ -228,6 +230,8 @@ apiVersions:
               type: array
               description: |
                 A limited set of zones in which nodes can be created.
+
+                The order in which zones are specified does not influence the sequence of node creation. Nodes are assigned to zones in alphabetical order: the first node is placed in the alphabetically first zone, the second node in the second zone, and so forth. If there are more nodes than zones, the assignment process restarts from the beginning of the zone list after placing a node in the last alphabetical zone.
               items:
                 enum:
                 - ru-central1-a
@@ -421,6 +425,11 @@ apiVersions:
                   Amount of primary memory in MB provision on the NAT instance.
                 type: integer
                 default: 2048
+              platform:
+                description: |
+                  Processor platform type on the NAT instance.
+                type: string
+                default: "standard-v2"
       provider:
         type: object
         description: |

@@ -84,5 +84,6 @@ import:
   add: /pause
   to: /pause
   before: install
-docker:
-  ENTRYPOINT: ["/vxlan-offloading-fixer"]
+imageSpec:
+  config:
+    entrypoint: ["/vxlan-offloading-fixer"]

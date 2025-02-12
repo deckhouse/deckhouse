@@ -42,6 +42,7 @@ module "vpc_components" {
   nat_instance_cores = local.nat_instance_cores
   nat_instance_memory = local.nat_instance_memory
   nat_instance_ssh_key = var.providerClusterConfiguration.sshPublicKey
+  nat_instance_platform = local.nat_instance_platform
 
   labels = local.labels
 }

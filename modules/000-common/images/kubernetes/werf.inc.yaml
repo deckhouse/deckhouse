@@ -50,6 +50,10 @@ import:
 mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
+- from: tmp_dir
+  to: /root/.cache/go-build
+- from: tmp_dir
+  to: /src/_output/local/go
 shell:
   beforeInstall:
   {{- include "alpine packages proxy" $ | nindent 2 }}
@@ -60,4 +64,5 @@ shell:
   - export KUBE_GIT_VERSION_FILE=.kube-version
   - go mod vendor
   - make all WHAT=cmd/kube-apiserver kube-controller-manager kube-scheduler kube-proxy kubelet kubectl kubeadm GOLDFLAGS="-s -w -extldflags \"-static\"" KUBE_STATIC_OVERRIDES="kubelet"
+  - rm -rf vendor
 {{- end }}

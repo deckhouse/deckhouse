@@ -6,8 +6,9 @@ import:
   add: /src/oom-kills-exporter
   to: /bin/oom-kills-exporter
   before: setup
-docker:
-  ENTRYPOINT: ["/bin/oom-kills-exporter"]
+imageSpec:
+  config:
+    entrypoint: ["/bin/oom-kills-exporter"]
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
 fromImage: common/src-artifact
