@@ -369,7 +369,7 @@ spec:
                       description: |
                         Similar to the `.spec.taints` field of the [Node](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#taint-v1-core) object.
 
-                        **Caution!** Only `effect`, `key`, `value` fields are available.
+                        > Available fields: `effect`, `key`, and `values`.
                       x-doc-examples:
                       - - effect: NoExecute
                           key: ship-class
@@ -1006,7 +1006,7 @@ spec:
                       description: |
                         Similar to the `.spec.taints` field of the [Node](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#taint-v1-core) object.
 
-                        **Caution!** Only `effect`, `key`, `value` fields are available.
+                        > Available fields: `effect`, `key`, and `values`.
                       x-doc-examples:
                       - - effect: NoExecute
                           key: ship-class
@@ -1801,7 +1801,7 @@ spec:
                       description: |
                         Similar to the `.spec.taints` field of the [Node](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#taint-v1-core) object.
 
-                        **Caution!** Only `effect`, `key`, `value` fields are available.
+                        > Available fields: `effect`, `key`, and `values`.
                       x-doc-examples:
                       - - effect: NoExecute
                           key: ship-class
