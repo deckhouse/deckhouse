@@ -35,7 +35,7 @@ import (
 type TaskCalculator struct {
 	k8sclient client.Client
 
-	listFunc func(ctx context.Context, c client.Client) ([]v1alpha1.Release, error)
+	listFunc func(ctx context.Context, c client.Client, moduleName string) ([]v1alpha1.Release, error)
 
 	log *log.Logger
 }
@@ -96,12 +96,10 @@ func (p *TaskCalculator) CalculatePendingReleaseTask(ctx context.Context, releas
 		return nil, ErrReleasePhaseIsNotPending
 	}
 
-	releases, err := p.listReleases(ctx)
+	releases, err := p.listReleases(ctx, release.GetModuleName())
 	if err != nil {
 		return nil, fmt.Errorf("list releases: %w", err)
 	}
-
-	releases = filterReleasesByModuleName(releases, release.GetModuleName())
 
 	if len(releases) == 1 {
 		return &Task{
@@ -249,8 +247,8 @@ func (p *TaskCalculator) CalculatePendingReleaseTask(ctx context.Context, releas
 	}, nil
 }
 
-func (p *TaskCalculator) listReleases(ctx context.Context) ([]v1alpha1.Release, error) {
-	return p.listFunc(ctx, p.k8sclient)
+func (p *TaskCalculator) listReleases(ctx context.Context, moduleName string) ([]v1alpha1.Release, error) {
+	return p.listFunc(ctx, p.k8sclient, moduleName)
 }
 
 // getFirstReleaseInfoByPhase
@@ -304,7 +302,7 @@ func getLatestForcedReleaseInfo(releases []v1alpha1.Release) *ReleaseInfo {
 	return nil
 }
 
-func listDeckhouseReleases(ctx context.Context, c client.Client) ([]v1alpha1.Release, error) {
+func listDeckhouseReleases(ctx context.Context, c client.Client, _ string) ([]v1alpha1.Release, error) {
 	releases := new(v1alpha1.DeckhouseReleaseList)
 
 	if err := c.List(ctx, releases); err != nil {
@@ -320,10 +318,11 @@ func listDeckhouseReleases(ctx context.Context, c client.Client) ([]v1alpha1.Rel
 	return result, nil
 }
 
-func listModuleReleases(ctx context.Context, c client.Client) ([]v1alpha1.Release, error) {
+func listModuleReleases(ctx context.Context, c client.Client, moduleName string) ([]v1alpha1.Release, error) {
 	releases := new(v1alpha1.ModuleReleaseList)
-	if err := c.List(ctx, releases); err != nil {
-		return nil, fmt.Errorf("get deckhouse releases: %w", err)
+	err := c.List(ctx, releases, client.MatchingLabels{v1alpha1.ModuleReleaseLabelModule: moduleName})
+	if err != nil {
+		return nil, fmt.Errorf("get module releases: %w", err)
 	}
 
 	result := make([]v1alpha1.Release, 0, len(releases.Items))
