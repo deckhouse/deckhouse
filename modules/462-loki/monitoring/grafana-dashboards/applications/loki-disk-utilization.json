@@ -15,10 +15,10 @@
       }
     ]
   },
-  "editable": false,
+  "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 1,
-  "id": 2,
+  "id": 32,
   "links": [],
   "liveNow": false,
   "panels": [
@@ -66,9 +66,11 @@
           "fields": "",
           "values": false
         },
-        "textMode": "auto"
+        "showPercentChange": false,
+        "textMode": "value_and_name",
+        "wideLayout": true
       },
-      "pluginVersion": "10.0.3",
+      "pluginVersion": "10.4.14",
       "targets": [
         {
           "datasource": {
@@ -76,8 +78,9 @@
             "uid": "${ds_prometheus}"
           },
           "editorMode": "code",
-          "expr": "max(rate(force_expiration_hook_dir_usage_evaluation_duration_sum[$__rate_interval])/rate(force_expiration_hook_dir_usage_evaluation_duration_count[$__rate_interval])) by (working_dir)",
+          "expr": "max(rate(force_expiration_hook_dir_usage_evaluation_duration_sum[1m])/rate(force_expiration_hook_dir_usage_evaluation_duration_count[1m])) by (working_dir)",
           "instant": false,
+          "legendFormat": "{{ working_dir }}",
           "range": true,
           "refId": "A"
         }
@@ -97,6 +100,7 @@
             "mode": "palette-classic"
           },
           "custom": {
+            "axisBorderShow": false,
             "axisCenteredZero": false,
             "axisColorMode": "text",
             "axisLabel": "",
@@ -110,6 +114,7 @@
               "tooltip": false,
               "viz": false
             },
+            "insertNulls": false,
             "lineInterpolation": "linear",
             "lineWidth": 1,
             "pointSize": 5,
@@ -198,13 +203,17 @@
             "type": "prometheus",
             "uid": "${ds_prometheus}"
           },
+          "disableTextWrap": false,
           "editorMode": "code",
           "expr": "force_expiration_hook_dir_usage_threshold_bytes",
+          "fullMetaSearch": false,
           "hide": false,
+          "includeNullMetadata": true,
           "instant": false,
           "legendFormat": "threshold",
           "range": true,
-          "refId": "B"
+          "refId": "B",
+          "useBackend": false
         }
       ],
       "title": "Disk utilization",
@@ -222,6 +231,7 @@
             "mode": "palette-classic"
           },
           "custom": {
+            "axisBorderShow": false,
             "axisCenteredZero": false,
             "axisColorMode": "text",
             "axisLabel": "",
@@ -235,6 +245,7 @@
               "tooltip": false,
               "viz": false
             },
+            "insertNulls": false,
             "lineInterpolation": "linear",
             "lineWidth": 1,
             "pointSize": 5,
@@ -294,7 +305,8 @@
             "uid": "${ds_prometheus}"
           },
           "editorMode": "code",
-          "expr": "sum(increase(force_expiration_hook_expired_chunks_count[$__rate_interval])) by (instance)",
+          "expr": "sum(increase(force_expiration_hook_expired_chunks_count[1m])) by (instance)",
+          "hide": false,
           "instant": false,
           "legendFormat": "__auto",
           "range": true,
@@ -316,6 +328,7 @@
             "mode": "palette-classic"
           },
           "custom": {
+            "axisBorderShow": false,
             "axisCenteredZero": false,
             "axisColorMode": "text",
             "axisLabel": "",
@@ -329,6 +342,7 @@
               "tooltip": false,
               "viz": false
             },
+            "insertNulls": false,
             "lineInterpolation": "linear",
             "lineWidth": 1,
             "pointSize": 5,
@@ -389,8 +403,9 @@
             "uid": "${ds_prometheus}"
           },
           "editorMode": "code",
-          "expr": "sum(increase(force_expiration_hook_expired_chunks_size_bytes[$__rate_interval])) by (instance)",
+          "expr": "sum(increase(force_expiration_hook_expired_chunks_size_bytes[1m])) by (instance)",
           "instant": false,
+          "legendFormat": "{{ instance }}",
           "range": true,
           "refId": "A"
         }
@@ -400,16 +415,15 @@
     }
   ],
   "refresh": "30s",
-  "schemaVersion": 38,
-  "style": "dark",
+  "schemaVersion": 39,
   "tags": [],
   "templating": {
     "list": [
       {
         "current": {
-          "selected": false,
-          "text": "Prometheus",
-          "value": "Prometheus"
+          "selected": true,
+          "text": "default",
+          "value": "default"
         },
         "hide": 0,
         "includeAll": false,
@@ -417,6 +431,7 @@
         "name": "ds_prometheus",
         "options": [],
         "query": "prometheus",
+        "queryValue": "",
         "refresh": 1,
         "regex": "",
         "skipUrlSync": false,
@@ -425,7 +440,7 @@
     ]
   },
   "time": {
-    "from": "now-1h",
+    "from": "now-30m",
     "to": "now"
   },
   "timepicker": {},

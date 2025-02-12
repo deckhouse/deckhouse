@@ -110,7 +110,7 @@ index 3c8b85ec3a503f4e55e6d9f9519d50be095565e4..4b3fd25e60e856d4e4ca2b9270b43d56
  			level.Error(util_log.Logger).Log("msg", "failed to run compaction", "err", err)
 diff --git a/pkg/storage/stores/indexshipper/compactor/force_expiration.go b/pkg/storage/stores/indexshipper/compactor/force_expiration.go
 new file mode 100644
-index 0000000000000000000000000000000000000000..30d12421fa6e18fc839a6a594638527a5b7beeee
+index 0000000000000000000000000000000000000000..856be45de8da7faba337ea160018b8a9e20664e5
 --- /dev/null
 +++ b/pkg/storage/stores/indexshipper/compactor/force_expiration.go
 @@ -0,0 +1,336 @@
@@ -215,10 +215,10 @@ index 0000000000000000000000000000000000000000..30d12421fa6e18fc839a6a594638527a
 +			)
 +			tableCompactedIndex, err = h.loadTableCompactedIndex(ctx, tableName)
 +			if err != nil {
-+				_ = level.Error(util_log.Logger).Log(
-+					"msg", "failed to load table compacted index",
++				_ = level.Warn(util_log.Logger).Log(
++					"msg", "unable to load table compacted index, table not ready yet",
 +					"table", tableName,
-+					"err", err,
++					"reason", err,
 +				)
 +				continue
 +			}
