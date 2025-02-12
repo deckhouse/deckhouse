@@ -1,5 +1,5 @@
 diff --git a/backend/go.mod b/backend/go.mod
-index 3a305c1..929400d 100644
+index 3a305c16..c6d2aee1 100644
 --- a/backend/go.mod
 +++ b/backend/go.mod
 @@ -3,16 +3,16 @@ module github.com/cilium/hubble-ui/backend
@@ -7,7 +7,7 @@ index 3a305c1..929400d 100644
  
  require (
 -	github.com/cilium/cilium v1.15.5
-+	github.com/cilium/cilium v1.15.10
++	github.com/cilium/cilium v1.15.13
  	github.com/cilium/hubble v0.13.4
  	github.com/google/gops v0.3.28
  	github.com/grpc-ecosystem/grpc-gateway v1.16.0
@@ -65,7 +65,7 @@ index 3a305c1..929400d 100644
  	gopkg.in/ini.v1 v1.67.0 // indirect
  	gopkg.in/yaml.v2 v2.4.0 // indirect
 diff --git a/backend/go.sum b/backend/go.sum
-index c13c946..018a902 100644
+index c13c946b..5a27b40a 100644
 --- a/backend/go.sum
 +++ b/backend/go.sum
 @@ -34,8 +34,8 @@ github.com/cespare/xxhash/v2 v2.3.0 h1:UL815xU9SqsFlibzuggzjXhog7bL6oX9BbNZnL2UF
@@ -74,8 +74,8 @@ index c13c946..018a902 100644
  github.com/cilium/checkmate v1.0.3/go.mod h1:KiBTasf39/F2hf2yAmHw21YFl3hcEyP4Yk6filxc12A=
 -github.com/cilium/cilium v1.15.5 h1:AFhWniiqVyQXYfpaPZTRfKdS0pLx+8lCDPp7JpAZqfo=
 -github.com/cilium/cilium v1.15.5/go.mod h1:hsruyj1KCncND7AyIlbKgHUlk7V+ONxTn3EbrOu39dI=
-+github.com/cilium/cilium v1.15.10 h1:DeTMoJQm78pgfrpfODSDOq+tWDS9ew0m1+B8SzojB4o=
-+github.com/cilium/cilium v1.15.10/go.mod h1:c7Pk1BmmZBUdYYxBGc/T4mLOocxmXx6K6idB7Iw012c=
++github.com/cilium/cilium v1.15.13 h1:0E85euXBRJp+oJtiOGX5Zy5KZ4PIcVRFjGrXrLVirmI=
++github.com/cilium/cilium v1.15.13/go.mod h1:CPlrRsHJAMdosrkc5/FN45WkZWW/Qlmy/Libk0SPMio=
  github.com/cilium/ebpf v0.15.0 h1:7NxJhNiBT3NG8pZJ3c+yfrVdHY8ScgKD27sScgjLMMk=
  github.com/cilium/ebpf v0.15.0/go.mod h1:DHp1WyrLeiBh19Cf/tfiSMhqheEiK8fXFZ4No0P1Hso=
  github.com/cilium/hubble v0.13.4 h1:WQaJGVpI/iyW14R2IEMVEpcrsWteopoqZKzSmICrouU=
