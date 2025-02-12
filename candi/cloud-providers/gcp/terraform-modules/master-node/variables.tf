@@ -38,6 +38,11 @@ variable "clusterUUID" {
   type = string
 }
 
+variable "resourceManagementTimeout" {
+  type = string
+  default = "10m"
+}
+
 locals {
   prefix                       = var.clusterConfiguration.cloud.prefix
   machine_type                 = var.providerClusterConfiguration.masterNodeGroup.instanceClass.machineType

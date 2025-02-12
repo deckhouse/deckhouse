@@ -8,8 +8,9 @@ import:
     add: /local-path-provisioner
     to: /usr/bin/local-path-provisioner
     after: install
-docker:
-  ENTRYPOINT: ["/usr/bin/local-path-provisioner"]
+imageSpec:
+  config:
+    entrypoint: ["/usr/bin/local-path-provisioner"]
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
 final: false

@@ -33,6 +33,8 @@ properties:
       ingressGateway:
         description: Параметры для ingressgateway.
         properties:
+          advertise:
+            description: Фактические адреса, которые будут объявлены удаленным кластерам для организации межкластерных запросов приложений. Если не указано, адреса будут выявлены автоматически.
           inlet:
             description: |
               Способ публикации ingressgateway:

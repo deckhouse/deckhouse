@@ -1,8 +1,9 @@
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
-docker:
-  ENTRYPOINT: ["/extended-monitoring-exporter"]
+imageSpec:
+  config:
+    entrypoint: ["/extended-monitoring-exporter"]
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-artifact
   add: /extended-monitoring-exporter

@@ -11,11 +11,11 @@ Depending on the storage properties, disks during creation and virtual machines 
 
 `Immediate` —  disk is created immediately after the resource is created (it is assumed that the disk will be available for attachment to a virtual machine on any cluster node).  
 
-![Immediate](/images/virtualization-platform/vd-immediate.png)
+![Immediate](/../../../../images/virtualization-platform/vd-immediate.png)
 
 `WaitForFirstConsumer` — disk is created only after it is attached to a virtual machine and will be created on the node where the virtual machine is launched.  
 
-![WaitForFirstConsumer](/images/virtualization-platform/vd-wffc.ru.png)
+![WaitForFirstConsumer](/../../../../images/virtualization-platform/vd-wffc.ru.png)
 
 AccessMode:
 
@@ -25,14 +25,12 @@ AccessMode:
 
 When a disk is created, the controller automatically determines the most optimal parameters supported by the storage.
 
-{% alert level="warning" %}
-Creating disks from ISO images is not allowed.
-{% endalert %}
+> **Warning** Creating disks from ISO images is not allowed.
 
 To find the available storage options on the platform, run the following command:
 
 ```bash
-kubectl get storageclass
+d8 k get storageclass
 ```
 
 Example output:
@@ -47,6 +45,41 @@ linstor-thin-r2               replicated.csi.storage.deckhouse.io   Delete      
 linstor-thin-r3               replicated.csi.storage.deckhouse.io   Delete          WaitForFirstConsumer   true                   48d
 nfs-4-1-wffc                  nfs.csi.k8s.io                        Delete          WaitForFirstConsumer   true                   30d
 ```
+
+The `(default)` marker next to the class name indicates that this `StorageClass` will be used by default if the user has not explicitly specified the class name in the resource being created.
+If the `StorageClass` is missing by default in the cluster, the user must explicitly specify the required `StorageClass` in the resource specification.
+Deckhouse Virtualization Platform also allows you to set individual settings for storing disks and images.
+
+### Storage class settings for disks
+
+The storage class settings for disks are defined in the `.spec.settings.virtualDisks` parameter of the module settings.
+Example:
+
+```yaml
+spec:
+...
+settings:
+virtualDisks:
+allowedStorageClassNames:
+- sc-1
+- sc-2
+defaultStorageClassName: sc-1
+```
+
+- `allowedStorageClassNames` — (optional) is a list of valid `StorageClass` for creating a `VirtualDisk`, which can be explicitly specified in the resource specification.
+- `defaultStorageClassName` — (optional) is the `StorageClass` used by default when creating a `VirtualDisk` if the `.spec.persistentVolumeClaim.storageClassName` parameter is not specified.
+
+### Fine-tuning storage classes for disks
+
+When creating a disk, the controller will automatically select the most optimal parameters supported by the storage based on the data it knows.
+Priorities for configuring `PersistentVolumeClaim` parameters when creating a disk by automatically detecting storage characteristics:
+
+- RWX + Block
+- RWX + FileSystem
+- RWO + Block
+- RWO + FileSystem.
+  
+If the storage is unknown and it is impossible to determine its parameters automatically, the mode is used: RWO + FileSystem
 
 ### Creating an empty disk
 

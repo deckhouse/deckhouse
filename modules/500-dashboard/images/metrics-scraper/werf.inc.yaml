@@ -9,8 +9,9 @@ import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-artifact
   add: /dashboard-metrics-scraper
   before: setup
-docker:
-  ENTRYPOINT: ["/dashboard-metrics-scraper"]
+imageSpec:
+  config:
+    entrypoint: ["/dashboard-metrics-scraper"]
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
 final: false

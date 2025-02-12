@@ -6,8 +6,9 @@ import:
     add: /events_exporter
     to: /events_exporter
     before: setup
-docker:
-  ENTRYPOINT: ["/events_exporter"]
+imageSpec:
+  config:
+    entrypoint: ["/events_exporter"]
 
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact

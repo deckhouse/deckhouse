@@ -2,7 +2,6 @@
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-dir-manager
 final: false
 from: {{ $.Images.BASE_GOLANG_20_ALPINE }}
-fromCacheVersion: "2023-10-16.1"
 git:
   - add: /{{ $.ModulePath }}modules/031-{{ $.ModuleName }}/images/{{ $.ImageName }}/dir-manager
     to: /src
@@ -22,7 +21,6 @@ shell:
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: common/distroless
-fromCacheVersion: "2023-10-16.3"
 import:
  - image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-dir-manager
    add: /tmp/manager

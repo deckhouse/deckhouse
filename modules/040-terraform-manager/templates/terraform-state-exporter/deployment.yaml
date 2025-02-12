@@ -86,6 +86,8 @@ spec:
         env:
         - name: DHCTL_CLI_KUBE_CLIENT_FROM_CLUSTER
           value: "true"
+        - name: DHCTL_CLI_ALLOWED_COMMANDS
+          value: "terraform converge-exporter"
         {{- include "helm_lib_envs_for_proxy" . | nindent 8 }}
         resources:
           requests:

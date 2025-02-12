@@ -44,7 +44,7 @@ spec:
 EOF
 ```
 
-![NodePort](/images/virtualization-platform/lb-nodeport.png)
+![NodePort](/../../../../images/virtualization-platform/lb-nodeport.png)
 
 ### Using a LoadBalancer service
 
@@ -68,13 +68,11 @@ spec:
 EOF
 ```
 
-![LoadBalancer](/images/virtualization-platform/lb-loadbalancer.png)
+![LoadBalancer](/../../../../images/virtualization-platform/lb-loadbalancer.png)
 
 ### Using services with active health checks
 
-{% alert level="warning" %}
-This feature is in testing phase and will be available in upcoming versions.
-{% endalert %}
+> **Warning.** This feature is in testing phase and will be available in upcoming versions.
 
 The `ServiceWithHealthchecks` resource allows you to configure active health checks for a service on specified TCP ports. If the health checks for virtual machines are unsuccessful, those machines will not be included in the traffic balancing.
 

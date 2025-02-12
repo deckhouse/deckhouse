@@ -7,6 +7,7 @@ package ee
 
 import (
 	"encoding/json"
+	"slices"
 	"strings"
 	"time"
 
@@ -135,6 +136,16 @@ func federationDiscovery(input *go_hook.HookInput, dc dependency.Container) erro
 		var publicMetadata eeCrd.AlliancePublicMetadata
 		var privateMetadata eeCrd.FederationPrivateMetadata
 		var httpOption []http.Option
+		protocolMap := map[string]string{
+			"https":    "TLS",
+			"tls":      "TLS",
+			"http":     "HTTP",
+			"http2":    "HTTP2",
+			"grpc":     "HTTP2",
+			"grpc-web": "HTTP2",
+		}
+
+		defaultProtocol := "TCP"
 
 		if federationInfo.ClusterCA != "" {
 			caCerts := [][]byte{[]byte(federationInfo.ClusterCA)}
@@ -208,10 +219,35 @@ func federationDiscovery(input *go_hook.HookInput, dc dependency.Container) erro
 			continue
 		}
 		federationInfo.SetMetricMetadataEndpointError(input.MetricsCollector, federationInfo.PrivateMetadataEndpoint, 0)
+		updatePortProtocols(privateMetadata.PublicServices, defaultProtocol, protocolMap)
 		err = federationInfo.PatchMetadataCache(input.PatchCollector, "private", privateMetadata)
 		if err != nil {
 			return err
 		}
 	}
 	return nil
+}
+
+func updatePortProtocols(services *[]eeCrd.FederationPublicServices, defaultProtocol string, protocolMap map[string]string) {
+	keys := make([]string, 0, len(protocolMap))
+	for key := range protocolMap {
+		keys = append(keys, key)
+	}
+	slices.SortFunc(keys, func(a, b string) int { return len(b) - len(a) })
+	for serviceIndex := range *services {
+		service := &(*services)[serviceIndex]
+		for portIndex, port := range service.Ports {
+			port.Protocol = defaultProtocol
+			portNameParts := strings.SplitN(port.Name, "-", 2)
+			basePortName := portNameParts[0]
+			for _, keyword := range keys {
+				protocol := protocolMap[keyword]
+				if strings.Contains(basePortName, keyword) {
+					port.Protocol = protocol
+					break
+				}
+			}
+			service.Ports[portIndex] = port
+		}
+	}
 }

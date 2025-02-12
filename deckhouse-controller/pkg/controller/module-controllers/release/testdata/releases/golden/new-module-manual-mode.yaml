@@ -24,6 +24,8 @@ apiVersion: deckhouse.io/v1alpha1
 kind: ModuleRelease
 metadata:
   annotations:
+    modules.deckhouse.io/isUpdating: "false"
+    modules.deckhouse.io/notified: "true"
     release.deckhouse.io/approved: "true"
   creationTimestamp: null
   labels:
@@ -32,7 +34,7 @@ metadata:
     release-checksum: fd59af7328ed891b53cc999f242b0866
     source: test
   name: echo-v0.4.69
-  resourceVersion: "1000"
+  resourceVersion: "1001"
 spec:
   moduleName: echo
   version: 0.4.69

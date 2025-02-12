@@ -79,7 +79,7 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "gomod"
-  directory: "/ee/modules/030-cloud-provider-openstack/images/cloud-data-discoverer"
+  directory: "/ee/modules/030-cloud-provider-openstack/images/cloud-data-discoverer/src"
   labels:
   - "type/dependencies"
   - "status/ok-to-test"
@@ -97,7 +97,7 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "gomod"
-  directory: "/ee/modules/110-istio/images/api-proxy"
+  directory: "/ee/modules/110-istio/images/api-proxy/src"
   labels:
   - "type/dependencies"
   - "status/ok-to-test"
@@ -106,7 +106,7 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "gomod"
-  directory: "/ee/modules/110-istio/images/metadata-exporter"
+  directory: "/ee/modules/110-istio/images/metadata-exporter/src"
   labels:
   - "type/dependencies"
   - "status/ok-to-test"
@@ -142,7 +142,7 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "gomod"
-  directory: "/ee/se-plus/modules/021-cni-cilium/images/egress-gateway-agent"
+  directory: "/ee/se-plus/modules/021-cni-cilium/images/egress-gateway-agent/src"
   labels:
   - "type/dependencies"
   - "status/ok-to-test"
@@ -268,7 +268,7 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "gomod"
-  directory: "/modules/021-cni-cilium/images/safe-agent-updater"
+  directory: "/modules/021-cni-cilium/images/safe-agent-updater/src"
   labels:
   - "type/dependencies"
   - "status/ok-to-test"
@@ -286,7 +286,7 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "gomod"
-  directory: "/modules/030-cloud-provider-azure/images/cloud-data-discoverer"
+  directory: "/modules/030-cloud-provider-azure/images/cloud-data-discoverer/src"
   labels:
   - "type/dependencies"
   - "status/ok-to-test"
@@ -295,7 +295,7 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "gomod"
-  directory: "/modules/030-cloud-provider-gcp/images/cloud-data-discoverer"
+  directory: "/modules/030-cloud-provider-gcp/images/cloud-data-discoverer/src"
   labels:
   - "type/dependencies"
   - "status/ok-to-test"

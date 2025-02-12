@@ -24,8 +24,9 @@ import:
   add: /lib/udev/scsi_id
   to: /lib/udev/scsi_id
   before: setup
-docker:
-  ENTRYPOINT: ["/cloud-director-named-disk-csi-driver"]
+imageSpec:
+  config:
+    entrypoint: ["/cloud-director-named-disk-csi-driver"]
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
 final: false

@@ -13,7 +13,7 @@ You can manage cluster nodes using the `node-manager` module.
    - Specifying metadata to be applied to all nodes in a group.
    - Monitoring a group of nodes as an entire object: with segmentation of nodes in graphs, aggregation of alerts about node unavailability, and notifications when a certain number or percentage of nodes in a group is unavailable.
 1. Installation, update, and configuration of the node software (containerd, kubelet, etc.), and connection of a node to a cluster:
-   - Installation of an operating system (refer to the [list of supported operating systems](../../install/requirements.html#supported-os)) regardless of the infrastructure type, whether in a cloud environment or on physical hardware.
+   - Installation of an operating system (refer to the [list of supported operating systems](../../install/requirements.html#supported-os-for-platform-nodes)) regardless of the infrastructure type, whether in a cloud environment or on physical hardware.
    - Basic operating system (OS) configuration: disabling auto-update, installing required packages, configuring logging settings, etc.
    - Configuration of nginx to balance requests from nodes between API servers (kubelet), including setting up automatic updates of the upstream server list.
    - Installing and configuring the containerd and Kubernetes CRI, adding a node to a cluster.
@@ -166,8 +166,9 @@ The general procedure for working with static nodes when using CAPS is as follow
 1. **Preparing resources.**
 
    Before bringing a bare-metal server or virtual machine under the CAPS management, the following preliminary steps may be necessary:
+
    - Preparing the storage system, adding mount points, and so on.
-   - Installing OS-specific packages. For example, installing the `ceph-common` package if the server uses CEPH volumes.
+   - Installing OS-specific packages.
    - Configuring the network connectivity. For example, between the server and cluster nodes.
    - Configuring the SSH access to the server, creating a user with the root-level access via `sudo`. A good practice is to create a separate user and unique keys for each server.
 
@@ -342,8 +343,8 @@ Deckhouse will create new `MachineDeployment` objects and delete the old ones.
 The number of `MachineDeployment` objects ordered at the same time is determined by the `cloudInstances.maxSurgePerZone` parameter.
 
 During the disruption update, pods are evicted from the node.
-If a pod couldn't be evicted, the eviction attempt is retried every 20 seconds until a global timeout of 5 minutes is reached.
-After that, the pods that couldn't be evicted are removed.
+If a pod could not be evicted, the eviction attempt is retried every 20 seconds until a global timeout of 5 minutes is reached.
+After that, the pods that could not be evicted are removed.
 
 ## How do I allocate nodes to specific loads?
 

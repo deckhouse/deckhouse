@@ -5,6 +5,33 @@ permalink: en/virtualization-platform/documentation/admin/platform-management/vi
 
 The [`VirtualMachineClass`](../../../../reference/cr/virtualmachineclass.html) resource is intended for centralized configuration of preferred virtual machine parameters. It allows setting parameters for CPU, including instructions and resource configuration policies, as well as defining the ratio between CPU and memory resources. Additionally, [VirtualMachineClass](../../../../reference/cr/virtualmachineclass.html) manages the placement of virtual machines across the platform nodes, helping administrators efficiently distribute resources and optimally place virtual machines.
 
+The structure of the `VirtualMachineClass` resource is as follows:
+
+```yaml
+apiVersion: virtualization.deckhouse.io/v1alpha2
+kind: VirtualMachineClass
+metadata:
+name: <vmclass-name>
+spec:
+# Block describes the parameters of the virtual processor for virtual machines.
+# This block cannot be changed after the resource is created.
+cpu: ...
+
+# (optional block) Describes the rules for placing virtual machines on nodes.
+# When changed, automatically applies to all virtual machines using this VirtualMachineClass.
+nodeSelector: ...
+
+# (optional block) Describes the policy for configuring virtual machine resources.
+# When changed, automatically applies to all virtual machines using this VirtualMachineClass.
+sizingPolicies: ...
+  ```
+
+> **Warning.**  Since changing the `.spec.nodeSelector` parameter affects all virtual machines using the given `VirtualMachineClass`, be aware of the following:
+>
+> For Enterprise edition: this may result in virtual machines migrating to new destination nodes if the current nodes do not meet the placement requirements.
+>
+> For Community edition: this may result in virtual machines being restarted according to the automatic change enforcement policy set in the `.spec.disruptions.restartApprovalMode` parameter.
+
 The virtualization platform provides 3 preconfigured `VirtualMachineClass` resources:
 
 ```shell
@@ -19,7 +46,7 @@ generic            Ready   6d1h
 - `host-passthrough` — in this class, the physical CPU of the platform node is used without modification. A virtual machine using this class can only be migrated to a node with a CPU that exactly matches the CPU of the original node.
 - `generic` — a universal CPU class using the Nehalem model, which is quite old but supported by most modern processors. This allows virtual machines to run on any node in the cluster with live migration capabilities.
 
-The [`VirtualMachineClass`](../../../../reference/cr/virtualmachineclass.html) is a mandatory parameter in the virtual machine configuration. Here's an example of how to specify the virtual machine class in the specification:
+The [`VirtualMachineClass`](../../../../reference/cr/virtualmachineclass.html) is a mandatory parameter in the virtual machine configuration. To specify the virtual machine class in the specification, run the command:
 
 ```yaml
 apiVersion: virtualization.deckhouse.io/v1alpha2
@@ -27,19 +54,17 @@ kind: VirtualMachine
 metadata:
   name: linux-vm
 spec:
-  virtualMachineClassName: generic # name of resource VirtualMachineClass
+  virtualMachineClassName: generic # Name of resource VirtualMachineClass.
   ...
 ```
 
-{% alert level="warning" %}
-It is recommended to create at least one [`VirtualMachineClass`](../../../../reference/cr/virtualmachineclass.html) resource in the cluster with the Discovery type as soon as all nodes are configured and added to the cluster. This will allow virtual machines to use a universal processor with the maximum possible characteristics considering the CPUs on the cluster nodes, ensuring that virtual machines can fully utilize CPU capabilities and, if necessary, migrate seamlessly between cluster nodes. Examples and descriptions of classes with the Discovery type are provided below.
-{% endalert %}
+> **Warning.**  It is recommended to create at least one [`VirtualMachineClass`](../../../../reference/cr/virtualmachineclass.html) resource in the cluster with the Discovery type as soon as all nodes are configured and added to the cluster. This will allow virtual machines to use a universal processor with the maximum possible characteristics considering the CPUs on the cluster nodes, ensuring that virtual machines can fully utilize CPU capabilities and, if necessary, migrate seamlessly between cluster nodes. Examples and descriptions of classes with the Discovery type are provided below.
 
-Platform administrators can create virtual machine classes according to their needs, but it is recommended to minimize the number of them to simplify management. Below is an example of the configuration.
+Platform administrators can create virtual machine classes tailored to their requirements; however, to simplify management, their number should be kept to a minimum. Below is an example of the configuration.
 
 ### Example Configuration of VirtualMachineClass
 
-![Example Configuration of VirtualMachineClass](/images/virtualization-platform/vmclass-examples.png)
+![Example Configuration of VirtualMachineClass](/../../../../../images/virtualization-platform/vmclass-examples.png)
 
 Suppose we have a cluster of four nodes. Two of these nodes with the label `group=blue` are equipped with **CPU X**, which supports three instruction sets. The other two nodes with the label `group=green` have a newer processor, **CPU Y**, which supports four instruction sets. In this case, the administrator can configure virtual machine classes to ensure compatibility with different types of processors in the cluster.
 
@@ -107,26 +132,26 @@ metadata:
   name: discovery
 spec:
   cpu:
-    # configure a universal vCPU for a specific set of nodes
+    # Configure a universal vCPU for a specific set of nodes.
     discovery:
       nodeSelector:
         matchExpressions:
           - key: node-role.kubernetes.io/control-plane
             operator: DoesNotExist
     type: Discovery
-  # allow virtual machines with this class to run only on nodes in the worker group.
+  # Allow virtual machines with this class to run only on nodes in the worker group.
   nodeSelector:
     matchExpressions:
       - key: node.deckhouse.io/group
         operator: In
         values:
           - worker
-  # resource configuration policy
+  # Resource configuration policy.
   sizingPolicies:
-  # for a range of 1 to 4 cores, it is possible to allocate between 1 and 8 GB of RAM in 512Mi increments
-  # for example, 1GB, 1.5GB, 2GB, 2.5GB, and so on
-  # dedicated cores are not allowed
-  # all values of the corefraction parameter are permitted
+  # For a range of 1 to 4 cores, it is possible to allocate between 1 and 8 GB of RAM in 512Mi increments.
+  # For example, 1GB, 1.5GB, 2GB, 2.5GB, and so on.
+  # Dedicated cores are not allowed.
+  # All values of the corefraction parameter are permitted.
     - cores:
         min: 1
         max: 4
@@ -136,10 +161,10 @@ spec:
         step: 512Mi
       dedicatedCores: [false]
       coreFractions: [5, 10, 20, 50, 100]
-  # for a range of 5 to 8 cores, it is possible to allocate between 5 and 16 GB of RAM in 1GB increments
-  # for example, 5GB, 6GB, 7GB, and so on
-  # dedicated cores are not allowed
-  # some values of the corefraction parameter are permitted
+  # For a range of 5 to 8 cores, it is possible to allocate between 5 and 16 GB of RAM in 1GB increments.
+  # For example, 5GB, 6GB, 7GB, and so on.
+  # Dedicated cores are not allowed.
+  # Some values of the corefraction parameter are permitted.
     - cores:
         min: 5
         max: 8
@@ -149,9 +174,9 @@ spec:
         step: 1Gi
       dedicatedCores: [false]
       coreFractions: [20, 50, 100]
-  # for a range of 9 to 16 cores, it is possible to allocate between 9 and 32 GB of RAM in 1GB increments
-  # dedicated cores can be used (but are not mandatory)
-  # some values of the corefraction parameter are permitted
+  # For a range of 9 to 16 cores, it is possible to allocate between 9 and 32 GB of RAM in 1GB increments.
+  # Dedicated cores can be used (but are not mandatory).
+  # Some values of the corefraction parameter are permitted.
     - cores:
         min: 9
         max: 16
@@ -161,9 +186,9 @@ spec:
         step: 1Gi
       dedicatedCores: [true, false]
       coreFractions: [50, 100]
-  # for a range of 17 to 1024 cores, it is possible to allocate between 1 and 2 GB of RAM per core
-  # only dedicated cores are allowed
-  # the only permitted corefraction value is 100%
+  # For a range of 17 to 1024 cores, it is possible to allocate between 1 and 2 GB of RAM per core.
+  # Only dedicated cores are allowed.
+  # The only permitted corefraction value is 100%.
     - cores:
         min: 17
         max: 1024

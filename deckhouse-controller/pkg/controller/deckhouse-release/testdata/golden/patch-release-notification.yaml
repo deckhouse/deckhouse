@@ -24,7 +24,7 @@ metadata:
     release.deckhouse.io/notified: "true"
   creationTimestamp: null
   name: v1.26.0
-  resourceVersion: "1002"
+  resourceVersion: "1001"
 spec:
   applyAfter: "2019-10-17T17:33:00Z"
   version: v1.25.1

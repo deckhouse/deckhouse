@@ -1,9 +1,9 @@
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: common/distroless
-docker:
-  ENTRYPOINT: ["/capz-controller-manager"]
-  USER: deckhouse:deckhouse
+imageSpec:
+  config:
+    entrypoint: ["/capz-controller-manager"]
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
   add: /capz-controller-manager

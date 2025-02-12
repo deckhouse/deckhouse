@@ -138,6 +138,8 @@ apiVersions:
             uniqueItems: true
             description: |
               A limited set of zones in which master nodes can be created.
+
+              The order in which zones are specified does not influence the sequence of node creation. Nodes are assigned to zones in alphabetical order: the first node is placed in the alphabetically first zone, the second node in the second zone, and so forth. If there are more nodes than zones, the assignment process restarts from the beginning of the zone list after placing a node in the last alphabetical zone.
             x-doc-required: false
           additionalTags:
             type: object
@@ -265,7 +267,9 @@ apiVersions:
               minItems: 1
               uniqueItems: true
               description: |
-                A limited set of zones in which master nodes can be created.
+                A limited set of zones in which nodes can be created.
+
+                The order in which zones are specified does not influence the sequence of node creation. Nodes are assigned to zones in alphabetical order: the first node is placed in the alphabetically first zone, the second node in the second zone, and so forth. If there are more nodes than zones, the assignment process restarts from the beginning of the zone list after placing a node in the last alphabetical zone.
               x-doc-required: false
             additionalTags:
               type: object
@@ -448,6 +452,15 @@ apiVersions:
           Default IAM role policies actions contain the following roles:
           - `ec2:DescribeTags`
           - `ec2:DescribeInstances`
+      iamNodeRole:
+        type: string
+        pattern: ^[a-zA-Z0-9+=,.@\-_']{1,64}$
+        description: |
+          The name of the IAM role that will be attached to all AWS instances of the cluster nodes.
+
+          DKP always creates and assigns a special IAM role named `<PREFIX>-node` to each AWS instance of the cluster nodes (`<PREFIX>` is the value of the parameter [cloud.prefix](../../installing/configuration.html#clusterconfiguration-cloud-prefix) in the common cluster parameters). You can specify your IAM-role with greater permissions in the `iamNodeRole` parameter, but it is important that it includes the IAM policies of the role created by DKP (the `<PREFIX>-node` role).
+
+          More details about IAM roles for AWS EC2 can be found in the [AWS documentation](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/iam-roles-for-amazon-ec2.html).
     allOf:
     - oneOf:
       - required: [layout]

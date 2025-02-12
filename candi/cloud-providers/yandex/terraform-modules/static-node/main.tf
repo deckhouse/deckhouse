@@ -117,6 +117,12 @@ resource "yandex_compute_instance" "static" {
     ]
   }
 
+  timeouts {
+    create = var.resourceManagementTimeout
+    delete = var.resourceManagementTimeout
+    update = var.resourceManagementTimeout
+  }
+
   metadata = {
     ssh-keys          = "user:${local.ssh_public_key}"
     user-data         = base64decode(var.cloudConfig)

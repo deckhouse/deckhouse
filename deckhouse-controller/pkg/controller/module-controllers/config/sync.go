@@ -30,11 +30,11 @@ import (
 // TODO(ipaqsa): move it to module loader and run it in goroutine not at start
 func (r *reconciler) syncModules(ctx context.Context) error {
 	// wait until module manager init
-	r.log.Debug("wait until module manager is inited")
-	if err := wait.PollUntilContextCancel(ctx, 2*time.Second, true, func(_ context.Context) (bool, error) {
-		return r.moduleManager.AreModulesInited(), nil
+	r.log.Debug("wait until kube config manager is started")
+	if err := wait.PollUntilContextCancel(ctx, 100*time.Millisecond, true, func(_ context.Context) (bool, error) {
+		return r.handler.ModuleConfigChannelIsSet(), nil
 	}); err != nil {
-		return fmt.Errorf("init module manager: %w", err)
+		return fmt.Errorf("wait kube config manager to start: %w", err)
 	}
 
 	r.log.Debug("sync modules")

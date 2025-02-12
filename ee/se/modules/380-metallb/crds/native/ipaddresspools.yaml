@@ -54,7 +54,7 @@ spec:
               properties:
                 addresses:
                   description: |-
-                    A list of IP address ranges over which MetalLB has authority.
+                    A list of IP address ranges over which metallb has authority.
                     You can list multiple ranges in a single pool, they will all share the
                     same settings. Each range can be either a CIDR prefix, or an explicit
                     start-end range of IPs.

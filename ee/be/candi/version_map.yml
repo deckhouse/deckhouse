@@ -16,18 +16,6 @@ bashible:
     '10.2':
     '11':
 k8s:
-  '1.27':
-    bashible:
-      redos:
-        !!merge <<: *redos
-      rosa:
-        !!merge <<: *rosa
-      astra:
-        !!merge <<: *astra
-    clusterApi:
-      vcd: v1.2.0
-    ccm:
-      vcd: 1.4.1
   '1.28':
     bashible:
       redos:
@@ -37,7 +25,7 @@ k8s:
       astra:
         !!merge <<: *astra
     clusterApi:
-      vcd: v1.2.0
+      vcd: v1.3.2
     ccm:
       vcd: 1.4.1
   '1.29':
@@ -49,7 +37,7 @@ k8s:
       astra:
         !!merge <<: *astra
     clusterApi:
-      vcd: v1.2.0
+      vcd: v1.3.2
     ccm:
       vcd: 1.4.1
   '1.30':
@@ -61,7 +49,7 @@ k8s:
       astra:
         !!merge <<: *astra
     clusterApi:
-      vcd: v1.2.0
+      vcd: v1.3.2
     ccm:
       vcd: 1.4.1
   '1.31':
@@ -73,6 +61,18 @@ k8s:
       astra:
         !!merge <<: *astra
     clusterApi:
-      vcd: v1.2.0
+      vcd: v1.3.2
     ccm:
       vcd: 1.4.1      
+  '1.32':
+    bashible:
+      redos:
+        !!merge <<: *redos
+      rosa:
+        !!merge <<: *rosa
+      astra:
+        !!merge <<: *astra
+    clusterApi:
+      vcd: v1.3.2
+    ccm:
+      vcd: 1.4.1

@@ -6,6 +6,6 @@ import:
     add: /agent
     to: /agent
     before: install
-docker:
-  USER: 64535
-  ENTRYPOINT: ["/agent"]
+imageSpec:
+  config:
+    entrypoint: ["/agent"]

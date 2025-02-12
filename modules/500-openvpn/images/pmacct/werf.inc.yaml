@@ -6,8 +6,9 @@ import:
   add: /relocate
   to: /
   before: setup
-docker:
-  ENTRYPOINT: ["/usr/sbin/pmacctd"]
+imageSpec:
+  config:
+    entrypoint: ["/usr/sbin/pmacctd"]
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
 final: false

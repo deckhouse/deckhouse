@@ -106,12 +106,14 @@ locals {
 resource "yandex_compute_instance" "nat_instance" {
   count = local.is_with_nat_instance ? 1 : 0
 
+  allow_stopping_for_update = true
+
   name                      = join("-", [var.prefix, "nat"])
   hostname                  = join("-", [var.prefix, "nat"])
   zone                      = local.internal_subnet_zone
   network_acceleration_type = "software_accelerated"
 
-  platform_id = "standard-v2"
+  platform_id = var.nat_instance_platform
   resources {
     cores  = var.nat_instance_cores
     memory = var.nat_instance_memory
@@ -149,6 +151,12 @@ resource "yandex_compute_instance" "nat_instance" {
       boot_disk[0].initialize_params[0].size,
       network_acceleration_type,
     ]
+  }
+
+  timeouts {
+    create = var.resourceManagementTimeout
+    delete = var.resourceManagementTimeout
+    update = var.resourceManagementTimeout
   }
 
   metadata = {
