@@ -1,16 +1,11 @@
 # Changelog v1.64
 
-## [MALFORMED]
-
-
- - #9289 unknown section "flant-integration"
- - #9573 unknown section "delivery"
- - #9768 unknown section "l2-load-balancer"
 
 ## Know before update
 
 
  - Ingress nginx controller will restart.
+ - l2-load-balancer module is deprecated. To upgrade to the next DKP version, you must disable the l2-load-balancer module.
 
 ## Features
 
@@ -51,6 +46,8 @@
  - **[docs]** Add new module `deckhouse-tools`. [#9140](https://github.com/deckhouse/deckhouse/pull/9140)
  - **[go_lib]** Added heritage label to all crds. [#9273](https://github.com/deckhouse/deckhouse/pull/9273)
  - **[ingress-nginx]** Added additional validation of inlet-related parameters. [#9208](https://github.com/deckhouse/deckhouse/pull/9208)
+ - **[l2-load-balancer]** Set the l2-load-balancer module to deprecated status. [#9768](https://github.com/deckhouse/deckhouse/pull/9768)
+    l2-load-balancer module is deprecated. To upgrade to the next DKP version, you must disable the l2-load-balancer module.
  - **[loki]** Configurable Loki limits. [#9437](https://github.com/deckhouse/deckhouse/pull/9437)
     Loki pod will be restarted. Short disruption will occur.
  - **[multitenancy-manager]** Add virtual projects and used namespaces to status. [#9463](https://github.com/deckhouse/deckhouse/pull/9463)
@@ -126,6 +123,7 @@
  - **[deckhouse-controller]** Use the default `ModuleUpdatePolicy` if the `ModuleUpdatePolicy`, referenced in `ModuleRelease`, has been deleted. [#9035](https://github.com/deckhouse/deckhouse/pull/9035)
  - **[deckhouse-controller]** Correct module validation. [#8989](https://github.com/deckhouse/deckhouse/pull/8989)
  - **[deckhouse-tools]** Fix custom certs copying. [#9840](https://github.com/deckhouse/deckhouse/pull/9840)
+ - **[delivery]** Fixed the `argocd-repo-server` and `argocd-server` Services with multiple ports broken by Helm. [#9573](https://github.com/deckhouse/deckhouse/pull/9573)
  - **[dhctl]** Fix empty registry credentials preflight check failure. [#10226](https://github.com/deckhouse/deckhouse/pull/10226)
  - **[dhctl]** Do not return error if deckhouse release exists. [#10164](https://github.com/deckhouse/deckhouse/pull/10164)
  - **[dhctl]** Only one resource will create for namespace if it namespace does not exist. [#10159](https://github.com/deckhouse/deckhouse/pull/10159)
