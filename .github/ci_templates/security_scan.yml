@@ -13,10 +13,10 @@ steps:
 {!{- else }!}
       TAG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
 {!{- end }!}
-      IMAGE: "dev-registry.deckhouse.io/sys/deckhouse-oss"
+      IMAGE: "${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}/sys/deckhouse-oss"
       TRIVY_TOKEN: ${{secrets.FOX_ACCESS_TOKEN}}
       DECKHOUSE_PRIVATE_REPO: ${{secrets.DECKHOUSE_PRIVATE_REPO}}
-      TRIVY_PROJECT_ID: "2181"
+      TRIVY_PROJECT_ID: ${{ vars.TRIVY_PROJECT_ID }}
     run: |
       echo "⚓️ 🏎 Running default user validation on ${TAG}..."
       make cve-base-images-check-default-user

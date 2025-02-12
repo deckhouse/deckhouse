@@ -999,10 +999,10 @@ jobs:
       - name: Running default user validation on ${{env.TAG}}
         env:
           TAG: ${{needs.pull_request_info.outputs.ref_slug}}
-          IMAGE: "dev-registry.deckhouse.io/sys/deckhouse-oss"
+          IMAGE: "${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}/sys/deckhouse-oss"
           TRIVY_TOKEN: ${{secrets.FOX_ACCESS_TOKEN}}
           DECKHOUSE_PRIVATE_REPO: ${{secrets.DECKHOUSE_PRIVATE_REPO}}
-          TRIVY_PROJECT_ID: "2181"
+          TRIVY_PROJECT_ID: ${{ vars.TRIVY_PROJECT_ID }}
         run: |
           echo "⚓️ 🏎 Running default user validation on ${TAG}..."
           make cve-base-images-check-default-user
