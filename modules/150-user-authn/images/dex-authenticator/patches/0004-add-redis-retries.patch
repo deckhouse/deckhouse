@@ -1,0 +1,37 @@
+diff --git a/pkg/validation/sessions.go b/pkg/validation/sessions.go
+index 96ea6d4f..f14bcd84 100644
+--- a/pkg/validation/sessions.go
++++ b/pkg/validation/sessions.go
+@@ -64,19 +64,21 @@ func validateRedisSessionStore(o *options.Options) []string {
+ func sendRedisConnectionTest(client redis.Client, key string, val string) []string {
+        msgs := []string{}
+        ctx := context.Background()
+-
+-       err := client.Set(ctx, key, []byte(val), time.Duration(60)*time.Second)
+-       if err != nil {
+-               msgs = append(msgs, fmt.Sprintf("unable to set a redis initialization key: %v", err))
+-       } else {
+-               gval, err := client.Get(ctx, key)
++       for i := 0; i < 5; i++ {
++               err := client.Set(ctx, key, []byte(val), time.Duration(60)*time.Second)
+                if err != nil {
+-                       msgs = append(msgs,
+-                               fmt.Sprintf("unable to retrieve redis initialization key: %v", err))
+-               }
+-               if string(gval) != val {
+-                       msgs = append(msgs,
+-                               "the retrieved redis initialization key did not match the value we set")
++                       msgs = append(msgs, fmt.Sprintf("unable to set a redis initialization key: %v", err))
++               } else {
++                       gval, err := client.Get(ctx, key)
++                       if err != nil {
++                               msgs = append(msgs,
++                                       fmt.Sprintf("unable to retrieve redis initialization key: %v", err))
++                       }
++                       if string(gval) != val {
++                               msgs = append(msgs,
++                                       "the retrieved redis initialization key did not match the value we set")
++                       }
++                       break
+                }
+        }
