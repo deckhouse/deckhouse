@@ -4249,11 +4249,6 @@ alerts:
       edition: ce
       description: |
         The '{{ $labels.moduleName }}' module matched by the '{{ $labels.updatePolicy }}' deprecated module update policy, the policy selector does not work, and the module will use deckhouse update policy.
-
-        Please specify the proper update policy in the module config to continue get updates:
-        ```
-        kubectl patch mc {{ $labels.moduleName }} --type=merge -p '{"spec": {"updatePolicy": {{ $labels.updatePolicy | quote }}}}'
-        ```
       summary: |
         The '{{ $labels.moduleName }}' module matched by the '{{ $labels.updatePolicy }}' deprecated module update policy.
       severity: "4"
