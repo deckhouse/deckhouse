@@ -1171,7 +1171,7 @@ const findAndRerunWorkflow = async ({ github, context, core, workflow_id }) => {
 
   core.startGroup(`Retry workflow ${workflow_id} run ${lastRun.id} ...`);
   try {
-    const response = await github.rest.actions.retryWorkflow({
+    const response = await github.rest.actions.reRunWorkflow({
       owner: context.repo.owner,
       repo: context.repo.repo,
       run_id: lastRun.id
@@ -1182,7 +1182,12 @@ const findAndRerunWorkflow = async ({ github, context, core, workflow_id }) => {
       core.info(`Bad status code from retryWorkflow: ${JSON.stringify(response)}`);
     }
   } catch (error) {
-    core.info(`Ignore error from retryWorkflow: ${dumpError(error)}`);
+    if (error instanceof Error) {
+      core.error(`Error from retryWorkflow: ${error.message}`);
+      core.error(`Stack trace: ${error.stack}`);
+    } else {
+      core.error(`Unknown error from retryWorkflow: ${JSON.stringify(error)}`);
+    }
   } finally {
     core.endGroup();
   }
