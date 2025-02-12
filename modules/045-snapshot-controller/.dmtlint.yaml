@@ -1,4 +1,4 @@
-linter-settings:
+linters-settings:
   probes:
     exclude-rules:
       liveness:

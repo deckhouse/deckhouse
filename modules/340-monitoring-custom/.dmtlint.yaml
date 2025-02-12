@@ -1,3 +1,3 @@
-linter-settings:
+linters-settings:
   oss:
     disable: true
