@@ -97,6 +97,8 @@ spec:
           value: "{{ $.Values.global.enabledModules | join " " }}"
         - name: DECKHOUSE_CONFIG_MAP
           value: deckhouse-generated-config-do-not-edit
+        - name: INSTANCE_CLASS_NAME
+          value: "{{ .Values.global.clusterConfiguration.cloud.provider | lower }}instanceclasses"
         ports:
           - containerPort: 9680
             name: validating-http
