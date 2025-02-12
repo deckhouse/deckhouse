@@ -116,7 +116,7 @@ function __main__() {
 
       IMAGE_HASH="$(jq -rc '.value' <<< "$module_image")"
       IMAGE_REPORT_NAME="$MODULE_NAME $IMAGE_NAME"
-      # check_user "$IMAGE_REPORT_NAME" "$IMAGE@$IMAGE_HASH"
+      check_user "$IMAGE_REPORT_NAME" "$IMAGE@$IMAGE_HASH"
     done
   done
   exit_code=0
