@@ -603,19 +603,6 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
-- add: /ee/fe/modules/300-prometheus/images/prometheuspp
-  to: /deckhouse/modules/300-prometheus/images/prometheuspp
-  excludePaths:
-    - docs
-    - README.md
-    - images
-    - hooks/**/*.go
-    - hooks/*.go
-    - hack
-    - template_tests
-    - .namespace
-    - values_matrix_test.yaml
-    - .build.yaml
 - add: /ee/fe/modules/340-monitoring-applications
   to: /deckhouse/modules/340-monitoring-applications
   excludePaths:

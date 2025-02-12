@@ -1074,29 +1074,6 @@
   stageDependencies:
     setup:
         - '**/*.go'
-- add: /ee/fe/modules/300-prometheus/images/prometheuspp
-  to: /deckhouse/modules/300-prometheus/images/prometheuspp
-  excludePaths:
-    - images
-    - templates
-    - charts
-    - crds
-    - docs
-    - monitoring
-    - openapi
-    - oss.yaml
-    - cloud-instance-manager
-    - values_matrix_test.yaml
-    - values.yaml
-    - .helmignore
-    - candi
-    - Chart.yaml
-    - .namespace
-    - '**/*_test.go'
-    - '**/*.sh'
-  stageDependencies:
-    setup:
-        - '**/*.go'
 - add: /ee/fe/modules/300-prometheus/hooks/cm_check.go
   to: /deckhouse/modules/300-prometheus/hooks/cm_check.go
   stageDependencies:
