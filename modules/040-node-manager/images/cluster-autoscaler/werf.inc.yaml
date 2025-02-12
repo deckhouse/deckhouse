@@ -34,7 +34,7 @@ shell:
   - git apply /patches/*.patch --verbose
     {{- end }}
   - mv ./cluster-autoscaler/* /src
-  - rm -rf /tmp/autoscaler
+  - rm -rf /tmp/autoscaler /src/vendor
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
 from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
@@ -50,6 +50,7 @@ mount:
 shell:
   install:
   - cd /src
+  - go mod download
   - GOPROXY={{ $.GOPROXY }} GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o cluster-autoscaler
   - echo "{{ $clusterAutoscalerVersion }}.{{ $value.clusterAutoscalerPatch }}-flant" > VERSION
 ---
@@ -57,7 +58,7 @@ image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
 fromImage: common/distroless
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
-  add: /src/cluster-autoscaler
+  add: /src
   to: /
   includePaths:
   - cluster-autoscaler
