@@ -101,6 +101,8 @@ func (p *TaskCalculator) CalculatePendingReleaseTask(ctx context.Context, releas
 		return nil, fmt.Errorf("list releases: %w", err)
 	}
 
+	releases = filterReleasesByModuleName(releases, release.GetModuleName())
+
 	if len(releases) == 1 {
 		return &Task{
 			TaskType: Process,
@@ -108,8 +110,6 @@ func (p *TaskCalculator) CalculatePendingReleaseTask(ctx context.Context, releas
 			IsLatest: true,
 		}, nil
 	}
-
-	releases = filterReleasesByModuleName(releases, release.GetModuleName())
 
 	sort.Sort(ByVersion[v1alpha1.Release](releases))
 
