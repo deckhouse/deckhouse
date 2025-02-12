@@ -117,14 +117,14 @@ func ensureDictBindings(input *go_hook.HookInput) error {
 		delete(subjects, subjectString)
 	}
 
-	for _, subject := range subjects {
-		input.PatchCollector.Create(createDictBinding(subject), object_patch.IgnoreIfExists())
+	for name, subject := range subjects {
+		input.PatchCollector.Create(createDictBinding(name, subject), object_patch.IgnoreIfExists())
 	}
 
 	return nil
 }
 
-func createDictBinding(subject rbacv1.Subject) *rbacv1.RoleBinding {
+func createDictBinding(subjectString string, subject rbacv1.Subject) *rbacv1.RoleBinding {
 	return &rbacv1.RoleBinding{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "ClusterRoleBinding",
@@ -132,6 +132,9 @@ func createDictBinding(subject rbacv1.Subject) *rbacv1.RoleBinding {
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			GenerateName: "d8:dict:",
+			Annotations: map[string]string{
+				"rbac.deckhouse.io/subject": subjectString,
+			},
 			Labels: map[string]string{
 				"heritage":                    "deckhouse",
 				"rbac.deckhouse.io/automated": "true",
