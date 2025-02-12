@@ -22,7 +22,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
-    "github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"	
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/converge"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/check"
@@ -110,9 +110,9 @@ func (c *Converger) Converge(ctx context.Context) (*ConvergeResult, error) {
 	if c.KubeClient != nil {
 		kubeCl = c.KubeClient
 	} else {
-                if c.SSHClient == nil {
-                      return nil, fmt.Errorf("Not enough flags were passed to perform the operation.\nUse dhctl converge --help to get available flags.\nSsh host flag is not provided. Need to pass --ssh-host")
-                }
+		if c.SSHClient == nil {
+			return nil, fmt.Errorf("Not enough flags were passed to perform the operation.\nUse dhctl converge --help to get available flags.\nSsh host is not provided. Need to pass --ssh-host, or specify SSHHost manifest in the --connection-config file")
+		}
 
 		kubeCl, err = kubernetes.ConnectToKubernetesAPI(ssh.NewNodeInterfaceWrapper(c.SSHClient))
 		if err != nil {
