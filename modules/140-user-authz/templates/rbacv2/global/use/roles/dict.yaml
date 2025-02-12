@@ -7,6 +7,14 @@ metadata:
     module: user-authz
 rules:
   - apiGroups:
+      - deckhouse.io
+    resources:
+      - clusterlogdestinations
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
       - node.k8s.io
     resources:
       - runtimeclasses
