@@ -4,7 +4,13 @@
 - sed -i "s|ftp.altlinux.org/pub/distributions/archive|{{ $.DistroPackagesProxy }}/repository/archive-ALT-Linux-APT-Repository|g" /etc/apt/sources.list.d/alt.list
   {{- end }}
 - export DEBIAN_FRONTEND=noninteractive
-- apt-get update
+- apt-get update -y
+{{- end }}
+
+{{- define "alt dist upgrade" }}
+- apt-get dist-upgrade -y
+- find /var/cache/apt/ -type f -delete
+- rm -rf /var/log/*log /var/log/apt/* /var/lib/dpkg/*-old /var/cache/debconf/*-old
 {{- end }}
 
 {{- define "debian packages proxy" }}

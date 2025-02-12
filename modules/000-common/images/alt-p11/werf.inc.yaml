@@ -12,6 +12,7 @@ shell:
   beforeInstall:
   {{- include "alt archive repos" . | nindent 2 }}
   {{- include "alt packages proxy" . | nindent 2 }}
+  {{- include "alt dist upgrade" . | nindent 2 }}
   # ssh auth to 3p repos
   - echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
 ---
@@ -21,6 +22,11 @@ final: false
 shell:
   beforeInstall:
   {{- include "alt archive repos" . | nindent 2 }}
+  - cp /etc/apt/sources.list.d/alt.list /etc/apt/sources.list.d/alt.list.orig
+  {{- include "alt packages proxy" . | nindent 2 }}
+  {{- include "alt dist upgrade" . | nindent 2 }}
+  # return original repos
+  - mv /etc/apt/sources.list.d/alt.list.orig /etc/apt/sources.list.d/alt.list
 imageSpec:
   config:
     user: "64535:64535"
