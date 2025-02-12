@@ -13,7 +13,7 @@ go get github.com/opencontainers/runc@v1.1.14
 go get google.golang.org/grpc@v1.56.3
 go get golang.org/x/crypto@v0.31.0
 go get golang.org/x/net@v0.33.0
-go get k8s.io/kubernetes@v1.28.12
+go get k8s.io/kubernetes@v1.28.15
 go mod tidy
 git diff > patches/go_mod.patch
 #git apply patches/go_mod.patch
