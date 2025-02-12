@@ -11,6 +11,7 @@ git:
     - '**/*'
 shell:
   install:
+  - cd /src
   - git clone --depth 1 -b {{ $version }} {{ $.SOURCE_REPO }}/stakater/Reloader.git .
   - git apply /patches/*.patch --verbose
   - rm -rf .git
