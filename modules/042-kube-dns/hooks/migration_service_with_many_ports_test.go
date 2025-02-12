@@ -52,7 +52,7 @@ spec:
     k8s-app: kube-dns
   sessionAffinity: None
   type: ClusterIP`
-	
+
 	serviceRightPorts = `
 - name: dns
   port: 53
