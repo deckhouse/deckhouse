@@ -36,7 +36,7 @@ data:
     schema_config:
       configs:
         - from: 2020-10-24
-          store: boltdb-shipper
+          store: boltdb-shipper # WARNING: do not change without testing force-expiration
           object_store: filesystem
           schema: v11
           index:
