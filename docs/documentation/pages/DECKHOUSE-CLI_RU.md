@@ -15,7 +15,7 @@ Deckhouse CLI — это интерфейс командной строки дл
 
 * `d8 k` — команды, которые в кластерах Kubernetes выполняет `kubectl`.  
     Например, в кластере можно выполнить `kubectl get pods` как `d8 k get pods`.
-* `d8 d` — команды, отвечающие за доставку по аналогии с утилитой `werf`.  
+* `d8 dk` — команды, отвечающие за доставку по аналогии с утилитой `werf`.  
     Например, вместо `werf plan --repo registry.deckhouse.io` можно выполнить `d8 d plan --repo registry.deckhouse.io`.
 
 * `d8 mirror` — команды, которые позволяют скопировать образы дистрибутива DKP в частный container registry (ранее для этого использовалась утилита `dhctl mirror`).
@@ -43,4 +43,32 @@ Deckhouse CLI — это интерфейс командной строки дл
 
 ## Как установить Deckhouse CLI
 
-{% include d8-cli-install/main.liquid %}
+Утилита Deckhouse CLI доступна в [trdl](https://ru.trdl.dev/). Сначала необходимо [установить клиент trdl](https://ru.trdl.dev/quickstart.html#%D1%83%D1%81%D1%82%D0%B0%D0%BD%D0%BE%D0%B2%D0%BA%D0%B0-%D0%BA%D0%BB%D0%B8%D0%B5%D0%BD%D1%82%D0%B0).
+
+После этого, добавьте репозиторий Deckhouse CLI в trdl. Выполните следующую команду:
+
+```bash
+URL=https://trrr.flant.dev/trdl-deckhouse-cli
+ROOT_VERSION=1
+ROOT_SHA512=$(curl -Ls ${URL}/${ROOT_VERSION}.root.json | sha512sum | tr -d '\-[:space:]\n')
+REPO=trdl-deckhouse-cli
+
+trdl add $REPO $URL $ROOT_VERSION $ROOT_SHA512
+```
+
+И установите актуальный стабильный релиз:
+
+```bash
+trdl update $REPO $ROOT_VERSION stable
+```
+
+Проверьте что исполняемый файл `d8` установлен и работоспособен:
+
+```bash
+. $(trdl use $REPO $ROOT_VERSION stable) && d8 --version
+```
+
+{% alert level="warning" %}
+Если вы используете macOS, вам может потребоваться удалить атрибут карантина с исполняемого файла, чтобы Gatekeeper не блокировал его.
+(`sudo xattr -d com.apple.quarantine /path/to/d8`)
+{% endalert %}
