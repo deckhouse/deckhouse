@@ -1,18 +1,5 @@
-diff --git a/client/go.mod b/client/go.mod
-index e3f8fd8f6..ef0fc8def 100644
---- a/client/go.mod
-+++ b/client/go.mod
-@@ -34,7 +34,7 @@ require (
- 	github.com/pkg/errors v0.9.1 // indirect
- 	github.com/spf13/pflag v1.0.5 // indirect
- 	golang.org/x/mod v0.15.0 // indirect
--	golang.org/x/net v0.23.0 // indirect
-+	golang.org/x/net v0.33.0 // indirect
- 	golang.org/x/oauth2 v0.10.0 // indirect
- 	golang.org/x/sys v0.19.0 // indirect
- 	golang.org/x/term v0.19.0 // indirect
 diff --git a/go.mod b/go.mod
-index 40a5d50f4..cc97836c8 100644
+index 459123086..575dc5706 100644
 --- a/go.mod
 +++ b/go.mod
 @@ -60,11 +60,11 @@ require (
@@ -32,7 +19,7 @@ index 40a5d50f4..cc97836c8 100644
  	google.golang.org/genproto/googleapis/rpc v0.0.0-20240822170219-fc7c04adadcd // indirect
  	gopkg.in/evanphx/json-patch.v4 v4.12.0 // indirect
 diff --git a/go.sum b/go.sum
-index 9e5831b84..6c29c0403 100644
+index dcae10efe..af07cd6b2 100644
 --- a/go.sum
 +++ b/go.sum
 @@ -138,8 +138,8 @@ golang.org/x/net v0.0.0-20190620200207-3b0461eec859/go.mod h1:z5CRVTTTmAJ677TzLL

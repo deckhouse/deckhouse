@@ -1,12 +1,21 @@
 {{- range $key, $value := .CandiVersionMap.k8s }}
   {{- $version := toString $key }}
   {{- if $value.csi.vsphere }}
+    {{- $src_version := toString $value.csi.vsphere }}
+    {{- $patches := (printf "/%smodules/%s-%s/images/%s" $.ModulePath $.ModulePriority $.ModuleName $.ImageName) }}
+    {{- $patch := false }}
+    {{- range $path, $_ := $.Files.Glob (printf "%s/*" $patches) }}
+      {{- if contains $src_version $path }}
+        {{- $patch = true }}
+      {{- end }}
+    {{- end }}
+
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $version | replace "." "-" }}
 fromImage: common/distroless
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
-  add: /src/vsphere-csi
+  add: /vsphere-csi
   to: /bin/vsphere-csi
   before: setup
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
@@ -19,32 +28,48 @@ imageSpec:
   config:
     entrypoint: ["/bin/vsphere-csi"]
 ---
-image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
+image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $version | replace "." "-" }}
+fromImage: common/src-artifact
 final: false
-from: {{ $.Images.BASE_GOLANG_21_ALPINE_DEV }}
+  {{- if $patch }}
 git:
-- add: /{{ $.ModulePath }}modules/030-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
+- add: {{ $patches }}/patches/{{ $src_version }}
   to: /patches
   stageDependencies:
     install:
-      - '**/*'
+    - '**/*'
+  {{- end }}
+shell:
+  install:
+  - git clone --depth 1 --branch v0.2.0 {{ $.SOURCE_REPO }}/gofsutil.git /src/gofsutil && rm -rf /src/gofsutil/.git
+  - git clone --depth 1 --branch {{ $src_version }} {{ $.SOURCE_REPO }}/kubernetes-sigs/vsphere-csi-driver.git /src/vsphere-csi-driver && rm -rf /src/vsphere-csi-driver/.git
+  - cd /src/vsphere-csi-driver
+  {{- if $patch }}
+  - git apply /patches/*.patch --verbose
+  {{- end }}
+  - rm -rf vendor
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
+final: false
+from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $version | replace "." "-" }}
+  add: /src
+  to: /src
+  before: install
 mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
 shell:
-  beforeInstall:
-  - apk add --no-cache openssh-client
-  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
   install:
-  - export GO_VERSION=${GOLANG_VERSION}
-  - export GOPROXY={{ $.GOPROXY }}
-  - git clone --depth 1 --branch v0.2.0 {{ $.SOURCE_REPO }}/gofsutil.git /gofsutil
-  - cd /gofsutil && go mod init deckhouse/3p/gofsutil
-  - git clone --depth 1 --branch {{ $value.csi.vsphere }} {{ $.SOURCE_REPO }}/kubernetes-sigs/vsphere-csi-driver.git /src
-  - cd /src
-  - git apply /patches/{{ $version }}/*.patch --verbose
-  - go mod tidy
-  - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o vsphere-csi cmd/vsphere-csi/main.go
+  - export GO_VERSION=${GOLANG_VERSION} GOPROXY={{ $.GOPROXY }}
+  - cd /src/gofsutil
+  - go mod init deckhouse/3p/gofsutil
+  - cd /src/vsphere-csi-driver
+  - go mod download
+  - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o /vsphere-csi cmd/vsphere-csi/main.go
+  - chown 64535:64535 /vsphere-csi
+  - chmod 755 /vsphere-csi
   {{- end }}
 {{- end }}
 ---
@@ -52,7 +77,10 @@ shell:
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
 final: false
-from: {{ $.Images.BASE_ALT_DEV }}
+fromImage: common/relocate-artifact
 shell:
-  setup:
-    - /binary_replace.sh -i "{{ $csiBinaries }}" -o /relocate
+  beforeInstall:
+  - apt-get update -y
+  - apt-get install -y e2fsprogs xfsprogs btrfs-progs nfs-utils parted nvme udev
+  install:
+  - /binary_replace.sh -i "{{ $csiBinaries }}" -o /relocate
