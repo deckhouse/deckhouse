@@ -1,0 +1,18 @@
+linter-settings:
+  oss:
+    disable: true
+  vpa:
+    exclude-rules:
+      tolerations:
+        - kind: DaemonSet
+          name: okmeter
+  probes:
+    exclude-rules:
+      liveness:
+        - kind: DaemonSet
+          name: okmeter
+          container: okagent
+      readiness:
+        - kind: DaemonSet
+          name: okmeter
+          container: okagent

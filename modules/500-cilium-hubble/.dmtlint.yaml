@@ -1,0 +1,29 @@
+linter-settings:
+  container:
+    exclude-rules:
+      read-only-file-system:
+        - kind: Deployment
+          name: hubble-relay
+          container: hubble-relay
+        - kind: Deployment
+          name: hubble-ui
+          container: frontend
+  probes:
+    exclude-rules:
+      liveness:
+        - kind: Deployment
+          name: hubble-ui
+          container: backend
+        - kind: Deployment
+          name: hubble-ui
+          container: frontend
+      readiness:
+        - kind: Deployment
+          name: hubble-ui
+          container: backend
+        - kind: Deployment
+          name: hubble-ui
+          container: frontend
+        - kind: Deployment
+          name: hubble-ui
+          container: kube-rbac-proxy

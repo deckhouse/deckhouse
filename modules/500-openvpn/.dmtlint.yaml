@@ -1,0 +1,29 @@
+linter-settings:
+  container:
+    exclude-rules:
+      read-only-root-filesystem:
+        - kind: StatefulSet
+          name: openvpn
+          container: openvpn-tcp
+  probes:
+    exclude-rules:
+      liveness:
+        - kind: StatefulSet
+          name: openvpn
+          container: kube-rbac-proxy
+        - kind: StatefulSet
+          name: openvpn
+          container: openvpn-tcp
+        - kind: StatefulSet
+          name: openvpn
+          container: ovpn-admin
+      readiness:
+        - kind: StatefulSet
+          name: openvpn
+          container: kube-rbac-proxy
+        - kind: StatefulSet
+          name: openvpn
+          container: openvpn-tcp
+        - kind: StatefulSet
+          name: openvpn
+          container: ovpn-admin

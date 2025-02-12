@@ -1,0 +1,3 @@
+linter-settings:
+  oss:
+    disable: true

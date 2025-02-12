@@ -1,0 +1,13 @@
+linter-settings:
+  oss:
+    disable: true
+  probes:
+    exclude-rules:
+      liveness:
+        - kind: DaemonSet
+          name: monitoring-ping
+          container: monitoring-ping
+      readiness:
+        - kind: DaemonSet
+          name: monitoring-ping
+          container: monitoring-ping

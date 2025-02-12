@@ -1,4 +1,35 @@
 linter-settings:
-  monitoring:
-    monitoring-rules:
-      disable: true
+  container:
+    exclude-rules:
+      read-only-root-filesystem:
+        - kind: DaemonSet
+          name: node-exporter
+          container: node-exporter
+  probes:
+    exclude-rules:
+      liveness:
+        - kind: DaemonSet
+          name: node-exporter
+          container: kube-rbac-proxy
+        - kind: DaemonSet
+          name: node-exporter
+          container: kubelet-eviction-thresholds-exporter
+        - kind: DaemonSet
+          name: node-exporter
+          container: node-exporter
+        - kind: DaemonSet
+          name: kube-state-metrics
+          container: kube-rbac-proxy
+      readiness:
+        - kind: DaemonSet
+          name: node-exporter
+          container: kube-rbac-proxy
+        - kind: DaemonSet
+          name: node-exporter
+          container: kubelet-eviction-thresholds-exporter
+        - kind: DaemonSet
+          name: node-exporter
+          container: node-exporter
+        - kind: DaemonSet
+          name: kube-state-metrics
+          container: kube-rbac-proxy

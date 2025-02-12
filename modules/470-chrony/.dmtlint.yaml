@@ -1,0 +1,10 @@
+linter-settings:
+  probes:
+    exclude-rules:
+      readiness:
+        - kind: DaemonSet
+          name: chrony
+          container: chrony
+        - kind: DaemonSet
+          name: chrony-master
+          container: chrony

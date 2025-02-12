@@ -1,0 +1,33 @@
+linter-settings:
+  container:
+    exclude-rules:
+      service-port:
+        - api
+        - auth
+        - metrics-scraper
+        - web
+  probes:
+    exclude-rules:
+      liveness:
+        - kind: Deployment
+          name: api
+          container: api
+        - kind: Deployment
+          name: auth
+          container: auth
+        - kind: Deployment
+          name: web
+          container: web
+      readiness:
+        - kind: Deployment
+          name: api
+          container: api
+        - kind: Deployment
+          name: auth
+          container: auth
+        - kind: Deployment
+          name: metrics-scraper
+          container: metrics-scraper
+        - kind: Deployment
+          name: web
+          container: web

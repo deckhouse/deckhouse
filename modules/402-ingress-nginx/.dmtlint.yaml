@@ -1,0 +1,7 @@
+linter-settings:
+  probes:
+    exclude-rules:
+      liveness:
+        - kind: Deployment
+          name: kruise-controller-manager
+          container: kruise

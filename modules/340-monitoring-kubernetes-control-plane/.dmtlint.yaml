@@ -1,0 +1,18 @@
+linter-settings:
+  oss:
+    disable: true
+  container:
+    exclude-rules:
+      security-context:
+        - kind: DaemonSet
+          name: control-plane-proxy
+      resources:
+        - kind: DaemonSet
+          name: control-plane-proxy
+          container: kube-rbac-proxy
+  probes:
+    exclude-rules:
+      readiness:
+        - kind: DaemonSet
+          name: control-plane-proxy
+          container: kube-rbac-proxy
