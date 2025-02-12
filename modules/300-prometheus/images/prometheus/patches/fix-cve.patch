@@ -1,15 +1,5 @@
-From bf0a2e2dcd8da9b7c26c51f2db320d602c15cd18 Mon Sep 17 00:00:00 2001
-From: Yaroslav Kavokin <yaroslav.kavokin@flant.com>
-Date: Thu, 9 Jan 2025 20:21:08 +0300
-Subject: [PATCH] Update net/crypto packages
-
----
- go.mod | 12 ++++++------
- go.sum | 24 ++++++++++++------------
- 2 files changed, 18 insertions(+), 18 deletions(-)
-
 diff --git a/go.mod b/go.mod
-index 0631611..35e9b04 100644
+index 063161123..03cad9d9f 100644
 --- a/go.mod
 +++ b/go.mod
 @@ -76,9 +76,9 @@ require (
@@ -25,6 +15,15 @@ index 0631611..35e9b04 100644
  	golang.org/x/time v0.6.0
  	golang.org/x/tools v0.24.0
  	google.golang.org/api v0.195.0
+@@ -133,7 +133,7 @@ require (
+ 	github.com/go-resty/resty/v2 v2.13.1 // indirect
+ 	github.com/godbus/dbus/v5 v5.0.4 // indirect
+ 	github.com/golang-jwt/jwt/v5 v5.2.1 // indirect
+-	github.com/golang/glog v1.2.1 // indirect
++	github.com/golang/glog v1.2.4 // indirect
+ 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
+ 	github.com/golang/protobuf v1.5.4 // indirect
+ 	github.com/google/gnostic-models v0.6.8 // indirect
 @@ -190,11 +190,11 @@ require (
  	go.opencensus.io v0.24.0 // indirect
  	go.opentelemetry.io/otel/metric v1.29.0 // indirect
@@ -41,9 +40,20 @@ index 0631611..35e9b04 100644
  	gopkg.in/evanphx/json-patch.v4 v4.12.0 // indirect
  	gopkg.in/inf.v0 v0.9.1 // indirect
 diff --git a/go.sum b/go.sum
-index 0246a37..7b3b493 100644
+index 0246a377d..4bc716865 100644
 --- a/go.sum
 +++ b/go.sum
+@@ -251,8 +251,8 @@ github.com/gogo/protobuf v1.3.2/go.mod h1:P1XiOD3dCwIKUDQYPy72D8LYyHL2YPYrpS2s69
+ github.com/golang-jwt/jwt/v5 v5.2.1 h1:OuVbFODueb089Lh128TAcimifWaLhJwVflnrgM17wHk=
+ github.com/golang-jwt/jwt/v5 v5.2.1/go.mod h1:pqrtFR0X4osieyHYxtmOUWsAWrfe1Q5UVIyoH402zdk=
+ github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b/go.mod h1:SBH7ygxi8pfUlaOkMMuAQtPIUF8ecWP5IEl/CR7VP2Q=
+-github.com/golang/glog v1.2.1 h1:OptwRhECazUx5ix5TTWC3EZhsZEHWcYWY4FQHTIubm4=
+-github.com/golang/glog v1.2.1/go.mod h1:6AhwSGph0fcJtXVM/PEHPqZlFeoLxhs7/t5UDAwmO+w=
++github.com/golang/glog v1.2.4 h1:CNNw5U8lSiiBk7druxtSHHTsRWcxKoac6kZKm2peBBc=
++github.com/golang/glog v1.2.4/go.mod h1:6AhwSGph0fcJtXVM/PEHPqZlFeoLxhs7/t5UDAwmO+w=
+ github.com/golang/groupcache v0.0.0-20160516000752-02826c3e7903/go.mod h1:cIg4eruTrX1D+g88fzRXU5OdNfaM+9IcxsU14FzY7Hc=
+ github.com/golang/groupcache v0.0.0-20190702054246-869f871628b6/go.mod h1:cIg4eruTrX1D+g88fzRXU5OdNfaM+9IcxsU14FzY7Hc=
+ github.com/golang/groupcache v0.0.0-20191227052852-215e87163ea7/go.mod h1:cIg4eruTrX1D+g88fzRXU5OdNfaM+9IcxsU14FzY7Hc=
 @@ -782,8 +782,8 @@ golang.org/x/crypto v0.0.0-20210921155107-089bfa567519/go.mod h1:GvvjBRRGRdwPK5y
  golang.org/x/crypto v0.0.0-20220829220503-c86fa9a7ed90/go.mod h1:IxCIyHEi3zRg3s0A5j5BB6A9Jmi73HwBIUl50j+osU4=
  golang.org/x/crypto v0.19.0/go.mod h1:Iy9bg/ha4yyC70EfRS8jz+B6ybOBKMaSxLj6P6oBDfU=
@@ -109,5 +119,3 @@ index 0246a37..7b3b493 100644
  golang.org/x/time v0.0.0-20180412165947-fbb02b2291d2/go.mod h1:tRJNPiyCQ0inRvYxbN9jk5I+vvW/OXSQhTDSoE431IQ=
  golang.org/x/time v0.0.0-20181108054448-85acf8d2951c/go.mod h1:tRJNPiyCQ0inRvYxbN9jk5I+vvW/OXSQhTDSoE431IQ=
  golang.org/x/time v0.0.0-20190308202827-9d24e82272b4/go.mod h1:tRJNPiyCQ0inRvYxbN9jk5I+vvW/OXSQhTDSoE431IQ=
--- 
-2.47.0
