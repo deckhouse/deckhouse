@@ -19,6 +19,7 @@ import (
 	"crypto/md5"
 	"encoding/json"
 	"fmt"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/ctrlutils"
 	"path/filepath"
 	"slices"
 	"time"
@@ -272,27 +273,25 @@ func (r *reconciler) ensureModule(ctx context.Context, sourceName, moduleName, r
 		}
 	}
 
-	err := utils.UpdateStatus[*v1alpha1.Module](ctx, r.client, module, func(module *v1alpha1.Module) bool {
+	err := ctrlutils.UpdateStatusWithRetry(ctx, r.client, module, func() error {
 		// init just created downloaded modules
-		if len(module.Status.Conditions) == 0 {
-			module.Status.Phase = v1alpha1.ModulePhaseAvailable
-			module.SetConditionFalse(v1alpha1.ModuleConditionEnabledByModuleConfig, v1alpha1.ModuleReasonDisabled, v1alpha1.ModuleMessageDisabled)
-			module.SetConditionFalse(v1alpha1.ModuleConditionEnabledByModuleManager, "", "")
-			module.SetConditionFalse(v1alpha1.ModuleConditionIsReady, v1alpha1.ModuleReasonNotInstalled, v1alpha1.ModuleMessageNotInstalled)
-			return true
-		}
-		return false
+		module.Status.Phase = v1alpha1.ModulePhaseAvailable
+		module.SetConditionFalse(v1alpha1.ModuleConditionEnabledByModuleConfig, v1alpha1.ModuleReasonDisabled, v1alpha1.ModuleMessageDisabled)
+		module.SetConditionFalse(v1alpha1.ModuleConditionEnabledByModuleManager, "", "")
+		module.SetConditionFalse(v1alpha1.ModuleConditionIsReady, v1alpha1.ModuleReasonNotInstalled, v1alpha1.ModuleMessageNotInstalled)
+
+		return nil
 	})
 	if err != nil {
 		return nil, fmt.Errorf("update the '%s' module status: %w", moduleName, err)
 	}
 
-	err = utils.Update[*v1alpha1.Module](ctx, r.client, module, func(module *v1alpha1.Module) bool {
+	err = ctrlutils.UpdateWithRetry(ctx, r.client, module, func() error {
 		if !slices.Contains(module.Properties.AvailableSources, sourceName) {
 			module.Properties.AvailableSources = append(module.Properties.AvailableSources, sourceName)
-			return true
 		}
-		return false
+
+		return nil
 	})
 	if err != nil {
 		return nil, fmt.Errorf("update the '%s' module: %w", moduleName, err)
@@ -309,12 +308,9 @@ func (r *reconciler) ensureModule(ctx context.Context, sourceName, moduleName, r
 	}
 
 	// update release channel
-	err = utils.Update[*v1alpha1.Module](ctx, r.client, module, func(module *v1alpha1.Module) bool {
-		if module.Properties.ReleaseChannel != releaseChannel {
-			module.Properties.ReleaseChannel = releaseChannel
-			return true
-		}
-		return false
+	err = ctrlutils.UpdateWithRetry[*v1alpha1.Module](ctx, r.client, module, func() error {
+		module.Properties.ReleaseChannel = releaseChannel
+		return nil
 	})
 	if err != nil {
 		return nil, fmt.Errorf("update release channel for the '%s' module: %w", moduleName, err)
