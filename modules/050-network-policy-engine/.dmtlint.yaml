@@ -1,0 +1,13 @@
+linter-settings:
+  container:
+    exclude-rules:
+      security-context:
+        - kind: DaemonSet
+          name: kube-router
+          container: kube-router
+  probes:
+    exclude-rules:
+      readiness:
+        - kind: DaemonSet
+          name: kube-router
+          container: kube-router

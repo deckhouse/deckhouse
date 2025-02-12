@@ -1,0 +1,32 @@
+linter-settings:
+  container:
+    exclude-rules:
+      read-only-root-filesystem:
+        - kind: DaemonSet
+          name: istio-cni-node
+          container: install-cni
+      security-context:
+        - kind: Deployment
+          name: kiali
+      service-port:
+        - istiod
+        -
+  probes:
+    exclude-rules:
+      readiness:
+        - kind: DaemonSet
+          name: istio-cni-node
+          container: kube-rbac-proxy
+        - kind: Deployment
+          name: kiali
+          container: kube-rbac-proxy
+        - kind: Deployment
+          name: operator-1x21
+          container: operator
+      liveness:
+        - kind: DaemonSet
+          name: istio-cni-node
+          container: kube-rbac-proxy
+        - kind: Deployment
+          name: operator-1x21
+          container: operator

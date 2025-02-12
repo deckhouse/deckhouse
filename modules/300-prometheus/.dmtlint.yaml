@@ -1,0 +1,39 @@
+linter-settings:
+  openapi:
+    exclude-rules:
+      enum:
+        - "properties.internal.properties.grafana.properties.alertsChannelsConfig.properties.notifiers.items.properties.type"
+  probes:
+    exclude-rules:
+      readiness:
+        - kind: Deployment
+          name: aggregating-proxy
+          container: kube-rbac-proxy
+        - kind: Deployment
+          name: grafana-v10
+          container: kube-rbac-proxy
+        - kind: Deployment
+          name: trickster
+          container: kube-rbac-proxy
+        - kind: Deployment
+          name: memcached
+          container: exporter
+      liveness:
+        - kind: Deployment
+          name: aggregating-proxy
+          container: kube-rbac-proxy
+        - kind: Deployment
+          name: grafana-v10
+          container: dashboard-provisioner
+        - kind: Deployment
+          name: grafana-v10
+          container: grafana
+        - kind: Deployment
+          name: grafana-v10
+          container: kube-rbac-proxy
+        - kind: Deployment
+          name: trickster
+          container: kube-rbac-proxy
+        - kind: Deployment
+          name: memcached
+          container: exporter

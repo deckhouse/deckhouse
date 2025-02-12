@@ -1,0 +1,17 @@
+linter-settings:
+  probes:
+    exclude-rules:
+      readiness:
+        - kind: Deployment
+          name: prometheus-operator
+          container: kube-rbac-proxy
+        - kind: Deployment
+          name: prometheus-operator
+          container: prometheus-operator
+      liveness:
+        - kind: Deployment
+          name: prometheus-operator
+          container: kube-rbac-proxy
+        - kind: Deployment
+          name: prometheus-operator
+          container: prometheus-operator

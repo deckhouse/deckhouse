@@ -1,0 +1,20 @@
+linter-settings:
+  probes:
+    exclude-rules:
+      readiness:
+        - kind: Deployment
+          name: cainjector
+          container: cainjector
+        - kind: Deployment
+          name: cert-manager
+          container: cert-manager
+        - kind: Deployment
+          name: cert-manager
+          container: kube-rbac-proxy
+      liveness:
+        - kind: Deployment
+          name: cainjector
+          container: cainjector
+        - kind: Deployment
+          name: cert-manager
+          container: kube-rbac-proxy
