@@ -5020,8 +5020,8 @@
       {
         "current": {
           "selected": false,
-          "text": "default",
-          "value": "default"
+          "text": "d8-monitoring",
+          "value": "d8-monitoring"
         },
         "datasource": {
           "type": "prometheus",
