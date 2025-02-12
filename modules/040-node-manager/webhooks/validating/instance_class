@@ -13,58 +13,30 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 source /shell_lib.sh
 
-function config() {
-    cat <<EOF
+function __config__(){
+  cat <<EOF
 configVersion: v1
-kubernetes:
-  - name: provider_cluster_config
-    apiVersion: v1
-    kind: Secret
-    group: main
-    executeHookOnEvent: []
-    executeHookOnSynchronization: false
-    keepFullObjectsInMemory: false
-    namespace:
-      nameSelector:
-        matchNames: ["kube-system"]
-    nameSelector:
-      matchNames:
-        - d8-provider-cluster-configuration
-    jqFilter: |
-      {
-        "resourceName": (
-          .data."cloud-provider-cluster-configuration.yaml" // "e30=" 
-          | @base64d 
-          | match("kind: ([A-Za-z]+)ClusterConfiguration").captures[0].string
-          | sub("ClusterConfiguration$"; "")
-          | ascii_downcase + "instanceclasses"
-        )
-      }
 kubernetesValidating:
- - name: instanceclass-in-nodegroups.deckhouse.io
-   group: main
-   rules:
-    - apiGroups: ["deckhouse.io"]
-      apiVersions: ["*"]
-      operations: ["DELETE"]
-      resources: ["$RESOURCE_NAME"]
-      scope: "Cluster"
+- name: instanceclass-in-nodegroups.deckhouse.io
+  group: main
+  rules:
+  - apiGroups:   ["deckhouse.io"]
+    apiVersions: ["*"]
+    operations:  ["DELETE"]
+    resources:   ["$INSTANCE_CLASS_NAME"]
+    scope:       "Cluster"
 EOF
 }
 
-function main() {
-    RESOURCE_NAME="$(context::jq -r '.snapshots.provider_cluster_config[0].filterResult.resourceName')"
-    
+function __main__() {
     classToDelete=$(context::jq -r '.review.request.name')
-    classKind=$(context::jq -r '.review.request.requestKind.kind')
 
     if context::jq -e '.review.request.oldObject.status.nodeGroupConsumers | length > 0' >/dev/null; then
         nodeGroups=$(context::jq -r '.review.request.oldObject.status.nodeGroupConsumers | join(", ")')
         cat <<EOF > "$VALIDATING_RESPONSE_PATH"
-{"allowed":false, "message":"$classKind \"$classToDelete\" cannot be deleted because it is being used by NodeGroup: $nodeGroups"}
+{"allowed":false, "message":"$INSTANCE_CLASS_NAME/$classToDelete cannot be deleted because it is being used by NodeGroup: $nodeGroups"}
 EOF
         return 0
     fi
@@ -74,4 +46,4 @@ EOF
 EOF
 }
 
-hook::run "$@"
+hook::run "$@" 
