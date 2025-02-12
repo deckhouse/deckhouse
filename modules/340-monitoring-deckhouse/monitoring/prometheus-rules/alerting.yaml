@@ -206,5 +206,10 @@
         ```
         kubectl patch mc {{ $labels.moduleName }} --type=merge -p '{"spec": {"updatePolicy": {{ $labels.updatePolicy | quote }}}}'
         ```
+        
+        When all modules updated, patch the v1alpha1 update policy to get rid of the alert:
+        ```
+        kubectl patch moduleupdatepolicies.v1alpha1.deckhouse.io {{ $labels.updatePolicy }} --type='json' -p='[{"op": "replace", "path": "/spec/moduleReleaseSelector/labelSelector/matchLabels", "value": {"": ""}}]'
+        ```
       summary: |
-        The '{{ $labels.moduleName }}' module has a deprecated module update policy.
+        The '{{ $labels.moduleName }}' module matched by the '{{ $labels.updatePolicy }}' deprecated module update policy.
