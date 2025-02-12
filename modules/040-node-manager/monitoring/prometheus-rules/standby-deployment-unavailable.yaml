@@ -32,6 +32,6 @@
       plk_create_group_if_not_exists__controllers_malfunctioning: "KubernetesControllersMalfunctioningInNamespace,prometheus=deckhouse,node_group_name={{ $labels.node_group_name }},kubernetes=~kubernetes"
       plk_grouped_by__controllers_malfunctioning: "KubernetesControllersMalfunctioningInNamespace,prometheus=deckhouse,node_group_name={{ $labels.node_group_name }},kubernetes=~kubernetes"
       summary: |-
-        No available replicas remaining in deployment standby-holder-{{$labels.node_group_name}} in namespace d8-cloud-instance-manager.
+        No available replicas remaining in Deployment `standby-holder-{{$labels.node_group_name}}` in namespace `d8-cloud-instance-manager`.
       description: |-
-        Deckhouse has detected that there are no available replicas remaining in deployment standby-holder-{{$labels.node_group_name}} in namespace d8-cloud-instance-manager.
+        Deckhouse has detected that there are no available replicas remaining in Deployment `standby-holder-{{$labels.node_group_name}}` in namespace `d8-cloud-instance-manager`.
