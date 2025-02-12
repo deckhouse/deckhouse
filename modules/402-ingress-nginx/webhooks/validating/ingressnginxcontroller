@@ -68,7 +68,7 @@ function __main__() {
 if context::jq -e -r '.review.request.object.kind == "IngressNginxController"' >/dev/null 2>&1; then
   # exists spec.controllerPodsAdditionalAnnotations
   if context::jq -e -r '.review.request.object.spec.controllerPodsAdditionalAnnotations' >/dev/null 2>&1; then
-    if context::jq -e -r '.review.request.object.spec.controllerPodsAdditionalAnnotations | keys[] | test("^(istio\\.io|deckhouse\\.io|kubernetes\\.io)")' >/dev/null 2>&1; then
+    if context::jq -e -r '.review.request.object.spec.controllerPodsAdditionalAnnotations | keys[] | test("(istio\\.io|deckhouse\\.io|kubernetes\\.io)")' >/dev/null 2>&1; then
       forbid "Adding annotations with istio.io, deckhouse.io, or kubernetes.io prefixes in spec.controllerPodsAdditionalAnnotations is not allowed"
       exit 0
     fi
