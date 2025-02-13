@@ -1,5 +1,5 @@
 diff --git a/go.mod b/go.mod
-index 2a26e89e..60d75cbf 100644
+index 2a26e89e..afb14ae1 100644
 --- a/go.mod
 +++ b/go.mod
 @@ -4,21 +4,21 @@ go 1.20
@@ -39,9 +39,12 @@ index 2a26e89e..60d75cbf 100644
  	github.com/davecgh/go-spew v1.1.1 // indirect
  	github.com/emicklei/go-restful/v3 v3.9.0 // indirect
  	github.com/felixge/httpsnoop v1.0.3 // indirect
-@@ -51,7 +51,7 @@ require (
+@@ -49,9 +49,9 @@ require (
+ 	github.com/go-openapi/swag v0.22.3 // indirect
+ 	github.com/go-task/slim-sprig v0.0.0-20230315185526-52ccab3ef572 // indirect
  	github.com/gogo/protobuf v1.3.2 // indirect
- 	github.com/golang/glog v1.1.1 // indirect
+-	github.com/golang/glog v1.1.1 // indirect
++	github.com/golang/glog v1.2.4 // indirect
  	github.com/google/gnostic-models v0.6.8 // indirect
 -	github.com/google/go-cmp v0.5.9 // indirect
 +	github.com/google/go-cmp v0.6.0 // indirect
@@ -136,7 +139,7 @@ index 2a26e89e..60d75cbf 100644
 +	k8s.io/sample-apiserver => k8s.io/kubernetes/staging/src/k8s.io/sample-apiserver v0.0.0-20241022202626-841856557ef0
  )
 diff --git a/go.sum b/go.sum
-index c2438f95..6f67319c 100644
+index c2438f95..991168a9 100644
 --- a/go.sum
 +++ b/go.sum
 @@ -20,7 +20,7 @@ cloud.google.com/go/bigquery v1.4.0/go.mod h1:S8dzgnTigyfTmLBfrtrhyYhwRxG72rYxvf
@@ -181,6 +184,17 @@ index c2438f95..6f67319c 100644
  github.com/felixge/httpsnoop v1.0.3 h1:s/nj+GCswXYzN5v2DpNMuMQYe+0DDwt5WVCU6CWBdXk=
  github.com/felixge/httpsnoop v1.0.3/go.mod h1:m8KPJKqk1gH5J9DgRY2ASl2lWCfGKXixSwevea8zH2U=
  github.com/fsnotify/fsnotify v1.6.0 h1:n+5WquG0fcWoWp6xPWfHdbskMCQaFnG6PfBrh1Ky4HY=
+@@ -115,8 +117,8 @@ github.com/gogo/protobuf v1.3.2 h1:Ov1cvc58UF3b5XjBnZv7+opcTcQFZebYjWzi34vdm4Q=
+ github.com/gogo/protobuf v1.3.2/go.mod h1:P1XiOD3dCwIKUDQYPy72D8LYyHL2YPYrpS2s69NZV8Q=
+ github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b/go.mod h1:SBH7ygxi8pfUlaOkMMuAQtPIUF8ecWP5IEl/CR7VP2Q=
+ github.com/golang/glog v1.0.0/go.mod h1:EWib/APOK0SL3dFbYqvxE3UYd8E6s1ouQ7iEp/0LWV4=
+-github.com/golang/glog v1.1.1 h1:jxpi2eWoU84wbX9iIEyAeeoac3FLuifZpY9tcNUD9kw=
+-github.com/golang/glog v1.1.1/go.mod h1:zR+okUeTbrL6EL3xHUDxZuEtGv04p5shwip1+mL/rLQ=
++github.com/golang/glog v1.2.4 h1:CNNw5U8lSiiBk7druxtSHHTsRWcxKoac6kZKm2peBBc=
++github.com/golang/glog v1.2.4/go.mod h1:6AhwSGph0fcJtXVM/PEHPqZlFeoLxhs7/t5UDAwmO+w=
+ github.com/golang/groupcache v0.0.0-20190702054246-869f871628b6/go.mod h1:cIg4eruTrX1D+g88fzRXU5OdNfaM+9IcxsU14FzY7Hc=
+ github.com/golang/groupcache v0.0.0-20191227052852-215e87163ea7/go.mod h1:cIg4eruTrX1D+g88fzRXU5OdNfaM+9IcxsU14FzY7Hc=
+ github.com/golang/groupcache v0.0.0-20200121045136-8c9f03a8e57e/go.mod h1:cIg4eruTrX1D+g88fzRXU5OdNfaM+9IcxsU14FzY7Hc=
 @@ -143,8 +145,8 @@ github.com/golang/protobuf v1.4.2/go.mod h1:oDoupMAO8OvCJWAcko0GGGIgR6R6ocIYbsSw
  github.com/golang/protobuf v1.4.3/go.mod h1:oDoupMAO8OvCJWAcko0GGGIgR6R6ocIYbsSw735rRwI=
  github.com/golang/protobuf v1.5.0/go.mod h1:FsONVRAS9T7sI+LIUmWTfcYkHO4aIWwzhcaSAoJOfIk=
