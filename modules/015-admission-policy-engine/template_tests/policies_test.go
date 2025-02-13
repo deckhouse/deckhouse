@@ -34,6 +34,11 @@ var _ = Describe("Module :: admissionPolicyEngine :: pod security policies ::", 
 	f := SetupHelmConfig(`
 admissionPolicyEngine:
   internal:
+    ratify:
+      webhook:
+        ca: YjY0ZW5jX3N0cmluZwo=
+        crt: YjY0ZW5jX3N0cmluZwo=
+        key: YjY0ZW5jX3N0cmluZwo=
     podSecurityStandards:
       enforcementActions:
       - deny
@@ -44,6 +49,7 @@ admissionPolicyEngine:
       key: YjY0ZW5jX3N0cmluZwo=
     trackedConstraintResources: []
     trackedMutateResources: []
+  denyVulnerableImages: {}
   podSecurityStandards:
     policies:
       hostPorts:

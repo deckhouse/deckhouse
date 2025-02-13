@@ -32,6 +32,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 var semVerRegex = regexp.MustCompile(`^v?([0-9]+)(\.[0-9]+)?(\.[0-9]+)?` +
@@ -49,7 +50,7 @@ const (
 	ReleaseChannelRockSolid   = "rock-solid"
 )
 
-func DefineRegistryCommand(kpApp *kingpin.Application) {
+func DefineRegistryCommand(kpApp *kingpin.Application, logger *log.Logger) {
 	registryCmd := kpApp.Command("registry", "Deckhouse repository work.").
 		PreAction(func(_ *kingpin.ParseContext) error {
 			kpApp.UsageTemplate(kingpin.DefaultUsageTemplate)
@@ -62,12 +63,12 @@ func DefineRegistryCommand(kpApp *kingpin.Application) {
 			return nil
 		})
 
-	registerReleaseCommand(registryGetCmd)
+	registerReleaseCommand(registryGetCmd, logger)
 	registerSourceCommand(registryGetCmd)
-	registerModuleCommand(registryGetCmd)
+	registerModuleCommand(registryGetCmd, logger)
 }
 
-func registerReleaseCommand(parentCMD *kingpin.CmdClause) {
+func registerReleaseCommand(parentCMD *kingpin.CmdClause, logger *log.Logger) {
 	releasesCmd := parentCMD.Command("releases", "Release resource. Aliases: 'release','rel'").
 		Alias("release").Alias("rel")
 
@@ -84,7 +85,7 @@ func registerReleaseCommand(parentCMD *kingpin.CmdClause) {
 			return fmt.Errorf("get deckhouse registry: %w", err)
 		}
 
-		svc := newDeckhouseReleaseService(registry, rconf)
+		svc := newDeckhouseReleaseService(registry, rconf, logger)
 
 		if *releaseChannel != "" {
 			if *releaseChannel != ReleaseChannelAuto {
@@ -192,7 +193,7 @@ func registerSourceCommand(parentCMD *kingpin.CmdClause) {
 	})
 }
 
-func registerModuleCommand(parentCMD *kingpin.CmdClause) {
+func registerModuleCommand(parentCMD *kingpin.CmdClause, logger *log.Logger) {
 	// deckhouse-controller registry list modules <module-source>
 	modulesCmd := parentCMD.Command("modules", "Show modules list. Aliases: 'module','mod'").
 		Alias("module").Alias("mod")
@@ -210,7 +211,7 @@ func registerModuleCommand(parentCMD *kingpin.CmdClause) {
 			return fmt.Errorf("get module registry: %w", err)
 		}
 
-		svc := newModuleReleaseService(registry, rconf)
+		svc := newModuleReleaseService(registry, rconf, logger)
 
 		if *moduleName != "" {
 			if *moduleChannel != "" {
@@ -340,7 +341,10 @@ func getDeckhouseRegistry(ctx context.Context) (string, string, *utils.RegistryC
 		return "", "", nil, fmt.Errorf("list ModuleSource got an error: %w", err)
 	}
 
-	drs, _ := utils.ParseDeckhouseRegistrySecret(secret.Data)
+	drs, err := utils.ParseDeckhouseRegistrySecret(secret.Data)
+	if errors.Is(err, utils.ErrImageRegistryFieldIsNotFound) {
+		drs.ImageRegistry = drs.Address + drs.Path
+	}
 
 	var discoverySecret corev1.Secret
 	key := types.NamespacedName{Namespace: "d8-system", Name: "deckhouse-discovery"}
@@ -359,6 +363,7 @@ func getDeckhouseRegistry(ctx context.Context) (string, string, *utils.RegistryC
 		DockerConfig: drs.DockerConfig,
 		Scheme:       drs.Scheme,
 		UserAgent:    string(clusterUUID),
+		CA:           drs.CA,
 	}
 
 	return drs.ImageRegistry, releaseChannel, rconf, nil
@@ -375,12 +380,31 @@ func getModuleRegistry(ctx context.Context, moduleSource string) (string, *utils
 		return "", nil, fmt.Errorf("get ModuleSource %s got an error: %w", moduleSource, err)
 	}
 
+	clusterUUID, _ := getClusterUUID(ctx, k8sClient)
+	// TODO: add debug error logging
+
 	rconf := &utils.RegistryConfig{
 		DockerConfig: ms.Spec.Registry.DockerCFG,
 		Scheme:       ms.Spec.Registry.Scheme,
 		CA:           ms.Spec.Registry.CA,
-		UserAgent:    "deckhouse-controller/ModuleControllers",
+		UserAgent:    clusterUUID,
 	}
 
 	return ms.Spec.Registry.Repo, rconf, nil
+}
+
+func getClusterUUID(ctx context.Context, client client.Client) (string, error) {
+	var secret corev1.Secret
+	key := types.NamespacedName{Namespace: "d8-system", Name: "deckhouse-discovery"}
+	err := client.Get(ctx, key, &secret)
+	if err != nil {
+		return "", fmt.Errorf("read clusterUUID from secret %s failed: %w", key, err)
+	}
+
+	clusterUUID, ok := secret.Data["clusterUUID"]
+	if !ok {
+		return "", fmt.Errorf("key \"clusterUUID\" not defined")
+	}
+
+	return string(clusterUUID), nil
 }

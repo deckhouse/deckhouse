@@ -13,6 +13,8 @@ apiVersions:
       ```shell
       kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller edit provider-cluster-configuration
       ```
+
+      > After updating the node parameters, you need to run the [dhctl converge](../../deckhouse-faq.html#changing-the-configuration) command to apply the changes.
     x-doc-search: |
       ProviderClusterConfiguration
     x-examples:
@@ -69,8 +71,7 @@ apiVersions:
         description: |
           Parameters of the master's NodeGroup.
 
-          > Caution! After changing the parameters of the section, you need to run `dhctl converge` for the changes to take effect.
-        x-unsafe-rules: [updateMasterImage]
+          > For the changes to take effect, run `dhctl converge` after modifying the parameters of the `masterNodeGroup` section.
         properties:
           replicas:
             type: integer
@@ -79,12 +80,11 @@ apiVersions:
               The number of master nodes to create.
 
               It is important to have an odd number of masters to ensure a quorum.
-            x-unsafe-rules: [updateReplicas]
           instanceClass:
             type: object
             required: [instanceType, ami]
             description: |
-              Partial contents of the fields of the [AWSInstanceClass](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-aws/cr.html#awsinstanceclass).
+              Partial contents of the fields of the [AWSInstanceClass](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/cloud-provider-aws/cr.html#awsinstanceclass).
             properties:
               instanceType:
                 type: string
@@ -138,6 +138,8 @@ apiVersions:
             uniqueItems: true
             description: |
               A limited set of zones in which master nodes can be created.
+
+              The order in which zones are specified does not influence the sequence of node creation. Nodes are assigned to zones in alphabetical order: the first node is placed in the alphabetically first zone, the second node in the second zone, and so forth. If there are more nodes than zones, the assignment process restarts from the beginning of the zone list after placing a node in the last alphabetical zone.
             x-doc-required: false
           additionalTags:
             type: object
@@ -200,7 +202,7 @@ apiVersions:
                   description: |
                     The same as the `.spec.taints` field of the [Node](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#taint-v1-core) object.
 
-                    > **Caution!** Only the `effect`, `key`, `values`  fields are available.
+                    > Available fields: `effect`, `key`, and `values`.
                   x-doc-example: |
                     ```yaml
                     taints:
@@ -222,7 +224,7 @@ apiVersions:
               required: [instanceType, ami]
               type: object
               description: |
-                Partial contents of the fields of the [AWSInstanceClass](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-aws/cr.html#awsinstanceclass).
+                Partial contents of the fields of the [AWSInstanceClass](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/cloud-provider-aws/cr.html#awsinstanceclass).
               properties:
                 instanceType:
                   type: string
@@ -265,7 +267,9 @@ apiVersions:
               minItems: 1
               uniqueItems: true
               description: |
-                A limited set of zones in which master nodes can be created.
+                A limited set of zones in which nodes can be created.
+
+                The order in which zones are specified does not influence the sequence of node creation. Nodes are assigned to zones in alphabetical order: the first node is placed in the alphabetically first zone, the second node in the second zone, and so forth. If there are more nodes than zones, the assignment process restarts from the beginning of the zone list after placing a node in the last alphabetical zone.
               x-doc-required: false
             additionalTags:
               type: object
@@ -283,7 +287,7 @@ apiVersions:
         description: |
           The way resources are located in the cloud.
 
-          Read [more](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-aws/layouts.html) about possible provider layouts.
+          Read [more](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/cloud-provider-aws/layouts.html) about possible provider layouts.
 
           > **Note,** that the `Standard` layout is deprecated.
         enum: ['WithoutNAT', 'WithNAT', 'Standard']
@@ -318,7 +322,7 @@ apiVersions:
                 type: object
                 required: [instanceType, ami]
                 description: |
-                  Partial contents of the fields of the [AWSInstanceClass](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-aws/cr.html#awsinstanceclass).
+                  Partial contents of the fields of the [AWSInstanceClass](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/cloud-provider-aws/cr.html#awsinstanceclass).
                 properties:
                   instanceType:
                     type: string
@@ -408,7 +412,7 @@ apiVersions:
         additionalProperties: false
         required: [providerAccessKeyId, providerSecretAccessKey, region]
         description: |
-          Contains [settings to connect](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-aws/environment.html) to the AWS API.
+          Contains [settings to connect](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/cloud-provider-aws/environment.html) to the AWS API.
         properties:
           providerAccessKeyId:
             type: string

@@ -73,7 +73,7 @@ function annotate_node() {
     fi
     sleep 10
   done
-  echo "Succesful annotate node ${D8_NODE_HOSTNAME} with annotation ${@}"
+  echo "Successful annotate node ${D8_NODE_HOSTNAME} with annotation ${@}"
 }
 
 function get_secret() {
@@ -174,22 +174,7 @@ function main() {
   export PACKAGES_PROXY_ADDRESSES="{{ .packagesProxy.addresses | join "," }}"
   export PACKAGES_PROXY_TOKEN="{{ .packagesProxy.token }}"
 {{- end }}
-{{- if .proxy }}
-  {{- if .proxy.httpProxy }}
-  export HTTP_PROXY={{ .proxy.httpProxy | quote }}
-  export http_proxy=${HTTP_PROXY}
-  {{- end }}
-  {{- if .proxy.httpsProxy }}
-  export HTTPS_PROXY={{ .proxy.httpsProxy | quote }}
-  export https_proxy=${HTTPS_PROXY}
-  {{- end }}
-  {{- if .proxy.noProxy }}
-  export NO_PROXY={{ .proxy.noProxy | join "," | quote }}
-  export no_proxy=${NO_PROXY}
-  {{- end }}
-{{- else }}
-  unset HTTP_PROXY http_proxy HTTPS_PROXY https_proxy NO_PROXY no_proxy
-{{- end }}
+unset HTTP_PROXY http_proxy HTTPS_PROXY https_proxy NO_PROXY no_proxy
 {{- if and (ne .nodeGroup.nodeType "Static") (ne .nodeGroup.nodeType "CloudStatic" )}}
   export D8_NODE_HOSTNAME=$(hostname -s)
 {{- else }}

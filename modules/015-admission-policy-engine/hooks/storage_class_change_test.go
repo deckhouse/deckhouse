@@ -41,7 +41,7 @@ var _ = Describe("Modules :: admission-policy-engine :: hooks :: storage_class_c
 	Context("Global storage class is set but denyVulnerableImages is disabled", func() {
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(""))
-			f.ConfigValuesSet("global.storageClass", "test")
+			f.ConfigValuesSet("global.modules.storageClass", "test")
 			f.RunHook()
 		})
 		It("Should not set effectiveClass", func() {
@@ -54,7 +54,7 @@ var _ = Describe("Modules :: admission-policy-engine :: hooks :: storage_class_c
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(""))
 			f.ValuesSet("admissionPolicyEngine.denyVulnerableImages.enabled", true)
-			f.ConfigValuesSet("global.storageClass", "test")
+			f.ConfigValuesSet("global.modules.storageClass", "test")
 			f.RunHook()
 		})
 		It("Should set effectiveClass to test", func() {
@@ -67,7 +67,7 @@ var _ = Describe("Modules :: admission-policy-engine :: hooks :: storage_class_c
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(""))
 			f.ValuesSet("admissionPolicyEngine.denyVulnerableImages.enabled", true)
-			f.ConfigValuesSet("global.storageClass", "global")
+			f.ConfigValuesSet("global.modules.storageClass", "global")
 			f.ConfigValuesSet("admissionPolicyEngine.denyVulnerableImages.storageClass", "test1")
 			f.RunHook()
 		})

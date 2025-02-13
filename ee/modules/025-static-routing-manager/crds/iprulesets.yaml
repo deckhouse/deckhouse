@@ -1,3 +1,4 @@
+---
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
@@ -5,6 +6,7 @@ metadata:
   labels:
     heritage: deckhouse
     module: static-routing-manager
+    backup.deckhouse.io/cluster-config: "true"
 spec:
   group: network.deckhouse.io
   scope: Cluster
@@ -50,7 +52,7 @@ spec:
                 type: array
                 minItems: 1
                 description: |
-                  The desired set of rules (`ip rule').
+                  The desired set of rules (`ip rule`).
                 items:
                   type: object
                   required:
@@ -66,7 +68,7 @@ spec:
                         The priority of the rule (the order of application depends on it).
 
                         When choosing a number, it is worth considering several nuances:
-                        - All rules are sorted by node's linux network subsystem in order of priority (from lesser to greater) until a match is found.
+                        - All rules are sorted by node's Linux network subsystem in order of priority (from lesser to greater) until a match is found.
                         - If the packet falls under some rule, and the corresponding action has been successfully performed, then the search for rules termitated.
                         - The default rule for searching the `main` routing table is `32766`. In this case, if you specify a higher value, the rule will never be processed.
                     selectors:
@@ -109,13 +111,13 @@ spec:
                           type: string
                           pattern: '^0[xX][0-9a-fA-F]{1,2}$'
                           description: |
-                            QOS traffic label (TOS/diffserv/dscp) transmitted over the network in the IP headers of the packet.
-                            Available values stored in the file /etc/iproute2/rt_dsfield.
+                            QOS traffic label (`TOS`, `diffserv`, `dscp`) transmitted over the network in the IP headers of the packet.
+                            Available values stored in the file `/etc/iproute2/rt_dsfield`.
                         fwMark:
                           type: string
                           pattern: '^0[xX][0-9a-fA-F]{1,8}(/0[xX][0-9a-fA-F]{1,8})?$'
                           description: |
-                            The traffic label exists only inside the linux network subsystem on the node.
+                            The traffic label exists only inside the Linux network subsystem on the node.
                         iif:
                           type: string
                           description: |
@@ -132,7 +134,7 @@ spec:
                             - `ICMP` — 1
                             - `TCP` — 6
                             - `UDP` — 17
-                            All available values can be found [at the link] (https://www.iana.org/assignments/protocol-numbers/protocol-numbers .xhtml), or in the /etc/protocols file on the node.
+                            All available values can be found [at the link](https://www.iana.org/assignments/protocol-numbers/protocol-numbers .xhtml), or in the /etc/protocols file on the node.
                         sportRange:
                           type: object
                           required:

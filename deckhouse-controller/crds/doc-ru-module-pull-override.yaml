@@ -32,3 +32,33 @@ spec:
                 weight:
                   type: integer
                   description: "_Вес_ (приоритет) модуля."
+    - name: v1alpha2
+      served: true
+      storage: false
+      schema:
+        openAPIV3Schema:
+          type: object
+          description: |
+            Определяет конфигурацию ресурса для скачивания конкретных версий модулей Deckhouse.
+          required:
+            - spec
+          properties:
+            spec:
+              properties:
+                imageTag:
+                  description: Тег образа контейнера модуля, который будет скачан и установлен.
+                scanInterval:
+                  description: Интервал сканирования для проверки изменения образа контейнера. Если образ изменился, модуль будет обновлен.
+            status:
+              properties:
+                message:
+                  type: string
+                updatedAt:
+                  type: string
+                  description: Когда модуль был обновлен в последний раз.
+                imageDigest:
+                  type: string
+                  description: Контрольная сумма образа контейнера.
+                weight:
+                  type: integer
+                  description: "_Вес_ (приоритет) модуля."

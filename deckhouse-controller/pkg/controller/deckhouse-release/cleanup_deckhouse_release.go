@@ -29,8 +29,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
-	d8updater "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/deckhouse-release/updater"
-	"github.com/deckhouse/deckhouse/go_lib/updater"
+	releaseUpdater "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/releaseupdater"
 )
 
 func (r *deckhouseReleaseReconciler) cleanupDeckhouseReleaseLoop(ctx context.Context) {
@@ -53,7 +52,8 @@ func (r *deckhouseReleaseReconciler) cleanupDeckhouseRelease(ctx context.Context
 	for _, release := range releases.Items {
 		pointerReleases = append(pointerReleases, &release)
 	}
-	sort.Sort(sort.Reverse(updater.ByVersion[*v1alpha1.DeckhouseRelease](pointerReleases)))
+
+	sort.Sort(sort.Reverse(releaseUpdater.ByVersion[*v1alpha1.DeckhouseRelease](pointerReleases)))
 
 	now := r.dc.GetClock().Now()
 
@@ -65,21 +65,21 @@ func (r *deckhouseReleaseReconciler) cleanupDeckhouseRelease(ctx context.Context
 
 	for i, release := range pointerReleases {
 		switch release.Status.Phase {
-		case v1alpha1.PhasePending:
+		case v1alpha1.DeckhouseReleasePhasePending:
 			pendingReleasesIndexes = append(pendingReleasesIndexes, i)
 
-		case v1alpha1.PhaseDeployed:
+		case v1alpha1.DeckhouseReleasePhaseDeployed:
 			deployedReleasesIndexes = append(deployedReleasesIndexes, i)
 
-		case v1alpha1.PhaseSuperseded, v1alpha1.PhaseSkipped, v1alpha1.PhaseSuspended:
+		case v1alpha1.DeckhouseReleasePhaseSuperseded, v1alpha1.DeckhouseReleasePhaseSkipped, v1alpha1.DeckhouseReleasePhaseSuspended:
 			outdatedReleasesIndexes = append(outdatedReleasesIndexes, i)
 		}
 	}
 
 	if len(deployedReleasesIndexes) > 1 {
 		// cleanup releases stacked in Deployed status
-		sp, _ := json.Marshal(d8updater.StatusPatch{
-			Phase:          v1alpha1.PhaseSuperseded,
+		sp, _ := json.Marshal(releaseUpdater.StatusPatch{
+			Phase:          v1alpha1.DeckhouseReleasePhaseSuperseded,
 			TransitionTime: metav1.NewTime(now),
 		})
 		// everything except the last Deployed release
@@ -109,8 +109,8 @@ func (r *deckhouseReleaseReconciler) cleanupDeckhouseRelease(ctx context.Context
 	// mark them as Skipped
 	if len(deployedReleasesIndexes) > 0 && len(pendingReleasesIndexes) > 0 {
 		lastDeployed := deployedReleasesIndexes[0] // releases are reversed, that's why we have to take the first one (latest Deployed release)
-		sp, _ := json.Marshal(d8updater.StatusPatch{
-			Phase:          v1alpha1.PhaseSkipped,
+		sp, _ := json.Marshal(releaseUpdater.StatusPatch{
+			Phase:          v1alpha1.DeckhouseReleasePhaseSkipped,
 			Message:        "Skipped by cleanup hook",
 			TransitionTime: metav1.NewTime(now),
 		})

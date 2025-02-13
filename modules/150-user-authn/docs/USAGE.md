@@ -323,6 +323,8 @@ echo "$password" | htpasswd -BinC 10 "" | cut -d: -f2 | base64 -w0
 
 Alternatively, you can use the [online service](https://bcrypt-generator.com/) to calculate the password hash.
 
+Note that in the below example the [`ttl`](cr.html#user-v1-spec-ttl) parameter is set.
+
 {% raw %}
 
 ```yaml
@@ -358,4 +360,4 @@ spec:
 
 ## How to set permissions for a user or group
 
-Parameters in the custom resource [`ClusterAuthorizationRule`](../../modules/140-user-authz/cr.html#clusterauthorizationrule) are used for configuration.
+Parameters in the custom resource [`ClusterAuthorizationRule`](../../modules/user-authz/cr.html#clusterauthorizationrule) are used for configuration.

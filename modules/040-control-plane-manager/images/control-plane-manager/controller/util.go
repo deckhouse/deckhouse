@@ -24,8 +24,8 @@ import (
 	"path/filepath"
 	"sort"
 
+	"github.com/deckhouse/deckhouse/pkg/log"
 	"github.com/otiai10/copy"
-	log "github.com/sirupsen/logrus"
 )
 
 func installFileIfChanged(src, dst string, perm os.FileMode) error {
@@ -127,7 +127,7 @@ func removeOrphanFiles() {
 	}
 
 	if err := filepath.WalkDir(srcDir, walkDirFunc); err != nil {
-		log.Warn(err)
+		log.Warn(err.Error())
 	}
 }
 
@@ -179,10 +179,10 @@ func removeOldBackups() error {
 
 func cleanup() {
 	if err := os.RemoveAll(config.TmpPath); err != nil {
-		log.Warn(err)
+		log.Warn(err.Error())
 	}
 
 	if err := removeOldBackups(); err != nil {
-		log.Warn(err)
+		log.Warn(err.Error())
 	}
 }

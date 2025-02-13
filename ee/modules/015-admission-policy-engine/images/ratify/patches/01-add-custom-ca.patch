@@ -1,0 +1,44 @@
+diff --git a/pkg/referrerstore/oras/oras.go b/pkg/referrerstore/oras/oras.go
+index 64679dd..d813d9c 100644
+--- a/pkg/referrerstore/oras/oras.go
++++ b/pkg/referrerstore/oras/oras.go
+@@ -19,6 +19,7 @@ import (
+ 	"bytes"
+ 	"context"
+ 	"crypto/tls"
++	"crypto/x509"
+ 	"encoding/json"
+ 	"errors"
+ 	"fmt"
+@@ -81,6 +82,7 @@ type OrasStoreConf struct { //nolint:revive // ignore linter to have unique type
+ 	CosignEnabled  bool                            `json:"cosignEnabled,omitempty"`
+ 	AuthProvider   authprovider.AuthProviderConfig `json:"authProvider,omitempty"`
+ 	LocalCachePath string                          `json:"localCachePath,omitempty"`
++	CA             []string                        `json:"ca,omitempty"`
+ }
+ 
+ type orasStoreFactory struct{}
+@@ -173,6 +175,23 @@ func createBaseStore(version string, storeConfig config.StorePluginConfig) (*ora
+ 	secureTransport.MaxIdleConns = HTTPMaxIdleConns
+ 	secureTransport.MaxConnsPerHost = HTTPMaxConnsPerHost
+ 	secureTransport.MaxIdleConnsPerHost = HTTPMaxIdleConnsPerHost
++
++	if len(conf.CA) > 0 {
++		tlsConfig := &tls.Config{}
++		certPool, err := x509.SystemCertPool()
++		if err != nil {
++			return nil, re.ErrorCodePluginInitFailure.WithError(err).WithComponentType(re.ReferrerStore).WithDetail(fmt.Sprintf("could not create cert pool: %v", err))
++		}
++
++		for _, ca := range conf.CA {
++			if !certPool.AppendCertsFromPEM([]byte(ca)) {
++				return nil, re.ErrorCodePluginInitFailure.WithError(err).WithComponentType(re.ReferrerStore).WithDetail(fmt.Sprintf("could not parse registry CA: %s", ca))
++			}
++		}
++		tlsConfig.RootCAs = certPool
++		secureTransport.TLSClientConfig = tlsConfig
++	}
++
+ 	secureRetryTransport := retry.NewTransport(secureTransport)
+ 	secureRetryTransport.Policy = customRetryPolicy
+ 

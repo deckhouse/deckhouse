@@ -22,17 +22,15 @@ import (
 	"os/signal"
 	"syscall"
 
-	log "github.com/sirupsen/logrus"
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 func main() {
 
-	log.SetFormatter(&log.JSONFormatter{})
-
 	var err error
 	config, err = NewConfig()
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal(err.Error())
 	}
 
 	sigs := make(chan os.Signal, 1)
@@ -53,7 +51,7 @@ func main() {
 		if err == nil || err == http.ErrServerClosed {
 			return
 		}
-		log.Error(err)
+		log.Error(err.Error())
 	}()
 
 	defer httpServerClose()
@@ -91,7 +89,7 @@ func runPhase(err error) {
 	if err == nil {
 		return
 	}
-	log.Error(err)
+	log.Error(err.Error())
 	cleanup()
 	httpServerClose()
 	os.Exit(1)

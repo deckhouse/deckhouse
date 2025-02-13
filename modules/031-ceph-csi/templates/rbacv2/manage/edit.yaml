@@ -10,7 +10,7 @@ metadata:
     rbac.deckhouse.io/kind: manage
     rbac.deckhouse.io/level: module
     rbac.deckhouse.io/namespace: d8-ceph-csi
-  name: d8:manage:capability:module:ceph-csi:edit
+  name: d8:manage:permission:module:ceph-csi:edit
 rules:
 - apiGroups:
   - deckhouse.io

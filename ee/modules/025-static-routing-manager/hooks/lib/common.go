@@ -48,7 +48,7 @@ func GenerateShortHash(input string) string {
 	return fullHash
 }
 
-func SetStatusCondition(conditions *[]v1alpha1.ExtendedCondition, newCondition v1alpha1.ExtendedCondition) (changed bool) {
+func SetStatusCondition(conditions *[]v1alpha1.ExtendedCondition, newCondition v1alpha1.ExtendedCondition) bool {
 	if conditions == nil {
 		return false
 	}
@@ -72,6 +72,8 @@ func SetStatusCondition(conditions *[]v1alpha1.ExtendedCondition, newCondition v
 	} else {
 		existingCondition.LastHeartbeatTime = timeNow
 	}
+
+	changed := false
 
 	if existingCondition.Status != newCondition.Status {
 		existingCondition.Status = newCondition.Status

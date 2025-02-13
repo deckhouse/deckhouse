@@ -136,42 +136,42 @@ func createTarball() *bytes.Buffer {
 		{
 			File: "mcm-logs.txt",
 			Cmd:  "kubectl",
-			Args: []string{"-n", "d8-cloud-instance-manager", "logs", "-l", "app=machine-controller-manager", "--tail", "3000", "-c", "controller"},
+			Args: []string{"-n", "d8-cloud-instance-manager", "logs", "-l", "app=machine-controller-manager", "--tail=3000", "-c", "controller", "--ignore-errors=true"},
 		},
 		{
 			File: "ccm-logs.txt",
 			Cmd:  "bash",
-			Args: []string{"-c", "kubectl -n $(kubectl get ns -o custom-columns=NAME:metadata.name | grep d8-cloud-provider) logs -l app=cloud-controller-manager --tail=3000"},
+			Args: []string{"-c", `kubectl get modules -o json | jq -r '.items[] | select(.status.phase == "Ready" and (.metadata.name | test("^cloud-provider"))) | "kubectl -n d8-"+.metadata.name+" logs -l app=cloud-controller-manager --tail=3000"' | bash`},
 		},
 		{
 			File: "cluster-autoscaler-logs.txt",
 			Cmd:  "kubectl",
-			Args: []string{"-n", "d8-cloud-instance-manager", "logs", "-l", "app=cluster-autoscaler", "--tail", "3000", "-c", "cluster-autoscaler"},
+			Args: []string{"-n", "d8-cloud-instance-manager", "logs", "-l", "app=cluster-autoscaler", "--tail=3000", "-c", "cluster-autoscaler", "--ignore-errors=true"},
 		},
 		{
 			File: "vpa-admission-controller-logs.txt",
 			Cmd:  "kubectl",
-			Args: []string{"-n", "kube-system", "logs", "-l", "app=vpa-admission-controller", "--tail", "3000", "-c", "admission-controller"},
+			Args: []string{"-n", "kube-system", "logs", "-l", "app=vpa-admission-controller", "--tail=3000", "-c", "admission-controller", "--ignore-errors=true"},
 		},
 		{
 			File: "vpa-recommender-logs.txt",
 			Cmd:  "kubectl",
-			Args: []string{"-n", "kube-system", "logs", "-l", "app=vpa-recommender", "--tail", "3000", "-c", "recommender"},
+			Args: []string{"-n", "kube-system", "logs", "-l", "app=vpa-recommender", "--tail=3000", "-c", "recommender", "--ignore-errors=true"},
 		},
 		{
 			File: "vpa-updater-logs.txt",
 			Cmd:  "kubectl",
-			Args: []string{"-n", "kube-system", "logs", "-l", "app=vpa-updater", "--tail", "3000", "-c", "updater"},
+			Args: []string{"-n", "kube-system", "logs", "-l", "app=vpa-updater", "--tail=3000", "-c", "updater", "--ignore-errors=true"},
 		},
 		{
 			File: "prometheus-logs.txt",
 			Cmd:  "kubectl",
-			Args: []string{"-n", "d8-monitoring", "logs", "-l", "prometheus=main", "--tail", "3000", "-c", "prometheus"},
+			Args: []string{"-n", "d8-monitoring", "logs", "-l", "prometheus=main", "--tail=3000", "-c", "prometheus", "--ignore-errors=true"},
 		},
 		{
 			File: "terraform-check.json",
 			Cmd:  "bash",
-			Args: []string{"-c", `kubectl exec deploy/terraform-state-exporter -- dhctl terraform check --logger-type json -o json | jq -c '.terraform_plan[]?.variables.providerClusterConfiguration.value.provider = "REDACTED"'`},
+			Args: []string{"-c", `kubectl get modules terraform-manager -o json | jq -r 'select(.status.phase == "Ready") | "kubectl -n d8-system exec deploy/terraform-state-exporter -- dhctl terraform check --logger-type json -o json"' | bash | jq -c '.terraform_plan[]?.variables.providerClusterConfiguration.value.provider = "REDACTED"'`},
 		},
 		{
 			File: "alerts.json",
@@ -179,9 +179,9 @@ func createTarball() *bytes.Buffer {
 			Args: []string{"-c", `kubectl get clusteralerts.deckhouse.io -o json | jq '.items[]'`},
 		},
 		{
-			File: "pods.txt",
+			File: "bad-pods.txt",
 			Cmd:  "bash",
-			Args: []string{"-c", `kubectl get pod -A -owide | grep -Pv '\s+([1-9]+[\d]*)\/\1\s+' | grep -v 'Completed\|Evicted' | grep -E "^(d8-|kube-system)"`},
+			Args: []string{"-c", `kubectl get pod -A -owide | grep -Pv '\s+([1-9]+[\d]*)\/\1\s+' | grep -v 'Completed\|Evicted' | grep -E "^(d8-|kube-system)" || true`},
 		},
 		{
 			File: "cluster-authorization-rules.json",

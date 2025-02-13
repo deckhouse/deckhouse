@@ -1,3 +1,0 @@
-module: pod-reloader
-scopes:
-  - infrastructure

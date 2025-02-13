@@ -17,6 +17,10 @@ locals {
   az_count = length(data.aws_availability_zones.available.names)
 }
 
+data "aws_availability_zone" "master_az" {
+  name = aws_instance.master.availability_zone
+}
+
 data "aws_subnet" "kube" {
   count = local.az_count
   tags = {
@@ -39,6 +43,12 @@ resource "aws_ebs_volume" "kubernetes_data" {
     Name = "${var.prefix}-kubernetes-data-${var.node_index}"
   })
   availability_zone = local.zone
+
+  timeouts {
+    create = var.resourceManagementTimeout
+    delete = var.resourceManagementTimeout
+    update = var.resourceManagementTimeout
+  }
 }
 
 resource "aws_volume_attachment" "kubernetes_data" {
@@ -100,14 +110,24 @@ resource "aws_instance" "master" {
       volume_tags
     ]
   }
+
+  timeouts {
+    create = var.resourceManagementTimeout
+    delete = var.resourceManagementTimeout
+    update = var.resourceManagementTimeout
+  }
 }
 
 resource "aws_eip" "eip" {
   count = var.associate_public_ip_address ? 1 : 0
+  network_border_group = data.aws_availability_zone.master_az.network_border_group
   vpc = true
   tags = merge(var.tags, {
     Name = "${var.prefix}-master-${var.node_index}"
   })
+  lifecycle {
+    ignore_changes = [network_border_group]
+  }
 }
 
 resource "aws_eip_association" "eip" {

@@ -11,6 +11,8 @@ config:
     - OBSERVABILITY_SOURCE_REPO
     - DISTRO_PACKAGES_PROXY
     - CARGO_PROXY
+    - STRONGHOLD_PULL_TOKEN
+    - DECKHOUSE_PRIVATE_REPO
     allowUncommittedFiles: [ "tools/build_includes/*" ]
   stapel:
     mount:

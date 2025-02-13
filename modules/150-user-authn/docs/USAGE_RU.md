@@ -328,6 +328,8 @@ echo "$password" | htpasswd -BinC 10 "" | cut -d: -f2 | base64 -w0
 
 Также можно воспользоваться [онлайн-сервисом](https://bcrypt-generator.com/).
 
+Обратите внимание, что в приведенном примере указан [`ttl`](cr.html#user-v1-spec-ttl).
+
 {% raw %}
 
 ```yaml
@@ -363,4 +365,4 @@ spec:
 
 ## Выдача прав пользователю или группе
 
-Для настройки используются параметры в Custom Resource [`ClusterAuthorizationRule`](../../modules/140-user-authz/cr.html#clusterauthorizationrule).
+Для настройки используются параметры в Custom Resource [`ClusterAuthorizationRule`](../../modules/user-authz/cr.html#clusterauthorizationrule).

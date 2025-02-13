@@ -9,7 +9,7 @@ metadata:
     rbac.deckhouse.io/kind: manage
     rbac.deckhouse.io/level: module
     rbac.deckhouse.io/namespace: d8-user-authn
-  name: d8:manage:capability:module:user-authn:view
+  name: d8:manage:permission:module:user-authn:view
 rules:
 - apiGroups:
   - deckhouse.io

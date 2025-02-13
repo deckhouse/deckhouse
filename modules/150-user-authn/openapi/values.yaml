@@ -26,6 +26,8 @@ properties:
       kubeconfigEncodedNames:
         type: array
         default: []
+        x-examples:
+        - ["nn2wezldn5xgm2lhfvtwk3tfojqxi33sfuymx4u44scceizf"]
         items:
           type: string
       discoveredDexClusterIP:
@@ -98,6 +100,7 @@ properties:
               applicationDomain: test.example.com
               applicationIngressCertificateSecretName: test-tls
               applicationIngressClassName: not-nginx
+              highAvailability: true
               nodeSelector:
                 testnode: ""
               tolerations:
@@ -149,6 +152,18 @@ properties:
               type: string
             legacyEncodedID:
               type: string
+            labels:
+              type: object
+              default: {}
+              additionalProperties:
+                type: string
+            annotations:
+              type: object
+              default: {}
+              additionalProperties:
+                type: string
+            allowAccessToKubernetes:
+              type: boolean
             spec:
               # clients spec is copied from custom resources as is and validated by its spec
               type: object

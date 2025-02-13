@@ -22,7 +22,7 @@ webIfaces:
 ## Интерфейс
 
 Пример веб-интерфейса:
-![Пример веб-интерфейса](../../images/500-upmeter/image1.png)
+![Пример веб-интерфейса](../../images/upmeter/image1.png)
 
 Пример графиков по метрикам из upmeter в Grafana:
-![Пример графиков по метрикам из upmeter в Grafana](../../images/500-upmeter/image2.png)
+![Пример графиков по метрикам из upmeter в Grafana](../../images/upmeter/image2.png)

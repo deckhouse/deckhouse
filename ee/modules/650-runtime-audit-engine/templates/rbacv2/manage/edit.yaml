@@ -9,7 +9,7 @@ metadata:
     rbac.deckhouse.io/kind: manage
     rbac.deckhouse.io/level: module
     rbac.deckhouse.io/namespace: d8-runtime-audit-engine
-  name: d8:manage:capability:module:runtime-audit-engine:edit
+  name: d8:manage:permission:module:runtime-audit-engine:edit
 rules:
 - apiGroups:
   - deckhouse.io

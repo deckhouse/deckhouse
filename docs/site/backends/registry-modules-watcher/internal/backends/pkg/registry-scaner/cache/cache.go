@@ -15,10 +15,12 @@
 package cache
 
 import (
-	"registry-modules-watcher/internal/backends"
+	"slices"
 	"sort"
 	"strings"
 	"sync"
+
+	"registry-modules-watcher/internal/backends"
 )
 
 type (
@@ -50,6 +52,7 @@ func New() *Cache {
 	}
 }
 
+// ResetRange sets stateSnap to State
 func (c *Cache) ResetRange() {
 	state := c.GetState()
 	c.m.Lock()
@@ -59,14 +62,23 @@ func (c *Cache) ResetRange() {
 	copy(c.stateSnap, state)
 }
 
+// GetRange returns a list of module versions from the current State
 func (c *Cache) GetRange() []backends.Version {
 	c.m.RLock()
 	defer c.m.RUnlock()
 
-	var versions = []backends.Version{}
+	versions := []backends.Version{}
+	state := c.GetState()
+	for _, version := range c.stateSnap {
+		if !contain(state, version) {
+			version.ToDelete = true
+			versions = append(versions, version)
+		}
+	}
 
-	for _, version := range c.GetState() {
+	for _, version := range state {
 		if !contain(c.stateSnap, version) {
+			version.ToDelete = false
 			versions = append(versions, version)
 		}
 	}
@@ -78,12 +90,10 @@ func (c *Cache) GetState() []backends.Version {
 	c.m.RLock()
 	defer c.m.RUnlock()
 
-	var versions = []backends.Version{}
-
+	versions := []backends.Version{}
 	for registry, modules := range c.val {
 		for module, moduleData := range modules {
 			for version, data := range moduleData.versions {
-
 				releaseChannels := []string{}
 				for releaseChannel := range data.ReleaseChannels {
 					releaseChannels = append(releaseChannels, releaseChannel)
@@ -187,8 +197,68 @@ func (c *Cache) syncReleaseChannels(registry, module, releaseChannel string) {
 			for versionKey, version := range m.versions {
 				delete(version.ReleaseChannels, releaseChannel)
 				if len(version.ReleaseChannels) == 0 {
-					delete(m.versions, versionNum(versionKey))
+					delete(m.versions, versionKey)
 				}
+			}
+		}
+	}
+}
+
+func (c *Cache) GetModules(registry string) []string {
+	c.m.RLock()
+	defer c.m.RUnlock()
+
+	var modules []string
+	r, ok := c.val[registryName(registry)]
+	if ok {
+		for m := range r {
+			modules = append(modules, string(m))
+		}
+	}
+
+	return modules
+}
+
+func (c *Cache) DeleteModule(registry string, module string) {
+	c.m.Lock()
+	defer c.m.Unlock()
+
+	r, ok := c.val[registryName(registry)]
+	if ok {
+		delete(r, moduleName(module))
+	}
+}
+
+func (c *Cache) GetReleaseChannels(registry, module string) []string {
+	c.m.RLock()
+	defer c.m.RUnlock()
+
+	var releaseChannels []string
+	r, ok := c.val[registryName(registry)]
+	if ok {
+		m, ok := r[moduleName(module)]
+		if ok {
+			for _, m := range m.versions {
+				for releaseChannel := range m.ReleaseChannels {
+					releaseChannels = append(releaseChannels, releaseChannel)
+				}
+			}
+		}
+	}
+
+	return slices.Compact(releaseChannels)
+}
+
+func (c *Cache) DeleteReleaseChannel(registry, module, releaseChannel string) {
+	c.m.Lock()
+	defer c.m.Unlock()
+
+	r, ok := c.val[registryName(registry)]
+	if ok {
+		m, ok := r[moduleName(module)]
+		if ok {
+			for _, m := range m.versions {
+				delete(m.ReleaseChannels, releaseChannel)
 			}
 		}
 	}
@@ -199,7 +269,6 @@ func contain(versions []backends.Version, version backends.Version) bool {
 		if val.Registry == version.Registry &&
 			val.Module == version.Module &&
 			val.Version == version.Version {
-
 			sort.Strings(val.ReleaseChannels)
 			sort.Strings(version.ReleaseChannels)
 			if strings.Join(val.ReleaseChannels, "") == strings.Join(version.ReleaseChannels, "") {

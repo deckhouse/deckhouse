@@ -88,7 +88,7 @@ func inletHostWithFailoverFilter(obj *unstructured.Unstructured) (go_hook.Filter
 	return controller, nil
 }
 
-func searchForDeprecatedGeoip(input *go_hook.HookInput, dc dependency.Container) (err error) {
+func searchForDeprecatedGeoip(input *go_hook.HookInput, dc dependency.Container) error {
 	kubeClient := dc.MustGetK8sClient()
 	input.MetricsCollector.Expire(metricsGroup)
 	defaultVersion, err := semver.NewVersion(input.Values.Get("ingressNginx.defaultControllerVersion").String())
@@ -130,7 +130,7 @@ func searchForDeprecatedGeoip(input *go_hook.HookInput, dc dependency.Container)
 			ResourceVersionMatch: metav1.ResourceVersionMatchNotOlderThan,
 		})
 		if err != nil {
-			input.LogEntry.Warnf("couldn't list ingresses: %v", err)
+			input.Logger.Warnf("couldn't list ingresses: %v", err)
 			return nil
 		}
 		ingressList.GetRemainingItemCount()
@@ -165,7 +165,7 @@ func checkControllerConfigMaps(client k8s.Client, input *go_hook.HookInput, cont
 	for _, cmName := range configMaps {
 		configMap, err := client.CoreV1().ConfigMaps(ingressNamespace).Get(context.Background(), cmName, metav1.GetOptions{})
 		if err != nil {
-			input.LogEntry.Warnf("couldn't get %s controller's configmap %s: %v", controllerName, cmName, err)
+			input.Logger.Warnf("couldn't get %s controller's configmap %s: %v", controllerName, cmName, err)
 			continue
 		}
 		for k, v := range configMap.Data {

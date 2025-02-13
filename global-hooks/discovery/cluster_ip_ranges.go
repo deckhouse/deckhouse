@@ -183,14 +183,14 @@ func discoveryClusterIPRanges(input *go_hook.HookInput) error {
 	if podSubnet != "" {
 		input.Values.Set("global.discovery.podSubnet", podSubnet)
 	} else {
-		input.LogEntry.Warnln("Pod subnet not found")
+		input.Logger.Warn("Pod subnet not found")
 	}
 
 	serviceSubnet := getSubnetsFromSnapshots(input, serviceSubnetByComponentSnapName, serviceSubnetByD8AppSnapName)
 	if serviceSubnet != "" {
 		input.Values.Set("global.discovery.serviceSubnet", serviceSubnet)
 	} else {
-		input.LogEntry.Warnln("Service subnet not found")
+		input.Logger.Warn("Service subnet not found")
 	}
 
 	return nil

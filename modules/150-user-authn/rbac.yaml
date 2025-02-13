@@ -1,5 +1,0 @@
-module: user-authn
-scopes:
-  - security
-crds:
-  - modules/010-user-authn/crds/*.yaml

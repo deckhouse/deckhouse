@@ -87,7 +87,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	},
 }, safeControllerUpdate)
 
-func safeControllerUpdate(input *go_hook.HookInput) (err error) {
+func safeControllerUpdate(input *go_hook.HookInput) error {
 	controllerPods := input.Snapshots["for_delete"]
 	if len(controllerPods) == 0 {
 		return nil
@@ -109,7 +109,7 @@ func safeControllerUpdate(input *go_hook.HookInput) (err error) {
 
 		proxy, ok := proxyMap[ds.ControllerName]
 		if !ok {
-			input.LogEntry.Warnf("Proxy DaemonSets not found for %q controller", ds.ControllerName)
+			input.Logger.Warnf("Proxy DaemonSets not found for %q controller", ds.ControllerName)
 			continue
 		}
 
@@ -132,13 +132,13 @@ func safeControllerUpdate(input *go_hook.HookInput) (err error) {
 		podForDelete := sn.(ingressControllerPod)
 
 		if !controllers.Has(podForDelete.ControllerName) {
-			input.LogEntry.Warnf("Failover and Proxy DaemonSets not found for %q controller", podForDelete.ControllerName)
+			input.Logger.Warnf("Failover and Proxy DaemonSets not found for %q controller", podForDelete.ControllerName)
 			continue
 		}
 
 		// postpone main controller's pod update for the first time so that failover controller could catch up with the hook
 		if !podForDelete.PostponedUpdate {
-			input.LogEntry.Infof("Assuring that %s/%s has met update conditions", podForDelete.ControllerName, podForDelete.Name)
+			input.Logger.Infof("Assuring that %s/%s has met update conditions", podForDelete.ControllerName, podForDelete.Name)
 			metadata := map[string]interface{}{
 				"metadata": map[string]interface{}{
 					"annotations": map[string]interface{}{

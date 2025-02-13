@@ -6,7 +6,7 @@ spec:
           description: |
             Определяет конфигурацию релизов модулей Deckhouse.
 
-            **Ресурсы ModuleRelease создает Deckhouse.**
+            **Ресурсы ModuleRelease создаёт Deckhouse.**
           properties:
             spec:
               properties:
@@ -19,7 +19,14 @@ spec:
                 applyAfter:
                   description: Время, до которого отложено обновление.
                 requirements:
-                  description: Структура содержащая требования, необходимые для применения релиза.
+                  description: Зависимости релиза — набор условий, которые должны выполняться чтобы Deckhouse Kubernetes Platform мог запустить эту версию модуля.
+                  properties:
+                    deckhouse:
+                      description: Требование к версии Deckhouse.
+                    kubernetes:
+                      description: Требование к версии Kubernetes.
+                    modules:
+                      description: Список других модулей, которые необходимы для этой версии модуля (должны быть включены).
                 changelog:
                   description: Список изменений модуля в данном релизе.
             status:

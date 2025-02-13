@@ -97,7 +97,6 @@ spec:
 		`{"prometheus":{"internal":{}},"global":{"enabledModules":[]}}`,
 		`{}`,
 	)
-
 	Context("Empty cluster", func() {
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(``))
@@ -151,6 +150,66 @@ spec:
 					"icon": "/public/img/unknown.png",
 					"name": "test 3",
 					"url":  "http://test3-example.com/abc/def",
+				},
+				Value: ptr.To(1.0),
+				Group: "deckhouse_exported_domains",
+			}))
+			Expect(ops[4]).To(BeEquivalentTo(operation.MetricOperation{
+				Name:   "deckhouse_web_interfaces",
+				Action: "set",
+				Labels: map[string]string{
+					"icon": "https://example.com/custom/icon",
+					"name": "test@4",
+					"url":  "https://test4-example.com",
+				},
+				Value: ptr.To(1.0),
+				Group: "deckhouse_exported_domains",
+			}))
+		})
+	})
+
+	Context("Cluster containing some services and global module https.mode:OnlyInURI", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(ingressMetrics))
+			f.ConfigValuesSet("global.modules.https.mode", "OnlyInURI")
+			f.RunHook()
+
+		})
+
+		It("Hook must not fail, should get metric", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			ops := f.MetricsCollector.CollectedMetrics()
+			Expect(len(ops)).To(BeEquivalentTo(5))
+
+			Expect(ops[1]).To(BeEquivalentTo(operation.MetricOperation{
+				Name:   "deckhouse_web_interfaces",
+				Action: "set",
+				Labels: map[string]string{
+					"icon": "/public/img/unknown.png",
+					"name": "test-1",
+					"url":  "https://test1-example.com/abc",
+				},
+				Value: ptr.To(1.0),
+				Group: "deckhouse_exported_domains",
+			}))
+			Expect(ops[2]).To(BeEquivalentTo(operation.MetricOperation{
+				Name:   "deckhouse_web_interfaces",
+				Action: "set",
+				Labels: map[string]string{
+					"icon": "/custom/icon",
+					"name": "test-2",
+					"url":  "https://test1-example.com%2Fabc/abc",
+				},
+				Value: ptr.To(1.0),
+				Group: "deckhouse_exported_domains",
+			}))
+			Expect(ops[3]).To(BeEquivalentTo(operation.MetricOperation{
+				Name:   "deckhouse_web_interfaces",
+				Action: "set",
+				Labels: map[string]string{
+					"icon": "/public/img/unknown.png",
+					"name": "test 3",
+					"url":  "https://test3-example.com/abc/def",
 				},
 				Value: ptr.To(1.0),
 				Group: "deckhouse_exported_domains",

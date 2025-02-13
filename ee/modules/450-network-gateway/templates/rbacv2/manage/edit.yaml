@@ -9,7 +9,7 @@ metadata:
     rbac.deckhouse.io/kind: manage
     rbac.deckhouse.io/level: module
     rbac.deckhouse.io/namespace: d8-network-gateway
-  name: d8:manage:capability:module:network-gateway:edit
+  name: d8:manage:permission:module:network-gateway:edit
 rules:
 - apiGroups:
   - deckhouse.io

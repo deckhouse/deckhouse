@@ -1,0 +1,11 @@
+---
+image: {{ $.ModuleName }}/{{ .ImageName }}
+fromImage: common/distroless
+import:
+  - image: {{ $.ModuleName }}/service-with-healthchecks-build-artifact
+    add: /agent
+    to: /agent
+    before: install
+imageSpec:
+  config:
+    entrypoint: ["/agent"]

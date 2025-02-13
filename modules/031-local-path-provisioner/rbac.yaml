@@ -1,5 +1,0 @@
-module: local-path-provisioner
-scopes:
-  - infrastructure
-crds:
-  - modules/031-local-path-provisioner/crds/*.yaml

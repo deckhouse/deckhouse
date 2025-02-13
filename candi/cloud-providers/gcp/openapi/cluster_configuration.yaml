@@ -13,6 +13,8 @@ apiVersions:
       ```shell
       kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller edit provider-cluster-configuration
       ```
+
+      > After updating the node parameters, you need to run the [dhctl converge](../../deckhouse-faq.html#changing-the-configuration) command to apply the changes.
     x-doc-search: |
       ProviderClusterConfiguration
     x-unsafe-rules: [deleteZones]
@@ -97,8 +99,7 @@ apiVersions:
         description: |
           Parameters of the master's NodeGroup.
 
-          > Caution! After changing the parameters of the section, you need to run `dhctl converge` for the changes to take effect.
-        x-unsafe-rules: [updateMasterImage]
+          > For the changes to take effect, run `dhctl converge` after modifying the parameters of the `masterNodeGroup` section.
         properties:
           replicas:
             type: integer
@@ -107,7 +108,6 @@ apiVersions:
               The number of master nodes to create.
 
               It is important to have an odd number of masters to ensure a quorum.
-            x-unsafe-rules: [updateReplicas]
           additionalNetworkTags:
             description: |
               The list of additional tags.
@@ -132,7 +132,7 @@ apiVersions:
           instanceClass:
             type: object
             required: [machineType, image]
-            description: Partial contents of the [GCPInstanceClass](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-gcp/cr.html#gcpinstanceclass) fields.
+            description: Partial contents of the [GCPInstanceClass](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/cloud-provider-gcp/cr.html#gcpinstanceclass) fields.
             properties:
               machineType: &instanceClassMachineType
                 type: string
@@ -175,7 +175,10 @@ apiVersions:
                   False means that static public addresses are created for nodes, they are also used for One-to-one NAT.;
           zones:
             type: array
-            description: A limited set of zones in which nodes can be created.
+            description: | 
+              A limited set of zones in which master nodes can be created.
+
+              The order in which zones are specified does not influence the sequence of node creation. Nodes are assigned to zones in alphabetical order: the first node is placed in the alphabetically first zone, the second node in the second zone, and so forth. If there are more nodes than zones, the assignment process restarts from the beginning of the zone list after placing a node in the last alphabetical zone.
             items:
               type: string
             minItems: 1
@@ -210,7 +213,10 @@ apiVersions:
                     type: string
                 taints:
                   type: array
-                  description: The same as the `.spec.taints` field of the Node object(https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#taint-v1-core). **CAUTION!** Only the `effect`, `key`, `values` fields are available
+                  description: |
+                    The same as the `.spec.taints` field of the Node object(https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#taint-v1-core).
+                    
+                    > Available fields: `effect`, `key`, and `values`.
                   items:
                     type: object
                     properties:
@@ -232,7 +238,7 @@ apiVersions:
             instanceClass:
               required: [machineType, image]
               type: object
-              description: Partial contents of the [GCPInstanceClass](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-gcp/cr.html#gcpinstanceclass) fields.
+              description: Partial contents of the [GCPInstanceClass](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/cloud-provider-gcp/cr.html#gcpinstanceclass) fields.
               properties:
                 machineType: *instanceClassMachineType
                 image: *instanceClassImage
@@ -240,7 +246,10 @@ apiVersions:
                 disableExternalIP: *instanceClassDisableExternalIP
             zones:
               type: array
-              description: A limited set of zones in which nodes can be created.
+              description: | 
+                A limited set of zones in which nodes can be created.
+
+                The order in which zones are specified does not influence the sequence of node creation. Nodes are assigned to zones in alphabetical order: the first node is placed in the alphabetically first zone, the second node in the second zone, and so forth. If there are more nodes than zones, the assignment process restarts from the beginning of the zone list after placing a node in the last alphabetical zone.
               items:
                 type: string
               minItems: 1
@@ -251,9 +260,9 @@ apiVersions:
         description: |
           The way resources are located in the cloud.
 
-          `Standard` - set [Cloud NAT](https://cloud.google.com/nat/docs/overview#benefits) mode. [More info...](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-gcp/layouts.html#standard)
+          `Standard` - set [Cloud NAT](https://cloud.google.com/nat/docs/overview#benefits) mode. [More info...](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/cloud-provider-gcp/layouts.html#standard)
 
-          `WithoutNAT` - a dedicated VPC is created for the cluster. All cluster nodes have public IP addresses. [More info...](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-gcp/layouts.html#withoutnat)
+          `WithoutNAT` - a dedicated VPC is created for the cluster. All cluster nodes have public IP addresses. [More info...](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/cloud-provider-gcp/layouts.html#withoutnat)
         x-unsafe: true
       standard:
         type: object

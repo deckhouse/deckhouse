@@ -1,0 +1,46 @@
+{%- assign subsystems = site.data.rbac.rbac.subsystems %}
+<div class="table-wrapper">
+<table>
+<thead>
+  <tr>
+    <th>{{ site.data.i18n.common['subsystem'][page.lang] }}</th>
+    <th>{{ site.data.i18n.common['modules_of_a_subsystem'][page.lang] }}</th>
+    <th>{{ site.data.i18n.common['namespaces_used_by_modules'][page.lang] }}</th>
+  </tr>
+</thead>
+<tbody>
+  <tr>
+    <td>all</td>
+    <td>{{ site.data.i18n.common['all_modules'][page.lang] }}</td>
+    <td>{{ site.data.i18n.common['all_namespaces'][page.lang] }}</td>
+  </tr>
+{%- for subsystem in subsystems %}
+  <tr>
+    <td>{{ subsystem[0] }}</td>
+    <td>
+    {%- assign modules = subsystem[1].modules | sort %}
+      {%- if modules %}
+        <ul>
+        {%- for module in modules %}
+           <li>{{ module }}</li>
+        {%- endfor %}
+        </ul>
+      {%- else %}&nbsp;
+      {%- endif %}
+    </td>
+    <td>
+    {%- assign namespaces = subsystem[1].namespaces | sort %}
+      {%- if namespaces %}
+        <ul>
+        {%- for namespace in namespaces %}
+           <li>{{ namespace }}</li>
+        {%- endfor %}
+        </ul>
+      {%- else %}&nbsp;
+      {%- endif %}
+    </td>
+  </tr>
+  {%- endfor %}
+</tbody>
+</table>
+</div>

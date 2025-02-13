@@ -52,7 +52,7 @@ const globalValues = `
     clusterType: Cloud
     defaultCRI: Containerd
     kind: ClusterConfiguration
-    kubernetesVersion: "1.27"
+    kubernetesVersion: "1.28"
     podSubnetCIDR: 10.111.0.0/16
     podSubnetNodeCIDRPrefix: "24"
     serviceSubnetCIDR: 10.222.0.0/16
@@ -64,7 +64,7 @@ const globalValues = `
       master:
         __ConstantChoices__: "3"
     podSubnet: 10.0.1.0/16
-    kubernetesVersion: 1.27.0
+    kubernetesVersion: 1.28.0
 `
 
 const moduleValues = `
@@ -197,7 +197,7 @@ storageclass.kubernetes.io/is-default-class: "true"
 			f.ValuesSetFromYaml("global", globalValues)
 			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYaml("cloudProviderAws", moduleValues)
-			f.ValuesSetFromYaml("cloudProviderAws.internal.defaultStorageClass", `iops-foo`)
+			f.ValuesSetFromYaml("global.discovery.defaultStorageClass", `iops-foo`)
 			f.HelmRender()
 		})
 

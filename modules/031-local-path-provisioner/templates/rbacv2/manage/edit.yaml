@@ -9,7 +9,7 @@ metadata:
     rbac.deckhouse.io/kind: manage
     rbac.deckhouse.io/level: module
     rbac.deckhouse.io/namespace: d8-local-path-provisioner
-  name: d8:manage:capability:module:local-path-provisioner:edit
+  name: d8:manage:permission:module:local-path-provisioner:edit
 rules:
 - apiGroups:
   - deckhouse.io

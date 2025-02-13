@@ -12,12 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-{{ if ne .runType "ImageBuilding" -}}
 bb-event-on 'bb-sync-file-changed' '_on_journald_service_config_changed'
 _on_journald_service_config_changed() {
   systemctl restart systemd-journald.service
 }
-{{ end }}
 
 bb-sync-file /etc/systemd/journald.conf - << "EOF"
 # Configure log rotation for all journal logs, which is where kubelet and

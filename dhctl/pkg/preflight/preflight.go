@@ -30,7 +30,9 @@ type State interface {
 	SetGlobalPreflightchecksWasRan() error
 	GlobalPreflightchecksWasRan() (bool, error)
 	SetCloudPreflightchecksWasRan() error
+	SetPostCloudPreflightchecksWasRan() error
 	CloudPreflightchecksWasRan() (bool, error)
+	PostCloudPreflightchecksWasRan() (bool, error)
 	SetStaticPreflightchecksWasRan() error
 	StaticPreflightchecksWasRan() (bool, error)
 }
@@ -162,6 +164,35 @@ func (pc *Checker) Cloud() error {
 	}
 
 	return pc.bootstrapState.SetCloudPreflightchecksWasRan()
+
+}
+
+func (pc *Checker) PostCloud() error {
+
+	ready, err := pc.bootstrapState.PostCloudPreflightchecksWasRan()
+
+	if err != nil {
+		msg := fmt.Sprintf("Can not get state from cache: %v", err)
+		return errors.New(msg)
+	}
+
+	if ready {
+		return nil
+	}
+
+	err = pc.do("Cloud deployment preflight checks", []checkStep{
+		{
+			fun:            pc.CheckCloudAPIAccessibility,
+			successMessage: "access to cloud api from master host",
+			skipFlag:       app.CloudAPIAccessibilityArgName,
+		},
+	})
+
+	if err != nil {
+		return err
+	}
+
+	return pc.bootstrapState.SetPostCloudPreflightchecksWasRan()
 
 }
 

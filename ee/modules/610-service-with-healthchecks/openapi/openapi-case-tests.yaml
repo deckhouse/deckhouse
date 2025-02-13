@@ -1,0 +1,7 @@
+positive:
+  configValues:
+    - debug: true
+    - debug: false
+negative:
+  configValues:
+    - debug: "bbb"

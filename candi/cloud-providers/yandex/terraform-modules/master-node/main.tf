@@ -55,7 +55,9 @@ data "yandex_vpc_subnet" "kube_d" {
 }
 
 resource "yandex_vpc_address" "addr" {
-  count = var.nodeIndex < length(local.external_ip_addresses) ? local.external_ip_addresses[var.nodeIndex] == "Auto" ? 1 : 0 : 0
+  count = (var.nodeIndex < length(local.external_ip_addresses)
+    ? (local.external_ip_addresses[var.nodeIndex] == "Auto" ? 1 : 0)
+    : (length(local.external_ip_addresses) > 0 ? 1 : 0))
   name  = join("-", [local.prefix, "master", var.nodeIndex])
 
   external_ipv4_address {
@@ -69,10 +71,15 @@ resource "yandex_vpc_address" "addr" {
 }
 
 locals {
-  # null if var.nodeIndex < length(local.external_ip_addresses)
-  # yandex_vpc_address.addr[0].external_ipv4_address[0].address if local.external_ip_addresses == Auto
-  # local.external_ip_addresses[var.nodeIndex] if local.external_ip_addresses contain IP-addresses
-  external_ip_address = var.nodeIndex < length(local.external_ip_addresses) ? local.external_ip_addresses[var.nodeIndex] == "Auto" ? yandex_vpc_address.addr[0].external_ipv4_address[0].address : local.external_ip_addresses[var.nodeIndex] : null
+  external_ip_address = (var.nodeIndex < length(local.external_ip_addresses)
+    ? (local.external_ip_addresses[var.nodeIndex] == "Auto"
+      ? yandex_vpc_address.addr[0].external_ipv4_address[0].address
+      : local.external_ip_addresses[var.nodeIndex])
+    : (length(local.external_ip_addresses) > 0
+      ? yandex_vpc_address.addr[0].external_ipv4_address[0].address
+      : null
+      )
+    )
 }
 
 resource "yandex_compute_disk" "kubernetes_data" {
@@ -83,6 +90,12 @@ resource "yandex_compute_disk" "kubernetes_data" {
   type        = local.disk_type
 
   labels = local.additional_labels
+
+  timeouts {
+    create = var.resourceManagementTimeout
+    delete = var.resourceManagementTimeout
+    update = var.resourceManagementTimeout
+  }
 }
 
 resource "yandex_compute_instance" "master" {
@@ -137,6 +150,12 @@ resource "yandex_compute_instance" "master" {
       metadata,
       secondary_disk,
     ]
+  }
+
+  timeouts {
+    create = var.resourceManagementTimeout
+    delete = var.resourceManagementTimeout
+    update = var.resourceManagementTimeout
   }
 
   metadata = {

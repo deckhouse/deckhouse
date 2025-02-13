@@ -25,7 +25,7 @@ function restoreData() {
   updateNode('#clusterdomain', 'dhctl-domain');
   // updateNode('#resourceprefix', 'dhctl-prefix');
   updateNode('#sshkey', 'dhctl-sshkey');
-  {% for preset in site.data.getting_started.data.presets %}
+  {% for preset in site.data.getting_started.dkp_data.presets %}
   {%- if preset[1].recommended %}
   sessionStorage.setItem('dhctl-preset', '{{ preset[0] }}');
   {%- endif %}

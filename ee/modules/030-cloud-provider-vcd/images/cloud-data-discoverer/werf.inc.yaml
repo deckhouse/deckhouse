@@ -2,16 +2,18 @@
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: common/distroless
 import:
-  - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+  - image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
     add: /discoverer
     to: /discoverer
     before: setup
-docker:
-  ENTRYPOINT: ["/discoverer"]
+imageSpec:
+  config:
+    entrypoint: ["/discoverer"]
 ---
 {{ $discovererAbsPath := "/deckhouse/ee/modules/030-cloud-provider-vcd/images/cloud-data-discoverer" }}
-{{ $discovererRelPath := printf "%s/modules/030-cloud-provider-vcd/images/cloud-data-discoverer" .ModulePath }}
-artifact: {{ .ModuleName }}/{{ .ImageName }}-artifact
+{{ $discovererRelPath := printf "%smodules/030-cloud-provider-vcd/images/cloud-data-discoverer" .ModulePath }}
+image: {{ .ModuleName }}/{{ .ImageName }}-artifact
+final: false
 from: {{ .Images.BASE_GOLANG_20_ALPINE }}
 shell:
   install:

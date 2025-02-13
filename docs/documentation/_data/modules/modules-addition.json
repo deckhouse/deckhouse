@@ -1,0 +1,93 @@
+{
+  "commander-agent": {
+    "path": "",
+    "edition": "ce"
+  },
+  "istio": {
+    "path": "modules/istio/",
+    "edition": "ce"
+  },
+  "metallb": {
+    "path": "modules/metallb/",
+    "editionRestrictions": ["se", "se-plus", "cse-lite"],
+    "editionRestrictionsComment": {"all": {"ru": "Ограничение на работу с BGP", "en": "Restriction on working with BGP"}},
+    "edition": "ee"
+  },
+  "cloud-provider-vsphere": {
+    "path": "modules/cloud-provider-vsphere/",
+    "editionFullyAvailable": ["se-plus", "ee"],
+    "edition": "ee"
+  },
+  "cloud-provider-zvirt": {
+    "path": "modules/cloud-provider-zvirt/",
+    "editionFullyAvailable": ["se-plus", "ee"],
+    "edition": "ee"
+  },
+  "cni-cilium": {
+    "path": "modules/cni-cilium/",
+    "editionFullyAvailable": ["se-plus"],
+    "edition": "ce"
+  },
+  "user-authz": {
+    "path": "modules/user-authz/",
+    "editionFullyAvailable": ["be", "se", "se-plus"],
+    "edition": "ce"
+  },
+  "registrypackages": {
+    "path": "",
+    "edition": "ce"
+  },
+  "console": {
+    "path": "/products/kubernetes-platform/modules/console/stable/",
+    "external": "true",
+    "edition": "se"
+  },
+  "sds-node-configurator": {
+    "external": "true",
+    "path": "/products/kubernetes-platform/modules/sds-node-configurator/stable/",
+    "edition": "ce"
+  },
+  "sds-drbd": {
+    "external": "true",
+    "path": "/products/kubernetes-platform/modules/sds-drbd/stable/",
+    "edition": "ee"
+  },
+  "sds-replicated-volume": {
+    "external": "true",
+    "path": "/products/kubernetes-platform/modules/sds-replicated-volume/stable/",
+    "edition": "se",
+    "editionRestrictions": ["ce"]
+  },
+  "sds-local-volume": {
+    "external": "true",
+    "path": "/products/kubernetes-platform/modules/sds-local-volume/stable/",
+    "edition": "ce"
+  },
+  "virtualization": {
+    "external": "true",
+    "path": "/products/kubernetes-platform/modules/virtualization/stable/",
+    "edition": "ee",
+    "editionRestrictions": ["ce"]
+  },
+  "secrets-store-integration": {
+    "external": "true",
+    "path": "/products/kubernetes-platform/modules/secrets-store-integration/stable/",
+    "edition": "be"
+  },
+  "csi-ceph": {
+    "external": "true",
+    "path": "/products/kubernetes-platform/modules/csi-ceph/stable/",
+    "edition": "ce"
+  },
+  "csi-nfs": {
+    "external": "true",
+    "path": "/products/kubernetes-platform/modules/csi-nfs/stable/",
+    "edition": "ce"
+  },
+  "commander": {
+    "external": "true",
+    "path": "/products/kubernetes-platform/modules/commander/stable/",
+    "edition": "ee"
+  }
+}
+

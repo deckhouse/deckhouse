@@ -39,6 +39,10 @@ deckhouse:
   bundle: {{ .bundle }}
 {{- end }}
 
+{{- if .releaseChannel }}
+  releaseChannel: {{ .releaseChannel }}
+{{- end }}
+
 {{- if .logLevel }}
   logLevel: {{ .logLevel }}
 {{- end }}
@@ -72,35 +76,6 @@ func generateMetaConfigForDeckhouseConfigTest(t *testing.T, data map[string]inte
 
 func generateMetaConfigForDeckhouseConfigTestWithErr(t *testing.T, data map[string]interface{}) *MetaConfig {
 	return generateMetaConfig(t, configOverridesTemplate, data, true)
-}
-
-func TestDeckhouseReleaseChannelDeprecated(t *testing.T) {
-	metaConfig := generateMetaConfig(t, `
-apiVersion: deckhouse.io/v1
-kind: ClusterConfiguration
-clusterType: Static
-podSubnetCIDR: 10.111.0.0/16
-serviceSubnetCIDR: 10.222.0.0/16
-kubernetesVersion: "1.28"
-clusterDomain: "cluster.local"
----
-apiVersion: deckhouse.io/v1
-kind: InitConfiguration
-deckhouse:
-  devBranch: aaaa
-  releaseChannel: Beta
----
-apiVersion: deckhouse.io/v1alpha1
-# type of the configuration section
-kind: StaticClusterConfiguration
-# address space for the cluster's internal network
-internalNetworkCIDRs:
-- 192.168.199.0/24
-
-`, map[string]interface{}{}, false)
-	iCfg, err := PrepareDeckhouseInstallConfig(metaConfig)
-	require.NoError(t, err)
-	require.Equal(t, iCfg.ReleaseChannel, "Beta")
 }
 
 func TestModuleDeckhouseConfigOverridesAndMc(t *testing.T) {
@@ -157,46 +132,6 @@ spec:
 		require.Len(t, iCfg.ModuleConfigs, 1)
 	})
 
-	t.Run("Remove releaseChannel from module config and set to installer cfg for adding after bootstrap", func(t *testing.T) {
-		metaConfig := generateMetaConfigForDeckhouseConfigTest(t, map[string]interface{}{
-			"moduleConfigs": `
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleConfig
-metadata:
-  name: deckhouse
-spec:
-  enabled: true
-  settings:
-    releaseChannel: RockSolid
-  version: 1
-`,
-		})
-
-		iCfg, err := PrepareDeckhouseInstallConfig(metaConfig)
-		require.NoError(t, err)
-
-		require.Equal(t, iCfg.LogLevel, "Info")
-		require.Equal(t, iCfg.Bundle, "Default")
-
-		require.Len(t, iCfg.ModuleConfigs, 1)
-
-		require.NotContains(t, iCfg.ModuleConfigs[0].Spec.Settings, "releaseChannel")
-		require.Equal(t, iCfg.ReleaseChannel, "RockSolid")
-	})
-
-	t.Run("Use bundle and logLevel from module config", func(t *testing.T) {
-		metaConfig := generateMetaConfigForDeckhouseConfigTest(t, map[string]interface{}{
-			"logLevel": "Debug",
-			"bundle":   "Minimal",
-		})
-
-		iCfg, err := PrepareDeckhouseInstallConfig(metaConfig)
-		require.NoError(t, err)
-
-		require.Equal(t, iCfg.LogLevel, "Debug")
-		require.Equal(t, iCfg.Bundle, "Minimal")
-	})
-
 	t.Run("Forbid to use configOverrides", func(t *testing.T) {
 		metaConfig := generateMetaConfigForDeckhouseConfigTest(t, map[string]interface{}{
 			"configOverrides": `
@@ -211,6 +146,33 @@ configOverrides:
   common:
     testString: aaaaa
 `,
+		})
+
+		_, err := PrepareDeckhouseInstallConfig(metaConfig)
+		require.Error(t, err)
+	})
+
+	t.Run("Forbid to use releaseChannel", func(t *testing.T) {
+		metaConfig := generateMetaConfigForDeckhouseConfigTest(t, map[string]interface{}{
+			"releaseChannel": "Beta",
+		})
+
+		_, err := PrepareDeckhouseInstallConfig(metaConfig)
+		require.Error(t, err)
+	})
+
+	t.Run("Forbid to use bundle", func(t *testing.T) {
+		metaConfig := generateMetaConfigForDeckhouseConfigTest(t, map[string]interface{}{
+			"bundle": "Default",
+		})
+
+		_, err := PrepareDeckhouseInstallConfig(metaConfig)
+		require.Error(t, err)
+	})
+
+	t.Run("Forbid to use logLevel", func(t *testing.T) {
+		metaConfig := generateMetaConfigForDeckhouseConfigTest(t, map[string]interface{}{
+			"logLevel": "Info",
 		})
 
 		_, err := PrepareDeckhouseInstallConfig(metaConfig)

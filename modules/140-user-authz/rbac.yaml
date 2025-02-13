@@ -1,4 +1,0 @@
-module: user-authz
-namespace: none
-scopes:
-  - security

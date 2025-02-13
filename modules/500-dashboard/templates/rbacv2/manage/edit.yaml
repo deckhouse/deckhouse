@@ -9,7 +9,7 @@ metadata:
     rbac.deckhouse.io/kind: manage
     rbac.deckhouse.io/level: module
     rbac.deckhouse.io/namespace: d8-dashboard
-  name: d8:manage:capability:module:dashboard:edit
+  name: d8:manage:permission:module:dashboard:edit
 rules:
 - apiGroups:
   - deckhouse.io

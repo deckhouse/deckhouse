@@ -22,10 +22,15 @@ import (
 	"reflect"
 	"regexp"
 	"runtime"
+	"strings"
 
 	"github.com/pkg/errors"
 
 	"github.com/deckhouse/deckhouse/go_lib/set"
+)
+
+const (
+	disabledModulesKey = "disabledModules"
 )
 
 var (
@@ -62,9 +67,18 @@ func CheckRequirement(key, value string, enabledModules ...set.Set) (bool, error
 		return true, nil
 	}
 
-	fs, err := defaultRegistry.GetChecksByKey(key)
-	if err != nil {
-		return false, err
+	if key == disabledModulesKey && len(enabledModules) > 0 {
+		blocked := hasBlockingEnabledModules(value, enabledModules[0])
+		if blocked {
+			return false, fmt.Errorf("%q module(s) have to be disabled", value)
+		}
+
+		return true, nil
+	}
+
+	fs := defaultRegistry.GetChecksByKey(key)
+	if fs == nil {
+		return true, nil
 	}
 
 	for _, f := range fs {
@@ -142,7 +156,7 @@ type ValueGetter interface {
 
 type requirementsResolver interface {
 	RegisterCheck(key string, f CheckFunc)
-	GetChecksByKey(key string) ([]CheckFunc, error)
+	GetChecksByKey(key string) []CheckFunc
 
 	RegisterDisruption(key string, f DisruptionFunc)
 	GetDisruptionByKey(key string) (DisruptionFunc, error)
@@ -168,13 +182,13 @@ func (r *requirementsRegistry) RegisterDisruption(key string, f DisruptionFunc) 
 	r.disruptions[key] = f
 }
 
-func (r *requirementsRegistry) GetChecksByKey(key string) ([]CheckFunc, error) {
+func (r *requirementsRegistry) GetChecksByKey(key string) []CheckFunc {
 	f, ok := r.checkers[key]
 	if !ok {
-		return nil, errors.Wrap(ErrNotRegistered, fmt.Sprintf("requirement with a key: %s", key))
+		return nil
 	}
 
-	return f, nil
+	return f
 }
 
 func (r *requirementsRegistry) GetDisruptionByKey(key string) (DisruptionFunc, error) {
@@ -184,4 +198,21 @@ func (r *requirementsRegistry) GetDisruptionByKey(key string) (DisruptionFunc, e
 	}
 
 	return f, nil
+}
+
+// hasBlockingEnabledModules checks special requirement key `disabledModules` and block the release update
+// if any of these modules is enabled in the cluster
+func hasBlockingEnabledModules(requirementsValue string, enabledModules set.Set) bool {
+	arr := strings.Split(requirementsValue, ",")
+	if len(arr) == 0 {
+		return false
+	}
+
+	for _, moduleName := range arr {
+		if enabledModules.Has(strings.TrimSpace(moduleName)) {
+			return true
+		}
+	}
+
+	return false
 }

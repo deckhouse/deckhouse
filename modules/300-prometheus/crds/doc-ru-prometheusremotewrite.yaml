@@ -24,6 +24,13 @@ spec:
                   description: Bearer-токен.
                 customAuthToken:
                   description: Пользовательский токен, передаваемый в качестве заголовка `X-Auth-Token`.
+                headers:
+                  description: |
+                    HTTP-заголовки, добавляемые к запросу.
+                  properties:
+                    X-Scope-OrgID:
+                      description: |
+                        Заголовок `X-Scope-OrgID`, указывающий ID тенанта.
                 writeRelabelConfigs:
                   description: |
                     Параметры для relabel'инга данных для отправки.

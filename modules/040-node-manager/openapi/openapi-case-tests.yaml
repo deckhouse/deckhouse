@@ -9,8 +9,6 @@ defaults:
 positive:
   configValues:
     - {}
-    - allowedKubernetesVersions: ["1.29"]
-    - allowedBundles: ["ubuntu-lts", "centos", "debian" ]
   values:
     - { internal: {} }
     - internal:
@@ -36,8 +34,11 @@ positive:
                 zoneb: mysubnetidb
             tags:
               aaa: aaa
+        allowedBundles: ["ubuntu-lts", "centos", "debian", "opensuse"]
+
 
 negative:
-  configValues:
-    # NOTE: bundles from EE
-    - allowedBundles: [ "astra", "altlinux" ]
+  values:
+    - internal:
+        <<: *internalDefault
+        allowedBundles: "astra"

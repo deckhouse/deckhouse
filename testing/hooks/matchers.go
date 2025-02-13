@@ -32,7 +32,7 @@ type successfulExecutionMatcher struct {
 	path int
 }
 
-func (matcher *successfulExecutionMatcher) Match(actual interface{}) (success bool, err error) {
+func (matcher *successfulExecutionMatcher) Match(actual interface{}) (bool, error) {
 	hec, ok := actual.(*HookExecutionConfig)
 	if !ok {
 		return false, fmt.Errorf("matcher ExecuteSuccessfully expects a *HookExecutionConfig")
@@ -54,7 +54,7 @@ func (matcher *successfulExecutionMatcher) Match(actual interface{}) (success bo
 	return false, nil
 }
 
-func (matcher *successfulExecutionMatcher) FailureMessage(actual interface{}) (message string) {
+func (matcher *successfulExecutionMatcher) FailureMessage(actual interface{}) string {
 	hec := actual.(*HookExecutionConfig)
 	if hec.GoHook != nil && hec.GoHookError != nil {
 		return fmt.Sprintf("Expected\n\t%v\n to be nil", hec.GoHookError)
@@ -63,7 +63,7 @@ func (matcher *successfulExecutionMatcher) FailureMessage(actual interface{}) (m
 	return fmt.Sprintf("Expected\n\t%v\nto be zero", actual.(*HookExecutionConfig).Session.ExitCode())
 }
 
-func (matcher *successfulExecutionMatcher) NegatedFailureMessage(actual interface{}) (message string) {
+func (matcher *successfulExecutionMatcher) NegatedFailureMessage(actual interface{}) string {
 	hec := actual.(*HookExecutionConfig)
 	if hec.GoHook != nil && hec.GoHookError == nil {
 		return fmt.Sprintf("Expected\n\t%v\nnot to be nil", hec.GoHookError)

@@ -22,4 +22,4 @@ spec:
 
 > **Note!** Following the addition, deletion, or changing the annotation, you have to restart kube-proxy Pods manually.
 >
-> **Note!** The kube-proxy module is automatically disabled when the [cni-cilium](../021-cni-cilium/) module is enabled.
+> **Note!** The kube-proxy module is automatically disabled when the [cni-cilium](../cni-cilium/) module is enabled.

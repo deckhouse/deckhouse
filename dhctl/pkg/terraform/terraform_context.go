@@ -19,6 +19,7 @@ import (
 	"sync"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	dstate "github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/tomb"
 )
@@ -276,6 +277,7 @@ type BootstrapNodeRunnerOptions struct {
 	NodeIndex                        int
 	NodeCloudConfig                  string
 	AdditionalStateSaverDestinations []SaverDestination
+	RunnerLogger                     log.Logger
 }
 
 func (f *TerraformContext) GetBootstrapNodeRunner(metaConfig *config.MetaConfig, stateCache dstate.Cache, opts BootstrapNodeRunnerOptions) RunnerInterface {
@@ -290,7 +292,8 @@ func (f *TerraformContext) GetBootstrapNodeRunner(metaConfig *config.MetaConfig,
 				WithVariables(nodeConfig).
 				WithName(opts.NodeName).
 				WithAutoApprove(opts.AutoApprove).
-				WithAdditionalStateSaverDestination(opts.AdditionalStateSaverDestinations...)
+				WithAdditionalStateSaverDestination(opts.AdditionalStateSaverDestinations...).
+				WithLogger(opts.RunnerLogger)
 
 			tomb.RegisterOnShutdown(opts.NodeName, r.Stop)
 

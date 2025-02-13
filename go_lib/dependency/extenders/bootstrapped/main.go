@@ -21,14 +21,13 @@ import (
 
 	"github.com/flant/addon-operator/pkg/module_manager/scheduler/extenders"
 	scherror "github.com/flant/addon-operator/pkg/module_manager/scheduler/extenders/error"
-	"github.com/flant/addon-operator/pkg/utils/logger"
-	log "github.com/sirupsen/logrus"
 	"k8s.io/utils/ptr"
+
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 const (
-	Name              extenders.ExtenderName = "Bootstrapped"
-	RequirementsField string                 = "bootstrapped"
+	Name extenders.ExtenderName = "Bootstrapped"
 )
 
 var (
@@ -40,13 +39,14 @@ var _ extenders.Extender = &Extender{}
 
 type Extender struct {
 	modules map[string]bool
-	logger  logger.Logger
+	logger  *log.Logger
 }
 
+// TODO: refactor
 func Instance() *Extender {
 	once.Do(func() {
 		instance = &Extender{
-			logger:  log.WithField("extender", Name),
+			logger:  log.Default().With("extender", Name),
 			modules: make(map[string]bool),
 		}
 	})
@@ -59,8 +59,10 @@ func (e *Extender) AddConstraint(name string, value string) error {
 		e.logger.Debugf("adding installed constraint for the '%s' module failed", name)
 		return err
 	}
+
 	e.modules[name] = parsed
 	e.logger.Debugf("installed constraint for the '%s' module is added", name)
+
 	return nil
 }
 

@@ -2,10 +2,10 @@
 
 Установка Deckhouse на kind, рассматриваемая далее, позволит вам за менее чем 15 минут получить локальный кластер Kubernetes с установленным Deckhouse. Такой вариант развертывания Deckhouse позволит вам быстро развернуть Deckhouse и познакомиться с основными его возможностями.
 
-Deckhouse будет установлен в **минимальной** конфигурации с включенным [мониторингом](/products/kubernetes-platform/documentation/v1/modules/300-prometheus/) на базе Grafana. Некоторые функции, такие как [управление узлами](/products/kubernetes-platform/documentation/v1/modules/040-node-manager/) и [управление control-plane](/products/kubernetes-platform/documentation/v1/modules/040-control-plane-manager/), работать не будут. Для упрощения при работе с DNS используется сервис [sslip.io](https://sslip.io).
+Deckhouse будет установлен в **минимальной** конфигурации с включенным [мониторингом](/products/kubernetes-platform/documentation/v1/modules/prometheus/) на базе Grafana. Некоторые функции, такие как [управление узлами](/products/kubernetes-platform/documentation/v1/modules/node-manager/) и [управление control-plane](/products/kubernetes-platform/documentation/v1/modules/control-plane-manager/), работать не будут. Для упрощения при работе с DNS используется сервис [sslip.io](https://sslip.io).
 
 {% alert level="warning" %}
-Некоторые провайдеры блокируют работу sslip.io и подобных сервисов. Если вы столкнулись с такой проблемой, пропишите нужные домены в `hosts`-файл локально, или направьте реальный домен и исправьте [шаблон DNS-имен](../../products/kubernetes-platform/documentation/v1/deckhouse-configure-global.html#parameters-modules-publicdomaintemplate).
+Некоторые провайдеры блокируют работу sslip.io и подобных сервисов. Если вы столкнулись с такой проблемой, пропишите нужные домены в `hosts`-файл локально, или направьте реальный домен и исправьте [шаблон DNS-имен](/products/kubernetes-platform/documentation/v1/deckhouse-configure-global.html#parameters-modules-publicdomaintemplate).
 {% endalert %}
 
 {% comment %}
@@ -24,18 +24,14 @@ Deckhouse будет установлен в **минимальной** конф
 
 Развертывание кластера Kubernetes и установка в него Deckhouse выполняются с помощью [Shell-скрипта](https://github.com/deckhouse/deckhouse/blob/main/tools/kind-d8.sh):
 - Выполните следующую команду для установки Deckhouse **Community Edition**:
-  {% snippetcut selector="kind-install" %}
 ```shell
 bash -c "$(curl -Ls https://raw.githubusercontent.com/deckhouse/deckhouse/main/tools/kind-d8.sh)"
 ```
-  {% endsnippetcut %}
 - Либо выполните следующую команду для установки Deckhouse **Enterprise Edition**, указав лицензионный ключ:
-  {% snippetcut selector="kind-install" %}
 ```shell
  echo <LICENSE_KEY> | docker login -u license-token --password-stdin registry.deckhouse.io
 bash -c "$(curl -Ls https://raw.githubusercontent.com/deckhouse/deckhouse/main/tools/kind-d8.sh)" -- --key <LICENSE_KEY>
 ```
-  {% endsnippetcut %}
 
 По окончании установки инсталлятор выведет пароль пользователя `admin` для доступа в Grafana, которая будет доступна по адресу [http://grafana.127.0.0.1.sslip.io](http://grafana.127.0.0.1.sslip.io).
 
@@ -63,8 +59,6 @@ Good luck!
 {% endofftopic %}
 
 Пароль пользователя `admin` для Grafana также можно узнать выполнив команду:
-{% snippetcut selector="kind-get-password" %}
 ```shell
 kubectl -n d8-system exec svc/deckhouse-leader -c deckhouse -- sh -c "deckhouse-controller module values prometheus -o json | jq -r '.internal.auth.password'"
 ```
-{% endsnippetcut %}

@@ -17,13 +17,12 @@ limitations under the License.
 package scheduler
 
 import (
-	"github.com/flant/shell-operator/pkg/kube/object_patch"
-	"github.com/sirupsen/logrus"
+	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 
 	"github.com/deckhouse/deckhouse/modules/500-upmeter/hooks/smokemini/internal/snapshot"
 )
 
-func NewCleaner(patcher *object_patch.PatchCollector, logger *logrus.Entry, pods []snapshot.Pod) Cleaner {
+func NewCleaner(patcher go_hook.PatchCollector, logger go_hook.Logger, pods []snapshot.Pod) Cleaner {
 	return &kubeCleaner{
 		pods:                          pods,
 		persistenceVolumeClaimDeleter: newPersistentVolumeClaimDeleter(patcher, logger),

@@ -10,7 +10,7 @@ rules:
   resourceNames:
   - bashible-bashbooster
   - node-users
-{{- range $bundle := $.Values.nodeManager.allowedBundles }}
+{{- range $bundle := $.Values.nodeManager.internal.allowedBundles }}
   {{- range $.Values.nodeManager.internal.nodeGroups }}
   - bashible-{{ .name }}-{{ $bundle }}
   {{- end }}

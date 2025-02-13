@@ -49,9 +49,6 @@ type/dependencies:
   - '**/go.mod'
   - '**/go.sum'
 
-area/delivery:
-  - ee/modules/502-delivery/**
-
 area/docs:
   - '**/docs/**'
   - docs/**
@@ -112,7 +109,6 @@ area/storage:
   - modules/031-ceph-csi/**
   - modules/031-local-path-provisioner/**
   - modules/045-snapshot-controller/**
-  - modules/491-containerized-data-importer/**
 
 area/testing:
   - testing/**

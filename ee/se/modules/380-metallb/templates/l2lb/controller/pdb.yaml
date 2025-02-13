@@ -1,0 +1,14 @@
+{{- if and .Values.metallb.internal.l2loadbalancers (gt (len .Values.metallb.internal.l2loadbalancers) 0) }}
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: l2lb-controller
+  namespace: d8-{{ .Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "l2lb-controller")) | nindent 2 }}
+spec:
+  minAvailable: 0
+  selector:
+    matchLabels:
+      app: l2lb-controller
+{{- end }}

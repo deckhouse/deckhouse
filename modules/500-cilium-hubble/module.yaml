@@ -1,0 +1,11 @@
+name: cilium-hubble
+weight: 500
+subsystems:
+  - networking
+namespace: d8-cni-cilium
+description: |
+    The cilium-hubble module
+requirements:
+  bootstrapped: true
+  modules:
+    cni-cilium: '>= 0.0.0'

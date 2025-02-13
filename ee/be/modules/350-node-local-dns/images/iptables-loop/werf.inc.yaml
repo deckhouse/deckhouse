@@ -1,37 +1,44 @@
+{{- $iptables_version := "1.8.9" }}
+{{- $iptables_image_version := $iptables_version | replace "." "-" }}
+---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: common/distroless
 import:
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
   add: /relocate
   to: /
   before: setup
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
-  add: /
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+  add: /src
   to: /
   includePaths:
-  - lib64/iptables
-  - lib64/libm*
+  - '*.sh'
+  before: setup
+- image: registrypackages/iptables-artifact-{{ $iptables_image_version }}
+  add: /
+  to: /sbin
+  includePaths:
+  - xtables-legacy-multi
+  - xtables-nft-multi
   before: setup
 - image: common/iptables-wrapper
   add: /iptables-wrapper
   to: /sbin/iptables-wrapper
   before: setup
-docker:
-  ENTRYPOINT: ["/iptables-loop.sh"]
+imageSpec:
+  config:
+    entrypoint: [ "/iptables-loop.sh" ]
 ---
-{{ $iptablesLoopBinaries := "/bin/rm /bin/mkfifo /bin/mktemp /bin/echo /bin/sleep /bin/bash /sbin/ip /usr/bin/iptables* /sbin/iptables* /sbin/ip6tables* /sbin/xtables* /sbin/arptables* /usr/bin/inotifywait" }}
+{{ $iptablesLoopBinaries := "/bin/rm /bin/mkfifo /bin/mktemp /bin/echo /bin/sleep /bin/bash /sbin/ip /usr/bin/inotifywait" }}
 ---
-artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
-from: {{ $.Images.BASE_ALT_DEV }}
-git:
-- add: /{{ $.ModulePath }}modules/350-{{ $.ModuleName }}/images/{{ $.ImageName }}
-  to: /relocate
-  stageDependencies:
-    install:
-    - '**/*'
-  includePaths:
-    - '*.sh'
+image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+fromImage: common/relocate-artifact
+final: false
 shell:
+  beforeInstall:
+  - apt-get update
+  - apt-get install -y inotify-tools
+  - rm -rf /var/lib/apt/lists/* /var/cache/apt/* && mkdir -p /var/lib/apt/lists/partial /var/cache/apt/archives/partial
   install:
     - /binary_replace.sh -i "{{ $iptablesLoopBinaries }}" -o /relocate
     - |
@@ -39,3 +46,20 @@ shell:
         rm -f "/relocate/sbin/${cmd}"
         ln -s /sbin/iptables-wrapper "/relocate/sbin/${cmd}"
       done
+    - |
+      for mode in legacy nft; do
+        for basecmd in iptables ip6tables; do
+          for cmd in ${basecmd}-${mode} ${basecmd}-${mode}-save ${basecmd}-${mode}-restore; do
+            ln -sf /sbin/xtables-${mode}-multi "/relocate/sbin/${cmd}"
+          done
+        done
+      done
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+fromImage: common/src-artifact
+final: false
+git:
+- add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}
+  to: /src
+  includePaths:
+  - "*.sh"

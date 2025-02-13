@@ -55,7 +55,7 @@ func CreateNodeTerraformState(kubeCl *client.KubernetesClient, nodeName, nodeGro
 	return retry.NewLoop(fmt.Sprintf("Create Terraform state for Node %q", nodeName), 45, 10*time.Second).Run(task.CreateOrUpdate)
 }
 
-func SaveNodeTerraformState(kubeCl *client.KubernetesClient, nodeName, nodeGroup string, tfState, settings []byte) error {
+func SaveNodeTerraformState(kubeCl *client.KubernetesClient, nodeName, nodeGroup string, tfState, settings []byte, logger log.Logger) error {
 	if len(tfState) == 0 {
 		return ErrNoTerraformState
 	}
@@ -74,7 +74,7 @@ func SaveNodeTerraformState(kubeCl *client.KubernetesClient, nodeName, nodeGroup
 			return err
 		},
 	}
-	return retry.NewLoop(fmt.Sprintf("Save Terraform state for Node %q", nodeName), 45, 10*time.Second).Run(task.CreateOrUpdate)
+	return retry.NewLoop(fmt.Sprintf("Save Terraform state for Node %q", nodeName), 45, 10*time.Second).WithLogger(logger).Run(task.CreateOrUpdate)
 }
 
 func SaveMasterNodeTerraformState(kubeCl *client.KubernetesClient, nodeName string, tfState, devicePath []byte) error {

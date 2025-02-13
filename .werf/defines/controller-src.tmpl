@@ -1,0 +1,51 @@
+# render git imports include paths
+{{- define "controller_src_git_imports_include_paths" }}
+- dhctl
+- deckhouse-controller
+- global-hooks/**/*.go
+- modules/**/*.go
+- ee/se-plus/modules/021-cni-cilium/images/egress-gateway-agent/src/**/*.go
+- ee/se-plus/modules/021-cni-cilium/images/egress-gateway-agent/src/go.mod
+- ee/se-plus/modules/021-cni-cilium/images/egress-gateway-agent/src/go.sum
+- go_lib/**/*.go
+- go_lib/**/go.mod
+- go_lib/**/go.sum
+- pkg/**/*.go
+- pkg/**/go.mod
+- pkg/**/go.sum
+- go.mod
+- go.sum
+- tools
+- editions.yaml
+{{- end }}
+
+# render git imports exclude paths
+{{- define "controller_src_git_imports_exclude_paths" }}
+- global-hooks/**/*_test.go
+- modules/**/*_test.go
+- modules/*/images
+- dhctl/development
+- deckhouse-controller/development
+- deckhouse-controller/cmd/deckhouse-controller/register-go-hooks.go
+{{- end }}
+
+
+# render git imports stage dependencies
+{{- define "controller_src_git_imports_stage_deps" }}
+- dhctl/go.mod
+- dhctl/go.sum
+- go.mod
+- go.sum
+- dhctl/**/*.go
+- deckhouse-controller/**/*.go
+- deckhouse-controller/go-build.sh
+- global-hooks/**/*.go
+- go_lib/**/*.go
+- go_lib/**/go.mod
+- go_lib/**/go.sum
+- pkg/**/*.go
+- pkg/**/go.mod
+- pkg/**/go.sum
+- modules/**/*.go
+- editions.yaml
+{{- end }}

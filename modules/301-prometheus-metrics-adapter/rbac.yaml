@@ -1,6 +1,0 @@
-module: prometheus-metrics-adapter
-namespace: d8-monitoring
-scopes:
-  - observability
-crds:
-  - modules/301-prometheus-metrics-adapter/crds/*.yaml

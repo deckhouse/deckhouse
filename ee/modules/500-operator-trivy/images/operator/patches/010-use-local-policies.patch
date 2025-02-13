@@ -1,0 +1,23 @@
+diff --git a/pkg/policy/loader.go b/pkg/policy/loader.go
+index d8b439ab..8b03b315 100644
+--- a/pkg/policy/loader.go
++++ b/pkg/policy/loader.go
+@@ -92,9 +92,15 @@ func (pl *policyLoader) getPoliciesFromCache() (interface{}, interface{}, error)
+ func (pl *policyLoader) LoadPoliciesAndCommands() ([]string, []string, error) {
+ 	pl.mutex.Lock()
+ 	defer pl.mutex.Unlock()
+-	bundlePaths, err := pl.getBuiltInPolicies(context.Background())
+-	if err != nil {
+-		return []string{}, []string{}, fmt.Errorf("failed to download policies: %w", err)
++	var err error
++	bundlePaths := make([]string, 0, 1)
++	if os.Getenv("OPERATOR_USE_LOCAL_POLICIES") == "true" {
++		bundlePaths = append(bundlePaths, "/local")
++	} else {
++		bundlePaths, err = pl.getBuiltInPolicies(context.Background())
++		if err != nil {
++			return []string{}, []string{}, fmt.Errorf("failed to download policies: %w", err)
++		}
+ 	}
+ 	contentData, err := LoadPoliciesData(bundlePaths)
+ 	if err != nil {

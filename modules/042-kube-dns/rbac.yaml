@@ -1,5 +1,0 @@
-module: kube-dns
-namespace: kube-system
-scopes:
-  - kubernetes
-  - networking

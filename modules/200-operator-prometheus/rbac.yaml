@@ -1,3 +1,0 @@
-module: operator-prometheus
-scopes:
-  - observability

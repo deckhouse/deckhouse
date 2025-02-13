@@ -18,7 +18,7 @@ import (
 	"context"
 	"fmt"
 
-	apiv1 "k8s.io/api/core/v1"
+	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/yaml"
 
@@ -86,6 +86,8 @@ func (c *KubeProxyChecker) IsReady(nodeName string) (bool, error) {
 
 	if c.input != nil {
 		sshClient = ssh.NewClient(session.NewSession(*c.input), c.privateKeys)
+		// Avoid starting a new ssh agent
+		sshClient.InitializeNewAgent = false
 	} else {
 		sshClient = ssh.NewClientFromFlags()
 	}
@@ -96,7 +98,7 @@ func (c *KubeProxyChecker) IsReady(nodeName string) (bool, error) {
 			return false, fmt.Errorf("Not found external ip for node %s", nodeName)
 		}
 
-		sshClient.Settings.SetAvailableHosts([]string{ip})
+		sshClient.Settings.SetAvailableHosts([]session.Host{{Host: ip, Name: nodeName}})
 	}
 
 	var err error
@@ -145,7 +147,7 @@ func (c *KubeProxyChecker) Name() string {
 	return "Ssh access and kube-proxy availability"
 }
 
-func (c *KubeProxyChecker) printNs(cm *apiv1.ConfigMap) {
+func (c *KubeProxyChecker) printNs(cm *corev1.ConfigMap) {
 	if !c.logCheckResult {
 		return
 	}

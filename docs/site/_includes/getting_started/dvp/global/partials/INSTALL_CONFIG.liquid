@@ -1,0 +1,53 @@
+{% assign revision=include.revision %}
+
+{% if revision == 'ee' %}
+{% include getting_started/global/EE_ACCESS.md revision=revision %}
+<div class="dimmer-block-content{% if page.ee_only %} disabled{% endif %}">
+{% endif %}
+
+<div markdown="1">
+  The recommended settings for a Deckhouse Virtualization Platform {% if revision == 'ee' %}Enterprise Edition{% else %}Community Edition{% endif %} installation are generated below:
+- `config.yml` — a file with the configuration needed to bootstrap the cluster. Contains the installer parameters,{% if page. platform_type== 'cloud' %}cloud provider related parameters (such as credentials, instance type, etc), description of the resources that must be installed after the installation (nodes description, Ingress controller description, etc){% else %} access parameters{% endif %}, and the initial cluster parameters.
+
+**Please pay attention to**:
+- <span class="mustChange">highlighted</span> parameters you *must* define.
+- <span class="mightChange">parameters</span> you might want to change.
+{%- if page.platform_type == 'baremetal' %}
+- The installation must be performed from a **personal computer** with SSH access to the node, the **master node** of the future cluster.
+{%- endif %}
+{%- if page.platform_type == 'existing' %}
+- We recommend that you read the section *[If something went wrong](#if-something-went-wrong)* first; perhaps, your ISP case is already addressed there. Refer to it if you have any problems during the installation process.
+{%- endif %}
+
+Create the `config.yml` file.
+{% capture includePath %}_includes/getting_started/dvp/{{ page.platform_code }}/partials/config.yml{% if include.layout.size > 0 %}.{{ include.layout }}{% endif %}.{{ revision }}.inc{% endcapture %}
+{% include_file "{{ includePath }}" syntax="yaml" %}
+{%- if page.platform_type == 'existing' %}
+{% offtopic title="About nodeSelector, taints and tolerations..." %}
+You can control on which nodes the Deckhouse core components will run by setting  `nodeSelector`/`tolerations` in the `configOverrides.deckhouse` parameter of the installation configuration. You can also specify cluster node taints in the `configOverrides.global.modules.placement.customTolerationKeys` array so that Deckhouse can automatically add the appropriate `toleration` to its components.
+
+> Below is an example of setting `nodeSelector`/`tolerations` for the `deckhouse` module and specifying tolerations for other Deckhouse components in the `customTolerationKeys` array (do not copy this example without adapting it to your configuration as the values will be different):
+> ```yaml
+> deckhouse:
+>   configOverrides:
+>     # ...
+>     deckhouse:
+>       tolerations:
+>         - key: dedicated.deckhouse.io
+>           operator: Exists
+>     # ...
+>     global:
+>       modules:
+>         # ...
+>         placement:
+>           customTolerationKeys:
+>           - SystemLoad
+>           - app.kubernetes.io/instance
+> ```
+{% endofftopic %}
+{% endif %}
+</div>
+
+{% if revision == 'ee' %}
+</div>
+{% endif %}

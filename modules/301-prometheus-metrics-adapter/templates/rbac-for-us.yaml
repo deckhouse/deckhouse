@@ -97,7 +97,7 @@ rules:
 - apiGroups:
   - external.metrics.k8s.io
   resources:
-  - '*'
+  - '*' # In this case "resource" is the arbitrary metric name, so we have to use a wildcard
   verbs:
   - get
   - list

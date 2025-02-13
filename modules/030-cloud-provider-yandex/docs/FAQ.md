@@ -30,7 +30,7 @@ reserved: true
 
 ## dhcpOptions-related problems and ways to address them
 
-Using DNS servers that differ from those provided by Yandex Cloud in the DHCP settings is a temporary solution. It will be abandoned after Yandex Cloud will introduce the Managed DNS service. To get around the restrictions described below, we recommend using `stubZones` from the [`kube-dns`](../042-kube-dns/) module.
+Using DNS servers that differ from those provided by Yandex Cloud in the DHCP settings is a temporary solution. It will be abandoned after Yandex Cloud will introduce the Managed DNS service. To get around the restrictions described below, we recommend using `stubZones` from the [`kube-dns`](../kube-dns/) module.
 
 ### Editing parameters
 
@@ -47,19 +47,12 @@ If the dhcpOptions parameter is set, all DNS are routed to the DNS servers speci
 
 ## How to set a custom StorageClass as default?
 
-Do the following to set a custom StorageClass as default:
+Specify the StorageClass name in the [defaultClusterStorageClass](../../deckhouse-configure-global.html#parameters-defaultclusterstorageclass) parameter in the `global` module settings.
+Note that after doing so, the `storageclass.kubernetes.io/is-default-class='true'` annotation will be removed from the StorageClass that was previously set as the default one.
 
-1. Add `storageclass.kubernetes.io/is-default-class='true'` annotation to the StorageClass:
-
-   ```shell
-   kubectl annotate sc $STORAGECLASS storageclass.kubernetes.io/is-default-class='true'
-   ```
-
-2. Specify the StorageClass name in the [storageClass.default](configuration.html#parameters-storageclass-default) parameter in the `cloud-provider-yandex` module settings. Note that after doing so, the `storageclass.kubernetes.io/is-default-class='true'` annotation will be removed from the StorageClass that was previously listed in the module settings as the default one.
-
-   ```shell
-   kubectl edit mc cloud-provider-yandex
-   ```
+```shell
+kubectl edit mc global
+```
 
 ## Adding CloudStatic nodes to a cluster
 
@@ -98,5 +91,5 @@ kubectl -n kube-system get secret d8-provider-cluster-configuration -o json | jq
 
    ```shell
    dhctl bootstrap --ssh-bastion-host=178.154.226.159 --ssh-bastion-user=yc-user \
-   --ssh-user=ubuntu --ssh-agent-private-keys=/tmp/.ssh/id_rsa --config=/config.yml --resources=/resources.yml
+   --ssh-user=ubuntu --ssh-agent-private-keys=/tmp/.ssh/id_rsa --config=/config.yml
    ```

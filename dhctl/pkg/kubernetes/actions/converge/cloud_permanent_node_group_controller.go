@@ -45,24 +45,27 @@ func (c *CloudPermanentNodeGroupController) addNodes() error {
 	index := 0
 
 	var (
-		nodesToWait []string
+		nodesToWait        []string
+		nodesIndexToCreate []int
 	)
 
 	for c.desiredReplicas > count {
 		candidateName := fmt.Sprintf("%s-%s-%v", c.config.ClusterPrefix, c.name, index)
-
 		if _, ok := c.state.State[candidateName]; !ok {
-			err := BootstrapAdditionalNode(c.client, c.config, index, c.layoutStep, c.name, c.cloudConfig, true, c.terraformContext)
-			if err != nil {
-				return err
-			}
-
+			nodesIndexToCreate = append(nodesIndexToCreate, index)
 			count++
-			nodesToWait = append(nodesToWait, candidateName)
 		}
 		index++
 	}
 
+	err := log.Process("terraform", fmt.Sprintf("Pipelines %s for %s-%s-%v", c.layoutStep, c.config.ClusterPrefix, c.name, nodesIndexToCreate), func() error {
+		var err error
+		nodesToWait, err = ParallelBootstrapAdditionalNodes(c.client, c.config, nodesIndexToCreate, c.layoutStep, c.name, c.cloudConfig, true, c.terraformContext, log.GetDefaultLogger(), false)
+		return err
+	})
+	if err != nil {
+		return err
+	}
 	return WaitForNodesListBecomeReady(c.client, nodesToWait, nil)
 }
 
@@ -112,7 +115,7 @@ func (c *CloudPermanentNodeGroupController) updateNode(nodeName string) error {
 		return ErrConvergeInterrupted
 	}
 
-	err = SaveNodeTerraformState(c.client, nodeName, c.name, outputs.TerraformState, nodeGroupSettingsFromConfig)
+	err = SaveNodeTerraformState(c.client, nodeName, c.name, outputs.TerraformState, nodeGroupSettingsFromConfig, log.GetDefaultLogger())
 	if err != nil {
 		return err
 	}

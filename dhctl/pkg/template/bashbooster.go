@@ -21,7 +21,7 @@ import (
 	"strings"
 )
 
-func RenderBashBooster(templatesDir string) (string, error) {
+func RenderBashBooster(templatesDir string, data map[string]interface{}) (string, error) {
 	files, err := os.ReadDir(templatesDir)
 	if err != nil {
 		return "", fmt.Errorf("bashbooster read dir: %v", err)
@@ -33,6 +33,8 @@ func RenderBashBooster(templatesDir string) (string, error) {
 			continue
 		}
 
+		isTemplate := !file.IsDir() && strings.HasSuffix(file.Name(), ".tpl")
+
 		filePath := filepath.Join(templatesDir, file.Name())
 
 		fileContent, err := os.ReadFile(filePath)
@@ -40,8 +42,18 @@ func RenderBashBooster(templatesDir string) (string, error) {
 			return "", fmt.Errorf("bashbooster read file %q: %v", filePath, err)
 		}
 
-		// BashBooster step can have no endline symbol at the end of the file. Tolerate this.
-		bashBoosterScriptContent := strings.TrimSuffix(string(fileContent), "\n")
+		var bashBoosterScriptContent string
+		if isTemplate {
+			rendered, err := RenderTemplate(file.Name(), fileContent, data)
+			if err != nil {
+				return "", fmt.Errorf("render template file '%s': %v", file.Name(), err)
+			}
+			// BashBooster step can have no endline symbol at the end of the file. Tolerate this.
+			bashBoosterScriptContent = strings.TrimSuffix(string(rendered.Content.String()), "\n")
+		} else {
+			// BashBooster step can have no endline symbol at the end of the file. Tolerate this.
+			bashBoosterScriptContent = strings.TrimSuffix(string(fileContent), "\n")
+		}
 		builder.WriteString(fmt.Sprintf("# %s\n\n%s\n", filePath, bashBoosterScriptContent))
 	}
 

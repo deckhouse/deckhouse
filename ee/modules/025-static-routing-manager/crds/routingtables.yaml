@@ -1,3 +1,4 @@
+---
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
@@ -5,6 +6,7 @@ metadata:
   labels:
     heritage: deckhouse
     module: static-routing-manager
+    backup.deckhouse.io/cluster-config: "true"
 spec:
   group: network.deckhouse.io
   scope: Cluster
@@ -62,7 +64,7 @@ spec:
                 description: |
                   ID of the desired routing table.
 
-                  If the value is not explicitly specified, it will be generated automatically.
+                  If the value is not explicitly specified, it will be automatically generated and added to the `status` field.
 
                   Once a resource is created, you can only change the routing table ID by recreating the resource.
               routes:
@@ -74,7 +76,7 @@ spec:
                     Desired routes.
                   required:
                   - destination
-                  - gateway
+                  minProperties: 2
                   properties:
                     destination:
                       type: string
@@ -85,7 +87,13 @@ spec:
                       type: string
                       format: ipv4
                       description: |
-                        Nexthop.
+                        The gateway through which the subnet is reachable.
+                    dev:
+                      type: string
+                      maxLength: 15
+                      pattern: '^[^\s\\]{1,15}$'
+                      description: |
+                        The output device name.
               nodeSelector:
                 type: object
                 description: |

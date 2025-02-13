@@ -1,0 +1,7 @@
+---
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: web-settings
+  namespace: d8-{{ .Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "dashboard")) | nindent 2 }}

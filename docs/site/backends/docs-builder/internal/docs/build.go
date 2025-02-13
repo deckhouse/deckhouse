@@ -21,7 +21,6 @@ import (
 	"strings"
 
 	"github.com/spf13/fsync"
-	"k8s.io/klog/v2"
 
 	"github.com/flant/docs-builder/pkg/hugo"
 )
@@ -29,6 +28,8 @@ import (
 func (svc *Service) Build() error {
 	err := svc.buildHugo()
 	if err != nil {
+		svc.isReady.Store(false)
+
 		return fmt.Errorf("hugo build: %w", err)
 	}
 
@@ -60,7 +61,7 @@ func (svc *Service) buildHugo() error {
 	}
 
 	for {
-		err := hugo.Build(flags)
+		err := hugo.Build(flags, svc.logger)
 		if err == nil {
 			return nil
 		}
@@ -72,13 +73,13 @@ func (svc *Service) buildHugo() error {
 				return fmt.Errorf("remove module: %w", err)
 			}
 
-			moduleName, channel := parseModulePath(modulePath)
+			moduleName, channel := svc.parseModulePath(modulePath)
 			err = svc.removeModuleFromChannelMapping(moduleName, channel)
 			if err != nil {
 				return fmt.Errorf("remove module from channel mapping: %w", err)
 			}
 
-			klog.Warningf("removed broken module %q", modulePath)
+			svc.logger.Warnf("removed broken module %q", modulePath)
 			continue
 		}
 
@@ -101,10 +102,10 @@ func getAssembleErrorPath(errorMessage string) (string, bool) {
 	return "", false
 }
 
-func parseModulePath(modulePath string) (moduleName, channel string) {
+func (svc *Service) parseModulePath(modulePath string) (moduleName, channel string) {
 	s := strings.Split(modulePath, "/")
 	if len(s) < 2 {
-		klog.Error("failed to parse", modulePath)
+		svc.logger.Error("failed to parse", modulePath)
 		return "", ""
 	}
 

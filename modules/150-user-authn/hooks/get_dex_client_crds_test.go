@@ -58,6 +58,33 @@ kind: DexClient
 metadata:
   name: opendistro
   namespace: test
+  labels:
+    test-label: test-value
+    certmanager.k8s.io/certificate-name: test-cert-name
+    argocd.argoproj.io/instance: test-instance
+    argocd.argoproj.io/secret-type: secret-type
+    app.kubernetes.io/managed-by: Helm
+    app: should-be-removed
+    heritage: should-be-removed
+    module: should-be-removed
+    name: should-be-removed
+  annotations:
+    test-annotation: test-value
+    new-annotation: test-new-value
+    kubectl.kubernetes.io/last-applied-configuration: should-be-removed
+    meta.helm.sh/release-name: opendistro
+    meta.helm.sh/release-namespace: test
+    helm.sh/chart: my-chart-1.2.3
+    helm.sh/hook: pre-install,pre-upgrade
+    ci.werf.io/commit: 90we4affe93154c1200cd3db0f5ee3085c31def6
+    ci.werf.io/tag: v1
+    gitlab.ci.werf.io/job-url: https://gitlab.example.com/job-url
+    gitlab.ci.werf.io/pipeline-url: https://gitlab.example.com/pipeline-url
+    project.werf.io/env: test
+    project.werf.io/git: https://gitlab.example.com/
+    project.werf.io/name: opendistro
+    werf.io/release-channel: 1 alpha
+    werf.io/version: v1
 spec:
   redirectURIs:
   - https://opendistro.example.com/callback
@@ -93,7 +120,15 @@ spec:
   },
   "legacyID": "dex-client-opendistro:test",
   "legacyEncodedID": "mrsxqlldnruwk3tufvxxazlomruxg5dsn45hizltotf7fhheqqrcgji",
-  "clientSecret": "test"
+  "clientSecret": "test",
+  "labels": {
+    "test-label": "test-value"
+  },
+  "annotations": {
+    "test-annotation": "test-value",
+    "new-annotation": "test-new-value"
+  },
+  "allowAccessToKubernetes": false
 }]`))
 			})
 
@@ -152,7 +187,64 @@ spec:
   },
   "clientSecret": "test",
   "legacyID": "dex-client-opendistro:test",
-  "legacyEncodedID": "mrsxqlldnruwk3tufvxxazlomruxg5dsn45hizltotf7fhheqqrcgji"
+  "legacyEncodedID": "mrsxqlldnruwk3tufvxxazlomruxg5dsn45hizltotf7fhheqqrcgji",
+  "labels": {},
+  "annotations": {},
+  "allowAccessToKubernetes": false
+}]`))
+				})
+			})
+			Context("Should allow access to kubernetes api", func() {
+				BeforeEach(func() {
+					f.BindingContexts.Set(f.KubeStateSet(`
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: dex-client-opendistro
+  namespace: test
+  labels:
+    app: dex-client
+    name: credentials
+data:
+  clientSecret: dGVzdA==
+---
+apiVersion: deckhouse.io/v1
+kind: DexClient
+metadata:
+  name: opendistro
+  namespace: test
+  annotations:
+    dexclient.deckhouse.io/allow-access-to-kubernetes: "true"
+spec:
+  redirectURIs:
+  - https://opendistro.example.com/callback
+`))
+					f.RunHook()
+				})
+				It("Should update entry in internal values", func() {
+					Expect(f).To(ExecuteSuccessfully())
+					Expect(f.BindingContexts.Array()).ShouldNot(BeEmpty())
+
+					Expect(f.ValuesGet("userAuthn.internal.dexClientCRDs").String()).To(MatchJSON(`
+[{
+  "id": "dex-client-opendistro@test",
+  "encodedID": "mrsxqlldnruwk3tufvxxazlomruxg5dsn5ahizltotf7fhheqqrcgji",
+  "name": "opendistro",
+  "namespace": "test",
+  "spec": {
+    "redirectURIs": [
+      "https://opendistro.example.com/callback"
+    ]
+  },
+  "clientSecret": "test",
+  "legacyID": "dex-client-opendistro:test",
+  "legacyEncodedID": "mrsxqlldnruwk3tufvxxazlomruxg5dsn45hizltotf7fhheqqrcgji",
+  "labels": {},
+  "annotations": {
+    "dexclient.deckhouse.io/allow-access-to-kubernetes": "true"
+  },
+  "allowAccessToKubernetes": true
 }]`))
 				})
 			})
@@ -190,6 +282,33 @@ kind: DexClient
 metadata:
   name: opendistro
   namespace: test
+  labels:
+    test-label: test-value
+    certmanager.k8s.io/certificate-name: test-cert-name
+    argocd.argoproj.io/instance: test-instance
+    argocd.argoproj.io/secret-type: secret-type
+    app.kubernetes.io/managed-by: Helm
+    app: should-be-removed
+    heritage: should-be-removed
+    module: should-be-removed
+    name: should-be-removed
+  annotations:
+    test-annotation: test-value
+    new-annotation: test-new-value
+    kubectl.kubernetes.io/last-applied-configuration: should-be-removed
+    meta.helm.sh/release-name: opendistro
+    meta.helm.sh/release-namespace: test
+    helm.sh/chart: my-chart-1.2.3
+    helm.sh/hook: pre-install,pre-upgrade
+    ci.werf.io/commit: 90we4affe93154c1200cd3db0f5ee3085c31def6
+    ci.werf.io/tag: v1
+    gitlab.ci.werf.io/job-url: https://gitlab.example.com/job-url
+    gitlab.ci.werf.io/pipeline-url: https://gitlab.example.com/pipeline-url
+    project.werf.io/env: test
+    project.werf.io/git: https://gitlab.example.com/
+    project.werf.io/name: opendistro
+    werf.io/release-channel: 1 alpha
+    werf.io/version: v1
 spec:
   redirectURIs:
   - https://opendistro.example.com/callback
@@ -215,7 +334,10 @@ spec:
   "name": "grafana",
   "namespace": "test-grafana",
   "spec": {"redirectURIs": ["https://grafana.example.com/callback"]},
-  "clientSecret": "test"
+  "clientSecret": "test",
+  "labels": {},
+  "annotations": {},
+  "allowAccessToKubernetes": false
 },
 {
   "id": "dex-client-opendistro@test",
@@ -225,7 +347,15 @@ spec:
   "name": "opendistro",
   "namespace": "test",
   "spec": {"redirectURIs": ["https://opendistro.example.com/callback"]},
-  "clientSecret": "test"
+  "clientSecret": "test",
+  "labels": {
+    "test-label": "test-value"
+  },
+  "annotations": {
+    "test-annotation": "test-value",
+    "new-annotation": "test-new-value"
+  },
+  "allowAccessToKubernetes": false
 }]`))
 		})
 	})

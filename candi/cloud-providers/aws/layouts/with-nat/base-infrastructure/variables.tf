@@ -34,6 +34,11 @@ variable "clusterUUID" {
   type = string
 }
 
+variable "resourceManagementTimeout" {
+  type = string
+  default = "10m"
+}
+
 locals {
   with_nat                 = lookup(var.providerClusterConfiguration, "withNAT", {})
   bastion_instance         = lookup(local.with_nat, "bastionInstance", {})
@@ -42,4 +47,5 @@ locals {
   existing_vpc_id          = lookup(var.providerClusterConfiguration, "existingVPCID", "")
   tags                     = lookup(var.providerClusterConfiguration, "tags", {})
   ssh_allow_list           = lookup(var.providerClusterConfiguration, "sshAllowList", ["0.0.0.0/0"])
+  additional_role_policies = lookup(var.providerClusterConfiguration, "additionalRolePolicies", [])
 }

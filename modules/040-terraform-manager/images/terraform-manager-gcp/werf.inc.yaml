@@ -5,22 +5,24 @@ git:
 - add: /{{ .ModulePath }}candi/cloud-providers/gcp
   to: /deckhouse/candi/cloud-providers/gcp
 import:
-- artifact: terraform-provider-gcp
+- image: terraform-provider-gcp
   add: /terraform-provider-gcp
   to: /plugins/registry.terraform.io/{{ .TF.gcp.namespace }}/{{ .TF.gcp.type }}/{{ .TF.gcp.version }}/linux_amd64/terraform-provider-google
   before: setup
 ---
-artifact: terraform-provider-gcp
+image: terraform-provider-gcp
+final: false
 from: {{ $.Images.BASE_GOLANG_20_ALPINE }}
 mount:
   - fromPath: ~/go-pkg-cache
     to: /go/pkg
 shell:
   beforeInstall:
-    - apk add --no-cache make patch git bash
+    - apk add --no-cache make patch git bash openssh-client
   install:
     - mkdir /src
     - export GOPROXY={{ $.GOPROXY }}
+    - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
     - git clone --depth 1 --branch v{{ .TF.gcp.version }}-flant.1 {{ $.SOURCE_REPO }}/flant/terraform-provider-google.git /src
     - cd /src
     - go mod download

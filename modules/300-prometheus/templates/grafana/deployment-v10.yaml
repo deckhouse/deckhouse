@@ -68,7 +68,7 @@ spec:
     spec:
       {{- include "helm_lib_node_selector" (tuple . "monitoring") | nindent 6 }}
       {{- include "helm_lib_tolerations" (tuple . "monitoring") | nindent 6 }}
-      {{- include "helm_lib_priority_class" (tuple . "cluster-medium") | nindent 6 }}
+      {{- include "helm_lib_priority_class" (tuple . "cluster-low") | nindent 6 }}
       {{- include "helm_lib_pod_anti_affinity_for_ha" (list . (dict "app" "grafana-v10")) | nindent 6 }}
       {{- include "helm_lib_module_pod_security_context_run_as_user_deckhouse" . | nindent 6 }}
       serviceAccountName: grafana
@@ -136,12 +136,30 @@ spec:
           value: "false"
         - name: GF_UNIFIED_ALERTING_DISABLED_ORGS
           value: "1"
+        - name: GF_ANALYTICS_REPORTING_ENABLED
+          value: "false"
+        - name: GF_ANALYTICS_CHECK_FOR_UPDATES
+          value: "false"
+        - name: GF_ANALYTICS_CHECK_FOR_PLUGIN_UPDATES
+          value: "false"
+        - name: GF_ANALYTICS_FEEDBACK_LINKS_ENABLED
+          value: "false"
         {{- if hasKey .Values.prometheus "grafana" }}
           {{- if hasKey .Values.prometheus.grafana "customPlugins" }}
         - name: GF_INSTALL_PLUGINS
           value: "{{- range $i, $v := .Values.prometheus.grafana.customPlugins }}{{- if ne $i 0 -}},{{- end -}}{{- $v -}}{{- end }}"
           {{- end }}
         {{- end }}
+        - name: GF_SECURITY_CONTENT_SECURITY_POLICY
+          value: "true"
+        {{- if ne .Values.global.modules.https.mode "Disabled" }}
+        - name: GF_SERVER_STRICT_TRANSPORT_SECURITY
+          value: "true"
+        - name: GF_SECURITY_COOKIE_SECURE
+          value: "true"
+        {{- end }}
+        - name: GF_SECURITY_COOKIE_SAMESITE
+          value: "strict"
         - name: PROMETHEUS_TOKEN
           valueFrom:
             secretKeyRef:
@@ -151,6 +169,8 @@ spec:
         volumeMounts:
         - name: grafana-data
           mountPath: /var/lib/grafana/data
+        - name: grafana-alerting
+          mountPath: /var/lib/grafana/data/alerting
         - name: grafana-datasources
           mountPath: /etc/grafana/provisioning/datasources
         - name: grafana-alerts-channels
@@ -197,6 +217,8 @@ spec:
         volumeMounts:
         - name: grafana-data
           mountPath: /var/lib/grafana/data
+        - name: grafana-alerting
+          mountPath: /var/lib/grafana/data/alerting
         - name: shared-dashboards-folder
           mountPath: /etc/grafana/dashboards
         - name: tmp
@@ -282,6 +304,8 @@ spec:
           defaultMode: 420
           name: kube-rbac-proxy-ca.crt
       - name: grafana-data
+        emptyDir: {}
+      - name: grafana-alerting
         emptyDir: {}
       - name: tmp
         emptyDir: {}

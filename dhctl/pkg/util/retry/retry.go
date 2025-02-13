@@ -101,6 +101,11 @@ func (l *Loop) WithContext(ctx context.Context) *Loop {
 	return l
 }
 
+func (l *Loop) WithLogger(logger log.Logger) *Loop {
+	l.logger = logger
+	return l
+}
+
 func (l *Loop) WithShowError(flag bool) *Loop {
 	l.showError = flag
 	return l
@@ -130,7 +135,7 @@ func (l *Loop) Run(task func() error) error {
 				return err
 			}
 
-			l.logger.LogFail(fmt.Sprintf(attemptMessage, i, l.attemptsQuantity, l.name, l.waitTime))
+			l.logger.LogFailRetry(fmt.Sprintf(attemptMessage, i, l.attemptsQuantity, l.name, l.waitTime))
 			errorMsg := "\t%v\n\n"
 			if l.showError {
 				errorMsg = "\tError: %v\n\n"

@@ -15,7 +15,7 @@
 # limitations under the License.
 
 CONFIG_DIR=~/.kind-d8
-KIND_IMAGE=kindest/node:v1.27.13@sha256:17439fa5b32290e3ead39ead1250dca1d822d94a10d26f1981756cd51b24b9d8
+KIND_IMAGE=kindest/node:v1.30.8@sha256:17cd608b3971338d9180b00776cb766c50d0a0b6b904ab4ff52fd3fc5c6369bf
 D8_RELEASE_CHANNEL_TAG=stable
 D8_RELEASE_CHANNEL_NAME=Stable
 D8_REGISTRY_ADDRESS=registry.deckhouse.io
@@ -25,11 +25,11 @@ D8_LICENSE_KEY=
 KIND_INSTALL_DIRECTORY=$CONFIG_DIR
 KIND_PATH=kind
 KIND_CLUSTER_NAME=d8
-KIND_VERSION=v0.23.0
+KIND_VERSION=v0.26.0
 
 KUBECTL_INSTALL_DIRECTORY=$CONFIG_DIR
 KUBECTL_PATH=kubectl
-KUBECTL_VERSION=v1.27.13
+KUBECTL_VERSION=v1.30.8
 
 REQUIRE_MEMORY_MIN_BYTES=4000000000 # 4GB
 
@@ -546,6 +546,12 @@ deckhouse_install() {
   fi
 }
 
+macos_force_qemu() {
+  if [ "$OS_NAME" = "mac" ]
+  then ${KUBECTL_PATH} --context kind-"${KIND_CLUSTER_NAME}" patch daemonset node-exporter -n d8-monitoring --type='json' -p='[{"op": "add", "path": "/spec/template/spec/containers/1/env/-", "value": {"name": "EXPERIMENTAL_DOCKER_DESKTOP_FORCE_QEMU", "value": "1"}}]' 2>/dev/null
+  fi
+}
+
 ingress_check() {
   local retries_max=100
   local retries_count=0
@@ -654,6 +660,7 @@ main() {
   configs_create
   cluster_create
   deckhouse_install
+  macos_force_qemu
   ingress_check
   installation_finish
 }

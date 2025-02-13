@@ -21,15 +21,14 @@ import (
 	"strings"
 	"time"
 
+	"github.com/deckhouse/deckhouse/pkg/log"
 	"golang.org/x/sync/errgroup"
+	coordination "k8s.io/api/coordination/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	coordinationclientv1 "k8s.io/client-go/kubernetes/typed/coordination/v1"
 	"k8s.io/client-go/rest"
-	"k8s.io/klog/v2"
 	"k8s.io/utils/ptr"
-
-	coordination "k8s.io/api/coordination/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 const (
@@ -40,7 +39,7 @@ const (
 	leaseCollectionPeriod = 90
 )
 
-func NewLeasesManager() (*LeasesManager, error) {
+func NewLeasesManager(logger *log.Logger) (*LeasesManager, error) {
 	config, err := rest.InClusterConfig()
 	if err != nil {
 		return nil, fmt.Errorf("create rest config: %w", err)
@@ -63,6 +62,7 @@ func NewLeasesManager() (*LeasesManager, error) {
 		podNamespace:  os.Getenv("POD_NAMESPACE"),
 		clusterDomain: os.Getenv("CLUSTER_DOMAIN"),
 		name:          strings.Join([]string{"module-docs-builder", splitPodName[2]}, "-"),
+		logger:        logger,
 	}, nil
 }
 
@@ -73,6 +73,8 @@ type LeasesManager struct {
 
 	name    string
 	kclient *kubernetes.Clientset
+
+	logger *log.Logger
 }
 
 func (m *LeasesManager) create(ctx context.Context) error {
@@ -192,7 +194,7 @@ func (m *LeasesManager) garbageCollectionLoop(ctx context.Context) error {
 		case <-ticker.C:
 			err := m.gc(ctx)
 			if err != nil {
-				klog.Error("cleanup leases:", err)
+				m.logger.Error("cleanup leases:", log.Err(err))
 			}
 
 		case <-ctx.Done():

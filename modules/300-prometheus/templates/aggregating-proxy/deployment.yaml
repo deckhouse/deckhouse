@@ -32,7 +32,6 @@ spec:
         maxAllowed:
           cpu: 50m
           memory: 100Mi
-      {{- include "helm_lib_vpa_kube_rbac_proxy_resources" . | nindent 6 }}
       - containerName: promxy
         minAllowed:
           {{- include "promxy_resources" . | nindent 10 }}
@@ -64,14 +63,14 @@ spec:
     spec:
       {{- include "helm_lib_node_selector" (tuple . "monitoring") | nindent 6 }}
       {{- include "helm_lib_tolerations" (tuple . "monitoring") | nindent 6 }}
-      {{- include "helm_lib_priority_class" (tuple . "cluster-medium") | nindent 6 }}
+      {{- include "helm_lib_priority_class" (tuple . "cluster-low") | nindent 6 }}
       {{- include "helm_lib_pod_anti_affinity_for_ha" (list . (dict "app" "aggregating-proxy")) | nindent 6 }}
       {{- include "helm_lib_module_pod_security_context_run_as_user_deckhouse" . | nindent 6 }}
       serviceAccountName: aggregating-proxy
       initContainers:
         - name: wait-memcached
-          image: {{ include "helm_lib_module_common_image" (list . "alpine") }}
-          command: [ '/bin/sh', '-c', 'while ! nc -w 1 -z memcached:11211; do sleep 1; done' ]
+          image: {{ include "helm_lib_module_common_image" (list . "init") }}
+          command: [ '/bin/sh', '-c', 'while ! nc -w 1 -z memcached 11211; do sleep 1; done' ]
           {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 10 }}
           resources:
             requests:

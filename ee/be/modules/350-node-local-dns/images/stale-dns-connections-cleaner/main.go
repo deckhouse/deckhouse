@@ -10,6 +10,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"log/slog"
 	"net"
 	"net/http"
 	"os"
@@ -25,7 +26,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 
-	log "github.com/sirupsen/logrus"
+	"github.com/deckhouse/deckhouse/pkg/log"
 	"github.com/vishvananda/netlink"
 )
 
@@ -115,13 +116,13 @@ func main() {
 	go func() {
 		log.Infof("Signal received: %v. Exiting.\n", <-signalChan)
 		cancel()
-		log.Infoln("Waiting for stop reconcile loop...")
+		log.Info("Waiting for stop reconcile loop...")
 		<-doneCh
 
 		ctx, cancel := context.WithTimeout(rootCtx, 10*time.Second)
 		defer cancel()
 
-		log.Infoln("Shutdown ...")
+		log.Info("Shutdown ...")
 
 		err := httpServer.Shutdown(ctx)
 		if err != nil {
@@ -145,7 +146,7 @@ func main() {
 
 	err = httpServer.ListenAndServe()
 	if !errors.Is(err, http.ErrServerClosed) {
-		log.Fatal(err)
+		log.Fatal("httpServer", slog.String("error", err.Error()))
 	}
 }
 

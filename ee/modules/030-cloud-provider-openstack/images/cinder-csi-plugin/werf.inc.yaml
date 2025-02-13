@@ -1,56 +1,82 @@
 {{- range $key, $value := .CandiVersionMap.k8s }}
-  {{- $version := toString $key }}
+  {{- $image_version := toString $key | replace "." "-" }}
   {{- if $value.csi.openstack }}
+    {{- $src_version := toString $value.csi.openstack}}
+    {{- $patches := (printf "/%smodules/%s-%s/images/%s" $.ModulePath $.ModulePriority $.ModuleName $.ImageName) }}
+    {{- $patch := false }}
+    {{- range $path, $_ := $.Files.Glob (printf "%s/*" $patches) }}
+      {{- if contains $src_version $path }}
+        {{- $patch = true }}
+      {{- end }}
+    {{- end }}
 ---
-image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $version | replace "." "-" }}
+image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
 fromImage: common/distroless
 import:
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
   add: /src/cinder-csi-plugin
   to: /bin/cinder-csi-plugin
   before: setup
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
   add: /relocate
   to: /
   before: install
   includePaths:
   - '**/*'
-docker:
-  ENTRYPOINT: ["/bin/cinder-csi-plugin"]
+imageSpec:
+  config:
+    entrypoint: ["/bin/cinder-csi-plugin"]
 ---
-artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
-    {{- if semverCompare ">=1.30" $version }}
-from: {{ $.Images.BASE_GOLANG_22_BULLSEYE }}
-    {{- else if semverCompare "=1.29" $version }}
-from: {{ $.Images.BASE_GOLANG_21_BULLSEYE }}
-    {{- else if semverCompare ">=1.27" $version }}
-from: {{ $.Images.BASE_GOLANG_20_BUSTER }}
-    {{- else if semverCompare "=1.26" $version }}
-from: {{ $.Images.BASE_GOLANG_19_BUSTER }}
-    {{- end }}
+image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
+final: false
+fromImage: common/src-artifact
+{{- if $patch }}
+git:
+- add: {{ $patches }}/patches/{{ $src_version }}
+  to: /patches
+  stageDependencies:
+    install:
+      - '**/*'
+{{- end }}
+shell:
+  install:
+  - git clone --depth 1 --branch {{ $value.csi.openstack }} {{ $.SOURCE_REPO }}/kubernetes/cloud-provider-openstack.git /src
+  - cd /src
+  {{- if $patch }}
+  - git apply /patches/*.patch --verbose
+  {{- end }}
+  - rm -rf .git
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
+final: false
+from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
+  add: /src
+  to: /src
+  before: install
 mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
 shell:
   beforeInstall:
-  - apt update && apt-get install -y --no-install-recommends ca-certificates git make
+  {{- include "alpine packages proxy" . | nindent 2 }}
+  - apk add --no-cache make
   install:
-  - export GO_VERSION=${GOLANG_VERSION}
-  - export GOPROXY={{ $.GOPROXY }}
-  - mkdir -p /src
-  - git clone {{ $.SOURCE_REPO }}/kubernetes/cloud-provider-openstack.git /src
   - cd /src
-  - git checkout tags/{{ $value.csi.openstack }}
-  - git config --global user.email "builder@deckhouse.io"
+  - export GOPROXY={{ $.GOPROXY }}
   - export VERSION={{ $value.csi.openstack }}
   - make cinder-csi-plugin
   {{- end }}
 {{- end }}
 ---
 {{- $csiBinaries := "/bin/chmod /bin/mount /bin/mkdir /bin/rmdir /bin/umount /bin/findmnt /bin/lsblk /sbin/badblocks /sbin/blockdev /sbin/blk* /sbin/btrfs* /sbin/dumpe2fs /sbin/e2* /sbin/findfs /sbin/fsck* /sbin/fsfreeze /sbin/fstrim /sbin/mke2fs /sbin/mkfs* /sbin/resize2fs /usr/sbin/parted /usr/sbin/xfs*" }}
----
-artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
-from: {{ $.Images.BASE_ALT_DEV }}
+image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+final: false
+fromImage: common/relocate-artifact
 shell:
-  setup:
-    - /binary_replace.sh -i "{{ $csiBinaries }}" -o /relocate
+  beforeInstall:
+  - apt-get update -y
+  - apt-get install -y e2fsprogs xfsprogs parted btrfs-progs
+  install:
+  - /binary_replace.sh -i "{{ $csiBinaries }}" -o /relocate

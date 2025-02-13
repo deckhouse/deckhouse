@@ -22,11 +22,13 @@ import (
 	"time"
 
 	flantkubeclient "github.com/flant/kube-client/client"
+	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh/session"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
@@ -35,12 +37,14 @@ type HookForDestroyPipeline struct {
 	kubeCl            *client.KubernetesClient
 	nodeToDestroy     string
 	oldMasterIPForSSH string
+	commanderMode     bool
 }
 
-func NewHookForDestroyPipeline(kubeCl *client.KubernetesClient, nodeToDestroy string) *HookForDestroyPipeline {
+func NewHookForDestroyPipeline(kubeCl *client.KubernetesClient, nodeToDestroy string, commanderMode bool) *HookForDestroyPipeline {
 	return &HookForDestroyPipeline{
 		kubeCl:        kubeCl,
 		nodeToDestroy: nodeToDestroy,
+		commanderMode: commanderMode,
 	}
 }
 
@@ -61,13 +65,17 @@ func (h *HookForDestroyPipeline) BeforeAction(runner terraform.RunnerInterface) 
 }
 
 func (h *HookForDestroyPipeline) AfterAction(runner terraform.RunnerInterface) error {
+	if h.commanderMode {
+		return nil
+	}
+
 	cl := h.kubeCl.NodeInterfaceAsSSHClient()
 	if cl == nil {
 		log.DebugLn("Node interface is not ssh")
 		return nil
 	}
 
-	cl.Settings.RemoveAvailableHosts(h.oldMasterIPForSSH)
+	cl.Settings.RemoveAvailableHosts(session.Host{Host: h.oldMasterIPForSSH, Name: h.nodeToDestroy})
 	return nil
 }
 
@@ -102,6 +110,10 @@ func removeLabelsFromNode(kubeCl *client.KubernetesClient, nodeName string, labe
 	return retry.NewLoop(fmt.Sprintf("Remove labels from node %s", nodeName), 45, 5*time.Second).Run(func() error {
 		node, err := kubeCl.CoreV1().Nodes().Get(context.TODO(), nodeName, metav1.GetOptions{})
 		if err != nil {
+			if errors.IsNotFound(err) {
+				log.InfoF("Node '%s' has been deleted. Skip\n", nodeName)
+				return nil
+			}
 			return err
 		}
 

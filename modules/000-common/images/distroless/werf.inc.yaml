@@ -2,15 +2,20 @@
 image: {{ .ModuleName }}/{{ .ImageName }}
 from: {{ .Images.BASE_SCRATCH }}
 import:
-  - artifact: {{ .ModuleName }}/{{ .ImageName }}-artifact
+  - image: {{ .ModuleName }}/{{ .ImageName }}-artifact
     add: /relocate
     to: /
     before: setup
+imageSpec:
+  config:
+    user: "64535:64535"
 ---
-artifact: {{ .ModuleName }}/{{ .ImageName }}-artifact
+image: {{ .ModuleName }}/{{ .ImageName }}-artifact
 from: {{ .Images.BASE_ALPINE }}
+final: false
 shell:
   beforeInstall:
+  {{- include "alpine packages proxy" . | nindent 2 }}
   - apk add --no-cache ca-certificates tzdata
   install:
   - mkdir -p /relocate/bin /relocate/sbin /relocate/etc /relocate/etc/ssl /relocate/usr/bin /relocate/usr/sbin /relocate/usr/share

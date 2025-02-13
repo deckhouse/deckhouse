@@ -13,6 +13,8 @@ apiVersions:
       ```shell
       kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller edit provider-cluster-configuration
       ```
+
+      > After updating the node parameters, you need to run the [dhctl converge](../../deckhouse-faq.html#changing-the-configuration) command to apply the changes.
     x-doc-search: |
       ProviderClusterConfiguration
     x-unsafe-rules: [deleteZones]
@@ -71,20 +73,20 @@ apiVersions:
         description: |
           The definition of the master's NodeGroup.
 
-          > Caution! After changing the parameters of the section, you need to run `dhctl converge` for the changes to take effect.
+          > For the changes to take effect, run `dhctl converge` after modifying the parameters of the `masterNodeGroup` section.
         additionalProperties: false
         required: [replicas, instanceClass]
-        x-unsafe-rules: [updateMasterImage]
         properties:
           replicas:
             description: |
               The number of master nodes to create. It is important to have an odd number of masters to ensure a quorum.
             type: integer
             minimum: 1
-            x-unsafe-rules: [updateReplicas]
           zones:
             description: |
-              A limited set of zones in which nodes can be created.
+              A limited set of zones in which master nodes can be created.
+
+              The order in which zones are specified does not influence the sequence of node creation. Nodes are assigned to zones in alphabetical order: the first node is placed in the alphabetically first zone, the second node in the second zone, and so forth. If there are more nodes than zones, the assignment process restarts from the beginning of the zone list after placing a node in the last alphabetical zone.
             x-doc-required: false
             type: array
             items:
@@ -96,7 +98,7 @@ apiVersions:
           instanceClass:
             type: object
             description: |
-              Partial contents of the fields of the [YandexInstanceClass](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-yandex/cr.html#yandexinstanceclass).
+              Partial contents of the fields of the [YandexInstanceClass](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/cloud-provider-yandex/cr.html#yandexinstanceclass).
             additionalProperties: false
             required: [cores, memory, imageID]
             properties:
@@ -143,21 +145,26 @@ apiVersions:
               externalIPAddresses: &instanceClassExternalIPAddresses
                 type: array
                 description: |
-                  A list of external addresses.
+                  A list of external IP addresses, listed in the order of the zones where nodes will be created.
 
-                  If `externalSubnetID` is not set, you have to use either [reserved public IP addresses](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-yandex/faq.html#how-to-reserve-a-public-ip-address) or the `Auto` constant.
+                  The following values can be specified in the list:
+                  - IP address from an additional external network for the corresponding zone (parameter `externalSubnetIDs`);
+                  - [reserved public IP address](faq.html#how-to-reserve-a-public-ip-address), if the list of additional external networks is not defined (parameter `externalSubnetIDs`);
+                  - `Auto`, to order a public IP address in the corresponding zone.
 
-                  If `externalSubnetID` is set, you must select specific unallocated IP addresses from the specified subnet.
+                  Please note:
+                  - The array elements must be listed according to the order of zones (parameter `zones`) in which the nodes will be created.
 
-                  The number of array elements **must** correspond to the number of nodes in the group (the value of the `replicas` parameter). If the value `Auto` is used (automatic public IP address reservation), then in the list, you still need to specify as many elements with the value `Auto` as there are nodes in the group.
+                    For example:
 
-                  The array elements must be listed in the same order as the zones in which the nodes will be created. For example:
+                    ```yaml
+                    - <RU-CENTRAL1-A-IP-ADDRESS>
+                    - <RU-CENTRAL1-B-IP-ADDRESS>
+                    - <RU-CENTRAL1-D-IP-ADDRESS>
+                    ```
 
-                  ```yaml
-                  - <RU-CENTRAL1-A-IP-ADDRESS>
-                  - <RU-CENTRAL1-B-IP-ADDRESS>
-                  - <RU-CENTRAL1-D-IP-ADDRESS>
-                  ```
+                  - The number of elements in the `externalIPAddresses` array must equal the number of nodes in the group (the `replicas` parameter). To automatically order public IP addresses in the zone, use the value `Auto` in the list of the `externalIPAddresses` parameter at the corresponding position (matching the order of zones).
+                  - If `externalIPAddresses` is not specified, the nodes in the group will be ordered without external IP addresses.
                 items:
                   type: string
                   pattern: '^([0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3})|(Auto)$'
@@ -169,11 +176,13 @@ apiVersions:
               externalSubnetIDs: &instanceClassExternalSubnetIDs
                 type: array
                 description: |
-                  If specified, an additional network interface will be added to the node (the latter will use it as a default route).
+                  List of additional external networks connected to the nodes.
 
-                  Also, a route for the node's internal interface will be added (it will cover the entire `nodeNetworkCIDR` subnet).
+                  The node interface that is in the list will be assigned as the default gateway.
 
-                  The array elements must be listed in the same order as the zones in which the nodes will be created. For example:
+                  Also, a route for the node's internal network interface will be added for the entire subnet specified in [nodeNetworkCIDR](#yandexclusterconfiguration-nodenetworkcidr).
+
+                  The array elements **must** be listed in the same order as the zones (parameter `zones`) in which the nodes will be created. For example:
 
                   ```yaml
                   - <RU-CENTRAL1-A-SUBNET-ID>
@@ -221,6 +230,8 @@ apiVersions:
               type: array
               description: |
                 A limited set of zones in which nodes can be created.
+
+                The order in which zones are specified does not influence the sequence of node creation. Nodes are assigned to zones in alphabetical order: the first node is placed in the alphabetically first zone, the second node in the second zone, and so forth. If there are more nodes than zones, the assignment process restarts from the beginning of the zone list after placing a node in the last alphabetical zone.
               items:
                 enum:
                 - ru-central1-a
@@ -263,7 +274,7 @@ apiVersions:
                   description: |
                     The same as the `.spec.taints` field of the [Node](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#taint-v1-core) object.
 
-                    > **Caution!** Only the `effect`, `key`, `values`  fields are available.
+                    > Available fields: `effect`, `key`, and `values`.
                   x-doc-example: |
                     ```yaml
                     taints:
@@ -285,7 +296,7 @@ apiVersions:
               required: [cores, memory, imageID]
               type: object
               description: |
-                Partial contents of the fields of the [YandexInstanceClass](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-yandex/cr.html#yandexinstanceclass).
+                Partial contents of the fields of the [YandexInstanceClass](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/cloud-provider-yandex/cr.html#yandexinstanceclass).
               properties:
                 platform: *instanceClassPlatform
                 cores: *instanceClassCores
@@ -342,7 +353,7 @@ apiVersions:
         description: |
           A list of DHCP parameters to use for all subnets.
 
-          Note that setting dhcpOptions may lead to [problems](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-yandex/faq.html#dhcpoptions-related-problems-and-ways-to-address-them).
+          Note that setting dhcpOptions may lead to [problems](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/cloud-provider-yandex/faq.html#dhcpoptions-related-problems-and-ways-to-address-them).
         properties:
           domainName:
             description: |
@@ -360,12 +371,12 @@ apiVersions:
         description: |
           The way resources are located in the cloud.
 
-          Read [more](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-yandex/layouts.html) about possible provider layouts.
+          Read [more](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/cloud-provider-yandex/layouts.html) about possible provider layouts.
         enum: [Standard, WithoutNAT, WithNATInstance]
       withNATInstance:
         type: object
         description: |
-          Settings for the [`WithNATInstance`](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-yandex/layouts.html#withnatinstance) layout.
+          Settings for the [`WithNATInstance`](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/cloud-provider-yandex/layouts.html#withnatinstance) layout.
         additionalProperties: false
         properties:
           exporterAPIKey:
@@ -380,7 +391,7 @@ apiVersions:
             default: ""
           natInstanceExternalAddress:
             description: |
-              A [reserved external IP address](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-yandex/faq.html#how-to-reserve-a-public-ip-address) (or `externalSubnetID` address if specified).
+              A [reserved external IP address](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/cloud-provider-yandex/faq.html#how-to-reserve-a-public-ip-address) (or `externalSubnetID` address if specified).
             type: string
             pattern: '^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$'
           natInstanceInternalAddress:
@@ -414,10 +425,15 @@ apiVersions:
                   Amount of primary memory in MB provision on the NAT instance.
                 type: integer
                 default: 2048
+              platform:
+                description: |
+                  Processor platform type on the NAT instance.
+                type: string
+                default: "standard-v2"
       provider:
         type: object
         description: |
-          Contains [settings to connect](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-yandex/environment.html) to the Yandex Cloud API.
+          Contains [settings to connect](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/cloud-provider-yandex/environment.html) to the Yandex Cloud API.
         additionalProperties: false
         properties:
           cloudID:

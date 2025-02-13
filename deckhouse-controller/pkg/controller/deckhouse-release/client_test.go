@@ -26,8 +26,7 @@ import (
 	"text/template"
 
 	"github.com/Masterminds/sprig/v3"
-	"github.com/flant/shell-operator/pkg/metric_storage"
-	log "github.com/sirupsen/logrus"
+	metricstorage "github.com/flant/shell-operator/pkg/metric_storage"
 	"github.com/stretchr/testify/require"
 	"helm.sh/helm/v3/pkg/releaseutil"
 	appsv1 "k8s.io/api/apps/v1"
@@ -39,8 +38,12 @@ import (
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers"
+	releaseUpdater "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/releaseupdater"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
+
+var testDeckhouseVersion = "v1.15.0"
 
 func setupFakeController(
 	t *testing.T,
@@ -93,12 +96,19 @@ func setupControllerSettings(
 	dc := dependency.NewDependencyContainer()
 
 	rec := &deckhouseReleaseReconciler{
-		client:         cl,
-		dc:             dc,
-		logger:         log.New(),
-		moduleManager:  stubModulesManager{},
-		updateSettings: helpers.NewDeckhouseSettingsContainer(ds),
-		metricStorage:  metric_storage.NewMetricStorage(context.Background(), "", true),
+		client:           cl,
+		deckhouseVersion: testDeckhouseVersion,
+		dc:               dc,
+		logger:           log.NewNop(),
+		moduleManager:    stubModulesManager{},
+		updateSettings:   helpers.NewDeckhouseSettingsContainer(ds),
+		metricStorage:    metricstorage.NewMetricStorage(context.Background(), "", true, log.NewNop()),
+		metricsUpdater:   releaseUpdater.NewMetricsUpdater(metricstorage.NewMetricStorage(context.Background(), "", true, log.NewNop()), releaseUpdater.D8ReleaseBlockedMetricName),
+	}
+	rec.clusterUUID = rec.getClusterUUID(context.Background())
+
+	for _, option := range options {
+		option(rec)
 	}
 
 	for _, option := range options {
@@ -113,7 +123,7 @@ func assembleInitObject(t *testing.T, obj string) client.Object {
 	var typ runtime.TypeMeta
 
 	err := yaml.Unmarshal([]byte(obj), &typ)
-	require.NoError(t, err)
+	require.NoErrorf(t, err, "try unmarshal yaml\n%s", obj)
 
 	switch typ.Kind {
 	case "Secret":
@@ -147,12 +157,12 @@ func fetchTestFileData(t *testing.T, filename, valuesJSON string) string {
 apiVersion: v1
 kind: Secret
 metadata:
- name: deckhouse-discovery
- namespace: d8-system
+  name: deckhouse-discovery
+  namespace: d8-system
 type: Opaque
 data:
 {{- if $.Values.global.discovery.clusterUUID }}
- clusterUUID: {{ $.Values.global.discovery.clusterUUID | b64enc }}
+  clusterUUID: {{ $.Values.global.discovery.clusterUUID | b64enc }}
 {{- end }}
 `
 
@@ -160,16 +170,27 @@ data:
 apiVersion: v1
 kind: Secret
 metadata:
- name: deckhouse-registry
- namespace: d8-system
+  name: deckhouse-registry
+  namespace: d8-system
 data:
- clusterIsBootstrapped: {{ .Values.global.clusterIsBootstrapped | quote | b64enc }}
- imagesRegistry: {{ b64enc .Values.global.modulesImages.registry.base }}
+  clusterIsBootstrapped: {{ .Values.global.clusterIsBootstrapped | quote | b64enc }}
+  imagesRegistry: {{ b64enc .Values.global.modulesImages.registry.base }}
 `
 
+	deckhouseClusterConfiguration := `---
+{{- $k8sv := cat "kubernetesVersion:" ( .Values.global.clusterConfiguration.kubernetesVersion | quote ) }}
+apiVersion: v1
+kind: Secret
+type: Opaque
+metadata:
+  name: d8-cluster-configuration
+  namespace: kube-system
+data:
+  cluster-configuration.yaml: {{ $k8sv | b64enc }}
+`
 	tmpl, err := template.New("manifest").
 		Funcs(sprig.TxtFuncMap()).
-		Parse(string(data) + deckhouseDiscovery + deckhouseRegistry)
+		Parse(string(data) + deckhouseDiscovery + deckhouseRegistry + deckhouseClusterConfiguration)
 	require.NoError(t, err)
 
 	var values any

@@ -26,7 +26,7 @@
   "fiscalYearStartMonth": 0,
   "gnetId": 15763,
   "graphTooltip": 0,
-  "iteration": 1699970633918,
+  "id": 19,
   "links": [],
   "liveNow": false,
   "panels": [
@@ -93,10 +93,12 @@
           "fields": "",
           "values": false
         },
+        "showPercentChange": false,
         "text": {},
-        "textMode": "auto"
+        "textMode": "auto",
+        "wideLayout": true
       },
-      "pluginVersion": "8.5.13",
+      "pluginVersion": "10.4.14",
       "targets": [
         {
           "exemplar": true,
@@ -144,8 +146,10 @@
       "id": 41,
       "options": {
         "displayMode": "basic",
+        "maxVizHeight": 300,
         "minVizHeight": 10,
         "minVizWidth": 0,
+        "namePlacement": "auto",
         "orientation": "auto",
         "reduceOptions": {
           "calcs": [
@@ -155,9 +159,11 @@
           "values": false
         },
         "showUnfilled": true,
-        "text": {}
+        "sizing": "auto",
+        "text": {},
+        "valueMode": "color"
       },
-      "pluginVersion": "8.5.13",
+      "pluginVersion": "10.4.14",
       "targets": [
         {
           "exemplar": true,
@@ -171,7 +177,6 @@
         }
       ],
       "title": "Total Violations by kind",
-      "transformations": [],
       "type": "bargauge"
     },
     {
@@ -186,7 +191,9 @@
           },
           "custom": {
             "align": "left",
-            "displayMode": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
             "filterable": false,
             "inspect": false
           },
@@ -320,7 +327,9 @@
       },
       "id": 44,
       "options": {
+        "cellHeight": "sm",
         "footer": {
+          "countRows": false,
           "enablePagination": false,
           "fields": "",
           "reducer": [
@@ -332,7 +341,7 @@
         "showHeader": true,
         "sortBy": []
       },
-      "pluginVersion": "8.5.13",
+      "pluginVersion": "10.4.14",
       "targets": [
         {
           "datasource": {
@@ -484,8 +493,10 @@
       "id": 25,
       "options": {
         "displayMode": "gradient",
+        "maxVizHeight": 300,
         "minVizHeight": 10,
         "minVizWidth": 0,
+        "namePlacement": "auto",
         "orientation": "auto",
         "reduceOptions": {
           "calcs": [
@@ -495,9 +506,11 @@
           "values": false
         },
         "showUnfilled": true,
-        "text": {}
+        "sizing": "auto",
+        "text": {},
+        "valueMode": "color"
       },
-      "pluginVersion": "8.5.13",
+      "pluginVersion": "10.4.14",
       "targets": [
         {
           "exemplar": true,
@@ -510,7 +523,6 @@
         }
       ],
       "title": "Total Violations",
-      "transformations": [],
       "type": "bargauge"
     },
     {
@@ -541,29 +553,31 @@
           },
           "custom": {
             "align": "left",
-            "displayMode": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
             "filterable": false,
             "inspect": false
           },
           "mappings": [
             {
-              "type": "value",
               "options": {
                 "PSS": {
-                  "text": "PodSecurityStandard",
-                  "index": 0
+                  "index": 0,
+                  "text": "PodSecurityStandard"
                 }
-              }
+              },
+              "type": "value"
             },
             {
-              "type": "regex",
               "options": {
                 "pattern": "^d8-pod-security-([a-zA-Z]+)-.*",
                 "result": {
-                  "text": "$1",
-                  "index": 1
+                  "index": 1,
+                  "text": "$1"
                 }
-              }
+              },
+              "type": "regex"
             }
           ],
           "thresholds": {
@@ -637,7 +651,7 @@
             "properties": [
               {
                 "id": "custom.width",
-                "value": 140
+                "value": 220
               }
             ]
           },
@@ -723,7 +737,9 @@
       },
       "id": 34,
       "options": {
+        "cellHeight": "sm",
         "footer": {
+          "countRows": false,
           "fields": "",
           "reducer": [
             "sum"
@@ -734,11 +750,11 @@
         "showHeader": true,
         "sortBy": []
       },
-      "pluginVersion": "8.5.13",
+      "pluginVersion": "10.4.14",
       "targets": [
         {
           "exemplar": false,
-          "expr": "group(d8_gatekeeper_exporter_constraint_violations{violating_namespace=~\".*\"}) by (violating_kind, violating_namespace, violating_name, kind, violation_enforcement, violation_msg, source_type, name)",
+          "expr": "group(d8_gatekeeper_exporter_constraint_violations{violating_namespace=~\"$namespace\"}) by (violating_kind, violating_namespace, violating_name, kind, violation_enforcement, violation_msg, source_type, name)",
           "format": "table",
           "hide": false,
           "instant": true,
@@ -776,9 +792,9 @@
             },
             "indexByName": {
               "Time": 0,
-              "source_type": 1,
-              "name": 2,
               "kind": 3,
+              "name": 2,
+              "source_type": 1,
               "violating_kind": 5,
               "violating_name": 6,
               "violating_namespace": 4,
@@ -788,13 +804,13 @@
             "renameByName": {
               "Time": "",
               "kind": "Policy",
+              "name": "Policy Name",
+              "source_type": "Policy Type",
               "violating_kind": "Kind",
               "violating_name": "Name",
               "violating_namespace": "Namespace",
               "violation_enforcement": "Enforcement",
-              "violation_msg": "Message",
-              "source_type": "Policy Type",
-              "name": "Policy Name"
+              "violation_msg": "Message"
             }
           }
         }
@@ -811,6 +827,55 @@
       },
       "fieldConfig": {
         "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
           "unit": "short"
         },
         "overrides": []
@@ -838,7 +903,17 @@
       "linewidth": 3,
       "nullPointMode": "null",
       "options": {
-        "alertThreshold": false
+        "alertThreshold": false,
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
       },
       "percentage": false,
       "pluginVersion": "8.5.13",
@@ -852,9 +927,9 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "count by (violating_name) (d8_gatekeeper_exporter_constraint_violations{violating_namespace=~\"$namespace\"})",
+          "expr": "count by (violating_name,violating_namespace) (d8_gatekeeper_exporter_constraint_violations{violating_namespace=~\"$namespace\"})",
           "interval": "",
-          "legendFormat": "{{violating_name}}",
+          "legendFormat": "{{violating_namespace }}/{{violating_name}}",
           "refId": "A"
         }
       ],
@@ -866,7 +941,7 @@
         "sort": 0,
         "value_type": "individual"
       },
-      "type": "graph",
+      "type": "timeseries",
       "xaxis": {
         "mode": "time",
         "show": true,
@@ -925,8 +1000,10 @@
       "id": 38,
       "options": {
         "displayMode": "basic",
+        "maxVizHeight": 300,
         "minVizHeight": 10,
         "minVizWidth": 0,
+        "namePlacement": "auto",
         "orientation": "auto",
         "reduceOptions": {
           "calcs": [
@@ -936,9 +1013,11 @@
           "values": false
         },
         "showUnfilled": true,
-        "text": {}
+        "sizing": "auto",
+        "text": {},
+        "valueMode": "color"
       },
-      "pluginVersion": "8.5.13",
+      "pluginVersion": "10.4.14",
       "targets": [
         {
           "exemplar": true,
@@ -952,7 +1031,6 @@
         }
       ],
       "title": "Total Violations by kind",
-      "transformations": [],
       "type": "bargauge"
     },
     {
@@ -971,7 +1049,8 @@
               "viz": false
             }
           },
-          "mappings": []
+          "mappings": [],
+          "noValue": "No enforcement actions found"
         },
         "overrides": [
           {
@@ -1001,7 +1080,8 @@
       "options": {
         "legend": {
           "displayMode": "list",
-          "placement": "bottom"
+          "placement": "bottom",
+          "showLegend": true
         },
         "pieType": "pie",
         "reduceOptions": {
@@ -1166,8 +1246,10 @@
       "id": 8,
       "options": {
         "displayMode": "gradient",
+        "maxVizHeight": 300,
         "minVizHeight": 10,
         "minVizWidth": 0,
+        "namePlacement": "auto",
         "orientation": "auto",
         "reduceOptions": {
           "calcs": [
@@ -1177,9 +1259,11 @@
           "values": false
         },
         "showUnfilled": true,
-        "text": {}
+        "sizing": "auto",
+        "text": {},
+        "valueMode": "color"
       },
-      "pluginVersion": "8.5.13",
+      "pluginVersion": "10.4.14",
       "targets": [
         {
           "exemplar": true,
@@ -1192,7 +1276,6 @@
         }
       ],
       "title": "Total Violations",
-      "transformations": [],
       "type": "bargauge"
     },
     {
@@ -1243,10 +1326,12 @@
           "fields": "",
           "values": false
         },
+        "showPercentChange": false,
         "text": {},
-        "textMode": "auto"
+        "textMode": "auto",
+        "wideLayout": true
       },
-      "pluginVersion": "8.5.13",
+      "pluginVersion": "10.4.14",
       "targets": [
         {
           "exemplar": true,
@@ -1257,7 +1342,6 @@
         }
       ],
       "title": "Audit duration",
-      "transformations": [],
       "type": "stat"
     },
     {
@@ -1308,10 +1392,12 @@
           "fields": "",
           "values": false
         },
+        "showPercentChange": false,
         "text": {},
-        "textMode": "auto"
+        "textMode": "auto",
+        "wideLayout": true
       },
-      "pluginVersion": "8.5.13",
+      "pluginVersion": "10.4.14",
       "targets": [
         {
           "exemplar": true,
@@ -1322,7 +1408,6 @@
         }
       ],
       "title": "Audit last run time",
-      "transformations": [],
       "type": "stat"
     },
     {
@@ -1373,10 +1458,12 @@
           "fields": "",
           "values": false
         },
+        "showPercentChange": false,
         "text": {},
-        "textMode": "auto"
+        "textMode": "auto",
+        "wideLayout": true
       },
-      "pluginVersion": "8.5.13",
+      "pluginVersion": "10.4.14",
       "targets": [
         {
           "exemplar": true,
@@ -1387,7 +1474,6 @@
         }
       ],
       "title": "Total GroupVersionKinds",
-      "transformations": [],
       "type": "stat"
     },
     {
@@ -1438,10 +1524,12 @@
           "fields": "",
           "values": false
         },
+        "showPercentChange": false,
         "text": {},
-        "textMode": "auto"
+        "textMode": "auto",
+        "wideLayout": true
       },
-      "pluginVersion": "8.5.13",
+      "pluginVersion": "10.4.14",
       "targets": [
         {
           "exemplar": true,
@@ -1452,7 +1540,6 @@
         }
       ],
       "title": "Total GroupVersionKinds registered",
-      "transformations": [],
       "type": "stat"
     },
     {
@@ -1483,6 +1570,9 @@
             "mode": "palette-classic"
           },
           "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
@@ -1494,6 +1584,7 @@
               "tooltip": false,
               "viz": false
             },
+            "insertNulls": false,
             "lineInterpolation": "linear",
             "lineStyle": {
               "fill": "solid"
@@ -1514,6 +1605,7 @@
             }
           },
           "mappings": [],
+          "noValue": "No mutation request found",
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -1540,8 +1632,9 @@
       "options": {
         "legend": {
           "calcs": [],
-          "displayMode": "hidden",
-          "placement": "bottom"
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": false
         },
         "tooltip": {
           "mode": "single",
@@ -1552,7 +1645,7 @@
       "targets": [
         {
           "exemplar": false,
-          "expr": "sum by (mutation_status, pod) (rate(gatekeeper_mutation_request_count[20m]))",
+          "expr": "sum by (mutation_status, pod) (rate(gatekeeper_mutation_request_count{namespace=~\"$namespace\"}[20m]))",
           "interval": "",
           "legendFormat": "{{mutation_status}}",
           "refId": "A"
@@ -1572,6 +1665,9 @@
             "mode": "palette-classic"
           },
           "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
@@ -1583,6 +1679,7 @@
               "tooltip": false,
               "viz": false
             },
+            "insertNulls": false,
             "lineInterpolation": "linear",
             "lineStyle": {
               "fill": "solid"
@@ -1603,6 +1700,7 @@
             }
           },
           "mappings": [],
+          "noValue": "No validation request found",
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -1629,8 +1727,9 @@
       "options": {
         "legend": {
           "calcs": [],
-          "displayMode": "hidden",
-          "placement": "bottom"
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": false
         },
         "tooltip": {
           "mode": "single",
@@ -1713,10 +1812,12 @@
           "fields": "",
           "values": false
         },
+        "showPercentChange": false,
         "text": {},
-        "textMode": "auto"
+        "textMode": "auto",
+        "wideLayout": true
       },
-      "pluginVersion": "8.5.13",
+      "pluginVersion": "10.4.14",
       "targets": [
         {
           "exemplar": true,
@@ -1826,8 +1927,10 @@
       "id": 19,
       "options": {
         "displayMode": "gradient",
+        "maxVizHeight": 300,
         "minVizHeight": 10,
         "minVizWidth": 0,
+        "namePlacement": "auto",
         "orientation": "auto",
         "reduceOptions": {
           "calcs": [
@@ -1837,9 +1940,11 @@
           "values": false
         },
         "showUnfilled": true,
-        "text": {}
+        "sizing": "auto",
+        "text": {},
+        "valueMode": "color"
       },
-      "pluginVersion": "8.5.13",
+      "pluginVersion": "10.4.14",
       "targets": [
         {
           "exemplar": true,
@@ -1852,18 +1957,18 @@
         }
       ],
       "title": "Constraints",
-      "transformations": [],
       "type": "bargauge"
     },
     {
       "datasource": {
+        "type": "prometheus",
         "uid": "$ds_prometheus"
       },
       "description": "Description: Constraint Template ingestion duration distribution\n\nUnderstanding this metric: When Gatekeeper is notified of a new constraint template, records the time from when it has loaded the resource from etcd to after OPA successfully returns from compiling the code. If there is a compilation error, the metric is not updated.",
       "fieldConfig": {
         "defaults": {
           "color": {
-            "mode": "thresholds"
+            "mode": "palette-classic"
           },
           "custom": {
             "fillOpacity": 80,
@@ -1891,32 +1996,7 @@
           },
           "unit": "s"
         },
-        "overrides": [
-          {
-            "__systemRef": "hideSeriesFrom",
-            "matcher": {
-              "id": "byNames",
-              "options": {
-                "mode": "exclude",
-                "names": [
-                  "gatekeeper-controller-manager-6bcfcf84cc-r4fjj"
-                ],
-                "prefix": "All except:",
-                "readOnly": true
-              }
-            },
-            "properties": [
-              {
-                "id": "custom.hideFrom",
-                "value": {
-                  "legend": false,
-                  "tooltip": false,
-                  "viz": true
-                }
-              }
-            ]
-          }
-        ]
+        "overrides": []
       },
       "gridPos": {
         "h": 6,
@@ -1929,28 +2009,33 @@
         "bucketOffset": 0,
         "legend": {
           "calcs": [],
-          "displayMode": "hidden",
-          "placement": "bottom"
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": false
         }
       },
       "pluginVersion": "8.2.3",
       "targets": [
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$ds_prometheus"
+          },
+          "editorMode": "code",
           "exemplar": true,
-          "expr": "rate(gatekeeper_constraint_template_ingestion_count[10m])",
+          "expr": "rate(gatekeeper_constraint_template_ingestion_count{namespace!=\"d8-admission-policy-engine\", pod!~\"gatekeeper.+\"} [10m]) or vector(0)",
           "interval": "",
           "legendFormat": "{{pod}}",
+          "range": true,
           "refId": "A"
         }
       ],
       "title": "Constraint template ingestion duration",
-      "transformations": [],
       "type": "histogram"
     }
   ],
   "refresh": false,
-  "schemaVersion": 36,
-  "style": "dark",
+  "schemaVersion": 39,
   "tags": [],
   "templating": {
     "list": [
@@ -2007,8 +2092,8 @@
       {
         "current": {
           "selected": false,
-          "text": "2",
-          "value": "2"
+          "text": "3",
+          "value": "3"
         },
         "datasource": {
           "type": "prometheus",
@@ -2034,8 +2119,8 @@
       {
         "current": {
           "selected": false,
-          "text": "3",
-          "value": "3"
+          "text": "1",
+          "value": "1"
         },
         "datasource": {
           "type": "prometheus",
@@ -2060,12 +2145,11 @@
     ]
   },
   "time": {
-    "from": "now-30m",
+    "from": "now-3h",
     "to": "now"
   },
   "timepicker": {
     "refresh_intervals": [
-      "5s",
       "10s",
       "30s",
       "1m",
@@ -2088,9 +2172,9 @@
       "30d"
     ]
   },
-  "timezone": "UTC",
+  "timezone": "browser",
   "title": "Admission policy engine",
   "uid": "YBgRZG6Ms",
-  "version": 3,
+  "version": 1,
   "weekStart": ""
 }

@@ -136,7 +136,7 @@ spec:
 
 Для начала вам потребуется закодировать в base64 ваш токен доступа к Grafana Cloud.
 
-![Grafana cloud API key](../../images/460-log-shipper/grafana_cloud.png)
+![Grafana cloud API key](../../images/log-shipper/grafana_cloud.png)
 
 ```bash
 echo -n "<YOUR-GRAFANACLOUD-TOKEN>" | base64 -w0
@@ -163,7 +163,7 @@ spec:
 
 ## Добавление Loki в Deckhouse Grafana
 
-Вы можете работать с Loki из встроенной в Deckhouse Grafana. Достаточно добавить [**GrafanaAdditionalDatasource**](../../modules/300-prometheus/cr.html#grafanaadditionaldatasource).
+Вы можете работать с Loki из встроенной в Deckhouse Grafana. Достаточно добавить [**GrafanaAdditionalDatasource**](../../modules/prometheus/cr.html#grafanaadditionaldatasource).
 
 ```yaml
 apiVersion: deckhouse.io/v1
@@ -326,6 +326,24 @@ spec:
     syslog.message_id: "{{ request_id }}"
 ```
 
+## Пример интеграции с Graylog
+
+Убедитесь, что в Graylog настроен входящий поток для приема сообщений по протоколу TCP на указанном порту. Пример манифеста для интеграции с Graylog:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ClusterLogDestination
+metadata:
+  name: test-socket2-dest
+spec:
+  type: Socket
+  socket:
+    address: graylog.svc.cluster.local:9200
+    mode: TCP
+    encoding:
+      codec: GELF
+```
+
 ## Логи в CEF формате
 
 Существует способ формировать логи в формате CEF, используя `codec: CEF`, с переопределением `cef.name` и `cef.severity` по значениям из поля `message` (лога приложения) в формате JSON.
@@ -363,7 +381,7 @@ extraLabels:
 
 ## Сбор событий Kubernetes
 
-События Kubernetes могут быть собраны log-shipper'ом, если `events-exporter` включен в настройках модуля [extended-monitoring](../340-extended-monitoring/).
+События Kubernetes могут быть собраны log-shipper'ом, если `events-exporter` включен в настройках модуля [extended-monitoring](../extended-monitoring/).
 
 Включите events-exporter, изменив параметры модуля `extended-monitoring`:
 
@@ -491,7 +509,7 @@ spec:
 {%- endalert %}
 {% raw %}
 
-## Настройка сборки логов с продуктовых namespace'ов, используя опцию namespace label selector
+## Настройка сборки логов с продуктовых пространств имен, используя опцию namespace label selector
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -503,7 +521,7 @@ spec:
   kubernetesPods:
     namespaceSelector:
       labelSelector:
-        matchNames:
+        matchLabels:
           environment: production
   destinationRefs:
   - loki-storage
@@ -541,7 +559,7 @@ spec:
 
 1. Временные перебои с подключением. Если есть временные перебои или нестабильность соединения с системой хранения логов (например, с Elasticsearch), буфер позволяет временно сохранять логи и отправить их, когда соединение восстановится.
 
-1. Сглаживание пиков нагрузки. При внезапных всплесках объема логов буфер позволяет сгладить пиковую нагрузку на систему хранения логов, предотвращая её перегрузку и потенциальную потерю данных.
+1. Сглаживание пиков нагрузки. При внезапных всплесках объёма логов буфер позволяет сгладить пиковую нагрузку на систему хранения логов, предотвращая её перегрузку и потенциальную потерю данных.
 
 1. Оптимизация производительности. Буферизация помогает оптимизировать производительность системы сбора логов за счёт накопления логов и отправки их группами, что снижает количество сетевых запросов и улучшает общую пропускную способность.
 

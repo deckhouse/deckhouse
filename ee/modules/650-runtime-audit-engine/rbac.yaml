@@ -1,5 +1,0 @@
-module: runtime-audit-engine
-scopes:
-  - security
-crds:
-  - ee/modules/650-runtime-audit-engine/crds/*.yaml

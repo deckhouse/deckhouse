@@ -97,7 +97,7 @@ func applyReadyNotMasterNodeFilter(obj *unstructured.Unstructured) (go_hook.Filt
 	return false, nil
 }
 
-func createBootstrapClusterCm(patchCollector *object_patch.PatchCollector) {
+func createBootstrapClusterCm(patchCollector go_hook.PatchCollector) {
 	cm := &v1core.ConfigMap{
 		TypeMeta: v1.TypeMeta{
 			APIVersion: "v1",

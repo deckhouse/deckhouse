@@ -6,7 +6,7 @@ metadata:
     heritage: deckhouse
     module: user-authz
     rbac.deckhouse.io/kind: use
-    rbac.deckhouse.io/aggregate-to-role: viewer
+    rbac.deckhouse.io/aggregate-to-kubernetes-as: viewer
 rules:
   - apiGroups:
       - metrics.k8s.io

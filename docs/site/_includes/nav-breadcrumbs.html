@@ -1,30 +1,53 @@
-<ol class="breadcrumbs">
-   <li><a href="{{ site.url }}{{ site.baseurl }}">🏠</a></li>
-   {% capture page_url_without_index_html %}{{ page.url | remove: "/index.html" }}{% endcapture %}
-   {% assign splitted_url_parts = page_url_without_index_html | split: '/' %}
-   {% assign docs_chapters = "how_to,reference,cli" | split: "," %}
-   {% if docs_chapters contains splitted_url_parts[1] %}<li><a href="{{ site.baseurl }}/overview.html">Documentation</a></li>
-   {% endif %}
-   {% capture forLoopMaxInt %}{{ splitted_url_parts.size | minus:1 }}{% endcapture %}
-   {% for i in (1..forLoopMaxInt) %}
-      {% capture current_breadcrumb_url %}{{next_prepender}}/{{ splitted_url_parts[i] }}/index.html{% endcapture %}
-      {% capture current_breadcrumb_md_url %}{{next_prepender}}/{{ splitted_url_parts[i] }}/{% endcapture %}
-      {% capture next_prepender %}{{next_prepender}}/{{ splitted_url_parts[i] }}{% endcapture %}
-      {% for breadcrumb_page in site.pages %}
-         {% if current_breadcrumb_url == breadcrumb_page.url or current_breadcrumb_md_url == breadcrumb_page.url  %}
-         {% assign j = forLoopMaxInt | plus: 0 %}
-               <li>
-                  {% capture breadcrumb_page_page_url_without_index_html %}{{ breadcrumb_page.url | remove: "index.html" }}{% endcapture %}
-                  {% if i == j %}
-                     {{breadcrumb_page.title}}
-                  {% else %}
-                     <a href="{{ site.baseurl }}/{{breadcrumb_page_page_url_without_index_html}}">{{breadcrumb_page.title}}</a>
-                  {% endif %}
-               </li>
-         {% endif %}
-      {% endfor %}
-   {% endfor %}
-   {% if splitted_url_parts.last contains '.html' %}
-   <li>{{page.title}}</li>
-   {% endif %}
-</ol>
+<div class="breadcrumbs-container">
+  <div class="breadcrumbs__left">
+    <ol class="breadcrumbs">
+      <li class="breadcrumbs__item">{{ site.data.i18n.common.documentation[page.lang] }}</li>
+    </ol>
+  </div>
+  <div class="breadcrumbs__right">
+    <ol class="breadcrumbs">
+      <li class="breadcrumbs__item">{{ site.data.i18n.common.platform[page.lang] }}</li>
+      <!--#include virtual="/includes/group-menu.html" -->
+      {%- assign page_url_parts = page.url | split: '/' -%}
+      {%- assign max_ind = page_url_parts.size | minus: 1 -%}
+      {% if max_ind == 1 %}{%- assign max_ind = 2 -%}{% endif %}
+
+      {%- for i in (2..max_ind) %}
+      {%- if forloop.last %}
+      <li class="breadcrumbs__item">{{ page.title }}</li>
+      {% else %}
+      {% unless page_url_parts[i].title %}
+        {% continue %}
+      {% endunless -%}
+      {%- capture current_breadcrumb_url %}{{ next_prepender }}/{{ page_url_parts[i] }}{% endcapture -%}
+      {%- capture next_prepender %}{{ next_prepender }}/{{ page_url_parts[i] }}{% endcapture -%}
+
+      {%- assign breadcrumb = site.data.breadcrumbs[current_breadcrumb_url] %}
+      {%- if breadcrumb %}
+          <li class="breadcrumbs__item">
+             <a href="{{ breadcrumb.url | true_relative_url }}">{%- if breadcrumb.title[page.lang] %}{{ breadcrumb.title[page.lang] }}{% else %}{{ breadcrumb.title }}{% endif -%}</a>
+          </li>
+      {% else %}
+          {%- assign breadcrumb_err = "Check breadcrumbs.yml: " | append: current_breadcrumb_url | append: " not defined" %}
+          {% comment %}{{ breadcrumb_err | raise_error }}{% endcomment %}
+      {%- endif -%}
+      {%- endif -%}
+      {%- endfor %}
+    </ol>
+  </div>
+
+  {% if page.search_bage_enabled %}
+  <!--start search-->
+  <div class="search">
+      <form action='{{ "search.html" | prepend: '/documentation/' | prepend: page.product_code | true_relative_url }}' method="get">
+      <input type="text" class="search__input" id="search-box" name="query" placeholder="{{ site.data.i18n.common.search_placeholder_text[page.lang] }}">
+      </form>
+  </div>
+  <!--end search-->
+  {% endif %}
+  {% unless site.mode == 'module' %}
+  <div id="doc-versions-menu" class="channel-menu submenu-parent">
+    <!-- #include virtual="/includes/channel-menu.html" -->
+  </div>
+  {% endunless %}
+</div>

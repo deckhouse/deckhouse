@@ -20,6 +20,7 @@ spec:
     - name: v1alpha1
       served: true
       storage: true
+      deprecated: true
       schema:
         openAPIV3Schema:
           type: object
@@ -71,3 +72,53 @@ spec:
           type: string
           jsonPath: .status.message
           description: 'Detailed description.'
+    - name: v1alpha2
+      served: true
+      storage: false
+      schema:
+        openAPIV3Schema:
+          type: object
+          description: |
+            Defines the configuration.
+          required:
+            - spec
+          properties:
+            spec:
+              type: object
+              required:
+                - imageTag
+              properties:
+                imageTag:
+                  type: string
+                  description: Module container image tag, which will be pulled.
+                scanInterval:
+                  type: string
+                  description: Scan interval for checking the image digest. If the digest changes, the module is updated.
+                  default: 15s
+            status:
+              type: object
+              properties:
+                message:
+                  type: string
+                  description: Details of the resource status.
+                updatedAt:
+                  type: string
+                  description: When the module was last updated.
+                imageDigest:
+                  type: string
+                  description: Digest of the module image.
+                weight:
+                  type: integer
+                  description: Module weight.
+      subresources:
+        status: {}
+      additionalPrinterColumns:
+        - name: Updated
+          type: date
+          jsonPath: .status.updatedAt
+          format: date-time
+          description: When the module was last updated.
+        - name: Message
+          type: string
+          jsonPath: .status.message
+          description: Detailed description.

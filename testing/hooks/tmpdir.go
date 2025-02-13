@@ -44,7 +44,7 @@ func nextRandom() string {
 	return strconv.Itoa(int(1e9 + r%1e9))[1:]
 }
 
-func TempFileWithPerms(dir, pattern string, perms int) (f *os.File, err error) {
+func TempFileWithPerms(dir, pattern string, perms int) (*os.File, error) {
 	if dir == "" {
 		dir = os.TempDir()
 	}
@@ -56,7 +56,12 @@ func TempFileWithPerms(dir, pattern string, perms int) (f *os.File, err error) {
 		prefix = pattern
 	}
 
-	nconflict := 0
+	var (
+		nconflict = 0
+		f         = new(os.File)
+		err       error
+	)
+
 	for i := 0; i < 10000; i++ {
 		name := filepath.Join(dir, prefix+nextRandom()+suffix)
 		f, err = os.OpenFile(name, os.O_RDWR|os.O_CREATE|os.O_EXCL, os.FileMode(perms))
@@ -70,15 +75,21 @@ func TempFileWithPerms(dir, pattern string, perms int) (f *os.File, err error) {
 		}
 		break
 	}
-	return
+
+	return f, err
 }
 
-func TempDirWithPerms(dir, prefix string, perms int) (name string, err error) {
+func TempDirWithPerms(dir, prefix string, perms int) (string, error) {
 	if dir == "" {
 		dir = os.TempDir()
 	}
 
-	nconflict := 0
+	var (
+		nconflict = 0
+		err       error
+		name      string
+	)
+
 	for i := 0; i < 10000; i++ {
 		try := filepath.Join(dir, prefix+nextRandom())
 		err = os.Mkdir(try, os.FileMode(perms))
@@ -100,5 +111,6 @@ func TempDirWithPerms(dir, prefix string, perms int) (name string, err error) {
 		}
 		break
 	}
-	return
+
+	return name, err
 }

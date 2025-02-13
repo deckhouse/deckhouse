@@ -68,7 +68,7 @@ properties:
             description: |
               The definition of the master's NodeGroup.
 
-              > Caution! After changing the parameters of the section, you need to run `dhctl converge` for the changes to take effect.
+              > For the changes to take effect, run `dhctl converge` after modifying the parameters of the `masterNodeGroup` section.
             properties:
               replicas:
                 type: integer
@@ -172,7 +172,7 @@ properties:
                       description: |
                         The same as the `.spec.taints` field of the [Node](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#taint-v1-core) object.
 
-                        > **Caution!** Only the `effect`, `key`, `values`  fields are available.
+                        > Available fields: `effect`, `key`, and `values`.
                       x-examples:
                         - - effect: NoExecute
                             key: ship-class
@@ -269,7 +269,7 @@ properties:
             description: |
               The way resources are located in the cloud.
 
-              Read [more](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-vcd/layouts.html) about possible provider layouts.
+              Read [more](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/cloud-provider-vcd/layouts.html) about possible provider layouts.
           provider:
             type: object
             additionalProperties: false
@@ -435,6 +435,4 @@ properties:
               type: string
             name:
               type: string
-      defaultStorageClass:
-        type: string
 

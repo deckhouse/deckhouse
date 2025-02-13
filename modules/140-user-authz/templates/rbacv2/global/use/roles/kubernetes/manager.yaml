@@ -1,0 +1,16 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: d8:use:role:manager:kubernetes
+  labels:
+    heritage: deckhouse
+    module: user-authz
+    rbac.deckhouse.io/kind: use
+    rbac.deckhouse.io/aggregate-to-all-as: manager
+    rbac.deckhouse.io/aggregate-to-kubernetes-as: admin
+aggregationRule:
+  clusterRoleSelectors:
+    - matchLabels:
+        rbac.deckhouse.io/kind: use
+        rbac.deckhouse.io/aggregate-to-kubernetes-as: manager
+rules: []

@@ -25,6 +25,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"runtime"
 	"strings"
 
@@ -34,6 +35,7 @@ import (
 	"github.com/flant/addon-operator/pkg/module_manager/models/hooks"
 	"github.com/flant/addon-operator/pkg/module_manager/models/hooks/kind"
 	addonutils "github.com/flant/addon-operator/pkg/utils"
+	"github.com/flant/addon-operator/pkg/values/validation"
 	"github.com/flant/addon-operator/sdk"
 	klient "github.com/flant/kube-client/client"
 	"github.com/flant/kube-client/fake"
@@ -42,18 +44,24 @@ import (
 	"github.com/flant/shell-operator/pkg/metric_storage/operation"
 	utils "github.com/flant/shell-operator/pkg/utils/file"
 	hookcontext "github.com/flant/shell-operator/test/hook/context"
+	"github.com/go-openapi/spec"
+	"github.com/go-openapi/swag"
 	. "github.com/onsi/ginkgo"
 	"github.com/onsi/ginkgo/config"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gbytes"
 	"github.com/onsi/gomega/gexec"
-	"github.com/sirupsen/logrus"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	k8sruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	k8sdynamicfake "k8s.io/client-go/dynamic/fake"
+	"k8s.io/client-go/testing"
+	"sigs.k8s.io/kustomize/kyaml/kio"
 	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/k8s"
+	"github.com/deckhouse/deckhouse/pkg/log"
 	"github.com/deckhouse/deckhouse/testing/library"
 	"github.com/deckhouse/deckhouse/testing/library/object_store"
 	"github.com/deckhouse/deckhouse/testing/library/sandbox_runner"
@@ -126,6 +134,24 @@ type ShellOperatorHookConfig struct {
 	Schedule      interface{} `json:"schedule,omitempty"`
 }
 
+type crdDoc struct {
+	APIVersion string `yaml:"apiVersion"`
+	Kind       string `yaml:"kind"`
+	Spec       struct {
+		Names struct {
+			Kind string `yaml:"kind"`
+		} `yaml:"names"`
+		Versions []struct {
+			Name   string `yaml:"name"`
+			Schema struct {
+				OpenAPIV3Schema struct {
+					Properties interface{} `yaml:"properties"`
+				} `yaml:"openAPIV3Schema"`
+			} `yaml:"schema"`
+		} `yaml:"versions"`
+	} `yaml:"spec"`
+}
+
 type CustomCRD struct {
 	Group      string
 	Version    string
@@ -145,6 +171,7 @@ type HookExecutionConfig struct {
 	configValues             *values_store.ValuesStore
 	hookConfig               string // <hook> --config output
 	KubeExtraCRDs            []CustomCRD
+	CRDSchemas               map[string]map[string]*spec.Schema
 	IsKubeStateInited        bool
 	BindingContexts          BindingContextsSlice
 	BindingContextController *hookcontext.BindingContextController
@@ -157,10 +184,12 @@ type HookExecutionConfig struct {
 	PatchCollector   *object_patch.PatchCollector
 
 	Session      *gexec.Session
-	LogrusOutput *gbytes.Buffer
+	LoggerOutput *gbytes.Buffer
 
 	fakeClusterVersion k8s.FakeClusterVersion
 	fakeCluster        *fake.Cluster
+
+	logger *log.Logger
 }
 
 func (hec *HookExecutionConfig) KubeClient() *klient.Client {
@@ -213,6 +242,8 @@ func HookExecutionConfigInit(initValues, initConfigValues string, k8sVersion ...
 	hookEnvs := []string{"ADDON_OPERATOR_NAMESPACE=tests", "DECKHOUSE_POD=tests"}
 
 	hec := new(HookExecutionConfig)
+	hec.logger = log.NewLogger(log.Options{})
+
 	fakeClusterVersion := k8s.DefaultFakeClusterVersion
 	if len(k8sVersion) > 0 {
 		fakeClusterVersion = k8sVersion[0]
@@ -255,17 +286,18 @@ func HookExecutionConfigInit(initValues, initConfigValues string, k8sVersion ...
 		}
 	}
 
-	// Catch logrus messages for LoadOpenAPISchemas.
+	// Catch log messages for LoadOpenAPISchemas.
 	buf := &bytes.Buffer{}
-	logrus.SetOutput(buf)
+
+	hec.logger.SetOutput(buf)
 	// TODO Is there a solution for ginkgo to have a shared validator for all tests in module?
 	hec.ValuesValidator, err = values_validation.NewValuesValidator(moduleName, modulePath)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, buf.String())
 		panic(fmt.Errorf("load module OpenAPI schemas for hook: %v", err))
 	}
-	// Set logrus output to GinkgoWriter to print only messages for failed specs.
-	logrus.SetOutput(GinkgoWriter)
+	// Set log output to GinkgoWriter to print only messages for failed specs.
+	hec.logger.SetOutput(GinkgoWriter)
 
 	// Search golang hook by name.
 	goHookPath := hec.HookPath + ".go"
@@ -285,6 +317,10 @@ func HookExecutionConfigInit(initValues, initConfigValues string, k8sVersion ...
 	}
 
 	hec.KubeExtraCRDs = []CustomCRD{}
+	hec.CRDSchemas, err = hec.prepareCRDSchemas()
+	if err != nil {
+		panic(fmt.Errorf("failed to prepare CRD schemas: %v", err))
+	}
 
 	BeforeEach(func() {
 		defaultConfigValues := addonutils.Values{
@@ -363,14 +399,155 @@ func (hec *HookExecutionConfig) KubeStateSetAndWaitForBindingContexts(newKubeSta
 	return hec.KubeStateSet(newKubeState)
 }
 
-func (hec *HookExecutionConfig) KubeStateSet(newKubeState string) hookcontext.GeneratedBindingContexts {
-	var contexts hookcontext.GeneratedBindingContexts
-	var err error
-	if !hec.IsKubeStateInited {
-		hec.BindingContextController = hookcontext.NewBindingContextController(hec.hookConfig, hec.fakeClusterVersion)
+func (hec *HookExecutionConfig) prepareCRDSchemas() (map[string]map[string]*spec.Schema, error) {
+	cwd, err := os.Getwd()
+	if err != nil {
+		return nil, err
+	}
+
+	crdPath, err := filepath.Abs(cwd + "/../crds/")
+	if err != nil {
+		return nil, err
+	}
+
+	crdFilesPaths := make([]string, 0)
+	err = filepath.Walk(
+		crdPath,
+		func(path string, _ os.FileInfo, err error) error {
+			if err != nil && !os.IsNotExist(err) {
+				return err
+			}
+
+			if filepath.Ext(path) == ".yaml" && !strings.HasPrefix(filepath.Base(path), "doc-ru-") {
+				crdFilesPaths = append(crdFilesPaths, path)
+			}
+
+			return nil
+		})
+	if err != nil {
+		return nil, err
+	}
+
+	schemas := make(map[string]map[string]*spec.Schema, 0)
+	manifestDelimiter := regexp.MustCompile("(?m)^---$")
+
+	// range over files
+	for _, crdFile := range crdFilesPaths {
+		bytes, err := os.ReadFile(crdFile)
 		if err != nil {
-			panic(err)
+			return nil, err
 		}
+		yamlDocs := manifestDelimiter.Split(string(bytes), -1)
+
+		// range over yaml docs
+		for _, doc := range yamlDocs {
+			crd := new(crdDoc)
+			err := yaml.Unmarshal([]byte(doc), crd)
+			if err != nil {
+				return nil, fmt.Errorf("yaml unmarashal: %w", err)
+			}
+
+			if crd.Kind != "CustomResourceDefinition" || crd.APIVersion != "apiextensions.k8s.io/v1" {
+				continue
+			}
+
+			// range over cr versions
+			for _, version := range crd.Spec.Versions {
+				if _, ok := schemas[crd.Spec.Names.Kind]; !ok {
+					schemas[crd.Spec.Names.Kind] = make(map[string]*spec.Schema, 0)
+				}
+
+				rawJSON, err := swag.YAMLToJSON(version.Schema.OpenAPIV3Schema)
+				if err != nil {
+					return nil, fmt.Errorf("yaml to json: %w", err)
+				}
+
+				s := new(spec.Schema)
+				if err := json.Unmarshal(rawJSON, s); err != nil {
+					return nil, fmt.Errorf("json unmarshal: %v", err)
+				}
+
+				err = spec.ExpandSchema(s, s, nil)
+				if err != nil {
+					return nil, fmt.Errorf("expand schema: %v", err)
+				}
+
+				schemas[crd.Spec.Names.Kind][version.Name] = s
+			}
+		}
+	}
+
+	return schemas, nil
+}
+
+// ApplyCRDefaults applies default values to the provided resources.
+// In case of absent default schema or an error, it returns the original definition
+func (hec *HookExecutionConfig) ApplyCRDefaults(definition string) string {
+	result, err := hec.applyDefaults(definition)
+	if err != nil {
+		return definition
+	}
+
+	return result
+}
+
+func (hec *HookExecutionConfig) applyDefaults(newKubeState string) (string, error) {
+	yamls, err := kio.FromBytes([]byte(newKubeState))
+	if err != nil {
+		return "", err
+	}
+
+	defaultedKubeState := new(strings.Builder)
+
+	for _, yamlDoc := range yamls {
+		defaulted := false
+		// defaulting
+		if versions, ok := hec.CRDSchemas[yamlDoc.GetKind()]; ok {
+			split := strings.Split(yamlDoc.GetApiVersion(), "/")
+			version := split[len(split)-1]
+			if sc, ok := versions[version]; ok {
+				doc, err := yamlDoc.Map()
+				if err != nil {
+					return "", err
+				}
+				if defaulted = validation.ApplyDefaults(doc, sc); defaulted {
+					defaultedDoc, err := yaml.Marshal(doc)
+					if err != nil {
+						return "", err
+					}
+					defaultedKubeState.WriteString("---\n" + string(defaultedDoc))
+				}
+			}
+		}
+		if !defaulted {
+			originalDoc, err := yamlDoc.String()
+			if err != nil {
+				return "", err
+			}
+			defaultedKubeState.WriteString("---\n" + originalDoc)
+		}
+	}
+
+	return defaultedKubeState.String(), nil
+}
+
+func (hec *HookExecutionConfig) KubeStateSet(newKubeState string) hookcontext.GeneratedBindingContexts {
+	var (
+		contexts hookcontext.GeneratedBindingContexts
+		err      error
+	)
+
+	if len(hec.CRDSchemas) > 0 {
+		newKubeStateWithDefaults, err := hec.applyDefaults(newKubeState)
+		if err != nil {
+			fmt.Printf("Warning: failed to apply default values to the kube state: %s\n", err.Error())
+		} else {
+			newKubeState = newKubeStateWithDefaults
+		}
+	}
+
+	if !hec.IsKubeStateInited {
+		hec.BindingContextController = hookcontext.NewBindingContextController(hec.hookConfig, hec.logger, hec.fakeClusterVersion)
 		hec.fakeCluster = hec.BindingContextController.FakeCluster()
 		hec.fakeCluster.Client.WithServer("fake-test")
 		dependency.TestDC.K8sClient = hec.fakeCluster.Client
@@ -391,6 +568,43 @@ func (hec *HookExecutionConfig) KubeStateSet(newKubeState string) hookcontext.Ge
 		if len(hec.KubeExtraCRDs) > 0 {
 			for _, crd := range hec.KubeExtraCRDs {
 				hec.BindingContextController.RegisterCRD(crd.Group, crd.Version, crd.Kind, crd.Namespaced)
+
+				// defaulting reactor (an entity of fake k8s client, that resembles kind of middleware that is invoked for each defined action) is prepended for each custom resource defined
+				if fc, ok := hec.fakeCluster.Client.Dynamic().(*k8sdynamicfake.FakeDynamicClient); ok {
+					// prepending is required so that the defaulting reactor is executed before the default one
+					resourcePlural := hec.fakeCluster.MustFindGVR(fmt.Sprintf("%s/%s", crd.Group, crd.Version), crd.Kind).Resource
+					fc.PrependReactor("create", resourcePlural, func(action testing.Action) (bool, k8sruntime.Object, error) {
+						obj := action.(testing.CreateAction).GetObject()
+						if versions, ok := hec.CRDSchemas[obj.GetObjectKind().GroupVersionKind().Kind]; ok {
+							if sc, ok := versions[obj.GetObjectKind().GroupVersionKind().Version]; ok {
+								unstructuredObj, err := k8sruntime.DefaultUnstructuredConverter.ToUnstructured(obj)
+								if err != nil {
+									panic(err)
+								}
+								// object defaulting
+								validation.ApplyDefaults(unstructuredObj, sc)
+							}
+						}
+						// returns false so as not to stop the ReactionChain (by default, the ReactionChain for each action contains a reactor that implements create/update/patch/etc actions
+						return false, nil, nil
+					})
+
+					fc.PrependReactor("update", resourcePlural, func(action testing.Action) (bool, k8sruntime.Object, error) {
+						obj := action.(testing.UpdateAction).GetObject()
+						if versions, ok := hec.CRDSchemas[obj.GetObjectKind().GroupVersionKind().Kind]; ok {
+							if sc, ok := versions[obj.GetObjectKind().GroupVersionKind().Version]; ok {
+								unstructuredObj, err := k8sruntime.DefaultUnstructuredConverter.ToUnstructured(obj)
+								if err != nil {
+									panic(err)
+								}
+								// object defaulting
+								validation.ApplyDefaults(unstructuredObj, sc)
+							}
+						}
+						// returns false so as not to stop the ReactionChain (by default, the ReactionChain for each action contains a reactor that implements create/update/patch/etc actions
+						return false, nil, nil
+					})
+				}
 			}
 		}
 
@@ -599,7 +813,7 @@ func (hec *HookExecutionConfig) RunHook() {
 		operations, err := object_patch.ParseOperations(kubernetesPatchBytes)
 		Expect(err).ShouldNot(HaveOccurred())
 
-		patcher := object_patch.NewObjectPatcher(hec.getFakeClient())
+		patcher := object_patch.NewObjectPatcher(hec.getFakeClient(), hec.logger)
 		err = patcher.ExecuteOperations(operations)
 		Expect(err).ToNot(HaveOccurred())
 	}
@@ -679,9 +893,8 @@ func (hec *HookExecutionConfig) RunGoHook() {
 	hec.MetricsCollector = metricsCollector
 
 	// Catch all log messages into assertable buffer.
-	hec.LogrusOutput = gbytes.NewBuffer()
-	logger := logrus.New()
-	logger.SetOutput(hec.LogrusOutput)
+	hec.LoggerOutput = gbytes.NewBuffer()
+	hec.logger.SetOutput(hec.LoggerOutput)
 
 	// TODO: assert on binding actions
 	var bindingActions []go_hook.BindingAction
@@ -695,7 +908,7 @@ func (hec *HookExecutionConfig) RunGoHook() {
 		Values:           patchableValues,
 		ConfigValues:     patchableConfigValues,
 		MetricsCollector: metricsCollector,
-		LogEntry:         logger.WithField("output", "gohook"),
+		Logger:           hec.logger.With("output", "gohook"),
 		PatchCollector:   patchCollector,
 		BindingActions:   &bindingActions,
 	}
@@ -729,7 +942,7 @@ func (hec *HookExecutionConfig) RunGoHook() {
 	}
 
 	if operations := patchCollector.Operations(); len(operations) > 0 {
-		patcher := object_patch.NewObjectPatcher(hec.getFakeClient())
+		patcher := object_patch.NewObjectPatcher(hec.getFakeClient(), hec.logger)
 		err := patcher.ExecuteOperations(operations)
 		Expect(err).ShouldNot(HaveOccurred())
 	}

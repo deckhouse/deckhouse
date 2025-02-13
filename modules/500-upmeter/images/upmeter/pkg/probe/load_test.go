@@ -96,7 +96,7 @@ func TestLoader_Probes(t *testing.T) {
 		{Group: "extensions", Probe: "cluster-scaling"},
 		{Group: "extensions", Probe: "dashboard"},
 		{Group: "extensions", Probe: "dex"},
-		{Group: "extensions", Probe: "grafana"},
+		{Group: "extensions", Probe: "grafana-v10"},
 		{Group: "extensions", Probe: "openvpn"},
 		{Group: "extensions", Probe: "prometheus-longterm"},
 		{Group: "load-balancing", Probe: "load-balancer-configuration"},

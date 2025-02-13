@@ -1,0 +1,20 @@
+{{- if and (.Values.admissionPolicyEngine.internal.bootstrapped) (.Values.admissionPolicyEngine.internal.ratify.imageReferences) }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ratify
+  namespace: d8-{{ .Chart.Name }}
+  annotations:
+    service.kubernetes.io/topology-aware-hints: auto
+  {{- include "helm_lib_module_labels" (list . (dict "app" "ratify" "app.kubernetes.io/part-of" "gatekeeper")) | nindent 2 }}
+spec:
+  type: ClusterIP
+  ports:
+    - name: ratify
+      port: 6001
+      targetPort: webhook-server
+  selector:
+    app: ratify
+    app.kubernetes.io/part-of: gatekeeper
+{{- end }}

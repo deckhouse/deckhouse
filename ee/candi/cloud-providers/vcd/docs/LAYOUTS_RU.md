@@ -5,7 +5,7 @@ description: "Описание схем размещения и взаимоде
 
 ## Standard
 
-![resources](../../images/030-cloud-provider-vcd/VCD-Standard.svg)
+![resources](../../images/cloud-provider-vcd/VCD-Standard.svg)
 <!--- Исходник: https://docs.google.com/drawings/d/1aosnFD7AzBgHrQGvxxQHZPfV0PSaTM66A-EPMWgPEqw/edit --->
 
 Пример конфигурации схемы размещения:

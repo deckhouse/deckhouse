@@ -45,7 +45,23 @@ spec:
   - host: {{ .URL }}
     http:
       paths:
-{{- if or (eq $.Values.web.dc_name "prod-sel") (eq $.Values.web.env "web-test" ) }}
+{{- if or (eq $.Values.web.dc_name "prod-sel") (eq $.Values.web.dc_name "prod-25") (eq $.Values.web.env "web-test" ) }}
+{{- if eq .Lang "en" }}
+      - path: /ru
+        pathType: Prefix
+        backend:
+          service:
+            name: frontend
+            port:
+              name: http
+      - path: /en
+        pathType: Prefix
+        backend:
+          service:
+            name: frontend
+            port:
+              name: http
+{{- end }}
       - path: /images
         pathType: Prefix
         backend:
@@ -214,6 +230,41 @@ spec:
         backend:
           service:
             name: backend
+            port:
+              name: http
+      - path: /products/virtualization-platform/documentation/
+        pathType: Prefix
+        backend:
+          service:
+            name: frontend
+            port:
+              name: http
+      - path: /products/virtualization-platform/reference/
+        pathType: Prefix
+        backend:
+          service:
+            name: frontend
+            port:
+              name: http
+      - path: /products/virtualization-platform/guides/
+        pathType: Prefix
+        backend:
+          service:
+            name: frontend
+            port:
+              name: http
+      - path: /products/virtualization-platform/gs/
+        pathType: Prefix
+        backend:
+          service:
+            name: frontend
+            port:
+              name: http
+      - path: /products/virtualization-platform/modules/
+        pathType: Prefix
+        backend:
+          service:
+            name: frontend
             port:
               name: http
 {{- if ne $.Values.web.env "web-production" }}

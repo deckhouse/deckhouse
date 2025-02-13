@@ -14,6 +14,8 @@
 
 package terraform
 
+import "github.com/deckhouse/deckhouse/dhctl/pkg/log"
+
 type PlanOptions struct {
 	Destroy bool
 }
@@ -33,4 +35,5 @@ type RunnerInterface interface {
 	GetPlanDestructiveChanges() *PlanDestructiveChanges
 	GetPlanPath() string
 	GetTerraformExecutor() Executor
+	GetLogger() log.Logger
 }

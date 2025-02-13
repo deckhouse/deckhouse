@@ -5,6 +5,7 @@ metadata:
   labels:
     heritage: deckhouse
     module: istio
+    backup.deckhouse.io/cluster-config: "true"
 spec:
   group: deckhouse.io
   scope: Cluster
@@ -39,9 +40,9 @@ spec:
                   default: true
                   x-doc-d8Revision: ee
                   description: |
-                    Should Istio use ingressgateways to access remote Pods?
+                    Using IngressGateway for accessing remote Pods.
 
-                    If remote Pods are accessible directly from our cluster ("flat" network), it is efficient not to use extra hop.
+                    If remote Pods are accessible directly from our cluster (flat network), it is efficient not to use extra hop.
                 metadataEndpoint:
                   type: string
                   x-doc-d8Revision: ee
@@ -49,6 +50,21 @@ spec:
                     HTTPS endpoint with remote cluster metadata.
                   pattern: '^(https|file)://[0-9a-zA-Z._/-]+$'
                   x-doc-examples: ['https://istio.k8s.example.com/metadata/']
+                metadata:
+                  type: object
+                  properties:
+                    ca:
+                      type: string
+                      x-doc-d8Revision: ee
+                      description: |
+                        HTTPS certificate authority for remote cluster metadata.
+                    insecureSkipVerify:
+                      type: boolean
+                      x-doc-d8Revision: ee
+                      description: |
+                        HTTPS check or not for remote cluster metadata.
+                      default: false
+                      x-doc-examples: ['true']
             status:
               type: object
               properties:
@@ -83,6 +99,8 @@ spec:
                                 type: string
                               port:
                                 type: integer
+                        ca:
+                          type: string
                     privateLastFetchTimestamp:
                       format: date-time
                       type: string

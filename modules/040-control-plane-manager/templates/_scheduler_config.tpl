@@ -8,7 +8,19 @@ kind: KubeSchedulerConfiguration
 clientConnection:
   kubeconfig: /etc/kubernetes/scheduler.conf
 profiles:
-- pluginConfig:
+- schedulerName: high-node-utilization
+  pluginConfig:
+  - args:
+      scoringStrategy:
+        resources:
+        - name: cpu
+          weight: 1
+        - name: memory
+          weight: 1
+        type: MostAllocated
+    name: NodeResourcesFit
+- schedulerName: default-scheduler
+  pluginConfig:
   - name: PodTopologySpread
     args:
       defaultingType: List

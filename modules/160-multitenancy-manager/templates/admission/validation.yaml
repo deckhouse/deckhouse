@@ -1,0 +1,78 @@
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingWebhookConfiguration
+metadata:
+  name: d8-multitenancy-manager-webhook
+  {{- include "helm_lib_module_labels" (list . (dict "app" "multitenancy-webhook")) | nindent 2 }}
+webhooks:
+  - name: projects.multitenancy-webhook.deckhouse.io
+    rules:
+      - apiGroups:
+          - deckhouse.io
+        apiVersions:
+          - v1alpha2
+        resources:
+          - projects
+        operations:
+          - CREATE
+          - UPDATE
+        scope: Cluster
+    admissionReviewVersions:
+      - v1
+    matchPolicy: Equivalent
+    sideEffects: None
+    clientConfig:
+      caBundle: {{ .Values.multitenancyManager.internal.admissionWebhookCert.ca | b64enc }}
+      service:
+        name: multitenancy-manager
+        namespace: d8-multitenancy-manager
+        port: 9443
+        path: /validate/v1alpha2/projects
+  - name: projecttemplates.multitenancy-webhook.deckhouse.io
+    rules:
+      - apiGroups:
+          - deckhouse.io
+        apiVersions:
+          - v1alpha1
+        resources:
+          - projecttemplates
+        operations:
+          - CREATE
+          - UPDATE
+          - DELETE
+        scope: Cluster
+    admissionReviewVersions:
+      - v1
+    matchPolicy: Equivalent
+    sideEffects: None
+    clientConfig:
+      caBundle: {{ .Values.multitenancyManager.internal.admissionWebhookCert.ca | b64enc }}
+      service:
+        name: multitenancy-manager
+        namespace: d8-multitenancy-manager
+        port: 9443
+        path: /validate/v1alpha1/templates
+  {{ if not .Values.multitenancyManager.allowNamespacesWithoutProjects }}
+  - name: namespaces.multitenancy-webhook.deckhouse.io
+    rules:
+      - apiGroups:
+          - ""
+        apiVersions:
+          - v1
+        resources:
+          - namespaces
+        operations:
+          - CREATE
+        scope: Cluster
+    admissionReviewVersions:
+      - v1
+    matchPolicy: Equivalent
+    sideEffects: None
+    clientConfig:
+      caBundle: {{ .Values.multitenancyManager.internal.admissionWebhookCert.ca | b64enc }}
+      service:
+        name: multitenancy-manager
+        namespace: d8-multitenancy-manager
+        port: 9443
+        path: /validate/v1/namespaces
+  {{ end }}

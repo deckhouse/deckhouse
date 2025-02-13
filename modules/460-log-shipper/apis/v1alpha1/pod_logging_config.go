@@ -46,6 +46,9 @@ type PodLoggingConfigSpec struct {
 	// Multiline parsers
 	MultiLineParser MultiLineParser `json:"multilineParser,omitempty"`
 
+	// KeepDeletedFilesOpenedFor specifies how long to keep deleted files opened for reading
+	KeepDeletedFilesOpenedFor metav1.Duration `json:"keepDeletedFilesOpenedFor,omitempty"`
+
 	// ClusterDestinationRefs slice of ClusterLogDestination names
 	ClusterDestinationRefs []string `json:"clusterDestinationRefs,omitempty"`
 }

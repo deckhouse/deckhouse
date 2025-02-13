@@ -336,7 +336,7 @@ function prepare_environment() {
         envsubst '${DECKHOUSE_DOCKERCFG} ${PREFIX} ${DEV_BRANCH} ${KUBERNETES_VERSION} ${CRI} ${VSPHERE_PASSWORD} ${VSPHERE_BASE_DOMAIN} ${MASTERS_COUNT}' \
         <"$cwd/configuration.tpl.yaml" >"$cwd/configuration.yaml"
 
-    ssh_user="ubuntu"
+    ssh_user="redos"
     ;;
 
 "VCD")
@@ -464,13 +464,18 @@ export PATH="/opt/deckhouse/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bi
 export LANG=C
 set -Eeuo pipefail
 
->&2 echo "Download yq..."
-
-/opt/deckhouse/bin/d8-curl -sSLf -o /opt/deckhouse/bin/yq https://github.com/mikefarah/yq/releases/download/v4.44.3/yq_linux_amd64
-
->&2 echo "chmod yq..."
-
-chmod +x /opt/deckhouse/bin/yq
+>&2 echo "Check python ..."
+function check_python() {
+  for pybin in python3 python2 python; do
+    if command -v "\$pybin" >/dev/null 2>&1; then
+      python_binary="\$pybin"
+      return 0
+    fi
+  done
+  echo "Python not found, exiting..."
+  return 1
+}
+check_python
 
 >&2 echo "Create release file ..."
 
@@ -504,7 +509,15 @@ metadata:
 spec:
   version: v1.96.3
   requirements: {}
-' | /opt/deckhouse/bin/yq '. | load("/tmp/releaseFile.yaml") as \$d1 | .spec.requirements=\$d1.requirements' | kubectl apply -f -
+' | \$python_binary -c "
+import yaml, sys
+
+data = yaml.safe_load(sys.stdin)
+with open('/tmp/releaseFile.yaml') as f:
+  d1 = yaml.safe_load(f)
+data['spec']['requirements'] = d1.get('requirements', {})
+print(yaml.dump(data))
+" | kubectl apply -f -
 
 >&2 echo "Remove release file ..."
 
@@ -688,9 +701,6 @@ ENDSSH
        ip route del default
        ip route add 10.111.0.0/16 dev lo
        ip route add 10.222.0.0/16 dev lo
-
-       #hack for relosve: 'error reading from /var/lib/apt/lists/partial/ftp.altlinux.org_pub_distributions_ALTLinux_p11_branch_x86%5f64-i586_base_release - fgets (0 Success)'
-       rm -f /var/lib/apt/lists/partial/ftp.altlinux.org_pub_distributions_ALTLinux_p11_branch_x86%5f64-i586_base_release
 ENDSSH
       initial_setup_failed=""
       break

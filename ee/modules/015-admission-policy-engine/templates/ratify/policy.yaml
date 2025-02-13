@@ -1,0 +1,13 @@
+{{- if and (.Values.admissionPolicyEngine.internal.bootstrapped) (.Values.admissionPolicyEngine.internal.ratify.imageReferences) }}
+---
+apiVersion: config.ratify.deislabs.io/v1beta1
+kind: Policy
+metadata:
+  {{- include "helm_lib_module_labels" (list . (dict "app" "ratify" "app.kubernetes.io/part-of" "gatekeeper")) | nindent 2 }}
+  name: ratify-policy
+spec:
+  type: config-policy
+  parameters:
+    artifactVerificationPolicies:
+      default: all
+{{- end }}

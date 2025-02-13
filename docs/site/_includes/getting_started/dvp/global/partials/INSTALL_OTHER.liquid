@@ -1,0 +1,185 @@
+{% assign revision=include.revision %}
+
+Use a Docker image to install the **Deckhouse Virtualization Platform**. It is necessary to transfer configuration file to the container{%- if page.platform_type != 'existing' %} as well as SSH keys for accessing **the master node** (further, it is assumed that the SSH key `~/.ssh/id_rsa` is used){% endif %}.
+{% if page.platform_code == 'bm-private' %}
+Log in on the **personal computer** to the container image registry you specified in the previous step.
+{%- endif %}
+
+Run the installer on the **personal computer**.
+
+{%- if revision == 'ee' %}
+
+<a id='tab_installer_linux_{{ revision }}' href="javascript:void(0)" class="tabs__btn tabs__btn_installer_{{ revision }} active"
+   onclick="openTabAndSaveStatus(event, 'tabs__btn_installer_{{ revision }}', 'tabs__content_installer_{{ revision }}', 'block_installer_linux_{{ revision }}');" >
+  Linux / macOS
+</a>
+<a id='tab_installer_windows_{{ revision }}' href="javascript:void(0)" class="tabs__btn tabs__btn_installer_{{ revision }}"
+   onclick="openTabAndSaveStatus(event, 'tabs__btn_installer_{{ revision }}', 'tabs__content_installer_{{ revision }}', 'block_installer_windows_{{ revision }}');" >
+  Windows
+</a>
+
+<div id='block_installer_linux_{{ revision }}' class="tabs__content tabs__content_installer_{{ revision }} active" markdown="1">
+<!-- Linux or macOS install, EE -->
+```shell
+ echo <LICENSE_TOKEN> | docker login -u license-token --password-stdin registry.deckhouse.io
+docker run --pull=always {% if page.platform_code == "kind" %} --network host {% endif %}-it -v "$PWD/config.yml:/config.yml"{%- if page.platform_type != 'existing' %} -v "$HOME/.ssh/:/tmp/.ssh/"{% endif %}
+{%- if page.platform_type == "existing" or page.platform_code == "kind" %} \
+  -v "$HOME/.kube/config:/kubeconfig"{% endif %}
+{%- if page.platform_type == "cloud" %} \
+  -v "$PWD/dhctl-tmp:/tmp/dhctl"{% endif %} registry.deckhouse.io/deckhouse/ee/install:stable bash
+```
+</div>
+<div id='block_installer_windows_{{ revision }}' class="tabs__content tabs__content_installer_{{ revision }}" markdown="1">
+<!-- Windows install, EE -->
+Log in on the **personal computer** to the container image registry by providing the license key as a password:
+```text
+docker login -u license-token registry.deckhouse.io
+```
+
+Run a container with the installer:
+```text
+docker run --pull=always {% if page.platform_code == "kind" %} --network host {% endif %}-it -v "%cd%\config.yml:/config.yml"
+{%- if page.platform_type != 'existing' %} -v "%userprofile%\.ssh\:/tmp/.ssh/"{% endif %}
+{%- if page.platform_type == "existing" or page.platform_code == "kind" %} -v "%userprofile%\.kube\config:/kubeconfig"{% endif %}
+{%- if page.platform_type == "cloud" %} -v "%cd%\dhctl-tmp:/tmp/dhctl" {% endif %} registry.deckhouse.io/deckhouse/ee/install:stable bash -c "chmod 400 /tmp/.ssh/id_rsa; bash"
+```
+</div>
+{% else %}
+
+<a id='tab_installer_linux_{{ revision }}' href="javascript:void(0)" class="tabs__btn tabs__btn_installer_{{ revision }} active"
+   onclick="openTabAndSaveStatus(event, 'tabs__btn_installer_{{ revision }}', 'tabs__content_installer_{{ revision }}', 'block_installer_linux_{{ revision }}');" >
+  Linux / macOS
+</a>
+<a id='tab_installer_windows_{{ revision }}' href="javascript:void(0)" class="tabs__btn tabs__btn_installer_{{ revision }}"
+   onclick="openTabAndSaveStatus(event, 'tabs__btn_installer_{{ revision }}', 'tabs__content_installer_{{ revision }}', 'block_installer_windows_{{ revision }}');" >
+  Windows
+</a>
+
+<div id='block_installer_linux_{{ revision }}' class="tabs__content tabs__content_installer_{{ revision }} active" markdown="1">
+<!-- Linux or macOS install, CE -->
+```shell
+docker run --pull=always {% if page.platform_code == "kind" %} --network host {% endif %}-it -v "$PWD/config.yml:/config.yml"{%- if page.platform_type != 'existing' %} -v "$HOME/.ssh/:/tmp/.ssh/"{% endif %}
+{%- if page.platform_type == "existing" or page.platform_code == "kind" %} \
+  -v "$HOME/.kube/config:/kubeconfig"{% endif %}
+{%- if page.platform_type == "cloud" %} \
+  -v "$PWD/dhctl-tmp:/tmp/dhctl"{% endif %}
+{%- if page.platform_code == "bm-private" %} <IMAGES_REPO_URI>/install:stable
+{%- else %} registry.deckhouse.io/deckhouse/ce/install:stable{% endif %} bash
+```
+</div>
+<div id='block_installer_windows_{{ revision }}' class="tabs__content tabs__content_installer_{{ revision }}" markdown="1">
+<!-- Windows install, CE -->
+```text
+docker run --pull=always {% if page.platform_code == "kind" %} --network host {% endif %}-it -v "%cd%\config.yml:/config.yml"
+{%- if page.platform_type != 'existing' %} -v "%userprofile%\.ssh\:/tmp/.ssh/"{% endif %}
+{%- if page.platform_type == "existing" or page.platform_code == "kind" %} -v "%userprofile%\.kube\config:/kubeconfig" {% endif %}
+{%- if page.platform_type == "cloud" %} -v "%cd%\dhctl-tmp:/tmp/dhctl" {% endif %}
+{%- if page.platform_code == "bm-private" %} <IMAGES_REPO_URI>/install:stable
+{%- else %} registry.deckhouse.io/deckhouse/ce/install:stable{% endif %} bash -c "chmod 400 /tmp/.ssh/id_rsa; bash"
+```
+</div>
+{% endif %}
+
+{%- if page.platform_type == "existing" or page.platform_code == "kind" %}
+Notes:
+- Kubectl configuration file with access to Kubernetes API must be mount as the /kubeconfig file in the container.
+{% endif %}
+
+
+Now, to initiate the process of installation, you need to execute inside the container:
+
+```shell
+{%- if page.platform_type == "existing" or page.platform_code == "kind" %}
+dhctl bootstrap-phase install-deckhouse --kubeconfig=/kubeconfig --config=/config.yml
+{%- elsif page.platform_type == "baremetal" %}
+dhctl bootstrap --ssh-user=<username> --ssh-host=<master_ip> --ssh-agent-private-keys=/tmp/.ssh/id_rsa \
+  --config=/config.yml \
+  --ask-become-pass
+{%- elsif page.platform_type == "cloud" %}
+dhctl bootstrap --ssh-user={% if page.platform_code == "azure" %}azureuser{%- elsif page.platform_code == "gcp" %}user{%- else %}ubuntu{%- endif %} --ssh-agent-private-keys=/tmp/.ssh/id_rsa --config=/config.yml
+{%- endif %}
+```
+
+{%- if page.platform_type == "baremetal" or page.platform_type == "cloud" %}
+{%- if page.platform_type == "baremetal" %}
+The `--ssh-user` parameter here refers to the user that generated the SSH key. If a password is required to run sudo on the server, then specify it in response to the request `[sudo] Password:`.
+{%- else %}
+The `--ssh-user` parameter here refers to the default user for the relevant VM image.
+{%- if page.platform_code == "azure" %} It is `azureuser` in case of {{ page.platform_name[page.lang] }} (for the image suggested in this guide).
+{%- elsif page.platform_code == "gcp" %} It is `user` in case of {{ page.platform_name[page.lang] }} (for the image suggested in this guide).
+{%- else %} It is `ubuntu` for the image suggested in this guide.
+{%- endif %}
+{%- endif %}
+
+{% if page.platform_type == "cloud" %}
+{% offtopic title="If the installation was interrupted..." %}
+> If the installation was interrupted (there were not enough quotas, network errors, etc.), you can restart it. The installation will continue correctly, no duplicate resources will be created in the cloud.
+>
+> If the installation failed, and you need to delete the resources created in the cloud, run the following command:
+>
+> ```shell
+  dhctl bootstrap-phase abort --ssh-user={% if page.platform_code == "azure" %}azureuser{%- elsif page.platform_code == "gcp" %}user{%- else %}ubuntu{%- endif %} --ssh-agent-private-keys=/tmp/.ssh/id_rsa --config=/config.yml
+  ```
+{%- endofftopic %}
+{%- endif %}
+{%- endif %}
+
+The installation process may take about from 5 to 30 minutes, depending on the connection.
+
+{% if page.platform_type == "baremetal" %}
+Example of output upon successful completion of the installation:
+```
+...
+│ │ No more converge tasks found in Deckhouse queue.
+│ │ Deckhouse pod is Ready!
+│ └ Waiting for Deckhouse to become Ready (157.34 seconds)
+└ ⛵ ~ Bootstrap: Install Deckhouse (158.47 seconds)
+
+❗ ~ Some resources require at least one non-master node to be added to the cluster.
+┌ ⛵ ~ Bootstrap: Clear cache
+│ ❗ ~ Next run of "dhctl bootstrap" will create a new Kubernetes cluster.
+└ ⛵ ~ Bootstrap: Clear cache (0.00 seconds)
+```
+{% else  %}
+After the installation is complete, the installer will output the IP of the **master node** (you will need it further). Example output:
+```
+...
+┌ 🎈 ~ Common: Kubernetes Master Node addresses for SSH
+│ cloud-demo-master-0 | ssh {% if page.platform_code == "azure" %}azureuser{% elsif page.platform_code == "gcp" %}user{% else %}ubuntu{% endif %}@1.2.3.4
+└ 🎈 ~ Common: Kubernetes Master Node addresses for SSH (0.00 seconds)
+```
+{% endif %}
+
+{%- if page.platform_code == "kind" %}
+
+It remains to create the Ingress controller configuration. Create the `ingress-nginx-controller` file.yml with the following content:
+{% capture includePath %}_includes/etting_started/dvp/{{ page.platform_code }}/partials/ingress-nginx-controller.yml.inc{% endcapture %}
+{% include_file "{{ includePath }}" syntax="yaml" %}
+<p>Apply the file using the command below:</p>
+```shell
+kubectl create -f ingress-nginx-controller.yml
+```
+
+It may take some time to start the Ingress controller.
+
+To check the status of the Ingress Controller Pod, run the following command:
+```shell
+kubectl -n d8-ingress-nginx get po
+```
+
+Wait for the Ingress controller Pod to switch to `Running` state.
+
+You have installed Deckhouse Virtualization Platform in `kind`!
+{%- else %}
+
+Almost everything is ready for a fully-fledged Deckhouse Virtualization Platform to work!
+{%- endif %}
+
+<!-- Troubleshooting in existing cluster //-->
+{%- if page.platform_type == "existing" %}
+<h2 id="if-something-went-wrong">If something went wrong</h2>
+
+{%  include getting_started/existing/partials/TROUBLESHOOT.liquid %}
+
+{% endif %}
+<!--  //-->

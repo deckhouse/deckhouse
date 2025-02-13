@@ -1,0 +1,29 @@
+relativeURLs: false
+params:
+ mode: module
+markup:
+  defaultMarkdownHandler: goldmark
+  goldmark:
+    # used to fix images
+    # we need to remove this, when we rename all pictures with unique names
+    duplicateResourceFiles: true
+
+languages:
+  en:
+    disabled: false
+    languageDirection: ""
+    languageName: ""
+    title: Deckhouse modules
+    weight: 0
+    baseURL: /en/
+    params:
+      description: "Kubernetes is flexibly and rapidly expanded by Deckhouse modules."
+  ru:
+    disabled: false
+    languageDirection: ""
+    languageName: ""
+    weight: 1
+    title: Модули Deckhouse
+    baseURL: /ru/
+    params:
+      description: "Kubernetes гибко и быстро расширяется модулями Deckhouse."

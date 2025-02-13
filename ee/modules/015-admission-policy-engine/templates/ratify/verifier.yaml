@@ -1,0 +1,24 @@
+{{- if and (.Values.admissionPolicyEngine.internal.bootstrapped) (.Values.admissionPolicyEngine.internal.ratify.imageReferences) }}
+---
+apiVersion: config.ratify.deislabs.io/v1beta1
+kind: Verifier
+metadata:
+  name: verifier-cosign
+  {{- include "helm_lib_module_labels" (list . (dict "app" "ratify" "app.kubernetes.io/part-of" "gatekeeper")) | nindent 2 }}
+spec:
+  name: cosign
+  artifactTypes: application/vnd.dev.cosign.artifact.sig.v1+json
+  parameters:
+    trustPolicies:
+{{- range $refid, $ref := .Values.admissionPolicyEngine.internal.ratify.imageReferences }}
+    - name: {{ printf "policy-%d" $refid }}
+      version: 1.0.0
+      scopes:
+      - {{ $ref.reference | quote }}
+      keys:
+{{- range $keyid, $key := $ref.publicKeys }}
+      - provider: {{ printf "ratify-cosign-inline-key-%d-%d" $refid $keyid }}
+{{- end }}
+      tLogVerify: false
+{{- end }}
+{{- end }}

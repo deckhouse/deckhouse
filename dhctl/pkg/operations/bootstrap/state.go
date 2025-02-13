@@ -22,6 +22,7 @@ import (
 
 const PostBootstrapResultCacheKey = "post-bootstrap-result"
 const PreflightBootstrapCloudResultCacheKey = "preflight-bootstrap-cloud-result"
+const PreflightBootstrapPostCloudResultCacheKey = "preflight-bootstrap-post-cloud-result"
 const PreflightBootstrapGlobalResultCacheKey = "preflight-bootstrap-global-result"
 const PreflightBootstrapStaticResultCacheKey = "preflight-bootstrap-static-result"
 
@@ -56,8 +57,17 @@ func (s *State) SetCloudPreflightchecksWasRan() error {
 	return s.cache.Save(PreflightBootstrapCloudResultCacheKey, []byte("yes"))
 }
 
+func (s *State) SetPostCloudPreflightchecksWasRan() error {
+	return s.cache.Save(PreflightBootstrapPostCloudResultCacheKey, []byte("yes"))
+}
+
 func (s *State) CloudPreflightchecksWasRan() (bool, error) {
 	preflightcachefile, err := s.cache.InCache(PreflightBootstrapCloudResultCacheKey)
+	return preflightcachefile, err
+}
+
+func (s *State) PostCloudPreflightchecksWasRan() (bool, error) {
+	preflightcachefile, err := s.cache.InCache(PreflightBootstrapPostCloudResultCacheKey)
 	return preflightcachefile, err
 }
 

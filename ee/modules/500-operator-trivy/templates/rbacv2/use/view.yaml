@@ -5,7 +5,7 @@ metadata:
   labels:
     heritage: deckhouse
     module: operator-trivy
-    rbac.deckhouse.io/aggregate-to-role: viewer
+    rbac.deckhouse.io/aggregate-to-kubernetes-as: viewer
     rbac.deckhouse.io/kind: use
   name: d8:use:capability:module:operator-trivy:view
 rules:

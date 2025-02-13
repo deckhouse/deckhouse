@@ -17,6 +17,18 @@ rules:
   - "daemonsets/prometheus-metrics"
   resourceNames: ["proxy-failover"]
   verbs: ["get"]
+---
+kind: Role
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: d8:cloud-provider-huaweicloud:cloud-controller-manager-ingress-nginx
+  namespace: d8-ingress-nginx
+  {{- include "helm_lib_module_labels" (list . (dict "app" "cloud-controller-manager")) | nindent 2 }}
+rules:
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get", "watch", "list"]
+
 {{- if (.Values.global.enabledModules | has "prometheus") }}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
@@ -35,4 +47,21 @@ subjects:
 - kind: ServiceAccount
   name: prometheus
   namespace: d8-monitoring
+{{- end }}
+{{- if (.Values.global.enabledModules | has "cloud-provider-huaweicloud") }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: d8:cloud-provider-huaweicloud:cloud-controller-manager-ingress-nginx
+  namespace: d8-ingress-nginx
+  {{- include "helm_lib_module_labels" (list . (dict "app" "cloud-controller-manager")) | nindent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: d8:cloud-provider-huaweicloud:cloud-controller-manager-ingress-nginx
+subjects:
+- kind: ServiceAccount
+  name: cloud-controller-manager
+  namespace: d8-cloud-provider-huaweicloud
 {{- end }}

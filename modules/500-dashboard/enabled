@@ -19,14 +19,20 @@ source /deckhouse/shell_lib.sh
 function __main__() {
   enabled::disable_module_if_cluster_is_not_bootstraped
 
+  echo "false" > $MODULE_ENABLED_RESULT
   if values::has global.modules.publicDomainTemplate ; then
-    if ! values::array_has global.enabledModules "user-authz" ; then
-      echo "false" > $MODULE_ENABLED_RESULT
-    else
-      echo "true" > $MODULE_ENABLED_RESULT
+    https_mode=$(values::get_first_defined dashboard.https.mode global.modules.https.mode)
+    if [ "$https_mode" != "Disabled" ] ; then
+      if values::array_has global.enabledModules "user-authz" ; then
+        if ! values::array_has global.enabledModules "user-authn"; then
+          if values::has dashboard.auth.externalAuthentication.authSignInURL && values::has dashboard.auth.externalAuthentication.authURL; then
+            echo "true" > $MODULE_ENABLED_RESULT
+          fi
+        else
+          echo "true" > $MODULE_ENABLED_RESULT
+        fi
+      fi
     fi
-  else
-    echo "false" > $MODULE_ENABLED_RESULT
   fi
 }
 

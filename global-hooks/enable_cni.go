@@ -24,6 +24,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/utils/ptr"
 
+	"github.com/deckhouse/deckhouse/go_lib/dependency/requirements"
 	"github.com/deckhouse/deckhouse/go_lib/set"
 )
 
@@ -37,6 +38,10 @@ Developer notes:
 - It is the only hook that subscribes to configuration ConfigMap because
   there is no way to get enabled modules list in global hook.
 */
+
+const (
+	cniConfigurationSettledKey = "cniConfigurationSettled"
+)
 
 var (
 	cniNameToModule = map[string]string{
@@ -105,31 +110,34 @@ func applyCniConfigFilter(obj *unstructured.Unstructured) (go_hook.FilterResult,
 }
 
 func enableCni(input *go_hook.HookInput) error {
+	requirements.RemoveValue(cniConfigurationSettledKey)
+
 	cniNameSnap := input.Snapshots["cni_name"]
 	deckhouseMCSnap := input.Snapshots["deckhouse_mc"]
 
 	explicitlyEnabledCNIs := set.NewFromSnapshot(deckhouseMCSnap)
 
 	if len(cniNameSnap) == 0 {
-		input.LogEntry.Warnln("CNI name not found")
+		input.Logger.Warn("CNI name not found")
 		return nil
 	}
 
 	if len(explicitlyEnabledCNIs) > 1 {
+		requirements.SaveValue(cniConfigurationSettledKey, "false")
 		return fmt.Errorf("more then one CNI enabled: %v", explicitlyEnabledCNIs.Slice())
 	} else if len(explicitlyEnabledCNIs) == 1 {
-		input.LogEntry.Infof("enabled CNI from Deckhouse ModuleConfig: %s", explicitlyEnabledCNIs.Slice()[0])
+		input.Logger.Infof("enabled CNI from Deckhouse ModuleConfig: %s", explicitlyEnabledCNIs.Slice()[0])
 		return nil
 	}
 
 	// nor any CNI enabled directly via MC, found default CNI from secret
 	cniToEnable := cniNameSnap[0].(string)
 	if _, ok := cniNameToModule[cniToEnable]; !ok {
-		input.LogEntry.Warnf("Incorrect cni name: '%v'. Skip", cniToEnable)
+		input.Logger.Warnf("Incorrect cni name: '%v'. Skip", cniToEnable)
 		return nil
 	}
 
-	input.LogEntry.Infof("enabled CNI by secret: %s", cniToEnable)
+	input.Logger.Infof("enabled CNI by secret: %s", cniToEnable)
 	input.Values.Set(cniNameToModule[cniToEnable], true)
 	return nil
 }

@@ -47,11 +47,12 @@ const helpersPath = "templates"
 
 // Deckhouse edition type
 const (
-	ce edition = "ce" // community edition
-	ee edition = "ee" // enterprise edition
-	be edition = "be" // basic edition
-	se edition = "se" // standard edition
-	fe edition = "fe" // fan edition
+	ce     edition = "ce"      // community edition
+	ee     edition = "ee"      // enterprise edition
+	be     edition = "be"      // basic edition
+	se     edition = "se"      // standard edition
+	sePlus edition = "se-plus" // standard plus edition
+	fe     edition = "fe"      // fan edition
 )
 
 var deckhouseRoot = ""
@@ -295,6 +296,18 @@ func modules(deckhouseRoot string) (modules []module) {
 				Name:    file.Name(),
 				Path:    filepath.Join("ee/se/modules", file.Name()),
 				Edition: se,
+			}
+			modules = append(modules, md)
+		}
+	}
+
+	files, _ = os.ReadDir(filepath.Join(deckhouseRoot, "ee/se-plus/modules"))
+	for _, file := range files {
+		if file.IsDir() {
+			md := module{
+				Name:    file.Name(),
+				Path:    filepath.Join("ee/se-plus/modules", file.Name()),
+				Edition: sePlus,
 			}
 			modules = append(modules, md)
 		}

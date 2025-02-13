@@ -10,7 +10,7 @@ metadata:
     rbac.deckhouse.io/kind: manage
     rbac.deckhouse.io/level: module
     rbac.deckhouse.io/namespace: d8-snapshot-controller
-  name: d8:manage:capability:module:snapshot-controller:view
+  name: d8:manage:permission:module:snapshot-controller:view
 rules:
 - apiGroups:
   - deckhouse.io

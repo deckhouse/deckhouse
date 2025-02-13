@@ -1,0 +1,19 @@
+admission-policy-engine:
+  features:
+    - summary: Add custom CA for private registries when verifying image signatures.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/10925
+docs:
+  fixes:
+    - summary: Minor documentation changes.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/10924
+    - summary: Changed the description of network policies for DKP
+      pull_request: https://github.com/deckhouse/deckhouse/pull/10778
+node-local-dns:
+  fixes:
+    - summary: Fix stuck in iptables-loop script.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/10937
+openvpn:
+  fixes:
+    - summary: Fix supported ciphers list.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/10739
+

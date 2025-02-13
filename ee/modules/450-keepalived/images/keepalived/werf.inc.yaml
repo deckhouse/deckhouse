@@ -1,8 +1,12 @@
 {{- $binaries := "/usr/bin/python3 /lib64/libz.so* /lib64/libexpat.so* /usr/lib64/libffi.so* /lib64/libcrypto.so* /lib64/libssl.so* /usr/lib64/libsqlite3.so* /usr/bin/pip3" }}
 ---
-artifact: {{ .ModuleName }}/build-keepalived
+image: {{ .ModuleName }}/build-keepalived
+final: false
 from: {{ .Images.BASE_ALPINE_DEV }}
 shell:
+  beforeInstall:
+  - apk add --no-cache openssh-client
+  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
   install:
     - mkdir build && cd build
     - git clone -b v2.2.7 --single-branch --depth=1 {{ $.SOURCE_REPO }}/acassen/keepalived.git ./src
@@ -15,7 +19,8 @@ shell:
     - chmod 0700 /opt/keepalived-static/usr/sbin/keepalived
     - chmod 0700 /opt/keepalived-static/usr/bin/genhash
 ---
-artifact: {{ $.ModuleName }}/python
+image: {{ $.ModuleName }}/python
+final: false
 from: {{ $.Images.BASE_ALT_DEV }}
 shell:
   install:
@@ -29,31 +34,31 @@ git:
   - add: /{{ $.ModulePath }}modules/450-{{ $.ModuleName }}/images/{{ $.ImageName }}/prepare-config.py
     to: /prepare-config.py
 import:
-  - artifact: {{ $.ModuleName }}/python
+  - image: {{ $.ModuleName }}/python
     add: /relocate
     to: /
     before: install
-  - artifact: {{ $.ModuleName }}/python
+  - image: {{ $.ModuleName }}/python
     add: /usr/lib64/python3
     to: /usr/lib64/python3
     before: install
-  - artifact: {{ $.ModuleName }}/python
+  - image: {{ $.ModuleName }}/python
     add: /usr/local/lib/python3/site-packages
     to: /usr/local/lib/python3/site-packages
     before: install
-  - artifact: {{ $.ModuleName }}/python
+  - image: {{ $.ModuleName }}/python
     add: /usr/lib64/python3.9
     to: /usr/lib64/python3.9
     before: install
-  - artifact: {{ $.ModuleName }}/build-keepalived
+  - image: {{ $.ModuleName }}/build-keepalived
     add: /opt/keepalived-static/usr/sbin/keepalived
     to: /usr/sbin/keepalived
     before: install
-  - artifact: {{ $.ModuleName }}/build-keepalived
+  - image: {{ $.ModuleName }}/build-keepalived
     add: /opt/keepalived-static/usr/bin/genhash
     to: /usr/bin/genhash
     before: install
-  - artifact: {{ $.ModuleName }}/python
+  - image: {{ $.ModuleName }}/python
     add: /empty
     to: /run
     before: setup

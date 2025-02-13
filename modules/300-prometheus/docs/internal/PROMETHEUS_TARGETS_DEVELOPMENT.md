@@ -8,7 +8,7 @@ search: Developing Prometheus targets, prometheus target
 ## General information
 
 * The most common operation is adding a target for a new application (redis, rabbitmq, etc.). In most cases, you only need to copy one of the existing service monitors in the `applications` directory and edit the names.
-* However, if you need to do something more complex or mere copying does not produce the expected result, refer to the [Prometheus Operator](../../modules/200-operator-prometheus/) module documentation.
+* However, if you need to do something more complex or mere copying does not produce the expected result, refer to the [Prometheus Operator](../../modules/operator-prometheus/) module documentation.
 * All existing targets are located in the `prometheus-targets` directory. They usually consist of a service monitor, some Prometheus exporter, and the necessary wrapping that binds them together.
 * All internal ServiceMonitors and PodMonitors should be created in the namespace `d8-monitoring`.
 

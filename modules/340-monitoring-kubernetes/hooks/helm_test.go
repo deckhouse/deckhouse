@@ -266,7 +266,7 @@ var _ = Describe("helm :: hooks :: deprecated_versions ::", func() {
 		})
 		It("Must be valid and have no deprecated resources", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			out, _ := io.ReadAll(f.LogrusOutput)
+			out, _ := io.ReadAll(f.LoggerOutput)
 			Expect(string(out)).ToNot(ContainSubstring("manifest read error"))
 			metrics := f.MetricsCollector.CollectedMetrics()
 			Expect(metrics).To(HaveLen(3))
@@ -306,7 +306,7 @@ clusterType: Static
 podSubnetCIDR: 10.122.0.0/16
 podSubnetNodeCIDRPrefix: "26"
 serviceSubnetCIDR: 10.213.0.0/16
-kubernetesVersion: "1.27"
+kubernetesVersion: "1.28"
 `
 		stateConcreteVersion = `
 apiVersion: v1
@@ -348,7 +348,7 @@ data:
 			})
 		})
 
-		Context("check for kubernetesVersion: \"1.27\"", func() {
+		Context("check for kubernetesVersion: \"1.28\"", func() {
 			BeforeEach(func() {
 				f.BindingContexts.Set(f.KubeStateSet(stateConcreteVersion))
 				var sec corev1.Secret

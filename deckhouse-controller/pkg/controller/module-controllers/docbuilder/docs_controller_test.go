@@ -27,7 +27,6 @@ import (
 	"time"
 
 	"github.com/jonboulle/clockwork"
-	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
@@ -41,9 +40,10 @@ import (
 	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
-	d8env "github.com/deckhouse/deckhouse/go_lib/deckhouse-config/env"
+	"github.com/deckhouse/deckhouse/go_lib/d8env"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	docs_builder "github.com/deckhouse/deckhouse/go_lib/module/docs-builder"
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 var golden bool
@@ -101,7 +101,7 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 		_ = os.MkdirAll(filepath.Join(suite.tmpDir, "testmodule", "v1.0.0", "openapi"), 0777)
 		_ = os.WriteFile(filepath.Join(suite.tmpDir, "testmodule", "v1.0.0", "openapi", "config-values.yaml"), []byte("{}"), 0666)
 
-		dependency.TestDC.HTTPClient.DoMock.Set(func(req *http.Request) (rp1 *http.Response, err error) {
+		dependency.TestDC.HTTPClient.DoMock.Set(func(req *http.Request) (*http.Response, error) {
 			switch req.URL.Path {
 			case "/api/v1/doc/testmodule/v1.0.0":
 				return &http.Response{StatusCode: http.StatusCreated, Body: io.NopCloser(strings.NewReader(""))}, nil
@@ -124,7 +124,7 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 		_ = os.MkdirAll(filepath.Join(suite.tmpDir, "testmodule", "v1.0.0", "openapi"), 0777)
 		_ = os.WriteFile(filepath.Join(suite.tmpDir, "testmodule", "v1.0.0", "openapi", "config-values.yaml"), []byte("{}"), 0666)
 
-		dependency.TestDC.HTTPClient.DoMock.Set(func(req *http.Request) (rp1 *http.Response, err error) {
+		dependency.TestDC.HTTPClient.DoMock.Set(func(req *http.Request) (*http.Response, error) {
 			switch req.URL.Path {
 			case "/api/v1/doc/testmodule/v1.0.0":
 				return &http.Response{StatusCode: http.StatusCreated, Body: io.NopCloser(strings.NewReader(""))}, nil
@@ -147,7 +147,7 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 		_ = os.MkdirAll(filepath.Join(suite.tmpDir, "testmodule", "v1.0.0", "openapi"), 0777)
 		_ = os.WriteFile(filepath.Join(suite.tmpDir, "testmodule", "v1.0.0", "openapi", "config-values.yaml"), []byte("{}"), 0666)
 
-		dependency.TestDC.HTTPClient.DoMock.Set(func(req *http.Request) (rp1 *http.Response, err error) {
+		dependency.TestDC.HTTPClient.DoMock.Set(func(req *http.Request) (*http.Response, error) {
 			if strings.HasPrefix(req.Host, "10-111-111-11") {
 				return &http.Response{StatusCode: http.StatusInternalServerError, Body: io.NopCloser(strings.NewReader("I'm broken"))}, nil
 			}
@@ -174,7 +174,7 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 		_ = os.MkdirAll(filepath.Join(suite.tmpDir, "testmodule", "v1.1.1", "openapi"), 0777)
 		_ = os.WriteFile(filepath.Join(suite.tmpDir, "testmodule", "v1.1.1", "openapi", "config-values.yaml"), []byte("{}"), 0666)
 
-		dependency.TestDC.HTTPClient.DoMock.Set(func(req *http.Request) (rp1 *http.Response, err error) {
+		dependency.TestDC.HTTPClient.DoMock.Set(func(req *http.Request) (*http.Response, error) {
 			switch req.URL.Path {
 			case "/api/v1/doc/testmodule/v1.1.1":
 				return &http.Response{StatusCode: http.StatusCreated, Body: io.NopCloser(strings.NewReader(""))}, nil
@@ -197,7 +197,7 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 		_ = os.MkdirAll(filepath.Join(suite.tmpDir, "testmodule", "v1.1.1", "openapi"), 0777)
 		_ = os.WriteFile(filepath.Join(suite.tmpDir, "testmodule", "v1.1.1", "openapi", "config-values.yaml"), []byte("{}"), 0666)
 
-		dependency.TestDC.HTTPClient.DoMock.Set(func(req *http.Request) (rp1 *http.Response, err error) {
+		dependency.TestDC.HTTPClient.DoMock.Set(func(req *http.Request) (*http.Response, error) {
 			switch req.URL.Path {
 			case "/api/v1/doc/testmodule/v1.1.1":
 				return &http.Response{StatusCode: http.StatusCreated, Body: io.NopCloser(strings.NewReader(""))}, nil
@@ -220,7 +220,7 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 		_ = os.MkdirAll(filepath.Join(suite.tmpDir, "testmodule", "dev", "openapi"), 0777)
 		_ = os.WriteFile(filepath.Join(suite.tmpDir, "testmodule", "dev", "openapi", "config-values.yaml"), []byte("{}"), 0666)
 
-		dependency.TestDC.HTTPClient.DoMock.Set(func(req *http.Request) (rp1 *http.Response, err error) {
+		dependency.TestDC.HTTPClient.DoMock.Set(func(req *http.Request) (*http.Response, error) {
 			switch req.URL.Path {
 			case "/api/v1/doc/testmodule/mpo-tag":
 				return &http.Response{StatusCode: http.StatusCreated, Body: io.NopCloser(strings.NewReader(""))}, nil
@@ -281,7 +281,7 @@ func (suite *ControllerTestSuite) setupController(yamlDoc string) {
 	rec := &moduleDocumentationReconciler{
 		client:               cl,
 		downloadedModulesDir: d8env.GetDownloadedModulesDir(),
-		logger:               log.New(),
+		logger:               log.NewNop(),
 		docsBuilder:          docs_builder.NewClient(dc.GetHTTPClient()),
 		dc:                   dc,
 	}

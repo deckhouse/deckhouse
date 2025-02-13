@@ -9,7 +9,7 @@ metadata:
     rbac.deckhouse.io/kind: manage
     rbac.deckhouse.io/level: module
     rbac.deckhouse.io/namespace: d8-operator-prometheus
-  name: d8:manage:capability:module:operator-prometheus:edit
+  name: d8:manage:permission:module:operator-prometheus:edit
 rules:
 - apiGroups:
   - deckhouse.io

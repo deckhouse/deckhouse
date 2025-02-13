@@ -4,22 +4,24 @@ git:
 - add: /{{ .ModulePath }}candi/cloud-providers/aws
   to: /deckhouse/candi/cloud-providers/aws
 import:
-- artifact: terraform-provider-aws
+- image: terraform-provider-aws
   add: /terraform-provider-aws
   to: /plugins/registry.terraform.io/{{ .TF.aws.namespace }}/{{ .TF.aws.type }}/{{ .TF.aws.version }}/linux_amd64/terraform-provider-aws
   before: setup
 ---
-artifact: terraform-provider-aws
+image: terraform-provider-aws
+final: false
 from: {{ $.Images.BASE_GOLANG_20_ALPINE }}
 mount:
   - fromPath: ~/go-pkg-cache
     to: /go/pkg
 shell:
   beforeInstall:
-    - apk add --no-cache make patch git bash
+    - apk add --no-cache make patch git bash openssh-client
   install:
     - mkdir /src
     - export GOPROXY={{ $.GOPROXY }}
+    - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
     - git clone --depth 1 --branch v{{ .TF.aws.version }} {{ $.SOURCE_REPO }}/hashicorp/terraform-provider-aws.git /src
     - cd /src
     - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 make build LDFLAGS="-s -w -extldflags \"-static\" -X github.com/hashicorp/terraform-provider-aws/version.ProviderVersion={{ .TF.aws.version }}"

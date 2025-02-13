@@ -75,10 +75,10 @@ type TerraNodeGroupSpec struct {
 }
 
 type DeckhouseClusterConfig struct {
-	ReleaseChannel    string                 `json:"releaseChannel,omitempty"`
+	ReleaseChannel    string                 `json:"releaseChannel,omitempty"` // Deprecated
 	DevBranch         string                 `json:"devBranch,omitempty"`
-	Bundle            string                 `json:"bundle,omitempty"`
-	LogLevel          string                 `json:"logLevel,omitempty"`
+	Bundle            string                 `json:"bundle,omitempty"`   // Deprecated
+	LogLevel          string                 `json:"logLevel,omitempty"` // Deprecated
 	ImagesRepo        string                 `json:"imagesRepo"`
 	RegistryDockerCfg string                 `json:"registryDockerCfg,omitempty"`
 	RegistryCA        string                 `json:"registryCA,omitempty"`
