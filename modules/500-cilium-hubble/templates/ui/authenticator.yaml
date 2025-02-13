@@ -13,7 +13,7 @@ spec:
   {{- end }}
   applicationIngressClassName: {{ include "helm_lib_module_ingress_class" . | quote }}
   {{- with .Values.ciliumHubble.auth.allowedUserEmails }}
-  allowedUserEmails:
+  allowedEmails:
   {{- . | toYaml | nindent 2 }}
   {{- end }}
   {{- with .Values.ciliumHubble.auth.allowedUserGroups }}

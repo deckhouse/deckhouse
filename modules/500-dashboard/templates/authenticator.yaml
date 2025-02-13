@@ -17,7 +17,7 @@ spec:
   signOutURL: "/logout"
   sendAuthorizationHeader: true
   {{- with .Values.dashboard.auth.allowedUserEmails }}
-  allowedUserEmails:
+  allowedEmails:
   {{- . | toYaml | nindent 2 }}
   {{- end }}
   {{- with .Values.dashboard.auth.allowedUserGroups }}
