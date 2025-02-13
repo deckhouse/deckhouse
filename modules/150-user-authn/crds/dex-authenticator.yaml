@@ -299,7 +299,7 @@ spec:
                 allowedEmails:
                   type: array
                   description: |-
-                    A list of usernames of members are allowed to connect to the client.
+                    A list of emails of users are allowed to connect to the client.
 
                     **By default**, all users can connect.
                   x-doc-default: 'All users are allowed.'
