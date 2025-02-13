@@ -10,7 +10,7 @@ metadata:
 id: {{ $crd.name }}-{{ $crd.namespace }}-dex-authenticator
 name: {{ $crd.name }}-{{ $crd.namespace }}-dex-authenticator
 secret: {{ $crd.credentials.appDexSecret }}
-    {{- if $crd.spec.allowedGroups }}
+    {{- if $crd.spec.allowedEmails }}
 allowedEmails:
 {{- range $email := $crd.spec.allowedEmails }}
   - {{ $email }}
