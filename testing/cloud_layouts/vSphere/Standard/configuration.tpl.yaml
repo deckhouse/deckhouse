@@ -37,7 +37,7 @@ masterNodeGroup:
   instanceClass:
     numCPUs: 4
     memory: 8192
-    template: vm-teamplates/redos8-cloudinit
+    template: vm-teamplates/redos8-cloudinit-2cfg
     mainNetwork: DPortGroup-lab-vms
     datastore: vsan-spb-5-datastore
     rootDiskSize: 50
