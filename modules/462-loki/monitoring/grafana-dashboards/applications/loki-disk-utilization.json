@@ -142,7 +142,7 @@
               }
             ]
           },
-          "unit": "decbytes"
+          "unit": "bytes"
         },
         "overrides": [
           {
@@ -216,7 +216,7 @@
           "useBackend": false
         }
       ],
-      "title": "Disk utilization",
+      "title": "Disk Utilization",
       "type": "timeseries"
     },
     {
@@ -321,7 +321,7 @@
         "type": "prometheus",
         "uid": "${ds_prometheus}"
       },
-      "description": "Size of currently expired chunks",
+      "description": "Size of currently expired chunks (this is an approximate value based on expired chunks count multiplied with ingester's chunk_target_size)",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -373,7 +373,7 @@
               }
             ]
           },
-          "unit": "decbytes"
+          "unit": "bytes"
         },
         "overrides": []
       },
@@ -421,7 +421,7 @@
     "list": [
       {
         "current": {
-          "selected": true,
+          "selected": false,
           "text": "default",
           "value": "default"
         },
@@ -440,13 +440,13 @@
     ]
   },
   "time": {
-    "from": "now-30m",
+    "from": "now-1h",
     "to": "now"
   },
   "timepicker": {},
   "timezone": "",
   "title": "Loki Disk Utilization",
   "uid": "d8-loki-disk-utilization",
-  "version": 1,
+  "version": 2,
   "weekStart": ""
 }

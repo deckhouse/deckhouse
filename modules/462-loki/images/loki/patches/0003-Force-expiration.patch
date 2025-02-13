@@ -110,10 +110,10 @@ index 3c8b85ec3a503f4e55e6d9f9519d50be095565e4..4b3fd25e60e856d4e4ca2b9270b43d56
  			level.Error(util_log.Logger).Log("msg", "failed to run compaction", "err", err)
 diff --git a/pkg/storage/stores/indexshipper/compactor/force_expiration.go b/pkg/storage/stores/indexshipper/compactor/force_expiration.go
 new file mode 100644
-index 0000000000000000000000000000000000000000..856be45de8da7faba337ea160018b8a9e20664e5
+index 0000000000000000000000000000000000000000..db15bb74b2525e6e3839f7b43da3e61a1cb59360
 --- /dev/null
 +++ b/pkg/storage/stores/indexshipper/compactor/force_expiration.go
-@@ -0,0 +1,336 @@
+@@ -0,0 +1,335 @@
 +package compactor
 +
 +import (
@@ -328,13 +328,12 @@ index 0000000000000000000000000000000000000000..856be45de8da7faba337ea160018b8a9
 +	var bytesDeleted int64
 +
 +	forEachErr := tableCompactedIndex.ForEachChunk(ctx, func(ce retention.ChunkEntry) (bool, error) {
-+		//userID := unsafeGetString(ce.UserID)
-+		chunkID := unsafeGetString(ce.ChunkID)
-+		chunksToDelete = append(chunksToDelete, strings.Clone(chunkID))
-+		bytesDeleted = bytesDeleted + int64(h.approxChunkSize.Val())
 +		if bytesDeleted >= bytesToDelete {
 +			return false, nil
 +		}
++		chunkID := unsafeGetString(ce.ChunkID)
++		chunksToDelete = append(chunksToDelete, strings.Clone(chunkID))
++		bytesDeleted = bytesDeleted + int64(h.approxChunkSize.Val())
 +		return true, nil
 +	})
 +	tciCloseErr := tableCompactedIndex.Close()
@@ -429,7 +428,7 @@ index 0000000000000000000000000000000000000000..856be45de8da7faba337ea160018b8a9
 +		expiredChunksSizeBytes: promauto.With(r).NewCounter(prometheus.CounterOpts{
 +			Namespace: "force_expiration_hook",
 +			Name:      "expired_chunks_size_bytes",
-+			Help:      "Size (in bytes) of all expired chunks.",
++			Help:      "Size (approximate, in bytes) of all expired chunks.",
 +		}),
 +		dirUsageThresholdBytes: promauto.With(r).NewGaugeVec(prometheus.GaugeOpts{
 +			Namespace: "force_expiration_hook",
