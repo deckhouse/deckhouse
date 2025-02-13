@@ -128,7 +128,7 @@ index 00000000..08a77ca9
 +func (*fakeCache) Remove(_ string)                              {}
 +func (*fakeCache) Get(_ string) (*authenticator.Response, bool) { return nil, false }
 diff --git a/pkg/proxy/proxy.go b/pkg/proxy/proxy.go
-index aaac103c..12f6905b 100644
+index aaac103c..7e2db1d2 100644
 --- a/pkg/proxy/proxy.go
 +++ b/pkg/proxy/proxy.go
 @@ -18,10 +18,13 @@ package proxy
@@ -159,7 +159,7 @@ index aaac103c..12f6905b 100644
  // Config holds proxy authorization and authentication settings
  type Config struct {
  	Authentication *authn.AuthnConfig
-@@ -45,77 +55,164 @@ type kubeRBACProxy struct {
+@@ -45,77 +55,169 @@ type kubeRBACProxy struct {
  	authorizer.Authorizer
  	// authorizerAttributesGetter implements retrieving authorization attributes for a respective request.
  	authorizerAttributesGetter *krpAuthorizerAttributesGetter
@@ -230,7 +230,8 @@ index aaac103c..12f6905b 100644
 +		ok bool
 +		err error
 +	)
-+
++	
++	// AUTHENTIFICATION
 +	if inBackoff {
 +		klog.Infof("Backoff mode active: blocking kube-api request until %s. Using cached credentials for %s.", h.backoffUntil, h.maskToken(userIdentity))
 +		u, ok = h.StaleCache.Get(userIdentity)
@@ -278,19 +279,21 @@ index aaac103c..12f6905b 100644
 -		return false
 +	if userIdentity == tokenPrefix {
 +		userIdentity = certificatePrefix + u.User.GetName()
-+	}
-+
+ 	}
+-
+-	// Get authorization attributes
++	// AUTHORIZATION BYPASS. We cache successfully authorized responses only
 +	if inBackoff {
 +		if h.Config.Authentication.Header.Enabled {
++ 		// Seemingly well-known headers to tell the upstream about user's identity
++ 		// so that the upstream can achieve the original goal of delegating RBAC authn/authz to kube-rbac-proxy
 +			headerCfg := h.Config.Authentication.Header
 +			req.Header.Set(headerCfg.UserFieldName,   u.User.GetName())
 +			req.Header.Set(headerCfg.GroupsFieldName, strings.Join(u.User.GetGroups(), headerCfg.GroupSeparator))
 +		}
-+		h.StaleCache.Add(userIdentity, u)
 +		return true
- 	}
- 
--	// Get authorization attributes
++	}
++	
  	allAttrs := h.authorizerAttributesGetter.GetRequestAttributes(u.User, req)
  	if len(allAttrs) == 0 {
  		msg := "Bad Request. The request or configuration is malformed."
@@ -300,7 +303,9 @@ index aaac103c..12f6905b 100644
 +		h.StaleCache.Remove(userIdentity)
  		return false
  	}
- 
+-
++	
++	// AUTHORIZATION
  	for _, attrs := range allAttrs {
 -		// Authorize
  		authorized, reason, err := h.Authorize(ctx, attrs)
@@ -311,21 +316,19 @@ index aaac103c..12f6905b 100644
 -			return false
 +			_, ok := h.StaleCache.Get(userIdentity)
 +			if !ok {
-+				msg := fmt.Sprintf("Authorization error (user=%s, verb=%s, resource=%s, subresource=%s)",
-+					u.User.GetName(), attrs.GetVerb(), attrs.GetResource(), attrs.GetSubresource())
++				msg := fmt.Sprintf("Authorization error (user=%s, verb=%s, resource=%s, subresource=%s)", u.User.GetName(), attrs.GetVerb(), attrs.GetResource(), attrs.GetSubresource())
 +				klog.Errorf("%s: %s", msg, err)
 +				http.Error(w, msg, http.StatusInternalServerError)
 +
 +				h.StaleCache.Remove(userIdentity)
 +				return false
 +			}
++			// We save only authorized requests to the stale cache, if there is an entry - authorization is allowed
 +			authorized = authorizer.DecisionAllow
  		}
 +
  		if authorized != authorizer.DecisionAllow {
--			msg := fmt.Sprintf("Forbidden (user=%s, verb=%s, resource=%s, subresource=%s)", u.User.GetName(), attrs.GetVerb(), attrs.GetResource(), attrs.GetSubresource())
-+			msg := fmt.Sprintf("Forbidden (user=%s, verb=%s, resource=%s, subresource=%s)",
-+				u.User.GetName(), attrs.GetVerb(), attrs.GetResource(), attrs.GetSubresource())
+ 			msg := fmt.Sprintf("Forbidden (user=%s, verb=%s, resource=%s, subresource=%s)", u.User.GetName(), attrs.GetVerb(), attrs.GetResource(), attrs.GetSubresource())
  			klog.V(2).Infof("%s. Reason: %q.", msg, reason)
  			http.Error(w, msg, http.StatusForbidden)
 +
@@ -333,11 +336,12 @@ index aaac103c..12f6905b 100644
  			return false
  		}
  	}
++	// cache successfully authorized responses only
 +	h.StaleCache.Add(userIdentity, u)
  
  	if h.Config.Authentication.Header.Enabled {
--		// Seemingly well-known headers to tell the upstream about user's identity
--		// so that the upstream can achieve the original goal of delegating RBAC authn/authz to kube-rbac-proxy
+ 		// Seemingly well-known headers to tell the upstream about user's identity
+ 		// so that the upstream can achieve the original goal of delegating RBAC authn/authz to kube-rbac-proxy
  		headerCfg := h.Config.Authentication.Header
 -		req.Header.Set(headerCfg.UserFieldName, u.User.GetName())
 +		req.Header.Set(headerCfg.UserFieldName,   u.User.GetName())
@@ -351,7 +355,7 @@ index aaac103c..12f6905b 100644
  func newKubeRBACProxyAuthorizerAttributesGetter(authzConfig *authz.Config) *krpAuthorizerAttributesGetter {
  	return &krpAuthorizerAttributesGetter{authzConfig}
  }
-@@ -210,6 +307,11 @@ func (n krpAuthorizerAttributesGetter) GetRequestAttributes(u user.Info, r *http
+@@ -210,6 +312,11 @@ func (n krpAuthorizerAttributesGetter) GetRequestAttributes(u user.Info, r *http
  		}
  		allAttrs = append(allAttrs, attrs)
  	}
@@ -363,7 +367,7 @@ index aaac103c..12f6905b 100644
  	return allAttrs
  }
  
-@@ -265,3 +367,15 @@ func templateWithValue(templateString, value string) string {
+@@ -265,3 +372,15 @@ func templateWithValue(templateString, value string) string {
  	}
  	return out.String()
  }
