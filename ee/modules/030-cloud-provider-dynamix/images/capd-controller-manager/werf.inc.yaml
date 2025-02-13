@@ -1,8 +1,9 @@
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
-docker:
-  ENTRYPOINT: ["/capd-controller-manager"]
+imageSpec:
+  config:
+    entrypoint: ["/capd-controller-manager"]
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-artifact
   add: /capd-controller-manager

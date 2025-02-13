@@ -39,7 +39,7 @@ To add a bare-metal server to a cluster as a static node, follow these steps:
 
 1. Pre-configure the new node according to your environment specifics:
    - Add all the necessary mount points to the `/etc/fstab` file: NFS, Ceph, etc.
-   - Install the necessary packages (for example, `ceph-common`).
+   - Install the necessary packages.
    - Set up network connectivity between the new node and the other nodes of the cluster.
 1. Connect to the new node over SSH and run the following command, inserting the Base64 string you got in step 2:
 

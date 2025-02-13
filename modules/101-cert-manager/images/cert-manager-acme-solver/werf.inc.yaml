@@ -6,5 +6,6 @@ import:
   add: /acmesolver-linux-amd64
   to: /bin/acmesolver
   before: setup
-docker:
-  ENTRYPOINT: ["/bin/acmesolver"]
+imageSpec:
+  config:
+    entrypoint: ["/bin/acmesolver"]

@@ -24,9 +24,10 @@ import:
   owner: 1337
   group: 1337
   after: setup
-docker:
-  USER: 1337
-  ENTRYPOINT: ["/usr/local/bin/pilot-discovery"]
+imageSpec:
+  config:
+    user: "1337:1337"
+    entrypoint: ["/usr/local/bin/pilot-discovery"]
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
 final: false
@@ -46,7 +47,7 @@ shell:
   setup:
   - cd /src/istio/
   - echo {{ $istioVersion }} > version
-  - export GOPROXY={{ $.GOPROXY }} GOOS=linux GOARCH=amd64 
+  - export GOPROXY={{ $.GOPROXY }} GOOS=linux GOARCH=amd64
   - export LDFLAGS='-extldflags -static -s -w'
   - go mod download
   - common/scripts/gobuild.sh /src/istio/out/ -tags=agent,disable_pgv /src/istio/pilot/cmd/pilot-discovery/

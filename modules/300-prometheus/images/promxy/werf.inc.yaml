@@ -42,5 +42,6 @@ import:
     add: /src/promxy
     to: /app/promxy
     after: setup
-docker:
-  ENTRYPOINT: ["/app/promxy"]
+imageSpec:
+  config:
+    entrypoint: ["/app/promxy"]

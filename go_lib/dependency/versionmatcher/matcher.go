@@ -126,7 +126,7 @@ func (m *Matcher) ValidateModuleVersion(name string, version *semver.Version) er
 	}
 
 	if !constraint.Check(version) {
-		return fmt.Errorf("the \"%s\" version does not satisfy the \"%s\" constraint", version.String(), constraint.String())
+		return fmt.Errorf("the '%s' version does not satisfy the '%s' constraint", version.Original(), constraint.String())
 	}
 
 	return nil

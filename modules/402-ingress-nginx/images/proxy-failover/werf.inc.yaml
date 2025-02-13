@@ -52,5 +52,6 @@ import:
 - image: {{ .ModuleName }}/nginx-static-artifact
   add: /opt/nginx-static
   before: setup
-docker:
-  ENTRYPOINT: ["/proxy-failover-controller"]
+imageSpec:
+  config:
+    entrypoint: ["/proxy-failover-controller"]

@@ -1,6 +1,14 @@
 ---
 project: deckhouse
 configVersion: 1
+build:
+  imageSpec:
+    author: "Deckhouse Kubernetes Platform <contact@deckhouse.io>"
+    clearHistory: true
+    config:
+      clearWerfLabels: true
+      removeLabels:
+        - /.*/
 gitWorktree:
   forceShallowClone: true
 cleanup:
@@ -78,7 +86,7 @@ cleanup:
 {{- $_ := set . "GOPROXY" (env "GOPROXY") }}
 ---
 # render ssh-static
-{{ include "ssh_static_artifact" (dict "Images" .Images "SOURCE_REPO" .SOURCE_REPO) }}
+{{ include "ssh_static_artifact" (dict "Images" .Images "SOURCE_REPO" .SOURCE_REPO "DistroPackagesProxy" .DistroPackagesProxy) }}
 ---
 {{ include "common_base_image" (dict "Files" .Files "k8sVersions" .k8sVersions "CandiVersionMap" $.CandiVersionMap "prefix" "") }}
 ---

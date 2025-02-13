@@ -30,6 +30,6 @@ import:
     add: /src/sts-pods-hosts-appender-webhook
     to: /sts-pods-hosts-appender-webhook
     before: setup
-docker:
-  USER: 64535
-  ENTRYPOINT: ["/sts-pods-hosts-appender-webhook"]
+imageSpec:
+  config:
+    entrypoint: ["/sts-pods-hosts-appender-webhook"]

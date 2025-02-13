@@ -12,11 +12,9 @@ import:
   - install
   - uninstall
   before: setup
-docker:
-  LABEL:
-    distro: all
-    version: all
-    growpart: {{ $version }}
+imageSpec:
+  config:
+    labels: { "distro": "all", "version": "all", "growpart": "{{ $version }}" }
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
 final: false

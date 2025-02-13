@@ -327,7 +327,7 @@ final: false
 shell:
   install:
   - cd /go/src/app
-  - go mod tidy
+  - go mod download
   setup:
   - cd /go/src/app
   - go build -ldflags "-w -s" -v -o /go/src/app/server /go/src/app/cmd/v-router
@@ -341,8 +341,9 @@ git:
       setup: '**/*'
 ---
 image: web-backend
-docker:
-  WORKDIR: /app
+imageSpec:
+  config:
+    workingDir: "/app"
 from: {{ .Images.BASE_ALPINE }}
 shell:
   install:
@@ -361,8 +362,9 @@ import:
     - ru/includes/
 ---
 image: web-frontend
-docker:
-  WORKDIR: /app
+imageSpec:
+  config:
+    workingDir: "/app"
 from: {{ .Images.BASE_NGINX_ALPINE }}
 shell:
   setup:
@@ -394,7 +396,7 @@ from: {{ .Images.BASE_GOLANG_23_ALPINE }}
 shell:
   install:
   - cd /go/src/app
-  - go mod tidy
+  - go mod download
   setup:
   - cd /go/src/app
   - go build -ldflags "-w -s" -v -o /go/src/app/registry-modules-watcher /go/src/app/cmd/
@@ -407,8 +409,9 @@ git:
 ---
 image: registry-modules-watcher
 from: {{ .Images.BASE_ALPINE }}
-docker:
-  WORKDIR: /app
+imageSpec:
+  config:
+    workingDir: "/app"
 import:
   - image: registry-modules-watcher-artifact
     add: /go/src/app/registry-modules-watcher

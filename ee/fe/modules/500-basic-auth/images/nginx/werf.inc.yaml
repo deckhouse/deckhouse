@@ -1,5 +1,6 @@
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/nginx-static
-docker:
-  ENTRYPOINT: ["/opt/nginx-static/sbin/nginx", "-g", "daemon off;"]
+imageSpec:
+  config:
+    entrypoint: ["/opt/nginx-static/sbin/nginx", "-g", "daemon off;"]

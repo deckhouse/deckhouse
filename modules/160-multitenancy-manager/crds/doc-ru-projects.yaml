@@ -45,7 +45,6 @@ spec:
 
                     Перед созданием, значения согласовываются со [схемой](cr.html#projecttemplate-v1alpha1-spec-parametersschema-openapiv3schema) входных параметров шаблона ресурсов.
             status:
-              description: ""
               properties:
                 namespaces:
                   description: Используемые пространства имен.
@@ -53,6 +52,8 @@ spec:
                   description: Последний generation проекта.
                 templateGeneration:
                   description: Последний generation шаблона.
+                resources:
+                  description: Список срендеренных и пропущенных ресурсов.
                 conditions:
                   type: array
                   items:
@@ -60,12 +61,15 @@ spec:
                     properties:
                       type:
                         type: string
-                      lastTransitionTime:
-                        format: date-time
-                        type: string
                       status:
                         type: string
                       message:
                         type: string
+                      lastTransitionTime:
+                        format: date-time
+                        type: string
+                      lastProbeTime:
+                        format: date-time
+                        type: string
                 state:
-                  description: Короткое описание состояния проекта, например, Error, Deploying, Deployed, и т.д.
+                  description: Короткое описание состояния проекта, например, Error, Deployed, и т.д.

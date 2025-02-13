@@ -6,8 +6,9 @@ import:
   add: /src/easyrsa-migrator
   to: /bin/easyrsa-migrator
   before: setup
-docker:
-  ENTRYPOINT: ["/bin/easyrsa-migrator"]
+imageSpec:
+  config:
+    entrypoint: ["/bin/easyrsa-migrator"]
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
 final: false

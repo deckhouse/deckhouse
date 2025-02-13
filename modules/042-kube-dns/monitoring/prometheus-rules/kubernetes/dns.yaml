@@ -11,7 +11,12 @@
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
+      summary: Critical errors found in CoreDNS.
       description: |-
-        CoreDNS pod {{$labels.pod}} has at least one critical error.
-        To debug the problem, look into container logs: `kubectl -n kube-system logs {{$labels.pod}}`
-      summary: CoreDNS has critical errors.
+        Deckhouse has detected at least one critical error in the CoreDNS pod {{$labels.pod}}.
+
+        To resolve the issue, review the container logs:
+        
+        ```bash
+        kubectl -n kube-system logs {{$labels.pod}}
+        ```

@@ -1,0 +1,103 @@
+# Copyright 2025 Flant JSC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+{!{- $ctx := . }!}
+name: "Rootless images scan"
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+      issue_id:
+        description: 'ID of issue where label was set'
+        required: false
+      issue_number:
+        description: 'Number of issue where label was set'
+        required: true
+      comment_id:
+        description: 'ID of comment in issue where to put workflow run status'
+        required: false
+      ci_commit_ref_name:
+        description: 'Git ref name for image tags'
+        required: false
+      pull_request_ref:
+        description: 'Git ref for checkout PR sources'
+        required: false
+      pull_request_sha:
+        description: 'Git SHA for restoring artifacts from cache'
+        required: false
+      pull_request_head_label:
+        description: 'Head label of pull request. e.g. my_repo:my_feature_branch'
+        required: false 
+  pull_request:
+    types:
+      - synchronize 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check_trigger:
+    runs-on: ubuntu-latest
+    outputs:
+      image_tag: ${{ steps.set_tag.outputs.image_tag }}
+    if: github.event_name != 'pull_request' || contains(github.event.pull_request.labels.*.name, 'security/rootless')
+    steps:
+      - name: Ensure valid trigger
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" && -z "${{ github.event.inputs.pull_request_ref }}" ]]; then
+            echo "Manual runs must specify a pull request reference."
+            exit 1
+          fi
+      - name: Set image tag based on event type
+        id: set_tag
+        run: |
+          if [[ "${{ github.ref }}" == "refs/heads/main" && "${{ github.event_name }}" == "push" ]]; then
+            echo "image_tag=main" >> $GITHUB_OUTPUT
+            echo "image_tag=main" >> $GITHUB_ENV
+          elif [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            echo "image_tag=pr${{ github.event.pull_request.number }}" >> $GITHUB_OUTPUT
+            echo "image_tag=pr${{ github.event.pull_request.number }}" >> $GITHUB_ENV
+          elif [[ -n "${{ github.event.inputs.issue_number }}" ]]; then
+            PR_NUMBER=$(echo "${{ github.event.inputs.issue_number }}")
+            echo "image_tag=pr$PR_NUMBER" >> $GITHUB_OUTPUT
+            echo "image_tag=pr$PR_NUMBER" >> $GITHUB_ENV
+          else
+            echo "image_tag=unknown" >> $GITHUB_OUTPUT
+            echo "image_tag=unknown" >> $GITHUB_ENV
+          fi
+      - name: Print trigger details
+        run: |
+          echo "Triggered by: ${{ github.event_name }}"
+          echo "Image tag: $image_tag"
+  scan_images:
+    runs-on: [ self-hosted, regular, selectel ]
+    needs: check_trigger
+    if: ${{ needs.check_trigger.outputs.image_tag != 'unknown' }}
+    steps:
+{!{ tmpl.Exec "checkout_full_step"           $ctx | strings.Indent 6 }!}
+{!{ tmpl.Exec "login_dev_registry_step"      $ctx | strings.Indent 6 }!}
+{!{ tmpl.Exec "link_bin_step"                     | strings.Indent 6 }!}
+      - name: Running default user validation on ${{env.TAG}}
+        env:
+          TAG: ${{ needs.check_trigger.outputs.image_tag }}
+          IMAGE: "dev-registry.deckhouse.io/sys/deckhouse-oss"
+          TRIVY_TOKEN: ${{secrets.FOX_ACCESS_TOKEN}}
+          DECKHOUSE_PRIVATE_REPO: ${{secrets.DECKHOUSE_PRIVATE_REPO}}
+          TRIVY_PROJECT_ID: "2181"
+        run: |
+          echo "⚓️ 🏎 Running default user validation on ${TAG}..."
+          make cve-base-images-check-default-user
+{!{ tmpl.Exec "unlink_bin_step"                   | strings.Indent 6 }!}

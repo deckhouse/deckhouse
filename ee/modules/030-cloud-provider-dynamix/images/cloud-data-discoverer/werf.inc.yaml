@@ -6,10 +6,11 @@ import:
     add: /discoverer
     to: /discoverer
     before: setup
-docker:
-  ENTRYPOINT: ["/discoverer"]
+imageSpec:
+  config:
+    entrypoint: ["/discoverer"]
 ---
-{{ $discovererRelPath := printf "%s/modules/030-cloud-provider-dynamix/images/cloud-data-discoverer" .ModulePath }}
+{{ $discovererRelPath := printf "%smodules/030-cloud-provider-dynamix/images/cloud-data-discoverer" .ModulePath }}
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
 final: false
 from: {{ .Images.BASE_GOLANG_22_ALPINE_DEV }}

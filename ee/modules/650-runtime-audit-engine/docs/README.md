@@ -17,6 +17,56 @@ This module:
   * Containers running in privileged mode or attempting to mount sensitive paths, such as `/proc`, on the host.
   * Unauthorized attempts to read confidential files such as `/etc/shadow`.
 
+## Requirements
+
+### OS
+
+The module uses the eBPF Falco driver to ingest syscall data. It is better suited for environments where loading a kernel module is prohibited or unsupported, such as GKE, EKS, and other managed Kubernetes solutions.
+The eBPF driver has the following requirements:
+* Linux kernel version >= 5.8.
+* Enabled [eBPF](https://www.kernel.org/doc/html/v5.8/bpf/btf.html). You can verify it as follows:
+  - Run `ls -lah /sys/kernel/btf/vmlinux` — if the file exists, eBPF support is enabled.
+  - Run `grep -E "CONFIG_DEBUG_INFO_BTF=(y|m)" /boot/config-*` — the parameter must be set for eBPF to function properly.
+
+> eBPF probes may not work on some systems.
+
+### CPU / Memory
+
+Falco agents are running on every node. Therefore, the resource consumption of each Pod depends on the number of rules or ingested events.
+
+## Kubernetes Audit Webhook
+
+[Webhook audit mode](https://kubernetes.io/docs/tasks/debug/debug-cluster/audit/#webhook-backend) should be configured to collect audit events of `kube-apiserver`.
+If the [control-plane-manager](../control-plane-manager/) module is enabled, settings will be automatically applied when the `runtime-audit-engine` module is enabled.
+
+You can manually configure the webhook for Kubernetes clusters with a control plane that is not controlled by Deckhouse:
+1. Create a webhook kubeconfig file with the `https://127.0.0.1:9765/k8s-audit` address and the CA (ca.crt) from the `d8-runtime-audit-engine/runtime-audit-engine-webhook-tls` secret.
+
+   Example:
+   ```yaml
+   apiVersion: v1
+   kind: Config
+   clusters:
+   - name: webhook
+     cluster:
+       certificate-authority-data: BASE64_CA
+       server: "https://127.0.0.1:9765/k8s-audit"
+   users:
+   - name: webhook
+   contexts:
+   - context:
+      cluster: webhook
+      user: webhook
+     name: webhook
+   current-context: webhook
+   ```
+2. Add the `--audit-webhook-config-file` flag to the `kube-apiserver` manifest. The flag must point to the previously created file.
+
+{% alert level="warning" %}
+Remember to configure the audit policy, because Deckhouse only collects Kubernetes audit events from the system namespaces by default.
+An example of configuration can be found in the [control-plane-manager](../control-plane-manager/) module documentation.
+{% endalert %}
+
 ## Architecture
 
 The module is based on the [Falco](https://falco.org/) system. 
@@ -66,55 +116,6 @@ Falco automatically reloads the configuration when a new rule becomes available.
 <!--- Source: https://docs.google.com/drawings/d/13MFYtiwH4Y66SfEPZIcS7S2wAY6vnKcoaztxsmX1hug --->
 
 Such a schema allows the IaC approach to be used to maintain Falco rules.
-
-## Requirements
-
-### OS
-
-The module uses the eBPF Falco driver to ingest syscall data. It is better suited for environments where loading a kernel module is prohibited or unsupported, such as GKE, EKS, and other managed Kubernetes solutions.
-The eBPF driver has the following requirements:
-* The eBPF probe may not work for every system.
-* Linux kernel version >= 5.8.
-* Enabled [eBPF](https://www.kernel.org/doc/html/v5.8/bpf/btf.html). Check with the command `ls -lah /sys/kernel/btf/vmlinux`, or find `CONFIG_DEBUG_INFO_BTF=y` in the list of kernel build parameters.
-
-> eBPF probes may not work on some systems.
-
-### CPU / Memory
-
-Falco agents are running on every node. Therefore, the resource consumption of each Pod depends on the number of rules or ingested events.
-
-## Kubernetes Audit Webhook
-
-[Webhook audit mode](https://kubernetes.io/docs/tasks/debug/debug-cluster/audit/#webhook-backend) should be configured to collect audit events of `kube-apiserver`. 
-If the [control-plane-manager](../control-plane-manager/) module is enabled, settings will be automatically applied when the `runtime-audit-engine` module is enabled.
-
-You can manually configure the webhook for Kubernetes clusters with a control plane that is not controlled by Deckhouse:
-1. Create a webhook kubeconfig file with the `https://127.0.0.1:9765/k8s-audit` address and the CA (ca.crt) from the `d8-runtime-audit-engine/runtime-audit-engine-webhook-tls` secret.
-    
-   Example:
-   ```yaml
-   apiVersion: v1
-   kind: Config
-   clusters:
-   - name: webhook
-     cluster:
-       certificate-authority-data: BASE64_CA
-       server: "https://127.0.0.1:9765/k8s-audit"
-   users:
-   - name: webhook
-   contexts:
-   - context:
-      cluster: webhook
-      user: webhook
-     name: webhook
-   current-context: webhook
-   ```
-2. Add the `--audit-webhook-config-file` flag to the `kube-apiserver` manifest. The flag must point to the previously created file.
-
-{% alert level="warning" %}
-Remember to configure the audit policy, because Deckhouse only collects Kubernetes audit events from the system namespaces by default. 
-An example of configuration can be found in the [control-plane-manager](../control-plane-manager/) module documentation.
-{% endalert %}
 
 ## Alerting
 

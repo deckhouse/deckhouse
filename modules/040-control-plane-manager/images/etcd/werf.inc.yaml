@@ -30,8 +30,9 @@ import:
   - etcd
   - etcdctl
   before: setup
-docker:
-  ENTRYPOINT: ["/usr/bin/etcd"]
+imageSpec:
+  config:
+    entrypoint: ["/usr/bin/etcd"]
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
 from: {{ .Images.BASE_GOLANG_23_ALPINE }}

@@ -16,9 +16,10 @@ package backends
 
 import (
 	"context"
+	"log/slog"
 	"sync"
 
-	"k8s.io/klog"
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 type Sender interface {
@@ -47,14 +48,18 @@ type backends struct {
 
 	m            sync.RWMutex
 	listBackends map[string]struct{} // list of backends ip addreses
+
+	logger *log.Logger
 }
 
-func New(registryScaner RegistryScaner, sender Sender) *backends {
+func New(registryScaner RegistryScaner, sender Sender, logger *log.Logger) *backends {
 	if instance == nil {
 		instance = &backends{
 			registryScaner: registryScaner,
 			sender:         sender,
 			listBackends:   make(map[string]struct{}),
+
+			logger: logger,
 		}
 	}
 	registryScaner.SubscribeOnUpdate(instance.updateHandler)
@@ -72,7 +77,7 @@ func Get() (b *backends, ok bool) {
 
 // Add new backend to list backends
 func (b *backends) Add(backend string) {
-	klog.V(3).Infof(`backend Add call for: %v`, backend)
+	b.logger.Info(`Add call`, slog.String("backend", backend))
 
 	b.m.Lock()
 	defer b.m.Unlock()
@@ -81,12 +86,12 @@ func (b *backends) Add(backend string) {
 	state := b.registryScaner.GetState()
 	err := b.sender.Send(context.Background(), map[string]struct{}{backend: {}}, state)
 	if err != nil {
-		klog.Fatal("error sending docs to new backend: ", err)
+		b.logger.Fatal("sending docs to new backend", log.Err(err))
 	}
 }
 
 func (b *backends) Delete(backend string) {
-	klog.V(3).Infof(`backend Delete call for: %v`, backend)
+	b.logger.Info(`Delete call`, slog.String("backend", backend))
 
 	b.m.Lock()
 	defer b.m.Unlock()
@@ -96,7 +101,7 @@ func (b *backends) Delete(backend string) {
 
 // UpdateDocks send update dock request to all backends
 func (b *backends) updateHandler(versions []Version) error {
-	klog.V(3).Infof(`"registryScaner" produce update event`)
+	b.logger.Info(`'registryScaner' produce update event`)
 
 	b.m.RLock()
 	defer b.m.RUnlock()

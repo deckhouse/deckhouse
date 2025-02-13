@@ -728,6 +728,10 @@ entries:
                 en: Configuration
                 ru: Настройки
               url: /modules/openvpn/configuration.html
+            - title:
+                en: FAQ
+                ru: FAQ
+              url: /modules/openvpn/faq.html
     - title:
         en: Network
         ru: Сеть
@@ -891,9 +895,18 @@ entries:
                     ru: Примеры
                   url: /modules/metallb/examples.html
                 - title:
-                    en: Configuration
-                    ru: Настройки
-                  url: /modules/metallb/configuration.html
+                    en: Reference
+                    ru: Справка
+                  folders:
+                    - title:
+                        en: Configuration
+                        ru: Настройки
+                      url: /modules/metallb/configuration.html
+                    - title:
+                        en: Custom Resources
+                        ru: Custom Resources
+                      url: /modules/metallb/cr.html
+
         - title:
             en: Other modules
             ru: Другие модули

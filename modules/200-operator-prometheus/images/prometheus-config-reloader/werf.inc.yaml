@@ -6,5 +6,6 @@ import:
   add: /prometheus-config-reloader
   to: /bin/prometheus-config-reloader
   before: setup
-docker:
-  ENTRYPOINT: ["/bin/prometheus-config-reloader"]
+imageSpec:
+  config:
+    entrypoint: ["/bin/prometheus-config-reloader"]

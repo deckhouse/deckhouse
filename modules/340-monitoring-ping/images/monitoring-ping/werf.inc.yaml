@@ -68,5 +68,6 @@ import:
   add: /opt/fping-static/sbin/fping
   to: /usr/sbin/fping
   before: setup
-docker:
-  ENTRYPOINT: ["/opt/python-static/bin/python3", "/src/monitoring-ping.py"]
+imageSpec:
+  config:
+    entrypoint: ["/opt/python-static/bin/python3", "/src/monitoring-ping.py"]
