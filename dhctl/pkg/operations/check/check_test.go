@@ -12,22 +12,22 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package check_test
+package check
 
 import (
-	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/commander"
 	"testing"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"sigs.k8s.io/yaml"
+
+	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
 )
 
 func TestStatistics_Format(t *testing.T) {
 	t.Parallel()
 
-	var statistics commander.Statistics
+	var statistics Statistics
 	err := yaml.Unmarshal([]byte(statisticsYAML), &statistics)
 	require.NoError(t, err)
 
@@ -82,8 +82,8 @@ nodes:
 `
 )
 
-var expectedStatistics = commander.Statistics{
-	Cluster: commander.ClusterCheckResult{
+var expectedStatistics = Statistics{
+	Cluster: ClusterCheckResult{
 		Status: "ok",
 		DestructiveChanges: &terraform.BaseInfrastructureDestructiveChanges{
 			PlanDestructiveChanges: terraform.PlanDestructiveChanges{
@@ -96,7 +96,7 @@ var expectedStatistics = commander.Statistics{
 			},
 		},
 	},
-	NodeTemplates: []commander.NodeGroupCheckResult{
+	NodeTemplates: []NodeGroupCheckResult{
 		{
 			Name:   "master",
 			Status: "ok",
@@ -106,7 +106,7 @@ var expectedStatistics = commander.Statistics{
 			Status: "ok",
 		},
 	},
-	Node: []commander.NodeCheckResult{
+	Node: []NodeCheckResult{
 		{
 			Group:  "master",
 			Name:   "akul-master-0",
