@@ -11,6 +11,7 @@ To create this patch run commands:
 go mod edit -go 1.23
 go get golang.org/x/net@v0.33.0
 go get github.com/aws/aws-sdk-go@v1.34.0
+go get github.com/hashicorp/go-getter@v1.6.1
 
 go get google.golang.org/grpc@v1.56.3
 go get github.com/go-git/go-git/v5@v5.13.0
