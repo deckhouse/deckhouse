@@ -130,7 +130,7 @@
         0,100
       ) > 90
     labels:
-      severity_level: "4"
+      severity_level: "8"
       d8_module: log-shipper
       d8_component: agent
     annotations:
