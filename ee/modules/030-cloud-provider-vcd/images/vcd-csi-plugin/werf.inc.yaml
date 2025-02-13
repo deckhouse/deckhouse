@@ -87,7 +87,7 @@ final: false
 fromImage: common/relocate-artifact
 shell:
   beforeInstall:
-    - apt-get update -y
-    - apt-get install -y e2fsprogs xfsprogs btrfs-progs nfs-utils parted nvme udev
+  - apt-get update -y
+  - apt-get install -y e2fsprogs xfsprogs btrfs-progs nfs-utils parted nvme udev
   install:
-    - /binary_replace.sh -i "{{ $csiBinaries }}" -o /relocate
+  - /binary_replace.sh -i "{{ $csiBinaries }}" -o /relocate
