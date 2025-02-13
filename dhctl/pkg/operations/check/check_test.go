@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package commander_test
+package check_test
 
 import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/commander"

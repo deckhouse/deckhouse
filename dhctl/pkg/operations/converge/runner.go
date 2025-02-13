@@ -26,7 +26,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/entity"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/commander"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/check"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/context"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/controller"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/lock"
@@ -124,7 +124,7 @@ func loadNodesState(ctx *context.Context) (map[string]state.NodeGroupTerraformSt
 			return nil, nil
 		}
 
-		nodesState, err := commander.LoadNodesStateForCommanderMode(ctx.StateCache(), metaConfig, kubeCl)
+		nodesState, err := check.LoadNodesStateForCommanderMode(ctx.StateCache(), metaConfig, kubeCl)
 		if err != nil {
 			return nil, fmt.Errorf("unable to load nodes state: %w", err)
 		}

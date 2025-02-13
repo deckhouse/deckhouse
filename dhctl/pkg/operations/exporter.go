@@ -26,7 +26,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/commander"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/check"
 	state_terraform "github.com/deckhouse/deckhouse/dhctl/pkg/state/terraform"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
@@ -66,23 +66,23 @@ type ConvergeExporter struct {
 
 var (
 	clusterStatuses = []string{
-		commander.OKStatus,
-		commander.ErrorStatus,
-		commander.ChangedStatus,
-		commander.DestructiveStatus,
+		check.OKStatus,
+		check.ErrorStatus,
+		check.ChangedStatus,
+		check.DestructiveStatus,
 	}
 	nodeStatuses = []string{
-		commander.OKStatus,
-		commander.ErrorStatus,
-		commander.ChangedStatus,
-		commander.DestructiveStatus,
-		commander.AbsentStatus,
-		commander.AbandonedStatus,
+		check.OKStatus,
+		check.ErrorStatus,
+		check.ChangedStatus,
+		check.DestructiveStatus,
+		check.AbsentStatus,
+		check.AbandonedStatus,
 	}
 	nodeTemplateStatuses = []string{
-		commander.OKStatus,
-		commander.ChangedStatus,
-		commander.AbsentStatus,
+		check.OKStatus,
+		check.ChangedStatus,
+		check.AbsentStatus,
 	}
 )
 
@@ -215,7 +215,7 @@ func (c *ConvergeExporter) convergeLoop(stopCh chan struct{}) {
 	}
 }
 
-func (c *ConvergeExporter) getStatistic() *commander.Statistics {
+func (c *ConvergeExporter) getStatistic() *check.Statistics {
 	metaConfig, err := config.ParseConfigInCluster(c.kubeCl)
 	if err != nil {
 		log.ErrorLn(err)
@@ -230,7 +230,7 @@ func (c *ConvergeExporter) getStatistic() *commander.Statistics {
 		return nil
 	}
 
-	statistic, err := commander.CheckState(c.kubeCl, metaConfig, c.terraformContext, commander.CheckStateOptions{})
+	statistic, err := check.CheckState(c.kubeCl, metaConfig, c.terraformContext, check.CheckStateOptions{})
 	if err != nil {
 		log.ErrorLn(err)
 		c.CounterMetrics["errors"].WithLabelValues().Inc()
@@ -242,7 +242,7 @@ func (c *ConvergeExporter) getStatistic() *commander.Statistics {
 	return statistic
 }
 
-func (c *ConvergeExporter) recordStatistic(statistic *commander.Statistics) {
+func (c *ConvergeExporter) recordStatistic(statistic *check.Statistics) {
 	if statistic == nil {
 		return
 	}

@@ -26,7 +26,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/entity"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/commander"
-	convergecommander "github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/commander"
 	dhctlstate "github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
@@ -96,7 +95,7 @@ func (c *Checker) Check(ctx context.Context) (*CheckResult, error) {
 		res.Status = res.Status.CombineStatus(status)
 
 		if status == CheckStatusDestructiveOutOfSync {
-			res.DestructiveChangeID, err = convergecommander.DestructiveChangeID(statusDetails)
+			res.DestructiveChangeID, err = DestructiveChangeID(statusDetails)
 			if err != nil {
 				return nil, fmt.Errorf("unable to generate destructive change id: %w", err)
 			}
@@ -144,10 +143,10 @@ func (c *Checker) checkConfiguration(ctx context.Context, kubeCl *client.Kuberne
 	return CheckStatusOutOfSync, nil
 }
 
-func (c *Checker) checkInfra(_ context.Context, kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig, terraformContext *terraform.TerraformContext) (CheckStatus, *convergecommander.Statistics, error) {
-	stat, err := convergecommander.CheckState(
+func (c *Checker) checkInfra(_ context.Context, kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig, terraformContext *terraform.TerraformContext) (CheckStatus, *Statistics, error) {
+	stat, err := CheckState(
 		kubeCl, metaConfig, terraformContext,
-		convergecommander.CheckStateOptions{
+		CheckStateOptions{
 			CommanderMode: c.CommanderMode,
 			StateCache:    c.StateCache,
 		},
@@ -173,21 +172,21 @@ func (c *Checker) checkInfra(_ context.Context, kubeCl *client.KubernetesClient,
 
 func resolveStatisticsStatus(status string) CheckStatus {
 	switch status {
-	case convergecommander.OKStatus:
+	case OKStatus:
 		return CheckStatusInSync
-	case convergecommander.ChangedStatus:
+	case ChangedStatus:
 		// NOTE: Regular out-of-sync state, which can be fixed by the converge run
 		return CheckStatusOutOfSync
-	case convergecommander.DestructiveStatus:
+	case DestructiveStatus:
 		// NOTE: Something will be destroyed by the converge run, such change should be approved
 		return CheckStatusDestructiveOutOfSync
-	case convergecommander.AbandonedStatus:
+	case AbandonedStatus:
 		// NOTE: Excess node — treat as destructive out-of-sync, because this node will be destroyed during converge run
 		return CheckStatusDestructiveOutOfSync
-	case convergecommander.AbsentStatus:
+	case AbsentStatus:
 		// NOTE: Lost node — treat as out-of-sync for now
 		return CheckStatusOutOfSync
-	case convergecommander.ErrorStatus:
+	case ErrorStatus:
 		// NOTE: Unknown error, probably can be healed by the retry
 		return CheckStatusDestructiveOutOfSync
 	}

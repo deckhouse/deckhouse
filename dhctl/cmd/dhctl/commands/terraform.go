@@ -17,15 +17,14 @@ package commands
 import (
 	"fmt"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/commander"
-
 	kingpin "gopkg.in/alecthomas/kingpin.v2"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/check"
 	state_terraform "github.com/deckhouse/deckhouse/dhctl/pkg/state/terraform"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
@@ -74,7 +73,7 @@ func DefineTerraformCheckCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 			return err
 		}
 
-		statistic, err := commander.CheckState(kubeCl, metaConfig, terraform.NewTerraformContext(), commander.CheckStateOptions{})
+		statistic, err := check.CheckState(kubeCl, metaConfig, terraform.NewTerraformContext(), check.CheckStateOptions{})
 		if err != nil {
 			return err
 		}
