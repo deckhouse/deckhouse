@@ -18,7 +18,6 @@ package hooks
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"time"
 
@@ -29,7 +28,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/tidwall/gjson"
 	corev1 "k8s.io/api/core/v1"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
@@ -54,56 +53,22 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			NameSelector: &types.NameSelector{
 				MatchNames: []string{"deckhouse-registry"},
 			},
-			FilterFunc: fileterTrivyProviderSecrets,
+			FilterFunc: filterTrivyProviderSecret,
 		},
 	},
 }, dependency.WithExternalDependencies(handleTrivyProviderSecrets))
 
 type dockerConfig struct {
-	Auths map[string]authn.AuthConfig `json:"auths"`
+	Auths map[string]authn.AuthConfig `json:"auths,omitempty"`
 }
 
-func fileterTrivyProviderSecrets(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	var secret corev1.Secret
-	err := sdk.FromUnstructured(obj, &secret)
-	if err != nil {
+func filterTrivyProviderSecret(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	secret := new(corev1.Secret)
+	if err := sdk.FromUnstructured(obj, secret); err != nil {
 		return nil, err
 	}
-	config, err := registrySecretToAuthnConfig(&secret)
-	if err != nil {
-		if errors.Is(err, ErrSecretWithNoData) || errors.Is(err, ErrNotDockerCfgJSONType) || errors.Is(err, ErrNoDockerConfigJSONKey) {
-			return nil, nil
-		}
-		return nil, err
-	}
-	return config.Auths, nil
-}
 
-var (
-	ErrSecretWithNoData      = errors.New("secret has nil data")
-	ErrNotDockerCfgJSONType  = fmt.Errorf("secret is not '%s' type", corev1.SecretTypeDockerConfigJson)
-	ErrNoDockerConfigJSONKey = fmt.Errorf("secret doesn't have '%s' key", corev1.DockerConfigJsonKey)
-)
-
-func registrySecretToAuthnConfig(secret *corev1.Secret) (*dockerConfig, error) {
-	if secret.Type != corev1.SecretTypeDockerConfigJson {
-		return nil, fmt.Errorf("%w: name=%s, namespace=%s", ErrNotDockerCfgJSONType, secret.GetName(), secret.GetNamespace())
-	}
-
-	if secret.Data == nil {
-		return nil, fmt.Errorf("%w: name=%s, namespace=%s", ErrSecretWithNoData, secret.GetName(), secret.GetNamespace())
-	}
-
-	rawCreds, ok := secret.Data[corev1.DockerConfigJsonKey]
-	if !ok {
-		return nil, fmt.Errorf("%w: name=%s, namespace=%s", ErrNoDockerConfigJSONKey, secret.GetName(), secret.GetNamespace())
-	}
-
-	config := new(dockerConfig)
-	if err := json.Unmarshal(rawCreds, config); err != nil {
-		return nil, fmt.Errorf("cannot decode docker config JSON: %v", err)
-	}
-	return config, nil
+	return dockerConfigBySecret(secret)
 }
 
 func handleTrivyProviderSecrets(input *go_hook.HookInput, dc dependency.Container) error {
@@ -111,69 +76,80 @@ func handleTrivyProviderSecrets(input *go_hook.HookInput, dc dependency.Containe
 		return nil
 	}
 
+	cfg := dockerConfig{Auths: make(map[string]authn.AuthConfig)}
+	for _, authSnap := range input.Snapshots["trivy_provider_secrets"] {
+		if authSnap == nil {
+			continue
+		}
+
+		auth, ok := authSnap.(*dockerConfig)
+		if !ok || len(auth.Auths) == 0 {
+			continue
+		}
+
+		for registry, config := range auth.Auths {
+			cfg.Auths[registry] = config
+		}
+	}
+
+	cli, err := dc.GetK8sClient()
+	if err != nil {
+		return fmt.Errorf("get k8s client: %w", err)
+	}
+
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*20)
 	defer cancel()
 
-	resultCfg := dockerConfig{Auths: make(map[string]authn.AuthConfig)}
-	for _, authSnap := range input.Snapshots["trivy_provider_secrets"] {
-		err := convertSnapToAuthnConfig(authSnap, &resultCfg)
-		if err != nil && !errors.Is(err, ErrNilSnapshot) {
-			return err
-		}
-	}
-
-	k8sClient, err := dc.GetK8sClient()
-	if err != nil {
-		return fmt.Errorf("can't get k8s client for retrieving registry secrets: %w", err)
-	}
-
-	registrySecretsValues := input.Values.Get("admissionPolicyEngine.denyVulnerableImages.registrySecrets").Array()
-	for _, registrySecretValue := range registrySecretsValues {
-		registrySecret, err := registrySecretValueToAuthnConfig(ctx, registrySecretValue, k8sClient)
+	for _, value := range input.Values.Get("admissionPolicyEngine.denyVulnerableImages.registrySecrets").Array() {
+		secret, err := dockerConfigByModuleValue(ctx, cli, value)
 		if err != nil {
-			return fmt.Errorf("can't get registry secret from module values: %w", err)
+			return fmt.Errorf("get registry secret from the module values: %w", err)
 		}
-		err = convertSnapToAuthnConfig(registrySecret.Auths, &resultCfg)
-		if err != nil && !errors.Is(err, ErrNilSnapshot) {
-			return err
+
+		for registry, config := range secret.Auths {
+			cfg.Auths[registry] = config
 		}
 	}
-	input.Values.Set("admissionPolicyEngine.internal.denyVulnerableImages.dockerConfigJson", resultCfg)
+
+	input.Values.Set("admissionPolicyEngine.internal.denyVulnerableImages.dockerConfigJson", cfg)
+
 	return nil
 }
 
-var ErrNilSnapshot = errors.New("nil snapshot")
-
-func convertSnapToAuthnConfig(authSnap interface{}, resultCfg *dockerConfig) error {
-	if authSnap == nil {
-		return fmt.Errorf("%w: %v", ErrNilSnapshot, authSnap)
+func dockerConfigByModuleValue(ctx context.Context, cli k8s.Client, value gjson.Result) (*dockerConfig, error) {
+	name, namespace, err := namespaceNameByModuleValue(value)
+	if err != nil {
+		return nil, fmt.Errorf("get name and namespace from registry secret: %w", err)
 	}
 
-	auths, ok := authSnap.(map[string]authn.AuthConfig)
+	secret, err := cli.CoreV1().Secrets(namespace).Get(ctx, name, metav1.GetOptions{})
+	if err != nil {
+		return nil, fmt.Errorf("get registry secret from namespace '%s': %w", namespace, err)
+	}
+
+	return dockerConfigBySecret(secret)
+}
+
+func dockerConfigBySecret(secret *corev1.Secret) (*dockerConfig, error) {
+	if secret.Type != corev1.SecretTypeDockerConfigJson || secret.Data == nil {
+		return nil, nil
+	}
+
+	raw, ok := secret.Data[corev1.DockerConfigJsonKey]
 	if !ok {
-		return fmt.Errorf("can't convert auths snaphsot to map[string]authn.AuthConfig{}: %v", authSnap)
+		return nil, nil
 	}
 
-	for registry, config := range auths {
-		resultCfg.Auths[registry] = config
+	config := new(dockerConfig)
+	if err := json.Unmarshal(raw, config); err != nil {
+		return nil, fmt.Errorf("unmarshal docker config: %v", err)
 	}
-	return nil
+
+	return config, nil
 }
 
-func registrySecretValueToAuthnConfig(ctx context.Context, registrySecretValue gjson.Result, k8sClient k8s.Client) (*dockerConfig, error) {
-	name, namespace, err := registrySecretValueToNamespaceName(registrySecretValue)
-	if err != nil {
-		return nil, fmt.Errorf("can't retrieve name and namespace from registry secret entry: %w", err)
-	}
-	registrySecret, err := k8sClient.CoreV1().Secrets(namespace).Get(ctx, name, v1.GetOptions{})
-	if err != nil {
-		return nil, fmt.Errorf("can't get registry secret from namespace '%s': %w", namespace, err)
-	}
-	return registrySecretToAuthnConfig(registrySecret)
-}
-
-func registrySecretValueToNamespaceName(registrySecretValue gjson.Result) (string, string, error) {
-	data := registrySecretValue.Map()
+func namespaceNameByModuleValue(value gjson.Result) (string, string, error) {
+	data := value.Map()
 	if len(data) == 0 {
 		return "", "", fmt.Errorf("no data found from registrySecret value")
 	}
@@ -187,5 +163,6 @@ func registrySecretValueToNamespaceName(registrySecretValue gjson.Result) (strin
 	if !ok {
 		return "", "", fmt.Errorf("no namespace found for registry secret")
 	}
+
 	return name.String(), namespace.String(), nil
 }
