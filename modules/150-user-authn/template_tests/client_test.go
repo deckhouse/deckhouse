@@ -104,7 +104,7 @@ var _ = Describe("Module :: user-authn :: helm template :: DexClient", func() {
 			Expect(clientOpendistroLegacy.Field("secret").String()).To(Equal("test"))
 			Expect(clientOpendistroLegacy.Field("redirectURIs").String()).To(MatchJSON(`["https://opendistro.example.com/callback"]`))
 			Expect(clientOpendistroLegacy.Field("allowedEmails").String()).To(MatchJSON(`["bb@aaa.com"]`))
-			Expect(clientOpendistroLegacy.Field("allowedGroups").String()).To(MatchJSON(`["aaa", "ccc"]`))
+			Expect(clientOpendistroLegacy.Field("allowedGroups").String()).To(MatchJSON(`["aaa","ccc"]`))
 			Expect(hec.KubernetesResource("Secret", "test", "dex-client-opendistro").Exists()).To(BeTrue())
 		})
 	})

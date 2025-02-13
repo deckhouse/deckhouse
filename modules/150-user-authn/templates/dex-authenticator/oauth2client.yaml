@@ -16,7 +16,7 @@ allowedEmails:
   - {{ $email }}
 {{- end }}
     {{- end }}
-    {{- if $crd.spec.allowedEmails }}
+    {{- if $crd.spec.allowedGroups }}
 allowedGroups:
 {{- range $group := $crd.spec.allowedGroups }}
   - {{ $group }}
