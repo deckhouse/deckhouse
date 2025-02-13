@@ -5,9 +5,7 @@ linters-settings:
         - kind: StatefulSet
           name: openvpn
           container: openvpn-tcp
-  probes:
-    exclude-rules:
-      liveness:
+      liveness-probe:
         - kind: StatefulSet
           name: openvpn
           container: kube-rbac-proxy
@@ -17,7 +15,7 @@ linters-settings:
         - kind: StatefulSet
           name: openvpn
           container: ovpn-admin
-      readiness:
+      readiness-probe:
         - kind: StatefulSet
           name: openvpn
           container: kube-rbac-proxy

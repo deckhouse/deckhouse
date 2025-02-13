@@ -1,6 +1,7 @@
 linters-settings:
-  oss:
-    disable: true
+  module:
+    oss:
+      disable: true
   container:
     exclude-rules:
       security-context:
@@ -10,9 +11,7 @@ linters-settings:
         - kind: DaemonSet
           name: control-plane-proxy
           container: kube-rbac-proxy
-  probes:
-    exclude-rules:
-      readiness:
+      readiness-probe:
         - kind: DaemonSet
           name: control-plane-proxy
           container: kube-rbac-proxy

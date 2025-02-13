@@ -1,3 +1,4 @@
 linters-settings:
-  oss:
-    disable: true
+  module:
+    oss:
+      disable: true

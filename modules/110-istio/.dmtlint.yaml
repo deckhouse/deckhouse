@@ -10,10 +10,7 @@ linters-settings:
           name: kiali
       service-port:
         - istiod
-        -
-  probes:
-    exclude-rules:
-      readiness:
+      readiness-probe:
         - kind: DaemonSet
           name: istio-cni-node
           container: kube-rbac-proxy
@@ -23,7 +20,7 @@ linters-settings:
         - kind: Deployment
           name: operator-1x21
           container: operator
-      liveness:
+      liveness-probe:
         - kind: DaemonSet
           name: istio-cni-node
           container: kube-rbac-proxy

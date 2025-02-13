@@ -1,22 +1,21 @@
 linters-settings:
-  oss:
-    disable: true
+  module:
+    oss:
+      disable: true
+  openapi:
+    exclude-rules:
+      enum:
+        - "properties.storageClass.properties.provision.items.properties.type"
   container:
     exclude-rules:
       dns-policy:
         - kind: Deployment
           name: cloud-controller-manager
-  openapi:
-    exclude-rules:
-      enum:
-        - "properties.storageClass.properties.provision.items.properties.type"
-  probes:
-    exclude-rules:
-      liveness:
+      liveness-probe:
         - kind: Deployment
           name: cloud-data-discoverer
           container: kube-rbac-proxy
-      readiness:
+      readiness-probe:
         - kind: Deployment
           name: cloud-data-discoverer
           container: kube-rbac-proxy

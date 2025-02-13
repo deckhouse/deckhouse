@@ -1,14 +1,14 @@
 linters-settings:
-  probes:
+  container:
     exclude-rules:
-      readiness:
+      readiness-probe:
         - kind: Deployment
           name: dex-authenticator-dex-authenticator
           container: redis
         - kind: Deployment
           name: test-dex-authenticator
           container: redis
-      liveness:
+      liveness-probe:
         - kind: Deployment
           name: dex-authenticator-dex-authenticator
           container: redis

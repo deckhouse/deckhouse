@@ -1,7 +1,7 @@
 linters-settings:
-  probes:
+  container:
     exclude-rules:
-      readiness:
+      readiness-probe:
         - kind: Deployment
           name: cainjector
           container: cainjector
@@ -11,7 +11,7 @@ linters-settings:
         - kind: Deployment
           name: cert-manager
           container: kube-rbac-proxy
-      liveness:
+      liveness-probe:
         - kind: Deployment
           name: cainjector
           container: cainjector

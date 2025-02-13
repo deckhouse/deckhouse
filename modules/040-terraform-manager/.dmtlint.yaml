@@ -8,16 +8,14 @@ linters-settings:
         - kind: Deployment
           name: terraform-state-exporter
           container: exporter
-  probes:
-    exclude-rules:
-      liveness:
+      liveness-probe:
         - kind: Deployment
           name: terraform-auto-converger
           container: kube-rbac-proxy
         - kind: Deployment
           name: terraform-state-exporter
           container: kube-rbac-proxy
-      readiness:
+      readiness-probe:
         - kind: Deployment
           name: terraform-auto-converger
           container: kube-rbac-proxy

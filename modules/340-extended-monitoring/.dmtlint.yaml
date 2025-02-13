@@ -1,16 +1,17 @@
 linters-settings:
-  oss:
-    disable: true
-  probes:
+  module:
+    oss:
+      disable: true
+  container:
     exclude-rules:
-      readiness:
+      readiness-probe:
         - kind: Deployment
           name: extended-monitoring-exporter
           container: kube-rbac-proxy
         - kind: Deployment
           name:  image-availability-exporter
           container: kube-rbac-proxy
-      liveness:
+      liveness-probe:
         - kind: Deployment
           name: extended-monitoring-exporter
           container: kube-rbac-proxy

@@ -1,7 +1,7 @@
 linters-settings:
-  probes:
+  container:
     exclude-rules:
-      readiness:
+      readiness-probe:
         - kind: Deployment
           name: prometheus-metrics-adapter
           container: prometheus-metrics-adapter

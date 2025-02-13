@@ -3,9 +3,9 @@ linters-settings:
     exclude-rules:
       enum:
         - "properties.internal.properties.grafana.properties.alertsChannelsConfig.properties.notifiers.items.properties.type"
-  probes:
+  container:
     exclude-rules:
-      readiness:
+      readiness-probe:
         - kind: Deployment
           name: aggregating-proxy
           container: kube-rbac-proxy
@@ -18,7 +18,7 @@ linters-settings:
         - kind: Deployment
           name: memcached
           container: exporter
-      liveness:
+      liveness-probe:
         - kind: Deployment
           name: aggregating-proxy
           container: kube-rbac-proxy

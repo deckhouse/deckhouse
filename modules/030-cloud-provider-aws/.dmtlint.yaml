@@ -1,26 +1,25 @@
 linters-settings:
-  oss:
-    disable: true
-  container:
-    exclude-rules:
-      dns-policy:
-        - kind: Deployment
-          name: cloud-controller-manager
+  module:
+    oss:
+      disable: true
   openapi:
     exclude-rules:
       enum:
         - "properties.storageClass.properties.provision.items.properties.type"
         - "properties.storageClass.properties.provision.items.oneOf[*].properties.type"
-  probes:
+  container:
     exclude-rules:
-      liveness:
+      dns-policy:
+        - kind: Deployment
+          name: cloud-controller-manager
+      liveness-probe:
         - kind: DaemonSet
           name: node-termination-handler
           container: node-termination-handler
         - kind: Deployment
           name: cloud-data-discoverer
           container: kube-rbac-proxy
-      readiness:
+      readiness-probe:
         - kind: DaemonSet
           name: node-termination-handler
           container: node-termination-handler

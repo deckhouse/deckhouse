@@ -8,16 +8,14 @@ linters-settings:
         - kind: Deployment
           name: hubble-ui
           container: frontend
-  probes:
-    exclude-rules:
-      liveness:
+      liveness-probe:
         - kind: Deployment
           name: hubble-ui
           container: backend
         - kind: Deployment
           name: hubble-ui
           container: frontend
-      readiness:
+      readiness-probe:
         - kind: Deployment
           name: hubble-ui
           container: backend

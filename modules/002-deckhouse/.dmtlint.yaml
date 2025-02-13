@@ -5,6 +5,14 @@ linters-settings:
         - kind: Deployment
           name: deckhouse
           container: init-downloaded-modules
+      liveness-probe:
+        - kind: Deployment
+          name: deckhouse
+          container: deckhouse
+      readiness-prove:
+        - kind: Deployment
+          name: webhook-handler
+          container: handler
   rbac:
     exclude-rules:
       wildcards:
@@ -13,13 +21,3 @@ linters-settings:
       placement:
         - kind: ClusterRole
           name: d8:rbac-proxy
-  probes:
-    exclude-rules:
-      liveness:
-        - kind: Deployment
-          name: deckhouse
-          container: deckhouse
-      readiness:
-        - kind: Deployment
-          name: webhook-handler
-          container: handler

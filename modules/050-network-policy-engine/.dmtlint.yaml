@@ -5,9 +5,7 @@ linters-settings:
         - kind: DaemonSet
           name: kube-router
           container: kube-router
-  probes:
-    exclude-rules:
-      readiness:
+      readiness-probe:
         - kind: DaemonSet
           name: kube-router
           container: kube-router

@@ -5,9 +5,7 @@ linters-settings:
         - kind: DaemonSet
           name: node-exporter
           container: node-exporter
-  probes:
-    exclude-rules:
-      liveness:
+      liveness-probe:
         - kind: DaemonSet
           name: node-exporter
           container: kube-rbac-proxy
@@ -20,7 +18,7 @@ linters-settings:
         - kind: DaemonSet
           name: kube-state-metrics
           container: kube-rbac-proxy
-      readiness:
+      readiness-probe:
         - kind: DaemonSet
           name: node-exporter
           container: kube-rbac-proxy

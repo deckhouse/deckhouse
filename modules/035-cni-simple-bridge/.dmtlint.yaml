@@ -1,19 +1,18 @@
 linters-settings:
-  oss:
-    disable: true
+  module:
+    oss:
+      disable: true
   container:
     exclude-rules:
       read-only-root-filesystem:
         - kind: DaemonSet
           name: simple-bridge
           container: simple-bridge
-  probes:
-    exclude-rules:
-      liveness:
+      liveness-probe:
         - kind: DaemonSet
           name: flannel
           container: simple-bridge
-      readiness:
+      readiness-probe:
         - kind: DaemonSet
           name: flannel
           container: simple-bridge

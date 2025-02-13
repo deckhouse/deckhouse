@@ -1,7 +1,7 @@
 linters-settings:
-  probes:
+  container:
     exclude-rules:
-      liveness:
+      liveness-probe:
         - kind: Deployment
           name: snapshot-controller
           container: kube-rbac-proxy
@@ -11,7 +11,7 @@ linters-settings:
         - kind: Deployment
           name: snapshot-controller
           container: snapshot-validation
-      readiness:
+      readiness-probe:
         - kind: Deployment
           name: snapshot-controller
           container: kube-rbac-proxy

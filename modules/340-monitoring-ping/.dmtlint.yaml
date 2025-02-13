@@ -1,13 +1,14 @@
 linters-settings:
-  oss:
-    disable: true
-  probes:
+  module:
+    oss:
+      disable: true
+  container:
     exclude-rules:
-      liveness:
+      liveness-probe:
         - kind: DaemonSet
           name: monitoring-ping
           container: monitoring-ping
-      readiness:
+      readiness-probe:
         - kind: DaemonSet
           name: monitoring-ping
           container: monitoring-ping

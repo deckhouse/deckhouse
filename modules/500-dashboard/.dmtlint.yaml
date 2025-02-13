@@ -6,9 +6,7 @@ linters-settings:
         - auth
         - metrics-scraper
         - web
-  probes:
-    exclude-rules:
-      liveness:
+      liveness-probe:
         - kind: Deployment
           name: api
           container: api
@@ -18,7 +16,7 @@ linters-settings:
         - kind: Deployment
           name: web
           container: web
-      readiness:
+      readiness-probe:
         - kind: Deployment
           name: api
           container: api
