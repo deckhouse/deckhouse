@@ -104,7 +104,7 @@ shell:
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
 final: false
-from: {{ $.Images.BASE_ALT_P11 }}
+fromImage: common/alt-p11-artifact
 git:
 - add: /{{ .ModulePath }}modules/002-deckhouse/images/webhook-handler/requirements.txt
   to: /requirements.txt
