@@ -243,9 +243,6 @@ properties:
       **Cation!** Deckhouse will stop working if there is a nonexistent label in `nodeSelector`. You need to change the values to the correct ones in `ModuleConfig/deckhouse` and `deployment/deckhouse` to get Deckhouse back on track.
   tolerations:
     type: array
-    x-examples:
-      -
-        - operator: Exists
     description: |
       The same as in the Pods' `spec.tolerations` parameter in Kubernetes;
 
