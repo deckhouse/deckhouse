@@ -65,7 +65,7 @@ var _ = Describe("Module :: user-authn :: helm template :: DexClient", func() {
     allowedGroups:
     - aaa
     - ccc
-    allowedEmail:
+    allowedEmails:
     - bb@aaa.com
   clientSecret: test
   encodedID: "n5ygk3tenfzxi4tpzpzjzzeeeirsk"
