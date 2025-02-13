@@ -128,7 +128,7 @@ index 00000000..08a77ca9
 +func (*fakeCache) Remove(_ string)                              {}
 +func (*fakeCache) Get(_ string) (*authenticator.Response, bool) { return nil, false }
 diff --git a/pkg/proxy/proxy.go b/pkg/proxy/proxy.go
-index aaac103c..da4e0a13 100644
+index aaac103c..fa4096a3 100644
 --- a/pkg/proxy/proxy.go
 +++ b/pkg/proxy/proxy.go
 @@ -18,10 +18,13 @@ package proxy
@@ -224,10 +224,10 @@ index aaac103c..da4e0a13 100644
 +	)
 +
 +	if inBackoff {
-+		klog.V(2).Infof("Backoff activated: using cache for %s until %s",userIdentity, h.backoffUntil)
++		klog.Infof("Backoff mode active: blocking kube-api request until %s. Using cached credentials for user %s.", h.backoffUntil, userIdentity)
 +		u, ok = h.StaleCache.Get(userIdentity)
 +		if !ok {
-+			klog.Errorf("Backoff activated: no cached data for %s", userIdentity)
++			klog.Errorf("Backoff mode active: no cached credentials found for user %s. Denying request.", userIdentity)
 +			http.Error(w, "Unauthorized", http.StatusUnauthorized)
 +			return false
 +		}
@@ -236,7 +236,7 @@ index aaac103c..da4e0a13 100644
 +		if err != nil {
 +			h.backoffMu.Lock()
 +			h.backoffUntil = time.Now().Add(h.currentBackoffDelay)
-+			klog.Errorf("Authentication error: %v. Set backoff to %v", err, h.backoffUntil)
++			klog.Errorf("Authentication failure: %v. Activating backoff until %v.", err, h.backoffUntil)
 +			h.currentBackoffDelay *= 2
 +			if h.currentBackoffDelay > maxBackoffDelay {
 +				h.currentBackoffDelay = maxBackoffDelay
