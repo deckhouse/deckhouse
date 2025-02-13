@@ -128,7 +128,7 @@ index 00000000..08a77ca9
 +func (*fakeCache) Remove(_ string)                              {}
 +func (*fakeCache) Get(_ string) (*authenticator.Response, bool) { return nil, false }
 diff --git a/pkg/proxy/proxy.go b/pkg/proxy/proxy.go
-index aaac103c..7e2db1d2 100644
+index aaac103c..4ff6df1f 100644
 --- a/pkg/proxy/proxy.go
 +++ b/pkg/proxy/proxy.go
 @@ -18,10 +18,13 @@ package proxy
@@ -159,7 +159,7 @@ index aaac103c..7e2db1d2 100644
  // Config holds proxy authorization and authentication settings
  type Config struct {
  	Authentication *authn.AuthnConfig
-@@ -45,77 +55,169 @@ type kubeRBACProxy struct {
+@@ -45,77 +55,170 @@ type kubeRBACProxy struct {
  	authorizer.Authorizer
  	// authorizerAttributesGetter implements retrieving authorization attributes for a respective request.
  	authorizerAttributesGetter *krpAuthorizerAttributesGetter
@@ -230,7 +230,7 @@ index aaac103c..7e2db1d2 100644
 +		ok bool
 +		err error
 +	)
-+	
++
 +	// AUTHENTIFICATION
 +	if inBackoff {
 +		klog.Infof("Backoff mode active: blocking kube-api request until %s. Using cached credentials for %s.", h.backoffUntil, h.maskToken(userIdentity))
@@ -281,7 +281,6 @@ index aaac103c..7e2db1d2 100644
 +		userIdentity = certificatePrefix + u.User.GetName()
  	}
 -
--	// Get authorization attributes
 +	// AUTHORIZATION BYPASS. We cache successfully authorized responses only
 +	if inBackoff {
 +		if h.Config.Authentication.Header.Enabled {
@@ -294,6 +293,7 @@ index aaac103c..7e2db1d2 100644
 +		return true
 +	}
 +	
+ 	// Get authorization attributes
  	allAttrs := h.authorizerAttributesGetter.GetRequestAttributes(u.User, req)
  	if len(allAttrs) == 0 {
  		msg := "Bad Request. The request or configuration is malformed."
@@ -303,8 +303,7 @@ index aaac103c..7e2db1d2 100644
 +		h.StaleCache.Remove(userIdentity)
  		return false
  	}
--
-+	
+ 
 +	// AUTHORIZATION
  	for _, attrs := range allAttrs {
 -		// Authorize
@@ -355,7 +354,7 @@ index aaac103c..7e2db1d2 100644
  func newKubeRBACProxyAuthorizerAttributesGetter(authzConfig *authz.Config) *krpAuthorizerAttributesGetter {
  	return &krpAuthorizerAttributesGetter{authzConfig}
  }
-@@ -210,6 +312,11 @@ func (n krpAuthorizerAttributesGetter) GetRequestAttributes(u user.Info, r *http
+@@ -210,6 +313,11 @@ func (n krpAuthorizerAttributesGetter) GetRequestAttributes(u user.Info, r *http
  		}
  		allAttrs = append(allAttrs, attrs)
  	}
@@ -367,7 +366,7 @@ index aaac103c..7e2db1d2 100644
  	return allAttrs
  }
  
-@@ -265,3 +372,15 @@ func templateWithValue(templateString, value string) string {
+@@ -265,3 +373,15 @@ func templateWithValue(templateString, value string) string {
  	}
  	return out.String()
  }
