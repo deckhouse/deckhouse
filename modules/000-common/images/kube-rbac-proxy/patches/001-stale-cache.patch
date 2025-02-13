@@ -128,7 +128,7 @@ index 00000000..08a77ca9
 +func (*fakeCache) Remove(_ string)                              {}
 +func (*fakeCache) Get(_ string) (*authenticator.Response, bool) { return nil, false }
 diff --git a/pkg/proxy/proxy.go b/pkg/proxy/proxy.go
-index aaac103c..96beb07b 100644
+index aaac103c..12f6905b 100644
 --- a/pkg/proxy/proxy.go
 +++ b/pkg/proxy/proxy.go
 @@ -18,10 +18,13 @@ package proxy
@@ -232,10 +232,10 @@ index aaac103c..96beb07b 100644
 +	)
 +
 +	if inBackoff {
-+		klog.Infof("Backoff mode active: blocking kube-api request until %s. Using cached credentials for token %s.", h.backoffUntil, h.maskToken(userIdentity))
++		klog.Infof("Backoff mode active: blocking kube-api request until %s. Using cached credentials for %s.", h.backoffUntil, h.maskToken(userIdentity))
 +		u, ok = h.StaleCache.Get(userIdentity)
 +		if !ok {
-+			klog.Errorf("Backoff mode active: no cached credentials found for token %s. Denying request.", h.maskToken(userIdentity))
++			klog.Errorf("Backoff mode active: no cached credentials found for %s. Denying request.", h.maskToken(userIdentity))
 +			http.Error(w, "Unauthorized", http.StatusUnauthorized)
 +			return false
 +		}
