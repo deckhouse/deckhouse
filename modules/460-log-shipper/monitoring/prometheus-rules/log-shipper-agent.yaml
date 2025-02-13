@@ -118,7 +118,7 @@
         Consider checking logs of the pod or follow advanced debug instructions.
         `kubectl -n d8-log-shipper get pods -o wide | grep {{ $labels.node }}`
 
-  - alert: D8LogShipperBufferOverflow
+  - alert: D8LogShipperMemoryBufferOverflow
     for: 10m
     expr: |
       clamp(
