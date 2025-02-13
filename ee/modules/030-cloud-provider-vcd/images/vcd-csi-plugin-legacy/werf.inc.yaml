@@ -47,7 +47,7 @@ image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
 final: false
 from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
 import:
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
   add: /src
   to: /src
   before: install
@@ -60,6 +60,7 @@ shell:
   - go mod download
   setup:
   - cd /src
+  - export VERSION="1.4.1"
   - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags "-s -w -X github.com/vmware/cloud-director-named-disk-csi-driver/version.Version=${VERSION}" -o bin/cloud-director-named-disk-csi-driver cmd/csi/main.go
   - chown 64535:64535 bin/cloud-director-named-disk-csi-driver
   - chmod 0755 bin/cloud-director-named-disk-csi-driver
