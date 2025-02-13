@@ -48,14 +48,18 @@ import:
   add: /iptables-wrapper
   to: /sbin/iptables-wrapper
   before: setup
-# - image: {{ .ModuleName }}/{{ .ImageName }}-library-artifact
-#   add: /usr/lib64/librt.so.1
-#   to: /usr/lib64/librt.so.1
-#   after: setup
+- image: {{ .ModuleName }}/{{ .ImageName }}-library-artifact
+  add: /usr/lib64/librt.so.1
+  to: /usr/lib64/librt.so.1
+  after: setup
+- image: {{ .ModuleName }}/{{ .ImageName }}-library-artifact
+  add: /usr/lib64/libpthread.so.0
+  to: /usr/lib64/libpthread.so.0
+  after: setup
 shell:
   beforeInstall:
-  # - chmod 0644 /usr/lib64/librt.so.1
-  # - ldconfig
+  - chmod 0644 /usr/lib64/librt.so.1
+  - chmod 0644 /usr/lib64/libpthread.so.0
   - |
     apt-get update && \
     apt-get install -y ca-certificates curl
@@ -69,7 +73,7 @@ shell:
   - echo istio-proxy ALL=NOPASSWD:ALL | tee -a /etc/sudoers
 imageSpec:
   config:
-    # user: "1337:1337"
+    user: "1337:1337"
     env: { "ISTIO_META_ISTIO_PROXY_SHA": "istio-proxy:af5e0ef2c1473f0f4e61f78adf81c85ff6389f87",  "ISTIO_META_ISTIO_VERSION": "1.19.7" }
     workingDir: "/"
     entrypoint: ["/usr/local/bin/pilot-agent"]
@@ -124,16 +128,16 @@ shell:
         done
       done
     done
-# ---
-# image: {{ .ModuleName }}/{{ .ImageName }}-library-artifact
-# fromImage: common/alt-p11
-# final: false
-# shell:
-#   beforeInstall:
-#   - |
-#     apt-get update && \
-#     apt-get install -y glibc
-#   - apt-get clean
-#   - rm -rf  /var/log/*log /var/lib/apt/lists/* /var/log/apt/* /var/lib/dpkg/*-old /var/cache/debconf/*-old
-#   - update-alternatives --set iptables /usr/sbin/iptables-legacy
-#   - update-alternatives --set ip6tables /usr/sbin/ip6tables-legacy
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-library-artifact
+fromImage: common/alt-p11
+final: false
+shell:
+  beforeInstall:
+  - |
+    apt-get update && \
+    apt-get install -y glibc
+  - apt-get clean
+  - rm -rf  /var/log/*log /var/lib/apt/lists/* /var/log/apt/* /var/lib/dpkg/*-old /var/cache/debconf/*-old
+  - update-alternatives --set iptables /usr/sbin/iptables-legacy
+  - update-alternatives --set ip6tables /usr/sbin/ip6tables-legacy
