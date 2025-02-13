@@ -9,7 +9,7 @@ linters-settings:
         - kind: Deployment
           name: deckhouse
           container: deckhouse
-      readiness-prove:
+      readiness-probe:
         - kind: Deployment
           name: webhook-handler
           container: handler

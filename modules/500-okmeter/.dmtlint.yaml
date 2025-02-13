@@ -4,7 +4,7 @@ linters-settings:
       disable: true
   templates:
     exclude-rules:
-      vpa:
+      pdb:
         - kind: DaemonSet
           name: okmeter
   container:

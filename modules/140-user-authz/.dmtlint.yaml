@@ -2,3 +2,5 @@ linters-settings:
   module:
     oss:
       disable: true
+  rbac:
+    impact: none
