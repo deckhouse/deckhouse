@@ -61,7 +61,7 @@ cleanup:
 
 {{- $_ := set . "CandiVersionMap" $versionMap }}
 
-{{- include "k8s_versions" . }}
+{{- include "base_k8s_versions" . }}
 ---
 # Terraform Versions
 {{- $_ := set . "TF" (.Files.Get "candi/terraform_versions.yml" | fromYaml) }}
