@@ -9,6 +9,11 @@ git:
   stageDependencies:
     install:
     - '**/*'
+mount:
+- fromPath: ~/go-pkg-cache
+  to: /root/go/pkg
+- from: tmp_dir
+  to: /root/.cache/go-build
 shell:
   install:
     - mkdir -p /src
@@ -20,8 +25,9 @@ shell:
     - export CGO_ENABLED=1
     - go mod vendor
     - make cephcsi
-    - cp _output/cephcsi /cephcsi
+    - mv _output/cephcsi /cephcsi
     - /binary_replace.sh -i "{{ $binaries }}" -o /relocate
+    - rm -rf .git vendor
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
