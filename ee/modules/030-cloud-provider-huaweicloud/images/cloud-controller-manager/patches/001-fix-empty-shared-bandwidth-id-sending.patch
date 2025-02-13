@@ -1,4 +1,4 @@
-Subject: [PATCH] comment some fields
+Subject: [PATCH] Prevent sending empty shared bandwidth identifier in HTTP requests to create EIP.
 ---
 Index: pkg/cloudprovider/huaweicloud/sharedloadbalancer.go
 IDEA additional info:
