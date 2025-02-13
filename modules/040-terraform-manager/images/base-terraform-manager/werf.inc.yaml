@@ -53,7 +53,6 @@ shell:
   - apk add --no-cache openssh-client
   - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
   install:
-  - mkdir /src
   - export GOPROXY={{ $.GOPROXY }}
   - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w -extldflags \"-static\"" -o /terraform/terraform .
   - chmod 755 /terraform/terraform
