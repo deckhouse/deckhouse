@@ -8,8 +8,8 @@ index 96ea6d4f..8614a60c 100644
         ctx := context.Background()
 -
 +       for i := 0; i < 5; i++ {
-+               tempErr := client.Set(ctx, key, []byte(val), time.Duration(60)*time.Second)
-+               if tempErr == nil {
++               err := client.Set(ctx, key, []byte(val), time.Duration(60)*time.Second)
++               if err == nil {
 +                       break
 +               }
 +               time.Sleep(2 * time.Second)
