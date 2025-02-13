@@ -150,6 +150,14 @@ spec:
           value: "{{- range $i, $v := .Values.prometheus.grafana.customPlugins }}{{- if ne $i 0 -}},{{- end -}}{{- $v -}}{{- end }}"
           {{- end }}
         {{- end }}
+        - name: GF_SECURITY_COOKIE_SAMESITE
+          value: "strict"
+        - name: GF_SECURITY_CONTENT_SECURITY_POLICY
+          value: "true"
+        {{- if ne .Values.global.modules.https.mode "Disabled" }}
+        - name: GF_SERVER_STRICT_TRANSPORT_SECURITY
+          value: "true"
+        {{- end }}
         - name: PROMETHEUS_TOKEN
           valueFrom:
             secretKeyRef:
