@@ -1,57 +1,72 @@
 {{- range $key, $value := .CandiVersionMap.k8s }}
   {{- $version := toString $key }}
+  {{- $image_version := $version | replace "." "-" }}
   {{- if $value.clusterAutoscalerPatch }}
+    {{- $patches := (printf "/%smodules/%s-%s/images/%s" $.ModulePath $.ModulePriority $.ModuleName $.ImageName) }}
+    {{- $patch := false }}
+    {{- range $path, $_ := $.Files.Glob (printf "%s/*" $patches) }}
+      {{- if contains $version $path }}
+        {{- $patch = true }}
+      {{- end }}
+    {{- end }}
 ---
-image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $version | replace "." "-" }}-src-artifact
+image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}-src-artifact
 fromImage: common/src-artifact
 final: false
+    {{- if $patch }}
 git:
-- add: /{{ $.ModulePath }}modules/040-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
+- add: {{ $patches }}/patches/{{ $version }}
   to: /patches
   stageDependencies:
     install:
     - '**/*'
+    {{- end }}
 shell:
   install:
-  - mkdir -p /src && cd /src
+  - mkdir -p /tmp/autoscaler
+  - cd /tmp/autoscaler
     {{- $clusterAutoscalerVersion := $version }}
     {{- if semverCompare ">=1.30" $version }}
       {{- $clusterAutoscalerVersion = "1.30" }}
     {{- end }}
   - git clone --depth 1 --branch v{{ $clusterAutoscalerVersion }}.{{ $value.clusterAutoscalerPatch }} {{ $.SOURCE_REPO }}/gardener/autoscaler.git .
-  - cd /src/cluster-autoscaler
-  - git apply /patches/{{ $version }}/*.patch --verbose
-  - rm -rf /src/.git /src/cluster-autoscaler/vendor
+    {{- if $patch }}
+  - git apply /patches/*.patch --verbose
+    {{- end }}
+  - mv ./cluster-autoscaler/* /src
+  - rm -rf /tmp/autoscaler /src/vendor
 ---
-image: {{ $.ModuleName }}/distroless-{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
+image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
 from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
 final: false
 import:
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $version | replace "." "-" }}-src-artifact
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}-src-artifact
   add: /src
   to: /src
   before: install
 mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
+- from: tmp_dir
+  to: /root/.cache/go-build
 shell:
   install:
-  - cd /src/cluster-autoscaler
+  - cd /src
   - export GOPROXY={{ $.GOPROXY }} GOOS=linux GOARCH=amd64 CGO_ENABLED=0
   - go mod download
   - go build -ldflags="-s -w" -o cluster-autoscaler
   - echo "{{ $clusterAutoscalerVersion }}.{{ $value.clusterAutoscalerPatch }}-flant" > VERSION
 ---
-image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $version | replace "." "-" }}
+image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
 fromImage: common/distroless
 import:
-  - image: {{ $.ModuleName }}/distroless-{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
-    add: /src/cluster-autoscaler
-    to: /
-    includePaths:
-    - cluster-autoscaler
-    - VERSION
-    before: setup
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
+  add: /src
+  to: /
+  includePaths:
+  - cluster-autoscaler
+  - VERSION
+  before: setup
 imageSpec:
   config:
     env: { "container": "docker" }
