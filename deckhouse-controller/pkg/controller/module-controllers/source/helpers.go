@@ -308,7 +308,7 @@ func (r *reconciler) ensureModule(ctx context.Context, sourceName, moduleName, r
 	}
 
 	// update release channel
-	err = ctrlutils.UpdateWithRetry[*v1alpha1.Module](ctx, r.client, module, func() error {
+	err = ctrlutils.UpdateWithRetry(ctx, r.client, module, func() error {
 		module.Properties.ReleaseChannel = releaseChannel
 		return nil
 	})
