@@ -11,6 +11,12 @@ id: {{ $crd.name }}-{{ $crd.namespace }}-dex-authenticator
 name: {{ $crd.name }}-{{ $crd.namespace }}-dex-authenticator
 secret: {{ $crd.credentials.appDexSecret }}
     {{- if $crd.spec.allowedGroups }}
+allowedEmails:
+{{- range $email := $crd.spec.allowedEmails }}
+  - {{ $email }}
+{{- end }}
+    {{- end }}
+    {{- if $crd.spec.allowedEmails }}
 allowedGroups:
 {{- range $group := $crd.spec.allowedGroups }}
   - {{ $group }}
