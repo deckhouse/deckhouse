@@ -275,10 +275,12 @@ func (r *reconciler) ensureModule(ctx context.Context, sourceName, moduleName, r
 
 	err := ctrlutils.UpdateStatusWithRetry(ctx, r.client, module, func() error {
 		// init just created downloaded modules
-		module.Status.Phase = v1alpha1.ModulePhaseAvailable
-		module.SetConditionFalse(v1alpha1.ModuleConditionEnabledByModuleConfig, v1alpha1.ModuleReasonDisabled, v1alpha1.ModuleMessageDisabled)
-		module.SetConditionFalse(v1alpha1.ModuleConditionEnabledByModuleManager, "", "")
-		module.SetConditionFalse(v1alpha1.ModuleConditionIsReady, v1alpha1.ModuleReasonNotInstalled, v1alpha1.ModuleMessageNotInstalled)
+		if module.Status.Phase == "" {
+			module.Status.Phase = v1alpha1.ModulePhaseAvailable
+			module.SetConditionFalse(v1alpha1.ModuleConditionEnabledByModuleConfig, v1alpha1.ModuleReasonDisabled, v1alpha1.ModuleMessageDisabled)
+			module.SetConditionFalse(v1alpha1.ModuleConditionEnabledByModuleManager, "", "")
+			module.SetConditionFalse(v1alpha1.ModuleConditionIsReady, v1alpha1.ModuleReasonNotInstalled, v1alpha1.ModuleMessageNotInstalled)
+		}
 
 		return nil
 	})
