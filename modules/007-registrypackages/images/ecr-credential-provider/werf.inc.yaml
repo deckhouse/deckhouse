@@ -28,12 +28,13 @@ git:
   {{- end }}
 shell:
   install:
-  - git clone --depth=1 --branch {{ $value.ccm.aws }} {{ $.SOURCE_REPO }}/kubernetes/cloud-provider-aws.git /src
   - cd /src
+  - git clone --depth=1 --branch {{ $value.ccm.aws }} {{ $.SOURCE_REPO }}/kubernetes/cloud-provider-aws.git
+  - cd cloud-provider-aws
   {{- if $patch }}
   - git apply /patches/*.patch --verbose
   {{- end }}
-  - rm -rf .git vendor
+  - rm -rf .git
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
 from: {{ $.Images.BASE_SCRATCH }}
@@ -70,7 +71,7 @@ shell:
     - export CGO_ENABLED=0
     - export GOOS=linux
     - export GOARCH=amd64
-    - cd /src
+    - cd /src/cloud-provider-aws
     - export VERSION={{ $value.ccm.aws }}
     - make ecr-credential-provider
     - mv /src/scripts/* /
