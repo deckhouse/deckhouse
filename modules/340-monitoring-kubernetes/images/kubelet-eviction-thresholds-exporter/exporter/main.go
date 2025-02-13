@@ -242,8 +242,7 @@ func getBytesAndInodeStatsFromPath(path string) (bytesTotal uint64, inodeTotal u
 
 	err = unix.Statfs(path, &stat)
     if err != nil {
-        log.Printf("Error statfs on path %s", path)
-        return 0, 0, err
+        return 0, 0, fmt.Errorf("Statfs on %s: %w", path, err)
     }
 
 	bytesTotal = stat.Blocks * uint64(stat.Bsize)
@@ -348,7 +347,7 @@ func getContainerdRootDir() (string, error) {
 
 	matches := containerdConfigRootDirRegex.FindSubmatch(containerdConfig)
 	if len(matches) != 2 {
-		log.Printf("Error reading containerd config: %s, using default /var/lib/containerd,", err)
+		log.Printf("Containerd config does not contain root dir option. Use default /var/lib/containerd")
 		return "/var/lib/containerd", nil
 	}
 
