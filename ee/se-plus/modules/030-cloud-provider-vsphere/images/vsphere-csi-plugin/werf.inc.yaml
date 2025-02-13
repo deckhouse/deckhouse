@@ -43,10 +43,10 @@ shell:
   - git clone --depth 1 --branch {{ $value.csi.vsphere }} {{ $.SOURCE_REPO }}/kubernetes-sigs/vsphere-csi-driver.git /src
   - git clone --depth 1 --branch v0.2.0 {{ $.SOURCE_REPO }}/gofsutil.git /src/gofsutil
   - cd /src
-  - sed -i -e 's# ../gofsutil#/src/gofsutil#g' go.mod
   {{- if $patch}}
   - git apply /patches/*.patch --verbose
   {{- end}}
+  - sed -i -e 's# ../gofsutil# /src/gofsutil#g' go.mod
   - rm -rf .git
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
