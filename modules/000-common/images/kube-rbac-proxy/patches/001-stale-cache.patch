@@ -128,7 +128,7 @@ index 00000000..08a77ca9
 +func (*fakeCache) Remove(_ string)                              {}
 +func (*fakeCache) Get(_ string) (*authenticator.Response, bool) { return nil, false }
 diff --git a/pkg/proxy/proxy.go b/pkg/proxy/proxy.go
-index aaac103c..fa4096a3 100644
+index aaac103c..fdc2f627 100644
 --- a/pkg/proxy/proxy.go
 +++ b/pkg/proxy/proxy.go
 @@ -18,10 +18,13 @@ package proxy
@@ -159,7 +159,7 @@ index aaac103c..fa4096a3 100644
  // Config holds proxy authorization and authentication settings
  type Config struct {
  	Authentication *authn.AuthnConfig
-@@ -45,77 +55,156 @@ type kubeRBACProxy struct {
+@@ -45,77 +55,164 @@ type kubeRBACProxy struct {
  	authorizer.Authorizer
  	// authorizerAttributesGetter implements retrieving authorization attributes for a respective request.
  	authorizerAttributesGetter *krpAuthorizerAttributesGetter
@@ -198,6 +198,14 @@ index aaac103c..fa4096a3 100644
 +	return new(authenticator, authorizer, config, staleCacheTTL), nil
  }
  
++func (h *kubeRBACProxy) maskToken(token string) string {
++	if len(token) <= 10 {
++		return token
++	}
++	return fmt.Sprintf("%s… (truncated)", token[:10])
++}
++
++
  // Handle authenticates the client and authorizes the request.
  // If the authn fails, a 401 error is returned. If the authz fails, a 403 error is returned
  func (h *kubeRBACProxy) Handle(w http.ResponseWriter, req *http.Request) bool {
@@ -224,10 +232,10 @@ index aaac103c..fa4096a3 100644
 +	)
 +
 +	if inBackoff {
-+		klog.Infof("Backoff mode active: blocking kube-api request until %s. Using cached credentials for user %s.", h.backoffUntil, userIdentity)
++		klog.Infof("Backoff mode active: blocking kube-api request until %s. Using cached credentials for user %s.", h.backoffUntil, h.maskToken(userIdentity))
 +		u, ok = h.StaleCache.Get(userIdentity)
 +		if !ok {
-+			klog.Errorf("Backoff mode active: no cached credentials found for user %s. Denying request.", userIdentity)
++			klog.Errorf("Backoff mode active: no cached credentials found for user %s. Denying request.", h.maskToken(userIdentity))
 +			http.Error(w, "Unauthorized", http.StatusUnauthorized)
 +			return false
 +		}
@@ -343,7 +351,7 @@ index aaac103c..fa4096a3 100644
  func newKubeRBACProxyAuthorizerAttributesGetter(authzConfig *authz.Config) *krpAuthorizerAttributesGetter {
  	return &krpAuthorizerAttributesGetter{authzConfig}
  }
-@@ -210,6 +299,11 @@ func (n krpAuthorizerAttributesGetter) GetRequestAttributes(u user.Info, r *http
+@@ -210,6 +307,11 @@ func (n krpAuthorizerAttributesGetter) GetRequestAttributes(u user.Info, r *http
  		}
  		allAttrs = append(allAttrs, attrs)
  	}
@@ -355,7 +363,7 @@ index aaac103c..fa4096a3 100644
  	return allAttrs
  }
  
-@@ -265,3 +359,15 @@ func templateWithValue(templateString, value string) string {
+@@ -265,3 +367,15 @@ func templateWithValue(templateString, value string) string {
  	}
  	return out.String()
  }
