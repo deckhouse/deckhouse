@@ -1,12 +1,16 @@
 ## Patches
 
+### remove_routes_on_deletion
+https://github.com/flant/terraform-provider-google/compare/v3.48.0...v3.48.0-flant.1
+
 ### Go mod
 
 To create this patch run commands:
 
 ```shell
-cd cluster-autoscaler
 go mod edit -go 1.23
+
+
 go get github.com/cyphar/filepath-securejoin@v0.2.4
 go get github.com/golang-jwt/jwt/v4@v4.5.1
 go get github.com/opencontainers/runc@v1.1.14

@@ -13,18 +13,18 @@ import:
 image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
 final: false
 fromImage: common/src-artifact
-# git:
-# - add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
-#   to: /patches
-#   stageDependencies:
-#     install:
-#     - '**/*'
+git:
+- add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
+  to: /patches
+  stageDependencies:
+    install:
+    - '**/*'
 shell:
   install:
   - cd /src
-  - git clone --depth 1 --branch v{{ .TF.gcp.version }}-flant.1 {{ .SOURCE_REPO }}/flant/terraform-provider-google.git .
-  # - git apply /patches/*.patch --verbose
-  - rm -rf .git
+  - git clone --depth 1 --branch v{{ .TF.gcp.version }} {{ .SOURCE_REPO }}hashicorp/terraform-provider-google.git .
+  - git apply /patches/*.patch --verbose
+  - rm -rf .git google/test-fixtures/appengine/hello-world-flask
 ---
 image: terraform-provider-gcp
 final: false
@@ -40,8 +40,6 @@ import:
   to: /src
   before: install
 shell:
-  # beforeInstall:
-  # - apk add --no-cache make patch git bash openssh-client
   install:
   - export GOPROXY={{ $.GOPROXY }}
   - cd /src
