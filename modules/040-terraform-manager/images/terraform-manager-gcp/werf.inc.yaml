@@ -10,23 +10,43 @@ import:
   to: /plugins/registry.terraform.io/{{ .TF.gcp.namespace }}/{{ .TF.gcp.type }}/{{ .TF.gcp.version }}/linux_amd64/terraform-provider-google
   before: setup
 ---
+image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+final: false
+fromImage: common/src-artifact
+# git:
+# - add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
+#   to: /patches
+#   stageDependencies:
+#     install:
+#     - '**/*'
+shell:
+  install:
+  - cd /src
+  - git clone --depth 1 --branch v{{ .TF.gcp.version }}-flant.1 {{ .SOURCE_REPO }}/flant/terraform-provider-google.git .
+  # - git apply /patches/*.patch --verbose
+  - rm -rf .git
+---
 image: terraform-provider-gcp
 final: false
-from: {{ $.Images.BASE_GOLANG_20_ALPINE }}
+from: {{ .Images.BASE_GOLANG_23_ALPINE }}
 mount:
-  - fromPath: ~/go-pkg-cache
-    to: /go/pkg
+- fromPath: ~/go-pkg-cache
+  to: /go/pkg
+- from: tmp_dir
+  to: /root/.cache/go-build
+import:
+- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+  add: /src
+  to: /src
+  before: install
 shell:
-  beforeInstall:
-    - apk add --no-cache make patch git bash openssh-client
+  # beforeInstall:
+  # - apk add --no-cache make patch git bash openssh-client
   install:
-    - mkdir /src
-    - export GOPROXY={{ $.GOPROXY }}
-    - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
-    - git clone --depth 1 --branch v{{ .TF.gcp.version }}-flant.1 {{ $.SOURCE_REPO }}/flant/terraform-provider-google.git /src
-    - cd /src
-    - go mod download
-    - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o terraform-provider-gcp -ldflags="-s -w -extldflags \"-static\" -X github.com/hashicorp/terraform-provider-google/version.ProviderVersion={{ .TF.gcp.version }}"
-    - mv terraform-provider-gcp /terraform-provider-gcp
-    - chmod -R 755 /terraform-provider-gcp
-    - chown 64535:64535 /terraform-provider-gcp
+  - export GOPROXY={{ $.GOPROXY }}
+  - cd /src
+  - go mod download
+  - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o terraform-provider-gcp -ldflags="-s -w -extldflags \"-static\" -X github.com/hashicorp/terraform-provider-google/version.ProviderVersion={{ .TF.gcp.version }}"
+  - mv terraform-provider-gcp /terraform-provider-gcp
+  - chmod -R 755 /terraform-provider-gcp
+  - chown 64535:64535 /terraform-provider-gcp
