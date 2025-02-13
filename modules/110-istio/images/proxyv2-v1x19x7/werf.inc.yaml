@@ -51,11 +51,11 @@ import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-library-artifact
   add: /usr/lib64/librt.so.1
   to: /usr/lib64/librt.so.1
-  before: beforeInstall
+  before: install
 - image: {{ .ModuleName }}/{{ .ImageName }}-library-artifact
   add: /usr/lib64/libpthread.so.0
   to: /usr/lib64/libpthread.so.0
-  before: beforeInstall
+  before: install
 shell:
   beforeInstall:
   - chmod 0644 /usr/lib64/librt.so.1
