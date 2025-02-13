@@ -128,7 +128,7 @@ index 00000000..08a77ca9
 +func (*fakeCache) Remove(_ string)                              {}
 +func (*fakeCache) Get(_ string) (*authenticator.Response, bool) { return nil, false }
 diff --git a/pkg/proxy/proxy.go b/pkg/proxy/proxy.go
-index aaac103c..035e405d 100644
+index aaac103c..da4e0a13 100644
 --- a/pkg/proxy/proxy.go
 +++ b/pkg/proxy/proxy.go
 @@ -18,10 +18,13 @@ package proxy
@@ -224,7 +224,7 @@ index aaac103c..035e405d 100644
 +	)
 +
 +	if inBackoff {
-+		klog.V(2).Infof("Backoff activated: using cache for %s",userIdentity)
++		klog.V(2).Infof("Backoff activated: using cache for %s until %s",userIdentity, h.backoffUntil)
 +		u, ok = h.StaleCache.Get(userIdentity)
 +		if !ok {
 +			klog.Errorf("Backoff activated: no cached data for %s", userIdentity)
@@ -260,7 +260,7 @@ index aaac103c..035e405d 100644
 +			return false
 +		} else {
 +			h.backoffMu.Lock()
-+			h.currentBackoffDelay = 3 * time.Second
++			h.currentBackoffDelay = 5 * time.Second
 +			h.backoffUntil = time.Time{}
 +			h.backoffMu.Unlock()
 +		}
