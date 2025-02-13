@@ -157,10 +157,9 @@ spec:
           value: "true"
         - name: GF_SECURITY_COOKIE_SECURE
           value: "true"
-        {{- else }}
+        {{- end }}
         - name: GF_SECURITY_COOKIE_SAMESITE
           value: "strict"
-        {{- end }}
         - name: PROMETHEUS_TOKEN
           valueFrom:
             secretKeyRef:
