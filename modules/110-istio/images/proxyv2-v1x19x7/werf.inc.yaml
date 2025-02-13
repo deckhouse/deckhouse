@@ -58,8 +58,6 @@ import:
   before: install
 shell:
   beforeInstall:
-  - chmod 0644 /usr/lib64/librt.so.1
-  - chmod 0644 /usr/lib64/libpthread.so.0
   - |
     apt-get update && \
     apt-get install -y ca-certificates curl
@@ -69,6 +67,8 @@ shell:
   - update-alternatives --set iptables /usr/sbin/iptables-legacy
   - update-alternatives --set ip6tables /usr/sbin/ip6tables-legacy
   install:
+  - chmod 0644 /usr/lib64/librt.so.1
+  - chmod 0644 /usr/lib64/libpthread.so.0
   - useradd -m --uid 1337 istio-proxy
   - echo istio-proxy ALL=NOPASSWD:ALL | tee -a /etc/sudoers
 imageSpec:
