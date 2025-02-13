@@ -8,3 +8,4 @@ index c26c4dc1..a3b5d1d8 100644
  	k8s.io/sample-controller => k8s.io/sample-controller v0.25.2
 +	github.com/akutz/gofsutil => ../gofsutil
  )
+ 
