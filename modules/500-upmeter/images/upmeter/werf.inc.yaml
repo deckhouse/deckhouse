@@ -46,7 +46,7 @@ image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
-  add: /src/updater/pkg/db/migrations/agent
+  add: /src/upmeter/pkg/db/migrations/agent
   to: /data/migrations/agent
   before: setup
 - image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
