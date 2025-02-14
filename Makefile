@@ -428,7 +428,7 @@ build: set-build-envs ## Build Deckhouse images.
   endif
 
 build-render: set-build-envs ## render werf.yaml for build Deckhouse images.
-	werf config render --dev
+	bin/werf config render --dev
 
 .PHONY: go-module-version
 go-module-version:
