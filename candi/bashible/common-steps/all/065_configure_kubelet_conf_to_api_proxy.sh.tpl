@@ -27,7 +27,7 @@ kind: Config
 clusters:
 - cluster:
     certificate-authority-data: $(cat /etc/kubernetes/pki/ca.crt | base64 -w0)
-    server: https://127.0.0.1:6445
+    server: https://127.0.0.1:3994
   name: d8-cluster
 
 users:

@@ -37,7 +37,7 @@ import (
 )
 
 const (
-	apiProxyAddress             = "127.0.0.1:6445"
+	apiProxyAddress             = "127.0.0.1:3994"
 	bindInternalIPAnnotationKey = "node.deckhouse.io/nodeport-bind-internal-ip"
 
 	kubeConfigPath      = "/var/lib/kube-proxy/kubeconfig.conf"
@@ -153,11 +153,11 @@ func main() {
 		log.Fatal(err)
 	}
 
-	err = os.WriteFile(kubeConfigPath, kubeConfigBytes, 0644)
+	err = os.WriteFile(kubeConfigPath, kubeConfigBytes, 0o644)
 	if err != nil {
 		log.Fatal(err)
 	}
-	err = os.WriteFile(kubeProxyConfigPath, kubeProxyConfigBytes, 0644)
+	err = os.WriteFile(kubeProxyConfigPath, kubeProxyConfigBytes, 0o644)
 	if err != nil {
 		log.Fatal(err)
 	}

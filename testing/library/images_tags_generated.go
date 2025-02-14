@@ -221,6 +221,7 @@ var DefaultImagesDigests = map[string]interface{}{
 		"csiVsphereSyncer131":       "imageHash-common-csiVsphereSyncer131",
 		"csiVsphereSyncer132":       "imageHash-common-csiVsphereSyncer132",
 		"distroless":                "imageHash-common-distroless",
+		"haproxyStatic":             "imageHash-common-haproxyStatic",
 		"init":                      "imageHash-common-init",
 		"iptablesWrapper":           "imageHash-common-iptablesWrapper",
 		"kubeRbacProxy":             "imageHash-common-kubeRbacProxy",
@@ -255,6 +256,8 @@ var DefaultImagesDigests = map[string]interface{}{
 		"kubeScheduler131":         "imageHash-controlPlaneManager-kubeScheduler131",
 		"kubeScheduler132":         "imageHash-controlPlaneManager-kubeScheduler132",
 		"kubernetesApiProxy":       "imageHash-controlPlaneManager-kubernetesApiProxy",
+		"nodeProxy":                "imageHash-controlPlaneManager-nodeProxy",
+		"nodeProxySidecar":         "imageHash-controlPlaneManager-nodeProxySidecar",
 	},
 	"dashboard": map[string]interface{}{
 		"api":            "imageHash-dashboard-api",

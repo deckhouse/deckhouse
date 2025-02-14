@@ -215,7 +215,7 @@ func neighborViaServiceHandler(w http.ResponseWriter, r *http.Request) {
 func apiHandler(w http.ResponseWriter, r *http.Request) {
 	log.Info(r.RemoteAddr, r.RequestURI)
 
-	apiserverEndpoint := "https://127.0.0.1:6445/readyz/ping"
+	apiserverEndpoint := "https://127.0.0.1:3994/readyz/ping"
 
 	kubernetesServiceHost := os.Getenv("KUBERNETES_SERVICE_HOST")
 	kubernetesServicePort := os.Getenv("KUBERNETES_SERVICE_PORT_HTTPS")

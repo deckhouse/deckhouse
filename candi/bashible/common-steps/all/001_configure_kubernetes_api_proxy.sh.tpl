@@ -45,7 +45,7 @@ stream {
 {{- end }}
   }
   server {
-    listen 127.0.0.1:6445;
+    listen 127.0.0.1:3994;
     proxy_pass kubernetes;
     # Configurator uses 24h proxy_timeout in case of long running jobs like kubectl exec or kubectl logs
     # After time out, nginx will force a client to reconnect
