@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package converge
+package check
 
 import (
 	"encoding/json"
@@ -25,8 +25,12 @@ import (
 	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/entity"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/utils"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	dhctlstate "github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	state_terraform "github.com/deckhouse/deckhouse/dhctl/pkg/state/terraform"
@@ -66,6 +70,14 @@ type Statistics struct {
 	TerraformPlan []terraform.TerraformPlan `json:"terraform_plan,omitempty"`
 }
 
+type NodeGroupOptions struct {
+	Name            string
+	LayoutStep      string
+	CloudConfig     string
+	DesiredReplicas int
+	State           map[string][]byte
+}
+
 // Format data according to the specified format ("json"|"yaml") and
 // hides raw terraform plan and destructive changes from result
 func (s Statistics) Format(outputFormat string) ([]byte, error) {
@@ -100,6 +112,14 @@ func (s Statistics) Format(outputFormat string) ([]byte, error) {
 	return data, nil
 }
 
+func getStepByNodeGroupName(nodeGroupName string) string {
+	step := "static-node"
+	if nodeGroupName == global.MasterNodeGroupName {
+		step = "master-node"
+	}
+	return step
+}
+
 func checkClusterState(kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig, terraformContext *terraform.TerraformContext, opts CheckStateOptions) (int, terraform.TerraformPlan, *terraform.BaseInfrastructureDestructiveChanges, error) {
 	var clusterState []byte
 	var err error
@@ -117,7 +137,7 @@ func checkClusterState(kubeCl *client.KubernetesClient, metaConfig *config.MetaC
 
 	var stateSavers []terraform.SaverDestination
 	if opts.CommanderMode {
-		stateSavers = append(stateSavers, NewClusterStateSaver(kubeCl))
+		stateSavers = append(stateSavers, entity.NewClusterStateSaver(kubernetes.NewSimpleKubeClientGetter(kubeCl)))
 	}
 
 	baseRunner := terraformContext.GetCheckBaseInfraRunner(metaConfig, terraform.BaseInfraRunnerOptions{
@@ -132,7 +152,7 @@ func checkClusterState(kubeCl *client.KubernetesClient, metaConfig *config.MetaC
 	return terraform.CheckBaseInfrastructurePipeline(baseRunner, "Kubernetes cluster")
 }
 
-func checkAbandonedNodeState(kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig, nodeGroup *NodeGroupGroupOptions, nodeGroupState *state.NodeGroupTerraformState, nodeName string, terraformContext *terraform.TerraformContext, opts CheckStateOptions) (int, terraform.TerraformPlan, *terraform.PlanDestructiveChanges, error) {
+func checkAbandonedNodeState(kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig, nodeGroup *NodeGroupOptions, nodeGroupState *state.NodeGroupTerraformState, nodeName string, terraformContext *terraform.TerraformContext, opts CheckStateOptions) (int, terraform.TerraformPlan, *terraform.PlanDestructiveChanges, error) {
 	nodeIndex, err := config.GetIndexFromNodeName(nodeName)
 	if err != nil {
 		return terraform.PlanHasNoChanges, nil, nil, fmt.Errorf("can't extract index from terraform state secret (%v), skip %s", err, nodeName)
@@ -155,12 +175,12 @@ func checkAbandonedNodeState(kubeCl *client.KubernetesClient, metaConfig *config
 	pipelineForMaster := nodeGroup.LayoutStep == "master-node"
 	nodeGroupName := nodeGroup.Name
 	if pipelineForMaster {
-		nodeGroupName = MasterNodeGroupName
+		nodeGroupName = global.MasterNodeGroupName
 	}
 
 	var stateSavers []terraform.SaverDestination
 	if opts.CommanderMode {
-		stateSavers = append(stateSavers, NewNodeStateSaver(kubeCl, nodeName, nodeGroupName, nil))
+		stateSavers = append(stateSavers, entity.NewNodeStateSaver(kubernetes.NewSimpleKubeClientGetter(kubeCl), nodeName, nodeGroupName, nil))
 	}
 	nodeRunner := terraformContext.GetCheckNodeDeleteRunner(cfg, terraform.NodeDeleteRunnerOptions{
 		AutoDismissDestructive:           false,
@@ -179,7 +199,7 @@ func checkAbandonedNodeState(kubeCl *client.KubernetesClient, metaConfig *config
 	return terraform.CheckPipeline(nodeRunner, nodeName, terraform.PlanOptions{Destroy: true})
 }
 
-func checkNodeState(kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig, nodeGroup *NodeGroupGroupOptions, nodeName string, terraformContext *terraform.TerraformContext, opts CheckStateOptions) (int, terraform.TerraformPlan, *terraform.PlanDestructiveChanges, error) {
+func checkNodeState(kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig, nodeGroup *NodeGroupOptions, nodeName string, terraformContext *terraform.TerraformContext, opts CheckStateOptions) (int, terraform.TerraformPlan, *terraform.PlanDestructiveChanges, error) {
 	nodeIndex, err := config.GetIndexFromNodeName(nodeName)
 	if err != nil {
 		return terraform.PlanHasNoChanges, nil, nil, fmt.Errorf("can't extract index from terraform state secret (%v), skip %s", err, nodeName)
@@ -190,7 +210,7 @@ func checkNodeState(kubeCl *client.KubernetesClient, metaConfig *config.MetaConf
 	nodeGroupName := nodeGroup.Name
 	var nodeGroupSettingsFromConfig []byte
 	if pipelineForMaster {
-		nodeGroupName = MasterNodeGroupName
+		nodeGroupName = global.MasterNodeGroupName
 	} else {
 		// Node group settings are only for the static node.
 		nodeGroupSettingsFromConfig = metaConfig.FindTerraNodeGroup(nodeGroup.Name)
@@ -198,7 +218,7 @@ func checkNodeState(kubeCl *client.KubernetesClient, metaConfig *config.MetaConf
 
 	var stateSavers []terraform.SaverDestination
 	if opts.CommanderMode {
-		stateSavers = append(stateSavers, NewNodeStateSaver(kubeCl, nodeName, nodeGroupName, nodeGroupSettingsFromConfig))
+		stateSavers = append(stateSavers, entity.NewNodeStateSaver(kubernetes.NewSimpleKubeClientGetter(kubeCl), nodeName, nodeGroupName, nodeGroupSettingsFromConfig))
 	}
 
 	nodeRunner := terraformContext.GetCheckNodeRunner(metaConfig, terraform.NodeRunnerOptions{
@@ -264,7 +284,7 @@ func CheckState(kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig, 
 		}
 	}
 
-	nodeTemplates, err := GetNodeGroupTemplates(kubeCl)
+	nodeTemplates, err := entity.GetNodeGroupTemplates(kubeCl)
 	if err != nil {
 		allErrs = multierror.Append(allErrs, fmt.Errorf("node goups in Kubernetes cluster not found: %w", err))
 	}
@@ -298,9 +318,9 @@ func CheckState(kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig, 
 		}
 	}
 
-	for _, nodeGroupName := range sortNodeGroupsStateKeys(nodesState, nodeGroupsWithStateInCluster) {
+	for _, nodeGroupName := range utils.SortNodeGroupsStateKeys(nodesState, nodeGroupsWithStateInCluster) {
 		nodeGroupState := nodesState[nodeGroupName]
-		replicas := getReplicasByNodeGroupName(metaConfig, nodeGroupName)
+		replicas := metaConfig.GetReplicasByNodeGroupName(nodeGroupName)
 		layoutStep := getStepByNodeGroupName(nodeGroupName)
 
 		if replicas > len(nodeGroupState.State) {
@@ -332,7 +352,7 @@ func CheckState(kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig, 
 				continue
 			}
 
-			nodeGroup := NodeGroupGroupOptions{
+			nodeGroup := NodeGroupOptions{
 				Name:            nodeGroupName,
 				LayoutStep:      layoutStep,
 				DesiredReplicas: replicas,
@@ -369,7 +389,7 @@ func CheckState(kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig, 
 			}
 		}
 
-		nodeGroup := NodeGroupGroupOptions{
+		nodeGroup := NodeGroupOptions{
 			Name:            nodeGroupName,
 			LayoutStep:      layoutStep,
 			DesiredReplicas: replicas,
@@ -441,7 +461,7 @@ func sortNodesByIndex(nodesState map[string][]byte) ([]string, error) {
 func getStatusForMissedNode(kubeCl *client.KubernetesClient, nodeName, nodeGroupName string, allErrs **multierror.Error) NodeCheckResult {
 	status := AbsentStatus
 
-	exists, err := IsNodeExistsInCluster(kubeCl, nodeName, log.GetDefaultLogger())
+	exists, err := entity.IsNodeExistsInCluster(kubeCl, nodeName, log.GetDefaultLogger())
 	if err != nil {
 		*allErrs = multierror.Append(*allErrs, err)
 		status = ErrorStatus

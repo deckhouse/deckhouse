@@ -12,13 +12,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package converge
+package controller
 
 import (
 	"fmt"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/entity"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/operations"
+
+	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/context"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/tomb"
 )
@@ -30,17 +36,23 @@ type CloudPermanentNodeGroupController struct {
 func NewCloudPermanentNodeGroupController(controller *NodeGroupController) *CloudPermanentNodeGroupController {
 	cloudPermanentNodeGroupController := &CloudPermanentNodeGroupController{NodeGroupController: controller}
 	cloudPermanentNodeGroupController.layoutStep = "static-node"
-	cloudPermanentNodeGroupController.desiredReplicas = getReplicasByNodeGroupName(controller.config, controller.name)
 	cloudPermanentNodeGroupController.nodeGroup = cloudPermanentNodeGroupController
 
 	return cloudPermanentNodeGroupController
 }
 
-func (c *CloudPermanentNodeGroupController) Run() error {
-	return c.NodeGroupController.Run()
+func (c *CloudPermanentNodeGroupController) Run(ctx *context.Context) error {
+	return c.NodeGroupController.Run(ctx)
 }
 
-func (c *CloudPermanentNodeGroupController) addNodes() error {
+func (c *CloudPermanentNodeGroupController) addNodes(ctx *context.Context) error {
+	metaConfig, err := ctx.MetaConfig()
+	if err != nil {
+		return err
+	}
+
+	c.desiredReplicas = metaConfig.GetReplicasByNodeGroupName(c.name)
+
 	count := len(c.state.State)
 	index := 0
 
@@ -50,7 +62,7 @@ func (c *CloudPermanentNodeGroupController) addNodes() error {
 	)
 
 	for c.desiredReplicas > count {
-		candidateName := fmt.Sprintf("%s-%s-%v", c.config.ClusterPrefix, c.name, index)
+		candidateName := fmt.Sprintf("%s-%s-%v", metaConfig.ClusterPrefix, c.name, index)
 		if _, ok := c.state.State[candidateName]; !ok {
 			nodesIndexToCreate = append(nodesIndexToCreate, index)
 			count++
@@ -58,21 +70,26 @@ func (c *CloudPermanentNodeGroupController) addNodes() error {
 		index++
 	}
 
-	err := log.Process("terraform", fmt.Sprintf("Pipelines %s for %s-%s-%v", c.layoutStep, c.config.ClusterPrefix, c.name, nodesIndexToCreate), func() error {
+	err = log.Process("terraform", fmt.Sprintf("Pipelines %s for %s-%s-%v", c.layoutStep, metaConfig.ClusterPrefix, c.name, nodesIndexToCreate), func() error {
 		var err error
-		nodesToWait, err = ParallelBootstrapAdditionalNodes(c.client, c.config, nodesIndexToCreate, c.layoutStep, c.name, c.cloudConfig, true, c.terraformContext, log.GetDefaultLogger(), false)
+		nodesToWait, err = operations.ParallelBootstrapAdditionalNodes(ctx.KubeClient(), metaConfig, nodesIndexToCreate, c.layoutStep, c.name, c.cloudConfig, true, ctx.Terraform(), log.GetDefaultLogger(), false)
 		return err
 	})
 	if err != nil {
 		return err
 	}
-	return WaitForNodesListBecomeReady(c.client, nodesToWait, nil)
+	return entity.WaitForNodesListBecomeReady(ctx.KubeClient(), nodesToWait, nil)
 }
 
-func (c *CloudPermanentNodeGroupController) updateNode(nodeName string) error {
+func (c *CloudPermanentNodeGroupController) updateNode(ctx *context.Context, nodeName string) error {
+	metaConfig, err := ctx.MetaConfig()
+	if err != nil {
+		return err
+	}
+
 	// NOTE: In the commander mode nodes state should exist in the local state cache, no need to pass state explicitly.
 	var nodeState []byte
-	if !c.commanderMode {
+	if !ctx.CommanderMode() {
 		nodeState = c.state.State[nodeName]
 	}
 
@@ -86,21 +103,21 @@ func (c *CloudPermanentNodeGroupController) updateNode(nodeName string) error {
 	var nodeGroupSettingsFromConfig []byte
 
 	// Node group settings are only for the static node.
-	nodeGroupSettingsFromConfig = c.config.FindTerraNodeGroup(c.name)
+	nodeGroupSettingsFromConfig = metaConfig.FindTerraNodeGroup(c.name)
 
-	nodeRunner := c.terraformContext.GetConvergeNodeRunner(c.config, terraform.NodeRunnerOptions{
-		AutoDismissDestructive: c.changeSettings.AutoDismissDestructive,
-		AutoApprove:            c.changeSettings.AutoApprove,
+	nodeRunner := ctx.Terraform().GetConvergeNodeRunner(metaConfig, terraform.NodeRunnerOptions{
+		AutoDismissDestructive: ctx.ChangesSettings().AutoDismissDestructive,
+		AutoApprove:            ctx.ChangesSettings().AutoApprove,
 		NodeName:               nodeName,
 		NodeGroupName:          c.name,
 		NodeGroupStep:          c.layoutStep,
 		NodeIndex:              nodeIndex,
 		NodeState:              nodeState,
 		NodeCloudConfig:        c.cloudConfig,
-		CommanderMode:          c.commanderMode,
-		StateCache:             c.stateCache,
+		CommanderMode:          ctx.CommanderMode(),
+		StateCache:             ctx.StateCache(),
 		AdditionalStateSaverDestinations: []terraform.SaverDestination{
-			NewNodeStateSaver(c.client, nodeName, nodeGroupName, nodeGroupSettingsFromConfig),
+			entity.NewNodeStateSaver(ctx, nodeName, nodeGroupName, nodeGroupSettingsFromConfig),
 		},
 		Hook: &terraform.DummyHook{},
 	})
@@ -112,21 +129,21 @@ func (c *CloudPermanentNodeGroupController) updateNode(nodeName string) error {
 	}
 
 	if tomb.IsInterrupted() {
-		return ErrConvergeInterrupted
+		return global.ErrConvergeInterrupted
 	}
 
-	err = SaveNodeTerraformState(c.client, nodeName, c.name, outputs.TerraformState, nodeGroupSettingsFromConfig, log.GetDefaultLogger())
+	err = entity.SaveNodeTerraformState(ctx.KubeClient(), nodeName, c.name, outputs.TerraformState, nodeGroupSettingsFromConfig, log.GetDefaultLogger())
 	if err != nil {
 		return err
 	}
 
-	return WaitForSingleNodeBecomeReady(c.client, nodeName)
+	return entity.WaitForSingleNodeBecomeReady(ctx.KubeClient(), nodeName)
 }
 
-func (c *CloudPermanentNodeGroupController) deleteNodes(nodesToDeleteInfo []nodeToDeleteInfo) error {
+func (c *CloudPermanentNodeGroupController) deleteNodes(ctx *context.Context, nodesToDeleteInfo []nodeToDeleteInfo) error {
 	title := fmt.Sprintf("Delete Nodes from NodeGroup %s (replicas: %v)", c.name, c.desiredReplicas)
 	return log.Process("converge", title, func() error {
-		return c.deleteRedundantNodes(c.state.Settings, nodesToDeleteInfo, func(nodeName string) terraform.InfraActionHook {
+		return c.deleteRedundantNodes(ctx, c.state.Settings, nodesToDeleteInfo, func(nodeName string) terraform.InfraActionHook {
 			return &terraform.DummyHook{}
 		})
 	})

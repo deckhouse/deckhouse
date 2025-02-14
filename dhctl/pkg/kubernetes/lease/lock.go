@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package client
+package lease
 
 import (
 	"context"
@@ -28,8 +28,9 @@ import (
 	coordinationv1 "k8s.io/api/coordination/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	coordinationclientv1 "k8s.io/client-go/kubernetes/typed/coordination/v1"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
@@ -83,17 +84,17 @@ func NewLockUserInfo(additional string) *LockUserInfo {
 }
 
 type LeaseLock struct {
-	leasesCl coordinationclientv1.LeaseInterface
-	config   LeaseLockConfig
+	getter kubernetes.KubeClientProvider
+	config LeaseLockConfig
 
 	lockLease   sync.Mutex
 	exitRenewCh chan struct{}
 	lease       *coordinationv1.Lease
 }
 
-func NewLeaseLock(kubeCl *KubernetesClient, config LeaseLockConfig) *LeaseLock {
+func NewLeaseLock(getter kubernetes.KubeClientProvider, config LeaseLockConfig) *LeaseLock {
 	return &LeaseLock{
-		leasesCl:    kubeCl.CoordinationV1().Leases(config.Namespace),
+		getter:      getter,
 		config:      config,
 		exitRenewCh: make(chan struct{}),
 	}
@@ -127,7 +128,7 @@ func (l *LeaseLock) Unlock() {
 
 	deleteRetries := l.config.RenewRetries()
 	err := retry.NewSilentLoop("unlock lease", deleteRetries, l.config.RetryWaitDuration).Run(func() error {
-		err := l.leasesCl.Delete(context.TODO(), l.lease.Name, metav1.DeleteOptions{})
+		err := l.getter.KubeClient().CoordinationV1().Leases(l.config.Namespace).Delete(context.TODO(), l.lease.Name, metav1.DeleteOptions{})
 		if errors.IsNotFound(err) {
 			return nil
 		}
@@ -187,7 +188,7 @@ func (l *LeaseLock) tryAcquire(force bool) (*coordinationv1.Lease, error) {
 		}
 
 		if errors.IsAlreadyExists(err) {
-			lease, err = l.leasesCl.Get(context.TODO(), l.config.Name, metav1.GetOptions{})
+			lease, err = l.getter.KubeClient().CoordinationV1().Leases(l.config.Namespace).Get(context.TODO(), l.config.Name, metav1.GetOptions{})
 			if err != nil {
 				return fmt.Errorf("%s Can't get current lease %v", prefix, err)
 			}
@@ -226,7 +227,7 @@ func (l *LeaseLock) createLease() (lease *coordinationv1.Lease, err error) {
 		},
 	}
 
-	return l.leasesCl.Create(context.TODO(), lease, metav1.CreateOptions{})
+	return l.getter.KubeClient().CoordinationV1().Leases(l.config.Namespace).Create(context.TODO(), lease, metav1.CreateOptions{})
 }
 
 func (l *LeaseLock) tryRenew(lease *coordinationv1.Lease, force bool) (*coordinationv1.Lease, error) {
@@ -248,7 +249,7 @@ func (l *LeaseLock) tryRenew(lease *coordinationv1.Lease, force bool) (*coordina
 	err := retry.NewSilentLoop("try to renew", renewRetries, l.config.RetryWaitDuration).Run(func() error {
 		var err error
 		lease.Spec.RenewTime = now()
-		newLease, err = l.leasesCl.Update(context.TODO(), lease, metav1.UpdateOptions{})
+		newLease, err = l.getter.KubeClient().CoordinationV1().Leases(l.config.Namespace).Update(context.TODO(), lease, metav1.UpdateOptions{})
 		return err
 	})
 
@@ -326,7 +327,7 @@ func LockInfo(lease *coordinationv1.Lease) (string, *LockUserInfo) {
 	), &userInfo
 }
 
-func RemoveLease(kubeCl *KubernetesClient, config *LeaseLockConfig, confirm func(lease *coordinationv1.Lease) error) error {
+func RemoveLease(kubeCl *client.KubernetesClient, config *LeaseLockConfig, confirm func(lease *coordinationv1.Lease) error) error {
 	leasesCl := kubeCl.CoordinationV1().Leases(config.Namespace)
 	lease, err := leasesCl.Get(context.TODO(), config.Name, metav1.GetOptions{})
 	if err != nil {

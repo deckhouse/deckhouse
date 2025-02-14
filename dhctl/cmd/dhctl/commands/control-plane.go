@@ -21,6 +21,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/infra/hook"
@@ -50,7 +51,7 @@ func DefineTestControlPlaneManagerReadyCommand(cmd *kingpin.CmdClause) *kingpin.
 			return fmt.Errorf("open kubernetes connection: %v", err)
 		}
 
-		checker := controlplane.NewManagerReadinessChecker(kubeCl)
+		checker := controlplane.NewManagerReadinessChecker(kubernetes.NewSimpleKubeClientGetter(kubeCl))
 		ready, err := checker.IsReady(app.ControlPlaneHostname)
 		if err != nil {
 			return fmt.Errorf("Control plane manager is not ready: %s", err)
@@ -91,13 +92,13 @@ func DefineTestControlPlaneNodeReadyCommand(cmd *kingpin.CmdClause) *kingpin.Cmd
 
 		nodeToHostForChecks := map[string]string{app.ControlPlaneHostname: app.ControlPlaneIP}
 
-		checkers := []hook.NodeChecker{hook.NewKubeNodeReadinessChecker(kubeCl)}
+		checkers := []hook.NodeChecker{hook.NewKubeNodeReadinessChecker(kubernetes.NewSimpleKubeClientGetter(kubeCl))}
 
 		if app.ControlPlaneHostname != "" {
 			checkers = append(checkers, controlplane.NewKubeProxyChecker().WithExternalIPs(nodeToHostForChecks))
 		}
 
-		checkers = append(checkers, controlplane.NewManagerReadinessChecker(kubeCl))
+		checkers = append(checkers, controlplane.NewManagerReadinessChecker(kubernetes.NewSimpleKubeClientGetter(kubeCl)))
 
 		err = controlplane.NewChecker(nodeToHostForChecks, checkers, "test", controlplane.DefaultConfirm).IsAllNodesReady()
 		if err != nil {

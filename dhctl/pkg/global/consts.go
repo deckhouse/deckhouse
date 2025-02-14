@@ -1,4 +1,4 @@
-// Copyright 2021 Flant JSC
+// Copyright 2024 Flant JSC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,23 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package client
+package global
 
-import (
-	"testing"
-	"time"
+const (
+	ShowDeckhouseLogs = true
+	HideDeckhouseLogs = false
 
-	"github.com/stretchr/testify/require"
+	MasterNodeGroupName = "master"
+
+	ConvergeNodeUserName = "d8-dhctl-converger"
+	ConvergeNodeUserUID  = 64536
 )
-
-func TestRenewRetryCount(t *testing.T) {
-	t.Run("Correct retries count", func(t *testing.T) {
-		lockConf := &LeaseLockConfig{
-			LeaseDurationSeconds: 300,
-			RenewEverySeconds:    180,
-			RetryWaitDuration:    3 * time.Second,
-		}
-
-		require.Equal(t, 40, lockConf.RenewRetries())
-	})
-}

@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package converge
+package operations
 
 import (
 	"bufio"
@@ -21,6 +21,9 @@ import (
 	"sync"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/entity"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
@@ -36,7 +39,7 @@ func BootstrapAdditionalNode(kubeCl *client.KubernetesClient, cfg *config.MetaCo
 	nodeName := NodeName(cfg, nodeGroupName, index)
 
 	if isConverge {
-		nodeExists, err := IsNodeExistsInCluster(kubeCl, nodeName, log.GetDefaultLogger())
+		nodeExists, err := entity.IsNodeExistsInCluster(kubeCl, nodeName, log.GetDefaultLogger())
 		if err != nil {
 			return err
 		} else if nodeExists {
@@ -55,7 +58,7 @@ func BootstrapAdditionalNode(kubeCl *client.KubernetesClient, cfg *config.MetaCo
 		NodeIndex:       index,
 		NodeCloudConfig: cloudConfig,
 		AdditionalStateSaverDestinations: []terraform.SaverDestination{
-			NewNodeStateSaver(kubeCl, nodeName, nodeGroupName, nodeGroupSettings),
+			entity.NewNodeStateSaver(kubernetes.NewSimpleKubeClientGetter(kubeCl), nodeName, nodeGroupName, nodeGroupSettings),
 		},
 		RunnerLogger: log.GetDefaultLogger(),
 	})
@@ -66,10 +69,10 @@ func BootstrapAdditionalNode(kubeCl *client.KubernetesClient, cfg *config.MetaCo
 	}
 
 	if tomb.IsInterrupted() {
-		return ErrConvergeInterrupted
+		return global.ErrConvergeInterrupted
 	}
 
-	err = SaveNodeTerraformState(kubeCl, nodeName, nodeGroupName, outputs.TerraformState, nodeGroupSettings, log.GetDefaultLogger())
+	err = entity.SaveNodeTerraformState(kubeCl, nodeName, nodeGroupName, outputs.TerraformState, nodeGroupSettings, log.GetDefaultLogger())
 	if err != nil {
 		return err
 	}
@@ -89,7 +92,7 @@ func BootstrapAdditionalNodeForParallelRun(kubeCl *client.KubernetesClient, cfg 
 		NodeIndex:       index,
 		NodeCloudConfig: cloudConfig,
 		AdditionalStateSaverDestinations: []terraform.SaverDestination{
-			NewNodeStateSaver(kubeCl, nodeName, nodeGroupName, nodeGroupSettings),
+			entity.NewNodeStateSaver(kubernetes.NewSimpleKubeClientGetter(kubeCl), nodeName, nodeGroupName, nodeGroupSettings),
 		},
 		RunnerLogger: runnerLogger,
 	})
@@ -100,10 +103,10 @@ func BootstrapAdditionalNodeForParallelRun(kubeCl *client.KubernetesClient, cfg 
 	}
 
 	if tomb.IsInterrupted() {
-		return ErrConvergeInterrupted
+		return global.ErrConvergeInterrupted
 	}
 
-	err = SaveNodeTerraformState(kubeCl, nodeName, nodeGroupName, outputs.TerraformState, nodeGroupSettings, runnerLogger)
+	err = entity.SaveNodeTerraformState(kubeCl, nodeName, nodeGroupName, outputs.TerraformState, nodeGroupSettings, runnerLogger)
 	if err != nil {
 		return err
 	}
@@ -111,7 +114,16 @@ func BootstrapAdditionalNodeForParallelRun(kubeCl *client.KubernetesClient, cfg 
 	return nil
 }
 
-func ParallelBootstrapAdditionalNodes(kubeCl *client.KubernetesClient, cfg *config.MetaConfig, nodesIndexToCreate []int, step, nodeGroupName, cloudConfig string, isConverge bool, terraformContext *terraform.TerraformContext, ngLogger log.Logger, saveLogToBuffer bool) ([]string, error) {
+func ParallelBootstrapAdditionalNodes(
+	kubeCl *client.KubernetesClient,
+	cfg *config.MetaConfig,
+	nodesIndexToCreate []int,
+	step, nodeGroupName, cloudConfig string,
+	isConverge bool,
+	terraformContext *terraform.TerraformContext,
+	ngLogger log.Logger,
+	saveLogToBuffer bool,
+) ([]string, error) {
 
 	var (
 		nodesToWait []string
@@ -127,7 +139,7 @@ func ParallelBootstrapAdditionalNodes(kubeCl *client.KubernetesClient, cfg *conf
 
 	for _, indexCandidate := range nodesIndexToCreate {
 		candidateName := fmt.Sprintf("%s-%s-%v", cfg.ClusterPrefix, nodeGroupName, indexCandidate)
-		nodeExists, err := IsNodeExistsInCluster(kubeCl, candidateName, ngLogger)
+		nodeExists, err := entity.IsNodeExistsInCluster(kubeCl, candidateName, ngLogger)
 		if err != nil {
 			return nil, err
 		} else if nodeExists {
@@ -152,7 +164,17 @@ func ParallelBootstrapAdditionalNodes(kubeCl *client.KubernetesClient, cfg *conf
 			if i == 0 && !saveLogToBuffer {
 				nodeLogger = ngLogger
 			}
-			err := BootstrapAdditionalNodeForParallelRun(kubeCl, cfg, indexCandidate, step, nodeGroupName, cloudConfig, true, terraformContext, nodeLogger)
+			err := BootstrapAdditionalNodeForParallelRun(
+				kubeCl,
+				cfg,
+				indexCandidate,
+				step,
+				nodeGroupName,
+				cloudConfig,
+				true,
+				terraformContext,
+				nodeLogger,
+			)
 
 			resultsChan <- checkResult{
 				name:        candidateName,
@@ -223,7 +245,7 @@ func ParallelCreateNodeGroup(kubeCl *client.KubernetesClient, metaConfig *config
 					ngLogger = currentLogger.CreateBufferLogger(&buffNGLog)
 				}
 
-				err := CreateNodeGroup(kubeCl, group.Name, ngLogger, metaConfig.NodeGroupManifest(group))
+				err := entity.CreateNodeGroup(kubeCl, group.Name, ngLogger, metaConfig.NodeGroupManifest(group))
 				if err != nil {
 					resultsChan <- checkResult{
 						name:    group.Name,
@@ -233,7 +255,7 @@ func ParallelCreateNodeGroup(kubeCl *client.KubernetesClient, metaConfig *config
 					return
 				}
 
-				nodeCloudConfig, err := GetCloudConfig(kubeCl, group.Name, ShowDeckhouseLogs, ngLogger)
+				nodeCloudConfig, err := entity.GetCloudConfig(kubeCl, group.Name, global.ShowDeckhouseLogs, ngLogger)
 				if err != nil {
 					resultsChan <- checkResult{
 						name:    group.Name,
@@ -280,15 +302,15 @@ func ParallelCreateNodeGroup(kubeCl *client.KubernetesClient, metaConfig *config
 			currentPLogger.LogProcessEnd()
 		}
 
-		return WaitForNodesBecomeReady(kubeCl, ngWaitMap)
+		return entity.WaitForNodesBecomeReady(kubeCl, ngWaitMap)
 	})
 }
 
 func BootstrapAdditionalMasterNode(kubeCl *client.KubernetesClient, cfg *config.MetaConfig, index int, cloudConfig string, isConverge bool, terraformContext *terraform.TerraformContext) (*terraform.PipelineOutputs, error) {
-	nodeName := NodeName(cfg, MasterNodeGroupName, index)
+	nodeName := NodeName(cfg, global.MasterNodeGroupName, index)
 
 	if isConverge {
-		nodeExists, existsErr := IsNodeExistsInCluster(kubeCl, nodeName, log.GetDefaultLogger())
+		nodeExists, existsErr := entity.IsNodeExistsInCluster(kubeCl, nodeName, log.GetDefaultLogger())
 		if existsErr != nil {
 			return nil, existsErr
 		} else if nodeExists {
@@ -301,11 +323,11 @@ func BootstrapAdditionalMasterNode(kubeCl *client.KubernetesClient, cfg *config.
 		AutoApprove:     true,
 		NodeName:        nodeName,
 		NodeGroupStep:   "master-node",
-		NodeGroupName:   MasterNodeGroupName,
+		NodeGroupName:   global.MasterNodeGroupName,
 		NodeIndex:       index,
 		NodeCloudConfig: cloudConfig,
 		AdditionalStateSaverDestinations: []terraform.SaverDestination{
-			NewNodeStateSaver(kubeCl, nodeName, MasterNodeGroupName, nil),
+			entity.NewNodeStateSaver(kubernetes.NewSimpleKubeClientGetter(kubeCl), nodeName, global.MasterNodeGroupName, nil),
 		},
 		RunnerLogger: log.GetDefaultLogger(),
 	})
@@ -316,10 +338,10 @@ func BootstrapAdditionalMasterNode(kubeCl *client.KubernetesClient, cfg *config.
 	}
 
 	if tomb.IsInterrupted() {
-		return nil, ErrConvergeInterrupted
+		return nil, global.ErrConvergeInterrupted
 	}
 
-	err = SaveMasterNodeTerraformState(kubeCl, nodeName, outputs.TerraformState, []byte(outputs.KubeDataDevicePath))
+	err = entity.SaveMasterNodeTerraformState(kubeCl, nodeName, outputs.TerraformState, []byte(outputs.KubeDataDevicePath))
 	if err != nil {
 		return outputs, err
 	}

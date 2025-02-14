@@ -12,10 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package converge
+package context
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"time"
@@ -26,46 +25,39 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/manifests"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
-
-const (
-	PhaseBaseInfra           Phase = "base-infrastructure"
-	PhaseAllNodes            Phase = "all-nodes"
-	PhaseScaleToMultiMaster  Phase = "scale-to-multi-master"
-	PhaseScaleToSingleMaster Phase = "scale-to-single-master"
-)
-
-type Phase string
 
 const (
 	stateSecretName = "d8-dhctl-converge-state"
 )
 
 type State struct {
-	Phase               Phase                `json:"phase"`
-	NodeUserCredentials *NodeUserCredentials `json:"nodeUserCredentials"`
+	Phase               phases.OperationPhase `json:"phase"`
+	NodeUserCredentials *NodeUserCredentials  `json:"nodeUserCredentials"`
 }
 
-type StateStore interface {
-	GetState() (*State, error)
-	SetState(*State) error
+type stateStore interface {
+	GetState(ctx *Context) (*State, error)
+	SetState(ctx *Context, st *State) error
+	Delete(ctx *Context) error
 }
 
-type InSecretStateStore struct {
-	kubeClient client.KubeClient
+type inSecretStateStore struct{}
+
+func newInSecretStateStore() *inSecretStateStore {
+	return &inSecretStateStore{}
 }
 
-func NewInSecretStateStore(kubeClient client.KubeClient) *InSecretStateStore {
-	return &InSecretStateStore{kubeClient: kubeClient}
-}
-
-func (s *InSecretStateStore) GetState() (*State, error) {
+func (s *inSecretStateStore) GetState(ctx *Context) (*State, error) {
 	var state State
 
 	err := retry.NewLoop("Get converge state from Kubernetes cluster", 5, 5*time.Second).Run(func() error {
-		convergeStateSecret, err := s.kubeClient.CoreV1().Secrets("d8-system").Get(context.TODO(), stateSecretName, metav1.GetOptions{})
+		c, cancel := ctx.WithTimeout(10 * time.Second)
+		defer cancel()
+
+		convergeStateSecret, err := ctx.KubeClient().CoreV1().Secrets("d8-system").Get(c, stateSecretName, metav1.GetOptions{})
 		if err != nil {
 			if k8errors.IsNotFound(err) {
 				return nil
@@ -88,7 +80,25 @@ func (s *InSecretStateStore) GetState() (*State, error) {
 	return &state, nil
 }
 
-func (s *InSecretStateStore) SetState(state *State) error {
+func (s *inSecretStateStore) Delete(ctx *Context) error {
+	return retry.NewLoop("Cleanup converge state from Kubernetes cluster", 5, 5*time.Second).Run(func() error {
+		c, cancel := ctx.WithTimeout(10 * time.Second)
+		defer cancel()
+
+		err := ctx.KubeClient().CoreV1().Secrets("d8-system").Delete(c, stateSecretName, metav1.DeleteOptions{})
+		if err != nil {
+			if k8errors.IsNotFound(err) {
+				return nil
+			}
+
+			return fmt.Errorf("failed to delete state secret: %w", err)
+		}
+
+		return nil
+	})
+}
+
+func (s *inSecretStateStore) SetState(ctx *Context, state *State) error {
 	stateBytes, err := json.Marshal(state)
 	if err != nil {
 		return fmt.Errorf("failed to marshal state: %w", err)
@@ -100,7 +110,10 @@ func (s *InSecretStateStore) SetState(state *State) error {
 			return manifests.SecretConvergeState(stateBytes)
 		},
 		CreateFunc: func(manifest interface{}) error {
-			_, err := s.kubeClient.CoreV1().Secrets("d8-system").Create(context.TODO(), manifest.(*apiv1.Secret), metav1.CreateOptions{})
+			c, cancel := ctx.WithTimeout(10 * time.Second)
+			defer cancel()
+
+			_, err := ctx.KubeClient().CoreV1().Secrets("d8-system").Create(c, manifest.(*apiv1.Secret), metav1.CreateOptions{})
 			if err != nil {
 				return fmt.Errorf("failed to create secret: %w", err)
 			}
@@ -108,7 +121,10 @@ func (s *InSecretStateStore) SetState(state *State) error {
 			return nil
 		},
 		UpdateFunc: func(manifest interface{}) error {
-			_, err := s.kubeClient.CoreV1().Secrets("d8-system").Update(context.TODO(), manifest.(*apiv1.Secret), metav1.UpdateOptions{})
+			c, cancel := ctx.WithTimeout(10 * time.Second)
+			defer cancel()
+
+			_, err := ctx.KubeClient().CoreV1().Secrets("d8-system").Update(c, manifest.(*apiv1.Secret), metav1.UpdateOptions{})
 			if err != nil {
 				return fmt.Errorf("failed to update secret: %w", err)
 			}

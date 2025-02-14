@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package converge
+package entity
 
 import (
 	"context"
@@ -26,6 +26,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/manifests"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
@@ -83,7 +85,7 @@ func SaveMasterNodeTerraformState(kubeCl *client.KubernetesClient, nodeName stri
 	}
 
 	getTerraformStateManifest := func() interface{} {
-		return manifests.SecretWithNodeTerraformState(nodeName, MasterNodeGroupName, tfState, nil)
+		return manifests.SecretWithNodeTerraformState(nodeName, global.MasterNodeGroupName, tfState, nil)
 	}
 	getDevicePathManifest := func() interface{} {
 		return manifests.SecretMasterDevicePath(nodeName, devicePath)
@@ -209,12 +211,12 @@ var (
 )
 
 type ClusterStateSaver struct {
-	kubeCl *client.KubernetesClient
+	getter kubernetes.KubeClientProvider
 }
 
-func NewClusterStateSaver(kubeCl *client.KubernetesClient) *ClusterStateSaver {
+func NewClusterStateSaver(getter kubernetes.KubeClientProvider) *ClusterStateSaver {
 	return &ClusterStateSaver{
-		kubeCl: kubeCl,
+		getter: getter,
 	}
 }
 
@@ -230,7 +232,7 @@ func (s *ClusterStateSaver) SaveState(outputs *terraform.PipelineOutputs) error 
 		},
 		PatchFunc: func(patch []byte) error {
 			// MergePatch is used because we need to replace one field in "data".
-			_, err := s.kubeCl.CoreV1().Secrets("d8-system").Patch(
+			_, err := s.getter.KubeClient().CoreV1().Secrets("d8-system").Patch(
 				context.TODO(),
 				manifests.TerraformClusterStateName,
 				types.MergePatchType,
@@ -253,15 +255,15 @@ func (s *ClusterStateSaver) SaveState(outputs *terraform.PipelineOutputs) error 
 }
 
 type NodeStateSaver struct {
-	kubeCl            *client.KubernetesClient
+	getter            kubernetes.KubeClientProvider
 	nodeName          string
 	nodeGroup         string
 	nodeGroupSettings []byte
 }
 
-func NewNodeStateSaver(kubeCl *client.KubernetesClient, nodeName, nodeGroup string, nodeGroupSettings []byte) *NodeStateSaver {
+func NewNodeStateSaver(getter kubernetes.KubeClientProvider, nodeName, nodeGroup string, nodeGroupSettings []byte) *NodeStateSaver {
 	return &NodeStateSaver{
-		kubeCl:            kubeCl,
+		getter:            getter,
 		nodeName:          nodeName,
 		nodeGroup:         nodeGroup,
 		nodeGroupSettings: nodeGroupSettings,
@@ -286,7 +288,7 @@ func (s *NodeStateSaver) SaveState(outputs *terraform.PipelineOutputs) error {
 			return manifests.SecretWithNodeTerraformState(s.nodeName, s.nodeGroup, outputs.TerraformState, s.nodeGroupSettings)
 		},
 		CreateFunc: func(manifest interface{}) error {
-			_, err := s.kubeCl.CoreV1().Secrets("d8-system").Create(context.TODO(), manifest.(*apiv1.Secret), metav1.CreateOptions{})
+			_, err := s.getter.KubeClient().CoreV1().Secrets("d8-system").Create(context.TODO(), manifest.(*apiv1.Secret), metav1.CreateOptions{})
 			return err
 		},
 		PatchData: func() interface{} {
@@ -295,7 +297,7 @@ func (s *NodeStateSaver) SaveState(outputs *terraform.PipelineOutputs) error {
 		PatchFunc: func(patchData []byte) error {
 			secretName := manifests.SecretNameForNodeTerraformState(s.nodeName)
 			// MergePatch is used because we need to replace one field in "data".
-			_, err := s.kubeCl.CoreV1().Secrets("d8-system").Patch(context.TODO(), secretName, types.MergePatchType, patchData, metav1.PatchOptions{})
+			_, err := s.getter.KubeClient().CoreV1().Secrets("d8-system").Patch(context.TODO(), secretName, types.MergePatchType, patchData, metav1.PatchOptions{})
 			return err
 		},
 	}
