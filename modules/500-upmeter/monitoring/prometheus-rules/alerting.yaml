@@ -480,7 +480,10 @@
   rules:
     - alert: D8UpmeterDiskUsage
       for: 10m
-      expr: 100 * (kubelet_volume_stats_used_bytes{persistentvolumeclaim="data-upmeter-0",namespace="d8-upmeter"}/kubelet_volume_stats_capacity_bytes{persistentvolumeclaim="data-upmeter-0",namespace="d8-upmeter"}) > 80
+      expr: |
+        100 * (
+        kubelet_volume_stats_used_bytes{persistentvolumeclaim="data-upmeter-0",namespace="d8-upmeter"} / kubelet_volume_stats_capacity_bytes{persistentvolumeclaim="data-upmeter-0",namespace="d8-upmeter"}
+        ) > 80
       labels:
         severity_level: "5"
         tier: cluster
@@ -492,9 +495,7 @@
         summary: Upmeter disk is over 80% used.
         description: |
           If the data is critical for you, then save it. You need to recreate the pvc using the command:
-            
           ```
           kubectl -n d8-upmeter delete persistentvolumeclaim/data-upmeter-0 pod/upmeter-0
           ```
-
           check pvc `kubectl -n d8-upmeter get pvc`
