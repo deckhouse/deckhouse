@@ -61,6 +61,7 @@ spec:
         - --namespace=d8-{{ .Chart.Name }}
         - --settings-config-map-name=web-settings
         - --insecure-bind-address=127.0.0.1
+        - -v3
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}

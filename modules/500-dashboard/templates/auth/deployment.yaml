@@ -59,6 +59,7 @@ spec:
         image: {{ include "helm_lib_module_image" (list . "auth") }}
         args:
         - --address=127.0.0.1
+        - -v3
         env:
         - name: CSRF_KEY
           valueFrom:
