@@ -47,9 +47,9 @@ k8s:
       livenessprobe: v2.11.0
   '1.29':
     status: available
-    patch: 13
+    patch: 14
     bashible: *bashible
-    clusterAutoscalerPatch: 1
+    clusterAutoscalerPatch: 2
     crictlPatch: 0
     ccm:
       openstack: v1.29.1
@@ -75,9 +75,9 @@ k8s:
       livenessprobe: v2.12.0
   '1.30':
     status: available
-    patch: 9
+    patch: 10
     bashible: *bashible
-    clusterAutoscalerPatch: '0'
+    clusterAutoscalerPatch: 2
     crictlPatch: 1
     ccm:
       openstack: v1.30.2
@@ -103,9 +103,9 @@ k8s:
       livenessprobe: v2.13.0
   '1.31':
     status: available
-    patch: 5
+    patch: 6
     bashible: *bashible
-    clusterAutoscalerPatch: '0'
+    clusterAutoscalerPatch: 2
     crictlPatch: 1
     ccm:
       openstack: v1.31.2
@@ -131,9 +131,9 @@ k8s:
       livenessprobe: v2.14.0
   '1.32':
     status: preview
-    patch: 1
+    patch: 2
     bashible: *bashible
-    clusterAutoscalerPatch: '0'
+    clusterAutoscalerPatch: 2
     crictlPatch: 0
     ccm:
       openstack: v1.31.2
@@ -158,6 +158,6 @@ k8s:
       snapshotter: v8.1.1
       livenessprobe: v2.15.0
 d8:
-  d8CliVersion: v0.10.3
+  d8CliVersion: v0.10.4
 jq:
   version: 1.7.1
