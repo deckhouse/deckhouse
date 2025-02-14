@@ -23,7 +23,7 @@ import:
 shell:
   beforeInstall:
   {{- include "alpine packages proxy" . | nindent 2 }}
-  - apk add --no-cache python3 vips make build-base
+  - apk add --no-cache python3 python2 vips make build-base
   install:
   - cd /src
   - yarn install
