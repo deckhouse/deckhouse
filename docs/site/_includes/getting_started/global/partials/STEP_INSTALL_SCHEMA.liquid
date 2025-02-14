@@ -74,7 +74,7 @@ Scheme of Deckhouse installation in a private environment:<br />
      {%- elsif page.platform_code == "vsphere" %} [govc](https://github.com/vmware/govmomi/tree/master/govc#installation) utility
      {%- else %} management utility via CLI
      {%- endif %}
-     {%- endunless %};
+     {%- endunless %}.
 {%- endif %}
 {%- if page.platform_type == "existing" %}
    - the `kubectl` command-line tool must be configured to communicate with your cluster.

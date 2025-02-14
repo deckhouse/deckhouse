@@ -81,7 +81,7 @@
      {%- elsif page.platform_code == "vsphere" %} утилита [govc](https://github.com/vmware/govmomi/tree/master/govc#installation)
      {%- else %} CLI-утилита управления облачными ресурсами
      {%- endif %}
-     {%- endunless %};
+     {%- endunless %}.
 {%- endif %}
 {%- if page.platform_type == "existing" %}
    - `kubectl`, настроенный для доступа к существующему кластеру.
