@@ -46,7 +46,7 @@ func (pc *Checker) CheckStaticNodeSystemRequirements() error {
 	}
 
 	minimumRequiredFoldersSizesGB := map[string]int{}
-	if !pc.metaConfig.Registry.IsDirect() {
+	if !pc.installConfig.Registry.IsDirect() {
 		minimumRequiredFoldersSizesGB["/opt/deckhouse/system-registry"] = minimumRequiredRegistryDiskSizeGB
 	}
 

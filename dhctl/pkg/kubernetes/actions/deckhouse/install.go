@@ -372,7 +372,7 @@ func CreateDeckhouseManifests(kubeCl *client.KubernetesClient, cfg *config.Deckh
 			Name: `Secret "d8-provider-cluster-configuration"`,
 			Manifest: func() interface{} {
 				return manifests.SecretWithProviderClusterConfig(
-					cfg.ProviderClusterConfig, cfg.CloudDiscovery, cfg.SystemRegistryConfig,
+					cfg.ProviderClusterConfig, cfg.CloudDiscovery, cfg.ProviderSecondaryDevicesConfig,
 				)
 			},
 			CreateFunc: func(manifest interface{}) error {

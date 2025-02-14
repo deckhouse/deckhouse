@@ -52,6 +52,11 @@ type checkStep struct {
 	fun            func() error
 }
 
+type requiredCheckStep struct {
+	successMessage string
+	fun            func() error
+}
+
 func NewChecker(
 	nodeInterface node.Interface,
 	config *config.DeckhouseInstaller,
@@ -139,6 +144,18 @@ func (pc *Checker) Static() error {
 }
 
 func (pc *Checker) Cloud() error {
+	// Necessary verification
+	// It is impossible to focus on the previous saved status
+	err := pc.doRequired("Cloud deployment required preflight checks", []requiredCheckStep{
+		{
+			fun:            pc.CheckCloudMasterNodeRegistryDataDeviceSupport,
+			successMessage: "cloud master node registry data device is supported",
+		},
+	})
+
+	if err != nil {
+		return err
+	}
 
 	ready, err := pc.bootstrapState.CloudPreflightchecksWasRan()
 
@@ -254,6 +271,23 @@ func (pc *Checker) do(title string, checks []checkStep) error {
 			}
 		}
 
+		return nil
+	})
+}
+
+func (pc *Checker) doRequired(title string, checks []requiredCheckStep) error {
+	return log.Process("common", title, func() error {
+		for _, check := range checks {
+			loop := retry.NewLoop(
+				fmt.Sprintf("Checking %s", check.successMessage),
+				1,
+				10*time.Second,
+			)
+			if err := loop.Run(check.fun); err != nil {
+				return fmt.Errorf("Installation aborted: %w\n"+
+					`Please fix this problem`, err)
+			}
+		}
 		return nil
 	})
 }

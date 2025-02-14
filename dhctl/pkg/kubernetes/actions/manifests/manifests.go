@@ -591,7 +591,7 @@ func SecretWithClusterConfig(data []byte) *apiv1.Secret {
 	)
 }
 
-func SecretWithProviderClusterConfig(configData, discoveryData, systemRegistryData []byte) *apiv1.Secret {
+func SecretWithProviderClusterConfig(configData, discoveryData, providerSecondaryDevicesData []byte) *apiv1.Secret {
 	data := make(map[string][]byte)
 	if configData != nil {
 		data["cloud-provider-cluster-configuration.yaml"] = configData
@@ -601,8 +601,8 @@ func SecretWithProviderClusterConfig(configData, discoveryData, systemRegistryDa
 		data["cloud-provider-discovery-data.json"] = discoveryData
 	}
 
-	if systemRegistryData != nil {
-		data["system-registry-configuration.yaml"] = systemRegistryData
+	if providerSecondaryDevicesData != nil {
+		data["cloud-provider-secondary-devices-configuration.yaml"] = providerSecondaryDevicesData
 	}
 
 	return generateSecret(

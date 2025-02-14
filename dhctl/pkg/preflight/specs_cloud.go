@@ -15,6 +15,7 @@
 package preflight
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -22,6 +23,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
 
@@ -110,12 +112,24 @@ func (pc *Checker) CheckCloudMasterNodeSystemRequirements() error {
 	if err = validateIntegerPropertyAtPath(configObject, coreCountPropertyPath, minimumRequiredCPUCores, false); err != nil {
 		return fmt.Errorf("CPU cores count: %v", err)
 	}
-	if !pc.metaConfig.Registry.IsDirect() {
+	if !pc.installConfig.Registry.IsDirect() {
 		if err = validateIntegerPropertyAtPath(configObject, registryDiskPropertyPath, minimumRequiredRegistryDiskSizeGB, false); err != nil {
 			return fmt.Errorf("Registry disk capacity: %v", err)
 		}
 	}
 
+	return nil
+}
+
+func (pc *Checker) CheckCloudMasterNodeRegistryDataDeviceSupport() error {
+	var cloud config.ClusterConfigCloudSpec
+	if err := json.Unmarshal(pc.metaConfig.ClusterConfig["cloud"], &cloud); err != nil {
+		return fmt.Errorf("unable to unmarshal cloud section from provider cluster configuration: %v", err)
+	}
+
+	if err := pc.metaConfig.ProviderSecondaryDevicesConfig.Validate(cloud.Provider); err != nil {
+		return err
+	}
 	return nil
 }
 

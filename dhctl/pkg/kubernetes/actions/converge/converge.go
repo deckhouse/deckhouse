@@ -316,9 +316,9 @@ func (r *Runner) converge() error {
 			return fmt.Errorf("unable to get provider cluster config yaml: %w", err)
 		}
 
-		systemRegistryConfigurationData, err := metaConfig.SystemRegistryConfig.ToYAML()
+		providerSecondaryDevicesConfig, err := metaConfig.ProviderSecondaryDevicesConfig.ToYAML()
 		if err != nil {
-			return fmt.Errorf("unable to get provider system registry config yaml: %w", err)
+			return fmt.Errorf("unable to get provider secondary devices config yaml: %w", err)
 		}
 
 		clusterUUID, err := uuid.Parse(metaConfig.UUID)
@@ -326,7 +326,7 @@ func (r *Runner) converge() error {
 			return fmt.Errorf("unable to parse cluster uuid %q: %w", metaConfig.UUID, err)
 		}
 
-		if err := deckhouse.ConvergeDeckhouseConfiguration(context.TODO(), r.kubeCl, clusterUUID, r.commanderUUID, clusterConfigurationData, providerClusterConfigurationData, systemRegistryConfigurationData); err != nil {
+		if err := deckhouse.ConvergeDeckhouseConfiguration(context.TODO(), r.kubeCl, clusterUUID, r.commanderUUID, clusterConfigurationData, providerClusterConfigurationData, providerSecondaryDevicesConfig); err != nil {
 			return fmt.Errorf("unable to update deckhouse configuration: %w", err)
 		}
 

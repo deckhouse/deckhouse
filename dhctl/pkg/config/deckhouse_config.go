@@ -34,21 +34,21 @@ const (
 )
 
 type DeckhouseInstaller struct {
-	Registry              Registry
-	LogLevel              string
-	Bundle                string
-	DevBranch             string
-	UUID                  string
-	KubeDNSAddress        string
-	ClusterConfig         []byte
-	ProviderClusterConfig []byte
-	StaticClusterConfig   []byte
-	SystemRegistryConfig  []byte
-	TerraformState        []byte
-	NodesTerraformState   map[string][]byte
-	NodesDataDevices      map[string]NodeDataDevices
-	CloudDiscovery        []byte
-	ModuleConfigs         []*ModuleConfig
+	Registry                       Registry
+	LogLevel                       string
+	Bundle                         string
+	DevBranch                      string
+	UUID                           string
+	KubeDNSAddress                 string
+	ClusterConfig                  []byte
+	ProviderSecondaryDevicesConfig []byte
+	ProviderClusterConfig          []byte
+	StaticClusterConfig            []byte
+	TerraformState                 []byte
+	NodesTerraformState            map[string][]byte
+	NodesDataDevices               map[string]NodeDataDevices
+	CloudDiscovery                 []byte
+	ModuleConfigs                  []*ModuleConfig
 
 	KubeadmBootstrap   bool
 	MasterNodeSelector bool
@@ -142,9 +142,9 @@ func PrepareDeckhouseInstallConfig(metaConfig *MetaConfig) (*DeckhouseInstaller,
 		return nil, fmt.Errorf("Marshal static config failed: %v", err)
 	}
 
-	systemRegistryConfig, err := metaConfig.SystemRegistryConfig.ToYAML()
+	providerSecondaryDevicesConfig, err := metaConfig.ProviderSecondaryDevicesConfig.ToYAML()
 	if err != nil {
-		return nil, fmt.Errorf("Marshal system registry config failed: %v", err)
+		return nil, fmt.Errorf("Marshal provider secondary devices config failed: %v", err)
 	}
 
 	bundle := DefaultBundle
@@ -183,18 +183,18 @@ func PrepareDeckhouseInstallConfig(metaConfig *MetaConfig) (*DeckhouseInstaller,
 	}
 
 	installConfig := DeckhouseInstaller{
-		UUID:                  metaConfig.UUID,
-		Registry:              metaConfig.Registry,
-		SystemRegistryConfig:  systemRegistryConfig,
-		DevBranch:             metaConfig.DeckhouseConfig.DevBranch,
-		Bundle:                bundle,
-		LogLevel:              logLevel,
-		KubeDNSAddress:        metaConfig.ClusterDNSAddress,
-		ProviderClusterConfig: providerClusterConfig,
-		StaticClusterConfig:   staticClusterConfig,
-		ClusterConfig:         clusterConfig,
-		ModuleConfigs:         metaConfig.ModuleConfigs,
-		InstallerVersion:      metaConfig.InstallerVersion,
+		UUID:                           metaConfig.UUID,
+		Registry:                       metaConfig.Registry,
+		DevBranch:                      metaConfig.DeckhouseConfig.DevBranch,
+		Bundle:                         bundle,
+		LogLevel:                       logLevel,
+		KubeDNSAddress:                 metaConfig.ClusterDNSAddress,
+		ProviderSecondaryDevicesConfig: providerSecondaryDevicesConfig,
+		ProviderClusterConfig:          providerClusterConfig,
+		StaticClusterConfig:            staticClusterConfig,
+		ClusterConfig:                  clusterConfig,
+		ModuleConfigs:                  metaConfig.ModuleConfigs,
+		InstallerVersion:               metaConfig.InstallerVersion,
 	}
 
 	return &installConfig, nil

@@ -5,7 +5,7 @@ description: ""
 
 ## Bootstrap
 
-For the initial master node during the bootstrap phase, the parameter [SystemRegistryConfig.IsEnable](dhctl/pkg/config/system_registry.go#L28) is passed in the `terraform apply` command. This parameter determines whether a disk for the embedded registry will be created.
+For the initial master node during the bootstrap phase, the parameter [ProviderSecondaryDevices.RegistryDataDeviceEnable](dhctl/pkg/config/spec_secondary_devices.go) is passed in the `terraform apply` command. This parameter determines whether a disk for the embedded registry will be created.
 
 During the execution of bashible, [disk mounting](candi/bashible/common-steps/node-group/005_integrate_system_registry_data_device.sh.tpl) is performed.
 

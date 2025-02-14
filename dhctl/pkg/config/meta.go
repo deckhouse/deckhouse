@@ -44,10 +44,11 @@ type MetaConfig struct {
 	MasterNodeGroupSpec  MasterNodeGroupSpec    `json:"-"`
 	TerraNodeGroupSpecs  []TerraNodeGroupSpec   `json:"-"`
 
-	ClusterConfig        map[string]json.RawMessage `json:"clusterConfiguration"`
-	InitClusterConfig    map[string]json.RawMessage `json:"-"`
-	SystemRegistryConfig SystemRegistryConfig       `json:"-"`
-	ModuleConfigs        []*ModuleConfig            `json:"-"`
+	ClusterConfig     map[string]json.RawMessage `json:"clusterConfiguration"`
+	InitClusterConfig map[string]json.RawMessage `json:"-"`
+	ModuleConfigs     []*ModuleConfig            `json:"-"`
+
+	ProviderSecondaryDevicesConfig ProviderSecondaryDevicesConfig `json:"-"`
 
 	ProviderClusterConfig map[string]json.RawMessage `json:"providerClusterConfiguration,omitempty"`
 	StaticClusterConfig   map[string]json.RawMessage `json:"staticClusterConfiguration,omitempty"`
@@ -285,7 +286,7 @@ func (m *MetaConfig) prepareDataFromInitClusterConfig() error {
 			},
 		}
 	case RegistryModeProxy:
-		m.SystemRegistryConfig.Enable = true
+		m.ProviderSecondaryDevicesConfig.RegistryDataDeviceEnable = true
 		properties := m.RegistryConfig.ProxyModeProperties
 		if properties == nil {
 			return fmt.Errorf("unable to get the properties of the proxy registry mode")
@@ -322,7 +323,7 @@ func (m *MetaConfig) prepareDataFromInitClusterConfig() error {
 			},
 		}
 	case RegistryModeDetached:
-		m.SystemRegistryConfig.Enable = true
+		m.ProviderSecondaryDevicesConfig.RegistryDataDeviceEnable = true
 		properties := m.RegistryConfig.DetachedModeProperties
 		if properties == nil {
 			return fmt.Errorf("unable to get the properties of the detached registry mode")
@@ -682,7 +683,7 @@ func (m *MetaConfig) NodeGroupConfig(nodeGroupName string, nodeIndex int, cloudC
 	if nodeGroupName != "master" {
 		result["nodeGroupName"] = nodeGroupName
 	} else {
-		result["systemRegistryEnable"] = m.SystemRegistryConfig.Enable
+		result["systemRegistryEnable"] = m.ProviderSecondaryDevicesConfig.RegistryDataDeviceEnable
 	}
 
 	if len(m.UUID) > 0 {
@@ -737,7 +738,7 @@ func (m *MetaConfig) DeepCopy() *MetaConfig {
 	}
 
 	out.Registry = m.Registry.DeepCopy()
-	out.SystemRegistryConfig = m.SystemRegistryConfig
+	out.ProviderSecondaryDevicesConfig = m.ProviderSecondaryDevicesConfig
 
 	if m.ClusterType != "" {
 		out.ClusterType = m.ClusterType
@@ -975,12 +976,20 @@ func (r *Registry) EmbeddedRegistryModuleMode() string {
 	return RegistryModeDirect
 }
 
-func (r *Registry) IsDirect() bool {
+func (r *Registry) Mode() string {
 	mode := r.EmbeddedRegistryModuleMode()
-	if mode == "" || mode == RegistryModeDirect {
-		return true
+	if mode == RegistryModeDirect {
+		return RegistryModeDirect
 	}
-	return false
+	return RegistryModeIndirect
+}
+
+func (r *Registry) IsDirect() bool {
+	return r.Mode() == RegistryModeDirect
+}
+
+func (r *Registry) IsIndirect() bool {
+	return r.Mode() == RegistryModeIndirect
 }
 
 func (r *Registry) IsProxy() (*ProxyModeRegistryData, bool) {
@@ -997,13 +1006,6 @@ func (r *Registry) IsDetached() (*DetachedModeRegistryData, bool) {
 		return &data, true
 	}
 	return nil, false
-}
-
-func (r *Registry) Mode() string {
-	if r.IsDirect() {
-		return RegistryModeDirect
-	}
-	return RegistryModeIndirect
 }
 
 func (r Registry) DeepCopy() Registry {

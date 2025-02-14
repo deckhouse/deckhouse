@@ -36,10 +36,10 @@ func (b *ClusterBootstrapper) ExecuteBashible() error {
 		return err
 	}
 
-	if metaConfig.SystemRegistryConfig.Enable && len(app.SystemRegistryDataDevicePath) == 0 {
+	if metaConfig.ProviderSecondaryDevicesConfig.RegistryDataDeviceEnable && len(app.SystemRegistryDataDevicePath) == 0 {
 		return fmt.Errorf("the '--system-registry-device-path' flag must be specified at RegistryMode!=Direct")
 	}
-	
+
 	err = terminal.AskBecomePassword()
 	if err != nil {
 		return err
@@ -59,7 +59,7 @@ func (b *ClusterBootstrapper) ExecuteBashible() error {
 		metaConfig,
 		app.InternalNodeIP,
 		terraform.DataDevices{
-			KubeDataDevicePath: app.KubeDataDevicePath,
+			KubeDataDevicePath:           app.KubeDataDevicePath,
 			SystemRegistryDataDevicePath: app.SystemRegistryDataDevicePath,
 		},
 	); err != nil {

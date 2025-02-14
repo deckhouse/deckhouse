@@ -17,7 +17,6 @@ package config
 import (
 	"fmt"
 	"math/rand"
-	"sigs.k8s.io/yaml"
 	"time"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
@@ -31,14 +30,6 @@ const (
 	RegistryModeProxy    = "Proxy"
 	RegistryModeDetached = "Detached"
 )
-
-type SystemRegistryConfig struct {
-	Enable bool
-}
-
-func (cfg *SystemRegistryConfig) ToYAML() ([]byte, error) {
-	return yaml.Marshal(cfg)
-}
 
 type RegistryAccessData struct {
 	CA     certificate.Authority `json:"ca"`
