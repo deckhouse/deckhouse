@@ -20,7 +20,7 @@ from github import Auth
 
 release_number = os.getenv('RELEASE_NUMBER')
 gh_token = os.getenv('ACCESS_TOKEN')
-gh_repo = "Nikolay1224/TestRepo"
+gh_repo = os.getenv('REPO_NAME')
 
 def check_input():
     if not re.fullmatch(r'\d\.[\d]*', release_number):
