@@ -62,7 +62,6 @@ document.addEventListener("DOMContentLoaded", function() {
       e.preventDefault();
 
       const FormData = this.serializeData();
-      console.log(FormData)
 
       const bitrixFields = {
         fields: {
