@@ -26,25 +26,38 @@ imageSpec:
   config:
     entrypoint: ["/dynamix-csi-driver"]
 ---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+final: false
+fromImage: common/src-artifact
+fromCacheVersion: "2025-02-14.1"
+shell:
+  install:
+  - export VERSION="v0.3.0"
+  - export VERSION_COMMON="v0.4.0"
+  - git clone --depth 1 --branch ${VERSION} {{ $.CLOUD_PROVIDERS_SOURCE_REPO }}/dynamix/dynamix-csi-driver.git /src
+  - git clone --depth 1 --branch ${VERSION_COMMON} {{ $.CLOUD_PROVIDERS_SOURCE_REPO }}/dynamix/dynamix-common.git /src/dynamix-common
+  - cd /src
+  - rm -rf .git vendor
+  - sed -i -e 's# ../../dynamix-common# /src/dynamix-common#g' go.mod
+  - cd /src/dynamix-common
+  - rm -rf .git vendor
+---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
 final: false
-from: {{ $.Images.BASE_GOLANG_22_ALPINE_DEV }}
+from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
 mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+  add: /src
+  to: /src
+  before: install
 shell:
-  beforeInstall:
-  - apk add --no-cache openssh-client
-  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
   install:
-  - export GO_VERSION=${GOLANG_VERSION}
   - export GOPROXY={{ $.GOPROXY }}
-  - export VERSION="v0.1.0"
-  - export VERSION_COMMON="v0.2.0"
-  - git clone --depth 1 --branch ${VERSION} {{ $.CLOUD_PROVIDERS_SOURCE_REPO }}/dynamix/dynamix-csi-driver.git /dynamix/dynamix-csi-driver/src
-  - git clone --depth 1 --branch ${VERSION_COMMON} {{ $.CLOUD_PROVIDERS_SOURCE_REPO }}/dynamix/dynamix-common.git /dynamix/dynamix-common
-  - cd /dynamix/dynamix-csi-driver/src
-  - go mod tidy
+  - cd /src
+  - go mod download
   - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags "-s -w -X main.version=${VERSION}" -o /dynamix-csi-driver cmd/dynamix-csi-driver/main.go
   - chown 64535:64535 /dynamix-csi-driver
   - chmod 0755 /dynamix-csi-driver
@@ -56,7 +69,7 @@ final: false
 fromImage: common/relocate-artifact
 shell:
   beforeInstall:
-    - apt-get update -y
-    - apt-get install -y e2fsprogs xfsprogs btrfs-progs nfs-utils parted nvme udev
+  - apt-get update -y
+  - apt-get install -y e2fsprogs xfsprogs btrfs-progs nfs-utils parted nvme udev
   install:
-    - /binary_replace.sh -i "{{ $csiBinaries }}" -o /relocate
+  - /binary_replace.sh -i "{{ $csiBinaries }}" -o /relocate
