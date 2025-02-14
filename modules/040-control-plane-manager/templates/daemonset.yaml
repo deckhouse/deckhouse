@@ -217,6 +217,7 @@ spec:
       {{- include "helm_lib_tolerations" (tuple . "any-node" "uninitialized") | nindent 6 }}
       imagePullSecrets:
       - name: deckhouse-registry
+      automountServiceAccountToken: true
       serviceAccountName: d8-control-plane-manager
       containers:
       - name: control-plane-manager

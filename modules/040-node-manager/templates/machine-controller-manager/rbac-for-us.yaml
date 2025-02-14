@@ -7,6 +7,7 @@ metadata:
   name: machine-controller-manager
   namespace: d8-cloud-instance-manager
   {{- include "helm_lib_module_labels" (list . (dict "app" "machine-controller-manager")) | nindent 2 }}
+automountServiceAccountToken: false
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
