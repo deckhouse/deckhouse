@@ -106,6 +106,16 @@ metadata:
 data:
   # base64 -w0 <<< '{"auths":{"registry.test-2.com":{"username":"test-2","password":"password-2"}}}' && echo
   .dockerconfigjson: eyJhdXRocyI6eyJyZWdpc3RyeS50ZXN0LTIuY29tIjp7InVzZXJuYW1lIjoidGVzdC0yIiwicGFzc3dvcmQiOiJwYXNzd29yZC0yIn19fQo=
+---
+apiVersion: v1
+kind: Secret
+type: kubernetes.io/dockerconfigjson
+metadata:
+  name: test-3
+  namespace: d8-admission-policy-engine
+data:
+  # base64 -w0 <<< '{"auths":{"registry.test-4.com":{}}}' && echo
+  .dockerconfigjson: eyJhdXRocyI6eyJyZWdpc3RyeS50ZXN0LTQuY29tIjp7fX19Cg==
 `
 
 	testDenyVulnerableImagesSecretsValues = `
@@ -120,7 +130,8 @@ data:
       "username": "test-3",
       "password": "password-3",
       "auth": "dGVzdC0zOnBhc3N3b3JkLTM="
-    }
+    },
+    "registry.test-4.com": {}
   }
 }
 `
