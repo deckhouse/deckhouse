@@ -14,7 +14,7 @@ shell:
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
 final: false
-from: {{ .Images.BASE_NODE_23_ALPINE }}
+from: {{ .Images.BASE_NODE_16_ALPINE }}
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
   add: /src
