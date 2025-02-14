@@ -316,7 +316,7 @@ function run-test() {
       "https://${commander_host}/api/v1/clusters/${cluster_id}" \
       -H 'accept: application/json' \
       -H "X-Auth-Token: ${commander_token}" |
-      jq -r '.[0].status')"
+      jq -r '.status')"
     >&2 echo "Check Cluster ready..."
     if [ "in_sync" = "$cluster_status" ]; then
       return 0
@@ -336,23 +336,32 @@ function run-test() {
 }
 
 function cleanup() {
+
+  #Get cluster id
+  cluster_id=$(curl -s\
+    "https://${commander_host}/api/v1/clusters" \
+    -H 'accept: application/json' \
+    -H "X-Auth-Token: ${commander_token}" | jq -r ".[] | select(.name == \"${PREFIX}\") | .id")
+
   curl -s -X 'DELETE' \
-      "https://$COMMANDER_HOST/api/v1/clusters/${cluster_id}" \
-      -H 'accept: application/json' \
-      -H "X-Auth-Token: $COMMANDER_TOKEN"
+    "https://${commander_host}/api/v1/clusters/${cluster_id}" \
+    -H 'accept: application/json' \
+    -H "X-Auth-Token: ${commander_token}"
 
   # Waiting to cluster cleanup
   testRunAttempts=40
   sleep=30
   for ((i=1; i<=testRunAttempts; i++)); do
-    cluster_status=$(curl -s -X 'GET' \
+    cluster_status="$(curl -s -X 'GET' \
+      "https://${commander_host}/api/v1/clusters/${cluster_id}" \
       -H 'accept: application/json' \
-      -H "X-Auth-Token: ${COMMANDER_TOKEN}" \
-      -o /dev/null -w "%{http_code}" \
-      "https://${COMMANDER_HOST}/api/v1/clusters/${cluster_id}")
+      -H "X-Auth-Token: ${commander_token}" |
+      jq -r '.status')"
     >&2 echo "Check Cluster delete..."
-    if [ "404" != "$cluster_status" ]; then
+    if [ "404" = "$cluster_status" ]; then
       return 0
+    else
+      echo "  Cluster status: $cluster_status"
     fi
     if [[ $i -lt $testRunAttempts ]]; then
       >&2 echo -n "  Cluster not deleted. Attempt $i/$testRunAttempts failed. Sleep for $sleep seconds..."
