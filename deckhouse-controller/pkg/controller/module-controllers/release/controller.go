@@ -806,9 +806,6 @@ func (r *reconciler) runReleaseDeploy(ctx context.Context, release *v1alpha1.Mod
 			delete(release.Annotations, v1alpha1.ModuleReleaseAnnotationForce)
 		}
 
-		release.Status.Size = downloadStatistic.Size
-		release.Status.PullDuration = metav1.Duration{Duration: downloadStatistic.PullDuration}
-
 		controllerutil.AddFinalizer(release, v1alpha1.ModuleReleaseFinalizerExistOnFs)
 
 		return nil
@@ -817,9 +814,14 @@ func (r *reconciler) runReleaseDeploy(ctx context.Context, release *v1alpha1.Mod
 		return fmt.Errorf("update with retry: %w", err)
 	}
 
-	err = r.updateReleaseStatus(ctx, release, &v1alpha1.ModuleReleaseStatus{
-		Phase: v1alpha1.ModuleReleasePhaseDeployed,
-	})
+	err = ctrlutils.UpdateStatusWithRetry(ctx, r.client, release, func() error {
+		release.Status.Phase = v1alpha1.DeckhouseReleasePhaseDeployed
+
+		release.Status.Size = downloadStatistic.Size
+		release.Status.PullDuration = metav1.Duration{Duration: downloadStatistic.PullDuration}
+
+		return nil
+	}, ctrlutils.WithRetryOnConflictBackoff(backoff))
 	if err != nil {
 		return fmt.Errorf("update status with retry: %w", err)
 	}
