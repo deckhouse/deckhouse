@@ -62,7 +62,7 @@ Scheme of Deckhouse installation in a private environment:<br />
 {%- else %}
    - HTTPS access to the `registry.deckhouse.io` container image registry;
 {%- endif %}
-{%- if page.platform_type == 'cloud' %}
+{%- if page.platform_type == 'cloud' and page.platform_code != 'zvirt' %}
    - access to the API of the cloud provider, an account with rights to create resources, and a configured
      {%- if page.platform_code == 'aws' %} [awscli](https://aws.amazon.com/cli/) utility
      {%- elsif page.platform_code == "gcp" %} [gcloud](https://cloud.google.com/sdk/docs/install) utility
