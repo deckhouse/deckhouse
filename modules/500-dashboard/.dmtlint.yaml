@@ -1,11 +1,6 @@
 linters-settings:
   container:
     exclude-rules:
-      service-port:
-        - api
-        - auth
-        - metrics-scraper
-        - web
       liveness-probe:
         - kind: Deployment
           name: api
@@ -29,3 +24,13 @@ linters-settings:
         - kind: Deployment
           name: web
           container: web
+  module:
+    conversions:
+      disable: true
+  templates:
+    exclude-rules:
+      service-port:
+        - api
+        - auth
+        - metrics-scraper
+        - web

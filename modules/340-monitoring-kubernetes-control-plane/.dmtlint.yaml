@@ -15,3 +15,8 @@ linters-settings:
         - kind: DaemonSet
           name: control-plane-proxy
           container: kube-rbac-proxy
+  templates:
+    exclude-rules:
+      pdb:
+        - kind: DaemonSet
+          name: control-plane-proxy

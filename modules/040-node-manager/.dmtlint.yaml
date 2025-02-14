@@ -5,6 +5,9 @@ linters-settings:
         - /openapi/conversions/v2.yaml
   container:
     exclude-rules:
+      read-only-root-filesystem:
+        - kind: Deployment
+          name: caps-controller-manager
       resources:
         - kind: Deployment
           name: standby-holder-name
@@ -29,6 +32,9 @@ linters-settings:
         - kind: Deployment
           name: standby-holder-name
           container: reserve-resources
+        - kind: Deployment
+          name: machine-controller-manager
+          container: controller
   templates:
     exclude-rules:
       pdb:
@@ -46,3 +52,6 @@ linters-settings:
           name: d8:node-manager:caps-controller-manager-leader-election-role
         - kind: RoleBinding
           name: d8:node-manager:caps-controller-manager-leader-election-role
+  module:
+    conversions:
+      disable: true

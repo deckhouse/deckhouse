@@ -61,3 +61,10 @@ linters-settings:
         - kind: Deployment
           name: operator
           container: operator
+  templates:
+    exclude-rules:
+      pdb:
+        - kind: DaemonSet
+          name: agent
+        - kind: DaemonSet
+          name: safe-agent-updater

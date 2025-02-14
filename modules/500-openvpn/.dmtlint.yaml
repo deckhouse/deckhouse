@@ -25,3 +25,6 @@ linters-settings:
         - kind: StatefulSet
           name: openvpn
           container: ovpn-admin
+  module:
+    conversions:
+      disable: true

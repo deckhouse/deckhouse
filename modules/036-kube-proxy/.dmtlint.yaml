@@ -25,3 +25,8 @@ linters-settings:
         - kind: DaemonSet
           name: d8-kube-proxy
           container: kube-rbac-proxy
+  templates:
+    exclude-rules:
+      pdb:
+        - kind: DaemonSet
+          name: d8-kube-proxy

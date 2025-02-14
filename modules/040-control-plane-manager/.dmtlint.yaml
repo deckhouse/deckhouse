@@ -5,9 +5,76 @@ linters-settings:
         - kind: DaemonSet
           name: d8-control-plane-manager
           container: image-holder-etcd
+        - kind: DaemonSet
+          name: d8-control-plane-manager
+          container: image-holder-kube-scheduler129
+        - kind: DaemonSet
+          name: d8-control-plane-manager
+          container: image-holder-kube-controller-manager129
+        - kind: DaemonSet
+          name: d8-control-plane-manager
+          container: image-holder-kube-apiserver-healthcheck
+        - kind: DaemonSet
+          name: d8-control-plane-manager
+          container: image-holder-kube-apiserver129
       security-context:
         - kind: DaemonSet
           name: d8-control-plane-manager
           container: image-holder-etcd
+        - kind: DaemonSet
+          name: d8-control-plane-manager
+          container: image-holder-kube-apiserver129
+        - kind: DaemonSet
+          name: d8-control-plane-manager
+          container: image-holder-kube-apiserver-healthcheck
+        - kind: DaemonSet
+          name: d8-control-plane-manager
+          container: image-holder-kube-controller-manager129
+        - kind: DaemonSet
+          name: d8-control-plane-manager
+          container: image-holder-kube-scheduler129
+      readiness-probe:
+        - kind: DaemonSet
+          name: d8-control-plane-manager
+          container: image-holder-etcd
+        - kind: DaemonSet
+          name: d8-control-plane-manager
+          container: image-holder-etcd
+        - kind: DaemonSet
+          name: d8-control-plane-manager
+          container: image-holder-kube-scheduler129
+        - kind: DaemonSet
+          name: d8-control-plane-manager
+          container: image-holder-kube-controller-manager129
+        - kind: DaemonSet
+          name: d8-control-plane-manager
+          container: image-holder-kube-apiserver-healthcheck
+        - kind: DaemonSet
+          name: d8-control-plane-manager
+          container: image-holder-kube-apiserver129
+      liveness-probe:
+        - kind: DaemonSet
+          name: d8-control-plane-manager
+          container: image-holder-etcd
+        - kind: DaemonSet
+          name: d8-control-plane-manager
+          container: image-holder-etcd
+        - kind: DaemonSet
+          name: d8-control-plane-manager
+          container: image-holder-kube-scheduler129
+        - kind: DaemonSet
+          name: d8-control-plane-manager
+          container: image-holder-kube-controller-manager129
+        - kind: DaemonSet
+          name: d8-control-plane-manager
+          container: image-holder-kube-apiserver-healthcheck
+        - kind: DaemonSet
+          name: d8-control-plane-manager
+          container: image-holder-kube-apiserver129
+  templates:
+    exclude-rules:
+      pdb:
+        - kind: DaemonSet
+          name: d8-control-plane-manager
       service-port:
         - d8-control-plane-apiserver

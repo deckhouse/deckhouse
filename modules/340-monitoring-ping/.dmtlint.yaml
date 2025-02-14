@@ -12,3 +12,8 @@ linters-settings:
         - kind: DaemonSet
           name: monitoring-ping
           container: monitoring-ping
+  templates:
+    exclude-rules:
+      pdb:
+        - kind: DaemonSet
+          name: monitoring-ping

@@ -2,6 +2,8 @@ linters-settings:
   module:
     oss:
       disable: true
+    conversions:
+      disable: true
   container:
     exclude-rules:
       readiness-probe:

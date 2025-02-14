@@ -15,7 +15,7 @@ linters-settings:
         - kind: Deployment
           name: trickster
           container: kube-rbac-proxy
-        - kind: Deployment
+        - kind: StatefulSet
           name: memcached
           container: exporter
       liveness-probe:
@@ -34,6 +34,6 @@ linters-settings:
         - kind: Deployment
           name: trickster
           container: kube-rbac-proxy
-        - kind: Deployment
+        - kind: StatefulSet
           name: memcached
           container: exporter

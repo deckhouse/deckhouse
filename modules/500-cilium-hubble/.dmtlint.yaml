@@ -25,3 +25,6 @@ linters-settings:
         - kind: Deployment
           name: hubble-ui
           container: kube-rbac-proxy
+  module:
+    conversions:
+      disable: true

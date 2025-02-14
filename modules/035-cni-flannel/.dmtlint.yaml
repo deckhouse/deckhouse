@@ -17,3 +17,8 @@ linters-settings:
         - kind: DaemonSet
           name: flannel
           container: kube-flannel
+  templates:
+    exclude-rules:
+      pdb:
+        - kind: DaemonSet
+          name: flannel

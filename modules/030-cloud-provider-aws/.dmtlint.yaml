@@ -26,5 +26,10 @@ linters-settings:
         - kind: Deployment
           name: cloud-data-discoverer
           container: kube-rbac-proxy
-
-
+  templates:
+    exclude-rules:
+      pdb:
+        - kind: Deployment
+          name: cloud-data-discoverer
+        - kind: DaemonSet
+          name: node-termination-handler

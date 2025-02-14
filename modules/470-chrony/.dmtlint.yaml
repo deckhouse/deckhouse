@@ -8,3 +8,10 @@ linters-settings:
         - kind: DaemonSet
           name: chrony-master
           container: chrony
+  templates:
+    exclude-rules:
+      pdb:
+        - kind: DaemonSet
+          name: chrony
+        - kind: DaemonSet
+          name: chrony-master

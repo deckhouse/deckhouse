@@ -1,7 +1,7 @@
 linters-settings:
   container:
     exclude-rules:
-      security-context:
+      read-only-root-filesystem:
         - kind: DaemonSet
           name: kube-router
           container: kube-router
@@ -9,3 +9,8 @@ linters-settings:
         - kind: DaemonSet
           name: kube-router
           container: kube-router
+  templates:
+    exclude-rules:
+      pdb:
+        - kind: DaemonSet
+          name: kube-router

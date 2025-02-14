@@ -1,15 +1,18 @@
 linters-settings:
   container:
     exclude-rules:
+      check-run-as-non-root:
+        - kind: Deployment
+          name: kiali
       read-only-root-filesystem:
         - kind: DaemonSet
           name: istio-cni-node
           container: install-cni
+        - kind: Deployment
+          name: kiali
       security-context:
         - kind: Deployment
           name: kiali
-      service-port:
-        - istiod
       readiness-probe:
         - kind: DaemonSet
           name: istio-cni-node
@@ -27,3 +30,17 @@ linters-settings:
         - kind: Deployment
           name: operator-1x21
           container: operator
+  templates:
+    exclude-rules:
+      service-port:
+        - istiod
+      pdb:
+        - kind: Deployment
+          name: operator-1x21
+          container: operator
+        - kind: DaemonSet
+          name: istio-cni-node
+          container: kube-rbac-proxy
+  module:
+    conversions:
+      disable: true

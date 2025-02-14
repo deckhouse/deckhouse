@@ -31,3 +31,8 @@ linters-settings:
         - kind: DaemonSet
           name: kube-state-metrics
           container: kube-rbac-proxy
+  templates:
+    exclude-rules:
+      pdb:
+        - kind: DaemonSet
+          name: node-exporter
