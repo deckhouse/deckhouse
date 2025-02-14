@@ -1,24 +1,23 @@
 diff --git a/pkg/validation/sessions.go b/pkg/validation/sessions.go
-index 96ea6d4f..6cf8b035 100644
+index 96ea6d4f..60f8bb03 100644
 --- a/pkg/validation/sessions.go
 +++ b/pkg/validation/sessions.go
-@@ -64,10 +64,17 @@ func validateRedisSessionStore(o *options.Options) []string {
- func sendRedisConnectionTest(client redis.Client, key string, val string) []string {
-        msgs := []string{}
-        ctx := context.Background()
--
-+       for i := 0; i < 5; i++ {
-+               fmt.Println("Testing connection to redis...")
-+               err := client.Set(ctx, key, []byte(val), time.Duration(60)*time.Second)
-+               if err == nil {
-+                       break
-+               }
-+               time.Sleep(2 * time.Second)
-+       }
-        err := client.Set(ctx, key, []byte(val), time.Duration(60)*time.Second)
-        if err != nil {
--               msgs = append(msgs, fmt.Sprintf("unable to set a redis initialization key: %v", err))
-+               msgs = append(msgs, fmt.Sprintf("TEST unable to set a redis initialization key: %v", err))
-        } else {
-                gval, err := client.Get(ctx, key)
-                if err != nil {
+@@ -65,9 +65,17 @@ func sendRedisConnectionTest(client redis.Client, key string, val string) []stri
+ 	msgs := []string{}
+ 	ctx := context.Background()
+ 
++	for i := 0; i < 5; i++ {
++		fmt.Println("Testing connection to redis...")
++		err := client.Set(ctx, key, []byte(val), time.Duration(60)*time.Second)
++		if err == nil {
++			break
++		}
++		time.Sleep(2 * time.Second)
++	}
+ 	err := client.Set(ctx, key, []byte(val), time.Duration(60)*time.Second)
+ 	if err != nil {
+-		msgs = append(msgs, fmt.Sprintf("unable to set a redis initialization key: %v", err))
++		msgs = append(msgs, fmt.Sprintf("TEST unable to set a redis initialization key: %v", err))
+ 	} else {
+ 		gval, err := client.Get(ctx, key)
+ 		if err != nil {
