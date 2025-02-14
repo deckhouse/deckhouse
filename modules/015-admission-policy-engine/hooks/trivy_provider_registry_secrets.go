@@ -18,6 +18,7 @@ package hooks
 
 import (
 	"context"
+	"encoding/base64"
 	"fmt"
 	"time"
 
@@ -59,72 +60,32 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, dependency.WithExternalDependencies(handleTrivyProviderSecrets))
 
 type dockerConfig struct {
-	Auths map[string]authn.AuthConfig `json:"auths,omitempty"`
+	Auths map[string]authn.AuthConfig `json:"auths"`
+}
+
+type valueDockerConfig struct {
+	Auths map[string]authConfig `json:"auths"`
+}
+
+type authConfig struct {
+	Username      string `json:"username,omitempty"`
+	Password      string `json:"password,omitempty"`
+	Auth          string `json:"auth,omitempty"`
+	IdentityToken string `json:"identitytoken,omitempty"`
+	RegistryToken string `json:"registrytoken,omitempty"`
+}
+
+func (a *authConfig) MarshalJSON() ([]byte, error) {
+	if a.Username != "" && a.Password != "" {
+		a.Auth = base64.StdEncoding.EncodeToString([]byte(a.Username + ":" + a.Password))
+	}
+	return json.Marshal(a)
 }
 
 func filterTrivyProviderSecret(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	secret := new(corev1.Secret)
 	if err := sdk.FromUnstructured(obj, secret); err != nil {
 		return nil, err
-	}
-
-	return dockerConfigBySecret(secret)
-}
-
-func handleTrivyProviderSecrets(input *go_hook.HookInput, dc dependency.Container) error {
-	if !input.Values.Get("admissionPolicyEngine.denyVulnerableImages.enabled").Bool() {
-		return nil
-	}
-
-	cfg := dockerConfig{Auths: make(map[string]authn.AuthConfig)}
-	for _, authSnap := range input.Snapshots["trivy_provider_secrets"] {
-		if authSnap == nil {
-			continue
-		}
-
-		auth, ok := authSnap.(*dockerConfig)
-		if !ok || len(auth.Auths) == 0 {
-			continue
-		}
-
-		for registry, config := range auth.Auths {
-			cfg.Auths[registry] = config
-		}
-	}
-
-	cli, err := dc.GetK8sClient()
-	if err != nil {
-		return fmt.Errorf("get k8s client: %w", err)
-	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*20)
-	defer cancel()
-
-	for _, value := range input.Values.Get("admissionPolicyEngine.denyVulnerableImages.registrySecrets").Array() {
-		secret, err := dockerConfigByModuleValue(ctx, cli, value)
-		if err != nil {
-			return fmt.Errorf("get registry secret from the module values: %w", err)
-		}
-
-		for registry, config := range secret.Auths {
-			cfg.Auths[registry] = config
-		}
-	}
-
-	input.Values.Set("admissionPolicyEngine.internal.denyVulnerableImages.dockerConfigJson", cfg)
-
-	return nil
-}
-
-func dockerConfigByModuleValue(ctx context.Context, cli k8s.Client, value gjson.Result) (*dockerConfig, error) {
-	name, namespace, err := namespaceNameByModuleValue(value)
-	if err != nil {
-		return nil, fmt.Errorf("get name and namespace from registry secret: %w", err)
-	}
-
-	secret, err := cli.CoreV1().Secrets(namespace).Get(ctx, name, metav1.GetOptions{})
-	if err != nil {
-		return nil, fmt.Errorf("get registry secret from namespace '%s': %w", namespace, err)
 	}
 
 	return dockerConfigBySecret(secret)
@@ -146,6 +107,77 @@ func dockerConfigBySecret(secret *corev1.Secret) (*dockerConfig, error) {
 	}
 
 	return config, nil
+}
+
+func handleTrivyProviderSecrets(input *go_hook.HookInput, dc dependency.Container) error {
+	if !input.Values.Get("admissionPolicyEngine.denyVulnerableImages.enabled").Bool() {
+		return nil
+	}
+
+	cfg := valueDockerConfig{Auths: make(map[string]authConfig)}
+	for _, authSnap := range input.Snapshots["trivy_provider_secrets"] {
+		if authSnap == nil {
+			continue
+		}
+
+		auth, ok := authSnap.(*dockerConfig)
+		if !ok || auth == nil || len(auth.Auths) == 0 {
+			continue
+		}
+
+		for registry, config := range auth.Auths {
+			cfg.Auths[registry] = authConfig{
+				Username:      config.Username,
+				Password:      config.Password,
+				Auth:          config.Auth,
+				IdentityToken: config.IdentityToken,
+				RegistryToken: config.RegistryToken,
+			}
+		}
+	}
+
+	cli, err := dc.GetK8sClient()
+	if err != nil {
+		return fmt.Errorf("get k8s client: %w", err)
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*20)
+	defer cancel()
+
+	for _, value := range input.Values.Get("admissionPolicyEngine.denyVulnerableImages.registrySecrets").Array() {
+		secret, err := dockerConfigByModuleValue(ctx, cli, value)
+		if err != nil {
+			return fmt.Errorf("get registry secret from the module values: %w", err)
+		}
+
+		for registry, config := range secret.Auths {
+			cfg.Auths[registry] = authConfig{
+				Username:      config.Username,
+				Password:      config.Password,
+				Auth:          config.Auth,
+				IdentityToken: config.IdentityToken,
+				RegistryToken: config.RegistryToken,
+			}
+		}
+	}
+
+	input.Values.Set("admissionPolicyEngine.internal.denyVulnerableImages.dockerConfigJson", cfg)
+
+	return nil
+}
+
+func dockerConfigByModuleValue(ctx context.Context, cli k8s.Client, value gjson.Result) (*dockerConfig, error) {
+	name, namespace, err := namespaceNameByModuleValue(value)
+	if err != nil {
+		return nil, fmt.Errorf("get name and namespace from registry secret: %w", err)
+	}
+
+	secret, err := cli.CoreV1().Secrets(namespace).Get(ctx, name, metav1.GetOptions{})
+	if err != nil {
+		return nil, fmt.Errorf("get registry secret from namespace '%s': %w", namespace, err)
+	}
+
+	return dockerConfigBySecret(secret)
 }
 
 func namespaceNameByModuleValue(value gjson.Result) (string, string, error) {
