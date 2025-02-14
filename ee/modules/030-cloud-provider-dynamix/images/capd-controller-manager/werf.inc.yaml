@@ -19,10 +19,10 @@ shell:
   # - export VERSION="v0.3.0"
   # - export VERSION_COMMON="v0.3.0"
   - export VERSION=bump-dynamix-go-lib
-  - export COMMON_VERSION=fix-createvm-method
+  - export VERSION_COMMON=fix-createvm-method
   - git clone --depth 1 --branch ${VERSION} {{ $.CLOUD_PROVIDERS_SOURCE_REPO }}/dynamix/capd-controller-manager.git /src
+  - git clone --depth 1 --branch ${VERSION_COMMON} {{ $.CLOUD_PROVIDERS_SOURCE_REPO }}/dynamix/dynamix-common.git /src/dynamix-common
   - cd /src
-  - git clone --depth 1 --branch ${VERSION_COMMON} {{ $.CLOUD_PROVIDERS_SOURCE_REPO }}/dynamix/dynamix-common.git ./dynamix-common
   - rm -rf .git vendor
   - sed -i -e 's# ../../dynamix-common# /src/dynamix-common#g' go.mod
   - cd /src/dynamix-common
