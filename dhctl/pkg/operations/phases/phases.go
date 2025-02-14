@@ -38,7 +38,7 @@ const (
 	// converge only
 	AllNodesPhase            OperationPhase = "AllNodes"
 	ScaleToMultiMasterPhase  OperationPhase = "ScaleToMultiMaster"
-	ScaleToSingleMasterPhase OperationPhase = "SScaleToSingleMaster"
+	ScaleToSingleMasterPhase OperationPhase = "ScaleToSingleMaster"
 	// all
 	FinalizationPhase OperationPhase = "Finalization"
 )
