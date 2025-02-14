@@ -112,7 +112,7 @@ func (c *Converger) Converge(ctx context.Context) (*ConvergeResult, error) {
 		kubeCl = c.KubeClient
 	} else {
 		if c.SSHClient == nil {
-			return nil, fmt.Errorf("Not enough flags were passed to perform the operation.\nUse dhctl converge --help to get available flags.\nSsh host flag is not provided. Need to pass --ssh-host")
+			return nil, fmt.Errorf("Not enough flags were passed to perform the operation.\nUse dhctl converge --help to get available flags.\nSsh host is not provided. Need to pass --ssh-host, or specify SSHHost manifest in the --connection-config file")
 		}
 
 		kubeCl, err = kubernetes.ConnectToKubernetesAPI(ssh.NewNodeInterfaceWrapper(c.SSHClient))
