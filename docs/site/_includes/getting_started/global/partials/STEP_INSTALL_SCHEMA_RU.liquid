@@ -69,8 +69,10 @@
 {%- else %}
    - HTTPS-доступ до хранилища образов контейнеров `registry.deckhouse.ru`;
 {%- endif %}
-{%- if page.platform_type == 'cloud' and page.platform_code != 'zvirt' %}
-   - доступ до API облачного провайдера, учетная запись с правами на создание ресурсов и настроенная
+{%- if page.platform_type == 'cloud' %}
+   - доступ до API облачного провайдера, учетная запись с правами на создание ресурсов
+     {%- unless page.platform_code == 'zvirt' %}
+     и настроенная
      {%- if page.platform_code == 'aws' %} утилита [awscli](https://aws.amazon.com/cli/)
      {%- elsif page.platform_code == "gcp" %} утилита [gcloud](https://cloud.google.com/sdk/docs/install)
      {%- elsif page.platform_code == "azure" %} утилита [Azure CLI](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli)
