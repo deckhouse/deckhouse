@@ -25,7 +25,7 @@
 
 if [ ! -f /var/lib/bashible/hosname-set-as-in-aws ]; then
 {{ with .images.registrypackages }}
-  bb-package-install "ec2DescribeTags:{{ .ec2DescribeTagsV001Flant2 }}" 
+  bb-package-install "ec2DescribeTags:{{ .ec2DescribeTagsV001Flant3 }}"
 {{- end }}
 
   attempt=0
