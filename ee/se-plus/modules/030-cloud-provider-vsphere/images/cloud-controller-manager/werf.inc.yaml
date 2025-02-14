@@ -33,7 +33,12 @@ git:
 {{- end }}
 shell:
   install:
+  {{- if semverCompare "=1.27" $version }}
+  - git clone https://github.com/kubernetes/cloud-provider-vsphere.git /src
+  - git checkout {{ $value.ccm.vsphere }}
+  {{- else }}
   - git clone --depth 1 --branch {{ $value.ccm.vsphere }} https://github.com/kubernetes/cloud-provider-vsphere.git /src
+  {{- end }}
   - cd /src
   {{- if $patch }}
   - git apply /patches/*.patch --verbose
