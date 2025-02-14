@@ -79,18 +79,106 @@ document.addEventListener("DOMContentLoaded", function() {
         bitrixFields.fields.COMMENTS += '. Telegram ID: ' + this.telegramInput.value;
       }
 
-      BX24.callMethod(
-        "crm.lead.add",
-        bitrixFields,
-        res => {
-          if (res.ok) {
-            this.downloadFile();
-            this.successSubmit();
-          } else {
-            this.errorSubmit();
+        BX24.callMethod(
+          "crm.lead.add",
+          bitrixFields,
+          res => {
+            if (res.ok) {
+              this.downloadFile();
+              this.successSubmit();
+            } else {
+              this.errorSubmit();
+            }
           }
-        }
-      )
+        )
+
+        // 2 способ
+        // const FormData = this.serializeData();
+
+        // const bitrixFields = {
+        //   fields: {
+        //     'TITLE': 'с сайта документации Deckhouse',
+        //     'NAME': FormData.name,
+        //     'EMAIL': FormData.email,
+        //     'PHONE': FormData.phone,
+        //     'COMPANY': FormData.company,
+        //     'POST': FormData.position,
+        //     'COMMENTS': 'Предпочтительный вид связи: ' + FormData.preferred_contact,
+        //   }
+        // }
+  
+        // if(this.telegramCheckbox.checked && this.telegramInput.value) {
+        //   bitrixFields.fields.COMMENTS += '. Telegram ID: ' + this.telegramInput.value;
+        // }
+  
+        // BX24.callMethod(
+        //   'app.info',
+        //   {}, 
+        //   (res) => {
+        //     if(!res.ok) {
+        //       this.errorSubmit();
+        //     } else {
+        //       const appInfo = res.data();
+        //       const token = appInfo.AUTH_ID;
+        //       const domain = appInfo.DOMAIN;
+        //       const url = `${endpoint}crm.lead.add?auth=${token}`;
+
+        //       BX24.callMethod(
+        //         "crm.lead.add",
+        //         bitrixFields,
+        //         res => {
+        //           if (res.ok) {
+        //             this.downloadFile();
+        //             this.successSubmit();
+        //           } else {
+        //             this.errorSubmit();
+        //           }
+        //         }
+        //       )
+        //     }
+        //   }
+        // )
+
+      // 3 способ
+      // const endpoint = 'https://crm.flant.ru/rest/132/bm7uy367wn001kef/';
+      // const token = 'BITRIX24CRM_ENDPOINT';
+      // const url = `${endpoint}crm.lead.add?auth=${token}`;
+
+      // const FormData = this.serializeData();
+
+      // const bitrixFields = {
+      //   auth: token,
+      //   fields: {
+      //     'TITLE': 'с сайта документации Deckhouse',
+      //     'NAME': FormData.name,
+      //     'EMAIL': FormData.email,
+      //     'PHONE': FormData.phone,
+      //     'COMPANY': FormData.company,
+      //     'POST': FormData.position,
+      //     'COMMENTS': 'Предпочтительный вид связи: ' + FormData.preferred_contact,
+      //   }
+      // }
+
+      // console.log(bitrixFields)
+
+      // fetch(url, {
+      //   method: 'POST',
+      //   headers: {
+      //    'Content-Type': 'application/json;charset=utf-8',
+      //     Accept: "application/json",
+      //   },
+      //   body: JSON.stringify(bitrixFields)
+      // })
+      //   .then(res => {
+      //     if (res.ok) {
+      //       console.log('успех')
+      //       // this.downloadFile();
+      //       // this.successSubmit();
+      //     } else {
+      //       console.log('ошибка')
+      //       // this.errorSubmit();
+      //     }
+      //   })
     }
 
     serializeData() {
