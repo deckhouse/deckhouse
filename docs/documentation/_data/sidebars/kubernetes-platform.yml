@@ -95,6 +95,10 @@ entries:
                         ru: Настройка внутренней сети
                       url: /admin/network/configuration.html
                     - title:
+                        en: Operation modes of bpfLB for external traffic processing
+                        ru: Режимы работы bpfLB для обработки внешнего трафика
+                      url: /admin/network/bpflb-external-traffic.html
+                    - title:
                         en: Encrypting traffic between nodes
                         ru: Шифрование трафика между узлами
                       url: /admin/network/encrypting-traffic.html
@@ -202,6 +206,10 @@ entries:
                         en: Overview
                         ru: Введение
                       url: /admin/network/network-policies-overview.html
+                    - title:
+                        en: Defining cluster-wide network policies (CiliumClusterwideNetworkPolicy)
+                        ru: Определение сетевых политик на уровне всего кластера (CiliumClusterwideNetworkPolicy)
+                      url: /admin/network/cilium-clusterwide-network-policy.html
                 - title:
                     en: Other network configuration options
                     ru: Другие возможности настройки сети
