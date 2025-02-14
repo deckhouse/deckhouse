@@ -1,5 +1,5 @@
 # #####################################################################
-# Based on https://github.com/kubernetes/dashboard/blob/web/v1.6.0/modules/web/Dockerfile
+# Based on https://github.com/kubernetes/dashboard/blob/kubernetes-dashboard-7.10.4/modules/web/Dockerfile
 # #####################################################################
 {{- $version := "1.6.1" }}
 ---

@@ -1,5 +1,5 @@
 # #####################################################################
-# Based on https://github.com/kubernetes/dashboard/blob/auth/v1.2.2/modules/auth/Dockerfile
+# Based on https://github.com/kubernetes/dashboard/blob/kubernetes-dashboard-7.10.4/modules/auth/Dockerfile
 # #####################################################################
 {{- $version := "1.2.3" }}
 ---

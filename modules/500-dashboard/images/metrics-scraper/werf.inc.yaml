@@ -1,5 +1,5 @@
 # #####################################################################
-# Based on https://github.com/kubernetes/dashboard/blob/metrics-scraper/v1.2.1/modules/metrics-scraper/Dockerfile
+# Based on https://github.com/kubernetes/dashboard/blob/kubernetes-dashboard-7.10.4/modules/metrics-scraper/Dockerfile
 # #####################################################################
 {{- $version := "1.2.2" }}
 ---
