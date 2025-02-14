@@ -130,7 +130,7 @@ resource "vsphere_virtual_disk" "kubernetes_data" {
 }
 
 resource "vsphere_virtual_disk" "system_registry_data" {
-  count              = var.systemRegistryEnable ? 1 : 0
+  count              = var.registryDataDeviceEnable ? 1 : 0
   size               = 100
   datastore          = local.master_instance_class.datastore
   datacenter         = data.vsphere_dynamic.datacenter_id.inventory_path
@@ -182,7 +182,7 @@ resource "vsphere_virtual_machine" "master" {
   }
 
   dynamic "disk" {
-    for_each = var.systemRegistryEnable ? [1] : []
+    for_each = var.registryDataDeviceEnable ? [1] : []
     content {
       label        = "disk2"
       unit_number  = 2

@@ -63,7 +63,7 @@ variable "tags" {
   type = map(string)
 }
 
-variable "systemRegistryEnable" {
+variable "registryDataDeviceEnable" {
   type = bool
 }
 

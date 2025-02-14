@@ -62,7 +62,7 @@ resource "ovirt_disk" "master-kubernetes-data" {
 }
 
 resource "ovirt_disk" "master-system-registry-data" {
-  count             = var.systemRegistryEnable ? 1 : 0
+  count             = var.registryDataDeviceEnable ? 1 : 0
   format            = "raw"
   size              = local.master_system_registry_disk_size
   storage_domain_id = local.storage_domain_id
@@ -79,7 +79,7 @@ resource "ovirt_disk_attachment" "master-kubernetes-data-attachment" {
 }
 
 resource "ovirt_disk_attachment" "master-system-registry-data-attachment" {
-  count          = var.systemRegistryEnable ? 1 : 0
+  count          = var.registryDataDeviceEnable ? 1 : 0
   disk_id        = ovirt_disk.master-system-registry-data[0].id
   disk_interface = "virtio_scsi"
   vm_id          = ovirt_vm.master_vm.id

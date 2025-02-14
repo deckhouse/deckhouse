@@ -683,7 +683,7 @@ func (m *MetaConfig) NodeGroupConfig(nodeGroupName string, nodeIndex int, cloudC
 	if nodeGroupName != "master" {
 		result["nodeGroupName"] = nodeGroupName
 	} else {
-		result["systemRegistryEnable"] = m.ProviderSecondaryDevicesConfig.RegistryDataDeviceEnable
+		result[RegistryDataDeviceEnableTerraformVar] = m.ProviderSecondaryDevicesConfig.RegistryDataDeviceEnable
 	}
 
 	if len(m.UUID) > 0 {

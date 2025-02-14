@@ -54,7 +54,7 @@ resource "vcd_vm_internal_disk" "kubernetes_data"{
 }
 
 resource "vcd_vm_internal_disk" "system_registry_data"{
-  count           = var.systemRegistryEnable ? 1 : 0
+  count           = var.registryDataDeviceEnable ? 1 : 0
   vapp_name       = local.vapp_name
   vm_name         = vcd_vapp_vm.master.name
   size_in_mb      = local.master_instance_class.systemRegistryDiskSizeGb * 1024

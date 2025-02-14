@@ -39,7 +39,7 @@ variable "resourceManagementTimeout" {
   default = "10m"
 }
 
-variable "systemRegistryEnable" {
+variable "registryDataDeviceEnable" {
   type    = bool
   default = false
 }

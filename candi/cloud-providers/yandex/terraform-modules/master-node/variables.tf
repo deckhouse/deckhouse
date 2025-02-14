@@ -34,7 +34,7 @@ variable "clusterUUID" {
   type = string
 }
 
-variable "systemRegistryEnable" {
+variable "registryDataDeviceEnable" {
   type = bool
   default = false
 }

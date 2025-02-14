@@ -51,7 +51,7 @@ module "kubernetes_data" {
 }
 
 module "system_registry_data" {
-  count = var.systemRegistryEnable ? 1 : 0
+  count = var.registryDataDeviceEnable ? 1 : 0
   source = "../../../terraform-modules/system-registry-data"
   prefix = local.prefix
   node_index = var.nodeIndex

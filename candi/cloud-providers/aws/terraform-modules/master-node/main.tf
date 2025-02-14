@@ -52,7 +52,7 @@ resource "aws_ebs_volume" "kubernetes_data" {
 }
 
 resource "aws_ebs_volume" "system_registry_data" {
-  count = var.systemRegistryEnable ? 1 : 0
+  count = var.registryDataDeviceEnable ? 1 : 0
   size  = var.node_group.instanceClass.systemRegistryDisk.sizeGb
   type  = var.node_group.instanceClass.systemRegistryDisk.type
   tags = merge(var.tags, {
@@ -69,7 +69,7 @@ resource "aws_volume_attachment" "kubernetes_data" {
 }
 
 resource "aws_volume_attachment" "system_registry_data" {
-  count        = var.systemRegistryEnable ? 1 : 0
+  count        = var.registryDataDeviceEnable ? 1 : 0
   device_name  = "/dev/xvdg"
   skip_destroy = false
   volume_id    = aws_ebs_volume.system_registry_data[0].id

@@ -14,6 +14,6 @@ output "kubernetes_data_device_path" {
 }
 
 output "system_registry_data_device_path" {
-  value = var.systemRegistryEnable ? module.system_registry_data[0].device_path : ""
+  value = var.registryDataDeviceEnable ? module.system_registry_data[0].device_path : ""
 }
 

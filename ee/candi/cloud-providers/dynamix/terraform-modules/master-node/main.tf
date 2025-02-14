@@ -34,7 +34,7 @@ locals {
   storage_endpoint_id = data.decort_cb_sep_list.storage_endpoints.items[0].sep_id
   extra_disks = concat(
     [decort_disk.kubernetes_data_disk.id],
-    var.systemRegistryEnable ? [decort_disk.system_registry_data_disk[0].id] : []
+    var.registryDataDeviceEnable ? [decort_disk.system_registry_data_disk[0].id] : []
   )
 }
 
@@ -55,7 +55,7 @@ resource "decort_disk" "kubernetes_data_disk" {
 }
 
 resource "decort_disk" "system_registry_data_disk" {
-  count       = var.systemRegistryEnable ? 1 : 0
+  count       = var.registryDataDeviceEnable ? 1 : 0
   disk_name  = local.system_registry_data_disk_name
   account_id = local.account_id
   gid        = local.gid

@@ -25,5 +25,5 @@ module "master-node" {
   zones = local.zones
   tags = local.tags
   resourceManagementTimeout = var.resourceManagementTimeout
-  systemRegistryEnable = var.systemRegistryEnable
+  registryDataDeviceEnable = var.registryDataDeviceEnable
 }

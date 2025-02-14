@@ -20,6 +20,10 @@ import (
 	"strings"
 )
 
+const (
+	RegistryDataDeviceEnableTerraformVar="registryDataDeviceEnable"
+)
+
 var (
 	providersSupportingSecondaryDataDevices = map[string]struct{}{
 		"aws":         {},

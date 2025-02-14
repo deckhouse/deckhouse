@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/template"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -47,9 +48,9 @@ const (
 	registryPodsNamespace = "d8-system"
 	registryModuleName    = "system-registry"
 
-	registryTerraformEnableFlagVar = "systemRegistryEnable"
-
 	NgcUmountTaskName = "umount-registry-data-device"
+
+	RegistryDataDeviceEnableTerraformVar = config.RegistryDataDeviceEnableTerraformVar
 )
 
 var (
@@ -71,7 +72,7 @@ func isRegistryMustBeEnabled(terraformVars []byte) (bool, error) {
 		return false, nil
 	}
 
-	value, found := objmap[registryTerraformEnableFlagVar]
+	value, found := objmap[RegistryDataDeviceEnableTerraformVar]
 	if !found {
 		return false, nil
 	}

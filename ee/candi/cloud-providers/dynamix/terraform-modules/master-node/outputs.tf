@@ -22,5 +22,5 @@ output "kubernetes_data_device_path" {
 }
 
 output "system_registry_data_device_path" {
-  value = var.systemRegistryEnable ? "/dev/vdc" : ""
+  value = var.registryDataDeviceEnable ? "/dev/vdc" : ""
 }

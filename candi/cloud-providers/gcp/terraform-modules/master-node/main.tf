@@ -42,7 +42,7 @@ resource "google_compute_disk" "kubernetes_data" {
 }
 
 resource "google_compute_disk" "system_registry_data" {
-  count  = var.systemRegistryEnable ? 1 : 0
+  count  = var.registryDataDeviceEnable ? 1 : 0
   zone   = local.zone
   name   = join("-", [local.prefix, "system-registry-data", var.nodeIndex])
   type   = "pd-ssd"
@@ -67,7 +67,7 @@ resource "google_compute_instance" "master" {
   }
 
   dynamic "attached_disk" {
-    for_each = var.systemRegistryEnable ? [1] : []
+    for_each = var.registryDataDeviceEnable ? [1] : []
     content {
       source      = google_compute_disk.system_registry_data[0].self_link
       device_name = google_compute_disk.system_registry_data[0].name
