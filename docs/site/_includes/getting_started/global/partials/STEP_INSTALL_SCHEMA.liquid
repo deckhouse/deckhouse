@@ -73,7 +73,8 @@ Scheme of Deckhouse installation in a private environment:<br />
      {%- elsif page.platform_code == "openstack" %} management [utility](https://docs.openstack.org/newton/user-guide/common/cli-install-openstack-command-line-clients.html) via CLI
      {%- elsif page.platform_code == "vsphere" %} [govc](https://github.com/vmware/govmomi/tree/master/govc#installation) utility
      {%- else %} management utility via CLI
-     {%- endif %};
+     {%- endif %}
+     {%- endunless %};
 {%- endif %}
 {%- if page.platform_type == "existing" %}
    - the `kubectl` command-line tool must be configured to communicate with your cluster.
