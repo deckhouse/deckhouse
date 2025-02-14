@@ -5,7 +5,7 @@ title: "The user-authz module: usage"
 ## Example of assigning rights to a cluster administrator
 
 {% alert level="info" %}
-The example uses the [new role-based](./#the-new-role-based-model).
+The example uses the [experimental role-based](./#the-new-role-based-model).
 {% endalert %}
 
 To grant access to a cluster administrator, use the role `d8:manage:all:manager` in `ClusterRoleBinding`.
@@ -43,7 +43,7 @@ The user will be able to:
 ## Example of assigning rights to a network administrator
 
 {% alert level="info" %}
-The example uses the [new role-based](./#the-new-role-based-model).
+The example uses the [experimental role-based](./#the-new-role-based-model).
 {% endalert %}
 
 To grant a network administrator access to manage the network subsystem of the cluster, use the role `d8:manage:networking:manager` in `ClusterRoleBinding`.
@@ -156,7 +156,7 @@ The user will be able to:
 ## Example of assigning administrative rights to a user within a namespace
 
 {% alert level="info" %}
-The example uses the [new role-based](./#the-new-role-based-model).
+The example uses the [experimental role-based](./#the-new-role-based-model).
 {% endalert %}
 
 To assign rights to a user manage application resources within a namespace, but without the ability to configure DKP modules, use the role `d8:use:role:admin` in `RoleBinding` in the corresponding namespace.

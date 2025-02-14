@@ -11,7 +11,7 @@ The new role-based access model is incompatible with the old one.
 {% endalert %}
 
 {% alert level="warning" %}
-The documentation of the module implies that you use the [new role-based model](#the-new-role-based-model), unless specified otherwise.
+The documentation of the module implies that you use the [experimental role-based model](#the-new-role-based-model), unless specified otherwise.
 {% endalert %}
 
 The module implements a role-based access model based on the standard RBAC Kubernetes mechanism. It creates a set of cluster roles (`ClusterRole`) suitable for most user and group access management tasks.
