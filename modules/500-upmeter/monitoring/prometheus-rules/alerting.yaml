@@ -476,14 +476,12 @@
           kubectl -n d8-upmeter get secret -ojson | jq -r '.items[] | .metadata.name' | grep upmeter-cm-probe | xargs -n 1 -- kubectl -n d8-upmeter delete secret
           ```
 
-- name: d8.upmeter.storage
-  rules:
     - alert: D8UpmeterDiskUsage
-      for: 10m
       expr: |
         100 * (
         kubelet_volume_stats_used_bytes{persistentvolumeclaim="data-upmeter-0",namespace="d8-upmeter"} / kubelet_volume_stats_capacity_bytes{persistentvolumeclaim="data-upmeter-0",namespace="d8-upmeter"}
         ) > 80
+      for: 10m
       labels:
         severity_level: "5"
         tier: cluster
