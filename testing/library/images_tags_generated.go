@@ -137,6 +137,7 @@ var DefaultImagesDigests = map[string]interface{}{
 		"checkKernelVersion": "imageHash-cniCilium-checkKernelVersion",
 		"egressGatewayAgent": "imageHash-cniCilium-egressGatewayAgent",
 		"kubeRbacProxy":      "imageHash-cniCilium-kubeRbacProxy",
+		"multusCni":          "imageHash-cniCilium-multusCni",
 		"operator":           "imageHash-cniCilium-operator",
 		"safeAgentUpdater":   "imageHash-cniCilium-safeAgentUpdater",
 	},
