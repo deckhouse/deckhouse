@@ -10,11 +10,7 @@ title: "The user-authz module: FAQ"
 
 To limit a user's rights to specific namespaces, use `RoleBinding` with the [use role](./#use-roles) that has the appropriate level of access. [Example...](usage.html#example-of-assigning-administrative-rights-to-a-user-within-a-namespace).
 
-### How do I limit user rights to specific namespaces (obsolete role-based model)?
-
-{% alert level="warning" %}
-The example uses the [obsolete role-based model](./#the-obsolete-role-based-model).
-{% endalert %}
+### How do I limit user rights to specific namespaces?
 
 Use the `namespaceSelector` or `limitNamespaces` (deprecated) parameters in the [`ClusterAuthorizationRule`](../../modules/user-authz/cr.html#clusterauthorizationrule) CR.
 
@@ -67,7 +63,7 @@ Because `Jane Doe` matches two rules, some calculations will be made:
 
 ## How do I extend a role or create a new one?
 
-[The new role model](./#the-new-role-based-model) is based on the aggregation principle; it compiles smaller roles into larger ones,
+[The experimental role model](./#experimental-role-based-model) is based on the aggregation principle; it compiles smaller roles into larger ones,
 thus providing easy ways to enhance the model with custom roles.
 
 ### Creating a new role subsystem

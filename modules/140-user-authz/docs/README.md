@@ -5,20 +5,20 @@ title: "The user-authz module"
 The module generates role-based access model objects based on the standard Kubernetes RBAC mechanism. The module creates a set of cluster roles (`ClusterRole`) suitable for most user and group access management tasks.
 
 {% alert level="warning" %}
-Starting from Deckhouse Kubernetes Platform v1.64, the module features a new role-based access model. The old role-based access model will continue to operate but support for it will be discontinued in the future.
+Starting from Deckhouse Kubernetes Platform v1.64, the module features a experimental role-based access model. The old role-based access model will continue to operate but support for it will be discontinued in the future.
 
-The new role-based access model is incompatible with the old one.
+The experimental role-based access model is incompatible with the old one.
 {% endalert %}
 
 {% alert level="warning" %}
-The documentation of the module implies that you use the [experimental role-based model](#the-new-role-based-model), unless specified otherwise.
+The documentation of the module implies that you use the [experimental role-based model](#experimental-role-based-model), unless specified otherwise.
 {% endalert %}
 
 The module implements a role-based access model based on the standard RBAC Kubernetes mechanism. It creates a set of cluster roles (`ClusterRole`) suitable for most user and group access management tasks.
 
 ## Experimental role-based model
 
-Unlike the [DKP role-based model](#the-obsolete-role-based-model), the new role-based one does not use `ClusterAuthorizationRule` and `AuthorizationRule` resources. All access rights are configured in the standard Kubernetes RBAC way, i.e., by creating `RoleBinding` or `ClusterRoleBinding` resources and specifying one of the roles prepared by the `user-authz` module in them.
+Unlike the [DKP role-based model](#role-based-model), the new role-based one does not use `ClusterAuthorizationRule` and `AuthorizationRule` resources. All access rights are configured in the standard Kubernetes RBAC way, i.e., by creating `RoleBinding` or `ClusterRoleBinding` resources and specifying one of the roles prepared by the `user-authz` module in them.
 
 The module creates special aggregated cluster roles (`ClusterRole`). By using these roles in `RoleBinding` or `ClusterRoleBinding`, you can do the following:
 - Manage access to modules of a specific [subsystem](#subsystems-of-the-role-based-model).
