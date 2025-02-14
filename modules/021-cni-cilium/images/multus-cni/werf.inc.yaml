@@ -18,7 +18,7 @@ shell:
     - cp LICENSE /build-output/
 ---
 image: {{ .ModuleName }}/multus-cni
-fromImage: debian:stable-slim
+from: debian:stable-slim
 import:
 - image: {{ .ModuleName }}/multus-binary
   add: /build-output/bin/multus-daemon
