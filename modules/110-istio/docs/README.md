@@ -5,15 +5,6 @@ webIfaces:
 - name: istio
 ---
 
-## Compatibility table for supported versions
-
-| Istio version | K8S versions supported by Istio |          Status in D8          |
-|:-------------:|:-----------------------------------------------------------------------------------------------------------------------------:|:------------------------------:|
-|     1.21      |                                                1.26, 1.27, 1.28, 1.29, 1.30, 1.31                                                | Supported |
-|     1.19      |                                                    1.25<sup>*</sup>, 1.26, 1.27, 1.28                                                     |           Deprecated and will be deleted            |
-
-<sup>*</sup> — the Kubernetes version **is NOT supported** in the current Deckhouse Kubernetes Platform release.
-
 ## What issues does Istio help to resolve?
 
 Istio is a framework for managing network traffic on a centralized basis that implements the Service Mesh approach.
