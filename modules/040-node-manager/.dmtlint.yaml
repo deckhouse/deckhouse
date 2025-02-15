@@ -18,6 +18,9 @@ linters-settings:
           container: caps-controller-manager
         - kind: Deployment
           name: standby-holder-name
+      controller-security-context:
+        - kind: Deployment
+          name: standby-holder-name
       dns-policy:
         - kind: Deployment
           name: machine-controller-manager

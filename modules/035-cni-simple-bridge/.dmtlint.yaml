@@ -10,11 +10,11 @@ linters-settings:
           container: simple-bridge
       liveness-probe:
         - kind: DaemonSet
-          name: flannel
+          name: simple-bridge
           container: simple-bridge
       readiness-probe:
         - kind: DaemonSet
-          name: flannel
+          name: simple-bridge
           container: simple-bridge
   license:
     exclude-rules:
@@ -25,3 +25,4 @@ linters-settings:
       pdb:
         - kind: DaemonSet
           name: simple-bridge
+

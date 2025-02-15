@@ -18,6 +18,9 @@ linters-settings:
         - kind: DaemonSet
           name: kube-state-metrics
           container: kube-rbac-proxy
+        - kind: Deployment
+          name: kube-state-metrics
+          container: kube-rbac-proxy
       readiness-probe:
         - kind: DaemonSet
           name: node-exporter
@@ -29,6 +32,9 @@ linters-settings:
           name: node-exporter
           container: node-exporter
         - kind: DaemonSet
+          name: kube-state-metrics
+          container: kube-rbac-proxy
+        - kind: Deployment
           name: kube-state-metrics
           container: kube-rbac-proxy
   templates:

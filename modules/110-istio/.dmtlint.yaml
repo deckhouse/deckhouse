@@ -10,6 +10,9 @@ linters-settings:
           container: install-cni
         - kind: Deployment
           name: kiali
+      controller-security-context:
+        - kind: Deployment
+          name: kiali
       security-context:
         - kind: Deployment
           name: kiali

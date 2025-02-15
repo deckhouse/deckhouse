@@ -1,10 +1,15 @@
 linters-settings:
   container:
     exclude-rules:
+      controller-security-context:
+        - kind: Deployment
+          name: d8-kube-dns-sts-pods-hosts-appender-webhook
+      read-only-root-filesystem:
+        - kind: Deployment
+          name: d8-kube-dns-sts-pods-hosts-appender-webhook
       security-context:
         - kind: Deployment
           name: d8-kube-dns-sts-pods-hosts-appender-webhook
-
       liveness-probe:
         - kind: Deployment
           name: d8-kube-dns
@@ -17,3 +22,7 @@ linters-settings:
     exclude-rules:
       service-port:
         - d8-kube-dns-sts-pods-hosts-appender-webhook
+  openapi:
+    exclude-rules:
+      enum:
+        - properties.internal.properties.specificNodeType

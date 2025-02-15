@@ -1,7 +1,7 @@
 linters-settings:
   container:
     exclude-rules:
-      read-only-file-system:
+      read-only-root-filesystem:
         - kind: Deployment
           name: hubble-relay
           container: hubble-relay
