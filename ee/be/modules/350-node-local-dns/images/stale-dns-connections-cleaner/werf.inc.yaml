@@ -31,6 +31,7 @@ shell:
     - apt-get install -y ca-certificates golang libcap-utils
   install:
   - cd /src
+  - export GO_VERSION=${GOLANG_VERSION} GOPROXY={{ $.GOPROXY }}
   - go mod download
   setup:
   - export GO_VERSION=${GOLANG_VERSION} GOPROXY={{ $.GOPROXY }}
@@ -50,5 +51,6 @@ import:
   add: /src/stale-dns-connections-cleaner
   to: /stale-dns-connections-cleaner
   before: install
-docker:
-  ENTRYPOINT: ["/stale-dns-connections-cleaner"]
+imageSpec:
+  config:
+    entrypoint: ["/stale-dns-connections-cleaner"]

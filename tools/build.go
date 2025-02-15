@@ -386,8 +386,9 @@ func (e *executor) executeEdition(editionName string) {
 		prefix := strings.TrimPrefix(strings.TrimSuffix(ed.ModulesDir, "modules"), "/")
 
 		writeSettingCandi := writeSettings{
-			Edition: editionName,
-			SaveTo:  candiFileName,
+			Edition:           editionName,
+			SaveTo:            candiFileName,
+			StageDependencies: stageDependenciesFile,
 		}
 		if bi.SkipCandi == nil || !*bi.SkipCandi {
 			writeSettingCandi.Prefix = prefix
@@ -415,7 +416,7 @@ func (e *executor) executeEdition(editionName string) {
 		if bi.SkipModules == nil || !*bi.SkipModules {
 			writeSettingsModules.Prefix = prefix
 			writeSettingsModules.Dir = "modules"
-			writeSettingsModules.StageDependencies = stageDependencies
+			writeSettingsModules.StageDependencies = stageDependenciesFile
 
 			writeSettingsExcludeFileName.Prefix = prefix
 			writeSettingsExcludeFileName.Dir = "modules"

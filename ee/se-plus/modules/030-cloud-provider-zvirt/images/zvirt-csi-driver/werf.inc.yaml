@@ -34,9 +34,9 @@ import:
   add: /lib/udev/scsi_id
   to: /lib/udev/scsi_id
   before: setup
-docker:
-  ENTRYPOINT: ["/ovirt-csi-driver"]
-  USER: deckhouse:deckhouse
+imageSpec:
+  config:
+    entrypoint: ["/ovirt-csi-driver"]
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
 final: false

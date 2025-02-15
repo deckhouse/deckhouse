@@ -106,7 +106,7 @@ apiVersions:
         description: |
           The definition of the master's NodeGroup.
 
-          > Caution. After changing the parameters of the section, you need to run `dhctl converge` command for the changes to take effect.
+          > For the changes to take effect, run `dhctl converge` after modifying the parameters of the `masterNodeGroup` section.
         x-doc-required: true
         additionalProperties: false
         required: [replicas, instanceClass, volumeTypeMap]
@@ -186,6 +186,8 @@ apiVersions:
               We recommend using the fastest disks provided by the provider in all cases.
 
               If the value specified in `replicas` exceeds the number of elements in the dictionary, the master nodes whose number exceeds the length of the dictionary get the values starting from the beginning of the dictionary. For example, if `replicas: 5`, then master-0, master-2, master-4 will have the `fast-eu-1a` disk type, while master-1, master-3 will have the `fast-eu-1b` disk type.
+
+              Master nodes will be created in zones specified at this param following by alphabetical order. Based on the example below, `master-0` will be created in zone `eu-1a`, `master-1` will be created in zone `eu-1b`, and `master-2` will be created in zone `eu-1a`. 
 
               Useful commands:
               - `openstack availability zone list` — get list of availability zones.
@@ -279,7 +281,7 @@ apiVersions:
                   description: |
                     The same as the `.spec.taints` field of the [Node](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#taint-v1-core) object.
 
-                    **Caution.** Only the `effect`, `key`, `values`  fields are available.
+                    > Available fields: `effect`, `key`, and `values`.
                   x-doc-examples:
                   - - effect: NoExecute
                       key: ship-class

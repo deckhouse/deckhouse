@@ -54,6 +54,8 @@ const (
 
 	maxConcurrentReconciles = 3
 	cacheSyncTimeout        = 3 * time.Minute
+
+	maxModulesLimit = 1500
 )
 
 var ErrSettingsNotChanged = errors.New("settings not changed")
@@ -225,6 +227,11 @@ func (r *reconciler) handleModuleSource(ctx context.Context, source *v1alpha1.Mo
 		return ctrl.Result{RequeueAfter: defaultScanInterval}, nil
 	}
 
+	// limit pulled module
+	if len(pulledModules) > maxModulesLimit {
+		pulledModules = pulledModules[:maxModulesLimit]
+	}
+
 	// remove the source from available sources in deleted modules
 	namesSet := make(map[string]bool)
 	for _, pulledModuleName := range pulledModules {
@@ -265,6 +272,7 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 		for _, available := range source.Status.AvailableModules {
 			if available.Name == moduleName {
 				availableModule = available
+				break
 			}
 		}
 
@@ -301,6 +309,9 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 			availableModules = append(availableModules, availableModule)
 			continue
 		}
+
+		// clear overridden
+		availableModule.Overridden = false
 
 		var cachedChecksum = availableModule.Checksum
 

@@ -5,8 +5,9 @@ import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-artifact
   add: /registry-packages-proxy
   before: setup
-docker:
-  ENTRYPOINT: ["/registry-packages-proxy"]
+imageSpec:
+  config:
+    entrypoint: ["/registry-packages-proxy"]
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
 final: false

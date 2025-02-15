@@ -12,11 +12,9 @@ import:
       - install
       - uninstall
     before: setup
-docker:
-  LABEL:
-    distro: all
-    version: all
-    drbd: {{ $version }}
+imageSpec:
+  config:
+    labels: {"distro": "all", "version": "all", "drbd": "{{ $version }}" }
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
 final: false

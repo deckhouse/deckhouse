@@ -15,7 +15,8 @@ soon:
   ru: "скоро..."
 ce: Community Edition
 be: Basic Edition
-se: Standard Edition / Standard Edition+
+se: Standard Edition
+se-plus: Standard Edition+
 ee: Enterprise Edition
 
 common:

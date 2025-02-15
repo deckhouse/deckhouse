@@ -1,5 +1,7 @@
 name: upmeter
 weight: 500
-
+subsystems:
+  - observability
+namespace: d8-upmeter
 requirements:
   bootstrapped: true

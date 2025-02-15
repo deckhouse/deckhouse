@@ -9,22 +9,40 @@ import:
   to: /plugins/registry.terraform.io/{{ .TF.aws.namespace }}/{{ .TF.aws.type }}/{{ .TF.aws.version }}/linux_amd64/terraform-provider-aws
   before: setup
 ---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+final: false
+fromImage: common/src-artifact
+git:
+- add: /{{ $.ModulePath }}modules/040-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
+  to: /patches
+  stageDependencies:
+    install:
+    - '**/*'
+shell:
+  install:
+  - git clone --depth 1 --branch v{{ .TF.aws.version }} {{ $.SOURCE_REPO }}/hashicorp/terraform-provider-aws.git /src
+  - cd /src
+  - git apply /patches/*.patch --verbose
+  - rm -rf .git
+---
 image: terraform-provider-aws
 final: false
-from: {{ $.Images.BASE_GOLANG_20_ALPINE }}
+from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
 mount:
-  - fromPath: ~/go-pkg-cache
-    to: /go/pkg
+- fromPath: ~/go-pkg-cache
+  to: /go/pkg
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+  add: /src
+  to: /src
+  before: install
 shell:
   beforeInstall:
-    - apk add --no-cache make patch git bash openssh-client
+  - apk add --no-cache make bash
   install:
-    - mkdir /src
-    - export GOPROXY={{ $.GOPROXY }}
-    - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
-    - git clone --depth 1 --branch v{{ .TF.aws.version }} {{ $.SOURCE_REPO }}/hashicorp/terraform-provider-aws.git /src
-    - cd /src
-    - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 make build LDFLAGS="-s -w -extldflags \"-static\" -X github.com/hashicorp/terraform-provider-aws/version.ProviderVersion={{ .TF.aws.version }}"
-    - mv /go/bin/terraform-provider-aws /terraform-provider-aws
-    - chmod -R 755 /terraform-provider-aws
-    - chown 64535:64535 /terraform-provider-aws
+  - export GOPROXY={{ $.GOPROXY }}
+  - cd /src
+  - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 make build LDFLAGS="-s -w -extldflags \"-static\" -X github.com/hashicorp/terraform-provider-aws/version.ProviderVersion={{ .TF.aws.version }}"
+  - mv /go/bin/terraform-provider-aws /terraform-provider-aws
+  - chmod -R 755 /terraform-provider-aws
+  - chown 64535:64535 /terraform-provider-aws

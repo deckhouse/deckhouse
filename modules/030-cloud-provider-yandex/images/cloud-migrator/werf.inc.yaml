@@ -6,8 +6,9 @@ import:
   add: /migrator
   to: /migrator
   before: setup
-docker:
-  ENTRYPOINT: ["/migrator"]
+imageSpec:
+  config:
+    entrypoint: ["/migrator"]
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 final: false

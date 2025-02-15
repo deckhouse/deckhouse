@@ -41,6 +41,7 @@ type Release interface {
 	GetSuspend() bool
 	GetManuallyApproved() bool
 	GetMessage() string
+	GetNotified() bool
 }
 
 type Changelog map[string]any

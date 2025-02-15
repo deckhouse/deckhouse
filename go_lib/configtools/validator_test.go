@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/flant/addon-operator/pkg/kube_config_manager/config"
 	"github.com/flant/addon-operator/pkg/module_manager"
 	. "github.com/onsi/gomega"
 	"sigs.k8s.io/yaml"
@@ -105,6 +106,18 @@ spec: {}
 `,
 			expectValid,
 		},
+		{
+			"empty spec.settings without version",
+			`
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: global
+spec:
+  settings: {}
+`,
+			expectValid,
+		},
 
 		// Invalid cases
 		{
@@ -145,18 +158,6 @@ spec:
   settings:
     paramStr: val1
   enabled: false
-`,
-			expectInvalid,
-		},
-		{
-			"empty spec.settings without version",
-			`
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleConfig
-metadata:
-  name: global
-spec:
-  settings: {}
 `,
 			expectInvalid,
 		},
@@ -258,10 +259,18 @@ spec:
 		t.Run(tt.name, func(t *testing.T) {
 			g := NewWithT(t)
 
+			const magic = 10
+			var kubeConfigManager = NewKubeConfigManagerMock(t).KubeConfigEventChMock.
+				Return(make(chan config.KubeConfigEvent, magic))
+
 			mmc := &module_manager.ModuleManagerConfig{
 				DirectoryConfig: module_manager.DirectoryConfig{
 					ModulesDir:     "testdata/validator",
 					GlobalHooksDir: "testdata/validator/global",
+					TempDir:        "testdata",
+				},
+				Dependencies: module_manager.ModuleManagerDependencies{
+					KubeConfigManager: kubeConfigManager,
 				},
 			}
 			mm := module_manager.NewModuleManager(context.Background(), mmc, log.NewNop())

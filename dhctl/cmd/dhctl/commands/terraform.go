@@ -16,22 +16,21 @@ package commands
 
 import (
 	"fmt"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 
 	kingpin "gopkg.in/alecthomas/kingpin.v2"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/converge"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/check"
 	state_terraform "github.com/deckhouse/deckhouse/dhctl/pkg/state/terraform"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
 )
 
-func DefineTerraformConvergeExporterCommand(parent *kingpin.CmdClause) *kingpin.CmdClause {
-	cmd := parent.Command("converge-exporter", "Run terraform converge exporter.")
+func DefineTerraformConvergeExporterCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 	app.DefineKubeFlags(cmd)
 	app.DefineConvergeExporterFlags(cmd)
 	app.DefineSSHFlags(cmd, config.ConnectionConfigParser{})
@@ -45,8 +44,7 @@ func DefineTerraformConvergeExporterCommand(parent *kingpin.CmdClause) *kingpin.
 	return cmd
 }
 
-func DefineTerraformCheckCommand(parent *kingpin.CmdClause) *kingpin.CmdClause {
-	cmd := parent.Command("check", "Check differences between state of Kubernetes cluster and Terraform state.")
+func DefineTerraformCheckCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 	app.DefineKubeFlags(cmd)
 	app.DefineOutputFlag(cmd)
 	app.DefineSSHFlags(cmd, config.ConnectionConfigParser{})
@@ -58,6 +56,10 @@ func DefineTerraformCheckCommand(parent *kingpin.CmdClause) *kingpin.CmdClause {
 		sshClient, err := ssh.NewInitClientFromFlags(true)
 		if err != nil {
 			return err
+		}
+
+		if sshClient == nil {
+			return fmt.Errorf("Not enough flags were passed to perform the operation.\nUse dhctl terraform check --help to get available flags.\nSsh host is not provided. Need to pass --ssh-host, or specify SSHHost manifest in the --connection-config file")
 		}
 
 		kubeCl, err := kubernetes.ConnectToKubernetesAPI(ssh.NewNodeInterfaceWrapper(sshClient))
@@ -75,7 +77,7 @@ func DefineTerraformCheckCommand(parent *kingpin.CmdClause) *kingpin.CmdClause {
 			return err
 		}
 
-		statistic, err := converge.CheckState(kubeCl, metaConfig, terraform.NewTerraformContext(), converge.CheckStateOptions{})
+		statistic, err := check.CheckState(kubeCl, metaConfig, terraform.NewTerraformContext(), check.CheckStateOptions{})
 		if err != nil {
 			return err
 		}

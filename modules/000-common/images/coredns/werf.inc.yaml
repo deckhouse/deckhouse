@@ -42,6 +42,6 @@ import:
     add: /coredns
     to: /coredns
     before: setup
-docker:
-  USER: 64535
-  ENTRYPOINT: ["/coredns"]
+imageSpec:
+  config:
+    entrypoint: ["/coredns"]

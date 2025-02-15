@@ -1,7 +1,7 @@
 name: documentation
 weight: 810
 description: |
-    Documentation module
+  Documentation module
 
 requirements:
   bootstrapped: true

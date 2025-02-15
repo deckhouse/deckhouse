@@ -18,8 +18,9 @@ import:
   add: /csi-attacher
   to: /csi-attacher
   before: setup
-docker:
-  ENTRYPOINT: ["/csi-attacher"]
+imageSpec:
+  config:
+    entrypoint: ["/csi-attacher"]
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $version | replace "." "-" }}
 fromImage: common/src-artifact

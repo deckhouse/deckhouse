@@ -77,8 +77,6 @@ font-family: 'Noto Sans', sans-serif;
 
 &__nav {
   &.nav {
-    display: none;
-
     @include min-w(xl) {
       display: flex;
       gap: .75rem .95rem;
@@ -272,10 +270,6 @@ font-family: 'Noto Sans', sans-serif;
   gap: .5rem;
   align-items: center;
 
-  @include max-w(l) {
-    display: none;
-  }
-
   @include min-w(xl) {
     gap: 1rem;
   }
@@ -294,7 +288,7 @@ font-family: 'Noto Sans', sans-serif;
     font-size: .875rem;
     font-weight: 400;
 
-    @include min-w(l) {
+    @include min-w(m) {
       padding: .25rem .4rem;
       font-size: .635rem;
     }
@@ -487,10 +481,7 @@ font-family: 'Noto Sans', sans-serif;
     display: flex;
     gap: 1.25rem 2.1rem;
     flex-direction: column;
-
-    @include min-w(l) {
-      flex-direction: row;
-    }
+    flex-direction: row;
   }
 
   &-logo {

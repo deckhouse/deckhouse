@@ -20,12 +20,15 @@
     plk_markup_format: "markdown"
     plk_create_group_if_not_exists__unavailable_images_in_namespace: "UnavailableImagesInNamespace,namespace={{`{{ $labels.namespace }}`}},prometheus=deckhouse,kubernetes=~kubernetes"
     plk_grouped_by__unavailable_images_in_namespace: "UnavailableImagesInNamespace,namespace={{`{{ $labels.namespace }}`}},prometheus=deckhouse,kubernetes=~kubernetes"
-    description: >
-      You should check whether the `{{`{{ $labels.image }}`}}` image is available:
-      in the `{{`{{ $labels.namespace }}`}}` Namespace;
-      in the {{ $controllerKind }} `{{`{{ $labels.name }}`}}`
-      in the `{{`{{ $labels.container }}`}}` container in the registry.
     summary: The `{{`{{ $labels.image }}`}}` image is missing from the registry.
+    description: |
+      Deckhouse has detected that the `{{`{{ $labels.image }}`}}` image is missing from the container registry.
+      
+      To resolve this issue, check whether the `{{`{{ $labels.image }}`}}` image is available in the following sources:
+      
+      - The `{{`{{ $labels.namespace }}`}}` namespace.
+      - The {{ $controllerKind }} `{{`{{ $labels.name }}`}}`.
+      - The `{{`{{ $labels.container }}`}}` container in the registry.
 
 - alert: {{ $controllerKind }}BadImageFormat
   expr: |
@@ -44,12 +47,15 @@
     plk_markup_format: "markdown"
     plk_create_group_if_not_exists__unavailable_images_in_namespace: "UnavailableImagesInNamespace,namespace={{`{{ $labels.namespace }}`}},prometheus=deckhouse,kubernetes=~kubernetes"
     plk_grouped_by__unavailable_images_in_namespace: "UnavailableImagesInNamespace,namespace={{`{{ $labels.namespace }}`}},prometheus=deckhouse,kubernetes=~kubernetes"
-    description: >
-      You should check whether the `{{`{{ $labels.image }}`}}` image name is spelled correctly:
-      in the `{{`{{ $labels.namespace }}`}}` Namespace;
-      in the {{ $controllerKind }} `{{`{{ $labels.name }}`}}`
-      in the `{{`{{ $labels.container }}`}}` container in the registry.
-    summary: The `{{`{{ $labels.image }}`}}` image has incorrect name.
+    summary: The `{{`{{ $labels.image }}`}}` image name is incorrect.
+    description: |
+      Deckhouse has detected that the `{{`{{ $labels.image }}`}}` image name is incorrect.
+      
+      To resolve this issue, check that the `{{`{{ $labels.image }}`}}` image name is spelled correctly in the following sources:
+
+      - The `{{`{{ $labels.namespace }}`}}` namespace.
+      - The {{ $controllerKind }} `{{`{{ $labels.name }}`}}`.
+      - The `{{`{{ $labels.container }}`}}` container in the registry.
 
 - alert: {{ $controllerKind }}RegistryUnavailable
   expr: |
@@ -68,12 +74,15 @@
     plk_markup_format: "markdown"
     plk_create_group_if_not_exists__unavailable_images_in_namespace: "UnavailableImagesInNamespace,namespace={{`{{ $labels.namespace }}`}},prometheus=deckhouse,kubernetes=~kubernetes"
     plk_grouped_by__unavailable_images_in_namespace: "UnavailableImagesInNamespace,namespace={{`{{ $labels.namespace }}`}},prometheus=deckhouse,kubernetes=~kubernetes"
-    description: >
-      The container registry is not available for the `{{`{{ $labels.image }}`}}` image:
-      in the `{{`{{ $labels.namespace }}`}}` Namespace;
-      in the {{ $controllerKind }} `{{`{{ $labels.name }}`}}`
-      in the `{{`{{ $labels.container }}`}}` container in the registry.
     summary: The container registry is not available for the `{{`{{ $labels.image }}`}}` image.
+    description: |
+      Deckhouse has detected that the container registry is not available for the `{{`{{ $labels.image }}`}}` image.
+
+      To resolve this issue, investigate the possible causes in the following sources:
+      
+      - The `{{`{{ $labels.namespace }}`}}` namespace.
+      - The {{ $controllerKind }} `{{`{{ $labels.name }}`}}`.
+      - The `{{`{{ $labels.container }}`}}` container in the registry.
 
 - alert: {{ $controllerKind }}AuthenticationFailure
   expr: |
@@ -92,12 +101,15 @@
     plk_markup_format: "markdown"
     plk_create_group_if_not_exists__unavailable_images_in_namespace: "UnavailableImagesInNamespace,namespace={{`{{ $labels.namespace }}`}},prometheus=deckhouse,kubernetes=~kubernetes"
     plk_grouped_by__unavailable_images_in_namespace: "UnavailableImagesInNamespace,namespace={{`{{ $labels.namespace }}`}},prometheus=deckhouse,kubernetes=~kubernetes"
-    description: >
-      Unable to login to the container registry using `imagePullSecrets` for the `{{`{{ $labels.image }}`}}` image
-      in the `{{`{{ $labels.namespace }}`}}` Namespace;
-      in the {{ $controllerKind }} `{{`{{ $labels.name }}`}}`
-      in the `{{`{{ $labels.container }}`}}` container in the registry.
-    summary: Unable to login to the container registry using `imagePullSecrets` for the `{{`{{ $labels.image }}`}}` image.
+    summary: Unable to log in to the container registry using `imagePullSecrets` for the `{{`{{ $labels.image }}`}}` image.
+    description: |
+      Deckhouse was unable to log in to the container registry using `imagePullSecrets` for the `{{`{{ $labels.image }}`}}` image.
+
+      To resolve this issue, investigate the possible causes in the following sources:
+
+      - The `{{`{{ $labels.namespace }}`}}` namespace.
+      - The {{ $controllerKind }} `{{`{{ $labels.name }}`}}`.
+      - The `{{`{{ $labels.container }}`}}` container in the registry.
 
 - alert: {{ $controllerKind }}AuthorizationFailure
   expr: |
@@ -116,12 +128,15 @@
     plk_markup_format: "markdown"
     plk_create_group_if_not_exists__unavailable_images_in_namespace: "UnavailableImagesInNamespace,namespace={{`{{ $labels.namespace }}`}},prometheus=deckhouse,kubernetes=~kubernetes"
     plk_grouped_by__unavailable_images_in_namespace: "UnavailableImagesInNamespace,namespace={{`{{ $labels.namespace }}`}},prometheus=deckhouse,kubernetes=~kubernetes"
-    description: >
-      Insufficient privileges to pull the `{{`{{ $labels.image }}`}}` image using the `imagePullSecrets` specified
-      in the `{{`{{ $labels.namespace }}`}}` Namespace;
-      in the {{ $controllerKind }} `{{`{{ $labels.name }}`}}`
-      in the `{{`{{ $labels.container }}`}}` container in the registry.
-    summary: Insufficient privileges to pull the `{{`{{ $labels.image }}`}}` image using the `imagePullSecrets` specified.
+    summary: Insufficient privileges to pull the `{{`{{ $labels.image }}`}}` image using the specified `imagePullSecrets`.
+    description: |
+      Deckhouse has insufficient privileges to pull the `{{`{{ $labels.image }}`}}` image using the specified `imagePullSecrets`.
+
+      To resolve this issue, investigate the possible causes in the following sources:
+
+      - The `{{`{{ $labels.namespace }}`}}` namespace.
+      - The {{ $controllerKind }} `{{`{{ $labels.name }}`}}`.
+      - The `{{`{{ $labels.container }}`}}` container in the registry.
 
 - alert: {{ $controllerKind }}UnknownError
   expr: |
@@ -140,14 +155,20 @@
     plk_markup_format: "markdown"
     plk_create_group_if_not_exists__unavailable_images_in_namespace: "UnavailableImagesInNamespace,namespace={{`{{ $labels.namespace }}`}},prometheus=deckhouse,kubernetes=~kubernetes"
     plk_grouped_by__unavailable_images_in_namespace: "UnavailableImagesInNamespace,namespace={{`{{ $labels.namespace }}`}},prometheus=deckhouse,kubernetes=~kubernetes"
+    summary: An unknown error occurred with the `{{`{{ $labels.image }}`}}` image.
     description: |
-      An unknown error occurred for the  `{{`{{ $labels.image }}`}}` image
-      in the `{{`{{ $labels.namespace }}`}}` Namespace;
-      in the {{ $controllerKind }} `{{`{{ $labels.name }}`}}`
-      in the `{{`{{ $labels.container }}`}}` container in the registry.
+      Deckhouse has detected an unknown error with the `{{`{{ $labels.image }}`}}` image in the following sources:
 
-      Refer to the exporter logs: `kubectl -n d8-monitoring logs -l app=image-availability-exporter -c image-availability-exporter`
-    summary: An unknown error occurred for the  `{{`{{ $labels.image }}`}}` image.
+      - The `{{`{{ $labels.namespace }}`}}` namespace.
+      - The {{ $controllerKind }} `{{`{{ $labels.name }}`}}`.
+      - The `{{`{{ $labels.container }}`}}` container in the registry.
+
+      To resolve this issue, review the exporter logs:
+      
+      ```bash
+      kubectl -n d8-monitoring logs -l app=image-availability-exporter -c image-availability-exporter
+      ```
+
 {{- end }}
 
 - name: d8.extended-monitoring.image-availability-exporter.image-checks

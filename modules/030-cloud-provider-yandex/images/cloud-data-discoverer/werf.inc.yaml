@@ -5,8 +5,9 @@ import:
     add: /discoverer
     to: /discoverer
     before: setup
-docker:
-  ENTRYPOINT: ["/discoverer"]
+imageSpec:
+  config:
+    entrypoint: ["/discoverer"]
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 final: false

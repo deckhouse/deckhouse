@@ -15,9 +15,8 @@
 package cache
 
 import (
-	"testing"
-
 	"registry-modules-watcher/internal/backends"
+	"testing"
 
 	"github.com/stretchr/testify/assert"
 )

@@ -1,5 +1,9 @@
 # Patches
 
-## 001-update-go-libraries.patch
+## 000-update-go-libraries.patch
 
-Update golang.org/x/net and tidy.
+Update golang libraries and dependencies.
+
+## 001-metallb-add-d8-annotations.patch
+
+Add optional use of “network.deckhouse.io/load-balancer-ips” and “network.deckhouse.io/load-balancer-shared-ip-key” annotations.

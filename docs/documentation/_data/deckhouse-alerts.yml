@@ -16,14 +16,25 @@ alerts:
       module: extended-monitoring
       edition: ce
       description: |
-        Certificate in secret {{$labels.namespace}}/{{$labels.name}} expired.
+        A certificate in Secret `{{$labels.namespace}}/{{$labels.name}}` has expired.
 
-        - If the certificate is manually managed, upload a newer one.
-        - If the certificate is managed by cert-manager, try inspecting certificate resource, the recommended course of action:
-          1. Retrieve certificate name from the secret: `cert=$(kubectl get secret -n {{$labels.namespace}} {{$labels.name}} -o 'jsonpath={.metadata.annotations.cert-manager\.io/certificate-name}')`
-          2. View the status of the Certificate and try to figure out why it is not updated: `kubectl describe cert -m {{$labels.namespace}} "$cert"`
+        Ways to resolve:
+
+        - If the certificate is managed manually, upload a new certificate.
+        - If the certificate is managed by the `cert-manager` module, inspect the certificate resource:
+          1. Retrieve the certificate name from the Secret:
+
+             ```bash
+             cert=$(kubectl get secret -n {{$labels.namespace}} {{$labels.name}} -o 'jsonpath={.metadata.annotations.cert-manager\.io/certificate-name}')
+             ```
+
+          2. Check the certificate status and investigate why it hasn't been updated:
+
+             ```bash
+             kubectl describe cert -m {{$labels.namespace}} "$cert"
+             ```
       summary: |
-        Certificate expired
+        Certificate has expired.
       severity: "8"
       markupFormat: markdown
     - name: CertificateSecretExpiredSoon
@@ -32,14 +43,25 @@ alerts:
       module: extended-monitoring
       edition: ce
       description: |
-        Certificate in secret {{$labels.namespace}}/{{$labels.name}} will expire in less than 2 weeks
+        A certificate in Secret `{{$labels.namespace}}/{{$labels.name}}` will expire in less than two weeks.
 
-        - If the certificate is manually managed, upload a newer one.
-        - If certificate is managed by cert-manager, try inspecting certificate resource, the recommended course of action:
-          1. Retrieve certificate name from the secret: `cert=$(kubectl get secret -n {{$labels.namespace}} {{$labels.name}} -o 'jsonpath={.metadata.annotations.cert-manager\.io/certificate-name}')`
-          2. View the status of the Certificate and try to figure out why it is not updated: `kubectl describe cert -n {{$labels.namespace}} "$cert"`
+        Ways to resolve:
+
+        - If the certificate is managed manually, upload a new certificate.
+        - If the certificate is managed by the `cert-manager` module, inspect the certificate resource:
+          1. Retrieve the certificate name from the Secret:
+
+             ```bash
+             cert=$(kubectl get secret -n {{$labels.namespace}} {{$labels.name}} -o 'jsonpath={.metadata.annotations.cert-manager\.io/certificate-name}')
+             ```
+
+          2. Check the certificate status and investigate why it hasn't been updated:
+
+             ```bash
+             kubectl describe cert -n {{$labels.namespace}} "$cert"
+             ```
       summary: |
-        Certificate will expire soon.
+        Certificate is expiring soon.
       severity: "8"
       markupFormat: markdown
     - name: CertmanagerCertificateExpired
@@ -240,9 +262,15 @@ alerts:
       module: extended-monitoring
       edition: ce
       description: |
-        Unable to login to the container registry using `imagePullSecrets` for the `{{ $labels.image }}` image in the `{{ $labels.namespace }}` Namespace; in the CronJob `{{ $labels.name }}` in the `{{ $labels.container }}` container in the registry.
+        Deckhouse was unable to log in to the container registry using `imagePullSecrets` for the `{{ $labels.image }}` image.
+
+        To resolve this issue, investigate the possible causes in the following sources:
+
+        - The `{{ $labels.namespace }}` namespace.
+        - The CronJob `{{ $labels.name }}`.
+        - The `{{ $labels.container }}` container in the registry.
       summary: |
-        Unable to login to the container registry using imagePullSecrets for the {{ $labels.image }} image.
+        Unable to log in to the container registry using imagePullSecrets for the {{ $labels.image }} image.
       severity: "7"
       markupFormat: markdown
     - name: CronJobAuthorizationFailure
@@ -251,9 +279,15 @@ alerts:
       module: extended-monitoring
       edition: ce
       description: |
-        Insufficient privileges to pull the `{{ $labels.image }}` image using the `imagePullSecrets` specified in the `{{ $labels.namespace }}` Namespace; in the CronJob `{{ $labels.name }}` in the `{{ $labels.container }}` container in the registry.
+        Deckhouse has insufficient privileges to pull the `{{ $labels.image }}` image using the specified `imagePullSecrets`.
+
+        To resolve this issue, investigate the possible causes in the following sources:
+
+        - The `{{ $labels.namespace }}` namespace.
+        - The CronJob `{{ $labels.name }}`.
+        - The `{{ $labels.container }}` container in the registry.
       summary: |
-        Insufficient privileges to pull the {{ $labels.image }} image using the imagePullSecrets specified.
+        Insufficient privileges to pull the {{ $labels.image }} image using the specified imagePullSecrets.
       severity: "7"
       markupFormat: markdown
     - name: CronJobBadImageFormat
@@ -262,9 +296,15 @@ alerts:
       module: extended-monitoring
       edition: ce
       description: |
-        You should check whether the `{{ $labels.image }}` image name is spelled correctly: in the `{{ $labels.namespace }}` Namespace; in the CronJob `{{ $labels.name }}` in the `{{ $labels.container }}` container in the registry.
+        Deckhouse has detected that the `{{ $labels.image }}` image name is incorrect.
+
+        To resolve this issue, check that the `{{ $labels.image }}` image name is spelled correctly in the following sources:
+
+        - The `{{ $labels.namespace }}` namespace.
+        - The CronJob `{{ $labels.name }}`.
+        - The `{{ $labels.container }}` container in the registry.
       summary: |
-        The {{ $labels.image }} image has incorrect name.
+        The {{ $labels.image }} image name is incorrect.
       severity: "7"
       markupFormat: markdown
     - name: CronJobFailed
@@ -273,13 +313,27 @@ alerts:
       module: extended-monitoring
       edition: ce
       description: |
-        Print Job details: `kubectl -n {{$labels.namespace}} describe job {{$labels.job_name}}`
+        Deckhouse has detected that Job `{{$labels.namespace}}/{{$labels.job_name}}` failed in CronJob `{{$labels.namespace}}/{{$labels.owner_name}}`.
 
-        Check the Job status:
-        `kubectl -n {{$labels.namespace}} get job {{$labels.job_name}}`
+        Steps to resolve:
 
-        Check the status of pods created by the Job:
-        `kubectl -n {{$labels.namespace}} get pods -l job-name={{$labels.job_name}}`
+        1. Print the job details:
+
+           ```bash
+           kubectl -n {{$labels.namespace}} describe job {{$labels.job_name}}
+           ```
+
+        1. Check the job status:
+
+           ```bash
+           kubectl -n {{$labels.namespace}} get job {{$labels.job_name}}
+           ```
+
+        1. Check the status of pods created by the job:
+
+           ```bash
+           kubectl -n {{$labels.namespace}} get pods -l job-name={{$labels.job_name}}
+           ```
       summary: |
         Job {{$labels.namespace}}/{{$labels.job_name}} failed in CronJob {{$labels.namespace}}/{{$labels.owner_name}}.
       severity: "5"
@@ -290,7 +344,13 @@ alerts:
       module: extended-monitoring
       edition: ce
       description: |
-        You should check whether the `{{ $labels.image }}` image is available: in the `{{ $labels.namespace }}` Namespace; in the CronJob `{{ $labels.name }}` in the `{{ $labels.container }}` container in the registry.
+        Deckhouse has detected that the `{{ $labels.image }}` image is missing from the container registry.
+
+        To resolve this issue, check whether the `{{ $labels.image }}` image is available in the following sources:
+
+        - The `{{ $labels.namespace }}` namespace.
+        - The CronJob `{{ $labels.name }}`.
+        - The `{{ $labels.container }}` container in the registry.
       summary: |
         The {{ $labels.image }} image is missing from the registry.
       severity: "7"
@@ -301,15 +361,29 @@ alerts:
       module: extended-monitoring
       edition: ce
       description: |
-        Print Job details: `kubectl -n {{$labels.namespace}} describe job {{$labels.job_name}}`
+        Deckhouse has detected that the pods set in CronJob `{{$labels.namespace}}/{{$labels.owner_name}}` still haven't been created.
 
-        Check the Job status:
-        `kubectl -n {{$labels.namespace}} get job {{$labels.job_name}}`
+        Steps to resolve:
 
-        Check the status of pods created by the Job:
-        `kubectl -n {{$labels.namespace}} get pods -l job-name={{$labels.job_name}}`
+        1. Print the job details:
+
+           ```bash
+           kubectl -n {{$labels.namespace}} describe job {{$labels.job_name}}
+           ```
+
+        1. Check the job status:
+
+           ```bash
+           kubectl -n {{$labels.namespace}} get job {{$labels.job_name}}
+           ```
+
+        1. Check the status of pods created by the job:
+
+           ```bash
+           kubectl -n {{$labels.namespace}} get pods -l job-name={{$labels.job_name}}
+           ```
       summary: |
-        CronJob {{$labels.namespace}}/{{$labels.job_name}} pods still not created.
+        Pods set in CronJob {{$labels.namespace}}/{{$labels.job_name}} haven't been created.
       severity: "5"
       markupFormat: markdown
     - name: CronJobRegistryUnavailable
@@ -318,7 +392,13 @@ alerts:
       module: extended-monitoring
       edition: ce
       description: |
-        The container registry is not available for the `{{ $labels.image }}` image: in the `{{ $labels.namespace }}` Namespace; in the CronJob `{{ $labels.name }}` in the `{{ $labels.container }}` container in the registry.
+        Deckhouse has detected that the container registry is not available for the `{{ $labels.image }}` image.
+
+        To resolve this issue, investigate the possible causes in the following sources:
+
+        - The `{{ $labels.namespace }}` namespace.
+        - The CronJob `{{ $labels.name }}`.
+        - The `{{ $labels.container }}` container in the registry.
       summary: |
         The container registry is not available for the {{ $labels.image }} image.
       severity: "7"
@@ -329,10 +409,11 @@ alerts:
       module: extended-monitoring
       edition: ce
       description: |
-        CronJob {{$labels.namespace}}/{{$labels.cronjob}} failed to schedule on time.
-        Schedule: "{{ printf "kube_cronjob_info{namespace=\"%s\", cronjob=\"%s\"}" $labels.namespace $labels.cronjob | query | first | label "schedule" }}"
-        Last schedule time: {{ printf "kube_cronjob_status_last_schedule_time{namespace=\"%s\", cronjob=\"%s\"}" $labels.namespace $labels.cronjob | query | first | value | humanizeTimestamp }}%
-        Projected next schedule time: {{ printf "kube_cronjob_next_schedule_time{namespace=\"%s\", cronjob=\"%s\"}" $labels.namespace $labels.cronjob | query | first | value | humanizeTimestamp }}%
+        Deckhouse has detected that CronJob `{{$labels.namespace}}/{{$labels.cronjob}}` failed to schedule on time.
+
+        - Current schedule: `{{ printf "kube_cronjob_info{namespace=\"%s\", cronjob=\"%s\"}" $labels.namespace $labels.cronjob | query | first | label "schedule" }}`
+        - Last scheduled time: `{{ printf "kube_cronjob_status_last_schedule_time{namespace=\"%s\", cronjob=\"%s\"}" $labels.namespace $labels.cronjob | query | first | value | humanizeTimestamp }}%`
+        - Next projected schedule time: `{{ printf "kube_cronjob_next_schedule_time{namespace=\"%s\", cronjob=\"%s\"}" $labels.namespace $labels.cronjob | query | first | value | humanizeTimestamp }}%`
       summary: |
         CronJob {{$labels.namespace}}/{{$labels.cronjob}} failed to schedule on time.
       severity: "6"
@@ -343,14 +424,19 @@ alerts:
       module: extended-monitoring
       edition: ce
       description: |
-        An unknown error occurred for the  `{{ $labels.image }}` image
-        in the `{{ $labels.namespace }}` Namespace;
-        in the CronJob `{{ $labels.name }}`
-        in the `{{ $labels.container }}` container in the registry.
+        Deckhouse has detected an unknown error with the `{{ $labels.image }}` image in the following sources:
 
-        Refer to the exporter logs: `kubectl -n d8-monitoring logs -l app=image-availability-exporter -c image-availability-exporter`
+        - The `{{ $labels.namespace }}` namespace.
+        - The CronJob `{{ $labels.name }}`.
+        - The `{{ $labels.container }}` container in the registry.
+
+        To resolve this issue, review the exporter logs:
+
+        ```bash
+        kubectl -n d8-monitoring logs -l app=image-availability-exporter -c image-availability-exporter
+        ```
       summary: |
-        An unknown error occurred for the  {{ $labels.image }} image.
+        An unknown error occurred with the {{ $labels.image }} image.
       severity: "7"
       markupFormat: markdown
     - name: CustomPodMonitorFoundInCluster
@@ -428,12 +514,9 @@ alerts:
       moduleUrl: 340-extended-monitoring
       module: extended-monitoring
       edition: ce
-      description: |
-        The recommended course of action:
-        1. Retrieve details of the Deployment: `kubectl -n d8-monitoring describe deploy x509-certificate-exporter`
-        2. View the status of the Pod and try to figure out why it is not running: `kubectl -n d8-monitoring describe pod -l app=x509-certificate-exporter`
+      description: "Steps to resolve:\n\n1. Retrieve the deployment details:\n   \n   ```bash\n   kubectl -n d8-monitoring describe deploy x509-certificate-exporter\n   ```\n\n2. Check the pod status and investigate why it's not ready:\n\n   ```bash\n   kubectl -n d8-monitoring describe pod -l app=x509-certificate-exporter\n   ```\n"
       summary: |
-        The x509-certificate-exporter Pod is NOT Ready.
+        The x509-certificate-exporter pod isn't ready.
       severity: "8"
       markupFormat: markdown
     - name: D8CertExporterPodIsNotRunning
@@ -441,12 +524,9 @@ alerts:
       moduleUrl: 340-extended-monitoring
       module: extended-monitoring
       edition: ce
-      description: |
-        The recommended course of action:
-        1. Retrieve details of the Deployment: `kubectl -n d8-monitoring describe deploy x509-certificate-exporter`
-        2. View the status of the Pod and try to figure out why it is not running: `kubectl -n d8-monitoring describe pod -l app=x509-certificate-exporter`
+      description: "Steps to resolve:\n\n1. Retrieve the deployment details:\n   \n   ```bash\n   kubectl -n d8-monitoring describe deploy x509-certificate-exporter\n   ```\n\n2. Check the pod status and investigate why it's not running:\n\n   ```bash\n   kubectl -n d8-monitoring describe pod -l app=x509-certificate-exporter\n   ```\n"
       summary: |
-        The x509-certificate-exporter Pod is NOT Running.
+        The x509-certificate-exporter pod isn't running.
       severity: "8"
       markupFormat: markdown
     - name: D8CertExporterTargetAbsent
@@ -455,9 +535,19 @@ alerts:
       module: extended-monitoring
       edition: ce
       description: |
-        Check the Pod status: `kubectl -n d8-monitoring get pod -l app=x509-certificate-exporter`
+        Ways to resolve:
 
-        Or check the Pod logs: `kubectl -n d8-monitoring logs -l app=x509-certificate-exporter -c x509-certificate-exporter`
+        - Check the pod status:
+
+          ```bash
+          kubectl -n d8-monitoring get pod -l app=x509-certificate-exporter
+          ```
+
+        - Check the pod logs:
+
+          ```bash
+          kubectl -n d8-monitoring logs -l app=x509-certificate-exporter -c x509-certificate-exporter
+          ```
       summary: |
         There is no x509-certificate-exporter target in Prometheus.
       severity: "8"
@@ -468,11 +558,21 @@ alerts:
       module: extended-monitoring
       edition: ce
       description: |
-        Check the Pod status: `kubectl -n d8-monitoring get pod -l app=x509-certificate-exporter`
+        Ways to resolve:
 
-        Or check the Pod logs: `kubectl -n d8-monitoring logs -l app=x509-certificate-exporter -c x509-certificate-exporter`
+        - Check the pod status:
+
+          ```bash
+          kubectl -n d8-monitoring get pod -l app=x509-certificate-exporter
+          ```
+
+        - Check the pod logs:
+
+          ```bash
+          kubectl -n d8-monitoring logs -l app=x509-certificate-exporter -c x509-certificate-exporter
+          ```
       summary: |
-        Prometheus cannot scrape the x509-certificate-exporter metrics.
+        Prometheus can't scrape x509-certificate-exporter metrics.
       severity: "8"
       markupFormat: markdown
     - name: D8CloudDataDiscovererCloudRequestError
@@ -1094,11 +1194,15 @@ alerts:
       module: extended-monitoring
       edition: ce
       description: |
-        The `image-availability-exporter` failed to perform any checks for the availability of images in the registry for over 20 minutes.
+        The `image-availability-exporter` has failed to perform any image availability checks in the container registry for over 20 minutes.
 
-        You need to analyze its logs: `kubectl -n d8-monitoring logs -l app=image-availability-exporter -c image-availability-exporter`
+        To investigate the issue, review the exporter's logs:
+
+        ```bash
+        kubectl -n d8-monitoring logs -l app=image-availability-exporter -c image-availability-exporter
+        ```
       summary: |
-        image-availability-exporter has crashed.
+        The image-availability-exporter has crashed.
       severity: "8"
       markupFormat: markdown
     - name: D8ImageAvailabilityExporterPodIsNotReady
@@ -1107,13 +1211,23 @@ alerts:
       module: extended-monitoring
       edition: ce
       description: |
-        The images listed in the `image` field are not checked for availability in the container registry.
+        Deckhouse has detected that the `image-availability-exporter` pod is not ready. As a result, the images listed in the `image` field aren't checked for availability in the container registry.
 
-        The recommended course of action:
-        1. Retrieve details of the Deployment: `kubectl -n d8-monitoring describe deploy image-availability-exporter`
-        2. View the status of the Pod and try to figure out why it is not running: `kubectl -n d8-monitoring describe pod -l app=image-availability-exporter`
+        Steps to resolve:
+
+        1. Retrieve the deployment details:
+
+           ```bash
+           kubectl -n d8-monitoring describe deploy image-availability-exporter
+           ```
+
+        2. Check the pod status and investigate why it isn't `Ready`:
+
+           ```bash
+           kubectl -n d8-monitoring describe pod -l app=image-availability-exporter
+           ```
       summary: |
-        The image-availability-exporter Pod is NOT Ready.
+        The image-availability-exporter pod is not ready.
       severity: "8"
       markupFormat: markdown
     - name: D8ImageAvailabilityExporterPodIsNotRunning
@@ -1122,13 +1236,23 @@ alerts:
       module: extended-monitoring
       edition: ce
       description: |
-        The images listed in the `image` field are not checked for availability in the container registry.
+        Deckhouse has detected that the `image-availability-exporter` pod is not running. As a result, the images listed in the `image` field aren't checked for availability in the container registry.
 
-        The recommended course of action:
-        1. Retrieve details of the Deployment: `kubectl -n d8-monitoring describe deploy image-availability-exporter`
-        2. View the status of the Pod and try to figure out why it is not running: `kubectl -n d8-monitoring describe pod -l app=image-availability-exporter`
+        Steps to resolve:
+
+        1. Retrieve the deployment details:
+
+           ```bash
+           kubectl -n d8-monitoring describe deploy image-availability-exporter
+           ```
+
+        2. Check the pod status and investigate why it isn't running:
+
+           ```bash
+           kubectl -n d8-monitoring describe pod -l app=image-availability-exporter
+           ```
       summary: |
-        The image-availability-exporter Pod is NOT Running.
+        The image-availability-exporter pod is not running.
       severity: "8"
       markupFormat: markdown
     - name: D8ImageAvailabilityExporterTargetAbsent
@@ -1137,11 +1261,23 @@ alerts:
       module: extended-monitoring
       edition: ce
       description: |
-        Check the Pod status: `kubectl -n d8-monitoring get pod -l app=image-availability-exporter`
+        Deckhouse has detected that the `image-availability-exporter` target is missing from Prometheus.
 
-        Or check the Pod logs: `kubectl -n d8-monitoring logs -l app=image-availability-exporter -c image-availability-exporter`
+        Steps to resolve:
+
+        1. Check the pod status:
+
+           ```bash
+           kubectl -n d8-monitoring get pod -l app=image-availability-exporter
+           ```
+
+        1. Check the pod logs:
+
+           ```bash
+           kubectl -n d8-monitoring logs -l app=image-availability-exporter -c image-availability-exporter
+           ```
       summary: |
-        There is no image-availability-exporter target in Prometheus.
+        The image-availability-exporter target is missing from Prometheus.
       severity: "8"
       markupFormat: markdown
     - name: D8ImageAvailabilityExporterTargetDown
@@ -1150,11 +1286,23 @@ alerts:
       module: extended-monitoring
       edition: ce
       description: |
-        Check the Pod status: `kubectl -n d8-monitoring get pod -l app=image-availability-exporter`
+        Deckhouse has detected that Prometheus is unable to scrape metrics of `image-availability-exporter`.
 
-        Or check the Pod logs: `kubectl -n d8-monitoring logs -l app=image-availability-exporter -c image-availability-exporter`
+        Steps to resolve:
+
+        1. Check the pod status:
+
+           ```bash
+           kubectl -n d8-monitoring get pod -l app=image-availability-exporter
+           ```
+
+        1. Check the pod logs:
+
+           ```bash
+           kubectl -n d8-monitoring logs -l app=image-availability-exporter -c image-availability-exporter
+           ```
       summary: |
-        Prometheus cannot scrape the image-availability-exporter metrics.
+        Prometheus can't scrape metrics of image-availability-exporter.
       severity: "8"
       markupFormat: markdown
     - name: D8IstioActualDataPlaneVersionNotEqualDesired
@@ -1163,20 +1311,21 @@ alerts:
       module: istio
       edition: ee
       description: |
-        There are Pods in Namespace `{{$labels.namespace}}` with istio data-plane version `{{$labels.version}}`, but the desired one is `{{$labels.desired_version}}`.
-        Impact — istio version is to change after Pod restarting.
-        Cheat sheet:
-        ```
-        ### namespace-wide configuration
-        # istio.io/rev=vXYZ — use specific revision
-        # istio-injection=enabled — use global revision
+        There are pods in the `{{$labels.namespace}}` namespace with Istio data plane version `{{$labels.version}}`, while the desired version is `{{$labels.desired_version}}`. As a result, the Istio version will be changed after the pod is restarted.
+
+        To resolve the issue, use the following cheat sheet:
+
+        ```text
+        ### Namespace-wide configuration
+        # `istio.io/rev=vXYZ`: Use a specific revision.
+        # `istio-injection=enabled`: Use the global revision.
         kubectl get ns {{$labels.namespace}} --show-labels
 
-        ### pod-wide configuration
+        ### Pod-wide configuration
         kubectl -n {{$labels.namespace}} get pods -l istio.io/rev={{$labels.desired_revision}}
         ```
       summary: |
-        There are Pods with istio data-plane version {{$labels.version}}, but desired version is {{$labels.desired_version}}
+        There are pods with Istio data plane version {{$labels.version}}, but desired version is {{$labels.desired_version}}.
       severity: "8"
       markupFormat: markdown
     - name: D8IstioActualVersionIsNotInstalled
@@ -1185,14 +1334,17 @@ alerts:
       module: istio
       edition: ee
       description: |
-        There are pods with injected sidecar with version `{{$labels.version}}` (revision `{{$labels.revision}}`) in namespace `{{$labels.namespace}}`, but the control-plane version isn't installed. Consider installing it or change the Namespace or Pod configuration.
-        Impact — Pods have lost their sync with k8s state.
-        Getting orphaned pods:
-        ```
+        There are pods in the `{{$labels.namespace}}` namespace with injected sidecars of version `{{$labels.version}}` (revision `{{$labels.revision}}`), but the corresponding control plane version is not installed. As a result, these pods have lost synchronization with the state in Kubernetes.
+
+        To resolve this issue, install the required control plane version. Alternatively, update the namespace or pod configuration to match an installed control plane version.
+
+        To identify orphaned pods, run the following command:
+
+        ```bash
         kubectl -n {{ $labels.namespace }} get pods -l 'service.istio.io/canonical-name' -o json | jq --arg revision {{ $labels.revision }} '.items[] | select(.metadata.annotations."sidecar.istio.io/status" // "{}" | fromjson | .revision == $revision) | .metadata.name'
         ```
       summary: |
-        control-plane version for Pod with already injected sidecar isn't installed
+        The control plane version for pods with injected sidecars isn't installed.
       severity: "4"
       markupFormat: markdown
     - name: D8IstioAdditionalControlplaneDoesntWork
@@ -1201,13 +1353,17 @@ alerts:
       module: istio
       edition: ce
       description: |
-        Additional istio controlplane `{{$labels.label_istio_io_rev}}` doesn' work.
-        Impact — sidecar injection for Pods with `{{$labels.label_istio_io_rev}}` revision doesn't work.
+        Deckhouse has detected that the additional Istio control plane `{{$labels.label_istio_io_rev}}` isn't working.
+
+        As a result, sidecar injection for pods with `{{$labels.label_istio_io_rev}}` isn't working as well.
+
+        To check the status of the control plane pods, run the following command:
+
         ```
         kubectl get pods -n d8-istio -l istio.io/rev={{$labels.label_istio_io_rev}}
         ```
       summary: |
-        Additional controlplane doesn't work.
+        Additional control plane isn't working.
       severity: "4"
       markupFormat: markdown
     - name: D8IstioDataPlaneVersionMismatch
@@ -1216,14 +1372,19 @@ alerts:
       module: istio
       edition: ee
       description: |
-        There are Pods in `{{$labels.namespace}}` namespace with istio data-plane version `{{$labels.full_version}}` which differ from control-plane one `{{$labels.desired_full_version}}`.
-        Consider restarting affected Pods, use PromQL query to get the list:
-        ```
-        max by (namespace, dataplane_pod) (d8_istio_dataplane_metadata{full_version="{{$labels.full_version}}"})
-        ```
-        Also consider using the automatic istio data-plane update described in the documentation: https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/istio/examples.html#upgrading-istio
+        There are pods in the `{{$labels.namespace}}` namespace with Istio data plane version `{{$labels.full_version}}`, which is different from the control plane version `{{$labels.desired_full_version}}`.
+
+        Steps to resolve the issue:
+
+        1. Restart affected pods and use the following PromQL query to get a full list:
+
+           ```promql
+           max by (namespace, dataplane_pod) (d8_istio_dataplane_metadata{full_version="{{$labels.full_version}}"})
+           ```
+
+        1. Use the automatic Istio data plane upgrade described in the [guide](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/istio/examples.html#upgrading-istio).
       summary: |
-        There are Pods with data-plane version different from control-plane one.
+        There are pods with data plane version different from the control plane version.
       severity: "8"
       markupFormat: markdown
     - name: D8IstioDataPlaneWithoutIstioInjectionConfigured
@@ -1232,14 +1393,15 @@ alerts:
       module: istio
       edition: ee
       description: |
-        There are Pods in `{{$labels.namespace}}` Namespace with istio sidecars, but the istio-injection isn't configured.
-        Impact — Pods will lose their istio sidecars after re-creation.
-        Getting affected Pods:
-        ```
+        There are pods in the `{{$labels.namespace}}` namespace with Istio sidecars, but istio-injection isn't configured. As a result, these pods will lose their Istio sidecars after being recreated.
+
+        To identify the affected pods, run the following command:
+
+        ```bash
         kubectl -n {{$labels.namespace}} get pods -o json | jq -r --arg revision {{$labels.revision}} '.items[] | select(.metadata.annotations."sidecar.istio.io/status" // "{}" | fromjson | .revision == $revision) | .metadata.name'
         ```
       summary: |
-        There are Pods with istio sidecars, but without istio-injection configured
+        Detected pods with Istio sidecars but istio-injection isn't configured.
       severity: "4"
       markupFormat: markdown
     - name: D8IstioDeprecatedIstioVersionInstalled
@@ -1248,11 +1410,13 @@ alerts:
       module: istio
       edition: ce
       description: |
-        There is deprecated istio version `{{$labels.version}}` installed.
-        Impact — version support will be removed in future deckhouse releases. The higher alert severity — the higher probability of support cancelling.
-        Read [documentation](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/istio/examples.html#upgrading-istio) on upgrading Istio.
+        Deckhouse has detected that a deprecated Istio version `{{$labels.version}}` is installed.
+
+        Support for this version will be removed in upcoming Deckhouse releases. The higher the alert severity, the greater the probability of support being discontinued.
+
+        To learn how to upgrade Istio, refer to the [upgrade guide](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/istio/examples.html#upgrading-istio).
       summary: |
-        There is deprecated istio version installed
+        The installed Istio version has been deprecated.
       severity: undefined
       markupFormat: markdown
     - name: D8IstioDesiredVersionIsNotInstalled
@@ -1261,20 +1425,23 @@ alerts:
       module: istio
       edition: ee
       description: |
-        There is desired istio control plane version `{{$labels.desired_version}}` (revision `{{$labels.revision}}`) configured for pods in namespace `{{$labels.namespace}}`, but the version isn't installed. Consider installing it or change the Namespace or Pod configuration.
-        Impact — Pods won't be able to re-create in the `{{$labels.namespace}}` Namespace.
-        Cheat sheet:
-        ```
-        ### namespace-wide configuration
-        # istio.io/rev=vXYZ — use specific revision
-        # istio-injection=enabled — use global revision
+        There is a desired Istio control plane version `{{$labels.desired_version}}` (revision `{{$labels.revision}}`) configured for pods in the `{{$labels.namespace}}` namespace, but that version isn't installed. As a result, pods can't be recreated in the `{{$labels.namespace}}` namespace.
+
+        To resolve this issue, install the desired control plane version. Alternatively, update the namespace or pod configuration to match an installed control plane version.
+
+        Use the following cheat sheet:
+
+        ```text
+        ### Namespace-wide configuration
+        # `istio.io/rev=vXYZ`: Use a specific revision.
+        # `istio-injection=enabled`: Use the global revision.
         kubectl get ns {{$labels.namespace}} --show-labels
 
-        ### pod-wide configuration
+        ### Pod-wide configuration
         kubectl -n {{$labels.namespace}} get pods -l istio.io/rev={{$labels.revision}}
         ```
       summary: |
-        Desired control-plane version isn't installed
+        Desired control plane version isn't installed.
       severity: "6"
       markupFormat: markdown
     - name: D8IstioFederationMetadataEndpointDoesntWork
@@ -1283,13 +1450,17 @@ alerts:
       module: istio
       edition: ee
       description: |
-        Metadata endpoint `{{$labels.endpoint}}` for IstioFederation `{{$labels.federation_name}}` has failed to fetch by d8 hook.
-        Reproducing request to public endpoint:
-        ```
+        The metadata endpoint `{{$labels.endpoint}}` for IstioFederation `{{$labels.federation_name}}` has failed to fetch via the Deckhouse hook.
+
+        To reproduce the request to the public endpoint, run the following command:
+
+        ```bash
         curl {{$labels.endpoint}}
         ```
-        Reproducing request to private endpoints (run from deckhouse pod):
-        ```
+
+        To reproduce the request to private endpoints (run from the Deckhouse pod), run the following:
+
+        ```bash
         KEY="$(deckhouse-controller module values istio -o json | jq -r .internal.remoteAuthnKeypair.priv)"
         LOCAL_CLUSTER_UUID="$(deckhouse-controller module values -g istio -o json | jq -r .global.discovery.clusterUUID)"
         REMOTE_CLUSTER_UUID="$(kubectl get istiofederation {{$labels.federation_name}} -o json | jq -r .status.metadataCache.public.clusterUUID)"
@@ -1297,7 +1468,7 @@ alerts:
         curl -H "Authorization: Bearer $TOKEN" {{$labels.endpoint}}
         ```
       summary: |
-        Federation metadata endpoint failed
+        Federation metadata endpoint failed.
       severity: "6"
       markupFormat: markdown
     - name: D8IstioGlobalControlplaneDoesntWork
@@ -1306,13 +1477,17 @@ alerts:
       module: istio
       edition: ce
       description: |
-        Global istio controlplane `{{$labels.label_istio_io_rev}}` doesn' work.
-        Impact — sidecar injection for Pods with global revision doesn't work, validating webhook for istio resources is absent.
-        ```
+        Deckhouse has detected that the global Istio control plane `{{$labels.label_istio_io_rev}}` isn't working.
+
+        As a result, sidecar injection for pods with global revision isn't working as well, and the validating webhook for Istio resources is absent.
+
+        To check the status of the control plane pods, run the following command:
+
+        ```bash
         kubectl get pods -n d8-istio -l istio.io/rev={{$labels.label_istio_io_rev}}
         ```
       summary: |
-        Global controlplane doesn't work.
+        Global control plane isn't working.
       severity: "4"
       markupFormat: markdown
     - name: D8IstioMulticlusterMetadataEndpointDoesntWork
@@ -1321,13 +1496,17 @@ alerts:
       module: istio
       edition: ee
       description: |
-        Metadata endpoint `{{$labels.endpoint}}` for IstioMulticluster `{{$labels.multicluster_name}}` has failed to fetch by d8 hook.
-        Reproducing request to public endpoint:
-        ```
+        The metadata endpoint `{{$labels.endpoint}}` for IstioMulticluster `{{$labels.multicluster_name}}` has failed to fetch via the Deckhouse hook.
+
+        To reproduce the request to the public endpoint, run the following command:
+
+        ```bash
         curl {{$labels.endpoint}}
         ```
-        Reproducing request to private endpoints (run from deckhouse pod):
-        ```
+
+        To reproduce the request to private endpoints (run from the `d8-system/deckhouse` pod), run the following:
+
+        ```bash
         KEY="$(deckhouse-controller module values istio -o json | jq -r .internal.remoteAuthnKeypair.priv)"
         LOCAL_CLUSTER_UUID="$(deckhouse-controller module values -g istio -o json | jq -r .global.discovery.clusterUUID)"
         REMOTE_CLUSTER_UUID="$(kubectl get istiomulticluster {{$labels.multicluster_name}} -o json | jq -r .status.metadataCache.public.clusterUUID)"
@@ -1335,7 +1514,7 @@ alerts:
         curl -H "Authorization: Bearer $TOKEN" {{$labels.endpoint}}
         ```
       summary: |
-        Multicluster metadata endpoint failed
+        Multicluster metadata endpoint failed.
       severity: "6"
       markupFormat: markdown
     - name: D8IstioMulticlusterRemoteAPIHostDoesntWork
@@ -1344,15 +1523,16 @@ alerts:
       module: istio
       edition: ee
       description: |
-        Remote api host `{{$labels.api_host}}` for IstioMulticluster `{{$labels.multicluster_name}}` has failed healthcheck by d8 monitoring hook.
+        The remote API host `{{$labels.api_host}}` for IstioMulticluster `{{$labels.multicluster_name}}` has failed the health check performed by the Deckhouse monitoring hook.
 
-        Reproducing (run from deckhouse pod):
-        ```
+        To reproduce the request (run from the `d8-system/deckhouse` pod), run the following:
+
+        ```bash
         TOKEN="$(deckhouse-controller module values istio -o json | jq -r --arg ah {{$labels.api_host}} '.internal.multiclusters[]| select(.apiHost == $ah)| .apiJWT ')"
         curl -H "Authorization: Bearer $TOKEN" https://{{$labels.api_host}}/version
         ```
       summary: |
-        Multicluster remote api host failed
+        Multicluster remote API host health check failed.
       severity: "6"
       markupFormat: markdown
     - name: D8IstioOperatorReconcileError
@@ -1361,11 +1541,15 @@ alerts:
       module: istio
       edition: ce
       description: |
-        There is some error in istio-operator reconcilation loop. Please check the logs out:
+        Deckhouse has detected an error in the `istio-operator` reconciliation loop.
 
-        ```kubectl -n d8-istio logs -l app=operator,revision={{$labels.revision}}```
+        To investigate the issue, check the operator logs:
+
+        ```bash
+        kubectl -n d8-istio logs -l app=operator,revision={{$labels.revision}}
+        ```
       summary: |
-        istio-operator is unable to reconcile istio control-plane setup.
+        The istio-operator is unable to reconcile Istio control plane setup.
       severity: "5"
       markupFormat: markdown
     - name: D8IstioPodsWithoutIstioSidecar
@@ -1374,13 +1558,15 @@ alerts:
       module: istio
       edition: ee
       description: |
-        There is a Pod `{{$labels.dataplane_pod}}` in `{{$labels.namespace}}` Namespace without istio sidecars, but the istio-injection is configured.
-        Getting affected Pods:
-        ```
+        There is a pod `{{$labels.dataplane_pod}}` in the `{{$labels.namespace}}` namespace without Istio sidecars, but with istio-injection configured.
+
+        To identify the affected pods, run the following command:
+
+        ```bash
         kubectl -n {{$labels.namespace}} get pods -l '!service.istio.io/canonical-name' -o json | jq -r '.items[] | select(.metadata.annotations."sidecar.istio.io/inject" != "false") | .metadata.name'
         ```
       summary: |
-        There are Pods without istio sidecars, but with istio-injection configured
+        Detected pods without Istio sidecars but with istio-injection configured.
       severity: "4"
       markupFormat: markdown
     - name: D8IstioVersionIsIncompatibleWithK8sVersion
@@ -1389,11 +1575,11 @@ alerts:
       module: istio
       edition: ce
       description: |
-        The current istio version `{{$labels.istio_version}}` may not work properly with the current k8s version `{{$labels.k8s_version}}`, because it is unsupported officially.
-        Please upgrade istio as soon as possible.
-        Read [documentation](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/istio/examples.html#upgrading-istio) on upgrading Istio.
+        The installed Istio version `{{$labels.istio_version}}` may not work properly with the current Kubernetes version `{{$labels.k8s_version}}` because it's not supported officially.
+
+        To resolve the issue, upgrade Istio following the [guide](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/istio/examples.html#upgrading-istio).
       summary: |
-        The installed istio version is incompatible with the k8s version
+        The installed Istio version is incompatible with the Kubernetes version.
       severity: "3"
       markupFormat: markdown
     - name: D8KubeEtcdDatabaseSizeCloseToTheLimit
@@ -1444,7 +1630,9 @@ alerts:
       description: |-
         The current Kubernetes version `{{ $labels.k8s_version }}` has been deprecated, and support for it will be removed in upcoming releases.
 
-        To resolve this issue, migrate to Kubernetes version `1.28` or later.
+        Please migrate to the next kubernetes version (at least 1.29)
+
+        Check how to update the Kubernetes version in the cluster here - https://deckhouse.io/documentation/deckhouse-faq.html#how-do-i-upgrade-the-kubernetes-version-in-a-cluster
 
         Refer to the [Kubernetes upgrade guide](https://deckhouse.io/documentation/deckhouse-faq.html#how-do-i-upgrade-the-kubernetes-version-in-a-cluster) for instructions.
       summary: |
@@ -1457,24 +1645,29 @@ alerts:
       module: log-shipper
       edition: ce
       description: |
-        A number of log-shipper-agents are not scheduled.
+        Deckhouse has detected that a number of `log-shipper-agent` pods are not scheduled.
 
-        To check the state of the `d8-log-shipper/log-shipper-agent` DaemonSet:
-        ```shell
-        kubectl -n d8-log-shipper get daemonsets --selector=app=log-shipper
-        ```
+        To resolve this issue, do the following:
 
-        To check the state of the `d8-log-shipper/log-shipper-agent` Pods:
-        ```shell
-        kubectl -n d8-log-shipper get pods --selector=app=log-shipper-agent
-        ```
+        1. Check the state of the `d8-log-shipper/log-shipper-agent` DaemonSet:
 
-        The following command might help figuring out problematic nodes given you are aware where the DaemonSet should be scheduled in the first place:
-        ```
-        kubectl -n d8-log-shipper get pod -ojson | jq -r '.items[] | select(.metadata.ownerReferences[] | select(.name =="log-shipper-agent")) | select(.status.phase != "Running" or ([ .status.conditions[] | select(.type == "Ready" and .status == "False") ] | length ) == 1 ) | .spec.affinity.nodeAffinity.requiredDuringSchedulingIgnoredDuringExecution.nodeSelectorTerms[].matchFields[].values[]'
-        ```
+           ```shell
+           kubectl -n d8-log-shipper get daemonsets --selector=app=log-shipper
+           ```
+
+        1. Check the state of the `d8-log-shipper/log-shipper-agent` pods:
+
+           ```shell
+           kubectl -n d8-log-shipper get pods --selector=app=log-shipper-agent
+           ```
+
+        1. If you know where the DaemonSet should be scheduled, run the following command to identify the problematic nodes:
+
+           ```shell
+           kubectl -n d8-log-shipper get pod -ojson | jq -r '.items[] | select(.metadata.ownerReferences[] | select(.name =="log-shipper-agent")) | select(.status.phase != "Running" or ([ .status.conditions[] | select(.type == "Ready" and .status == "False") ] | length ) == 1 ) | .spec.affinity.nodeAffinity.requiredDuringSchedulingIgnoredDuringExecution.nodeSelectorTerms[].matchFields[].values[]'
+           ```
       summary: |
-        Pods of log-shipper-agent cannot be scheduled in the cluster.
+        The log-shipper-agent pods can't be scheduled in the cluster.
       severity: "7"
       markupFormat: markdown
     - name: D8LogShipperClusterLogDestinationD8LokiAuthorizationRequired
@@ -1483,10 +1676,11 @@ alerts:
       module: log-shipper
       edition: ce
       description: |-
-        Found ClusterLogDestination resource {{$labels.resource_name}} without authorization params.
-        You should [add](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/log-shipper/faq.html#how-to-add-authorization-to-the-clusterlogdestination-resource) authorization params to the ClusterLogDestination resource.
+        Deckhouse has detected the ClusterLogDestination resource `{{$labels.resource_name}}` without authorization parameters.
+
+        Add the authorization parameters to the ClusterLogDestination resource following the [instructions](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/log-shipper/faq.html#how-to-add-authorization-to-the-clusterlogdestination-resource).
       summary: |
-        Required authorization params for ClusterLogDestination.
+        Authorization parameters required for the ClusterLogDestination resource.
       severity: "9"
       markupFormat: markdown
     - name: D8LogShipperCollectLogErrors
@@ -1495,13 +1689,17 @@ alerts:
       module: log-shipper
       edition: ce
       description: |
-        The `{{ $labels.host }}` log-shipper agent on the `{{ $labels.node }}` node failed to collect metrics for more than 10 minutes.
-        The reason is `{{ $labels.error_type }}` errors occurred during the `{{ $labels.stage }}` stage while reading `{{ $labels.component_type }}`.
+        Deckhouse has detected that the {{ $labels.host }} `log-shipper-agent` on the `{{ $labels.node }}` node has failed to collect metrics for more than 10 minutes.
 
-        Consider checking logs of the pod or follow advanced debug instructions.
-        `kubectl -n d8-log-shipper logs {{ $labels.host }}` -c vector
+        This is caused by the `{{ $labels.error_type }}` errors occurred during the `{{ $labels.stage }}` stage while reading `{{ $labels.component_type }}`.
+
+        To resolve this, check the pod logs or follow advanced instructions:
+
+        ```bash
+        kubectl -n d8-log-shipper logs {{ $labels.host }}` -c vector
+        ```
       summary: |
-        Pods of log-shipper-agent cannot collect logs to the {{ $labels.component_id }} on the {{ $labels.node }} node.
+        The log-shipper-agent pods can't collect logs to {{ $labels.component_id }} on the {{ $labels.node }} node.
       severity: "4"
       markupFormat: markdown
     - name: D8LogShipperDestinationErrors
@@ -1510,13 +1708,17 @@ alerts:
       module: log-shipper
       edition: ce
       description: |
-        Logs do not reach their destination, the `{{ $labels.host }}` log-shipper agent on the {{ $labels.node }} node cannot send logs for more than 10 minutes.
-        The reason is `{{ $labels.error_type }}` errors occurred during the `{{ $labels.stage }}` stage while sending logs to `{{ $labels.component_type }}`.
+        Deckhouse has detected that the {{ $labels.host }} `log-shipper-agent` on the {{ $labels.node }} node has failed to send a log for more than 10 minutes.
 
-        Consider checking logs of the pod or follow advanced debug instructions.
-        `kubectl -n d8-log-shipper logs {{ $labels.host }}` -c vector
+        This is caused by the `{{ $labels.error_type }}` errors occurred during the `{{ $labels.stage }}` stage while sending logs to `{{ $labels.component_type }}`.
+
+        To resolve this, check the pod logs or follow advanced instructions:
+
+        ```bash
+        kubectl -n d8-log-shipper logs {{ $labels.host }}` -c vector
+        ```
       summary: |
-        Pods of log-shipper-agent cannot send logs to the {{ $labels.component_id }} on the {{ $labels.node }} node.
+        The log-shipper-agent pods can't send logs to {{ $labels.component_id }} on the {{ $labels.node }} node.
       severity: "4"
       markupFormat: markdown
     - name: D8LogShipperLogsDroppedByRateLimit
@@ -1525,12 +1727,15 @@ alerts:
       module: log-shipper
       edition: ce
       description: |
-        Rate limit rules are applied, log-shipper agent on the {{ $labels.node }} node is dropping logs for more than 10 minutes.
+        Rate-limiting rules have been applied, and the `log-shipper-agent` on the `{{ $labels.node }}` node has been dropping logs for more than 10 minutes.
 
-        Consider checking logs of the pod or follow advanced debug instructions.
-        `kubectl -n d8-log-shipper get pods -o wide | grep {{ $labels.node }}`
+        To resolve this, check the pod logs or follow advanced instructions:
+
+        ```bash
+        kubectl -n d8-log-shipper get pods -o wide | grep {{ $labels.node }}
+        ```
       summary: |
-        Pods of log-shipper-agent drop logs to the {{ $labels.component_id }} on the {{ $labels.node }} node.
+        The log-shipper-agent pods are dropping logs to {{ $labels.component_id }} on the {{ $labels.node }} node.
       severity: "4"
       markupFormat: markdown
     - name: D8MachineControllerManagerPodIsNotReady
@@ -1597,49 +1802,55 @@ alerts:
         Prometheus is unable to scrape machine-controller-manager's metrics.
       severity: "8"
       markupFormat: markdown
-    - name: D8MetalLBBGPSessionDown
+    - name: D8MetallbBGPSessionDown
       sourceFile: ee/modules/380-metallb/monitoring/prometheus-rules/metallb.yaml
       moduleUrl: 380-metallb
       module: metallb
       edition: ee
       description: |
-        {{ $labels.job }} — MetalLB {{ $labels.container }} on {{ $labels.pod}} has BGP session {{ $labels.peer }} down.
-        Details are in logs:
-        ```
+        {{ $labels.job }}, MetalLB {{ $labels.container }} on {{ $labels.pod}} has BGP session {{ $labels.peer }} down.
+
+        Check the logs for details:
+
+        ```bash
         kubectl -n d8-metallb logs daemonset/speaker -c speaker
         ```
       summary: |
-        MetalLB BGP session down.
+        MetalLB BGP session is down.
       severity: "4"
       markupFormat: markdown
-    - name: D8MetalLBConfigNotLoaded
+    - name: D8MetallbConfigNotLoaded
       sourceFile: ee/modules/380-metallb/monitoring/prometheus-rules/metallb.yaml
       moduleUrl: 380-metallb
       module: metallb
       edition: ee
       description: |
-        {{ $labels.job }} — MetalLB {{ $labels.container }} on {{ $labels.pod}} has not loaded.
-        To figure out the problem, check controller logs:
-        ```
+        {{ $labels.job }}, MetalLB {{ $labels.container }} on {{ $labels.pod}} hasn't been loaded.
+
+        To find the cause of the issue, review the controller logs:
+
+        ```bash
         kubectl -n d8-metallb logs deploy/controller -c controller
         ```
       summary: |
-        MetalLB config not loaded.
+        The MetalLB configuration hasn't been loaded.
       severity: "4"
       markupFormat: markdown
-    - name: D8MetalLBConfigStale
+    - name: D8MetallbConfigStale
       sourceFile: ee/modules/380-metallb/monitoring/prometheus-rules/metallb.yaml
       moduleUrl: 380-metallb
       module: metallb
       edition: ee
       description: |
-        {{ $labels.job }} — MetalLB {{ $labels.container }} on {{ $labels.pod}} has run on a stale configuration, because the latest config failed to load.
-        To figure out the problem, check controller logs:
-        ```
+        {{ $labels.job }}, MetalLB {{ $labels.container }} on {{ $labels.pod}} is running on a stale configuration because the latest configuration failed to load.
+
+        To find the cause of the issue, review the controller logs:
+
+        ```bash
         kubectl -n d8-metallb logs deploy/controller -c controller
         ```
       summary: |
-        MetalLB running on a stale configuration, because the latest config failed to load.
+        MetalLB is running on a stale configuration.
       severity: "4"
       markupFormat: markdown
     - name: D8MetallbNotSupportedServiceAnnotationsDetected
@@ -1648,16 +1859,29 @@ alerts:
       module: metallb
       edition: se
       description: |
-        Annotation '{{$labels.annotation}}' is deprecated for Service '{{$labels.name}}' located in namespace '{{$labels.namespace}}'
-        Service annotations below don't take effect now:
-          `metallb.universe.tf/ip-allocated-from-pool` — just wipe it out.
-          `metallb.universe.tf/address-pool` — use `.spec.loadBalancerClass` parameter or `network.deckhouse.io/metal-load-balancer-class` annotation with corresponding MetalLoadBalancerClass reference.
-          `metallb.universe.tf/loadBalancerIPs` — use `network.deckhouse.io/load-balancer-ips: <ip>` instead.
+        The annotation '{{$labels.annotation}}' has been deprecated for the service '{{$labels.name}}' in the '{{$labels.namespace}}' namespace.
 
-          Important! Existing LoadBalancer Services of the Deckhouse were migrated automatically, but the new ones won't.
+        The following service annotations are no longer effective:
+        - `metallb.universe.tf/ip-allocated-from-pool`: Remove this annotation.
+        - `metallb.universe.tf/address-pool`: Replace it with the `.spec.loadBalancerClass` parameter or use the `network.deckhouse.io/metal-load-balancer-class` annotation, referencing the appropriate MetalLoadBalancerClass.
+        - `metallb.universe.tf/loadBalancerIPs`: Replace it with `network.deckhouse.io/load-balancer-ips: <IP>`.
+        - `metallb.universe.tf/allow-shared-ip`: Replace it with `network.deckhouse.io/load-balancer-shared-ip-key`.
+
+        **Please note.** Existing LoadBalancer services of Deckhouse have been migrated automatically, but the new ones will not be.
       summary: |
-        D8 MetalLB settings is outdated
+        The annotation '{{$labels.annotation}}' has been deprecated for the service '{{$labels.name}}' in the '{{$labels.namespace}}' namespace.
       severity: "4"
+      markupFormat: markdown
+    - name: D8MetallbObsoleteLayer2PoolsAreUsed
+      sourceFile: ee/se/modules/380-metallb/monitoring/prometheus-rules/services.yaml
+      moduleUrl: 380-metallb
+      module: metallb
+      edition: se
+      description: |
+        In ModuleConfig version 2, addressPool '{{$labels.name}}' of type “layer2” are ignored. They should be removed from the configuration.
+      summary: |
+        The metallb module has obsolete layer2 pools configured.
+      severity: "7"
       markupFormat: markdown
     - name: D8MetallbUpdateMCVersionRequired
       sourceFile: ee/se/modules/380-metallb/monitoring/prometheus-rules/services.yaml
@@ -1665,9 +1889,11 @@ alerts:
       module: metallb
       edition: se
       description: |
-        ModuleConfig version for MetaLB needs to be increased
+        D8 MetalLB settings are outdated.
+
+        To resolve this issue, increase version in the ModuleConfig `metallb`.
       summary: |
-        D8 MetalLB settings is outdated
+        The metallb ModuleConfig settings are outdated.
       severity: "5"
       markupFormat: markdown
     - name: D8NeedDecreaseEtcdQuotaBackendBytes
@@ -1721,18 +1947,31 @@ alerts:
       module: ingress-nginx
       edition: ce
       description: |-
-        The number of restarts in the last hour: {{ $value }}.
-        Excessive kruise controller restarts indicate that something is wrong. Normally, it should be up and running all the time.
+        {{ $value }} Kruise controller restarts detected in the last hour.
 
-        The recommended course of action:
-        1. Check any events regarding kruise-controller-manager in d8-ingress-nginx namespace
-        in case there were some issues there related to the nodes the manager runs on or memory shortage (OOM):  `kubectl -n d8-ingress-nginx get events | grep kruise-controller-manager`
-        2. Analyze the controller's pods' descriptions to check which containers were restarted
-        and what were the possible reasons (exit codes, etc.): `kubectl -n d8-ingress-nginx describe pod -lapp=kruise,control-plane=controller-manager`
-        3. In case `kruise` container was restarted, list relevant logs of the container to check
-        if there were some meaningful errors there: `kubectl -n d8-ingress-nginx logs -lapp=kruise,control-plane=controller-manager -c kruise`
+        Excessive Kruise controller restarts indicate that something is wrong. Normally, it should be up and running all the time.
+
+        Steps to resolve:
+
+        1. Check events associated with `kruise-controller-manager` in the `d8-ingress-nginx` namespace. Look for issues related to node failures or memory shortages (OOM events):
+
+           ```bash
+           kubectl -n d8-ingress-nginx get events | grep kruise-controller-manager
+           ```
+
+        2. Analyze the controller's pod descriptions to identify restarted containers and possible causes. Pay attention to exit codes and other details:
+
+           ```bash
+           kubectl -n d8-ingress-nginx describe pod -lapp=kruise,control-plane=controller-manager
+           ```
+
+        3. In case the `kruise` container has restarted, get a list of relevant container logs to identify any meaningful errors:
+
+           ```bash
+           kubectl -n d8-ingress-nginx logs -lapp=kruise,control-plane=controller-manager -c kruise
+           ```
       summary: |
-        Too many kruise controller restarts have been detected in d8-ingress-nginx namespace.
+        Too many Kruise controller restarts detected.
       severity: "8"
       markupFormat: markdown
     - name: D8NodeGroupIsNotUpdating
@@ -2623,9 +2862,15 @@ alerts:
       module: extended-monitoring
       edition: ce
       description: |
-        Unable to login to the container registry using `imagePullSecrets` for the `{{ $labels.image }}` image in the `{{ $labels.namespace }}` Namespace; in the DaemonSet `{{ $labels.name }}` in the `{{ $labels.container }}` container in the registry.
+        Deckhouse was unable to log in to the container registry using `imagePullSecrets` for the `{{ $labels.image }}` image.
+
+        To resolve this issue, investigate the possible causes in the following sources:
+
+        - The `{{ $labels.namespace }}` namespace.
+        - The DaemonSet `{{ $labels.name }}`.
+        - The `{{ $labels.container }}` container in the registry.
       summary: |
-        Unable to login to the container registry using imagePullSecrets for the {{ $labels.image }} image.
+        Unable to log in to the container registry using imagePullSecrets for the {{ $labels.image }} image.
       severity: "7"
       markupFormat: markdown
     - name: DaemonSetAuthorizationFailure
@@ -2634,9 +2879,15 @@ alerts:
       module: extended-monitoring
       edition: ce
       description: |
-        Insufficient privileges to pull the `{{ $labels.image }}` image using the `imagePullSecrets` specified in the `{{ $labels.namespace }}` Namespace; in the DaemonSet `{{ $labels.name }}` in the `{{ $labels.container }}` container in the registry.
+        Deckhouse has insufficient privileges to pull the `{{ $labels.image }}` image using the specified `imagePullSecrets`.
+
+        To resolve this issue, investigate the possible causes in the following sources:
+
+        - The `{{ $labels.namespace }}` namespace.
+        - The DaemonSet `{{ $labels.name }}`.
+        - The `{{ $labels.container }}` container in the registry.
       summary: |
-        Insufficient privileges to pull the {{ $labels.image }} image using the imagePullSecrets specified.
+        Insufficient privileges to pull the {{ $labels.image }} image using the specified imagePullSecrets.
       severity: "7"
       markupFormat: markdown
     - name: DaemonSetBadImageFormat
@@ -2645,9 +2896,15 @@ alerts:
       module: extended-monitoring
       edition: ce
       description: |
-        You should check whether the `{{ $labels.image }}` image name is spelled correctly: in the `{{ $labels.namespace }}` Namespace; in the DaemonSet `{{ $labels.name }}` in the `{{ $labels.container }}` container in the registry.
+        Deckhouse has detected that the `{{ $labels.image }}` image name is incorrect.
+
+        To resolve this issue, check that the `{{ $labels.image }}` image name is spelled correctly in the following sources:
+
+        - The `{{ $labels.namespace }}` namespace.
+        - The DaemonSet `{{ $labels.name }}`.
+        - The `{{ $labels.container }}` container in the registry.
       summary: |
-        The {{ $labels.image }} image has incorrect name.
+        The {{ $labels.image }} image name is incorrect.
       severity: "7"
       markupFormat: markdown
     - name: DaemonSetImageAbsent
@@ -2656,7 +2913,13 @@ alerts:
       module: extended-monitoring
       edition: ce
       description: |
-        You should check whether the `{{ $labels.image }}` image is available: in the `{{ $labels.namespace }}` Namespace; in the DaemonSet `{{ $labels.name }}` in the `{{ $labels.container }}` container in the registry.
+        Deckhouse has detected that the `{{ $labels.image }}` image is missing from the container registry.
+
+        To resolve this issue, check whether the `{{ $labels.image }}` image is available in the following sources:
+
+        - The `{{ $labels.namespace }}` namespace.
+        - The DaemonSet `{{ $labels.name }}`.
+        - The `{{ $labels.container }}` container in the registry.
       summary: |
         The {{ $labels.image }} image is missing from the registry.
       severity: "7"
@@ -2667,7 +2930,13 @@ alerts:
       module: extended-monitoring
       edition: ce
       description: |
-        The container registry is not available for the `{{ $labels.image }}` image: in the `{{ $labels.namespace }}` Namespace; in the DaemonSet `{{ $labels.name }}` in the `{{ $labels.container }}` container in the registry.
+        Deckhouse has detected that the container registry is not available for the `{{ $labels.image }}` image.
+
+        To resolve this issue, investigate the possible causes in the following sources:
+
+        - The `{{ $labels.namespace }}` namespace.
+        - The DaemonSet `{{ $labels.name }}`.
+        - The `{{ $labels.container }}` container in the registry.
       summary: |
         The container registry is not available for the {{ $labels.image }} image.
       severity: "7"
@@ -2678,14 +2947,19 @@ alerts:
       module: extended-monitoring
       edition: ce
       description: |
-        An unknown error occurred for the  `{{ $labels.image }}` image
-        in the `{{ $labels.namespace }}` Namespace;
-        in the DaemonSet `{{ $labels.name }}`
-        in the `{{ $labels.container }}` container in the registry.
+        Deckhouse has detected an unknown error with the `{{ $labels.image }}` image in the following sources:
 
-        Refer to the exporter logs: `kubectl -n d8-monitoring logs -l app=image-availability-exporter -c image-availability-exporter`
+        - The `{{ $labels.namespace }}` namespace.
+        - The DaemonSet `{{ $labels.name }}`.
+        - The `{{ $labels.container }}` container in the registry.
+
+        To resolve this issue, review the exporter logs:
+
+        ```bash
+        kubectl -n d8-monitoring logs -l app=image-availability-exporter -c image-availability-exporter
+        ```
       summary: |
-        An unknown error occurred for the  {{ $labels.image }} image.
+        An unknown error occurred with the {{ $labels.image }} image.
       severity: "7"
       markupFormat: markdown
     - name: DeadMansSwitch
@@ -2820,9 +3094,15 @@ alerts:
       module: extended-monitoring
       edition: ce
       description: |
-        Unable to login to the container registry using `imagePullSecrets` for the `{{ $labels.image }}` image in the `{{ $labels.namespace }}` Namespace; in the Deployment `{{ $labels.name }}` in the `{{ $labels.container }}` container in the registry.
+        Deckhouse was unable to log in to the container registry using `imagePullSecrets` for the `{{ $labels.image }}` image.
+
+        To resolve this issue, investigate the possible causes in the following sources:
+
+        - The `{{ $labels.namespace }}` namespace.
+        - The Deployment `{{ $labels.name }}`.
+        - The `{{ $labels.container }}` container in the registry.
       summary: |
-        Unable to login to the container registry using imagePullSecrets for the {{ $labels.image }} image.
+        Unable to log in to the container registry using imagePullSecrets for the {{ $labels.image }} image.
       severity: "7"
       markupFormat: markdown
     - name: DeploymentAuthorizationFailure
@@ -2831,9 +3111,15 @@ alerts:
       module: extended-monitoring
       edition: ce
       description: |
-        Insufficient privileges to pull the `{{ $labels.image }}` image using the `imagePullSecrets` specified in the `{{ $labels.namespace }}` Namespace; in the Deployment `{{ $labels.name }}` in the `{{ $labels.container }}` container in the registry.
+        Deckhouse has insufficient privileges to pull the `{{ $labels.image }}` image using the specified `imagePullSecrets`.
+
+        To resolve this issue, investigate the possible causes in the following sources:
+
+        - The `{{ $labels.namespace }}` namespace.
+        - The Deployment `{{ $labels.name }}`.
+        - The `{{ $labels.container }}` container in the registry.
       summary: |
-        Insufficient privileges to pull the {{ $labels.image }} image using the imagePullSecrets specified.
+        Insufficient privileges to pull the {{ $labels.image }} image using the specified imagePullSecrets.
       severity: "7"
       markupFormat: markdown
     - name: DeploymentBadImageFormat
@@ -2842,9 +3128,15 @@ alerts:
       module: extended-monitoring
       edition: ce
       description: |
-        You should check whether the `{{ $labels.image }}` image name is spelled correctly: in the `{{ $labels.namespace }}` Namespace; in the Deployment `{{ $labels.name }}` in the `{{ $labels.container }}` container in the registry.
+        Deckhouse has detected that the `{{ $labels.image }}` image name is incorrect.
+
+        To resolve this issue, check that the `{{ $labels.image }}` image name is spelled correctly in the following sources:
+
+        - The `{{ $labels.namespace }}` namespace.
+        - The Deployment `{{ $labels.name }}`.
+        - The `{{ $labels.container }}` container in the registry.
       summary: |
-        The {{ $labels.image }} image has incorrect name.
+        The {{ $labels.image }} image name is incorrect.
       severity: "7"
       markupFormat: markdown
     - name: DeploymentGenerationMismatch
@@ -2863,7 +3155,13 @@ alerts:
       module: extended-monitoring
       edition: ce
       description: |
-        You should check whether the `{{ $labels.image }}` image is available: in the `{{ $labels.namespace }}` Namespace; in the Deployment `{{ $labels.name }}` in the `{{ $labels.container }}` container in the registry.
+        Deckhouse has detected that the `{{ $labels.image }}` image is missing from the container registry.
+
+        To resolve this issue, check whether the `{{ $labels.image }}` image is available in the following sources:
+
+        - The `{{ $labels.namespace }}` namespace.
+        - The Deployment `{{ $labels.name }}`.
+        - The `{{ $labels.container }}` container in the registry.
       summary: |
         The {{ $labels.image }} image is missing from the registry.
       severity: "7"
@@ -2874,7 +3172,13 @@ alerts:
       module: extended-monitoring
       edition: ce
       description: |
-        The container registry is not available for the `{{ $labels.image }}` image: in the `{{ $labels.namespace }}` Namespace; in the Deployment `{{ $labels.name }}` in the `{{ $labels.container }}` container in the registry.
+        Deckhouse has detected that the container registry is not available for the `{{ $labels.image }}` image.
+
+        To resolve this issue, investigate the possible causes in the following sources:
+
+        - The `{{ $labels.namespace }}` namespace.
+        - The Deployment `{{ $labels.name }}`.
+        - The `{{ $labels.container }}` container in the registry.
       summary: |
         The container registry is not available for the {{ $labels.image }} image.
       severity: "7"
@@ -2885,14 +3189,19 @@ alerts:
       module: extended-monitoring
       edition: ce
       description: |
-        An unknown error occurred for the  `{{ $labels.image }}` image
-        in the `{{ $labels.namespace }}` Namespace;
-        in the Deployment `{{ $labels.name }}`
-        in the `{{ $labels.container }}` container in the registry.
+        Deckhouse has detected an unknown error with the `{{ $labels.image }}` image in the following sources:
 
-        Refer to the exporter logs: `kubectl -n d8-monitoring logs -l app=image-availability-exporter -c image-availability-exporter`
+        - The `{{ $labels.namespace }}` namespace.
+        - The Deployment `{{ $labels.name }}`.
+        - The `{{ $labels.container }}` container in the registry.
+
+        To resolve this issue, review the exporter logs:
+
+        ```bash
+        kubectl -n d8-monitoring logs -l app=image-availability-exporter -c image-availability-exporter
+        ```
       summary: |
-        An unknown error occurred for the  {{ $labels.image }} image.
+        An unknown error occurred with the {{ $labels.image }} image.
       severity: "7"
       markupFormat: markdown
     - name: DeprecatedGeoIPVersion
@@ -2901,20 +3210,23 @@ alerts:
       module: ingress-nginx
       edition: ce
       description: |-
-        There is an IngressNginxController and/or an Ingress object that utilize(s) Nginx GeoIPv1 module's variables. The module is deprecated and its support is discontinued from Ingess Nginx Controller of version 1.10 and higher. It's recommend to upgrade your configuration to use [GeoIPv2 module](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/ingress-nginx/cr.html#ingressnginxcontroller-v1-spec-geoip2).
-        Use the following command to get the list of the IngressNginxControllers that contain GeoIPv1 variables:
+        An IngressNginxController and/or Ingress object in the cluster is using variables from the deprecated NGINX GeoIPv1 module. Support for this module has been discontinued in Ingress NGINX Controller version 1.10 and higher.
+
+        It's recommended that you update your configuration to use the [GeoIPv2 module](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/ingress-nginx/cr.html#ingressnginxcontroller-v1-spec-geoip2).
+
+        To get a list of the IngressNginxControllers using GeoIPv1 variables, run the following command:
 
         ```shell
-        kubectl  get ingressnginxcontrollers.deckhouse.io -o json | jq '.items[] | select(..|strings | test("\\$geoip_(country_(code3|code|name)|area_code|city_continent_code|city_country_(code3|code|name)|dma_code|latitude|longitude|region|region_name|city|postal_code|org)([^_a-zA-Z0-9]|$)+")) | .metadata.name'
+        kubectl get ingressnginxcontrollers.deckhouse.io -o json | jq '.items[] | select(..|strings | test("\\$geoip_(country_(code3|code|name)|area_code|city_continent_code|city_country_(code3|code|name)|dma_code|latitude|longitude|region|region_name|city|postal_code|org)([^_a-zA-Z0-9]|$)+")) | .metadata.name'
         ```
 
-        Use the following command to get the list of the Ingress objects that contain GeoIPv1 variables:
+        To get a list of the Ingress objects using GeoIPv1 variables, run the following command:
 
         ```shell
-        kubectl  get ingress -A -o json | jq '.items[] | select(..|strings | test("\\$geoip_(country_(code3|code|name)|area_code|city_continent_code|city_country_(code3|code|name)|dma_code|latitude|longitude|region|region_name|city|postal_code|org)([^_a-zA-Z0-9]|$)+")) | "\(.metadata.namespace)/\(.metadata.name)"' | sort | uniq
+        kubectl get ingress -A -o json | jq '.items[] | select(..|strings | test("\\$geoip_(country_(code3|code|name)|area_code|city_continent_code|city_country_(code3|code|name)|dma_code|latitude|longitude|region|region_name|city|postal_code|org)([^_a-zA-Z0-9]|$)+")) | "\(.metadata.namespace)/\(.metadata.name)"' | sort | uniq
         ```
       summary: |
-        Deprecated GeoIP version 1 is being used in the cluster.
+        Deprecated GeoIP version 1 is used in the cluster.
       severity: "9"
       markupFormat: markdown
     - name: EarlyOOMPodIsNotReady
@@ -2942,9 +3254,15 @@ alerts:
       moduleUrl: 340-extended-monitoring
       module: extended-monitoring
       edition: ce
-      description: ""
+      description: |
+        Deckhouse has detected that the deprecated annotation `extended-monitoring.flant.com/enabled` is used in the cluster.
+
+        Steps to resolve:
+
+        1. Check the `d8_deprecated_legacy_annotation` metric in Prometheus for a list of all detected usages.
+        1. Migrate to the `extended-monitoring.deckhouse.io/enabled` label.
       summary: |
-        Deprecated extended-monitoring.flant.com/enabled annotations are used in cluster. Migrate to extended-monitoring.deckhouse.io/enabled label ASAP. Check d8_deprecated_legacy_annotation metric in Prometheus to get list of all usages.
+        Deprecated annotation is used in the cluster.
       severity: "4"
       markupFormat: markdown
     - name: ExtendedMonitoringTargetDown
@@ -2953,20 +3271,31 @@ alerts:
       module: extended-monitoring
       edition: ce
       description: |-
-        Pod with extended-monitoring exporter is unavailable.
+        The pod running `extended-monitoring-exporter` is currently unavailable.
 
-        Following alerts will not be fired:
-          * About lack of the space and inodes on volumes
-          * CPU overloads and throttling of containers
-          * 500 errors on ingress
-          * Replicas quantity of controllers (alerts about the insufficient amount of replicas of  Deployment, StatefulSet, DaemonSet)
-          * And [others](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/extended-monitoring/)
+        As a result, the following alerts will not be triggered:
 
-        To debug, execute the following commands:
-          1. `kubectl -n d8-monitoring describe deploy extended-monitoring-exporter`
-          2. `kubectl -n d8-monitoring describe pod -l app=extended-monitoring-exporter`
+        * Low disk space and inode usage on volumes.
+        * CPU overloads and container throttling.
+        * `500` errors on Ingress.
+        * Insufficient replicas of Deployments, StatefulSets, and DaemonSets.
+        * [Other alerts](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/extended-monitoring/) associated with this exporter.
+
+        To resolve this issue, investigate its possible causes:
+
+        1. Print detailed information about the `extended-monitoring-exporter` deployment:
+
+           ```bash
+           kubectl -n d8-monitoring describe deploy extended-monitoring-exporter
+           ```
+
+        2. Print detailed information about the pods associated with the `extended-monitoring-exporter`:
+
+           ```bash
+           kubectl -n d8-monitoring describe pod -l app=extended-monitoring-exporter
+           ```
       summary: |
-        Extended-monitoring is down
+        Extended monitoring is unavailable.
       severity: "5"
       markupFormat: markdown
     - name: FdExhaustionClose
@@ -3090,11 +3419,11 @@ alerts:
       module: extended-monitoring
       edition: ce
       description: |-
-        URL {{$labels.vhost}}{{$labels.location}} on Ingress {{$labels.ingress}} with Service name "{{$labels.service}}" and port "{{$labels.service_port}}" has more than {{ printf "extended_monitoring_ingress_threshold{threshold=\"5xx-critical\", namespace=\"%s\", ingress=\"%s\"}" $labels.namespace $labels.ingress | query | first | value }}% 5xx responses from backend.
+        Deckhouse has detected that URL {{$labels.vhost}}{{$labels.location}} on Ingress `{{$labels.ingress}}`, using service `{{$labels.service}}` on port {{$labels.service_port}} has more than {{ printf "extended_monitoring_ingress_threshold{threshold=\"5xx-critical\", namespace=\"%s\", ingress=\"%s\"}" $labels.namespace $labels.ingress | query | first | value }}% of `5xx` responses from the backend.
 
-        Currently at: {{ .Value }}%
+        Current rate of `5xx` responses: {{ .Value }}%
       summary: |
-        URL {{$labels.vhost}}{{$labels.location}} on Ingress {{$labels.ingress}} has more than {{ printf &quot;extended_monitoring_ingress_threshold{threshold=&quot;5xx-critical&quot;, namespace=&quot;%s&quot;, ingress=&quot;%s&quot;}&quot; $labels.namespace $labels.ingress | query | first | value }}% 5xx responses from backend.
+        URL {{$labels.vhost}}{{$labels.location}} on Ingress {{$labels.ingress}} has more than {{ printf &quot;extended_monitoring_ingress_threshold{threshold=&quot;5xx-critical&quot;, namespace=&quot;%s&quot;, ingress=&quot;%s&quot;}&quot; $labels.namespace $labels.ingress | query | first | value }}% of 5xx responses from the backend.
       severity: "4"
       markupFormat: default
     - name: IngressResponses5xx
@@ -3103,11 +3432,11 @@ alerts:
       module: extended-monitoring
       edition: ce
       description: |-
-        URL {{$labels.vhost}}{{$labels.location}} on Ingress {{$labels.ingress}} with Service name "{{$labels.service}}" and port "{{$labels.service_port}}" has more than {{ printf "extended_monitoring_ingress_threshold{threshold=\"5xx-warning\", namespace=\"%s\", ingress=\"%s\"}" $labels.namespace $labels.ingress | query | first | value }}% 5xx responses from backend.
+        Deckhouse has detected that URL {{$labels.vhost}}{{$labels.location}} on Ingress `{{$labels.ingress}}`, using service `{{$labels.service}}` on port {{$labels.service_port}}, has more than {{ printf "extended_monitoring_ingress_threshold{threshold=\"5xx-warning\", namespace=\"%s\", ingress=\"%s\"}" $labels.namespace $labels.ingress | query | first | value }}% of `5xx` responses from the backend.
 
-        Currently at: {{ .Value }}%
+        Current rate of `5xx` responses: {{ .Value }}%
       summary: |
-        URL {{$labels.vhost}}{{$labels.location}} on Ingress {{$labels.ingress}} has more than {{ printf &quot;extended_monitoring_ingress_threshold{threshold=&quot;5xx-warning&quot;, namespace=&quot;%s&quot;, ingress=&quot;%s&quot;}&quot; $labels.namespace $labels.ingress | query | first | value }}% 5xx responses from backend.
+        URL {{$labels.vhost}}{{$labels.location}} on Ingress {{$labels.ingress}} has more than {{ printf &quot;extended_monitoring_ingress_threshold{threshold=&quot;5xx-warning&quot;, namespace=&quot;%s&quot;, ingress=&quot;%s&quot;}&quot; $labels.namespace $labels.ingress | query | first | value }}% of 5xx responses from the backend.
       severity: "5"
       markupFormat: default
     - name: IstioIrrelevantExternalServiceFound
@@ -3116,13 +3445,14 @@ alerts:
       module: istio
       edition: ce
       description: |
-        There is service in the namespace: `{{$labels.namespace}}` with the name: `{{$labels.name}}` which has irrelevant ports spec.
-        .spec.ports[] do not make any sense for services with a type `ExternalName` but
-        istio renders for External Services with ports listener "0.0.0.0:port" which catch all the traffic to the port. It is a problem for services out of istio registry.
+        A service `{{$labels.name}}` in the `{{$labels.namespace}}` namespace has an irrelevant port specification.
 
-        It is recommended to get rid of ports section (`.spec.ports`). It is safe.
+        The `.spec.ports[]` field isn't applicable for services of the `ExternalName` type.
+        However, Istio renders port listeners for external services as `0.0.0.0:port`, which captures all traffic to the specified port. This can cause problems for services that aren't registered in the Istio registry.
+
+        To resolve the issue, remove the `.spec.ports` section from the service configuration. It is safe.
       summary: |
-        Found external service with irrelevant ports spec
+        External service found with irrelevant ports specifications.
       severity: "5"
       markupFormat: markdown
     - name: K8SApiserverDown
@@ -3577,9 +3907,13 @@ alerts:
       module: flow-schema
       edition: ce
       description: |
-        To show APF schema queue requests, use the expr `apiserver_flowcontrol_current_inqueue_requests{flow_schema="d8-serviceaccounts"}`.
+        > This alert is experimental.
 
-        Attention: This is an experimental alert!
+        To display the APF schema queue requests, use the following expression:
+
+        ```promql
+        apiserver_flowcontrol_current_inqueue_requests{flow_schema="d8-serviceaccounts"}
+        ```
       summary: |
         APF flow schema d8-serviceaccounts has rejected API requests.
       severity: "9"
@@ -3590,10 +3924,15 @@ alerts:
       module: kube-dns
       edition: ce
       description: |-
-        CoreDNS pod {{$labels.pod}} has at least one critical error.
-        To debug the problem, look into container logs: `kubectl -n kube-system logs {{$labels.pod}}`
+        Deckhouse has detected at least one critical error in the CoreDNS pod {{$labels.pod}}.
+
+        To resolve the issue, review the container logs:
+
+        ```bash
+        kubectl -n kube-system logs {{$labels.pod}}
+        ```
       summary: |
-        CoreDNS has critical errors.
+        Critical errors found in CoreDNS.
       severity: "5"
       markupFormat: markdown
     - name: KubernetesDaemonSetNotUpToDate
@@ -3602,17 +3941,31 @@ alerts:
       module: extended-monitoring
       edition: ce
       description: |-
-        There are {{ .Value }} outdated Pods in the {{ $labels.namespace }}/{{ $labels.daemonset }} DaemonSet for the last 15 minutes.
+        Deckhouse has detected {{ .Value }} outdated pods in DaemonSet `{{ $labels.namespace }}/{{ $labels.daemonset }}` over the last 15 minutes.
 
-        The recommended course of action:
-        1. Check the DaemonSet's status: `kubectl -n {{ $labels.namespace }} get ds {{ $labels.daemonset }}`
-        2. Analyze the DaemonSet's description: `kubectl -n {{ $labels.namespace }} describe ds {{ $labels.daemonset }}`
-        3. If the `Number of Nodes Scheduled with Up-to-date Pods` parameter does not match
-        `Current Number of Nodes Scheduled`, check the DaemonSet's updateStrategy:
-        `kubectl -n {{ $labels.namespace }} get ds {{ $labels.daemonset }} -o json | jq '.spec.updateStrategy'`
-        4. Note that if the OnDelete updateStrategy is set, the DaemonSet gets only updated when Pods are deleted.
+        Steps to resolve:
+
+        1. Check the DaemonSet's status:
+
+           ```bash
+           kubectl -n {{ $labels.namespace }} get ds {{ $labels.daemonset }}
+           ```
+
+        2. Analyze the DaemonSet's description:
+
+           ```bash
+           kubectl -n {{ $labels.namespace }} describe ds {{ $labels.daemonset }}
+           ```
+
+        3. If the parameter `Number of Nodes Scheduled with Up-to-date Pods` does not match `Current Number of Nodes Scheduled`, check the DaemonSet's `updateStrategy`:
+
+           ```bash
+           kubectl -n {{ $labels.namespace }} get ds {{ $labels.daemonset }} -o json | jq '.spec.updateStrategy'
+           ```
+
+           If `updateStrategy` is set to `OnDelete`, the DaemonSet is updated only when pods are deleted.
       summary: |
-        There are {{ .Value }} outdated Pods in the {{ $labels.namespace }}/{{ $labels.daemonset }} DaemonSet for the last 15 minutes.
+        There were {{ .Value }} outdated pods in DaemonSet {{ $labels.namespace }}/{{ $labels.daemonset }} over the last 15 minutes.
       severity: "9"
       markupFormat: markdown
     - name: KubernetesDaemonSetReplicasUnavailable
@@ -3621,17 +3974,21 @@ alerts:
       module: extended-monitoring
       edition: ce
       description: |-
-        Count of available replicas in DaemonSet {{$labels.namespace}}/{{$labels.daemonset}} is at zero.
+        Deckhouse has detected that there are no available replicas remaining in DaemonSet `{{$labels.namespace}}/{{$labels.daemonset}}`.
 
-        List of unavailable Pod(s): {{range $index, $result := (printf "(max by (namespace, pod) (kube_pod_status_ready{namespace=\"%s\", condition!=\"true\"} == 1)) * on (namespace, pod) kube_controller_pod{namespace=\"%s\", controller_type=\"DaemonSet\", controller_name=\"%s\"}" $labels.namespace $labels.namespace $labels.daemonset | query)}}{{if not (eq $index 0)}}, {{ end }}{{ $result.Labels.pod }}{{ end }}
+        List of unavailable pods:
 
-        This command might help figuring out problematic nodes given you are aware where the DaemonSet should be scheduled in the first place (using label selector for pods might be of help, too):
-
+        ```text
+        {{range $index, $result := (printf "(max by (namespace, pod) (kube_pod_status_ready{namespace=\"%s\", condition!=\"true\"} == 1)) * on (namespace, pod) kube_controller_pod{namespace=\"%s\", controller_type=\"DaemonSet\", controller_name=\"%s\"}" $labels.namespace $labels.namespace $labels.daemonset | query)}}{{if not (eq $index 0)}}, {{ end }}{{ $result.Labels.pod }}{{ end }}
         ```
+
+        If you know where the DaemonSet should be scheduled, run the command below to identify the problematic nodes. Use a label selector for pods, if needed.
+
+        ```bash
         kubectl -n {{$labels.namespace}} get pod -ojson | jq -r '.items[] | select(.metadata.ownerReferences[] | select(.name =="{{$labels.daemonset}}")) | select(.status.phase != "Running" or ([ .status.conditions[] | select(.type == "Ready" and .status == "False") ] | length ) == 1 ) | .spec.affinity.nodeAffinity.requiredDuringSchedulingIgnoredDuringExecution.nodeSelectorTerms[].matchFields[].values[]'
         ```
       summary: |
-        Count of available replicas in DaemonSet {{$labels.namespace}}/{{$labels.daemonset}} is at zero.
+        No available replicas remaining in DaemonSet {{$labels.namespace}}/{{$labels.daemonset}}.
       severity: "5"
       markupFormat: markdown
     - name: KubernetesDaemonSetReplicasUnavailable
@@ -3640,19 +3997,24 @@ alerts:
       module: extended-monitoring
       edition: ce
       description: |-
-        Count of unavailable replicas in DaemonSet {{$labels.namespace}}/{{$labels.daemonset}} is above threshold.
-        Currently at: {{ .Value }} unavailable replica(s)
-        Threshold at: {{ printf "extended_monitoring_daemonset_threshold{threshold=\"replicas-not-ready\", namespace=\"%s\", daemonset=\"%s\"}" $labels.namespace $labels.daemonset | query | first | value }} unavailable replica(s)
+        Deckhouse has detected that the number of unavailable replicas in DaemonSet `{{$labels.namespace}}/{{$labels.daemonset}}` exceeds the threshold.
 
-        List of unavailable Pod(s): {{range $index, $result := (printf "(max by (namespace, pod) (kube_pod_status_ready{namespace=\"%s\", condition!=\"true\"} == 1)) * on (namespace, pod) kube_controller_pod{namespace=\"%s\", controller_type=\"DaemonSet\", controller_name=\"%s\"}" $labels.namespace $labels.namespace $labels.daemonset | query)}}{{if not (eq $index 0)}}, {{ end }}{{ $result.Labels.pod }}{{ end }}
+        - Current number: `{{ .Value }}` unavailable replica(s).
+        - Threshold number: `{{ printf "extended_monitoring_daemonset_threshold{threshold=\"replicas-not-ready\", namespace=\"%s\", daemonset=\"%s\"}" $labels.namespace $labels.daemonset | query | first | value }}` unavailable replica(s).
 
-        This command might help figuring out problematic nodes given you are aware where the DaemonSet should be scheduled in the first place (using label selector for pods might be of help, too):
+        List of unavailable pods:
 
+        ```text
+        {{range $index, $result := (printf "(max by (namespace, pod) (kube_pod_status_ready{namespace=\"%s\", condition!=\"true\"} == 1)) * on (namespace, pod) kube_controller_pod{namespace=\"%s\", controller_type=\"DaemonSet\", controller_name=\"%s\"}" $labels.namespace $labels.namespace $labels.daemonset | query)}}{{if not (eq $index 0)}}, {{ end }}{{ $result.Labels.pod }}{{ end }}
         ```
+
+        If you know where the DaemonSet should be scheduled, run the command below to identify the problematic nodes. Use a label selector for pods, if needed.
+
+        ```bash
         kubectl -n {{$labels.namespace}} get pod -ojson | jq -r '.items[] | select(.metadata.ownerReferences[] | select(.name =="{{$labels.daemonset}}")) | select(.status.phase != "Running" or ([ .status.conditions[] | select(.type == "Ready" and .status == "False") ] | length ) == 1 ) | .spec.affinity.nodeAffinity.requiredDuringSchedulingIgnoredDuringExecution.nodeSelectorTerms[].matchFields[].values[]'
         ```
       summary: |
-        Count of unavailable replicas in DaemonSet {{$labels.namespace}}/{{$labels.daemonset}} is above threshold.
+        The number of unavailable replicas in DaemonSet {{$labels.namespace}}/{{$labels.daemonset}} exceeds the threshold.
       severity: "6"
       markupFormat: markdown
     - name: KubernetesDeploymentReplicasUnavailable
@@ -3661,11 +4023,15 @@ alerts:
       module: extended-monitoring
       edition: ce
       description: |-
-        Count of available replicas in Deployment {{$labels.namespace}}/{{$labels.deployment}} is at zero.
+        Deckhouse has detected that there are no available replicas remaining in deployment `{{$labels.namespace}}/{{$labels.deployment}}`.
 
-        List of unavailable Pod(s): {{range $index, $result := (printf "(max by (namespace, pod) (kube_pod_status_ready{namespace=\"%s\", condition!=\"true\"} == 1)) * on (namespace, pod) kube_controller_pod{namespace=\"%s\", controller_type=\"Deployment\", controller_name=\"%s\"}" $labels.namespace $labels.namespace $labels.deployment | query)}}{{if not (eq $index 0)}}, {{ end }}{{ $result.Labels.pod }}{{ end }}
+        List of unavailable pods:
+
+        ```text
+        {{range $index, $result := (printf "(max by (namespace, pod) (kube_pod_status_ready{namespace=\"%s\", condition!=\"true\"} == 1)) * on (namespace, pod) kube_controller_pod{namespace=\"%s\", controller_type=\"Deployment\", controller_name=\"%s\"}" $labels.namespace $labels.namespace $labels.deployment | query)}}{{if not (eq $index 0)}}, {{ end }}{{ $result.Labels.pod }}{{ end }}
+        ```
       summary: |
-        Count of available replicas in Deployment {{$labels.namespace}}/{{$labels.deployment}} is at zero.
+        No available replicas remaining in deployment {{$labels.namespace}}/{{$labels.deployment}}.
       severity: "5"
       markupFormat: markdown
     - name: KubernetesDeploymentReplicasUnavailable
@@ -3674,14 +4040,18 @@ alerts:
       module: extended-monitoring
       edition: ce
       description: |-
-        Count of unavailable replicas in Deployment {{$labels.namespace}}/{{$labels.deployment}} is violating "spec.strategy.rollingupdate.maxunavailable".
+        Deckhouse has detected that the number of unavailable replicas in deployment `{{$labels.namespace}}/{{$labels.deployment}}` exceeds the value set in `spec.strategy.rollingupdate.maxunavailable`.
 
-        Currently at: {{ .Value }} unavailable replica(s)
-        Threshold at: {{ printf "extended_monitoring_deployment_threshold{threshold=\"replicas-not-ready\", namespace=\"%s\", deployment=\"%s\"}" $labels.namespace $labels.deployment | query | first | value }} unavailable replica(s)
+        - Current number: `{{ .Value }}` unavailable replica(s).
+        - Threshold number: `{{ printf "extended_monitoring_deployment_threshold{threshold=\"replicas-not-ready\", namespace=\"%s\", deployment=\"%s\"}" $labels.namespace $labels.deployment | query | first | value }}` unavailable replica(s).
 
-        List of unavailable Pod(s): {{range $index, $result := (printf "(max by (namespace, pod) (kube_pod_status_ready{namespace=\"%s\", condition!=\"true\"} == 1)) * on (namespace, pod) kube_controller_pod{namespace=\"%s\", controller_type=\"Deployment\", controller_name=\"%s\"}" $labels.namespace $labels.namespace $labels.deployment | query)}}{{if not (eq $index 0)}}, {{ end }}{{ $result.Labels.pod }}{{ end }}
+        List of unavailable pods:
+
+        ```text
+        {{range $index, $result := (printf "(max by (namespace, pod) (kube_pod_status_ready{namespace=\"%s\", condition!=\"true\"} == 1)) * on (namespace, pod) kube_controller_pod{namespace=\"%s\", controller_type=\"Deployment\", controller_name=\"%s\"}" $labels.namespace $labels.namespace $labels.deployment | query)}}{{if not (eq $index 0)}}, {{ end }}{{ $result.Labels.pod }}{{ end }}
+        ```
       summary: |
-        Count of unavailable replicas in Deployment {{$labels.namespace}}/{{$labels.deployment}} is violating &quot;spec.strategy.rollingupdate.maxunavailable&quot;.
+        The number of unavailable replicas in deployment {{$labels.namespace}}/{{$labels.deployment}} exceeds spec.strategy.rollingupdate.maxunavailable.
       severity: "6"
       markupFormat: markdown
     - name: KubernetesDnsTargetDown
@@ -3705,11 +4075,15 @@ alerts:
       module: extended-monitoring
       edition: ce
       description: |-
-        Count of ready replicas in StatefulSet {{$labels.namespace}}/{{$labels.statefulset}} at zero.
+        Deckhouse has detected that there are no ready replicas remaining in StatefulSet `{{$labels.namespace}}/{{$labels.statefulset}}`.
 
-        List of unavailable Pod(s): {{range $index, $result := (printf "(max by (namespace, pod) (kube_pod_status_ready{namespace=\"%s\", condition!=\"true\"} == 1)) * on (namespace, pod) kube_controller_pod{namespace=\"%s\", controller_type=\"StatefulSet\", controller_name=\"%s\"}" $labels.namespace $labels.namespace $labels.deployment | query)}}{{if not (eq $index 0)}}, {{ end }}{{ $result.Labels.pod }}{{ end }}
+        List of unavailable pods:
+
+        ```text
+        {{range $index, $result := (printf "(max by (namespace, pod) (kube_pod_status_ready{namespace=\"%s\", condition!=\"true\"} == 1)) * on (namespace, pod) kube_controller_pod{namespace=\"%s\", controller_type=\"StatefulSet\", controller_name=\"%s\"}" $labels.namespace $labels.namespace $labels.deployment | query)}}{{if not (eq $index 0)}}, {{ end }}{{ $result.Labels.pod }}{{ end }}
+        ```
       summary: |
-        Count of ready replicas in StatefulSet {{$labels.namespace}}/{{$labels.statefulset}} at zero.
+        No ready replicas remaining in StatefulSet {{$labels.namespace}}/{{$labels.statefulset}}.
       severity: "5"
       markupFormat: markdown
     - name: KubernetesStatefulSetReplicasUnavailable
@@ -3718,14 +4092,18 @@ alerts:
       module: extended-monitoring
       edition: ce
       description: |-
-        Count of unavailable replicas in StatefulSet {{$labels.namespace}}/{{$labels.statefulset}} above threshold.
+        Deckhouse has detected that the number of unavailable replicas in StatefulSet `{{$labels.namespace}}/{{$labels.statefulset}}` exceeds the threshold.
 
-        Currently at: {{ .Value }} unavailable replica(s)
-        Threshold at: {{ printf "extended_monitoring_statefulset_threshold{threshold=\"replicas-not-ready\", namespace=\"%s\", statefulset=\"%s\"}" $labels.namespace $labels.statefulset | query | first | value }} unavailable replica(s)
+        - Current number: `{{ .Value }}` unavailable replica(s).
+        - Threshold number: `{{ printf "extended_monitoring_statefulset_threshold{threshold=\"replicas-not-ready\", namespace=\"%s\", statefulset=\"%s\"}" $labels.namespace $labels.statefulset | query | first | value }}` unavailable replica(s).
 
-        List of unavailable Pod(s): {{range $index, $result := (printf "(max by (namespace, pod) (kube_pod_status_ready{namespace=\"%s\", condition!=\"true\"} == 1)) * on (namespace, pod) kube_controller_pod{namespace=\"%s\", controller_type=\"StatefulSet\", controller_name=\"%s\"}" $labels.namespace $labels.namespace $labels.deployment | query)}}{{if not (eq $index 0)}}, {{ end }}{{ $result.Labels.pod }}{{ end }}
+        List of unavailable pods:
+
+        ```text
+        {{range $index, $result := (printf "(max by (namespace, pod) (kube_pod_status_ready{namespace=\"%s\", condition!=\"true\"} == 1)) * on (namespace, pod) kube_controller_pod{namespace=\"%s\", controller_type=\"StatefulSet\", controller_name=\"%s\"}" $labels.namespace $labels.namespace $labels.deployment | query)}}{{if not (eq $index 0)}}, {{ end }}{{ $result.Labels.pod }}{{ end }}
+        ```
       summary: |
-        Count of unavailable replicas in StatefulSet {{$labels.namespace}}/{{$labels.statefulset}} above threshold.
+        The number of unavailable replicas in StatefulSet {{$labels.namespace}}/{{$labels.statefulset}} exceeds the threshold.
       severity: "6"
       markupFormat: markdown
     - name: KubeStateMetricsDown
@@ -3751,11 +4129,11 @@ alerts:
       module: metallb
       edition: se
       description: |
-        There is orphan service in the namespace: `{{$labels.namespace}}` with the name: `{{$labels.name}}` which has irrelevant L2LoadBalancer name.
+        The cluster contains an orphaned service `{{$labels.name}}` in the `{{$labels.namespace}}` namespace  with an irrelevant L2LoadBalancer name.
 
-        It is recommended to check L2LoadBalancer name in annotations (`network.deckhouse.io/l2-load-balancer-name`).
+        To resolve this issue, verify the L2LoadBalancer name specified in the annotation `network.deckhouse.io/l2-load-balancer-name`.
       summary: |
-        Found orphan service with irrelevant L2LoadBalancer name
+        Orphaned service with an irrelevant L2LoadBalancer name has been found.
       severity: "4"
       markupFormat: markdown
     - name: LoadAverageHigh
@@ -3763,9 +4141,17 @@ alerts:
       moduleUrl: 340-extended-monitoring
       module: extended-monitoring
       edition: ce
-      description: For the last 5 minutes, the load average on the {{ $labels.node }} Node has been higher than {{ printf "extended_monitoring_node_threshold{threshold=\"load-average-per-core-critical\", node=\"%s\"}" $labels.node | query | first | value }} per core. There are more processes in the queue than the CPU can handle; probably, some process has created too many threads or child processes, or the CPU is overloaded.
+      description: |-
+        Over the last 5 minutes, the average load on node `{{ $labels.node }}` has been higher than {{ printf "extended_monitoring_node_threshold{threshold=\"load-average-per-core-critical\", node=\"%s\"}" $labels.node | query | first | value }} per core.
+
+        There are more processes in the queue than the CPU can handle.
+
+        Possible causes:
+
+        - A process has created too many threads or child processes.
+        - The CPU is overloaded.
       summary: |
-        The load average on the {{ $labels.node }} Node is too high.
+        Average load on node {{ $labels.node }} is too high.
       severity: "4"
       markupFormat: markdown
     - name: LoadAverageHigh
@@ -3773,9 +4159,17 @@ alerts:
       moduleUrl: 340-extended-monitoring
       module: extended-monitoring
       edition: ce
-      description: For the last 30 minutes, the load average on the {{ $labels.node }} Node has been higher or equal to {{ printf "extended_monitoring_node_threshold{threshold=\"load-average-per-core-warning\", node=\"%s\"}" $labels.node | query | first | value }} per core. There are more processes in the queue than the CPU can handle; probably, some process has created too many threads or child processes, or the CPU is overloaded.
+      description: |-
+        Over the last 30 minutes, the average load on node `{{ $labels.node }}` has been higher than or equal to {{ printf "extended_monitoring_node_threshold{threshold=\"load-average-per-core-warning\", node=\"%s\"}" $labels.node | query | first | value }} per core.
+
+        There are more processes in the queue than the CPU can handle.
+
+        Possible causes:
+
+        - A process has created too many threads or child processes.
+        - The CPU is overloaded.
       summary: |
-        The load average on the {{ $labels.node }} Node is too high.
+        Average load on node {{ $labels.node }} is too high.
       severity: "5"
       markupFormat: markdown
     - name: LoadBalancerServiceWithoutExternalIP
@@ -3976,14 +4370,25 @@ alerts:
       module: ingress-nginx
       edition: ce
       description: |-
-        The configuration testing (nginx -t) of the {{ $labels.controller }} Ingress controller in the {{ $labels.controller_namespace }} Namespace has failed.
+        The configuration test (`nginx -t`) for the `{{ $labels.controller }}` Ingress controller in the `{{ $labels.controller_namespace }}` namespace has failed.
 
-        The recommended course of action:
-        1. Check controllers logs: `kubectl -n {{ $labels.controller_namespace }} logs {{ $labels.controller_pod }} -c controller`;
-        2. Find the newest Ingress in the cluster: `kubectl get ingress --all-namespaces --sort-by="metadata.creationTimestamp"`;
-        3. Probably, there is an error in configuration-snippet or server-snippet.
+        Steps to resolve:
+
+        1. Check the controller logs:
+
+           ```bash
+           kubectl -n {{ $labels.controller_namespace }} logs {{ $labels.controller_pod }} -c controller
+           ```
+
+        2. Find the most recently created Ingress in the cluster:
+
+           ```bash
+           kubectl get ingress --all-namespaces --sort-by="metadata.creationTimestamp"
+           ```
+
+        3. Check for errors in the `configuration-snippet` or `server-snippet` annotations.
       summary: |
-        Config test failed on NGINX Ingress {{ $labels.controller }} in the {{ $labels.controller_namespace }} Namespace.
+        Configuration test failed on NGINX Ingress {{ $labels.controller_namespace }}/{{ $labels.controller }}.
       severity: "4"
       markupFormat: markdown
     - name: NginxIngressDaemonSetNotUpToDate
@@ -3992,16 +4397,26 @@ alerts:
       module: ingress-nginx
       edition: ce
       description: |-
-        There are {{ .Value }} outdated Pods in the {{ $labels.namespace }}/{{ $labels.daemonset }} Ingress Nginx DaemonSet for the last 20 minutes.
+        Deckhouse has detected {{ .Value }} outdated pods in NGINX Ingress DaemonSet `{{ $labels.namespace }}/{{ $labels.daemonset }}` over the last 20 minutes.
 
-        The recommended course of action:
-        1. Check the DaemonSet's status: `kubectl -n {{ $labels.namespace }} get ads {{ $labels.daemonset }}`
-        2. Analyze the DaemonSet's description: `kubectl -n {{ $labels.namespace }} describe ads {{ $labels.daemonset }}`
-        3. If the `Number of Nodes Scheduled with Up-to-date Pods` parameter does not match
-        `Current Number of Nodes Scheduled`, check the pertinent Ingress Nginx Controller's 'nodeSelector' and 'toleration' settings,
-        and compare them to the relevant nodes' 'labels' and 'taints' settings
+        Steps to resolve:
+
+        1. Check the DaemonSet's status:
+
+           ```bash
+           kubectl -n {{ $labels.namespace }} get ads {{ $labels.daemonset }}
+           ```
+
+        2. Analyze the DaemonSet's description:
+
+           ```bash
+           kubectl -n {{ $labels.namespace }} describe ads {{ $labels.daemonset }}
+           ```
+
+        3. If the parameter `Number of Nodes Scheduled with Up-to-date Pods` does not match
+        `Current Number of Nodes Scheduled`, check the 'nodeSelector' and 'toleration' settings of the corresponding NGINX Ingress Controller and compare them to the 'labels' and 'taints' settings of the relevant nodes.
       summary: |
-        There are {{ .Value }} outdated Pods in the {{ $labels.namespace }}/{{ $labels.daemonset }} Ingress Nginx DaemonSet for the last 20 minutes.
+        There were {{ .Value }} outdated pods in NGINX Ingress DaemonSet {{ $labels.namespace }}/{{ $labels.daemonset }} over the last 20 minutes.
       severity: "9"
       markupFormat: markdown
     - name: NginxIngressDaemonSetReplicasUnavailable
@@ -4010,17 +4425,21 @@ alerts:
       module: ingress-nginx
       edition: ce
       description: |-
-        Count of available replicas in NGINX Ingress DaemonSet {{$labels.namespace}}/{{$labels.daemonset}} is at zero.
+        Deckhouse has detected that there are no available replicas remaining in NGINX Ingress DaemonSet `{{$labels.namespace}}/{{$labels.daemonset}}`.
 
-        List of unavailable Pod(s): {{range $index, $result := (printf "(max by (namespace, pod) (kube_pod_status_ready{namespace=\"%s\", condition!=\"true\"} == 1)) * on (namespace, pod) kube_controller_pod{namespace=\"%s\", controller_type=\"DaemonSet\", controller_name=\"%s\"}" $labels.namespace $labels.namespace $labels.daemonset | query)}}{{if not (eq $index 0)}}, {{ end }}{{ $result.Labels.pod }}{{ end }}
+        List of unavailable pods:
 
-        This command might help figuring out problematic nodes given you are aware where the DaemonSet should be scheduled in the first place (using label selector for pods might be of help, too):
-
+        ```text
+        {{range $index, $result := (printf "(max by (namespace, pod) (kube_pod_status_ready{namespace=\"%s\", condition!=\"true\"} == 1)) * on (namespace, pod) kube_controller_pod{namespace=\"%s\", controller_type=\"DaemonSet\", controller_name=\"%s\"}" $labels.namespace $labels.namespace $labels.daemonset | query)}}{{if not (eq $index 0)}}, {{ end }}{{ $result.Labels.pod }}{{ end }}
         ```
+
+        If you know where the DaemonSet should be scheduled, run the command below to identify the problematic nodes. Use a label selector for pods, if needed.
+
+        ```bash
         kubectl -n {{$labels.namespace}} get pod -ojson | jq -r '.items[] | select(.metadata.ownerReferences[] | select(.name =="{{$labels.daemonset}}")) | select(.status.phase != "Running" or ([ .status.conditions[] | select(.type == "Ready" and .status == "False") ] | length ) == 1 ) | .spec.affinity.nodeAffinity.requiredDuringSchedulingIgnoredDuringExecution.nodeSelectorTerms[].matchFields[].values[]'
         ```
       summary: |
-        Count of available replicas in NGINX Ingress DaemonSet {{$labels.namespace}}/{{$labels.daemonset}} is at zero.
+        No available replicas remaining in NGINX Ingress DaemonSet {{$labels.namespace}}/{{$labels.daemonset}}.
       severity: "4"
       markupFormat: markdown
     - name: NginxIngressDaemonSetReplicasUnavailable
@@ -4029,14 +4448,19 @@ alerts:
       module: ingress-nginx
       edition: ce
       description: |-
-        Some replicas of NGINX Ingress DaemonSet {{$labels.namespace}}/{{$labels.daemonset}} are unavailable.
-        Currently at: {{ .Value }} unavailable replica(s)
+        Deckhouse has detected that some replicas of NGINX Ingress DaemonSet `{{$labels.namespace}}/{{$labels.daemonset}}` are unavailable.
 
-        List of unavailable Pod(s): {{range $index, $result := (printf "(max by (namespace, pod) (kube_pod_status_ready{namespace=\"%s\", condition!=\"true\"} == 1)) * on (namespace, pod) kube_controller_pod{namespace=\"%s\", controller_type=\"DaemonSet\", controller_name=\"%s\"}" $labels.namespace $labels.namespace $labels.daemonset | query)}}{{if not (eq $index 0)}}, {{ end }}{{ $result.Labels.pod }}{{ end }}
+        Current number: {{ .Value }} unavailable replica(s).
 
-        This command might help figuring out problematic nodes given you are aware where the DaemonSet should be scheduled in the first place (using label selector for pods might be of help, too):
+        List of unavailable pods:
 
+        ```text
+        {{range $index, $result := (printf "(max by (namespace, pod) (kube_pod_status_ready{namespace=\"%s\", condition!=\"true\"} == 1)) * on (namespace, pod) kube_controller_pod{namespace=\"%s\", controller_type=\"DaemonSet\", controller_name=\"%s\"}" $labels.namespace $labels.namespace $labels.daemonset | query)}}{{if not (eq $index 0)}}, {{ end }}{{ $result.Labels.pod }}{{ end }}
         ```
+
+        If you know where the DaemonSet should be scheduled, run the command below to identify the problematic nodes. Use a label selector for pods, if needed.
+
+        ```bash
         kubectl -n {{$labels.namespace}} get pod -ojson | jq -r '.items[] | select(.metadata.ownerReferences[] | select(.name =="{{$labels.daemonset}}")) | select(.status.phase != "Running" or ([ .status.conditions[] | select(.type == "Ready" and .status == "False") ] | length ) == 1 ) | .spec.affinity.nodeAffinity.requiredDuringSchedulingIgnoredDuringExecution.nodeSelectorTerms[].matchFields[].values[]'
         ```
       summary: |
@@ -4049,10 +4473,11 @@ alerts:
       module: ingress-nginx
       edition: ce
       description: |-
-        The number of restarts in the last hour: {{ $value }}.
+        {{ $value }} NGINX Ingress controller restarts detected in the last hour.
+
         Excessive NGINX Ingress restarts indicate that something is wrong. Normally, it should be up and running all the time.
       summary: |
-        Too many NGINX Ingress restarts have been detected.
+        Too many NGINX Ingress restarts detected.
       severity: "4"
       markupFormat: markdown
     - name: NginxIngressProtobufExporterHasErrors
@@ -4061,12 +4486,15 @@ alerts:
       module: ingress-nginx
       edition: ce
       description: |-
-        The Ingress Nginx sidecar container with `protobuf_exporter` has {{ $labels.type }} errors.
+        Deckhouse has detected that the Ingress NGINX sidecar container with `protobuf_exporter` has {{ $labels.type }} errors.
 
-        Please, check Ingress controller's logs:
-        `kubectl -n d8-ingress-nginx logs $(kubectl -n d8-ingress-nginx get pods -l app=controller,name={{ $labels.controller }} -o wide | grep {{ $labels.node }} | awk '{print $1}') -c protobuf-exporter`.
+        To resolve the issue, check the Ingress controller's logs:
+
+        ```bash
+        kubectl -n d8-ingress-nginx logs $(kubectl -n d8-ingress-nginx get pods -l app=controller,name={{ $labels.controller }} -o wide | grep {{ $labels.node }} | awk '{print $1}') -c protobuf-exporter
+        ```
       summary: |
-        The Ingress Nginx sidecar container with protobuf_exporter has {{ $labels.type }} errors.
+        The Ingress NGINX sidecar container with protobuf_exporter has {{ $labels.type }} errors.
       severity: "8"
       markupFormat: markdown
     - name: NginxIngressSslExpired
@@ -4075,10 +4503,15 @@ alerts:
       module: ingress-nginx
       edition: ce
       description: |-
-        SSL certificate for {{ $labels.host }} in {{ $labels.namespace }} has expired.
-        You can verify the certificate with the `kubectl -n {{ $labels.namespace }} get secret {{ $labels.secret_name }} -o json | jq -r '.data."tls.crt" | @base64d' | openssl x509 -noout -alias -subject -issuer -dates` command.
+        The SSL certificate for {{ $labels.host }} in the `{{ $labels.namespace }}` namespace has expired.
 
-        https://{{ $labels.host }} version of site doesn't work!
+        To verify the certificate, run the following command:
+
+        ```bash
+        kubectl -n {{ $labels.namespace }} get secret {{ $labels.secret_name }} -o json | jq -r '.data."tls.crt" | @base64d' | openssl x509 -noout -alias -subject -issuer -dates
+        ```
+
+        The site at `https://{{ $labels.host }}` is not accessible.
       summary: |
         Certificate has expired.
       severity: "4"
@@ -4089,10 +4522,15 @@ alerts:
       module: ingress-nginx
       edition: ce
       description: |-
-        SSL certificate for {{ $labels.host }} in {{ $labels.namespace }} will expire in less than 2 weeks.
-        You can verify the certificate with the `kubectl -n {{ $labels.namespace }} get secret {{ $labels.secret_name }} -o json | jq -r '.data."tls.crt" | @base64d' | openssl x509 -noout -alias -subject -issuer -dates` command.
+        The SSL certificate for {{ $labels.host }} in the `{{ $labels.namespace }}` namespace will expire in less than two weeks.
+
+        To verify the certificate, run the following command:
+
+        ```bash
+        kubectl -n {{ $labels.namespace }} get secret {{ $labels.secret_name }} -o json | jq -r '.data."tls.crt" | @base64d' | openssl x509 -noout -alias -subject -issuer -dates
+        ```
       summary: |
-        Certificate expires soon.
+        Certificate is expiring soon.
       severity: "5"
       markupFormat: markdown
     - name: NodeConntrackTableFull
@@ -4130,9 +4568,26 @@ alerts:
       moduleUrl: 340-extended-monitoring
       module: extended-monitoring
       edition: ce
-      description: ""
+      description: |-
+        Deckhouse has detected that node disk `{{$labels.device}}` on mount point `{{$labels.mountpoint}}` is using more than {{ printf "extended_monitoring_node_threshold{threshold=\"disk-bytes-critical\", node=\"%s\"}" $labels.node | query | first | value }}% of its storage capacity.
+
+        Current storage usage: {{ .Value }}%
+
+        Steps to resolve:
+
+        1. Retrieve disk usage information on the node:
+
+           ```bash
+           ncdu -x {{$labels.mountpoint}}
+           ```
+
+        1. If the output shows high disk usage in the `/var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/` directory, identify the pods with the highest usage:
+
+           ```bash
+           crictl stats -o json | jq '.stats[] | select((.writableLayer.usedBytes.value | tonumber) > 1073741824) | { meta: .attributes.labels, diskUsage: ((.writableLayer.usedBytes.value | tonumber) / 1073741824 * 100 | round / 100 | tostring + " GiB")}'
+           ```
       summary: |
-        Node disk &quot;{{$labels.device}}&quot; on mountpoint &quot;{{$labels.mountpoint}}&quot; is using more than {{ printf &quot;extended_monitoring_node_threshold{threshold=&quot;disk-bytes-critical&quot;, node=&quot;%s&quot;}&quot; $labels.node | query | first | value }}% of storage capacity. Currently at: {{ .Value }}%
+        Node disk {{$labels.device}} on mount point {{$labels.mountpoint}} is using more than {{ printf &quot;extended_monitoring_node_threshold{threshold=&quot;disk-bytes-critical&quot;, node=&quot;%s&quot;}&quot; $labels.node | query | first | value }}% of its storage capacity.
       severity: "5"
       markupFormat: markdown
     - name: NodeDiskBytesUsage
@@ -4141,15 +4596,25 @@ alerts:
       module: extended-monitoring
       edition: ce
       description: |-
-        Node disk "{{$labels.device}}" on mountpoint "{{$labels.mountpoint}}" is using more than {{ printf "extended_monitoring_node_threshold{threshold=\"disk-bytes-warning\", node=\"%s\"}" $labels.node | query | first | value }}% of the storage capacity.
-        Currently at: {{ .Value }}%
+        Deckhouse has detected that node disk `{{$labels.device}}` on mount point `{{$labels.mountpoint}}` is using more than {{ printf "extended_monitoring_node_threshold{threshold=\"disk-bytes-warning\", node=\"%s\"}" $labels.node | query | first | value }}% of its storage capacity.
 
-        Retrieve the disk usage info on the node: `ncdu -x {{$labels.mountpoint}}'
+        Current storage usage: {{ .Value }}%
 
-        If the output shows high disk usage in the /var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/ directory, use the following command to show the pods with the highest usage:
-        `crictl stats -o json | jq '.stats[] | select((.writableLayer.usedBytes.value | tonumber) > 1073741824) | { meta: .attributes.labels, diskUsage: ((.writableLayer.usedBytes.value | tonumber) / 1073741824 * 100 | round / 100 | tostring + " GiB")}'`
+        Steps to resolve:
+
+        1. Retrieve disk usage information on the node:
+
+           ```bash
+           ncdu -x {{$labels.mountpoint}}
+           ```
+
+        1. If the output shows high disk usage in the `/var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/` directory, identify the pods with the highest usage:
+
+           ```bash
+           crictl stats -o json | jq '.stats[] | select((.writableLayer.usedBytes.value | tonumber) > 1073741824) | { meta: .attributes.labels, diskUsage: ((.writableLayer.usedBytes.value | tonumber) / 1073741824 * 100 | round / 100 | tostring + " GiB")}'
+           ```
       summary: |
-        Node disk &quot;{{$labels.device}}&quot; on mountpoint &quot;{{$labels.mountpoint}}&quot; is using more than {{ printf &quot;extended_monitoring_node_threshold{threshold=&quot;disk-bytes-warning&quot;, node=&quot;%s&quot;}&quot; $labels.node | query | first | value }}% of the storage capacity. Currently at: {{ .Value }}%
+        Node disk {{$labels.device}} on mount point {{$labels.mountpoint}} is using more than {{ printf &quot;extended_monitoring_node_threshold{threshold=&quot;disk-bytes-warning&quot;, node=&quot;%s&quot;}&quot; $labels.node | query | first | value }}% of its storage capacity.
       severity: "6"
       markupFormat: markdown
     - name: NodeDiskInodesUsage
@@ -4157,9 +4622,12 @@ alerts:
       moduleUrl: 340-extended-monitoring
       module: extended-monitoring
       edition: ce
-      description: ""
+      description: |-
+        Deckhouse has detected that node disk `{{$labels.device}}` on mount point `{{$labels.mountpoint}}` is using more than {{ printf "extended_monitoring_node_threshold{threshold=\"disk-inodes-critical\", node=\"%s\"}" $labels.node | query | first | value }}% of its storage capacity.
+
+        Current storage usage: {{ .Value }}%
       summary: |
-        Node disk &quot;{{$labels.device}}&quot; on mountpoint &quot;{{$labels.mountpoint}}&quot; is using more than {{ printf &quot;extended_monitoring_node_threshold{threshold=&quot;disk-inodes-critical&quot;, node=&quot;%s&quot;}&quot; $labels.node | query | first | value }}% of storage capacity. Currently at: {{ .Value }}%
+        Node disk {{$labels.device}} on mount point {{$labels.mountpoint}} is using more than {{ printf &quot;extended_monitoring_node_threshold{threshold=&quot;disk-inodes-critical&quot;, node=&quot;%s&quot;}&quot; $labels.node | query | first | value }}% of its storage capacity.
       severity: "5"
       markupFormat: markdown
     - name: NodeDiskInodesUsage
@@ -4167,9 +4635,12 @@ alerts:
       moduleUrl: 340-extended-monitoring
       module: extended-monitoring
       edition: ce
-      description: ""
+      description: |-
+        Deckhouse has detected that node disk `{{$labels.device}}` on mount point `{{$labels.mountpoint}}` is using more than {{ printf "extended_monitoring_node_threshold{threshold=\"disk-inodes-warning\", node=\"%s\"}" $labels.node | query | first | value }}% of its storage capacity.
+
+        Current storage usage: {{ .Value }}%
       summary: |
-        Node disk &quot;{{$labels.device}}&quot; on mountpoint &quot;{{$labels.mountpoint}}&quot; is using more than {{ printf &quot;extended_monitoring_node_threshold{threshold=&quot;disk-inodes-warning&quot;, node=&quot;%s&quot;}&quot; $labels.node | query | first | value }}% of storage capacity. Currently at: {{ .Value }}%
+        Node disk {{$labels.device}} on mount point {{$labels.mountpoint}} is using more than {{ printf &quot;extended_monitoring_node_threshold{threshold=&quot;disk-inodes-warning&quot;, node=&quot;%s&quot;}&quot; $labels.node | query | first | value }}% of its storage capacity.
       severity: "6"
       markupFormat: markdown
     - name: NodeExporterDown
@@ -4268,7 +4739,7 @@ alerts:
           2. The absence of Machines in the list that have been in Pending status for more than a couple of minutes means that Machines are continuously being created and deleted because of some error:
           `kubectl -n d8-cloud-instance-manager get machine`;
           3. Refer to the Machine description if the logs do not include error messages and the Machine continues to be Pending:
-          `kubectl -n d8-cloud-instance-manager get machine <machine_name> -o json | jq .status.bootstrapStatus`;
+          `kubectl -n d8-cloud-instance-manager get machine <MACHINE_NAME> -o json | jq .status.bootstrapStatus`;
           4. The output similar to the one below means that you have to use nc to examine the bootstrap logs:
              ```json
              {
@@ -4299,7 +4770,7 @@ alerts:
           2. The absence of Machines in the list that have been in Pending status for more than a couple of minutes means that Machines are continuously being created and deleted because of some error:
           `kubectl -n d8-cloud-instance-manager get machine`;
           3. Refer to the Machine description if the logs do not include error messages and the Machine continues to be Pending:
-          `kubectl -n d8-cloud-instance-manager get machine <machine_name> -o json | jq .status.bootstrapStatus`;
+          `kubectl -n d8-cloud-instance-manager get machine <MACHINE_NAME> -o json | jq .status.bootstrapStatus`;
           4. The output similar to the one below means that you have to use nc to examine the bootstrap logs:
              ```json
              {
@@ -4330,7 +4801,7 @@ alerts:
           2. The absence of Machines in the list that have been in Pending status for more than a couple of minutes means that Machines are continuously being created and deleted because of some error:
           `kubectl -n d8-cloud-instance-manager get machine`;
           3. Refer to the Machine description if the logs do not include error messages and the Machine continues to be Pending:
-          `kubectl -n d8-cloud-instance-manager get machine <machine_name> -o json | jq .status.bootstrapStatus`;
+          `kubectl -n d8-cloud-instance-manager get machine <MACHINE_NAME> -o json | jq .status.bootstrapStatus`;
           4. The output similar to the one below means that you have to use nc to examine the bootstrap logs:
              ```json
              {
@@ -4441,7 +4912,7 @@ alerts:
 
         The recommended course of action:
         1. Find the Node exporter Pod for this Node: `kubectl -n d8-monitoring get pod -l app=node-exporter -o json | jq -r ".items[] | select(.spec.nodeName==\"{{$labels.node}}\") | .metadata.name"`;
-        2. Describe the Node exporter Pod: `kubectl -n d8-monitoring describe pod <pod_name>`;
+        2. Describe the Node exporter Pod: `kubectl -n d8-monitoring describe pod <POD_NAME>`;
         3. Check that kubelet is running on the {{ $labels.node }} node.
       summary: ""
       severity: "4"
@@ -4556,12 +5027,17 @@ alerts:
       module: extended-monitoring
       edition: ce
       description: |-
-        PersistentVolumeClaim {{$labels.namespace}}/{{$labels.persistentvolumeclaim}} is using more than {{ printf "extended_monitoring_pod_threshold{threshold=\"disk-bytes-critical\", namespace=\"%s\", pod=\"%s\"}" $labels.namespace $labels.pod | query | first | value }}% of volume storage capacity.
-        Currently at: {{ .Value }}%
+        Deckhouse has detected that PersistentVolumeClaim `{{$labels.namespace}}/{{$labels.persistentvolumeclaim}}` is using more than {{ printf "extended_monitoring_pod_threshold{threshold=\"disk-bytes-critical\", namespace=\"%s\", pod=\"%s\"}" $labels.namespace $labels.pod | query | first | value }}% of the volume storage capacity.
 
-        PersistentVolumeClaim is used by the following pods: {{range $index, $result := (print "kube_pod_spec_volumes_persistentvolumeclaims_info{namespace='" $labels.namespace "', persistentvolumeclaim='" $labels.persistentvolumeclaim "'}" | query)}}{{if not (eq $index 0)}}, {{ end }}{{ $result.Labels.pod }}{{ end }}
+        Current volume storage usage: {{ .Value }}%
+
+        PersistentVolumeClaim `{{$labels.namespace}}/{{$labels.persistentvolumeclaim}}` is used by the following pods:
+
+        ```text
+        {{range $index, $result := (print "kube_pod_spec_volumes_persistentvolumeclaims_info{namespace='" $labels.namespace "', persistentvolumeclaim='" $labels.persistentvolumeclaim "'}" | query)}}{{if not (eq $index 0)}}, {{ end }}{{ $result.Labels.pod }}{{ end }}
+        ```
       summary: |
-        PersistentVolumeClaim {{$labels.namespace}}/{{$labels.persistentvolumeclaim}} is using more than {{ printf &quot;extended_monitoring_pod_threshold{threshold=&quot;disk-bytes-critical&quot;, namespace=&quot;%s&quot;, pod=&quot;%s&quot;}&quot; $labels.namespace $labels.pod | query | first | value }}% of volume storage capacity.
+        PersistentVolumeClaim {{$labels.namespace}}/{{$labels.persistentvolumeclaim}} is using more than {{ printf &quot;extended_monitoring_pod_threshold{threshold=&quot;disk-bytes-critical&quot;, namespace=&quot;%s&quot;, pod=&quot;%s&quot;}&quot; $labels.namespace $labels.pod | query | first | value }}% of the volume storage capacity.
       severity: "4"
       markupFormat: markdown
     - name: PersistentVolumeClaimBytesUsage
@@ -4570,12 +5046,17 @@ alerts:
       module: extended-monitoring
       edition: ce
       description: |-
-        PersistentVolumeClaim {{$labels.namespace}}/{{$labels.persistentvolumeclaim}} is using more than {{ printf "extended_monitoring_pod_threshold{threshold=\"disk-bytes-warning\", namespace=\"%s\", pod=\"%s\"}" $labels.namespace $labels.pod | query | first | value }}% of volume storage capacity.
-        Currently at: {{ .Value }}%
+        Deckhouse has detected that PersistentVolumeClaim `{{$labels.namespace}}/{{$labels.persistentvolumeclaim}}` is using more than {{ printf "extended_monitoring_pod_threshold{threshold=\"disk-bytes-warning\", namespace=\"%s\", pod=\"%s\"}" $labels.namespace $labels.pod | query | first | value }}% of the volume storage capacity.
 
-        PersistentVolumeClaim is used by the following pods: {{range $index, $result := (print "kube_pod_spec_volumes_persistentvolumeclaims_info{namespace='" $labels.namespace "', persistentvolumeclaim='" $labels.persistentvolumeclaim "'}" | query)}}{{if not (eq $index 0)}}, {{ end }}{{ $result.Labels.pod }}{{ end }}
+        Currently volume storage usage: {{ .Value }}%
+
+        PersistentVolumeClaim `{{$labels.namespace}}/{{$labels.persistentvolumeclaim}}` is used by the following pods:
+
+        ```text
+        {{range $index, $result := (print "kube_pod_spec_volumes_persistentvolumeclaims_info{namespace='" $labels.namespace "', persistentvolumeclaim='" $labels.persistentvolumeclaim "'}" | query)}}{{if not (eq $index 0)}}, {{ end }}{{ $result.Labels.pod }}{{ end }}
+        ```
       summary: |
-        PersistentVolumeClaim {{$labels.namespace}}/{{$labels.persistentvolumeclaim}} is using more than {{ printf &quot;extended_monitoring_pod_threshold{threshold=&quot;disk-bytes-warning&quot;, namespace=&quot;%s&quot;, pod=&quot;%s&quot;}&quot; $labels.namespace $labels.pod | query | first | value }}% of volume storage capacity.
+        PersistentVolumeClaim {{$labels.namespace}}/{{$labels.persistentvolumeclaim}} is using more than {{ printf &quot;extended_monitoring_pod_threshold{threshold=&quot;disk-bytes-warning&quot;, namespace=&quot;%s&quot;, pod=&quot;%s&quot;}&quot; $labels.namespace $labels.pod | query | first | value }}% of the volume storage capacity.
       severity: "5"
       markupFormat: markdown
     - name: PersistentVolumeClaimInodesUsed
@@ -4584,12 +5065,17 @@ alerts:
       module: extended-monitoring
       edition: ce
       description: |-
-        PersistentVolumeClaim {{$labels.namespace}}/{{$labels.persistentvolumeclaim}} is using more than {{ printf "extended_monitoring_pod_threshold{threshold=\"disk-inodes-critical\", namespace=\"%s\", pod=\"%s\"}" $labels.namespace $labels.pod | query | first | value }}% of volume inode capacity.
-        Currently at: {{ .Value }}%
+        Deckhouse has detected that PersistentVolumeClaim `{{$labels.namespace}}/{{$labels.persistentvolumeclaim}}` is using more than {{ printf "extended_monitoring_pod_threshold{threshold=\"disk-inodes-critical\", namespace=\"%s\", pod=\"%s\"}" $labels.namespace $labels.pod | query | first | value }}% of the volume inode capacity.
 
-        PersistentVolumeClaim is used by the following pods: {{range $index, $result := (print "kube_pod_spec_volumes_persistentvolumeclaims_info{namespace='" $labels.namespace "', persistentvolumeclaim='" $labels.persistentvolumeclaim "'}" | query)}}{{if not (eq $index 0)}}, {{ end }}{{ $result.Labels.pod }}{{ end }}
+        Current volume inode usage: {{ .Value }}%
+
+        PersistentVolumeClaim `{{$labels.namespace}}/{{$labels.persistentvolumeclaim}}` is used by the following pods:
+
+        ```text
+        {{range $index, $result := (print "kube_pod_spec_volumes_persistentvolumeclaims_info{namespace='" $labels.namespace "', persistentvolumeclaim='" $labels.persistentvolumeclaim "'}" | query)}}{{if not (eq $index 0)}}, {{ end }}{{ $result.Labels.pod }}{{ end }}
+        ```
       summary: |
-        PersistentVolumeClaim {{$labels.namespace}}/{{$labels.persistentvolumeclaim}} is using more than {{ printf &quot;extended_monitoring_pod_threshold{threshold=&quot;disk-inodes-critical&quot;, namespace=&quot;%s&quot;, pod=&quot;%s&quot;}&quot; $labels.namespace $labels.pod | query | first | value }}% of volume inode capacity.
+        PersistentVolumeClaim {{$labels.namespace}}/{{$labels.persistentvolumeclaim}} is using more than {{ printf &quot;extended_monitoring_pod_threshold{threshold=&quot;disk-inodes-critical&quot;, namespace=&quot;%s&quot;, pod=&quot;%s&quot;}&quot; $labels.namespace $labels.pod | query | first | value }}% of the volume inode capacity.
       severity: "4"
       markupFormat: markdown
     - name: PersistentVolumeClaimInodesUsed
@@ -4598,12 +5084,17 @@ alerts:
       module: extended-monitoring
       edition: ce
       description: |-
-        PersistentVolumeClaim {{$labels.namespace}}/{{$labels.persistentvolumeclaim}} is using more than {{ printf "extended_monitoring_pod_threshold{threshold=\"disk-inodes-warning\", namespace=\"%s\", pod=\"%s\"}" $labels.namespace $labels.pod | query | first | value }}% of volume inode capacity.
-        Currently at: {{ .Value }}%
+        Deckhouse has detected that PersistentVolumeClaim `{{$labels.namespace}}/{{$labels.persistentvolumeclaim}}` is using more than {{ printf "extended_monitoring_pod_threshold{threshold=\"disk-inodes-warning\", namespace=\"%s\", pod=\"%s\"}" $labels.namespace $labels.pod | query | first | value }}% of the volume inode capacity.
 
-        PersistentVolumeClaim is used by the following pods: {{range $index, $result := (print "kube_pod_spec_volumes_persistentvolumeclaims_info{namespace='" $labels.namespace "', persistentvolumeclaim='" $labels.persistentvolumeclaim "'}" | query)}}{{if not (eq $index 0)}}, {{ end }}{{ $result.Labels.pod }}{{ end }}
+        Current volume inode usage: {{ .Value }}%
+
+        PersistentVolumeClaim `{{$labels.namespace}}/{{$labels.persistentvolumeclaim}}` is used by the following pods:
+
+        ```text
+        {{range $index, $result := (print "kube_pod_spec_volumes_persistentvolumeclaims_info{namespace='" $labels.namespace "', persistentvolumeclaim='" $labels.persistentvolumeclaim "'}" | query)}}{{if not (eq $index 0)}}, {{ end }}{{ $result.Labels.pod }}{{ end }}
+        ```
       summary: |
-        PersistentVolumeClaim {{$labels.namespace}}/{{$labels.persistentvolumeclaim}} is using more than {{ printf &quot;extended_monitoring_pod_threshold{threshold=&quot;disk-inodes-warning&quot;, namespace=&quot;%s&quot;, pod=&quot;%s&quot;}&quot; $labels.namespace $labels.pod | query | first | value }}% of volume inode capacity.
+        PersistentVolumeClaim {{$labels.namespace}}/{{$labels.persistentvolumeclaim}} is using more than {{ printf &quot;extended_monitoring_pod_threshold{threshold=&quot;disk-inodes-warning&quot;, namespace=&quot;%s&quot;, pod=&quot;%s&quot;}&quot; $labels.namespace $labels.pod | query | first | value }}% of the volume inode capacity.
       severity: "5"
       markupFormat: markdown
     - name: PodSecurityStandardsViolation
@@ -4760,9 +5251,15 @@ alerts:
       module: extended-monitoring
       edition: ce
       description: |
-        Unable to login to the container registry using `imagePullSecrets` for the `{{ $labels.image }}` image in the `{{ $labels.namespace }}` Namespace; in the StatefulSet `{{ $labels.name }}` in the `{{ $labels.container }}` container in the registry.
+        Deckhouse was unable to log in to the container registry using `imagePullSecrets` for the `{{ $labels.image }}` image.
+
+        To resolve this issue, investigate the possible causes in the following sources:
+
+        - The `{{ $labels.namespace }}` namespace.
+        - The StatefulSet `{{ $labels.name }}`.
+        - The `{{ $labels.container }}` container in the registry.
       summary: |
-        Unable to login to the container registry using imagePullSecrets for the {{ $labels.image }} image.
+        Unable to log in to the container registry using imagePullSecrets for the {{ $labels.image }} image.
       severity: "7"
       markupFormat: markdown
     - name: StatefulSetAuthorizationFailure
@@ -4771,9 +5268,15 @@ alerts:
       module: extended-monitoring
       edition: ce
       description: |
-        Insufficient privileges to pull the `{{ $labels.image }}` image using the `imagePullSecrets` specified in the `{{ $labels.namespace }}` Namespace; in the StatefulSet `{{ $labels.name }}` in the `{{ $labels.container }}` container in the registry.
+        Deckhouse has insufficient privileges to pull the `{{ $labels.image }}` image using the specified `imagePullSecrets`.
+
+        To resolve this issue, investigate the possible causes in the following sources:
+
+        - The `{{ $labels.namespace }}` namespace.
+        - The StatefulSet `{{ $labels.name }}`.
+        - The `{{ $labels.container }}` container in the registry.
       summary: |
-        Insufficient privileges to pull the {{ $labels.image }} image using the imagePullSecrets specified.
+        Insufficient privileges to pull the {{ $labels.image }} image using the specified imagePullSecrets.
       severity: "7"
       markupFormat: markdown
     - name: StatefulSetBadImageFormat
@@ -4782,9 +5285,15 @@ alerts:
       module: extended-monitoring
       edition: ce
       description: |
-        You should check whether the `{{ $labels.image }}` image name is spelled correctly: in the `{{ $labels.namespace }}` Namespace; in the StatefulSet `{{ $labels.name }}` in the `{{ $labels.container }}` container in the registry.
+        Deckhouse has detected that the `{{ $labels.image }}` image name is incorrect.
+
+        To resolve this issue, check that the `{{ $labels.image }}` image name is spelled correctly in the following sources:
+
+        - The `{{ $labels.namespace }}` namespace.
+        - The StatefulSet `{{ $labels.name }}`.
+        - The `{{ $labels.container }}` container in the registry.
       summary: |
-        The {{ $labels.image }} image has incorrect name.
+        The {{ $labels.image }} image name is incorrect.
       severity: "7"
       markupFormat: markdown
     - name: StatefulSetImageAbsent
@@ -4793,7 +5302,13 @@ alerts:
       module: extended-monitoring
       edition: ce
       description: |
-        You should check whether the `{{ $labels.image }}` image is available: in the `{{ $labels.namespace }}` Namespace; in the StatefulSet `{{ $labels.name }}` in the `{{ $labels.container }}` container in the registry.
+        Deckhouse has detected that the `{{ $labels.image }}` image is missing from the container registry.
+
+        To resolve this issue, check whether the `{{ $labels.image }}` image is available in the following sources:
+
+        - The `{{ $labels.namespace }}` namespace.
+        - The StatefulSet `{{ $labels.name }}`.
+        - The `{{ $labels.container }}` container in the registry.
       summary: |
         The {{ $labels.image }} image is missing from the registry.
       severity: "7"
@@ -4804,7 +5319,13 @@ alerts:
       module: extended-monitoring
       edition: ce
       description: |
-        The container registry is not available for the `{{ $labels.image }}` image: in the `{{ $labels.namespace }}` Namespace; in the StatefulSet `{{ $labels.name }}` in the `{{ $labels.container }}` container in the registry.
+        Deckhouse has detected that the container registry is not available for the `{{ $labels.image }}` image.
+
+        To resolve this issue, investigate the possible causes in the following sources:
+
+        - The `{{ $labels.namespace }}` namespace.
+        - The StatefulSet `{{ $labels.name }}`.
+        - The `{{ $labels.container }}` container in the registry.
       summary: |
         The container registry is not available for the {{ $labels.image }} image.
       severity: "7"
@@ -4815,14 +5336,19 @@ alerts:
       module: extended-monitoring
       edition: ce
       description: |
-        An unknown error occurred for the  `{{ $labels.image }}` image
-        in the `{{ $labels.namespace }}` Namespace;
-        in the StatefulSet `{{ $labels.name }}`
-        in the `{{ $labels.container }}` container in the registry.
+        Deckhouse has detected an unknown error with the `{{ $labels.image }}` image in the following sources:
 
-        Refer to the exporter logs: `kubectl -n d8-monitoring logs -l app=image-availability-exporter -c image-availability-exporter`
+        - The `{{ $labels.namespace }}` namespace.
+        - The StatefulSet `{{ $labels.name }}`.
+        - The `{{ $labels.container }}` container in the registry.
+
+        To resolve this issue, review the exporter logs:
+
+        ```bash
+        kubectl -n d8-monitoring logs -l app=image-availability-exporter -c image-availability-exporter
+        ```
       summary: |
-        An unknown error occurred for the  {{ $labels.image }} image.
+        An unknown error occurred with the {{ $labels.image }} image.
       severity: "7"
       markupFormat: markdown
     - name: StorageClassCloudManual

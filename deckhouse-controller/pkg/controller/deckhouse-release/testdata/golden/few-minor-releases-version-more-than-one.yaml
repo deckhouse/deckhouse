@@ -25,7 +25,7 @@ spec:
   version: v1.33.0
 status:
   approved: false
-  message: minor version is more than deployed v1.31.0 by one
+  message: minor version is greater than deployed v1.31.0 by one
   phase: Pending
   transitionTime: null
 ---

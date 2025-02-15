@@ -2,6 +2,7 @@
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 fromImage: common/src-artifact
+final: false
 git:
   - add: /modules/300-prometheus/images/{{ $.ImageName }}
     to: /
@@ -44,5 +45,6 @@ import:
     add: /src/mimir
     to: /bin/mimir
     after: setup
-docker:
-  ENTRYPOINT: ["/bin/mimir"]
+imageSpec:
+  config:
+    entrypoint: ["/bin/mimir"]

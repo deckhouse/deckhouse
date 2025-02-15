@@ -18,6 +18,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"flag"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -50,13 +51,12 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
 	moduletypes "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/moduleloader/types"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers"
+	releaseUpdater "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/releaseupdater"
 	"github.com/deckhouse/deckhouse/go_lib/d8env"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/hooks/update"
-	"github.com/deckhouse/deckhouse/go_lib/updater"
 	"github.com/deckhouse/deckhouse/pkg/log"
 	"github.com/deckhouse/deckhouse/testing/controller/controllersuite"
-	"github.com/deckhouse/deckhouse/testing/flags"
 )
 
 var (
@@ -64,12 +64,17 @@ var (
 
 	embeddedMUP = &v1alpha2.ModuleUpdatePolicySpec{
 		Update: v1alpha2.ModuleUpdatePolicySpecUpdate{
-			Mode:    updater.ModeAuto.String(),
+			Mode:    v1alpha1.UpdateModeAuto.String(),
 			Windows: make(update.Windows, 0),
 		},
 		ReleaseChannel: "Stable",
 	}
+	golden bool
 )
+
+func init() {
+	flag.BoolVar(&golden, "golden", false, "generate golden files")
+}
 
 func TestReleaseControllerTestSuite(t *testing.T) {
 	suite.Run(t, new(ReleaseControllerTestSuite))
@@ -107,7 +112,7 @@ func (suite *ReleaseControllerTestSuite) TearDownSubTest() {
 	goldenFile := filepath.Join("./testdata/releases", "golden", suite.testDataFileName)
 	gotB := suite.fetchResults()
 
-	if flags.Golden {
+	if golden {
 		err := os.WriteFile(goldenFile, gotB, 0o666)
 		require.NoError(suite.T(), err)
 	} else {
@@ -236,6 +241,10 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 			testData := suite.fetchTestFileData("auto-patch-patch-update.yaml")
 			suite.setupReleaseController(testData, withModuleUpdatePolicy(mup))
 
+			_, err = suite.ctr.handleRelease(ctx, suite.getModuleRelease("parca-1.26.2"))
+			require.NoError(suite.T(), err)
+			_, err = suite.ctr.handleRelease(ctx, suite.getModuleRelease("parca-1.26.3"))
+			require.NoError(suite.T(), err)
 			_, err = suite.ctr.handleRelease(ctx, suite.getModuleRelease("parca-1.26.3"))
 			require.NoError(suite.T(), err)
 		})
@@ -252,6 +261,10 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 			testData := suite.fetchTestFileData("auto-patch-minor-update.yaml")
 			suite.setupReleaseController(testData, withModuleUpdatePolicy(mup))
 
+			_, err = suite.ctr.handleRelease(ctx, suite.getModuleRelease("parca-1.26.2"))
+			require.NoError(suite.T(), err)
+			_, err = suite.ctr.handleRelease(ctx, suite.getModuleRelease("parca-1.27.0"))
+			require.NoError(suite.T(), err)
 			_, err = suite.ctr.handleRelease(ctx, suite.getModuleRelease("parca-1.27.0"))
 			require.NoError(suite.T(), err)
 		})
@@ -268,39 +281,55 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 			testData := suite.fetchTestFileData("auto-mode.yaml")
 			suite.setupReleaseController(testData, withModuleUpdatePolicy(mup))
 
+			_, err = suite.ctr.handleRelease(ctx, suite.getModuleRelease("parca-1.26.2"))
+			require.NoError(suite.T(), err)
+			_, err = suite.ctr.handleRelease(ctx, suite.getModuleRelease("parca-1.27.0"))
+			require.NoError(suite.T(), err)
 			_, err = suite.ctr.handleRelease(ctx, suite.getModuleRelease("parca-1.27.0"))
 			require.NoError(suite.T(), err)
 		})
 
 		suite.Run("Postponed patch release", func() {
 			mup := embeddedMUP.DeepCopy()
-			mup.Update.Mode = updater.ModeAutoPatch.String()
+			mup.Update.Mode = v1alpha1.UpdateModeAutoPatch.String()
 
 			testData := suite.fetchTestFileData("auto-patch-mode.yaml")
 			suite.setupReleaseController(testData, withModuleUpdatePolicy(mup))
 
+			_, err = suite.ctr.handleRelease(ctx, suite.getModuleRelease("parca-1.26.2"))
+			require.NoError(suite.T(), err)
+			_, err = suite.ctr.handleRelease(ctx, suite.getModuleRelease("parca-1.26.3"))
+			require.NoError(suite.T(), err)
 			_, err = suite.ctr.handleRelease(ctx, suite.getModuleRelease("parca-1.26.3"))
 			require.NoError(suite.T(), err)
 		})
 
 		suite.Run("Postponed minor release", func() {
 			mup := embeddedMUP.DeepCopy()
-			mup.Update.Mode = updater.ModeAutoPatch.String()
+			mup.Update.Mode = v1alpha1.UpdateModeAutoPatch.String()
 
 			testData := suite.fetchTestFileData("auto-patch-mode-minor-release.yaml")
 			suite.setupReleaseController(testData, withModuleUpdatePolicy(mup))
 
+			_, err = suite.ctr.handleRelease(ctx, suite.getModuleRelease("parca-1.26.2"))
+			require.NoError(suite.T(), err)
+			_, err = suite.ctr.handleRelease(ctx, suite.getModuleRelease("parca-1.27.0"))
+			require.NoError(suite.T(), err)
 			_, err = suite.ctr.handleRelease(ctx, suite.getModuleRelease("parca-1.27.0"))
 			require.NoError(suite.T(), err)
 		})
 
 		suite.Run("Approved minor release", func() {
 			mup := embeddedMUP.DeepCopy()
-			mup.Update.Mode = updater.ModeAutoPatch.String()
+			mup.Update.Mode = v1alpha1.UpdateModeAutoPatch.String()
 
 			testData := suite.fetchTestFileData("auto-patch-mode-minor-release-approved.yaml")
 			suite.setupReleaseController(testData, withModuleUpdatePolicy(mup))
 
+			_, err = suite.ctr.handleRelease(ctx, suite.getModuleRelease("parca-1.26.2"))
+			require.NoError(suite.T(), err)
+			_, err = suite.ctr.handleRelease(ctx, suite.getModuleRelease("parca-1.27.0"))
+			require.NoError(suite.T(), err)
 			_, err = suite.ctr.handleRelease(ctx, suite.getModuleRelease("parca-1.27.0"))
 			require.NoError(suite.T(), err)
 		})
@@ -415,6 +444,7 @@ type: Opaque
 		metricStorage:        metricstorage.NewMetricStorage(context.Background(), "", true, logger),
 
 		embeddedPolicy: helpers.NewModuleUpdatePolicySpecContainer(embeddedMUP),
+		metricsUpdater: releaseUpdater.NewMetricsUpdater(metricstorage.NewMetricStorage(context.Background(), "", true, logger), releaseUpdater.ModuleReleaseBlockedMetricName),
 	}
 
 	for _, option := range options {

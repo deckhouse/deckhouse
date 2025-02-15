@@ -28,14 +28,32 @@ metadata:
 spec:
   enabled: true
   version: 3
+  settings:
+    addressPools:
+    - addresses:
+      - 192.168.219.100-192.168.219.100
+      name: frontend-pool
+      protocol: layer2
 `))
 			f.RunHook()
 		})
-		It("Should not proceed as ModuleConfig version is >= 2", func() {
+		It("Should not proceed as ModuleConfig version is >= 2 and add alert", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			mc := f.KubernetesResource("ModuleConfig", "", "metallb")
 			Expect(mc.Exists()).To(BeTrue(), "ModuleConfig resource should exist")
 			Expect(mc.Field("spec.version").Int()).To(BeNumerically(">=", 2))
+
+			metrics := f.MetricsCollector.CollectedMetrics()
+			found := false
+			for _, metric := range metrics {
+				if metric.Name == "d8_metallb_obsolete_layer2_pools_are_used" {
+					found = true
+					Expect(*metric.Value).To(Equal(float64(1)))
+					Expect(metric.Labels["name"]).To(Equal("frontend-pool"))
+				}
+			}
+			Expect(found).To(BeTrue(), "Expected to find "+
+				"'d8_metallb_obsolete_layer2_pools_are_used' metric")
 		})
 	})
 

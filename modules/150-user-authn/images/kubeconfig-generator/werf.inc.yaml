@@ -18,9 +18,10 @@ import:
     add: /src/templates
     to: /app/templates
     before: setup
-docker:
-  WORKDIR: /app
-  ENTRYPOINT: ["/dex-k8s-authenticator"]
+imageSpec:
+  config:
+    entrypoint: ["/dex-k8s-authenticator"]
+    workingDir: "/app"
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-dex-k8s-authenticator-src-artifact
 fromImage: common/src-artifact

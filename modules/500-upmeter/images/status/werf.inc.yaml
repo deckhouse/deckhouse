@@ -1,16 +1,30 @@
 ---
-image: {{ .ModuleName }}/build-status-artifact
+image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+fromImage: common/src-artifact
 final: false
-from: node:14-alpine3.12@sha256:426384fb33a11d27dbbdc545f39bb8daacd3e7db7c60b52cd6bc0597e0045b8d
 git:
-- add: /{{ $.ModulePath }}modules/500-{{ $.ModuleName }}/images/{{ $.ImageName }}/
+- add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/src
   to: /src
   stageDependencies:
     install:
-    - '**/*'
+    - "**/*"
 shell:
   install:
+  - cd /src
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
+final: false
+from: {{ .Images.BASE_NODE_23_ALPINE }}
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+  add: /src
+  to: /src
+  before: install
+shell:
+  beforeInstall:
+  {{- include "alpine packages proxy" . | nindent 2 }}
   - apk add --no-cache python3 vips make build-base
+  install:
   - cd /src
   - npm ci
   - npm run build
@@ -19,9 +33,10 @@ shell:
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/nginx-static
 import:
-- image: {{ .ModuleName }}/build-status-artifact
+- image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
   add: /src/dist
   to: /opt/nginx-static/html
   before: setup
-docker:
-  ENTRYPOINT: ["/opt/nginx-static/sbin/nginx", "-g", "daemon off;"]
+imageSpec:
+  config:
+    entrypoint: ["/opt/nginx-static/sbin/nginx", "-g", "daemon off;"]

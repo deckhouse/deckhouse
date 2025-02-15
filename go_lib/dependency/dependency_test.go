@@ -78,8 +78,8 @@ func ExampleVersionedK8sClient() {
 	_ = dependency.WithExternalDependencies(handlerWithVersionedK8S)(nil)
 
 	// Output:
-	// 19
-	// 22
+	// 32
+	// 38
 
 	os.Setenv("D8_IS_TESTS_ENVIRONMENT", prev)
 }
