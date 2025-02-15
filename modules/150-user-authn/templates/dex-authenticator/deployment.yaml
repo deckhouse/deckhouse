@@ -186,7 +186,7 @@ spec:
             command:
             - /usr/local/bin/url-exec-prober
             - https://dex.d8-user-authn/.well-known/openid-configuration
-          initialDelaySeconds: 5
+          initialDelaySeconds: 10
           periodSeconds: 5
           failureThreshold: 5
         livenessProbe:
