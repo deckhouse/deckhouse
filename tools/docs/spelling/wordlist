@@ -5,6 +5,8 @@ AbsoluteVersion
 acceptRequestsFrom
 accessLevel
 ACS
+additionalAPIAudiences
+additionalAPIIssuers
 additionalPrinterColumns
 additionalProperties
 additionalSecurityGroups
@@ -24,6 +26,7 @@ allowedBundles
 allowedTopologies
 allowedUnsafeSysctls
 allowVolumeExpansion
+AMD
 ami
 AMIs
 ANDed
@@ -468,6 +471,7 @@ HashiCorp
 hasn
 hdd
 healthcheck
+healthchecks
 HEC
 helmignore
 helthcheck
@@ -499,6 +503,7 @@ HTTPS
 hubble
 HWE
 hyperconverged
+hypervisor
 hypervisors
 Hypervisors
 IaC
@@ -858,6 +863,7 @@ ownerRef
 PagerDuty
 PagerDutyConfig
 parametersSchema
+paravirtualization
 passphrase
 passwordHash
 pathPrefix
@@ -961,6 +967,7 @@ recordscontaining
 Reddit
 redis
 Redis
+Redoc
 regex
 Regex
 regexes
@@ -1033,6 +1040,7 @@ SEMVER
 Sep
 sequelize
 sequelizerc
+serviceAccount
 ServiceAccount
 ServiceAccounts
 ServiceEntry
@@ -1122,6 +1130,7 @@ SVC
 sVersion
 svg
 SVG
+SVM
 symlink
 syncer
 syscall
@@ -1135,6 +1144,7 @@ tarball
 tarballs
 targetRef
 Taskfile
+TATLIN
 TBH
 tcp
 templating
@@ -1167,6 +1177,7 @@ tunnelMode
 txt
 Ubuntu
 UDP
+UEFI
 UI
 uid
 UID
@@ -1205,11 +1216,13 @@ VictoriaMetrics
 VictorOps
 VictorOpsConfig
 virt
+VirtIO
 VirtualDataCenter
 VirtualIPAddress
 virtualization
 Virtualization
 VirtualMachine
+VirtualMachineClass
 VirtualMachines
 VirtualService
 Vitastor
@@ -1220,6 +1233,7 @@ vm
 VM
 VMs
 VMware
+VMX
 VNC
 VNet
 VNets
@@ -1252,6 +1266,7 @@ WAL
 webgraphviz
 webhook
 WebhookConfig
+webhooks
 webinar
 webpack
 webpacker
@@ -1280,6 +1295,7 @@ worktree
 worseness
 WSL
 www
+Yadro
 yaml
 yandex
 Yandex
@@ -1328,6 +1344,7 @@ zVirt
 ам
 ами
 апстрима
+архитектурах
 ассетами
 ассетов
 ассеты
@@ -1387,6 +1404,7 @@ zVirt
 валидировать
 валидируются
 вебхук
+вебхуки
 вендором
 вендору
 вендоры
@@ -1395,6 +1413,7 @@ zVirt
 версионированной
 Визуализировать
 виртуализации
+виртуализация
 включaл
 включал
 ВМ
@@ -1415,6 +1434,7 @@ zVirt
 геораспределенном
 гипервизорами
 гипервизорах
+гипервизором
 гиперконвергентной
 гитерминизм
 гитерминизма
@@ -1461,6 +1481,7 @@ zVirt
 задеплоить
 Задеплойте
 закажется
+закомментированы
 запустившемся
 запушить
 иcпользовать
@@ -1607,6 +1628,7 @@ zVirt
 Мультикластер
 мультикластера
 мультикластерной
+мультикластерный
 мультикластером
 мультимастер
 мультимастерного
@@ -1636,6 +1658,7 @@ zVirt
 неподдерживаемые
 неподдерживаемых
 неподнимающийся
+непринадлежности
 непубличного
 непубличный
 нереляционные
@@ -1660,6 +1683,7 @@ zVirt
 п
 пайплайна
 пайплайнов
+паравиртуализации
 парсер
 парсера
 парсеров
@@ -1681,6 +1705,7 @@ zVirt
 перевыписывает
 перевыпуск
 перевыпуска
+перевыпускаются
 перевыпустить
 перегенерации
 перегенерация
@@ -1756,6 +1781,7 @@ zVirt
 примонтированные
 примонтированных
 примонтируем
+приоритизация
 проброс
 проинициализирован
 прокинуть
@@ -1785,6 +1811,7 @@ zVirt
 регистри
 редиректить
 резолвинга
+резолвится
 реквест
 реквеста
 реквестами
@@ -1979,6 +2006,7 @@ zVirt
 ЦОД
 ЦОДах
 ЦОДов
+ЦП
 ЦС
 ч
 чаржить
