@@ -1,4 +1,5 @@
 require 'shellwords'
+require_relative "utils"
 
 module Jekyll
   class CustomSidebarTag < Liquid::Tag
@@ -62,7 +63,7 @@ module Jekyll
            external_url = "%s%s%s" % [ @context.registers[:site].config['urls'][lang], @context.registers[:site].config['canonical_url_prefix_documentation'], entry['url'] ]
       end
 
-      if entry && entry.has_key?('folders')
+      if entry.has_key?('folders')
          result.push(%Q(<li class='#{ parameters['folder_entry_class']}'>
             <a href='#'>
                 <span class='sidebar__submenu-title'>#{entry.dig('title',lang)}</span>))
@@ -110,12 +111,12 @@ module Jekyll
       elsif !external_url.nil? && external_url.size > 0
         result.push("<li class='#{ parameters['item_entry_class']}'><a href='#{ external_url }' target='_blank'>#{entry.dig('title', lang)} ↗</a></li>")
       elsif page_url == entry['url'] or page_url == entry_with_lang
-        result.push("<li class='#{ parameters['item_entry_class']} active'><a href='#{ entry['url'] }' target='_blank'>#{entry.dig('title', lang)}</a></li>")
+        result.push("<li class='#{ parameters['item_entry_class']} active'><a href='#{ getTrueRelativeUrl(entry['url']) }' target='_blank'>#{entry.dig('title', lang)}</a></li>")
       else
         if @context.registers[:page]['url'] == '404.md'
-          result.push(%Q(<li class='#{ parameters['item_entry_class']}'><a data-proofer-ignore href='#{ @context.registers[:site].config['canonical_url_prefix_documentation'] + entry['url'] }'>#{entry.dig('title', lang)}</a></li>))
+          result.push(%Q(<li class='#{ parameters['item_entry_class']}'><a data-proofer-ignore href='#{ @context.registers[:site].config['canonical_url_prefix_documentation'] + getTrueRelativeUrl(entry['url']) }'>#{entry.dig('title', lang)}</a></li>))
         else
-          result.push(%Q(<li class='#{ parameters['item_entry_class']}'><a href='#{entry['url'] }'>#{entry.dig('title', lang)}</a></li>))
+          result.push(%Q(<li class='#{ parameters['item_entry_class']}'><a href='#{ getTrueRelativeUrl(entry['url']) }'>#{entry.dig('title', lang)}</a></li>))
         end
       end
       #entry.each do |entry|
