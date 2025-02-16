@@ -160,6 +160,11 @@ func (d *ClusterDestroyer) DestroyCluster(autoApprove bool) error {
 		return err
 	}
 
+	err = config.SetEnvVars(metaConfig)
+	if err != nil {
+		return err
+	}
+
 	clusterType := metaConfig.ClusterType
 	var infraDestroyer Destroyer
 	switch clusterType {

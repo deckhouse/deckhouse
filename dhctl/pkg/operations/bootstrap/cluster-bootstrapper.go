@@ -189,6 +189,11 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 		return err
 	}
 
+	err = config.SetEnvVars(metaConfig)
+	if err != nil {
+		return err
+	}
+
 	if b.Params.NodeInterface == nil || reflect.ValueOf(b.Params.NodeInterface).IsNil() {
 		log.DebugLn("NodeInterface is nil")
 		if len(app.SSHHosts) == 0 && metaConfig.IsStatic() {
