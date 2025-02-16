@@ -19,7 +19,9 @@ import (
 	"fmt"
 	"net"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
 
 type internalNetworkCIDRs struct {
@@ -27,6 +29,11 @@ type internalNetworkCIDRs struct {
 }
 
 func (pc *Checker) CheckCidrIntersection() error {
+	if app.PreflightSkipCIDRIntersection {
+		log.DebugLn("Verification of CIDRs intersection is skipped")
+		return nil
+	}
+
 	podSubnetCIDR, serviceSubnetCIDR, err := getCidrFromMetaConfig(pc.metaConfig)
 	if err != nil {
 		return err
@@ -41,6 +48,11 @@ func (pc *Checker) CheckCidrIntersection() error {
 }
 
 func (pc *Checker) CheckCidrIntersectionStatic() error {
+	if app.PreflightSkipCIDRIntersection {
+		log.DebugLn("Verification of CIDRs intersection is skipped")
+		return nil
+	}
+
 	podSubnetCIDR, serviceSubnetCIDR, err := getCidrFromMetaConfig(pc.metaConfig)
 	if err != nil {
 		return err

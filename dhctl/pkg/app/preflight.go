@@ -32,6 +32,7 @@ var (
 	PreflightSkipSystemRequirementsCheck   = false
 	PreflightSkipOneSSHHost                = false
 	PreflightSkipCloudAPIAccessibility     = false
+	PreflightSkipCIDRIntersection          = false
 )
 
 const (
@@ -68,6 +69,7 @@ var (
 		SudoAllowedCheckArgName:          &PreflightSkipSudoIsAllowedForUserCheck,
 		SystemRequirementsArgName:        &PreflightSkipSystemRequirementsCheck,
 		OneSSHHostCheckArgName:           &PreflightSkipOneSSHHost,
+		CIDRIntersection:                 &PreflightSkipCIDRIntersection,
 	}
 )
 
@@ -125,4 +127,7 @@ func DefinePreflight(cmd *kingpin.CmdClause) {
 	cmd.Flag(OneSSHHostCheckArgName, "Skip verifying one ssh-host parametr").
 		Envar(configEnvName("PREFLIGHT_SKIP_ONE_SSH_HOST")).
 		BoolVar(PreflightSkipOptionsMap[OneSSHHostCheckArgName])
+	cmd.Flag(CIDRIntersection, "Skip verifying CIDRs intersection").
+		Envar(configEnvName("PREFLIGHT_SKIP_CIDR_INTERSECTION")).
+		BoolVar(PreflightSkipOptionsMap[CIDRIntersection])
 }
