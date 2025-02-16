@@ -49,6 +49,7 @@ const (
 	SystemRequirementsArgName        = "preflight-skip-system-requirements-check"
 	CloudAPIAccessibilityArgName     = "preflight-cloud-api-accesibility-check"
 	OneSSHHostCheckArgName           = "preflight-skip-one-ssh-host"
+	CIDRIntersection                 = "preflight-skip-cidr-intersection"
 )
 
 var (
