@@ -1,4 +1,4 @@
-{{- $localPathProvisionerVersion := "0.0.31"}}
+{{- $localPathProvisionerVersion := "0.0.26"}}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: common/distroless
