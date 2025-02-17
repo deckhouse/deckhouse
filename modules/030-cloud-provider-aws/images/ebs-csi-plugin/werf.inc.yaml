@@ -47,7 +47,7 @@ shell:
   - go mod download
   setup:
   - cd /src
-  - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="X github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/driver.driverVersion={{ $value.csi.aws }} -X github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/cloud.driverVersion={{ $value.csi.aws }} -s -w" -o /aws-ebs-csi-driver ./cmd/main.go
+  - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="X github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/driver.driverVersion={{ $value.csi.aws }} -X github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/cloud.driverVersion={{ $value.csi.aws }} -s -w" -o /aws-ebs-csi-driver ./cmd/
   - chown 64535:64535 /aws-ebs-csi-driver
   - chmod 0755 /aws-ebs-csi-driver
  {{- end }}
