@@ -5,9 +5,9 @@ title: "The user-authz module"
 The module generates role-based access model objects based on the standard Kubernetes RBAC mechanism. The module creates a set of cluster roles (`ClusterRole`) suitable for most user and group access management tasks.
 
 {% alert level="warning" %}
-Starting from Deckhouse Kubernetes Platform v1.64, the module features a experimental role-based access model. The old role-based access model will continue to operate but support for it will be discontinued in the future.
+Starting from Deckhouse Kubernetes Platform v1.64, the module features a experimental role-based access model. The current role-based access model will continue to operate but support for it will be discontinued in the future.
 
-The experimental role-based access model is incompatible with the old one.
+The experimental role-based access model is incompatible with the current one.
 {% endalert %}
 
 The module implements a role-based access model based on the standard RBAC Kubernetes mechanism. It creates a set of cluster roles (`ClusterRole`) suitable for most user and group access management tasks.
