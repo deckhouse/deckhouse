@@ -1,12 +1,13 @@
 {{- range $key, $value := .CandiVersionMap.k8s }}
   {{- $version := toString $key }}
+  {{- $image_version := toString $key | replace "." "-" }}
   {{- if $value.csi.aws }}
 ---
-image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $version | replace "." "-" }}
+image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
 fromImage: common/distroless
 import:
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
-  add: /go/src/github.com/kubernetes-sigs/aws-ebs-csi-driver/bin/aws-ebs-csi-driver
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
+  add: /aws-ebs-csi-driver
   to: /bin/aws-ebs-csi-driver
   before: setup
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
@@ -19,42 +20,46 @@ imageSpec:
   config:
     entrypoint: ["/bin/aws-ebs-csi-driver"]
 ---
-image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
+image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
 final: false
-    {{- if semverCompare ">=1.31" $version }}
-from: {{ $.Images.BASE_GOLANG_23_ALPINE_DEV }}
-    {{- else if semverCompare "=1.30" $version }}
-from: {{ $.Images.BASE_GOLANG_22_ALPINE_DEV }}
-    {{- else if semverCompare "=1.29" $version }}
-from: {{ $.Images.BASE_GOLANG_21_ALPINE_DEV }}
-    {{- else if semverCompare ">=1.27" $version }}
-from: {{ $.Images.BASE_GOLANG_20_ALPINE_DEV }}
-    {{- end }}
+fromImage: common/src-artifact
 shell:
-  beforeInstall:
-  - apk add --no-cache openssh-client
   install:
-  - export GO_VERSION=${GOLANG_VERSION}
-  - export GOPROXY={{ $.GOPROXY }}
-  - mkdir -p /go/src/github.com/kubernetes-sigs/aws-ebs-csi-driver
-  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
-  - git clone --depth 1 --branch {{ $value.csi.aws }} {{ $.SOURCE_REPO }}/kubernetes-sigs/aws-ebs-csi-driver.git /go/src/github.com/kubernetes-sigs/aws-ebs-csi-driver
-  - cd /go/src/github.com/kubernetes-sigs/aws-ebs-csi-driver
-  - make default
+    - git clone --depth 1 --branch {{ $value.csi.aws }} {{ $.SOURCE_REPO }}/kubernetes-sigs/aws-ebs-csi-driver.git /src
+    - cd /src
+    - rm -rf .git vendor
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
+final: false
+from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
+import:
+  - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
+    add: /src
+    to: /src
+    before: install
 mount:
-- fromPath: ~/go-pkg-cache
-  to: /go/pkg
+  - fromPath: ~/go-pkg-cache
+    to: /go/pkg
+shell:
+  install:
+  - cd /src
+  - export GOPROXY={{ $.GOPROXY }}
+  - go mod download
+  setup:
+  - cd /src
+  - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="X github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/driver.driverVersion={{ $value.csi.aws }} -X github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/cloud.driverVersion={{ $value.csi.aws }} -s -w" -o /aws-ebs-csi-driver ./cmd/main.go
+  - chown 64535:64535 /aws-ebs-csi-driver
+  - chmod 0755 /aws-ebs-csi-driver
  {{- end }}
 {{- end }}
 ---
 {{- $csiBinaries := "/bin/chmod /bin/mount /bin/mkdir /bin/rmdir /bin/umount /bin/findmnt /bin/lsblk /sbin/badblocks /sbin/blockdev /sbin/blk* /sbin/dumpe2fs /sbin/e2* /sbin/findfs /sbin/fsck* /sbin/fstrim /sbin/mke2fs /sbin/mkfs* /sbin/resize2fs /usr/sbin/parted /usr/sbin/xfs*" }}
----
 image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
 final: false
 fromImage: common/relocate-artifact
 shell:
   beforeInstall:
     - apt-get update -y
-    - apt-get install -y e2fsprogs xfsprogs btrfs-progs nfs-utils parted nvme udev
+    - apt-get install -y e2fsprogs xfsprogs parted
   install:
     - /binary_replace.sh -i "{{ $csiBinaries }}" -o /relocate
