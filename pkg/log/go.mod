@@ -4,7 +4,7 @@ go 1.23.1
 
 require (
 	github.com/DataDog/gostackparse v0.7.0
-	github.com/stretchr/testify v1.10.0
+	github.com/stretchr/testify v1.9.0
 	gopkg.in/yaml.v3 v3.0.1
 )
 
