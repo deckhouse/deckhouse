@@ -39,6 +39,9 @@ linters-settings:
         - kind: DaemonSet
           name: csi-node
           container: node
+        - kind: Deployment
+          name: csi-controller
+          container: syncer
       readiness-probe:
         - kind: Deployment
           name: cloud-data-discoverer
@@ -64,3 +67,6 @@ linters-settings:
         - kind: DaemonSet
           name: csi-node
           container: node
+        - kind: Deployment
+          name: csi-controller
+          container: syncer

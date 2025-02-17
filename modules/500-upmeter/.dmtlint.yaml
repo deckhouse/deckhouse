@@ -66,9 +66,6 @@ linters-settings:
           name: upmeter-agent
   templates:
     exclude-rules:
-      pdb:
-        - kind: DaemonSet
-          name: upmeter-agent
       service-port:
         - name: smoke-mini-a
           port: http

@@ -10,6 +10,9 @@ linters-settings:
           container: install-cni
         - kind: Deployment
           name: kiali
+        - kind: DaemonSet
+          name: ingressgateway
+          container: istio-proxy
       controller-security-context:
         - kind: Deployment
           name: kiali
@@ -26,6 +29,9 @@ linters-settings:
         - kind: Deployment
           name: operator-1x21
           container: operator
+        - kind: Deployment
+          name: metadata-exporter
+          container: metadata-discovery
       liveness-probe:
         - kind: DaemonSet
           name: istio-cni-node
@@ -33,6 +39,9 @@ linters-settings:
         - kind: Deployment
           name: operator-1x21
           container: operator
+        - kind: Deployment
+          name: metadata-exporter
+          container: metadata-discovery
   templates:
     exclude-rules:
       service-port:
@@ -44,6 +53,12 @@ linters-settings:
           port: https-dns
         - name: istiod
           port: https-webhook
+        - name: ingressgateway
+          port: tls
+        - name: metadata-exporter
+          port: http
+        - name: api-proxy
+          port: https
       pdb:
         - kind: Deployment
           name: operator-1x21
@@ -54,3 +69,8 @@ linters-settings:
   module:
     conversions:
       disable: true
+  rbac:
+    exclude-rules:
+      wildcards:
+        - kind: ClusterRole
+          name: d8:istio:multicluster:api-proxy

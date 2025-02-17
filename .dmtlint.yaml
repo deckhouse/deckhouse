@@ -1,4 +1,0 @@
-global:
-  linters-settings:
-    images:
-      impact: warn

@@ -2,6 +2,12 @@ linters-settings:
   module:
     oss:
       disable: true
+  container:
+    exclude-rules:
+      readiness-probe:
+        - kind: DaemonSet
+          name: user-authz-webhook
+          container: webhook
   rbac:
     exclude-rules:
       placement:
