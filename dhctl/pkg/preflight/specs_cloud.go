@@ -121,7 +121,7 @@ func (pc *Checker) CheckCloudMasterNodeSystemRequirements() error {
 	return nil
 }
 
-func (pc *Checker) CheckCloudMasterNodeRegistryDataDeviceSupport() error {
+func (pc *Checker) CheckCloudMasterNodeSecondaryDevicesSupport() error {
 	var cloud config.ClusterConfigCloudSpec
 	if err := json.Unmarshal(pc.metaConfig.ClusterConfig["cloud"], &cloud); err != nil {
 		return fmt.Errorf("unable to unmarshal cloud section from provider cluster configuration: %v", err)

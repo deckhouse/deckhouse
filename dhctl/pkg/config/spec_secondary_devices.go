@@ -21,11 +21,12 @@ import (
 )
 
 const (
-	RegistryDataDeviceEnableTerraformVar="registryDataDeviceEnable"
+	RegistryDataDeviceEnableTerraformVar = "registryDataDeviceEnable"
+	RegistryDataDeviceModuleName         = "system-registry"
 )
 
 var (
-	providersSupportingSecondaryDataDevices = map[string]struct{}{
+	providersWithRegistryDataDeviceSupport = map[string]struct{}{
 		"aws":         {},
 		"gcp":         {},
 		"yandex":      {},
@@ -37,6 +38,7 @@ var (
 		// "zvirt":       {},
 		// "dynamix":     {},
 	}
+	registryModesWithoutRegistryDataDeviceSupport = []string{RegistryModeDirect}
 )
 
 type ProviderSecondaryDevicesConfig struct {
@@ -74,14 +76,17 @@ func (d *ProviderSecondaryDevicesConfig) validateRegistryDataDevice(cloudProvide
 		return nil
 	}
 
-	// Check if the current cloud provider is supported
-	if _, supported := providersSupportingSecondaryDataDevices[strings.ToLower(cloudProvider)]; supported {
+	// Check cloud provider`s white list
+	if _, supported := providersWithRegistryDataDeviceSupport[strings.ToLower(cloudProvider)]; supported {
 		return nil
 	}
 
-	// Return an error if the cloud provider is unsupported
+	// Return an error if data device is unsupported
 	return fmt.Errorf(
-		"cloud provider '%s' is unsupported for registry data device",
+		"The registry data device for the '%s' module is not supported with the cloud provider '%s'. "+
+			"Please select a registry mode that does not require the registry data device. Available modes: %+v",
+		RegistryDataDeviceModuleName,
 		cloudProvider,
+		registryModesWithoutRegistryDataDeviceSupport,
 	)
 }

@@ -148,8 +148,8 @@ func (pc *Checker) Cloud() error {
 	// It is impossible to focus on the previous saved status
 	err := pc.doRequired("Cloud deployment required preflight checks", []requiredCheckStep{
 		{
-			fun:            pc.CheckCloudMasterNodeRegistryDataDeviceSupport,
-			successMessage: "cloud master node registry data device is supported",
+			fun:            pc.CheckCloudMasterNodeSecondaryDevicesSupport,
+			successMessage: "cloud master node secondary devices support",
 		},
 	})
 
@@ -284,8 +284,7 @@ func (pc *Checker) doRequired(title string, checks []requiredCheckStep) error {
 				10*time.Second,
 			)
 			if err := loop.Run(check.fun); err != nil {
-				return fmt.Errorf("Installation aborted: %w\n"+
-					`Please fix this problem`, err)
+				return fmt.Errorf("Installation aborted: %w", err)
 			}
 		}
 		return nil
