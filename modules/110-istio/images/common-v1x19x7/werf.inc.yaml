@@ -19,5 +19,5 @@ shell:
   - rm -rf /src/istio/.git
   - git clone --depth 1 --branch {{ $kialiVersion }} {{ $.SOURCE_REPO }}/istio/kiali.git /src/kiali/
   - cd /src/kiali/
-  # - git apply --verbose /patches/*.patch
+  - git apply --verbose /patches/kiali-*.patch
   - rm -rf /src/kiali/.git
