@@ -1,7 +1,7 @@
 ---
 {{- $istioVersion := "1.19.7" }}
 {{- $istioImageVersion := (printf "v%s" (replace "." "x" $istioVersion)) }} {{- /* 1.19.7 -> v1x19x7 */}}
-{{- $kialiVersion := "1.67.2" }}
+{{- $kialiVersion := "v1.67.2" }}
 ---
 # Based on https://github.com/kiali/kiali/blob/v1.67.2/deploy/docker/Dockerfile-distroless
 image: {{ .ModuleName }}/{{ .ImageName }}
@@ -45,7 +45,7 @@ shell:
   - cd /src/kiali/
   - echo {{ $kialiVersion }} > version
   - export GOPROXY={{ $.GOPROXY }} GOOS=linux GOARCH=amd64
-  - export LDFLAGS='-X main.version=${kialiVersio}'
+  - export LDFLAGS='-X main.version=${kialiVersion}'
   - go mod download
   - go build -o /src/kiali/out/kiali /src/kiali/
   - strip /src/kiali/out/kiali

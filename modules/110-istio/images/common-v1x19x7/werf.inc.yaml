@@ -1,6 +1,6 @@
 ---
 {{- $istioVersion := "1.19.7" }}
-{{- $kialiVersion := "1.67.2" }}
+{{- $kialiVersion := "v1.67.2" }}
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
 fromImage: common/src-artifact
