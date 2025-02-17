@@ -54,10 +54,11 @@ def validate(ctx: DotMap) -> tuple[Optional[str], list[str]]:
 def validate_delete(ctx: DotMap) -> tuple[Optional[str], list[str]]:
     class_to_delete = ctx.review.request.name
     node_group_consumers = ctx.review.request.oldObject.status.nodeGroupConsumers
+    resource_kind = ctx.review.request.kind.kind
 
     if node_group_consumers:
         node_groups = ", ".join(node_group_consumers)
-        error_message = (f"{INSTANCE_CLASS_NAME}/{class_to_delete} cannot be deleted "
+        error_message = (f"{resource_kind}/{class_to_delete} cannot be deleted "
                          f"because it is being used by NodeGroup: {node_groups}")
         return error_message, []
 
