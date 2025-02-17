@@ -11,6 +11,8 @@ istio:
     - version: 2
 metallb:
     - version: 2
+monitoring-kubernetes:
+    - version: 2
 node-manager:
     - version: 2
 openvpn:
