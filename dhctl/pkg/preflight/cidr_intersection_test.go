@@ -269,6 +269,21 @@ func TestCheckCidrIntersectionStatic(t *testing.T) {
 			},
 		},
 		{
+			name: "intersects serviceSubnetCIDR with internalNetworkCIDRs",
+			fields: fields{metaConfig: &config.MetaConfig{
+				ClusterConfig: map[string]json.RawMessage{
+					"podSubnetCIDR":     []byte(`"10.111.0.0/16"`),
+					"serviceSubnetCIDR": []byte(`"10.222.0.0/16"`),
+				},
+				StaticClusterConfig: map[string]json.RawMessage{
+					"internalNetworkCIDRs": []byte(`["10.222.128.0/24"]`),
+				},
+			}},
+			wantErr: func(t assert.TestingT, err error, i ...interface{}) bool {
+				return assert.ErrorContains(t, err, "are intersects")
+			},
+		},
+		{
 			name: "missing podSubnetCIDR",
 			fields: fields{metaConfig: &config.MetaConfig{
 				ClusterConfig: map[string]json.RawMessage{
