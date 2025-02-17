@@ -24,10 +24,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
 
-type internalNetworkCIDRs struct {
-	internalNetworkCIDR []string
-}
-
 func (pc *Checker) CheckCidrIntersection() error {
 	if app.PreflightSkipCIDRIntersection {
 		log.DebugLn("Verification of CIDRs intersection is skipped")
@@ -58,7 +54,7 @@ func (pc *Checker) CheckCidrIntersectionStatic() error {
 		return err
 	}
 
-	var internalNetworkCIDRs internalNetworkCIDRs
+	var internalNetworkCIDRs []string
 	err = json.Unmarshal(pc.metaConfig.StaticClusterConfig["internalNetworkCIDRs"], &internalNetworkCIDRs)
 	if err != nil {
 		return err
@@ -69,7 +65,7 @@ func (pc *Checker) CheckCidrIntersectionStatic() error {
 		return err
 	}
 
-	for _, ininternalNetworkCIDR := range internalNetworkCIDRs.internalNetworkCIDR {
+	for _, ininternalNetworkCIDR := range internalNetworkCIDRs {
 		err := cidrIntersects(podSubnetCIDR, ininternalNetworkCIDR)
 		if err != nil {
 			return err
@@ -101,8 +97,17 @@ func cidrIntersects(cidr1, cidr2 string) error {
 }
 
 func getCidrFromMetaConfig(metaConfig *config.MetaConfig) (string, string, error) {
-	podSubnetCIDR := fmt.Sprint(metaConfig.ClusterConfig["podSubnetCIDR"])
-	serviceSubnetCIDR := fmt.Sprint(metaConfig.ClusterConfig["serviceSubnetCIDR"])
+	var podSubnetCIDR string
+	var serviceSubnetCIDR string
+	err := json.Unmarshal(metaConfig.ClusterConfig["podSubnetCIDR"], &podSubnetCIDR)
+	if err != nil {
+		return "", "", err
+	}
+
+	err = json.Unmarshal(metaConfig.ClusterConfig["serviceSubnetCIDR"], &serviceSubnetCIDR)
+	if err != nil {
+		return "", "", err
+	}
 
 	return podSubnetCIDR, serviceSubnetCIDR, nil
 }
