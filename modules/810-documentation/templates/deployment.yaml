@@ -24,6 +24,7 @@ spec:
       imagePullSecrets:
       - name: deckhouse-registry
       serviceAccountName: documentation
+      automountServiceAccountToken: true
       containers:
       - name: web
         image: {{ include "helm_lib_module_image" (list $ "web") }}

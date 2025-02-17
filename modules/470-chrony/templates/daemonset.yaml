@@ -107,6 +107,7 @@ spec:
                 - master
       dnsPolicy: ClusterFirstWithHostNet
       serviceAccountName: chrony-exporter
+      automountServiceAccountToken: true
       hostNetwork: true
       imagePullSecrets:
       - name: deckhouse-registry
@@ -305,6 +306,7 @@ spec:
                 - master
       dnsPolicy: ClusterFirstWithHostNet
       serviceAccountName: chrony-exporter-master
+      automountServiceAccountToken: true
       hostNetwork: true
       imagePullSecrets:
       - name: deckhouse-registry

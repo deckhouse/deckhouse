@@ -49,6 +49,7 @@ spec:
       imagePullSecrets:
       - name: deckhouse-registry
       serviceAccountName: {{ $.Chart.Name }}
+      automountServiceAccountToken: true
       shareProcessNamespace: true
       {{- with .Values.logShipper.nodeSelector }}
       nodeSelector:
