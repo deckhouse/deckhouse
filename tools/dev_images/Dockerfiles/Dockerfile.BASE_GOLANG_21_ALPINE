@@ -1,5 +1,0 @@
-ARG DISTRO
-FROM $DISTRO
-RUN apk update &&\
-    apk add --no-cache bash bash-completion ca-certificates curl pwgen bc grep tar unzip coreutils util-linux sed gawk busybox-extras vim tini git build-base libstdc++ libgcc libcurl binutils binutils-dev elfutils-dev tzdata rsync &&\
-    update-ca-certificates
