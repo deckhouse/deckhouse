@@ -3,6 +3,10 @@ kind: Project
 metadata:
   name: test
 spec:
+  resourceLabels:
+    key: val
+  resourceAnnotations:
+    key: val
   description: This is an example from the Deckhouse documentation.
   projectTemplateName: default
   parameters:
