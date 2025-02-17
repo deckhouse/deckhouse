@@ -747,6 +747,7 @@ myns
 mysql
 MySQL
 MySQL’s
+MySuperResource
 namespace
 namespaced
 Namespaced
@@ -989,6 +990,7 @@ repo
 reprovisioning
 RequestAuthentication
 resizer
+resourceAttributes
 ResourceList
 ResourceName
 resourcePolicy
@@ -1234,6 +1236,7 @@ VMX
 VNC
 VNet
 VNets
+volumeMounts
 VolumeSnapshot
 VolumeSnapshotClass
 VolumeSnapshotClasses
@@ -1378,6 +1381,7 @@ zVirt
 беспроблемный
 биллинга
 биндинг
+биндинга
 биндинги
 биндятся
 блокирующе
@@ -1401,7 +1405,9 @@ zVirt
 валидировать
 валидируются
 вебхук
+вебхука
 вебхуки
+вебхуком
 вендором
 вендору
 вендоры
