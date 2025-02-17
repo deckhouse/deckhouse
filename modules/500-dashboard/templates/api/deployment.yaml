@@ -61,6 +61,7 @@ spec:
         - --namespace=d8-{{ .Chart.Name }}
         - --metrics-scraper-service-name=metrics-scraper
         - --insecure-bind-address=127.0.0.1
+        - --v=3
         env:
         - name: CSRF_KEY
           valueFrom:

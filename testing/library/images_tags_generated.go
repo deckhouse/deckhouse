@@ -331,8 +331,7 @@ var DefaultImagesDigests = map[string]interface{}{
 		"vector": "imageHash-logShipper-vector",
 	},
 	"loki": map[string]interface{}{
-		"loki":            "imageHash-loki-loki",
-		"lokiSrcArtifact": "imageHash-loki-lokiSrcArtifact",
+		"loki": "imageHash-loki-loki",
 	},
 	"metallb": map[string]interface{}{
 		"l2lbController":    "imageHash-metallb-l2lbController",
@@ -404,10 +403,8 @@ var DefaultImagesDigests = map[string]interface{}{
 		"memcached":                   "imageHash-prometheus-memcached",
 		"memcachedExporter":           "imageHash-prometheus-memcachedExporter",
 		"mimir":                       "imageHash-prometheus-mimir",
-		"mimirSrcArtifact":            "imageHash-prometheus-mimirSrcArtifact",
 		"prometheus":                  "imageHash-prometheus-prometheus",
 		"promxy":                      "imageHash-prometheus-promxy",
-		"promxySrcArtifact":           "imageHash-prometheus-promxySrcArtifact",
 		"trickster":                   "imageHash-prometheus-trickster",
 	},
 	"prometheusMetricsAdapter": map[string]interface{}{
@@ -434,7 +431,7 @@ var DefaultImagesDigests = map[string]interface{}{
 		"dockerRegistry283":         "imageHash-registrypackages-dockerRegistry283",
 		"drbd":                      "imageHash-registrypackages-drbd",
 		"e2fsprogs1472":             "imageHash-registrypackages-e2fsprogs1472",
-		"ec2DescribeTagsV001Flant2": "imageHash-registrypackages-ec2DescribeTagsV001Flant2",
+		"ec2DescribeTagsV001Flant3": "imageHash-registrypackages-ec2DescribeTagsV001Flant3",
 		"ecrCredentialProvider128":  "imageHash-registrypackages-ecrCredentialProvider128",
 		"ecrCredentialProvider129":  "imageHash-registrypackages-ecrCredentialProvider129",
 		"ecrCredentialProvider130":  "imageHash-registrypackages-ecrCredentialProvider130",
