@@ -8,10 +8,8 @@ shell:
   setup:
     - mkdir -p /go/src
     - cd /go/src
-    - git clone https://github.com/k8snetworkplumbingwg/multus-cni.git 
+    - git clone --depth 1 --branch v4.1.4 https://github.com/k8snetworkplumbingwg/multus-cni.git
     - cd multus-cni
-    - git fetch --all --tags
-    - git checkout v4.1.4
     - ./hack/build-go.sh
     - mkdir -p /build-output/bin
     - cp -r bin/* /build-output/bin/
