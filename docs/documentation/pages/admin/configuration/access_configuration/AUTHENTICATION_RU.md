@@ -62,6 +62,44 @@ DKP позволяет:
    - ограничить список адресов, с которых разрешена аутентификация;
    - интегрировать приложение в единую систему аутентификации, если приложение поддерживает OIDC. Для этого в Kubernetes создается ресурс DexClient в пространстве имён приложения. В том же пространстве имён создается секрет с данными для подключения в Dex по OIDC.
 
+### Настройка OAuth2-клиента в Dex для подключения приложения
+
+Этот вариант настройки подходит приложениям, которые имеют возможность использовать OAuth2-аутентификацию самостоятельно, без помощи oauth2-proxy. Чтобы позволить подобным приложениям взаимодействовать с Dex, используется ресурс [DexClient](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/user-authn/cr.html#dexclient).
+
+Пример ресурса:
+
+```yaml
+apiVersion: deckhouse.io/v1
+kind: DexClient
+metadata:
+  name: myname
+  namespace: mynamespace
+spec:
+  redirectURIs:
+  - https://app.example.com/callback
+  - https://app.example.com/callback-reserve
+  allowedGroups:
+  - Everyone
+  - admins
+  trustedPeers:
+  - opendistro-sibling
+```
+
+После создания такого ресурса в Dex будет зарегистрирован клиент с идентификатором (`clientID`) `dex-client-myname@mynamespace`.
+
+Пароль доступа к клиенту (`clientSecret`) сохранится в секрете. Пример:
+
+```yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: dex-client-myname
+  namespace: mynamespace
+type: Opaque
+data:
+  clientSecret: c2VjcmV0
+```
+
 ### Поддерживаемые провайдеры
 
 DKP поддерживает подключение следующих внешних провайдеров и протоколов аутентификации:
@@ -412,16 +450,6 @@ spec:
 ```console
 accessLevel: PrivilegedUser
 ```
-
-## Доступ к Kubernetes API
-
-вот тут раздел про то как настроить доступ к API, закрытый аутентификацией. 
-
-
-
-Также тут надо написать про kubeconfig. Тут не нужно про то, как сгенерировать kubeconfig через веб интерфейс, но нужно про то, что надо сделать чтобы он заработал
-
-Думаю что раздел надо писать после раздела “Настройка интеграции с внешними провайдерами аутентификации.
 
 ## Важно
 
