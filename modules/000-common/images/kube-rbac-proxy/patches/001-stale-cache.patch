@@ -18,7 +18,7 @@ index 6812e746..15e5f25e 100644
  	rbac_proxy_tls "github.com/brancz/kube-rbac-proxy/pkg/tls"
  )
  
-+var kubeClientDefaultTimeout = 3 * time.Second
++var kubeClientDefaultTimeout = 5 * time.Second
 +
  type config struct {
  	insecureListenAddress string
