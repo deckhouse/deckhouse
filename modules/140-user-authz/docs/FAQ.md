@@ -6,7 +6,7 @@ title: "The user-authz module: FAQ"
 
 [Creating a user](usage.html#creating-a-user).
 
-<div style="height: 0;" id="кhow-do-i-limit-user-rights-to-specific-namespaces-obsolete-role-based-model"></div>
+<div style="height: 0;" id="how-do-i-limit-user-rights-to-specific-namespaces-obsolete-role-based-model"></div>
 
 ## How do I limit user rights to specific namespaces?
 

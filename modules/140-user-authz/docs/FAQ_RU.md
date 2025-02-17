@@ -126,7 +126,7 @@ rules: []
   rbac.deckhouse.io/subsystem: custom
   ```
 
-- позволяет `manage:all`-роли сагрегировать эту роль:
+- позволяет `manage:all`-роли агрегировать эту роль в себя:
 
   ```yaml
   rbac.deckhouse.io/aggregate-to-all-as: manager
@@ -141,7 +141,7 @@ rules: []
   rbac.deckhouse.io/aggregate-to-deckhouse-as: manager
   ```
 
-- агрерирует все правила от модуля user-authn:
+- агрегирует все правила от модуля user-authn:
 
   ```yaml
    rbac.deckhouse.io/kind: manage
@@ -280,7 +280,7 @@ rules:
    - watch
  ```
 
-Хук мониторит `ClusterRoleBinding` и при создании биндинга ходит по всем manage-ролям, чтобы найти все сагрерированные роли с помощью проверки правила агрегации. Затем он берёт пространство имён из лейбла `rbac.deckhouse.io/namespace` и создает use-роль в этом пространстве имён.
+Хук мониторит `ClusterRoleBinding` и при создании биндинга ходит по всем manage-ролям, чтобы найти все объединенные в них роли с помощью проверки правила агрегации. Затем он берёт пространство имён из лейбла `rbac.deckhouse.io/namespace` и создает use-роль в этом пространстве имён.
 
 ### Расширение существующих use-ролей
 
