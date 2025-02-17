@@ -23,6 +23,7 @@ imageSpec:
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
 fromImage: common/src-artifact
+final: false
 {{- if $patch }}
 git:
 - add: {{ $patches }}/patches/{{ $version }}
