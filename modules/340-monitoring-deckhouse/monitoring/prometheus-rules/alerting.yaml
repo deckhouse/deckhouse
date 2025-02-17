@@ -193,13 +193,23 @@
       summary: |
         ModuleConfig {{ $labels.name }} is outdated.
   - alert: ModuleHasDeprecatedUpdatePolicy
-    expr: max by (moduleName) (d8_deprecated_update_policy) >= 1
+    expr: max by (moduleName, updatePolicy) (d8_deprecated_update_policy) >= 1
     labels:
       severity_level: "4"
     annotations:
       plk_markup_format: "markdown"
       plk_protocol_version: "1"
       description: |
-        The '{{ $labels.moduleName }}' module matched by the '{{ $labels.updatePolicy }}' deprecated module update policy, the policy selector does not work, and the module will use deckhouse update policy.
+        The '{{ $labels.moduleName }}' module matched by the '{{ $labels.updatePolicy }}' deprecated module update policy, the policy`s v1alpha1 has selector that no longer works.
+        
+        Specify the update policy in the module config by following command:
+        ```
+        kubectl patch moduleconfig {{ $labels.moduleName }} --type='json' -p='[{"op": "add", "path": "/spec/updatePolicy", "value": "{{ $labels.updatePolicy }}"}]'
+        ```
+        
+        After all alerts are solved, use this command to clear selector in the update policy:
+        ```
+        kubectl patch moduleupdatepolicies.v1alpha1.deckhouse.io {{ $labels.updatePolicy }} --type='json' -p='[{"op": "replace", "path": "/spec/moduleReleaseSelector/labelSelector/matchLabels", "value": {"": ""}}]'
+        ```
       summary: |
         The '{{ $labels.moduleName }}' module matched by the '{{ $labels.updatePolicy }}' deprecated module update policy.
