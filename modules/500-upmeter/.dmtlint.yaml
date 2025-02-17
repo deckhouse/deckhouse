@@ -34,6 +34,22 @@ linters-settings:
         - kind: StatefulSet
           name: upmeter
           container: kube-rbac-proxy
+      image-digest:
+        - kind: StatefulSet
+          name: smoke-mini-e
+          container: smoke-mini
+        - kind: StatefulSet
+          name: smoke-mini-d
+          container: smoke-mini
+        - kind: StatefulSet
+          name: smoke-mini-c
+          container: smoke-mini
+        - kind: StatefulSet
+          name: smoke-mini-b
+          container: smoke-mini
+        - kind: StatefulSet
+          name: smoke-mini-a
+          container: smoke-mini
   module:
     oss:
       disable: true
@@ -54,8 +70,13 @@ linters-settings:
         - kind: DaemonSet
           name: upmeter-agent
       service-port:
-        - smoke-mini-a
-        - smoke-mini-b
-        - smoke-mini-c
-        - smoke-mini-d
-        - smoke-mini-e
+        - name: smoke-mini-a
+          port: http
+        - name: smoke-mini-b
+          port: http
+        - name: smoke-mini-c
+          port: http
+        - name: smoke-mini-d
+          port: http
+        - name: smoke-mini-e
+          port: http

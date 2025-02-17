@@ -77,4 +77,5 @@ linters-settings:
         - kind: DaemonSet
           name: d8-control-plane-manager
       service-port:
-        - d8-control-plane-apiserver
+        - name: d8-control-plane-apiserver
+          port: https

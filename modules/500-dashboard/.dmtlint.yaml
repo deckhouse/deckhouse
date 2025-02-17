@@ -30,7 +30,11 @@ linters-settings:
   templates:
     exclude-rules:
       service-port:
-        - api
-        - auth
-        - metrics-scraper
-        - web
+        - name: api
+          port: https
+        - name: auth
+          port: https
+        - name: metrics-scraper
+          port: https
+        - name: web
+          port: https

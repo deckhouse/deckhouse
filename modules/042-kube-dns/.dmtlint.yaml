@@ -21,7 +21,8 @@ linters-settings:
   templates:
     exclude-rules:
       service-port:
-        - d8-kube-dns-sts-pods-hosts-appender-webhook
+        - name: d8-kube-dns-sts-pods-hosts-appender-webhook
+          port: https
   openapi:
     exclude-rules:
       enum:

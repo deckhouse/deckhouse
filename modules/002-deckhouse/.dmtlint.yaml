@@ -13,6 +13,10 @@ linters-settings:
         - kind: Deployment
           name: webhook-handler
           container: handler
+      image-digest:
+        - kind: Deployment
+          name: deckhouse
+          container: deckhouse
   rbac:
     exclude-rules:
       wildcards:

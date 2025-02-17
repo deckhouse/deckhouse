@@ -17,3 +17,7 @@ linters-settings:
         - kind: DaemonSet
           name: okmeter
           container: okagent
+      image-digest:
+        - kind: DaemonSet
+          name: okmeter
+          container: okagent

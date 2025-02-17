@@ -36,7 +36,14 @@ linters-settings:
   templates:
     exclude-rules:
       service-port:
-        - istiod
+        - name: istiod
+          port: http-monitoring
+        - name: istiod
+          port: grpc-xds
+        - name: istiod
+          port: https-dns
+        - name: istiod
+          port: https-webhook
       pdb:
         - kind: Deployment
           name: operator-1x21
