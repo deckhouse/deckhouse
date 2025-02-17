@@ -1,3 +1,16 @@
+diff --git a/pkg/distributor/http.go b/pkg/distributor/http.go
+index 29f0f80e394d9c3a5736c20e214760f8b38d32af..23218f98e95d4a8bf406d8a9cbc824fb1b14ea3b 100644
+--- a/pkg/distributor/http.go
++++ b/pkg/distributor/http.go
+@@ -28,7 +28,7 @@ func (d *Distributor) PushHandler(w http.ResponseWriter, r *http.Request) {
+ 	}
+ 	req, err := push.ParseRequest(logger, tenantID, r, d.tenantsRetention)
+ 	if err != nil {
+-		if d.tenantConfigs.LogPushRequest(tenantID) {
++		if true || d.tenantConfigs.LogPushRequest(tenantID) {
+ 			level.Debug(logger).Log(
+ 				"msg", "push request failed",
+ 				"code", http.StatusBadRequest,
 diff --git a/pkg/loki/loki.go b/pkg/loki/loki.go
 index 05c057ea38a4af597eadb9f91ffe82156711fe5f..47bb2d2810b22eadd30301cce43af3d55e89bd52 100644
 --- a/pkg/loki/loki.go
