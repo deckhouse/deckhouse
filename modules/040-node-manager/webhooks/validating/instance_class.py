@@ -19,7 +19,7 @@ from typing import Optional
 from deckhouse import hook
 from dotmap import DotMap
 
-INSTANCE_CLASS_NAME = os.getenv("INSTANCE_CLASS_NAME")
+INSTANCE_CLASS_NAME = os.getenv("INSTANCE_CLASS_NAME", "instanceclasses")
 
 config = f"""
 configVersion: v1
