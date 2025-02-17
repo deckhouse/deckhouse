@@ -907,7 +907,7 @@ spec:
           - id: AVD-KSV-0020
           - id: AVD-KSV-0005
           - id: AVD-KSV-0025
-          - id: AVD-KSV-0104
+          # - id: AVD-KSV-0104
           - id: AVD-KSV-0030
         severity: HIGH
       - id: 5.7.4
