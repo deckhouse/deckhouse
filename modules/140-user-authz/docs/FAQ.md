@@ -6,17 +6,13 @@ title: "The user-authz module: FAQ"
 
 [Creating a user](usage.html#creating-a-user).
 
+<div style="height: 0;" id="how-do-i-limit-user-rights-to-specific-namespaces-obsolete-role-based-model"></div>
+
 ## How do I limit user rights to specific namespaces?
 
-To limit a user's rights to specific namespaces, use `RoleBinding` with the [use role](./#use-roles) that has the appropriate level of access. [Example...](usage.html#example-of-assigning-administrative-rights-to-a-user-within-a-namespace).
+To limit a user's rights to specific namespaces in the experimental role-based model, use `RoleBinding` with the [use role](./#use-roles) that has the appropriate level of access. [Example...](usage.html#example-of-assigning-administrative-rights-to-a-user-within-a-namespace).
 
-### How do I limit user rights to specific namespaces (obsolete role-based model)?
-
-{% alert level="warning" %}
-The example uses the [obsolete role-based model](./#the-obsolete-role-based-model).
-{% endalert %}
-
-Use the `namespaceSelector` or `limitNamespaces` (deprecated) parameters in the [`ClusterAuthorizationRule`](../../modules/user-authz/cr.html#clusterauthorizationrule) CR.
+In the current role-based model, use the `namespaceSelector` or `limitNamespaces` (deprecated) parameters in the [`ClusterAuthorizationRule`](../../modules/user-authz/cr.html#clusterauthorizationrule) CR.
 
 ## What if there are two ClusterAuthorizationRules matching to a single user?
 
@@ -67,7 +63,7 @@ Because `Jane Doe` matches two rules, some calculations will be made:
 
 ## How do I extend a role or create a new one?
 
-[The new role model](./#the-new-role-based-model) is based on the aggregation principle; it compiles smaller roles into larger ones,
+[The experimental role model](./#experimental-role-based-model) is based on the aggregation principle; it compiles smaller roles into larger ones,
 thus providing easy ways to enhance the model with custom roles.
 
 ### Creating a new role subsystem
