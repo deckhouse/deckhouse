@@ -6,7 +6,7 @@ import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-binary-artifact
   add: /opt/kiali/
   to: /opt/kiali/
-  after: setup
+  before: install
 shell:
   install:
   - adduser --no-create-home --uid 1000 kiali
