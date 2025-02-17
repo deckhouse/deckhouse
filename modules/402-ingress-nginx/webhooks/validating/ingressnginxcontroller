@@ -63,6 +63,7 @@ function __main__() {
       exit 0
     fi
   fi
+
   # Allowed response.
   jq -nc '{"allowed": true}' > $VALIDATING_RESPONSE_PATH
 }
