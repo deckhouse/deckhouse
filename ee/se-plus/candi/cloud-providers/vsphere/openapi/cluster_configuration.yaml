@@ -80,7 +80,7 @@ apiVersions:
         description: |
           The definition of the master's NodeGroup.
 
-          > Caution! After changing the parameters of the section, you need to run `dhctl converge` for the changes to take effect.
+          > For the changes to take effect, run `dhctl converge` after modifying the parameters of the `masterNodeGroup` section.
         properties:
           replicas:
             type: integer
@@ -274,7 +274,7 @@ apiVersions:
                   description: |
                     The same as the `.spec.taints` field of the [Node](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#taint-v1-core) object.
 
-                    > **Caution!** Only the `effect`, `key`, `values`  fields are available.
+                    > Available fields: `effect`, `key`, and `values`.
                   x-examples:
                   - - effect: NoExecute
                       key: ship-class

@@ -58,6 +58,8 @@ spec:
       containers:
       - args:
         - --config-dir=/tmp/cilium/config-map
+        - --leader-election-lease-duration=25s
+        - --leader-election-renew-deadline=20s
         command:
         - cilium-operator
         env:

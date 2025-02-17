@@ -29,7 +29,7 @@ import (
 
 	v1 "github.com/deckhouse/deckhouse/dhctl/pkg/apis/v1"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/converge"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/entity"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/template"
@@ -49,7 +49,7 @@ func (n *kubeNgGetter) NodeGroups() ([]*v1.NodeGroup, error) {
 	var ngs []unstructured.Unstructured
 	err := retry.NewSilentLoop("get machine failed events", 3, 3*time.Second).Run(func() error {
 		var err error
-		ngs, err = converge.GetNodeGroups(n.kubeCl)
+		ngs, err = entity.GetNodeGroups(n.kubeCl)
 		return err
 	})
 
