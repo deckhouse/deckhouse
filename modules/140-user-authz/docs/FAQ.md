@@ -6,13 +6,13 @@ title: "The user-authz module: FAQ"
 
 [Creating a user](usage.html#creating-a-user).
 
+<div style="height: 0;" id="кhow-do-i-limit-user-rights-to-specific-namespaces-obsolete-role-based-model"></div>
+
 ## How do I limit user rights to specific namespaces?
 
-To limit a user's rights to specific namespaces, use `RoleBinding` with the [use role](./#use-roles) that has the appropriate level of access. [Example...](usage.html#example-of-assigning-administrative-rights-to-a-user-within-a-namespace).
+To limit a user's rights to specific namespaces in the experimental role-based model, use `RoleBinding` with the [use role](./#use-roles) that has the appropriate level of access. [Example...](usage.html#example-of-assigning-administrative-rights-to-a-user-within-a-namespace).
 
-### How do I limit user rights to specific namespaces?
-
-Use the `namespaceSelector` or `limitNamespaces` (deprecated) parameters in the [`ClusterAuthorizationRule`](../../modules/user-authz/cr.html#clusterauthorizationrule) CR.
+In the current role-based model, use the `namespaceSelector` or `limitNamespaces` (deprecated) parameters in the [`ClusterAuthorizationRule`](../../modules/user-authz/cr.html#clusterauthorizationrule) CR.
 
 ## What if there are two ClusterAuthorizationRules matching to a single user?
 

@@ -12,6 +12,8 @@ The experimental role-based access model is incompatible with the current one.
 
 The module implements a role-based access model based on the standard RBAC Kubernetes mechanism. It creates a set of cluster roles (`ClusterRole`) suitable for most user and group access management tasks.
 
+<div style="height: 0;" id="the-new-role-based-model"></div>
+
 ## Experimental role-based model
 
 Unlike the [current DKP role-based model](#current-role-based-model), the new role-based one does not use `ClusterAuthorizationRule` and `AuthorizationRule` resources. All access rights are configured in the standard Kubernetes RBAC way, i.e., by creating `RoleBinding` or `ClusterRoleBinding` resources and specifying one of the roles prepared by the `user-authz` module in them.
@@ -86,6 +88,8 @@ The subsystem of the role restricts its action to all system namespaces of the c
 Role-based model subsystems composition table.
 
 {% include rbac/rbac-subsystems-list.liquid %}
+
+<div style="height: 0;" id="the-obsolete-role-based-model"></div>
 
 ## Current role-based model
 
