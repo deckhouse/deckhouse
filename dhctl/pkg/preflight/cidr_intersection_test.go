@@ -49,14 +49,23 @@ func TestGetCidrFromMetaConfig(t *testing.T) {
 				},
 			},
 			expectError: true,
-			errorMsg:    "unexpected end of JSON input",
+			errorMsg:    "missing podSubnetCIDR field in ClusterConfiguration",
+		},
+		{
+			metaConfig: &config.MetaConfig{
+				ClusterConfig: map[string]json.RawMessage{
+					"podSubnetCIDR": json.RawMessage(`"192.168.0.0/16"`),
+				},
+			},
+			expectError: true,
+			errorMsg:    "missing serviceSubnetCIDR field in ClusterConfiguration",
 		},
 		{
 			metaConfig: &config.MetaConfig{
 				ClusterConfig: map[string]json.RawMessage{},
 			},
 			expectError: true,
-			errorMsg:    "unexpected end of JSON input",
+			errorMsg:    "missing podSubnetCIDR field in ClusterConfiguration",
 		},
 	}
 
@@ -167,7 +176,7 @@ func TestCheckCidrIntersection(t *testing.T) {
 				},
 			}},
 			wantErr: func(t assert.TestingT, err error, i ...interface{}) bool {
-				return assert.ErrorContains(t, err, "unexpected end of JSON input")
+				return assert.ErrorContains(t, err, "missing podSubnetCIDR field in ClusterConfiguration")
 			},
 		},
 		{
@@ -178,7 +187,7 @@ func TestCheckCidrIntersection(t *testing.T) {
 				},
 			}},
 			wantErr: func(t assert.TestingT, err error, i ...interface{}) bool {
-				return assert.ErrorContains(t, err, "unexpected end of JSON input")
+				return assert.ErrorContains(t, err, "missing serviceSubnetCIDR field in ClusterConfiguration")
 			},
 		},
 		{
@@ -294,7 +303,7 @@ func TestCheckCidrIntersectionStatic(t *testing.T) {
 				},
 			}},
 			wantErr: func(t assert.TestingT, err error, i ...interface{}) bool {
-				return assert.ErrorContains(t, err, "unexpected end of JSON input")
+				return assert.ErrorContains(t, err, "missing podSubnetCIDR field in ClusterConfiguration")
 			},
 		},
 		{
@@ -308,7 +317,7 @@ func TestCheckCidrIntersectionStatic(t *testing.T) {
 				},
 			}},
 			wantErr: func(t assert.TestingT, err error, i ...interface{}) bool {
-				return assert.ErrorContains(t, err, "unexpected end of JSON input")
+				return assert.ErrorContains(t, err, "missing serviceSubnetCIDR field in ClusterConfiguration")
 			},
 		},
 		{
@@ -321,7 +330,7 @@ func TestCheckCidrIntersectionStatic(t *testing.T) {
 				StaticClusterConfig: map[string]json.RawMessage{},
 			}},
 			wantErr: func(t assert.TestingT, err error, i ...interface{}) bool {
-				return assert.ErrorContains(t, err, "unexpected end of JSON input")
+				return assert.ErrorContains(t, err, "missing internalNetworkCIDRs field in ClusterConfiguration")
 			},
 		},
 		{

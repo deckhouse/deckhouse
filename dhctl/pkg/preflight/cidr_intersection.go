@@ -57,7 +57,7 @@ func (pc *Checker) CheckCidrIntersectionStatic() error {
 	var internalNetworkCIDRs []string
 	err = json.Unmarshal(pc.metaConfig.StaticClusterConfig["internalNetworkCIDRs"], &internalNetworkCIDRs)
 	if err != nil {
-		return err
+		return fmt.Errorf("missing internalNetworkCIDRs field in ClusterConfiguration")
 	}
 
 	err = cidrIntersects(podSubnetCIDR, serviceSubnetCIDR)
@@ -101,12 +101,12 @@ func getCidrFromMetaConfig(metaConfig *config.MetaConfig) (string, string, error
 	var serviceSubnetCIDR string
 	err := json.Unmarshal(metaConfig.ClusterConfig["podSubnetCIDR"], &podSubnetCIDR)
 	if err != nil {
-		return "", "", err
+		return "", "", fmt.Errorf("missing podSubnetCIDR field in ClusterConfiguration")
 	}
 
 	err = json.Unmarshal(metaConfig.ClusterConfig["serviceSubnetCIDR"], &serviceSubnetCIDR)
 	if err != nil {
-		return "", "", err
+		return "", "", fmt.Errorf("missing serviceSubnetCIDR field in ClusterConfiguration")
 	}
 
 	return podSubnetCIDR, serviceSubnetCIDR, nil
