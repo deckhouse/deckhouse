@@ -26,12 +26,12 @@ k8s:
     ccm:
       openstack: v1.28.3
       yandex: v0.31.0
-      aws: v1.28.1
-      vsphere: v1.28.0
+      aws: v1.28.11
+      vsphere: v1.28.1
       azure: v1.28.13
       gcp: ccm/v28.10.0
     csi:
-      aws: v1.28.0
+      aws: v1.30.0
       azure: v1.28.11
       gcp: v1.12.13
       yandex: v0.14.0
@@ -47,19 +47,19 @@ k8s:
       livenessprobe: v2.11.0
   '1.29':
     status: available
-    patch: 13
+    patch: 14
     bashible: *bashible
     clusterAutoscalerPatch: 2
     crictlPatch: 0
     ccm:
       openstack: v1.29.1
       yandex: v0.31.0
-      aws: v1.29.1
-      vsphere: v1.29.0
+      aws: v1.29.8
+      vsphere: v1.29.2
       azure: v1.29.11
       gcp: ccm/v29.5.1
     csi:
-      aws: v1.28.0
+      aws: v1.30.0
       azure: v1.29.12
       gcp: v1.12.13
       yandex: v0.14.0
@@ -75,19 +75,19 @@ k8s:
       livenessprobe: v2.12.0
   '1.30':
     status: available
-    patch: 9
+    patch: 10
     bashible: *bashible
     clusterAutoscalerPatch: 2
     crictlPatch: 1
     ccm:
       openstack: v1.30.2
       yandex: v0.31.0
-      aws: v1.30.1
-      vsphere: v1.30.1
+      aws: v1.30.7
+      vsphere: v1.30.2
       azure: v1.30.7
       gcp: ccm/v30.1.4
     csi:
-      aws: v1.28.0
+      aws: v1.34.0
       azure: v1.30.7
       gcp: v1.15.4
       yandex: v0.14.0
@@ -103,7 +103,7 @@ k8s:
       livenessprobe: v2.13.0
   '1.31':
     status: available
-    patch: 5
+    patch: 6
     bashible: *bashible
     clusterAutoscalerPatch: 2
     crictlPatch: 1
@@ -111,11 +111,11 @@ k8s:
       openstack: v1.31.2
       yandex: v0.31.0
       aws: v1.31.0
-      vsphere: v1.31.0
+      vsphere: v1.31.1
       azure: v1.31.1
       gcp: ccm/v30.1.4
     csi:
-      aws: v1.35.0
+      aws: v1.38.1
       azure: v1.31.2
       gcp: v1.15.4
       yandex: v0.14.0
@@ -131,7 +131,7 @@ k8s:
       livenessprobe: v2.14.0
   '1.32':
     status: preview
-    patch: 1
+    patch: 2
     bashible: *bashible
     clusterAutoscalerPatch: 2
     crictlPatch: 0
@@ -139,7 +139,7 @@ k8s:
       openstack: v1.31.2
       yandex: v0.30.0
       aws: v1.32.0
-      vsphere: v1.32.1
+      vsphere: v1.32.2
       azure: v1.32.0
       gcp: ccm/v30.1.4
     csi:

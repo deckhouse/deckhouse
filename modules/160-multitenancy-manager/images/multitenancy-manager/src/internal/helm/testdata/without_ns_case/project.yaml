@@ -3,6 +3,10 @@ kind: Project
 metadata:
   name: test
 spec:
+  resourceLabels:
+    "my": "key"
+  resourceAnnotations:
+    "my": "key"
   description: This is an example from the Deckhouse documentation.
   projectTemplateName: without_ns
   parameters:

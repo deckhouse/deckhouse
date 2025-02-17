@@ -35,7 +35,7 @@ mount:
 shell:
   install:
     - cd /src
-    - GOPROXY={{ $.GOPROXY }} GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o controller controller.go node.go util.go pki.go kubeconfig.go converge.go config.go handlers.go
+    - GOPROXY={{ $.GOPROXY }} GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o controller controller.go node.go util.go pki.go kubeconfig.go converge.go config.go handlers.go etcd.go
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 fromImage: common/src-artifact
