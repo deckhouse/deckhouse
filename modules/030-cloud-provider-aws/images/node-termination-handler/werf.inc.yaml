@@ -3,7 +3,7 @@ image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: common/distroless
 import:
   - image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
-    add: /src/build/node-termination-handler
+    add: /node-termination-handler
     to: /node-termination-handler
     before: setup
 imageSpec:
@@ -17,7 +17,7 @@ shell:
   install:
   - git clone --depth 1 --branch v1.23.1 {{ $.SOURCE_REPO }}/aws/aws-node-termination-handler.git /src
   - cd /src
-  - rm -rf .git
+  - rm -rf .git vendor
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
 final: false
@@ -31,14 +31,12 @@ import:
   to: /src
   before: install
 shell:
-  beforeInstall:
-  - |
-    apk upgrade --available --no-cache && \
-    apk add --no-cache ca-certificates make
   install:
-  - export GO_VERSION=${GOLANG_VERSION}
-  - export GOPROXY={{ $.GOPROXY }}
   - cd /src
-  - make build
-  - chown 64535:64535 /src/build/node-termination-handler
-  - chmod 0755 /src/build/node-termination-handler
+  - export GOPROXY={{ $.GOPROXY }}
+  - go mod download
+  setup:
+  - cd /src
+  - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o /node-termination-handler ./cmd/node-termination-handler.go
+  - chown 64535:64535 /node-termination-handler
+  - chmod 0755 /node-termination-handler
