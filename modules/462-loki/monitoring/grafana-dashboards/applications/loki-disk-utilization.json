@@ -18,7 +18,7 @@
   "editable": false,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 1,
-  "id": 32,
+  "id": 62,
   "links": [],
   "liveNow": false,
   "panels": [
@@ -70,7 +70,7 @@
         "textMode": "value_and_name",
         "wideLayout": true
       },
-      "pluginVersion": "10.4.14",
+      "pluginVersion": "10.4.5",
       "targets": [
         {
           "datasource": {
@@ -321,7 +321,7 @@
         "type": "prometheus",
         "uid": "${ds_prometheus}"
       },
-      "description": "Size of currently expired chunks (this is an approximate value based on expired chunks count multiplied with ingester's chunk_target_size)",
+      "description": "Size of currently expired chunks",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -447,6 +447,6 @@
   "timezone": "",
   "title": "Loki Disk Utilization",
   "uid": "d8-loki-disk-utilization",
-  "version": 2,
+  "version": 1,
   "weekStart": ""
 }

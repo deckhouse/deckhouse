@@ -1,46 +1,36 @@
 diff --git a/pkg/loki/loki.go b/pkg/loki/loki.go
-index 05c057ea38a4af597eadb9f91ffe82156711fe5f..d94d8b00c535e5b370dbea6283190f8227cb59d7 100644
+index 05c057ea38a4af597eadb9f91ffe82156711fe5f..47bb2d2810b22eadd30301cce43af3d55e89bd52 100644
 --- a/pkg/loki/loki.go
 +++ b/pkg/loki/loki.go
-@@ -8,6 +8,7 @@ import (
- 	"net/http"
- 	"os"
- 	rt "runtime"
-+	"strconv"
- 	"time"
-
- 	"go.uber.org/atomic"
-@@ -259,6 +260,10 @@ func (c *Config) Validate() error {
+@@ -259,6 +259,8 @@ func (c *Config) Validate() error {
  		return err
  	}
 
-+	if err := AdjustForForceExpiration(c); err != nil {
-+		return err
-+	}
++	AdjustForForceExpiration(c)
 +
  	// Honor the legacy scalable deployment topology
  	if c.LegacyReadTarget {
  		if c.isModuleEnabled(Backend) {
-@@ -269,6 +274,17 @@ func (c *Config) Validate() error {
+@@ -269,6 +271,17 @@ func (c *Config) Validate() error {
  	return nil
  }
 
-+func AdjustForForceExpiration(c *Config) error {
++func AdjustForForceExpiration(c *Config) {
 +	if c.CompactorConfig.ForceExpirationThreshold.Val() > 0 {
-+		err := c.CompactorConfig.ForceExpirationApproxChunkSize.Set(strconv.Itoa(c.Ingester.TargetChunkSize))
-+		if err != nil {
-+			return err
++		if c.CompactorConfig.ForceExpirationThresholdDir == "" {
++			c.CompactorConfig.ForceExpirationThresholdDir = c.Common.PathPrefix
 +		}
-+		c.CompactorConfig.ForceExpirationThresholdDir = c.Common.Storage.FSConfig.ChunksDirectory
++		if c.CompactorConfig.ForceExpirationThresholdChunksDir == "" {
++			c.CompactorConfig.ForceExpirationThresholdChunksDir = c.Common.Storage.FSConfig.ChunksDirectory
++		}
 +	}
-+	return nil
 +}
 +
  // AdjustForTimeoutsMigration will adjust Loki timeouts configuration to be in accordance with the next major release.
  //
  // We're preparing to unify the querier:engine:timeout and querier:query_timeout into a single timeout named limits_config:query_timeout.
 diff --git a/pkg/storage/stores/indexshipper/compactor/compactor.go b/pkg/storage/stores/indexshipper/compactor/compactor.go
-index 3c8b85ec3a503f4e55e6d9f9519d50be095565e4..4b3fd25e60e856d4e4ca2b9270b43d5605951dfc 100644
+index 3c8b85ec3a503f4e55e6d9f9519d50be095565e4..a3ba20ea8540e645a8a365991d53443b434f2a18 100644
 --- a/pkg/storage/stores/indexshipper/compactor/compactor.go
 +++ b/pkg/storage/stores/indexshipper/compactor/compactor.go
 @@ -34,6 +34,10 @@ import (
@@ -59,9 +49,9 @@ index 3c8b85ec3a503f4e55e6d9f9519d50be095565e4..4b3fd25e60e856d4e4ca2b9270b43d56
  	// Deprecated
  	DeletionMode string `yaml:"deletion_mode" doc:"deprecated|description=Use deletion_mode per tenant configuration instead."`
 +
-+	ForceExpirationThresholdDir    string                `yaml:"force_expiration_threshold_dir"`
-+	ForceExpirationThreshold       util_flagext.ByteSize `yaml:"force_expiration_threshold"`
-+	ForceExpirationApproxChunkSize util_flagext.ByteSize `yaml:"__" doc:"hidden"`
++	ForceExpirationThreshold          util_flagext.ByteSize `yaml:"force_expiration_threshold"`
++	ForceExpirationThresholdDir       string                `yaml:"force_expiration_threshold_dir"`
++	ForceExpirationThresholdChunksDir string                `yaml:"force_expiration_threshold_chunks_dir"`
  }
 
  // RegisterFlags registers flags.
@@ -110,16 +100,18 @@ index 3c8b85ec3a503f4e55e6d9f9519d50be095565e4..4b3fd25e60e856d4e4ca2b9270b43d56
  			level.Error(util_log.Logger).Log("msg", "failed to run compaction", "err", err)
 diff --git a/pkg/storage/stores/indexshipper/compactor/force_expiration.go b/pkg/storage/stores/indexshipper/compactor/force_expiration.go
 new file mode 100644
-index 0000000000000000000000000000000000000000..db15bb74b2525e6e3839f7b43da3e61a1cb59360
+index 0000000000000000000000000000000000000000..429ecf8ef42c57a269f1756a5577efeb423c6310
 --- /dev/null
 +++ b/pkg/storage/stores/indexshipper/compactor/force_expiration.go
-@@ -0,0 +1,335 @@
+@@ -0,0 +1,376 @@
 +package compactor
 +
 +import (
 +	"context"
++	"encoding/base64"
 +	"fmt"
 +	"os"
++	"path"
 +	"path/filepath"
 +	"strings"
 +	"time"
@@ -129,6 +121,7 @@ index 0000000000000000000000000000000000000000..db15bb74b2525e6e3839f7b43da3e61a
 +	"github.com/prometheus/client_golang/prometheus"
 +	"github.com/prometheus/client_golang/prometheus/promauto"
 +
++	"github.com/grafana/loki/pkg/storage/chunk"
 +	"github.com/grafana/loki/pkg/storage/stores/indexshipper/compactor/deletion"
 +	"github.com/grafana/loki/pkg/storage/stores/indexshipper/compactor/retention"
 +	shipper_storage "github.com/grafana/loki/pkg/storage/stores/indexshipper/storage"
@@ -137,9 +130,9 @@ index 0000000000000000000000000000000000000000..db15bb74b2525e6e3839f7b43da3e61a
 +)
 +
 +type forceExpirationHook struct {
-+	approxChunkSize      util_flagext.ByteSize
-+	dirUsageThreshold    util_flagext.ByteSize
-+	dirUsageThresholdDir string
++	dirUsageThreshold          util_flagext.ByteSize
++	dirUsageThresholdDir       string
++	dirUsageThresholdChunksDir string
 +
 +	c  *Compactor
 +	cm *retention.ForceExpirationCheckerManager
@@ -147,19 +140,19 @@ index 0000000000000000000000000000000000000000..db15bb74b2525e6e3839f7b43da3e61a
 +}
 +
 +func newForceExpirationHook(c *Compactor, r prometheus.Registerer) (*forceExpirationHook, error) {
-+	if c.cfg.ForceExpirationThreshold.Val() > 0 && c.cfg.ForceExpirationApproxChunkSize.Val() == 0 {
-+		return nil, fmt.Errorf("force expiration approx chunk size not set")
-+	}
 +	if c.cfg.ForceExpirationThreshold.Val() > 0 && c.cfg.ForceExpirationThresholdDir == "" {
 +		return nil, fmt.Errorf("force expiration threshold dir not set")
 +	}
++	if c.cfg.ForceExpirationThreshold.Val() > 0 && c.cfg.ForceExpirationThresholdChunksDir == "" {
++		return nil, fmt.Errorf("force expiration threshold chunks dir not set")
++	}
 +	h := &forceExpirationHook{
-+		approxChunkSize:      c.cfg.ForceExpirationApproxChunkSize,
-+		dirUsageThreshold:    c.cfg.ForceExpirationThreshold,
-+		dirUsageThresholdDir: c.cfg.ForceExpirationThresholdDir,
-+		c:                    c,
-+		cm:                   c.forceExpirationCheckerManager,
-+		m:                    newForceExpirationHookMetrics(r),
++		dirUsageThreshold:          c.cfg.ForceExpirationThreshold,
++		dirUsageThresholdDir:       c.cfg.ForceExpirationThresholdDir,
++		dirUsageThresholdChunksDir: c.cfg.ForceExpirationThresholdChunksDir,
++		c:                          c,
++		cm:                         c.forceExpirationCheckerManager,
++		m:                          newForceExpirationHookMetrics(r),
 +	}
 +	h.m.dirUsageThresholdBytes.WithLabelValues(h.dirUsageThresholdDir).Set(float64(h.dirUsageThreshold.Val()))
 +	return h, nil
@@ -177,9 +170,9 @@ index 0000000000000000000000000000000000000000..db15bb74b2525e6e3839f7b43da3e61a
 +
 +	_ = level.Info(util_log.Logger).Log(
 +		"msg", "applying force expiration",
-+		"approximate chunk size", h.approxChunkSize,
 +		"threshold", h.dirUsageThreshold.String(),
 +		"threshold dir", h.dirUsageThresholdDir,
++		"threshold chunks dir", h.dirUsageThresholdChunksDir,
 +	)
 +
 +	expiredChunks := make([]string, 0)
@@ -331,9 +324,33 @@ index 0000000000000000000000000000000000000000..db15bb74b2525e6e3839f7b43da3e61a
 +		if bytesDeleted >= bytesToDelete {
 +			return false, nil
 +		}
-+		chunkID := unsafeGetString(ce.ChunkID)
-+		chunksToDelete = append(chunksToDelete, strings.Clone(chunkID))
-+		bytesDeleted = bytesDeleted + int64(h.approxChunkSize.Val())
++
++		userIDValue := unsafeGetString(ce.UserID)
++		chunkIDValue := unsafeGetString(ce.ChunkID)
++
++		chk, err := chunk.ParseExternalKey(userIDValue, chunkIDValue)
++		if err != nil {
++			return false, err
++		}
++
++		key := h.c.schemaConfig.ExternalKey(chk.ChunkRef)
++		if h.c.schemaConfig.VersionForChunk(chk.ChunkRef) > 11 {
++			split := strings.LastIndexByte(key, '/')
++			encodedTail := base64Encoder(key[split+1:])
++			key = strings.Join([]string{key[:split], encodedTail}, "/")
++		} else {
++			key = base64Encoder(key)
++		}
++
++		chkPath := path.Join(h.dirUsageThresholdChunksDir, key)
++		chkSize, err := evaluateFileSize(chkPath)
++		if err != nil {
++			return false, err
++		}
++
++		chunkID := strings.Clone(chunkIDValue)
++		chunksToDelete = append(chunksToDelete, chunkID)
++		bytesDeleted = bytesDeleted + chkSize
 +		return true, nil
 +	})
 +	tciCloseErr := tableCompactedIndex.Close()
@@ -396,10 +413,24 @@ index 0000000000000000000000000000000000000000..db15bb74b2525e6e3839f7b43da3e61a
 +	return size, err
 +}
 +
++// chunk size
++
++func evaluateFileSize(path string) (int64, error) {
++	stat, err := os.Lstat(path)
++	if err != nil {
++		return 0, err
++	}
++	return stat.Size(), nil
++}
++
 +// helper functions
 +
 +func unsafeGetString(buf []byte) string {
 +	return *((*string)(unsafe.Pointer(&buf)))
++}
++
++var base64Encoder = func(key string) string {
++	return base64.StdEncoding.EncodeToString([]byte(key))
 +}
 +
 +// metrics
@@ -428,7 +459,7 @@ index 0000000000000000000000000000000000000000..db15bb74b2525e6e3839f7b43da3e61a
 +		expiredChunksSizeBytes: promauto.With(r).NewCounter(prometheus.CounterOpts{
 +			Namespace: "force_expiration_hook",
 +			Name:      "expired_chunks_size_bytes",
-+			Help:      "Size (approximate, in bytes) of all expired chunks.",
++			Help:      "Size (in bytes) of all expired chunks.",
 +		}),
 +		dirUsageThresholdBytes: promauto.With(r).NewGaugeVec(prometheus.GaugeOpts{
 +			Namespace: "force_expiration_hook",

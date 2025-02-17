@@ -23,7 +23,7 @@ data:
       {{- omit $lokiConfigSnakeCase "grpc_server_max_send_msg_size" "grpc_server_max_recv_msg_size" "grpc_server_max_concurrent_streams" | toYaml | nindent 6 }}
 
     common:
-      path_prefix: /loki
+      path_prefix: /loki # WARNING: other data must be stored here too for force-expiration
       storage:
         filesystem:
           chunks_directory: /loki/chunks
