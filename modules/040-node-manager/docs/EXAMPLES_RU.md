@@ -442,7 +442,7 @@ spec:
 Данный пример приведен для ОС Ubuntu.  
 Способ добавления сертификатов в хранилище может отличаться в зависимости от ОС.
   
-При адаптации скрипта под другую ОС измените параметр [bundles](cr.html#nodegroupconfiguration-v1alpha1-spec-bundles).
+При адаптации скрипта под другую ОС измените параметры [bundles](cr.html#nodegroupconfiguration-v1alpha1-spec-bundles) и [content](cr.html#nodegroupconfiguration-v1alpha1-spec-content).
 {% endalert %}
 
 {% alert level="warning" %}
@@ -518,7 +518,7 @@ spec:
 Данный пример приведен для ОС Ubuntu.  
 Способ добавления сертификатов в хранилище может отличаться в зависимости от ОС.
   
-При адаптации скрипта под другую ОС измените параметр [bundles](cr.html#nodegroupconfiguration-v1alpha1-spec-bundles).
+При адаптации скрипта под другую ОС измените параметры [bundles](cr.html#nodegroupconfiguration-v1alpha1-spec-bundles) и [content](cr.html#nodegroupconfiguration-v1alpha1-spec-content).
 {% endalert %}
 
 {% alert level="info" %}

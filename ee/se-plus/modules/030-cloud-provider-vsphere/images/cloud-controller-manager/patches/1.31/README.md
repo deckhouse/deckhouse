@@ -29,3 +29,7 @@ This patch adds a check, restricting Node registration in the cluster while it h
 This patch is for our case when we want to have a static Nodes in the cluster, managed by vSphere cloud provider.
 
 > Consider implementing a flag in CCM config and sending as a PR to the upstream.
+
+## go_mod.patch
+
+This patch fixes cve.

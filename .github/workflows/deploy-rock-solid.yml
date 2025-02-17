@@ -133,10 +133,20 @@ jobs:
             core.setCommandEcho(false)
 
   # </template: git_info_job>
-
+  check_branch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check if triggered by a tag
+        run: |
+          TAG="${{ github.ref }}"
+          if [[ ! "$TAG" =~ ^refs/tags/v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Workflow can only be triggered from release tags (vX.Y.Z)!"
+            exit 1
+          fi
   detect_editions:
     name: Detect editions
     runs-on: ubuntu-latest
+    needs: check_branch
     outputs:
       DEPLOY_CE: ${{steps.detect_editions.outputs.DEPLOY_CE}}
       DEPLOY_EE: ${{steps.detect_editions.outputs.DEPLOY_EE}}
