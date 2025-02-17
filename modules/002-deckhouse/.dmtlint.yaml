@@ -8,11 +8,11 @@ linters-settings:
       liveness-probe:
         - kind: Deployment
           name: deckhouse
-          container: deckhousezzz
+          container: deckhouse
       readiness-probe:
         - kind: Deployment
           name: webhook-handler
-          container: handlerzzz
+          container: handler
       image-digest:
         - kind: Deployment
           name: deckhouse
@@ -21,7 +21,7 @@ linters-settings:
     exclude-rules:
       wildcards:
         - kind: ClusterRole
-          name: d8:deckhouse:webhook-handlerzzz
+          name: d8:deckhouse:webhook-handler
       placement:
         - kind: ClusterRole
-          name: d8:rbac-proxyzzz
+          name: d8:rbac-proxy
