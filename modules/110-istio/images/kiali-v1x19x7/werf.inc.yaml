@@ -1,4 +1,8 @@
 ---
+{{- $istioVersion := "1.19.7" }}
+{{- $istioImageVersion := (printf "v%s" (replace "." "x" $istioVersion)) }} {{- /* 1.19.7 -> v1x19x7 */}}
+{{- $kialiVersion := "1.67.2" }}
+---
 # Based on https://github.com/kiali/kiali/blob/v1.67.2/deploy/docker/Dockerfile-distroless
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/alt-p11
@@ -21,3 +25,28 @@ imageSpec:
 image: {{ .ModuleName }}/{{ .ImageName }}-binary-artifact
 from: quay.io/kiali/kiali:v1.67.2@sha256:92fec2b44580519b922d37747114865df4cc4cd51a2fe8342f090c8941e6905d
 final: false
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
+final: false
+from: {{ .Images.BASE_GOLANG_23_ALPINE }}
+mount:
+- fromPath: ~/go-pkg-cache
+  to: /go/pkg
+import:
+- image: {{ .ModuleName }}/common-{{ $istioImageVersion }}-src-artifact
+  add: /src/kiali
+  to: /src/kiali
+  before: setup
+shell:
+  beforeInstall:
+  {{- include "alpine packages proxy" . | nindent 2 }}
+  - apk add --no-cache bash git binutils
+  setup:
+  - cd /src/kiali/
+  - echo {{ $kialiVersion }} > version
+  - export GOPROXY={{ $.GOPROXY }} GOOS=linux GOARCH=amd64
+  - export LDFLAGS='-X main.version=${kialiVersio}'
+  - go mod download
+  - go build -o /src/kiali/out/kiali /src/kiali/
+  - strip /src/kiali/out/kiali
+  - chmod 0755 /src/kiali/out/kiali
