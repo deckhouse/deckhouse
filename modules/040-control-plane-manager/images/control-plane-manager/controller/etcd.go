@@ -60,34 +60,31 @@ func (c *EtcdClient) EtcdJoinConverge() error {
 	return err
 }
 
-func (c *EtcdClient) CheckIfNodeIsLearner() (uint64, error) {
+func (c *EtcdClient) CheckIfNodeIsLearner() (uint64, bool, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
 	resp, err := c.client.MemberList(ctx)
 	if err != nil {
-		return NotFoundID, fmt.Errorf("MemberList request failed: %v", err)
+		return NotFoundID, false, fmt.Errorf("MemberList request failed: %v", err)
 	}
 
 	for _, m := range resp.Members {
 		if m.Name == config.NodeName {
 			log.Infof("[etcd] member: ID=%d Name=%q PeerURLs=%v IsLearner=%v",
 				m.ID, m.Name, m.PeerURLs, m.IsLearner)
-			if m.IsLearner {
-				return m.ID, nil
-			}
+			return m.ID, m.IsLearner, nil
 		}
 	}
-
-	return NotFoundID, nil
+	return NotFoundID, false, nil
 }
 
 func (c *EtcdClient) PromoteMemberIfNeeded() error {
-	memberId, err := c.CheckIfNodeIsLearner()
+	memberId, isLearner, err := c.CheckIfNodeIsLearner()
 	if err != nil {
 		return err
 	}
-	if memberId != NotFoundID {
+	if isLearner {
 		return c.MemberPromote(memberId)
 	}
 	return nil
