@@ -15,10 +15,10 @@
       }
     ]
   },
-  "editable": false,
+  "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 1,
-  "id": 22,
+  "id": 43,
   "links": [],
   "panels": [
     {
@@ -48,80 +48,6 @@
       "type": "row"
     },
     {
-      "columns": [],
-      "datasource": {
-        "uid": "$ds_prometheus"
-      },
-      "description": "Average latency values grouped by target nodes",
-      "fontSize": "100%",
-      "gridPos": {
-        "h": 6,
-        "w": 24,
-        "x": 0,
-        "y": 1
-      },
-      "id": 2,
-      "scroll": true,
-      "showHeader": true,
-      "sort": {
-        "col": 2,
-        "desc": true
-      },
-      "styles": [
-        {
-          "alias": "Time",
-          "align": "auto",
-          "dateFormat": "YYYY-MM-DD HH:mm:ss",
-          "pattern": "Time",
-          "type": "hidden"
-        },
-        {
-          "alias": "Target Node",
-          "align": "auto",
-          "colors": [
-            "rgba(245, 54, 54, 0.9)",
-            "rgba(237, 129, 40, 0.89)",
-            "rgba(50, 172, 45, 0.97)"
-          ],
-          "decimals": 2,
-          "pattern": "target_node_name",
-          "thresholds": [],
-          "type": "string",
-          "unit": "short"
-        },
-        {
-          "alias": "Average Latency",
-          "align": "auto",
-          "colors": [
-            "rgba(245, 54, 54, 0.9)",
-            "rgba(237, 129, 40, 0.89)",
-            "rgba(50, 172, 45, 0.97)"
-          ],
-          "dateFormat": "YYYY-MM-DD HH:mm:ss",
-          "decimals": 3,
-          "mappingType": 1,
-          "pattern": "Value",
-          "thresholds": [],
-          "type": "number",
-          "unit": "s"
-        }
-      ],
-      "targets": [
-        {
-          "datasource": {
-            "uid": "$ds_prometheus"
-          },
-          "expr": "avg by (target_node_name) (cilium_node_connectivity_latency_seconds{source_node_name=~\"$source_node\", target_node_name=~\"$destination_node\", protocol=~\"$protocol\"})",
-          "format": "table",
-          "instant": true,
-          "intervalFactor": 1,
-          "refId": "A"
-        }
-      ],
-      "transform": "table",
-      "type": "table-old"
-    },
-    {
       "datasource": {
         "uid": "$ds_prometheus"
       },
@@ -132,43 +58,53 @@
           },
           "custom": {
             "fillOpacity": 70,
-            "lineWidth": 0,
-            "spanNulls": false
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineWidth": 0
           },
           "mappings": [],
           "thresholds": {
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
+                "color": "red",
                 "value": null
               },
               {
                 "color": "yellow",
-                "value": 0.2
+                "value": 50
+              },
+              {
+                "color": "green",
+                "value": 90
               }
             ]
           },
-          "unit": "s"
+          "unit": "percent"
         },
         "overrides": []
       },
       "gridPos": {
-        "h": 8,
+        "h": 17,
         "w": 24,
         "x": 0,
-        "y": 15
+        "y": 1
       },
+      "id": 778,
       "options": {
-        "alignValue": "left",
+        "colWidth": 0.8,
         "legend": {
           "displayMode": "list",
+          "height": 500,
           "placement": "bottom",
-          "showLegend": true
+          "showLegend": true,
+          "width": 700
         },
-        "mergeValues": true,
-        "rowHeight": 0.9,
-        "showValue": "auto",
+        "rowHeight": 0.7,
+        "showValue": "never",
         "tooltip": {
           "mode": "single",
           "sort": "none"
@@ -176,19 +112,12 @@
       },
       "targets": [
         {
-          "datasource": {
-            "uid": "$ds_prometheus"
-          },
-          "expr": "avg by (target_node_name) (cilium_node_connectivity_latency_seconds{source_node_name=~\"$source_node\", target_node_name=~\"$destination_node\", protocol=~\"$protocol\"})",
-          "format": "time_series",
-          "instant": false,
-          "intervalFactor": 1,
-          "legendFormat": "{{target_node_name}}",
-          "refId": "A"
+          "expr": "100 * avg_over_time(cilium_node_connectivity_status{source_node_name=~\"$source_node\", target_node_name=~\"$destination_node\"}[$__range])",
+          "legendFormat": "{{source_node_name}} -> {{target_node_name}}"
         }
       ],
-      "title": "Node Connectivity Status",
-      "type": "state-timeline"
+      "title": "Node Connectivity Status Matrix",
+      "type": "status-history"
     },
     {
       "collapsed": true,
@@ -200,83 +129,99 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 15
+        "y": 18
       },
       "id": 17,
       "panels": [
         {
-          "columns": [],
           "datasource": {
             "uid": "$ds_prometheus"
           },
-          "description": "Average latency values grouped by source nodes",
-          "fontSize": "100%",
-          "gridPos": {
-            "h": 6,
-            "w": 24,
-            "x": 0,
-            "y": 16
-          },
-          "id": 643,
-          "scroll": true,
-          "showHeader": true,
-          "sort": {
-            "col": 2,
-            "desc": true
-          },
-          "styles": [
-            {
-              "alias": "Time",
-              "align": "auto",
-              "dateFormat": "YYYY-MM-DD HH:mm:ss",
-              "pattern": "Time",
-              "type": "hidden"
-            },
-            {
-              "alias": "Target Node",
-              "align": "auto",
-              "colors": [
-                "rgba(245, 54, 54, 0.9)",
-                "rgba(237, 129, 40, 0.89)",
-                "rgba(50, 172, 45, 0.97)"
-              ],
-              "decimals": 2,
-              "pattern": "target_node_name",
-              "thresholds": [],
-              "type": "string",
-              "unit": "short"
-            },
-            {
-              "alias": "Average Latency",
-              "align": "auto",
-              "colors": [
-                "rgba(245, 54, 54, 0.9)",
-                "rgba(237, 129, 40, 0.89)",
-                "rgba(50, 172, 45, 0.97)"
-              ],
-              "dateFormat": "YYYY-MM-DD HH:mm:ss",
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "axisBorderShow": false,
+                "axisCenteredZero": false,
+                "axisColorMode": "text",
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "barAlignment": 0,
+                "drawStyle": "line",
+                "fillOpacity": 0,
+                "gradientMode": "none",
+                "hideFrom": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": false
+                },
+                "insertNulls": false,
+                "lineInterpolation": "linear",
+                "lineWidth": 1,
+                "pointSize": 5,
+                "scaleDistribution": {
+                  "type": "linear"
+                },
+                "showPoints": "never",
+                "spanNulls": false,
+                "stacking": {
+                  "group": "A",
+                  "mode": "none"
+                },
+                "thresholdsStyle": {
+                  "mode": "off"
+                }
+              },
               "decimals": 3,
-              "mappingType": 1,
-              "pattern": "Value",
-              "thresholds": [],
-              "type": "number",
+              "mappings": [],
+              "min": 0,
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": null
+                  },
+                  {
+                    "color": "red",
+                    "value": 80
+                  }
+                ]
+              },
               "unit": "s"
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 0,
+            "y": 17
+          },
+          "id": 779,
+          "options": {
+            "legend": {
+              "calcs": [],
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": true
+            },
+            "tooltip": {
+              "mode": "single",
+              "sort": "none"
             }
-          ],
+          },
           "targets": [
             {
-              "datasource": {
-                "uid": "$ds_prometheus"
-              },
-              "expr": "avg by (target_node_name) (cilium_node_connectivity_latency_seconds{source_node_name=~\"$source_node\", target_node_name=~\"$destination_node\", protocol=~\"$protocol\"})",
-              "format": "table",
-              "instant": true,
-              "intervalFactor": 1,
+              "expr": "avg by (target_node_name) (cilium_node_connectivity_latency_seconds{source_node_name=~\"$source_node\", target_node_name=~\"$destination_node\", type=\"node\", protocol=\"icmp\"})",
+              "legendFormat": "{{target_node_name}}",
               "refId": "A"
             }
           ],
-          "transform": "table",
-          "type": "table-old"
+          "title": "Node ICMP Latency",
+          "type": "timeseries"
         },
         {
           "datasource": {
@@ -340,42 +285,212 @@
             "overrides": []
           },
           "gridPos": {
-            "h": 7,
-            "w": 24,
-            "x": 0,
-            "y": 22
+            "h": 8,
+            "w": 12,
+            "x": 12,
+            "y": 17
           },
-          "id": 677,
+          "id": 780,
           "options": {
             "legend": {
-              "calcs": [
-                "lastNotNull",
-                "max",
-                "min"
-              ],
-              "displayMode": "table",
+              "calcs": [],
+              "displayMode": "list",
               "placement": "bottom",
               "showLegend": true
             },
             "tooltip": {
-              "mode": "multi",
-              "sort": "desc"
+              "mode": "single",
+              "sort": "none"
             }
           },
-          "pluginVersion": "10.4.5",
           "targets": [
             {
-              "datasource": {
-                "uid": "$ds_prometheus"
-              },
-              "expr": "avg by (target_node_name) (cilium_node_connectivity_latency_seconds{source_node_name=~\"$source_node\", target_node_name=~\"$destination_node\", protocol=~\"$protocol\"})",
-              "format": "time_series",
-              "intervalFactor": 1,
+              "expr": "avg by (target_node_name) (cilium_node_connectivity_latency_seconds{source_node_name=~\"$source_node\", target_node_name=~\"$destination_node\", type=\"node\", protocol=\"http\"})",
               "legendFormat": "{{target_node_name}}",
               "refId": "A"
             }
           ],
-          "title": "Node Connectivity Latency by Target",
+          "title": "Node HTTP Latency",
+          "type": "timeseries"
+        },
+        {
+          "datasource": {
+            "uid": "$ds_prometheus"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "axisBorderShow": false,
+                "axisCenteredZero": false,
+                "axisColorMode": "text",
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "barAlignment": 0,
+                "drawStyle": "line",
+                "fillOpacity": 0,
+                "gradientMode": "none",
+                "hideFrom": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": false
+                },
+                "insertNulls": false,
+                "lineInterpolation": "linear",
+                "lineWidth": 1,
+                "pointSize": 5,
+                "scaleDistribution": {
+                  "type": "linear"
+                },
+                "showPoints": "never",
+                "spanNulls": false,
+                "stacking": {
+                  "group": "A",
+                  "mode": "none"
+                },
+                "thresholdsStyle": {
+                  "mode": "off"
+                }
+              },
+              "decimals": 3,
+              "mappings": [],
+              "min": 0,
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": null
+                  },
+                  {
+                    "color": "red",
+                    "value": 80
+                  }
+                ]
+              },
+              "unit": "s"
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 0,
+            "y": 25
+          },
+          "id": 781,
+          "options": {
+            "legend": {
+              "calcs": [],
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": true
+            },
+            "tooltip": {
+              "mode": "single",
+              "sort": "none"
+            }
+          },
+          "targets": [
+            {
+              "expr": "avg by (target_node_name) (cilium_node_connectivity_latency_seconds{source_node_name=~\"$source_node\", target_node_name=~\"$destination_node\", type=\"endpoint\", protocol=\"icmp\"})",
+              "legendFormat": "{{target_node_name}}",
+              "refId": "A"
+            }
+          ],
+          "title": "Endpoint ICMP Latency",
+          "type": "timeseries"
+        },
+        {
+          "datasource": {
+            "uid": "$ds_prometheus"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "axisBorderShow": false,
+                "axisCenteredZero": false,
+                "axisColorMode": "text",
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "barAlignment": 0,
+                "drawStyle": "line",
+                "fillOpacity": 0,
+                "gradientMode": "none",
+                "hideFrom": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": false
+                },
+                "insertNulls": false,
+                "lineInterpolation": "linear",
+                "lineWidth": 1,
+                "pointSize": 5,
+                "scaleDistribution": {
+                  "type": "linear"
+                },
+                "showPoints": "never",
+                "spanNulls": false,
+                "stacking": {
+                  "group": "A",
+                  "mode": "none"
+                },
+                "thresholdsStyle": {
+                  "mode": "off"
+                }
+              },
+              "decimals": 3,
+              "mappings": [],
+              "min": 0,
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": null
+                  },
+                  {
+                    "color": "red",
+                    "value": 80
+                  }
+                ]
+              },
+              "unit": "s"
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 12,
+            "y": 25
+          },
+          "id": 782,
+          "options": {
+            "legend": {
+              "calcs": [],
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": true
+            },
+            "tooltip": {
+              "mode": "single",
+              "sort": "none"
+            }
+          },
+          "targets": [
+            {
+              "expr": "avg by (target_node_name) (cilium_node_connectivity_latency_seconds{source_node_name=~\"$source_node\", target_node_name=~\"$destination_node\", type=\"endpoint\", protocol=\"http\"})",
+              "legendFormat": "{{target_node_name}}",
+              "refId": "A"
+            }
+          ],
+          "title": "Endpoint HTTP Latency",
           "type": "timeseries"
         }
       ],
@@ -404,7 +519,7 @@
         "current": {
           "selected": false,
           "text": "main",
-          "value": "$ds_prometheus"
+          "value": "P0D6E4079E36703EB"
         },
         "hide": 0,
         "includeAll": false,
@@ -507,11 +622,21 @@
         "skipUrlSync": false,
         "sort": 1,
         "type": "query"
+      },
+      {
+        "datasource": {
+          "type": "prometheus",
+          "uid": "$ds_prometheus"
+        },
+        "hide": 0,
+        "name": "Filters",
+        "skipUrlSync": false,
+        "type": "adhoc"
       }
     ]
   },
   "time": {
-    "from": "now-3h",
+    "from": "now-1h",
     "to": "now"
   },
   "timepicker": {
