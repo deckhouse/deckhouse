@@ -315,8 +315,7 @@ var DefaultImagesDigests = map[string]interface{}{
 		"vector": "imageHash-logShipper-vector",
 	},
 	"loki": map[string]interface{}{
-		"loki":            "imageHash-loki-loki",
-		"lokiSrcArtifact": "imageHash-loki-lokiSrcArtifact",
+		"loki": "imageHash-loki-loki",
 	},
 	"metallb": map[string]interface{}{
 		"l2lbController":    "imageHash-metallb-l2lbController",
@@ -388,10 +387,8 @@ var DefaultImagesDigests = map[string]interface{}{
 		"memcached":                   "imageHash-prometheus-memcached",
 		"memcachedExporter":           "imageHash-prometheus-memcachedExporter",
 		"mimir":                       "imageHash-prometheus-mimir",
-		"mimirSrcArtifact":            "imageHash-prometheus-mimirSrcArtifact",
 		"prometheus":                  "imageHash-prometheus-prometheus",
 		"promxy":                      "imageHash-prometheus-promxy",
-		"promxySrcArtifact":           "imageHash-prometheus-promxySrcArtifact",
 		"trickster":                   "imageHash-prometheus-trickster",
 	},
 	"prometheusMetricsAdapter": map[string]interface{}{
