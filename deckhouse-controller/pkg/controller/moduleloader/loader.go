@@ -26,7 +26,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/flant/addon-operator/pkg/app"
+	addonapp "github.com/flant/addon-operator/pkg/app"
 	"github.com/flant/addon-operator/pkg/module_manager/loader"
 	"github.com/flant/addon-operator/pkg/module_manager/models/modules"
 	"github.com/flant/addon-operator/pkg/utils"
@@ -37,6 +37,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/app"
 	d8utils "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
 	moduletypes "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/moduleloader/types"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers"
@@ -52,8 +53,6 @@ const (
 
 	moduleOrderIdx = 2
 	moduleNameIdx  = 3
-
-	embeddedModulesDir = "/deckhouse/modules"
 )
 
 var (
@@ -171,7 +170,7 @@ func (l *Loader) processModuleDefinition(def *moduletypes.Definition) (*modulety
 	valuesModuleName := utils.ModuleNameToValuesKey(def.Name)
 
 	// 1. from static values.yaml inside the module
-	moduleStaticValues, err := utils.LoadValuesFileFromDir(def.Path, app.StrictModeEnabled)
+	moduleStaticValues, err := utils.LoadValuesFileFromDir(def.Path, addonapp.StrictModeEnabled)
 	if err != nil {
 		return nil, fmt.Errorf("load values file from the %q dir: %w", def.Path, err)
 	}
@@ -261,7 +260,7 @@ func (l *Loader) LoadModulesFromFS(ctx context.Context) error {
 			}
 
 			l.log.Debugf("ensure the '%s' module", def.Name)
-			if err = l.ensureModule(ctx, def, strings.HasPrefix(def.Path, embeddedModulesDir)); err != nil {
+			if err = l.ensureModule(ctx, def, strings.HasPrefix(def.Path, app.EmbeddedModulesDir)); err != nil {
 				return fmt.Errorf("ensure the '%s' embedded module: %w", def.Name, err)
 			}
 

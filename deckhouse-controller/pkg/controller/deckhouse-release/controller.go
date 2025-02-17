@@ -21,6 +21,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/app"
 	"log/slog"
 	"net/http"
 	"strconv"
@@ -58,10 +59,6 @@ import (
 const (
 	metricReleasesGroup = "d8_releases"
 	metricUpdatingGroup = "d8_updating"
-
-	deckhouseNamespace          = "d8-system"
-	deckhouseDeployment         = "deckhouse"
-	deckhouseRegistrySecretName = "deckhouse-registry"
 )
 
 const defaultCheckInterval = 15 * time.Second
@@ -688,7 +685,7 @@ func (r *deckhouseReleaseReconciler) runReleaseDeploy(ctx context.Context, dr *v
 var ErrDeploymentContainerIsNotFound = errors.New("deployment container is not found")
 
 func (r *deckhouseReleaseReconciler) bumpDeckhouseDeployment(ctx context.Context, dr *v1alpha1.DeckhouseRelease) error {
-	key := client.ObjectKey{Namespace: deckhouseNamespace, Name: deckhouseDeployment}
+	key := client.ObjectKey{Namespace: app.NamespaceDeckhouse, Name: app.ModuleDeckhouse}
 
 	depl := new(appsv1.Deployment)
 
@@ -910,7 +907,7 @@ func (r *deckhouseReleaseReconciler) tagUpdate(ctx context.Context, leaderPod *c
 }
 
 func (r *deckhouseReleaseReconciler) getRegistrySecret(ctx context.Context) (*utils.DeckhouseRegistrySecret, error) {
-	key := types.NamespacedName{Namespace: deckhouseNamespace, Name: deckhouseRegistrySecretName}
+	key := types.NamespacedName{Namespace: app.NamespaceDeckhouse, Name: app.RegistrySecret}
 
 	secret := new(corev1.Secret)
 

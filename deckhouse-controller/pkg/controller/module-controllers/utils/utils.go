@@ -19,6 +19,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/app"
 	"io"
 	"os"
 	"path/filepath"
@@ -41,12 +42,6 @@ import (
 	releaseUpdater "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/releaseupdater"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
 	"github.com/deckhouse/deckhouse/pkg/log"
-)
-
-const (
-	deckhouseNamespace = "d8-system"
-
-	deckhouseDiscoverySecret = "deckhouse-discovery"
 )
 
 // GenerateRegistryOptionsFromModuleSource fetches settings from ModuleSource and generate registry options from them
@@ -243,7 +238,7 @@ func ModulePullOverrideExists(ctx context.Context, cli client.Client, moduleName
 func GetClusterUUID(ctx context.Context, cli client.Client) string {
 	// attempt to read the cluster UUID from a secret
 	secret := new(corev1.Secret)
-	if err := cli.Get(ctx, client.ObjectKey{Namespace: deckhouseNamespace, Name: deckhouseDiscoverySecret}, secret); err != nil {
+	if err := cli.Get(ctx, client.ObjectKey{Namespace: app.NamespaceDeckhouse, Name: app.DiscoverySecret}, secret); err != nil {
 		return uuid.Must(uuid.NewV4()).String()
 	}
 
@@ -355,7 +350,7 @@ func EnsureModuleDocumentation(
 // GetNotificationConfig gets config from discovery secret
 func GetNotificationConfig(ctx context.Context, cli client.Client) (releaseUpdater.NotificationConfig, error) {
 	secret := new(corev1.Secret)
-	if err := cli.Get(ctx, client.ObjectKey{Name: deckhouseDiscoverySecret, Namespace: deckhouseNamespace}, secret); err != nil {
+	if err := cli.Get(ctx, client.ObjectKey{Name: app.DiscoverySecret, Namespace: app.NamespaceDeckhouse}, secret); err != nil {
 		return releaseUpdater.NotificationConfig{}, fmt.Errorf("get secret: %w", err)
 	}
 

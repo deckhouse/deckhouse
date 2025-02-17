@@ -24,13 +24,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/app"
 	"github.com/deckhouse/deckhouse/go_lib/configtools/conversion"
 	"github.com/deckhouse/deckhouse/pkg/log"
-)
-
-const (
-	moduleDeckhouse = "deckhouse"
-	moduleGlobal    = "global"
 )
 
 var _ backend.ConfigHandler = &Handler{}
@@ -64,7 +60,7 @@ func (h *Handler) HandleEvent(moduleConfig *v1alpha1.ModuleConfig, op config.Op)
 		return
 	}
 
-	if moduleConfig.Name == moduleGlobal {
+	if moduleConfig.Name == app.ModuleGlobal {
 		kubeConfig.Global = &config.GlobalKubeConfig{
 			Values:   values,
 			Checksum: values.Checksum(),
@@ -78,7 +74,7 @@ func (h *Handler) HandleEvent(moduleConfig *v1alpha1.ModuleConfig, op config.Op)
 		}
 
 		// update deckhouse settings
-		if moduleConfig.Name == moduleDeckhouse {
+		if moduleConfig.Name == app.ModuleGlobal {
 			h.deckhouseConfigCh <- values
 		}
 	}
@@ -105,7 +101,7 @@ func (h *Handler) LoadConfig(ctx context.Context, _ ...string) (*config.KubeConf
 			return nil, err
 		}
 
-		if moduleConfig.Name == moduleGlobal {
+		if moduleConfig.Name == app.ModuleGlobal {
 			kubeConfig.Global = &config.GlobalKubeConfig{
 				Values:   values,
 				Checksum: values.Checksum(),
@@ -122,7 +118,7 @@ func (h *Handler) LoadConfig(ctx context.Context, _ ...string) (*config.KubeConf
 		}
 
 		// update deckhouse settings
-		if moduleConfig.Name == moduleDeckhouse {
+		if moduleConfig.Name == app.ModuleDeckhouse {
 			h.deckhouseConfigCh <- values
 		}
 	}

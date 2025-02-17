@@ -46,6 +46,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/validation"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/app"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/confighandler"
 	deckhouserelease "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/deckhouse-release"
 	moduleconfig "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/config"
@@ -66,9 +67,6 @@ var DeckhouseVersion string
 
 const (
 	docsLeaseLabel = "deckhouse.io/documentation-builder-sync"
-
-	deckhouseNamespace  = "d8-system"
-	kubernetesNamespace = "kube-system"
 )
 
 type DeckhouseController struct {
@@ -121,7 +119,7 @@ func NewDeckhouseController(ctx context.Context, version string, operator *addon
 				// for ModuleDocumentation controller
 				&coordv1.Lease{}: {
 					Namespaces: map[string]cache.Config{
-						deckhouseNamespace: {
+						app.NamespaceDeckhouse: {
 							LabelSelector: labels.SelectorFromSet(map[string]string{docsLeaseLabel: ""}),
 						},
 					},
@@ -129,18 +127,18 @@ func NewDeckhouseController(ctx context.Context, version string, operator *addon
 				// for ModuleRelease controller and DeckhouseRelease controller
 				&corev1.Secret{}: {
 					Namespaces: map[string]cache.Config{
-						deckhouseNamespace: {
+						app.NamespaceDeckhouse: {
 							LabelSelector: labels.SelectorFromSet(map[string]string{"heritage": "deckhouse", "module": "deckhouse"}),
 						},
-						kubernetesNamespace: {
-							LabelSelector: labels.SelectorFromSet(map[string]string{"name": "d8-cluster-configuration"}),
+						app.NamespaceKubernetes: {
+							LabelSelector: labels.SelectorFromSet(map[string]string{"name": app.ClusterConfigurationSecret}),
 						},
 					},
 				},
 				// for DeckhouseRelease controller
 				&corev1.Pod{}: {
 					Namespaces: map[string]cache.Config{
-						deckhouseNamespace: {
+						app.NamespaceDeckhouse: {
 							LabelSelector: labels.SelectorFromSet(map[string]string{"app": "deckhouse"}),
 						},
 					},
@@ -148,7 +146,7 @@ func NewDeckhouseController(ctx context.Context, version string, operator *addon
 				// for DeckhouseRelease controller
 				&corev1.ConfigMap{}: {
 					Namespaces: map[string]cache.Config{
-						deckhouseNamespace: {
+						app.NamespaceDeckhouse: {
 							LabelSelector: labels.SelectorFromSet(map[string]string{"heritage": "deckhouse"}),
 						},
 					},

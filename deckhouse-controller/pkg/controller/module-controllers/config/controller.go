@@ -39,6 +39,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/app"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/confighandler"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/moduleloader"
@@ -53,9 +54,6 @@ const (
 	deleteReleasesAfter = 72 * time.Hour
 
 	maxConcurrentReconciles = 3
-
-	moduleDeckhouse = "deckhouse"
-	moduleGlobal    = "global"
 )
 
 func RegisterController(
@@ -173,7 +171,7 @@ func (r *reconciler) handleModuleConfig(ctx context.Context, moduleConfig *v1alp
 	module := new(v1alpha1.Module)
 	if err := r.client.Get(ctx, client.ObjectKey{Name: moduleConfig.Name}, module); err != nil {
 		if apierrors.IsNotFound(err) {
-			if moduleConfig.Name != moduleGlobal {
+			if moduleConfig.Name != app.ModuleGlobal {
 				r.log.Warnf("the module '%s' not found", moduleConfig.Name)
 				err = utils.UpdateStatus[*v1alpha1.ModuleConfig](ctx, r.client, moduleConfig, func(moduleConfig *v1alpha1.ModuleConfig) bool {
 					moduleConfig.Status.Message = v1alpha1.ModuleConfigMessageUnknownModule
@@ -235,7 +233,7 @@ func (r *reconciler) processModule(ctx context.Context, moduleConfig *v1alpha1.M
 	}
 
 	// skip system modules
-	if module.Name == moduleDeckhouse || module.Name == moduleGlobal {
+	if module.Name == app.ModuleDeckhouse || module.Name == app.ModuleGlobal {
 		r.log.Debugf("skip the '%s' system module", module.Name)
 		return ctrl.Result{}, nil
 	}
@@ -323,7 +321,7 @@ func (r *reconciler) deleteModuleConfig(ctx context.Context, moduleConfig *v1alp
 	}
 
 	// skip system modules
-	if module.Name == moduleDeckhouse || module.Name == moduleGlobal {
+	if module.Name == app.ModuleDeckhouse || module.Name == app.ModuleGlobal {
 		r.log.Debugf("skip the '%s' system module", module.Name)
 		return ctrl.Result{}, nil
 	}
