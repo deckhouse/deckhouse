@@ -13,7 +13,7 @@
 031-ceph-csi/                   @AleksZimin
 035-cni-flannel/                @apolovov
 035-cni-simple-bridge/          @apolovov
-036-kube-proxy/                 @name212 @sprait
+036-kube-proxy/                 @apolovov
 039-registry-packages-proxy/    @RomanenkoDenys @name212 @sprait
 040-control-plane-manager/      @name212 @sprait
 040-node-manager/               @name212 @sprait
