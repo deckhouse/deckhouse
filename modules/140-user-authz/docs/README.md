@@ -87,7 +87,7 @@ Role-based model subsystems composition table.
 
 {% include rbac/rbac-subsystems-list.liquid %}
 
-## Role-based model
+## Current role-based model
 
 Features:
 - Manages user and group access control using Kubernetes RBAC;
