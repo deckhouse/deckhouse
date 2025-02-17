@@ -168,6 +168,7 @@ var DefaultImagesDigests = map[string]interface{}{
 		"egressGatewayAgent": "imageHash-cniCilium-egressGatewayAgent",
 		"kubeRbacProxy":      "imageHash-cniCilium-kubeRbacProxy",
 		"multusCni":          "imageHash-cniCilium-multusCni",
+		"multusController":   "imageHash-cniCilium-multusController",
 		"operator":           "imageHash-cniCilium-operator",
 		"safeAgentUpdater":   "imageHash-cniCilium-safeAgentUpdater",
 	},
