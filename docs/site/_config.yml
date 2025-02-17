@@ -94,6 +94,10 @@ defaults:
     values:
       sidebar: kubernetes-platform
   - scope:
+      path: "pages/user"
+    values:
+      sidebar: kubernetes-platform
+  - scope:
       path: "pages/includes"
       type: "pages"
     values:

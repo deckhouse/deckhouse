@@ -102,6 +102,10 @@ entries:
                         en: Encrypting traffic between nodes
                         ru: Шифрование трафика между узлами
                       url: /admin/network/encrypting-traffic.html
+                    - title:
+                        en: Kube-proxy configuration
+                        ru: Настройка kube-proxy
+                      url: /admin/network/kube-proxy-configuration.html
                 - title:
                     en: Incoming traffic balancing
                     ru: Балансировка входящего трафика
@@ -142,6 +146,26 @@ entries:
                             en: ALB means Istio
                             ru: ALB средствами Istio
                           url: /admin/network/alb-istio.html
+                    - title:
+                        en: Ensuring high availability and fault tolerance (keepalived)
+                        ru: Обеспечение высокой доступности и отказоустойчивости (keepalived)
+                      url: /admin/network/keepalived.html
+                - title:
+                    en: Outgoing traffic balancing
+                    ru: Балансировка исходящего трафика
+                  folders:
+                    - title:
+                        en: Overview
+                        ru: Введение
+                      url: /admin/network/outgoing-traffic-balancing.html
+                    - title:
+                        en: Egress
+                        ru: Egress
+                      url: /admin/network/egress.html
+                    - title:
+                        en: Istio
+                        ru: Istio
+                      url: /admin/network/istio-outgoing-balancing.html
                 - title:
                     en: Service Mesh
                     ru: Service Mesh
@@ -183,22 +207,6 @@ entries:
                         ru: Федерация
                       url: /admin/network/cluster-federation.html
                 - title:
-                    en: Outgoing traffic balancing
-                    ru: Балансировка исходящего трафика
-                  folders:
-                    - title:
-                        en: Overview
-                        ru: Введение
-                      url: /admin/network/outgoing-traffic-balancing.html
-                    - title:
-                        en: Egress
-                        ru: Egress
-                      url: /admin/network/egress.html
-                    - title:
-                        en: Istio
-                        ru: Istio
-                      url: /admin/network/istio-outgoing-balancing.html
-                - title:
                     en: Network policies
                     ru: Сетевые политики
                   folders:
@@ -207,9 +215,9 @@ entries:
                         ru: Введение
                       url: /admin/network/network-policies-overview.html
                     - title:
-                        en: Defining cluster-wide network policies (CiliumClusterwideNetworkPolicy)
-                        ru: Определение сетевых политик на уровне всего кластера (CiliumClusterwideNetworkPolicy)
-                      url: /admin/network/cilium-clusterwide-network-policy.html
+                        en: Network policy configuration
+                        ru: Настройка сетевых политик
+                      url: /admin/network/network-policy-configuration.html
                 - title:
                     en: Other network configuration options
                     ru: Другие возможности настройки сети
@@ -227,21 +235,9 @@ entries:
                         ru: Управление DNS в кластере Kubernetes
                       url: /admin/network/dns-management-in-cluster.html
                     - title:
-                        en: Kube-proxy configuration
-                        ru: Настройка kube-proxy
-                      url: /admin/network/kube-proxy-configuration.html
-                    - title:
                         en: Building a network gateway from Kubernetes nodes
                         ru: Постройка сетевого шлюза из Kubernetes-узлов
                       url: /admin/network/building-network-gateway-from-nodes.html
-                    - title:
-                        en: ServiceWithHealthcheck balancer
-                        ru: Балансировщик ServiceWithHealthcheck
-                      url: /admin/network/service-with-healthcheck.html
-                    - title:
-                        en: Ensuring high availability and fault tolerance (keepalived)
-                        ru: Обеспечение высокой доступности и отказоустойчивости (keepalived)
-                      url: /admin/network/keepalived.html
             - title:
                 en: Storage
                 ru: Хранение
@@ -314,7 +310,11 @@ entries:
         - title:
             en: Network
             ru: Сеть
-          url: /user/user-network.html
+          folders:
+            - title:
+                en: ServiceWithHealthchecks
+                ru: ServiceWithHealthchecks
+              url: /user/service-with-healthchecks.html
         - title:
             en: Interfaces
             ru: Интерфейсы
