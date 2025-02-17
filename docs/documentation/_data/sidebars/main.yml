@@ -351,6 +351,43 @@ entries:
                     ru: FAQ
                   url: /modules/cloud-provider-openstack/faq.html
             - title:
+                en: Huawei Cloud
+                ru: Huawei Cloud
+              d8Revision: ee
+              folders:
+                - title:
+                    en: Description
+                    ru: Описание
+                  url: /modules/cloud-provider-huaweicloud/
+                - title:
+                    en: Installation
+                    ru: Установка
+                  folders:
+                    - title:
+                        en: Preparing environment
+                        ru: Подготовка окружения
+                      url: /modules/cloud-provider-huaweicloud/environment.html
+                    - title:
+                        en: Layouts
+                        ru: Схемы размещения
+                      url: /modules/cloud-provider-huaweicloud/layouts.html
+                    - title:
+                        en: Provider configuration
+                        ru: Настройка провайдера
+                      url: /modules/cloud-provider-huaweicloud/cluster_configuration.html
+                - title:
+                    en: Reference
+                    ru: Справка
+                  folders:
+                    - title:
+                        en: Configuration
+                        ru: Настройки
+                      url: /modules/cloud-provider-huaweicloud/configuration.html
+                    - title:
+                        en: Custom Resources
+                        ru: Custom Resources
+                      url: /modules/cloud-provider-huaweicloud/cr.html
+            - title:
                 en: VMware Cloud Director
                 ru: VMware Cloud Director
               d8Revision: ee
@@ -691,6 +728,10 @@ entries:
                 en: Configuration
                 ru: Настройки
               url: /modules/openvpn/configuration.html
+            - title:
+                en: FAQ
+                ru: FAQ
+              url: /modules/openvpn/faq.html
     - title:
         en: Network
         ru: Сеть
@@ -854,9 +895,18 @@ entries:
                     ru: Примеры
                   url: /modules/metallb/examples.html
                 - title:
-                    en: Configuration
-                    ru: Настройки
-                  url: /modules/metallb/configuration.html
+                    en: Reference
+                    ru: Справка
+                  folders:
+                    - title:
+                        en: Configuration
+                        ru: Настройки
+                      url: /modules/metallb/configuration.html
+                    - title:
+                        en: Custom Resources
+                        ru: Custom Resources
+                      url: /modules/metallb/cr.html
+
         - title:
             en: Other modules
             ru: Другие модули
@@ -1182,6 +1232,10 @@ entries:
                         en: Custom Resources
                         ru: Custom Resources
                       url: /modules/upmeter/cr.html
+                - title:
+                    en: FAQ
+                    ru: FAQ
+                  url: /modules/upmeter/faq.html
     - title:
         en: Autoscaling & Managing resources
         ru: Масштабирование и управление ресурсами

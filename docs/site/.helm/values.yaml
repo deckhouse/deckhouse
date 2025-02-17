@@ -5,10 +5,12 @@ priorityClassName:
 
 ingressClass:
   _default: nginx
+  prod-25: nginx
   prod-sel: nginx-tfprod
 
 certificateClusterIssuer:
   _default: letsencrypt
+  prod-25: letsencrypt-nginx
   prod-sel: letsencrypt-nginx-tfprod
 
 moduleWatcher:
@@ -22,8 +24,8 @@ moduleWatcher:
     _default: 15s
     web-production: 5m
   logLevel:
-    _default: 4
-    web-production: 1
+    _default: debug
+    web-production: error
 
 docsBuilder:
   highAvailability:

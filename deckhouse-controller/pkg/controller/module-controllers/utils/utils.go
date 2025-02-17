@@ -23,6 +23,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"strconv"
 	"strings"
 
 	"github.com/gofrs/uuid/v5"
@@ -37,8 +38,8 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers/reginjector"
+	releaseUpdater "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/releaseupdater"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
-	"github.com/deckhouse/deckhouse/go_lib/updater"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
@@ -89,13 +90,19 @@ func GenerateRegistryOptions(ri *RegistryConfig, logger *log.Logger) []cr.Option
 type DeckhouseRegistrySecret struct {
 	DockerConfig          string
 	Address               string
-	ClusterIsBootstrapped string
+	ClusterIsBootstrapped bool
 	ImageRegistry         string
 	Path                  string
 	Scheme                string
 	CA                    string
 }
 
+var ErrDockerConfigFieldIsNotFound = errors.New("secret has no .dockerconfigjson field")
+var ErrAddressFieldIsNotFound = errors.New("secret has no address field")
+var ErrClusterIsBootstrappedFieldIsNotFound = errors.New("secret has no clusterIsBootstrapped field")
+var ErrImageRegistryFieldIsNotFound = errors.New("secret has no imagesRegistry field")
+var ErrPathFieldIsNotFound = errors.New("secret has no path field")
+var ErrSchemeFieldIsNotFound = errors.New("secret has no scheme field")
 var ErrCAFieldIsNotFound = errors.New("secret has no ca field")
 
 func ParseDeckhouseRegistrySecret(data map[string][]byte) (*DeckhouseRegistrySecret, error) {
@@ -103,32 +110,43 @@ func ParseDeckhouseRegistrySecret(data map[string][]byte) (*DeckhouseRegistrySec
 
 	dockerConfig, ok := data[".dockerconfigjson"]
 	if !ok {
-		err = errors.Join(err, errors.New("secret has no .dockerconfigjson field"))
+		err = errors.Join(err, ErrDockerConfigFieldIsNotFound)
 	}
 
 	address, ok := data["address"]
 	if !ok {
-		err = errors.Join(err, errors.New("secret has no address field"))
+		err = errors.Join(err, ErrAddressFieldIsNotFound)
 	}
 
-	clusterIsBootstrapped, ok := data["clusterIsBootstrapped"]
+	clusterIsBootstrappedRaw, ok := data["clusterIsBootstrapped"]
 	if !ok {
-		err = errors.Join(err, errors.New("secret has no clusterIsBootstrapped field"))
+		err = errors.Join(err, ErrClusterIsBootstrappedFieldIsNotFound)
+	}
+
+	var clusterIsBootstrapped bool
+	var castErr error
+	if ok {
+		trimmedBool := strings.ReplaceAll(string(clusterIsBootstrappedRaw), "\"", "")
+
+		clusterIsBootstrapped, castErr = strconv.ParseBool(trimmedBool)
+		if castErr != nil {
+			err = errors.Join(err, fmt.Errorf("clusterIsBootstrapped is not bool: %w", castErr))
+		}
 	}
 
 	imagesRegistry, ok := data["imagesRegistry"]
 	if !ok {
-		err = errors.Join(err, errors.New("secret has no imagesRegistry field"))
+		err = errors.Join(err, ErrImageRegistryFieldIsNotFound)
 	}
 
 	path, ok := data["path"]
 	if !ok {
-		err = errors.Join(err, errors.New("secret has no path field"))
+		err = errors.Join(err, ErrPathFieldIsNotFound)
 	}
 
 	scheme, ok := data["scheme"]
 	if !ok {
-		err = errors.Join(err, errors.New("secret has no scheme field"))
+		err = errors.Join(err, ErrSchemeFieldIsNotFound)
 	}
 
 	ca, ok := data["ca"]
@@ -139,7 +157,7 @@ func ParseDeckhouseRegistrySecret(data map[string][]byte) (*DeckhouseRegistrySec
 	return &DeckhouseRegistrySecret{
 		DockerConfig:          string(dockerConfig),
 		Address:               string(address),
-		ClusterIsBootstrapped: string(clusterIsBootstrapped),
+		ClusterIsBootstrapped: clusterIsBootstrapped,
 		ImageRegistry:         string(imagesRegistry),
 		Path:                  string(path),
 		Scheme:                string(scheme),
@@ -335,24 +353,24 @@ func EnsureModuleDocumentation(
 }
 
 // GetNotificationConfig gets config from discovery secret
-func GetNotificationConfig(ctx context.Context, cli client.Client) (updater.NotificationConfig, error) {
+func GetNotificationConfig(ctx context.Context, cli client.Client) (releaseUpdater.NotificationConfig, error) {
 	secret := new(corev1.Secret)
 	if err := cli.Get(ctx, client.ObjectKey{Name: deckhouseDiscoverySecret, Namespace: deckhouseNamespace}, secret); err != nil {
-		return updater.NotificationConfig{}, fmt.Errorf("get secret: %w", err)
+		return releaseUpdater.NotificationConfig{}, fmt.Errorf("get secret: %w", err)
 	}
 
 	// TODO: remove this dependency
 	jsonSettings, ok := secret.Data["updateSettings.json"]
 	if !ok {
-		return updater.NotificationConfig{}, nil
+		return releaseUpdater.NotificationConfig{}, nil
 	}
 
 	var settings struct {
-		NotificationConfig updater.NotificationConfig `json:"notification"`
+		NotificationConfig releaseUpdater.NotificationConfig `json:"notification"`
 	}
 
 	if err := json.Unmarshal(jsonSettings, &settings); err != nil {
-		return updater.NotificationConfig{}, fmt.Errorf("unmarshal json: %w", err)
+		return releaseUpdater.NotificationConfig{}, fmt.Errorf("unmarshal json: %w", err)
 	}
 
 	return settings.NotificationConfig, nil

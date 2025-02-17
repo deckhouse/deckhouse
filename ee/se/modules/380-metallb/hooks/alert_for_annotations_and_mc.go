@@ -76,8 +76,16 @@ func checkServicesForDeprecatedAnnotations(input *go_hook.HookInput) error {
 	}
 	mc, ok := mcSnaps[0].(*ModuleConfig)
 	if ok && mc.Spec.Version >= 2 {
+		for _, pool := range mc.Spec.Settings.AddressPools {
+			if pool.Protocol == "layer2" {
+				input.MetricsCollector.Set("d8_metallb_obsolete_layer2_pools_are_used", 1,
+					map[string]string{"name": pool.Name},
+					metrics.WithGroup("D8MetallbObsoleteLayer2PoolsAreUsed"))
+			}
+		}
 		return nil
 	}
+
 	for _, pool := range mc.Spec.Settings.AddressPools {
 		if pool.Protocol == "bgp" {
 			return nil
@@ -93,6 +101,7 @@ func checkServicesForDeprecatedAnnotations(input *go_hook.HookInput) error {
 		"metallb.universe.tf/ip-allocated-from-pool",
 		"metallb.universe.tf/address-pool",
 		"metallb.universe.tf/loadBalancerIPs",
+		"metallb.universe.tf/allow-shared-ip",
 	}
 
 	serviceSnaps := input.Snapshots["services"]

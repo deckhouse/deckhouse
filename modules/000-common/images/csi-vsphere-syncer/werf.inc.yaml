@@ -17,8 +17,9 @@ import:
   add: /src/vsphere-syncer
   to: /bin/vsphere-syncer
   before: setup
-docker:
-  ENTRYPOINT: ["/bin/vsphere-syncer"]
+imageSpec:
+  config:
+    entrypoint: ["/bin/vsphere-syncer"]
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $version | replace "." "-" }}
 fromImage: common/src-artifact

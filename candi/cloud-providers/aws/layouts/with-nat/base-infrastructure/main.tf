@@ -194,7 +194,7 @@ resource "aws_iam_role_policy" "node" {
 
 resource "aws_iam_instance_profile" "node" {
   name = "${local.prefix}-node"
-  role = aws_iam_role.node.id
+  role = lookup(var.providerClusterConfiguration,"iamNodeRole", aws_iam_role.node.id)
 }
 
 resource "aws_key_pair" "ssh" {
@@ -250,6 +250,12 @@ resource "aws_instance" "bastion" {
     ignore_changes = [
       ebs_optimized
     ]
+  }
+
+  timeouts {
+    create = var.resourceManagementTimeout
+    delete = var.resourceManagementTimeout
+    update = var.resourceManagementTimeout
   }
 }
 

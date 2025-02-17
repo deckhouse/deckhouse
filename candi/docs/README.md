@@ -28,7 +28,7 @@ clusterType: Static
 podSubnetCIDR: 10.111.0.0/16
 podSubnetNodeCIDRPrefix: "24"
 serviceSubnetCIDR: 10.222.0.0/16
-kubernetesVersion: 1.27
+kubernetesVersion: 1.28
 defaultCRI: "Containerd"
 clusterDomain: cluster.local
 ---
@@ -37,7 +37,6 @@ kind: InitConfiguration
 deckhouse:
   imagesRepo: registry.example.com/deckhouse
   registryDockerCfg: edsfkslfklsdfkl==
-  releaseChannel: Alpha
 ```
 
 For validation and values defaulting, each configuration object has its OpenAPI specification.

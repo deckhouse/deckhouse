@@ -28,6 +28,7 @@ import (
 	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
 
@@ -49,12 +50,13 @@ type MetaConfig struct {
 	ProviderClusterConfig map[string]json.RawMessage `json:"providerClusterConfiguration,omitempty"`
 	StaticClusterConfig   map[string]json.RawMessage `json:"staticClusterConfiguration,omitempty"`
 
-	VersionMap       map[string]interface{} `json:"-"`
-	Images           imagesDigests          `json:"-"`
-	Registry         RegistryData           `json:"-"`
-	UUID             string                 `json:"clusterUUID,omitempty"`
-	InstallerVersion string                 `json:"-"`
-	ResourcesYAML    string                 `json:"-"`
+	VersionMap                map[string]interface{} `json:"-"`
+	Images                    imagesDigests          `json:"-"`
+	Registry                  RegistryData           `json:"-"`
+	UUID                      string                 `json:"clusterUUID,omitempty"`
+	InstallerVersion          string                 `json:"-"`
+	ResourcesYAML             string                 `json:"-"`
+	ResourceManagementTimeout string                 `json:"resourceManagementTimeout,omitempty"`
 }
 
 type imagesDigests map[string]map[string]interface{}
@@ -462,6 +464,10 @@ func (m *MetaConfig) NodeGroupConfig(nodeGroupName string, nodeIndex int, cloudC
 		result["clusterUUID"] = m.UUID
 	}
 
+	if len(m.ResourceManagementTimeout) > 0 {
+		result["resourceManagementTimeout"] = m.ResourceManagementTimeout
+	}
+
 	data, _ := json.Marshal(result)
 	return data
 }
@@ -529,6 +535,10 @@ func (m *MetaConfig) DeepCopy() *MetaConfig {
 
 	if m.UUID != "" {
 		out.UUID = m.UUID
+	}
+
+	if m.ResourceManagementTimeout != "" {
+		out.ResourceManagementTimeout = m.ResourceManagementTimeout
 	}
 
 	return out
@@ -646,6 +656,20 @@ func (m *MetaConfig) LoadInstallerVersion() error {
 	m.InstallerVersion = strings.TrimSpace(string(rawFile))
 
 	return nil
+}
+
+func (m *MetaConfig) GetReplicasByNodeGroupName(nodeGroupName string) int {
+	if nodeGroupName == global.MasterNodeGroupName {
+		return m.MasterNodeGroupSpec.Replicas
+	}
+
+	for _, group := range m.GetTerraNodeGroups() {
+		if group.Name == nodeGroupName {
+			return group.Replicas
+		}
+	}
+
+	return 0
 }
 
 func (r *RegistryData) ConvertToMap() map[string]interface{} {

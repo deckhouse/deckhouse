@@ -7,7 +7,7 @@ permalink: en/virtualization-platform/documentation/admin/install/steps/nodes.ht
 
 After the initial installation, the cluster consists of only one node — the master node. To run virtual machines on the prepared worker nodes, they need to be added to the cluster.
 
-Next, we'll cover the process of adding two worker nodes. For more detailed information about adding static nodes to the cluster, refer to the [documentation](../../platform-management/node-management/adding-node.html)).
+Next, we'll cover the process of adding two worker nodes. For more detailed information about adding static nodes to the cluster, refer to the [documentation](../../platform-management/node-management/adding-node.html).
 
 Ensure that all preparation steps have been completed (see [preparation of worker nodes](/products/virtualization-platform/documentation/admin/install/steps/prepare.html)).
 

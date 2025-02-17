@@ -18,8 +18,9 @@ import:
   add: /csi-snapshotter
   to: /csi-snapshotter
   before: setup
-docker:
-  ENTRYPOINT: ["/csi-snapshotter"]
+imageSpec:
+  config:
+    entrypoint: ["/csi-snapshotter"]
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $version | replace "." "-" }}
 fromImage: common/src-artifact
@@ -46,7 +47,7 @@ image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "
 from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
 final: false
 import:
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $version | replace "." "-" }}
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $version | replace "." "-" }}
   add: /src
   to: /src
   before: install

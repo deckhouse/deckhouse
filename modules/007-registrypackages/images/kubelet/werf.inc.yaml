@@ -6,7 +6,7 @@
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
 from: {{ $.Images.BASE_SCRATCH }}
 import:
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
   add: /
   to: /
   includePaths:
@@ -15,13 +15,12 @@ import:
   - install
   - uninstall
   before: setup
-docker:
-  LABEL:
-    distro: all
-    version: all
-    kubelet: {{ printf "%s.%s" $version $patch }}
+imageSpec:
+  config:
+    labels: {"distro": "all", "version": "all", "kubelet": "{{ printf "%s.%s" $version $patch }}" }
 ---
-artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
+image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
+final: false
 from: {{ $.Images.BASE_SCRATCH }}
 git:
 - add: /{{ $.ModulePath }}modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
@@ -30,7 +29,7 @@ git:
     setup:
     - '**/*'
 import:
-- artifact: common/kubernetes-artifact-{{ $image_version }}
+- image: common/kubernetes-artifact-{{ $image_version }}
   add: /src/_output/bin/kubelet
   to: /kubelet
   before: setup

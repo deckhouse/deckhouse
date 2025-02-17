@@ -11,13 +11,31 @@
         - '**/*'
 - add: /ee/se-plus/candi/cloud-providers/vsphere
   to: /deckhouse/candi/cloud-providers/vsphere
+  stageDependencies:
+    setup:
+        - '**/*'
 - add: /ee/se-plus/candi/cloud-providers/zvirt
   to: /deckhouse/candi/cloud-providers/zvirt
+  stageDependencies:
+    setup:
+        - '**/*'
 - add: /ee/candi/cloud-providers/openstack
   to: /deckhouse/candi/cloud-providers/openstack
+  stageDependencies:
+    setup:
+        - '**/*'
 - add: /ee/candi/cloud-providers/vcd
   to: /deckhouse/candi/cloud-providers/vcd
+  stageDependencies:
+    setup:
+        - '**/*'
 - add: /ee/candi/cloud-providers/dynamix
   to: /deckhouse/candi/cloud-providers/dynamix
+  stageDependencies:
+    setup:
+        - '**/*'
 - add: /ee/candi/cloud-providers/huaweicloud
   to: /deckhouse/candi/cloud-providers/huaweicloud
+  stageDependencies:
+    setup:
+        - '**/*'

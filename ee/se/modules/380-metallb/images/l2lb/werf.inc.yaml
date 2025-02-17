@@ -11,8 +11,10 @@ git:
 shell:
   install:
   - cd /src
-  - git clone -b v0.14.8 {{ $.SOURCE_REPO }}/metallb/metallb.git . && rm -rf /src/.git
+  - git clone -b v0.14.8 {{ $.SOURCE_REPO }}/metallb/metallb.git .
   - git apply /patches/*.patch --verbose
+  - rm -rf e2etest
+  - rm -rf /src/.git
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
 from: {{ .Images.BASE_GOLANG_23_ALPINE }}
@@ -46,8 +48,9 @@ import:
   add: /controller
   to: /controller
   before: setup
-docker:
-  ENTRYPOINT: ["/controller"]
+imageSpec:
+  config:
+    entrypoint: ["/controller"]
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-speaker
 fromImage: common/distroless
@@ -56,5 +59,6 @@ import:
   add: /speaker
   to: /speaker
   before: setup
-docker:
-  ENTRYPOINT: ["/speaker"]
+imageSpec:
+  config:
+    entrypoint: ["/speaker"]

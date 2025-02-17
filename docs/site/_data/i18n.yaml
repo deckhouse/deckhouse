@@ -15,7 +15,8 @@ soon:
   ru: "скоро..."
 ce: Community Edition
 be: Basic Edition
-se: Standard Edition / Standard Edition+
+se: Standard Edition
+se-plus: Standard Edition+
 ee: Enterprise Edition
 
 common:
@@ -82,6 +83,12 @@ common:
   deprecated_parameter_hint:
     en: Support for the parameter might be removed in a later release.
     ru: Поддержка параметра может быть исключена в следующих версиях.
+  documentation_title:
+    en: Documentation
+    ru: Документация
+  contact_us_button:
+    en: Contact us
+    ru: Свяжитесь с нами
   coming_soon:
     en: "coming soon..."
     ru: "скоро..."

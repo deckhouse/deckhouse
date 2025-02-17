@@ -1,4 +1,4 @@
-{{- $version := "v0.0.1-flant.2" }}
+{{- $version := "v0.0.1-flant.3" }}
 {{- $image_version := $version | replace "." "-" }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
@@ -26,12 +26,9 @@ import:
   - install
   - uninstall
   before: setup
-docker:
-  LABEL:
-    distro: all
-    version: all
-    ec2-describe-tags: {{ $version }}
-  USER: 64535
+imageSpec:
+  config:
+    labels: { "distro": "all", "version": "all", "ec2-describe-tags": "{{ $version }}" }
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
 final: false

@@ -1,9 +1,9 @@
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: common/distroless
-docker:
-  ENTRYPOINT: ["/capz-controller-manager"]
-  USER: deckhouse:deckhouse
+imageSpec:
+  config:
+    entrypoint: ["/capz-controller-manager"]
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
   add: /capz-controller-manager
@@ -18,7 +18,7 @@ import:
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
 final: false
-from: {{ $.Images.BASE_GOLANG_21_ALPINE_DEV }}
+from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
 git:
   - add: /{{ $.ModulePath }}modules/030-{{ $.ModuleName }}/images/{{ $.ImageName }}/src
     to: /src

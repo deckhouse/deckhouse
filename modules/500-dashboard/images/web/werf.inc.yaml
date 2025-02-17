@@ -1,34 +1,38 @@
 # #####################################################################
-# Based on https://github.com/kubernetes/dashboard/blob/web/v1.6.0/modules/web/Dockerfile
+# Based on https://github.com/kubernetes/dashboard/blob/kubernetes-dashboard-7.10.4/modules/web/Dockerfile
 # #####################################################################
-{{- $version := "1.6.0" }}
+{{- $version := "1.6.1" }}
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
 import:
-- artifact: {{ .ModuleName }}/{{ .ImageName }}-artifact
+- image: {{ .ModuleName }}/{{ .ImageName }}-artifact
   add: /dashboard-web
   before: setup
-- artifact: {{ .ModuleName }}/{{ .ImageName }}-node-artifact
+- image: {{ .ModuleName }}/{{ .ImageName }}-node-artifact
   add: /src/modules/web/.dist/public
   to: /public
   before: setup
-- artifact: {{ .ModuleName }}/{{ .ImageName }}-node-artifact
+- image: {{ .ModuleName }}/{{ .ImageName }}-node-artifact
   add: /src/modules/web/.dist/public/locale_conf.json
   to: /locale_conf.json
   before: setup
-docker:
-  ENTRYPOINT: ["/dashboard-web"]
+imageSpec:
+  config:
+    entrypoint: ["/dashboard-web"]
 ---
-artifact: {{ .ModuleName }}/{{ .ImageName }}-artifact
+image: {{ .ModuleName }}/{{ .ImageName }}-artifact
+final: false
 from: {{ .Images.BASE_GOLANG_23_ALPINE }}
 import:
-- artifact: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
   add: /src
   before: install
 mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
+- from: tmp_dir
+  to: /root/.cache/go-build
 shell:
   install:
   - cd /src/modules/web
@@ -38,10 +42,11 @@ shell:
   - chown 64535:64535 /dashboard-web
   - chmod 0755 /dashboard-web
 ---
-artifact: {{ .ModuleName }}/{{ .ImageName }}-node-artifact
+image: {{ .ModuleName }}/{{ .ImageName }}-node-artifact
+final: false
 from: {{ .Images.BASE_NODE_20_ALPINE }}
 import:
-- artifact: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
   add: /src
   before: install
 mount:
@@ -61,7 +66,8 @@ shell:
   - ./install_logout.sh
   - rm -r node_modules .angular .yarn /root/.cache /root/.yarn #1Gi
 ---
-artifact: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+final: false
 fromImage: common/src-artifact
 git:
 - add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/patches

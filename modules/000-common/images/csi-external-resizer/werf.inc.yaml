@@ -18,8 +18,9 @@ import:
   add: /csi-resizer
   to: /csi-resizer
   before: setup
-docker:
-  ENTRYPOINT: ["/csi-resizer"]
+imageSpec:
+  config:
+    entrypoint: ["/csi-resizer"]
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $version | replace "." "-" }}
 fromImage: common/src-artifact

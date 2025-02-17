@@ -1,26 +1,30 @@
 # #####################################################################
-# Based on https://github.com/kubernetes/dashboard/blob/metrics-scraper/v1.2.1/modules/metrics-scraper/Dockerfile
+# Based on https://github.com/kubernetes/dashboard/blob/kubernetes-dashboard-7.10.4/modules/metrics-scraper/Dockerfile
 # #####################################################################
-{{- $version := "1.2.1" }}
+{{- $version := "1.2.2" }}
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
 import:
-- artifact: {{ .ModuleName }}/{{ .ImageName }}-artifact
+- image: {{ .ModuleName }}/{{ .ImageName }}-artifact
   add: /dashboard-metrics-scraper
   before: setup
-docker:
-  ENTRYPOINT: ["/dashboard-metrics-scraper"]
+imageSpec:
+  config:
+    entrypoint: ["/dashboard-metrics-scraper"]
 ---
-artifact: {{ .ModuleName }}/{{ .ImageName }}-artifact
+image: {{ .ModuleName }}/{{ .ImageName }}-artifact
+final: false
 from: {{ .Images.BASE_GOLANG_23_ALPINE }}
 import:
-- artifact: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
   add: /src
   before: install
 mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
+- from: tmp_dir
+  to: /root/.cache/go-build
 shell:
   install:
   - cd /src/modules/metrics-scraper
@@ -30,7 +34,8 @@ shell:
   - chown 64535:64535 /dashboard-metrics-scraper
   - chmod 0755 /dashboard-metrics-scraper
 ---
-artifact: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+final: false
 fromImage: common/src-artifact
 shell:
   install:

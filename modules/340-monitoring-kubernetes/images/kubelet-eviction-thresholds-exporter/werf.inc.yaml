@@ -6,11 +6,12 @@ import:
   add: /src/loop
   to: /bin/loop
   before: setup
-docker:
-  ENTRYPOINT: ["/bin/loop"]
+imageSpec:
+  config:
+    entrypoint: ["/bin/loop"]
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
-fromArtifact: common/src-artifact
+fromImage: common/src-artifact
 final: false
 git:
 - add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/src

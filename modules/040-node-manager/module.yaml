@@ -1,4 +1,7 @@
 name: node-manager
 weight: 40
+subsystems:
+  - infrastructure
+namespace: d8-cloud-instance-manager
 description: |
-    Managing nodes
+  Managing nodes

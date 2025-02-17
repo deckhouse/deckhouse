@@ -118,7 +118,7 @@ spec:
                       description: |
                         Аналогично полю `.spec.taints` из объекта [Node](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#taint-v1-core).
 
-                        > **Внимание!** Доступны только поля `effect`, `key`, `value`.
+                        > Доступны только поля `effect`, `key`, `value`.
                 static:
                   description: |
                     Параметры статического узла.
@@ -364,7 +364,7 @@ spec:
                       description: |
                         Аналогично полю `.spec.taints` из объекта [Node](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#taint-v1-core).
 
-                        > **Внимание!** Доступны только поля `effect`, `key`, `value`.
+                        > Доступны только поля `effect`, `key`, `value`.
                 chaos:
                   description: |
                     Настройки Chaos Monkey.
@@ -631,7 +631,7 @@ spec:
                       description: |
                         Аналогично полю `.spec.taints` из объекта [Node](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#taint-v1-core).
 
-                        > **Внимание!** Доступны только поля `effect`, `key`, `value`.
+                        > Доступны только поля `effect`, `key`, `value`.
                 chaos:
                   description: |
                     Настройки Chaos Monkey.

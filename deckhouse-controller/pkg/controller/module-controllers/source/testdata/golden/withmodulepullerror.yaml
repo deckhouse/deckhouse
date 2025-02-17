@@ -32,7 +32,7 @@ apiVersion: deckhouse.io/v1alpha1
 kind: ModuleRelease
 metadata:
   annotations:
-    release.deckhouse.io/apply-now: "true"
+    modules.deckhouse.io/apply-now: "true"
   creationTimestamp: null
   labels:
     module: enabledmodule

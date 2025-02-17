@@ -4,35 +4,47 @@ git:
 - add: /{{ .ModulePath }}candi/cloud-providers/openstack
   to: /deckhouse/candi/cloud-providers/openstack
 import:
-- artifact: terraform-provider-openstack
+- image: terraform-provider-openstack
   add: /terraform-provider-openstack
   to: /plugins/registry.terraform.io/{{ .TF.openstack.namespace }}/{{ .TF.openstack.type }}/{{ .TF.openstack.version }}/linux_amd64/terraform-provider-openstack
   before: setup
 ---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+final: false
+fromImage: common/src-artifact
+git:
+- add: /{{ $.ModulePath }}modules/040-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
+  to: /patches
+  stageDependencies:
+    install:
+    - '**/*'
+shell:
+  install:
+  - git clone --depth 1 --branch v{{ .TF.openstack.version }} {{ $.SOURCE_REPO }}/terraform-provider-openstack/terraform-provider-openstack.git /src
+  - cd /src
+  - git apply /patches/*.patch --verbose
+  - rm -rf .git
+---
 image: terraform-provider-openstack
 final: false
-from: {{ $.Images.BASE_GOLANG_20_ALPINE }}
+from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
 mount:
-  - fromPath: ~/go-pkg-cache
-    to: /go/pkg
-git:
-  - add: /{{ $.ModulePath }}modules/040-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
-    to: /patches
-    stageDependencies:
-      install:
-        - '**/*'
+- fromPath: ~/go-pkg-cache
+  to: /go/pkg
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+  add: /src
+  to: /src
+  before: install
 shell:
   beforeInstall:
-  - apk add --no-cache make patch git bash openssh-client
-  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
+  {{- include "alpine packages proxy" . | nindent 2 }}
+  - apk add --no-cache make bash
   install:
-    - mkdir /src
-    - export GOPROXY={{ $.GOPROXY }}
-    - git clone --depth 1 --branch v{{ .TF.openstack.version }} {{ $.SOURCE_REPO }}/terraform-provider-openstack/terraform-provider-openstack.git /src
-    - cd /src
-    - git apply /patches/*.patch --verbose
-    - make fmt
-    - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 make build LDFLAGS="-s -w -extldflags \"-static\" -X github.com/terraform-provider-openstack/terraform-provider-openstack/version.ProviderVersion={{ .TF.openstack.version }}"
-    - mv /go/bin/terraform-provider-openstack /terraform-provider-openstack
-    - chmod -R 755 /terraform-provider-openstack
-    - chown 64535:64535 /terraform-provider-openstack
+  - export GOPROXY={{ $.GOPROXY }}
+  - cd /src
+  - make fmt
+  - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 make build LDFLAGS="-s -w -extldflags \"-static\" -X github.com/terraform-provider-openstack/terraform-provider-openstack/version.ProviderVersion={{ .TF.openstack.version }}"
+  - mv /go/bin/terraform-provider-openstack /terraform-provider-openstack
+  - chmod -R 755 /terraform-provider-openstack
+  - chown 64535:64535 /terraform-provider-openstack

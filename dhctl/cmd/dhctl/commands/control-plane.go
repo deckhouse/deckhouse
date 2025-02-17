@@ -21,6 +21,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/infra/hook"
@@ -28,8 +29,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
 )
 
-func DefineTestControlPlaneManagerReadyCommand(parent *kingpin.CmdClause) *kingpin.CmdClause {
-	cmd := parent.Command("manager", "Test control plane manager is ready.")
+func DefineTestControlPlaneManagerReadyCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 	app.DefineSSHFlags(cmd, config.ConnectionConfigParser{})
 	app.DefineBecomeFlags(cmd)
 	app.DefineKubeFlags(cmd)
@@ -51,7 +51,7 @@ func DefineTestControlPlaneManagerReadyCommand(parent *kingpin.CmdClause) *kingp
 			return fmt.Errorf("open kubernetes connection: %v", err)
 		}
 
-		checker := controlplane.NewManagerReadinessChecker(kubeCl)
+		checker := controlplane.NewManagerReadinessChecker(kubernetes.NewSimpleKubeClientGetter(kubeCl))
 		ready, err := checker.IsReady(app.ControlPlaneHostname)
 		if err != nil {
 			return fmt.Errorf("Control plane manager is not ready: %s", err)
@@ -68,8 +68,7 @@ func DefineTestControlPlaneManagerReadyCommand(parent *kingpin.CmdClause) *kingp
 	return cmd
 }
 
-func DefineTestControlPlaneNodeReadyCommand(parent *kingpin.CmdClause) *kingpin.CmdClause {
-	cmd := parent.Command("node", "Test control plane node is ready.")
+func DefineTestControlPlaneNodeReadyCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 	app.DefineSSHFlags(cmd, config.ConnectionConfigParser{})
 	app.DefineBecomeFlags(cmd)
 	app.DefineKubeFlags(cmd)
@@ -93,13 +92,13 @@ func DefineTestControlPlaneNodeReadyCommand(parent *kingpin.CmdClause) *kingpin.
 
 		nodeToHostForChecks := map[string]string{app.ControlPlaneHostname: app.ControlPlaneIP}
 
-		checkers := []hook.NodeChecker{hook.NewKubeNodeReadinessChecker(kubeCl)}
+		checkers := []hook.NodeChecker{hook.NewKubeNodeReadinessChecker(kubernetes.NewSimpleKubeClientGetter(kubeCl))}
 
 		if app.ControlPlaneHostname != "" {
 			checkers = append(checkers, controlplane.NewKubeProxyChecker().WithExternalIPs(nodeToHostForChecks))
 		}
 
-		checkers = append(checkers, controlplane.NewManagerReadinessChecker(kubeCl))
+		checkers = append(checkers, controlplane.NewManagerReadinessChecker(kubernetes.NewSimpleKubeClientGetter(kubeCl)))
 
 		err = controlplane.NewChecker(nodeToHostForChecks, checkers, "test", controlplane.DefaultConfirm).IsAllNodesReady()
 		if err != nil {

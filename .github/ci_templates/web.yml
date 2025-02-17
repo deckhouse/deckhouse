@@ -145,9 +145,9 @@ steps:
       test -e ./tools/docs/link-checker/entrypoint.sh && \
       docker run \
         --rm \
-        -v "${_TMPDIR}/site_en:/src/en:ro" \
-        -v "${_TMPDIR}/site_ru:/src/ru:ro" \
-        -v "./tools/docs/link-checker/entrypoint.sh:/entrypoint.sh:ro" \
+        --mount type=bind,src="${_TMPDIR}/site_en",dst="/src/en",ro \
+        --mount type=bind,src="${_TMPDIR}/site_ru",dst="/src/ru",ro \
+        --mount type=bind,src="./tools/docs/link-checker/entrypoint.sh",dst="/entrypoint.sh",ro \
         -u $(id -u) \
         ${DECKHOUSE_REGISTRY_READ_HOST}/base_images/${CHECKER_IMAGE} \
         /entrypoint.sh
@@ -193,14 +193,17 @@ steps:
 {!{- $kubeConfig := "${{ secrets.KUBECONFIG_BASE64_DEV }}" -}!}
 {!{- $dcName := "dev" -}!}
 {!{- $repo := "${{ steps.check_dev_registry.outputs.web_registry_path }}" -}!}
-{!{- if or (eq $env "production") (eq $env "preproduction") -}!}
+{!{- if eq $env "production" -}!}
   {!{- $repo = "${{ steps.check_readonly_registry.outputs.web_registry_path }}" -}!}
   {!{- $url = "deckhouse.io" -}!}
   {!{- $urlRu = "deckhouse.ru" -}!}
-  {!{- $kubeConfig = "${{ secrets.KUBECONFIG_BASE64_PROD }}" -}!}
-  {!{- $dcName = "prod-eu" -}!}
+  {!{- $kubeConfig = "${{ secrets.KUBECONFIG_BASE64_PROD_25 }}" -}!}
+  {!{- $dcName = "prod-25" -}!}
 {!{- end -}!}
-{!{- if eq $env "preproduction" -}!}
+{!{- if eq $env "oldproduction" -}!}
+  {!{- $repo = "${{ steps.check_readonly_registry.outputs.web_registry_path }}" -}!}
+  {!{- $url = "deckhouse.io" -}!}
+  {!{- $urlRu = "deckhouse.ru" -}!}
   {!{- $ns = "deckhouse-web-production" -}!}
   {!{- $webEnv = "web-production" -}!}
   {!{- $kubeConfig = "${{ secrets.KUBECONFIG_BASE64_PROD_SEL }}" -}!}
@@ -236,14 +239,17 @@ steps:
 {!{- $kubeConfig := "${{ secrets.KUBECONFIG_BASE64_DEV }}" -}!}
 {!{- $dcName := "dev" -}!}
 {!{- $repo := "${{ steps.check_dev_registry.outputs.web_registry_path }}" -}!}
-{!{- if or (eq $env "production") (eq $env "preproduction") -}!}
+{!{- if eq $env "production" -}!}
   {!{- $repo = "${{ steps.check_readonly_registry.outputs.web_registry_path }}" -}!}
   {!{- $url = "deckhouse.io" -}!}
   {!{- $urlRu = "deckhouse.ru" -}!}
-  {!{- $kubeConfig = "${{ secrets.KUBECONFIG_BASE64_PROD }}" -}!}
-  {!{- $dcName = "prod-eu" -}!}
+  {!{- $kubeConfig = "${{ secrets.KUBECONFIG_BASE64_PROD_25 }}" -}!}
+  {!{- $dcName = "prod-25" -}!}
 {!{- end -}!}
-{!{- if eq $env "preproduction" -}!}
+{!{- if eq $env "oldproduction" -}!}
+  {!{- $repo = "${{ steps.check_readonly_registry.outputs.web_registry_path }}" -}!}
+  {!{- $url = "deckhouse.io" -}!}
+  {!{- $urlRu = "deckhouse.ru" -}!}
   {!{- $ns = "deckhouse-web-production" -}!}
   {!{- $webEnv = "web-production" -}!}
   {!{- $kubeConfig = "${{ secrets.KUBECONFIG_BASE64_PROD_SEL }}" -}!}

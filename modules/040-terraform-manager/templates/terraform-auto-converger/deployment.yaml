@@ -73,6 +73,8 @@ spec:
         env:
         - name: DHCTL_CLI_KUBE_CLIENT_FROM_CLUSTER
           value: "true"
+        - name: DHCTL_CLI_ALLOWED_COMMANDS
+          value: "converge-periodical, terraform check"
         - name: DHCTL_CLI_RUNNING_NODE_NAME
           valueFrom:
             fieldRef:

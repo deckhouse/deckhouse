@@ -154,6 +154,18 @@ spec:
                       type: object
                       description: Configures the TLS options for outgoing connections.
                       properties:
+                        secretRef:
+                          type: object
+                          description: |
+                            Reference to a Kubernetes Secret containing the CA certificate (ca.pem), client certificate
+                            (crt.pem), private key (key.pem) and key pass (keyPass) in Base64-encoded PEM format. If
+                            specified, TLS settings are overridden with values from the secret.
+                            Secret should be located in d8-log-shipper namespace and have
+                            `log-shipper.deckhouse.io/watch-secret: true` label.
+                          properties:
+                            name:
+                              type: string
+                              description: Name of the Secret with TLS certificates.
                         caFile:
                           type: string
                           description: Base64-encoded CA certificate in PEM format.
@@ -283,6 +295,18 @@ spec:
                       type: object
                       description: Configures the TLS options for outgoing connections.
                       properties:
+                        secretRef:
+                          type: object
+                          description: |
+                            Reference to a Kubernetes Secret containing the CA certificate (ca.pem), client certificate
+                            (crt.pem), private key (key.pem) and key pass (keyPass) in Base64-encoded PEM format. If
+                            specified, TLS settings are overridden with values from the secret.
+                            Secret should be located in d8-log-shipper namespace and have
+                            `log-shipper.deckhouse.io/watch-secret: true` label.
+                          properties:
+                            name:
+                              type: string
+                              description: Name of the Secret with TLS certificates.
                         caFile:
                           type: string
                           description: Base64-encoded CA certificate in PEM format.
@@ -330,6 +354,18 @@ spec:
                       type: object
                       description: Configures the TLS options for outgoing connections.
                       properties:
+                        secretRef:
+                          type: object
+                          description: |
+                            Reference to a Kubernetes Secret containing the CA certificate (ca.pem), client certificate
+                            (crt.pem), private key (key.pem) and key pass (keyPass) in Base64-encoded PEM format. If
+                            specified, TLS settings are overridden with values from the secret.
+                            Secret should be located in d8-log-shipper namespace and have
+                            `log-shipper.deckhouse.io/watch-secret: true` label.
+                          properties:
+                            name:
+                              type: string
+                              description: Name of the Secret with TLS certificates.
                         caFile:
                           type: string
                           description: Base64-encoded CA certificate in PEM format.
@@ -427,6 +463,18 @@ spec:
                       type: object
                       description: Configures the TLS options for outgoing connections.
                       properties:
+                        secretRef:
+                          type: object
+                          description: |
+                            Reference to a Kubernetes Secret containing the CA certificate (ca.pem), client certificate
+                            (crt.pem), private key (key.pem) and key pass (keyPass) in Base64-encoded PEM format. If
+                            specified, TLS settings are overridden with values from the secret.
+                            Secret should be located in d8-log-shipper namespace and have
+                            `log-shipper.deckhouse.io/watch-secret: true` label.
+                          properties:
+                            name:
+                              type: string
+                              description: Name of the Secret with TLS certificates.
                         caFile:
                           type: string
                           description: Base64-encoded CA certificate in PEM format.
@@ -483,6 +531,18 @@ spec:
                       type: object
                       description: Configures the TLS options for outgoing connections.
                       properties:
+                        secretRef:
+                          type: object
+                          description: |
+                            Reference to a Kubernetes Secret containing the CA certificate (ca.pem), client certificate
+                            (crt.pem), private key (key.pem) and key pass (keyPass) in Base64-encoded PEM format. If
+                            specified, TLS settings are overridden with values from the secret.
+                            Secret should be located in d8-log-shipper namespace and have
+                            `log-shipper.deckhouse.io/watch-secret: true` label.
+                          properties:
+                            name:
+                              type: string
+                              description: Name of the Secret with TLS certificates.
                         caFile:
                           type: string
                           description: Base64-encoded CA certificate in PEM format.
@@ -548,6 +608,18 @@ spec:
                           type: object
                           description: Configures the TLS options for outgoing connections.
                           properties:
+                            secretRef:
+                              type: object
+                              description: |
+                                Reference to a Kubernetes Secret containing the CA certificate (ca.pem), client certificate
+                                (crt.pem), private key (key.pem) and key pass (keyPass) in Base64-encoded PEM format. If
+                                specified, TLS settings are overridden with values from the secret.
+                                Secret should be located in d8-log-shipper namespace and have
+                                `log-shipper.deckhouse.io/watch-secret: true` label.
+                              properties:
+                                name:
+                                  type: string
+                                  description: Name of the Secret with TLS certificates.
                             caFile:
                               type: string
                               description: Base64-encoded CA certificate in PEM format.
@@ -599,6 +671,18 @@ spec:
                       type: object
                       description: Configures the TLS options for outgoing connections.
                       properties:
+                        secretRef:
+                          type: object
+                          description: |
+                            Reference to a Kubernetes Secret containing the CA certificate (ca.pem), client certificate
+                            (crt.pem), private key (key.pem) and key pass (keyPass) in Base64-encoded PEM format. If
+                            specified, TLS settings are overridden with values from the secret.
+                            Secret should be located in d8-log-shipper namespace and have
+                            `log-shipper.deckhouse.io/watch-secret: true` label.
+                          properties:
+                            name:
+                              type: string
+                              description: Name of the Secret with TLS certificates.
                         caFile:
                           type: string
                           description: Base64-encoded CA certificate in PEM format.

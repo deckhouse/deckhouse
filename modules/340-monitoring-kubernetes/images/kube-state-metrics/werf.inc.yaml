@@ -6,11 +6,12 @@ import:
   add: /src/kube-state-metrics
   to: /bin/kube-state-metrics
   before: setup
-docker:
-  ENTRYPOINT: ["/bin/kube-state-metrics"]
+imageSpec:
+  config:
+    entrypoint: ["/bin/kube-state-metrics"]
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
-fromArtifact: common/src-artifact
+fromImage: common/src-artifact
 final: false
 git:
 - add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/patches
@@ -23,6 +24,7 @@ shell:
   - cd /src
   - git clone --depth 1 --branch v2.14.0 {{ .SOURCE_REPO }}/kubernetes/kube-state-metrics.git .
   - git apply /patches/*.patch --verbose
+  - rm -rf .git tools
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
 from: {{ .Images.BASE_GOLANG_23_ALPINE }}

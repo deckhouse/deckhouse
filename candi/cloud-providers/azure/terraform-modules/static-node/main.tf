@@ -97,4 +97,10 @@ resource "azurerm_linux_virtual_machine" "node" {
       custom_data
     ]
   }
+
+  timeouts {
+    create = var.resourceManagementTimeout
+    delete = var.resourceManagementTimeout
+    update = var.resourceManagementTimeout
+  }
 }

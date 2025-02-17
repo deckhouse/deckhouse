@@ -9,8 +9,8 @@
       annotations:
         plk_protocol_version: "1"
         plk_markup_format: markdown
+        summary: Authorization parameters required for the ClusterLogDestination resource.
         description: |-
-          Found ClusterLogDestination resource {{$labels.resource_name}} without authorization params.
-          You should [add](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/log-shipper/faq.html#how-to-add-authorization-to-the-clusterlogdestination-resource) authorization params to the ClusterLogDestination resource.
-        summary: >
-          Required authorization params for ClusterLogDestination.
+          Deckhouse has detected the ClusterLogDestination resource `{{$labels.resource_name}}` without authorization parameters.
+
+          Add the authorization parameters to the ClusterLogDestination resource following the [instructions](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/log-shipper/faq.html#how-to-add-authorization-to-the-clusterlogdestination-resource).

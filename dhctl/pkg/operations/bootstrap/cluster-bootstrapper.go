@@ -25,11 +25,12 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/converge"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/entity"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/resources"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/infra/hook/controlplane"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/lock"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/preflight"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
@@ -242,6 +243,8 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 	}
 	metaConfig.UUID = clusterUUID
 
+	metaConfig.ResourceManagementTimeout = app.ResourceManagementTimeout
+
 	deckhouseInstallConfig, err := config.PrepareDeckhouseInstallConfig(metaConfig)
 	if err != nil {
 		return err
@@ -437,7 +440,7 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 			if b.CommanderMode {
 				return action()
 			}
-			return converge.NewInLockLocalRunner(kubeCl, "local-bootstraper").Run(action)
+			return lock.NewInLockLocalRunner(kubernetes.NewSimpleKubeClientGetter(kubeCl), "local-bootstraper").Run(action)
 		}
 
 		err := localBootstraper(func() error {
@@ -454,7 +457,7 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 		return nil
 	}
 
-	if err := controlplane.NewManagerReadinessChecker(kubeCl).IsReadyAll(); err != nil {
+	if err := controlplane.NewManagerReadinessChecker(kubernetes.NewSimpleKubeClientGetter(kubeCl)).IsReadyAll(); err != nil {
 		return err
 	}
 
@@ -577,9 +580,10 @@ func bootstrapAdditionalNodesForCloudCluster(kubeCl *client.KubernetesClient, me
 	}
 
 	return log.Process("bootstrap", "Waiting for Node Groups are ready", func() error {
-		if err := converge.WaitForNodesBecomeReady(kubeCl, map[string]int{"master": metaConfig.MasterNodeGroupSpec.Replicas}); err != nil {
+		if err := entity.WaitForNodesBecomeReady(kubeCl, map[string]int{"master": metaConfig.MasterNodeGroupSpec.Replicas}); err != nil {
 			return err
 		}
+
 		return nil
 	})
 }

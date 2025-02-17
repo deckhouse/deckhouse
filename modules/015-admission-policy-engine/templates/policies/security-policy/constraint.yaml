@@ -36,7 +36,7 @@
   {{- if or (hasKey $cr.spec.policies "allowedCapabilities") (hasKey $cr.spec.policies "requiredDropCapabilities") }}
     {{- include "allowed_capabilities" (list $context $cr) }}
   {{- end }}
-  {{- if or (hasKey $cr.spec.policies "allowedAppArmor") }}
+  {{- if hasKey $cr.spec.policies "allowedAppArmor" }}
     {{- include "allowed_apparmor" (list $context $cr) }}
   {{- end }}
   {{- if hasKey $cr.spec.policies "allowedProcMount" }}
@@ -51,7 +51,7 @@
   {{- if or (hasKey $cr.spec.policies "allowedUnsafeSysctls") (hasKey $cr.spec.policies "forbiddenSysctls") }}
     {{- include "allowed_sysctls" (list $context $cr) }}
   {{- end }}
-  {{- if hasKey $cr.spec.policies "seccompProfiles" }}
+  {{- if $cr.spec.policies.seccompProfiles }}
     {{- include "seccomp_profiles" (list $context $cr) }}
   {{- end }}
   {{- if and (hasKey $cr.spec.policies "verifyImageSignatures") (regexMatch "^(EE|FE|CSE|SE-plus)$" $context.Values.global.deckhouseEdition) }}
@@ -117,14 +117,8 @@ spec:
     scope: Namespaced
     {{- include "constraint_selector" (list $cr) }}
   parameters:
-    {{- if not $cr.spec.policies.allowHostPID }}
-    allowHostPID:
-      {{- $cr.spec.policies.allowHostPID | toYaml | nindent 6 }}
-    {{- end }}
-    {{- if not $cr.spec.policies.allowHostIPC }}
-    allowHostIPC:
-      {{- $cr.spec.policies.allowHostIPC | toYaml | nindent 6 }}
-    {{- end }}
+    allowHostPID: {{ $cr.spec.policies.allowHostPID | default false }}
+    allowHostIPC: {{ $cr.spec.policies.allowHostIPC | default false }}
 {{- end }}
 
 {{- define "allow_host_network" }}
@@ -145,10 +139,7 @@ spec:
     scope: Namespaced
     {{- include "constraint_selector" (list $cr) }}
   parameters:
-    {{- if not $cr.spec.policies.allowHostNetwork }}
-    allowHostNetwork:
-      {{- $cr.spec.policies.allowHostNetwork | toYaml | nindent 6 }}
-    {{- end }}
+    allowHostNetwork: {{ $cr.spec.policies.allowHostNetwork | default false }}
     {{- if hasKey $cr.spec.policies "allowedHostPorts" }}
     ranges:
       {{- $cr.spec.policies.allowedHostPorts | toYaml | nindent 6 }}

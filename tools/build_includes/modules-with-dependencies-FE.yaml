@@ -814,6 +814,11 @@
   stageDependencies:
     setup:
         - '**/*.go'
+- add: /ee/modules/380-metallb/templates/_helper.tpl
+  to: /deckhouse/modules/380-metallb/templates/_helper.tpl
+  stageDependencies:
+    setup:
+        - '**/*'
 - add: /ee/modules/380-metallb/templates/controller
   to: /deckhouse/modules/380-metallb/templates/controller
   excludePaths:
@@ -1043,6 +1048,11 @@
         - '**/*'
 - add: /ee/fe/modules/300-prometheus/templates/prometheus/prometheus.yaml
   to: /deckhouse/modules/300-prometheus/templates/prometheus/prometheus.yaml
+  stageDependencies:
+    setup:
+        - '**/*'
+- add: /ee/fe/modules/300-prometheus/templates/prometheus/longterm/prometheus.yaml
+  to: /deckhouse/modules/300-prometheus/templates/prometheus/longterm/prometheus.yaml
   stageDependencies:
     setup:
         - '**/*'

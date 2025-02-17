@@ -2,6 +2,7 @@
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 fromImage: common/src-artifact
+final: false
 git:
   - add: /modules/462-loki/images/{{ $.ImageName }}
     to: /
@@ -40,9 +41,10 @@ shell:
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: common/distroless
 import:
-  - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+  - image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
     add: /src/loki
     to: /usr/bin/loki
     after: setup
-docker:
-  ENTRYPOINT: ["/usr/bin/loki"]
+imageSpec:
+  config:
+    entrypoint: ["/usr/bin/loki"]

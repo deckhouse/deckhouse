@@ -6,6 +6,16 @@ This module copies Secrets to all namespaces.
 
 It facilitates the copying of Secrets required to pull images and to provision Ceph's RBDs as part of the CI process.
 
+{% alert level="warning" %}
+The `secret-copier` module cannot be used together with `multitenancy-manager`.
+
+`multitenancy-manager` creates isolated environments for users within their projects, while `secret-copier` automatically distributes secrets across all namespaces.
+This may lead to sensitive data leaks if important secrets end up in a user's isolated environment, violating the security model.
+
+If you need to provide a shared certificate (e.g., a WC certificate for an internal environment) or a shared registry access token, do not use `secret-copier`.
+Instead, place such secrets in the project template in `multitenancy-manager` — the cluster administrator should define them in the project configuration.
+{% endalert %}
+
 ### How does it work?
 
 This module monitors the Secrets (with the `secret-copier.deckhouse.io/enabled: ""` label) in the `default` namespace for changes.

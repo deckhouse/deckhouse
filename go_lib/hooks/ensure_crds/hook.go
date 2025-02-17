@@ -19,12 +19,10 @@ package ensure_crds
 import (
 	"context"
 	"fmt"
-	"log/slog"
 	"path/filepath"
 	"reflect"
 	"strings"
 
-	addonoperator "github.com/flant/addon-operator/pkg/addon-operator"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/hashicorp/go-multierror"
@@ -36,6 +34,8 @@ import (
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/k8s"
+	"github.com/deckhouse/deckhouse/pkg/log"
+	crdinstaller "github.com/deckhouse/module-sdk/pkg/crd-installer"
 )
 
 var crdGVR = schema.GroupVersionResource{
@@ -56,17 +56,19 @@ func RegisterEnsureCRDsHook(crdsGlob string) bool {
 
 func EnsureCRDsHandler(crdsGlob string) func(input *go_hook.HookInput, dc dependency.Container) error {
 	return func(input *go_hook.HookInput, dc dependency.Container) error {
-		result := EnsureCRDs(crdsGlob, dc)
+		err := EnsureCRDs(crdsGlob, dc)
 
-		if result.ErrorOrNil() != nil {
-			input.Logger.Error("ensure_crds failed", slog.String("error", result.Error()))
+		if err != nil {
+			input.Logger.Error("ensure_crds failed", log.Err(err))
+
+			return err
 		}
 
-		return result.ErrorOrNil()
+		return nil
 	}
 }
 
-func EnsureCRDs(crdsGlob string, dc dependency.Container) *multierror.Error {
+func EnsureCRDs(crdsGlob string, dc dependency.Container) error {
 	result := new(multierror.Error)
 
 	client, err := dc.GetK8sClient()
@@ -88,7 +90,7 @@ func EnsureCRDs(crdsGlob string, dc dependency.Container) *multierror.Error {
 type CRDsInstaller struct {
 	k8sClient    k8s.Client
 	crdFilesPath []string
-	installer    *addonoperator.CRDsInstaller
+	installer    *crdinstaller.CRDsInstaller
 
 	// concurrent tasks to create resource in a k8s cluster
 	k8sTasks *multierror.Group
@@ -134,7 +136,7 @@ func (cp *CRDsInstaller) DeleteCRDs(ctx context.Context, crdsToDelete []string) 
 	return deletedCRDs, nil
 }
 
-func (cp *CRDsInstaller) Run(ctx context.Context) *multierror.Error {
+func (cp *CRDsInstaller) Run(ctx context.Context) error {
 	return cp.installer.Run(ctx)
 }
 
@@ -206,11 +208,11 @@ func NewCRDsInstaller(client k8s.Client, crdsGlob string) (*CRDsInstaller, error
 
 	return &CRDsInstaller{
 		k8sClient: client,
-		installer: addonoperator.NewCRDsInstaller(
+		installer: crdinstaller.NewCRDsInstaller(
 			client.Dynamic(),
 			crds,
-			addonoperator.WithExtraLabels(defaultLabels),
-			addonoperator.WithFileFilter(func(crdFilePath string) bool {
+			crdinstaller.WithExtraLabels(defaultLabels),
+			crdinstaller.WithFileFilter(func(crdFilePath string) bool {
 				return !strings.HasPrefix(filepath.Base(crdFilePath), "doc-")
 			}),
 		),

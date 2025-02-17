@@ -199,6 +199,27 @@ func DeletePVC(kubeCl *client.KubernetesClient) error {
 	})
 }
 
+func DeletePV(kubeCl *client.KubernetesClient) error {
+	return retry.NewLoop("Delete PersistentVolumes provided manually or contain reclaimPolicy other than Delete.", 45, 5*time.Second).WithShowError(false).Run(func() error {
+		persistentVolumes, err := kubeCl.CoreV1().PersistentVolumes().List(context.TODO(), metav1.ListOptions{})
+		if err != nil {
+			return err
+		}
+
+		annotationKey := "pv.kubernetes.io/provisioned-by"
+		for _, volume := range persistentVolumes.Items {
+			if _, exists := volume.Annotations[annotationKey]; !exists || volume.Spec.PersistentVolumeReclaimPolicy != v1.PersistentVolumeReclaimDelete {
+				err := kubeCl.CoreV1().PersistentVolumes().Delete(context.TODO(), volume.Name, metav1.DeleteOptions{})
+				if err != nil {
+					return err
+				}
+				log.InfoF("%s\n", volume.Name)
+			}
+		}
+		return nil
+	})
+}
+
 func WaitForDeckhouseDeploymentDeletion(kubeCl *client.KubernetesClient) error {
 	return retry.NewLoop("Wait for Deckhouse Deployment deletion", 30, 5*time.Second).WithShowError(false).Run(func() error {
 		_, err := kubeCl.AppsV1().Deployments(deckhouseDeploymentNamespace).Get(context.TODO(), deckhouseDeploymentName, metav1.GetOptions{})
