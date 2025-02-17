@@ -7,9 +7,12 @@
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/alt-p11
 import:
+- image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
+  add: /src/kiali/out/kiali
+  to: /opt/kiali/kiali
 - image: {{ .ModuleName }}/{{ .ImageName }}-binary-artifact
-  add: /opt/kiali/
-  to: /opt/kiali/
+  add: /opt/kiali/console
+  to: /opt/kiali/console
   before: install
 shell:
   install:
