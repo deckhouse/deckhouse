@@ -1,6 +1,7 @@
 ---
 title: "Аутентификация"
-permalink: /admin/authentication.html
+permalink: ru/admin/authentication.html
+lang: ru
 ---
 
 ## Введение
