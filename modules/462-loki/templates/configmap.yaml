@@ -49,4 +49,4 @@ data:
       retention_delete_delay: 1s
       retention_delete_worker_count: 150
       deletion_mode: filter-and-delete
-      force_expiration_threshold: {{ .Values.loki.maxDiskUsageMegabytes }}MB
+      force_expiration_threshold: {{ .Values.loki.internal.cleanupThreshold }}

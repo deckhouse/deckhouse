@@ -6,10 +6,6 @@ properties:
     type: object
     default: {}
     properties:
-      activated:
-        type: boolean
-        default: false
-        x-examples: [false, true]
       effectiveStorageClass:
         default: false
         oneOf:
@@ -22,3 +18,9 @@ properties:
       logShipperToken:
         type: string
         default: ""
+      diskSize:
+        type: integer
+        default: 0
+      cleanupThreshold:
+        type: integer
+        default: 0

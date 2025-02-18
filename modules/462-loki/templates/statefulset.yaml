@@ -164,10 +164,10 @@ spec:
       - ReadWriteOnce
       resources:
         requests:
-          storage: {{ .Values.loki.diskSizeGigabytes }}Gi
+          storage: {{ include "toGi" .Values.loki.internal.diskSize }}Gi
       storageClassName: {{ $storageClass }}
 {{- else }}
       - name: storage
         emptyDir:
-          sizeLimit: {{ .Values.loki.diskSizeGigabytes }}Gi
+          sizeLimit: {{ include "toGi" .Values.loki.internal.diskSize }}Gi
 {{- end }}
