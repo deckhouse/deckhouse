@@ -73,6 +73,7 @@ rm -rf /var/lib/deckhouse
 rm -rf /var/lib/upmeter
 rm -rf /etc/sudoers.d/sudoers_flant_kubectl
 rm -rf /etc/sudoers.d/30-deckhouse-nodeadmins
+chown -R deckhouse:deckhouse /home/deckhouse
 
 shutdown -r -t 5
 EOF
