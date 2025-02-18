@@ -104,6 +104,7 @@ There is a built-in set of rules that cannot be disabled. It helps to identify p
 - a rule statically located in the `falco` container, along the path `/etc/falco/k8s_audit_rules.yaml` — rules for Kubernetes auditing.
 - a rule placed in the custom resource format [FalcoAuditRules](cr.html#falcoauditrules).
 
+You can customize the list of built-in rules with [`settings.defaultRulesList`](../runtime-audit-engine/configuration.html#parameters-defaultruleslist) 
 
 ### Custom audit rules
 
