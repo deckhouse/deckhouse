@@ -109,22 +109,27 @@
         display: inline-flex;
         flex-direction: row;
         vertical-align: top;
+        gap: 0.5em;
       }
 
       div.slot {
         flex-grow: 1;
         flex-direction: column;
-        border-right: 0.5px solid #ffffff33;
+        width: 2em;
+        height: 2em;
+        border: 0.5px solid #000000cc;
         min-width: 4px;
         display: flex;
         outline-offset: -1px;
       }
 
-      div.slot > div {
+      div.slotsingle {
         display: block;
-        width: 100%;
-        border-top-left-radius: 2px;
-        border-top-right-radius: 2px;
+        width: 2em;
+        height: 2em;
+        border-radius: 5px;
+        box-sizing: border-box;
+        margin: 0;
       }
     </style>
 
@@ -179,22 +184,73 @@
           .join("div")
           .attr("class", "range");
 
+        function getColor(d) {
+          const total = d.up + d.down + d.unknown + d.nodata;
+          const measured = d.up + d.down;
+          const availability = d.up / measured;
+
+          /*
+          function perc2color(perc) {
+            var r, g, b = 0;
+            if(perc < 50) {
+              r = 255;
+              g = Math.round(5.1 * perc);
+              }
+              else {
+                g = 130; // 255
+                r = Math.round(510 - 5.10 * perc);
+                }
+                var h = r * 0x10000 + g * 0x100 + b * 0x1;
+                return '#' + ('000000' + h.toString(16)).slice(-6);
+                }
+
+                return perc2color(availability*100)
+                */
+
+          if (!Number.isFinite(availability))
+            return { background: "#DDDDDD", border: "#000000cc" };
+          const colors = [
+            { background: "#508E59cc", border: "#000000cc" },
+            { background: "#55B138cc", border: "#000000cc" },
+            { background: "#91D71Dcc", border: "#000000cc" },
+            // { background:  "#FFFD00", border: "000000cc" },
+            // { background:  "#FAD405", border: "000000cc" },
+            { background: "#F4AF0Bcc", border: "#000000cc" },
+            { background: "#EF8C10cc", border: "#000000cc" },
+            { background: "#EA6D15cc", border: "#ffffffcc" },
+            { background: "#E5501Aff", border: "#ffffffcc" },
+            { background: "#DF3720ff", border: "#ffffffcc" },
+            { background: "#DA2529ff", border: "#ffffffcc" },
+          ].reverse();
+
+          const ci = Math.round(availability * (colors.length - 1));
+          return colors[ci];
+
+          const hue = 130 * availability + 20;
+          const fullness = (measured / total) * 100;
+          // return `oklch(70.73% 0.1429 ${hue} / ${fullness}%)`;
+          return `oklch(60% 0.1429 ${hue} / ${fullness}%)`;
+        }
+
         // Slot
         const slot = range
-          .selectAll("div.slot")
+          .selectAll("div")
           .data((gp) => gp.statuses.slice(0, -1))
           .join("div")
-          .attr("class", "slot");
-
-        
+          .attr("class", "slotsingle")
+          .style("background", (d) => getColor(d).background)
+          // .style( "height", (d) => `${(d.up + d.down) / (d.up + d.down + d.nodata + d.unknown) * 100}%` )
+          .style("border-color", (d) => getColor(d).border);
 
         // Colored bar (green/violet/red/grey)
-        slot
-          .selectAll("div")
-          .data((d, i) => ordering.map((k) => [d[k]]))
-          .join("div")
-          .style("height", (d) => `${h(d)}px`)
-          .attr("class", (d, i) => ordering[i]);
+        /*
+           slot
+             .selectAll("div")
+             .data((d, i) => ordering.map((k) => [d[k]]))
+             .join("div")
+             .style("height", (d) => `${h(d)}px`)
+             .attr("class", (d, i) => ordering[i]);
+             */
       }
 
       // /api/status/range?from=1723221800&to=1723245800&step=300&group=control-plane&probe=apiserver
