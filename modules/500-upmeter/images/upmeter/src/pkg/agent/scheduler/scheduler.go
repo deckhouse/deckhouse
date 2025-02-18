@@ -208,7 +208,7 @@ func (e *Scheduler) convert(start time.Time) ([]check.Episode, error) {
 			return nil, fmt.Errorf("cannot calculate episode stats for %q: %v", calc.ProbeRef().Id(), err)
 		}
 
-		ep := check.NewEpisode(calc.ProbeRef(), start, e.scrapePeriod, series.Stats())
+		ep := check.NewEpisode(calc.ProbeRef(), start, e.scrapePeriod, series)
 		episodes = append(episodes, ep)
 	}
 
@@ -223,7 +223,7 @@ func (e *Scheduler) convert(start time.Time) ([]check.Episode, error) {
 		}
 		byGroup[group] = append(byGroup[group], series)
 
-		ep := check.NewEpisode(probeResult.ProbeRef(), start, e.scrapePeriod, series.Stats())
+		ep := check.NewEpisode(probeResult.ProbeRef(), start, e.scrapePeriod, series)
 		episodes = append(episodes, ep)
 	}
 
@@ -235,7 +235,7 @@ func (e *Scheduler) convert(start time.Time) ([]check.Episode, error) {
 		}
 
 		groupRef := check.ProbeRef{Group: group, Probe: dao.GroupAggregation}
-		ep := check.NewEpisode(groupRef, start, e.scrapePeriod, groupSeries.Stats())
+		ep := check.NewEpisode(groupRef, start, e.scrapePeriod, groupSeries)
 		episodes = append(episodes, ep)
 	}
 

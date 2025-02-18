@@ -1,0 +1,250 @@
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Upmeter</title>
+
+    <!--
+      Start the server with the following command (read README.md for more details):
+      go run ./cmd/upmeter/ start --origins=1 --db-path=./db-emu-server.db.sqlite
+
+      Start the agent emulator with the following command
+      go run ./cmd/upmeter/ agent --emulation --db-path=./db-emu-agent.sqlite --log-level="debug"
+
+      Open this page
+    -->
+
+    <style>
+      body {
+        margin: 0;
+        padding: 0;
+      }
+
+      body > header,
+      body > main {
+        padding: 1rem;
+      }
+
+      div.up {
+        background: hsl(130, 83%, 35%);
+        background: linear-gradient(
+          0,
+          hsla(130, 55%, 45%, 100%) 0,
+          hsla(130, 50%, 55%, 60%) 6px,
+          hsla(130, 44%, 65%, 50%) 12px,
+          hsla(130, 44%, 65%, 100%) 100%
+        );
+      }
+
+      div.down {
+        background: hsl(340, 83%, 35%);
+        background: linear-gradient(
+          0,
+          hsl(340, 74%, 25%) 0%,
+          hsl(340, 83%, 45%) 5%,
+          hsl(340, 83%, 45%) 95%,
+          hsl(340, 74%, 35%) 100%
+        );
+      }
+
+      div.unknown {
+        background: hsl(278, 83%, 35%);
+        background: linear-gradient(
+          0,
+          hsl(278, 74%, 25%) 0%,
+          hsl(278, 83%, 45%) 5%,
+          hsl(278, 83%, 45%) 95%,
+          hsl(278, 74%, 35%) 100%
+        );
+      }
+
+      div.nodata,
+      div.muted {
+        background: hsl(0, 0%, 82%);
+        background: linear-gradient(
+          0,
+          hsl(0, 0%, 88%) 0%,
+          hsl(0, 0%, 94%) 5px,
+          hsl(0, 0%, 94%) 95%,
+          hsl(0, 0%, 88%) 100%
+        );
+      }
+
+      #chart > * {
+        margin-block-end: 0.5rem;
+      }
+
+      div.probe {
+        display: flex;
+        flex-direction: row;
+        vertical-align: top;
+        padding: 0;
+        margin: 0;
+        font-size: small;
+      }
+
+      div.probe > div {
+        margin-block-end: 0rem;
+      }
+
+      div.title {
+        flex-grow: 0;
+        width: 20rem;
+        font-size: larger;
+      }
+
+      div.availability {
+        font-size: large;
+        flex-grow: 0;
+        width: 5rem;
+      }
+
+      div.title,
+      div.availability {
+        padding-top: 0em;
+      }
+
+      div.range {
+        flex-grow: 1;
+        display: inline-flex;
+        flex-direction: row;
+        vertical-align: top;
+      }
+
+      div.slot {
+        flex-grow: 1;
+        flex-direction: column;
+        border-right: 0.5px solid #ffffff33;
+        min-width: 4px;
+        display: flex;
+        outline-offset: -1px;
+      }
+
+      div.slot > div {
+        display: block;
+        width: 100%;
+        border-top-left-radius: 2px;
+        border-top-right-radius: 2px;
+      }
+    </style>
+
+    <script type="module">
+      import * as d3 from "https://cdn.jsdelivr.net/npm/d3@7/+esm";
+
+      // The data
+      const GPs = await fetch("/api/probe").then((d) => d.json());
+      console.log(GPs);
+
+      var h = d3.scaleLinear().domain([0, 1]).range([0, 24]);
+      const ordering = ["down", "nodata", "muted", "unknown", "up"];
+
+      const chartElement = d3.select("#chart");
+
+      function show(data) {
+        const gp = chartElement
+          .selectAll("div.probe") // , (gp) => gp.group + "/" + gp.probe)
+          .data(data)
+          .join("div") // , (gp) => gp.group + "/" + gp.probe)
+          .attr("class", "probe");
+
+        // Probe title
+        gp.selectAll("div.title")
+          // .data((gp) => [gp.group + "/" + gp.probe])
+          .data((gp) => [gp.probe])
+          .join("div")
+          .attr("class", "title")
+          .text((d) => d);
+
+        // Avaialbility for the range
+        gp.selectAll("div.availability")
+          .data((gp) => gp.statuses.slice(-1))
+          .join("div")
+          .attr("class", "availability")
+          .text((d) => `${((d.up / (d.up + d.down)) * 100).toFixed(2)}%`);
+
+        // Slot range
+        gp.selectAll("div.range")
+          .data((gp) => [gp])
+          .join("div")
+          .attr("class", "range")
+          .selectAll("div.slot")
+          .data((gp) => gp.statuses.slice(0, -1))
+          .join("div")
+          .attr("class", "slot")
+          .selectAll("div")
+          .data((d, i) => ordering.map((k) => [d[k]]))
+          .join("div")
+          .style("height", (d) => `${h(d)}px`)
+          .attr("class", (d, i) => ordering[i]);
+      }
+
+      // /api/status/range?from=1723221800&to=1723245800&step=300&group=control-plane&probe=apiserver
+
+      async function getData() {
+        // controls that should become parameters
+        const step = 300;
+        const hour = 3600;
+        const range = 6 * hour;
+        const from = Math.round(new Date().valueOf() / 1000) - range;
+        const to = Math.round(new Date().valueOf() / 1000);
+
+        const url = (gp) =>
+          `/api/status/range?from=${from}&to=${to}&step=${step}&group=${gp.group}&probe=${gp.probe}`;
+        const fetchGP = (gp) => fetch(url(gp)).then((d) => d.json());
+        const gpStatuses = await Promise.all(GPs.map(fetchGP));
+
+        const data = GPs.map((gp, i) => {
+          const groupStatuses = gpStatuses[i].statuses;
+          if (!groupStatuses[gp.group]) {
+            return null;
+          }
+          if (!groupStatuses[gp.group][gp.probe]) {
+            return null;
+          }
+          gp.statuses = groupStatuses[gp.group][gp.probe]
+            // .slice(0, -1)
+            .map((d) => {
+              if (d.slot_size == 0) {
+                const slot_size =
+                  1e6 *
+                  (new Date(d.end).valueOf() - new Date(d.start).valueOf());
+                return {
+                  up: d.up / slot_size,
+                  down: d.down / slot_size,
+                  unknown: d.unknown / slot_size,
+                  muted: d.muted / slot_size,
+                  nodata: d.nodata / slot_size,
+                };
+              }
+              return {
+                up: d.up / d.slot_size,
+                down: d.down / d.slot_size,
+                unknown: d.unknown / d.slot_size,
+                muted: d.muted / d.slot_size,
+                nodata: d.nodata / d.slot_size,
+              };
+            });
+
+          return gp;
+        }).filter((d) => d);
+
+        return data;
+      }
+
+      show(await getData());
+
+      setInterval(async () => {
+        show(await getData());
+        console.log("Updated");
+      }, 5000);
+    </script>
+  </head>
+  <body>
+    <header>
+      <h1>Deckhouse Kubernetes Platform Subsystem Availability</h1>
+    </header>
+    <main>
+      <div id="chart"></div>
+    </main>
+  </body>
+</html>

@@ -54,6 +54,8 @@ type Config struct {
 
 	DisabledProbes []string
 	DynamicProbes  *DynamicProbesConfig
+
+	EmulationMode bool
 }
 
 type DynamicProbesConfig struct {
@@ -79,34 +81,11 @@ func New(config *Config, kubeConfig *kubernetes.Config, logger *log.Logger) *Age
 }
 
 func (a *Agent) Start(ctx context.Context) error {
-	// Initialize kube client from kubeconfig and service account token from filesystem.
-	kubeAccess := &kubernetes.Accessor{}
-	err := kubeAccess.Init(a.kubeConfig, a.config.UserAgent)
-	if err != nil {
-		return fmt.Errorf("cannot init access to Kubernetes cluster: %v", err)
-	}
-
-	// Probe registry
 	ftr := probe.NewProbeFilter(a.config.DisabledProbes)
-	dynamicConfig := probe.DynamicConfig{
-		IngressNginxControllers: a.config.DynamicProbes.IngressControllers,
-		NodeGroups:              a.config.DynamicProbes.NodeGroups,
-		Zones:                   a.config.DynamicProbes.Zones,
-		ZonePrefix:              a.config.DynamicProbes.ZonePrefix,
+	runnerLoader, err := a.probeLoader(ctx, ftr)
+	if err != nil {
+		return fmt.Errorf("cannot load probes: %v", err)
 	}
-
-	nodeMon := node.NewMonitor(kubeAccess.Kubernetes(), log.NewEntry(a.logger))
-	if err := nodeMon.Start(ctx); err != nil {
-		return fmt.Errorf("starting node monitor: %v", err)
-	}
-
-	// The preflight interval is chosen as the smallest period among probe runs which use the
-	// preflight check.
-	preflightInterval := 5 * time.Second
-	controlPlanePreflight := checker.NewK8sVersionGetter(kubeAccess, preflightInterval)
-	controlPlanePreflight.Start()
-
-	runnerLoader := probe.NewLoader(ftr, kubeAccess, nodeMon, dynamicConfig, controlPlanePreflight, a.logger)
 	calcLoader := calculated.NewLoader(ftr, a.logger)
 	registry := registry.New(runnerLoader, calcLoader)
 
@@ -116,11 +95,10 @@ func (a *Agent) Start(ctx context.Context) error {
 		return fmt.Errorf("cannot connect to database: %v", err)
 	}
 
-	ch := make(chan []check.Episode)
-
 	client := sender.NewClient(a.config.ClientConfig)
 	storage := sender.NewStorage(dbctx)
 
+	ch := make(chan []check.Episode)
 	a.sender = sender.New(client, ch, storage, a.config.Interval)
 	a.scheduler = scheduler.New(registry, ch)
 
@@ -128,6 +106,40 @@ func (a *Agent) Start(ctx context.Context) error {
 	a.scheduler.Start()
 
 	return nil
+}
+
+func (a *Agent) probeLoader(ctx context.Context, ftr probe.Filter) (probe.Loader, error) {
+	if a.config.EmulationMode {
+		return probe.NewFakeLoader(a.logger), nil
+	}
+
+	// Initialize kube client from kubeconfig and service account token from filesystem.
+	kubeAccess := &kubernetes.Accessor{}
+	err := kubeAccess.Init(a.kubeConfig, a.config.UserAgent)
+	if err != nil {
+		return nil, fmt.Errorf("cannot init access to Kubernetes cluster: %v", err)
+	}
+
+	// Probe registry
+	dynamicConfig := probe.DynamicConfig{
+		IngressNginxControllers: a.config.DynamicProbes.IngressControllers,
+		NodeGroups:              a.config.DynamicProbes.NodeGroups,
+		Zones:                   a.config.DynamicProbes.Zones,
+		ZonePrefix:              a.config.DynamicProbes.ZonePrefix,
+	}
+
+	nodeMon := node.NewMonitor(kubeAccess.Kubernetes(), log.NewEntry(a.logger))
+	if err := nodeMon.Start(ctx); err != nil {
+		return nil, fmt.Errorf("starting node monitor: %v", err)
+	}
+
+	// The preflight interval is chosen as the smallest period among probe runs which use the
+	// preflight check.
+	preflightInterval := 5 * time.Second
+	controlPlanePreflight := checker.NewK8sVersionGetter(kubeAccess, preflightInterval)
+	controlPlanePreflight.Start()
+
+	return probe.NewLoader(ftr, kubeAccess, nodeMon, dynamicConfig, controlPlanePreflight, a.logger), nil
 }
 
 func (a *Agent) Stop() error {

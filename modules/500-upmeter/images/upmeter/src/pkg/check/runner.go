@@ -64,6 +64,8 @@ func (r *Runner) Run(start time.Time) Result {
 	if err != nil {
 		status = err.Status()
 		r.logger.WithField("status", status).Errorf(err.Error())
+	} else {
+		r.logger.WithField("status", status).Debugf("up")
 	}
 
 	return NewResult(*r.ref, r.checkName, status)

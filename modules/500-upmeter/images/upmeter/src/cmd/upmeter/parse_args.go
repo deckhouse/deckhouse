@@ -143,6 +143,10 @@ func parseAgentArgs(cmd *kingpin.CmdClause, config *agent.Config) {
 		Envar("UPMETER_USER_AGENT").
 		Default("UpmeterAgent/1.0").
 		StringVar(&config.UserAgent)
+
+	cmd.Flag("emulation", "Emulation mode").
+		Default("false").
+		BoolVar(&config.EmulationMode)
 }
 
 func parseKubeArgs(cmd *kingpin.CmdClause, config *kubernetes.Config) {

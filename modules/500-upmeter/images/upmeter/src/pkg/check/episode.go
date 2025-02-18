@@ -23,30 +23,36 @@ import (
 
 // Episode with time counters and start aligned to 30s or 5m
 type Episode struct {
-	ProbeRef ProbeRef      `json:"probeRef"`
-	TimeSlot time.Time     `json:"ts"`      // timestamp: 30s or 5m time slot (timestamp that is a multiple of 30 seconds or 5 min)
-	Down     time.Duration `json:"fail"`    // seconds of fail state during the slot range [timeslot;timeslot+30)
-	Up       time.Duration `json:"success"` // seconds of success state during the slot range [timeslot;timeslot+30)
-	Unknown  time.Duration `json:"unknown"` // seconds of "unknown" state
-	NoData   time.Duration `json:"nodata"`  // seconds without data
+	ProbeRef ProbeRef `json:"probeRef"`
+	// timestamp: 30s or 5m time slot (timestamp that is a multiple of 30 seconds or 5 min)
+	TimeSlot  time.Time     `json:"ts"`
+	Down      time.Duration `json:"fail"`    // nanoseconds of fail state during the slot range [timeslot;timeslot+30)
+	Up        time.Duration `json:"success"` // nanoseconds of success state during the slot range [timeslot;timeslot+30)
+	Unknown   time.Duration `json:"unknown"` // nanoseconds of "unknown" state
+	NoData    time.Duration `json:"nodata"`  // nanoseconds without data
+	SeriesRLE string        `json:"series"`  // series of statuses
 }
 
-func NewEpisode(ref ProbeRef, start time.Time, step time.Duration, counters Stats) Episode {
+// NewEpisode creates an Episode from a StatusSeries. It calculates the total time slot duration.
+// Scrape period is a scale for the points in the series.
+func NewEpisode(ref ProbeRef, start time.Time, scrapePeriod time.Duration, series *StatusSeries) Episode {
 	var (
-		total   = step * time.Duration(counters.Expected)
-		up      = step * time.Duration(counters.Up)
-		down    = step * time.Duration(counters.Down)
-		unknown = step * time.Duration(counters.Unknown)
-		nodata  = total - up - down - unknown
+		counters = series.Stats()
+		total    = scrapePeriod * time.Duration(counters.Expected)
+		up       = scrapePeriod * time.Duration(counters.Up)
+		down     = scrapePeriod * time.Duration(counters.Down)
+		unknown  = scrapePeriod * time.Duration(counters.Unknown)
+		nodata   = total - up - down - unknown
 	)
 
 	return Episode{
-		ProbeRef: ref,
-		TimeSlot: start,
-		Up:       up,
-		Down:     down,
-		Unknown:  unknown,
-		NoData:   nodata,
+		ProbeRef:  ref,
+		TimeSlot:  start,
+		Up:        up,
+		Down:      down,
+		Unknown:   unknown,
+		NoData:    nodata,
+		SeriesRLE: series.RLE(),
 	}
 }
 
@@ -125,13 +131,14 @@ func (e Episode) EqualTimers(a Episode) bool {
 }
 
 func (e Episode) String() string {
-	return fmt.Sprintf("slot=%s probe=%s up=%s down=%s uncertain=%s notmeasured=%s",
+	return fmt.Sprintf("slot=%s probe=%s stats=↑%s ↓%s ?%s o%s series=%s",
 		e.TimeSlot.Format(time.Stamp),
 		e.ProbeRef.Id(),
-		e.Up,
-		e.Down,
-		e.Unknown,
-		e.NoData,
+		time.Duration(e.Up).String(),
+		time.Duration(e.Down).String(),
+		time.Duration(e.Unknown).String(),
+		time.Duration(e.NoData).String(),
+		e.SeriesRLE,
 	)
 }
 

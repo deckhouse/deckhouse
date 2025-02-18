@@ -33,7 +33,7 @@ type Registry struct {
 	calculators []*calculated.Probe
 }
 
-func New(runLoader *probe.Loader, calcLoader *calculated.Loader) *Registry {
+func New(runLoader probe.Loader, calcLoader *calculated.Loader) *Registry {
 	return &Registry{
 		runners:     runLoader.Load(),
 		calculators: calcLoader.Load(),

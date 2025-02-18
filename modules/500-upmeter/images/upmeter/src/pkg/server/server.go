@@ -211,6 +211,7 @@ func initHttpServer(dbCtx *dbcontext.DbContext, downtimeMonitor *downtime.Monito
 	mux.Handle("/public/api/status", &api.PublicStatusHandler{DbCtx: dbCtx, DowntimeMonitor: downtimeMonitor, ProbeLister: probeLister})
 	mux.Handle("/downtime", &api.AddEpisodesHandler{DbCtx: dbCtx, RemoteWrite: controller})
 	mux.Handle("/stats", &api.StatsHandler{DbCtx: dbCtx})
+	mux.Handle("/", http.FileServer(http.Dir("web")))
 	// Kubernetes probes
 	mux.HandleFunc("/healthz", writeOk)
 	mux.HandleFunc("/ready", writeOk)

@@ -549,3 +549,202 @@ func Test_StatusSeries_AddI(t *testing.T) {
 		assert.ErrorIs(t, err, ErrIndexTooBig)
 	}
 }
+
+func TestStatusSeries_RLE(t *testing.T) {
+	type fields struct {
+		nextIndex int
+		series    []Status
+	}
+	tests := []struct {
+		name   string
+		fields fields
+		want   string
+	}{
+		{
+			name: "empty",
+			want: "",
+		},
+		{
+			name: "single up",
+			fields: fields{
+				series: []Status{Up},
+			},
+			want: "1.",
+		},
+		{
+			name: "single down",
+			fields: fields{
+				series: []Status{Down},
+			},
+			want: "1X",
+		},
+		{
+			name: "single unknown",
+			fields: fields{
+				series: []Status{Unknown},
+			},
+			want: "1u",
+		},
+		{
+			name: "single nodate",
+			fields: fields{
+				series: []Status{nodata},
+			},
+			want: "1o",
+		},
+		{
+			name: "up down",
+			fields: fields{
+				series: []Status{Up, Down},
+			},
+			want: "1.1X",
+		},
+		{
+			name: "up up",
+			fields: fields{
+				series: []Status{Up, Up},
+			},
+			want: "2.",
+		},
+		{
+			name: "up up down",
+			fields: fields{
+				series: []Status{Up, Up, Down},
+			},
+			want: "2.1X",
+		},
+		{
+			name: "up up down up",
+			fields: fields{
+				series: []Status{Up, Up, Down, Up},
+			},
+			want: "2.1X1.",
+		},
+		{
+			name: "up up down up down",
+			fields: fields{
+				series: []Status{Up, Up, Down, Up, Down},
+			},
+			want: "2.1X1.1X",
+		},
+		{
+			name: "nodata up up up up nodata",
+			fields: fields{
+				series: []Status{nodata, Up, Up, Up, Up, nodata},
+			},
+			want: "1o4.1o",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ss := &StatusSeries{
+				nextIndex: tt.fields.nextIndex,
+				series:    tt.fields.series,
+			}
+			if got := ss.RLE(); got != tt.want {
+				t.Errorf("StatusSeries.RLE() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestNewStatusSeriesFromRLE(t *testing.T) {
+	type args struct {
+		rle string
+	}
+	tests := []struct {
+		name string
+		args args
+		want *StatusSeries
+	}{
+		{
+			name: "empty",
+			args: args{
+				rle: "",
+			},
+			want: NewStatusSeries(0),
+		},
+		{
+			name: "single up",
+			args: args{
+				rle: "1.",
+			},
+			want: &StatusSeries{series: []Status{Up}},
+		},
+		{
+			name: "single down",
+			args: args{
+				rle: "1X",
+			},
+			want: &StatusSeries{series: []Status{Down}},
+		},
+		{
+			name: "single unknown",
+			args: args{
+				rle: "1u",
+			},
+			want: &StatusSeries{series: []Status{Unknown}},
+		},
+
+		{
+			name: "single nodata",
+			args: args{
+				rle: "1o",
+			},
+			want: &StatusSeries{series: []Status{nodata}},
+		},
+		{
+			name: "up down",
+			args: args{
+				rle: "1.1X",
+			},
+			want: &StatusSeries{series: []Status{Up, Down}},
+		},
+		{
+			name: "up up",
+			args: args{
+				rle: "2.",
+			},
+			want: &StatusSeries{series: []Status{Up, Up}},
+		},
+		{
+			name: "nodata up up up up nodata",
+			args: args{
+				rle: "1o4.1o",
+			},
+			want: &StatusSeries{series: []Status{nodata, Up, Up, Up, Up, nodata}},
+		},
+		{
+			name: "30 down",
+			args: args{
+				rle: "30X",
+			},
+			want: &StatusSeries{series: []Status{
+				Down, Down, Down, Down, Down, Down,
+				Down, Down, Down, Down, Down, Down,
+				Down, Down, Down, Down, Down, Down,
+				Down, Down, Down, Down, Down, Down,
+				Down, Down, Down, Down, Down, Down,
+			}},
+		},
+		{
+			name: "17 down + 1up + 12 down",
+			args: args{
+				rle: "17X1.12X",
+			},
+			want: &StatusSeries{series: []Status{
+				Down, Down, Down, Down, Down, Down,
+				Down, Down, Down, Down, Down, Down,
+				Down, Down, Down, Down, Down, Up, // <-
+				Down, Down, Down, Down, Down, Down,
+				Down, Down, Down, Down, Down, Down,
+			}},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := NewStatusSeriesFromRLE(tt.args.rle)
+			assert.Equal(t, tt.want.series, got.series)
+		})
+	}
+}

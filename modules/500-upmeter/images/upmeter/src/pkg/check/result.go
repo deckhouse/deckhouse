@@ -22,9 +22,9 @@ type Status int64
 // status series that is not meant to be used outside of the package.
 const (
 	nodata Status = iota
-	Down
-	Up
 	Unknown
+	Up
+	Down
 )
 
 func (s Status) String() string {

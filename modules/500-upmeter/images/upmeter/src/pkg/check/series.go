@@ -18,6 +18,7 @@ package check
 
 import (
 	"fmt"
+	"strings"
 )
 
 var ErrIndexTooBig = fmt.Errorf("index is too big")
@@ -59,6 +60,7 @@ func (ss *StatusSeries) Merge(src *StatusSeries) error {
 	return nil
 }
 
+// Stats contains the number of statuses in the series.
 func (ss *StatusSeries) Stats() Stats {
 	stats := Stats{
 		Expected: ss.size(),
@@ -76,6 +78,80 @@ func (ss *StatusSeries) Stats() Stats {
 	}
 
 	return stats
+}
+
+func (ss *StatusSeries) RLE() string {
+	if len(ss.series) == 0 {
+		return ""
+	}
+
+	sb := strings.Builder{}
+	cur := ss.series[0]
+	i := 0
+	for _, s := range ss.series {
+		if cur == s {
+			i++
+			continue
+		}
+		sb.WriteString(fmt.Sprint(i))
+		sb.WriteRune(mapStatusToRune(cur))
+		cur = s
+		i = 1
+	}
+	sb.WriteString(fmt.Sprint(i))
+	sb.WriteRune(mapStatusToRune(cur))
+	return sb.String()
+}
+
+func NewStatusSeriesFromRLE(rle string) *StatusSeries {
+	ss := &StatusSeries{
+		series: make([]Status, 0),
+	}
+
+	var (
+		n int
+		r rune
+	)
+
+	for _, r = range rle {
+		if r >= '0' && r <= '9' {
+			// a digit
+			n = n*10 + int(r-'0')
+			continue
+		}
+		status := mapRuneToStatus(r)
+		for i := 0; i < n; i++ {
+			ss.series = append(ss.series, status)
+		}
+		n = 0 // reset
+	}
+	return ss
+}
+
+func mapRuneToStatus(r rune) Status {
+	switch r {
+	case '.':
+		return Up
+	case 'X':
+		return Down
+	case 'u':
+		return Unknown
+	default:
+		return nodata
+	}
+}
+
+func mapStatusToRune(status Status) rune {
+	switch status {
+	case Up:
+		return '.'
+	case Down:
+		return 'X'
+	case Unknown:
+		return 'u'
+	default:
+		return 'o'
+	}
 }
 
 func (ss *StatusSeries) Clean() {
@@ -97,9 +173,9 @@ func mergeStrategy(dst, src Status) Status {
 		return src
 	}
 	if dst > src {
-		return src
+		return dst
 	}
-	return dst
+	return src
 }
 
 // MergeStatusSeries merges status series according to the merge strategy: Down is preferred to Up,

@@ -36,7 +36,26 @@ func RandomEpisode() Episode {
 	slotSize := 30 * time.Second
 	ts := rand.Int63nRange(0, time.Now().Unix())
 	slot := time.Unix(ts, 0).Truncate(slotSize)
-	return NewEpisode(RandRef(), slot, slotSize, RandomStats())
+	return NewEpisode(RandRef(), slot, slotSize, RandomSeries(150))
+}
+
+func RandomSeries(size int) *StatusSeries {
+	series := NewStatusSeries(size)
+	for i := 0; i < size; i++ {
+		series.AddI(i, RandomStatus())
+	}
+	return series
+}
+
+func RandomStatus() Status {
+	switch rand.Intn(3) {
+	case 0:
+		return Down
+	case 1:
+		return Up
+	default:
+		return Unknown
+	}
 }
 
 func RandomStats() Stats {

@@ -46,7 +46,7 @@ func Test_NewProbeFilter(t *testing.T) {
 }
 
 func TestLoader_Groups(t *testing.T) {
-	unfiltered := &Loader{
+	unfiltered := &ProbeLoader{
 		filter: NewProbeFilter([]string{}),
 		access: kubernetes.FakeAccessor(),
 		logger: newDummyLogger().Logger,
@@ -62,7 +62,7 @@ func TestLoader_Groups(t *testing.T) {
 	}
 	assert.Equal(t, allGroups, unfiltered.Groups())
 
-	filtered := &Loader{
+	filtered := &ProbeLoader{
 		filter: NewProbeFilter([]string{"deckhouse", "extensions/"}),
 		access: kubernetes.FakeAccessor(),
 		logger: newDummyLogger().Logger,
@@ -78,7 +78,7 @@ func TestLoader_Groups(t *testing.T) {
 }
 
 func TestLoader_Probes(t *testing.T) {
-	unfiltered := &Loader{
+	unfiltered := &ProbeLoader{
 		filter: NewProbeFilter([]string{}),
 		access: kubernetes.FakeAccessor(),
 		logger: newDummyLogger().Logger,
