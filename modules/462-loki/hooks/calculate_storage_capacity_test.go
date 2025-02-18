@@ -83,10 +83,9 @@ spec:
 		})
 	})
 
-	f.ConfigValuesSet("loki.lokiConfig.ingestionRateMB", 128)
-
 	Context("Cluster with Large PVCs", func() {
 		BeforeEach(func() {
+			f.ConfigValuesSet("loki.lokiConfig.ingestionRateMB", 128)
 			f.BindingContexts.Set(f.KubeStateSet(pvcs))
 			f.RunHook()
 		})
