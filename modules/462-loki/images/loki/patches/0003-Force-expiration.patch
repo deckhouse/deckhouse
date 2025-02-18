@@ -1,5 +1,5 @@
 diff --git a/pkg/distributor/http.go b/pkg/distributor/http.go
-index 29f0f80e394d9c3a5736c20e214760f8b38d32af..ade6c720784353a593bfb5a327811f38683bd8bf 100644
+index 29f0f80e394d9c3a5736c20e214760f8b38d32af..fb63f0e9d6c167f44c1c80c1e6df213d48280f85 100644
 --- a/pkg/distributor/http.go
 +++ b/pkg/distributor/http.go
 @@ -28,7 +28,7 @@ func (d *Distributor) PushHandler(w http.ResponseWriter, r *http.Request) {
@@ -11,15 +11,6 @@ index 29f0f80e394d9c3a5736c20e214760f8b38d32af..ade6c720784353a593bfb5a327811f38
  			level.Debug(logger).Log(
  				"msg", "push request failed",
  				"code", http.StatusBadRequest,
-@@ -41,7 +41,7 @@ func (d *Distributor) PushHandler(w http.ResponseWriter, r *http.Request) {
- 		return
- 	}
-
--	if d.tenantConfigs.LogPushRequestStreams(tenantID) {
-+	if true || d.tenantConfigs.LogPushRequestStreams(tenantID) {
- 		var sb strings.Builder
- 		for _, s := range req.Streams {
- 			sb.WriteString(s.Labels)
 @@ -54,7 +54,7 @@ func (d *Distributor) PushHandler(w http.ResponseWriter, r *http.Request) {
 
  	_, err = d.Push(r.Context(), req)
@@ -544,7 +535,7 @@ index 2224afa296a63874394df4472ba703e337d29887..84ce81f774e33215066a4901c0e0ddfd
  // indexSet helps with doing operations on a set of index files belonging to a single user or common index files shared by users.
 diff --git a/pkg/storage/stores/indexshipper/compactor/retention/force_expiration.go b/pkg/storage/stores/indexshipper/compactor/retention/force_expiration.go
 new file mode 100644
-index 0000000000000000000000000000000000000000..6c4ad29e5620fc6e2c99b6123d5a5da189eb7e42
+index 0000000000000000000000000000000000000000..9603b24e46a27c5a9795c0f05796f4aaf94b6fb5
 --- /dev/null
 +++ b/pkg/storage/stores/indexshipper/compactor/retention/force_expiration.go
 @@ -0,0 +1,105 @@
@@ -629,7 +620,7 @@ index 0000000000000000000000000000000000000000..6c4ad29e5620fc6e2c99b6123d5a5da1
 +// interface implementation
 +
 +func (f *ForceExpirationChecker) Expired(ref ChunkEntry, now model.Time) (bool, filter.Func) {
-+	_, ok := f.expiredChunkIds[unsafeGetString(ref.ChunkID)]
++	ok := f.IsChunkExists(unsafeGetString(ref.ChunkID))
 +	if ok {
 +		return true, nil
 +	}
@@ -653,6 +644,19 @@ index 0000000000000000000000000000000000000000..6c4ad29e5620fc6e2c99b6123d5a5da1
 +func (f *ForceExpirationChecker) DropFromIndex(ref ChunkEntry, tableEndTime model.Time, now model.Time) bool {
 +	return f.internalExpirationChecker.DropFromIndex(ref, tableEndTime, now)
 +}
+diff --git a/pkg/storage/stores/indexshipper/compactor/retention/retention.go b/pkg/storage/stores/indexshipper/compactor/retention/retention.go
+index bb2167d2a8d59d4fd646dc10e4da304388854c77..18e88b5d8011ecb7fdcc793a2177e71126b0f98b 100644
+--- a/pkg/storage/stores/indexshipper/compactor/retention/retention.go
++++ b/pkg/storage/stores/indexshipper/compactor/retention/retention.go
+@@ -310,6 +310,8 @@ func (s *Sweeper) Start() {
+ 		if err != nil {
+ 			level.Error(util_log.Logger).Log("msg", "error deleting chunk", "chunkID", chunkIDString, "err", err)
+ 			status = statusFailure
++		} else {
++			level.Debug(util_log.Logger).Log("msg", "deleted chunk", "chunkID", chunkIDString)
+ 		}
+ 		return err
+ 	})
 diff --git a/pkg/storage/stores/shipper/index/compactor/compacted_index.go b/pkg/storage/stores/shipper/index/compactor/compacted_index.go
 index 557b49fbc2b6e0fb5b2aba5db6776da1adf92ea6..19b5305156b24c938a52b71384265bcf7ed40314 100644
 --- a/pkg/storage/stores/shipper/index/compactor/compacted_index.go
