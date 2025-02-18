@@ -140,6 +140,14 @@
 
       const chartElement = d3.select("#chart");
 
+      function formatPercentage(d) {
+        const sum = d.up + d.down;
+        if (!sum) return "No data";
+        const ratio = d.up / (d.up + d.down);
+        if (ratio == 1) return "100%";
+        return (ratio * 100).toFixed(2) + "%";
+      }
+
       function show(data) {
         const gp = chartElement
           .selectAll("div.probe") // , (gp) => gp.group + "/" + gp.probe)
@@ -155,22 +163,33 @@
           .attr("class", "title")
           .text((d) => d);
 
-        // Avaialbility for the range
+        // Availability for the range
         gp.selectAll("div.availability")
           .data((gp) => gp.statuses.slice(-1))
           .join("div")
           .attr("class", "availability")
-          .text((d) => `${((d.up / (d.up + d.down)) * 100).toFixed(2)}%`);
+          .style("text-align", "right")
+          .style("margin", "auto 1ex")
+          .text(formatPercentage);
 
         // Slot range
-        gp.selectAll("div.range")
+        const range = gp
+          .selectAll("div.range")
           .data((gp) => [gp])
           .join("div")
-          .attr("class", "range")
+          .attr("class", "range");
+
+        // Slot
+        const slot = range
           .selectAll("div.slot")
           .data((gp) => gp.statuses.slice(0, -1))
           .join("div")
-          .attr("class", "slot")
+          .attr("class", "slot");
+
+        
+
+        // Colored bar (green/violet/red/grey)
+        slot
           .selectAll("div")
           .data((d, i) => ordering.map((k) => [d[k]]))
           .join("div")
@@ -182,11 +201,14 @@
 
       async function getData() {
         // controls that should become parameters
-        const step = 300;
-        const hour = 3600;
-        const range = 6 * hour;
-        const from = Math.round(new Date().valueOf() / 1000) - range;
-        const to = Math.round(new Date().valueOf() / 1000);
+        const API_MINUTE = 60;
+        const API_HOUR = 3600;
+
+        const step = API_MINUTE * 5; // ←←←←←←← CHANGE THIS
+        const range = API_HOUR * 2; // ←←←←←←← CHANGE THIS
+
+        const to = Math.round(new Date().valueOf() / 1000); // 'now' in seconds
+        const from = to - range;
 
         const url = (gp) =>
           `/api/status/range?from=${from}&to=${to}&step=${step}&group=${gp.group}&probe=${gp.probe}`;
@@ -204,24 +226,19 @@
           gp.statuses = groupStatuses[gp.group][gp.probe]
             // .slice(0, -1)
             .map((d) => {
-              if (d.slot_size == 0) {
-                const slot_size =
-                  1e6 *
-                  (new Date(d.end).valueOf() - new Date(d.start).valueOf());
-                return {
-                  up: d.up / slot_size,
-                  down: d.down / slot_size,
-                  unknown: d.unknown / slot_size,
-                  muted: d.muted / slot_size,
-                  nodata: d.nodata / slot_size,
-                };
+              // Calculate relative availability. Convert from time units to fractions of 1.
+              let slotDuration = d.slot_size;
+              if (slotDuration == 0) {
+                const start = new Date(d.start).valueOf();
+                const end = new Date(d.end).valueOf();
+                slotDuration = 1e6 * (end - start);
               }
               return {
-                up: d.up / d.slot_size,
-                down: d.down / d.slot_size,
-                unknown: d.unknown / d.slot_size,
-                muted: d.muted / d.slot_size,
-                nodata: d.nodata / d.slot_size,
+                up: d.up / slotDuration,
+                down: d.down / slotDuration,
+                unknown: d.unknown / slotDuration,
+                muted: d.muted / slotDuration,
+                nodata: d.nodata / slotDuration,
               };
             });
 
