@@ -15,16 +15,6 @@
     -->
 
     <style>
-      body {
-        margin: 0;
-        padding: 0;
-      }
-
-      body > header,
-      body > main {
-        padding: 1rem;
-      }
-
       div.up {
         background: hsl(130, 83%, 35%);
         background: linear-gradient(
@@ -70,8 +60,18 @@
         );
       }
 
+      body {
+        margin: 0;
+        padding: 0;
+      }
+
+      body > header,
+      body > main {
+        padding: 1rem;
+      }
+
       #chart > * {
-        margin-block-end: 0.5rem;
+        margin-block-end: 0.6em;
       }
 
       div.probe {
@@ -97,6 +97,7 @@
         font-size: large;
         flex-grow: 0;
         width: 5rem;
+        font-family: monospace;
       }
 
       div.title,
@@ -109,27 +110,28 @@
         display: inline-flex;
         flex-direction: row;
         vertical-align: top;
-        gap: 0.5em;
-      }
-
-      div.slot {
-        flex-grow: 1;
-        flex-direction: column;
-        width: 2em;
-        height: 2em;
-        border: 0.5px solid #000000cc;
-        min-width: 4px;
-        display: flex;
-        outline-offset: -1px;
+        gap: 0.6em;
       }
 
       div.slotsingle {
         display: block;
         width: 2em;
         height: 2em;
-        border-radius: 5px;
+        border-radius: 20%;
+        border: .2em solid;
         box-sizing: border-box;
         margin: 0;
+      }
+
+      div.slot {
+        flex-grow: 1;
+        flex-direction: column;
+        width: 3em;
+        height: 3em;
+        border: 10% solid;
+        min-width: 4px;
+        display: flex;
+        outline-offset: -1px;
       }
     </style>
 
@@ -208,19 +210,19 @@
                 */
 
           if (!Number.isFinite(availability))
-            return { background: "#DDDDDD", border: "#000000cc" };
+            return { background: "#f6f6f6", border: "#eee" };
           const colors = [
-            { background: "#508E59cc", border: "#000000cc" },
-            { background: "#55B138cc", border: "#000000cc" },
-            { background: "#91D71Dcc", border: "#000000cc" },
-            // { background:  "#FFFD00", border: "000000cc" },
-            // { background:  "#FAD405", border: "000000cc" },
-            { background: "#F4AF0Bcc", border: "#000000cc" },
-            { background: "#EF8C10cc", border: "#000000cc" },
-            { background: "#EA6D15cc", border: "#ffffffcc" },
-            { background: "#E5501Aff", border: "#ffffffcc" },
-            { background: "#DF3720ff", border: "#ffffffcc" },
-            { background: "#DA2529ff", border: "#ffffffcc" },
+            { background: "#bbddaa88", border: "#bbddaa44" },
+            { background: "#759138aa", border: "#509E5922" },
+            { background: "#A1C71Dbb", border: "#75913822" },
+            // { background:  "#FFFD00", border: "ffffff33" },
+            // { background:  "#FAD405", border: "ffffff33" },
+            { background: "#F4AF0Bcc", border: "#EF8C1022" },
+            { background: "#EF8C10dd", border: "#EA6D1522" },
+            { background: "#EA6D15ee", border: "#E5501A22" },
+            { background: "#E5501Aff", border: "#DF372022" },
+            { background: "#DF3720ff", border: "#DA252922" },
+            { background: "#DA2529ff", border: "#00000022" },
           ].reverse();
 
           const ci = Math.round(availability * (colors.length - 1));
@@ -261,7 +263,7 @@
         const API_HOUR = 3600;
 
         const step = API_MINUTE * 5; // ←←←←←←← CHANGE THIS
-        const range = API_HOUR * 2; // ←←←←←←← CHANGE THIS
+        const range = API_HOUR * 3; // ←←←←←←← CHANGE THIS
 
         const to = Math.round(new Date().valueOf() / 1000); // 'now' in seconds
         const from = to - range;
