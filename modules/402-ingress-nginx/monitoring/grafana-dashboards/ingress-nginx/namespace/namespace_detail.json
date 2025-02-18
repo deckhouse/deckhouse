@@ -12811,8 +12811,8 @@
         "allValue": ".*",
         "current": {
           "selected": false,
-          "text": "d8-monitoring",
-          "value": "d8-monitoring"
+          "text": "default",
+          "value": "default"
         },
         "datasource": {
           "type": "prometheus",
@@ -12832,7 +12832,7 @@
         "refresh": 2,
         "regex": "",
         "skipUrlSync": false,
-        "sort": 0,
+        "sort": 1,
         "tagValuesQuery": "",
         "tagsQuery": "",
         "type": "query",

@@ -1,4 +1,4 @@
-2037
+2040
 1GB
 2GB
 5XX
@@ -6,8 +6,6 @@ AbsoluteVersion
 acceptRequestsFrom
 accessLevel
 ACS
-additionalAPIAudiences
-additionalAPIIssuers
 additionalPrinterColumns
 additionalProperties
 additionalSecurityGroups
@@ -750,6 +748,7 @@ myns
 mysql
 MySQL
 MySQL’s
+MySuperResource
 namespace
 namespaced
 Namespaced
@@ -992,6 +991,7 @@ repo
 reprovisioning
 RequestAuthentication
 resizer
+resourceAttributes
 ResourceList
 ResourceName
 resourcePolicy
@@ -1041,7 +1041,6 @@ SEMVER
 Sep
 sequelize
 sequelizerc
-serviceAccount
 ServiceAccount
 ServiceAccounts
 ServiceEntry
@@ -1238,6 +1237,7 @@ VMX
 VNC
 VNet
 VNets
+volumeMounts
 VolumeSnapshot
 VolumeSnapshotClass
 VolumeSnapshotClasses
@@ -1382,6 +1382,7 @@ zVirt
 беспроблемный
 биллинга
 биндинг
+биндинга
 биндинги
 биндятся
 блокирующе
@@ -1405,7 +1406,9 @@ zVirt
 валидировать
 валидируются
 вебхук
+вебхука
 вебхуки
+вебхуком
 вендором
 вендору
 вендоры

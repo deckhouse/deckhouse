@@ -77,7 +77,7 @@ const labels = {
   'e2e/use/cis': { type: 'e2e-use', cis: true },
 
   // security validation for images
-  'security/rootless': {type: 'security', security: 'rootless'}
+  'security/rootless': { type: 'security', security: 'rootless' }
 };
 module.exports.knownLabels = labels;
 
@@ -85,22 +85,9 @@ module.exports.knownLabels = labels;
 const releaseIssueLabel = 'issue/release';
 module.exports.releaseIssueLabel = releaseIssueLabel;
 
-
 const slashCommands = {
-  deploy: [
-    'deploy/alpha',
-    'deploy/beta',
-    'deploy/early-access',
-    'deploy/stable',
-    'deploy/rock-solid'
-  ],
-  suspend: [
-    'suspend/alpha',
-    'suspend/beta',
-    'suspend/early-access',
-    'suspend/stable',
-    'suspend/rock-solid'
-  ],
+  deploy: ['deploy/alpha', 'deploy/beta', 'deploy/early-access', 'deploy/stable', 'deploy/rock-solid'],
+  suspend: ['suspend/alpha', 'suspend/beta', 'suspend/early-access', 'suspend/stable', 'suspend/rock-solid']
 };
 module.exports.knownSlashCommands = slashCommands;
 
@@ -167,14 +154,7 @@ module.exports.e2eDefaults = {
   edition: 'FE',
   multimaster: false,
   cis: false
-}
+};
 
-const editions = [
-  'CE',
-  'EE',
-  'FE',
-  'BE',
-  'SE',
-  'SE-plus'
-];
+const editions = ['CE', 'EE', 'FE', 'BE', 'SE', 'SE-plus'];
 module.exports.knownEditions = editions;
