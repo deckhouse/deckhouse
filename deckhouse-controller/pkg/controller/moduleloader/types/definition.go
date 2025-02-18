@@ -105,3 +105,14 @@ func (d *Definition) Validate(values addonutils.Values, logger *log.Logger) erro
 
 	return nil
 }
+
+func (d *Definition) Annotations() map[string]string {
+	annotations := make(map[string]string)
+
+	if d.Descriptions != nil {
+		annotations[v1alpha1.ModuleAnnotationDescriptionRu] = d.Descriptions.Ru
+		annotations[v1alpha1.ModuleAnnotationDescriptionEn] = d.Descriptions.En
+	}
+
+	return annotations
+}

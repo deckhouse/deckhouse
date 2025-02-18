@@ -302,11 +302,8 @@ func (l *Loader) ensureModule(ctx context.Context, def *moduletypes.Definition, 
 						APIVersion: v1alpha1.ModuleGVK.GroupVersion().String(),
 					},
 					ObjectMeta: metav1.ObjectMeta{
-						Name: def.Name,
-						Annotations: map[string]string{
-							v1alpha1.ModuleAnnotationDescriptionRu: def.Descriptions.Ru,
-							v1alpha1.ModuleAnnotationDescriptionEn: def.Descriptions.En,
-						},
+						Name:        def.Name,
+						Annotations: def.Annotations(),
 					},
 					Properties: v1alpha1.ModuleProperties{
 						Weight:       def.Weight,
@@ -327,12 +324,7 @@ func (l *Loader) ensureModule(ctx context.Context, def *moduletypes.Definition, 
 			module.Properties.Weight = def.Weight
 			module.Properties.Stage = def.Stage
 
-			if len(module.Annotations) == 0 {
-				module.Annotations = make(map[string]string)
-			}
-
-			module.Annotations[v1alpha1.ModuleAnnotationDescriptionRu] = def.Descriptions.Ru
-			module.Annotations[v1alpha1.ModuleAnnotationDescriptionEn] = def.Descriptions.En
+			module.SetAnnotations(def.Annotations())
 
 			if embedded {
 				// set deckhouse release channel to embedded modules
