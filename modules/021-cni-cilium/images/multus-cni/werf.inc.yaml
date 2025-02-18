@@ -19,8 +19,8 @@ image: {{ .ModuleName }}/multus-cni
 from: debian:stable-slim
 import:
 - image: {{ .ModuleName }}/multus-binary
-  add: /build-output/bin/multus-daemon
-  to: /usr/src/multus-cni/bin/multus-daemon
+  add: /build-output/bin
+  to: /usr/src/multus-cni/bin
   before: install
 imageSpec:
   config:
