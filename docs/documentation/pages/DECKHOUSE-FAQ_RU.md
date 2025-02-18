@@ -462,7 +462,7 @@ echo "$MYRESULTSTRING"
 
 В результате образы Deckhouse будут доступны, например, по следующему адресу: `https://your-harbor.com/d8s/deckhouse/ee:{d8s-version}`.
 
-### Ручная загрузка образов в изолированный приватный registry
+### Ручная загрузка образов Deckhouse Kubernetes Platform, БД сканера уязвимостей и модулей Deckhouse в приватный registry
 
 {% alert level="warning" %}
 Доступно только в Standard Edition (SE), Enterprise Edition (EE) и Certified Security Edition (CSE).
@@ -476,7 +476,7 @@ echo "$MYRESULTSTRING"
 
 1. Скачайте образы Deckhouse в выделенную директорию, используя команду `d8 mirror pull`.
 
-   По умолчанию `d8 mirror pull` скачивает только актуальные версии Deckhouse и официально поставляемых модулей.
+   По умолчанию `d8 mirror pull` скачивает только актуальные версии Deckhouse, базы данных сканера уязвимостей (если они входят в редакцию DKP) и официально поставляемых модулей.
    Например, для Deckhouse 1.59 будет скачана только версия `1.59.12`, т. к. этого достаточно для обновления Deckhouse с 1.58 до 1.59.
 
    Выполните следующую команду (укажите код редакции и лицензионный ключ), чтобы скачать образы актуальных версий:
@@ -484,24 +484,30 @@ echo "$MYRESULTSTRING"
    ```shell
    d8 mirror pull \
      --source='registry.deckhouse.ru/deckhouse/<EDITION>' \
-     --license='<LICENSE_KEY>' $(pwd)/d8.tar
+     --license='<LICENSE_KEY>' /home/user/d8-bundle
    ```
 
    где:
    - `<EDITION>` — код редакции Deckhouse Kubernetes Platform (например, `ee`, `se`, `cse`);
    - `<LICENSE_KEY>` — лицензионный ключ Deckhouse Kubernetes Platform.
+   - `/home/user/d8-bundle` — директория в которой будут расположены пакеты образов. Будет создана, если не существует.
 
    > Если загрузка образов будет прервана, повторный вызов команды продолжит загрузку, если с момента ее остановки прошло не более суток.
 
    Вы также можете использовать следующие параметры команды:
    - `--no-pull-resume` — чтобы принудительно начать загрузку сначала;
-   - `--no-modules` — для пропуска загрузки модулей;
-   - `--min-version=X.Y` — чтобы скачать все версии Deckhouse, начиная с указанной минорной версии. Параметр будет проигнорирован, если указана версия выше чем версия находящаяся на канале обновлений Rock Solid. Параметр не может быть использован одновременно с параметром `--release`;
-   - `--release=X.Y.Z` — чтобы скачать только конкретную версию Deckhouse (без учета каналов обновлений). Параметр не может быть использован одновременно с параметром `--min-version`;
+   - `--no-platform` — для пропуска загрузки пакета образов Deckhouse Kubernetes Platform (platform.tar);
+   - `--no-modules` — для пропуска загрузки пакетов модулей (module-*.tar);
+   - `--no-security-db` — для пропуска загрузки пакета баз данных сканера уязвимостей (security.tar);
+   - `--include-module` / `-i` = `name[@X.Y.Z]` — для загрузки только определенного набора модулей по принципу белого списка (и, при необходимости, их минимальных версий). Укажите несколько раз, чтобы добавить в белый список больше модулей. Эти флаги игнорируются, если используются совместно с `--no-modules`.
+   - `--exclude-module` / `-e` = `name` — для пропуска загрузки определенного набора модулей по принципу черного списка. Укажите несколько раз, чтобы добавить в черный список больше модулей. Игнорируется, если используются `--no-modules` или `--include-module`.
+   - `--modules-path-suffix` — для изменения суффикса пути к репозиторию модулей в основном репозитории Deckhouse. По умолчанию используется суффикс `/modules` (так, например, полный путь к репозиторию с модулями будет выглядеть как `registry.deckhouse.ru/deckhouse/EDITION/modules`).
+   - `--since-version=X.Y` — чтобы скачать все версии Deckhouse, начиная с указанной минорной версии. Параметр будет проигнорирован, если указана версия выше чем версия находящаяся на канале обновлений Rock Solid. Параметр не может быть использован одновременно с параметром `--deckhouse-tag`;
+   - `--deckhouse-tag` — чтобы скачать только конкретную версию Deckhouse (без учета каналов обновлений). Параметр не может быть использован одновременно с параметром `--since-version`;
    - `--gost-digest` — для расчета контрольной суммы итогового набора образов Deckhouse в формате ГОСТ Р 34.11-2012 (Стрибог). Контрольная сумма будет отображена и записана в файл с расширением `.tar.gostsum` в папке с tar-архивом, содержащим образы Deckhouse;
-   - `--source` — чтобы указать адрес источника хранилища образов Deckhouse;
-      - Для аутентификации в официальном хранилище образов Deckhouse нужно использовать лицензионный ключ и параметр `--license`;
-      - Для аутентификации в стороннем хранилище образов нужно использовать параметры `--source-login` и `--source-password`;
+   - `--source` — чтобы указать адрес источника хранилища образов Deckhouse (по умолчанию `registry.deckhouse.ru/deckhouse/ee`);
+   - Для аутентификации в официальном хранилище образов Deckhouse нужно использовать лицензионный ключ и параметр `--license`;
+   - Для аутентификации в стороннем хранилище образов нужно использовать параметры `--source-login` и `--source-password`;
    - `--images-bundle-chunk-size=N` — для указания максимального размера файла (в ГБ), на которые нужно разбить архив образов. В результате работы вместо одного файла архива образов будет создан набор `.chunk`-файлов (например, `d8.tar.NNNN.chunk`). Чтобы загрузить образы из такого набора файлов, укажите в команде `d8 mirror push` имя файла без суффикса `.NNNN.chunk` (например, `d8.tar` для файлов `d8.tar.NNNN.chunk`).
 
    Дополнительные параметры конфигурации для семейства команд `d8 mirror` доступны в виде переменных окружения:
@@ -516,26 +522,65 @@ echo "$MYRESULTSTRING"
 
    ```shell
    d8 mirror pull \
-     --source='registry.deckhouse.ru/deckhouse/ee' \
-     --license='<LICENSE_KEY>' --min-version=1.59 $(pwd)/d8.tar
+   --license='<LICENSE_KEY>' \
+   --since-version=1.59 /home/user/d8-bundle
+   ```
+
+   Пример команды для загрузки актуальных версий Deckhouse SE (укажите лицензионный ключ):
+
+   ```shell
+   d8 mirror pull \
+   --license='<LICENSE_KEY>' \
+   --source='registry.deckhouse.ru/deckhouse/se' \
+   /home/user/d8-bundle
    ```
 
    Пример команды для загрузки образов Deckhouse из стороннего хранилища образов:
 
    ```shell
    d8 mirror pull \
-     --source='corp.company.com:5000/sys/deckhouse' \
-     --source-login='<USER>' --source-password='<PASSWORD>' $(pwd)/d8.tar
+   --source='corp.company.com:5000/sys/deckhouse' \
+   --source-login='<USER>' --source-password='<PASSWORD>' /home/user/d8-bundle
+   ```
+
+   Пример команды для загрузки пакета баз данных сканера уязвимостей:
+
+   ```shell
+   d8 mirror pull \
+   --license='<LICENSE_KEY>' \
+   --no-platform --no-modules /home/user/d8-bundle
+   ```
+
+   Пример команды для загрузки пакетов всех доступных дополнительных модулей:
+
+   ```shell
+   d8 mirror pull \
+   --license='<LICENSE_KEY>' \
+   --no-platform --no-security-db /home/user/d8-bundle
+   ```
+
+   Пример команды для загрузки пакетов модулей `stronghold` и `secrets-store-integration`:
+
+   ```shell
+   d8 mirror pull \
+   --license='<LICENSE_KEY>' \
+   --no-platform --no-security-db \
+   --include-module stronghold \
+   --include-module secrets-store-integration \
+   /home/user/d8-bundle
    ```
 
 1. На хост с доступом к хранилищу, куда нужно загрузить образы Deckhouse, скопируйте загруженный пакет образов Deckhouse и установите [Deckhouse CLI](deckhouse-cli/).
 
 1. Загрузите образы Deckhouse в хранилище с помощью команды `d8 mirror push`.
 
-   Пример команды для загрузки образов из файла `/tmp/d8-images/d8.tar` (укажите данные для авторизации при необходимости):
+   Команда `d8 mirror push` загружает в репозиторий образы из всех пакетов, которые присутствуют в переданной директории.
+   При необходимости выгрузить в репозиторий только часть пакетов, вы можете либо выполнить команду для каждого необходимого пакета образов передав ей прямой путь до пакета tar вместо директории, либо убрав расширение `.tar` у ненужных пакетов или переместив их вне директории.
+
+   Пример команды для загрузки пакетов образов из директории `/mnt/MEDIA/d8-images` (укажите данные для авторизации при необходимости):
 
    ```shell
-   d8 mirror push /tmp/d8-images/d8.tar 'corp.company.com:5000/sys/deckhouse' \
+   d8 mirror push /mnt/MEDIA/d8-images 'corp.company.com:5000/sys/deckhouse' \
      --registry-login='<USER>' --registry-password='<PASSWORD>'
    ```
 
@@ -553,113 +598,6 @@ echo "$MYRESULTSTRING"
    ```shell
    d8 k apply -f ./deckhousereleases.yaml
    ```
-
-### Ручная загрузка образов подключаемых модулей Deckhouse в изолированный приватный registry
-
-Для ручной загрузки образов модулей, подключаемых из источника модулей (ресурс [ModuleSource](cr.html#modulesource)), выполните следующие шаги:
-
-1. [Скачайте и установите утилиту Deckhouse CLI](deckhouse-cli/).
-
-1. Создайте строку аутентификации для официального хранилища образов `registry.deckhouse.ru`, выполнив следующую команду (укажите лицензионный ключ):
-
-   ```shell
-   LICENSE_KEY='<LICENSE_KEY>'
-   base64 -w0 <<EOF
-     {
-       "auths": {
-         "registry.deckhouse.ru": {
-           "auth": "$(echo -n license-token:${LICENSE_KEY} | base64 -w0)"
-         }
-       }
-     }
-   EOF
-   ```
-
-1. Скачайте образы модулей из их источника, описанного в виде ресурса `ModuleSource`, в выделенную директорию, используя команду `d8 mirror modules pull`.
-
-   Если не передан параметр `--filter`, то `d8 mirror modules pull` скачивает только версии модулей, доступные в каналах обновлений модуля на момент копирования.
-
-   - Создайте файл с описанием ресурса `ModuleSource` (например, `$HOME/module_source.yml`).
-
-     Пример ресурса ModuleSource:
-
-     ```yaml
-     apiVersion: deckhouse.io/v1alpha1
-     kind: ModuleSource
-     metadata:
-       name: deckhouse
-     spec:
-       registry:
-         # Укажите строку аутентификации для официального хранилища образов, полученную в п. 2
-         dockerCfg: <BASE64_REGISTRY_CREDENTIALS>
-         repo: registry.deckhouse.ru/deckhouse/ee/modules
-         scheme: HTTPS
-       # Выберите подходящий канал обновлений: Alpha, Beta, EarlyAccess, Stable, RockSolid
-       releaseChannel: "Stable"
-     ```
-
-   - Скачайте образы модулей из источника, описанного в ресурсе `ModuleSource`, в выделенную директорию, используя команду `d8 mirror modules pull`.
-
-     Пример команды:
-
-     ```shell
-     d8 mirror modules pull -d ./d8-modules -m $HOME/module_source.yml
-     ```
-
-     Для загрузки только набора из определенных модулей конкретных версий используйте параметр `--filter`, передав набор необходимых модулей и их минимальных версий, разделенных символом `;`.
-
-     Пример:
-
-     ```shell
-     d8 mirror modules pull -d /tmp/d8-modules -m $HOME/module_source.yml \
-       --filter='deckhouse-admin@1.3.3; sds-drbd@0.0.1'
-     ```
-
-     Команда выше загрузит только модули `deckhouse-admin` и `sds-drbd`. Для `deckhouse-admin` будут загружены все доступные версии начиная с `1.3.3`, для `sds-drbd` — все доступные версии начиная с `0.0.1`.
-
-1. На хост с доступом к хранилищу, куда нужно загрузить образы, скопируйте директорию с загруженными образами модулей Deckhouse и установите [Deckhouse CLI](deckhouse-cli/).
-
-1. Загрузите образы модулей в хранилище с помощью команды `d8 mirror modules push`.
-
-   Пример команды для загрузки образов из директории `/tmp/d8-modules`:
-
-   ```shell
-   d8 mirror modules push \
-     -d /tmp/d8-modules --registry='corp.company.com:5000/sys/deckhouse/modules' \
-     --registry-login='<USER>' --registry-password='<PASSWORD>'
-   ```
-
-   > Перед загрузкой образов убедитесь, что путь для загрузки в хранилище образов существует (в примере — `/sys/deckhouse/modules`) и у используемой учетной записи есть права на запись.
-
-1. Отредактируйте YAML-манифест `ModuleSource`, подготовленный на шаге 3:
-
-   * Измените поле `.spec.registry.repo` на адрес, который вы указали в параметре `--registry` при загрузке образов.
-   * Измените поле `.spec.registry.dockerCfg` на Base64-строку с данными для авторизации в вашем хранилище образов в формате `dockercfg`. Обратитесь к документации вашего registry для получения информации о том, как сгенерировать этот токен.
-
-   Пример `ModuleSource`:
-
-   ```yaml
-   apiVersion: deckhouse.io/v1alpha1
-   kind: ModuleSource
-   metadata:
-     name: deckhouse
-   spec:
-     registry:
-       # Укажите строку аутентификации для вашего хранилища образов.
-       dockerCfg: <BASE64_REGISTRY_CREDENTIALS>
-       repo: 'corp.company.com:5000/sys/deckhouse/modules'
-       scheme: HTTPS
-     # Выберите подходящий канал обновлений: Alpha, Beta, EarlyAccess, Stable, RockSolid
-     releaseChannel: "Stable"
-   ```
-
-1. Примените в кластере исправленный манифест `ModuleSource`:
-
-   ```shell
-   d8 k apply -f $HOME/module_source.yml
-   ```
-
-   После применения манифеста модули готовы к использованию. Обратитесь к [документации по разработке модуля](./module-development/) для получения дополнительной информации.
 
 ### Как переключить работающий кластер Deckhouse на использование стороннего registry?
 

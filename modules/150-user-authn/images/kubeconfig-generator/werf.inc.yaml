@@ -29,6 +29,9 @@ final: false
 git:
   - add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
     to: /patches
+    stageDependencies:
+      install:
+        - '**/*'
   - url: {{ $.SOURCE_REPO }}/mintel/dex-k8s-authenticator.git
     to: /src
     commit: 378a39dd93bed9f56a5a1b1a799a208c61ead83f

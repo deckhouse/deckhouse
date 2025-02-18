@@ -5,7 +5,7 @@ title: "The user-authz module: usage"
 ## Example of assigning rights to a cluster administrator
 
 {% alert level="info" %}
-The example uses the [new role-based](./#the-new-role-based-model).
+The example uses the [experimental role-based](./#experimental-role-based-model).
 {% endalert %}
 
 To grant access to a cluster administrator, use the role `d8:manage:all:manager` in `ClusterRoleBinding`.
@@ -43,7 +43,7 @@ The user will be able to:
 ## Example of assigning rights to a network administrator
 
 {% alert level="info" %}
-The example uses the [new role-based](./#the-new-role-based-model).
+The example uses the [experimental role-based](./#experimental-role-based-model).
 {% endalert %}
 
 To grant a network administrator access to manage the network subsystem of the cluster, use the role `d8:manage:networking:manager` in `ClusterRoleBinding`.
@@ -156,7 +156,7 @@ The user will be able to:
 ## Example of assigning administrative rights to a user within a namespace
 
 {% alert level="info" %}
-The example uses the [new role-based](./#the-new-role-based-model).
+The example uses the [experimental role-based](./#experimental-role-based-model).
 {% endalert %}
 
 To assign rights to a user manage application resources within a namespace, but without the ability to configure DKP modules, use the role `d8:use:role:admin` in `RoleBinding` in the corresponding namespace.
@@ -224,10 +224,6 @@ In the `myapp` namespace, the user will be able to:
 
 ## An example of `ClusterAuthorizationRule`
 
-{% alert level="warning" %}
-The example uses the [obsolete role-based model](./#the-obsolete-role-based-model).
-{% endalert %}
-
 ```yaml
 apiVersion: deckhouse.io/v1
 kind: ClusterAuthorizationRule
@@ -260,10 +256,6 @@ spec:
 ```
 
 ## Creating a user
-
-{% alert level="warning" %}
-The example uses the [obsolete role-based model](./#the-obsolete-role-based-model).
-{% endalert %}
 
 There are two types of users in Kubernetes:
 
@@ -404,10 +396,6 @@ You may need to create a ServiceAccount with access to the Kubernetes API when, 
    ```
 
 ### How to create a user using a client certificate
-
-{% alert level="warning" %}
-The example uses the [obsolete role-based model](./#the-obsolete-role-based-model).
-{% endalert %}
 
 #### Creating a user
 
@@ -583,11 +571,7 @@ The `allowed: false` message means that the webhook doesn't block access. In cas
 
 ## Customizing rights of high-level roles
 
-{% alert level="warning" %}
-The example uses the [obsolete role-based model](./#the-obsolete-role-based-model).
-{% endalert %}
-
-If you want to grant more privileges to a specific [high-level role](./#the-obsolete-role-based-model), you only need to create a ClusterRole with the `user-authz.deckhouse.io/access-level: <AccessLevel>` annotation.
+If you want to grant more privileges to a specific [high-level role](./#current-role-based-model), you only need to create a ClusterRole with the `user-authz.deckhouse.io/access-level: <AccessLevel>` annotation.
 
 An example:
 

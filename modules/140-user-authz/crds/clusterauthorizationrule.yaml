@@ -25,7 +25,7 @@ spec:
           description: |
             This cluster-wide object manages RBAC and authorization.
 
-            > The `ClusterAuthorizationRule` resource is used in the [obsolete role-based model](./#the-obsolete-role-based-model), which will be removed in future versions of Deckhouse. We recommend using the [new role-based model](./#the-new-role-based-model).
+            > The `ClusterAuthorizationRule` resource is used in the [current role-based model](./#current-role-based-model) and isn't used in the experimental role model.
           required:
           - spec
           properties:

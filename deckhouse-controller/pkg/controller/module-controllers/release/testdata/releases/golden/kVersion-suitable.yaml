@@ -62,6 +62,6 @@ status:
   approved: false
   message: ""
   phase: Deployed
-  pullDuration: 0s
+  pullDuration: 9m15s
   size: 0
-  transitionTime: "2019-10-17T15:33:00Z"
+  transitionTime: "2024-05-03T20:55:49Z"
