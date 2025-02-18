@@ -80,6 +80,7 @@ spec:
           args:
           - --leader-elect=true
           - --cluster-cidr={{ .Values.global.discovery.podSubnet }}
+          - --cluster-name={{ .Values.global.clusterConfiguration.cloud.prefix }}
           - --allocate-node-cidrs=true
           - --configure-cloud-routes=true
           - --cloud-config=/etc/config/cloud-config
@@ -103,6 +104,8 @@ spec:
             valueFrom:
               fieldRef:
                 fieldPath: status.hostIP
+          - name: CLUSTER_NAME
+            value: {{ .Values.global.clusterConfiguration.cloud.prefix }}
           {{- include "helm_lib_envs_for_proxy" . | nindent 10 }}
           livenessProbe:
             httpGet:
