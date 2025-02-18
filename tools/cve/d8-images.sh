@@ -53,7 +53,6 @@ function __main__() {
                 "dev-registry.deckhouse.io/sys/deckhouse-oss/install"
                 "dev-registry.deckhouse.io/sys/deckhouse-oss/install-standalone"
                 )
-  digests=$(cat digest.json)
   for additional_image in "${additional_images[@]}"; do
     additional_image_name=$(echo "$additional_image" | grep -o '[^/]*$')
     additional_image_sha=$(docker manifest inspect $additional_image:$TAG | jq -r .config.digest)
