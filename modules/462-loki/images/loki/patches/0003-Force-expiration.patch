@@ -140,10 +140,10 @@ index 3c8b85ec3a503f4e55e6d9f9519d50be095565e4..a3ba20ea8540e645a8a365991d53443b
  			level.Error(util_log.Logger).Log("msg", "failed to run compaction", "err", err)
 diff --git a/pkg/storage/stores/indexshipper/compactor/force_expiration.go b/pkg/storage/stores/indexshipper/compactor/force_expiration.go
 new file mode 100644
-index 0000000000000000000000000000000000000000..bf855341ce3bf49b9fcfc86b65309949f7d1a903
+index 0000000000000000000000000000000000000000..d4ca33f0ee9d6a97ba8a21c46fdcba2a5e364fc5
 --- /dev/null
 +++ b/pkg/storage/stores/indexshipper/compactor/force_expiration.go
-@@ -0,0 +1,383 @@
+@@ -0,0 +1,394 @@
 +package compactor
 +
 +import (
@@ -368,9 +368,16 @@ index 0000000000000000000000000000000000000000..bf855341ce3bf49b9fcfc86b65309949
 +		userIDValue := unsafeGetString(ce.UserID)
 +		chunkIDValue := unsafeGetString(ce.ChunkID)
 +
++		chunkID := strings.Clone(chunkIDValue)
++
 +		chk, err := chunk.ParseExternalKey(userIDValue, chunkIDValue)
 +		if err != nil {
-+			return false, err
++			_ = level.Warn(util_log.Logger).Log(
++				"msg", "unable to parse external chunk key, skipping chunk",
++				"chunkID", chunkID,
++				"reason", err,
++			)
++			return false, nil
 +		}
 +
 +		key := h.c.schemaConfig.ExternalKey(chk.ChunkRef)
@@ -385,13 +392,17 @@ index 0000000000000000000000000000000000000000..bf855341ce3bf49b9fcfc86b65309949
 +		chkPath := path.Join(h.dirUsageThresholdChunksDir, key)
 +		chkSize, err := evaluateFileSize(chkPath)
 +		if err != nil {
-+			return false, err
++			_ = level.Warn(util_log.Logger).Log(
++				"msg", "unable to evaluate chunk file size, skipping chunk",
++				"chunkID", chunkID,
++				"reason", err,
++			)
++			return false, nil
 +		}
 +		if chkSize == 0 {
 +			return false, nil
 +		}
 +
-+		chunkID := strings.Clone(chunkIDValue)
 +		chunksToDelete = append(chunksToDelete, chunkID)
 +		bytesDeleted = bytesDeleted + chkSize
 +		return true, nil
