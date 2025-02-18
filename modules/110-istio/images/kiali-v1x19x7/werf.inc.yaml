@@ -7,12 +7,16 @@
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/alt-p11
 import:
-- image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
+- image: {{ .ModuleName }}/{{ .ImageName }}-backend-build-artifact
   add: /src/kiali/out/kiali
   to: /opt/kiali/kiali
   before: install
-- image: {{ .ModuleName }}/{{ .ImageName }}-binary-artifact
-  add: /opt/kiali/console
+# - image: {{ .ModuleName }}/{{ .ImageName }}-binary-artifact
+#   add: /opt/kiali/console
+#   to: /opt/kiali/console
+#   before: install
+- image: {{ .ModuleName }}/{{ .ImageName }}-frontend-build-artifact
+  add: /src/kiali/frontend/build
   to: /opt/kiali/console
   before: install
 shell:
@@ -25,12 +29,12 @@ imageSpec:
     user: "1000"
     workingDir: "/opt/kiali"
     entrypoint: ["/opt/kiali/kiali"]
+# ---
+# image: {{ .ModuleName }}/{{ .ImageName }}-binary-artifact
+# from: quay.io/kiali/kiali:v1.67.2@sha256:92fec2b44580519b922d37747114865df4cc4cd51a2fe8342f090c8941e6905d
+# final: false
 ---
-image: {{ .ModuleName }}/{{ .ImageName }}-binary-artifact
-from: quay.io/kiali/kiali:v1.67.2@sha256:92fec2b44580519b922d37747114865df4cc4cd51a2fe8342f090c8941e6905d
-final: false
----
-image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
+image: {{ .ModuleName }}/{{ .ImageName }}-backend-build-artifact
 final: false
 from: {{ .Images.BASE_GOLANG_23_ALPINE }}
 mount:
@@ -54,3 +58,18 @@ shell:
   - go build -o /src/kiali/out/kiali /src/kiali/
   - strip /src/kiali/out/kiali
   - chmod 0755 /src/kiali/out/kiali
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-frontend-build-artifact
+final: false
+from: {{ .Images.BASE_NODE_16_ALPINE }}
+import:
+- image: {{ .ModuleName }}/common-{{ $istioImageVersion }}-src-artifact
+  add: /src/kiali
+  to: /src/kiali
+  before: setup
+shell:
+  setup:
+  {{- include "node packages proxy" . | nindent 2 }}
+  - cd /src/kiali/frontend
+  - yarn install --frozen-lockfile
+  - yarn run build
