@@ -146,10 +146,7 @@ properties:
     type: integer
     description: |
       Срок действия клиентского сертификата для OpenVPN в днях. Указывает количество дней, на которое будет выпущен клиентский сертификат, сгенерированный с помощью EasyRSA.
-
-      По умолчанию устанавливается 356 дней
     default: 365
-    x-doc-default: 365
 oneOf:
   - properties:
       tcpEnabled:
