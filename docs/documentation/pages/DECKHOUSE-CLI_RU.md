@@ -43,38 +43,38 @@ Deckhouse CLI — это интерфейс командной строки дл
 
 ## Как установить Deckhouse CLI
 
-Утилита Deckhouse CLI доступна [в trdl](https://ru.trdl.dev/).
+Начиная с версии 0.10 Deckhouse CLI, установить её можно с помощью [trdl](https://ru.trdl.dev/).
 
 {% alert %}
-Обратите внимание, что с версии 0.10 доступна установка **только через trdl**. Если у вас установлена версия ниже 0.10, то её необходимо предварительно удалить.
+Если у вас установлена версия ниже 0.10, то её необходимо предварительно удалить.
 
 Если вам нужно установить одну из версий ниже 0.10, воспользуйтесь [устаревшим способом установки](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.67/deckhouse-cli/#how-do-i-install-deckhouse-cli).
 {% endalert %}
 
-Установите [клиент trdl](https://ru.trdl.dev/quickstart.html#%D1%83%D1%81%D1%82%D0%B0%D0%BD%D0%BE%D0%B2%D0%BA%D0%B0-%D0%BA%D0%BB%D0%B8%D0%B5%D0%BD%D1%82%D0%B0).
+1. Установите [клиент trdl](https://ru.trdl.dev/quickstart.html#%D1%83%D1%81%D1%82%D0%B0%D0%BD%D0%BE%D0%B2%D0%BA%D0%B0-%D0%BA%D0%BB%D0%B8%D0%B5%D0%BD%D1%82%D0%B0).
 
-Добавьте репозиторий Deckhouse CLI в trdl, выполнив следующую команду:
+1. Добавьте репозиторий Deckhouse CLI в trdl:
 
-```bash
-URL=https://trrr.flant.dev/trdl-deckhouse-cli
-ROOT_VERSION=1
-ROOT_SHA512=$(curl -Ls ${URL}/${ROOT_VERSION}.root.json | sha512sum | tr -d '\-[:space:]\n')
-REPO=trdl-deckhouse-cli
+   ```bash
+   URL=https://trrr.flant.dev/trdl-deckhouse-cli
+   ROOT_VERSION=1
+   ROOT_SHA512=$(curl -Ls ${URL}/${ROOT_VERSION}.root.json | sha512sum | tr -d '\-[:space:]\n')
+   REPO=trdl-deckhouse-cli
+   
+   trdl add $REPO $URL $ROOT_VERSION $ROOT_SHA512
+   ```
 
-trdl add $REPO $URL $ROOT_VERSION $ROOT_SHA512
-```
+1. Установите актуальный стабильный релиз:
 
-Установите актуальный стабильный релиз:
+   ```bash
+   trdl update $REPO $ROOT_VERSION stable
+   ```
 
-```bash
-trdl update $REPO $ROOT_VERSION stable
-```
+1. Убедитесь, что исполняемый файл `d8` установлен и работоспособен:
 
-Убедитесь, что исполняемый файл `d8` установлен и работоспособен:
-
-```bash
-. $(trdl use $REPO $ROOT_VERSION stable) && d8 --version
-```
+   ```bash
+   . $(trdl use $REPO $ROOT_VERSION stable) && d8 --version
+   ```
 
 {% alert level="warning" %}
 Если вы используете macOS, вам может потребоваться удалить атрибут карантина с исполняемого файла, чтобы Gatekeeper не блокировал его.

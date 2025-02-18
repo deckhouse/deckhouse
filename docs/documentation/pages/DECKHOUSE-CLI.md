@@ -42,38 +42,39 @@ The `d8 d` and `d8 mirror` command groups are not available for Community Editio
 
 ## How do I install Deckhouse CLI?
 
+
+Starting from Deckhouse CLI 0.10 it can be installed using [trdl](https://trdl.dev/).
+
 {% alert %}
 Please note that since version 0.10, installation **is available only via trdl**. If you have a version lower than 0.10 installed, then you must first uninstall it.
 
 If you need to install one of the versions below 0.10, use the [outdated installation method](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.67/deckhouse-cli/#how-do-i-install-deckhouse-cli).
 {% endalert %}
 
-Deckhouse CLI is distributed and updated via [trdl](https://trdl.dev/).
+1. [Install trdl client](https://trdl.dev/quickstart.html#installing-the-client).
+   
+1. Add the Deckhouse CLI repository to trdl:
 
-[Install trdl client](https://trdl.dev/quickstart.html#installing-the-client).
+   ```bash
+   URL=https://trrr.flant.dev/trdl-deckhouse-cli
+   ROOT_VERSION=1
+   ROOT_SHA512=$(curl -Ls ${URL}/${ROOT_VERSION}.root.json | sha512sum | tr -d '\-[:space:]\n')
+   REPO=trdl-deckhouse-cli
+   
+   trdl add $REPO $URL $ROOT_VERSION $ROOT_SHA512
+   ```
 
-Add the Deckhouse CLI repository to trdl by running the following command:
+1. Install stable release:
 
-```bash
-URL=https://trrr.flant.dev/trdl-deckhouse-cli
-ROOT_VERSION=1
-ROOT_SHA512=$(curl -Ls ${URL}/${ROOT_VERSION}.root.json | sha512sum | tr -d '\-[:space:]\n')
-REPO=trdl-deckhouse-cli
+   ```bash
+   trdl update $REPO $ROOT_VERSION stable
+   ```
 
-trdl add $REPO $URL $ROOT_VERSION $ROOT_SHA512
-```
+1. Validate that the `d8` binary is installed:
 
-Install stable release using:
-
-```bash
-trdl update $REPO $ROOT_VERSION stable
-```
-
-Validate that the `d8` binary is installed:
-
-```bash
-. $(trdl use $REPO $ROOT_VERSION stable) && d8 --version
-```
+   ```bash
+   . $(trdl use $REPO $ROOT_VERSION stable) && d8 --version
+   ```
 
 {% alert level="warning" %}
 On macOS you might need to remove the quarantine attribute from binary to prevent Gatekeeper from blocking it.
