@@ -11,10 +11,6 @@ import:
   add: /src/kiali/out/kiali
   to: /opt/kiali/kiali
   before: install
-# - image: {{ .ModuleName }}/{{ .ImageName }}-binary-artifact
-#   add: /opt/kiali/console
-#   to: /opt/kiali/console
-#   before: install
 - image: {{ .ModuleName }}/{{ .ImageName }}-frontend-build-artifact
   add: /src/kiali/frontend/build
   to: /opt/kiali/console
@@ -29,10 +25,6 @@ imageSpec:
     user: "1000"
     workingDir: "/opt/kiali"
     entrypoint: ["/opt/kiali/kiali"]
-# ---
-# image: {{ .ModuleName }}/{{ .ImageName }}-binary-artifact
-# from: quay.io/kiali/kiali:v1.67.2@sha256:92fec2b44580519b922d37747114865df4cc4cd51a2fe8342f090c8941e6905d
-# final: false
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-backend-build-artifact
 final: false
