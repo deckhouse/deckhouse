@@ -223,12 +223,8 @@ func (h *PublicStatusHandler) calcStatuses(rng ranges.StepRange, lister entity.R
 			probeAvails = append(probeAvails, ProbeAvailability{
 				Probe:        probeRef.Probe,
 				Availability: av,
-<<<<<<< HEAD
 				status:       status,
 				Status:       status.String(),
-=======
-				Status:       calculateStatus(probeSummaryList),
->>>>>>> 3a8ddd356c ([multitenancy-manager] fix templates (#9205))
 			})
 		}
 
