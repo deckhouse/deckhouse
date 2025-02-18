@@ -28,6 +28,7 @@ import (
 	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	util_time "github.com/deckhouse/deckhouse/dhctl/pkg/util/time"
 )
@@ -866,6 +867,20 @@ func (m *MetaConfig) LoadInstallerVersion() error {
 	m.InstallerVersion = strings.TrimSpace(string(rawFile))
 
 	return nil
+}
+
+func (m *MetaConfig) GetReplicasByNodeGroupName(nodeGroupName string) int {
+	if nodeGroupName == global.MasterNodeGroupName {
+		return m.MasterNodeGroupSpec.Replicas
+	}
+
+	for _, group := range m.GetTerraNodeGroups() {
+		if group.Name == nodeGroupName {
+			return group.Replicas
+		}
+	}
+
+	return 0
 }
 
 func (rData ProxyModeRegistryData) DeepCopy() ProxyModeRegistryData {

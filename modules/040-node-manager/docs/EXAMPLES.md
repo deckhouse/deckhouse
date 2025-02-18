@@ -98,8 +98,8 @@ Follow the steps below to add a new static node (e.g., VM or bare metal server) 
    ```
 
 1. Pre-configure the new node according to the specifics of your environment. For example:
-   - Add all the necessary mount points to the `/etc/fstab` file (NFS, Ceph, etc.);
-   - Install the necessary packages (e.g., `ceph-common`);
+   - Add all the necessary mount points to the `/etc/fstab` file (NFS, Ceph, etc.).
+   - Install the necessary packages.
    - Configure network connectivity between the new node and the other nodes of the cluster.
 1. Connect to the new node over SSH and run the following command, inserting the Base64 string you got in step 3:
 
@@ -436,7 +436,7 @@ spec:
 Example is given for Ubuntu OS.  
 The method of adding certificates to the store may differ depending on the OS.  
 
-Change the [bundles](cr.html#nodegroupconfiguration-v1alpha1-spec-bundles) parameter to adapt the script to a different OS.
+Change the [bundles](cr.html#nodegroupconfiguration-v1alpha1-spec-bundles) and [content](cr.html#nodegroupconfiguration-v1alpha1-spec-content) parameters to adapt the script to a different OS.
 {% endalert %}
 
 {% alert level="warning" %}

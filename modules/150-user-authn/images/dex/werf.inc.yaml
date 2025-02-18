@@ -10,8 +10,9 @@ import:
     add: /web
     to: /web
     before: setup
-docker:
-  ENTRYPOINT: ["/usr/local/bin/dex", "serve", "/etc/dex/config.docker.yaml"]
+imageSpec:
+  config:
+    entrypoint: ["/usr/local/bin/dex", "serve", "/etc/dex/config.docker.yaml"]
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-dex-src-artifact
 fromImage: common/src-artifact
@@ -27,13 +28,13 @@ git:
         - '**/go.sum'
   - add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches/
     to: /patches
-  - add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/web
+  - add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/src/web
     to: /web
 shell:
   install:
     - cd /src
     - git apply /patches/*.patch --verbose
-    - rm -rf .git
+    - rm -rf examples
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-dex-artifact
 from: {{ $.Images.BASE_GOLANG_23_BOOKWORM }}

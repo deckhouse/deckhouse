@@ -43,7 +43,7 @@ apiVersions:
         description: |
           Спецификация для описания NodeGroup master-узлов.
 
-          > Внимание! После изменения параметров секции `masterNodeGroup` необходимо выполнить команду `dhctl converge`, чтобы изменения вступили в силу.
+          > Чтобы изменения вступили в силу, после изменения параметров секции `masterNodeGroup` выполните команду `dhctl converge`.
         properties:
           replicas:
             description: |
@@ -94,7 +94,10 @@ apiVersions:
 
                   `false` — для узлов создаются статические публичные адреса, они же используются для One-to-One NAT.
           zones:
-            description: Список зон, в которых допустимо создавать статические-узлы.
+            description: |
+                Список зон, в которых допустимо создавать узлы.
+                
+                Порядок указания зон не влияет на порядок создания узлов. Узлы будут размещаться в зонах в алфавитном порядке: первый узел — в зоне, стоящей первой по алфавиту, второй — во второй зоне и так далее. Если количество зон меньше числа узлов, то после размещения узла в последней зоне по алфавиту распределение продолжится сначала списка.
       nodeGroups:
         description: Массив дополнительных NodeGroup для создания статических узлов (например, для выделенных фронтов или шлюзов).
         items:
@@ -111,7 +114,10 @@ apiVersions:
                 annotations:
                   description: Аналогично стандартному [полю](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta) `metadata.annotations`.
                 taints:
-                  description: Аналогично полю `.spec.taints` из объекта [Node](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#taint-v1-core). **Внимание!** Доступны только поля `effect`, `key`, `values`.
+                  description: |
+                    Аналогично полю `.spec.taints` из объекта [Node](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#taint-v1-core).
+                  
+                    > Доступны только поля `effect`, `key`, `values`.
             additionalNetworkTags:
               description: |
                 Список дополнительных тегов.
@@ -127,7 +133,10 @@ apiVersions:
               properties:
                 <<: *instanceClassProperties_ru
             zones:
-              description: Список зон, в которых допустимо создавать узлы.
+              description: |
+                Список зон, в которых допустимо создавать узлы.
+
+                Порядок указания зон не влияет на порядок создания узлов. Узлы будут размещаться в зонах в алфавитном порядке: первый узел — в зоне, стоящей первой по алфавиту, второй — во второй зоне и так далее. Если количество зон меньше числа узлов, то после размещения узла в последней зоне по алфавиту распределение продолжится сначала списка.
       layout:
         description: |
           Название схемы размещения.

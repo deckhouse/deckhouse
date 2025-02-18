@@ -18,8 +18,9 @@ import:
   add: /csi-provisioner
   to: /csi-provisioner
   before: setup
-docker:
-  ENTRYPOINT: ["/csi-provisioner"]
+imageSpec:
+  config:
+    entrypoint: ["/csi-provisioner"]
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $version | replace "." "-" }}
 fromImage: common/src-artifact

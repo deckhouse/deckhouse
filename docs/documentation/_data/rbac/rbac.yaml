@@ -619,6 +619,14 @@ modules:
         rules:
         - apiGroups:
           - deckhouse.io
+          resources:
+          - kubeschedulerwebhookconfigurations
+          verbs:
+          - get
+          - list
+          - watch
+        - apiGroups:
+          - deckhouse.io
           resourceNames:
           - control-plane-manager
           resources:
@@ -629,6 +637,16 @@ modules:
           - watch
       - name: d8:manage:permission:module:control-plane-manager:edit
         rules:
+        - apiGroups:
+          - deckhouse.io
+          resources:
+          - kubeschedulerwebhookconfigurations
+          verbs:
+          - create
+          - update
+          - patch
+          - delete
+          - deletecollection
         - apiGroups:
           - deckhouse.io
           resourceNames:
@@ -689,9 +707,9 @@ modules:
           - moduledocumentations
           - modulepulloverrides
           - modulereleases
+          - modules
           - modulesources
           - moduleupdatepolicies
-          - modules
           verbs:
           - get
           - list
@@ -706,9 +724,9 @@ modules:
           - moduledocumentations
           - modulepulloverrides
           - modulereleases
+          - modules
           - modulesources
           - moduleupdatepolicies
-          - modules
           verbs:
           - create
           - update
@@ -830,7 +848,7 @@ modules:
           - patch
           - delete
       use: null
-    namespace: none
+    namespace: d8-system
     subsystems:
     - kubernetes
     - networking
@@ -1593,8 +1611,8 @@ modules:
           resources:
           - instances
           - instancetypescatalogs
-          - nodegroups
           - nodegroupconfigurations
+          - nodegroups
           - nodeusers
           - sshcredentials
           - staticinstances
@@ -1619,8 +1637,8 @@ modules:
           resources:
           - instances
           - instancetypescatalogs
-          - nodegroups
           - nodegroupconfigurations
+          - nodegroups
           - nodeusers
           - sshcredentials
           - staticinstances
@@ -1894,7 +1912,7 @@ modules:
           - patch
           - delete
       use: null
-    namespace: none
+    namespace: d8-system
     subsystems:
     - kubernetes
   prometheus:
@@ -2164,7 +2182,7 @@ modules:
           - patch
           - delete
       use: null
-    namespace: none
+    namespace: ""
     subsystems:
     - security
   snapshot-controller:
@@ -2403,6 +2421,14 @@ modules:
         rules:
         - apiGroups:
           - deckhouse.io
+          resources:
+          - clusterauthorizationrules
+          verbs:
+          - get
+          - list
+          - watch
+        - apiGroups:
+          - deckhouse.io
           resourceNames:
           - user-authz
           resources:
@@ -2415,6 +2441,16 @@ modules:
         rules:
         - apiGroups:
           - deckhouse.io
+          resources:
+          - clusterauthorizationrules
+          verbs:
+          - create
+          - update
+          - patch
+          - delete
+          - deletecollection
+        - apiGroups:
+          - deckhouse.io
           resourceNames:
           - user-authz
           resources:
@@ -2424,8 +2460,30 @@ modules:
           - update
           - patch
           - delete
-      use: null
-    namespace: none
+      use:
+      - name: d8:use:capability:module:user-authz:view
+        rules:
+        - apiGroups:
+          - deckhouse.io
+          resources:
+          - authorizationrules
+          verbs:
+          - get
+          - list
+          - watch
+      - name: d8:use:capability:module:user-authz:edit
+        rules:
+        - apiGroups:
+          - deckhouse.io
+          resources:
+          - authorizationrules
+          verbs:
+          - create
+          - update
+          - patch
+          - delete
+          - deletecollection
+    namespace: ""
     subsystems:
     - security
   vertical-pod-autoscaler:
@@ -2519,6 +2577,7 @@ subsystems:
     - control-plane-manager
     - kube-dns
     namespaces:
+    - d8-system
     - kube-system
   networking:
     modules:

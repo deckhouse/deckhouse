@@ -25,7 +25,9 @@ type (
 // Define common operations phases for such operations as bootstrap, converge and destroy.
 // Notice that each operation could define own phases (like attach operation do).
 const (
-	BaseInfraPhase                         OperationPhase = "BaseInfra"
+	// bootstrap and converge both
+	BaseInfraPhase OperationPhase = "BaseInfra"
+	// bootstrap only
 	RegistryPackagesProxyPhase             OperationPhase = "RegistryPackagesProxyBundle"
 	ExecuteBashibleBundlePhase             OperationPhase = "ExecuteBashibleBundle"
 	InstallDeckhousePhase                  OperationPhase = "InstallDeckhouse"
@@ -33,8 +35,12 @@ const (
 	InstallAdditionalMastersAndStaticNodes OperationPhase = "InstallAdditionalMastersAndStaticNodes"
 	DeleteResourcesPhase                   OperationPhase = "DeleteResources"
 	ExecPostBootstrapPhase                 OperationPhase = "ExecPostBootstrap"
-	AllNodesPhase                          OperationPhase = "AllNodes"
-	FinalizationPhase                      OperationPhase = "Finalization"
+	// converge only
+	AllNodesPhase            OperationPhase = "AllNodes"
+	ScaleToMultiMasterPhase  OperationPhase = "ScaleToMultiMaster"
+	ScaleToSingleMasterPhase OperationPhase = "ScaleToSingleMaster"
+	// all
+	FinalizationPhase OperationPhase = "Finalization"
 )
 
 var (

@@ -1197,6 +1197,21 @@ spec:
                           default: d8-ingress-nginx
                           type: string
                           pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?$'
+                controllerPodsAdditionalAnnotations:
+                  type: object
+                  description: |
+                    Custom additional annotations for Ingress controller pods.
+
+                    > **Caution.** The usage of this parameter is not recommended — the backward compatibility or operability of the Ingress controller that uses this option is not guaranteed.
+                  additionalProperties:
+                    type: string
+                  x-kubernetes-validations:
+                    - rule: self.all(k, !k.matches('(^|\\.)deckhouse\\.io/'))
+                      message: "Annotations with 'deckhouse.io' as a domain suffix are not allowed."
+                    - rule: self.all(k, !k.matches('(^|\\.)istio\\.io/'))
+                      message: "Annotations with 'istio.io' as a domain suffix are not allowed."
+                    - rule: self.all(k, !k.matches('(^|\\.)kubernetes\\.io/'))
+                      message: "Annotations with 'kubernetes.io' as a domain suffix are not allowed."
               oneOf:
                 - properties:
                     inlet:

@@ -47,12 +47,9 @@ import:
   - install
   - uninstall
   before: setup
-docker:
-  LABEL:
-    distro: all
-    version: all
-    crictl: {{ $version }}
-  USER: 64535
+imageSpec:
+  config:
+    labels: { "distro": "all", "version": "all", "crictl": "{{ $version }}" }
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
 final: false
@@ -71,7 +68,7 @@ mount:
   to: /root/.cache/go-build
 shell:
   beforeInstall:
-  {{- include "alpine packages proxy" . | nindent 2 }}
+  {{- include "alpine packages proxy" $ | nindent 2 }}
   - apk add --no-cache make
   setup:
   - export GOPROXY={{ $.GOPROXY }}

@@ -1,4 +1,4 @@
-.github/                        @name212 @RomanenkoDenys
+.github/                        @name212 @RomanenkoDenys @Nikolay1224
 000-common/                     @name212 @sprait
 001-priority-class/             @name212 @sprait
 002-deckhouse/                  @yalosev @miklezzzz @ldmonster
@@ -13,7 +13,7 @@
 031-ceph-csi/                   @AleksZimin
 035-cni-flannel/                @apolovov
 035-cni-simple-bridge/          @apolovov
-036-kube-proxy/                 @name212 @sprait
+036-kube-proxy/                 @apolovov
 039-registry-packages-proxy/    @RomanenkoDenys @name212 @sprait
 040-control-plane-manager/      @name212 @sprait
 040-node-manager/               @name212 @sprait
@@ -68,3 +68,4 @@ helm_lib/                       @name212 @sprait
 crds/                           @nabokihms @z9r5
 openapi/                        @nabokihms @z9r5
 /pkg/                           @yalosev @ldmonster
+/monitoring/prometheus-rules/   @sudoroot-null

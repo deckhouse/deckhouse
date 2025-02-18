@@ -90,7 +90,7 @@ status:
   metadataCache:
     private:
       publicServices:
-      - {"hostname": "aaa", "ports": [{"name": "ppp", "port": 123}]}
+      - {"hostname": "aaa", "ports": [{"name": "ppp", "port": 123, "protocol": TCP}]}
     public:
       clusterUUID: aaa-bbb-f2
       rootCA: abc-f2
@@ -109,7 +109,7 @@ status:
       ingressGateways:
       - {"address": "bbb", "port": 222}
       publicServices:
-      - {"hostname": "bbb", "ports": [{"name": "ppp", "port": 123},{"name": "zzz", "port": 777}]}
+      - {"hostname": "bbb", "ports": [{"name": "ppp", "port": 123, "protocol": TCP},{"name": "zzz", "port": 777, "protocol": TCP},{"name": "https-xxx", "port": 555, "protocol": TLS}]}
     public:
       clusterUUID: aaa-bbb-f3
       rootCA: abc-f3
@@ -128,8 +128,12 @@ status:
       ingressGateways:
       - {"address": "ccc", "port": 222}
       publicServices:
-      - {"hostname": "ccc", "ports": [{"name": "ppp", "port": 123}]}
-      - {"hostname": "ddd", "ports": [{"name": "xxx", "port": 555}]}
+      - {"hostname": "ccc", "ports": [{"name": "ppp", "port": 123, "protocol": TCP}]}
+      - {"hostname": "ddd", "ports": [{"name": "xxx", "port": 555, "protocol": TCP}]}
+      - {"hostname": "eee", "ports": [{"name": "http-xxx", "port": 555, "protocol": HTTP}]}
+      - {"hostname": "fff", "ports": [{"name": "https-xxx", "port": 555, "protocol": TLS}]}
+      - {"hostname": "ggg", "ports": [{"name": "grpc-xxx", "port": 555, "protocol": HTTP2}]}
+      - {"hostname": "hhh", "ports": [{"name": "tls-xxx", "port": 555, "protocol": TLS}]}
     public:
       clusterUUID: aaa-bbb-f4
       rootCA: abc-f4
@@ -147,7 +151,7 @@ status:
     private:
       ingressGateways: []
       publicServices:
-      - {"hostname": "bbb", "ports": [{"name": "ppp", "port": 123},{"name": "zzz", "port": 777}]}
+      - {"hostname": "bbb", "ports": [{"name": "ppp", "port": 123, "protocol": TCP},{"name": "zzz", "port": 777, "protocol": TCP},{"name": "grpc-xxx", "port": 555, "protocol": HTTP2},{"name": "tls-xxx", "port": 555, "protocol": TLS}]}
     public:
       clusterUUID: aaa-bbb-f5
       rootCA: abc-f5
@@ -310,7 +314,7 @@ status:
             "publicServices": [
               {
                 "hostname": "bbb",
-                "ports": [{"name": "ppp", "port": 123},{"name": "zzz", "port": 777}]
+                "ports": [{"name": "ppp", "port": 123, "protocol": "TCP" },{"name": "zzz", "port": 777, "protocol": "TCP"},{"name": "https-xxx", "port": 555, "protocol": "TLS"}]
               }
             ],
             "spiffeEndpoint": "https://some-proper-host/public/spiffe-bundle-endpoint",
@@ -329,11 +333,27 @@ status:
             "publicServices": [
               {
                 "hostname": "ccc",
-                "ports": [{"name": "ppp", "port": 123}]
+                "ports": [{"name": "ppp", "port": 123, "protocol": "TCP"}]
               },
               {
                 "hostname": "ddd",
-                "ports": [{"name": "xxx", "port": 555}]
+                "ports": [{"name": "xxx", "port": 555, "protocol": "TCP"}]
+              },
+              {
+                "hostname": "eee",
+                "ports": [{"name": "http-xxx", "port": 555, "protocol": "HTTP"}]
+              },
+              {
+                "hostname": "fff",
+                "ports": [{"name": "https-xxx", "port": 555, "protocol": "TLS"}]
+              },
+              {
+                "hostname": "ggg",
+                "ports": [{"name": "grpc-xxx", "port": 555, "protocol": "HTTP2"}]
+              },
+              {
+                "hostname": "hhh",
+                "ports": [{"name": "tls-xxx", "port": 555, "protocol": "TLS"}]
               }
             ],
             "spiffeEndpoint": "https://some-proper-host/public/spiffe-bundle-endpoint",

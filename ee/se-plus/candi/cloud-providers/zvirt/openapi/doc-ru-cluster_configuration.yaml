@@ -30,7 +30,7 @@ apiVersions:
         description: |
           Спецификация для описания NodeGroup master-узлов.
 
-          > Внимание! После изменения параметров секции `masterNodeGroup` необходимо выполнить команду `dhctl converge`, чтобы изменения вступили в силу.
+          > Чтобы изменения вступили в силу, после изменения параметров секции `masterNodeGroup` выполните команду `dhctl converge`.
         properties:
           replicas:
             description: |
@@ -101,7 +101,7 @@ apiVersions:
                   description: |
                     Аналогично полю `.spec.taints` из объекта [Node](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#taint-v1-core).
 
-                    > **Внимание!** Доступны только поля `effect`, `key`, `values`.
+                    > Доступны только поля `effect`, `key`, `values`.
                   x-doc-example: |
                     ```yaml
                     taints:

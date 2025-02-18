@@ -46,6 +46,22 @@ spec:
     http:
       paths:
 {{- if or (eq $.Values.web.dc_name "prod-sel") (eq $.Values.web.dc_name "prod-25") (eq $.Values.web.env "web-test" ) }}
+{{- if eq .Lang "en" }}
+      - path: /ru
+        pathType: Prefix
+        backend:
+          service:
+            name: frontend
+            port:
+              name: http
+      - path: /en
+        pathType: Prefix
+        backend:
+          service:
+            name: frontend
+            port:
+              name: http
+{{- end }}
       - path: /images
         pathType: Prefix
         backend:

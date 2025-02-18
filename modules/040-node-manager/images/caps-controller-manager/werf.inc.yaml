@@ -1,9 +1,9 @@
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
-docker:
-  ENTRYPOINT: ["/caps-controller-manager"]
-  USER: 64535
+imageSpec:
+  config:
+    entrypoint: ["/caps-controller-manager"]
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-artifact
   add: /caps-controller-manager

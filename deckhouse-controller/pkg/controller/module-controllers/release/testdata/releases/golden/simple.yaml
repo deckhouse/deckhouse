@@ -18,10 +18,10 @@ spec:
 status:
   message: ""
   modules:
-    - name: mcplay
-      policy: foxtrot-alpha
-    - name: parca
-      policy: foxtrot-alpha
+  - name: mcplay
+    policy: foxtrot-alpha
+  - name: parca
+    policy: foxtrot-alpha
   modulesCount: 2
   syncTime: "2024-05-03T21:05:05Z"
 ---
@@ -29,13 +29,17 @@ apiVersion: deckhouse.io/v1alpha1
 kind: ModuleRelease
 metadata:
   annotations:
-    release.deckhouse.io/notified: "false"
+    modules.deckhouse.io/isUpdating: "true"
+    modules.deckhouse.io/notified: "false"
   creationTimestamp: null
+  finalizers:
+  - modules.deckhouse.io/exist-on-fs
   labels:
     module: parca
     modules.deckhouse.io/update-policy: foxtrot-alpha
     release-checksum: 98d00f741c99e06e6c6c4d18b763c550
     source: foxtrot
+    status: deployed
   name: parca-v1.4.3
   ownerReferences:
   - apiVersion: deckhouse.io/v1alpha1
@@ -43,7 +47,7 @@ metadata:
     kind: ModuleSource
     name: foxtrot
     uid: 71d2300f-700b-452a-896a-6a3805f9cef7
-  resourceVersion: "1002"
+  resourceVersion: "1001"
 spec:
   changelog:
     features:
@@ -57,4 +61,4 @@ status:
   phase: Deployed
   pullDuration: 9m15s
   size: 0
-  transitionTime: "2019-10-17T15:33:00Z"
+  transitionTime: "2024-05-03T20:55:49Z"

@@ -79,7 +79,7 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "gomod"
-  directory: "/ee/modules/030-cloud-provider-openstack/images/cloud-data-discoverer"
+  directory: "/ee/modules/030-cloud-provider-openstack/images/cloud-data-discoverer/src"
   labels:
   - "type/dependencies"
   - "status/ok-to-test"
@@ -169,7 +169,7 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "gomod"
-  directory: "/ee/se-plus/modules/030-cloud-provider-vsphere/images/cloud-data-discoverer"
+  directory: "/ee/se-plus/modules/030-cloud-provider-vsphere/images/cloud-data-discoverer/src"
   labels:
   - "type/dependencies"
   - "status/ok-to-test"
@@ -304,7 +304,7 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "gomod"
-  directory: "/modules/030-cloud-provider-aws/images/cloud-data-discoverer"
+  directory: "/modules/030-cloud-provider-aws/images/cloud-data-discoverer/src"
   labels:
   - "type/dependencies"
   - "status/ok-to-test"
@@ -313,7 +313,7 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "gomod"
-  directory: "/modules/030-cloud-provider-azure/images/cloud-data-discoverer"
+  directory: "/modules/030-cloud-provider-azure/images/cloud-data-discoverer/src"
   labels:
   - "type/dependencies"
   - "status/ok-to-test"
@@ -322,7 +322,7 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "gomod"
-  directory: "/modules/030-cloud-provider-gcp/images/cloud-data-discoverer"
+  directory: "/modules/030-cloud-provider-gcp/images/cloud-data-discoverer/src"
   labels:
   - "type/dependencies"
   - "status/ok-to-test"
@@ -358,7 +358,7 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "gomod"
-  directory: "/modules/031-local-path-provisioner/images/helper/dir-manager"
+  directory: "/modules/031-local-path-provisioner/images/helper/src"
   labels:
   - "type/dependencies"
   - "status/ok-to-test"
@@ -637,7 +637,7 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "gomod"
-  directory: "/modules/500-upmeter/images/smoke-mini"
+  directory: "/modules/500-upmeter/images/smoke-mini/src"
   labels:
   - "type/dependencies"
   - "status/ok-to-test"
@@ -646,7 +646,7 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "gomod"
-  directory: "/modules/500-upmeter/images/upmeter"
+  directory: "/modules/500-upmeter/images/upmeter/src"
   labels:
   - "type/dependencies"
   - "status/ok-to-test"
@@ -729,7 +729,7 @@ updates:
 
 # npm
 - package-ecosystem: "npm"
-  directory: "/modules/500-upmeter/images/webui"
+  directory: "/modules/500-upmeter/images/webui/src"
   labels:
   - "type/dependencies"
   - "status/ok-to-test"

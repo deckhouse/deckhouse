@@ -49,6 +49,7 @@ locals {
   nat_instance_internal_address = lookup(var.providerClusterConfiguration.withNATInstance, "natInstanceInternalAddress", null)
   nat_instance_cores = lookup(var.providerClusterConfiguration.withNATInstance.natInstanceResources, "cores", 2)
   nat_instance_memory = floor(lookup(var.providerClusterConfiguration.withNATInstance.natInstanceResources, "memory", 2048) / 1024)
+  nat_instance_platform = lookup(var.providerClusterConfiguration.withNATInstance.natInstanceResources, "platform", "standard-v2")
   exporter_api_key = lookup(var.providerClusterConfiguration.withNATInstance, "exporterAPIKey", "")
 
   dhcp_options = lookup(var.providerClusterConfiguration, "dhcpOptions", null)

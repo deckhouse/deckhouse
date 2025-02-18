@@ -18,4 +18,5 @@ rm -f /opt/deckhouse/bin/mkfs.ext4
 rm -f /opt/deckhouse/bin/mkfs.ext3
 rm -f /opt/deckhouse/bin/fsck
 rm -f /opt/deckhouse/bin/mke2fs
+rm -f /opt/deckhouse/bin/resize2fs
 rm -f /opt/deckhouse/bin/tune2fs

@@ -1,11 +1,11 @@
-{{- $version := "1.47.0" }}
+{{- $version := "1.47.2" }}
 {{- $image_version := $version | replace "." "-" }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
 final: false
 fromImage: common/src-artifact
 git:
-- add: /{{ $.ModulePath }}/modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
+- add: /{{ .ModulePath }}/modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/scripts
   to: /src/scripts
   stageDependencies:
     install:
@@ -19,23 +19,24 @@ image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
 from: {{ $.Images.BASE_SCRATCH }}
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
-  add: /
+  add: /src/scripts
+  to: /
+  includePaths:
+  - install
+  - uninstall
+  before: setup
+- image: {{ .ModuleName }}/{{ .ImageName }}-artifact-{{ $image_version }}
+  add: /relocate/sbin
   to: /
   includePaths:
   - mke2fs
   - fsck
+  - resize2fs
   - tune2fs
-  - install
-  - uninstall
   before: setup
-docker:
-  LABEL:
-    distro: all
-    version: all
-    mke2fs: {{ $version }}
-    fsck: {{ $version }}
-    tune2fs: {{ $version }}
-  USER: 64535
+imageSpec:
+  config:
+    labels: { "distro": "all", "version": "all", "mke2fs": "{{ $version }}", "fsck": "{{ $version }}", "resize2fs": "{{ $version }}", "tune2fs": "{{ $version }}" }
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
 final: false
@@ -50,10 +51,9 @@ shell:
   {{- include "alpine packages proxy" . | nindent 2 }}
   - apk add --no-cache make gettext-dev autoconf automake libtool flex bison clang binutils g++ linux-headers
   setup:
+  - mkdir /relocate
   - cd /src/e2fsprogs
   - CFLAGS='-static' LDFLAGS="-static" ./configure
   - make
-  - strip ./misc/mke2fs && strip ./misc/fsck && strip ./misc/tune2fs
-  - mv ./misc/mke2fs /mke2fs && mv ./misc/fsck /fsck && mv ./misc/tune2fs /tune2fs
-  - mv /src/scripts/* /
-  - chmod +x /mke2fs /fsck /tune2fs  /install /uninstall
+  - make DESTDIR=/relocate install
+  - make clean

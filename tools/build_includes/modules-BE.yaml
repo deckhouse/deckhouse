@@ -23,9 +23,9 @@
   to: /deckhouse/modules/140-user-authz/templates/webhook
   stageDependencies:
     setup:
-        - '**/*.go'
+        - '**/*'
 - add: /ee/be/modules/350-node-local-dns
   to: /deckhouse/modules/350-node-local-dns
   stageDependencies:
     setup:
-        - '**/*.go'
+        - '**/*'

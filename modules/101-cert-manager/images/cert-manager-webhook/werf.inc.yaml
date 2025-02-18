@@ -6,5 +6,6 @@ import:
   add: /webhook-linux-amd64
   to: /bin/webhook
   before: setup
-docker:
-  ENTRYPOINT: ["/bin/webhook"]
+imageSpec:
+  config:
+    entrypoint: ["/bin/webhook"]

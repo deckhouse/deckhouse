@@ -13,7 +13,7 @@
 # limitations under the License.
 
 # exit if unit doesn't exist
-if ! systemctl list-unit-files firewalld  > /dev/null 2>&1; then
+if ! systemctl list-unit-files firewalld.service >/dev/null 2>&1; then
   exit 0
 fi
 

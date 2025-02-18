@@ -74,6 +74,12 @@ spec:
         kubectl.kubernetes.io/default-container: deckhouse
     spec:
       affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchLabels:
+                app: deckhouse
+            topologyKey: kubernetes.io/hostname
         nodeAffinity:
           preferredDuringSchedulingIgnoredDuringExecution:
             - preference:
@@ -83,19 +89,6 @@ spec:
                   values:
                   - "true"
               weight: 100
-{{- if and (include "helm_lib_ha_enabled" .) .Values.global.clusterIsBootstrapped }}
-        podAntiAffinity:
-          preferredDuringSchedulingIgnoredDuringExecution:
-            - podAffinityTerm:
-                labelSelector:
-                  matchExpressions:
-                    - key: app
-                      operator: In
-                      values:
-                        - deckhouse
-                topologyKey: kubernetes.io/hostname
-              weight: 100
-{{- end }}
 {{- include "helm_lib_priority_class" (tuple . "system-cluster-critical") | nindent 6 }}
 {{- if .Values.deckhouse.nodeSelector }}
       nodeSelector:
@@ -213,6 +206,7 @@ spec:
               value: /tmp/.bash_history
             - name: DEBUG_HTTP_SERVER_ADDR
               value: "127.0.0.1:9652"
+            {{- include "helm_lib_envs_for_proxy" . | nindent 12 }}
           ports:
             - containerPort: 4222
               name: self

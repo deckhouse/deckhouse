@@ -50,7 +50,7 @@ shell:
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: common/distroless
 import:
-- artifact: {{ $.ModuleName }}/distroless-proxy-failover-iptables-artifact
+- image: {{ $.ModuleName }}/distroless-proxy-failover-iptables-artifact
   add: /relocate
   to: /
   before: setup
@@ -64,10 +64,11 @@ import:
   before: setup
 - image: registrypackages/iptables-artifact-{{ $iptables_image_version }}
   add: /
-  to: /usr/sbin/
+  to: /usr/sbin
   includePaths:
   - xtables-legacy-multi
   - xtables-nft-multi
   before: setup
-docker:
-  ENTRYPOINT: ["/failover"]
+imageSpec:
+  config:
+    entrypoint: ["/failover"]

@@ -17,8 +17,9 @@ import:
   add: /relocate
   to: /
   before: setup
-docker:
-  ENTRYPOINT: ["/entrypoint.sh"]
+imageSpec:
+  config:
+    entrypoint: ["/entrypoint.sh"]
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
 fromImage: common/relocate-artifact

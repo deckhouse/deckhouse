@@ -6,8 +6,9 @@ import:
     add: /src/basic-auth-proxy
     to: /basic-auth-proxy
     before: setup
-docker:
-  ENTRYPOINT: [ "/basic-auth-proxy" ]
+imageSpec:
+  config:
+    entrypoint: [ "/basic-auth-proxy" ]
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-basic-auth-proxy-src-artifact
 fromImage: common/src-artifact

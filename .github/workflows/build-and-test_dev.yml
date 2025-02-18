@@ -25,7 +25,7 @@ on:
 env:
 
   # <template: werf_envs>
-  WERF_CHANNEL: "ea"
+  WERF_CHANNEL: "alpha"
   WERF_ENV: "FE"
   TEST_TIMEOUT: "15m"
   # Use fixed string 'sys/deckhouse-oss' for repo name. ${CI_PROJECT_PATH} is not available here in GitHub.
@@ -71,6 +71,7 @@ jobs:
       pr_description: ${{ steps.pr_props.outputs.pr_description }}
       diff_url: ${{ steps.pr_props.outputs.diff_url }}
       labels: ${{ steps.pr_props.outputs.labels }}
+      security_rootless_scan: ${{ steps.pr_props.outputs.security_rootless_scan }}
       changes_docs: ${{ steps.changes.outputs.docs }}
       changes_not_markdown: ${{ steps.changes.outputs.not_markdown }}
 
@@ -225,7 +226,8 @@ jobs:
             }
             core.info(`Edition labels: 'edition/ce':${hasCE}, 'edition/ee':${hasEE}, 'edition/be':${hasBE}, 'edition/se':${hasSE}, 'edition/se+':${hasSE_plus}`);
             core.notice(`Enable '${edition}' edition for '${context.eventName}' trigger.`);
-
+            // Set security rootless scan from labels.
+            const security_rootless_scan = pr.labels.some((l) => l.name === 'security/rootless');
             // Construct head commit ref using pr number.
             const ref = `refs/pull/${ pr.number }/head`;
             core.notice(`Use ref: '${ref}'`)
@@ -248,6 +250,7 @@ jobs:
             core.setOutput('pr_description', pr.body);
             core.setOutput('diff_url', diff_url);
             core.setOutput('labels', JSON.stringify(pr.labels));
+            core.setOutput('security_rootless_scan', security_rootless_scan);
             core.setCommandEcho(false);
 
       # Checkhout the head commit of the PR branch.
@@ -480,7 +483,7 @@ jobs:
 
       # <template: werf_install_step>
       - name: Install werf CLI
-        uses: werf/actions/install@43075e4ab81952b181d33e125ef15b9c060a782e
+        uses: werf/actions/install@v2
         with:
           channel: ${{env.WERF_CHANNEL}}
       # </template: werf_install_step>
@@ -652,7 +655,7 @@ jobs:
 
       # <template: werf_install_step>
       - name: Install werf CLI
-        uses: werf/actions/install@43075e4ab81952b181d33e125ef15b9c060a782e
+        uses: werf/actions/install@v2
         with:
           channel: ${{env.WERF_CHANNEL}}
       # </template: werf_install_step>
@@ -875,7 +878,7 @@ jobs:
 
 
       - name: Run doc web build
-        uses: werf/actions/build@43075e4ab81952b181d33e125ef15b9c060a782e
+        uses: werf/actions/build@v2
         with:
           channel: ${{env.WERF_CHANNEL}}
         env:
@@ -935,7 +938,7 @@ jobs:
 
 
       - name: Run main web build
-        uses: werf/actions/build@43075e4ab81952b181d33e125ef15b9c060a782e
+        uses: werf/actions/build@v2
         with:
           channel: ${{env.WERF_CHANNEL}}
         env:
@@ -947,6 +950,72 @@ jobs:
           WERF_REPO: "${{ steps.check_dev_registry.outputs.web_registry_path }}"
 
     # </template: web_build_template>
+
+  security_scan_images:
+    name: Security scan images
+    if: ${{ needs.pull_request_info.outputs.security_rootless_scan == 'true' }}
+    runs-on: [ self-hosted, regular, selectel ]
+    needs:
+      - git_info
+      - pull_request_info
+      - build_deckhouse
+    # <template: security_scan_template>
+    steps:
+
+      # <template: checkout_full_step>
+      - name: Checkout sources
+        uses: actions/checkout@v3.5.2
+        with:
+          fetch-depth: 0
+          ref: ${{ needs.pull_request_info.outputs.ref }}
+      # </template: checkout_full_step>
+
+      # <template: login_dev_registry_step>
+      - name: Check dev registry credentials
+        id: check_dev_registry
+        env:
+          HOST: ${{secrets.DECKHOUSE_DEV_REGISTRY_HOST}}
+        run: |
+          if [[ -n $HOST ]]; then
+            echo "has_credentials=true" >> $GITHUB_OUTPUT
+            echo "web_registry_path=${{secrets.DECKHOUSE_DEV_REGISTRY_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
+          fi
+      - name: Login to dev registry
+        uses: docker/login-action@v2.1.0
+        if: ${{ steps.check_dev_registry.outputs.has_credentials == 'true' }}
+        with:
+          registry: ${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}
+          username: ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
+          password: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
+          logout: false
+      # </template: login_dev_registry_step>
+
+      # <template: link_bin_step>
+      - name: Link binary cache
+        id: link_bin_step
+        run: |
+          ln -s ~/deckhouse-bin-cache bin
+      # </template: link_bin_step>
+      - name: Running default user validation on ${{env.TAG}}
+        env:
+          TAG: ${{needs.pull_request_info.outputs.ref_slug}}
+          IMAGE: "${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}/sys/deckhouse-oss"
+          TRIVY_TOKEN: ${{secrets.FOX_ACCESS_TOKEN}}
+          DECKHOUSE_PRIVATE_REPO: ${{secrets.DECKHOUSE_PRIVATE_REPO}}
+          TRIVY_PROJECT_ID: ${{ vars.TRIVY_PROJECT_ID }}
+        run: |
+          echo "⚓️ 🏎 Running default user validation on ${TAG}..."
+          make cve-base-images-check-default-user
+
+      # <template: unlink_bin_step>
+      - name: Unlink binary cache
+        id: unlink_bin_step
+        if: always()
+        run: |
+          rm bin
+      # </template: unlink_bin_step>
+    # </template: security_scan_template>
+
 
   tests:
     if: ${{ needs.pull_request_info.outputs.changes_not_markdown == 'true' }}
@@ -1024,7 +1093,7 @@ jobs:
       # </template: login_rw_registry_step>
       - name: Run tests
         env:
-          TESTS_IMAGE_NAME: "registry.deckhouse.io/base_images/golang:1.23.4-bullseye@sha256:9b3176d53704a9b1be19d307b660733cc691af02906d7e918dbe4d11427a422c"
+          TESTS_IMAGE_NAME: "registry.deckhouse.io/base_images/golang:1.23.6-bullseye@sha256:fad5b33791a319ba1c910a03a33575ea34fc8e142695a64be9a1a228e74af11e"
         run: |
           # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
           echo "Tests image name: '${TESTS_IMAGE_NAME}'" | tr '[:lower:]' '[:upper:]'
@@ -1433,7 +1502,7 @@ jobs:
 
       # <template: werf_install_step>
       - name: Install werf CLI
-        uses: werf/actions/install@43075e4ab81952b181d33e125ef15b9c060a782e
+        uses: werf/actions/install@v2
         with:
           channel: ${{env.WERF_CHANNEL}}
       # </template: werf_install_step>

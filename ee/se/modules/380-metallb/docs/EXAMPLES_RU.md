@@ -1,10 +1,10 @@
 ---
-title: "The MetalLB module: примеры"
+title: "The metallb module: примеры"
 ---
 
 Metallb можно использовать в статических кластерах (bare metal), когда нет возможности воспользоваться балансировщиком от облачного провайдера. Metallb может работать в режимах L2 LoadBalancer или BGP LoadBalancer.
 
-## Пример использования MetalLB в режиме L2 LoadBalancer
+## Пример использования metallb в режиме L2 LoadBalancer
 
 {% raw %}
 
@@ -26,7 +26,7 @@ spec:
 kubectl create deploy nginx --image=nginx
 ```
 
-Создайте ресурс _MetalLoadBalancerClass_:
+Создайте ресурс MetalLoadBalancerClass:
 
 ```yaml
 apiVersion: network.deckhouse.io/v1alpha1
@@ -42,7 +42,7 @@ spec:
   type: L2
 ```
 
-Создайте ресурс _Service_ со аннотацией и именем MetalLoadBalancerClass:
+Создайте ресурс Service с аннотацией и именем MetalLoadBalancerClass:
 
 ```yaml
 apiVersion: v1
@@ -83,11 +83,11 @@ $ curl -s -o /dev/null -w "%{http_code}" 192.168.2.102:8000
 
 {% endraw %}
 
-## Пример использования MetalLB в режиме BGP LoadBalancer
+## Пример использования metallb в режиме BGP LoadBalancer
 
 {% raw %}
 
-Включите модуль и настройте все необходимые параметры:
+Включите модуль и настройте все необходимые параметры<sup>*</sup>:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -113,15 +113,17 @@ spec:
   version: 2
 ```
 
+<sup>*</sup> — в будущих версиях настройки режима BGP будут задаваться через ресурс MetalLoadBalancerClass.
+
 Настройте BGP-пиринг на сетевом оборудовании.
 
 {% endraw %}
 
-## Дополнительные примеры настроек для _Service_
+## Дополнительные примеры настроек для Service
 
 {% raw %}
 
-Для создания _Services_ с общими IP адресами необходимо добавить к ним аннотацию `metallb.universe.tf/allow-shared-ip`:
+Для создания _Services_ с общими IP адресами необходимо добавить к ним аннотацию `network.deckhouse.io/load-balancer-shared-ip-key`:
 
 ```yaml
 apiVersion: v1
@@ -130,10 +132,9 @@ metadata:
   name: dns-service-tcp
   namespace: default
   annotations:
-    metallb.universe.tf/allow-shared-ip: "key-to-share-1.2.3.4"
+    network.deckhouse.io/load-balancer-shared-ip-key: "key-to-share-1.2.3.4"
 spec:
   type: LoadBalancer
-  loadBalancerIP: 1.2.3.4
   ports:
     - name: dnstcp
       protocol: TCP
@@ -148,10 +149,9 @@ metadata:
   name: dns-service-udp
   namespace: default
   annotations:
-    metallb.universe.tf/allow-shared-ip: "key-to-share-1.2.3.4"
+    network.deckhouse.io/load-balancer-shared-ip-key: "key-to-share-1.2.3.4"
 spec:
   type: LoadBalancer
-  loadBalancerIP: 1.2.3.4
   ports:
     - name: dnsudp
       protocol: UDP
@@ -161,7 +161,7 @@ spec:
     app: dns
 ```
 
-Для создания _Service_ с принудительно выбранным адресом в режиме L2 LoadBalancer, необходимо добавить аннотацию `network.deckhouse.io/load-balancer-ips`:
+Для создания Service с принудительно выбранным адресом необходимо добавить аннотацию `network.deckhouse.io/load-balancer-ips`:
 
 ```yaml
 apiVersion: v1
@@ -179,25 +179,7 @@ spec:
   type: LoadBalancer
 ```
 
-Для создания _Service_ с принудительно выбранным адресом в режиме BGP LoadBalancer, необходимо добавить аннотацию `metallb.universe.tf/loadBalancerIPs`:
-
-```yaml
-apiVersion: v1
-kind: Service
-metadata:
-  name: nginx
-  annotations:
-    metallb.universe.tf/loadBalancerIPs: 192.168.1.100
-spec:
-  ports:
-  - port: 80
-    targetPort: 80
-  selector:
-    app: nginx
-  type: LoadBalancer
-```
-
-Создание _Service_ и назначение ему _IPAddressPools_ возможно в режиме BGP LoadBalancer через аннотацию `metallb.universe.tf/address-pool`. Для режима L2 LoadBalancer необходимо использовать настройки _MetalLoadBalancerClass_ (см. выше).
+Создание Service и назначение ему _IPAddressPools_ возможно в режиме BGP LoadBalancer через аннотацию `metallb.universe.tf/address-pool`. Для режима L2 LoadBalancer необходимо использовать настройки MetalLoadBalancerClass (см. выше).
 
 ```yaml
 apiVersion: v1

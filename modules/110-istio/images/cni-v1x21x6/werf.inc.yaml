@@ -18,12 +18,12 @@ import:
   owner: 1337
   group: 1337
   after: setup
-docker:
-  ENV:
-    PATH: "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/opt/cni/bin"
-  WORKDIR: "/opt/cni/bin"
-  USER: 1337
-  ENTRYPOINT: ["/usr/local/bin/install-cni"]
+imageSpec:
+  config:
+    env: {"PATH": "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/opt/cni/bin"}
+    workingDir: "/opt/cni/bin"
+    user: "1337:1337"
+    entrypoint: ["/usr/local/bin/install-cni"]
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
 final: false
@@ -43,7 +43,7 @@ shell:
   install:
   - cd /src/istio/
   - echo {{ $istioVersion }} > version
-  - export GOPROXY={{ $.GOPROXY }} GOOS=linux GOARCH=amd64 
+  - export GOPROXY={{ $.GOPROXY }} GOOS=linux GOARCH=amd64
   - export LDFLAGS='-extldflags -static -s -w'
   - go mod download
   - common/scripts/gobuild.sh /src/istio/out/ -tags=agent,disable_pgv /src/istio/cni/cmd/install-cni/

@@ -25,8 +25,9 @@ import:
   add: /iptables-wrapper
   to: /sbin/iptables-wrapper
   before: setup
-docker:
-  ENTRYPOINT: ["/iptables-loop.sh"]
+imageSpec:
+  config:
+    entrypoint: [ "/iptables-loop.sh" ]
 ---
 {{ $iptablesLoopBinaries := "/bin/rm /bin/mkfifo /bin/mktemp /bin/echo /bin/sleep /bin/bash /sbin/ip /usr/bin/inotifywait" }}
 ---

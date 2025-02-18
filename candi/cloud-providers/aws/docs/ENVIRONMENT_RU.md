@@ -62,6 +62,7 @@ description: "Настройка AWS для работы облачного пр
                 "ec2:DescribeInstanceCreditSpecifications",
                 "ec2:DescribeInstances",
                 "ec2:DescribeInstanceTypes",
+                "ec2:DescribeInstanceTopology",
                 "ec2:DescribeInternetGateways",
                 "ec2:DescribeKeyPairs",
                 "ec2:DescribeNatGateways",

@@ -25,9 +25,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/manifests"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/infra/hook"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh/session"
@@ -37,24 +37,24 @@ import (
 
 type HookForUpdatePipeline struct {
 	*Checker
-	kubeCl            *client.KubernetesClient
+	kubeGetter        kubernetes.KubeClientProvider
 	nodeToConverge    string
 	oldMasterIPForSSH string
 	commanderMode     bool
 }
 
 func NewHookForUpdatePipeline(
-	kubeCl *client.KubernetesClient,
+	kubeGetter kubernetes.KubeClientProvider,
 	nodeToHostForChecks map[string]string,
 	clusterUUID string,
 	commanderMode bool,
 ) *HookForUpdatePipeline {
 	checkers := []hook.NodeChecker{
-		hook.NewKubeNodeReadinessChecker(kubeCl),
+		hook.NewKubeNodeReadinessChecker(kubeGetter),
 	}
 
 	if !commanderMode {
-		cl := kubeCl.NodeInterfaceAsSSHClient()
+		cl := kubeGetter.KubeClient().NodeInterfaceAsSSHClient()
 		if cl == nil {
 			panic("Node interface is not ssh")
 		}
@@ -75,12 +75,12 @@ func NewHookForUpdatePipeline(
 				}, cl.PrivateKeys...))
 	}
 
-	checkers = append(checkers, NewManagerReadinessChecker(kubeCl))
+	checkers = append(checkers, NewManagerReadinessChecker(kubeGetter))
 	checker := NewChecker(nodeToHostForChecks, checkers, "", DefaultConfirm)
 
 	return &HookForUpdatePipeline{
 		Checker:       checker,
-		kubeCl:        kubeCl,
+		kubeGetter:    kubeGetter,
 		commanderMode: commanderMode,
 	}
 }
@@ -114,7 +114,7 @@ func (h *HookForUpdatePipeline) BeforeAction(runner terraform.RunnerInterface) (
 		return false, fmt.Errorf("not all nodes are ready: %v", err)
 	}
 
-	err = lockRegistryDataDeviceMount(context.TODO(), h.kubeCl, h.nodeToConverge)
+	err = lockRegistryDataDeviceMount(context.TODO(), h.kubeGetter.KubeClient(), h.nodeToConverge)
 	if err != nil {
 		return false, fmt.Errorf("failed to lock registry data device mount: %v", err)
 	}
@@ -124,13 +124,13 @@ func (h *HookForUpdatePipeline) BeforeAction(runner terraform.RunnerInterface) (
 		return false, fmt.Errorf("failed to check is registry must be enable: %v", err)
 	}
 	if !isRegistryMustBeEnabled {
-		err = gracefulUnmountRegistryData(context.TODO(), h.kubeCl, h.nodeToConverge)
+		err = gracefulUnmountRegistryData(context.TODO(), h.kubeGetter.KubeClient(), h.nodeToConverge)
 		if err != nil {
 			return false, fmt.Errorf("failed to umount registry data device from node '%s': %v", h.nodeToConverge, err)
 		}
 	}
 
-	err = removeControlPlaneRoleFromNode(h.kubeCl, h.nodeToConverge)
+	err = removeControlPlaneRoleFromNode(h.kubeGetter.KubeClient(), h.nodeToConverge)
 	if err != nil {
 		return false, fmt.Errorf("failed to remove control plane role from node '%s': %v", h.nodeToConverge, err)
 	}
@@ -156,7 +156,7 @@ func (h *HookForUpdatePipeline) AfterAction(runner terraform.RunnerInterface) er
 	}
 
 	if !h.commanderMode {
-		cl := h.kubeCl.NodeInterfaceAsSSHClient()
+		cl := h.kubeGetter.KubeClient().NodeInterfaceAsSSHClient()
 		if cl == nil {
 			panic("Node interface is not ssh")
 		}
@@ -177,18 +177,18 @@ func (h *HookForUpdatePipeline) AfterAction(runner terraform.RunnerInterface) er
 		return fmt.Errorf("failed to save registry data device path: %v", err)
 	}
 
-	err = waitEtcdHasMember(h.kubeCl.KubeClient.(*flantkubeclient.Client), h.nodeToConverge)
+	err = waitEtcdHasMember(h.kubeGetter.KubeClient().KubeClient.(*flantkubeclient.Client), h.nodeToConverge)
 	if err != nil {
 		return fmt.Errorf("failed to wait for the master node '%s' to be listed as etcd cluster member: %v", h.nodeToConverge, err)
 	}
 
-	err = unlockRegistryDataDeviceMount(context.TODO(), h.kubeCl, h.nodeToConverge)
+	err = unlockRegistryDataDeviceMount(context.TODO(), h.kubeGetter.KubeClient(), h.nodeToConverge)
 	if err != nil {
 		return fmt.Errorf("failed to unlock registry data device mount: %v", err)
 	}
 
 	err = retry.NewLoop(fmt.Sprintf("Check the master node '%s' is ready", h.nodeToConverge), 45, 10*time.Second).Run(func() error {
-		ready, err := NewManagerReadinessChecker(h.kubeCl).IsReady(h.nodeToConverge)
+		ready, err := NewManagerReadinessChecker(h.kubeGetter).IsReady(h.nodeToConverge)
 		if err != nil {
 			return fmt.Errorf("failed to check the master node '%s' readiness: %v", h.nodeToConverge, err)
 		}
@@ -219,7 +219,7 @@ func (h *HookForUpdatePipeline) saveKubernetesDataDevicePath(devicePath string) 
 		Name:     `Secret "d8-masters-kubernetes-data-device-path"`,
 		Manifest: getDevicePathManifest,
 		CreateFunc: func(manifest interface{}) error {
-			_, err := h.kubeCl.CoreV1().Secrets("d8-system").Create(context.TODO(), manifest.(*apiv1.Secret), metav1.CreateOptions{})
+			_, err := h.kubeGetter.KubeClient().CoreV1().Secrets("d8-system").Create(context.TODO(), manifest.(*apiv1.Secret), metav1.CreateOptions{})
 			if err != nil {
 				return err
 			}
@@ -232,7 +232,7 @@ func (h *HookForUpdatePipeline) saveKubernetesDataDevicePath(devicePath string) 
 				return err
 			}
 
-			_, err = h.kubeCl.CoreV1().Secrets("d8-system").Patch(
+			_, err = h.kubeGetter.KubeClient().CoreV1().Secrets("d8-system").Patch(
 				context.TODO(),
 				"d8-masters-kubernetes-data-device-path",
 				types.MergePatchType,
@@ -266,7 +266,7 @@ func (h *HookForUpdatePipeline) saveSystemRegistryDataDevicePath(devicePath stri
 		Name:     `Secret "d8-masters-system-registry-data-device-path"`,
 		Manifest: getDevicePathManifest,
 		CreateFunc: func(manifest interface{}) error {
-			_, err := h.kubeCl.CoreV1().Secrets("d8-system").Create(context.TODO(), manifest.(*apiv1.Secret), metav1.CreateOptions{})
+			_, err := h.kubeGetter.KubeClient().CoreV1().Secrets("d8-system").Create(context.TODO(), manifest.(*apiv1.Secret), metav1.CreateOptions{})
 			if err != nil {
 				return err
 			}
@@ -279,7 +279,7 @@ func (h *HookForUpdatePipeline) saveSystemRegistryDataDevicePath(devicePath stri
 				return err
 			}
 
-			_, err = h.kubeCl.CoreV1().Secrets("d8-system").Patch(
+			_, err = h.kubeGetter.KubeClient().CoreV1().Secrets("d8-system").Patch(
 				context.TODO(),
 				"d8-masters-system-registry-data-device-path",
 				types.MergePatchType,

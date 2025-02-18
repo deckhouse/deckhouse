@@ -37,7 +37,7 @@ apiVersions:
         description: |
           Спецификация для описания NodeGroup master-узлов.
 
-          > Внимание. После изменения параметров секции `masterNodeGroup` необходимо выполнить команду `dhctl converge`, чтобы изменения вступили в силу.
+          > Чтобы изменения вступили в силу, после изменения параметров секции `masterNodeGroup` выполните команду `dhctl converge`.
         properties:
           replicas:
             description: |
@@ -155,7 +155,7 @@ apiVersions:
                   description: |
                     Аналогично полю `.spec.taints` из объекта [Node](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#taint-v1-core).
 
-                    > **Внимание.** Доступны только поля `effect`, `key`, `values`.
+                    > Доступны только поля `effect`, `key`, `values`.
                   x-doc-example: |
                     ```yaml
                     taints:
@@ -200,6 +200,8 @@ apiVersions:
                 Если значение, указанное в `replicas`, превышает количество элементов в словаре, узлы, чьи номера превышают длину словаря, получают значения, начиная с начала словаря. Если для словаря из примера указано `replicas: 5`, с типом диска `fast-eu-1a` будут worker-0, worker-2 и worker-4, а с типом диска `fast-eu-1b` будут worker-1 и worker-3.
 
                 > **Внимание.** Ограничение по зонам доступности работает только при использовании параметра `zones` (`nodeGroups.zones`). Если параметр `zones` не задан, будут использованы все зоны доступности.
+
+                Master-узлы будут создаваться в зонах в алфавитном порядке, указанных в этом параметре. Исходя из примера ниже, `master-0` будет создан в зоне `eu-1a`, `master-1` будет создан в зоне `eu-1b`, а `master-2` будет создан в зоне `eu-1a`.
 
                 Полезные команды:
                 - `openstack availability zone list` — получить список зон доступности.

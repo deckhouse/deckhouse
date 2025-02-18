@@ -25,6 +25,7 @@ import (
 
 	alerttemplates "tools/helm_generate/runners/alert_templates"
 	authzgeneraterulesforroles "tools/helm_generate/runners/authz_generate_rules_for_roles"
+	"tools/helm_generate/runners/conversion"
 )
 
 type Runner interface {
@@ -41,6 +42,7 @@ func run(args []string) error {
 	cmds := []Runner{
 		alerttemplates.NewImageChecks(),
 		authzgeneraterulesforroles.NewAuthzGenerate(),
+		conversion.NewConversion(),
 	}
 
 	subcommand := os.Args[1]

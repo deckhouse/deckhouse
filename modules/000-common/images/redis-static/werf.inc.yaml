@@ -39,5 +39,6 @@ import:
   add: /src/src/redis-server
   to: /redis-server
   before: setup
-docker:
-  ENTRYPOINT: ["/redis-server"]
+imageSpec:
+  config:
+    entrypoint: ["/redis-server"]

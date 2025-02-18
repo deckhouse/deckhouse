@@ -30,7 +30,8 @@ runs:
             "ee/modules",
             "ee/be/modules",
             "ee/se/modules",
-            "ee/fe/modules"
+            "ee/fe/modules",
+            "ee/se-plus/modules"
           ]
           const excludePatterns = [
             "^\\.",

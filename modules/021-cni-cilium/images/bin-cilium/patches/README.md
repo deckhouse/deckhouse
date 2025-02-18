@@ -24,3 +24,15 @@ Upstream issue <https://github.com/cilium/cilium/issues/23711>
 ## 004-go-mod.patch
 
 Update go.mod and tidy.
+
+## 005-ebpf-dhcp-server.patch
+
+Added DHCP server for pods (ebpf implementation).
+
+## 006-add-pod-prioroty-managment.patch
+
+Added a `network.deckhouse.io/pod-common-ip-priority` label allows you to share a single IP between  several Pods and to switch the actual owner.
+
+## 007-fix-restoring-cep-for-dead-local-endpoint.patch
+
+Fixed bug when agent uses CiliumEndpoint cache for dead local endpoints.

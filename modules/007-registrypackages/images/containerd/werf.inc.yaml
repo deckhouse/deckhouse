@@ -19,12 +19,9 @@ import:
   - uninstall
   - containerd.service
   before: setup
-docker:
-  LABEL:
-    distro: all
-    version: all
-    containerd: {{ $containerd_version }}
-    runc: {{ $runc_version }}
+imageSpec:
+  config:
+    labels: { "distro": "all", "version": "all", "containerd": "{{ $containerd_version }}", "runc": "{{ $runc_version }}" }
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact-{{ $image_version }}
 final: false

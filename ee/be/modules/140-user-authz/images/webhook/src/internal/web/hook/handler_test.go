@@ -615,7 +615,8 @@ func TestAuthorizeRequest(t *testing.T) {
 						},
 					},
 					preferredVersions: map[string]string{
-						"test": "v1",
+						"object2.test": "v1",
+						"object1.test": "v1",
 					},
 				},
 				directory: map[string]map[string]DirectoryEntry{
@@ -688,8 +689,8 @@ func (d *dummyCache) Get(api, key string) (bool, error) {
 	return d.data[api][key], nil
 }
 
-func (d *dummyCache) GetPreferredVersion(group string) (string, error) {
-	if v, ok := d.preferredVersions[group]; ok {
+func (d *dummyCache) GetPreferredVersion(group, resource string) (string, error) {
+	if v, ok := d.preferredVersions[fmt.Sprintf("%s.%s", resource, group)]; ok {
 		return v, nil
 	}
 

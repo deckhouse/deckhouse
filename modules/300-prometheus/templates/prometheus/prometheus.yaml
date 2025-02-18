@@ -8,6 +8,12 @@ cpu: 10m
 memory: 25Mi
 {{- end }}
 
+{{- define "toSeconds" -}}
+{{- $duration := . }}
+{{- $now := now }}
+{{- sub ($now | unixEpoch) ($now |  date_modify (printf "-%s" $duration) | unixEpoch) }}
+{{- end }}
+
 {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
 ---
 apiVersion: autoscaling.k8s.io/v1
@@ -135,6 +141,7 @@ spec:
 {{- end }}
   scrapeInterval: {{ .Values.prometheus.scrapeInterval | default "30s"}}
   evaluationInterval: {{ .Values.prometheus.scrapeInterval | default "30s" }}
+  minReadySeconds: {{ mul (include "toSeconds" .Values.prometheus.scrapeInterval) 2 }}
   # Empty field because when scraping metrics via the Federation API,
   # labels from externalLabels are being added,
   # which makes the series in long-term storage and regular Prometheus different
@@ -285,7 +292,7 @@ spec:
     fsGroup: 64535
   {{- include "helm_lib_node_selector" (tuple . "monitoring") | nindent 2 }}
   {{- include "helm_lib_tolerations" (tuple . "monitoring" "without-storage-problems") | nindent 2 }}
-  {{- include "helm_lib_priority_class" (tuple . "cluster-low") | nindent 2 }}
+  {{- include "helm_lib_priority_class" (tuple . "cluster-medium") | nindent 2 }}
 {{- $storageClass := .Values.prometheus.internal.prometheusMain.effectiveStorageClass }}
 {{- if $storageClass }}
   storage:

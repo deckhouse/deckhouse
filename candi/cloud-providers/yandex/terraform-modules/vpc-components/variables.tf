@@ -83,6 +83,11 @@ variable "labels" {
   type = map
 }
 
+variable "nat_instance_platform" {
+  type = string
+  default = ""
+}
+
 variable "resourceManagementTimeout" {
   type = string
   default = "10m"
