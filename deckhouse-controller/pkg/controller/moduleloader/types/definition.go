@@ -39,12 +39,17 @@ type Definition struct {
 	Subsystems   []string                     `yaml:"subsystems,omitempty"`
 	Namespace    string                       `yaml:"namespace,omitempty"`
 	Stage        string                       `yaml:"stage,omitempty"`
-	Description  string                       `yaml:"description,omitempty"`
+	Descriptions *ModuleDescriptions          `yaml:"descriptions,omitempty"`
 	Requirements *v1alpha1.ModuleRequirements `yaml:"requirements,omitempty"`
 
 	DisableOptions DisableOptions `yaml:"disable,omitempty"`
 
 	Path string `yaml:"-"`
+}
+
+type ModuleDescriptions struct {
+	Ru string `yaml:"ru,omitempty"`
+	En string `yaml:"en,omitempty"`
 }
 
 type DisableOptions struct {
