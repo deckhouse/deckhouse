@@ -1,7 +1,6 @@
 ---
 title: "Building a network gateway from Kubernetes nodes"
-permalink: ru/admin/network/building-network-gateway-from-nodes.html
-lang: ru
+permalink: en/admin/network/building-network-gateway-from-nodes.html
 ---
 
 In Deckhouse Kubernetes Platform, you can use the [`network-gateway`](#) module to build a network gateway out of Kubernetes nodes.
