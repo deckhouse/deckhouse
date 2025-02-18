@@ -242,19 +242,17 @@ cve-base-images-check-default-user: bin/trivy bin/jq ## Check CVE in our base im
 .PHONY: docs
 docs: ## Run containers with the documentation.
 	docker network inspect deckhouse 2>/dev/null 1>/dev/null || docker network create deckhouse
-	cd docs/documentation/; werf compose up --docker-compose-command-options='-d' --env local --repo ":local"
-	cd docs/site/; werf compose up --docker-compose-command-options='-d' --env local --repo ":local"
+	cd docs/documentation/; werf compose up --docker-compose-command-options='-d' --env local
+	cd docs/site/; werf compose up --docker-compose-command-options='-d' --env local
 	echo "Open http://localhost to access the documentation..."
 
 .PHONY: docs-dev
 docs-dev: ## Run containers with the documentation in the dev mode (allow uncommited files).
-	export WERF_REPO=:local
-	export SECONDARY_REPO=""
 	export DOC_API_URL=dev
 	export DOC_API_KEY=dev
 	docker network inspect deckhouse 2>/dev/null 1>/dev/null || docker network create deckhouse
-	cd docs/documentation/; werf compose up --docker-compose-command-options='-d' --dev --env development --repo ":local"
-	cd docs/site/; werf compose up --docker-compose-command-options='-d' --dev --env development --repo ":local"
+	cd docs/documentation/; werf compose up --docker-compose-command-options='-d' --dev --env development
+	cd docs/site/; werf compose up --docker-compose-command-options='-d' --dev --env development
 	echo "Open http://localhost to access the documentation..."
 
 .PHONY: docs-down
@@ -430,7 +428,7 @@ build: set-build-envs ## Build Deckhouse images.
   endif
 
 build-render: set-build-envs ## render werf.yaml for build Deckhouse images.
-	werf config render --dev
+	bin/werf config render --dev
 
 .PHONY: go-module-version
 go-module-version:
