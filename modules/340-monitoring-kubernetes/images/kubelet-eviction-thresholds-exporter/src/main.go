@@ -357,40 +357,37 @@ func getContainerdRootDir() (string, error) {
 }
 
 func getMountpoint(path string) (string, error) {
+	if ln, err := os.Readlink(path); err == nil {
+		path = ln
+	}
 
-    if ln, err := os.Readlink(path); err == nil {
-        path = ln
-    } else if err != nil {
-        return "", fmt.Errorf("failed to read symlink for path %s: %w", path, err)
-    }
+	pi, err := os.Stat(path)
+	if err != nil {
+		return "", fmt.Errorf("failed to get file info for path %s: %w", path, err)
+	}
 
-    pi, err := os.Stat(path)
-    if err != nil {
-        return "", fmt.Errorf("failed to get stat for path %s: %w", path, err)
-    }
+	dev := pi.Sys().(*syscall.Stat_t).Dev
 
-    dev := pi.Sys().(*syscall.Stat_t).Dev
+	for path != "/" {
+		_path := filepath.Dir(path)
 
-    for path != "/" {
-        _path := filepath.Dir(path)
-        _pi, err := os.Stat(_path)
-        if err != nil {
-            return "", fmt.Errorf("failed to get stat for path %s: %w", _path, err)
-        }
+		_pi, err := os.Stat(_path)
+		if err != nil {
+			return "", fmt.Errorf("failed to get file info for path %s: %w", _path, err)
+		}
 
-        if dev != _pi.Sys().(*syscall.Stat_t).Dev {
-            break
-        }
+		if dev != _pi.Sys().(*syscall.Stat_t).Dev {
+			break
+		}
 
-        path = _path
-    }
+		path = _path
+	}
 
-    if path == hostPath {
-        return "/", nil
-    }
+	if path == hostPath {
+		return "/", nil
+	}
 
-    mountpoint := strings.TrimPrefix(path, hostPath)
-    return mountpoint, nil
+	return strings.TrimPrefix(path, hostPath), nil
 }
 
 func getContainerRuntimeAndKubeletConfig() (string, *KubeletConfig, error) {
