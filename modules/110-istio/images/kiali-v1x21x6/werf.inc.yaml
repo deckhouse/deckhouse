@@ -6,11 +6,6 @@
 # Based on https://github.com/kiali/kiali/blob/v1.81.0/deploy/docker/Dockerfile-distroless
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/alt-p11
-# import:
-# - image: {{ .ModuleName }}/{{ .ImageName }}-binary-artifact
-#   add: /opt/kiali/
-#   to: /opt/kiali/
-#   before: install
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-backend-build-artifact
   add: /src/kiali/out/kiali
@@ -30,10 +25,6 @@ imageSpec:
     user: "1000"
     workingDir: "/opt/kiali"
     entrypoint: ["/opt/kiali/kiali"]
-# ---
-# image: {{ .ModuleName }}/{{ .ImageName }}-binary-artifact
-# from: quay.io/kiali/kiali:v1.81.0@sha256:c3d71c47a8f970b896b6cbf92718276bfc7205037f90155cdd37ee2fb57e8962
-# final: false
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-backend-build-artifact
 final: false

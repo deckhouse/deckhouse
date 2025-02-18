@@ -18,8 +18,8 @@ shell:
   - git apply --verbose /patches/istio-*.patch
   - rm -rf /src/istio/.git
   - git clone --depth 1 --branch {{ $kialiVersion }} {{ $.SOURCE_REPO }}/istio/kiali.git /src/kiali/
-  # - cd /src/kiali/
-  # - git apply --verbose /patches/kiali-*.patch
+  - cd /src/kiali/
+  - git apply --verbose /patches/kiali-*.patch
   - rm -rf /src/kiali/.git
 
   # getting rid of unused vulnerable code
