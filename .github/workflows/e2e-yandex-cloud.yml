@@ -167,32 +167,6 @@ jobs:
 
   # </template: git_info_job>
 
-
-  # </template: block-e2e-until-image-is-not-ready>
-  block-e2e-until-image-is-not-ready:
-    name: Block e2e until the docker image is not ready
-    runs-on: ubuntu-latest
-    if: ${{ github.event.pull_request.user.login != 'deckhouse-BOaTswain' }}
-    steps:
-      - uses: actions/checkout@v3.5.2
-      - name: Block e2e until the docker image is not ready
-        id: block-e2e
-        uses: actions/github-script@v6.4.1
-        with:
-          script: |
-            const branchName = context.payload.inputs.ci_commit_ref_name;
-            const prNum = context.payload.inputs.issue_number;
-            console.log(`Check build workflow is completed for branch: ${branchName} PR: ${context.payload.repository.html_url}/pull/${prNum}`);
-
-            const waitForWorkflowIsCompleted = require('./.github/scripts/js/validators/validate-workflow-is-ready')({ github, context, core });
-            try {
-                await waitForWorkflowIsCompleted(branchName, 'Build and test for dev branches');
-            } catch(error) {
-                core.setFailed(error);
-            }
-
-  # </template: block-e2e-until-image-is-not-ready>
-
   # <template: check_e2e_labels_job>
   check_e2e_labels:
     name: Check e2e labels
@@ -236,7 +210,6 @@ jobs:
     needs:
       - check_e2e_labels
       - git_info
-      - block-e2e-until-image-is-not-ready
     if: needs.check_e2e_labels.outputs.run_containerd_1_26 == 'true'
     outputs:
       ssh_master_connection_string: ${{ steps.check_stay_failed_cluster.outputs.ssh_master_connection_string }}
@@ -745,7 +718,6 @@ jobs:
     needs:
       - check_e2e_labels
       - git_info
-      - block-e2e-until-image-is-not-ready
     if: needs.check_e2e_labels.outputs.run_containerd_1_27 == 'true'
     outputs:
       ssh_master_connection_string: ${{ steps.check_stay_failed_cluster.outputs.ssh_master_connection_string }}
@@ -1254,7 +1226,6 @@ jobs:
     needs:
       - check_e2e_labels
       - git_info
-      - block-e2e-until-image-is-not-ready
     if: needs.check_e2e_labels.outputs.run_containerd_1_28 == 'true'
     outputs:
       ssh_master_connection_string: ${{ steps.check_stay_failed_cluster.outputs.ssh_master_connection_string }}
@@ -1763,7 +1734,6 @@ jobs:
     needs:
       - check_e2e_labels
       - git_info
-      - block-e2e-until-image-is-not-ready
     if: needs.check_e2e_labels.outputs.run_containerd_1_29 == 'true'
     outputs:
       ssh_master_connection_string: ${{ steps.check_stay_failed_cluster.outputs.ssh_master_connection_string }}
@@ -2272,7 +2242,6 @@ jobs:
     needs:
       - check_e2e_labels
       - git_info
-      - block-e2e-until-image-is-not-ready
     if: needs.check_e2e_labels.outputs.run_containerd_1_30 == 'true'
     outputs:
       ssh_master_connection_string: ${{ steps.check_stay_failed_cluster.outputs.ssh_master_connection_string }}
@@ -2781,7 +2750,6 @@ jobs:
     needs:
       - check_e2e_labels
       - git_info
-      - block-e2e-until-image-is-not-ready
     if: needs.check_e2e_labels.outputs.run_containerd_1_31 == 'true'
     outputs:
       ssh_master_connection_string: ${{ steps.check_stay_failed_cluster.outputs.ssh_master_connection_string }}
@@ -3290,7 +3258,6 @@ jobs:
     needs:
       - check_e2e_labels
       - git_info
-      - block-e2e-until-image-is-not-ready
     if: needs.check_e2e_labels.outputs.run_containerd_1_32 == 'true'
     outputs:
       ssh_master_connection_string: ${{ steps.check_stay_failed_cluster.outputs.ssh_master_connection_string }}
@@ -3799,7 +3766,6 @@ jobs:
     needs:
       - check_e2e_labels
       - git_info
-      - block-e2e-until-image-is-not-ready
     if: needs.check_e2e_labels.outputs.run_containerd_Automatic == 'true'
     outputs:
       ssh_master_connection_string: ${{ steps.check_stay_failed_cluster.outputs.ssh_master_connection_string }}
