@@ -14,7 +14,6 @@ import json
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import os
 import unittest
 from instance_class import main
 from deckhouse import hook, tests
