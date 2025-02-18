@@ -42,7 +42,6 @@ The `d8 d` and `d8 mirror` command groups are not available for Community Editio
 
 ## How do I install Deckhouse CLI?
 
-
 Starting from Deckhouse CLI 0.10 it can be installed using [trdl](https://trdl.dev/).
 
 {% alert %}
@@ -52,7 +51,7 @@ If you need to install one of the versions below 0.10, use the [outdated install
 {% endalert %}
 
 1. [Install trdl client](https://trdl.dev/quickstart.html#installing-the-client).
-   
+
 1. Add the Deckhouse CLI repository to trdl:
 
    ```bash
