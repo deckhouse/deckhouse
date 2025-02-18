@@ -32,8 +32,16 @@ function __on_conversion::v1alpha1_to_v1alpha2() {
     if .apiVersion == "deckhouse.io/v1alpha1" then
       .apiVersion = "deckhouse.io/v1alpha2" |
       if .spec.kubernetesPods.namespaceSelector then
-        .spec.kubernetesPods.namespaceSelector -= { matchNames: .spec.kubernetesPods.namespaceSelector.matchNames } |
-        .spec.kubernetesPods.namespaceSelector -= { excludeNames: .spec.kubernetesPods.namespaceSelector.excludeNames }
+        .spec.kubernetesPods.namespaceSelector.labelSelector = (
+          if .spec.kubernetesPods.namespaceSelector.matchNames then
+            { "matchExpressions": [{ "key": "kubernetes.io/metadata.name", "operator": "In", "values": .spec.kubernetesPods.namespaceSelector.matchNames }] }
+          else if .spec.kubernetesPods.namespaceSelector.excludeNames then
+            { "matchExpressions": [{ "key": "kubernetes.io/metadata.name", "operator": "NotIn", "values": .spec.kubernetesPods.namespaceSelector.excludeNames }] }
+          else
+            null
+          end
+        ) |
+        del(.spec.kubernetesPods.namespaceSelector.matchNames, .spec.kubernetesPods.namespaceSelector.excludeNames)
       else . end
     else . end
   )'); then
