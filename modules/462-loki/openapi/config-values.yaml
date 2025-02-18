@@ -50,7 +50,7 @@ properties:
       Interval to launch Loki's compaction mechanism along with force-expiration hook.
 
       During that compaction  (if `maxDiskUsageMegabytes` > 0), hook will check the current size of `common.path_prefix`.
-      As soon as the size of this dir exceeds the `maxDiskUsageMegabytes`, some of the old chunks being marked as expired and then deleted during the original Loki compaction iteration.
+      As soon as the size of this directory exceeds the `maxDiskUsageMegabytes`, some of the old chunks being marked as expired and then deleted during the original Loki compaction iteration.
       Quantity of chunks to delete depends on the space required to be free until the chunks dir size be lower than `maxDiskUsageMegabytes`
     x-doc-default: 300
     default: 300
