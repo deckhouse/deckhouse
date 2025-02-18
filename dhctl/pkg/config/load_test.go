@@ -165,7 +165,7 @@ one: test
 two: test
 three: test
 `,
-			true,
+			false,
 		},
 		{
 			"Without version",
