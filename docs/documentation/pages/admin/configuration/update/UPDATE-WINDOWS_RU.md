@@ -1,6 +1,6 @@
 ---
 title: Окна обновлений
-permalink: ru/admin/platform-update/update-windows.html
+permalink: ru/admin/configuration/update/update-windows.html
 lang: ru
 ---
 

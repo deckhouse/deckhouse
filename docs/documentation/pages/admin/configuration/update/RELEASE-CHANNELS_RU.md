@@ -1,6 +1,6 @@
 ---
 title: Каналы обновлений
-permalink: ru/admin/platform-update/release-channels.html
+permalink: ru/admin/configuration/update/release-channels.html
 lang: ru
 ---
 

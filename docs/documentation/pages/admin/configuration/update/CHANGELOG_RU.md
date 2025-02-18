@@ -1,6 +1,6 @@
 ---
 title: "Получение Changelog"
-permalink: ru/admin/platform-update/changelog/
+permalink: ru/admin/configuration/update/changelog.html
 lang: ru
 ---
 

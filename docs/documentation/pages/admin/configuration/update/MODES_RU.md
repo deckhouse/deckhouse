@@ -1,6 +1,6 @@
 ---
 title: Режимы обновлений
-permalink: ru/admin/platform-update/modes.html
+permalink: ru/admin/configuration/update/modes.html
 lang: ru
 ---
 

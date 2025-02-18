@@ -1,6 +1,6 @@
 ---
 title: Настройка автоматических оповещений
-permalink: ru/admin/platform-update/alerts.html
+permalink: ru/admin/configuration/update/alerts.html
 lang: ru
 ---
 

@@ -65,7 +65,35 @@ entries:
             - title:
                 en: Platform update
                 ru: Обновление платформы
-              url: /admin/platform-update.html
+              folders:
+                - title:
+                    en: Overview
+                    ru: Введение
+                  url: /admin/configuration/update/update/
+                - title:
+                    en: Alerts
+                    ru: Оповещения
+                  url: /admin/configuration/update/alerts.html
+                - title:
+                    en: Changelog
+                    ru: Список изменений
+                  url: /admin/configuration/update/changelog.html
+                - title:
+                    en: Update modes
+                    ru: Режимы обновлений
+                  url: /admin/configuration/update/modes.html
+                - title:
+                    en: Release channels
+                    ru: Каналы обновлений
+                  url: /admin/configuration/update/release-channels.html
+                - title:
+                    en: Update windows
+                    ru: Окна обновлений
+                  url: /admin/configuration/update/update-windows.html
+                - title:
+                    en: Versioning
+                    ru: Версионирование
+                  url: /admin/configuration/update/versioning.html
             - title:
                 en: High reliability and availability
                 ru: Высокая надежность и доступность
