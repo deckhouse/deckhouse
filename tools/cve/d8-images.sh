@@ -48,6 +48,18 @@ function __main__() {
   docker pull "$IMAGE:$TAG"
   digests=$(docker run --rm "$IMAGE:$TAG" cat /deckhouse/modules/images_digests.json)
 
+  # Additional images to scan
+  declare -a additional_images=("dev-registry.deckhouse.io/sys/deckhouse-oss" 
+                "dev-registry.deckhouse.io/sys/deckhouse-oss/install"
+                "dev-registry.deckhouse.io/sys/deckhouse-oss/install-standalone"
+                )
+  digests=$(cat digest.json)
+  for additional_image in "${additional_images[@]}"; do
+    additional_image_name=$(echo "$additional_image" | grep -o '[^/]*$')
+    additional_image_sha=$(docker manifest inspect $additional_image:$TAG | jq -r .config.digest)
+    digests=$(echo "$digests"|jq --arg i "$additional_image_name" --arg s "$additional_image_sha" '.deckhouse += {$i: $s}')
+  done
+
   IMAGE_REPORT_NAME="deckhouse::$(echo "$IMAGE:$TAG" | sed 's/^.*\/\(.*\)/\1/')"
   mkdir -p out/json
 
