@@ -153,10 +153,11 @@ func (cb *ContextBuilder) Build() (BashibleContextData, map[string][]byte, map[s
 			KubernetesCA:       cb.clusterInputData.KubernetesCA,
 			ModuleSourcesCA:    cb.moduleSourcesCA,
 		},
-		Registry:      cb.registryData,
-		Images:        cb.imagesDigests,
-		Proxy:         cb.clusterInputData.Proxy,
-		PackagesProxy: cb.clusterInputData.PackagesProxy,
+		Registry:       cb.registryData,
+		Images:         cb.imagesDigests,
+		Proxy:          cb.clusterInputData.Proxy,
+		PackagesProxy:  cb.clusterInputData.PackagesProxy,
+		SystemRegistry: cb.clusterInputData.SystemRegistry,
 	}
 
 	cb.clusterInputData.AllowedBundles = append(cb.clusterInputData.AllowedBundles, "common") // temporary hack for using single bundle boostrap for all bundles
@@ -212,6 +213,7 @@ func (cb *ContextBuilder) newBashibleContext(checksumCollector hash.Hash, bundle
 		Proxy:             cb.clusterInputData.Proxy,
 		CloudProviderType: cb.getCloudProvider(),
 		PackagesProxy:     cb.clusterInputData.PackagesProxy,
+		SystemRegistry:    cb.clusterInputData.SystemRegistry,
 	}
 
 	err := cb.generateBashibleChecksum(checksumCollector, bc, bundleNgContext, versionMap)
@@ -351,6 +353,12 @@ func (rid *registryInputData) FromMap(m map[string][]byte) {
 	if v, ok := m[".dockerconfigjson"]; ok {
 		rid.DockerConfig = v
 	}
+
+	if v, ok := m["registryMode"]; ok {
+		rid.RegistryMode = string(v)
+	} else {
+		rid.RegistryMode = "Direct"
+	}
 }
 
 func (rid registryInputData) toRegistry() registry {
@@ -375,12 +383,13 @@ func (rid registryInputData) toRegistry() registry {
 	}
 
 	return registry{
-		Address:   rid.Address,
-		Path:      rid.Path,
-		Scheme:    rid.Scheme,
-		CA:        rid.CA,
-		DockerCFG: rid.DockerConfig,
-		Auth:      auth,
+		Address:      rid.Address,
+		Path:         rid.Path,
+		Scheme:       rid.Scheme,
+		CA:           rid.CA,
+		DockerCFG:    rid.DockerConfig,
+		Auth:         auth,
+		RegistryMode: rid.RegistryMode,
 	}
 }
 
@@ -440,6 +449,8 @@ type bashibleContext struct {
 	Proxy             map[string]interface{}       `json:"proxy" yaml:"proxy"`
 	CloudProviderType string                       `json:"cloudProviderType" yaml:"cloudProviderType"`
 	PackagesProxy     map[string]interface{}       `json:"packagesProxy" yaml:"packagesProxy"`
+	SystemRegistry    map[string]interface{}       `json:"systemRegistry" yaml:"systemRegistry"`
+	RegistryMode      string                       `json:"registryMode" yaml:"registryMode"`
 }
 
 func (bc *bashibleContext) AddToChecksum(checksumCollector hash.Hash) error {
@@ -484,8 +495,10 @@ type tplContextCommon struct {
 	Images   map[string]map[string]string `json:"images" yaml:"images"`
 	Registry registry                     `json:"registry" yaml:"registry"`
 
-	Proxy         map[string]interface{} `json:"proxy,omitempty" yaml:"proxy,omitempty"`
-	PackagesProxy map[string]interface{} `json:"packagesProxy,omitempty" yaml:"packagesProxy,omitempty"`
+	Proxy          map[string]interface{} `json:"proxy,omitempty" yaml:"proxy,omitempty"`
+	PackagesProxy  map[string]interface{} `json:"packagesProxy,omitempty" yaml:"packagesProxy,omitempty"`
+	SystemRegistry map[string]interface{} `json:"systemRegistry,omitempty" yaml:"systemRegistry,omitempty"`
+	RegistryMode   string                 `json:"registryMode,omitempty" yaml:"registryMode,omitempty"`
 }
 
 type bundleNGContext struct {
@@ -521,12 +534,13 @@ type normal struct {
 }
 
 type registry struct {
-	Address   string `json:"address" yaml:"address"`
-	Path      string `json:"path" yaml:"path"`
-	Scheme    string `json:"scheme" yaml:"scheme"`
-	CA        string `json:"ca,omitempty" yaml:"ca,omitempty"`
-	DockerCFG []byte `json:"dockerCfg" yaml:"dockerCfg"`
-	Auth      string `json:"auth" yaml:"auth"`
+	Address      string `json:"address" yaml:"address"`
+	Path         string `json:"path" yaml:"path"`
+	Scheme       string `json:"scheme" yaml:"scheme"`
+	CA           string `json:"ca,omitempty" yaml:"ca,omitempty"`
+	DockerCFG    []byte `json:"dockerCfg" yaml:"dockerCfg"`
+	Auth         string `json:"auth" yaml:"auth"`
+	RegistryMode string `json:"registryMode" yaml:"registryMode"`
 }
 
 // input from secret
@@ -536,6 +550,7 @@ type registryInputData struct {
 	Scheme       string `json:"scheme" yaml:"scheme"`
 	CA           string `json:"ca,omitempty" yaml:"ca,omitempty"`
 	DockerConfig []byte `json:".dockerconfigjson" yaml:".dockerconfigjson"`
+	RegistryMode string `json:"registryMode" yaml:"registryMode"`
 }
 
 type dockerCfg struct {
@@ -553,6 +568,7 @@ type inputData struct {
 	Proxy              map[string]interface{} `json:"proxy,omitempty" yaml:"proxy,omitempty"`
 	BootstrapTokens    map[string]string      `json:"bootstrapTokens,omitempty" yaml:"bootstrapTokens,omitempty"`
 	PackagesProxy      map[string]interface{} `json:"packagesProxy,omitempty" yaml:"packagesProxy,omitempty"`
+	SystemRegistry     map[string]interface{} `json:"systemRegistry,omitempty" yaml:"systemRegistry,omitempty"`
 	APIServerEndpoints []string               `json:"apiserverEndpoints" yaml:"apiserverEndpoints"`
 	KubernetesCA       string                 `json:"kubernetesCA" yaml:"kubernetesCA"`
 	AllowedBundles     []string               `json:"allowedBundles" yaml:"allowedBundles"`

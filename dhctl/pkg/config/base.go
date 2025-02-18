@@ -65,6 +65,13 @@ func LoadConfigFromFile(paths []string, opts ...ValidateOption) (*MetaConfig, er
 		return nil, err
 	}
 
+	if !metaConfig.Registry.IsDirect() {
+		if metaConfig.Images["systemRegistry"] == nil {
+			return nil, fmt.Errorf("RegistryMode allowed only in Enterprise / Standard editions.\n" +
+				"Please remove mode from InitConfiguration, or set it to 'Direct'.")
+		}
+	}
+
 	err = metaConfig.LoadInstallerVersion()
 	if err != nil {
 		return nil, err
@@ -164,6 +171,11 @@ func parseConfigFromCluster(kubeCl *client.KubernetesClient) (*MetaConfig, error
 	}
 
 	if clusterType == CloudClusterType {
+		var cloud ClusterConfigCloudSpec
+		if err := json.Unmarshal(parsedClusterConfig["cloud"], &cloud); err != nil {
+			return nil, fmt.Errorf("unable to unmarshal cloud section from provider cluster configuration: %v", err)
+		}
+
 		providerClusterConfig, err := kubeCl.CoreV1().Secrets("kube-system").Get(context.TODO(), "d8-provider-cluster-configuration", metav1.GetOptions{})
 		if err != nil {
 			return nil, err
@@ -179,8 +191,17 @@ func parseConfigFromCluster(kubeCl *client.KubernetesClient) (*MetaConfig, error
 		if err := yaml.Unmarshal(providerClusterConfigData, &parsedProviderClusterConfig); err != nil {
 			return nil, err
 		}
-
 		metaConfig.ProviderClusterConfig = parsedProviderClusterConfig
+
+		// Read and validate provider secondary devices
+		if metaConfig.ProviderSecondaryDevicesConfig, err = NewProviderSecondaryDevicesConfigFromData(
+			providerClusterConfig.Data["cloud-provider-secondary-devices-configuration.yaml"],
+		); err != nil {
+			return nil, err
+		}
+		if err := metaConfig.ProviderSecondaryDevicesConfig.Validate(cloud.Provider); err != nil {
+			return nil, err
+		}
 	}
 
 	return metaConfig.Prepare()
