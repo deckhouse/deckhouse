@@ -63,68 +63,68 @@ spec:
       imagePullSecrets:
         - name: deckhouse-registry
       containers:
-      - name: multus
-        image: {{ include "helm_lib_module_image" (list . "multusCni") }}
-        command: [ "/usr/src/multus-cni/bin/multus-daemon" ]
-        resources:
-          requests:
-            cpu: "100m"
-            memory: "50Mi"
-          limits:
-            cpu: "100m"
-            memory: "50Mi"
-        securityContext:
-          privileged: true
-        terminationMessagePolicy: FallbackToLogsOnError
-        volumeMounts:
-          - name: cni
-            mountPath: /host/etc/cni/net.d
-          # multus-daemon expects that cnibin path must be identical between pod and container host.
-          # e.g. if the cni bin is in '/opt/cni/bin' on the container host side, then it should be mount to '/opt/cni/bin' in multus-daemon,
-          # not to any other directory, like '/opt/bin' or '/usr/bin'.
-          - name: cnibin
-            mountPath: /opt/cni/bin
-          - name: host-run
-            mountPath: /host/run
-          - name: host-var-lib-cni-multus
-            mountPath: /var/lib/cni/multus
-          - name: host-var-lib-kubelet
-            mountPath: /var/lib/kubelet
-            mountPropagation: HostToContainer
-          - name: host-run-k8s-cni-cncf-io
-            mountPath: /run/k8s.cni.cncf.io
-          - name: host-run-netns
-            mountPath: /run/netns
-            mountPropagation: HostToContainer
-          - name: multus-daemon-config
-            mountPath: /etc/cni/net.d/multus.d
-            readOnly: true
-          - name: hostroot
-            mountPath: /hostroot
-            mountPropagation: HostToContainer
-        env:
-          - name: MULTUS_NODE_NAME
-            valueFrom:
-              fieldRef:
-                fieldPath: spec.nodeName
-      initContainers:
-      - name: install-cni-binaries
-        image: {{ include "helm_lib_module_image" (list . "multusCni") }}
-        command:
-          - "cp"
-          - "/usr/src/multus-cni/bin/multus-shim"
-          - "/host/opt/cni/bin/multus-shim"
+        - name: multus
+          image: {{ include "helm_lib_module_image" (list . "multusCni") }}
+          command: [ "/usr/src/multus-cni/bin/multus-daemon" ]
           resources:
             requests:
-              cpu: "10m"
-              memory: "15Mi"
+              cpu: "100m"
+              memory: "50Mi"
+            limits:
+              cpu: "100m"
+              memory: "50Mi"
           securityContext:
             privileged: true
           terminationMessagePolicy: FallbackToLogsOnError
           volumeMounts:
+            - name: cni
+              mountPath: /host/etc/cni/net.d
+            # multus-daemon expects that cnibin path must be identical between pod and container host.
+            # e.g. if the cni bin is in '/opt/cni/bin' on the container host side, then it should be mount to '/opt/cni/bin' in multus-daemon,
+            # not to any other directory, like '/opt/bin' or '/usr/bin'.
             - name: cnibin
-              mountPath: /host/opt/cni/bin
-              mountPropagation: Bidirectional
+              mountPath: /opt/cni/bin
+            - name: host-run
+              mountPath: /host/run
+            - name: host-var-lib-cni-multus
+              mountPath: /var/lib/cni/multus
+            - name: host-var-lib-kubelet
+              mountPath: /var/lib/kubelet
+              mountPropagation: HostToContainer
+            - name: host-run-k8s-cni-cncf-io
+              mountPath: /run/k8s.cni.cncf.io
+            - name: host-run-netns
+              mountPath: /run/netns
+              mountPropagation: HostToContainer
+            - name: multus-daemon-config
+              mountPath: /etc/cni/net.d/multus.d
+              readOnly: true
+            - name: hostroot
+              mountPath: /hostroot
+              mountPropagation: HostToContainer
+          env:
+            - name: MULTUS_NODE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+      initContainers:
+        - name: install-cni-binaries
+          image: {{ include "helm_lib_module_image" (list . "multusCni") }}
+          command:
+            - "cp"
+            - "/usr/src/multus-cni/bin/multus-shim"
+            - "/host/opt/cni/bin/multus-shim"
+            resources:
+              requests:
+                cpu: "10m"
+                memory: "15Mi"
+            securityContext:
+              privileged: true
+            terminationMessagePolicy: FallbackToLogsOnError
+            volumeMounts:
+              - name: cnibin
+                mountPath: /host/opt/cni/bin
+                mountPropagation: Bidirectional
       restartPolicy: Always
       serviceAccountName: multus
       terminationGracePeriodSeconds: 10
