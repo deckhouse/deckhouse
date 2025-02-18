@@ -42,9 +42,17 @@ The `d8 d` and `d8 mirror` command groups are not available for Community Editio
 
 ## How do I install Deckhouse CLI?
 
-Deckhouse CLI is distributed and updated via [trdl](https://trdl.dev/). You should [install trdl client](https://trdl.dev/quickstart.html#installing-the-client) first.
+{% alert %}
+Please note that since version 0.10, installation **is available only via trdl**. If you have a version lower than 0.10 installed, then you must first uninstall it.
 
-After that is dealt with, add the Deckhouse CLI repository into trdl. Proceed with the following shell command:
+If you need to install one of the versions below 0.10, use the [outdated installation method](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.67/deckhouse-cli/#how-do-i-install-deckhouse-cli).
+{% endalert %}
+
+Deckhouse CLI is distributed and updated via [trdl](https://trdl.dev/).
+
+[Install trdl client](https://trdl.dev/quickstart.html#installing-the-client).
+
+Add the Deckhouse CLI repository to trdl by running the following command:
 
 ```bash
 URL=https://trrr.flant.dev/trdl-deckhouse-cli
@@ -55,7 +63,7 @@ REPO=trdl-deckhouse-cli
 trdl add $REPO $URL $ROOT_VERSION $ROOT_SHA512
 ```
 
-And install stable release using:
+Install stable release using:
 
 ```bash
 trdl update $REPO $ROOT_VERSION stable
