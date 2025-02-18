@@ -16,6 +16,7 @@ imageSpec:
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-dex-src-artifact
 fromImage: common/src-artifact
+fromCacheVersion: "2025-02-18.01"
 final: false
 git:
   - url: {{ $.SOURCE_REPO }}/dexidp/dex.git
