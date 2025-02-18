@@ -15,7 +15,7 @@ imageSpec:
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
 final: false
-from: {{ $.Images.BASE_GOLANG_20_BUSTER }}
+from: {{ $.Images.BASE_GOLANG_23_BUSTER }}
 git:
   - add: /{{ $.ModulePath }}modules/030-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
     to: /patches

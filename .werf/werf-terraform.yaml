@@ -66,14 +66,14 @@ shell:
 ---
 image: e2e-eks-terraform-plugins
 final: false
-from: {{ $.Images.BASE_GOLANG_21_ALPINE_DEV }}
+from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
 mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
 shell:
   beforeInstall:
-  - apk add --no-cache git openssh-client
-  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
+  {{- include "alpine packages proxy" . | nindent 2 }}
+  - apk add --no-cache git
   install:
   - export GOPROXY={{ $.GOPROXY }}
   - git clone --depth 1 --branch v3.4.3 {{ $.SOURCE_REPO }}/hashicorp/terraform-provider-random.git /src-provider-random
