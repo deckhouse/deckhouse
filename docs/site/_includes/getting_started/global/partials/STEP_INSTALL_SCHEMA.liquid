@@ -63,7 +63,9 @@ Scheme of Deckhouse installation in a private environment:<br />
    - HTTPS access to the `registry.deckhouse.io` container image registry;
 {%- endif %}
 {%- if page.platform_type == 'cloud' %}
-   - access to the API of the cloud provider, an account with rights to create resources, and a configured
+   - access to the API of the cloud provider, an account with rights to create resources
+     {%- unless page.platform_code == 'zvirt' %}
+     , and a configured
      {%- if page.platform_code == 'aws' %} [awscli](https://aws.amazon.com/cli/) utility
      {%- elsif page.platform_code == "gcp" %} [gcloud](https://cloud.google.com/sdk/docs/install) utility
      {%- elsif page.platform_code == "azure" %} [Azure CLI](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli) utility
@@ -71,7 +73,8 @@ Scheme of Deckhouse installation in a private environment:<br />
      {%- elsif page.platform_code == "openstack" %} management [utility](https://docs.openstack.org/newton/user-guide/common/cli-install-openstack-command-line-clients.html) via CLI
      {%- elsif page.platform_code == "vsphere" %} [govc](https://github.com/vmware/govmomi/tree/master/govc#installation) utility
      {%- else %} management utility via CLI
-     {%- endif %};
+     {%- endif %}
+     {%- endunless %}.
 {%- endif %}
 {%- if page.platform_type == "existing" %}
    - the `kubectl` command-line tool must be configured to communicate with your cluster.

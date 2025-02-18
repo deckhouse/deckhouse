@@ -121,7 +121,8 @@ function __main__() {
         -F "active=true" \
         -F "verified=true" \
         -F "scan_type=Trivy Scan" \
-        -F "close_old_findings=false" \
+        -F "close_old_findings=true" \
+        -F "do_not_reactivate=false" \
         -F "push_to_jira=false" \
         -F "file=@out/json/d8_${MODULE_NAME}_${IMAGE_NAME}_report.json" \
         -F "product_type_name=Deckhouse images" \

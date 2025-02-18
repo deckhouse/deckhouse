@@ -21,7 +21,7 @@
 {!{ end -}!}
 
 {!{- define "e2e_kubernetes_default_version" -}!}
-1.29
+1.30
 {!{- end -}!}
 
 # job for set e2e requirement status
@@ -336,6 +336,7 @@ check_e2e_labels:
     - check_e2e_labels
 {!{- end }!}
     - git_info
+    - block-e2e-until-image-is-not-ready
 {!{- if coll.Has $ctx "manualRun" }!}
   if: needs.check_e2e_labels.outputs.run_{!{ $ctx.cri }!}_{!{ $ctx.kubernetesVersionSlug }!} == 'true'
 {!{- end }!}

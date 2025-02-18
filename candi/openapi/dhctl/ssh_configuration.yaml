@@ -48,3 +48,7 @@ apiVersions:
         type: integer
       sshBastionUser:
         type: string
+      sudoPassword:
+        description: |
+          A sudo password for the user.
+        type: string

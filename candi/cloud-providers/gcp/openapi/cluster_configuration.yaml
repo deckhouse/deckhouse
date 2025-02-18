@@ -99,7 +99,7 @@ apiVersions:
         description: |
           Parameters of the master's NodeGroup.
 
-          > Caution! After changing the parameters of the section, you need to run `dhctl converge` for the changes to take effect.
+          > For the changes to take effect, run `dhctl converge` after modifying the parameters of the `masterNodeGroup` section.
         properties:
           replicas:
             type: integer
@@ -213,7 +213,10 @@ apiVersions:
                     type: string
                 taints:
                   type: array
-                  description: The same as the `.spec.taints` field of the Node object(https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#taint-v1-core). **CAUTION!** Only the `effect`, `key`, `values` fields are available
+                  description: |
+                    The same as the `.spec.taints` field of the Node object(https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#taint-v1-core).
+                    
+                    > Available fields: `effect`, `key`, and `values`.
                   items:
                     type: object
                     properties:

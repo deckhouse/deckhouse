@@ -42,7 +42,7 @@ func installExtraFiles() error {
 		return err
 	}
 
-	if err := os.MkdirAll(dstDir, 0700); err != nil {
+	if err := os.MkdirAll(dstDir, 0o700); err != nil {
 		return err
 	}
 
@@ -59,7 +59,7 @@ func installExtraFiles() error {
 			continue
 		}
 
-		if err := installFileIfChanged(filepath.Join(configPath, entry.Name()), filepath.Join(dstDir, strings.TrimPrefix(entry.Name(), "extra-file-")), 0600); err != nil {
+		if err := installFileIfChanged(filepath.Join(configPath, entry.Name()), filepath.Join(dstDir, strings.TrimPrefix(entry.Name(), "extra-file-")), 0o600); err != nil {
 			return err
 		}
 	}
@@ -78,8 +78,8 @@ func convergeComponents() error {
 
 func convergeComponent(componentName string) error {
 	log.Infof("converge component %s", componentName)
-
-	//remove checksum patch, if it was left from previous run
+	etcd := &EtcdClient{}
+	// remove checksum patch, if it was left from previous run
 	_ = os.Remove(filepath.Join(deckhousePath, "kubeadm", "patches", componentName+"999checksum.yaml"))
 
 	if err := prepareConverge(componentName, true); err != nil {
@@ -103,7 +103,6 @@ func convergeComponent(componentName string) error {
 	} else {
 		recreateConfig = true
 	}
-
 	if recreateConfig {
 		log.Infof("generate new manifest for %s", componentName)
 		if err := backupFile(filepath.Join(manifestsPath, componentName+".yaml")); err != nil {
@@ -116,7 +115,7 @@ func convergeComponent(componentName string) error {
 
 		_, err := os.Stat("/var/lib/etcd/member")
 		if componentName == "etcd" && err != nil {
-			if err := etcdJoinConverge(); err != nil {
+			if err := etcd.EtcdJoinConverge(); err != nil {
 				return err
 			}
 		} else {
@@ -141,6 +140,19 @@ func convergeComponent(componentName string) error {
 			return waitPodIsReady(componentName, checksum)
 		}
 		return err
+	}
+
+	// Handle the situation when etcd member remains in the learner state
+	if componentName == "etcd" {
+		etcd.client, err = etcd.NewEtcdClient()
+		if err != nil {
+			return err
+		}
+		defer etcd.client.Close()
+		err = etcd.PromoteMemberIfNeeded()
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -227,18 +239,7 @@ metadata:
 	log.Infof("write checksum patch for component %s", componentName)
 	patchFile := filepath.Join(deckhousePath, "kubeadm", "patches", componentName+"999checksum.yaml")
 	content := fmt.Sprintf(patch, componentName, checksum)
-	return os.WriteFile(patchFile, []byte(content), 0600)
-}
-
-func etcdJoinConverge() error {
-	// kubeadm -v=5 join phase control-plane-join etcd --config /etc/kubernetes/deckhouse/kubeadm/config.yaml
-	args := []string{"-v=5", "join", "phase", "control-plane-join", "etcd", "--config", deckhousePath + "/kubeadm/config.yaml"}
-	c := exec.Command(kubeadmPath, args...)
-	out, err := c.CombinedOutput()
-	for _, s := range strings.Split(string(out), "\n") {
-		log.Infof("%s", s)
-	}
-	return err
+	return os.WriteFile(patchFile, []byte(content), 0o600)
 }
 
 func waitPodIsReady(componentName string, checksum string) error {

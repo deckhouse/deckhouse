@@ -131,7 +131,7 @@ func newSchemaStore(schemasDir []string) *SchemaStore {
 	entries, err := os.ReadDir(modulesDir)
 	if err != nil {
 		// autoconverger and state exporter do not contains module dir
-		log.WarnF("Modules dir not found\n")
+		log.WarnF("Modules dir %s not found\n", modulesDir)
 		return st
 	}
 

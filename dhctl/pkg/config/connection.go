@@ -42,6 +42,7 @@ type SSHConfig struct {
 	SSHBastionHost      string               `json:"sshBastionHost,omitempty"`
 	SSHBastionPort      *int32               `json:"sshBastionPort,omitempty"`
 	SSHBastionUser      string               `json:"sshBastionUser,omitempty"`
+	SudoPassword        string               `json:"sudoPassword,omitempty"`
 }
 
 type SSHAgentPrivateKey struct {
@@ -162,9 +163,18 @@ func (ConnectionConfigParser) ParseConnectionConfigFromFile() error {
 		return fmt.Errorf("parsing ssh config from file: %w", err)
 	}
 
-	keys := make([]string, 0, len(cfg.SSHConfig.SSHAgentPrivateKeys))
+	keysPaths := make([]string, 0, len(cfg.SSHConfig.SSHAgentPrivateKeys))
 	for _, key := range cfg.SSHConfig.SSHAgentPrivateKeys {
-		keys = append(keys, key.Key)
+		f, err := os.CreateTemp(app.TmpDirName, "ssh-key-*")
+		if err != nil {
+			return fmt.Errorf("unable to create temp file: %w", err)
+		}
+
+		if _, err := f.Write([]byte(strings.TrimSpace(key.Key) + "\n")); err != nil {
+			return fmt.Errorf("unable to write temp file %s: %w", f.Name(), err)
+		}
+
+		keysPaths = append(keysPaths, f.Name())
 	}
 
 	hosts := make([]session.Host, 0, len(cfg.SSHHosts))
@@ -182,10 +192,11 @@ func (ConnectionConfigParser) ParseConnectionConfigFromFile() error {
 		port = strconv.Itoa(int(*cfg.SSHConfig.SSHPort))
 	}
 
-	app.SSHPrivateKeys = keys
+	app.SSHPrivateKeys = keysPaths
 	app.SSHBastionHost = cfg.SSHConfig.SSHBastionHost
 	app.SSHBastionPort = bastionPort
 	app.SSHBastionUser = cfg.SSHConfig.SSHBastionUser
+	app.BecomePass = cfg.SSHConfig.SudoPassword
 	app.SSHUser = cfg.SSHConfig.SSHUser
 	app.SSHHosts = hosts
 	app.SSHPort = port
