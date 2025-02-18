@@ -14,9 +14,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-set -Eeo pipefail
-shopt -s failglob
-
 source tools/cve/trivy-wrapper.sh
 
 # This script generates full CVE scan report for a Deckhouse release in `out/` directory in HTML format.
