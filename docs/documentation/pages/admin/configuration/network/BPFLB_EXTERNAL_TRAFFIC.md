@@ -1,6 +1,6 @@
 ---
 title: "Operation modes of bpfLB for external traffic processing"
-permalink: /admin/network/bpflb-external-traffic.html
+permalink: en/admin/network/bpflb-external-traffic.html
 ---
 
 You can use the [Cilium](#) module to configure the bpfLB (BPF Load Balancer) mode of operation in Deckhouse Kubernetes Platform.
