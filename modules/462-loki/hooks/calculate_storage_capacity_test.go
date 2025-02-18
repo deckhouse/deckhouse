@@ -65,8 +65,8 @@ spec:
 
 		It("must be executed successfully; loki disk size must be 50 GiB, threshold: 47.5 GiB", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("loki.internal.diskSize").Int()).To(Equal(50 << 30))
-			Expect(f.ValuesGet("loki.internal.cleanupThreshold").Int()).To(Equal(50 << 30 * 0.95))
+			Expect(f.ValuesGet("loki.internal.diskSize").Int()).To(Equal(int64(50 << 30)))
+			Expect(f.ValuesGet("loki.internal.cleanupThreshold").Int()).To(Equal(int64(50 << 30 * 0.95)))
 		})
 	})
 
@@ -78,8 +78,8 @@ spec:
 
 		It("must be executed successfully; loki disk size must be 70 GiB, retention must be 66.5 GiB", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("loki.internal.diskSize").Int()).To(Equal(70 << 30))
-			Expect(f.ValuesGet("loki.internal.cleanupThreshold").Int()).To(Equal(70 << 30 * 0.95))
+			Expect(f.ValuesGet("loki.internal.diskSize").Int()).To(Equal(int64(70 << 30)))
+			Expect(f.ValuesGet("loki.internal.cleanupThreshold").Int()).To(Equal(int64(70 << 30 * 0.95)))
 		})
 	})
 
@@ -92,8 +92,8 @@ spec:
 
 		It("must be executed successfully; loki disk size must be 70, retention must be 255; longterm disk size must be 300, retention must be 255", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("loki.internal.diskSize").Int()).To(Equal(70 << 30))
-			Expect(f.ValuesGet("loki.internal.cleanupThreshold").Int()).To(Equal(70<<30 - 128<<20*60*2))
+			Expect(f.ValuesGet("loki.internal.diskSize").Int()).To(Equal(int64(70 << 30)))
+			Expect(f.ValuesGet("loki.internal.cleanupThreshold").Int()).To(Equal(int64(70<<30 - 128<<20*60*2)))
 		})
 	})
 })
