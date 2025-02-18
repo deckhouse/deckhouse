@@ -21,6 +21,9 @@ final: false
 git:
   - add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches/
     to: /patches
+    stageDependencies:
+      install:
+        - '**/*'
   - url: {{ $.SOURCE_REPO }}/oauth2-proxy/oauth2-proxy.git
     to: /src
     tag: v7.5.1
