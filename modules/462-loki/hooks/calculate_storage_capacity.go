@@ -29,7 +29,7 @@ import (
 )
 
 const defaultDiskSize = 50 << 30 // 50 GiB
-const minFreePercent = 5
+const maxSpaceUtilization = 0.95
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	OnBeforeHelm: &go_hook.OrderedConfig{Order: 10},
@@ -97,11 +97,11 @@ func lokiDisk(input *go_hook.HookInput) error {
 		pvcSize = defaultDiskSize
 	}
 
-	threshold = uint64(ingestionRate*1024*1024) * 60 * 2 // Reserve twice size of WALs for a minute (checkpoint interval)
+	threshold = pvcSize - uint64(ingestionRate*1024*1024)*60*2 // Reserve twice size of WALs for a minute (checkpoint interval)
 
-	// if the reserved space is less than 5% of the total disk size, set it to 5%
-	if pvcSize-threshold < pvcSize/minFreePercent {
-		threshold = pvcSize / minFreePercent
+	// do not exceed 95% of the PVC size
+	if float64(threshold) < float64(pvcSize)*maxSpaceUtilization {
+		threshold = uint64(float64(pvcSize) * maxSpaceUtilization)
 	}
 
 	input.Values.Set("loki.internal.diskSize", pvcSize)
