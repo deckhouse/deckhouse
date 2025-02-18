@@ -106,8 +106,14 @@ func generateMetrics() error {
 		log.Fatal(err)
 	}
 
-	nodefsMountpoint := getMountpoint(filepath.Join(hostPath, kubeletRootDir))
-	imagefsMountpoint := getMountpoint(filepath.Join(hostPath, runtimeRootDir))
+	nodefsMountpoint, err := getMountpoint(filepath.Join(hostPath, kubeletRootDir))
+	if err != nil {
+		log.Printf("Error getting nodefs mountpoint: %s", err)
+	}
+	imagefsMountpoint, err := getMountpoint(filepath.Join(hostPath, runtimeRootDir))
+	if err != nil {
+		log.Printf("Error getting imagefs mountpoint: %s", err)
+	}
 
 	softEvictionMap := kubeletConfig.KubeletConfiguration.EvictionSoft
 	hardEvictionMap := kubeletConfig.KubeletConfiguration.EvictionHard
@@ -242,7 +248,7 @@ func getBytesAndInodeStatsFromPath(path string) (bytesTotal uint64, inodeTotal u
 
 	err = unix.Statfs(path, &stat)
     if err != nil {
-        return 0, 0, fmt.Errorf("Statfs on %s: %w", path, err)
+        return 0, 0, fmt.Errorf("statfs on %s: %w", path, err)
     }
 
 	bytesTotal = stat.Blocks * uint64(stat.Bsize)
@@ -254,14 +260,12 @@ func getBytesAndInodeStatsFromPath(path string) (bytesTotal uint64, inodeTotal u
 func getKubeletRootDir() (string, error) {
 	procs, err := process.Processes()
 	if err != nil {
-        log.Printf("Error getting processes: %s", err)
-		return "", err
+		return "", fmt.Errorf("error getting processes: %s", err)
 	}
 
 	for _, p := range procs {
 		cmdLine, err := p.CmdlineSlice()
 		if err != nil {
-            log.Printf("Error getting command line for process %d: %s", p.Pid, err)
 
 			// Skip errors, as they are likely due to the process having terminated
 			continue
@@ -341,53 +345,52 @@ func getDockerRootDir() (string, error) {
 func getContainerdRootDir() (string, error) {
 	containerdConfig, err := os.ReadFile("/etc/containerd/config.toml")
 	if err != nil {
-		log.Printf("Error reading containerd config: %s, using default /var/lib/containerd", err)
-		return "/var/lib/containerd", nil
+		return "/var/lib/containerd", fmt.Errorf("error reading containerd config: %s, using default /var/lib/containerd", err)
 	}
 
 	matches := containerdConfigRootDirRegex.FindSubmatch(containerdConfig)
 	if len(matches) != 2 {
-		log.Printf("Containerd config does not contain root dir option. Use default /var/lib/containerd")
-		return "/var/lib/containerd", nil
+		return "/var/lib/containerd", fmt.Errorf("containerd config does not contain root dir option, using default /var/lib/containerd")
 	}
 
 	return string(matches[1]), err
 }
 
-func getMountpoint(path string) string {
-	if ln, err := os.Readlink(path); err == nil {
-		path = ln
-	}
+func getMountpoint(path string) (string, error) {
 
-	pi, err := os.Stat(path)
-	if err != nil {
-        log.Printf("Error getting stat for path %s: %s", path, err)
-		return ""
-	}
+    if ln, err := os.Readlink(path); err == nil {
+        path = ln
+    } else if err != nil {
+        return "", fmt.Errorf("failed to read symlink for path %s: %w", path, err)
+    }
 
-	dev := pi.Sys().(*syscall.Stat_t).Dev
+    pi, err := os.Stat(path)
+    if err != nil {
+        return "", fmt.Errorf("failed to get stat for path %s: %w", path, err)
+    }
 
-	for path != "/" {
-		_path := filepath.Dir(path)
+    dev := pi.Sys().(*syscall.Stat_t).Dev
 
-		_pi, err := os.Stat(_path)
-		if err != nil {
-            log.Printf("Error getting stat for path %s: %s", _path, err)
-			return ""
-		}
+    for path != "/" {
+        _path := filepath.Dir(path)
+        _pi, err := os.Stat(_path)
+        if err != nil {
+            return "", fmt.Errorf("failed to get stat for path %s: %w", _path, err)
+        }
 
-		if dev != _pi.Sys().(*syscall.Stat_t).Dev {
-			break
-		}
+        if dev != _pi.Sys().(*syscall.Stat_t).Dev {
+            break
+        }
 
-		path = _path
-	}
+        path = _path
+    }
 
-	if path == hostPath {
-		return "/"
-	}
+    if path == hostPath {
+        return "/", nil
+    }
 
-	return strings.TrimPrefix(path, hostPath)
+    mountpoint := strings.TrimPrefix(path, hostPath)
+    return mountpoint, nil
 }
 
 func getContainerRuntimeAndKubeletConfig() (string, *KubeletConfig, error) {
