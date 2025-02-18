@@ -20,7 +20,7 @@ Local run can be achieved with emulator mode. Emulator mode is a mode when the a
 Install the migrator
 
 ```sh
-CGO_ENABLED=1 go install -tags 'sqlite3' github.com/golang-migrate/migrate/v4/cmd/migrate@v4.15
+CGO_ENABLED=1 go install -tags 'sqlite3' github.com/golang-migrate/migrate/v4/cmd/migrate@v4.18
 ```
 
 Prepare the database for agent and run the agent in emulator mode
