@@ -140,10 +140,10 @@ index 3c8b85ec3a503f4e55e6d9f9519d50be095565e4..a3ba20ea8540e645a8a365991d53443b
  			level.Error(util_log.Logger).Log("msg", "failed to run compaction", "err", err)
 diff --git a/pkg/storage/stores/indexshipper/compactor/force_expiration.go b/pkg/storage/stores/indexshipper/compactor/force_expiration.go
 new file mode 100644
-index 0000000000000000000000000000000000000000..429ecf8ef42c57a269f1756a5577efeb423c6310
+index 0000000000000000000000000000000000000000..bf855341ce3bf49b9fcfc86b65309949f7d1a903
 --- /dev/null
 +++ b/pkg/storage/stores/indexshipper/compactor/force_expiration.go
-@@ -0,0 +1,376 @@
+@@ -0,0 +1,383 @@
 +package compactor
 +
 +import (
@@ -387,6 +387,9 @@ index 0000000000000000000000000000000000000000..429ecf8ef42c57a269f1756a5577efeb
 +		if err != nil {
 +			return false, err
 +		}
++		if chkSize == 0 {
++			return false, nil
++		}
 +
 +		chunkID := strings.Clone(chunkIDValue)
 +		chunksToDelete = append(chunksToDelete, chunkID)
@@ -457,10 +460,14 @@ index 0000000000000000000000000000000000000000..429ecf8ef42c57a269f1756a5577efeb
 +
 +func evaluateFileSize(path string) (int64, error) {
 +	stat, err := os.Lstat(path)
-+	if err != nil {
++	switch {
++	case os.IsNotExist(err):
++		return 0, nil
++	case err != nil:
 +		return 0, err
++	default:
++		return stat.Size(), nil
 +	}
-+	return stat.Size(), nil
 +}
 +
 +// helper functions
