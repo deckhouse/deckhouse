@@ -43,25 +43,25 @@ entries:
             ru: Настройка
           folders:
             - title:
-                en: Access configuration
-                ru: Настройка доступа
+                en: Access
+                ru: Доступ
               folders:
                 - title:
                     en: Overview
                     ru: Введение
-                  url: /admin/access-overview.html
+                  url: /admin/configuration/access/
                 - title:
-                    en: Подключение
-                    ru: Connection
-                  url: /admin/connection.html
+                    en: Connection
+                    ru: Подключение
+                  url: /admin/configuration/access/connection.html
                 - title:
-                    en: Аутентификация
-                    ru: Authentication
-                  url: /admin/authentication.html
+                    en: Authentication
+                    ru: Аутентификация
+                  url: /admin/configuration/access/authentication.html
                 - title:
-                    en: Авторизация
-                    ru: Authorization
-                  url: /admin/authorization.html
+                    en: Authorization
+                    ru: Авторизация
+                  url: /admin/configuration/access/authorization.html
             - title:
                 en: Platform update
                 ru: Обновление платформы
@@ -165,11 +165,11 @@ entries:
                 - title:
                     en: Inter-cluster cooperation (alliance)
                     ru: Межкластерное взаимодействие (альянс)
-                  folders: 
+                  folders:
                     - title:
                         en: Overview
                         ru: Введение
-                      url: /admin/network/inter-cluster-cooperation-overview.html 
+                      url: /admin/network/inter-cluster-cooperation-overview.html
                     - title:
                         en: Multicluster
                         ru: Мультикластер
