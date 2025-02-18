@@ -100,7 +100,7 @@ func lokiDisk(input *go_hook.HookInput) error {
 	threshold = pvcSize - uint64(ingestionRate*1024*1024)*60*2 // Reserve twice size of WALs for a minute (checkpoint interval)
 
 	// do not exceed 95% of the PVC size
-	if float64(threshold) < float64(pvcSize)*maxSpaceUtilization {
+	if float64(threshold) > float64(pvcSize)*maxSpaceUtilization {
 		threshold = uint64(float64(pvcSize) * maxSpaceUtilization)
 	}
 
