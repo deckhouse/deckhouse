@@ -461,7 +461,7 @@ You need to use the Proxy Cache feature of a [Harbor](https://github.com/goharbo
 
 Thus, Deckhouse images will be available at `https://your-harbor.com/d8s/deckhouse/ee:{d8s-version}`.
 
-### Manually uploading Deckhouse Kubernetes Platform, vulnerability scanner DB, and Deckhouse modules to private registry
+### Manually uploading Deckhouse Kubernetes Platform, vulnerability scanner DB and Deckhouse modules to private registry
 
 {% alert level="warning" %}
 The `d8 mirror` command group is not available for Community Edition (CE) and Basic Edition (BE).
