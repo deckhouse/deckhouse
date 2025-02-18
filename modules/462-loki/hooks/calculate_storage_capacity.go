@@ -78,7 +78,7 @@ func persistentVolumeClaimFilter(obj *unstructured.Unstructured) (go_hook.Filter
 }
 
 func lokiDisk(input *go_hook.HookInput) error {
-	var pvcSize, threshold uint64
+	var pvcSize, cleanupThreshold uint64
 
 	ingestionRate := input.Values.Get("loki.lokiConfig.ingestionRateMB").Float()
 
@@ -97,15 +97,15 @@ func lokiDisk(input *go_hook.HookInput) error {
 		pvcSize = defaultDiskSize
 	}
 
-	threshold = pvcSize - uint64(ingestionRate*1024*1024)*60*2 // Reserve twice size of WALs for a minute (checkpoint interval)
+	cleanupThreshold = pvcSize - uint64(ingestionRate*1024*1024)*60*2 // Reserve twice size of WALs for a minute (checkpoint interval)
 
 	// do not exceed 95% of the PVC size
-	if float64(threshold) > float64(pvcSize)*maxSpaceUtilization {
-		threshold = uint64(float64(pvcSize) * maxSpaceUtilization)
+	if float64(cleanupThreshold) > float64(pvcSize)*maxSpaceUtilization {
+		cleanupThreshold = uint64(float64(pvcSize) * maxSpaceUtilization)
 	}
 
-	input.Values.Set("loki.internal.diskSize", pvcSize)
-	input.Values.Set("loki.internal.cleanupThreshold", threshold)
+	input.Values.Set("loki.internal.pvcSize", pvcSize)
+	input.Values.Set("loki.internal.cleanupThreshold", cleanupThreshold)
 
 	// remove deprecated parameters from configmap to further remove them from the openapi spec
 	if input.ConfigValues.Exists("loki.diskSizeGigabytes") {

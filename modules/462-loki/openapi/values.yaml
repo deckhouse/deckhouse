@@ -18,7 +18,7 @@ properties:
       logShipperToken:
         type: string
         default: ""
-      diskSize:
+      pvcSize:
         type: integer
         default: 0
       cleanupThreshold:
