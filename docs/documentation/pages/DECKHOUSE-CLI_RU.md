@@ -43,13 +43,17 @@ Deckhouse CLI — это интерфейс командной строки дл
 
 ## Как установить Deckhouse CLI
 
-Утилита Deckhouse CLI доступна [в trdl](https://ru.trdl.dev/). Сначала необходимо [установить клиент trdl](https://ru.trdl.dev/quickstart.html#%D1%83%D1%81%D1%82%D0%B0%D0%BD%D0%BE%D0%B2%D0%BA%D0%B0-%D0%BA%D0%BB%D0%B8%D0%B5%D0%BD%D1%82%D0%B0).
+Утилита Deckhouse CLI доступна [в trdl](https://ru.trdl.dev/).
 
 {% alert %}
-Обратите внимание, что с версии 0.10 доступна установка **только через trdl**. Если у вас установлена версия ниже 0.10, то её необходимо предварительно удалить. 
+Обратите внимание, что с версии 0.10 доступна установка **только через trdl**. Если у вас установлена версия ниже 0.10, то её необходимо предварительно удалить.
+
+Если вам нужно установить одну из версий ниже 0.10, воспользуйтесь [устаревшим способом установки](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.67/deckhouse-cli/#how-do-i-install-deckhouse-cli).
 {% endalert %}
 
-После этого добавьте репозиторий Deckhouse CLI в trdl. Выполните следующую команду:
+Установите [клиент trdl](https://ru.trdl.dev/quickstart.html#%D1%83%D1%81%D1%82%D0%B0%D0%BD%D0%BE%D0%B2%D0%BA%D0%B0-%D0%BA%D0%BB%D0%B8%D0%B5%D0%BD%D1%82%D0%B0).
+
+Добавьте репозиторий Deckhouse CLI в trdl, выполнив следующую команду:
 
 ```bash
 URL=https://trrr.flant.dev/trdl-deckhouse-cli
@@ -60,13 +64,13 @@ REPO=trdl-deckhouse-cli
 trdl add $REPO $URL $ROOT_VERSION $ROOT_SHA512
 ```
 
-И установите актуальный стабильный релиз:
+Установите актуальный стабильный релиз:
 
 ```bash
 trdl update $REPO $ROOT_VERSION stable
 ```
 
-Проверьте что исполняемый файл `d8` установлен и работоспособен:
+Убедитесь, что исполняемый файл `d8` установлен и работоспособен:
 
 ```bash
 . $(trdl use $REPO $ROOT_VERSION stable) && d8 --version
