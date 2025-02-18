@@ -21,3 +21,6 @@ shell:
   - cd /src/kiali/
   - git apply --verbose /patches/kiali-*.patch
   - rm -rf /src/kiali/.git
+
+  # getting rid of unused vulnerable code
+  - rm -rf /src/istio/samples
