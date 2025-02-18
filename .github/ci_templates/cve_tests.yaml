@@ -28,7 +28,6 @@
     TRIVY_DB_URL: ${{secrets.DECKHOUSE_REGISTRY_HOST}}/deckhouse/fe/security/trivy-db:2 
     TRIVY_JAVA_DB_URL: ${{secrets.DECKHOUSE_REGISTRY_HOST}}/deckhouse/fe/security/trivy-java-db:1
     TRIVY_POLICY_URL: ${{secrets.DECKHOUSE_REGISTRY_HOST}}/deckhouse/fe/security/trivy-bdu:1
-    DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
   run: |
     echo "⚓️ 🏎 Running Deckhouse images CVE tests on ${TAG}..."
     make cve-report
