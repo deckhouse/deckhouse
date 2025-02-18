@@ -1,3 +1,4 @@
+---
 {{- define "multus_resources" }}
 cpu: 50m
 memory: 100Mi
@@ -114,17 +115,17 @@ spec:
             - "cp"
             - "/usr/src/multus-cni/bin/multus-shim"
             - "/host/opt/cni/bin/multus-shim"
-            resources:
-              requests:
-                cpu: "10m"
-                memory: "15Mi"
-            securityContext:
-              privileged: true
-            terminationMessagePolicy: FallbackToLogsOnError
-            volumeMounts:
-              - name: cnibin
-                mountPath: /host/opt/cni/bin
-                mountPropagation: Bidirectional
+          resources:
+            requests:
+              cpu: "10m"
+              memory: "15Mi"
+          securityContext:
+            privileged: true
+          terminationMessagePolicy: FallbackToLogsOnError
+          volumeMounts:
+            - name: cnibin
+              mountPath: /host/opt/cni/bin
+              mountPropagation: Bidirectional
       restartPolicy: Always
       serviceAccountName: multus
       terminationGracePeriodSeconds: 10
