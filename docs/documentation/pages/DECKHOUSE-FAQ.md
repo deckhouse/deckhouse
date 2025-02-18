@@ -489,7 +489,7 @@ Check [releases.deckhouse.io](https://releases.deckhouse.io) for the current sta
    where:
    - `<EDITION>` — the edition code of the Deckhouse Kubernetes Platform (for example, `ee`, `se`, `cse`);
    - `<LICENSE_KEY>` — Deckhouse Kubernetes Platform license key.
-   - `/home/user/d8-bundle` — Directory to store the resulting bundle into. It will be created if not present.
+   - `/home/user/d8-bundle` — the directory to store the resulting bundle into. It will be created if not present.
 
    > If the loading of images is interrupted, rerunning the command will resume the loading if no more than a day has passed since it stopped.
 
@@ -502,7 +502,7 @@ Check [releases.deckhouse.io](https://releases.deckhouse.io) for the current sta
    - `--deckhouse-tag` — to download only a specific build of Deckhouse (without considering update channels). This parameter cannot be used simultaneously with the `--since-version` parameter;
    - `--include-module` / `-i` = `name[@X.Y.Z]` — to download only a specific whitelist of modules (and optionally their minimal versions). Specify multiple times to whitelist more modules. This flags are ignored if used with `--no-modules`.
    - `--exclude-module` / `-e` = `name` — to skip downloading of a specific blacklisted set of modules. Specify multiple times to blacklist more modules. Ignored if `--no-modules` or `--include-module` are used.
-   - `--modules-path-suffix` — to change the suffix of the module repository path in the main Deckhouse repository. By default, the suffix is `/modules`. (for example, the full path to the repository with modules will look like `registry.deckhouse.ru/deckhouse/EDITION/modules` with this default).
+   - `--modules-path-suffix` — to change the suffix of the module repository path in the main Deckhouse repository. By default, the suffix is `/modules`. (for example, the full path to the repository with modules will look like `registry.deckhouse.io/deckhouse/EDITION/modules` with this default).
    - `--gost-digest` — for calculating the checksums of the bundle in the format of GOST R 34.11-2012 (Streebog). The checksum for each package will be displayed and written to a file with the extension `.tar.gostsum` in the folder with the package;
    - `--source` — to specify the address of the Deckhouse source registry;
       - To authenticate in the official Deckhouse image registry, you need to use a license key and the `--license` parameter;
@@ -605,7 +605,7 @@ Check [releases.deckhouse.io](https://releases.deckhouse.io) for the current sta
 ### How do I switch a running Deckhouse cluster to use a third-party registry?
 
 {% alert level="warning" %}
-Using a registry other than `registry.deckhouse.io` and `registry.deckhouse.ru` is only available in the Enterprise Edition.
+Using a registry other than `registry.deckhouse.io` is only available in the Enterprise Edition.
 {% endalert %}
 
 To switch the Deckhouse cluster to using a third-party registry, follow these steps:
@@ -787,7 +787,7 @@ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-con
 ### How to switch Deckhouse EE to CE?
 
 {% alert level="warning" %}
-The instruction implies using the public address of the container registry: `registry.deckhouse.io`. Using a registry other than `registry.deckhouse.io` and `registry.deckhouse.ru` is only available in the Enterprise Edition.
+The instruction implies using the public address of the container registry: `registry.deckhouse.io`. Using a registry other than `registry.deckhouse.io` is only available in the Enterprise Edition.
 {% endalert %}
 
 {% alert level="warning" %}
@@ -1259,7 +1259,7 @@ Follow this steps to switch a Deckhouse Community Edition to Enterprise Edition 
 1. Apply the Deckhouse EE image. Enter the latest version of Deckhouse into the <DECKHOUSE_VERSION> variable:
 
    ```shell
-   kubectl -n d8-system exec svc/deckhouse-leader -c deckhouse -- kubectl -n d8-system set image deployment/deckhouse deckhouse=registry.deckhouse.ru/deckhouse/ee:<DECKHOUSE_VERSION>
+   kubectl -n d8-system exec svc/deckhouse-leader -c deckhouse -- kubectl -n d8-system set image deployment/deckhouse deckhouse=registry.deckhouse.io/deckhouse/ee:<DECKHOUSE_VERSION>
    ```
 
 1. Wait for the Deckhouse pod to become `Ready` and for [all the queued jobs to complete](https://deckhouse.io/products/kubernetes-platform/documentation/latest/deckhouse-faq.html#how-to-check-the-job-queue-in-deckhouse). If an `ImagePullBackOff` error is generated in the process, wait for the pod to be restarted automatically.
@@ -1280,7 +1280,7 @@ Follow this steps to switch a Deckhouse Community Edition to Enterprise Edition 
 
    ```shell
    kubectl get pods -A -o json | jq -r '.items[] | select(.spec.containers[]
-      | select(.image | contains("deckhouse.ru/deckhouse/ce"))) | .metadata.namespace + "\t" + .metadata.name' | sort | uniq
+      | select(.image | contains("deckhouse.io/deckhouse/ce"))) | .metadata.namespace + "\t" + .metadata.name' | sort | uniq
    ```
 
 1. Purge temporary files, `NodeGroupConfiguration` resource, and variables:
