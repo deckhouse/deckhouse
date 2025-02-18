@@ -83,8 +83,8 @@ entries:
                 ru: Сеть
               folders:
                 - title:
-                    en: General network settings information in DKP
-                    ru: Общие сведения о настройках сети в DKP
+                    en: Overview
+                    ru: Введение
                   url: /admin/network/overview.html
                 - title:
                     en: Internal network
@@ -193,11 +193,11 @@ entries:
                 - title:
                     en: Inter-cluster cooperation (alliance)
                     ru: Межкластерное взаимодействие (альянс)
-                  folders: 
+                  folders:
                     - title:
                         en: Overview
                         ru: Введение
-                      url: /admin/network/inter-cluster-cooperation-overview.html 
+                      url: /admin/network/inter-cluster-cooperation-overview.html
                     - title:
                         en: Multicluster
                         ru: Мультикластер
