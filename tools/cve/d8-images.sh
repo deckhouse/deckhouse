@@ -57,6 +57,7 @@ function __main__() {
     additional_image_name=$(echo "$additional_image" | grep -o '[^/]*$')
     echo "additional_image_name: $additional_image_name"
     additional_image_sha=$(docker manifest inspect "$additional_image:$TAG" | jq -r .config.digest)
+    echo "getting hash of: "$additional_image:$TAG""
     echo "additional_image_sha: $additional_image_sha"
     digests=$(echo "$digests"|jq --arg i "$additional_image_name" --arg s "$additional_image_sha" '.deckhouse += { ($i): ($s) }')
   done
