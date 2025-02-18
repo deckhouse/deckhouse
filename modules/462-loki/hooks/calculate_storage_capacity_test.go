@@ -90,7 +90,7 @@ spec:
 			f.RunHook()
 		})
 
-		It("must be executed successfully; loki disk size must be 70, retention must be 255; longterm disk size must be 300, retention must be 255", func() {
+		It("must be executed successfully; loki disk size must be 70, retention must be 55 GiB", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet("loki.internal.diskSize").Int()).To(Equal(int64(70 << 30)))
 			Expect(f.ValuesGet("loki.internal.cleanupThreshold").Int()).To(Equal(int64(70<<30 - 128<<20*60*2)))
