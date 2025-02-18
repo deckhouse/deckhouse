@@ -161,8 +161,8 @@ defaults:
   - scope:
       path: "*/030-cloud-provider-huaweicloud"
       type: "pages"
-    values:  
-      d8Revision: ee    
+    values:
+      d8Revision: ee
   - scope:
       path: "*/462-loki"
       type: "pages"
