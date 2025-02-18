@@ -1,5 +1,5 @@
 diff --git a/go.mod b/go.mod
-index 8d25423d6..8195dd661 100644
+index 8d25423d6..dbe16bae2 100644
 --- a/go.mod
 +++ b/go.mod
 @@ -1,6 +1,6 @@
@@ -10,7 +10,7 @@ index 8d25423d6..8195dd661 100644
  
  require (
  	github.com/NYTimes/gziphandler v1.1.1
-@@ -23,8 +23,8 @@ require (
+@@ -23,11 +23,11 @@ require (
  	go.opentelemetry.io/otel/sdk v1.22.0
  	go.opentelemetry.io/otel/trace v1.22.0
  	golang.org/x/exp v0.0.0-20231006140011-7918f672742d
@@ -20,7 +20,11 @@ index 8d25423d6..8195dd661 100644
 +	golang.org/x/sync v0.10.0
  	google.golang.org/genproto/googleapis/api v0.0.0-20231002182017-d307bd883b97
  	google.golang.org/grpc v1.60.1
- 	google.golang.org/protobuf v1.32.0
+-	google.golang.org/protobuf v1.32.0
++	google.golang.org/protobuf v1.33.0
+ 	gopkg.in/square/go-jose.v2 v2.5.1
+ 	gopkg.in/yaml.v2 v2.4.0
+ 	istio.io/api v0.0.0-20230524015941-fa6c5f7916bf
 @@ -73,11 +73,11 @@ require (
  	github.com/vjeantet/grok v1.0.0 // indirect
  	go.opentelemetry.io/otel/metric v1.22.0 // indirect
