@@ -20,7 +20,7 @@ from datetime import datetime
 # Env vars
 defectdojo_host = os.getenv('DEFECTDOJO_HOST')
 defectdojo_token = os.getenv('DEFECTDOJO_API_TOKEN')
-days_to_keep = os.getenv('DEFECTDOJO_DEV_TESTS_ROTATION_DAYS', 7)
+days_to_keep = int(os.getenv('DEFECTDOJO_DEV_TESTS_ROTATION_DAYS', 7))
 
 # Static vars
 defectdojo_proto = "https://"

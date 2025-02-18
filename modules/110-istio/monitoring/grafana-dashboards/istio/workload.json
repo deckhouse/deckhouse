@@ -2512,7 +2512,7 @@
         "refresh": 1,
         "regex": "/.*_namespace=\"([^\"]*).*/",
         "skipUrlSync": false,
-        "sort": 0,
+        "sort": 1,
         "tagValuesQuery": "",
         "tags": [],
         "tagsQuery": "",

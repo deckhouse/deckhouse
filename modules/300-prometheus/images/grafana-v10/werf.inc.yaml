@@ -1,5 +1,5 @@
 ---
-{{ $grafanaVersion := "10.4.14" }}
+{{ $grafanaVersion := "10.4.15" }}
 {{ $bundledPlugins := "petrslavotinek-carpetplot-panel,vonage-status-panel,btplc-status-dot-panel,natel-plotly-panel,savantly-heatmap-panel,grafana-piechart-panel,grafana-worldmap-panel" }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-files
@@ -164,18 +164,9 @@ import:
   add: /var/log/grafana/
   to: /var/log/grafana
   before: install
-docker:
-  ENV:
-    PATH: "/usr/share/grafana/bin:$PATH"
-    GF_PATHS_CONFIG: "/etc/grafana/grafana.ini"
-    GF_PATHS_DATA: "/var/lib/grafana"
-    GF_PATHS_HOME: "/usr/share/grafana"
-    GF_PATHS_LOGS: "/var/log/grafana"
-    GF_PATHS_PLUGINS: "/usr/share/grafana/plugins-bundled"
-    GF_PATHS_PROVISIONING: "/etc/grafana/provisioning"
-    BUNDLED_PLUGINS_PATH: "${GF_PATHS_PLUGINS}"
-  WORKDIR: $GF_PATHS_HOME
-  EXPOSE:
-  - "3000"
-  ENTRYPOINT:
-  - "entrypoint"
+imageSpec:
+  config:
+    entrypoint: ["/usr/local/bin/entrypoint"]
+    workingDir: "/usr/share/grafana"
+    env: { "PATH": "/usr/share/grafana/bin:$PATH", "GF_PATHS_CONFIG": "/etc/grafana/grafana.ini", "GF_PATHS_DATA": "/var/lib/grafana", "GF_PATHS_HOME": "/usr/share/grafana", "GF_PATHS_LOGS": "/var/log/grafana", "GF_PATHS_PLUGINS": "/usr/share/grafana/plugins-bundled", "GF_PATHS_PROVISIONING": "/etc/grafana/provisioning", "BUNDLED_PLUGINS_PATH": "${GF_PATHS_PLUGINS}" }
+    expose: ["3000"]

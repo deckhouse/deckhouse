@@ -6,9 +6,9 @@ import:
     add: /constraint_exporter
     to: /constraint_exporter
     before: setup
-docker:
-  ENTRYPOINT: [ "/constraint_exporter" ]
-  USER: deckhouse:deckhouse
+imageSpec:
+  config:
+    entrypoint: [ "/constraint_exporter" ]
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 fromImage: common/src-artifact

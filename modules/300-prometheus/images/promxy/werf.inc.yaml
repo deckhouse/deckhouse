@@ -2,6 +2,7 @@
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 fromImage: common/src-artifact
+final: false
 git:
 - add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/patches
   to: /patches
@@ -42,5 +43,6 @@ import:
     add: /src/promxy
     to: /app/promxy
     after: setup
-docker:
-  ENTRYPOINT: ["/app/promxy"]
+imageSpec:
+  config:
+    entrypoint: ["/app/promxy"]

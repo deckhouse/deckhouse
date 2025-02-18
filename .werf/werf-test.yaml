@@ -71,14 +71,9 @@ shell:
     - find /deckhouse/modules/* -type f -name '*.go' -exec sed -E -i 's|github.com/deckhouse/deckhouse/{{ $edition.modulesDir }}|github.com/deckhouse/deckhouse/modules|g' {} +
       {{- end }}
       {{- end }}
-
-docker:
-  ENV:
-    ADDON_OPERATOR_NAMESPACE: tests
-    DECKHOUSE_POD: tests
-    MODULES_DIR: /deckhouse/modules
-    GLOBAL_HOOKS_DIR: /deckhouse/global-hooks
-    PATH: ${PATH}:/usr/local/go/bin:/root/go/bin
+imageSpec:
+  config:
+    env: { "ADDON_OPERATOR_NAMESPACE": "tests", "DECKHOUSE_POD": "tests", "MODULES_DIR": "/deckhouse/modules", "GLOBAL_HOOKS_DIR": "/deckhouse/global-hooks", "PATH": "${PATH}:/usr/local/go/bin:/root/go/bin" }
 ---
 image: tests
 fromImage: tests-prebuild

@@ -35,7 +35,7 @@ import (
 type TaskCalculator struct {
 	k8sclient client.Client
 
-	listFunc func(ctx context.Context, c client.Client) ([]v1alpha1.Release, error)
+	listFunc func(ctx context.Context, c client.Client, moduleName string) ([]v1alpha1.Release, error)
 
 	log *log.Logger
 }
@@ -96,7 +96,7 @@ func (p *TaskCalculator) CalculatePendingReleaseTask(ctx context.Context, releas
 		return nil, ErrReleasePhaseIsNotPending
 	}
 
-	releases, err := p.listReleases(ctx)
+	releases, err := p.listReleases(ctx, release.GetModuleName())
 	if err != nil {
 		return nil, fmt.Errorf("list releases: %w", err)
 	}
@@ -111,7 +111,7 @@ func (p *TaskCalculator) CalculatePendingReleaseTask(ctx context.Context, releas
 
 	sort.Sort(ByVersion[v1alpha1.Release](releases))
 
-	forcedReleaseInfo := p.getLatestForcedReleaseInfo(releases)
+	forcedReleaseInfo := getLatestForcedReleaseInfo(releases)
 
 	// if we have a forced release
 	if forcedReleaseInfo != nil {
@@ -127,7 +127,7 @@ func (p *TaskCalculator) CalculatePendingReleaseTask(ctx context.Context, releas
 		}
 	}
 
-	deployedReleaseInfo := p.getFirstReleaseInfoByPhase(releases, v1alpha1.DeckhouseReleasePhaseDeployed)
+	deployedReleaseInfo := getFirstReleaseInfoByPhase(releases, v1alpha1.DeckhouseReleasePhaseDeployed)
 
 	// if we have a deployed release
 	if deployedReleaseInfo != nil {
@@ -247,13 +247,13 @@ func (p *TaskCalculator) CalculatePendingReleaseTask(ctx context.Context, releas
 	}, nil
 }
 
-func (p *TaskCalculator) listReleases(ctx context.Context) ([]v1alpha1.Release, error) {
-	return p.listFunc(ctx, p.k8sclient)
+func (p *TaskCalculator) listReleases(ctx context.Context, moduleName string) ([]v1alpha1.Release, error) {
+	return p.listFunc(ctx, p.k8sclient, moduleName)
 }
 
 // getFirstReleaseInfoByPhase
 // releases slice must be sorted asc
-func (p *TaskCalculator) getFirstReleaseInfoByPhase(releases []v1alpha1.Release, phase string) *ReleaseInfo {
+func getFirstReleaseInfoByPhase(releases []v1alpha1.Release, phase string) *ReleaseInfo {
 	idx := slices.IndexFunc(releases, func(a v1alpha1.Release) bool {
 		return a.GetPhase() == phase
 	})
@@ -272,7 +272,7 @@ func (p *TaskCalculator) getFirstReleaseInfoByPhase(releases []v1alpha1.Release,
 
 // getLatestForcedReleaseInfo
 // releases slice must be sorted asc
-func (p *TaskCalculator) getLatestForcedReleaseInfo(releases []v1alpha1.Release) *ReleaseInfo {
+func getLatestForcedReleaseInfo(releases []v1alpha1.Release) *ReleaseInfo {
 	for _, release := range slices.Backward(releases) {
 		if !release.GetForce() {
 			continue
@@ -287,7 +287,7 @@ func (p *TaskCalculator) getLatestForcedReleaseInfo(releases []v1alpha1.Release)
 	return nil
 }
 
-func listDeckhouseReleases(ctx context.Context, c client.Client) ([]v1alpha1.Release, error) {
+func listDeckhouseReleases(ctx context.Context, c client.Client, _ string) ([]v1alpha1.Release, error) {
 	releases := new(v1alpha1.DeckhouseReleaseList)
 
 	if err := c.List(ctx, releases); err != nil {
@@ -303,10 +303,11 @@ func listDeckhouseReleases(ctx context.Context, c client.Client) ([]v1alpha1.Rel
 	return result, nil
 }
 
-func listModuleReleases(ctx context.Context, c client.Client) ([]v1alpha1.Release, error) {
+func listModuleReleases(ctx context.Context, c client.Client, moduleName string) ([]v1alpha1.Release, error) {
 	releases := new(v1alpha1.ModuleReleaseList)
-	if err := c.List(ctx, releases); err != nil {
-		return nil, fmt.Errorf("get deckhouse releases: %w", err)
+	err := c.List(ctx, releases, client.MatchingLabels{v1alpha1.ModuleReleaseLabelModule: moduleName})
+	if err != nil {
+		return nil, fmt.Errorf("get module releases: %w", err)
 	}
 
 	result := make([]v1alpha1.Release, 0, len(releases.Items))

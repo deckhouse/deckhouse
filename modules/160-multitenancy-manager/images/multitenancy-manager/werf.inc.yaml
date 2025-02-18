@@ -14,8 +14,9 @@ import:
     add: /src/helmlib
     to: /helmlib
     before: setup
-docker:
-  ENTRYPOINT: [ "/multitenancy-manager" ]
+imageSpec:
+  config:
+    entrypoint: [ "/multitenancy-manager" ]
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-multitenancy-manager-src-artifact
 fromImage: common/src-artifact

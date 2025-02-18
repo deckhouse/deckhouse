@@ -9,8 +9,9 @@ import:
   add: /src/bin/cloud-provider-for-cloud-director
   to: /cloud-provider-for-cloud-director
   before: setup
-docker:
-  ENTRYPOINT: ["/cloud-provider-for-cloud-director"]
+imageSpec:
+  config:
+    entrypoint: ["/cloud-provider-for-cloud-director"]
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
 final: false

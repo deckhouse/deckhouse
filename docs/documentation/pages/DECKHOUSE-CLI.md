@@ -4,7 +4,7 @@ permalink: en/deckhouse-cli/
 description: Deckhouse CLI is a command line interface for cluster management created by the Deckhouse team.
 ---
 
-Deckhouse CLI is a command line interface for cluster management created by the developers of Deckhouse Kubernetes Platform (DKP). Starting with version 1.59, the DH CLI is automatically installed on all cluster nodes. You can also [install](#how-do-i-install-deckhouse-cli) the CLI on any machine and use it to operate clusters that are not managed by DKP.
+Deckhouse CLI is a command line interface for cluster management created by the developers of Deckhouse Kubernetes Platform (DKP). Starting with version 1.59, the D8 CLI is automatically installed on all cluster nodes. You can also [install](#how-do-i-install-deckhouse-cli) the CLI on any machine and use it to operate clusters that are not managed by DKP.
 
 On the command line, the utility can be invoked using the `d8` alias. All the commands are grouped by their function:
 
@@ -14,7 +14,7 @@ The `d8 d` and `d8 mirror` command groups are not available for Community Editio
 
 * `d8 k` — the `kubectl` command family.  
     For example, `d8 k get pods` is the same as `kubectl get pods`.
-* `d8 d` — the range of delivery-related commands (see the `werf` tool).  
+* `d8 dk` — the range of delivery-related commands (see the `werf` tool).  
     For example, you can run `d8 d plan --repo registry.deckhouse.io` instead of `werf plan --repo registry.deckhouse.io`.
 
 * `d8 mirror` — the range of commands that allow you to copy DKP distribution images to a private container registry (previously the `dhctl mirror` tool was used for this purpose).
@@ -42,4 +42,40 @@ The `d8 d` and `d8 mirror` command groups are not available for Community Editio
 
 ## How do I install Deckhouse CLI?
 
-{% include d8-cli-install/main.liquid %}
+Starting from Deckhouse CLI 0.10 it can be installed using [trdl](https://trdl.dev/).
+
+{% alert %}
+Please note that since version 0.10, installation **is available only via trdl**. If you have a version lower than 0.10 installed, then you must first uninstall it.
+
+If you need to install one of the versions below 0.10, use the [outdated installation method](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.67/deckhouse-cli/#how-do-i-install-deckhouse-cli).
+{% endalert %}
+
+1. [Install trdl client](https://trdl.dev/quickstart.html#installing-the-client).
+
+1. Add the Deckhouse CLI repository to trdl:
+
+   ```bash
+   URL=https://trrr.flant.dev/trdl-deckhouse-cli
+   ROOT_VERSION=1
+   ROOT_SHA512=$(curl -Ls ${URL}/${ROOT_VERSION}.root.json | sha512sum | tr -d '\-[:space:]\n')
+   REPO=trdl-deckhouse-cli
+   
+   trdl add $REPO $URL $ROOT_VERSION $ROOT_SHA512
+   ```
+
+1. Install stable release:
+
+   ```bash
+   trdl update $REPO $ROOT_VERSION stable
+   ```
+
+1. Validate that the `d8` binary is installed:
+
+   ```bash
+   . $(trdl use $REPO $ROOT_VERSION stable) && d8 --version
+   ```
+
+{% alert level="warning" %}
+On macOS you might need to remove the quarantine attribute from binary to prevent Gatekeeper from blocking it.
+(`sudo xattr -d com.apple.quarantine /path/to/d8`)
+{% endalert %}

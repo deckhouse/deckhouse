@@ -6,9 +6,9 @@ import:
     add: /ratify
     to: /ratify
     before: setup
-docker:
-  ENTRYPOINT: [ "/ratify" ]
-  USER: deckhouse:deckhouse
+imageSpec:
+  config:
+    entrypoint: [ "/ratify" ]
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 fromImage: common/src-artifact

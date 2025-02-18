@@ -131,10 +131,6 @@ shell:
       chmod +x "/usr/local/bin/${long_binary_name}"
       USE_BAZEL_VERSION="${bazel_version}" bazel version # to extract all binaries properly
     done
-docker:
-  ENV:
-    GOROOT: "/usr/local/go"
-    GOPATH: "/go"
-    PATH: "${PATH}:${GOROOT}/bin:${GOPATH}/bin"
-    GOOS: "linux"
-    GOARCH: "amd64"
+imageSpec:
+  config:
+    env: { "GOROOT": "/usr/local/go", "GOPATH": "/go", "PATH": "${PATH}:${GOROOT}/bin:${GOPATH}/bin", "GOOS": "linux", "GOARCH": "amd64" }

@@ -1,6 +1,14 @@
 ---
 project: deckhouse
 configVersion: 1
+build:
+  imageSpec:
+    author: "Deckhouse Kubernetes Platform <contact@deckhouse.io>"
+    clearHistory: true
+    config:
+      clearWerfLabels: true
+      removeLabels:
+        - /.*/
 gitWorktree:
   forceShallowClone: true
 cleanup:
@@ -53,7 +61,8 @@ cleanup:
 
 {{- $_ := set . "CandiVersionMap" $versionMap }}
 
-{{- $_ := set . "kubectlForBaseComponents" (list "1.27" "1.30") }}
+# do not forget change /deckhouse-controller/files/kubectl_wrapper.sh
+{{- $_ := set . "kubectlForBaseComponents" (list "1.29" "1.31") }}
 ---
 # Terraform Versions
 {{- $_ := set . "TF" (.Files.Get "candi/terraform_versions.yml" | fromYaml) }}

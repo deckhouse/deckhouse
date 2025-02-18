@@ -13,8 +13,9 @@ shell:
   - apt-get clean
   - find /var/lib/apt/ /var/cache/apt/ -type f -delete
   - rm -rf  /var/log/*log /var/lib/apt/lists/* /var/log/apt/* /var/lib/dpkg/*-old /var/cache/debconf/*-old
-docker:
-  ENTRYPOINT: ["/metadata-exporter"]
+imageSpec:
+  config:
+    entrypoint: ["/metadata-exporter"]
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
 from: {{ .Images.BASE_GOLANG_23_ALPINE }}

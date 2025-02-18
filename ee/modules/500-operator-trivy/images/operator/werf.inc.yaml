@@ -10,9 +10,9 @@ import:
     add: /src/local
     to: /local
     before: setup
-docker:
-  ENTRYPOINT: [ "/operator-trivy" ]
-  USER: deckhouse:deckhouse
+imageSpec:
+  config:
+    entrypoint: [ "/operator-trivy" ]
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 fromImage: {{ $.ModuleName }}/trivy-src-artifact

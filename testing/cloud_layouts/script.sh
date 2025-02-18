@@ -854,6 +854,22 @@ ENDSSH
     fi
   done
 
+  if [[ -z $provisioning_failed && $CIS_ENABLED == "true" ]]; then
+    for ((i=1; i<=5; i++)); do
+      if $ssh_command -i "$ssh_private_key_path" $ssh_bastion "$ssh_user@$master_ip" sudo su -c /bin/bash <<"ENDSSH"; then
+export PATH="/opt/deckhouse/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+export LANG=C
+set -Eeuo pipefail
+kubectl -n d8-system exec svc/deckhouse-leader -c deckhouse -- deckhouse-controller module enable operator-trivy
+kubectl label ns security-scanning.deckhouse.io/enabled="" --all > /dev/null
+ENDSSH
+        break
+      else
+        sleep 20
+      fi
+    done
+  fi
+
   if [[ $registration_failed == "true" ]] ; then
     return 1
   fi
@@ -924,6 +940,22 @@ ENDSSH
       sleep 60
     fi
   done
+
+  if [[ -z $provisioning_failed && $CIS_ENABLED == "true" ]]; then
+    for ((i=1; i<=5; i++)); do
+      if $ssh_command -i "$ssh_private_key_path" $ssh_bastion "$ssh_user@$master_ip" sudo su -c /bin/bash <<"ENDSSH"; then
+export PATH="/opt/deckhouse/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+export LANG=C
+set -Eeuo pipefail
+kubectl -n d8-system exec svc/deckhouse-leader -c deckhouse -- deckhouse-controller module enable operator-trivy
+kubectl label ns security-scanning.deckhouse.io/enabled="" --all > /dev/null
+ENDSSH
+        break
+      else
+        sleep 20
+      fi
+    done
+  fi
 
   if [[ $provisioning_failed == "true" ]] ; then
     return 1
@@ -1062,6 +1094,12 @@ function wait_cluster_ready() {
       return 1
   fi
 
+  if [[ $CIS_ENABLED == "true" ]]; then
+    testCisScript=$(cat "$(pwd)/deckhouse/testing/cloud_layouts/script.d/wait_cluster_ready/test_cis.sh")
+    REPORT=$($ssh_command -i "$ssh_private_key_path" $ssh_bastion "$ssh_user@$master_ip" sudo su -c /bin/bash <<<"${testCisScript}")
+    echo "$REPORT"
+  fi
+
   write_deckhouse_logs
 }
 
@@ -1085,7 +1123,6 @@ function chmod_dirs_for_cleanup() {
     chmod -f -R 777 /tmp || true
   fi
 }
-
 
 function main() {
   >&2 echo "Start cloud test script"
