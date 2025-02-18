@@ -32,8 +32,8 @@ apiVersion: apps/v1
 kind: DaemonSet
 metadata:
   name: multus
-  namespace: d8-{{ $context.Chart.Name }}
-  {{ include "helm_lib_module_labels" (list $context (dict "app" "multus" "tier" "node" "name" "multus")) | nindent 2 }}
+  namespace: d8-{{ .Chart.Name }}
+  {{ include "helm_lib_module_labels" (list . (dict "app" "multus" "tier" "node" "name" "multus")) | nindent 2 }}
 spec:
   selector:
     matchLabels:
@@ -49,9 +49,9 @@ spec:
         app: multus
         name: multus
     spec:
-      {{- include "helm_lib_priority_class" (tuple $context "system-node-critical") | nindent 6 }}
-      {{- include "helm_lib_tolerations" (tuple $context "any-node" "with-uninitialized") | nindent 6 }}
-      {{- include "helm_lib_module_pod_security_context_run_as_user_root" $context | nindent 6 }}
+      {{- include "helm_lib_priority_class" (tuple . "system-node-critical") | nindent 6 }}
+      {{- include "helm_lib_tolerations" (tuple . "any-node" "with-uninitialized") | nindent 6 }}
+      {{- include "helm_lib_module_pod_security_context_run_as_user_root" . | nindent 6 }}
       hostNetwork: true
       hostPID: true
       tolerations:
@@ -64,7 +64,7 @@ spec:
         - name: deckhouse-registry
       containers:
       - name: multus
-        image: {{ include "helm_lib_module_image" (list $context "multusCni") }}
+        image: {{ include "helm_lib_module_image" (list . "multusCni") }}
         command: [ "/usr/src/multus-cni/bin/multus-daemon" ]
         resources:
           requests:
@@ -109,7 +109,7 @@ spec:
                 fieldPath: spec.nodeName
       initContainers:
       - name: install-cni-binaries
-        image: {{ include "helm_lib_module_image" (list $context "multusCni") }}
+        image: {{ include "helm_lib_module_image" (list . "multusCni") }}
         command:
           - "cp"
           - "/usr/src/multus-cni/bin/multus-shim"
@@ -201,19 +201,19 @@ roleRef:
 subjects:
   - kind: ServiceAccount
     name: multus
-    namespace: d8-{{ $context.Chart.Name }}
+    namespace: d8-{{ .Chart.Name }}
 ---
 apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: multus
-  namespace: d8-{{ $context.Chart.Name }}
+  namespace: d8-{{ .Chart.Name }}
 ---
 kind: ConfigMap
 apiVersion: v1
 metadata:
   name: multus-daemon-config
-  namespace: d8-{{ $context.Chart.Name }}
+  namespace: d8-{{ .Chart.Name }}
   labels:
     tier: node
     app: multus
