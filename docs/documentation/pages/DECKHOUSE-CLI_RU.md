@@ -43,9 +43,13 @@ Deckhouse CLI — это интерфейс командной строки дл
 
 ## Как установить Deckhouse CLI
 
-Утилита Deckhouse CLI доступна в [trdl](https://ru.trdl.dev/). Сначала необходимо [установить клиент trdl](https://ru.trdl.dev/quickstart.html#%D1%83%D1%81%D1%82%D0%B0%D0%BD%D0%BE%D0%B2%D0%BA%D0%B0-%D0%BA%D0%BB%D0%B8%D0%B5%D0%BD%D1%82%D0%B0).
+Утилита Deckhouse CLI доступна [в trdl](https://ru.trdl.dev/). Сначала необходимо [установить клиент trdl](https://ru.trdl.dev/quickstart.html#%D1%83%D1%81%D1%82%D0%B0%D0%BD%D0%BE%D0%B2%D0%BA%D0%B0-%D0%BA%D0%BB%D0%B8%D0%B5%D0%BD%D1%82%D0%B0).
 
-После этого, добавьте репозиторий Deckhouse CLI в trdl. Выполните следующую команду:
+{% alert %}
+Обратите внимание, что с версии 0.10 доступна установка **только через trdl**. Если у вас установлена версия ниже 0.10, то её необходимо предварительно удалить. 
+{% endalert %}
+
+После этого добавьте репозиторий Deckhouse CLI в trdl. Выполните следующую команду:
 
 ```bash
 URL=https://trrr.flant.dev/trdl-deckhouse-cli
