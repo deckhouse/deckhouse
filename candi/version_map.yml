@@ -145,10 +145,10 @@ k8s:
     csi:
       aws: v1.38.1
       azure: v1.31.2
-      gcp: v1.15.3
+      gcp: v1.15.4
       yandex: v0.13.0
       vcd: 1.6.0
-      zvirt: release-4.20
+      zvirt: release-4.19
       vsphere: v3.0.3
       openstack: v1.31.2
       provisioner: v5.2.0
