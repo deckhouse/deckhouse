@@ -304,6 +304,7 @@ func (l *Loader) ensureModule(ctx context.Context, def *moduletypes.Definition, 
 					ObjectMeta: metav1.ObjectMeta{
 						Name:        def.Name,
 						Annotations: def.Annotations(),
+						Labels:      def.Labels(),
 					},
 					Properties: v1alpha1.ModuleProperties{
 						Weight:       def.Weight,
@@ -325,6 +326,7 @@ func (l *Loader) ensureModule(ctx context.Context, def *moduletypes.Definition, 
 			module.Properties.Stage = def.Stage
 
 			module.SetAnnotations(def.Annotations())
+			module.SetLabels(def.Labels())
 
 			if embedded {
 				// set deckhouse release channel to embedded modules

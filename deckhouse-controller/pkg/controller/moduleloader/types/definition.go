@@ -18,6 +18,7 @@ import (
 	"errors"
 	"fmt"
 	"path/filepath"
+	"strings"
 
 	addonmodules "github.com/flant/addon-operator/pkg/module_manager/models/modules"
 	addonutils "github.com/flant/addon-operator/pkg/utils"
@@ -115,4 +116,28 @@ func (d *Definition) Annotations() map[string]string {
 	}
 
 	return annotations
+}
+
+func (d *Definition) Labels() map[string]string {
+	labels := make(map[string]string)
+
+	if strings.HasPrefix(d.Name, "cni-") {
+		labels["module.deckhouse.io/cni"] = ""
+	}
+
+	if strings.HasPrefix(d.Name, "cloud-provider-") {
+		labels["module.deckhouse.io/cloud-provider"] = ""
+	}
+
+	if strings.HasSuffix(d.Name, "-crd") {
+		labels["module.deckhouse.io/crd"] = ""
+	}
+
+	if len(d.Tags) != 0 {
+		for _, tag := range d.Tags {
+			labels["module.deckhouse.io/"+tag] = ""
+		}
+	}
+
+	return labels
 }
