@@ -2,9 +2,9 @@
 title: "Модуль ingress-nginx: FAQ"
 ---
 
-## Как разрешить доступ к приложению внутри кластера только от ingress controller'ов?
+## Как разрешить доступ к приложению внутри кластера только от ingress controller?
 
-Если вы хотите ограничить доступ к вашему приложению внутри кластера ТОЛЬКО от подов ingress'а, необходимо в под с приложением добавить контейнер с kube-rbac-proxy:
+Если необходимо ограничить доступ к вашему приложению внутри кластера исключительно от подов ingress, необходимо в под с приложением добавить контейнер с kube-rbac-proxy:
 
 ### Пример Deployment для защищенного приложения
 
@@ -44,7 +44,7 @@ spec:
         - "--config-file=/etc/kube-rbac-proxy/config-file.yaml"
         - "--v=2"
         - "--logtostderr=true"
-        # Если kube-apiserver недоступен, мы не сможем аутентифицировать и авторизовывать пользователей.
+        # Если kube-apiserver недоступен, аутентификация и авторизация пользователей невозможна.
         # Stale Cache хранит только результаты успешной авторизации и используется, только если apiserver недоступен.
         - "--stale-cache-interval=1h30m"
         ports:
@@ -61,15 +61,15 @@ spec:
 
 {% endraw %}
 
-Приложение принимает запросы на адресе 127.0.0.1, это означает, что по незащищенному соединению к нему можно подключиться только изнутри пода.
-Прокси же слушает на адресе 0.0.0.0 и перехватывает весь внешний трафик к поду.
+Приложение принимает запросы на адресе `127.0.0.1`, это означает, что по незащищенному соединению к нему можно подключиться только внутри пода.
+Прокси слушает на адресе `0.0.0.0` и перехватывает весь внешний трафик к поду.
 
 ### Как дать минимальные права для Service Account?
 
 Чтобы аутентифицировать и авторизовывать пользователей с помощью kube-apiserver, у прокси должны быть права на создание `TokenReview` и `SubjectAccessReview`.
 
-В наших кластерах [уже есть готовая ClusterRole](https://github.com/deckhouse/deckhouse/blob/main/modules/002-deckhouse/templates/common/rbac/kube-rbac-proxy.yaml) — **d8-rbac-proxy**.
-Создавать ее самостоятельно не нужно! Нужно только прикрепить ее к Service Account'у вашего Deployment'а.
+В кластерах DKP [уже есть готовая ClusterRole](https://github.com/deckhouse/deckhouse/blob/main/modules/002-deckhouse/templates/common/rbac/kube-rbac-proxy.yaml) — **d8-rbac-proxy**.
+Создавать ее самостоятельно не нужно! Необходимо прикрепить ее к Service Account'у вашего Deployment'а.
 {% raw %}
 
 ```yaml
@@ -119,10 +119,10 @@ data:
 ```
 
 {% endraw %}
-Согласно конфигурации, у пользователя должны быть права на доступ к Deployment с именем `my-app`
-и его дополнительному ресурсу `http` в namespace `my-namespace`.
+Согласно конфигурации, у пользователя должны быть права доступа к Deployment с именем `my-app`
+и его дополнительному ресурсу `http` в пространство имён `my-namespace`.
 
-Выглядят такие права в виде RBAC так:
+Выглядят такие права в виде RBAC следующим образом:
 {% raw %}
 
 ```yaml
@@ -153,7 +153,7 @@ subjects:
   name: ingress-nginx:auth
 ```
 
-Для ingress'а ресурса необходимо добавить параметры:
+Для ingress-ресурса необходимо добавить параметры:
 
 ```yaml
 nginx.ingress.kubernetes.io/backend-protocol: HTTPS
@@ -171,13 +171,14 @@ nginx.ingress.kubernetes.io/configuration-snippet: |
 
 В ситуации, когда `IngressNginxController` размещен за балансировщиком нагрузки, рекомендуется сконфигурировать балансировщик для проверки доступности
 узлов `IngressNginxController` с помощью HTTP-запросов или TCP-подключений. В то время как тестирование с помощью TCP-подключений представляет собой простой и универсальный механизм проверки доступности, мы рекомендуем использовать проверку на основе HTTP-запросов со следующими параметрами:
+
 - протокол: `HTTP`;
 - путь: `/healthz`;
 - порт: `80` (в случае использования inlet'а `HostPort` нужно указать номер порта, соответствующий параметру [httpPort](cr.html#ingressnginxcontroller-v1-spec-hostport-httpport).
 
 ## Как настроить работу через MetalLB с доступом только из внутренней сети?
 
-Пример MetalLB с доступом только из внутренней сети.
+Пример MetalLB с доступом только из внутренней сети:
 
 ```yaml
 apiVersion: deckhouse.io/v1
@@ -212,25 +213,29 @@ spec:
 
 ## Как включить HorizontalPodAutoscaling для IngressNginxController?
 
-> **Важно.** Режим HPA возможен только для контроллеров с inlet'ом `LoadBalancer` или `LoadBalancerWithProxyProtocol`.
->
-> **Важно.** Режим HPA возможен только при `minReplicas` != `maxReplicas`, в противном случае deployment `hpa-scaler` не создается.
+{% alert level="warning" %}
+Режим HPA возможен только для контроллеров с inlet'ом `LoadBalancer` или `LoadBalancerWithProxyProtocol`.
+
+Режим HPA возможен только при `minReplicas` != `maxReplicas`, в противном случае deployment `hpa-scaler` не создается.
+{% endalert %}
 
 HPA выставляется с помощью аттрибутов `minReplicas` и `maxReplicas` в [IngressNginxController CR](cr.html#ingressnginxcontroller).
 
 IngressNginxController разворачивается с помощью DaemonSet. DaemonSet не предоставляет возможности горизонтального масштабирования, поэтому создается дополнительный deployment `hpa-scaler` и HPA resource, который следит за предварительно созданной метрикой `prometheus-metrics-adapter-d8-ingress-nginx-cpu-utilization-for-hpa`. Если CPU utilization превысит 50%, HPA закажет новую реплику для `hpa-scaler` (с учетом minReplicas и maxReplicas).
 
-`hpa-scaler` deployment обладает HardPodAntiAffinity, поэтому он попытается заказать себе новый узел (если это возможно
-в рамках своей NodeGroup), куда автоматически будет размещен еще один Ingress-контроллер.
+Deployment `hpa-scaler` обладает HardPodAntiAffinity, поэтому он попытается выделить для себя новый узел (если это возможно
+в рамках своей группы узлов), куда автоматически будет размещен еще один instance Ingress-контроллера.
 
-Примечания:
-* Минимальное реальное количество реплик IngressNginxController не может быть меньше минимального количества узлов в NodeGroup, в которую разворачивается IngressNginxController.
-* Максимальное реальное количество реплик IngressNginxController не может быть больше максимального количества узлов в NodeGroup, в которую разворачивается IngressNginxController.
+{% alert level="info" %}
+
+- Минимальное реальное количество реплик IngressNginxController не может быть меньше минимального количества узлов в группе узлов, в которую разворачивается IngressNginxController.
+- Максимальное реальное количество реплик IngressNginxController не может быть больше максимального количества узлов в группе узлов, в которую разворачивается IngressNginxController.
+
+{% endalert %}
 
 ## Как использовать IngressClass с установленными IngressClassParameters?
 
-Начиная с версии 1.1 IngressNginxController, Deckhouse создает объект IngressClass самостоятельно. Если вы хотите использовать свой IngressClass,
-например с установленными IngressClassParameters, достаточно добавить к нему label `ingress-class.deckhouse.io/external: "true"`
+Начиная с версии 1.1 IngressNginxController, Deckhouse создает объект IngressClass самостоятельно. Если вы хотите использовать свой IngressClass с установленными IngressClassParameters, достаточно добавить к нему label `ingress-class.deckhouse.io/external: "true"`:
 
 ```yaml
 apiVersion: networking.k8s.io/v1
@@ -247,13 +252,13 @@ spec:
     name: awesome-class-cfg
 ```
 
-В таком случае, при указании данного IngressClass в CRD IngressNginxController, Deckhouse не будет создавать объект, а использует уже существующий.
+В этом случае, при указании данного IngressClass в CRD IngressNginxController, Deckhouse не будет создавать объект, а использует существующий.
 
 ## Как отключить сборку детализированной статистики Ingress-ресурсов?
 
-По умолчанию Deckhouse собирает подробную статистику со всех Ingress-ресурсов в кластере, что может генерировать высокую нагрузку на систему мониторинга.
+По умолчанию Deckhouse собирает подробную статистику со всех Ingress-ресурсов в кластере. Этот процесс может приводить к высокой нагрузке системы мониторинга.
 
-Для отключения сбора статистики добавьте label `ingress.deckhouse.io/discard-metrics: "true"` к соответствующему namespace или Ingress-ресурсу.
+Для отключения сбора статистики добавьте лейбл `ingress.deckhouse.io/discard-metrics: "true"` к соответствующему пространству имён или Ingress-ресурсу.
 
 Пример отключения сбора статистики (метрик) для всех Ingress-ресурсов в пространстве имен `review-1`:
 

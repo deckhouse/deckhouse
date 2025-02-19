@@ -29,8 +29,14 @@ git:
         - '**/go.sum'
   - add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches/
     to: /patches
+    stageDependencies:
+      install:
+        - '**/*'
   - add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/src/web
     to: /web
+    stageDependencies:
+      install:
+        - '**/*'
 shell:
   install:
     - cd /src

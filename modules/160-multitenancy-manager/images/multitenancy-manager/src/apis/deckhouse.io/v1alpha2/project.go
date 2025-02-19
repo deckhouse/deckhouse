@@ -17,11 +17,12 @@ limitations under the License.
 package v1alpha2
 
 import (
+	"slices"
+
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
-	"slices"
 )
 
 const (
@@ -116,6 +117,12 @@ type ProjectSpec struct {
 	// Description of the Project
 	Description string `json:"description,omitempty"`
 
+	// Labels that will be set for all project resources
+	ResourceLabels map[string]string `json:"resourceLabels,omitempty"`
+
+	// Annotations that will be set for all project resources
+	ResourceAnnotations map[string]string `json:"resourceAnnotations,omitempty"`
+
 	// Name of ProjectTemplate to use to create Project
 	ProjectTemplateName string `json:"projectTemplateName,omitempty"`
 
@@ -135,11 +142,23 @@ func (p *ProjectSpec) DeepCopy() *ProjectSpec {
 }
 func (p *ProjectSpec) DeepCopyInto(newObj *ProjectSpec) {
 	*newObj = *p
-	newObj.Description = p.Description
-	newObj.ProjectTemplateName = p.ProjectTemplateName
 	newObj.Parameters = make(map[string]interface{})
 	for key, value := range p.Parameters {
 		newObj.Parameters[key] = value
+	}
+	if p.ResourceLabels != nil {
+		in, out := &p.ResourceLabels, &newObj.ResourceLabels
+		*out = make(map[string]string, len(*in))
+		for key, val := range *in {
+			(*out)[key] = val
+		}
+	}
+	if p.ResourceAnnotations != nil {
+		in, out := &p.ResourceAnnotations, &newObj.ResourceAnnotations
+		*out = make(map[string]string, len(*in))
+		for key, val := range *in {
+			(*out)[key] = val
+		}
 	}
 }
 
@@ -241,7 +260,7 @@ func (p *ProjectStatus) DeepCopyInto(newObj *ProjectStatus) {
 }
 
 type ResourceKind struct {
-	Installed bool     `json:"installed,omitempty"`
+	Installed bool     `json:"installed"`
 	Names     []string `json:"names,omitempty"`
 }
 

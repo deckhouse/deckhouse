@@ -23,7 +23,7 @@ bb-is-bundle(){
 
   . /etc/os-release
   case "$ID" in
-    centos|rocky|almalinux|rhel)
+    centos|rocky|almalinux|rhel|ol)
       case "$VERSION_ID" in 7*|8*|9*)
         os="centos" ;;
       esac

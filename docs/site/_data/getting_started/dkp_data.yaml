@@ -3,6 +3,7 @@ global:
     - ce
     - be
     - se
+    - se-plus
     - ee
   step1:
     name:
@@ -737,4 +738,4 @@ installTypes:
         name:
           en: What can I do next?
           ru: Куда двигаться дальше?
-        template: getting_started/global/STEP_FINISH.md      
+        template: getting_started/global/STEP_FINISH.md

@@ -10,7 +10,7 @@ kind: VerticalPodAutoscaler
 metadata:
   name: webhook-handler
   namespace: d8-system
-  {{- include "helm_lib_module_labels" (list . (dict "app" "webhook-handler" "workload-resource-policy.deckhouse.io" "master")) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "webhook-handler")) | nindent 2 }}
 spec:
   targetRef:
     apiVersion: "apps/v1"

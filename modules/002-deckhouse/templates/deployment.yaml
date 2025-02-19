@@ -13,7 +13,7 @@ metadata:
   {{- if .Values.deckhouse.nodeSelector }}
   {{- include "helm_lib_module_labels" (list . (dict "app" "deckhouse")) | nindent 2 }}
   {{- else }}
-  {{- include "helm_lib_module_labels" (list . (dict "app" "deckhouse" "workload-resource-policy.deckhouse.io" "master")) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "deckhouse")) | nindent 2 }}
   {{- end }}
 spec:
   targetRef:

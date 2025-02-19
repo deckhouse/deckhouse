@@ -80,7 +80,7 @@ properties:
           Используется, если включен модуль [user-authn](../../../platform/modules/150-user-authn/) или задан параметр `externalAuthentication`.
       allowedUserGroups:
         description: |
-          Массив групп, пользователям которых позволен доступ в панель администратора OpenVPN.
+          Массив групп пользователей с доступом в панель администратора OpenVPN.
 
           Используется, если включен модуль [user-authn](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/user-authn/) или параметр [externalAuthentication](#parameters-auth-externalauthentication).
 

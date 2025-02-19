@@ -1,0 +1,22 @@
+linters-settings:
+  container:
+    exclude-rules:
+      read-only-root-filesystem:
+        - kind: StatefulSet
+          name: trivy-server
+          container: server
+        - kind: StatefulSet
+          name: trivy-server
+          container: chown-volume-data
+      liveness-probe:
+        - kind: Deployment
+          name: operator
+          container: kube-rbac-proxy
+      readiness-probe:
+        - kind: Deployment
+          name: operator
+          container: kube-rbac-proxy
+        - kind: Deployment
+          name: report-updater
+          container: report-updater
+

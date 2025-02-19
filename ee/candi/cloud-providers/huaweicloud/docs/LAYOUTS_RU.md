@@ -9,7 +9,7 @@ description: "Настройка окружения Huawei Cloud для рабо
 * Elastic IP-адрес можно назначить master-узлу.
 * Узлы, управляемые Cluster API, не имеют публичных IP-адресов.
 
-![resources](https://docs.google.com/drawings/d/e/2PACX-1vSUznz9tfsUtLqC7r2nHHndLdbTYN5LIwFnP68-pxZY1wZaIrG6Mxj0kvyIZV-jKDDidp8sfB0UMTdz/pub?w=812&h=655)
+![resources](../../images/cloud-provider-huawei/huawei-standard.png)
 <!--- Source: https://docs.google.com/drawings/d/1sB_V7NhDiit8Gok2pq_8syQknCdC4GicpG3L2YF5QIU/edit --->
 
 Пример конфигурации схемы размещения:

@@ -37,7 +37,7 @@ metadata:
   {{- include "helm_lib_module_labels" (list . (dict "app" "auth")) | nindent 2 }}
 spec:
   {{- include "helm_lib_deployment_strategy_and_replicas_for_ha" . | nindent 2 }}
-  revisionHistoryLimit: 10
+  revisionHistoryLimit: 2
   selector:
     matchLabels:
       app: auth
@@ -59,6 +59,7 @@ spec:
         image: {{ include "helm_lib_module_image" (list . "auth") }}
         args:
         - --address=127.0.0.1
+        - --v=3
         env:
         - name: CSRF_KEY
           valueFrom:
