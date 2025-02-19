@@ -5,6 +5,9 @@ dashboard:
     - version: 3
 descheduler:
     - version: 2
+      description:
+        en: Delete `settings`.
+        ru: Удалите `settings`.
 extended-monitoring:
     - version: 2
 istio:
