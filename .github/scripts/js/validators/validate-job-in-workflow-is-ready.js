@@ -9,60 +9,53 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-const WORKFLOW_STATUS_RUNNING = 'in_progress';
-const WORKFLOW_STATUS_COMPLETED = 'completed';
-const CONCLUSION_STATUS_SUCCESS = 'success';
-const MAX_ATTEMPTS = 60;
+/**
+ * @typedef JobStatusResult
+ * @property {boolean} isReady
+ * @property {boolean} hasFailed
+ */
+
 const TIMEOUT_BETWEEN_ATTEMPT = 1000 * 30;
-const MAX_ITEMS_PER_PAGE = 100;
+const MAX_ATTEMPTS = 100;
 
 module.exports = ({ github, context, core }) => {
+  const { sleep } = require('../helpers/utils');
+  const githubActions = require('../helpers/github-actions')({ github, context, core });
+
   /**
-   *
-   * @param {string} branch
-   * @param {string} workflowName
+   * @param {GithubWorkflow} workflowRun
    * @param {string} jobName
-   * @returns
+   * @returns {GithubWorkflowJob}
    */
-  async function isJobInWorkflowOrWorkflowCompleted(branch, workflowName, jobName) {
-    try {
-      const { data } = await github.rest.actions.listWorkflowRunsForRepo({
-        owner: context.repo.owner,
-        repo: context.repo.repo,
-        branch: branch,
-        per_page: MAX_ITEMS_PER_PAGE
-      });
-
-      const activeRuns = data.workflow_runs.filter((run) => run.name === workflowName && run.status === WORKFLOW_STATUS_RUNNING);
-
-      if (activeRuns.length > 0) {
-        core.info(`🔄 Active '${workflowName}' workflows found...`);
-        const activeRun = activeRuns[activeRuns.length - 1];
-        core.info(`🔄 Last active '${workflowName}' workflow found, check job '${jobName}' status ...`);
-        const { data } = await github.rest.actions.listJobsForWorkflowRunAttempt({
-          owner: context.repo.owner,
-          repo: context.repo.repo,
-          run_id: activeRun.id,
-          attempt_number: activeRun.run_attempt,
-          per_page: MAX_ITEMS_PER_PAGE
-        });
-
-        // search job by jobName
-        const jobs = data.jobs.filter((job) => job.name === jobName);
-        const foundJob = jobs[0];
-
-        core.info(foundJob.status, foundJob.conclusion);
-        return foundJob.status === WORKFLOW_STATUS_COMPLETED && foundJob.conclusion === CONCLUSION_STATUS_SUCCESS;
-      }
-      return true;
-    } catch (error) {
-      core.setFailed(`🔥 Error: ${error.message}`);
-      return false;
-    }
+  async function getJobsForWorkflowRun(workflowRun, jobName) {
+    return await githubActions.GetJobsForWorkflowRunAttempt(workflowRun.id, workflowRun.run_attempt, jobName);
   }
 
-  function sleep(ms) {
-    return new Promise((resolve) => setTimeout(resolve, ms));
+  /**
+   * @param {GithubWorkflow[]} workflowRuns
+   * @param {string} jobName
+   * @returns {JobStatusResult}
+   */
+  async function isJobInWorkflowCompletedSuccess(workflowRuns, jobName) {
+    const workflowRun = workflowRuns[0];
+    const jobs = await getJobsForWorkflowRun(workflowRun, jobName);
+    if (jobs.length === 0) {
+      return { success: false, hasFailed: false };
+    }
+
+    const job = jobs[0];
+    core.info(`Job status: ${job.status} | Job conclusion ${job.conclusion}`);
+
+    if (
+      job.conclusion === githubActions.CONCLUSION_STATUS_FAILURE ||
+      job.conclusion === githubActions.CONCLUSION_STATUS_CANCELLED
+    ) {
+      return { success: false, hasFailed: true };
+    }
+
+    const isSuccess =
+      job.status === githubActions.WORKFLOW_STATUS_COMPLETED && job.conclusion === githubActions.CONCLUSION_STATUS_SUCCESS;
+    return { success: isSuccess, hasFailed: false };
   }
 
   /**
@@ -70,23 +63,65 @@ module.exports = ({ github, context, core }) => {
    * @param {string} branchName
    * @param {string} workflowName
    * @param {string} jobName
-   * @param {int=} [maxAttempts=MAX_ATTEMPTS]
-   * @param {int=} [timeoutBetweenAttempt=TIMEOUT_BETWEEN_ATTEMPT]
-   * @returns
+   * @returns {Promise<JobStatusResult>}
    */
-  return async function waitForJobInWorkflowIsCompletedWithSuccess(
+  async function isJobInWorkflowCompleted(branchName, workflowName, jobName) {
+    const activeRuns = await githubActions.GetWorkflowsByNameAndStatus(
+      workflowName,
+      branchName,
+      githubActions.WORKFLOW_STATUS_RUNNING
+    );
+    if (activeRuns.length > 0) {
+      const result = await isJobInWorkflowCompletedSuccess(activeRuns, jobName);
+      if (result.hasFailed) return { isReady: false, hasFailed: true };
+      return { isReady: result.success, hasFailed: false };
+    }
+
+    const completedRuns = await githubActions.GetWorkflowsByNameAndStatus(
+      workflowName,
+      branchName,
+      githubActions.WORKFLOW_STATUS_COMPLETED
+    );
+    if (completedRuns.length > 0) {
+      const result = await isJobInWorkflowCompletedSuccess(completedRuns, jobName);
+      if (result.hasFailed) return { isReady: false, hasFailed: true };
+      return { isReady: result.success, hasFailed: false };
+    }
+
+    return { isReady: false, hasFailed: false };
+  }
+
+  /**
+   * @param {string} branchName
+   * @param {string} workflowName
+   * @param {string} jobName
+   * @param {number} [maxAttempts=MAX_ATTEMPTS]
+   * @param {number} [timeoutBetweenAttempt=TIMEOUT_BETWEEN_ATTEMPT]
+   * @returns {Promise<boolean>}
+   */
+  async function waitForJobInWorkflowIsCompletedWithSuccess(
     branchName,
     workflowName,
     jobName,
     maxAttempts = MAX_ATTEMPTS,
     timeoutBetweenAttempt = TIMEOUT_BETWEEN_ATTEMPT
   ) {
+    core.info(
+      'wait for some time to exclude the moment when the task with the build has just been created and for some reason it is not visible'
+    );
+    await sleep(TIMEOUT_BETWEEN_ATTEMPT);
+
     for (let i = 0; i < maxAttempts; i++) {
       core.info(`🚀 Attempt ${i + 1}/${maxAttempts}`);
-      const isReady = await isJobInWorkflowOrWorkflowCompleted(branchName, workflowName, jobName);
+      const result = await isJobInWorkflowCompleted(branchName, workflowName, jobName);
 
-      if (isReady) {
-        core.info('✅ Job In Workflow completed successfully!');
+      if (result.hasFailed) {
+        core.setFailed('❌ Job failed or was cancelled');
+        return false;
+      }
+
+      if (result.isReady) {
+        core.info('✅ Job completed successfully!');
         return true;
       }
 
@@ -94,6 +129,11 @@ module.exports = ({ github, context, core }) => {
     }
 
     core.setFailed('⌛ Timeout waiting for workflow completion');
-    throw new Error('Max attempts reached');
+    return false;
+  }
+
+  return {
+    waitForJobInWorkflowIsCompletedWithSuccess,
+    isJobInWorkflowCompleted
   };
 };
