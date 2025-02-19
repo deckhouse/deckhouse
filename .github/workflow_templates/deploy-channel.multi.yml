@@ -138,7 +138,7 @@ Jobs for visual control allowed editions when approving deploy to environments.
 
   prepare_channel_releases:
     name: Prepare channel releases
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, regular]
     needs:
       - run_deploy
     steps:
@@ -212,7 +212,8 @@ stage:
     env:
       WERF_CHANNEL: "ea"
     steps:
-
+      {!{- tmpl.Exec "checkout_step" . | strings.Indent 6 }!}
+      
       - name: Download artifacts
         uses: {!{ index (ds "actions") "actions/download-artifact" }!}
         with:
@@ -237,7 +238,7 @@ stage:
         uses: werf/actions/converge@v1.2
         with:
           channel: ${{env.WERF_CHANNEL}}
-          kube-config-base64-data: "{!{ $env_properties.kubeconfig }!}"
+          kube-config-base64-data: "${{ secrets.{!{ $env_properties.kubeconfig }!} }}"
           env: {!{ $env_properties.werf_env }!}
         env:
           WERF_NAMESPACE: "{!{ $env_properties.werf_namespace }!}"

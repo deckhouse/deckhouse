@@ -240,7 +240,7 @@ jobs:
 
   prepare_channel_releases:
     name: Prepare channel releases
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, regular]
     needs:
       - run_deploy
     steps:
@@ -297,6 +297,11 @@ jobs:
     env:
       WERF_CHANNEL: "ea"
     steps:
+      # <template: checkout_step>
+      - name: Checkout sources
+        uses: actions/checkout@v3.5.2
+
+      # </template: checkout_step>
 
       - name: Download artifacts
         uses: actions/download-artifact@v4.1.8
@@ -322,7 +327,7 @@ jobs:
         uses: werf/actions/converge@v1.2
         with:
           channel: ${{env.WERF_CHANNEL}}
-          kube-config-base64-data: "KUBECONFIG_BASE64_DEV"
+          kube-config-base64-data: "${{ secrets.KUBECONFIG_BASE64_DEV }}"
           env: web-stage
         env:
           WERF_NAMESPACE: "deckhouse-web-stage"
