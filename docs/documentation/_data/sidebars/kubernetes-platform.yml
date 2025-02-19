@@ -43,25 +43,25 @@ entries:
             ru: Настройка
           folders:
             - title:
-                en: Access configuration
-                ru: Настройка доступа
+                en: Access
+                ru: Доступ
               folders:
                 - title:
                     en: Overview
                     ru: Введение
-                  url: /admin/access-overview.html
+                  url: /admin/configuration/access/
                 - title:
-                    en: Подключение
-                    ru: Connection
-                  url: /admin/connection.html
+                    en: Connection
+                    ru: Подключение
+                  url: /admin/configuration/access/connection.html
                 - title:
-                    en: Аутентификация
-                    ru: Authentication
-                  url: /admin/authentication.html
+                    en: Authentication
+                    ru: Аутентификация
+                  url: /admin/configuration/access/authentication.html
                 - title:
-                    en: Авторизация
-                    ru: Authorization
-                  url: /admin/authorization.html
+                    en: Authorization
+                    ru: Авторизация
+                  url: /admin/configuration/access/authorization.html
             - title:
                 en: Platform update
                 ru: Обновление платформы
@@ -235,6 +235,22 @@ entries:
                         ru: Федерация
                       url: /admin/network/cluster-federation.html
                 - title:
+                    en: Outgoing traffic balancing
+                    ru: Балансировка исходящего трафика
+                  folders:
+                    - title:
+                        en: Overview
+                        ru: Введение
+                      url: /admin/network/outgoing-traffic-balancing.html
+                    - title:
+                        en: Egress
+                        ru: Egress
+                      url: /admin/network/egress.html
+                    - title:
+                        en: Istio
+                        ru: Istio
+                      url: /admin/network/istio-outgoing-balancing.html
+                - title:
                     en: Network policies
                     ru: Сетевые политики
                   folders:
@@ -263,9 +279,21 @@ entries:
                         ru: Управление DNS в кластере Kubernetes
                       url: /admin/network/dns-management-in-cluster.html
                     - title:
+                        en: Kube-proxy configuration
+                        ru: Настройка kube-proxy
+                      url: /admin/network/kube-proxy-configuration.html
+                    - title:
                         en: Building a network gateway from Kubernetes nodes
                         ru: Постройка сетевого шлюза из Kubernetes-узлов
                       url: /admin/network/building-network-gateway-from-nodes.html
+                    - title:
+                        en: ServiceWithHealthcheck balancer
+                        ru: Балансировщик ServiceWithHealthcheck
+                      url: /admin/network/service-with-healthcheck.html
+                    - title:
+                        en: Ensuring high availability and fault tolerance (keepalived)
+                        ru: Обеспечение высокой доступности и отказоустойчивости (keepalived)
+                      url: /admin/network/keepalived.html
             - title:
                 en: Storage
                 ru: Хранение
