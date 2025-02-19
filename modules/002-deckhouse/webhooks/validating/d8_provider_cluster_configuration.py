@@ -58,7 +58,7 @@ kubernetesValidating:
     matchLabels:
       name: d8-provider-cluster-configuration
   namespace:
-    labelSelector
+    labelSelector:
       matchLabels:
         kubernetes.io/metadata.name: kube-system
   rules:
