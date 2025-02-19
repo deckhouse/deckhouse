@@ -71,7 +71,7 @@
       }
 
       #chart > * {
-        margin-block-end: 0.6em;
+        margin-block-end: 0.4rem;
       }
 
       div.probe {
@@ -110,17 +110,24 @@
         display: inline-flex;
         flex-direction: row;
         vertical-align: top;
-        gap: 0.6em;
+        gap: 0.4rem;
       }
 
       div.slotsingle {
         display: block;
-        width: 2em;
-        height: 2em;
+        width: 1.5rem;
+        height: 1.5rem;
         border-radius: 20%;
-        border: .2em solid;
+        border: 0.1rem solid;
         box-sizing: border-box;
         margin: 0;
+        color: #ffffff;
+        font-family: monospace;
+        font-size: 100%;
+        line-height: 100%;
+        text-align: center;
+        align-content: center;
+        flex-direction: column;
       }
 
       div.slot {
@@ -186,54 +193,6 @@
           .join("div")
           .attr("class", "range");
 
-        function getColor(d) {
-          const total = d.up + d.down + d.unknown + d.nodata;
-          const measured = d.up + d.down;
-          const availability = d.up / measured;
-
-          /*
-          function perc2color(perc) {
-            var r, g, b = 0;
-            if(perc < 50) {
-              r = 255;
-              g = Math.round(5.1 * perc);
-              }
-              else {
-                g = 130; // 255
-                r = Math.round(510 - 5.10 * perc);
-                }
-                var h = r * 0x10000 + g * 0x100 + b * 0x1;
-                return '#' + ('000000' + h.toString(16)).slice(-6);
-                }
-
-                return perc2color(availability*100)
-                */
-
-          if (!Number.isFinite(availability))
-            return { background: "#f6f6f6", border: "#eee" };
-          const colors = [
-            { background: "#bbddaa88", border: "#bbddaa44" },
-            { background: "#759138aa", border: "#509E5922" },
-            { background: "#A1C71Dbb", border: "#75913822" },
-            // { background:  "#FFFD00", border: "ffffff33" },
-            // { background:  "#FAD405", border: "ffffff33" },
-            { background: "#F4AF0Bcc", border: "#EF8C1022" },
-            { background: "#EF8C10dd", border: "#EA6D1522" },
-            { background: "#EA6D15ee", border: "#E5501A22" },
-            { background: "#E5501Aff", border: "#DF372022" },
-            { background: "#DF3720ff", border: "#DA252922" },
-            { background: "#DA2529ff", border: "#00000022" },
-          ].reverse();
-
-          const ci = Math.round(availability * (colors.length - 1));
-          return colors[ci];
-
-          const hue = 130 * availability + 20;
-          const fullness = (measured / total) * 100;
-          // return `oklch(70.73% 0.1429 ${hue} / ${fullness}%)`;
-          return `oklch(60% 0.1429 ${hue} / ${fullness}%)`;
-        }
-
         // Slot
         const slot = range
           .selectAll("div")
@@ -241,8 +200,15 @@
           .join("div")
           .attr("class", "slotsingle")
           .style("background", (d) => getColor(d).background)
-          // .style( "height", (d) => `${(d.up + d.down) / (d.up + d.down + d.nodata + d.unknown) * 100}%` )
-          .style("border-color", (d) => getColor(d).border);
+          // .style( "height", (d) => `${d.measured / d.total * 100}%` )
+          .style("border-color", (d) => getColor(d).border)
+          // .style("line-height", "100%")
+          .text((d) => {
+            if (!Number.isFinite(d.availability)) return "";
+            if (d.availability === 1) return "";
+            if (d.total === 0) return "";
+            return (d.availability * 100).toFixed(0);
+          });
 
         // Colored bar (green/violet/red/grey)
         /*
@@ -262,8 +228,8 @@
         const API_MINUTE = 60;
         const API_HOUR = 3600;
 
-        const step = API_MINUTE * 5; // ←←←←←←← CHANGE THIS
-        const range = API_HOUR * 3; // ←←←←←←← CHANGE THIS
+        const step = API_MINUTE * 30; // ←←←←←←← CHANGE THIS
+        const range = API_HOUR * 12; // ←←←←←←← CHANGE THIS
 
         const to = Math.round(new Date().valueOf() / 1000); // 'now' in seconds
         const from = to - range;
@@ -291,12 +257,20 @@
                 const end = new Date(d.end).valueOf();
                 slotDuration = 1e6 * (end - start);
               }
+
+              const total = d.up + d.down + d.unknown + d.nodata;
+              const measured = d.up + d.down;
+              const availability = d.up / measured;
+
               return {
                 up: d.up / slotDuration,
                 down: d.down / slotDuration,
                 unknown: d.unknown / slotDuration,
                 muted: d.muted / slotDuration,
                 nodata: d.nodata / slotDuration,
+                total,
+                measured,
+                availability,
               };
             });
 
@@ -304,6 +278,53 @@
         }).filter((d) => d);
 
         return data;
+      }
+
+      function getColor(d) {
+        /*
+        function perc2color(perc) {
+          var r, g, b = 0;
+          if(perc < 50) {
+            r = 255;
+            g = Math.round(5.1 * perc);
+            }
+            else {
+              g = 130; // 255
+              r = Math.round(510 - 5.10 * perc);
+              }
+              var h = r * 0x10000 + g * 0x100 + b * 0x1;
+              return '#' + ('000000' + h.toString(16)).slice(-6);
+              }
+
+              return perc2color(availability*100)
+              */
+
+        if (!Number.isFinite(d.availability)) {
+          return { background: "#f6f6f6", border: "#eee" };
+        }
+
+        const colors = [
+          { background: "#bbddaa88", border: "#bbddaa44" },
+          { background: "#759138aa", border: "#509E5922" },
+          { background: "#A1C71Dbb", border: "#75913822" },
+          // { background:  "#FFFD00", border: "ffffff33" },
+          // { background:  "#FAD405", border: "ffffff33" },
+          { background: "#F4AF0Bcc", border: "#EF8C1022" },
+          { background: "#EF8C10dd", border: "#EA6D1522" },
+          { background: "#EA6D15ee", border: "#E5501A22" },
+          { background: "#E5501Aff", border: "#DF372022" },
+          { background: "#DF3720ff", border: "#DA252922" },
+          { background: "#DA2529ff", border: "#00000022" },
+        ];
+
+        if (d.availability === 1) return colors[0];
+        const ci = Math.round((1 - d.availability) * (colors.length - 2)) + 1;
+        return colors[ci];
+
+        const hue = 130 * d.availability + 20;
+        const fullness = (d.measured / d.total) * 100;
+        // return `oklch(70.73% 0.1429 ${hue} / ${fullness}%)`;
+        return `oklch(60% 0.1429 ${hue} / ${fullness}%)`;
       }
 
       show(await getData());
