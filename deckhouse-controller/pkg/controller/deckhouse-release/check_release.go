@@ -167,7 +167,6 @@ func (r *deckhouseReleaseReconciler) checkDeckhouseRelease(ctx context.Context) 
 		return fmt.Errorf("parse semver: %w", err)
 	}
 
-	r.releaseVersionImageHash = imageInfo.Digest.String()
 	r.metricStorage.Grouped().ExpireGroupMetrics(metricUpdatingFailedGroup)
 
 	releaseForUpdate := deployedRelease
@@ -184,6 +183,9 @@ func (r *deckhouseReleaseReconciler) checkDeckhouseRelease(ctx context.Context) 
 	if err != nil {
 		return fmt.Errorf("create releases: %w", err)
 	}
+
+	// update image hash only if create all releases
+	r.releaseVersionImageHash = imageInfo.Digest.String()
 
 	sort.Sort(sort.Reverse(releaseUpdater.ByVersion[*v1alpha1.DeckhouseRelease](releases)))
 
