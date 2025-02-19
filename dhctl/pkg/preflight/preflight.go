@@ -100,6 +100,11 @@ func (pc *Checker) Static() error {
 			skipFlag:       app.SSHForwardArgName,
 		},
 		{
+			fun:            pc.CheckDeckhouseUser,
+			successMessage: "deckhouse user and group aren't present on node",
+			skipFlag:       app.DeckhouseUserCheckName,
+		},
+		{
 			fun:            pc.CheckStaticNodeSystemRequirements,
 			successMessage: "that node meets system requirements",
 			skipFlag:       app.SystemRequirementsArgName,
