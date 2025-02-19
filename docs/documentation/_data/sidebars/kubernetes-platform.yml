@@ -2,13 +2,9 @@
 entries:
   folders:
     - title:
-        en: Deckhouse Kubernetes Platform
-        ru: Deckhouse Kubernetes Platform
-      folders:
-        - title:
-            en: What is DKP
-            ru: Что такое DKP
-          url: /about.html
+        en: Overview
+        ru: Обзор
+      url: /deckhouse-overview.html
 # ------------- Administration -------------
     - title:
         en: Administration
@@ -16,7 +12,7 @@ entries:
       folders:
         - title:
             en: Overview
-            ru: Введение
+            ru: Обзор
           url: /admin/administration-overview.html
         - title:
             en: Installation
@@ -48,7 +44,7 @@ entries:
               folders:
                 - title:
                     en: Overview
-                    ru: Введение
+                    ru: Обзор
                   url: /admin/configuration/access/
                 - title:
                     en: Connection
@@ -68,7 +64,7 @@ entries:
               folders:
                 - title:
                     en: Overview
-                    ru: Введение
+                    ru: Обзор
                   url: /admin/configuration/update/update/
                 - title:
                     en: Alerts
@@ -112,7 +108,7 @@ entries:
               folders:
                 - title:
                     en: Overview
-                    ru: Введение
+                    ru: Обзор
                   url: /admin/network/overview.html
                 - title:
                     en: Internal network
@@ -148,7 +144,7 @@ entries:
                       folders:
                         - title:
                             en: Overview
-                            ru: Введение
+                            ru: Обзор
                           url: /admin/network/tcp-udp-balancing-overview.html
                         - title:
                             en: Balancing in Bare metal clusters
@@ -164,7 +160,7 @@ entries:
                       folders:
                         - title:
                             en: Overview
-                            ru: Введение
+                            ru: Обзор
                           url: /admin/network/alb-overview.html
                         - title:
                             en: ALB means NGINX Ingress controller
@@ -184,7 +180,7 @@ entries:
                   folders:
                     - title:
                         en: Overview
-                        ru: Введение
+                        ru: Обзор
                       url: /admin/network/outgoing-traffic-balancing.html
                     - title:
                         en: Egress
@@ -200,7 +196,7 @@ entries:
                   folders:
                     - title:
                         en: Overview
-                        ru: Введение
+                        ru: Обзор
                       url: /admin/network/service-mesh-overview.html
                     - title:
                         en: mTLS
@@ -224,7 +220,7 @@ entries:
                   folders:
                     - title:
                         en: Overview
-                        ru: Введение
+                        ru: Обзор
                       url: /admin/network/inter-cluster-cooperation-overview.html
                     - title:
                         en: Multicluster
@@ -240,7 +236,7 @@ entries:
                   folders:
                     - title:
                         en: Overview
-                        ru: Введение
+                        ru: Обзор
                       url: /admin/network/outgoing-traffic-balancing.html
                     - title:
                         en: Egress
@@ -256,7 +252,7 @@ entries:
                   folders:
                     - title:
                         en: Overview
-                        ru: Введение
+                        ru: Обзор
                       url: /admin/network/network-policies-overview.html
                     - title:
                         en: Network policy configuration
@@ -268,7 +264,7 @@ entries:
                   folders:
                     - title:
                         en: Overview
-                        ru: Введение
+                        ru: Обзор
                       url: /admin/network/other-network-configuration-options-overview.html
                     - title:
                         en: Management of static routes and ip rules on cluster nodes
@@ -300,7 +296,7 @@ entries:
               folders:
                 - title:
                     en: Overview
-                    ru: Введение
+                    ru: Обзор
                   url: /admin/storage-overview.html
             - title:
                 en: Platform security
@@ -308,7 +304,7 @@ entries:
               folders:
                 - title:
                     en: Overview
-                    ru: Введение
+                    ru: Обзор
                   url: /admin/security-overview.html
                 - title:
                     en: SIEM and security software
@@ -332,7 +328,7 @@ entries:
               folders:
                 - title:
                     en: Overview
-                    ru: Введение
+                    ru: Обзор
                   url: /admin/monitoring-overview.html
             - title:
                 en: Platform journaling
@@ -340,7 +336,7 @@ entries:
               folders:
                 - title:
                     en: Overview
-                    ru: Введение
+                    ru: Обзор
                   url: /admin/journaling-overview.html
             - title:
                 en: Multitenancy
@@ -348,7 +344,7 @@ entries:
               folders:
                 - title:
                     en: Overview
-                    ru: Введение
+                    ru: Обзор
                   url: /admin/multitenancy-overview.html
 # ------------- Using -------------
     - title:
@@ -357,7 +353,7 @@ entries:
       folders:
         - title:
             en: Overview
-            ru: Введение
+            ru: Обзор
           url: /user/using-overview.html
         - title:
             en: Access to the platform
@@ -438,7 +434,7 @@ entries:
       folders:
         - title:
             en: Overview
-            ru: Введение
+            ru: Обзор
           url: /architecture/architecture-overview.html
         - title:
             en: Installation
@@ -459,7 +455,7 @@ entries:
       folders:
         - title:
             en: Overview
-            ru: Введение
+            ru: Обзор
           url: /reference/reference-overview.html
         - title:
             en: Modules
