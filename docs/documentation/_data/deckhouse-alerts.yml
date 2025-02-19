@@ -4186,6 +4186,19 @@ alerts:
         A load balancer has not been created.
       severity: "4"
       markupFormat: default
+    - name: LokiRetentionPerionViolation
+      sourceFile: modules/462-loki/monitoring/prometheus-rules/alerts.yaml
+      moduleUrl: 462-loki
+      module: loki
+      edition: ce
+      description: |-
+        Not enough disk space to retain logs for {{ .Values.loki.retentionPeriodHours }} hours. Current effective retention period is {{`{{ $value }}`}} hours.
+
+        You need either decrease expected `retentionPeriodHours` or increase resize Loki PersistentVolumeClaim
+      summary: |
+        Not enough disk space to retain logs for {{{{ $value }}}} hours
+      severity: "4"
+      markupFormat: markdown
     - name: MigrationRequiredFromRBDInTreeProvisionerToCSIDriver
       sourceFile: modules/340-monitoring-deckhouse/monitoring/prometheus-rules/migration-alerts.tpl
       moduleUrl: 340-monitoring-deckhouse
@@ -5457,6 +5470,7 @@ modules-having-alerts:
     - istio
     - kube-dns
     - log-shipper
+    - loki
     - metallb
     - monitoring-applications
     - monitoring-custom
