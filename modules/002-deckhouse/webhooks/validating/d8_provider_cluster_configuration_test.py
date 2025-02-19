@@ -32,7 +32,7 @@ def _prepare_update_binding_context(
 ) -> DotMap:
     ctx = DotMap(
         {
-            "binding": "d8-provider-cluster-configuration-secret.deckhouse.io",
+            "binding": "d8-provider-cluster-cfg-secret.deckhouse.io",
             "review": {
                 "request": {
                     "uid": "8af60184-b30b-4b90-a33e-0c190f10e96d",
@@ -124,7 +124,7 @@ def _prepare_create_binding_context(
 ) -> DotMap:
     ctx = DotMap(
         {
-            "binding": "d8-provider-cluster-configuration-secret.deckhouse.io",
+            "binding": "d8-provider-cluster-cfg-secret.deckhouse.io",
             "review": {
                 "request": {
                     "uid": "8af60184-b30b-4b90-a33e-0c190f10e96d",
@@ -201,7 +201,7 @@ def _prepare_delete_binding_context(
 ) -> DotMap:
     ctx = DotMap(
         {
-            "binding": "d8-provider-cluster-configuration-secret.deckhouse.io",
+            "binding": "d8-provider-cluster-cfg-secret.deckhouse.io",
             "review": {
                 "request": {
                     "uid": "8af60184-b30b-4b90-a33e-0c190f10e96d",
