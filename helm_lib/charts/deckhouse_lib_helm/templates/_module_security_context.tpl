@@ -149,6 +149,8 @@ securityContext:
 securityContext:
   readOnlyRootFilesystem: true
   allowPrivilegeEscalation: false
+  seccompProfile:
+    type: RuntimeDefault
   capabilities:
     drop:
     - ALL
