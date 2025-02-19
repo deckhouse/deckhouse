@@ -280,7 +280,6 @@ spec:
                               operator:
                                 description: A comparison operator.
                                 type: string
-                                enum: [In,NotIn,Exists,DoesNotExist]
                                 x-doc-d8Revision: ee
                                 enum:
                                   - In

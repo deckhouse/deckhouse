@@ -24,7 +24,7 @@ kind: VerticalPodAutoscaler
 metadata:
   name: chrony
   namespace: d8-{{ .Chart.Name }}
-  {{- include "helm_lib_module_labels" (list . (dict "app" "chrony" "tier" "node" "workload-resource-policy.deckhouse.io" "every-node")) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "chrony" "tier" "node")) | nindent 2 }}
 spec:
   targetRef:
     apiVersion: "apps/v1"
@@ -53,7 +53,7 @@ kind: VerticalPodAutoscaler
 metadata:
   name: chrony-master
   namespace: d8-{{ .Chart.Name }}
-  {{- include "helm_lib_module_labels" (list . (dict "app" "chrony" "tier" "node" "workload-resource-policy.deckhouse.io" "master")) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "chrony" "tier" "node")) | nindent 2 }}
 spec:
   targetRef:
     apiVersion: "apps/v1"
