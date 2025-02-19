@@ -25,7 +25,6 @@ k8s:
     crictlPatch: 0
     ccm:
       openstack: v1.28.3
-      yandex: v0.31.0
       aws: v1.28.11
       vsphere: v1.28.1
       azure: v1.28.13
@@ -34,7 +33,6 @@ k8s:
       aws: v1.30.0
       azure: v1.28.11
       gcp: v1.12.13
-      yandex: v0.14.0
       vcd: 1.6.0
       zvirt: release-4.19
       vsphere: v3.0.3
@@ -53,7 +51,6 @@ k8s:
     crictlPatch: 0
     ccm:
       openstack: v1.29.1
-      yandex: v0.31.0
       aws: v1.29.8
       vsphere: v1.29.2
       azure: v1.29.11
@@ -62,7 +59,6 @@ k8s:
       aws: v1.30.0
       azure: v1.29.12
       gcp: v1.12.13
-      yandex: v0.14.0
       vcd: 1.6.0
       zvirt: release-4.19
       vsphere: v3.0.3
@@ -81,7 +77,6 @@ k8s:
     crictlPatch: 1
     ccm:
       openstack: v1.30.2
-      yandex: v0.31.0
       aws: v1.30.7
       vsphere: v1.30.2
       azure: v1.30.7
@@ -90,7 +85,6 @@ k8s:
       aws: v1.34.0
       azure: v1.30.7
       gcp: v1.15.4
-      yandex: v0.14.0
       vcd: 1.6.0
       zvirt: release-4.19
       vsphere: v3.0.3
@@ -109,7 +103,6 @@ k8s:
     crictlPatch: 1
     ccm:
       openstack: v1.31.2
-      yandex: v0.31.0
       aws: v1.31.0
       vsphere: v1.31.1
       azure: v1.31.1
@@ -118,7 +111,6 @@ k8s:
       aws: v1.38.1
       azure: v1.31.2
       gcp: v1.15.4
-      yandex: v0.14.0
       vcd: 1.6.0
       zvirt: release-4.19
       vsphere: v3.0.3
@@ -137,7 +129,6 @@ k8s:
     crictlPatch: 0
     ccm:
       openstack: v1.31.2
-      yandex: v0.30.0
       aws: v1.32.0
       vsphere: v1.32.2
       azure: v1.32.0
@@ -146,7 +137,6 @@ k8s:
       aws: v1.38.1
       azure: v1.31.2
       gcp: v1.15.4
-      yandex: v0.13.0
       vcd: 1.6.0
       zvirt: release-4.19
       vsphere: v3.0.3
