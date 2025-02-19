@@ -164,11 +164,11 @@ func (r *deckhouseReleaseReconciler) checkDeckhouseRelease(ctx context.Context) 
 
 		r.logger.Warn("deployed deckhouse-release restored")
 
-		releases = append(releases, restored)
-
 		if releaseForUpdate == nil {
 			releaseForUpdate = restored
 		}
+
+		releases = append(releases, restored)
 
 		sort.Sort(releaseUpdater.ByVersion[*v1alpha1.DeckhouseRelease](releases))
 	}
