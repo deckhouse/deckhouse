@@ -2,6 +2,14 @@
   {{- $version := toString $key }}
   {{- $image_version := toString $key | replace "." "-" }}
   {{- if $value.csi.aws }}
+    {{- $src_version := toString $value.csi.aws}}
+    {{- $patches := (printf "/%smodules/%s-%s/images/%s" $.ModulePath $.ModulePriority $.ModuleName $.ImageName) }}
+    {{- $patch := false }}
+    {{- range $path, $_ := $.Files.Glob (printf "%s/*" $patches) }}
+      {{- if contains $src_version $path }}
+        {{- $patch = true }}
+      {{- end }}
+    {{- end }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
 fromImage: common/distroless
@@ -23,10 +31,21 @@ imageSpec:
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
 final: false
 fromImage: common/src-artifact
+{{- if $patch }}
+git:
+- add: {{ $patches }}/patches/{{ $src_version }}
+  to: /patches
+  stageDependencies:
+    install:
+      - '**/*'
+{{- end }}
 shell:
   install:
     - git clone --depth 1 --branch {{ $value.csi.aws }} {{ $.SOURCE_REPO }}/kubernetes-sigs/aws-ebs-csi-driver.git /src
     - cd /src
+    {{- if $patch}}
+    - git apply /patches/*.patch --verbose
+    {{- end}}
     - rm -rf .git vendor
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
