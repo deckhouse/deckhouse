@@ -55,8 +55,6 @@ function __main__() {
                 )
   for additional_image in "${additional_images[@]}"; do
     additional_image_name=$(echo "$additional_image" | grep -o '[^/]*$')
-    echo "additional_image_name: $additional_image_name"
-    echo "additional_image_tag: $TAG"
     digests=$(echo "$digests"|jq --arg i "$additional_image_name" --arg s "$TAG" '.deckhouse += { ($i): ($s) }')
   done
 
