@@ -106,7 +106,7 @@ Deckhouse запускает агенты Falco (объединены в DaemonS
 Также существуют дополнительный набор встроенных правил:
 - правила, размещенные в формате custom resource [FalcoAuditRules](cr.html#falcoauditrules), `fstec` — правила аудита удовлетворяющие требованиям приказа ФСТЭК России №118 от 4 июля 2022г. (Требования по безопасности информации к средствам контейнеризации).
 
-Вы можете настроить список встроенных правил с помощью [`settings.defaultRulesList`](../runtime-audit-engine/configuration.html#parameters-defaultruleslist) 
+Вы можете настроить список встроенных правил с помощью [`settings.builtInRulesList`](../runtime-audit-engine/configuration.html#parameters-builtinruleslist) 
 
 ### Пользовательские правила
 
