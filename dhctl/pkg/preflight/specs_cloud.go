@@ -121,14 +121,18 @@ func (pc *Checker) CheckCloudMasterNodeSystemRequirements() error {
 	return nil
 }
 
-func (pc *Checker) CheckCloudMasterNodeSecondaryDevicesSupport() error {
+func (pc *Checker) CheckSystemRegistryModuleSupport() error {
 	var cloud config.ClusterConfigCloudSpec
 	if err := json.Unmarshal(pc.metaConfig.ClusterConfig["cloud"], &cloud); err != nil {
 		return fmt.Errorf("unable to unmarshal cloud section from provider cluster configuration: %v", err)
 	}
 
-	if err := pc.metaConfig.ProviderSecondaryDevicesConfig.Validate(cloud.Provider); err != nil {
-		return err
+	if err := pc.metaConfig.ProviderSecondaryDevicesConfig.ValidateRegistryDataDevice(cloud.Provider); err != nil {
+		return fmt.Errorf(
+			"the module 'system-registry' is not supported with the cloud provider '%s': %v",
+			cloud.Provider,
+			err,
+		)
 	}
 	return nil
 }

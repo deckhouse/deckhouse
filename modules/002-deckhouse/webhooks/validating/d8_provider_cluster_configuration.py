@@ -146,10 +146,9 @@ def validate_registry_data_device(
             cloud_provider_field.lower()
             not in PROVIDERS_WITH_REGISTRY_DATA_DEVICE_SUPPORT
         ):
-            return f'The registry data device is not supported with the cloud provider \
-                "{cloud_provider_field}". Please select a registry mode that does \
-                not require the registry data device. Available modes: \
-                {", ".join(REGISTRY_MODES_WITHOUT_REGISTRY_DATA_DEVICE_SUPPORT)}'
+            return f'Creating a disk for registry data is not supported by the cloud provider "{cloud_provider_field}". \
+                    Please select a supported registry mode that does not require a registry data device. \
+                    Available modes: {", ".join(REGISTRY_MODES_WITHOUT_REGISTRY_DATA_DEVICE_SUPPORT)}'
     return None
 
 

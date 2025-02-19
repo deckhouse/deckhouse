@@ -148,8 +148,8 @@ func (pc *Checker) Cloud() error {
 	// It is impossible to focus on the previous saved status
 	err := pc.doRequired("Cloud deployment required preflight checks", []requiredCheckStep{
 		{
-			fun:            pc.CheckCloudMasterNodeSecondaryDevicesSupport,
-			successMessage: "cloud master node secondary devices support",
+			fun:            pc.CheckSystemRegistryModuleSupport,
+			successMessage: "the system registry module is supported",
 		},
 	})
 
@@ -260,6 +260,8 @@ func (pc *Checker) do(title string, checks []checkStep) error {
 			}
 			knownSkipFlags[check.skipFlag] = struct{}{}
 
+			// The Loop is used for formatting logs for user readability.
+			// It utilizes Succeeded and Failed logs.
 			loop := retry.NewLoop(
 				fmt.Sprintf("Checking %s", check.successMessage),
 				1,
@@ -278,6 +280,8 @@ func (pc *Checker) do(title string, checks []checkStep) error {
 func (pc *Checker) doRequired(title string, checks []requiredCheckStep) error {
 	return log.Process("common", title, func() error {
 		for _, check := range checks {
+			// The Loop is used for formatting logs for user readability.
+			// It utilizes Succeeded and Failed logs.
 			loop := retry.NewLoop(
 				fmt.Sprintf("Checking %s", check.successMessage),
 				1,

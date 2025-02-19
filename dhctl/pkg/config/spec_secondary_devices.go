@@ -22,7 +22,6 @@ import (
 
 const (
 	RegistryDataDeviceEnableTerraformVar = "registryDataDeviceEnable"
-	RegistryDataDeviceModuleName         = "system-registry"
 )
 
 var (
@@ -63,14 +62,7 @@ func (cfg *ProviderSecondaryDevicesConfig) ToYAML() ([]byte, error) {
 	return yaml.Marshal(cfg)
 }
 
-func (d *ProviderSecondaryDevicesConfig) Validate(cloudProvider string) error {
-	if err := d.validateRegistryDataDevice(cloudProvider); err != nil {
-		return err
-	}
-	return nil
-}
-
-func (d *ProviderSecondaryDevicesConfig) validateRegistryDataDevice(cloudProvider string) error {
+func (d *ProviderSecondaryDevicesConfig) ValidateRegistryDataDevice(cloudProvider string) error {
 	// Skip if disable
 	if !d.RegistryDataDeviceEnable {
 		return nil
@@ -83,9 +75,9 @@ func (d *ProviderSecondaryDevicesConfig) validateRegistryDataDevice(cloudProvide
 
 	// Return an error if data device is unsupported
 	return fmt.Errorf(
-		"The registry data device for the '%s' module is not supported with the cloud provider '%s'. "+
-			"Please select a registry mode that does not require the registry data device. Available modes: %+v",
-		RegistryDataDeviceModuleName,
+		"Creating a disk for registry data is not supported by the cloud provider '%s'. "+
+			"Please select a supported registry mode that does not require a registry data device. "+
+			"Available modes: %s",
 		cloudProvider,
 		registryModesWithoutRegistryDataDeviceSupport,
 	)

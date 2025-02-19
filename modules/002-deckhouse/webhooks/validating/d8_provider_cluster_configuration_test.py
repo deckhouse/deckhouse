@@ -410,10 +410,9 @@ class TestProviderSecondaryDevicesConfigurationCreate(unittest.TestCase):
         tests.assert_validation_deny(
             self,
             out,
-            f'The registry data device is not supported with the cloud provider \
-                "NonYandex". Please select a registry mode that does \
-                not require the registry data device. Available modes: \
-                {", ".join(REGISTRY_MODES_WITHOUT_REGISTRY_DATA_DEVICE_SUPPORT)}',
+            f'Creating a disk for registry data is not supported by the cloud provider "NonYandex". \
+                    Please select a supported registry mode that does not require a registry data device. \
+                    Available modes: {", ".join(REGISTRY_MODES_WITHOUT_REGISTRY_DATA_DEVICE_SUPPORT)}',
         )
 
     def test_should_create_with_disabled_registry_data_device_with_unsupported_cloud(
@@ -516,10 +515,9 @@ class TestProviderSecondaryDevicesConfigurationUpdate(unittest.TestCase):
         tests.assert_validation_deny(
             self,
             out,
-            f'The registry data device is not supported with the cloud provider \
-                "NonYandex". Please select a registry mode that does \
-                not require the registry data device. Available modes: \
-                {", ".join(REGISTRY_MODES_WITHOUT_REGISTRY_DATA_DEVICE_SUPPORT)}',
+            f'Creating a disk for registry data is not supported by the cloud provider "NonYandex". \
+                    Please select a supported registry mode that does not require a registry data device. \
+                    Available modes: {", ".join(REGISTRY_MODES_WITHOUT_REGISTRY_DATA_DEVICE_SUPPORT)}',
         )
 
     def test_should_update_when_switch_to_disable_registry_data_device_with_unsupported_cloud(

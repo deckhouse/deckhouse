@@ -199,7 +199,7 @@ func parseConfigFromCluster(kubeCl *client.KubernetesClient) (*MetaConfig, error
 		); err != nil {
 			return nil, err
 		}
-		if err := metaConfig.ProviderSecondaryDevicesConfig.Validate(cloud.Provider); err != nil {
+		if err := metaConfig.ProviderSecondaryDevicesConfig.ValidateRegistryDataDevice(cloud.Provider); err != nil {
 			return nil, err
 		}
 	}

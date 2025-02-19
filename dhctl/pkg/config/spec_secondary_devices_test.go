@@ -111,7 +111,7 @@ func TestProviderSecondaryDevicesConfigValidateRegistryDataDevice(t *testing.T) 
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			tt.wantErr(t, tt.config.validateRegistryDataDevice(tt.provider))
+			tt.wantErr(t, tt.config.ValidateRegistryDataDevice(tt.provider))
 		})
 	}
 }
