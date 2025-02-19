@@ -51,8 +51,6 @@ shell:
       github.com/deckhouse/yandex-csi-driver/cmd/yandex-csi-driver
     - chown 64535:64535 /go/bin/yandex-csi-driver
     - chmod 0755 /go/bin/yandex-csi-driver
- {{- end }}
-{{- end }}
 ---
 {{- $csiBinaries := "/bin/chmod /bin/mount /bin/mkdir /bin/rmdir /bin/umount /bin/findmnt /bin/lsblk /sbin/badblocks /sbin/blockdev /sbin/blk* /sbin/dumpe2fs /sbin/e2* /sbin/findfs /sbin/fsck* /sbin/fstrim /sbin/mke2fs /sbin/mkfs* /sbin/resize2fs /usr/sbin/parted /usr/sbin/xfs*" }}
 image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
