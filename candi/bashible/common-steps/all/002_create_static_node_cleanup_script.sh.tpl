@@ -74,7 +74,7 @@ rm -rf /var/lib/upmeter
 rm -rf /etc/sudoers.d/sudoers_flant_kubectl
 rm -rf /etc/sudoers.d/30-deckhouse-nodeadmins
 userdel deckhouse
-groupdel deckhouse
+groupdel nodeadmin
 rm -rf /home/deckhouse
 
 shutdown -r -t 5
