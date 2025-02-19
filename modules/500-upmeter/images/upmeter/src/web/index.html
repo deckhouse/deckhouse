@@ -204,10 +204,11 @@
           .style("border-color", (d) => getColor(d).border)
           // .style("line-height", "100%")
           .text((d) => {
-            if (!Number.isFinite(d.availability)) return ""; // NaN
+            if (!Number.isFinite(d.availability)) return ""; // NaN == no data
             if (d.total === 0) return ""; // No data here
             const av = d.availability * 100;
             if (av === 100) return "";
+            if (av < 1) return "";
             if (av > 99) return av.toFixed(2).substring(2);
             return av.toFixed(0);
           });
