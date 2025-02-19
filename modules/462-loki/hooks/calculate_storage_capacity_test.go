@@ -56,7 +56,7 @@ spec:
 `
 	)
 
-	f := HookExecutionConfigInit(`{"loki": {"internal":{}}}`, `{"loki": {"lokiConfig": {"ingestionRateMB": 4}}}`)
+	f := HookExecutionConfigInit(`{"loki": {"internal":{}}}`, `{"loki": {"diskSizeGigabytes": 50, "lokiConfig": {"ingestionRateMB": 4}}}`)
 
 	Context("Empty cluster", func() {
 		BeforeEach(func() {

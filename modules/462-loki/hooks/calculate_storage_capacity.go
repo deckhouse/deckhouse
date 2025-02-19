@@ -28,7 +28,6 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
-const defaultDiskSize = 50 << 30 // 50 GiB
 const maxSpaceUtilization = 0.95
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -81,6 +80,7 @@ func lokiDisk(input *go_hook.HookInput) error {
 	var pvcSize, cleanupThreshold uint64
 
 	ingestionRate := input.ConfigValues.Get("loki.lokiConfig.ingestionRateMB").Float()
+	defaultDiskSize := uint64(input.ConfigValues.Get("loki.lokiConfig.diskSizeGigabytes").Int() << 30)
 
 	for _, obj := range input.Snapshots["pvcs"] {
 		pvc := obj.(PersistentVolumeClaim)
@@ -106,11 +106,6 @@ func lokiDisk(input *go_hook.HookInput) error {
 
 	input.Values.Set("loki.internal.pvcSize", pvcSize)
 	input.Values.Set("loki.internal.cleanupThreshold", cleanupThreshold)
-
-	// remove deprecated parameters from configmap to further remove them from the openapi spec
-	if input.ConfigValues.Exists("loki.diskSizeGigabytes") {
-		input.ConfigValues.Remove("loki.diskSizeGigabytes")
-	}
 
 	return nil
 }
