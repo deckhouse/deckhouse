@@ -83,6 +83,8 @@ Cilium fully replaces the functionality of the `kube-proxy` module, so `kube-pro
 
 {% alert level="warning" %} The feature is available only in the Enterprise Edition {% endalert %}
 
+Egress Gateway in Deckhouse Kubernetes Platform can be used in one of two modes: [Basic](#basic-mode) and [Mode with Virtual IP](#mode-with-virtual-ip). Use Custom Resource [EgressGateway](cr.html#egressgateway) (parameter `spec.sourceIP.node`) to select the mode.
+
 ### Basic mode
 
 Pre-configured IP addresses are used on egress nodes.

@@ -25,7 +25,7 @@ title: "Модуль cni-cilium: примеры"
 
 ### Пример настройки
 
-#### EgressGateway в режиме PrimaryIPFromEgressGatewayNodeInterface
+#### EgressGateway в режиме PrimaryIPFromEgressGatewayNodeInterface (базовый режим)
 
 ```yaml
 apiVersion: network.deckhouse.io/v1alpha1
@@ -44,7 +44,7 @@ spec:
       interfaceName: eth1
 ```
 
-#### EgressGateway в режиме VirtualIPAddress
+#### EgressGateway в режиме VirtualIPAddress (режим с Virtual IP)
 
 ```yaml
 apiVersion: network.deckhouse.io/v1alpha1
