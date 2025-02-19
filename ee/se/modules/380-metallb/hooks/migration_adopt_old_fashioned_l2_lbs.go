@@ -24,7 +24,7 @@ import (
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	// Depends on 'migration-auto-generating-l2-mlbc.go' hook, we need the ipAddressPoolToMLBCMap here
 	OnBeforeHelm: &go_hook.OrderedConfig{Order: 10},
-	Queue:        "/modules/metallb/services-migration",
+	Queue:        "/modules/metallb/discovery",
 }, dependency.WithExternalDependencies(discoveryServicesForMigrate))
 
 func discoveryServicesForMigrate(input *go_hook.HookInput, dc dependency.Container) error {
