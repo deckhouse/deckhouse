@@ -34,7 +34,7 @@ kind: DaemonSet
 metadata:
   name: multus-controller
   namespace: d8-{{ .Chart.Name }}
-  {{ include "helm_lib_module_labels" (list . (dict "app" "multus-controller" "tier" "node" "name" "multus-controller")) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "multus-controller" "tier" "node" "name" "multus-controller")) | nindent 2 }}
 spec:
   selector:
     matchLabels:
