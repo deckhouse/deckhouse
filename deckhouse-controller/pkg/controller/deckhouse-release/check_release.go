@@ -131,6 +131,14 @@ func (r *deckhouseReleaseReconciler) checkDeckhouseRelease(ctx context.Context) 
 
 	sort.Sort(releaseUpdater.ByVersion[*v1alpha1.DeckhouseRelease](releases))
 
+	var releaseForUpdate *v1alpha1.DeckhouseRelease
+
+	if len(releases) > 0 {
+		releaseForUpdate = releases[0]
+	}
+	releasesInCluster := releases
+
+	// check sequence from the start if no deckhouse release deployed
 	releasesFromDeployed := make([]*v1alpha1.DeckhouseRelease, 0, len(releases))
 	for _, release := range releases {
 		if release.GetPhase() == v1alpha1.DeckhouseReleasePhaseDeployed {
@@ -149,11 +157,20 @@ func (r *deckhouseReleaseReconciler) checkDeckhouseRelease(ctx context.Context) 
 	if deployedRelease == nil {
 		r.logger.Warn("deployed deckhouse-release is not found, restoring...")
 
-		if err := r.restoreCurrentDeployedRelease(ctx, releaseChecker, r.deckhouseVersion); err != nil {
+		restored, err := r.restoreCurrentDeployedRelease(ctx, releaseChecker, r.deckhouseVersion)
+		if err != nil {
 			return fmt.Errorf("restore current deployed release: %w", err)
 		}
 
 		r.logger.Warn("deployed deckhouse-release restored")
+
+		releases = append(releases, restored)
+
+		if releaseForUpdate == nil {
+			releaseForUpdate = restored
+		}
+
+		sort.Sort(releaseUpdater.ByVersion[*v1alpha1.DeckhouseRelease](releases))
 	}
 
 	// no new image found
@@ -169,14 +186,10 @@ func (r *deckhouseReleaseReconciler) checkDeckhouseRelease(ctx context.Context) 
 
 	r.metricStorage.Grouped().ExpireGroupMetrics(metricUpdatingFailedGroup)
 
-	releaseForUpdate := deployedRelease
 	// shortened slice for only releases after deployed
-	releasesInCluster := releasesFromDeployed
-
-	if deployedRelease == nil {
-		// check sequence from the start if no deckhouse release deployed
-		releaseForUpdate = releases[0]
-		releasesInCluster = releases
+	if deployedRelease != nil {
+		releaseForUpdate = deployedRelease
+		releasesInCluster = releasesFromDeployed
 	}
 
 	err = r.createReleases(ctx, releaseChecker, releaseForUpdate, releasesInCluster, newSemver)
@@ -187,7 +200,7 @@ func (r *deckhouseReleaseReconciler) checkDeckhouseRelease(ctx context.Context) 
 	// update image hash only if create all releases
 	r.releaseVersionImageHash = imageInfo.Digest.String()
 
-	sort.Sort(sort.Reverse(releaseUpdater.ByVersion[*v1alpha1.DeckhouseRelease](releases)))
+	sort.Sort(sort.Reverse(releaseUpdater.ByVersion[*v1alpha1.DeckhouseRelease](releasesInCluster)))
 
 	// filter by skipped and suspended
 	for _, release := range releasesInCluster {
@@ -268,7 +281,7 @@ func (r *deckhouseReleaseReconciler) listDeckhouseReleases(ctx context.Context) 
 	return result, nil
 }
 
-func (r *deckhouseReleaseReconciler) restoreCurrentDeployedRelease(ctx context.Context, releaseChecker *DeckhouseReleaseChecker, tag string) error {
+func (r *deckhouseReleaseReconciler) restoreCurrentDeployedRelease(ctx context.Context, releaseChecker *DeckhouseReleaseChecker, tag string) (*v1alpha1.DeckhouseRelease, error) {
 	var releaseMetadata *ReleaseMetadata
 
 	image, err := releaseChecker.registryClient.Image(ctx, tag)
@@ -308,7 +321,12 @@ func (r *deckhouseReleaseReconciler) restoreCurrentDeployedRelease(ctx context.C
 		release.Spec.ChangelogLink = fmt.Sprintf("https://github.com/deckhouse/deckhouse/releases/tag/%s", releaseMetadata.Version)
 	}
 
-	return client.IgnoreAlreadyExists(r.client.Create(ctx, release))
+	err = client.IgnoreAlreadyExists(r.client.Create(ctx, release))
+	if err != nil {
+		return nil, fmt.Errorf("create release: %w", err)
+	}
+
+	return release, nil
 }
 
 // createReleases flow:
@@ -330,6 +348,15 @@ func (r *deckhouseReleaseReconciler) createReleases(ctx context.Context, release
 
 	if releaseChecker.releaseMetadata.Cooldown != nil {
 		cooldownUntil = releaseChecker.releaseMetadata.Cooldown
+	}
+
+	if len(releasesInCluster) == 0 {
+		err := r.createRelease(ctx, releaseChecker, cooldownUntil, notificationShiftTime)
+		if err != nil {
+			return fmt.Errorf("create release %s: %w", releaseChecker.releaseMetadata.Version, err)
+		}
+
+		return nil
 	}
 
 	// create release if deployed release and new release are in updating sequence
@@ -398,7 +425,6 @@ func (r *deckhouseReleaseReconciler) createReleases(ctx context.Context, release
 
 	for _, meta := range metas {
 		releaseChecker.releaseMetadata = &meta
-
 		err = r.createRelease(ctx, releaseChecker, cooldownUntil, notificationShiftTime)
 		if err != nil {
 			return fmt.Errorf("create release %s: %w", releaseChecker.releaseMetadata.Version, err)
