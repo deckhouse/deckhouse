@@ -3,9 +3,9 @@
 ---
 # #####################################################################
 # Final image of cilium-agent (used in helm-templates)
-# Based on https://github.com/cilium/cilium/blob/v1.14.14/images/runtime/Dockerfile
-# and https://github.com/cilium/cilium/blob/v1.14.14/images/runtime/install-runtime-deps.sh
-# and https://github.com/cilium/cilium/blob/v1.14.14/images/cilium/Dockerfile (release stage)
+# Based on https://github.com/cilium/cilium/blob/v1.17.0/images/runtime/Dockerfile
+# and https://github.com/cilium/cilium/blob/v1.17.0/images/runtime/install-runtime-deps.sh
+# and https://github.com/cilium/cilium/blob/v1.17.0/images/cilium/Dockerfile (release stage)
 ---
 # #####################################################################
 # List of binary files used by agent
@@ -137,6 +137,8 @@ import:
   - opt/cni/bin/cilium-cni
   - usr/bin/cilium*
   - var/lib/cilium/bpf
+  - usr/bin/hubble
+  - etc/bash_completion.d/hubble
 - image: {{ .ModuleName }}/cilium-envoy-artifact
   add: /tmp/install/usr
   to: /usr
@@ -145,14 +147,6 @@ import:
   - bin/cilium-envoy
   - bin/cilium-envoy-starter
   - lib/libcilium.so
-- image: {{ .ModuleName }}/hubble-artifact
-  add: /hubble
-  to: /usr/bin/hubble
-  before: install
-- image: {{ .ModuleName }}/hubble-artifact
-  add: /bash_completion
-  to: /etc/bash_completion.d/hubble
-  before: install
 - image: common/pause
   add: /pause
   to: /pause
@@ -253,4 +247,4 @@ imageSpec:
   config:
     env: { "HUBBLE_SERVER": "unix:///var/run/cilium/hubble.sock", "INITSYSTEM": "SYSTEMD", "HUBBLE_COMPAT": "legacy-json-output", "PATH": "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin", "LANG": "C.UTF-8", "LANGUAGE": "C.UTF-8", "LC_ALL": "C.UTF-8" }
     workingDir: "/home/cilium"
-    cmd: ["/usr/bin/cilium"]
+    cmd: ["/usr/bin/cilium-dbg"]
