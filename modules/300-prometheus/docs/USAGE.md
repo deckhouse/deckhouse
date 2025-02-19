@@ -76,9 +76,11 @@ spec:
 
 Each `ingress-nginx-controller` has certificates that can be used to connect to Prometheus. All you need is to create an additional `Ingress` resource.
 
-> For the example below, it is presumed that Secret `example-com-tls` already exist in namespace d8-monitoring.
->
-> Names for Ingress `my-prometheus-api` and Secret `my-basic-auth-secret` are there for example. Change them to the most suitable names for your case.
+{% alert level="info" %}
+For the example below, it is presumed that Secret `example-com-tls` already exist in namespace d8-monitoring.
+
+Names for Ingress `my-prometheus-api` and Secret `my-basic-auth-secret` are there for example. Change them to the most suitable names for your case.
+{% endalert %}
 
 ```yaml
 apiVersion: networking.k8s.io/v1
@@ -127,14 +129,16 @@ data:
 
 Next, you only need to add the data source to Grafana:
 
-**Set `https://prometheus-api.<cluster-domain>` as the URL**.
+{% alert level="info" %}
+Specify `https://prometheus-api.<cluster-domain>` as the URL.
+{% endalert %}
 
 <img src="../../images/prometheus/prometheus_connect_settings.png" height="500">
 
 * Note that **basic authorization** is not sufficiently secure and safe. You are encouraged to implement additional safety measures, e.g., attach the `nginx.ingress.kubernetes.io/whitelist-source-range` annotation.
 
-* A **considerable disadvantage** of this method is the need to create an Ingress resource in the system namespace.
-Deckhouse does **not guarantee** the functionality of this connection method due to its regular updates.
+* It is **not recommended** connecting this way since you have to create an Ingress resource in the system namespace.
+  Deckhouse does **not guarantee** the functionality of this connection method due to its regular updates.
 
 * This Ingress resource can be used to access the Prometheus API not only from Grafana but for other integrations, e.g., the Prometheus federation.
 
@@ -174,7 +178,7 @@ subjects:
   namespace: default
 ```
 
-Next, define the following job containing the `curl` request:
+Define the following job containing the `curl` request:
 
 ```yaml
 apiVersion: batch/v1

@@ -7,6 +7,7 @@ title: "The user-authn module: FAQ"
 ## How to secure my application?
 
 To enable Dex authentication for your application, follow these steps:
+
 1. Create a [DexAuthenticator](cr.html#dexauthenticator) custom resource.
 
    Creating `DexAuthenticator` in a cluster results in an [oauth2-proxy](https://github.com/oauth2-proxy/oauth2-proxy) instance being created. The latter is connected to Dex. Once the `DexAuthenticator` custom resource becomes available, the necessary Deployment, Service, Ingress, Secret objects will be created in the specified namespace.
@@ -92,11 +93,12 @@ If there is no id token by the id token ticket in Redis, the user will be able t
 3. DexAuthenticator sets the `Authorization` HTTP header to the ID token value from Redis. It is not required for services like [Upmeter](../upmeter/), because permissions to Upmeter entities are not highly grained.
 On the other hand, for the [Kubernetes Dashboard](../dashboard/), it is a crucial functionality because it sends the ID token further to access Kubernetes API.
 
-## How can I generate a kubeconfig and access Kubernetes API?
+## How to generate a kubeconfig and access Kubernetes API?
 
 You can generate `kubeconfig` for remote access to the cluster via `kubectl` via the `kubeconfigurator` web interface.
 
 Configure the [publishAPI](configuration.html#parameters-publishapi) parameter:
+
 - Open the `user-authn` module settings (create the moduleConfig `user-authn` resource if there is none):
 
   ```shell
