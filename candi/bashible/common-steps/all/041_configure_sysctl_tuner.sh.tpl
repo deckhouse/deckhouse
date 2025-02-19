@@ -67,7 +67,7 @@ sysctl -w fs.inotify.max_user_watches=524288 # Increase inotify (https://github.
 sysctl -w fs.inotify.max_user_instances=5120
 sysctl -w kernel.pid_max=2000000
 
-if [ "$(sysctl -n fs.may_detach_mounts)" -eq 0 ]; then
+if [[ "$(sysctl -n fs.may_detach_mounts 2> /dev/null)"  ]]; then
     # For Centos to avoid problems with unmount when container stops # https://bugzilla.redhat.com/show_bug.cgi?id=1441737
     sysctl -w fs.may_detach_mounts=1
 fi
