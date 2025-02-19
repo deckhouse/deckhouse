@@ -70,7 +70,7 @@ module Jekyll
          if entry.has_key?('featureStatus')
            result.push(%Q(
                <span class='sidebar__badge sidebar__badge_#{entry['featureStatus']}'
-                     title="#{ @context.registers[:site].data['i18n']['features'][entry['featureStatus']][lang].lstrip.sub(/\.$/, '')}">
+                     title="#{ @context.registers[:site].data['i18n']['features'][entry['featureStatus']][lang].gsub(/<\/?[^>]*>/, "").lstrip.sub(/\.$/, '')}">
                    #{case entry['featureStatus']
                        when "experimental"
                            "Exp"
