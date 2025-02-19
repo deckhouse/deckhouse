@@ -30,7 +30,7 @@ k8s:
       azure: v1.28.13
       gcp: ccm/v28.10.0
     csi:
-      aws: v1.30.0
+      aws: v1.34.0
       azure: v1.28.11
       gcp: v1.12.13
       vcd: 1.6.0
@@ -55,7 +55,7 @@ k8s:
       azure: v1.29.11
       gcp: ccm/v29.5.1
     csi:
-      aws: v1.30.0
+      aws: v1.34.0
       azure: v1.29.12
       gcp: v1.12.13
       vcd: 1.6.0
