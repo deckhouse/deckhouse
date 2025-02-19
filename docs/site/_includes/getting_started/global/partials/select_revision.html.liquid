@@ -30,7 +30,7 @@
 {%- if page.ee_only == true and page.se_support == true %}
   <div class="tabs">
     {%- for revision in site.data.getting_started.dkp_data.global.revisions %}
-      {%  if revision == "se" or revision == "ee" %}
+      {%  if revision == "se" or revision == "se-plus" or revision == "ee" %}
       <a id='tab_layout_{{ revision }}' href="javascript:void(0)" class="tabs__btn tabs__btn_revision{% if revision == 'se' %} active{% endif %}"
          onclick="openTabAndSaveStatus(event, 'tabs__btn_revision', 'tabs__content_revision', 'block_layout_{{ revision }}', 'dhctl-revision', '{{ revision }}');
            openTabAndSaveStatus(event, 'tabs__btn_revision', 'tabs__content_other', 'block_other_{{ revision }}');
@@ -46,12 +46,14 @@
 {%- if page.ee_only == true and revision == 'ce' %}{% continue %}{% endif %}
 {%- if page.ee_only == true and revision == 'be' %}{% continue %}{% endif %}
 {%- if page.ee_only == true and revision == 'se' %}{% if page.se_support != true %}{% continue %}{% endif %}{% endif %}
-{%- if page.ce_only == true and revision == 'ee' %}{% continue %}{% endif %}
+{%- if page.ee_only == true and revision == 'se-plus' %}{% if page.se_support != true %}{% continue %}{% endif %}{% endif %}
+  {%- if page.ce_only == true and revision == 'ee' %}{% continue %}{% endif %}
 {% assign layoutCode = '' | append: layout.code %}
 <div id='block_layout_{{ revision }}' class="tabs__content tabs__content_revision
 {% if revision == 'ce' %} active{% endif %}
 {% if page.ee_only == true and page.se_support != true %} active{% endif %}
 {% if revision == 'se' and page.se_support == true %} active{% endif %}
+{% if revision == 'se-plus' and page.se_support == true %} active{% endif %}
 " markdown="1">
     {% if page.lang == 'ru' %}
     {% include getting_started/global/partials/INSTALL_CONFIG_RU.liquid revision=revision layout=layoutCode %}
@@ -90,6 +92,7 @@
 {% if revision == 'ce' %} active{% endif %}
 {% if page.ee_only == true and page.se_support != true %} active{% endif %}
 {% if revision == 'se' and page.se_support == true %} active{% endif %}
+{% if revision == 'se-plus' and page.se_support == true %} active{% endif %}
 " markdown="1">
 {% if page.lang == 'ru' %}
 {% include getting_started/global/partials/INSTALL_OTHER_RU.liquid revision=revision %}
@@ -97,7 +100,7 @@
 {% include getting_started/global/partials/INSTALL_OTHER.liquid revision=revision %}
 {% endif %}
 </div>
-{% if revision == 'ee' or revision == 'be' or revision == 'se' %}
+{% if revision == 'ee' or revision == 'be' or revision == 'se' or revision == 'se-plus' %}
 </div>
 {% endif %}
 
