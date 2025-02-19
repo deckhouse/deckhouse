@@ -204,10 +204,12 @@
           .style("border-color", (d) => getColor(d).border)
           // .style("line-height", "100%")
           .text((d) => {
-            if (!Number.isFinite(d.availability)) return "";
-            if (d.availability === 1) return "";
-            if (d.total === 0) return "";
-            return (d.availability * 100).toFixed(0);
+            if (!Number.isFinite(d.availability)) return ""; // NaN
+            if (d.total === 0) return ""; // No data here
+            const av = d.availability * 100;
+            if (av === 100) return "";
+            if (av > 99) return av.toFixed(2).substring(2);
+            return av.toFixed(0);
           });
 
         // Colored bar (green/violet/red/grey)
@@ -228,7 +230,7 @@
         const API_MINUTE = 60;
         const API_HOUR = 3600;
 
-        const step = API_MINUTE * 30; // ←←←←←←← CHANGE THIS
+        const step = API_MINUTE * 15; // ←←←←←←← CHANGE THIS
         const range = API_HOUR * 12; // ←←←←←←← CHANGE THIS
 
         const to = Math.round(new Date().valueOf() / 1000); // 'now' in seconds
