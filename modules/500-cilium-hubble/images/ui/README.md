@@ -1,4 +1,4 @@
-## Static frontend build
+## How to build static assets for hubble-ui-frontend
 
 ```bash
 git clone --depth 1 --branch v{{ $hubbleUIVersion }} {{ $.SOURCE_REPO }}/cilium/hubble-ui.git /src
