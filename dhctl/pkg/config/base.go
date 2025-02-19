@@ -138,7 +138,7 @@ func ParseConfigInCluster(kubeCl *client.KubernetesClient) (*MetaConfig, error) 
 
 func parseConfigFromCluster(kubeCl *client.KubernetesClient) (*MetaConfig, error) {
 	metaConfig := MetaConfig{}
-	schemaStore := NewSchemaStore()
+	schemaStore := NewSchemaStore(false)
 
 	clusterConfig, err := kubeCl.CoreV1().Secrets("kube-system").Get(context.TODO(), "d8-cluster-configuration", metav1.GetOptions{})
 	if err != nil {
@@ -269,7 +269,7 @@ func parseDocument(doc string, metaConfig *MetaConfig, schemaStore *SchemaStore,
 }
 
 func ParseConfigFromData(configData string, opts ...ValidateOption) (*MetaConfig, error) {
-	schemaStore := NewSchemaStore()
+	schemaStore := NewSchemaStore(false)
 
 	bigFileTmp := strings.TrimSpace(configData)
 	docs := input.YAMLSplitRegexp.Split(bigFileTmp, -1)
@@ -308,6 +308,21 @@ deckhouse: {}
 	}
 
 	return metaConfig.Prepare()
+}
+
+func CheckParseConfigFromData(configData string, opts ...ValidateOption) error {
+	schemaStore := NewSchemaStore(true)
+	bigFileTmp := strings.TrimSpace(configData)
+	docs := input.YAMLSplitRegexp.Split(bigFileTmp, -1)
+
+	metaConfig := MetaConfig{}
+	for _, doc := range docs {
+		_, err := parseDocument(doc, &metaConfig, schemaStore, opts...)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func InitGlobalVars(pwd string) {

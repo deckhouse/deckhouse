@@ -1,0 +1,20 @@
+- name: d8.check-cloud-provider-config
+  rules:
+    - alert: CheckCloudProviderConfig
+      expr: |
+        d8_check_cloud_provider_config > 0
+      for: 1m
+      labels:
+        tier: cluster
+        severity_level: "9"
+      annotations:
+        plk_markup_format: markdown
+        plk_protocol_version: "1"
+        summary: Provider-cluster-configuration secret in the cluster contains fields outside the schema.
+        description: |
+          Provider-cluster-configuration secret in the cluster contains fields outside the schema.
+          Remove it from provider-cluster-configuration.
+
+          ```bash
+          kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller edit provider-cluster-configuration
+          ```

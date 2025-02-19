@@ -176,7 +176,7 @@ func DefineCommandParseCloudDiscoveryData(cmd *kingpin.CmdClause) *kingpin.CmdCl
 			}
 		}
 
-		schemaStore := config.NewSchemaStore()
+		schemaStore := config.NewSchemaStore(false)
 		_, err = schemaStore.Validate(&data)
 		if err != nil {
 			return fmt.Errorf("validate cloud_discovery_data: %v", err)
