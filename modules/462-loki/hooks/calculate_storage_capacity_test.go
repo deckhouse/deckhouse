@@ -25,7 +25,8 @@ import (
 
 var _ = Describe("Modules :: loki :: hooks :: calculate_storage_capacity ::", func() {
 	const (
-		pvcs = `
+		highLogsThroughputRate = 128
+		pvcs                   = `
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
@@ -65,7 +66,7 @@ spec:
 
 		It("must be executed successfully; loki disk size must be 50 GiB, threshold: 47.5 GiB", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("loki.internal.diskSize").Int()).To(Equal(int64(50 << 30)))
+			Expect(f.ValuesGet("loki.internal.pvcSize").Int()).To(Equal(int64(50 << 30)))
 			Expect(f.ValuesGet("loki.internal.cleanupThreshold").Int()).To(Equal(int64(50 << 30 * 0.95)))
 		})
 	})
@@ -78,22 +79,23 @@ spec:
 
 		It("must be executed successfully; loki disk size must be 70 GiB, retention must be 66.5 GiB", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("loki.internal.diskSize").Int()).To(Equal(int64(70 << 30)))
+			Expect(f.ValuesGet("loki.internal.pvcSize").Int()).To(Equal(int64(70 << 30)))
 			Expect(f.ValuesGet("loki.internal.cleanupThreshold").Int()).To(Equal(int64(70 << 30 * 0.95)))
 		})
 	})
 
 	Context("Cluster with PVC and high logs throughput", func() {
 		BeforeEach(func() {
-			f.ConfigValuesSet("loki.lokiConfig.ingestionRateMB", 128)
+			f.ConfigValuesSet("loki.lokiConfig.ingestionRateMB", highLogsThroughputRate)
 			f.BindingContexts.Set(f.KubeStateSet(pvcs))
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
 			f.RunHook()
 		})
 
 		It("must be executed successfully; loki disk size must be 70, retention must be 55 GiB", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("loki.internal.diskSize").Int()).To(Equal(int64(70 << 30)))
-			Expect(f.ValuesGet("loki.internal.cleanupThreshold").Int()).To(Equal(int64(70<<30 - 128<<20*60*2)))
+			Expect(f.ValuesGet("loki.internal.pvcSize").Int()).To(Equal(int64(70 << 30)))
+			Expect(f.ValuesGet("loki.internal.cleanupThreshold").Int()).To(Equal(int64(70<<30 - highLogsThroughputRate<<20*60*2)))
 		})
 	})
 })

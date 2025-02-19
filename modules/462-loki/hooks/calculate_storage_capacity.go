@@ -80,7 +80,7 @@ func persistentVolumeClaimFilter(obj *unstructured.Unstructured) (go_hook.Filter
 func lokiDisk(input *go_hook.HookInput) error {
 	var pvcSize, cleanupThreshold uint64
 
-	ingestionRate := input.Values.Get("loki.lokiConfig.ingestionRateMB").Float()
+	ingestionRate := input.ConfigValues.Get("loki.lokiConfig.ingestionRateMB").Float()
 
 	for _, obj := range input.Snapshots["pvcs"] {
 		pvc := obj.(PersistentVolumeClaim)
