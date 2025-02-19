@@ -231,10 +231,11 @@
         const API_MINUTE = 60;
         const API_HOUR = 3600;
 
-        const step = API_MINUTE * 15; // ←←←←←←← CHANGE THIS
-        const range = API_HOUR * 12; // ←←←←←←← CHANGE THIS
+        const step = API_MINUTE * 10; // ←←←←←←← CHANGE THIS
+        const range = API_HOUR * 6; // ←←←←←←← CHANGE THIS
 
-        const to = Math.round(new Date().valueOf() / 1000); // 'now' in seconds
+        const now = Math.round(new Date().valueOf() / 1000); // 'now' in seconds
+        const to = now - (now % (5 * API_MINUTE));  // 'now' floored by 5 min
         const from = to - range;
 
         const url = (gp) =>
@@ -307,7 +308,10 @@
         }
 
         const colors = [
-          { background: "#bbddaa88", border: "#bbddaa44" },
+          // { background: "#bbddaa88", border: "#bbddaa44" },
+          // { background: "#aaddaa88", border: "#aaddaa44" },
+          { background: "#aaddcc88", border: "#aaddcc44" },
+          // { background: "#aaddbb88", border: "#aaddbb44" },
           { background: "#759138aa", border: "#509E5922" },
           { background: "#A1C71Dbb", border: "#75913822" },
           // { background:  "#FFFD00", border: "ffffff33" },
