@@ -140,10 +140,10 @@ index 3c8b85ec3a503f4e55e6d9f9519d50be095565e4..a3ba20ea8540e645a8a365991d53443b
  			level.Error(util_log.Logger).Log("msg", "failed to run compaction", "err", err)
 diff --git a/pkg/storage/stores/indexshipper/compactor/force_expiration.go b/pkg/storage/stores/indexshipper/compactor/force_expiration.go
 new file mode 100644
-index 0000000000000000000000000000000000000000..d4ca33f0ee9d6a97ba8a21c46fdcba2a5e364fc5
+index 0000000000000000000000000000000000000000..c9aa63acd33a7c8ed4f718f04d82fadd8516d2db
 --- /dev/null
 +++ b/pkg/storage/stores/indexshipper/compactor/force_expiration.go
-@@ -0,0 +1,394 @@
+@@ -0,0 +1,402 @@
 +package compactor
 +
 +import (
@@ -403,6 +403,8 @@ index 0000000000000000000000000000000000000000..d4ca33f0ee9d6a97ba8a21c46fdcba2a
 +			return false, nil
 +		}
 +
++		h.m.lastExpiredChunkTimestampSeconds.Set(float64(chk.Through.Unix()))
++
 +		chunksToDelete = append(chunksToDelete, chunkID)
 +		bytesDeleted = bytesDeleted + chkSize
 +		return true, nil
@@ -494,16 +496,22 @@ index 0000000000000000000000000000000000000000..d4ca33f0ee9d6a97ba8a21c46fdcba2a
 +// metrics
 +
 +type forceExpirationHookMetrics struct {
-+	expiredChunksCount         prometheus.Counter
-+	expiredChunksIncrement     prometheus.Counter
-+	expiredChunksSizeBytes     prometheus.Counter
-+	dirUsageThresholdBytes     *prometheus.GaugeVec
-+	dirUsageBytes              *prometheus.GaugeVec
-+	dirUsageEvaluationDuration *prometheus.HistogramVec
++	lastExpiredChunkTimestampSeconds prometheus.Gauge
++	expiredChunksCount               prometheus.Counter
++	expiredChunksIncrement           prometheus.Counter
++	expiredChunksSizeBytes           prometheus.Counter
++	dirUsageThresholdBytes           *prometheus.GaugeVec
++	dirUsageBytes                    *prometheus.GaugeVec
++	dirUsageEvaluationDuration       *prometheus.HistogramVec
 +}
 +
 +func newForceExpirationHookMetrics(r prometheus.Registerer) *forceExpirationHookMetrics {
 +	m := forceExpirationHookMetrics{
++		lastExpiredChunkTimestampSeconds: promauto.With(r).NewGauge(prometheus.GaugeOpts{
++			Namespace: "force_expiration_hook",
++			Name:      "last_expired_chunk_timestamp_seconds",
++			Help:      "Unix epoch timestamp of last expired chunk",
++		}),
 +		expiredChunksCount: promauto.With(r).NewCounter(prometheus.CounterOpts{
 +			Namespace: "force_expiration_hook",
 +			Name:      "expired_chunks_count",
