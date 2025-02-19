@@ -3,6 +3,7 @@ global:
     - ce
     - be
     - se
+    - se-plus
     - ee
   step1:
     name:
