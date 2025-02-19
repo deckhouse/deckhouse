@@ -32,6 +32,7 @@ var (
 	PreflightSkipSystemRequirementsCheck   = false
 	PreflightSkipOneSSHHost                = false
 	PreflightSkipCloudAPIAccessibility     = false
+	PreflightSkipDeckhouseUserCheck        = false
 )
 
 const (
@@ -49,6 +50,7 @@ const (
 	SystemRequirementsArgName        = "preflight-skip-system-requirements-check"
 	CloudAPIAccessibilityArgName     = "preflight-cloud-api-accesibility-check"
 	OneSSHHostCheckArgName           = "preflight-skip-one-ssh-host"
+	DeckhouseUserCheckName           = "preflight-skip-deckhouse-user-check"
 )
 
 var (
@@ -67,6 +69,7 @@ var (
 		SudoAllowedCheckArgName:          &PreflightSkipSudoIsAllowedForUserCheck,
 		SystemRequirementsArgName:        &PreflightSkipSystemRequirementsCheck,
 		OneSSHHostCheckArgName:           &PreflightSkipOneSSHHost,
+		DeckhouseUserCheckName:           &PreflightSkipDeckhouseUserCheck,
 	}
 )
 
@@ -124,4 +127,7 @@ func DefinePreflight(cmd *kingpin.CmdClause) {
 	cmd.Flag(OneSSHHostCheckArgName, "Skip verifying one ssh-host parametr").
 		Envar(configEnvName("PREFLIGHT_SKIP_ONE_SSH_HOST")).
 		BoolVar(PreflightSkipOptionsMap[OneSSHHostCheckArgName])
+	cmd.Flag(DeckhouseUserCheckName, "Skip verifying deckhouse user existence").
+		Envar(configEnvName("PREFLIGHT_SKIP_DECKHOUSE_USER")).
+		BoolVar(PreflightSkipOptionsMap[DeckhouseUserCheckName])
 }
