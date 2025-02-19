@@ -35,6 +35,7 @@ jobs:
       - name: Download custom trivy-db binary and copy image
         run: |
           rm -rf ./trivy-db && git clone --depth 1 --branch flant-v2 ${{secrets.SOURCE_REPO_GIT}}/aquasecurity/trivy-db.git && cd trivy-db
+          echo TEST
           ./update.sh ${{secrets.DECKHOUSE_REGISTRY_HOST}}/deckhouse/ee >/dev/null 2>&1
           ./update.sh ${{secrets.DECKHOUSE_REGISTRY_HOST}}/deckhouse/fe >/dev/null 2>&1
           ./update.sh ${{secrets.DECKHOUSE_CSE_REGISTRY_HOST}}/deckhouse/cse >/dev/null 2>&1
