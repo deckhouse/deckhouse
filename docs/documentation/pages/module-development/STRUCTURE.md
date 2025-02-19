@@ -269,19 +269,25 @@ Module parameter conversions allow you to convert the OpenAPI specification of m
 
 Each conversion can only be performed between two consecutive versions (e.g., from the first to the second one). There can be several conversions, and the chain of conversions must cover all versions of the parameter specification with no "gaps".
 
-The conversion file is an arbitrarily named YAML file of the following format:
+The conversion file is a YAML file named `v<N>.yaml` or `v<N>.yml`, where `<N>` is the conversion version. It has the following structure:
 
 ```yaml
-version: N # The version number to convert to. 
+version: N # The version number to convert to.
 conversions: []  # A set of jq expressions to transform data from the previous version.
+description:
+  ru: ""  # Explanation of changes in Russian.
+  en: ""  # Explanation of changes in English.
 ```
 
-Below is an example of a module parameter conversion file where in version 2, the `.auth.password` parameter has been removed:
+Below is an example of a module parameter conversion file `v2.yaml`, where in version 2 the `.auth.password` parameter has been removed:
 
 ```yaml
 version: 2
 conversions:
   - del(.auth.password) | if .auth == {} then del(.auth) end
+description:
+  ru: "Удалите `.auth.password`, затем `auth`, если он пуст."
+  en: "Remove `.auth.password`, then `auth` if empty."
 ```
 
 #### Conversion tests
