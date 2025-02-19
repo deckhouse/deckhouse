@@ -20,19 +20,34 @@ imageSpec:
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
 final: false
-from: {{ $.Images.BASE_UBUNTU }}
+fromImage: common/alt-p11-artifact
 git:
-  - add: /{{ $.ModulePath }}modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
-    to: /
-    stageDependencies:
-      setup:
-      - '**/*'
-  - add: /{{ $.ModulePath }}modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/ca-certificates
-    to: /ca-certificates
-    stageDependencies:
-      setup:
-      - '**/*'
+- add: /{{ $.ModulePath }}modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
+  to: /
+  stageDependencies:
+    install:
+    - '**/*'
+- add: /{{ $.ModulePath }}modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/ca-certificates
+  to: /ca-certificates
+  stageDependencies:
+    install:
+    - '**/*'
+- image: common/python-static
+  add: /opt/python-static/bin
+  to: /usr/bin
+  before: install
+  includePaths:
+  - python3*
+  - python3
+- image: common/python-static
+  add: /opt/python-static/lib
+  to: /usr/lib
+  before: install
+  includePaths:
+  - python3*
 shell:
+  beforeInstall:
+  - apt-get install -y perl-Encode-compat perl-Time-Piece
   setup:
   - mkdir /certs
   - mv /mk-ca-bundle.pl /ca-certificates/mozilla
