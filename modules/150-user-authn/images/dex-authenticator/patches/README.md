@@ -18,3 +18,7 @@ Two options to fix this without patch:
 
 Add a new flag: https://github.com/oauth2-proxy/oauth2-proxy/issues/2144
 Migrate to a structured config (alpha config): https://oauth2-proxy.github.io/oauth2-proxy/docs/configuration/alpha-config
+
+### Redis retries
+
+Prevents oauth2-proxy from failing with exit 1 if Redis has not started in time. Adds a loop to retry sendRedisConnectionTest.
