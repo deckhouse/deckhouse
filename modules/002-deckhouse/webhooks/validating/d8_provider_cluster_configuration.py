@@ -20,7 +20,7 @@ import yaml
 from dotmap import DotMap
 from deckhouse import hook
 
-PROVIDERS_WITH_REGISTRY_DATA_DEVICE_SUPPORT = {
+providers_with_registry_data_device_support = {
     "aws",
     "gcp",
     "yandex",
@@ -32,9 +32,9 @@ PROVIDERS_WITH_REGISTRY_DATA_DEVICE_SUPPORT = {
     # "zvirt",
     # "dynamix",
 }
-REGISTRY_MODES_WITHOUT_REGISTRY_DATA_DEVICE_SUPPORT = {"Direct"}
+registry_modes_without_registry_data_device_support = {"Direct"}
 
-HOOK_CONFIG = """
+config = """
 configVersion: v1
 kubernetes:
   - name: cluster_cfg
@@ -144,11 +144,11 @@ def validate_registry_data_device(
         cloud_provider_field = str(cloud_provider_field)
         if (
             cloud_provider_field.lower()
-            not in PROVIDERS_WITH_REGISTRY_DATA_DEVICE_SUPPORT
+            not in providers_with_registry_data_device_support
         ):
             return f'Creating a disk for registry data is not supported by the cloud provider "{cloud_provider_field}". \
                     Please select a supported registry mode that does not require a registry data device. \
-                    Available modes: {", ".join(REGISTRY_MODES_WITHOUT_REGISTRY_DATA_DEVICE_SUPPORT)}'
+                    Available modes: {", ".join(registry_modes_without_registry_data_device_support)}'
     return None
 
 
@@ -200,4 +200,4 @@ def get_nested_value(data: dict, keys: list) -> Tuple[Any, bool]:
 
 
 if __name__ == "__main__":
-    hook.run(main, config=HOOK_CONFIG)
+    hook.run(main, config=config)

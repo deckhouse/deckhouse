@@ -21,7 +21,7 @@ import unittest
 import yaml
 from d8_provider_cluster_configuration import (
     main,
-    REGISTRY_MODES_WITHOUT_REGISTRY_DATA_DEVICE_SUPPORT,
+    registry_modes_without_registry_data_device_support,
 )
 from dotmap import DotMap
 from deckhouse import hook, tests
@@ -412,7 +412,7 @@ class TestProviderSecondaryDevicesConfigurationCreate(unittest.TestCase):
             out,
             f'Creating a disk for registry data is not supported by the cloud provider "NonYandex". \
                     Please select a supported registry mode that does not require a registry data device. \
-                    Available modes: {", ".join(REGISTRY_MODES_WITHOUT_REGISTRY_DATA_DEVICE_SUPPORT)}',
+                    Available modes: {", ".join(registry_modes_without_registry_data_device_support)}',
         )
 
     def test_should_create_with_disabled_registry_data_device_with_unsupported_cloud(
@@ -517,7 +517,7 @@ class TestProviderSecondaryDevicesConfigurationUpdate(unittest.TestCase):
             out,
             f'Creating a disk for registry data is not supported by the cloud provider "NonYandex". \
                     Please select a supported registry mode that does not require a registry data device. \
-                    Available modes: {", ".join(REGISTRY_MODES_WITHOUT_REGISTRY_DATA_DEVICE_SUPPORT)}',
+                    Available modes: {", ".join(registry_modes_without_registry_data_device_support)}',
         )
 
     def test_should_update_when_switch_to_disable_registry_data_device_with_unsupported_cloud(
