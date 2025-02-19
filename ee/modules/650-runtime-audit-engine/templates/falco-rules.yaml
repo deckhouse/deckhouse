@@ -1,4 +1,4 @@
-{{- $rules := default (list) .Values.runtimeAuditEngine.defaultRulesList -}}
+{{- $rules := default (list) .Values.runtimeAuditEngine.builtInRulesList -}}
 {{- $ruleSet := dict -}}
 {{- range $rule := $rules -}}
   {{- $ruleSet = set $ruleSet $rule true -}}
