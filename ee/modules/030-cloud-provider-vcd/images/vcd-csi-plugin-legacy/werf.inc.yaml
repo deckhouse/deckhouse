@@ -63,7 +63,10 @@ shell:
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
 final: false
-from: {{ $.Images.BASE_ALT_DEV }}
+fromImage: common/relocate-artifact
 shell:
-  setup:
+  beforeInstall:
+    - apt-get update -y
+    - apt-get install -y e2fsprogs xfsprogs btrfs-progs nfs-utils parted nvme udev
+  install:
     - /binary_replace.sh -i "{{ $csiBinaries }}" -o /relocate
