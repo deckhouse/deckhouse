@@ -1,6 +1,6 @@
 # src of image BASE_ALT_DEV_CILIUM in candi/image_versions.yml
 {{- $goVersion := "1.23.1" }}
-{{- $protocVersion := "22.3" }}
+{{- $protocVersion := "29.3" }}
 {{- $bazelVersions := "3.7.0 3.7.1 3.7.2 6.3.2" }}
 #
 {{- $source := "https://github.com" }}
@@ -14,22 +14,22 @@
 # #####################################################################
 # BASE_DEV image for build binaries of all cilium components (based on Ubuntu)
 # based on original images: runtime, builder, compilers, cilium-envoy, iptables
-# Based on https://github.com/cilium/cilium/blob/v1.14.14/images/runtime/Dockerfile
-# and https://github.com/cilium/cilium/blob/v1.14.14/images/runtime/install-runtime-deps.sh
-# and https://github.com/cilium/cilium/blob/v1.14.14/images/builder/Dockerfile
+# Based on https://github.com/cilium/cilium/blob/v1.17.0/images/runtime/Dockerfile
+# and https://github.com/cilium/cilium/blob/v1.17.0/images/runtime/install-runtime-deps.sh
+# and https://github.com/cilium/cilium/blob/v1.17.0/images/builder/Dockerfile
 # and https://github.com/cilium/image-tools/blob/063fa0d879d9560b85b6134c48ece08e672fa057/images/compilers/Dockerfile
 # and https://github.com/cilium/image-tools/blob/063fa0d879d9560b85b6134c48ece08e672fa057/images/compilers/install-deps.sh
 # and https://github.com/cilium/image-tools/blob/063fa0d879d9560b85b6134c48ece08e672fa057/images/compilers/install-bazel.sh
 # and https://github.com/cilium/cilium/blob/v1.14.5/images/cilium/Dockerfile#L9
 # and https://github.com/cilium/proxy/blob/ad82c7c56e88989992fd25d8d67747de865c823b/Dockerfile.builder
-# and https://github.com/cilium/image-tools/blob/3e6b0f588d788ac0e69f4d126cfb3c55b1513948/images/iptables/Dockerfile
+# and https://github.com/cilium/image-tools/blob/0e4de6ffe79e97a9795f1ce887a45026e1af22a7/images/iptables/Dockerfile
 #
 # Original IMAGE_TAG of compilers (taken from builds of BPFTOOL and LLVM) is 5569a29cea6b3ad50aeb03102aaf3dc03841197c
 # Corresponding commit is 063fa0d879d9560b85b6134c48ece08e672fa057 (https://github.com/cilium/image-tools/tree/063fa0d879d9560b85b6134c48ece08e672fa057)
 # Original IMAGE_TAG of cilium-envoy is v1.26.6-ad82c7c56e88989992fd25d8d67747de865c823b
 # Corresponding commit is ad82c7c56e88989992fd25d8d67747de865c823b
-# Original IMAGE_TAG of cilium/iptables is 67f517af50e18f64cd12625021f1c39246bb4f92
-# Corresponding commit is 3e6b0f588d788ac0e69f4d126cfb3c55b1513948 (https://github.com/cilium/image-tools/tree/3e6b0f588d788ac0e69f4d126cfb3c55b1513948)
+# Original IMAGE_TAG of cilium/iptables is 1331e9b1b03f70c9d8b08626d9a7126963f86478
+# Corresponding commit is 0e4de6ffe79e97a9795f1ce887a45026e1af22a7 (https://github.com/cilium/image-tools/tree/0e4de6ffe79e97a9795f1ce887a45026e1af22a7)
 # #####################################################################
 ---
 image: {{ .ModuleName }}/golang-artifact
@@ -88,10 +88,10 @@ shell:
   - curl --fail --show-error --silent --location "{{ $source }}/protocolbuffers/protobuf/releases/download/v{{ $protocVersion }}/protoc-{{ $protocVersion }}-linux-x86_64.zip" --output /tmp/protoc.zip
   - unzip /tmp/protoc.zip -x readme.txt -d /usr/local && rm /tmp/protoc.zip
   - chmod o+rx /usr/local/bin/protoc && chmod o+rX -R /usr/local/include/google/
-  # 8ba23be9613c672d40ae261d2a1335d639bdd59b == tag: cmd/protoc-gen-go-grpc/v1.3.0
-  - git clone --depth 1 --branch cmd/protoc-gen-go-grpc/v1.3.0 {{ $.SOURCE_REPO }}/grpc/grpc-go.git /src/grpc-go
-  - git clone --depth 1 --branch v1.30.0 {{ $.SOURCE_REPO }}/protocolbuffers/protobuf-go.git /src/protobuf-go
-  - git clone --depth 1 --branch v1.1.0 {{ $.SOURCE_REPO }}/mitchellh/protoc-gen-go-json.git /src/protoc-gen-go-json
+  #
+  - git clone --depth 1 --branch cmd/protoc-gen-go-grpc/v1.5.1 {{ $.SOURCE_REPO }}/grpc/grpc-go.git /src/grpc-go
+  - git clone --depth 1 --branch v1.36.5 {{ $.SOURCE_REPO }}/protocolbuffers/protobuf-go.git /src/protobuf-go
+  - git clone --depth 1 --branch v1.5.0 {{ $.SOURCE_REPO }}/mfridman/protoc-gen-go-json.git /src/protoc-gen-go-json
   - git clone --depth 1 --branch v1.5.1 {{ $.SOURCE_REPO }}/pseudomuto/protoc-gen-doc.git /src/protoc-gen-doc
   - cd /src/grpc-go/cmd/protoc-gen-go-grpc && go install
   - cd /src/protobuf-go/cmd/protoc-gen-go && go install
