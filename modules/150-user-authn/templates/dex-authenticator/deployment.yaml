@@ -210,6 +210,9 @@ spec:
         - name: dex-https
           containerPort: 8443
           protocol: TCP
+        securityContext:
+          seccompProfile:
+            type: RuntimeDefault
       - name: redis
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" . | nindent 8 }}
         image: {{ include "helm_lib_module_common_image" (list $context "redisStatic") }}
