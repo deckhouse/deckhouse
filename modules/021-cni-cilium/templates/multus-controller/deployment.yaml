@@ -29,81 +29,12 @@ spec:
         memory: 200Mi
 {{- end }}
 ---
-kind: ClusterRole
-apiVersion: rbac.authorization.k8s.io/v1
-metadata:
-  name: multus-controller
-rules:
-  - apiGroups: ["k8s.cni.cncf.io"]
-    resources:
-      - network-attachment-definitions
-    verbs:
-      - get
-      - list
-      - watch
-  - apiGroups:
-      - ""
-    resources:
-      - pods
-      - pods/status
-    verbs:
-      - get
-      - list
-      - update
-      - watch
-  - apiGroups:
-      - ""
-      - events.k8s.io
-    resources:
-      - events
-    verbs:
-      - create
-      - patch
-      - update
----
-kind: ClusterRoleBinding
-apiVersion: rbac.authorization.k8s.io/v1
-metadata:
-  name: multus-controller
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: ClusterRole
-  name: multus-controller
-subjects:
-  - kind: ServiceAccount
-    name: multus-controller
-    namespace: d8-{{ .Chart.Name }}
----
-apiVersion: v1
-kind: ServiceAccount
-metadata:
-  name: multus-controller
-  namespace: d8-{{ .Chart.Name }}
----
-kind: ConfigMap
-apiVersion: v1
-metadata:
-  name: multus-controller-config
-  namespace: d8-{{ .Chart.Name }}
-  labels:
-    tier: node
-    app: multus-controller
-data:
-  dynamic-networks-config.json: |
-    {
-        "criSocketPath": "/host/run/containerd/containerd.sock",
-        "multusSocketPath": "/host/run/multus/multus.sock"
-    }
----
 apiVersion: apps/v1
 kind: DaemonSet
 metadata:
   name: multus-controller
   namespace: d8-{{ .Chart.Name }}
-  labels:
-    tier: node
-    app: multus-controller
-    name: multus-controller
+  {{ include "helm_lib_module_labels" (list . (dict "app" "multus-controller" "tier" "node" "name" "multus-controller")) | nindent 2 }}
 spec:
   selector:
     matchLabels:
@@ -175,3 +106,70 @@ spec:
            hostPath:
              path: /run/containerd/containerd.sock
              type: Socket
+---
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: multus-controller
+rules:
+  - apiGroups: ["k8s.cni.cncf.io"]
+    resources:
+      - network-attachment-definitions
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - ""
+    resources:
+      - pods
+      - pods/status
+    verbs:
+      - get
+      - list
+      - update
+      - watch
+  - apiGroups:
+      - ""
+      - events.k8s.io
+    resources:
+      - events
+    verbs:
+      - create
+      - patch
+      - update
+---
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: multus-controller
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: multus-controller
+subjects:
+  - kind: ServiceAccount
+    name: multus-controller
+    namespace: d8-{{ .Chart.Name }}
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: multus-controller
+  namespace: d8-{{ .Chart.Name }}
+---
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: multus-controller-config
+  namespace: d8-{{ .Chart.Name }}
+  labels:
+    tier: node
+    app: multus-controller
+data:
+  dynamic-networks-config.json: |
+    {
+        "criSocketPath": "/host/run/containerd/containerd.sock",
+        "multusSocketPath": "/host/run/multus/multus.sock"
+    }
+---
