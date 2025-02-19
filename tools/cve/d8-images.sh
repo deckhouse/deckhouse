@@ -56,10 +56,8 @@ function __main__() {
   for additional_image in "${additional_images[@]}"; do
     additional_image_name=$(echo "$additional_image" | grep -o '[^/]*$')
     echo "additional_image_name: $additional_image_name"
-    additional_image_sha=$(docker manifest inspect "$additional_image:$TAG" | jq -r .config.digest)
-    echo "getting hash of: "$additional_image:$TAG""
-    echo "additional_image_sha: $additional_image_sha"
-    digests=$(echo "$digests"|jq --arg i "$additional_image_name" --arg s "$additional_image_sha" '.deckhouse += { ($i): ($s) }')
+    echo "additional_image_tag: $TAG"
+    digests=$(echo "$digests"|jq --arg i "$additional_image_name" --arg s "$TAG" '.deckhouse += { ($i): ($s) }')
   done
 
   IMAGE_REPORT_NAME="deckhouse::$(echo "$IMAGE:$TAG" | sed 's/^.*\/\(.*\)/\1/')"
@@ -113,6 +111,15 @@ function __main__() {
       if [[ "$IMAGE_NAME" == "trivy" ]]; then
         continue
       fi
+      # Set flag if additional image to use tag instead of hash
+      additional_image_detected=false
+      for image_item in "${additional_images[@]}"; do
+        if [ "$IMAGE_NAME" == $(echo "$image_item"| grep -o '[^/]*$') ]; then
+          additional_image_detected=true
+          break
+        fi
+      done
+
       echo "----------------------------------------------"
       echo "👾 Image: $IMAGE_NAME"
       echo ""
@@ -121,7 +128,11 @@ function __main__() {
       IMAGE_REPORT_NAME="$MODULE_NAME::$IMAGE_NAME"
 
       # Output reports per images
-      trivyGetJSONReportPartForImage -l "$IMAGE_REPORT_NAME" -i "$IMAGE@$IMAGE_HASH" -s "$SEVERITY" --ignore "out/.trivyignore" --output "out/json/d8_${MODULE_NAME}_${IMAGE_NAME}_report.json"
+      if [ "$additional_image_detected" == true ]; then
+        trivyGetJSONReportPartForImage -l "$IMAGE_REPORT_NAME" -i "$IMAGE" -t "$TAG" -s "$SEVERITY" --ignore "out/.trivyignore" --output "out/json/d8_${MODULE_NAME}_${IMAGE_NAME}_report.json"
+      else
+        trivyGetJSONReportPartForImage -l "$IMAGE_REPORT_NAME" -i "$IMAGE@$IMAGE_HASH" -s "$SEVERITY" --ignore "out/.trivyignore" --output "out/json/d8_${MODULE_NAME}_${IMAGE_NAME}_report.json"
+      fi
       echo ""
       echo " Uploading trivy CVE report for image ${IMAGE_NAME} of ${MODULE_NAME} module"
       echo ""
