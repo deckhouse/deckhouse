@@ -32,7 +32,7 @@ spec:
 apiVersion: apps/v1
 kind: DaemonSet
 metadata:
-    na eeee  me: multus-controller
+    name: multus-controller
   namespace: d8-{{ .Chart.Name }}
   {{- include "helm_lib_module_labels" (list . (dict "app" "multus-controller" "tier" "node" "name" "multus-controller")) | nindent 2 }}
 spec:
@@ -47,6 +47,7 @@ spec:
         tier: node
         app: multus-controller
         name: multus-controller
+        module: cni-cilium
     spec:
       serviceAccountName: multus-controller
       {{- include "helm_lib_priority_class" (tuple . "system-node-critical") | nindent 6 }}
@@ -78,6 +79,10 @@ spec:
             periodSeconds: 5
           resources:
             requests:
+              {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 14 }}
+              cpu: "100m"
+              memory: "50Mi"
+            limits:
               cpu: "100m"
               memory: "50Mi"
           securityContext:
