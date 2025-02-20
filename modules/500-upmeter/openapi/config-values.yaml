@@ -56,11 +56,9 @@ properties:
             items:
               type: string
             description: |
-              An array of user groups that can access module's public web interfaces.
+              An array of emails of users that can access module's public web interfaces.
 
               This parameter is used if the `user-authn` module is enabled or the `externalAuthentication` parameter is set.
-
-              **Caution!** Note that you must add those groups to the appropriate field in the DexProvider config if this module is used together with the [user-authn](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/user-authn/) one.
           allowedUserGroups:
             type: array
             items:
@@ -108,11 +106,9 @@ properties:
             items:
               type: string
             description: |
-              An array of user groups that can access module's public web interfaces.
+              An array of emails of users that can access module's public web interfaces.
 
               This parameter is used if the `user-authn` module is enabled or the `externalAuthentication` parameter is set.
-
-              **Caution!** Note that you must add those groups to the appropriate field in the DexProvider config if this module is used together with the [user-authn](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/user-authn/) one.
           allowedUserGroups:
             type: array
             items:
