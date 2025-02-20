@@ -70,16 +70,11 @@ image: pdf-page-builder
 from: {{ .Images.BASE_ALPINE }}
 final: false
 shell:
-  install:
-  - |
-    echo "Installing bash"
-    apk update
-    apk add bash
   setup:
   - |
     echo "Generate PDF page..."
     cd /srv/jekyll-data/site
-    sh ./prepare_for_pdf.sh
+    bash ./prepare_for_pdf.sh
 git:
 - add: /docs/documentation
   to: /srv/jekyll-data/site/documentation
