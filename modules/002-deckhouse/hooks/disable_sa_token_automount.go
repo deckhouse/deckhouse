@@ -63,6 +63,8 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	},
 }, disableDefaultSATokenAutomount)
 
+var automountPatch = map[string]interface{}{"automountServiceAccountToken": false}
+
 type SA struct {
 	Name                         string
 	Namespace                    string
@@ -93,9 +95,6 @@ func disableDefaultSATokenAutomount(input *go_hook.HookInput) error {
 
 	for _, s := range sa {
 		if s.(*SA).AutomountServiceAccountToken {
-			automountPatch := map[string]interface{}{
-				"automountServiceAccountToken": false,
-			}
 			input.PatchCollector.MergePatch(automountPatch, "v1", "ServiceAccount", s.(*SA).Namespace, s.(*SA).Name)
 		}
 	}
