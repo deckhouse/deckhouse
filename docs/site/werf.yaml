@@ -82,8 +82,6 @@ git:
   to: /srv/jekyll-data/site/modules
 - add: /ee
   to: /srv/jekyll-data/site/ee
-- add: /_includes
-  to: /srv/jekyll-data/site/ee
 - add: /tools/docs/pdf/prepare_for_pdf.sh
   to: /srv/jekyll-data/site/prepare_for_pdf.sh
 ---
