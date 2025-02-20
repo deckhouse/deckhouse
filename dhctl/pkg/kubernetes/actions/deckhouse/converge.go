@@ -52,7 +52,7 @@ func ConvergeDeckhouseConfiguration(ctx context.Context, kubeCl *client.Kubernet
 			Name: `Secret "d8-provider-cluster-configuration"`,
 			Manifest: func() interface{} {
 				return manifests.SecretWithProviderClusterConfig(
-					providerClusterConfig, nil, providerSecondaryDevicesConfig,
+					providerClusterConfig, nil,
 				)
 			},
 			CreateFunc: func(manifest interface{}) error {
@@ -70,6 +70,18 @@ func ConvergeDeckhouseConfiguration(ctx context.Context, kubeCl *client.Kubernet
 					data,
 					metav1.PatchOptions{},
 				)
+				return err
+			},
+		},
+		{
+			Name:     `Secret "d8-provider-secondary-devices-configuration"`,
+			Manifest: func() interface{} { return manifests.SecretWithProviderSecondaryDevicesConfig(providerSecondaryDevicesConfig) },
+			CreateFunc: func(manifest interface{}) error {
+				_, err := kubeCl.CoreV1().Secrets("kube-system").Create(ctx, manifest.(*apiv1.Secret), metav1.CreateOptions{})
+				return err
+			},
+			UpdateFunc: func(manifest interface{}) error {
+				_, err := kubeCl.CoreV1().Secrets("kube-system").Update(ctx, manifest.(*apiv1.Secret), metav1.UpdateOptions{})
 				return err
 			},
 		},

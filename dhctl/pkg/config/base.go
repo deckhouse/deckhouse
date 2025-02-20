@@ -23,6 +23,7 @@ import (
 	"strings"
 	"time"
 
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/yaml"
 
@@ -171,11 +172,6 @@ func parseConfigFromCluster(kubeCl *client.KubernetesClient) (*MetaConfig, error
 	}
 
 	if clusterType == CloudClusterType {
-		var cloud ClusterConfigCloudSpec
-		if err := json.Unmarshal(parsedClusterConfig["cloud"], &cloud); err != nil {
-			return nil, fmt.Errorf("unable to unmarshal cloud section from provider cluster configuration: %v", err)
-		}
-
 		providerClusterConfig, err := kubeCl.CoreV1().Secrets("kube-system").Get(context.TODO(), "d8-provider-cluster-configuration", metav1.GetOptions{})
 		if err != nil {
 			return nil, err
@@ -193,11 +189,28 @@ func parseConfigFromCluster(kubeCl *client.KubernetesClient) (*MetaConfig, error
 		}
 		metaConfig.ProviderClusterConfig = parsedProviderClusterConfig
 
-		// Read and validate provider secondary devices
+		// Read provider secondary devices
+		providerSecondaryDevicesConfig, err := kubeCl.CoreV1().Secrets("kube-system").Get(context.TODO(), "d8-provider-secondary-devices-configuration", metav1.GetOptions{})
+		// Continue if not found
+		if err !=nil && !apierrors.IsNotFound(err) {
+			return nil, err
+		}
+
+		// If not found -> generate ProviderSecondaryDevicesConfig with default vars
+		providerSecondaryDevicesConfigData := []byte{}
+		if providerSecondaryDevicesConfig != nil {
+			providerSecondaryDevicesConfigData = providerSecondaryDevicesConfig.Data["cloud-provider-secondary-devices-configuration.yaml"]
+		}
 		if metaConfig.ProviderSecondaryDevicesConfig, err = NewProviderSecondaryDevicesConfigFromData(
-			providerClusterConfig.Data["cloud-provider-secondary-devices-configuration.yaml"],
+			providerSecondaryDevicesConfigData,
 		); err != nil {
 			return nil, err
+		}
+
+		// Validate provider secondary devices
+		var cloud ClusterConfigCloudSpec
+		if err := json.Unmarshal(parsedClusterConfig["cloud"], &cloud); err != nil {
+			return nil, fmt.Errorf("unable to unmarshal cloud section from provider cluster configuration: %v", err)
 		}
 		if err := metaConfig.ProviderSecondaryDevicesConfig.ValidateRegistryDataDevice(cloud.Provider); err != nil {
 			return nil, err

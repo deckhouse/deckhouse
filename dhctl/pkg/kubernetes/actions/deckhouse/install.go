@@ -367,12 +367,27 @@ func CreateDeckhouseManifests(kubeCl *client.KubernetesClient, cfg *config.Deckh
 		})
 	}
 
+	if len(cfg.ProviderSecondaryDevicesConfig) > 0 {
+		tasks = append(tasks, actions.ManifestTask{
+			Name:     `Secret "d8-provider-secondary-devices-configuration"`,
+			Manifest: func() interface{} { return manifests.SecretWithProviderSecondaryDevicesConfig(cfg.ProviderSecondaryDevicesConfig) },
+			CreateFunc: func(manifest interface{}) error {
+				_, err := kubeCl.CoreV1().Secrets("kube-system").Create(context.TODO(), manifest.(*apiv1.Secret), metav1.CreateOptions{})
+				return err
+			},
+			UpdateFunc: func(manifest interface{}) error {
+				_, err := kubeCl.CoreV1().Secrets("kube-system").Update(context.TODO(), manifest.(*apiv1.Secret), metav1.UpdateOptions{})
+				return err
+			},
+		})
+	}
+
 	if len(cfg.ProviderClusterConfig) > 0 {
 		tasks = append(tasks, actions.ManifestTask{
 			Name: `Secret "d8-provider-cluster-configuration"`,
 			Manifest: func() interface{} {
 				return manifests.SecretWithProviderClusterConfig(
-					cfg.ProviderClusterConfig, cfg.CloudDiscovery, cfg.ProviderSecondaryDevicesConfig,
+					cfg.ProviderClusterConfig, cfg.CloudDiscovery,
 				)
 			},
 			CreateFunc: func(manifest interface{}) error {

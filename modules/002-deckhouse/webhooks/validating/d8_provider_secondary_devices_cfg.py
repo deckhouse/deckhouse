@@ -52,11 +52,11 @@ kubernetes:
         matchNames: ["kube-system"]
     jqFilter: '.data."cluster-configuration.yaml" // ""'
 kubernetesValidating:
-- name: d8-provider-cluster-cfg-secret.deckhouse.io
+- name: d8-provider-secondary-devices-cfg-secret.deckhouse.io
   group: main
   labelSelector:
     matchLabels:
-      name: d8-provider-cluster-configuration
+      name: d8-provider-secondary-devices-configuration
   namespace:
     labelSelector:
       matchLabels:

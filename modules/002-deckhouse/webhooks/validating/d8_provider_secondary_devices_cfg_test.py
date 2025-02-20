@@ -19,7 +19,7 @@ from typing import Optional
 import base64
 import unittest
 import yaml
-from d8_provider_cluster_configuration import (
+from d8_provider_secondary_devices_cfg import (
     main,
     registry_modes_without_registry_data_device_support,
 )
@@ -32,7 +32,7 @@ def _prepare_update_binding_context(
 ) -> DotMap:
     ctx = DotMap(
         {
-            "binding": "d8-provider-cluster-cfg-secret.deckhouse.io",
+            "binding": "d8-provider-secondary-devices-cfg-secret.deckhouse.io",
             "review": {
                 "request": {
                     "uid": "8af60184-b30b-4b90-a33e-0c190f10e96d",
@@ -124,7 +124,7 @@ def _prepare_create_binding_context(
 ) -> DotMap:
     ctx = DotMap(
         {
-            "binding": "d8-provider-cluster-cfg-secret.deckhouse.io",
+            "binding": "d8-provider-secondary-devices-cfg-secret.deckhouse.io",
             "review": {
                 "request": {
                     "uid": "8af60184-b30b-4b90-a33e-0c190f10e96d",
@@ -201,7 +201,7 @@ def _prepare_delete_binding_context(
 ) -> DotMap:
     ctx = DotMap(
         {
-            "binding": "d8-provider-cluster-cfg-secret.deckhouse.io",
+            "binding": "d8-provider-secondary-devices-cfg-secret.deckhouse.io",
             "review": {
                 "request": {
                     "uid": "8af60184-b30b-4b90-a33e-0c190f10e96d",
@@ -285,7 +285,7 @@ def _prepare_cloud_provider_secondary_devices_cfg_data(
     return base64.standard_b64encode(yaml_data)
 
 
-def _prepare_provider_cluster_configuration_with_custom_data(
+def _prepare_provider_secondary_devices_cfg_with_custom_data(
     data: bytes,
 ) -> dict:
     return dict(
@@ -295,10 +295,10 @@ def _prepare_provider_cluster_configuration_with_custom_data(
     )
 
 
-def _prepare_provider_cluster_configuration(
+def _prepare_provider_secondary_devices_cfg(
     registry_data_device_enable: bool,
 ) -> dict:
-    return _prepare_provider_cluster_configuration_with_custom_data(
+    return _prepare_provider_secondary_devices_cfg_with_custom_data(
         _prepare_cloud_provider_secondary_devices_cfg_data(
             registry_data_device_enable=registry_data_device_enable
         )
@@ -343,7 +343,7 @@ class TestProviderSecondaryDevicesConfigurationCreate(unittest.TestCase):
         self,
     ):
         ctx = _prepare_create_binding_context(
-            new_data=_prepare_provider_cluster_configuration(
+            new_data=_prepare_provider_secondary_devices_cfg(
                 registry_data_device_enable=True
             ),
             cluster_cfg_data=_prepare_cluster_cfg_with_supported_cloud(),
@@ -355,7 +355,7 @@ class TestProviderSecondaryDevicesConfigurationCreate(unittest.TestCase):
         self,
     ):
         ctx = _prepare_create_binding_context(
-            new_data=_prepare_provider_cluster_configuration(
+            new_data=_prepare_provider_secondary_devices_cfg(
                 registry_data_device_enable=True
             ),
             cluster_cfg_data=_prepare_cluster_cfg_with_static(),
@@ -377,7 +377,7 @@ class TestProviderSecondaryDevicesConfigurationCreate(unittest.TestCase):
         self,
     ):
         ctx = _prepare_create_binding_context(
-            new_data=_prepare_provider_cluster_configuration_with_custom_data(""),
+            new_data=_prepare_provider_secondary_devices_cfg_with_custom_data(""),
             cluster_cfg_data="",
         )
         out = hook.testrun(main, [ctx])
@@ -387,7 +387,7 @@ class TestProviderSecondaryDevicesConfigurationCreate(unittest.TestCase):
         self,
     ):
         ctx = _prepare_create_binding_context(
-            new_data=_prepare_provider_cluster_configuration(
+            new_data=_prepare_provider_secondary_devices_cfg(
                 registry_data_device_enable=True
             ),
             cluster_cfg_data="",
@@ -401,7 +401,7 @@ class TestProviderSecondaryDevicesConfigurationCreate(unittest.TestCase):
         self,
     ):
         ctx = _prepare_create_binding_context(
-            new_data=_prepare_provider_cluster_configuration(
+            new_data=_prepare_provider_secondary_devices_cfg(
                 registry_data_device_enable=True
             ),
             cluster_cfg_data=_prepare_cluster_cfg_with_unsupported_cloud(),
@@ -419,7 +419,7 @@ class TestProviderSecondaryDevicesConfigurationCreate(unittest.TestCase):
         self,
     ):
         ctx = _prepare_create_binding_context(
-            new_data=_prepare_provider_cluster_configuration(
+            new_data=_prepare_provider_secondary_devices_cfg(
                 registry_data_device_enable=False
             ),
             cluster_cfg_data=_prepare_cluster_cfg_with_unsupported_cloud(),
@@ -434,10 +434,10 @@ class TestProviderSecondaryDevicesConfigurationUpdate(unittest.TestCase):
         self,
     ):
         ctx = _prepare_update_binding_context(
-            old_data=_prepare_provider_cluster_configuration(
+            old_data=_prepare_provider_secondary_devices_cfg(
                 registry_data_device_enable=False
             ),
-            new_data=_prepare_provider_cluster_configuration(
+            new_data=_prepare_provider_secondary_devices_cfg(
                 registry_data_device_enable=True
             ),
             cluster_cfg_data=_prepare_cluster_cfg_with_supported_cloud(),
@@ -449,10 +449,10 @@ class TestProviderSecondaryDevicesConfigurationUpdate(unittest.TestCase):
         self,
     ):
         ctx = _prepare_update_binding_context(
-            old_data=_prepare_provider_cluster_configuration(
+            old_data=_prepare_provider_secondary_devices_cfg(
                 registry_data_device_enable=False
             ),
-            new_data=_prepare_provider_cluster_configuration(
+            new_data=_prepare_provider_secondary_devices_cfg(
                 registry_data_device_enable=True
             ),
             cluster_cfg_data=_prepare_cluster_cfg_with_static(),
@@ -475,8 +475,8 @@ class TestProviderSecondaryDevicesConfigurationUpdate(unittest.TestCase):
         self,
     ):
         ctx = _prepare_update_binding_context(
-            old_data=_prepare_provider_cluster_configuration_with_custom_data(""),
-            new_data=_prepare_provider_cluster_configuration_with_custom_data(""),
+            old_data=_prepare_provider_secondary_devices_cfg_with_custom_data(""),
+            new_data=_prepare_provider_secondary_devices_cfg_with_custom_data(""),
             cluster_cfg_data="",
         )
         out = hook.testrun(main, [ctx])
@@ -486,10 +486,10 @@ class TestProviderSecondaryDevicesConfigurationUpdate(unittest.TestCase):
         self,
     ):
         ctx = _prepare_update_binding_context(
-            old_data=_prepare_provider_cluster_configuration(
+            old_data=_prepare_provider_secondary_devices_cfg(
                 registry_data_device_enable=False
             ),
-            new_data=_prepare_provider_cluster_configuration(
+            new_data=_prepare_provider_secondary_devices_cfg(
                 registry_data_device_enable=True
             ),
             cluster_cfg_data="",
@@ -503,10 +503,10 @@ class TestProviderSecondaryDevicesConfigurationUpdate(unittest.TestCase):
         self,
     ):
         ctx = _prepare_update_binding_context(
-            old_data=_prepare_provider_cluster_configuration(
+            old_data=_prepare_provider_secondary_devices_cfg(
                 registry_data_device_enable=False
             ),
-            new_data=_prepare_provider_cluster_configuration(
+            new_data=_prepare_provider_secondary_devices_cfg(
                 registry_data_device_enable=True
             ),
             cluster_cfg_data=_prepare_cluster_cfg_with_unsupported_cloud(),
@@ -524,10 +524,10 @@ class TestProviderSecondaryDevicesConfigurationUpdate(unittest.TestCase):
         self,
     ):
         ctx = _prepare_update_binding_context(
-            old_data=_prepare_provider_cluster_configuration(
+            old_data=_prepare_provider_secondary_devices_cfg(
                 registry_data_device_enable=True
             ),
-            new_data=_prepare_provider_cluster_configuration(
+            new_data=_prepare_provider_secondary_devices_cfg(
                 registry_data_device_enable=False
             ),
             cluster_cfg_data=_prepare_cluster_cfg_with_unsupported_cloud(),
@@ -542,7 +542,7 @@ class TestProviderSecondaryDevicesConfigurationDelete(unittest.TestCase):
         self,
     ):
         ctx = _prepare_delete_binding_context(
-            old_data=_prepare_provider_cluster_configuration(
+            old_data=_prepare_provider_secondary_devices_cfg(
                 registry_data_device_enable=True
             ),
             cluster_cfg_data=_prepare_cluster_cfg_with_supported_cloud(),
@@ -554,7 +554,7 @@ class TestProviderSecondaryDevicesConfigurationDelete(unittest.TestCase):
         self,
     ):
         ctx = _prepare_delete_binding_context(
-            old_data=_prepare_provider_cluster_configuration(
+            old_data=_prepare_provider_secondary_devices_cfg(
                 registry_data_device_enable=True
             ),
             cluster_cfg_data=_prepare_cluster_cfg_with_static(),
@@ -576,7 +576,7 @@ class TestProviderSecondaryDevicesConfigurationDelete(unittest.TestCase):
         self,
     ):
         ctx = _prepare_delete_binding_context(
-            old_data=_prepare_provider_cluster_configuration_with_custom_data(""),
+            old_data=_prepare_provider_secondary_devices_cfg_with_custom_data(""),
             cluster_cfg_data="",
         )
         out = hook.testrun(main, [ctx])
@@ -586,7 +586,7 @@ class TestProviderSecondaryDevicesConfigurationDelete(unittest.TestCase):
         self,
     ):
         ctx = _prepare_delete_binding_context(
-            old_data=_prepare_provider_cluster_configuration(
+            old_data=_prepare_provider_secondary_devices_cfg(
                 registry_data_device_enable=True
             ),
             cluster_cfg_data="",
@@ -598,7 +598,7 @@ class TestProviderSecondaryDevicesConfigurationDelete(unittest.TestCase):
         self,
     ):
         ctx = _prepare_delete_binding_context(
-            old_data=_prepare_provider_cluster_configuration(
+            old_data=_prepare_provider_secondary_devices_cfg(
                 registry_data_device_enable=True
             ),
             cluster_cfg_data=_prepare_cluster_cfg_with_unsupported_cloud(),
@@ -610,7 +610,7 @@ class TestProviderSecondaryDevicesConfigurationDelete(unittest.TestCase):
         self,
     ):
         ctx = _prepare_delete_binding_context(
-            old_data=_prepare_provider_cluster_configuration(
+            old_data=_prepare_provider_secondary_devices_cfg(
                 registry_data_device_enable=False
             ),
             cluster_cfg_data=_prepare_cluster_cfg_with_unsupported_cloud(),
