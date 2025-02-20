@@ -262,7 +262,7 @@ func (f *DeckhouseReleaseFetcher) fetchDeckhouseRelease(ctx context.Context) err
 		releasesInCluster = releasesFromDeployed
 	}
 
-	err = f.createReleases(ctx, releaseMetadata, releaseForUpdate, releasesInCluster, newSemver)
+	lastCreatedMeta, err := f.createReleases(ctx, releaseMetadata, releaseForUpdate, releasesInCluster, newSemver)
 	if err != nil {
 		return fmt.Errorf("create releases: %w", err)
 	}
@@ -298,7 +298,7 @@ func (f *DeckhouseReleaseFetcher) fetchDeckhouseRelease(ctx context.Context) err
 
 			switch release.Status.Phase {
 			case v1alpha1.DeckhouseReleasePhasePending, "":
-				if releaseMetadata.Suspend {
+				if lastCreatedMeta.Suspend {
 					err := f.patchSetSuspendAnnotation(ctx, release, true)
 					if err != nil {
 						return fmt.Errorf("patch suspend annotation: %w", err)
@@ -306,7 +306,7 @@ func (f *DeckhouseReleaseFetcher) fetchDeckhouseRelease(ctx context.Context) err
 				}
 
 			case v1alpha1.DeckhouseReleasePhaseSuspended:
-				if !releaseMetadata.Suspend {
+				if !lastCreatedMeta.Suspend {
 					err := f.patchSetSuspendAnnotation(ctx, release, false)
 					if err != nil {
 						return fmt.Errorf("patch suspend annotation: %w", err)
@@ -407,7 +407,8 @@ func (f *DeckhouseReleaseFetcher) restoreCurrentDeployedRelease(ctx context.Cont
 	return release, nil
 }
 
-// createReleases flow:
+// createReleases create releases and return metadata of last created release.
+// flow:
 // 1) if no releases in cluster - create from channel
 // 2) if deployed release patch version is lower than channel (with same minor and major) - create from channel
 // 3) if deployed release minor version is lower than channel (with same major) - create from channel
@@ -422,7 +423,7 @@ func (f *DeckhouseReleaseFetcher) createReleases(
 	releaseMetadata *ReleaseMetadata,
 	releaseForUpdate *v1alpha1.DeckhouseRelease,
 	releasesInCluster []*v1alpha1.DeckhouseRelease,
-	newSemver *semver.Version) error {
+	newSemver *semver.Version) (*ReleaseMetadata, error) {
 	var (
 		cooldownUntil, notificationShiftTime *metav1.Time
 	)
@@ -434,10 +435,10 @@ func (f *DeckhouseReleaseFetcher) createReleases(
 	if len(releasesInCluster) == 0 {
 		err := f.createRelease(ctx, releaseMetadata, cooldownUntil, notificationShiftTime, "no releases in cluster")
 		if err != nil {
-			return fmt.Errorf("create release %s: %w", releaseMetadata.Version, err)
+			return nil, fmt.Errorf("create release %s: %w", releaseMetadata.Version, err)
 		}
 
-		return nil
+		return releaseMetadata, nil
 	}
 
 	// create release if deployed release and new release are in updating sequence
@@ -445,10 +446,10 @@ func (f *DeckhouseReleaseFetcher) createReleases(
 	if isUpdatingSequence(actual.GetVersion(), newSemver) {
 		err := f.createRelease(ctx, releaseMetadata, cooldownUntil, notificationShiftTime, "from deployed")
 		if err != nil {
-			return fmt.Errorf("create release %s: %w", releaseMetadata.Version, err)
+			return nil, fmt.Errorf("create release %s: %w", releaseMetadata.Version, err)
 		}
 
-		return nil
+		return releaseMetadata, nil
 	}
 
 	isSequence := false
@@ -468,10 +469,10 @@ func (f *DeckhouseReleaseFetcher) createReleases(
 			// TODO: remove cooldown?
 			err := f.createRelease(ctx, releaseMetadata, cooldownUntil, notificationShiftTime, "from last release in cluster")
 			if err != nil {
-				return fmt.Errorf("create release %s: %w", releaseMetadata.Version, err)
+				return nil, fmt.Errorf("create release %s: %w", releaseMetadata.Version, err)
 			}
 
-			return nil
+			return releaseMetadata, nil
 		}
 	}
 
@@ -501,15 +502,15 @@ func (f *DeckhouseReleaseFetcher) createReleases(
 
 		f.metricStorage.Grouped().GaugeSet(metricUpdatingFailedGroup, "d8_updating_is_failed", 1, labels)
 
-		return err
+		return nil, fmt.Errorf("get new releases metadata: %w", err)
 	}
 
 	for _, meta := range metas {
-		*releaseMetadata = meta
+		releaseMetadata = &meta
 
 		err = f.createRelease(ctx, releaseMetadata, cooldownUntil, notificationShiftTime, "step-by-step")
 		if err != nil {
-			return fmt.Errorf("create release %s: %w", releaseMetadata.Version, err)
+			return nil, fmt.Errorf("create release %s: %w", releaseMetadata.Version, err)
 		}
 
 		if releaseMetadata.Cooldown != nil {
@@ -517,7 +518,7 @@ func (f *DeckhouseReleaseFetcher) createReleases(
 		}
 	}
 
-	return nil
+	return releaseMetadata, nil
 }
 
 // createRelease create new release by metadata,
