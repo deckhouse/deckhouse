@@ -63,7 +63,7 @@ spec:
                 fieldRef:
                     fieldPath: spec.nodeName
           image: {{ include "helm_lib_module_image" (list . "multusController") }}
-          command: [ "/dynamic-networks-controller" ]
+          command: [ "/usr/local/bin/dynamic-networks-controller" ]
           args:
             - "-config=/etc/multus-controller/dynamic-networks-config.json"
             - "-v=5"
