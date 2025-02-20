@@ -44,6 +44,42 @@ func NewComputeService(service *Service) *ComputeService {
 	return &ComputeService{service}
 }
 
+func (c *ComputeService) CreateVM(ctx context.Context, machine *v1alpha2.VirtualMachine) (*v1alpha2.VirtualMachine, error) {
+	if machine.Namespace != "" && machine.Namespace != c.namespace {
+		return nil, fmt.Errorf("namespace mismatch: expected %s got %s", c.namespace, machine.ObjectMeta.Namespace)
+	}
+
+	machine.Namespace = c.namespace
+
+	if err := c.client.Create(ctx, machine); err != nil {
+		return nil, fmt.Errorf("create VirtualMachine resource: %w", err)
+	}
+
+	err := c.Wait(ctx, machine.Name, machine, func(obj client.Object) (bool, error) {
+		if obj == nil {
+			return false, nil
+		}
+
+		vm, ok := obj.(*v1alpha2.VirtualMachine)
+		if !ok {
+			return false, fmt.Errorf("expected a VirtualMachine but got a %T", obj)
+		}
+
+		expectedPhase := v1alpha2.MachineRunning
+		runPolicy := vm.Spec.RunPolicy
+		if runPolicy == v1alpha2.AlwaysOffPolicy || runPolicy == v1alpha2.ManualPolicy {
+			expectedPhase = v1alpha2.MachineStopped
+		}
+
+		return vm.Status.Phase == expectedPhase, nil
+	})
+	if err != nil {
+		return nil, fmt.Errorf("await VirtualMachine creation: %w", err)
+	}
+
+	return machine, nil
+}
+
 func (c *ComputeService) GetVMByName(ctx context.Context, name string) (*v1alpha2.VirtualMachine, error) {
 	var instance v1alpha2.VirtualMachine
 
@@ -110,6 +146,83 @@ func (c *ComputeService) GetVMByID(ctx context.Context, id string) (*v1alpha2.Vi
 	return instance, nil
 }
 
+func (c *ComputeService) DeleteVM(ctx context.Context, name string) error {
+	vm, err := c.GetVMByName(ctx, name)
+	if err != nil {
+		if k8serrors.IsNotFound(err) {
+			return nil
+		}
+		return fmt.Errorf("get VirtualMachine resource: %w", err)
+	}
+
+	if err = c.client.Delete(ctx, vm); err != nil {
+		return fmt.Errorf("delete VirtualMachine resource: %w", err)
+	}
+
+	err = c.Wait(ctx, name, vm, func(obj client.Object) (bool, error) { return obj == nil, nil })
+	if err != nil {
+		return fmt.Errorf("await VirtualMachine deletion: %w", err)
+	}
+
+	return nil
+}
+
+func (c *ComputeService) StartVM(ctx context.Context, name string) error {
+	err := c.client.Create(ctx, &v1alpha2.VirtualMachineOperation{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: c.namespace,
+		},
+		Spec: v1alpha2.VirtualMachineOperationSpec{
+			Type:           v1alpha2.VMOPTypeStart,
+			VirtualMachine: name,
+		},
+	})
+	if err != nil {
+		return fmt.Errorf("create VirtualMachineOperation resource: %w", err)
+	}
+
+	err = c.Wait(ctx, name, &v1alpha2.VirtualMachine{}, func(obj client.Object) (bool, error) {
+		if obj == nil {
+			return false, nil
+		}
+		return obj.(*v1alpha2.VirtualMachine).Status.Phase == v1alpha2.MachineRunning, nil
+	})
+	if err != nil {
+		return fmt.Errorf("wait for VM running phase: %w", err)
+	}
+
+	return nil
+}
+
+func (c *ComputeService) StopVM(ctx context.Context, name string) error {
+	err := c.client.Create(ctx, &v1alpha2.VirtualMachineOperation{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: c.namespace,
+		},
+		Spec: v1alpha2.VirtualMachineOperationSpec{
+			Type:           v1alpha2.VMOPTypeStop,
+			VirtualMachine: name,
+		},
+	})
+	if err != nil {
+		return fmt.Errorf("create VirtualMachineOperation resource: %w", err)
+	}
+
+	err = c.Wait(ctx, name, &v1alpha2.VirtualMachine{}, func(obj client.Object) (bool, error) {
+		if obj == nil {
+			return false, nil
+		}
+		return obj.(*v1alpha2.VirtualMachine).Status.Phase == v1alpha2.MachineStopped, nil
+	})
+	if err != nil {
+		return fmt.Errorf("wait for VM starting phase: %w", err)
+	}
+
+	return nil
+}
+
 func (c *ComputeService) GetVMIPAddresses(vm *v1alpha2.VirtualMachine) ([]string, []string, error) {
 	if vm == nil {
 		return nil, nil, cloudprovider.InstanceNotFound
@@ -164,7 +277,7 @@ func (d *ComputeService) AttachDiskToVM(ctx context.Context, diskName string, vm
 		},
 	}
 
-	err = d.client.Create(ctx, vmbda)
+	err = c.client.Create(ctx, vmbda)
 	if err != nil && !k8serrors.IsAlreadyExists(err) {
 		return err
 	}
@@ -178,11 +291,29 @@ func (d *ComputeService) DetachDiskFromVM(ctx context.Context, diskName string, 
 		return err
 	}
 
-	err = d.client.Delete(ctx, vmbda)
+	err = c.client.Delete(ctx, vmbda)
 	if err != nil {
 		return err
 	}
 	return nil
+}
+
+func (c *ComputeService) GetVMAttachedBlockDevices(ctx context.Context, computeName string) (*v1alpha2.VirtualMachineBlockDeviceAttachmentList, error) {
+	selector, err := labels.Parse(fmt.Sprintf("%s=%s", attachmentMachineNameLabel, computeName))
+	if err != nil {
+		return nil, err
+	}
+
+	var vmbdas v1alpha2.VirtualMachineBlockDeviceAttachmentList
+	err = c.client.List(ctx, &vmbdas, &client.ListOptions{
+		LabelSelector: selector,
+		Namespace:     c.namespace,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return &vmbdas, nil
 }
 
 func (d *ComputeService) getVMBDA(ctx context.Context, diskName string, vmHostname string) (*v1alpha2.VirtualMachineBlockDeviceAttachment, error) {
@@ -192,9 +323,9 @@ func (d *ComputeService) getVMBDA(ctx context.Context, diskName string, vmHostna
 	}
 
 	var vmbdas v1alpha2.VirtualMachineBlockDeviceAttachmentList
-	err = d.client.List(ctx, &vmbdas, &client.ListOptions{
+	err = c.client.List(ctx, &vmbdas, &client.ListOptions{
 		LabelSelector: selector,
-		Namespace:     d.namespace,
+		Namespace:     c.namespace,
 	})
 	if err != nil {
 		return nil, err
