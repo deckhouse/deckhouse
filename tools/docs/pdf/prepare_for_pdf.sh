@@ -59,29 +59,3 @@ do
   echo "\n## "$(getname $PATH_TO_PAGES${LIST_OF_PAGES[$ix]}) >> $PATH_TO_PDF_PAGE
   echo "$(gettext $PATH_TO_PAGES${LIST_OF_PAGES[$ix]})" >> $PATH_TO_PDF_PAGE
 done
-
-unset LIST_OF_PAGES
-LIST_OF_PAGES=(
-"security/SECURITY_SOFTWARE_SETUP_RU.md"
-"security/KESL_RU.md"
-"security/KUMA_RU.md"
-)
-
-echo "## Настройка ПО безопасности" >> $PATH_TO_PDF_PAGE
-
-for ix in ${!LIST_OF_PAGES[*]}
-do
-  echo "\n### "$(getname $PATH_TO_PAGES${LIST_OF_PAGES[$ix]}) >> $PATH_TO_PDF_PAGE
-  echo "$(gettext $PATH_TO_PAGES${LIST_OF_PAGES[$ix]})" >> $PATH_TO_PDF_PAGE
-done
-
-unset LIST_OF_PAGES
-LIST_OF_PAGES=(
-"DECKHOUSE-FAQ_RU.md"
-)
-
-for ix in ${!LIST_OF_PAGES[*]}
-do
-  echo "\n## "$(getname $PATH_TO_PAGES${LIST_OF_PAGES[$ix]}) >> $PATH_TO_PDF_PAGE
-  echo "$(gettext $PATH_TO_PAGES${LIST_OF_PAGES[$ix]})" >> $PATH_TO_PDF_PAGE
-done
