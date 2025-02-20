@@ -7,9 +7,9 @@ permalink: en/virtualization-platform/documentation/admin/install/requirements.h
 >
 > Installation on virtual machines is allowed for demonstration purposes only, but nested virtualization must be enabled. If the platform is deployed on virtual machines, technical support will not be provided.
 
-## Platform Limitations
+## Platform scalability
 
-The platform has the following limitations:
+The platform supports the following configuration:
 
 - Maximum number of nodes: 1000.
 - Maximum number of virtual machines: 50000.
@@ -96,9 +96,17 @@ The platform has no other restrictions and is compatible with any hardware that 
 
 ## Supported guest operating systems
 
-The virtualization platform supports operating systems running on x86 and x86_64 architectures as guest operating systems. For paravirtualization mode to work properly, the appropriate VirtIO drivers must be installed to enable efficient communication between the virtual machine and the hypervisor.
+The virtualization platform supports operating systems running on `x86` and `x86_64` architectures as guest operating systems. For correct operation in paravirtualization mode, `VirtIO` drivers must be installed to ensure efficient interaction between the virtual machine and the hypervisor.
 
-An operating system is considered successfully started if it installs and boots correctly, all major components such as networking and storage operate stably, and there are no failures or errors.
+Successful startup of the operating system is determined by the following criteria:
+
+  * correct installation and booting of the OS;
+  * uninterrupted operation of key components such as networking and storage;
+  * no crashes or errors during operation.
+
+For Linux family operating systems it is recommended to use guest OS images with cloud-init support, which allows initializing virtual machines after their creation.
+
+For Windows operating systems, the platform supports initialization using the built-in sysprep utility.
 
 ## Supported virtual machine configurations
 
