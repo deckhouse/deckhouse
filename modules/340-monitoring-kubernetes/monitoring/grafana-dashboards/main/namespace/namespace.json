@@ -21,10 +21,10 @@
       }
     ]
   },
-  "editable": false,
+  "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 1,
-  "id": 23,
+  "id": 21,
   "links": [],
   "liveNow": false,
   "panels": [
@@ -597,6 +597,28 @@
                 "value": 230
               }
             ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "controller"
+            },
+            "properties": [
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "options": {
+                      "/": {
+                        "index": 0,
+                        "text": "Without controller"
+                      }
+                    },
+                    "type": "value"
+                  }
+                ]
+              }
+            ]
           }
         ]
       },
@@ -621,7 +643,7 @@
         "showHeader": true,
         "sortBy": []
       },
-      "pluginVersion": "10.4.5",
+      "pluginVersion": "10.4.14",
       "repeatDirection": "h",
       "targets": [
         {
