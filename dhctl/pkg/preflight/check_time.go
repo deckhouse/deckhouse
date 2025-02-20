@@ -54,13 +54,14 @@ func getRemoteTimeStamp(sshCl node.Interface) (int64, error) {
 
 func (pc *Checker) CheckTimeDrift() error {
 	if app.PreflightSkipCloudAPIAccessibility {
-		log.InfoLn("Checking  Cloud API is accessible from first master host was skipped (via skip flag)")
+		log.InfoLn("Checking Time Drift was skipped (via skip flag)")
 		return nil
 	}
 
 	remoteTimeStamp, err := getRemoteTimeStamp(pc.nodeInterface)
 	if err != nil {
-		return err
+		log.InfoF("Checking Time Drift was skipped, check cannot be performed: %w", err)
+		return nil
 	}
 	localTimeStamp := getLocalTimeStamp()
 
