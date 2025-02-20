@@ -76,13 +76,13 @@ shell:
     cd /srv/jekyll-data/site
     sh ./prepare_for_pdf.sh
 git:
-- add: docs/documentation
+- add: /docs/documentation
   to: /srv/jekyll-data/site/documentation
-- add: modules
+- add: /modules
   to: /srv/jekyll-data/site/modules
-- add: ee
+- add: /ee
   to: /srv/jekyll-data/site/ee
-- add: tools/docs/pdf/prepare_for_pdf.sh
+- add: /tools/docs/pdf/prepare_for_pdf.sh
   to: /srv/jekyll-data/site
 ---
 image: web-static
