@@ -21,7 +21,10 @@ data:
   operator-api-serve-addr: "127.0.0.1:9234"
   enable-metrics: "true"
 
+  {{- if not .Values.cniCilium.activeL2NeighborDiscoveryEnabled }}
   enable-l2-neigh-discovery: "false"
+  {{- end }}
+
   enable-ipv4: "true"
   enable-ipv6: "false"
 

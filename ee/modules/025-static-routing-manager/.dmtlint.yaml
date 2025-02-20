@@ -1,0 +1,10 @@
+linters-settings:
+  module:
+    oss:
+      disable: true
+  container:
+    exclude-rules:
+      readiness-probe:
+        - kind: DaemonSet
+          name: agent
+          container: agent

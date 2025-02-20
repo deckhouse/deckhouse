@@ -28,7 +28,7 @@ rules:
   resources: ["clusterroles"]
   verbs: ["get", "list", "watch"]
 - apiGroups: ["network.deckhouse.io"]
-  resources: ["*"]
+  resources: ["metalloadbalancerclasses"]
   verbs: ["get","list","watch"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1

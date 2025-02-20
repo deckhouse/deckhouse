@@ -5235,6 +5235,16 @@ alerts:
         At least one object violates the configured cluster security policies.
       severity: "7"
       markupFormat: markdown
+    - name: StandbyHolderDeploymentReplicasUnavailable
+      sourceFile: modules/040-node-manager/monitoring/prometheus-rules/standby-deployment-unavailable.yaml
+      moduleUrl: 040-node-manager
+      module: node-manager
+      edition: ce
+      description: Deckhouse has detected that there are no available replicas remaining in Deployment `standby-holder-{{$labels.node_group_name}}` in namespace `d8-cloud-instance-manager`.
+      summary: |
+        No available replicas remaining in Deployment standby-holder-{{$labels.node_group_name}} in namespace d8-cloud-instance-manager.
+      severity: "5"
+      markupFormat: markdown
     - name: StatefulSetAuthenticationFailure
       sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-checks.tpl
       moduleUrl: 340-extended-monitoring

@@ -12,7 +12,7 @@ kind: VerticalPodAutoscaler
 metadata:
   name: oom-kills-exporter
   namespace: d8-monitoring
-  {{- include "helm_lib_module_labels" (list . (dict "app" "oom-kills-exporter" "workload-resource-policy.deckhouse.io" "every-node")) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "oom-kills-exporter")) | nindent 2 }}
 spec:
   targetRef:
     apiVersion: "apps/v1"
