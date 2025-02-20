@@ -36,12 +36,13 @@ func getLocalTimeStamp() int64 {
 func getRemoteTimeStamp(sshCl node.Interface) (int64, error) {
 	cmd := sshCl.Command("date", "+%s")
 	dateOutput, _, err := cmd.Output()
+	fmt.Println("dateOutput:", string(dateOutput))
 	if err != nil {
 		return 0, fmt.Errorf("failed to execute date command: %w", err)
 	}
 
 	match := timestampRegexp.FindSubmatch(dateOutput)
-	if match == nil || len(match) < 2 {
+	if match == nil {
 		return 0, errors.New("invalid timestamp format received")
 	}
 
