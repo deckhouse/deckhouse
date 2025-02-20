@@ -80,41 +80,6 @@ type DeckhouseReleaseFetcherConfig struct {
 	logger *log.Logger
 }
 
-func NewDeckhouseReleaseFetcher(cfg *DeckhouseReleaseFetcherConfig) *DeckhouseReleaseFetcher {
-	return &DeckhouseReleaseFetcher{
-		k8sClient:               cfg.k8sClient,
-		registryClient:          cfg.registryClient,
-		clock:                   cfg.clock,
-		moduleManager:           cfg.moduleManager,
-		releaseChannel:          cfg.releaseChannel,
-		releaseVersionImageHash: cfg.releaseVersionImageHash,
-		clusterUUID:             cfg.clusterUUID,
-		deckhouseVersion:        cfg.deckhouseVersion,
-		metricStorage:           cfg.metricStorage,
-		logger:                  cfg.logger,
-	}
-}
-
-type DeckhouseReleaseFetcher struct {
-	k8sClient      client.Client
-	registryClient cr.Client
-	clock          clockwork.Clock
-	moduleManager  moduleManager
-
-	clusterUUID             string
-	deckhouseVersion        string
-	releaseChannel          string
-	releaseVersionImageHash string
-
-	metricStorage *metricstorage.MetricStorage
-
-	logger *log.Logger
-}
-
-func (f *DeckhouseReleaseFetcher) GetReleaseChannel() string {
-	return f.releaseChannel
-}
-
 // checkDeckhouseRelease create fetcher and start
 func (r *deckhouseReleaseReconciler) checkDeckhouseRelease(ctx context.Context) error {
 	if r.updateSettings.Get().ReleaseChannel == "" {
@@ -177,6 +142,41 @@ func (r *deckhouseReleaseReconciler) checkDeckhouseRelease(ctx context.Context) 
 	releaseFetcher := NewDeckhouseReleaseFetcher(cfg)
 
 	return releaseFetcher.fetchDeckhouseRelease(ctx)
+}
+
+func NewDeckhouseReleaseFetcher(cfg *DeckhouseReleaseFetcherConfig) *DeckhouseReleaseFetcher {
+	return &DeckhouseReleaseFetcher{
+		k8sClient:               cfg.k8sClient,
+		registryClient:          cfg.registryClient,
+		clock:                   cfg.clock,
+		moduleManager:           cfg.moduleManager,
+		releaseChannel:          cfg.releaseChannel,
+		releaseVersionImageHash: cfg.releaseVersionImageHash,
+		clusterUUID:             cfg.clusterUUID,
+		deckhouseVersion:        cfg.deckhouseVersion,
+		metricStorage:           cfg.metricStorage,
+		logger:                  cfg.logger,
+	}
+}
+
+type DeckhouseReleaseFetcher struct {
+	k8sClient      client.Client
+	registryClient cr.Client
+	clock          clockwork.Clock
+	moduleManager  moduleManager
+
+	clusterUUID             string
+	deckhouseVersion        string
+	releaseChannel          string
+	releaseVersionImageHash string
+
+	metricStorage *metricstorage.MetricStorage
+
+	logger *log.Logger
+}
+
+func (f *DeckhouseReleaseFetcher) GetReleaseChannel() string {
+	return f.releaseChannel
 }
 
 // fetchDeckhouseRelease is a complete flow for loop
