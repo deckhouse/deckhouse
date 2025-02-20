@@ -4187,16 +4187,16 @@ alerts:
       severity: "4"
       markupFormat: default
     - name: LokiRetentionPerionViolation
-      sourceFile: modules/462-loki/monitoring/prometheus-rules/alerts.yaml
+      sourceFile: modules/462-loki/monitoring/prometheus-rules/alerts.tpl
       moduleUrl: 462-loki
       module: loki
       edition: ce
       description: |-
-        Not enough disk space to retain logs for {{ .Values.loki.retentionPeriodHours }} hours. Current effective retention period is {{`{{ $value }}`}} hours.
+        Not enough disk space to retain logs for 168 hours. Current effective retention period is {{ $value }} hours.
 
         You need either decrease expected `retentionPeriodHours` or increase resize Loki PersistentVolumeClaim
       summary: |
-        Not enough disk space to retain logs for {{{{ $value }}}} hours
+        Not enough disk space to retain logs for {{ $value }} hours
       severity: "4"
       markupFormat: markdown
     - name: MigrationRequiredFromRBDInTreeProvisionerToCSIDriver
