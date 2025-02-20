@@ -63,6 +63,7 @@ shell:
   install:
   - cd /src
   - export GOPROXY={{ $.GOPROXY }}
+  - go mod edit -go=1.23.4
   - go mod download
   setup:
   - cd /src
