@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"regexp"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
@@ -27,7 +28,7 @@ import (
 )
 
 const maxTimeDrift int64 = 6 * 60 * 60 // 6 hours
-var timestampRegexp = regexp.MustCompile(`^\d+$`)
+var timestampRegexp = regexp.MustCompile(`^(\d+)$`)
 
 func getLocalTimeStamp() int64 {
 	return time.Now().Unix()
@@ -36,17 +37,16 @@ func getLocalTimeStamp() int64 {
 func getRemoteTimeStamp(sshCl node.Interface) (int64, error) {
 	cmd := sshCl.Command("date", "+%s")
 	dateOutput, _, err := cmd.Output()
-	fmt.Println("dateOutput:", string(dateOutput))
 	if err != nil {
 		return 0, fmt.Errorf("failed to execute date command: %w", err)
 	}
-
-	match := timestampRegexp.FindSubmatch(dateOutput)
+	out := strings.TrimSpace(string(dateOutput))
+	fmt.Println("dateOutput:", out)
+	match := timestampRegexp.FindStringSubmatch(out)
 	if match == nil {
 		return 0, errors.New("invalid timestamp format received")
 	}
-
-	timeStamp, err := strconv.ParseInt(string(match[1]), 10, 64)
+	timeStamp, err := strconv.ParseInt(match[1], 10, 64)
 	if err != nil {
 		return 0, fmt.Errorf("failed to parse timestamp: %w", err)
 	}
