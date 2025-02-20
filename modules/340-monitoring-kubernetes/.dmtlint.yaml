@@ -1,4 +1,8 @@
 linters-settings:
+  conversions:
+    exclude-rules:
+      description:
+        - /openapi/conversions/v2.yaml
   container:
     exclude-rules:
       read-only-root-filesystem:
