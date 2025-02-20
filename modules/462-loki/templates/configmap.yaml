@@ -19,9 +19,6 @@ data:
       {{- pick $lokiConfigSnakeCase "grpc_server_max_send_msg_size" "grpc_server_max_recv_msg_size" "grpc_server_max_concurrent_streams" | toYaml | nindent 6 }}
 
     limits_config:
-      {{- if eq (int .Values.loki.maxDiskUsageMegabytes) 0 }}
-      retention_period: {{ .Values.loki.retentionPeriodHours | default 168 }}h # WARNING: do not use table manager retention along with compactor retention
-      {{- end }}
       {{- omit $lokiConfigSnakeCase "grpc_server_max_send_msg_size" "grpc_server_max_recv_msg_size" "grpc_server_max_concurrent_streams" | toYaml | nindent 6 }}
 
     common:
@@ -51,4 +48,4 @@ data:
       retention_delete_delay: 1s
       retention_delete_worker_count: 150
       deletion_mode: filter-and-delete
-      force_expiration_threshold: {{ .Values.loki.maxDiskUsageMegabytes }}MB
+      force_expiration_threshold: {{ .Values.loki.internal.cleanupThreshold }}
