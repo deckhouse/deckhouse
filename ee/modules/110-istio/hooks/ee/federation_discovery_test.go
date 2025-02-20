@@ -125,6 +125,8 @@ status:
       - {"hostname": "some-actual.host-1", "ports": [{"name": "ppp", "port": 111}]} # should be saved
       - {"hostname": "some-outdated.host-2", "ports": [{"name": "ppp", "port": 111}]} # should be deleted
       - {"hostname": "some-actual.host-3", "ports": [{"name": "ppp", "port": 111}]} # port should be changed to 222
+      - {"hostname": "some-actual.host-4", "ports": [{"name": "https-ppp", "port": 111}]} # port should be changed to 222
+      - {"hostname": "some-actual.host-5", "ports": [{"name": "grps-ppp", "port": 222}]} # port should be changed to 222
 `))
 
 			respMap := map[string]map[string]HTTPMockResponse{
@@ -190,7 +192,10 @@ status:
 						 "publicServices": [
 						   {"hostname": "some-actual.host-1", "ports": [{"name": "ppp", "port": 111}]},
 						   {"hostname": "some-actual.host-2", "ports": [{"name": "ppp", "port": 111}]},
-						   {"hostname": "some-actual.host-3", "ports": [{"name": "ppp", "port": 222}]}
+						   {"hostname": "some-actual.host-3", "ports": [{"name": "ppp", "port": 222}]},
+                           {"hostname": "some-actual.host-4", "ports": [{"name": "https-ppp", "port": 222}]},
+                           {"hostname": "some-actual.host-5", "ports": [{"name": "grpc-ppp", "port": 222}]},
+                           {"hostname": "some-actual.host-6", "ports": [{"name": "http-ppp", "port": 222}]}
 						 ]
 						}`,
 						Code: http.StatusOK,
@@ -282,20 +287,23 @@ status:
 
 			Expect(f.KubernetesGlobalResource("IstioFederation", "proper-federation-0").Field("status.metadataCache.private.publicServices").String()).To(MatchJSON(`
             [
-              {"hostname": "a.b.c", "ports": [{"name": "ppp", "port": 123}]},
-              {"hostname": "1.2.3.4", "ports": [{"name": "ppp", "port": 234}]}
+              {"hostname": "a.b.c", "ports": [{"name": "ppp", "port": 123, "protocol": "TCP"}]},
+              {"hostname": "1.2.3.4", "ports": [{"name": "ppp", "port": 234, "protocol": "TCP"}]}
             ]
 `))
 			Expect(f.KubernetesGlobalResource("IstioFederation", "proper-federation-1").Field("status.metadataCache.private.publicServices").String()).To(MatchJSON(`
             [
-              {"hostname": "some-actual.host", "ports": [{"name": "ppp", "port": 111}]}
+              {"hostname": "some-actual.host", "ports": [{"name": "ppp", "port": 111, "protocol": "TCP"}]}
             ]
 `))
 			Expect(f.KubernetesGlobalResource("IstioFederation", "proper-federation-2").Field("status.metadataCache.private.publicServices").String()).To(MatchJSON(`
             [
-              {"hostname": "some-actual.host-1", "ports": [{"name": "ppp", "port": 111}]},
-              {"hostname": "some-actual.host-2", "ports": [{"name": "ppp", "port": 111}]},
-              {"hostname": "some-actual.host-3", "ports": [{"name": "ppp", "port": 222}]}
+              {"hostname": "some-actual.host-1", "ports": [{"name": "ppp", "port": 111, "protocol": "TCP"}]},
+              {"hostname": "some-actual.host-2", "ports": [{"name": "ppp", "port": 111, "protocol": "TCP"}]},
+              {"hostname": "some-actual.host-3", "ports": [{"name": "ppp", "port": 222, "protocol": "TCP"}]},
+              {"hostname": "some-actual.host-4", "ports": [{"name": "https-ppp", "port": 222, "protocol": "TLS"}]},
+              {"hostname": "some-actual.host-5", "ports": [{"name": "grpc-ppp", "port": 222, "protocol": "HTTP2"}]},
+              {"hostname": "some-actual.host-6", "ports": [{"name": "http-ppp", "port": 222, "protocol": "HTTP"}]}
             ]
 `))
 
