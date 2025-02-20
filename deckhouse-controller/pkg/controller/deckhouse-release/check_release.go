@@ -409,15 +409,15 @@ func (f *DeckhouseReleaseFetcher) restoreCurrentDeployedRelease(ctx context.Cont
 
 // createReleases create releases and return metadata of last created release.
 // flow:
-// 1) if no releases in cluster - create from channel
-// 2) if deployed release patch version is lower than channel (with same minor and major) - create from channel
-// 3) if deployed release minor version is lower than channel (with same major) - create from channel
-// 4) if deployed release minor version is lower by 2 or more than channel (with same major) - look at releases in cluster
-// 4.1) if update sequence between deployed release and last release in cluster is broken - get releases from registry between deployed and version from channel, and create releases
-// 4.2) if update sequence between deployed release and last release in cluster not broken - check update sequence between last release in cluster and version in channel
-// 4.2.1) if update sequence between last release in cluster and version in channel is broken - get releases from registry between last release in cluster and version from channel, and create releases
-// 4.2.2) if update sequence between last release in cluster and version in channel not broken - create from channel
-// 4.3) if update sequences not broken - create from channel
+//  1. if no releases in cluster - create from channel
+//  2. if deployed release patch version is lower than channel (with same minor and major) - create from channel
+//  3. if deployed release minor version is lower than channel (with same major) - create from channel
+//  4. if deployed release minor version is lower by 2 or more than channel (with same major) - look at releases in cluster
+//     4.1 if update sequence between deployed release and last release in cluster is broken - get releases from registry between deployed and version from channel, and create releases
+//     4.2 if update sequence between deployed release and last release in cluster not broken - check update sequence between last release in cluster and version in channel
+//     4.2.1 if update sequence between last release in cluster and version in channel is broken - get releases from registry between last release in cluster and version from channel, and create releases
+//     4.2.2 if update sequence between last release in cluster and version in channel not broken - create from channel
+//     4.3 if update sequences not broken - create from channel
 func (f *DeckhouseReleaseFetcher) createReleases(
 	ctx context.Context,
 	releaseMetadata *ReleaseMetadata,
