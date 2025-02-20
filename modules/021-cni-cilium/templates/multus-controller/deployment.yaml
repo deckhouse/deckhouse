@@ -92,7 +92,7 @@ spec:
             - name: multus-controller-config-dir
               mountPath: /etc/multus-controller/
               readOnly: true
-            - name: multus-controller-server-socket
+            - name: multus-server-socket
               mountPath: /host/run/multus/multus.sock
             - name: cri-socket
               mountPath: /host/run/containerd/containerd.sock
@@ -104,11 +104,11 @@ spec:
             items:
               - key: dynamic-networks-config.json
                 path: dynamic-networks-config.json
-        -  name: multus-server-socket
+        - name: multus-server-socket
            hostPath:
              path: /run/multus/multus.sock
              type: Socket
-        -  name: cri-socket
+        - name: cri-socket
            hostPath:
              path: /run/containerd/containerd.sock
              type: Socket
