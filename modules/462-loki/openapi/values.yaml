@@ -22,6 +22,10 @@ properties:
         type: integer
         format: int64
         default: 0
+      stsStorageSize:
+        type: integer
+        format: int64
+        default: 0
       cleanupThreshold:
         type: integer
         format: int64

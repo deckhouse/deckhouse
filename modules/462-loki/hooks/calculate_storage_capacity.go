@@ -23,6 +23,7 @@ import (
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -50,6 +51,22 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			},
 			FilterFunc: persistentVolumeClaimFilter,
 		},
+		{
+			Name:       "sts",
+			ApiVersion: "apps/v1",
+			Kind:       "StatefulSet",
+			NamespaceSelector: &types.NamespaceSelector{
+				NameSelector: &types.NameSelector{
+					MatchNames: []string{"d8-monitoring"},
+				},
+			},
+			LabelSelector: &v1.LabelSelector{
+				MatchLabels: map[string]string{
+					"app": "loki",
+				},
+			},
+			FilterFunc: statefulSetFilter,
+		},
 	},
 }, lokiDisk)
 
@@ -58,8 +75,51 @@ type PersistentVolumeClaim struct {
 	RequestsStorage uint64
 }
 
+type StatefulSet struct {
+	Name       string
+	VolumeSize uint64
+}
+
+func statefulSetFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	sts := &appsv1.StatefulSet{}
+	err := sdk.FromUnstructured(obj, sts)
+	if err != nil {
+		return nil, fmt.Errorf("cannot convert kubernetes object: %w", err)
+	}
+
+	volumeSize := uint64(0)
+	for _, volume := range sts.Spec.VolumeClaimTemplates {
+		if volume.Name == "storage" {
+			size, ok := volume.Spec.Resources.Requests.Storage().AsInt64()
+			if !ok {
+				return nil, fmt.Errorf("cannot get .Spec.Resources.Requests from sts/%s, VolumeClaimTemplate %s", sts.Name, volume.Name)
+			}
+			volumeSize = uint64(size)
+			break
+		}
+	}
+
+	if volumeSize == 0 {
+		for _, volume := range sts.Spec.Template.Spec.Volumes {
+			if volume.Name == "storage" && volume.EmptyDir != nil {
+				size, ok := volume.EmptyDir.SizeLimit.AsInt64()
+				if !ok {
+					return nil, fmt.Errorf("cannot get .SizeLimit from sts/%s, EmptyDir %s", sts.Name, volume.Name)
+				}
+				volumeSize = uint64(size)
+				break
+			}
+		}
+	}
+
+	return StatefulSet{
+		Name:       sts.Name,
+		VolumeSize: uint64(volumeSize),
+	}, nil
+}
+
 func persistentVolumeClaimFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	var pvc = &corev1.PersistentVolumeClaim{}
+	pvc := &corev1.PersistentVolumeClaim{}
 	err := sdk.FromUnstructured(obj, pvc)
 	if err != nil {
 		return nil, fmt.Errorf("cannot convert kubernetes object: %v", err)
@@ -77,7 +137,7 @@ func persistentVolumeClaimFilter(obj *unstructured.Unstructured) (go_hook.Filter
 }
 
 func lokiDisk(input *go_hook.HookInput) error {
-	var pvcSize, cleanupThreshold uint64
+	var stsStorageSize, pvcSize, cleanupThreshold uint64
 
 	defaultDiskSize := uint64(input.ConfigValues.Get("loki.diskSizeGigabytes").Int() << 30)
 	ingestionRate := input.ConfigValues.Get("loki.lokiConfig.ingestionRateMB").Float()
@@ -91,6 +151,21 @@ func lokiDisk(input *go_hook.HookInput) error {
 
 		pvcSize = pvc.RequestsStorage
 		break
+	}
+
+	for _, obj := range input.Snapshots["sts"] {
+		sts := obj.(StatefulSet)
+
+		if sts.Name != "loki" {
+			continue
+		}
+
+		stsStorageSize = sts.VolumeSize
+		break
+	}
+
+	if stsStorageSize == 0 {
+		stsStorageSize = defaultDiskSize
 	}
 
 	if pvcSize == 0 {
@@ -111,6 +186,7 @@ func lokiDisk(input *go_hook.HookInput) error {
 	}
 
 	input.Values.Set("loki.internal.pvcSize", pvcSize)
+	input.Values.Set("loki.internal.stsStorageSize", stsStorageSize)
 	input.Values.Set("loki.internal.cleanupThreshold", cleanupThreshold)
 
 	return nil
