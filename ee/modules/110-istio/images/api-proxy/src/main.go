@@ -83,15 +83,6 @@ func main() {
 		return
 	}
 
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		if err := proxy.Watch(ctx); err != nil {
-			logger.Println("[api-proxy] Error watching proxy:", err)
-			return
-		}
-	}()
-
 	router := http.NewServeMux()
 	router.Handle("/healthz", http.HandlerFunc(httpHandlerHealthz))
 	router.Handle("/ready", http.HandlerFunc(httpHandlerReady(proxy)))
@@ -99,7 +90,7 @@ func main() {
 
 	kubeCA, err := os.ReadFile("/etc/ssl/kube-rbac-proxy-ca.crt")
 	if err != nil {
-		logger.Println("[api-proxy] Could not read CA certificate: %v\n", err)
+		logger.Printf("[api-proxy] Could not read CA certificate: %v\n", err)
 		return
 	}
 	kubeCertPool := x509.NewCertPool()
@@ -123,16 +114,25 @@ func main() {
 	}
 
 	stop := make(chan os.Signal, 2)
-	errChan := make(chan error, 1)
+	errChan := make(chan error, 2)
 
 	signal.Notify(stop, os.Interrupt, syscall.SIGTERM)
 
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
+		if err := proxy.Watch(ctx); err != nil {
+			logger.Println("[api-proxy] Error watching proxy:", err)
+			errChan <- err
+		}
+	}()
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
 		logger.Println("Server is starting to listen on", listenAddr, "...")
 		if err := server.ListenAndServeTLS("", ""); err != nil && err != http.ErrServerClosed {
-			logger.Println("Could not listen on %s: %v\n", listenAddr, err)
+			logger.Printf("Could not listen on %s: %v\n", listenAddr, err)
 			errChan <- err
 		}
 	}()
@@ -158,6 +158,7 @@ func main() {
 	}
 
 	wg.Wait()
+	close(errChan)
 
 	logger.Println("Server gracefully stopped")
 }
