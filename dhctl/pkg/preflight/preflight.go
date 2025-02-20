@@ -129,7 +129,7 @@ func (pc *Checker) Static() error {
 		},
 		{
 			fun:            pc.CheckTimeDrift,
-			successMessage: "critical time drift is not detected",
+			successMessage: "server time drift has a acceptable value",
 			skipFlag:       app.TimeDriftArgName,
 		},
 	})

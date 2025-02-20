@@ -41,7 +41,6 @@ func getRemoteTimeStamp(sshCl node.Interface) (int64, error) {
 		return 0, fmt.Errorf("failed to execute date command: %w", err)
 	}
 	out := strings.TrimSpace(string(dateOutput))
-	fmt.Println("dateOutput:", out)
 	match := timestampRegexp.FindStringSubmatch(out)
 	if match == nil {
 		return 0, errors.New("invalid timestamp format received")
@@ -62,7 +61,7 @@ func (pc *Checker) CheckTimeDrift() error {
 
 	remoteTimeStamp, err := getRemoteTimeStamp(pc.nodeInterface)
 	if err != nil {
-		log.InfoF("Checking Time Drift was skipped, check cannot be performed: %v", err)
+		log.InfoF("Checking Time Drift was skipped, check cannot be performed: %v\n", err)
 		return nil
 	}
 	localTimeStamp := getLocalTimeStamp()
@@ -76,7 +75,7 @@ func (pc *Checker) CheckTimeDrift() error {
 		localTime := time.Unix(localTimeStamp, 0).Format(time.RFC3339)
 		remoteTime := time.Unix(remoteTimeStamp, 0).Format(time.RFC3339)
 		driftDuration := time.Duration(timeDrift) * time.Second
-		return fmt.Errorf("time drift between local (%s) and remote (%s) server is too high (%s)", localTime, remoteTime, driftDuration.String())
+		return fmt.Errorf("time drift between local (%s) and remote server (%s) is too high: (%s)", localTime, remoteTime, driftDuration.String())
 	}
 
 	return nil
