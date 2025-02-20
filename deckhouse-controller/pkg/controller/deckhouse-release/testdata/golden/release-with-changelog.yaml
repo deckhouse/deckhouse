@@ -29,7 +29,7 @@ metadata:
   creationTimestamp: null
   labels:
     heritage: deckhouse
-  name: v1.31.0
+  name: v1.16.0
   resourceVersion: "1"
 spec:
   changelog:
@@ -52,8 +52,8 @@ spec:
         pull_request: https://github.com/deckhouse/deckhouse/pull/527
       - description: Fix serialization of empty strings in secrets
         pull_request: https://github.com/deckhouse/deckhouse/pull/523
-  changelogLink: https://github.com/deckhouse/deckhouse/releases/tag/v1.31.0
-  version: v1.31.0
+  changelogLink: https://github.com/deckhouse/deckhouse/releases/tag/v1.16.0
+  version: v1.16.0
 status:
   approved: false
   message: ""

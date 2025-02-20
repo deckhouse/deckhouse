@@ -131,14 +131,6 @@ func (r *deckhouseReleaseReconciler) checkDeckhouseRelease(ctx context.Context) 
 
 	sort.Sort(releaseUpdater.ByVersion[*v1alpha1.DeckhouseRelease](releases))
 
-	var releaseForUpdate *v1alpha1.DeckhouseRelease
-
-	if len(releases) > 0 {
-		releaseForUpdate = releases[0]
-	}
-	releasesInCluster := releases
-
-	// check sequence from the start if no deckhouse release deployed
 	releasesFromDeployed := make([]*v1alpha1.DeckhouseRelease, 0, len(releases))
 	for _, release := range releases {
 		if release.GetPhase() == v1alpha1.DeckhouseReleasePhaseDeployed {
@@ -164,10 +156,6 @@ func (r *deckhouseReleaseReconciler) checkDeckhouseRelease(ctx context.Context) 
 
 		r.logger.Warn("deployed deckhouse-release restored")
 
-		if releaseForUpdate == nil {
-			releaseForUpdate = restored
-		}
-
 		releases = append(releases, restored)
 
 		sort.Sort(releaseUpdater.ByVersion[*v1alpha1.DeckhouseRelease](releases))
@@ -185,6 +173,14 @@ func (r *deckhouseReleaseReconciler) checkDeckhouseRelease(ctx context.Context) 
 	}
 
 	r.metricStorage.Grouped().ExpireGroupMetrics(metricUpdatingFailedGroup)
+
+	var releaseForUpdate *v1alpha1.DeckhouseRelease
+
+	// check sequence from the start if no deckhouse release deployed
+	if len(releases) > 0 {
+		releaseForUpdate = releases[0]
+	}
+	releasesInCluster := releases
 
 	// shortened slice for only releases after deployed
 	if deployedRelease != nil {

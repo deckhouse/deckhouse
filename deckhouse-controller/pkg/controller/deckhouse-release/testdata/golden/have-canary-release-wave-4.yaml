@@ -29,12 +29,12 @@ metadata:
   creationTimestamp: null
   labels:
     heritage: deckhouse
-  name: v1.25.5
+  name: v1.16.5
   resourceVersion: "1"
 spec:
-  applyAfter: "2019-10-17T16:33:00Z"
-  changelogLink: https://github.com/deckhouse/deckhouse/releases/tag/v1.25.5
-  version: v1.25.5
+  applyAfter: "2019-10-17T16:03:00Z"
+  changelogLink: https://github.com/deckhouse/deckhouse/releases/tag/v1.16.5
+  version: v1.16.5
 status:
   approved: false
   message: ""

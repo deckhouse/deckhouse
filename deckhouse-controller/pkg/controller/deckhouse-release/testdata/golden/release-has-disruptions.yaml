@@ -29,13 +29,13 @@ metadata:
   creationTimestamp: null
   labels:
     heritage: deckhouse
-  name: v1.32.0
+  name: v1.16.0
   resourceVersion: "1"
 spec:
-  changelogLink: https://github.com/deckhouse/deckhouse/releases/tag/v1.32.0
+  changelogLink: https://github.com/deckhouse/deckhouse/releases/tag/v1.16.0
   disruptions:
   - ingressNginx
-  version: v1.32.0
+  version: v1.16.0
 status:
   approved: false
   message: ""

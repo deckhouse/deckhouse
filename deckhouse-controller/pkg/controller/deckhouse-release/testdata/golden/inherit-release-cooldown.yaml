@@ -30,11 +30,11 @@ metadata:
   creationTimestamp: null
   labels:
     heritage: deckhouse
-  name: v1.31.1
+  name: v1.16.1
   resourceVersion: "1"
 spec:
-  changelogLink: https://github.com/deckhouse/deckhouse/releases/tag/v1.31.1
-  version: v1.31.1
+  changelogLink: https://github.com/deckhouse/deckhouse/releases/tag/v1.16.1
+  version: v1.16.1
 status:
   approved: false
   message: ""
