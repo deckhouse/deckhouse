@@ -18,7 +18,7 @@
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 1,
-  "id": 43,
+  "id": 36,
   "links": [],
   "panels": [
     {
@@ -49,21 +49,13 @@
     },
     {
       "datasource": {
+        "type": "prometheus",
         "uid": "$ds_prometheus"
       },
       "fieldConfig": {
         "defaults": {
           "color": {
             "mode": "thresholds"
-          },
-          "custom": {
-            "fillOpacity": 70,
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "lineWidth": 0
           },
           "mappings": [],
           "thresholds": {
@@ -75,7 +67,7 @@
               },
               {
                 "color": "yellow",
-                "value": 50
+                "value": 70
               },
               {
                 "color": "green",
@@ -83,7 +75,9 @@
               }
             ]
           },
-          "unit": "percent"
+          "unit": "percent",
+          "min": 0,
+          "max": 100
         },
         "overrides": []
       },
@@ -95,7 +89,13 @@
       },
       "id": 778,
       "options": {
+        "addUrl": false,
+        "cellPadding": 5,
+        "cellSize": 15,
         "colWidth": 0.8,
+        "defaultColor": "#E6E6E6",
+        "destination": "target_name",
+        "inputList": false,
         "legend": {
           "displayMode": "list",
           "height": 500,
@@ -103,21 +103,49 @@
           "showLegend": true,
           "width": 700
         },
+        "nullColor": "#E6E6E6",
         "rowHeight": 0.7,
         "showValue": "never",
+        "source": "source_name",
+        "sourceField": "source_node_name",
+        "sourceText": "From",
+        "targetField": "target_node_name",
+        "targetText": "To",
         "tooltip": {
           "mode": "single",
           "sort": "none"
-        }
+        },
+        "txtLength": 50,
+        "txtSize": 10,
+        "value": "Value",
+        "valueText": "Value"
       },
       "targets": [
         {
-          "expr": "100 * avg_over_time(cilium_node_connectivity_status{source_node_name=~\"$source_node\", target_node_name=~\"$destination_node\"}[$__range])",
-          "legendFormat": "{{source_node_name}} -> {{target_node_name}}"
+          "datasource": {
+            "type": "prometheus",
+            "uid": "P0D6E4079E36703EB"
+          },
+          "editorMode": "code",
+          "expr": "avg_over_time(cilium_node_connectivity_status{type=\"node\"}[$__range]) * 100",
+          "format": "table",
+          "legendFormat": "__auto",
+          "range": true,
+          "refId": "A"
         }
       ],
       "title": "Node Connectivity Status Matrix",
-      "type": "status-history"
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {},
+            "indexByName": {},
+            "renameByName": {}
+          }
+        }
+      ],
+      "type": "esnet-matrix-panel"
     },
     {
       "collapsed": true,
@@ -181,8 +209,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -271,8 +298,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -361,8 +387,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -451,8 +476,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -628,6 +652,7 @@
           "type": "prometheus",
           "uid": "$ds_prometheus"
         },
+        "filters": [],
         "hide": 0,
         "name": "Filters",
         "skipUrlSync": false,
@@ -665,8 +690,8 @@
     ]
   },
   "timezone": "",
-  "title": "Cilium Nodes Connectivity Latency",
-  "uid": "vtuWtdunt",
+  "title": "Cilium Nodes Connectivity Latency 2",
+  "uid": "vtuWtduns",
   "version": 1,
   "weekStart": ""
 }
