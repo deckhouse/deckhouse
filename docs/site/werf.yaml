@@ -77,8 +77,6 @@ shell:
 git:
   - add: /docs/documentation
     to: /srv/jekyll-data/site
-  - add: /docs/documentation
-    to: /srv/jekyll-data/site
   - add: /modules
     to: /srv/jekyll-data/site
   - add: /ee
