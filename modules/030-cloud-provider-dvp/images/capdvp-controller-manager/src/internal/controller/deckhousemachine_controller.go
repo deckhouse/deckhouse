@@ -1,0 +1,379 @@
+/*
+Copyright 2025 Flant JSC
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
+package controller
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"strconv"
+	"time"
+
+	"github.com/deckhouse/virtualization/api/core/v1alpha2"
+	"github.com/go-logr/logr"
+	"github.com/hashicorp/go-multierror"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/resource"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
+	cloudprovider "k8s.io/cloud-provider"
+	"k8s.io/utils/ptr"
+	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
+	capierrors "sigs.k8s.io/cluster-api/errors"
+	capiutil "sigs.k8s.io/cluster-api/util"
+	"sigs.k8s.io/cluster-api/util/annotations"
+	"sigs.k8s.io/cluster-api/util/conditions"
+	"sigs.k8s.io/cluster-api/util/patch"
+	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	"sigs.k8s.io/controller-runtime/pkg/log"
+
+	dvpapi "dvp-common/api"
+
+	infrastructurev1a1 "cluster-api-provider-dvp/api/v1alpha1"
+)
+
+const ProviderIDPrefix = "dvp://"
+
+// DeckhouseMachineReconciler reconciles a DeckhouseMachine object
+type DeckhouseMachineReconciler struct {
+	client.Client
+	Scheme *runtime.Scheme
+	DVP    *dvpapi.DVPCloudAPI
+}
+
+// +kubebuilder:rbac:groups=infrastructure.cluster.x-k8s.io,resources=deckhousemachines,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=infrastructure.cluster.x-k8s.io,resources=deckhousemachines/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=infrastructure.cluster.x-k8s.io,resources=deckhousemachines/finalizers,verbs=update
+
+// Reconcile is part of the main kubernetes reconciliation loop which aims to
+// move the current state of the cluster closer to the desired state.
+func (r *DeckhouseMachineReconciler) Reconcile(ctx context.Context, req ctrl.Request) (result ctrl.Result, reterr error) {
+	logger := log.FromContext(ctx)
+
+	dvpMachine := &infrastructurev1a1.DeckhouseMachine{}
+	err := r.Client.Get(ctx, req.NamespacedName, dvpMachine)
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			return ctrl.Result{}, nil
+		}
+		return ctrl.Result{}, fmt.Errorf("Error getting DeckhouseMachine: %w", err)
+	}
+	logger = logger.WithValues("dvp_machine", dvpMachine.Name, "dvp_machine_ns", dvpMachine.Namespace)
+
+	machine, err := capiutil.GetOwnerMachine(ctx, r.Client, dvpMachine.ObjectMeta)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+	if machine == nil {
+		logger.Info("Machine Controller has not yet set OwnerRef")
+		return ctrl.Result{}, nil
+	}
+	logger = logger.WithValues("machine", machine.Name)
+
+	cluster, err := capiutil.GetClusterFromMetadata(ctx, r.Client, machine.ObjectMeta)
+	if err != nil {
+		logger.Info("Machine is missing cluster label or cluster does not exist")
+		return ctrl.Result{}, nil
+	}
+	logger = logger.WithValues("cluster", cluster.Name)
+
+	dvpCluster := &infrastructurev1a1.DeckhouseCluster{}
+	err = r.Client.Get(ctx, types.NamespacedName{
+		Namespace: cluster.Spec.InfrastructureRef.Namespace,
+		Name:      cluster.Spec.InfrastructureRef.Name,
+	}, dvpCluster)
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			return ctrl.Result{}, nil
+		}
+		return ctrl.Result{}, fmt.Errorf("Error getting DeckhouseCluster: %w", err)
+	}
+	logger = logger.WithValues("dvp_cluster", dvpCluster.Name, "dvp_cluster_ns", dvpCluster.Namespace)
+
+	if annotations.IsPaused(cluster, dvpMachine) {
+		logger.Info("DeckhouseMachine or linked Cluster is marked as paused. Will not reconcile.")
+		return ctrl.Result{}, nil
+	}
+
+	// Initialize the patch helper
+	patchHelper, err := patch.NewHelper(dvpMachine, r.Client)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
+	// Always patch the dvpMachine when exiting this function, so we can persist any DeckhouseMachine changes.
+	defer func() {
+		if err := patchDeckhouseMachine(ctx, patchHelper, dvpMachine); err != nil {
+			result = ctrl.Result{}
+			reterr = err
+		}
+	}()
+
+	// Handle deleted machines
+	if !dvpMachine.DeletionTimestamp.IsZero() {
+		return r.reconcileDeleteOperation(ctx, logger, dvpMachine)
+	}
+
+	// Handle other kinds of changes
+	return r.reconcileUpdates(ctx, logger, cluster, machine, dvpMachine, dvpCluster)
+}
+
+func patchDeckhouseMachine(
+	ctx context.Context,
+	patchHelper *patch.Helper,
+	dvpMachine *infrastructurev1a1.DeckhouseMachine,
+	options ...patch.Option,
+) error {
+	conditions.SetSummary(dvpMachine,
+		conditions.WithConditions(infrastructurev1a1.VMReadyCondition),
+	)
+
+	// Patch the object, ignoring conflicts on the conditions owned by this controller.
+	options = append(options,
+		patch.WithOwnedConditions{Conditions: []clusterv1.ConditionType{
+			clusterv1.ReadyCondition,
+			infrastructurev1a1.VMReadyCondition,
+		}},
+	)
+	return patchHelper.Patch(ctx, dvpMachine, options...)
+}
+
+func (r *DeckhouseMachineReconciler) reconcileUpdates(
+	ctx context.Context,
+	logger logr.Logger,
+	cluster *clusterv1.Cluster,
+	machine *clusterv1.Machine,
+	dvpMachine *infrastructurev1a1.DeckhouseMachine,
+	dvpCluster *infrastructurev1a1.DeckhouseCluster,
+) (ctrl.Result, error) {
+	if dvpMachine.Status.FailureReason != nil || dvpMachine.Status.FailureMessage != nil {
+		logger.Info("DeckhouseMachine has failed, will not reconcile. See DeckhouseMachine status for details.")
+		return ctrl.Result{}, nil
+	}
+
+	// If DeckhouseMachine is not under finalizer yet, set it now.
+	if controllerutil.AddFinalizer(dvpMachine, infrastructurev1a1.MachineFinalizer) {
+		return ctrl.Result{}, nil
+	}
+
+	if !cluster.Status.InfrastructureReady {
+		logger.Info("Waiting for Cluster infrastructure to become Ready")
+		conditions.MarkFalse(
+			dvpMachine,
+			infrastructurev1a1.VMReadyCondition,
+			infrastructurev1a1.WaitingForClusterInfrastructureReason,
+			clusterv1.ConditionSeverityInfo,
+			"",
+		)
+		return ctrl.Result{RequeueAfter: 5 * time.Second}, nil
+	}
+
+	if machine.Spec.Bootstrap.DataSecretName == nil {
+		logger.Info("Bootstrap cloud-init secret reference is missing from Machine")
+		conditions.MarkFalse(
+			dvpMachine,
+			infrastructurev1a1.VMReadyCondition,
+			infrastructurev1a1.WaitingForBootstrapScriptReason,
+			clusterv1.ConditionSeverityInfo,
+			"",
+		)
+		return ctrl.Result{}, nil
+	}
+
+	logger.Info("Reconciling DeckhouseMachine")
+
+	vm, err := r.getOrCreateVM(ctx, dvpMachine)
+	if err != nil {
+		logger.Info("No VM can be found or created for Machine, see DeckhouseMachine status for details")
+		conditions.MarkFalse(
+			dvpMachine,
+			infrastructurev1a1.VMReadyCondition,
+			infrastructurev1a1.VMErrorReason,
+			clusterv1.ConditionSeverityError,
+			"No VM can be found or created for Machine: %v",
+			err,
+		)
+		return ctrl.Result{}, fmt.Errorf("find or create VM: %w", err)
+	}
+	logger = logger.WithValues("vm_name", vm.Name, "vm_ns", vm.Namespace)
+
+	// Node usually joins the cluster if the CSR generated by kubelet with the node name is approved.
+	// The approval happens if the Machine InternalDNS matches the node name, so we add it here along with hostname.
+	dvpMachine.Status.Addresses = []infrastructurev1a1.VMAddress{
+		{Type: clusterv1.MachineHostName, Address: vm.Name},
+		// {Type: clusterv1.MachineInternalDNS, Address: fmt.Sprintf("%s.%s", vm.Name, vm.Namespace)}, TODO Validate correctness of dns name
+	}
+	dvpMachine.Spec.ProviderID = ProviderIDPrefix + vm.Name
+
+	switch vm.Status.Phase {
+	case v1alpha2.MachineRunning:
+		// If VM is running, fetch its IP addr and add it to dvpMachine.Status.Addresses
+		logger.Info("VM is Running")
+		conditions.MarkTrue(dvpMachine, infrastructurev1a1.VMReadyCondition)
+		dvpMachine.Status.Ready = true
+		dvpMachine.Status.Addresses = append(dvpMachine.Status.Addresses, []infrastructurev1a1.VMAddress{
+			{Type: clusterv1.MachineInternalIP, Address: vm.Status.IPAddress},
+			{Type: clusterv1.MachineExternalIP, Address: vm.Status.IPAddress},
+		}...)
+	case v1alpha2.MachineStopped:
+		// VM is stopped, this is unexpected as we use "AlwaysOn" run policy for VM's here.
+		// Let's wait and see what happens as this may be a part of migration process or this is a bug in the DVP VM controller.
+		logger.Info("VM is in Stopped state, waiting for DVP to bring it back up", "state", vm.Status.Phase)
+		dvpMachine.Status.Ready = false
+		conditions.MarkFalse(
+			dvpMachine,
+			infrastructurev1a1.VMReadyCondition,
+			infrastructurev1a1.VMInStoppedStateReason,
+			clusterv1.ConditionSeverityWarning,
+			"VM is in Stopped state, waiting for DVP to bring it back up",
+		)
+		return ctrl.Result{RequeueAfter: 30 * time.Second}, nil
+	case v1alpha2.MachineDegraded:
+		// If VM is in some bad state and cannot be booted up, check if it has NodeRef.
+		// If the machine has a NodeRef then it must have been working at some point,
+		// so the error could be something temporary.
+		// If not, it is more likely a configuration error, so we record failure and never retry.
+		logger.Info("VM failed", "state", vm.Status.Phase)
+		if machine.Status.NodeRef == nil {
+			err = fmt.Errorf("VM state %q is unexpected", vm.Status.Phase)
+			dvpMachine.Status.FailureReason = ptr.To(string(capierrors.UpdateMachineError))
+			dvpMachine.Status.FailureMessage = ptr.To(err.Error())
+		}
+		conditions.MarkFalse(
+			dvpMachine,
+			infrastructurev1a1.VMReadyCondition,
+			infrastructurev1a1.VMInFailedStateReason,
+			clusterv1.ConditionSeverityError,
+			"",
+		)
+		return ctrl.Result{}, nil
+	default:
+		// The other states are normal (for example, migration or shutdown) but we don't want to proceed until it's up
+		// due to potential conflict or unexpected actions
+		logger.Info("Waiting for VM state to become Running", "state", vm.Status.Phase)
+		dvpMachine.Status.Ready = false
+		conditions.MarkUnknown(
+			dvpMachine,
+			infrastructurev1a1.VMReadyCondition,
+			infrastructurev1a1.VMNotReadyReason,
+			"VM is not ready, state is %s",
+			vm.Status.Phase,
+		)
+		return ctrl.Result{RequeueAfter: 30 * time.Second}, nil
+	}
+
+	logger.Info("Reconciled DeckhouseMachine successfully")
+	return ctrl.Result{}, nil
+}
+
+func (r *DeckhouseMachineReconciler) reconcileDeleteOperation(
+	ctx context.Context,
+	logger logr.Logger,
+	dvpMachine *infrastructurev1a1.DeckhouseMachine,
+) (ctrl.Result, error) {
+	logger.Info("Reconciling DeckhouseMachine delete operation")
+
+	vmDisksList, err := r.DVP.ComputeService.GetVMAttachedBlockDevices(ctx, dvpMachine.Name)
+	if err != nil {
+		return ctrl.Result{}, fmt.Errorf("find attached disks: %w", err)
+	}
+
+	if err = r.DVP.ComputeService.DeleteVM(ctx, dvpMachine.Name); err != nil {
+		return ctrl.Result{}, fmt.Errorf("delete VirtualMachine: %w", err)
+	}
+
+	merr := &multierror.Error{}
+	for _, disk := range vmDisksList.Items {
+		if err = r.DVP.DiskService.RemoveDiskByName(ctx, disk.Name); err != nil {
+			merr = multierror.Append(merr, fmt.Errorf("delete VirtualDisk %s: %w", disk.Name, err))
+		}
+	}
+
+	if err = merr.ErrorOrNil(); err != nil {
+		return ctrl.Result{}, fmt.Errorf("delete DeckhouseMachine: %w", err)
+	}
+
+	controllerutil.RemoveFinalizer(dvpMachine, infrastructurev1a1.MachineFinalizer)
+	logger.Info("Reconciled Machine delete successfully")
+	return ctrl.Result{}, nil
+}
+
+func (r *DeckhouseMachineReconciler) getOrCreateVM(
+	ctx context.Context,
+	dvpMachine *infrastructurev1a1.DeckhouseMachine,
+) (
+	vm *v1alpha2.VirtualMachine,
+	err error,
+) {
+	vm, err = r.DVP.ComputeService.GetVMByName(ctx, dvpMachine.Name)
+	if err != nil {
+		if errors.Is(err, cloudprovider.InstanceNotFound) {
+			vm, err = r.createVM(ctx, dvpMachine)
+			return vm, err
+		}
+		return nil, fmt.Errorf("cannot get VirtualMachine: %w", err)
+	}
+
+	return vm, nil
+}
+
+func (r *DeckhouseMachineReconciler) createVM(
+	ctx context.Context,
+	dvpMachine *infrastructurev1a1.DeckhouseMachine,
+) (*v1alpha2.VirtualMachine, error) {
+	vm, err := r.DVP.ComputeService.CreateVM(ctx, &v1alpha2.VirtualMachine{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: dvpMachine.Name,
+		},
+		Spec: v1alpha2.VirtualMachineSpec{
+			RunPolicy:                v1alpha2.AlwaysOnPolicy,
+			OsType:                   v1alpha2.GenericOs,
+			Bootloader:               v1alpha2.BootloaderType(dvpMachine.Spec.Bootloader),
+			VirtualMachineClassName:  dvpMachine.Spec.VMClassName,
+			EnableParavirtualization: true,
+			CPU: v1alpha2.CPUSpec{
+				Cores:        dvpMachine.Spec.CPU.Cores,
+				CoreFraction: strconv.Itoa(dvpMachine.Spec.CPU.Fraction) + "%",
+			},
+			Memory: v1alpha2.MemorySpec{
+				Size: *resource.NewQuantity(int64(dvpMachine.Spec.Memory), resource.BinarySI),
+			},
+			BlockDeviceRefs: []v1alpha2.BlockDeviceSpecRef{
+				{
+					Name: dvpMachine.Spec.BootDiskImageRef.Name,
+					Kind: v1alpha2.BlockDeviceKind(dvpMachine.Spec.BootDiskImageRef.Kind),
+				},
+			},
+		},
+	})
+	if err != nil {
+		return nil, fmt.Errorf("create VM: %w", err)
+	}
+
+	return vm, nil
+}
+
+// SetupWithManager sets up the controller with the Manager.
+func (r *DeckhouseMachineReconciler) SetupWithManager(mgr ctrl.Manager) error {
+	return ctrl.NewControllerManagedBy(mgr).
+		For(&infrastructurev1a1.DeckhouseMachine{}).
+		Named("deckhousemachine").
+		Complete(r)
+}
