@@ -275,8 +275,7 @@ func (f *DeckhouseReleaseFetcher) fetchDeckhouseRelease(ctx context.Context) err
 	// filter by skipped and suspended
 	for _, release := range releasesInCluster {
 		if release.Status.Phase != v1alpha1.DeckhouseReleasePhasePending &&
-			release.Status.Phase != v1alpha1.DeckhouseReleasePhaseSuspended &&
-			release.Status.Phase != "" {
+			release.Status.Phase != v1alpha1.DeckhouseReleasePhaseSuspended {
 			continue
 		}
 
