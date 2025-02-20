@@ -49,6 +49,7 @@ spec:
         tier: node
         app: multus
         name: multus
+        module: cni-cilium
     spec:
       {{- include "helm_lib_priority_class" (tuple . "system-node-critical") | nindent 6 }}
       {{- include "helm_lib_tolerations" (tuple . "any-node" "with-uninitialized") | nindent 6 }}
@@ -64,6 +65,7 @@ spec:
           command: [ "/usr/src/multus-cni/bin/multus-daemon" ]
           resources:
             requests:
+              {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 14 }}
               cpu: "100m"
               memory: "50Mi"
             limits:
@@ -112,6 +114,7 @@ spec:
             - "/host/opt/cni/bin/multus-shim"
           resources:
             requests:
+              {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 14 }}
               cpu: "10m"
               memory: "15Mi"
           securityContext:
