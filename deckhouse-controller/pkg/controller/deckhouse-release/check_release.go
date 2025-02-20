@@ -74,7 +74,6 @@ type DeckhouseReleaseFetcherConfig struct {
 	deckhouseVersion        string
 	releaseChannel          string
 	releaseVersionImageHash string
-	tags                    []string
 
 	metricStorage *metricstorage.MetricStorage
 
@@ -106,7 +105,6 @@ type DeckhouseReleaseFetcher struct {
 	deckhouseVersion        string
 	releaseChannel          string
 	releaseVersionImageHash string
-	tags                    []string
 
 	metricStorage *metricstorage.MetricStorage
 
@@ -853,7 +851,7 @@ func (dcr *DeckhouseReleaseFetcher) GetNewReleasesMetadata(ctx context.Context, 
 // 1.68.5
 // result will be [1.67.11, 1.68.5]
 func (dcr *DeckhouseReleaseFetcher) getNewVersions(ctx context.Context, actual, target *semver.Version) ([]*semver.Version, error) {
-	tags, err := dcr.listTags(ctx)
+	tags, err := dcr.registryClient.ListTags(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("list tags: %w", err)
 	}
@@ -950,15 +948,6 @@ func (r *DeckhouseReleaseFetcher) generateChangelogForEnabledModules(releaseMeta
 	}
 
 	return enabledModulesChangelog
-}
-
-func (dcr *DeckhouseReleaseFetcher) listTags(ctx context.Context) ([]string, error) {
-	var err error
-	if dcr.tags == nil {
-		dcr.tags, err = dcr.registryClient.ListTags(ctx)
-	}
-
-	return dcr.tags, err
 }
 
 type ReleaseMetadata struct {
