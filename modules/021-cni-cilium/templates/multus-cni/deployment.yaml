@@ -74,6 +74,7 @@ spec:
           securityContext:
             privileged: true
             readOnlyRootFilesystem: false
+            runAsUser: 0
           terminationMessagePolicy: FallbackToLogsOnError
           volumeMounts:
             - name: cni
