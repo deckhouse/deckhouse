@@ -124,7 +124,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "P0D6E4079E36703EB"
+            "uid": "$ds_prometheus"
           },
           "editorMode": "code",
           "expr": "avg_over_time(cilium_node_connectivity_status{type=\"node\"}[$__range]) * 100",
@@ -543,7 +543,7 @@
         "current": {
           "selected": false,
           "text": "main",
-          "value": "P0D6E4079E36703EB"
+          "value": "$ds_prometheus"
         },
         "hide": 0,
         "includeAll": false,
