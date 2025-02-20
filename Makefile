@@ -292,6 +292,10 @@ docs-spellcheck-get-typos-list: ## Print out a list of all the terms in all page
 docs-pdf: ## Prepare special MD-page for PDF generation.
 	bash tools/pdf_tools/prepare_for_pdf.sh
 
+.PHONY: docs-pdf
+docs-pdf: ## Prepare special MD-page for PDF generation.
+	bash tools/pdf_tools/prepare_for_pdf.sh
+
 ##@ Update kubernetes control-plane patchversions
 
 bin/jq-$(JQ_VERSION)/jq:
