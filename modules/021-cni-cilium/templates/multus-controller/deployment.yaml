@@ -52,7 +52,7 @@ spec:
       serviceAccountName: multus-controller
       {{- include "helm_lib_priority_class" (tuple . "system-node-critical") | nindent 6 }}
       {{- include "helm_lib_tolerations" (tuple . "any-node" "with-uninitialized") | nindent 6 }}
-      {{- include "helm_lib_module_pod_security_context_run_as_user_deckhouse" . | nindent 6 }}
+      {{- include "helm_lib_module_pod_security_context_run_as_user_root" . | nindent 6 }}
       imagePullSecrets:
         - name: deckhouse-registry
       containers:
@@ -85,6 +85,9 @@ spec:
             limits:
               cpu: "100m"
               memory: "50Mi"
+          securityContext:
+            privileged: true
+            runAsUser: 0
           volumeMounts:
             - name: multus-controller-config-dir
               mountPath: /etc/multus-controller/
@@ -94,9 +97,6 @@ spec:
             - name: cri-socket
               mountPath: /host/run/containerd/containerd.sock
       terminationGracePeriodSeconds: 10
-      securityContext:
-        privileged: true
-        runAsUser: 0
       volumes:
         - name: multus-controller-config-dir
           configMap:
