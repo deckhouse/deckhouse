@@ -22,6 +22,7 @@ import yaml
 from d8_provider_secondary_devices_cfg import (
     main,
     registry_modes_without_registry_data_device_support,
+    d8_provider_secondary_devices_cfg_secret_delete_err,
 )
 from dotmap import DotMap
 from deckhouse import hook, tests
@@ -410,9 +411,11 @@ class TestProviderSecondaryDevicesConfigurationCreate(unittest.TestCase):
         tests.assert_validation_deny(
             self,
             out,
-            f'Creating a disk for registry data is not supported by the cloud provider "NonYandex". \
-                    Please select a supported registry mode that does not require a registry data device. \
-                    Available modes: {", ".join(registry_modes_without_registry_data_device_support)}',
+            (
+                f'Creating a disk for registry data is not supported by the cloud provider "NonYandex". '
+                f"Please select a supported registry mode that does not require a registry data device. "
+                f'Available modes: {", ".join(registry_modes_without_registry_data_device_support)}'
+            ),
         )
 
     def test_should_create_with_disabled_registry_data_device_with_unsupported_cloud(
@@ -515,9 +518,11 @@ class TestProviderSecondaryDevicesConfigurationUpdate(unittest.TestCase):
         tests.assert_validation_deny(
             self,
             out,
-            f'Creating a disk for registry data is not supported by the cloud provider "NonYandex". \
-                    Please select a supported registry mode that does not require a registry data device. \
-                    Available modes: {", ".join(registry_modes_without_registry_data_device_support)}',
+            (
+                f'Creating a disk for registry data is not supported by the cloud provider "NonYandex". '
+                f"Please select a supported registry mode that does not require a registry data device. "
+                f'Available modes: {", ".join(registry_modes_without_registry_data_device_support)}'
+            ),
         )
 
     def test_should_update_when_switch_to_disable_registry_data_device_with_unsupported_cloud(
@@ -538,7 +543,7 @@ class TestProviderSecondaryDevicesConfigurationUpdate(unittest.TestCase):
 
 class TestProviderSecondaryDevicesConfigurationDelete(unittest.TestCase):
 
-    def test_should_delete_with_enabled_registry_data_device_with_supported_cloud(
+    def test_should_not_delete_with_enabled_registry_data_device_with_supported_cloud(
         self,
     ):
         ctx = _prepare_delete_binding_context(
@@ -548,9 +553,11 @@ class TestProviderSecondaryDevicesConfigurationDelete(unittest.TestCase):
             cluster_cfg_data=_prepare_cluster_cfg_with_supported_cloud(),
         )
         out = hook.testrun(main, [ctx])
-        tests.assert_validation_allowed(self, out, None)
+        tests.assert_validation_deny(
+            self, out, d8_provider_secondary_devices_cfg_secret_delete_err
+        )
 
-    def test_should_delete_with_enabled_registry_data_device_with_static_cluster(
+    def test_should_not_delete_with_enabled_registry_data_device_with_static_cluster(
         self,
     ):
         ctx = _prepare_delete_binding_context(
@@ -560,9 +567,11 @@ class TestProviderSecondaryDevicesConfigurationDelete(unittest.TestCase):
             cluster_cfg_data=_prepare_cluster_cfg_with_static(),
         )
         out = hook.testrun(main, [ctx])
-        tests.assert_validation_allowed(self, out, None)
+        tests.assert_validation_deny(
+            self, out, d8_provider_secondary_devices_cfg_secret_delete_err
+        )
 
-    def test_should_delete_with_empty_configs(
+    def test_should_not_delete_with_empty_configs(
         self,
     ):
         ctx = _prepare_delete_binding_context(
@@ -570,9 +579,11 @@ class TestProviderSecondaryDevicesConfigurationDelete(unittest.TestCase):
             cluster_cfg_data=None,
         )
         out = hook.testrun(main, [ctx])
-        tests.assert_validation_allowed(self, out, None)
+        tests.assert_validation_deny(
+            self, out, d8_provider_secondary_devices_cfg_secret_delete_err
+        )
 
-    def test_should_delete_with_empty_fields(
+    def test_should_not_delete_with_empty_fields(
         self,
     ):
         ctx = _prepare_delete_binding_context(
@@ -580,9 +591,11 @@ class TestProviderSecondaryDevicesConfigurationDelete(unittest.TestCase):
             cluster_cfg_data="",
         )
         out = hook.testrun(main, [ctx])
-        tests.assert_validation_allowed(self, out, None)
+        tests.assert_validation_deny(
+            self, out, d8_provider_secondary_devices_cfg_secret_delete_err
+        )
 
-    def test_should_delete_with_enabled_registry_data_device_with_empty_cluster_cfg(
+    def test_should_not_delete_with_enabled_registry_data_device_with_empty_cluster_cfg(
         self,
     ):
         ctx = _prepare_delete_binding_context(
@@ -592,9 +605,11 @@ class TestProviderSecondaryDevicesConfigurationDelete(unittest.TestCase):
             cluster_cfg_data="",
         )
         out = hook.testrun(main, [ctx])
-        tests.assert_validation_allowed(self, out, None)
+        tests.assert_validation_deny(
+            self, out, d8_provider_secondary_devices_cfg_secret_delete_err
+        )
 
-    def test_should_delete_with_enabled_registry_data_device_with_unsupported_cloud(
+    def test_should_not_delete_with_enabled_registry_data_device_with_unsupported_cloud(
         self,
     ):
         ctx = _prepare_delete_binding_context(
@@ -604,9 +619,11 @@ class TestProviderSecondaryDevicesConfigurationDelete(unittest.TestCase):
             cluster_cfg_data=_prepare_cluster_cfg_with_unsupported_cloud(),
         )
         out = hook.testrun(main, [ctx])
-        tests.assert_validation_allowed(self, out, None)
+        tests.assert_validation_deny(
+            self, out, d8_provider_secondary_devices_cfg_secret_delete_err
+        )
 
-    def test_should_delete_with_disabled_registry_data_device_with_unsupported_cloud(
+    def test_should_not_delete_with_disabled_registry_data_device_with_unsupported_cloud(
         self,
     ):
         ctx = _prepare_delete_binding_context(
@@ -616,7 +633,9 @@ class TestProviderSecondaryDevicesConfigurationDelete(unittest.TestCase):
             cluster_cfg_data=_prepare_cluster_cfg_with_unsupported_cloud(),
         )
         out = hook.testrun(main, [ctx])
-        tests.assert_validation_allowed(self, out, None)
+        tests.assert_validation_deny(
+            self, out, d8_provider_secondary_devices_cfg_secret_delete_err
+        )
 
 
 if __name__ == "__main__":

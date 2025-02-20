@@ -20,6 +20,10 @@ import yaml
 from dotmap import DotMap
 from deckhouse import hook
 
+d8_provider_secondary_devices_cfg_secret_delete_err = (
+    'it is forbidden to delete secret "d8-provider-secondary-devices-configuration"'
+)
+
 providers_with_registry_data_device_support = {
     "aws",
     "gcp",
@@ -90,7 +94,7 @@ def validate(ctx: DotMap, output: hook.ValidationsCollector):
 
 
 def validate_delete(ctx: DotMap, output: hook.ValidationsCollector):
-    output.allow()
+    output.deny(d8_provider_secondary_devices_cfg_secret_delete_err)
     return
 
 
@@ -146,9 +150,11 @@ def validate_registry_data_device(
             cloud_provider_field.lower()
             not in providers_with_registry_data_device_support
         ):
-            return f'Creating a disk for registry data is not supported by the cloud provider "{cloud_provider_field}". \
-                    Please select a supported registry mode that does not require a registry data device. \
-                    Available modes: {", ".join(registry_modes_without_registry_data_device_support)}'
+            return (
+                f'Creating a disk for registry data is not supported by the cloud provider "{cloud_provider_field}". '
+                f"Please select a supported registry mode that does not require a registry data device. "
+                f'Available modes: {", ".join(registry_modes_without_registry_data_device_support)}'
+            )
     return None
 
 
