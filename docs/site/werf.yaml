@@ -67,7 +67,7 @@ shell:
 {{- end }}
 ---
 image: pdf-page-builder
-from: {{ .Images.BASE_ALPINE }}
+from: {{ .Images.BASE_JEKYLL }}
 final: false
 shell:
   setup:
