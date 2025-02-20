@@ -35,6 +35,15 @@ spec:
             spec:
               type: object
               properties:
+                allowedEmails:
+                  type: array
+                  description: |-
+                    A list of emails of users are allowed to connect to the client.
+
+                    **By default**, all users can connect.
+                  x-doc-default: 'All users are allowed.'
+                  items:
+                    type: string
                 allowedGroups:
                   type: array
                   description: |
