@@ -4,6 +4,7 @@ approved: true
 kind: DeckhouseRelease
 metadata:
   annotations:
+    release.deckhouse.io/change-cause: check release (restore release)
     release.deckhouse.io/current-restored: "true"
     release.deckhouse.io/isUpdating: "false"
     release.deckhouse.io/notified: "false"
@@ -24,6 +25,7 @@ approved: false
 kind: DeckhouseRelease
 metadata:
   annotations:
+    release.deckhouse.io/change-cause: check release (from deployed)
     release.deckhouse.io/cooldown: "2026-06-06T16:16:16Z"
     release.deckhouse.io/isUpdating: "false"
     release.deckhouse.io/notified: "false"

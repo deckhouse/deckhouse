@@ -115,9 +115,11 @@ func (r *deckhouseReleaseReconciler) checkDeckhouseRelease(ctx context.Context) 
 		return fmt.Errorf("get new image: %w", err)
 	}
 
+	var releaseMetadata *ReleaseMetadata
+
 	// only if image changed
 	if imageErr == nil {
-		releaseChecker.releaseMetadata = imageInfo.Metadata
+		releaseMetadata = imageInfo.Metadata
 	}
 
 	var (
@@ -166,7 +168,7 @@ func (r *deckhouseReleaseReconciler) checkDeckhouseRelease(ctx context.Context) 
 		return nil
 	}
 
-	newSemver, err := semver.NewVersion(releaseChecker.releaseMetadata.Version)
+	newSemver, err := semver.NewVersion(releaseMetadata.Version)
 	if err != nil {
 		// TODO: maybe set something like v1.0.0-{meta.Version} for developing purpose
 		return fmt.Errorf("parse semver: %w", err)
@@ -188,7 +190,7 @@ func (r *deckhouseReleaseReconciler) checkDeckhouseRelease(ctx context.Context) 
 		releasesInCluster = releasesFromDeployed
 	}
 
-	err = r.createReleases(ctx, releaseChecker, releaseForUpdate, releasesInCluster, newSemver)
+	err = r.createReleases(ctx, releaseChecker, releaseMetadata, releaseForUpdate, releasesInCluster, newSemver)
 	if err != nil {
 		return fmt.Errorf("create releases: %w", err)
 	}
@@ -219,7 +221,7 @@ func (r *deckhouseReleaseReconciler) checkDeckhouseRelease(ctx context.Context) 
 
 			switch release.Status.Phase {
 			case v1alpha1.DeckhouseReleasePhasePending, "":
-				if releaseChecker.releaseMetadata.Suspend {
+				if releaseMetadata.Suspend {
 					err := r.patchSetSuspendAnnotation(ctx, release, true)
 					if err != nil {
 						return fmt.Errorf("patch suspend annotation: %w", err)
@@ -227,7 +229,7 @@ func (r *deckhouseReleaseReconciler) checkDeckhouseRelease(ctx context.Context) 
 				}
 
 			case v1alpha1.DeckhouseReleasePhaseSuspended:
-				if !releaseChecker.releaseMetadata.Suspend {
+				if !releaseMetadata.Suspend {
 					err := r.patchSetSuspendAnnotation(ctx, release, false)
 					if err != nil {
 						return fmt.Errorf("patch suspend annotation: %w", err)
@@ -301,6 +303,7 @@ func (r *deckhouseReleaseReconciler) restoreCurrentDeployedRelease(ctx context.C
 				v1alpha1.DeckhouseReleaseAnnotationIsUpdating:      "false",
 				v1alpha1.DeckhouseReleaseAnnotationNotified:        "false",
 				v1alpha1.DeckhouseReleaseAnnotationCurrentRestored: "true",
+				v1alpha1.DeckhouseReleaseAnnotationChangeCause:     "check release (restore release)",
 			},
 			Labels: map[string]string{
 				"heritage": "deckhouse",
@@ -334,22 +337,25 @@ func (r *deckhouseReleaseReconciler) restoreCurrentDeployedRelease(ctx context.C
 // 3.2.1) if update sequence between last release in cluster and version in channel is broken - get releases from registry between last release in cluster and version from channel, and create releases
 // 3.2.2) if update sequence between last release in cluster and version in channel not broken - create from channel
 // 3.3) if update sequences not broken - create from channel
-func (r *deckhouseReleaseReconciler) createReleases(ctx context.Context, releaseChecker *DeckhouseReleaseChecker,
-	releaseForUpdate *v1alpha1.DeckhouseRelease, releasesInCluster []*v1alpha1.DeckhouseRelease,
+func (r *deckhouseReleaseReconciler) createReleases(
+	ctx context.Context,
+	releaseChecker *DeckhouseReleaseChecker,
+	releaseMetadata *ReleaseMetadata,
+	releaseForUpdate *v1alpha1.DeckhouseRelease,
+	releasesInCluster []*v1alpha1.DeckhouseRelease,
 	newSemver *semver.Version) error {
-	// run only if it's a canary release
 	var (
 		cooldownUntil, notificationShiftTime *metav1.Time
 	)
 
-	if releaseChecker.releaseMetadata.Cooldown != nil {
-		cooldownUntil = releaseChecker.releaseMetadata.Cooldown
+	if releaseMetadata.Cooldown != nil {
+		cooldownUntil = releaseMetadata.Cooldown
 	}
 
 	if len(releasesInCluster) == 0 {
-		err := r.createRelease(ctx, releaseChecker, cooldownUntil, notificationShiftTime)
+		err := r.createRelease(ctx, releaseMetadata, cooldownUntil, notificationShiftTime, "no releases in cluster")
 		if err != nil {
-			return fmt.Errorf("create release %s: %w", releaseChecker.releaseMetadata.Version, err)
+			return fmt.Errorf("create release %s: %w", releaseMetadata.Version, err)
 		}
 
 		return nil
@@ -358,9 +364,9 @@ func (r *deckhouseReleaseReconciler) createReleases(ctx context.Context, release
 	// create release if deployed release and new release are in updating sequence
 	actual := releaseForUpdate
 	if isUpdatingSequence(actual.GetVersion(), newSemver) {
-		err := r.createRelease(ctx, releaseChecker, cooldownUntil, notificationShiftTime)
+		err := r.createRelease(ctx, releaseMetadata, cooldownUntil, notificationShiftTime, "from deployed")
 		if err != nil {
-			return fmt.Errorf("create release %s: %w", releaseChecker.releaseMetadata.Version, err)
+			return fmt.Errorf("create release %s: %w", releaseMetadata.Version, err)
 		}
 
 		return nil
@@ -381,9 +387,9 @@ func (r *deckhouseReleaseReconciler) createReleases(ctx context.Context, release
 		// create release if last release and new release are in updating sequence
 		if isUpdatingSequence(actual.GetVersion(), newSemver) {
 			// TODO: remove cooldown and notificationShiftTime?
-			err := r.createRelease(ctx, releaseChecker, cooldownUntil, notificationShiftTime)
+			err := r.createRelease(ctx, releaseMetadata, cooldownUntil, notificationShiftTime, "from last release in cluster")
 			if err != nil {
-				return fmt.Errorf("create release %s: %w", releaseChecker.releaseMetadata.Version, err)
+				return fmt.Errorf("create release %s: %w", releaseMetadata.Version, err)
 			}
 
 			return nil
@@ -420,32 +426,39 @@ func (r *deckhouseReleaseReconciler) createReleases(ctx context.Context, release
 	}
 
 	for _, meta := range metas {
-		releaseChecker.releaseMetadata = &meta
-		err = r.createRelease(ctx, releaseChecker, cooldownUntil, notificationShiftTime)
+		*releaseMetadata = meta
+
+		err = r.createRelease(ctx, releaseMetadata, cooldownUntil, notificationShiftTime, "step-by-step")
 		if err != nil {
-			return fmt.Errorf("create release %s: %w", releaseChecker.releaseMetadata.Version, err)
+			return fmt.Errorf("create release %s: %w", releaseMetadata.Version, err)
 		}
 
-		if releaseChecker.releaseMetadata.Cooldown != nil {
-			cooldownUntil = releaseChecker.releaseMetadata.Cooldown
+		if releaseMetadata.Cooldown != nil {
+			cooldownUntil = releaseMetadata.Cooldown
 		}
 	}
 
 	return nil
 }
 
-func (r *deckhouseReleaseReconciler) createRelease(ctx context.Context, releaseChecker *DeckhouseReleaseChecker,
-	cooldownUntil, notificationShiftTime *metav1.Time,
+func (r *deckhouseReleaseReconciler) createRelease(
+	ctx context.Context,
+	releaseMetadata *ReleaseMetadata,
+	cooldownUntil,
+	notificationShiftTime *metav1.Time,
+	createProcess string,
 ) error {
 	var applyAfter *metav1.Time
 
+	releaseChannelName := strcase.ToKebab(r.updateSettings.Get().ReleaseChannel)
+
 	ts := metav1.Time{Time: r.dc.GetClock().Now()}
-	if releaseChecker.IsCanaryRelease() {
+	if releaseMetadata.IsCanaryRelease(releaseChannelName) {
 		// if cooldown is set, calculate canary delay from cooldown time, not current
 		if cooldownUntil != nil && cooldownUntil.After(ts.Time) {
 			ts = *cooldownUntil
 		}
-		applyAfter = releaseChecker.CalculateReleaseDelay(ts, r.clusterUUID)
+		applyAfter = releaseMetadata.CalculateReleaseDelay(releaseChannelName, ts, r.clusterUUID)
 	}
 
 	// inherit applyAfter from notified release
@@ -454,16 +467,20 @@ func (r *deckhouseReleaseReconciler) createRelease(ctx context.Context, releaseC
 	}
 
 	var disruptions []string
-	if len(releaseChecker.releaseMetadata.Disruptions) > 0 {
-		version, err := semver.NewVersion(releaseChecker.releaseMetadata.Version)
+	if len(releaseMetadata.Disruptions) > 0 {
+		version, err := semver.NewVersion(releaseMetadata.Version)
 		if err != nil {
 			return err
 		}
 		disruptionsVersion := fmt.Sprintf("%d.%d", version.Major(), version.Minor())
-		disruptions = releaseChecker.releaseMetadata.Disruptions[disruptionsVersion]
+		disruptions = releaseMetadata.Disruptions[disruptionsVersion]
 	}
 
-	enabledModulesChangelog := releaseChecker.generateChangelogForEnabledModules()
+	enabledModulesChangelog := r.generateChangelogForEnabledModules(releaseMetadata)
+	changeCause := "check release"
+	if createProcess != "" {
+		changeCause += " (" + createProcess + ")"
+	}
 
 	release := &v1alpha1.DeckhouseRelease{
 		TypeMeta: metav1.TypeMeta{
@@ -471,27 +488,28 @@ func (r *deckhouseReleaseReconciler) createRelease(ctx context.Context, releaseC
 			APIVersion: "deckhouse.io/v1alpha1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name: releaseChecker.releaseMetadata.Version,
+			Name: releaseMetadata.Version,
 			Annotations: map[string]string{
-				v1alpha1.DeckhouseReleaseAnnotationIsUpdating: "false",
-				v1alpha1.DeckhouseReleaseAnnotationNotified:   "false",
+				v1alpha1.DeckhouseReleaseAnnotationIsUpdating:  "false",
+				v1alpha1.DeckhouseReleaseAnnotationNotified:    "false",
+				v1alpha1.DeckhouseReleaseAnnotationChangeCause: changeCause,
 			},
 			Labels: map[string]string{
 				"heritage": "deckhouse",
 			},
 		},
 		Spec: v1alpha1.DeckhouseReleaseSpec{
-			Version:       releaseChecker.releaseMetadata.Version,
+			Version:       releaseMetadata.Version,
 			ApplyAfter:    applyAfter,
-			Requirements:  releaseChecker.releaseMetadata.Requirements,
+			Requirements:  releaseMetadata.Requirements,
 			Disruptions:   disruptions,
 			Changelog:     enabledModulesChangelog,
-			ChangelogLink: fmt.Sprintf("https://github.com/deckhouse/deckhouse/releases/tag/%s", releaseChecker.releaseMetadata.Version),
+			ChangelogLink: fmt.Sprintf("https://github.com/deckhouse/deckhouse/releases/tag/%s", releaseMetadata.Version),
 		},
 		Approved: false,
 	}
 
-	if releaseChecker.releaseMetadata.Suspend {
+	if releaseMetadata.Suspend {
 		release.ObjectMeta.Annotations[v1alpha1.DeckhouseReleaseAnnotationSuspended] = "true"
 	}
 	if cooldownUntil != nil {
@@ -533,20 +551,14 @@ type DeckhouseReleaseChecker struct {
 	registryClient cr.Client
 	moduleManager  moduleManager
 
-	releaseChannel  string
-	releaseMetadata *ReleaseMetadata
-	tags            []string
+	releaseChannel string
+	tags           []string
 
 	logger *log.Logger
 }
 
-func (dcr *DeckhouseReleaseChecker) IsCanaryRelease() bool {
-	settings := dcr.releaseCanarySettings()
-	return settings.Enabled
-}
-
-func (dcr *DeckhouseReleaseChecker) releaseCanarySettings() canarySettings {
-	return dcr.releaseMetadata.Canary[dcr.releaseChannel]
+func (dcr *DeckhouseReleaseChecker) GetReleaseChannel() string {
+	return dcr.releaseChannel
 }
 
 var ErrImageNotChanged = errors.New("image not changed")
@@ -558,9 +570,9 @@ type ImageInfo struct {
 }
 
 func (dcr *DeckhouseReleaseChecker) GetNewImageInfo(ctx context.Context, previousImageHash string) (*ImageInfo, error) {
-	image, err := dcr.registryClient.Image(ctx, dcr.releaseChannel)
+	image, err := dcr.registryClient.Image(ctx, dcr.GetReleaseChannel())
 	if err != nil {
-		return nil, fmt.Errorf("get image from channel '%s': %w", dcr.releaseChannel, err)
+		return nil, fmt.Errorf("get image from channel '%s': %w", dcr.GetReleaseChannel(), err)
 	}
 
 	imageDigest, err := image.Digest()
@@ -628,6 +640,7 @@ func (rr *releaseReader) untarMetadata(rc io.Reader) error {
 
 var ErrImageIsNil = errors.New("image is nil")
 
+// TODO: make registry service with this method
 func (dcr *DeckhouseReleaseChecker) fetchReleaseMetadata(img registryv1.Image) (*ReleaseMetadata, error) {
 	if img == nil {
 		return nil, ErrImageIsNil
@@ -723,20 +736,6 @@ func parseTime(s string) (time.Time, error) {
 	}
 
 	return time.Parse(time.RFC3339, s)
-}
-
-// https://github.com/deckhouse/deckhouse/issues/332
-func (dcr *DeckhouseReleaseChecker) CalculateReleaseDelay(ts metav1.Time, clusterUUID string) *metav1.Time {
-	hash := murmur3.Sum64([]byte(clusterUUID + dcr.releaseMetadata.Version))
-	wave := hash % uint64(dcr.releaseCanarySettings().Waves)
-
-	if wave != 0 {
-		delay := time.Duration(wave) * dcr.releaseCanarySettings().Interval.Duration
-		applyAfter := metav1.NewTime(ts.Add(delay))
-		return &applyAfter
-	}
-
-	return nil
 }
 
 // FetchReleasesMetadata realize step by step update
@@ -887,19 +886,19 @@ func (dcr *DeckhouseReleaseChecker) getNewVersions(ctx context.Context, actual, 
 
 var globalModules = []string{"candi", "deckhouse-controller", "global"}
 
-func (dcr *DeckhouseReleaseChecker) generateChangelogForEnabledModules() map[string]interface{} {
-	enabledModules := dcr.moduleManager.GetEnabledModuleNames()
+func (r *deckhouseReleaseReconciler) generateChangelogForEnabledModules(releaseMetadata *ReleaseMetadata) map[string]interface{} {
+	enabledModules := r.moduleManager.GetEnabledModuleNames()
 	enabledModulesChangelog := make(map[string]interface{})
 
 	for _, enabledModule := range enabledModules {
-		if v, ok := dcr.releaseMetadata.Changelog[enabledModule]; ok {
+		if v, ok := releaseMetadata.Changelog[enabledModule]; ok {
 			enabledModulesChangelog[enabledModule] = v
 		}
 	}
 
 	// enable global modules
 	for _, globalModule := range globalModules {
-		if v, ok := dcr.releaseMetadata.Changelog[globalModule]; ok {
+		if v, ok := releaseMetadata.Changelog[globalModule]; ok {
 			enabledModulesChangelog[globalModule] = v
 		}
 	}
@@ -926,6 +925,29 @@ type ReleaseMetadata struct {
 	Changelog map[string]interface{}
 
 	Cooldown *metav1.Time `json:"-"`
+}
+
+func (m *ReleaseMetadata) IsCanaryRelease(channel string) bool {
+	settings := m.releaseCanarySettings(channel)
+	return settings.Enabled
+}
+
+func (m *ReleaseMetadata) releaseCanarySettings(channel string) canarySettings {
+	return m.Canary[channel]
+}
+
+// https://github.com/deckhouse/deckhouse/issues/332
+func (m *ReleaseMetadata) CalculateReleaseDelay(channel string, ts metav1.Time, clusterUUID string) *metav1.Time {
+	hash := murmur3.Sum64([]byte(clusterUUID + m.Version))
+	wave := hash % uint64(m.releaseCanarySettings(channel).Waves)
+
+	if wave != 0 {
+		delay := time.Duration(wave) * m.releaseCanarySettings(channel).Interval.Duration
+		applyAfter := metav1.NewTime(ts.Add(delay))
+		return &applyAfter
+	}
+
+	return nil
 }
 
 type canarySettings struct {
