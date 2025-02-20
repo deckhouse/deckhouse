@@ -22,7 +22,7 @@ image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
 final: false
 fromImage: common/alt-p11-artifact
 git:
-- add: /{{ $.ModulePath }}modules{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
+- add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
   to: /
   stageDependencies:
     install:
