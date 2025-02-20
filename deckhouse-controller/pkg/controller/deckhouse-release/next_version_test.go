@@ -40,7 +40,7 @@ type ReleaseTestSuite struct {
 
 	kubeClient client.Client
 	ctr        *deckhouseReleaseReconciler
-	rc         *DeckhouseReleaseChecker
+	rc         *DeckhouseReleaseFetcher
 }
 
 func (suite *ReleaseTestSuite) SetupSuite() {
@@ -72,8 +72,13 @@ func (suite *ReleaseTestSuite) SetupSubTest() {
 	}, nil)
 
 	suite.ctr, suite.kubeClient = setupFakeController(suite.T(), "", initValues, embeddedMUP)
-	suite.rc = NewDeckhouseReleaseChecker(dependency.TestDC.CRClient,
-		suite.ctr.moduleManager, "", suite.ctr.logger)
+	cfg := &DeckhouseReleaseFetcherConfig{
+		registryClient: dependency.TestDC.CRClient,
+		moduleManager:  suite.ctr.moduleManager,
+		logger:         suite.ctr.logger,
+	}
+
+	suite.rc = NewDeckhouseReleaseFetcher(cfg)
 }
 
 func (suite *ReleaseTestSuite) TestCheckRelease() {

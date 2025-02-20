@@ -31,8 +31,10 @@ import (
 	"time"
 
 	"github.com/Masterminds/semver/v3"
+	metricstorage "github.com/flant/shell-operator/pkg/metric_storage"
 	registryv1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/iancoleman/strcase"
+	"github.com/jonboulle/clockwork"
 	"github.com/spaolacci/murmur3"
 	"gopkg.in/yaml.v3"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -60,6 +62,59 @@ func (r *deckhouseReleaseReconciler) checkDeckhouseReleaseLoop(ctx context.Conte
 			r.logger.Error("check Deckhouse release", log.Err(err))
 		}
 	}, 3*time.Minute)
+}
+
+type DeckhouseReleaseFetcherConfig struct {
+	k8sClient      client.Client
+	registryClient cr.Client
+	clock          clockwork.Clock
+	moduleManager  moduleManager
+
+	clusterUUID             string
+	deckhouseVersion        string
+	releaseChannel          string
+	releaseVersionImageHash string
+	tags                    []string
+
+	metricStorage *metricstorage.MetricStorage
+
+	logger *log.Logger
+}
+
+func NewDeckhouseReleaseFetcher(cfg *DeckhouseReleaseFetcherConfig) *DeckhouseReleaseFetcher {
+	return &DeckhouseReleaseFetcher{
+		k8sClient:               cfg.k8sClient,
+		registryClient:          cfg.registryClient,
+		clock:                   cfg.clock,
+		moduleManager:           cfg.moduleManager,
+		releaseChannel:          cfg.releaseChannel,
+		releaseVersionImageHash: cfg.releaseVersionImageHash,
+		clusterUUID:             cfg.clusterUUID,
+		deckhouseVersion:        cfg.deckhouseVersion,
+		metricStorage:           cfg.metricStorage,
+		logger:                  cfg.logger,
+	}
+}
+
+type DeckhouseReleaseFetcher struct {
+	k8sClient      client.Client
+	registryClient cr.Client
+	clock          clockwork.Clock
+	moduleManager  moduleManager
+
+	clusterUUID             string
+	deckhouseVersion        string
+	releaseChannel          string
+	releaseVersionImageHash string
+	tags                    []string
+
+	metricStorage *metricstorage.MetricStorage
+
+	logger *log.Logger
+}
+
+func (dcr *DeckhouseReleaseFetcher) GetReleaseChannel() string {
+	return dcr.releaseChannel
 }
 
 func (r *deckhouseReleaseReconciler) checkDeckhouseRelease(ctx context.Context) error {
@@ -102,17 +157,34 @@ func (r *deckhouseReleaseReconciler) checkDeckhouseRelease(ctx context.Context) 
 
 	// client watch only one channel
 	// registry.deckhouse.io/deckhouse/ce/release-channel:$release-channel
-	regCli, err := r.dc.GetRegistryClient(path.Join(imagesRegistry, "release-channel"), opts...)
+	registryClient, err := r.dc.GetRegistryClient(path.Join(imagesRegistry, "release-channel"), opts...)
 	if err != nil {
 		return fmt.Errorf("get registry client: %w", err)
 	}
 
-	releaseChecker := NewDeckhouseReleaseChecker(regCli, r.moduleManager, releaseChannelName, r.logger)
+	cfg := &DeckhouseReleaseFetcherConfig{
+		k8sClient:               r.client,
+		registryClient:          registryClient,
+		clock:                   r.dc.GetClock(),
+		moduleManager:           r.moduleManager,
+		releaseChannel:          releaseChannelName,
+		releaseVersionImageHash: r.releaseVersionImageHash,
+		clusterUUID:             r.clusterUUID,
+		deckhouseVersion:        r.deckhouseVersion,
+		metricStorage:           r.metricStorage,
+		logger:                  r.logger.Named("release-fetcher"),
+	}
 
+	releaseChecker := NewDeckhouseReleaseFetcher(cfg)
+
+	return releaseChecker.checkDeckhouseRelease(ctx)
+}
+
+func (r *DeckhouseReleaseFetcher) checkDeckhouseRelease(ctx context.Context) error {
 	// get image info from release channel
-	imageInfo, imageErr := releaseChecker.GetNewImageInfo(ctx, r.releaseVersionImageHash)
+	imageInfo, imageErr := r.GetNewImageInfo(ctx, r.releaseVersionImageHash)
 	if imageErr != nil && !errors.Is(imageErr, ErrImageNotChanged) {
-		return fmt.Errorf("get new image: %w", err)
+		return fmt.Errorf("get new image: %w", imageErr)
 	}
 
 	var releaseMetadata *ReleaseMetadata
@@ -151,7 +223,7 @@ func (r *deckhouseReleaseReconciler) checkDeckhouseRelease(ctx context.Context) 
 	if deployedRelease == nil {
 		r.logger.Warn("deployed deckhouse-release is not found, restoring...")
 
-		restored, err := r.restoreCurrentDeployedRelease(ctx, releaseChecker, r.deckhouseVersion)
+		restored, err := r.restoreCurrentDeployedRelease(ctx, r.deckhouseVersion)
 		if err != nil {
 			return fmt.Errorf("restore current deployed release: %w", err)
 		}
@@ -190,7 +262,7 @@ func (r *deckhouseReleaseReconciler) checkDeckhouseRelease(ctx context.Context) 
 		releasesInCluster = releasesFromDeployed
 	}
 
-	err = r.createReleases(ctx, releaseChecker, releaseMetadata, releaseForUpdate, releasesInCluster, newSemver)
+	err = r.createReleases(ctx, releaseMetadata, releaseForUpdate, releasesInCluster, newSemver)
 	if err != nil {
 		return fmt.Errorf("create releases: %w", err)
 	}
@@ -210,7 +282,7 @@ func (r *deckhouseReleaseReconciler) checkDeckhouseRelease(ctx context.Context) 
 		case 1:
 			// cleanup versions which are older than current version in a specified channel and are in a Pending state
 			if release.Status.Phase == v1alpha1.DeckhouseReleasePhasePending {
-				err = r.client.Delete(ctx, release, client.PropagationPolicy(metav1.DeletePropagationBackground))
+				err = r.k8sClient.Delete(ctx, release, client.PropagationPolicy(metav1.DeletePropagationBackground))
 				if err != nil {
 					return fmt.Errorf("delete old release: %w", err)
 				}
@@ -263,10 +335,10 @@ func isUpdatingSequence(a, b *semver.Version) bool {
 	return true
 }
 
-func (r *deckhouseReleaseReconciler) listDeckhouseReleases(ctx context.Context) ([]*v1alpha1.DeckhouseRelease, error) {
+func (r *DeckhouseReleaseFetcher) listDeckhouseReleases(ctx context.Context) ([]*v1alpha1.DeckhouseRelease, error) {
 	releases := new(v1alpha1.DeckhouseReleaseList)
 
-	if err := r.client.List(ctx, releases); err != nil {
+	if err := r.k8sClient.List(ctx, releases); err != nil {
 		return nil, fmt.Errorf("get deckhouse releases: %w", err)
 	}
 
@@ -279,15 +351,15 @@ func (r *deckhouseReleaseReconciler) listDeckhouseReleases(ctx context.Context) 
 	return result, nil
 }
 
-func (r *deckhouseReleaseReconciler) restoreCurrentDeployedRelease(ctx context.Context, releaseChecker *DeckhouseReleaseChecker, tag string) (*v1alpha1.DeckhouseRelease, error) {
+func (r *DeckhouseReleaseFetcher) restoreCurrentDeployedRelease(ctx context.Context, tag string) (*v1alpha1.DeckhouseRelease, error) {
 	var releaseMetadata *ReleaseMetadata
 
-	image, err := releaseChecker.registryClient.Image(ctx, tag)
+	image, err := r.registryClient.Image(ctx, tag)
 	if err != nil {
 		r.logger.Warn("couldn't get current deployed release's image from registry", slog.String("image", tag), log.Err(err))
 	}
 
-	releaseMetadata, err = releaseChecker.fetchReleaseMetadata(image)
+	releaseMetadata, err = r.fetchReleaseMetadata(image)
 	if err != nil {
 		r.logger.Warn("couldn't fetch current deployed release's image metadata", slog.String("image", tag), log.Err(err))
 	}
@@ -320,7 +392,7 @@ func (r *deckhouseReleaseReconciler) restoreCurrentDeployedRelease(ctx context.C
 		release.Spec.ChangelogLink = fmt.Sprintf("https://github.com/deckhouse/deckhouse/releases/tag/%s", releaseMetadata.Version)
 	}
 
-	err = client.IgnoreAlreadyExists(r.client.Create(ctx, release))
+	err = client.IgnoreAlreadyExists(r.k8sClient.Create(ctx, release))
 	if err != nil {
 		return nil, fmt.Errorf("create release: %w", err)
 	}
@@ -337,9 +409,8 @@ func (r *deckhouseReleaseReconciler) restoreCurrentDeployedRelease(ctx context.C
 // 3.2.1) if update sequence between last release in cluster and version in channel is broken - get releases from registry between last release in cluster and version from channel, and create releases
 // 3.2.2) if update sequence between last release in cluster and version in channel not broken - create from channel
 // 3.3) if update sequences not broken - create from channel
-func (r *deckhouseReleaseReconciler) createReleases(
+func (r *DeckhouseReleaseFetcher) createReleases(
 	ctx context.Context,
-	releaseChecker *DeckhouseReleaseChecker,
 	releaseMetadata *ReleaseMetadata,
 	releaseForUpdate *v1alpha1.DeckhouseRelease,
 	releasesInCluster []*v1alpha1.DeckhouseRelease,
@@ -386,7 +457,7 @@ func (r *deckhouseReleaseReconciler) createReleases(
 
 		// create release if last release and new release are in updating sequence
 		if isUpdatingSequence(actual.GetVersion(), newSemver) {
-			// TODO: remove cooldown and notificationShiftTime?
+			// TODO: remove cooldown?
 			err := r.createRelease(ctx, releaseMetadata, cooldownUntil, notificationShiftTime, "from last release in cluster")
 			if err != nil {
 				return fmt.Errorf("create release %s: %w", releaseMetadata.Version, err)
@@ -412,9 +483,9 @@ func (r *deckhouseReleaseReconciler) createReleases(
 		notificationShiftTime = &metav1.Time{Time: *actual.GetApplyAfter()}
 	}
 
-	metas, err := releaseChecker.GetNewReleasesMetadata(ctx, actual.GetVersion(), newSemver)
+	metas, err := r.GetNewReleasesMetadata(ctx, actual.GetVersion(), newSemver)
 	if err != nil {
-		releaseChecker.logger.Error("step by step update failed", log.Err(err))
+		r.logger.Error("step by step update failed", log.Err(err))
 
 		labels := map[string]string{
 			"version": releaseForUpdate.GetVersion().Original(),
@@ -441,7 +512,7 @@ func (r *deckhouseReleaseReconciler) createReleases(
 	return nil
 }
 
-func (r *deckhouseReleaseReconciler) createRelease(
+func (r *DeckhouseReleaseFetcher) createRelease(
 	ctx context.Context,
 	releaseMetadata *ReleaseMetadata,
 	cooldownUntil,
@@ -450,15 +521,13 @@ func (r *deckhouseReleaseReconciler) createRelease(
 ) error {
 	var applyAfter *metav1.Time
 
-	releaseChannelName := strcase.ToKebab(r.updateSettings.Get().ReleaseChannel)
-
-	ts := metav1.Time{Time: r.dc.GetClock().Now()}
-	if releaseMetadata.IsCanaryRelease(releaseChannelName) {
+	ts := metav1.Time{Time: r.clock.Now()}
+	if releaseMetadata.IsCanaryRelease(r.GetReleaseChannel()) {
 		// if cooldown is set, calculate canary delay from cooldown time, not current
 		if cooldownUntil != nil && cooldownUntil.After(ts.Time) {
 			ts = *cooldownUntil
 		}
-		applyAfter = releaseMetadata.CalculateReleaseDelay(releaseChannelName, ts, r.clusterUUID)
+		applyAfter = releaseMetadata.CalculateReleaseDelay(r.GetReleaseChannel(), ts, r.clusterUUID)
 	}
 
 	// inherit applyAfter from notified release
@@ -519,46 +588,23 @@ func (r *deckhouseReleaseReconciler) createRelease(
 		release.ObjectMeta.Annotations[v1alpha1.DeckhouseReleaseAnnotationNotificationTimeShift] = "true"
 	}
 
-	return client.IgnoreAlreadyExists(r.client.Create(ctx, release))
+	return client.IgnoreAlreadyExists(r.k8sClient.Create(ctx, release))
 }
 
-func (r *deckhouseReleaseReconciler) patchSetSuspendAnnotation(ctx context.Context, release *v1alpha1.DeckhouseRelease, suspend bool) error {
+func (r *DeckhouseReleaseFetcher) patchSetSuspendAnnotation(ctx context.Context, release *v1alpha1.DeckhouseRelease, suspend bool) error {
 	patch := client.RawPatch(types.MergePatchType, buildSuspendAnnotation(suspend))
 
-	err := r.client.Patch(ctx, release, patch)
+	err := r.k8sClient.Patch(ctx, release, patch)
 	if err != nil {
 		return fmt.Errorf("patch release %v: %w", release.Name, err)
 	}
 
-	err = r.client.Status().Patch(ctx, release, patch)
+	err = r.k8sClient.Status().Patch(ctx, release, patch)
 	if err != nil {
 		return fmt.Errorf("patch release %v status: %w", release.Name, err)
 	}
 
 	return nil
-}
-
-func NewDeckhouseReleaseChecker(regCli cr.Client, moduleManager moduleManager, releaseChannel string, logger *log.Logger) *DeckhouseReleaseChecker {
-	return &DeckhouseReleaseChecker{
-		registryClient: regCli,
-		moduleManager:  moduleManager,
-		releaseChannel: releaseChannel,
-		logger:         logger,
-	}
-}
-
-type DeckhouseReleaseChecker struct {
-	registryClient cr.Client
-	moduleManager  moduleManager
-
-	releaseChannel string
-	tags           []string
-
-	logger *log.Logger
-}
-
-func (dcr *DeckhouseReleaseChecker) GetReleaseChannel() string {
-	return dcr.releaseChannel
 }
 
 var ErrImageNotChanged = errors.New("image not changed")
@@ -569,7 +615,7 @@ type ImageInfo struct {
 	Digest   registryv1.Hash
 }
 
-func (dcr *DeckhouseReleaseChecker) GetNewImageInfo(ctx context.Context, previousImageHash string) (*ImageInfo, error) {
+func (dcr *DeckhouseReleaseFetcher) GetNewImageInfo(ctx context.Context, previousImageHash string) (*ImageInfo, error) {
 	image, err := dcr.registryClient.Image(ctx, dcr.GetReleaseChannel())
 	if err != nil {
 		return nil, fmt.Errorf("get image from channel '%s': %w", dcr.GetReleaseChannel(), err)
@@ -641,7 +687,7 @@ func (rr *releaseReader) untarMetadata(rc io.Reader) error {
 var ErrImageIsNil = errors.New("image is nil")
 
 // TODO: make registry service with this method
-func (dcr *DeckhouseReleaseChecker) fetchReleaseMetadata(img registryv1.Image) (*ReleaseMetadata, error) {
+func (dcr *DeckhouseReleaseFetcher) fetchReleaseMetadata(img registryv1.Image) (*ReleaseMetadata, error) {
 	if img == nil {
 		return nil, ErrImageIsNil
 	}
@@ -695,7 +741,7 @@ func (dcr *DeckhouseReleaseChecker) fetchReleaseMetadata(img registryv1.Image) (
 	return meta, nil
 }
 
-func (dcr *DeckhouseReleaseChecker) fetchCooldown(image registryv1.Image) *metav1.Time {
+func (dcr *DeckhouseReleaseFetcher) fetchCooldown(image registryv1.Image) *metav1.Time {
 	cfg, err := image.ConfigFile()
 	if err != nil {
 		dcr.logger.Warnf("image config error: %s", err)
@@ -739,7 +785,7 @@ func parseTime(s string) (time.Time, error) {
 }
 
 // FetchReleasesMetadata realize step by step update
-func (dcr *DeckhouseReleaseChecker) GetNewReleasesMetadata(ctx context.Context, actual, target *semver.Version) ([]ReleaseMetadata, error) {
+func (dcr *DeckhouseReleaseFetcher) GetNewReleasesMetadata(ctx context.Context, actual, target *semver.Version) ([]ReleaseMetadata, error) {
 	vers, err := dcr.getNewVersions(ctx, actual, target)
 	if err != nil {
 		return nil, fmt.Errorf("get next version: %w", err)
@@ -806,7 +852,7 @@ func (dcr *DeckhouseReleaseChecker) GetNewReleasesMetadata(ctx context.Context, 
 // 1.68.3
 // 1.68.5
 // result will be [1.67.11, 1.68.5]
-func (dcr *DeckhouseReleaseChecker) getNewVersions(ctx context.Context, actual, target *semver.Version) ([]*semver.Version, error) {
+func (dcr *DeckhouseReleaseFetcher) getNewVersions(ctx context.Context, actual, target *semver.Version) ([]*semver.Version, error) {
 	tags, err := dcr.listTags(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("list tags: %w", err)
@@ -886,7 +932,7 @@ func (dcr *DeckhouseReleaseChecker) getNewVersions(ctx context.Context, actual, 
 
 var globalModules = []string{"candi", "deckhouse-controller", "global"}
 
-func (r *deckhouseReleaseReconciler) generateChangelogForEnabledModules(releaseMetadata *ReleaseMetadata) map[string]interface{} {
+func (r *DeckhouseReleaseFetcher) generateChangelogForEnabledModules(releaseMetadata *ReleaseMetadata) map[string]interface{} {
 	enabledModules := r.moduleManager.GetEnabledModuleNames()
 	enabledModulesChangelog := make(map[string]interface{})
 
@@ -906,7 +952,7 @@ func (r *deckhouseReleaseReconciler) generateChangelogForEnabledModules(releaseM
 	return enabledModulesChangelog
 }
 
-func (dcr *DeckhouseReleaseChecker) listTags(ctx context.Context) ([]string, error) {
+func (dcr *DeckhouseReleaseFetcher) listTags(ctx context.Context) ([]string, error) {
 	var err error
 	if dcr.tags == nil {
 		dcr.tags, err = dcr.registryClient.ListTags(ctx)
