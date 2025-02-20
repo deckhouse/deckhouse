@@ -33,7 +33,6 @@ import (
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	OnBeforeHelm: &go_hook.OrderedConfig{Order: 10},
-	Queue:        "/modules/cni-cilium/gen-cert",
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
 			Name:       "hubble-server-cert-secret",
