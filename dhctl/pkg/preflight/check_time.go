@@ -40,15 +40,16 @@ func getRemoteTimeStamp(sshCl node.Interface) (int64, error) {
 		return 0, fmt.Errorf("failed to execute date command: %w", err)
 	}
 
-	match := timestampRegexp.Find(dateOutput)
-	if match == nil {
+	match := timestampRegexp.FindSubmatch(dateOutput)
+	if match == nil || len(match) < 2 {
 		return 0, errors.New("invalid timestamp format received")
 	}
 
-	timeStamp, err := strconv.ParseInt(string(match), 10, 64)
+	timeStamp, err := strconv.ParseInt(string(match[1]), 10, 64)
 	if err != nil {
 		return 0, fmt.Errorf("failed to parse timestamp: %w", err)
 	}
+
 	return timeStamp, nil
 }
 
@@ -60,7 +61,7 @@ func (pc *Checker) CheckTimeDrift() error {
 
 	remoteTimeStamp, err := getRemoteTimeStamp(pc.nodeInterface)
 	if err != nil {
-		log.InfoF("Checking Time Drift was skipped, check cannot be performed: %w", err)
+		log.InfoF("Checking Time Drift was skipped, check cannot be performed: %v", err)
 		return nil
 	}
 	localTimeStamp := getLocalTimeStamp()
