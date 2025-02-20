@@ -72,6 +72,7 @@ final: false
 shell:
   install:
   - |
+    echo "Installing bash"
     apk update
     apk add bash
   setup:
