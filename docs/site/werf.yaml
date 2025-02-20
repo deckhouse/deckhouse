@@ -63,6 +63,24 @@ shell:
       jq '.copyright | if ( ( .en | length) < 1 ) or ( ( .ru | length) < 1 ) then error("Got empty copyright array!") else . end ' /tmp/menus.json > /data/copyright.json
 {{- end }}
 ---
+image: pdf-page-builder
+from: {{ .Images.BASE_ALPINE }}
+final: false
+shell:
+  install:
+    - |
+      echo "Prepare page for PDF generation"
+      ls /srv/jekyll-data/site
+git:
+  - add: /docs/documentation
+    to: /srv/jekyll-data/site
+  - add: /docs/documentation
+    to: /srv/jekyll-data/site
+  - add: /modules
+    to: /srv/jekyll-data/site
+  - add: /ee
+    to: /srv/jekyll-data/site
+---
 artifact: web-static
 from: {{ .Images.BASE_JEKYLL }}
 ansible:
