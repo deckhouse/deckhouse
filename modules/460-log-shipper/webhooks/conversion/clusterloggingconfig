@@ -22,8 +22,14 @@ kubernetesCustomResourceConversion:
   - name: v1alpha1_to_v1alpha2
     crdName: clusterloggingconfigs.deckhouse.io
     conversions:
-    - fromVersion: deckhouse.io/v1alpha1
-      toVersion: deckhouse.io/v1alpha2
+      - fromVersion: deckhouse.io/v1alpha1
+        toVersion: deckhouse.io/v1alpha2
+
+  - name: v1alpha2_to_v1alpha1
+    crdName: clusterloggingconfigs.deckhouse.io
+    conversions:
+      - fromVersion: deckhouse.io/v1alpha2
+        toVersion: deckhouse.io/v1alpha1
 EOF
 }
 
@@ -66,7 +72,7 @@ function __on_conversion::v1alpha2_to_v1alpha1() {
 EOF
   else
     cat <<EOF >"$CONVERSION_RESPONSE_PATH"
-{"failedMessage":"Conversion of grafanaadditionaldatasources.deckhouse.io failed"}
+{"failedMessage":"Conversion of grafanaadditionaldatasources.deckhouse.io failedfrom v1alpha2 to v1alpha1 failed"}
 EOF
   fi
 }
