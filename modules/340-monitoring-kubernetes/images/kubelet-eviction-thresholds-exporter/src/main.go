@@ -345,12 +345,14 @@ func getDockerRootDir() (string, error) {
 func getContainerdRootDir() (string, error) {
 	containerdConfig, err := os.ReadFile("/etc/containerd/config.toml")
 	if err != nil {
-		return "/var/lib/containerd", fmt.Errorf("error reading containerd config: %s, using default /var/lib/containerd", err)
+         log.Printf("error reading containerd config: %e, using default /var/lib/containerd", err)
+		return "/var/lib/containerd", nil
 	}
 
 	matches := containerdConfigRootDirRegex.FindSubmatch(containerdConfig)
 	if len(matches) != 2 {
-		return "/var/lib/containerd", fmt.Errorf("containerd config does not contain root dir option, using default /var/lib/containerd")
+        log.Println("containerd config does not contain root dir option, using default /var/lib/containerd")
+		return "/var/lib/containerd", nil
 	}
 
 	return string(matches[1]), err
