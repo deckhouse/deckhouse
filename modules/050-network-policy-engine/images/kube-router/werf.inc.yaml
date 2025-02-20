@@ -7,7 +7,7 @@ final: false
 fromImage: common/relocate-artifact
 shell:
   beforeInstall:
-  - apt-get install ipset conntrack-tools
+  - apt-get install -y ipset conntrack-tools
   install:
   - /binary_replace.sh -i "{{ $binaries }}" -o /relocate
   - |
