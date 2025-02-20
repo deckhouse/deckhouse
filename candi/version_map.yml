@@ -1,26 +1,7 @@
-bashible: &bashible
-  ubuntu:
-    '18.04':
-    '20.04':
-    '22.04':
-    '24.04':
-  debian:
-    '10':
-    '11':
-    '12':
-  centos:
-    '7':
-    '8':
-    '9':
-  opensuse:
-    '15.4':
-    '15.5':
-    '15.6':
 k8s:
   '1.28':
     status: end-of-life
     patch: 15
-    bashible: *bashible
     clusterAutoscalerPatch: 3
     crictlPatch: 0
     ccm:
@@ -44,7 +25,6 @@ k8s:
   '1.29':
     status: available
     patch: 14
-    bashible: *bashible
     clusterAutoscalerPatch: 2
     crictlPatch: 0
     ccm:
@@ -68,7 +48,6 @@ k8s:
   '1.30':
     status: available
     patch: 10
-    bashible: *bashible
     clusterAutoscalerPatch: 2
     crictlPatch: 1
     ccm:
@@ -92,7 +71,6 @@ k8s:
   '1.31':
     status: available
     patch: 6
-    bashible: *bashible
     clusterAutoscalerPatch: 2
     crictlPatch: 1
     ccm:
@@ -116,7 +94,6 @@ k8s:
   '1.32':
     status: preview
     patch: 2
-    bashible: *bashible
     clusterAutoscalerPatch: 2
     crictlPatch: 0
     ccm:
