@@ -140,7 +140,7 @@ deckhouse:
   fixes:
     - summary: Module release downloading statistic shows in status
       pull_request: https://github.com/deckhouse/deckhouse/pull/12114
-    - summary: Trigger the module config when a module created.
+    - summary: Trigger the ModuleConfig handling when a module created.
       pull_request: https://github.com/deckhouse/deckhouse/pull/12039
     - summary: Return `helm_lib_envs_for_proxy` template to deckhouse deployment.
       pull_request: https://github.com/deckhouse/deckhouse/pull/11921
@@ -333,8 +333,6 @@ loki:
       pull_request: https://github.com/deckhouse/deckhouse/pull/11399
 metallb:
   fixes:
-    - summary: Fixed race condition in migration hook.
-      pull_request: https://github.com/deckhouse/deckhouse/pull/12210
     - summary: Bumped Go module dependencies to fix security vulnerabilities.
       pull_request: https://github.com/deckhouse/deckhouse/pull/11650
 monitoring-kubernetes:
