@@ -725,6 +725,7 @@ func parseTime(s string) (time.Time, error) {
 	return time.Parse(time.RFC3339, s)
 }
 
+// https://github.com/deckhouse/deckhouse/issues/332
 func (dcr *DeckhouseReleaseChecker) CalculateReleaseDelay(ts metav1.Time, clusterUUID string) *metav1.Time {
 	hash := murmur3.Sum64([]byte(clusterUUID + dcr.releaseMetadata.Version))
 	wave := hash % uint64(dcr.releaseCanarySettings().Waves)
