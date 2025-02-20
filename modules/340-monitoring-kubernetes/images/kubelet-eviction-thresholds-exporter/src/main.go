@@ -345,7 +345,7 @@ func getDockerRootDir() (string, error) {
 func getContainerdRootDir() (string, error) {
 	containerdConfig, err := os.ReadFile("/etc/containerd/config.toml")
 	if err != nil {
-         log.Printf("error reading containerd config: %e, using default /var/lib/containerd", err)
+         log.Printf("error reading containerd config: %v, using default /var/lib/containerd", err)
 		return "/var/lib/containerd", nil
 	}
 
