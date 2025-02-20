@@ -1,19 +1,9 @@
-{{- range $key, $value := .CandiVersionMap.k8s }}
-  {{- $version := toString $key }}
-  {{- $image_version := $version | replace "." "-"}}
-  {{- if $value.csi.vcd }}
-    {{- $patches := (printf "/%smodules/%s-%s/images/%s" $.ModulePath $.ModulePriority $.ModuleName $.ImageName) }}
-    {{- $patch := false }}
-    {{- range $path, $_ := $.Files.Glob (printf "%s/*" $patches) }}
-      {{- if contains $version $path }}
-        {{- $patch = true }}
-      {{- end }}
-    {{- end }}
+{{- $version := "1.6.0"}}
 ---
-image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
+image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: common/distroless
 import:
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
   add: /src/bin/cloud-director-named-disk-csi-driver
   to: /cloud-director-named-disk-csi-driver
   before: setup
@@ -37,31 +27,27 @@ imageSpec:
   config:
     entrypoint: ["/cloud-director-named-disk-csi-driver"]
 ---
-image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
+image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 final: false
 fromImage: common/src-artifact
-{{- if $patch }}
 git:
-- add: {{ $patches }}/patches/{{ $version }}
+- add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
   to: /patches
   stageDependencies:
     install:
       - '**/*'
-{{- end }}
 shell:
   install:
-  - git clone --depth 1 --branch {{ $value.csi.vcd }} {{ $.SOURCE_REPO }}/vmware/cloud-director-named-disk-csi-driver.git /src
+  - git clone --depth 1 --branch {{ $version }} {{ $.SOURCE_REPO }}/vmware/cloud-director-named-disk-csi-driver.git /src
   - cd /src
-  {{- if $patch }}
   - git apply /patches/*.patch --verbose
-  {{- end }}
   - rm -rf .git vendor
 ---
-image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
+image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
 final: false
 from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
 import:
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
   add: /src
   to: /src
   before: install
@@ -75,11 +61,9 @@ shell:
   - go mod download
   setup:
   - cd /src
-  - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags "-s -w -X github.com/vmware/cloud-director-named-disk-csi-driver/version.Version={{ $value.csi.vcd }}" -o bin/cloud-director-named-disk-csi-driver cmd/csi/main.go
+  - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags "-s -w -X github.com/vmware/cloud-director-named-disk-csi-driver/version.Version={{ $version }}" -o bin/cloud-director-named-disk-csi-driver cmd/csi/main.go
   - chown 64535:64535 bin/cloud-director-named-disk-csi-driver
   - chmod 0755 bin/cloud-director-named-disk-csi-driver
- {{- end }}
-{{- end }}
 ---
 {{- $csiBinaries := "/bin/chmod /bin/mount /bin/mkdir /bin/rmdir /bin/umount /bin/findmnt /bin/lsblk /sbin/badblocks /sbin/blockdev /sbin/blk* /sbin/btrfs* /sbin/dumpe2fs /sbin/e2* /sbin/findfs /sbin/fsck* /sbin/fsfreeze /sbin/fstrim /sbin/mke2fs /sbin/mkfs* /sbin/resize2fs /sbin/xfs_repair /usr/sbin/nvme /usr/sbin/parted /usr/sbin/xfs*" }}
 image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact

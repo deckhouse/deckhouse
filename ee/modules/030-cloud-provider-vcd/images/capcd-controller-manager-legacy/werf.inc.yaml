@@ -1,3 +1,4 @@
+{{- $version := "v1.2.0"}}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: common/distroless
@@ -21,8 +22,7 @@ git:
       - '**/*'
 shell:
   install:
-  - export VERSION="v1.2.0"
-  - git clone --depth 1 --branch $VERSION {{ $.SOURCE_REPO }}/vmware/cluster-api-provider-cloud-director /src
+  - git clone --depth 1 --branch {{ $version }} {{ $.SOURCE_REPO }}/vmware/cluster-api-provider-cloud-director /src
   - cd /src
   - git apply /patches/*.patch --verbose
   - rm -rf .git vendor
@@ -44,8 +44,7 @@ shell:
   - cd /src
   - go mod download
   setup:
-  - export VERSION="v1.2.0"
   - cd /src
-  - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags "-s -w -X github.com/vmware/cluster-api-provider-cloud-director/release.Version=${VERSION}" -o /cluster-api-provider-cloud-director
+  - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags "-s -w -X github.com/vmware/cluster-api-provider-cloud-director/release.Version={{ $version }}" -o /cluster-api-provider-cloud-director
   - chown 64535:64535 /cluster-api-provider-cloud-director
   - chmod 0755 /cluster-api-provider-cloud-director

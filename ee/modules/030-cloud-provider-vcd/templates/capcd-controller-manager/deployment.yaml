@@ -14,11 +14,9 @@ cpu: 25m
 memory: 50Mi
 {{- end }}
 
-{{- $kubernetesSemVer := semver .Values.global.discovery.kubernetesVersion }}
-
 {{- $capcdImageName := ""}}
 {{- if semverCompare ">=37.2" .Values.cloudProviderVcd.internal.discoveryData.vcdAPIVersion -}}
-  {{- $capcdImageName = join "" (list "capcdControllerManager" $kubernetesSemVer.Major $kubernetesSemVer.Minor ) }}
+  {{- $capcdImageName = "capcdControllerManager" }}
 {{- else -}}
   {{- $capcdImageName = "capcdControllerManagerLegacy" }}
 {{- end }}

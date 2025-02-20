@@ -62,10 +62,9 @@
   readOnly: true
 {{- end }}
 
-{{- $kubernetesSemVer := semver .Values.global.discovery.kubernetesVersion }}
 {{- $csiImageName := ""}}
 {{- if semverCompare ">=37.2" .Values.cloudProviderVcd.internal.discoveryData.vcdAPIVersion -}}
-  {{- $csiImageName = join "" (list "vcdCsiPlugin" $kubernetesSemVer.Major $kubernetesSemVer.Minor ) }}
+  {{- $csiImageName = "vcdCsiPlugin" }}
 {{- else -}}
   {{- $csiImageName = "vcdCsiPluginLegacy" }}
 {{- end }}
