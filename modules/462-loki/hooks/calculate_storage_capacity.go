@@ -97,7 +97,13 @@ func lokiDisk(input *go_hook.HookInput) error {
 		pvcSize = defaultDiskSize
 	}
 
-	cleanupThreshold = pvcSize - uint64(ingestionRate*1024*1024)*60*2 // Reserve twice size of WALs for a minute (checkpoint interval)
+	reservedByWALs := uint64(ingestionRate*1024*1024) * 60 * 2
+
+	if pvcSize <= reservedByWALs {
+		return fmt.Errorf("PVC size is less or equal than reserved space for WALs. Too high ingestionRateMB (%f) or too small PVC size (%d)", ingestionRate, pvcSize)
+	}
+
+	cleanupThreshold = pvcSize - reservedByWALs
 
 	// do not exceed 95% of the PVC size
 	if float64(cleanupThreshold) > float64(pvcSize)*maxSpaceUtilization {
