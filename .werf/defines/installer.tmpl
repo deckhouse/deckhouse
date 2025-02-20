@@ -12,7 +12,7 @@
   before: setup
 - image: dev-prebuild
   add: /deckhouse
-  to: /deckhouse
+  to: {{ $prefix }}/deckhouse
   includePaths:
   - modules/*/openapi/config-values.yaml
   - global-hooks/openapi/config-values.yaml
@@ -27,7 +27,7 @@
   before: setup
 - image: ssh-static
   add: /ssh/bin
-  to: /bin
+  to: {{ $prefix }}/bin
   before: setup
   includePaths:
   - ssh
