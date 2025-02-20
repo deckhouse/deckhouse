@@ -187,13 +187,6 @@ func (f *DeckhouseReleaseFetcher) fetchDeckhouseRelease(ctx context.Context) err
 		return fmt.Errorf("get new image: %w", imageErr)
 	}
 
-	var releaseMetadata *ReleaseMetadata
-
-	// only if image changed
-	if imageErr == nil {
-		releaseMetadata = imageInfo.Metadata
-	}
-
 	var (
 		deployedRelease *v1alpha1.DeckhouseRelease
 	)
@@ -240,7 +233,7 @@ func (f *DeckhouseReleaseFetcher) fetchDeckhouseRelease(ctx context.Context) err
 		return nil
 	}
 
-	newSemver, err := semver.NewVersion(releaseMetadata.Version)
+	newSemver, err := semver.NewVersion(imageInfo.Metadata.Version)
 	if err != nil {
 		// TODO: maybe set something like v1.0.0-{meta.Version} for developing purpose
 		return fmt.Errorf("parse semver: %w", err)
@@ -262,7 +255,7 @@ func (f *DeckhouseReleaseFetcher) fetchDeckhouseRelease(ctx context.Context) err
 		releasesInCluster = releasesFromDeployed
 	}
 
-	lastCreatedMeta, err := f.createReleases(ctx, releaseMetadata, releaseForUpdate, releasesInCluster, newSemver)
+	lastCreatedMeta, err := f.createReleases(ctx, imageInfo.Metadata, releaseForUpdate, releasesInCluster, newSemver)
 	if err != nil {
 		return fmt.Errorf("create releases: %w", err)
 	}
