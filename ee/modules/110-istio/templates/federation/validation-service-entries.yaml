@@ -1,0 +1,37 @@
+{{- if .Values.istio.federation.enabled }}
+---
+kind: ValidatingAdmissionPolicy
+apiVersion: admissionregistration.k8s.io/v1beta1
+metadata:
+  name: validation-serviceentry-ports
+  {{- include "helm_lib_module_labels" (list $) | nindent 2 }}
+spec:
+  validations:
+    - expression: "has(object.spec.ports)"
+      message: "A ServiceEntry must define at least one port to ensure proper traffic routing. Without ports, Istio cannot determine which protocols to use or how to direct traffic, potentially leading to connectivity issues. This may cause failures in service discovery and communication."
+  matchConstraints:
+    resourceRules:
+      - apiGroups: [ "networking.istio.io" ]
+        apiVersions: [ "v1beta1", "v1" ]
+        resources: [ "serviceentries" ]
+        operations: ["CREATE", "UPDATE"]
+  failurePolicy: Ignore
+---
+apiVersion: admissionregistration.k8s.io/v1beta1
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: validation-serviceentry-binding
+  {{- include "helm_lib_module_labels" (list $) | nindent 2 }}
+spec:
+  policyName: validation-serviceentry-ports
+  matchResources:
+    resourceRules:
+      - apiGroups: ["networking.istio.io"]
+        apiVersions: ["v1beta1", "v1"]
+        resources: ["serviceentries"]
+        operations: ["CREATE", "UPDATE"]
+  validationActions: ["Warn"]
+---
+{{- end }}
+
+
