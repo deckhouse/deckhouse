@@ -39,7 +39,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	OnBeforeHelm: &go_hook.OrderedConfig{Order: 20},
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
-			Name:       "cloud_provider_discovery_data",
+			Name:       "provider_cluster_configuration",
 			ApiVersion: "v1",
 			Kind:       "Secret",
 			NamespaceSelector: &types.NamespaceSelector{
@@ -47,9 +47,9 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 					MatchNames: []string{"kube-system"},
 				},
 			},
-			NameSelector: &types.NameSelector{
-				MatchNames: []string{"d8-cloud-provider-discovery-data"},
-			},
+			NameSelector: &types.NameSelector{MatchNames: []string{
+				"d8-provider-cluster-configuration",
+			}},
 			FilterFunc: applyProviderClusterConfigurationSecretFilter,
 		},
 	},
