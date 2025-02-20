@@ -14,6 +14,41 @@ document.addEventListener("DOMContentLoaded", function() {
       this.form.addEventListener('submit', this.submitForm.bind(this));
       this.closeBtn.addEventListener('click', this.closeModal.bind(this));
       this.closeBg.addEventListener('click', this.closeModal.bind(this));
+
+      this.preferredContact = document.querySelector('input[name="preferred_contact"]');
+      this.telegramInput = document.querySelector('input[name="telegram_id"]');
+      this.telegramCheckbox = document.querySelector('input[value="telegram"]');
+      this.updateContactValue();
+      this.initializeCheckbox();
+      this.toggleTelegramInput();
+      this.telegramCheckbox.addEventListener('change', this.toggleTelegramInput.bind(this));
+    }
+
+    initializeCheckbox() {
+      const checkboxes = document.querySelectorAll('input[type="checkbox"]');
+      checkboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', this.updateContactValue.bind(this));
+      });
+    }
+
+    updateContactValue() {
+      let selectedContacts = [];
+      const checkboxes = document.querySelectorAll('input[type="checkbox"]');
+      checkboxes.forEach(checkbox => {
+        if(checkbox.checked) {
+          selectedContacts.push(checkbox.value);
+        }
+      });
+      this.preferredContact.value = selectedContacts.join(',');
+    }
+
+    toggleTelegramInput() {
+      if(this.telegramCheckbox.checked) {
+        this.telegramInput.style.display = 'block';
+      } else {
+        this.telegramInput.style.display = 'none';
+        this.telegramInput.value = '';
+      }
     }
 
     initializeOpenModalButton() {
@@ -26,14 +61,124 @@ document.addEventListener("DOMContentLoaded", function() {
     submitForm(e) {
       e.preventDefault();
 
-      PostData(this.url, this.serializeData()).then(res => {
-        if (res.ok) {
-          this.downloadFile();
-          this.successSubmit();
-        } else {
-          this.errorSubmit();
+      const FormData = this.serializeData();
+
+      const bitrixFields = {
+        fields: {
+          'TITLE': 'с сайта документации Deckhouse',
+          'NAME': FormData.name,
+          'EMAIL': FormData.email,
+          'PHONE': FormData.phone,
+          'COMPANY': FormData.company,
+          'POST': FormData.position,
+          'COMMENTS': 'Предпочтительный вид связи: ' + FormData.preferred_contact,
         }
-      });
+      }
+
+      if(this.telegramCheckbox.checked && this.telegramInput.value) {
+        bitrixFields.fields.COMMENTS += '. Telegram ID: ' + this.telegramInput.value;
+      }
+
+        BX24.callMethod(
+          "crm.lead.add",
+          bitrixFields,
+          res => {
+            if (res.ok) {
+              this.downloadFile();
+              this.successSubmit();
+            } else {
+              this.errorSubmit();
+            }
+          }
+        )
+
+        // 2 способ
+        // const FormData = this.serializeData();
+
+        // const bitrixFields = {
+        //   fields: {
+        //     'TITLE': 'с сайта документации Deckhouse',
+        //     'NAME': FormData.name,
+        //     'EMAIL': FormData.email,
+        //     'PHONE': FormData.phone,
+        //     'COMPANY': FormData.company,
+        //     'POST': FormData.position,
+        //     'COMMENTS': 'Предпочтительный вид связи: ' + FormData.preferred_contact,
+        //   }
+        // }
+  
+        // if(this.telegramCheckbox.checked && this.telegramInput.value) {
+        //   bitrixFields.fields.COMMENTS += '. Telegram ID: ' + this.telegramInput.value;
+        // }
+  
+        // BX24.callMethod(
+        //   'app.info',
+        //   {}, 
+        //   (res) => {
+        //     if(!res.ok) {
+        //       this.errorSubmit();
+        //     } else {
+        //       const appInfo = res.data();
+        //       const token = appInfo.AUTH_ID;
+        //       const domain = appInfo.DOMAIN;
+        //       const url = `${endpoint}crm.lead.add?auth=${token}`;
+
+        //       BX24.callMethod(
+        //         "crm.lead.add",
+        //         bitrixFields,
+        //         res => {
+        //           if (res.ok) {
+        //             this.downloadFile();
+        //             this.successSubmit();
+        //           } else {
+        //             this.errorSubmit();
+        //           }
+        //         }
+        //       )
+        //     }
+        //   }
+        // )
+
+      // 3 способ
+      // const endpoint = 'https://crm.flant.ru/rest/132/bm7uy367wn001kef/';
+      // const token = 'BITRIX24CRM_ENDPOINT';
+      // const url = `${endpoint}crm.lead.add?auth=${token}`;
+
+      // const FormData = this.serializeData();
+
+      // const bitrixFields = {
+      //   auth: token,
+      //   fields: {
+      //     'TITLE': 'с сайта документации Deckhouse',
+      //     'NAME': FormData.name,
+      //     'EMAIL': FormData.email,
+      //     'PHONE': FormData.phone,
+      //     'COMPANY': FormData.company,
+      //     'POST': FormData.position,
+      //     'COMMENTS': 'Предпочтительный вид связи: ' + FormData.preferred_contact,
+      //   }
+      // }
+
+      // console.log(bitrixFields)
+
+      // fetch(url, {
+      //   method: 'POST',
+      //   headers: {
+      //    'Content-Type': 'application/json;charset=utf-8',
+      //     Accept: "application/json",
+      //   },
+      //   body: JSON.stringify(bitrixFields)
+      // })
+      //   .then(res => {
+      //     if (res.ok) {
+      //       console.log('успех')
+      //       // this.downloadFile();
+      //       // this.successSubmit();
+      //     } else {
+      //       console.log('ошибка')
+      //       // this.errorSubmit();
+      //     }
+      //   })
     }
 
     serializeData() {
@@ -98,16 +243,4 @@ document.addEventListener("DOMContentLoaded", function() {
   wrapper.forEach(item => {
     new PopupForm(item);
   })
-
-  async function PostData(url, data) {
-    const res = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json;charset=utf-8',
-        Accept: "application/json",
-      },
-      body: JSON.stringify(data)
-    })
-    return res
-  }
 })
