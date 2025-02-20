@@ -74,13 +74,20 @@ shell:
     - |
       echo "Prepare page for PDF generation"
       ls /srv/jekyll-data/site
+  setup:
+    - |
+      echo "Generate PDF page..."
+      cd /srv/jekyll-data/site
+      sh ./prepare_for_pdf.sh
 git:
-  - add: /docs/documentation
-    to: /srv/jekyll-data/site/documentation
-  - add: /modules
-    to: /srv/jekyll-data/site/modules
-  - add: /ee
-    to: /srv/jekyll-data/site/ee
+- add: /docs/documentation
+  to: /srv/jekyll-data/site/documentation
+- add: /modules
+  to: /srv/jekyll-data/site/modules
+- add: /ee
+  to: /srv/jekyll-data/site/ee
+- add: /tools/docs/pdf/prepare_for_pdf.sh
+  to: /srv/jekyll-data/site
 ---
 image: web-static
 from: {{ .Images.BASE_JEKYLL }}
@@ -334,6 +341,10 @@ import:
   - image: site-external-artifacts
     add: /data/copyright.json
     to: /srv/jekyll-data/site/_data/copyright.json
+    before: setup
+  - image: pdf-page-builder
+    add: /srv/jekyll-data/site/ADMIN_GUIDE_RU.md
+    to: /srv/jekyll-data/site/pages
     before: setup
 {{- end }}
 ---
