@@ -13,6 +13,9 @@ metallb:
     - version: 2
 node-manager:
     - version: 2
+      description:
+        en: Delete `allowedKubernetesVersions` and `allowedBundles`.
+        ru: Удалите `allowedKubernetesVersions` и `allowedBundles`.
 openvpn:
     - version: 2
 prometheus:
