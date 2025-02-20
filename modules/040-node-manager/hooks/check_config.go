@@ -17,6 +17,7 @@ package hooks
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
@@ -66,26 +67,19 @@ func applyProviderClusterConfigurationSecretFilter(obj *unstructured.Unstructure
 }
 
 func CheckCloudProviderConfig(input *go_hook.HookInput) error {
-	input.Logger.Info("0000")
 	snap := input.Snapshots["provider_cluster_configuration"]
-	input.Logger.Info("0001")
 	if len(snap) > 0 {
-		input.Logger.Info("0002")
 		secret := snap[0].(*v1.Secret)
-		input.Logger.Info("0003")
 		if YAML, ok := secret.Data["cloud-provider-cluster-configuration.yaml"]; ok && len(YAML) > 0 {
-			input.Logger.Info("0004")
 			err := config.CheckParseConfigFromData(string(YAML))
-			input.Logger.Info("0005")
 			if err != nil {
-				input.Logger.Info("0006")
 				requirements.SaveValue(CheckCloudProviderConfigRaw, true)
 				input.MetricsCollector.Set("d8_check_cloud_provider_config", 1, nil)
-				return err
+				err1 := fmt.Errorf(findErrorLines(err.Error()))
+				return err1
 			}
 		}
 	}
-	input.Logger.Info("0007")
 	requirements.SaveValue(CheckCloudProviderConfigRaw, false)
 	input.MetricsCollector.Expire("d8_check_cloud_provider_config")
 	return nil
@@ -113,22 +107,15 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, CheckStaticClusterConfig)
 
 func CheckStaticClusterConfig(input *go_hook.HookInput) error {
-	input.Logger.Info("1000")
 	snap := input.Snapshots["static_cluster_configuration"]
-	input.Logger.Info("1001")
 	if len(snap) > 0 {
-		input.Logger.Info("1002")
 		secret := snap[0].(*v1.Secret)
-		input.Logger.Info("1003")
 		if YAML, ok := secret.Data["static-cluster-configuration.yaml"]; ok && len(YAML) > 0 {
-			input.Logger.Info("1004")
 			err := config.CheckParseConfigFromData(string(YAML))
-			input.Logger.Info("1005")
 			if err != nil {
-				input.Logger.Info("1006")
 				requirements.SaveValue(CheckStaticClusterConfigRaw, true)
 				input.MetricsCollector.Set("d8_check_static_cluster_config", 1, nil)
-				return err
+				return fmt.Errorf(findErrorLines(err.Error()))
 			}
 		}
 	}
@@ -160,27 +147,33 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, CheckClusterConfig)
 
 func CheckClusterConfig(input *go_hook.HookInput) error {
-	input.Logger.Info("2000")
 	snap := input.Snapshots["cluster_configuration"]
-	input.Logger.Info("2001")
 	if len(snap) > 0 {
-		input.Logger.Info("2002")
 		secret := snap[0].(*v1.Secret)
-		input.Logger.Info("2003")
 		if YAML, ok := secret.Data["cluster-configuration.yaml"]; ok && len(YAML) > 0 {
-			input.Logger.Info("2004")
 			err := config.CheckParseConfigFromData(string(YAML))
-			input.Logger.Info("2005")
 			if err != nil {
-				input.Logger.Info("2006")
 				requirements.SaveValue(CheckStaticClusterConfigRaw, true)
 				input.MetricsCollector.Set("d8_check_cluster_config", 1, nil)
-				return err
+				return fmt.Errorf(findErrorLines(err.Error()))
 			}
 		}
 	}
-	input.Logger.Info("2007")
 	requirements.SaveValue(CheckStaticClusterConfigRaw, false)
 	input.MetricsCollector.Expire("d8_check_cluster_config")
 	return nil
+}
+
+func findErrorLines(text string) string {
+	lines := strings.Split(text, "\n")
+	var result strings.Builder
+	for i := 0; i < len(lines); i++ {
+		if strings.Contains(lines[i], "error occurred:") {
+			result.WriteString(lines[i] + "\n")
+			if i+1 < len(lines) {
+				result.WriteString(lines[i+1] + "\n")
+			}
+		}
+	}
+	return result.String()
 }
