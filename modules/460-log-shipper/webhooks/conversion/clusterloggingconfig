@@ -35,7 +35,7 @@ function __on_conversion::v1alpha1_to_v1alpha2() {
         .spec.kubernetesPods.namespaceSelector.labelSelector = (
           if .spec.kubernetesPods.namespaceSelector.matchNames then
             { "matchExpressions": [{ "key": "kubernetes.io/metadata.name", "operator": "In", "values": .spec.kubernetesPods.namespaceSelector.matchNames }] }
-          else if .spec.kubernetesPods.namespaceSelector.excludeNames then
+          elif .spec.kubernetesPods.namespaceSelector.excludeNames then
             { "matchExpressions": [{ "key": "kubernetes.io/metadata.name", "operator": "NotIn", "values": .spec.kubernetesPods.namespaceSelector.excludeNames }] }
           else
             null
