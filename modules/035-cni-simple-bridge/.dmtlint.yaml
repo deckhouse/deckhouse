@@ -2,6 +2,10 @@ linters-settings:
   module:
     oss:
       disable: true
+    exclude-rules:
+      license:
+        files:
+          - images/simple-bridge/rootfs/bin/simple-bridge
   container:
     exclude-rules:
       read-only-root-filesystem:
@@ -16,10 +20,6 @@ linters-settings:
         - kind: DaemonSet
           name: simple-bridge
           container: simple-bridge
-  license:
-    exclude-rules:
-      files:
-        - /images/simple-bridge/rootfs/bin/simple-bridge
   templates:
     exclude-rules:
       pdb:
