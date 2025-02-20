@@ -1,0 +1,60 @@
+linters-settings:
+  conversions:
+    exclude-rules:
+      description:
+        - /openapi/conversions/v2.yaml
+  container:
+    exclude-rules:
+      read-only-root-filesystem:
+        - kind: Deployment
+          name: caps-controller-manager
+      resources:
+        - kind: Deployment
+          name: standby-holder-name
+          container: reserve-resources
+      security-context:
+        - kind: Deployment
+          name: caps-controller-manager
+          container: caps-controller-manager
+        - kind: Deployment
+          name: standby-holder-name
+      controller-security-context:
+        - kind: Deployment
+          name: standby-holder-name
+      dns-policy:
+        - kind: Deployment
+          name: machine-controller-manager
+      liveness-probe:
+        - kind: Deployment
+          name: machine-controller-manager
+          container: controller
+        - kind: Deployment
+          name: standby-holder-name
+          container: reserve-resources
+      readiness-probe:
+        - kind: Deployment
+          name: standby-holder-name
+          container: reserve-resources
+        - kind: Deployment
+          name: machine-controller-manager
+          container: controller
+  templates:
+    exclude-rules:
+      pdb:
+        - kind: Deployment
+          name: machine-controller-manager
+        - kind: Deployment
+          name: standby-holder-name
+      vpa:
+        - kind: Deployment
+          name: standby-holder-name
+  rbac:
+    exclude-rules:
+      placement:
+        - kind: Role
+          name: d8:node-manager:caps-controller-manager-leader-election-role
+        - kind: RoleBinding
+          name: d8:node-manager:caps-controller-manager-leader-election-role
+  module:
+    conversions:
+      disable: true

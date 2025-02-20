@@ -32,7 +32,7 @@ fi
 
 . /etc/os-release
 case "$ID" in
-  centos|rocky|almalinux|rhel)
+  centos|rocky|almalinux|rhel|ol)
     case "$VERSION_ID" in 7|7.*|8|8.*|9|9.*)
       echo "centos" && exit 0 ;;
     esac

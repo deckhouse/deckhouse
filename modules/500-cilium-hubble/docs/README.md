@@ -4,4 +4,4 @@ webIfaces:
 - name: hubble
 ---
 
-This module could be used for adding observability network tools if a cluster is using the cilium CNI.
+The `cilium-hubble` module provides visualization of the cluster network stack if the cilium CNI is enabled.

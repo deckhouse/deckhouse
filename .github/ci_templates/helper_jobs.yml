@@ -117,6 +117,7 @@ pull_request_info:
     pr_description: ${{ steps.pr_props.outputs.pr_description }}
     diff_url: ${{ steps.pr_props.outputs.diff_url }}
     labels: ${{ steps.pr_props.outputs.labels }}
+    security_rootless_scan: ${{ steps.pr_props.outputs.security_rootless_scan }}
     changes_docs: ${{ steps.changes.outputs.docs }}
     changes_not_markdown: ${{ steps.changes.outputs.not_markdown }}
 
@@ -271,7 +272,8 @@ pull_request_info:
           }
           core.info(`Edition labels: 'edition/ce':${hasCE}, 'edition/ee':${hasEE}, 'edition/be':${hasBE}, 'edition/se':${hasSE}, 'edition/se+':${hasSE_plus}`);
           core.notice(`Enable '${edition}' edition for '${context.eventName}' trigger.`);
-
+          // Set security rootless scan from labels.
+          const security_rootless_scan = pr.labels.some((l) => l.name === 'security/rootless');
           // Construct head commit ref using pr number.
           const ref = `refs/pull/${ pr.number }/head`;
           core.notice(`Use ref: '${ref}'`)
@@ -294,6 +296,7 @@ pull_request_info:
           core.setOutput('pr_description', pr.body);
           core.setOutput('diff_url', diff_url);
           core.setOutput('labels', JSON.stringify(pr.labels));
+          core.setOutput('security_rootless_scan', security_rootless_scan);
           core.setCommandEcho(false);
 
     # Checkhout the head commit of the PR branch.

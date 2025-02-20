@@ -1,0 +1,24 @@
+linters-settings:
+  module:
+    oss:
+      disable: true
+  container:
+    exclude-rules:
+      read-only-root-filesystem:
+        - kind: DaemonSet
+          name: snat
+          container: snat
+      liveness-probe:
+        - kind: DaemonSet
+          name: snat
+          container: snat
+        - kind: StatefulSet
+          name: dhcp
+          container: dhcp
+      readiness-probe:
+        - kind: DaemonSet
+          name: snat
+          container: snat
+        - kind: StatefulSet
+          name: dhcp
+          container: dhcp

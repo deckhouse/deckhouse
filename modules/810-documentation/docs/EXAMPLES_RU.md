@@ -4,8 +4,6 @@ title: "Модуль documentation: примеры"
 
 ## Пример конфигурации модуля
 
-Ниже представлен простой пример конфигурации модуля:
-
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig

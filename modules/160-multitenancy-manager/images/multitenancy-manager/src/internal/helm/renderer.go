@@ -75,9 +75,26 @@ func (r *postRenderer) Run(renderedManifests *bytes.Buffer) (modifiedManifests *
 			}
 		}
 
+		// inject project annotations
+		if len(r.project.Spec.ResourceAnnotations) != 0 {
+			annotations := object.GetAnnotations()
+			if len(annotations) == 0 {
+				annotations = map[string]string{}
+			}
+			for k, v := range r.project.Spec.ResourceAnnotations {
+				annotations[k] = v
+			}
+			object.SetAnnotations(annotations)
+		}
+
 		labels := object.GetLabels()
 		if len(labels) == 0 {
 			labels = make(map[string]string)
+		}
+
+		// inject project labels
+		for k, v := range r.project.Spec.ResourceLabels {
+			labels[k] = v
 		}
 
 		// inject multitenancy-manager
@@ -122,14 +139,25 @@ func (r *postRenderer) newNamespace(name string) []byte {
 			Kind:       "Namespace",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name: name,
-			Labels: map[string]string{
-				v1alpha2.ResourceLabelHeritage: v1alpha2.ResourceHeritageMultitenancy,
-				v1alpha2.ResourceLabelProject:  r.project.Name,
-				v1alpha2.ResourceLabelTemplate: r.project.Spec.ProjectTemplateName,
-			},
+			Name:   name,
+			Labels: map[string]string{},
 		},
 	}
+
+	// inject project annotations
+	if len(r.project.Spec.ResourceAnnotations) != 0 {
+		obj.SetAnnotations(r.project.Spec.ResourceAnnotations)
+	}
+
+	// inject project labels
+	if len(r.project.Spec.ResourceLabels) != 0 {
+		obj.SetLabels(r.project.Spec.ResourceLabels)
+	}
+
+	obj.Labels[v1alpha2.ResourceLabelHeritage] = v1alpha2.ResourceHeritageMultitenancy
+	obj.Labels[v1alpha2.ResourceLabelProject] = r.project.Name
+	obj.Labels[v1alpha2.ResourceLabelTemplate] = r.project.Spec.ProjectTemplateName
+
 	data, _ := yaml.Marshal(obj)
 	return data
 }

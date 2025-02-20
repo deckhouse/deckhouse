@@ -2,6 +2,7 @@
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 fromImage: common/src-artifact
+final: false
 git:
   - add: /modules/462-loki/images/{{ $.ImageName }}
     to: /

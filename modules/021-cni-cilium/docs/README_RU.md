@@ -7,11 +7,11 @@ description: Модуль cni-cilium Deckhouse обеспечивает рабо
 
 ## Ограничения
 
-1. Сервисы с типом `NodePort` и `LoadBalancer` несовместимы с hostNetwork-эндпойнтами в LB-режиме `DSR`. Переключитесь на режим `SNAT`, если это требуется.
-2. `HostPort` поды связываются только [с одним IP-адресом](https://github.com/deckhouse/deckhouse/issues/3035). Если в ОС есть несколько интерфейсов/IP, Cilium выберет один, предпочитая «серые» «белым».
-3. Требования к ядру:
+1. Сервисам с типом `NodePort` и `LoadBalancer` не подходят эндпоинты в LB-режиме `DSR`, работающие с hostNetwork. Если это необходимо, переключитесь на режим `SNAT`.
+1. Поды `HostPort` связываются только [с одним IP-адресом](https://github.com/deckhouse/deckhouse/issues/3035). Если в ОС есть несколько интерфейсов/IP, Cilium выберет один, предпочитая «серые» «белым».
+1. Требования к ядру:
    * ядро Linux версии не ниже `5.7` для работы модуля `cni-cilium` и его совместной работы с модулями [istio](../istio/), [openvpn](../openvpn/), [node-local-dns]({% if site.d8Revision == 'CE' %}{{ site.urls.ru}}/products/kubernetes-platform/documentation/v1/modules/{% else %}..{% endif %}/node-local-dns/).
-4. Совместимость с ОС:
+1. Совместимость с ОС:
    * Ubuntu:
      * несовместим с версией 18.04;
      * для работы с версией 20.04 необходима установка ядра HWE.

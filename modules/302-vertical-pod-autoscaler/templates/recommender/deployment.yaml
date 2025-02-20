@@ -63,6 +63,7 @@ spec:
         - --memory-aggregation-interval=1h
         - --recommender-interval={{ printf "%vs" $.Values.global.discovery.prometheusScrapeInterval }}
         - --stderrthreshold=0
+        - --memory-saver=true
         - --v=4
         ports:
         - containerPort: 8080

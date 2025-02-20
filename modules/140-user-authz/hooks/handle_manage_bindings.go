@@ -62,7 +62,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			},
 			ExecuteHookOnEvents:          ptr.To(false),
 			ExecuteHookOnSynchronization: ptr.To(false),
-			FilterFunc:                   filterUseBinding,
+			FilterFunc:                   filterAutomaticUseBinding,
 		},
 	},
 }, syncBindings)
@@ -74,7 +74,7 @@ type filteredUseBinding struct {
 	Subjects  []rbacv1.Subject `json:"subjects"`
 }
 
-func filterUseBinding(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+func filterAutomaticUseBinding(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	var binding rbacv1.RoleBinding
 	if err := sdk.FromUnstructured(obj, &binding); err != nil {
 		return nil, err

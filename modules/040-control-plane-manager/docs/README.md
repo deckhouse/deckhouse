@@ -6,6 +6,7 @@ description: Deckhouse manages a Kubernetes cluster control plane components —
 The `control-plane-manager` (CPM) module is responsible for managing the cluster's control plane components. It runs on all master nodes of the cluster (nodes that have the `node-role.kubernetes.io/control-plane: ""` label).
 
 The control-plane-manager:
+
 - **Manages certificates** required for the operation of the control plane (renews certificates and re-issues them in response to configuration changes, among other things). This feature allows the CPM to automatically maintain a secure control plane configuration and quickly add additional SANs for organizing secure access to the Kubernetes API.
 - **Configures components**. The CPM module automatically creates the required configs and manifests of the control plane components.
 - **Upgrades/downgrades components**. Makes sure that the versions of the components in the cluster are the same.
@@ -15,9 +16,11 @@ The control-plane-manager:
   - placing data storage application pods closer to the data itself,
   - state-based node prioritization (network load, storage subsystem status, etc.),
   - dividing nodes into zones, etc.
+
 ## Managing certificates
 
 The CPM module manages certificates of the `control-plane` components, such as:
+
 - Server certificates for `kube-apiserver` & `etcd`. These are stored in the secret `d8-pki` of the namespace `kube-system`:
   - the root CA kubernetes certificate (`ca.crt` & `ca.key`),
   - the root CA etcd certificate (`etcd/ca.crt` & `etcd/ca.key`),
@@ -41,20 +44,25 @@ The CPM module automatically updates the kubeconfig configuration when certifica
 The CPM module supports `control plane` running in a *single-master* or *multi-master* mode.
 
 In the *single-master* mode:
+
 - `kube-apiserver` only uses the `etcd` instance that is hosted on the same node;
 - A proxy server is configured on the node that responds to localhost, `kube-apiserver` responds to the IP address of the master node.
 
 In the *multi-master* mode, `control plane` components are automatically deployed in a fault-tolerant manner:
+
 - `kube-apiserver`  is configured to work with all etcd instances;
 - The additional proxy server that processes localhost requests is set up on each master node. By default, the proxy server sends requests to the local `kube-apiserver` instance. If it is unavailable, the proxy tries to connect to other `kube-apiserver` instances.
 
 ### Scaling master nodes
 
 The `control-plane` nodes are scaled automatically using the `node-role.kubernetes.io/control-plane=""` label:
+
 - Attaching the `node-role.kubernetes.io/control-plane=""` label to a node results in deploying `control plane` components on this node, connecting the new `etcd` node to the etcd cluster, and regenerating all the necessary certificates and config files.
 - Removing the `node-role.kubernetes.io/control-plane=""` label results in deleting all `control plane` components on a node, gracefully removing it from the etcd cluster, and regenerating all the necessary config files and certificates.
 
-> **Note!** Manual `etcd` [actions](./faq.html#what-if-the-etcd-cluster-fails) are required when decreasing the number of nodes from two to one. In all other cases, all the necessary actions are performed automatically. Please note that when scaling from any number of master nodes to one, sooner or later at the last step, the situation of scaling nodes from two to one will arise.
+{% alert level="warning" %}
+Manual `etcd` [actions](./faq.html#what-if-the-etcd-cluster-fails) are required when decreasing the number of nodes from two to one. In all other cases, all the necessary actions are performed automatically. Please note that when scaling from any number of master nodes to one, sooner or later at the last step, the situation of scaling nodes from two to one will arise.
+{% endalert %}
 
 ## Version control
 
@@ -64,12 +72,13 @@ Upgrading **minor versions** of control plane components (e.g. from `1.26.*` to 
 
 The control plane upgrade is performed in a safe way for both single-master and multi-master clusters. The API server may be temporarily unavailable during the upgrade. At the same time, it does not affect the operation of applications in the cluster and can be performed without scheduling a maintenance window.
 
-If the target version (set in the [kubernetesVersion](../../installing/configuration.html#clusterconfiguration-kubernetesversion) parameter) does not match the current control plane version in the cluster, a smart strategy for changing component versions is applied:
+If the target version (set with the [kubernetesVersion](../../installing/configuration.html#clusterconfiguration-kubernetesversion) parameter) does not match the current control plane version in the cluster, a smart strategy for changing component versions is applied:
+
 - General remarks
   - Updating in different NodeGroups is performed in parallel. Within each NodeGroup, nodes are updated sequentially, one at a time.
 - When upgrading:
   - Upgrades are carried out sequentially, one minor version at a time: 1.26 -> 1.27, 1.27 -> 1.28, 1.28 -> 1.29.
-  - At each step, the control plane version is upgraded first, followed by kubelet upgrades on the cluster nodes. 
+  - At each step, the control plane version is upgraded first, followed by kubelet upgrades on the cluster nodes.
 - When downgrading:
   - Successful downgrading is only guaranteed for a single version down from the maximum minor version of the control plane ever used in the cluster.
   - kubelets on the cluster nodes are downgraded first, followed by the control plane components.
@@ -79,6 +88,7 @@ If the target version (set in the [kubernetesVersion](../../installing/configura
 Kubernetes [Auditing](https://kubernetes.io/docs/tasks/debug/debug-cluster/audit/) can help you if you need to keep track of operations in your Namespaces or troubleshoot the cluster. You can configure it by setting the appropriate [Audit Policy](https://kubernetes.io/docs/tasks/debug/debug-cluster/audit/#audit-policy). As the result you will have the log file `/var/log/kube-audit/audit.log` containing audit events according to the configured Policy.
 
 By default, in a cluster with Deckhouse, a basic policy is created for logging events:
+
 - related to the creation, deletion, and changing of resources;
 - committed from the names of ServiceAccounts from the "system" Namespace `kube-system`, `d8-*`;
 - committed with resources in the "system" Namespace `kube-system`, `d8-*`.
