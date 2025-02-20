@@ -708,19 +708,35 @@ func (r *reconciler) runReleaseDeploy(ctx context.Context, release *v1alpha1.Mod
 		Path:   path.Join(tmpDir, release.GetModuleName(), "v"+release.GetVersion().String()),
 	}
 
+	var valuesByConfig bool
 	values := make(addonutils.Values)
 	if module := r.moduleManager.GetModule(release.GetModuleName()); module != nil {
 		values = module.GetConfigValues(false)
+	} else {
+		config := new(v1alpha1.ModuleConfig)
+		if err = r.client.Get(ctx, client.ObjectKey{Name: release.GetModuleName()}, config); err != nil {
+			if !apierrors.IsNotFound(err) {
+				return fmt.Errorf("get the '%s' module config: %w", release.GetModuleName(), err)
+			}
+		} else {
+			values = addonutils.Values(config.Spec.Settings)
+			valuesByConfig = true
+		}
 	}
 
-	err = def.Validate(values, r.log)
-	if err != nil {
-		err = r.updateReleaseStatus(ctx, newModuleReleaseWithName(deployedReleaseInfo.Name), &v1alpha1.ModuleReleaseStatus{
+	if err = def.Validate(values, r.log); err != nil {
+		status := &v1alpha1.ModuleReleaseStatus{
 			Phase:   v1alpha1.ModuleReleasePhaseSuspended,
 			Message: "validation failed: " + err.Error(),
-		})
-		if err != nil {
-			r.log.Error("update status", slog.String("release", deployedReleaseInfo.Name), log.Err(err))
+		}
+
+		if valuesByConfig {
+			status.Phase = v1alpha1.ModuleReleasePhasePending
+			status.Message = "initial module config validation failed: " + err.Error()
+		}
+
+		if err = r.updateReleaseStatus(ctx, newModuleReleaseWithName(deployedReleaseInfo.Name), status); err != nil {
+			r.log.Error("update release status", slog.String("release", deployedReleaseInfo.Name), log.Err(err))
 
 			return fmt.Errorf("update status: the '%s:v%s' module validation: %w", release.GetModuleName(), release.GetVersion().String(), err)
 		}

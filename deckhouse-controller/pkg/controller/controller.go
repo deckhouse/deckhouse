@@ -173,7 +173,7 @@ func NewDeckhouseController(ctx context.Context, version string, operator *addon
 
 	deckhouseConfigCh := make(chan utils.Values, 1)
 
-	configHandler := confighandler.New(runtimeManager.GetClient(), deckhouseConfigCh, logger.Named("config-handler"))
+	configHandler := confighandler.New(runtimeManager.GetClient(), deckhouseConfigCh)
 	operator.SetupKubeConfigManager(configHandler)
 
 	// init module manager
