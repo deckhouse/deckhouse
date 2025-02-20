@@ -46,3 +46,6 @@ linters-settings:
       pdb:
         - kind: DaemonSet
           name: node-exporter
+  module:
+    conversions:
+      disable: true
