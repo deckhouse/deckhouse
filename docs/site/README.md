@@ -83,6 +83,7 @@ Some tips:
 - [Jekyll Asset Pipeline](https://github.com/matthodan/jekyll-asset-pipeline)
 - [Jekyll Regex Replace](https://github.com/joshdavenport/jekyll-regex-replace]
 - [Jekyll Include Plugin](https://github.com/flant/jekyll_include_plugin)
+- [A Jekyll plugin to render GitHub-flavored admonitions](https://github.com/Helveg/jekyll-gfm-admonitions)
 
 ## Running a site with the documentation locally
 
