@@ -51,7 +51,7 @@ properties:
           description: |
             The CoreDNS zone.
           type: string
-          pattern: '^[0-9a-zA-Z\.-]+$'
+          pattern: '^(?:[a-zA-Z0-9-_]+\.)*(?:[a-zA-Z0-9-]+\.)[a-zA-Z]{2,6}$'
           x-doc-example: consul.local
         upstreamNameservers:
           mixLength: 1
