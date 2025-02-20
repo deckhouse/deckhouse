@@ -254,7 +254,7 @@ func (suite *ControllerTestSuite) TestCheckDeckhouseRelease() {
 			LayersStub: func() ([]v1.Layer, error) {
 				return []v1.Layer{&fakeLayer{}, &fakeLayer{
 					FilesContent: map[string]string{
-						"version.json": `{"version":"v1.16.0","canary":{"stable":{"enabled":true,"interval":"30m","waves":6},"alpha":{"enabled":true,"interval":"5m","waves":2}, "beta":{"enabled":false,"interval":"1m","waves":1},"early-access":{"enabled":true,"interval":"30m","waves":6},"rock-solid":{"enabled":false,"interval":"5m","waves":5}}}`}}}, nil
+						"version.json": `{"version":"v1.16.1","canary":{"stable":{"enabled":true,"interval":"30m","waves":6},"alpha":{"enabled":true,"interval":"5m","waves":2}, "beta":{"enabled":false,"interval":"1m","waves":1},"early-access":{"enabled":true,"interval":"30m","waves":6},"rock-solid":{"enabled":false,"interval":"5m","waves":5}}}`}}}, nil
 			},
 			DigestStub: func() (v1.Hash, error) {
 				return v1.NewHash("sha256:e1752280e1115ac71ca734ed769f9a1af979aaee4013cdafb62d0f9090f76859")
