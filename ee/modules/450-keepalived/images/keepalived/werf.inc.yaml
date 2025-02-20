@@ -18,7 +18,7 @@ import:
 shell:
   beforeInstall:
   {{- include "alpine packages proxy" . | nindent 2 }}
-  - apk add --no-cache make autoconf automake build-base linux-headers
+  - apk add --no-cache make autoconf automake build-base linux-headers openssl-dev openssl-libs-static pcre-dev pcre2-dev net-snmp-dev
   install:
   - cd /src
   - ./autogen.sh
