@@ -94,6 +94,14 @@ entries:
                     en: Versioning
                     ru: Версионирование
                   url: /admin/configuration/update/versioning.html
+                - title:
+                    en: Control Plane Update
+                    ru: Обновление Control Plane
+                  url: /admin/configuration/update/control-plane-update.html
+                - title:
+                    en: FAQ
+                    ru: FAQ
+                  url: /admin/configuration/update/faq.html
             - title:
                 en: High reliability and availability
                 ru: Высокая надежность и доступность
