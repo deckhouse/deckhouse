@@ -130,3 +130,11 @@ properties:
     description: |
       Enable CAInjector. It only needs to inject CA certs into `ValidatingWebhookConfiguration`, `MutatingWebhookConfiguration`, `CustomResourceDefinition` and `APIService`.
       Deckhouse does not use CAInjector, so you have to enable it only if you use custom CA injections in your services.
+
+  recursiveNameservers:
+    type: string
+    description: |
+      These nameservers are used to query for TXT records when solving DNS01 ACME challenges.
+      This is similar to the `--dns01-recursive-nameservers` parameter in cert-manager.
+      The format is a comma-separated list of server addresses, each optionally followed by a colon and port (e.g., `8.8.8.8:53,8.8.4.4:53`).
+    x-examples: ["8.8.8.8:53,8.8.4.4:53"]

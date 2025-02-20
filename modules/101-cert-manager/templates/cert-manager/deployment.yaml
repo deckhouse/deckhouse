@@ -75,6 +75,10 @@ spec:
           {{- if $.Values.certManager.cleanupOrphanSecrets }}
           - --enable-certificate-owner-ref
           {{- end }}
+          {{- if $.Values.certManager.recursiveNameservers }}
+          - --dns01-recursive-nameservers={{ $.Values.certManager.recursiveNameservers }}
+          - --dns01-recursive-nameservers-only
+          {{- end }}
 {{- end }}
 {{- end }}
           ports:

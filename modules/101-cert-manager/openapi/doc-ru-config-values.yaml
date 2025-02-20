@@ -61,3 +61,8 @@ properties:
     description: |
       Включить CAInjector. Он необходим только для инъекции CA-сертификатов в `ValidatingWebhookConfiguration`, `MutatingWebhookConfiguration`, `CustomResourceDefinition` и `APIService`.
       Deckhouse не использует CAInjector, поэтому включать нужно только в том случае, если вы используете в своих сервисах пользовательские инъекции CA.
+  recursiveNameservers:
+    description: |
+      Эти серверы используются для запросов TXT записей при решении задач DNS01 ACME.
+      Это аналогично параметру `--dns01-recursive-nameservers` в cert-manager.
+      Формат представляет собой список адресов серверов, разделенных запятыми, где каждый адрес может быть дополнен двоеточием и номером порта (например, `8.8.8.8:53,8.8.4.4:53`).
