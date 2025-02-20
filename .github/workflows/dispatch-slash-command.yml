@@ -64,7 +64,7 @@ jobs:
               return core.setOutput('trigger_for_release_issue', 'true');
             }
 
-            if (isPR && milestoneState === 'open' && hasChangelogLabel && hasAutoLabel) {
+            if (isPR && hasChangelogLabel && hasAutoLabel) {
               core.notice(`Comment on changelog pull request.`);
               return core.setOutput('trigger_for_changelog', 'true');
             }
