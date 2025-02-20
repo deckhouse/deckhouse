@@ -23,4 +23,6 @@ import:
     add: /build-output/LICENSE
     to: /usr/share/licenses/multus-dynamic-networks-controller/LICENSE
     before: install
-
+imageSpec:
+  config:
+    entrypoint: ["/usr/local/bin/dynamic-networks-controller"]
