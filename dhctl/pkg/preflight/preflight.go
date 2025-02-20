@@ -71,9 +71,7 @@ func NewChecker(
 }
 
 func (pc *Checker) Static() error {
-
 	ready, err := pc.bootstrapState.StaticPreflightchecksWasRan()
-
 	if err != nil {
 		msg := fmt.Sprintf("Can not get state from cache: %v", err)
 		return errors.New(msg)
@@ -129,8 +127,12 @@ func (pc *Checker) Static() error {
 			successMessage: "sudo is allowed for user",
 			skipFlag:       app.SudoAllowedCheckArgName,
 		},
+		{
+			fun:            pc.CheckTimeDrift,
+			successMessage: "critical time drift is not detected",
+			skipFlag:       app.TimeDriftArgName,
+		},
 	})
-
 	if err != nil {
 		return err
 	}
@@ -139,9 +141,7 @@ func (pc *Checker) Static() error {
 }
 
 func (pc *Checker) Cloud() error {
-
 	ready, err := pc.bootstrapState.CloudPreflightchecksWasRan()
-
 	if err != nil {
 		msg := fmt.Sprintf("Can not get state from cache: %v", err)
 		return errors.New(msg)
@@ -158,19 +158,15 @@ func (pc *Checker) Cloud() error {
 			skipFlag:       app.SystemRequirementsArgName,
 		},
 	})
-
 	if err != nil {
 		return err
 	}
 
 	return pc.bootstrapState.SetCloudPreflightchecksWasRan()
-
 }
 
 func (pc *Checker) PostCloud() error {
-
 	ready, err := pc.bootstrapState.PostCloudPreflightchecksWasRan()
-
 	if err != nil {
 		msg := fmt.Sprintf("Can not get state from cache: %v", err)
 		return errors.New(msg)
@@ -187,18 +183,15 @@ func (pc *Checker) PostCloud() error {
 			skipFlag:       app.CloudAPIAccessibilityArgName,
 		},
 	})
-
 	if err != nil {
 		return err
 	}
 
 	return pc.bootstrapState.SetPostCloudPreflightchecksWasRan()
-
 }
 
 func (pc *Checker) Global() error {
 	ready, err := pc.bootstrapState.GlobalPreflightchecksWasRan()
-
 	if err != nil {
 		msg := fmt.Sprintf("Can not get state from cache: %v", err)
 		return errors.New(msg)
@@ -220,13 +213,11 @@ func (pc *Checker) Global() error {
 			skipFlag:       app.RegistryCredentialsCheckArgName,
 		},
 	})
-
 	if err != nil {
 		return err
 	}
 
 	return pc.bootstrapState.SetGlobalPreflightchecksWasRan()
-
 }
 
 func (pc *Checker) do(title string, checks []checkStep) error {
