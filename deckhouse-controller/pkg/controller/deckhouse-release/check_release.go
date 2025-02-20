@@ -751,7 +751,7 @@ func (f *DeckhouseReleaseFetcher) fetchReleaseMetadata(img registryv1.Image) (*R
 func (f *DeckhouseReleaseFetcher) fetchCooldown(image registryv1.Image) *metav1.Time {
 	cfg, err := image.ConfigFile()
 	if err != nil {
-		f.logger.Warnf("image config error: %s", err)
+		f.logger.Warn("image config error", log.Err(err))
 		return nil
 	}
 
