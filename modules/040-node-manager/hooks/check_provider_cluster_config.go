@@ -32,20 +32,21 @@ const (
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
+	Queue: "/requirements/check-config",
 	OnBeforeHelm: &go_hook.OrderedConfig{Order: 20},
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
-			Name:       "static_cluster_configuration",
+			Name:       "cloud_provider_discovery_data",
 			ApiVersion: "v1",
 			Kind:       "Secret",
 			NamespaceSelector: &types.NamespaceSelector{
-				NameSelector: &types.NameSelector{MatchNames: []string{
-					"kube-system",
-				}},
+				NameSelector: &types.NameSelector{
+					MatchNames: []string{"kube-system"},
+				},
 			},
-			NameSelector: &types.NameSelector{MatchNames: []string{
-				"d8-static-cluster-configuration",
-			}},
+			NameSelector: &types.NameSelector{
+				MatchNames: []string{"d8-cloud-provider-discovery-data"},
+			},
 			FilterFunc: applyProviderClusterConfigurationSecretFilter,
 		},
 	},
@@ -62,7 +63,7 @@ func applyProviderClusterConfigurationSecretFilter(obj *unstructured.Unstructure
 }
 
 func CheckCloudProviderConfig(input *go_hook.HookInput) error {
-	snap := input.Snapshots["static_cluster_configuration"]
+	snap := input.Snapshots["provider_cluster_configuration"]
 	if len(snap) > 0 {
 		secret := snap[0].(*v1.Secret)
 		if clusterConfigurationYAML, ok := secret.Data["cloud-provider-cluster-configuration.yaml"]; ok && len(clusterConfigurationYAML) > 0 {

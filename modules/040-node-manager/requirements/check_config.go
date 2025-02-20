@@ -24,15 +24,25 @@ import (
 
 const (
 	CheckCloudProviderConfigRaw = "checkCloudProviderConfigRaw"
-	CheckCloudProviderConfig    = "checkCloudProviderConfig"
+	CheckStaticClusterConfigRaw = "checkStaticClusterConfigRaw"
+	CheckConfig                 = "checkConfig"
 )
 
 func init() {
-	requirements.RegisterCheck(CheckCloudProviderConfig, func(_ string, getter requirements.ValueGetter) (bool, error) {
+	requirements.RegisterCheck(CheckConfig, func(_ string, getter requirements.ValueGetter) (bool, error) {
 		key, exists := getter.Get(CheckCloudProviderConfigRaw)
 		if exists {
 			if key.(bool) {
 				return false, errors.New("The provider-cluster-configuration secret in the cluster contains fields outside the schema. Remove it from provider-cluster-configuration")
+			}
+		}
+		return true, nil
+	})
+	requirements.RegisterCheck(CheckConfig, func(_ string, getter requirements.ValueGetter) (bool, error) {
+		key, exists := getter.Get(CheckStaticClusterConfigRaw)
+		if exists {
+			if key.(bool) {
+				return false, errors.New("The static-cluster-configuration secret in the cluster contains fields outside the schema. Remove it from static-cluster-configuration")
 			}
 		}
 		return true, nil

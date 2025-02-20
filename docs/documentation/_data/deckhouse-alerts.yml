@@ -115,6 +115,38 @@ alerts:
         Cert-manager couldn't order a certificate.
       severity: "5"
       markupFormat: default
+    - name: CheckCloudProviderConfig
+      sourceFile: modules/040-node-manager/monitoring/prometheus-rules/check_config.yaml
+      moduleUrl: 040-node-manager
+      module: node-manager
+      edition: ce
+      description: |
+        Provider-cluster-configuration secret in the cluster contains fields outside the schema.
+        Remove it from provider-cluster-configuration.
+
+        ```bash
+        kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller edit provider-cluster-configuration
+        ```
+      summary: |
+        Provider-cluster-configuration secret in the cluster contains fields outside the schema.
+      severity: "9"
+      markupFormat: markdown
+    - name: CheckStaticClusterConfig
+      sourceFile: modules/040-node-manager/monitoring/prometheus-rules/check_config.yaml
+      moduleUrl: 040-node-manager
+      module: node-manager
+      edition: ce
+      description: |
+        Static-cluster-configuration secret in the cluster contains fields outside the schema.
+        Remove it from static-cluster-configuration.
+
+        ```bash
+        kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller edit static-cluster-configuration
+        ```
+      summary: |
+        Static-cluster-configuration secret in the cluster contains fields outside the schema.
+      severity: "9"
+      markupFormat: markdown
     - name: CiliumAgentEndpointsNotReady
       sourceFile: modules/021-cni-cilium/monitoring/prometheus-rules/agent.yaml
       moduleUrl: 021-cni-cilium
