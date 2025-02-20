@@ -105,13 +105,13 @@ spec:
               - key: dynamic-networks-config.json
                 path: dynamic-networks-config.json
         - name: multus-server-socket
-           hostPath:
-             path: /run/multus/multus.sock
-             type: Socket
+          hostPath:
+            path: /run/multus/multus.sock
+            type: Socket
         - name: cri-socket
-           hostPath:
-             path: /run/containerd/containerd.sock
-             type: Socket
+          hostPath:
+            path: /run/containerd/containerd.sock
+            type: Socket
 ---
 kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1
