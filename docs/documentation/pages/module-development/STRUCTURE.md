@@ -267,17 +267,24 @@ The `/openapi/conversions` directory contains module parameter conversion files 
 
 Module parameter conversions allow you to convert the OpenAPI specification of module parameters from one version to another. Conversions may be necessary when a parameter is renamed or moved to a different location in a new version of the OpenAPI specification.
 
-Each conversion can only be performed between two consecutive versions (e.g., from the first to the second one). There can be several conversions, and the chain of conversions must cover all versions of the parameter specification with no "gaps".
+Each conversion can only be performed between two consecutive versions (e.g., from the first to the second one). There can be several conversions, and the chain of conversions must sequentially cover all versions of the parameter specification with no "gaps".
 
 The conversion file is a YAML file named `v<N>.yaml` or `v<N>.yml`, where `<N>` is the conversion version. It has the following structure:
 
 ```yaml
-version: N # The version number to convert to.
-conversions: []  # A set of jq expressions to transform data from the previous version.
+# Version number of the module parameter specification to which the data is converted during the conversion.
+version: N
+# A set of jq expressions used during conversion in the cluster for the automatic transformation 
+# of the previous version module parameters.
+conversions: []
+# Actions (in two languages) that need to be taken to convert the data 
+# from the previous version of the module parameter specification.
 description:
-  ru: ""  # Explanation of changes in Russian.
-  en: ""  # Explanation of changes in English.
+  ru: ""
+  en: ""
 ```
+
+The description of actions specified in the description section of the conversion file must be clear and include information on which parameters and in what order need to be changed in the module's parameter specification in order to switch to the new version.
 
 Below is an example of a module parameter conversion file `v2.yaml`, where in version 2 the `.auth.password` parameter has been removed:
 
@@ -286,7 +293,7 @@ version: 2
 conversions:
   - del(.auth.password) | if .auth == {} then del(.auth) end
 description:
-  ru: "Удалите `.auth.password`, затем `auth`, если он пуст."
+  ru: "Remove `.auth.password`, then `auth` if empty."
   en: "Remove `.auth.password`, then `auth` if empty."
 ```
 
