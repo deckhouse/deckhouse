@@ -2,6 +2,8 @@
 title: "The metallb module"
 ---
 
+{% include module-editions.liquid %}
+
 This module implements the `LoadBalancer` mechanism for services in bare metal clusters.
 
 Supports the following operating modes:

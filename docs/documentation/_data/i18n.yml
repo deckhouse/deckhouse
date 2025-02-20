@@ -134,6 +134,15 @@ common:
   search_placeholder_text:
     en: Search...
     ru: Поиск...
+  module_available_editions_prefix:
+    en: Available in
+    ru: Доступно в редакциях
+  module_available_with_limitations_prefix:
+    en: Available **with** limitations in
+    ru: Доступно **с ограничениями** в редакциях
+  module_available_without_limitations_prefix:
+    en: Available without limitations in
+    ru: Доступно без ограничений в редакциях
   warning_ee_version:
     en: Available only in
     ru: Доступно только в
@@ -265,6 +274,9 @@ comparison:
   module_has_restions:
     en: "There are limitations to functionality"
     ru: "Есть ограничения  функциональности"
+  module_has_restions_short:
+    en: "with limitations"
+    ru: "с ограничениями"
 
 features:
   currency_sign:

@@ -30,6 +30,15 @@ require 'json'
 #     end
 # end
 
+# Inserts the module-editions.liquid block into the module pages content.
+# The block is inserted at the beginning of the page's content if the page content is not empty.
+def insert_module_edition_block(page)
+    additional_content = "\n{% include module-editions.liquid %}\n\n"
+
+    # Insert the content at the end of the page's content
+    page.content.prepend(additional_content) if page.content
+end
+
 ##
 Jekyll::Hooks.register :site, :pre_render do |site|
   bundlesByModule = Hash.new()
@@ -114,6 +123,9 @@ Jekyll::Hooks.register :site, :pre_render do |site|
         page.data['module-index-page'] = true
       end
     end
+
+    insert_module_edition_block(page)
+
     next if ! ( page.name.end_with?('CR.md') or page.name.end_with?('CR_RU.md') or page.name.end_with?('CONFIGURATION.md') or page.name.end_with?('CONFIGURATION_RU.md') )
     next if page['force_searchable'] == true
     page.data['searchable'] = false

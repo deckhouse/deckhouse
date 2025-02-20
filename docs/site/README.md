@@ -279,7 +279,7 @@ Some data is stored in the `_data` directory of a Jekyll project, but some data 
   ```
 - `site.data.editions`
 
-  - `docs/documentation/_data/editions-addition.json` - the data from the file is merged with the data from the `/editions.yaml` file. 
+  - `docs/documentation/_data/modules/editions-addition.json` - the data from the file is merged with the data from the `/editions.yaml` file. 
   - Each edition in the file can include both filters - `excludeModules` and `includeModules`. In this case, the module will be added to edition if its name is in the `includeModules` and does not in the `excludeModules`.
   - `docs/documentation/_data/modules-addition.json` - 
   

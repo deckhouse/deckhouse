@@ -1,16 +1,23 @@
 {
+  "admission-policy-engine": {
+    "editionRestrictions": ["ce","be","se","se-plus"],
+    "editionRestrictionsComment": {"all": {"ru": "Ограничение на использование политик проверки подписи образов контейнеров", "en": "Restriction on the use of image signature verification policies"}},
+    "editionMinimumAvailable": "ce"
+  },
   "commander-agent": {
     "path": "",
     "editionMinimumAvailable": "ce"
   },
   "istio": {
     "path": "modules/istio/",
+    "editionRestrictions": ["ce","be","se","se-plus"],
+    "editionRestrictionsComment": {"all": {"ru": "Ограничение на использование федерации и мультикластерной конфигурации", "en": "Restriction on the use of federation and multicluster features"}},
     "editionMinimumAvailable": "ce"
   },
   "metallb": {
     "path": "modules/metallb/",
     "editionRestrictions": ["se", "se-plus"],
-    "editionRestrictionsComment": {"all": {"ru": "Ограничение на работу с BGP", "en": "Restriction on working with BGP"}},
+    "editionRestrictionsComment": {"all": {"ru": "Ограничение на работу с BGP", "en": "Restriction on working with BGP"}},
     "editionMinimumAvailable": "se"
   },
   "cloud-provider-vsphere": {
@@ -24,8 +31,8 @@
     "editionMinimumAvailable": "ee"
   },
   "cni-cilium": {
-    "path": "modules/cni-cilium/",
-    "editionFullyAvailable": ["se-plus"],
+    "editionRestrictions": ["ce","be","se"],
+    "editionRestrictionsComment": {"all": {"ru": "Ограничение на использование EgressGateway", "en": "Restriction on the use of EgressGateway feature"}},
     "editionMinimumAvailable": "ce"
   },
   "user-authz": {
@@ -88,14 +95,14 @@
     "external": "true",
     "path": "/products/kubernetes-platform/modules/commander/stable/",
     "editionRestrictions": ["be", "se"],
-    "editionRestrictionsComment": {"all": {"ru": "Требуется дополнительная лицензия", "en": "Additional license required"}},
+    "editionRestrictionsComment": {"all": {"ru": "Требуется дополнительная лицензия", "en": "Additional license required"}},
     "editionMinimumAvailable": "be"
   },
   "stronghold": {
     "external": "true",
     "path": "/products/kubernetes-platform/modules/stronghold/stable/",
     "editionRestrictions": ["be", "se", "se-plus", "ee"],
-    "editionRestrictionsComment": {"all": {"ru": "Требуется дополнительная лицензия", "en": "Additional license required"}},
+    "editionRestrictionsComment": {"all": {"ru": "Требуется дополнительная лицензия", "en": "Additional license required"}},
     "editionMinimumAvailable": "be"
   }
 }
