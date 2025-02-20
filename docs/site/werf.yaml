@@ -83,7 +83,7 @@ git:
 - add: /ee
   to: /srv/jekyll-data/site/ee
 - add: /tools/docs/pdf/prepare_for_pdf.sh
-  to: /srv/jekyll-data/site
+  to: /srv/jekyll-data/site/prepare_for_pdf.sh
 ---
 image: web-static
 from: {{ .Images.BASE_JEKYLL }}
