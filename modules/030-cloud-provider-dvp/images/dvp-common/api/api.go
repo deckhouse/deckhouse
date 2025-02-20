@@ -17,8 +17,9 @@ limitations under the License.
 package api
 
 import (
-	"dvp-common/config"
 	"errors"
+
+	"dvp-common/config"
 
 	"github.com/deckhouse/virtualization/api/core/v1alpha2"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -73,4 +74,9 @@ func NewDVPCloudAPI(config *config.CloudConfig) (*DVPCloudAPI, error) {
 		DiskService:    NewDiskService(service),
 		PortalService:  NewPortalService(service),
 	}, nil
+}
+
+// ProjectNamespace returns the project that this DVPCloudAPI instance is bound to.
+func (a *DVPCloudAPI) ProjectNamespace() string {
+	return a.Service.namespace
 }

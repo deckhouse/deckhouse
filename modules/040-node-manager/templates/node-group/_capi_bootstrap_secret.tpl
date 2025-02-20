@@ -35,6 +35,7 @@ data:
 {{- $_ := set $tpl_context "zvirt" $context.Values.nodeManager.internal.cloudProvider.zvirt }}
 {{- $_ := set $tpl_context "dynamix" $context.Values.nodeManager.internal.cloudProvider.dynamix }}
 {{- $_ := set $tpl_context "huaweicloud" $context.Values.nodeManager.internal.cloudProvider.huaweicloud }}
+{{- $_ := set $tpl_context "dvp" $context.Values.nodeManager.internal.cloudProvider.dvp }}
 ---
 {{- $f := $context.Files.Get (printf "capi/%s/cluster.yaml" $context.Values.nodeManager.internal.cloudProvider.type)}}
 {{ tpl ($f) $tpl_context }}

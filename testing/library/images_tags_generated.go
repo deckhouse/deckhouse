@@ -58,9 +58,10 @@ var DefaultImagesDigests = map[string]interface{}{
 		"cloudDataDiscoverer":       "imageHash-cloudProviderAzure-cloudDataDiscoverer",
 	},
 	"cloudProviderDvp": map[string]interface{}{
-		"cloudControllerManager": "imageHash-cloudProviderDvp-cloudControllerManager",
-		"cloudDataDiscoverer":    "imageHash-cloudProviderDvp-cloudDataDiscoverer",
-		"dvpCsiDriver":           "imageHash-cloudProviderDvp-dvpCsiDriver",
+		"capdvpControllerManager": "imageHash-cloudProviderDvp-capdvpControllerManager",
+		"cloudControllerManager":  "imageHash-cloudProviderDvp-cloudControllerManager",
+		"cloudDataDiscoverer":     "imageHash-cloudProviderDvp-cloudDataDiscoverer",
+		"dvpCsiDriver":            "imageHash-cloudProviderDvp-dvpCsiDriver",
 	},
 	"cloudProviderDynamix": map[string]interface{}{
 		"capdControllerManager":  "imageHash-cloudProviderDynamix-capdControllerManager",

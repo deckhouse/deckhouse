@@ -1,0 +1,43 @@
+apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+kind: DeckhouseMachineTemplate
+metadata:
+  annotations:
+    checksum/instance-class: {{ .instanceClassChecksum | quote }}
+    # todo keep machine instance template after rollout
+    # https://github.com/kubernetes-sigs/cluster-api/issues/6588#issuecomment-1925433449
+    helm.sh/resource-policy: keep
+  namespace: d8-cloud-instance-manager
+  name: {{ .templateName | quote }}
+  {{- include "helm_lib_module_labels" (list . (dict "node-group" .nodeGroup.name)) | nindent 2 }}
+spec:
+  template:
+    spec:
+      {{- if .nodeGroup.instanceClass.vmClassName }}
+      vmClassName: {{ .nodeGroup.instanceClass.vmClassName | quote }}
+      {{- end }}
+      {{- if .nodeGroup.instanceClass.rootDiskStorageClass }}
+      rootDiskStorageClass: {{ .nodeGroup.instanceClass.rootDiskStorageClass | quote }}
+      {{- end }}
+      cpu:
+        {{- if .nodeGroup.instanceClass.cpu.cores }}
+        cores: {{ .nodeGroup.instanceClass.cpu.cores }}
+        {{- end }}
+        {{- if .nodeGroup.instanceClass.cpu.cpuFraction }}
+        cpuFraction: {{ .nodeGroup.instanceClass.cpu.cpuFraction }}
+        {{- end }}
+      {{- if .nodeGroup.instanceClass.memory }}
+      memory: {{ .nodeGroup.instanceClass.memory }}
+      {{- end }}
+      {{- if .nodeGroup.instanceClass.rootDiskSize }}
+      rootDiskSize: {{ .nodeGroup.instanceClass.rootDiskSize | quote }}
+      {{- end }}
+      {{- if .nodeGroup.instanceClass.bootloader }}
+      bootloader: {{ .nodeGroup.instanceClass.bootloader | quote }}
+      {{- end }}
+      bootDiskImageRef:
+        {{- if .nodeGroup.instanceClass.osImageRef.kind }}
+        kind: {{ .nodeGroup.instanceClass.osImageRef.kind | quote }}
+        {{- end }}
+        {{- if .nodeGroup.instanceClass.osImageRef.name }}
+        name: {{ .nodeGroup.instanceClass.osImageRef.name | quote }}
+        {{- end }}
