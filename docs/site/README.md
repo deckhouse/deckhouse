@@ -242,7 +242,7 @@ Some data is stored in the `_data` directory of a Jekyll project, but some data 
   The data is filled in the `werf-web.inc.yaml`.
   
   - `editionFullyAvailable` - the list of editions, where the module available without restrictions. Used for overriding computed values. Takes precedence over `excludeModules` and `includeModules` from the `site.data.editions` file (see below). The `editionFullyAvailable` for a module can be set in the `docs/documentation/_data/modules/modules-addition.json` file.
-  - `editionRestrictions` - The list of editions, where the module is available with restrictions. Used for overriding computed values. Takes precedence over `excludeModules` and `includeModules` from the `site.data.editions` file (see below). Takes precedence over `editionFullyAvailable`. The `editionRestrictions` for a module can be set in the `docs/documentation/_data/modules/modules-addition.json` file.
+  - `editionsWithRestrictions` - The list of editions, where the module is available with restrictions. Used for overriding computed values. Takes precedence over `excludeModules` and `includeModules` from the `site.data.editions` file (see below). Takes precedence over `editionFullyAvailable`. The `editionsWithRestrictions` for a module can be set in the `docs/documentation/_data/modules/modules-addition.json` file.
   - `editions` — The list of editions, where the module is available **with or without** restrictions. 
   
   ```text
@@ -252,12 +252,12 @@ Some data is stored in the `_data` directory of a Jekyll project, but some data 
     "editions": [],  <-- list of editions, where the module is available with restrictions or without restrictions
     "external": "true|false", <-- true if the module installs from the modulesource
     "path": "modules/<module-kebab-name>/",  <-- path to module documentation on the site (on null)
-    "editionRestrictions": [ <-- editions, where the module is available with restrictions
+    "editionsWithRestrictions": [ <-- editions, where the module is available with restrictions
       "se",
       "se-plus",
       "cse-lite"
     ],
-    "editionRestrictionsComment": { <-- comments for restrictions. `all` - for all editions
+    "editionsWithRestrictionsComments": { <-- comments for restrictions. `all` - for all editions
       "all": {
         "en": "Restriction on working with BGP",
         "ru": "Ограничение на работу с BGP"

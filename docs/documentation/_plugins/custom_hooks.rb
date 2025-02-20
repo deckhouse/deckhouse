@@ -90,7 +90,7 @@ Jekyll::Hooks.register :site, :pre_render do |site|
       editions.delete(edition) if editionData.has_key?("excludeModules") && editionData['excludeModules'].include?(moduleName)
     end
     editions = editions | moduleData['editionFullyAvailable'] if moduleData.has_key?("editionFullyAvailable")
-    editions = editions | moduleData['editionRestrictions'] if moduleData.has_key?("editionRestrictions")
+    editions = editions | moduleData['editionsWithRestrictions'] if moduleData.has_key?("editionsWithRestrictions")
     puts "Module #{moduleName} editions: #{editions}"
     site.data['modules']['all'][moduleName]['editions'] = editions
   end

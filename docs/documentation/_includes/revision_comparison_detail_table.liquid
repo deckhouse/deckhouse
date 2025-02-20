@@ -97,7 +97,7 @@
         {%- if skip %}{% continue %}{% endif %}
 
         <td style="text-align: center;">
-          {%- if editionsWeight[moduleEdition] <= editionsWeight[currentEdition] or module[1].editionRestrictions contains currentEdition %}
+          {%- if editionsWeight[moduleEdition] <= editionsWeight[currentEdition] or module[1].editionsWithRestrictions contains currentEdition %}
 
             {%- if site.data.editions[currentEdition].excludeModules contains moduleName %}
                <img src="{{ notsupported_img_url }}">
@@ -107,13 +107,13 @@
 
                {%- if module[1].editionFullyAvailable contains currentEdition %}
                   <img src="{{ supported_img_url }}">
-               {%- elsif module[1].editionRestrictions contains currentEdition %}
+               {%- elsif module[1].editionsWithRestrictions contains currentEdition %}
                   {%- assign restrictionComment = site.data.i18n.comparison['module_has_restions'][page.lang] %}
-                  {%- if module[1].editionRestrictionsComment["all"] %}
-                     {%- assign restrictionComment = module[1].editionRestrictionsComment["all"][page.lang] %}
+                  {%- if module[1].editionsWithRestrictionsComments["all"] %}
+                     {%- assign restrictionComment = module[1].editionsWithRestrictionsComments["all"][page.lang] %}
                   {%- endif %}
-                  {%- if module[1].editionRestrictionsComment[currentEdition] %}
-                     {%- assign restrictionComment = module[1].editionRestrictionsComment[currentEdition][page.lang] %}
+                  {%- if module[1].editionsWithRestrictionsComments[currentEdition] %}
+                     {%- assign restrictionComment = module[1].editionsWithRestrictionsComments[currentEdition][page.lang] %}
                   {%- endif %}
                   <span class="table__asterisk"><img src="{{ partially_supported_img_url }}"
                                                     data-tippy-content="{{ restrictionComment }}"></span>
