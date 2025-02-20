@@ -95,22 +95,27 @@ func (suite *ReleaseTestSuite) TestCheckRelease() {
 	}
 
 	check("Patch", "1.31.0", "1.31.1", []*semver.Version{semver.MustParse("1.31.1")})
+
 	check("Minor", "1.31.0", "1.32.3", []*semver.Version{
 		semver.MustParse("1.32.3")})
+
 	check("Last Minor", "1.31.0", "1.33.1", []*semver.Version{
 		semver.MustParse("1.32.3"),
 		semver.MustParse("1.33.1")})
+
 	check("Major", "1.31.0", "2.0.5", []*semver.Version{
 		semver.MustParse("1.32.3"),
 		semver.MustParse("1.33.1"),
 		semver.MustParse("2.0.5"),
 	})
+
 	check("Last Major Minor", "1.31.0", "2.1.12", []*semver.Version{
 		semver.MustParse("1.32.3"),
 		semver.MustParse("1.33.1"),
 		semver.MustParse("2.0.5"),
 		semver.MustParse("2.1.12"),
 	})
+
 	check("Last Minor is not equal to target", "1.31.0", "1.33.0", []*semver.Version{
 		semver.MustParse("1.32.3"),
 	})
