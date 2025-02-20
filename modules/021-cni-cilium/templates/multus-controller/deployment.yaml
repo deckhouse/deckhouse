@@ -85,9 +85,6 @@ spec:
             limits:
               cpu: "100m"
               memory: "50Mi"
-          securityContext:
-            privileged: true
-            runAsUser: 0
           volumeMounts:
             - name: multus-controller-config-dir
               mountPath: /etc/multus-controller/
@@ -97,6 +94,9 @@ spec:
             - name: cri-socket
               mountPath: /host/run/containerd/containerd.sock
       terminationGracePeriodSeconds: 10
+      securityContext:
+        privileged: true
+        runAsUser: 0
       volumes:
         - name: multus-controller-config-dir
           configMap:
