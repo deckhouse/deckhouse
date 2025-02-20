@@ -67,9 +67,13 @@ shell:
 {{- end }}
 ---
 image: pdf-page-builder
-from: {{ .Images.BASE_UBUNTU }}
+from: {{ .Images.BASE_ALPINE }}
 final: false
 shell:
+  install:
+  - |
+    apk update
+    apk add bash
   setup:
   - |
     echo "Generate PDF page..."
