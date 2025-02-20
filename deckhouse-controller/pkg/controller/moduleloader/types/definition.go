@@ -129,10 +129,6 @@ func (d *Definition) Labels() map[string]string {
 		labels["module.deckhouse.io/cloud-provider"] = ""
 	}
 
-	if strings.HasSuffix(d.Name, "-crd") {
-		labels["module.deckhouse.io/crd"] = ""
-	}
-
 	if len(d.Tags) != 0 {
 		for _, tag := range d.Tags {
 			labels["module.deckhouse.io/"+tag] = ""
