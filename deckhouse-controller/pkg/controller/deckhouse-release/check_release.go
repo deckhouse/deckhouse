@@ -202,7 +202,7 @@ func (f *DeckhouseReleaseFetcher) fetchDeckhouseRelease(ctx context.Context) err
 	}
 
 	// check sequence from the start if no deckhouse release deployed
-	// lst element because it's reversed
+	// last element because it's reversed
 	if len(releasesInCluster) == 0 && len(releases) > 0 {
 		releaseForUpdate = releases[len(releases)-1]
 		releasesInCluster = releases
@@ -909,6 +909,7 @@ func (f *DeckhouseReleaseFetcher) getNewVersions(ctx context.Context, actual, ta
 		(prevVersion.Major() == target.Major() && prevVersion.Minor() > target.Minor()) ||
 		(prevVersion.Major() == target.Major() && prevVersion.Minor() == target.Minor() && prevVersion.Patch() > target.Patch()) {
 		f.logger.Warn("last release is not equals to target, skipped", slog.String("last", prevVersion.Original()), slog.String("target", target.Original()))
+		result = append(result, target)
 	} else {
 		result = append(result, prevVersion)
 	}

@@ -123,5 +123,6 @@ func (suite *ReleaseTestSuite) TestCheckRelease() {
 
 	check("Last Minor is not equal to target", "1.31.0", "1.33.0", []*semver.Version{
 		semver.MustParse("1.32.3"),
+		semver.MustParse("1.33.0"),
 	})
 }
