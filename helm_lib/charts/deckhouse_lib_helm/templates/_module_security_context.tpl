@@ -197,3 +197,17 @@ securityContext:
     drop:
     - ALL
 {{- end }}
+
+{{- /* Usage: {{ include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all_pss_restricted" . }} */ -}}
+{{- /* returns SecurityContext parameters for Container with minimal required settings to comply with the Restricted mode of the Pod Security Standards */ -}}
+{{- define "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all_pss_restricted" -}}
+{{- /* Template context with .Values, .Chart, etc */ -}}
+securityContext:
+  readOnlyRootFilesystem: true
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+    - ALL
+  seccompProfile:
+    type: RuntimeDefault
+{{- end }}
