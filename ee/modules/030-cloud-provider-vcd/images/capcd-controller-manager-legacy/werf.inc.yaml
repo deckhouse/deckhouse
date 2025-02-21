@@ -14,6 +14,11 @@ imageSpec:
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 final: false
 fromImage: common/src-artifact
+import:
+- image: {{$.ModuleName}}/cloud-controller-manager-legacy-src-artifact
+  add: /src
+  to: /src/ccm
+  after: install
 git:
 - add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
   to: /patches
@@ -25,6 +30,7 @@ shell:
   - git clone --depth 1 --branch {{ $version }} {{ $.SOURCE_REPO }}/vmware/cluster-api-provider-cloud-director /src
   - cd /src
   - git apply /patches/*.patch --verbose
+  - echo "replace github.com/vmware/cloud-provider-for-cloud-director => /src/ccm" >> go.mod
   - rm -rf .git vendor
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
