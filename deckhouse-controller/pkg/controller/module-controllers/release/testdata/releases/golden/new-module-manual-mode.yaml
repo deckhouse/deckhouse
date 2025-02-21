@@ -24,7 +24,6 @@ apiVersion: deckhouse.io/v1alpha1
 kind: ModuleRelease
 metadata:
   annotations:
-    modules.deckhouse.io/isUpdating: "false"
     modules.deckhouse.io/notified: "true"
     release.deckhouse.io/approved: "true"
   creationTimestamp: null

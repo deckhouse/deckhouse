@@ -26,7 +26,6 @@ kind: ModuleRelease
 metadata:
   annotations:
     a: b
-    modules.deckhouse.io/isUpdating: "true"
     modules.deckhouse.io/notified: "false"
   creationTimestamp: null
   finalizers:
