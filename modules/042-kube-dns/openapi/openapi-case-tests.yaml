@@ -36,27 +36,27 @@ negative:
       - domain: two-another.example.com
         ip: 10.10.0.128
     - stubZones:
-      - zone: consul.local:53
+      - zone: consul.local
         upstreamNameservers:
           - 10.a150.0.1
     - enableLogs: 1
     - clusterDomainAliases:
       - foo?.bar
     - stubZones:
-      - zone: consul.local:53
+      - zone: consul.local
         upstreamNameservers:
         - 10.10.0.1
         cacheTTLSeconds: 3800
     - stubZones:
-      - zone: consul.local:53
+      - zone: consul.local
         upstreamNameservers:
           - 10.10.0.1
         cacheTTLSeconds: "abc"
     - stubZones:
-      - zone: consul.local:53
+      - zone: consul.local
         upstreamNameservers: []
     - stubZones:
-      - zone: consul.local:53
+      - zone: consul.local
   values:
     - internal:
         enablePodAntiAffinity: 1
