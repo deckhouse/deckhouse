@@ -66,25 +66,6 @@ shell:
       jq '.copyright | if ( ( .en | length) < 1 ) or ( ( .ru | length) < 1 ) then error("Got empty copyright array!") else . end ' /tmp/menus.json > /data/copyright.json
 {{- end }}
 ---
-image: pdf-page-builder
-from: {{ .Images.BASE_JEKYLL }}
-final: false
-shell:
-  setup:
-  - |
-    echo "Generate PDF page..."
-    cd /srv/jekyll-data/site
-    bash ./prepare_for_pdf.sh
-git:
-- add: /docs/documentation
-  to: /srv/jekyll-data/site/documentation
-- add: /modules
-  to: /srv/jekyll-data/site/modules
-- add: /ee
-  to: /srv/jekyll-data/site/ee
-- add: /tools/docs/pdf/prepare_for_pdf.sh
-  to: /srv/jekyll-data/site/prepare_for_pdf.sh
----
 image: web-static
 from: {{ .Images.BASE_JEKYLL }}
 final: false
@@ -105,7 +86,6 @@ shell:
 
         # "Building static files"
         cd /srv/jekyll-data/site/
-        tree /srv/jekyll-data/site/
         export JEKYLL_ENV=production
         mkdir -m 777 -p /app/_site/
         jekyll build -d /app/_site/ --config  _config.yml
@@ -338,10 +318,6 @@ import:
   - image: site-external-artifacts
     add: /data/copyright.json
     to: /srv/jekyll-data/site/_data/copyright.json
-    before: setup
-  - image: pdf-page-builder
-    add: /srv/jekyll-data/site/ADMIN_GUIDE_RU.md
-    to: /srv/jekyll-data/site/pages/ADMIN_GUIDE_RU.md
     before: setup
 {{- end }}
 ---

@@ -33,6 +33,25 @@ imageSpec:
     entrypoint: [ "/opt/nginx-static/sbin/nginx", "-e", "/dev/stderr", "-g", "daemon off;" ]
 {{ end }}
 ---
+image: pdf-page-builder
+from: {{ .Images.BASE_JEKYLL }}
+final: false
+shell:
+  setup:
+    - |
+      echo "Generate PDF page..."
+      cd /srv/jekyll-data/site
+      bash ./prepare_for_pdf.sh
+git:
+  - add: /docs/documentation
+    to: /srv/jekyll-data/site/documentation
+  - add: /modules
+    to: /srv/jekyll-data/site/modules
+  - add: /ee
+    to: /srv/jekyll-data/site/ee
+  - add: /tools/docs/pdf/prepare_for_pdf.sh
+    to: /srv/jekyll-data/site/prepare_for_pdf.sh
+---
 image: {{ .ModuleName }}/{{ .ImageName }}/static
 from: {{ .Images.BASE_JEKYLL }}
 final: false
@@ -239,5 +258,10 @@ git:
     setup: ['**/*']
   includePaths:
   - modules/**/docs/README.md
+import:
+  - image: pdf-page-builder
+    add: /srv/jekyll-data/site/ADMIN_GUIDE_RU.md
+    to: /srv/jekyll-data/site/pages/ADMIN_GUIDE_RU.md
+    before: setup
 {{ end }}
 {{ tpl (.Files.Get (printf "%sdocs/documentation/werf-git-section.inc.yaml" .ModulePath)) . }}
