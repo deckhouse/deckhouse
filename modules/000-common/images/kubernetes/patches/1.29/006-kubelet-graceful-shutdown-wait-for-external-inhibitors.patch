@@ -10,7 +10,7 @@ index 8469cecdc0e..8acbf774d14 100644
  	"sort"
  	"sync"
  	"time"
- @@ -320,6 +320,9 @@ func (m *managerImpl) ShutdownStatus() error {
+@@ -320,6 +320,9 @@ func (m *managerImpl) ShutdownStatus() error {
 
  func (m *managerImpl) processShutdownEvent() error {
  	m.logger.V(1).Info("Shutdown manager processing shutdown event")
