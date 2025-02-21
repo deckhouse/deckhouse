@@ -21,6 +21,6 @@ k8s:
       vcd: 1.4.1      
   '1.32':
     clusterApi:
-      vcd: v1.2.0
+      vcd: v1.3.2
     ccm:
       vcd: 1.4.1  
