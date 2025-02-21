@@ -43,6 +43,8 @@ spec:
     type: RollingUpdate
   template:
     metadata:
+      annotations:
+        container.apparmor.security.beta.kubernetes.io/multus-controller: "unconfined"
       labels:
         tier: node
         app: multus-controller
