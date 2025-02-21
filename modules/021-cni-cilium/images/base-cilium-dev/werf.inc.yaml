@@ -114,7 +114,7 @@ shell:
   - cd /src/protoc-gen-go-json && go install
   - cd /src/protoc-gen-doc/cmd/protoc-gen-doc && go install
   # Install Bazelisk (for build envoy)
-  - curl --fail --show-error --silent --location "{{ $source }}/bazelbuild/bazelisk/releases/download/{{ $bazeliskVersions }}/bazelisk-linux-amd64" -o /usr/bin/bazel
+  - curl --fail --show-error --silent --location "{{ $source }}/bazelbuild/bazelisk/releases/download/{{ $bazeliskVersions }}/bazelisk-linux-amd64" -o /usr/local/bin/bazel
   - chmod +x /usr/local/bin/bazel
 imageSpec:
   config:
