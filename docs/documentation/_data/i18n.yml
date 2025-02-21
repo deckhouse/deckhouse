@@ -273,7 +273,7 @@ comparison:
     ru: "Кроме следующих параметров:<br />"
   module_has_restions:
     en: "There are limitations to functionality"
-    ru: "Есть ограничения  функциональности"
+    ru: "Есть ограничения функциональности"
   module_has_restions_short:
     en: "with limitations"
     ru: "с ограничениями"

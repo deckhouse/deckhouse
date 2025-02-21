@@ -5,7 +5,10 @@
   },
   "be": {
     "name": "BE",
-    "title": "Basic Edition"
+    "title": "Basic Edition",
+    "excludeModules": [
+      "sds-replicated-volume"
+    ]
   },
   "se": {
     "name": "SE",
@@ -27,6 +30,7 @@
     "admission-policy-engine",
     "chrony",
     "cni-flannel",
+    "cni-cilium",
     "control-plane-manager",
     "deckhouse",
     "flow-schema",
@@ -39,6 +43,7 @@
     "monitoring-deckhouse",
     "monitoring-kubernetes",
     "monitoring-kubernetes-control-plane",
+    "multitenancy-manager",
     "node-manager",
     "operator-prometheus",
     "operator-prometheus-crd",

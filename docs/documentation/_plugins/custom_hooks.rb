@@ -124,7 +124,7 @@ Jekyll::Hooks.register :site, :pre_render do |site|
       end
     end
 
-    insert_module_edition_block(page)
+    insert_module_edition_block(page) if page.data['module-kebab-name']
 
     next if ! ( page.name.end_with?('CR.md') or page.name.end_with?('CR_RU.md') or page.name.end_with?('CONFIGURATION.md') or page.name.end_with?('CONFIGURATION_RU.md') )
     next if page['force_searchable'] == true
