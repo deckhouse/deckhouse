@@ -51,7 +51,7 @@ import:
   before: install
 shell:
   beforeInstall:
-  - apt-get install -y build-essential gdb lcov pkg-config bzlib-devel bzlib-devel-static libffi-devel libffi-devel-static libgdbm-devel liblzma-devel liblzma-devel-static libncurses-devel libncurses-devel-static libreadline-devel libreadline-devel-static libsqlite3-devel libssl-devel libssl-devel-static liblzma-devel liblzma-devel-static tklib libuuid-devel libuuid-devel-static zlib-devel zlib-devel-static libmpdec-devel
+  - apt-get install -y build-essential glibc-devel-static gdb lcov pkg-config bzlib-devel bzlib-devel-static libffi-devel libffi-devel-static libgdbm-devel liblzma-devel liblzma-devel-static libncurses-devel libncurses-devel-static libreadline-devel libreadline-devel-static libsqlite3-devel libssl-devel libssl-devel-static liblzma-devel liblzma-devel-static tklib libuuid-devel libuuid-devel-static zlib-devel zlib-devel-static libmpdec-devel
   install:
   - cd /src
   - ./configure LDFLAGS="-static" --disable-shared --prefix=/opt/python-static --enable-optimizations --with-ensurepip=install

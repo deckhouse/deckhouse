@@ -370,7 +370,6 @@ imageSpec:
 from: {{ .Images.BASE_ALPINE }}
 shell:
   beforeSetup:
-  {{- include "alpine packages proxy" . | nindent 2 }}
   - apt add --no-cache nginx
   setup:
   - |
