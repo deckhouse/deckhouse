@@ -310,21 +310,6 @@ deckhouse: {}
 	return metaConfig.Prepare()
 }
 
-func CheckParseConfigFromData(configData string, opts ...ValidateOption) error {
-	schemaStore := NewSchemaStore(true)
-	bigFileTmp := strings.TrimSpace(configData)
-	docs := input.YAMLSplitRegexp.Split(bigFileTmp, -1)
-
-	metaConfig := MetaConfig{}
-	for _, doc := range docs {
-		_, err := parseDocument(doc, &metaConfig, schemaStore, opts...)
-		if err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
 func InitGlobalVars(pwd string) {
 	deckhouseDir = pwd + "/deckhouse"
 	candiDir = deckhouseDir + "/candi"

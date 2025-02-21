@@ -411,6 +411,15 @@ func ValidateDiscoveryData(config *[]byte, paths []string, opts ...ValidateOptio
 	return true, nil
 }
 
+func CheckConfigFromData(config *[]byte, opts ...ValidateOption) error {
+	schemaStore := NewSchemaStore(true)
+	_, err := schemaStore.Validate(config, opts...)
+	if err != nil {
+		return fmt.Errorf("Loading schema file: %v", err)
+	}
+	return nil
+}
+
 func applyOptions(opts ...ValidateOption) validateOptions {
 	options := validateOptions{}
 	for _, opt := range opts {
