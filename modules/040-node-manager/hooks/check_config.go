@@ -83,10 +83,10 @@ func CheckCloudProviderConfig(input *go_hook.HookInput) error {
 				requirements.SaveValue(CheckCloudProviderConfigRaw, true)
 				input.MetricsCollector.Set("d8_check_cloud_provider_config", 1, nil)
 				err1 := fmt.Errorf("%s", findErrorLines(err.Error()))
-				input.Logger.Info("2008" + err1.Error())
+				input.Logger.Info("1008" + err1.Error())
 				return err1
 			}
-			input.Logger.Info("1009")
+			input.Logger.Info("1009 " + string(YAML))
 			requirements.SaveValue(CheckCloudProviderConfigRaw, false)
 			input.MetricsCollector.Expire("d8_check_cloud_provider_config")
 		}
@@ -157,31 +157,20 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, CheckClusterConfig)
 
 func CheckClusterConfig(input *go_hook.HookInput) error {
-	input.Logger.Info("0001")
 	snap := input.Snapshots["cluster_configuration"]
-	input.Logger.Info("0002")
 	if len(snap) > 0 {
-		input.Logger.Info("0003")
 		secret := snap[0].(*v1.Secret)
-		input.Logger.Info("0004")
 		if YAML, ok := secret.Data["cluster-configuration.yaml"]; ok && len(YAML) > 0 {
-			input.Logger.Info("0005")
 			err := config.CheckConfigFromData(&YAML)
-			input.Logger.Info("0006")
 			if err != nil {
-				input.Logger.Info("0007" + err.Error())
 				requirements.SaveValue(CheckStaticClusterConfigRaw, true)
 				input.MetricsCollector.Set("d8_check_cluster_config", 1, nil)
-				err1 := fmt.Errorf("%s", findErrorLines(err.Error()))
-				input.Logger.Info("0008" + err1.Error())
-				return err1
+				return fmt.Errorf("%s", findErrorLines(err.Error()))
 			}
-			input.Logger.Info("0009")
 			requirements.SaveValue(CheckStaticClusterConfigRaw, false)
 			input.MetricsCollector.Expire("d8_check_cluster_config")
 		}
 	}
-	input.Logger.Info("0010")
 	return nil
 }
 

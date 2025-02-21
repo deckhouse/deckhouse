@@ -415,7 +415,7 @@ func CheckConfigFromData(config *[]byte, opts ...ValidateOption) error {
 	schemaStore := NewSchemaStore(true)
 	_, err := schemaStore.Validate(config, opts...)
 	if err != nil {
-		return fmt.Errorf("Loading schema file: %v", err)
+		return err
 	}
 	return nil
 }
