@@ -10,7 +10,7 @@ kind: VerticalPodAutoscaler
 metadata:
   name: d8-kube-dns
   namespace: kube-system
-  {{- include "helm_lib_module_labels" (list . (dict "app" "d8-kube-dns" "workload-resource-policy.deckhouse.io" "master")) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "d8-kube-dns")) | nindent 2 }}
 spec:
   targetRef:
     apiVersion: "apps/v1"

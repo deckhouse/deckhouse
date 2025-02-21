@@ -1,0 +1,139 @@
+linters-settings:
+  module:
+    oss:
+      disable: true
+  container:
+    exclude-rules:
+      readiness-probe:
+        - kind: DaemonSet
+          name: user-authz-webhook
+          container: webhook
+  rbac:
+    exclude-rules:
+      placement:
+        - kind: RoleBinding
+          name: user-authz:admin-crd:admin:custom-cluster-role:d8:user-authz:cert-manager:admin
+        - kind: RoleBinding
+          name: user-authz:admin-crd:admin:custom-cluster-role:d8:user-authz:node-manager:user
+        - kind: ClusterRole
+          name: user-authz:cluster-editor
+        - kind: RoleBinding
+          name: user-authz:admin-crd:admin
+        - kind: ClusterRoleBinding
+          name: user-authz:admin-crd:cluster-editor:custom-cluster-role:d8:user-authz:ingress-nginx:cluster-editor
+        - kind: ClusterRoleBinding
+          name: user-authz:admin-crd:cluster-editor:custom-cluster-role:d8:user-authz:cert-manager:editor
+        - kind: ClusterRoleBinding
+          name: user-authz:admin-crd:cluster-editor:custom-cluster-role:d8:user-authz:prometheus:editor
+        - kind: ClusterRoleBinding
+          name: user-authz:user-crd:user:custom-cluster-role:d8:user-authz:cert-manager:user
+        - kind: ClusterRoleBinding
+          name: user-authz:admin-crd:cluster-editor:custom-cluster-role:d8:user-authz:prometheus:cluster-editor
+        - kind: RoleBinding
+          name: user-authz:admin-crd:admin:custom-cluster-role:d8:user-authz:cert-manager:user
+        - kind: ClusterRoleBinding
+          name: user-authz:admin-crd:cluster-editor
+        - kind: ClusterRoleBinding
+          name: user-authz:admin-crd:cluster-editor:custom-cluster-role:d8:user-authz:cert-manager:user
+        - kind: ClusterRole
+          name: user-authz:admin
+        - kind: RoleBinding
+          name: user-authz:admin-crd:admin:custom-cluster-role:d8:user-authz:cert-manager:editor
+        - kind: ClusterRoleBinding
+          name: user-authz:editor-crd:editor:custom-cluster-role:d8:user-authz:prometheus:editor
+        - kind: ClusterRoleBinding
+          name: user-authz:admin-crd:cluster-editor:custom-cluster-role:d8:user-authz:cloud-provider-openstack:user
+        - kind: ClusterRoleBinding
+          name: user-authz:admin-crd:cluster-editor:custom-cluster-role:d8:user-authz:prometheus-metrics-adapter:editor
+        - kind: ClusterRoleBinding
+          name: user-authz:admin-crd:cluster-editor:custom-cluster-role:d8:user-authz:node-manager:user
+        - kind: ClusterRole
+          name: user-authz:super-admin
+        - kind: ClusterRoleBinding
+          name: user-authz:editor-crd:editor:custom-cluster-role:d8:user-authz:cloud-provider-openstack:user
+        - kind: RoleBinding
+          name: user-authz:editor-crd:editor:custom-cluster-role:d8:user-authz:node-manager:user
+        - kind: ClusterRoleBinding
+          name: user-authz:user-crd:user:custom-cluster-role:d8:user-authz:cloud-provider-openstack:user
+        - kind: ClusterRoleBinding
+          name: user-authz:admin-crd:cluster-editor:custom-cluster-role:d8:user-authz:cert-manager:cluster-editor
+        - kind: ClusterRoleBinding
+          name: user-authz:admin-crd:cluster-editor:custom-cluster-role:d8:user-authz:node-manager:cluster-editor
+        - kind: ClusterRole
+          name: user-authz:privileged-user
+        - kind: RoleBinding
+          name: user-authz:user-crd:user:custom-cluster-role:d8:user-authz:cert-manager:user
+        - kind: ClusterRoleBinding
+          name: user-authz:editor-crd:editor
+        - kind: ClusterRoleBinding
+          name: user-authz:user-crd:user:custom-cluster-role:d8:user-authz:prometheus-metrics-adapter:user
+        - kind: ClusterRoleBinding
+          name: user-authz:editor-crd:editor:custom-cluster-role:d8:user-authz:cert-manager:user
+        - kind: ClusterRoleBinding
+          name: user-authz:editor-crd:editor:custom-cluster-role:d8:user-authz:node-manager:user
+        - kind: RoleBinding
+          name: user-authz:editor-crd:editor:custom-cluster-role:d8:user-authz:cloud-provider-openstack:user
+        - kind: RoleBinding
+          name: user-authz:user-crd:user:custom-cluster-role:d8:user-authz:node-manager:user
+        - kind: ClusterRoleBinding
+          name: user-authz:admin-crd:port-forward
+        - kind: ClusterRole
+          name: user-authz:user
+        - kind: RoleBinding
+          name: user-authz:editor-crd:editor:custom-cluster-role:d8:user-authz:ingress-nginx:editor
+        - kind: ClusterRoleBinding
+          name: user-authz:editor-crd:editor:custom-cluster-role:d8:user-authz:prometheus-metrics-adapter:user
+        - kind: ClusterRoleBinding
+          name: user-authz:admin-crd:cluster-editor:custom-cluster-role:d8:user-authz:ingress-nginx:editor
+        - kind: RoleBinding
+          name: user-authz:editor-crd:editor:custom-cluster-role:d8:user-authz:prometheus:editor
+        - kind: RoleBinding
+          name: user-authz:editor-crd:editor:custom-cluster-role:d8:user-authz:cert-manager:editor
+        - kind: RoleBinding
+          name: user-authz:admin-crd:admin:custom-cluster-role:d8:user-authz:prometheus:editor
+        - kind: ClusterRoleBinding
+          name: user-authz:user-crd:user
+        - kind: ClusterRoleBinding
+          name: user-authz:editor-crd:editor:custom-cluster-role:d8:user-authz:ingress-nginx:editor
+        - kind: RoleBinding
+          name: user-authz:editor-crd:editor:custom-cluster-role:d8:user-authz:prometheus-metrics-adapter:user
+        - kind: RoleBinding
+          name: user-authz:admin-crd:admin:custom-cluster-role:d8:user-authz:cloud-provider-openstack:user
+        - kind: ClusterRole
+          name: user-authz:cluster-admin
+        - kind: RoleBinding
+          name: user-authz:user-crd:user:custom-cluster-role:d8:user-authz:prometheus-metrics-adapter:user
+        - kind: ClusterRole
+          name: user-authz:scale
+        - kind: ClusterRoleBinding
+          name: user-authz:admin-crd:cluster-editor:custom-cluster-role:d8:user-authz:prometheus-metrics-adapter:cluster-editor
+        - kind: RoleBinding
+          name: user-authz:user-crd:user
+        - kind: RoleBinding
+          name: user-authz:admin-crd:admin:custom-cluster-role:d8:user-authz:prometheus-metrics-adapter:user
+        - kind: ClusterRoleBinding
+          name: user-authz:admin-crd:cluster-editor:custom-cluster-role:d8:user-authz:prometheus-metrics-adapter:user
+        - kind: RoleBinding
+          name: user-authz:editor-crd:editor:custom-cluster-role:d8:user-authz:prometheus-metrics-adapter:editor
+        - kind: ClusterRole
+          name: user-authz:port-forward
+        - kind: RoleBinding
+          name: user-authz:editor-crd:editor
+        - kind: RoleBinding
+          name: user-authz:admin-crd:admin:custom-cluster-role:d8:user-authz:ingress-nginx:editor
+        - kind: RoleBinding
+          name: user-authz:admin-crd:admin:custom-cluster-role:d8:user-authz:prometheus-metrics-adapter:editor
+        - kind: ClusterRoleBinding
+          name: user-authz:editor-crd:editor:custom-cluster-role:d8:user-authz:cert-manager:editor
+        - kind: ClusterRole
+          name: user-authz:editor
+        - kind: RoleBinding
+          name: user-authz:user-crd:user:custom-cluster-role:d8:user-authz:cloud-provider-openstack:user
+        - kind: ClusterRoleBinding
+          name: user-authz:user-crd:user:custom-cluster-role:d8:user-authz:node-manager:user
+        - kind: RoleBinding
+          name: user-authz:editor-crd:editor:custom-cluster-role:d8:user-authz:cert-manager:user
+        - kind: RoleBinding
+          name: user-authz:admin-crd:port-forward
+        - kind: ClusterRoleBinding
+          name: user-authz:editor-crd:editor:custom-cluster-role:d8:user-authz:prometheus-metrics-adapter:editor

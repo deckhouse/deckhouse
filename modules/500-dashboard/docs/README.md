@@ -8,14 +8,15 @@ This module installs Kubernetes Dashboard [Web UI](https://github.com/kubernetes
 
 Kubernetes Dashboard provides the following features:
 
-- management of pods and other high-level resources;
-- exec to containers via a web console for debugging purposes;
-- viewing logs of individual containers.
+- Managing pods and other high-level resources.
+- Accessing containers via a web console for debugging.
+- Viewing logs of individual containers.
 
 {% alert level="warning" %}
 The module does not work over HTTP.
 {% endalert %}
 
 For the module to work, it is necessary to:
-- enable the [user-authz](../user-authz/) module;
-- either enable the [user-authn](../user-authn/) module or enable external authentication (see the [externalAuthentication](configuration.html#parameters-auth-externalauthentication) module parameters section).
+
+1. Enable the [user-authz](../user-authz/) module;
+1. Enable the [user-authn](../user-authn/) module or enable external authentication (see the [externalAuthentication](configuration.html#parameters-auth-externalauthentication) module parameters section).

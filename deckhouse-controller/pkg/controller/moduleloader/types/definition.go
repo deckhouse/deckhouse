@@ -18,6 +18,7 @@ import (
 	"errors"
 	"fmt"
 	"path/filepath"
+	"strings"
 
 	addonmodules "github.com/flant/addon-operator/pkg/module_manager/models/modules"
 	addonutils "github.com/flant/addon-operator/pkg/utils"
@@ -33,23 +34,28 @@ const (
 )
 
 type Definition struct {
-	Name         string                       `yaml:"name"`
-	Weight       uint32                       `yaml:"weight,omitempty"`
-	Tags         []string                     `yaml:"tags,omitempty"`
-	Subsystems   []string                     `yaml:"subsystems,omitempty"`
-	Namespace    string                       `yaml:"namespace,omitempty"`
-	Stage        string                       `yaml:"stage,omitempty"`
-	Description  string                       `yaml:"description,omitempty"`
-	Requirements *v1alpha1.ModuleRequirements `yaml:"requirements,omitempty"`
+	Name         string                       `json:"name" yaml:"name"`
+	Weight       uint32                       `json:"weight,omitempty" yaml:"weight,omitempty"`
+	Tags         []string                     `json:"tags,omitempty" yaml:"tags,omitempty"`
+	Subsystems   []string                     `json:"subsystems,omitempty" yaml:"subsystems,omitempty"`
+	Namespace    string                       `json:"namespace,omitempty" yaml:"namespace,omitempty"`
+	Stage        string                       `json:"stage,omitempty" yaml:"stage,omitempty"`
+	Descriptions *ModuleDescriptions          `json:"descriptions,omitempty" yaml:"descriptions,omitempty"`
+	Requirements *v1alpha1.ModuleRequirements `json:"requirements,omitempty" yaml:"requirements,omitempty"`
 
-	DisableOptions DisableOptions `yaml:"disable,omitempty"`
+	DisableOptions DisableOptions `json:"disable,omitempty" yaml:"disable,omitempty"`
 
 	Path string `yaml:"-"`
 }
 
+type ModuleDescriptions struct {
+	Ru string `json:"ru,omitempty" yaml:"ru,omitempty"`
+	En string `json:"en,omitempty" yaml:"en,omitempty"`
+}
+
 type DisableOptions struct {
-	Confirmation bool   `yaml:"confirmation"`
-	Message      string `yaml:"message"`
+	Confirmation bool   `json:"confirmation" yaml:"confirmation"`
+	Message      string `json:"message" yaml:"message"`
 }
 
 func (d *Definition) Validate(values addonutils.Values, logger *log.Logger) error {
@@ -99,4 +105,35 @@ func (d *Definition) Validate(values addonutils.Values, logger *log.Logger) erro
 	}
 
 	return nil
+}
+
+func (d *Definition) Annotations() map[string]string {
+	annotations := make(map[string]string)
+
+	if d.Descriptions != nil {
+		annotations[v1alpha1.ModuleAnnotationDescriptionRu] = d.Descriptions.Ru
+		annotations[v1alpha1.ModuleAnnotationDescriptionEn] = d.Descriptions.En
+	}
+
+	return annotations
+}
+
+func (d *Definition) Labels() map[string]string {
+	labels := make(map[string]string)
+
+	if strings.HasPrefix(d.Name, "cni-") {
+		labels["module.deckhouse.io/cni"] = ""
+	}
+
+	if strings.HasPrefix(d.Name, "cloud-provider-") {
+		labels["module.deckhouse.io/cloud-provider"] = ""
+	}
+
+	if len(d.Tags) != 0 {
+		for _, tag := range d.Tags {
+			labels["module.deckhouse.io/"+tag] = ""
+		}
+	}
+
+	return labels
 }

@@ -260,7 +260,7 @@ func (p *ProjectStatus) DeepCopyInto(newObj *ProjectStatus) {
 }
 
 type ResourceKind struct {
-	Installed bool     `json:"installed,omitempty"`
+	Installed bool     `json:"installed"`
 	Names     []string `json:"names,omitempty"`
 }
 

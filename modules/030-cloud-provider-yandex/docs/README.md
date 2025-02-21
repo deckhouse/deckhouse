@@ -4,13 +4,14 @@ title: "Cloud provider — Yandex Cloud"
 
 The `cloud-provider-yandex` module is responsible for interacting with the [Yandex Cloud](https://cloud.yandex.com/en/) cloud resources. It allows the node manager module to use Yandex Cloud resources for provisioning nodes for the defined [node group](../../modules/node-manager/cr.html#nodegroup) (a group of nodes that are acted upon as if they were a single entity).
 
-The `cloud-provider-yandex` module:
-- Manages Yandex Cloud resources using the `cloud-controller-manager` (CCM) module:
-  * The CCM module creates network routes for the `PodNetwork` network on the Yandex Cloud side.
-  * The CCM module updates the Yandex Cloud Instances and Kubernetes Nodes metadata and deletes from Kubernetes nodes that no longer exist in Yandex Cloud.
-- Provisions disks in Yandex Cloud using the `CSI storage` component.
-- Registers with the [node-manager](../../modules/node-manager/) module so that [YandexInstanceClasses](cr.html#yandexinstanceclass) can be used when creating the [NodeGroup](../../modules/node-manager/cr.html#nodegroup).
-- Enables the necessary CNI plugin (using the [simple bridge](../../modules/cni-simple-bridge/)).
+Features of the `cloud-provider-yandex` module:
+
+- Managing Yandex Cloud resources using the `cloud-controller-manager` (CCM) module:
+  - Creating network routes for the `PodNetwork` network on the Yandex Cloud side.
+  - Updating Yandex Cloud Instances and Kubernetes Nodes metadata. Deleting nodes from Kubernetes that are no longer in Yandex Cloud.
+- Provisioning disks in Yandex Cloud using the `CSI storage` component.
+- Registration in the [node-manager](../../modules/node-manager/) module, so that [YandexInstanceClasses](cr.html#yandexinstanceclass) can be used when creating the [NodeGroup](../../modules/node-manager/cr.html#nodegroup).
+- Enabling the necessary CNI plugin (which uses [simple bridge](../../modules/cni-simple-bridge/)).
 
 ## Yandex Cloud integration
 
@@ -35,11 +36,11 @@ This section provides general guidelines for setting up a security group. Incorr
 
 1. In the Yandex Cloud console, select the Virtual Private Cloud service and navigate to the *Security Groups* section. You should see a single security group labeled `Default`.
 
-    ![The default security group](../../images/cloud-provider-yandex/sg-en-default.png)
+   ![The default security group](../../images/cloud-provider-yandex/sg-en-default.png)
 
 1. Create rules as described in [Yandex Cloud instructions](https://cloud.yandex.com/en/docs/managed-kubernetes/operations/connect/security-groups#rules-internal).
 
-    ![Rules for the security group](../../images/cloud-provider-yandex/sg-en-rules.png)
+   ![Rules for the security group](../../images/cloud-provider-yandex/sg-en-rules.png)
 
 1. Delete the rule that allows for any **inbound** traffic (in the screenshot above it has already been deleted), and save the changes.
 
@@ -81,7 +82,7 @@ The instructions below are meant to be viewed as a *Quick Start* guide. To use i
 1. Install the External Secrets Operator using the Helm chart according to [instructions](https://cloud.yandex.com/en/docs/managed-kubernetes/operations/applications/external-secrets-operator#helm-install).
 
    Note that you may need to set `nodeSelector`, `tolerations` and other parameters. To do this, use the `./external-secrets/values.yaml` file after unpacking the Helm-chart.
-   
+
    Pull and extract the chart:
 
    ```shell
@@ -119,6 +120,7 @@ The instructions below are meant to be viewed as a *Quick Start* guide. To use i
    ```
 
    Where:
+
    - `sa-creds` — the name of the `Secret` that contains the authorized key. This secret should show up after the Helm Chart has been installed.
    - `key` — the name of the key in the `.data` field of the secret above.
 
@@ -140,10 +142,10 @@ The instructions below are meant to be viewed as a *Quick Start* guide. To use i
 
 1. [Create](https://cloud.yandex.com/en/docs/lockbox/operations/secret-create) a Yandex Lockbox secret with the following parameters:
 
-    - **Name** — `lockbox-secret`.
-    - **Key** — enter the non-confidential identifier `password`.
-    - **Value** — enter the confidential data to store `p@$$w0rd`.
-      
+   - **Name** — `lockbox-secret`.
+   - **Key** — enter the non-confidential identifier `password`.
+   - **Value** — enter the confidential data to store `p@$$w0rd`.
+
 1. Create an [ExternalSecret](https://external-secrets.io/latest/api/externalsecret/) object that refers to the `lockbox-secret` secret in the `secret-store`:
 
    ```shell
