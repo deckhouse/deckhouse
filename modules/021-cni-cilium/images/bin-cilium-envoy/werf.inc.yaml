@@ -81,8 +81,8 @@ shell:
   - echo 'Defaults env_keep += "SSH_AUTH_SOCK"' >> /etc/sudoers
   - groupadd -f -g 1337 cilium && useradd -m -g cilium -u 1337 cilium
   - sudo -u cilium PATH=${PATH} echo "StrictHostKeyChecking accept-new" > /home/cilium/.ssh/config
-  - echo SSH_AUTH_SOCK=$SSH_AUTH_SOCK
-  - sudo -u cilium PATH=${PATH} echo SSH_AUTH_SOCK=$SSH_AUTH_SOCK
+  - echo env
+  - sudo -u cilium PATH=${PATH} env
   - chmod -R a+w /tmp
   - chown -R 1337:1337 /cilium/proxy
   setup:
