@@ -256,6 +256,12 @@ func (f *DeckhouseReleaseFetcher) fetchDeckhouseRelease(ctx context.Context) err
 
 	sort.Sort(sort.Reverse(releaseUpdater.ByVersion[*v1alpha1.DeckhouseRelease](releasesInCluster)))
 
+	const (
+		lesserThan  = -1
+		greaterThan = 1
+		equal       = 0
+	)
+
 	// filter by skipped and suspended
 	for _, release := range releasesInCluster {
 		if release.Status.Phase != v1alpha1.DeckhouseReleasePhasePending &&
@@ -264,11 +270,9 @@ func (f *DeckhouseReleaseFetcher) fetchDeckhouseRelease(ctx context.Context) err
 		}
 
 		switch release.GetVersion().Compare(newSemver) {
-		// Lesser than
-		case -1:
+		case lesserThan:
 			// pass
-		// Greater than
-		case 1:
+		case greaterThan:
 			// cleanup versions which are older than current version in a specified channel and are in a Pending state
 			if release.Status.Phase == v1alpha1.DeckhouseReleasePhasePending {
 				err = f.k8sClient.Delete(ctx, release, client.PropagationPolicy(metav1.DeletePropagationBackground))
@@ -276,8 +280,7 @@ func (f *DeckhouseReleaseFetcher) fetchDeckhouseRelease(ctx context.Context) err
 					return fmt.Errorf("delete old release: %w", err)
 				}
 			}
-		// Equal
-		case 0:
+		case equal:
 			f.logger.Debug("Release already exists", slog.String("version", release.GetVersion().Original()))
 
 			switch release.Status.Phase {
