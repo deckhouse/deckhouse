@@ -41,6 +41,7 @@ import:
   before: install
 shell:
   beforeInstall:
+  {{- include "debian packages proxy" . | nindent 2 }}
   - apt-get update && apt-get install -y make libinih-dev libblkid-dev gettext liburcu-dev libtool libicu-dev pkg-config
   setup:
   - cd /src/xfsprogs-dev
