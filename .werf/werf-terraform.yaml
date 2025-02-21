@@ -47,8 +47,7 @@ import:
     before: setup
 shell:
   beforeInstall:
-  - apt-get update
-  - DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends wget unzip git python3 python3-pip jq curl gettext-base bsdextrautils
+  - apt-get install -y wget unzip git python3 python3-pip jq curl gettext-base bsdextrautils
   - pip3 install awscli
   - |
     mkdir /terraform
