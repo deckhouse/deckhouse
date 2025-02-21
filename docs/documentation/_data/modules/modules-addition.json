@@ -144,7 +144,7 @@
   "virtualization": {
     "external": "true",
     "path": "/products/kubernetes-platform/modules/virtualization/stable/",
-    "editionMinimumAvailable": "ee",
+    "editionMinimumAvailable": "se-plus",
     "editionsWithRestrictions": [
       "ce"
     ],
