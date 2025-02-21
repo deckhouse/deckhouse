@@ -18,6 +18,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"sort"
 	"sync"
 	"time"
@@ -413,12 +414,23 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 }
 
 func (r *reconciler) deleteModuleSource(ctx context.Context, source *v1alpha1.ModuleSource) (ctrl.Result, error) {
+	if source.Status.Message != v1alpha1.ModuleSourceMessageTerminating {
+		source.Status.Message = v1alpha1.ModuleSourceMessageTerminating
+		if err := r.client.Status().Update(ctx, source); err != nil {
+			r.log.Warn("failed to set terminating to the source", slog.String("source", source.GetName()), log.Err(err))
+
+			return ctrl.Result{}, err
+		}
+	}
+
 	if controllerutil.ContainsFinalizer(source, v1alpha1.ModuleSourceFinalizerReleaseExists) {
 		if source.GetAnnotations()[v1alpha1.ModuleSourceAnnotationForceDelete] != "true" {
 			// list deployed ModuleReleases associated with the ModuleSource
 			releases := new(v1alpha1.ModuleReleaseList)
 			if err := r.client.List(ctx, releases, client.MatchingLabels{"source": source.Name, "status": "deployed"}); err != nil {
-				return ctrl.Result{Requeue: true}, nil
+				r.log.Warn("failed to list releases", slog.String("source", source.GetName()), log.Err(err))
+
+				return ctrl.Result{}, err
 			}
 
 			// prevent deletion if there are deployed releases
@@ -429,8 +441,9 @@ func (r *reconciler) deleteModuleSource(ctx context.Context, source *v1alpha1.Mo
 				})
 				if err != nil {
 					r.log.Errorf("failed to update the '%s' module source status: %v", source.Name, err)
-					return ctrl.Result{Requeue: true}, nil
+					return ctrl.Result{}, err
 				}
+
 				return ctrl.Result{RequeueAfter: 5 * time.Second}, nil
 			}
 		}
@@ -438,7 +451,8 @@ func (r *reconciler) deleteModuleSource(ctx context.Context, source *v1alpha1.Mo
 		controllerutil.RemoveFinalizer(source, v1alpha1.ModuleSourceFinalizerReleaseExists)
 		if err := r.client.Update(ctx, source); err != nil {
 			r.log.Errorf("failed to update the '%s' module source: %v", source.Name, err)
-			return ctrl.Result{Requeue: true}, nil
+
+			return ctrl.Result{}, err
 		}
 	}
 
@@ -447,7 +461,8 @@ func (r *reconciler) deleteModuleSource(ctx context.Context, source *v1alpha1.Mo
 			for _, module := range source.Status.AvailableModules {
 				if err := r.cleanSourceInModule(ctx, source.Name, module.Name); err != nil {
 					r.log.Errorf("failed to clean source in the %q module during deleting the %q module source: %v", module.Name, source.Name, err)
-					return ctrl.Result{Requeue: true}, nil
+
+					return ctrl.Result{}, err
 				}
 			}
 		}
@@ -455,7 +470,8 @@ func (r *reconciler) deleteModuleSource(ctx context.Context, source *v1alpha1.Mo
 		controllerutil.RemoveFinalizer(source, v1alpha1.ModuleSourceFinalizerModuleExists)
 		if err := r.client.Update(ctx, source); err != nil {
 			r.log.Errorf("failed to update the '%s' module source: %v", source.Name, err)
-			return ctrl.Result{Requeue: true}, nil
+
+			return ctrl.Result{}, err
 		}
 	}
 
