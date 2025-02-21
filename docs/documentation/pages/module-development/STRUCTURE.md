@@ -410,7 +410,10 @@ The `module.yaml` file in the root of the module folder contains the module's me
 The file might not be present, but it is recommended to fill it in. Most of the metadata will be available in the [Module](../../cr.html#module) object in the cluster. The Module object will be created automatically after the module source (resource [ModuleSource](../../cr.html#modulesource)) is configured and synchronization is successful.
 
 Parameters that can be used in `module.yaml`:
-- `description` — *String.* Arbitrary text description of the module's purpose. Will be displayed in the documentation.
+- `namespace` - *Строка.* Namespace where the module parts work.
+- `subsystems` - *Массив строк.* List of subsystems the module belongs to.
+- `descriptions` — *Object.* Arbitrary text description of the module's purpose.
+  - `en` - *String.* English description.
 - `disable` — *Object.* Parameters related to the behavior when disabling a module.
 - `confirmation` — *Boolean.* Require confirmation when disabling a module.
 - `message` — *String.* Message with information about what will happen when disabling a module.
@@ -437,7 +440,12 @@ name: hello-world
 tags: ["test", "myTag"]
 weight: 960
 stage: "Sandbox"
-description: "The module to say hello to the world."
+namespace: "test"
+subsystems:
+  - test
+  - test1
+descriptions: 
+  en: "The module to say hello to the world."
 requirements:
     deckhouse: ">= 1.61"
     kubernetes: ">= 1.27"
