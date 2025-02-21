@@ -367,8 +367,11 @@ image: web-frontend
 imageSpec:
   config:
     workingDir: "/app"
-from: {{ .Images.BASE_NGINX_ALPINE }}
+from: {{ .Images.BASE_ALPINE }}
 shell:
+  beforeSetup:
+  {{- include "alpine packages proxy" . | nindent 2 }}
+  - apt add --no-cache nginx
   setup:
   - |
       cat <<"EOD" > /etc/nginx/nginx.conf
