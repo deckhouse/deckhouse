@@ -1634,11 +1634,10 @@ alerts:
         - Ensure your application is configured to periodically reload the token from the file system.
         - Verify that you are using an up-to-date client library that supports automatic token rotation.
 
-        **Note:**
-        Currently, these tokens are not blocked because the `--service-account-extend-token-expiration` flag is enabled by default (Default: true). With this flag enabled, admission-injected tokens are extended up to 1 year during token generation to facilitate a safe transition from legacy tokens to the bound service account token feature, ignoring the value of `service-account-max-token-expiration`.
+        Note thar currently these tokens are not blocked because the `--service-account-extend-token-expiration` flag is enabled by default (`Default: true`). With this flag enabled, admission-injected tokens are extended up to 1 year during token generation to facilitate a safe transition from legacy tokens to the bound service account token feature, ignoring the value of `service-account-max-token-expiration`.
 
         **For further investigation:**
-        Log into the server with label `instance={{ $labels.instance }}` and inspect the audit log using the following command:
+        log into the server with label `instance={{ $labels.instance }}` and inspect the audit log using the following command:
 
         ```
         jq 'select(.annotations["authentication.k8s.io/stale-token"]) | {auditID, stageTimestamp, requestURI, verb, user: .user.username, stale_token: .annotations["authentication.k8s.io/stale-token"]}' /var/log/kube-audit/audit.log
