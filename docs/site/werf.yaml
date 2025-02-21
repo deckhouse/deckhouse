@@ -105,6 +105,7 @@ shell:
 
         # "Building static files"
         cd /srv/jekyll-data/site/
+        tree /srv/jekyll-data/site/
         export JEKYLL_ENV=production
         mkdir -m 777 -p /app/_site/
         jekyll build -d /app/_site/ --config  _config.yml
