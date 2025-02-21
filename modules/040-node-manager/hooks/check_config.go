@@ -195,6 +195,7 @@ func validate(conf *[]byte, input *go_hook.HookInput) error {
 		"/deckhouse/ee/candi/cloud-providers/huaweicloud/openapi",
 		"/deckhouse/ee/candi/cloud-providers/dynamix/openapi",
 		"/deckhouse/ee/candi/cloud-providers/openstack/openapi",
+		"/deckhouse/candi/cloud-providers/openstack/openapi",
 		"/deckhouse/ee/candi/cloud-providers/vcd/openapi",
 		"/deckhouse/candi/cloud-providers/gcp/openapi",
 		"/deckhouse/candi/cloud-providers/yandex/openapi",
