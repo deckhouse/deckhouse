@@ -1,6 +1,7 @@
 {{- $ciliumProxyRev := "fe8efeb16a7d233bffd05af9ea53599340d3f18e" }}
 {{- $ciliumProxyCacheRev := "v1.31.5-1737535524-fe8efeb16a7d233bffd05af9ea53599340d3f18e-alt-v1" }}
 {{- $ciliumProxyDepsRev := "v1.31.5-1737535524-fe8efeb16a7d233bffd05af9ea53599340d3f18e-alt-v1" }}
+{{- $bazelVersions := "6.5.0" }}
 ---
 # #####################################################################
 # Build cilium-envoy binaries
@@ -90,6 +91,7 @@ shell:
   - mv proxylib/libcilium.so /tmp/install/usr/lib/libcilium.so
   #
   - export TARGETARCH=amd64 ARCH="x86_64"
+  - export BAZEL_VERSION="{{ $bazelVersions }}" USE_BAZEL_VERSION="{{ $bazelVersions }}"
   #- export BAZEL_BUILD_OPTS="--disk_cache=/tmp/bazel-cache --nofetch"
   - export BAZEL_BUILD_OPTS="--disk_cache=/tmp/bazel-cache"
   - export PKG_BUILD=1 V=$V DEBUG=$DEBUG DESTDIR=/tmp/install
