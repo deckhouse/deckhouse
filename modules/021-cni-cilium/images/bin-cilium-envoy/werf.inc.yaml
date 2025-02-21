@@ -80,11 +80,14 @@ shell:
   - echo 'Defaults env_keep += "BAZEL_BUILD_OPTS PKG_BUILD V DEBUG DESTDIR"' >> /etc/sudoers
   - echo 'Defaults env_keep += "SSH_AUTH_SOCK"' >> /etc/sudoers
   - groupadd -f -g 1337 cilium && useradd -m -g cilium -u 1337 cilium
+  - mv -t /home/cilium/.cache /root/.cache/bazelisk /root/.cache/bazel
+  - chown -R cilium:cilium /home/cilium/.cache
   - sudo -u cilium PATH=${PATH} echo "StrictHostKeyChecking accept-new" > /home/cilium/.ssh/config
-  - echo env
-  - sudo -u cilium PATH=${PATH} env
   - chmod -R a+w /tmp
   - chown -R 1337:1337 /cilium/proxy
+  #
+  - echo env
+  - sudo -u cilium PATH=${PATH} env
   setup:
   - export GO_VERSION=${GOLANG_VERSION} GOPROXY={{ $.GOPROXY }}
   - export GOOS=linux GOARCH=amd64 CGO_ENABLED=0
