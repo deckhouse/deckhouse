@@ -101,12 +101,13 @@ Deckhouse запускает агенты Falco (объединены в DaemonS
 ### Встроенные правила
 
 Существует набор встроенных правил, который нельзя отключить.
-Он помогает выявить проблемы с безопасностью Deckhouse и с самим модулем `runtime-audit-engine`. Это правила, статично размещенные в контейнере `falco`, по пути `/etc/falco/k8s_audit_rules.yaml` — правила для аудита Kubernetes.
+Он помогает выявить проблемы с безопасностью Deckhouse и с самим модулем `runtime-audit-engine`. Это правила для аудита Kubernetes, статично размещённые в контейнере `falco` по пути `/etc/falco/k8s_audit_rules.yaml`.
 
 Также существуют дополнительный набор встроенных правил:
-- правила, размещенные в формате custom resource [FalcoAuditRules](cr.html#falcoauditrules), `fstec` — правила аудита удовлетворяющие требованиям приказа ФСТЭК России №118 от 4 июля 2022г. (Требования по безопасности информации к средствам контейнеризации).
 
-Вы можете настроить список встроенных правил с помощью [`settings.builtInRulesList`](../runtime-audit-engine/configuration.html#parameters-builtinruleslist)
+- правила, размещённые в формате custom resource [FalcoAuditRules](cr.html#falcoauditrules), `fstec` — правила аудита удовлетворяющие требованиям приказа ФСТЭК России №118 от 4 июля 2022г. (Требования по безопасности информации к средствам контейнеризации).
+
+Настроить список встроенных правил можно с помощью параметра [`settings.builtInRulesList`](../runtime-audit-engine/configuration.html#parameters-builtinruleslist).
 
 ### Пользовательские правила
 
