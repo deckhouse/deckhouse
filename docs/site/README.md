@@ -208,7 +208,7 @@ Some data is stored in the `_data` directory of a Jekyll project, but some data 
   {
     "module-name": {
       "path": "path to the documentation on the site",  <-- null, if the module don't have documentation
-      "editionMinimumAvailable": "<EDITION>" <-- the "smallest" edition, where module is available. It is computed from the repo folder structure.
+      "editionMinimumAvailable": "<EDITION>" <-- the "smallest" edition, where module is available. It is computed from the repo folder structure. **Don't use it in logic.** It seems to be deprecated in the future.
     }
   }
   ```
@@ -241,17 +241,17 @@ Some data is stored in the `_data` directory of a Jekyll project, but some data 
  
   The data is filled in the `werf-web.inc.yaml`.
   
-  - `editionFullyAvailable` - the list of editions, where the module available without restrictions. Used for overriding computed values. Takes precedence over `excludeModules` and `includeModules` from the `site.data.editions` file (see below). The `editionFullyAvailable` for a module can be set in the `docs/documentation/_data/modules/modules-addition.json` file.
+  - `editionFullyAvailable` - the list of editions, where the module available without restrictions. Used for overriding computed values. Takes precedence over `excludeModules` and `includeModules` from the `site.data.editions` file (see below). The `editionFullyAvailable` for a module can be set in the `docs/documentation/_data/modules/modules-addition.json` file. Better don't use it in logic (but you can use it for adding editions to the module). 
   - `editionsWithRestrictions` - The list of editions, where the module is available with restrictions. Used for overriding computed values. Takes precedence over `excludeModules` and `includeModules` from the `site.data.editions` file (see below). Takes precedence over `editionFullyAvailable`. The `editionsWithRestrictions` for a module can be set in the `docs/documentation/_data/modules/modules-addition.json` file.
   - `editions` — The list of editions, where the module is available **with or without** restrictions. 
   
   ```text
   {
     "<module-kebab-name>": {
-    "editionMinimumAvailable": "<EDITION>",  <-- the "smallest" edition according to the edition weight (_data/modules/editions-weight.yml), where module is available. It is computed from the module folder of the repo (_tools/modules_list.sh), can be specified in the `_data/modules/modules-addition.json`. **Don't use it in logic.** Use editions array instead.
+    "editionMinimumAvailable": "<EDITION>",  <-- the "smallest" edition according to the edition weight (_data/modules/editions-weight.yml), where module is available. It is computed from the module folder of the repo (_tools/modules_list.sh), can be specified in the `_data/modules/modules-addition.json`. **Don't use it in logic.** It seems to be deprecated in the future. Use editions array instead. 
     "editions": [],  <-- list of editions, where the module is available with restrictions or without restrictions
-    "external": "true|false", <-- true if the module installs from the modulesource
-    "path": "modules/<module-kebab-name>/",  <-- path to module documentation on the site (on null)
+    "external": "true|false", <-- Optional, true if the module installs from the modulesource
+    "path": "modules/<module-kebab-name>/",  <-- Optional, path to module documentation on the site.
     "editionsWithRestrictions": [ <-- editions, where the module is available with restrictions
       "se",
       "se-plus",
