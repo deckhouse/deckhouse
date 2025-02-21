@@ -111,8 +111,12 @@ func (d *Definition) Annotations() map[string]string {
 	annotations := make(map[string]string)
 
 	if d.Descriptions != nil {
-		annotations[v1alpha1.ModuleAnnotationDescriptionRu] = d.Descriptions.Ru
-		annotations[v1alpha1.ModuleAnnotationDescriptionEn] = d.Descriptions.En
+		if len(d.Descriptions.Ru) > 0 {
+			annotations[v1alpha1.ModuleAnnotationDescriptionRu] = d.Descriptions.Ru
+		}
+		if len(d.Descriptions.En) > 0 {
+			annotations[v1alpha1.ModuleAnnotationDescriptionEn] = d.Descriptions.En
+		}
 	}
 
 	return annotations
