@@ -75,7 +75,7 @@ func (pc *Checker) CheckTimeDrift() error {
 		localTime := time.Unix(localTimeStamp, 0).Format(time.RFC3339)
 		remoteTime := time.Unix(remoteTimeStamp, 0).Format(time.RFC3339)
 		driftDuration := time.Duration(timeDrift) * time.Second
-		log.ErrorF("time drift between local (%s) and remote server (%s) is too high: (%s)", localTime, remoteTime, driftDuration.String())
+		log.ErrorF("time drift between local (%s) and remote server (%s) is too high: (%s)\n", localTime, remoteTime, driftDuration.String())
 		log.InfoLn("please make sure that the time on the server is correct")
 	}
 	return nil
