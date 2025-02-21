@@ -37,7 +37,8 @@
         {%- endif %}
       {%- endif %}
       {%- if skip %}{% continue %}{% endif %}
-      <th style="text-align: center">{{ site.data.editions[currentEdition].name }}</th>
+      <th style="text-align: center">{%- if site.data.editions[currentEdition]['name_version'] %}{{ site.data.editions[currentEdition]['name_version'] }}{% else %}{{ site.data.editions[currentEdition]['name'] }}{% endif -%}
+      </th>
     {%- endfor %}
   </tr>
   </thead>
