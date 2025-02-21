@@ -1,0 +1,67 @@
+From f33dfc5efc514dc66e3298792912c3bfab8f0e60 Mon Sep 17 00:00:00 2001
+From: Dmitriy Andreychenko <dmitriy.andreychenko@flant.com>
+Date: Fri, 21 Feb 2025 16:05:48 +0300
+Subject: [PATCH] fix: add debug logs
+
+Signed-off-by: Dmitriy Andreychenko <dmitriy.andreychenko@flant.com>
+---
+ pkg/ipcache/ipcache.go              |  2 ++
+ pkg/k8s/watchers/cilium_endpoint.go | 22 ++++++++++++++++++++++
+ 2 files changed, 24 insertions(+)
+
+diff --git a/pkg/ipcache/ipcache.go b/pkg/ipcache/ipcache.go
+index 08bb066aac..f7c2dcb629 100644
+--- a/pkg/ipcache/ipcache.go
++++ b/pkg/ipcache/ipcache.go
+@@ -1019,6 +1019,8 @@ func (ipc *IPCache) DeleteOnMetadataMatch(IP string, source source.Source, names
+ 	k8sMeta := ipc.getK8sMetadata(IP)
+ 	if k8sMeta != nil && k8sMeta.Namespace == namespace && k8sMeta.PodName == name {
+ 		return ipc.deleteLocked(IP, source)
++	} else {
++		fmt.Printf("DEBUG DeleteOnMetadataMatch skip delete: %v %v\n", namespace, name)
+ 	}
+ 	return false
+ }
+diff --git a/pkg/k8s/watchers/cilium_endpoint.go b/pkg/k8s/watchers/cilium_endpoint.go
+index aad3684254..1d26923f48 100644
+--- a/pkg/k8s/watchers/cilium_endpoint.go
++++ b/pkg/k8s/watchers/cilium_endpoint.go
+@@ -114,6 +114,22 @@ func (k *K8sWatcher) ciliumEndpointsInit(ciliumNPClient client.Clientset, asyncC
+ }
+ 
+ func (k *K8sWatcher) endpointUpdated(oldEndpoint, endpoint *types.CiliumEndpoint) {
++	if oldEndpoint != nil {
++		fmt.Printf("DEBUG endpointUpdated old: %v, %v\n", oldEndpoint.Namespace, oldEndpoint.Name)
++		if oldEndpoint.Networking != nil {
++			for _, pair := range oldEndpoint.Networking.Addressing {
++				fmt.Printf("DEBUG endpointUpdated oldip4: %v\n", pair.IPV4)
++			}
++		}
++	}
++	if endpoint != nil {
++		fmt.Printf("DEBUG endpointUpdated new: %v, %v\n", endpoint.Namespace, endpoint.Name)
++		if endpoint.Networking != nil {
++			for _, pair := range endpoint.Networking.Addressing {
++				fmt.Printf("DEBUG endpointUpdated newip4: %v\n", pair.IPV4)
++			}
++		}
++	}
+ 	var namedPortsChanged bool
+ 	defer func() {
+ 		if namedPortsChanged {
+@@ -228,6 +244,12 @@ func (k *K8sWatcher) endpointUpdated(oldEndpoint, endpoint *types.CiliumEndpoint
+ }
+ 
+ func (k *K8sWatcher) endpointDeleted(endpoint *types.CiliumEndpoint) {
++	fmt.Printf("DEBUG endpointDeleted new: %v, %v, %v\n", endpoint.Namespace, endpoint.Name, endpoint.Networking.Addressing)
++	if endpoint.Networking != nil {
++		for _, pair := range endpoint.Networking.Addressing {
++			fmt.Printf("DEBUG endpointDeleted newip4: %v\n", pair.IPV4)
++		}
++	}
+ 	if endpoint.Networking != nil {
+ 		namedPortsChanged := false
+ 		for _, pair := range endpoint.Networking.Addressing {
+-- 
+2.34.1
+
