@@ -74,7 +74,7 @@ lang: ru
     {"size":"59G","storageClass":"linstor-thick-data-r1"}
     ```
 
-1. Проверьте состояние persistentVolumeClaim:
+1. Проверьте текущее состояние DVCR:
 
     ```shell
     d8 k get pvc dvcr -n d8-virtualization

@@ -73,15 +73,15 @@ To increase the disk size for DVCR, you need to set a larger size in the virtual
     {"size":"59G","storageClass":"linstor-thick-data-r1"}
    ```
 
-1. Check the persistentVolumeClaim status:
+1. Check the current status of the DVCR:
 
     ```shell
     d8 k get pvc dvcr -n d8-virtualization
     ```
 
-    Example output:
+   Example output:
 
-    ```txt
+    ```console
     NAME STATUS VOLUME                                    CAPACITY    ACCESS MODES   STORAGECLASS           AGE
     dvcr Bound  pvc-6a6cedb8-1292-4440-b789-5cc9d15bbc6b  57617188Ki  RWO            linstor-thick-data-r1  7d
     ```
