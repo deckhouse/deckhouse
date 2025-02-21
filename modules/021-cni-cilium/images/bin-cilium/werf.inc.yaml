@@ -17,7 +17,7 @@ shell:
   install:
   - git clone --depth 1 --branch v{{ $ciliumVersion }} {{ $.SOURCE_REPO }}/cilium/cilium.git /src/cilium
   - cd /src/cilium
-  - git apply --verbose /patches/*.patch
+  #- git apply --verbose /patches/*.patch
   - rm -rf Documentation
   - rm -rf /src/cilium/.git
 ---
