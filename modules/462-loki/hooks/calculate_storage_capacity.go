@@ -164,12 +164,12 @@ func lokiDisk(input *go_hook.HookInput) error {
 		break
 	}
 
-	if stsStorageSize == 0 {
-		stsStorageSize = defaultDiskSize
-	}
-
 	if pvcSize == 0 {
 		pvcSize = defaultDiskSize
+	}
+
+	if stsStorageSize == 0 {
+		stsStorageSize = pvcSize
 	}
 
 	reservedByWALs := uint64(ingestionRate*1024*1024) * 60 * 2
