@@ -27,7 +27,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
 )
 
-const maxTimeDrift int64 = 6 * 60 * 60 // 6 hours
+const maxTimeDrift int64 = 600 // 10 minutes
 var timestampRegexp = regexp.MustCompile(`^(\d+)$`)
 
 func getLocalTimeStamp() int64 {
@@ -75,8 +75,8 @@ func (pc *Checker) CheckTimeDrift() error {
 		localTime := time.Unix(localTimeStamp, 0).Format(time.RFC3339)
 		remoteTime := time.Unix(remoteTimeStamp, 0).Format(time.RFC3339)
 		driftDuration := time.Duration(timeDrift) * time.Second
-		return fmt.Errorf("time drift between local (%s) and remote server (%s) is too high: (%s)", localTime, remoteTime, driftDuration.String())
+		log.ErrorF("time drift between local (%s) and remote server (%s) is too high: (%s)", localTime, remoteTime, driftDuration.String())
+		log.InfoLn("please make sure that the time on the server is correct")
 	}
-
 	return nil
 }
