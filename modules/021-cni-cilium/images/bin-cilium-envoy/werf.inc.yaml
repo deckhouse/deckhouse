@@ -26,7 +26,7 @@ shell:
   - git clone {{ $.SOURCE_REPO }}/cilium/proxy.git /src/proxy
   - cd /src/proxy
   - git checkout {{ $ciliumProxyRev }}
-  - git apply --verbose /patches/*.patch
+  #- git apply --verbose /patches/*.patch
   - rm -rf /src/proxy/.git
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-basel-artifact
