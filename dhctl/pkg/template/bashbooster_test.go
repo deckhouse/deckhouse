@@ -51,7 +51,7 @@ func TestRenderBashBooster(t *testing.T) {
 		t.Errorf("ParseConfigFromData error: %v", err)
 	}
 
-	bashibleData, _ := metaConfig.ConfigForBashibleBundleTemplate("ubuntu", "10.0.0.2")
+	bashibleData, _ := metaConfig.ConfigForBashibleBundleTemplate("10.0.0.2")
 	data, err := RenderBashBooster("/deckhouse/candi/bashible/bashbooster/", bashibleData)
 	if err != nil {
 		t.Errorf("Rendering bash booster error: %v", err)
