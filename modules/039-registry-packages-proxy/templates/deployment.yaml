@@ -63,6 +63,7 @@ spec:
     spec:
       # registry-packages-proxy runs in the hostNetwork on the bootstrap phase due to this component should work
       # when is cni plugin is absent
+      automountServiceAccountToken: true
       hostNetwork: true
       dnsPolicy: ClusterFirstWithHostNet
       imagePullSecrets:

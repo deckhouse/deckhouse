@@ -51,6 +51,7 @@ spec:
       {{- include "helm_lib_tolerations" (tuple $ "monitoring") | nindent 6 }}
       {{- include "helm_lib_priority_class" (tuple $ "cluster-medium") | nindent 6 }}
       {{- include "helm_lib_module_pod_security_context_run_as_user_deckhouse" $ | nindent 6 }}
+      automountServiceAccountToken: true
       containers:
       - name: alerts-receiver
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" $ | nindent 8 }}
