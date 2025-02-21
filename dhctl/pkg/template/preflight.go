@@ -21,6 +21,7 @@ var (
 	checkLocalhostScriptPath          = candiBashibleDir + "/preflight/check_localhost.sh.tpl"
 	checkProxyRevTunnelOpenScriptPath = candiBashibleDir + "/preflight/check_reverse_tunnel_open.sh.tpl"
 	killReverseTunnelPath             = candiBashibleDir + "/preflight/kill_reverse_tunnel.sh.tpl"
+	checkDeckhouseUserScriptPath      = candiBashibleDir + "/preflight/check_deckhouse_user.sh.tpl"
 	preflightScriptDirPath            = candiBashibleDir + "/preflight/"
 )
 
@@ -28,6 +29,12 @@ func RenderAndSavePreflightCheckPortsScript() (string, error) {
 	log.DebugLn("Start render check ports script")
 
 	return RenderAndSaveTemplate("check_ports.sh", checkPortsScriptPath, map[string]interface{}{})
+}
+
+func RenderAndSavePreflightCheckDeckhouseUserScript() (string, error) {
+	log.DebugLn("Start render check user script")
+
+	return RenderAndSaveTemplate("check_deckhouse_user.sh", checkDeckhouseUserScriptPath, map[string]interface{}{})
 }
 
 func RenderAndSavePreflightCheckLocalhostScript() (string, error) {
