@@ -1,6 +1,12 @@
 {{- $hubbleUIVersion := "0.13.1" }}
+{{- $hubbleUIFrontVersion := "0.13.1" }}
+{{- $hubbleUIBackVersion := "0.13.1" }}
 ---
-# Based on https://github.com/cilium/hubble-ui/blob/v0.13.1/backend/Dockerfile
+# Based on https://github.com/cilium/cilium/blob/v1.17.0/install/kubernetes/cilium/values.yaml#L1691
+# and on https://github.com/cilium/cilium/blob/v1.17.0/install/kubernetes/cilium/values.yaml#L1725
+# and on https://github.com/cilium/hubble-ui/blob/v0.13.1/Dockerfile
+# and on https://github.com/cilium/hubble-ui/blob/v0.13.1/backend/Dockerfile
+---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 fromImage: common/src-artifact
 final: false
@@ -17,22 +23,20 @@ git:
       - '**/*'
 shell:
   install:
-  #- git clone --depth 1 --branch v{{ $hubbleUIVersion }} {{ $.SOURCE_REPO }}/cilium/hubble-ui.git /src
-  - cd /src
-  - git init .
-  - git remote add origin -f {{ $.SOURCE_REPO }}/cilium/hubble-ui.git
-  - git checkout v{{ $hubbleUIVersion }}
+  - git clone --depth 1 --branch v{{ $hubbleUIVersion }} {{ $.SOURCE_REPO }}/cilium/hubble-ui.git /src/hubble-ui
+  - cd /src/hubble-ui
   - git apply /patches/*.patch --verbose
+  - rm -r /src/hubble-ui/.git
   - chown -R 64535:64535 /src/server/public
-  - rm -r /src/.git
+
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-backend-build-artifact
 from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
 final: false
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
-  add: /src
-  to: /src
+  add: /src/hubble-ui
+  to: /src/hubble-ui
   before: install
 mount:
 - fromPath: ~/go-pkg-cache
@@ -42,11 +46,13 @@ shell:
   - export GO_VERSION=${GOLANG_VERSION}
   - export GOPROXY={{ $.GOPROXY }}
   - export "GOARCH=amd64"
-  - cd /src/backend
-  - go mod vendor && go mod download -x
+  - cd /src/hubble-ui/backend
+  - go mod download -x && go mod vendor && go mod verify
   - CGO_ENABLED=0 go build -ldflags "-s -w" -o backend
-  - chown 64535:64535 /src/backend/backend
-  - chmod 0700 /src/backend/backend
+  - chown 64535:64535 /src/hubble-ui/backend/backend
+  - chmod 0700 /src/hubble-ui/backend/backend
+---
+############################################################################
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-frontend
 fromImage: common/nginx-static
@@ -63,7 +69,7 @@ image: {{ $.ModuleName }}/{{ $.ImageName }}-backend
 fromImage: common/distroless
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-backend-build-artifact
-  add: /src/backend/backend
+  add: /src/hubble-ui/backend/backend
   to: /usr/local/bin/hubble-ui-backend
   before: install
 imageSpec:
