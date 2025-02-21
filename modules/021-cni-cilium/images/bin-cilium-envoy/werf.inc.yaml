@@ -78,8 +78,11 @@ shell:
   - echo 'Defaults env_keep += "GOPROXY GOPATH GOROOT GOOS GOARCH GO_VERSION CGO_ENABLED"' >> /etc/sudoers
   - echo 'Defaults env_keep += "TARGETARCH ARCH BAZEL_VERSION USE_BAZEL_VERSION BAZEL_OUTPUT_BASE"' >> /etc/sudoers
   - echo 'Defaults env_keep += "BAZEL_BUILD_OPTS PKG_BUILD V DEBUG DESTDIR"' >> /etc/sudoers
+  - echo 'Defaults env_keep += "SSH_AUTH_SOCK"' >> /etc/sudoers
   - groupadd -f -g 1337 cilium && useradd -m -g cilium -u 1337 cilium
   - sudo -u cilium PATH=${PATH} echo "StrictHostKeyChecking accept-new" > /home/cilium/.ssh/config
+  - echo SSH_AUTH_SOCK=$SSH_AUTH_SOCK
+  - sudo -u cilium PATH=${PATH} echo SSH_AUTH_SOCK=$SSH_AUTH_SOCK
   - chmod -R a+w /tmp
   - chown -R 1337:1337 /cilium/proxy
   setup:
