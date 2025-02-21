@@ -82,12 +82,15 @@ func (s *registryscaner) Subscribe(ctx context.Context, scanInterval time.Durati
 			select {
 			case <-ticker.C:
 				s.processRegistries(ctx)
+
 				state := s.cache.GetRange()
 				if len(state) > 0 {
 					s.logger.Info("module versions changed in registry")
+
 					if err := s.updateHandler(state); err != nil {
 						s.logger.Error("updateHandler", log.Err(err))
 					}
+
 					s.cache.ResetRange()
 				}
 
