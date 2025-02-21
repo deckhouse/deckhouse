@@ -46,7 +46,6 @@ shell:
   - rm -rf /src/protoc-gen-go-json/.git
   - git clone --depth 1 --branch v1.5.1 {{ $.SOURCE_REPO }}/pseudomuto/protoc-gen-doc.git /src/protoc-gen-doc
   - rm -rf /src/protoc-gen-doc/.git
-
 ---
 image: {{ .ModuleName }}/base-cilium-dev
 fromImage: common/alt-p11-artifact
@@ -115,7 +114,7 @@ shell:
   - cd /src/protoc-gen-go-json && go install
   - cd /src/protoc-gen-doc/cmd/protoc-gen-doc && go install
   # Install Bazelisk (for build envoy)
-  - curl --fail --show-error --silent --location {{ $source }}/bazelbuild/bazelisk/releases/download/{{ $bazeliskVersions }}/bazelisk-linux-x86_64 -o /usr/bin/bazel
+  - curl --fail --show-error --silent --location "{{ $source }}/bazelbuild/bazelisk/releases/download/{{ $bazeliskVersions }}/bazelisk-linux-amd64" -o /usr/bin/bazel
   - chmod +x /usr/local/bin/bazel
 imageSpec:
   config:
