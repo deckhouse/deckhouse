@@ -56,6 +56,7 @@ LIST_OF_PAGES=(
 
 for ix in ${!LIST_OF_PAGES[*]}
 do
+  echo "Preparing page $PATH_TO_PAGES${LIST_OF_PAGES[$ix]}"
   echo "\n## "$(getname $PATH_TO_PAGES${LIST_OF_PAGES[$ix]}) >> $PATH_TO_PDF_PAGE
   echo "$(gettext $PATH_TO_PAGES${LIST_OF_PAGES[$ix]})" >> $PATH_TO_PDF_PAGE
 done
