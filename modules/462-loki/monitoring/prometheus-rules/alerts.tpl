@@ -2,7 +2,7 @@
   rules:
     - alert: LokiRetentionPerionViolation
       expr: |
-        (time() - avg(force_expiration_hook_last_expired_chunk_timestamp_seconds{job="loki", namespace="d8-monitoring"})) / 3600 < {{ .Values.loki.retentionPeriodHours }}
+        (time() - max_over_time(force_expiration_hook_last_expired_chunk_timestamp_seconds{job="loki",namespace="d8-monitoring"}[10m])) / 3600 < {{ .Values.loki.retentionPeriodHours }}
       for: 5m
       labels:
         severity_level: "4"

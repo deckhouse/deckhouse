@@ -29,6 +29,8 @@ spec:
     metadata:
       labels:
         app: {{ .Chart.Name }}
+        threshold.extended-monitoring.deckhouse.io/disk-bytes-critical: "97"
+        threshold.extended-monitoring.deckhouse.io/disk-bytes-warning: "96"
       annotations:
         checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
     spec:
