@@ -67,21 +67,26 @@ bb-package-fetch-blob() {
 import random
 import ssl
 try:
-    from urllib.request import urlopen, Request, HTTPError
-except ImportError as e:
-    from urllib2 import urlopen, Request, HTTPError
-# Choose a random endpoint to increase fault tolerance and reduce load on a single endpoint.
+  from urllib.request import urlopen, Request, HTTPError
+except ImportError:
+  from urllib2 import urlopen, Request, HTTPError
 endpoints = "${PACKAGES_PROXY_ADDRESSES}".split(",")
-endpoint = random.choice(endpoints)
+# Choose a random endpoint to increase fault tolerance and reduce load on a single endpoint.
+random.shuffle(endpoints)
 ssl._create_default_https_context = ssl._create_unverified_context
-url = 'https://{}/package?digest=$1&repository=${REPOSITORY}&path=${REPOSITORY_PATH}'.format(endpoint)
-request = Request(url, headers={'Authorization': 'Bearer ${PACKAGES_PROXY_TOKEN}'})
-try:
-    response = urlopen(request, timeout=300)
-except HTTPError as e:
-    print("HTTP Error {}: {}".format(e.getcode(), e.read()[:255]))
+for ep in endpoints:
+  url = 'https://{}/package?digest=$1&repository=${REPOSITORY}&path=${REPOSITORY_PATH}'.format(ep)
+  request = Request(url, headers={'Authorization': 'Bearer ${PACKAGES_PROXY_TOKEN}'})
+  try:
+    response = urlopen(request, timeout=10)
+  except HTTPError as e:
+    print("Access to {} return HTTP Error {}: {}".format(url, e.getcode(), e.read()[:255]))
     print('You can check via curl -v -k -H "Authorization: Bearer ${PACKAGES_PROXY_TOKEN}" "{}" > /dev/null'.format(url))
-    raise SystemExit
+    continue
+  except Exception as e:
+    print("Access to {} return Error: {}".format(url, e))
+    continue
+  break
 with open('$2', 'wb') as f:
     f.write(response.read())
 EOF

@@ -80,8 +80,8 @@ func (s *SSH) Cmd() *exec.Cmd {
 		"-o", "StrictHostKeyChecking=no",
 		"-o", "UserKnownHostsFile=/dev/null",
 		"-o", "GlobalKnownHostsFile=/dev/null",
-		"-o", "ServerAliveInterval=10",
-		"-o", "ServerAliveCountMax=3",
+		"-o", "ServerAliveInterval=1",
+		"-o", "ServerAliveCountMax=3600",
 		"-o", "ConnectTimeout=15",
 		"-o", "PasswordAuthentication=no",
 	}

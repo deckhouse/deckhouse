@@ -139,6 +139,7 @@ type Logger interface {
 	LogJSON([]byte)
 
 	ProcessLogger() ProcessLogger
+	NewSilentLogger() *SilentLogger
 
 	CreateBufferLogger(buffer *bytes.Buffer) Logger
 
@@ -213,6 +214,10 @@ func (d *PrettyLogger) FlushAndClose() error {
 
 func (d *PrettyLogger) ProcessLogger() ProcessLogger {
 	return newPrettyProcessLogger(d.logboekLogger)
+}
+
+func (d *PrettyLogger) NewSilentLogger() *SilentLogger {
+	return &SilentLogger{}
 }
 
 func (d *PrettyLogger) LogProcess(p, t string, run func() error) error {
@@ -336,6 +341,10 @@ func (d *SimpleLogger) ProcessLogger() ProcessLogger {
 	return newWrappedProcessLogger(d)
 }
 
+func (d *SimpleLogger) NewSilentLogger() *SilentLogger {
+	return &SilentLogger{}
+}
+
 func (d *SimpleLogger) FlushAndClose() error {
 	return nil
 }
@@ -409,6 +418,10 @@ type DummyLogger struct{}
 
 func (d *DummyLogger) ProcessLogger() ProcessLogger {
 	return newWrappedProcessLogger(d)
+}
+
+func (d *DummyLogger) NewSilentLogger() *SilentLogger {
+	return &SilentLogger{}
 }
 
 func (d *DummyLogger) CreateBufferLogger(buffer *bytes.Buffer) Logger {
@@ -548,13 +561,24 @@ func GetDefaultLogger() Logger {
 }
 
 func GetSilentLogger() Logger {
-	return emptyLogger
+	switch defaultLogger.(type) {
+	default:
+		return emptyLogger
+	case *TeeLogger:
+		return defaultLogger.NewSilentLogger()
+	}
 }
 
-type SilentLogger struct{}
+type SilentLogger struct {
+	t *TeeLogger
+}
 
 func (d *SilentLogger) ProcessLogger() ProcessLogger {
 	return newWrappedProcessLogger(d)
+}
+
+func (d *SilentLogger) NewSilentLogger() *SilentLogger {
+	return &SilentLogger{}
 }
 
 func (d *SilentLogger) CreateBufferLogger(buffer *bytes.Buffer) Logger {
@@ -571,42 +595,81 @@ func (d *SilentLogger) FlushAndClose() error {
 }
 
 func (d *SilentLogger) LogInfoF(format string, a ...interface{}) {
+	if d.t != nil {
+		d.t.writeToFile(fmt.Sprintf(format, a...))
+	}
 }
 
 func (d *SilentLogger) LogInfoLn(a ...interface{}) {
+	if d.t != nil {
+		d.t.writeToFile(fmt.Sprintln(a...))
+	}
 }
 
 func (d *SilentLogger) LogErrorF(format string, a ...interface{}) {
+	if d.t != nil {
+		d.t.writeToFile(fmt.Sprintf(format, a...))
+	}
 }
 
 func (d *SilentLogger) LogErrorLn(a ...interface{}) {
+	if d.t != nil {
+		d.t.writeToFile(fmt.Sprintln(a...))
+	}
 }
 
 func (d *SilentLogger) LogDebugF(format string, a ...interface{}) {
+	if d.t != nil {
+		d.t.writeToFile(fmt.Sprintf(format, a...))
+	}
 }
 
 func (d *SilentLogger) LogDebugLn(a ...interface{}) {
+	if d.t != nil {
+		d.t.writeToFile(fmt.Sprintln(a...))
+	}
 }
 
 func (d *SilentLogger) LogSuccess(l string) {
+	if d.t != nil {
+		d.t.writeToFile(l)
+	}
 }
 
 func (d *SilentLogger) LogFail(l string) {
+	if d.t != nil {
+		d.t.writeToFile(l)
+	}
 }
 
 func (d *SilentLogger) LogFailRetry(l string) {
+	if d.t != nil {
+		d.t.writeToFile(l)
+	}
 }
 
 func (d *SilentLogger) LogWarnLn(a ...interface{}) {
+	if d.t != nil {
+		d.t.writeToFile(fmt.Sprintln(a...))
+	}
 }
 
 func (d *SilentLogger) LogWarnF(format string, a ...interface{}) {
+	if d.t != nil {
+		d.t.writeToFile(fmt.Sprintf(format, a...))
+	}
 }
 
 func (d *SilentLogger) LogJSON(content []byte) {
+	if d.t != nil {
+		d.t.writeToFile(string(content))
+	}
 }
 
 func (d *SilentLogger) Write(content []byte) (int, error) {
+	if d.t != nil {
+		d.t.writeToFile(string(content))
+	}
 	return len(content), nil
 }
 
@@ -679,12 +742,18 @@ func (d *TeeLogger) ProcessLogger() ProcessLogger {
 	return d.l.ProcessLogger()
 }
 
+func (d *TeeLogger) NewSilentLogger() *SilentLogger {
+	return &SilentLogger{
+		t: d,
+	}
+}
+
 func (d *TeeLogger) LogProcess(msg, t string, run func() error) error {
-	d.writeToFile(fmt.Sprintf("Start process %s", t))
+	d.writeToFile(fmt.Sprintf("Start process %s\n", t))
 
 	err := d.l.LogProcess(msg, t, run)
 
-	d.writeToFile(fmt.Sprintf("End process %s", t))
+	d.writeToFile(fmt.Sprintf("End process %s\n", t))
 
 	return err
 }

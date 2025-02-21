@@ -156,7 +156,7 @@ func GetLockLeaseConfig(identity string) *lease.LeaseLockConfig {
 		Identity:             identity,
 		Namespace:            "d8-system",
 		LeaseDurationSeconds: 300,
-		RenewEverySeconds:    180,
+		RenewEverySeconds:    30,
 		RetryWaitDuration:    3 * time.Second,
 		AdditionalUserInfo:   additionalInfo,
 		OnRenewError: func(renewErr error) {
