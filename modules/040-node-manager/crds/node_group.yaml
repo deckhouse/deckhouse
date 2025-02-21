@@ -1495,6 +1495,10 @@ spec:
                     - CloudPermanent
                     - CloudStatic
                     - Static
+                nodeDrainTimeoutSecond:
+                  type: integer
+                  description: |
+                    Maximum duration (in seconds) for which the controller attempts to reschedule pods to a new machine during node draining.
                 cri:
                   type: object
                   description: |
@@ -1647,8 +1651,10 @@ spec:
                     - maxPerZone
                   properties:
                     quickShutdown:
-                      description: Lowers CloudEphemeral machine drain timeout to 5 minutes.
                       type: boolean
+                      deprecated: true
+                      description: |
+                        Lowers CloudEphemeral machine drain timeout to 5 minutes.
                     zones:
                       description: |
                         List of availability zones to create instances in.
