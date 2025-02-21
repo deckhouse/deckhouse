@@ -8,6 +8,9 @@
     "path": "",
     "editionMinimumAvailable": "ce"
   },
+  "ceph-csi": {
+    "editions": ["ce","se","se-plus","ee"]
+  },
   "istio": {
     "path": "modules/istio/",
     "editionsWithRestrictions": ["ce","be","se","se-plus"],
