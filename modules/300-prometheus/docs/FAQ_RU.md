@@ -686,6 +686,10 @@ metadata:
   labels:
     prometheus: main
 spec:
+  authorization:
+  credentials:
+    key: token
+    name: prometheus-token
   honorLabels: true
   staticConfigs:
     - targets: ['example-app.frontend.svc.{{ .Values.global.discovery.clusterDomain }}.:8080']
