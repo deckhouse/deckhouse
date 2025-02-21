@@ -3,7 +3,7 @@
 image: e2e-terraform
 # we use artifact with ubuntu because alpine can not unzip with `unzip` and `tar` command
 # current openstack zip-archive with error: "unzip: zip flag 8 (streaming) is not supported"
-from: {{ .Images.BASE_UBUNTU }}
+fromImage: common/alt-p11-artifact
 import:
   {{- $k8sVersion := "1.28"}}
   {{- $image_version := printf "%s.%d" $k8sVersion (index $.CandiVersionMap "k8s" $k8sVersion "patch") | replace "." "-" }}

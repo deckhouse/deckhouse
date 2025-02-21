@@ -33,7 +33,7 @@ imageSpec:
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
 final: false
-from: {{ $.Images.BASE_UBUNTU }}
+fromImage: common/alt-p11-artifact
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
   add: /src
@@ -41,8 +41,7 @@ import:
   before: install
 shell:
   beforeInstall:
-  {{- include "ubuntu packages proxy" . | nindent 2 }}
-  - apt-get update && apt-get install -y make libinih-dev libblkid-dev gettext liburcu-dev libtool libicu-dev pkg-config
+  - apt-get install -y make libinih-devel libblkid-devel gettext libuserspace-rcu-devel libtool libicu-devel pkg-config
   setup:
   - cd /src/xfsprogs-dev
   - libtoolize -c -i -f
