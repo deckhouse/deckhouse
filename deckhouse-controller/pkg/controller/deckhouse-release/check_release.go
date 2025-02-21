@@ -858,70 +858,49 @@ func (f *DeckhouseReleaseFetcher) getNewVersions(ctx context.Context, actual, ta
 		return nil, fmt.Errorf("list tags: %w", err)
 	}
 
-	versionMatcher := regexp.MustCompile(`^v(([0-9]+).([0-9]+).([0-9]+))$`)
-
-	collection := make([]*semver.Version, 0)
-
-	// to be sure, they are sorted correctly we parse them before working
-	for _, ver := range tags {
-		if !versionMatcher.MatchString(ver) {
-			f.logger.Debug("not suitable. This version will be skipped.", slog.String("version", ver))
-
-			continue
-		}
-
-		newSemver, err := semver.NewVersion(ver)
-		if err != nil {
-			f.logger.Warn("unable to parse semver from the registry. This version will be skipped.", slog.String("version", ver))
-
-			continue
-		}
-
-		collection = append(collection, newSemver)
-	}
-
+	collection := f.parseAndFilterVersions(tags)
 	if len(collection) == 0 {
 		return nil, fmt.Errorf("no matched tags in registry")
 	}
 
 	sort.Sort(semver.Collection(collection))
 
+	// Get only highest patch version for each minor version between actual and target
 	result := make([]*semver.Version, 0)
-	prevVersion := new(semver.Version)
+	var lastVer *semver.Version
 
 	for _, ver := range collection {
-		// skip all versions out of actual and target range
-		if actual.Major() > ver.Major() ||
-			(actual.Major() == ver.Major() && actual.Minor() > ver.Minor()) ||
-			target.Major() < ver.Major() ||
-			(target.Major() == ver.Major() && target.Minor() < ver.Minor()) {
+		// Skip versions outside the actual-target range
+		if !isVersionInRange(ver, actual, target) {
 			continue
 		}
 
-		// add only last minor or last major releases
-		if !prevVersion.Equal(new(semver.Version)) &&
-			(prevVersion.Major() < ver.Major() || prevVersion.Minor() < ver.Minor()) {
-			result = append(result, prevVersion)
+		// Add version if it's first or has different minor/major from previous
+		if lastVer == nil || lastVer.Minor() < ver.Minor() || lastVer.Major() < ver.Major() {
+			if lastVer != nil {
+				result = append(result, lastVer)
+			}
 		}
 
-		prevVersion = ver
+		lastVer = ver
 	}
 
-	// if last patch is more than target release - skip target
-	if prevVersion.Major() > target.Major() ||
-		(prevVersion.Major() == target.Major() && prevVersion.Minor() > target.Minor()) ||
-		(prevVersion.Major() == target.Major() && prevVersion.Minor() == target.Minor() && prevVersion.Patch() > target.Patch()) {
-		f.logger.Warn("last release is not equals to target, skipped", slog.String("last", prevVersion.Original()), slog.String("target", target.Original()))
-		result = append(result, target)
-	} else {
-		result = append(result, prevVersion)
-	}
+	// Add the final version
+	if lastVer != nil {
+		if isVersionGreaterThanTarget(lastVer, target) {
+			f.logger.Warn("last release is not equals to target, using target instead",
+				slog.String("last", lastVer.Original()),
+				slog.String("target", target.Original()))
 
-	// trim max patch from current minor version
-	if len(result) > 1 {
-		if result[0].Minor() == actual.Minor() {
-			result = result[1:]
+			result = append(result, target)
+		} else {
+			result = append(result, lastVer)
 		}
+	}
+
+	// Remove highest patch from actual minor version if we have more versions
+	if len(result) > 1 && result[0].Minor() == actual.Minor() {
+		result = result[1:]
 	}
 
 	if len(result) == 0 {
@@ -929,6 +908,41 @@ func (f *DeckhouseReleaseFetcher) getNewVersions(ctx context.Context, actual, ta
 	}
 
 	return result, nil
+}
+
+func (f *DeckhouseReleaseFetcher) parseAndFilterVersions(tags []string) []*semver.Version {
+	versionMatcher := regexp.MustCompile(`^v(([0-9]+).([0-9]+).([0-9]+))$`)
+	var versions []*semver.Version
+
+	for _, tag := range tags {
+		if !versionMatcher.MatchString(tag) {
+			f.logger.Debug("not suitable. This version will be skipped.", slog.String("version", tag))
+			continue
+		}
+
+		ver, err := semver.NewVersion(tag)
+		if err != nil {
+			f.logger.Warn("unable to parse semver from the registry. This version will be skipped.", slog.String("version", tag))
+			continue
+		}
+
+		versions = append(versions, ver)
+	}
+
+	return versions
+}
+
+func isVersionInRange(ver, actual, target *semver.Version) bool {
+	return !(actual.Major() > ver.Major() ||
+		(actual.Major() == ver.Major() && actual.Minor() > ver.Minor()) ||
+		target.Major() < ver.Major() ||
+		(target.Major() == ver.Major() && target.Minor() < ver.Minor()))
+}
+
+func isVersionGreaterThanTarget(ver, target *semver.Version) bool {
+	return ver.Major() > target.Major() ||
+		(ver.Major() == target.Major() && ver.Minor() > target.Minor()) ||
+		(ver.Major() == target.Major() && ver.Minor() == target.Minor() && ver.Patch() > target.Patch())
 }
 
 var globalModules = []string{"candi", "deckhouse-controller", "global"}
