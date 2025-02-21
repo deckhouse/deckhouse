@@ -187,29 +187,25 @@ func (f *DeckhouseReleaseFetcher) fetchDeckhouseRelease(ctx context.Context) err
 		return fmt.Errorf("get new image: %w", imageErr)
 	}
 
-	var (
-		deployedRelease *v1alpha1.DeckhouseRelease
-	)
-
 	releases, err := f.listDeckhouseReleases(ctx)
 	if err != nil {
 		return fmt.Errorf("list deckhouse releases: %w", err)
 	}
 
-	sort.Sort(releaseUpdater.ByVersion[*v1alpha1.DeckhouseRelease](releases))
+	var releaseForUpdate *v1alpha1.DeckhouseRelease
+	releasesInCluster := make([]*v1alpha1.DeckhouseRelease, 0)
 
-	releasesFromDeployed := make([]*v1alpha1.DeckhouseRelease, 0, len(releases))
-	for _, release := range releases {
-		if release.GetPhase() == v1alpha1.DeckhouseReleasePhaseDeployed {
-			// no deployed release was found or there is more than one deployed release (get the latest)
-			if deployedRelease == nil || release.GetVersion().GreaterThan(deployedRelease.GetVersion()) {
-				deployedRelease = release
-			}
-		}
+	idx, deployedRelease := getLatestDeployedRelease(releases)
+	if idx != -1 {
+		releasesInCluster = releases[:idx+1]
+		releaseForUpdate = deployedRelease
+	}
 
-		if deployedRelease != nil {
-			releasesFromDeployed = append(releasesFromDeployed, release)
-		}
+	// check sequence from the start if no deckhouse release deployed
+	// lst element because it's reversed
+	if len(releasesInCluster) == 0 && len(releases) > 0 {
+		releaseForUpdate = releases[len(releases)-1]
+		releasesInCluster = releases
 	}
 
 	// restore current deployed release if no deployed releases found
@@ -223,10 +219,15 @@ func (f *DeckhouseReleaseFetcher) fetchDeckhouseRelease(ctx context.Context) err
 
 		f.logger.Warn("deployed deckhouse-release restored")
 
-		deployedRelease = restored
-		releases = append(releases, restored)
+		restored.Status.Phase = v1alpha1.DeckhouseReleasePhaseDeployed
 
-		sort.Sort(releaseUpdater.ByVersion[*v1alpha1.DeckhouseRelease](releases))
+		releasesInCluster = append(releasesInCluster, restored)
+		releaseForUpdate = restored
+
+		idx, _ = getLatestDeployedRelease(releasesInCluster)
+		if idx != -1 {
+			releasesInCluster = releasesInCluster[:idx+1]
+		}
 	}
 
 	// no new image found
@@ -242,22 +243,8 @@ func (f *DeckhouseReleaseFetcher) fetchDeckhouseRelease(ctx context.Context) err
 
 	f.metricStorage.Grouped().ExpireGroupMetrics(metricUpdatingFailedGroup)
 
-	var releaseForUpdate *v1alpha1.DeckhouseRelease
-
-	// check sequence from the start if no deckhouse release deployed
-	if len(releases) > 0 {
-		releaseForUpdate = releases[0]
-	}
-	releasesInCluster := releases
-
-	// shortened slice for only releases after deployed
-	if deployedRelease != nil {
-		releaseForUpdate = deployedRelease
-
-		if len(releasesFromDeployed) > 0 {
-			releasesInCluster = releasesFromDeployed
-		}
-	}
+	// sort releases before
+	sort.Sort(releaseUpdater.ByVersion[*v1alpha1.DeckhouseRelease](releasesInCluster))
 
 	lastCreatedMeta, err := f.createReleases(ctx, imageInfo.Metadata, releaseForUpdate, releasesInCluster, newSemver)
 	if err != nil {
@@ -960,6 +947,18 @@ func (f *DeckhouseReleaseFetcher) generateChangelogForEnabledModules(releaseMeta
 	}
 
 	return enabledModulesChangelog
+}
+
+func getLatestDeployedRelease(releases []*v1alpha1.DeckhouseRelease) (int, *v1alpha1.DeckhouseRelease) {
+	sort.Sort(sort.Reverse(releaseUpdater.ByVersion[*v1alpha1.DeckhouseRelease](releases)))
+
+	for idx, release := range releases {
+		if release.GetPhase() == v1alpha1.DeckhouseReleasePhaseDeployed {
+			return idx, release
+		}
+	}
+
+	return -1, nil
 }
 
 type ReleaseMetadata struct {
