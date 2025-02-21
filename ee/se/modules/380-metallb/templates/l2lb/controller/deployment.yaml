@@ -45,6 +45,7 @@ spec:
     metadata:
       labels:
         app: l2lb-controller
+        metallb-role: controller
     spec:
       {{- include "helm_lib_priority_class" (tuple . "system-cluster-critical") | nindent 6 }}
       {{- include "helm_lib_node_selector" (tuple . "system") | nindent 6 }}

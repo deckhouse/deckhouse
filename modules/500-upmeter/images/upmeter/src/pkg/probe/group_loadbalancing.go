@@ -53,7 +53,7 @@ func initLoadBalancing(access kubernetes.Access, preflight checker.Doer) []runne
 				Access:           access,
 				Timeout:          5 * time.Second,
 				Namespace:        "d8-metallb",
-				LabelSelector:    "app=controller",
+				LabelSelector:    "metallb-role=controller",
 				PreflightChecker: controlPlanePinger,
 			},
 		}, {
@@ -65,7 +65,7 @@ func initLoadBalancing(access kubernetes.Access, preflight checker.Doer) []runne
 				Access:           access,
 				Timeout:          5 * time.Second,
 				Namespace:        "d8-metallb",
-				LabelSelector:    "app=speaker",
+				LabelSelector:    "metallb-role=speaker",
 				PreflightChecker: controlPlanePinger,
 			},
 		},
