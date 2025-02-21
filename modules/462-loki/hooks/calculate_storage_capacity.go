@@ -114,7 +114,7 @@ func statefulSetFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, er
 
 	return StatefulSet{
 		Name:       sts.Name,
-		VolumeSize: uint64(volumeSize),
+		VolumeSize: volumeSize,
 	}, nil
 }
 
