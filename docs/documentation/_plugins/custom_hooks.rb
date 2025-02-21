@@ -1,34 +1,5 @@
 require 'json'
 
-# Fills site.data.modulesFeatureStatus according to the site.data.sidebars.main.entries
-# DEPRECATED.
-# The site.data.modulesFeatureStatus structure used in the comparison table.
-# {
-#  "module-kebab-name": "<feature_status>",
-#  ...
-# }
-# def parse_module_data(input, site)
-#     if input.has_key?("featureStatus")
-#        featureStatus = input["featureStatus"]
-#        if input.has_key?("moduleName")
-#          moduleName = input["moduleName"]
-#        elsif input["title"].is_a?(Hash) && input["title"].has_key?('en')
-#          moduleName = input["title"]['en']
-#        else
-#          moduleName = input["title"]
-#        end
-#        if ! site.data["modulesFeatureStatus"]
-#           site.data["modulesFeatureStatus"] = {}
-#        end
-#        site.data["modulesFeatureStatus"][moduleName] = featureStatus
-#     else
-#       if input.has_key?("folders")
-#         input["folders"].each do |item|
-#           parse_module_data(item, site)
-#         end
-#       end
-#     end
-# end
 
 # Inserts the module-editions.liquid block into the module pages content.
 # The block is inserted at the beginning of the page's content if the page content is not empty.
