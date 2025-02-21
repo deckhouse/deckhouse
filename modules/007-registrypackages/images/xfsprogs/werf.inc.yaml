@@ -41,7 +41,7 @@ import:
   before: install
 shell:
   beforeInstall:
-  - apt-get install -y make libinih-devel libblkid-devel gettext libuserspace-rcu-devel libtool libicu-devel pkg-config
+  - apt-get install -y make libinih-devel libblkid-devel gettext libuserspace-rcu-devel libtool libicu-devel pkg-config build-essential
   setup:
   - cd /src/xfsprogs-dev
   - libtoolize -c -i -f
