@@ -277,7 +277,7 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "gomod"
-  directory: "/modules/030-cloud-provider-aws/images/cloud-data-discoverer"
+  directory: "/modules/030-cloud-provider-aws/images/cloud-data-discoverer/src"
   labels:
   - "type/dependencies"
   - "status/ok-to-test"
