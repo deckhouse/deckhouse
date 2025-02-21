@@ -16,6 +16,7 @@ imageSpec:
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-dex-src-artifact
 fromImage: common/src-artifact
+fromCacheVersion: "2025-02-18.01"
 final: false
 git:
   - url: {{ $.SOURCE_REPO }}/dexidp/dex.git
@@ -28,8 +29,14 @@ git:
         - '**/go.sum'
   - add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches/
     to: /patches
+    stageDependencies:
+      install:
+        - '**/*'
   - add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/src/web
     to: /web
+    stageDependencies:
+      install:
+        - '**/*'
 shell:
   install:
     - cd /src

@@ -55,8 +55,8 @@ The following Managed Kubernetes services are supported (note that some service 
 
 The following node types that can be worked with within a node group (resource [NodeGroup](cr.html#nodegroup)) are supported:
 
-- `CloudEphemeral` — such nodes are automatically ordered, created, and deleted in the configured cloud provider.
-- `CloudPermanent` — they differ in that their configuration is not taken from the custom resource [nodeGroup](cr.html#nodegroup), but from a special resource `<PROVIDER>ClusterConfiguration` (for example, [AWSClusterConfiguration](../cloud-provider-aws/cluster_configuration.html) for AWS). Also, an important difference is that to apply node configuration, you need to run `dhctl converge` (by running Deckhouse installer). An example of a CloudPermanent node of a cloud cluster is a cluster master node.
+- `CloudEphemeral` — the nodes are automatically ordered, created, and deleted in the configured cloud provider.
+- `CloudPermanent` — the nodes differ in that their configuration is not taken from the custom resource [nodeGroup](cr.html#nodegroup), but from a special resource `<PROVIDER>ClusterConfiguration` (for example, [AWSClusterConfiguration](../cloud-provider-aws/cluster_configuration.html) for AWS). Also, an important difference is that to apply node configuration, you need to run `dhctl converge` (by running Deckhouse installer). An example of a CloudPermanent node of a cloud cluster is a cluster master node.
 - `CloudStatic` — a static node (created manually) hosted in the cloud integrated with one of the cloud providers. This node has the CSI running, and it is managed by the cloud-controller-manager. The `Node` object automatically gets the information about the cloud zone and region. Also, if a node gets deleted from the cloud, its corresponding Node object will be deleted in a cluster.
 - `Static` — a static node hosted on a bare metal or virtual machine. In the case of a cloud environment, the `cloud-controller-manager` does not manage the node even if one of the cloud providers is enabled. [Learn more about working with static nodes...](#working-with-static-nodes)
 
@@ -175,12 +175,12 @@ The workflow for dealing with static nodes when using Cluster API Provider Stati
 
 1. **Preparing resources.**
 
-   Before bringing a bare-metal server or virtual machine under the CAPS management, the following preliminary steps may be necessary:
+   Before bringing a bare metal server or virtual machine under CAPS control, some preliminary steps may be necessary:
 
    - Preparing the storage system, adding mount points, and so on.
-   - Installing OS-specific packages.
-   - Configuring the network connectivity. For example, between the server and cluster nodes.
-   - Configuring the SSH access to the server, creating a user with the root-level access via `sudo`. A good practice is to create a separate user and unique keys for each server.
+   - Installing the OS-specific packages.
+   - Configuring the network. For example, configuring the network between the server and the cluster nodes.
+   - Configuring SSH access to the server, creating a user that is a member of sudoers group. A good practice is to create a separate user and unique keys for each server.
 
 1. **Creating a [SSHCredentials](cr.html#sshcredentials) resource.**
 
@@ -203,7 +203,7 @@ The workflow for dealing with static nodes when using Cluster API Provider Stati
 
    When using CAPS, you have to focus on the [nodeType](cr.html#nodegroup-v1-spec-nodetype) parameter (must be `Static`) of the `NodeGroup` resource as well as the [staticInstances](cr.html#nodegroup-v1-spec-staticinstances) parameter section.
 
-   The [staticInstances.labelSelector](cr.html#nodegroup-v1-spec-staticinstances-labelselector) parameter section defines a filter that CAPS applies to select the `StaticInstance` resources to be used for a group. The filter allows only certain `StaticInstance` to be used for specific node groups, and also allows a single `StaticInstance` to be used in different node groups. You can choose not to define a filter to use any available `StaticInstance` for a node group.   
+   The [staticInstances.labelSelector](cr.html#nodegroup-v1-spec-staticinstances-labelselector) parameter section defines a filter that CAPS applies to select the `StaticInstance` resources to be used for a group. The filter allows only certain `StaticInstance` to be used for specific node groups, and also allows a single `StaticInstance` to be used in different node groups. You can choose not to define a filter to use any available `StaticInstance` for a node group.
 
    The [staticInstances.count](cr.html#nodegroup-v1-spec-staticinstances-count) parameter specifies the desired number of nodes in the group. When the parameter changes, CAPS starts adding or removing the desired number of nodes (this process runs in parallel).
 
@@ -215,7 +215,7 @@ The [NodeGroupConfiguration](cr.html#nodegroupconfiguration) resource allows you
 
 - Installing and configuring additional OS packages.  
 
-  Examples:
+  Examples:  
 
   - [installing the plugin for kubectl](examples.html#installing-the-cert-manager-plugin-for-kubectl-on-master-nodes);  
   - [installing containerd with Nvidia GPU support](faq.html#how-to-use-containerd-with-nvidia-gpu-support).
@@ -240,7 +240,7 @@ The `NodeGroupConfiguration` resource allows you to assign [priority](cr.html#no
 
 The script code is stored in the [content](cr.html#nodegroupconfiguration-v1alpha1-spec-content) of the resource. When a script is created on a node, the contents of the `content` parameter are fed into the [Go Template](https://pkg.go.dev/text/template) templating engine. The latter embeds an extra layer of logic when generating a script. When parsed by the templating engine, a context with a set of dynamic variables becomes available.
 
-The following variables are supported by the templating engine: 
+The following variables are supported by the templating engine:
 <ul>
 <li><code>.cloudProvider</code> (for node groups of nodeType <code>CloudEphemeral</code> or <code>CloudPermanent</code>) — cloud provider dataset.
 {% offtopic title="Example of data..." %}
@@ -317,7 +317,7 @@ nodeGroup:
   updateEpoch: "1699879470"
 ```
 {% endofftopic %}</li>
-</ul>    
+</ul>
 
 {% raw %}
 An example of using variables in a template:
@@ -349,6 +349,7 @@ journalctl -u bashible.service
 The scripts themselves are located on the node in the directory `/var/lib/bashible/bundle_steps/`.
 
 The service decides to re-run the scripts by comparing the single checksum of all files located at `/var/lib/bashible/configuration_checksum` with the checksum located in the `kubernetes` cluster in the `configuration-checksums` secret namespace `d8-cloud-instance-manager`.
+
 You can see the checksum using the following command:
 
 ```bash
@@ -374,16 +375,6 @@ When writing your own scripts, it is important to consider the following feature
 Useful features of some scripts:
 
 * [`032_configure_containerd.sh`](https://github.com/deckhouse/deckhouse/blob/main/candi/bashible/common-steps/all/032_configure_containerd.sh.tpl) - merges all configuration files of the `containerd` service located at `/etc/containerd/conf.d/*.toml`, and also **restarts** the service. It is important to note that the `/etc/containerd/conf.d/` directory is not created automatically, and that files in this directory should be created in scripts with a priority lower than `32`
-
-### Automatic installation of custom labels for nodes
-
-Custom labels can be set automatically for nodes. To do this, in the directory `/var/lib/node_labels` of the node, you need to create files containing the necessary labels in the format `key=value`. The file names can be any, the nesting of directories with files is not limited.
-
-This method works both for existing nodes in the cluster and during the addition of new nodes.
-
-{% alert level="warning" %}
-Please note that it is not possible to add labels used in DKP in this way. This method will only work with custom labels that do not overlap with those reserved for Deckhouse.
-{% endalert %}
 
 ## Chaos Monkey
 

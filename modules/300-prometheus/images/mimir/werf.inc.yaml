@@ -2,15 +2,16 @@
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 fromImage: common/src-artifact
+fromCacheVersion: "2025-02-20 10:00"
 final: false
 git:
-  - add: /modules/300-prometheus/images/{{ $.ImageName }}
-    to: /
-    stageDependencies:
-      setup:
-        - "**/*"
-    includePaths:
-      - patches
+- add: /modules/300-prometheus/images/{{ $.ImageName }}
+  to: /
+  stageDependencies:
+    install:
+      - "**/*"
+  includePaths:
+    - patches
 shell:
   install:
     - git clone --depth 1 --branch mimir-{{ $MimirVersion }} {{ .SOURCE_REPO }}/grafana/mimir.git /src
