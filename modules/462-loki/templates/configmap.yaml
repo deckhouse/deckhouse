@@ -41,6 +41,9 @@ data:
           index:
             prefix: index_
             period: 24h
+    ingester:
+      wal:
+        checkpoint_duration: 1m
     compactor:
       shared_store: filesystem
       retention_enabled: true
