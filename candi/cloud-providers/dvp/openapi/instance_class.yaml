@@ -1,0 +1,156 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: dvpinstanceclasses.deckhouse.io
+  labels:
+    heritage: deckhouse
+    module: cloud-provider-dvp
+spec:
+  group: deckhouse.io
+  preserveUnknownFields: false
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          description: >
+            Describes the configuration and status of a virtual machine (VM).
+
+            On a running VM, changed parameters can only be applied after
+            rebooting, except for the following parameters that are applied on
+            the fly:
+
+            - `.metadata.labels`
+
+            - `.metadata.annotations`
+
+            - `.spec.disruptions.restartApprovalMode`
+
+            - `.spec.runPolicy`.
+          required:
+            - spec
+          properties:
+            spec:
+              type: object
+              required:
+                - vmClassName
+                - cpu
+                - memory
+                - blockDeviceRefs
+              properties:
+                vmClassName:
+                  type: string
+                  description: >
+                    Name of the VirtualMachineClass resource describing the
+                    requirements for a virtual CPU, memory, and the resource
+                    allocation policy.
+                cpu:
+                  type: object
+                  description: Section describing the CPU settings for a VM.
+                  required:
+                    - cores
+                  properties:
+                    cores:
+                      format: int32
+                      type: integer
+                      minimum: 1
+                      description: Number of cores.
+                    coreFraction:
+                      type: string
+                      default: 100%
+                      description: >
+                        Guaranteed share of CPU time that will be allocated to
+                        the VM. Specified as a percentage.
+                memory:
+                  type: integer
+                  default: 8192
+                  description: RAM amount in megabytes.
+                blockDeviceRefs:
+                  type: array
+                  minItems: 1
+                  maxItems: 16
+                  description: |
+                    List of block devices connected to the VM.
+                  items:
+                    type: object
+                    description: |
+                      Link to a block device.
+                    properties:
+                      kind:
+                        type: string
+                        description: >
+                          Supported block device types:
+
+
+                          * `ClusterVirtualImage`: Use ClusterVirtualImage as
+                          the disk. This type is always mounted in `ReadOnly`
+                          mode. An ISO image will be mounted as a CD-ROM device.
+
+                          * `VirtualImage`: Use VirtualImage as the disk. This
+                          type is always mounted in `ReadOnly` mode. An ISO
+                          image will be mounted as a CD-ROM device.
+
+                          * `VirtualDisk`: Use VirtualDisk as the disk. This
+                          type is always mounted in `ReadWrite` mode.
+                        enum:
+                          - ClusterVirtualImage
+                          - VirtualImage
+                          - VirtualDisk
+                      name:
+                        type: string
+                        description: |
+                          Name of the attached resource.
+                osType:
+                  type: string
+                  enum:
+                    - Windows
+                    - Generic
+                  default: Generic
+                  description: >
+                    Lets you select the type of a used OS that will be used to
+                    create a VM with an optimal set of required virtual devices
+                    and parameters.
+
+
+                    * `Windows`: For an operating system from the Microsoft
+                    Windows family.
+
+                    * `Generic`: For other operating systems.
+                enableParavirtualization:
+                  type: boolean
+                  default: true
+                  description: >
+                    Use the `virtio` bus for connecting virtual devices of a VM.
+                    To disable `virtio` for a VM, set this parameter to `False`.
+
+
+                    > **Note**: To use the paravirtualization mode, some
+                    operating systems require installing the corresponding
+                    drivers.
+                bootloader:
+                  type: string
+                  enum:
+                    - BIOS
+                    - EFI
+                    - EFIWithSecureBoot
+                  default: BIOS
+                  description: >
+                    Defines a bootloader for a VM.
+
+
+                    * `BIOS`: Use BIOS.
+
+                    * `EFI`: Use Unified Extensible Firmware (EFI/UEFI).
+
+                    * `EFIWithSecureBoot`: Use UEFI/EFI with the Secure Boot
+                    support.
+
+  scope: Cluster
+  names:
+    plural: dvpinstanceclasses
+    singular: dvpinstanceclass
+    kind: DVPInstanceClass
+    categories:
+      - cloudinstanceclasses
