@@ -126,7 +126,6 @@ apiVersions:
 - apiVersion: test
   openAPISpec:
     type: object
-    additionalProperties: false
     required: [kind, apiVersion, one, two]
     properties:
       kind:
@@ -154,6 +153,17 @@ apiVersion: test
 kind: TestKind
 one: test
 two: test
+`,
+			false,
+		},
+		{
+			"Wrong config",
+			`
+apiVersion: test
+kind: TestKind
+one: test
+two: test
+three: test
 `,
 			false,
 		},
