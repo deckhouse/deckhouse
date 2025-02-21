@@ -2,6 +2,7 @@
 {{- $ciliumProxyCacheRev := "v1.31.5-1737535524-fe8efeb16a7d233bffd05af9ea53599340d3f18e-alt-v1" }}
 {{- $ciliumProxyDepsRev := "v1.31.5-1737535524-fe8efeb16a7d233bffd05af9ea53599340d3f18e-alt-v1" }}
 {{- $bazelVersions := "6.5.0" }}
+{{- $envoySHA := "688c4bbe47f4d05bb8ed268f5172bb026cf03242" }}
 ---
 # #####################################################################
 # Build cilium-envoy binaries
@@ -29,6 +30,12 @@ shell:
   - git checkout {{ $ciliumProxyRev }}
   #- git apply --verbose /patches/*.patch
   - rm -rf /src/proxy/.git
+  #
+  - git clone {{ $.SOURCE_REPO }}/envoyproxy/envoy.git /src/envoy
+  - cd /src/envoy
+  - git checkout {{ $envoySHA }}
+  - git apply --verbose /src/proxy/patches/*.patch
+  - rm -rf /src/envoy/.git
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-basel-artifact
 fromImage: common/src-artifact
@@ -81,13 +88,11 @@ shell:
   - echo 'Defaults env_keep += "SSH_AUTH_SOCK"' >> /etc/sudoers
   - groupadd -f -g 1337 cilium && useradd -m -g cilium -u 1337 cilium
   - mv -t /home/cilium/.cache /root/.cache/bazelisk /root/.cache/bazel
-  - chown -R cilium:cilium /home/cilium/.cache
+  - chown -R 1337:1337 /home/cilium/.cache
   - sudo -u cilium PATH=${PATH} echo "StrictHostKeyChecking accept-new" > /home/cilium/.ssh/config
   - chmod -R a+w /tmp
   - chown -R 1337:1337 /cilium/proxy
-  #
-  - echo env
-  - sudo -u cilium PATH=${PATH} env
+  - chown -R 1337:1337 /src/envoy
   setup:
   - export GO_VERSION=${GOLANG_VERSION} GOPROXY={{ $.GOPROXY }}
   - export GOOS=linux GOARCH=amd64 CGO_ENABLED=0
@@ -105,7 +110,13 @@ shell:
   #
   - cd /cilium/proxy
   - sudo -u cilium echo "{{ $ciliumProxyRev }}" >SOURCE_VERSION
-  - sudo -u cilium sed -i "s,https://github.com,{{ $.SOURCE_REPO }}," WORKSPACE
+  #
+  - sudo -u cilium sed -i "30,56d" WORKSPACE
+  - sudo -u cilium sed -i '30i local_repository(' WORKSPACE
+  - sudo -u cilium sed -i '31i \    name = "envoy",' WORKSPACE
+  - sudo -u cilium sed -i '32i \    path = "/src/envoy",' WORKSPACE
+  - sudo -u cilium sed -i '33i )' WORKSPACE
+  #
   - sudo -u cilium sed -i 's/$(SUDO) apt info clang-17 || $(call add_clang_apt_source,$(shell lsb_release -cs))/rpm -q clang17.0/' Makefile
   - sudo -u cilium sed -i "/\$(SUDO) apt install -y clang-17 llvm-17-dev lld-17 clang-format-17/d" Makefile
   - sudo -u cilium sed -i '\#"/usr/include"#a \        "/usr/lib/llvm-17.0/lib64/clang/17/include",' bazel/toolchains/BUILD
