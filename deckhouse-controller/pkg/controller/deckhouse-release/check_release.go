@@ -193,7 +193,7 @@ func (f *DeckhouseReleaseFetcher) fetchDeckhouseRelease(ctx context.Context) err
 	}
 
 	var releaseForUpdate *v1alpha1.DeckhouseRelease
-	releasesInCluster := make([]*v1alpha1.DeckhouseRelease, 0)
+	releasesInCluster := make([]*v1alpha1.DeckhouseRelease, 0, len(releases))
 
 	idx, deployedRelease := getLatestDeployedRelease(releases)
 	if idx != -1 {
