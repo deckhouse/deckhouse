@@ -78,6 +78,11 @@ properties:
 
           0 means unlimited.
         default: 0
+      maxLabelNamesPerSeries:
+        type: integer
+        description: |
+          The maximum number of unique label names per series (log stream).
+        default: 32
       maxEntriesLimitPerQuery:
         type: integer
         description: |
