@@ -40,7 +40,7 @@ shell:
   - export GO_VERSION=${GOLANG_VERSION} GOPROXY={{ $.GOPROXY }}
   - export GOOS=linux GOARCH=amd64 CGO_ENABLED=0
   #
-  - /src/grpc-health-probe
+  - cd /src/grpc-health-probe
   - go mod download -x
   - go build -a -tags netgo -ldflags="-w -X main.versionTag={{ $grpcHealthProbeVersion }}" -o grpc_health_probe
   - strip /src/grpc-health-probe/grpc_health_probe
