@@ -48,6 +48,8 @@ import (
 )
 
 const (
+	defaultModuleWeight = 900
+
 	moduleOrderIdx = 2
 	moduleNameIdx  = 3
 
@@ -319,6 +321,8 @@ func (l *Loader) ensureModule(ctx context.Context, def *moduletypes.Definition, 
 				}
 			}
 
+			moduleCopy := module.DeepCopy()
+
 			module.Properties.Requirements = def.Requirements
 			module.Properties.Subsystems = def.Subsystems
 			module.Properties.Namespace = def.Namespace
@@ -336,7 +340,9 @@ func (l *Loader) ensureModule(ctx context.Context, def *moduletypes.Definition, 
 				module.Properties.Version = l.version
 			}
 
-			if !reflect.DeepEqual(def, module) {
+			if !reflect.DeepEqual(moduleCopy.Properties, module.Properties) ||
+				!reflect.DeepEqual(module.Labels, module.Labels) ||
+				!reflect.DeepEqual(module.Annotations, module.Annotations) {
 				return l.client.Update(ctx, module)
 			}
 
@@ -472,15 +478,21 @@ func (l *Loader) moduleDefinitionByFile(absPath string) (*moduletypes.Definition
 	if err != nil {
 		return nil, err
 	}
+	defer f.Close()
 
 	def := new(moduletypes.Definition)
 	if err = yaml.NewDecoder(f).Decode(def); err != nil {
 		return nil, err
 	}
 
-	if def.Name == "" || def.Weight == 0 {
+	if def.Name == "" {
 		return nil, nil
 	}
+
+	if def.Weight == 0 {
+		def.Weight = defaultModuleWeight
+	}
+
 	def.Path = absPath
 
 	return def, nil
