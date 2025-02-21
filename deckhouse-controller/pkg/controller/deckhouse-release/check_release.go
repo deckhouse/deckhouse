@@ -865,8 +865,10 @@ func (f *DeckhouseReleaseFetcher) getNewVersions(ctx context.Context, actual, ta
 
 	sort.Sort(semver.Collection(collection))
 
+	const minVersionsCapacity = 10
+
 	// Get only highest patch version for each minor version between actual and target
-	result := make([]*semver.Version, 0)
+	result := make([]*semver.Version, minVersionsCapacity)
 	var lastVer *semver.Version
 
 	for _, ver := range collection {
@@ -876,10 +878,9 @@ func (f *DeckhouseReleaseFetcher) getNewVersions(ctx context.Context, actual, ta
 		}
 
 		// Add version if it's first or has different minor/major from previous
-		if lastVer == nil || lastVer.Minor() < ver.Minor() || lastVer.Major() < ver.Major() {
-			if lastVer != nil {
-				result = append(result, lastVer)
-			}
+		if lastVer != nil &&
+			(lastVer.Minor() < ver.Minor() || lastVer.Major() < ver.Major()) {
+			result = append(result, lastVer)
 		}
 
 		lastVer = ver
