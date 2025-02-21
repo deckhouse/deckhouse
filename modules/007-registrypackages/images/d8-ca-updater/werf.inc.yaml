@@ -39,30 +39,20 @@ git:
     - '**/*'
 import:
 - image: common/python-static
-  add: /opt/python-static/bin
-  to: /usr/bin
+  add: /opt/python-static
+  to: /opt/python-static
   before: install
-  includePaths:
-  - python3*
-  - python3
-  - pip3
-- image: common/python-static
-  add: /opt/python-static/lib
-  to: /usr/lib
-  before: install
-  includePaths:
-  - python3*
 shell:
   beforeInstall:
   - apt-get install -y perl-Encode-compat perl-Time-Piece git
   install:
   - git clone --depth 1 {{ $.SOURCE_REPO }}/python-modules/wheels /wheels
-  - pip3 install -f file:///wheels --no-index -r /requirements.txt
+  - /opt/python/static/bin/pip3 install -f file:///wheels --no-index -r /requirements.txt
   - rm -rf /wheels
   - mv /mk-ca-bundle.pl /ca-certificates/mozilla
   - cd ca-certificates/mozilla
   - perl mk-ca-bundle.pl -n
   - mv ca-bundle.crt /ca-bundle.crt
-  - python3 certdata2pem.py
+  - /opt/python/static/bin/python3 certdata2pem.py
   - mv *.crt /certs/
   - chmod +x /d8-ca-updater /install /uninstall
