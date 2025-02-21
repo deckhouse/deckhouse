@@ -1,0 +1,13 @@
+ci:
+  fixes:
+    - summary: fix standalone-installer build
+      pull_request: https://github.com/deckhouse/deckhouse/pull/12237
+    - summary: >-
+        cloud providers CVE fixes, use single images for cloud-provider-zvirt and
+        cloud-provider-yandex
+      pull_request: https://github.com/deckhouse/deckhouse/pull/12200
+docs:
+  features:
+    - summary: Add new description info for conversions.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/12202
+
