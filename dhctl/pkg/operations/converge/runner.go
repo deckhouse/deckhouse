@@ -253,6 +253,11 @@ func (r *runner) converge(ctx *context.Context) error {
 		return err
 	}
 
+	err = config.SetEnvVars(metaConfig)
+	if err != nil {
+		return err
+	}
+
 	skipTerraform := metaConfig.ClusterType == config.StaticClusterType
 
 	if !skipTerraform && !r.isSkip(phases.BaseInfraPhase) {

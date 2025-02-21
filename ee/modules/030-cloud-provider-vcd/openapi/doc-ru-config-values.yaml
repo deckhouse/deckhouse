@@ -1,5 +1,12 @@
 type: object
 properties:
+  minVcdApiVersion:
+    type: string
+    description: |
+      Минимальная версия API VCD, которую поддерживает модуль.
+    x-examples:
+      - "37.0"
+      - "38.1"
   storageClass:
     description: |
       Автоматическое создание StorageClass'ов, которые есть в OpenStack.

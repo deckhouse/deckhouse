@@ -37,6 +37,11 @@ func (b *ClusterBootstrapper) BaseInfrastructure() error {
 		return err
 	}
 
+	err = config.SetEnvVars(metaConfig)
+	if err != nil {
+		return err
+	}
+
 	if metaConfig.ClusterType != config.CloudClusterType {
 		return fmt.Errorf(bootstrapPhaseBaseInfraNonCloudMessage)
 	}
