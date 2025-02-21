@@ -10,9 +10,10 @@ import:
   add: /src/docs-builder
   to: /app/server
   before: setup
-docker:
-  WORKDIR: /app
-  ENTRYPOINT: [ "/app/server" ]
+imageSpec:
+  config:
+    workingDir: "/app"
+    entrypoint: [ "/app/server" ]
 git:
   - add: /{{ .ModulePath }}docs/site/backends/docs-builder-template
     to: /app/hugo

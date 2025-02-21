@@ -40,7 +40,7 @@ on:
 env:
 
   # <template: werf_envs>
-  WERF_CHANNEL: "ea"
+  WERF_CHANNEL: "alpha"
   WERF_ENV: "FE"
   TEST_TIMEOUT: "15m"
   # Use fixed string 'sys/deckhouse-oss' for repo name. ${CI_PROJECT_PATH} is not available here in GitHub.
@@ -101,7 +101,7 @@ jobs:
         with:
           script: |
             const provider = 'yandex-cloud';
-            const kubernetesDefaultVersion = '1.29';
+            const kubernetesDefaultVersion = '1.30';
 
             const ci = require('./.github/scripts/js/ci');
             return await ci.checkE2ELabels({github, context, core, provider, kubernetesDefaultVersion});
@@ -203,7 +203,7 @@ jobs:
 
       # <template: werf_install_step>
       - name: Install werf CLI
-        uses: werf/actions/install@43075e4ab81952b181d33e125ef15b9c060a782e
+        uses: werf/actions/install@v2
         with:
           channel: ${{env.WERF_CHANNEL}}
       # </template: werf_install_step>
@@ -495,7 +495,7 @@ jobs:
 
       # <template: werf_install_step>
       - name: Install werf CLI
-        uses: werf/actions/install@43075e4ab81952b181d33e125ef15b9c060a782e
+        uses: werf/actions/install@v2
         with:
           channel: ${{env.WERF_CHANNEL}}
       # </template: werf_install_step>
@@ -787,7 +787,7 @@ jobs:
 
       # <template: werf_install_step>
       - name: Install werf CLI
-        uses: werf/actions/install@43075e4ab81952b181d33e125ef15b9c060a782e
+        uses: werf/actions/install@v2
         with:
           channel: ${{env.WERF_CHANNEL}}
       # </template: werf_install_step>
@@ -1079,7 +1079,7 @@ jobs:
 
       # <template: werf_install_step>
       - name: Install werf CLI
-        uses: werf/actions/install@43075e4ab81952b181d33e125ef15b9c060a782e
+        uses: werf/actions/install@v2
         with:
           channel: ${{env.WERF_CHANNEL}}
       # </template: werf_install_step>
@@ -1371,7 +1371,7 @@ jobs:
 
       # <template: werf_install_step>
       - name: Install werf CLI
-        uses: werf/actions/install@43075e4ab81952b181d33e125ef15b9c060a782e
+        uses: werf/actions/install@v2
         with:
           channel: ${{env.WERF_CHANNEL}}
       # </template: werf_install_step>
@@ -1663,7 +1663,7 @@ jobs:
 
       # <template: werf_install_step>
       - name: Install werf CLI
-        uses: werf/actions/install@43075e4ab81952b181d33e125ef15b9c060a782e
+        uses: werf/actions/install@v2
         with:
           channel: ${{env.WERF_CHANNEL}}
       # </template: werf_install_step>
@@ -1955,7 +1955,7 @@ jobs:
 
       # <template: werf_install_step>
       - name: Install werf CLI
-        uses: werf/actions/install@43075e4ab81952b181d33e125ef15b9c060a782e
+        uses: werf/actions/install@v2
         with:
           channel: ${{env.WERF_CHANNEL}}
       # </template: werf_install_step>
@@ -2247,7 +2247,7 @@ jobs:
 
       # <template: werf_install_step>
       - name: Install werf CLI
-        uses: werf/actions/install@43075e4ab81952b181d33e125ef15b9c060a782e
+        uses: werf/actions/install@v2
         with:
           channel: ${{env.WERF_CHANNEL}}
       # </template: werf_install_step>

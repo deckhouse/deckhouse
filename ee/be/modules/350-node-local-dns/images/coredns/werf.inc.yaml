@@ -37,8 +37,9 @@ import:
   includePaths:
   - '**/*.sh'
   before: setup
-docker:
-  ENTRYPOINT: ["/coredns"]
+imageSpec:
+  config:
+    entrypoint: [ "/coredns" ]
 ---
 {{ $corednsBinaries := "/usr/bin/dig /bin/echo /usr/bin/curl /usr/bin/jq /bin/bash /bin/grep /sbin/ip" }}
 ---

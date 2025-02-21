@@ -6,9 +6,9 @@ import:
     add: /gatekeeper
     to: /bin/gatekeeper
     before: setup
-docker:
-  ENTRYPOINT: [ "/bin/gatekeeper" ]
-  USER: deckhouse:deckhouse
+imageSpec:
+  config:
+    entrypoint: [ "/bin/gatekeeper" ]
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 fromImage: common/src-artifact

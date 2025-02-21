@@ -186,7 +186,7 @@ func (l *Loader) processModuleDefinition(def *moduletypes.Definition) (*modulety
 
 	module, err := moduletypes.NewModule(def, moduleStaticValues, configBytes, vb, l.log.Named("module"))
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("build %q module: %w", def.Name, err)
 	}
 
 	// load conversions
@@ -302,11 +302,12 @@ func (l *Loader) ensureModule(ctx context.Context, def *moduletypes.Definition, 
 						APIVersion: v1alpha1.ModuleGVK.GroupVersion().String(),
 					},
 					ObjectMeta: metav1.ObjectMeta{
-						Name: def.Name,
+						Name:        def.Name,
+						Annotations: def.Annotations(),
+						Labels:      def.Labels(),
 					},
 					Properties: v1alpha1.ModuleProperties{
 						Weight:       def.Weight,
-						Description:  def.Description,
 						Stage:        def.Stage,
 						Source:       v1alpha1.ModuleSourceEmbedded,
 						Requirements: def.Requirements,
@@ -322,8 +323,10 @@ func (l *Loader) ensureModule(ctx context.Context, def *moduletypes.Definition, 
 			module.Properties.Subsystems = def.Subsystems
 			module.Properties.Namespace = def.Namespace
 			module.Properties.Weight = def.Weight
-			module.Properties.Description = def.Description
 			module.Properties.Stage = def.Stage
+
+			module.SetAnnotations(def.Annotations())
+			module.SetLabels(def.Labels())
 
 			if embedded {
 				// set deckhouse release channel to embedded modules
@@ -331,15 +334,6 @@ func (l *Loader) ensureModule(ctx context.Context, def *moduletypes.Definition, 
 
 				// set deckhouse version to embedded modules
 				module.Properties.Version = l.version
-
-				// set embedded source to embedded modules
-				// TODO(ipaqsa): it is needed for migration, can be removed after 1.68
-				module.Properties.Source = v1alpha1.ModuleSourceEmbedded
-			}
-
-			// TODO(ipaqsa): it is needed for migration, can be removed after 1.68
-			if module.IsEmbedded() && !embedded {
-				module.Properties.Source = ""
 			}
 
 			if !reflect.DeepEqual(def, module) {

@@ -140,11 +140,11 @@ shell:
 
 # render docker parameters for installer image
 {{- define "installer_docker_properties" }}
-docker:
+imageSpec:
+  config:
   # we need root permission for installer image
-  USER: 0
-  ENV:
-    EDITOR: vim
+    user: "0:0"
+    env: { "EDITOR": "vim" }
 {{- end }}
 
 

@@ -32,11 +32,14 @@ metadata:
     modules.deckhouse.io/isUpdating: "true"
     modules.deckhouse.io/notified: "false"
   creationTimestamp: null
+  finalizers:
+  - modules.deckhouse.io/exist-on-fs
   labels:
     module: parca-kube-suitable
     modules.deckhouse.io/update-policy: foxtrot-alpha-kube-suitable
     release-checksum: 98d00f741c99e06e6c6c4d18b763c550
     source: foxtrot-kube-suitable
+    status: deployed
   name: parca-v1.4.3-kube-suitable
   ownerReferences:
   - apiVersion: deckhouse.io/v1alpha1
@@ -59,6 +62,6 @@ status:
   approved: false
   message: ""
   phase: Deployed
-  pullDuration: 0s
+  pullDuration: 9m15s
   size: 0
-  transitionTime: "2019-10-17T15:33:00Z"
+  transitionTime: "2024-05-03T20:55:49Z"

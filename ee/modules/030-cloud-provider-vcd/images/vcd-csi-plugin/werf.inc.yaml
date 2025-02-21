@@ -25,8 +25,9 @@ import:
   add: /lib/udev/scsi_id
   to: /lib/udev/scsi_id
   before: setup
-docker:
-  ENTRYPOINT: ["/cloud-director-named-disk-csi-driver"]
+imageSpec:
+  config:
+    entrypoint: ["/cloud-director-named-disk-csi-driver"]
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
 final: false
@@ -63,7 +64,10 @@ shell:
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
 final: false
-from: {{ $.Images.BASE_ALT_DEV }}
+fromImage: common/relocate-artifact
 shell:
-  setup:
+  beforeInstall:
+    - apt-get update -y
+    - apt-get install -y e2fsprogs xfsprogs btrfs-progs nfs-utils parted nvme udev
+  install:
     - /binary_replace.sh -i "{{ $csiBinaries }}" -o /relocate

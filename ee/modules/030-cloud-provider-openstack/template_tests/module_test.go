@@ -272,7 +272,7 @@ var _ = Describe("Module :: cloud-provider-openstack :: helm template ::", func(
 	})
 
 	Context("Openstack", func() {
-		openstackCheck(f, "1.27")
+		openstackCheck(f, "1.28")
 	})
 
 	Context("Openstack with default StorageClass specified", func() {

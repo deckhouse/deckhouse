@@ -93,6 +93,18 @@ spec:
                   description: |
                     Arbitrary description of the project's purpose. Specify an empty string if no description is required.
                   type: string
+                resourceLabels:
+                  description: |
+                    Labels to be applied to all resources created by the project.
+                  type: object
+                  additionalProperties:
+                    type: string
+                  resourceAnnotations:
+                    description: |
+                      Annotations to be applied to all resources created by the project.
+                    type: object
+                    additionalProperties:
+                      type: string
                 projectTemplateName:
                   description: |
                     The name of the [ProjectTemplate](cr.html#projecttemplate) resource that defines which resources will be created in the project.
@@ -120,6 +132,22 @@ spec:
                 templateGeneration:
                   description: The last observed template`s generation
                   type: integer
+                resources:
+                  description: Rendered and skipped resources.
+                  type: object
+                  additionalProperties:
+                    type: object
+                    additionalProperties:
+                      type: object
+                      properties:
+                        installed:
+                          type: boolean
+                          description: Indicates if the resources were successfully rendered.
+                        names:
+                          type: array
+                          description: List of resource names.
+                          items:
+                            type: string
                 conditions:
                   type: array
                   items:
@@ -127,12 +155,15 @@ spec:
                     properties:
                       type:
                         type: string
-                      lastTransitionTime:
-                        format: date-time
-                        type: string
                       status:
                         type: string
                       message:
+                        type: string
+                      lastTransitionTime:
+                        format: date-time
+                        type: string
+                      lastProbeTime:
+                        format: date-time
                         type: string
                 state:
                   description: Brief description of the project status, such as Error, Deploying, Deployed, etc.

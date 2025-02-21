@@ -18,8 +18,9 @@ import:
   add: /csi-node-driver-registrar
   to: /csi-node-driver-registrar
   before: setup
-docker:
-  ENTRYPOINT: ["/csi-node-driver-registrar"]
+imageSpec:
+  config:
+    entrypoint: ["/csi-node-driver-registrar"]
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $version | replace "." "-" }}
 fromImage: common/src-artifact

@@ -37,7 +37,7 @@ metadata:
   {{- include "helm_lib_module_labels" (list . (dict "app" "web")) | nindent 2 }}
 spec:
   {{- include "helm_lib_deployment_strategy_and_replicas_for_ha" . | nindent 2 }}
-  revisionHistoryLimit: 10
+  revisionHistoryLimit: 2
   selector:
     matchLabels:
       app: web
@@ -61,6 +61,7 @@ spec:
         - --namespace=d8-{{ .Chart.Name }}
         - --settings-config-map-name=web-settings
         - --insecure-bind-address=127.0.0.1
+        - --v=3
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}

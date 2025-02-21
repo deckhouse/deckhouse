@@ -12,11 +12,9 @@ import:
   - install
   - uninstall
   before: setup
-docker:
-  LABEL:
-    distro: all
-    version: all
-    growpart: {{ $version }}
+imageSpec:
+  config:
+    labels: {"distro": "all", "version": "all", "nvme-cli": "{{ $version }}" }
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact-{{ $image_version }}
 final: false

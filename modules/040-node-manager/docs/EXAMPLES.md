@@ -436,7 +436,7 @@ spec:
 Example is given for Ubuntu OS.  
 The method of adding certificates to the store may differ depending on the OS.  
 
-Change the [bundles](cr.html#nodegroupconfiguration-v1alpha1-spec-bundles) parameter to adapt the script to a different OS.
+Change the [bundles](cr.html#nodegroupconfiguration-v1alpha1-spec-bundles) and [content](cr.html#nodegroupconfiguration-v1alpha1-spec-content) parameters to adapt the script to a different OS.
 {% endalert %}
 
 {% alert level="warning" %}

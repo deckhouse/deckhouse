@@ -1,30 +1,41 @@
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-dir-manager
 final: false
-from: {{ $.Images.BASE_GOLANG_20_ALPINE }}
-fromCacheVersion: "2023-10-16.1"
-git:
-  - add: /{{ $.ModulePath }}modules/031-{{ $.ModuleName }}/images/{{ $.ImageName }}/dir-manager
-    to: /src
-    stageDependencies:
-      install:
-        - '**/*'
+from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
+import:
+- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+  add: /src
+  to: /src
+  before: install
 shell:
-  installCacheVersion: "2023-10-16.2"
   install:
-    - export "CGO_ENABLED=0"
-    - export "GOOS=linux"
-    - export "GOARCH=amd64"
-    - cd /src
-    - echo "Build manager"
-    - GOPROXY={{ $.GOPROXY }} go build -o /tmp/manager main.go
-    - chmod 0777 /tmp/manager
+  - cd /src
+  - GOPROXY={{ $.GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o /manager main.go
+  - chmod 0777 /manager
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: common/distroless
-fromCacheVersion: "2023-10-16.3"
 import:
  - image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-dir-manager
-   add: /tmp/manager
+   add: /manager
    to: /manager
    after: install
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+final: false
+fromImage: common/src-artifact
+git:
+- add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/src
+  to: /src
+  includePaths:
+  - '**/*.go'
+  - '**/*.mod'
+  - '**/*.sum'
+  stageDependencies:
+    install:
+    - '**/*.go'
+    - 'go.mod'
+    - 'go.sum'
+shell:
+  install:
+  - cd /src

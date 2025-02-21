@@ -48,6 +48,14 @@ import:
   add: /iptables-wrapper
   to: /sbin/iptables-wrapper
   before: setup
+- image: {{ .ModuleName }}/{{ .ImageName }}-library-artifact
+  add: /usr/lib64/librt.so.1
+  to: /usr/lib64/librt.so.1
+  before: install
+- image: {{ .ModuleName }}/{{ .ImageName }}-library-artifact
+  add: /usr/lib64/libpthread.so.0
+  to: /usr/lib64/libpthread.so.0
+  before: install
 shell:
   beforeInstall:
   - |
@@ -59,15 +67,16 @@ shell:
   - update-alternatives --set iptables /usr/sbin/iptables-legacy
   - update-alternatives --set ip6tables /usr/sbin/ip6tables-legacy
   install:
+  - chmod 0644 /usr/lib64/librt.so.1
+  - chmod 0644 /usr/lib64/libpthread.so.0
   - useradd -m --uid 1337 istio-proxy
   - echo istio-proxy ALL=NOPASSWD:ALL | tee -a /etc/sudoers
-docker:
-  ENV:
-    ISTIO_META_ISTIO_PROXY_SHA: "istio-proxy:af5e0ef2c1473f0f4e61f78adf81c85ff6389f87"
-    ISTIO_META_ISTIO_VERSION: "1.19.7"
-  WORKDIR: "/"
-  USER: 1337
-  ENTRYPOINT: ["/usr/local/bin/pilot-agent"]
+imageSpec:
+  config:
+    user: "1337:1337"
+    env: { "ISTIO_META_ISTIO_PROXY_SHA": "istio-proxy:af5e0ef2c1473f0f4e61f78adf81c85ff6389f87",  "ISTIO_META_ISTIO_VERSION": "1.19.7" }
+    workingDir: "/"
+    entrypoint: ["/usr/local/bin/pilot-agent"]
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-binary-artifact
 from: istio/proxyv2:1.19.7@sha256:680eac0faff1835f994ba9047750d7cfe989e868324a933a38d6a6cb80779b33
@@ -91,7 +100,7 @@ shell:
   install:
   - cd /src/istio/
   - echo {{ $istioVersion }} > version
-  - export GOPROXY={{ $.GOPROXY }} GOOS=linux GOARCH=amd64 
+  - export GOPROXY={{ $.GOPROXY }} GOOS=linux GOARCH=amd64
   - export LDFLAGS='-extldflags -static -s -w'
   - go mod vendor
   - common/scripts/gobuild.sh /src/istio/out/ -tags=agent,disable_pgv /src/istio/pilot/cmd/pilot-agent/
@@ -119,3 +128,14 @@ shell:
         done
       done
     done
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-library-artifact
+fromImage: common/alt-p11
+final: false
+shell:
+  beforeInstall:
+  - |
+    apt-get update && \
+    apt-get install -y glibc
+  - apt-get clean
+  - rm -rf  /var/log/*log /var/lib/apt/lists/* /var/log/apt/* /var/lib/dpkg/*-old /var/cache/debconf/*-old

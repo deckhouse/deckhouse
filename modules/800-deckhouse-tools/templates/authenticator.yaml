@@ -12,6 +12,10 @@ spec:
   applicationIngressCertificateSecretName: {{ include "helm_lib_module_https_secret_name" (list . "tools-ingress-tls") }}
   {{- end }}
   applicationIngressClassName: {{ include "helm_lib_module_ingress_class" . | quote }}
+  {{- with .Values.deckhouseTools.auth.allowedUserEmails }}
+  allowedEmails:
+  {{- . | toYaml | nindent 2 }}
+  {{- end }}
   {{- with .Values.deckhouseTools.auth.allowedUserGroups }}
   allowedGroups:
   {{- . | toYaml | nindent 2 }}

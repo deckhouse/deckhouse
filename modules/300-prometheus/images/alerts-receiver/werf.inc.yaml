@@ -6,8 +6,9 @@ import:
   add: /app/alerts-receiver
   to: /alerts-receiver
   before: setup
-docker:
-  ENTRYPOINT: [ "/alerts-receiver" ]
+imageSpec:
+  config:
+    entrypoint: [ "/alerts-receiver" ]
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 fromImage: common/src-artifact

@@ -1,9 +1,13 @@
 ## Patches
 
-### Client allowed groups
+### go mod
 
-With this patch, Dex can authorize requests for specific `OAuth2Client`s based on user's groups.
-We use it in Dex authenticators to make `allowedGroups` option to work.
+Update go mod for fix vuln's
+
+### Client filters
+
+With this patch, Dex can authorize requests for specific `OAuth2Client`s based on username and user's groups.
+We use it in Dex authenticators to make `allowedUsers` and `allowedGroups` option to work.
 
 This problem is not solved in upstream, and our patch will not be accepted.
 

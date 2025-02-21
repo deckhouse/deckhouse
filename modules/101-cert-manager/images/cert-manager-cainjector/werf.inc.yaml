@@ -6,5 +6,6 @@ import:
   add: /cainjector-linux-amd64
   to: /bin/cainjector
   before: setup
-docker:
-  ENTRYPOINT: ["/bin/cainjector"]
+imageSpec:
+  config:
+    entrypoint: ["/bin/cainjector"]

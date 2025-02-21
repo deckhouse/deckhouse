@@ -11,8 +11,9 @@ import:
     add: /app
     to: /app
     before: setup
-docker:
-  ENTRYPOINT: [ "/opt/nginx-static/sbin/nginx", "-g", "daemon off;" ]
+imageSpec:
+  config:
+    entrypoint: [ "/opt/nginx-static/sbin/nginx", "-g", "daemon off;" ]
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
 final: false

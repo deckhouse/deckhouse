@@ -6,8 +6,9 @@ import:
     add: /relocate
     to: /
     before: setup
-docker:
-  USER: 64535
+imageSpec:
+  config:
+    user: "64535:64535"
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
 from: {{ .Images.BASE_ALPINE }}

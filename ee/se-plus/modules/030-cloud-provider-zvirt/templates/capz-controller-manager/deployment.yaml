@@ -11,7 +11,7 @@ kind: VerticalPodAutoscaler
 metadata:
   name: capz-controller-manager
   namespace: d8-cloud-provider-zvirt
-  {{- include "helm_lib_module_labels" (list . (dict "app" "capz-controller-manager" "workload-resource-policy.deckhouse.io" "master")) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "capz-controller-manager")) | nindent 2 }}
 spec:
   targetRef:
     apiVersion: "apps/v1"

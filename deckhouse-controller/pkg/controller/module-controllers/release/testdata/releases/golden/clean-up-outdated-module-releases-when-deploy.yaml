@@ -157,12 +157,14 @@ metadata:
     modules.deckhouse.io/notified: "false"
     release.deckhouse.io/notified: "false"
   creationTimestamp: null
+  finalizers:
+  - modules.deckhouse.io/exist-on-fs
   labels:
     module: echo
     modules.deckhouse.io/update-policy: test-alpha
     release-checksum: 6f0b1c3f78bf63e712e225b2ac3030ce
     source: test
-    status: pending
+    status: deployed
   name: echo-v0.4.54
   ownerReferences:
   - apiVersion: deckhouse.io/v1alpha1
@@ -179,6 +181,6 @@ status:
   approved: false
   message: ""
   phase: Deployed
-  pullDuration: 0s
+  pullDuration: 9m15s
   size: 0
-  transitionTime: "2019-10-17T15:33:00Z"
+  transitionTime: null

@@ -17,9 +17,9 @@ import (
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	// Depends on 'migration-adopt-old-fashioned-l2-lbs.go' hook
+	// 'migration-adopt-old-fashioned-l2-lbs.go' depends on this hook
 	OnBeforeHelm: &go_hook.OrderedConfig{Order: 5},
-	Queue:        "/modules/metallb/generate-mlbc",
+	Queue:        "/modules/metallb/discovery",
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
 			Name:       "module_config",

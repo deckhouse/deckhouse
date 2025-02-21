@@ -7,9 +7,8 @@ git:
   stageDependencies:
     install:
     - '**/*'
-docker:
-  ENV:
-    SHELL_OPERATOR_HOOKS_DIR: "/hooks"
-    LOG_TYPE: json
-  ENTRYPOINT: ["tini", "--", "/shell-operator"]
-  CMD: ["start"]
+imageSpec:
+  config:
+    entrypoint: ["tini", "--", "/shell-operator"]
+    cmd: ["start"]
+    env: { "SHELL_OPERATOR_HOOKS_DIR": "/hooks", "LOG_TYPE": "json" }

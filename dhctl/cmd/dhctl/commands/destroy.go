@@ -42,8 +42,7 @@ If you understand what you are doing, you can use flag "--yes-i-am-sane-and-i-un
 `
 )
 
-func DefineDestroyCommand(parent *kingpin.Application) *kingpin.CmdClause {
-	cmd := parent.Command("destroy", "Destroy Kubernetes cluster.")
+func DefineDestroyCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 	app.DefineSSHFlags(cmd, config.ConnectionConfigParser{})
 	app.DefineBecomeFlags(cmd)
 	app.DefineCacheFlags(cmd)

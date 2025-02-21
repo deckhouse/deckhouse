@@ -1,5 +1,9 @@
 ## Patches
 
+### Go.mod patch
+
+Update deps.
+
 ### Cookie refresh
 
 There is a problem when we are using nonpersistent Redis for session storage. If Redis was killed or flushed, the user should be authenticated again. That makes oauth2 proxy to be stateful application (or sort of).
@@ -14,3 +18,7 @@ Two options to fix this without patch:
 
 Add a new flag: https://github.com/oauth2-proxy/oauth2-proxy/issues/2144
 Migrate to a structured config (alpha config): https://oauth2-proxy.github.io/oauth2-proxy/docs/configuration/alpha-config
+
+### Redis retries
+
+Prevents oauth2-proxy from failing with exit 1 if Redis has not started in time. Adds a loop to retry sendRedisConnectionTest.
