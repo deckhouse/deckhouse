@@ -341,8 +341,8 @@ func (l *Loader) ensureModule(ctx context.Context, def *moduletypes.Definition, 
 			}
 
 			if !reflect.DeepEqual(moduleCopy.Properties, module.Properties) ||
-				!reflect.DeepEqual(module.Labels, module.Labels) ||
-				!reflect.DeepEqual(module.Annotations, module.Annotations) {
+				!reflect.DeepEqual(moduleCopy.Labels, module.Labels) ||
+				!reflect.DeepEqual(moduleCopy.Annotations, module.Annotations) {
 				return l.client.Update(ctx, module)
 			}
 
