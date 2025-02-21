@@ -1,29 +1,17 @@
 require 'json'
 
-def parse_module_data(input, site)
-    if input.has_key?("featureStatus")
-       featureStatus = input["featureStatus"]
-       if input.has_key?("moduleName")
-         moduleName = input["moduleName"]
-       elsif input["title"].is_a?(Hash) && input["title"].has_key?('en')
-         moduleName = input["title"]['en']
-       else
-         moduleName = input["title"]
-       end
-       if ! site.data["modulesFeatureStatus"]
-          site.data["modulesFeatureStatus"] = {}
-       end
-       site.data["modulesFeatureStatus"][moduleName] = featureStatus
-    else
-      if input.has_key?("folders")
-        input["folders"].each do |item|
-          parse_module_data(item, site)
-        end
-      end
-    end
+
+# Inserts the module-editions.liquid block into the module pages content.
+# The block is inserted at the beginning of the page's content if the page content is not empty.
+def insert_module_edition_block(page)
+    additional_content = "\n{% include module-editions.liquid %}\n\n"
+
+    # Insert the content at the end of the page's content
+    page.content.prepend(additional_content) if page.content
 end
 
-Jekyll::Hooks.register :site, :post_read do |site|
+##
+Jekyll::Hooks.register :site, :pre_render do |site|
   bundlesByModule = Hash.new()
   bundlesModules = Hash.new()
   bundleNames = []
@@ -57,8 +45,26 @@ Jekyll::Hooks.register :site, :post_read do |site|
   site.data['bundles']['bundleNames'] = bundleNames.sort
   site.data['bundles']['bundleModules'] = bundlesModules
 
-  # Fill site.data.modulesFeatureStatus
-  parse_module_data(site.data["sidebars"]["main"]["entries"], site)
+  #parse_module_data(site.data["sidebars"]["main"]["entries"], site)
+
+  _editionsFullList = site.data['modules']['editions-weight'].keys
+  # Automatically fill editions, except for CSE, since their CSE needs to be specified explicitly.
+  _editionsToFillWith = _editionsFullList.reject { |key| key.start_with?("cse")  }
+  site.data['modules']['all'].each do |moduleName, moduleData|
+    editions = []
+    if moduleData.has_key?("editionMinimumAvailable") then
+      _index = _editionsToFillWith.find_index(moduleData['editionMinimumAvailable'])
+      editions = _editionsToFillWith.slice(_index, _editionsToFillWith.length())
+    end
+    site.data['editions'].each do |edition, editionData|
+      editions = editions | [edition] if editionData.has_key?("includeModules") && editionData['includeModules'].include?(moduleName)
+      editions.delete(edition) if editionData.has_key?("excludeModules") && editionData['excludeModules'].include?(moduleName)
+    end
+    editions = editions | moduleData['editionFullyAvailable'] if moduleData.has_key?("editionFullyAvailable")
+    editions = editions | moduleData['editionsWithRestrictions'] if moduleData.has_key?("editionsWithRestrictions")
+    puts "Module #{moduleName} editions: #{editions}"
+    site.data['modules']['all'][moduleName]['editions'] = editions
+  end
 
   # Exclude custom resource and module setting files from the search index by setting the 'searchable' parameter to false.
   # Add module name in kebab case and snake case to metadata of module pages.
@@ -72,6 +78,9 @@ Jekyll::Hooks.register :site, :post_read do |site|
     'FAQ_RU.md', 'FAQ.md'
   ]
 
+  # Set the following data for each module page:
+  # - module-kebab-name: module name in kebab case
+  # - module-snake-name: module name in snake case
   site.pages.each do |page|
     if page.url.match?(%r{/modules/([0-9]+-)?[^/]+/$}) || pageSuffixes.any? { |suffix| page.name.end_with?(suffix) }
     then
@@ -85,6 +94,9 @@ Jekyll::Hooks.register :site, :post_read do |site|
         page.data['module-index-page'] = true
       end
     end
+
+    insert_module_edition_block(page) if page.data['module-kebab-name']
+
     next if ! ( page.name.end_with?('CR.md') or page.name.end_with?('CR_RU.md') or page.name.end_with?('CONFIGURATION.md') or page.name.end_with?('CONFIGURATION_RU.md') )
     next if page['force_searchable'] == true
     page.data['searchable'] = false
