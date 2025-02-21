@@ -1,5 +1,6 @@
 # src of image BASE_ALT_DEV_CILIUM in candi/image_versions.yml
 {{- $protocVersion := "29.3" }}
+{{- $bazelVersions := "6.5.0" }}
 {{- $bazeliskVersions := "v1.20.0" }}
 #
 {{- $source := "https://github.com" }}
@@ -102,6 +103,7 @@ shell:
   # Install Bazelisk (for build envoy)
   - curl --fail --show-error --silent --location "{{ $source }}/bazelbuild/bazelisk/releases/download/{{ $bazeliskVersions }}/bazelisk-linux-amd64" -o /usr/local/bin/bazel
   - chmod +x /usr/local/bin/bazel
+  - USE_BAZEL_VERSION={{ $bazelVersions }} bazel version # to extract all binaries properly
 imageSpec:
   config:
     env: { "GOROOT": "/usr/local/go", "GOPATH": "/go", "PATH": "${PATH}:${GOROOT}/bin:${GOPATH}/bin", "GOOS": "linux", "GOARCH": "amd64" }
