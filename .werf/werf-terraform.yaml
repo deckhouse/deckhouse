@@ -47,7 +47,7 @@ import:
     before: setup
 shell:
   beforeInstall:
-  - apt-get install -y wget unzip git python3 python3-pip jq curl gettext-base bsdextrautils
+  - apt-get install -y wget unzip git python3 pip jq curl gettext-base
   - pip3 install awscli
   - |
     mkdir /terraform
