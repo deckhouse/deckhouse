@@ -102,7 +102,7 @@ shell:
   # Install Bazelisk (for build envoy)
   - bazel_versions=({{ $bazelVersions }})
   # install bazelisk, it automatically recognises `.bazelversion` and `USE_BAZEL_VERSIONS`, if neither are set it picks latest
-  - curl --fail --show-error --silent --location {{ $source }}/bazelbuild/bazelisk/releases/download/{{ $bazeliskVersions }}/bazelisk-linux-x86_64 -o /usr/bin/bazel
+  - curl --fail --show-error --silent --location "{{ $source }}/bazelbuild/bazelisk/releases/download/{{ $bazeliskVersions }}/bazelisk-linux-amd64" -o /usr/bin/bazel
   - chmod +x /usr/local/bin/bazel
 imageSpec:
   config:
