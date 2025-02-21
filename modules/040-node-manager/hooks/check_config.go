@@ -76,11 +76,12 @@ func CheckCloudProviderConfig(input *go_hook.HookInput) error {
 				requirements.SaveValue(CheckCloudProviderConfigRaw, true)
 				input.MetricsCollector.Set("d8_check_cloud_provider_config", 1, nil)
 				return fmt.Errorf(findErrorLines(err.Error()))
+			} else {
+				requirements.SaveValue(CheckCloudProviderConfigRaw, false)
+				input.MetricsCollector.Expire("d8_check_cloud_provider_config")
 			}
 		}
 	}
-	requirements.SaveValue(CheckCloudProviderConfigRaw, false)
-	input.MetricsCollector.Expire("d8_check_cloud_provider_config")
 	return nil
 }
 
@@ -115,12 +116,13 @@ func CheckStaticClusterConfig(input *go_hook.HookInput) error {
 				requirements.SaveValue(CheckStaticClusterConfigRaw, true)
 				input.MetricsCollector.Set("d8_check_static_cluster_config", 1, nil)
 				return fmt.Errorf(findErrorLines(err.Error()))
+			} else {
+				requirements.SaveValue(CheckStaticClusterConfigRaw, false)
+				input.MetricsCollector.Expire("d8_check_static_cluster_config")
 			}
 		}
 	}
-	input.Logger.Info("1007")
-	requirements.SaveValue(CheckStaticClusterConfigRaw, false)
-	input.MetricsCollector.Expire("d8_check_static_cluster_config")
+
 	return nil
 }
 
@@ -155,11 +157,13 @@ func CheckClusterConfig(input *go_hook.HookInput) error {
 				requirements.SaveValue(CheckStaticClusterConfigRaw, true)
 				input.MetricsCollector.Set("d8_check_cluster_config", 1, nil)
 				return fmt.Errorf(findErrorLines(err.Error()))
+			} else {
+				requirements.SaveValue(CheckStaticClusterConfigRaw, false)
+				input.MetricsCollector.Expire("d8_check_cluster_config")
 			}
 		}
 	}
-	requirements.SaveValue(CheckStaticClusterConfigRaw, false)
-	input.MetricsCollector.Expire("d8_check_cluster_config")
+
 	return nil
 }
 
