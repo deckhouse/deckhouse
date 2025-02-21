@@ -67,21 +67,31 @@ func applyProviderClusterConfigurationSecretFilter(obj *unstructured.Unstructure
 }
 
 func CheckCloudProviderConfig(input *go_hook.HookInput) error {
+	input.Logger.Info("1001")
 	snap := input.Snapshots["provider_cluster_configuration"]
+	input.Logger.Info("1002")
 	if len(snap) > 0 {
+		input.Logger.Info("1003")
 		secret := snap[0].(*v1.Secret)
+		input.Logger.Info("1004")
 		if YAML, ok := secret.Data["cloud-provider-cluster-configuration.yaml"]; ok && len(YAML) > 0 {
+			input.Logger.Info("1005")
 			err := config.CheckParseConfigFromData(string(YAML))
+			input.Logger.Info("1006")
 			if err != nil {
+				input.Logger.Info("1007")
 				requirements.SaveValue(CheckCloudProviderConfigRaw, true)
 				input.MetricsCollector.Set("d8_check_cloud_provider_config", 1, nil)
-				return fmt.Errorf(findErrorLines(err.Error()))
-			} else {
-				requirements.SaveValue(CheckCloudProviderConfigRaw, false)
-				input.MetricsCollector.Expire("d8_check_cloud_provider_config")
+				err1 := fmt.Errorf("%s", findErrorLines(err.Error()))
+				input.Logger.Info("2008" + err1.Error())
+				return err1
 			}
+			input.Logger.Info("1009")
+			requirements.SaveValue(CheckCloudProviderConfigRaw, false)
+			input.MetricsCollector.Expire("d8_check_cloud_provider_config")
 		}
 	}
+	input.Logger.Info("1010")
 	return nil
 }
 
@@ -115,11 +125,10 @@ func CheckStaticClusterConfig(input *go_hook.HookInput) error {
 			if err != nil {
 				requirements.SaveValue(CheckStaticClusterConfigRaw, true)
 				input.MetricsCollector.Set("d8_check_static_cluster_config", 1, nil)
-				return fmt.Errorf(findErrorLines(err.Error()))
-			} else {
-				requirements.SaveValue(CheckStaticClusterConfigRaw, false)
-				input.MetricsCollector.Expire("d8_check_static_cluster_config")
+				return fmt.Errorf("%s", findErrorLines(err.Error()))
 			}
+			requirements.SaveValue(CheckStaticClusterConfigRaw, false)
+			input.MetricsCollector.Expire("d8_check_static_cluster_config")
 		}
 	}
 
@@ -163,14 +172,13 @@ func CheckClusterConfig(input *go_hook.HookInput) error {
 				input.Logger.Info("0007" + err.Error())
 				requirements.SaveValue(CheckStaticClusterConfigRaw, true)
 				input.MetricsCollector.Set("d8_check_cluster_config", 1, nil)
-				err1 := fmt.Errorf(findErrorLines(err.Error()))
+				err1 := fmt.Errorf("%s", findErrorLines(err.Error()))
 				input.Logger.Info("0008" + err1.Error())
 				return err1
-			} else {
-				input.Logger.Info("0009")
-				requirements.SaveValue(CheckStaticClusterConfigRaw, false)
-				input.MetricsCollector.Expire("d8_check_cluster_config")
 			}
+			input.Logger.Info("0009")
+			requirements.SaveValue(CheckStaticClusterConfigRaw, false)
+			input.MetricsCollector.Expire("d8_check_cluster_config")
 		}
 	}
 	input.Logger.Info("0010")
