@@ -57,7 +57,7 @@ index 8469cecdc0e..8acbf774d14 100644
 +			m.logger.V(1).Info("Shutdown still locked by external inhibitors")
 +		}
 +
-+		<-timer.C
++		<-timer.C()
 +	}
 +
 +	m.logger.V(1).Info("Timeout while waiting for external inhibitors, proceed with shutdown")
