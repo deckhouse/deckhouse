@@ -4196,7 +4196,7 @@ alerts:
 
         You need either decrease expected `retentionPeriodHours` or increase resize Loki PersistentVolumeClaim
       summary: |
-        Not enough disk space to retain logs for {{ $value }} hours
+        Not enough disk space to retain logs for 168 hours
       severity: "4"
       markupFormat: markdown
     - name: MigrationRequiredFromRBDInTreeProvisionerToCSIDriver
