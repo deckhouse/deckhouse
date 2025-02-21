@@ -223,6 +223,7 @@ func (f *DeckhouseReleaseFetcher) fetchDeckhouseRelease(ctx context.Context) err
 
 		f.logger.Warn("deployed deckhouse-release restored")
 
+		deployedRelease = restored
 		releases = append(releases, restored)
 
 		sort.Sort(releaseUpdater.ByVersion[*v1alpha1.DeckhouseRelease](releases))
@@ -252,7 +253,10 @@ func (f *DeckhouseReleaseFetcher) fetchDeckhouseRelease(ctx context.Context) err
 	// shortened slice for only releases after deployed
 	if deployedRelease != nil {
 		releaseForUpdate = deployedRelease
-		releasesInCluster = releasesFromDeployed
+
+		if len(releasesFromDeployed) > 0 {
+			releasesInCluster = releasesFromDeployed
+		}
 	}
 
 	lastCreatedMeta, err := f.createReleases(ctx, imageInfo.Metadata, releaseForUpdate, releasesInCluster, newSemver)
