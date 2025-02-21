@@ -260,7 +260,7 @@ Some data is stored in the `_data` directory of a Jekyll project, but some data 
     "editionsWithRestrictionsComments": { <-- comments for restrictions. `all` - for all editions
       "all": {
         "en": "Restriction on working with BGP",
-        "ru": "Ограничение на работу с BGP"
+        "ru": "Restriction on working with BGP"
       }
     },
     "editionFullyAvailable": [ <-- list of editions, where the module is available without restrictions. Used for overriding computed values.
