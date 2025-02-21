@@ -5,7 +5,7 @@ terraform {
   required_providers {
     vcd = {
       source = "vmware/vcd"
-      version = "3.10.0"
+      version = var.providerClusterConfiguration.terraformProviderVersion
     }
   }
   required_version = ">= 0.13"

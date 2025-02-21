@@ -318,6 +318,13 @@ apiVersions:
               x-doc-default: false
           required:
             - server
+        terraformProviderVersion:
+          type: string
+          description: |
+              The version of the Terraform provider for the cloud provider.
+
+              If not specified, the legacy version is used.
+          default: "3.10.0"
       allOf:
       - oneOf:
         - required: [layout]
