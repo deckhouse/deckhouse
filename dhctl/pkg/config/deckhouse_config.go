@@ -138,7 +138,7 @@ func PrepareDeckhouseInstallConfig(metaConfig *MetaConfig) (*DeckhouseInstaller,
 	bundle := DefaultBundle
 	logLevel := DefaultLogLevel
 
-	schemasStore := NewSchemaStore()
+	schemasStore := NewSchemaStore(false)
 
 	var deckhouseCm *ModuleConfig
 	// find deckhouse module config for extract release

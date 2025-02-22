@@ -33,8 +33,8 @@ func ParseBashibleConfig(paths []string, specPath string) (map[string]interface{
 
 	fileContentBytes := []byte(fileContent)
 
-	schemaStore := NewSchemaStore()
-	err := schemaStore.UploadByPath(specPath)
+	schemaStore := NewSchemaStore(false)
+	err := schemaStore.UploadByPath(false,specPath)
 	if err != nil {
 		return nil, fmt.Errorf("loading bashible schema: %v", err)
 	}
