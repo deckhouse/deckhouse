@@ -93,7 +93,7 @@ type ProjectTemplateSpec struct {
 	// ParametersSchema specification for template values (`values`) in TemplateValues.
 	ParametersSchema ParametersSchema `json:"parametersSchema,omitempty"`
 
-	// Resource templates in `helm` format to be created when starting a new `Workspace` (environment).
+	// Resource templates in `helm` format to be created when starting a new `Project` (environment).
 	// Fully compatible with all `helm` functions.
 	ResourcesTemplate string `json:"resourcesTemplate,omitempty"`
 }
@@ -127,9 +127,6 @@ func (p *ParametersSchema) DeepCopyInto(newObj *ParametersSchema) {
 type ProjectTemplateStatus struct {
 	// Status message.
 	Message string `json:"message,omitempty"`
-
-	// Number of projects created from this template
-	ProjectsNumber int `json:"projectsNumber,omitempty"`
 
 	// Current state.
 	Ready bool `json:"ready,omitempty"`
