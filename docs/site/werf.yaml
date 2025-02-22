@@ -322,7 +322,7 @@ import:
 {{- end }}
 ---
 image: web-backend-srv
-from: {{ .Images.BASE_GOLANG_16_ALPINE }}
+from: {{ .Images.BASE_GOLANG_23_ALPINE }}
 final: false
 shell:
   install:
@@ -365,8 +365,10 @@ image: web-frontend
 imageSpec:
   config:
     workingDir: "/app"
-from: {{ .Images.BASE_NGINX_ALPINE }}
+from: {{ .Images.BASE_ALPINE }}
 shell:
+  beforeSetup:
+  - apt add --no-cache nginx
   setup:
   - |
       cat <<"EOD" > /etc/nginx/nginx.conf

@@ -13,15 +13,30 @@ imageSpec:
   config:
     entrypoint: ["/cloud-provider-for-cloud-director"]
 ---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $version | replace "." "-" }}
+final: false
+fromImage: common/src-artifact
+git:
+- add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
+  to: /patches
+  stageDependencies:
+    install:
+    - '**/*'
+shell:
+  install:
+  - git clone --depth 1 --branch {{ $value.ccm.vcd }} {{ $.SOURCE_REPO }}/vmware/cloud-provider-for-cloud-director.git /src
+  - cd /src
+  - git apply /patches/{{ $version }}/*.patch --verbose
+  - rm -rf .git
+---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
 final: false
-from: {{ $.Images.BASE_GOLANG_20_BUSTER }}
-git:
-  - add: /{{ $.ModulePath }}modules/030-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
-    to: /patches
-    stageDependencies:
-      install:
-        - '**/*'
+from: {{ $.Images.BASE_GOLANG_23_BOOKWORM }}
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $version | replace "." "-" }}
+  add: /src
+  to: /src
+  before: install
 mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
@@ -34,11 +49,7 @@ shell:
   install:
   - export GO_VERSION=${GOLANG_VERSION}
   - export GOPROXY={{ $.GOPROXY }}
-  - mkdir -p /src
-  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
-  - git clone --depth 1 --branch {{ $value.ccm.vcd }} {{ $.SOURCE_REPO }}/vmware/cloud-provider-for-cloud-director.git /src
   - cd /src
-  - git apply /patches/{{ $version }}/*.patch --verbose
   - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags "-s -w -X github.com/vmware/cloud-provider-for-cloud-director/release.Version={{ $value.ccm.vcd }}" -o bin/cloud-provider-for-cloud-director cmd/ccm/main.go
   {{- end }}
 {{- end }}

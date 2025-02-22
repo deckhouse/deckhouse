@@ -29,15 +29,30 @@ imageSpec:
   config:
     entrypoint: ["/cloud-director-named-disk-csi-driver"]
 ---
-image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
+image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $version | replace "." "-" }}
 final: false
-from: {{ $.Images.BASE_GOLANG_20_BUSTER }}
+fromImage: common/src-artifact
 git:
-- add: /{{ $.ModulePath }}/modules/030-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
+- add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
   to: /patches
   stageDependencies:
     install:
     - '**/*'
+shell:
+  install:
+    - git clone --depth 1 --branch {{ $value.csi.vcd }} {{ $.SOURCE_REPO }}/vmware/cloud-director-named-disk-csi-driver.git /src
+    - cd /src
+    - git apply /patches/*.patch --verbose
+    - rm -rf .git
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
+final: false
+from: {{ $.Images.BASE_GOLANG_23_BOOKWORM }}
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $version | replace "." "-" }}
+  add: /src
+  to: /src
+  before: install
 mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
@@ -50,11 +65,7 @@ shell:
   install:
   - export GO_VERSION=${GOLANG_VERSION}
   - export GOPROXY={{ $.GOPROXY }}
-  - mkdir -p /src
-  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
-  - git clone --depth 1 --branch {{ $value.csi.vcd }} {{ $.SOURCE_REPO }}/vmware/cloud-director-named-disk-csi-driver.git /src
   - cd /src
-  - git apply /patches/*.patch --verbose
   - go mod vendor
   - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags "-s -w -X github.com/vmware/cloud-director-named-disk-csi-driver/version.Version={{ $value.csi.vcd }}" -o bin/cloud-director-named-disk-csi-driver cmd/csi/main.go
  {{- end }}
