@@ -28,7 +28,7 @@ shell:
   - chown -R 64535:64535 /opt/keepalived-static
   - chmod 0700 /opt/keepalived-static/usr/sbin/keepalived
   - chmod 0700 /opt/keepalived-static/usr/bin/genhash
-  - mdkir /empty
+  - mkdir /empty
   - chmod 755 /empty
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
