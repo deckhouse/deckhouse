@@ -60,11 +60,11 @@ func (p *ProjectTemplateList) DeepCopyInto(newObj *ProjectTemplateList) {
 
 type ProjectTemplate struct {
 	metav1.TypeMeta   `json:",inline"`
-	metav1.ObjectMeta `json:"metadata,omitempty" yaml:"metadata,omitempty"`
+	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec ProjectTemplateSpec `json:"spec,omitempty" yaml:"spec,omitempty"`
+	Spec ProjectTemplateSpec `json:"spec,omitempty"`
 
-	Status ProjectTemplateStatus `json:"status,omitempty" yaml:"status,omitempty"`
+	Status ProjectTemplateStatus `json:"status,omitempty"`
 }
 
 func (p *ProjectTemplate) DeepCopyObject() runtime.Object {
@@ -91,11 +91,11 @@ type ProjectTemplateSpec struct {
 	Description string `json:"description,omitempty"`
 
 	// ParametersSchema specification for template values (`values`) in TemplateValues.
-	ParametersSchema ParametersSchema `json:"parametersSchema,omitempty" yaml:"parametersSchema,omitempty"`
+	ParametersSchema ParametersSchema `json:"parametersSchema,omitempty"`
 
-	// Resource templates in `helm` format to be created when starting a new `Project` (environment).
+	// Resource templates in `helm` format to be created when starting a new `Workspace` (environment).
 	// Fully compatible with all `helm` functions.
-	ResourcesTemplate string `json:"resourcesTemplate,omitempty" yaml:"resourcesTemplate,omitempty"`
+	ResourcesTemplate string `json:"resourcesTemplate,omitempty"`
 }
 
 func (p *ProjectTemplateSpec) DeepCopyInto(newObj *ProjectTemplateSpec) {
@@ -127,6 +127,9 @@ func (p *ParametersSchema) DeepCopyInto(newObj *ParametersSchema) {
 type ProjectTemplateStatus struct {
 	// Status message.
 	Message string `json:"message,omitempty"`
+
+	// Number of projects created from this template
+	ProjectsNumber int `json:"projectsNumber,omitempty"`
 
 	// Current state.
 	Ready bool `json:"ready,omitempty"`
