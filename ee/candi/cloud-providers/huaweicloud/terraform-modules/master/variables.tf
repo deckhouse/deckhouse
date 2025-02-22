@@ -64,3 +64,7 @@ variable "zone" {
 variable "server_group" {
   type = any
 }
+
+variable "subnet" {
+  type = string
+}
