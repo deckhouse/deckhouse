@@ -8,6 +8,7 @@ spec:
   resourceAnnotations:
     key: val
   description: This is an example from the Deckhouse documentation.
+  tenant: test
   projectTemplateName: default
   parameters:
     extendedMonitoringEnabled: true

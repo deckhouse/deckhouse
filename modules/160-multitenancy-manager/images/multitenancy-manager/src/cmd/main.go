@@ -41,6 +41,7 @@ import (
 	"controller/apis/deckhouse.io/v1alpha2"
 	projectcontroller "controller/internal/controller/project"
 	templatecontroller "controller/internal/controller/template"
+	workspacecontroller "controller/internal/controller/workspace"
 	"controller/internal/helm"
 	namespacewebhook "controller/internal/webhook/namespace"
 	projectwebhook "controller/internal/webhook/project"
@@ -67,7 +68,7 @@ const (
 
 func main() {
 	var allowOrphanNamespaces bool
-	flag.BoolVar(&allowOrphanNamespaces, "allow-orphan-namespaces", true, "allow to create a namespace which is not a part of a Project")
+	flag.BoolVar(&allowOrphanNamespaces, "allow-orphan-namespaces", true, "allow to create a namespace which is not a part of a Workspace")
 	flag.Parse()
 
 	// setup logger
@@ -95,6 +96,11 @@ func main() {
 
 	// register template controller
 	if err = templatecontroller.Register(runtimeManager, templatesPath, logger); err != nil {
+		panic(err)
+	}
+
+	// register workspace controller
+	if err = workspacecontroller.Register(runtimeManager, logger); err != nil {
 		panic(err)
 	}
 
