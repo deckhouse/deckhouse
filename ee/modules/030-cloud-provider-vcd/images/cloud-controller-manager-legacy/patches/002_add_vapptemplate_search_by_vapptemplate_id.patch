@@ -1,17 +1,17 @@
 Subject: [PATCH] Add vAppTemplate search by vAppTemplate ID
 ---
-Index: vendor/github.com/vmware/cloud-provider-for-cloud-director/pkg/vcdsdk/vapp.go
+Index: pkg/vcdsdk/vapp.go
 IDEA additional info:
 Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
 <+>UTF-8
 ===================================================================
-diff --git a/vendor/github.com/vmware/cloud-provider-for-cloud-director/pkg/vcdsdk/vapp.go b/vendor/github.com/vmware/cloud-provider-for-cloud-director/pkg/vcdsdk/vapp.go
---- a/vendor/github.com/vmware/cloud-provider-for-cloud-director/pkg/vcdsdk/vapp.go	(revision be8e5d9d8032f5415c888052b2d29de0d1646471)
-+++ b/vendor/github.com/vmware/cloud-provider-for-cloud-director/pkg/vcdsdk/vapp.go	(date 1733302223770)
+diff --git a/pkg/vcdsdk/vapp.go b/pkg/vcdsdk/vapp.go
+--- a/pkg/vcdsdk/vapp.go	(revision f3f44d21165e798e1a8e1a14324b09e01fe35fd4)
++++ b/pkg/vcdsdk/vapp.go	(revision 62c3e9620155db4beb6b046c6c94a10e855b9457)
 @@ -552,13 +552,24 @@
  		return govcd.Task{}, fmt.Errorf("unable to query templates of catalog [%s]: [%v]", catalogName, err)
  	}
- 
+
 -	var queryVAppTemplate *types.QueryResultVappTemplateType = nil
 -	for _, template := range vAppTemplateList {
 -		if template.Name == templateName {
@@ -41,7 +41,7 @@ diff --git a/vendor/github.com/vmware/cloud-provider-for-cloud-director/pkg/vcds
 @@ -851,13 +862,24 @@
  		return fmt.Errorf("unable to query templates of catalog [%s]: [%v]", catalogName, err)
  	}
- 
+
 -	var queryVAppTemplate *types.QueryResultVappTemplateType = nil
 -	for _, template := range vAppTemplateList {
 -		if template.Name == templateName {
