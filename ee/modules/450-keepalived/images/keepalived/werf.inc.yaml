@@ -28,6 +28,8 @@ shell:
   - chown -R 64535:64535 /opt/keepalived-static
   - chmod 0700 /opt/keepalived-static/usr/sbin/keepalived
   - chmod 0700 /opt/keepalived-static/usr/bin/genhash
+  - mdkir /empty
+  - chmod 755 /empty
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
@@ -43,6 +45,10 @@ import:
   add: /opt/keepalived-static/usr/bin/genhash
   to: /usr/bin/genhash
   before: install
+- image: {{ $.ModuleName }}/build-keepalived
+  add: /empty
+  to: /run
+  before: install
 - image: common/python-static
   add: /opt/python-static/bin
   to: /usr/bin
@@ -56,7 +62,3 @@ import:
   before: install
   includePaths:
   - python3*
-shell:
-  install:
-  - mdkir /run
-  - chmod 755 /run
