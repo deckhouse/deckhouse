@@ -69,7 +69,6 @@ shell:
   - groupadd -f -g 1337 cilium && useradd -m -g cilium -u 1337 cilium
   - mv -t /home/cilium/.cache /root/.cache/bazelisk /root/.cache/bazel
   - chown -R 1337:1337 /home/cilium/.cache
-  - sudo -u cilium PATH=${PATH} echo "StrictHostKeyChecking accept-new" > /home/cilium/.ssh/config
   - chmod -R a+w /tmp
   - chown -R 1337:1337 /cilium/proxy
   - chown -R 1337:1337 /src/envoy
