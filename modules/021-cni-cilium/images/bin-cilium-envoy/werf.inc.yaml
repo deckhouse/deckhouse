@@ -76,12 +76,10 @@ shell:
   setup:
   #
   - mkdir -p /tmp/bazel-cache
-  #- git clone --depth 1 --branch {{ $ciliumProxyCacheRev }} {{ $.SOURCE_REPO }}/cilium/proxy-build-cache.git /tmp/bazel-cache
-  - rm -rf /tmp/bazel-cache/.git
+  #- git clone --depth 1 --branch {{ $ciliumProxyCacheRev }} {{ $.SOURCE_REPO }}/cilium/proxy-build-cache.git /tmp/bazel-cache && rm -rf /tmp/bazel-cache/.git
   - chown -R 1337:1337 /tmp/bazel-cache
   - mkdir -p /tmp/bazel-deps
-  #- git clone --depth 1 --branch {{ $ciliumProxyDepsRev }} {{ $.SOURCE_REPO }}/cilium/proxy-build-deps.git /tmp/bazel-deps
-  - rm -rf /tmp/bazel-deps/.git
+  #- git clone --depth 1 --branch {{ $ciliumProxyDepsRev }} {{ $.SOURCE_REPO }}/cilium/proxy-build-deps.git /tmp/bazel-deps && rm -rf /tmp/bazel-deps/.git
   - chown -R 1337:1337 /tmp/bazel-deps
   #
   - export GO_VERSION=${GOLANG_VERSION} GOPROXY={{ $.GOPROXY }}
@@ -96,9 +94,7 @@ shell:
   - export BAZEL_VERSION="{{ $bazelVersions }}" USE_BAZEL_VERSION="{{ $bazelVersions }}"
   #- export BAZEL_BUILD_OPTS="--disk_cache=/tmp/bazel-cache --nofetch"
   - export BAZEL_BUILD_OPTS="--disk_cache=/tmp/bazel-cache"
-  #- export PKG_BUILD=1 V=$V DEBUG=$DEBUG DESTDIR=/tmp/install
-  #- export PKG_BUILD=1
-  - export V=$V DEBUG=$DEBUG DESTDIR=/tmp/install
+  - export PKG_BUILD=1 V=$V DEBUG=$DEBUG DESTDIR=/tmp/install
   #
   - cd /cilium/proxy
   - sudo -u cilium echo "{{ $ciliumProxyRev }}" >SOURCE_VERSION
@@ -119,6 +115,8 @@ shell:
   - sudo -u cilium PATH=${PATH} mkdir -p ${BAZEL_OUTPUT_BASE}/external
   #- sudo -u cilium PATH=${PATH} tar -zxf /tmp/bazel-deps/external.tar.gz -C ${BAZEL_OUTPUT_BASE}/external
   - rm -rf /tmp/bazel-deps
+  #
+  - sudo -u cilium PATH=${PATH} make clang.bazelrc
   #
   - sudo -u cilium PATH=${PATH} make bazel-bin/cilium-envoy-starter bazel-bin/cilium-envoy
   - sudo -u cilium PATH=${PATH} ./bazel/get_workspace_status
