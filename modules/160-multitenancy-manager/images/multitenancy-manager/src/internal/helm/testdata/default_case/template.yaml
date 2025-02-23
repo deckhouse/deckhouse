@@ -138,6 +138,8 @@ spec:
     apiVersion: deckhouse.io/v1alpha1
     kind: AuthorizationRule
     metadata:
+      annotations:
+        projects.deckhouse.io/share-resource: "true"
       name: {{ $administrator.name | include "normalize" }}
     spec:
       accessLevel: Admin

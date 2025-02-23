@@ -23,7 +23,6 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
-
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/util/retry"
 
@@ -96,8 +95,8 @@ func (m *Manager) Handle(ctx context.Context, template *v1alpha1.ProjectTemplate
 					return fmt.Errorf("get the '%s' project: %w", project.Name, err)
 				}
 				m.logger.Info("trigger the project to update", "template", template.Name, "project", project.Name)
-				if project.Annotations == nil {
-					project.Annotations = map[string]string{}
+				if len(project.Annotations) == 0 {
+					project.Annotations = make(map[string]string, 1)
 				}
 				project.Annotations[v1alpha2.ProjectAnnotationRequireSync] = "true"
 				return m.client.Update(ctx, project)

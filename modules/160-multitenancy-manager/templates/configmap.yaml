@@ -1,0 +1,10 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: multitenancy-limits
+  namespace: d8-{{ .Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" .Chart.Name)) | nindent 2 }}
+data:
+  templateLimits: |
+    {{- .Values.multitenancyManager.templateLimits | toYaml | nindent 4}}

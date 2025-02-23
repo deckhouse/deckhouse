@@ -142,17 +142,8 @@ func (m *Manager) Handle(ctx context.Context, project *v1alpha2.Project) (ctrl.R
 	// upgrade project`s resources
 	m.logger.Info("upgrade resources for the project", "project", project.Name, "template", projectTemplate.Name)
 	if err = m.helmClient.Upgrade(ctx, project, projectTemplate); err != nil {
-		// to avoid helm flaky errors
-		m.logger.Info("failed to upgrade the project resources, try again", "project", project.Name, "template", projectTemplate.Name)
-		if err = m.helmClient.Upgrade(ctx, project, projectTemplate); err != nil {
-			project.SetState(v1alpha2.ProjectStateError)
-			project.SetConditionFalse(v1alpha2.ProjectConditionProjectResourcesUpgraded, err.Error())
-			if updateErr := m.updateProjectStatus(ctx, project); updateErr != nil {
-				m.logger.Error(updateErr, "failed to update the project status", "project", project.Name, "template", projectTemplate.Name)
-				return ctrl.Result{}, updateErr
-			}
-			return ctrl.Result{}, nil
-		}
+		m.logger.Info("failed to upgrade the project resources", "project", project.Name, "template", projectTemplate.Name)
+		return ctrl.Result{}, err
 	}
 
 	project.SetState(v1alpha2.ProjectStateDeployed)
@@ -202,6 +193,14 @@ func (m *Manager) HandleVirtual(ctx context.Context, project *v1alpha2.Project) 
 
 // Delete deletes project`s resources
 func (m *Manager) Delete(ctx context.Context, project *v1alpha2.Project) (ctrl.Result, error) {
+	if project.Status.State != v1alpha2.ProjectStateTerminating {
+		project.SetState(v1alpha2.ProjectStateTerminating)
+		if err := m.client.Status().Update(ctx, project); err != nil {
+			m.logger.Error(err, "failed to set terminating", "project", project.Name)
+			return ctrl.Result{}, err
+		}
+	}
+
 	// delete resources
 	if err := m.helmClient.Delete(ctx, project.Name); err != nil {
 		// TODO: add error to the project`s status

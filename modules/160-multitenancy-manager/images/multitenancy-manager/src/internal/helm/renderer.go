@@ -51,7 +51,10 @@ func (r *postRenderer) Run(renderedManifests *bytes.Buffer) (modifiedManifests *
 	// clear resources
 	r.project.Status.Resources = make(map[string]map[string]v1alpha2.ResourceKind)
 
-	var coreFound bool
+	// clear namespaces
+	r.project.Status.Namespaces = []string{}
+
+	var core *unstructured.Unstructured
 	builder := strings.Builder{}
 	for _, manifest := range releaseutil.SplitManifests(renderedManifests.String()) {
 		object := new(unstructured.Unstructured)
@@ -104,15 +107,27 @@ func (r *postRenderer) Run(renderedManifests *bytes.Buffer) (modifiedManifests *
 
 		object.SetLabels(labels)
 
-		if object.GetKind() != "Namespace" {
-			object.SetNamespace(r.project.Name)
-		} else {
+		if object.GetKind() == "Namespace" {
 			// skip other namespaces
-			if object.GetName() != r.project.Name {
+			if object.GetName() == r.project.Name {
+				core = object
+				r.project.AddResource(object, true)
+			} else {
 				r.logger.Info("namespace skipped during render project", "project", r.project.Name, "namespace", object.GetName())
-				continue
 			}
-			coreFound = true
+			continue
+		}
+
+		object.SetNamespace(r.project.Name)
+
+		if _, ok := object.GetAnnotations()[v1alpha2.ResourceAnnotationShare]; ok {
+			for _, namespace := range r.project.Spec.Namespaces {
+				objectCopy := object.DeepCopy()
+				objectCopy.SetNamespace(fmt.Sprintf("%s-%s", r.project.Name, namespace))
+
+				data, _ := yaml.Marshal(objectCopy)
+				builder.WriteString("\n---\n" + string(data))
+			}
 		}
 
 		r.project.AddResource(object, true)
@@ -122,18 +137,31 @@ func (r *postRenderer) Run(renderedManifests *bytes.Buffer) (modifiedManifests *
 	}
 
 	buf := bytes.NewBuffer(nil)
+
 	// ensure core namespace
-	if !coreFound {
-		core := r.newNamespace(r.project.Name)
-		buf.WriteString("\n---\n" + string(core))
+	if core == nil {
+		buf.WriteString("\n---\n" + string(r.newNamespace(r.project.Name)))
+	} else {
+		data, _ := yaml.Marshal(core)
+		buf.WriteString("\n---\n" + string(data))
 	}
+
+	r.project.Status.Namespaces = append(r.project.Status.Namespaces, r.project.Name)
+
+	// ensure extra namespaces
+	for _, namespace := range r.project.Spec.Namespaces {
+		extraNamespace := fmt.Sprintf("%s-%s", r.project.Name, namespace)
+		buf.WriteString("\n---\n" + string(r.newNamespace(extraNamespace)))
+		r.project.Status.Namespaces = append(r.project.Status.Namespaces, extraNamespace)
+	}
+
 	buf.WriteString(builder.String())
 
 	return buf, nil
 }
 
 func (r *postRenderer) newNamespace(name string) []byte {
-	obj := corev1.Namespace{
+	obj := &corev1.Namespace{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "v1",
 			Kind:       "Namespace",

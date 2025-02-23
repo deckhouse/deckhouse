@@ -3,6 +3,8 @@ kind: Project
 metadata:
   name: test
 spec:
+  namespaces:
+    - test
   resourceLabels:
     key: val
   resourceAnnotations:

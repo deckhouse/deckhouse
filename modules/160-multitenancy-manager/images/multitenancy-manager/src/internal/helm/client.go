@@ -264,6 +264,8 @@ func buildValues(project *v1alpha2.Project, template *v1alpha1.ProjectTemplate) 
 		// this helps to trigger project rendering when resource labels/annotations changed
 		"_projectLabels":      project.Spec.ResourceLabels,
 		"_projectAnnotations": project.Spec.ResourceAnnotations,
+		// this help to trigger project rendering when namespaces changed
+		"_namespaces": project.Spec.Namespaces,
 	}
 }
 

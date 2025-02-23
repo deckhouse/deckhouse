@@ -48,10 +48,15 @@ type validator struct {
 	helmClient *helm.Client
 }
 
-func (v *validator) Handle(_ context.Context, req admission.Request) admission.Response {
+func (v *validator) Handle(ctx context.Context, req admission.Request) admission.Response {
 	project := new(v1alpha2.Project)
 	if err := yaml.Unmarshal(req.Object.Raw, project); err != nil {
 		return admission.Errored(http.StatusBadRequest, err)
+	}
+
+	// skip deleted projects
+	if project.GetDeletionTimestamp() != nil {
+		return admission.Allowed("The project is being deleted")
 	}
 
 	if req.Operation == admissionv1.Create {
@@ -97,6 +102,11 @@ func (v *validator) Handle(_ context.Context, req admission.Request) admission.R
 	}
 	if template == nil {
 		return admission.Allowed("").WithWarnings("The project template not found")
+	}
+
+	// validate the project against limits
+	if err = validate.ProjectLimits(ctx, v.client, project); err != nil {
+		return admission.Denied(fmt.Sprintf("Limits validation failed: %v", err))
 	}
 
 	// validate the project against the template
