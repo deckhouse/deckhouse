@@ -451,7 +451,7 @@ This file stores the following module settings:
 
 - `tags: string` — the additional module tags, which are converted to module labels: `module.deckhouse.io/$tag=""`.
 - `weight: integer` — the module weight. The default weight is 900, you can set your own weight between 900 and 999.
-- `stage: string` — [module lifecycle stage](../versioning/#module-lifecycle). Can be `Sandbox`, `Incubating`, `Graduated`, or `Deprecated`.
+- `stage: string` — [module lifecycle stage](../versioning/#module-lifecycle). Possible values: `Experimental`, `Preview`, `General Availability`, `Deprecated`.
 - `description: string` — the module description.
 
 An example:
