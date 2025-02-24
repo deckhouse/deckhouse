@@ -122,8 +122,8 @@ type OperationPolicySpec struct {
 	Policies          struct {
 		AllowedRepos      []string `json:"allowedRepos,omitempty"`
 		RequiredResources struct {
-			Limits   []string `json:"limits"`
-			Requests []string `json:"requests"`
+			Limits   []string `json:"limits,omitempty"`
+			Requests []string `json:"requests,omitempty"`
 		} `json:"requiredResources,omitempty"`
 		DisallowedImageTags []string `json:"disallowedImageTags,omitempty"`
 		RequiredProbes      []string `json:"requiredProbes,omitempty"`
