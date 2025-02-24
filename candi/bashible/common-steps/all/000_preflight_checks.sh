@@ -18,5 +18,12 @@ if [[ "$FIRST_BASHIBLE_RUN" == "yes" ]]; then
     bb-log-error "containerd is detected on $HOSTNAME. Deckhouse does not support pre-provisioned containerd installations. Please uninstall containerd and try again."
     exit 1
   fi
+else
+  if systemctl list-unit-files containerd.service >/dev/null 2>&1; then
+    if systemctl is-enabled containerd >/dev/null 2>&1 || systemctl is-active containerd >/dev/null 2>&1; then
+      bb-log-error "containerd.service is enabled or running on $HOSTNAME. Deckhouse use only containerd-deckhouse.service. Please disable/stop/uninstall containerd.service to avoid further conflicts."
+      exit 1
+    fi
+  fi
 fi
 {{- end }}
