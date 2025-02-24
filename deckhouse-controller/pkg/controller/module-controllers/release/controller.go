@@ -325,8 +325,6 @@ func (r *reconciler) handleDeployedRelease(ctx context.Context, release *v1alpha
 	var needsUpdate bool
 
 	if release.GetReinstall() {
-		delete(release.Annotations, v1alpha1.ModuleReleaseAnnotationReinstall)
-
 		err := r.runReleaseDeploy(ctx, release, nil)
 		if err != nil {
 			return ctrl.Result{}, fmt.Errorf("run release deploy: %w", err)
@@ -736,6 +734,10 @@ func (r *reconciler) runReleaseDeploy(ctx context.Context, release *v1alpha1.Mod
 
 		if release.GetForce() {
 			delete(release.Annotations, v1alpha1.ModuleReleaseAnnotationForce)
+		}
+
+		if release.GetReinstall() {
+			delete(release.Annotations, v1alpha1.ModuleReleaseAnnotationReinstall)
 		}
 
 		controllerutil.AddFinalizer(release, v1alpha1.ModuleReleaseFinalizerExistOnFs)
