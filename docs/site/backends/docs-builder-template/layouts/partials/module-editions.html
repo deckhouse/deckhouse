@@ -14,83 +14,86 @@
   </svg>
 <div>
 {{ if $editionsWithRestrictions }}
-<p>
-  {{ if index $moduleData.editionsWithRestrictionsComments "all" }}
-    <span style='border-bottom: 1px dotted #000' data-tippy-content='{{ index $moduleData.editionsWithRestrictionsComments "all" $lang }}'>
-      {{- T "module_available_with_limitations_prefix" }}:
-    </span> 
-  {{- else }}
-    {{- T "module_available_with_limitations_prefix" }}: 
-  {{- end }}
-  {{- range $index, $edition := $moduleData.editions }}
-    {{- if eq $edition "fe" }}
-      {{- continue -}}
-    {{- end }}
+    <p>
+      {{ if index $moduleData.editionsWithRestrictionsComments "all" }}
+        <span style='border-bottom: 1px dotted #000' data-tippy-content='{{ index $moduleData.editionsWithRestrictionsComments "all" $lang }}'>
+          {{- T "module_available_with_limitations_prefix" }}:
+        </span> 
+      {{- else }}
+        {{- T "module_available_with_limitations_prefix" }}: 
+      {{- end }}
+      {{- range $index, $edition := $moduleData.editions }}
+        {{- if eq $edition "fe" }}
+          {{- continue -}}
+        {{- end }}
 
-    {{- $editionLanguages := index $editionsData $edition "languages" -}}
-    {{- if $editionLanguages -}}
-        {{- if not (in $editionLanguages $lang) -}}
-            {{- continue -}}
+        {{- $editionLanguages := index $editionsData $edition "languages" -}}
+        {{- if $editionLanguages -}}
+            {{- if not (in $editionLanguages $lang) -}}
+                {{- continue -}}
+            {{- end -}}
         {{- end -}}
-    {{- end -}}
 
-    {{- if in $editionsWithRestrictions $edition }}
-      {{- continue -}}
-    {{- end }}
-    {{- $editionsWithoutRestrictions = $editionsWithoutRestrictions | append $edition -}}
-  {{- end }}
+        {{- if in $editionsWithRestrictions $edition }}
+          {{- continue -}}
+        {{- end }}
+        {{- $editionsWithoutRestrictions = $editionsWithoutRestrictions | append $edition -}}
+      {{- end }}
 
-<strong>
-  {{- $lastIndex := sub (len $editionsWithRestrictions) 1 -}}
-  {{- range $index, $edition := $editionsWithRestrictions }}
+    <strong>
+      {{- $lastIndex := sub (len $editionsWithRestrictions) 1 -}}
+      {{- range $index, $edition := $editionsWithRestrictions }}
 
-     {{- $comment := index $moduleData.editionsWithRestrictionsComments $edition -}}
-     {{- if $comment }}
-       {{- $commentLang := index $comment $lang -}}
-       <span style="border-bottom: 1px dotted #000" data-tippy-content="{{ $commentLang }}">
-         {{- with index $editionsData $edition }}
-           {{- if .name_version }}
-             {{ .name_version }}
-           {{- else }}
-             {{ .name }}
+         {{- $comment := index $moduleData.editionsWithRestrictionsComments $edition -}}
+         {{- if $comment }}
+           {{- $commentLang := index $comment $lang -}}
+           <span style="border-bottom: 1px dotted #000" data-tippy-content="{{ $commentLang }}">
+             {{- with index $editionsData $edition }}
+               {{- if .name_version }}
+                 {{ .name_version }}
+               {{- else }}
+                 {{ .name }}
+               {{- end }}
+             {{- end }}
+           </span>
+         {{- else }}
+           {{- with index $editionsData $edition }}
+             {{- if .name_version }}
+               {{ .name_version }}
+             {{- else }}
+               {{ .name }}
+             {{- end }}
            {{- end }}
          {{- end }}
-       </span>
-     {{- else }}
-       {{- with index $editionsData $edition }}
-         {{- if .name_version }}
-           {{ .name_version }}
-         {{- else }}
-           {{ .name }}
-         {{- end }}
-       {{- end }}
-     {{- end }}
 
-     {{- if lt $index $lastIndex }}, {{ end }}
-  {{- end }}
-
-</strong>
-</p>
-<p>
-{{- T "module_available_without_limitations_prefix" }}: 
-<strong>
-  {{- $lastIndex := sub (len $editionsWithoutRestrictions) 1 -}}
-  {{- range $index, $edition := $editionsWithoutRestrictions }}
-
-    {{- with index $editionsData $edition }}
-      {{- if .name_version }}
-        {{ .name_version }}
-      {{- else }}
-        {{ .name }}
+         {{- if lt $index $lastIndex }}, {{ end }}
       {{- end }}
-    {{- end }}
 
-    {{- if lt $index $lastIndex }}, {{ end }}
+    </strong>
+    </p>
+    {{ if gt (len $editionsWithoutRestrictions) 0 }}
 
-  {{ end }}
+        <p>
+        {{- T "module_available_without_limitations_prefix" }}: 
+        <strong>
+          {{- $lastIndex := sub (len $editionsWithoutRestrictions) 1 -}}
+          {{- range $index, $edition := $editionsWithoutRestrictions }}
 
-</strong>
-</p>
+            {{- with index $editionsData $edition }}
+              {{- if .name_version }}
+                {{ .name_version }}
+              {{- else }}
+                {{ .name }}
+              {{- end }}
+            {{- end }}
+
+            {{- if lt $index $lastIndex }}, {{ end }}
+
+          {{ end }}
+
+        </strong>
+        </p>
+    {{ end }}
 
 
 {{- else }}
@@ -110,21 +113,23 @@
         {{- end -}}
         {{- $editionsWithoutRestrictions = $editionsWithoutRestrictions | append $edition -}}
     {{- end -}}
-<p>{{ T "module_available_editions_prefix" }}: 
-<strong>
-  {{- $lastIndex := sub (len $editionsWithoutRestrictions) 1 -}}
-  {{- range $i, $edition := $editionsWithoutRestrictions -}}
-    {{- with index $editionsData $edition -}}
-      {{- if .name_version -}}
-        {{ .name_version }}
-      {{- else -}}
-        {{ .name }}
+    {{ if gt (len $editionsWithoutRestrictions) 0 }}
+    <p>{{ T "module_available_editions_prefix" }}: 
+    <strong>
+      {{- $lastIndex := sub (len $editionsWithoutRestrictions) 1 -}}
+      {{- range $i, $edition := $editionsWithoutRestrictions -}}
+        {{- with index $editionsData $edition -}}
+          {{- if .name_version -}}
+            {{ .name_version }}
+          {{- else -}}
+            {{ .name }}
+          {{- end -}}
+        {{- end -}}
+        {{- if ne $i $lastIndex -}}, {{ end -}}
       {{- end -}}
-    {{- end -}}
-    {{- if ne $i $lastIndex -}}, {{ end -}}
-  {{- end -}}
-</strong>
-</p>
+    </strong>
+    </p>
+    {{- end }}
 {{- end }}
 </div>
 </div>
