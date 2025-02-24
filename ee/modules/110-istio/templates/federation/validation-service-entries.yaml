@@ -8,7 +8,7 @@ metadata:
 spec:
   validations:
     - expression: "has(object.spec.ports)"
-      message: "A ServiceEntry must define at least one port to ensure proper traffic routing. Without ports, Istio cannot determine which protocols to use or how to direct traffic, potentially leading to connectivity issues. This may cause failures in service discovery and communication."
+      message: "A ServiceEntry must define at least one port to ensure proper traffic routing. Without ports, Istio cannot determine which service traffic belongs to and just proxy-passes it. The cluster uses ISTIO_META_DNS_AUTO_ALLOCATE feature which generates fake IPs for ServiceEntries, so proxy-passed traffic is being sent to fake IP. This may cause failures in service discovery and communication."
   matchConstraints:
     resourceRules:
       - apiGroups: [ "networking.istio.io" ]
