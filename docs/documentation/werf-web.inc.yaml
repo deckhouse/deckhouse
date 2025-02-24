@@ -52,9 +52,10 @@ shell:
         # Creating list of ALL the modules...
         cat _data/modules/internal.yaml |yq eval -j | jq -MsS '.[0] * .[1]' - _data/modules/modules-addition.json > _data/modules/all.json
 
+        # The list of modules, which documentation should be excluded from the site...
         cat _tools/modules_menu_skip  | sed -E 's/^[0-9]+-//'  | jq -nRc '[inputs]' > _data/excludedModules.json
 
-        echo '[] Edition - {{ .Edition }}. Merging modules of different editions...'
+        echo '[] Edition - {{ .Edition }}. Merging files of modules for different editions...'
         for dir in {be,se,ee,se-plus,fe}; do if [ -d /src/$dir/modules ];then cp -rf /src/$dir/modules /src >& /dev/null; fi; done
 
         echo '[] Preparing modules structure...'
@@ -106,12 +107,12 @@ shell:
         sed '/^bashible:/r version_map_addition.yml' version_map.yml >> supported_versions.yml
 
         echo '[] Converting editions structure...'
-        yq e -j editions-source.yaml | jq -M 'reduce .editions[] as $item ({}; .[$item.name | ascii_downcase] = $item)' | jq -Ms '.[0] * .[1]' - editions-addition.json | jq '. as $editions | input as $be | .["be"].excludeModules += $be.excludeModules' - modules/be-addition.json > editions.json
+        yq e -j editions-repo-data.yaml | jq -M 'reduce .editions[] as $item ({}; .[$item.name | ascii_downcase] = $item)' | jq -Ms '.[0] * .[1]' - modules/editions-addition.json | jq '. as $editions | input as $be | .["be"].excludeModules += $be.excludeModules' - modules/be-addition.json > editions.json
 
 
 {{ if ne .ModuleName "docs" }}
         # Syncing file from the documentation to the main site...
-        cp /srv/jekyll-data/documentation/_plugins/{jekyll_asset_pipeline.rb,custom_filters.rb,offtopic.rb} /srv/jekyll-data/site/_plugins/
+        cp /srv/jekyll-data/documentation/_plugins/{jekyll_asset_pipeline.rb,custom_filters.rb,utils.rb,custom_sidebar.rb,offtopic.rb} /srv/jekyll-data/site/_plugins/
         cp /srv/jekyll-data/documentation/_assets/js/{lunr*.js,search.js} /srv/jekyll-data/site/_assets/
 
         # "Converting public documentation links to internal relative..."
@@ -130,19 +131,18 @@ shell:
         cat <<"EOD" > /srv/jekyll-data/site/_includes/footer.html
         {{- .Files.Get (printf "%smodules/810-documentation/images/web/site/_includes/footer.html" .ModulePath) | nindent 8 }}
         EOD
-
+{{ end }}
         # Creating additional config...
         echo -e "\nd8Revision: {{ .Edition }}" >> /tmp/_config_additional.yml
-{{ end }}
 
         echo '[] Generating static files of the documentation part...'
         cd ..
         mkdir -m 777 -p /app/_site/
 {{ if eq .ModuleName "docs" }}
         {{- if eq .Mode "development" }}
-        JEKYLL_ENV=development jekyll build -d /app/_site/ --profile -t
+        JEKYLL_ENV=development jekyll build -d /app/_site/ --config _config.yml,/tmp/_config_additional.yml --profile -t
         {{- else }}
-        JEKYLL_ENV=production jekyll build -d /app/_site/
+        JEKYLL_ENV=production jekyll build -d /app/_site/ --config _config.yml,/tmp/_config_additional.yml
         {{- end }}
 {{ else }}
         JEKYLL_ENV=production jekyll build -d /app/_site/documentation/ --config _config.yml,/tmp/_config_additional.yml

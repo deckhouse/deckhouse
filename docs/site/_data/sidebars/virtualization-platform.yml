@@ -1,6 +1,5 @@
 # Next lines are for local build only
 entries:
-  folders:
     - title:
         en: Overview
         ru: Введение
@@ -20,16 +19,11 @@ entries:
         - title:
             en: Update channels
             ru: Каналы обновлений
-          url: /virtualization-platform/documentation/admin/update-channels.html
+          url: /virtualization-platform/documentation/admin/release-channels.html
         - title:
-            en: Install
-            ru: Установка платформы
-          url: /virtualization-platform/documentation/admin/install/steps/install.html
-          folders:
-            - title:
-                en: Requirements
-                ru: Требования
-              url: /virtualization-platform/documentation/admin/install/requirements.html
+            en: Requirements
+            ru: Требования
+          url: /virtualization-platform/documentation/admin/install/requirements.html
             # - title:
             #     en: Setup scenarios
             #     ru: Сценарии установки
