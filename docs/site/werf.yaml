@@ -102,8 +102,6 @@ git:
   - _includes/rbac/
   - _plugins/jekyll_asset_pipeline.rb
   - _plugins/custom_filters.rb
-  - _plugins/custom_sidebar.rb
-  - _plugins/utils.rb
   - _plugins/offtopic.rb
   stageDependencies:
     setup: '**/*'

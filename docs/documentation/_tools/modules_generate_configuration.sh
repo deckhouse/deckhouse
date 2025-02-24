@@ -34,6 +34,7 @@ for schema_path in $(find $MODULES_DIR -regex '^.*/openapi/config-values.yaml$' 
 
   if grep -q '<!-- SCHEMA -->' ${module_path}/docs/CONFIGURATION.md; then
     # Apply schema
+    echo "   ...${module_name}"
     sed -i "/<!-- SCHEMA -->/i\{\% include module-configuration.liquid \%\}" ${module_path}/docs/CONFIGURATION.md
   elif grep -q 'module-settings.liquid' ${module_path}/docs/CONFIGURATION.md; then
     # It is a normal case. Manually configured schema rendering.

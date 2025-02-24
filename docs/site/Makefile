@@ -21,9 +21,6 @@ network: registry
 up: network
 		werf compose up --follow --docker-compose-command-options='-d --force-recreate' --env local --repo localhost:4999/docs
 
-clean:
-		werf cleanup --env local --repo localhost:4999/docs --without-kube
-
 down:
 		docker rm -f site-site-1 site-front-1 site_site_1 site_front_1 2>/dev/null; docker network rm deckhouse
 
