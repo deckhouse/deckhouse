@@ -20,7 +20,7 @@ imageSpec:
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
 final: false
-fromImage: common/alt-p11-artifact
+fromImage: {{ $.Images.BASE_ALPINE }}
 git:
 - add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
   to: /
@@ -32,25 +32,13 @@ git:
   stageDependencies:
     install:
     - '**/*'
-- add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/requirements.txt
-  to: /requirements.txt
-  stageDependencies:
-    install:
-    - '**/*'
-import:
-- image: common/python-static
-  add: /opt/python-static
-  to: /opt/python-static
-  before: install
 shell:
   beforeInstall:
-  - apt-get install -y perl-Encode-compat perl-Time-Piece git
+  {{ - include "alpine packages proxy" . | nindent 2 }}
+  - apk add --no-cache perl curl python3 py3-cryptography
   install:
-  - git clone --depth 1 {{ $.SOURCE_REPO }}/python-modules/wheels /wheels
-  - /opt/python-static/bin/pip3 install -f file:///wheels --no-index -r /requirements.txt
-  - rm -rf /wheels
   - mv /mk-ca-bundle.pl /ca-certificates/mozilla
-  - cd ca-certificates/mozilla
+  - cd /ca-certificates/mozilla
   - perl mk-ca-bundle.pl -n
   - mv ca-bundle.crt /ca-bundle.crt
   - /opt/python-static/bin/python3 certdata2pem.py
