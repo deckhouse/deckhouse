@@ -20,7 +20,7 @@ imageSpec:
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
 final: false
-from: {{ $.Images.BASE_ALPINE }}
+from: {{ $.Images.BASE_GOLANG_23_BOOKWORM }}
 git:
 - add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
   to: /
@@ -34,13 +34,14 @@ git:
     - '**/*'
 shell:
   beforeInstall:
-  {{- include "alpine packages proxy" . | nindent 2 }}
-  - apk add --no-cache perl curl python3 py3-cryptography
+  {{- include "debian packages proxy" . | nindent 2 }}
+  - apt-get install -y python3-cryptography
   install:
   - mv /mk-ca-bundle.pl /ca-certificates/mozilla
   - cd /ca-certificates/mozilla
   - perl mk-ca-bundle.pl -n
   - mv ca-bundle.crt /ca-bundle.crt
   - python3 certdata2pem.py
+  - mkdir /certs
   - mv *.crt /certs/
   - chmod +x /d8-ca-updater /install /uninstall
