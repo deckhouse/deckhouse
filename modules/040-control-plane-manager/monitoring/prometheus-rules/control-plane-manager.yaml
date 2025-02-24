@@ -64,19 +64,20 @@
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
-      summary: "Stale service account tokens detected"
+      summary: Stale service account tokens detected.
       description: |-
-        This issue may occur if the application reads the token only at startup and does not reload it periodically. As a result, an outdated token might be used, leading to security breach and authentication failures.
+        This issue may occur if an application reads the token only at startup and does not reload it periodically. As a result, an outdated token might be used, leading to security breach and authentication failures.
 
-        **Recommended Actions:**
+        **Recommended actions:**
+
         - Ensure your application is configured to periodically reload the token from the file system.
         - Verify that you are using an up-to-date client library that supports automatic token rotation.
 
         Note that currently these tokens are not blocked because the `--service-account-extend-token-expiration` flag is enabled by default (`Default: true`). With this flag enabled, admission-injected tokens are extended up to 1 year during token generation to facilitate a safe transition from legacy tokens to the bound service account token feature, ignoring the value of `service-account-max-token-expiration`.
 
         **For further investigation:**
-        log into the server with label `instance={{ $labels.instance }}` and inspect the audit log using the following command:
+        Log into the server with label `instance={{ $labels.instance }}` and inspect the audit log using the following command:
 
-        ```
+        ```bash
         jq 'select(.annotations["authentication.k8s.io/stale-token"]) | {auditID, stageTimestamp, requestURI, verb, user: .user.username, stale_token: .annotations["authentication.k8s.io/stale-token"]}' /var/log/kube-audit/audit.log
         ```
