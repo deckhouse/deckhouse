@@ -18,6 +18,7 @@ import re
 from kubernetes import client, config
 import yaml
 import base64
+import inspect
 
 GITHUB_TOKEN=os.getenv('GITHUB_TOKEN')
 if (GITHUB_TOKEN == None):
@@ -128,17 +129,23 @@ def collect_released_versions():
 def determine_clusters_need_deploy (kubeconf_name,kubeconf64):
     output_prefix = 'DEPLOY_'
 
-    kubeconf = yaml.safe_load(base64.b64decode(kubeconf64).decode('utf-8'))
-    config.load_kube_config_from_dict(kubeconf)
-    
+    try:
+        kubeconf = yaml.safe_load(base64.b64decode(kubeconf64).decode('utf-8'))
+        config.load_kube_config_from_dict(kubeconf)
+    except:
+        print(f'::warning file=.github/scripts/python/{os.path.basename(__file__)},line={inspect.currentframe().f_lineno}::Unable to load "{kubeconf_name}". Unable to connect to "{kubeconf_name}". Skipping.')
+        write_output(output_prefix+kubeconf_name,'false')
+        return
+      
     namespace = os.getenv(f'NAMESPACE_{kubeconf_name}')
 
     v1 = client.CoreV1Api()
     try:
         cm = v1.read_namespaced_config_map(CM_NAME,namespace)
     except:
-        print(f'Unable to get configmap: "{CM_NAME}" in namespace "{namespace}"')
-        exit(1)
+        print(f'::warning file=.github/scripts/python/{os.path.basename(__file__)},line={inspect.currentframe().f_lineno}::Unable to load "{kubeconf_name}". Cluster {kubeconf_name} will be skipped.')
+        write_output(output_prefix+kubeconf_name,'false')
+        return
 
     data = yamldata.format(**result_channels)
     if (data != cm.data['channels.yaml']):
