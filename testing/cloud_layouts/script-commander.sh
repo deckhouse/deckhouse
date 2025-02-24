@@ -311,13 +311,29 @@ function run-test() {
   # Waiting to cluster ready
   testRunAttempts=120
   sleep=30
+  master_ip_find=false
   for ((i=1; i<=testRunAttempts; i++)); do
-    cluster_status="$(curl -s -X 'GET' \
+    cluster_response=$(curl -s -X 'GET' \
       "https://${commander_host}/api/v1/clusters/${cluster_id}" \
       -H 'accept: application/json' \
-      -H "X-Auth-Token: ${commander_token}" |
-      jq -r '.status')"
+      -H "X-Auth-Token: ${commander_token}")
     >&2 echo "Check Cluster ready..."
+
+
+    # Get ssh connection string
+    if [[ "$master_ip_find" == "false" ]]; then
+      master_ip=$(jq -r '.connection_hosts.masters[0].host' <<< "$response")
+      master_user=$(jq -r '.connection_hosts.masters[0].user' <<< "$response")
+      if [[ -n "$master_ip" ]]; then
+        connection="    ssh ${master_user}@${master_ip}"
+        master_ip_find=true
+        echo "SSH connection string"
+        echo "$connection"
+      fi
+    fi
+
+    # Get cluster status
+    cluster_status=$(jq -r '.status' <<< "$cluster_response")
     if [ "in_sync" = "$cluster_status" ]; then
       return 0
     elif [ "creation_failed" = "$cluster_status" ]; then
