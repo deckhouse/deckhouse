@@ -69,4 +69,8 @@ import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-artifact
   add: /opt/python-static
   to: /opt/python-static
+  excludePaths:
+  - /opt/python-static/include
+  - /opt/python-static/share
+  - /opt/python-static/lib/*.a
   before: setup
