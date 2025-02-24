@@ -81,6 +81,34 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			}},
 			FilterFunc: filterResources,
 		},
+		{
+			Name:       "grafana-v8-pdb",
+			ApiVersion: "policy/v1",
+			Kind:       "PodDisruptionBudget",
+			NamespaceSelector: &types.NamespaceSelector{
+				NameSelector: &types.NameSelector{
+					MatchNames: []string{"d8-monitoring"},
+				},
+			},
+			NameSelector: &types.NameSelector{MatchNames: []string{
+				"grafana-v8-dex-authenticator",
+			}},
+			FilterFunc: filterResources,
+		},
+		{
+			Name:       "grafana-v8-dexauth",
+			ApiVersion: "deckhouse.io/v1",
+			Kind:       "DexAuthenticator",
+			NamespaceSelector: &types.NamespaceSelector{
+				NameSelector: &types.NameSelector{
+					MatchNames: []string{"d8-monitoring"},
+				},
+			},
+			NameSelector: &types.NameSelector{MatchNames: []string{
+				"grafana-v8",
+			}},
+			FilterFunc: filterResources,
+		},
 	},
 }, grafanaV8ResourcesHandler)
 
@@ -104,8 +132,10 @@ func grafanaV8ResourcesHandler(input *go_hook.HookInput) error {
 	deployments := input.Snapshots["grafana-v8-deployments"]
 	services := input.Snapshots["grafana-v8-services"]
 	ingresses := input.Snapshots["grafana-v8-ingresses"]
+	pdb := input.Snapshots["grafana-v8-ingresses"]
+	dexAuth := input.Snapshots["grafana-v8-ingresses"]
 
-	for _, snap := range [][]go_hook.FilterResult{deployments, services, ingresses} {
+	for _, snap := range [][]go_hook.FilterResult{deployments, services, ingresses, pdb, dexAuth} {
 		for _, s := range snap {
 			resource := s.(GrafanaV8Resource)
 			input.PatchCollector.Delete(resource.APIVersion, resource.Kind, resource.Metadata.Namespace, resource.Metadata.Name)
