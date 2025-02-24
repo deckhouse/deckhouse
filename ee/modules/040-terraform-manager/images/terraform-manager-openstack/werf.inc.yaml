@@ -38,7 +38,7 @@ import:
   before: install
 shell:
   beforeInstall:
-  ca85d2ce775d0bc921a2016f2f4bd32374a888beaec98b467c590774-1740381419942
+  {{- include "alpine packages proxy" . | nindent 2 }}
   - apk add --no-cache make bash
   install:
   - export GOPROXY={{ $.GOPROXY }}
