@@ -449,7 +449,7 @@ stage:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           {!{- range $env, $env_properties := $envs }!}
-          {!{   printf "DEPLOY_%s: ${{ secrets.%s }}" $env_properties.kubeconfig $env_properties.kubeconfig }!}
+          {!{   printf "%s: ${{ secrets.%s }}" $env_properties.kubeconfig $env_properties.kubeconfig }!}
           {!{   printf "NAMESPACE_%s: \"%s\"" $env_properties.kubeconfig $env_properties.werf_namespace -}!}
           {!{- end }!}          
 

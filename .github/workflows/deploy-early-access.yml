@@ -1406,11 +1406,11 @@ jobs:
         run: python .github/scripts/python/post-deploy-preparation.py
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          DEPLOY_KUBECONFIG_BASE64_PROD_SEL: ${{ secrets.KUBECONFIG_BASE64_PROD_SEL }}
+          KUBECONFIG_BASE64_PROD_SEL: ${{ secrets.KUBECONFIG_BASE64_PROD_SEL }}
           NAMESPACE_KUBECONFIG_BASE64_PROD_SEL: "deckhouse-web-production"
-          DEPLOY_KUBECONFIG_BASE64_PROD_25: ${{ secrets.KUBECONFIG_BASE64_PROD_25 }}
+          KUBECONFIG_BASE64_PROD_25: ${{ secrets.KUBECONFIG_BASE64_PROD_25 }}
           NAMESPACE_KUBECONFIG_BASE64_PROD_25: "deckhouse-web-production"
-          DEPLOY_KUBECONFIG_BASE64_DEV: ${{ secrets.KUBECONFIG_BASE64_DEV }}
+          KUBECONFIG_BASE64_DEV: ${{ secrets.KUBECONFIG_BASE64_DEV }}
           NAMESPACE_KUBECONFIG_BASE64_DEV: "deckhouse-web-stage"          
 
       - name: Upload artifacts
