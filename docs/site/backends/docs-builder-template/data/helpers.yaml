@@ -8,9 +8,3 @@ knownPageNames:
   - README
   - SETUP
   - USAGE
-
-moduleStageBageMap:
-  experimental: Exp
-  preview: Pre
-  "general availability": GA
-  deprecated: Dep

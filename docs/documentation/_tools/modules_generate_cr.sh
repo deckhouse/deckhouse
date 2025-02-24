@@ -32,8 +32,9 @@ for schema_path in $(find $MODULES_DIR -regex '^.*/crds/.*.yaml$' -print | grep 
   grep -q '<!-- SCHEMA -->' ${module_path}/docs/CR.md &> /dev/null
   if [ $? -eq 0 ]; then
     # Apply schema
+    echo "   ...${module_name}/${module_file_name}"
     sed -i "/<!-- SCHEMA -->/i\{\{ site.data.schemas.${module_name}.${schema_path_relative} \| format_crd: \"${module_name}\" \}\}" ${module_path}/docs/CR.md
   else
-    echo "Skip: ${module_file_name}"
+    echo "WARN: Found ${module_file_name} for ${module_name} module, but there is no '<!-- SCHEMA -->' placeholder in the CR.md file."
   fi
 done

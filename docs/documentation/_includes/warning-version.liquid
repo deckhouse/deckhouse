@@ -1,6 +1,0 @@
-{% assign stage = include.stage %}
-{%- if stage %}
-{% alert level="warning" %}
-{{ site.data.i18n.features[stage][page.lang] }}
-{% endalert %}
-{%- endif %}
