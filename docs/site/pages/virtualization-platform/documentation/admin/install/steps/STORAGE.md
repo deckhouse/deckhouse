@@ -180,7 +180,7 @@ Configuring the storage involves combining the available block devices on the no
 1. Set the default StorageClass:
 
    ```shell
-   # Укажите имя своего объекта StorageClass.
+   # Specify the name of your StorageClass object.
    DEFAULT_STORAGE_CLASS=replicated-storage-class
    sudo -i d8 k patch mc global --type='json' -p='[{"op": "replace", "path": "/spec/settings/defaultClusterStorageClass", "value": "'"$DEFAULT_STORAGE_CLASS"'"}]'
    ```
