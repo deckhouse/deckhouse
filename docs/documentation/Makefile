@@ -11,6 +11,9 @@ network:
 up: network
 		werf compose up --follow --docker-compose-command-options='-d' --env module
 
+clean:
+		werf cleanup --env module --repo localhost:4999/docs --without-kube
+
 down:
 		docker rm -f documentation
 
