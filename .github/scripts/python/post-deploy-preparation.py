@@ -165,7 +165,7 @@ if __name__ == "__main__":
 
     kubecfgs = {}
     for key,value in os.environ.items():
-        if key.startswith(KUBECONF_NAME_PREFIX):
+        if (key.startswith(KUBECONF_NAME_PREFIX) and len(value) > 0):
             kubecfgs |= {key:value}
     for item,value in kubecfgs.items():
       determine_clusters_need_deploy(item,value)

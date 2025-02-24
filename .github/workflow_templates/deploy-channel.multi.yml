@@ -410,7 +410,7 @@ stage:
       LATEST_RELEASE_ID: ${{ steps.post-deploy-preparation.outputs.latest_release_id }}
       TARGET_RELEASE_ID: ${{ steps.post-deploy-preparation.outputs.target_release_id }}
       {!{- range $env, $env_properties := $envs }!}
-      {!{   printf "DEPLOY_%s: ${{ steps.post-deploy-preparation.outputs.%s }}" $env_properties.kubeconfig $env_properties.kubeconfig -}!}
+      {!{   printf "DEPLOY_%s: ${{ steps.post-deploy-preparation.outputs.DEPLOY_%s }}" $env_properties.kubeconfig $env_properties.kubeconfig -}!}
       {!{- end }!}
     needs:
       - run_deploy

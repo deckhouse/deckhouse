@@ -1363,9 +1363,9 @@ jobs:
       STABLE_VERSION: ${{ steps.post-deploy-preparation.outputs.stable_version }}
       LATEST_RELEASE_ID: ${{ steps.post-deploy-preparation.outputs.latest_release_id }}
       TARGET_RELEASE_ID: ${{ steps.post-deploy-preparation.outputs.target_release_id }}
-      DEPLOY_KUBECONFIG_BASE64_PROD_SEL: ${{ steps.post-deploy-preparation.outputs.KUBECONFIG_BASE64_PROD_SEL }}
-      DEPLOY_KUBECONFIG_BASE64_PROD_25: ${{ steps.post-deploy-preparation.outputs.KUBECONFIG_BASE64_PROD_25 }}
-      DEPLOY_KUBECONFIG_BASE64_DEV: ${{ steps.post-deploy-preparation.outputs.KUBECONFIG_BASE64_DEV }}
+      DEPLOY_KUBECONFIG_BASE64_PROD_SEL: ${{ steps.post-deploy-preparation.outputs.DEPLOY_KUBECONFIG_BASE64_PROD_SEL }}
+      DEPLOY_KUBECONFIG_BASE64_PROD_25: ${{ steps.post-deploy-preparation.outputs.DEPLOY_KUBECONFIG_BASE64_PROD_25 }}
+      DEPLOY_KUBECONFIG_BASE64_DEV: ${{ steps.post-deploy-preparation.outputs.DEPLOY_KUBECONFIG_BASE64_DEV }}
     needs:
       - run_deploy
     steps:
