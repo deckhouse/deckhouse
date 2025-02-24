@@ -74,7 +74,7 @@ import:
   - share
   - lib/*.a
   - lib/**/*.a
-  - lib/**/*.с
+  - lib/**/*.c
   - lib/**/test
   - lib/**/*.exe
   before: setup
