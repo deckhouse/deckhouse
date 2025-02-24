@@ -34,7 +34,7 @@ git:
     - '**/*'
 shell:
   beforeInstall:
-  {{ - include "alpine packages proxy" . | nindent 2 }}
+  {{- include "alpine packages proxy" . | nindent 2 }}
   - apk add --no-cache perl curl python3 py3-cryptography
   install:
   - mv /mk-ca-bundle.pl /ca-certificates/mozilla
