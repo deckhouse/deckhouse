@@ -51,7 +51,6 @@ from: {{ .Images.BASE_ALPINE }}
 final: false
 shell:
   install:
-  {{ - include "alpine packages proxy" . | nindent 2 }}
   - apk add --no-cache jq curl
   - mkdir -p /data
   setup:
@@ -350,7 +349,6 @@ imageSpec:
 from: {{ .Images.BASE_ALPINE }}
 shell:
   install:
-  {{- include "alpine packages proxy" . | nindent 2 }}
   - apk add --no-cache curl jq
 import:
   - image: web-backend-srv
@@ -372,7 +370,6 @@ imageSpec:
 from: {{ .Images.BASE_ALPINE }}
 shell:
   beforeSetup:
-  {{ - include "alpine packages proxy" . | nindent 2 }}
   - apk add --no-cache nginx
   setup:
   - |

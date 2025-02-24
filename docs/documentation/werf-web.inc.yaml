@@ -3,7 +3,6 @@ image: {{ .ModuleName }}/{{ .ImageName }}
 from: {{ .Images.BASE_ALPINE }}
 shell:
   beforeSetup:
-  {{- include "alpine packages proxy" . | nindent 2 }}
   - apk add --no-cache nginx
   setup:
   - |
