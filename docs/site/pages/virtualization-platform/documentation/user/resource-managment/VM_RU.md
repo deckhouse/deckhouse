@@ -690,19 +690,6 @@ ip-10-66-10-14   {"name":"linux-vm-7prpx","namespace":"default"}     Bound    12
 
 Ресурс [VirtualMachineIPAddress](../../../reference/cr/virtualmachineipaddress.html) (`vmip`) — это ресурс проекта или пространства имен, который отвечает за резервирование выделенных IP-адресов и их привязку к виртуальным машинам. IP-адреса могут выделяться автоматически или по запросу.
 
-Чтобы посмотреть список `vmip`, используйте команду:
-
-```shell
-d8 k get vmipl
-```
-
-Пример вывода:
-
-```console
-NAME             VIRTUALMACHINEIPADDRESS                             STATUS   AGE
-ip-10-66-10-14   {"name":"linux-vm-7prpx","namespace":"default"}     Bound    12h
-```
-
 Проверить назначенный IP-адрес можно с помощью команды:
 
 ```shell

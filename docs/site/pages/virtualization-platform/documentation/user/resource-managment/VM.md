@@ -689,19 +689,6 @@ ip-10-66-10-14   {"name":"linux-vm-7prpx","namespace":"default"}     Bound    12
 
 The [VirtualMachineIPAddress](../../../reference/cr/virtualmachineipaddress.html) (`vmip`) resource is a project or namespace resource responsible for reserving allocated IP addresses and binding them to virtual machines. IP addresses can be assigned automatically or upon request.
 
-To view the list of `vmip`, use the following command:
-
-```shell
-d8 k get vmipl
-```
-
-Example output:
-
-```console
-NAME             VIRTUALMACHINEIPADDRESS                             STATUS   AGE
-ip-10-66-10-14   {"name":"linux-vm-7prpx","namespace":"default"}     Bound    12h
-```
-
 To check the assigned IP address, you can use the following command:
 
 ```shell

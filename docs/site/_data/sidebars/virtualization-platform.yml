@@ -171,6 +171,7 @@ entries:
                 - title:
                     en: Supported storages
                     ru: Поддерживаемые хранилища
+                  url: /virtualization-platform/documentation/admin/platform-management/storage/supported-storage.html
                   folders:
                     - title:
                         en: SDS
