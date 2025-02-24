@@ -1,93 +1,247 @@
 {
+  "admission-policy-engine": {
+    "editionsWithRestrictions": [
+      "ce",
+      "be",
+      "se",
+      "se-plus"
+    ],
+    "editionsWithRestrictionsComments": {
+      "all": {
+        "ru": "Ограничение на возможность использования политик проверки подписи образов контейнеров и возможность установки запрета на запуск контейнеров с уязвимостями",
+        "en": "Restriction on the ability to use signature verification policies for container images and the ability to prohibit the launch of containers with vulnerabilities"
+      }
+    },
+    "editionMinimumAvailable": "ce"
+  },
   "commander-agent": {
     "path": "",
-    "edition": "ce"
+    "editionMinimumAvailable": "ce"
   },
   "istio": {
-    "path": "modules/istio/",
-    "edition": "ce"
+    "editionsWithRestrictions": [
+      "ce",
+      "be"
+    ],
+    "editionsWithRestrictionsComments": {
+      "all": {
+        "ru": "Ограничение на использование федерации и мультикластерной конфигурации",
+        "en": "Restriction on the use of federation and multicluster features"
+      }
+    },
+    "editionMinimumAvailable": "ce"
   },
   "metallb": {
     "path": "modules/metallb/",
-    "editionRestrictions": ["se", "se-plus", "cse-lite"],
-    "editionRestrictionsComment": {"all": {"ru": "Ограничение на работу с BGP", "en": "Restriction on working with BGP"}},
-    "edition": "ee"
+    "editionsWithRestrictions": [
+      "se",
+      "se-plus",
+      "cse-lite"
+    ],
+    "editionsWithRestrictionsComments": {
+      "all": {
+        "ru": "Ограничение на использование BGP-балансировщика для сервисов",
+        "en": "Restriction on the use of the BGP load balancer for services"
+      }
+    },
+    "editionMinimumAvailable": "se"
   },
   "cloud-provider-vsphere": {
     "path": "modules/cloud-provider-vsphere/",
-    "editionFullyAvailable": ["se-plus", "ee"],
-    "edition": "ee"
+    "editionFullyAvailable": [
+      "se-plus",
+      "ee"
+    ],
+    "editionMinimumAvailable": "ee"
   },
   "cloud-provider-zvirt": {
     "path": "modules/cloud-provider-zvirt/",
-    "editionFullyAvailable": ["se-plus", "ee"],
-    "edition": "ee"
+    "editionFullyAvailable": [
+      "se-plus",
+      "ee"
+    ],
+    "editionMinimumAvailable": "ee"
   },
   "cni-cilium": {
-    "path": "modules/cni-cilium/",
-    "editionFullyAvailable": ["se-plus"],
-    "edition": "ce"
+    "editionsWithRestrictions": [
+      "ce",
+      "be",
+      "se"
+    ],
+    "editionsWithRestrictionsComments": {
+      "all": {
+        "ru": "Ограничение на возможность настройки отказоустойчивых выходных узлов (Egress Gateway)",
+        "en": "Restriction on the ability to configure fault&ndash;tolerant Egress Gateways"
+      }
+    },
+    "editionMinimumAvailable": "ce"
   },
   "user-authz": {
     "path": "modules/user-authz/",
-    "editionFullyAvailable": ["be", "se", "se-plus"],
-    "edition": "ce"
+    "editionFullyAvailable": [
+      "be",
+      "se",
+      "se-plus"
+    ],
+    "editionsWithRestrictions": [
+      "ce"
+    ],
+    "editionsWithRestrictionsComments": {
+      "all": {
+        "ru": "Ограничение на использование фильтрации по пространствам имен в ролевой модели доступа",
+        "en": "Restriction on the use of namespace filtering in the role-based access model"
+      }
+    },
+    "editionMinimumAvailable": "ce"
   },
   "registrypackages": {
     "path": "",
-    "edition": "ce"
+    "editionMinimumAvailable": "ce"
   },
   "console": {
     "path": "/products/kubernetes-platform/modules/console/stable/",
     "external": "true",
-    "edition": "se"
+    "editionMinimumAvailable": "se"
   },
   "sds-node-configurator": {
     "external": "true",
     "path": "/products/kubernetes-platform/modules/sds-node-configurator/stable/",
-    "edition": "ce"
+    "editionMinimumAvailable": "ce"
   },
   "sds-drbd": {
     "external": "true",
     "path": "/products/kubernetes-platform/modules/sds-drbd/stable/",
-    "edition": "ee"
+    "editionMinimumAvailable": "ee"
   },
   "sds-replicated-volume": {
     "external": "true",
     "path": "/products/kubernetes-platform/modules/sds-replicated-volume/stable/",
-    "edition": "se",
-    "editionRestrictions": ["ce"]
+    "editionMinimumAvailable": "ce",
+    "editionsWithRestrictions": [
+      "ce"
+    ],
+    "editionsWithRestrictionsComments": {
+      "all": {
+        "ru": "Ограничение на возможность создания снимков",
+        "en": "Restriction on the ability to create snapshots"
+      }
+    }
   },
   "sds-local-volume": {
     "external": "true",
     "path": "/products/kubernetes-platform/modules/sds-local-volume/stable/",
-    "edition": "ce"
+    "editionsWithRestrictions": [
+      "ce"
+    ],
+    "editionsWithRestrictionsComments": {
+      "all": {
+        "ru": "Ограничение на возможность создания снимков",
+        "en": "Restriction on the ability to create snapshots"
+      }
+    },
+    "editionMinimumAvailable": "ce"
   },
   "virtualization": {
     "external": "true",
     "path": "/products/kubernetes-platform/modules/virtualization/stable/",
-    "edition": "ee",
-    "editionRestrictions": ["ce"]
+    "editionMinimumAvailable": "se-plus",
+    "editionsWithRestrictions": [
+      "ce"
+    ],
+    "editionsWithRestrictionsComments": {
+      "all": {
+        "ru": "Ограничение на возможность беспростойной миграции виртуальных машин при изменении конфигурации",
+        "en": "Restriction on the VM migration without interruption"
+      }
+    }
   },
   "secrets-store-integration": {
     "external": "true",
     "path": "/products/kubernetes-platform/modules/secrets-store-integration/stable/",
-    "edition": "be"
+    "editionMinimumAvailable": "be"
+  },
+  "csi-yadro": {
+    "external": "true",
+    "path": "/products/kubernetes-platform/modules/csi-yadro/stable/",
+    "editionMinimumAvailable": "ee"
+  },
+  "csi-huawei": {
+    "external": "true",
+    "path": "/products/kubernetes-platform/modules/csi-huawei/stable/",
+    "editionMinimumAvailable": "ee"
+  },
+  "csi-hpe": {
+    "external": "true",
+    "path": "/products/kubernetes-platform/modules/csi-hpe/stable/",
+    "editionMinimumAvailable": "ee"
   },
   "csi-ceph": {
     "external": "true",
     "path": "/products/kubernetes-platform/modules/csi-ceph/stable/",
-    "edition": "ce"
+    "editionMinimumAvailable": "ce"
   },
   "csi-nfs": {
     "external": "true",
     "path": "/products/kubernetes-platform/modules/csi-nfs/stable/",
-    "edition": "ce"
+    "editionMinimumAvailable": "ce"
+  },
+  "csi-s3": {
+    "external": "true",
+    "path": "/products/kubernetes-platform/modules/csi-s3/stable/",
+    "editionMinimumAvailable": "ee"
+  },
+  "csi-scsi-generic": {
+    "external": "true",
+    "path": "/products/kubernetes-platform/modules/csi-scsi-generic/stable/",
+    "editionMinimumAvailable": "ee"
+  },
+  "delivery-kit": {
+    "external": "true",
+    "path": "/products/kubernetes-platform/modules/delivery-kit/stable/",
+    "editionMinimumAvailable": "be"
+  },
+  "observability-platform": {
+    "external": "true",
+    "path": "/products/kubernetes-platform/modules/observability-platform/stable/",
+    "editionMinimumAvailable": "ee"
+  },
+  "operator-argo": {
+    "external": "true",
+    "path": "/products/kubernetes-platform/modules/operator-argo/stable/",
+    "editionMinimumAvailable": "ee"
   },
   "commander": {
     "external": "true",
     "path": "/products/kubernetes-platform/modules/commander/stable/",
-    "edition": "ee"
+    "editionsWithRestrictions": [
+      "ce",
+      "be",
+      "se"
+    ],
+    "editionsWithRestrictionsComments": {
+      "all": {
+        "ru": "Требуется дополнительная лицензия",
+        "en": "Additional license required"
+      }
+    },
+    "editionMinimumAvailable": "be"
+  },
+  "stronghold": {
+    "external": "true",
+    "path": "/products/kubernetes-platform/modules/stronghold/stable/",
+    "editionsWithRestrictions": [
+      "be",
+      "se",
+      "se-plus",
+      "ee"
+    ],
+    "editionsWithRestrictionsComments": {
+      "all": {
+        "ru": "Требуется дополнительная лицензия",
+        "en": "Additional license required"
+      }
+    },
+    "editionMinimumAvailable": "be"
   }
 }
 

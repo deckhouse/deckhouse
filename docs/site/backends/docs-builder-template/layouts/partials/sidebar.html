@@ -68,11 +68,20 @@
         {{- range $sidebarItem := $sidebarRootMenu }}
             <li class="sidebar__item sidebar__item_parent{{ if $sidebarItem.isActive }} active{{ end }}">
                 <a href='#'>
-                  {{- $sidebarItem.title }}
-                  {{- if ne $sidebarItem.d8Edition "ce" }}<span class="sidebar__badge sidebar__badge_{{ lower $sidebarItem.d8Edition }}">EE Only</span>{{ end }}
-                  {{- if $sidebarItem.moduleStatus -}}
-                    <span class="sidebar__badge sidebar__badge_{{ lower $sidebarItem.moduleStatus }}" title='{{ (T (printf "module_alert_%s" (lower $sidebarItem.moduleStatus ))) }}'>{{ humanize $sidebarItem.moduleStatus }}</span>
-                  {{ end }}
+                  <span class='sidebar__submenu-title'>
+                    {{- $sidebarItem.title -}}
+                  </span>
+
+
+                  {{- if ne $sidebarItem.d8Edition "ce" }}<span class="sidebar__badge_v2 sidebar__badge_commercial" title='{{ T "commercial" }}'>{{ T "currency_sign"  }}</span>{{ end }}
+                  {{- if and $sidebarItem.moduleStatus (index $.Site.Data.helpers.moduleStageBageMap ( replace (lower $sidebarItem.moduleStatus) " " "_")) -}}
+                    <span class='sidebar__badge_v2'
+                        {{- if (T (printf "module_alert_%s" (lower $sidebarItem.moduleStatus ))) }}
+                          title='{{ (T (printf "module_alert_%s" (lower $sidebarItem.moduleStatus ))) }}'
+                        {{ end -}}
+                        >{{ index $.Site.Data.helpers.moduleStageBageMap ( lower $sidebarItem.moduleStatus ) -}}
+                    </span>
+                  {{- end }}
                 </a>
                   {{- template "subpages" (dict "parent" $sidebarItem "pages" $pages "ctx" $ctx) }}
             </li>
