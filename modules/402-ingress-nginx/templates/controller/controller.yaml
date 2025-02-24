@@ -1,3 +1,12 @@
+{{- define "additional-image-pull-secrets" }}
+  {{- $crd := index . 0 }}
+  {{- if $crd.spec.additionalImagePullSecrets }}
+    {{- range $secret := $crd.spec.additionalImagePullSecrets }}
+- name: {{ $secret }}
+    {{- end }}
+  {{- end }}
+{{ end }}
+---
 {{- define "ingress-controller" }}
 {{- $context := index . 0 }}
 {{- $crd := index . 1 }}
@@ -163,6 +172,7 @@ spec:
   {{- end }}
       imagePullSecrets:
       - name: deckhouse-registry
+      {{- include "additional-image-pull-secrets" (list $crd) | nindent 6 }}
       containers:
       - image: {{ include "helm_lib_module_image" (list $context (printf "controller%s" ($controllerVersion | replace "." ""))) }}
         name: controller
@@ -453,3 +463,4 @@ spec:
     {{ include "ingress-controller" (list $context $crd (printf "%s-failover" $crd.name) true) }}
   {{- end }}
 {{- end }}
+---
