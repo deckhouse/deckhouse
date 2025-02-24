@@ -70,6 +70,22 @@ lang: ru
    EOF
    ```
 
+<<<<<<< HEAD
+=======
+1. Включите модуль `kube-proxy`:
+
+   ```shell
+   $ kubectl apply -f - << EOF
+   apiVersion: deckhouse.io/v1alpha1
+   kind: ModuleConfig
+   metadata:
+    name: kube-proxy
+   spec:
+    enabled: true
+   EOF
+   ```
+
+>>>>>>> 8ca68eb2f9 (docs: add section Switching from CNI flannel to cilium)
 1. Включите модуль `node-local-dns`:
 
    ```shell
@@ -85,6 +101,7 @@ lang: ru
 
    После включения модуля дождитесь перехода всех агентов cilium в состояние `Running`.
 
+<<<<<<< HEAD
 1. Убедитесь, что переключение с CNI flannel на cilium прошло успешно.
 
 ### Проверка успешности переключения с CNI flannel на cilium
@@ -128,3 +145,51 @@ lang: ru
    $ kubectl get modules | grep node-local-dns
    node-local-dns                      350    Enabled     Embedded     Ready
    ```
+=======
+1. Убедитесь, что переключение с CNI flannel на cilium прошло успешно. Для этого выполните следующие действия:
+
+   1. Проверьте очередь deckhouse:
+
+      В случае одной мастер ноды:
+
+      ```shell
+      kubectl -n d8-system exec -it deploy/deckhouse -c deckhouse -- deckhouse-controller queue list
+      ```
+
+      В случае мультимастер инсталляции:
+
+      ```shell
+      kubectl -n d8-system exec svc/deckhouse-leader -c deckhouse -- deckhouse-controller queue list
+      ```
+
+   2. Проверьте агенты cilium. Они должны быть в статусе Running:
+
+      ```shell
+      $ kubectl get po -n d8-cni-cilium
+      NAME        READY STATUS  RESTARTS    AGE
+      agent-5zzfv 2/2   Running 5 (23m ago) 26m
+      agent-gqb2b 2/2   Running 5 (23m ago) 26m
+      agent-wtv4p 2/2   Running 5 (23m ago) 26m
+      ```
+
+   3. Проверьте, что модуль `cni-flannel` выключен:
+
+      ```shell
+      $ kubectl get modules | grep flannel
+      cni-flannel                         35     Disabled    Embedded
+      ```
+
+   4. Проверьте, что модуль `node-local-dns` включен:
+
+      ```shell
+      $ kubectl get modules | grep node-local-dns
+      node-local-dns                      350    Enabled     Embedded     Ready
+      ```
+
+   5. Проверьте, что модуль kube-proxy включен:
+
+      ```shell
+      $ kubectl get modules | grep kube-proxy
+      kube-proxy                          36     Enabled     Embedded     Ready
+      ```
+>>>>>>> 8ca68eb2f9 (docs: add section Switching from CNI flannel to cilium)
