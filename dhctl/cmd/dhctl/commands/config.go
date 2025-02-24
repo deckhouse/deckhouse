@@ -36,7 +36,6 @@ var (
 func DefineRenderBashibleBundle(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 	app.DefineConfigFlags(cmd)
 	app.DefineRenderConfigFlags(cmd)
-	app.DefineRenderBundleFlags(cmd)
 
 	runFunc := func() error {
 		metaConfig, err := config.LoadConfigFromFile(app.ConfigPaths)
@@ -44,7 +43,7 @@ func DefineRenderBashibleBundle(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 			return err
 		}
 
-		templateData, err := metaConfig.ConfigForBashibleBundleTemplate(app.BundleName, "$MY_IP")
+		templateData, err := metaConfig.ConfigForBashibleBundleTemplate("$MY_IP")
 		if err != nil {
 			return err
 		}
@@ -56,7 +55,6 @@ func DefineRenderBashibleBundle(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 			templateController,
 			templateData,
 			metaConfig.ProviderName,
-			app.BundleName,
 			"",
 		)
 	}
@@ -71,7 +69,6 @@ func DefineRenderBashibleBundle(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 func DefineRenderMasterBootstrap(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 	app.DefineConfigFlags(cmd)
 	app.DefineRenderConfigFlags(cmd)
-	app.DefineRenderBundleFlags(cmd)
 
 	runFunc := func() error {
 		metaConfig, err := config.LoadConfigFromFile(app.ConfigPaths)
@@ -82,7 +79,7 @@ func DefineRenderMasterBootstrap(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 		templateController := template.NewTemplateController(app.RenderBashibleBundleDir)
 		log.InfoF("Bundle Dir: %q\n\n", templateController.TmpDir)
 
-		return template.PrepareBootstrap(templateController, "127.0.0.1", app.BundleName, metaConfig)
+		return template.PrepareBootstrap(templateController, "127.0.0.1", metaConfig)
 	}
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
