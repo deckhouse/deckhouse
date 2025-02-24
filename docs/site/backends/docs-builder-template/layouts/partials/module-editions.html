@@ -1,4 +1,5 @@
 {{- $moduleName := .moduleName }}
+{{- if not $moduleName }}{{ return }}{{ end }}
 {{- $moduleData := index site.Data.modules_all $moduleName }}
 {{- $editionsData := site.Data.editions }}
 {{- $lang := .lang }}
