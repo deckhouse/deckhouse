@@ -73,4 +73,5 @@ import:
   - include
   - share
   - lib/*.a
+  - lib/**/*.exe
   before: setup
