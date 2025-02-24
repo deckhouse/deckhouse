@@ -299,21 +299,21 @@ function run-test() {
   echo "Bootstrap resuest response: ${response}"
 
   # Extract id and handle errors
-  CLUSTER_ID=$(jq -r '.id' <<< "$response")
+  cluster_id=$(jq -r '.id' <<< "$response")
   if [[ $? -ne 0 ]]; then
     echo "Error: jq failed to extract cluster ID" >&2
      echo "$response" >&2
     return 1
   fi
 
-  echo "Cluster ID: ${CLUSTER_ID}"
+  echo "Cluster ID: ${cluster_id}"
 
   # Waiting to cluster ready
   testRunAttempts=120
   sleep=30
   master_ip_find=false
   for ((i=1; i<=testRunAttempts; i++)); do
-    cluster_response=$(curl -s -X 'GET' \
+    response=$(curl -s -X 'GET' \
       "https://${commander_host}/api/v1/clusters/${cluster_id}" \
       -H 'accept: application/json' \
       -H "X-Auth-Token: ${commander_token}")
@@ -324,7 +324,7 @@ function run-test() {
     if [[ "$master_ip_find" == "false" ]]; then
       master_ip=$(jq -r '.connection_hosts.masters[0].host' <<< "$response")
       master_user=$(jq -r '.connection_hosts.masters[0].user' <<< "$response")
-      if [[ -n "$master_ip" ]]; then
+      if [[ "$master_ip" != "null" && "$master_user" != "null" ]]; then
         connection="    ssh ${master_user}@${master_ip}"
         master_ip_find=true
         echo "SSH connection string"
@@ -333,7 +333,7 @@ function run-test() {
     fi
 
     # Get cluster status
-    cluster_status=$(jq -r '.status' <<< "$cluster_response")
+    cluster_status=$(jq -r '.status' <<< "$response")
     if [ "in_sync" = "$cluster_status" ]; then
       return 0
     elif [ "creation_failed" = "$cluster_status" ]; then
