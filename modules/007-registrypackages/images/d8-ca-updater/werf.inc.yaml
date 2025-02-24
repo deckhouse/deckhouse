@@ -47,7 +47,7 @@ shell:
   - apt-get install -y perl-Encode-compat perl-Time-Piece git
   install:
   - git clone --depth 1 {{ $.SOURCE_REPO }}/python-modules/wheels /wheels
-  - /opt/python/static/bin/pip3 install -f file:///wheels --no-index -r /requirements.txt
+  - /opt/python-static/bin/pip3 install -f file:///wheels --no-index -r /requirements.txt
   - rm -rf /wheels
   - mv /mk-ca-bundle.pl /ca-certificates/mozilla
   - cd ca-certificates/mozilla
