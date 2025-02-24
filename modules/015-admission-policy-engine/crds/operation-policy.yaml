@@ -58,9 +58,9 @@ spec:
                       description: |
                         Requires containers to have defined resources set.
                       anyOf:
+                        - required: [ limits, requests ]
                         - required: [ limits ]
                         - required: [ requests ]
-                        - required: [ limits, requests ]
                       properties:
                         limits:
                           type: array
