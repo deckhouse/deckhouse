@@ -72,13 +72,16 @@ spec:
 ...
 ```
 
-> **Caution!** System dashboards and dashboards added using [GrafanaDashboardDefinition](cr.html#grafanadashboarddefinition) cannot be modified via the Grafana interface.
+{% alert level="warning" %}
+System dashboards and dashboards added using [GrafanaDashboardDefinition](cr.html#grafanadashboarddefinition) cannot be modified via the Grafana interface.
+{% endalert %}
 
 ## How do I add alerts and/or recording rules?
 
 The `CustomPrometheusRules` resource allows you to add alerts.
 
 Parameters:
+
 - `groups` — is the only parameter where you need to define alert groups. The structure of the groups is similar to [that of prometheus-operator](https://github.com/prometheus-operator/prometheus-operator/blob/ed9e365370603345ec985b8bfb8b65c242262497/Documentation/api.md#rulegroup).
 
 An example:
@@ -135,7 +138,7 @@ To enable secure access to metrics, we strongly recommend using **kube-rbac-prox
 
 ### An example of collecting metrics securely from an application inside a cluster
 
-Do the following to set up application metrics protection via the `kube-rbac-proxy` with the subsequent metrics scraping using Prometheus tools:
+To set up application metrics protection using `kube-rbac-proxy` and then collect metrics using Prometheus, follow these steps:
 
 1. Create a new `ServiceAccount` with the following permissions:
 
@@ -278,10 +281,12 @@ After step 4, your application's metrics should become available in Prometheus.
 Suppose there is a server exposed to the Internet on which the `node-exporter` is running. By default, the `node-exporter` listens on port `9100` and is available on all interfaces. One needs to ensure access control to the `node-exporter` so that metrics can be collected securely. Below is an example of how you can set this up.
 
 Requirements:
+
 - There must be network access from the cluster to the `kube-rbac-proxy` service running on the *remote server*.
 - The *remote server* must have access to the Kubernetes API server.
 
 Follow these steps:
+
 1. Create a new `ServiceAccount` with the following permissions:
 
    ```yaml
@@ -483,6 +488,7 @@ A detailed description of all parameters can be found in the [official documenta
 
 The Prometheus developer Brian Brazil provides, probably, the most [comprehensive answer](https://www.robustperception.io/keep-it-simple-scrape_interval-id) to this question.
 In short, different scrapeIntervals are likely to cause the following complications:
+
 * Increasing configuration complexity;
 * Problems with writing queries and creating graphs;
 * Short intervals are more like profiling an app, and Prometheus isn't the best tool to do this in most cases.
@@ -492,6 +498,7 @@ The most appropriate value for scrapeInterval is in the range of 10-60s.
 ## How do I limit Prometheus resource consumption?
 
 To avoid situations when VPA requests more resources for Prometheus or Longterm Prometheus than those available on the corresponding node, you can explicitly limit VPA using [module parameters](configuration.html):
+
 - `vpa.longtermMaxCPU`
 - `vpa.longtermMaxMemory`
 - `vpa.maxCPU`
@@ -651,7 +658,9 @@ status:
   startsAt: "2023-05-10T13:43:09Z"
 ```
 
-Remember the special alert `DeadMansSwitch` — its presence in the cluster indicates that Prometheus is working.
+{% alert level="info" %}
+The presence of a special alert `DeadMansSwitch` in the cluster indicates that Prometheus is working.
+{% endalert %}
 
 ## How do I add additional endpoints to a scrape config?
 

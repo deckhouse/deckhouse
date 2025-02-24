@@ -1,0 +1,11 @@
+linters-settings:
+  container:
+    exclude-rules:
+      readiness-probe:
+        - kind: Deployment
+          name: pod-reloader
+          container: kube-rbac-proxy
+      liveness-probe:
+        - kind: Deployment
+          name: pod-reloader
+          container: kube-rbac-proxy

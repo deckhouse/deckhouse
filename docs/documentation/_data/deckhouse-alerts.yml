@@ -4296,11 +4296,19 @@ alerts:
       module: monitoring-deckhouse
       edition: ce
       description: |
-        The '{{ $labels.moduleName }}' module has a deprecated module update policy, the policy selector does not work, and the module will use deckhouse update policy.
+        The '{{ $labels.moduleName }}' module is matched by the '{{ $labels.updatePolicy }}' deprecated module update policy. The policy`s v1alpha1 has a selector that no longer works.
 
-        Please specify the proper update policy in the module configuration to continue get updates.
+        Specify the update policy in the module config by running the following command:
+        ```
+        kubectl patch moduleconfig {{ $labels.moduleName }} --type='json' -p='[{"op": "add", "path": "/spec/updatePolicy", "value": "{{ $labels.updatePolicy }}"}]'
+        ```
+
+        After solving all alerts for the '{{ $labels.updatePolicy }}' update policy, use this command to clear the selector:
+        ```
+        kubectl patch moduleupdatepolicies.v1alpha1.deckhouse.io {{ $labels.updatePolicy }} --type='json' -p='[{"op": "replace", "path": "/spec/moduleReleaseSelector/labelSelector/matchLabels", "value": {"": ""}}]'
+        ```
       summary: |
-        The '{{ $labels.moduleName }}' module has a deprecated module update policy.
+        The '{{ $labels.moduleName }}' module is matched by the '{{ $labels.updatePolicy }}' deprecated module update policy.
       severity: "4"
       markupFormat: markdown
     - name: ModuleReleaseIsBlockedByRequirements

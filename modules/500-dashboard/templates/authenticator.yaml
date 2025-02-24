@@ -16,6 +16,10 @@ spec:
   applicationIngressClassName: {{ include "helm_lib_module_ingress_class" . | quote }}
   signOutURL: "/logout"
   sendAuthorizationHeader: true
+  {{- with .Values.dashboard.auth.allowedUserEmails }}
+  allowedEmails:
+  {{- . | toYaml | nindent 2 }}
+  {{- end }}
   {{- with .Values.dashboard.auth.allowedUserGroups }}
   allowedGroups:
   {{- . | toYaml | nindent 2 }}

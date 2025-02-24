@@ -1,10 +1,9 @@
-{{- range $key, $value := .CandiVersionMap.k8s }}
-  {{- $version := toString $key }}
+{{- $version := "1.4.1"}}
 ---
-image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $version | replace "." "-" }}
+image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: common/distroless
 import:
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
   add: /src/bin/cloud-director-named-disk-csi-driver
   to: /cloud-director-named-disk-csi-driver
   before: setup
@@ -28,45 +27,51 @@ imageSpec:
   config:
     entrypoint: ["/cloud-director-named-disk-csi-driver"]
 ---
-image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
+image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 final: false
-from: {{ $.Images.BASE_GOLANG_20_BUSTER }}
+fromImage: common/src-artifact
 git:
-- add: /{{ $.ModulePath }}/modules/030-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
+- add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
   to: /patches
   stageDependencies:
     install:
-    - '**/*'
+      - '**/*'
+shell:
+  install:
+  - git clone --depth 1 --branch {{ $version }} {{ $.SOURCE_REPO }}/vmware/cloud-director-named-disk-csi-driver.git /src
+  - cd /src
+  - git apply /patches/*.patch --verbose
+  - rm -rf .git vendor
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+final: false
+from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+  add: /src
+  to: /src
+  before: install
 mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
 shell:
-  beforeInstall:
-  - |
-    apt-get update && apt-get install -y --no-install-recommends \
-      git ca-certificates && apt-get clean -y && \
-      rm -rf /var/cache/debconf/* /var/lib/apt/lists/* /var/log/* /tmp/* /var/tmp/*
   install:
-  - export GO_VERSION=${GOLANG_VERSION}
-  - export GOPROXY={{ $.GOPROXY }}
-  - export VERSION="1.4.1"
-  - mkdir -p /src
-  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
-  - git clone --depth 1 --branch ${VERSION} {{ $.SOURCE_REPO }}/vmware/cloud-director-named-disk-csi-driver.git /src
   - cd /src
-  - git apply /patches/*.patch --verbose
-  - go mod vendor
-  - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags "-s -w -X github.com/vmware/cloud-director-named-disk-csi-driver/version.Version=${VERSION}" -o bin/cloud-director-named-disk-csi-driver cmd/csi/main.go
-{{- end }}
+  - export GOPROXY={{ $.GOPROXY }}
+  - go mod download
+  setup:
+  - cd /src
+  - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags "-s -w -X github.com/vmware/cloud-director-named-disk-csi-driver/version.Version={{ $version }}" -o bin/cloud-director-named-disk-csi-driver cmd/csi/main.go
+  - chown 64535:64535 bin/cloud-director-named-disk-csi-driver
+  - chmod 0755 bin/cloud-director-named-disk-csi-driver
 ---
 {{- $csiBinaries := "/bin/chmod /bin/mount /bin/mkdir /bin/rmdir /bin/umount /bin/findmnt /bin/lsblk /sbin/badblocks /sbin/blockdev /sbin/blk* /sbin/btrfs* /sbin/dumpe2fs /sbin/e2* /sbin/findfs /sbin/fsck* /sbin/fsfreeze /sbin/fstrim /sbin/mke2fs /sbin/mkfs* /sbin/resize2fs /sbin/xfs_repair /usr/sbin/nvme /usr/sbin/parted /usr/sbin/xfs*" }}
----
 image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
 final: false
 fromImage: common/relocate-artifact
 shell:
   beforeInstall:
-    - apt-get update -y
-    - apt-get install -y e2fsprogs xfsprogs btrfs-progs nfs-utils parted nvme udev
+  - apt-get update -y
+  - apt-get install -y e2fsprogs xfsprogs btrfs-progs nfs-utils parted nvme udev
   install:
-    - /binary_replace.sh -i "{{ $csiBinaries }}" -o /relocate
+  - /binary_replace.sh -i "{{ $csiBinaries }}" -o /relocate

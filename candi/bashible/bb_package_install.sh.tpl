@@ -29,7 +29,7 @@ export PACKAGES_PROXY_ADDRESSES="{{ .packagesProxy.addresses | join "," }}"
 export PACKAGES_PROXY_TOKEN="{{ .packagesProxy.token }}"
 {{- end }}
 
-{{- if $check_python := .Files.Get "/deckhouse/candi/bashible/check_python.sh.tpl" | default (.Files.Get "candi/bashible/check_python.sh.tpl") -}}
+{{- if $check_python := .Files.Get "deckhouse/candi/bashible/check_python.sh.tpl" | default (.Files.Get "candi/bashible/check_python.sh.tpl") -}}
   {{- tpl ( $check_python ) . | nindent 0 }}
 {{- end }}
 
@@ -91,7 +91,7 @@ bb-package-fetch-blob() {
   local REPOSITORY_PATH="${REPOSITORY_PATH:-}"
   local no_proxy=${PACKAGES_PROXY_ADDRESSES}
   local NO_PROXY=${PACKAGES_PROXY_ADDRESSES}
-  
+
   check_python
 
   cat - <<EOFILE | $python_binary

@@ -31,6 +31,9 @@ const (
 
 	ModuleSourceEmbedded = "Embedded"
 
+	ModuleAnnotationDescriptionRu = "ru.meta.deckhouse.io/description"
+	ModuleAnnotationDescriptionEn = "en.meta.deckhouse.io/description"
+
 	ModuleConditionEnabledByModuleConfig  = "EnabledByModuleConfig"
 	ModuleConditionEnabledByModuleManager = "EnabledByModuleManager"
 	ModuleConditionIsReady                = "IsReady"
@@ -157,7 +160,6 @@ type ModuleProperties struct {
 	Stage            string              `json:"stage,omitempty"`
 	Namespace        string              `json:"namespace,omitempty"`
 	Subsystems       []string            `json:"subsystems,omitempty"`
-	Description      string              `json:"description,omitempty"`
 	Version          string              `json:"version,omitempty"`
 	UpdatePolicy     string              `json:"updatePolicy,omitempty"`
 	AvailableSources []string            `json:"availableSources,omitempty"`
@@ -202,16 +204,6 @@ func (m *Module) ConditionStatus(condName string) bool {
 			return cond.Status == corev1.ConditionTrue
 		}
 	}
-	return false
-}
-
-func (m *Module) CheckConditionTrue(condName string) bool {
-	for _, cond := range m.Status.Conditions {
-		if cond.Type == condName {
-			return cond.Status == corev1.ConditionTrue
-		}
-	}
-
 	return false
 }
 
