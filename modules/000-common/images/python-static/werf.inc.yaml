@@ -72,6 +72,7 @@ import:
   excludePaths:
   - include
   - share
-  - lib/*.a
+  - lib/**/*.a
+  - lib/**/test
   - lib/**/*.exe
   before: setup
