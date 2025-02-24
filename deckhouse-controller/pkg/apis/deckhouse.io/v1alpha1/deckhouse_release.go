@@ -124,7 +124,7 @@ func (in *DeckhouseRelease) GetForce() bool {
 	return ok && v == "true"
 }
 
-func (mr *DeckhouseRelease) GetReinstall() bool {
+func (in *DeckhouseRelease) GetReinstall() bool {
 	return false
 }
 
