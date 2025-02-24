@@ -99,12 +99,12 @@ spec:
                   type: object
                   additionalProperties:
                     type: string
-                  resourceAnnotations:
-                    description: |
-                      Annotations to be applied to all resources created by the project.
-                    type: object
-                    additionalProperties:
-                      type: string
+                resourceAnnotations:
+                  description: |
+                    Annotations to be applied to all resources created by the project.
+                  type: object
+                  additionalProperties:
+                    type: string
                 projectTemplateName:
                   description: |
                     The name of the [ProjectTemplate](cr.html#projecttemplate) resource that defines which resources will be created in the project.
