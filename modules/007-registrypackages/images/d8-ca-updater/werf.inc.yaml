@@ -41,6 +41,6 @@ shell:
   - cd /ca-certificates/mozilla
   - perl mk-ca-bundle.pl -n
   - mv ca-bundle.crt /ca-bundle.crt
-  - /opt/python-static/bin/python3 certdata2pem.py
+  - python3 certdata2pem.py
   - mv *.crt /certs/
   - chmod +x /d8-ca-updater /install /uninstall
