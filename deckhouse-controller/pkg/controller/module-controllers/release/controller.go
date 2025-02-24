@@ -324,6 +324,17 @@ func (r *reconciler) preHandleCheck(ctx context.Context, release *v1alpha1.Modul
 func (r *reconciler) handleDeployedRelease(ctx context.Context, release *v1alpha1.ModuleRelease) (ctrl.Result, error) {
 	var needsUpdate bool
 
+	if release.GetReinstall() {
+		delete(release.Annotations, v1alpha1.ModuleReleaseAnnotationReinstall)
+
+		err := r.runReleaseDeploy(ctx, release, nil)
+		if err != nil {
+			return ctrl.Result{}, fmt.Errorf("run release deploy: %w", err)
+		}
+
+		return ctrl.Result{Requeue: true}, nil
+	}
+
 	// check if RegistrySpecChanged annotation is set process it
 	if _, set := release.GetAnnotations()[v1alpha1.ModuleReleaseAnnotationRegistrySpecChanged]; set {
 		// if module is enabled - push runModule task in the main queue
@@ -676,88 +687,9 @@ func (r *reconciler) ApplyRelease(ctx context.Context, mr *v1alpha1.ModuleReleas
 func (r *reconciler) runReleaseDeploy(ctx context.Context, release *v1alpha1.ModuleRelease, deployedReleaseInfo *releaseUpdater.ReleaseInfo) error {
 	r.log.Info("applying release", slog.String("release", release.GetName()))
 
-	// download desired module version
-	source := new(v1alpha1.ModuleSource)
-	if err := r.client.Get(ctx, client.ObjectKey{Name: release.GetModuleSource()}, source); err != nil {
-		return fmt.Errorf("get the '%s' module source: %w", release.GetModuleSource(), err)
-	}
-
-	tmpDir, err := os.MkdirTemp("", "module*")
+	downloadStatistic, err := r.loadModule(ctx, release, deployedReleaseInfo)
 	if err != nil {
-		return fmt.Errorf("create tmp directory: %w", err)
-	}
-
-	// clear tmp dir
-	defer func() {
-		if err = os.RemoveAll(tmpDir); err != nil {
-			r.log.Error("failed to remove old module directory", slog.String("directory", tmpDir), log.Err(err))
-		}
-	}()
-
-	options := utils.GenerateRegistryOptionsFromModuleSource(source, r.clusterUUID, r.log)
-	md := downloader.NewModuleDownloader(r.dependencyContainer, tmpDir, source, options)
-
-	downloadStatistic, err := md.DownloadByModuleVersion(release.GetModuleName(), release.GetVersion().String())
-	if err != nil {
-		return fmt.Errorf("download the '%s/%s' module: %w", release.GetModuleName(), release.GetVersion().String(), err)
-	}
-
-	def := &moduletypes.Definition{
-		Name:   release.GetModuleName(),
-		Weight: release.Spec.Weight,
-		Path:   path.Join(tmpDir, release.GetModuleName(), "v"+release.GetVersion().String()),
-	}
-
-	values := make(addonutils.Values)
-	if module := r.moduleManager.GetModule(release.GetModuleName()); module != nil {
-		values = module.GetConfigValues(false)
-	}
-
-	err = def.Validate(values, r.log)
-	if err != nil {
-		err = r.updateReleaseStatus(ctx, newModuleReleaseWithName(deployedReleaseInfo.Name), &v1alpha1.ModuleReleaseStatus{
-			Phase:   v1alpha1.ModuleReleasePhaseSuspended,
-			Message: "validation failed: " + err.Error(),
-		})
-		if err != nil {
-			r.log.Error("update status", slog.String("release", deployedReleaseInfo.Name), log.Err(err))
-
-			return fmt.Errorf("update status: the '%s:v%s' module validation: %w", release.GetModuleName(), release.GetVersion().String(), err)
-		}
-
-		return fmt.Errorf("the '%s:v%s' module validation: %w", release.GetModuleName(), release.GetVersion().String(), err)
-	}
-
-	moduleVersionPath := path.Join(r.downloadedModulesDir, release.GetModuleName(), "v"+release.GetVersion().String())
-	if err = os.RemoveAll(moduleVersionPath); err != nil {
-		return fmt.Errorf("remove the '%s' old module dir: %w", moduleVersionPath, err)
-	}
-
-	if err = cp.Copy(def.Path, moduleVersionPath); err != nil {
-		return fmt.Errorf("copy module dir: %w", err)
-	}
-
-	// search symlink for module by regexp
-	// module weight for a new version of the module may be different from the old one,
-	// we need to find a symlink that contains the module name without looking at the weight prefix.
-	currentModuleSymlink, err := utils.GetModuleSymlink(r.symlinksDir, release.GetModuleName())
-	if err != nil {
-		r.log.Warn("failed to find the current module symlink", slog.String("module", release.GetModuleName()), log.Err(err))
-
-		currentModuleSymlink = "900-" + release.GetModuleName() // fallback
-	}
-
-	newModuleSymlink := path.Join(r.symlinksDir, fmt.Sprintf("%d-%s", def.Weight, release.GetModuleName()))
-
-	relativeModulePath := path.Join("../", release.GetModuleName(), "v"+release.GetVersion().String())
-
-	if err = utils.EnableModule(r.downloadedModulesDir, currentModuleSymlink, newModuleSymlink, relativeModulePath); err != nil {
-		return fmt.Errorf("enable the '%s' module: %w", release.GetModuleName(), err)
-	}
-
-	// disable target module hooks so as not to invoke them before restart
-	if r.moduleManager.GetModule(release.GetModuleName()) != nil {
-		r.moduleManager.DisableModuleHooks(release.GetModuleName())
+		return fmt.Errorf("load module: %w", err)
 	}
 
 	if deployedReleaseInfo != nil {
@@ -827,6 +759,96 @@ func (r *reconciler) runReleaseDeploy(ctx context.Context, release *v1alpha1.Mod
 	}
 
 	return nil
+}
+
+func (r *reconciler) loadModule(ctx context.Context, release *v1alpha1.ModuleRelease, deployedReleaseInfo *releaseUpdater.ReleaseInfo) (*downloader.DownloadStatistic, error) {
+	// download desired module version
+	source := new(v1alpha1.ModuleSource)
+	if err := r.client.Get(ctx, client.ObjectKey{Name: release.GetModuleSource()}, source); err != nil {
+		return nil, fmt.Errorf("get the '%s' module source: %w", release.GetModuleSource(), err)
+	}
+
+	tmpDir, err := os.MkdirTemp("", "module*")
+	if err != nil {
+		return nil, fmt.Errorf("create tmp directory: %w", err)
+	}
+
+	// clear tmp dir
+	defer func() {
+		if err = os.RemoveAll(tmpDir); err != nil {
+			r.log.Error("failed to remove old module directory", slog.String("directory", tmpDir), log.Err(err))
+		}
+	}()
+
+	options := utils.GenerateRegistryOptionsFromModuleSource(source, r.clusterUUID, r.log)
+	md := downloader.NewModuleDownloader(r.dependencyContainer, tmpDir, source, options)
+
+	downloadStatistic, err := md.DownloadByModuleVersion(release.GetModuleName(), release.GetVersion().String())
+	if err != nil {
+		return nil, fmt.Errorf("download the '%s/%s' module: %w", release.GetModuleName(), release.GetVersion().String(), err)
+	}
+
+	def := &moduletypes.Definition{
+		Name:   release.GetModuleName(),
+		Weight: release.Spec.Weight,
+		Path:   path.Join(tmpDir, release.GetModuleName(), "v"+release.GetVersion().String()),
+	}
+
+	values := make(addonutils.Values)
+	if module := r.moduleManager.GetModule(release.GetModuleName()); module != nil {
+		values = module.GetConfigValues(false)
+	}
+
+	err = def.Validate(values, r.log)
+	if err != nil {
+		if deployedReleaseInfo != nil {
+			err = r.updateReleaseStatus(ctx, newModuleReleaseWithName(deployedReleaseInfo.Name), &v1alpha1.ModuleReleaseStatus{
+				Phase:   v1alpha1.ModuleReleasePhaseSuspended,
+				Message: "validation failed: " + err.Error(),
+			})
+			if err != nil {
+				r.log.Error("update status", slog.String("release", deployedReleaseInfo.Name), log.Err(err))
+
+				return nil, fmt.Errorf("update status: the '%s:v%s' module validation: %w", release.GetModuleName(), release.GetVersion().String(), err)
+			}
+		}
+
+		return nil, fmt.Errorf("the '%s:v%s' module validation: %w", release.GetModuleName(), release.GetVersion().String(), err)
+	}
+
+	moduleVersionPath := path.Join(r.downloadedModulesDir, release.GetModuleName(), "v"+release.GetVersion().String())
+	if err = os.RemoveAll(moduleVersionPath); err != nil {
+		return nil, fmt.Errorf("remove the '%s' old module dir: %w", moduleVersionPath, err)
+	}
+
+	if err = cp.Copy(def.Path, moduleVersionPath); err != nil {
+		return nil, fmt.Errorf("copy module dir: %w", err)
+	}
+
+	// search symlink for module by regexp
+	// module weight for a new version of the module may be different from the old one,
+	// we need to find a symlink that contains the module name without looking at the weight prefix.
+	currentModuleSymlink, err := utils.GetModuleSymlink(r.symlinksDir, release.GetModuleName())
+	if err != nil {
+		r.log.Warn("failed to find the current module symlink", slog.String("module", release.GetModuleName()), log.Err(err))
+
+		currentModuleSymlink = "900-" + release.GetModuleName() // fallback
+	}
+
+	newModuleSymlink := path.Join(r.symlinksDir, fmt.Sprintf("%d-%s", def.Weight, release.GetModuleName()))
+
+	relativeModulePath := path.Join("../", release.GetModuleName(), "v"+release.GetVersion().String())
+
+	if err = utils.EnableModule(r.downloadedModulesDir, currentModuleSymlink, newModuleSymlink, relativeModulePath); err != nil {
+		return nil, fmt.Errorf("enable the '%s' module: %w", release.GetModuleName(), err)
+	}
+
+	// disable target module hooks so as not to invoke them before restart
+	if r.moduleManager.GetModule(release.GetModuleName()) != nil {
+		r.moduleManager.DisableModuleHooks(release.GetModuleName())
+	}
+
+	return downloadStatistic, nil
 }
 
 var ErrPreApplyCheckIsFailed = errors.New("pre apply check is failed")
