@@ -49,6 +49,10 @@ func (pc *Checker) CheckCidrIntersectionStatic() error {
 		return nil
 	}
 
+	if pc.metaConfig.StaticClusterConfig["internalNetworkCIDRs"] == nil {
+		return nil
+	}
+
 	podSubnetCIDR, serviceSubnetCIDR, err := getCidrFromMetaConfig(pc.metaConfig)
 	if err != nil {
 		return err
@@ -58,11 +62,6 @@ func (pc *Checker) CheckCidrIntersectionStatic() error {
 	err = json.Unmarshal(pc.metaConfig.StaticClusterConfig["internalNetworkCIDRs"], &internalNetworkCIDRs)
 	if err != nil {
 		return fmt.Errorf("missing internalNetworkCIDRs field in ClusterConfiguration")
-	}
-
-	err = cidrIntersects(podSubnetCIDR, serviceSubnetCIDR)
-	if err != nil {
-		return err
 	}
 
 	for _, ininternalNetworkCIDR := range internalNetworkCIDRs {

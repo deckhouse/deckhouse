@@ -248,19 +248,14 @@ func TestCheckCidrIntersectionStatic(t *testing.T) {
 			wantErr: assert.NoError,
 		},
 		{
-			name: "intersects subnets",
+			name: "happy path",
 			fields: fields{metaConfig: &config.MetaConfig{
 				ClusterConfig: map[string]json.RawMessage{
-					"podSubnetCIDR":     []byte(`"10.111.0.0/17"`),
-					"serviceSubnetCIDR": []byte(`"10.111.110.0/18"`),
-				},
-				StaticClusterConfig: map[string]json.RawMessage{
-					"internalNetworkCIDRs": []byte(`["10.128.0.0/24"]`),
+					"podSubnetCIDR":     []byte(`"10.111.0.0/16"`),
+					"serviceSubnetCIDR": []byte(`"10.222.0.0/16"`),
 				},
 			}},
-			wantErr: func(t assert.TestingT, err error, i ...interface{}) bool {
-				return assert.ErrorContains(t, err, "are intersects")
-			},
+			wantErr: assert.NoError,
 		},
 		{
 			name: "intersects subnets with internal",
@@ -318,19 +313,6 @@ func TestCheckCidrIntersectionStatic(t *testing.T) {
 			}},
 			wantErr: func(t assert.TestingT, err error, i ...interface{}) bool {
 				return assert.ErrorContains(t, err, "missing serviceSubnetCIDR field in ClusterConfiguration")
-			},
-		},
-		{
-			name: "missing internalNetworkCIDRs",
-			fields: fields{metaConfig: &config.MetaConfig{
-				ClusterConfig: map[string]json.RawMessage{
-					"podSubnetCIDR":     []byte(`"10.111.0.0/16"`),
-					"serviceSubnetCIDR": []byte(`"10.222.0.0/16"`),
-				},
-				StaticClusterConfig: map[string]json.RawMessage{},
-			}},
-			wantErr: func(t assert.TestingT, err error, i ...interface{}) bool {
-				return assert.ErrorContains(t, err, "missing internalNetworkCIDRs field in ClusterConfiguration")
 			},
 		},
 		{
