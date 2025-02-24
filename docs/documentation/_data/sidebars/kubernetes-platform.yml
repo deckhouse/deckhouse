@@ -106,6 +106,10 @@ entries:
                         en: Kube-proxy configuration
                         ru: Настройка kube-proxy
                       url: /admin/network/kube-proxy-configuration.html
+                    - title:
+                        en: Switching from CNI flannel to cilium
+                        ru: Переключение с CNI flannel на cilium
+                      url: /admin/network/flanel-cilium-switching.html
                 - title:
                     en: Incoming traffic balancing
                     ru: Балансировка входящего трафика
