@@ -38,7 +38,7 @@ k8s:
       provisioner: v5.2.0
       attacher: v4.4.0
       resizer: v1.9.0
-      registrar: v2.9.0
+      registrar: v2.13.0
       snapshotter: v8.1.1
       livenessprobe: v2.15.0
   '1.29':
@@ -62,7 +62,7 @@ k8s:
       provisioner: v5.2.0
       attacher: v4.5.0
       resizer: v1.9.3
-      registrar: v2.10.0
+      registrar: v2.13.0
       snapshotter: v8.1.1
       livenessprobe: v2.15.0
   '1.30':
@@ -86,7 +86,7 @@ k8s:
       provisioner: v5.2.0
       attacher: v4.6.1
       resizer: v1.11.0
-      registrar: v2.11.0
+      registrar: v2.13.0
       snapshotter: v8.1.1
       livenessprobe: v2.15.0
   '1.31':
@@ -110,7 +110,7 @@ k8s:
       provisioner: v5.2.0
       attacher: v4.7.0
       resizer: v1.12.0
-      registrar: v2.12.0
+      registrar: v2.13.0
       snapshotter: v8.1.1
       livenessprobe: v2.15.0
   '1.32':
