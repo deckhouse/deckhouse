@@ -150,7 +150,7 @@ groups:
   - ports: "4202"
     protocol: TCP
     description:
-      en: "*sds-node-configurator* node agent metrix"
+      en: "*sds-node-configurator* node agent metrics"
       ru: "Метрики агента *sds-node-configurator*"
   - ports: "4214"
     protocol: TCP
