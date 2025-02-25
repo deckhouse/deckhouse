@@ -163,7 +163,8 @@ status:
     kind: ""
     plural: ""
   conditions: null
-  storedVersions: null
+  storedVersions:
+  - v1alpha1
 `
 	)
 
