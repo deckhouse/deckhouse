@@ -233,7 +233,7 @@ properties:
     type: integer
     description: |
       Certificate client expired period for OpenVPN in days. Specifies the number of days for which a client certificate generated using EasyRSA will be issued.
-    default: 365
+    default: 3650
 oneOf:
   - properties:
       tcpEnabled:

@@ -300,10 +300,8 @@ spec:
               fieldPath: metadata.namespace
         - name: EASYRSA_PATH
           value: /mnt/easyrsa
-        {{- if .Values.openvpn.openvpnDefaultClientCertExpiredDays}}
         - name: CLIENT_CERT_EXPIRE
           value: "{{ .Values.openvpn.openvpnDefaultClientCertExpiredDays }}"
-        {{- end }}
         volumeMounts:
           - mountPath: /mnt/easyrsa
             name: certs

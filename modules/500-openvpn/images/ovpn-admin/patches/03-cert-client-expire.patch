@@ -1,5 +1,5 @@
 diff --git a/certificates.go b/certificates.go
-index 697c539..e00db78 100644
+index 697c539..297aa8e 100644
 --- a/certificates.go
 +++ b/certificates.go
 @@ -9,6 +9,8 @@ import (
@@ -11,15 +11,7 @@ index 697c539..e00db78 100644
  	"time"
  )
  
-@@ -60,7 +62,6 @@ func genPrivKey() (privKeyPEM *bytes.Buffer, err error) {
- 		Bytes: privKeyPKCS8,
- 	})
- 
--
- 	return
- }
- 
-@@ -133,6 +134,19 @@ func genClientCert(privKey, caPrivKey *rsa.PrivateKey, ca *x509.Certificate, cn
+@@ -133,6 +135,19 @@ func genClientCert(privKey, caPrivKey *rsa.PrivateKey, ca *x509.Certificate, cn
  	serialNumberRange := new(big.Int).Lsh(big.NewInt(1), 128)
  	serial, err := rand.Int(rand.Reader, serialNumberRange)
  
@@ -39,7 +31,7 @@ index 697c539..e00db78 100644
  	template := x509.Certificate{
  		BasicConstraintsValid: true,
  		DNSNames:              []string{cn},
-@@ -142,8 +156,8 @@ func genClientCert(privKey, caPrivKey *rsa.PrivateKey, ca *x509.Certificate, cn
+@@ -142,8 +157,8 @@ func genClientCert(privKey, caPrivKey *rsa.PrivateKey, ca *x509.Certificate, cn
  		},
  		KeyUsage:    x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment,
  		ExtKeyUsage: []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth},
