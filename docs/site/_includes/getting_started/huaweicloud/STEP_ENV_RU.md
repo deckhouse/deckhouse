@@ -12,7 +12,7 @@
 1. Нажмите «OK» для создания группы.
 1. Выберите созданную группу из списка.
 1. На вкладке «Permissions» нажмите «Authorize».
-1. Укажите следующие политики: «ECS Admin», «VPC Administrator», «NAT Admin», «DEW KeypairFullAccess».
+1. Укажите следующие политики: «ECS Admin», «VPC Administrator», «NAT Admin», «ELB FullAccess», «DEW KeypairFullAccess».
 1. Нажмите «Next», затем «OK» и завершите настройку, нажав «Finish».
 
 Добавьте нового пользователя. Для этого выполните следующие шаги:
@@ -135,6 +135,26 @@
               "Effect": "Allow"
           }
       ]
+  }
+```
+{% endofftopic %}
+
+{% offtopic title="Политика «ELB FullAccess»" %}
+```json
+  {
+    "Version": "1.1",
+    "Statement": [
+        {
+            "Action": [
+                "elb:*:*",
+                "vpc:*:get*",
+                "vpc:*:list*",
+                "ecs:*:get*",
+                "ecs:*:list*"
+            ],
+            "Effect": "Allow"
+        }
+    ]
   }
 ```
 {% endofftopic %}

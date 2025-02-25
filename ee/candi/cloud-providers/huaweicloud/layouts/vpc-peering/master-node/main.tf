@@ -11,6 +11,7 @@ locals {
   root_disk_size       = lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass, "rootDiskSize", 10) # Huaweicloud can have disks predefined within vm flavours, so we do not set any defaults here
   etcd_volume_size     = var.providerClusterConfiguration.masterNodeGroup.instanceClass.etcdDiskSizeGb
   additional_tags      = lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass, "additionalTags", {})
+  subnet               = var.providerClusterConfiguration.vpcPeering.subnet
 }
 
 module "network_security_info" {
@@ -37,13 +38,13 @@ module "master" {
   keypair_ssh_name      = data.huaweicloud_kps_keypairs.ssh.name
   security_group_ids    = module.security_groups.security_group_ids
   internal_network_cidr = local.internal_network_cidr
-  enable_eip            = lookup(local.standard, "enableEIP", false)
+  enable_eip            = false
   tags                  = local.tags
   zone                  = local.zone
   volume_type           = local.volume_type
   volume_zone           = module.volume_zone.zone
   server_group          = local.server_group
-  subnet                = local.prefix
+  subnet                = local.subnet
 }
 
 module "kubernetes_data" {

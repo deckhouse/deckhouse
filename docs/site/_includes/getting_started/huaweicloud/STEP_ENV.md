@@ -12,7 +12,7 @@ To configure IAM via the web interface, first create a new user group and assign
 1. Click "OK" to create the group.
 1. Select the newly created group from the list.
 1. On the "Permissions" tab, click "Authorize".
-1. Assign the following policies: "ECS Admin", "VPC Administrator", "NAT Admin", "DEW KeypairFullAccess".
+1. Assign the following policies: "ECS Admin", "VPC Administrator", "NAT Admin", "ELB FullAccess", "DEW KeypairFullAccess".
 1. Click "Next", then "OK", and complete the setup by clicking "Finish".
 
 Then add a new user. Follow these steps:
@@ -135,6 +135,26 @@ Below are the contents of the policies in JSON format:
               "Effect": "Allow"
           }
       ]
+  }
+```
+{% endofftopic %}
+
+{% offtopic title="ELB FullAccess policy" %}
+```json
+  {
+    "Version": "1.1",
+    "Statement": [
+        {
+            "Action": [
+                "elb:*:*",
+                "vpc:*:get*",
+                "vpc:*:list*",
+                "ecs:*:get*",
+                "ecs:*:list*"
+            ],
+            "Effect": "Allow"
+        }
+    ]
   }
 ```
 {% endofftopic %}
