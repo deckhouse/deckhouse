@@ -372,12 +372,12 @@ $(echo -n $ENDPOINTS_STRING) endpoint status -w table
 
     1. Убедитесь, что удаляемые master-узлы пропали из списка узлов кластера etcd:
 
-       ```bash
-       kubectl -n kube-system exec -ti $(kubectl -n kube-system get pod -l component=etcd,tier=control-plane -o name | head -n1) -- \
-       etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
-       --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key \
-       --endpoints https://127.0.0.1:2379/ member list -w table
-       ```
+         ```bash
+         kubectl -n kube-system exec -ti $(kubectl -n kube-system get pod -l component=etcd,tier=control-plane -o name | head -n1) -- \
+         etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
+         --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key \
+         --endpoints https://127.0.0.1:2379/ member list -w table
+         ```
 
 1. Выполните `drain` для удаляемых узлов:
 
