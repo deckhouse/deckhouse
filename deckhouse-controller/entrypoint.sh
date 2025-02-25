@@ -36,7 +36,7 @@ signal_handler() {
 
 run_deckhouse() {
   if [ -f /usr/bin/dlv ]; then
-    /usr/bin/dlv --headless --continue --accept-multiclient --listen=localhost:2345 --api-version=2 exec /usr/bin/deckhouse-controller start &
+    /usr/bin/dlv --headless --continue --accept-multiclient --listen=:2345 --api-version=2 --log --log-dest=/tmp/dlv.log exec /usr/bin/deckhouse-controller start &
   else
     /usr/bin/deckhouse-controller start &
   fi
