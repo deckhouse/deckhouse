@@ -45,6 +45,7 @@ const (
 	ModuleReleaseFinalizerExistOnFs              = "modules.deckhouse.io/exist-on-fs"
 	ModuleReleaseAnnotationNotificationTimeShift = "modules.deckhouse.io/notification-time-shift"
 	ModuleReleaseAnnotationForce                 = "modules.deckhouse.io/force"
+	ModuleReleaseAnnotationReinstall             = "modules.deckhouse.io/reinstall"
 
 	ModuleReleaseAnnotationDryrun            = "dryrun"
 	ModuleReleaseAnnotationTriggeredByDryrun = "triggered_by_dryrun"
@@ -159,6 +160,10 @@ func (mr *ModuleRelease) GetPhase() string {
 
 func (mr *ModuleRelease) GetForce() bool {
 	return false
+}
+
+func (mr *ModuleRelease) GetReinstall() bool {
+	return mr.Annotations[ModuleReleaseAnnotationReinstall] == "true"
 }
 
 func (mr *ModuleRelease) GetApplyNow() bool {
