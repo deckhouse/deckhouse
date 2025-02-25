@@ -69,7 +69,27 @@ entries:
             - title:
                 en: High reliability and availability
                 ru: Высокая надежность и доступность
-              url: /admin/high-reliability-and-availability.html
+              folders:
+                - title:
+                    en: Overview
+                    ru: Введение
+                  url: /admin/high-reliability-and-availability/overview.html
+                - title:
+                    en: Manual control of HA mode for specific modules
+                    ru: Ручное управление режимом HA для определённых модулей
+                  url: /admin/high-reliability-and-availability/manual.html
+                - title:
+                    en: Recommendations for cluster configuration
+                    ru: Рекомендации к конфигурации кластера
+                  url: /admin/high-reliability-and-availability/recomendations.html
+                - title:
+                    en: Recommendations for cluster configuration
+                    ru: Межкластерное взаимодйствие
+                  url: /admin/high-reliability-and-availability/inter-cluster-interaction.html
+                - title:
+                    en: Cluster Fault Tolerance Testing
+                    ru: Тестирование отказоустройчивости кластера
+                  url: /admin/high-reliability-and-availability/chaos-testing.html
             - title:
                 en: Platform resource management
                 ru: Управление ресурсами платформы
