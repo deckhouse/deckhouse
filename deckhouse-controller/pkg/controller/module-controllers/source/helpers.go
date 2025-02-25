@@ -292,30 +292,11 @@ func (r *reconciler) ensureModule(ctx context.Context, sourceName, moduleName, r
 		if !slices.Contains(module.Properties.AvailableSources, sourceName) {
 			module.Properties.AvailableSources = append(module.Properties.AvailableSources, sourceName)
 		}
-
-		return nil
-	})
-	if err != nil {
-		return nil, fmt.Errorf("update the '%s' module: %w", moduleName, err)
-	}
-
-	if module.Properties.Source != sourceName {
-		r.log.Debugf("the '%s' source not active source for the '%s' module, skip it", sourceName, moduleName)
-		return nil, nil
-	}
-
-	if !module.ConditionStatus(v1alpha1.ModuleConditionEnabledByModuleConfig) {
-		r.log.Debugf("skip the '%s' disabled module", moduleName)
-		return nil, nil
-	}
-
-	// update release channel
-	err = ctrlutils.UpdateWithRetry(ctx, r.client, module, func() error {
 		module.Properties.ReleaseChannel = releaseChannel
 		return nil
 	})
 	if err != nil {
-		return nil, fmt.Errorf("update release channel for the '%s' module: %w", moduleName, err)
+		return nil, fmt.Errorf("update the '%s' module: %w", moduleName, err)
 	}
 
 	return module, nil
