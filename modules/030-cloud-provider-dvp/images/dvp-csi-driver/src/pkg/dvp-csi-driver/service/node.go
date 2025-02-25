@@ -18,14 +18,12 @@ package service
 
 import (
 	"context"
+	"dvp-csi-driver/pkg/utils"
 	"errors"
 	"fmt"
 	"os"
 	"os/exec"
-	"strconv"
 	"strings"
-
-	"dvp-csi-driver/pkg/utils"
 
 	dvpapi "dvp-common/api"
 
@@ -34,10 +32,6 @@ import (
 	"google.golang.org/grpc/status"
 	"k8s.io/klog/v2"
 	"k8s.io/utils/mount"
-)
-
-const (
-	deviceNamePrefix = "virtio-pci-0000:00:"
 )
 
 type NodeService struct {
@@ -69,28 +63,25 @@ func (n *NodeService) NodeStageVolume(
 	if len(req.VolumeId) == 0 {
 		return nil, fmt.Errorf("error required request paramater VolumeId wasn't set")
 	}
-	diskID, err := strconv.ParseUint(req.VolumeId, 10, 64)
-	if err != nil {
-		return nil, fmt.Errorf("error required paramater VolumeId can't parse: %w", err)
-	}
+	diskName := req.VolumeId
 
-	klog.Infof("Staging volume %v with %+v", diskID, req)
+	klog.Infof("Staging volume %v with %+v", diskName, req)
 
 	if req.VolumeCapability.GetBlock() != nil {
-		klog.Infof("Volume %v is a block volume, no need for staging", diskID)
+		klog.Infof("Volume %v is a block volume, no need for staging", diskName)
 		return &csi.NodeStageVolumeResponse{}, nil
 	}
 
-	device, err := n.getDevicePath(ctx, diskID)
+	device, err := n.getDevicePath(ctx, diskName)
 	if err != nil {
-		klog.Errorf("Failed to fetch device by for volume %v", diskID)
+		klog.Errorf("Failed to fetch device by for volume %v", diskName)
 		return nil, err
 	}
 
 	// is there a filesystem on this device?
 	filesystem, err := utils.GetDeviceInfo(device)
 	if err != nil {
-		klog.Errorf("Failed to fetch device info for volume %v", diskID)
+		klog.Errorf("Failed to fetch device info for volume %v", diskName)
 		return nil, err
 	}
 	if filesystem != "" {
@@ -121,14 +112,11 @@ func (n *NodeService) NodePublishVolume(
 	if len(req.VolumeId) == 0 {
 		return nil, fmt.Errorf("error required request paramater VolumeId wasn't set")
 	}
-	diskID, err := strconv.ParseUint(req.VolumeId, 10, 64)
-	if err != nil {
-		return nil, fmt.Errorf("error required paramater VolumeId can't parse: %w", err)
-	}
+	diskName := req.VolumeId
 
-	device, err := n.getDevicePath(ctx, diskID)
+	device, err := n.getDevicePath(ctx, diskName)
 	if err != nil {
-		klog.Errorf("Failed to fetch device by for volume %v", diskID)
+		klog.Errorf("Failed to fetch device by for volume %v", diskName)
 		return nil, err
 	}
 
@@ -154,18 +142,51 @@ func (n *NodeService) NodePublishVolume(
 	return &csi.NodePublishVolumeResponse{}, nil
 }
 
-func (n *NodeService) getDevicePath(ctx context.Context, diskID uint64) (string, error) {
-	disk, err := n.dvpCloudAPI.DiskService.GetDisk(ctx, diskID)
+func (n *NodeService) getDevicePath(ctx context.Context, diskName string) (string, error) {
+	disk, err := n.dvpCloudAPI.DiskService.GetDiskByName(ctx, diskName)
 	if err != nil {
-		msg := fmt.Errorf("error while finding disk %v by id, error: %w", diskID, err)
-		klog.Errorf(msg.Error())
+		msg := fmt.Errorf("error while finding disk %v by id, error: %w", diskName, err)
+		klog.Error(msg.Error())
 		return "", msg
 	}
 
-	device := fmt.Sprintf("/dev/disk/by-path/%s%.2d.0", deviceNamePrefix, disk.PCISlot)
+	if len(disk.Status.AttachedToVirtualMachines) > 1 {
+		msg := fmt.Errorf("disk %v has more than one compute node, can't find device path", diskName)
+		klog.Error(msg.Error())
+		return "", msg
+	}
+	if len(disk.Status.AttachedToVirtualMachines) == 0 {
+		msg := fmt.Errorf("disk %v has no compute node, can't find device path", diskName)
+		klog.Error(msg.Error())
+		return "", msg
+	}
+
+	vmName := disk.Status.AttachedToVirtualMachines[0].Name
+	vm, err := n.dvpCloudAPI.ComputeService.GetVMByName(ctx, vmName)
+	if err != nil {
+		msg := fmt.Errorf("error while finding virtual machine %v by name, error: %w", vmName, err)
+		klog.Error(msg.Error())
+		return "", msg
+	}
+
+	target := ""
+	for _, attachedDiskRef := range vm.Status.BlockDeviceRefs {
+		if attachedDiskRef.Name == diskName {
+			target = attachedDiskRef.Target
+			break
+		}
+	}
+
+	if target == "" {
+		msg := fmt.Errorf("error while finding device path for disk %s on virtual machine %v, error: %w", diskName, vmName, err)
+		klog.Error(msg.Error())
+		return "", msg
+	}
+
+	device := fmt.Sprintf("/dev/%s", target)
 	_, err = os.Stat(device)
 	if err != nil {
-		klog.Errorf("Device path for disk ID %v does not exists", diskID)
+		klog.Errorf("Device path for disk ID %v does not exists", diskName)
 		return "", errors.New("device was not found")
 	}
 

@@ -17,9 +17,8 @@ limitations under the License.
 package api
 
 import (
-	"errors"
-
 	"dvp-common/config"
+	"errors"
 
 	"github.com/deckhouse/virtualization/api/core/v1alpha2"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -32,6 +31,8 @@ var ErrNotFound = errors.New("not found")
 type DVPCloudAPI struct {
 	Service        *Service
 	ComputeService *ComputeService
+	DiskService    *DiskService
+	PortalService  *PortalService
 }
 
 func NewDVPCloudAPI(config *config.CloudConfig) (*DVPCloudAPI, error) {
@@ -66,5 +67,7 @@ func NewDVPCloudAPI(config *config.CloudConfig) (*DVPCloudAPI, error) {
 	return &DVPCloudAPI{
 		Service:        service,
 		ComputeService: NewComputeService(service),
+		DiskService:    NewDiskService(service),
+		PortalService:  NewPortalService(service),
 	}, nil
 }

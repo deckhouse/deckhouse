@@ -18,23 +18,21 @@ package service
 
 import (
 	"context"
+	"dvp-csi-driver/pkg/utils"
 	"errors"
 	"fmt"
-	"strconv"
 
 	dvpapi "dvp-common/api"
 
 	"github.com/container-storage-interface/spec/lib/go/csi"
+	"github.com/deckhouse/virtualization/api/core/v1alpha2"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"k8s.io/klog/v2"
 )
 
 const (
-	ParameterPool            = "pool"
-	ParameterAccount         = "account"
-	ParameterLocation        = "location"
-	ParameterStorageEndpoint = "storageEndpoint"
+	ParameterDVPStorageClass = "dvpStorageClass"
 )
 
 type ControllerService struct {
@@ -56,29 +54,8 @@ func NewController(
 	}
 }
 
-func (c *ControllerService) parseParameters(ctx context.Context, params map[string]string) (string, uint64, uint64, uint64, error) {
-	pool := params[ParameterPool]
-
-	account, err := c.dvpCloudAPI.AccountService.GetAccountByName(ctx, params[ParameterAccount])
-	if err != nil {
-		return "", 0, 0, 0, fmt.Errorf("can't get accountId by name: %v , %w ", params[ParameterAccount], err)
-	}
-
-	location, err := c.dvpCloudAPI.LocationService.GetLocationByName(ctx, params[ParameterLocation])
-	if err != nil {
-		return "", 0, 0, 0, fmt.Errorf("can't get gId by location name: %v, %w ", params[ParameterLocation], err)
-	}
-
-	storageEndpoint, err := c.dvpCloudAPI.StorageEndpointService.GetStorageEndpointByName(ctx, params[ParameterStorageEndpoint])
-	if err != nil {
-		return "", 0, 0, 0, fmt.Errorf("can't get sepId by name: %v, %w ", params[ParameterStorageEndpoint], err)
-	}
-
-	return pool, account.ID, location.ID, storageEndpoint.ID, nil
-}
-
 func checkRequiredParams(params map[string]string) error {
-	for _, paramName := range []string{ParameterPool, ParameterAccount, ParameterLocation, ParameterStorageEndpoint} {
+	for _, paramName := range []string{ParameterDVPStorageClass} {
 		if len(params[paramName]) == 0 {
 			return fmt.Errorf("error required storageClass paramater %s wasn't set",
 				paramName)
@@ -97,10 +74,7 @@ func (c *ControllerService) CreateVolume(
 		return nil, err
 	}
 
-	pool, accountID, gID, storageEndpointID, err := c.parseParameters(ctx, req.Parameters)
-	if err != nil {
-		return nil, fmt.Errorf("error parse storageClass paramater %w", err)
-	}
+	dvpStorageClass := req.Parameters[ParameterDVPStorageClass]
 
 	diskName := req.Name
 	if len(diskName) == 0 {
@@ -124,14 +98,14 @@ func (c *ControllerService) CreateVolume(
 	disks, err := c.dvpCloudAPI.DiskService.ListDisksByName(ctx, diskName)
 	if err != nil {
 		msg := fmt.Errorf("error while finding disk %s by name, error: %w", diskName, err)
-		klog.Errorf(msg.Error())
+		klog.Error(msg.Error())
 		return nil, msg
 	}
-	if len(disks) > 1 {
+	if len(disks.Items) > 1 {
 		msg := fmt.Errorf(
 			"found more then one disk with the name %s,"+
 				"please contanct the DVP admin to check the name duplication", diskName)
-		klog.Errorf(msg.Error())
+		klog.Error(msg.Error())
 		return nil, msg
 	}
 
@@ -139,30 +113,37 @@ func (c *ControllerService) CreateVolume(
 		Volume: &csi.Volume{},
 	}
 
-	if len(disks) == 1 {
-		disk := disks[0]
-		result.Volume.VolumeId = strconv.FormatUint(disk.ID, 10)
-		result.Volume.CapacityBytes = int64(disk.SizeMax)
+	if len(disks.Items) == 1 {
+		disk := disks.Items[0]
+		diskCapacity, err := utils.ConvertStringQuantityToInt64(disk.Status.Capacity)
+		if err != nil {
+			klog.Error(err.Error())
+			return nil, err
+		}
+		result.Volume.VolumeId = disk.Name
+		result.Volume.CapacityBytes = diskCapacity
 		return result, nil
 	}
 
 	disk, err := c.dvpCloudAPI.DiskService.CreateDisk(
 		ctx,
-		accountID,
-		gID,
 		diskName,
-		convertBytesToGigabytes(uint64(requiredSize)),
-		pool,
-		storageEndpointID,
+		requiredSize,
+		dvpStorageClass,
 	)
 	if err != nil {
 		msg := fmt.Errorf("error while creating disk %s, error: %w", diskName, err)
-		klog.Errorf(msg.Error())
+		klog.Error(msg.Error())
 		return nil, msg
 	}
 
-	result.Volume.VolumeId = strconv.FormatUint(disk.ID, 10)
-	result.Volume.CapacityBytes = int64(convertGigabytesToBytes(disk.SizeMax))
+	diskCapacity, err := utils.ConvertStringQuantityToInt64(disk.Status.Capacity)
+	if err != nil {
+		klog.Error(err.Error())
+		return nil, err
+	}
+	result.Volume.VolumeId = disk.Name
+	result.Volume.CapacityBytes = diskCapacity
 	return result, nil
 }
 
@@ -170,30 +151,27 @@ func (c *ControllerService) DeleteVolume(
 	ctx context.Context,
 	req *csi.DeleteVolumeRequest,
 ) (*csi.DeleteVolumeResponse, error) {
-	diskID, err := strconv.ParseUint(req.VolumeId, 10, 64)
-	if err != nil {
-		return nil, fmt.Errorf("error required paramater VolumeId can't parse: %w", err)
-	}
-	klog.Infof("Removing disk %v", diskID)
+	diskName := req.VolumeId
+	klog.Infof("Removing disk %v", diskName)
 
-	_, err = c.dvpCloudAPI.DiskService.GetDisk(ctx, diskID)
+	_, err := c.dvpCloudAPI.DiskService.GetDiskByName(ctx, diskName)
 	if err != nil {
 		if errors.Is(err, dvpapi.ErrNotFound) {
 			return &csi.DeleteVolumeResponse{}, nil
 		}
-		msg := fmt.Errorf("error while finding disk %v by id, error: %w", diskID, err)
-		klog.Errorf(msg.Error())
+		msg := fmt.Errorf("error while finding disk %v by id, error: %w", diskName, err)
+		klog.Error(msg.Error())
 		return nil, msg
 	}
 
-	err = c.dvpCloudAPI.DiskService.RemoveDisk(ctx, diskID)
+	err = c.dvpCloudAPI.DiskService.RemoveDiskByName(ctx, diskName)
 	if err != nil {
-		msg := fmt.Errorf("failed removing disk %v by id, error: %w", diskID, err)
-		klog.Errorf(msg.Error())
+		msg := fmt.Errorf("failed removing disk %v by id, error: %w", diskName, err)
+		klog.Error(msg.Error())
 		return nil, msg
 	}
 
-	klog.Infof("Finished removing disk %v", diskID)
+	klog.Infof("Finished removing disk %v", diskName)
 	return &csi.DeleteVolumeResponse{}, nil
 }
 
@@ -207,52 +185,49 @@ func (c *ControllerService) ControllerPublishVolume(
 		return nil, fmt.Errorf("error required request paramater NodeId wasn't set")
 	}
 
-	diskID, err := strconv.ParseUint(req.VolumeId, 10, 64)
-	if err != nil {
-		return nil, fmt.Errorf("error required paramater VolumeId can't parse: %w", err)
-	}
+	diskName := req.VolumeId
 
 	vm, err := c.dvpCloudAPI.ComputeService.GetVMByName(ctx, req.NodeId)
 	if err != nil {
 		return nil, fmt.Errorf("failed finding VM: %v, error: %w", req.NodeId, err)
 	}
 
-	computeID := vm.ID
+	computeName := vm.Name
 
-	attached, err := c.hasDiskAttachedToVM(ctx, diskID, computeID)
+	attached, err := c.hasDiskAttachedToVM(ctx, diskName, computeName)
 	if err != nil {
-		klog.Errorf(err.Error())
+		klog.Error(err.Error())
 		return nil, err
 	}
 
 	if attached {
-		klog.Infof("Disk %v is already attached to VM %v, returning OK", diskID, computeID)
+		klog.Infof("Disk %v is already attached to VM %v, returning OK", diskName, computeName)
 		return &csi.ControllerPublishVolumeResponse{}, nil
 	}
 
-	err = c.dvpCloudAPI.ComputeService.AttachDiskToVM(ctx, diskID, computeID)
+	err = c.dvpCloudAPI.ComputeService.AttachDiskToVM(ctx, diskName, computeName)
 	if err != nil {
 		msg := fmt.Errorf("failed creating disk attachment, error: %w", err)
-		klog.Errorf(msg.Error())
+		klog.Error(msg.Error())
 		return nil, msg
 	}
 
-	klog.Infof("Attached Disk %v to VM %v", diskID, computeID)
+	klog.Infof("Attached Disk %v to VM %v", diskName, computeName)
 	return &csi.ControllerPublishVolumeResponse{}, nil
 }
 
 func (c *ControllerService) hasDiskAttachedToVM(
 	ctx context.Context,
-	diskID uint64,
-	computeID uint64,
+	diskName string,
+	computeName string,
 ) (bool, error) {
-	vm, err := c.dvpCloudAPI.ComputeService.GetVMByID(ctx, computeID)
+	vm, err := c.dvpCloudAPI.ComputeService.GetVMByName(ctx, computeName)
 	if err != nil {
-		return false, fmt.Errorf("failed finding VM: %v, error: %w", computeID, err)
+		return false, fmt.Errorf("failed finding VM: %v, error: %w", computeName, err)
 	}
 
-	for _, disk := range vm.Disks {
-		if disk.ID == diskID {
+	for _, diskRef := range vm.Status.BlockDeviceRefs {
+		if diskRef.Name == diskName {
 			return true, nil
 		}
 	}
@@ -271,33 +246,30 @@ func (c *ControllerService) ControllerUnpublishVolume(
 		return nil, fmt.Errorf("error required request paramater NodeId wasn't set")
 	}
 
-	diskID, err := strconv.ParseUint(req.VolumeId, 10, 64)
-	if err != nil {
-		return nil, fmt.Errorf("error required paramater VolumeId can't parse: %w", err)
-	}
+	diskName := req.VolumeId
 
 	vm, err := c.dvpCloudAPI.ComputeService.GetVMByName(ctx, req.NodeId)
 	if err != nil {
 		return nil, fmt.Errorf("failed finding VM: %v, error: %w", req.NodeId, err)
 	}
 
-	computeID := vm.ID
+	computeName := vm.Name
 
-	attached, err := c.hasDiskAttachedToVM(ctx, diskID, computeID)
+	attached, err := c.hasDiskAttachedToVM(ctx, diskName, computeName)
 	if err != nil {
-		klog.Errorf(err.Error())
+		klog.Error(err.Error())
 		return nil, err
 	}
 
 	if !attached {
-		klog.Infof("Disk attachment %v for VM %v already detached, returning OK", diskID, computeID)
+		klog.Infof("Disk attachment %v for VM %v already detached, returning OK", diskName, computeName)
 		return &csi.ControllerUnpublishVolumeResponse{}, nil
 	}
 
-	err = c.dvpCloudAPI.ComputeService.DetachDiskFromVM(ctx, diskID, computeID)
+	err = c.dvpCloudAPI.ComputeService.DetachDiskFromVM(ctx, diskName, computeName)
 	if err != nil {
-		msg := fmt.Errorf("failed removing disk %v from VM %v, error: %w", diskID, computeID, err)
-		klog.Errorf(msg.Error())
+		msg := fmt.Errorf("failed removing disk %v from VM %v, error: %w", diskName, computeName, err)
+		klog.Error(msg.Error())
 		return nil, msg
 	}
 	return &csi.ControllerUnpublishVolumeResponse{}, nil
@@ -308,72 +280,80 @@ func (c *ControllerService) ControllerExpandVolume(ctx context.Context, req *csi
 		return nil, status.Error(codes.InvalidArgument, "Volume ID not provided")
 	}
 
-	volumeID, err := strconv.ParseUint(req.GetVolumeId(), 10, 64)
-	if err != nil {
-		return nil, fmt.Errorf("error required paramater VolumeId can't parse: %w", err)
-	}
+	volumeName := req.GetVolumeId()
 
 	capRange := req.GetCapacityRange()
 	if capRange == nil {
 		return nil, status.Error(codes.InvalidArgument, "Capacity range not provided")
 	}
-	newSizeBytes := capRange.GetRequiredBytes()
+	requestedSizeBytes := capRange.GetRequiredBytes()
 
-	if newSizeBytes < 0 {
+	if requestedSizeBytes < 0 {
 		return nil, status.Error(codes.InvalidArgument, "Required Bytes cannot be negative")
 	}
 
-	newSize := convertBytesToGigabytes(uint64(newSizeBytes))
+	newSize := utils.ConvertInt64ToStringQuantity(requestedSizeBytes)
 
-	klog.Infof("Expanding volume %v to %v Gb.", volumeID, newSize)
-	disk, err := c.dvpCloudAPI.DiskService.GetDisk(ctx, volumeID)
+	klog.Infof("Expanding volume %v to %v", volumeName, newSize)
+	disk, err := c.dvpCloudAPI.DiskService.GetDiskByName(ctx, volumeName)
 	if err != nil {
 		if errors.Is(err, dvpapi.ErrNotFound) {
-			msg := fmt.Errorf("disk %v wasn't found", volumeID)
+			msg := fmt.Errorf("disk %v wasn't found", volumeName)
 			klog.Error(msg)
 			return nil, status.Error(codes.NotFound, msg.Error())
 		}
-		msg := fmt.Errorf("error while finding disk %v, error: %w", volumeID, err)
+		msg := fmt.Errorf("error while finding disk %v, error: %w", volumeName, err)
 		klog.Error(msg)
 		return nil, status.Error(codes.Internal, msg.Error())
 	}
 
-	diskSize := disk.SizeMax
-	if diskSize >= newSize {
-		klog.Infof("Volume %v of size %d is larger than requested size %d, no need to extend",
-			volumeID, diskSize, newSize)
+	diskSize, err := utils.ConvertStringQuantityToInt64(disk.Status.Capacity)
+	if err != nil {
+		klog.Error(err)
+		return nil, err
+	}
+
+	if diskSize >= requestedSizeBytes {
+		klog.Infof("Volume %v of size %d is larger than requested size %s, no need to extend",
+			volumeName, diskSize, newSize)
 		return &csi.ControllerExpandVolumeResponse{
 			CapacityBytes:         int64(diskSize),
 			NodeExpansionRequired: false,
 		}, nil
 	}
 
-	err = c.dvpCloudAPI.DiskService.Resize2Disk(
+	err = c.dvpCloudAPI.DiskService.ResizeDisk(
 		ctx,
-		volumeID,
+		volumeName,
 		newSize,
 	)
 	if err != nil {
-		return nil, status.Errorf(codes.ResourceExhausted, "failed to expand volume %v: %v", volumeID, err)
+		return nil, status.Errorf(codes.ResourceExhausted, "failed to expand volume %v: %v", volumeName, err)
 	}
-	klog.Infof("Expanded Disk %v to %v Gb", volumeID, newSize)
+	klog.Infof("Expanded Disk %v to %v", volumeName, newSize)
+
+	newSizeBytes, err := utils.ConvertStringQuantityToInt64(newSize)
+	if err != nil {
+		klog.Error(err)
+		return nil, err
+	}
 
 	return &csi.ControllerExpandVolumeResponse{
-		CapacityBytes:         int64(convertGigabytesToBytes(newSize)),
+		CapacityBytes:         newSizeBytes,
 		NodeExpansionRequired: isNodeExpansionRequired(req.GetVolumeCapability(), disk),
 	}, nil
 }
 
 func isNodeExpansionRequired(
 	vc *csi.VolumeCapability,
-	disk //*disks.ItemDisk,
+	disk *v1alpha2.VirtualDisk,
 ) bool {
 	// If this is a raw block device, no expansion should be necessary on the node
 	if vc != nil && vc.GetBlock() != nil {
 		return false
 	}
 	// If disk is not attached to any VM then no need to expand
-	if len(disk.Computes) == 0 {
+	if (disk != nil && len(disk.Status.AttachedToVirtualMachines) == 0) || disk == nil {
 		return false
 	}
 	return true
