@@ -60,6 +60,7 @@ spec:
                   type: string
                   description: Module update policy.
                 disableOptions:
+                  type: object
                   description: Module disable options.
                   properties:
                     confirmation:
