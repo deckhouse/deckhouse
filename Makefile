@@ -375,7 +375,10 @@ set-build-envs:
   ifeq ($(OBSERVABILITY_SOURCE_REPO),)
   	export OBSERVABILITY_SOURCE_REPO=https://example.com
   endif
-
+  ifeq ($(DECKHOUSE_PRIVATE_REPO),)
+  	export DECKHOUSE_PRIVATE_REPO=https://github.com
+  endif
+  
 	export WERF_REPO=$(DEV_REGISTRY_PATH)
 	export REGISTRY_SUFFIX=$(shell echo $(WERF_ENV) | tr '[:upper:]' '[:lower:]')
 	export SECONDARY_REPO=--secondary-repo $(DECKHOUSE_REGISTRY_HOST)/deckhouse/$(REGISTRY_SUFFIX)

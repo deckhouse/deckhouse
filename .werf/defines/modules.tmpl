@@ -25,6 +25,7 @@ args:
   SOURCE_REPO: {{ .SOURCE_REPO }}
   CLOUD_PROVIDERS_SOURCE_REPO: {{ .CLOUD_PROVIDERS_SOURCE_REPO }}
   OBSERVABILITY_SOURCE_REPO: {{ .OBSERVABILITY_SOURCE_REPO }}
+  DECKHOUSE_PRIVATE_REPO: {{ .DECKHOUSE_PRIVATE_REPO }}
   # proxies for various packages
   GOPROXY: {{ .GOPROXY }}
     {{- if not (has (list .ModuleName .ImageName | join "/") (list "common/distroless")) }}

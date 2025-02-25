@@ -71,9 +71,9 @@ shell:
   install:
     - export GOPROXY={{ $.GOPROXY }}
 
-    - SOURCE_REPO_GIT=$(grep -oP '(?<=@)[^/:]+' <<< $SOURCE_REPO_GIT)
+    - export PRIVATE_REPO={{ $.DECKHOUSE_PRIVATE_REPO }}
     - GOPRIVATE="flant.internal"
-    - git config --global url."ssh://git@${SOURCE_REPO_GIT}/".insteadOf "https://flant.internal/"
+    - git config --global url."ssh://git@${PRIVATE_REPO}/".insteadOf "https://flant.internal/"
     - git config --global --add safe.directory '*'
 
     - cd /src
