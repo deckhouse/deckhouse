@@ -68,3 +68,7 @@ variable "server_group" {
 variable "node_group_name" {
   type = any
 }
+
+variable "subnet" {
+  type = string
+}

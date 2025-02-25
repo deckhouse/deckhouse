@@ -7,7 +7,7 @@ locals {
 }
 
 data "huaweicloud_vpc_subnet" "subnet" {
-  name = var.prefix
+  name = var.subnet
 }
 
 data "huaweicloud_compute_servergroups" "node" {
