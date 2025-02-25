@@ -35,7 +35,11 @@ signal_handler() {
 }
 
 run_deckhouse() {
-  /usr/bin/deckhouse-controller start &
+  if [ -f /usr/bin/dlv ]; then
+    /usr/bin/dlv --headless --continue --accept-multiclient --listen=localhost:2345 --api-version=2 exec /usr/bin/deckhouse-controller start &
+  else
+    /usr/bin/deckhouse-controller start &
+  fi
   PID="${!}"
   echo "{\"level\":\"info\", \"msg\": \"New deckhouse PID ${PID}\"}"
   wait "${PID}"
