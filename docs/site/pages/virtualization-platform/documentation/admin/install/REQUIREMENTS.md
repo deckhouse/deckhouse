@@ -100,9 +100,9 @@ The virtualization platform supports operating systems running on `x86` and `x86
 
 Successful startup of the operating system is determined by the following criteria:
 
-  * correct installation and booting of the OS;
-  * uninterrupted operation of key components such as networking and storage;
-  * no crashes or errors during operation.
+- correct installation and booting of the OS;
+- uninterrupted operation of key components such as networking and storage;
+- no crashes or errors during operation.
 
 For Linux family operating systems it is recommended to use guest OS images with cloud-init support, which allows initializing virtual machines after their creation.
 
