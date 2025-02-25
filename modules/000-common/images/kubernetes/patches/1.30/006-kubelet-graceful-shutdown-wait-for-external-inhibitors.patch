@@ -1,5 +1,5 @@
 diff --git a/pkg/kubelet/nodeshutdown/nodeshutdown_manager_linux.go b/pkg/kubelet/nodeshutdown/nodeshutdown_manager_linux.go
-index 8469cecdc0e..b432d38c817 100644
+index 8469cecdc0e..ed74ff4f339 100644
 --- a/pkg/kubelet/nodeshutdown/nodeshutdown_manager_linux.go
 +++ b/pkg/kubelet/nodeshutdown/nodeshutdown_manager_linux.go
 @@ -23,6 +23,7 @@ package nodeshutdown
@@ -10,29 +10,20 @@ index 8469cecdc0e..b432d38c817 100644
  	"sort"
  	"sync"
  	"time"
-@@ -85,7 +86,7 @@ type managerImpl struct {
- 	nodeShuttingDownMutex sync.Mutex
- 	nodeShuttingDownNow   bool
-
--	clock clock.Clock
-+	clock clock.WithTicker
-
- 	enableMetrics bool
- 	storage       storage
 @@ -320,6 +321,9 @@ func (m *managerImpl) ShutdownStatus() error {
-
+ 
  func (m *managerImpl) processShutdownEvent() error {
  	m.logger.V(1).Info("Shutdown manager processing shutdown event")
 +
 +	m.waitForExternalInhibitorsToUnlock()
 +
  	activePods := m.getPods()
-
+ 
  	defer func() {
-@@ -417,6 +421,46 @@ func (m *managerImpl) processShutdownEvent() error {
+@@ -417,6 +421,47 @@ func (m *managerImpl) processShutdownEvent() error {
  	return nil
  }
-
+ 
 +// waitForExternalInhibitorsToUnlock waits for external inhibitors to unlock before proceeding with shutdown.
 +func (m *managerImpl) waitForExternalInhibitorsToUnlock() {
 +	const (
@@ -48,8 +39,9 @@ index 8469cecdc0e..b432d38c817 100644
 +
 +	m.logger.V(1).Info("Wait for external inhibitors to unlock")
 +
-+	timer := m.clock.NewTicker(inhibitorsCheckInterval)
-+	defer timer.Stop()
++	realClock := clock.RealClock{}
++	ticker := realClock.NewTicker(inhibitorsCheckInterval)
++	defer ticker.Stop()
 +
 +	lastLogTime := time.Now()
 +
@@ -66,7 +58,7 @@ index 8469cecdc0e..b432d38c817 100644
 +			m.logger.V(1).Info("Shutdown still locked by external inhibitors")
 +		}
 +
-+		<-timer.C()
++		<-ticker.C()
 +	}
 +
 +	m.logger.V(1).Info("Timeout while waiting for external inhibitors, proceed with shutdown")
