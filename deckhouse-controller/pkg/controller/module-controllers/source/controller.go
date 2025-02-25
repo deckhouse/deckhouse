@@ -416,7 +416,7 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 
 func (r *reconciler) deleteModuleSource(ctx context.Context, source *v1alpha1.ModuleSource) (ctrl.Result, error) {
 	if source.Status.Status != v1alpha1.ModuleSourceStatusTerminating {
-		source.Status.Message = v1alpha1.ModuleSourceStatusTerminating
+		source.Status.Status = v1alpha1.ModuleSourceStatusTerminating
 		if err := r.client.Status().Update(ctx, source); err != nil {
 			r.logger.Warn("failed to set terminating to the source", slog.String("moduleSource", source.GetName()), log.Err(err))
 

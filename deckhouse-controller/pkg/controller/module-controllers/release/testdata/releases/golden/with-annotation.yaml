@@ -16,6 +16,7 @@ spec:
     repo: prod.deckhouse.io/modules
     scheme: HTTPS
 status:
+  status: ""
   message: ""
   modules: null
   modulesCount: 0
