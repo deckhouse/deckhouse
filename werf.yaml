@@ -77,6 +77,8 @@ cleanup:
 # Source repo with observability private code
 {{- $_ := set . "OBSERVABILITY_SOURCE_REPO" (env "OBSERVABILITY_SOURCE_REPO" | default "https://example.com") }}
 
+{{- $_ := set . "DECKHOUSE_PRIVATE_REPO" (env "DECKHOUSE_PRIVATE_REPO") }}
+
 {{- $_ := set . "CI_COMMIT_TAG" (env "CI_COMMIT_TAG" "dev") }}
 
 # goproxy  settings
