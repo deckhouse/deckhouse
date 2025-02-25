@@ -58,11 +58,12 @@ shell:
   - git config --global url."ssh://git@${PRIVATE_REPO}/".insteadOf "https://flant.internal/"
   - git config --global --add safe.directory '*'
 
+  - cd /src/deckhouse-cli
+
   # TODO test only
   - echo 0.0.1 > VERSION
   - sed -i "s|sh:\ git describe --tags|sh:\ cat VERSION|" Taskfile.yml
 
-  - cd /src/deckhouse-cli
   - task build:dist:linux:amd64
   - mv ./dist/{{ .CandiVersionMap.d8.d8CliVersion }}/linux-amd64/bin/d8 /d8
   - mv /src/scripts/* /
