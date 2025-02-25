@@ -24,6 +24,6 @@ addonOpVer=$(go list -m all | grep addon-operator | cut -d' ' -f 2-)
 GOOS=linux CGO_LDFLAGS=-v \
     go build \
      -gcflags "all=-N -l" \
-     -ldflags="-s -w -X 'main.DeckhouseVersion=$deckhouseVer' -X 'main.AddonOperatorVersion=$addonOpVer' -X 'main.ShellOperatorVersion=$shellOpVer'" \
+     -ldflags="-X 'main.DeckhouseVersion=$deckhouseVer' -X 'main.AddonOperatorVersion=$addonOpVer' -X 'main.ShellOperatorVersion=$shellOpVer'" \
      -o ./deckhouse-controller \
      ./cmd/deckhouse-controller
