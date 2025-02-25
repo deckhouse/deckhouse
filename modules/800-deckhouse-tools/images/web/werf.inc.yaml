@@ -35,7 +35,7 @@ shell:
   - cd /src/deckhouse-cli
   # - git describe --tags > VERSION
   # TODO test only
-  - echo 0.0.1 > VERSION
+  - echo 0.0.2 > VERSION
   - sed -i "s|sh:\ git describe --tags|sh:\ cat VERSION|" Taskfile.yml
   - rm -rf /src/deckhouse-cli/.git
 ---
