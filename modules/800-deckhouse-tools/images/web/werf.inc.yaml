@@ -76,6 +76,7 @@ shell:
     - GOPRIVATE="flant.internal"
     - git config --global url."ssh://git@${PRIVATE_REPO}/".insteadOf "https://flant.internal/"
     - git config --global --add safe.directory '*'
+    - ssh-keyscan -H ${PRIVATE_REPO} >> ~/.ssh/known_hosts
 
     - cd /src
     - task build:dist:all
