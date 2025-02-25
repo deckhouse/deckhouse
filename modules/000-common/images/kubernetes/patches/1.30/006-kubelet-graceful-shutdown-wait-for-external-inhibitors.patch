@@ -28,7 +28,7 @@ index 8469cecdc0e..2deb4b144fc 100644
 +func (m *managerImpl) waitForExternalInhibitorsToUnlock() {
 +	const (
 +		inhibitorsCheckInterval = 5 * time.Second
-+		delayLogInterval        = 2 * time.Minute
++		delayLogInterval        = 2 * time.Second
 +	)
 +	// Do not wait if inhibitors not started.
 +	_, err := os.Stat("/var/run/node-manager-graceful-shutdown/enabled")
@@ -39,7 +39,7 @@ index 8469cecdc0e..2deb4b144fc 100644
 +
 +	m.logger.V(1).Info("Wait for external inhibitors to unlock")
 +
-+	timer := m.clock.NewTimer(inhibitorsCheckInterval)
++	timer := m.clock.NewTicker(inhibitorsCheckInterval)
 +	defer timer.Stop()
 +
 +	lastLogTime := time.Now()
