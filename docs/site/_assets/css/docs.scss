@@ -358,7 +358,7 @@
 .sidebar__wrapper-inner {
   position: -webkit-sticky;
   position: sticky;
-  top: 105px;
+  top: 135.5px;
   //width: 260px;
   height: calc(100vh - 105px);
   overflow-x: hidden;
@@ -1103,10 +1103,10 @@ a.comparison-table__module-proprietaryOkmeter::after {
         background: url(/images/copy.svg) center/contain no-repeat;
         opacity: 0;
         transition: opacity .25s;
-    
+
         &.show {
             opacity: .75;
-      
+
             &:hover {
                 opacity: 1;
             }
@@ -1203,14 +1203,14 @@ a.comparison-table__module-proprietaryOkmeter::after {
     table {
         th, td {
             padding: 1em 1.5em;
-            border-bottom: 1px solid #C4CAD4;  
+            border-bottom: 1px solid #C4CAD4;
         }
     }
 
     .table-wrapper__small {
         table {
             th, td {
-                padding: 1em 1.2em; 
+                padding: 1em 1.2em;
             }
         }
     }
