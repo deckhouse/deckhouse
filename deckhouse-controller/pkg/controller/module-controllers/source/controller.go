@@ -316,13 +316,13 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 
 		if module.Properties.Source != source.Name {
 			availableModules = append(availableModules, availableModule)
-			r.log.Debugf("the '%s' source not active source for the '%s' module, skip it", source.Name, moduleName)
+			r.logger.Debugf("the '%s' source not active source for the '%s' module, skip it", source.Name, moduleName)
 			continue
 		}
 
 		if !module.ConditionStatus(v1alpha1.ModuleConditionEnabledByModuleConfig) {
 			availableModules = append(availableModules, availableModule)
-			r.log.Debugf("skip the '%s' disabled module", moduleName)
+			r.logger.Debugf("skip the '%s' disabled module", moduleName)
 			continue
 		}
 
