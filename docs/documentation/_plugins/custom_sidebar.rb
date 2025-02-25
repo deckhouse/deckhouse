@@ -66,8 +66,9 @@ module Jekyll
       if entry.dig('folders') && entry['folders'].size > 0
          result.push(%Q(<li class='#{ parameters['folder_entry_class']}'>
             <a href='#'>
-                <span class='sidebar__submenu-title'>#{entry.dig('title',lang)}</span>))
+              <span class='sidebar__submenu-title'>#{entry.dig('title',lang)}</span>
 
+              <span class='sidebar__badge--container'>))
          if (site_mode != 'module' && avail_in_commercial_editions_only) ||
             (doc_edition == 'ce' && avail_in_commercial_editions_only) ||
             (site_mode == 'module' && not_avail_in_this_edition)
@@ -99,6 +100,7 @@ module Jekyll
          end
 
          result.push(%q(
+           </span>
            </a>
            <ul class='sidebar__submenu'>))
          entry['folders'].each do |sub_entry|
