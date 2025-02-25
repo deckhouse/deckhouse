@@ -62,11 +62,6 @@ shell:
   - ssh-keyscan -H ${PRIVATE_REPO} >> ~/.ssh/known_hosts
 
   - cd /src/deckhouse-cli
-
-  # TODO test only
-  - echo go-mod-pull-fix > VERSION
-  - sed -i "s|sh:\ git describe --tags|sh:\ cat VERSION|" Taskfile.yml
-
   - task build:dist:linux:amd64
   - mv ./dist/{{ .CandiVersionMap.d8.d8CliVersion }}/linux-amd64/bin/d8 /d8
   - mv /src/scripts/* /

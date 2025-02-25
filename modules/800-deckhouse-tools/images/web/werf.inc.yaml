@@ -33,9 +33,7 @@ shell:
   install:
   - git clone --depth 1 --branch {{ .CandiVersionMap.d8.d8CliVersion }} {{ $.SOURCE_REPO }}/deckhouse/deckhouse-cli.git /src/deckhouse-cli
   - cd /src/deckhouse-cli
-  # - git describe --tags > VERSION
-  # TODO test only
-  - echo go-mod-pull-fix > VERSION
+  - git describe --tags > VERSION
   - sed -i "s|sh:\ git describe --tags|sh:\ cat VERSION|" Taskfile.yml
   - rm -rf /src/deckhouse-cli/.git
 ---
