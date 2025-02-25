@@ -103,6 +103,10 @@ entries:
                         ru: Шифрование трафика между узлами
                       url: /admin/network/encrypting-traffic.html
                     - title:
+                        en: Configuring Cluster Network Stack Visualization
+                        ru: Настройка визуализации сетевого стека кластера
+                      url: /admin/network/network-stack-visualization-cilium-hubble.html
+                    - title:
                         en: Kube-proxy configuration
                         ru: Настройка kube-proxy
                       url: /admin/network/kube-proxy-configuration.html
@@ -322,23 +326,27 @@ entries:
         - title:
             en: Interfaces
             ru: Интерфейсы
-            folders:
-              - title:
-                  en: API
-                  ru: API
-                url: /user/api.html
-              - title:
-                  en: CLI
-                  ru: CLI
-                url: /user/cli.html
-              - title:
-                  en: IaC
-                  ru: IaC
-                url: /user/iac.html
-              - title:
-                  en: WEB-interfaces
-                  ru: WEB-интерфейсы
-                url: /user/web-interfaces.html
+          folders:
+            - title:
+                en: API
+                ru: API
+              url: /user/api.html
+            - title:
+                en: CLI
+                ru: CLI
+              url: /user/cli.html
+            - title:
+                en: IaC
+                ru: IaC
+              url: /user/iac.html
+            - title:
+                en: WEB-interfaces
+                ru: WEB-интерфейсы
+              folders:
+                - title:
+                    en: Hubble web interface
+                    ru: Веб-интерфейс Hubble
+                  url: /user/hubble.html
         - title:
             en: Multitenancy
             ru: Мультитенантность
