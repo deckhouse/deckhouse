@@ -710,13 +710,6 @@ func (r *reconciler) ApplyRelease(ctx context.Context, mr *v1alpha1.ModuleReleas
 func (r *reconciler) runReleaseDeploy(ctx context.Context, release *v1alpha1.ModuleRelease, deployedReleaseInfo *releaseUpdater.ReleaseInfo) error {
 	r.log.Info("applying release", slog.String("release", release.GetName()))
 
-	// dryrun for testing purpose
-	if release.GetDryRun() {
-		go r.runDryRunDeploy(release)
-
-		return nil
-	}
-
 	downloadStatistic, err := r.loadModule(ctx, release, deployedReleaseInfo)
 	if err != nil {
 		return fmt.Errorf("load module: %w", err)
@@ -845,6 +838,13 @@ func (r *reconciler) runDryRunDeploy(mr *v1alpha1.ModuleRelease) {
 }
 
 func (r *reconciler) loadModule(ctx context.Context, release *v1alpha1.ModuleRelease, deployedReleaseInfo *releaseUpdater.ReleaseInfo) (*downloader.DownloadStatistic, error) {
+	// dryrun for testing purpose
+	if release.GetDryRun() {
+		go r.runDryRunDeploy(release)
+
+		return &downloader.DownloadStatistic{}, nil
+	}
+
 	// download desired module version
 	source := new(v1alpha1.ModuleSource)
 	if err := r.client.Get(ctx, client.ObjectKey{Name: release.GetModuleSource()}, source); err != nil {
