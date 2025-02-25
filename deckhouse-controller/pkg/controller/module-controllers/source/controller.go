@@ -385,12 +385,13 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 
 	// update source status
 	err := utils.UpdateStatus[*v1alpha1.ModuleSource](ctx, r.client, source, func(source *v1alpha1.ModuleSource) bool {
-		source.Status.Message = v1alpha1.ModuleSourceMessageReady
+		source.Status.Status = v1alpha1.ModuleSourceStatusActive
 		source.Status.SyncTime = metav1.NewTime(r.dependencyContainer.GetClock().Now().UTC())
 		source.Status.AvailableModules = availableModules
 		source.Status.ModulesCount = len(availableModules)
 		if pullErrorsExist {
 			source.Status.Message = v1alpha1.ModuleSourceMessagePullErrors
+			source.Status.Status = v1alpha1.ModuleSourceStatusError
 		}
 		return true
 	})
@@ -414,8 +415,8 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 }
 
 func (r *reconciler) deleteModuleSource(ctx context.Context, source *v1alpha1.ModuleSource) (ctrl.Result, error) {
-	if source.Status.Message != v1alpha1.ModuleSourceMessageTerminating {
-		source.Status.Message = v1alpha1.ModuleSourceMessageTerminating
+	if source.Status.Status != v1alpha1.ModuleSourceStatusTerminating {
+		source.Status.Message = v1alpha1.ModuleSourceStatusTerminating
 		if err := r.client.Status().Update(ctx, source); err != nil {
 			r.log.Warn("failed to set terminating to the source", slog.String("source", source.GetName()), log.Err(err))
 

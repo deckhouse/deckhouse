@@ -26,9 +26,11 @@ const (
 	ModuleSourceResource = "modulesources"
 	ModuleSourceKind     = "ModuleSource"
 
-	ModuleSourceMessageTerminating = "Terminating"
-	ModuleSourceMessageReady       = "Ready"
-	ModuleSourceMessagePullErrors  = "Some errors occurred. Inspect status for details"
+	ModuleSourceStatusActive      = "Active"
+	ModuleSourceStatusTerminating = "Terminating"
+	ModuleSourceStatusError       = "Error"
+
+	ModuleSourceMessagePullErrors = "Some errors occurred. Inspect status for details"
 
 	ModuleSourceFinalizerReleaseExists = "modules.deckhouse.io/release-exists"
 	ModuleSourceFinalizerModuleExists  = "modules.deckhouse.io/module-exists"
@@ -98,6 +100,7 @@ type ModuleSourceStatus struct {
 	SyncTime         metav1.Time       `json:"syncTime"`
 	ModulesCount     int               `json:"modulesCount"`
 	AvailableModules []AvailableModule `json:"modules"`
+	Status           string            `json:"status"`
 	Message          string            `json:"message"`
 }
 
