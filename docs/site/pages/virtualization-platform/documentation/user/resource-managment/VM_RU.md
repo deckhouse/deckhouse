@@ -396,7 +396,7 @@ spec:
     disktype: ssd
 ```
 
-![nodeSelector](/../../../../images/virtualization-platform/placement-node-affinity.ru.png)
+![nodeSelector](/../../../../images/virtualization-platform/placement-nodeselector.ru.png)
 
 В этом примере виртуальная машина будет размещена только на узлах, которые имеют метку `disktype` со значением `ssd`.
 
@@ -725,7 +725,7 @@ linux-vm-7prpx   10.66.10.14   Attached   linux-vm   12h
 
 По умолчанию IP-адрес для виртуальной машины назначается автоматически, из подсетей, и закрепляется за ней до её удаления. После удаления виртуальной машины ресурс `vmip` также удаляется, но IP-адрес временно остается закрепленным за проектом/пространством имен и может быть повторно запрошен.
 
-## Как запросить требуемый IP-адрес?
+## Запрос требуемого IP-адреса
 
 Создайте ресурс `vmip`:
 
@@ -748,7 +748,7 @@ spec:
   virtualMachineIPAddressName: linux-vm-custom-ip
 ```
 
-## Как сохранить присвоенный виртуальной машине IP-адрес?
+## Сохранение IP-адреса, присвоенного виртуальной машине
 
 Чтобы автоматически выданный IP-адрес виртуальной машины не удалился вместе с самой виртуальной машиной, выполните следующие действия.
 
@@ -791,9 +791,10 @@ spec:
 EOF
 ```
 
-## Как установить ОС в виртуальной машине из ISO-образа?
+## Установка ОС в виртуальной машине из ISO-образа
 
-Рассмотрим пример установки ОС из ISO-образа ОС Windows. Для этого загрузите и опубликуйте его на каком-либо HTTP-сервисе, доступном из кластера.
+Рассмотрим пример установки ОС из ISO-образа ОС Windows.
+Для этого загрузите и опубликуйте его на каком-либо HTTP-сервисе, доступном из кластера.
 
 1. Создайте пустой диск для установки ОС:
 
@@ -857,15 +858,17 @@ EOF
         size: 8Gi
       enableParavirtualization: true
       blockDeviceRefs:
+        - kind: VirtualDisk
+          name: win-disk
         - kind: ClusterVirtualImage
           name: win-11-iso
         - kind: ClusterVirtualImage
           name: win-virtio-iso
-        - kind: VirtualDisk
-          name: win-disk
     ```
 
-1. После создания ресурса виртуальная машина будет запущена. К ней необходимо подключиться, и с помощью графического установщика выполнить установку ОС и драйверов `virtio`.
+1. После создания ресурса виртуальная машина будет запущена.
+
+   К ней необходимо подключиться и с помощью графического установщика выполнить установку ОС и драйверов `virtio`.
 
    Команда для подключения:
 
@@ -873,46 +876,228 @@ EOF
     d8 v vnc -n default win-vm
     ```
 
-1. После окончания установки завершите работу виртуальной машины.
+1. После окончания установки перезагрузите виртуальную машину.
 
-1. Модифицируйте ресурс `VirtualMachine` и примените изменения:
-
-    ```yaml
-    spec:
-      # ...
-      runPolicy: AlwaysOn
-      # ...
-      blockDeviceRefs:
-        # Удалить из блока все ресурсы ClusterVirtualImage с ISO-дисками.
-        - kind: VirtualDisk
-          name: win-disk
-    ```
-
-1. После внесенных изменений виртуальная машина запустится. Для продолжения работы с ней используйте команду:
+1. Для продолжения работы с виртуальной машиной также используйте команду:
 
    ```bash
    d8 v vnc -n default win-vm
    ```
 
-## Как предоставить файл ответов Windows(Sysprep)?
+## Предоставление файла ответов Windows(Sysprep)
 
-Чтобы предоставить виртуальной машине Windows файл ответов, необходимо указать provisioning с типом SysprepRef.
+Чтобы выполнить автоматическую установку Windows, создайте файл ответов (обычно именуются unattend.xml или autounattend.xml).
+Для примера возьмем файл, позволяющий:
 
-Прежде всего необходимо создать секрет:
+- Добавить русский язык и раскладку;
+- Указать расположение virtio драйверов необходимых для установки
+  (поэтому важен порядок дисковых устройств в спецификации ВМ);
+- Разметить диски для установки windows на ВМ c EFI;
+- Создать в группе администраторов пользователя *cloud* с паролем *cloud*;
+- Создать непривилегированного пользователя *user* с паролем *user*.
 
-```yaml
-apiVersion: v1
-kind: Secret
-metadata:
-  name: sysprep-config
-data:
-  unattend.xml: XXXx # base64 файла ответов
-type: "provisioning.virtualization.deckhouse.io/sysprep"
+<details><summary><b>autounattend.xml</b></summary>
+
+```xml
+<?xml version="1.0" encoding="utf-8"?>
+<unattend xmlns="urn:schemas-microsoft-com:unattend" xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State">
+  <settings pass="offlineServicing"></settings>
+  <settings pass="windowsPE">
+    <component name="Microsoft-Windows-International-Core-WinPE" processorArchitecture="amd64" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS">
+      <SetupUILanguage>
+        <UILanguage>ru-RU</UILanguage>
+      </SetupUILanguage>
+      <InputLocale>0409:00000409;0419:00000419</InputLocale>
+      <SystemLocale>en-US</SystemLocale>
+      <UILanguage>ru-RU</UILanguage>
+      <UserLocale>en-US</UserLocale>
+    </component>
+    <component name="Microsoft-Windows-PnpCustomizationsWinPE" processorArchitecture="amd64" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS">
+      <DriverPaths>
+        <PathAndCredentials wcm:keyValue="4b29ba63" wcm:action="add">
+          <Path>E:\amd64\w11</Path>
+        </PathAndCredentials>
+        <PathAndCredentials wcm:keyValue="25fe51ea" wcm:action="add">
+          <Path>E:\NetKVM\w11\amd64</Path>
+        </PathAndCredentials>
+      </DriverPaths>
+    </component>
+    <component name="Microsoft-Windows-Setup" processorArchitecture="amd64" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS">
+      <DiskConfiguration>
+        <Disk wcm:action="add">
+          <DiskID>0</DiskID>
+          <WillWipeDisk>true</WillWipeDisk>
+          <CreatePartitions>
+            <!-- Recovery partition -->
+            <CreatePartition wcm:action="add">
+              <Order>1</Order>
+              <Type>Primary</Type>
+              <Size>250</Size>
+            </CreatePartition>
+            <!-- EFI system partition (ESP) -->
+            <CreatePartition wcm:action="add">
+              <Order>2</Order>
+              <Type>EFI</Type>
+              <Size>100</Size>
+            </CreatePartition>
+            <!-- Microsoft reserved partition (MSR) -->
+            <CreatePartition wcm:action="add">
+              <Order>3</Order>
+              <Type>MSR</Type>
+              <Size>128</Size>
+            </CreatePartition>
+            <!-- Windows partition -->
+            <CreatePartition wcm:action="add">
+              <Order>4</Order>
+              <Type>Primary</Type>
+              <Extend>true</Extend>
+            </CreatePartition>
+          </CreatePartitions>
+          <ModifyPartitions>
+            <!-- Recovery partition -->
+            <ModifyPartition wcm:action="add">
+              <Order>1</Order>
+              <PartitionID>1</PartitionID>
+              <Label>Recovery</Label>
+              <Format>NTFS</Format>
+              <TypeID>de94bba4-06d1-4d40-a16a-bfd50179d6ac</TypeID>
+            </ModifyPartition>
+            <!-- EFI system partition (ESP) -->
+            <ModifyPartition wcm:action="add">
+              <Order>2</Order>
+              <PartitionID>2</PartitionID>
+              <Label>System</Label>
+              <Format>FAT32</Format>
+            </ModifyPartition>
+            <!-- MSR partition does not need to be modified -->
+            <!-- Windows partition -->
+            <ModifyPartition wcm:action="add">
+              <Order>3</Order>
+              <PartitionID>4</PartitionID>
+              <Label>Windows</Label>
+              <Letter>C</Letter>
+              <Format>NTFS</Format>
+            </ModifyPartition>
+          </ModifyPartitions>
+        </Disk>
+        <WillShowUI>OnError</WillShowUI>
+      </DiskConfiguration>
+      <ImageInstall>
+        <OSImage>
+          <InstallTo>
+            <DiskID>0</DiskID>
+            <PartitionID>4</PartitionID>
+          </InstallTo>
+        </OSImage>
+      </ImageInstall>
+      <UserData>
+        <ProductKey>
+          <Key>VK7JG-NPHTM-C97JM-9MPGT-3V66T</Key>
+          <WillShowUI>OnError</WillShowUI>
+        </ProductKey>
+        <AcceptEula>true</AcceptEula>
+      </UserData>
+      <UseConfigurationSet>false</UseConfigurationSet>
+    </component>
+  </settings>
+  <settings pass="generalize"></settings>
+  <settings pass="specialize">
+    <component name="Microsoft-Windows-Deployment" processorArchitecture="amd64" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS">
+      <RunSynchronous>
+        <RunSynchronousCommand wcm:action="add">
+          <Order>1</Order>
+          <Path>powershell.exe -NoProfile -Command "$xml = [xml]::new(); $xml.Load('C:\Windows\Panther\unattend.xml'); $sb = [scriptblock]::Create( $xml.unattend.Extensions.ExtractScript ); Invoke-Command -ScriptBlock $sb -ArgumentList $xml;"</Path>
+        </RunSynchronousCommand>
+        <RunSynchronousCommand wcm:action="add">
+          <Order>2</Order>
+          <Path>powershell.exe -NoProfile -Command "Get-Content -LiteralPath 'C:\Windows\Setup\Scripts\Specialize.ps1' -Raw | Invoke-Expression;"</Path>
+        </RunSynchronousCommand>
+        <RunSynchronousCommand wcm:action="add">
+          <Order>3</Order>
+          <Path>reg.exe load "HKU\DefaultUser" "C:\Users\Default\NTUSER.DAT"</Path>
+        </RunSynchronousCommand>
+        <RunSynchronousCommand wcm:action="add">
+          <Order>4</Order>
+          <Path>powershell.exe -NoProfile -Command "Get-Content -LiteralPath 'C:\Windows\Setup\Scripts\DefaultUser.ps1' -Raw | Invoke-Expression;"</Path>
+        </RunSynchronousCommand>
+        <RunSynchronousCommand wcm:action="add">
+          <Order>5</Order>
+          <Path>reg.exe unload "HKU\DefaultUser"</Path>
+        </RunSynchronousCommand>
+      </RunSynchronous>
+    </component>
+  </settings>
+  <settings pass="auditSystem"></settings>
+  <settings pass="auditUser"></settings>
+  <settings pass="oobeSystem">
+    <component name="Microsoft-Windows-International-Core" processorArchitecture="amd64" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS">
+      <InputLocale>0409:00000409;0419:00000419</InputLocale>
+      <SystemLocale>en-US</SystemLocale>
+      <UILanguage>ru-RU</UILanguage>
+      <UserLocale>en-US</UserLocale>
+    </component>
+    <component name="Microsoft-Windows-Shell-Setup" processorArchitecture="amd64" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS">
+      <UserAccounts>
+        <LocalAccounts>
+          <LocalAccount wcm:action="add">
+            <Name>cloud</Name>
+            <DisplayName>cloud</DisplayName>
+            <Group>Administrators</Group>
+            <Password>
+              <Value>cloud</Value>
+              <PlainText>true</PlainText>
+            </Password>
+          </LocalAccount>
+          <LocalAccount wcm:action="add">
+            <Name>User</Name>
+            <DisplayName>user</DisplayName>
+            <Group>Users</Group>
+            <Password>
+              <Value>user</Value>
+              <PlainText>true</PlainText>
+            </Password>
+          </LocalAccount>
+        </LocalAccounts>
+      </UserAccounts>
+      <AutoLogon>
+        <Username>cloud</Username>
+        <Enabled>true</Enabled>
+        <LogonCount>1</LogonCount>
+        <Password>
+          <Value>cloud</Value>
+          <PlainText>true</PlainText>
+        </Password>
+      </AutoLogon>
+      <OOBE>
+        <ProtectYourPC>3</ProtectYourPC>
+        <HideEULAPage>true</HideEULAPage>
+        <HideWirelessSetupInOOBE>true</HideWirelessSetupInOOBE>
+        <HideOnlineAccountScreens>false</HideOnlineAccountScreens>
+      </OOBE>
+      <FirstLogonCommands>
+        <SynchronousCommand wcm:action="add">
+          <Order>1</Order>
+          <CommandLine>powershell.exe -NoProfile -Command "Get-Content -LiteralPath 'C:\Windows\Setup\Scripts\FirstLogon.ps1' -Raw | Invoke-Expression;"</CommandLine>
+        </SynchronousCommand>
+      </FirstLogonCommands>
+    </component>
+  </settings>
+</unattend>
+  ```
+
+</details>
+
+Создайте секрет из этого xml файла:
+
+```bash
+d8 k create secret generic sysprep-config --type="provisioning.virtualization.deckhouse.io/sysprep" --from-file=./autounattend.xml
 ```
 
-Затем можно создать виртуальную машину, которая в процессе установке будет использовать файл ответов.
-Внесите файл ответов (обычно именуются unattend.xml или autounattend.xml) в секрет, чтобы выполнять автоматическую установку Windows.
-Вы также можете указать здесь другие файлы в формате base64 (customize.ps1, id_rsa.pub,...), необходимые для успешного выполнения скриптов внутри файла ответов.
+Затем можно создать виртуальную машину, которая в процессе установки будет использовать файл ответов.
+
+Чтобы предоставить виртуальной машине Windows файл ответов, необходимо указать provisioning с типом SysprepRef.
+Вы также можете указать здесь другие файлы в формате base64 (customize.ps1, id_rsa.pub,...),
+необходимые для успешного выполнения скриптов внутри файла ответов.
 
 ```yaml
 apiVersion: virtualization.deckhouse.io/v1alpha2
@@ -939,17 +1124,17 @@ spec:
     size: 8Gi
   enableParavirtualization: true
   blockDeviceRefs:
+    - kind: VirtualDisk
+      name: win-disk
     - kind: ClusterVirtualImage
       name: win-11-iso
     - kind: ClusterVirtualImage
       name: win-virtio-iso
-    - kind: VirtualDisk
-      name: win-disk
 ```
 
-## Как перенаправить трафик на виртуальную машину?
+## Перенаправление трафика на виртуальную машину
 
-Виртуальная машина функционирует в кластере Kubernetes, поэтому направление сетевого трафика осуществляется аналогично направлению трафика на поды:
+Виртуальная машина функционирует в кластере Kubernetes, поэтому направление сетевого трафика осуществляется аналогично направлению трафика на поды.
 
 1. Создайте сервис с требуемыми настройками.
 
