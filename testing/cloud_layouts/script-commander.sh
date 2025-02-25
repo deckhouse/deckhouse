@@ -246,6 +246,15 @@ function prepare_environment() {
   esac
 }
 
+function get_cluster_status() {
+  local response
+  response=$(curl -s -X 'GET' \
+    "https://${commander_host}/api/v1/clusters/${cluster_id}" \
+    -H 'accept: application/json' \
+    -H "X-Auth-Token: ${commander_token}")
+  echo "${response}"
+}
+
 function run-test() {
   local commander_host="$COMMANDER_HOST"
   local commander_token="$COMMANDER_TOKEN"
@@ -313,10 +322,7 @@ function run-test() {
   sleep=30
   master_ip_find=false
   for ((i=1; i<=testRunAttempts; i++)); do
-    response=$(curl -s -X 'GET' \
-      "https://${commander_host}/api/v1/clusters/${cluster_id}" \
-      -H 'accept: application/json' \
-      -H "X-Auth-Token: ${commander_token}")
+    response=$(get_cluster_status)
     >&2 echo "Check Cluster ready..."
 
 
@@ -327,7 +333,7 @@ function run-test() {
       if [[ "$master_ip" != "null" && "$master_user" != "null" ]]; then
         connection="    ssh ${master_user}@${master_ip}"
         master_ip_find=true
-        echo "SSH connection string"
+        echo "SSH connection string:"
         echo "$connection"
       fi
     fi
@@ -335,8 +341,10 @@ function run-test() {
     # Get cluster status
     cluster_status=$(jq -r '.status' <<< "$response")
     if [ "in_sync" = "$cluster_status" ]; then
+      echo "  Cluster status: $cluster_status"
       return 0
     elif [ "creation_failed" = "$cluster_status" ]; then
+      echo "  Cluster status: $cluster_status"
       return 1
     else
       echo "  Cluster status: $cluster_status"
@@ -349,6 +357,42 @@ function run-test() {
       return 1
     fi
   done
+
+  # Upmeter
+  iterations=40
+  sleep_interval=30
+
+  for i in $(seq 1 $iterations); do
+    response=$(get_cluster_status)
+    statuses=$(jq -r '.cluster_agent_data[] | select(.source == "upmeter") | .data.rows[] | .probes[] | "\(.probe):\(.availability)"' <<< "$response")
+    all_ok=true
+
+    while IFS= read -r line; do
+      availability=$(echo "$line" | cut -d':' -f2)
+      if [[ "$availability" != "1" ]]; then
+        all_ok=false
+        break
+      fi
+    done <<< "$statuses"
+
+    if $all_ok; then
+      echo "All components are available"
+      exit 0
+    else
+      echo "Cluster components are not ready. Attempt $i/$iterations failed. Sleep for $sleep_interval seconds..."
+      if [[ "$i" -eq "$iterations" ]]; then
+        echo "Maximum iterations reached. Not all components reached status 1."
+        exit 1
+      fi
+      sleep "$sleep_interval"
+    fi
+  done
+
+
+  # alerts
+  # pause
+
+
 }
 
 function cleanup() {
