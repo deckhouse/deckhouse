@@ -284,6 +284,10 @@ func generateJob(registry, digest, csrb64 string) *batchv1.Job {
 			BackoffLimit: ptr.To(int32(1)),
 			Template: corev1.PodTemplateSpec{
 				Spec: corev1.PodSpec{
+					SecurityContext: &corev1.PodSecurityContext{
+						// we have to run this container as root as a hostPath volume's permissions can't be altered on mounting and we need to read from /etc/kubernetes/pki
+						RunAsUser: ptr.To(int64(0)),
+					},
 					ImagePullSecrets: []corev1.LocalObjectReference{{Name: "deckhouse-registry"}},
 					Containers: []corev1.Container{
 						{
