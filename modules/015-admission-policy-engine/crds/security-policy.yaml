@@ -476,10 +476,12 @@ spec:
                 match:
                   type: object
                   description: Container filtering rules. Use selectors to specify the pods and containers to which you want to apply the policy.
-                  required: ["namespaceSelector"]
+                  anyOf:
+                  - required: [namespaceSelector]
+                  - required: [labelSelector]
                   properties:
                     namespaceSelector:
-                      oneOf:
+                      anyOf:
                         - required: [matchNames]
                         - required: [excludeNames]
                         - required: [labelSelector]
