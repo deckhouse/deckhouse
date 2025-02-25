@@ -43,8 +43,9 @@ import (
 )
 
 const (
-	proxyJobNS   = "d8-system"
-	proxyJobName = "proxy-cert-generate-job"
+	proxyJobNS            = "d8-system"
+	proxyJobName          = "proxy-cert-generate-job"
+	deckhouseUserId int64 = 64535
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -285,6 +286,12 @@ func generateJob(registry, digest, csrb64 string) *batchv1.Job {
 			Template: corev1.PodTemplateSpec{
 				Spec: corev1.PodSpec{
 					ImagePullSecrets: []corev1.LocalObjectReference{{Name: "deckhouse-registry"}},
+					SecurityContext: &corev1.PodSecurityContext{
+						RunAsUser:    ptr.To(deckhouseUserId),
+						RunAsGroup:   ptr.To(deckhouseUserId),
+						RunAsNonRoot: ptr.To(true),
+						FSGroup:      ptr.To(deckhouseUserId),
+					},
 					Containers: []corev1.Container{
 						{
 							Name:  "generator",
