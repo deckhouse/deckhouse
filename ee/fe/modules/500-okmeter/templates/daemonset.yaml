@@ -108,6 +108,8 @@ spec:
   {{- if not (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
             {{- include "okagent_resources" . | nindent 12 }}
   {{- end }}
+      serviceAccount: null
+      serviceAccountName: null
       volumes:
       - name: containerdsocket
         hostPath:
