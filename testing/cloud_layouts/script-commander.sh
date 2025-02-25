@@ -21,12 +21,9 @@ Usage:
 Commands:
 
   run-test       Create cluster and install Deckhouse
-                 using dhctl.
+                 using commander api.
 
   cleanup        Delete cluster.
-
-  <no-command>   Create cluster, install Deckhouse and delete cluster
-                 if no command specified (execute run-test + cluster).
 
 Required environment variables:
 
@@ -368,16 +365,16 @@ function run-test() {
     all_ok=true
 
     while IFS= read -r line; do
+      echo "${line}"
       availability=$(echo "$line" | cut -d':' -f2)
       if [[ "$availability" != "1" ]]; then
         all_ok=false
-        break
       fi
     done <<< "$statuses"
 
     if $all_ok; then
       echo "All components are available"
-      exit 0
+      break
     else
       echo "Cluster components are not ready. Attempt $i/$iterations failed. Sleep for $sleep_interval seconds..."
       if [[ "$i" -eq "$iterations" ]]; then
