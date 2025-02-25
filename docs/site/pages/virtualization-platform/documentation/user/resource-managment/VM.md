@@ -395,7 +395,7 @@ spec:
     disktype: ssd
 ```
 
-![nodeSelector](/../../../../images/virtualization-platform/placement-node-affinity.png)
+![nodeSelector](/../../../../images/virtualization-platform/placement-nodeselector.png)
 
 In this example, the virtual machine will be placed only on nodes that have the label `disktype` with the value `ssd`.
 
@@ -826,7 +826,7 @@ To do this, download and publish it on any HTTP service accessible from the clus
 
     ```yaml
     apiVersion: virtualization.deckhouse.io/v1alpha2
-    kind: ClusterVirtualImage 
+    kind: ClusterVirtualImage
     metadata:
      name: win-virtio-iso
      spec:
