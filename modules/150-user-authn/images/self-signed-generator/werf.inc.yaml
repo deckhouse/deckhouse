@@ -9,7 +9,6 @@ import:
 imageSpec:
   config:
     entrypoint: [ "/self-signed-generator" ]
-    user: "1:1"
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-self-signed-generator-src-artifact
 fromImage: common/src-artifact
