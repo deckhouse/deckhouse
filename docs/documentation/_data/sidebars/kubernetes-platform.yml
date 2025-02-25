@@ -16,11 +16,11 @@ entries:
       folders:
         - title:
             en: Overview
-            ru: Введение
+            ru: TODO Введение
           url: /admin/administration-overview.html
         - title:
             en: Installation
-            ru: Установка
+            ru: TODO Установка
           folders:
             - title:
                 en: Preparing for installation
@@ -48,11 +48,11 @@ entries:
               folders:
                 - title:
                     en: Overview
-                    ru: Введение
+                    ru: TODO Введение
                   url: /admin/configuration/access/
                 - title:
                     en: Connection
-                    ru: Подключение
+                    ru: TODO Подключение
                   url: /admin/configuration/access/connection.html
                 - title:
                     en: Authentication
@@ -60,7 +60,7 @@ entries:
                   url: /admin/configuration/access/authentication.html
                 - title:
                     en: Authorization
-                    ru: Авторизация
+                    ru: TODO Авторизация
                   url: /admin/configuration/access/authorization.html
             - title:
                 en: Platform update
@@ -244,7 +244,7 @@ entries:
                   url: /admin/storage-overview.html
             - title:
                 en: Platform security
-                ru: Безопасность платформы
+                ru: TODO Безопасность платформы
               folders:
                 - title:
                     en: Overview
@@ -268,7 +268,7 @@ entries:
                   url: /admin/vulnerability-scanning.html
             - title:
                 en: Platform monitoring
-                ru: Мониторинг платформы
+                ru: TODO Мониторинг платформы
               folders:
                 - title:
                     en: Overview
@@ -276,7 +276,7 @@ entries:
                   url: /admin/monitoring-overview.html
             - title:
                 en: Platform journaling
-                ru: Журналирование платформы
+                ru: TODO Журналирование платформы
               folders:
                 - title:
                     en: Overview
@@ -284,7 +284,7 @@ entries:
                   url: /admin/journaling-overview.html
             - title:
                 en: Multitenancy
-                ru: Мультенантность
+                ru: TODO Мультенантность
               folders:
                 - title:
                     en: Overview
@@ -297,12 +297,20 @@ entries:
       folders:
         - title:
             en: Overview
-            ru: Введение
+            ru: TODO Введение
           url: /user/using-overview.html
         - title:
-            en: Access to the platform
-            ru: Доступ к платформе
-          url: /user/access-platform.html
+            en: Access
+            ru: Доступ
+          folders:
+          - title:
+              en: Authentication
+              ru: Аутентификация
+            url: /user/access/authentication.html
+          - title:
+              en: Access to the platform
+              ru: TODO Доступ к платформе
+            url: /user/access-platform.html
         - title:
             en: Network
             ru: Сеть
@@ -329,11 +337,11 @@ entries:
                 url: /user/web-interfaces.html
         - title:
             en: Multitenancy
-            ru: Мультитенантность
+            ru: TODO Мультитенантность
           url: /user/multitenancy-user.html
         - title:
             en: Containerized applications
-            ru: Контейнеризированные приложения
+            ru: TODO Контейнеризированные приложения
           folders:
             - title:
                 en: Running applications on the platform
@@ -345,11 +353,11 @@ entries:
               url: /user/migration-from-other-platforms.html
         - title:
             en: Virtual machines
-            ru: Виртуальные машины
+            ru: TODO Виртуальные машины
           url: /user/virtual-machines.html
         - title:
             en: Network capabilities
-            ru: Сетевые возможности
+            ru: TODO Сетевые возможности
           folders:
             - title:
                 en: Balancing and traffic management
@@ -365,12 +373,12 @@ entries:
               url: /user/istio-based-service-mesh.html
         - title:
             en: Catastrophic resistance
-            ru: Катастрофоустойчивость
+            ru: TODO Катастрофоустойчивость
           url: /user/catastrophic-resistance.html
 # ------------- Architecture -------------
     - title:
         en: Architecture
-        ru: Архитектура
+        ru: TODO Архитектура
       folders:
         - title:
             en: Overview
@@ -391,7 +399,7 @@ entries:
 # ------------- Reference -------------
     - title:
         en: Reference
-        ru: Справка
+        ru: TODO Справка
       folders:
         - title:
             en: Overview
@@ -416,10 +424,10 @@ entries:
 # ------------- Versions -------------
     - title:
         en: DKP versions overview
-        ru: Обзор версий DKP
+        ru: TODO Обзор версий DKP
       url: /versions/versions-overview.html
 # ------------- FAQ -------------
     - title:
         en: FAQ
-        ru: Вопросы и ответы
+        ru: TODO Вопросы и ответы
       url: /faq/faq-overview.html
