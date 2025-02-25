@@ -40,9 +40,10 @@ const (
 	DeckhouseReleaseAnnotationForce                 = "release.deckhouse.io/force"
 	DeckhouseReleaseAnnotationSuspended             = "release.deckhouse.io/suspended"
 	DeckhouseReleaseAnnotationNotificationTimeShift = "release.deckhouse.io/notification-time-shift"
-	DeckhouseReleaseAnnotationDryrun                = "dryrun"
-	DeckhouseReleaseAnnotationTriggeredByDryrun     = "triggered_by_dryrun"
 	DeckhouseReleaseAnnotationCurrentRestored       = "release.deckhouse.io/current-restored"
+
+	DeckhouseReleaseAnnotationDryrun            = "dryrun"
+	DeckhouseReleaseAnnotationTriggeredByDryrun = "triggered_by_dryrun"
 
 	// TODO: remove in entire code
 	DeckhouseReleaseAnnotationCooldown = "release.deckhouse.io/cooldown"
