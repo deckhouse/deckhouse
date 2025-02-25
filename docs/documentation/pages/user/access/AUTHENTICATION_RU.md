@@ -82,6 +82,12 @@ description: "Deckhouse Kubernetes Platform. Использование ауте
      - 192.168.0.0/24
    ```
 
+   Обратите внимание на следующие возможности при настройке аутентификации:
+   - В параметре `applicationDomain` DexAuthenticator указывается основной домен приложения. Дополнительные домены можно указать в параметре `additionalApplications.domain`;
+   - Параметры `whitelistSourceRanges` и `additionalApplications.whitelistSourceRanges` позволяют открыть возможность аутентификации в приложении только для указанного списка IP-адресов;
+
+   О настройке авторизации читайте в разделе [Авторизация](TODO) документации. Все параметры DexAuthenticator описаны в разделе [Справка](TODO).
+
 2. Добавьте в Ingress-ресурс приложения следующие аннотации:
 
    - `nginx.ingress.kubernetes.io/auth-signin: https://$host/dex-authenticator/sign_in`
@@ -99,7 +105,7 @@ description: "Deckhouse Kubernetes Platform. Использование ауте
      nginx.ingress.kubernetes.io/auth-url: https://app-name-dex-authenticator.app-ns.svc.cluster.local/dex-authenticator/auth
      nginx.ingress.kubernetes.io/auth-response-headers: X-Auth-Request-User,X-Auth-Request-Email
    ```
-
+ 
 ### Настойка аутентификации для приложения, которое умеет обрабатывать запросы на аутентификацию
 
 Приложения, которые умеют самостоятельно обрабатывать запросы на аутентификацию и выступать OIDC-клиентом, напрямую взаимодействуют с DKP для аутентификации пользователей.
