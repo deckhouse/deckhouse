@@ -497,6 +497,11 @@ a.comparison-table__module::after {
 }
 
 // The version used after DKP ~1.68
+
+.sidebar__badge--container {
+  display: inline-block;
+}
+
 .sidebar__badge_v2 {
   display: inline-flex;
   margin-right: 4px;
