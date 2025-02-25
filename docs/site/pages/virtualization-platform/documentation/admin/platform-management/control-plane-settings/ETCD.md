@@ -111,7 +111,7 @@ To correctly recover a cluster with one master node, follow these steps:
 
 To properly recover a multi-master cluster, follow these steps:
 
-1. Explicitly enable High Availability (HA) mode using the global parameter [highAvailability](/products/virtualization-platform/reference/mc.html#global-parameters-highavailability). This is necessary, for example, to avoid losing one Prometheus replica and its PVC, since HA is disabled by default in single-master cluster mode.
+1. Explicitly enable High Availability (HA) mode using the global parameter [highAvailability](/products/virtualization-platform/reference/mc.html#parameters-highavailability). This is necessary, for example, to avoid losing one Prometheus replica and its PVC, since HA is disabled by default in single-master cluster mode.
 
 1. Switch the cluster to single-master mode, according to the [instruction](#how-to-reduce-the-number-of-master-nodes-in-a-multi-master-cloud-cluster-to-single-master) for cloud clusters or manually remove static master nodes from the cluster.
 
@@ -287,6 +287,98 @@ d8 k -n kube-system exec -ti $(d8 k -n kube-system get pod \
 --key /etc/kubernetes/pki/etcd/ca.key \
 $(echo -n $ENDPOINTS_STRING) endpoint status -w table
 ```
+
+## How do I reduce the number of master nodes in a cloud cluster?
+
+The following describes the conversion of a multi-master cluster into a single-master.
+
+{% alert level="warning" %}
+The steps described below must be performed from the first in order of the master node of the cluster (master-0). This is because the cluster is always scaled in order: for example, it is impossible to delete nodes master-0 and master-1, leaving master-2.
+{% endalert %}
+
+1. Make a [backup of etcd](https://deckhouse.io/products/virtualization-platform/documentation/admin/platform-management/control-plane-settings/etcd.html#etcd-backup) and the `/etc/kubernetes` directory.
+1. Transfer the archive to a server outside the cluster (e.g., on a local machine).
+1. Ensure there are no [alerts](../prometheus/faq.html#how-to-get-information-about-alerts-in-a-cluster) in the cluster that can prevent the update of the master nodes.
+1. Make sure that [Deckhouse queue is empty](../../deckhouse-faq.html#how-to-check-the-job-queue-in-deckhouse).
+1. Run the appropriate edition and version of the Deckhouse installer container **on the local machine** (change the container registry address if necessary):
+
+   ```bash
+   DH_VERSION=$(kubectl -n d8-system get deployment deckhouse -o jsonpath='{.metadata.annotations.core\.deckhouse\.io\/version}') \
+   DH_EDITION=$(kubectl -n d8-system get deployment deckhouse -o jsonpath='{.metadata.annotations.core\.deckhouse\.io\/edition}' | tr '[:upper:]' '[:lower:]' ) \
+   docker run --pull=always -it -v "$HOME/.ssh/:/tmp/.ssh/" \
+     registry.deckhouse.io/deckhouse/${DH_EDITION}/install:${DH_VERSION} bash
+   ```
+
+1. **In the installer container**, run the following command to check the state before working:
+
+   ```bash
+   dhctl terraform check --ssh-agent-private-keys=/tmp/.ssh/<SSH_KEY_FILENAME> --ssh-user=<USERNAME> --ssh-host <MASTER-NODE-0-HOST>
+   ```
+
+   The command output should indicate that Terraform found no inconsistencies and no changes are required.
+
+1. Run the following command **in the installer container** and set `masterNodeGroup.replicas` to `1`:
+
+   ```bash
+   dhctl config edit provider-cluster-configuration --ssh-agent-private-keys=/tmp/.ssh/<SSH_KEY_FILENAME> \
+     --ssh-user=<USERNAME> --ssh-host <MASTER-NODE-0-HOST>
+   ```
+
+   > For **Yandex Cloud**, when using external addresses on master nodes, the number of array elements in the [masterNodeGroup.instanceClass.externalIPAddresses](../cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration-masternodegroup-instanceclass-externalipaddresses) parameter must equal the number of master nodes. If `Auto` is used (public IP addresses are provisioned automatically), the number of array elements must still equal the number of master nodes.
+   >
+   > To illustrate, with three master nodes (`masterNodeGroup.replicas: 1`) and automatic address reservation, the `masterNodeGroup.instanceClass.externalIPAddresses` parameter would look as follows:
+   >
+   > ```yaml
+   > externalIPAddresses:
+   > - "Auto"
+   > ```
+
+1. Remove the following labels from the master nodes to be deleted:
+  * `node-role.kubernetes.io/control-plane`
+  * `node-role.kubernetes.io/master`
+  * `node.deckhouse.io/group`
+
+   Use the following command to remove labels:
+
+   ```bash
+   kubectl label node <MASTER-NODE-N-NAME> node-role.kubernetes.io/control-plane- node-role.kubernetes.io/master- node.deckhouse.io/group-
+   ```
+
+1. Make sure that the master nodes to be deleted are no longer listed as etcd cluster members:
+
+   ```bash
+   kubectl -n kube-system exec -ti \
+   $(kubectl -n kube-system get pod -l component=etcd,tier=control-plane -o json | jq -r '.items[] | select( .status.conditions[] | select(.type == "ContainersReady" and .status == "True")) | .metadata.name' | head -n1) -- \
+   etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
+   --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key \
+   --endpoints https://127.0.0.1:2379/ member list -w table
+   ```
+
+1. `drain` the nodes being deleted:
+
+   ```bash
+   kubectl drain <MASTER-NODE-N-NAME> --ignore-daemonsets --delete-emptydir-data
+   ```
+
+1. Shut down the virtual machines corresponding to the nodes to be deleted, remove the instances of those nodes from the cloud and the disks connected to them (`kubernetes-data-master-<N>`).
+
+1. In the cluster, delete the Pods running on the nodes being deleted:
+
+   ```bash
+   kubectl delete pods --all-namespaces --field-selector spec.nodeName=<MASTER-NODE-N-NAME> --force
+   ```
+
+1. In the cluster, delete the Node objects associated with the nodes being deleted:
+
+   ```bash
+   kubectl delete node <MASTER-NODE-N-NAME>
+   ```
+
+1. **In the installer container**, run the following command to start scaling:
+
+   ```bash
+   dhctl converge --ssh-agent-private-keys=/tmp/.ssh/<SSH_KEY_FILENAME> --ssh-user=<USERNAME> --ssh-host <MASTER-NODE-0-HOST>
+   ```
 
 ## Rebuilding etcd cluster
 
