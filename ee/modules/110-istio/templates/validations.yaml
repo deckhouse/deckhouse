@@ -1,9 +1,8 @@
-{{- if .Values.istio.federation.enabled }}
 ---
 kind: ValidatingAdmissionPolicy
 apiVersion: admissionregistration.k8s.io/v1beta1
 metadata:
-  name: validation-serviceentry-ports
+  name: d8:istio:serviceentry-ports
   {{- include "helm_lib_module_labels" (list $) | nindent 2 }}
 spec:
   validations:
@@ -20,10 +19,10 @@ spec:
 apiVersion: admissionregistration.k8s.io/v1beta1
 kind: ValidatingAdmissionPolicyBinding
 metadata:
-  name: validation-serviceentry-binding
+  name: d8:istio:serviceentry-ports-binding
   {{- include "helm_lib_module_labels" (list $) | nindent 2 }}
 spec:
-  policyName: validation-serviceentry-ports
+  policyName: d8:istio:serviceentry-ports
   matchResources:
     resourceRules:
       - apiGroups: ["networking.istio.io"]
@@ -32,6 +31,5 @@ spec:
         operations: ["CREATE", "UPDATE"]
   validationActions: ["Warn"]
 ---
-{{- end }}
 
 
