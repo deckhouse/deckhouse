@@ -375,12 +375,6 @@ set-build-envs:
   ifeq ($(OBSERVABILITY_SOURCE_REPO),)
   	export OBSERVABILITY_SOURCE_REPO=https://example.com
   endif
-  ifeq ($(DECKHOUSE_PRIVATE_REPO),)
-  	export DECKHOUSE_PRIVATE_REPO=https://github.com
-  endif
-  ifeq ($(STRONGHOLD_PULL_TOKEN=),)
-  	export STRONGHOLD_PULL_TOKEN="token"
-  endif
 
 	export WERF_REPO=$(DEV_REGISTRY_PATH)
 	export REGISTRY_SUFFIX=$(shell echo $(WERF_ENV) | tr '[:upper:]' '[:lower:]')
