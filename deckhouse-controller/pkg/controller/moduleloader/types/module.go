@@ -24,9 +24,8 @@ import (
 )
 
 type Module struct {
-	basic                     *modules.BasicModule
-	needConfirmDisable        bool
-	needConfirmDisableMessage string
+	def   *Definition
+	basic *modules.BasicModule
 }
 
 func NewModule(def *Definition, staticValues utils.Values, configBytes, valuesBytes []byte, logger *log.Logger) (*Module, error) {
@@ -36,9 +35,8 @@ func NewModule(def *Definition, staticValues utils.Values, configBytes, valuesBy
 	}
 
 	return &Module{
-		basic:                     basic,
-		needConfirmDisable:        def.DisableOptions.Confirmation,
-		needConfirmDisableMessage: def.DisableOptions.Message,
+		def:   def,
+		basic: basic,
 	}, nil
 }
 
@@ -46,6 +44,9 @@ func (m *Module) GetBasicModule() *modules.BasicModule {
 	return m.basic
 }
 
-func (m *Module) GetConfirmationDisableReason() (string, bool) {
-	return m.needConfirmDisableMessage, m.needConfirmDisable
+func (m *Module) GetDisableOptions() (string, bool) {
+	if m.def != nil && m.def.DisableOptions != nil {
+		return m.def.DisableOptions.Message, m.def.DisableOptions.Confirmation
+	}
+	return "", false
 }
