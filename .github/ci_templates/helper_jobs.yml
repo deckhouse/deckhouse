@@ -98,33 +98,6 @@ git_info:
 # </template: git_info_job>
 {!{- end -}!}
 
-{!{ define "block-e2e-until-image-is-not-ready" }!}
-# </template: block-e2e-until-image-is-not-ready>
-{!{- $ctx := . }!}
-block-e2e-until-image-is-not-ready:
-  name: Block e2e until the docker image is not ready
-  runs-on: ubuntu-latest
-  if: ${{ github.event.pull_request.user.login != 'deckhouse-BOaTswain' }}
-  steps:
-    - uses: {!{ index (ds "actions") "actions/checkout" }!}
-    - name: Block e2e until the docker image is not ready
-      id: block-e2e
-      uses: {!{ index (ds "actions") "actions/github-script" }!}
-      with:
-        script: |
-          const branchName = context.payload.inputs.ci_commit_ref_name;
-          const prNum = context.payload.inputs.issue_number;
-          console.log(`Check build workflow is completed for branch: ${branchName} PR: ${context.payload.repository.html_url}/pull/${prNum}`);
-
-          const waitForWorkflowIsCompleted = require('./.github/scripts/js/validators/validate-workflow-is-ready')({ github, context, core });
-          try {
-              await waitForWorkflowIsCompleted(branchName, 'Build and test for dev branches');
-          } catch(error) {
-              core.setFailed(error);
-          }
-
-# </template: block-e2e-until-image-is-not-ready>
-{!{- end -}!}
 
 # Check pull request state on push or pull_request_target events:
 # - find PR info on push event

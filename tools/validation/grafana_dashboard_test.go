@@ -237,7 +237,7 @@ func TestValidateGrafanaDashboardFile(t *testing.T) {
         "sort": 0,
         "value_type": "individual"
       },
-      "type": "graph",
+      "type": "timeseries",
       "version": 1,
       "xaxis": {
         "mode": "time",

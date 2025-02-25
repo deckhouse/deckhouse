@@ -138,7 +138,6 @@ jobs:
     name: "AWS, Containerd, Kubernetes 1.29"
     needs:
       - git_info
-      - block-e2e-until-image-is-not-ready
     outputs:
       ssh_master_connection_string: ${{ steps.check_stay_failed_cluster.outputs.ssh_master_connection_string }}
       ssh_bastion_connection_string: ${{ steps.check_stay_failed_cluster.outputs.ssh_bastion_connection_string }}
@@ -601,7 +600,6 @@ jobs:
     name: "EKS, Containerd, Kubernetes 1.29"
     needs:
       - git_info
-      - block-e2e-until-image-is-not-ready
     outputs:
       ssh_master_connection_string: ${{ steps.check_stay_failed_cluster.outputs.ssh_master_connection_string }}
       ssh_bastion_connection_string: ${{ steps.check_stay_failed_cluster.outputs.ssh_bastion_connection_string }}
@@ -1109,7 +1107,6 @@ jobs:
     name: "Azure, Containerd, Kubernetes 1.29"
     needs:
       - git_info
-      - block-e2e-until-image-is-not-ready
     outputs:
       ssh_master_connection_string: ${{ steps.check_stay_failed_cluster.outputs.ssh_master_connection_string }}
       ssh_bastion_connection_string: ${{ steps.check_stay_failed_cluster.outputs.ssh_bastion_connection_string }}
@@ -1580,7 +1577,6 @@ jobs:
     name: "GCP, Containerd, Kubernetes 1.29"
     needs:
       - git_info
-      - block-e2e-until-image-is-not-ready
     outputs:
       ssh_master_connection_string: ${{ steps.check_stay_failed_cluster.outputs.ssh_master_connection_string }}
       ssh_bastion_connection_string: ${{ steps.check_stay_failed_cluster.outputs.ssh_bastion_connection_string }}
@@ -2039,7 +2035,6 @@ jobs:
     name: "Yandex.Cloud, Containerd, Kubernetes 1.29"
     needs:
       - git_info
-      - block-e2e-until-image-is-not-ready
     outputs:
       ssh_master_connection_string: ${{ steps.check_stay_failed_cluster.outputs.ssh_master_connection_string }}
       ssh_bastion_connection_string: ${{ steps.check_stay_failed_cluster.outputs.ssh_bastion_connection_string }}
@@ -2506,7 +2501,6 @@ jobs:
     name: "OpenStack, Containerd, Kubernetes 1.29"
     needs:
       - git_info
-      - block-e2e-until-image-is-not-ready
     outputs:
       ssh_master_connection_string: ${{ steps.check_stay_failed_cluster.outputs.ssh_master_connection_string }}
       ssh_bastion_connection_string: ${{ steps.check_stay_failed_cluster.outputs.ssh_bastion_connection_string }}
@@ -2965,7 +2959,6 @@ jobs:
     name: "vSphere, Containerd, Kubernetes 1.29"
     needs:
       - git_info
-      - block-e2e-until-image-is-not-ready
     outputs:
       ssh_master_connection_string: ${{ steps.check_stay_failed_cluster.outputs.ssh_master_connection_string }}
       ssh_bastion_connection_string: ${{ steps.check_stay_failed_cluster.outputs.ssh_bastion_connection_string }}
@@ -3428,7 +3421,6 @@ jobs:
     name: "VCD, Containerd, Kubernetes 1.29"
     needs:
       - git_info
-      - block-e2e-until-image-is-not-ready
     outputs:
       ssh_master_connection_string: ${{ steps.check_stay_failed_cluster.outputs.ssh_master_connection_string }}
       ssh_bastion_connection_string: ${{ steps.check_stay_failed_cluster.outputs.ssh_bastion_connection_string }}
@@ -3903,7 +3895,6 @@ jobs:
     name: "Static, Containerd, Kubernetes 1.29"
     needs:
       - git_info
-      - block-e2e-until-image-is-not-ready
     outputs:
       ssh_master_connection_string: ${{ steps.check_stay_failed_cluster.outputs.ssh_master_connection_string }}
       ssh_bastion_connection_string: ${{ steps.check_stay_failed_cluster.outputs.ssh_bastion_connection_string }}

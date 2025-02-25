@@ -267,21 +267,34 @@ The `/openapi/conversions` directory contains module parameter conversion files 
 
 Module parameter conversions allow you to convert the OpenAPI specification of module parameters from one version to another. Conversions may be necessary when a parameter is renamed or moved to a different location in a new version of the OpenAPI specification.
 
-Each conversion can only be performed between two consecutive versions (e.g., from the first to the second one). There can be several conversions, and the chain of conversions must cover all versions of the parameter specification with no "gaps".
+Each conversion can only be performed between two consecutive versions (e.g., from the first to the second one). There can be several conversions, and the chain of conversions must sequentially cover all versions of the parameter specification with no "gaps".
 
-The conversion file is an arbitrarily named YAML file of the following format:
+The conversion file is a YAML file named `v<N>.yaml` or `v<N>.yml`, where `<N>` is the conversion version. It has the following structure:
 
 ```yaml
-version: N # The version number to convert to. 
-conversions: []  # A set of jq expressions to transform data from the previous version.
+# Version number of the module parameter specification to which the data is converted during the conversion.
+version: N
+# A set of jq expressions used during conversion in the cluster for the automatic transformation 
+# of the previous version module parameters.
+conversions: []
+# Actions (in two languages) that need to be taken to convert the data 
+# from the previous version of the module parameter specification.
+description:
+  ru: ""
+  en: ""
 ```
 
-Below is an example of a module parameter conversion file where in version 2, the `.auth.password` parameter has been removed:
+The description of actions specified in the description section of the conversion file must be clear and include information on which parameters and in what order need to be changed in the module's parameter specification in order to switch to the new version.
+
+Below is an example of a module parameter conversion file `v2.yaml`, where in version 2 the `.auth.password` parameter has been removed:
 
 ```yaml
 version: 2
 conversions:
   - del(.auth.password) | if .auth == {} then del(.auth) end
+description:
+  ru: "Remove `.auth.password`, then `auth` if empty."
+  en: "Remove `.auth.password`, then `auth` if empty."
 ```
 
 #### Conversion tests
@@ -397,7 +410,10 @@ The `module.yaml` file in the root of the module folder contains the module's me
 The file might not be present, but it is recommended to fill it in. Most of the metadata will be available in the [Module](../../cr.html#module) object in the cluster. The Module object will be created automatically after the module source (resource [ModuleSource](../../cr.html#modulesource)) is configured and synchronization is successful.
 
 Parameters that can be used in `module.yaml`:
-- `description` — *String.* Arbitrary text description of the module's purpose. Will be displayed in the documentation.
+- `namespace` — *String.* The namespace where the module components will be deployed..
+- `subsystems` — *Array of strings.* List of subsystems the module belongs to.
+- `descriptions` — *Object.* Arbitrary text description of the module's purpose.
+  - `en` — *String.* Description in English.
 - `disable` — *Object.* Parameters related to the behavior when disabling a module.
 - `confirmation` — *Boolean.* Require confirmation when disabling a module.
 - `message` — *String.* Message with information about what will happen when disabling a module.
@@ -409,7 +425,7 @@ If confirmation is required to disable a module (the `confirmation` parameter is
 - `deckhouse` — *String.* Pod dependency [on Deckhouse Kubernetes Platform version](../dependencies/#deckhouse-kubernetes-platform-version-dependency) that the pod is compatible with.
 - `kubernetes` — *String.* Pod dependency [on Kubernetes version](../dependencies/#kubernetes-version-dependency) that the pod is compatible with.
 - `modules` — *Object.* Module dependency [on the version of other modules](../dependencies/#dependency-on-the-version-of-other-modules).
-- `stage` — *String.* [Module lifecycle stage](../versioning/#how-do-i-figure-out-how-stable-a-module-is). Possible values: `Sandbox`, `Incubating`, `Graduated`, or `Deprecated`.
+- `stage` — *String.* [Module lifecycle stage](../versioning/#how-do-i-figure-out-how-stable-a-module-is). Possible values: `Experimental`, `Preview`, `General Availability`, `Deprecated`.
 - `tags` — *Array of strings.* List of additional module tags. Tags are converted to [Module](../../cr.html#module) object labels according to the template `module.deckhouse.io/<TAG>=""` (where `<TAG>` is the tag name).
 
 For example, if you specify `tags: ["test", "myTag"]`, then the corresponding Module object in the cluster will be assigned the labels `module.deckhouse.io/test=""` and `module.deckhouse.io/myTag=""`.
@@ -424,7 +440,12 @@ name: hello-world
 tags: ["test", "myTag"]
 weight: 960
 stage: "Sandbox"
-description: "The module to say hello to the world."
+namespace: "test"
+subsystems:
+  - test
+  - test1
+descriptions: 
+  en: "The module to say hello to the world."
 requirements:
     deckhouse: ">= 1.61"
     kubernetes: ">= 1.27"

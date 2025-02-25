@@ -1,0 +1,7 @@
+linters-settings:
+  container:
+    exclude-rules:
+      liveness-probe:
+        - kind: Deployment
+          name: kruise-controller-manager
+          container: kruise

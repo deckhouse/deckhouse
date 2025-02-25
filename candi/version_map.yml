@@ -25,26 +25,22 @@ k8s:
     crictlPatch: 0
     ccm:
       openstack: v1.28.3
-      yandex: v0.31.0
       aws: v1.28.11
       vsphere: v1.28.1
       azure: v1.28.13
       gcp: ccm/v28.10.0
     csi:
-      aws: v1.30.0
+      aws: v1.34.0
       azure: v1.28.11
       gcp: v1.12.13
-      yandex: v0.14.0
-      vcd: 1.6.0
-      zvirt: release-4.19
       vsphere: v3.0.3
       openstack: v1.28.3
-      provisioner: v3.6.0
+      provisioner: v5.2.0
       attacher: v4.4.0
       resizer: v1.9.0
       registrar: v2.9.0
-      snapshotter: v6.3.1
-      livenessprobe: v2.11.0
+      snapshotter: v8.1.1
+      livenessprobe: v2.15.0
   '1.29':
     status: available
     patch: 14
@@ -53,26 +49,22 @@ k8s:
     crictlPatch: 0
     ccm:
       openstack: v1.29.1
-      yandex: v0.31.0
       aws: v1.29.8
       vsphere: v1.29.2
       azure: v1.29.11
       gcp: ccm/v29.5.1
     csi:
-      aws: v1.30.0
+      aws: v1.34.0
       azure: v1.29.12
       gcp: v1.12.13
-      yandex: v0.14.0
-      vcd: 1.6.0
-      zvirt: release-4.19
       vsphere: v3.0.3
       openstack: v1.29.1
-      provisioner: v4.0.0
+      provisioner: v5.2.0
       attacher: v4.5.0
       resizer: v1.9.3
       registrar: v2.10.0
-      snapshotter: v6.3.3
-      livenessprobe: v2.12.0
+      snapshotter: v8.1.1
+      livenessprobe: v2.15.0
   '1.30':
     status: available
     patch: 10
@@ -81,26 +73,22 @@ k8s:
     crictlPatch: 1
     ccm:
       openstack: v1.30.2
-      yandex: v0.31.0
       aws: v1.30.7
       vsphere: v1.30.2
       azure: v1.30.7
       gcp: ccm/v30.1.4
     csi:
-      aws: v1.34.0
+      aws: v1.40.0
       azure: v1.30.7
       gcp: v1.15.4
-      yandex: v0.14.0
-      vcd: 1.6.0
-      zvirt: release-4.19
       vsphere: v3.0.3
       openstack: v1.30.2
-      provisioner: v5.0.0
+      provisioner: v5.2.0
       attacher: v4.6.1
       resizer: v1.11.0
       registrar: v2.11.0
-      snapshotter: v8.0.0
-      livenessprobe: v2.13.0
+      snapshotter: v8.1.1
+      livenessprobe: v2.15.0
   '1.31':
     status: available
     patch: 6
@@ -109,26 +97,22 @@ k8s:
     crictlPatch: 1
     ccm:
       openstack: v1.31.2
-      yandex: v0.31.0
       aws: v1.31.0
       vsphere: v1.31.1
       azure: v1.31.1
       gcp: ccm/v30.1.4
     csi:
-      aws: v1.38.1
+      aws: v1.40.0
       azure: v1.31.2
       gcp: v1.15.4
-      yandex: v0.14.0
-      vcd: 1.6.0
-      zvirt: release-4.19
       vsphere: v3.0.3
       openstack: v1.31.2
-      provisioner: v5.1.0
+      provisioner: v5.2.0
       attacher: v4.7.0
       resizer: v1.12.0
       registrar: v2.12.0
-      snapshotter: v8.1.0
-      livenessprobe: v2.14.0
+      snapshotter: v8.1.1
+      livenessprobe: v2.15.0
   '1.32':
     status: preview
     patch: 2
@@ -137,21 +121,17 @@ k8s:
     crictlPatch: 0
     ccm:
       openstack: v1.31.2
-      yandex: v0.30.0
       aws: v1.32.0
       vsphere: v1.32.2
       azure: v1.32.0
       gcp: ccm/v30.1.4
     csi:
-      aws: v1.38.1
+      aws: v1.40.0
       azure: v1.31.2
-      gcp: v1.15.3
-      yandex: v0.13.0
-      vcd: 1.6.0
-      zvirt: release-4.20
+      gcp: v1.15.4
       vsphere: v3.0.3
       openstack: v1.31.2
-      provisioner: v5.1.0
+      provisioner: v5.2.0
       attacher: v4.8.0
       resizer: v1.13.0
       registrar: v2.13.0

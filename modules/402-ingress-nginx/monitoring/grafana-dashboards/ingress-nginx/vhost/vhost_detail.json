@@ -26,13 +26,12 @@
   "editable": false,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 1,
-  "id": 12,
+  "id": 13,
   "links": [],
   "liveNow": false,
   "panels": [
     {
       "collapsed": false,
-      "datasource": null,
       "gridPos": {
         "h": 1,
         "w": 24,
@@ -107,7 +106,7 @@
         "textMode": "auto",
         "wideLayout": true
       },
-      "pluginVersion": "10.4.5",
+      "pluginVersion": "10.4.14",
       "targets": [
         {
           "datasource": {
@@ -186,7 +185,7 @@
         "textMode": "auto",
         "wideLayout": true
       },
-      "pluginVersion": "10.4.5",
+      "pluginVersion": "10.4.14",
       "targets": [
         {
           "datasource": {
@@ -265,7 +264,7 @@
         "textMode": "auto",
         "wideLayout": true
       },
-      "pluginVersion": "10.4.5",
+      "pluginVersion": "10.4.14",
       "targets": [
         {
           "datasource": {
@@ -344,7 +343,7 @@
         "textMode": "auto",
         "wideLayout": true
       },
-      "pluginVersion": "10.4.5",
+      "pluginVersion": "10.4.14",
       "targets": [
         {
           "datasource": {
@@ -423,7 +422,7 @@
         "textMode": "auto",
         "wideLayout": true
       },
-      "pluginVersion": "10.4.5",
+      "pluginVersion": "10.4.14",
       "targets": [
         {
           "datasource": {
@@ -501,7 +500,7 @@
         "textMode": "auto",
         "wideLayout": true
       },
-      "pluginVersion": "10.4.5",
+      "pluginVersion": "10.4.14",
       "targets": [
         {
           "datasource": {
@@ -579,7 +578,7 @@
         "textMode": "auto",
         "wideLayout": true
       },
-      "pluginVersion": "10.4.5",
+      "pluginVersion": "10.4.14",
       "targets": [
         {
           "datasource": {
@@ -658,7 +657,7 @@
         "textMode": "auto",
         "wideLayout": true
       },
-      "pluginVersion": "10.4.5",
+      "pluginVersion": "10.4.14",
       "targets": [
         {
           "datasource": {
@@ -683,6 +682,7 @@
             "mode": "thresholds"
           },
           "custom": {
+            "align": "auto",
             "cellOptions": {
               "type": "auto"
             },
@@ -1289,7 +1289,7 @@
         },
         "showHeader": true
       },
-      "pluginVersion": "10.4.5",
+      "pluginVersion": "10.4.14",
       "targets": [
         {
           "datasource": {
@@ -1644,6 +1644,25 @@
                   "group": "A",
                   "mode": "none"
                 }
+              },
+              {
+                "id": "custom.pointSize",
+                "value": 0
+              },
+              {
+                "id": "custom.lineWidth",
+                "value": 0
+              },
+              {
+                "id": "custom.fillOpacity",
+                "value": 0
+              },
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "yellow",
+                  "mode": "fixed"
+                }
               }
             ]
           }
@@ -1754,7 +1773,46 @@
           },
           "unit": "percentunit"
         },
-        "overrides": []
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Total"
+            },
+            "properties": [
+              {
+                "id": "custom.drawStyle",
+                "value": "line"
+              },
+              {
+                "id": "custom.stacking",
+                "value": {
+                  "group": "A",
+                  "mode": "none"
+                }
+              },
+              {
+                "id": "custom.pointSize",
+                "value": 0
+              },
+              {
+                "id": "custom.lineWidth",
+                "value": 0
+              },
+              {
+                "id": "custom.fillOpacity",
+                "value": 0
+              },
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "yellow",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          }
+        ]
       },
       "gridPos": {
         "h": 5,
@@ -1853,6 +1911,44 @@
           {
             "matcher": {
               "id": "byName",
+              "options": "Total"
+            },
+            "properties": [
+              {
+                "id": "custom.drawStyle",
+                "value": "line"
+              },
+              {
+                "id": "custom.stacking",
+                "value": {
+                  "group": "A",
+                  "mode": "none"
+                }
+              },
+              {
+                "id": "custom.pointSize",
+                "value": 0
+              },
+              {
+                "id": "custom.lineWidth",
+                "value": 0
+              },
+              {
+                "id": "custom.fillOpacity",
+                "value": 0
+              },
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "yellow",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
               "options": "3xx"
             },
             "properties": [
@@ -1891,25 +1987,6 @@
                 "value": {
                   "fixedColor": "#BF1B00",
                   "mode": "fixed"
-                }
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "Total"
-            },
-            "properties": [
-              {
-                "id": "custom.drawStyle",
-                "value": "line"
-              },
-              {
-                "id": "custom.stacking",
-                "value": {
-                  "group": "A",
-                  "mode": "none"
                 }
               }
             ]
@@ -2045,6 +2122,44 @@
           {
             "matcher": {
               "id": "byName",
+              "options": "Total"
+            },
+            "properties": [
+              {
+                "id": "custom.drawStyle",
+                "value": "line"
+              },
+              {
+                "id": "custom.stacking",
+                "value": {
+                  "group": "A",
+                  "mode": "none"
+                }
+              },
+              {
+                "id": "custom.pointSize",
+                "value": 0
+              },
+              {
+                "id": "custom.lineWidth",
+                "value": 0
+              },
+              {
+                "id": "custom.fillOpacity",
+                "value": 0
+              },
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "yellow",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
               "options": "3xx"
             },
             "properties": [
@@ -2083,25 +2198,6 @@
                 "value": {
                   "fixedColor": "#BF1B00",
                   "mode": "fixed"
-                }
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "Total"
-            },
-            "properties": [
-              {
-                "id": "custom.drawStyle",
-                "value": "line"
-              },
-              {
-                "id": "custom.stacking",
-                "value": {
-                  "group": "A",
-                  "mode": "none"
                 }
               }
             ]
@@ -3020,8 +3116,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "color": "green"
               },
               {
                 "color": "red",
@@ -3047,6 +3142,25 @@
                 "value": {
                   "group": "A",
                   "mode": "none"
+                }
+              },
+              {
+                "id": "custom.pointSize",
+                "value": 0
+              },
+              {
+                "id": "custom.lineWidth",
+                "value": 0
+              },
+              {
+                "id": "custom.fillOpacity",
+                "value": 0
+              },
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "yellow",
+                  "mode": "fixed"
                 }
               }
             ]
@@ -3146,8 +3260,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "color": "green"
               },
               {
                 "color": "red",
@@ -3173,6 +3286,25 @@
                 "value": {
                   "group": "A",
                   "mode": "none"
+                }
+              },
+              {
+                "id": "custom.pointSize",
+                "value": 0
+              },
+              {
+                "id": "custom.lineWidth",
+                "value": 0
+              },
+              {
+                "id": "custom.fillOpacity",
+                "value": 0
+              },
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "yellow",
+                  "mode": "fixed"
                 }
               }
             ]
@@ -3262,8 +3394,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "color": "green"
               },
               {
                 "color": "red",
@@ -3274,6 +3405,44 @@
           "unit": "ops"
         },
         "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Total"
+            },
+            "properties": [
+              {
+                "id": "custom.drawStyle",
+                "value": "line"
+              },
+              {
+                "id": "custom.stacking",
+                "value": {
+                  "group": "A",
+                  "mode": "none"
+                }
+              },
+              {
+                "id": "custom.pointSize",
+                "value": 0
+              },
+              {
+                "id": "custom.lineWidth",
+                "value": 0
+              },
+              {
+                "id": "custom.fillOpacity",
+                "value": 0
+              },
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "yellow",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
           {
             "matcher": {
               "id": "byName",
@@ -3315,25 +3484,6 @@
                 "value": {
                   "fixedColor": "#BF1B00",
                   "mode": "fixed"
-                }
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "Total"
-            },
-            "properties": [
-              {
-                "id": "custom.drawStyle",
-                "value": "line"
-              },
-              {
-                "id": "custom.stacking",
-                "value": {
-                  "group": "A",
-                  "mode": "none"
                 }
               }
             ]
@@ -3438,8 +3588,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "color": "green"
               },
               {
                 "color": "red",
@@ -3450,6 +3599,44 @@
           "unit": "ops"
         },
         "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Total"
+            },
+            "properties": [
+              {
+                "id": "custom.drawStyle",
+                "value": "line"
+              },
+              {
+                "id": "custom.stacking",
+                "value": {
+                  "group": "A",
+                  "mode": "none"
+                }
+              },
+              {
+                "id": "custom.pointSize",
+                "value": 0
+              },
+              {
+                "id": "custom.lineWidth",
+                "value": 0
+              },
+              {
+                "id": "custom.fillOpacity",
+                "value": 0
+              },
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "yellow",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
           {
             "matcher": {
               "id": "byName",
@@ -3491,25 +3678,6 @@
                 "value": {
                   "fixedColor": "#BF1B00",
                   "mode": "fixed"
-                }
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "Total"
-            },
-            "properties": [
-              {
-                "id": "custom.drawStyle",
-                "value": "line"
-              },
-              {
-                "id": "custom.stacking",
-                "value": {
-                  "group": "A",
-                  "mode": "none"
                 }
               }
             ]
@@ -3806,8 +3974,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "color": "green"
               },
               {
                 "color": "red",
@@ -3818,6 +3985,44 @@
           "unit": "ops"
         },
         "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Total"
+            },
+            "properties": [
+              {
+                "id": "custom.drawStyle",
+                "value": "line"
+              },
+              {
+                "id": "custom.stacking",
+                "value": {
+                  "group": "A",
+                  "mode": "none"
+                }
+              },
+              {
+                "id": "custom.pointSize",
+                "value": 0
+              },
+              {
+                "id": "custom.lineWidth",
+                "value": 0
+              },
+              {
+                "id": "custom.fillOpacity",
+                "value": 0
+              },
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "yellow",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
           {
             "matcher": {
               "id": "byName",
@@ -3859,25 +4064,6 @@
                 "value": {
                   "fixedColor": "#BF1B00",
                   "mode": "fixed"
-                }
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "Total"
-            },
-            "properties": [
-              {
-                "id": "custom.drawStyle",
-                "value": "line"
-              },
-              {
-                "id": "custom.stacking",
-                "value": {
-                  "group": "A",
-                  "mode": "none"
                 }
               }
             ]
@@ -4174,8 +4360,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "color": "green"
               },
               {
                 "color": "red",
@@ -4186,6 +4371,44 @@
           "unit": "ops"
         },
         "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Total"
+            },
+            "properties": [
+              {
+                "id": "custom.drawStyle",
+                "value": "line"
+              },
+              {
+                "id": "custom.stacking",
+                "value": {
+                  "group": "A",
+                  "mode": "none"
+                }
+              },
+              {
+                "id": "custom.pointSize",
+                "value": 0
+              },
+              {
+                "id": "custom.lineWidth",
+                "value": 0
+              },
+              {
+                "id": "custom.fillOpacity",
+                "value": 0
+              },
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "yellow",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
           {
             "matcher": {
               "id": "byName",
@@ -4227,25 +4450,6 @@
                 "value": {
                   "fixedColor": "#BF1B00",
                   "mode": "fixed"
-                }
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "Total"
-            },
-            "properties": [
-              {
-                "id": "custom.drawStyle",
-                "value": "line"
-              },
-              {
-                "id": "custom.stacking",
-                "value": {
-                  "group": "A",
-                  "mode": "none"
                 }
               }
             ]
@@ -4350,8 +4554,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "color": "green"
               },
               {
                 "color": "red",
@@ -4377,6 +4580,25 @@
                 "value": {
                   "group": "A",
                   "mode": "none"
+                }
+              },
+              {
+                "id": "custom.pointSize",
+                "value": 0
+              },
+              {
+                "id": "custom.lineWidth",
+                "value": 0
+              },
+              {
+                "id": "custom.fillOpacity",
+                "value": 0
+              },
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "yellow",
+                  "mode": "fixed"
                 }
               }
             ]
@@ -4482,8 +4704,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "color": "green"
               },
               {
                 "color": "red",
@@ -4509,6 +4730,25 @@
                 "value": {
                   "group": "A",
                   "mode": "none"
+                }
+              },
+              {
+                "id": "custom.pointSize",
+                "value": 0
+              },
+              {
+                "id": "custom.lineWidth",
+                "value": 0
+              },
+              {
+                "id": "custom.fillOpacity",
+                "value": 0
+              },
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "yellow",
+                  "mode": "fixed"
                 }
               }
             ]
@@ -4608,8 +4848,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "color": "green"
               },
               {
                 "color": "red",
@@ -4620,6 +4859,44 @@
           "unit": "ops"
         },
         "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Total"
+            },
+            "properties": [
+              {
+                "id": "custom.drawStyle",
+                "value": "line"
+              },
+              {
+                "id": "custom.stacking",
+                "value": {
+                  "group": "A",
+                  "mode": "none"
+                }
+              },
+              {
+                "id": "custom.pointSize",
+                "value": 0
+              },
+              {
+                "id": "custom.lineWidth",
+                "value": 0
+              },
+              {
+                "id": "custom.fillOpacity",
+                "value": 0
+              },
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "yellow",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
           {
             "matcher": {
               "id": "byName",
@@ -4661,25 +4938,6 @@
                 "value": {
                   "fixedColor": "#BF1B00",
                   "mode": "fixed"
-                }
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "Total"
-            },
-            "properties": [
-              {
-                "id": "custom.drawStyle",
-                "value": "line"
-              },
-              {
-                "id": "custom.stacking",
-                "value": {
-                  "group": "A",
-                  "mode": "none"
                 }
               }
             ]
@@ -4798,8 +5056,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -4810,6 +5067,44 @@
               "unit": "percentunit"
             },
             "overrides": [
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Total"
+                },
+                "properties": [
+                  {
+                    "id": "custom.drawStyle",
+                    "value": "line"
+                  },
+                  {
+                    "id": "custom.stacking",
+                    "value": {
+                      "group": "A",
+                      "mode": "none"
+                    }
+                  },
+                  {
+                    "id": "custom.pointSize",
+                    "value": 0
+                  },
+                  {
+                    "id": "custom.lineWidth",
+                    "value": 0
+                  },
+                  {
+                    "id": "custom.fillOpacity",
+                    "value": 0
+                  },
+                  {
+                    "id": "color",
+                    "value": {
+                      "fixedColor": "yellow",
+                      "mode": "fixed"
+                    }
+                  }
+                ]
+              },
               {
                 "matcher": {
                   "id": "byName",
@@ -4854,25 +5149,6 @@
                     }
                   }
                 ]
-              },
-              {
-                "matcher": {
-                  "id": "byName",
-                  "options": "Total"
-                },
-                "properties": [
-                  {
-                    "id": "custom.drawStyle",
-                    "value": "line"
-                  },
-                  {
-                    "id": "custom.stacking",
-                    "value": {
-                      "group": "A",
-                      "mode": "none"
-                    }
-                  }
-                ]
               }
             ]
           },
@@ -4880,7 +5156,7 @@
             "h": 4,
             "w": 8,
             "x": 0,
-            "y": 47
+            "y": 2
           },
           "id": 189,
           "options": {
@@ -4965,8 +5241,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -4977,6 +5252,44 @@
               "unit": "percentunit"
             },
             "overrides": [
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Total"
+                },
+                "properties": [
+                  {
+                    "id": "custom.drawStyle",
+                    "value": "line"
+                  },
+                  {
+                    "id": "custom.stacking",
+                    "value": {
+                      "group": "A",
+                      "mode": "none"
+                    }
+                  },
+                  {
+                    "id": "custom.pointSize",
+                    "value": 0
+                  },
+                  {
+                    "id": "custom.lineWidth",
+                    "value": 0
+                  },
+                  {
+                    "id": "custom.fillOpacity",
+                    "value": 0
+                  },
+                  {
+                    "id": "color",
+                    "value": {
+                      "fixedColor": "yellow",
+                      "mode": "fixed"
+                    }
+                  }
+                ]
+              },
               {
                 "matcher": {
                   "id": "byName",
@@ -5021,25 +5334,6 @@
                     }
                   }
                 ]
-              },
-              {
-                "matcher": {
-                  "id": "byName",
-                  "options": "Total"
-                },
-                "properties": [
-                  {
-                    "id": "custom.drawStyle",
-                    "value": "line"
-                  },
-                  {
-                    "id": "custom.stacking",
-                    "value": {
-                      "group": "A",
-                      "mode": "none"
-                    }
-                  }
-                ]
               }
             ]
           },
@@ -5047,7 +5341,7 @@
             "h": 4,
             "w": 8,
             "x": 8,
-            "y": 47
+            "y": 2
           },
           "id": 190,
           "options": {
@@ -5132,8 +5426,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -5144,6 +5437,44 @@
               "unit": "percentunit"
             },
             "overrides": [
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Total"
+                },
+                "properties": [
+                  {
+                    "id": "custom.drawStyle",
+                    "value": "line"
+                  },
+                  {
+                    "id": "custom.stacking",
+                    "value": {
+                      "group": "A",
+                      "mode": "none"
+                    }
+                  },
+                  {
+                    "id": "custom.pointSize",
+                    "value": 0
+                  },
+                  {
+                    "id": "custom.lineWidth",
+                    "value": 0
+                  },
+                  {
+                    "id": "custom.fillOpacity",
+                    "value": 0
+                  },
+                  {
+                    "id": "color",
+                    "value": {
+                      "fixedColor": "yellow",
+                      "mode": "fixed"
+                    }
+                  }
+                ]
+              },
               {
                 "matcher": {
                   "id": "byName",
@@ -5188,25 +5519,6 @@
                     }
                   }
                 ]
-              },
-              {
-                "matcher": {
-                  "id": "byName",
-                  "options": "Total"
-                },
-                "properties": [
-                  {
-                    "id": "custom.drawStyle",
-                    "value": "line"
-                  },
-                  {
-                    "id": "custom.stacking",
-                    "value": {
-                      "group": "A",
-                      "mode": "none"
-                    }
-                  }
-                ]
               }
             ]
           },
@@ -5214,7 +5526,7 @@
             "h": 4,
             "w": 8,
             "x": 16,
-            "y": 47
+            "y": 2
           },
           "id": 191,
           "options": {
@@ -5299,8 +5611,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -5311,6 +5622,44 @@
               "unit": "percentunit"
             },
             "overrides": [
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Total"
+                },
+                "properties": [
+                  {
+                    "id": "custom.drawStyle",
+                    "value": "line"
+                  },
+                  {
+                    "id": "custom.stacking",
+                    "value": {
+                      "group": "A",
+                      "mode": "none"
+                    }
+                  },
+                  {
+                    "id": "custom.pointSize",
+                    "value": 0
+                  },
+                  {
+                    "id": "custom.lineWidth",
+                    "value": 0
+                  },
+                  {
+                    "id": "custom.fillOpacity",
+                    "value": 0
+                  },
+                  {
+                    "id": "color",
+                    "value": {
+                      "fixedColor": "yellow",
+                      "mode": "fixed"
+                    }
+                  }
+                ]
+              },
               {
                 "matcher": {
                   "id": "byName",
@@ -5355,25 +5704,6 @@
                     }
                   }
                 ]
-              },
-              {
-                "matcher": {
-                  "id": "byName",
-                  "options": "Total"
-                },
-                "properties": [
-                  {
-                    "id": "custom.drawStyle",
-                    "value": "line"
-                  },
-                  {
-                    "id": "custom.stacking",
-                    "value": {
-                      "group": "A",
-                      "mode": "none"
-                    }
-                  }
-                ]
               }
             ]
           },
@@ -5381,7 +5711,7 @@
             "h": 5,
             "w": 12,
             "x": 0,
-            "y": 51
+            "y": 6
           },
           "id": 192,
           "options": {
@@ -5466,8 +5796,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -5478,6 +5807,44 @@
               "unit": "percentunit"
             },
             "overrides": [
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Total"
+                },
+                "properties": [
+                  {
+                    "id": "custom.drawStyle",
+                    "value": "line"
+                  },
+                  {
+                    "id": "custom.stacking",
+                    "value": {
+                      "group": "A",
+                      "mode": "none"
+                    }
+                  },
+                  {
+                    "id": "custom.pointSize",
+                    "value": 0
+                  },
+                  {
+                    "id": "custom.lineWidth",
+                    "value": 0
+                  },
+                  {
+                    "id": "custom.fillOpacity",
+                    "value": 0
+                  },
+                  {
+                    "id": "color",
+                    "value": {
+                      "fixedColor": "yellow",
+                      "mode": "fixed"
+                    }
+                  }
+                ]
+              },
               {
                 "matcher": {
                   "id": "byName",
@@ -5522,25 +5889,6 @@
                     }
                   }
                 ]
-              },
-              {
-                "matcher": {
-                  "id": "byName",
-                  "options": "Total"
-                },
-                "properties": [
-                  {
-                    "id": "custom.drawStyle",
-                    "value": "line"
-                  },
-                  {
-                    "id": "custom.stacking",
-                    "value": {
-                      "group": "A",
-                      "mode": "none"
-                    }
-                  }
-                ]
               }
             ]
           },
@@ -5548,7 +5896,7 @@
             "h": 5,
             "w": 12,
             "x": 12,
-            "y": 51
+            "y": 6
           },
           "id": 193,
           "options": {
@@ -5632,8 +5980,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -5644,6 +5991,44 @@
               "unit": "ops"
             },
             "overrides": [
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Total"
+                },
+                "properties": [
+                  {
+                    "id": "custom.drawStyle",
+                    "value": "line"
+                  },
+                  {
+                    "id": "custom.stacking",
+                    "value": {
+                      "group": "A",
+                      "mode": "none"
+                    }
+                  },
+                  {
+                    "id": "custom.pointSize",
+                    "value": 0
+                  },
+                  {
+                    "id": "custom.lineWidth",
+                    "value": 0
+                  },
+                  {
+                    "id": "custom.fillOpacity",
+                    "value": 0
+                  },
+                  {
+                    "id": "color",
+                    "value": {
+                      "fixedColor": "yellow",
+                      "mode": "fixed"
+                    }
+                  }
+                ]
+              },
               {
                 "matcher": {
                   "id": "byName",
@@ -5688,33 +6073,14 @@
                     }
                   }
                 ]
-              },
-              {
-                "matcher": {
-                  "id": "byName",
-                  "options": "Total"
-                },
-                "properties": [
-                  {
-                    "id": "custom.drawStyle",
-                    "value": "line"
-                  },
-                  {
-                    "id": "custom.stacking",
-                    "value": {
-                      "group": "A",
-                      "mode": "none"
-                    }
-                  }
-                ]
               }
             ]
           },
           "gridPos": {
             "h": 4,
-            "w": 12,
+            "w": 24,
             "x": 0,
-            "y": 56
+            "y": 11
           },
           "id": 86,
           "options": {
@@ -5829,7 +6195,7 @@
             "h": 2,
             "w": 3,
             "x": 0,
-            "y": 48
+            "y": 3
           },
           "id": 130,
           "maxDataPoints": 100,
@@ -5850,7 +6216,7 @@
             "textMode": "auto",
             "wideLayout": true
           },
-          "pluginVersion": "10.4.5",
+          "pluginVersion": "10.4.14",
           "targets": [
             {
               "datasource": {
@@ -5906,7 +6272,7 @@
             "h": 2,
             "w": 3,
             "x": 3,
-            "y": 48
+            "y": 3
           },
           "id": 132,
           "maxDataPoints": 100,
@@ -5927,7 +6293,7 @@
             "textMode": "auto",
             "wideLayout": true
           },
-          "pluginVersion": "10.4.5",
+          "pluginVersion": "10.4.14",
           "targets": [
             {
               "datasource": {
@@ -5983,7 +6349,7 @@
             "h": 2,
             "w": 3,
             "x": 6,
-            "y": 48
+            "y": 3
           },
           "id": 134,
           "maxDataPoints": 100,
@@ -6004,7 +6370,7 @@
             "textMode": "auto",
             "wideLayout": true
           },
-          "pluginVersion": "10.4.5",
+          "pluginVersion": "10.4.14",
           "targets": [
             {
               "datasource": {
@@ -6060,7 +6426,7 @@
             "h": 2,
             "w": 3,
             "x": 9,
-            "y": 48
+            "y": 3
           },
           "id": 174,
           "maxDataPoints": 100,
@@ -6081,7 +6447,7 @@
             "textMode": "auto",
             "wideLayout": true
           },
-          "pluginVersion": "10.4.5",
+          "pluginVersion": "10.4.14",
           "targets": [
             {
               "datasource": {
@@ -6137,7 +6503,7 @@
             "h": 2,
             "w": 3,
             "x": 12,
-            "y": 48
+            "y": 3
           },
           "id": 140,
           "maxDataPoints": 100,
@@ -6158,7 +6524,7 @@
             "textMode": "auto",
             "wideLayout": true
           },
-          "pluginVersion": "10.4.5",
+          "pluginVersion": "10.4.14",
           "targets": [
             {
               "datasource": {
@@ -6214,7 +6580,7 @@
             "h": 2,
             "w": 3,
             "x": 15,
-            "y": 48
+            "y": 3
           },
           "id": 142,
           "maxDataPoints": 100,
@@ -6235,7 +6601,7 @@
             "textMode": "auto",
             "wideLayout": true
           },
-          "pluginVersion": "10.4.5",
+          "pluginVersion": "10.4.14",
           "targets": [
             {
               "datasource": {
@@ -6291,7 +6657,7 @@
             "h": 2,
             "w": 3,
             "x": 18,
-            "y": 48
+            "y": 3
           },
           "id": 144,
           "maxDataPoints": 100,
@@ -6312,7 +6678,7 @@
             "textMode": "auto",
             "wideLayout": true
           },
-          "pluginVersion": "10.4.5",
+          "pluginVersion": "10.4.14",
           "targets": [
             {
               "datasource": {
@@ -6368,7 +6734,7 @@
             "h": 2,
             "w": 3,
             "x": 21,
-            "y": 48
+            "y": 3
           },
           "id": 146,
           "maxDataPoints": 100,
@@ -6389,7 +6755,7 @@
             "textMode": "auto",
             "wideLayout": true
           },
-          "pluginVersion": "10.4.5",
+          "pluginVersion": "10.4.14",
           "targets": [
             {
               "datasource": {
@@ -6486,7 +6852,7 @@
             "h": 5,
             "w": 12,
             "x": 0,
-            "y": 50
+            "y": 5
           },
           "hideTimeOverride": false,
           "id": 136,
@@ -6630,7 +6996,7 @@
             "h": 5,
             "w": 12,
             "x": 12,
-            "y": 50
+            "y": 5
           },
           "hideTimeOverride": false,
           "id": 148,
@@ -6753,7 +7119,7 @@
             "h": 21,
             "w": 12,
             "x": 0,
-            "y": 49
+            "y": 4
           },
           "heatmap": {},
           "highlightCards": true,
@@ -6801,7 +7167,7 @@
               "unit": "s"
             }
           },
-          "pluginVersion": "10.4.5",
+          "pluginVersion": "10.4.14",
           "targets": [
             {
               "datasource": {
@@ -6867,7 +7233,7 @@
             "h": 21,
             "w": 12,
             "x": 12,
-            "y": 49
+            "y": 4
           },
           "heatmap": {},
           "highlightCards": true,
@@ -6916,7 +7282,7 @@
               "unit": "s"
             }
           },
-          "pluginVersion": "10.4.5",
+          "pluginVersion": "10.4.14",
           "targets": [
             {
               "datasource": {
@@ -7012,7 +7378,7 @@
             "h": 2,
             "w": 3,
             "x": 0,
-            "y": 50
+            "y": 5
           },
           "id": 171,
           "maxDataPoints": 100,
@@ -7033,7 +7399,7 @@
             "textMode": "auto",
             "wideLayout": true
           },
-          "pluginVersion": "10.4.5",
+          "pluginVersion": "10.4.14",
           "targets": [
             {
               "datasource": {
@@ -7089,7 +7455,7 @@
             "h": 2,
             "w": 3,
             "x": 3,
-            "y": 50
+            "y": 5
           },
           "id": 172,
           "maxDataPoints": 100,
@@ -7110,7 +7476,7 @@
             "textMode": "auto",
             "wideLayout": true
           },
-          "pluginVersion": "10.4.5",
+          "pluginVersion": "10.4.14",
           "targets": [
             {
               "datasource": {
@@ -7166,7 +7532,7 @@
             "h": 2,
             "w": 3,
             "x": 6,
-            "y": 50
+            "y": 5
           },
           "id": 173,
           "maxDataPoints": 100,
@@ -7187,7 +7553,7 @@
             "textMode": "auto",
             "wideLayout": true
           },
-          "pluginVersion": "10.4.5",
+          "pluginVersion": "10.4.14",
           "targets": [
             {
               "datasource": {
@@ -7243,7 +7609,7 @@
             "h": 2,
             "w": 3,
             "x": 9,
-            "y": 50
+            "y": 5
           },
           "id": 128,
           "maxDataPoints": 100,
@@ -7264,7 +7630,7 @@
             "textMode": "auto",
             "wideLayout": true
           },
-          "pluginVersion": "10.4.5",
+          "pluginVersion": "10.4.14",
           "targets": [
             {
               "datasource": {
@@ -7320,7 +7686,7 @@
             "h": 2,
             "w": 3,
             "x": 12,
-            "y": 50
+            "y": 5
           },
           "id": 175,
           "maxDataPoints": 100,
@@ -7341,7 +7707,7 @@
             "textMode": "auto",
             "wideLayout": true
           },
-          "pluginVersion": "10.4.5",
+          "pluginVersion": "10.4.14",
           "targets": [
             {
               "datasource": {
@@ -7397,7 +7763,7 @@
             "h": 2,
             "w": 3,
             "x": 15,
-            "y": 50
+            "y": 5
           },
           "id": 176,
           "maxDataPoints": 100,
@@ -7418,7 +7784,7 @@
             "textMode": "auto",
             "wideLayout": true
           },
-          "pluginVersion": "10.4.5",
+          "pluginVersion": "10.4.14",
           "targets": [
             {
               "datasource": {
@@ -7474,7 +7840,7 @@
             "h": 2,
             "w": 3,
             "x": 18,
-            "y": 50
+            "y": 5
           },
           "id": 177,
           "maxDataPoints": 100,
@@ -7495,7 +7861,7 @@
             "textMode": "auto",
             "wideLayout": true
           },
-          "pluginVersion": "10.4.5",
+          "pluginVersion": "10.4.14",
           "targets": [
             {
               "datasource": {
@@ -7551,7 +7917,7 @@
             "h": 2,
             "w": 3,
             "x": 21,
-            "y": 50
+            "y": 5
           },
           "id": 178,
           "maxDataPoints": 100,
@@ -7572,7 +7938,7 @@
             "textMode": "auto",
             "wideLayout": true
           },
-          "pluginVersion": "10.4.5",
+          "pluginVersion": "10.4.14",
           "targets": [
             {
               "datasource": {
@@ -7669,7 +8035,7 @@
             "h": 4,
             "w": 12,
             "x": 0,
-            "y": 52
+            "y": 7
           },
           "hideTimeOverride": false,
           "id": 155,
@@ -7813,7 +8179,7 @@
             "h": 4,
             "w": 12,
             "x": 12,
-            "y": 52
+            "y": 7
           },
           "hideTimeOverride": false,
           "id": 157,
@@ -7936,7 +8302,7 @@
             "h": 10,
             "w": 12,
             "x": 0,
-            "y": 51
+            "y": 6
           },
           "heatmap": {},
           "highlightCards": true,
@@ -7985,7 +8351,7 @@
               "unit": "bytes"
             }
           },
-          "pluginVersion": "10.4.5",
+          "pluginVersion": "10.4.14",
           "targets": [
             {
               "datasource": {
@@ -8051,7 +8417,7 @@
             "h": 10,
             "w": 12,
             "x": 12,
-            "y": 51
+            "y": 6
           },
           "heatmap": {},
           "highlightCards": true,
@@ -8100,7 +8466,7 @@
               "unit": "bytes"
             }
           },
-          "pluginVersion": "10.4.5",
+          "pluginVersion": "10.4.14",
           "targets": [
             {
               "datasource": {
@@ -8203,8 +8569,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -8231,6 +8596,25 @@
                       "group": "A",
                       "mode": "none"
                     }
+                  },
+                  {
+                    "id": "custom.pointSize",
+                    "value": 0
+                  },
+                  {
+                    "id": "custom.lineWidth",
+                    "value": 0
+                  },
+                  {
+                    "id": "custom.fillOpacity",
+                    "value": 0
+                  },
+                  {
+                    "id": "color",
+                    "value": {
+                      "fixedColor": "yellow",
+                      "mode": "fixed"
+                    }
                   }
                 ]
               }
@@ -8240,7 +8624,7 @@
             "h": 6,
             "w": 12,
             "x": 0,
-            "y": 52
+            "y": 7
           },
           "id": 61,
           "options": {
@@ -8319,8 +8703,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -8330,13 +8713,52 @@
               },
               "unit": "percentunit"
             },
-            "overrides": []
+            "overrides": [
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Total"
+                },
+                "properties": [
+                  {
+                    "id": "custom.drawStyle",
+                    "value": "line"
+                  },
+                  {
+                    "id": "custom.stacking",
+                    "value": {
+                      "group": "A",
+                      "mode": "none"
+                    }
+                  },
+                  {
+                    "id": "custom.pointSize",
+                    "value": 0
+                  },
+                  {
+                    "id": "custom.lineWidth",
+                    "value": 0
+                  },
+                  {
+                    "id": "custom.fillOpacity",
+                    "value": 0
+                  },
+                  {
+                    "id": "color",
+                    "value": {
+                      "fixedColor": "yellow",
+                      "mode": "fixed"
+                    }
+                  }
+                ]
+              }
+            ]
           },
           "gridPos": {
             "h": 6,
             "w": 12,
             "x": 12,
-            "y": 52
+            "y": 7
           },
           "id": 60,
           "options": {
@@ -8414,8 +8836,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -8442,6 +8863,25 @@
                       "group": "A",
                       "mode": "none"
                     }
+                  },
+                  {
+                    "id": "custom.pointSize",
+                    "value": 0
+                  },
+                  {
+                    "id": "custom.lineWidth",
+                    "value": 0
+                  },
+                  {
+                    "id": "custom.fillOpacity",
+                    "value": 0
+                  },
+                  {
+                    "id": "color",
+                    "value": {
+                      "fixedColor": "yellow",
+                      "mode": "fixed"
+                    }
                   }
                 ]
               }
@@ -8451,7 +8891,7 @@
             "h": 4,
             "w": 12,
             "x": 0,
-            "y": 58
+            "y": 13
           },
           "id": 90,
           "options": {
@@ -8541,8 +8981,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -8569,6 +9008,25 @@
                       "group": "A",
                       "mode": "none"
                     }
+                  },
+                  {
+                    "id": "custom.pointSize",
+                    "value": 0
+                  },
+                  {
+                    "id": "custom.lineWidth",
+                    "value": 0
+                  },
+                  {
+                    "id": "custom.fillOpacity",
+                    "value": 0
+                  },
+                  {
+                    "id": "color",
+                    "value": {
+                      "fixedColor": "yellow",
+                      "mode": "fixed"
+                    }
                   }
                 ]
               }
@@ -8578,7 +9036,7 @@
             "h": 4,
             "w": 12,
             "x": 12,
-            "y": 58
+            "y": 13
           },
           "id": 97,
           "options": {
@@ -8656,6 +9114,7 @@
                 "mode": "thresholds"
               },
               "custom": {
+                "align": "auto",
                 "cellOptions": {
                   "type": "auto"
                 },
@@ -8935,7 +9394,7 @@
             "h": 6,
             "w": 24,
             "x": 0,
-            "y": 53
+            "y": 8
           },
           "id": 213,
           "options": {
@@ -8950,7 +9409,7 @@
             },
             "showHeader": true
           },
-          "pluginVersion": "10.4.5",
+          "pluginVersion": "10.4.14",
           "targets": [
             {
               "datasource": {
@@ -9130,8 +9589,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -9158,6 +9616,25 @@
                       "group": "A",
                       "mode": "none"
                     }
+                  },
+                  {
+                    "id": "custom.pointSize",
+                    "value": 0
+                  },
+                  {
+                    "id": "custom.lineWidth",
+                    "value": 0
+                  },
+                  {
+                    "id": "custom.fillOpacity",
+                    "value": 0
+                  },
+                  {
+                    "id": "color",
+                    "value": {
+                      "fixedColor": "yellow",
+                      "mode": "fixed"
+                    }
                   }
                 ]
               }
@@ -9167,7 +9644,7 @@
             "h": 5,
             "w": 16,
             "x": 0,
-            "y": 59
+            "y": 14
           },
           "id": 215,
           "options": {
@@ -9257,8 +9734,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -9268,13 +9744,52 @@
               },
               "unit": "percentunit"
             },
-            "overrides": []
+            "overrides": [
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Total"
+                },
+                "properties": [
+                  {
+                    "id": "custom.drawStyle",
+                    "value": "line"
+                  },
+                  {
+                    "id": "custom.stacking",
+                    "value": {
+                      "group": "A",
+                      "mode": "none"
+                    }
+                  },
+                  {
+                    "id": "custom.pointSize",
+                    "value": 0
+                  },
+                  {
+                    "id": "custom.lineWidth",
+                    "value": 0
+                  },
+                  {
+                    "id": "custom.fillOpacity",
+                    "value": 0
+                  },
+                  {
+                    "id": "color",
+                    "value": {
+                      "fixedColor": "yellow",
+                      "mode": "fixed"
+                    }
+                  }
+                ]
+              }
+            ]
           },
           "gridPos": {
             "h": 5,
             "w": 8,
             "x": 16,
-            "y": 59
+            "y": 14
           },
           "id": 217,
           "options": {
@@ -9369,7 +9884,7 @@
             "h": 5,
             "w": 8,
             "x": 0,
-            "y": 64
+            "y": 19
           },
           "hideTimeOverride": false,
           "id": 219,
@@ -9465,7 +9980,7 @@
             "h": 5,
             "w": 8,
             "x": 8,
-            "y": 64
+            "y": 19
           },
           "hideTimeOverride": false,
           "id": 221,
@@ -9544,8 +10059,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -9572,6 +10086,25 @@
                       "group": "A",
                       "mode": "none"
                     }
+                  },
+                  {
+                    "id": "custom.pointSize",
+                    "value": 0
+                  },
+                  {
+                    "id": "custom.lineWidth",
+                    "value": 0
+                  },
+                  {
+                    "id": "custom.fillOpacity",
+                    "value": 0
+                  },
+                  {
+                    "id": "color",
+                    "value": {
+                      "fixedColor": "yellow",
+                      "mode": "fixed"
+                    }
                   }
                 ]
               }
@@ -9581,7 +10114,7 @@
             "h": 5,
             "w": 8,
             "x": 16,
-            "y": 64
+            "y": 19
           },
           "id": 223,
           "options": {
@@ -9670,8 +10203,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -9682,6 +10214,44 @@
               "unit": "ops"
             },
             "overrides": [
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Total"
+                },
+                "properties": [
+                  {
+                    "id": "custom.drawStyle",
+                    "value": "line"
+                  },
+                  {
+                    "id": "custom.stacking",
+                    "value": {
+                      "group": "A",
+                      "mode": "none"
+                    }
+                  },
+                  {
+                    "id": "custom.pointSize",
+                    "value": 0
+                  },
+                  {
+                    "id": "custom.lineWidth",
+                    "value": 0
+                  },
+                  {
+                    "id": "custom.fillOpacity",
+                    "value": 0
+                  },
+                  {
+                    "id": "color",
+                    "value": {
+                      "fixedColor": "yellow",
+                      "mode": "fixed"
+                    }
+                  }
+                ]
+              },
               {
                 "matcher": {
                   "id": "byName",
@@ -9726,25 +10296,6 @@
                     }
                   }
                 ]
-              },
-              {
-                "matcher": {
-                  "id": "byName",
-                  "options": "Total"
-                },
-                "properties": [
-                  {
-                    "id": "custom.drawStyle",
-                    "value": "line"
-                  },
-                  {
-                    "id": "custom.stacking",
-                    "value": {
-                      "group": "A",
-                      "mode": "none"
-                    }
-                  }
-                ]
               }
             ]
           },
@@ -9752,7 +10303,7 @@
             "h": 4,
             "w": 8,
             "x": 0,
-            "y": 69
+            "y": 24
           },
           "id": 225,
           "options": {
@@ -9846,8 +10397,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -9858,6 +10408,44 @@
               "unit": "ops"
             },
             "overrides": [
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Total"
+                },
+                "properties": [
+                  {
+                    "id": "custom.drawStyle",
+                    "value": "line"
+                  },
+                  {
+                    "id": "custom.stacking",
+                    "value": {
+                      "group": "A",
+                      "mode": "none"
+                    }
+                  },
+                  {
+                    "id": "custom.pointSize",
+                    "value": 0
+                  },
+                  {
+                    "id": "custom.lineWidth",
+                    "value": 0
+                  },
+                  {
+                    "id": "custom.fillOpacity",
+                    "value": 0
+                  },
+                  {
+                    "id": "color",
+                    "value": {
+                      "fixedColor": "yellow",
+                      "mode": "fixed"
+                    }
+                  }
+                ]
+              },
               {
                 "matcher": {
                   "id": "byName",
@@ -9902,25 +10490,6 @@
                     }
                   }
                 ]
-              },
-              {
-                "matcher": {
-                  "id": "byName",
-                  "options": "Total"
-                },
-                "properties": [
-                  {
-                    "id": "custom.drawStyle",
-                    "value": "line"
-                  },
-                  {
-                    "id": "custom.stacking",
-                    "value": {
-                      "group": "A",
-                      "mode": "none"
-                    }
-                  }
-                ]
               }
             ]
           },
@@ -9928,7 +10497,7 @@
             "h": 4,
             "w": 8,
             "x": 8,
-            "y": 69
+            "y": 24
           },
           "id": 227,
           "options": {
@@ -10022,8 +10591,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -10034,6 +10602,44 @@
               "unit": "ops"
             },
             "overrides": [
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Total"
+                },
+                "properties": [
+                  {
+                    "id": "custom.drawStyle",
+                    "value": "line"
+                  },
+                  {
+                    "id": "custom.stacking",
+                    "value": {
+                      "group": "A",
+                      "mode": "none"
+                    }
+                  },
+                  {
+                    "id": "custom.pointSize",
+                    "value": 0
+                  },
+                  {
+                    "id": "custom.lineWidth",
+                    "value": 0
+                  },
+                  {
+                    "id": "custom.fillOpacity",
+                    "value": 0
+                  },
+                  {
+                    "id": "color",
+                    "value": {
+                      "fixedColor": "yellow",
+                      "mode": "fixed"
+                    }
+                  }
+                ]
+              },
               {
                 "matcher": {
                   "id": "byName",
@@ -10078,25 +10684,6 @@
                     }
                   }
                 ]
-              },
-              {
-                "matcher": {
-                  "id": "byName",
-                  "options": "Total"
-                },
-                "properties": [
-                  {
-                    "id": "custom.drawStyle",
-                    "value": "line"
-                  },
-                  {
-                    "id": "custom.stacking",
-                    "value": {
-                      "group": "A",
-                      "mode": "none"
-                    }
-                  }
-                ]
               }
             ]
           },
@@ -10104,7 +10691,7 @@
             "h": 4,
             "w": 8,
             "x": 16,
-            "y": 69
+            "y": 24
           },
           "id": 229,
           "options": {
@@ -10198,8 +10785,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -10210,6 +10796,44 @@
               "unit": "ops"
             },
             "overrides": [
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Total"
+                },
+                "properties": [
+                  {
+                    "id": "custom.drawStyle",
+                    "value": "line"
+                  },
+                  {
+                    "id": "custom.stacking",
+                    "value": {
+                      "group": "A",
+                      "mode": "none"
+                    }
+                  },
+                  {
+                    "id": "custom.pointSize",
+                    "value": 0
+                  },
+                  {
+                    "id": "custom.lineWidth",
+                    "value": 0
+                  },
+                  {
+                    "id": "custom.fillOpacity",
+                    "value": 0
+                  },
+                  {
+                    "id": "color",
+                    "value": {
+                      "fixedColor": "yellow",
+                      "mode": "fixed"
+                    }
+                  }
+                ]
+              },
               {
                 "matcher": {
                   "id": "byName",
@@ -10254,25 +10878,6 @@
                     }
                   }
                 ]
-              },
-              {
-                "matcher": {
-                  "id": "byName",
-                  "options": "Total"
-                },
-                "properties": [
-                  {
-                    "id": "custom.drawStyle",
-                    "value": "line"
-                  },
-                  {
-                    "id": "custom.stacking",
-                    "value": {
-                      "group": "A",
-                      "mode": "none"
-                    }
-                  }
-                ]
               }
             ]
           },
@@ -10280,7 +10885,7 @@
             "h": 5,
             "w": 12,
             "x": 0,
-            "y": 73
+            "y": 28
           },
           "id": 231,
           "options": {
@@ -10374,8 +10979,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -10386,6 +10990,44 @@
               "unit": "ops"
             },
             "overrides": [
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Total"
+                },
+                "properties": [
+                  {
+                    "id": "custom.drawStyle",
+                    "value": "line"
+                  },
+                  {
+                    "id": "custom.stacking",
+                    "value": {
+                      "group": "A",
+                      "mode": "none"
+                    }
+                  },
+                  {
+                    "id": "custom.pointSize",
+                    "value": 0
+                  },
+                  {
+                    "id": "custom.lineWidth",
+                    "value": 0
+                  },
+                  {
+                    "id": "custom.fillOpacity",
+                    "value": 0
+                  },
+                  {
+                    "id": "color",
+                    "value": {
+                      "fixedColor": "yellow",
+                      "mode": "fixed"
+                    }
+                  }
+                ]
+              },
               {
                 "matcher": {
                   "id": "byName",
@@ -10430,25 +11072,6 @@
                     }
                   }
                 ]
-              },
-              {
-                "matcher": {
-                  "id": "byName",
-                  "options": "Total"
-                },
-                "properties": [
-                  {
-                    "id": "custom.drawStyle",
-                    "value": "line"
-                  },
-                  {
-                    "id": "custom.stacking",
-                    "value": {
-                      "group": "A",
-                      "mode": "none"
-                    }
-                  }
-                ]
               }
             ]
           },
@@ -10456,7 +11079,7 @@
             "h": 5,
             "w": 12,
             "x": 12,
-            "y": 73
+            "y": 28
           },
           "id": 233,
           "options": {
@@ -10883,7 +11506,7 @@
             "h": 5,
             "w": 16,
             "x": 0,
-            "y": 78
+            "y": 33
           },
           "hideTimeOverride": false,
           "id": 235,
@@ -11298,7 +11921,7 @@
             "h": 5,
             "w": 8,
             "x": 16,
-            "y": 78
+            "y": 33
           },
           "hideTimeOverride": false,
           "id": 237,
@@ -11367,6 +11990,7 @@
                 "mode": "thresholds"
               },
               "custom": {
+                "align": "auto",
                 "cellOptions": {
                   "type": "auto"
                 },
@@ -11998,7 +12622,7 @@
             "h": 6,
             "w": 24,
             "x": 0,
-            "y": 54
+            "y": 9
           },
           "id": 42,
           "options": {
@@ -12013,7 +12637,7 @@
             },
             "showHeader": true
           },
-          "pluginVersion": "10.4.5",
+          "pluginVersion": "10.4.14",
           "targets": [
             {
               "datasource": {
@@ -12341,8 +12965,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -12352,13 +12975,52 @@
               },
               "unit": "ops"
             },
-            "overrides": []
+            "overrides": [
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Total"
+                },
+                "properties": [
+                  {
+                    "id": "custom.drawStyle",
+                    "value": "line"
+                  },
+                  {
+                    "id": "custom.stacking",
+                    "value": {
+                      "group": "A",
+                      "mode": "none"
+                    }
+                  },
+                  {
+                    "id": "custom.pointSize",
+                    "value": 0
+                  },
+                  {
+                    "id": "custom.lineWidth",
+                    "value": 0
+                  },
+                  {
+                    "id": "custom.fillOpacity",
+                    "value": 0
+                  },
+                  {
+                    "id": "color",
+                    "value": {
+                      "fixedColor": "yellow",
+                      "mode": "fixed"
+                    }
+                  }
+                ]
+              }
+            ]
           },
           "gridPos": {
             "h": 4,
             "w": 8,
             "x": 0,
-            "y": 60
+            "y": 15
           },
           "id": 39,
           "options": {
@@ -12437,8 +13099,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -12448,13 +13109,52 @@
               },
               "unit": "bps"
             },
-            "overrides": []
+            "overrides": [
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Total"
+                },
+                "properties": [
+                  {
+                    "id": "custom.drawStyle",
+                    "value": "line"
+                  },
+                  {
+                    "id": "custom.stacking",
+                    "value": {
+                      "group": "A",
+                      "mode": "none"
+                    }
+                  },
+                  {
+                    "id": "custom.pointSize",
+                    "value": 0
+                  },
+                  {
+                    "id": "custom.lineWidth",
+                    "value": 0
+                  },
+                  {
+                    "id": "custom.fillOpacity",
+                    "value": 0
+                  },
+                  {
+                    "id": "color",
+                    "value": {
+                      "fixedColor": "yellow",
+                      "mode": "fixed"
+                    }
+                  }
+                ]
+              }
+            ]
           },
           "gridPos": {
             "h": 4,
             "w": 8,
             "x": 8,
-            "y": 60
+            "y": 15
           },
           "id": 41,
           "options": {
@@ -12539,8 +13239,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -12550,13 +13249,52 @@
               },
               "unit": "bps"
             },
-            "overrides": []
+            "overrides": [
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Total"
+                },
+                "properties": [
+                  {
+                    "id": "custom.drawStyle",
+                    "value": "line"
+                  },
+                  {
+                    "id": "custom.stacking",
+                    "value": {
+                      "group": "A",
+                      "mode": "none"
+                    }
+                  },
+                  {
+                    "id": "custom.pointSize",
+                    "value": 0
+                  },
+                  {
+                    "id": "custom.lineWidth",
+                    "value": 0
+                  },
+                  {
+                    "id": "custom.fillOpacity",
+                    "value": 0
+                  },
+                  {
+                    "id": "color",
+                    "value": {
+                      "fixedColor": "yellow",
+                      "mode": "fixed"
+                    }
+                  }
+                ]
+              }
+            ]
           },
           "gridPos": {
             "h": 4,
             "w": 8,
             "x": 16,
-            "y": 60
+            "y": 15
           },
           "id": 40,
           "options": {
@@ -12753,8 +13491,9 @@
       {
         "allValue": ".*",
         "current": {
-          "text": "example.com",
-          "value": "example.com"
+          "selected": false,
+          "text": "_",
+          "value": "_"
         },
         "datasource": {
           "type": "prometheus",
@@ -12999,5 +13738,6 @@
   "timezone": "",
   "title": "VHost Detail",
   "uid": "a4hXN3Gik",
-  "version": 1
+  "version": 1,
+  "weekStart": ""
 }

@@ -15,10 +15,6 @@
 # limitations under the License.
 */}}
 
-function detect_bundle() {
-  {{- .Files.Get "/deckhouse/candi/bashible/detect_bundle.sh" | nindent 2 }}
-}
-
 function get_bundle() {
   resource="$1"
   name="$2"
@@ -48,8 +44,6 @@ mkdir -p "$BOOTSTRAP_DIR" "$TMPDIR"
 # Directory contains sensitive information
 chmod 0700 $BOOTSTRAP_DIR
 
-# Detect bundle
-BUNDLE="$(detect_bundle)"
 unset HTTP_PROXY http_proxy HTTPS_PROXY https_proxy NO_PROXY no_proxy
 
 {{- if and (ne .nodeGroup.nodeType "Static") (ne .nodeGroup.nodeType "CloudStatic" )}}
@@ -113,7 +107,7 @@ done
 
 export PATH="/opt/deckhouse/bin:$PATH"
 # Get bashible script from secret
-get_bundle bashible "${BUNDLE}.{{ .nodeGroup.name }}" | jq -r '.data."bashible.sh"' > $BOOTSTRAP_DIR/bashible.sh
+get_bundle bashible "{{ .nodeGroup.name }}" | jq -r '.data."bashible.sh"' > $BOOTSTRAP_DIR/bashible.sh
 chmod +x $BOOTSTRAP_DIR/bashible.sh
 
 # Bashible first run

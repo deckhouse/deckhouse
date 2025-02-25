@@ -12,12 +12,12 @@ To enable the `monitoring-custom` module to collect application metrics, you mus
 - Attach the `prometheus.deckhouse.io/custom-target` label to a Service or a Pod. The label value defines the name in the Prometheus list of targets.
   - You should use the application's name (in lowercase, separated by a hyphen "-") as the value of the `prometheus.deckhouse.io/custom-target` label. This way, the application will be uniquely identified in the cluster.
 
-     Suppose the application is deployed in the cluster more than once (in staging, testing, etc.) or even has several copies in the same namespace. In that case, you still only need to specify its name since all metrics have namespace/Pod labels anyway (and the service label if it is accessed via the Service). In other words, the application's name uniquely identifies the application in the cluster (and not a specific installation of it).
+     Suppose the application is deployed in the cluster more than once (in staging, testing, etc.) or even has several copies in the same namespace. In that case, you still only need to specify its name since all metrics have `namespace`, `pod` labels anyway (and the `service` label if it is accessed via the Service). In other words, the application's name uniquely identifies the application in the cluster (and not a specific installation of it).
 - Set the `http-metrics` or `https-metrics` name to the port that will be used for collecting metrics to connect to it over HTTP or HTTPS, respectively.
 
   If it is not feasible for some reason (e.g., the port is already defined and has a different name), you can use the `prometheus.deckhouse.io/port: port_number` annotation to set the port number and `prometheus.deckhouse.io/tls: "true"` if metrics are collected over HTTPS.
 
-  > **Note!** When annotating a Service, you must use `targetPort` as the port value. I.e., the port that is open and listening by your application, not the Service port.
+  > When annotating a Service, you must use `targetPort` as the port value. I.e., the port that is open and listening by your application, not the Service port.
 
   - Example No. 1:
 
