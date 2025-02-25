@@ -328,6 +328,7 @@ func (l *Loader) ensureModule(ctx context.Context, def *moduletypes.Definition, 
 			module.Properties.Namespace = def.Namespace
 			module.Properties.Weight = def.Weight
 			module.Properties.Stage = def.Stage
+			module.Properties.DisableOptions = def.DisableOptions
 
 			module.SetAnnotations(def.Annotations())
 			module.SetLabels(def.Labels())
