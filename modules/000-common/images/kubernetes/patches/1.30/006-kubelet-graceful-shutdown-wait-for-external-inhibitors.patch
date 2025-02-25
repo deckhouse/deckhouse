@@ -1,5 +1,5 @@
 diff --git a/pkg/kubelet/nodeshutdown/nodeshutdown_manager_linux.go b/pkg/kubelet/nodeshutdown/nodeshutdown_manager_linux.go
-index 8469cecdc0e..2deb4b144fc 100644
+index 8469cecdc0e..b432d38c817 100644
 --- a/pkg/kubelet/nodeshutdown/nodeshutdown_manager_linux.go
 +++ b/pkg/kubelet/nodeshutdown/nodeshutdown_manager_linux.go
 @@ -23,6 +23,7 @@ package nodeshutdown
@@ -10,6 +10,15 @@ index 8469cecdc0e..2deb4b144fc 100644
  	"sort"
  	"sync"
  	"time"
+@@ -85,7 +86,7 @@ type managerImpl struct {
+ 	nodeShuttingDownMutex sync.Mutex
+ 	nodeShuttingDownNow   bool
+
+-	clock clock.Clock
++	clock clock.WithTicker
+
+ 	enableMetrics bool
+ 	storage       storage
 @@ -320,6 +321,9 @@ func (m *managerImpl) ShutdownStatus() error {
 
  func (m *managerImpl) processShutdownEvent() error {
