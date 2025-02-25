@@ -59,6 +59,12 @@ spec:
                 updatePolicy:
                   type: string
                   description: Module update policy.
+                disableOptions:
+                  description: Module disable options.
+                  confirmation:
+                    type: boolean
+                  message:
+                    type: string
                 requirements:
                   type: object
                   x-kubernetes-preserve-unknown-fields: true
