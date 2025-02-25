@@ -1,0 +1,15 @@
+Subject: [PATCH] patch go-ovirt
+---
+Index: go.mod
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/go.mod b/go.mod
+--- a/go.mod	(revision 1a0874207671f4708e8d985ffe9446443a0f0239)
++++ b/go.mod	(revision aa66b01c903bef94bb7c1c6b223a7bcd5a557a7f)
+@@ -66,3 +66,4 @@
+ )
+ 
+ replace github.com/ovirt/go-ovirt-client/v3 v3.2.0 => github.com/flant/go-ovirt-client/v3 v3.2.0-flant-1
++replace github.com/ovirt/go-ovirt v0.0.0-20220427092237-114c47f2835c => fox.flant.com/deckhouse/cloud-providers/ovirt/go-ovirt v0.0.1-flant
