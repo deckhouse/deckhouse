@@ -324,13 +324,22 @@ func (r *reconciler) preHandleCheck(ctx context.Context, release *v1alpha1.Modul
 func (r *reconciler) handleDeployedRelease(ctx context.Context, release *v1alpha1.ModuleRelease) (ctrl.Result, error) {
 	var needsUpdate bool
 
+	var modulesChangedReason string
+	defer func() {
+		if modulesChangedReason != "" {
+			r.emitRestart(modulesChangedReason)
+		}
+	}()
+
 	if release.GetReinstall() {
 		err := r.runReleaseDeploy(ctx, release, nil)
 		if err != nil {
 			return ctrl.Result{}, fmt.Errorf("run release deploy: %w", err)
 		}
 
-		return ctrl.Result{Requeue: true}, nil
+		modulesChangedReason = "module release reloaded"
+
+		return ctrl.Result{}, nil
 	}
 
 	// check if RegistrySpecChanged annotation is set process it
