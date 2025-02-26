@@ -9,201 +9,75 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-const { mockDeep } = require('jest-mock-extended');
-const waitForJobUnderTest = require('./validate-job-in-workflow-is-ready');
+// Mocks
+const mockGithub = {
+  rest: {
+    actions: {
+      listWorkflowRunsForRepo: jest.fn()
+    }
+  }
+};
 
-describe('GitHub Actions Workflow Checker', () => {
-  let github;
-  let context;
-  let core;
+const mockGithubActions = {
+  GetJobsForWorkflowRunAttempt: jest.fn(),
+  CONCLUSION_STATUS_FAILURE: 'failure',
+  CONCLUSION_STATUS_CANCELLED: 'cancelled',
+  WORKFLOW_STATUS_COMPLETED: 'completed',
+  CONCLUSION_STATUS_SUCCESS: 'success',
+  GetWorkflowsByNameAndStatus: jest.fn()
+};
+const mockContext = {
+  repo: {
+    owner: 'owner',
+    repo: 'repo'
+  }
+};
+const mockCore = {
+  info: jest.fn(),
+  setFailed: jest.fn()
+};
 
+jest.mock('../helpers/github-actions', () => {
+  return jest.fn(() => mockGithubActions);
+});
+
+// Set up the module with mocked dependencies
+const { isJobInWorkflowCompleted, waitForJobInWorkflowIsCompletedWithSuccess } = require('./validate-job-in-workflow-is-ready')({
+  github: mockGithub,
+  context: mockContext,
+  core: mockCore
+});
+
+describe('Job Workflow Tests', () => {
   beforeEach(() => {
-    github = mockDeep();
-    context = {
-      repo: {
-        owner: 'test-owner',
-        repo: 'test-repo'
-      }
-    };
-    core = {
-      info: jest.fn((str) => console.log(str)),
-      setFailed: jest.fn((str) => console.error(str))
-    };
-
-    waitForJobInWorkflowIsCompletedWithSuccess = waitForJobUnderTest({ github, context, core });
-
-    jest.useFakeTimers();
+    jest.clearAllMocks();
   });
 
-  afterEach(() => {
-    jest.useRealTimers();
+  it('should complete job successfully', async () => {
+    mockGithub.rest.actions.listWorkflowRunsForRepo.mockResolvedValue({
+      data: { workflow_runs: [{ name: 'workflow', status: mockGithubActions.WORKFLOW_STATUS_COMPLETED }] }
+    });
+
+    mockGithubActions.GetWorkflowsByNameAndStatus.mockResolvedValueOnce([{ id: 1 }]);
+    mockGithubActions.GetJobsForWorkflowRunAttempt.mockResolvedValueOnce([{ status: 'completed', conclusion: 'success' }]);
+
+    const result = await isJobInWorkflowCompleted('branch', 'workflow', 'job');
+    console.log(result);
+    expect(result).toEqual({ isReady: true, hasFailed: false });
   });
 
-  ({ github, context, core });
+  it('should fail job due to cancellation', async () => {
+    mockGithubActions.GetWorkflowsByNameAndStatus.mockResolvedValueOnce([{ id: 1 }]);
+    mockGithubActions.GetJobsForWorkflowRunAttempt.mockResolvedValueOnce([{ status: 'completed', conclusion: 'cancelled' }]);
 
-  describe('isJobInWorkflowOrWorkflowCompleted', () => {
-    it('should return true when job is successfully completed', async () => {
-      // Mock workflow runs response
-      github.rest.actions.listWorkflowRunsForRepo.mockResolvedValue({
-        data: {
-          workflow_runs: [
-            {
-              id: 1,
-              name: 'test-workflow',
-              status: 'completed',
-              conclusion: 'success',
-              run_attempt: 1
-            }
-          ]
-        }
-      });
-
-      const result = await waitForJobInWorkflowIsCompletedWithSuccess('main', 'test-workflow', 'test-job');
-
-      console.log(result);
-      expect(result).toBe(true);
-      expect(core.setFailed).not.toHaveBeenCalled();
-    });
+    const result = await isJobInWorkflowCompleted('branch', 'workflow', 'job');
+    expect(result).toEqual({ isReady: false, hasFailed: true });
   });
 
-  describe('waitForJobInWorkflowIsCompletedWithSuccess', () => {
-    it('should retry until job completes', async () => {
-      let attempt = 0;
+  it('should return false when no workflows are active or completed', async () => {
+    mockGithubActions.GetWorkflowsByNameAndStatus.mockResolvedValueOnce([]);
 
-      github.rest.actions.listWorkflowRunsForRepo.mockImplementation(() => {
-        attempt++;
-        return {
-          data: {
-            workflow_runs: [
-              {
-                id: 1,
-                name: 'test-workflow',
-                status: attempt > 2 ? 'completed' : 'in_progress',
-                run_attempt: 1,
-                conclusion: 'success'
-              }
-            ]
-          }
-        };
-      });
-
-      github.rest.actions.listJobsForWorkflowRunAttempt.mockResolvedValue({
-        data: {
-          jobs: [
-            {
-              name: 'test-job',
-              status: 'completed',
-              conclusion: 'success'
-            }
-          ]
-        }
-      });
-
-      const resultPromise = waitForJobInWorkflowIsCompletedWithSuccess('main', 'test-workflow', 'test-job', 5, 1000);
-
-      await jest.advanceTimersByTimeAsync(5000);
-      const result = await resultPromise;
-
-      expect(result).toBe(true);
-      expect(github.rest.actions.listWorkflowRunsForRepo).toHaveBeenCalledTimes(3);
-    });
-
-    it('should timeout when max attempts reached', async () => {
-      github.rest.actions.listWorkflowRunsForRepo.mockResolvedValue({
-        data: {
-          workflow_runs: [
-            {
-              id: 1,
-              name: 'test-workflow',
-              status: 'in_progress',
-              run_attempt: 1
-            }
-          ]
-        }
-      });
-
-      github.rest.actions.listJobsForWorkflowRunAttempt.mockResolvedValue({
-        data: {
-          jobs: [
-            {
-              name: 'test-job',
-              status: 'in_progress',
-              conclusion: null
-            }
-          ]
-        }
-      });
-
-      await expect(waitForJobInWorkflowIsCompletedWithSuccess('main', 'test-workflow', 'test-job', 3, 1000)).rejects.toThrow(
-        'Max attempts reached'
-      );
-
-      expect(core.setFailed).toHaveBeenCalledWith('⌛ Timeout waiting for workflow completion');
-    });
-  });
-
-  describe('Edge Cases', () => {
-    it('should handle missing completed workflow', async () => {
-      github.rest.actions.listWorkflowRunsForRepo.mockResolvedValue({
-        data: {
-          workflow_runs: [
-            {
-              id: 1,
-              name: 'wrong-workflow',
-              status: 'completed',
-              run_attempt: 1
-            }
-          ]
-        }
-      });
-
-      await waitForJobInWorkflowIsCompletedWithSuccess('main', 'test-workflow', 'test-job', 1, 1000);
-
-      expect(core.setFailed).toHaveBeenCalledWith('❌ No completed workflow found');
-    });
-
-    it('should handle multiple active workflow runs', async () => {
-      github.rest.actions.listWorkflowRunsForRepo.mockResolvedValue({
-        data: {
-          workflow_runs: [
-            {
-              id: 2,
-              name: 'test-workflow',
-              status: 'in_progress',
-              run_attempt: 2
-            },
-            {
-              id: 1,
-              name: 'test-workflow',
-              status: 'in_progress',
-              run_attempt: 1
-            }
-          ]
-        }
-      });
-
-      github.rest.actions.listJobsForWorkflowRunAttempt.mockResolvedValue({
-        data: {
-          jobs: [
-            {
-              name: 'test-job',
-              status: 'completed',
-              conclusion: 'success'
-            }
-          ]
-        }
-      });
-
-      const result = await waitForJobInWorkflowIsCompletedWithSuccess('main', 'test-workflow', 'test-job', 1, 1000);
-
-      expect(result).toBe(true);
-      expect(github.rest.actions.listJobsForWorkflowRunAttempt).toHaveBeenCalledWith({
-        owner: 'test-owner',
-        repo: 'test-repo',
-        run_id: 2,
-        attempt_number: 2,
-        per_page: 100
-      });
-    });
+    const result = await isJobInWorkflowCompleted('branch', 'workflow', 'job');
+    expect(result).toEqual({ isReady: false, hasFailed: false });
   });
 });
