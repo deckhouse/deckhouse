@@ -35,6 +35,7 @@
           D8 MetalLB settings are outdated.
 
           To resolve this issue, increase version in the ModuleConfig `metallb`.
+
     - alert: D8MetallbNotSupportedServiceAnnotationsDetected
       expr: d8_metallb_not_supported_service_annotations_detected == 1
       for: 1m
@@ -57,6 +58,7 @@
           - `metallb.universe.tf/allow-shared-ip`: Replace it with `network.deckhouse.io/load-balancer-shared-ip-key`.
 
           **Please note.** Existing LoadBalancer services of Deckhouse have been migrated automatically, but the new ones will not be.
+
     - alert: D8MetallbObsoleteLayer2PoolsAreUsed
       expr: d8_metallb_obsolete_layer2_pools_are_used == 1
       for: 1m
