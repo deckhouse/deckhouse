@@ -188,5 +188,6 @@ jobs:
           LOOP_TOKEN: ${{secrets.LOOP_CVE_REPORTS_SEND_TOKEN}}
           LOOP_CHANNEL_ID: ${{secrets.LOOP_E2E_REPORT_CHANEL_ID}}
         run: |
-          WORKFLOW_URL="${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}"
-          bash ./.github/scripts/send-report.sh --message "🛑Trivy db shedule failure🛑\n[URL]($WORKFLOW_URL)"
+          echo Fail
+          # WORKFLOW_URL="${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}"
+          # bash ./.github/scripts/send-report.sh --message "🛑Trivy db shedule failure🛑\n[URL]($WORKFLOW_URL)"
