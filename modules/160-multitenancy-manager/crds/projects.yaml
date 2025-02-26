@@ -93,6 +93,12 @@ spec:
                   description: |
                     Arbitrary description of the project's purpose. Specify an empty string if no description is required.
                   type: string
+                namespaces:
+                  description: |
+                    List of extra namespaces that will be created. Shared resources will be applied there.
+                  type: array
+                  items:
+                    type: string
                 resourceLabels:
                   description: |
                     Labels to be applied to all resources created by the project.

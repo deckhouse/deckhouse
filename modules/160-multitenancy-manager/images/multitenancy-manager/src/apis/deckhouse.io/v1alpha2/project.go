@@ -26,8 +26,9 @@ import (
 )
 
 const (
-	ProjectStateError    = "Error"
-	ProjectStateDeployed = "Deployed"
+	ProjectStateError       = "Error"
+	ProjectStateDeployed    = "Deployed"
+	ProjectStateTerminating = "Terminating"
 
 	ProjectConditionProjectTemplateFound     = "ProjectTemplateFound"
 	ProjectConditionProjectValidated         = "Validated"
@@ -41,6 +42,8 @@ const (
 
 	ResourceLabelProject  = "projects.deckhouse.io/project"
 	ResourceLabelTemplate = "projects.deckhouse.io/project-template"
+
+	ResourceAnnotationShare = "projects.deckhouse.io/share-resource"
 
 	ResourceLabelHeritage        = "heritage"
 	ResourceHeritageMultitenancy = "multitenancy-manager"
@@ -117,6 +120,9 @@ type ProjectSpec struct {
 	// Description of the Project
 	Description string `json:"description,omitempty"`
 
+	// List of additional namespaces that will be created with project name as prefix
+	Namespaces []string `json:"namespaces,omitempty"`
+
 	// Labels that will be set for all project resources
 	ResourceLabels map[string]string `json:"resourceLabels,omitempty"`
 
@@ -145,6 +151,11 @@ func (p *ProjectSpec) DeepCopyInto(newObj *ProjectSpec) {
 	newObj.Parameters = make(map[string]interface{})
 	for key, value := range p.Parameters {
 		newObj.Parameters[key] = value
+	}
+	if p.Namespaces != nil {
+		in, out := &p.Namespaces, &newObj.Namespaces
+		*out = make([]string, len(*in))
+		copy(*out, *in)
 	}
 	if p.ResourceLabels != nil {
 		in, out := &p.ResourceLabels, &newObj.ResourceLabels
