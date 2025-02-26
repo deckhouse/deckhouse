@@ -26,25 +26,20 @@ import (
 	"path"
 	"sync"
 	"time"
-
-	"github.com/maxmind/geoipupdate/v7/client"
 )
 
 var once sync.Once
 
 type Updater struct {
 	interval        int
-	maxmindClient   *client.Client
+	maxmindClient   *Client
 	databasePath    string
 	editionsMD5Sums map[string]string
 	mu              sync.Mutex
 }
 
 func NewUpdater(interval int, licenseKey string, databasePath string, accountID int, editionIDs []string) *Updater {
-	client, err := client.New(accountID, licenseKey)
-	if err != nil {
-		log.Fatalf("Error creating maxmind client: %v", err)
-	}
+	client := NewClient(licenseKey)
 
 	editionsMD5Sums := make(map[string]string)
 	for _, editionID := range editionIDs {
@@ -54,7 +49,7 @@ func NewUpdater(interval int, licenseKey string, databasePath string, accountID 
 	return &Updater{
 		interval:        interval,
 		databasePath:    databasePath,
-		maxmindClient:   &client,
+		maxmindClient:   client,
 		editionsMD5Sums: editionsMD5Sums,
 	}
 }
