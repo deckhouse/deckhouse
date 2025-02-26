@@ -55,13 +55,14 @@ shell:
     sudo \
     libcap-devel \
     clang17.0 clang17.0-tools lldb17.0 lld17.0 llvm17.0-devel \
-    libcxxabi-devel
+    libcxxabi-devel \
+    gcc11 gcc11-c++ libstdc++11-devel libstdc++11-devel-static
   - ln -f -s llvm-17.0 "/usr/lib/llvm-17"
-  - update-alternatives --install /usr/bin/python python /usr/bin/python3 1
   - apt-get autoclean && apt-get clean
   install:
   - mkdir -p /cilium && mv /src/proxy /cilium/
   - sed -i "s/# root ALL=(ALL:ALL) ALL/root ALL=(ALL:ALL) ALL/" /etc/sudoers
+  - echo 'Defaults env_keep += "ALTWRAP_LLVM_VERSION GCC_VERSION"' >> /etc/sudoers
   - echo 'Defaults env_keep += "GOPROXY GOPATH GOROOT GOOS GOARCH GO_VERSION CGO_ENABLED"' >> /etc/sudoers
   - echo 'Defaults env_keep += "TARGETARCH ARCH BAZEL_VERSION USE_BAZEL_VERSION BAZEL_OUTPUT_BASE"' >> /etc/sudoers
   - echo 'Defaults env_keep += "BAZEL_BUILD_OPTS PKG_BUILD V DEBUG DESTDIR"' >> /etc/sudoers
@@ -81,6 +82,9 @@ shell:
   #- git clone --depth 1 --branch {{ $ciliumProxyDepsRev }} {{ $.SOURCE_REPO }}/cilium/proxy-build-deps.git /tmp/bazel-deps && rm -rf /tmp/bazel-deps/.git
   - chown -R 1337:1337 /tmp/bazel-deps
   #
+  - export ALTWRAP_LLVM_VERSION=17.0 GCC_VERSION=11
+  - export TARGETARCH=amd64 ARCH="x86_64"
+  #
   - export GO_VERSION=${GOLANG_VERSION} GOPROXY={{ $.GOPROXY }}
   - export GOOS=linux GOARCH=amd64 CGO_ENABLED=0
   - cd /cilium/proxy
@@ -89,7 +93,6 @@ shell:
   - sudo -u cilium PATH=${PATH} mkdir -p /tmp/install/usr/lib
   - mv proxylib/libcilium.so /tmp/install/usr/lib/libcilium.so
   #
-  - export TARGETARCH=amd64 ARCH="x86_64"
   - export BAZEL_VERSION="{{ $bazelVersions }}" USE_BAZEL_VERSION="{{ $bazelVersions }}"
   #- export BAZEL_BUILD_OPTS="--disk_cache=/tmp/bazel-cache --nofetch"
   - export BAZEL_BUILD_OPTS="--disk_cache=/tmp/bazel-cache"
@@ -107,6 +110,8 @@ shell:
   - sudo -u cilium sed -i 's/$(SUDO) apt info clang-17 || $(call add_clang_apt_source,$(shell lsb_release -cs))/rpm -q clang17.0/' Makefile
   - sudo -u cilium sed -i "/\$(SUDO) apt install -y clang-17 llvm-17-dev lld-17 clang-format-17/d" Makefile
   - sudo -u cilium sed -i '\#"/usr/include"#a \        "/usr/lib/llvm-17.0/lib64/clang/17/include",' bazel/toolchains/BUILD
+  - sudo -u cilium sed -i '\#"/usr/include"#a \        "/usr/bin/../lib64/gcc/x86_64-alt-linux/11",' bazel/toolchains/BUILD
+  - sudo -u cilium sed -i '28i build:clang --action_env=CCC_OVERRIDE_OPTIONS="^--gcc-install-dir=/usr/bin/../lib64/gcc/x86_64-alt-linux/11"' bazel/setup_clang.sh
   #
   #- sudo -u cilium PATH=${PATH} bazel fetch //:cilium-envoy-starter //:cilium-envoy
   #
