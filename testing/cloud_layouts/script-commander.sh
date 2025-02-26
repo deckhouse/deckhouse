@@ -282,9 +282,10 @@ function wait_upmeter_green() {
 
     all_ok=true
     while IFS= read -r line; do
-      echo "${line}"
-      availability=$(echo "$line" | cut -d':' -f2)
-      if [[ "$availability" != "1" ]]; then
+      service=$(echo "$line" | cut -d':' -f1)
+      availability=$(echo "$line" | cut -d':' -f2 | awk -F. '{printf "%.2f", $1"."$2}')
+      printf "%-50s %8s\n" "$service" "$availability"  # Выравнивание по правому краю второго столбца
+      if [[ "$availability" != "1.00" ]]; then
         all_ok=false
       fi
     done <<< "$statuses"
