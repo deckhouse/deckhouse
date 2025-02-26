@@ -23,6 +23,9 @@ properties:
   retentionPeriodHours:
     description: |
       Сколько часов логи будут храниться, прежде чем будут удалены.
+  maxLabelNamesPerSeries:
+    description: |
+      Максимальное количество лейблов в серии.
   storeSystemLogs:
     description: |
       Сохранять логи из пространства имен `d8-*` в loki.
