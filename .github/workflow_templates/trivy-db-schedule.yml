@@ -39,6 +39,7 @@ jobs:
         run: |
           rm -rf ./trivy-db
           git clone --depth 1 --branch flant-v2 ${{secrets.SOURCE_REPO_GIT}}/aquasecurity/trivy-db.git
+          docker logout ghcr.io
           cd trivy-db
           ./update.sh ${{secrets.DECKHOUSE_REGISTRY_HOST}}/deckhouse/ee 
           ./update.sh ${{secrets.DECKHOUSE_REGISTRY_HOST}}/deckhouse/fe 
@@ -63,6 +64,5 @@ jobs:
           LOOP_TOKEN: ${{secrets.LOOP_CVE_REPORTS_SEND_TOKEN}}
           LOOP_CHANNEL_ID: ${{secrets.LOOP_E2E_REPORT_CHANEL_ID}}
         run: |
-          echo Fail
-          # WORKFLOW_URL="${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}"
-          # bash ./.github/scripts/send-report.sh --message "🛑Trivy db shedule failure🛑\n[URL]($WORKFLOW_URL)"
+          WORKFLOW_URL="${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}"
+          bash ./.github/scripts/send-report.sh --message "🛑Trivy db shedule failure🛑\n[URL]($WORKFLOW_URL)"
