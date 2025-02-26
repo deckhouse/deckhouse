@@ -1,4 +1,4 @@
-// Copyright 2023 Flant JSC
+// Copyright 2025 Flant JSC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -77,18 +77,18 @@ func setupCompleteClientOne(mc *minimock.Controller) Client {
 	client.NameMock.Return("clientOne")
 	client.ModulesMock.Return([]string{"console", "parca"}, nil)
 
-	client.ListTagsMock.When("console").Then([]string{"alpha", "beta"}, nil)
-	client.ListTagsMock.When("parca").Then([]string{"rock-solid", "stable"}, nil)
+	client.ListTagsMock.When(minimock.AnyContext, "console").Then([]string{"alpha", "beta"}, nil)
+	client.ListTagsMock.When(minimock.AnyContext, "parca").Then([]string{"rock-solid", "stable"}, nil)
 
-	client.ReleaseImageMock.When("console", "alpha").Then(images["console"]["1.2.3"], nil)
-	client.ReleaseImageMock.When("console", "beta").Then(images["console"]["2.2.3"], nil)
-	client.ReleaseImageMock.When("parca", "rock-solid").Then(images["parca"]["2.3.4"], nil)
-	client.ReleaseImageMock.When("parca", "stable").Then(images["parca"]["3.3.4"], nil)
+	client.ReleaseImageMock.When(minimock.AnyContext, "console", "alpha").Then(images["console"]["1.2.3"], nil)
+	client.ReleaseImageMock.When(minimock.AnyContext, "console", "beta").Then(images["console"]["2.2.3"], nil)
+	client.ReleaseImageMock.When(minimock.AnyContext, "parca", "rock-solid").Then(images["parca"]["2.3.4"], nil)
+	client.ReleaseImageMock.When(minimock.AnyContext, "parca", "stable").Then(images["parca"]["3.3.4"], nil)
 
-	client.ImageMock.When("console", "1.2.3").Then(images["console"]["1.2.3"], nil)
-	client.ImageMock.When("console", "2.2.3").Then(images["console"]["2.2.3"], nil)
-	client.ImageMock.When("parca", "2.3.4").Then(images["parca"]["2.3.4"], nil)
-	client.ImageMock.When("parca", "3.3.4").Then(images["parca"]["3.3.4"], nil)
+	client.ImageMock.When(minimock.AnyContext, "console", "1.2.3").Then(images["console"]["1.2.3"], nil)
+	client.ImageMock.When(minimock.AnyContext, "console", "2.2.3").Then(images["console"]["2.2.3"], nil)
+	client.ImageMock.When(minimock.AnyContext, "parca", "2.3.4").Then(images["parca"]["2.3.4"], nil)
+	client.ImageMock.When(minimock.AnyContext, "parca", "3.3.4").Then(images["parca"]["3.3.4"], nil)
 
 	return client
 }
@@ -107,11 +107,11 @@ func setupRemovedImagesClientOne(mc *minimock.Controller) Client {
 	client.NameMock.Return("clientOne")
 	client.ModulesMock.Return([]string{"console", "parca"}, nil)
 
-	client.ListTagsMock.When("console").Then([]string{"alpha"}, nil)
-	client.ListTagsMock.When("parca").Then([]string{"rock-solid"}, nil)
+	client.ListTagsMock.When(minimock.AnyContext, "console").Then([]string{"alpha"}, nil)
+	client.ListTagsMock.When(minimock.AnyContext, "parca").Then([]string{"rock-solid"}, nil)
 
-	client.ReleaseImageMock.When("console", "alpha").Then(images["console"]["1.2.3"], nil)
-	client.ReleaseImageMock.When("parca", "rock-solid").Then(images["parca"]["2.3.4"], nil)
+	client.ReleaseImageMock.When(minimock.AnyContext, "console", "alpha").Then(images["console"]["1.2.3"], nil)
+	client.ReleaseImageMock.When(minimock.AnyContext, "parca", "rock-solid").Then(images["parca"]["2.3.4"], nil)
 
 	return client
 }
@@ -131,17 +131,17 @@ func setupCompleteClientTwo(mc *minimock.Controller) Client {
 	client.NameMock.Return("clientTwo")
 	client.ModulesMock.Return([]string{"console", "parca"}, nil)
 
-	client.ListTagsMock.When("console").Then([]string{"alpha", "beta"}, nil)
-	client.ListTagsMock.When("parca").Then([]string{"rock-solid", "stable"}, nil)
+	client.ListTagsMock.When(minimock.AnyContext, "console").Then([]string{"alpha", "beta"}, nil)
+	client.ListTagsMock.When(minimock.AnyContext, "parca").Then([]string{"rock-solid", "stable"}, nil)
 
-	client.ReleaseImageMock.When("console", "alpha").Then(images["console"]["3.4.5"], nil)
-	client.ReleaseImageMock.When("console", "beta").Then(images["console"]["4.4.5"], nil)
-	client.ReleaseImageMock.When("parca", "rock-solid").Then(images["parca"]["4.5.6"], nil)
-	client.ReleaseImageMock.When("parca", "stable").Then(images["parca"]["4.5.6"], nil)
+	client.ReleaseImageMock.When(minimock.AnyContext, "console", "alpha").Then(images["console"]["3.4.5"], nil)
+	client.ReleaseImageMock.When(minimock.AnyContext, "console", "beta").Then(images["console"]["4.4.5"], nil)
+	client.ReleaseImageMock.When(minimock.AnyContext, "parca", "rock-solid").Then(images["parca"]["4.5.6"], nil)
+	client.ReleaseImageMock.When(minimock.AnyContext, "parca", "stable").Then(images["parca"]["4.5.6"], nil)
 
-	client.ImageMock.When("console", "3.4.5").Then(images["console"]["3.4.5"], nil)
-	client.ImageMock.When("console", "4.4.5").Then(images["console"]["4.4.5"], nil)
-	client.ImageMock.When("parca", "4.5.6").Then(images["parca"]["4.5.6"], nil)
+	client.ImageMock.When(minimock.AnyContext, "console", "3.4.5").Then(images["console"]["3.4.5"], nil)
+	client.ImageMock.When(minimock.AnyContext, "console", "4.4.5").Then(images["console"]["4.4.5"], nil)
+	client.ImageMock.When(minimock.AnyContext, "parca", "4.5.6").Then(images["parca"]["4.5.6"], nil)
 
 	return client
 }
@@ -160,11 +160,11 @@ func setupRemovedImagesClientTwo(mc *minimock.Controller) Client {
 	client.NameMock.Return("clientTwo")
 	client.ModulesMock.Return([]string{"console", "parca"}, nil)
 
-	client.ListTagsMock.When("console").Then([]string{"alpha"}, nil)
-	client.ListTagsMock.When("parca").Then([]string{"rock-solid"}, nil)
+	client.ListTagsMock.When(minimock.AnyContext, "console").Then([]string{"alpha"}, nil)
+	client.ListTagsMock.When(minimock.AnyContext, "parca").Then([]string{"rock-solid"}, nil)
 
-	client.ReleaseImageMock.When("console", "alpha").Then(images["console"]["3.4.5"], nil)
-	client.ReleaseImageMock.When("parca", "rock-solid").Then(images["parca"]["4.5.6"], nil)
+	client.ReleaseImageMock.When(minimock.AnyContext, "console", "alpha").Then(images["console"]["3.4.5"], nil)
+	client.ReleaseImageMock.When(minimock.AnyContext, "parca", "rock-solid").Then(images["parca"]["4.5.6"], nil)
 
 	return client
 }

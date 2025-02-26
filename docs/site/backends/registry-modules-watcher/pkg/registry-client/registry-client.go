@@ -15,6 +15,7 @@
 package registryclient
 
 import (
+	"context"
 	"fmt"
 	registryscaner "registry-modules-watcher/internal/backends/pkg/registry-scaner"
 
@@ -66,19 +67,19 @@ func (c *client) Name() string {
 	return c.registryURL
 }
 
-func (c *client) ReleaseImage(moduleName, tag string) (v1.Image, error) {
+func (c *client) ReleaseImage(ctx context.Context, moduleName, tag string) (v1.Image, error) {
 	imageURL := c.registryURL + "/" + moduleName + "/release" + ":" + tag
 
-	return c.image(imageURL)
+	return c.image(ctx, imageURL)
 }
 
-func (c *client) Image(moduleName, tag string) (v1.Image, error) {
+func (c *client) Image(ctx context.Context, moduleName, tag string) (v1.Image, error) {
 	imageURL := c.registryURL + "/" + moduleName + ":" + tag
 
-	return c.image(imageURL)
+	return c.image(ctx, imageURL)
 }
 
-func (c *client) image(imageURL string) (v1.Image, error) {
+func (c *client) image(ctx context.Context, imageURL string) (v1.Image, error) {
 	var nameOpts []name.Option
 
 	ref, err := name.ParseReference(imageURL, nameOpts...) // parse options available: weak validation, etc.
@@ -91,29 +92,33 @@ func (c *client) image(imageURL string) (v1.Image, error) {
 		imageOptions = append(imageOptions, remote.WithAuth(authn.FromConfig(c.authConfig)))
 	}
 
+	imageOptions = append(imageOptions, remote.WithContext(ctx))
+
 	return remote.Image(
 		ref,
 		imageOptions...,
 	)
 }
 
-func (c *client) Modules() ([]string, error) {
-	return c.list(c.registryURL)
+func (c *client) Modules(ctx context.Context) ([]string, error) {
+	return c.list(ctx, c.registryURL)
 }
 
-func (c *client) ListTags(moduleName string) ([]string, error) {
+func (c *client) ListTags(ctx context.Context, moduleName string) ([]string, error) {
 	listTagsUrl := c.registryURL + "/" + moduleName + "/release"
 
-	return c.list(listTagsUrl)
+	return c.list(ctx, listTagsUrl)
 }
 
-func (c *client) list(url string) ([]string, error) {
+func (c *client) list(ctx context.Context, url string) ([]string, error) {
 	var nameOpts []name.Option
 
 	imageOptions := make([]remote.Option, 0)
 	if !c.options.withoutAuth {
 		imageOptions = append(imageOptions, remote.WithAuth(authn.FromConfig(c.authConfig)))
 	}
+
+	imageOptions = append(imageOptions, remote.WithContext(ctx))
 
 	repo, err := name.NewRepository(url, nameOpts...)
 	if err != nil {

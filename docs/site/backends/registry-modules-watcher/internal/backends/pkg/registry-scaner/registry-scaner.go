@@ -26,10 +26,10 @@ import (
 
 type Client interface {
 	Name() string
-	ReleaseImage(moduleName, releaseChannel string) (v1.Image, error)
-	Image(moduleName, version string) (v1.Image, error)
-	ListTags(moduleName string) ([]string, error)
-	Modules() ([]string, error)
+	ReleaseImage(ctx context.Context, moduleName, releaseChannel string) (v1.Image, error)
+	Image(ctx context.Context, moduleName, version string) (v1.Image, error)
+	ListTags(ctx context.Context, moduleName string) ([]string, error)
+	Modules(ctx context.Context) ([]string, error)
 }
 
 type registryscaner struct {

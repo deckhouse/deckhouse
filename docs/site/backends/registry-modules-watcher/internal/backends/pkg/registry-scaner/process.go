@@ -35,7 +35,7 @@ func (s *registryscaner) processRegistries(ctx context.Context) {
 	s.logger.Info("start scanning registries")
 
 	for _, registry := range s.registryClients {
-		modules, err := registry.Modules()
+		modules, err := registry.Modules(ctx)
 		if err != nil {
 			s.logger.Error("registry is unavailable", slog.String("registry", registry.Name()), log.Err(err))
 			continue
@@ -49,7 +49,7 @@ func (s *registryscaner) processRegistries(ctx context.Context) {
 
 func (s *registryscaner) processModules(ctx context.Context, registry Client, modules []string) {
 	for _, module := range modules {
-		tags, err := registry.ListTags(module)
+		tags, err := registry.ListTags(ctx, module)
 		if err != nil {
 			s.logger.Error("list tags", log.Err(err))
 			continue
@@ -60,69 +60,79 @@ func (s *registryscaner) processModules(ctx context.Context, registry Client, mo
 }
 
 func (s *registryscaner) processReleaseChannels(ctx context.Context, registry, module string, releaseChannels []string) {
-	vers := make([]internal.VersionData, 0, len(releaseChannels))
+	versions := make([]internal.VersionData, 0, len(releaseChannels))
 
 	for _, releaseChannel := range releaseChannels {
-		releaseImage, err := s.registryClients[registry].ReleaseImage(module, releaseChannel)
+		versionData, err := s.processReleaseChannel(ctx, registry, module, releaseChannel)
 		if err != nil {
-			s.logger.Error("get releae image", log.Err(err))
+			s.logger.Error("failed to process release channel",
+				slog.String("registry", registry),
+				slog.String("module", module),
+				slog.String("channel", releaseChannel),
+				log.Err(err))
 			continue
 		}
 
-		// if the checksum for the release channel matches - skip processing of the release channel
-		releaseDigest, err := releaseImage.Digest()
-		if err != nil {
-			s.logger.Error("get digest", log.Err(err))
-			continue
+		if versionData != nil {
+			versions = append(versions, *versionData)
 		}
-
-		ver := internal.VersionData{
-			Registry:       registry,
-			ModuleName:     module,
-			ReleaseChannel: releaseChannel,
-			Checksum:       releaseDigest.String(),
-			Version:        "",
-			TarFile:        make([]byte, 0),
-			TarLen:         0,
-			Image:          releaseImage,
-		}
-
-		releaseChecksum, ok := s.cache.GetReleaseChecksum(ver)
-		if ok && releaseChecksum == ver.Checksum {
-			version, tarFile, ok := s.cache.GetReleaseVersionData(ver)
-			if ok {
-				ver.Version = version
-				ver.TarFile = tarFile
-
-				vers = append(vers, ver)
-			}
-
-			continue
-		}
-
-		version, err := extractVersionFromImage(ver.Image)
-		if err != nil {
-			s.logger.Error("extract version from image", log.Err(err))
-			continue
-		}
-
-		ver.Version = version
-
-		tarFile, err := s.extractTar(ver)
-		if err != nil {
-			s.logger.Error("extract tar", log.Err(err))
-			continue
-		}
-
-		ver.TarFile = tarFile
-
-		vers = append(vers, ver)
 	}
 
-	for _, ver := range vers {
+	// Update cache with processed versions
+	for _, ver := range versions {
 		s.cache.SetTar(ver)
 		s.cache.SetReleaseChecksum(ver)
 	}
+}
+
+func (s *registryscaner) processReleaseChannel(ctx context.Context, registry, module, releaseChannel string) (*internal.VersionData, error) {
+	releaseImage, err := s.registryClients[registry].ReleaseImage(ctx, module, releaseChannel)
+	if err != nil {
+		return nil, fmt.Errorf("get release image: %w", err)
+	}
+
+	releaseDigest, err := releaseImage.Digest()
+	if err != nil {
+		return nil, fmt.Errorf("get digest: %w", err)
+	}
+
+	versionData := &internal.VersionData{
+		Registry:       registry,
+		ModuleName:     module,
+		ReleaseChannel: releaseChannel,
+		Checksum:       releaseDigest.String(),
+		Version:        "",
+		TarFile:        make([]byte, 0),
+		TarLen:         0,
+		Image:          releaseImage,
+	}
+
+	// Check if we already have this release in cache
+	releaseChecksum, ok := s.cache.GetReleaseChecksum(*versionData)
+	if ok && releaseChecksum == versionData.Checksum {
+		version, tarFile, ok := s.cache.GetReleaseVersionData(*versionData)
+		if ok {
+			versionData.Version = version
+			versionData.TarFile = tarFile
+			return versionData, nil
+		}
+	}
+
+	// Extract version from image
+	version, err := extractVersionFromImage(versionData.Image)
+	if err != nil {
+		return nil, fmt.Errorf("extract version from image: %w", err)
+	}
+	versionData.Version = version
+
+	// Extract tar file
+	tarFile, err := s.extractTar(ctx, *versionData)
+	if err != nil {
+		return nil, fmt.Errorf("extract tar: %w", err)
+	}
+	versionData.TarFile = tarFile
+
+	return versionData, nil
 }
 
 // cache is populated
@@ -133,8 +143,8 @@ func (s *registryscaner) processReleaseChannels(ctx context.Context, registry, m
 // 1.2.4
 // 1.2.5
 // 1.2.6 was not found and added to the list (needs to be added)
-func (s *registryscaner) extractTar(version internal.VersionData) ([]byte, error) {
-	image, err := s.registryClients[version.Registry].Image(version.ModuleName, version.Version)
+func (s *registryscaner) extractTar(ctx context.Context, version internal.VersionData) ([]byte, error) {
+	image, err := s.registryClients[version.Registry].Image(ctx, version.ModuleName, version.Version)
 	if err != nil {
 		s.logger.Error("get image", log.Err(err))
 		return nil, err
@@ -148,7 +158,6 @@ func (s *registryscaner) extractTar(version internal.VersionData) ([]byte, error
 
 	return tarFile, nil
 }
-
 func (s *registryscaner) extractDocumentation(image v1.Image) ([]byte, error) {
 	readCloser, err := cr.Extract(image)
 	if err != nil {
@@ -158,97 +167,57 @@ func (s *registryscaner) extractDocumentation(image v1.Image) ([]byte, error) {
 
 	tarFile := bytes.NewBuffer(nil)
 	tarWriter := tar.NewWriter(tarFile)
+	defer tarWriter.Close()
 	tarReader := tar.NewReader(readCloser)
 
-	// "docs" directory
-	err = tarWriter.WriteHeader(&tar.Header{
-		Typeflag: tar.TypeDir,
-		Name:     "docs",
-		Mode:     0700,
-	})
-	if err != nil {
-		s.logger.Error("write header", log.Err(err))
-		return nil, err
+	// Create directories
+	dirs := []string{"docs", "openapi", "crds"}
+	for _, dir := range dirs {
+		if err := tarWriter.WriteHeader(&tar.Header{
+			Typeflag: tar.TypeDir,
+			Name:     dir,
+			Mode:     0700,
+		}); err != nil {
+			return nil, fmt.Errorf("write directory header for %s: %w", dir, err)
+		}
 	}
 
-	// "openapi" directory
-	err = tarWriter.WriteHeader(&tar.Header{
-		Typeflag: tar.TypeDir,
-		Name:     "openapi",
-		Mode:     0700,
-	})
-	if err != nil {
-		s.logger.Error("write header", log.Err(err))
-		return nil, err
-	}
-
-	// "crds" directory
-	err = tarWriter.WriteHeader(&tar.Header{
-		Typeflag: tar.TypeDir,
-		Name:     "crds",
-		Mode:     0700,
-	})
-	if err != nil {
-		s.logger.Error("write header", log.Err(err))
-		return nil, err
-	}
-
+	// Copy files from source tar to destination tar
 	for {
 		hdr, err := tarReader.Next()
 		if err != nil {
 			if err == io.EOF {
-				return tarFile.Bytes(), nil
+				break
 			}
-
 			return nil, err
 		}
 
-		// TODO: short duplicate
-		if strings.Contains(hdr.Name, "docs/") {
-			buf := bytes.NewBuffer(nil)
-			if _, err := io.Copy(buf, tarReader); err != nil {
-				s.logger.Error("copy", log.Err(err))
-			}
-
-			if err := tarWriter.WriteHeader(hdr); err != nil {
-				s.logger.Error("write header", log.Err(err))
-			}
-
-			if _, err := tarWriter.Write(buf.Bytes()); err != nil {
-				s.logger.Error("write", log.Err(err))
+		// Check if file belongs to one of our target directories
+		shouldCopy := false
+		for _, dir := range dirs {
+			if strings.Contains(hdr.Name, dir+"/") {
+				shouldCopy = true
+				break
 			}
 		}
 
-		if strings.Contains(hdr.Name, "openapi/") {
+		if shouldCopy {
 			buf := bytes.NewBuffer(nil)
 			if _, err := io.Copy(buf, tarReader); err != nil {
-				s.logger.Error("copy", log.Err(err))
+				return nil, fmt.Errorf("copy file content: %w", err)
 			}
 
 			if err := tarWriter.WriteHeader(hdr); err != nil {
-				s.logger.Error("write header", log.Err(err))
+				return nil, fmt.Errorf("write file header: %w", err)
 			}
 
 			if _, err := tarWriter.Write(buf.Bytes()); err != nil {
-				s.logger.Error("write", log.Err(err))
-			}
-		}
-
-		if strings.Contains(hdr.Name, "crds/") {
-			buf := bytes.NewBuffer(nil)
-			if _, err := io.Copy(buf, tarReader); err != nil {
-				s.logger.Error("copy", log.Err(err))
-			}
-
-			if err := tarWriter.WriteHeader(hdr); err != nil {
-				s.logger.Error("write header", log.Err(err))
-			}
-
-			if _, err := tarWriter.Write(buf.Bytes()); err != nil {
-				s.logger.Error("write", log.Err(err))
+				return nil, fmt.Errorf("write file content: %w", err)
 			}
 		}
 	}
+
+	return tarFile.Bytes(), nil
 }
 
 func extractVersionFromImage(releaseImage v1.Image) (string, error) {

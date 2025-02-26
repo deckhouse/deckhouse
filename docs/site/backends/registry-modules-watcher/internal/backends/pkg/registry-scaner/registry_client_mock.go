@@ -5,6 +5,7 @@ package registryscaner
 //go:generate minimock -i registry-modules-watcher/internal/backends/pkg/registry-scaner.Client -o registry_client_mock.go -n ClientMock -p registryscaner
 
 import (
+	"context"
 	"sync"
 	mm_atomic "sync/atomic"
 	mm_time "time"
@@ -18,23 +19,23 @@ type ClientMock struct {
 	t          minimock.Tester
 	finishOnce sync.Once
 
-	funcImage          func(moduleName string, version string) (i1 v1.Image, err error)
+	funcImage          func(ctx context.Context, moduleName string, version string) (i1 v1.Image, err error)
 	funcImageOrigin    string
-	inspectFuncImage   func(moduleName string, version string)
+	inspectFuncImage   func(ctx context.Context, moduleName string, version string)
 	afterImageCounter  uint64
 	beforeImageCounter uint64
 	ImageMock          mClientMockImage
 
-	funcListTags          func(moduleName string) (sa1 []string, err error)
+	funcListTags          func(ctx context.Context, moduleName string) (sa1 []string, err error)
 	funcListTagsOrigin    string
-	inspectFuncListTags   func(moduleName string)
+	inspectFuncListTags   func(ctx context.Context, moduleName string)
 	afterListTagsCounter  uint64
 	beforeListTagsCounter uint64
 	ListTagsMock          mClientMockListTags
 
-	funcModules          func() (sa1 []string, err error)
+	funcModules          func(ctx context.Context) (sa1 []string, err error)
 	funcModulesOrigin    string
-	inspectFuncModules   func()
+	inspectFuncModules   func(ctx context.Context)
 	afterModulesCounter  uint64
 	beforeModulesCounter uint64
 	ModulesMock          mClientMockModules
@@ -46,9 +47,9 @@ type ClientMock struct {
 	beforeNameCounter uint64
 	NameMock          mClientMockName
 
-	funcReleaseImage          func(moduleName string, releaseChannel string) (i1 v1.Image, err error)
+	funcReleaseImage          func(ctx context.Context, moduleName string, releaseChannel string) (i1 v1.Image, err error)
 	funcReleaseImageOrigin    string
-	inspectFuncReleaseImage   func(moduleName string, releaseChannel string)
+	inspectFuncReleaseImage   func(ctx context.Context, moduleName string, releaseChannel string)
 	afterReleaseImageCounter  uint64
 	beforeReleaseImageCounter uint64
 	ReleaseImageMock          mClientMockReleaseImage
@@ -69,6 +70,7 @@ func NewClientMock(t minimock.Tester) *ClientMock {
 	m.ListTagsMock.callArgs = []*ClientMockListTagsParams{}
 
 	m.ModulesMock = mClientMockModules{mock: m}
+	m.ModulesMock.callArgs = []*ClientMockModulesParams{}
 
 	m.NameMock = mClientMockName{mock: m}
 
@@ -106,12 +108,14 @@ type ClientMockImageExpectation struct {
 
 // ClientMockImageParams contains parameters of the Client.Image
 type ClientMockImageParams struct {
+	ctx        context.Context
 	moduleName string
 	version    string
 }
 
 // ClientMockImageParamPtrs contains pointers to parameters of the Client.Image
 type ClientMockImageParamPtrs struct {
+	ctx        *context.Context
 	moduleName *string
 	version    *string
 }
@@ -125,6 +129,7 @@ type ClientMockImageResults struct {
 // ClientMockImageOrigins contains origins of expectations of the Client.Image
 type ClientMockImageExpectationOrigins struct {
 	origin           string
+	originCtx        string
 	originModuleName string
 	originVersion    string
 }
@@ -140,7 +145,7 @@ func (mmImage *mClientMockImage) Optional() *mClientMockImage {
 }
 
 // Expect sets up expected params for Client.Image
-func (mmImage *mClientMockImage) Expect(moduleName string, version string) *mClientMockImage {
+func (mmImage *mClientMockImage) Expect(ctx context.Context, moduleName string, version string) *mClientMockImage {
 	if mmImage.mock.funcImage != nil {
 		mmImage.mock.t.Fatalf("ClientMock.Image mock is already set by Set")
 	}
@@ -153,7 +158,7 @@ func (mmImage *mClientMockImage) Expect(moduleName string, version string) *mCli
 		mmImage.mock.t.Fatalf("ClientMock.Image mock is already set by ExpectParams functions")
 	}
 
-	mmImage.defaultExpectation.params = &ClientMockImageParams{moduleName, version}
+	mmImage.defaultExpectation.params = &ClientMockImageParams{ctx, moduleName, version}
 	mmImage.defaultExpectation.expectationOrigins.origin = minimock.CallerInfo(1)
 	for _, e := range mmImage.expectations {
 		if minimock.Equal(e.params, mmImage.defaultExpectation.params) {
@@ -164,8 +169,31 @@ func (mmImage *mClientMockImage) Expect(moduleName string, version string) *mCli
 	return mmImage
 }
 
-// ExpectModuleNameParam1 sets up expected param moduleName for Client.Image
-func (mmImage *mClientMockImage) ExpectModuleNameParam1(moduleName string) *mClientMockImage {
+// ExpectCtxParam1 sets up expected param ctx for Client.Image
+func (mmImage *mClientMockImage) ExpectCtxParam1(ctx context.Context) *mClientMockImage {
+	if mmImage.mock.funcImage != nil {
+		mmImage.mock.t.Fatalf("ClientMock.Image mock is already set by Set")
+	}
+
+	if mmImage.defaultExpectation == nil {
+		mmImage.defaultExpectation = &ClientMockImageExpectation{}
+	}
+
+	if mmImage.defaultExpectation.params != nil {
+		mmImage.mock.t.Fatalf("ClientMock.Image mock is already set by Expect")
+	}
+
+	if mmImage.defaultExpectation.paramPtrs == nil {
+		mmImage.defaultExpectation.paramPtrs = &ClientMockImageParamPtrs{}
+	}
+	mmImage.defaultExpectation.paramPtrs.ctx = &ctx
+	mmImage.defaultExpectation.expectationOrigins.originCtx = minimock.CallerInfo(1)
+
+	return mmImage
+}
+
+// ExpectModuleNameParam2 sets up expected param moduleName for Client.Image
+func (mmImage *mClientMockImage) ExpectModuleNameParam2(moduleName string) *mClientMockImage {
 	if mmImage.mock.funcImage != nil {
 		mmImage.mock.t.Fatalf("ClientMock.Image mock is already set by Set")
 	}
@@ -187,8 +215,8 @@ func (mmImage *mClientMockImage) ExpectModuleNameParam1(moduleName string) *mCli
 	return mmImage
 }
 
-// ExpectVersionParam2 sets up expected param version for Client.Image
-func (mmImage *mClientMockImage) ExpectVersionParam2(version string) *mClientMockImage {
+// ExpectVersionParam3 sets up expected param version for Client.Image
+func (mmImage *mClientMockImage) ExpectVersionParam3(version string) *mClientMockImage {
 	if mmImage.mock.funcImage != nil {
 		mmImage.mock.t.Fatalf("ClientMock.Image mock is already set by Set")
 	}
@@ -211,7 +239,7 @@ func (mmImage *mClientMockImage) ExpectVersionParam2(version string) *mClientMoc
 }
 
 // Inspect accepts an inspector function that has same arguments as the Client.Image
-func (mmImage *mClientMockImage) Inspect(f func(moduleName string, version string)) *mClientMockImage {
+func (mmImage *mClientMockImage) Inspect(f func(ctx context.Context, moduleName string, version string)) *mClientMockImage {
 	if mmImage.mock.inspectFuncImage != nil {
 		mmImage.mock.t.Fatalf("Inspect function is already set for ClientMock.Image")
 	}
@@ -236,7 +264,7 @@ func (mmImage *mClientMockImage) Return(i1 v1.Image, err error) *ClientMock {
 }
 
 // Set uses given function f to mock the Client.Image method
-func (mmImage *mClientMockImage) Set(f func(moduleName string, version string) (i1 v1.Image, err error)) *ClientMock {
+func (mmImage *mClientMockImage) Set(f func(ctx context.Context, moduleName string, version string) (i1 v1.Image, err error)) *ClientMock {
 	if mmImage.defaultExpectation != nil {
 		mmImage.mock.t.Fatalf("Default expectation is already set for the Client.Image method")
 	}
@@ -252,14 +280,14 @@ func (mmImage *mClientMockImage) Set(f func(moduleName string, version string) (
 
 // When sets expectation for the Client.Image which will trigger the result defined by the following
 // Then helper
-func (mmImage *mClientMockImage) When(moduleName string, version string) *ClientMockImageExpectation {
+func (mmImage *mClientMockImage) When(ctx context.Context, moduleName string, version string) *ClientMockImageExpectation {
 	if mmImage.mock.funcImage != nil {
 		mmImage.mock.t.Fatalf("ClientMock.Image mock is already set by Set")
 	}
 
 	expectation := &ClientMockImageExpectation{
 		mock:               mmImage.mock,
-		params:             &ClientMockImageParams{moduleName, version},
+		params:             &ClientMockImageParams{ctx, moduleName, version},
 		expectationOrigins: ClientMockImageExpectationOrigins{origin: minimock.CallerInfo(1)},
 	}
 	mmImage.expectations = append(mmImage.expectations, expectation)
@@ -294,17 +322,17 @@ func (mmImage *mClientMockImage) invocationsDone() bool {
 }
 
 // Image implements Client
-func (mmImage *ClientMock) Image(moduleName string, version string) (i1 v1.Image, err error) {
+func (mmImage *ClientMock) Image(ctx context.Context, moduleName string, version string) (i1 v1.Image, err error) {
 	mm_atomic.AddUint64(&mmImage.beforeImageCounter, 1)
 	defer mm_atomic.AddUint64(&mmImage.afterImageCounter, 1)
 
 	mmImage.t.Helper()
 
 	if mmImage.inspectFuncImage != nil {
-		mmImage.inspectFuncImage(moduleName, version)
+		mmImage.inspectFuncImage(ctx, moduleName, version)
 	}
 
-	mm_params := ClientMockImageParams{moduleName, version}
+	mm_params := ClientMockImageParams{ctx, moduleName, version}
 
 	// Record call args
 	mmImage.ImageMock.mutex.Lock()
@@ -323,9 +351,14 @@ func (mmImage *ClientMock) Image(moduleName string, version string) (i1 v1.Image
 		mm_want := mmImage.ImageMock.defaultExpectation.params
 		mm_want_ptrs := mmImage.ImageMock.defaultExpectation.paramPtrs
 
-		mm_got := ClientMockImageParams{moduleName, version}
+		mm_got := ClientMockImageParams{ctx, moduleName, version}
 
 		if mm_want_ptrs != nil {
+
+			if mm_want_ptrs.ctx != nil && !minimock.Equal(*mm_want_ptrs.ctx, mm_got.ctx) {
+				mmImage.t.Errorf("ClientMock.Image got unexpected parameter ctx, expected at\n%s:\nwant: %#v\n got: %#v%s\n",
+					mmImage.ImageMock.defaultExpectation.expectationOrigins.originCtx, *mm_want_ptrs.ctx, mm_got.ctx, minimock.Diff(*mm_want_ptrs.ctx, mm_got.ctx))
+			}
 
 			if mm_want_ptrs.moduleName != nil && !minimock.Equal(*mm_want_ptrs.moduleName, mm_got.moduleName) {
 				mmImage.t.Errorf("ClientMock.Image got unexpected parameter moduleName, expected at\n%s:\nwant: %#v\n got: %#v%s\n",
@@ -349,9 +382,9 @@ func (mmImage *ClientMock) Image(moduleName string, version string) (i1 v1.Image
 		return (*mm_results).i1, (*mm_results).err
 	}
 	if mmImage.funcImage != nil {
-		return mmImage.funcImage(moduleName, version)
+		return mmImage.funcImage(ctx, moduleName, version)
 	}
-	mmImage.t.Fatalf("Unexpected call to ClientMock.Image. %v %v", moduleName, version)
+	mmImage.t.Fatalf("Unexpected call to ClientMock.Image. %v %v %v", ctx, moduleName, version)
 	return
 }
 
@@ -449,11 +482,13 @@ type ClientMockListTagsExpectation struct {
 
 // ClientMockListTagsParams contains parameters of the Client.ListTags
 type ClientMockListTagsParams struct {
+	ctx        context.Context
 	moduleName string
 }
 
 // ClientMockListTagsParamPtrs contains pointers to parameters of the Client.ListTags
 type ClientMockListTagsParamPtrs struct {
+	ctx        *context.Context
 	moduleName *string
 }
 
@@ -466,6 +501,7 @@ type ClientMockListTagsResults struct {
 // ClientMockListTagsOrigins contains origins of expectations of the Client.ListTags
 type ClientMockListTagsExpectationOrigins struct {
 	origin           string
+	originCtx        string
 	originModuleName string
 }
 
@@ -480,7 +516,7 @@ func (mmListTags *mClientMockListTags) Optional() *mClientMockListTags {
 }
 
 // Expect sets up expected params for Client.ListTags
-func (mmListTags *mClientMockListTags) Expect(moduleName string) *mClientMockListTags {
+func (mmListTags *mClientMockListTags) Expect(ctx context.Context, moduleName string) *mClientMockListTags {
 	if mmListTags.mock.funcListTags != nil {
 		mmListTags.mock.t.Fatalf("ClientMock.ListTags mock is already set by Set")
 	}
@@ -493,7 +529,7 @@ func (mmListTags *mClientMockListTags) Expect(moduleName string) *mClientMockLis
 		mmListTags.mock.t.Fatalf("ClientMock.ListTags mock is already set by ExpectParams functions")
 	}
 
-	mmListTags.defaultExpectation.params = &ClientMockListTagsParams{moduleName}
+	mmListTags.defaultExpectation.params = &ClientMockListTagsParams{ctx, moduleName}
 	mmListTags.defaultExpectation.expectationOrigins.origin = minimock.CallerInfo(1)
 	for _, e := range mmListTags.expectations {
 		if minimock.Equal(e.params, mmListTags.defaultExpectation.params) {
@@ -504,8 +540,31 @@ func (mmListTags *mClientMockListTags) Expect(moduleName string) *mClientMockLis
 	return mmListTags
 }
 
-// ExpectModuleNameParam1 sets up expected param moduleName for Client.ListTags
-func (mmListTags *mClientMockListTags) ExpectModuleNameParam1(moduleName string) *mClientMockListTags {
+// ExpectCtxParam1 sets up expected param ctx for Client.ListTags
+func (mmListTags *mClientMockListTags) ExpectCtxParam1(ctx context.Context) *mClientMockListTags {
+	if mmListTags.mock.funcListTags != nil {
+		mmListTags.mock.t.Fatalf("ClientMock.ListTags mock is already set by Set")
+	}
+
+	if mmListTags.defaultExpectation == nil {
+		mmListTags.defaultExpectation = &ClientMockListTagsExpectation{}
+	}
+
+	if mmListTags.defaultExpectation.params != nil {
+		mmListTags.mock.t.Fatalf("ClientMock.ListTags mock is already set by Expect")
+	}
+
+	if mmListTags.defaultExpectation.paramPtrs == nil {
+		mmListTags.defaultExpectation.paramPtrs = &ClientMockListTagsParamPtrs{}
+	}
+	mmListTags.defaultExpectation.paramPtrs.ctx = &ctx
+	mmListTags.defaultExpectation.expectationOrigins.originCtx = minimock.CallerInfo(1)
+
+	return mmListTags
+}
+
+// ExpectModuleNameParam2 sets up expected param moduleName for Client.ListTags
+func (mmListTags *mClientMockListTags) ExpectModuleNameParam2(moduleName string) *mClientMockListTags {
 	if mmListTags.mock.funcListTags != nil {
 		mmListTags.mock.t.Fatalf("ClientMock.ListTags mock is already set by Set")
 	}
@@ -528,7 +587,7 @@ func (mmListTags *mClientMockListTags) ExpectModuleNameParam1(moduleName string)
 }
 
 // Inspect accepts an inspector function that has same arguments as the Client.ListTags
-func (mmListTags *mClientMockListTags) Inspect(f func(moduleName string)) *mClientMockListTags {
+func (mmListTags *mClientMockListTags) Inspect(f func(ctx context.Context, moduleName string)) *mClientMockListTags {
 	if mmListTags.mock.inspectFuncListTags != nil {
 		mmListTags.mock.t.Fatalf("Inspect function is already set for ClientMock.ListTags")
 	}
@@ -553,7 +612,7 @@ func (mmListTags *mClientMockListTags) Return(sa1 []string, err error) *ClientMo
 }
 
 // Set uses given function f to mock the Client.ListTags method
-func (mmListTags *mClientMockListTags) Set(f func(moduleName string) (sa1 []string, err error)) *ClientMock {
+func (mmListTags *mClientMockListTags) Set(f func(ctx context.Context, moduleName string) (sa1 []string, err error)) *ClientMock {
 	if mmListTags.defaultExpectation != nil {
 		mmListTags.mock.t.Fatalf("Default expectation is already set for the Client.ListTags method")
 	}
@@ -569,14 +628,14 @@ func (mmListTags *mClientMockListTags) Set(f func(moduleName string) (sa1 []stri
 
 // When sets expectation for the Client.ListTags which will trigger the result defined by the following
 // Then helper
-func (mmListTags *mClientMockListTags) When(moduleName string) *ClientMockListTagsExpectation {
+func (mmListTags *mClientMockListTags) When(ctx context.Context, moduleName string) *ClientMockListTagsExpectation {
 	if mmListTags.mock.funcListTags != nil {
 		mmListTags.mock.t.Fatalf("ClientMock.ListTags mock is already set by Set")
 	}
 
 	expectation := &ClientMockListTagsExpectation{
 		mock:               mmListTags.mock,
-		params:             &ClientMockListTagsParams{moduleName},
+		params:             &ClientMockListTagsParams{ctx, moduleName},
 		expectationOrigins: ClientMockListTagsExpectationOrigins{origin: minimock.CallerInfo(1)},
 	}
 	mmListTags.expectations = append(mmListTags.expectations, expectation)
@@ -611,17 +670,17 @@ func (mmListTags *mClientMockListTags) invocationsDone() bool {
 }
 
 // ListTags implements Client
-func (mmListTags *ClientMock) ListTags(moduleName string) (sa1 []string, err error) {
+func (mmListTags *ClientMock) ListTags(ctx context.Context, moduleName string) (sa1 []string, err error) {
 	mm_atomic.AddUint64(&mmListTags.beforeListTagsCounter, 1)
 	defer mm_atomic.AddUint64(&mmListTags.afterListTagsCounter, 1)
 
 	mmListTags.t.Helper()
 
 	if mmListTags.inspectFuncListTags != nil {
-		mmListTags.inspectFuncListTags(moduleName)
+		mmListTags.inspectFuncListTags(ctx, moduleName)
 	}
 
-	mm_params := ClientMockListTagsParams{moduleName}
+	mm_params := ClientMockListTagsParams{ctx, moduleName}
 
 	// Record call args
 	mmListTags.ListTagsMock.mutex.Lock()
@@ -640,9 +699,14 @@ func (mmListTags *ClientMock) ListTags(moduleName string) (sa1 []string, err err
 		mm_want := mmListTags.ListTagsMock.defaultExpectation.params
 		mm_want_ptrs := mmListTags.ListTagsMock.defaultExpectation.paramPtrs
 
-		mm_got := ClientMockListTagsParams{moduleName}
+		mm_got := ClientMockListTagsParams{ctx, moduleName}
 
 		if mm_want_ptrs != nil {
+
+			if mm_want_ptrs.ctx != nil && !minimock.Equal(*mm_want_ptrs.ctx, mm_got.ctx) {
+				mmListTags.t.Errorf("ClientMock.ListTags got unexpected parameter ctx, expected at\n%s:\nwant: %#v\n got: %#v%s\n",
+					mmListTags.ListTagsMock.defaultExpectation.expectationOrigins.originCtx, *mm_want_ptrs.ctx, mm_got.ctx, minimock.Diff(*mm_want_ptrs.ctx, mm_got.ctx))
+			}
 
 			if mm_want_ptrs.moduleName != nil && !minimock.Equal(*mm_want_ptrs.moduleName, mm_got.moduleName) {
 				mmListTags.t.Errorf("ClientMock.ListTags got unexpected parameter moduleName, expected at\n%s:\nwant: %#v\n got: %#v%s\n",
@@ -661,9 +725,9 @@ func (mmListTags *ClientMock) ListTags(moduleName string) (sa1 []string, err err
 		return (*mm_results).sa1, (*mm_results).err
 	}
 	if mmListTags.funcListTags != nil {
-		return mmListTags.funcListTags(moduleName)
+		return mmListTags.funcListTags(ctx, moduleName)
 	}
-	mmListTags.t.Fatalf("Unexpected call to ClientMock.ListTags. %v", moduleName)
+	mmListTags.t.Fatalf("Unexpected call to ClientMock.ListTags. %v %v", ctx, moduleName)
 	return
 }
 
@@ -741,23 +805,44 @@ type mClientMockModules struct {
 	defaultExpectation *ClientMockModulesExpectation
 	expectations       []*ClientMockModulesExpectation
 
+	callArgs []*ClientMockModulesParams
+	mutex    sync.RWMutex
+
 	expectedInvocations       uint64
 	expectedInvocationsOrigin string
 }
 
 // ClientMockModulesExpectation specifies expectation struct of the Client.Modules
 type ClientMockModulesExpectation struct {
-	mock *ClientMock
+	mock               *ClientMock
+	params             *ClientMockModulesParams
+	paramPtrs          *ClientMockModulesParamPtrs
+	expectationOrigins ClientMockModulesExpectationOrigins
+	results            *ClientMockModulesResults
+	returnOrigin       string
+	Counter            uint64
+}
 
-	results      *ClientMockModulesResults
-	returnOrigin string
-	Counter      uint64
+// ClientMockModulesParams contains parameters of the Client.Modules
+type ClientMockModulesParams struct {
+	ctx context.Context
+}
+
+// ClientMockModulesParamPtrs contains pointers to parameters of the Client.Modules
+type ClientMockModulesParamPtrs struct {
+	ctx *context.Context
 }
 
 // ClientMockModulesResults contains results of the Client.Modules
 type ClientMockModulesResults struct {
 	sa1 []string
 	err error
+}
+
+// ClientMockModulesOrigins contains origins of expectations of the Client.Modules
+type ClientMockModulesExpectationOrigins struct {
+	origin    string
+	originCtx string
 }
 
 // Marks this method to be optional. The default behavior of any method with Return() is '1 or more', meaning
@@ -771,7 +856,7 @@ func (mmModules *mClientMockModules) Optional() *mClientMockModules {
 }
 
 // Expect sets up expected params for Client.Modules
-func (mmModules *mClientMockModules) Expect() *mClientMockModules {
+func (mmModules *mClientMockModules) Expect(ctx context.Context) *mClientMockModules {
 	if mmModules.mock.funcModules != nil {
 		mmModules.mock.t.Fatalf("ClientMock.Modules mock is already set by Set")
 	}
@@ -780,11 +865,46 @@ func (mmModules *mClientMockModules) Expect() *mClientMockModules {
 		mmModules.defaultExpectation = &ClientMockModulesExpectation{}
 	}
 
+	if mmModules.defaultExpectation.paramPtrs != nil {
+		mmModules.mock.t.Fatalf("ClientMock.Modules mock is already set by ExpectParams functions")
+	}
+
+	mmModules.defaultExpectation.params = &ClientMockModulesParams{ctx}
+	mmModules.defaultExpectation.expectationOrigins.origin = minimock.CallerInfo(1)
+	for _, e := range mmModules.expectations {
+		if minimock.Equal(e.params, mmModules.defaultExpectation.params) {
+			mmModules.mock.t.Fatalf("Expectation set by When has same params: %#v", *mmModules.defaultExpectation.params)
+		}
+	}
+
+	return mmModules
+}
+
+// ExpectCtxParam1 sets up expected param ctx for Client.Modules
+func (mmModules *mClientMockModules) ExpectCtxParam1(ctx context.Context) *mClientMockModules {
+	if mmModules.mock.funcModules != nil {
+		mmModules.mock.t.Fatalf("ClientMock.Modules mock is already set by Set")
+	}
+
+	if mmModules.defaultExpectation == nil {
+		mmModules.defaultExpectation = &ClientMockModulesExpectation{}
+	}
+
+	if mmModules.defaultExpectation.params != nil {
+		mmModules.mock.t.Fatalf("ClientMock.Modules mock is already set by Expect")
+	}
+
+	if mmModules.defaultExpectation.paramPtrs == nil {
+		mmModules.defaultExpectation.paramPtrs = &ClientMockModulesParamPtrs{}
+	}
+	mmModules.defaultExpectation.paramPtrs.ctx = &ctx
+	mmModules.defaultExpectation.expectationOrigins.originCtx = minimock.CallerInfo(1)
+
 	return mmModules
 }
 
 // Inspect accepts an inspector function that has same arguments as the Client.Modules
-func (mmModules *mClientMockModules) Inspect(f func()) *mClientMockModules {
+func (mmModules *mClientMockModules) Inspect(f func(ctx context.Context)) *mClientMockModules {
 	if mmModules.mock.inspectFuncModules != nil {
 		mmModules.mock.t.Fatalf("Inspect function is already set for ClientMock.Modules")
 	}
@@ -809,7 +929,7 @@ func (mmModules *mClientMockModules) Return(sa1 []string, err error) *ClientMock
 }
 
 // Set uses given function f to mock the Client.Modules method
-func (mmModules *mClientMockModules) Set(f func() (sa1 []string, err error)) *ClientMock {
+func (mmModules *mClientMockModules) Set(f func(ctx context.Context) (sa1 []string, err error)) *ClientMock {
 	if mmModules.defaultExpectation != nil {
 		mmModules.mock.t.Fatalf("Default expectation is already set for the Client.Modules method")
 	}
@@ -821,6 +941,28 @@ func (mmModules *mClientMockModules) Set(f func() (sa1 []string, err error)) *Cl
 	mmModules.mock.funcModules = f
 	mmModules.mock.funcModulesOrigin = minimock.CallerInfo(1)
 	return mmModules.mock
+}
+
+// When sets expectation for the Client.Modules which will trigger the result defined by the following
+// Then helper
+func (mmModules *mClientMockModules) When(ctx context.Context) *ClientMockModulesExpectation {
+	if mmModules.mock.funcModules != nil {
+		mmModules.mock.t.Fatalf("ClientMock.Modules mock is already set by Set")
+	}
+
+	expectation := &ClientMockModulesExpectation{
+		mock:               mmModules.mock,
+		params:             &ClientMockModulesParams{ctx},
+		expectationOrigins: ClientMockModulesExpectationOrigins{origin: minimock.CallerInfo(1)},
+	}
+	mmModules.expectations = append(mmModules.expectations, expectation)
+	return expectation
+}
+
+// Then sets up Client.Modules return parameters for the expectation previously defined by the When method
+func (e *ClientMockModulesExpectation) Then(sa1 []string, err error) *ClientMock {
+	e.results = &ClientMockModulesResults{sa1, err}
+	return e.mock
 }
 
 // Times sets number of times Client.Modules should be invoked
@@ -845,18 +987,48 @@ func (mmModules *mClientMockModules) invocationsDone() bool {
 }
 
 // Modules implements Client
-func (mmModules *ClientMock) Modules() (sa1 []string, err error) {
+func (mmModules *ClientMock) Modules(ctx context.Context) (sa1 []string, err error) {
 	mm_atomic.AddUint64(&mmModules.beforeModulesCounter, 1)
 	defer mm_atomic.AddUint64(&mmModules.afterModulesCounter, 1)
 
 	mmModules.t.Helper()
 
 	if mmModules.inspectFuncModules != nil {
-		mmModules.inspectFuncModules()
+		mmModules.inspectFuncModules(ctx)
+	}
+
+	mm_params := ClientMockModulesParams{ctx}
+
+	// Record call args
+	mmModules.ModulesMock.mutex.Lock()
+	mmModules.ModulesMock.callArgs = append(mmModules.ModulesMock.callArgs, &mm_params)
+	mmModules.ModulesMock.mutex.Unlock()
+
+	for _, e := range mmModules.ModulesMock.expectations {
+		if minimock.Equal(*e.params, mm_params) {
+			mm_atomic.AddUint64(&e.Counter, 1)
+			return e.results.sa1, e.results.err
+		}
 	}
 
 	if mmModules.ModulesMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmModules.ModulesMock.defaultExpectation.Counter, 1)
+		mm_want := mmModules.ModulesMock.defaultExpectation.params
+		mm_want_ptrs := mmModules.ModulesMock.defaultExpectation.paramPtrs
+
+		mm_got := ClientMockModulesParams{ctx}
+
+		if mm_want_ptrs != nil {
+
+			if mm_want_ptrs.ctx != nil && !minimock.Equal(*mm_want_ptrs.ctx, mm_got.ctx) {
+				mmModules.t.Errorf("ClientMock.Modules got unexpected parameter ctx, expected at\n%s:\nwant: %#v\n got: %#v%s\n",
+					mmModules.ModulesMock.defaultExpectation.expectationOrigins.originCtx, *mm_want_ptrs.ctx, mm_got.ctx, minimock.Diff(*mm_want_ptrs.ctx, mm_got.ctx))
+			}
+
+		} else if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmModules.t.Errorf("ClientMock.Modules got unexpected parameters, expected at\n%s:\nwant: %#v\n got: %#v%s\n",
+				mmModules.ModulesMock.defaultExpectation.expectationOrigins.origin, *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
+		}
 
 		mm_results := mmModules.ModulesMock.defaultExpectation.results
 		if mm_results == nil {
@@ -865,9 +1037,9 @@ func (mmModules *ClientMock) Modules() (sa1 []string, err error) {
 		return (*mm_results).sa1, (*mm_results).err
 	}
 	if mmModules.funcModules != nil {
-		return mmModules.funcModules()
+		return mmModules.funcModules(ctx)
 	}
-	mmModules.t.Fatalf("Unexpected call to ClientMock.Modules.")
+	mmModules.t.Fatalf("Unexpected call to ClientMock.Modules. %v", ctx)
 	return
 }
 
@@ -879,6 +1051,19 @@ func (mmModules *ClientMock) ModulesAfterCounter() uint64 {
 // ModulesBeforeCounter returns a count of ClientMock.Modules invocations
 func (mmModules *ClientMock) ModulesBeforeCounter() uint64 {
 	return mm_atomic.LoadUint64(&mmModules.beforeModulesCounter)
+}
+
+// Calls returns a list of arguments used in each call to ClientMock.Modules.
+// The list is in the same order as the calls were made (i.e. recent calls have a higher index)
+func (mmModules *mClientMockModules) Calls() []*ClientMockModulesParams {
+	mmModules.mutex.RLock()
+
+	argCopy := make([]*ClientMockModulesParams, len(mmModules.callArgs))
+	copy(argCopy, mmModules.callArgs)
+
+	mmModules.mutex.RUnlock()
+
+	return argCopy
 }
 
 // MinimockModulesDone returns true if the count of the Modules invocations corresponds
@@ -902,14 +1087,18 @@ func (m *ClientMock) MinimockModulesDone() bool {
 func (m *ClientMock) MinimockModulesInspect() {
 	for _, e := range m.ModulesMock.expectations {
 		if mm_atomic.LoadUint64(&e.Counter) < 1 {
-			m.t.Error("Expected call to ClientMock.Modules")
+			m.t.Errorf("Expected call to ClientMock.Modules at\n%s with params: %#v", e.expectationOrigins.origin, *e.params)
 		}
 	}
 
 	afterModulesCounter := mm_atomic.LoadUint64(&m.afterModulesCounter)
 	// if default expectation was set then invocations count should be greater than zero
 	if m.ModulesMock.defaultExpectation != nil && afterModulesCounter < 1 {
-		m.t.Errorf("Expected call to ClientMock.Modules at\n%s", m.ModulesMock.defaultExpectation.returnOrigin)
+		if m.ModulesMock.defaultExpectation.params == nil {
+			m.t.Errorf("Expected call to ClientMock.Modules at\n%s", m.ModulesMock.defaultExpectation.returnOrigin)
+		} else {
+			m.t.Errorf("Expected call to ClientMock.Modules at\n%s with params: %#v", m.ModulesMock.defaultExpectation.expectationOrigins.origin, *m.ModulesMock.defaultExpectation.params)
+		}
 	}
 	// if func was set then invocations count should be greater than zero
 	if m.funcModules != nil && afterModulesCounter < 1 {
@@ -1134,12 +1323,14 @@ type ClientMockReleaseImageExpectation struct {
 
 // ClientMockReleaseImageParams contains parameters of the Client.ReleaseImage
 type ClientMockReleaseImageParams struct {
+	ctx            context.Context
 	moduleName     string
 	releaseChannel string
 }
 
 // ClientMockReleaseImageParamPtrs contains pointers to parameters of the Client.ReleaseImage
 type ClientMockReleaseImageParamPtrs struct {
+	ctx            *context.Context
 	moduleName     *string
 	releaseChannel *string
 }
@@ -1153,6 +1344,7 @@ type ClientMockReleaseImageResults struct {
 // ClientMockReleaseImageOrigins contains origins of expectations of the Client.ReleaseImage
 type ClientMockReleaseImageExpectationOrigins struct {
 	origin               string
+	originCtx            string
 	originModuleName     string
 	originReleaseChannel string
 }
@@ -1168,7 +1360,7 @@ func (mmReleaseImage *mClientMockReleaseImage) Optional() *mClientMockReleaseIma
 }
 
 // Expect sets up expected params for Client.ReleaseImage
-func (mmReleaseImage *mClientMockReleaseImage) Expect(moduleName string, releaseChannel string) *mClientMockReleaseImage {
+func (mmReleaseImage *mClientMockReleaseImage) Expect(ctx context.Context, moduleName string, releaseChannel string) *mClientMockReleaseImage {
 	if mmReleaseImage.mock.funcReleaseImage != nil {
 		mmReleaseImage.mock.t.Fatalf("ClientMock.ReleaseImage mock is already set by Set")
 	}
@@ -1181,7 +1373,7 @@ func (mmReleaseImage *mClientMockReleaseImage) Expect(moduleName string, release
 		mmReleaseImage.mock.t.Fatalf("ClientMock.ReleaseImage mock is already set by ExpectParams functions")
 	}
 
-	mmReleaseImage.defaultExpectation.params = &ClientMockReleaseImageParams{moduleName, releaseChannel}
+	mmReleaseImage.defaultExpectation.params = &ClientMockReleaseImageParams{ctx, moduleName, releaseChannel}
 	mmReleaseImage.defaultExpectation.expectationOrigins.origin = minimock.CallerInfo(1)
 	for _, e := range mmReleaseImage.expectations {
 		if minimock.Equal(e.params, mmReleaseImage.defaultExpectation.params) {
@@ -1192,8 +1384,31 @@ func (mmReleaseImage *mClientMockReleaseImage) Expect(moduleName string, release
 	return mmReleaseImage
 }
 
-// ExpectModuleNameParam1 sets up expected param moduleName for Client.ReleaseImage
-func (mmReleaseImage *mClientMockReleaseImage) ExpectModuleNameParam1(moduleName string) *mClientMockReleaseImage {
+// ExpectCtxParam1 sets up expected param ctx for Client.ReleaseImage
+func (mmReleaseImage *mClientMockReleaseImage) ExpectCtxParam1(ctx context.Context) *mClientMockReleaseImage {
+	if mmReleaseImage.mock.funcReleaseImage != nil {
+		mmReleaseImage.mock.t.Fatalf("ClientMock.ReleaseImage mock is already set by Set")
+	}
+
+	if mmReleaseImage.defaultExpectation == nil {
+		mmReleaseImage.defaultExpectation = &ClientMockReleaseImageExpectation{}
+	}
+
+	if mmReleaseImage.defaultExpectation.params != nil {
+		mmReleaseImage.mock.t.Fatalf("ClientMock.ReleaseImage mock is already set by Expect")
+	}
+
+	if mmReleaseImage.defaultExpectation.paramPtrs == nil {
+		mmReleaseImage.defaultExpectation.paramPtrs = &ClientMockReleaseImageParamPtrs{}
+	}
+	mmReleaseImage.defaultExpectation.paramPtrs.ctx = &ctx
+	mmReleaseImage.defaultExpectation.expectationOrigins.originCtx = minimock.CallerInfo(1)
+
+	return mmReleaseImage
+}
+
+// ExpectModuleNameParam2 sets up expected param moduleName for Client.ReleaseImage
+func (mmReleaseImage *mClientMockReleaseImage) ExpectModuleNameParam2(moduleName string) *mClientMockReleaseImage {
 	if mmReleaseImage.mock.funcReleaseImage != nil {
 		mmReleaseImage.mock.t.Fatalf("ClientMock.ReleaseImage mock is already set by Set")
 	}
@@ -1215,8 +1430,8 @@ func (mmReleaseImage *mClientMockReleaseImage) ExpectModuleNameParam1(moduleName
 	return mmReleaseImage
 }
 
-// ExpectReleaseChannelParam2 sets up expected param releaseChannel for Client.ReleaseImage
-func (mmReleaseImage *mClientMockReleaseImage) ExpectReleaseChannelParam2(releaseChannel string) *mClientMockReleaseImage {
+// ExpectReleaseChannelParam3 sets up expected param releaseChannel for Client.ReleaseImage
+func (mmReleaseImage *mClientMockReleaseImage) ExpectReleaseChannelParam3(releaseChannel string) *mClientMockReleaseImage {
 	if mmReleaseImage.mock.funcReleaseImage != nil {
 		mmReleaseImage.mock.t.Fatalf("ClientMock.ReleaseImage mock is already set by Set")
 	}
@@ -1239,7 +1454,7 @@ func (mmReleaseImage *mClientMockReleaseImage) ExpectReleaseChannelParam2(releas
 }
 
 // Inspect accepts an inspector function that has same arguments as the Client.ReleaseImage
-func (mmReleaseImage *mClientMockReleaseImage) Inspect(f func(moduleName string, releaseChannel string)) *mClientMockReleaseImage {
+func (mmReleaseImage *mClientMockReleaseImage) Inspect(f func(ctx context.Context, moduleName string, releaseChannel string)) *mClientMockReleaseImage {
 	if mmReleaseImage.mock.inspectFuncReleaseImage != nil {
 		mmReleaseImage.mock.t.Fatalf("Inspect function is already set for ClientMock.ReleaseImage")
 	}
@@ -1264,7 +1479,7 @@ func (mmReleaseImage *mClientMockReleaseImage) Return(i1 v1.Image, err error) *C
 }
 
 // Set uses given function f to mock the Client.ReleaseImage method
-func (mmReleaseImage *mClientMockReleaseImage) Set(f func(moduleName string, releaseChannel string) (i1 v1.Image, err error)) *ClientMock {
+func (mmReleaseImage *mClientMockReleaseImage) Set(f func(ctx context.Context, moduleName string, releaseChannel string) (i1 v1.Image, err error)) *ClientMock {
 	if mmReleaseImage.defaultExpectation != nil {
 		mmReleaseImage.mock.t.Fatalf("Default expectation is already set for the Client.ReleaseImage method")
 	}
@@ -1280,14 +1495,14 @@ func (mmReleaseImage *mClientMockReleaseImage) Set(f func(moduleName string, rel
 
 // When sets expectation for the Client.ReleaseImage which will trigger the result defined by the following
 // Then helper
-func (mmReleaseImage *mClientMockReleaseImage) When(moduleName string, releaseChannel string) *ClientMockReleaseImageExpectation {
+func (mmReleaseImage *mClientMockReleaseImage) When(ctx context.Context, moduleName string, releaseChannel string) *ClientMockReleaseImageExpectation {
 	if mmReleaseImage.mock.funcReleaseImage != nil {
 		mmReleaseImage.mock.t.Fatalf("ClientMock.ReleaseImage mock is already set by Set")
 	}
 
 	expectation := &ClientMockReleaseImageExpectation{
 		mock:               mmReleaseImage.mock,
-		params:             &ClientMockReleaseImageParams{moduleName, releaseChannel},
+		params:             &ClientMockReleaseImageParams{ctx, moduleName, releaseChannel},
 		expectationOrigins: ClientMockReleaseImageExpectationOrigins{origin: minimock.CallerInfo(1)},
 	}
 	mmReleaseImage.expectations = append(mmReleaseImage.expectations, expectation)
@@ -1322,17 +1537,17 @@ func (mmReleaseImage *mClientMockReleaseImage) invocationsDone() bool {
 }
 
 // ReleaseImage implements Client
-func (mmReleaseImage *ClientMock) ReleaseImage(moduleName string, releaseChannel string) (i1 v1.Image, err error) {
+func (mmReleaseImage *ClientMock) ReleaseImage(ctx context.Context, moduleName string, releaseChannel string) (i1 v1.Image, err error) {
 	mm_atomic.AddUint64(&mmReleaseImage.beforeReleaseImageCounter, 1)
 	defer mm_atomic.AddUint64(&mmReleaseImage.afterReleaseImageCounter, 1)
 
 	mmReleaseImage.t.Helper()
 
 	if mmReleaseImage.inspectFuncReleaseImage != nil {
-		mmReleaseImage.inspectFuncReleaseImage(moduleName, releaseChannel)
+		mmReleaseImage.inspectFuncReleaseImage(ctx, moduleName, releaseChannel)
 	}
 
-	mm_params := ClientMockReleaseImageParams{moduleName, releaseChannel}
+	mm_params := ClientMockReleaseImageParams{ctx, moduleName, releaseChannel}
 
 	// Record call args
 	mmReleaseImage.ReleaseImageMock.mutex.Lock()
@@ -1351,9 +1566,14 @@ func (mmReleaseImage *ClientMock) ReleaseImage(moduleName string, releaseChannel
 		mm_want := mmReleaseImage.ReleaseImageMock.defaultExpectation.params
 		mm_want_ptrs := mmReleaseImage.ReleaseImageMock.defaultExpectation.paramPtrs
 
-		mm_got := ClientMockReleaseImageParams{moduleName, releaseChannel}
+		mm_got := ClientMockReleaseImageParams{ctx, moduleName, releaseChannel}
 
 		if mm_want_ptrs != nil {
+
+			if mm_want_ptrs.ctx != nil && !minimock.Equal(*mm_want_ptrs.ctx, mm_got.ctx) {
+				mmReleaseImage.t.Errorf("ClientMock.ReleaseImage got unexpected parameter ctx, expected at\n%s:\nwant: %#v\n got: %#v%s\n",
+					mmReleaseImage.ReleaseImageMock.defaultExpectation.expectationOrigins.originCtx, *mm_want_ptrs.ctx, mm_got.ctx, minimock.Diff(*mm_want_ptrs.ctx, mm_got.ctx))
+			}
 
 			if mm_want_ptrs.moduleName != nil && !minimock.Equal(*mm_want_ptrs.moduleName, mm_got.moduleName) {
 				mmReleaseImage.t.Errorf("ClientMock.ReleaseImage got unexpected parameter moduleName, expected at\n%s:\nwant: %#v\n got: %#v%s\n",
@@ -1377,9 +1597,9 @@ func (mmReleaseImage *ClientMock) ReleaseImage(moduleName string, releaseChannel
 		return (*mm_results).i1, (*mm_results).err
 	}
 	if mmReleaseImage.funcReleaseImage != nil {
-		return mmReleaseImage.funcReleaseImage(moduleName, releaseChannel)
+		return mmReleaseImage.funcReleaseImage(ctx, moduleName, releaseChannel)
 	}
-	mmReleaseImage.t.Fatalf("Unexpected call to ClientMock.ReleaseImage. %v %v", moduleName, releaseChannel)
+	mmReleaseImage.t.Fatalf("Unexpected call to ClientMock.ReleaseImage. %v %v %v", ctx, moduleName, releaseChannel)
 	return
 }
 
