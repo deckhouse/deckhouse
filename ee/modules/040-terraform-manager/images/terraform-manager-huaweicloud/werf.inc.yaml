@@ -6,7 +6,7 @@ git:
 import:
   - image: terraform-provider-huaweicloud
     add: /terraform-provider-huaweicloud
-    to: /plugins/registry.terraform.io/{{ .TF.huaweicloud.namespace }}/{{ .TF.huaweicloud.type }}/{{ .TF.huaweicloud.version }}/linux_amd64/terraform-provider-huaweicloud
+    to: /plugins/registry.opentofu.org/{{ .TF.huaweicloud.namespace }}/{{ .TF.huaweicloud.type }}/{{ .TF.huaweicloud.version }}/linux_amd64/terraform-provider-huaweicloud
     before: setup
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
