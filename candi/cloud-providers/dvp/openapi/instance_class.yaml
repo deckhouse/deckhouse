@@ -80,11 +80,11 @@ spec:
                   x-doc-examples: [ 8192 ]
                   x-doc-default: 8192
                   description: RAM amount in megabytes.
-                rootDiskSizeGb:
+                rootDiskSize:
                   description: |
-                    Root disk size in GiB to use in VirtualMachines.
+                    Root disk size in GiB.
 
-                    The disk will be automatically resized if its size in the template differs from specified.
+                    The disk will be automatically resized if its VirtualImage size differs from specified.
                   x-doc-examples: [ 30 ]
                   x-doc-default: 30
                   default: 30
