@@ -14,7 +14,7 @@ spec:
     repo: dev-registry.deckhouse.io/deckhouse/modules
     scheme: HTTPS
 status:
-  status: ""
+  phase: ""
   message: ""
   modules: null
   modulesCount: 0

@@ -17,7 +17,7 @@ spec:
     scheme: HTTPS
 status:
   message: ""
-  status: Active
+  phase: Active
   modules:
   - name: disabledmodule
   - checksum: 'sha256:'

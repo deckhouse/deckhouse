@@ -16,7 +16,7 @@ spec:
     repo: dev-registry.deckhouse.io/deckhouse/modules
     scheme: HTTPS
 status:
-  status: Error
+  phase: Active
   message: Some errors occurred. Inspect status for details
   modules:
   - checksum: 'sha256:'
