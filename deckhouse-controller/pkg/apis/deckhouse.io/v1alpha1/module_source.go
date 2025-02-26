@@ -26,9 +26,8 @@ const (
 	ModuleSourceResource = "modulesources"
 	ModuleSourceKind     = "ModuleSource"
 
-	ModuleSourceStatusActive      = "Active"
-	ModuleSourceStatusTerminating = "Terminating"
-	ModuleSourceStatusError       = "Error"
+	ModuleSourcePhaseActive      = "Active"
+	ModuleSourcePhaseTerminating = "Terminating"
 
 	ModuleSourceMessagePullErrors = "Some errors occurred. Inspect status for details"
 
@@ -100,7 +99,7 @@ type ModuleSourceStatus struct {
 	SyncTime         metav1.Time       `json:"syncTime"`
 	ModulesCount     int               `json:"modulesCount"`
 	AvailableModules []AvailableModule `json:"modules"`
-	Status           string            `json:"status"`
+	Phase            string            `json:"phase"`
 	Message          string            `json:"message"`
 }
 
