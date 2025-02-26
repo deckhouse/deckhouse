@@ -79,3 +79,4 @@ require (
 )
 
 replace github.com/ovirt/go-ovirt-client/v3 v3.2.0 => github.com/flant/go-ovirt-client/v3 v3.2.0-flant-1
+replace github.com/ovirt/go-ovirt v0.0.0-20220427092237-114c47f2835c => fox.flant.com/deckhouse/cloud-providers/ovirt/go-ovirt v0.0.1-flant
