@@ -71,7 +71,7 @@ module.exports = ({ github, context, core }) => {
       branchName,
       githubActions.WORKFLOW_STATUS_RUNNING
     );
-    if (activeRuns.length > 0) {
+    if (activeRuns && activeRuns.length > 0) {
       const result = await isJobInWorkflowCompletedSuccess(activeRuns, jobName);
       if (result.hasFailed) return { isReady: false, hasFailed: true };
       return { isReady: result.success, hasFailed: false };
@@ -82,7 +82,8 @@ module.exports = ({ github, context, core }) => {
       branchName,
       githubActions.WORKFLOW_STATUS_COMPLETED
     );
-    if (completedRuns.length > 0) {
+
+    if (completedRuns && completedRuns.length > 0) {
       const result = await isJobInWorkflowCompletedSuccess(completedRuns, jobName);
       if (result.hasFailed) return { isReady: false, hasFailed: true };
       return { isReady: result.success, hasFailed: false };
