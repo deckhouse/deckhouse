@@ -35,8 +35,7 @@ const (
 
 // TODO: Remove this hook after 1.70.0 release
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	Queue:        "/requirements/check_cluster_configuration",
-	AllowFailure: true,
+	Queue: "/requirements/check_cluster_configuration",
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
 			Name:       "check_cluster_configuration",
@@ -64,7 +63,8 @@ func CheckClusterConfig(input *go_hook.HookInput) error {
 			if err != nil {
 				requirements.SaveValue(CheckStaticClusterConfigRaw, true)
 				input.MetricsCollector.Set("d8_check_cluster_config", 1, nil)
-				return fmt.Errorf("%s", findErrorLines(err.Error()))
+				input.Logger.Error("%s", findErrorLines(err.Error()))
+				return nil
 			}
 			requirements.SaveValue(CheckStaticClusterConfigRaw, false)
 			input.MetricsCollector.Expire("d8_check_cluster_config")

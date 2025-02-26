@@ -16,8 +16,6 @@ limitations under the License.
 package hooks
 
 import (
-	"fmt"
-
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
@@ -33,8 +31,7 @@ const (
 
 // TODO: Remove this hook after 1.70.0 release
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	Queue:        "/requirements/check_static_cluster_configuration",
-	AllowFailure: true,
+	Queue: "/requirements/check_static_cluster_configuration",
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
 			Name:       "check_static_cluster_configuration",
@@ -62,7 +59,8 @@ func CheckStaticClusterConfig(input *go_hook.HookInput) error {
 			if err != nil {
 				requirements.SaveValue(CheckStaticClusterConfigRaw, true)
 				input.MetricsCollector.Set("d8_check_static_cluster_config", 1, nil)
-				return fmt.Errorf("%s", findErrorLines(err.Error()))
+				input.Logger.Error("%s", findErrorLines(err.Error()))
+				return nil
 			}
 			requirements.SaveValue(CheckStaticClusterConfigRaw, false)
 			input.MetricsCollector.Expire("d8_check_static_cluster_config")
