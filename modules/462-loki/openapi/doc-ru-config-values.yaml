@@ -23,9 +23,6 @@ properties:
   retentionPeriodHours:
     description: |
       Сколько часов логи будут храниться, прежде чем будут удалены.
-  maxLabelNamesPerSeries:
-    description: |
-      Максимальное количество лейблов в серии.
   storeSystemLogs:
     description: |
       Сохранять логи из пространства имен `d8-*` в loki.
@@ -39,6 +36,9 @@ properties:
 
       > Внимание! Ошибочные  настройки могут привести к неработоспособности Loki.
     properties:
+      maxLabelNamesPerSeries:
+        description: |
+          Максимальное количество лейблов в серии.
       ingestionRateMB:
         description: |
           Общий лимит скорости приема логов в мегабайтах в секунду.
