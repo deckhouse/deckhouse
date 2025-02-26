@@ -36,7 +36,7 @@ func NewCSIConfig(version string) (*CSIConfig, error) {
 		VendorVersion: version,
 	}
 	flag.StringVar(&cfg.Endpoint, "endpoint", "unix://tmp/csi.sock", "CSI endpoint")
-	flag.StringVar(&cfg.DriverName, "drivername", "dynamix.deckhouse.io", "name of the driver")
+	flag.StringVar(&cfg.DriverName, "drivername", "csi.dvp.deckhouse.io", "name of the driver")
 	flag.StringVar(&cfg.NodeName, "node-name", "", "node name")
 
 	cloudConfig, err := config.NewCloudConfig()
