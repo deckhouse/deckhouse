@@ -34,8 +34,10 @@ import:
   before: install
 shell:
   beforeInstall:
-  - update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-13 2
+  - apt-get install -y gcc11 gcc11-c++ libstdc++11-devel libstdc++11-devel-static
+  #- update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-13 2
   install:
+  - export GCC_VERSION=11
   - cd /src/linux/tools/bpf/bpftool
   - make -j "$(getconf _NPROCESSORS_ONLN)"
   - strip bpftool
