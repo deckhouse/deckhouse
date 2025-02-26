@@ -323,6 +323,104 @@ metadata:
 		})
 	})
 
+	Context("There is a service with a minimum number of fields", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(`
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: serv-config-class
+  namespace: nginx1
+spec:
+  ports:
+  - port: 7474
+  externalTrafficPolicy: Local
+  internalTrafficPolicy: Cluster
+  type: LoadBalancer
+---
+apiVersion: network.deckhouse.io/v1alpha1
+kind: MetalLoadBalancerClass
+metadata:
+  name: config-mlbc
+spec:
+  isDefault: true
+  type: L2
+  l2:
+    interfaces:
+    - eth1
+    - eth2
+  addressPool:
+  - 192.168.3.100-192.168.3.150
+  nodeSelector:
+    node-role.kubernetes.io/frontend: ""
+---
+apiVersion: v1
+kind: Node
+metadata:
+  name: frontend-1
+  labels:
+    node-role.kubernetes.io/frontend: ""
+---
+apiVersion: v1
+kind: Node
+metadata:
+  name: frontend-2
+  labels:
+    node-role.kubernetes.io/frontend: ""
+`))
+			f.RunHook()
+		})
+
+		It("Values are generated and written without errors", func() { //
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.BindingContexts.Array()).ShouldNot(BeEmpty())
+			Expect(f.ValuesGet("metallb.internal.l2loadbalancers").String()).To(MatchJSON(`
+[
+        {
+            "name": "config-mlbc",
+            "addressPool": [
+              "192.168.3.100-192.168.3.150"
+            ],
+            "interfaces": [
+              "eth1",
+              "eth2"
+            ],
+            "nodeSelector": {
+              "node-role.kubernetes.io/frontend": ""
+            },
+            "isDefault": true
+        }
+]
+`))
+			Expect(f.ValuesGet("metallb.internal.l2lbservices").String()).To(MatchJSON(`
+[
+        {
+            "publishNotReadyAddresses": false,
+            "name": "serv-config-class-config-mlbc-0",
+            "namespace": "nginx1",
+            "serviceName": "serv-config-class",
+            "serviceNamespace": "nginx1",
+            "preferredNode": "frontend-2",
+            "clusterIP": "",
+            "ports": [
+              {
+                "port": 7474,
+                "targetPort": 0
+              }
+            ],
+            "externalTrafficPolicy": "Local",
+            "internalTrafficPolicy": "Cluster",
+            "selector": null,
+            "mlbcName": "config-mlbc",
+            "desiredIP": "",
+            "lbAllowSharedIP": ""
+          }
+]
+`))
+		})
+	})
+
 	Context("Migrate Services: transfer IPs to L2LBServices", func() {
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(`
