@@ -83,7 +83,6 @@ spec:
                   enum:
                     - Active
                     - Terminating
-                    - Error
                 modulesCount:
                   type: integer
                   description: The number of modules available.
