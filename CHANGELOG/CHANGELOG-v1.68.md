@@ -1,5 +1,10 @@
 # Changelog v1.68
 
+## [MALFORMED]
+
+
+ - #12028 unknown section "prometheus-rules"
+
 ## Know before update
 
 
