@@ -909,7 +909,7 @@ Follow this steps to switch a Deckhouse Enterprise Edition to Community Edition 
    * Retrieve the value of `USED_MODULES`:
 
      ```shell
-     USED_MODULES=$(kubectl get modules  -o custom-columns=NAME:.metadata.name,SOURCE:.properties.source,STATE:.properties.state,ENABLED:.status.phase | grep Embedded| grep -E 'Enabled|Ready' | awk {'print $1'})
+     USED_MODULES=$(kubectl get modules -o custom-columns=NAME:.metadata.name,SOURCE:.properties.source,STATE:.properties.state,ENABLED:.status.phase | grep Embedded | grep -E 'Enabled|Ready' | awk {'print $1'})
      ```
 
      Check the result of the command to make sure it was successful:
@@ -1569,7 +1569,7 @@ All commands should be executed on a master node of the existing cluster.
    * Retrieve the value of `USED_MODULES`:
 
      ```shell
-     USED_MODULES=$(sudo /opt/deckhouse/bin/kubectl get modules  -o custom-columns=NAME:.metadata.name,SOURCE:.properties.source,STATE:.properties.state,ENABLED:.status.phase | grep Embedded| grep -E 'Enabled|Ready' | awk {'print $1'})
+     USED_MODULES=$(sudo /opt/deckhouse/bin/kubectl get modules -o custom-columns=NAME:.metadata.name,SOURCE:.properties.source,STATE:.properties.state,ENABLED:.status.phase | grep Embedded | grep -E 'Enabled|Ready' | awk {'print $1'})
      ```
 
      Check the result of the command to make sure it was successful:
