@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"slices"
 	"sort"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -39,19 +40,29 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			Kind:       "SecurityPolicy",
 			FilterFunc: filterSP,
 		},
+		{
+			Name:       "namespaced-security-policies",
+			ApiVersion: "deckhouse.io/v1alpha1",
+			Kind:       "NamespacedSecurityPolicy",
+			FilterFunc: filterSP,
+		},
 	},
 }, handleSP)
 
 func handleSP(input *go_hook.HookInput) error {
 	result := make([]*securityPolicy, 0)
-	refs := make(map[string]set.Set, 0)
+	refs := make(map[string]set.Set)
 
-	snap := input.Snapshots["security-policies"]
+	snap := slices.Concat(input.Snapshots["security-policies"], input.Snapshots["namespaced-security-policies"])
 
 	for _, sn := range snap {
 		sp := sn.(*securityPolicy)
 		// set observed status
-		input.PatchCollector.Filter(set_cr_statuses.SetObservedStatus(sn, filterSP), "deckhouse.io/v1alpha1", "securitypolicy", "", sp.Metadata.Name, object_patch.WithSubresource("/status"), object_patch.IgnoreHookError())
+		if sp.Metadata.Namespace == "" {
+			input.PatchCollector.Filter(set_cr_statuses.SetObservedStatus(sn, filterSP), "deckhouse.io/v1alpha1", "securitypolicy", "", sp.Metadata.Name, object_patch.WithSubresource("/status"), object_patch.IgnoreHookError())
+		} else {
+			input.PatchCollector.Filter(set_cr_statuses.SetObservedStatus(sn, filterSP), "deckhouse.io/v1alpha1", "namespacedsecuritypolicy", sp.Metadata.Namespace, sp.Metadata.Name, object_patch.WithSubresource("/status"), object_patch.IgnoreHookError())
+		}
 		sp.preprocesSecurityPolicy()
 		result = append(result, sp)
 		for _, v := range sp.Spec.Policies.VerifyImageSignatures {
@@ -164,7 +175,8 @@ func (sp *securityPolicy) preprocesSecurityPolicy() {
 
 type securityPolicy struct {
 	Metadata struct {
-		Name string `json:"name"`
+		Name      string `json:"name"`
+		Namespace string `json:"namespace"`
 	} `json:"metadata"`
 	Spec v1alpha1.SecurityPolicySpec `json:"spec"`
 }
