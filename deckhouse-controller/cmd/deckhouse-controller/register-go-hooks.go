@@ -36,7 +36,6 @@ import (
 	_ "github.com/deckhouse/deckhouse/modules/000-common/hooks"
 	_ "github.com/deckhouse/deckhouse/modules/002-deckhouse/hooks"
 	_ "github.com/deckhouse/deckhouse/modules/002-deckhouse/hooks/migrate"
-	_ "github.com/deckhouse/deckhouse/modules/011-flow-schema/hooks"
 	_ "github.com/deckhouse/deckhouse/modules/015-admission-policy-engine/hooks"
 	_ "github.com/deckhouse/deckhouse/modules/021-cni-cilium/hooks"
 	_ "github.com/deckhouse/deckhouse/modules/021-cni-cilium/requirements"
