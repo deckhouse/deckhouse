@@ -74,7 +74,8 @@ shell:
     sudo \
     libcap-devel libpcap-devel \
     clang17.0 clang17.0-tools lldb17.0 lld17.0 llvm17.0-devel \
-    libcxxabi-devel
+    libcxxabi-devel \
+    gcc11 gcc11-c++ libstdc++11-devel libstdc++11-devel-static
   install:
   # Install Go
   - export GOROOT=/usr/local/go GOPATH=/go
