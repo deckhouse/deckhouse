@@ -164,6 +164,7 @@ jobs:
         run: |
           rm -rf ./trivy-db
           git clone --depth 1 --branch flant-v2 ${{secrets.SOURCE_REPO_GIT}}/aquasecurity/trivy-db.git
+          docker logout ghcr.io
           cd trivy-db
           ./update.sh ${{secrets.DECKHOUSE_REGISTRY_HOST}}/deckhouse/ee 
           ./update.sh ${{secrets.DECKHOUSE_REGISTRY_HOST}}/deckhouse/fe 
