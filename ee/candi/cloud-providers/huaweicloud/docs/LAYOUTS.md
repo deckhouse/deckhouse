@@ -45,8 +45,6 @@ masterNodeGroup:
 
 ## VpcPeering
 
-![VpcPeering layout](../../images/cloud-provider-huawei/huawei-vpc-peering.png)
-
 Example of the layout configuration:
 
 ```yaml
