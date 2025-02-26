@@ -400,7 +400,7 @@ $(echo -n $ENDPOINTS_STRING) endpoint status -w table
     ```
 
     Чтобы просмотреть конкретный алерт, выполните команду:
- 
+
     ```shell
     kubectl get clusteralerts <ALERT_NAME> -o yaml
     ```
