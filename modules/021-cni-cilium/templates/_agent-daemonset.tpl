@@ -32,6 +32,7 @@ spec:
       {{- include "helm_lib_priority_class" (tuple $context "system-node-critical") | nindent 6 }}
       {{- include "helm_lib_tolerations" (tuple $context "any-node" "with-uninitialized" "with-cloud-provider-uninitialized" "with-storage-problems") | nindent 6 }}
       {{- include "helm_lib_module_pod_security_context_run_as_user_root" $context | nindent 6 }}
+      automountServiceAccountToken: true
       imagePullSecrets:
       - name: deckhouse-registry
       containers:

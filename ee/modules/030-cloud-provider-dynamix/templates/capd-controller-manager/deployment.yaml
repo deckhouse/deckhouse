@@ -70,6 +70,7 @@ spec:
       {{- include "helm_lib_priority_class" (tuple . "system-cluster-critical") | nindent 6 }}
       {{- include "helm_lib_pod_anti_affinity_for_ha" (list . (dict "app" "capd-controller-manager")) | nindent 6 }}
       serviceAccountName: capd-controller-manager
+      automountServiceAccountToken: true
       imagePullSecrets:
         - name: deckhouse-registry
       terminationGracePeriodSeconds: 10
