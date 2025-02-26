@@ -270,10 +270,17 @@ function wait_upmeter_green() {
   sleep_interval=30
 
   for i in $(seq 1 $iterations); do
+    sleep "$sleep_interval"
     response=$(get_cluster_status)
-    statuses=$(jq -r '.cluster_agent_data[] | select(.source == "upmeter") | .data.rows[] | .probes[] | "\(.probe):\(.availability)"' <<< "$response")
-    all_ok=true
+    upmeter_data_exists=$(echo "$response" | jq -r '.cluster_agent_data[] | select(.source == "upmeter")' 2>/dev/null)
+    if [[ -n $upmeter_data_exists ]]; then
+      statuses=$(jq -r '.cluster_agent_data[] | select(.source == "upmeter") | .data.rows[] | .probes[] | "\(.probe):\(.availability)"' <<< "$response")
+    else
+      echo "Upmeter don't ready"
+      continue
+    fi
 
+    all_ok=true
     while IFS= read -r line; do
       echo "${line}"
       availability=$(echo "$line" | cut -d':' -f2)
@@ -291,7 +298,6 @@ function wait_upmeter_green() {
         echo "Maximum iterations reached. Not all components reached status 1."
         exit 1
       fi
-      sleep "$sleep_interval"
     fi
   done
 
@@ -356,7 +362,7 @@ function run-test() {
   echo "Cluster ID: ${cluster_id}"
 
   # Waiting to cluster ready
-  testRunAttempts=120
+  testRunAttempts=80
   sleep=30
   master_ip_find=false
   for ((i=1; i<=testRunAttempts; i++)); do
@@ -380,6 +386,7 @@ function run-test() {
     cluster_status=$(jq -r '.status' <<< "$response")
     if [ "in_sync" = "$cluster_status" ]; then
       echo "  Cluster status: $cluster_status"
+      echo "  Bootstrap completed, starting to deploy additional components"
       break
     elif [ "creation_failed" = "$cluster_status" ]; then
       echo "  Cluster status: $cluster_status"
