@@ -21,7 +21,7 @@ import:
           {{- $tf := index $.TF $tfProvider }}
   - image: {{ $tf.artifact }} # from modules/040-terraform-manager/images/terraform-manager-{PROVIDER}/werf.inc.yaml
     add: /{{ $tf.artifactBinary }}
-    to: /usr/local/share/terraform/plugins/registry.terraform.io/{{ $tf.namespace }}/{{ $tf.type }}/{{ $tf.version }}//linux_amd64/{{ $tf.destinationBinary }}
+    to: /usr/local/share/terraform/plugins/registry.opentofu.org/{{ $tf.namespace }}/{{ $tf.type }}/{{ $tf.version }}//linux_amd64/{{ $tf.destinationBinary }}
     before: setup
       {{- end }}
     {{- end }}
@@ -31,19 +31,19 @@ import:
   {{- end }}
   - image: e2e-eks-terraform-plugins
     add: /terraform-provider-random
-    to: /usr/local/share/terraform/plugins/registry.terraform.io/hashicorp/random/3.4.3/linux_amd64/terraform-provider-random_v3.4.3_x5
+    to: /usr/local/share/terraform/plugins/registry.opentofu.org/hashicorp/random/3.4.3/linux_amd64/terraform-provider-random_v3.4.3_x5
     before: setup
   - image: e2e-eks-terraform-plugins
     add: /terraform-provider-tls
-    to: /usr/local/share/terraform/plugins/registry.terraform.io/hashicorp/tls/4.0.5/linux_amd64/terraform-provider-tls_v4.0.5_x5
+    to: /usr/local/share/terraform/plugins/registry.opentofu.org/hashicorp/tls/4.0.5/linux_amd64/terraform-provider-tls_v4.0.5_x5
     before: setup
   - image: e2e-eks-terraform-plugins
     add: /terraform-provider-cloudinit
-    to: /usr/local/share/terraform/plugins/registry.terraform.io/hashicorp/cloudinit/2.2.0/linux_amd64/terraform-provider-cloudinit_v2.2.0_x5
+    to: /usr/local/share/terraform/plugins/registry.opentofu.org/hashicorp/cloudinit/2.2.0/linux_amd64/terraform-provider-cloudinit_v2.2.0_x5
     before: setup
   - image: e2e-eks-terraform-plugins
     add: /terraform-provider-kubernetes
-    to: /usr/local/share/terraform/plugins/registry.terraform.io/hashicorp/kubernetes/2.31.0/linux_amd64/terraform-provider-kubernetes_v2.31.0_x5
+    to: /usr/local/share/terraform/plugins/registry.opentofu.org/hashicorp/kubernetes/2.31.0/linux_amd64/terraform-provider-kubernetes_v2.31.0_x5
     before: setup
 shell:
   beforeInstall:

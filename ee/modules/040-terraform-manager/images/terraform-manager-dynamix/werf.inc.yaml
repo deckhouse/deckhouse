@@ -6,7 +6,7 @@ git:
 import:
   - image: terraform-provider-decort
     add: /terraform-provider-decort
-    to: /plugins/registry.terraform.io/{{ .TF.decort.namespace }}/{{ .TF.decort.type }}/{{ .TF.decort.version }}/linux_amd64/terraform-provider-decort
+    to: /plugins/registry.opentofu.org/{{ .TF.decort.namespace }}/{{ .TF.decort.type }}/{{ .TF.decort.version }}/linux_amd64/terraform-provider-decort
     before: setup
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact

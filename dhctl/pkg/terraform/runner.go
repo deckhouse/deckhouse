@@ -310,12 +310,12 @@ func (r *Runner) Init() error {
 
 	return r.logger.LogProcess("default", "terraform init ...", func() error {
 		args := []string{
+			fmt.Sprintf("-chdir=%s", r.workingDir),
 			"init",
 			fmt.Sprintf("-plugin-dir=%s/plugins", strings.TrimRight(dhctlPath, "/")),
-			"-get-plugins=false",
+			"-get=false",
 			"-no-color",
 			"-input=false",
-			r.workingDir,
 		}
 
 		_, err := r.execTerraform(args...)
@@ -417,12 +417,10 @@ func (r *Runner) Apply() error {
 		}
 
 		if r.planPath != "" {
-			args = append(args, r.planPath)
+			args = append([]string{fmt.Sprintf("-chdir=%s", r.planPath)}, args...)
 		} else {
-			args = append(args,
-				fmt.Sprintf("-var-file=%s", r.variablesPath),
-				r.workingDir,
-			)
+			args = append([]string{fmt.Sprintf("-chdir=%s", r.workingDir)}, args...)
+			args = append(args, fmt.Sprintf("-var-file=%s", r.variablesPath))
 		}
 
 		_, err = r.execTerraform(args...)
@@ -463,7 +461,7 @@ func (r *Runner) Plan(opts PlanOptions) error {
 		if opts.Destroy {
 			args = append(args, "-destroy")
 		}
-		args = append(args, r.workingDir)
+		args = append([]string{fmt.Sprintf("-chdir=%s", r.workingDir)}, args...)
 
 		exitCode, err := r.execTerraform(args...)
 		if exitCode == terraformHasChangesExitCode {
@@ -535,7 +533,7 @@ func (r *Runner) Destroy() error {
 		fmt.Sprintf("-var-file=%s", r.variablesPath),
 		fmt.Sprintf("-state=%s", r.statePath),
 	}
-	planDestroyArgs = append(planDestroyArgs, r.workingDir)
+	planDestroyArgs = append([]string{fmt.Sprintf("-chdir=%s", r.workingDir)}, planDestroyArgs...)
 
 	_, err := r.execTerraform(planDestroyArgs...)
 	if err != nil {
@@ -567,7 +565,7 @@ func (r *Runner) Destroy() error {
 			fmt.Sprintf("-var-file=%s", r.variablesPath),
 			fmt.Sprintf("-state=%s", r.statePath),
 		}
-		args = append(args, r.workingDir)
+		args = append([]string{fmt.Sprintf("-chdir=%s", r.workingDir)}, args...)
 
 		_, err = r.execTerraform(args...)
 
