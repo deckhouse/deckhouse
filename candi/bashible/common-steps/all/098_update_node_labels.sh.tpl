@@ -27,6 +27,22 @@ import json
 
 system_lables = {"beta.kubernetes.io/arch", "beta.kubernetes.io/os", "failure-domain.beta.kubernetes.io/region", "failure-domain.beta.kubernetes.io/zone", "kubernetes.io/arch", "kubernetes.io/hostname", "kubernetes.io/os", "node.deckhouse.io/group", "node.deckhouse.io/type", "topology.kubernetes.io/region", "topology.kubernetes.io/zone"}
 
+def recursive_glob(base_dir, pattern):
+    matches = []
+    for root, _, filenames in os.walk(base_dir):
+        for filename in glob.glob(os.path.join(root, pattern)):
+            matches.append(filename)
+    return matches
+
+
+def find_files(base_dir, pattern):
+    if sys.version_info[0] == 2:
+        return recursive_glob(base_dir, pattern)
+    elif sys.version_info[0] == 3:
+        return glob.glob(os.path.join(base_dir, '**'), recursive=True)
+    else:
+        raise RuntimeError("unknown Py Ver")
+
 def validate(string, is_key = True):
     if len(string) > 63:
         return False
@@ -36,12 +52,12 @@ def validate(string, is_key = True):
         pattern = re.compile("^(?:(?:(?:[a-z0-9][a-z0-9-]+)\.)+[a-z0-9]+/)*[A-Za-z0-9][A-Za-z0-9-._]*$")
     else:
         pattern = re.compile("^[A-Za-z0-9][A-Za-z0-9-._]*$")
-    if pattern.fullmatch(string):
+    if pattern.match(string):
         return True
     return False
 
 def fetch_labels(fileglob, valid = True):
-    files = glob.glob(fileglob, recursive=True)
+    files = find_files(fileglob, "**")
     labels = dict()
     for f in files:
         if os.path.isfile(f):
@@ -72,7 +88,7 @@ def get_removed(d1, d2):
     removed = d1_keys - d2_keys
     return removed
 
-labels = fetch_labels("$1" + "/**", True)
+labels = fetch_labels("$1", True)
 
 if "$2" == "add":
     format = "$4"
