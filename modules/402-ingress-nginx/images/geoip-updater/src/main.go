@@ -30,7 +30,7 @@ import (
 
 func main() {
 	// Parse command line arguments
-	address := flag.String("address", "127.0.0.1:8789", "Server address in format host:port")
+	address := flag.String("address", ":8789", "Server address in format host:port")
 	databasePath := flag.String("databasePath", "/chroot/etc/ingress-controller/geoip/", "Path to the GeoIP database")
 	licenseKey := flag.String("licenseKey", "", "License key")
 	accountID := flag.Int("accountID", 0, "Account ID")
