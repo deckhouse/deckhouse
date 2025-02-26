@@ -328,7 +328,7 @@ function run-test() {
 
   echo "Bootstrap payload: ${payload}"
 
-  response=$(curl -X POST "https://${COMMANDER_HOST}/api/v1/clusters" \
+  response=$(curl -s -X POST "https://${COMMANDER_HOST}/api/v1/clusters" \
     -H 'accept: application/json' \
     -H "X-Auth-Token: ${COMMANDER_TOKEN}" \
     -H 'Content-Type: application/json' \
@@ -344,8 +344,6 @@ function run-test() {
     echo "$response" >&2
     return 1
   fi
-
-  echo "Bootstrap resuest response: ${response}"
 
   # Extract id and handle errors
   cluster_id=$(jq -r '.id' <<< "$response")
@@ -408,7 +406,7 @@ function run-test() {
 
 function cleanup() {
   #Get cluster id
-  cluster_id=$(curl \
+  cluster_id=$(curl -s \
     "https://${COMMANDER_HOST}/api/v1/clusters" \
     -H 'accept: application/json' \
     -H "X-Auth-Token: ${COMMANDER_TOKEN}" |
@@ -419,12 +417,23 @@ function cleanup() {
     return 1
   fi
 
-  echo $cluster_id
+  echo "  Deleting cluster ${cluster_id}"
 
-  curl -s -X 'DELETE' \
+  response=$(curl -s -X 'DELETE' \
     "https://${COMMANDER_HOST}/api/v1/clusters/${cluster_id}" \
     -H 'accept: application/json' \
-    -H "X-Auth-Token: ${COMMANDER_TOKEN}"
+    -H "X-Auth-Token: ${COMMANDER_TOKEN}" \
+    -w "\n%{http_code}")
+
+  http_code=$(echo "$response" | tail -n 1)
+  response=$(echo "$response" | head -n -1)
+
+  # Check for HTTP errors
+  if [[ ${http_code} -ge 400 ]]; then
+    echo "Error: HTTP error ${http_code}" >&2
+    echo "$response" >&2
+    return 1
+  fi
 
   # Waiting to cluster cleanup
   testRunAttempts=40
@@ -470,6 +479,7 @@ function main() {
 
     "")
       >&2 echo "Empty command"
+      exit 1
     ;;
     *)
       >&2 echo "Unknown command '${1}'"
