@@ -56,7 +56,7 @@
 apiVersion: constraints.gatekeeper.sh/v1beta1
 kind: D8AllowedRepos
 metadata:
-  name: {{$cr.metadata.name}}
+  name: {{ include "constraint_name" (list $cr) }}
   {{- include "helm_lib_module_labels" (list $context (dict "security.deckhouse.io/operation-policy" "")) | nindent 2 }}
 spec:
   enforcementAction: {{ $cr.spec.enforcementAction | default "deny" | lower }}
@@ -64,12 +64,11 @@ spec:
     kinds:
       - apiGroups: [""]
         kinds: ["Pod"]
-    {{- include "constraint_selector" (list $cr) }}
+    {{- include "constraint_selector" (list $cr "op") }}
   parameters:
     repos:
       {{- $cr.spec.policies.allowedRepos | toYaml | nindent 6 }}
 {{- end }}
-
 
 {{- define "required_resources_policy" }}
   {{- $context := index . 0 }}
@@ -78,7 +77,7 @@ spec:
 apiVersion: constraints.gatekeeper.sh/v1beta1
 kind: D8RequiredResources
 metadata:
-  name: {{$cr.metadata.name}}
+  name: {{ include "constraint_name" (list $cr) }}
   {{- include "helm_lib_module_labels" (list $context (dict "security.deckhouse.io/operation-policy" "")) | nindent 2 }}
 spec:
   enforcementAction: {{ $cr.spec.enforcementAction | default "deny" | lower }}
@@ -86,7 +85,7 @@ spec:
     kinds:
       - apiGroups: [""]
         kinds: ["Pod"]
-    {{- include "constraint_selector" (list $cr) }}
+    {{- include "constraint_selector" (list $cr "op") }}
   parameters:
     {{- if $cr.spec.policies.requiredResources.limits }}
     limits:
@@ -106,7 +105,7 @@ spec:
 apiVersion: constraints.gatekeeper.sh/v1beta1
 kind: D8DisallowedTags
 metadata:
-  name: {{$cr.metadata.name}}
+  name: {{ include "constraint_name" (list $cr) }}
   {{- include "helm_lib_module_labels" (list $context (dict "security.deckhouse.io/operation-policy" "")) | nindent 2 }}
 spec:
   enforcementAction: {{ $cr.spec.enforcementAction | default "deny" | lower }}
@@ -114,7 +113,7 @@ spec:
     kinds:
       - apiGroups: [""]
         kinds: ["Pod"]
-    {{- include "constraint_selector" (list $cr) }}
+    {{- include "constraint_selector" (list $cr "op") }}
   parameters:
     tags:
       {{- $cr.spec.policies.disallowedImageTags | toYaml | nindent 6 }}
@@ -128,7 +127,7 @@ spec:
 apiVersion: constraints.gatekeeper.sh/v1beta1
 kind: D8RequiredLabels
 metadata:
-  name: {{$cr.metadata.name}}
+  name: {{ include "constraint_name" (list $cr) }}
   {{- include "helm_lib_module_labels" (list $context (dict "security.deckhouse.io/operation-policy" "")) | nindent 2 }}
 spec:
   enforcementAction: {{ $cr.spec.enforcementAction | default "deny" | lower }}
@@ -139,7 +138,7 @@ spec:
       - apiGroups: [{{ index $arrk 0 | default "\"\"" }}]
         kinds: [{{ index $arrk 1 }}]
       {{- end }}
-    {{- include "constraint_selector" (list $cr) }}
+    {{- include "constraint_selector" (list $cr "op") }}
   parameters:
     labels:
       {{- $cr.spec.policies.requiredLabels.labels | toYaml | nindent 6 }}
@@ -152,7 +151,7 @@ spec:
 apiVersion: constraints.gatekeeper.sh/v1beta1
 kind: D8RequiredAnnotations
 metadata:
-  name: {{$cr.metadata.name}}
+  name: {{ include "constraint_name" (list $cr) }}
   {{- include "helm_lib_module_labels" (list $context (dict "security.deckhouse.io/operation-policy" "")) | nindent 2 }}
 spec:
   enforcementAction: {{ $cr.spec.enforcementAction | default "deny" | lower }}
@@ -163,7 +162,7 @@ spec:
       - apiGroups: [{{ index $arrk 0 | default "\"\"" }}]
         kinds: [{{ index $arrk 1 }}]
       {{- end }}
-    {{- include "constraint_selector" (list $cr) }}
+    {{- include "constraint_selector" (list $cr "op") }}
   parameters:
     annotations:
       {{- $cr.spec.policies.requiredAnnotations.annotations | toYaml | nindent 6 }}
@@ -176,7 +175,7 @@ spec:
 apiVersion: constraints.gatekeeper.sh/v1beta1
 kind: D8RequiredProbes
 metadata:
-  name: {{$cr.metadata.name}}
+  name: {{ include "constraint_name" (list $cr) }}
   {{- include "helm_lib_module_labels" (list $context (dict "security.deckhouse.io/operation-policy" "")) | nindent 2 }}
 spec:
   enforcementAction: {{ $cr.spec.enforcementAction | default "deny" | lower }}
@@ -184,7 +183,7 @@ spec:
     kinds:
       - apiGroups: [""]
         kinds: ["Pod"]
-    {{- include "constraint_selector" (list $cr) }}
+    {{- include "constraint_selector" (list $cr "op") }}
   parameters:
     probes:
       {{- $cr.spec.policies.requiredProbes | toYaml | nindent 6 }}
@@ -198,7 +197,7 @@ spec:
 apiVersion: constraints.gatekeeper.sh/v1beta1
 kind: D8RevisionHistoryLimit
 metadata:
-  name: {{$cr.metadata.name}}
+  name: {{ include "constraint_name" (list $cr) }}
   {{- include "helm_lib_module_labels" (list $context (dict "security.deckhouse.io/operation-policy" "")) | nindent 2 }}
 spec:
   enforcementAction: {{ $cr.spec.enforcementAction | default "deny" | lower }}
@@ -206,7 +205,7 @@ spec:
     kinds:
       - apiGroups: ["apps"]
         kinds: ["DaemonSet", "Deployment"]
-    {{- include "constraint_selector" (list $cr) }}
+    {{- include "constraint_selector" (list $cr "op") }}
   parameters:
     limit: {{ $cr.spec.policies.maxRevisionHistoryLimit }}
 {{- end }}
@@ -220,7 +219,7 @@ spec:
 apiVersion: constraints.gatekeeper.sh/v1beta1
 kind: D8ImagePullPolicy
 metadata:
-  name: {{$cr.metadata.name}}
+  name: {{ include "constraint_name" (list $cr) }}
   {{- include "helm_lib_module_labels" (list $context (dict "security.deckhouse.io/operation-policy" "")) | nindent 2 }}
 spec:
   enforcementAction: {{ $cr.spec.enforcementAction | default "deny" | lower }}
@@ -228,7 +227,7 @@ spec:
     kinds:
       - apiGroups: [""]
         kinds: ["Pod"]
-    {{- include "constraint_selector" (list $cr) }}
+    {{- include "constraint_selector" (list $cr "op") }}
   parameters:
     policy: {{$cr.spec.policies.imagePullPolicy | quote }}
 {{- end }}
@@ -241,7 +240,7 @@ spec:
 apiVersion: constraints.gatekeeper.sh/v1beta1
 kind: D8PriorityClass
 metadata:
-  name: {{$cr.metadata.name}}
+  name: {{ include "constraint_name" (list $cr) }}
   {{- include "helm_lib_module_labels" (list $context (dict "security.deckhouse.io/operation-policy" "")) | nindent 2 }}
 spec:
   enforcementAction: {{ $cr.spec.enforcementAction | default "deny" | lower }}
@@ -249,7 +248,7 @@ spec:
     kinds:
       - apiGroups: [""]
         kinds: ["Pod"]
-    {{- include "constraint_selector" (list $cr) }}
+    {{- include "constraint_selector" (list $cr "op") }}
   parameters:
     priorityClassNames:
       {{- $cr.spec.policies.priorityClassNames | toYaml | nindent 6 }}
@@ -262,7 +261,7 @@ spec:
 apiVersion: constraints.gatekeeper.sh/v1beta1
 kind: D8IngressClass
 metadata:
-  name: {{$cr.metadata.name}}
+  name: {{ include "constraint_name" (list $cr) }}
   {{- include "helm_lib_module_labels" (list $context (dict "security.deckhouse.io/operation-policy" "")) | nindent 2 }}
 spec:
   enforcementAction: {{ $cr.spec.enforcementAction | default "deny" | lower }}
@@ -270,7 +269,7 @@ spec:
     kinds:
       - apiGroups: ["networking.k8s.io"]
         kinds: ["Ingress"]
-    {{- include "constraint_selector" (list $cr) }}
+    {{- include "constraint_selector" (list $cr "op") }}
   parameters:
     ingressClassNames:
       {{- $cr.spec.policies.ingressClassNames | toYaml | nindent 6 }}
@@ -283,7 +282,7 @@ spec:
 apiVersion: constraints.gatekeeper.sh/v1beta1
 kind: D8StorageClass
 metadata:
-  name: {{$cr.metadata.name}}
+  name: {{ include "constraint_name" (list $cr) }}
   {{- include "helm_lib_module_labels" (list $context (dict "security.deckhouse.io/operation-policy" "")) | nindent 2 }}
 spec:
   enforcementAction: {{ $cr.spec.enforcementAction | default "deny" | lower }}
@@ -291,7 +290,7 @@ spec:
     kinds:
       - apiGroups: [""]
         kinds: ["PersistentVolumeClaim"]
-    {{- include "constraint_selector" (list $cr) }}
+    {{- include "constraint_selector" (list $cr "op") }}
   parameters:
     storageClassNames:
       {{- $cr.spec.policies.storageClassNames | toYaml | nindent 6 }}
@@ -304,7 +303,7 @@ spec:
 apiVersion: constraints.gatekeeper.sh/v1beta1
 kind: D8DNSPolicy
 metadata:
-  name: {{$cr.metadata.name}}
+  name: {{ include "constraint_name" (list $cr) }}
   {{- include "helm_lib_module_labels" (list $context (dict "security.deckhouse.io/operation-policy" "")) | nindent 2 }}
 spec:
   enforcementAction: {{ $cr.spec.enforcementAction | default "deny" | lower }}
@@ -312,7 +311,7 @@ spec:
     kinds:
       - apiGroups: [""]
         kinds: ["Pod"]
-    {{- include "constraint_selector" (list $cr) }}
+    {{- include "constraint_selector" (list $cr "op") }}
 {{- end }}
 
 {{- define "container_duplicates_policy" }}
@@ -322,7 +321,7 @@ spec:
 apiVersion: constraints.gatekeeper.sh/v1beta1
 kind: D8ContainerDuplicates
 metadata:
-  name: {{$cr.metadata.name}}
+  name: {{ include "constraint_name" (list $cr) }}
   {{- include "helm_lib_module_labels" (list $context (dict "security.deckhouse.io/operation-policy" "")) | nindent 2 }}
 spec:
   enforcementAction: {{ $cr.spec.enforcementAction | default "deny" | lower }}
@@ -330,7 +329,7 @@ spec:
     kinds:
       - apiGroups: [""]
         kinds: ["Pod"]
-    {{- include "constraint_selector" (list $cr) }}
+    {{- include "constraint_selector" (list $cr "op") }}
 {{- end }}
 
 {{- define "replica_limits_policy" }}
@@ -340,14 +339,14 @@ spec:
 apiVersion: constraints.gatekeeper.sh/v1beta1
 kind: D8ReplicaLimits
 metadata:
-  name: {{$cr.metadata.name}}
+  name: {{ include "constraint_name" (list $cr) }}
   {{- include "helm_lib_module_labels" (list $context (dict "security.deckhouse.io/operation-policy" "")) | nindent 2 }}
 spec:
   match:
     kinds:
       - apiGroups: ["apps"]
         kinds: ["Deployment"]
-    {{- include "constraint_selector" (list $cr) }}
+    {{- include "constraint_selector" (list $cr "op") }}
   parameters:
     ranges:
       - {{- $cr.spec.policies.replicaLimits | toYaml | nindent 8 }}

@@ -36,6 +36,7 @@ var _ = Describe("Modules :: admission-policy-engine :: hooks :: handle operatio
 	)
 	f.RegisterCRD("templates.gatekeeper.sh", "v1", "ConstraintTemplate", false)
 	f.RegisterCRD("deckhouse.io", "v1alpha1", "OperationPolicy", false)
+	f.RegisterCRD("deckhouse.io", "v1alpha1", "NamespacedOperationPolicy", false)
 
 	Context("Operation policy is set", func() {
 		BeforeEach(func() {
@@ -44,7 +45,7 @@ var _ = Describe("Modules :: admission-policy-engine :: hooks :: handle operatio
 		})
 		It("should have generated resources", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("admissionPolicyEngine.internal.operationPolicies").Array()).To(HaveLen(1))
+			Expect(f.ValuesGet("admissionPolicyEngine.internal.operationPolicies").Array()).To(HaveLen(2))
 		})
 	})
 })
@@ -100,6 +101,58 @@ spec:
         key: foobar
       watchKinds:
       - /Namespace
+    requiredProbes:
+      - livenessProbe
+      - readinessProbe
+    maxRevisionHistoryLimit: 3
+    imagePullPolicy: Always
+    priorityClassNames:
+      - foo
+      - bar
+    ingressClassNames:
+      - ing1
+      - ing2
+    storageClassNames:
+      - st1
+      - st2
+    checkHostNetworkDNSPolicy: true
+    checkContainerDuplicates: true
+    replicaLimits:
+      minReplicas: 1
+      maxReplicas: 3
+  match:
+    namespaceSelector:
+      matchNames:
+        - default
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: NamespacedOperationPolicy
+metadata:
+  name: foo
+spec:
+  policies:
+    allowedRepos:
+      - foo
+    requiredResources:
+      limits:
+        - memory
+      requests:
+        - cpu
+        - memory
+    disallowedImageTags:
+      - latest
+    requiredLabels:
+      labels:
+      - allowedRegex: ^P\d{4}$
+        key: product-id
+      watchKinds:
+      - /Pod
+    requiredAnnotations:
+      annotations:
+      - allowedRegex: ^P\d{4}$
+        key: foobar
+      watchKinds:
+      - /Pod
     requiredProbes:
       - livenessProbe
       - readinessProbe

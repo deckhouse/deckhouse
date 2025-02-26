@@ -17,6 +17,8 @@ limitations under the License.
 package hooks
 
 import (
+	"slices"
+
 	"github.com/clarketm/json"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
@@ -34,13 +36,19 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			Kind:       "OperationPolicy",
 			FilterFunc: filterOP,
 		},
+		{
+			Name:       "namespaced-operation-policies",
+			ApiVersion: "deckhouse.io/v1alpha1",
+			Kind:       "NamespacedOperationPolicy",
+			FilterFunc: filterOP,
+		},
 	},
 }, handleOP)
 
 func handleOP(input *go_hook.HookInput) error {
 	result := make([]*operationPolicy, 0)
 
-	snap := input.Snapshots["operation-policies"]
+	snap := slices.Concat(input.Snapshots["operation-policies"], input.Snapshots["namespaced-operation-policies"])
 
 	for _, sn := range snap {
 		op := sn.(*operationPolicy)
@@ -67,7 +75,8 @@ func filterOP(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 
 type operationPolicy struct {
 	Metadata struct {
-		Name string `json:"name"`
+		Name      string `json:"name"`
+		Namespace string `json:"namespace"`
 	} `json:"metadata"`
 	Spec v1alpha1.OperationPolicySpec `json:"spec"`
 }

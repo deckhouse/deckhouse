@@ -63,7 +63,8 @@ var _ = Describe("Module :: admissionPolicyEngine :: helm template ::", func() {
 	f := SetupHelmConfig(`{"admissionPolicyEngine": {"denyVulnerableImages": {}, "podSecurityStandards": {}, "internal": {"ratify": {"imageReferences": [{"reference": "ghcr.io/*", "publicKeys": ["someKey2"]}], "webhook": {"key": "YjY0ZW5jX3N0cmluZwo=", "crt": "YjY0ZW5jX3N0cmluZwo=" , "ca": "YjY0ZW5jX3N0cmluZwo="}}, "podSecurityStandards": {"enforcementActions": ["deny"]}, "operationPolicies": [
 	{
 		"metadata": {
-			"name": "foo"
+			"name": "foo",
+			"namespace": ""
 		},
 		"spec": {
 			"enforcementAction": "Deny",
@@ -98,7 +99,8 @@ var _ = Describe("Module :: admissionPolicyEngine :: helm template ::", func() {
         "securityPolicies": [
 	{
 		"metadata": {
-			"name": "foo"
+			"name": "foo",
+			"namespace": ""
 		},
 		"spec": {
 			"enforcementAction": "Deny",
@@ -332,7 +334,7 @@ var _ = Describe("Module :: admissionPolicyEngine :: helm template ::", func() {
 	Context("Cluster with deckhouse on master node and ratify-provider", func() {
 		Context("Enables signature verification", func() {
 			BeforeEach(func() {
-				f.ValuesSetFromYaml("admissionPolicyEngine.internal", `{ "bootstrapped": true, "podSecurityStandards": {"enforcementActions": ["deny"]}, "securityPolicies": [{"metadata": {"name": "foo"}, "spec": {"match": {"labelSelector": {}}, "policies": {"verifyImageSignatures": [{"dockerCfg": "zxc=", "reference": "ghcr.io/*", "publicKeys": ["someKey1"]}]}}}], "ratify": {"webhook": {"ca": "ca", "crt": "crt", "key": "key"}, "imageReferences": [{"reference": "ghcr.io/*", "publicKeys": ["someKey1"]}]}, "trackedConstraintResources": [{"apiGroups": [], "resources": ["pod"]}], "webhook": {"ca": "ca", "crt": "crt", "key": "key"}, "trackedMutateResources": []}`)
+				f.ValuesSetFromYaml("admissionPolicyEngine.internal", `{ "bootstrapped": true, "podSecurityStandards": {"enforcementActions": ["deny"]}, "securityPolicies": [{"metadata": {"name": "foo", "namespace": ""}, "spec": {"match": {"labelSelector": {}}, "policies": {"verifyImageSignatures": [{"dockerCfg": "zxc=", "reference": "ghcr.io/*", "publicKeys": ["someKey1"]}]}}}], "ratify": {"webhook": {"ca": "ca", "crt": "crt", "key": "key"}, "imageReferences": [{"reference": "ghcr.io/*", "publicKeys": ["someKey1"]}]}, "trackedConstraintResources": [{"apiGroups": [], "resources": ["pod"]}], "webhook": {"ca": "ca", "crt": "crt", "key": "key"}, "trackedMutateResources": []}`)
 				f.HelmRender()
 			})
 

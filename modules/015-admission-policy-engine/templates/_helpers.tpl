@@ -1,7 +1,20 @@
+{{- define "constraint_name" }}
+    {{- $cr := index . 0 }}
+    {{- if $cr.metadata.namespace }}
+    {{- printf "%s-%s" $cr.metadata.namespace $cr.metadata.name }}
+    {{- else }}
+    {{- $cr.metadata.name }}
+    {{- end }}
+{{- end }}
+
 {{- define "constraint_selector" }}
     {{- $cr := index . 0 }}
-
-    {{- if $cr.spec.match.namespaceSelector }}
+    {{- $policy := index . 1 }}
+    {{- if $cr.metadata.namespace }}
+    namespaces:
+      - {{ $cr.metadata.namespace }}
+    scope: Namespaced
+    {{- else if $cr.spec.match.namespaceSelector }}
       {{- if hasKey $cr.spec.match.namespaceSelector "matchNames"}}
     namespaces:
       {{- $cr.spec.match.namespaceSelector.matchNames | toYaml | nindent 6 }}
@@ -13,6 +26,9 @@
       {{- if hasKey $cr.spec.match.namespaceSelector "labelSelector" }}
     namespaceSelector:
       {{- $cr.spec.match.namespaceSelector.labelSelector | toYaml | nindent 6 }}
+      {{- end }}
+      {{- if eq $policy "sp" }}
+    scope: Namespaced
       {{- end }}
     {{- end }}
     {{- if hasKey $cr.spec.match "labelSelector" }}

@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"slices"
 	"sort"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -39,19 +40,29 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			Kind:       "SecurityPolicy",
 			FilterFunc: filterSP,
 		},
+		{
+			Name:       "namespaced-security-policies",
+			ApiVersion: "deckhouse.io/v1alpha1",
+			Kind:       "NamespacedSecurityPolicy",
+			FilterFunc: filterSP,
+		},
 	},
 }, handleSP)
 
 func handleSP(input *go_hook.HookInput) error {
 	result := make([]*securityPolicy, 0)
-	refs := make(map[string]set.Set, 0)
+	refs := make(map[string]set.Set)
 
-	snap := input.Snapshots["security-policies"]
+	snap := slices.Concat(input.Snapshots["security-policies"], input.Snapshots["namespaced-security-policies"])
 
 	for _, sn := range snap {
 		sp := sn.(*securityPolicy)
 		// set observed status
-		input.PatchCollector.Filter(set_cr_statuses.SetObservedStatus(sn, filterSP), "deckhouse.io/v1alpha1", "securitypolicy", "", sp.Metadata.Name, object_patch.WithSubresource("/status"), object_patch.IgnoreHookError())
+		if sp.Metadata.Namespace == "" {
+			input.PatchCollector.Filter(set_cr_statuses.SetObservedStatus(sn, filterSP), "deckhouse.io/v1alpha1", "securitypolicy", "", sp.Metadata.Name, object_patch.WithSubresource("/status"), object_patch.IgnoreHookError())
+		} else {
+			input.PatchCollector.Filter(set_cr_statuses.SetObservedStatus(sn, filterSP), "deckhouse.io/v1alpha1", "namespacedsecuritypolicy", sp.Metadata.Namespace, sp.Metadata.Name, object_patch.WithSubresource("/status"), object_patch.IgnoreHookError())
+		}
 		sp.preprocesSecurityPolicy()
 		result = append(result, sp)
 		for _, v := range sp.Spec.Policies.VerifyImageSignatures {
@@ -99,23 +110,14 @@ func filterSP(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	return &sp, nil
 }
 
-func hasItem(slice []string, value string) bool {
-	for _, v := range slice {
-		if v == value {
-			return true
-		}
-	}
-	return false
-}
-
 func (sp *securityPolicy) preprocesSecurityPolicy() {
 	// Check if we really need to create a constraint
 	// AllowedCapabilities with 'ALL' and empty RequiredDropCapabilities list result in a sensless constraint
-	if hasItem(sp.Spec.Policies.AllowedCapabilities, "ALL") && len(sp.Spec.Policies.RequiredDropCapabilities) == 0 {
+	if slices.Contains(sp.Spec.Policies.AllowedCapabilities, "ALL") && len(sp.Spec.Policies.RequiredDropCapabilities) == 0 {
 		sp.Spec.Policies.AllowedCapabilities = nil
 	}
 	// AllowedUnsafeSysctls with '*' and empty ForbiddenSysctls list result in a sensless constraint
-	if hasItem(sp.Spec.Policies.AllowedUnsafeSysctls, "*") && len(sp.Spec.Policies.ForbiddenSysctls) == 0 {
+	if slices.Contains(sp.Spec.Policies.AllowedUnsafeSysctls, "*") && len(sp.Spec.Policies.ForbiddenSysctls) == 0 {
 		sp.Spec.Policies.AllowedUnsafeSysctls = nil
 	}
 	// The rules set to 'RunAsAny' should be ignored
@@ -148,23 +150,24 @@ func (sp *securityPolicy) preprocesSecurityPolicy() {
 		sp.Spec.Policies.AllowedProcMount = ""
 	}
 	// Having rules allowing '*' volumes makes no sense
-	if hasItem(sp.Spec.Policies.AllowedVolumes, "*") {
+	if slices.Contains(sp.Spec.Policies.AllowedVolumes, "*") {
 		sp.Spec.Policies.AllowedVolumes = nil
 	}
 	// Having all seccomp profiles allowed also isn't worth creating a constraint
-	if hasItem(sp.Spec.Policies.SeccompProfiles.AllowedProfiles, "*") && hasItem(sp.Spec.Policies.SeccompProfiles.AllowedLocalhostFiles, "*") {
+	if slices.Contains(sp.Spec.Policies.SeccompProfiles.AllowedProfiles, "*") && slices.Contains(sp.Spec.Policies.SeccompProfiles.AllowedLocalhostFiles, "*") {
 		sp.Spec.Policies.SeccompProfiles.AllowedProfiles = nil
 		sp.Spec.Policies.SeccompProfiles.AllowedLocalhostFiles = nil
 	}
 	// Having rules allowing '*' volumes makes no sense
-	if hasItem(sp.Spec.Policies.AllowedClusterRoles, "*") {
+	if slices.Contains(sp.Spec.Policies.AllowedClusterRoles, "*") {
 		sp.Spec.Policies.AllowedClusterRoles = nil
 	}
 }
 
 type securityPolicy struct {
 	Metadata struct {
-		Name string `json:"name"`
+		Name      string `json:"name"`
+		Namespace string `json:"namespace"`
 	} `json:"metadata"`
 	Spec v1alpha1.SecurityPolicySpec `json:"spec"`
 }

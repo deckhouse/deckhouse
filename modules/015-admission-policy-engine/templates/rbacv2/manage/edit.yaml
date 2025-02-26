@@ -16,6 +16,8 @@ rules:
   resources:
   - operationpolicies
   - securitypolicies
+  - namespacedoperationpolicies
+  - namespacedsecuritypolicies
   verbs:
   - create
   - update

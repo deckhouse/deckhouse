@@ -1,18 +1,18 @@
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
-  name: operationpolicies.deckhouse.io
+  name: namespacedoperationpolicies.deckhouse.io
   labels:
     heritage: deckhouse
     module: admission-policy-engine
     backup.deckhouse.io/cluster-config: "true"
 spec:
   group: deckhouse.io
-  scope: Cluster
+  scope: Namespaced
   names:
-    plural: operationpolicies
-    singular: operationpolicy
-    kind: OperationPolicy
+    plural: namespacedoperationpolicies
+    singular: namespacedoperationpolicy
+    kind: NamespacedOperationPolicy
   preserveUnknownFields: false
   versions:
     - name: v1alpha1
@@ -23,13 +23,13 @@ spec:
           type: object
           required: ["spec"]
           description: |
-            Describes a cluster-wide operation policy.
+            Describes an operation policy for a namespace.
 
-            Each CustomResource `OperationPolicy` describes rules for objects in a cluster.
+            Each CustomResource `NamespacedOperationPolicy` describes rules for objects in a namespaced.
           properties:
             spec:
               type: object
-              required: ["match", "policies"]
+              required: ["policies"]
               properties:
                 enforcementAction:
                   type: string
@@ -108,7 +108,7 @@ spec:
                         watchKinds:
                           type: array
                           description: |
-                            The list of kubernetes objects in the format `$apiGroup/$kind` to watch the labels on.
+                            The list of namespaced kubernetes objects in the format `$apiGroup/$kind` to watch the labels on.
                           minItems: 1
                           items:
                             type: string
@@ -138,7 +138,7 @@ spec:
                         watchKinds:
                           type: array
                           description: |
-                            The list of kubernetes objects in the format `$apiGroup/$kind` to watch the annotations on.
+                            The list of namespaced kubernetes objects in the format `$apiGroup/$kind` to watch the annotations on.
                           minItems: 1
                           items:
                             type: string
@@ -198,70 +198,8 @@ spec:
                           type: integer
                 match:
                   type: object
-                  required: ["namespaceSelector"]
+                  required: ["labelSelector"]
                   properties:
-                    namespaceSelector:
-                      oneOf:
-                        - required: [matchNames]
-                        - required: [excludeNames]
-                        - required: [labelSelector]
-                      type: object
-                      description: Specifies the Namespace selector to filter objects with.
-                      properties:
-                        matchNames:
-                          type: array
-                          description: "Include only a particular set of namespaces. Supports glob pattern."
-                          items:
-                            type: string
-                        excludeNames:
-                          type: array
-                          description: "Include all namespaces except a particular set. Support glob pattern."
-                          items:
-                            type: string
-                        labelSelector:
-                          type: object
-                          description: |
-                            Specifies the label selector to filter namespaces.
-
-                            You can get more info in [the documentation](https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/).
-                          anyOf:
-                            - required: [ matchLabels ]
-                            - required: [ matchExpressions ]
-                          properties:
-                            matchLabels:
-                              type: object
-                              description: List of labels which a namespace should have.
-                              x-doc-examples: [{ "foo": "bar", "baz": "who"}]
-                              additionalProperties:
-                                type: string
-                            matchExpressions:
-                              type: array
-                              description: List of label expressions for namespaces.
-                              x-doc-examples:
-                              - - key: tier
-                                  operator: In
-                                  values:
-                                  - production
-                                  - staging
-                              items:
-                                type: object
-                                required:
-                                  - key
-                                  - operator
-                                properties:
-                                  key:
-                                    type: string
-                                  operator:
-                                    type: string
-                                    enum:
-                                      - In
-                                      - NotIn
-                                      - Exists
-                                      - DoesNotExist
-                                  values:
-                                    type: array
-                                    items:
-                                      type: string
                     labelSelector:
                       type: object
                       description: |

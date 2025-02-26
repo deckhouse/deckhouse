@@ -81,6 +81,9 @@ spec:
         - --enable-external-data=true
         - --metrics-backend=prometheus
         - --disable-cert-rotation=true
+        - --default-create-vap-binding-for-constraints=false
+        - --default-create-vap-for-templates=false
+        - --enable-k8s-native-validation=false
         env:
         - name: POD_NAMESPACE
           valueFrom:
