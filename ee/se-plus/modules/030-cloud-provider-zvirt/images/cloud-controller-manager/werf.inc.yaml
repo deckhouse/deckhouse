@@ -26,9 +26,9 @@ git:
         - "**/*.go"
 shell:
   install:
-    - git clone --depth 1 --branch v0.0.1-flant fox.flant.com/deckhouse/cloud-providers/ovirt/go-ovirt /src/go-ovirt
+    - git clone --depth 1 --branch v0.0.1-flant {{ $.CLOUD_PROVIDERS_SOURCE_REPO }}/ovirt/go-ovirt /src/go-ovirt
     - cd /src
-    - sed -i -e 's#replace github.com/ovirt/go-ovirt v0.0.0-20220427092237-114c47f2835c => fox.flant.com/deckhouse/cloud-providers/ovirt/go-ovirt v0.0.1-flant#replace github.com/ovirt/go-ovirt => /src/go-ovirt#g' go.mod
+    - echo "replace github.com/ovirt/go-ovirt => /src/go-ovirt" >> go.mod
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
 final: false
