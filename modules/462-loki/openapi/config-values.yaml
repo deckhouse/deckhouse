@@ -43,12 +43,6 @@ properties:
       How many hours to keep logs before deleting.
     x-doc-default: 168
     default: 168
-  maxLabelNamesPerSeries:
-    type: integer
-    description: |
-      Maximum number of label names per series.
-    x-doc-default: 15
-    default: 15
   storeSystemLogs:
     type: boolean
     default: true
@@ -67,6 +61,11 @@ properties:
 
       > Caution! Incorrect settings may lead to the malfunction of Loki.
     properties:
+      maxLabelNamesPerSeries:
+        type: integer
+        description: |
+          Maximum number of label names per series.
+        default: 15
       ingestionRateMB:
         type: number
         description: |

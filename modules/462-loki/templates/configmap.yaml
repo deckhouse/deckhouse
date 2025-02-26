@@ -19,7 +19,7 @@ data:
       {{- pick $lokiConfigSnakeCase "grpc_server_max_send_msg_size" "grpc_server_max_recv_msg_size" "grpc_server_max_concurrent_streams" | toYaml | nindent 6 }}
 
     limits_config:
-      max_label_names_per_series: {{ .Values.loki.maxLabelNamesPerSeries | default 15 }}
+      max_label_names_per_series: {{ .Values.loki.lokiConfig.maxLabelNamesPerSeries | default 15 }}
       retention_period: {{ .Values.loki.retentionPeriodHours | default 168 }}h
       {{- omit $lokiConfigSnakeCase "grpc_server_max_send_msg_size" "grpc_server_max_recv_msg_size" "grpc_server_max_concurrent_streams" | toYaml | nindent 6 }}
 
