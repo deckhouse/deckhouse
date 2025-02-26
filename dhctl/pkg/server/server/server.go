@@ -106,7 +106,7 @@ func Serve(network, address string, parallelTasksLimit int) error {
 	reflection.Register(s)
 
 	// init services
-	validationService := validation.New(config.NewSchemaStore())
+	validationService := validation.New(config.NewSchemaStore(false))
 	statusService := status.New(requestsCounter)
 
 	// register services
