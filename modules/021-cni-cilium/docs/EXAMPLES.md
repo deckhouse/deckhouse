@@ -25,7 +25,7 @@ The `CiliumEgressGatewayPolicy` implies configuring only a single node as an egr
 
 ### Examples
 
-#### EgressGateway in PrimaryIPFromEgressGatewayNodeInterface mode
+#### EgressGateway in PrimaryIPFromEgressGatewayNodeInterface mode (basic mode)
 
 ```yaml
 apiVersion: network.deckhouse.io/v1alpha1
@@ -44,7 +44,7 @@ spec:
       interfaceName: eth1 
 ```
 
-#### EgressGateway in VirtualIPAddress mode
+#### EgressGateway in VirtualIPAddress mode (Virtual IP mode)
 
 ```yaml
 apiVersion: network.deckhouse.io/v1alpha1
