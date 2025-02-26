@@ -61,6 +61,11 @@ properties:
 
       > Caution! Incorrect settings may lead to the malfunction of Loki.
     properties:
+      maxLabelNamesPerSeries:
+        type: integer
+        description: |
+          Maximum number of label names per series.
+        default: 15
       ingestionRateMB:
         type: number
         description: |

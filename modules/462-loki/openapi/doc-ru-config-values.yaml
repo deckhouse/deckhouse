@@ -36,6 +36,9 @@ properties:
 
       > Внимание! Ошибочные  настройки могут привести к неработоспособности Loki.
     properties:
+      maxLabelNamesPerSeries:
+        description: |
+          Максимальное количество лейблов в серии.
       ingestionRateMB:
         description: |
           Общий лимит скорости приема логов в мегабайтах в секунду.
