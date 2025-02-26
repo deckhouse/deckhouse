@@ -22,6 +22,7 @@ import (
 	"io"
 	"registry-modules-watcher/internal/backends"
 	"registry-modules-watcher/internal/backends/pkg/registry-scaner/cache"
+	"slices"
 	"strings"
 	"testing"
 
@@ -102,12 +103,16 @@ func assertCacheContains(t *testing.T, expected, actual []backends.Documentation
 	// Create maps for easier lookup and comparison by key components
 	expectedMap := make(map[string]struct{})
 	for _, task := range expected {
+		slices.Sort(task.ReleaseChannels)
+
 		key := fmt.Sprintf("%s/%s/%s/%v/1536", task.Registry, task.Module, task.Version, task.ReleaseChannels)
 		expectedMap[key] = struct{}{}
 	}
 
 	actualMap := make(map[string]struct{})
 	for _, task := range actual {
+		slices.Sort(task.ReleaseChannels)
+
 		key := fmt.Sprintf("%s/%s/%s/%v/%d", task.Registry, task.Module, task.Version, task.ReleaseChannels, len(task.TarFile))
 		actualMap[key] = struct{}{}
 	}
