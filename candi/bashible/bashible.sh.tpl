@@ -56,21 +56,10 @@ function bb-event-error-create() {
 EOF
     fi
 }
+
 function bb-event-info-create() {
-    # This function is used for creating event in the default namespace with reference of
-    # bashible step and used events.k8s.io/v1 apiVersion.
-    # eventName aggregates hostname with bashible step - sed keep only name and replace
-    # underscore with dash due to regexp.
-    # nodeName is used for both .name and .uid fields intentionally as putting a real node uid
-    # has proven to have some side effects like missing events when describing objects
-    # using kubectl versions 1.23.x (https://github.com/deckhouse/deckhouse/issues/4609).
-    # All of stdout outputs are stored in the eventLog file.
-    # step is used as argument for function call.
-    # If event creation failed, error from kubectl suppressed.
-    step="$1"
-    eventName="$(echo -n "${D8_NODE_HOSTNAME}")-$(echo $step | sed 's#.*/##; s/_/-/g')"
+    eventName="$(echo -n "${D8_NODE_HOSTNAME}")-$1"
     nodeName="${D8_NODE_HOSTNAME}"
-    eventLog="/var/lib/bashible/step.log"
     if type kubectl >/dev/null 2>&1 && test -f /etc/kubernetes/kubelet.conf ; then
       kubectl_exec apply -f - <<EOF || true
           apiVersion: events.k8s.io/v1
@@ -82,8 +71,7 @@ function bb-event-info-create() {
             kind: Node
             name: ${nodeName}
             uid: ${nodeName}
-          note: '$(tail -c 500 ${eventLog})'
-          reason: BashibleStepStarted
+          reason: BashibleNodeUpdate
           type: Info
           reportingController: bashible
           reportingInstance: '${D8_NODE_HOSTNAME}'
@@ -279,6 +267,10 @@ unset HTTP_PROXY http_proxy HTTPS_PROXY https_proxy NO_PROXY no_proxy
 
   fi
 
+  {{- if ne .runType "ClusterBootstrap" }}
+      bb-event-info-create "StartUpdate"
+  {{- end }}
+
   # Execute bashible steps
   for step in $BUNDLE_STEPS_DIR/*; do
     echo ===
@@ -303,10 +295,13 @@ unset HTTP_PROXY http_proxy HTTPS_PROXY https_proxy NO_PROXY no_proxy
       fi
       {{- if ne .runType "ClusterBootstrap" }}
       bb-event-error-create "$step"
-      bb-event-info-create "$step"
       {{- end }}
     done
   done
+
+  {{- if ne .runType "ClusterBootstrap" }}
+      bb-event-info-create "FinishUpdate"
+  {{- end }}
 
 {{ if eq .runType "Normal" }}
   annotate_node node.deckhouse.io/configuration-checksum=${CONFIGURATION_CHECKSUM}
