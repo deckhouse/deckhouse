@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"registry-modules-watcher/internal"
 	"strings"
 
 	v1 "github.com/google/go-containerregistry/pkg/v1"
@@ -59,6 +60,8 @@ func (s *registryscaner) processModules(ctx context.Context, registry Client, mo
 }
 
 func (s *registryscaner) processReleaseChannels(ctx context.Context, registry, module string, releaseChannels []string) {
+	vers := make([]internal.VersionData, 0, len(releaseChannels))
+
 	for _, releaseChannel := range releaseChannels {
 		releaseImage, err := s.registryClients[registry].ReleaseImage(module, releaseChannel)
 		if err != nil {
@@ -73,42 +76,77 @@ func (s *registryscaner) processReleaseChannels(ctx context.Context, registry, m
 			continue
 		}
 
-		releaseChecksum, ok := s.cache.GetReleaseChecksum(registry, module, releaseChannel)
-		if ok && releaseChecksum == releaseDigest.String() {
+		ver := internal.VersionData{
+			Registry:       registry,
+			ModuleName:     module,
+			ReleaseChannel: releaseChannel,
+			Checksum:       releaseDigest.String(),
+			Version:        "",
+			TarFile:        make([]byte, 0),
+			TarLen:         0,
+			Image:          releaseImage,
+		}
+
+		releaseChecksum, ok := s.cache.GetReleaseChecksum(ver)
+		if ok && releaseChecksum == ver.Checksum {
+			version, tarFile, ok := s.cache.GetReleaseVersionData(ver)
+			if ok {
+				ver.Version = version
+				ver.TarFile = tarFile
+
+				vers = append(vers, ver)
+			}
+
 			continue
 		}
 
-		version, err := extractVersionFromImage(releaseImage)
+		version, err := extractVersionFromImage(ver.Image)
 		if err != nil {
 			s.logger.Error("extract version from image", log.Err(err))
 			continue
 		}
 
-		err = s.processVersion(ctx, registry, module, version, releaseChannel)
-		if err == nil {
-			s.cache.SetReleaseChecksum(registry, module, releaseChannel, releaseDigest.String())
+		ver.Version = version
+
+		tarFile, err := s.extractTar(ver)
+		if err != nil {
+			s.logger.Error("extract tar", log.Err(err))
+			continue
 		}
+
+		ver.TarFile = tarFile
+
+		vers = append(vers, ver)
+	}
+
+	for _, ver := range vers {
+		s.cache.SetTar(ver)
+		s.cache.SetReleaseChecksum(ver)
 	}
 }
 
-func (s *registryscaner) processVersion(_ context.Context, registry, module, version, releaseChannel string) error {
-	image, err := s.registryClients[registry].Image(module, version)
+// cache is populated
+// 1.2.3 was not removed and remains in cache, form a list for deletion
+// 1.2.4 was removed from cache and taken into the list (already existed)
+// 1.2.5 was removed from cache and taken into the list (already existed)
+// versions arrived
+// 1.2.4
+// 1.2.5
+// 1.2.6 was not found and added to the list (needs to be added)
+func (s *registryscaner) extractTar(version internal.VersionData) ([]byte, error) {
+	image, err := s.registryClients[version.Registry].Image(version.ModuleName, version.Version)
 	if err != nil {
 		s.logger.Error("get image", log.Err(err))
-		return err
+		return nil, err
 	}
 
 	tarFile, err := s.extractDocumentation(image)
 	if err != nil {
 		s.logger.Error("extract documentation", log.Err(err))
-		return err
+		return nil, err
 	}
 
-	fmt.Println(module, releaseChannel)
-
-	s.cache.SetTar(registry, module, version, releaseChannel, tarFile)
-
-	return nil
+	return tarFile, nil
 }
 
 func (s *registryscaner) extractDocumentation(image v1.Image) ([]byte, error) {

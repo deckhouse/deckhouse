@@ -124,7 +124,6 @@ func setupCompleteClientTwo(mc *minimock.Controller) Client {
 		},
 		"parca": {
 			"4.5.6": createMockImage("c2parcaImageFirst", "4.5.6"),
-			"5.5.6": createMockImage("c2parcaImageSecond", "5.5.6"),
 		},
 	}
 
@@ -138,12 +137,11 @@ func setupCompleteClientTwo(mc *minimock.Controller) Client {
 	client.ReleaseImageMock.When("console", "alpha").Then(images["console"]["3.4.5"], nil)
 	client.ReleaseImageMock.When("console", "beta").Then(images["console"]["4.4.5"], nil)
 	client.ReleaseImageMock.When("parca", "rock-solid").Then(images["parca"]["4.5.6"], nil)
-	client.ReleaseImageMock.When("parca", "stable").Then(images["parca"]["5.5.6"], nil)
+	client.ReleaseImageMock.When("parca", "stable").Then(images["parca"]["4.5.6"], nil)
 
 	client.ImageMock.When("console", "3.4.5").Then(images["console"]["3.4.5"], nil)
 	client.ImageMock.When("console", "4.4.5").Then(images["console"]["4.4.5"], nil)
 	client.ImageMock.When("parca", "4.5.6").Then(images["parca"]["4.5.6"], nil)
-	client.ImageMock.When("parca", "5.5.6").Then(images["parca"]["5.5.6"], nil)
 
 	return client
 }
@@ -227,61 +225,15 @@ func buildCompleteExpectedCache() map[cache.RegistryName]map[cache.ModuleName]ca
 			"parca": {
 				ReleaseChecksum: map[cache.ReleaseChannelName]string{
 					"rock-solid": "algo:c2parcaImageFirst",
-					"stable":     "algo:c2parcaImageSecond",
+					"stable":     "algo:c2parcaImageFirst",
 				},
 				Versions: map[cache.VersionNum]cache.Data{
 					"4.5.6": {
-						ReleaseChannels: map[string]struct{}{"rock-solid": {}},
-						TarLen:          1536,
-					},
-					"5.5.6": {
-						ReleaseChannels: map[string]struct{}{"stable": {}},
-						TarLen:          1536,
-					},
-				},
-			},
-		},
-	}
-}
-
-func buildRemovedImagesExpectedCache() map[cache.RegistryName]map[cache.ModuleName]cache.ModuleData {
-	return map[cache.RegistryName]map[cache.ModuleName]cache.ModuleData{
-		"clientOne": {
-			"console": {
-				ReleaseChecksum: map[cache.ReleaseChannelName]string{},
-				Versions: map[cache.VersionNum]cache.Data{
-					"1.2.3": {
-						ReleaseChannels: map[string]struct{}{},
-						TarLen:          1536,
-					},
-				},
-			},
-			"parca": {
-				ReleaseChecksum: map[cache.ReleaseChannelName]string{},
-				Versions: map[cache.VersionNum]cache.Data{
-					"2.3.4": {
-						ReleaseChannels: map[string]struct{}{},
-						TarLen:          1536,
-					},
-				},
-			},
-		},
-		"clientTwo": {
-			"console": {
-				ReleaseChecksum: map[cache.ReleaseChannelName]string{},
-				Versions: map[cache.VersionNum]cache.Data{
-					"3.4.5": {
-						ReleaseChannels: map[string]struct{}{},
-						TarLen:          1536,
-					},
-				},
-			},
-			"parca": {
-				ReleaseChecksum: map[cache.ReleaseChannelName]string{},
-				Versions: map[cache.VersionNum]cache.Data{
-					"4.5.6": {
-						ReleaseChannels: map[string]struct{}{},
-						TarLen:          1536,
+						ReleaseChannels: map[string]struct{}{
+							"rock-solid": {},
+							"stable":     {},
+						},
+						TarLen: 1536,
 					},
 				},
 			},

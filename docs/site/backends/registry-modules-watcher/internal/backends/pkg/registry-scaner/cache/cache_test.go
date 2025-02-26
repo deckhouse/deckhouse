@@ -15,6 +15,7 @@
 package cache
 
 import (
+	"registry-modules-watcher/internal"
 	"registry-modules-watcher/internal/backends"
 	"testing"
 
@@ -32,7 +33,15 @@ func TestGetState(t *testing.T) {
 		},
 	}
 	cache := New()
-	cache.SetTar("TestReg", "TestModule", "1.0.0", "alpha", []byte("test"))
+
+	ver := internal.VersionData{
+		Registry:       "TestReg",
+		ModuleName:     "TestModule",
+		ReleaseChannel: "alpha",
+		Version:        "1.0.0",
+		TarFile:        []byte("test"),
+	}
+	cache.SetTar(ver)
 
 	state := cache.GetState()
 	assert.Equal(t, expected, state, "GetState return wrong state. Expected %v, got %v", expected, state)
@@ -40,18 +49,35 @@ func TestGetState(t *testing.T) {
 
 func TestSetTar(t *testing.T) {
 	cache := New()
-	cache.SetTar("TestReg", "TestModule", "1.0.0", "stable", []byte(""))
-	cache.SetTar("TestReg", "TestModule", "1.0.0", "beta", []byte(""))
-	cache.SetTar("TestReg", "TestModule", "1.0.0", "alpha", []byte(""))
+
+	ver := internal.VersionData{
+		Registry:       "TestReg",
+		ModuleName:     "TestModule",
+		ReleaseChannel: "stable",
+		Version:        "1.0.0",
+		TarFile:        []byte("test"),
+	}
+	cache.SetTar(ver)
+
+	ver.ReleaseChannel = "beta"
+	cache.SetTar(ver)
+
+	ver.ReleaseChannel = "alpha"
+	cache.SetTar(ver)
 	cache.ResetRange()
 
-	cache.SetTar("TestReg", "TestModule", "1.0.1", "alpha", []byte(""))
+	ver.ReleaseChannel = "alpha"
+	ver.Version = "1.0.1"
+	cache.SetTar(ver)
 	rng := cache.GetState()
 	// remove "alpha" tag from 1.0.0 and add to 1.0.1
 	assert.Equal(t, 2, len(rng), "Unexpected version range. Expected %v, got %v", 2, len(rng))
 
-	cache.SetTar("TestReg", "TestModule", "1.0.1", "beta", []byte(""))
-	cache.SetTar("TestReg", "TestModule", "1.0.2", "alpha", []byte(""))
+	ver.ReleaseChannel = "beta"
+	cache.SetTar(ver)
+	ver.ReleaseChannel = "alpha"
+	ver.Version = "1.0.2"
+	cache.SetTar(ver)
 
 	rng = cache.GetRange()
 	// "stable" tag in 1.0.0, "beta" in 1.0.1 and "alpha" in 1.0.2
