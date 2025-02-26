@@ -75,7 +75,7 @@ spec:
                           description: The checksum of last applied resource.
             spec:
               type: object
-              required: ["match", "policies"]
+              required: ["policies"]
               properties:
                 enforcementAction:
                   type: string
@@ -476,6 +476,7 @@ spec:
                 match:
                   type: object
                   description: Container filtering rules. Use selectors to specify the pods and containers to which you want to apply the policy.
+                  required: ["labelSelector"]
                   properties:
                     labelSelector:
                       type: object

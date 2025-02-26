@@ -97,7 +97,7 @@ var _ = Describe("Modules :: admission-policy-engine :: hooks :: handle security
 			Expect(f.ValuesGet("admissionPolicyEngine.internal.securityPolicies").Array()[1].String()).To(MatchJSON(`
 			{
 				"metadata": {
-					"name": "bar-namespaced",
+					"name": "bar",
 					"namespace": "default"
 				},
 				"spec": {
@@ -241,7 +241,7 @@ var _ = Describe("Modules :: admission-policy-engine :: hooks :: handle security
 				}
 			}`))
 
-			Expect(f.KubernetesResource("NamespacedSecurityPolicy", "default", "bar-namespaced").Field("status").String()).To(MatchJSON(`
+			Expect(f.KubernetesResource("NamespacedSecurityPolicy", "default", "bar").Field("status").String()).To(MatchJSON(`
 			{
 				"deckhouse": {
 					"observed": {
@@ -307,7 +307,7 @@ spec:
 apiVersion: deckhouse.io/v1alpha1
 kind: NamespacedSecurityPolicy
 metadata:
-  name: bar-namespaced
+  name: bar
   namespace: default
 spec:
   enforcementAction: Deny
@@ -343,12 +343,8 @@ spec:
     allowedFlexVolumes:
     - driver: vmware
     allowedProcMount: Unmasked
-    allowedUnsafeSysctls:
-    - user/huyser
     allowedVolumes:
     - '*'
-    forbiddenSysctls:
-    - user/huyser
     fsGroup:
       rule: RunAsAny
     readOnlyRootFilesystem: true

@@ -26,7 +26,10 @@ import (
 var _ = Describe("Module :: admissionPolicyEngine :: helm template :: security policies", func() {
 	f := SetupHelmConfig(`{admissionPolicyEngine: {denyVulnerableImages: {}, podSecurityStandards: {}, internal: {"bootstrapped": true, "ratify": {"webhook": {"key": "YjY0ZW5jX3N0cmluZwo=", "crt": "YjY0ZW5jX3N0cmluZwo=" , "ca": "YjY0ZW5jX3N0cmluZwo="}}, "podSecurityStandards": {"enforcementActions": ["deny"]}, "securityPolicies": [
 {
-	"metadata":{"name":"genpolicy"},
+	"metadata":{
+		"name":"genpolicy",
+		"namespace": ""
+	},
 	"spec":{
 		"policies":{
 				"allowHostIPC": true,

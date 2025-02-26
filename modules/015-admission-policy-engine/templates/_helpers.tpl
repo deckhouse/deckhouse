@@ -1,3 +1,12 @@
+{{- define "constraint_name" }}
+    {{- $cr := index . 0 }}
+    {{- if $cr.metadata.namespace }}
+    {{- printf "%s-%s" $cr.metadata.namespace $cr.metadata.name }}
+    {{- else }}
+    {{- $cr.metadata.name }}
+    {{- end }}
+{{- end }}
+
 {{- define "constraint_selector" }}
     {{- $cr := index . 0 }}
 
