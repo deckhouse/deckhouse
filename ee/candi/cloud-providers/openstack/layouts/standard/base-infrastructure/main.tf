@@ -137,7 +137,7 @@ resource "openstack_compute_instance_v2" "bastion" {
     update = var.resourceManagementTimeout
   }
 
-  metadata = local.metadata_tags
+  metadata = length(local.metadata_tags) > 0 ? local.metadata_tags : null
 }
 
 resource "openstack_compute_floatingip_v2" "bastion" {
