@@ -20,7 +20,7 @@ deckhouseVer=${D8_VERSION:-"dev"}
 shellOpVer=$(go list -m all | grep shell-operator | cut -d' ' -f 2-)
 addonOpVer=$(go list -m all | grep addon-operator | cut -d' ' -f 2-)
 
-GOOS=linux CGO_LDFLAGS=-v \
+GOOS=linux \
     go build \
      -gcflags "all=-N -l" \
      -ldflags="-X 'main.DeckhouseVersion=$deckhouseVer' -X 'main.AddonOperatorVersion=$addonOpVer' -X 'main.ShellOperatorVersion=$shellOpVer'" \

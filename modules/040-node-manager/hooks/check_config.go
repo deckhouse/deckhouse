@@ -81,8 +81,7 @@ func CheckCloudProviderConfig(input *go_hook.HookInput) error {
 			if err != nil {
 				requirements.SaveValue(CheckCloudProviderConfigRaw, true)
 				input.MetricsCollector.Set("d8_check_cloud_provider_config", 1, nil)
-				err1 := fmt.Errorf("%s", findErrorLines(err.Error()))
-				return err1
+				return fmt.Errorf("%s", findErrorLines(err.Error()))
 			}
 			requirements.SaveValue(CheckCloudProviderConfigRaw, false)
 			input.MetricsCollector.Expire("d8_check_cloud_provider_config")
@@ -133,7 +132,6 @@ func CheckStaticClusterConfig(input *go_hook.HookInput) error {
 			input.MetricsCollector.Expire("d8_check_static_cluster_config")
 		}
 	}
-
 	return nil
 }
 
