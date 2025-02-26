@@ -179,11 +179,6 @@ document.addEventListener("DOMContentLoaded", function() {
       if (FormData.name) {
         bitrixFields.fields['NAME'] = FormData.name;
       }
-  
-      // if (FormData.email) {
-      //   bitrixFields.fields['EMAIL[0][VALUE]'] = FormData.email;
-      //   bitrixFields.fields['EMAIL[0][VALUE_TYPE]'] = 'WORK';
-      // }
 
       if (FormData.email) {
         bitrixFields.fields['EMAIL'] = [
@@ -193,11 +188,6 @@ document.addEventListener("DOMContentLoaded", function() {
           }
         ]
       }
-
-      // if (FormData.phone) {
-      //   bitrixFields.fields['PHONE[0][VALUE]'] = FormData.phone;
-      //   bitrixFields.fields['PHONE[0][VALUE_TYPE]'] = 'WORK';
-      // }
 
       if (FormData.phone) {
         bitrixFields.fields['PHONE'] = [
