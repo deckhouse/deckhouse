@@ -464,5 +464,5 @@ func isRel(candidate, target string) bool {
 type ModuleReleaseMetadata struct {
 	Version *semver.Version `json:"version"`
 
-	Changelog map[string]any
+	Changelog map[string]any `json:"-"`
 }
