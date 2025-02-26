@@ -76,7 +76,7 @@ func CheckCloudProviderConfig(input *go_hook.HookInput) error {
 		input.Logger.Info("1004")
 		if YAML, ok := secret.Data["cloud-provider-cluster-configuration.yaml"]; ok && len(YAML) > 0 {
 			input.Logger.Info("1005")
-			err := validate(&YAML, input)
+			err := config.ValidateConf(&YAML)
 			input.Logger.Info("1006")
 			if err != nil {
 				input.Logger.Info("1007")
@@ -121,7 +121,7 @@ func CheckStaticClusterConfig(input *go_hook.HookInput) error {
 	if len(snap) > 0 {
 		secret := snap[0].(*v1.Secret)
 		if YAML, ok := secret.Data["static-cluster-configuration.yaml"]; ok && len(YAML) > 0 {
-			err := validate(&YAML, input)
+			err := config.ValidateConf(&YAML)
 			if err != nil {
 				requirements.SaveValue(CheckStaticClusterConfigRaw, true)
 				input.MetricsCollector.Set("d8_check_static_cluster_config", 1, nil)
@@ -161,7 +161,7 @@ func CheckClusterConfig(input *go_hook.HookInput) error {
 	if len(snap) > 0 {
 		secret := snap[0].(*v1.Secret)
 		if YAML, ok := secret.Data["cluster-configuration.yaml"]; ok && len(YAML) > 0 {
-			err := validate(&YAML, input)
+			err := config.ValidateConf(&YAML)
 			if err != nil {
 				requirements.SaveValue(CheckStaticClusterConfigRaw, true)
 				input.MetricsCollector.Set("d8_check_cluster_config", 1, nil)
@@ -186,25 +186,4 @@ func findErrorLines(text string) string {
 		}
 	}
 	return result.String()
-}
-
-func validate(conf *[]byte, input *go_hook.HookInput) error {
-	schemaStore := config.NewSchemaStore(true,
-		"/deckhouse/ee/se-plus/candi/cloud-providers/zvirt/openapi",
-		"/deckhouse/ee/se-plus/candi/cloud-providers/vsphere/openapi",
-		"/deckhouse/ee/candi/cloud-providers/huaweicloud/openapi",
-		"/deckhouse/ee/candi/cloud-providers/dynamix/openapi",
-		"/deckhouse/ee/candi/cloud-providers/openstack/openapi",
-		"/deckhouse/candi/cloud-providers/openstack/openapi",
-		"/deckhouse/ee/candi/cloud-providers/vcd/openapi",
-		"/deckhouse/candi/cloud-providers/gcp/openapi",
-		"/deckhouse/candi/cloud-providers/yandex/openapi",
-		"/deckhouse/candi/cloud-providers/aws/openapi",
-		"/deckhouse/candi/cloud-providers/azure/openapi",
-		"/deckhouse/candi/openapi/",
-	)
-	input.Logger.Info("validate schemaStore: %v\n", schemaStore)
-	_, err := schemaStore.Validate(conf)
-	input.Logger.Info("validate err: %v\n", err)
-	return err
 }
