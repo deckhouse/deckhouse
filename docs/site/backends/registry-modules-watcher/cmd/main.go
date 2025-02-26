@@ -80,12 +80,12 @@ func main() {
 		logger.Fatal("no registries to watch")
 	}
 
-	registryScaner := registryscaner.New(logger, clients...)
+	registryScaner := registryscaner.New(logger.Named("registry-scanner"), clients...)
 	registryScaner.Subscribe(ctx, *scanInterval)
 
 	// * * * * * * * * *
 	// New sender
-	sender := sender.New(logger)
+	sender := sender.New(logger.Named("sender"))
 
 	// * * * * * * * * *
 	// New backends service
@@ -106,7 +106,7 @@ func main() {
 	// * * * * * * * * *
 	// Watch lease
 	namespace := os.Getenv("POD_NAMESPACE")
-	wather := watcher.New(kClient, namespace, logger)
+	wather := watcher.New(kClient, namespace, logger.Named("watcher"))
 	wather.Watch(ctx, backends.Add, backends.Delete)
 
 	<-ctx.Done()

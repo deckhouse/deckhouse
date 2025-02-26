@@ -16,6 +16,7 @@ package backends
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"sync"
 
@@ -23,24 +24,32 @@ import (
 )
 
 type Sender interface {
-	Send(ctx context.Context, listBackends map[string]struct{}, versions []Version) error
+	Send(ctx context.Context, listBackends map[string]struct{}, versions []DocumentationTask) error
 }
 
 type RegistryScaner interface {
-	GetState() []Version
-	SubscribeOnUpdate(updateHandler func([]Version) error)
+	GetState() []DocumentationTask
+	SubscribeOnUpdate(updateHandler func([]DocumentationTask) error)
 }
 
 var instance *backends = nil
 
-type Version struct {
+type DocumentationTask struct {
 	Registry        string
 	Module          string
 	Version         string
 	ReleaseChannels []string
 	TarFile         []byte
-	ToDelete        bool
+
+	Task Task
 }
+
+type Task string
+
+const (
+	TaskCreate Task = "create"
+	TaskDelete Task = "delete"
+)
 
 type backends struct {
 	registryScaner RegistryScaner
@@ -84,6 +93,7 @@ func (b *backends) Add(backend string) {
 
 	b.listBackends[backend] = struct{}{}
 	state := b.registryScaner.GetState()
+
 	err := b.sender.Send(context.Background(), map[string]struct{}{backend: {}}, state)
 	if err != nil {
 		b.logger.Fatal("sending docs to new backend", log.Err(err))
@@ -100,15 +110,15 @@ func (b *backends) Delete(backend string) {
 }
 
 // UpdateDocks send update dock request to all backends
-func (b *backends) updateHandler(versions []Version) error {
+func (b *backends) updateHandler(docTask []DocumentationTask) error {
 	b.logger.Info(`'registryScaner' produce update event`)
 
 	b.m.RLock()
 	defer b.m.RUnlock()
 
-	err := b.sender.Send(context.Background(), b.listBackends, versions)
+	err := b.sender.Send(context.Background(), b.listBackends, docTask)
 	if err != nil {
-		return err
+		return fmt.Errorf("send: %w", err)
 	}
 
 	return nil

@@ -1,4 +1,4 @@
-// Copyright 2023 Flant JSC
+// Copyright 2025 Flant JSC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,45 +15,95 @@
 package cache
 
 import (
+	"registry-modules-watcher/internal"
 	"registry-modules-watcher/internal/backends"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 )
 
-func TestGetState(t *testing.T) {
-	expected := []backends.Version{
-		{
-			Registry:        "TestReg",
-			Module:          "TestModule",
-			Version:         "1.0.0",
-			ReleaseChannels: []string{"alpha"},
-			TarFile:         []byte("test"),
-		},
+func TestCache(t *testing.T) {
+	// Test data
+	testVersion := internal.VersionData{
+		Registry:       "TestReg",
+		ModuleName:     "TestModule",
+		ReleaseChannel: "alpha",
+		Version:        "1.0.0",
+		TarFile:        []byte("test"),
+		Checksum:       "checksum",
 	}
-	cache := New()
-	cache.SetTar("TestReg", "TestModule", "1.0.0", "alpha", []byte("test"))
 
-	state := cache.GetState()
-	assert.Equal(t, expected, state, "GetState return wrong state. Expected %v, got %v", expected, state)
-}
+	t.Run("EmptyCache", func(t *testing.T) {
+		cache := New()
+		state := cache.GetState()
+		assert.Empty(t, state, "GetState should return empty state")
+	})
 
-func TestSetTar(t *testing.T) {
-	cache := New()
-	cache.SetTar("TestReg", "TestModule", "1.0.0", "stable", []byte(""))
-	cache.SetTar("TestReg", "TestModule", "1.0.0", "beta", []byte(""))
-	cache.SetTar("TestReg", "TestModule", "1.0.0", "alpha", []byte(""))
-	cache.ResetRange()
+	t.Run("SyncWithRegistryVersions", func(t *testing.T) {
+		cache := New()
+		cache.SyncWithRegistryVersions([]internal.VersionData{testVersion})
 
-	cache.SetTar("TestReg", "TestModule", "1.0.1", "alpha", []byte(""))
-	rng := cache.GetState()
-	// remove "alpha" tag from 1.0.0 and add to 1.0.1
-	assert.Equal(t, 2, len(rng), "Unexpected version range. Expected %v, got %v", 2, len(rng))
+		expectedState := []backends.DocumentationTask{
+			{
+				Registry:        "TestReg",
+				Module:          "TestModule",
+				Version:         "1.0.0",
+				ReleaseChannels: []string{"alpha"},
+				TarFile:         []byte("test"),
+				Task:            backends.TaskCreate,
+			},
+		}
+		state := cache.GetState()
+		assert.Equal(t, expectedState, state, "State should match expected after sync")
+	})
 
-	cache.SetTar("TestReg", "TestModule", "1.0.1", "beta", []byte(""))
-	cache.SetTar("TestReg", "TestModule", "1.0.2", "alpha", []byte(""))
+	t.Run("ReleaseData", func(t *testing.T) {
+		cache := New()
+		cache.SyncWithRegistryVersions([]internal.VersionData{testVersion})
 
-	rng = cache.GetRange()
-	// "stable" tag in 1.0.0, "beta" in 1.0.1 and "alpha" in 1.0.2
-	assert.Equal(t, 4, len(rng), "Unexpected version range. Expected %v, got %v", 3, len(rng))
+		t.Run("GetReleaseChecksum", func(t *testing.T) {
+			checksum, found := cache.GetReleaseChecksum(&testVersion)
+			assert.True(t, found, "Checksum should be found")
+			assert.Equal(t, "checksum", checksum, "Checksum should match")
+		})
+
+		t.Run("GetReleaseVersionData", func(t *testing.T) {
+			version, tarFile, found := cache.GetReleaseVersionData(&testVersion)
+			assert.True(t, found, "Version data should be found")
+			assert.Equal(t, "1.0.0", version, "Version should match")
+			assert.Equal(t, []byte("test"), tarFile, "TarFile should match")
+		})
+	})
+
+	t.Run("ModuleOperations", func(t *testing.T) {
+		cache := New()
+		cache.SyncWithRegistryVersions([]internal.VersionData{testVersion})
+
+		t.Run("GetModules", func(t *testing.T) {
+			modules := cache.GetModules("TestReg")
+			assert.Equal(t, []string{"TestModule"}, modules, "Modules should match")
+		})
+
+		t.Run("DeleteModule", func(t *testing.T) {
+			cache.DeleteModule("TestReg", "TestModule")
+			modules := cache.GetModules("TestReg")
+			assert.Empty(t, modules, "Modules should be empty after deletion")
+		})
+	})
+
+	t.Run("ReleaseChannelOperations", func(t *testing.T) {
+		cache := New()
+		cache.SyncWithRegistryVersions([]internal.VersionData{testVersion})
+
+		t.Run("GetReleaseChannels", func(t *testing.T) {
+			releaseChannels := cache.GetReleaseChannels("TestReg", "TestModule")
+			assert.Equal(t, []string{"alpha"}, releaseChannels, "ReleaseChannels should match")
+		})
+
+		t.Run("DeleteReleaseChannel", func(t *testing.T) {
+			cache.DeleteReleaseChannel("TestReg", "TestModule", "alpha")
+			releaseChannels := cache.GetReleaseChannels("TestReg", "TestModule")
+			assert.Empty(t, releaseChannels, "ReleaseChannels should be empty after deletion")
+		})
+	})
 }

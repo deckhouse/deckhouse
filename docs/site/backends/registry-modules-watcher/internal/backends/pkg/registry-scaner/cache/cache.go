@@ -16,10 +16,9 @@ package cache
 
 import (
 	"slices"
-	"sort"
-	"strings"
 	"sync"
 
+	"registry-modules-watcher/internal"
 	"registry-modules-watcher/internal/backends"
 )
 
@@ -32,18 +31,17 @@ type (
 
 type moduleData struct {
 	releaseChecksum map[releaseChannelName]string
-	versions        map[versionNum]data
+	versions        map[versionNum]versionData
 }
 
-type data struct {
-	ReleaseChannels map[string]struct{}
-	TarFile         []byte
+type versionData struct {
+	releaseChannels map[string]struct{}
+	tarFile         []byte
 }
 
 type Cache struct {
-	m         sync.RWMutex
-	val       map[registryName]map[moduleName]moduleData
-	stateSnap []backends.Version
+	m   sync.RWMutex
+	val map[registryName]map[moduleName]moduleData
 }
 
 func New() *Cache {
@@ -52,59 +50,136 @@ func New() *Cache {
 	}
 }
 
-// ResetRange sets stateSnap to State
-func (c *Cache) ResetRange() {
-	state := c.GetState()
-	c.m.Lock()
-	defer c.m.Unlock()
-
-	c.stateSnap = make([]backends.Version, len(state))
-	copy(c.stateSnap, state)
-}
-
-// GetRange returns a list of module versions from the current State
-func (c *Cache) GetRange() []backends.Version {
+func (c *Cache) GetState() []backends.DocumentationTask {
 	c.m.RLock()
 	defer c.m.RUnlock()
 
-	versions := []backends.Version{}
-	state := c.GetState()
-	for _, version := range c.stateSnap {
-		if !contain(state, version) {
-			version.ToDelete = true
-			versions = append(versions, version)
-		}
-	}
-
-	for _, version := range state {
-		if !contain(c.stateSnap, version) {
-			version.ToDelete = false
-			versions = append(versions, version)
-		}
-	}
-
-	return versions
+	return RemapFromMapToVersions(c.val, backends.TaskCreate)
 }
 
-func (c *Cache) GetState() []backends.Version {
+func (c *Cache) GetReleaseChecksum(version *internal.VersionData) (string, bool) {
 	c.m.RLock()
 	defer c.m.RUnlock()
 
-	versions := []backends.Version{}
-	for registry, modules := range c.val {
+	r, ok := c.val[registryName(version.Registry)]
+	if !ok {
+		return "", false
+	}
+
+	m, ok := r[moduleName(version.ModuleName)]
+	if !ok {
+		return "", false
+	}
+
+	rc, ok := m.releaseChecksum[releaseChannelName(version.ReleaseChannel)]
+	if !ok {
+		return "", false
+	}
+
+	return rc, true
+}
+
+func (c *Cache) GetReleaseVersionData(version *internal.VersionData) (string, []byte, bool) {
+	c.m.RLock()
+	defer c.m.RUnlock()
+
+	r, ok := c.val[registryName(version.Registry)]
+	if !ok {
+		return "", nil, false
+	}
+
+	m, ok := r[moduleName(version.ModuleName)]
+	if !ok {
+		return "", nil, false
+	}
+
+	for ver, verData := range m.versions {
+		_, ok := verData.releaseChannels[version.ReleaseChannel]
+		if ok {
+			return string(ver), verData.tarFile, true
+		}
+	}
+
+	return "", nil, false
+}
+
+// cache is populated
+// 1.2.3 was not removed and remains in cache, form a list for deletion
+// 1.2.4 was removed from cache and taken into the list (already existed)
+// 1.2.5 was removed from cache and taken into the list (already existed)
+// versions arrived
+// 1.2.4
+// 1.2.5
+// 1.2.6 was not found and added to the list (needs to be added)
+func (c *Cache) SyncWithRegistryVersions(versions []internal.VersionData) []backends.DocumentationTask {
+	c.m.RLock()
+	defer c.m.RUnlock()
+
+	// Create a slice to hold unique versions
+	newVersions := make([]internal.VersionData, 0, len(versions))
+
+	// Iterate through all input versions
+	for _, version := range versions {
+		// Check if this version already exists in the cache
+		found := false
+
+		if modules, ok := c.val[registryName(version.Registry)]; ok {
+			if module, ok := modules[moduleName(version.ModuleName)]; ok {
+				if versionData, ok := module.versions[versionNum(version.Version)]; ok {
+					delete(versionData.releaseChannels, version.ReleaseChannel)
+					delete(module.releaseChecksum, releaseChannelName(version.ReleaseChannel))
+
+					if len(versionData.releaseChannels) == 0 {
+						delete(module.versions, versionNum(version.Version))
+					}
+
+					found = true
+				}
+
+				if len(module.versions) == 0 {
+					delete(modules, moduleName(version.ModuleName))
+				}
+			}
+
+			if len(modules) == 0 {
+				delete(c.val, registryName(version.Registry))
+			}
+		}
+
+		// If not found in cache, keep it in the result
+		if !found {
+			newVersions = append(newVersions, version)
+		}
+	}
+
+	versionsToDelete := RemapFromMapToVersions(c.val, backends.TaskDelete)
+
+	result := RemapFromMapToVersions(RemapFromVersionData(newVersions), backends.TaskCreate)
+	result = append(result, versionsToDelete...)
+
+	// Update the cache with the registry versions
+	c.val = RemapFromVersionData(versions)
+
+	return result
+}
+
+func RemapFromMapToVersions(m map[registryName]map[moduleName]moduleData, task backends.Task) []backends.DocumentationTask {
+	versions := make([]backends.DocumentationTask, 0, 1)
+	for registry, modules := range m {
 		for module, moduleData := range modules {
 			for version, data := range moduleData.versions {
-				releaseChannels := []string{}
-				for releaseChannel := range data.ReleaseChannels {
+				releaseChannels := make([]string, 0, len(data.releaseChannels))
+				for releaseChannel := range data.releaseChannels {
 					releaseChannels = append(releaseChannels, releaseChannel)
 				}
 
-				versions = append(versions, backends.Version{
+				versions = append(versions, backends.DocumentationTask{
 					Registry:        string(registry),
 					Module:          string(module),
 					Version:         string(version),
-					TarFile:         data.TarFile,
 					ReleaseChannels: releaseChannels,
+					TarFile:         data.tarFile,
+					Task:            task,
 				})
 			}
 		}
@@ -113,95 +188,53 @@ func (c *Cache) GetState() []backends.Version {
 	return versions
 }
 
-func (c *Cache) GetReleaseChecksum(registry, module, releaseChannel string) (string, bool) {
-	c.m.RLock()
-	defer c.m.RUnlock()
+func RemapFromVersionData(input []internal.VersionData) map[registryName]map[moduleName]moduleData {
+	result := make(map[registryName]map[moduleName]moduleData)
 
-	r, ok := c.val[registryName(registry)]
-	if !ok {
-		return "", false
-	}
+	for _, ver := range input {
+		registry := registryName(ver.Registry)
+		module := moduleName(ver.ModuleName)
+		version := versionNum(ver.Version)
 
-	m, ok := r[moduleName(module)]
-	if !ok {
-		return "", false
-	}
-
-	rc, ok := m.releaseChecksum[releaseChannelName(releaseChannel)]
-	if !ok {
-		return "", false
-	}
-
-	return rc, true
-}
-
-func (c *Cache) SetReleaseChecksum(registry, module, releaseChannel, releaseChecksum string) {
-	c.m.Lock()
-	defer c.m.Unlock()
-
-	if _, ok := c.val[registryName(registry)]; !ok {
-		c.val[registryName(registry)] = make(map[moduleName]moduleData)
-	}
-	if _, ok := c.val[registryName(registry)][moduleName(module)]; !ok {
-		c.val[registryName(registry)][moduleName(module)] = moduleData{
-			versions:        make(map[versionNum]data),
-			releaseChecksum: make(map[releaseChannelName]string),
+		// Initialize registry map if it doesn't exist
+		if _, exists := result[registry]; !exists {
+			result[registry] = make(map[moduleName]moduleData)
 		}
-	}
 
-	c.val[registryName(registry)][moduleName(module)].releaseChecksum[releaseChannelName(releaseChannel)] = releaseChecksum
-}
-
-func (c *Cache) SetTar(registry, module, version, releaseChannel string, tarFile []byte) {
-	c.m.Lock()
-	defer c.m.Unlock()
-
-	var releaseChannels = make(map[string]struct{})
-
-	r, ok := c.val[registryName(registry)]
-	if ok {
-		m, ok := r[moduleName(module)]
-		if ok {
-			v, ok := m.versions[versionNum(version)]
-			if ok {
-				releaseChannels = v.ReleaseChannels
+		// Initialize module data if it doesn't exist
+		if _, exists := result[registry][module]; !exists {
+			result[registry][module] = moduleData{
+				releaseChecksum: make(map[releaseChannelName]string),
+				versions:        make(map[versionNum]versionData),
 			}
 		}
-	}
 
-	if _, ok := c.val[registryName(registry)]; !ok {
-		c.val[registryName(registry)] = make(map[moduleName]moduleData)
-	}
-	if _, ok := c.val[registryName(registry)][moduleName(module)]; !ok {
-		c.val[registryName(registry)][moduleName(module)] = moduleData{
-			versions:        make(map[versionNum]data),
-			releaseChecksum: make(map[releaseChannelName]string),
-		}
-	}
+		// Add or update version data
+		moduleData := result[registry][module]
 
-	// remove releaseChannel from all another versions
-	c.syncReleaseChannels(registry, module, releaseChannel)
-
-	releaseChannels[releaseChannel] = struct{}{}
-	c.val[registryName(registry)][moduleName(module)].versions[versionNum(version)] = data{
-		TarFile:         tarFile,
-		ReleaseChannels: releaseChannels,
-	}
-}
-
-func (c *Cache) syncReleaseChannels(registry, module, releaseChannel string) {
-	r, ok := c.val[registryName(registry)]
-	if ok {
-		m, ok := r[moduleName(module)]
-		if ok {
-			for versionKey, version := range m.versions {
-				delete(version.ReleaseChannels, releaseChannel)
-				if len(version.ReleaseChannels) == 0 {
-					delete(m.versions, versionKey)
-				}
+		// Initialize version data if it doesn't exist
+		if _, exists := moduleData.versions[version]; !exists {
+			moduleData.versions[version] = versionData{
+				releaseChannels: make(map[string]struct{}),
+				tarFile:         ver.TarFile,
 			}
 		}
+
+		// Add release channel to the version
+		if ver.ReleaseChannel != "" {
+			moduleData.versions[version].releaseChannels[ver.ReleaseChannel] = struct{}{}
+
+			// Update release checksum if provided
+			if ver.Checksum != "" {
+				moduleData.releaseChecksum[releaseChannelName(ver.ReleaseChannel)] = ver.Checksum
+			}
+		}
+
+		// Store the updated module data back in the result map
+		result[registry][module] = moduleData
 	}
+
+	return result
 }
 
 func (c *Cache) GetModules(registry string) []string {
@@ -239,7 +272,7 @@ func (c *Cache) GetReleaseChannels(registry, module string) []string {
 		m, ok := r[moduleName(module)]
 		if ok {
 			for _, m := range m.versions {
-				for releaseChannel := range m.ReleaseChannels {
+				for releaseChannel := range m.releaseChannels {
 					releaseChannels = append(releaseChannels, releaseChannel)
 				}
 			}
@@ -258,24 +291,8 @@ func (c *Cache) DeleteReleaseChannel(registry, module, releaseChannel string) {
 		m, ok := r[moduleName(module)]
 		if ok {
 			for _, m := range m.versions {
-				delete(m.ReleaseChannels, releaseChannel)
+				delete(m.releaseChannels, releaseChannel)
 			}
 		}
 	}
-}
-
-func contain(versions []backends.Version, version backends.Version) bool {
-	for _, val := range versions {
-		if val.Registry == version.Registry &&
-			val.Module == version.Module &&
-			val.Version == version.Version {
-			sort.Strings(val.ReleaseChannels)
-			sort.Strings(version.ReleaseChannels)
-			if strings.Join(val.ReleaseChannels, "") == strings.Join(version.ReleaseChannels, "") {
-				return true
-			}
-		}
-	}
-
-	return false
 }
