@@ -2607,11 +2607,11 @@ alerts:
       module: upmeter
       edition: ce
       description: |
-        The only way to resolve is to the PVC using the following steps:
+        The only way to resolve is to recreate the PVC using the following steps:
 
         1. Save the PVC data if you need it.
 
-        1. Delete the PVC and restart upmeter:
+        1. Delete the PVC and restart `upmeter`:
 
            ```shell
            kubectl -n d8-upmeter delete persistentvolumeclaim/data-upmeter-0 pod/upmeter-0
