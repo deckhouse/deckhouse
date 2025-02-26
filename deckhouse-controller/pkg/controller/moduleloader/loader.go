@@ -75,7 +75,6 @@ type Loader struct {
 	log            *log.Logger
 	embeddedPolicy *helpers.ModuleUpdatePolicySpecContainer
 	modules        map[string]*moduletypes.Module
-	version        string
 	modulesDirs    []string
 	// global module dir
 	globalDir string
@@ -87,17 +86,16 @@ type Loader struct {
 	clusterUUID          string
 }
 
-func New(client client.Client, version, modulesDir, globalDir string, dc dependency.Container, embeddedPolicy *helpers.ModuleUpdatePolicySpecContainer, logger *log.Logger) *Loader {
+func New(client client.Client, modulesDir, globalDir string, dc dependency.Container, embeddedPolicy *helpers.ModuleUpdatePolicySpecContainer, logger *log.Logger) *Loader {
 	return &Loader{
 		client:               client,
-		log:                  logger,
+		log:                  logger.Named("module-loader"),
 		modulesDirs:          utils.SplitToPaths(modulesDir),
 		globalDir:            globalDir,
 		downloadedModulesDir: d8env.GetDownloadedModulesDir(),
 		symlinksDir:          filepath.Join(d8env.GetDownloadedModulesDir(), "modules"),
 		modules:              make(map[string]*moduletypes.Module),
 		embeddedPolicy:       embeddedPolicy,
-		version:              version,
 		dependencyContainer:  dc,
 	}
 }
@@ -336,7 +334,7 @@ func (l *Loader) ensureModule(ctx context.Context, def *moduletypes.Definition, 
 				module.Properties.ReleaseChannel = l.embeddedPolicy.Get().ReleaseChannel
 
 				// set deckhouse version to embedded modules
-				module.Properties.Version = l.version
+				module.Properties.Version = app.Version
 			}
 
 			if !reflect.DeepEqual(moduleCopy.Properties, module.Properties) ||

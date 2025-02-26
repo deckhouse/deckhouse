@@ -40,7 +40,7 @@ type Handler struct {
 
 func New(client client.Client, deckhouseConfigCh chan<- utils.Values, logger *log.Logger) *Handler {
 	return &Handler{
-		log:               logger,
+		log:               logger.Named("config-handler"),
 		client:            client,
 		deckhouseConfigCh: deckhouseConfigCh,
 	}

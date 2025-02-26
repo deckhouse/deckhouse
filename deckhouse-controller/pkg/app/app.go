@@ -14,6 +14,8 @@
 
 package app
 
+var Version = ""
+
 const (
 	ModuleDeckhouse = "deckhouse"
 	ModuleGlobal    = "global"
@@ -26,4 +28,12 @@ const (
 	RegistrySecret             = "deckhouse-registry"
 
 	EmbeddedModulesDir = "/deckhouse/modules"
+
+	Name        = "deckhouse"
+	Description = "controller for Kubernetes platform from Flant"
+
+	PathToCRDs = "/deckhouse/deckhouse-controller/crds/*.yaml"
+
+	LockName  = "deckhouse-bootstrap-lock"
+	LeaseName = "deckhouse-leader-election"
 )

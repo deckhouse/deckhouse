@@ -89,9 +89,9 @@ type deckhouseReleaseReconciler struct {
 
 func NewDeckhouseReleaseController(ctx context.Context, mgr manager.Manager, dc dependency.Container,
 	moduleManager moduleManager, updateSettings *helpers.DeckhouseSettingsContainer, metricStorage *metricstorage.MetricStorage,
-	preflightCountDown *sync.WaitGroup, deckhouseVersion string, logger *log.Logger,
+	preflightCountDown *sync.WaitGroup, logger *log.Logger,
 ) error {
-	parsedVersion, err := semver.NewVersion(deckhouseVersion)
+	parsedVersion, err := semver.NewVersion(app.Version)
 	if err != nil {
 		return fmt.Errorf("parse deckhouse version: %w", err)
 	}
@@ -99,7 +99,7 @@ func NewDeckhouseReleaseController(ctx context.Context, mgr manager.Manager, dc 
 	r := &deckhouseReleaseReconciler{
 		client:             mgr.GetClient(),
 		dc:                 dc,
-		logger:             logger,
+		logger:             logger.Named("deckhouse-release-controller"),
 		moduleManager:      moduleManager,
 		updateSettings:     updateSettings,
 		metricStorage:      metricStorage,

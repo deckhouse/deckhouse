@@ -28,7 +28,7 @@ import (
 	sh_debug "github.com/flant/shell-operator/pkg/debug"
 	"gopkg.in/alecthomas/kingpin.v2"
 
-	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/app"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/debug"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/registry"
@@ -51,19 +51,14 @@ func version() string {
 // main is almost a copy from addon-operator. We compile addon-operator to inline
 // Go hooks and set some defaults. Also, helper commands are defined for Shell hooks.
 
-const (
-	AppName        = "deckhouse"
-	AppDescription = "controller for Kubernetes platform from Flant"
-)
-
 func main() {
 	sh_app.Version = ShellOperatorVersion
 	ad_app.Version = AddonOperatorVersion
-	controller.DeckhouseVersion = DeckhouseVersion
+	app.Version = DeckhouseVersion
 
 	FileName := filepath.Base(os.Args[0])
 
-	kpApp := kingpin.New(FileName, fmt.Sprintf("%s %s: %s", AppName, DeckhouseVersion, AppDescription))
+	kpApp := kingpin.New(FileName, fmt.Sprintf("%s %s: %s", app.Name, DeckhouseVersion, app.Description))
 
 	logger := log.NewLogger(log.Options{})
 	log.SetDefault(logger)
