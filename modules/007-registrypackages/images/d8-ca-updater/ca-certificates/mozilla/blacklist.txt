@@ -4,4 +4,3 @@
 "Explicitly Distrust DigiNotar Root CA"
 
 # Expired CAs
-
