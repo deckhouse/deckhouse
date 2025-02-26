@@ -7,7 +7,7 @@ git:
 import:
 - image: terraform-provider-vcd-artifact
   add: /terraform-provider-vcd
-  to: /plugins/registry.terraform.io/{{ .TF.vcd.namespace }}/{{ .TF.vcd.type }}/{{ .TF.vcd.version }}/linux_amd64/terraform-provider-vcd
+  to: /plugins/registry.opentofu.org/{{ .TF.vcd.namespace }}/{{ .TF.vcd.type }}/{{ .TF.vcd.version }}/linux_amd64/terraform-provider-vcd
   before: setup
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
