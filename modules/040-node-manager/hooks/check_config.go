@@ -36,11 +36,11 @@ const (
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	Queue:        "/requirements/check-config",
-	OnBeforeHelm: &go_hook.OrderedConfig{Order: 20},
+	Queue: "/requirements/check-config",
+	// OnBeforeHelm: &go_hook.OrderedConfig{Order: 20},
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
-			Name:       "provider_cluster_configuration",
+			Name:       "check_provider_cluster_configuration",
 			ApiVersion: "v1",
 			Kind:       "Secret",
 			NamespaceSelector: &types.NamespaceSelector{
@@ -67,40 +67,30 @@ func applyProviderClusterConfigurationSecretFilter(obj *unstructured.Unstructure
 }
 
 func CheckCloudProviderConfig(input *go_hook.HookInput) error {
-	input.Logger.Info("1001")
-	snap := input.Snapshots["provider_cluster_configuration"]
-	input.Logger.Info("1002")
+	snap := input.Snapshots["check_provider_cluster_configuration"]
 	if len(snap) > 0 {
-		input.Logger.Info("1003")
 		secret := snap[0].(*v1.Secret)
-		input.Logger.Info("1004")
 		if YAML, ok := secret.Data["cloud-provider-cluster-configuration.yaml"]; ok && len(YAML) > 0 {
-			input.Logger.Info("1005")
 			err := config.ValidateConf(&YAML)
-			input.Logger.Info("1006")
 			if err != nil {
-				input.Logger.Info("1007")
 				requirements.SaveValue(CheckCloudProviderConfigRaw, true)
 				input.MetricsCollector.Set("d8_check_cloud_provider_config", 1, nil)
 				err1 := fmt.Errorf("%s", findErrorLines(err.Error()))
-				input.Logger.Info("1008" + err1.Error())
 				return err1
 			}
-			input.Logger.Info("1009 " + string(YAML))
 			requirements.SaveValue(CheckCloudProviderConfigRaw, false)
 			input.MetricsCollector.Expire("d8_check_cloud_provider_config")
 		}
 	}
-	input.Logger.Info("1010")
 	return nil
 }
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	Queue:        "/requirements/check-config",
-	OnBeforeHelm: &go_hook.OrderedConfig{Order: 20},
+	Queue: "/requirements/check-config",
+	// OnBeforeHelm: &go_hook.OrderedConfig{Order: 20},
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
-			Name:       "static_cluster_configuration",
+			Name:       "check_static_cluster_configuration",
 			ApiVersion: "v1",
 			Kind:       "Secret",
 			NamespaceSelector: &types.NamespaceSelector{
@@ -117,7 +107,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, CheckStaticClusterConfig)
 
 func CheckStaticClusterConfig(input *go_hook.HookInput) error {
-	snap := input.Snapshots["static_cluster_configuration"]
+	snap := input.Snapshots["check_static_cluster_configuration"]
 	if len(snap) > 0 {
 		secret := snap[0].(*v1.Secret)
 		if YAML, ok := secret.Data["static-cluster-configuration.yaml"]; ok && len(YAML) > 0 {
@@ -136,11 +126,11 @@ func CheckStaticClusterConfig(input *go_hook.HookInput) error {
 }
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	Queue:        "/requirements/check-config",
-	OnBeforeHelm: &go_hook.OrderedConfig{Order: 20},
+	Queue: "/requirements/check-config",
+	// OnBeforeHelm: &go_hook.OrderedConfig{Order: 30},
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
-			Name:       "cluster_configuration",
+			Name:       "check_cluster_configuration",
 			ApiVersion: "v1",
 			Kind:       "Secret",
 			NamespaceSelector: &types.NamespaceSelector{
@@ -157,7 +147,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, CheckClusterConfig)
 
 func CheckClusterConfig(input *go_hook.HookInput) error {
-	snap := input.Snapshots["cluster_configuration"]
+	snap := input.Snapshots["check_cluster_configuration"]
 	if len(snap) > 0 {
 		secret := snap[0].(*v1.Secret)
 		if YAML, ok := secret.Data["cluster-configuration.yaml"]; ok && len(YAML) > 0 {
