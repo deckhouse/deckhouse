@@ -22,7 +22,6 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
-	"slices"
 	"strings"
 
 	v1 "github.com/google/go-containerregistry/pkg/v1"
@@ -55,22 +54,7 @@ func (s *registryscaner) processModules(ctx context.Context, registry Client, mo
 			continue
 		}
 
-		// remove deleted release channels from cache
-		releaseTags := filterReleaseChannelsFromTags(tags)
-		for _, r := range s.cache.GetReleaseChannels(registry.Name(), module) {
-			if !slices.Contains(releaseTags, r) {
-				s.cache.DeleteReleaseChannel(registry.Name(), module, r)
-			}
-		}
-
-		s.processReleaseChannels(ctx, registry.Name(), module, releaseTags)
-	}
-
-	// remove deleted modules from cache
-	for _, m := range s.cache.GetModules(registry.Name()) {
-		if !slices.Contains(modules, m) {
-			s.cache.DeleteModule(registry.Name(), m)
-		}
+		s.processReleaseChannels(ctx, registry.Name(), module, filterReleaseChannelsFromTags(tags))
 	}
 }
 
@@ -88,6 +72,7 @@ func (s *registryscaner) processReleaseChannels(ctx context.Context, registry, m
 			s.logger.Error("get digest", log.Err(err))
 			continue
 		}
+
 		releaseChecksum, ok := s.cache.GetReleaseChecksum(registry, module, releaseChannel)
 		if ok && releaseChecksum == releaseDigest.String() {
 			continue
@@ -99,7 +84,8 @@ func (s *registryscaner) processReleaseChannels(ctx context.Context, registry, m
 			continue
 		}
 
-		if err := s.processVersion(ctx, registry, module, version, releaseChannel); err == nil {
+		err = s.processVersion(ctx, registry, module, version, releaseChannel)
+		if err == nil {
 			s.cache.SetReleaseChecksum(registry, module, releaseChannel, releaseDigest.String())
 		}
 	}
@@ -117,6 +103,8 @@ func (s *registryscaner) processVersion(_ context.Context, registry, module, ver
 		s.logger.Error("extract documentation", log.Err(err))
 		return err
 	}
+
+	fmt.Println(module, releaseChannel)
 
 	s.cache.SetTar(registry, module, version, releaseChannel, tarFile)
 
