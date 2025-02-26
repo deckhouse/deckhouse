@@ -41,8 +41,8 @@ shell:
   - git clone --depth 1 --branch {{ $version }} {{ $.SOURCE_REPO }}/openshift/ovirt-csi-driver.git /src
   - git clone --depth 1 --branch v0.0.1-flant {{ $.CLOUD_PROVIDERS_SOURCE_REPO }}/ovirt/go-ovirt /src/go-ovirt
   - cd /src
-  - echo "replace github.com/ovirt/go-ovirt => /src/go-ovirt" >> go.mod
   - git apply /patches/*.patch --verbose
+  - echo "replace github.com/ovirt/go-ovirt => /src/go-ovirt" >> go.mod
   - rm -rf vendor .git
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
