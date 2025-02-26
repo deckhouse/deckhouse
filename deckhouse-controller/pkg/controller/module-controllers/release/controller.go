@@ -735,7 +735,7 @@ func (r *reconciler) runReleaseDeploy(ctx context.Context, release *v1alpha1.Mod
 			status.Message = "initial module config validation failed: " + err.Error()
 		}
 
-		if err = r.updateReleaseStatus(ctx, newModuleReleaseWithName(release.Name), status); err != nil {
+		if err = r.updateReleaseStatus(ctx, release, status); err != nil {
 			r.log.Error("update release status", slog.String("release", release.Name), log.Err(err))
 
 			return fmt.Errorf("update status: the '%s:v%s' module validation: %w", release.GetModuleName(), release.GetVersion().String(), err)
