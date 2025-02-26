@@ -1013,7 +1013,7 @@ list:
 
 ### helm_lib_priority_class
 
- returns priority class if priority-class module enabled, otherwise returns nothing 
+ returns priority class
 
 #### Arguments
 
