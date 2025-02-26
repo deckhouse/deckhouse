@@ -369,9 +369,9 @@ function run-test() {
       master_ip=$(jq -r '.connection_hosts.masters[0].host' <<< "$response")
       master_user=$(jq -r '.connection_hosts.masters[0].user' <<< "$response")
       if [[ "$master_ip" != "null" && "$master_user" != "null" ]]; then
-        connection="    ssh ${master_user}@${master_ip}"
+        connection="      ssh ${master_user}@${master_ip}"
         master_ip_find=true
-        echo "SSH connection string:"
+        echo "  SSH connection string:"
         echo "$connection"
       fi
     fi
@@ -406,7 +406,7 @@ function run-test() {
 
 function cleanup() {
   #Get cluster id
-  cluster_id=$(curl -s \
+  cluster_id=$(curl \
     "https://${COMMANDER_HOST}/api/v1/clusters" \
     -H 'accept: application/json' \
     -H "X-Auth-Token: ${COMMANDER_TOKEN}" |
@@ -445,7 +445,7 @@ function cleanup() {
       -H "X-Auth-Token: ${COMMANDER_TOKEN}" |
       jq -r '.status')"
     >&2 echo "Check Cluster delete..."
-    if [ "404" = "$cluster_status" ]; then
+    if [ "deleted" = "$cluster_status" ]; then
       return 0
     else
       echo "  Cluster status: $cluster_status"
