@@ -43,28 +43,58 @@ DKP поддерживает подключение следующих внеш�
    - укажите Redirect URI вида https://dex.<modules.publicDomainTemplate>/callback;
    - получите `clientID` и `clientSecret`.
 1. Создайте ресурс DexProvider с учётом специфики выбранного провайдера.
-1. Включите и настройте модуль user-authn (если он не активен по умолчанию):
-   - создайте ModuleConfig с именем user-authn;
-   - укажите необходимые параметры в секции `spec.settings`.
+1. Включите модуль user-authn (если он выключен).
 
-   Пример конфигурации user-authn:
-   
-   ```yaml
-   apiVersion: deckhouse.io/v1alpha1
-   kind: ModuleConfig
-   metadata:
-     name: user-authn
-   spec:
-     version: 2
-     enabled: true
-     settings:
-       kubeconfigGenerator:
-       - id: direct
-         masterURI: https://159.89.5.247:6443
-         description: "Direct access to kubernetes API"
-       publishAPI:
-         enabled: true
+   Включить модуль user-authn можно как через веб-интерфейс администратора, так и через CLI. Далее приведен пример работы через CLI (требуется `kubectl` настроенный на работу с кластером).
+
+   Проверить статус модуля:
+  
+   ```shell
+   kubectl get module user-authn
    ```
+
+   Пример вывода:  
+
+   ```console
+   kubectl get module user-authn
+   NAME         WEIGHT   SOURCE     PHASE   ENABLED   READY
+   user-authn   150      Embedded   Ready   True      True
+   ```
+
+   Включить модуль через CLI:
+
+   ```shell
+   kubectl -ti -n d8-system exec svc/deckhouse-leader -c deckhouse -- deckhouse-controller module enable user-authn
+   ```
+
+1. Настройте модуль.
+
+   - Откройте настройки модуля `user-authn` (создайте ресурс moduleConfig `user-authn`, если его нет):
+   
+     ```shell
+     kubectl edit mc user-authn
+     ```
+
+   - Укажите необходимые параметры модуля в секции `spec.settings`. Подробнее о возможных настройках модуля `user-authn` можно узнать в разделе [справки модуля](#TODO).
+
+     Пример конфигурации user-authn:
+     
+     ```yaml
+     apiVersion: deckhouse.io/v1alpha1
+     kind: ModuleConfig
+     metadata:
+       name: user-authn
+     spec:
+       version: 2
+       enabled: true
+       settings:
+         kubeconfigGenerator:
+         - id: direct
+           masterURI: https://159.89.5.247:6443
+           description: "Direct access to kubernetes API"
+         publishAPI:
+           enabled: true
+     ```
 
 ### Интеграция с GitHub
 
@@ -403,7 +433,7 @@ DKP позволяет организовать доступ к Kubernetes API �
   user-authn   150      Embedded   Ready   True      True
   ```
 
-  Включить модуль, если он не включен:
+  Включить модуль:
 
   ```shell
   kubectl -ti -n d8-system exec svc/deckhouse-leader -c deckhouse -- deckhouse-controller module enable user-authn
