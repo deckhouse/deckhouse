@@ -250,7 +250,13 @@ func routingTablesHandler(input *go_hook.HookInput) error {
 		}
 
 		// Generate desired AffectedNodeRoutingTables and ReadyNodeRoutingTables, and filling affectedNodes
-		validatedSelector, _ := labels.ValidatedSelectorFromSet(rti.NodeSelector)
+		validatedSelector, err := labels.ValidatedSelectorFromSet(rti.NodeSelector)
+		if err != nil {
+			input.Logger.Errorf("Invalid nodeSelector in RoutingTable %s: %v", rti.Name, err)
+			tmpDRTS.localErrors = append(tmpDRTS.localErrors, fmt.Sprintf("Invalid nodeSelector: %v", err))
+			continue
+		}
+
 		for _, nodeiRaw := range input.Snapshots["nodes"] {
 			nodei := nodeiRaw.(lib.NodeInfo)
 
