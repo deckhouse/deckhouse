@@ -47,13 +47,13 @@ func Test_RegistryScannerProcess(t *testing.T) {
 		scanner.processRegistries(context.Background())
 
 		expectedTasks := []backends.DocumentationTask{
-			{Registry: "clientOne", Module: "console", Version: "1.2.3"},
-			{Registry: "clientOne", Module: "console", Version: "2.2.3"},
-			{Registry: "clientOne", Module: "parca", Version: "2.3.4"},
-			{Registry: "clientOne", Module: "parca", Version: "3.3.4"},
-			{Registry: "clientTwo", Module: "console", Version: "3.4.5"},
-			{Registry: "clientTwo", Module: "console", Version: "4.4.5"},
-			{Registry: "clientTwo", Module: "parca", Version: "4.5.6"},
+			{Registry: "clientOne", Module: "console", Version: "1.2.3", ReleaseChannels: []string{"alpha"}},
+			{Registry: "clientOne", Module: "console", Version: "2.2.3", ReleaseChannels: []string{"beta"}},
+			{Registry: "clientOne", Module: "parca", Version: "2.3.4", ReleaseChannels: []string{"rock-solid"}},
+			{Registry: "clientOne", Module: "parca", Version: "3.3.4", ReleaseChannels: []string{"stable"}},
+			{Registry: "clientTwo", Module: "console", Version: "3.4.5", ReleaseChannels: []string{"alpha"}},
+			{Registry: "clientTwo", Module: "console", Version: "4.4.5", ReleaseChannels: []string{"beta"}},
+			{Registry: "clientTwo", Module: "parca", Version: "4.5.6", ReleaseChannels: []string{"rock-solid", "stable"}},
 		}
 
 		assertCacheContains(t, expectedTasks, scanner.cache.GetState())
@@ -80,14 +80,14 @@ func Test_RegistryScannerProcess(t *testing.T) {
 		scanner.processRegistries(context.Background())
 
 		expectedTasks := []backends.DocumentationTask{
-			{Registry: "clientOne", Module: "console", Version: "1.2.3"},
-			{Registry: "clientOne", Module: "parca", Version: "2.3.4"},
-			{Registry: "clientOne", Module: "console", Version: "3.3.3"},
-			{Registry: "clientTwo", Module: "console", Version: "3.4.5"},
-			{Registry: "clientOne", Module: "parca", Version: "4.4.4"},
-			{Registry: "clientTwo", Module: "parca", Version: "4.5.6"},
-			{Registry: "clientTwo", Module: "console", Version: "5.5.5"},
-			{Registry: "clientTwo", Module: "parca", Version: "6.6.6"},
+			{Registry: "clientOne", Module: "console", Version: "1.2.3", ReleaseChannels: []string{"alpha"}},
+			{Registry: "clientOne", Module: "parca", Version: "2.3.4", ReleaseChannels: []string{"rock-solid"}},
+			{Registry: "clientOne", Module: "console", Version: "3.3.3", ReleaseChannels: []string{"beta"}},
+			{Registry: "clientTwo", Module: "console", Version: "3.4.5", ReleaseChannels: []string{"alpha"}},
+			{Registry: "clientOne", Module: "parca", Version: "4.4.4", ReleaseChannels: []string{"stable"}},
+			{Registry: "clientTwo", Module: "parca", Version: "4.5.6", ReleaseChannels: []string{"rock-solid"}},
+			{Registry: "clientTwo", Module: "console", Version: "5.5.5", ReleaseChannels: []string{"beta"}},
+			{Registry: "clientTwo", Module: "parca", Version: "6.6.6", ReleaseChannels: []string{"stable"}},
 		}
 
 		assertCacheContains(t, expectedTasks, scanner.cache.GetState())
@@ -102,13 +102,13 @@ func assertCacheContains(t *testing.T, expected, actual []backends.Documentation
 	// Create maps for easier lookup and comparison by key components
 	expectedMap := make(map[string]struct{})
 	for _, task := range expected {
-		key := fmt.Sprintf("%s/%s/%s", task.Registry, task.Module, task.Version)
+		key := fmt.Sprintf("%s/%s/%s/%v/1536", task.Registry, task.Module, task.Version, task.ReleaseChannels)
 		expectedMap[key] = struct{}{}
 	}
 
 	actualMap := make(map[string]struct{})
 	for _, task := range actual {
-		key := fmt.Sprintf("%s/%s/%s", task.Registry, task.Module, task.Version)
+		key := fmt.Sprintf("%s/%s/%s/%v/%d", task.Registry, task.Module, task.Version, task.ReleaseChannels, len(task.TarFile))
 		actualMap[key] = struct{}{}
 	}
 
