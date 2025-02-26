@@ -153,6 +153,8 @@ spec:
 
                                 The secret can contain the following authentication fields:
                                 `tlsMode`, `clientCert`, `clientKey`, `caCert`, `password`, `user`.
+
+                                > **Warining.** The type of the secret must be `network.deckhouse.io/postgresql-credentials`.
                             dbName:
                               type: string
                               description: Optional Database Name.

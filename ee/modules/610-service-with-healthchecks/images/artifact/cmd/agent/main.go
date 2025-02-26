@@ -108,12 +108,23 @@ func main() {
 		os.Exit(1)
 	}
 
+	secretController := &agent.PostgreSQLCredentialsReconciler{
+		Client: mgr.GetClient(),
+		Logger: ctrl.Log.WithName("secret-controller"),
+		Scheme: mgr.GetScheme(),
+	}
+	if err = secretController.SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "PostgreSQLCredentials")
+		os.Exit(1)
+	}
+
 	serviceWithHealthchecksController := agent.NewServiceWithHealthchecksReconciler(
 		mgr.GetClient(),
 		workersCount,
 		nodeName,
 		mgr.GetScheme(),
-		ctrl.Log.WithName("agent"),
+		ctrl.Log.WithName("service-with-healthchecks-controller"),
+		secretController,
 	)
 	if err = serviceWithHealthchecksController.RunWorkers(context.Background()); err != nil {
 		setupLog.Error(err, "unable to run controller workers", "controller", "ServiceWithHealthchecks")
