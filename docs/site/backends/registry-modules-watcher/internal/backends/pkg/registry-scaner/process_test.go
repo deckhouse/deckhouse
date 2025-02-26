@@ -18,6 +18,7 @@ import (
 	"archive/tar"
 	"bytes"
 	"context"
+	"fmt"
 	"io"
 	"registry-modules-watcher/internal/backends/pkg/registry-scaner/cache"
 	"strings"
@@ -49,15 +50,16 @@ func Test_RegistryScannerProcess(t *testing.T) {
 	expectedCache := buildCompleteExpectedCache()
 	assert.Equal(t, expectedCache, scanner.cache.GetCache())
 
-	clientOne = setupRemovedImagesClientOne(mc)
-	clientTwo = setupRemovedImagesClientTwo(mc)
+	fmt.Println("second test")
+	clientOne = setupNewImagesClientOne(mc)
+	clientTwo = setupNewImagesClientTwo(mc)
 
 	scanner.registryClients = map[string]Client{"clientOne": clientOne, "clientTwo": clientTwo}
 
 	// Run the scanner
 	scanner.processRegistries(context.Background())
 
-	expectedCache = buildCompleteExpectedCache()
+	expectedCache = buildUpdatedExpectedCache()
 	assert.Equal(t, expectedCache, scanner.cache.GetCache())
 }
 
@@ -93,13 +95,15 @@ func setupCompleteClientOne(mc *minimock.Controller) Client {
 	return client
 }
 
-func setupRemovedImagesClientOne(mc *minimock.Controller) Client {
+func setupNewImagesClientOne(mc *minimock.Controller) Client {
 	images := map[string]map[string]*crfake.FakeImage{
 		"console": {
 			"1.2.3": createMockImage("c1consoleImageFirst", "1.2.3"),
+			"3.3.3": createMockImage("c1consoleImageThird", "3.3.3"),
 		},
 		"parca": {
 			"2.3.4": createMockImage("c1parcaImageFirst", "2.3.4"),
+			"4.4.4": createMockImage("c1parcaImageThird", "4.4.4"),
 		},
 	}
 
@@ -107,11 +111,16 @@ func setupRemovedImagesClientOne(mc *minimock.Controller) Client {
 	client.NameMock.Return("clientOne")
 	client.ModulesMock.Return([]string{"console", "parca"}, nil)
 
-	client.ListTagsMock.When(minimock.AnyContext, "console").Then([]string{"alpha"}, nil)
-	client.ListTagsMock.When(minimock.AnyContext, "parca").Then([]string{"rock-solid"}, nil)
+	client.ListTagsMock.When(minimock.AnyContext, "console").Then([]string{"alpha", "beta"}, nil)
+	client.ListTagsMock.When(minimock.AnyContext, "parca").Then([]string{"rock-solid", "stable"}, nil)
 
 	client.ReleaseImageMock.When(minimock.AnyContext, "console", "alpha").Then(images["console"]["1.2.3"], nil)
+	client.ReleaseImageMock.When(minimock.AnyContext, "console", "beta").Then(images["console"]["3.3.3"], nil)
 	client.ReleaseImageMock.When(minimock.AnyContext, "parca", "rock-solid").Then(images["parca"]["2.3.4"], nil)
+	client.ReleaseImageMock.When(minimock.AnyContext, "parca", "stable").Then(images["parca"]["4.4.4"], nil)
+
+	client.ImageMock.When(minimock.AnyContext, "console", "3.3.3").Then(images["console"]["3.3.3"], nil)
+	client.ImageMock.When(minimock.AnyContext, "parca", "4.4.4").Then(images["parca"]["4.4.4"], nil)
 
 	return client
 }
@@ -146,13 +155,15 @@ func setupCompleteClientTwo(mc *minimock.Controller) Client {
 	return client
 }
 
-func setupRemovedImagesClientTwo(mc *minimock.Controller) Client {
+func setupNewImagesClientTwo(mc *minimock.Controller) Client {
 	images := map[string]map[string]*crfake.FakeImage{
 		"console": {
 			"3.4.5": createMockImage("c2consoleImageFirst", "3.4.5"),
+			"5.5.5": createMockImage("c2consoleImageThird", "5.5.5"),
 		},
 		"parca": {
 			"4.5.6": createMockImage("c2parcaImageFirst", "4.5.6"),
+			"6.6.6": createMockImage("c2parcaImageThird", "6.6.6"),
 		},
 	}
 
@@ -160,11 +171,16 @@ func setupRemovedImagesClientTwo(mc *minimock.Controller) Client {
 	client.NameMock.Return("clientTwo")
 	client.ModulesMock.Return([]string{"console", "parca"}, nil)
 
-	client.ListTagsMock.When(minimock.AnyContext, "console").Then([]string{"alpha"}, nil)
-	client.ListTagsMock.When(minimock.AnyContext, "parca").Then([]string{"rock-solid"}, nil)
+	client.ListTagsMock.When(minimock.AnyContext, "console").Then([]string{"alpha", "beta"}, nil)
+	client.ListTagsMock.When(minimock.AnyContext, "parca").Then([]string{"rock-solid", "stable"}, nil)
 
 	client.ReleaseImageMock.When(minimock.AnyContext, "console", "alpha").Then(images["console"]["3.4.5"], nil)
+	client.ReleaseImageMock.When(minimock.AnyContext, "console", "beta").Then(images["console"]["5.5.5"], nil)
 	client.ReleaseImageMock.When(minimock.AnyContext, "parca", "rock-solid").Then(images["parca"]["4.5.6"], nil)
+	client.ReleaseImageMock.When(minimock.AnyContext, "parca", "stable").Then(images["parca"]["6.6.6"], nil)
+
+	client.ImageMock.When(minimock.AnyContext, "console", "5.5.5").Then(images["console"]["5.5.5"], nil)
+	client.ImageMock.When(minimock.AnyContext, "parca", "6.6.6").Then(images["parca"]["6.6.6"], nil)
 
 	return client
 }
@@ -312,4 +328,77 @@ func (fl FakeLayer) Uncompressed() (io.ReadCloser, error) {
 
 func (fl FakeLayer) Size() (int64, error) {
 	return int64(len(fl.FilesContent)), nil
+}
+
+func buildUpdatedExpectedCache() map[cache.RegistryName]map[cache.ModuleName]cache.ModuleData {
+	return map[cache.RegistryName]map[cache.ModuleName]cache.ModuleData{
+		"clientOne": {
+			"console": {
+				ReleaseChecksum: map[cache.ReleaseChannelName]string{
+					"alpha": "algo:c1consoleImageFirst",
+					"beta":  "algo:c1consoleImageThird",
+				},
+				Versions: map[cache.VersionNum]cache.Data{
+					"1.2.3": {
+						ReleaseChannels: map[string]struct{}{"alpha": {}},
+						TarLen:          1536,
+					},
+					"3.3.3": {
+						ReleaseChannels: map[string]struct{}{"beta": {}},
+						TarLen:          1536,
+					},
+				},
+			},
+			"parca": {
+				ReleaseChecksum: map[cache.ReleaseChannelName]string{
+					"rock-solid": "algo:c1parcaImageFirst",
+					"stable":     "algo:c1parcaImageThird",
+				},
+				Versions: map[cache.VersionNum]cache.Data{
+					"2.3.4": {
+						ReleaseChannels: map[string]struct{}{"rock-solid": {}},
+						TarLen:          1536,
+					},
+					"4.4.4": {
+						ReleaseChannels: map[string]struct{}{"stable": {}},
+						TarLen:          1536,
+					},
+				},
+			},
+		},
+		"clientTwo": {
+			"console": {
+				ReleaseChecksum: map[cache.ReleaseChannelName]string{
+					"alpha": "algo:c2consoleImageFirst",
+					"beta":  "algo:c2consoleImageThird",
+				},
+				Versions: map[cache.VersionNum]cache.Data{
+					"3.4.5": {
+						ReleaseChannels: map[string]struct{}{"alpha": {}},
+						TarLen:          1536,
+					},
+					"5.5.5": {
+						ReleaseChannels: map[string]struct{}{"beta": {}},
+						TarLen:          1536,
+					},
+				},
+			},
+			"parca": {
+				ReleaseChecksum: map[cache.ReleaseChannelName]string{
+					"rock-solid": "algo:c2parcaImageFirst",
+					"stable":     "algo:c2parcaImageThird",
+				},
+				Versions: map[cache.VersionNum]cache.Data{
+					"4.5.6": {
+						ReleaseChannels: map[string]struct{}{"rock-solid": {}},
+						TarLen:          1536,
+					},
+					"6.6.6": {
+						ReleaseChannels: map[string]struct{}{"stable": {}},
+						TarLen:          1536,
+					},
+				},
+			},
+		},
+	}
 }

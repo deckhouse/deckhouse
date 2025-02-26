@@ -34,6 +34,8 @@ import (
 func (s *registryscaner) processRegistries(ctx context.Context) {
 	s.logger.Info("start scanning registries")
 
+	versions := make([]internal.VersionData, 0, len(s.registryClients))
+
 	for _, registry := range s.registryClients {
 		modules, err := registry.Modules(ctx)
 		if err != nil {
@@ -43,11 +45,16 @@ func (s *registryscaner) processRegistries(ctx context.Context) {
 
 		s.logger.Info("found modules", slog.Any("modules", modules), slog.String("registry", registry.Name()))
 
-		s.processModules(ctx, registry, modules)
+		vers := s.processModules(ctx, registry, modules)
+		versions = append(versions, vers...)
 	}
+
+	s.cache.SyncWithRegistryVersions(versions)
 }
 
-func (s *registryscaner) processModules(ctx context.Context, registry Client, modules []string) {
+func (s *registryscaner) processModules(ctx context.Context, registry Client, modules []string) []internal.VersionData {
+	versions := make([]internal.VersionData, 0, len(modules))
+
 	for _, module := range modules {
 		tags, err := registry.ListTags(ctx, module)
 		if err != nil {
@@ -55,11 +62,14 @@ func (s *registryscaner) processModules(ctx context.Context, registry Client, mo
 			continue
 		}
 
-		s.processReleaseChannels(ctx, registry.Name(), module, filterReleaseChannelsFromTags(tags))
+		vers := s.processReleaseChannels(ctx, registry.Name(), module, filterReleaseChannelsFromTags(tags))
+		versions = append(versions, vers...)
 	}
+
+	return versions
 }
 
-func (s *registryscaner) processReleaseChannels(ctx context.Context, registry, module string, releaseChannels []string) {
+func (s *registryscaner) processReleaseChannels(ctx context.Context, registry, module string, releaseChannels []string) []internal.VersionData {
 	versions := make([]internal.VersionData, 0, len(releaseChannels))
 
 	for _, releaseChannel := range releaseChannels {
@@ -78,11 +88,7 @@ func (s *registryscaner) processReleaseChannels(ctx context.Context, registry, m
 		}
 	}
 
-	// Update cache with processed versions
-	for _, ver := range versions {
-		s.cache.SetTar(ver)
-		s.cache.SetReleaseChecksum(ver)
-	}
+	return versions
 }
 
 func (s *registryscaner) processReleaseChannel(ctx context.Context, registry, module, releaseChannel string) (*internal.VersionData, error) {
@@ -108,12 +114,13 @@ func (s *registryscaner) processReleaseChannel(ctx context.Context, registry, mo
 	}
 
 	// Check if we already have this release in cache
-	releaseChecksum, ok := s.cache.GetReleaseChecksum(*versionData)
+	releaseChecksum, ok := s.cache.GetReleaseChecksum(versionData)
 	if ok && releaseChecksum == versionData.Checksum {
-		version, tarFile, ok := s.cache.GetReleaseVersionData(*versionData)
+		version, tarFile, ok := s.cache.GetReleaseVersionData(versionData)
 		if ok {
 			versionData.Version = version
 			versionData.TarFile = tarFile
+
 			return versionData, nil
 		}
 	}
@@ -126,7 +133,7 @@ func (s *registryscaner) processReleaseChannel(ctx context.Context, registry, mo
 	versionData.Version = version
 
 	// Extract tar file
-	tarFile, err := s.extractTar(ctx, *versionData)
+	tarFile, err := s.extractTar(ctx, versionData)
 	if err != nil {
 		return nil, fmt.Errorf("extract tar: %w", err)
 	}
@@ -135,15 +142,7 @@ func (s *registryscaner) processReleaseChannel(ctx context.Context, registry, mo
 	return versionData, nil
 }
 
-// cache is populated
-// 1.2.3 was not removed and remains in cache, form a list for deletion
-// 1.2.4 was removed from cache and taken into the list (already existed)
-// 1.2.5 was removed from cache and taken into the list (already existed)
-// versions arrived
-// 1.2.4
-// 1.2.5
-// 1.2.6 was not found and added to the list (needs to be added)
-func (s *registryscaner) extractTar(ctx context.Context, version internal.VersionData) ([]byte, error) {
+func (s *registryscaner) extractTar(ctx context.Context, version *internal.VersionData) ([]byte, error) {
 	image, err := s.registryClients[version.Registry].Image(ctx, version.ModuleName, version.Version)
 	if err != nil {
 		s.logger.Error("get image", log.Err(err))
