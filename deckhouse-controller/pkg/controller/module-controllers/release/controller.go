@@ -832,6 +832,7 @@ func (r *reconciler) runReleaseDeploy(ctx context.Context, release *v1alpha1.Mod
 
 	err = ctrlutils.UpdateStatusWithRetry(ctx, r.client, release, func() error {
 		release.Status.Phase = v1alpha1.DeckhouseReleasePhaseDeployed
+		release.Status.Message = ""
 
 		release.Status.Size = downloadStatistic.Size
 		release.Status.PullDuration = metav1.Duration{Duration: downloadStatistic.PullDuration}
