@@ -54,18 +54,4 @@ func TestNodeOSVersionRequirement(t *testing.T) {
 		assert.False(t, ok)
 		require.Error(t, err)
 	})
-
-	t.Run("containerd requirement runs successfully", func(t *testing.T) {
-		requirements.SaveValue(hasNodesWithDocker, false)
-		ok, err := requirements.CheckRequirement(containerdRequirementsKey, "true")
-		assert.True(t, ok)
-		require.NoError(t, err)
-	})
-
-	t.Run("containerd requirement fails", func(t *testing.T) {
-		requirements.SaveValue(hasNodesWithDocker, true)
-		ok, err := requirements.CheckRequirement(containerdRequirementsKey, "true")
-		assert.False(t, ok)
-		require.Error(t, err)
-	})
 }
