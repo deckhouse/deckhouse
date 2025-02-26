@@ -1,4 +1,4 @@
-images/*
 templates/*
-template_tests/*
-monitoring/*
+monitoring/grafana-dashboards/kubernetes-cluster/metallb-pool.json
+monitoring/grafana-dashboards/kubernetes-cluster/metallb.json
+monitoring/prometheus-rules/metallb.yaml
