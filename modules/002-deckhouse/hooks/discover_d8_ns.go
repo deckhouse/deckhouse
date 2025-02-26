@@ -25,7 +25,7 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/set"
 )
 
-const namespacesValuesPath = `flowSchema.internal.namespaces`
+const namespacesValuesPath = `deckhouse.internal.namespaces`
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Queue:        "/modules/flow-schema",
