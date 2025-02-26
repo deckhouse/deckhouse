@@ -67,7 +67,6 @@ spec:
           args:
           - --namespace=d8-cloud-instance-manager
           - --cloud-provider={{ .Values.nodeManager.internal.cloudProvider.type | quote }}
-          - --machine-max-evict-retries=30
 {{- if eq .Values.nodeManager.internal.cloudProvider.type "yandex" }}
           - --machine-safety-orphan-vms-period=30s
 {{- else }}
