@@ -148,6 +148,23 @@ apiVersions:
           enableEIP:
             description: |
                 Включите Elastic IP для мастер узлов.
+      vpcPeering:
+        type: object
+        description: |
+          Настройки для [схемы размещения `VpcPeering`](./layouts.html#vpcpeering).
+        properties:
+          internalNetworkCIDR: &internalNetworkCIDR_ru
+            description: |
+              Адресация для внутренней сети узлов кластера.
+          internalNetworkDNSServers:
+            description: |
+              Список адресов рекурсивных DNS внутренней сети узлов кластера.
+          internalNetworkSecurity: &internalNetworkSecurity_ru
+            description: |
+              Флаг, который определяет необходимость настройки [SecurityGroups](./cr.html#huaweicloudinstanceclass-v1-spec-securitygroups) на портах внутренней сети.
+          subnet:
+            description: |
+              Имя подсети в сети VPC.
       provider:
         description: |
           [Параметры подключения](./environment.html) к API Huawei Cloud.
