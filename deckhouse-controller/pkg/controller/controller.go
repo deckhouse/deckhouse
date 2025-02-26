@@ -19,7 +19,6 @@ package controller
 import (
 	"context"
 	"fmt"
-	"sync"
 	"time"
 
 	addonoperator "github.com/flant/addon-operator/pkg/addon-operator"
@@ -64,13 +63,10 @@ import (
 
 const (
 	controllerName = "deckhouse-controller"
-
-	docsLeaseLabel = "deckhouse.io/documentation-builder-sync"
 )
 
-type controller struct {
-	runtimeManager     manager.Manager
-	preflightCountDown *sync.WaitGroup
+type Controller struct {
+	runtimeManager manager.Manager
 
 	moduleLoader *moduleloader.Loader
 
@@ -81,7 +77,7 @@ type controller struct {
 	logger         *log.Logger
 }
 
-func Register(ctx context.Context, operator *addonoperator.AddonOperator, logger *log.Logger) error {
+func New(ctx context.Context, operator *addonoperator.AddonOperator, logger *log.Logger) (*Controller, error) {
 	logger = logger.Named(controllerName)
 
 	addToScheme := []func(s *runtime.Scheme) error{
@@ -95,7 +91,7 @@ func Register(ctx context.Context, operator *addonoperator.AddonOperator, logger
 	scheme := runtime.NewScheme()
 	for _, add := range addToScheme {
 		if err := add(scheme); err != nil {
-			return fmt.Errorf("add to scheme: %w", err)
+			return nil, fmt.Errorf("add to scheme: %w", err)
 		}
 	}
 
@@ -121,7 +117,7 @@ func Register(ctx context.Context, operator *addonoperator.AddonOperator, logger
 				&coordv1.Lease{}: {
 					Namespaces: map[string]cache.Config{
 						app.NamespaceDeckhouse: {
-							LabelSelector: labels.SelectorFromSet(map[string]string{docsLeaseLabel: ""}),
+							LabelSelector: labels.SelectorFromSet(map[string]string{v1alpha1.ModuleDocumentationLabelLease: ""}),
 						},
 					},
 				},
@@ -167,7 +163,7 @@ func Register(ctx context.Context, operator *addonoperator.AddonOperator, logger
 		},
 	})
 	if err != nil {
-		return fmt.Errorf("create controller runtime manager: %w", err)
+		return nil, fmt.Errorf("create controller runtime manager: %w", err)
 	}
 
 	deckhouseConfigCh := make(chan utils.Values, 1)
@@ -177,7 +173,7 @@ func Register(ctx context.Context, operator *addonoperator.AddonOperator, logger
 
 	// init module manager
 	if err = operator.Setup(); err != nil {
-		return fmt.Errorf("setup operator: %w", err)
+		return nil, fmt.Errorf("setup operator: %w", err)
 	}
 
 	operator.ModuleManager.SetModuleEventsChannel(make(chan events.ModuleEvent, 350))
@@ -202,7 +198,7 @@ func Register(ctx context.Context, operator *addonoperator.AddonOperator, logger
 	// register extenders
 	for _, extender := range extenders.Extenders() {
 		if err = operator.ModuleManager.AddExtender(extender); err != nil {
-			return fmt.Errorf("add extender: %w", err)
+			return nil, fmt.Errorf("add extender: %w", err)
 		}
 	}
 
@@ -217,40 +213,37 @@ func Register(ctx context.Context, operator *addonoperator.AddonOperator, logger
 	dc := dependency.NewDependencyContainer()
 	settingsContainer := helpers.NewDeckhouseSettingsContainer(nil)
 
-	// do not start operator until controllers preflight checks done
-	preflightCountDown := new(sync.WaitGroup)
-
 	loader := moduleloader.New(runtimeManager.GetClient(), operator.ModuleManager.ModulesDir, operator.ModuleManager.GlobalHooksDir, dc, embeddedPolicy, logger)
 	operator.ModuleManager.SetModuleLoader(loader)
 
-	err = deckhouserelease.NewDeckhouseReleaseController(ctx, runtimeManager, dc, operator.ModuleManager, settingsContainer, operator.MetricStorage, preflightCountDown, logger)
+	err = deckhouserelease.RegisterController(ctx, runtimeManager, dc, operator.ModuleManager, settingsContainer, operator.MetricStorage, logger)
 	if err != nil {
-		return fmt.Errorf("create deckhouse release controller: %w", err)
+		return nil, fmt.Errorf("register deckhouse release controller: %w", err)
 	}
 
 	err = moduleconfig.RegisterController(runtimeManager, operator.ModuleManager, configHandler, operator.MetricStorage, logger)
 	if err != nil {
-		return fmt.Errorf("register module config controller: %w", err)
+		return nil, fmt.Errorf("register module config controller: %w", err)
 	}
 
 	err = modulesource.RegisterController(runtimeManager, operator.ModuleManager, dc, embeddedPolicy, logger)
 	if err != nil {
-		return fmt.Errorf("register module source controller: %w", err)
+		return nil, fmt.Errorf("register module source controller: %w", err)
 	}
 
 	err = modulerelease.RegisterController(runtimeManager, operator.ModuleManager, dc, embeddedPolicy, operator.MetricStorage, logger)
 	if err != nil {
-		return fmt.Errorf("register module release controller: %w", err)
+		return nil, fmt.Errorf("register module release controller: %w", err)
 	}
 
 	err = moduleoverride.RegisterController(runtimeManager, operator.ModuleManager, dc, logger)
 	if err != nil {
-		return fmt.Errorf("register module pull override controller: %w", err)
+		return nil, fmt.Errorf("register module pull override controller: %w", err)
 	}
 
 	err = docbuilder.RegisterController(runtimeManager, dc, logger)
 	if err != nil {
-		return fmt.Errorf("register module documentation controller: %w", err)
+		return nil, fmt.Errorf("register module documentation controller: %w", err)
 	}
 
 	validation.RegisterAdmissionHandlers(
@@ -261,25 +254,25 @@ func Register(ctx context.Context, operator *addonoperator.AddonOperator, logger
 		loader,
 		operator.MetricStorage)
 
-	ctrl := &controller{
-		runtimeManager:     runtimeManager,
-		moduleLoader:       loader,
-		preflightCountDown: preflightCountDown,
+	return &Controller{
+		runtimeManager: runtimeManager,
+		moduleLoader:   loader,
 
 		deckhouseConfigCh: deckhouseConfigCh,
 
 		embeddedPolicy: embeddedPolicy,
 		settings:       settingsContainer,
 		logger:         logger,
-	}
-
-	return ctrl.start(ctx)
+	}, nil
 }
 
-// start loads and ensures modules from FS, starts controllers and runs deckhouse config event loop
-func (c *controller) start(ctx context.Context) error {
-	// run preflight check
-	c.startModulesControllers(ctx)
+// Start loads and ensures modules from FS, starts controllers and runs deckhouse config event loop
+func (c *Controller) Start(ctx context.Context) error {
+	go func() {
+		if err := c.runtimeManager.Start(ctx); err != nil {
+			c.logger.Fatalf("start controller manager failed: %s", err)
+		}
+	}()
 
 	// wait for cache sync
 	if ok := c.runtimeManager.GetCache().WaitForCacheSync(ctx); !ok {
@@ -302,22 +295,8 @@ func (c *controller) start(ctx context.Context) error {
 	return nil
 }
 
-// startModulesControllers starts all child controllers
-func (c *controller) startModulesControllers(ctx context.Context) {
-	// syncs the fs with the cluster state, starts the manager and various controllers
-	go func() {
-		if err := c.runtimeManager.Start(ctx); err != nil {
-			c.logger.Fatalf("start controller manager failed: %s", err)
-		}
-	}()
-
-	c.logger.Info("waiting for the preflight checks to run")
-	c.preflightCountDown.Wait()
-	c.logger.Info("the preflight checks are done")
-}
-
 // syncSettings updates embeddedPolicy and deckhouse settings by the deckhouse moduleConfig
-func (c *controller) syncSettings() {
+func (c *Controller) syncSettings() {
 	for {
 		config := <-c.deckhouseConfigCh
 

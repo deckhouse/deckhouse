@@ -74,7 +74,6 @@ func start(logger *log.Logger) func(_ *kingpin.ParseContext) error {
 }
 
 func runHAMode(ctx context.Context, operator *addonoperator.AddonOperator, logger *log.Logger) {
-	var identity string
 	podName := os.Getenv("DECKHOUSE_POD")
 	if len(podName) == 0 {
 		log.Fatal("DECKHOUSE_POD env not set or empty")
@@ -90,6 +89,7 @@ func runHAMode(ctx context.Context, operator *addonoperator.AddonOperator, logge
 		podNs = app.NamespaceDeckhouse
 	}
 
+	var identity string
 	clusterDomain := os.Getenv("KUBERNETES_CLUSTER_DOMAIN")
 	if len(clusterDomain) == 0 {
 		log.Warn("KUBERNETES_CLUSTER_DOMAIN env not set or empty - it's value won't be used for the leader election")
@@ -154,11 +154,16 @@ func run(ctx context.Context, operator *addonoperator.AddonOperator, logger *log
 	}
 
 	// register subcontrollers and load modules from FS, start controllers and run deckhouse config event loop
-	if err := controller.Register(ctx, operator, logger); err != nil {
+	deckhouseController, err := controller.New(ctx, operator, logger)
+	if err != nil {
 		return fmt.Errorf("register deckhouse controller: %w", err)
 	}
 
-	if err := operator.Start(ctx); err != nil {
+	if err = deckhouseController.Start(ctx); err != nil {
+		return fmt.Errorf("start deckhouse controller: %w", err)
+	}
+
+	if err = operator.Start(ctx); err != nil {
 		return fmt.Errorf("start operator: %w", err)
 	}
 
