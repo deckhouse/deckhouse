@@ -188,7 +188,8 @@ func (s *registryscaner) extractDocumentation(image v1.Image) ([]byte, error) {
 			if err == io.EOF {
 				break
 			}
-			return nil, err
+
+			return nil, fmt.Errorf("tar reader next: %w", err)
 		}
 
 		// Check if file belongs to one of our target directories
@@ -227,7 +228,7 @@ func extractVersionFromImage(releaseImage v1.Image) (string, error) {
 
 	readCloser, err := cr.Extract(releaseImage)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("extract image: %w", err)
 	}
 	defer readCloser.Close()
 
@@ -239,18 +240,18 @@ func extractVersionFromImage(releaseImage v1.Image) (string, error) {
 				return "", fmt.Errorf("version is not set")
 			}
 
-			return "", err
+			return "", fmt.Errorf("tar reader next: %w", err)
 		}
 
 		if hdr.Typeflag == tar.TypeReg && hdr.Name == "version.json" {
 			buf := bytes.NewBuffer(nil)
 			if _, err = io.Copy(buf, tarReader); err != nil {
-				return "", err
+				return "", fmt.Errorf("copy: %w", err)
 			}
 
 			v := versionJSON{}
 			if err := json.Unmarshal(buf.Bytes(), &v); err != nil {
-				return "", err
+				return "", fmt.Errorf("unmarshal: %w", err)
 			}
 
 			if v.Version != "" {
@@ -262,10 +263,12 @@ func extractVersionFromImage(releaseImage v1.Image) (string, error) {
 
 func filterReleaseChannelsFromTags(tags []string) []string {
 	releaseChannels := make([]string, 0)
+
 	for _, tag := range tags {
 		if _, ok := releaseChannelsTags[tag]; ok {
 			releaseChannels = append(releaseChannels, tag)
 		}
 	}
+
 	return releaseChannels
 }

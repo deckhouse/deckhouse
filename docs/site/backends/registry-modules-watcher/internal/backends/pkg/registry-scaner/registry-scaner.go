@@ -83,6 +83,7 @@ func (s *registryscaner) Subscribe(ctx context.Context, scanInterval time.Durati
 				docTask := s.processRegistries(ctx)
 				if len(docTask) > 0 {
 					s.logger.Info("module versions changed in registry")
+
 					if err := s.updateHandler(docTask); err != nil {
 						s.logger.Error("updateHandler", log.Err(err))
 					}

@@ -16,6 +16,7 @@ package backends
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"sync"
 
@@ -92,6 +93,7 @@ func (b *backends) Add(backend string) {
 
 	b.listBackends[backend] = struct{}{}
 	state := b.registryScaner.GetState()
+
 	err := b.sender.Send(context.Background(), map[string]struct{}{backend: {}}, state)
 	if err != nil {
 		b.logger.Fatal("sending docs to new backend", log.Err(err))
@@ -116,7 +118,7 @@ func (b *backends) updateHandler(docTask []DocumentationTask) error {
 
 	err := b.sender.Send(context.Background(), b.listBackends, docTask)
 	if err != nil {
-		return err
+		return fmt.Errorf("send: %w", err)
 	}
 
 	return nil

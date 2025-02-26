@@ -17,6 +17,7 @@ package sender
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -60,28 +61,25 @@ func (s *sender) Send(ctx context.Context, listBackends map[string]struct{}, ver
 		go func(backend string) {
 			for _, version := range versions {
 				if version.Task == backends.TaskDelete {
-					err := s.delete(ctx, backend, version.Module, version.ReleaseChannels)
+					err := s.delete(ctx, backend, version)
 					if err != nil {
-						s.logger.Error("send delete", log.Err(err))
+						s.logger.Error("send delete docs", log.Err(err))
 					}
 
 					continue
 				}
 
-				url := "http://" + backend + "/api/v1/doc/" + version.Module + "/" + version.Version + "?channels=" + strings.Join(version.ReleaseChannels, ",")
-
-				err := s.loadDocArchive(ctx, url, version.TarFile)
+				err := s.upload(ctx, backend, version)
 				if err != nil {
-					s.logger.Error("send docs", log.Err(err))
+					s.logger.Error("send upload docs", log.Err(err))
 				}
 			}
 
-			url := "http://" + backend + "/api/v1/build"
-
-			err := s.build(ctx, url)
+			err := s.build(ctx, backend)
 			if err != nil {
-				s.logger.Error("build docs", log.Err(err))
+				s.logger.Error("send build docs", log.Err(err))
 			}
+
 			<-syncChan
 		}(backend)
 	}
@@ -89,15 +87,20 @@ func (s *sender) Send(ctx context.Context, listBackends map[string]struct{}, ver
 	return nil
 }
 
-func (s *sender) delete(_ context.Context, backend, moduleName string, releaseChannels []string) error {
-	url := fmt.Sprintf("http://%s/api/v1/doc/%s", backend, moduleName)
-	if len(releaseChannels) > 0 {
+var ErrBadStatusCode = errors.New("bad status code")
+
+func (s *sender) delete(ctx context.Context, backend string, version backends.DocumentationTask) error {
+	url := fmt.Sprintf("http://%s/api/v1/doc/%s", backend, version.Module)
+
+	s.logger.Info("delete documentation", slog.String("url", url))
+
+	if len(version.ReleaseChannels) > 0 {
 		params := url2.Values{}
-		params.Add("channels", strings.Join(releaseChannels, ","))
+		params.Add("channels", strings.Join(version.ReleaseChannels, ","))
 		url += "?" + params.Encode()
 	}
 
-	req, err := http.NewRequest(http.MethodDelete, url, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodDelete, url, nil)
 	if err != nil {
 		return fmt.Errorf("client: could not create request: %s", err)
 	}
@@ -108,7 +111,12 @@ func (s *sender) delete(_ context.Context, backend, moduleName string, releaseCh
 			return fmt.Errorf("client: error making http request: %s", err)
 		}
 
-		// TODO: add >=300 status code handling
+		if resp.StatusCode != http.StatusNoContent {
+			s.logger.Warn("delete response", slog.Int("status_code", resp.StatusCode))
+
+			return fmt.Errorf("%w: %s", ErrBadStatusCode, resp.Status)
+		}
+
 		s.logger.Info("delete response", slog.Int("status_code", resp.StatusCode))
 
 		return nil
@@ -116,17 +124,21 @@ func (s *sender) delete(_ context.Context, backend, moduleName string, releaseCh
 
 	b := backoff.NewExponentialBackOff()
 	b.MaxElapsedTime = maxElapsedTime * time.Minute
+
 	err = backoff.Retry(operation, backoff.WithMaxRetries(b, maxRetries))
 	if err != nil {
-		return err
+		return fmt.Errorf("send request: %w", err)
 	}
 
 	return nil
 }
 
-func (s *sender) loadDocArchive(_ context.Context, url string, tarFile []byte) error {
-	s.logger.Info("send loadDoc", slog.String("url", url))
-	req, err := http.NewRequest(http.MethodPost, url, bytes.NewReader(tarFile))
+func (s *sender) upload(ctx context.Context, backend string, version backends.DocumentationTask) error {
+	url := "http://" + backend + "/api/v1/doc/" + version.Module + "/" + version.Version + "?channels=" + strings.Join(version.ReleaseChannels, ",")
+
+	s.logger.Info("upload archive", slog.String("url", url))
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(version.TarFile))
 	if err != nil {
 		return fmt.Errorf("client: could not create request: %s", err)
 	}
@@ -139,7 +151,12 @@ func (s *sender) loadDocArchive(_ context.Context, url string, tarFile []byte) e
 			return fmt.Errorf("client: error making http request: %s", err)
 		}
 
-		// TODO: add >=300 status code handling
+		if resp.StatusCode != http.StatusCreated {
+			s.logger.Warn("send archive response", slog.Int("status_code", resp.StatusCode))
+
+			return fmt.Errorf("%w: %s", ErrBadStatusCode, resp.Status)
+		}
+
 		s.logger.Info("send archive response", slog.Int("status_code", resp.StatusCode))
 
 		return nil
@@ -147,18 +164,21 @@ func (s *sender) loadDocArchive(_ context.Context, url string, tarFile []byte) e
 
 	b := backoff.NewExponentialBackOff()
 	b.MaxElapsedTime = maxElapsedTime * time.Minute
+
 	err = backoff.Retry(operation, backoff.WithMaxRetries(b, maxRetries))
 	if err != nil {
-		return err
+		return fmt.Errorf("send request: %w", err)
 	}
 
 	return nil
 }
 
-func (s *sender) build(_ context.Context, url string) error {
+func (s *sender) build(ctx context.Context, backend string) error {
+	url := "http://" + backend + "/api/v1/build"
+
 	s.logger.Info("send build", slog.String("url", url))
 
-	req, err := http.NewRequest(http.MethodPost, url, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, nil)
 	if err != nil {
 		return fmt.Errorf("client: could not create request: %s", err)
 	}
@@ -171,17 +191,23 @@ func (s *sender) build(_ context.Context, url string) error {
 			return fmt.Errorf("client: error making http request: %s", err)
 		}
 
-		// TODO: add >=300 status code handling
-		s.logger.Info("send build response", slog.Int("status_code", resp.StatusCode))
+		if resp.StatusCode != http.StatusOK {
+			s.logger.Warn("build response", slog.Int("status_code", resp.StatusCode))
+
+			return fmt.Errorf("%w: %s", ErrBadStatusCode, resp.Status)
+		}
+
+		s.logger.Info("build response", slog.Int("status_code", resp.StatusCode))
 
 		return nil
 	}
 
 	b := backoff.NewExponentialBackOff()
 	b.MaxElapsedTime = maxElapsedTime * time.Minute
+
 	err = backoff.Retry(operation, backoff.WithMaxRetries(b, maxRetries))
 	if err != nil {
-		return err
+		return fmt.Errorf("send request: %w", err)
 	}
 
 	return nil

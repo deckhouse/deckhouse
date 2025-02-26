@@ -55,8 +55,9 @@ func NewClient(repo string, options ...Option) (registryscaner.Client, error) {
 	if !opts.withoutAuth {
 		authConfig, err := readAuthConfig(repo, opts.dockerCfg)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("read auth config: %w", err)
 		}
+
 		client.authConfig = authConfig
 	}
 
@@ -84,7 +85,7 @@ func (c *client) image(ctx context.Context, imageURL string) (v1.Image, error) {
 
 	ref, err := name.ParseReference(imageURL, nameOpts...) // parse options available: weak validation, etc.
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("parse reference: %w", err)
 	}
 
 	imageOptions := make([]remote.Option, 0)
