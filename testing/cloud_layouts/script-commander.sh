@@ -78,7 +78,7 @@ EOF
 
 
 set -Eeo pipefail
-shopt -s inherit_errexit
+#shopt -s inherit_errexit
 shopt -s failglob
 
 function prepare_environment() {
@@ -124,6 +124,18 @@ function prepare_environment() {
     if [[ -z "$PREFIX" ]]; then
       # shellcheck disable=SC2016
       >&2 echo 'PREFIX environment variable is required.'
+      return 1
+    fi
+
+    if [[ -z "$COMMANDER_TOKEN" ]]; then
+      # shellcheck disable=SC2016
+      >&2 echo 'COMMANDER_TOKEN environment variable is required.'
+      return 1
+    fi
+
+    if [[ -z "$COMMANDER_HOST" ]]; then
+      # shellcheck disable=SC2016
+      >&2 echo 'COMMANDER_HOST environment variable is required.'
       return 1
     fi
 
@@ -246,23 +258,54 @@ function prepare_environment() {
 function get_cluster_status() {
   local response
   response=$(curl -s -X 'GET' \
-    "https://${commander_host}/api/v1/clusters/${cluster_id}" \
+    "https://${COMMANDER_HOST}/api/v1/clusters/${cluster_id}" \
     -H 'accept: application/json' \
-    -H "X-Auth-Token: ${commander_token}")
+    -H "X-Auth-Token: ${COMMANDER_TOKEN}")
   echo "${response}"
 }
 
+function wait_upmeter_green() {
+  # Upmeter
+  iterations=40
+  sleep_interval=30
+
+  for i in $(seq 1 $iterations); do
+    response=$(get_cluster_status)
+    statuses=$(jq -r '.cluster_agent_data[] | select(.source == "upmeter") | .data.rows[] | .probes[] | "\(.probe):\(.availability)"' <<< "$response")
+    all_ok=true
+
+    while IFS= read -r line; do
+      echo "${line}"
+      availability=$(echo "$line" | cut -d':' -f2)
+      if [[ "$availability" != "1" ]]; then
+        all_ok=false
+      fi
+    done <<< "$statuses"
+
+    if $all_ok; then
+      echo "All components are available"
+      break
+    else
+      echo "Cluster components are not ready. Attempt $i/$iterations failed. Sleep for $sleep_interval seconds..."
+      if [[ "$i" -eq "$iterations" ]]; then
+        echo "Maximum iterations reached. Not all components reached status 1."
+        exit 1
+      fi
+      sleep "$sleep_interval"
+    fi
+  done
+
+}
+
 function run-test() {
-  local commander_host="$COMMANDER_HOST"
-  local commander_token="$COMMANDER_TOKEN"
   local payload
   local response
   local cluster_id
 
   cluster_template_version_id=$(curl -s -X 'GET' \
-    "https://${commander_host}/api/v1/cluster_templates/${cluster_template_id}?without_archived=true" \
+    "https://${COMMANDER_HOST}/api/v1/cluster_templates/${cluster_template_id}?without_archived=true" \
     -H 'accept: application/json' \
-    -H "X-Auth-Token: ${commander_token}" |
+    -H "X-Auth-Token: ${COMMANDER_TOKEN}" |
     jq -r 'del(.cluster_template_versions).current_cluster_template_version_id')
 
   payload="{
@@ -285,9 +328,9 @@ function run-test() {
 
   echo "Bootstrap payload: ${payload}"
 
-  response=$(curl -X POST "https://${commander_host}/api/v1/clusters" \
+  response=$(curl -X POST "https://${COMMANDER_HOST}/api/v1/clusters" \
     -H 'accept: application/json' \
-    -H "X-Auth-Token: ${commander_token}" \
+    -H "X-Auth-Token: ${COMMANDER_TOKEN}" \
     -H 'Content-Type: application/json' \
     -d "$payload" \
     -w "\n%{http_code}")
@@ -339,7 +382,7 @@ function run-test() {
     cluster_status=$(jq -r '.status' <<< "$response")
     if [ "in_sync" = "$cluster_status" ]; then
       echo "  Cluster status: $cluster_status"
-      return 0
+      break
     elif [ "creation_failed" = "$cluster_status" ]; then
       echo "  Cluster status: $cluster_status"
       return 1
@@ -355,64 +398,42 @@ function run-test() {
     fi
   done
 
-  # Upmeter
-  iterations=40
-  sleep_interval=30
+  wait_upmeter_green
 
-  for i in $(seq 1 $iterations); do
-    response=$(get_cluster_status)
-    statuses=$(jq -r '.cluster_agent_data[] | select(.source == "upmeter") | .data.rows[] | .probes[] | "\(.probe):\(.availability)"' <<< "$response")
-    all_ok=true
-
-    while IFS= read -r line; do
-      echo "${line}"
-      availability=$(echo "$line" | cut -d':' -f2)
-      if [[ "$availability" != "1" ]]; then
-        all_ok=false
-      fi
-    done <<< "$statuses"
-
-    if $all_ok; then
-      echo "All components are available"
-      break
-    else
-      echo "Cluster components are not ready. Attempt $i/$iterations failed. Sleep for $sleep_interval seconds..."
-      if [[ "$i" -eq "$iterations" ]]; then
-        echo "Maximum iterations reached. Not all components reached status 1."
-        exit 1
-      fi
-      sleep "$sleep_interval"
-    fi
-  done
-
-
-  # alerts
-  # pause
-
+#  wait_allerts_resolve
+#
+#  wait_pause_remove
 
 }
 
 function cleanup() {
-
   #Get cluster id
-  cluster_id=$(curl -s\
-    "https://${commander_host}/api/v1/clusters" \
+  cluster_id=$(curl \
+    "https://${COMMANDER_HOST}/api/v1/clusters" \
     -H 'accept: application/json' \
-    -H "X-Auth-Token: ${commander_token}" | jq -r ".[] | select(.name == \"${PREFIX}\") | .id")
+    -H "X-Auth-Token: ${COMMANDER_TOKEN}" |
+    jq -r ".[] | select(.name == \"${PREFIX}\") | .id")
+
+  if [ -z $cluster_id ]; then
+    echo "  Error getting cluster id"
+    return 1
+  fi
+
+  echo $cluster_id
 
   curl -s -X 'DELETE' \
-    "https://${commander_host}/api/v1/clusters/${cluster_id}" \
+    "https://${COMMANDER_HOST}/api/v1/clusters/${cluster_id}" \
     -H 'accept: application/json' \
-    -H "X-Auth-Token: ${commander_token}"
+    -H "X-Auth-Token: ${COMMANDER_TOKEN}"
 
   # Waiting to cluster cleanup
   testRunAttempts=40
   sleep=30
   for ((i=1; i<=testRunAttempts; i++)); do
     cluster_status="$(curl -s -X 'GET' \
-      "https://${commander_host}/api/v1/clusters/${cluster_id}" \
+      "https://${COMMANDER_HOST}/api/v1/clusters/${cluster_id}" \
       -H 'accept: application/json' \
-      -H "X-Auth-Token: ${commander_token}" |
+      -H "X-Auth-Token: ${COMMANDER_TOKEN}" |
       jq -r '.status')"
     >&2 echo "Check Cluster delete..."
     if [ "404" = "$cluster_status" ]; then
@@ -425,8 +446,8 @@ function cleanup() {
       sleep $sleep
     else
       >&2 echo -n "  Cluster not deleted. Attempt $i/$testRunAttempts failed."
+      return 1
     fi
-    return 1
   done
 
 }
