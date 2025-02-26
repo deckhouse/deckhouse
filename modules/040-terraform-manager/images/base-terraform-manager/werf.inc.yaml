@@ -31,9 +31,9 @@ git:
       - '**/*'
 shell:
   install:
-  - git clone --depth 1 --branch v{{ .TF.version }} {{ $.SOURCE_REPO }}/hashicorp/terraform.git /src
+  - git clone --depth 1 --branch v{{ .TF.version }} https://github.com/opentofu/opentofu.git /src
   - cd /src
-  - git apply /patches/*.patch --verbose
+#  - git apply /patches/*.patch --verbose
   - rm -rf .git
 ---
 # use artifact for one place import for base and install images
@@ -55,5 +55,5 @@ shell:
   install:
   - cd /src
   - export GOPROXY={{ $.GOPROXY }}
-  - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w -extldflags \"-static\"" -o /terraform/terraform .
+  - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w -extldflags \"-static\"" -o /terraform/terraform ./cmd/tofu
   - chmod 755 /terraform/terraform
