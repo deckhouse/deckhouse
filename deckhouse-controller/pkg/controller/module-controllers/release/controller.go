@@ -885,7 +885,7 @@ func (r *reconciler) loadModule(ctx context.Context, release *v1alpha1.ModuleRel
 	err = def.Validate(values, r.log)
 	if err != nil {
 		err := r.updateReleaseStatus(ctx, release, &v1alpha1.ModuleReleaseStatus{
-			Phase:   v1alpha1.ModuleReleasePhasePending,
+			Phase:   v1alpha1.ModuleReleasePhaseSuspended,
 			Message: "validation failed: " + err.Error(),
 		})
 		if err != nil {
