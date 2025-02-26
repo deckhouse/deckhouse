@@ -138,16 +138,16 @@ document.addEventListener("DOMContentLoaded", function() {
         'pilot'             : 'пилота',
       }
 
-      const query = [];
-      const parts = new URLSearchParams(FormData.current_url);
+      // const query = [];
+      // const parts = new URLSearchParams(FormData.current_url);
 
-      if(parts.has('query')) {
-        const params = new URLSearchParams(parts.get('query'));
+      // if(parts.has('query')) {
+      //   const params = new URLSearchParams(parts.get('query'));
 
-        for(const [key, value] of params.entries()) {
-          query[key] = value;
-        }
-      }
+      //   for(const [key, value] of params.entries()) {
+      //     query[key] = value;
+      //   }
+      // }
 
       const bitrixFields = {
         fields: {
@@ -161,14 +161,14 @@ document.addEventListener("DOMContentLoaded", function() {
         bitrixFields.fields['TITLE'] += FormData.company + ' - запрос ';
       }
 
-      if (FormData.form_id === 'partner') {
-        const typePartner = {
-          'commercial': ' коммерческого',
-          'cloud': ' облачного',
-          'tech': ' технологического',  
-        };
-        bitrixFields.fields['TITLE'] += typePartner.FormData['partner_type'] || '';
-      }
+      // if (FormData.form_id === 'partner') {
+      //   const typePartner = {
+      //     'commercial': ' коммерческого',
+      //     'cloud': ' облачного',
+      //     'tech': ' технологического',  
+      //   };
+      //   bitrixFields.fields['TITLE'] += typePartner.FormData['partner_type'] || '';
+      // }
 
       // if (form_type_labels.FormData.form_id) {
       //   bitrixFields.fields['TITLE'] += form_type_labels.FormData.form_id;
@@ -180,12 +180,32 @@ document.addEventListener("DOMContentLoaded", function() {
         bitrixFields.fields['NAME'] = FormData.name;
       }
   
+      // if (FormData.email) {
+      //   bitrixFields.fields['EMAIL[0][VALUE]'] = FormData.email;
+      //   bitrixFields.fields['EMAIL[0][VALUE_TYPE]'] = 'WORK';
+      // }
+
       if (FormData.email) {
-        bitrixFields.fields['EMAIL'] = FormData.email;
+        bitrixFields.fields['EMAIL'] = [
+          {
+            'VALUE': FormData.email,
+            'VALUE_TYPE': 'WORK',
+          }
+        ]
       }
-  
+
+      // if (FormData.phone) {
+      //   bitrixFields.fields['PHONE[0][VALUE]'] = FormData.phone;
+      //   bitrixFields.fields['PHONE[0][VALUE_TYPE]'] = 'WORK';
+      // }
+
       if (FormData.phone) {
-        bitrixFields.fields['PHONE'] = FormData.phone;
+        bitrixFields.fields['PHONE'] = [
+          {
+            'VALUE': FormData.phone,
+            'VALUE_TYPE': 'WORK',
+          }
+        ]
       }
   
       if (FormData.position) {
@@ -199,30 +219,30 @@ document.addEventListener("DOMContentLoaded", function() {
         }
       }
 
-      if (FormData.current_url) {
-        const params = FormData.current_url.indexOf('?');
-        bitrixFields.fields['SOURCE_DESCRIPTION'] = params !== -1 ? FormData.current_url.substring(0, params) : FormData.current_url;
-      }
+      // if (FormData.current_url) {
+      //   const params = FormData.current_url.indexOf('?');
+      //   bitrixFields.fields['SOURCE_DESCRIPTION'] = params !== -1 ? FormData.current_url.substring(0, params) : FormData.current_url;
+      // }
 
-      if (FormData.utm_campaign) {
-        bitrixFields.fields['UTM_CAMPAIGN'] = query.utm_campaign;
-      }
+      // if (FormData.utm_campaign) {
+      //   bitrixFields.fields['UTM_CAMPAIGN'] = query.utm_campaign;
+      // }
 
-      if (FormData.utm_medium) {
-        bitrixFields.fields['UTM_MEDIUM'] = query.utm_medium;
-      }
+      // if (FormData.utm_medium) {
+      //   bitrixFields.fields['UTM_MEDIUM'] = query.utm_medium;
+      // }
 
-      if (FormData.utm_source) {
-        bitrixFields.fields['UTM_SOURCE'] = query.utm_source;
-      }
+      // if (FormData.utm_source) {
+      //   bitrixFields.fields['UTM_SOURCE'] = query.utm_source;
+      // }
 
-      if (FormData.utm_term) {
-        bitrixFields.fields['UTM_TERM'] = query.utm_term;
-      }
+      // if (FormData.utm_term) {
+      //   bitrixFields.fields['UTM_TERM'] = query.utm_term;
+      // }
 
       const url = 'https://crm.flant.ru/rest/132/bm7uy367wn001kef/crm.lead.add.json';
 
-      // const url = 'https://b24-f0ud24.bitrix24.ru/rest/crm.lead.add.json?auth=aab4bd67007618480076182800000001000007e6adfb2eee459ffce161d05f6bc9f6da';
+      // const url = 'https://b24-f0ud24.bitrix24.ru/rest/crm.lead.add.json?auth=e5c9be67007618480076182800000001000007e73fd6cc1438bb48a5874dc4707447da';
 
       fetch(url, {
         method: 'POST',
@@ -234,8 +254,11 @@ document.addEventListener("DOMContentLoaded", function() {
       })
       .then(res => {
         if(res.ok) {
-          res.json();
+          this.downloadFile();
+          this.successSubmit();
+
         } else {
+          this.errorSubmit();
           throw new Error(`${res.status}`);
         }
       })
