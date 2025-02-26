@@ -142,15 +142,13 @@ func (c *Client) Download(ctx context.Context, editionID, md5 string) (*Download
 		return &emptyResponse, fmt.Errorf("failed to create edition reader: %w", err)
 	}
 
-	if md5 != hex.EncodeToString(editionReader.MD5.Sum(nil)) {
-		return &emptyResponse, fmt.Errorf("md5 mismatch")
-	}
+	newMD5 := hex.EncodeToString(editionReader.MD5.Sum(nil))
 
 	return &DownloadResponse{
 		LastModified:    time.Now(),
-		MD5:             hex.EncodeToString(editionReader.MD5.Sum(nil)),
+		MD5:             newMD5,
 		Reader:          editionReader.Buffer,
-		UpdateAvailable: true,
+		UpdateAvailable: newMD5 != md5,
 	}, nil
 }
 
