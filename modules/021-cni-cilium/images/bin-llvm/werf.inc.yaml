@@ -49,8 +49,10 @@ import:
   before: install
 shell:
   install:
-  - update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-13 2
+  - apt-get install -y gcc11 gcc11-c++ libstdc++11-devel libstdc++11-devel-static
+  #- update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-13 2
   setup:
+  - export GCC_VERSION=11
   - sed -i '/\#include <string>/a \#include <cstdint>' /src/llvm/llvm/include/llvm/Support/Signals.h
   - export CCACHE_DIR="/tmp/ccache-dir"
   - mkdir -p /src/llvm/llvm/build-native
