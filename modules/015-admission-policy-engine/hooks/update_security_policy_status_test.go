@@ -48,6 +48,20 @@ const (
 					"allowPrivileged": false
 				}
 			}
+		},
+		{
+			"metadata": {
+				"name": "foo",
+				"namespace": "default"
+			},
+			"spec": {
+				"enforcementAction": Deny,
+				"policies": {
+					"allowHostNetwork": false,
+					"allowPrivilegeEscalation": false,
+					"allowPrivileged": false
+				}
+			}
 		}
 	]`
 )
@@ -58,6 +72,7 @@ var _ = Describe("Modules :: admission-policy-engine :: hooks :: update security
 	)
 	f.RegisterCRD("templates.gatekeeper.sh", "v1", "ConstraintTemplate", false)
 	f.RegisterCRD("deckhouse.io", "v1alpha1", "SecurityPolicy", false)
+	f.RegisterCRD("deckhouse.io", "v1alpha1", "NamespacedSecurityPolicy", false)
 
 	err := os.Setenv("TEST_CONDITIONS_CALC_NOW_TIME", nowTime)
 	if err != nil {
@@ -78,7 +93,7 @@ var _ = Describe("Modules :: admission-policy-engine :: hooks :: update security
 		})
 		It("should have generated resources", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("admissionPolicyEngine.internal.securityPolicies").Array()).To(HaveLen(1))
+			Expect(f.ValuesGet("admissionPolicyEngine.internal.securityPolicies").Array()).To(HaveLen(2))
 			const expectedStatus = `{
 				"deckhouse": {
         				"observed": {
@@ -93,6 +108,7 @@ var _ = Describe("Modules :: admission-policy-engine :: hooks :: update security
 				}
 			}`
 			Expect(f.KubernetesGlobalResource("SecurityPolicy", "foo").Field("status").String()).To(MatchJSON(expectedStatus))
+			Expect(f.KubernetesResource("NamespacedSecurityPolicy", "default", "foo").Field("status").String()).To(MatchJSON(expectedStatus))
 		})
 	})
 })
@@ -110,6 +126,24 @@ spec:
       labelSelector:
         matchLabels:
           operation-policy.deckhouse.io/enabled: "true"
+  policies:
+    allowHostNetwork: false
+    allowPrivilegeEscalation: false
+    allowPrivileged: false
+status:
+  deckhouse:
+    observed:
+      checkSum: "123123123123123"
+      lastTimestamp: "2023-03-03T16:49:52Z"
+    synced: "False"
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: NamespacedSecurityPolicy
+metadata:
+  name: foo
+  namespace: default
+spec:
+  enforcementAction: Deny
   policies:
     allowHostNetwork: false
     allowPrivilegeEscalation: false

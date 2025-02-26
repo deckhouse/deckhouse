@@ -32,8 +32,26 @@ kubernetes:
     jqFilter: |
       {
         "name": .metadata.name,
-        "references": [.spec.policies.verifyImageSignatures[]?.reference]
+        "references": [.spec.policies.verifyImageSignatures[]?.reference],
+        "kind": .kind
       }
+
+  - name: namespacedpolicies
+    apiVersion: deckhouse.io/v1alpha1
+    kind: NamespacedSecurityPolicy
+    queue: "securitypolicies"
+    group: main
+    executeHookOnEvent: []
+    executeHookOnSynchronization: false
+    keepFullObjectsInMemory: false
+    jqFilter: |
+      {
+        "name": .metadata.name,
+        "namespace": .metadata.namespace,
+        "references": [.spec.policies.verifyImageSignatures[]?.reference],
+        "kind": .kind
+      }
+
 kubernetesValidating:
 - name: securitypolicies.deckhouse.io
   group: main
@@ -43,6 +61,11 @@ kubernetesValidating:
     operations:  ["CREATE", "UPDATE"]
     resources:   ["securitypolicies"]
     scope:       "Cluster"
+  - apiGroups:   ["deckhouse.io"]
+    apiVersions: ["*"]
+    operations:  ["CREATE", "UPDATE"]
+    resources:   ["namespacedsecuritypolicies"]
+    scope:       "Namespaced"
 """
 
 
@@ -85,7 +108,7 @@ def check_verify_image_signatures(ctx: DotMap) -> Optional[str]:
     if len(references) == 0:
         return None
 
-    existing_references = [obj.filterResult for obj in ctx.snapshots.policies if obj.filterResult.references is not None]
+    existing_references = [obj.filterResult for obj in ctx.snapshots.policies + ctx.snapshots.namespacedpolicies if obj.filterResult.references is not None] 
 
     for exobj in existing_references:
         # On update skip self intersection
@@ -101,7 +124,10 @@ def check_verify_image_signatures(ctx: DotMap) -> Optional[str]:
                 min_length = min(len(ref_clean), len(exref_clean))
                 # Check intersection but ignore fully equal references
                 if ref_clean[:min_length] == exref_clean[:min_length] and ref_clean != exref_clean:
-                    return f"ImageReference \"{ref}\" has intersection in the SecurityPolicy \"{exobj.name}\""
+                    objName = exobj.name
+                    if exobj.namespace is not None:
+                        objName = exobj.namespace + "/" + exobj.name
+                    return f"ImageReference \"{ref}\" has intersection in the {exobj.kind} \"{objName}\""
 
     return None
 
