@@ -270,13 +270,13 @@ function wait_upmeter_green() {
   sleep_interval=30
 
   for i in $(seq 1 $iterations); do
-    sleep "$sleep_interval"
     response=$(get_cluster_status)
-    upmeter_data_exists=$(echo "$response" | jq -r '.cluster_agent_data[] | select(.source == "upmeter")' 2>/dev/null)
+    upmeter_data_exists=$(echo "$response" | jq -r '.cluster_agent_data[] | select(.source == "upmeter") | .data.rows[]' 2>/dev/null)
     if [[ -n $upmeter_data_exists ]]; then
       statuses=$(jq -r '.cluster_agent_data[] | select(.source == "upmeter") | .data.rows[] | .probes[] | "\(.probe):\(.availability)"' <<< "$response")
     else
       echo "Upmeter don't ready"
+      sleep "$sleep_interval"
       continue
     fi
 
@@ -299,6 +299,7 @@ function wait_upmeter_green() {
         exit 1
       fi
     fi
+    sleep "$sleep_interval"
   done
 
 }
