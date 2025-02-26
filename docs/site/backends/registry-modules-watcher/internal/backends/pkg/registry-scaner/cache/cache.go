@@ -15,8 +15,6 @@
 package cache
 
 import (
-	"fmt"
-	"maps"
 	"slices"
 	"sort"
 	"strings"
@@ -24,8 +22,6 @@ import (
 
 	"registry-modules-watcher/internal"
 	"registry-modules-watcher/internal/backends"
-
-	"github.com/google/go-cmp/cmp"
 )
 
 type (
@@ -47,11 +43,8 @@ type Data struct {
 }
 
 type Cache struct {
-	m         sync.RWMutex
-	val       map[RegistryName]map[ModuleName]ModuleData
-	stateSnap []backends.Version
-
-	stateSnapMap map[RegistryName]map[ModuleName]ModuleData
+	m   sync.RWMutex
+	val map[RegistryName]map[ModuleName]ModuleData
 }
 
 func New() *Cache {
@@ -60,107 +53,11 @@ func New() *Cache {
 	}
 }
 
-// ResetRange sets stateSnap to State
-func (c *Cache) ResetRange() {
-	state := c.GetState()
-	c.m.Lock()
-	defer c.m.Unlock()
-
-	c.stateSnap = make([]backends.Version, len(state))
-	copy(c.stateSnap, state)
-
-	c.stateSnapMap = make(map[RegistryName]map[ModuleName]ModuleData, len(c.val))
-	maps.Copy(c.stateSnapMap, c.val)
-}
-
-// GetRange returns a list of module versions from the current State
-func (c *Cache) GetRange() []backends.Version {
+func (c *Cache) GetState() []backends.DocumentationTask {
 	c.m.RLock()
 	defer c.m.RUnlock()
 
-	versions := []backends.Version{}
-
-	for registryName, modules := range c.val {
-		snapModules, ok := c.stateSnapMap[registryName]
-		if !ok {
-			// TODO: remove all registry data
-			delete(c.stateSnapMap, registryName)
-			continue
-		}
-
-		for moduleName, moduleData := range modules {
-			snapModuleData, ok := snapModules[moduleName]
-			if !ok {
-				// TODO: remove all module data
-				delete(c.stateSnapMap[registryName], moduleName)
-				continue
-			}
-
-			for version, data := range moduleData.Versions {
-				snapVersionData, ok := snapModuleData.Versions[version]
-				if !ok {
-					// TODO: remove version
-					delete(c.stateSnapMap[registryName][moduleName].Versions, version)
-					continue
-				}
-
-				cmp.Equal(data.ReleaseChannels, snapVersionData.ReleaseChannels)
-			}
-		}
-	}
-
-	state := c.GetState()
-	for _, version := range c.stateSnap {
-		if !contain(state, version) {
-			version.ToDelete = true
-			versions = append(versions, version)
-		}
-	}
-
-	for _, version := range state {
-		if !contain(c.stateSnap, version) {
-			version.ToDelete = false
-			versions = append(versions, version)
-		}
-	}
-
-	return versions
-}
-
-func (c *Cache) GetState() []backends.Version {
-	c.m.RLock()
-	defer c.m.RUnlock()
-
-	versions := []backends.Version{}
-	for registry, modules := range c.val {
-		for module, moduleData := range modules {
-			for version, data := range moduleData.Versions {
-				releaseChannels := []string{}
-				for releaseChannel := range data.ReleaseChannels {
-					releaseChannels = append(releaseChannels, releaseChannel)
-				}
-
-				versions = append(versions, backends.Version{
-					Registry:        string(registry),
-					Module:          string(module),
-					Version:         string(version),
-					TarFile:         data.TarFile,
-					ReleaseChannels: releaseChannels,
-				})
-			}
-		}
-	}
-
-	return versions
-}
-
-func (c *Cache) GetCache() map[RegistryName]map[ModuleName]ModuleData {
-	c.m.RLock()
-	defer c.m.RUnlock()
-
-	cacheCopy := CopyMapWithoutTar(c.val)
-
-	return cacheCopy
+	return RemapFromMapToVersions(c.val, backends.TaskCreate)
 }
 
 func CopyMapWithoutTar(m map[RegistryName]map[ModuleName]ModuleData) map[RegistryName]map[ModuleName]ModuleData {
@@ -340,7 +237,7 @@ func (c *Cache) SetTar(version internal.VersionData) {
 // 1.2.4
 // 1.2.5
 // 1.2.6 was not found and added to the list (needs to be added)
-func (c *Cache) SyncWithRegistryVersions(versions []internal.VersionData) []internal.VersionData {
+func (c *Cache) SyncWithRegistryVersions(versions []internal.VersionData) []backends.DocumentationTask {
 	c.m.RLock()
 	defer c.m.RUnlock()
 
@@ -381,39 +278,35 @@ func (c *Cache) SyncWithRegistryVersions(versions []internal.VersionData) []inte
 		}
 	}
 
-	fmt.Println("versions to delete")
-	versionsToDelete := Remap(c.val)
-	for _, ver := range versionsToDelete {
-		ver.TarFile = nil
-		fmt.Println(ver)
-	}
+	versionsToDelete := RemapFromMapToVersions(c.val, backends.TaskDelete)
 
-	fmt.Println("new versions")
-	for _, ver := range newVersions {
-		ver.TarFile = nil
-		fmt.Println(ver)
-	}
+	result := RemapFromMapToVersions(RemapFromVersionData(newVersions), backends.TaskCreate)
+	result = append(result, versionsToDelete...)
 
 	// Update the cache with the registry versions
 	c.val = RemapFromVersionData(versions)
 
-	return newVersions
+	return result
 }
 
-func Remap(m map[RegistryName]map[ModuleName]ModuleData) []internal.VersionData {
-	versions := make([]internal.VersionData, 0, 1)
+func RemapFromMapToVersions(m map[RegistryName]map[ModuleName]ModuleData, task backends.Task) []backends.DocumentationTask {
+	versions := make([]backends.DocumentationTask, 0, 1)
 	for registry, modules := range m {
 		for module, moduleData := range modules {
 			for version, data := range moduleData.Versions {
+				releaseChannels := make([]string, 0, len(data.ReleaseChannels))
 				for releaseChannel := range data.ReleaseChannels {
-					versions = append(versions, internal.VersionData{
-						Registry:       string(registry),
-						ModuleName:     string(module),
-						Version:        string(version),
-						TarFile:        data.TarFile,
-						ReleaseChannel: releaseChannel,
-					})
+					releaseChannels = append(releaseChannels, releaseChannel)
 				}
+
+				versions = append(versions, backends.DocumentationTask{
+					Registry:        string(registry),
+					Module:          string(module),
+					Version:         string(version),
+					ReleaseChannels: releaseChannels,
+					TarFile:         data.TarFile,
+					Task:            task,
+				})
 			}
 		}
 	}
@@ -566,7 +459,7 @@ func (c *Cache) DeleteReleaseChannel(registry, module, releaseChannel string) {
 	}
 }
 
-func contain(versions []backends.Version, version backends.Version) bool {
+func contain(versions []backends.DocumentationTask, version backends.DocumentationTask) bool {
 	for _, val := range versions {
 		if val.Registry == version.Registry &&
 			val.Module == version.Module &&

@@ -52,14 +52,14 @@ func New(logger *log.Logger) *sender {
 	}
 }
 
-func (s *sender) Send(ctx context.Context, listBackends map[string]struct{}, versions []backends.Version) error {
+func (s *sender) Send(ctx context.Context, listBackends map[string]struct{}, versions []backends.DocumentationTask) error {
 	syncChan := make(chan struct{}, 10)
 	for backend := range listBackends {
 		syncChan <- struct{}{}
 
 		go func(backend string) {
 			for _, version := range versions {
-				if version.ToDelete {
+				if version.Task == backends.TaskDelete {
 					err := s.delete(ctx, backend, version.Module, version.ReleaseChannels)
 					if err != nil {
 						s.logger.Error("send delete", log.Err(err))

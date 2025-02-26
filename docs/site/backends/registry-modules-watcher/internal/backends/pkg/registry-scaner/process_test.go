@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"registry-modules-watcher/internal/backends"
 	"registry-modules-watcher/internal/backends/pkg/registry-scaner/cache"
 	"strings"
 	"testing"
@@ -32,35 +33,86 @@ import (
 )
 
 func Test_RegistryScannerProcess(t *testing.T) {
-	mc := minimock.NewController(t)
+	t.Run("processes initial registry data", func(t *testing.T) {
+		mc := minimock.NewController(t)
+		clientOne := setupCompleteClientOne(mc)
+		clientTwo := setupCompleteClientTwo(mc)
 
-	clientOne := setupCompleteClientOne(mc)
-	clientTwo := setupCompleteClientTwo(mc)
+		scanner := &registryscaner{
+			logger:          log.NewNop(),
+			registryClients: map[string]Client{"clientOne": clientOne, "clientTwo": clientTwo},
+			cache:           cache.New(),
+		}
 
-	// Create scanner with mocked dependencies
-	scanner := &registryscaner{
-		logger:          log.NewNop(),
-		registryClients: map[string]Client{"clientOne": clientOne, "clientTwo": clientTwo},
-		cache:           cache.New(),
+		scanner.processRegistries(context.Background())
+
+		expectedTasks := []backends.DocumentationTask{
+			{Registry: "clientOne", Module: "console", Version: "1.2.3"},
+			{Registry: "clientOne", Module: "console", Version: "2.2.3"},
+			{Registry: "clientOne", Module: "parca", Version: "2.3.4"},
+			{Registry: "clientOne", Module: "parca", Version: "3.3.4"},
+			{Registry: "clientTwo", Module: "console", Version: "3.4.5"},
+			{Registry: "clientTwo", Module: "console", Version: "4.4.5"},
+			{Registry: "clientTwo", Module: "parca", Version: "4.5.6"},
+		}
+
+		assertCacheContains(t, expectedTasks, scanner.cache.GetState())
+	})
+
+	t.Run("processes new registry images", func(t *testing.T) {
+		mc := minimock.NewController(t)
+		clientOne := setupCompleteClientOne(mc)
+		clientTwo := setupCompleteClientTwo(mc)
+
+		scanner := &registryscaner{
+			logger:          log.NewNop(),
+			registryClients: map[string]Client{"clientOne": clientOne, "clientTwo": clientTwo},
+			cache:           cache.New(),
+		}
+
+		scanner.processRegistries(context.Background())
+
+		clientOne = setupNewImagesClientOne(mc)
+		clientTwo = setupNewImagesClientTwo(mc)
+
+		scanner.registryClients = map[string]Client{"clientOne": clientOne, "clientTwo": clientTwo}
+
+		scanner.processRegistries(context.Background())
+
+		expectedTasks := []backends.DocumentationTask{
+			{Registry: "clientOne", Module: "console", Version: "1.2.3"},
+			{Registry: "clientOne", Module: "parca", Version: "2.3.4"},
+			{Registry: "clientOne", Module: "console", Version: "3.3.3"},
+			{Registry: "clientTwo", Module: "console", Version: "3.4.5"},
+			{Registry: "clientOne", Module: "parca", Version: "4.4.4"},
+			{Registry: "clientTwo", Module: "parca", Version: "4.5.6"},
+			{Registry: "clientTwo", Module: "console", Version: "5.5.5"},
+			{Registry: "clientTwo", Module: "parca", Version: "6.6.6"},
+		}
+
+		assertCacheContains(t, expectedTasks, scanner.cache.GetState())
+	})
+}
+
+func assertCacheContains(t *testing.T, expected, actual []backends.DocumentationTask) {
+	t.Helper()
+
+	assert.Equal(t, len(expected), len(actual), "Cache should have the correct number of entries")
+
+	// Create maps for easier lookup and comparison by key components
+	expectedMap := make(map[string]struct{})
+	for _, task := range expected {
+		key := fmt.Sprintf("%s/%s/%s", task.Registry, task.Module, task.Version)
+		expectedMap[key] = struct{}{}
 	}
 
-	// Run the scanner
-	scanner.processRegistries(context.Background())
+	actualMap := make(map[string]struct{})
+	for _, task := range actual {
+		key := fmt.Sprintf("%s/%s/%s", task.Registry, task.Module, task.Version)
+		actualMap[key] = struct{}{}
+	}
 
-	expectedCache := buildCompleteExpectedCache()
-	assert.Equal(t, expectedCache, scanner.cache.GetCache())
-
-	fmt.Println("second test")
-	clientOne = setupNewImagesClientOne(mc)
-	clientTwo = setupNewImagesClientTwo(mc)
-
-	scanner.registryClients = map[string]Client{"clientOne": clientOne, "clientTwo": clientTwo}
-
-	// Run the scanner
-	scanner.processRegistries(context.Background())
-
-	expectedCache = buildUpdatedExpectedCache()
-	assert.Equal(t, expectedCache, scanner.cache.GetCache())
+	assert.Equal(t, expectedMap, actualMap, "Cache should contain the expected entries")
 }
 
 func setupCompleteClientOne(mc *minimock.Controller) Client {
@@ -185,78 +237,6 @@ func setupNewImagesClientTwo(mc *minimock.Controller) Client {
 	return client
 }
 
-func buildCompleteExpectedCache() map[cache.RegistryName]map[cache.ModuleName]cache.ModuleData {
-	return map[cache.RegistryName]map[cache.ModuleName]cache.ModuleData{
-		"clientOne": {
-			"console": {
-				ReleaseChecksum: map[cache.ReleaseChannelName]string{
-					"alpha": "algo:c1consoleImageFirst",
-					"beta":  "algo:c1consoleImageSecond",
-				},
-				Versions: map[cache.VersionNum]cache.Data{
-					"1.2.3": {
-						ReleaseChannels: map[string]struct{}{"alpha": {}},
-						TarLen:          1536,
-					},
-					"2.2.3": {
-						ReleaseChannels: map[string]struct{}{"beta": {}},
-						TarLen:          1536,
-					},
-				},
-			},
-			"parca": {
-				ReleaseChecksum: map[cache.ReleaseChannelName]string{
-					"rock-solid": "algo:c1parcaImageFirst",
-					"stable":     "algo:c1parcaImageSecond",
-				},
-				Versions: map[cache.VersionNum]cache.Data{
-					"2.3.4": {
-						ReleaseChannels: map[string]struct{}{"rock-solid": {}},
-						TarLen:          1536,
-					},
-					"3.3.4": {
-						ReleaseChannels: map[string]struct{}{"stable": {}},
-						TarLen:          1536,
-					},
-				},
-			},
-		},
-		"clientTwo": {
-			"console": {
-				ReleaseChecksum: map[cache.ReleaseChannelName]string{
-					"alpha": "algo:c2consoleImageFirst",
-					"beta":  "algo:c2consoleImageSecond",
-				},
-				Versions: map[cache.VersionNum]cache.Data{
-					"3.4.5": {
-						ReleaseChannels: map[string]struct{}{"alpha": {}},
-						TarLen:          1536,
-					},
-					"4.4.5": {
-						ReleaseChannels: map[string]struct{}{"beta": {}},
-						TarLen:          1536,
-					},
-				},
-			},
-			"parca": {
-				ReleaseChecksum: map[cache.ReleaseChannelName]string{
-					"rock-solid": "algo:c2parcaImageFirst",
-					"stable":     "algo:c2parcaImageFirst",
-				},
-				Versions: map[cache.VersionNum]cache.Data{
-					"4.5.6": {
-						ReleaseChannels: map[string]struct{}{
-							"rock-solid": {},
-							"stable":     {},
-						},
-						TarLen: 1536,
-					},
-				},
-			},
-		},
-	}
-}
-
 func createMockImage(hex, version string) *crfake.FakeImage {
 	return &crfake.FakeImage{
 		DigestStub: func() (v1.Hash, error) {
@@ -328,77 +308,4 @@ func (fl FakeLayer) Uncompressed() (io.ReadCloser, error) {
 
 func (fl FakeLayer) Size() (int64, error) {
 	return int64(len(fl.FilesContent)), nil
-}
-
-func buildUpdatedExpectedCache() map[cache.RegistryName]map[cache.ModuleName]cache.ModuleData {
-	return map[cache.RegistryName]map[cache.ModuleName]cache.ModuleData{
-		"clientOne": {
-			"console": {
-				ReleaseChecksum: map[cache.ReleaseChannelName]string{
-					"alpha": "algo:c1consoleImageFirst",
-					"beta":  "algo:c1consoleImageThird",
-				},
-				Versions: map[cache.VersionNum]cache.Data{
-					"1.2.3": {
-						ReleaseChannels: map[string]struct{}{"alpha": {}},
-						TarLen:          1536,
-					},
-					"3.3.3": {
-						ReleaseChannels: map[string]struct{}{"beta": {}},
-						TarLen:          1536,
-					},
-				},
-			},
-			"parca": {
-				ReleaseChecksum: map[cache.ReleaseChannelName]string{
-					"rock-solid": "algo:c1parcaImageFirst",
-					"stable":     "algo:c1parcaImageThird",
-				},
-				Versions: map[cache.VersionNum]cache.Data{
-					"2.3.4": {
-						ReleaseChannels: map[string]struct{}{"rock-solid": {}},
-						TarLen:          1536,
-					},
-					"4.4.4": {
-						ReleaseChannels: map[string]struct{}{"stable": {}},
-						TarLen:          1536,
-					},
-				},
-			},
-		},
-		"clientTwo": {
-			"console": {
-				ReleaseChecksum: map[cache.ReleaseChannelName]string{
-					"alpha": "algo:c2consoleImageFirst",
-					"beta":  "algo:c2consoleImageThird",
-				},
-				Versions: map[cache.VersionNum]cache.Data{
-					"3.4.5": {
-						ReleaseChannels: map[string]struct{}{"alpha": {}},
-						TarLen:          1536,
-					},
-					"5.5.5": {
-						ReleaseChannels: map[string]struct{}{"beta": {}},
-						TarLen:          1536,
-					},
-				},
-			},
-			"parca": {
-				ReleaseChecksum: map[cache.ReleaseChannelName]string{
-					"rock-solid": "algo:c2parcaImageFirst",
-					"stable":     "algo:c2parcaImageThird",
-				},
-				Versions: map[cache.VersionNum]cache.Data{
-					"4.5.6": {
-						ReleaseChannels: map[string]struct{}{"rock-solid": {}},
-						TarLen:          1536,
-					},
-					"6.6.6": {
-						ReleaseChannels: map[string]struct{}{"stable": {}},
-						TarLen:          1536,
-					},
-				},
-			},
-		},
-	}
 }

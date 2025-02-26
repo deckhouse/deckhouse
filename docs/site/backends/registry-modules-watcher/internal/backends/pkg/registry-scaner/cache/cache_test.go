@@ -23,13 +23,14 @@ import (
 )
 
 func TestGetState(t *testing.T) {
-	expected := []backends.Version{
+	expected := []backends.DocumentationTask{
 		{
 			Registry:        "TestReg",
 			Module:          "TestModule",
 			Version:         "1.0.0",
 			ReleaseChannels: []string{"alpha"},
 			TarFile:         []byte("test"),
+			Task:            backends.TaskCreate,
 		},
 	}
 	cache := New()
@@ -64,7 +65,6 @@ func TestSetTar(t *testing.T) {
 
 	ver.ReleaseChannel = "alpha"
 	cache.SetTar(ver)
-	cache.ResetRange()
 
 	ver.ReleaseChannel = "alpha"
 	ver.Version = "1.0.1"
@@ -72,14 +72,4 @@ func TestSetTar(t *testing.T) {
 	rng := cache.GetState()
 	// remove "alpha" tag from 1.0.0 and add to 1.0.1
 	assert.Equal(t, 2, len(rng), "Unexpected version range. Expected %v, got %v", 2, len(rng))
-
-	ver.ReleaseChannel = "beta"
-	cache.SetTar(ver)
-	ver.ReleaseChannel = "alpha"
-	ver.Version = "1.0.2"
-	cache.SetTar(ver)
-
-	rng = cache.GetRange()
-	// "stable" tag in 1.0.0, "beta" in 1.0.1 and "alpha" in 1.0.2
-	assert.Equal(t, 4, len(rng), "Unexpected version range. Expected %v, got %v", 3, len(rng))
 }

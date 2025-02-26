@@ -9,7 +9,6 @@ type VersionData struct {
 	Checksum       string
 	Version        string
 	TarFile        []byte
-	TarLen         int
 
 	Image v1.Image
 }

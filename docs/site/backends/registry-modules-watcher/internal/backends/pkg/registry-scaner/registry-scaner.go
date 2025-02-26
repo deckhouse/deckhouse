@@ -34,7 +34,7 @@ type Client interface {
 
 type registryscaner struct {
 	registryClients map[string]Client
-	updateHandler   func([]backends.Version) error
+	updateHandler   func([]backends.DocumentationTask) error
 	cache           *cache.Cache
 
 	logger *log.Logger
@@ -63,32 +63,29 @@ func New(logger *log.Logger, registryClients ...Client) *registryscaner { //noli
 	return &registryscaner
 }
 
-func (s *registryscaner) GetState() []backends.Version {
+func (s *registryscaner) GetState() []backends.DocumentationTask {
 	return s.cache.GetState()
 }
 
-func (s *registryscaner) SubscribeOnUpdate(updateHandler func([]backends.Version) error) {
+func (s *registryscaner) SubscribeOnUpdate(updateHandler func([]backends.DocumentationTask) error) {
 	s.updateHandler = updateHandler
 }
 
 // Subscribe
 func (s *registryscaner) Subscribe(ctx context.Context, scanInterval time.Duration) {
 	s.processRegistries(ctx)
-	s.cache.ResetRange()
 	ticker := time.NewTicker(scanInterval)
 
 	go func() {
 		for {
 			select {
 			case <-ticker.C:
-				s.processRegistries(ctx)
-				state := s.cache.GetRange()
-				if len(state) > 0 {
+				docTask := s.processRegistries(ctx)
+				if len(docTask) > 0 {
 					s.logger.Info("module versions changed in registry")
-					if err := s.updateHandler(state); err != nil {
+					if err := s.updateHandler(docTask); err != nil {
 						s.logger.Error("updateHandler", log.Err(err))
 					}
-					s.cache.ResetRange()
 				}
 
 			case <-ctx.Done():

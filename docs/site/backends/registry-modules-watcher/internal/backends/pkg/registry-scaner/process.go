@@ -23,6 +23,7 @@ import (
 	"io"
 	"log/slog"
 	"registry-modules-watcher/internal"
+	"registry-modules-watcher/internal/backends"
 	"strings"
 
 	v1 "github.com/google/go-containerregistry/pkg/v1"
@@ -31,7 +32,7 @@ import (
 	"github.com/deckhouse/module-sdk/pkg/dependency/cr"
 )
 
-func (s *registryscaner) processRegistries(ctx context.Context) {
+func (s *registryscaner) processRegistries(ctx context.Context) []backends.DocumentationTask {
 	s.logger.Info("start scanning registries")
 
 	versions := make([]internal.VersionData, 0, len(s.registryClients))
@@ -49,7 +50,7 @@ func (s *registryscaner) processRegistries(ctx context.Context) {
 		versions = append(versions, vers...)
 	}
 
-	s.cache.SyncWithRegistryVersions(versions)
+	return s.cache.SyncWithRegistryVersions(versions)
 }
 
 func (s *registryscaner) processModules(ctx context.Context, registry Client, modules []string) []internal.VersionData {
@@ -109,7 +110,6 @@ func (s *registryscaner) processReleaseChannel(ctx context.Context, registry, mo
 		Checksum:       releaseDigest.String(),
 		Version:        "",
 		TarFile:        make([]byte, 0),
-		TarLen:         0,
 		Image:          releaseImage,
 	}
 
