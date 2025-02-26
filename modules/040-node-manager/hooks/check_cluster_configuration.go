@@ -35,14 +35,8 @@ const (
 
 // TODO: Remove this hook after 1.70.0 release
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	Queue: "/requirements/check_cluster_configuration",
-	Schedule: []go_hook.ScheduleConfig{
-		{
-			Crontab: "*/15 * * * *",
-			Name:    "check_cluster_configuration",
-		},
-	},
-	// OnBeforeHelm: &go_hook.OrderedConfig{Order: 30},
+	Queue:        "/requirements/check_cluster_configuration",
+	AllowFailure: true,
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
 			Name:       "check_cluster_configuration",
