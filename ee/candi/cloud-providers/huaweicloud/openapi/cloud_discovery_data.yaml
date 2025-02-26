@@ -14,7 +14,7 @@ apiVersions:
         enum: [HuaweiCloudDiscoveryData]
       layout:
         type: string
-        enum: [Standard]
+        enum: [Standard, VpcPeering]
       zones:
         type: array
         items:
