@@ -32,7 +32,6 @@ def recursive_glob(base_dir, pattern):
     for root, _, filenames in os.walk(base_dir):
         for filename in glob.glob(os.path.join(root, pattern)):
             matches.append(filename)
-    print(matches)
     return matches
 
 
