@@ -1013,11 +1013,22 @@ func (r *reconciler) updateReleaseStatus(ctx context.Context, mr *v1alpha1.Modul
 
 // deleteRelease deletes the module from filesystem
 func (r *reconciler) deleteRelease(ctx context.Context, release *v1alpha1.ModuleRelease) (ctrl.Result, error) {
+	if release.GetPhase() != v1alpha1.ModuleReleasePhaseTerminating {
+		release.Status.Phase = v1alpha1.ModuleReleasePhaseTerminating
+		if err := r.client.Status().Update(ctx, release); err != nil {
+			r.log.Warn("failed to set terminating to the release", slog.String("release", release.GetName()), log.Err(err))
+
+			return ctrl.Result{}, err
+		}
+
+		return ctrl.Result{Requeue: true}, nil
+	}
+
 	modulePath := path.Join(r.downloadedModulesDir, release.GetModuleName(), "v"+release.GetVersion().String())
 
 	if err := os.RemoveAll(modulePath); err != nil {
 		r.log.Error("failed to remove module in downloaded dir", slog.String("release", release.GetName()), slog.String("path", modulePath), log.Err(err))
-		return ctrl.Result{Requeue: true}, nil
+		return ctrl.Result{}, err
 	}
 
 	if release.GetPhase() == v1alpha1.ModuleReleasePhaseDeployed {
@@ -1025,7 +1036,7 @@ func (r *reconciler) deleteRelease(ctx context.Context, release *v1alpha1.Module
 		symlinkPath := filepath.Join(r.symlinksDir, fmt.Sprintf("%d-%s", release.GetWeight(), release.GetModuleName()))
 		if err := os.RemoveAll(symlinkPath); err != nil {
 			r.log.Error("failed to remove module in downloaded symlinks dir", slog.String("release", release.GetName()), slog.String("path", modulePath), log.Err(err))
-			return ctrl.Result{Requeue: true}, nil
+			return ctrl.Result{}, err
 		}
 		// TODO(yalosev): we have to disable module here somehow.
 		// otherwise, hooks from file system will fail
@@ -1039,7 +1050,7 @@ func (r *reconciler) deleteRelease(ctx context.Context, release *v1alpha1.Module
 		controllerutil.RemoveFinalizer(release, v1alpha1.ModuleReleaseFinalizerExistOnFs)
 		if err := r.client.Update(ctx, release); err != nil {
 			r.log.Error("failed to update module release", slog.String("release", release.GetName()), log.Err(err))
-			return ctrl.Result{Requeue: true}, nil
+			return ctrl.Result{}, err
 		}
 	}
 
