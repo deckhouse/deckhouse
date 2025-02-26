@@ -21,9 +21,9 @@ spec:
             spec:
               type: object
               required:
-                - vmClassName
                 - cpu
                 - memory
+                - vmClassName
                 - osImageRef
               properties:
                 osImageRef:
@@ -77,17 +77,18 @@ spec:
                 memory:
                   type: integer
                   default: 8192
+                  minimum: 8
                   x-doc-examples: [ 8192 ]
                   x-doc-default: 8192
                   description: RAM amount in megabytes.
-                rootDiskSizeGb:
+                rootDiskSize:
                   description: |
-                    Root disk size in GiB to use in VirtualMachines.
+                    Root disk size in GiB.
 
-                    The disk will be automatically resized if its size in the template differs from specified.
-                  x-doc-examples: [ 30 ]
-                  x-doc-default: 30
-                  default: 30
+                    The disk will be automatically resized if its VirtualImage size differs from specified.
+                  x-doc-examples: [ 50 ]
+                  x-doc-default: 50
+                  default: 50
                   type: integer
                 bootloader:
                   type: string
