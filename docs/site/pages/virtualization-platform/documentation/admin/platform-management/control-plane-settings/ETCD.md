@@ -401,13 +401,13 @@ The steps described below must be performed from the first in order of the maste
 1. Ensure there are no alerts in the cluster that can prevent the update of the master nodes.
 
     To get a list of alerts in a cluster, run the command:
-    
+
     ```shell
     kubectl get clusteralerts
     ```
-    
+
     To view a specific alert, run the command:
-    
+
     ```shell
     kubectl get clusteralerts <ALERT_NAME> -o yaml
     ```
@@ -415,28 +415,28 @@ The steps described below must be performed from the first in order of the maste
 1. Make sure that Deckhouse queue is empty.
 
     To view the status of all Deckhouse job queues, run the command:
-    
+
     ```shell
     kubectl -n d8-system exec -it svc/deckhouse-leader -c deckhouse -- deckhouse-controller queue list
     ```
-    
+
     Output example (queues are empty):
-    
+
     ```console
     Summary:
     - 'main' queue: empty.
     - 88 other queues (0 active, 88 empty): 0 tasks.
     - no tasks to handle.
     ```
-    
+
     To view the status of the `main` Deckhouse task queue, run the command:
-    
+
     ```shell
     kubectl -n d8-system exec -it svc/deckhouse-leader -c deckhouse -- deckhouse-controller queue main
     ```
-    
+
     Output example (queue `main` is empty):
-    
+
     ```console
     Queue 'main': length 0, status: 'waiting for task 0s'
     ```

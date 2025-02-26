@@ -407,4 +407,3 @@ metadata:
 labels:
 app: old
 ```
-

@@ -394,13 +394,13 @@ $(echo -n $ENDPOINTS_STRING) endpoint status -w table
 1. Убедитесь, что в кластере нет алертов, которые могут помешать обновлению master-узлов.
 
     Чтобы получить список алертов в кластере, выполните команду:
-    
+
     ```shell
     kubectl get clusteralerts
     ```
-    
+
     Чтобы просмотреть конкретный алерт, выполните команду:
-    
+ 
     ```shell
     kubectl get clusteralerts <ALERT_NAME> -o yaml
     ```
@@ -408,28 +408,28 @@ $(echo -n $ENDPOINTS_STRING) endpoint status -w table
 1. Убедитесь, что очередь Deckhouse пуста.
 
     Чтобы просмотреть состояние всех очередей заданий Deckhouse, выполните команду:
-    
+
     ```shell
     kubectl -n d8-system exec -it svc/deckhouse-leader -c deckhouse -- deckhouse-controller queue list
     ```
-    
+  
     Пример вывода (очереди пусты):
-    
+
     ```console
     Summary:
     - 'main' queue: empty.
     - 88 other queues (0 active, 88 empty): 0 tasks.
     - no tasks to handle.
     ```
-    
+
     Чтобы просмотреть состояние очереди заданий `main` Deckhouse, выполните команду:
-    
+
     ```shell
     kubectl -n d8-system exec -it svc/deckhouse-leader -c deckhouse -- deckhouse-controller queue main
     ```
-    
+
     Пример вывода (очередь `main` пуста):
-    
+
     ```console
     Queue 'main': length 0, status: 'waiting for task 0s'
     ```
