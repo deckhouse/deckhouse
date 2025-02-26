@@ -114,6 +114,8 @@ spec:
                                       type: string
                                     port:
                                       type: integer
+                                    protocol:
+                                      type: string
                     privateLastFetchTimestamp:
                       format: date-time
                       type: string
