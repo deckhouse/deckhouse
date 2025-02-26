@@ -376,7 +376,6 @@ spec:
         name: geoip-updater
         args:
         - --licenseKey={{ $geoIP2.maxmindLicenseKey }}
-        - --accountID={{ $geoIP2.maxmindAccountID }}
         - --editionIDs={{ $geoIP2.maxmindEditionIDs | join "," }}
         - --interval=1440 
         resources:
