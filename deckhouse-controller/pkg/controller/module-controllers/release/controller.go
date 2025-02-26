@@ -884,16 +884,14 @@ func (r *reconciler) loadModule(ctx context.Context, release *v1alpha1.ModuleRel
 
 	err = def.Validate(values, r.log)
 	if err != nil {
-		if deployedReleaseInfo != nil {
-			err = r.updateReleaseStatus(ctx, newModuleReleaseWithName(deployedReleaseInfo.Name), &v1alpha1.ModuleReleaseStatus{
-				Phase:   v1alpha1.ModuleReleasePhaseSuspended,
-				Message: "validation failed: " + err.Error(),
-			})
-			if err != nil {
-				r.log.Error("update status", slog.String("release", deployedReleaseInfo.Name), log.Err(err))
+		err := r.updateReleaseStatus(ctx, release, &v1alpha1.ModuleReleaseStatus{
+			Phase:   v1alpha1.ModuleReleasePhasePending,
+			Message: "validation failed: " + err.Error(),
+		})
+		if err != nil {
+			r.log.Error("update status", slog.String("release", release.Name), log.Err(err))
 
-				return nil, fmt.Errorf("update status: the '%s:v%s' module validation: %w", release.GetModuleName(), release.GetVersion().String(), err)
-			}
+			return nil, fmt.Errorf("update status: the '%s:v%s' module validation: %w", release.GetModuleName(), release.GetVersion().String(), err)
 		}
 
 		return nil, fmt.Errorf("the '%s:v%s' module validation: %w", release.GetModuleName(), release.GetVersion().String(), err)
