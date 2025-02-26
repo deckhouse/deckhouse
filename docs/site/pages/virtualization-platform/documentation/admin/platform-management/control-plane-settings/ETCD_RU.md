@@ -114,9 +114,9 @@ rm -r ./kubernetes ./etcd-backup.snapshot
 
 1. Явно включите режим High Availability (HA) с помощью глобального параметра [highAvailability](/products/virtualization-platform/reference/mc.html#parameters-highavailability). Это нужно, например, чтобы не потерять одну реплику Prometheus и её PVC, поскольку в режиме кластера с одним master-узлом HA отключен по умолчанию.
 
-1. Переведите кластер в режим с одним master-узлом, в соответствии с [инструкцией](#как-уменьшить-число-master-узлов-в-облачном-кластере-multi-master-в-single-master) для облачных кластеров или самостоятельно выведите статические master-узлы из кластера.
+1. Переведите кластер в режим с одним master-узлом, в соответствии с [инструкцией](#как-уменьшить-число-master-узлов-в-облачном-кластере) для облачных кластеров или самостоятельно выведите статические master-узлы из кластера.
 
-1. На оставшемся единственном master-узле выполните шаги по восстановлению etcd из резервной копии в соответствии с [инструкцией](#восстановление-кластера-single-master) для кластера с одним master-узлом.
+1. На оставшемся единственном master-узле выполните шаги по восстановлению etcd из резервной копии в соответствии с [инструкцией](#восстановление-кластера-с-одним-master-узлом) для кластера с одним master-узлом.
 
 1. Когда работа etcd будет восстановлена, удалите из кластера информацию об уже удаленных в п.1 master-узлах, воспользовавшись следующей командой (укажите название узла):
 
@@ -132,9 +132,9 @@ rm -r ./kubernetes ./etcd-backup.snapshot
    d8 k -n d8-system exec svc/deckhouse-leader -c deckhouse -- deckhouse-controller queue main
    ```
 
-1. Переведите кластер обратно в режим мультимастерного в соответствии с [инструкцией](#как-добавить-master-узлы-в-облачном-кластере-single-master-в-multi-master) для облачных кластеров или [инструкцией](/products/virtualization-platform/documentation/admin/platform-management/node-management/adding-node.html) для статических или гибридных кластеров.
+1. Переведите кластер обратно в режим мультимастерного в соответствии с [инструкцией](#как-добавить-master-узлы-в-облачном-кластере) для облачных кластеров или [инструкцией](/products/virtualization-platform/documentation/admin/platform-management/node-management/adding-node.html) для статических или гибридных кластеров.
 
-## Восстановление объекта Kubernetes из резервной копии etcd
+### Восстановление объекта Kubernetes из резервной копии etcd
 
 Краткий сценарий восстановления отдельных объектов из резервной копии etcd:
 
@@ -283,7 +283,107 @@ d8 k -n kube-system exec -ti $(d8 k -n kube-system get pod \
 $(echo -n $ENDPOINTS_STRING) endpoint status -w table
 ```
 
-## Как уменьшить число master-узлов в облачном кластере?
+## Как добавить master-узлы в облачном кластере
+
+Далее описана конвертация кластера с одним master-узлом в мультимастерный кластер.
+
+> Перед добавлением узлов убедитесь в наличии необходимых квот.
+>
+> Важно иметь нечетное количество master-узлов для обеспечения кворума.
+
+1. Сделайте [резервную копию `etcd`](#резервное копирование-etcd) и папки `/etc/kubernetes`.
+1. Скопируйте полученный архив за пределы кластера (например, на локальную машину).
+1. Убедитесь, что в кластере нет алертов, которые могут помешать обновлению.
+
+   Чтобы получить список алертов в кластере, выполните команду:
+
+    ```shell
+    kubectl get clusteralerts
+    ```
+
+   Чтобы просмотреть конкретный алерт, выполните команду:
+
+    ```shell
+    kubectl get clusteralerts <ALERT_NAME> -o yaml
+    ```
+
+1. Убедитесь, что очередь Deckhouse пуста.
+
+   Чтобы просмотреть состояние всех очередей заданий Deckhouse, выполните команду:
+
+    ```shell
+    kubectl -n d8-system exec -it svc/deckhouse-leader -c deckhouse -- deckhouse-controller queue list
+    ```
+
+   Пример вывода (очереди пусты):
+
+    ```console
+    Summary:
+    - 'main' queue: empty.
+    - 88 other queues (0 active, 88 empty): 0 tasks.
+    - no tasks to handle.
+    ```
+
+   Чтобы просмотреть состояние очереди заданий `main` Deckhouse, выполните команду:
+
+    ```shell
+    kubectl -n d8-system exec -it svc/deckhouse-leader -c deckhouse -- deckhouse-controller queue main
+    ```
+
+   Пример вывода (очередь `main` пуста):
+
+    ```console
+    Queue 'main': length 0, status: 'waiting for task 0s'
+    ```
+
+1. **На локальной машине** запустите контейнер установщика Deckhouse соответствующей редакции и версии (измените адрес container registry при необходимости):
+
+   ```bash
+   DH_VERSION=$(kubectl -n d8-system get deployment deckhouse -o jsonpath='{.metadata.annotations.core\.deckhouse\.io\/version}') \
+   DH_EDITION=$(kubectl -n d8-system get deployment deckhouse -o jsonpath='{.metadata.annotations.core\.deckhouse\.io\/edition}' | tr '[:upper:]' '[:lower:]' ) \
+   docker run --pull=always -it -v "$HOME/.ssh/:/tmp/.ssh/" \
+     registry.deckhouse.io/deckhouse/${DH_EDITION}/install:${DH_VERSION} bash
+   ```
+
+1. **В контейнере с инсталлятором** выполните следующую команду, чтобы проверить состояние перед началом работы:
+
+   ```bash
+   dhctl terraform check --ssh-agent-private-keys=/tmp/.ssh/<SSH_KEY_FILENAME> --ssh-user=<USERNAME> --ssh-host <MASTER-NODE-0-HOST>
+   ```
+
+   Ответ должен сообщить, что Terraform не нашел расхождений и изменений не требуется.
+
+1. **В контейнере с инсталлятором** выполните следующую команду и укажите требуемое количество master-узлов в параметре `masterNodeGroup.replicas`:
+
+   ```bash
+   dhctl config edit provider-cluster-configuration --ssh-agent-private-keys=/tmp/.ssh/<SSH_KEY_FILENAME> --ssh-user=<USERNAME> \
+     --ssh-host <MASTER-NODE-0-HOST>
+   ```
+
+   > Для **Yandex Cloud**, при использовании внешних адресов на master-узлах, количество элементов массива в параметре [masterNodeGroup.instanceClass.externalIPAddresses](../cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration-masternodegroup-instanceclass-externalipaddresses) должно равняться количеству master-узлов. При использовании значения `Auto` (автоматический заказ публичных IP-адресов), количество элементов в массиве все равно должно соответствовать количеству master-узлов.
+   >
+   > Например, при трех master-узлах (`masterNodeGroup.replicas: 3`) и автоматическом заказе адресов, параметр `masterNodeGroup.instanceClass.externalIPAddresses` будет выглядеть следующим образом:
+   >
+   > ```bash
+   > externalIPAddresses:
+   > - "Auto"
+   > - "Auto"
+   > - "Auto"
+   > ```
+
+1. **В контейнере с инсталлятором** выполните следующую команду для запуска масштабирования:
+
+   ```bash
+   dhctl converge --ssh-agent-private-keys=/tmp/.ssh/<SSH_KEY_FILENAME> --ssh-user=<USERNAME> --ssh-host <MASTER-NODE-0-HOST>
+   ```
+
+1. Дождитесь появления необходимого количества master-узлов в статусе `Ready` и готовности всех экземпляров `control-plane-manager`:
+
+   ```bash
+   kubectl -n kube-system wait pod --timeout=10m --for=condition=ContainersReady -l app=d8-control-plane-manager
+   ```
+
+### Как уменьшить число master-узлов в облачном кластере?
 
 {% alert level="warning" %}
 Описанные ниже шаги необходимо выполнять с первого по порядку master-узла кластера (master-0). Это связано с тем, что кластер всегда масштабируется по порядку: например, невозможно удалить узлы master-0 и master-1, оставив master-2.
@@ -360,24 +460,24 @@ $(echo -n $ENDPOINTS_STRING) endpoint status -w table
    > ```
 
 1. Снимите следующие лейблы с удаляемых master-узлов:
-  * `node-role.kubernetes.io/control-plane`
-  * `node-role.kubernetes.io/master`
-  * `node.deckhouse.io/group`
+   - `node-role.kubernetes.io/control-plane`
+   - `node-role.kubernetes.io/master`
+   - `node.deckhouse.io/group`
 
-     Команда для снятия лейблов:
+      Команда для снятия лейблов:
   
-     ```bash
-     kubectl label node <MASTER-NODE-N-NAME> node-role.kubernetes.io/control-plane- node-role.kubernetes.io/master- node.deckhouse.io/group-
-     ```
+      ```bash
+      kubectl label node <MASTER-NODE-N-NAME> node-role.kubernetes.io/control-plane- node-role.kubernetes.io/master- node.deckhouse.io/group-
+      ```
 
-    1. Убедитесь, что удаляемые master-узлы пропали из списка узлов кластера etcd:
+1. Убедитесь, что удаляемые master-узлы пропали из списка узлов кластера etcd:
 
-         ```bash
-         kubectl -n kube-system exec -ti $(kubectl -n kube-system get pod -l component=etcd,tier=control-plane -o name | head -n1) -- \
-         etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
-         --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key \
-         --endpoints https://127.0.0.1:2379/ member list -w table
-         ```
+   ```bash
+   kubectl -n kube-system exec -ti $(kubectl -n kube-system get pod -l component=etcd,tier=control-plane -o name | head -n1) -- \
+   etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
+   --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key \
+   --endpoints https://127.0.0.1:2379/ member list -w table
+   ```
 
 1. Выполните `drain` для удаляемых узлов:
 
