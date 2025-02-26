@@ -1803,10 +1803,10 @@ alerts:
       severity: "8"
       markupFormat: markdown
     - name: D8MetallbBGPSessionDown
-      sourceFile: ee/se/modules/380-metallb/monitoring/prometheus-rules/metallb.yaml
+      sourceFile: ee/modules/380-metallb/monitoring/prometheus-rules/metallb.yaml
       moduleUrl: 380-metallb
       module: metallb
-      edition: se
+      edition: ee
       description: |
         {{ $labels.job }}, MetalLB {{ $labels.container }} on {{ $labels.pod}} has BGP session {{ $labels.peer }} down.
 
@@ -1820,10 +1820,10 @@ alerts:
       severity: "4"
       markupFormat: markdown
     - name: D8MetallbConfigNotLoaded
-      sourceFile: ee/se/modules/380-metallb/monitoring/prometheus-rules/metallb.yaml
+      sourceFile: ee/modules/380-metallb/monitoring/prometheus-rules/metallb.yaml
       moduleUrl: 380-metallb
       module: metallb
-      edition: se
+      edition: ee
       description: |
         {{ $labels.job }}, MetalLB {{ $labels.container }} on {{ $labels.pod}} hasn't been loaded.
 
@@ -1837,10 +1837,10 @@ alerts:
       severity: "4"
       markupFormat: markdown
     - name: D8MetallbConfigStale
-      sourceFile: ee/se/modules/380-metallb/monitoring/prometheus-rules/metallb.yaml
+      sourceFile: ee/modules/380-metallb/monitoring/prometheus-rules/metallb.yaml
       moduleUrl: 380-metallb
       module: metallb
-      edition: se
+      edition: ee
       description: |
         {{ $labels.job }}, MetalLB {{ $labels.container }} on {{ $labels.pod}} is running on a stale configuration because the latest configuration failed to load.
 
