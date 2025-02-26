@@ -16,12 +16,13 @@ package registryscaner
 
 import (
 	"context"
-	"registry-modules-watcher/internal/backends"
-	"registry-modules-watcher/internal/backends/pkg/registry-scaner/cache"
 	"time"
 
-	"github.com/deckhouse/deckhouse/pkg/log"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
+	"registry-modules-watcher/internal/backends"
+	"registry-modules-watcher/internal/backends/pkg/registry-scaner/cache"
+
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 type Client interface {
