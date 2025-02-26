@@ -203,7 +203,16 @@
   "observability-platform": {
     "external": "true",
     "path": "/products/kubernetes-platform/modules/observability-platform/stable/",
-    "editionMinimumAvailable": "ee"
+    "editionMinimumAvailable": "ee",
+    "editionsWithRestrictions": [
+      "ee"
+    ],
+    "editionsWithRestrictionsComments": {
+      "all": {
+        "ru": "Требуется дополнительная лицензия",
+        "en": "Additional license required"
+      }
+    }
   },
   "operator-argo": {
     "external": "true",
