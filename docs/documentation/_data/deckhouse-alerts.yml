@@ -1854,10 +1854,10 @@ alerts:
       severity: "4"
       markupFormat: markdown
     - name: D8MetallbNotSupportedServiceAnnotationsDetected
-      sourceFile: ee/se/modules/380-metallb/monitoring/prometheus-rules/services.yaml
+      sourceFile: ee/modules/380-metallb/monitoring/prometheus-rules/services.yaml
       moduleUrl: 380-metallb
       module: metallb
-      edition: se
+      edition: ee
       description: |
         The annotation '{{$labels.annotation}}' has been deprecated for the service '{{$labels.name}}' in the '{{$labels.namespace}}' namespace.
 
@@ -1873,10 +1873,10 @@ alerts:
       severity: "4"
       markupFormat: markdown
     - name: D8MetallbObsoleteLayer2PoolsAreUsed
-      sourceFile: ee/se/modules/380-metallb/monitoring/prometheus-rules/services.yaml
+      sourceFile: ee/modules/380-metallb/monitoring/prometheus-rules/services.yaml
       moduleUrl: 380-metallb
       module: metallb
-      edition: se
+      edition: ee
       description: |
         In ModuleConfig version 2, addressPool '{{$labels.name}}' of type “layer2” are ignored. They should be removed from the configuration.
       summary: |
@@ -1884,10 +1884,10 @@ alerts:
       severity: "7"
       markupFormat: markdown
     - name: D8MetallbUpdateMCVersionRequired
-      sourceFile: ee/se/modules/380-metallb/monitoring/prometheus-rules/services.yaml
+      sourceFile: ee/modules/380-metallb/monitoring/prometheus-rules/services.yaml
       moduleUrl: 380-metallb
       module: metallb
-      edition: se
+      edition: ee
       description: |
         D8 MetalLB settings are outdated.
 
@@ -4124,10 +4124,10 @@ alerts:
       severity: "3"
       markupFormat: markdown
     - name: L2LoadBalancerOrphanServiceFound
-      sourceFile: ee/se/modules/380-metallb/monitoring/prometheus-rules/services.yaml
+      sourceFile: ee/modules/380-metallb/monitoring/prometheus-rules/services.yaml
       moduleUrl: 380-metallb
       module: metallb
-      edition: se
+      edition: ee
       description: |
         The cluster contains an orphaned service `{{$labels.name}}` in the `{{$labels.namespace}}` namespace  with an irrelevant L2LoadBalancer name.
 
