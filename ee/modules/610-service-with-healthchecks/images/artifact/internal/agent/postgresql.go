@@ -133,7 +133,7 @@ func getNativeTLSMode(tlsMode string) string {
 	case "VerifyAll":
 		return "verify-full"
 	case "Disabled":
-		return "disabled"
+		return "disable"
 	default:
 		return "require"
 	}
