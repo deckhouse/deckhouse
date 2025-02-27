@@ -23,11 +23,16 @@ request-access:
 request-callback:
   header:
     ru:
-      title: "Запросить обратный звонок"
-      text: "Оставьте ваши данные, и мы свяжемся с вами."
+      title: "Связаться со специалистом Deckhouse"
+      text: "Ответим на вопросы о продуктах, разберем ваш кейс, назначим встречу с техническим экспертом"
     en:
       title: "Request callback"
       text: "Fill out this form, and we will contact you soon."
+  сommunication-method:
+    ru: 
+      title: "Удобный способ связи"
+    en: 
+      title: "Select your preferred communication means"
   success-message:
     ru:
       title: "Заявка отправлена"
