@@ -124,6 +124,8 @@ func (l *Loader) Sync(ctx context.Context) error {
 		return fmt.Errorf("delete modules with absent releases: %w", err)
 	}
 
+	go l.runDeleteStaleModulesLoop(ctx)
+
 	l.log.Debug("module loader initialized")
 
 	return nil
