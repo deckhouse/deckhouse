@@ -161,15 +161,6 @@ func (c *Cache) SyncWithRegistryVersions(versions []internal.VersionData) []back
 					}
 				}
 
-				if _, ok := module.releaseChecksum[releaseChannelName(version.ReleaseChannel)]; ok {
-					for _, v := range module.versions {
-						if _, ok := v.releaseChannels[version.ReleaseChannel]; !ok {
-							delete(v.releaseChannels, version.ReleaseChannel)
-							delete(module.releaseChecksum, releaseChannelName(version.ReleaseChannel))
-						}
-					}
-				}
-
 				if len(module.versions) == 0 {
 					delete(modules, moduleName(version.ModuleName))
 				}
