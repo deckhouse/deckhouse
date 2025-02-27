@@ -91,7 +91,10 @@ func (b *backends) Add(backend string) {
 	defer b.m.Unlock()
 
 	b.listBackends[backend] = struct{}{}
+
 	state := b.registryScaner.GetState()
+
+	b.logger.Warn("send all modules documentation to new backend", slog.Int("docs_len", len(state)))
 
 	b.sender.Send(context.Background(), map[string]struct{}{backend: {}}, state)
 }
