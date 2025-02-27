@@ -126,29 +126,6 @@ document.addEventListener("DOMContentLoaded", function() {
       // Default Assigned by - Anna Saprykina
       const assigned_by_id = 7;
 
-      const form_type_labels = {
-        'book-your-sessions': 'сессии',
-        'callback'          : 'звонка',
-        'cs-edition'        : 'CS Edition',
-        'demo'              : 'демо',
-        'ee-trial'          : 'пробной версии',
-        'get-advice'        : 'консультации',
-        'partner'           : 'партнёрства',
-        'pci-ssc'           : 'отчета PCI SSC',
-        'pilot'             : 'пилота',
-      }
-
-      // const query = [];
-      // const parts = new URLSearchParams(FormData.current_url);
-
-      // if(parts.has('query')) {
-      //   const params = new URLSearchParams(parts.get('query'));
-
-      //   for(const [key, value] of params.entries()) {
-      //     query[key] = value;
-      //   }
-      // }
-
       const bitrixFields = {
         fields: {
           'ASSIGNED_BY_ID': assigned_by_id,
@@ -160,19 +137,6 @@ document.addEventListener("DOMContentLoaded", function() {
       if(FormData.company) {
         bitrixFields.fields['TITLE'] += FormData.company + ' - запрос ';
       }
-
-      // if (FormData.form_id === 'partner') {
-      //   const typePartner = {
-      //     'commercial': ' коммерческого',
-      //     'cloud': ' облачного',
-      //     'tech': ' технологического',  
-      //   };
-      //   bitrixFields.fields['TITLE'] += typePartner.FormData['partner_type'] || '';
-      // }
-
-      // if (form_type_labels.FormData.form_id) {
-      //   bitrixFields.fields['TITLE'] += form_type_labels.FormData.form_id;
-      // }
   
       bitrixFields.fields['TITLE'] += ' с сайта Deckhouse ';
   
@@ -206,33 +170,49 @@ document.addEventListener("DOMContentLoaded", function() {
         bitrixFields.fields['COMMENTS'] = `Предпочтительный вид связи: ${FormData.preferred_contact}`;
         if (this.telegramCheckbox.checked && this.telegramInput.value) {
           bitrixFields.fields['COMMENTS'] += `. Telegram ID: ${this.telegramInput.value}`;
+          bitrixFields.fields['IM'] = [
+            {
+              'VALUE': this.telegramInput.value,
+              'VALUE_TYPE': 'TELEGRAM'
+            }
+          ]
         }
       }
 
-      // if (FormData.current_url) {
-      //   const params = FormData.current_url.indexOf('?');
-      //   bitrixFields.fields['SOURCE_DESCRIPTION'] = params !== -1 ? FormData.current_url.substring(0, params) : FormData.current_url;
-      // }
+      if (FormData.referer_url) {
+        const params = FormData.referer_url.indexOf('?');
+        bitrixFields.fields['SOURCE_DESCRIPTION'] = params !== -1 ? FormData.referer_url.substring(0, params) : FormData.referer_url;
+      }
 
-      // if (FormData.utm_campaign) {
-      //   bitrixFields.fields['UTM_CAMPAIGN'] = query.utm_campaign;
-      // }
+      const query = {};
+      const parts = new URLSearchParams(FormData.referer_url);
 
-      // if (FormData.utm_medium) {
-      //   bitrixFields.fields['UTM_MEDIUM'] = query.utm_medium;
-      // }
+      parts.forEach((value, key) => {
+        if(key.startsWith('utm_')) {
+          query[key] = value;
+        }
+      })
 
-      // if (FormData.utm_source) {
-      //   bitrixFields.fields['UTM_SOURCE'] = query.utm_source;
-      // }
+      if (query.utm_campaign) {
+        bitrixFields.fields['UTM_CAMPAIGN'] = query.utm_campaign;
+      }
 
-      // if (FormData.utm_term) {
-      //   bitrixFields.fields['UTM_TERM'] = query.utm_term;
-      // }
+      if (query.utm_medium) {
+        bitrixFields.fields['UTM_MEDIUM'] = query.utm_medium;
+      }
+
+      if (query.utm_source) {
+        bitrixFields.fields['UTM_SOURCE'] = query.utm_source;
+      }
+
+      if (query.utm_term) {
+        bitrixFields.fields['UTM_TERM'] = query.utm_term;
+      }
 
       const url = 'https://crm.flant.ru/rest/132/bm7uy367wn001kef/crm.lead.add.json';
 
-      // const url = 'https://b24-f0ud24.bitrix24.ru/rest/crm.lead.add.json?auth=e5c9be67007618480076182800000001000007e73fd6cc1438bb48a5874dc4707447da';
+      // const url = 'https://b24-f0ud24.bitrix24.ru/rest/crm.lead.add.json?auth=000ec0670076184800761828000000010000076437596c50bdc7471967352ee29d6b8b';
+      // const url = 'https://b24-f0ud24.bitrix24.ru/rest/crm.lead.fieald.json?auth=7cf6be6700761848007618280000000100000706b74c56f83b5ea486f34444762192f6';
 
       fetch(url, {
         method: 'POST',
@@ -251,17 +231,6 @@ document.addEventListener("DOMContentLoaded", function() {
           this.errorSubmit();
           throw new Error(`${res.status}`);
         }
-      })
-      .then(data => {
-        if (data.result) {
-          this.downloadFile();
-          this.successSubmit();
-        } else {
-          this.errorSubmit();
-        }
-      })  
-      .catch(error => {
-        this.errorSubmit();
       })
     } 
 
