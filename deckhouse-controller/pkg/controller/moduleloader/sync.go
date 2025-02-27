@@ -23,6 +23,7 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
+	"time"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -30,10 +31,73 @@ import (
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/ctrlutils"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/downloader"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
+
+const (
+	// if a module is disabled more than three days, it will be uninstalled at next deckhouse restart
+	deleteReleasesAfter = 5 * time.Minute
+)
+
+func (l *Loader) runDeleteStaleModulesLoop(ctx context.Context) {
+	for {
+		if err := l.deleteStaleModules(ctx); err != nil {
+			l.log.Warnf("Failed to delete stale modules: %v", err)
+		}
+	}
+}
+
+func (l *Loader) deleteStaleModules(ctx context.Context) error {
+	modules := new(v1alpha1.ModuleList)
+	if err := l.client.List(ctx, modules); err != nil {
+		return fmt.Errorf("list all modules: %w", err)
+	}
+
+	for _, module := range modules.Items {
+		// handle too long disabled embedded modules
+		if module.DisabledByModuleConfigMoreThan(deleteReleasesAfter) && !module.IsEmbedded() {
+			// delete module releases of a stale module
+			l.log.Infof("the %q module disabled too long, delete module releases", module.Name)
+			moduleReleases := new(v1alpha1.ModuleReleaseList)
+			if err := l.client.List(ctx, moduleReleases, &client.MatchingLabels{"module": module.Name}); err != nil {
+				return fmt.Errorf("list module releases for the '%s' module: %w", module.Name, err)
+			}
+
+			for _, release := range moduleReleases.Items {
+				if err := l.client.Delete(ctx, &release); err != nil {
+					return fmt.Errorf("delete the '%s' module release for the '%s' module: %w", release.Name, module.Name, err)
+				}
+			}
+
+			// clear module
+			err := ctrlutils.UpdateWithRetry(ctx, l.client, &module, func() error {
+				availableSources := module.Properties.AvailableSources
+				module.Properties = v1alpha1.ModuleProperties{
+					AvailableSources: availableSources,
+				}
+				return nil
+			})
+			if err != nil {
+				return fmt.Errorf("clear the %q module: %w", module.Name, err)
+			}
+
+			// set available and skip
+			err = ctrlutils.UpdateStatusWithRetry(ctx, l.client, &module, func() error {
+				module.Status.Phase = v1alpha1.ModulePhaseAvailable
+				module.SetConditionFalse(v1alpha1.ModuleConditionIsReady, v1alpha1.ModuleReasonNotInstalled, v1alpha1.ModuleMessageNotInstalled)
+				return nil
+			})
+			if err != nil {
+				return fmt.Errorf("set the Available module phase for the '%s' module: %w", module.Name, err)
+			}
+		}
+	}
+
+	return nil
+}
 
 // restoreAbsentModulesFromOverrides checks ModulePullOverrides and restore modules on the FS
 func (l *Loader) restoreAbsentModulesFromOverrides(ctx context.Context) error {

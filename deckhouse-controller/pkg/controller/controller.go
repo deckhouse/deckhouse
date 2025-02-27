@@ -19,7 +19,6 @@ package controller
 import (
 	"context"
 	"fmt"
-	"os"
 	"sync"
 	"time"
 
@@ -222,8 +221,6 @@ func NewDeckhouseController(ctx context.Context, version string, operator *addon
 	// do not start operator until controllers preflight checks done
 	preflightCountDown := new(sync.WaitGroup)
 
-	bundle := os.Getenv("DECKHOUSE_BUNDLE")
-
 	loader := moduleloader.New(runtimeManager.GetClient(), version, operator.ModuleManager.ModulesDir, operator.ModuleManager.GlobalHooksDir, dc, embeddedPolicy, logger.Named("module-loader"))
 	operator.ModuleManager.SetModuleLoader(loader)
 
@@ -232,7 +229,7 @@ func NewDeckhouseController(ctx context.Context, version string, operator *addon
 		return nil, fmt.Errorf("create deckhouse release controller: %w", err)
 	}
 
-	err = moduleconfig.RegisterController(runtimeManager, operator.ModuleManager, configHandler, operator.MetricStorage, loader, bundle, logger.Named("module-config-controller"))
+	err = moduleconfig.RegisterController(runtimeManager, operator.ModuleManager, configHandler, operator.MetricStorage, logger.Named("module-config-controller"))
 	if err != nil {
 		return nil, fmt.Errorf("register module config controller: %w", err)
 	}
