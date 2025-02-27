@@ -48,12 +48,16 @@ entries:
               folders:
                 - title:
                     en: Overview
-                    ru: TODO Введение
+                    ru: TODO Обзор
                   url: /admin/configuration/access/
                 - title:
                     en: Connection
-                    ru: TODO Подключение
+                    ru: TODO (переформулировать) Подключение
                   url: /admin/configuration/access/connection.html
+                - title:
+                    en: Access to API
+                    ru: WIP Доступ к API
+                  url: /admin/configuration/access/api.html
                 - title:
                     en: Authentication
                     ru: Аутентификация
@@ -62,6 +66,14 @@ entries:
                     en: Authorization
                     ru: TODO Авторизация
                   url: /admin/configuration/access/authorization.html
+                - title:
+                    en: Intercluster
+                    ru: TODO Межкластерный доступ
+                  url: /admin/configuration/access/intercluster.html
+                - title:
+                    en: Service accounts
+                    ru: TODO Сервисные аккауты
+                  url: /admin/configuration/access/sa.html
             - title:
                 en: Platform update
                 ru: Обновление платформы
