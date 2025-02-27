@@ -301,9 +301,9 @@ unset HTTP_PROXY http_proxy HTTPS_PROXY https_proxy NO_PROXY no_proxy
     done
   done
 
-  {{- if ne .runType "ClusterBootstrap" }}
-      bb-event-info-create "FinishUpdate"
-  {{- end }}
+#  {{- if ne .runType "ClusterBootstrap" }}
+#      bb-event-info-create "FinishUpdate"
+#  {{- end }}
 
 {{ if eq .runType "Normal" }}
   annotate_node node.deckhouse.io/configuration-checksum=${CONFIGURATION_CHECKSUM}
