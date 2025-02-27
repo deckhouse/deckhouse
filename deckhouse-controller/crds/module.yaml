@@ -61,7 +61,7 @@ spec:
                   description: Module update policy.
                 disableOptions:
                   type: object
-                  description: Module disable options.
+                  description: Parameters of module disable protection.
                   properties:
                     confirmation:
                       type: boolean
