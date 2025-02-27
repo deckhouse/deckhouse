@@ -94,13 +94,11 @@ func (c *Cache) GetReleaseVersionData(version *internal.VersionData) (string, []
 		return "", nil, false
 	}
 
-	verData, ok := m.versions[versionNum(version.Version)]
-	if !ok {
-		return "", nil, false
-	}
-
-	if _, ok := verData.releaseChannels[version.ReleaseChannel]; ok {
-		return string(version.Version), verData.tarFile, true
+	for ver, verData := range m.versions {
+		_, ok := verData.releaseChannels[version.ReleaseChannel]
+		if ok {
+			return string(ver), verData.tarFile, true
+		}
 	}
 
 	return "", nil, false
@@ -325,6 +323,10 @@ func sortDocumentationTasks(input []backends.DocumentationTask) {
 	}
 
 	sort.Slice(input, func(i, j int) bool {
+		if input[i].Task != input[j].Task {
+			return input[i].Task > input[j].Task
+		}
+
 		if input[i].Registry != input[j].Registry {
 			return input[i].Registry < input[j].Registry
 		}
@@ -333,10 +335,6 @@ func sortDocumentationTasks(input []backends.DocumentationTask) {
 			return input[i].Module < input[j].Module
 		}
 
-		if input[i].Version != input[j].Version {
-			return input[i].Version < input[j].Version
-		}
-
-		return input[i].Task > input[j].Task
+		return input[i].Version < input[j].Version
 	})
 }
