@@ -58,7 +58,7 @@ resource "openstack_blockstorage_volume_v3" "master" {
   name = join("-", [local.prefix, "master-root-volume", var.nodeIndex])
   size = local.root_disk_size
   image_id = data.openstack_images_image_v2.master.id
-  metadata = local.metadata_tags
+  metadata = length(local.metadata_tags) > 0 ? local.metadata_tags : null
   volume_type = local.volume_type
   availability_zone = module.volume_zone.zone
   enable_online_resize = true
@@ -113,5 +113,5 @@ resource "openstack_compute_instance_v2" "master" {
     update = var.resourceManagementTimeout
   }
 
-  metadata = local.metadata_tags
+  metadata = length(local.metadata_tags) > 0 ? local.metadata_tags : null
 }
