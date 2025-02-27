@@ -15,7 +15,9 @@
 package app
 
 import (
-	log "github.com/sirupsen/logrus"
+	"log/slog"
+
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 const (
@@ -23,19 +25,15 @@ const (
 	loggerJSON   = "json"
 )
 
-func InitLogger() *log.Entry {
-	var formatter log.Formatter = &log.TextFormatter{
-		DisableColors:   true,
-		TimestampFormat: "2006-01-02 15:04:05",
-		FullTimestamp:   true,
-	}
-	if LoggerType == loggerJSON {
-		formatter = &log.JSONFormatter{}
+func InitLogger() *log.Logger {
+	if LoggerType == loggerSimple {
+		// todo: now unused, need change formatter to text when our slog implementation will support it
 	}
 
-	l := log.New()
-	l.SetLevel(log.Level(LoggerLevel))
-	l.SetFormatter(formatter)
+	// json is default formatter for our slog implementation
+	l := log.NewLogger(log.Options{
+		Level: slog.Level(LoggerLevel),
+	})
 
-	return log.NewEntry(l)
+	return l
 }
