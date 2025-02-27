@@ -125,7 +125,7 @@ def check_verify_image_signatures(ctx: DotMap) -> Optional[str]:
                 # Check intersection but ignore fully equal references
                 if ref_clean[:min_length] == exref_clean[:min_length] and ref_clean != exref_clean:
                     objName = exobj.name
-                    if exobj.namespace is not None:
+                    if exobj.namespace != "":
                         objName = exobj.namespace + "/" + exobj.name
                     return f"ImageReference \"{ref}\" has intersection in the {exobj.kind} \"{objName}\""
 
