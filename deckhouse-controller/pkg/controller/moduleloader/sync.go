@@ -40,13 +40,16 @@ import (
 const (
 	// if a module is disabled more than three days, it will be uninstalled at next deckhouse restart
 	deleteReleasesAfter = 5 * time.Minute
+
+	deleteStaleModuleLoopSleep = 5 * time.Minute
 )
 
 func (l *Loader) runDeleteStaleModulesLoop(ctx context.Context) {
 	for {
 		if err := l.deleteStaleModules(ctx); err != nil {
-			l.log.Warnf("Failed to delete stale modules: %v", err)
+			l.log.Warnf("failed to delete stale modules: %v", err)
 		}
+		time.Sleep(deleteStaleModuleLoopSleep)
 	}
 }
 
