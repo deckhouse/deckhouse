@@ -423,7 +423,7 @@ stage:
           python-version: '3.12.3'
 
       - name: Install dependencies
-        run: pip install ghapi fastcore kubernetes
+        run: pip install ghapi=1.0.6 fastcore=1.7.28 kubernetes=32.0.1
 
       - name: Prepare files to collect and deploy channels
         run: |
@@ -518,11 +518,12 @@ stage:
               -d '{"prerelease":false,"make_latest":true}') || exit $?
 
           response_code=$(echo "$response" | tail -n1)
+          response_message=$(echo "$response" | head -n -1)
 
           if [[ $response_code != '200' ]]; then
-              echo -e "\e[31mERROR: Unable to update release ${TARGET_RELEASE_ID}!\e[0m"
-              echo -e "\e[31mURL: ${update_release}!\e[0m"
-              echo -e "\e[31mResponse code: ${response_code}!\e[0m"
+              echo -e "\e[31mERROR: Unable to update release \"${TARGET_RELEASE_ID}\"!\e[0m"
+              echo -e "\e[31mURL: ${update_release}\e[0m"
+              echo -e "\e[31mResponse message: ${response_message}\e[0m"
               exit 1
           fi
 
