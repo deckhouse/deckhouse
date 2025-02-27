@@ -35,6 +35,7 @@ type Release interface {
 	GetDisruptionApproved() bool
 	GetPhase() string
 	GetForce() bool
+	GetReinstall() bool
 	GetApplyNow() bool
 	GetApprovedStatus() bool
 	SetApprovedStatus(b bool)
