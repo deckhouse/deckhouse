@@ -98,7 +98,7 @@ git:
 import:
 - image: common/python-static-artifact
   add: /opt/python-static
-  before: setup
+  before: install
 shell:
   beforeInstall:
   - apt-get install -y git
