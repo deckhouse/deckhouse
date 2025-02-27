@@ -73,7 +73,7 @@ The master node configuration for cloud clusters can be configured using the [ma
 
 Reference:
 - [How do I add a master node to a cluster...](https://deckhouse.ru/products/virtualization-platform/documentation/admin/platform-management/control-plane-settings/etcd.html##how-to-add-master-nodes-to-a-cloud-cluster)
-- [Working with static nodes...](https://deckhouse.io/products/kubernetes-platform/documentation/latest/modules/node-manager/#working-with-static-nodes)
+- [Working with static nodes...](https://deckhouse.io/products/kubernetes-platform/documentation/modules/node-manager/#working-with-static-nodes)
 
 ### Frontend nodes
 

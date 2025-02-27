@@ -72,7 +72,7 @@ lang: ru
 
 Может быть полезно:
 - [Как добавить мастер-узлы в облачном кластере...](https://deckhouse.ru/products/virtualization-platform/documentation/admin/platform-management/control-plane-settings/etcd.html#как-добавить-master-узлы-в-облачном-кластере).
-- [Работа со статическими узлами...](https://deckhouse.ru/products/kubernetes-platform/documentation/latest/modules/node-manager/#работа-со-статическими-узлами).
+- [Работа со статическими узлами...](https://deckhouse.ru/products/kubernetes-platform/documentation/modules/node-manager/#работа-со-статическими-узлами).
 
 ### Frontend-узлы
 
