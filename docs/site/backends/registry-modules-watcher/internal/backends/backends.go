@@ -23,28 +23,36 @@ import (
 )
 
 type Sender interface {
-	Send(ctx context.Context, listBackends map[string]struct{}, versions []Version) error
+	Send(ctx context.Context, listBackends map[string]struct{}, versions []DocumentationTask)
 }
 
-type RegistryScaner interface {
-	GetState() []Version
-	SubscribeOnUpdate(updateHandler func([]Version) error)
+type registryscanner interface {
+	GetState() []DocumentationTask
+	SubscribeOnUpdate(updateHandler func([]DocumentationTask) error)
 }
 
 var instance *backends = nil
 
-type Version struct {
+type DocumentationTask struct {
 	Registry        string
 	Module          string
 	Version         string
 	ReleaseChannels []string
 	TarFile         []byte
-	ToDelete        bool
+
+	Task Task
 }
 
+type Task uint
+
+const (
+	TaskCreate Task = iota
+	TaskDelete
+)
+
 type backends struct {
-	registryScaner RegistryScaner
-	sender         Sender
+	registryscanner registryscanner
+	sender          Sender
 
 	m            sync.RWMutex
 	listBackends map[string]struct{} // list of backends ip addreses
@@ -52,17 +60,17 @@ type backends struct {
 	logger *log.Logger
 }
 
-func New(registryScaner RegistryScaner, sender Sender, logger *log.Logger) *backends {
+func New(registryscanner registryscanner, sender Sender, logger *log.Logger) *backends {
 	if instance == nil {
 		instance = &backends{
-			registryScaner: registryScaner,
-			sender:         sender,
-			listBackends:   make(map[string]struct{}),
+			registryscanner: registryscanner,
+			sender:          sender,
+			listBackends:    make(map[string]struct{}),
 
 			logger: logger,
 		}
 	}
-	registryScaner.SubscribeOnUpdate(instance.updateHandler)
+	registryscanner.SubscribeOnUpdate(instance.updateHandler)
 
 	return instance
 }
@@ -83,11 +91,12 @@ func (b *backends) Add(backend string) {
 	defer b.m.Unlock()
 
 	b.listBackends[backend] = struct{}{}
-	state := b.registryScaner.GetState()
-	err := b.sender.Send(context.Background(), map[string]struct{}{backend: {}}, state)
-	if err != nil {
-		b.logger.Fatal("sending docs to new backend", log.Err(err))
-	}
+
+	state := b.registryscanner.GetState()
+
+	b.logger.Warn("send all modules documentation to new backend", slog.Int("docs_len", len(state)))
+
+	b.sender.Send(context.Background(), map[string]struct{}{backend: {}}, state)
 }
 
 func (b *backends) Delete(backend string) {
@@ -100,16 +109,13 @@ func (b *backends) Delete(backend string) {
 }
 
 // UpdateDocks send update dock request to all backends
-func (b *backends) updateHandler(versions []Version) error {
-	b.logger.Info(`'registryScaner' produce update event`)
+func (b *backends) updateHandler(docTask []DocumentationTask) error {
+	b.logger.Info(`'registryscanner' produce update event`)
 
 	b.m.RLock()
 	defer b.m.RUnlock()
 
-	err := b.sender.Send(context.Background(), b.listBackends, versions)
-	if err != nil {
-		return err
-	}
+	b.sender.Send(context.Background(), b.listBackends, docTask)
 
 	return nil
 }

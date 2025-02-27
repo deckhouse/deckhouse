@@ -25,7 +25,7 @@ moduleWatcher:
     web-production: 5m
   logLevel:
     _default: debug
-    web-production: error
+    web-production: warn
 
 docsBuilder:
   highAvailability:
