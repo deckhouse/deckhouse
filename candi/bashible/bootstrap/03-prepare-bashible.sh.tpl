@@ -23,7 +23,7 @@ function get_bundle() {
   while true; do
     for server in {{ .normal.apiserverEndpoints | join " " }}; do
       url="https://$server/apis/bashible.deckhouse.io/v1alpha1/${resource}s/${name}"
-      if d8-curl -sS -f -x "" -X GET "$url" --header "Authorization: Bearer $token" --cacert "$BOOTSTRAP_DIR/ca.crt"
+      if d8-curl -sS -f -x "" --connect-timeout 10 -X GET "$url" --header "Authorization: Bearer $token" --cacert "$BOOTSTRAP_DIR/ca.crt"
       then
        return 0
       else
