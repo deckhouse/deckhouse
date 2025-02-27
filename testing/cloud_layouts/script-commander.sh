@@ -284,7 +284,7 @@ function wait_upmeter_green() {
     while IFS= read -r line; do
       service=$(echo "$line" | cut -d':' -f1)
       availability=$(echo "$line" | cut -d':' -f2 | awk -F. '{printf "%.2f", $1"."$2}')
-      printf "%-50s %8s\n" "$service" "$availability"  # Выравнивание по правому краю второго столбца
+      printf "%-50s %8s\n" "$service" "$availability"
       if [[ "$availability" != "1.00" ]]; then
         all_ok=false
       fi
@@ -296,7 +296,7 @@ function wait_upmeter_green() {
     else
       echo "Cluster components are not ready. Attempt $i/$iterations failed. Sleep for $sleep_interval seconds..."
       if [[ "$i" -eq "$iterations" ]]; then
-        echo "Maximum iterations reached. Not all components reached status 1."
+        echo "Maximum iterations reached. Cluster components are not ready."
         exit 1
       fi
     fi
