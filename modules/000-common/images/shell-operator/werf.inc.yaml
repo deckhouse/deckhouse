@@ -34,8 +34,8 @@ import:
   before: setup
 imageSpec:
   config:
-    entrypoint: ["tini", "--", "/shell-operator"]
     env: {"PATH": "/opt/python-static/bin:${PATH}"}
+    entrypoint: ["tini", "--", "/shell-operator"]
 shell:
   setup:
   - find /var/lib/apt/ /var/cache/apt/ -type f -delete
