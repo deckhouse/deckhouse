@@ -20,9 +20,10 @@ import (
 	"registry-modules-watcher/internal/backends/pkg/registry-scanner/cache"
 	"time"
 
+	"log/slog"
+
 	"github.com/deckhouse/deckhouse/pkg/log"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
-	"golang.org/x/exp/slog"
 )
 
 type Client interface {
