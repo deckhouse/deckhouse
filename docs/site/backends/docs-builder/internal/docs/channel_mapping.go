@@ -15,7 +15,6 @@
 package docs
 
 import (
-	"cmp"
 	"errors"
 	"fmt"
 	"io"
@@ -83,20 +82,14 @@ func (m *channelMappingEditor) edit(fn func(channelMapping)) error {
 
 // Channel represents a single channel with its code and version
 type Channel struct {
-	Code    string `json:"code" yaml:"code"`
-	Version string `json:"version" yaml:"version"`
+	Code    string
+	Version string
 }
 
 // Module represents a module with its name and associated channels
 type Module struct {
-	ModuleName string    `json:"moduleName" yaml:"moduleName"`
-	Channels   []Channel `json:"channels" yaml:"channels"`
-}
-
-// ChannelMappingData represents the structure of channel mapping data
-type ChannelMappingData struct {
-	// Modules provides a slice-based representation of the mapping
-	Modules []Module
+	ModuleName string
+	Channels   []Channel
 }
 
 func (m *channelMappingEditor) get() ([]Module, error) {
@@ -117,50 +110,37 @@ func (m *channelMappingEditor) get() ([]Module, error) {
 		return nil, fmt.Errorf("decode yaml: %w", err)
 	}
 
-	// Populate the ModuleChannels field
-	moduleChannels := make(map[string]map[string]string)
 	var modules []Module
 
 	for moduleName, channels := range cm {
 		if channelMap, exists := channels["channels"]; exists {
-			moduleChannels[moduleName] = make(map[string]string)
-
-			// Create a new Module
 			module := Module{
 				ModuleName: moduleName,
 				Channels:   []Channel{},
 			}
 
 			for channelCode, entity := range channelMap {
-				moduleChannels[moduleName][channelCode] = entity.Version
-
-				// Add channel to the module
 				module.Channels = append(module.Channels, Channel{
 					Code:    channelCode,
 					Version: entity.Version,
 				})
 			}
 
+			// Sort channels by code
+			sort.Slice(module.Channels, func(i, j int) bool {
+				if module.Channels[i].Code != module.Channels[j].Code {
+					return module.Channels[i].Code < module.Channels[j].Code
+				}
+				return module.Channels[i].Version < module.Channels[j].Version
+			})
+
 			modules = append(modules, module)
 		}
 	}
 
+	// Sort modules by name
 	sort.Slice(modules, func(i, j int) bool {
-		sort.Slice(modules[i].Channels, func(i, j int) bool {
-			return cmp.Or(
-				cmp.Less(modules[i].Channels[i].Code, modules[i].Channels[j].Code),
-				cmp.Less(modules[i].Channels[i].Version, modules[i].Channels[j].Version),
-			)
-		})
-
-		sort.Slice(modules[j].Channels, func(i, j int) bool {
-			return cmp.Or(
-				cmp.Less(modules[j].Channels[i].Code, modules[j].Channels[j].Code),
-				cmp.Less(modules[j].Channels[i].Version, modules[j].Channels[j].Version),
-			)
-		})
-
-		return cmp.Less(modules[i].ModuleName, modules[j].ModuleName)
+		return modules[i].ModuleName < modules[j].ModuleName
 	})
 
 	return modules, nil

@@ -79,7 +79,17 @@ func (h *DocsBuilderHandler) handleGetDocsInfo(w http.ResponseWriter, r *http.Re
 		return
 	}
 
-	err = json.NewEncoder(w).Encode(modules)
+	// module name - channel code - version
+	result := make(map[string]map[string]string)
+
+	for _, mod := range modules {
+		result[mod.ModuleName] = make(map[string]string)
+		for _, channel := range mod.Channels {
+			result[mod.ModuleName][channel.Code] = channel.Version
+		}
+	}
+
+	err = json.NewEncoder(w).Encode(result)
 	if err != nil {
 		h.logger.Error("marshal documentation", log.Err(err))
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
