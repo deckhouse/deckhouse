@@ -507,7 +507,7 @@ Check [releases.deckhouse.io](https://releases.deckhouse.io) for the current sta
    ```
 
    where:
-   - `<EDITION>` — the edition code of the Deckhouse Kubernetes Platform (for example, `ee`, `se`, `cse`);
+   - `<EDITION>` — the edition code of the Deckhouse Kubernetes Platform (for example, `ee`, `se`);
    - `<LICENSE_KEY>` — Deckhouse Kubernetes Platform license key.
    - `/home/user/d8-bundle` — the directory to store the resulting bundle into. It will be created if not present.
 
@@ -909,7 +909,7 @@ Follow this steps to switch a Deckhouse Enterprise Edition to Community Edition 
    * Retrieve the value of `USED_MODULES`:
 
      ```shell
-     USED_MODULES=$(kubectl get modules | grep Enabled | awk {'print $1'})
+     USED_MODULES=$(kubectl get modules -o custom-columns=NAME:.metadata.name,SOURCE:.properties.source,STATE:.properties.state,ENABLED:.status.phase | grep Embedded | grep -E 'Enabled|Ready' | awk {'print $1'})
      ```
 
      Check the result of the command to make sure it was successful:
@@ -1569,7 +1569,7 @@ All commands should be executed on a master node of the existing cluster.
    * Retrieve the value of `USED_MODULES`:
 
      ```shell
-     USED_MODULES=$(sudo /opt/deckhouse/bin/kubectl get modules | grep Enabled | awk {'print $1'})
+     USED_MODULES=$(sudo /opt/deckhouse/bin/kubectl get modules -o custom-columns=NAME:.metadata.name,SOURCE:.properties.source,STATE:.properties.state,ENABLED:.status.phase | grep Embedded | grep -E 'Enabled|Ready' | awk {'print $1'})
      ```
 
      Check the result of the command to make sure it was successful:
