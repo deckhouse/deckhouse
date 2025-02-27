@@ -1,5 +1,10 @@
 # Changelog v1.68
 
+## [MALFORMED]
+
+
+ - #12028 unknown section "prometheus-rules"
+
 ## Know before update
 
 
@@ -66,6 +71,7 @@
  - **[deckhouse]** Trigger the ModuleConfig handling when a module created. [#12039](https://github.com/deckhouse/deckhouse/pull/12039)
  - **[deckhouse]** Return `helm_lib_envs_for_proxy` template to deckhouse deployment. [#11921](https://github.com/deckhouse/deckhouse/pull/11921)
  - **[deckhouse-controller]** Fixed a bug in the `kubectl` wrapper script. [#11494](https://github.com/deckhouse/deckhouse/pull/11494)
+ - **[deckhouse-tools]** Fix tools links pointing to wrong path [#12346](https://github.com/deckhouse/deckhouse/pull/12346)
  - **[dhctl]** Fix broken connection-config in CLI and support sudoPassword in SSHConfig. [#12036](https://github.com/deckhouse/deckhouse/pull/12036)
  - **[dhctl]** Fixed a bug that prevented PersistentVolumes from being properly deleted by the `dhctl destroy` command in Stronghold. [#11878](https://github.com/deckhouse/deckhouse/pull/11878)
  - **[dhctl]** Fixed the behavior of static cluster destruction. [#11059](https://github.com/deckhouse/deckhouse/pull/11059)
