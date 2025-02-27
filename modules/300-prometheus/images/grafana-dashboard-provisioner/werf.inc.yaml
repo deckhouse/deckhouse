@@ -1,7 +1,7 @@
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/shell-operator
 import:
-- image: common/python-static
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
   add: /opt/python-static
   to: /opt/python-static
   before: install
