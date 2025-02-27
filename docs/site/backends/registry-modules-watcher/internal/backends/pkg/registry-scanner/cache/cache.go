@@ -145,8 +145,11 @@ func (c *Cache) SyncWithRegistryVersions(versions []internal.VersionData) []back
 
 		if modules, ok := c.val[registryName(version.Registry)]; ok {
 			if module, ok := modules[moduleName(version.ModuleName)]; ok {
+				// if version exist in module
 				if versionData, ok := module.versions[versionNum(version.Version)]; ok {
+					// if release channel in version exist
 					if _, ok := versionData.releaseChannels[version.ReleaseChannel]; ok {
+						// if module has same checksum that version
 						if module.releaseChecksum[releaseChannelName(version.ReleaseChannel)] == version.Checksum {
 							delete(versionData.releaseChannels, version.ReleaseChannel)
 							delete(module.releaseChecksum, releaseChannelName(version.ReleaseChannel))
@@ -157,6 +160,15 @@ func (c *Cache) SyncWithRegistryVersions(versions []internal.VersionData) []back
 
 					if len(versionData.releaseChannels) == 0 {
 						delete(module.versions, versionNum(version.Version))
+					}
+				}
+
+				if _, ok := module.releaseChecksum[releaseChannelName(version.ReleaseChannel)]; ok {
+					for _, v := range module.versions {
+						if _, ok := v.releaseChannels[version.ReleaseChannel]; !ok {
+							delete(v.releaseChannels, version.ReleaseChannel)
+							delete(module.releaseChecksum, releaseChannelName(version.ReleaseChannel))
+						}
 					}
 				}
 
@@ -217,6 +229,18 @@ func RemapFromMapToVersions(m map[registryName]map[moduleName]moduleData, task b
 }
 
 func RemapFromVersionData(input []internal.VersionData) map[registryName]map[moduleName]moduleData {
+	sort.Slice(input, func(i, j int) bool {
+		if input[i].Registry != input[j].Registry {
+			return input[i].Registry < input[j].Registry
+		}
+
+		if input[i].ModuleName != input[j].ModuleName {
+			return input[i].ModuleName < input[j].ModuleName
+		}
+
+		return input[i].Version < input[j].Version
+	})
+
 	result := make(map[registryName]map[moduleName]moduleData)
 
 	for _, ver := range input {
@@ -246,6 +270,11 @@ func RemapFromVersionData(input []internal.VersionData) map[registryName]map[mod
 				releaseChannels: make(map[string]struct{}),
 				tarFile:         ver.TarFile,
 			}
+		}
+
+		// remove all module versions containing the same release channel
+		for _, existedVer := range moduleData.versions {
+			delete(existedVer.releaseChannels, ver.ReleaseChannel)
 		}
 
 		// Add release channel to the version

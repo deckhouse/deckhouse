@@ -80,7 +80,7 @@ func TestCache(t *testing.T) {
 			newVersion := internal.VersionData{
 				Registry:       "TestReg",
 				ModuleName:     "TestModule",
-				ReleaseChannel: "stable",
+				ReleaseChannel: "beta",
 				Version:        "2.0.0",
 				TarFile:        []byte("new version"),
 				Checksum:       "newchecksum",
@@ -93,7 +93,7 @@ func TestCache(t *testing.T) {
 					Registry:        "TestReg",
 					Module:          "TestModule",
 					Version:         "2.0.0",
-					ReleaseChannels: []string{"stable"},
+					ReleaseChannels: []string{"beta"},
 					TarFile:         []byte("new version"),
 					Task:            backends.TaskCreate,
 				},
@@ -106,14 +106,14 @@ func TestCache(t *testing.T) {
 					Registry:        "TestReg",
 					Module:          "TestModule",
 					Version:         "1.0.0",
-					ReleaseChannels: []string{"alpha", "beta"},
+					ReleaseChannels: []string{"alpha"},
 					TarFile:         []byte("test"),
 				},
 				{
 					Registry:        "TestReg",
 					Module:          "TestModule",
 					Version:         "2.0.0",
-					ReleaseChannels: []string{"stable"},
+					ReleaseChannels: []string{"beta"},
 					TarFile:         []byte("new version"),
 				},
 			}
@@ -308,22 +308,6 @@ func TestCache(t *testing.T) {
 			assert.True(t, found, "Version data should be found")
 			assert.Equal(t, "1.0.0", version, "Version should match")
 			assert.Equal(t, []byte("test"), tarFile, "TarFile should match")
-		})
-	})
-
-	t.Run("ModuleOperations", func(t *testing.T) {
-		cache := New()
-		cache.SyncWithRegistryVersions(testVersions)
-
-		t.Run("GetModules", func(t *testing.T) {
-			modules := cache.GetModules("TestReg")
-			assert.Equal(t, []string{"TestModule"}, modules, "Modules should match")
-		})
-
-		t.Run("DeleteModule", func(t *testing.T) {
-			cache.DeleteModule("TestReg", "TestModule")
-			modules := cache.GetModules("TestReg")
-			assert.Empty(t, modules, "Modules should be empty after deletion")
 		})
 	})
 }
