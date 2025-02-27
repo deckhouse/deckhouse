@@ -31,26 +31,29 @@ const (
 
 func init() {
 	requirements.RegisterCheck(CheckConfig, func(_ string, getter requirements.ValueGetter) (bool, error) {
-		key, exists := getter.Get(CheckCloudProviderConfigRaw)
+		key, exists := getter.Get(CheckClusterConfigRaw)
 		if exists {
-			if !key.(bool) {
-				return false, errors.New("The provider-cluster-configuration in the cluster contains fields outside the schema. Remove it from provider-cluster-configuration")
-			}
-		}
-
-		key, exists = getter.Get(CheckStaticClusterConfigRaw)
-		if exists {
-			if !key.(bool) {
-				return false, errors.New("The static-cluster-configuration in the cluster contains fields outside the schema. Remove it from static-cluster-configuration")
-			}
-		}
-
-		key, exists = getter.Get(CheckClusterConfigRaw)
-		if exists {
-			if !key.(bool) {
+			if key.(bool) {
 				return false, errors.New("The cluster-configuration in the cluster contains fields outside the schema. Remove it from cluster-configuration")
 			}
+
+			key, exists = getter.Get(CheckCloudProviderConfigRaw)
+			if exists {
+				if key.(bool) {
+					return false, errors.New("The provider-cluster-configuration in the cluster contains fields outside the schema. Remove it from provider-cluster-configuration")
+				}
+				return true, nil
+			}
+
+			key, exists = getter.Get(CheckStaticClusterConfigRaw)
+			if exists {
+				if key.(bool) {
+					return false, errors.New("The static-cluster-configuration in the cluster contains fields outside the schema. Remove it from static-cluster-configuration")
+				}
+				return true, nil
+			}
 		}
-		return true, nil
+
+		return false, errors.New("Not checked all configurations in dhctl secrets")
 	})
 }
