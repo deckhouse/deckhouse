@@ -164,12 +164,12 @@ func (s *sender) upload(ctx context.Context, backend string, version backends.Do
 		}
 
 		if resp.StatusCode != http.StatusCreated {
-			s.logger.Warn("send upload archive response", slog.Int("status_code", resp.StatusCode))
+			s.logger.Warn("upload archive response", slog.Int("status_code", resp.StatusCode))
 
 			return fmt.Errorf("%w: %s", ErrBadStatusCode, resp.Status)
 		}
 
-		s.logger.Info("send upload archive response", slog.Int("status_code", resp.StatusCode))
+		s.logger.Info("upload archive response", slog.Int("status_code", resp.StatusCode))
 
 		return nil
 	}

@@ -103,14 +103,27 @@ func (c *Cache) GetReleaseVersionData(version *internal.VersionData) (string, []
 	return "", nil, false
 }
 
-// cache is populated
-// 1.2.3 was not removed and remains in cache, form a list for deletion
-// 1.2.4 was removed from cache and taken into the list (already existed)
-// 1.2.5 was removed from cache and taken into the list (already existed)
-// versions arrived
-// 1.2.4
-// 1.2.5
-// 1.2.6 was not found and added to the list (needs to be added)
+// SyncWithRegistryVersions synchronizes the cache with versions from the registry and returns
+// documentation tasks that need to be performed as a result of this synchronization.
+//
+// Flow:
+// 1. For each version from the registry:
+//   - If it exists in the cache: Remove it from the cache (will be re-added later)
+//   - If it doesn't exist in the cache: Mark it for creation
+//
+// 2. Any versions remaining in the cache are marked for deletion
+// 3. Update the cache with all versions from the registry
+// 4. Return tasks for both creation and deletion
+//
+// Example scenario:
+// - Initial cache contains versions: 1.2.3, 1.2.4, 1.2.5
+// - Registry provides versions: 1.2.4, 1.2.5, 1.2.6
+// - Result:
+//   - 1.2.3 remains in cache temporarily and is marked for deletion
+//   - 1.2.4 and 1.2.5 are removed from cache temporarily
+//   - 1.2.6 is identified as new and marked for creation
+//   - Final tasks: Delete 1.2.3, Create 1.2.6
+//   - Cache is updated to match registry: 1.2.4, 1.2.5, 1.2.6
 func (c *Cache) SyncWithRegistryVersions(versions []internal.VersionData) []backends.DocumentationTask {
 	c.m.RLock()
 	defer c.m.RUnlock()
@@ -126,8 +139,10 @@ func (c *Cache) SyncWithRegistryVersions(versions []internal.VersionData) []back
 		if modules, ok := c.val[registryName(version.Registry)]; ok {
 			if module, ok := modules[moduleName(version.ModuleName)]; ok {
 				if versionData, ok := module.versions[versionNum(version.Version)]; ok {
-					delete(versionData.releaseChannels, version.ReleaseChannel)
-					delete(module.releaseChecksum, releaseChannelName(version.ReleaseChannel))
+					if _, ok := versionData.releaseChannels[version.ReleaseChannel]; ok {
+						delete(versionData.releaseChannels, version.ReleaseChannel)
+						delete(module.releaseChecksum, releaseChannelName(version.ReleaseChannel))
+					}
 
 					if len(versionData.releaseChannels) == 0 {
 						delete(module.versions, versionNum(version.Version))
