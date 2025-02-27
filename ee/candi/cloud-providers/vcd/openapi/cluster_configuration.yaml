@@ -325,6 +325,7 @@ apiVersions:
             layout:
               enum:
                 - Standard
+                - StandardV37
               type: string
       - oneOf:
         - properties:
