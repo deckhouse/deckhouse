@@ -161,7 +161,7 @@ If the `withNATInstance.externalSubnetID` parameter is set, the NAT instance wil
 
 IF the `withNATInstance.externalSubnetID` parameter is not set and `withNATInstance.internalSubnetID` is set, the NAT instance will be created in this last subnet.
 
-If neither `withNATInstance.externalSubnetID` nor `withNATInstance.internalSubnetID` is set, the NAT instance will be created in the  `ru-central1-a` zone.
+If neither `withNATInstance.externalSubnetID` nor `withNATInstance.internalSubnetID` is set, `withNATInstance.internalSubnetCIDR` must be set and internal subnet for NAT instance will be created automatically to avoid routing loop. 
 
 If the IP address of the NAT-instance does not matter, you can pass an empty object `withNATInstance: {}`, then the necessary networks and dynamic IP will be created automatically.
 
