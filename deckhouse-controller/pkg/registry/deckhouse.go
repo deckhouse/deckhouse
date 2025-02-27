@@ -68,6 +68,7 @@ func (svc *deckhouseReleaseService) GetDeckhouseRelease(ctx context.Context, rel
 		return nil, fmt.Errorf("fetch image: %w", err)
 	}
 
+	// TODO: see check_release with same method
 	releaseMetadata, err := svc.fetchReleaseMetadata(img)
 	if err != nil {
 		return nil, fmt.Errorf("fetch release metadata: %w", err)
