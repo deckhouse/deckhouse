@@ -2,7 +2,11 @@
   {{- $crd := index . 0 }}
   {{- if $crd.spec.additionalImagePullSecrets }}
     {{- range $secret := $crd.spec.additionalImagePullSecrets }}
-- name: {{ $secret }}
+      {{- if (not $secret.name) }}
+- name: custom-{{ $secret.dockerCfgJSON | sha256sum }}
+      {{- else }}
+- name: {{ $secret.name }}
+      {{- end }}
     {{- end }}
   {{- end }}
 {{ end }}

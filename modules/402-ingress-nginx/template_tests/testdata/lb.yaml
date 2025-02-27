@@ -10,7 +10,7 @@ spec:
   additionalLogFields:
     my-cookie: "$cookie_MY_COOKIE"
   additionalImagePullSecrets:
-  - test-secret
+  - name: test-secret
   validationEnabled: true
   controllerVersion: "1.9"
   inlet: LoadBalancer

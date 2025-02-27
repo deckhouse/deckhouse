@@ -238,8 +238,14 @@ properties:
                   additionalProperties: true
                 additionalImagePullSecrets:
                   type: array
+                  default: []
                   items:
-                    type: string
+                    type: object
+                    properties:
+                      name:
+                        type: string
+                      dockerCfgJSON:
+                        type: string
                 resourcesRequests:
                   type: object
                   default: {}

@@ -57,6 +57,8 @@ spec:
       name: wait-lb-non-default
   template:
     metadata:
+      annotations:
+        cluster-autoscaler.kubernetes.io/enable-ds-eviction: "false"
       labels:
         app: controller
         name: wait-lb-non-default
@@ -90,7 +92,7 @@ spec:
               fieldPath: metadata.namespace
         - name: POD_IP
           value: 127.0.0.1
-        image: registry.example.com@imageHash-ingressNginx-controller16
+        image: registry.example.com@imageHash-ingressNginx-controller19
         lifecycle:
           preStop:
             exec:
@@ -129,21 +131,21 @@ spec:
             ephemeral-storage: 150Mi
             memory: 500Mi
         volumeMounts:
-        - mountPath: /var/lib/nginx/body
+        - mountPath: /chroot/var/lib/nginx/body
           name: client-body-temp-path
-        - mountPath: /var/lib/nginx/fastcgi
+        - mountPath: /chroot/var/lib/nginx/fastcgi
           name: fastcgi-temp-path
-        - mountPath: /var/lib/nginx/proxy
+        - mountPath: /chroot/var/lib/nginx/proxy
           name: proxy-temp-path
-        - mountPath: /var/lib/nginx/scgi
+        - mountPath: /chroot/var/lib/nginx/scgi
           name: scgi-temp-path
-        - mountPath: /var/lib/nginx/uwsgi
+        - mountPath: /chroot/var/lib/nginx/uwsgi
           name: uwsgi-temp-path
-        - mountPath: /etc/nginx/ssl/
+        - mountPath: /chroot/etc/nginx/ssl/
           name: secret-nginx-auth-tls
-        - mountPath: /tmp/nginx/
+        - mountPath: /chroot/tmp/nginx/
           name: tmp-nginx
-        - mountPath: /etc/nginx/webhook-ssl/
+        - mountPath: /chroot/etc/nginx/webhook-ssl/
           name: webhook-cert
           readOnly: true
       - image: registry.example.com@imageHash-ingressNginx-protobufExporter
