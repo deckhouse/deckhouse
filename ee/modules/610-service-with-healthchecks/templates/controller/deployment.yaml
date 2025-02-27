@@ -68,6 +68,9 @@ spec:
       containers:
         - args:
             - --metrics-bind-address=:8080
+            {{- if .Values.serviceWithHealthchecks.debug }}
+            - --debugging=true
+            {{- end }}
           image: {{ include "helm_lib_module_image" (list . "controller") }}
           imagePullPolicy: IfNotPresent
           name: controller
