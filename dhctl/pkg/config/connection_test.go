@@ -26,7 +26,7 @@ import (
 func TestLoadDHCTLConfigSchema(t *testing.T) {
 	const schemasDir = "./../../../candi/openapi/dhctl"
 
-	newStore := newSchemaStore([]string{schemasDir})
+	newStore := newSchemaStore(false, []string{schemasDir})
 
 	require.NotEmpty(t, newStore.Get(&SchemaIndex{
 		Kind:    "SSHConfig",
@@ -40,7 +40,7 @@ func TestLoadDHCTLConfigSchema(t *testing.T) {
 
 func TestParseConnectionConfig(t *testing.T) {
 	const schemasDir = "./../../../candi/openapi/dhctl"
-	newStore := newSchemaStore([]string{schemasDir})
+	newStore := newSchemaStore(false, []string{schemasDir})
 
 	configFunc := func(config, keyPath1, keyPath2 string) string {
 		return fmt.Sprintf(
