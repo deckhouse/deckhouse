@@ -37,12 +37,14 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/local"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
+	oldssh "github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh/session"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/template"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terminal"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
+
+	"golang.org/x/crypto/ssh"
 )
 
 const (
@@ -195,12 +197,15 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 			log.DebugLn("Hosts empty and static cluster. Use local interface")
 			b.Params.NodeInterface = local.NewNodeInterface()
 		} else {
-			sshClient := ssh.NewClientFromFlags()
-			if _, err := sshClient.Start(); err != nil {
+			sshClient, err := oldssh.NewSSHClientFromFlags()
+			if err != nil {
+				return fmt.Errorf("unable to get ssh client: %w", err)
+			}
+			if _, err := sshClient.NewSession(); err != nil {
 				return fmt.Errorf("unable to start ssh client: %w", err)
 			}
 			log.DebugF("Hosts is %v empty; static cluster is %v. Use ssh", len(app.SSHHosts), metaConfig.IsStatic())
-			b.Params.NodeInterface = ssh.NewNodeInterfaceWrapper(sshClient)
+			b.Params.NodeInterface = oldssh.NewNewNodeInterfaceWrapper(sshClient)
 		}
 	}
 
@@ -326,7 +331,7 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 			deckhouseInstallConfig.CloudDiscovery = baseOutputs.CloudDiscovery
 			deckhouseInstallConfig.TerraformState = baseOutputs.TerraformState
 
-			if wrapper, ok := b.NodeInterface.(*ssh.NodeInterfaceWrapper); ok {
+			if wrapper, ok := b.NodeInterface.(*oldssh.NodeNewInterfaceWrapper); ok {
 				sshClient := wrapper.Client()
 				if baseOutputs.BastionHost != "" {
 					sshClient.Settings.BastionHost = baseOutputs.BastionHost
