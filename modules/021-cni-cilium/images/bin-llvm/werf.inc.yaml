@@ -1,5 +1,5 @@
 {{- $llvmRev := "llvmorg-18.1.8" }}
-{{- $llvmCacheRev := "llvmorg-18.1.8-alt-p11-gcc13-v1-180225" }}
+{{- $llvmCacheRev := "llvmorg-18.1.8-alt-p11-gcc11-v2-180225" }}
 ---
 # #####################################################################
 # Build LLVM binaries (based on base-cilium-dev)
@@ -26,15 +26,6 @@ shell:
   - rm -rf clang-tools-extra/clangd/clients/clangd-vscode
   - rm -rf /src/llvm/.git
 ---
-image: {{ .ModuleName }}/{{ .ImageName }}-ccache-artifact
-fromImage: common/src-artifact
-final: false
-shell:
-  install:
-  - mkdir -p /tmp/ccache-dir
-  - git clone --depth 1 --branch {{ $llvmCacheRev }} {{ $.SOURCE_REPO }}/llvm/llvm-build-cache.git /tmp/ccache-dir
-  - rm -rf /tmp/ccache-dir/.git
----
 image: {{ .ModuleName }}/llvm-artifact
 fromImage: {{ .ModuleName }}/base-cilium-dev
 final: false
@@ -43,15 +34,15 @@ import:
   add: /src
   to: /src
   before: install
-- image: {{ .ModuleName }}/{{ .ImageName }}-ccache-artifact
-  add: /tmp/ccache-dir
-  to: /tmp/ccache-dir
-  before: install
 shell:
   install:
   - apt-get install -y gcc11 gcc11-c++ libstdc++11-devel libstdc++11-devel-static
   #- update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-13 2
   setup:
+  - mkdir -p /tmp/ccache-dir
+  - git clone --depth 1 --branch {{ $llvmCacheRev }} {{ $.SOURCE_REPO }}/llvm/llvm-build-cache.git /tmp/ccache-dir
+  - rm -rf /tmp/ccache-dir/.git
+  #
   - export GCC_VERSION=11
   - sed -i '/\#include <string>/a \#include <cstdint>' /src/llvm/llvm/include/llvm/Support/Signals.h
   - export CCACHE_DIR="/tmp/ccache-dir"
@@ -77,6 +68,4 @@ shell:
   - strip bin/clang
   - strip bin/llc
   - strip bin/llvm-objcopy
-  # - mkdir -p /out/linux/amd64/bin
-  # - cp bin/clang bin/llc bin/llvm-objcopy /out/linux/amd64/bin
   - cp bin/clang bin/llc bin/llvm-objcopy /usr/local/bin
