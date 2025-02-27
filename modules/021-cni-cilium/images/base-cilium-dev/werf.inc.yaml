@@ -89,7 +89,6 @@ shell:
   - unzip /tmp/protoc.zip -x readme.txt -d /usr/local && rm /tmp/protoc.zip
   - chmod o+rx /usr/local/bin/protoc && chmod o+rX -R /usr/local/include/google/
   # 8ba23be9613c672d40ae261d2a1335d639bdd59b == tag: cmd/protoc-gen-go-grpc/v1.3.0
-  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
   - git clone --depth 1 --branch cmd/protoc-gen-go-grpc/v1.3.0 {{ $.SOURCE_REPO }}/grpc/grpc-go.git /src/grpc-go
   - git clone --depth 1 --branch v1.30.0 {{ $.SOURCE_REPO }}/protocolbuffers/protobuf-go.git /src/protobuf-go
   - git clone --depth 1 --branch v1.1.0 {{ $.SOURCE_REPO }}/mitchellh/protoc-gen-go-json.git /src/protoc-gen-go-json
