@@ -395,7 +395,7 @@ spec:
     disktype: ssd
 ```
 
-![nodeSelector](/../../../../images/virtualization-platform/placement-node-affinity.png)
+![nodeSelector](/../../../../images/virtualization-platform/placement-nodeselector.png)
 
 In this example, the virtual machine will be placed only on nodes that have the label `disktype` with the value `ssd`.
 

@@ -15,10 +15,6 @@
 # limitations under the License.
 */}}
 
-function detect_bundle() {
-  {{- .Files.Get "deckhouse/candi/bashible/detect_bundle.sh" | nindent 2 }}
-}
-
 function get_bundle() {
   resource="$1"
   name="$2"
@@ -27,7 +23,7 @@ function get_bundle() {
   while true; do
     for server in {{ .normal.apiserverEndpoints | join " " }}; do
       url="https://$server/apis/bashible.deckhouse.io/v1alpha1/${resource}s/${name}"
-      if d8-curl -sS -f -x "" -X GET "$url" --header "Authorization: Bearer $token" --cacert "$BOOTSTRAP_DIR/ca.crt"
+      if d8-curl -sS -f -x "" --connect-timeout 10 -X GET "$url" --header "Authorization: Bearer $token" --cacert "$BOOTSTRAP_DIR/ca.crt"
       then
        return 0
       else
@@ -48,8 +44,6 @@ mkdir -p "$BOOTSTRAP_DIR" "$TMPDIR"
 # Directory contains sensitive information
 chmod 0700 $BOOTSTRAP_DIR
 
-# Detect bundle
-BUNDLE="$(detect_bundle)"
 unset HTTP_PROXY http_proxy HTTPS_PROXY https_proxy NO_PROXY no_proxy
 
 {{- if and (ne .nodeGroup.nodeType "Static") (ne .nodeGroup.nodeType "CloudStatic" )}}
@@ -113,7 +107,7 @@ done
 
 export PATH="/opt/deckhouse/bin:$PATH"
 # Get bashible script from secret
-get_bundle bashible "${BUNDLE}.{{ .nodeGroup.name }}" | jq -r '.data."bashible.sh"' > $BOOTSTRAP_DIR/bashible.sh
+get_bundle bashible "{{ .nodeGroup.name }}" | jq -r '.data."bashible.sh"' > $BOOTSTRAP_DIR/bashible.sh
 chmod +x $BOOTSTRAP_DIR/bashible.sh
 
 # Bashible first run

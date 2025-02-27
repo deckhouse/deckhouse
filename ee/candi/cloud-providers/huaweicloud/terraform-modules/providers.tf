@@ -6,6 +6,7 @@ provider "huaweicloud" {
   region      = var.providerClusterConfiguration.provider.region
   access_key  = var.providerClusterConfiguration.provider.accessKey
   secret_key  = var.providerClusterConfiguration.provider.secretKey
+  project_id  = lookup(var.providerClusterConfiguration.provider, "projectID", "")
   insecure    = lookup(var.providerClusterConfiguration.provider, "insecure", false)
   auth_url    = lookup(var.providerClusterConfiguration.provider, "authURL", "")
   domain_name = lookup(var.providerClusterConfiguration.provider, "domainName", "")
