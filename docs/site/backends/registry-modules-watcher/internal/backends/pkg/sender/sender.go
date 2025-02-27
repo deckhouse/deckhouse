@@ -31,7 +31,11 @@ import (
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
-const maxElapsedTime = 15 // minutes
+var (
+	MaxElapsedTime = backoff.DefaultMaxElapsedTime
+	MaxInterval    = backoff.DefaultMaxInterval
+)
+
 const maxRetries = 10
 
 type sender struct {
@@ -57,6 +61,7 @@ func New(logger *log.Logger) *sender {
 func (s *sender) Send(ctx context.Context, listBackends map[string]struct{}, versions []backends.DocumentationTask) {
 	syncChan := make(chan struct{}, 10)
 	wg := new(sync.WaitGroup)
+
 	for backend := range listBackends {
 		syncChan <- struct{}{}
 		wg.Add(1)
@@ -129,7 +134,8 @@ func (s *sender) delete(ctx context.Context, backend string, version backends.Do
 	}
 
 	b := backoff.NewExponentialBackOff()
-	b.MaxElapsedTime = maxElapsedTime * time.Minute
+	b.MaxElapsedTime = MaxElapsedTime
+	b.MaxInterval = MaxInterval
 
 	err = backoff.Retry(operation, backoff.WithMaxRetries(b, maxRetries))
 	if err != nil {
@@ -158,18 +164,19 @@ func (s *sender) upload(ctx context.Context, backend string, version backends.Do
 		}
 
 		if resp.StatusCode != http.StatusCreated {
-			s.logger.Warn("send archive response", slog.Int("status_code", resp.StatusCode))
+			s.logger.Warn("send upload archive response", slog.Int("status_code", resp.StatusCode))
 
 			return fmt.Errorf("%w: %s", ErrBadStatusCode, resp.Status)
 		}
 
-		s.logger.Info("send archive response", slog.Int("status_code", resp.StatusCode))
+		s.logger.Info("send upload archive response", slog.Int("status_code", resp.StatusCode))
 
 		return nil
 	}
 
 	b := backoff.NewExponentialBackOff()
-	b.MaxElapsedTime = maxElapsedTime * time.Minute
+	b.MaxElapsedTime = MaxElapsedTime
+	b.MaxInterval = MaxInterval
 
 	err = backoff.Retry(operation, backoff.WithMaxRetries(b, maxRetries))
 	if err != nil {
@@ -209,7 +216,8 @@ func (s *sender) build(ctx context.Context, backend string) error {
 	}
 
 	b := backoff.NewExponentialBackOff()
-	b.MaxElapsedTime = maxElapsedTime * time.Minute
+	b.MaxElapsedTime = MaxElapsedTime
+	b.MaxInterval = MaxInterval
 
 	err = backoff.Retry(operation, backoff.WithMaxRetries(b, maxRetries))
 	if err != nil {

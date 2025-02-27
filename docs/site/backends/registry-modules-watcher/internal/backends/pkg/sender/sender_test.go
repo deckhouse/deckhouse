@@ -19,6 +19,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"registry-modules-watcher/internal/backends"
 
@@ -27,11 +28,19 @@ import (
 )
 
 func TestSender(t *testing.T) {
+	t.Parallel()
+
 	logger := log.NewNop()
 	s := New(logger)
 
+	MaxInterval = 1 * time.Millisecond
+
 	t.Run("Send", func(t *testing.T) {
+		t.Parallel()
+
 		t.Run("successful responses", func(t *testing.T) {
+			t.Parallel()
+
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				if r.Method == http.MethodPost && r.URL.Path == "/api/v1/doc/TestModule/1.0.0" {
 					w.WriteHeader(http.StatusCreated)
@@ -50,6 +59,8 @@ func TestSender(t *testing.T) {
 			}
 
 			t.Run("with create task", func(t *testing.T) {
+				t.Parallel()
+
 				versions := []backends.DocumentationTask{
 					{
 						Registry:        "TestReg",
@@ -65,6 +76,8 @@ func TestSender(t *testing.T) {
 			})
 
 			t.Run("with delete task", func(t *testing.T) {
+				t.Parallel()
+
 				versions := []backends.DocumentationTask{
 					{
 						Registry:        "TestReg",
@@ -81,7 +94,10 @@ func TestSender(t *testing.T) {
 		})
 
 		t.Run("error responses", func(t *testing.T) {
+			t.Parallel()
+
 			t.Run("upload error with successful retry", func(t *testing.T) {
+				t.Parallel()
 				// Counter to track number of retry attempts
 				requestCount := 0
 
@@ -124,6 +140,7 @@ func TestSender(t *testing.T) {
 			})
 
 			t.Run("build error with successful retry", func(t *testing.T) {
+				t.Parallel()
 				// Counter to track number of retry attempts
 				requestCount := 0
 
@@ -168,6 +185,7 @@ func TestSender(t *testing.T) {
 			})
 
 			t.Run("delete error with successful retry", func(t *testing.T) {
+				t.Parallel()
 				// Counter to track number of retry attempts
 				requestCount := 0
 
@@ -210,6 +228,7 @@ func TestSender(t *testing.T) {
 			})
 
 			t.Run("connection error with successful retry", func(t *testing.T) {
+				t.Parallel()
 				// Counter to track number of requests
 				requestCount := 0
 
@@ -260,6 +279,8 @@ func TestSender(t *testing.T) {
 	})
 
 	t.Run("delete", func(t *testing.T) {
+		t.Parallel()
+
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			assert.Equal(t, http.MethodDelete, r.Method, "Expected DELETE method")
 			assert.Equal(t, "/api/v1/doc/TestModule", r.URL.Path, "Unexpected URL path")
@@ -281,6 +302,8 @@ func TestSender(t *testing.T) {
 	})
 
 	t.Run("upload", func(t *testing.T) {
+		t.Parallel()
+
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			assert.Equal(t, http.MethodPost, r.Method, "Expected POST method")
 			assert.Equal(t, "/api/v1/doc/TestModule/1.0.0", r.URL.Path, "Unexpected URL path")
@@ -302,6 +325,8 @@ func TestSender(t *testing.T) {
 	})
 
 	t.Run("build", func(t *testing.T) {
+		t.Parallel()
+
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			assert.Equal(t, http.MethodPost, r.Method, "Expected POST method")
 			assert.Equal(t, "/api/v1/build", r.URL.Path, "Unexpected URL path")
