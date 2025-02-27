@@ -149,7 +149,6 @@ function prepare_environment() {
 
   case "$PROVIDER" in
   "Yandex.Cloud")
-    # shellcheck disable=SC2016
     CLOUD_ID="$(base64 -d <<< "$LAYOUT_YANDEX_CLOUD_ID")"
     FOLDER_ID="$(base64 -d <<< "$LAYOUT_YANDEX_FOLDER_ID")"
     SERVICE_ACCOUNT_JSON=$LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON
@@ -208,7 +207,7 @@ function prepare_environment() {
     ssh_user="redos"
     ;;
 
-"VCD")
+  "VCD")
     # shellcheck disable=SC2016
     env VCD_PASSWORD="$(base64 -d <<<"$LAYOUT_VCD_PASSWORD")" \
         KUBERNETES_VERSION="$KUBERNETES_VERSION" \
@@ -336,7 +335,8 @@ function run-test() {
 
   echo "Bootstrap payload: ${payload}"
 
-  response=$(curl -s -X POST "https://${COMMANDER_HOST}/api/v1/clusters" \
+  response=$(curl -s -X POST  --retry 3 --retry-delay 5 --retry-connrefused --retry-all-errors\
+    "https://${COMMANDER_HOST}/api/v1/clusters" \
     -H 'accept: application/json' \
     -H "X-Auth-Token: ${COMMANDER_TOKEN}" \
     -H 'Content-Type: application/json' \
@@ -456,6 +456,8 @@ function cleanup() {
     >&2 echo "Check Cluster delete..."
     if [ "deleted" = "$cluster_status" ]; then
       return 0
+    elif [ "deletion_failed" = "$cluster_status" ]; then
+      return 1
     else
       echo "  Cluster status: $cluster_status"
     fi
