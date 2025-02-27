@@ -1,7 +1,3 @@
-{{- define "metadata_discovery_resources" }}
-cpu: 10m
-memory: 25Mi
-{{- end }}
 {{- define "metadata_exporter_resources" }}
 cpu: 10m
 memory: 25Mi
