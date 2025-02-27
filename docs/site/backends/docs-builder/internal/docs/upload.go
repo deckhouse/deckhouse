@@ -110,7 +110,7 @@ func (svc *Service) generateChannelMapping(moduleName, version string, channels 
 	return svc.channelMappingEditor.edit(func(m channelMapping) {
 		var versions = make(map[string]versionEntity)
 		if _, ok := m[moduleName]; ok {
-			versions = m[moduleName]["channels"]
+			versions = m[moduleName][channelMappingChannels]
 		}
 
 		for _, ch := range channels {
@@ -118,7 +118,7 @@ func (svc *Service) generateChannelMapping(moduleName, version string, channels 
 		}
 
 		m[moduleName] = map[string]map[string]versionEntity{
-			"channels": versions,
+			channelMappingChannels: versions,
 		}
 	})
 }

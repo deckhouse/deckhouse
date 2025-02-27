@@ -90,7 +90,7 @@ func (svc *Service) buildHugo() error {
 
 func (svc *Service) removeModuleFromChannelMapping(moduleName, channel string) error {
 	return svc.channelMappingEditor.edit(func(m channelMapping) {
-		delete(m[moduleName]["channels"], channel)
+		delete(m[moduleName][channelMappingChannels], channel)
 	})
 }
 

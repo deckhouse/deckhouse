@@ -50,7 +50,7 @@ func TestChannelMappingEditor_Edit(t *testing.T) {
 	t.Run("Edit empty file", func(t *testing.T) {
 		err = editor.edit(func(cm channelMapping) {
 			cm["console"] = map[string]map[string]versionEntity{
-				"channels": {
+				channelMappingChannels: {
 					"stable": {Version: "1.0.0"},
 					"alpha":  {Version: "1.1.0"},
 				},
@@ -85,9 +85,9 @@ func TestChannelMappingEditor_Edit(t *testing.T) {
 
 	t.Run("Update existing data", func(t *testing.T) {
 		err = editor.edit(func(cm channelMapping) {
-			cm["console"]["channels"]["stable"] = versionEntity{Version: "1.2.0"}
+			cm["console"][channelMappingChannels]["stable"] = versionEntity{Version: "1.2.0"}
 			cm["parca"] = map[string]map[string]versionEntity{
-				"channels": {
+				channelMappingChannels: {
 					"beta": {Version: "0.1.0"},
 				},
 			}

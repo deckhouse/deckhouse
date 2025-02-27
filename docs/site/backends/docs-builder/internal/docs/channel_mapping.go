@@ -39,7 +39,9 @@ type versionEntity struct {
 	Version string `json:"version" yaml:"version"`
 }
 
-// moduleName - "channels" - channelCode
+const channelMappingChannels = "channels"
+
+// moduleName - channelMappingChannels - channelCode
 type channelMapping map[string]map[string]map[string]versionEntity
 
 func (m *channelMappingEditor) edit(fn func(channelMapping)) error {
@@ -113,7 +115,7 @@ func (m *channelMappingEditor) get() ([]Module, error) {
 	var modules []Module
 
 	for moduleName, channels := range cm {
-		if channelMap, exists := channels["channels"]; exists {
+		if channelMap, exists := channels[channelMappingChannels]; exists {
 			module := Module{
 				ModuleName: moduleName,
 				Channels:   []Channel{},
