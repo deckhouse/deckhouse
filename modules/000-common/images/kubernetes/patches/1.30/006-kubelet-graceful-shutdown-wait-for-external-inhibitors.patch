@@ -1,0 +1,70 @@
+diff --git a/pkg/kubelet/nodeshutdown/nodeshutdown_manager_linux.go b/pkg/kubelet/nodeshutdown/nodeshutdown_manager_linux.go
+index 8469cecdc0e..ed74ff4f339 100644
+--- a/pkg/kubelet/nodeshutdown/nodeshutdown_manager_linux.go
++++ b/pkg/kubelet/nodeshutdown/nodeshutdown_manager_linux.go
+@@ -23,6 +23,7 @@ package nodeshutdown
+ import (
+ 	"fmt"
+ 	"path/filepath"
++	"os"
+ 	"sort"
+ 	"sync"
+ 	"time"
+@@ -320,6 +321,9 @@ func (m *managerImpl) ShutdownStatus() error {
+ 
+ func (m *managerImpl) processShutdownEvent() error {
+ 	m.logger.V(1).Info("Shutdown manager processing shutdown event")
++
++	m.waitForExternalInhibitorsToUnlock()
++
+ 	activePods := m.getPods()
+ 
+ 	defer func() {
+@@ -417,6 +421,47 @@ func (m *managerImpl) processShutdownEvent() error {
+ 	return nil
+ }
+ 
++// waitForExternalInhibitorsToUnlock waits for external inhibitors to unlock before proceeding with shutdown.
++func (m *managerImpl) waitForExternalInhibitorsToUnlock() {
++	const (
++		inhibitorsCheckInterval = 5 * time.Second
++		delayLogInterval        = 2 * time.Second
++	)
++	// Do not wait if inhibitors not started.
++	_, err := os.Stat("/var/run/node-manager-graceful-shutdown/enabled")
++	if os.IsNotExist(err) {
++		m.logger.V(1).Info("No external inhibitor locks enabled, proceed with shutdown")
++		return
++	}
++
++	m.logger.V(1).Info("Wait for external inhibitors to unlock")
++
++	realClock := clock.RealClock{}
++	ticker := realClock.NewTicker(inhibitorsCheckInterval)
++	defer ticker.Stop()
++
++	lastLogTime := time.Now()
++
++	for {
++		_, err := os.Stat("/var/run/node-manager-graceful-shutdown/inhibited")
++		if os.IsNotExist(err) {
++			m.logger.V(1).Info("External inhibitors unlocked, proceed with shutdown")
++			return
++		}
++
++		now := time.Now()
++		if now.Sub(lastLogTime) > delayLogInterval {
++			lastLogTime = now
++			m.logger.V(1).Info("Shutdown still locked by external inhibitors")
++		}
++
++		<-ticker.C()
++	}
++
++	m.logger.V(1).Info("Timeout while waiting for external inhibitors, proceed with shutdown")
++	return
++}
++
+ func (m *managerImpl) periodRequested() time.Duration {
+ 	var sum int64
+ 	for _, period := range m.shutdownGracePeriodByPodPriority {
