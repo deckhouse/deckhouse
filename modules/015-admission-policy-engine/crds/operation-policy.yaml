@@ -198,10 +198,12 @@ spec:
                           type: integer
                 match:
                   type: object
-                  required: ["namespaceSelector"]
+                  anyOf:
+                  - required: [namespaceSelector]
+                  - required: [labelSelector]
                   properties:
                     namespaceSelector:
-                      oneOf:
+                      anyOf:
                         - required: [matchNames]
                         - required: [excludeNames]
                         - required: [labelSelector]
