@@ -104,90 +104,137 @@ func (c *Cache) GetReleaseVersionData(version *internal.VersionData) (string, []
 	return "", nil, false
 }
 
-// SyncWithRegistryVersions compares the current cache with versions from the registry
-// and returns documentation tasks that need to be performed.
+// SyncWithRegistryVersions compares cache with registry versions and returns
+// documentation tasks that need to be performed (create new, delete old).
 //
-// Flow:
-// 1. For each version from the registry:
+// It identifies which versions:
+// - Are new and need to be created
+// - No longer exist and need to be deleted
+// - Remain unchanged
 //
-//   - If it exists in the cache with matching registry, module, version, release channel, and checksum:
-//     Remove that release channel from the cache comparison
-//
-//   - If it doesn't match completely: Mark it for creation
-//
-//     2. After processing all registry versions, any versions/release channels remaining
-//     in the cache are marked for deletion
-//     3. Update the cache with all versions from the registry
-//     4. Return sorted tasks for both creation and deletion
-//
-// Example scenario:
-// - Initial cache contains versions: 1.2.3, 1.2.4, 1.2.5
-// - Registry provides versions: 1.2.4, 1.2.5, 1.2.6
-// - Result:
-//   - 1.2.3 remains in cache temporarily and is marked for deletion
-//   - 1.2.4 and 1.2.5 are temporarily removed from cache comparison
-//   - 1.2.6 is identified as new and marked for creation
-//   - Final tasks: Delete 1.2.3, Create 1.2.6
-//   - Cache is updated to match registry: 1.2.4, 1.2.5, 1.2.6
-func (c *Cache) SyncWithRegistryVersions(versions []internal.VersionData) []backends.DocumentationTask {
+// The cache is updated to match registry state after comparison.
+func (c *Cache) SyncWithRegistryVersions(registryVersions []internal.VersionData) []backends.DocumentationTask {
 	c.m.Lock()
 	defer c.m.Unlock()
 
-	// Create a slice to hold unique versions
-	newVersions := make([]internal.VersionData, 0)
+	// Find versions needing creation (not matching in cache)
+	versionsToCreate := make([]internal.VersionData, 0)
 
-	// Iterate through all input versions
-	for _, version := range versions {
-		// Check if this version already exists in the cache
-		found := false
+	// Make a copy of current cache to track versions for deletion
+	cacheCopy := copyCache(c.val)
 
-		if modules, ok := c.val[registryName(version.Registry)]; ok {
-			if module, ok := modules[moduleName(version.ModuleName)]; ok {
-				// if version exist in module
-				if versionData, ok := module.versions[versionNum(version.Version)]; ok {
-					// if release channel in version exist
-					if _, ok := versionData.releaseChannels[version.ReleaseChannel]; ok {
-						// if module has same checksum that version
-						if module.releaseChecksum[releaseChannelName(version.ReleaseChannel)] == version.Checksum {
-							delete(versionData.releaseChannels, version.ReleaseChannel)
-							delete(module.releaseChecksum, releaseChannelName(version.ReleaseChannel))
+	// Compare registry versions against cache
+	for _, version := range registryVersions {
+		reg := registryName(version.Registry)
+		mod := moduleName(version.ModuleName)
+		ver := versionNum(version.Version)
+		relChannel := releaseChannelName(version.ReleaseChannel)
 
-							found = true
-						}
-					}
-
-					if len(versionData.releaseChannels) == 0 {
-						delete(module.versions, versionNum(version.Version))
-					}
-				}
-
-				if len(module.versions) == 0 {
-					delete(modules, moduleName(version.ModuleName))
-				}
-			}
-
-			if len(modules) == 0 {
-				delete(c.val, registryName(version.Registry))
-			}
+		// Check if version matches in cache
+		moduleMap, regExists := cacheCopy[reg]
+		if !regExists {
+			versionsToCreate = append(versionsToCreate, version)
+			continue
 		}
 
-		// If not found in cache, keep it in the result
-		if !found {
-			newVersions = append(newVersions, version)
+		moduleData, modExists := moduleMap[mod]
+		if !modExists {
+			versionsToCreate = append(versionsToCreate, version)
+			continue
+		}
+
+		vData, verExists := moduleData.versions[ver]
+		if !verExists {
+			versionsToCreate = append(versionsToCreate, version)
+			continue
+		}
+
+		// Check if release channel exists with matching checksum
+		_, channelExists := vData.releaseChannels[version.ReleaseChannel]
+		checksumMatches := moduleData.releaseChecksum[relChannel] == version.Checksum
+
+		if !channelExists || !checksumMatches {
+			versionsToCreate = append(versionsToCreate, version)
+			continue
+		}
+
+		// Remove from deletion tracking if it matches
+		delete(vData.releaseChannels, version.ReleaseChannel)
+		delete(moduleData.releaseChecksum, relChannel)
+
+		// Clean up empty maps
+		cleanupEmptyMaps(cacheCopy, reg, mod, ver)
+	}
+
+	// Get versions to delete from what remains in the copy
+	versionsToDelete := RemapFromMapToVersions(cacheCopy, backends.TaskDelete)
+
+	// Get versions to create
+	createTasks := RemapFromMapToVersions(RemapFromVersionData(versionsToCreate), backends.TaskCreate)
+
+	// Combine and sort all tasks
+	result := append(createTasks, versionsToDelete...)
+	sortDocumentationTasks(result)
+
+	// Update cache with registry versions
+	c.val = RemapFromVersionData(registryVersions)
+
+	return result
+}
+
+// Helper function to clean up empty maps
+func cleanupEmptyMaps(cache map[registryName]map[moduleName]moduleData, reg registryName, mod moduleName, ver versionNum) {
+	moduleMap := cache[reg]
+	moduleData := moduleMap[mod]
+
+	if len(moduleData.versions[ver].releaseChannels) == 0 {
+		delete(moduleData.versions, ver)
+	}
+
+	if len(moduleData.versions) == 0 {
+		delete(moduleMap, mod)
+	}
+
+	if len(moduleMap) == 0 {
+		delete(cache, reg)
+	}
+}
+
+// Helper function to deep copy the cache map
+func copyCache(original map[registryName]map[moduleName]moduleData) map[registryName]map[moduleName]moduleData {
+	copy := make(map[registryName]map[moduleName]moduleData)
+
+	for reg, moduleMap := range original {
+		copy[reg] = make(map[moduleName]moduleData)
+
+		for mod, data := range moduleMap {
+			newData := moduleData{
+				releaseChecksum: make(map[releaseChannelName]string),
+				versions:        make(map[versionNum]versionData),
+			}
+
+			for channel, checksum := range data.releaseChecksum {
+				newData.releaseChecksum[channel] = checksum
+			}
+
+			for ver, vData := range data.versions {
+				newVersionData := versionData{
+					releaseChannels: make(map[string]struct{}),
+					tarFile:         vData.tarFile,
+				}
+
+				for channel := range vData.releaseChannels {
+					newVersionData.releaseChannels[channel] = struct{}{}
+				}
+
+				newData.versions[ver] = newVersionData
+			}
+
+			copy[reg][mod] = newData
 		}
 	}
 
-	versionsToDelete := RemapFromMapToVersions(c.val, backends.TaskDelete)
-
-	result := RemapFromMapToVersions(RemapFromVersionData(newVersions), backends.TaskCreate)
-	result = append(result, versionsToDelete...)
-
-	sortDocumentationTasks(result)
-
-	// Update the cache with the registry versions
-	c.val = RemapFromVersionData(versions)
-
-	return result
+	return copy
 }
 
 func RemapFromMapToVersions(m map[registryName]map[moduleName]moduleData, task backends.Task) []backends.DocumentationTask {
