@@ -15,7 +15,9 @@ import (
 	"service-with-healthchecks/internal/agent"
 	"syscall"
 
+	"github.com/go-logr/logr"
 	_ "go.uber.org/automaxprocs" // To automatically adjust GOMAXPROCS
+
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
@@ -147,16 +149,25 @@ func main() {
 	}
 
 	setupLog.Info("starting manager")
-	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
+	if err := mgr.Start(SetupSignalHandler(serviceWithHealthchecksController, setupLog)); err != nil {
 		setupLog.Error(err, "problem running manager")
 		os.Exit(1)
 	}
+}
 
+func SetupSignalHandler(reconciler *agent.ServiceWithHealthchecksReconciler, logger logr.Logger) context.Context {
+	ctx, cancel := context.WithCancel(context.Background())
+
+	c := make(chan os.Signal, 2)
+	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
 	go func() {
-		c := make(chan os.Signal, 1)
-		signal.Notify(c, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
 		<-c
-		signal.Stop(c)
-		serviceWithHealthchecksController.Shutdown()
+		logger.Info("received signal, shutting down reconciler")
+		cancel()
+		reconciler.Shutdown()
+		<-c
+		os.Exit(1) // second signal. Exit directly.
 	}()
+
+	return ctx
 }
