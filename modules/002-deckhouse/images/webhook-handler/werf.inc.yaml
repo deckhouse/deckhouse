@@ -15,11 +15,8 @@ import:
     to: /usr/local/bin/promtool
     before: setup
   - image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
-    add: /
-    to: /
+    add: /opt/python-static
     before: setup
-    includePaths:
-    - opt/python-static
   - image: {{ $.ModuleName }}/{{ .ImageName }}-label-converter-artifact
     add: /label-converter
     to: /usr/local/bin/label-converter
@@ -100,11 +97,8 @@ git:
     - '**/*'
 import:
 - image: common/python-static-artifact
-  add: /
-  to: /
-  before: install
-  includePaths:
-  - opt/python-static
+  add: /opt/python-static
+  before: setup
 shell:
   install:
   - git clone --depth 1 {{ $.SOURCE_REPO }}/python-modules/wheels /wheels
