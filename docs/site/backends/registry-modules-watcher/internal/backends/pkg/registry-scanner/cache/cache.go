@@ -283,31 +283,6 @@ func RemapFromVersionData(input []internal.VersionData) map[registryName]map[mod
 	return result
 }
 
-func (c *Cache) GetModules(registry string) []string {
-	c.m.RLock()
-	defer c.m.RUnlock()
-
-	var modules []string
-	r, ok := c.val[registryName(registry)]
-	if ok {
-		for m := range r {
-			modules = append(modules, string(m))
-		}
-	}
-
-	return modules
-}
-
-func (c *Cache) DeleteModule(registry string, module string) {
-	c.m.Lock()
-	defer c.m.Unlock()
-
-	r, ok := c.val[registryName(registry)]
-	if ok {
-		delete(r, moduleName(module))
-	}
-}
-
 func sortDocumentationTasks(input []backends.DocumentationTask) {
 	for i := range input {
 		slices.Sort(input[i].ReleaseChannels)
