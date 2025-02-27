@@ -37,6 +37,7 @@ var _ = Describe("Modules :: admission-policy-engine :: hooks :: handle security
 	)
 	f.RegisterCRD("templates.gatekeeper.sh", "v1", "ConstraintTemplate", false)
 	f.RegisterCRD("deckhouse.io", "v1alpha1", "SecurityPolicy", false)
+	f.RegisterCRD("deckhouse.io", "v1alpha1", "NamespacedSecurityPolicy", false)
 
 	err := os.Setenv("TEST_CONDITIONS_CALC_NOW_TIME", nowTime)
 	if err != nil {
@@ -55,136 +56,192 @@ var _ = Describe("Modules :: admission-policy-engine :: hooks :: handle security
 		})
 		It("should have generated resources", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("admissionPolicyEngine.internal.securityPolicies").Array()).To(HaveLen(2))
-			Expect(f.ValuesGet("admissionPolicyEngine.internal.securityPolicies").Array()[0].Get("spec").String()).To(MatchJSON(`
+			Expect(f.ValuesGet("admissionPolicyEngine.internal.securityPolicies").Array()).To(HaveLen(3))
+			Expect(f.ValuesGet("admissionPolicyEngine.internal.securityPolicies").Array()[0].String()).To(MatchJSON(`
 			{
-				"enforcementAction": "Deny",
-				"match": {
-					"namespaceSelector": {
-						"labelSelector": {
-							"matchLabels": {
-								"security-policy.deckhouse.io/enabled": "true"
-							}
-						}
-					},
-					"labelSelector": {}
+				"metadata": {
+					"name": "bar",
+					"namespace": ""
 				},
-				"policies": {
-					"automountServiceAccountToken": true,
- 					"seccompProfiles": {},
-					"verifyImageSignatures": [
-						{
-							"dockerCfg": "zxc=",
-							"reference": "ghcr.io/*",
-							"publicKeys": ["someKey1", "someKey2"]
+				"spec": {
+					"enforcementAction": "Deny",
+					"match": {
+						"namespaceSelector": {
+							"labelSelector": {
+								"matchLabels": {
+									"security-policy.deckhouse.io/enabled": "true"
+								}
+							}
 						},
-						{
-							"reference": "*",
-							"publicKeys": ["someKey3"],
-							"ca": "someCA1"
-						}
-					]
+						"labelSelector": {}
+					},
+					"policies": {
+						"automountServiceAccountToken": true,
+ 						"seccompProfiles": {},
+						"verifyImageSignatures": [
+							{
+								"dockerCfg": "zxc=",
+								"reference": "ghcr.io/*",
+								"publicKeys": ["someKey1", "someKey2"]
+							},
+							{
+								"reference": "*",
+								"publicKeys": ["someKey3"],
+								"ca": "someCA1"
+							}
+						]
+					}
 				}
 			}`))
 
-			Expect(f.ValuesGet("admissionPolicyEngine.internal.securityPolicies").Array()[1].Get("spec").String()).To(MatchJSON(`
+			Expect(f.ValuesGet("admissionPolicyEngine.internal.securityPolicies").Array()[1].String()).To(MatchJSON(`
 			{
-				"enforcementAction": "Deny",
-				"match": {
-					"namespaceSelector": {
+				"metadata": {
+					"name": "bar",
+					"namespace": "default"
+				},
+				"spec": {
+					"enforcementAction": "Deny",
+					"match": {
 						"labelSelector": {
 							"matchLabels": {
 								"security-policy.deckhouse.io/enabled": "true"
 							}
-						}
-					},
-					"labelSelector": {}
-				},
-				"policies": {
-					"allowedAppArmor": [
-						"runtime/default"
-					],
-					"allowedFlexVolumes": [
-						{
-							"driver": "vmware"
-						}
-					],
-					"allowedHostPaths": [
-						{
-							"pathPrefix": "/dev",
-							"readOnly": true
-						}
-					],
-					"allowedHostPorts": [
-						{
-							"max": 100,
-							"min": 10
-						}
-					],
-					"allowedUnsafeSysctls": [
-						"*"
-					],
-					"allowHostIPC": true,
-					"allowHostNetwork": false,
-					"allowHostPID": false,
-					"allowPrivileged": false,
-					"allowPrivilegeEscalation": false,
-					"automountServiceAccountToken": true,
-					"forbiddenSysctls": [
-						"user/example"
-					],
-					"readOnlyRootFilesystem": true,
-					"requiredDropCapabilities": [
-						"ALL"
-					],
-					"runAsUser": {
-						"ranges": [
-							{
-								"max": 500,
-								"min": 300
-							}
-						],
-						"rule": "MustRunAs"
-					},
-					"seccompProfiles": {
-						"allowedLocalhostFiles": [
-							"*"
-						],
-						"allowedProfiles": [
-							"RuntimeDefault",
-							"Localhost"
-						]
-					},
-					"seLinux": [
-						{
-							"role": "role",
-							"user": "user"
 						},
-						{
-							"level": "level",
-							"type": "type"
+						"namespaceSelector": {
+							"labelSelector": {}
 						}
-					],
-					"supplementalGroups": {
-						"ranges": [
-							{
-								"max": 1000,
-								"min": 500
-							}
-						],
-						"rule": "MustRunAs"
 					},
-					"verifyImageSignatures": [
-						{
-							"dockerCfg": "zxc=",
-							"reference": "ghcr.io/*",
-							"publicKeys": ["someKey2"],
-							"ca": "someCA2"
-						}
-					]
+					"policies": {
+						"automountServiceAccountToken": true,
+ 						"seccompProfiles": {},
+						"verifyImageSignatures": [
+							{
+								"reference": "docker.io/*",
+								"publicKeys": ["someKey4"],
+								"ca": "someCA5"
+							}
+						]
+					}
 				}
 			}`))
+
+			Expect(f.ValuesGet("admissionPolicyEngine.internal.securityPolicies").Array()[2].String()).To(MatchJSON(`
+			{
+				"metadata": {
+					"name": "foo",
+					"namespace": ""
+				},
+				"spec": {
+					"enforcementAction": "Deny",
+					"match": {
+						"namespaceSelector": {
+							"labelSelector": {
+								"matchLabels": {
+									"security-policy.deckhouse.io/enabled": "true"
+								}
+							}
+						},
+						"labelSelector": {}
+					},
+					"policies": {
+						"allowedAppArmor": [
+							"runtime/default"
+						],
+						"allowedFlexVolumes": [
+							{
+								"driver": "vmware"
+							}
+						],
+						"allowedHostPaths": [
+							{
+								"pathPrefix": "/dev",
+								"readOnly": true
+							}
+						],
+						"allowedHostPorts": [
+							{
+								"max": 100,
+								"min": 10
+							}
+						],
+						"allowedUnsafeSysctls": [
+							"*"
+						],
+						"allowHostIPC": true,
+						"allowHostNetwork": false,
+						"allowHostPID": false,
+						"allowPrivileged": false,
+						"allowPrivilegeEscalation": false,
+						"automountServiceAccountToken": true,
+						"forbiddenSysctls": [
+							"user/example"
+						],
+						"readOnlyRootFilesystem": true,
+						"requiredDropCapabilities": [
+							"ALL"
+						],
+						"runAsUser": {
+							"ranges": [
+								{
+									"max": 500,
+									"min": 300
+								}
+							],
+							"rule": "MustRunAs"
+						},
+						"seccompProfiles": {
+							"allowedLocalhostFiles": [
+								"*"
+							],
+							"allowedProfiles": [
+								"RuntimeDefault",
+								"Localhost"
+							]
+						},
+						"seLinux": [
+							{
+								"role": "role",
+								"user": "user"
+							},
+							{
+								"level": "level",
+								"type": "type"
+							}
+						],
+						"supplementalGroups": {
+							"ranges": [
+								{
+									"max": 1000,
+									"min": 500
+								}
+							],
+							"rule": "MustRunAs"
+						},
+						"verifyImageSignatures": [
+							{
+								"dockerCfg": "zxc=",
+								"reference": "ghcr.io/*",
+								"publicKeys": ["someKey2"],
+								"ca": "someCA2"
+							}
+						]
+					}
+				}
+			}`))
+
 			Expect(f.KubernetesGlobalResource("SecurityPolicy", "foo").Field("status").String()).To(MatchJSON(`
+			{
+				"deckhouse": {
+					"observed": {
+						"checkSum": "123123123123123",
+						"lastTimestamp": "2023-03-03T16:49:52Z"
+					},
+					"synced": "False"
+				}
+			}`))
+
+			Expect(f.KubernetesResource("NamespacedSecurityPolicy", "default", "bar").Field("status").String()).To(MatchJSON(`
 			{
 				"deckhouse": {
 					"observed": {
@@ -203,6 +260,12 @@ var _ = Describe("Modules :: admission-policy-engine :: hooks :: handle security
 						"someKey2"
 					],
 					"reference": "ghcr.io/*"
+				},
+				{
+					"publicKeys": [
+						"someKey4"
+					],
+					"reference": "docker.io/*"
 				},
 				{
 					"publicKeys": [
@@ -242,6 +305,24 @@ spec:
       ca: someCA1
 ---
 apiVersion: deckhouse.io/v1alpha1
+kind: NamespacedSecurityPolicy
+metadata:
+  name: bar
+  namespace: default
+spec:
+  enforcementAction: Deny
+  match:
+    labelSelector:
+      matchLabels:
+        security-policy.deckhouse.io/enabled: "true"
+  policies:
+    verifyImageSignatures:
+    - reference: "docker.io/*"
+      publicKeys:
+      - someKey4
+      ca: someCA5
+---
+apiVersion: deckhouse.io/v1alpha1
 kind: SecurityPolicy
 metadata:
   name: foo
@@ -262,12 +343,8 @@ spec:
     allowedFlexVolumes:
     - driver: vmware
     allowedProcMount: Unmasked
-    allowedUnsafeSysctls:
-    - user/huyser
     allowedVolumes:
     - '*'
-    forbiddenSysctls:
-    - user/huyser
     fsGroup:
       rule: RunAsAny
     readOnlyRootFilesystem: true
