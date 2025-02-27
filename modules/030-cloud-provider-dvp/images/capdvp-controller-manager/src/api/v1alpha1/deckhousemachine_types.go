@@ -21,6 +21,19 @@ import (
 	clusterv1b1 "sigs.k8s.io/cluster-api/api/v1beta1"
 )
 
+const MachineFinalizer = "deckhousemachine.infrastructure.cluster.x-k8s.io"
+
+const (
+	VMReadyCondition clusterv1b1.ConditionType = "VirtualMachineReady"
+)
+
+const (
+	VMNotReadyReason = "VMNotReady"
+
+	WaitingForClusterInfrastructureReason = "WaitingForClusterInfrastructure"
+	WaitingForBootstrapScriptReason       = "WaitingForBootstrapScript"
+)
+
 // CPU defines the VM CPU, made of variable number of cores, each getting the Fraction amount of processing time on a physical core.
 type CPU struct {
 	// Cores is the number of cores per socket.
@@ -110,6 +123,16 @@ type DeckhouseMachine struct {
 
 	Spec   DeckhouseMachineSpec   `json:"spec,omitempty"`
 	Status DeckhouseMachineStatus `json:"status,omitempty"`
+}
+
+// GetConditions gets the DeckhouseMachine status conditions
+func (r *DeckhouseMachine) GetConditions() clusterv1b1.Conditions {
+	return r.Status.Conditions
+}
+
+// SetConditions sets the DeckhouseMachine status conditions
+func (r *DeckhouseMachine) SetConditions(conditions clusterv1b1.Conditions) {
+	r.Status.Conditions = conditions
 }
 
 // +kubebuilder:object:root=true
