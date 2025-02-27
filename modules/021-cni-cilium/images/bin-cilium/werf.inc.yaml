@@ -75,6 +75,7 @@ shell:
   - mkdir -p /tmp/install/usr/bin && mv hubble /tmp/install/usr/bin/hubble
   - /tmp/install/usr/bin/hubble completion bash > /tmp/install/etc/bash_completion.d/hubble
   #
+  - cd /src/cilium
   - cp -t /tmp/install images/cilium/init-container.sh plugins/cilium-cni/install-plugin.sh plugins/cilium-cni/cni-uninstall.sh
   #
   - rm -rf /src/cilium/vendor
