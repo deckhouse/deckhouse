@@ -30,6 +30,7 @@ shell:
     - BUILD_DATE=$(date +%Y-%m-%dT%H:%M:%S%z)
     - export GOPROXY={{ $.GOPROXY }}
     - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags "-X github.com/cloudnativelabs/kube-router/v2/pkg/version.Version=${GIT_COMMIT} -X github.com/cloudnativelabs/kube-router/v2/pkg/version.BuildDate=${BUILD_DATE}" -o kube-router cmd/kube-router/kube-router.go
+    - rm -rf .git
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
