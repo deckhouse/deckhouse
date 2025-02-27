@@ -28,19 +28,13 @@ import (
 )
 
 func TestSender(t *testing.T) {
-	t.Parallel()
-
 	logger := log.NewNop()
 	s := New(logger)
 
-	MaxInterval = 1 * time.Millisecond
+	MaxInterval = 10 * time.Millisecond
 
 	t.Run("Send", func(t *testing.T) {
-		t.Parallel()
-
 		t.Run("successful responses", func(t *testing.T) {
-			t.Parallel()
-
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				if r.Method == http.MethodPost && r.URL.Path == "/api/v1/doc/TestModule/1.0.0" {
 					w.WriteHeader(http.StatusCreated)
@@ -59,8 +53,6 @@ func TestSender(t *testing.T) {
 			}
 
 			t.Run("with create task", func(t *testing.T) {
-				t.Parallel()
-
 				versions := []backends.DocumentationTask{
 					{
 						Registry:        "TestReg",
@@ -76,8 +68,6 @@ func TestSender(t *testing.T) {
 			})
 
 			t.Run("with delete task", func(t *testing.T) {
-				t.Parallel()
-
 				versions := []backends.DocumentationTask{
 					{
 						Registry:        "TestReg",
@@ -94,10 +84,7 @@ func TestSender(t *testing.T) {
 		})
 
 		t.Run("error responses", func(t *testing.T) {
-			t.Parallel()
-
 			t.Run("upload error with successful retry", func(t *testing.T) {
-				t.Parallel()
 				// Counter to track number of retry attempts
 				requestCount := 0
 
@@ -140,7 +127,6 @@ func TestSender(t *testing.T) {
 			})
 
 			t.Run("build error with successful retry", func(t *testing.T) {
-				t.Parallel()
 				// Counter to track number of retry attempts
 				requestCount := 0
 
@@ -185,7 +171,6 @@ func TestSender(t *testing.T) {
 			})
 
 			t.Run("delete error with successful retry", func(t *testing.T) {
-				t.Parallel()
 				// Counter to track number of retry attempts
 				requestCount := 0
 
@@ -228,7 +213,6 @@ func TestSender(t *testing.T) {
 			})
 
 			t.Run("connection error with successful retry", func(t *testing.T) {
-				t.Parallel()
 				// Counter to track number of requests
 				requestCount := 0
 
@@ -279,62 +263,223 @@ func TestSender(t *testing.T) {
 	})
 
 	t.Run("delete", func(t *testing.T) {
-		t.Parallel()
+		t.Run("successful case", func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				assert.Equal(t, http.MethodDelete, r.Method, "Expected DELETE method")
+				assert.Equal(t, "/api/v1/doc/TestModule", r.URL.Path, "Unexpected URL path")
+				w.WriteHeader(http.StatusNoContent)
+			}))
+			defer server.Close()
 
-		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			assert.Equal(t, http.MethodDelete, r.Method, "Expected DELETE method")
-			assert.Equal(t, "/api/v1/doc/TestModule", r.URL.Path, "Unexpected URL path")
-			w.WriteHeader(http.StatusNoContent)
-		}))
-		defer server.Close()
+			version := backends.DocumentationTask{
+				Registry:        "TestReg",
+				Module:          "TestModule",
+				Version:         "1.0.0",
+				ReleaseChannels: []string{"alpha"},
+				TarFile:         []byte("test"),
+				Task:            backends.TaskDelete,
+			}
 
-		version := backends.DocumentationTask{
-			Registry:        "TestReg",
-			Module:          "TestModule",
-			Version:         "1.0.0",
-			ReleaseChannels: []string{"alpha"},
-			TarFile:         []byte("test"),
-			Task:            backends.TaskDelete,
-		}
+			err := s.delete(context.Background(), server.URL[7:], version)
+			assert.NoError(t, err, "delete should not return an error")
+		})
 
-		err := s.delete(context.Background(), server.URL[7:], version)
-		assert.NoError(t, err, "delete should not return an error")
+		t.Run("http error", func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(http.StatusInternalServerError)
+			}))
+			defer server.Close()
+
+			version := backends.DocumentationTask{
+				Registry:        "TestReg",
+				Module:          "TestModule",
+				Version:         "1.0.0",
+				ReleaseChannels: []string{"alpha"},
+				Task:            backends.TaskDelete,
+			}
+
+			err := s.delete(context.Background(), server.URL[7:], version)
+			assert.Error(t, err, "delete should return an error on HTTP 500")
+		})
+
+		t.Run("connection error", func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				// Hijack and close connection to simulate network failure
+				hj, ok := w.(http.Hijacker)
+				if !ok {
+					t.Fatal("couldn't hijack connection")
+				}
+				conn, _, _ := hj.Hijack()
+				conn.Close()
+			}))
+			defer server.Close()
+
+			version := backends.DocumentationTask{
+				Registry:        "TestReg",
+				Module:          "TestModule",
+				Version:         "1.0.0",
+				ReleaseChannels: []string{"alpha"},
+				Task:            backends.TaskDelete,
+			}
+
+			err := s.delete(context.Background(), server.URL[7:], version)
+			assert.Error(t, err, "delete should return an error on connection failure")
+		})
+
+		t.Run("invalid backend URL", func(t *testing.T) {
+			version := backends.DocumentationTask{
+				Registry:        "TestReg",
+				Module:          "TestModule",
+				Version:         "1.0.0",
+				ReleaseChannels: []string{"alpha"},
+				Task:            backends.TaskDelete,
+			}
+
+			err := s.delete(context.Background(), "invalid-host:8080", version)
+			assert.Error(t, err, "delete should return an error with invalid backend URL")
+		})
 	})
 
 	t.Run("upload", func(t *testing.T) {
-		t.Parallel()
+		t.Run("successful case", func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				assert.Equal(t, http.MethodPost, r.Method, "Expected POST method")
+				assert.Equal(t, "/api/v1/doc/TestModule/1.0.0", r.URL.Path, "Unexpected URL path")
+				w.WriteHeader(http.StatusCreated)
+			}))
+			defer server.Close()
 
-		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			assert.Equal(t, http.MethodPost, r.Method, "Expected POST method")
-			assert.Equal(t, "/api/v1/doc/TestModule/1.0.0", r.URL.Path, "Unexpected URL path")
-			w.WriteHeader(http.StatusCreated)
-		}))
-		defer server.Close()
+			version := backends.DocumentationTask{
+				Registry:        "TestReg",
+				Module:          "TestModule",
+				Version:         "1.0.0",
+				ReleaseChannels: []string{"alpha"},
+				TarFile:         []byte("test"),
+				Task:            backends.TaskCreate,
+			}
 
-		version := backends.DocumentationTask{
-			Registry:        "TestReg",
-			Module:          "TestModule",
-			Version:         "1.0.0",
-			ReleaseChannels: []string{"alpha"},
-			TarFile:         []byte("test"),
-			Task:            backends.TaskCreate,
-		}
+			err := s.upload(context.Background(), server.URL[7:], version)
+			assert.NoError(t, err, "upload should not return an error")
+		})
 
-		err := s.upload(context.Background(), server.URL[7:], version)
-		assert.NoError(t, err, "upload should not return an error")
+		t.Run("http error", func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(http.StatusInternalServerError)
+			}))
+			defer server.Close()
+
+			version := backends.DocumentationTask{
+				Registry:        "TestReg",
+				Module:          "TestModule",
+				Version:         "1.0.0",
+				ReleaseChannels: []string{"alpha"},
+				TarFile:         []byte("test"),
+				Task:            backends.TaskCreate,
+			}
+
+			err := s.upload(context.Background(), server.URL[7:], version)
+			assert.Error(t, err, "upload should return an error on HTTP 500")
+		})
+
+		t.Run("connection error", func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				// Hijack and close connection to simulate network failure
+				hj, ok := w.(http.Hijacker)
+				if !ok {
+					t.Fatal("couldn't hijack connection")
+				}
+				conn, _, _ := hj.Hijack()
+				conn.Close()
+			}))
+			defer server.Close()
+
+			version := backends.DocumentationTask{
+				Registry:        "TestReg",
+				Module:          "TestModule",
+				Version:         "1.0.0",
+				ReleaseChannels: []string{"alpha"},
+				TarFile:         []byte("test"),
+				Task:            backends.TaskCreate,
+			}
+
+			err := s.upload(context.Background(), server.URL[7:], version)
+			assert.Error(t, err, "upload should return an error on connection failure")
+		})
+
+		t.Run("invalid backend URL", func(t *testing.T) {
+			version := backends.DocumentationTask{
+				Registry:        "TestReg",
+				Module:          "TestModule",
+				Version:         "1.0.0",
+				ReleaseChannels: []string{"alpha"},
+				TarFile:         []byte("test"),
+				Task:            backends.TaskCreate,
+			}
+
+			err := s.upload(context.Background(), "invalid-host:8080", version)
+			assert.Error(t, err, "upload should return an error with invalid backend URL")
+		})
 	})
 
 	t.Run("build", func(t *testing.T) {
-		t.Parallel()
+		t.Run("successful case", func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				assert.Equal(t, http.MethodPost, r.Method, "Expected POST method")
+				assert.Equal(t, "/api/v1/build", r.URL.Path, "Unexpected URL path")
+				w.WriteHeader(http.StatusOK)
+			}))
+			defer server.Close()
 
-		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			assert.Equal(t, http.MethodPost, r.Method, "Expected POST method")
-			assert.Equal(t, "/api/v1/build", r.URL.Path, "Unexpected URL path")
-			w.WriteHeader(http.StatusOK)
-		}))
-		defer server.Close()
+			err := s.build(context.Background(), server.URL[7:])
+			assert.NoError(t, err, "build should not return an error")
+		})
 
-		err := s.build(context.Background(), server.URL[7:])
-		assert.NoError(t, err, "build should not return an error")
+		t.Run("http error", func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(http.StatusInternalServerError)
+			}))
+			defer server.Close()
+
+			err := s.build(context.Background(), server.URL[7:])
+			assert.Error(t, err, "build should return an error on HTTP 500")
+		})
+
+		t.Run("connection error", func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				// Hijack and close connection to simulate network failure
+				hj, ok := w.(http.Hijacker)
+				if !ok {
+					t.Fatal("couldn't hijack connection")
+				}
+				conn, _, _ := hj.Hijack()
+				conn.Close()
+			}))
+			defer server.Close()
+
+			err := s.build(context.Background(), server.URL[7:])
+			assert.Error(t, err, "build should return an error on connection failure")
+		})
+
+		t.Run("invalid backend URL", func(t *testing.T) {
+			err := s.build(context.Background(), "invalid-host:8080")
+			assert.Error(t, err, "build should return an error with invalid backend URL")
+		})
+
+		t.Run("retry behavior", func(t *testing.T) {
+			requestCount := 0
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				requestCount++
+				if requestCount <= 2 {
+					w.WriteHeader(http.StatusInternalServerError)
+				} else {
+					w.WriteHeader(http.StatusOK)
+				}
+			}))
+			defer server.Close()
+
+			err := s.build(context.Background(), server.URL[7:])
+			assert.NoError(t, err, "build should succeed after retries")
+			assert.Equal(t, 3, requestCount, "Expected 3 requests before success")
+		})
 	})
 }
