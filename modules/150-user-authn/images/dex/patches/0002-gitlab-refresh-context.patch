@@ -1,8 +1,8 @@
-diff --git a/connector/gitlab/gitlab.go b/connector/gitlab/gitlab.go
-index f35ac357..0d64dd11 100644
---- a/connector/gitlab/gitlab.go
-+++ b/connector/gitlab/gitlab.go
-@@ -185,7 +185,10 @@ func (c *gitlabConnector) identity(ctx context.Context, s connector.Scopes, toke
+diff --git i/connector/gitlab/gitlab.go w/connector/gitlab/gitlab.go
+index 7aa44398..43294fb1 100644
+--- i/connector/gitlab/gitlab.go
++++ w/connector/gitlab/gitlab.go
+@@ -190,7 +190,10 @@ func (c *gitlabConnector) identity(ctx context.Context, s connector.Scopes, toke
  	return identity, nil
  }
  
