@@ -74,9 +74,8 @@
 
         &:checked + label::before {
           background-color: #0064ff;
-          background-image: url("data:image/svg+xml;charset=utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='8' fill='none'%3E%3Cpath fill='%23fff' fill-rule='evenodd' d='M9.342 1.099a.54.54 0 0 1 0 .763l-5.04 5.04a.54.54 0 0 1-.764 0l-2.88-2.88a.54.54 0 0 1 .764-.763L3.92 5.757l4.658-4.658a.54.54 0 0 1 .764 0Z' clip-rule='evenodd'/%3E%3C/svg%3E");
+          background-image: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2210%22%20height%3D%228%22%20fill%3D%22none%22%3E%3Cpath%20fill%3D%22%23fff%22%20fill-rule%3D%22evenodd%22%20d%3D%22M9.342%201.099a.54.54%200%200%201%200%20.763l-5.04%205.04a.54.54%200%200%201-.764%200l-2.88-2.88a.54.54%200%200%201%20.764-.763L3.92%205.757l4.658-4.658a.54.54%200%200%201%20.764%200Z%22%20clip-rule%3D%22evenodd%22%2F%3E%3C%2Fsvg%3E");
           border-color: #0064ff;
-          // background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='8' fill='none'%3E%3Cpath fill='%23fff' fill-rule='evenodd' d='M9.342 1.099a.54.54 0 0 1 0 .763l-5.04 5.04a.54.54 0 0 1-.764 0l-2.88-2.88a.54.54 0 0 1 .764-.763L3.92 5.757l4.658-4.658a.54.54 0 0 1 .764 0Z' clip-rule='evenodd'/%3E%3C/svg%3E");
         }
 
         &:checked + label:hover::before {
