@@ -116,6 +116,10 @@ To render CRDs from the `/crds` directory in the site documentation or documenta
 
 ## docs
 
+{% alert %}
+The module [lifecycle](../versioning/#module-lifecycle) is specified in [module.yaml](#moduleyaml). The availability of the module in the editions of the Deckhouse Kubernetes Platform is not determined by the module developer.
+{% endalert %}
+
 The `/docs` directory contains the module documentation:
 
 * `README.md` — this file describes what the module is for, what problem it solves and outlines the general architectural principles.
@@ -125,8 +129,6 @@ The `/docs` directory contains the module documentation:
   - `menuTitle` — **(recommended)** The name of the module to show in the menu on the left sidebar of the page, e.g., "Deckhouse Admin". If not set, the name of the directory or repository is used, e.g. `deckhouse-admin`.
   - `linkTitle` — **(optional)** Alternative title for navigation if, for example, the `title` is very long. If not set, the `title` parameter is used.
   - `description` — **(recommended)** A short unique description of the page content (up to 150 characters). It should not repeat the `title'. Goes on with the meaning of the title and reveals it in more detail. It is used during generation of preview links and indexing by search engines, e.g., "The module allows you to fully manage your Kubernetes cluster through a web interface with only mouse skills."
-  - `d8Edition` — **(optional)** `ce/be/se/ee`. The minimum edition in which the module is available. The default is `ce`.
-  - `moduleStatus` — **(optional)** `experimental`. The status of the module. If a module is labeled as `experimental`, a warning that the code is unstable is displayed on its pages. Also, a special bar in the menu is displayed.
 
   <div markdown="0">
   <details><summary>Metadata example...</summary>
