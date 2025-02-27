@@ -9,7 +9,7 @@ Suppose that there are two applications running on a Linux virtual machine — a
 
 ### Creating a virtual machine
 
-Create a `my-vm` virtual machine by following the examples in the [DVP documentation](Создайте виртуальную машину `my-vm` основываясь на примерах из [документации DVP](https://deckhouse.io/products/virtualization-platform/documentation/user/resource-management/virtual-machines.html).
+Create a `my-vm` virtual machine by following the examples in the [DVP documentation](https://deckhouse.io/products/virtualization-platform/documentation/user/resource-management/virtual-machines.html).
 
 In the manifest example below, the `vm: my-vm` label is included so that the virtual machine can be bound to load balancers.
 
