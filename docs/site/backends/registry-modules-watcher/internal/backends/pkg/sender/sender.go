@@ -21,7 +21,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
-	url2 "net/url"
+	neturl "net/url"
 	"registry-modules-watcher/internal/backends"
 	"strings"
 	"sync"
@@ -38,27 +38,38 @@ var (
 
 const maxRetries = 10
 
-type sender struct {
+type Sender struct {
 	client *http.Client
 
 	logger *log.Logger
 }
 
-// New
-func New(logger *log.Logger) *sender {
+// New creates a new sender instance with the provided logger.
+// It initializes an HTTP client with a custom transport.
+// Default values: MaxIdleConns = 10, IdleConnTimeout = 30s.
+func (s *Sender) newBackOff() *backoff.ExponentialBackOff {
+	b := backoff.NewExponentialBackOff()
+	b.MaxElapsedTime = MaxElapsedTime
+	b.MaxInterval = MaxInterval
+	return b
+}
+
+// New creates a new sender instance with the provided logger.
+// It initializes an HTTP client with a custom transport.
+func New(logger *log.Logger) *Sender {
 	tr := &http.Transport{
 		MaxIdleConns:    10,
 		IdleConnTimeout: 30 * time.Second,
 	}
 	client := &http.Client{Transport: tr}
 
-	return &sender{
+	return &Sender{
 		client: client,
 		logger: logger,
 	}
 }
 
-func (s *sender) Send(ctx context.Context, listBackends map[string]struct{}, versions []backends.DocumentationTask) {
+func (s *Sender) Send(ctx context.Context, listBackends map[string]struct{}, versions []backends.DocumentationTask) {
 	syncChan := make(chan struct{}, 10)
 	wg := new(sync.WaitGroup)
 
@@ -72,41 +83,45 @@ func (s *sender) Send(ctx context.Context, listBackends map[string]struct{}, ver
 				<-syncChan
 			}()
 
-			for _, version := range versions {
-				if version.Task == backends.TaskDelete {
-					err := s.delete(ctx, backend, version)
-					if err != nil {
-						s.logger.Error("send delete docs", log.Err(err))
-					}
-
-					continue
-				}
-
-				err := s.upload(ctx, backend, version)
-				if err != nil {
-					s.logger.Error("send upload docs", log.Err(err))
-				}
-			}
-
-			err := s.build(ctx, backend)
-			if err != nil {
-				s.logger.Error("send build docs", log.Err(err))
-			}
+			s.processBackend(ctx, backend, versions)
 		}(backend)
 	}
 
 	wg.Wait()
 }
 
+func (s *Sender) processBackend(ctx context.Context, backend string, versions []backends.DocumentationTask) {
+	for _, version := range versions {
+		if version.Task == backends.TaskDelete {
+			err := s.delete(ctx, backend, version)
+			if err != nil {
+				s.logger.Error("send delete docs", log.Err(err))
+			}
+
+			continue
+		}
+
+		err := s.upload(ctx, backend, version)
+		if err != nil {
+			s.logger.Error("send upload docs", log.Err(err))
+		}
+	}
+
+	err := s.build(ctx, backend)
+	if err != nil {
+		s.logger.Error("send build docs", log.Err(err))
+	}
+}
+
 var ErrBadStatusCode = errors.New("bad status code")
 
-func (s *sender) delete(ctx context.Context, backend string, version backends.DocumentationTask) error {
+func (s *Sender) delete(ctx context.Context, backend string, version backends.DocumentationTask) error {
 	url := fmt.Sprintf("http://%s/api/v1/doc/%s", backend, version.Module)
 
 	s.logger.Info("delete documentation", slog.String("url", url))
 
 	if len(version.ReleaseChannels) > 0 {
-		params := url2.Values{}
+		params := neturl.Values{}
 		params.Add("channels", strings.Join(version.ReleaseChannels, ","))
 		url += "?" + params.Encode()
 	}
@@ -122,6 +137,8 @@ func (s *sender) delete(ctx context.Context, backend string, version backends.Do
 			return fmt.Errorf("client: error making http request: %s", err)
 		}
 
+		defer resp.Body.Close()
+
 		if resp.StatusCode != http.StatusNoContent {
 			s.logger.Warn("delete response", slog.Int("status_code", resp.StatusCode))
 
@@ -133,9 +150,7 @@ func (s *sender) delete(ctx context.Context, backend string, version backends.Do
 		return nil
 	}
 
-	b := backoff.NewExponentialBackOff()
-	b.MaxElapsedTime = MaxElapsedTime
-	b.MaxInterval = MaxInterval
+	b := s.newBackOff()
 
 	err = backoff.Retry(operation, backoff.WithMaxRetries(b, maxRetries))
 	if err != nil {
@@ -145,7 +160,7 @@ func (s *sender) delete(ctx context.Context, backend string, version backends.Do
 	return nil
 }
 
-func (s *sender) upload(ctx context.Context, backend string, version backends.DocumentationTask) error {
+func (s *Sender) upload(ctx context.Context, backend string, version backends.DocumentationTask) error {
 	url := "http://" + backend + "/api/v1/doc/" + version.Module + "/" + version.Version + "?channels=" + strings.Join(version.ReleaseChannels, ",")
 
 	s.logger.Info("upload archive", slog.String("url", url))
@@ -162,6 +177,8 @@ func (s *sender) upload(ctx context.Context, backend string, version backends.Do
 		if err != nil {
 			return fmt.Errorf("client: error making http request: %s", err)
 		}
+
+		defer resp.Body.Close()
 
 		if resp.StatusCode != http.StatusCreated {
 			s.logger.Warn("upload archive response", slog.Int("status_code", resp.StatusCode))
@@ -186,7 +203,7 @@ func (s *sender) upload(ctx context.Context, backend string, version backends.Do
 	return nil
 }
 
-func (s *sender) build(ctx context.Context, backend string) error {
+func (s *Sender) build(ctx context.Context, backend string) error {
 	url := "http://" + backend + "/api/v1/build"
 
 	s.logger.Info("send build", slog.String("url", url))
@@ -203,6 +220,8 @@ func (s *sender) build(ctx context.Context, backend string) error {
 		if err != nil {
 			return fmt.Errorf("client: error making http request: %s", err)
 		}
+
+		defer resp.Body.Close()
 
 		if resp.StatusCode != http.StatusOK {
 			s.logger.Warn("build response", slog.Int("status_code", resp.StatusCode))

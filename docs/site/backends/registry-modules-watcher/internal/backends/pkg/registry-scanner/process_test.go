@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package registryscaner
+package registryscanner
 
 import (
 	"archive/tar"
@@ -21,7 +21,7 @@ import (
 	"fmt"
 	"io"
 	"registry-modules-watcher/internal/backends"
-	"registry-modules-watcher/internal/backends/pkg/registry-scaner/cache"
+	"registry-modules-watcher/internal/backends/pkg/registry-scanner/cache"
 	"slices"
 	"strings"
 	"testing"
@@ -40,7 +40,7 @@ func Test_RegistryScannerProcess(t *testing.T) {
 		clientOne := setupCompleteClientOne(mc)
 		clientTwo := setupCompleteClientTwo(mc)
 
-		scanner := &registryscaner{
+		scanner := &registryscanner{
 			logger:          log.NewNop(),
 			registryClients: map[string]Client{"clientOne": clientOne, "clientTwo": clientTwo},
 			cache:           cache.New(),
@@ -79,7 +79,7 @@ func Test_RegistryScannerProcess(t *testing.T) {
 		clientOne := setupCompleteClientOne(mc)
 		clientTwo := setupCompleteClientTwo(mc)
 
-		scanner := &registryscaner{
+		scanner := &registryscanner{
 			logger:          log.NewNop(),
 			registryClients: map[string]Client{"clientOne": clientOne, "clientTwo": clientTwo},
 			cache:           cache.New(),

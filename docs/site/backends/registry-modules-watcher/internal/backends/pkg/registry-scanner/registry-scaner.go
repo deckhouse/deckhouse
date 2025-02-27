@@ -12,12 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package registryscaner
+package registryscanner
 
 import (
 	"context"
 	"registry-modules-watcher/internal/backends"
-	"registry-modules-watcher/internal/backends/pkg/registry-scaner/cache"
+	"registry-modules-watcher/internal/backends/pkg/registry-scanner/cache"
 	"time"
 
 	"github.com/deckhouse/deckhouse/pkg/log"
@@ -33,7 +33,7 @@ type Client interface {
 	Modules(ctx context.Context) ([]string, error)
 }
 
-type registryscaner struct {
+type registryscanner struct {
 	registryClients map[string]Client
 	updateHandler   func([]backends.DocumentationTask) error
 	cache           *cache.Cache
@@ -50,30 +50,29 @@ var releaseChannelsTags = map[string]string{
 }
 
 // New
-func New(logger *log.Logger, registryClients ...Client) *registryscaner { //nolint:revive  // as is
-	registryscaner := registryscaner{
+func New(logger *log.Logger, registryClients ...Client) *registryscanner {
+	registryscanner := registryscanner{
 		registryClients: make(map[string]Client),
 		cache:           cache.New(),
 		logger:          logger,
 	}
 
 	for _, client := range registryClients {
-		registryscaner.registryClients[client.Name()] = client
+		registryscanner.registryClients[client.Name()] = client
 	}
 
-	return &registryscaner
+	return &registryscanner
 }
 
-func (s *registryscaner) GetState() []backends.DocumentationTask {
+func (s *registryscanner) GetState() []backends.DocumentationTask {
 	return s.cache.GetState()
 }
 
-func (s *registryscaner) SubscribeOnUpdate(updateHandler func([]backends.DocumentationTask) error) {
+func (s *registryscanner) SubscribeOnUpdate(updateHandler func([]backends.DocumentationTask) error) {
 	s.updateHandler = updateHandler
 }
 
-// Subscribe
-func (s *registryscaner) Subscribe(ctx context.Context, scanInterval time.Duration) {
+func (s *registryscanner) Subscribe(ctx context.Context, scanInterval time.Duration) {
 	s.processRegistries(ctx)
 	ticker := time.NewTicker(scanInterval)
 

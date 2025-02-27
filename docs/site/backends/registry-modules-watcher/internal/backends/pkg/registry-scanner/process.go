@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package registryscaner
+package registryscanner
 
 import (
 	"archive/tar"
@@ -39,7 +39,7 @@ var (
 
 const versionFileName = "version.json"
 
-func (s *registryscaner) processRegistries(ctx context.Context) []backends.DocumentationTask {
+func (s *registryscanner) processRegistries(ctx context.Context) []backends.DocumentationTask {
 	s.logger.Info("start scanning registries")
 
 	versions := make([]internal.VersionData, 0, len(s.registryClients))
@@ -64,7 +64,7 @@ func (s *registryscaner) processRegistries(ctx context.Context) []backends.Docum
 	return s.cache.SyncWithRegistryVersions(versions)
 }
 
-func (s *registryscaner) processModules(ctx context.Context, registry Client, modules []string) []internal.VersionData {
+func (s *registryscanner) processModules(ctx context.Context, registry Client, modules []string) []internal.VersionData {
 	versions := make([]internal.VersionData, 0, len(modules))
 
 	for _, module := range modules {
@@ -77,7 +77,7 @@ func (s *registryscaner) processModules(ctx context.Context, registry Client, mo
 			continue
 		}
 
-		releaseChannels := filterReleaseChannelsFromTags(tags)
+		releaseChannels := getReleaseChannelsFromTags(tags)
 		vers := s.processReleaseChannels(ctx, registry.Name(), module, releaseChannels)
 		versions = append(versions, vers...)
 	}
@@ -85,7 +85,7 @@ func (s *registryscaner) processModules(ctx context.Context, registry Client, mo
 	return versions
 }
 
-func (s *registryscaner) processReleaseChannels(ctx context.Context, registry, module string, releaseChannels []string) []internal.VersionData {
+func (s *registryscanner) processReleaseChannels(ctx context.Context, registry, module string, releaseChannels []string) []internal.VersionData {
 	versions := make([]internal.VersionData, 0, len(releaseChannels))
 
 	for _, releaseChannel := range releaseChannels {
@@ -107,7 +107,7 @@ func (s *registryscaner) processReleaseChannels(ctx context.Context, registry, m
 	return versions
 }
 
-func (s *registryscaner) processReleaseChannel(ctx context.Context, registry, module, releaseChannel string) (*internal.VersionData, error) {
+func (s *registryscanner) processReleaseChannel(ctx context.Context, registry, module, releaseChannel string) (*internal.VersionData, error) {
 	releaseImage, err := s.registryClients[registry].ReleaseImage(ctx, module, releaseChannel)
 	if err != nil {
 		return nil, fmt.Errorf("get release image: %w", err)
@@ -141,7 +141,7 @@ func (s *registryscaner) processReleaseChannel(ctx context.Context, registry, mo
 	}
 
 	// Extract version from image
-	version, err := extractVersionFromImage(versionData.Image)
+	version, err := getVersionFromImage(versionData.Image)
 	if err != nil {
 		return nil, fmt.Errorf("extract version from image: %w", err)
 	}
@@ -157,7 +157,7 @@ func (s *registryscaner) processReleaseChannel(ctx context.Context, registry, mo
 	return versionData, nil
 }
 
-func (s *registryscaner) extractTar(ctx context.Context, version *internal.VersionData) ([]byte, error) {
+func (s *registryscanner) extractTar(ctx context.Context, version *internal.VersionData) ([]byte, error) {
 	image, err := s.registryClients[version.Registry].Image(ctx, version.ModuleName, version.Version)
 	if err != nil {
 		return nil, fmt.Errorf("get image: %w", err)
@@ -171,7 +171,7 @@ func (s *registryscaner) extractTar(ctx context.Context, version *internal.Versi
 	return tarFile, nil
 }
 
-func (s *registryscaner) extractDocumentation(image v1.Image) ([]byte, error) {
+func (s *registryscanner) extractDocumentation(image v1.Image) ([]byte, error) {
 	readCloser, err := cr.Extract(image)
 	if err != nil {
 		return nil, fmt.Errorf("extract: %w", err)
@@ -183,7 +183,7 @@ func (s *registryscaner) extractDocumentation(image v1.Image) ([]byte, error) {
 	defer tarWriter.Close()
 
 	// Create directories structure
-	if err := createDirectoryStructure(tarWriter); err != nil {
+	if err := createDocumentationDirectoryStructure(tarWriter); err != nil {
 		return nil, err
 	}
 
@@ -195,7 +195,7 @@ func (s *registryscaner) extractDocumentation(image v1.Image) ([]byte, error) {
 	return tarFile.Bytes(), nil
 }
 
-func createDirectoryStructure(tarWriter *tar.Writer) error {
+func createDocumentationDirectoryStructure(tarWriter *tar.Writer) error {
 	for _, dir := range documentationDirs {
 		if err := tarWriter.WriteHeader(&tar.Header{
 			Typeflag: tar.TypeDir,
@@ -220,7 +220,7 @@ func copyDocumentationFiles(source io.Reader, tarWriter *tar.Writer) error {
 			return fmt.Errorf("tar reader next: %w", err)
 		}
 
-		if shouldCopyFile(hdr.Name) {
+		if isDocumentationFile(hdr.Name) {
 			buf := bytes.NewBuffer(nil)
 			if _, err := io.Copy(buf, tarReader); err != nil {
 				return fmt.Errorf("copy file content: %w", err)
@@ -239,7 +239,7 @@ func copyDocumentationFiles(source io.Reader, tarWriter *tar.Writer) error {
 	return nil
 }
 
-func shouldCopyFile(filename string) bool {
+func isDocumentationFile(filename string) bool {
 	for _, dir := range documentationDirs {
 		if strings.Contains(filename, dir+"/") {
 			return true
@@ -248,7 +248,7 @@ func shouldCopyFile(filename string) bool {
 	return false
 }
 
-func extractVersionFromImage(releaseImage v1.Image) (string, error) {
+func getVersionFromImage(releaseImage v1.Image) (string, error) {
 	readCloser, err := cr.Extract(releaseImage)
 	if err != nil {
 		return "", fmt.Errorf("extract image: %w", err)
@@ -266,12 +266,12 @@ func extractVersionFromImage(releaseImage v1.Image) (string, error) {
 		}
 
 		if hdr.Typeflag == tar.TypeReg && hdr.Name == versionFileName {
-			return readVersionFromTarFile(tarReader)
+			return parseVersionFromTarFile(tarReader)
 		}
 	}
 }
 
-func readVersionFromTarFile(reader io.Reader) (string, error) {
+func parseVersionFromTarFile(reader io.Reader) (string, error) {
 	buf := bytes.NewBuffer(nil)
 	if _, err := io.Copy(buf, reader); err != nil {
 		return "", fmt.Errorf("copy version file content: %w", err)
@@ -292,7 +292,7 @@ func readVersionFromTarFile(reader io.Reader) (string, error) {
 	return versionJSON.Version, nil
 }
 
-func filterReleaseChannelsFromTags(tags []string) []string {
+func getReleaseChannelsFromTags(tags []string) []string {
 	releaseChannels := make([]string, 0)
 
 	for _, tag := range tags {

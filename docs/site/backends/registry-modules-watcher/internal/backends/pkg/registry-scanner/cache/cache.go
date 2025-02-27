@@ -15,8 +15,8 @@
 package cache
 
 import (
-	"cmp"
 	"slices"
+	"sort"
 	"sync"
 
 	"registry-modules-watcher/internal"
@@ -94,11 +94,13 @@ func (c *Cache) GetReleaseVersionData(version *internal.VersionData) (string, []
 		return "", nil, false
 	}
 
-	for ver, verData := range m.versions {
-		_, ok := verData.releaseChannels[version.ReleaseChannel]
-		if ok {
-			return string(ver), verData.tarFile, true
-		}
+	verData, ok := m.versions[versionNum(version.Version)]
+	if !ok {
+		return "", nil, false
+	}
+
+	if _, ok := verData.releaseChannels[version.ReleaseChannel]; ok {
+		return string(version.Version), verData.tarFile, true
 	}
 
 	return "", nil, false
@@ -130,11 +132,11 @@ func (c *Cache) GetReleaseVersionData(version *internal.VersionData) (string, []
 //   - Final tasks: Delete 1.2.3, Create 1.2.6
 //   - Cache is updated to match registry: 1.2.4, 1.2.5, 1.2.6
 func (c *Cache) SyncWithRegistryVersions(versions []internal.VersionData) []backends.DocumentationTask {
-	c.m.RLock()
-	defer c.m.RUnlock()
+	c.m.Lock()
+	defer c.m.Unlock()
 
 	// Create a slice to hold unique versions
-	newVersions := make([]internal.VersionData, 0, len(versions))
+	newVersions := make([]internal.VersionData, 0)
 
 	// Iterate through all input versions
 	for _, version := range versions {
@@ -179,14 +181,7 @@ func (c *Cache) SyncWithRegistryVersions(versions []internal.VersionData) []back
 	result := RemapFromMapToVersions(RemapFromVersionData(newVersions), backends.TaskCreate)
 	result = append(result, versionsToDelete...)
 
-	slices.SortFunc(result, func(a, b backends.DocumentationTask) int {
-		return cmp.Or(
-			cmp.Compare(a.Registry, b.Registry),
-			cmp.Compare(a.Module, b.Module),
-			cmp.Compare(a.Version, b.Version),
-			cmp.Compare(a.Task, b.Task),
-		)
-	})
+	sortDocumentationTasks(result)
 
 	// Update the cache with the registry versions
 	c.val = RemapFromVersionData(versions)
@@ -204,8 +199,6 @@ func RemapFromMapToVersions(m map[registryName]map[moduleName]moduleData, task b
 					releaseChannels = append(releaseChannels, releaseChannel)
 				}
 
-				slices.Sort(releaseChannels)
-
 				versions = append(versions, backends.DocumentationTask{
 					Registry:        string(registry),
 					Module:          string(module),
@@ -218,14 +211,7 @@ func RemapFromMapToVersions(m map[registryName]map[moduleName]moduleData, task b
 		}
 	}
 
-	slices.SortFunc(versions, func(a, b backends.DocumentationTask) int {
-		return cmp.Or(
-			cmp.Compare(a.Registry, b.Registry),
-			cmp.Compare(a.Module, b.Module),
-			cmp.Compare(a.Version, b.Version),
-			cmp.Compare(a.Task, b.Task),
-		)
-	})
+	sortDocumentationTasks(versions)
 
 	return versions
 }
@@ -302,4 +288,26 @@ func (c *Cache) DeleteModule(registry string, module string) {
 	if ok {
 		delete(r, moduleName(module))
 	}
+}
+
+func sortDocumentationTasks(input []backends.DocumentationTask) {
+	for i := range input {
+		slices.Sort(input[i].ReleaseChannels)
+	}
+
+	sort.Slice(input, func(i, j int) bool {
+		if input[i].Registry != input[j].Registry {
+			return input[i].Registry < input[j].Registry
+		}
+
+		if input[i].Module != input[j].Module {
+			return input[i].Module < input[j].Module
+		}
+
+		if input[i].Version != input[j].Version {
+			return input[i].Version < input[j].Version
+		}
+
+		return input[i].Task < input[j].Task
+	})
 }
