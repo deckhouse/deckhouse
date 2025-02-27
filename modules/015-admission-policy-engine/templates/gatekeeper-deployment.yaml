@@ -77,6 +77,8 @@ spec:
         - --disable-cert-rotation=true
         - --metrics-backend=prometheus
         - --disable-opa-builtin={http.send}
+        - --default-create-vap-binding-for-constraints=false
+        - --default-create-vap-for-templates=false
         env:
         - name: POD_NAMESPACE
           valueFrom:
