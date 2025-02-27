@@ -1,0 +1,9 @@
+admission-policy-engine:
+  fixes:
+    - summary: Fix wildcard apparmor profile.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/12333
+deckhouse-tools:
+  fixes:
+    - summary: Fix tools links pointing to wrong path
+      pull_request: https://github.com/deckhouse/deckhouse/pull/12346
+
