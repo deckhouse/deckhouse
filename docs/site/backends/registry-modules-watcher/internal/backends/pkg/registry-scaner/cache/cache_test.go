@@ -50,7 +50,7 @@ func TestCache(t *testing.T) {
 	})
 
 	t.Run("SyncWithRegistryVersions", func(t *testing.T) {
-		t.Run("AddNewVersion", func(t *testing.T) {
+		t.Run("AddNewVersions", func(t *testing.T) {
 			cache := New()
 
 			tasks := cache.SyncWithRegistryVersions(testVersions)
@@ -108,7 +108,6 @@ func TestCache(t *testing.T) {
 					Version:         "1.0.0",
 					ReleaseChannels: []string{"alpha", "beta"},
 					TarFile:         []byte("test"),
-					Task:            backends.TaskCreate,
 				},
 				{
 					Registry:        "TestReg",
@@ -116,7 +115,6 @@ func TestCache(t *testing.T) {
 					Version:         "2.0.0",
 					ReleaseChannels: []string{"stable"},
 					TarFile:         []byte("new version"),
-					Task:            backends.TaskCreate,
 				},
 			}
 			state := cache.GetState()
@@ -181,7 +179,6 @@ func TestCache(t *testing.T) {
 					Version:         "1.0.0",
 					ReleaseChannels: []string{"alpha", "beta"},
 					TarFile:         []byte("updated content"),
-					Task:            backends.TaskCreate,
 				},
 			}
 			state := cache.GetState()
@@ -208,7 +205,6 @@ func TestCache(t *testing.T) {
 					Version:         "1.0.0",
 					ReleaseChannels: []string{"alpha", "beta"},
 					TarFile:         []byte("test"),
-					Task:            backends.TaskCreate,
 				},
 			}
 			state := cache.GetState()
@@ -261,7 +257,6 @@ func TestCache(t *testing.T) {
 					Version:         "1.0.0",
 					ReleaseChannels: []string{"alpha", "beta", "stable"},
 					TarFile:         []byte("test"),
-					Task:            backends.TaskCreate,
 				},
 			}
 
