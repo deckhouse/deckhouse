@@ -37,5 +37,9 @@ func (svc *Service) removeFromChannelMapping(moduleName string, channels []strin
 		for _, channel := range channels {
 			delete(m[moduleName][channelMappingChannels], channel)
 		}
+
+		if len(m[moduleName][channelMappingChannels]) == 0 {
+			delete(m, moduleName)
+		}
 	})
 }
