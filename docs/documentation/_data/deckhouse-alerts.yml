@@ -129,7 +129,7 @@ alerts:
         ```
       summary: |
         Provider-cluster-configuration in the cluster contains fields outside the schema.
-      severity: "9"
+      severity: "5"
       markupFormat: markdown
     - name: CheckClusterConfig
       sourceFile: modules/040-node-manager/monitoring/prometheus-rules/check_config.yaml
@@ -145,7 +145,7 @@ alerts:
         ```
       summary: |
         Cluster-configuration in the cluster contains fields outside the schema.
-      severity: "9"
+      severity: "5"
       markupFormat: markdown
     - name: CheckStaticClusterConfig
       sourceFile: modules/040-node-manager/monitoring/prometheus-rules/check_config.yaml
@@ -161,7 +161,7 @@ alerts:
         ```
       summary: |
         Static-cluster-configuration in the cluster contains fields outside the schema.
-      severity: "9"
+      severity: "5"
       markupFormat: markdown
     - name: CiliumAgentEndpointsNotReady
       sourceFile: modules/021-cni-cilium/monitoring/prometheus-rules/agent.yaml
