@@ -15,6 +15,7 @@
 package v1
 
 import (
+	"encoding/json"
 	"io"
 	"net/http"
 	"strings"
@@ -43,6 +44,7 @@ func NewHandler(docsService *docs.Service, logger *log.Logger) *DocsBuilderHandl
 	r.HandleFunc("/readyz", h.handleReadyZ)
 	r.HandleFunc("/healthz", h.handleHealthZ)
 
+	r.HandleFunc("GET /api/v1/doc", h.handleGetDocsInfo)
 	r.HandleFunc("POST /api/v1/doc/{moduleName}/{version}", h.handleUpload)
 	r.HandleFunc("DELETE /api/v1/doc/{moduleName}", h.handleDelete)
 	r.HandleFunc("POST /api/v1/build", h.handleBuild)
@@ -64,6 +66,26 @@ func (h *DocsBuilderHandler) handleReadyZ(w http.ResponseWriter, _ *http.Request
 func (h *DocsBuilderHandler) handleHealthZ(w http.ResponseWriter, _ *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	_, _ = io.WriteString(w, "ok")
+}
+
+func (h *DocsBuilderHandler) handleGetDocsInfo(w http.ResponseWriter, r *http.Request) {
+	h.logger.Info("getting all docs info")
+
+	modules, err := h.docsService.GetDocumentationInfo()
+	if err != nil {
+		h.logger.Error("getting documentation info", log.Err(err))
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	err = json.NewEncoder(w).Encode(modules)
+	if err != nil {
+		h.logger.Error("marshal documentation info", log.Err(err))
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
 }
 
 func (h *DocsBuilderHandler) handleUpload(w http.ResponseWriter, r *http.Request) {

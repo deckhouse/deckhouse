@@ -15,6 +15,7 @@
 package cache
 
 import (
+	"cmp"
 	"slices"
 	"sync"
 
@@ -103,24 +104,28 @@ func (c *Cache) GetReleaseVersionData(version *internal.VersionData) (string, []
 	return "", nil, false
 }
 
-// SyncWithRegistryVersions synchronizes the cache with versions from the registry and returns
-// documentation tasks that need to be performed as a result of this synchronization.
+// SyncWithRegistryVersions compares the current cache with versions from the registry
+// and returns documentation tasks that need to be performed.
 //
 // Flow:
 // 1. For each version from the registry:
-//   - If it exists in the cache: Remove it from the cache (will be re-added later)
-//   - If it doesn't exist in the cache: Mark it for creation
 //
-// 2. Any versions remaining in the cache are marked for deletion
-// 3. Update the cache with all versions from the registry
-// 4. Return tasks for both creation and deletion
+//   - If it exists in the cache with matching registry, module, version, release channel, and checksum:
+//     Remove that release channel from the cache comparison
+//
+//   - If it doesn't match completely: Mark it for creation
+//
+//     2. After processing all registry versions, any versions/release channels remaining
+//     in the cache are marked for deletion
+//     3. Update the cache with all versions from the registry
+//     4. Return sorted tasks for both creation and deletion
 //
 // Example scenario:
 // - Initial cache contains versions: 1.2.3, 1.2.4, 1.2.5
 // - Registry provides versions: 1.2.4, 1.2.5, 1.2.6
 // - Result:
 //   - 1.2.3 remains in cache temporarily and is marked for deletion
-//   - 1.2.4 and 1.2.5 are removed from cache temporarily
+//   - 1.2.4 and 1.2.5 are temporarily removed from cache comparison
 //   - 1.2.6 is identified as new and marked for creation
 //   - Final tasks: Delete 1.2.3, Create 1.2.6
 //   - Cache is updated to match registry: 1.2.4, 1.2.5, 1.2.6
@@ -140,15 +145,17 @@ func (c *Cache) SyncWithRegistryVersions(versions []internal.VersionData) []back
 			if module, ok := modules[moduleName(version.ModuleName)]; ok {
 				if versionData, ok := module.versions[versionNum(version.Version)]; ok {
 					if _, ok := versionData.releaseChannels[version.ReleaseChannel]; ok {
-						delete(versionData.releaseChannels, version.ReleaseChannel)
-						delete(module.releaseChecksum, releaseChannelName(version.ReleaseChannel))
+						if module.releaseChecksum[releaseChannelName(version.ReleaseChannel)] == version.Checksum {
+							delete(versionData.releaseChannels, version.ReleaseChannel)
+							delete(module.releaseChecksum, releaseChannelName(version.ReleaseChannel))
+
+							found = true
+						}
 					}
 
 					if len(versionData.releaseChannels) == 0 {
 						delete(module.versions, versionNum(version.Version))
 					}
-
-					found = true
 				}
 
 				if len(module.versions) == 0 {
@@ -172,6 +179,15 @@ func (c *Cache) SyncWithRegistryVersions(versions []internal.VersionData) []back
 	result := RemapFromMapToVersions(RemapFromVersionData(newVersions), backends.TaskCreate)
 	result = append(result, versionsToDelete...)
 
+	slices.SortFunc(result, func(a, b backends.DocumentationTask) int {
+		return cmp.Or(
+			cmp.Compare(a.Registry, b.Registry),
+			cmp.Compare(a.Module, b.Module),
+			cmp.Compare(a.Version, b.Version),
+			cmp.Compare(a.Task, b.Task),
+		)
+	})
+
 	// Update the cache with the registry versions
 	c.val = RemapFromVersionData(versions)
 
@@ -188,6 +204,8 @@ func RemapFromMapToVersions(m map[registryName]map[moduleName]moduleData, task b
 					releaseChannels = append(releaseChannels, releaseChannel)
 				}
 
+				slices.Sort(releaseChannels)
+
 				versions = append(versions, backends.DocumentationTask{
 					Registry:        string(registry),
 					Module:          string(module),
@@ -199,6 +217,15 @@ func RemapFromMapToVersions(m map[registryName]map[moduleName]moduleData, task b
 			}
 		}
 	}
+
+	slices.SortFunc(versions, func(a, b backends.DocumentationTask) int {
+		return cmp.Or(
+			cmp.Compare(a.Registry, b.Registry),
+			cmp.Compare(a.Module, b.Module),
+			cmp.Compare(a.Version, b.Version),
+			cmp.Compare(a.Task, b.Task),
+		)
+	})
 
 	return versions
 }
@@ -274,40 +301,5 @@ func (c *Cache) DeleteModule(registry string, module string) {
 	r, ok := c.val[registryName(registry)]
 	if ok {
 		delete(r, moduleName(module))
-	}
-}
-
-func (c *Cache) GetReleaseChannels(registry, module string) []string {
-	c.m.RLock()
-	defer c.m.RUnlock()
-
-	var releaseChannels []string
-	r, ok := c.val[registryName(registry)]
-	if ok {
-		m, ok := r[moduleName(module)]
-		if ok {
-			for _, m := range m.versions {
-				for releaseChannel := range m.releaseChannels {
-					releaseChannels = append(releaseChannels, releaseChannel)
-				}
-			}
-		}
-	}
-
-	return slices.Compact(releaseChannels)
-}
-
-func (c *Cache) DeleteReleaseChannel(registry, module, releaseChannel string) {
-	c.m.Lock()
-	defer c.m.Unlock()
-
-	r, ok := c.val[registryName(registry)]
-	if ok {
-		m, ok := r[moduleName(module)]
-		if ok {
-			for _, m := range m.versions {
-				delete(m.releaseChannels, releaseChannel)
-			}
-		}
 	}
 }

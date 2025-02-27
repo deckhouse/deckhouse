@@ -105,6 +105,14 @@ func TestCache(t *testing.T) {
 				{
 					Registry:        "TestReg",
 					Module:          "TestModule",
+					Version:         "1.0.0",
+					ReleaseChannels: []string{"alpha", "beta"},
+					TarFile:         []byte("test"),
+					Task:            backends.TaskCreate,
+				},
+				{
+					Registry:        "TestReg",
+					Module:          "TestModule",
 					Version:         "2.0.0",
 					ReleaseChannels: []string{"stable"},
 					TarFile:         []byte("new version"),
@@ -150,15 +158,34 @@ func TestCache(t *testing.T) {
 					Registry:        "TestReg",
 					Module:          "TestModule",
 					Version:         "1.0.0",
-					ReleaseChannels: []string{"beta"},
+					ReleaseChannels: []string{"alpha", "beta"},
 					TarFile:         []byte("updated content"),
 					Task:            backends.TaskCreate,
+				},
+				{
+					Registry:        "TestReg",
+					Module:          "TestModule",
+					Version:         "1.0.0",
+					ReleaseChannels: []string{"alpha", "beta"},
+					TarFile:         []byte("test"),
+					Task:            backends.TaskDelete,
 				},
 			}
 
 			assert.Equal(t, expectedTasks, tasks, "Should generate update task")
+
+			expectedCachedTasks := []backends.DocumentationTask{
+				{
+					Registry:        "TestReg",
+					Module:          "TestModule",
+					Version:         "1.0.0",
+					ReleaseChannels: []string{"alpha", "beta"},
+					TarFile:         []byte("updated content"),
+					Task:            backends.TaskCreate,
+				},
+			}
 			state := cache.GetState()
-			assert.Equal(t, expectedTasks, state, "Should have update task in state")
+			assert.Equal(t, expectedCachedTasks, state, "Should have update task in state")
 		})
 
 		t.Run("NoChangeNoTask", func(t *testing.T) {
@@ -173,8 +200,19 @@ func TestCache(t *testing.T) {
 			tasks := cache.SyncWithRegistryVersions(testVersions)
 
 			assert.Empty(t, tasks, "No tasks should be generated when nothing changes")
+
+			expectedCachedTasks := []backends.DocumentationTask{
+				{
+					Registry:        "TestReg",
+					Module:          "TestModule",
+					Version:         "1.0.0",
+					ReleaseChannels: []string{"alpha", "beta"},
+					TarFile:         []byte("test"),
+					Task:            backends.TaskCreate,
+				},
+			}
 			state := cache.GetState()
-			assert.Empty(t, state, "No tasks should be in state when nothing changes")
+			assert.Equal(t, expectedCachedTasks, state, "State should not change")
 		})
 
 		t.Run("AddNewReleaseChannel", func(t *testing.T) {
@@ -248,14 +286,15 @@ func TestCache(t *testing.T) {
 					Registry:        "TestReg",
 					Module:          "TestModule",
 					Version:         "1.0.0",
-					ReleaseChannels: []string{"alpha"},
+					ReleaseChannels: []string{"alpha", "beta"},
+					TarFile:         []byte("test"),
 					Task:            backends.TaskDelete,
 				},
 			}
 
 			assert.Equal(t, expectedTasks, tasks, "Should generate delete task")
 			state := cache.GetState()
-			assert.Equal(t, expectedTasks, state, "Should have delete task in state")
+			assert.Empty(t, state, "State should be empty after deletion")
 		})
 	})
 
@@ -290,22 +329,6 @@ func TestCache(t *testing.T) {
 			cache.DeleteModule("TestReg", "TestModule")
 			modules := cache.GetModules("TestReg")
 			assert.Empty(t, modules, "Modules should be empty after deletion")
-		})
-	})
-
-	t.Run("ReleaseChannelOperations", func(t *testing.T) {
-		cache := New()
-		cache.SyncWithRegistryVersions(testVersions)
-
-		t.Run("GetReleaseChannels", func(t *testing.T) {
-			releaseChannels := cache.GetReleaseChannels("TestReg", "TestModule")
-			assert.Equal(t, []string{"alpha"}, releaseChannels, "ReleaseChannels should match")
-		})
-
-		t.Run("DeleteReleaseChannel", func(t *testing.T) {
-			cache.DeleteReleaseChannel("TestReg", "TestModule", "alpha")
-			releaseChannels := cache.GetReleaseChannels("TestReg", "TestModule")
-			assert.Empty(t, releaseChannels, "ReleaseChannels should be empty after deletion")
 		})
 	})
 }
