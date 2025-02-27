@@ -334,6 +334,24 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 			require.NoError(suite.T(), err)
 		})
 	})
+
+	suite.Run("Reinstall", func() {
+		mup := &v1alpha2.ModuleUpdatePolicySpec{
+			Update: v1alpha2.ModuleUpdatePolicySpecUpdate{
+				Mode:    "AutoPatch",
+				Windows: update.Windows{{From: "10:00", To: "11:00", Days: update.Everyday()}},
+			},
+			ReleaseChannel: "Stable",
+		}
+
+		testData := suite.fetchTestFileData("reinstall-annotation.yaml")
+		suite.setupReleaseController(testData, withModuleUpdatePolicy(mup))
+
+		_, err = suite.ctr.handleRelease(ctx, suite.getModuleRelease("parca-1.26.2"))
+		require.NoError(suite.T(), err)
+		_, err = suite.ctr.handleRelease(ctx, suite.getModuleRelease("parca-1.26.2"))
+		require.NoError(suite.T(), err)
+	})
 }
 
 func (suite *ReleaseControllerTestSuite) loopUntilDeploy(dc *dependency.MockedContainer, releaseName string) {
