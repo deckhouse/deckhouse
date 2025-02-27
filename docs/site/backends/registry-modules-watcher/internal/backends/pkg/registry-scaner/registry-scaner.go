@@ -22,6 +22,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/pkg/log"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
+	"golang.org/x/exp/slog"
 )
 
 type Client interface {
@@ -81,12 +82,27 @@ func (s *registryscaner) Subscribe(ctx context.Context, scanInterval time.Durati
 			select {
 			case <-ticker.C:
 				docTask := s.processRegistries(ctx)
-				if len(docTask) > 0 {
-					s.logger.Info("module versions changed in registry")
+				if len(docTask) == 0 {
+					continue
+				}
 
-					if err := s.updateHandler(docTask); err != nil {
-						s.logger.Error("updateHandler", log.Err(err))
+				createCounter := 0
+				deleteCounter := 0
+				for _, task := range docTask {
+					switch task.Task {
+					case backends.TaskCreate:
+						createCounter++
+						s.logger.Warn("received a new module version, processing...", slog.String("module", task.Module), slog.String("version", task.Version))
+					case backends.TaskDelete:
+						deleteCounter++
+						s.logger.Warn("find module version to remove, processing...", slog.String("module", task.Module), slog.String("version", task.Version))
 					}
+				}
+
+				s.logger.Warn("module versions changed in registry", slog.Int("create", createCounter), slog.Int("delete", deleteCounter))
+
+				if err := s.updateHandler(docTask); err != nil {
+					s.logger.Error("updateHandler", log.Err(err))
 				}
 
 			case <-ctx.Done():
