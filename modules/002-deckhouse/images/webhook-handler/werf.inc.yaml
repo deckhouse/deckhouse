@@ -100,6 +100,8 @@ import:
   add: /opt/python-static
   before: setup
 shell:
+  beforeInstall:
+  - apt-get install -y git
   install:
   - git clone --depth 1 {{ $.SOURCE_REPO }}/python-modules/wheels /wheels
   - rm -rf /wheels/.git
