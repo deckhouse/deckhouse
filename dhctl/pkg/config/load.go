@@ -78,7 +78,7 @@ func ValidateOptionRequiredSSHHost(v bool) ValidateOption {
 	}
 }
 
-func NewSchemaStore(checkAdditionalProperties bool, paths ...string) *SchemaStore {
+func NewSchemaStore(paths ...string) *SchemaStore {
 	paths = append([]string{candiDir}, paths...)
 
 	pathsStr := strings.TrimSpace(os.Getenv("DHCTL_CLI_ADDITIONAL_SCHEMAS_PATHS"))
@@ -89,7 +89,7 @@ func NewSchemaStore(checkAdditionalProperties bool, paths ...string) *SchemaStor
 		}
 	}
 
-	return newOnceSchemaStore(checkAdditionalProperties, paths)
+	return newOnceSchemaStore(paths)
 }
 
 func newSchemaStore(checkAdditionalProperties bool, schemasDir []string) *SchemaStore {
@@ -187,9 +187,9 @@ func newSchemaStore(checkAdditionalProperties bool, schemasDir []string) *Schema
 	return st
 }
 
-func newOnceSchemaStore(checkAdditionalProperties bool, schemasDir []string) *SchemaStore {
+func newOnceSchemaStore(schemasDir []string) *SchemaStore {
 	once.Do(func() {
-		store = newSchemaStore(checkAdditionalProperties, schemasDir)
+		store = newSchemaStore(false, schemasDir)
 	})
 	return store
 }
@@ -401,7 +401,7 @@ func openAPIValidate(dataObj *[]byte, schema *spec.Schema, options validateOptio
 }
 
 func ValidateDiscoveryData(config *[]byte, paths []string, opts ...ValidateOption) (bool, error) {
-	schemaStore := NewSchemaStore(false, paths...)
+	schemaStore := NewSchemaStore(paths...)
 
 	_, err := schemaStore.Validate(config, opts...)
 	if err != nil {

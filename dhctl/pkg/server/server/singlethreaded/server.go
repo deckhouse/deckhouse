@@ -103,7 +103,7 @@ func Serve(network, address string) error {
 	reflection.Register(s)
 
 	// init services
-	dhctlService := dhctl.New(podName, cacheDir, config.NewSchemaStore(false))
+	dhctlService := dhctl.New(podName, cacheDir, config.NewSchemaStore())
 
 	// register services
 	pbdhctl.RegisterDHCTLServer(s, dhctlService)
