@@ -44,7 +44,8 @@ import (
 )
 
 func (s *Service) Check(server pb.DHCTL_CheckServer) error {
-	ctx := operationCtx(server)
+	ctx, cancel := operationCtx(server)
+	defer cancel()
 
 	logger.L(ctx).Info("started")
 

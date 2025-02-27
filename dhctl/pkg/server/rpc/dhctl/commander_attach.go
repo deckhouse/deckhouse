@@ -42,7 +42,8 @@ import (
 )
 
 func (s *Service) CommanderAttach(server pb.DHCTL_CommanderAttachServer) error {
-	ctx := operationCtx(server)
+	ctx, cancel := operationCtx(server)
+	defer cancel()
 
 	logger.L(ctx).Info("started")
 

@@ -15,6 +15,7 @@
 package bootstrap
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"reflect"
@@ -159,7 +160,8 @@ func (b *ClusterBootstrapper) applyParams() (func(), error) {
 	return restoreFunc, nil
 }
 
-func (b *ClusterBootstrapper) Bootstrap() error {
+// TODO(feat/dhctl-for-commander-bootstrap-context): use ctx in network operations
+func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 	if restore, err := b.applyParams(); err != nil {
 		return err
 	} else {
@@ -521,11 +523,11 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 }
 
 // TODO(dhctl-for-commander): pass stateCache externally using params as in Destroyer, this method will be unneeded then
-func (c *ClusterBootstrapper) GetLastState() phases.DhctlState {
-	if c.lastState != nil {
-		return c.lastState
+func (b *ClusterBootstrapper) GetLastState() phases.DhctlState {
+	if b.lastState != nil {
+		return b.lastState
 	} else {
-		return c.PhasedExecutionContext.GetLastState()
+		return b.PhasedExecutionContext.GetLastState()
 	}
 }
 
