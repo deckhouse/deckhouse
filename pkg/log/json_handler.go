@@ -29,27 +29,31 @@ import (
 	logContext "github.com/deckhouse/deckhouse/pkg/log/context"
 )
 
-var _ slog.Handler = (*SlogHandler)(nil)
+var _ slog.Handler = (*SlogJsonHandler)(nil)
 
-type SlogHandler struct {
+type SlogJsonHandler struct {
 	slog.Handler
 
+	// output
 	w io.Writer
+	// buffer for default slog handler
 	b *bytes.Buffer
 	m *sync.Mutex
 
+	// aggregate logger name
 	name string
 
+	// for testing purpose
 	timeFn func(t time.Time) time.Time
 }
 
-func NewSlogHandler(handler slog.Handler) *SlogHandler {
-	return &SlogHandler{
+func NewSlogHandler(handler slog.Handler) *SlogJsonHandler {
+	return &SlogJsonHandler{
 		Handler: handler,
 	}
 }
 
-func (h *SlogHandler) Handle(ctx context.Context, r slog.Record) error {
+func (h *SlogJsonHandler) Handle(ctx context.Context, r slog.Record) error {
 	h.m.Lock()
 
 	defer func() {
@@ -104,13 +108,7 @@ func (h *SlogHandler) Handle(ctx context.Context, r slog.Record) error {
 	}
 
 	if len(attrs) > 0 {
-		b, err := json.Marshal(attrs)
-		if err != nil {
-			return err
-		}
-
-		// drop { and }
-		logOutput.FieldsJSON = b[1 : len(b)-1]
+		logOutput.Fields = attrs
 	}
 
 	buf := bytes.NewBuffer([]byte{})
@@ -124,7 +122,7 @@ func (h *SlogHandler) Handle(ctx context.Context, r slog.Record) error {
 	return nil
 }
 
-func (h *SlogHandler) WithAttrs(attrs []slog.Attr) slog.Handler {
+func (h *SlogJsonHandler) WithAttrs(attrs []slog.Attr) slog.Handler {
 	if len(attrs) < 1 {
 		return h
 	}
@@ -135,14 +133,14 @@ func (h *SlogHandler) WithAttrs(attrs []slog.Attr) slog.Handler {
 	return &h2
 }
 
-func (h *SlogHandler) WithGroup(name string) slog.Handler {
+func (h *SlogJsonHandler) WithGroup(name string) slog.Handler {
 	h2 := *h
 	h2.Handler = h.Handler.WithGroup(name)
 
 	return &h2
 }
 
-func (h *SlogHandler) Named(name string) slog.Handler {
+func (h *SlogJsonHandler) Named(name string) slog.Handler {
 	currName := name
 	if h.name != "" {
 		currName = fmt.Sprintf("%s.%s", h.name, name)
@@ -154,10 +152,14 @@ func (h *SlogHandler) Named(name string) slog.Handler {
 	return &h2
 }
 
-func NewHandler(out io.Writer, opts *slog.HandlerOptions, timeFn func(t time.Time) time.Time) *SlogHandler {
+func (h *SlogJsonHandler) SetOutput(w io.Writer) {
+	h.w = w
+}
+
+func NewJSONHandler(out io.Writer, opts *slog.HandlerOptions, timeFn func(t time.Time) time.Time) *SlogJsonHandler {
 	b := new(bytes.Buffer)
 
-	return &SlogHandler{
+	return &SlogJsonHandler{
 		Handler: slog.NewJSONHandler(b, opts),
 		b:       b,
 		m:       &sync.Mutex{},
