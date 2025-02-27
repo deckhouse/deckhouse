@@ -347,11 +347,11 @@ func (r *reconciler) handleDeployedRelease(ctx context.Context, release *v1alpha
 		needsUpdate = true
 	}
 
-	if len(release.Labels) == 0 || (release.Labels[v1alpha1.ModuleReleaseLabelStatus] != strings.ToLower(v1alpha1.ModuleReleasePhaseDeployed)) {
+	if len(release.Labels) == 0 || (release.Labels[v1alpha1.ModuleReleaseLabelStatus] != v1alpha1.ModuleReleaseLabelDeployed) {
 		if len(release.ObjectMeta.Labels) == 0 {
 			release.ObjectMeta.Labels = make(map[string]string)
 		}
-		release.ObjectMeta.Labels[v1alpha1.ModuleReleaseLabelStatus] = strings.ToLower(v1alpha1.ModuleReleasePhaseDeployed)
+		release.ObjectMeta.Labels[v1alpha1.ModuleReleaseLabelStatus] = v1alpha1.ModuleReleaseLabelDeployed
 		needsUpdate = true
 	}
 
@@ -796,7 +796,7 @@ func (r *reconciler) runReleaseDeploy(ctx context.Context, release *v1alpha1.Mod
 			release.ObjectMeta.Labels = make(map[string]string, 1)
 		}
 
-		release.ObjectMeta.Labels[v1alpha1.ModuleReleaseLabelStatus] = strings.ToLower(v1alpha1.ModuleReleasePhaseDeployed)
+		release.ObjectMeta.Labels[v1alpha1.ModuleReleaseLabelStatus] = v1alpha1.ModuleReleaseLabelDeployed
 
 		if release.GetApplyNow() {
 			delete(release.Annotations, v1alpha1.ModuleReleaseAnnotationApplyNow)
