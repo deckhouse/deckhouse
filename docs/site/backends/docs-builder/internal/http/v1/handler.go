@@ -89,14 +89,14 @@ func (h *DocsBuilderHandler) handleGetDocsInfo(w http.ResponseWriter, r *http.Re
 		}
 	}
 
+	w.WriteHeader(http.StatusOK)
+
 	err = json.NewEncoder(w).Encode(result)
 	if err != nil {
 		h.logger.Error("marshal documentation", log.Err(err))
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
-
-	w.WriteHeader(http.StatusOK)
 }
 
 func (h *DocsBuilderHandler) handleUpload(w http.ResponseWriter, r *http.Request) {
