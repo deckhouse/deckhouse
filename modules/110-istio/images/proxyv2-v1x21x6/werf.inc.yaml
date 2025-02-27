@@ -263,7 +263,7 @@ shell:
     libcap-devel libpcap-devel \
     clang14.0 clang14.0-tools lld14.0 llvm14.0-devel \
     libcxxabi-devel \
-    libcxx libcxx-static libcxxabi-static lld14.0 git
+    libcxx libcxx-static libcxxabi-static lld14.0
   # apt clean
   - apt-get autoclean && apt-get clean
   install:
