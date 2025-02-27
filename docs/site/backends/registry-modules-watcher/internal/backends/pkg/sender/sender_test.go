@@ -31,35 +31,232 @@ func TestSender(t *testing.T) {
 	s := New(logger)
 
 	t.Run("Send", func(t *testing.T) {
-		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			if r.Method == http.MethodPost && r.URL.Path == "/api/v1/doc/TestModule/1.0.0" {
-				w.WriteHeader(http.StatusCreated)
-			} else if r.Method == http.MethodPost && r.URL.Path == "/api/v1/build" {
-				w.WriteHeader(http.StatusOK)
-			} else if r.Method == http.MethodDelete && r.URL.Path == "/api/v1/doc/TestModule" {
-				w.WriteHeader(http.StatusNoContent)
-			} else {
-				w.WriteHeader(http.StatusNotFound)
+		t.Run("successful responses", func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if r.Method == http.MethodPost && r.URL.Path == "/api/v1/doc/TestModule/1.0.0" {
+					w.WriteHeader(http.StatusCreated)
+				} else if r.Method == http.MethodPost && r.URL.Path == "/api/v1/build" {
+					w.WriteHeader(http.StatusOK)
+				} else if r.Method == http.MethodDelete && r.URL.Path == "/api/v1/doc/TestModule" {
+					w.WriteHeader(http.StatusNoContent)
+				} else {
+					w.WriteHeader(http.StatusNotFound)
+				}
+			}))
+			defer server.Close()
+
+			listBackends := map[string]struct{}{
+				server.URL[7:]: {}, // remove "http://"
 			}
-		}))
-		defer server.Close()
 
-		listBackends := map[string]struct{}{
-			server.URL[7:]: {}, // remove "http://"
-		}
-		versions := []backends.DocumentationTask{
-			{
-				Registry:        "TestReg",
-				Module:          "TestModule",
-				Version:         "1.0.0",
-				ReleaseChannels: []string{"alpha"},
-				TarFile:         []byte("test"),
-				Task:            backends.TaskCreate,
-			},
-		}
+			t.Run("with create task", func(t *testing.T) {
+				versions := []backends.DocumentationTask{
+					{
+						Registry:        "TestReg",
+						Module:          "TestModule",
+						Version:         "1.0.0",
+						ReleaseChannels: []string{"alpha"},
+						TarFile:         []byte("test"),
+						Task:            backends.TaskCreate,
+					},
+				}
 
-		err := s.Send(context.Background(), listBackends, versions)
-		assert.NoError(t, err, "Send should not return an error")
+				s.Send(context.Background(), listBackends, versions)
+			})
+
+			t.Run("with delete task", func(t *testing.T) {
+				versions := []backends.DocumentationTask{
+					{
+						Registry:        "TestReg",
+						Module:          "TestModule",
+						Version:         "1.0.0",
+						ReleaseChannels: []string{"alpha"},
+						TarFile:         []byte("test"),
+						Task:            backends.TaskDelete,
+					},
+				}
+
+				s.Send(context.Background(), listBackends, versions)
+			})
+		})
+
+		t.Run("error responses", func(t *testing.T) {
+			t.Run("upload error with successful retry", func(t *testing.T) {
+				// Counter to track number of retry attempts
+				requestCount := 0
+
+				server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					if r.Method == http.MethodPost && r.URL.Path == "/api/v1/doc/TestModule/1.0.0" {
+						requestCount++
+						if requestCount <= 2 {
+							// Return error for first 2 attempts
+							w.WriteHeader(http.StatusInternalServerError)
+						} else {
+							// Success on the 3rd attempt (after 2 retries)
+							w.WriteHeader(http.StatusCreated)
+						}
+					} else {
+						w.WriteHeader(http.StatusOK)
+					}
+				}))
+				defer server.Close()
+
+				listBackends := map[string]struct{}{
+					server.URL[7:]: {}, // remove "http://"
+				}
+
+				versions := []backends.DocumentationTask{
+					{
+						Registry:        "TestReg",
+						Module:          "TestModule",
+						Version:         "1.0.0",
+						ReleaseChannels: []string{"alpha"},
+						TarFile:         []byte("test"),
+						Task:            backends.TaskCreate,
+					},
+				}
+
+				s.Send(context.Background(), listBackends, versions)
+
+				// Verify the sender attempted the expected number of requests
+				assert.Equal(t, 3, requestCount,
+					"Expected sender to make 3 requests total (1 initial + 2 retries) before success")
+			})
+
+			t.Run("build error with successful retry", func(t *testing.T) {
+				// Counter to track number of retry attempts
+				requestCount := 0
+
+				server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					if r.Method == http.MethodPost && r.URL.Path == "/api/v1/doc/TestModule/1.0.0" {
+						w.WriteHeader(http.StatusCreated)
+					} else if r.Method == http.MethodPost && r.URL.Path == "/api/v1/build" {
+						requestCount++
+						if requestCount <= 2 {
+							// Return error for first 2 attempts
+							w.WriteHeader(http.StatusInternalServerError)
+						} else {
+							// Success on the 3rd attempt (after 2 retries)
+							w.WriteHeader(http.StatusOK)
+						}
+					} else {
+						w.WriteHeader(http.StatusOK)
+					}
+				}))
+				defer server.Close()
+
+				listBackends := map[string]struct{}{
+					server.URL[7:]: {}, // remove "http://"
+				}
+
+				versions := []backends.DocumentationTask{
+					{
+						Registry:        "TestReg",
+						Module:          "TestModule",
+						Version:         "1.0.0",
+						ReleaseChannels: []string{"alpha"},
+						TarFile:         []byte("test"),
+						Task:            backends.TaskCreate,
+					},
+				}
+
+				s.Send(context.Background(), listBackends, versions)
+
+				// Verify the sender attempted the expected number of requests
+				assert.Equal(t, 3, requestCount,
+					"Expected sender to make 3 requests total (1 initial + 2 retries) before success")
+			})
+
+			t.Run("delete error with successful retry", func(t *testing.T) {
+				// Counter to track number of retry attempts
+				requestCount := 0
+
+				server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					if r.Method == http.MethodDelete && r.URL.Path == "/api/v1/doc/TestModule" {
+						requestCount++
+						if requestCount <= 2 {
+							// Return error for first 2 attempts
+							w.WriteHeader(http.StatusInternalServerError)
+						} else {
+							// Success on the 3rd attempt (after 2 retries)
+							w.WriteHeader(http.StatusNoContent)
+						}
+					} else {
+						w.WriteHeader(http.StatusOK)
+					}
+				}))
+				defer server.Close()
+
+				listBackends := map[string]struct{}{
+					server.URL[7:]: {}, // remove "http://"
+				}
+
+				versions := []backends.DocumentationTask{
+					{
+						Registry:        "TestReg",
+						Module:          "TestModule",
+						Version:         "1.0.0",
+						ReleaseChannels: []string{"alpha"},
+						TarFile:         []byte("test"),
+						Task:            backends.TaskDelete,
+					},
+				}
+
+				s.Send(context.Background(), listBackends, versions)
+
+				// Verify the sender attempted the expected number of requests
+				assert.Equal(t, 3, requestCount,
+					"Expected sender to make 3 requests total (1 initial + 2 retries) before success")
+			})
+
+			t.Run("connection error with successful retry", func(t *testing.T) {
+				// Counter to track number of requests
+				requestCount := 0
+
+				// Create a server that initially refuses connections then works
+				server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					requestCount++
+					if requestCount <= 2 {
+						// Close the connection without response for first 2 attempts
+						hj, ok := w.(http.Hijacker)
+						if !ok {
+							t.Fatal("couldn't hijack connection")
+						}
+						conn, _, _ := hj.Hijack()
+						conn.Close()
+					} else {
+						// Success on the 3rd attempt
+						if r.URL.Path == "/api/v1/doc/TestModule/1.0.0" {
+							w.WriteHeader(http.StatusCreated)
+						} else {
+							w.WriteHeader(http.StatusOK)
+						}
+					}
+				}))
+				defer server.Close()
+
+				listBackends := map[string]struct{}{
+					server.URL[7:]: {}, // remove "http://"
+				}
+
+				versions := []backends.DocumentationTask{
+					{
+						Registry:        "TestReg",
+						Module:          "TestModule",
+						Version:         "1.0.0",
+						ReleaseChannels: []string{"alpha"},
+						TarFile:         []byte("test"),
+						Task:            backends.TaskCreate,
+					},
+				}
+
+				s.Send(context.Background(), listBackends, versions)
+
+				// Verify the sender attempted the expected number of requests
+				assert.Equal(t, 3, requestCount,
+					"Expected sender to make 3 requests total (1 initial + 2 retries) before success")
+			})
+		})
 	})
 
 	t.Run("delete", func(t *testing.T) {

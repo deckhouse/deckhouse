@@ -24,6 +24,7 @@ import (
 	url2 "net/url"
 	"registry-modules-watcher/internal/backends"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/cenkalti/backoff"
@@ -53,12 +54,19 @@ func New(logger *log.Logger) *sender {
 	}
 }
 
-func (s *sender) Send(ctx context.Context, listBackends map[string]struct{}, versions []backends.DocumentationTask) error {
+func (s *sender) Send(ctx context.Context, listBackends map[string]struct{}, versions []backends.DocumentationTask) {
 	syncChan := make(chan struct{}, 10)
+	wg := new(sync.WaitGroup)
 	for backend := range listBackends {
 		syncChan <- struct{}{}
+		wg.Add(1)
 
 		go func(backend string) {
+			defer func() {
+				wg.Done()
+				<-syncChan
+			}()
+
 			for _, version := range versions {
 				if version.Task == backends.TaskDelete {
 					err := s.delete(ctx, backend, version)
@@ -79,12 +87,10 @@ func (s *sender) Send(ctx context.Context, listBackends map[string]struct{}, ver
 			if err != nil {
 				s.logger.Error("send build docs", log.Err(err))
 			}
-
-			<-syncChan
 		}(backend)
 	}
 
-	return nil
+	wg.Wait()
 }
 
 var ErrBadStatusCode = errors.New("bad status code")

@@ -16,7 +16,6 @@ package backends
 
 import (
 	"context"
-	"fmt"
 	"log/slog"
 	"sync"
 
@@ -24,7 +23,7 @@ import (
 )
 
 type Sender interface {
-	Send(ctx context.Context, listBackends map[string]struct{}, versions []DocumentationTask) error
+	Send(ctx context.Context, listBackends map[string]struct{}, versions []DocumentationTask)
 }
 
 type RegistryScaner interface {
@@ -44,11 +43,11 @@ type DocumentationTask struct {
 	Task Task
 }
 
-type Task string
+type Task uint
 
 const (
-	TaskCreate Task = "create"
-	TaskDelete Task = "delete"
+	TaskCreate Task = iota
+	TaskDelete
 )
 
 type backends struct {
@@ -94,10 +93,7 @@ func (b *backends) Add(backend string) {
 	b.listBackends[backend] = struct{}{}
 	state := b.registryScaner.GetState()
 
-	err := b.sender.Send(context.Background(), map[string]struct{}{backend: {}}, state)
-	if err != nil {
-		b.logger.Fatal("sending docs to new backend", log.Err(err))
-	}
+	b.sender.Send(context.Background(), map[string]struct{}{backend: {}}, state)
 }
 
 func (b *backends) Delete(backend string) {
@@ -116,10 +112,7 @@ func (b *backends) updateHandler(docTask []DocumentationTask) error {
 	b.m.RLock()
 	defer b.m.RUnlock()
 
-	err := b.sender.Send(context.Background(), b.listBackends, docTask)
-	if err != nil {
-		return fmt.Errorf("send: %w", err)
-	}
+	b.sender.Send(context.Background(), b.listBackends, docTask)
 
 	return nil
 }

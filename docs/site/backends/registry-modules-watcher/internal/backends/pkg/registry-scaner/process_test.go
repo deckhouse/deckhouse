@@ -36,6 +36,7 @@ import (
 func Test_RegistryScannerProcess(t *testing.T) {
 	t.Run("processes initial registry data", func(t *testing.T) {
 		mc := minimock.NewController(t)
+
 		clientOne := setupCompleteClientOne(mc)
 		clientTwo := setupCompleteClientTwo(mc)
 
@@ -45,23 +46,36 @@ func Test_RegistryScannerProcess(t *testing.T) {
 			cache:           cache.New(),
 		}
 
-		scanner.processRegistries(context.Background())
+		tasks := scanner.processRegistries(context.Background())
 
-		expectedTasks := []backends.DocumentationTask{
+		expectedProcessedTasks := []backends.DocumentationTask{
 			{Registry: "clientOne", Module: "console", Version: "1.2.3", ReleaseChannels: []string{"alpha"}},
 			{Registry: "clientOne", Module: "console", Version: "2.2.3", ReleaseChannels: []string{"beta"}},
-			{Registry: "clientOne", Module: "parca", Version: "2.3.4", ReleaseChannels: []string{"rock-solid"}},
-			{Registry: "clientOne", Module: "parca", Version: "3.3.4", ReleaseChannels: []string{"stable"}},
 			{Registry: "clientTwo", Module: "console", Version: "3.4.5", ReleaseChannels: []string{"alpha"}},
 			{Registry: "clientTwo", Module: "console", Version: "4.4.5", ReleaseChannels: []string{"beta"}},
+			{Registry: "clientOne", Module: "parca", Version: "2.3.4", ReleaseChannels: []string{"rock-solid"}},
+			{Registry: "clientOne", Module: "parca", Version: "3.3.4", ReleaseChannels: []string{"stable"}},
 			{Registry: "clientTwo", Module: "parca", Version: "4.5.6", ReleaseChannels: []string{"rock-solid", "stable"}},
 		}
 
-		assertCacheContains(t, expectedTasks, scanner.cache.GetState())
+		assertTasksMatch(t, expectedProcessedTasks, tasks)
+
+		expectedCachedTasks := []backends.DocumentationTask{
+			{Registry: "clientOne", Module: "console", Version: "1.2.3", ReleaseChannels: []string{"alpha"}},
+			{Registry: "clientOne", Module: "console", Version: "2.2.3", ReleaseChannels: []string{"beta"}},
+			{Registry: "clientTwo", Module: "console", Version: "3.4.5", ReleaseChannels: []string{"alpha"}},
+			{Registry: "clientTwo", Module: "console", Version: "4.4.5", ReleaseChannels: []string{"beta"}},
+			{Registry: "clientOne", Module: "parca", Version: "2.3.4", ReleaseChannels: []string{"rock-solid"}},
+			{Registry: "clientOne", Module: "parca", Version: "3.3.4", ReleaseChannels: []string{"stable"}},
+			{Registry: "clientTwo", Module: "parca", Version: "4.5.6", ReleaseChannels: []string{"rock-solid", "stable"}},
+		}
+
+		assertTasksMatch(t, expectedCachedTasks, scanner.cache.GetState())
 	})
 
 	t.Run("processes new registry images", func(t *testing.T) {
 		mc := minimock.NewController(t)
+
 		clientOne := setupCompleteClientOne(mc)
 		clientTwo := setupCompleteClientTwo(mc)
 
@@ -78,46 +92,78 @@ func Test_RegistryScannerProcess(t *testing.T) {
 
 		scanner.registryClients = map[string]Client{"clientOne": clientOne, "clientTwo": clientTwo}
 
-		scanner.processRegistries(context.Background())
+		tasks := scanner.processRegistries(context.Background())
 
-		expectedTasks := []backends.DocumentationTask{
-			{Registry: "clientOne", Module: "console", Version: "1.2.3", ReleaseChannels: []string{"alpha"}},
-			{Registry: "clientOne", Module: "parca", Version: "2.3.4", ReleaseChannels: []string{"rock-solid"}},
+		expectedProcessedTasks := []backends.DocumentationTask{
+			{Registry: "clientOne", Module: "console", Version: "2.2.3", ReleaseChannels: []string{"beta"}, Task: backends.TaskDelete},
+			{Registry: "clientTwo", Module: "console", Version: "4.4.5", ReleaseChannels: []string{"beta"}, Task: backends.TaskDelete},
+			{Registry: "clientOne", Module: "parca", Version: "3.3.4", ReleaseChannels: []string{"stable"}, Task: backends.TaskDelete},
+			{Registry: "clientTwo", Module: "parca", Version: "4.5.6", ReleaseChannels: []string{"stable"}, Task: backends.TaskDelete},
 			{Registry: "clientOne", Module: "console", Version: "3.3.3", ReleaseChannels: []string{"beta"}},
-			{Registry: "clientTwo", Module: "console", Version: "3.4.5", ReleaseChannels: []string{"alpha"}},
-			{Registry: "clientOne", Module: "parca", Version: "4.4.4", ReleaseChannels: []string{"stable"}},
-			{Registry: "clientTwo", Module: "parca", Version: "4.5.6", ReleaseChannels: []string{"rock-solid"}},
-			{Registry: "clientTwo", Module: "console", Version: "5.5.5", ReleaseChannels: []string{"beta"}},
+			{Registry: "clientTwo", Module: "console", Version: "4.4.4", ReleaseChannels: []string{"beta"}},
+			{Registry: "clientOne", Module: "parca", Version: "5.5.5", ReleaseChannels: []string{"stable"}},
 			{Registry: "clientTwo", Module: "parca", Version: "6.6.6", ReleaseChannels: []string{"stable"}},
 		}
 
-		assertCacheContains(t, expectedTasks, scanner.cache.GetState())
+		assertTasksMatch(t, expectedProcessedTasks, tasks)
+
+		expectedCachedTasks := []backends.DocumentationTask{
+			{Registry: "clientOne", Module: "console", Version: "1.2.3", ReleaseChannels: []string{"alpha"}},
+			{Registry: "clientOne", Module: "console", Version: "3.3.3", ReleaseChannels: []string{"beta"}},
+			{Registry: "clientTwo", Module: "console", Version: "3.4.5", ReleaseChannels: []string{"alpha"}},
+			{Registry: "clientTwo", Module: "console", Version: "4.4.4", ReleaseChannels: []string{"beta"}},
+			{Registry: "clientOne", Module: "parca", Version: "2.3.4", ReleaseChannels: []string{"rock-solid"}},
+			{Registry: "clientOne", Module: "parca", Version: "5.5.5", ReleaseChannels: []string{"stable"}},
+			{Registry: "clientTwo", Module: "parca", Version: "4.5.6", ReleaseChannels: []string{"rock-solid"}},
+			{Registry: "clientTwo", Module: "parca", Version: "6.6.6", ReleaseChannels: []string{"stable"}},
+		}
+
+		assertTasksMatch(t, expectedCachedTasks, scanner.cache.GetState())
 	})
 }
 
-func assertCacheContains(t *testing.T, expected, actual []backends.DocumentationTask) {
+func assertTasksMatch(t *testing.T, expected, actual []backends.DocumentationTask) {
 	t.Helper()
 
 	assert.Equal(t, len(expected), len(actual), "Cache should have the correct number of entries")
 
-	// Create maps for easier lookup and comparison by key components
-	expectedMap := make(map[string]struct{})
+	// Create maps for task lookup using a composite key
+	expectedMap := make(map[string]backends.DocumentationTask)
 	for _, task := range expected {
 		slices.Sort(task.ReleaseChannels)
-
-		key := fmt.Sprintf("%s/%s/%s/%v/1536", task.Registry, task.Module, task.Version, task.ReleaseChannels)
-		expectedMap[key] = struct{}{}
+		key := fmt.Sprintf("%s/%s/%s/%v", task.Registry, task.Module, task.Version, task.ReleaseChannels)
+		expectedMap[key] = task
 	}
 
-	actualMap := make(map[string]struct{})
+	actualMap := make(map[string]backends.DocumentationTask)
 	for _, task := range actual {
 		slices.Sort(task.ReleaseChannels)
-
-		key := fmt.Sprintf("%s/%s/%s/%v/%d", task.Registry, task.Module, task.Version, task.ReleaseChannels, len(task.TarFile))
-		actualMap[key] = struct{}{}
+		key := fmt.Sprintf("%s/%s/%s/%v", task.Registry, task.Module, task.Version, task.ReleaseChannels)
+		actualMap[key] = task
 	}
 
-	assert.Equal(t, expectedMap, actualMap, "Cache should contain the expected entries")
+	for key, expectedTask := range expectedMap {
+		actualTask, exists := actualMap[key]
+		assert.True(t, exists, "Expected task not found: %s, task: %d", key, expectedTask.Task)
+		if !exists {
+			fmt.Println("expected tasks:")
+			for k, v := range actualMap {
+				fmt.Printf("%s - task: %d\n", k, v.Task)
+			}
+
+			continue
+		}
+
+		if exists {
+			assert.Equal(t, expectedTask.Registry, actualTask.Registry, "Registry mismatch for %s", key)
+			assert.Equal(t, expectedTask.Module, actualTask.Module, "Module mismatch for %s", key)
+			assert.Equal(t, expectedTask.Version, actualTask.Version, "Version mismatch for %s", key)
+			assert.Equal(t, expectedTask.ReleaseChannels, actualTask.ReleaseChannels, "ReleaseChannels mismatch for %s", key)
+			assert.Equal(t, 1536, len(actualTask.TarFile), "TarFile length mismatch for %s", key)
+			assert.Equal(t, expectedTask.Task, actualTask.Task, "Task mismatch for %s", key)
+			assert.Greater(t, len(actualTask.TarFile), 0, "TarFile should not be empty for %s", key)
+		}
+	}
 }
 
 func setupCompleteClientOne(mc *minimock.Controller) Client {
@@ -160,7 +206,7 @@ func setupNewImagesClientOne(mc *minimock.Controller) Client {
 		},
 		"parca": {
 			"2.3.4": createMockImage("c1parcaImageFirst", "2.3.4"),
-			"4.4.4": createMockImage("c1parcaImageThird", "4.4.4"),
+			"5.5.5": createMockImage("c1parcaImageThird", "5.5.5"),
 		},
 	}
 
@@ -174,10 +220,10 @@ func setupNewImagesClientOne(mc *minimock.Controller) Client {
 	client.ReleaseImageMock.When(minimock.AnyContext, "console", "alpha").Then(images["console"]["1.2.3"], nil)
 	client.ReleaseImageMock.When(minimock.AnyContext, "console", "beta").Then(images["console"]["3.3.3"], nil)
 	client.ReleaseImageMock.When(minimock.AnyContext, "parca", "rock-solid").Then(images["parca"]["2.3.4"], nil)
-	client.ReleaseImageMock.When(minimock.AnyContext, "parca", "stable").Then(images["parca"]["4.4.4"], nil)
+	client.ReleaseImageMock.When(minimock.AnyContext, "parca", "stable").Then(images["parca"]["5.5.5"], nil)
 
 	client.ImageMock.When(minimock.AnyContext, "console", "3.3.3").Then(images["console"]["3.3.3"], nil)
-	client.ImageMock.When(minimock.AnyContext, "parca", "4.4.4").Then(images["parca"]["4.4.4"], nil)
+	client.ImageMock.When(minimock.AnyContext, "parca", "5.5.5").Then(images["parca"]["5.5.5"], nil)
 
 	return client
 }
@@ -216,7 +262,7 @@ func setupNewImagesClientTwo(mc *minimock.Controller) Client {
 	images := map[string]map[string]*crfake.FakeImage{
 		"console": {
 			"3.4.5": createMockImage("c2consoleImageFirst", "3.4.5"),
-			"5.5.5": createMockImage("c2consoleImageThird", "5.5.5"),
+			"4.4.4": createMockImage("c2consoleImageThird", "4.4.4"),
 		},
 		"parca": {
 			"4.5.6": createMockImage("c2parcaImageFirst", "4.5.6"),
@@ -232,11 +278,11 @@ func setupNewImagesClientTwo(mc *minimock.Controller) Client {
 	client.ListTagsMock.When(minimock.AnyContext, "parca").Then([]string{"rock-solid", "stable"}, nil)
 
 	client.ReleaseImageMock.When(minimock.AnyContext, "console", "alpha").Then(images["console"]["3.4.5"], nil)
-	client.ReleaseImageMock.When(minimock.AnyContext, "console", "beta").Then(images["console"]["5.5.5"], nil)
+	client.ReleaseImageMock.When(minimock.AnyContext, "console", "beta").Then(images["console"]["4.4.4"], nil)
 	client.ReleaseImageMock.When(minimock.AnyContext, "parca", "rock-solid").Then(images["parca"]["4.5.6"], nil)
 	client.ReleaseImageMock.When(minimock.AnyContext, "parca", "stable").Then(images["parca"]["6.6.6"], nil)
 
-	client.ImageMock.When(minimock.AnyContext, "console", "5.5.5").Then(images["console"]["5.5.5"], nil)
+	client.ImageMock.When(minimock.AnyContext, "console", "4.4.4").Then(images["console"]["4.4.4"], nil)
 	client.ImageMock.When(minimock.AnyContext, "parca", "6.6.6").Then(images["parca"]["6.6.6"], nil)
 
 	return client
