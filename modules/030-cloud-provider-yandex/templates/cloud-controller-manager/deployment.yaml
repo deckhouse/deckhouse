@@ -3,9 +3,7 @@ cpu: 25m
 memory: 60Mi
 {{- end }}
 
-{{- $kubernetesSemVer := semver .Values.global.discovery.kubernetesVersion }}
-{{- $ccmImageName := join "" (list "cloudControllerManager" $kubernetesSemVer.Major $kubernetesSemVer.Minor ) }}
-{{- $ccmImage := include "helm_lib_module_image_no_fail" (list . $ccmImageName) }}
+{{- $ccmImage := include "helm_lib_module_image_no_fail" (list .  "cloudControllerManager") }}
 {{- if $ccmImage }}
   {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
 ---

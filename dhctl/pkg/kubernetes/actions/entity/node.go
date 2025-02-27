@@ -166,7 +166,6 @@ func GetNodeGroup(kubeCl *client.KubernetesClient, nodeGroupName string) (*unstr
 
 		return err
 	})
-
 	if err != nil {
 		return nil, err
 	}
@@ -178,7 +177,6 @@ func GetNodeGroups(kubeCl *client.KubernetesClient) ([]unstructured.Unstructured
 	ngs, err := kubeCl.Dynamic().
 		Resource(nodeGroupResource).
 		List(context.TODO(), metav1.ListOptions{})
-
 	if err != nil {
 		return nil, err
 	}
