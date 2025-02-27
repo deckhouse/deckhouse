@@ -17,6 +17,7 @@ package v1
 import (
 	"encoding/json"
 	"io"
+	"log/slog"
 	"net/http"
 	"strings"
 
@@ -80,7 +81,7 @@ func (h *DocsBuilderHandler) handleGetDocsInfo(w http.ResponseWriter, r *http.Re
 
 	err = json.NewEncoder(w).Encode(modules)
 	if err != nil {
-		h.logger.Error("marshal documentation info", log.Err(err))
+		h.logger.Error("marshal documentation", log.Err(err))
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
@@ -98,7 +99,7 @@ func (h *DocsBuilderHandler) handleUpload(w http.ResponseWriter, r *http.Request
 	moduleName := r.PathValue("moduleName")
 	version := r.PathValue("version")
 
-	h.logger.Infof("loading %s %s: %s", moduleName, version, channels)
+	h.logger.Info("uploading module", slog.String("module", moduleName), slog.String("version", version), slog.String("channels", strings.Join(channels, ",")))
 
 	err := h.docsService.Upload(r.Body, moduleName, version, channels)
 	if err != nil {
@@ -130,7 +131,7 @@ func (h *DocsBuilderHandler) handleDelete(w http.ResponseWriter, r *http.Request
 
 	moduleName := r.PathValue("moduleName")
 
-	h.logger.Infof("deleting %s: %s", moduleName, channels)
+	h.logger.Info("deleting module", slog.String("module", moduleName), slog.String("channels", strings.Join(channels, ",")))
 	err := h.docsService.Delete(moduleName, channels)
 	if err != nil {
 		h.logger.Error("delete", log.Err(err))
