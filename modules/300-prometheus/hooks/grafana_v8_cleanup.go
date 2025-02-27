@@ -33,7 +33,7 @@ type GrafanaV8Resource struct {
 }
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	Queue: "/modules/prometheus/grafana_v8_deprecation",
+	Queue: "/modules/prometheus/grafana_v8_cleanup",
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
 			Name:       "grafana-v8-deployments",
