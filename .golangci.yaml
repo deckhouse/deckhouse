@@ -86,3 +86,4 @@ linters:
   - whitespace
   - copyloopvar
   - nonamedreturns
+  - musttag

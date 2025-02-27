@@ -23,10 +23,10 @@ type HTTPMockResponse struct {
 }
 
 type jwtPayload struct {
-	Iss   string
-	Sub   string
-	Aud   string
-	Scope string
-	Nbf   int64
-	Exp   int64
+	Iss   string `json:"iss"`
+	Sub   string `json:"sub"`
+	Aud   string `json:"aud"`
+	Scope string `json:"scope"`
+	Nbf   int64  `json:"nbf"`
+	Exp   int64  `json:"exp"`
 }
