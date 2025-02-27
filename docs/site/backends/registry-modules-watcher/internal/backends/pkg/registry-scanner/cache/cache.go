@@ -308,6 +308,6 @@ func sortDocumentationTasks(input []backends.DocumentationTask) {
 			return input[i].Version < input[j].Version
 		}
 
-		return input[i].Task < input[j].Task
+		return input[i].Task > input[j].Task
 	})
 }

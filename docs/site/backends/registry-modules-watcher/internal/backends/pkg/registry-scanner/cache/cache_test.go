@@ -157,16 +157,16 @@ func TestCache(t *testing.T) {
 					Module:          "TestModule",
 					Version:         "1.0.0",
 					ReleaseChannels: []string{"alpha", "beta"},
-					TarFile:         []byte("updated content"),
-					Task:            backends.TaskCreate,
+					TarFile:         []byte("test"),
+					Task:            backends.TaskDelete,
 				},
 				{
 					Registry:        "TestReg",
 					Module:          "TestModule",
 					Version:         "1.0.0",
 					ReleaseChannels: []string{"alpha", "beta"},
-					TarFile:         []byte("test"),
-					Task:            backends.TaskDelete,
+					TarFile:         []byte("updated content"),
+					Task:            backends.TaskCreate,
 				},
 			}
 
