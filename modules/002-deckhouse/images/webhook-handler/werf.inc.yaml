@@ -54,7 +54,7 @@ git:
       - '**/*'
 imageSpec:
   config:
-    env: {"PYTHONPATH": "/frameworks/python" ,"PATH": "/opt/python-static/bin:${PATH}}
+    env: {"PYTHONPATH": "/frameworks/python" ,"PATH": "/opt/python-static/bin:${PATH}"}
     entrypoint: ["/entrypoint.sh"]
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-label-converter-src-artifact

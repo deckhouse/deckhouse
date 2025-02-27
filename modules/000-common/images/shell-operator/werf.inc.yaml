@@ -19,6 +19,9 @@ import:
   add: /src/jq/jq
   to: /usr/local/bin/jq
   before: setup
+- image: common/python-static-artifact
+  add: /opt/python-static
+  before: setup
 {{- $k8sVersion := "1.28" }}
 {{- $image_version := printf "%s.%d" $k8sVersion (index $.CandiVersionMap "k8s" $k8sVersion "patch") | replace "." "-" }}
 - image: common/kubernetes-artifact-{{ $image_version }}
@@ -32,6 +35,7 @@ import:
 imageSpec:
   config:
     entrypoint: ["tini", "--", "/shell-operator"]
+    env: {"PATH": "/opt/python-static/bin:${PATH}"}
 shell:
   setup:
   - find /var/lib/apt/ /var/cache/apt/ -type f -delete
@@ -67,9 +71,6 @@ mount:
 - from: tmp_dir
   to: /root/.cache/go-build
 import:
-- image: common/python-static-artifact
-  add: /opt/python-static
-  before: setup
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
   add: /src
   to: /src
