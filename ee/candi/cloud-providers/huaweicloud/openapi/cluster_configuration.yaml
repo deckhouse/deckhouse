@@ -263,7 +263,7 @@ apiVersions:
       vpcPeering:
         type: object
         description: |
-          Settings for the [`Standard` layout](./layouts.html#standard).
+          Settings for the [`VpcPeering` layout](./layouts.html#vpcpeering).
         additionalProperties: false
         required: [ internalNetworkCIDR ]
         properties:
