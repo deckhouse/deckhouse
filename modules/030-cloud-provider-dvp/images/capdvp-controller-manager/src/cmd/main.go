@@ -26,6 +26,9 @@ import (
 	// to ensure that exec-entrypoint and run can make use of them.
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 
+	dvpapi "dvp-common/api"
+	"dvp-common/config"
+
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
@@ -87,7 +90,20 @@ func main() {
 	opts.BindFlags(flag.CommandLine)
 	flag.Parse()
 
-	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
+	log := zap.New(zap.UseFlagOptions(&opts))
+	ctrl.SetLogger(log)
+
+	cloudConfig, err := config.NewCloudConfig()
+	if err != nil {
+		log.Error(err, "Failed to load cloud config")
+		os.Exit(1)
+	}
+
+	cloudAPI, err := dvpapi.NewDVPCloudAPI(cloudConfig)
+	if err != nil {
+		log.Error(err, "Failed to setup DVP API Client")
+		os.Exit(1)
+	}
 
 	// if the enable-http2 flag is false (the default), http/2 should be disabled
 	// due to its vulnerabilities. More specifically, disabling http/2 will
@@ -205,6 +221,7 @@ func main() {
 	if err = (&controller.DeckhouseClusterReconciler{
 		Client: mgr.GetClient(),
 		Scheme: mgr.GetScheme(),
+		DVP:    cloudAPI,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "DeckhouseCluster")
 		os.Exit(1)
@@ -212,6 +229,7 @@ func main() {
 	if err = (&controller.DeckhouseMachineReconciler{
 		Client: mgr.GetClient(),
 		Scheme: mgr.GetScheme(),
+		DVP:    cloudAPI,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "DeckhouseMachine")
 		os.Exit(1)

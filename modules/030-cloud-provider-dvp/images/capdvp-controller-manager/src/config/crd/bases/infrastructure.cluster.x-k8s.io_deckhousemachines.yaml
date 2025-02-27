@@ -46,7 +46,6 @@ spec:
                   cores:
                     default: 4
                     description: Cores is the number of cores per socket.
-                    maximum: 1024
                     minimum: 1
                     type: integer
                   cpuFraction:
@@ -54,8 +53,12 @@ spec:
                     description: |-
                       Fraction is a guaranteed share of CPU time that will be allocated to the VM.
                       Expressed as percentage (0-100]
-                    maximum: 100
-                    minimum: 1
+                    enum:
+                    - 5
+                    - 10
+                    - 25
+                    - 50
+                    - 100
                     type: integer
                 required:
                 - cores
@@ -75,11 +78,12 @@ spec:
                   proto.
                 type: string
               rootDiskSize:
-                default: 50
-                description: RootDiskSize size of the bootable disk in GiB.
-                format: int64
-                minimum: 1
-                type: integer
+                anyOf:
+                - type: integer
+                - type: string
+                description: RootDiskSize holds the size of the bootable disk.
+                pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                x-kubernetes-int-or-string: true
               vmClassName:
                 description: |-
                   VMClassName defines the name of the VirtualMachineClass resource describing requirements

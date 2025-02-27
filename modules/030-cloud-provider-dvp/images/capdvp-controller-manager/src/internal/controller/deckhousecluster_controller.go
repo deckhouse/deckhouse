@@ -25,12 +25,14 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	infrastructurev1alpha1 "cluster-api-provider-dvp/api/v1alpha1"
+	dvpapi "dvp-common/api"
 )
 
 // DeckhouseClusterReconciler reconciles a DeckhouseCluster object
 type DeckhouseClusterReconciler struct {
 	client.Client
 	Scheme *runtime.Scheme
+	DVP    *dvpapi.DVPCloudAPI
 }
 
 // +kubebuilder:rbac:groups=infrastructure.cluster.x-k8s.io,resources=deckhouseclusters,verbs=get;list;watch;create;update;patch;delete

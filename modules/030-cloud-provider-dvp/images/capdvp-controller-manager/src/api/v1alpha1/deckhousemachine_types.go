@@ -17,8 +17,22 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	clusterv1b1 "sigs.k8s.io/cluster-api/api/v1beta1"
+)
+
+const MachineFinalizer = "deckhousemachine.infrastructure.cluster.x-k8s.io"
+
+const (
+	VMReadyCondition clusterv1b1.ConditionType = "VirtualMachineReady"
+)
+
+const (
+	VMNotReadyReason = "VMNotReady"
+
+	WaitingForClusterInfrastructureReason = "WaitingForClusterInfrastructure"
+	WaitingForBootstrapScriptReason       = "WaitingForBootstrapScript"
 )
 
 // CPU defines the VM CPU, made of variable number of cores, each getting the Fraction amount of processing time on a physical core.
@@ -26,14 +40,12 @@ type CPU struct {
 	// Cores is the number of cores per socket.
 	// +kubebuilder:default=4
 	// +kubebuilder:validation:Minimum=1
-	// +kubebuilder:validation:Maximum=1024
 	Cores int `json:"cores"`
 
 	// Fraction is a guaranteed share of CPU time that will be allocated to the VM.
 	// Expressed as percentage (0-100]
-	// +kubebuilder:validation:Minimum=1
-	// +kubebuilder:validation:Maximum=100
 	// +kubebuilder:default=100
+	// +kubebuilder:validation:Enum:={5, 10, 25, 50, 100}
 	Fraction int `json:"cpuFraction"`
 }
 
@@ -63,15 +75,13 @@ type DeckhouseMachineSpec struct {
 	// CPU holds number of cores and processing time allocated to them.
 	CPU CPU `json:"cpu"`
 
-	// Memory is this machine's RAM amount in megabytes.
+	// Memory is this machine's RAM amount in mebibytes (MiB).
 	// +kubebuilder:validation:Minimum=8
 	// +kubebuilder:default=8192
 	Memory int `json:"memory"`
 
-	// RootDiskSize size of the bootable disk in GiB.
-	// +kubebuilder:validation:Minimum=1
-	// +kubebuilder:default=50
-	RootDiskSize int64 `json:"rootDiskSize"`
+	// RootDiskSize holds the size of the bootable disk.
+	RootDiskSize resource.Quantity `json:"rootDiskSize"`
 }
 
 // DeckhouseMachineStatus defines the observed state of DeckhouseMachine.
@@ -110,6 +120,16 @@ type DeckhouseMachine struct {
 
 	Spec   DeckhouseMachineSpec   `json:"spec,omitempty"`
 	Status DeckhouseMachineStatus `json:"status,omitempty"`
+}
+
+// GetConditions gets the DeckhouseMachine status conditions
+func (r *DeckhouseMachine) GetConditions() clusterv1b1.Conditions {
+	return r.Status.Conditions
+}
+
+// SetConditions sets the DeckhouseMachine status conditions
+func (r *DeckhouseMachine) SetConditions(conditions clusterv1b1.Conditions) {
+	r.Status.Conditions = conditions
 }
 
 // +kubebuilder:object:root=true

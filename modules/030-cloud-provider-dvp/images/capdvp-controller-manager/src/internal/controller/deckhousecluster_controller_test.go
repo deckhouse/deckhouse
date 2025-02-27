@@ -38,7 +38,7 @@ var _ = Describe("DeckhouseCluster Controller", func() {
 
 		typeNamespacedName := types.NamespacedName{
 			Name:      resourceName,
-			Namespace: "default", // TODO(user):Modify as needed
+			Namespace: "d8-cloud-provider-dvp", // TODO(user):Modify as needed
 		}
 		deckhousecluster := &infrastructurev1alpha1.DeckhouseCluster{}
 
@@ -49,7 +49,7 @@ var _ = Describe("DeckhouseCluster Controller", func() {
 				resource := &infrastructurev1alpha1.DeckhouseCluster{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      resourceName,
-						Namespace: "default",
+						Namespace: "d8-cloud-provider-dvp",
 					},
 					// TODO(user): Specify other spec details if needed.
 				}
