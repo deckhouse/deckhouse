@@ -45,7 +45,8 @@ import (
 )
 
 func (s *Service) Destroy(server pb.DHCTL_DestroyServer) error {
-	ctx := operationCtx(server)
+	ctx, cancel := operationCtx(server)
+	defer cancel()
 
 	logger.L(ctx).Info("started")
 
