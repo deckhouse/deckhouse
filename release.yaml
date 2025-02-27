@@ -29,7 +29,6 @@ requirements:
   # it's used to block release with deprecated APIs when changing default kubernetes version
   "autoK8sVersion": "1.30" #modules/340-monitoring-kubernetes/requirements/check.go
   "ingressNginx": "1.9" # modules/402-ingress-nginx/requirements/check.go
-  "containerdOnAllNodes": "true" # modules/040-node-manager/requirements/check.go
   "istioMinimalVersion": "1.19" # modules/110-istio/requirements/check.go
   "metallbHasStandardConfiguration": "true" # ee/se/modules/380-metallb/requirements/check.go
 
