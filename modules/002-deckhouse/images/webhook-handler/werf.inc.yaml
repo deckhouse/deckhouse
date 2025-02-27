@@ -20,8 +20,6 @@ import:
     before: setup
     includePaths:
     - opt/python-static
-    - usr/bin/pip3
-    - usr/bin/python3
   - image: {{ $.ModuleName }}/{{ .ImageName }}-label-converter-artifact
     add: /label-converter
     to: /usr/local/bin/label-converter
@@ -56,7 +54,7 @@ git:
       - '**/*'
 imageSpec:
   config:
-    env: {"PYTHONPATH": "/frameworks/python"}
+    env: {"PYTHONPATH": "/frameworks/python" ,"PATH": "/opt/python-static/bin:${PATH}}
     entrypoint: ["/entrypoint.sh"]
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-label-converter-src-artifact
@@ -107,8 +105,6 @@ import:
   before: install
   includePaths:
   - opt/python-static
-  - usr/bin/pip3
-  - usr/bin/python3
 shell:
   install:
-  - pip3 install -r /requirements.txt
+  - /opt/python-static/bin/pip3 install -r /requirements.txt
