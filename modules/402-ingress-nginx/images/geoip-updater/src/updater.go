@@ -31,7 +31,9 @@ import (
 var once sync.Once
 
 type Updater struct {
-	interval        int
+	interval int
+	// Retained compatibility with the Client from the package https://pkg.go.dev/github.com/maxmind/geoipupdate/v7.
+	// The internal implementation of the Client can be replaced by it.
 	maxmindClient   *Client
 	databasePath    string
 	editionsMD5Sums map[string]string
