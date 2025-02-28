@@ -101,8 +101,6 @@ spec:
                 additionalProperties:
                   type: string
                   pattern: "^[a-zA-Z0-9][a-zA-Z0-9-_.]*[a-zA-Z0-9]$|^[a-zA-Z0-9]$|^$"
-                  not:
-                    pattern: ".*\\*.*"
                   description: |
                     The value must be a valid label value: it can contain letters (a-z, A-Z), numbers (0-9), dashes (-), underscores (_), and dots (.),
                     must start and end with an alphanumeric character (a-z, A-Z, 0-9), and must not contain '*'.
