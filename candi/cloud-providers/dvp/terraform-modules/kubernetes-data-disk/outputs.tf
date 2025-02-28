@@ -20,3 +20,6 @@ output "hash" {
   value = local.data_disk_destructive_params_json_hash
 }
 
+output "md5_id" {
+  value = md5(data.kubernetes_resource.kubernetes-data-disk.object.metadata.uid)
+}

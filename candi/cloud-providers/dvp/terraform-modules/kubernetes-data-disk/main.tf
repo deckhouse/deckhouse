@@ -45,3 +45,16 @@ resource "kubernetes_manifest" "kubernetes-data-disk" {
     ]
   }
 }
+
+data "kubernetes_resource" "kubernetes-data-disk" {
+  api_version = var.api_version
+  kind        = "VirtualDisk"
+
+  metadata {
+    name      = local.data_disk_name
+    namespace = var.namespace
+  }
+  depends_on = [
+    kubernetes_manifest.kubernetes-data-disk
+  ]
+}
