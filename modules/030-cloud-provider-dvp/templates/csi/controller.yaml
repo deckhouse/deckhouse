@@ -68,7 +68,6 @@
   readOnly: true
 {{- end }}
 
-{{- $kubernetesSemVer := semver .Values.global.discovery.kubernetesVersion }}
 {{- $csiImageName := "dvpCsiDriver" }}
 {{- $csiControllerImage := include "helm_lib_module_image_no_fail" (list . $csiImageName) }}
 {{- if $csiControllerImage }}
