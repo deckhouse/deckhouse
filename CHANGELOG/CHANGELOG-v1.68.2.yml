@@ -1,0 +1,17 @@
+admission-policy-engine:
+  fixes:
+    - summary: Fix wildcard apparmor profile.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/12333
+deckhouse-tools:
+  fixes:
+    - summary: Fix tools links pointing to wrong path
+      pull_request: https://github.com/deckhouse/deckhouse/pull/12346
+service-with-healthchecks:
+  fixes:
+    - summary: Fixed several issues.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/12272
+upmeter:
+  fixes:
+    - summary: Fixed metallb module probe.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/12231
+

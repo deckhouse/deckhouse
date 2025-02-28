@@ -1,5 +1,10 @@
 # Changelog v1.68
 
+## [MALFORMED]
+
+
+ - #12028 unknown section "prometheus-rules"
+
 ## Know before update
 
 
@@ -66,6 +71,7 @@
  - **[deckhouse]** Trigger the ModuleConfig handling when a module created. [#12039](https://github.com/deckhouse/deckhouse/pull/12039)
  - **[deckhouse]** Return `helm_lib_envs_for_proxy` template to deckhouse deployment. [#11921](https://github.com/deckhouse/deckhouse/pull/11921)
  - **[deckhouse-controller]** Fixed a bug in the `kubectl` wrapper script. [#11494](https://github.com/deckhouse/deckhouse/pull/11494)
+ - **[deckhouse-tools]** Fix tools links pointing to wrong path [#12346](https://github.com/deckhouse/deckhouse/pull/12346)
  - **[dhctl]** Fix broken connection-config in CLI and support sudoPassword in SSHConfig. [#12036](https://github.com/deckhouse/deckhouse/pull/12036)
  - **[dhctl]** Fixed a bug that prevented PersistentVolumes from being properly deleted by the `dhctl destroy` command in Stronghold. [#11878](https://github.com/deckhouse/deckhouse/pull/11878)
  - **[dhctl]** Fixed the behavior of static cluster destruction. [#11059](https://github.com/deckhouse/deckhouse/pull/11059)
@@ -119,6 +125,7 @@
  - **[registrypackages]** Bumped the `docker_auth` version in in `docker-registry`. [#11600](https://github.com/deckhouse/deckhouse/pull/11600)
  - **[registrypackages]** Fixed security vulnerabilities in `crictl`. [#11523](https://github.com/deckhouse/deckhouse/pull/11523)
  - **[runtime-audit-engine]** Fixed security vulnerabilities in `k8s-metacollector` and `rules-loader`. [#11581](https://github.com/deckhouse/deckhouse/pull/11581)
+ - **[service-with-healthchecks]** Fixed several issues. [#12272](https://github.com/deckhouse/deckhouse/pull/12272)
  - **[terraform-manager]** CVE fix dynamix cloud provider and bump go version. [#12111](https://github.com/deckhouse/deckhouse/pull/12111)
  - **[terraform-manager]** CVE fix terraform-manager-gcp and bump go version. [#12068](https://github.com/deckhouse/deckhouse/pull/12068)
  - **[terraform-manager]** CVE fix terraform-manager-aws and bump go version. [#12065](https://github.com/deckhouse/deckhouse/pull/12065)
@@ -131,12 +138,14 @@
  - **[terraform-manager]** Bumped the Go version to fix security invulnerabilities in `terraform-manager-vsphere`. [#11903](https://github.com/deckhouse/deckhouse/pull/11903)
  - **[terraform-manager]** Fixed the sizing policy change procedure in the `vcd_vapp_vm` resource. [#11202](https://github.com/deckhouse/deckhouse/pull/11202)
  - **[terraform-manager]** Removed the patch with `vcd_catalog_vapp_template` data source fixes for `terraform-provider-vcd`. [#10902](https://github.com/deckhouse/deckhouse/pull/10902)
+ - **[upmeter]** Fixed metallb module probe. [#12231](https://github.com/deckhouse/deckhouse/pull/12231)
  - **[user-authn]** Fixed security vulnerabilities and updated the build. [#11588](https://github.com/deckhouse/deckhouse/pull/11588)
  - **[user-authn]** Bumped dependencies to fix security vulnerabilities. [#11332](https://github.com/deckhouse/deckhouse/pull/11332)
 
 ## Chore
 
 
+ - **[admission-policy-engine]** Fixes policies schemas. Allow to exclude namespaces or use only object labels. [#12292](https://github.com/deckhouse/deckhouse/pull/12292)
  - **[admission-policy-engine]** Fixed security vulnerabilities and updated the `trivy` build. [#11568](https://github.com/deckhouse/deckhouse/pull/11568)
  - **[admission-policy-engine]** Bumped `gatekeeper` and refactored the build. [#11356](https://github.com/deckhouse/deckhouse/pull/11356)
  - **[candi]** update d8-cli [#12104](https://github.com/deckhouse/deckhouse/pull/12104)
