@@ -1070,9 +1070,9 @@ spec:
                         description: Base64 encoded docker config.json content
                     x-kubernetes-validations:
                     - rule: "has(self.name) != has(self.dockerCfgJSON)"
-                      message: Each item must contain either 'name' or 'dockerCfgJSON' field, but not both.
+                      message: "Each item must contain either 'name' or 'dockerCfgJSON' field, but not both."
                     - rule: "has(self.name) || has(self.dockerCfgJSON)"
-                      message: Each item must contain one of the following fields: 'name' or 'dockerCfgJSON'.
+                      message: "Each item must contain one of the following fields: 'name' or 'dockerCfgJSON'."
                   description: |
                     A list of image pull secrets. Each item can either reference an existing secret by name
                     or provide docker registry credentials directly via dockerCfgJSON.
