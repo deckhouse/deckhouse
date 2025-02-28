@@ -34,6 +34,10 @@ module_alert_experimental: Экспериментальная версия
 module_alert_preview: Предварительная версия (preview)
 module_alert_general_availability: Общедоступная версия
 module_alert_deprecated: Устарело
+module_alert_experimental_long: Экспериментальная версия. Функциональность может сильно измениться. Совместимость с будущими версиями не гарантируется.
+module_alert_preview_long: Предварительная версия. Функциональность может измениться, но основные возможности сохранятся. Совместимость с будущими версиями может потребовать ручных действий по миграции.
+module_alert_general_availability_long: Общедоступная версия. Готово к использованию в production-средах.
+module_alert_deprecated_long: Устарело. Развитие и поддержка прекращены.
 deprecated_parameter: Параметр устарел
 deprecated_parameter_hint: Поддержка параметра может быть исключена в следующих версиях.
 element_of_array: элемент массива
