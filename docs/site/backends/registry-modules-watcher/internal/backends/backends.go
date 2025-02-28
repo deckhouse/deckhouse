@@ -83,7 +83,7 @@ func (bm *BackendManager) Add(ctx context.Context, backend string) {
 	bm.backendAddrs[backend] = struct{}{}
 
 	state := bm.scanner.GetState()
-	bm.logger.Warn("Sending documentation to new backend",
+	bm.logger.Info("Sending documentation to new backend",
 		slog.String("backend", backend),
 		slog.Int("docs_count", len(state)))
 

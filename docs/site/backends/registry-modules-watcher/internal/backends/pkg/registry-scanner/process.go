@@ -53,7 +53,7 @@ func (s *registryscanner) processRegistries(ctx context.Context) []backends.Docu
 			continue
 		}
 
-		s.logger.Info("found modules",
+		s.logger.Debug("found modules",
 			slog.Any("modules", modules),
 			slog.String("registry", registry.Name()))
 

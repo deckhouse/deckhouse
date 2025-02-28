@@ -92,14 +92,14 @@ func (s *registryscanner) Subscribe(ctx context.Context, scanInterval time.Durat
 					switch task.Task {
 					case backends.TaskCreate:
 						createCounter++
-						s.logger.Warn("received a new module version, processing...", slog.String("module", task.Module), slog.String("version", task.Version))
+						s.logger.Info("received a new module version, processing...", slog.String("module", task.Module), slog.String("version", task.Version))
 					case backends.TaskDelete:
 						deleteCounter++
-						s.logger.Warn("find module version to remove, processing...", slog.String("module", task.Module), slog.String("version", task.Version))
+						s.logger.Info("find module version to remove, processing...", slog.String("module", task.Module), slog.String("version", task.Version))
 					}
 				}
 
-				s.logger.Warn("module versions changed in registry", slog.Int("create", createCounter), slog.Int("delete", deleteCounter))
+				s.logger.Info("module versions changed in registry", slog.Int("create", createCounter), slog.Int("delete", deleteCounter))
 
 				if err := s.updateHandler(docTask); err != nil {
 					s.logger.Error("updateHandler", log.Err(err))
