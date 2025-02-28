@@ -188,7 +188,7 @@ func (s *registryscanner) extractDocumentation(image v1.Image) ([]byte, error) {
 	}
 
 	// Copy relevant files from source tar to destination tar
-	if err := copyDocumentationFiles(readCloser, tarWriter); err != nil {
+	if err := s.copyDocumentationFiles(readCloser, tarWriter); err != nil {
 		return nil, err
 	}
 
@@ -208,7 +208,7 @@ func createDocumentationDirectoryStructure(tarWriter *tar.Writer) error {
 	return nil
 }
 
-func copyDocumentationFiles(source io.Reader, tarWriter *tar.Writer) error {
+func (s *registryscanner) copyDocumentationFiles(source io.Reader, tarWriter *tar.Writer) error {
 	tarReader := tar.NewReader(source)
 
 	for {
@@ -233,6 +233,9 @@ func copyDocumentationFiles(source io.Reader, tarWriter *tar.Writer) error {
 			if _, err := tarWriter.Write(buf.Bytes()); err != nil {
 				return fmt.Errorf("write file content: %w", err)
 			}
+
+			s.logger.Debug("copied file",
+				slog.String("file", hdr.Name))
 		}
 	}
 
