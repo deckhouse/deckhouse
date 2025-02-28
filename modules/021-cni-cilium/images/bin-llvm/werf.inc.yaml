@@ -35,9 +35,6 @@ import:
   to: /src
   before: install
 shell:
-  install:
-  - apt-get install -y gcc11 gcc11-c++ libstdc++11-devel libstdc++11-devel-static
-  #- update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-13 2
   setup:
   - mkdir -p /tmp/ccache-dir
   - git clone --depth 1 --branch {{ $llvmCacheRev }} {{ $.SOURCE_REPO }}/llvm/llvm-build-cache.git /tmp/ccache-dir
