@@ -21,83 +21,84 @@ properties:
           ```
         x-doc-search: |
           ProviderClusterConfiguration
-        x-unsafe-rules: [ deleteZones ]
+        x-unsafe-rules: [deleteZones]
         x-examples:
-        - apiVersion: deckhouse.io/v1
-          kind: DVPClusterConfiguration
-          layout: Standard
-          sshPublicKey: "ssh-rsa AAAA"
-          provider:
-            kubeconfigDataBase64: "<kubeconfig base64>"
-            namespace: default
-          masterNodeGroup:
-            replicas: 1
-            zones:
-            - zone-a
-            - zone-b
-            instanceClass:
-              virtualMachine:
-                cpu:
-                  cores: 4
-                  coreFraction: 100%
-                memory:
-                  size: 8Gi
-                ipAddresses:
-                - Auto
-              rootDisk:
-                size: 50Gi
-                image:
-                  kind: ClusterVirtualImage
-                  name: ubuntu-2204
-              etcdDisk:
-                size: 15Gi
-          nodeGroups:
-          - name: worker
-            replicas: 1
-            zones:
-            - zone-a
-            - zone-b
-            instanceClass:
-              virtualMachine:
-                cpu:
-                  cores: 4
-                  coreFraction: 100%
-                memory:
-                  size: 8Gi
-                ipAddresses:
-                - Auto
-              rootDisk:
-                size: 50Gi
-                image:
-                  kind: ClusterVirtualImage
-                  name: ubuntu-2204
-        required: [ apiVersion, kind, sshPublicKey, masterNodeGroup, layout, provider ]
+          - apiVersion: deckhouse.io/v1
+            kind: DVPClusterConfiguration
+            layout: Standard
+            sshPublicKey: "ssh-rsa AAAA"
+            provider:
+              kubeconfigDataBase64: "<kubeconfig base64>"
+              namespace: default
+            masterNodeGroup:
+              replicas: 1
+              zones:
+                - zone-a
+                - zone-b
+              instanceClass:
+                virtualMachine:
+                  cpu:
+                    cores: 4
+                    coreFraction: 100%
+                  memory:
+                    size: 8Gi
+                  ipAddresses:
+                    - Auto
+                rootDisk:
+                  size: 50Gi
+                  image:
+                    kind: ClusterVirtualImage
+                    name: ubuntu-2204
+                etcdDisk:
+                  size: 15Gi
+            nodeGroups:
+              - name: worker
+                replicas: 1
+                zones:
+                  - zone-a
+                  - zone-b
+                instanceClass:
+                  virtualMachine:
+                    cpu:
+                      cores: 4
+                      coreFraction: 100%
+                    memory:
+                      size: 8Gi
+                    ipAddresses:
+                      - Auto
+                  rootDisk:
+                    size: 50Gi
+                    image:
+                      kind: ClusterVirtualImage
+                      name: ubuntu-2204
+        required:
+          [apiVersion, kind, sshPublicKey, masterNodeGroup, layout, provider]
         properties:
           apiVersion:
             type: string
-            enum: [ deckhouse.io/v1 ]
+            enum: [deckhouse.io/v1]
           kind:
             type: string
-            enum: [ DVPClusterConfiguration ]
+            enum: [DVPClusterConfiguration]
           sshPublicKey:
             type: string
             description: a public key for accessing nodes.
           masterNodeGroup:
             type: object
             additionalProperties: false
-            required: [ replicas, instanceClass ]
+            required: [replicas, instanceClass]
             description: |
               The definition of the master's NodeGroup.
 
               > Caution! After changing the parameters of the section, you need to run `dhctl converge` for the changes to take effect.
-            x-unsafe-rules: [ updateMasterImage ]
+            x-unsafe-rules: [updateMasterImage]
             properties:
               replicas:
                 type: integer
                 minimum: 1
                 description: |
                   The number of master nodes to create. It is important to have an odd number of masters to ensure a quorum.
-                x-unsafe-rules: [ updateReplicas ]
+                x-unsafe-rules: [updateReplicas]
               zones:
                 type: array
                 description: |
@@ -258,8 +259,8 @@ properties:
                             description: |
                               The kind of the image source.
                             enum:
-                            - "ClusterVirtualImage"
-                            - "VirtualImage"
+                              - "ClusterVirtualImage"
+                              - "VirtualImage"
                           name:
                             type: string
                             description: |
@@ -300,7 +301,7 @@ properties:
               An array of additional NodeGroups for creating static nodes (e.g., for dedicated front nodes or gateways).
             items:
               type: object
-              required: [ name, replicas, instanceClass ]
+              required: [name, replicas, instanceClass]
               properties:
                 name:
                   type: string
@@ -348,7 +349,7 @@ properties:
                         properties:
                           effect:
                             type: string
-                            enum: [ NoSchedule, PreferNoSchedule, NoExecute ]
+                            enum: [NoSchedule, PreferNoSchedule, NoExecute]
                           key:
                             type: string
                           value:
@@ -395,36 +396,36 @@ properties:
                 description: |
                   Kubeconfig to connect to Deckhouse Kubernetes Platform API base64 encoded.
                 type: string
-                pattern: '^[A-Za-z0-9+/]+[=]{0,2}$'
+                pattern: "^[A-Za-z0-9+/]+[=]{0,2}$"
               namespace:
                 description: |
                   Namespace in which DKP cluster resources will be created.
                   > Caution! If not explicitly specified, the default namespace for kubeconfig will be used.
                 type: string
             required:
-            - kubeconfigDataBase64
-            - namespace
+              - kubeconfigDataBase64
+              - namespace
         oneOf:
-        - required: [layout]
-          properties:
-            layout:
-              enum:
-              - Standard
-              type: string
+          - required: [layout]
+            properties:
+              layout:
+                enum:
+                  - Standard
+                type: string
       providerDiscoveryData:
         type: object
         additionalProperties: false
-        required: [ apiVersion, kind ]
+        required: [apiVersion, kind]
         x-examples:
-        - apiVersion: deckhouse.io/v1
-          kind: DVPCloudDiscoveryData
+          - apiVersion: deckhouse.io/v1
+            kind: DVPCloudDiscoveryData
         properties:
           apiVersion:
             type: string
-            enum: [ deckhouse.io/v1 ]
+            enum: [deckhouse.io/v1]
           kind:
             type: string
-            enum: [ DVPCloudDiscoveryData ]
+            enum: [DVPCloudDiscoveryData]
           zones:
             type: array
             items:
@@ -437,5 +438,5 @@ properties:
         items:
           type: object
           properties:
-            name:
+            dvpStorageClass:
               type: string
