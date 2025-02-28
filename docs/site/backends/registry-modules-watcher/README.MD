@@ -40,7 +40,7 @@ When starting with an empty cache:
 |----------|:--------:|---------|-------------|
 | `REGISTRY_AUTHS` | ✅ | - | JSON object with registry credentials (Docker config format) |
 | `POD_NAMESPACE` | ✅ | - | Kubernetes namespace of the running service |
-| `LOG_LEVEL` |  | `info` | Logging level (`debug`, `info`, `warn`, `error`) |
+| `LOG_LEVEL` |  | `info` | Logging level (`debug`, `info`, `warn`, `error`, `fatal`) |
 
 ## Deployment Notes
 
