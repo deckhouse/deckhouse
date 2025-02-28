@@ -145,6 +145,7 @@ func (c *SSHCommand) ProcessWait() {
 
 func (c *SSHCommand) Run() error {
 	log.DebugF("executor: run '%s'\n", c.cmd)
+	defer c.Session.Close()
 
 	err := c.Start()
 	if err != nil {
