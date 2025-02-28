@@ -263,6 +263,19 @@ function get_cluster_status() {
   echo "${response}"
 }
 
+function prepare_ssh() {
+  echo ${SSH_KEY} | base64 -d > id_rsa
+}
+
+function ssh_command_to_cluster() {
+  local command "$*"
+  ssh -i id_rsa ${master_user}@${master_ip} "${command}"
+}
+
+function wait_allerts_resolve() {
+  ssh_command_to_cluster "d8 k get clusteralerts"
+}
+
 function wait_upmeter_green() {
   # Upmeter
   iterations=40
@@ -335,7 +348,7 @@ function run-test() {
 
   echo "Bootstrap payload: ${payload}"
 
-  response=$(curl -s -X POST  --retry 3 --retry-delay 5 --retry-connrefused --retry-all-errors\
+  response=$(curl -s -X POST  --retry 3 --retry-delay 5 --retry-connrefused --retry-all-errors \
     "https://${COMMANDER_HOST}/api/v1/clusters" \
     -H 'accept: application/json' \
     -H "X-Auth-Token: ${COMMANDER_TOKEN}" \
@@ -407,8 +420,10 @@ function run-test() {
 
   wait_upmeter_green
 
-#  wait_allerts_resolve
-#
+  prepare_ssh
+
+  wait_allerts_resolve
+
 #  wait_pause_remove
 
 }
