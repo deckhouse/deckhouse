@@ -222,7 +222,7 @@ run: |
 
   {!{- end }!}
 {!{- else }!}
-
+  
   docker run --rm \
     -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
     -e PREFIX=${PREFIX} \
@@ -255,6 +255,7 @@ run: |
     -e LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON=${LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON:-not_provided} \
 {!{- else if or (eq $provider "openstack") (eq $provider "static") }!}
     -e LAYOUT_OS_PASSWORD=${LAYOUT_OS_PASSWORD:-not_provided} \
+    -e INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME} \
 {!{- else if eq $provider "vsphere" }!}
     -e LAYOUT_VSPHERE_PASSWORD=${LAYOUT_VSPHERE_PASSWORD:-not_provided} \
     -e LAYOUT_VSPHERE_BASE_DOMAIN=${LAYOUT_VSPHERE_BASE_DOMAIN:-not_provided} \
