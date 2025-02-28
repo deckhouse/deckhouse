@@ -121,6 +121,19 @@ properties:
         description: |
           Limit on the number of concurrent streams for gRPC calls.
         default: 100
+      splitQueriesByInterval:
+        type: string
+        pattern: '^[0-9]+(s|m|h)?$'
+        description: |
+          Interval for splitting large Loki queries.
+          Helps improve performance by breaking queries into smaller chunks.
+          Can be string with number firstly and unit second, minute, hour.
+        default: "0s"
+      paralleliseShardableQueries:
+        type: boolean
+        description: |
+          Enable parallel execution of shardable queries.
+        default: false
   nodeSelector:
     type: object
     additionalProperties:

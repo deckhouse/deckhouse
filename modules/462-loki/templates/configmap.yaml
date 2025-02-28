@@ -22,6 +22,9 @@ data:
       retention_period: {{ .Values.loki.retentionPeriodHours | default 168 }}h
       {{- omit $lokiConfigSnakeCase "grpc_server_max_send_msg_size" "grpc_server_max_recv_msg_size" "grpc_server_max_concurrent_streams" | toYaml | nindent 6 }}
 
+    query_range:
+      parallelise_shardable_queries: {{ .Values.loki.lokiConfig.paralleliseShardableQueries | default false }}
+
     common:
       path_prefix: /loki
       storage:
