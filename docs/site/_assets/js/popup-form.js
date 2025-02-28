@@ -65,7 +65,6 @@ document.addEventListener("DOMContentLoaded", function() {
 
       // Default Source - Site
       const source_id = 'UC_GAZF8L';
-      // const source_id = 'Polina';
 
       // Default Assigned by - Anna Saprykina
       const assigned_by_id = 7;
@@ -172,9 +171,6 @@ document.addEventListener("DOMContentLoaded", function() {
 
       const url = 'https://crm.flant.ru/rest/132/bm7uy367wn001kef/crm.lead.add.json';
 
-      // const url = 'https://b24-f0ud24.bitrix24.ru/rest/crm.lead.add.json?auth=b781c1670076184800761828000000010000072d002acfe2e544b0219745019dd83144';
-      // const url = 'https://b24-f0ud24.bitrix24.ru/rest/crm.lead.fieald.json?auth=7cf6be6700761848007618280000000100000706b74c56f83b5ea486f34444762192f6';
-
       fetch(url, {
         method: 'POST',
         headers: {
@@ -187,13 +183,11 @@ document.addEventListener("DOMContentLoaded", function() {
         if(res.ok) {
           this.downloadFile();
           this.successSubmit();
-
         } else {
           this.errorSubmit();
-          throw new Error(`${res.status}`);
         }
       })
-    } 
+    }
 
     serializeData() {
       let data = new FormData(this.form);
