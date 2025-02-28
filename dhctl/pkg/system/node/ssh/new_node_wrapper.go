@@ -48,7 +48,7 @@ func (n *NodeNewInterfaceWrapper) File() node.File {
 func (n *NodeNewInterfaceWrapper) UploadScript(scriptPath string, args ...string) node.Script {
 	log.DebugLn("Starting NodeInterfaceWrapper.UploadScript")
 	defer log.DebugLn("Stop NodeInterfaceWrapper.UploadScript")
-	return n.sshClient.UploadScript(scriptPath, args...)
+	return frontend.NewSSHUploadScript(n.sshClient, scriptPath, args...)
 }
 
 func (n *NodeNewInterfaceWrapper) Client() *ssh.Client {

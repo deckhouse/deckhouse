@@ -103,25 +103,15 @@ func (u *SSHUploadScript) Execute() (stdout []byte, err error) {
 		cmd.Cmd()
 	}
 
-	// scriptCmd := cmd.CaptureStdout(nil).CaptureStderr(nil)
-	// if u.stdoutHandler != nil {
-	// 	scriptCmd.WithStdoutHandler(u.stdoutHandler)
-	// }
-
-	// if u.timeout > 0 {
-	// 	scriptCmd.WithTimeout(u.timeout)
-	// }
-
-	if u.cleanupAfterExec {
-		defer func() {
-			err := NewSSHCommand(u.sshClient, "rm", "-f", scriptFullPath).Run()
-			if err != nil {
-				log.DebugF("Failed to delete uploaded script %s: %v", scriptFullPath, err)
-			}
-		}()
+	if u.stdoutHandler != nil {
+		cmd.WithStdoutHandler(u.stdoutHandler)
 	}
 
-	err = scriptCmd.Run()
+	if u.timeout > 0 {
+		cmd.WithTimeout(u.timeout)
+	}
+
+	err = cmd.Run()
 	if err != nil {
 		var exitErr *exec.ExitError
 		if errors.As(err, &exitErr) {
@@ -133,6 +123,16 @@ func (u *SSHUploadScript) Execute() (stdout []byte, err error) {
 
 		err = fmt.Errorf("execute on remote: %w", err)
 	}
+
+	if u.cleanupAfterExec {
+		defer func() {
+			err := NewSSHCommand(u.sshClient, "rm", "-f", scriptFullPath).Run()
+			if err != nil {
+				log.DebugF("Failed to delete uploaded script %s: %v", scriptFullPath, err)
+			}
+		}()
+	}
+
 	return cmd.StdoutBytes(), err
 }
 
@@ -173,7 +173,7 @@ func (u *SSHUploadScript) ExecuteBundle(parentDir, bundleDir string) (stdout []b
 	)
 
 	// upload to node's deckhouse tmp directory
-	err = NewFile(u.Session).Upload(bundleLocalFilepath, app.DeckhouseNodeTmpPath)
+	err = NewSSHFile(u.sshClient).Upload(bundleLocalFilepath, app.DeckhouseNodeTmpPath)
 	if err != nil {
 		return nil, fmt.Errorf("upload: %v", err)
 	}
@@ -188,7 +188,7 @@ func (u *SSHUploadScript) ExecuteBundle(parentDir, bundleDir string) (stdout []b
 		u.ScriptPath,
 		strings.Join(u.Args, " "),
 	)
-	bundleCmd := NewCommand(u.Session, tarCmdline)
+	bundleCmd := NewSSHCommand(u.sshClient, tarCmdline)
 	bundleCmd.Sudo()
 
 	// Buffers to implement output handler logic
@@ -198,7 +198,7 @@ func (u *SSHUploadScript) ExecuteBundle(parentDir, bundleDir string) (stdout []b
 
 	processLogger := log.GetProcessLogger()
 
-	handler := bundleOutputHandler(bundleCmd, processLogger, &lastStep, &failsCounter, &isBashibleTimeout)
+	handler := bundleSSHOutputHandler(bundleCmd, processLogger, &lastStep, &failsCounter, &isBashibleTimeout)
 	bundleCmd.WithStdoutHandler(handler)
 	bundleCmd.CaptureStdout(nil)
 	bundleCmd.CaptureStderr(nil)
@@ -231,7 +231,7 @@ func (u *SSHUploadScript) ExecuteBundle(parentDir, bundleDir string) (stdout []b
 // var stepHeaderRegexp = regexp.MustCompile("^=== Step: /var/lib/bashible/bundle_steps/(.*)$")
 
 func bundleSSHOutputHandler(
-	cmd *Command,
+	cmd *SSHCommand,
 	processLogger log.ProcessLogger,
 	lastStep *string,
 	failsCounter *int,
@@ -253,7 +253,7 @@ func bundleSSHOutputHandler(
 					*isBashibleTimeout = true
 					if cmd != nil {
 						// Force kill bashible
-						_ = cmd.cmd.Process.Kill()
+						_ = cmd.Session.Signal(ssh.SIGABRT)
 					}
 					return
 				}

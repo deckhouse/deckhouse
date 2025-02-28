@@ -15,12 +15,15 @@
 package frontend
 
 import (
+	"bufio"
 	"bytes"
 	"fmt"
+	"io"
 	"os"
-	"regexp"
+	"reflect"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
@@ -38,14 +41,33 @@ type SSHCommand struct {
 
 	SSHArgs []string
 
+	pipesMutex     sync.Mutex
+	stdoutPipeFile *os.File
+	stderrPipeFile *os.File
+	StdoutSplitter bufio.SplitFunc
+
+	StdinPipe bool
+	Stdin     io.WriteCloser
+
+	Matchers     []*ByteSequenceMatcher
+	MatchHandler func(pattern string) string
+
 	onCommandStart func()
 	stderrHandler  func(string)
 	stdoutHandler  func(string)
 
-	out bytes.Buffer
-	err bytes.Buffer
+	out *bytes.Buffer
+	err *bytes.Buffer
 
-	cmd string
+	stop   bool
+	waitCh chan struct{}
+	stopCh chan struct{}
+
+	lockWaitError sync.RWMutex
+	waitError     error
+
+	cmd     string
+	timeout time.Duration
 }
 
 func NewSSHCommand(client *ssh.Client, name string, arg ...string) *SSHCommand {
@@ -81,11 +103,65 @@ func (c *SSHCommand) OnCommandStart(fn func()) {
 	c.onCommandStart = fn
 }
 
-func (c *SSHCommand) Run() error {
-	defer c.Session.Close()
-	err := c.Session.Run(c.cmd)
+func (c *SSHCommand) Start() error {
+	// setup stream handlers
+	log.DebugF("executor: start '%s'\n", c.cmd)
+	err := c.SetupStreamHandlers()
+	if err != nil {
+		return err
+	}
 
-	return err
+	err = c.Session.Start(c.cmd)
+	if err != nil {
+		return err
+	}
+
+	c.ProcessWait()
+
+	log.DebugF("Register stoppable: '%s'\n", c.cmd)
+
+	return nil
+}
+
+func (c *SSHCommand) ProcessWait() {
+	waitErrCh := make(chan error, 1)
+	c.waitCh = make(chan struct{}, 1)
+	c.stopCh = make(chan struct{}, 1)
+
+	// wait for process in go routine
+	go func() {
+		waitErrCh <- c.Session.Wait()
+	}()
+
+	go func() {
+		if c.timeout > 0 {
+			time.Sleep(c.timeout)
+			if c.stopCh != nil {
+				c.stopCh <- struct{}{}
+			}
+		}
+	}()
+}
+
+func (c *SSHCommand) Run() error {
+	log.DebugF("executor: run '%s'\n", c.cmd)
+
+	err := c.Start()
+	if err != nil {
+		return err
+	}
+
+	<-c.waitCh
+
+	c.closePipes()
+
+	return c.WaitError()
+}
+
+func (c *SSHCommand) WaitError() error {
+	defer c.lockWaitError.RUnlock()
+	c.lockWaitError.RLock()
+	return c.waitError
 }
 
 func (c *SSHCommand) StderrBytes() []byte {
@@ -96,6 +172,22 @@ func (c *SSHCommand) StdoutBytes() []byte {
 	return c.out.Bytes()
 }
 
+func (c *SSHCommand) WithMatchers(matchers ...*ByteSequenceMatcher) *SSHCommand {
+	c.Matchers = make([]*ByteSequenceMatcher, 0)
+	c.Matchers = append(c.Matchers, matchers...)
+	return c
+}
+
+func (c *SSHCommand) OpenStdinPipe() *SSHCommand {
+	c.StdinPipe = true
+	return c
+}
+
+func (c *SSHCommand) WithMatchHandler(fn func(pattern string) string) *SSHCommand {
+	c.MatchHandler = fn
+	return c
+}
+
 func (c *SSHCommand) Sudo() {
 	cmdLine := c.Name + " " + strings.Join(c.Args, " ")
 	sudoCmdLine := fmt.Sprintf(
@@ -103,43 +195,49 @@ func (c *SSHCommand) Sudo() {
 		cmdLine,
 	)
 
-	defer c.Session.Close()
+	c.cmd = sudoCmdLine
 
-	c.Session.Stdout = &c.out
-	c.Session.Stderr = &c.err
+	c.WithMatchers(
+		NewByteSequenceMatcher("SudoPassword"),
+		NewByteSequenceMatcher("SUDO-SUCCESS").WaitNonMatched(),
+	)
+	c.OpenStdinPipe()
 
-	c.Session.Start(sudoCmdLine)
+	passSent := false
+	c.WithMatchHandler(func(pattern string) string {
+		if pattern == "SudoPassword" {
+			if !passSent {
+				// send pass through stdin
+				log.DebugLn("Send become pass to cmd")
+				var becomePass string
 
-	stdin, _ := c.Session.StdinPipe()
-	re := regexp.MustCompile(`SudoPassword`)
-	re2 := regexp.MustCompile(`SUDO-SUCCESS`)
-	passwordSent := false
-	for {
-		if len(c.out.Bytes()) > 0 {
-			if re.Match(c.err.Bytes()) {
-				if !passwordSent {
-					becomePass := app.BecomePass
-					stdin.Write([]byte(becomePass + "\n"))
-					c.err.Reset()
-					passwordSent = true
-				} else {
-					log.ErrorLn("Bad sudo password, exiting. TODO handle this correctly.")
-					os.Exit(1)
-				}
+				// if c.Session.BecomePass != "" {
+				// becomePass = c.Session.BecomePass
+				// } else {
+				becomePass = app.BecomePass
+				// }
+
+				_, _ = c.Stdin.Write([]byte(becomePass + "\n"))
+				passSent = true
+			} else {
+				// Second prompt is error!
+				log.ErrorLn("Bad sudo password, exiting. TODO handle this correctly.")
+				os.Exit(1)
 			}
+			return "reset"
 		}
-		if len(c.out.Bytes()) > 0 {
-			if re2.Match(c.out.Bytes()) {
-				break
+		if pattern == "SUDO-SUCCESS" {
+			log.DebugLn("Got SUCCESS")
+			if c.onCommandStart != nil {
+				c.onCommandStart()
 			}
+			return "done"
 		}
-	}
-
-	stdin.Close()
+		return ""
+	})
 
 	// Wait for the command to finish
 	if err := c.Session.Wait(); err != nil {
-		log.ErrorF("Command finish with an error %w", err)
 		os.Exit(1)
 	}
 }
@@ -152,13 +250,7 @@ func (c *SSHCommand) WithStderrHandler(handler func(string)) {
 	c.stderrHandler = handler
 }
 
-func (c *SSHCommand) Cmd() {
-	defer c.Session.Close()
-	c.Session.Stdout = &c.out
-	c.Session.Stderr = &c.err
-	c.Session.Run(c.cmd)
-	c.Session.Wait()
-}
+func (c *SSHCommand) Cmd() {}
 
 func (c *SSHCommand) Output() ([]byte, []byte, error) {
 	defer c.Session.Close()
@@ -181,7 +273,7 @@ func (c *SSHCommand) CombinedOutput() ([]byte, error) {
 }
 
 func (c *SSHCommand) WithTimeout(timeout time.Duration) {
-	// c.Executor = c.Executor.WithTimeout(timeout)
+	c.timeout = timeout
 }
 
 func (c *SSHCommand) WithEnv(env map[string]string) {
@@ -189,4 +281,284 @@ func (c *SSHCommand) WithEnv(env map[string]string) {
 	for k, v := range env {
 		c.Env = append(c.Env, fmt.Sprintf("%s=%s", k, v))
 	}
+}
+func (c *SSHCommand) CaptureStdout(buf *bytes.Buffer) *SSHCommand {
+	if buf != nil {
+		c.out = buf
+	} else {
+		c.out = &bytes.Buffer{}
+	}
+	return c
+}
+
+func (c *SSHCommand) CaptureStderr(buf *bytes.Buffer) *SSHCommand {
+	if buf != nil {
+		c.err = buf
+	} else {
+		c.err = &bytes.Buffer{}
+	}
+	return c
+}
+
+func (c *SSHCommand) SetupStreamHandlers() (err error) {
+	// stderr goes to console (commented because ssh writes only "Connection closed" messages to stderr)
+	// c.Cmd.Stderr = os.Stderr
+	// connect console's stdin
+	// c.Cmd.Stdin = os.Stdin
+
+	// setup stdout stream handlers
+	if c.Session != nil && c.out == nil && c.stdoutHandler == nil && len(c.Matchers) == 0 {
+		c.Session.Stdout = os.Stdout
+		return
+	}
+
+	var stdoutReadPipe *os.File
+	var stdoutHandlerWritePipe *os.File
+	var stdoutHandlerReadPipe *os.File
+	if c.out != nil || c.stdoutHandler != nil || len(c.Matchers) > 0 {
+		// create pipe for stdout
+		var stdoutWritePipe *os.File
+		stdoutReadPipe, stdoutWritePipe, err = os.Pipe()
+		if err != nil {
+			return fmt.Errorf("unable to create os pipe for stdout: %s", err)
+		}
+
+		c.Session.Stdout = stdoutWritePipe
+
+		c.pipesMutex.Lock()
+		c.stdoutPipeFile = stdoutWritePipe
+		c.pipesMutex.Unlock()
+
+		// create pipe for StdoutHandler
+		if c.stdoutHandler != nil {
+			stdoutHandlerReadPipe, stdoutHandlerWritePipe, err = os.Pipe()
+			if err != nil {
+				return fmt.Errorf("unable to create os pipe for stdoutHandler: %s", err)
+			}
+		}
+	}
+
+	var stderrReadPipe *os.File
+	var stderrHandlerWritePipe *os.File
+	var stderrHandlerReadPipe *os.File
+	if c.err != nil || c.stderrHandler != nil {
+		// create pipe for stderr
+		var stderrWritePipe *os.File
+		stderrReadPipe, stderrWritePipe, err = os.Pipe()
+		if err != nil {
+			return fmt.Errorf("unable to create os pipe for stderr: %s", err)
+		}
+		c.Session.Stderr = stderrWritePipe
+
+		c.pipesMutex.Lock()
+		c.stderrPipeFile = stderrWritePipe
+		c.pipesMutex.Unlock()
+
+		// create pipe for StderrHandler
+		if c.stderrHandler != nil {
+			stderrHandlerReadPipe, stderrHandlerWritePipe, err = os.Pipe()
+			if err != nil {
+				return fmt.Errorf("unable to create os pipe for stderrHandler: %s", err)
+			}
+		}
+	}
+
+	if c.StdinPipe {
+		c.Stdin, err = c.Session.StdinPipe()
+		if err != nil {
+			return fmt.Errorf("open stdin pipe: %v", err)
+		}
+	}
+
+	// Start reading from stdout of a command.
+	// Wait until all matchers are done and then:
+	// - Copy to os.Stdout if live output is enabled
+	// - Copy to buffer if capture is enabled
+	// - Copy to pipe if StdoutHandler is set
+	go func() {
+		c.readFromStreams(stdoutReadPipe, stdoutHandlerWritePipe)
+	}()
+
+	go func() {
+		if c.stdoutHandler == nil {
+			return
+		}
+		c.ConsumeLines(stdoutHandlerReadPipe, c.stdoutHandler)
+		log.DebugF("stop line consumer for '%s'\n", c.Args[0])
+	}()
+
+	// Start reading from stderr of a command.
+	// Copy to os.Stderr if live output is enabled
+	// Copy to buffer if capture is enabled
+	// Copy to pipe if StderrHandler is set
+	go func() {
+		if stderrReadPipe == nil {
+			return
+		}
+
+		log.DebugLn("Start reading from stderr pipe")
+		defer log.DebugLn("Stop reading from stderr pipe")
+
+		buf := make([]byte, 16)
+		for {
+			n, err := stderrReadPipe.Read(buf)
+
+			// TODO logboek
+			if app.IsDebug {
+				os.Stderr.Write(buf[:n])
+			}
+			if c.err != nil {
+				c.err.Write(buf[:n])
+			}
+			if c.stderrHandler != nil {
+				_, _ = stderrHandlerWritePipe.Write(buf[:n])
+			}
+
+			if err == io.EOF {
+				break
+			}
+		}
+	}()
+
+	go func() {
+		if c.stderrHandler == nil {
+			return
+		}
+		c.ConsumeLines(stderrHandlerReadPipe, c.stderrHandler)
+		log.DebugF("stop sdterr line consumer for '%s'\n", c.Args[0])
+	}()
+
+	return nil
+}
+
+func (c *SSHCommand) readFromStreams(stdoutReadPipe io.Reader, stdoutHandlerWritePipe io.Writer) {
+	defer log.DebugLn("stop readFromStreams")
+
+	if stdoutReadPipe == nil || reflect.ValueOf(stdoutReadPipe).IsNil() {
+		return
+	}
+
+	log.DebugLn("Start read from streams for command: ", c.cmd)
+
+	buf := make([]byte, 16)
+	matchersDone := false
+	errorsCount := 0
+	for {
+		n, err := stdoutReadPipe.Read(buf)
+		if err != nil && err != io.EOF {
+			log.DebugF("Error reading from stdout: %s\n", err)
+			errorsCount++
+			if errorsCount > 1000 {
+				panic(fmt.Errorf("readFromStreams: too many errors, last error %v", err))
+			}
+			continue
+		}
+
+		m := 0
+		if !matchersDone {
+			for _, matcher := range c.Matchers {
+				m = matcher.Analyze(buf[:n])
+				if matcher.IsMatched() {
+					log.DebugF("Trigger matcher '%s'\n", matcher.Pattern)
+					// matcher is triggered
+					if c.MatchHandler != nil {
+						res := c.MatchHandler(matcher.Pattern)
+						if res == "done" {
+							matchersDone = true
+							break
+						}
+						if res == "reset" {
+							matcher.Reset()
+						}
+					}
+				}
+			}
+
+			// stdout for internal use, no copying to pipes until all Matchers are matched
+			if !matchersDone {
+				m = n
+			}
+		}
+		// TODO logboek
+		if app.IsDebug {
+			os.Stdout.Write(buf[:n])
+		}
+		if c.out != nil {
+			c.out.Write(buf[m:n])
+		}
+		if c.stdoutHandler != nil {
+			_, _ = stdoutHandlerWritePipe.Write(buf[m:n])
+		}
+
+		if err == io.EOF {
+			log.DebugLn("readFromStreams: EOF")
+			break
+		}
+	}
+}
+
+func (c *SSHCommand) ConsumeLines(r io.Reader, fn func(l string)) {
+	scanner := bufio.NewScanner(r)
+	if c.StdoutSplitter != nil {
+		scanner.Split(c.StdoutSplitter)
+	}
+	for scanner.Scan() {
+		text := scanner.Text()
+
+		if fn != nil {
+			fn(text)
+		}
+
+		if text != "" {
+			log.DebugF("%s: %s\n", c.Args[0], text)
+		}
+	}
+}
+
+func (c *SSHCommand) closePipes() {
+	log.DebugLn("Starting close piped")
+	defer log.DebugLn("Stop close piped")
+
+	c.pipesMutex.Lock()
+	defer c.pipesMutex.Unlock()
+
+	if c.stdoutPipeFile != nil {
+		err := c.stdoutPipeFile.Close()
+		if err != nil {
+			log.DebugF("Cannot close stdout pipe: %v\n", err)
+		}
+		c.stdoutPipeFile = nil
+	}
+
+	if c.stderrPipeFile != nil {
+		err := c.stderrPipeFile.Close()
+		if err != nil {
+			log.DebugF("Cannot close stderr pipe: %v\n", err)
+		}
+		c.stderrPipeFile = nil
+	}
+}
+
+func (c *SSHCommand) Stop() {
+	if c.stop {
+		log.DebugF("Stop '%s': already stopped\n", c.cmd)
+		return
+	}
+	if c.Session == nil {
+		log.DebugF("Stop '%s': session not started yet\n", c.cmd)
+		return
+	}
+	if c.cmd == "" {
+		log.DebugF("Possible BUG: Call Executor.Stop with Cmd==nil\n")
+		return
+	}
+
+	c.stop = true
+	log.DebugF("Stop '%s'\n", c.cmd)
+	if c.stopCh != nil {
+		close(c.stopCh)
+	}
+	<-c.waitCh
+	log.DebugF("Stopped '%s' \n", c.cmd)
+	c.closePipes()
 }
