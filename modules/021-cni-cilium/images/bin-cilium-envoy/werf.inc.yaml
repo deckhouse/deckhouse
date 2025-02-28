@@ -101,8 +101,8 @@ shell:
   #
   - sudo -u cilium sed -i '\#"/usr/include"#a \        "/usr/lib/llvm-17.0/lib64/clang/17/include",' bazel/toolchains/BUILD
   - sudo -u cilium sed -i '\#"/usr/include"#a \        "/usr/bin/../lib64/gcc/x86_64-alt-linux/11",' bazel/toolchains/BUILD
-  #- sudo -u cilium sed -i '133i \        "--gcc-install-dir=/usr/bin/../lib64/gcc/x86_64-alt-linux/11",' bazel/toolchains/BUILD
-  - sudo -u cilium sed -i '28i build:clang --action_env=CCC_OVERRIDE_OPTIONS="^--gcc-install-dir=/usr/bin/../lib64/gcc/x86_64-alt-linux/11"' bazel/setup_clang.sh
+  - sudo -u cilium sed -i '133i \        "--gcc-install-dir=/usr/bin/../lib64/gcc/x86_64-alt-linux/11",' bazel/toolchains/BUILD
+  #- sudo -u cilium sed -i '28i build:clang --action_env=CCC_OVERRIDE_OPTIONS="^--gcc-install-dir=/usr/bin/../lib64/gcc/x86_64-alt-linux/11"' bazel/setup_clang.sh
   #
   #- sudo -u cilium PATH=${PATH} bazel fetch //:cilium-envoy-starter //:cilium-envoy
   #
