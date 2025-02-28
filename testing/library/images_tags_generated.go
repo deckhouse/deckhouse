@@ -390,7 +390,7 @@ var DefaultImagesDigests = map[string]interface{}{
 		"crictl131":                 "imageHash-registrypackages-crictl131",
 		"crictl132":                 "imageHash-registrypackages-crictl132",
 		"d8":                        "imageHash-registrypackages-d8",
-		"d8CaUpdater060824":         "imageHash-registrypackages-d8CaUpdater060824",
+		"d8CaUpdater200225":         "imageHash-registrypackages-d8CaUpdater200225",
 		"d8Curl891":                 "imageHash-registrypackages-d8Curl891",
 		"dockerRegistry283":         "imageHash-registrypackages-dockerRegistry283",
 		"drbd":                      "imageHash-registrypackages-drbd",
