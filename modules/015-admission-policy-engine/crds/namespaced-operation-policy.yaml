@@ -25,7 +25,7 @@ spec:
           description: |
             Describes an operation policy for a namespace.
 
-            Each CustomResource `NamespacedOperationPolicy` describes rules for objects in a namespaced.
+            Each `NamespacedOperationPolicy` custom resource describes rules for objects in the namespace.
           properties:
             spec:
               type: object

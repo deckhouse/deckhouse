@@ -86,6 +86,40 @@ spec:
 To apply the policy, it will be sufficient to set the label `operation-policy.deckhouse.io/enabled: "true"` on the desired namespace.
 The above policy is generic and recommended by Deckhouse team. Similarly, you can configure your own policy with the necessary settings.
 
+Moreover, operation policies can be specified at the namespace level:
+
+```yaml
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: NamespacedOperationPolicy
+metadata:
+  name: common
+  namespace: default
+spec:
+  policies:
+    allowedRepos:
+      - myrepo.example.com
+      - registry.deckhouse.io
+    requiredResources:
+      limits:
+        - memory
+      requests:
+        - cpu
+        - memory
+    disallowedImageTags:
+      - latest
+    requiredProbes:
+      - livenessProbe
+      - readinessProbe
+    maxRevisionHistoryLimit: 3
+    imagePullPolicy: Always
+    priorityClassNames:
+      - production-high
+      - production-low
+    checkHostNetworkDNSPolicy: true
+    checkContainerDuplicates: true
+```
+
 ### Security policies
 
 The module allows defining security policies for making sure the workload running in the cluster meets certain security requirements.
@@ -155,6 +189,65 @@ spec:
 ```
 
 To apply the policy, it will be sufficient to set the label `enforce: "mypolicy"` on the desired namespace.
+
+Similarly to operation policies, security policies can be specified at the namespace level:
+
+```yaml
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: NamespacedSecurityPolicy
+metadata:
+  name: mypolicy
+  namespace: default
+spec:
+  enforcementAction: Deny
+  policies:
+    allowHostIPC: true
+    allowHostNetwork: true
+    allowHostPID: false
+    allowPrivileged: false
+    allowPrivilegeEscalation: false
+    allowedFlexVolumes:
+    - driver: vmware
+    allowedHostPorts:
+    - max: 4000
+      min: 2000
+    allowedProcMount: Unmasked
+    allowedAppArmor:
+    - unconfined
+    allowedUnsafeSysctls:
+    - kernel.*
+    allowedVolumes:
+    - hostPath
+    - projected
+    fsGroup:
+      ranges:
+      - max: 200
+        min: 100
+      rule: MustRunAs
+    readOnlyRootFilesystem: true
+    requiredDropCapabilities:
+    - ALL
+    runAsGroup:
+      ranges:
+      - max: 500
+        min: 300
+      rule: RunAsAny
+    runAsUser:
+      ranges:
+      - max: 200
+        min: 100
+      rule: MustRunAs
+    seccompProfiles:
+      allowedLocalhostFiles:
+      - my_profile.json
+      allowedProfiles:
+      - Localhost
+    supplementalGroups:
+      ranges:
+      - max: 133
+        min: 129
+      rule: MustRunAs
 
 ### Modifying Kubernetes resources
 

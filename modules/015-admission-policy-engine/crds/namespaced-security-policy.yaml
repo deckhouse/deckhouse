@@ -42,7 +42,7 @@ spec:
           description: |
             Describes a namespaced security policy.
 
-            Each `NamespacedSecurityPolicy` custom resource describes rules for the objects in the namespace.
+            Each `NamespacedSecurityPolicy` custom resource describes rules for objects in the namespace.
           properties:
             status:
               type: object
