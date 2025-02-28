@@ -20,7 +20,7 @@
           {{- T "module_available_with_limitations_prefix" -}}
         </span>: 
       {{- else }}
-        {{- T "module_available_with_limitations_prefix" -}}: 
+        {{- T "module_available_with_limitations_prefix" }}: 
       {{- end }}
       {{- range $index, $edition := $moduleData.editions }}
         {{- if eq $edition "fe" }}
