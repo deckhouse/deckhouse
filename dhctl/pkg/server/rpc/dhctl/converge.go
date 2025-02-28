@@ -45,7 +45,8 @@ import (
 )
 
 func (s *Service) Converge(server pb.DHCTL_ConvergeServer) error {
-	ctx := operationCtx(server)
+	ctx, cancel := operationCtx(server)
+	defer cancel()
 
 	logger.L(ctx).Info("started")
 

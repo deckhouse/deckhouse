@@ -57,7 +57,7 @@ func New(podName, cacheDir string, schemaStore *config.SchemaStore) *Service {
 	}
 }
 
-func operationCtx(server grpc.ServerStream) context.Context {
+func operationCtx(server grpc.ServerStream) (context.Context, context.CancelFunc) {
 	ctx := server.Context()
 
 	var operation string
@@ -79,14 +79,18 @@ func operationCtx(server grpc.ServerStream) context.Context {
 	default:
 		operation = "unknown"
 	}
+
 	go func() {
 		<-ctx.Done()
 		tomb.Shutdown(0)
 	}()
+
+	opCtx, cancel := context.WithCancel(ctx)
+
 	return logger.ToContext(
-		ctx,
+		opCtx,
 		logger.L(ctx).With(slog.String("operation", operation)),
-	)
+	), cancel
 }
 
 type serverStream[Request proto.Message, Response proto.Message] interface {
