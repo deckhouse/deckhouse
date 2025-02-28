@@ -201,11 +201,8 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 			if err != nil {
 				return fmt.Errorf("unable to get ssh client: %w", err)
 			}
-			if _, err := sshClient.NewSession(); err != nil {
-				return fmt.Errorf("unable to start ssh client: %w", err)
-			}
 			log.DebugF("Hosts is %v empty; static cluster is %v. Use ssh", len(app.SSHHosts), metaConfig.IsStatic())
-			b.Params.NodeInterface = oldssh.NewNewNodeInterfaceWrapper(sshClient)
+			b.Params.NodeInterface = oldssh.NewNewNodeInterfaceWrapper(sshClient.SSHCllient)
 		}
 	}
 
