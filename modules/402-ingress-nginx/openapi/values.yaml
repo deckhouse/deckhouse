@@ -236,6 +236,16 @@ properties:
                 additionalLogFields:
                   type: object
                   additionalProperties: true
+                additionalImagePullSecrets:
+                  type: array
+                  default: []
+                  items:
+                    type: object
+                    properties:
+                      name:
+                        type: string
+                      dockerCfgJSON:
+                        type: string
                 resourcesRequests:
                   type: object
                   default: {}

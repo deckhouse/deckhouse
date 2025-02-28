@@ -9,6 +9,8 @@ spec:
   ingressClass: nginx
   additionalLogFields:
     my-cookie: "$cookie_MY_COOKIE"
+  additionalImagePullSecrets:
+  - name: test-secret
   validationEnabled: true
   controllerVersion: "1.9"
   inlet: LoadBalancer
@@ -25,7 +27,7 @@ spec:
       my: annotation
       second: true
     sourceRanges:
-      - 1.1.1.1
-      - 2.2.2.2
+    - 1.1.1.1
+    - 2.2.2.2
   maxReplicas: 6
   minReplicas: 2
