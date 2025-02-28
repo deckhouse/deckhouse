@@ -1,30 +1,22 @@
 ## Patches
 
-### go mod
+### 001-go-mod.patch
 
-Update go mod for fix vuln's
+Changing Golang version from 1.24 to version 1.23
 
-### Client filters
+### 002-client-filters.patch
 
 With this patch, Dex can authorize requests for specific `OAuth2Client`s based on username and user's groups.
 We use it in Dex authenticators to make `allowedUsers` and `allowedGroups` option to work.
 
 This problem is not solved in upstream, and our patch will not be accepted.
 
-### Static user groups
-
-Allows setting groups for the `User` kind. It makes convenient authenticating as user alongside having another IdP.
-
-This problem is not solved in upstream, and our patch will not be accepted.
-
-### Gitlab refresh context
+### 003-gitlab-refresh-context.patch
 
 Refresh can be called only one. By propagating a context of the user request, refresh can accidentally canceled.
 
 To avoid this, this patch makes refresh requests to declare and utilize their own contexts.
 
-### Fix offline session creation
+### 004-static-user-groups.patch
 
-Offline session is not created if the skip approval option is toggled. In this case Dex looses connector data and cannot refresh tokens.
-
-Upstream PR: https://github.com/dexidp/dex/pull/3828
+Adding group entity to kubernetes authentication.

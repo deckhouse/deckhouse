@@ -21,7 +21,7 @@ final: false
 git:
   - url: {{ $.SOURCE_REPO }}/dexidp/dex.git
     to: /src
-    tag: v2.41.1
+    tag: v2.42.0
     stageDependencies:
       install:
         - '**/*.go'
