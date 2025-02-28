@@ -1,0 +1,360 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   role="img"
+   viewBox="-4.48 -3.98 89.639999 103.92"
+   version="1.1"
+   id="svg106"
+   sodipodi:docname="grafana-loki.svg"
+   width="89.639999"
+   height="103.92"
+   inkscape:version="1.2.2 (b0a8486541, 2022-12-01)"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:cc="http://creativecommons.org/ns#"
+   xmlns:dc="http://purl.org/dc/elements/1.1/">
+  <defs
+     id="defs110" />
+  <sodipodi:namedview
+     id="namedview108"
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1.0"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     showgrid="false"
+     inkscape:zoom="5.3204451"
+     inkscape:cx="37.214931"
+     inkscape:cy="71.140664"
+     inkscape:window-width="2560"
+     inkscape:window-height="1376"
+     inkscape:window-x="0"
+     inkscape:window-y="0"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="svg106" />
+  <title
+     id="title2">Grafana Loki logo</title>
+  <style
+     id="style4">svg {enable-background:new 0 0 237.6 144}</style>
+  <linearGradient
+     id="a"
+     x1="542.91498"
+     x2="542.91498"
+     y1="723.24902"
+     y2="595.21399"
+     gradientTransform="rotate(-8.748,-3656.4837,3858.3933)"
+     gradientUnits="userSpaceOnUse">
+    <stop
+       offset="0"
+       stop-color="#faed1e"
+       id="stop8" />
+    <stop
+       offset="1"
+       stop-color="#f15b2b"
+       id="stop10" />
+  </linearGradient>
+  <path
+     fill="url(#a)"
+     d="m 16.71,90.38 -8.28,1.28 1.28,8.28 8.28,-1.27 z"
+     id="path13"
+     style="fill:url(#a)" />
+  <linearGradient
+     id="b"
+     x1="596.57599"
+     x2="596.57599"
+     y1="723.24902"
+     y2="595.21399"
+     gradientTransform="rotate(-8.748,-3656.4837,3858.3933)"
+     gradientUnits="userSpaceOnUse">
+    <stop
+       offset="0"
+       stop-color="#faed1e"
+       id="stop15" />
+    <stop
+       offset="1"
+       stop-color="#f15b2b"
+       id="stop17" />
+  </linearGradient>
+  <path
+     fill="url(#b)"
+     d="M 46.61,80.99 83.17,75.36 81.89,67.08 45.34,72.7 Z"
+     id="path20"
+     style="fill:url(#b)" />
+  <linearGradient
+     id="c"
+     x1="569.15503"
+     x2="569.15503"
+     y1="723.24902"
+     y2="595.21399"
+     gradientTransform="rotate(-8.748,-3656.4837,3858.3933)"
+     gradientUnits="userSpaceOnUse">
+    <stop
+       offset="0"
+       stop-color="#faed1e"
+       id="stop22" />
+    <stop
+       offset="1"
+       stop-color="#f15b2b"
+       id="stop24" />
+  </linearGradient>
+  <path
+     fill="url(#c)"
+     d="m 32.37,74.7 1.27,8.28 8.29,-1.27 -1.28,-8.29 z"
+     id="path27"
+     style="fill:url(#c)" />
+  <linearGradient
+     id="d"
+     x1="556.03497"
+     x2="556.03497"
+     y1="723.24902"
+     y2="595.21399"
+     gradientTransform="rotate(-8.748,-3656.4837,3858.3933)"
+     gradientUnits="userSpaceOnUse">
+    <stop
+       offset="0"
+       stop-color="#faed1e"
+       id="stop29" />
+    <stop
+       offset="1"
+       stop-color="#f15b2b"
+       id="stop31" />
+  </linearGradient>
+  <path
+     fill="url(#d)"
+     d="m 30.96,96.67 -1.28,-8.28 -8.28,1.27 1.27,8.29 z"
+     id="path34"
+     style="fill:url(#d)" />
+  <linearGradient
+     id="e"
+     x1="542.91498"
+     x2="542.91498"
+     y1="723.24902"
+     y2="595.21399"
+     gradientTransform="rotate(-8.748,-3656.4837,3858.3933)"
+     gradientUnits="userSpaceOnUse">
+    <stop
+       offset="0"
+       stop-color="#faed1e"
+       id="stop36" />
+    <stop
+       offset="1"
+       stop-color="#f15b2b"
+       id="stop38" />
+  </linearGradient>
+  <path
+     fill="url(#e)"
+     d="M 7.71,86.97 15.99,85.7 14.72,77.41 6.44,78.69 Z"
+     id="path41"
+     style="fill:url(#e)" />
+  <linearGradient
+     id="f"
+     x1="596.57599"
+     x2="596.57599"
+     y1="723.24902"
+     y2="595.21399"
+     gradientTransform="rotate(-8.748,-3656.4837,3858.3933)"
+     gradientUnits="userSpaceOnUse">
+    <stop
+       offset="0"
+       stop-color="#faed1e"
+       id="stop43" />
+    <stop
+       offset="1"
+       stop-color="#f15b2b"
+       id="stop45" />
+  </linearGradient>
+  <path
+     fill="url(#f)"
+     d="m 83.89,80.05 -36.56,5.62 1.28,8.29 36.55,-5.63 z"
+     id="path48"
+     style="fill:url(#f)" />
+  <linearGradient
+     id="g"
+     x1="569.15503"
+     x2="569.15503"
+     y1="723.24902"
+     y2="595.21399"
+     gradientTransform="rotate(-8.748,-3656.4837,3858.3933)"
+     gradientUnits="userSpaceOnUse">
+    <stop
+       offset="0"
+       stop-color="#faed1e"
+       id="stop50" />
+    <stop
+       offset="1"
+       stop-color="#f15b2b"
+       id="stop52" />
+  </linearGradient>
+  <path
+     fill="url(#g)"
+     d="m 34.37,87.67 1.27,8.28 8.28,-1.27 -1.27,-8.29 z"
+     id="path55"
+     style="fill:url(#g)" />
+  <linearGradient
+     id="h"
+     x1="556.03497"
+     x2="556.03497"
+     y1="723.24902"
+     y2="595.21399"
+     gradientTransform="rotate(-8.748,-3656.4837,3858.3933)"
+     gradientUnits="userSpaceOnUse">
+    <stop
+       offset="0"
+       stop-color="#faed1e"
+       id="stop57" />
+    <stop
+       offset="1"
+       stop-color="#f15b2b"
+       id="stop59" />
+  </linearGradient>
+  <path
+     fill="url(#h)"
+     d="M 20.68,84.98 28.96,83.7 27.69,75.42 19.4,76.69 Z"
+     id="path62"
+     style="fill:url(#h)" />
+  <linearGradient
+     id="i"
+     x1="540.495"
+     x2="540.495"
+     y1="720.76202"
+     y2="599.33197"
+     gradientTransform="rotate(-8.748,-3656.4837,3858.3933)"
+     gradientUnits="userSpaceOnUse">
+    <stop
+       offset="0"
+       stop-color="#faed1e"
+       id="stop64" />
+    <stop
+       offset="1"
+       stop-color="#f15b2b"
+       id="stop66" />
+  </linearGradient>
+  <path
+     fill="url(#i)"
+     d="M 5.72,74.01 9.21,73.47 -0.98,7.19 -4.48,7.73 Z"
+     id="path69"
+     style="fill:url(#i)" />
+  <linearGradient
+     id="j"
+     x1="545.36102"
+     x2="545.36102"
+     y1="724.13"
+     y2="593.75598"
+     gradientTransform="rotate(-8.748,-3656.4837,3858.3933)"
+     gradientUnits="userSpaceOnUse">
+    <stop
+       offset="0"
+       stop-color="#faed1e"
+       id="stop71" />
+    <stop
+       offset="1"
+       stop-color="#f15b2b"
+       id="stop73" />
+  </linearGradient>
+  <path
+     fill="url(#j)"
+     d="M 10.52,73.27 14.02,72.73 3.08,1.57 -0.42,2.11 Z"
+     id="path76"
+     style="fill:url(#j)" />
+  <linearGradient
+     id="k"
+     x1="553.66803"
+     x2="553.66803"
+     y1="727.08899"
+     y2="588.85602"
+     gradientTransform="rotate(-8.748,-3656.4837,3858.3933)"
+     gradientUnits="userSpaceOnUse">
+    <stop
+       offset="0"
+       stop-color="#faed1e"
+       id="stop78" />
+    <stop
+       offset="1"
+       stop-color="#f15b2b"
+       id="stop80" />
+  </linearGradient>
+  <path
+     fill="url(#k)"
+     d="m 18.74,72 3.49,-0.54 -11.6,-75.44 -3.5,0.54 z"
+     id="path83"
+     style="fill:url(#k)" />
+  <linearGradient
+     id="l"
+     x1="558.534"
+     x2="558.534"
+     y1="722.492"
+     y2="596.46802"
+     gradientTransform="rotate(-8.748,-3656.4837,3858.3933)"
+     gradientUnits="userSpaceOnUse">
+    <stop
+       offset="0"
+       stop-color="#faed1e"
+       id="stop85" />
+    <stop
+       offset="1"
+       stop-color="#f15b2b"
+       id="stop87" />
+  </linearGradient>
+  <path
+     fill="url(#l)"
+     d="M 23.54,71.26 27.04,70.72 16.46,1.94 12.96,2.48 Z"
+     id="path90"
+     style="fill:url(#l)" />
+  <linearGradient
+     id="m"
+     x1="566.737"
+     x2="566.737"
+     y1="717.19299"
+     y2="605.24298"
+     gradientTransform="rotate(-8.748,-3656.4837,3858.3933)"
+     gradientUnits="userSpaceOnUse">
+    <stop
+       offset="0"
+       stop-color="#faed1e"
+       id="stop92" />
+    <stop
+       offset="1"
+       stop-color="#f15b2b"
+       id="stop94" />
+  </linearGradient>
+  <path
+     fill="url(#m)"
+     d="m 31.65,70.02 3.5,-0.54 -9.4,-61.1 -3.5,0.53 z"
+     id="path97"
+     style="fill:url(#m)" />
+  <linearGradient
+     id="n"
+     x1="571.60303"
+     x2="571.60303"
+     y1="718.80798"
+     y2="602.56799"
+     gradientTransform="rotate(-8.748,-3656.4837,3858.3933)"
+     gradientUnits="userSpaceOnUse">
+    <stop
+       offset="0"
+       stop-color="#faed1e"
+       id="stop99" />
+    <stop
+       offset="1"
+       stop-color="#f15b2b"
+       id="stop101" />
+  </linearGradient>
+  <path
+     fill="url(#n)"
+     d="M 36.46,69.28 39.96,68.74 30.2,5.3 26.7,5.83 Z"
+     id="path104"
+     style="fill:url(#n)" />
+  <metadata
+     id="metadata393">
+    <rdf:RDF>
+      <cc:Work
+         rdf:about="">
+        <dc:title>Grafana Loki logo</dc:title>
+      </cc:Work>
+    </rdf:RDF>
+  </metadata>
+</svg>
