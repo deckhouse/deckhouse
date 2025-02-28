@@ -35,13 +35,12 @@ Docs Builder handles the complete documentation lifecycle:
 ## Configuration
 
 ### Command-Line Options
-
-| Option | Default | Description |
-|--------|---------|-------------|
-| `--address` | `:8081` | HTTP server address:port |
-| `--src` | `/app/hugo/` | Source files location |
-| `--dst` | `/mount/` | Built site output directory |
-| `--highAvailability` | `false` | Enable high availability mode |
+| Option | Default | Required | Description |
+|--------|---------|----------|-------------|
+| `--address` | `:8081` |  | HTTP server address:port |
+| `--src` | `/app/hugo/` |  | Source files location |
+| `--dst` | `/mount/` |  | Built site output directory |
+| `--highAvailability` | `false` |  | Enable high availability mode |
 
 ### Environment Variables
 
