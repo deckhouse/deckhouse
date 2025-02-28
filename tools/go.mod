@@ -82,7 +82,7 @@ require (
 	github.com/hashicorp/go-multierror v1.1.1 // indirect
 	github.com/hashicorp/hcl v1.0.0 // indirect
 	github.com/huandu/xstrings v1.4.0 // indirect
-	github.com/imdario/mergo v0.3.15 // indirect
+	github.com/imdario/mergo v0.3.16 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/jgautheron/goconst v1.4.0 // indirect
 	github.com/jingyugao/rowserrcheck v0.0.0-20210315055705-d907ca737bb1 // indirect
@@ -181,7 +181,7 @@ require (
 	helm.sh/helm/v3 v3.14.2 // indirect
 	honnef.co/go/tools v0.1.4 // indirect
 	k8s.io/api v0.29.10 // indirect
-	k8s.io/apiextensions-apiserver v0.29.0 // indirect
+	k8s.io/apiextensions-apiserver v0.29.8 // indirect
 	k8s.io/apimachinery v0.29.10 // indirect
 	k8s.io/client-go v0.29.10 // indirect
 	k8s.io/klog/v2 v2.130.1 // indirect
