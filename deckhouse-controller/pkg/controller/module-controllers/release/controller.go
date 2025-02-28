@@ -347,6 +347,17 @@ func (r *reconciler) handleDeployedRelease(ctx context.Context, release *v1alpha
 		needsUpdate = true
 	}
 
+	// set notified in true
+	if !release.GetNotified() {
+		if len(release.Annotations) == 0 {
+			release.Annotations = make(map[string]string, 1)
+		}
+
+		release.Annotations[v1alpha1.ModuleReleaseAnnotationNotified] = "true"
+
+		needsUpdate = true
+	}
+
 	if len(release.Labels) == 0 || (release.Labels[v1alpha1.ModuleReleaseLabelStatus] != strings.ToLower(v1alpha1.ModuleReleasePhaseDeployed)) {
 		if len(release.ObjectMeta.Labels) == 0 {
 			release.ObjectMeta.Labels = make(map[string]string)
@@ -780,12 +791,11 @@ func (r *reconciler) runReleaseDeploy(ctx context.Context, release *v1alpha1.Mod
 
 	err = ctrlutils.UpdateWithRetry(ctx, r.client, release, func() error {
 		annotations := map[string]string{
-			v1alpha1.ModuleReleaseAnnotationIsUpdating: "true",
-			v1alpha1.ModuleReleaseAnnotationNotified:   "false",
+			v1alpha1.ModuleReleaseAnnotationNotified: "false",
 		}
 
 		if len(release.Annotations) == 0 {
-			release.Annotations = make(map[string]string, 2)
+			release.Annotations = make(map[string]string, 1)
 		}
 
 		for k, v := range annotations {
@@ -869,10 +879,9 @@ func (r *reconciler) PreApplyReleaseCheck(ctx context.Context, mr *v1alpha1.Modu
 
 	err = ctrlutils.UpdateWithRetry(ctx, r.client, mr, func() error {
 		if len(mr.Annotations) == 0 {
-			mr.Annotations = make(map[string]string, 2)
+			mr.Annotations = make(map[string]string, 1)
 		}
 
-		mr.Annotations[v1alpha1.ModuleReleaseAnnotationIsUpdating] = "false"
 		mr.Annotations[v1alpha1.ModuleReleaseAnnotationNotified] = strconv.FormatBool(timeResult.Notified)
 
 		if !timeResult.ReleaseApplyAfterTime.IsZero() {
