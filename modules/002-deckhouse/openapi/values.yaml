@@ -51,3 +51,10 @@ properties:
       configMapName:
         type: string
         x-examples: ["deckhouse"]
+      namespaces:
+          type: array
+          default: []
+          items:
+            type: string
+          x-examples:
+          - ["test1", "test2"]
