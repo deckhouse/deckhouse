@@ -68,14 +68,18 @@ shell:
   - apt-get install -y strace vim-console
   # apt clean
   - apt-get autoclean && apt-get clean
-  # download-only
+  # dependencies are only for envoy, bpftool and llvm build
+  # If the versions of these packages are older than those used by default,
+  # you should install them using the `-download-only` flag,
+  # and then install them without this flag before building.
   - |
-    apt-get update && apt-get install -y -d \
+    apt-get update && apt-get install -y \
     sudo \
     libcap-devel libpcap-devel \
     clang17.0 clang17.0-tools lldb17.0 lld17.0 llvm17.0-devel \
     libcxxabi-devel \
     gcc11 gcc11-c++ libstdc++11-devel libstdc++11-devel-static
+  - apt-get autoclean && apt-get clean
   install:
   # Install Go
   - export GOROOT=/usr/local/go GOPATH=/go
@@ -83,11 +87,11 @@ shell:
   - export GOOS=linux GOARCH=amd64 CGO_ENABLED=0
   - export GO_VERSION=${GOLANG_VERSION} GOPROXY={{ $.GOPROXY }}
   - go version
-  # Install protoc and plugins
+  # Install protoc
   - curl --fail --show-error --silent --location "{{ $source }}/protocolbuffers/protobuf/releases/download/v{{ $protocVersion }}/protoc-{{ $protocVersion }}-linux-x86_64.zip" --output /tmp/protoc.zip
   - unzip /tmp/protoc.zip -x readme.txt -d /usr/local && rm /tmp/protoc.zip
   - chmod o+rx /usr/local/bin/protoc && chmod o+rX -R /usr/local/include/google/
-  #
+  # Install protoc plugins
   - git clone --depth 1 --branch cmd/protoc-gen-go-grpc/v1.5.1 {{ $.SOURCE_REPO }}/grpc/grpc-go.git /src/grpc-go
   - git clone --depth 1 --branch v1.36.5 {{ $.SOURCE_REPO }}/protocolbuffers/protobuf-go.git /src/protobuf-go
   - git clone --depth 1 --branch v1.5.0 {{ $.SOURCE_REPO }}/mfridman/protoc-gen-go-json.git /src/protoc-gen-go-json
@@ -96,11 +100,8 @@ shell:
   - cd /src/protobuf-go/cmd/protoc-gen-go && go install
   - cd /src/protoc-gen-go-json && go install
   - cd /src/protoc-gen-doc/cmd/protoc-gen-doc && go install
-  - cd /src
-  - rm -rf /src/grpc-go
-  - rm -rf /src/protobuf-go
-  - rm -rf /src/protoc-gen-go-json
-  - rm -rf /src/protoc-gen-doc
+  - cd ~
+  - rm -rf /src
   # Install Bazelisk (for build envoy)
   - curl --fail --show-error --silent --location "{{ $source }}/bazelbuild/bazelisk/releases/download/{{ $bazeliskVersions }}/bazelisk-linux-amd64" -o /usr/local/bin/bazel
   - chmod +x /usr/local/bin/bazel
