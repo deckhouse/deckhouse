@@ -22,15 +22,9 @@
 {{- end }}
 
 {{- define "csi_controller_volumes" }}
-- name: csi-controller-config-volume
-  secret:
-    secretName: csi-controller-manager
 {{- end }}
 
 {{- define "csi_controller_volume_mounts" }}
-- name: csi-controller-config-volume
-  mountPath: /etc/cloud
-  readOnly: true
 {{- end }}
 
 {{- define "csi_node_args" }}
@@ -57,15 +51,9 @@
 {{- end }}
 
 {{- define "csi_node_volumes" }}
-- name: csi-node-config-volume
-  secret:
-    secretName: csi-controller-manager
 {{- end }}
 
 {{- define "csi_node_volume_mounts" }}
-- mountPath: /etc/cloud
-  name: csi-node-config-volume
-  readOnly: true
 {{- end }}
 
 {{- $csiImageName := "dvpCsiDriver" }}
