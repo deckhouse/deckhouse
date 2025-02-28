@@ -18,10 +18,12 @@ package api
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/deckhouse/virtualization/api/core/v1alpha2"
-	"k8s.io/apimachinery/pkg/api/errors"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	cloudprovider "k8s.io/cloud-provider"
@@ -29,7 +31,9 @@ import (
 )
 
 const (
-	DVPVMHostnameLabel = "dvp.deckhouse.io/hostname"
+	DVPVMHostnameLabel         = "dvp.deckhouse.io/hostname"
+	attachmentDiskNameLabel    = "virtualMachineDiskName"
+	attachmentMachineNameLabel = "virtualMachineName"
 )
 
 type ComputeService struct {
@@ -54,7 +58,7 @@ func (c *ComputeService) GetVMByName(ctx context.Context, name string) (*v1alpha
 	}
 
 	if err := c.client.List(ctx, &instanceList, opts); err != nil {
-		if errors.IsNotFound(err) {
+		if k8serrors.IsNotFound(err) {
 			return nil, cloudprovider.InstanceNotFound
 		}
 		return nil, err
@@ -70,18 +74,6 @@ func (c *ComputeService) GetVMByName(ctx context.Context, name string) (*v1alpha
 
 	return &instanceList.Items[0], nil
 }
-
-// func (c *ComputeService) GetVMByName(ctx context.Context, name string) (*v1alpha2.VirtualMachine, error) {
-// 	var instance v1alpha2.VirtualMachine
-//
-// 	if err := c.client.Get(ctx, types.NamespacedName{Name: name, Namespace: c.namespace}, &instance); err != nil {
-// 		if errors.IsNotFound(err) {
-// 			return nil, cloudprovider.InstanceNotFound
-// 		}
-// 		return nil, err
-// 	}
-// 	return &instance, nil
-// }
 
 func (c *ComputeService) GetVMByID(ctx context.Context, id string) (*v1alpha2.VirtualMachine, error) {
 	var (
@@ -121,4 +113,83 @@ func (c *ComputeService) GetVMHostname(vm *v1alpha2.VirtualMachine) (string, err
 		return hostname, nil
 	}
 	return "", cloudprovider.InstanceNotFound
+}
+
+func (d *ComputeService) AttachDiskToVM(ctx context.Context, diskName string, computeName string) error {
+	vmbda, err := d.getVMBDA(ctx, diskName, computeName)
+	if vmbda != nil && err == nil {
+		return nil
+	}
+
+	if err != nil && !errors.Is(err, ErrNotFound) {
+		return err
+	}
+
+	vmbda = &v1alpha2.VirtualMachineBlockDeviceAttachment{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       v1alpha2.VirtualMachineBlockDeviceAttachmentKind,
+			APIVersion: v1alpha2.Version,
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      fmt.Sprintf("vmbda-%s-%s", diskName, computeName),
+			Namespace: d.namespace,
+			Labels: map[string]string{
+				attachmentDiskNameLabel:    diskName,
+				attachmentMachineNameLabel: computeName,
+			},
+		},
+		Spec: v1alpha2.VirtualMachineBlockDeviceAttachmentSpec{
+			VirtualMachineName: computeName,
+			BlockDeviceRef: v1alpha2.VMBDAObjectRef{
+				Kind: v1alpha2.VMBDAObjectRefKindVirtualDisk,
+				Name: diskName,
+			},
+		},
+	}
+
+	err = d.client.Create(ctx, vmbda)
+	if err != nil && !k8serrors.IsAlreadyExists(err) {
+		return err
+	}
+
+	return nil
+}
+
+func (d *ComputeService) DetachDiskFromVM(ctx context.Context, diskName string, computeName string) error {
+	vmbda, err := d.getVMBDA(ctx, diskName, computeName)
+	if err != nil {
+		return err
+	}
+
+	err = d.client.Delete(ctx, vmbda)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (d *ComputeService) getVMBDA(ctx context.Context, diskName, computeName string) (*v1alpha2.VirtualMachineBlockDeviceAttachment, error) {
+	selector, err := labels.Parse(fmt.Sprintf("%s=%s,%s=%s", attachmentDiskNameLabel, computeName, attachmentMachineNameLabel, diskName))
+	if err != nil {
+		return nil, err
+	}
+
+	var vmbdas v1alpha2.VirtualMachineBlockDeviceAttachmentList
+	err = d.client.List(ctx, &vmbdas, &client.ListOptions{
+		LabelSelector: selector,
+		Namespace:     d.namespace,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	if len(vmbdas.Items) == 0 {
+		return nil, ErrNotFound
+	}
+
+	if len(vmbdas.Items) != 1 {
+		return nil, fmt.Errorf("more attachments found than expected: please report a bug %w", ErrDuplicateAttachment)
+	}
+
+	return &vmbdas.Items[0], nil
 }
