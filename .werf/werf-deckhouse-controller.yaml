@@ -64,6 +64,4 @@ shell:
   - cd /deckhouse/deckhouse-controller
   - D8_VERSION=${CI_COMMIT_TAG} ./go-build.sh
   - mv deckhouse-controller /out
-  - go install github.com/go-delve/delve/cmd/dlv@latest
-  - mv ~/go/bin/dlv /out
 ---
