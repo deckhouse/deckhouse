@@ -22,7 +22,6 @@ import (
 	"fmt"
 
 	"github.com/deckhouse/virtualization/api/core/v1alpha2"
-	"github.com/google/uuid"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -132,7 +131,7 @@ func (d *ComputeService) AttachDiskToVM(ctx context.Context, diskName string, co
 			APIVersion: v1alpha2.Version,
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "vmbda-" + uuid.New().String(),
+			Name:      fmt.Sprintf("vmbda-%s-%s", diskName, computeName),
 			Namespace: d.namespace,
 			Labels: map[string]string{
 				attachmentDiskNameLabel:    diskName,
@@ -189,7 +188,7 @@ func (d *ComputeService) getVMBDA(ctx context.Context, diskName, computeName str
 	}
 
 	if len(vmbdas.Items) != 1 {
-		return nil, errors.New("more attachments found than expected: please report a bug")
+		return nil, fmt.Errorf("more attachments found than expected: please report a bug %w", ErrDuplicateAttachment)
 	}
 
 	return &vmbdas.Items[0], nil

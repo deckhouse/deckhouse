@@ -26,7 +26,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-var ErrNotFound = errors.New("not found")
+var (
+	ErrNotFound            = errors.New("not found")
+	ErrDuplicateAttachment = errors.New("duplicate attachment")
+)
 
 type DVPCloudAPI struct {
 	Service        *Service
