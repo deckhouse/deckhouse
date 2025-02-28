@@ -157,13 +157,11 @@ dhcpOptions:
 
 In this placement strategy, Deckhouse creates a NAT instance and adds a rule to a route table containing a route to 0.0.0.0/0 with a NAT instance as the next hop.
 
-If the `withNATInstance.externalSubnetID` parameter is set, the NAT instance will be created in this subnet.
+If the `withNATInstance.internalSubnetID` parameter is set, the NAT instance will be created in this subnet.
 
-IF the `withNATInstance.externalSubnetID` parameter is not set and `withNATInstance.internalSubnetID` is set, the NAT instance will be created in this last subnet.
+If the `withNATInstance.internalSubnetID` parameter is not set, `withNATInstance.internalSubnetCIDR` is required, then a new internal subnet will be created. The NAT instance will be created in this subnet. This separate subnet is needed to avoid routing loop.
 
-If neither `withNATInstance.externalSubnetID` nor `withNATInstance.internalSubnetID` is set, the NAT instance will be created in the  `ru-central1-a` zone.
-
-If the IP address of the NAT-instance does not matter, you can pass an empty object `withNATInstance: {}`, then the necessary networks and dynamic IP will be created automatically.
+If the `withNATInstance.externalSubnetID` is provided in addition to previous ones, the NAT instance will be attached to it via secondary interface.
 
 ![Yandex Cloud WithNATInstance Layout scheme](../../images/cloud-provider-yandex/layout-withnatinstance.png)
 <!--- Source: https://docs.google.com/drawings/d/1oVpZ_ldcuNxPnGCkx0dRtcAdL7BSEEvmsvbG8Aif1pE/edit --->
