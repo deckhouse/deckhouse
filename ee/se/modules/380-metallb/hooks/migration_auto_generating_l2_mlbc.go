@@ -153,6 +153,7 @@ func createMetalLoadBalancerClass(input *go_hook.HookInput, mlbcInfo *MetalLoadB
 		return
 	}
 	input.PatchCollector.Create(mlbcUnstructured, object_patch.UpdateIfExists())
+	input.Logger.Info("MetalLoadBalancerClass created", "name", mlbcInfo.Name)
 }
 
 func deleteMetalLoadBalancerClass(input *go_hook.HookInput, mlbcName string) {
@@ -163,6 +164,7 @@ func deleteMetalLoadBalancerClass(input *go_hook.HookInput, mlbcName string) {
 		mlbcName,
 		object_patch.InBackground(),
 	)
+	input.Logger.Info("MetalLoadBalancerClass deleted", "name", mlbcName)
 }
 
 func migrateMCtoMLBC(input *go_hook.HookInput) error {
@@ -172,6 +174,7 @@ func migrateMCtoMLBC(input *go_hook.HookInput) error {
 	}
 	mc, ok := snapsMC[0].(*ModuleConfig)
 	if !ok || mc.Spec.Version >= 2 {
+		input.Logger.Info("processing skipped", "ModuleConfig version", mc.Spec.Version)
 		return nil
 	}
 
