@@ -206,7 +206,10 @@ spec:
                         - required: [excludeNames]
                         - required: [labelSelector]
                       type: object
-                      description: Specifies the Namespace selector to filter objects with.
+                      description: |
+                         Specifies the Namespace selector to filter objects with.
+
+                         If the Namespace selector is not specified, the policy matches objects from all namespaces.
                       properties:
                         matchNames:
                           type: array
