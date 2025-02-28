@@ -25,6 +25,7 @@ shell:
   #
   - git clone --depth 1 --branch v{{ $hubbleUIVersion }} {{ $.SOURCE_REPO }}/cilium/hubble-ui-frontend-assets.git /src/frontend_prebuilt
   - rm -r /src/frontend_prebuilt/.git
+  - mkdir -p /src/server/public
   - mv /src/frontend_prebuilt/static/* /src/server/public
   - chown -R 64535:64535 /src/server/public
 
