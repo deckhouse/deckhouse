@@ -49,16 +49,6 @@ mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
 shell:
-  beforeInstall:
-  - |
-    apt-get install -y \
-    sudo \
-    libcap-devel \
-    clang17.0 clang17.0-tools lldb17.0 lld17.0 llvm17.0-devel \
-    libcxxabi-devel \
-    gcc11 gcc11-c++ libstdc++11-devel libstdc++11-devel-static
-  - ln -f -s llvm-17.0 "/usr/lib/llvm-17"
-  - apt-get autoclean && apt-get clean
   install:
   - mkdir -p /cilium && mv /src/proxy /cilium/
   - sed -i "s/# root ALL=(ALL:ALL) ALL/root ALL=(ALL:ALL) ALL/" /etc/sudoers
@@ -66,7 +56,6 @@ shell:
   - echo 'Defaults env_keep += "GOPROXY GOPATH GOROOT GOOS GOARCH GO_VERSION CGO_ENABLED"' >> /etc/sudoers
   - echo 'Defaults env_keep += "TARGETARCH ARCH BAZEL_VERSION USE_BAZEL_VERSION BAZEL_OUTPUT_BASE"' >> /etc/sudoers
   - echo 'Defaults env_keep += "BAZEL_BUILD_OPTS PKG_BUILD V DEBUG DESTDIR"' >> /etc/sudoers
-  - echo 'Defaults env_keep += "SSH_AUTH_SOCK"' >> /etc/sudoers
   - groupadd -f -g 1337 cilium && useradd -m -g cilium -u 1337 cilium
   - mv -t /home/cilium/.cache /root/.cache/bazelisk /root/.cache/bazel
   - chown -R 1337:1337 /home/cilium/.cache
@@ -74,6 +63,7 @@ shell:
   - chown -R 1337:1337 /cilium/proxy
   - chown -R 1337:1337 /src/envoy
   setup:
+  - ln -f -s llvm-17.0 "/usr/lib/llvm-17"
   #
   - mkdir -p /tmp/bazel-cache
   - git clone --depth 1 --branch {{ $ciliumProxyCacheRev }} {{ $.SOURCE_REPO }}/cilium/proxy-build-cache.git /tmp/bazel-cache && rm -rf /tmp/bazel-cache/.git
@@ -95,7 +85,6 @@ shell:
   #
   - export BAZEL_VERSION="{{ $bazelVersions }}" USE_BAZEL_VERSION="{{ $bazelVersions }}"
   - export BAZEL_BUILD_OPTS="--disk_cache=/tmp/bazel-cache --nofetch"
-  #- export BAZEL_BUILD_OPTS="--disk_cache=/tmp/bazel-cache"
   - export PKG_BUILD=1 V=$V DEBUG=$DEBUG DESTDIR=/tmp/install
   #
   - cd /cilium/proxy
