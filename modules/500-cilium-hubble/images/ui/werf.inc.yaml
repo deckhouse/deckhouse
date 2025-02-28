@@ -16,17 +16,16 @@ git:
   stageDependencies:
     install:
       - '**/*'
-- add: /{{ $.ModulePath }}modules/500-{{ $.ModuleName }}/images/{{ $.ImageName }}/static
-  to: /src/server/public
-  stageDependencies:
-    install:
-      - '**/*'
 shell:
   install:
   - git clone --depth 1 --branch v{{ $hubbleUIVersion }} {{ $.SOURCE_REPO }}/cilium/hubble-ui.git /src/hubble-ui
   - cd /src/hubble-ui
   - git apply /patches/*.patch --verbose
   - rm -r /src/hubble-ui/.git
+  #
+  - git clone --depth 1 --branch v{{ $hubbleUIVersion }} {{ $.SOURCE_REPO }}/cilium/hubble-ui-frontend-assets.git /src/frontend_prebuilt
+  - rm -r /src/frontend_prebuilt/.git
+  - mv /src/frontend_prebuilt/static/* /src/server/public
   - chown -R 64535:64535 /src/server/public
 
 ---
