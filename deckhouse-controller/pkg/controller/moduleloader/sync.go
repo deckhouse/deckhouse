@@ -38,10 +38,10 @@ import (
 )
 
 const (
-	// if a module is disabled more than three days, it will be uninstalled at next deckhouse restart
-	deleteReleasesAfter = 5 * time.Minute
+	// if a module is disabled more than three days, it will be uninstalled
+	deleteReleasesAfter = 72 * time.Hour
 
-	deleteStaleModuleLoopSleep = 5 * time.Minute
+	deleteStaleModuleLoopSleep = 5 * time.Hour
 )
 
 func (l *Loader) runDeleteStaleModulesLoop(ctx context.Context) {
@@ -53,6 +53,7 @@ func (l *Loader) runDeleteStaleModulesLoop(ctx context.Context) {
 	}
 }
 
+// deleteStaleModules deletes module releases for modules that disabled too long
 func (l *Loader) deleteStaleModules(ctx context.Context) error {
 	modules := new(v1alpha1.ModuleList)
 	if err := l.client.List(ctx, modules); err != nil {
@@ -63,7 +64,7 @@ func (l *Loader) deleteStaleModules(ctx context.Context) error {
 		// handle too long disabled embedded modules
 		if module.DisabledByModuleConfigMoreThan(deleteReleasesAfter) && !module.IsEmbedded() {
 			// delete module releases of a stale module
-			l.log.Infof("the %q module disabled too long, delete module releases", module.Name)
+			l.log.Debugf("the %q module disabled too long, delete module releases", module.Name)
 			moduleReleases := new(v1alpha1.ModuleReleaseList)
 			if err := l.client.List(ctx, moduleReleases, &client.MatchingLabels{"module": module.Name}); err != nil {
 				return fmt.Errorf("list module releases for the '%s' module: %w", module.Name, err)
