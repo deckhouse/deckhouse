@@ -18,6 +18,7 @@ shell:
     - chown -R 64535:64535 /opt/keepalived-static
     - chmod 0700 /opt/keepalived-static/usr/sbin/keepalived
     - chmod 0700 /opt/keepalived-static/usr/bin/genhash
+    - rm -rf .git
 ---
 image: {{ $.ModuleName }}/python
 final: false
