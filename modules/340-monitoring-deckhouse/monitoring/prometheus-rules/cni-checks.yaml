@@ -16,4 +16,4 @@
           Deckhouse has detected that multiple CNIs are enabled in the cluster.
           For the cluster to work correctly, only one CNI must be enabled.
 
-          To resolve this issue, disable the unnecessary CNI.
+          To resolve this issue, disable any unnecessary CNI.

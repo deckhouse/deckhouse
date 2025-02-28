@@ -15,7 +15,7 @@
           Deckhouse has detected that some nodes don't meet the required kernel constraints.
           As a result, certain modules can't run on these nodes.
           
-          Kernel requirements by module:
+          Kernel requirements for each module:
           
           - **Cilium module**: Kernel version must be **>= 4.9.17**.
           - **Cilium with Istio**: Kernel version must be **>= 5.7**.

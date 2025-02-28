@@ -9,7 +9,7 @@
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
-      summary: Kube-dns or CoreDNS are not under monitoring.
+      summary: Kube-dns or CoreDNS are not being monitored.
       description: |-
         Prometheus is unable to collect metrics from `kube-dns`, which makes its status unknown.
 

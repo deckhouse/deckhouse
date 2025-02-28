@@ -3,7 +3,7 @@
 **Control-plane-manager** module is enabled, meaning control plane component certificates and kubelets will renew automatically.
 If you see this alert, it's probably because someone uses a stale kubeconfig on ci-runner or in a user's home directory.
 
-To find who it is and where the stale kubeconfig is stored, search through the kube-apiserver logs:
+To identify who is using a stale kubeconfig and where it is stored, search through the kube-apiserver logs:
 
 ```bash
 kubectl -n kube-system logs -l component=kube-apiserver --tail=-1 --timestamps -c kube-apiserver | grep "expire"
@@ -35,7 +35,7 @@ To check kubelet certificates, do the following on each node:
      | xargs cat
    ```
 
-2. Find the `client-certificate` or `client-certificate-data` field.
+2. Locate the `client-certificate` or `client-certificate-data` field.
 3. Check certificate expiration using OpenSSL.
 
 Note that there are no tools to find other stale kubeconfig files.
@@ -94,7 +94,7 @@ Consider enabling the `control-plane-manager` module for advanced debugging.
     annotations:
       plk_protocol_version: "1"
       summary: API servers can't be reached.
-      description: No API servers are reachable, or all have disappeared from service.
+      description: No API servers are reachable, or they have all disappeared from service.
         discovery
   - alert: K8sCertificateExpiration
     expr: sum(label_replace(rate(apiserver_client_certificate_expiration_seconds_bucket{le="604800", job=~"kubelet|kube-apiserver"}[1m]) > 0, "component", "$1", "job", "(.*)")) by (component, node)

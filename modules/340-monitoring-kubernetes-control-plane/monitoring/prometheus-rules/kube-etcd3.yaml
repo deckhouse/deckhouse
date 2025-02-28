@@ -132,7 +132,7 @@
       plk_markup_format: "markdown"
       plk_create_group_if_not_exists__kube_etcd_malfunctioning: "KubeEtcdMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
       plk_grouped_by__kube_etcd_malfunctioning: "KubeEtcdMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
-      summary: Synching (fsync) WAL files to disk is slow.
+      summary: Syncing (fsync) WAL files to disk is slow.
       description: |
         In the last 15 minutes, the 99th percentile of the fsync duration for WAL files exceeded 0.5 seconds: {{ $value }}.
 

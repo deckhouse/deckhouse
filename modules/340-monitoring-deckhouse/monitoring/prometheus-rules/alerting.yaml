@@ -191,7 +191,7 @@
       description: |
         A new release for module `{{ $labels.moduleName }}` has been blocked because it doesn't meet the required conditions.
 
-        To check the requirements, run the following commands:
+        To check the requirements, run the following command:
         
         ```bash
         kubectl  get mr {{ $labels.name }} -o json | jq .spec.requirements
