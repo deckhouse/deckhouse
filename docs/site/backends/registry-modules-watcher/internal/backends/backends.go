@@ -31,8 +31,6 @@ type registryscanner interface {
 	SubscribeOnUpdate(updateHandler func([]DocumentationTask) error)
 }
 
-var instance *backends = nil
-
 type DocumentationTask struct {
 	Registry        string
 	Module          string
@@ -61,26 +59,17 @@ type backends struct {
 }
 
 func New(registryscanner registryscanner, sender Sender, logger *log.Logger) *backends {
-	if instance == nil {
-		instance = &backends{
-			registryscanner: registryscanner,
-			sender:          sender,
-			listBackends:    make(map[string]struct{}),
+	b := &backends{
+		registryscanner: registryscanner,
+		sender:          sender,
+		listBackends:    make(map[string]struct{}),
 
-			logger: logger,
-		}
-	}
-	registryscanner.SubscribeOnUpdate(instance.updateHandler)
-
-	return instance
-}
-
-func Get() (b *backends, ok bool) {
-	if instance == nil {
-		return nil, false
+		logger: logger,
 	}
 
-	return instance, true
+	registryscanner.SubscribeOnUpdate(b.updateHandler)
+
+	return b
 }
 
 // Add new backend to list backends
