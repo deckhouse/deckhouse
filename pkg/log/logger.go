@@ -37,6 +37,22 @@ const KeyComponent = "component"
 type logger = slog.Logger
 type handlerOptions = *slog.HandlerOptions
 
+type Handler interface {
+	Enabled(context.Context, slog.Level) bool
+	Handle(ctx context.Context, r slog.Record) error
+	Named(name string) slog.Handler
+	SetOutput(w io.Writer)
+	WithAttrs(attrs []slog.Attr) slog.Handler
+	WithGroup(name string) slog.Handler
+}
+
+type HandlerType int
+
+const (
+	JSONHandlerType HandlerType = iota
+	TextHandlerType
+)
+
 type Logger struct {
 	*logger
 
@@ -44,14 +60,15 @@ type Logger struct {
 	level        *slog.LevelVar
 	name         string
 
-	slogHandler *SlogHandler
+	slogHandler Handler
 }
 
 type Options struct {
 	handlerOptions
 
-	Level  slog.Level
-	Output io.Writer
+	Level       slog.Level
+	Output      io.Writer
+	HandlerType HandlerType
 
 	TimeFunc func(t time.Time) time.Time
 }
@@ -124,7 +141,14 @@ func NewLogger(opts Options) *Logger {
 		},
 	}
 
-	l.slogHandler = NewHandler(opts.Output, handlerOpts, opts.TimeFunc)
+	switch opts.HandlerType {
+	case JSONHandlerType:
+		l.slogHandler = NewJSONHandler(opts.Output, handlerOpts, opts.TimeFunc)
+	case TextHandlerType:
+		l.slogHandler = NewTextHandler(opts.Output, handlerOpts, opts.TimeFunc)
+	default:
+		l.slogHandler = NewJSONHandler(opts.Output, handlerOpts, opts.TimeFunc)
+	}
 
 	l.logger = slog.New(l.slogHandler.WithAttrs(nil))
 
@@ -142,12 +166,12 @@ func (l *Logger) SetLevel(level Level) {
 }
 
 func (l *Logger) SetOutput(w io.Writer) {
-	l.slogHandler.w = w
+	l.slogHandler.SetOutput(w)
 }
 
 func (l *Logger) Named(name string) *Logger {
 	return &Logger{
-		logger:       slog.New(l.Handler().(*SlogHandler).Named(name)),
+		logger:       slog.New(l.Handler().(Handler).Named(name)),
 		addSourceVar: l.addSourceVar,
 		level:        l.level,
 		name:         l.name,
