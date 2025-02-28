@@ -695,7 +695,7 @@ alerts:
         Deckhouse has detected that multiple CNIs are enabled in the cluster.
         For the cluster to work correctly, only one CNI must be enabled.
 
-        To resolve this issue, disable the unnecessary CNI.
+        To resolve this issue, disable any unnecessary CNI.
       summary: |
         More than one CNI is enabled in the cluster.
       severity: "2"
@@ -2064,7 +2064,7 @@ alerts:
         Deckhouse has detected that some nodes don't meet the required kernel constraints.
         As a result, certain modules can't run on these nodes.
 
-        Kernel requirements by module:
+        Kernel requirements for each module:
 
         - **Cilium module**: Kernel version must be **>= 4.9.17**.
         - **Cilium with Istio**: Kernel version must be **>= 5.7**.
@@ -2328,7 +2328,7 @@ alerts:
         - A reserved `metadata.labels` object `node-role.deckhouse.io/`, which doesn't end with `(system|frontend|monitoring|_deckhouse_module_name_)`.
         - A reserved `spec.taints` object `dedicated.deckhouse.io`, with a value other than `(system|frontend|monitoring|_deckhouse_module_name_)`.
 
-        For instructions on how to fix this issue, refer to the [node allocation guide](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/node-manager/faq.html#how-do-i-allocate-nodes-to-specific-loads).
+        For instructions on how to resolve this issue, refer to the [node allocation guide](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/node-manager/faq.html#how-do-i-allocate-nodes-to-specific-loads).
       summary: |
         Node {{ $labels.name }} is using a reserved label or taint.
       severity: "6"
@@ -3562,7 +3562,7 @@ alerts:
       moduleUrl: 340-monitoring-kubernetes-control-plane
       module: monitoring-kubernetes-control-plane
       edition: ce
-      description: No API servers are reachable, or all have disappeared from service. discovery
+      description: No API servers are reachable, or they have all disappeared from service discovery.
       summary: |
         API servers can't be reached.
       severity: "3"
@@ -3572,7 +3572,7 @@ alerts:
       moduleUrl: 340-monitoring-kubernetes-control-plane
       module: monitoring-kubernetes-control-plane
       edition: ce
-      description: "Some clients are connecting to {{$labels.component}} with certificates that will expire in less than a day on node `{{$labels.component}}`.\n\nTo check control plane certificates, use kubeadm:\n\n1. Install kubeadm using the following command:\n   \n   ```bash\n   apt install kubeadm=1.24.*\n   ```\n\n2. Check certificates:\n\n   ```bash\n   kubeadm alpha certs check-expiration\n   ```\n\nTo check kubelet certificates, do the following on each node:\n\n1. Check kubelet configuration:\n\n   ```bash\n   ps aux \\\n     | grep \"/usr/bin/kubelet\" \\\n     | grep -o -e \"--kubeconfig=\\S*\" \\\n     | cut -f2 -d\"=\" \\\n     | xargs cat\n   ```\n\n2. Find the `client-certificate` or `client-certificate-data` field.\n3. Check certificate expiration using OpenSSL.\n\nNote that there are no tools to find other stale kubeconfig files.\nConsider enabling the `control-plane-manager` module for advanced debugging.\n"
+      description: "Some clients are connecting to {{$labels.component}} with certificates that will expire in less than a day on node `{{$labels.component}}`.\n\nTo check control plane certificates, use kubeadm:\n\n1. Install kubeadm using the following command:\n   \n   ```bash\n   apt install kubeadm=1.24.*\n   ```\n\n2. Check certificates:\n\n   ```bash\n   kubeadm alpha certs check-expiration\n   ```\n\nTo check kubelet certificates, do the following on each node:\n\n1. Check kubelet configuration:\n\n   ```bash\n   ps aux \\\n     | grep \"/usr/bin/kubelet\" \\\n     | grep -o -e \"--kubeconfig=\\S*\" \\\n     | cut -f2 -d\"=\" \\\n     | xargs cat\n   ```\n\n2. Locate the `client-certificate` or `client-certificate-data` field.\n3. Check certificate expiration using OpenSSL.\n\nNote that there are no tools to find other stale kubeconfig files.\nConsider enabling the `control-plane-manager` module for advanced debugging.\n"
       summary: |
         Kubernetes has API clients with soon-to-expire certificates.
       severity: "5"
@@ -3582,7 +3582,7 @@ alerts:
       moduleUrl: 340-monitoring-kubernetes-control-plane
       module: monitoring-kubernetes-control-plane
       edition: ce
-      description: "Some clients are connecting to {{$labels.component}} with certificates that will expire in less than 7 days on node `{{$labels.node}}`.\n\nTo check control plane certificates, use kubeadm:\n\n1. Install kubeadm using the following command:\n   \n   ```bash\n   apt install kubeadm=1.24.*\n   ```\n\n2. Check certificates:\n\n   ```bash\n   kubeadm alpha certs check-expiration\n   ```\n\nTo check kubelet certificates, do the following on each node:\n\n1. Check kubelet configuration:\n\n   ```bash\n   ps aux \\\n     | grep \"/usr/bin/kubelet\" \\\n     | grep -o -e \"--kubeconfig=\\S*\" \\\n     | cut -f2 -d\"=\" \\\n     | xargs cat\n   ```\n\n2. Find the `client-certificate` or `client-certificate-data` field.\n3. Check certificate expiration using OpenSSL.\n\nNote that there are no tools to find other stale kubeconfig files.\nConsider enabling the `control-plane-manager` module for advanced debugging.\n"
+      description: "Some clients are connecting to {{$labels.component}} with certificates that will expire in less than 7 days on node `{{$labels.node}}`.\n\nTo check control plane certificates, use kubeadm:\n\n1. Install kubeadm using the following command:\n   \n   ```bash\n   apt install kubeadm=1.24.*\n   ```\n\n2. Check certificates:\n\n   ```bash\n   kubeadm alpha certs check-expiration\n   ```\n\nTo check kubelet certificates, do the following on each node:\n\n1. Check kubelet configuration:\n\n   ```bash\n   ps aux \\\n     | grep \"/usr/bin/kubelet\" \\\n     | grep -o -e \"--kubeconfig=\\S*\" \\\n     | cut -f2 -d\"=\" \\\n     | xargs cat\n   ```\n\n2. Locate the `client-certificate` or `client-certificate-data` field.\n3. Check certificate expiration using OpenSSL.\n\nNote that there are no tools to find other stale kubeconfig files.\nConsider enabling the `control-plane-manager` module for advanced debugging.\n"
       summary: |
         Kubernetes has API clients with soon-to-expire certificates.
       severity: "6"
@@ -3683,7 +3683,7 @@ alerts:
         - High disk latency where etcd data is stored.
         - High CPU usage on the node.
       summary: |
-        Synching (fsync) WAL files to disk is slow.
+        Syncing (fsync) WAL files to disk is slow.
       severity: "7"
       markupFormat: markdown
     - name: KubeEtcdHighNumberOfLeaderChanges
@@ -4167,7 +4167,7 @@ alerts:
            kubectl -n kube-system describe pod -l k8s-app=kube-dns
            ```
       summary: |
-        Kube-dns or CoreDNS are not under monitoring.
+        Kube-dns or CoreDNS are not being monitored.
       severity: "5"
       markupFormat: markdown
     - name: KubernetesStatefulSetReplicasUnavailable
@@ -4310,7 +4310,7 @@ alerts:
       module: monitoring-deckhouse
       edition: ce
       description: |
-        To resolve this issue, migrate volumes to the Ceph CSI driver using the `rbd-in-tree-to-ceph-csi-migration-helper.sh` script located at `https://github.com/deckhouse/deckhouse/blob//modules/031-ceph-csi/tools/rbd-in-tree-to-ceph-csi-migration-helper.sh`.
+        To resolve this issue, migrate volumes to the Ceph CSI driver using the `rbd-in-tree-to-ceph-csi-migration-helper.sh` script available at `https://github.com/deckhouse/deckhouse/blob//modules/031-ceph-csi/tools/rbd-in-tree-to-ceph-csi-migration-helper.sh`.
 
         For details on volume migration, refer to the migration guide available at `https://github.com/deckhouse/deckhouse/blob//modules/031-ceph-csi/docs/internal/INTREE_MIGRATION.md`.
       summary: |
@@ -4394,7 +4394,7 @@ alerts:
       description: |
         A new release for module `{{ $labels.moduleName }}` has been blocked because it doesn't meet the required conditions.
 
-        To check the requirements, run the following commands:
+        To check the requirements, run the following command:
 
         ```bash
         kubectl  get mr {{ $labels.name }} -o json | jq .spec.requirements

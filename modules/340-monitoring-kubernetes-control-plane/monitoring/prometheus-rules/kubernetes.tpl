@@ -94,8 +94,7 @@ Consider enabling the `control-plane-manager` module for advanced debugging.
     annotations:
       plk_protocol_version: "1"
       summary: API servers can't be reached.
-      description: No API servers are reachable, or they have all disappeared from service.
-        discovery
+      description: No API servers are reachable, or they have all disappeared from service discovery.
   - alert: K8sCertificateExpiration
     expr: sum(label_replace(rate(apiserver_client_certificate_expiration_seconds_bucket{le="604800", job=~"kubelet|kube-apiserver"}[1m]) > 0, "component", "$1", "job", "(.*)")) by (component, node)
     labels:
