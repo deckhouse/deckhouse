@@ -15,10 +15,10 @@
 package cache
 
 import (
-	"registry-modules-watcher/internal/backends"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"registry-modules-watcher/internal/backends"
 )
 
 func TestGetState(t *testing.T) {
