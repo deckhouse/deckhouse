@@ -1,6 +1,6 @@
 - name: d8.check-config
   rules:
-    - alert: CheckCloudProviderConfig
+    - alert: D8CheckCloudProviderConfig
       expr: |
         d8_check_cloud_provider_config > 0
       for: 1m
@@ -13,12 +13,15 @@
         summary: Provider-cluster-configuration in the cluster contains fields outside the schema.
         description: |
           Provider-cluster-configuration in the cluster contains fields outside the schema.
+          More details can be found in the logs.
+          ```bash
+          kubectl logs -n d8-system -l app=deckhouse --tail=-1 | grep check_provider_cluster_configuration | grep error | jq .msg
+          ```
           Remove it from provider-cluster-configuration.
-
           ```bash
           kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller edit provider-cluster-configuration
           ```
-    - alert: CheckStaticClusterConfig
+    - alert: D8CheckStaticClusterConfig
       expr: |
         d8_check_static_cluster_config > 0
       for: 1m
@@ -31,12 +34,15 @@
         summary: Static-cluster-configuration in the cluster contains fields outside the schema.
         description: |
           Static-cluster-configuration in the cluster contains fields outside the schema.
+          More details can be found in the logs.
+          ```bash
+          kubectl logs -n d8-system -l app=deckhouse --tail=-1 | grep check_static_cluster_configuration | grep error | jq .msg
+          ```
           Remove it from static-cluster-configuration.
-
           ```bash
           kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller edit static-cluster-configuration
           ```
-    - alert: CheckClusterConfig
+    - alert: D8CheckClusterConfig
       expr: |
         d8_check_cluster_config > 0
       for: 1m
@@ -49,8 +55,11 @@
         summary: Cluster-configuration in the cluster contains fields outside the schema.
         description: |
           Cluster-configuration in the cluster contains fields outside the schema.
+          More details can be found in the logs.
+          ```bash
+          kubectl logs -n d8-system -l app=deckhouse --tail=-1 | grep check_cluster_configuration | grep error | jq .msg
+          ```
           Remove it from cluster-configuration.
-
           ```bash
           kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller edit cluster-configuration
           ```
