@@ -67,12 +67,12 @@ func CheckClusterConfig(input *go_hook.HookInput) error {
 		if YAML, ok := secret.Data["cluster-configuration.yaml"]; ok && len(YAML) > 0 {
 			err := config.ValidateConf(&YAML)
 			if err != nil {
-				requirements.SaveValue(CheckStaticClusterConfigRaw, true)
+				requirements.SaveValue(CheckClusterConfigRaw, true)
 				input.MetricsCollector.Set("d8_check_cluster_config", 1, nil)
 				input.Logger.Error(findErrorLines(err.Error()))
 				return nil
 			}
-			requirements.SaveValue(CheckStaticClusterConfigRaw, false)
+			requirements.SaveValue(CheckClusterConfigRaw, false)
 			input.MetricsCollector.Expire("d8_check_cluster_config")
 		}
 	}
