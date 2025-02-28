@@ -57,6 +57,10 @@ var DefaultImagesDigests = map[string]interface{}{
 		"cloudControllerManager132": "imageHash-cloudProviderAzure-cloudControllerManager132",
 		"cloudDataDiscoverer":       "imageHash-cloudProviderAzure-cloudDataDiscoverer",
 	},
+	"cloudProviderDvp": map[string]interface{}{
+		"cloudControllerManager": "imageHash-cloudProviderDvp-cloudControllerManager",
+		"dvpCsiDriver":           "imageHash-cloudProviderDvp-dvpCsiDriver",
+	},
 	"cloudProviderDynamix": map[string]interface{}{
 		"capdControllerManager":  "imageHash-cloudProviderDynamix-capdControllerManager",
 		"cloudControllerManager": "imageHash-cloudProviderDynamix-cloudControllerManager",
@@ -452,6 +456,7 @@ var DefaultImagesDigests = map[string]interface{}{
 		"terraformManagerDynamix":     "imageHash-terraformManager-terraformManagerDynamix",
 		"terraformManagerGcp":         "imageHash-terraformManager-terraformManagerGcp",
 		"terraformManagerHuaweicloud": "imageHash-terraformManager-terraformManagerHuaweicloud",
+		"terraformManagerKubernetes":  "imageHash-terraformManager-terraformManagerKubernetes",
 		"terraformManagerOpenstack":   "imageHash-terraformManager-terraformManagerOpenstack",
 		"terraformManagerVcd":         "imageHash-terraformManager-terraformManagerVcd",
 		"terraformManagerVsphere":     "imageHash-terraformManager-terraformManagerVsphere",
