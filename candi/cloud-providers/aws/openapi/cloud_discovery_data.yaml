@@ -39,6 +39,8 @@ apiVersions:
       zoneToSubnetIdMap:
         type: object
         minProperties: 1
+        additionalProperties:
+          type: string
       zones:
         type: array
         minItems: 1
