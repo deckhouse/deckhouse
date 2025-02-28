@@ -85,8 +85,9 @@ variable "root_disk" {
 
 variable "kubernetes_data_disk" {
   type = object({
-    name = string
-    hash = string
+    name   = string
+    hash   = string
+    md5_id = string
   })
 }
 
