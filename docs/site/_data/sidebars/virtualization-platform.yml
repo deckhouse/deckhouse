@@ -171,35 +171,36 @@ entries:
                 - title:
                     en: Supported storages
                     ru: Поддерживаемые хранилища
+                  url: /virtualization-platform/documentation/admin/platform-management/storage/supported-storage.html
+              folders:
+                - title:
+                    en: SDS
+                    ru: Программно определяемые
                   folders:
                     - title:
-                        en: SDS
-                        ru: Программно определяемые
-                      folders:
-                        - title:
-                            en: Local storage based on LVM
-                            ru: Локальные на основе LVM
-                          url: /virtualization-platform/documentation/admin/platform-management/storage/sds/lvm-local.html
-                        - title:
-                            en: Replicated storage based on LVM
-                            ru: Реплицируемые на основе LVM
-                          url: /virtualization-platform/documentation/admin/platform-management/storage/sds/lvm-replicated.html
+                        en: Local storage based on LVM
+                        ru: Локальные на основе LVM
+                      url: /virtualization-platform/documentation/admin/platform-management/storage/sds/lvm-local.html
                     - title:
-                        en: External
-                        ru: Внешние
-                      folders:
-                        - title:
-                            en: Yadro
-                            ru: Yadro
-                          url: /virtualization-platform/documentation/admin/platform-management/storage/external/yadro.html
-                        - title:
-                            en: NFS storage
-                            ru: NFS-хранилище
-                          url: /virtualization-platform/documentation/admin/platform-management/storage/external/nfs.html
-                        - title:
-                            en: CEPH storage
-                            ru: CEPH-хранилище
-                          url: /virtualization-platform/documentation/admin/platform-management/storage/external/ceph.html
+                        en: Replicated storage based on LVM
+                        ru: Реплицируемые на основе LVM
+                      url: /virtualization-platform/documentation/admin/platform-management/storage/sds/lvm-replicated.html
+                - title:
+                    en: External
+                    ru: Внешние
+                  folders:
+                    - title:
+                        en: Yadro
+                        ru: Yadro
+                      url: /virtualization-platform/documentation/admin/platform-management/storage/external/yadro.html
+                    - title:
+                        en: NFS storage
+                        ru: NFS-хранилище
+                      url: /virtualization-platform/documentation/admin/platform-management/storage/external/nfs.html
+                    - title:
+                        en: CEPH storage
+                        ru: CEPH-хранилище
+                      url: /virtualization-platform/documentation/admin/platform-management/storage/external/ceph.html
             - title:
                 en: Virtualization
                 ru: Виртуализация
@@ -346,12 +347,16 @@ entries:
           folders:
             #- title:
             #    en: dhctl
-            #    ru: dhctl
+            #    ru: dhctlа
             #  url: /virtualization-platform/documentation/reference/console-utilities/dhctl.html
             - title:
                 en: d8 (Deckhouse CLI)
                 ru: d8 (Deckhouse CLI)
               url: /virtualization-platform/reference/console-utilities/d8.html
+        - title:
+            en: FAQ
+            ru: FAQ
+          url: /virtualization-platform/documentation/faq.html
     #- title:
     #    en: DVP editions
     #    ru: Список  DVP
@@ -360,7 +365,3 @@ entries:
     #        en: Configuration module
     #        ru: Конфигурации модуля
     #      url: /virtualization-platform/documentation/dvp-editions/changelog.html
-    #- title:
-    #    en: FAQ
-    #    ru: FAQ
-    #  url: /virtualization-platform/documentation/faq.html
