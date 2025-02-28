@@ -116,7 +116,7 @@ kind: ModuleConfig
 metadata:
   name: metallb
 spec:
-  version: 1
+  version: 2
   enabled: true
   settings:
       # [<ru>] Настройки metaillb-пула для входящего трафика.
