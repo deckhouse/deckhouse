@@ -1,82 +1,107 @@
-# Deckhouse documentation website 
+# Deckhouse documentation website
 
-> May contain incomplete information. It is being updated.
+> This README is a work in progress. Some information may be incomplete or outdated.
 
-This document describes Deckhouse documentation architecture and how to run the documentation website locally.
+This document describes the architecture of Deckhouse documentation and explains how to run the documentation website locally.
 
-## Running a site with the documentation locally
+## Running the documentation site locally
 
 ### Requirements
 
-- Clone repo firstly.
-- Free 80 port to bind.
+- Clone this repository.
+- Ensure that port `80` is available for binding.
 - Install [werf](https://werf.io/getting_started/).
+  When installing, set the release channel to `alpha`.
 
-### Starting and stopping a site with the documentation locally — the first method
+### Running the documentation site using separate services
 
-- To start documentation, open two separate consoles and follow the steps:
+#### Starting the documentation site
 
-  1. In the first console run:
+To start the documentation site, open two separate terminal windows or tabs and follow these steps:
 
-     ```shell
-     cd docs/documentation
-     make up
-     ```
+1. In the first terminal, run:
 
-  1. In the second console run:
+   ```shell
+   cd docs/documentation
+   make up
+   ```
 
-     ```shell
-     cd docs/site
-     make up
-     ```
+1. In the second terminal, run:
 
-  1. Open <http://localhost>
+   ```shell
+   cd docs/site
+   make up
+   ```
 
-- To stop documentation, cancel the process in the consoles and run:
+1. Open the documentation site in your browser at <http://localhost>.
 
-  ```shell
-  make down
-  ```
+#### Stopping the documentation site
 
-### Starting and stopping a site with the documentation locally — the second method
-
-- To start documentation, open console and follow the steps:
-
-  1. In the console run:
-
-     ```shell
-     make docs
-     ```
-
-  1. Open <http://localhost>
-
-- To stop documentation, cancel the process in the console and run:
-
-  ```shell
-  make docs-down
-  ```
-
-## How to debug
-
-> Instructions may be outdated!
-
-There is the `docs/site/werf-debug.yaml` file to compile and the `docs/site/docker-compose-debug.yml` file to run the backend with [delve](https://github.com/go-delve/delve) debugger.
-
-Run from the docs/site directory of the project (or run docs/site/backend/debug.sh):
+To stop the documentation site, cancel the running processes and run the following command in both terminals:
 
 ```shell
-werf compose up --config werf-debug.yaml --follow --docker-compose-command-options='-d --force-recreate' --docker-compose-options='-f docker-compose-debug.yml'
+make down
 ```
 
-Connect to localhost:2345
+### Running the documentation site using a single command
+
+#### Starting the documentation site
+
+To start the documentation site, open a terminal and follow these steps:
+
+1. Run the following command:
+
+   ```shell
+   make docs
+   ```
+
+1. Open the documentation site in your browser at <http://localhost>.
+
+If you cloned the Deckhouse repository and made uncommitted changes, trying to run the documentation site will result in an error from werf stating that the changes must be committed first.
+
+To bypass that restriction and run the documentation site with uncommitted changes, run the following command:
+
+```shell
+make docs-dev
+```
+
+#### Stopping the documentation site
+
+To stop the documentation site, cancel the running process and run the following command in the terminal:
+
+```shell
+make docs-down
+```
+
+## Debugging
+
+The [Delve](https://github.com/go-delve/delve) debugger is used for debugging the documentation site's backend.
+
+Files available for debugging:
+
+- `docs/site/werf-debug.yaml`: Used for compiling the backend.
+- `docs/site/docker-compose-debug.yml`: Used for running the backend.
+
+To run the debugger:
+
+1. Navigate to the `docs/site` directory and run the following command:
+
+   ```shell
+   werf compose up --config werf-debug.yaml --follow --docker-compose-command-options='-d --force-recreate' --docker-compose-options='-f docker-compose-debug.yml'
+   ```
+
+   Alternatively, run `docs/site/backend/debug.sh`.
+
+1. Once the process is running, connect to `localhost:2345`.
 
 ## Working with spellchecker
 
-Commands below assume that you are run them from the root of the repository.
+> Run the following commands from the root of the repository.
 
-Use the following commands:
-- `make docs-spellcheck` — to check all the documentation for spelling errors.
-- `file=<PATH_TO_FILE> make docs-spellcheck` — to check the specified file for spelling errors.
+Spellchecking commands:
+
+- `make docs-spellcheck`: Check all documentation in the repository for spelling errors.
+- `file=<PATH_TO_FILE> make docs-spellcheck`: Check a specific file for spelling errors.
 
   Example:
 
@@ -84,18 +109,17 @@ Use the following commands:
   file=ee/se-plus/modules/cloud-provider-vsphere/docs/CONFIGURATION_RU.md make docs-spellcheck`
   ```
 
-- `make docs-spellcheck-generate-dictionary` — to generate a dictionary of words. Run it after adding new words to the tools/docs/spelling/wordlist file.
-- `make docs-spellcheck-get-typos-list` — to get the sorted list of typos from the documentation.
-
-The `make lint-doc-spellcheck-pr` command is used in CI to check the spelling of the documentation in a PR.
+- `make docs-spellcheck-generate-dictionary`: Generate a word dictionary. Run it after adding new words to the `tools/docs/spelling/wordlist` file.
+- `make docs-spellcheck-get-typos-list`: Get a sorted list of typos from the documentation.
+- `make lint-doc-spellcheck-pr`: Used in CI to check the spelling of documentation in a PR.
 
 ## Architecture
 
-There following parts of the Deckhouse website:
-- The main part of the site. Includes all sections except that not described below.
-- The non-versioned documentation part.
-   
-  Includes the following sections:
+The Deckhouse website consists of the following parts:
+
+- **Main website**. Includes all sections except those specifically described below.
+- **Non-versioned documentation**. Includes the following sections:
+
   - `/products/kubernetes-platform/gs/`
   - `/products/kubernetes-platform/guides/`
   - `/assets/`
@@ -106,35 +130,37 @@ There following parts of the Deckhouse website:
   - `/products/virtualization-platform/guides/`
   - `/products/virtualization-platform/reference/`
   
-  Content is generated using Jekyll from the `docs/site` directory.
+  The content is generated using Jekyll from the `docs/site` directory.
   
-- The versioned documentation part. 
-
-  Includes the following sections:
+- **Versioned documentation**. Includes the following sections:
+  
   - `/products/kubernetes-platform/documentation/`
 
-  Content is generated using Jekyll from the `docs/documentation` directory.
+  The content is generated using Jekyll from the `docs/documentation` directory.
+  Contains documentation for Deckhouse Kubernetes Platform (DKP) and built-in modules.
 
-  Contains documentation for Deckhouse Kubernetes Platform and built-in modules.
+- **Documentation for DKP modules**. Includes the following sections:
 
-- Documentation for Deckhouse Kubernetes Platform modules.
-
-  Includes the following sections:
   - `/products/kubernetes-platform/modules/`
 
-  Content is generated using HuGo:
-  - Project files for HuGo is in the `docs/site/backends/docs-builder-template` directory.
-  - The builder, which generates the documentation, is in the `docs/site/backends/docs-builder` directory (written in Go).
+  The content is generated using Hugo:
+  
+  - Project files for Hugo are located in the `docs/site/backends/docs-builder-template` directory.
+  - The documentation builder (written in Go) is located in the `docs/site/backends/docs-builder` directory.
 
 ### Structure of the Jekyll-based projects
 
-Project uses [werf](werf.io) to build and deploy documentation.
+The project uses [werf](werf.io) to build and deploy documentation.
 
-Some tips:
-- `_tool` directory contains scripts used for build;
-- `_assets` directory stores assets (styles and scripts), which are used by Jekyll Asset Pipeline plugin. Assets are compiled and minified into the `/assets` directory (yeah, the absolute path) and have a digest in the path. If you don't need a digest in the path, you may use `/css` or `/js` directory (assets will be processed by Jekyll as usual).  
+Things to note:
+
+- The `_tool` directory contains scripts used for building the documentation.
+- The `_assets` directory stores assets (styles and scripts), which are used by Jekyll Asset Pipeline plugin.
+  Assets are compiled and minified into the `/assets` directory (absolute path) and include a digest in their path.
+  If you don't need a digest in the path, use the `/css` or `/js` directory instead.
+  In this case, assets will be processed by Jekyll as usual.
   
-  Here is an example of how to include a JavaScript assets:
+  Example of including JavaScript assets:
 
   ```liquid
   <script type="text/javascript" src="
@@ -145,7 +171,7 @@ Some tips:
   "></script>
   ```
 
-- Here is an example of how to include CSS assets:
+  Example of including CSS assets:
 
   ```liquid
   <link href='
@@ -156,7 +182,7 @@ Some tips:
   ' rel='stylesheet' type='text/css' crossorigin="anonymous" />
   ```
 
-- If you need to include assets and use a relative link, you can use the following syntax:
+- If you need to include assets and use a relative link, use the following syntax:
 
   ```liquid
   {% capture asset_url %}{%- css_asset_tag supported_versions %}[_assets/css/supported_versions.css]{% endcss_asset_tag %}{% endcapture %}
@@ -164,17 +190,21 @@ Some tips:
   ```
 
 ### Dependencies
+
 - Jekyll 4+
 - [Jekyll Asset Pipeline](https://github.com/matthodan/jekyll-asset-pipeline)
-- [Jekyll Regex Replace](https://github.com/joshdavenport/jekyll-regex-replace]
+- [Jekyll Regex Replace](https://github.com/joshdavenport/jekyll-regex-replace)
 - [Jekyll Include Plugin](https://github.com/flant/jekyll_include_plugin)
 
 ### Jekyll data
 
-Some data is stored in the `_data` directory of a Jekyll project, but some data is generated from the repo by the scripts or by Jekyll hooks. Here are some data structures, which are used in the Jekyll projects. 
+Some data is stored in the `_data` directory of the Jekyll project,
+while other data is generated from the repo by the scripts or Jekyll hooks.
+Below are some data structures used in the Jekyll projects.
 
-- (documentation) `site.data.bundles.raw.[<EDITION>]`. Added in the werf.yaml to build the followings data (in `docs/documentation/_plugins/custom_hooks.rb`):
-  - `site.data.bundles.byModule` — list of bundles for each module. Example: 
+- (documentation) `site.data.bundles.raw.[<EDITION>]`. Added in `werf.yaml` to build the followings data in `docs/documentation/_plugins/custom_hooks.rb`:
+  - `site.data.bundles.byModule`: A list of bundles for each module. Example:
+
     ```json
     {
       "node-local-dns": {
@@ -186,8 +216,10 @@ Some data is stored in the `_data` directory of a Jekyll project, but some data 
       }
     }
     ```
-  - `site.data.bundles.bundleNames` — list of available bundles. Example: `["Default", "Managed", "Minimal"]`
-  - `site.data.bundles.bundleModules` — list of modules for each bundle. Example:
+
+  - `site.data.bundles.bundleNames`: A list of available bundles. Example: `["Default", "Managed", "Minimal"]`.
+  - `site.data.bundles.bundleModules`: A list of modules for each bundle. Example:
+
     ```json
     {
       "Default": [
@@ -203,19 +235,22 @@ Some data is stored in the `_data` directory of a Jekyll project, but some data 
       ]
     }
     ```
-- `site.data.modules.internal`. List of embedded modules with the following structure:
+
+- `site.data.modules.internal`: A list of embedded modules with the following structure:
+
   ```text
   {
     "module-name": {
-      "path": "path to the documentation on the site",  <-- null, if the module don't have documentation
+      "path": "A path to the documentation on the site",  <-- null, if the module doesn't have documentation
       "editionMinimumAvailable": "<EDITION>" <-- the "smallest" edition, where module is available. It is computed from the repo folder structure. **Don't use it in logic.** It seems to be deprecated in the future.
     }
   }
   ```
-   
-  The data is filled by the `docs/documentation/_tools/modules_list.sh` script.
+
+  The data is generated by the `docs/documentation/_tools/modules_list.sh` script.
   
-  Example: 
+  Example:
+  
   ```json
   {
     "admission-policy-engine": {
@@ -236,23 +271,23 @@ Some data is stored in the `_data` directory of a Jekyll project, but some data 
     }
   }
   ```
-    
-- `site.data.modules.all`. List of all the modules.
- 
-  The data is filled in the `werf-web.inc.yaml`.
+
+- `site.data.modules.all`: A list of all modules.
+
+  The data is defined by `werf-web.inc.yaml`.
   
-  - `editionFullyAvailable` - the list of editions, where the module available without restrictions. Used for overriding computed values. Takes precedence over `excludeModules` and `includeModules` from the `site.data.editions` file (see below). The `editionFullyAvailable` for a module can be set in the `docs/documentation/_data/modules/modules-addition.json` file. Better don't use it in logic (but you can use it for adding editions to the module). 
-  - `editionsWithRestrictions` - The list of editions, where the module is available with restrictions. Used for overriding computed values. Takes precedence over `excludeModules` and `includeModules` from the `site.data.editions` file (see below). Takes precedence over `editionFullyAvailable`. The `editionsWithRestrictions` for a module can be set in the `docs/documentation/_data/modules/modules-addition.json` file.
-  - `editions` — The list of editions, where the module is available **with or without** restrictions. 
+  - `editionFullyAvailable`: A list of editions where the module available without restrictions. Used for overriding computed values. Takes precedence over `excludeModules` and `includeModules` from the `site.data.editions` file (see below). The `editionFullyAvailable` for a module can be set in the `docs/documentation/_data/modules/modules-addition.json` file. It's recommended that you don't use it in logic (but you can use it for adding editions to the module).
+  - `editionsWithRestrictions`: A list of editions where the module is available with restrictions. Used for overriding computed values. Takes precedence over `excludeModules` and `includeModules` from the `site.data.editions` file (see below). Takes precedence over `editionFullyAvailable`. The `editionsWithRestrictions` for a module can be set in the `docs/documentation/_data/modules/modules-addition.json` file.
+  - `editions`: A list of editions where the module is available **with or without** restrictions.
   
   ```text
   {
     "<module-kebab-name>": {
-    "editionMinimumAvailable": "<EDITION>",  <-- the "smallest" edition according to the edition weight (_data/modules/editions-weight.yml), where module is available. It is computed from the module folder of the repo (_tools/modules_list.sh), can be specified in the `_data/modules/modules-addition.json`. **Don't use it in logic.** It seems to be deprecated in the future. Use editions array instead. 
-    "editions": [],  <-- list of editions, where the module is available with restrictions or without restrictions
-    "external": "true|false", <-- Optional, true if the module installs from the modulesource
-    "path": "modules/<module-kebab-name>/",  <-- Optional, path to module documentation on the site.
-    "editionsWithRestrictions": [ <-- editions, where the module is available with restrictions
+    "editionMinimumAvailable": "<EDITION>",  <-- the "smallest" edition according to the edition weight (_data/modules/editions-weight.yml) where a module is available. It is computed from the module folder of the repo (_tools/modules_list.sh), can be specified in the `_data/modules/modules-addition.json`. **Don't use it in logic.** It seems to be deprecated in the future. Use editions array instead. 
+    "editions": [],  <-- a list of editions where the module is available with or without restrictions
+    "external": "true|false", <-- Optional, true if the module is installed from the modulesource
+    "path": "modules/<module-kebab-name>/",  <-- Optional, path to the module documentation on the site.
+    "editionsWithRestrictions": [ <-- editions where the module is available with restrictions
       "se",
       "se-plus",
       "cse-lite"
@@ -263,12 +298,12 @@ Some data is stored in the `_data` directory of a Jekyll project, but some data 
         "ru": "Restriction on working with BGP"
       }
     },
-    "editionFullyAvailable": [ <-- list of editions, where the module is available without restrictions. Used for overriding computed values.
+    "editionFullyAvailable": [ <-- a list of editions, where the module is available without restrictions. Used for overriding computed values.
       "be",
       "se",
       "se-plus"
     ],  
-    "parameters-ee": {  <-- deprecated. list of parameters for EE
+    "parameters-ee": {  <-- deprecated. A list of parameters for EE
       "some uniq key name": {
         "linkAnchor": "securitypolicy-v1alpha1-spec-policies-verifyimagesignatures",  <-- anchor to the CRD field
         "resourceType": "crd",
@@ -277,13 +312,13 @@ Some data is stored in the `_data` directory of a Jekyll project, but some data 
     }
   }
   ```
+
 - `site.data.editions`
 
-  - `docs/documentation/_data/modules/editions-addition.json` - the data from the file is merged with the data from the `/editions.yaml` file. 
-  - Each edition in the file can include both filters - `excludeModules` and `includeModules`. In this case, the module will be added to edition if its name is in the `includeModules` and does not in the `excludeModules`.
-  - `docs/documentation/_data/modules-addition.json` - 
+  - `docs/documentation/_data/modules/editions-addition.json`: Merged with the data from the `/editions.yaml` file.
+  - Each edition in the file can include both `excludeModules` and `includeModules` filters. In this case, the module will be added to the edition if its name is in `includeModules` and not in `excludeModules`.
+  - `docs/documentation/_data/modules-addition.json`
   
-
   ```json
   {
     "ce": {
