@@ -44,7 +44,11 @@ func updateSpStatus(input *go_hook.HookInput) error {
 
 	// update SPs' statuses
 	for _, sp := range securityPolicies {
-		input.PatchCollector.Filter(set_cr_statuses.SetProcessedStatus(filterSP), "deckhouse.io/v1alpha1", "securitypolicy", "", sp.Metadata.Name, object_patch.WithSubresource("/status"), object_patch.IgnoreHookError())
+		if sp.Metadata.Namespace == "" {
+			input.PatchCollector.Filter(set_cr_statuses.SetProcessedStatus(filterSP), "deckhouse.io/v1alpha1", "securitypolicy", "", sp.Metadata.Name, object_patch.WithSubresource("/status"), object_patch.IgnoreHookError())
+		} else {
+			input.PatchCollector.Filter(set_cr_statuses.SetProcessedStatus(filterSP), "deckhouse.io/v1alpha1", "namespacedsecuritypolicy", sp.Metadata.Namespace, sp.Metadata.Name, object_patch.WithSubresource("/status"), object_patch.IgnoreHookError())
+		}
 	}
 
 	return nil
