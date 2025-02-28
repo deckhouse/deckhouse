@@ -58,62 +58,6 @@ document.addEventListener("DOMContentLoaded", function() {
       })
     }
 
-    // submitForm(e) {
-    //   e.preventDefault();
-
-    //   const FormData = this.serializeData();
-
-    //   const bitrixFields = {
-    //     fields: {
-    //       'TITLE': 'с сайта документации Deckhouse',
-    //       'NAME': FormData.name,
-    //       'EMAIL': FormData.email,
-    //       'PHONE': FormData.phone,
-    //       'COMPANY': FormData.company,
-    //       'POST': FormData.position,
-    //       'COMMENTS': 'Предпочтительный вид связи: ' + FormData.preferred_contact,
-    //     }
-    //   }
-      
-    //   if(this.telegramCheckbox.checked && this.telegramInput.value) {
-    //     bitrixFields.fields.COMMENTS += '. Telegram ID: ' + this.telegramInput.value;
-    //   }
-
-    //   // const url = 'https://crm.flant.ru/rest/132/bm7uy367wn001kef/crm.lead.add.json';
-
-    // const url = 'https://b24-f0ud24.bitrix24.ru/rest/crm.lead.add.json?auth=8f44b767007618480076182800000001000007c8f5118e27264ab009585d1e51c2c61b';
-
-    //   fetch(url, {
-    //     method: 'POST',
-    //     headers: {
-    //       'Content-Type': 'application/json;charset=utf-8',
-    //       Accept: "application/json",
-    //     },
-    //     body: JSON.stringify(bitrixFields)
-    //   })
-    //   .then(res => {
-    //     if(res.ok) {
-    //       res.json();
-    //       console.log('успех');
-    //     } else {
-    //       throw new Error(`${res.status}`);
-    //     }
-    //   })
-    //   .then(data => {
-    //     if (data.result) {
-    //       this.downloadFile();
-    //       this.successSubmit();
-    //     } else {
-    //       this.errorSubmit();
-    //     }
-    //   })
-    //   .catch(error => {
-    //     this.errorSubmit();
-    //   })
-    // }
-
-
-
     submitForm(e) {
       e.preventDefault();   
 
@@ -185,7 +129,7 @@ document.addEventListener("DOMContentLoaded", function() {
       }
 
       const query = {};
-      const parts = new URLSearchParams(FormData.referer_url);
+      const parts = new URL(FormData.referer_url).searchParams;
 
       parts.forEach((value, key) => {
         if(key.startsWith('utm_')) {
@@ -209,9 +153,26 @@ document.addEventListener("DOMContentLoaded", function() {
         bitrixFields.fields['UTM_TERM'] = query.utm_term;
       }
 
+      function creatCookie(name, value, days) {
+        const date = new Date(Date.now() + (days * 24 * 60 * 60 * 1000));
+        const expires = 'expires=' + date.toUTCString();
+        document.cookie = name + '=' + encodeURIComponent(value) + ';' + expires + ';path=/';
+      }
+
+      const utmAccepted = ['utm_campaign', 'utm_medium', 'utm_source', 'utm_term'];
+      utmAccepted.forEach(param => {
+        if(query[param]) {
+          if(!document.cookie.includes(param + '=')) {
+            creatCookie(param, query[param], 28);
+          }
+        } else {
+          creatCookie(param, '', -1);
+        }
+      })
+
       const url = 'https://crm.flant.ru/rest/132/bm7uy367wn001kef/crm.lead.add.json';
 
-      // const url = 'https://b24-f0ud24.bitrix24.ru/rest/crm.lead.add.json?auth=000ec0670076184800761828000000010000076437596c50bdc7471967352ee29d6b8b';
+      // const url = 'https://b24-f0ud24.bitrix24.ru/rest/crm.lead.add.json?auth=b781c1670076184800761828000000010000072d002acfe2e544b0219745019dd83144';
       // const url = 'https://b24-f0ud24.bitrix24.ru/rest/crm.lead.fieald.json?auth=7cf6be6700761848007618280000000100000706b74c56f83b5ea486f34444762192f6';
 
       fetch(url, {
