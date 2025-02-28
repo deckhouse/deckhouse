@@ -85,17 +85,17 @@ func main() {
 
 	err = lManager.Remove(ctx)
 	if err != nil {
-		logger.Errorf("lease removing failed: %v", err)
+		logger.Error("lease removing failed", log.Err(err))
 	}
 
 	err = srv.Shutdown(ctx)
 	if err != nil {
-		logger.Errorf("shutdown failed: %v", err)
+		logger.Error("shutdown failed", log.Err(err))
 	}
 
 	err = eg.Wait()
 	if err != nil {
-		logger.Errorf("error due stopping application%v", err)
+		logger.Error("error due stopping application", log.Err(err))
 	}
 
 	logger.Info("application stopped")
