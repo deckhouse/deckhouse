@@ -153,7 +153,7 @@ document.addEventListener("DOMContentLoaded", function() {
         bitrixFields.fields['UTM_TERM'] = query.utm_term;
       }
 
-      function creatCookie(name, value, days) {
+      function createCookie(name, value, days) {
         const date = new Date(Date.now() + (days * 24 * 60 * 60 * 1000));
         const expires = 'expires=' + date.toUTCString();
         document.cookie = name + '=' + encodeURIComponent(value) + ';' + expires + ';path=/';
@@ -163,10 +163,10 @@ document.addEventListener("DOMContentLoaded", function() {
       utmAccepted.forEach(param => {
         if(query[param]) {
           if(!document.cookie.includes(param + '=')) {
-            creatCookie(param, query[param], 28);
+            createCookie(param, query[param], 28);
           }
         } else {
-          creatCookie(param, '', -1);
+          createCookie(param, '', -1);
         }
       })
 
