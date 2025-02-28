@@ -1,0 +1,13 @@
+diff --git a/pkg/validation/limits.go b/pkg/validation/limits.go
+index bb2f5c4b2..6c4196455 100644
+--- a/pkg/validation/limits.go
++++ b/pkg/validation/limits.go
+@@ -307,7 +307,7 @@ func (l *Limits) RegisterFlags(f *flag.FlagSet) {
+ 	f.Var(&l.RejectOldSamplesMaxAge, "validation.reject-old-samples.max-age", "Maximum accepted sample age before rejecting.")
+ 	_ = l.CreationGracePeriod.Set("10m")
+ 	f.Var(&l.CreationGracePeriod, "validation.create-grace-period", "Duration which table will be created/deleted before/after it's needed; we won't accept sample from before this time.")
+-	f.IntVar(&l.MaxEntriesLimitPerQuery, "validation.max-entries-limit", 5000, "Maximum number of log entries that will be returned for a query.")
++	f.IntVar(&l.MaxEntriesLimitPerQuery, "validation.max-entries-limit", 100000, "Maximum number of log entries that will be returned for a query.")
+ 
+ 	f.BoolVar(&l.UseOwnedStreamCount, "ingester.use-owned-stream-count", false, "When true an ingester takes into account only the streams that it owns according to the ring while applying the stream limit.")
+ 	f.IntVar(&l.MaxLocalStreamsPerUser, "ingester.max-streams-per-user", 0, "Maximum number of active streams per user, per ingester. 0 to disable.")

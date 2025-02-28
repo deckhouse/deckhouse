@@ -84,7 +84,7 @@ properties:
         type: integer
         description: |
           The maximum number of entries returned for the query.
-        default: 5000
+        default: 100000
       maxChunksPerQuery:
         type: integer
         description: |
