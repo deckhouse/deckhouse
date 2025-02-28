@@ -26,7 +26,7 @@ type Sender interface {
 	Send(ctx context.Context, listBackends map[string]struct{}, versions []DocumentationTask)
 }
 
-type registryscanner interface {
+type RegistryScanner interface {
 	GetState() []DocumentationTask
 	SubscribeOnUpdate(updateHandler func([]DocumentationTask) error)
 }
@@ -48,63 +48,66 @@ const (
 	TaskDelete
 )
 
-type backends struct {
-	registryscanner registryscanner
-	sender          Sender
+// BackendManager handles operations on backend endpoints and coordinates updates
+type BackendManager struct {
+	scanner RegistryScanner
+	sender  Sender
 
-	m            sync.RWMutex
-	listBackends map[string]struct{} // list of backends ip addreses
+	mu           sync.RWMutex
+	backendAddrs map[string]struct{} // list of backend IP addresses
 
 	logger *log.Logger
 }
 
-func New(registryscanner registryscanner, sender Sender, logger *log.Logger) *backends {
-	b := &backends{
-		registryscanner: registryscanner,
-		sender:          sender,
-		listBackends:    make(map[string]struct{}),
-
-		logger: logger,
+// New creates a new BackendManager instance
+func New(scanner RegistryScanner, sender Sender, logger *log.Logger) *BackendManager {
+	bm := &BackendManager{
+		scanner:      scanner,
+		sender:       sender,
+		backendAddrs: make(map[string]struct{}),
+		logger:       logger,
 	}
 
-	registryscanner.SubscribeOnUpdate(b.updateHandler)
+	scanner.SubscribeOnUpdate(bm.handleUpdate)
 
-	return b
+	return bm
 }
 
-// Add new backend to list backends
-func (b *backends) Add(backend string) {
-	b.logger.Info(`Add call`, slog.String("backend", backend))
+// Add registers a new backend endpoint and sends the current documentation state
+func (bm *BackendManager) Add(ctx context.Context, backend string) {
+	bm.logger.Info("Adding backend", slog.String("backend", backend))
 
-	b.m.Lock()
-	defer b.m.Unlock()
+	bm.mu.Lock()
+	defer bm.mu.Unlock()
 
-	b.listBackends[backend] = struct{}{}
+	bm.backendAddrs[backend] = struct{}{}
 
-	state := b.registryscanner.GetState()
+	state := bm.scanner.GetState()
+	bm.logger.Warn("Sending documentation to new backend",
+		slog.String("backend", backend),
+		slog.Int("docs_count", len(state)))
 
-	b.logger.Warn("send all modules documentation to new backend", slog.Int("docs_len", len(state)))
-
-	b.sender.Send(context.Background(), map[string]struct{}{backend: {}}, state)
+	bm.sender.Send(ctx, map[string]struct{}{backend: {}}, state)
 }
 
-func (b *backends) Delete(backend string) {
-	b.logger.Info(`Delete call`, slog.String("backend", backend))
+// Delete removes a backend endpoint from the managed list
+func (bm *BackendManager) Delete(_ context.Context, backend string) {
+	bm.logger.Info("Removing backend", slog.String("backend", backend))
 
-	b.m.Lock()
-	defer b.m.Unlock()
+	bm.mu.Lock()
+	defer bm.mu.Unlock()
 
-	delete(b.listBackends, backend)
+	delete(bm.backendAddrs, backend)
 }
 
-// UpdateDocks send update dock request to all backends
-func (b *backends) updateHandler(docTask []DocumentationTask) error {
-	b.logger.Info(`'registryscanner' produce update event`)
+// handleUpdate sends documentation updates to all registered backends
+func (bm *BackendManager) handleUpdate(docTasks []DocumentationTask) error {
+	bm.logger.Info("Processing registry update event", slog.Int("tasks", len(docTasks)))
 
-	b.m.RLock()
-	defer b.m.RUnlock()
+	bm.mu.RLock()
+	defer bm.mu.RUnlock()
 
-	b.sender.Send(context.Background(), b.listBackends, docTask)
+	bm.sender.Send(context.Background(), bm.backendAddrs, docTasks)
 
 	return nil
 }
