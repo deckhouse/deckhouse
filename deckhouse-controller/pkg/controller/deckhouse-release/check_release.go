@@ -679,7 +679,7 @@ type ReleaseMetadata struct {
 	Disruptions  map[string][]string       `json:"disruptions"`
 	Suspend      bool                      `json:"suspend"`
 
-	Changelog map[string]interface{}
+	Changelog map[string]interface{} `json:"-"`
 
 	Cooldown *metav1.Time `json:"-"`
 }
