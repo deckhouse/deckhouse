@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   role="img"
+   viewBox="-4.77 -4.77 86.000266 69.999998"
+   version="1.1"
+   id="svg15"
+   sodipodi:docname="grafana-tempo.svg"
+   width="86.000267"
+   height="70"
+   inkscape:version="1.2.2 (b0a8486541, 2022-12-01)"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:cc="http://creativecommons.org/ns#"
+   xmlns:dc="http://purl.org/dc/elements/1.1/">
+  <sodipodi:namedview
+     id="namedview17"
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1.0"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     showgrid="false"
+     inkscape:zoom="5.2758759"
+     inkscape:cx="43.405115"
+     inkscape:cy="60.369123"
+     inkscape:window-width="2560"
+     inkscape:window-height="1376"
+     inkscape:window-x="0"
+     inkscape:window-y="0"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="svg15" />
+  <title
+     id="title2">Grafana Tempo logo</title>
+  <path
+     fill="url(#paint0_linear)"
+     d="m -1.5318,12.9223 h -1.542 c -0.9252,0 -1.6962,0.7693 -1.6962,1.6924 0,0.923 0.771,1.6922 1.6962,1.6922 h 1.542 c 0.9252,0 1.6962,-0.7692 1.6962,-1.6922 0,-0.9231 -0.771,-1.6924 -1.6962,-1.6924 z M 29.462,37.2301 H 27.92 c -0.925,0 -1.696,0.7692 -1.696,1.6922 0,0.9231 0.771,1.6923 1.696,1.6923 h 1.542 c 0.925,0 1.696,-0.7692 1.696,-1.6923 -0.154,-0.923 -0.771,-1.6922 -1.696,-1.6922 z M 28.074,21.23 c 0,-0.923 -0.771,-1.6922 -1.696,-1.6922 h -5.551 c -0.925,0 -1.6963,0.7692 -1.6963,1.6922 0,0.9231 0.7713,1.6923 1.6963,1.6923 h 5.551 c 0.925,0 1.696,-0.7692 1.696,-1.6923 z M 81.119,10.7685 79.422,1.23004 C 78.651,-2.61612 75.876,-4.77 72.175,-4.77 H 6.4865 c -2.9298,0 -4.9343,2.46154 -4.4717,5.38462 L 3.8651,10.7685 v 0.3077 c 0.1542,1.2308 -0.4626,1.6923 -0.9252,1.8461 -0.6168,0.3077 -1.0793,0.7692 -1.0793,1.5385 0,0.923 0.771,1.6923 1.6961,1.6923 H 76.647 c 3.084,0.1539 5.088,-2.3077 4.472,-5.3846 z M 58.914,49.0762 C 58.143,45.3838 56.138,43.9993 53.671,43.9993 H 36.247 c -0.925,0 -1.696,0.7692 -1.696,1.6923 0,0.9231 0.616,1.5384 1.542,1.6923 0.616,0.1538 1.079,0.7692 1.542,2.6154 l 1.85,9.8461 c 0.463,2.9231 3.392,5.3846 6.476,5.3846 h 10.332 c 3.084,0 5.088,-2.4615 4.626,-5.3846 z M 35.938,40.7685 h 19.275 c 1.696,-0.3077 1.851,-1.8462 1.542,-3.2308 L 54.288,24.4608 c -0.617,-3.3846 -2.621,-4.7692 -5.243,-4.7692 h -17.27 c -0.925,0 -1.696,0.7692 -1.696,1.6922 0,0.9231 0.617,1.5386 1.542,1.6924 0.617,0.1539 1.233,0.9231 1.542,2.7692 l 1.85,10 c 0.154,0.9231 -0.462,1.3846 -1.079,1.6923 -0.617,0.1538 -1.08,0.7692 -1.08,1.5385 0,0.923 0.771,1.6923 1.697,1.6923 z"
+     id="path6"
+     style="fill:url(#paint0_linear)" />
+  <defs
+     id="defs13">
+    <linearGradient
+       id="paint0_linear"
+       x1="195.047"
+       x2="95.165001"
+       y1="9.4460001"
+       y2="40.320999"
+       gradientUnits="userSpaceOnUse"
+       gradientTransform="translate(-80.77,-4.77)">
+      <stop
+         stop-color="#FFF100"
+         id="stop8" />
+      <stop
+         offset="1"
+         stop-color="#F05A28"
+         id="stop10" />
+    </linearGradient>
+  </defs>
+  <metadata
+     id="metadata300">
+    <rdf:RDF>
+      <cc:Work
+         rdf:about="">
+        <dc:title>Grafana Tempo logo</dc:title>
+      </cc:Work>
+    </rdf:RDF>
+  </metadata>
+</svg>
