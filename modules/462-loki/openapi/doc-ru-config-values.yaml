@@ -70,6 +70,13 @@ properties:
       grpcServerMaxConcurrentStreams:
         description: |
           Ограничение на количество одновременных потоков для вызовов gRPC.
+      splitQueriesByInterval:
+        description: |
+          Интервал для разбиения больших запросов на мелкие.
+          Помогает улучшить производительность, разбивая большие запросы на мелкие.
+      paralleliseShardableQueries:
+        description: |
+          Позволяет разбивать большие запросы на мелкие.
   nodeSelector:
     description: |
       Структура, аналогичная `spec.nodeSelector` пода Kubernetes.
