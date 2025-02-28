@@ -36,21 +36,6 @@ image: {{ .ModuleName }}/golang-artifact
 from: {{ .Images.BASE_GOLANG_23_ALPINE }}
 final: false
 ---
-image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
-fromImage: common/src-artifact
-final: false
-shell:
-  install:
-  - git clone --depth 1 --branch cmd/protoc-gen-go-grpc/v1.3.0 {{ $.SOURCE_REPO }}/grpc/grpc-go.git /src/grpc-go
-  - rm -rf /src/grpc-go/.git
-  - git clone --depth 1 --branch v1.30.0 {{ $.SOURCE_REPO }}/protocolbuffers/protobuf-go.git /src/protobuf-go
-  - rm -rf /src/protobuf-go/.git
-  - git clone --depth 1 --branch v1.1.0 {{ $.SOURCE_REPO }}/mitchellh/protoc-gen-go-json.git /src/protoc-gen-go-json
-  - rm -rf /src/protoc-gen-go-json/.git
-  - git clone --depth 1 --branch v1.5.1 {{ $.SOURCE_REPO }}/pseudomuto/protoc-gen-doc.git /src/protoc-gen-doc
-  - rm -rf /src/protoc-gen-doc/.git
-
----
 image: {{ .ModuleName }}/base-cilium-dev
 fromImage: common/alt-p11-artifact
 final: false
@@ -61,15 +46,6 @@ import:
 - image: {{ .ModuleName }}/golang-artifact
   add: /usr/local/go
   to: /usr/local/go
-  before: install
-- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
-  add: /src
-  to: /src
-  includePaths:
-  - grpc-go
-  - protobuf-go
-  - protoc-gen-go-json
-  - protoc-gen-doc
   before: install
 shell:
   beforeInstall:
@@ -100,7 +76,7 @@ shell:
     sudo \
     libcap-devel libpcap-devel \
     clang17.0 clang17.0-tools lldb17.0 lld17.0 llvm17.0-devel \
-    libcxxabi-devel \
+    libcxxabi-devel
   install:
   # Install Go
   - export GOROOT=/usr/local/go GOPATH=/go
@@ -113,10 +89,19 @@ shell:
   - unzip /tmp/protoc.zip -x readme.txt -d /usr/local && rm /tmp/protoc.zip
   - chmod o+rx /usr/local/bin/protoc && chmod o+rX -R /usr/local/include/google/
   # 8ba23be9613c672d40ae261d2a1335d639bdd59b == tag: cmd/protoc-gen-go-grpc/v1.3.0
+  - git clone --depth 1 --branch cmd/protoc-gen-go-grpc/v1.3.0 {{ $.SOURCE_REPO }}/grpc/grpc-go.git /src/grpc-go
+  - git clone --depth 1 --branch v1.30.0 {{ $.SOURCE_REPO }}/protocolbuffers/protobuf-go.git /src/protobuf-go
+  - git clone --depth 1 --branch v1.1.0 {{ $.SOURCE_REPO }}/mitchellh/protoc-gen-go-json.git /src/protoc-gen-go-json
+  - git clone --depth 1 --branch v1.5.1 {{ $.SOURCE_REPO }}/pseudomuto/protoc-gen-doc.git /src/protoc-gen-doc
   - cd /src/grpc-go/cmd/protoc-gen-go-grpc && go install
   - cd /src/protobuf-go/cmd/protoc-gen-go && go install
   - cd /src/protoc-gen-go-json && go install
   - cd /src/protoc-gen-doc/cmd/protoc-gen-doc && go install
+  - cd /src
+  - rm -rf /src/grpc-go
+  - rm -rf /src/protobuf-go
+  - rm -rf /src/protoc-gen-go-json
+  - rm -rf /src/protoc-gen-doc
   # Install multiversion bazel
   - bazel_versions=({{ $bazelVersions }})
   # install bazel wrapper script in the path, it automatically recognises `.bazelversion` and `USE_BAZEL_VERSIONS`, if neither are set it picks latest
