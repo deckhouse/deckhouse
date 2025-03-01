@@ -1,5 +1,20 @@
 
 ---
+apiVersion: v1
+kind: Namespace
+metadata:
+  annotations:
+    key: val
+  labels:
+    extended-monitoring.deckhouse.io/enabled: ""
+    heritage: multitenancy-manager
+    key: val
+    projects.deckhouse.io/project: test
+    projects.deckhouse.io/project-template: default
+    security.deckhouse.io/pod-policy: baseline
+  name: test
+
+---
 apiVersion: deckhouse.io/v1alpha1
 kind: AuthorizationRule
 metadata:
@@ -109,18 +124,3 @@ spec:
       requests:
       - cpu
       - memory
-
----
-apiVersion: v1
-kind: Namespace
-metadata:
-  annotations:
-    key: val
-  labels:
-    extended-monitoring.deckhouse.io/enabled: ""
-    heritage: multitenancy-manager
-    key: val
-    projects.deckhouse.io/project: test
-    projects.deckhouse.io/project-template: default
-    security.deckhouse.io/pod-policy: baseline
-  name: test

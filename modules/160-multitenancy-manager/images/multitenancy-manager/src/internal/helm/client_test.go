@@ -76,7 +76,7 @@ func test(templates map[string][]byte, basePath string) error {
 	rendered := releaseutil.SplitManifests(buf.String())
 
 	// uncomment for test and render rendered resources
-	//os.WriteFile(filepath.Join(basePath, "rendered.yaml"), buf.Bytes(), 0644)
+	//os.WriteFile(filepath.Join(basePath, "resources.yaml"), buf.Bytes(), 0644)
 
 	rawExpected, err := os.ReadFile(filepath.Join(basePath, "resources.yaml"))
 	if err != nil {
