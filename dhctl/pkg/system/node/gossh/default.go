@@ -65,9 +65,10 @@ func NewInitClientFromFlags(askPassword bool) (*Client, error) {
 		return nil, nil
 	}
 
-	sshClient := NewClientFromFlags()
+	var sshClient *Client
 	var err error
 
+	sshClient = NewClientFromFlags()
 	err = sshClient.Start()
 	if err != nil {
 		return nil, err

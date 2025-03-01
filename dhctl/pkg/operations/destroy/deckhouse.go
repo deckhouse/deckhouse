@@ -17,6 +17,8 @@ package destroy
 import (
 	"github.com/google/uuid"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/lock"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
@@ -33,14 +35,14 @@ type DeckhouseDestroyerOptions struct {
 
 type DeckhouseDestroyer struct {
 	convergeUnlocker func(fullUnlock bool)
-	sshClient        *ssh.Client
+	sshClient        node.SSHClient
 	kubeCl           *client.KubernetesClient
 	state            *State
 
 	DeckhouseDestroyerOptions
 }
 
-func NewDeckhouseDestroyer(sshClient *ssh.Client, state *State, opts DeckhouseDestroyerOptions) *DeckhouseDestroyer {
+func NewDeckhouseDestroyer(sshClient node.SSHClient, state *State, opts DeckhouseDestroyerOptions) *DeckhouseDestroyer {
 	return &DeckhouseDestroyer{
 		sshClient:                 sshClient,
 		state:                     state,

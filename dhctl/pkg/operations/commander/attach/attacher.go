@@ -222,7 +222,7 @@ func (i *Attacher) scan(
 		}
 		res.ProviderSpecificClusterConfiguration = string(providerConfiguration)
 
-		sshPrivateKey, err := os.ReadFile(i.Params.SSHClient.PrivateKeys[0].Key)
+		sshPrivateKey, err := os.ReadFile(i.Params.SSHClient.PrivateKeys()[0].Key)
 		if err != nil {
 			return fmt.Errorf("unable to read ssh private key: %w", err)
 		}

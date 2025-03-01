@@ -21,7 +21,7 @@ import (
 	"time"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh/frontend"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/fs"
 )
@@ -29,11 +29,11 @@ import (
 type PostBootstrapScriptExecutor struct {
 	path      string
 	timeout   time.Duration
-	sshClient *ssh.Client
+	sshClient node.SSHClient
 	state     *State
 }
 
-func NewPostBootstrapScriptExecutor(sshClient *ssh.Client, path string, state *State) *PostBootstrapScriptExecutor {
+func NewPostBootstrapScriptExecutor(sshClient node.SSHClient, path string, state *State) *PostBootstrapScriptExecutor {
 	return &PostBootstrapScriptExecutor{
 		path:      path,
 		sshClient: sshClient,
@@ -72,7 +72,7 @@ func (e *PostBootstrapScriptExecutor) run() (string, error) {
 	}
 
 	createOUtFileCmd := fmt.Sprintf("touch %s && chmod 644 %s", outputFile, outputFile)
-	cmd := frontend.NewCommand(e.sshClient.Settings, createOUtFileCmd)
+	cmd := frontend.NewCommand(e.sshClient.Session(), createOUtFileCmd)
 	cmd.Sudo()
 	cmd.WithStderrHandler(nil)
 	cmd.WithStdoutHandler(nil)
@@ -84,7 +84,7 @@ func (e *PostBootstrapScriptExecutor) run() (string, error) {
 
 	defer func() {
 		// remove out file on server because it can contain non-safe information
-		cmd = frontend.NewCommand(e.sshClient.Settings, fmt.Sprintf("rm %s", outputFile))
+		cmd = frontend.NewCommand(e.sshClient.Session(), fmt.Sprintf("rm %s", outputFile))
 		cmd.Sudo()
 		cmd.WithStderrHandler(nil)
 		cmd.WithStdoutHandler(nil)

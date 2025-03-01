@@ -19,8 +19,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh/session"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/session"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
 
@@ -33,7 +35,7 @@ func NewCheck(sess *session.Session) *Check {
 	return &Check{Session: sess}
 }
 
-func (c *Check) WithDelaySeconds(seconds int) *Check {
+func (c *Check) WithDelaySeconds(seconds int) node.Check {
 	c.delay = time.Duration(seconds) * time.Second
 	return c
 }

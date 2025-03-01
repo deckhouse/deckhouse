@@ -101,7 +101,7 @@ func (pc *Checker) CheckSingleSSHHostForStatic() error {
 		return nil
 	}
 
-	if len(wrapper.Client().Settings.AvailableHosts()) > 1 {
+	if len(wrapper.Client().Session().AvailableHosts()) > 1 {
 		return fmt.Errorf(
 			"during the bootstrap of the first static master node, only one --ssh-host parameter is allowed",
 		)

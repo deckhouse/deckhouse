@@ -24,8 +24,8 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/session"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh/session"
 )
 
 type KubeProxyChecker struct {
@@ -102,7 +102,7 @@ func (c *KubeProxyChecker) IsReady(nodeName string) (bool, error) {
 	}
 
 	var err error
-	sshClient, err = sshClient.Start()
+	err = sshClient.Start()
 	if err != nil {
 		return false, err
 	}
