@@ -26,8 +26,8 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/entity"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/lock"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/session"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh/session"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
 )
 
@@ -114,7 +114,7 @@ func (s *KubeClientSwitcher) replaceKubeClient(convergeState *State, state map[s
 		panic("Node interface is not ssh")
 	}
 
-	settings := sshCl.Settings
+	settings := sshCl.Session()
 
 	for nodeName, stateBytes := range state {
 		statePath := filepath.Join(tmpDir, fmt.Sprintf("%s.tfstate", nodeName))
@@ -160,14 +160,14 @@ func (s *KubeClientSwitcher) replaceKubeClient(convergeState *State, state map[s
 	// Avoid starting a new ssh agent
 	newSSHClient.InitializeNewAgent = false
 
-	_, err = newSSHClient.Start()
+	err = newSSHClient.Start()
 	if err != nil {
 		return fmt.Errorf("failed to start SSH client: %w", err)
 	}
 
 	log.DebugLn("ssh client started for replacing kube client")
 
-	err = newSSHClient.Agent.AddKeys(newSSHClient.PrivateKeys)
+	err = newSSHClient.Agent.AddKeys(newSSHClient.PrivateKeys())
 	if err != nil {
 		return fmt.Errorf("failed to add keys to ssh agent: %w", err)
 	}

@@ -14,7 +14,11 @@
 
 package node
 
-import "time"
+import (
+	"time"
+
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/session"
+)
 
 type Interface interface {
 	Command(name string, args ...string) Command
@@ -57,4 +61,89 @@ type Script interface {
 	WithTimeout(timeout time.Duration)
 	WithEnvs(envs map[string]string)
 	WithCleanupAfterExec(doCleanup bool)
+}
+
+type Tunnel interface {
+	Up() error
+
+	HealthMonitor(errorOutCh chan<- error)
+
+	Stop()
+
+	String() string
+}
+
+type ReverseTunnelChecker interface {
+	CheckTunnel() (string, error)
+}
+
+type ReverseTunnelKiller interface {
+	KillTunnel() (string, error)
+}
+
+type ReverseTunnel interface {
+	Up() error
+
+	StartHealthMonitor(checker ReverseTunnelChecker, killer ReverseTunnelKiller)
+
+	Stop()
+
+	String() string
+}
+
+type KubeProxy interface {
+	Start(useLocalPort int) (port string, err error)
+
+	StopAll()
+
+	Stop(startID int)
+}
+
+type Check interface {
+	WithDelaySeconds(seconds int) Check
+
+	AwaitAvailability() error
+
+	CheckAvailability() error
+
+	ExpectAvailable() ([]byte, error)
+
+	String() string
+}
+
+type SSHLoopHandler func(s SSHClient) error
+
+type SSHClient interface {
+	Start() error
+
+	// Tunnel is used to open local (L) and remote (R) tunnels
+	Tunnel(ttype, address string) Tunnel
+
+	// ReverseTunnel is used to open remote (R) tunnel
+	ReverseTunnel(address string) ReverseTunnel
+
+	// Command is used to run commands on remote server
+	Command(name string, arg ...string) Command
+
+	// KubeProxy is used to start kubectl proxy and create a tunnel from local port to proxy port
+	KubeProxy() KubeProxy
+
+	// File is used to upload and download files and directories
+	File() File
+
+	// UploadScript is used to upload script and execute it on remote server
+	UploadScript(scriptPath string, args ...string) Script
+
+	// UploadScript is used to upload script and execute it on remote server
+	Check() Check
+
+	// Stop the client
+	Stop()
+
+	// Loop Looping all available hosts
+	Loop(fn SSHLoopHandler) error
+
+	Session() *session.Session
+
+	PrivateKeys() []session.AgentPrivateKey
 }

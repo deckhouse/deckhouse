@@ -24,6 +24,9 @@ import (
 
 	"github.com/google/uuid"
 
+	v1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	infra "github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
@@ -32,14 +35,12 @@ import (
 	dhctlstate "github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/terraform"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/session"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh/frontend"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh/session"
 	tf "github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
-	v1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 type Destroyer interface {
@@ -226,11 +227,11 @@ type NodeIP struct {
 }
 
 type StaticMastersDestroyer struct {
-	SSHClient *ssh.Client
+	SSHClient node.SSHClient
 	IPs       []NodeIP
 }
 
-func NewStaticMastersDestroyer(c *ssh.Client, ips []NodeIP) *StaticMastersDestroyer {
+func NewStaticMastersDestroyer(c node.SSHClient, ips []NodeIP) *StaticMastersDestroyer {
 	return &StaticMastersDestroyer{
 		SSHClient: c,
 		IPs:       ips,
@@ -244,14 +245,14 @@ func (d *StaticMastersDestroyer) DestroyCluster(autoApprove bool) error {
 		}
 	}
 
-	mastersHosts := d.SSHClient.Settings.AvailableHosts()
+	mastersHosts := d.SSHClient.Session().AvailableHosts()
 	stdOutErrHandler := func(l string) {
 		log.WarnLn(l)
 	}
 
 	hostToExclude := ""
 	if len(d.IPs) > 0 {
-		file := frontend.NewFile(d.SSHClient.Settings)
+		file := frontend.NewFile(d.SSHClient.Session())
 		bytes, err := file.DownloadBytes("/var/lib/bashible/discovered-node-ip")
 		if err != nil {
 
@@ -281,7 +282,7 @@ func (d *StaticMastersDestroyer) DestroyCluster(autoApprove bool) error {
 	cmd := "test -f /var/lib/bashible/cleanup_static_node.sh || exit 0 && bash /var/lib/bashible/cleanup_static_node.sh --yes-i-am-sane-and-i-understand-what-i-am-doing"
 
 	if len(additionalMastersHosts) > 0 {
-		settings := d.SSHClient.Settings.Copy()
+		settings := d.SSHClient.Session().Copy()
 		settings.BastionHost = settings.AvailableHosts()[0].Host
 		settings.SetAvailableHosts(additionalMastersHosts)
 		err := processStaticHosts(additionalMastersHosts, settings, stdOutErrHandler, cmd)
@@ -291,7 +292,7 @@ func (d *StaticMastersDestroyer) DestroyCluster(autoApprove bool) error {
 		}
 	}
 
-	err := processStaticHosts(mastersHosts, d.SSHClient.Settings, stdOutErrHandler, cmd)
+	err := processStaticHosts(mastersHosts, d.SSHClient.Session(), stdOutErrHandler, cmd)
 	if err != nil {
 
 		return err

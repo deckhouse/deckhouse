@@ -20,10 +20,10 @@ import (
 )
 
 type NodeInterfaceWrapper struct {
-	sshClient *Client
+	sshClient node.SSHClient
 }
 
-func NewNodeInterfaceWrapper(sshClient *Client) *NodeInterfaceWrapper {
+func NewNodeInterfaceWrapper(sshClient node.SSHClient) *NodeInterfaceWrapper {
 	if sshClient == nil {
 		return nil
 	}
@@ -49,6 +49,6 @@ func (n *NodeInterfaceWrapper) UploadScript(scriptPath string, args ...string) n
 	return n.sshClient.UploadScript(scriptPath, args...)
 }
 
-func (n *NodeInterfaceWrapper) Client() *Client {
+func (n *NodeInterfaceWrapper) Client() node.SSHClient {
 	return n.sshClient
 }

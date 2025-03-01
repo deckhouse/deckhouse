@@ -51,17 +51,17 @@ func (b *ClusterBootstrapper) initSSHClient() error {
 	}
 
 	sshClient := wrapper.Client()
-	if _, err := sshClient.Start(); err != nil {
+	if err := sshClient.Start(); err != nil {
 		return fmt.Errorf("unable to start ssh client: %w", err)
 	}
 
-	if len(sshClient.Settings.AvailableHosts()) == 0 {
+	if len(sshClient.Session().AvailableHosts()) == 0 {
 		mastersIPs, err := GetMasterHostsIPs()
 		if err != nil {
 			log.ErrorF("Can not load available ssh hosts: %v\n", err)
 			return err
 		}
-		sshClient.Settings.SetAvailableHosts(mastersIPs)
+		sshClient.Session().SetAvailableHosts(mastersIPs)
 	}
 
 	bastionHost, err := GetBastionHostFromCache()
@@ -71,7 +71,7 @@ func (b *ClusterBootstrapper) initSSHClient() error {
 	}
 
 	if bastionHost != "" {
-		sshClient.Settings.BastionHost = bastionHost
+		sshClient.Session().BastionHost = bastionHost
 	}
 
 	return nil

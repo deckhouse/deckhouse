@@ -58,7 +58,8 @@ func DefineDestroyCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 			}
 		}
 
-		sshClient, err := ssh.NewClientFromFlags().Start()
+		sshClient := ssh.NewClientFromFlags()
+		err := sshClient.Start()
 		if err != nil {
 			return err
 		}

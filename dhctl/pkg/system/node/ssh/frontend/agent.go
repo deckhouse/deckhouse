@@ -26,8 +26,8 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/session"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh/cmd"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh/session"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terminal"
 )
 
@@ -108,7 +108,7 @@ func addKeys(authSock string, keys []session.AgentPrivateKey) error {
 	agentClient := agent.NewClient(conn)
 
 	for _, key := range keys {
-		privateKey, err := parsePrivateSSHKey(key.Key, []byte(key.Passphrase))
+		privateKey, err := ParsePrivateSSHKey(key.Key, []byte(key.Passphrase))
 		if err != nil {
 			return err
 		}
@@ -122,7 +122,7 @@ func addKeys(authSock string, keys []session.AgentPrivateKey) error {
 	return nil
 }
 
-func parsePrivateSSHKey(keyPath string, passphrase []byte) (any, error) {
+func ParsePrivateSSHKey(keyPath string, passphrase []byte) (any, error) {
 	keyData, err := os.ReadFile(keyPath)
 	if err != nil {
 		return nil, fmt.Errorf("error reading key file %q: %w", keyPath, err)

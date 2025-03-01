@@ -38,7 +38,7 @@ func DefineTestSSHConnectionCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 		if err != nil {
 			return err
 		}
-		sshCl, err = sshCl.Start()
+		err = sshCl.Start()
 		if err != nil {
 			return err
 		}
@@ -75,7 +75,7 @@ func DefineTestSCPCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 		if err != nil {
 			return err
 		}
-		sshCl, err = sshCl.Start()
+		err = sshCl.Start()
 		if err != nil {
 			return err
 		}
