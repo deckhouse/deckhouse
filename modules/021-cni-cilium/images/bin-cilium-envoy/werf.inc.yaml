@@ -1,17 +1,17 @@
-{{- $ciliumProxyRev := "fe8efeb16a7d233bffd05af9ea53599340d3f18e" }}
-{{- $ciliumProxyCacheRev := "v1.31.5-1737535524-fe8efeb16a7d233bffd05af9ea53599340d3f18e-alt-p11-llvm17-gcc11-v2" }}
-{{- $ciliumProxyDepsRev := "v1.31.5-1737535524-fe8efeb16a7d233bffd05af9ea53599340d3f18e-alt-p11-llvm17-gcc11-v1" }}
+{{- $ciliumProxyRev := "958bef243c6c66fcfd73ca319f2eb49fff1eb2ae" }}
+{{- $ciliumProxyCacheRev := "v1.31.5-1739264036-958bef243c6c66fcfd73ca319f2eb49fff1eb2ae-alt-p11-llvm17-gcc11-v1" }}
+{{- $ciliumProxyDepsRev := "v1.31.5-1739264036-958bef243c6c66fcfd73ca319f2eb49fff1eb2ae-alt-p11-llvm17-gcc11-v1" }}
 {{- $bazelVersions := "6.5.0" }}
 {{- $envoySHA := "688c4bbe47f4d05bb8ed268f5172bb026cf03242" }}
 ---
 # #####################################################################
 # Build cilium-envoy binaries
-# Original IMAGE_TAG of cilium-envoy is v1.31.5-1737535524-fe8efeb16a7d233bffd05af9ea53599340d3f18e
-# Corresponding commit is fe8efeb16a7d233bffd05af9ea53599340d3f18e
-# Based on https://github.com/cilium/cilium/blob/v1.17.0/images/cilium/Dockerfile#L9
-# and https://github.com/cilium/proxy/blob/fe8efeb16a7d233bffd05af9ea53599340d3f18e/Dockerfile.builder
-# and https://github.com/cilium/proxy/blob/fe8efeb16a7d233bffd05af9ea53599340d3f18e/Dockerfile
-# and https://github.com/cilium/proxy/blob/fe8efeb16a7d233bffd05af9ea53599340d3f18e/.github/workflows/build-envoy-images-release.yaml
+# Original IMAGE_TAG of cilium-envoy is v1.31.5-1739264036-958bef243c6c66fcfd73ca319f2eb49fff1eb2ae
+# Corresponding commit is 958bef243c6c66fcfd73ca319f2eb49fff1eb2ae
+# Based on https://github.com/cilium/cilium/blob/v1.17.1/images/cilium/Dockerfile#L9
+# and https://github.com/cilium/proxy/blob/958bef243c6c66fcfd73ca319f2eb49fff1eb2ae/Dockerfile.builder
+# and https://github.com/cilium/proxy/blob/958bef243c6c66fcfd73ca319f2eb49fff1eb2ae/Dockerfile
+# and https://github.com/cilium/proxy/blob/958bef243c6c66fcfd73ca319f2eb49fff1eb2ae/.github/workflows/build-envoy-images-release.yaml
 # #####################################################################
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
@@ -100,9 +100,9 @@ shell:
   - sudo -u cilium sed -i "/\$(SUDO) apt install -y clang-17 llvm-17-dev lld-17 clang-format-17/d" Makefile
   #
   - sudo -u cilium sed -i '\#"/usr/include"#a \        "/usr/lib/llvm-17.0/lib64/clang/17/include",' bazel/toolchains/BUILD
+  # TODO: delete next line before merge and update cache
   - sudo -u cilium sed -i '\#"/usr/include"#a \        "/usr/bin/../lib64/gcc/x86_64-alt-linux/11",' bazel/toolchains/BUILD
   - sudo -u cilium sed -i '134i \        "--gcc-install-dir=/usr/bin/../lib64/gcc/x86_64-alt-linux/11",' bazel/toolchains/BUILD
-  #- sudo -u cilium sed -i '28i build:clang --action_env=CCC_OVERRIDE_OPTIONS="^--gcc-install-dir=/usr/bin/../lib64/gcc/x86_64-alt-linux/11"' bazel/setup_clang.sh
   #
   #- sudo -u cilium PATH=${PATH} bazel fetch //:cilium-envoy-starter //:cilium-envoy
   #
