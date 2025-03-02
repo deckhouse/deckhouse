@@ -1,8 +1,8 @@
-{{- $ciliumVersion := "1.17.0" }}
+{{- $ciliumVersion := "1.17.1" }}
 {{- $grpcHealthProbeVersion := "0.4.37" }}
 ---
-# Based on https://github.com/cilium/cilium/blob/v1.17.0/images/hubble-relay/Dockerfile
-# and https://github.com/cilium/cilium/blob/v1.17.0/images/hubble-relay/download-grpc-health-probe.sh
+# Based on https://github.com/cilium/cilium/blob/v1.17.1/images/hubble-relay/Dockerfile
+# and https://github.com/cilium/cilium/blob/v1.17.1/images/hubble-relay/download-grpc-health-probe.sh
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 fromImage: common/src-artifact
 final: false
