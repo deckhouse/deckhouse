@@ -15,20 +15,17 @@
 package frontend
 
 import (
-	"bytes"
-	"errors"
 	"fmt"
 	"net"
 	"os"
 
-	"golang.org/x/crypto/ssh"
 	"golang.org/x/crypto/ssh/agent"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/session"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh/cmd"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/terminal"
 )
 
 type Agent struct {
@@ -108,7 +105,7 @@ func addKeys(authSock string, keys []session.AgentPrivateKey) error {
 	agentClient := agent.NewClient(conn)
 
 	for _, key := range keys {
-		privateKey, err := ParsePrivateSSHKey(key.Key, []byte(key.Passphrase))
+		privateKey, err := node.ParsePrivateSSHKey(key.Key, []byte(key.Passphrase))
 		if err != nil {
 			return err
 		}
@@ -120,40 +117,4 @@ func addKeys(authSock string, keys []session.AgentPrivateKey) error {
 	}
 
 	return nil
-}
-
-func ParsePrivateSSHKey(keyPath string, passphrase []byte) (any, error) {
-	keyData, err := os.ReadFile(keyPath)
-	if err != nil {
-		return nil, fmt.Errorf("error reading key file %q: %w", keyPath, err)
-	}
-
-	keyData = append(bytes.TrimSpace(keyData), '\n')
-
-	var privateKey interface{}
-
-	privateKey, err = ssh.ParseRawPrivateKey(keyData)
-	if err != nil {
-		var passphraseMissingError *ssh.PassphraseMissingError
-		switch {
-		case errors.As(err, &passphraseMissingError):
-			if len(passphrase) == 0 {
-				passphraseFromStdin, err := terminal.AskPassword(
-					fmt.Sprintf("Enter passphrase for ssh key %q: ", keyPath),
-				)
-				if err != nil {
-					return nil, fmt.Errorf("getting passphrase for ssh key %q: %w", keyPath, err)
-				}
-				passphrase = passphraseFromStdin
-			}
-			privateKey, err = ssh.ParseRawPrivateKeyWithPassphrase(keyData, passphrase)
-			if err != nil {
-				return nil, fmt.Errorf("parsing private key %q: %w", keyPath, err)
-			}
-		default:
-			return nil, fmt.Errorf("parsing private key %q: %w", keyPath, err)
-		}
-	}
-
-	return privateKey, nil
 }

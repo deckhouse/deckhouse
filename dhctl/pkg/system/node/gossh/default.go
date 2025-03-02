@@ -38,10 +38,7 @@ func NewClientFromFlags() *Client {
 		keys = append(keys, session.AgentPrivateKey{Key: key})
 	}
 
-	return &Client{
-		Settings:    settings,
-		privateKeys: keys,
-	}
+	return NewClient(settings, keys)
 }
 
 func NewClientFromFlagsWithHosts() (*Client, error) {

@@ -17,15 +17,14 @@ package ssh
 import (
 	"fmt"
 	"net"
-
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
-
-	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
+	"time"
 
 	"golang.org/x/crypto/ssh"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/session"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh/frontend"
 )
 
 func NewClient(session *session.Session, privKeys []session.AgentPrivateKey) *Client {
@@ -52,50 +51,51 @@ func (s *Client) Start() error {
 		return fmt.Errorf("possible bug in ssh client: session should be created before start")
 	}
 
+	log.DebugLn("Starting go ssh client....")
+
+	signers := make([]ssh.Signer, 0, len(s.privateKeys))
+	for _, keypath := range s.privateKeys {
+		key, err := node.ParsePrivateSSHKey(keypath.Key, []byte(keypath.Passphrase))
+		if err != nil {
+			return err
+		}
+		signer, err := ssh.NewSignerFromKey(key)
+		if err != nil {
+			return fmt.Errorf("unable to parse private key: %v", err)
+		}
+		signers = append(signers, signer)
+	}
+
 	var bastionClient *ssh.Client
 	var client *ssh.Client
 	if s.Settings.BastionHost != "" {
 		bastionConfig := &ssh.ClientConfig{}
-		if len(s.privateKeys) > 0 {
-			signers := make([]ssh.Signer, 0, len(s.privateKeys))
-			for _, keypath := range s.privateKeys {
-				key, err := frontend.ParsePrivateSSHKey(keypath.Key, []byte(keypath.Passphrase))
-				signer, err := ssh.NewSignerFromKey(key)
-				if err != nil {
-					return fmt.Errorf("unable to parse private key: %v", err)
-				}
-				signers = append(signers, signer)
-			}
+		log.DebugLn("Initialize bastion connection...")
 
-			AuthMethods := []ssh.AuthMethod{ssh.PublicKeys(signers...)}
-
-			bastionConfig = &ssh.ClientConfig{
-				User:            s.Settings.BastionUser,
-				Auth:            AuthMethods,
-				HostKeyCallback: ssh.InsecureIgnoreHostKey(),
-			}
-			bastionAddr := fmt.Sprintf("%s:%s", s.Settings.BastionHost, s.Settings.BastionPort)
-			var err error
-			bastionClient, err = ssh.Dial("tcp", bastionAddr, bastionConfig)
-			if err != nil {
-				return fmt.Errorf("could not connect to bastion host")
-			}
-		} else {
+		if len(s.privateKeys) == 0 {
 			return fmt.Errorf("no SSH key present to connect to bastion host")
 		}
+
+		AuthMethods := []ssh.AuthMethod{ssh.PublicKeys(signers...)}
+
+		bastionConfig = &ssh.ClientConfig{
+			User:            s.Settings.BastionUser,
+			Auth:            AuthMethods,
+			HostKeyCallback: ssh.InsecureIgnoreHostKey(),
+		}
+		bastionAddr := fmt.Sprintf("%s:%s", s.Settings.BastionHost, s.Settings.BastionPort)
+		var err error
+		log.DebugF("Connect to bastion host %s\n", bastionAddr)
+		bastionClient, err = ssh.Dial("tcp", bastionAddr, bastionConfig)
+		if err != nil {
+			return fmt.Errorf("could not connect to bastion host")
+		}
+		log.DebugF("Connected successfully to bastion host %s", bastionAddr)
 	}
 
 	config := &ssh.ClientConfig{}
 	if len(s.privateKeys) > 0 {
-		signers := make([]ssh.Signer, 0, len(s.privateKeys))
-		for _, keypath := range s.privateKeys {
-			key, err := frontend.ParsePrivateSSHKey(keypath.Key, []byte(keypath.Passphrase))
-			signer, err := ssh.NewSignerFromKey(key)
-			if err != nil {
-				return fmt.Errorf("unable to parse private key: %v", err)
-			}
-			signers = append(signers, signer)
-		}
+		log.DebugF("Initial ssh privater keys auth to master host\n")
 
 		AuthMethods := []ssh.AuthMethod{ssh.PublicKeys(signers...)}
 
@@ -105,8 +105,9 @@ func (s *Client) Start() error {
 			HostKeyCallback: ssh.InsecureIgnoreHostKey(),
 		}
 	} else if len(app.BecomePass) > 0 {
+		log.DebugF("Initial password auth to master host\n")
 		config = &ssh.ClientConfig{
-			User: app.SSHUser,
+			User: s.Settings.User,
 			Auth: []ssh.AuthMethod{
 				ssh.Password(app.BecomePass),
 			},
@@ -117,38 +118,50 @@ func (s *Client) Start() error {
 	}
 
 	var targetConn net.Conn
-	var ClientConn ssh.Conn
+	var clientConn ssh.Conn
+
 	s.Settings.ChoiceNewHost()
 	addr := fmt.Sprintf("%s:%s", s.Settings.Host(), s.Settings.Port)
+
+	config.Timeout = 10 * time.Second
+	config.BannerCallback = func(message string) error {
+		return nil
+	}
+
 	if bastionClient == nil {
+		log.DebugF("Try to direct connect host master host %s\n", addr)
+
 		var err error
 		client, err = ssh.Dial("tcp", addr, config)
 		if err != nil {
 			return fmt.Errorf("failed to connect to host: %w", err)
 		}
-	} else {
-		var err error
-		targetConn, err = bastionClient.Dial("tcp", addr)
-		if err != nil {
-			return fmt.Errorf("failed to connect to target host through bastion host: %w", err)
-		}
-		targetClientConn, targetNewChan, targetReqChan, err := ssh.NewClientConn(targetConn, addr, config)
-		if err != nil {
-			return fmt.Errorf("failed to create client connection to target host: %w", err)
-		}
-		ClientConn = targetClientConn
-		client = ssh.NewClient(targetClientConn, targetNewChan, targetReqChan)
+
+		s.sshClient = client
+
+		return nil
 	}
+
+	log.DebugF("Try to connect to through bastion host master host %s\n", addr)
+
+	targetConn, err := bastionClient.Dial("tcp", addr)
+	if err != nil {
+		return fmt.Errorf("failed to connect to target host through bastion host: %w", err)
+	}
+	targetClientConn, targetNewChan, targetReqChan, err := ssh.NewClientConn(targetConn, addr, config)
+	if err != nil {
+		return fmt.Errorf("failed to create client connection to target host: %w", err)
+	}
+	clientConn = targetClientConn
+	client = ssh.NewClient(targetClientConn, targetNewChan, targetReqChan)
 
 	s.sshClient = client
 	s.BastionClient = bastionClient
 	s.NetConn = &targetConn
-	s.SSHConn = &ClientConn
+	s.SSHConn = &clientConn
 
 	return nil
 }
-
-// Easy access to frontends
 
 // Tunnel is used to open local (L) and remote (R) tunnels
 func (s *Client) Tunnel(ttype, address string) node.Tunnel {
@@ -162,7 +175,7 @@ func (s *Client) ReverseTunnel(address string) node.ReverseTunnel {
 
 // Command is used to run commands on remote server
 func (s *Client) Command(name string, arg ...string) node.Command {
-	return frontend.NewCommand(s.Settings, name, arg...)
+	return nil
 }
 
 // KubeProxy is used to start kubectl proxy and create a tunnel from local port to proxy port
@@ -172,17 +185,17 @@ func (s *Client) KubeProxy() node.KubeProxy {
 
 // File is used to upload and download files and directories
 func (s *Client) File() node.File {
-	return frontend.NewFile(s.Settings)
+	return nil
 }
 
 // UploadScript is used to upload script and execute it on remote server
 func (s *Client) UploadScript(scriptPath string, args ...string) node.Script {
-	return frontend.NewUploadScript(s.Settings, scriptPath, args...)
+	return nil
 }
 
 // UploadScript is used to upload script and execute it on remote server
 func (s *Client) Check() node.Check {
-	return frontend.NewCheck(s.Settings)
+	return nil
 }
 
 // Stop the client
