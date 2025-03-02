@@ -21,17 +21,16 @@ entries:
             ru: Каналы обновлений
           url: /virtualization-platform/documentation/admin/release-channels.html
         - title:
-            en: Requirements
-            ru: Требования
-          url: /virtualization-platform/documentation/admin/install/requirements.html
-            # - title:
-            #     en: Setup scenarios
-            #     ru: Сценарии установки
-            #   url: /virtualization-platform/documentation/admin/install/scenarios.html
-            - title:
-                en: Installation steps
-                ru: Порядок установки
-              folders:
+            en: Install
+            ru: Установка платформы
+          folders:
+                - title:
+                    en: Requirements
+                    ru: Требования
+                  url: /virtualization-platform/documentation/admin/install/requirements.html
+                - title:
+                    en: Installation steps
+                    ru: Порядок установки
                 - title:
                     en: Prepare the environment
                     ru: Подготовка окружения
