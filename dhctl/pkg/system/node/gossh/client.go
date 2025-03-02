@@ -176,7 +176,7 @@ func (s *Client) ReverseTunnel(address string) node.ReverseTunnel {
 
 // Command is used to run commands on remote server
 func (s *Client) Command(name string, arg ...string) node.Command {
-	return nil
+	return NewSSHCommand(s.sshClient, name, arg...)
 }
 
 // KubeProxy is used to start kubectl proxy and create a tunnel from local port to proxy port
