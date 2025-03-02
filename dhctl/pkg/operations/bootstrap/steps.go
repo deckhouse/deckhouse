@@ -54,9 +54,9 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/clissh"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/clissh/frontend"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/session"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh/frontend"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/template"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
@@ -272,8 +272,8 @@ func SetupSSHTunnelToRegistryPackagesProxy(sshCl node.SSHClient) (node.ReverseTu
 		return nil, fmt.Errorf("Cannot render kill reverse tunnel script: %v", err)
 	}
 
-	checker := ssh.NewRunScriptReverseTunnelChecker(sshCl, checkingScript)
-	killer := ssh.NewRunScriptReverseTunnelKiller(sshCl, killScript)
+	checker := clissh.NewRunScriptReverseTunnelChecker(sshCl, checkingScript)
+	killer := clissh.NewRunScriptReverseTunnelKiller(sshCl, killScript)
 
 	tun := sshCl.ReverseTunnel(fmt.Sprintf("%s:%s:%s:%s", listenAddress, port, listenAddress, port))
 	err = tun.Up()
@@ -471,7 +471,7 @@ func RunBashiblePipeline(nodeInterface node.Interface, cfg *config.MetaConfig, n
 		})
 	})
 
-	if wrapper, ok := nodeInterface.(*ssh.NodeInterfaceWrapper); ok {
+	if wrapper, ok := nodeInterface.(*clissh.NodeInterfaceWrapper); ok {
 		cleanUpTunnel, err := setupRPPTunnel(wrapper.Client())
 		if err != nil {
 			return err

@@ -39,7 +39,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/logger"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/util"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/util/callback"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/clissh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 )
@@ -220,7 +220,7 @@ func (s *Service) bootstrap(
 		return &pb.BootstrapResult{Err: err.Error()}
 	}
 
-	var sshClient *ssh.Client
+	var sshClient *clissh.Client
 	err = log.Process("default", "Preparing SSH client", func() error {
 		connectionConfig, err := config.ParseConnectionConfig(
 			request.ConnectionConfig,
@@ -253,7 +253,7 @@ func (s *Service) bootstrap(
 	}
 
 	bootstrapper := bootstrap.NewClusterBootstrapper(&bootstrap.Params{
-		NodeInterface:              ssh.NewNodeInterfaceWrapper(sshClient),
+		NodeInterface:              clissh.NewNodeInterfaceWrapper(sshClient),
 		InitialState:               initialState,
 		ResetInitialState:          true,
 		DisableBootstrapClearCache: true,

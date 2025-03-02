@@ -23,7 +23,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/clissh"
 )
 
 func connectionFlags(parent *kingpin.CmdClause) {
@@ -38,12 +38,12 @@ func baseEditConfigCMD(parent *kingpin.CmdClause, name, secret, dataKey string) 
 	app.DefineSanityFlags(cmd)
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
-		sshClient, err := ssh.NewInitClientFromFlags(true)
+		sshClient, err := clissh.NewInitClientFromFlags(true)
 		if err != nil {
 			return err
 		}
 
-		kubeCl, err := kubernetes.ConnectToKubernetesAPI(ssh.NewNodeInterfaceWrapper(sshClient))
+		kubeCl, err := kubernetes.ConnectToKubernetesAPI(clissh.NewNodeInterfaceWrapper(sshClient))
 		if err != nil {
 			return err
 		}

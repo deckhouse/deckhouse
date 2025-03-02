@@ -22,7 +22,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/clissh"
 )
 
 const (
@@ -38,7 +38,7 @@ func (pc *Checker) CheckSSHTunnel() error {
 		return nil
 	}
 
-	wrapper, ok := pc.nodeInterface.(*ssh.NodeInterfaceWrapper)
+	wrapper, ok := pc.nodeInterface.(*clissh.NodeInterfaceWrapper)
 	if !ok {
 		log.InfoLn("SSH forward preflight check was skipped (local run)")
 		return nil
@@ -72,7 +72,7 @@ func (pc *Checker) CheckSSHCredential() error {
 		return nil
 	}
 
-	wrapper, ok := pc.nodeInterface.(*ssh.NodeInterfaceWrapper)
+	wrapper, ok := pc.nodeInterface.(*clissh.NodeInterfaceWrapper)
 	if !ok {
 		log.InfoLn("SSH credentials preflight check was skipped (local run)")
 		return nil
@@ -95,7 +95,7 @@ func (pc *Checker) CheckSingleSSHHostForStatic() error {
 		return nil
 	}
 
-	wrapper, ok := pc.nodeInterface.(*ssh.NodeInterfaceWrapper)
+	wrapper, ok := pc.nodeInterface.(*clissh.NodeInterfaceWrapper)
 	if !ok {
 		log.InfoLn("Only one --ssh-host parameter used preflight check was skipped (local run)")
 		return nil

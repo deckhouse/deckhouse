@@ -19,7 +19,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/clissh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terminal"
 )
 
@@ -30,7 +30,7 @@ func (b *ClusterBootstrapper) ExecPostBootstrap() error {
 		defer restore()
 	}
 
-	wrapper, ok := b.NodeInterface.(*ssh.NodeInterfaceWrapper)
+	wrapper, ok := b.NodeInterface.(*clissh.NodeInterfaceWrapper)
 	if !ok {
 		return fmt.Errorf("post bootstrap executor is not supported for local execution contexts")
 	}

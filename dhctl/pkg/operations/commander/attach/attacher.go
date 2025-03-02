@@ -33,7 +33,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
 	state_terraform "github.com/deckhouse/deckhouse/dhctl/pkg/state/terraform"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/clissh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/template"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
 )
@@ -41,7 +41,7 @@ import (
 type Params struct {
 	CommanderMode    bool
 	CommanderUUID    uuid.UUID
-	SSHClient        *ssh.Client
+	SSHClient        *clissh.Client
 	OnCheckResult    func(*check.CheckResult) error
 	TerraformContext *terraform.TerraformContext
 	OnPhaseFunc      OnPhaseFunc
@@ -163,7 +163,7 @@ func (i *Attacher) prepare(_ context.Context) (*client.KubernetesClient, *config
 	err := log.Process("attach", "Prepare cluster attach", func() error {
 		var err error
 
-		kubeClient, err = kubernetes.ConnectToKubernetesAPI(ssh.NewNodeInterfaceWrapper(i.Params.SSHClient))
+		kubeClient, err = kubernetes.ConnectToKubernetesAPI(clissh.NewNodeInterfaceWrapper(i.Params.SSHClient))
 		if err != nil {
 			return fmt.Errorf("unable to connect to kubernetes api over ssh: %w", err)
 		}

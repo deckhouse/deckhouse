@@ -23,7 +23,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/check"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/commander"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/clissh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/template"
 )
 
@@ -37,7 +37,7 @@ type Detacher struct {
 	DetacherOptions
 
 	AgentModuleName string
-	SSHClient       *ssh.Client
+	SSHClient       *clissh.Client
 	Checker         *check.Checker
 }
 
@@ -46,7 +46,7 @@ type DetachResources struct {
 	Values   map[string]any
 }
 
-func NewDetacher(checker *check.Checker, sshClient *ssh.Client, opts DetacherOptions) *Detacher {
+func NewDetacher(checker *check.Checker, sshClient *clissh.Client, opts DetacherOptions) *Detacher {
 	return &Detacher{
 		DetacherOptions: opts,
 		SSHClient:       sshClient,

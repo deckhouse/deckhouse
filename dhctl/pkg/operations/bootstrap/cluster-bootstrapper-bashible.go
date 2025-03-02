@@ -19,7 +19,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/clissh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terminal"
 )
 
@@ -40,7 +40,7 @@ func (b *ClusterBootstrapper) ExecuteBashible() error {
 		return err
 	}
 
-	if wrapper, ok := b.NodeInterface.(*ssh.NodeInterfaceWrapper); ok {
+	if wrapper, ok := b.NodeInterface.(*clissh.NodeInterfaceWrapper); ok {
 		if err = wrapper.Client().Start(); err != nil {
 			return fmt.Errorf("unable to start ssh client: %w", err)
 		}

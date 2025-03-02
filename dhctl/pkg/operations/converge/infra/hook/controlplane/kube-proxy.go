@@ -25,7 +25,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/session"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/clissh"
 )
 
 type KubeProxyChecker struct {
@@ -82,14 +82,14 @@ func (c *KubeProxyChecker) WithSSHCredentials(input session.Input, privateKeys .
 }
 
 func (c *KubeProxyChecker) IsReady(nodeName string) (bool, error) {
-	var sshClient *ssh.Client
+	var sshClient *clissh.Client
 
 	if c.input != nil {
-		sshClient = ssh.NewClient(session.NewSession(*c.input), c.privateKeys)
+		sshClient = clissh.NewClient(session.NewSession(*c.input), c.privateKeys)
 		// Avoid starting a new ssh agent
 		sshClient.InitializeNewAgent = false
 	} else {
-		sshClient = ssh.NewClientFromFlags()
+		sshClient = clissh.NewClientFromFlags()
 	}
 
 	if len(c.nodesExternalIPs) > 0 {
@@ -107,7 +107,7 @@ func (c *KubeProxyChecker) IsReady(nodeName string) (bool, error) {
 		return false, err
 	}
 
-	kubeCl := client.NewKubernetesClient().WithNodeInterface(ssh.NewNodeInterfaceWrapper(sshClient))
+	kubeCl := client.NewKubernetesClient().WithNodeInterface(clissh.NewNodeInterfaceWrapper(sshClient))
 	err = kubeCl.Init(client.AppKubernetesInitParams())
 	if err != nil {
 		return false, fmt.Errorf("open kubernetes connection: %v", err)
@@ -122,7 +122,7 @@ func (c *KubeProxyChecker) IsReady(nodeName string) (bool, error) {
 			kubeCl.KubeProxy.StopAll()
 		}
 
-		if wrapper, ok := kubeCl.NodeInterface.(*ssh.NodeInterfaceWrapper); ok {
+		if wrapper, ok := kubeCl.NodeInterface.(*clissh.NodeInterfaceWrapper); ok {
 			wrapper.Client().Stop()
 		}
 	}()

@@ -26,7 +26,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
 	terrastate "github.com/deckhouse/deckhouse/dhctl/pkg/state/terraform"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/clissh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terminal"
 )
 
@@ -45,7 +45,7 @@ func (b *ClusterBootstrapper) Abort(forceAbortFromCache bool) error {
 }
 
 func (b *ClusterBootstrapper) initSSHClient() error {
-	wrapper, ok := b.NodeInterface.(*ssh.NodeInterfaceWrapper)
+	wrapper, ok := b.NodeInterface.(*clissh.NodeInterfaceWrapper)
 	if !ok {
 		return nil // Local runs don't use ssh client.
 	}
@@ -134,7 +134,7 @@ func (b *ClusterBootstrapper) doRunBootstrapAbort(forceAbortFromCache bool) erro
 					},
 				)
 			} else {
-				wrapper, ok := b.NodeInterface.(*ssh.NodeInterfaceWrapper)
+				wrapper, ok := b.NodeInterface.(*clissh.NodeInterfaceWrapper)
 				if !ok {
 					return fmt.Errorf("destroy operations are not supported for local execution contexts")
 				}
@@ -162,7 +162,7 @@ func (b *ClusterBootstrapper) doRunBootstrapAbort(forceAbortFromCache bool) erro
 		}
 
 		if !b.CommanderMode {
-			if wrapper, ok := b.NodeInterface.(*ssh.NodeInterfaceWrapper); ok {
+			if wrapper, ok := b.NodeInterface.(*clissh.NodeInterfaceWrapper); ok {
 				if err = cache.InitWithOptions(wrapper.Client().Check().String(), cache.CacheOptions{}); err != nil {
 					return fmt.Errorf(bootstrapAbortInvalidCacheMessage, wrapper.Client().Check().String(), err)
 				}

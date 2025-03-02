@@ -20,7 +20,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/clissh"
 )
 
 type ClusterConnectionsOptions struct {
@@ -33,7 +33,7 @@ type ClusterConnectionsOptions struct {
 	SSHConnectionConfig string
 }
 
-func InitializeClusterConnections(opts ClusterConnectionsOptions) (*client.KubernetesClient, *ssh.Client, func() error, error) {
+func InitializeClusterConnections(opts ClusterConnectionsOptions) (*client.KubernetesClient, *clissh.Client, func() error, error) {
 	if opts.CommanderMode && opts.ApiServerUrl != "" {
 		kubeCl, cleanup, err := CreateKubeClient(opts.ApiServerUrl, opts.ApiServerOptions)
 		if err != nil {
@@ -41,7 +41,7 @@ func InitializeClusterConnections(opts ClusterConnectionsOptions) (*client.Kuber
 		}
 		return kubeCl, nil, cleanup, nil
 	} else {
-		var sshClient *ssh.Client
+		var sshClient *clissh.Client
 		var cleanup func() error
 
 		err := log.Process("default", "Preparing SSH client", func() error {

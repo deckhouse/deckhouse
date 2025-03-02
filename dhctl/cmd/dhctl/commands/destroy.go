@@ -24,7 +24,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/destroy"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/clissh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terminal"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
@@ -58,7 +58,7 @@ func DefineDestroyCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 			}
 		}
 
-		sshClient := ssh.NewClientFromFlags()
+		sshClient := clissh.NewClientFromFlags()
 		err := sshClient.Start()
 		if err != nil {
 			return err
@@ -72,7 +72,7 @@ func DefineDestroyCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 		}
 
 		destroyer, err := destroy.NewClusterDestroyer(&destroy.Params{
-			NodeInterface:    ssh.NewNodeInterfaceWrapper(sshClient),
+			NodeInterface:    clissh.NewNodeInterfaceWrapper(sshClient),
 			StateCache:       cache.Global(),
 			SkipResources:    app.SkipResources,
 			TerraformContext: terraform.NewTerraformContext(),

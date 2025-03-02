@@ -21,7 +21,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/resources"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/clissh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/template"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terminal"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/fs"
@@ -62,7 +62,7 @@ func (b *ClusterBootstrapper) CreateResources() error {
 		return nil
 	}
 
-	if wrapper, ok := b.NodeInterface.(*ssh.NodeInterfaceWrapper); ok && wrapper != nil {
+	if wrapper, ok := b.NodeInterface.(*clissh.NodeInterfaceWrapper); ok && wrapper != nil {
 		sshClient := wrapper.Client()
 		if sshClient != nil {
 			if err := sshClient.Start(); err != nil {
