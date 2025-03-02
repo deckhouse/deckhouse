@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package ssh
+package gossh
 
 import (
 	"fmt"
@@ -25,6 +25,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/session"
+	genssh "github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
 )
 
 func NewClient(session *session.Session, privKeys []session.AgentPrivateKey) *Client {
@@ -55,7 +56,7 @@ func (s *Client) Start() error {
 
 	signers := make([]ssh.Signer, 0, len(s.privateKeys))
 	for _, keypath := range s.privateKeys {
-		key, err := node.ParsePrivateSSHKey(keypath.Key, []byte(keypath.Passphrase))
+		key, err := genssh.ParsePrivateSSHKey(keypath.Key, []byte(keypath.Passphrase))
 		if err != nil {
 			return err
 		}
@@ -195,7 +196,9 @@ func (s *Client) UploadScript(scriptPath string, args ...string) node.Script {
 
 // UploadScript is used to upload script and execute it on remote server
 func (s *Client) Check() node.Check {
-	return nil
+	return genssh.NewCheck(func(sess *session.Session, cmd string) node.Command {
+		return NewSSHCommand(s.sshClient, cmd)
+	}, s.Settings)
 }
 
 // Stop the client

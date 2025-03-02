@@ -23,9 +23,9 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/clissh/cmd"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/session"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
 )
 
 type Agent struct {
@@ -105,7 +105,7 @@ func addKeys(authSock string, keys []session.AgentPrivateKey) error {
 	agentClient := agent.NewClient(conn)
 
 	for _, key := range keys {
-		privateKey, err := node.ParsePrivateSSHKey(key.Key, []byte(key.Passphrase))
+		privateKey, err := ssh.ParsePrivateSSHKey(key.Key, []byte(key.Passphrase))
 		if err != nil {
 			return err
 		}

@@ -18,6 +18,8 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/clissh/frontend"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/session"
@@ -144,7 +146,9 @@ func (s *Client) UploadScript(scriptPath string, args ...string) node.Script {
 
 // UploadScript is used to upload script and execute it on remote server
 func (s *Client) Check() node.Check {
-	return frontend.NewCheck(s.Settings)
+	return ssh.NewCheck(func(sess *session.Session, cmd string) node.Command {
+		return frontend.NewCommand(sess, cmd)
+	}, s.Settings)
 }
 
 // Stop the client
