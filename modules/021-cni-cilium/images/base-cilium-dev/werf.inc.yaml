@@ -13,19 +13,19 @@
 # #####################################################################
 # BASE_DEV image for build binaries of all cilium components (based on Ubuntu)
 # based on original images: runtime, builder, compilers, cilium-envoy, iptables
-# Based on https://github.com/cilium/cilium/blob/v1.17.0/images/runtime/Dockerfile
-# and https://github.com/cilium/cilium/blob/v1.17.0/images/runtime/install-runtime-deps.sh
-# and https://github.com/cilium/cilium/blob/v1.17.0/images/builder/Dockerfile
+# Based on https://github.com/cilium/cilium/blob/v1.17.1/images/runtime/Dockerfile
+# and https://github.com/cilium/cilium/blob/v1.17.1/images/runtime/install-runtime-deps.sh
+# and https://github.com/cilium/cilium/blob/v1.17.1/images/builder/Dockerfile
 # and https://github.com/cilium/image-tools/blob/063fa0d879d9560b85b6134c48ece08e672fa057/images/compilers/Dockerfile
 # and https://github.com/cilium/image-tools/blob/063fa0d879d9560b85b6134c48ece08e672fa057/images/compilers/install-deps.sh
-# and https://github.com/cilium/cilium/blob/v1.17.0/images/cilium/Dockerfile#L9
-# and https://github.com/cilium/proxy/blob/fe8efeb16a7d233bffd05af9ea53599340d3f18e/Dockerfile.builder
+# and https://github.com/cilium/cilium/blob/v1.17.1/images/cilium/Dockerfile#L9
+# and https://github.com/cilium/proxy/blob/958bef243c6c66fcfd73ca319f2eb49fff1eb2ae/Dockerfile.builder
 # and https://github.com/cilium/image-tools/blob/0e4de6ffe79e97a9795f1ce887a45026e1af22a7/images/iptables/Dockerfile
 #
 # Original IMAGE_TAG of compilers (taken from builds of BPFTOOL and LLVM) is 5569a29cea6b3ad50aeb03102aaf3dc03841197c
 # Corresponding commit is 063fa0d879d9560b85b6134c48ece08e672fa057 (https://github.com/cilium/image-tools/tree/063fa0d879d9560b85b6134c48ece08e672fa057)
-# Original IMAGE_TAG of cilium-envoy is v1.31.5-1737535524-fe8efeb16a7d233bffd05af9ea53599340d3f18e
-# Corresponding commit is fe8efeb16a7d233bffd05af9ea53599340d3f18e
+# Original IMAGE_TAG of cilium-envoy is v1.31.5-1739264036-958bef243c6c66fcfd73ca319f2eb49fff1eb2ae
+# Corresponding commit is 958bef243c6c66fcfd73ca319f2eb49fff1eb2ae
 # Original IMAGE_TAG of cilium/iptables is 1331e9b1b03f70c9d8b08626d9a7126963f86478
 # Corresponding commit is 0e4de6ffe79e97a9795f1ce887a45026e1af22a7 (https://github.com/cilium/image-tools/tree/0e4de6ffe79e97a9795f1ce887a45026e1af22a7)
 # #####################################################################

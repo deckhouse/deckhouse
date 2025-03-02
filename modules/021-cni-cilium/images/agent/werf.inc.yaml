@@ -3,9 +3,9 @@
 ---
 # #####################################################################
 # Final image of cilium-agent (used in helm-templates)
-# Based on https://github.com/cilium/cilium/blob/v1.17.0/images/runtime/Dockerfile
-# and https://github.com/cilium/cilium/blob/v1.17.0/images/runtime/install-runtime-deps.sh
-# and https://github.com/cilium/cilium/blob/v1.17.0/images/cilium/Dockerfile (release stage)
+# Based on https://github.com/cilium/cilium/blob/v1.17.1/images/runtime/Dockerfile
+# and https://github.com/cilium/cilium/blob/v1.17.1/images/runtime/install-runtime-deps.sh
+# and https://github.com/cilium/cilium/blob/v1.17.1/images/cilium/Dockerfile (release stage)
 ---
 # #####################################################################
 # List of binary files used by agent
