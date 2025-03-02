@@ -4,7 +4,7 @@
 # Build BPFTOOL binaries (based on base-cilium-dev)
 # Original IMAGE_TAG of BPFTOOL is 5a9c4852a21287686009bfe1cdc1fed6e7aabdea
 # Corresponding commit 0e4de6ffe79e97a9795f1ce887a45026e1af22a7 (https://github.com/cilium/image-tools/tree/3f125f524cdf74e20c1ac73855042a9254747855)
-# Based on https://github.com/cilium/cilium/blob/v1.17.0/images/runtime/Dockerfile#L9
+# Based on https://github.com/cilium/cilium/blob/v1.17.1/images/runtime/Dockerfile#L9
 # and https://github.com/cilium/image-tools/blob/0e4de6ffe79e97a9795f1ce887a45026e1af22a7/images/bpftool/Dockerfile
 # and https://github.com/cilium/image-tools/blob/0e4de6ffe79e97a9795f1ce887a45026e1af22a7/images/bpftool/checkout-linux.sh
 # and https://github.com/cilium/image-tools/blob/0e4de6ffe79e97a9795f1ce887a45026e1af22a7/images/bpftool/build-bpftool-native.sh
