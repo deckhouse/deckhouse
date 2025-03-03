@@ -124,7 +124,7 @@ resource "yandex_compute_instance" "nat_instance" {
   }
 
   network_interface {
-    subnet_id      = var.nat_instance_internal_subnet_id == null ? try(yandex_vpc_subnet.nat_instance[0].id, null) : var.nat_instance_internal_subnet_id
+    subnet_id      = var.nat_instance_internal_subnet_id == null ? try(yandex_vpc_subnet.nat_instance[0].id, "") : var.nat_instance_internal_subnet_id
     ip_address     = local.nat_instance_internal_address_calculated
     nat            = local.assign_external_ip_address
     nat_ip_address = local.assign_external_ip_address ? var.nat_instance_external_address : null
