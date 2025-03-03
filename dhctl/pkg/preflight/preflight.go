@@ -164,7 +164,7 @@ func (pc *Checker) Cloud() error {
 		},
 		{
 			fun:            pc.CheckYandexWithNatInstanceConfig,
-			successMessage: "Yandex NAT instance config is OK",
+			successMessage: "Yandex NAT instance config",
 			skipFlag:       app.YandexWithNatInstance,
 		},
 	})
