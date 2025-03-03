@@ -14,8 +14,8 @@
 <p>
 {%- if editionsWithRestrictionsComments['all'] -%}
   <span style='border-bottom: 1px dotted #000' data-tippy-content='{{ editionsWithRestrictionsComments['all'][page.lang] }}'>
-    {{- site.data.i18n.common['module_available_with_limitations_prefix'][page.lang] }}:
-  </span> 
+    {{- site.data.i18n.common['module_available_with_limitations_prefix'][page.lang] -}}
+  </span>: 
 {%- else -%}
   {{- site.data.i18n.common['module_available_with_limitations_prefix'][page.lang] }}: 
 {%- endif -%}

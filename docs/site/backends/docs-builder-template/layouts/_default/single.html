@@ -27,7 +27,9 @@
         {{- end }}
 
         {{- if $moduleStatus }}
-          {{- partial "alert" ( dict "level" "warn" "content" (T (printf "module_alert_%s" (lower $moduleStatus))) ) }}
+          {{- if (T (printf "module_alert_%s_long" (lower $moduleStatus ))) }}
+            {{- partial "alert" ( dict "level" "warn" "content" (T (printf "module_alert_%s_long" (lower $moduleStatus))) ) }}
+          {{- end }}
         {{- end }}
 
         {{.Content}}
