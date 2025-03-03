@@ -53,6 +53,15 @@ func (f *SSHFile) Upload(srcPath, remotePath string) error {
 			return fmt.Errorf("failed to open local file: %w", err)
 		}
 		defer localFile.Close()
+
+		rType, err := getRemoteFileStat(f.sshClient, remotePath)
+		if err != nil {
+			return err
+		}
+		if rType == "directory" {
+			remotePath = remotePath + "/" + filepath.Base(srcPath)
+		}
+
 		if err := scpClient.CopyFile(context.Background(), localFile, remotePath, "0655"); err != nil {
 			return fmt.Errorf("failed to copy file to remote host: %w", err)
 		}
