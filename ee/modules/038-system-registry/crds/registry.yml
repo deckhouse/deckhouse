@@ -45,10 +45,8 @@ spec:
         properties:
           spec:
             type: object
-            required:
-            - mode
             properties:
-              type:
+              mode:
                 type: string
                 description: Registry mode
                 enum:
@@ -95,6 +93,27 @@ spec:
                   ttl:
                     type: string
                     pattern: "^[0-9]+[smhd]$"  # Matches durations like 12h, 30m
+            oneOf:
+              - required: [mode]
+                properties:
+                  mode:
+                    enum: [Direct]
+                  direct: {}
+                not:
+                  required: [proxy, local]
+              - required: [mode]
+                properties:
+                  mode:
+                    enum: [Proxy]
+                  proxy: {}
+                not:
+                  required: [direct, local]
+              - required: [mode]
+                properties:
+                  mode:
+                    enum: [Local]
+                not:
+                  required: [direct, proxy]
           status:
             type: object
             properties:
