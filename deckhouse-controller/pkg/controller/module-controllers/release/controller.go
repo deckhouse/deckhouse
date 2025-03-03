@@ -615,6 +615,10 @@ func (r *reconciler) handlePendingRelease(ctx context.Context, release *v1alpha1
 		return res, fmt.Errorf("apply predicted release: %w", err)
 	}
 
+	if release.GetDryRun() {
+		return ctrl.Result{}, nil
+	}
+
 	modulesChangedReason = "a new module release deployed"
 
 	return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
