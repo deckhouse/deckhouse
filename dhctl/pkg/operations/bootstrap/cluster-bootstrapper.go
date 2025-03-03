@@ -290,7 +290,7 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 		err = log.Process("bootstrap", "Cloud infrastructure", func() error {
 			baseRunner := b.TerraformContext.GetBootstrapBaseInfraRunner(metaConfig, stateCache)
 
-			baseOutputs, err := terraform.ApplyPipeline(baseRunner, "Kubernetes cluster", terraform.GetBaseInfraResult)
+			baseOutputs, err := terraform.ApplyPipeline(ctx, baseRunner, "Kubernetes cluster", terraform.GetBaseInfraResult)
 			if err != nil {
 				return err
 			}
@@ -318,7 +318,7 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 				RunnerLogger:    log.GetDefaultLogger(),
 			})
 
-			masterOutputs, err := terraform.ApplyPipeline(masterRunner, masterNodeName, terraform.GetMasterNodeResult)
+			masterOutputs, err := terraform.ApplyPipeline(ctx, masterRunner, masterNodeName, terraform.GetMasterNodeResult)
 			if err != nil {
 				return err
 			}
@@ -393,6 +393,7 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 	}
 
 	if wrapper, ok := b.NodeInterface.(*ssh.NodeInterfaceWrapper); ok {
+		// TODO(feat/dhctl-for-commander-bootstrap-context): pass ctx
 		if err := WaitForSSHConnectionOnMaster(wrapper.Client()); err != nil {
 			return fmt.Errorf("failed to wait for SSH connection on master: %v", err)
 		}
@@ -411,6 +412,7 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 		return nil
 	}
 
+	// TODO(feat/dhctl-for-commander-bootstrap-context): pass ctx
 	if err := RunBashiblePipeline(b.NodeInterface, metaConfig, nodeIP, devicePath); err != nil {
 		return err
 	}
@@ -421,11 +423,13 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 		return nil
 	}
 
+	// TODO(feat/dhctl-for-commander-bootstrap-context): pass ctx
 	kubeCl, err := kubernetes.ConnectToKubernetesAPI(b.NodeInterface)
 	if err != nil {
 		return err
 	}
 
+	// TODO(feat/dhctl-for-commander-bootstrap-context): pass ctx
 	installDeckhouseResult, err := InstallDeckhouse(kubeCl, deckhouseInstallConfig)
 	if err != nil {
 		return err
@@ -446,6 +450,7 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 		}
 
 		err := localBootstraper(func() error {
+			// TODO(feat/dhctl-for-commander-bootstrap-context): pass ctx
 			return bootstrapAdditionalNodesForCloudCluster(kubeCl, metaConfig, masterAddressesForSSH, b.TerraformContext)
 		})
 		if err != nil {
@@ -459,10 +464,12 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 		return nil
 	}
 
+	// TODO(feat/dhctl-for-commander-bootstrap-context): pass ctx
 	if err := controlplane.NewManagerReadinessChecker(kubernetes.NewSimpleKubeClientGetter(kubeCl)).IsReadyAll(); err != nil {
 		return err
 	}
 
+	// TODO(feat/dhctl-for-commander-bootstrap-context): pass ctx
 	err = createResources(kubeCl, resourcesToCreate, metaConfig, installDeckhouseResult)
 	if err != nil {
 		return err
@@ -479,6 +486,7 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 		postScriptExecutor := NewPostBootstrapScriptExecutor(sshNodeInterfaceWrapper.Client(), app.PostBootstrapScriptPath, bootstrapState).
 			WithTimeout(app.PostBootstrapScriptTimeout)
 
+		// TODO(feat/dhctl-for-commander-bootstrap-context): pass ctx
 		if err := postScriptExecutor.Execute(); err != nil {
 			return err
 		}
@@ -490,6 +498,7 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 		return nil
 	}
 
+	// TODO(feat/dhctl-for-commander-bootstrap-context): pass ctx
 	if err := RunPostInstallTasks(kubeCl, installDeckhouseResult); err != nil {
 		return err
 	}
