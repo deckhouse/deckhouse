@@ -416,11 +416,7 @@ stage:
       - run_deploy
     steps:
       {!{- tmpl.Exec "checkout_step" . | strings.Indent 6 }!}
-      
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.12.3'
+      {!{ tmpl.Exec "python_setup_step" . | strings.Indent 6 }!}
 
       - name: Install dependencies
         run: pip install ghapi=1.0.6 fastcore=1.7.28 kubernetes=32.0.1
@@ -451,7 +447,7 @@ stage:
           {!{- range $env, $env_properties := $envs }!}
           {!{   printf "%s: ${{ secrets.%s }}" $env_properties.kubeconfig $env_properties.kubeconfig }!}
           {!{   printf "NAMESPACE_%s: \"%s\"" $env_properties.kubeconfig $env_properties.werf_namespace -}!}
-          {!{- end }!}          
+          {!{- end }!}
 
       - name: Upload artifacts
         uses: {!{ index (ds "actions") "actions/upload-artifact" }!}
@@ -471,7 +467,7 @@ stage:
       WERF_CHANNEL: "ea"
     steps:
       {!{- tmpl.Exec "checkout_step" . | strings.Indent 6 }!}
-      
+
       - name: Download artifacts
         uses: {!{ index (ds "actions") "actions/download-artifact" }!}
         with:
