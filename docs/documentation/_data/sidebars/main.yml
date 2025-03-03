@@ -1671,9 +1671,6 @@ entries:
                 ru: Примеры
               url: /modules/local-path-provisioner/examples.html
             - title:
-                en: Reference
-                ru: Справка
-            - title:
                 en: Configuration
                 ru: Настройки
               url: /modules/local-path-provisioner/configuration.html
