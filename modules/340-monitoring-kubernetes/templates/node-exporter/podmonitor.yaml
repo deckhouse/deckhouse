@@ -16,7 +16,7 @@ spec:
   podMetricsEndpoints:
   - port: https-metrics
     scheme: https
-    scrapeTimeout: {{ include "helm_lib_prometheus_target_scrape_timeout_seconds" (list . 20) }}
+    scrapeTimeout: {{ include "helm_lib_prometheus_target_scrape_timeout_seconds" (list .) }}
     bearerTokenSecret:
       name: "prometheus-token"
       key: "token"

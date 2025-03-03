@@ -44,24 +44,24 @@ var _ = Describe("Module :: extendedMonitoring :: helm template :: scrape timeou
 			hec.ValuesSet("global.discovery.prometheusScrapeInterval", 10)
 			hec.HelmRender()
 		})
-		It("Should be equal to scrape interval", func() {
+		It("Should be 80% of scrape interval", func() {
 			podMonitor := hec.KubernetesResource("PodMonitor", "d8-monitoring", "extended-monitoring-exporter")
 			Expect(podMonitor.Exists()).To(BeTrue())
 
 			scrapeTimeout := podMonitor.Field("spec.podMetricsEndpoints.0.scrapeTimeout").String()
-			Expect(scrapeTimeout).Should(Equal("10s"))
+			Expect(scrapeTimeout).Should(Equal("8s"))
 		})
 	})
 	Context("With default scrape", func() {
 		BeforeEach(func() {
 			hec.HelmRender()
 		})
-		It("Should be equal to timeout", func() {
+		It("Should be 25% lower than timeout", func() {
 			podMonitor := hec.KubernetesResource("PodMonitor", "d8-monitoring", "extended-monitoring-exporter")
 			Expect(podMonitor.Exists()).To(BeTrue())
 
 			scrapeTimeout := podMonitor.Field("spec.podMetricsEndpoints.0.scrapeTimeout").String()
-			Expect(scrapeTimeout).Should(Equal("25s"))
+			Expect(scrapeTimeout).Should(Equal("24s"))
 		})
 	})
 })
