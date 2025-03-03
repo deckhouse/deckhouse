@@ -7,7 +7,7 @@
     DEFECTDOJO_HOST: ${{secrets.DEFECTDOJO_HOST}}
     DECKHOUSE_PRIVATE_REPO: ${{secrets.DECKHOUSE_PRIVATE_REPO}}
     TRIVY_PROJECT_ID: "2181"
-    TRIVY_DB_URL: ${{secrets.DECKHOUSE_DEV_REGISTRY_HOST}}/sys/deckhouse-oss/security/trivy-db:2 
+    TRIVY_DB_URL: ${{secrets.DECKHOUSE_DEV_REGISTRY_HOST}}/sys/deckhouse-oss/security/trivy-db:2
     TRIVY_JAVA_DB_URL: ${{secrets.DECKHOUSE_DEV_REGISTRY_HOST}}/sys/deckhouse-oss/security/trivy-java-db:1
     TRIVY_POLICY_URL: ${{secrets.DECKHOUSE_DEV_REGISTRY_HOST}}/sys/deckhouse-oss/security/trivy-bdu:1
   run: |
@@ -65,10 +65,8 @@
 
 {!{ define "defectdojo_dev_tests_rotator" }!}
 # <template: defectdojo_dev_tests_rotator>
-- name: Set up Python
-  uses: actions/setup-python@v4
-  with:
-    python-version: ${{ env.PYTHON_VERSION }}
+
+{!{ tmpl.Exec "python_setup_step" . }!}
 - name: Install dependencies
   run: pip install requests
 - name: DefectDojo rotate dev tests
