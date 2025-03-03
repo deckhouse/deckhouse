@@ -71,16 +71,14 @@ spec:
                     format: byte
                   scheme:
                     type: string
-                    enum: ["https"]
-                    default: "https"
+                    enum: ["HTTPS"]
+                    default: "HTTPS"
               proxy:
                 type: object
                 properties:
                   imagesRepo:
                     type: string
                     pattern: "^nexus\\.company\\.my/deckhouse/(ee|ce/cse|[^/]+)$"
-                  license:
-                    type: string
                   login:
                     type: string
                   password:
@@ -90,6 +88,10 @@ spec:
                   ca:
                     type: string
                     format: byte
+                  scheme:
+                    type: string
+                    enum: ["HTTPS"]
+                    default: "HTTPS"
                   ttl:
                     type: string
                     pattern: "^[0-9]+[smhd]$"  # Matches durations like 12h, 30m
