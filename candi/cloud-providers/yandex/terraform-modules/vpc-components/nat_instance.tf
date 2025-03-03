@@ -35,11 +35,11 @@ locals {
   # if user set internal subnet id for nat instance get cidr from its subnet
   user_internal_subnet_cidr = var.nat_instance_internal_subnet_id == null ? null : data.yandex_vpc_subnet.user_internal_subnet[0].v4_cidr_blocks[0]
 
-  nat_instance_internal_cidr = local.is_with_nat_instance ? (coalesce(var.nat_instance_internal_subnet_cidr, local.user_internal_subnet_cidr)) : null
+  nat_instance_internal_cidr = var.nat_instance_internal_subnet_cidr != null ? var.nat_instance_internal_subnet_cidr : (local.user_internal_subnet_cidr != null ? local.user_internal_subnet_cidr : null)
 
   # but if user pass nat instance internal address directly (it for backward compatibility) use passed address,
   # else get 10 host address from cidr which got in previous step
-  nat_instance_internal_address_calculated = local.is_with_nat_instance ? (var.nat_instance_internal_address == null ? cidrhost(local.nat_instance_internal_cidr, 10) : var.nat_instance_internal_address) : null
+  nat_instance_internal_address_calculated = local.is_with_nat_instance ? (var.nat_instance_internal_address != null ? var.nat_instance_internal_address : (local.nat_instance_internal_cidr != null ? cidrhost(local.nat_instance_internal_cidr, 10): null)) : null
 
   assign_external_ip_address = var.nat_instance_external_subnet_id == null ? true : false
 
@@ -124,7 +124,7 @@ resource "yandex_compute_instance" "nat_instance" {
   }
 
   network_interface {
-    subnet_id      = var.nat_instance_internal_subnet_id == null ? yandex_vpc_subnet.nat_instance[0].id : var.nat_instance_internal_subnet_id
+    subnet_id      = var.nat_instance_internal_subnet_id == null ? try(yandex_vpc_subnet.nat_instance[0].id, "") : var.nat_instance_internal_subnet_id
     ip_address     = local.nat_instance_internal_address_calculated
     nat            = local.assign_external_ip_address
     nat_ip_address = local.assign_external_ip_address ? var.nat_instance_external_address : null
