@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"slices"
 
+	infra_utils "github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/infra/utils"
 	gcmp "github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/go-multierror"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -173,6 +174,8 @@ func (c *NodeGroupController) deleteRedundantNodes(
 		if !ctx.CommanderMode() {
 			nodeState = nodeToDeleteInfo.state
 		}
+
+		infra_utils.TryToDrainNode(ctx.KubeClient(), nodeToDeleteInfo.name)
 
 		nodeRunner := ctx.Terraform().GetConvergeNodeDeleteRunner(cfg, terraform.NodeDeleteRunnerOptions{
 			AutoDismissDestructive: ctx.ChangesSettings().AutoDismissDestructive,
@@ -334,7 +337,6 @@ func (c *NodeGroupController) updateNodes(ctx *context.Context) error {
 
 			return nil
 		})
-
 		if err != nil {
 			// We do not return an error immediately for the following reasons:
 			// - some nodes cannot be converged for some reason, but other nodes must be converged

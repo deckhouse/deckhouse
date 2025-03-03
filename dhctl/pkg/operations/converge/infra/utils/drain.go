@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package controlplane
+package utils
 
 import (
 	"context"
@@ -31,11 +31,10 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
 
-func tryToDrainNode(ctx context.Context, kubeCl *client.KubernetesClient, nodeName string) error {
-	return retry.NewLoop(fmt.Sprintf("Drain node '%s'", nodeName), 45, 10*time.Second).
-		RunContext(ctx, func() error {
-			return drainNode(ctx, kubeCl, nodeName)
-		})
+func TryToDrainNode(kubeCl *client.KubernetesClient, nodeName string) error {
+	return retry.NewLoop(fmt.Sprintf("Drain node '%s'", nodeName), 45, 10*time.Second).Run(func() error {
+		return drainNode(kubeCl, nodeName)
+	})
 }
 
 func drainNode(ctx context.Context, kubeCl *client.KubernetesClient, nodeName string) error {
