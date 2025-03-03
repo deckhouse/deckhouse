@@ -17,9 +17,10 @@ package bootstrap
 import (
 	"encoding/json"
 	"fmt"
-	gossh "github.com/deckhouse/deckhouse/dhctl/pkg/system/node/gossh"
 	"reflect"
 	"time"
+
+	gossh "github.com/deckhouse/deckhouse/dhctl/pkg/system/node/gossh"
 
 	"github.com/google/uuid"
 
@@ -37,9 +38,9 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/clissh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/local"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/session"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/clissh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/template"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terminal"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
@@ -201,7 +202,7 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 				return fmt.Errorf("unable to start ssh client: %w", err)
 			}
 			log.DebugF("Hosts is %v empty; static cluster is %v. Use ssh", len(app.SSHHosts), metaConfig.IsStatic())
-			b.Params.NodeInterface = clissh.NewNodeInterfaceWrapper(sshClient)
+			b.Params.NodeInterface = gossh.NewNodeInterfaceWrapper(sshClient)
 		}
 	}
 

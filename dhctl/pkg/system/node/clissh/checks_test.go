@@ -17,7 +17,7 @@ package clissh
 import (
 	"testing"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/clissh/session"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/session"
 	"github.com/stretchr/testify/require"
 )
 
