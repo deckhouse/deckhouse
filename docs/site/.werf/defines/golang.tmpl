@@ -1,0 +1,10 @@
+
+{{- define "mount points for golang builds" }}
+- from: tmp_dir
+  to: /go/pkg
+- from: tmp_dir
+  to: /root/go/pkg
+- from: tmp_dir
+  to: /root/.cache/go-build
+{{- end }}
+

@@ -58,10 +58,7 @@ import:
     to: /usr/local/bin/task
     before: install
 mount:
-- fromPath: ~/go-pkg-cache
-  to: /go/pkg
-- from: tmp_dir
-  to: /root/.cache/go-build
+{{ include "mount points for golang builds" . }}
 shell:
   beforeInstall:
     {{- include "debian packages proxy" . | nindent 4 }}

@@ -52,5 +52,4 @@ git:
     setup:
       - "**/*.go"
 mount:
-  - fromPath: ~/go-pkg-cache
-    to: /go/pkg
+{{ include "mount points for golang builds" . }}

@@ -92,8 +92,7 @@ import:
   to: /src/istio
   before: install
 mount:
-- fromPath: ~/go-pkg-cache
-  to: /go/pkg
+{{ include "mount points for golang builds" . }}
 shell:
   beforeInstall:
   {{- include "alpine packages proxy" . | nindent 2 }}
@@ -124,8 +123,7 @@ import:
   to: /opt/libcxx
   before: install
 mount:
-- fromPath: ~/go-pkg-cache
-  to: /go/pkg
+{{ include "mount points for golang builds" . }}
 shell:
   install:
   - mkdir -p /tmp/bazel-cache
@@ -230,8 +228,7 @@ image: {{ $.ModuleName }}/{{ .ImageName }}-build-image-artifact
 fromImage: common/alt-p11-artifact
 final: false
 mount:
-- fromPath: ~/go-pkg-cache
-  to: /go/pkg
+{{ include "mount points for golang builds" . }}
 import:
 - image: {{ .ModuleName }}/golang-artifact
   add: /usr/local/go
