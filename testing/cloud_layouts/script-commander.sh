@@ -269,7 +269,7 @@ function prepare_ssh() {
 
 function ssh_command_to_cluster() {
   local command "$*"
-  ssh -i id_rsa ${master_user}@${master_ip} "${command}"
+  ssh -o StrictHostKeyChecking=no -i id_rsa ${master_user}@${master_ip} "${command}"
 }
 
 function wait_allerts_resolve() {
