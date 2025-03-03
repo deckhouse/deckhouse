@@ -46,8 +46,6 @@ import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
   add: /src
   before: install
-mount:
-{{ include "mount points for golang builds" . }}
 shell:
   beforeInstall:
   {{- include "alpine packages proxy" . | nindent 2 }}

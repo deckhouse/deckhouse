@@ -41,7 +41,6 @@ shell:
   - git apply /patches/*.patch --verbose
   - rm -r vendor
   - rm -rf .git
-  - rm -rf .git
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
 final: false
