@@ -23,6 +23,7 @@ imageSpec:
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
 fromImage: common/src-artifact
+final: false
 {{- if $patch }}
 git:
 - add: {{ $patches }}/patches/{{ $version }}
@@ -33,7 +34,7 @@ git:
 {{- end }}
 shell:
   install:
-  - git clone --depth 1 --branch {{ $value.ccm.vsphere }} https://github.com/kubernetes/cloud-provider-vsphere.git /src
+  - git clone --depth 1 --branch {{ $value.ccm.vsphere }} {{ $.SOURCE_REPO }}/kubernetes/cloud-provider-vsphere.git /src
   - cd /src
   {{- if $patch }}
   - git apply /patches/*.patch --verbose

@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
 
+# Copyright 2025 Flant JSC
+# Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https://github.com/deckhouse/deckhouse/blob/main/ee/LICENSE
+
 PVC_NAMESPACE="$1"
 PVC_NAME="$2"
 FLAG="$3"

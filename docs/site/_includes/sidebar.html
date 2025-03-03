@@ -1,5 +1,4 @@
 {%- unless page.hide_sidebar or jekyll.environment == "development" %}
-{%- assign sidebar = site.data.sidebars[page.sidebar].entries %}
 
   {%- if page.product_code == kubernetes-platform %}
     <div style="display: flex; justify-content: start; padding-top: 12px; padding-bottom: 35px; gap: 25px;">
@@ -30,10 +29,7 @@
     <nav class="sidebar__container">
 
       <ul class="sidebar" id="mysidebar">
-
-        {%- for entry in sidebar.folders %}
-        {% include sidebar_entry.html entry=entry folder_entry_class="sidebar__item sidebar__item_parent" item_entry_class="sidebar__item" %}
-        {%- endfor %}
+        {% sidebar_custom folder_entry_class="sidebar__item sidebar__item_parent" item_entry_class="sidebar__item" %}
       </ul>
 
     </nav>

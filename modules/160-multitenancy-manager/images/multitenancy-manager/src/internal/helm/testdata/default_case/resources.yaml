@@ -3,8 +3,11 @@
 apiVersion: deckhouse.io/v1alpha1
 kind: AuthorizationRule
 metadata:
+  annotations:
+    key: val
   labels:
     heritage: multitenancy-manager
+    key: val
     projects.deckhouse.io/project: test
     projects.deckhouse.io/project-template: default
   name: user-gmail.com
@@ -19,8 +22,11 @@ spec:
 apiVersion: v1
 kind: ResourceQuota
 metadata:
+  annotations:
+    key: val
   labels:
     heritage: multitenancy-manager
+    key: val
     projects.deckhouse.io/project: test
     projects.deckhouse.io/project-template: default
   name: all-pods
@@ -34,8 +40,11 @@ spec:
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
+  annotations:
+    key: val
   labels:
     heritage: multitenancy-manager
+    key: val
     projects.deckhouse.io/project: test
     projects.deckhouse.io/project-template: default
   name: isolated
@@ -80,8 +89,11 @@ spec:
 apiVersion: deckhouse.io/v1alpha1
 kind: OperationPolicy
 metadata:
+  annotations:
+    key: val
   labels:
     heritage: multitenancy-manager
+    key: val
     projects.deckhouse.io/project: test
     projects.deckhouse.io/project-template: default
   name: required-requests-9f86d081
@@ -102,9 +114,12 @@ spec:
 apiVersion: v1
 kind: Namespace
 metadata:
+  annotations:
+    key: val
   labels:
     extended-monitoring.deckhouse.io/enabled: ""
     heritage: multitenancy-manager
+    key: val
     projects.deckhouse.io/project: test
     projects.deckhouse.io/project-template: default
     security.deckhouse.io/pod-policy: baseline

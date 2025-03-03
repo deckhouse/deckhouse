@@ -88,6 +88,12 @@ properties:
                 annotationValidationEnabled:
                   type: boolean
                   default: false
+                controllerPodsAdditionalAnnotations:
+                  type: object
+                  additionalProperties:
+                    type: string
+                  description: |
+                    Custom annotations for pods nginx controller.
                 nodeSelector:
                     type: object
                     additionalProperties:

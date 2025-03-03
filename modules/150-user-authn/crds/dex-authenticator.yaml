@@ -102,6 +102,15 @@ spec:
                     Specified with  `s`, `m` or `h` suffix.
                   x-doc-examples: ['24h']
                   x-doc-default: '168h'
+                allowedEmails:
+                  type: array
+                  description: |-
+                    A list of emails of users are allowed to connect to the client.
+
+                    **By default**, all users can connect.
+                  x-doc-default: 'All emails are allowed.'
+                  items:
+                    type: string
                 allowedGroups:
                   type: array
                   description: |-
@@ -287,6 +296,15 @@ spec:
 
                     Specified with  `s`, `m` or `h` suffix.
                   x-doc-default: '168h'
+                allowedEmails:
+                  type: array
+                  description: |-
+                    A list of emails of users are allowed to connect to the client.
+
+                    **By default**, all users can connect.
+                  x-doc-default: 'All users are allowed.'
+                  items:
+                    type: string
                 allowedGroups:
                   type: array
                   description: |-

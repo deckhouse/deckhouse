@@ -15,6 +15,10 @@ spec:
   {{- end }}
   applicationIngressClassName: {{ include "helm_lib_module_ingress_class" . | quote }}
   sendAuthorizationHeader: true
+  {{- with .Values.istio.auth.allowedUserEmails }}
+  allowedEmails:
+  {{- . | toYaml | nindent 2 }}
+  {{- end }}
   {{- with .Values.istio.auth.allowedUserGroups }}
   allowedGroups:
   {{- . | toYaml | nindent 2 }}

@@ -11,7 +11,7 @@ kind: VerticalPodAutoscaler
 metadata:
   name:  d8-kube-dns-sts-pods-hosts-appender-webhook
   namespace: kube-system
-  {{- include "helm_lib_module_labels" (list . (dict "app" "sts-pods-hosts-appender-webhook" "workload-resource-policy.deckhouse.io" "master")) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "sts-pods-hosts-appender-webhook")) | nindent 2 }}
 spec:
   targetRef:
     apiVersion: "apps/v1"
@@ -37,6 +37,7 @@ metadata:
   {{- include "helm_lib_module_labels" (list . (dict "app" "sts-pods-hosts-appender-webhook")) | nindent 2 }}
 spec:
   {{- include "helm_lib_deployment_on_master_strategy_and_replicas_for_ha" . | nindent 2 }}
+  revisionHistoryLimit: 2
   selector:
     matchLabels:
       app: sts-pods-hosts-appender-webhook

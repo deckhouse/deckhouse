@@ -1,6 +1,5 @@
 # Next lines are for local build only
 entries:
-  folders:
     - title:
         en: Overview
         ru: Введение
@@ -25,7 +24,6 @@ entries:
             en: Update channels
             ru: Каналы обновлений
           url: /virtualization-platform/documentation/admin/release-channels.html
-          folders:
         - title:
             en: Requirements
             ru: Требования

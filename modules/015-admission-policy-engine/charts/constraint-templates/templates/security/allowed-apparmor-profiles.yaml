@@ -45,7 +45,7 @@ spec:
         }
 
         input_apparmor_allowed(pod, container) {
-            get_apparmor_profile(pod, container) == input.parameters.allowedProfiles[_]
+            glob.match(input.parameters.allowedProfiles[_], [], get_apparmor_profile(pod, container))
         }
 
         input_containers[c] {

@@ -65,6 +65,8 @@ var _ = Describe("Module :: user-authn :: helm template :: dex authenticator", f
     allowedGroups:
     - everyone
     - admins
+    allowedEmails:
+    - test@mail.io
     nodeSelector:
       testnode: ""
     tolerations:
@@ -124,6 +126,7 @@ var _ = Describe("Module :: user-authn :: helm template :: dex authenticator", f
 			Expect(oauth2clientTest.Exists()).To(BeTrue())
 			Expect(oauth2clientTest.Field("redirectURIs").String()).To(MatchJSON(`["https://authenticator.example.com/dex-authenticator/callback","https://authenticator-two.example.com/dex-authenticator/callback"]`))
 			Expect(oauth2clientTest.Field("secret").String()).To(Equal("dexSecret"))
+			Expect(oauth2clientTest.Field("allowedEmails").String()).To(MatchJSON(`["test@mail.io"]`))
 			Expect(oauth2clientTest.Field("allowedGroups").String()).To(MatchJSON(`["everyone","admins"]`))
 
 			ingressTest := hec.KubernetesResource("Ingress", "d8-test", "test-dex-authenticator")

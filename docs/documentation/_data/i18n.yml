@@ -134,6 +134,15 @@ common:
   search_placeholder_text:
     en: Search...
     ru: Поиск...
+  module_available_editions_prefix:
+    en: Available in
+    ru: Доступно в редакциях
+  module_available_with_limitations_prefix:
+    en: Available with limitations in
+    ru: Доступно с ограничениями в редакциях
+  module_available_without_limitations_prefix:
+    en: Available without limitations in
+    ru: Доступно без ограничений в редакциях
   warning_ee_version:
     en: Available only in
     ru: Доступно только в
@@ -264,24 +273,54 @@ comparison:
     ru: "Кроме следующих параметров:<br />"
   module_has_restions:
     en: "There are limitations to functionality"
-    ru: "Есть ограничения  функциональности"
+    ru: "Есть ограничения функциональности"
+  module_has_restions_short:
+    en: "with limitations"
+    ru: "с ограничениями"
 
 features:
+  currency_sign:
+    en: "&#36;"
+    ru: "&#8381;"
   experimental:
-    en: The functionality of the module might significantly change. Compatibility with future versions is not guaranteed.
-    ru: Функциональность модуля может сильно измениться. Совместимость с будущими версиями не гарантируется
+    en: Experimental
+    ru: Экспериментальная версия
+  experimental_long:
+    en: Experimental version. The functionality may undergo significant changes. Compatibility with future versions is not guaranteed.
+    ru: Экспериментальная версия. Функциональность может сильно измениться. Совместимость с будущими версиями не гарантируется.
   preview:
-    en: The functionality of the module might change, but the main features will remain. Compatibility with future versions is guaranteed, but might require additional migration steps.
-    ru: Функциональность модуля может измениться, но основные возможности сохранятся. Совместимость с будущими версиями обеспечивается, но может потребовать дополнительных действий по миграции.
+    en: Preview
+    ru: Предварительная версия (preview)
+  preview_long:
+    en: Preliminary version. The functionality may change, but the basic features will be preserved. Compatibility with future versions is ensured, but may require additional migration actions.
+    ru: Предварительная версия. Функциональность может измениться, но основные возможности сохранятся. Совместимость с будущими версиями может потребовать ручных действий по миграции.
   deprecated:
-    en: The module is deprecated.
-    ru: Модуль устарел.
+    en: Deprecated
+    ru: Устарело
+  deprecated_long:
+    en: Deprecated version. Development and support have been terminated.
+    ru: Устарело. Развитие и поддержка прекращены.
+  "general_availability":
+    en: Ready to be used in production environments
+    ru: Готово к использованию в production-средах
+  "general_availability_long":
+    en: Generally available version. Ready to be used in production environments.
+    ru: Общедоступная версия. Готово к использованию в production-средах.
   temporaryDeprecated:
     en: The current version of the module is deprecated, a new version will be published soon.
     ru: Текущая версия модуля устарела, скоро будет опубликована новая версия.
   proprietaryOkmeter:
+    en: Additiona license required
+    ru: Требуется дополнительная лицензия
+  proprietaryOkmeter_long:
     en: This feature requires an <a href="https://okmeter.io">Okmeter</a> license.
     ru: Для этого компонента требуется лицензия <a href="https://okmeter.io">Okmeter</a>.
   ee:
     en: This feature is available in Enterprise Edition only.
     ru: Доступно только в Enterprise Edition.
+  commercial:
+    en: Available in commercial editions.
+    ru: Доступно в коммерческих редакциях.
+  notAvailableInThisEdition:
+    en: Available in other commercial editions.
+    ru: Доступно в других коммерческих редакциях.

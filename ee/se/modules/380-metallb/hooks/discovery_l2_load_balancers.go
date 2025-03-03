@@ -240,6 +240,11 @@ func handleL2LoadBalancers(input *go_hook.HookInput) error {
 				service.Namespace,
 				service.Name,
 				object_patch.WithSubresource("/status"))
+			input.Logger.Info("MetalLoadBalancerClass was selected and added to the service status",
+				"Service", service.Name,
+				"Namespace", service.Namespace,
+				"MetalLoadBalancerClass", mlbcForUse.Name,
+			)
 		}
 
 		desiredIPsCount := len(service.DesiredIPs)

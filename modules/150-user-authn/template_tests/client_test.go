@@ -62,6 +62,11 @@ var _ = Describe("Module :: user-authn :: helm template :: DexClient", func() {
   spec:
     redirectURIs:
     - "https://opendistro.example.com/callback"
+    allowedGroups:
+    - aaa
+    - ccc
+    allowedEmails:
+    - bb@aaa.com
   clientSecret: test
   encodedID: "n5ygk3tenfzxi4tpzpzjzzeeeirsk"
   legacyID: dex-client-opendistro:test
@@ -89,6 +94,8 @@ var _ = Describe("Module :: user-authn :: helm template :: DexClient", func() {
 			Expect(clientOpendistro.Field("id").String()).To(Equal("dex-client-opendistro@test"))
 			Expect(clientOpendistro.Field("secret").String()).To(Equal("test"))
 			Expect(clientOpendistro.Field("redirectURIs").String()).To(MatchJSON(`["https://opendistro.example.com/callback"]`))
+			Expect(clientOpendistro.Field("allowedEmails").String()).To(MatchJSON(`["bb@aaa.com"]`))
+			Expect(clientOpendistro.Field("allowedGroups").String()).To(MatchJSON(`["aaa", "ccc"]`))
 			Expect(hec.KubernetesResource("Secret", "test", "dex-client-opendistro").Exists()).To(BeTrue())
 
 			clientOpendistroLegacy := hec.KubernetesResource("OAuth2Client", "d8-user-authn", "m5zgcztbnzq4x4u44scceizfyyy")
@@ -96,6 +103,8 @@ var _ = Describe("Module :: user-authn :: helm template :: DexClient", func() {
 			Expect(clientOpendistroLegacy.Field("id").String()).To(Equal("dex-client-opendistro:test"))
 			Expect(clientOpendistroLegacy.Field("secret").String()).To(Equal("test"))
 			Expect(clientOpendistroLegacy.Field("redirectURIs").String()).To(MatchJSON(`["https://opendistro.example.com/callback"]`))
+			Expect(clientOpendistroLegacy.Field("allowedEmails").String()).To(MatchJSON(`["bb@aaa.com"]`))
+			Expect(clientOpendistroLegacy.Field("allowedGroups").String()).To(MatchJSON(`["aaa","ccc"]`))
 			Expect(hec.KubernetesResource("Secret", "test", "dex-client-opendistro").Exists()).To(BeTrue())
 		})
 	})
