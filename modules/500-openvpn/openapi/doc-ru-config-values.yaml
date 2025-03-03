@@ -142,9 +142,11 @@ properties:
     type: boolean
     default: false
     x-examples: [true, false]
-  openvpnDefaultClientCertExpiredDays:
+  defaultClientCertExpirationDays:
     description: |
       Срок действия клиентского сертификата для OpenVPN в днях. Указывает количество дней, на которое будет выпущен клиентский сертификат, сгенерированный с помощью EasyRSA.
+
+      Срок действия клиентского сертификата может быть не менее 1 дня и не более 10 лет.
 oneOf:
   - properties:
       tcpEnabled:
