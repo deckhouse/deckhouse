@@ -86,7 +86,7 @@ spec:
 {{- /* returns adjust timeout value to scrape interval / */ -}}
 {{- define "helm_lib_prometheus_target_scrape_timeout_seconds" -}}
   {{- $context := index . 0 }}  {{- /* Template context with .Values, .Chart, etc */ -}}
-  {{- $scrape_interval := (int $context.Values.global.discovery.prometheusScrapeInterval | default 30) }}
-  {{- $timeout := int (mul (float64 $scrape_interval) 0.8) }}
-  {{- print $timeout "s" -}}
+  {{- $scrape_interval := (int $context.Values.global.discovery.prometheusScrapeInterval | default 30) | float64 }}
+  {{- $timeout := int (mul $scrape_interval 0.8) }}
+  {{- printf "%ds" $timeout -}}
 {{- end }}
