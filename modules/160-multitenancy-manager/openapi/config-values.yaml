@@ -13,3 +13,15 @@ properties:
       Manually enable the high availability mode.
 
       By default, Deckhouse automatically decides whether to enable the HA mode. Click [here](../../deckhouse-configure-global.html#parameters) to learn more about the HA mode for modules.
+
+  templateLimits:
+    type: object
+    additionalProperties:
+      projectsLimit:
+        type: integer
+        minimum: 1
+        maximum: 4096
+      namespacesLimits:
+        type: integer
+        minimum: 1
+        maximum: 4096

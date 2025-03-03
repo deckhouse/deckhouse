@@ -60,11 +60,11 @@ func (p *ProjectTemplateList) DeepCopyInto(newObj *ProjectTemplateList) {
 
 type ProjectTemplate struct {
 	metav1.TypeMeta   `json:",inline"`
-	metav1.ObjectMeta `json:"metadata,omitempty" yaml:"metadata,omitempty"`
+	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec ProjectTemplateSpec `json:"spec,omitempty" yaml:"spec,omitempty"`
+	Spec ProjectTemplateSpec `json:"spec,omitempty"`
 
-	Status ProjectTemplateStatus `json:"status,omitempty" yaml:"status,omitempty"`
+	Status ProjectTemplateStatus `json:"status,omitempty"`
 }
 
 func (p *ProjectTemplate) DeepCopyObject() runtime.Object {

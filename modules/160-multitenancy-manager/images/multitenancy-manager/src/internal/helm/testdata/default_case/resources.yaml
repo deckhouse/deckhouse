@@ -1,10 +1,62 @@
 
 ---
+apiVersion: v1
+kind: Namespace
+metadata:
+  annotations:
+    key: val
+  labels:
+    extended-monitoring.deckhouse.io/enabled: ""
+    heritage: multitenancy-manager
+    key: val
+    projects.deckhouse.io/project: test
+    projects.deckhouse.io/project-template: default
+    security.deckhouse.io/pod-policy: baseline
+  name: test
+
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  annotations:
+    key: val
+  creationTimestamp: null
+  labels:
+    heritage: multitenancy-manager
+    key: val
+    projects.deckhouse.io/project: test
+    projects.deckhouse.io/project-template: default
+  name: test-test
+spec: {}
+status: {}
+
+---
 apiVersion: deckhouse.io/v1alpha1
 kind: AuthorizationRule
 metadata:
   annotations:
     key: val
+    projects.deckhouse.io/share-resource: "true"
+  labels:
+    heritage: multitenancy-manager
+    key: val
+    projects.deckhouse.io/project: test
+    projects.deckhouse.io/project-template: default
+  name: user-gmail.com
+  namespace: test-test
+spec:
+  accessLevel: Admin
+  subjects:
+  - kind: User
+    name: user@gmail.com
+
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: AuthorizationRule
+metadata:
+  annotations:
+    key: val
+    projects.deckhouse.io/share-resource: "true"
   labels:
     heritage: multitenancy-manager
     key: val
@@ -109,18 +161,3 @@ spec:
       requests:
       - cpu
       - memory
-
----
-apiVersion: v1
-kind: Namespace
-metadata:
-  annotations:
-    key: val
-  labels:
-    extended-monitoring.deckhouse.io/enabled: ""
-    heritage: multitenancy-manager
-    key: val
-    projects.deckhouse.io/project: test
-    projects.deckhouse.io/project-template: default
-    security.deckhouse.io/pod-policy: baseline
-  name: test
