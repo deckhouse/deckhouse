@@ -615,6 +615,7 @@ func (r *reconciler) handlePendingRelease(ctx context.Context, release *v1alpha1
 		return res, fmt.Errorf("apply predicted release: %w", err)
 	}
 
+	// no deckhouse restart if dryrun
 	if release.GetDryRun() {
 		return ctrl.Result{}, nil
 	}
