@@ -65,19 +65,56 @@ entries:
             - title:
                 en: Platform update
                 ru: Обновление платформы
-              url: /admin/platform-update.html
+              url: /admin/configuration/platform-update.html
             - title:
                 en: High reliability and availability
                 ru: Высокая надежность и доступность
-              url: /admin/high-reliability-and-availability.html
+              url: /admin/configuration/high-reliability-and-availability.html
             - title:
                 en: Platform resource management
                 ru: Управление ресурсами платформы
-              url: /admin/platform-resource-management.html
+              url: /admin/configuration/platform-resource-management.html
             - title:
                 en: Platform scaling and node management
                 ru: Масштабирование платформы и управление узлами
-              url: /admin/platform-scaling-and-node-management.html
+              url: /admin/configuration/platform-scaling/overwiew.html
+              folders:
+                - title:
+                    en: Control plane management
+                    ru: Управление control plane
+                  url: /admin/configuration/platform-scaling/control-plane.html
+                - title:
+                    en: Node management
+                    ru: Управление узлами
+                  url: /admin/configuration/platform-scaling/node-management.html
+            - title:
+                en: Application scaling and resource management
+                ru: Масштабирование приложений и управление ресурсами
+              folders:
+                - title:
+                    en: Scaling by metrics
+                    ru: Масштабирование по метрикам
+                  url: /admin/configuration/app-scaling/scaling-by-metrics.html
+                - title:
+                    en: Horizontal pod autoscaling
+                    ru: Горизонтальное масштабирование
+                  url: /admin/configuration/app-scaling/hpa.html
+                - title:
+                    en: Vertical pod autoscaling
+                    ru: Вертикальное масштабирование
+                  url: /admin/configuration/app-scaling/vpa.html
+                - title:
+                    en: Load distribution management
+                    ru: Управление распределением нагрузки
+                  folders:
+                    - title:
+                        en: Scheduler
+                        ru: Планировщик
+                      url: /admin/configuration/app-scaling/pod-eviction/scheduler.html
+                    - title:
+                        en: Priority classes
+                        ru: Приоритеты подов
+                      url: /admin/configuration/app-scaling/pod-eviction/priority-classes.html
             - title:
                 en: Network
                 ru: Сеть
@@ -404,6 +441,11 @@ entries:
             en: Functional specifications
             ru: Функциональные характеристики
           url: /architecture/functional.html
+          folders:
+            - title:
+                en: VPA
+                ru: VPA
+              url: /architecture/vpa.html
         - title:
             en: Table
             ru: Таблица (Мэгтона)
