@@ -156,7 +156,7 @@ apiVersions:
                 description: |
                   The list of additional tags.
 
-                  For example, you can use tags to apply firewall rules to instances. The detailed description of network tags is available in the [official documentation](https://cloud.google.com/vpc/docs/add-remove-network-tags).
+                  For example, you can use tags to apply firewall rules to instances. The detailed description of network tags is available in the [Google Cloud documentation](https://cloud.google.com/vpc/docs/add-remove-network-tags).
                 type: array
                 items:
                   type: string
@@ -165,7 +165,7 @@ apiVersions:
                 description: |
                   Additional labels.
 
-                  [More info...](https://cloud.google.com/resource-manager/docs/creating-managing-labels).
+                  For details on labels, refer to the [Google Cloud documentation](https://cloud.google.com/resource-manager/docs/creating-managing-labels).
                 x-doc-example: |
                   ```yaml
                   project: cms-production
