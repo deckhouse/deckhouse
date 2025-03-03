@@ -24,10 +24,10 @@ spec:
       status: {}
     additionalPrinterColumns:
     - jsonPath: .spec.mode
-      name: mode
+      name: Mode
       type: string
     - jsonPath: .status.actualMode
-      name: actualMode
+      name: ActualMode
       type: string
     - jsonPath: .status.conditions[?(@.type=="Ready")].status
       name: Ready
