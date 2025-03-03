@@ -26,7 +26,7 @@ spec:
         - targetLabel: "nat_instance"
           replacement: "true"
       relabelings:
-        - regex: endpoint|namespace
+        - regex: endpoint
           action: labeldrop
         - sourceLabels: [ __meta_kubernetes_pod_ready ]
           regex: "true"
