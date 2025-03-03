@@ -1,19 +1,26 @@
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
-fromImage: common/alt-p11-artifact
+fromImage: common/alt-p11
 import:
   - image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
     add: /node-collector
     to: /usr/local/bin/node-collector
     before: setup
+  - image: {{ .ModuleName }}/{{ .ImageName }}-binaries-artifact
+    add: /usr/bin/ps
+    to: /usr/bin/ps
+    before: setup
 imageSpec:
   config:
     entrypoint: [ "/usr/local/bin/node-collector" ]
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-binaries-artifact
+fromImage: common/alt-p11-artifact
+final: false
 shell:
   setup:
   - apt-get update
   - apt-get install procps -y
-  - rm /var/lib/apt/lists/ftp* -f
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 fromImage: common/src-artifact
