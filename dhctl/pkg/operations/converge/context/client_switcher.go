@@ -28,6 +28,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/lock"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/session"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/clissh"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
 )
 
@@ -174,7 +175,7 @@ func (s *KubeClientSwitcher) replaceKubeClient(convergeState *State, state map[s
 
 	log.DebugLn("private keys added for replacing kube client")
 
-	newKubeClient, err := kubernetes.ConnectToKubernetesAPI(clissh.NewNodeInterfaceWrapper(newSSHClient))
+	newKubeClient, err := kubernetes.ConnectToKubernetesAPI(ssh.NewNodeInterfaceWrapper(newSSHClient))
 	if err != nil {
 		return fmt.Errorf("failed to connect to Kubernetes API: %w", err)
 	}

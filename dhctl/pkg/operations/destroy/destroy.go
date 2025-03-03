@@ -22,6 +22,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
+
 	"github.com/google/uuid"
 
 	v1 "k8s.io/api/core/v1"
@@ -35,7 +37,6 @@ import (
 	dhctlstate "github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/terraform"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/clissh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/clissh/frontend"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/session"
 	tf "github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
@@ -90,7 +91,7 @@ func NewClusterDestroyer(params *Params) (*ClusterDestroyer, error) {
 		pec = phases.NewDefaultPhasedExecutionContext(params.OnPhaseFunc)
 	}
 
-	wrapper, ok := params.NodeInterface.(*clissh.NodeInterfaceWrapper)
+	wrapper, ok := params.NodeInterface.(*ssh.NodeInterfaceWrapper)
 	if !ok {
 		return nil, fmt.Errorf("cluster destruction requires usage of ssh node interface")
 	}

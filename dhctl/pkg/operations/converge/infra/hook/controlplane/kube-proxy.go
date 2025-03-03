@@ -18,6 +18,9 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/clissh"
+
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/yaml"
@@ -25,7 +28,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/session"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/clissh"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
 )
 
 type KubeProxyChecker struct {
@@ -82,12 +85,11 @@ func (c *KubeProxyChecker) WithSSHCredentials(input session.Input, privateKeys .
 }
 
 func (c *KubeProxyChecker) IsReady(nodeName string) (bool, error) {
-	var sshClient *clissh.Client
+	var sshClient node.SSHClient
 
 	if c.input != nil {
 		sshClient = clissh.NewClient(session.NewSession(*c.input), c.privateKeys)
 		// Avoid starting a new ssh agent
-		sshClient.InitializeNewAgent = false
 	} else {
 		sshClient = clissh.NewClientFromFlags()
 	}
@@ -98,7 +100,7 @@ func (c *KubeProxyChecker) IsReady(nodeName string) (bool, error) {
 			return false, fmt.Errorf("Not found external ip for node %s", nodeName)
 		}
 
-		sshClient.Settings.SetAvailableHosts([]session.Host{{Host: ip, Name: nodeName}})
+		sshClient.Session().SetAvailableHosts([]session.Host{{Host: ip, Name: nodeName}})
 	}
 
 	var err error
@@ -107,7 +109,7 @@ func (c *KubeProxyChecker) IsReady(nodeName string) (bool, error) {
 		return false, err
 	}
 
-	kubeCl := client.NewKubernetesClient().WithNodeInterface(clissh.NewNodeInterfaceWrapper(sshClient))
+	kubeCl := client.NewKubernetesClient().WithNodeInterface(ssh.NewNodeInterfaceWrapper(sshClient))
 	err = kubeCl.Init(client.AppKubernetesInitParams())
 	if err != nil {
 		return false, fmt.Errorf("open kubernetes connection: %v", err)
@@ -122,7 +124,7 @@ func (c *KubeProxyChecker) IsReady(nodeName string) (bool, error) {
 			kubeCl.KubeProxy.StopAll()
 		}
 
-		if wrapper, ok := kubeCl.NodeInterface.(*clissh.NodeInterfaceWrapper); ok {
+		if wrapper, ok := kubeCl.NodeInterface.(*ssh.NodeInterfaceWrapper); ok {
 			wrapper.Client().Stop()
 		}
 	}()

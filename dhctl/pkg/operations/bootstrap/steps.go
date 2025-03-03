@@ -38,6 +38,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations"
 
@@ -471,7 +473,7 @@ func RunBashiblePipeline(nodeInterface node.Interface, cfg *config.MetaConfig, n
 		})
 	})
 
-	if wrapper, ok := nodeInterface.(*clissh.NodeInterfaceWrapper); ok {
+	if wrapper, ok := nodeInterface.(*ssh.NodeInterfaceWrapper); ok {
 		cleanUpTunnel, err := setupRPPTunnel(wrapper.Client())
 		if err != nil {
 			return err

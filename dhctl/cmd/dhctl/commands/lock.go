@@ -25,7 +25,8 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/lease"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/lock"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/clissh"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/gossh"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 )
 
@@ -44,14 +45,14 @@ func DefineReleaseConvergeLockCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause
 	app.DefineKubeFlags(cmd)
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
-		sshClient, err := clissh.NewInitClientFromFlags(true)
+		sshClient, err := gossh.NewInitClientFromFlags(true)
 		if err != nil {
 			return err
 		}
 
 		kubeCl := client.NewKubernetesClient().
 			WithNodeInterface(
-				clissh.NewNodeInterfaceWrapper(sshClient),
+				ssh.NewNodeInterfaceWrapper(sshClient),
 			)
 		if err := kubeCl.Init(client.AppKubernetesInitParams()); err != nil {
 			return err

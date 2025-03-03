@@ -19,6 +19,8 @@ import (
 	"os"
 	"time"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
+
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
@@ -92,7 +94,7 @@ func NewConvergeExporter(address, path string, interval time.Duration) *Converge
 		panic(err)
 	}
 
-	kubeCl := client.NewKubernetesClient().WithNodeInterface(clissh.NewNodeInterfaceWrapper(sshClient))
+	kubeCl := client.NewKubernetesClient().WithNodeInterface(ssh.NewNodeInterfaceWrapper(sshClient))
 	if err := kubeCl.Init(client.AppKubernetesInitParams()); err != nil {
 		panic(err)
 	}

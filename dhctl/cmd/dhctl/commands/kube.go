@@ -27,7 +27,8 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/infra/hook/controlplane"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/clissh"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/gossh"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/tomb"
 )
 
@@ -87,7 +88,7 @@ func DefineWaitDeploymentReadyCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause
 		StringVar(&Name)
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
-		sshClient, err := clissh.NewInitClientFromFlags(true)
+		sshClient, err := gossh.NewInitClientFromFlags(true)
 		if err != nil {
 			return err
 		}
@@ -95,7 +96,7 @@ func DefineWaitDeploymentReadyCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause
 		err = log.Process("bootstrap", "Wait for Deckhouse to become Ready", func() error {
 			kubeCl := client.NewKubernetesClient().
 				WithNodeInterface(
-					clissh.NewNodeInterfaceWrapper(sshClient),
+					ssh.NewNodeInterfaceWrapper(sshClient),
 				)
 			// auto init
 			err = kubeCl.Init(client.AppKubernetesInitParams())

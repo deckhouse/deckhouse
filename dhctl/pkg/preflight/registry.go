@@ -29,7 +29,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/clissh"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
 )
 
 var (
@@ -53,7 +53,7 @@ func (pc *Checker) CheckRegistryAccessThroughProxy() error {
 		return nil
 	}
 
-	wrapper, ok := pc.nodeInterface.(*clissh.NodeInterfaceWrapper)
+	wrapper, ok := pc.nodeInterface.(*ssh.NodeInterfaceWrapper)
 	if !ok {
 		log.InfoLn("Checking if registry is accessible through proxy was skipped (local run)")
 		return nil

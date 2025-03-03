@@ -21,18 +21,20 @@ import (
 
 	"github.com/google/uuid"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/entity"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/commander"
 	dhctlstate "github.com/deckhouse/deckhouse/dhctl/pkg/state"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/clissh"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
 )
 
 type Params struct {
-	SSHClient     *clissh.Client
+	SSHClient     node.SSHClient
 	StateCache    dhctlstate.Cache
 	CommanderMode bool
 	CommanderUUID uuid.UUID
@@ -198,7 +200,7 @@ func (c *Checker) GetKubeClient() (*client.KubernetesClient, error) {
 		return c.KubeClient, nil
 	}
 
-	kubeCl, err := kubernetes.ConnectToKubernetesAPI(clissh.NewNodeInterfaceWrapper(c.SSHClient))
+	kubeCl, err := kubernetes.ConnectToKubernetesAPI(ssh.NewNodeInterfaceWrapper(c.SSHClient))
 	if err != nil {
 		return nil, fmt.Errorf("unable to connect to kubernetes api over ssh: %w", err)
 	}

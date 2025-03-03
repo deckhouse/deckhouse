@@ -17,7 +17,7 @@ package destroy
 import (
 	"github.com/google/uuid"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/clissh"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
 
@@ -72,7 +72,7 @@ func (g *DeckhouseDestroyer) GetKubeClient() (*client.KubernetesClient, error) {
 		return g.kubeCl, nil
 	}
 
-	kubeCl, err := kubernetes.ConnectToKubernetesAPI(clissh.NewNodeInterfaceWrapper(g.sshClient))
+	kubeCl, err := kubernetes.ConnectToKubernetesAPI(ssh.NewNodeInterfaceWrapper(g.sshClient))
 	if err != nil {
 		return nil, err
 	}

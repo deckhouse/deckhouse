@@ -31,7 +31,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	cca "github.com/deckhouse/deckhouse/dhctl/pkg/preflight/check-cloud-api"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/clissh"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
 )
 
 var (
@@ -46,7 +46,7 @@ func (pc *Checker) CheckCloudAPIAccessibility() error {
 	}
 
 	log.DebugLn("Checking if Cloud API is accessible from first master host")
-	wrapper, ok := pc.nodeInterface.(*clissh.NodeInterfaceWrapper)
+	wrapper, ok := pc.nodeInterface.(*ssh.NodeInterfaceWrapper)
 	var tun node.Tunnel
 
 	if !ok {
