@@ -154,16 +154,22 @@ type ModulePlatformRequirements struct {
 }
 
 type ModuleProperties struct {
-	Weight           uint32              `json:"weight,omitempty"`
-	Source           string              `json:"source,omitempty"`
-	ReleaseChannel   string              `json:"releaseChannel,omitempty"`
-	Stage            string              `json:"stage,omitempty"`
-	Namespace        string              `json:"namespace,omitempty"`
-	Subsystems       []string            `json:"subsystems,omitempty"`
-	Version          string              `json:"version,omitempty"`
-	UpdatePolicy     string              `json:"updatePolicy,omitempty"`
-	AvailableSources []string            `json:"availableSources,omitempty"`
-	Requirements     *ModuleRequirements `json:"requirements,omitempty" yaml:"requirements,omitempty"`
+	Weight           uint32                `json:"weight,omitempty"`
+	Source           string                `json:"source,omitempty"`
+	ReleaseChannel   string                `json:"releaseChannel,omitempty"`
+	Stage            string                `json:"stage,omitempty"`
+	Namespace        string                `json:"namespace,omitempty"`
+	Subsystems       []string              `json:"subsystems,omitempty"`
+	Version          string                `json:"version,omitempty"`
+	UpdatePolicy     string                `json:"updatePolicy,omitempty"`
+	AvailableSources []string              `json:"availableSources,omitempty"`
+	Requirements     *ModuleRequirements   `json:"requirements,omitempty" yaml:"requirements,omitempty"`
+	DisableOptions   *ModuleDisableOptions `json:"disableOptions,omitempty" yaml:"disableOptions,omitempty"`
+}
+
+type ModuleDisableOptions struct {
+	Confirmation bool   `json:"confirmation" yaml:"confirmation"`
+	Message      string `json:"message" yaml:"message"`
 }
 
 type ModuleStatus struct {
