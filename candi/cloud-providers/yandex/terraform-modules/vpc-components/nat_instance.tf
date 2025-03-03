@@ -35,7 +35,7 @@ locals {
   # if user set internal subnet id for nat instance get cidr from its subnet
   user_internal_subnet_cidr = var.nat_instance_internal_subnet_id == null ? null : data.yandex_vpc_subnet.user_internal_subnet[0].v4_cidr_blocks[0]
 
-  nat_instance_internal_cidr = coalesce(var.nat_instance_internal_subnet_cidr, local.user_internal_subnet_cidr)
+  nat_instance_internal_cidr = local.is_with_nat_instance ? (coalesce(var.nat_instance_internal_subnet_cidr, local.user_internal_subnet_cidr)) : null
 
   # but if user pass nat instance internal address directly (it for backward compatibility) use passed address,
   # else get 10 host address from cidr which got in previous step
