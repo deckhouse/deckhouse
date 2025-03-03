@@ -348,7 +348,7 @@ function run-test() {
 
   echo "Bootstrap payload: ${payload}"
 
-  response=$(curl -s -X POST  --retry 3 --retry-delay 5 --retry-connrefused --retry-all-errors \
+  response=$(curl -s -X POST  \
     "https://${COMMANDER_HOST}/api/v1/clusters" \
     -H 'accept: application/json' \
     -H "X-Auth-Token: ${COMMANDER_TOKEN}" \
@@ -366,9 +366,8 @@ function run-test() {
     return 1
   fi
 
-  # Extract id and handle errors
   cluster_id=$(jq -r '.id' <<< "$response")
-  if [[ $? -ne 0 ]]; then
+  if [[ $cluster_id == "null" ]]; then
     echo "Error: jq failed to extract cluster ID" >&2
      echo "$response" >&2
     return 1
