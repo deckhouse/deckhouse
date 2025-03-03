@@ -83,9 +83,9 @@ apiVersions:
                   `false` — для узлов создаются статические публичные адреса, они же используются для One-to-One NAT.
               additionalNetworkTags:
                 description: |
-                  Список дополнительных тегов.
+                  Список дополнительных сетевых тегов (network tags).
 
-                  К примеру, теги позволяют применять к инстансам firewall-правила. Подробно про network tags можно прочитать [в документации Google Cloud](https://cloud.google.com/vpc/docs/add-remove-network-tags).
+                  Сетевые теги позволяют применять к инстансам firewall-правила. Подробно о сетевых тегах можно прочитать [в документации Google Cloud](https://cloud.google.com/vpc/docs/add-remove-network-tags).
               additionalLabels:
                 description: |
                   Список дополнительных лейблов.
