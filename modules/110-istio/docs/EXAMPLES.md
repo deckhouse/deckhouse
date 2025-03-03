@@ -417,7 +417,7 @@ Examples:
     - {}
   ```
 
-### Deny all for the foo namespace
+### Deny all actions for the foo namespace
 
 There are two ways you can do that:
 
@@ -643,7 +643,7 @@ Unlike the `InitContainer` mode, the redirection setting is done at the moment o
   * The other ones are additional, they handle namespaces or Pods with explicitly configured versions (`istio.io/rev: v1x21` label for namespace or Pod). They are configured by the [additionalVersions](configuration.html#parameters-additionalversions) parameter.
 * Istio declares backward compatibility between data-plane and control-plane in the range of two minor versions:
 ![Istio data-plane and control-plane compatibility](https://istio.io/latest/blog/2021/extended-support/extended_support.png)
-* Upgrade algorithm (i.e. to `1.21`):
+* Upgrade algorithm (i.e. from `1.19` to `1.21`):
   * Configure additional version in the [additionalVersions](configuration.html#parameters-additionalversions) parameter (`additionalVersions: ["1.21"]`).
   * Wait for the corresponding pod `istiod-v1x21-xxx-yyy` to appear in `d8-istio` namespace.
   * For every application Namespase with istio enabled:
@@ -653,10 +653,10 @@ Unlike the `InitContainer` mode, the redirection setting is done at the moment o
   * Make sure, the old `istiod` Pod has gone.
   * Change application namespace labels to `istio-injection: enabled`.
 
-To find all Pods with old Istio revision, execute the following command:
+To find all Pods with old Istio revision (in the example — version 19), execute the command:
 
 ```shell
-kubectl get pods -A -o json | jq --arg revision "v1x21" \
+kubectl get pods -A -o json | jq --arg revision "v1x19" \
   '.items[] | select(.metadata.annotations."sidecar.istio.io/status" // "{}" | fromjson |
    .revision == $revision) | .metadata.namespace + "/" + .metadata.name'
 ```
