@@ -13,6 +13,11 @@ import (
 	"encoding/json"
 	"encoding/pem"
 	"fmt"
+	"net/http"
+	"os"
+	"strings"
+	"time"
+
 	"github.com/go-jose/go-jose/v3"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -20,10 +25,6 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
-	"net/http"
-	"os"
-	"strings"
-	"time"
 )
 
 type Exporter struct {
@@ -46,9 +47,25 @@ type Exporter struct {
 	publicServiceInformer                cache.SharedInformer // for federation
 	remoteClustersPublicMetadataInformer cache.SharedInformer
 	remoteAuthnKeypair                   cache.SharedInformer
+	inlet                                string
+	clusterDomain                        string
+	clusterUUID                          string
+	multicluserNetworkName               string
+	multiclusterAPIHost                  string
+	federationEnabled                    string
 }
 
 func New(namespace string, labelSelector string) (*Exporter, error) {
+
+	// Get enviroments
+
+	inlet := os.Getenv("INLET")
+	clusterDomain := os.Getenv("CLUSTER_DOMAIN")
+	clusterUUID := os.Getenv("CLUSTER_UUID")
+	multicluserNetworkName := os.Getenv("MULTICLUSTER_NETWORK_NAME")
+	multiclusterAPIHost := os.Getenv("MULTICLUSTER_API_HOST")
+	federationEnabled := os.Getenv("FEDERATION_ENABLED")
+
 	// Create config for Kubernetes-client
 	config, err := rest.InClusterConfig()
 	if err != nil {
@@ -143,6 +160,12 @@ func New(namespace string, labelSelector string) (*Exporter, error) {
 			lwCertCAConfigMap:               lwCertCAConfigMap,
 			lwdRemoteClustersPublicMetadata: lwRemoteClustersPublicMetadata,
 			lwRemoteAuthnKeypair:            lwRemoteAuthnKeypair,
+			inlet:                           inlet,
+			clusterDomain:                   clusterDomain,
+			clusterUUID:                     clusterUUID,
+			multicluserNetworkName:          multicluserNetworkName,
+			multiclusterAPIHost:             multiclusterAPIHost,
+			federationEnabled:               federationEnabled,
 		},
 		nil
 }
@@ -263,14 +286,14 @@ func extractNodePortInfo(service *v1.Service, pods *v1.PodList, nodes *v1.NodeLi
 		return nil, fmt.Errorf("no tls port found")
 	}
 
-	podNodes := map[string]struct{}{}
+	nodesWithPods := map[string]struct{}{}
 	for _, pod := range pods.Items {
-		podNodes[pod.Spec.NodeName] = struct{}{}
+		nodesWithPods[pod.Spec.NodeName] = struct{}{}
 	}
 
 	var gateways []IngressGateway
 	for _, node := range nodes.Items {
-		if _, exists := podNodes[node.Name]; !exists {
+		if _, exists := nodesWithPods[node.Name]; !exists {
 			continue
 		}
 
@@ -332,9 +355,7 @@ func extractIngressGatewaysFromCM(cm v1.ConfigMap) ([]IngressGateway, error) {
 
 // GetIngressGateways Main function to get all ingress gateways
 func (exp *Exporter) GetIngressGateways() ([]IngressGateway, error) {
-
-	inlet := os.Getenv("INLET")
-
+	inlet := exp.inlet
 	//debug
 	fmt.Printf("INLET=%s\n", inlet)
 
@@ -412,7 +433,7 @@ func (exp *Exporter) GetIngressGateways() ([]IngressGateway, error) {
 // GetPublicServices main function for federation to get public services
 func (exp *Exporter) GetPublicServices() ([]PublicServices, error) {
 	services := exp.publicServiceInformer.GetStore().List()
-	clusterDomain := os.Getenv("CLUSTER_DOMAIN")
+	clusterDomain := exp.clusterDomain
 	var result []PublicServices
 
 	for _, svc := range services {
@@ -586,7 +607,7 @@ func (exp *Exporter) CheckAuthn(header http.Header, scope string) error {
 	}
 
 	// Check JWT
-	expectedUUID := os.Getenv("CLUSTER_UUID")
+	expectedUUID := exp.clusterUUID
 	if payload.Aud != expectedUUID {
 		return fmt.Errorf("JWT is signed for wrong destination cluster. Expected: %s, Got: %s", expectedUUID, payload.Aud)
 	}
@@ -633,12 +654,12 @@ func (exp *Exporter) RenderMulticlusterPrivateMetadataJSON() string {
 
 	pm.IngressGateways = &ingressGateways
 
-	pm.NetworkName = os.Getenv("MULTICLUSTER_NETWORK_NAME")
+	pm.NetworkName = exp.multicluserNetworkName
 	if len(pm.NetworkName) == 0 {
 		panic("Error reading MULTICLUSTER_NETWORK_NAME from env")
 	}
 
-	pm.APIHost = os.Getenv("MULTICLUSTER_API_HOST")
+	pm.APIHost = exp.multiclusterAPIHost
 	if len(pm.APIHost) == 0 {
 		panic("Error reading MULTICLUSTER_API_HOST from env")
 	}
@@ -660,7 +681,7 @@ func (exp *Exporter) RenderFederationPrivateMetadataJSON() string {
 
 	pm.IngressGateways = &ingressGateways
 
-	if os.Getenv("FEDERATION_ENABLED") == "true" {
+	if exp.federationEnabled == "true" {
 		services, err := exp.GetPublicServices()
 		if err != nil {
 			fmt.Printf("failed to get public services: %v", err)
@@ -676,7 +697,7 @@ func (exp *Exporter) RenderFederationPrivateMetadataJSON() string {
 }
 
 func (exp *Exporter) RenderPublicMetadataJSON() string {
-	clusterUUID := os.Getenv("CLUSTER_UUID")
+	clusterUUID := exp.clusterUUID
 	if len(clusterUUID) == 0 {
 		panic("Error reading cluster UUID")
 	}
