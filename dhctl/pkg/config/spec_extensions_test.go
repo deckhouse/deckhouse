@@ -24,9 +24,9 @@ import (
 )
 
 func TestRulesExtension_sshPrivateKey(t *testing.T) {
-	newStore := newSchemaStore(false, []string{"/tmp"})
+	newStore := newSchemaStore([]string{"/tmp"})
 
-	err := newStore.upload(false, []byte(`
+	err := newStore.upload([]byte(`
 kind: TestKind
 apiVersions:
 - apiVersion: test

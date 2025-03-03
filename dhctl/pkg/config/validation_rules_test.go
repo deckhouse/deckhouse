@@ -337,7 +337,7 @@ masterNodeGroup:
 }
 
 func testSchemaStore(t *testing.T) *SchemaStore {
-	schemaStore := newSchemaStore(false, []string{"/tmp"})
+	schemaStore := newSchemaStore([]string{"/tmp"})
 
 	clusterConfigSchema := []byte(`
 kind: ClusterConfiguration
@@ -454,10 +454,10 @@ apiVersions:
              type: string
 `)
 
-	require.NoError(t, schemaStore.upload(false, clusterConfigSchema))
-	require.NoError(t, schemaStore.upload(false, moduleConfigSchema))
-	require.NoError(t, schemaStore.upload(false, nodeGroupConfigSchema))
-	require.NoError(t, schemaStore.upload(false, instanceClassConfigSchema))
-	require.NoError(t, schemaStore.upload(false, unsafeObjectSchema))
+	require.NoError(t, schemaStore.upload(clusterConfigSchema))
+	require.NoError(t, schemaStore.upload(moduleConfigSchema))
+	require.NoError(t, schemaStore.upload(nodeGroupConfigSchema))
+	require.NoError(t, schemaStore.upload(instanceClassConfigSchema))
+	require.NoError(t, schemaStore.upload(unsafeObjectSchema))
 	return schemaStore
 }

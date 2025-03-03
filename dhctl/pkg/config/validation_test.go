@@ -84,7 +84,7 @@ func TestValidateInitConfiguration(t *testing.T) {
 	t.Parallel()
 
 	const schemasDir = "./../../../candi/openapi"
-	newStore := newSchemaStore(false,[]string{schemasDir})
+	newStore := newSchemaStore([]string{schemasDir})
 	newStore.moduleConfigsCache["deckhouse"] = &spec.Schema{}
 	newStore.modulesCache["deckhouse"] = struct{}{}
 
@@ -187,7 +187,7 @@ func TestValidateClusterConfiguration(t *testing.T) {
 	t.Parallel()
 
 	const schemasDir = "./../../../candi/openapi"
-	newStore := newSchemaStore(false,[]string{schemasDir})
+	newStore := newSchemaStore([]string{schemasDir})
 
 	tests := map[string]struct {
 		config      string
@@ -284,7 +284,7 @@ func TestValidateProviderSpecificClusterConfiguration(t *testing.T) {
 	t.Parallel()
 
 	const schemasDir = "./../../../candi/cloud-providers"
-	newStore := newSchemaStore(false,[]string{schemasDir})
+	newStore := newSchemaStore([]string{schemasDir})
 
 	tests := map[string]struct {
 		config        string
@@ -474,7 +474,7 @@ func TestValidateStaticClusterConfiguration(t *testing.T) {
 	t.Parallel()
 
 	const schemasDir = "./../../../candi/openapi"
-	newStore := newSchemaStore(false,[]string{schemasDir})
+	newStore := newSchemaStore([]string{schemasDir})
 
 	tests := map[string]struct {
 		config      string
