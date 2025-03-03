@@ -30,13 +30,13 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/lock"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/clissh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
 )
 
 // TODO(remove-global-app): Support all needed parameters in Params, remove usage of app.*
 type Params struct {
-	SSHClient  *ssh.Client
+	SSHClient  *clissh.Client
 	KubeClient *client.KubernetesClient // optional
 
 	OnPhaseFunc            phases.DefaultOnPhaseFunc
@@ -115,7 +115,7 @@ func (c *Converger) Converge(ctx context.Context) (*ConvergeResult, error) {
 			return nil, fmt.Errorf("Not enough flags were passed to perform the operation.\nUse dhctl converge --help to get available flags.\nSsh host is not provided. Need to pass --ssh-host, or specify SSHHost manifest in the --connection-config file")
 		}
 
-		kubeCl, err = kubernetes.ConnectToKubernetesAPI(ssh.NewNodeInterfaceWrapper(c.SSHClient))
+		kubeCl, err = kubernetes.ConnectToKubernetesAPI(clissh.NewNodeInterfaceWrapper(c.SSHClient))
 		if err != nil {
 			return nil, fmt.Errorf("unable to connect to Kubernetes over ssh tunnel: %w", err)
 		}
@@ -243,13 +243,13 @@ func (c *Converger) AutoConverge() error {
 	if c.KubeClient != nil {
 		kubeCl = c.KubeClient
 	} else {
-		var sshClient *ssh.Client
-		sshClient, err = ssh.NewInitClientFromFlags(false)
+		var sshClient *clissh.Client
+		sshClient, err = clissh.NewInitClientFromFlags(false)
 		if err != nil {
 			return err
 		}
 
-		kubeCl = client.NewKubernetesClient().WithNodeInterface(ssh.NewNodeInterfaceWrapper(sshClient))
+		kubeCl = client.NewKubernetesClient().WithNodeInterface(clissh.NewNodeInterfaceWrapper(sshClient))
 		if err := kubeCl.Init(client.AppKubernetesInitParams()); err != nil {
 			return err
 		}

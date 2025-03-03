@@ -22,7 +22,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/bootstrap"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/clissh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
 )
 
@@ -36,13 +36,13 @@ func DefineBootstrapInstallDeckhouseCommand(cmd *kingpin.CmdClause) *kingpin.Cmd
 	app.DefineDeckhouseInstallFlags(cmd)
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
-		var sshClient *ssh.Client
+		var sshClient *clissh.Client
 		if len(app.SSHHosts) != 0 {
-			sshClient = ssh.NewClientFromFlags()
+			sshClient = clissh.NewClientFromFlags()
 		}
 
 		bootstraper := bootstrap.NewClusterBootstrapper(&bootstrap.Params{
-			NodeInterface:    ssh.NewNodeInterfaceWrapper(sshClient),
+			NodeInterface:    clissh.NewNodeInterfaceWrapper(sshClient),
 			TerraformContext: terraform.NewTerraformContext(),
 		})
 		return bootstraper.InstallDeckhouse()
@@ -58,13 +58,13 @@ func DefineBootstrapExecuteBashibleCommand(cmd *kingpin.CmdClause) *kingpin.CmdC
 	app.DefineBashibleBundleFlags(cmd)
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
-		sshClient, err := ssh.NewClientFromFlagsWithHosts()
+		sshClient, err := clissh.NewClientFromFlagsWithHosts()
 		if err != nil {
 			return fmt.Errorf("unable to create ssh-client: %w", err)
 		}
 
 		bootstraper := bootstrap.NewClusterBootstrapper(&bootstrap.Params{
-			NodeInterface:    ssh.NewNodeInterfaceWrapper(sshClient),
+			NodeInterface:    clissh.NewNodeInterfaceWrapper(sshClient),
 			TerraformContext: terraform.NewTerraformContext(),
 		})
 		return bootstraper.ExecuteBashible()
@@ -81,13 +81,13 @@ func DefineCreateResourcesCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 	app.DefineKubeFlags(cmd)
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
-		var sshClient *ssh.Client
+		var sshClient *clissh.Client
 		if len(app.SSHHosts) != 0 {
-			sshClient = ssh.NewClientFromFlags()
+			sshClient = clissh.NewClientFromFlags()
 		}
 
 		bootstraper := bootstrap.NewClusterBootstrapper(&bootstrap.Params{
-			NodeInterface:    ssh.NewNodeInterfaceWrapper(sshClient),
+			NodeInterface:    clissh.NewNodeInterfaceWrapper(sshClient),
 			TerraformContext: terraform.NewTerraformContext(),
 		})
 		return bootstraper.CreateResources()
@@ -105,9 +105,9 @@ func DefineBootstrapAbortCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 	app.DefineAbortFlags(cmd)
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
-		sshClient := ssh.NewClientFromFlags()
+		sshClient := clissh.NewClientFromFlags()
 		bootstraper := bootstrap.NewClusterBootstrapper(&bootstrap.Params{
-			NodeInterface:    ssh.NewNodeInterfaceWrapper(sshClient),
+			NodeInterface:    clissh.NewNodeInterfaceWrapper(sshClient),
 			TerraformContext: terraform.NewTerraformContext(),
 		})
 		return bootstraper.Abort(app.ForceAbortFromCache)
@@ -137,13 +137,13 @@ func DefineExecPostBootstrapScript(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 	app.DefinePostBootstrapScriptFlags(cmd)
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
-		sshClient, err := ssh.NewClientFromFlagsWithHosts()
+		sshClient, err := clissh.NewClientFromFlagsWithHosts()
 		if err != nil {
 			return fmt.Errorf("unable to create ssh-client: %w", err)
 		}
 
 		bootstraper := bootstrap.NewClusterBootstrapper(&bootstrap.Params{
-			NodeInterface:    ssh.NewNodeInterfaceWrapper(sshClient),
+			NodeInterface:    clissh.NewNodeInterfaceWrapper(sshClient),
 			TerraformContext: terraform.NewTerraformContext(),
 		})
 		return bootstraper.ExecPostBootstrap()

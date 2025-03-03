@@ -20,6 +20,8 @@ import (
 	"reflect"
 	"time"
 
+	gossh "github.com/deckhouse/deckhouse/dhctl/pkg/system/node/gossh"
+
 	"github.com/google/uuid"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
@@ -36,9 +38,9 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/clissh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/local"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh/session"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/session"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/template"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terminal"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
@@ -195,12 +197,12 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 			log.DebugLn("Hosts empty and static cluster. Use local interface")
 			b.Params.NodeInterface = local.NewNodeInterface()
 		} else {
-			sshClient := ssh.NewClientFromFlags()
-			if _, err := sshClient.Start(); err != nil {
+			sshClient := gossh.NewClientFromFlags()
+			if err := sshClient.Start(); err != nil {
 				return fmt.Errorf("unable to start ssh client: %w", err)
 			}
 			log.DebugF("Hosts is %v empty; static cluster is %v. Use ssh", len(app.SSHHosts), metaConfig.IsStatic())
-			b.Params.NodeInterface = ssh.NewNodeInterfaceWrapper(sshClient)
+			b.Params.NodeInterface = gossh.NewNodeInterfaceWrapper(sshClient)
 		}
 	}
 
@@ -326,13 +328,13 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 			deckhouseInstallConfig.CloudDiscovery = baseOutputs.CloudDiscovery
 			deckhouseInstallConfig.TerraformState = baseOutputs.TerraformState
 
-			if wrapper, ok := b.NodeInterface.(*ssh.NodeInterfaceWrapper); ok {
+			if wrapper, ok := b.NodeInterface.(*clissh.NodeInterfaceWrapper); ok {
 				sshClient := wrapper.Client()
 				if baseOutputs.BastionHost != "" {
-					sshClient.Settings.BastionHost = baseOutputs.BastionHost
+					sshClient.Session().BastionHost = baseOutputs.BastionHost
 					SaveBastionHostToCache(baseOutputs.BastionHost)
 				}
-				sshClient.Settings.SetAvailableHosts([]session.Host{{Host: masterOutputs.MasterIPForSSH, Name: masterNodeName}})
+				sshClient.Session().SetAvailableHosts([]session.Host{{Host: masterOutputs.MasterIPForSSH, Name: masterNodeName}})
 			}
 
 			nodeIP = masterOutputs.NodeInternalIP
@@ -359,14 +361,14 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 		_ = json.Unmarshal(metaConfig.ClusterConfig["static"], &static)
 		nodeIP = static.NodeIP
 
-		if wrapper, ok := b.NodeInterface.(*ssh.NodeInterfaceWrapper); ok {
+		if wrapper, ok := b.NodeInterface.(*clissh.NodeInterfaceWrapper); ok {
 			sshClient := wrapper.Client()
-			if sshClient.Settings.BastionHost != "" {
-				SaveBastionHostToCache(sshClient.Settings.BastionHost)
+			if sshClient.Session().BastionHost != "" {
+				SaveBastionHostToCache(sshClient.Session().BastionHost)
 			}
 
 			SaveMasterHostsToCache(map[string]string{
-				"first-master": sshClient.Settings.Host(),
+				"first-master": sshClient.Session().Host(),
 			})
 		}
 	}
@@ -390,7 +392,7 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 		return nil
 	}
 
-	if wrapper, ok := b.NodeInterface.(*ssh.NodeInterfaceWrapper); ok {
+	if wrapper, ok := b.NodeInterface.(*clissh.NodeInterfaceWrapper); ok {
 		if err := WaitForSSHConnectionOnMaster(wrapper.Client()); err != nil {
 			return fmt.Errorf("failed to wait for SSH connection on master: %v", err)
 		}
@@ -472,7 +474,7 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 		return nil
 	}
 
-	sshNodeInterfaceWrapper, ok := b.NodeInterface.(*ssh.NodeInterfaceWrapper)
+	sshNodeInterfaceWrapper, ok := b.NodeInterface.(*clissh.NodeInterfaceWrapper)
 	if ok && app.PostBootstrapScriptPath != "" {
 		postScriptExecutor := NewPostBootstrapScriptExecutor(sshNodeInterfaceWrapper.Client(), app.PostBootstrapScriptPath, bootstrapState).
 			WithTimeout(app.PostBootstrapScriptTimeout)
@@ -509,9 +511,9 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 
 	if metaConfig.ClusterType == config.CloudClusterType {
 		_ = log.Process("common", "Kubernetes Master Node addresses for SSH", func() error {
-			wrapper := b.NodeInterface.(*ssh.NodeInterfaceWrapper)
+			wrapper := b.NodeInterface.(*clissh.NodeInterfaceWrapper)
 			for nodeName, address := range masterAddressesForSSH {
-				fakeSession := wrapper.Client().Settings.Copy()
+				fakeSession := wrapper.Client().Session().Copy()
 				fakeSession.SetAvailableHosts([]session.Host{{Host: address, Name: nodeName}})
 				log.InfoF("%s | %s\n", nodeName, fakeSession.String())
 			}

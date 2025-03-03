@@ -24,7 +24,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/clissh"
 )
 
 type testState struct{}
@@ -209,7 +209,7 @@ deckhouse:
 
 		bootstrapState := &testState{}
 
-		preflightChecker := NewChecker(ssh.NewNodeInterfaceWrapper(&ssh.Client{}), installer, metaConfig, bootstrapState)
+		preflightChecker := NewChecker(clissh.NewNodeInterfaceWrapper(&clissh.Client{}), installer, metaConfig, bootstrapState)
 
 		err = preflightChecker.CheckRegistryAccessThroughProxy()
 		if test.skipped {
