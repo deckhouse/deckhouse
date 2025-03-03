@@ -14,7 +14,7 @@ kind: VerticalPodAutoscaler
 metadata:
   name: {{ .Chart.Name }}
   namespace: kube-system
-  {{- include "helm_lib_module_labels" (list . (dict "app" "node-local-dns" "workload-resource-policy.deckhouse.io" "every-node")) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "node-local-dns")) | nindent 2 }}
 spec:
   targetRef:
     apiVersion: apps/v1

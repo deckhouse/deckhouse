@@ -10,8 +10,9 @@ import:
   add: /src/kube-apiserver-healthcheck
   to: /usr/local/bin/kube-apiserver-healthcheck
   before: setup
-docker:
-  ENTRYPOINT: ["/usr/local/bin/kube-apiserver-healthcheck"]
+imageSpec:
+  config:
+    entrypoint: ["/usr/local/bin/kube-apiserver-healthcheck"]
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
 from: {{ $.Images.BASE_GOLANG_23_ALPINE }}

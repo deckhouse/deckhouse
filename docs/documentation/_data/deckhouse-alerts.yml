@@ -1671,6 +1671,31 @@ alerts:
         etcd database size is approaching the limit.
       severity: "3"
       markupFormat: markdown
+    - name: D8KubernetesStaleTokensDetected
+      sourceFile: modules/040-control-plane-manager/monitoring/prometheus-rules/control-plane-manager.yaml
+      moduleUrl: 040-control-plane-manager
+      module: control-plane-manager
+      edition: ce
+      description: |-
+        This issue may occur if an application reads the token only at startup and does not reload it periodically. As a result, an outdated token might be used, leading to security breach and authentication failures.
+
+        **Recommended actions:**
+
+        - Ensure your application is configured to periodically reload the token from the file system.
+        - Verify that you are using an up-to-date client library that supports automatic token rotation.
+
+        Note that currently these tokens are not blocked because the `--service-account-extend-token-expiration` flag is enabled by default (`Default: true`). With this flag enabled, admission-injected tokens are extended up to 1 year during token generation to facilitate a safe transition from legacy tokens to the bound service account token feature, ignoring the value of `service-account-max-token-expiration`.
+
+        **For further investigation:**
+        Log into the server with label `instance={{ $labels.instance }}` and inspect the audit log using the following command:
+
+        ```bash
+        jq 'select(.annotations["authentication.k8s.io/stale-token"]) | {auditID, stageTimestamp, requestURI, verb, user: .user.username, stale_token: .annotations["authentication.k8s.io/stale-token"]}' /var/log/kube-audit/audit.log
+        ```
+      summary: |
+        Stale service account tokens detected.
+      severity: "8"
+      markupFormat: markdown
     - name: D8KubernetesVersionIsDeprecated
       sourceFile: modules/040-control-plane-manager/monitoring/prometheus-rules/control-plane-manager.yaml
       moduleUrl: 040-control-plane-manager
@@ -1679,7 +1704,9 @@ alerts:
       description: |-
         The current Kubernetes version `{{ $labels.k8s_version }}` has been deprecated, and support for it will be removed in upcoming releases.
 
-        To resolve this issue, migrate to Kubernetes version `1.28` or later.
+        Please migrate to the next kubernetes version (at least 1.29)
+
+        Check how to update the Kubernetes version in the cluster here - https://deckhouse.io/documentation/deckhouse-faq.html#how-do-i-upgrade-the-kubernetes-version-in-a-cluster
 
         Refer to the [Kubernetes upgrade guide](https://deckhouse.io/documentation/deckhouse-faq.html#how-do-i-upgrade-the-kubernetes-version-in-a-cluster) for instructions.
       summary: |
@@ -5426,6 +5453,16 @@ alerts:
       summary: |
         At least one object violates the configured cluster security policies.
       severity: "7"
+      markupFormat: markdown
+    - name: StandbyHolderDeploymentReplicasUnavailable
+      sourceFile: modules/040-node-manager/monitoring/prometheus-rules/standby-deployment-unavailable.yaml
+      moduleUrl: 040-node-manager
+      module: node-manager
+      edition: ce
+      description: Deckhouse has detected that there are no available replicas remaining in Deployment `standby-holder-{{$labels.node_group_name}}` in namespace `d8-cloud-instance-manager`.
+      summary: |
+        No available replicas remaining in Deployment standby-holder-{{$labels.node_group_name}} in namespace d8-cloud-instance-manager.
+      severity: "5"
       markupFormat: markdown
     - name: StatefulSetAuthenticationFailure
       sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-checks.tpl

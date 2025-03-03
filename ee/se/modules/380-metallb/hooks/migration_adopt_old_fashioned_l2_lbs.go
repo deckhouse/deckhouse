@@ -24,7 +24,7 @@ import (
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	// Depends on 'migration-auto-generating-l2-mlbc.go' hook, we need the ipAddressPoolToMLBCMap here
 	OnBeforeHelm: &go_hook.OrderedConfig{Order: 10},
-	Queue:        "/modules/metallb/services-migration",
+	Queue:        "/modules/metallb/discovery",
 }, dependency.WithExternalDependencies(discoveryServicesForMigrate))
 
 func discoveryServicesForMigrate(input *go_hook.HookInput, dc dependency.Container) error {
@@ -50,6 +50,7 @@ func discoveryServicesForMigrate(input *go_hook.HookInput, dc dependency.Contain
 	}
 	if moduleConfig.Spec.Version >= 2 {
 		input.Values.Set("metallb.internal.migrationOfOldFashionedLBsAdoptionComplete", true)
+		input.Logger.Info("processing skipped", "ModuleConfig version", moduleConfig.Spec.Version)
 		return nil
 	}
 	for _, pool := range moduleConfig.Spec.Settings.AddressPools {
@@ -143,6 +144,7 @@ func discoveryServicesForMigrate(input *go_hook.HookInput, dc dependency.Contain
 		if err != nil {
 			return fmt.Errorf("error to apply patch to Service %s: %w", service.Name, err)
 		}
+		input.Logger.Info("annotations added", "Service", service.Name)
 	}
 	input.Values.Set("metallb.internal.migrationOfOldFashionedLBsAdoptionComplete", true)
 	return nil

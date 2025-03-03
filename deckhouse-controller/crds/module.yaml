@@ -59,9 +59,6 @@ spec:
                 updatePolicy:
                   type: string
                   description: Module update policy.
-                description:
-                  type: string
-                  description: Module description.
                 requirements:
                   type: object
                   x-kubernetes-preserve-unknown-fields: true
@@ -99,10 +96,6 @@ spec:
                     - Conflict
                     - Ready
                     - Error
-                    # TODO(ipaqsa): delete after 1.68
-                    - Pending
-                    - Enqueued
-                    - NotInstalled
                 hooksState:
                   type: string
                   description: Hooks status report.

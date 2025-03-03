@@ -1,0 +1,70 @@
+linters-settings:
+  container:
+    exclude-rules:
+      read-only-root-filesystem:
+        - kind: DaemonSet
+          name: agent
+          container: apply-sysctl-overwrites
+        - kind: DaemonSet
+          name: agent
+          container: cilium-agent
+        - kind: DaemonSet
+          name: agent
+          container: clean-cilium-state
+        - kind: DaemonSet
+          name: agent
+          container: clearing-unnecessary-iptables
+        - kind: DaemonSet
+          name: agent
+          container: config
+        - kind: DaemonSet
+          name: agent
+          container: install-cni-binaries
+        - kind: DaemonSet
+          name: agent
+          container: mount-bpf-fs
+        - kind: DaemonSet
+          name: agent
+          container: mount-cgroup
+      liveness-probe:
+        - kind: DaemonSet
+          name: agent
+          container: kube-rbac-proxy
+        - kind: DaemonSet
+          name: safe-agent-updater
+          container: pause-check-linux-kernel
+        - kind: DaemonSet
+          name: safe-agent-updater
+          container: pause-cilium
+        - kind: DaemonSet
+          name: safe-agent-updater
+          container: pause-kube-rbac-proxy
+        - kind: Deployment
+          name: operator
+          container: kube-rbac-proxy
+      readiness-probe:
+        - kind: DaemonSet
+          name: agent
+          container: kube-rbac-proxy
+        - kind: DaemonSet
+          name: safe-agent-updater
+          container: pause-check-linux-kernel
+        - kind: DaemonSet
+          name: safe-agent-updater
+          container: pause-cilium
+        - kind: DaemonSet
+          name: safe-agent-updater
+          container: pause-kube-rbac-proxy
+        - kind: Deployment
+          name: operator
+          container: kube-rbac-proxy
+        - kind: Deployment
+          name: operator
+          container: operator
+  templates:
+    exclude-rules:
+      pdb:
+        - kind: DaemonSet
+          name: agent
+        - kind: DaemonSet
+          name: safe-agent-updater

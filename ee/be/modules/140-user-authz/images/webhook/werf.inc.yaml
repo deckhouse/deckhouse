@@ -10,8 +10,9 @@ import:
     add: /src/healthcheck
     to: /healthcheck
     before: setup
-docker:
-  ENTRYPOINT: [ "/webhook" ]
+imageSpec:
+  config:
+    entrypoint: [ "/webhook" ]
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-user-authz-webhook-src-artifact
 fromImage: common/src-artifact

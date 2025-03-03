@@ -249,6 +249,11 @@ function wait_cluster_ready() {
   if [[ $test_failed == "true" ]] ; then
     return 1
   fi
+
+  if [[ $CIS_ENABLED == "true" ]]; then
+    chmod 755 /deckhouse/testing/cloud_layouts/script.d/wait_cluster_ready/test_cis_eks.sh
+    /deckhouse/testing/cloud_layouts/script.d/wait_cluster_ready/test_cis_eks.sh
+  fi
 }
 
 function destroy_eks_infra() {
@@ -286,7 +291,6 @@ function chmod_dirs_for_cleanup() {
     chmod -f -R 777 /tmp || true
   fi
 }
-
 
 function main() {
    >&2 echo "Start cloud test script"

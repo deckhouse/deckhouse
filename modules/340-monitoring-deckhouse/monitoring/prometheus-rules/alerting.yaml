@@ -252,7 +252,7 @@
         To resolve this issue, update ModuleConfig `{{ $labels.name }}` to the latest version.
       
   - alert: ModuleHasDeprecatedUpdatePolicy
-    expr: max by (moduleName) (d8_deprecated_update_policy) >= 1
+    expr: max by (moduleName, updatePolicy) (d8_deprecated_update_policy) >= 1
     labels:
       severity_level: "4"
     annotations:

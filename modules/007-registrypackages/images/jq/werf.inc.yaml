@@ -12,11 +12,9 @@ import:
   - uninstall
   - jq
   before: setup
-docker:
-  LABEL:
-    distro: all
-    version: all
-    jq: {{ $version }}
+imageSpec:
+  config:
+    labels: { "distro": "all", "version": "all", "jq": "{{ $version }}" }
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
 final: false

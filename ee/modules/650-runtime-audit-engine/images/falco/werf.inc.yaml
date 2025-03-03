@@ -23,8 +23,9 @@ shell:
   - ln -s $HOST_ROOT/lib/modules /lib/modules
   install:
   - "sed -i 's/time_format_iso_8601: false/time_format_iso_8601: true/' /etc/falco/falco.yaml"
-docker:
-  CMD: ["/usr/bin/falco"]
+imageSpec:
+  config:
+    cmd: ["/usr/bin/falco"]
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 fromImage: common/src-artifact

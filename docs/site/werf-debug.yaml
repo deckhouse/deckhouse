@@ -59,8 +59,9 @@ git:
 ---
 image: web-backend
 from: {{ $BASE_GOLANG_16_BUSTER }}
-docker:
-  WORKDIR: /app
+imageSpec:
+  config:
+    workingDir:  "/tmp"
 shell:
   install:
   - apt update && apt install -yq git curl jq
@@ -85,8 +86,9 @@ import:
     before: setup
 ---
 image: web-frontend
-docker:
-  WORKDIR: /app
+imageSpec:
+  config:
+    workingDir: "/app"
 from: {{ .Images.BASE_NGINX_ALPINE }}
 shell:
   setup:

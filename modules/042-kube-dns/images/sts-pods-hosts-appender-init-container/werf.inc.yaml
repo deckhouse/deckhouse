@@ -30,6 +30,6 @@ import:
     add: /src/render-etc-hosts-with-cluster-domain-aliases
     to: /render-etc-hosts-with-cluster-domain-aliases
     before: setup
-docker:
-  USER: 64535
-  ENTRYPOINT: ["/render-etc-hosts-with-cluster-domain-aliases"]
+imageSpec:
+  config:
+    entrypoint: ["/render-etc-hosts-with-cluster-domain-aliases"]

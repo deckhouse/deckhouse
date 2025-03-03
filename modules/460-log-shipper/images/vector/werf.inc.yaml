@@ -10,8 +10,9 @@ import:
     add: /relocate
     to: /
     before: install
-docker:
-  ENTRYPOINT: ["/usr/bin/vector"]
+imageSpec:
+  config:
+    entrypoint: ["/usr/bin/vector"]
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 fromImage: common/src-artifact

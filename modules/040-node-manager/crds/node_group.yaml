@@ -189,11 +189,11 @@ spec:
                   type: string
                   x-doc-examples: ["1.29"]
                   enum:
-                    - "1.27"
                     - "1.28"
                     - "1.29"
                     - "1.30"
                     - "1.31"
+                    - "1.32"
                 cri:
                   type: object
                   description: |
@@ -369,7 +369,7 @@ spec:
                       description: |
                         Similar to the `.spec.taints` field of the [Node](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#taint-v1-core) object.
 
-                        **Caution!** Only `effect`, `key`, `value` fields are available.
+                        > Available fields: `effect`, `key`, and `values`.
                       x-doc-examples:
                       - - effect: NoExecute
                           key: ship-class
@@ -1006,7 +1006,7 @@ spec:
                       description: |
                         Similar to the `.spec.taints` field of the [Node](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#taint-v1-core) object.
 
-                        **Caution!** Only `effect`, `key`, `value` fields are available.
+                        > Available fields: `effect`, `key`, and `values`.
                       x-doc-examples:
                       - - effect: NoExecute
                           key: ship-class
@@ -1495,6 +1495,10 @@ spec:
                     - CloudPermanent
                     - CloudStatic
                     - Static
+                nodeDrainTimeoutSecond:
+                  type: integer
+                  description: |
+                    Maximum duration (in seconds) for which the controller attempts to reschedule pods to a new machine during node draining.
                 cri:
                   type: object
                   description: |
@@ -1647,8 +1651,10 @@ spec:
                     - maxPerZone
                   properties:
                     quickShutdown:
-                      description: Lowers CloudEphemeral machine drain timeout to 5 minutes.
                       type: boolean
+                      deprecated: true
+                      description: |
+                        Lowers CloudEphemeral machine drain timeout to 5 minutes.
                     zones:
                       description: |
                         List of availability zones to create instances in.
@@ -1801,7 +1807,7 @@ spec:
                       description: |
                         Similar to the `.spec.taints` field of the [Node](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#taint-v1-core) object.
 
-                        **Caution!** Only `effect`, `key`, `value` fields are available.
+                        > Available fields: `effect`, `key`, and `values`.
                       x-doc-examples:
                       - - effect: NoExecute
                           key: ship-class

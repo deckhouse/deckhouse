@@ -74,13 +74,13 @@ requirements:
 
 Эта зависимость определяет минимальную или максимальную версию Kubernetes, с которой совместим модуль.
 
-Пример настройки зависимости от Kubernetes 1.27 и выше в файле `module.yaml`:
+Пример настройки зависимости от Kubernetes 1.28 и выше в файле `module.yaml`:
 
 ```yaml
 name: test
 weight: 901
 requirements:
-    kubernetes: ">= 1.27"
+    kubernetes: ">= 1.28"
 ```
 
 {% alert level="info" %}

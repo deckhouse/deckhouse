@@ -102,6 +102,8 @@ git:
   - _includes/rbac/
   - _plugins/jekyll_asset_pipeline.rb
   - _plugins/custom_filters.rb
+  - _plugins/custom_sidebar.rb
+  - _plugins/utils.rb
   - _plugins/offtopic.rb
   stageDependencies:
     setup: '**/*'
@@ -341,8 +343,9 @@ git:
       setup: '**/*'
 ---
 image: web-backend
-docker:
-  WORKDIR: /app
+imageSpec:
+  config:
+    workingDir: "/app"
 from: {{ .Images.BASE_ALPINE }}
 shell:
   install:
@@ -361,8 +364,9 @@ import:
     - ru/includes/
 ---
 image: web-frontend
-docker:
-  WORKDIR: /app
+imageSpec:
+  config:
+    workingDir: "/app"
 from: {{ .Images.BASE_NGINX_ALPINE }}
 shell:
   setup:
@@ -407,8 +411,9 @@ git:
 ---
 image: registry-modules-watcher
 from: {{ .Images.BASE_ALPINE }}
-docker:
-  WORKDIR: /app
+imageSpec:
+  config:
+    workingDir: "/app"
 import:
   - image: registry-modules-watcher-artifact
     add: /go/src/app/registry-modules-watcher

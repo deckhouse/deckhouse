@@ -12,7 +12,7 @@ kind: VerticalPodAutoscaler
 metadata:
   name: machine-controller-manager
   namespace: d8-cloud-instance-manager
-  {{- include "helm_lib_module_labels" (list . (dict "app" "machine-controller-manager" "workload-resource-policy.deckhouse.io" "master")) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "machine-controller-manager")) | nindent 2 }}
 spec:
   targetRef:
     apiVersion: "apps/v1"
@@ -67,7 +67,6 @@ spec:
           args:
           - --namespace=d8-cloud-instance-manager
           - --cloud-provider={{ .Values.nodeManager.internal.cloudProvider.type | quote }}
-          - --machine-max-evict-retries=30
 {{- if eq .Values.nodeManager.internal.cloudProvider.type "yandex" }}
           - --machine-safety-orphan-vms-period=30s
 {{- else }}

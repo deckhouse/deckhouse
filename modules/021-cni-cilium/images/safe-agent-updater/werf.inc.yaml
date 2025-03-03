@@ -43,5 +43,6 @@ import:
   add: /src/safe-agent-updater
   to: /safe-agent-updater
   before: install
-docker:
-  ENTRYPOINT: ["/safe-agent-updater"]
+imageSpec:
+  config:
+    entrypoint: ["/safe-agent-updater"]

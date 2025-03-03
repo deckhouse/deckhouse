@@ -67,6 +67,9 @@ type NodeGroupSpec struct {
 	// Type of nodes in group: CloudEphemeral, CloudPermanent, CloudStatic, Static. Field is required
 	NodeType NodeType `json:"nodeType,omitempty"`
 
+	// Maximum drain time of CloudEphemeral machines in seconds
+	NodeDrainTimeoutSecond *int64 `json:"nodeDrainTimeoutSecond,omitempty"`
+
 	// CRI parameters. Optional.
 	CRI CRI `json:"cri,omitempty"`
 

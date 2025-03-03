@@ -43,5 +43,6 @@ import:
   before: install
   includePaths:
   - python3*
-docker:
-  ENTRYPOINT: ["python3"]
+imageSpec:
+  config:
+    entrypoint: ["python3"]

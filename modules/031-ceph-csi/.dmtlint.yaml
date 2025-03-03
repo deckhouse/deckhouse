@@ -1,0 +1,10 @@
+linters-settings:
+  openapi:
+    exclude-rules:
+      enum:
+        - "properties.internal.properties.crs.items.properties.spec.properties.rbd.properties.storageClasses.items.properties.defaultFSType"
+  templates:
+    exclude-rules:
+      pdb:
+        - kind: DaemonSet
+          name: csi-node

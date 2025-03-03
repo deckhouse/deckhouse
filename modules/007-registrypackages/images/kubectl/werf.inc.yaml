@@ -14,11 +14,9 @@ import:
   - install
   - uninstall
   before: setup
-docker:
-  LABEL:
-    distro: all
-    version: all
-    kubectl: {{ printf "%s.%s" $version $patch }}
+imageSpec:
+  config:
+    labels: { "distro": "all", "version": "all", "kubectl": "{{ printf "%s.%s" $version $patch }}" }
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
 final: false

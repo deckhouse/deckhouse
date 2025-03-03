@@ -36,7 +36,7 @@ metadata:
   {{- include "helm_lib_module_labels" (list . (dict "app" "metrics-scraper")) | nindent 2 }}
 spec:
   {{- include "helm_lib_deployment_strategy_and_replicas_for_ha" . | nindent 2 }}
-  revisionHistoryLimit: 10
+  revisionHistoryLimit: 2
   selector:
     matchLabels:
       app: metrics-scraper
@@ -58,9 +58,12 @@ spec:
       - name: metrics-scraper
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
         image: {{ include "helm_lib_module_image" (list $ "metricsScraper") }}
+        args:
+        - --v=3
         ports:
         - containerPort: 8000
           protocol: TCP
+          name: http
         livenessProbe:
           httpGet:
             scheme: HTTP
