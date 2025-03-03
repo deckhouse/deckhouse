@@ -7,9 +7,12 @@ import:
     to: /usr/local/bin/node-collector
     before: setup
   - image: {{ .ModuleName }}/{{ .ImageName }}-binaries-artifact
-    add: /usr/bin/ps
-    to: /usr/bin/ps
+    add: /usr/bin
+    to: /usr/bin
     before: setup
+    includePaths:
+    - 'ps'
+    - 'pgrep'
   - image: {{ .ModuleName }}/{{ .ImageName }}-binaries-artifact
     add: /usr/lib64
     to: /usr/lib64
