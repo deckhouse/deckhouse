@@ -61,7 +61,7 @@ var _ = Describe("Module :: extendedMonitoring :: helm template :: scrape timeou
 			Expect(podMonitor.Exists()).To(BeTrue())
 
 			scrapeTimeout := podMonitor.Field("spec.podMetricsEndpoints.0.scrapeTimeout").String()
-			Expect(scrapeTimeout).Should(Equal("20s"))
+			Expect(scrapeTimeout).Should(Equal("24s"))
 		})
 	})
 })
