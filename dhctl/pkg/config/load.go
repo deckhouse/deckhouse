@@ -31,6 +31,7 @@ import (
 	"github.com/hashicorp/go-multierror"
 	"sigs.k8s.io/yaml"
 
+	transformer "github.com/deckhouse/deckhouse/dhctl/pkg/config/schema"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
 
@@ -147,6 +148,12 @@ func newSchemaStore(schemasDir []string) *SchemaStore {
 			if err != nil {
 				return err
 			}
+
+			schema = transformer.TransformSchema(
+				schema,
+				&transformer.AdditionalPropertiesTransformer{},
+			)
+
 			st.moduleConfigsCache[moduleName] = schema
 		} else if errors.Is(err, os.ErrNotExist) {
 			log.DebugF("Openapi spec not found for module %s\n", moduleName)
@@ -344,6 +351,11 @@ func (s *SchemaStore) upload(fileContent []byte) error {
 			return fmt.Errorf("expand the schema: %v", err)
 		}
 
+		schema = transformer.TransformSchema(
+			schema,
+			&transformer.AdditionalPropertiesTransformer{},
+		)
+
 		s.cache[SchemaIndex{Kind: openAPISchema.Kind, Version: parsedSchema.Version}] = schema
 	}
 
@@ -397,6 +409,24 @@ func ValidateDiscoveryData(config *[]byte, paths []string, opts ...ValidateOptio
 	}
 
 	return true, nil
+}
+
+func ValidateConf(conf *[]byte) error {
+	schemaStore := newSchemaStore([]string{
+		"/deckhouse/ee/se-plus/candi/cloud-providers/zvirt/openapi",
+		"/deckhouse/ee/se-plus/candi/cloud-providers/vsphere/openapi",
+		"/deckhouse/ee/candi/cloud-providers/huaweicloud/openapi",
+		"/deckhouse/ee/candi/cloud-providers/dynamix/openapi",
+		"/deckhouse/ee/candi/cloud-providers/openstack/openapi",
+		"/deckhouse/candi/cloud-providers/openstack/openapi",
+		"/deckhouse/ee/candi/cloud-providers/vcd/openapi",
+		"/deckhouse/candi/cloud-providers/gcp/openapi",
+		"/deckhouse/candi/cloud-providers/yandex/openapi",
+		"/deckhouse/candi/cloud-providers/aws/openapi",
+		"/deckhouse/candi/cloud-providers/azure/openapi",
+		"/deckhouse/candi/openapi/"})
+	_, err := schemaStore.Validate(conf)
+	return err
 }
 
 func applyOptions(opts ...ValidateOption) validateOptions {
