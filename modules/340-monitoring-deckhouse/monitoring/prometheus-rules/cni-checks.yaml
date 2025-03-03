@@ -11,9 +11,9 @@
         plk_protocol_version: "1"
         plk_create_group_if_not_exists__d8_cni_check: D8CNIEnabledMoreThanOne,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes
         plk_grouped_by__d8_cni_check: D8CNIEnabledMoreThanOne,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes
-        description: |
-          Several CNIs are enabled in the cluster:
-          For the cluster to work correctly, only one CNI must be enabled.
         summary: More than one CNI is enabled in the cluster.
+        description: |
+          Deckhouse has detected that multiple CNIs are enabled in the cluster.
+          For the cluster to work correctly, only one CNI must be enabled.
 
-
+          To resolve this issue, disable any unnecessary CNI.

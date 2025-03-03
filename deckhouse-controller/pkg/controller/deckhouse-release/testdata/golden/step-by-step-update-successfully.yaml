@@ -19,6 +19,7 @@ approved: false
 kind: DeckhouseRelease
 metadata:
   annotations:
+    release.deckhouse.io/change-cause: check release (step-by-step)
     release.deckhouse.io/isUpdating: "false"
     release.deckhouse.io/notified: "false"
   creationTimestamp: null
@@ -39,6 +40,7 @@ approved: false
 kind: DeckhouseRelease
 metadata:
   annotations:
+    release.deckhouse.io/change-cause: check release (step-by-step)
     release.deckhouse.io/isUpdating: "false"
     release.deckhouse.io/notified: "false"
   creationTimestamp: null

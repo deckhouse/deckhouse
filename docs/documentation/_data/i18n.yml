@@ -283,21 +283,36 @@ features:
     en: "&#36;"
     ru: "&#8381;"
   experimental:
+    en: Experimental
+    ru: Экспериментальная версия
+  experimental_long:
     en: Experimental version. The functionality may undergo significant changes. Compatibility with future versions is not guaranteed.
     ru: Экспериментальная версия. Функциональность может сильно измениться. Совместимость с будущими версиями не гарантируется.
   preview:
+    en: Preview
+    ru: Предварительная версия (preview)
+  preview_long:
     en: Preliminary version. The functionality may change, but the basic features will be preserved. Compatibility with future versions is ensured, but may require additional migration actions.
     ru: Предварительная версия. Функциональность может измениться, но основные возможности сохранятся. Совместимость с будущими версиями может потребовать ручных действий по миграции.
   deprecated:
+    en: Deprecated
+    ru: Устарело
+  deprecated_long:
     en: Deprecated version. Development and support have been terminated.
-    ru: Общедоступная версия. Готово к использованию в production-средах.
+    ru: Устарело. Развитие и поддержка прекращены.
   "general_availability":
+    en: Ready to be used in production environments
+    ru: Готово к использованию в production-средах
+  "general_availability_long":
     en: Generally available version. Ready to be used in production environments.
     ru: Общедоступная версия. Готово к использованию в production-средах.
   temporaryDeprecated:
     en: The current version of the module is deprecated, a new version will be published soon.
     ru: Текущая версия модуля устарела, скоро будет опубликована новая версия.
   proprietaryOkmeter:
+    en: Additiona license required
+    ru: Требуется дополнительная лицензия
+  proprietaryOkmeter_long:
     en: This feature requires an <a href="https://okmeter.io">Okmeter</a> license.
     ru: Для этого компонента требуется лицензия <a href="https://okmeter.io">Okmeter</a>.
   ee:
