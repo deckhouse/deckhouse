@@ -57,6 +57,31 @@ EOF
     fi
 }
 
+function bb-event-info-create() {
+    eventName="$(echo -n "${D8_NODE_HOSTNAME}")-$1"
+    nodeName="${D8_NODE_HOSTNAME}"
+    if type kubectl >/dev/null 2>&1 && test -f /etc/kubernetes/kubelet.conf ; then
+      kubectl_exec apply -f - <<EOF || true
+          apiVersion: events.k8s.io/v1
+          kind: Event
+          metadata:
+            name: bashible-info-${eventName}-update-$(date -u +"%Y-%m-%dt%H-%M-%S-%6N")
+          regarding:
+            apiVersion: v1
+            kind: Node
+            name: ${nodeName}
+            uid: ${nodeName}
+          reason: BashibleNodeUpdate
+          type: Normal
+          note: "$1 steps update on ${nodeName}"
+          reportingController: bashible
+          reportingInstance: '${D8_NODE_HOSTNAME}'
+          eventTime: '$(date -u +"%Y-%m-%dT%H:%M:%S.%6NZ")'
+          action: "BashibleStepExecution"
+EOF
+    fi
+}
+
 function annotate_node() {
   echo "Annotate node ${D8_NODE_HOSTNAME} with annotation ${@}"
   attempt=0
@@ -243,6 +268,10 @@ unset HTTP_PROXY http_proxy HTTPS_PROXY https_proxy NO_PROXY no_proxy
 
   fi
 
+  {{- if ne .runType "ClusterBootstrap" }}
+      bb-event-info-create "start"
+  {{- end }}
+
   # Execute bashible steps
   for step in $BUNDLE_STEPS_DIR/*; do
     echo ===
@@ -270,6 +299,10 @@ unset HTTP_PROXY http_proxy HTTPS_PROXY https_proxy NO_PROXY no_proxy
       {{- end }}
     done
   done
+
+  {{- if ne .runType "ClusterBootstrap" }}
+      bb-event-info-create "finish"
+  {{- end }}
 
 {{ if eq .runType "Normal" }}
   annotate_node node.deckhouse.io/configuration-checksum=${CONFIGURATION_CHECKSUM}
