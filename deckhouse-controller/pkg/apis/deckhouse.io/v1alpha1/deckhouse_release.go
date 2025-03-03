@@ -43,6 +43,7 @@ const (
 	DeckhouseReleaseAnnotationDryrun                = "dryrun"
 	DeckhouseReleaseAnnotationTriggeredByDryrun     = "triggered_by_dryrun"
 	DeckhouseReleaseAnnotationCurrentRestored       = "release.deckhouse.io/current-restored"
+	DeckhouseReleaseAnnotationChangeCause           = "release.deckhouse.io/change-cause"
 
 	// TODO: remove in entire code
 	DeckhouseReleaseAnnotationCooldown = "release.deckhouse.io/cooldown"
@@ -122,6 +123,10 @@ func (in *DeckhouseRelease) GetPhase() string {
 func (in *DeckhouseRelease) GetForce() bool {
 	v, ok := in.Annotations[DeckhouseReleaseAnnotationForce]
 	return ok && v == "true"
+}
+
+func (*DeckhouseRelease) GetReinstall() bool {
+	return false
 }
 
 func (in *DeckhouseRelease) GetApplyNow() bool {

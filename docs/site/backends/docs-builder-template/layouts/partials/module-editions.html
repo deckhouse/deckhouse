@@ -17,8 +17,8 @@
     <p>
       {{ if index $moduleData.editionsWithRestrictionsComments "all" }}
         <span style='border-bottom: 1px dotted #000' data-tippy-content='{{ index $moduleData.editionsWithRestrictionsComments "all" $lang }}'>
-          {{- T "module_available_with_limitations_prefix" }}:
-        </span> 
+          {{- T "module_available_with_limitations_prefix" -}}
+        </span>: 
       {{- else }}
         {{- T "module_available_with_limitations_prefix" }}: 
       {{- end }}

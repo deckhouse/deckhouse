@@ -115,7 +115,7 @@ func (suite *ModuleLoaderTestSuite) setupModuleLoader(raw string) {
 
 	suite.loader = &Loader{
 		client:               suite.client,
-		log:                  log.NewNop(),
+		logger:               log.NewNop(),
 		downloadedModulesDir: d8env.GetDownloadedModulesDir(),
 		symlinksDir:          filepath.Join(d8env.GetDownloadedModulesDir(), "modules"),
 		dependencyContainer:  dependency.NewDependencyContainer(),

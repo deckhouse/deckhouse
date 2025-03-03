@@ -55,9 +55,10 @@ type ServiceWithHealthchecksReconciler struct {
 	cancelFunc                                 context.CancelFunc
 	servicesWithHealthchecks                   sync.Map
 	healthecksResultsByServiceWithHealthchecks map[types.NamespacedName][]HealthcheckTarget
+	secretController                           *PostgreSQLCredentialsReconciler
 }
 
-func NewServiceWithHealthchecksReconciler(client client.Client, workersCount int, nodeName string, scheme *runtime.Scheme, logger logr.Logger) *ServiceWithHealthchecksReconciler {
+func NewServiceWithHealthchecksReconciler(client client.Client, workersCount int, nodeName string, scheme *runtime.Scheme, logger logr.Logger, secretController *PostgreSQLCredentialsReconciler) *ServiceWithHealthchecksReconciler {
 	return &ServiceWithHealthchecksReconciler{
 		workersCount: workersCount,
 		nodeName:     nodeName,
@@ -68,6 +69,7 @@ func NewServiceWithHealthchecksReconciler(client client.Client, workersCount int
 		tasksResults: make(chan ProbeResult, workersCount*10),
 		events:       make(chan event.GenericEvent),
 		healthecksResultsByServiceWithHealthchecks: make(map[types.NamespacedName][]HealthcheckTarget),
+		secretController: secretController,
 	}
 }
 
@@ -90,7 +92,7 @@ func (r *ServiceWithHealthchecksReconciler) Reconcile(ctx context.Context, req c
 		podList       corev1.PodList
 		err           error
 	)
-	r.logger.Info("reconciling ServiceWithHealthchecks", "name", req.Name, "namespace", req.Namespace)
+	r.logger.V(1).Info("reconciling ServiceWithHealthchecks", "name", req.Name, "namespace", req.Namespace)
 	if err := r.Get(ctx, req.NamespacedName, &serviceWithHC); err != nil {
 		r.logger.Error(err, "unable to fetch ServiceWithHealthchecks")
 		if errors.IsNotFound(err) {
@@ -102,7 +104,7 @@ func (r *ServiceWithHealthchecksReconciler) Reconcile(ctx context.Context, req c
 
 	// Delete helthchecks from internal map because ServiceWithHealthchecks was deleted
 	if serviceWithHC.DeletionTimestamp != nil {
-		r.logger.Info("ServiceWithHealthchecks is being deleted")
+		r.logger.V(1).Info("ServiceWithHealthchecks is being deleted")
 		r.deleteServiceWithHealthcheks(req.NamespacedName)
 		return ctrl.Result{}, nil
 	}
@@ -141,7 +143,7 @@ func (r *ServiceWithHealthchecksReconciler) Reconcile(ctx context.Context, req c
 	updatedServiceWithHC.Status.Conditions = kubernetes.UpdateStatusWithConditions(serviceWithHC.Status.Conditions, newStatus.Conditions)
 
 	if isNew {
-		r.logger.Info("updating status of ServiceWithHealthchecks with healthchecks probes results", "name", updatedServiceWithHC.GetName(), "namespace", updatedServiceWithHC.GetNamespace())
+		r.logger.V(1).Info("updating status of ServiceWithHealthchecks with healthchecks probes results", "name", updatedServiceWithHC.GetName(), "namespace", updatedServiceWithHC.GetNamespace())
 		updatedServiceWithHC.Status = *newStatus
 		err = r.Status().Update(ctx, updatedServiceWithHC)
 		if err != nil {
@@ -242,7 +244,7 @@ func (r *ServiceWithHealthchecksReconciler) getExposedServiceWithHCForPod(ctx co
 }
 
 func (r *ServiceWithHealthchecksReconciler) RunWorkers(ctx context.Context) error {
-	r.logger.Info("starting workers", "workersCount", r.workersCount)
+	r.logger.V(1).Info("starting workers", "workersCount", r.workersCount)
 
 	ctx, cancel := context.WithCancel(ctx)
 	r.cancelFunc = cancel
@@ -342,10 +344,10 @@ func (r *ServiceWithHealthchecksReconciler) RunTaskResultsAnalyzer(ctx context.C
 }
 
 func (r *ServiceWithHealthchecksReconciler) RunTaskWorker(ctx context.Context) {
-	r.logger.Info("running task")
+	r.logger.V(1).Info("running task")
 	for {
 		task := r.taskQueue.Dequeue()
-		r.logger.Info("running task", "host", task.host, "swhName", task.swhName.String())
+		r.logger.V(1).Info("running task", "host", task.host, "swhName", task.swhName.String())
 		g, _ := errgroup.WithContext(ctx)
 		probesResultDetails := make([]ProbeResultDetail, len(task.probes))
 		for i, probe := range task.probes {
@@ -367,6 +369,9 @@ func (r *ServiceWithHealthchecksReconciler) RunTaskWorker(ctx context.Context) {
 			})
 		}
 		err := g.Wait()
+		if err != nil {
+			r.logger.V(1).Error(err, "error performing probes", "host", task.host, "swhName", task.swhName.String())
+		}
 		r.tasksResults <- ProbeResult{
 			host:         task.host,
 			swhName:      task.swhName,
@@ -392,7 +397,7 @@ func (r *ServiceWithHealthchecksReconciler) GetNodeName() string {
 }
 
 func (r *ServiceWithHealthchecksReconciler) updateEPSForServiceWithHealthchecks(ctx context.Context, svc networkv1alpha1.ServiceWithHealthchecks) error {
-	r.logger.Info("updating endpoints for service", "swhName", svc.GetName(), "namespace", svc.GetNamespace())
+	r.logger.V(1).Info("updating endpoints for service", "swhName", svc.GetName(), "namespace", svc.GetNamespace())
 	desiredNameForEndpointSlice := svc.GetName() + "-" + r.nodeName
 
 	// discoveryv1.EndpointSlice
@@ -402,7 +407,7 @@ func (r *ServiceWithHealthchecksReconciler) updateEPSForServiceWithHealthchecks(
 	if len(eps.Endpoints) == 0 {
 		err := r.Delete(ctx, &eps)
 		if err != nil {
-			r.logger.Info("could not delete EndpointSlice for ServiceWithHealthchecks and node", "swhName", svc.GetName(), "namespace", svc.GetNamespace(), "node", r.nodeName)
+			r.logger.V(1).Info("could not delete EndpointSlice for ServiceWithHealthchecks and node", "swhName", svc.GetName(), "namespace", svc.GetNamespace(), "node", r.nodeName)
 			return nil
 		}
 	}
@@ -462,9 +467,10 @@ func (r *ServiceWithHealthchecksReconciler) BuildEndpointSlice(desiredName strin
 func (r *ServiceWithHealthchecksReconciler) buildPortsForEndpointslice(svc networkv1alpha1.ServiceWithHealthchecks) []discoveryv1.EndpointPort {
 	ports := []discoveryv1.EndpointPort{}
 	for _, port := range svc.Spec.Ports {
+		portTarget := int32(port.TargetPort.IntValue())
 		ports = append(ports, discoveryv1.EndpointPort{
 			Name:     &port.Name,
-			Port:     &port.Port,
+			Port:     &portTarget,
 			Protocol: &port.Protocol,
 		})
 	}
@@ -570,19 +576,7 @@ func (r *ServiceWithHealthchecksReconciler) getProbesFromServiceWithHealthchecks
 }
 
 func (r *ServiceWithHealthchecksReconciler) getPostgreSQLCredentials(sqlHandler *networkv1alpha1.PGSQLHandler, namespace string) (PostgreSQLCredentials, error) {
-	var creds PostgreSQLCredentials
-	var secret corev1.Secret
-	err := r.Get(context.Background(), types.NamespacedName{Namespace: namespace, Name: sqlHandler.AuthSecretName}, &secret)
-	if err != nil {
-		return creds, err
-	}
-	creds.TlsMode = getNativeTLSMode(string(secret.Data["tlsMode"]))
-	creds.User = string(secret.Data["user"])
-	creds.Password = string(secret.Data["password"])
-	creds.ClientCert = string(secret.Data["clientCert"])
-	creds.ClientKey = string(secret.Data["clientKey"])
-	creds.CaCert = string(secret.Data["caCert"])
-	return creds, nil
+	return r.secretController.GetCachedSecret(types.NamespacedName{Namespace: namespace, Name: sqlHandler.AuthSecretName})
 }
 
 func (r *ServiceWithHealthchecksReconciler) syncResultsMapWithPodList(hc networkv1alpha1.ServiceWithHealthchecks, podList corev1.PodList) {
@@ -633,7 +627,7 @@ func (r *ServiceWithHealthchecksReconciler) syncResultsMapWithPodList(hc network
 			r.healthecksResultsByServiceWithHealthchecks[serviceWithHCKey][oldIndex].podReady = podsReadinessMap[types.NamespacedName{Name: pod.GetName(), Namespace: pod.GetNamespace()}]
 			r.healthecksResultsByServiceWithHealthchecks[serviceWithHCKey][oldIndex].targetHost = pod.Status.PodIP
 			r.healthecksResultsByServiceWithHealthchecks[serviceWithHCKey][oldIndex].creationTime = pod.CreationTimestamp.Time
-			r.logger.Info("update target pod for service", "podName", pod.GetName(), "swhName", hc.Name, "namespace", hc.Namespace)
+			r.logger.V(1).Info("update target pod for service", "podName", pod.GetName(), "swhName", hc.Name, "namespace", hc.Namespace)
 		}
 	}
 	r.mu.Unlock()
@@ -642,6 +636,15 @@ func (r *ServiceWithHealthchecksReconciler) syncResultsMapWithPodList(hc network
 func (r *ServiceWithHealthchecksReconciler) buildRenewedStatus(hc *networkv1alpha1.ServiceWithHealthchecks) *networkv1alpha1.ServiceWithHealthchecksStatus {
 	endpoints := r.buildEndpointStatuses(hc)
 	readyEndpoints := onlyReadyEndpoints(endpoints)
+
+	status := isEqualReadyAndAll(int32(len(endpoints)), readyEndpoints)
+	message := "All endpoints are ready"
+	reason := "AllEndpointsAreReady"
+	if status == metav1.ConditionFalse {
+		message = "Not all endpoints are ready"
+		reason = "NotAllEndpointsAreReady"
+	}
+
 	return &networkv1alpha1.ServiceWithHealthchecksStatus{
 		EndpointStatuses: endpoints,
 		HealthcheckCondition: networkv1alpha1.HealthcheckCondition{
@@ -653,9 +656,9 @@ func (r *ServiceWithHealthchecksReconciler) buildRenewedStatus(hc *networkv1alph
 			{
 				Type:               "Ready",
 				LastTransitionTime: metav1.Now(),
-				Status:             isEqualReadyAndAll(int32(len(endpoints)), readyEndpoints),
-				Reason:             "AllEndpointsAreReady",
-				Message:            "All endpoints are ready",
+				Status:             status,
+				Reason:             reason,
+				Message:            message,
 			},
 		},
 	}
