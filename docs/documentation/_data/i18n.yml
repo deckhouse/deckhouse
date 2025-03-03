@@ -299,7 +299,7 @@ features:
     ru: Устарело
   deprecated_long:
     en: Deprecated version. Development and support have been terminated.
-    ru: Общедоступная версия. Готово к использованию в production-средах.
+    ru: Устарело. Развитие и поддержка прекращены.
   "general_availability":
     en: Ready to be used in production environments
     ru: Готово к использованию в production-средах
