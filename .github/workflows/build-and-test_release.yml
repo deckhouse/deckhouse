@@ -4147,8 +4147,6 @@ jobs:
       # </template: python_setup_step>
       - name: Get artifacts
         uses: actions/download-artifact@v4.1.8
-      - name: Display file structure
-        run: ls -R
       - name: Compare modules
         run: python .github/scripts/python/compare_internal_modules.py
 

@@ -1,3 +1,21 @@
+{!{ define "cve_tests_base_images" }!}
+# <template: cve_tests_base_images>
+- name: Run base images CVE tests on ${{env.TAG}}
+  env:
+    TRIVY_TOKEN: ${{secrets.FOX_ACCESS_TOKEN}}
+    DEFECTDOJO_API_TOKEN: ${{secrets.DEFECTDOJO_API_TOKEN}}
+    DEFECTDOJO_HOST: ${{secrets.DEFECTDOJO_HOST}}
+    DECKHOUSE_PRIVATE_REPO: ${{secrets.DECKHOUSE_PRIVATE_REPO}}
+    TRIVY_PROJECT_ID: "2181"
+    TRIVY_DB_URL: ${{secrets.DECKHOUSE_DEV_REGISTRY_HOST}}/sys/deckhouse-oss/security/trivy-db:2
+    TRIVY_JAVA_DB_URL: ${{secrets.DECKHOUSE_DEV_REGISTRY_HOST}}/sys/deckhouse-oss/security/trivy-java-db:1
+    TRIVY_POLICY_URL: ${{secrets.DECKHOUSE_DEV_REGISTRY_HOST}}/sys/deckhouse-oss/security/trivy-bdu:1
+  run: |
+    echo "⚓️ 🏎 Running CVE tests on ${TAG}..."
+    make cve-base-images
+# </template: cve_tests_base_images>
+{!{- end -}!}
+
 {!{ define "cve_tests_deckhouse_images" }!}
 # <template: cve_tests_deckhouse_images>
 - name: Run Deckhouse images CVE tests on ${{env.TAG}}
@@ -46,10 +64,8 @@
 
 {!{ define "defectdojo_dev_tests_rotator" }!}
 # <template: defectdojo_dev_tests_rotator>
-- name: Set up Python
-  uses: actions/setup-python@v4
-  with:
-    python-version: ${{ env.PYTHON_VERSION }}
+
+{!{ tmpl.Exec "python_setup_step" . }!}
 - name: Install dependencies
   run: pip install requests
 - name: DefectDojo rotate dev tests

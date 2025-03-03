@@ -353,8 +353,6 @@ jobs:
       {!{ tmpl.Exec "python_setup_step" . | strings.Indent 6 }!}
       - name: Get artifacts
         uses: {!{ index (ds "actions") "actions/download-artifact" }!}
-      - name: Display file structure
-        run: ls -R
       - name: Compare modules
         run: python .github/scripts/python/compare_internal_modules.py
 
