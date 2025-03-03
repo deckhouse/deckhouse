@@ -265,6 +265,7 @@ function get_cluster_status() {
 
 function prepare_ssh() {
   echo ${SSH_KEY} | base64 -d > id_rsa
+  chmod 400 id_rsa
 }
 
 function ssh_command_to_cluster() {
@@ -273,7 +274,50 @@ function ssh_command_to_cluster() {
 }
 
 function wait_allerts_resolve() {
-  ssh_command_to_cluster "d8 k get clusteralerts"
+
+  allow_alerts=(
+  "D8DeckhouseIsNotOnReleaseChannel" # Tests may be made on dev branch
+  "DeadMansSwitch" # Always active in system. Tells that monitoring works.
+  "CertmanagerCertificateExpired" # On some system do not have DNS
+  "CertmanagerCertificateExpiredSoon" # Same as above
+  "DeckhouseModuleUseEmptyDir" # TODO Need made split storage class
+  "D8EtcdExcessiveDatabaseGrowth" # It may trigger during bootstrap due to a sudden increase in resource count
+  "D8CNIMisconfigured" # This alert may appear until we completely abandon the use of the `d8-cni-configuration` secret when configuring CNI.
+  "D8KubernetesVersionIsDeprecated" # Run test on deprecated version is OK
+  )
+
+  # Alerts
+  iterations=20
+  sleep_interval=30
+
+  for i in $(seq 1 $iterations); do
+
+    response=$(get_cluster_status)
+    mapfile -t alerts < <(jq -r '.cluster_agent_data[] | select(.source == "overview") | .data.warnings.firing_alerts.[].alert' <<< "$response")
+      alerts_is_ok=true
+      for alert in "${alerts[@]}"; do
+        # Check if the alert is in the allow list
+        if ! [[ "${allow_alerts[*]}" =~ ${alert} ]]; then
+          echo "Error: Unexpected alert: '$alert'"
+          alerts_is_ok=false
+        else
+          echo "Alert '$alert' ignored"
+        fi
+      done
+
+      if $alerts_is_ok; then
+        echo "All alerts are in the allow list."
+        break
+      else
+        echo "Cluster components are not ready. Attempt $i/$iterations failed. Sleep for $sleep_interval seconds..."
+        if [[ "$i" -eq "$iterations" ]]; then
+          echo "Maximum iterations reached. Cluster components are not ready."
+          exit 1
+        fi
+      fi
+      sleep "$sleep_interval"
+
+  done
 }
 
 function wait_upmeter_green() {
@@ -419,9 +463,9 @@ function run-test() {
 
   wait_upmeter_green
 
-  prepare_ssh
-
   wait_allerts_resolve
+
+  prepare_ssh
 
 #  wait_pause_remove
 
