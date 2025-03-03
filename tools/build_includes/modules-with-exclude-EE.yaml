@@ -395,6 +395,11 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
+- add: /ee/modules/110-istio/templates/validations.yaml
+  to: /deckhouse/modules/110-istio/templates/validations.yaml
+  stageDependencies:
+    setup:
+        - '**/*'
 - add: /ee/modules/110-istio/crds/doc-ru-istiofederation.yaml
   to: /deckhouse/modules/110-istio/crds/doc-ru-istiofederation.yaml
   stageDependencies:

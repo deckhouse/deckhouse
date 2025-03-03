@@ -4,5 +4,5 @@
 resource "huaweicloud_kps_keypair" "ssh" {
   name       = var.prefix
   public_key = var.ssh_public_key
-  scope      = "account"
+  scope      = "user"
 }

@@ -575,6 +575,63 @@ alerts:
         Prometheus can't scrape x509-certificate-exporter metrics.
       severity: "8"
       markupFormat: markdown
+    - name: D8CheckCloudProviderConfig
+      sourceFile: modules/040-node-manager/monitoring/prometheus-rules/check_config.yaml
+      moduleUrl: 040-node-manager
+      module: node-manager
+      edition: ce
+      description: |
+        Provider-cluster-configuration in the cluster contains fields outside the schema.
+        More details can be found in the logs.
+        ```bash
+        kubectl logs -n d8-system -l app=deckhouse --tail=-1 | grep check_provider_cluster_configuration | grep error | jq .msg
+        ```
+        Remove it from provider-cluster-configuration.
+        ```bash
+        kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller edit provider-cluster-configuration
+        ```
+      summary: |
+        Provider-cluster-configuration in the cluster contains fields outside the schema.
+      severity: "5"
+      markupFormat: markdown
+    - name: D8CheckClusterConfig
+      sourceFile: modules/040-node-manager/monitoring/prometheus-rules/check_config.yaml
+      moduleUrl: 040-node-manager
+      module: node-manager
+      edition: ce
+      description: |
+        Cluster-configuration in the cluster contains fields outside the schema.
+        More details can be found in the logs.
+        ```bash
+        kubectl logs -n d8-system -l app=deckhouse --tail=-1 | grep check_cluster_configuration | grep error | jq .msg
+        ```
+        Remove it from cluster-configuration.
+        ```bash
+        kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller edit cluster-configuration
+        ```
+      summary: |
+        Cluster-configuration in the cluster contains fields outside the schema.
+      severity: "5"
+      markupFormat: markdown
+    - name: D8CheckStaticClusterConfig
+      sourceFile: modules/040-node-manager/monitoring/prometheus-rules/check_config.yaml
+      moduleUrl: 040-node-manager
+      module: node-manager
+      edition: ce
+      description: |
+        Static-cluster-configuration in the cluster contains fields outside the schema.
+        More details can be found in the logs.
+        ```bash
+        kubectl logs -n d8-system -l app=deckhouse --tail=-1 | grep check_static_cluster_configuration | grep error | jq .msg
+        ```
+        Remove it from static-cluster-configuration.
+        ```bash
+        kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller edit static-cluster-configuration
+        ```
+      summary: |
+        Static-cluster-configuration in the cluster contains fields outside the schema.
+      severity: "5"
+      markupFormat: markdown
     - name: D8CloudDataDiscovererCloudRequestError
       sourceFile: modules/040-node-manager/monitoring/prometheus-rules/cloud-data-discovery.tpl
       moduleUrl: 040-node-manager
@@ -1621,6 +1678,31 @@ alerts:
       summary: |
         etcd database size is approaching the limit.
       severity: "3"
+      markupFormat: markdown
+    - name: D8KubernetesStaleTokensDetected
+      sourceFile: modules/040-control-plane-manager/monitoring/prometheus-rules/control-plane-manager.yaml
+      moduleUrl: 040-control-plane-manager
+      module: control-plane-manager
+      edition: ce
+      description: |-
+        This issue may occur if an application reads the token only at startup and does not reload it periodically. As a result, an outdated token might be used, leading to security breach and authentication failures.
+
+        **Recommended actions:**
+
+        - Ensure your application is configured to periodically reload the token from the file system.
+        - Verify that you are using an up-to-date client library that supports automatic token rotation.
+
+        Note that currently these tokens are not blocked because the `--service-account-extend-token-expiration` flag is enabled by default (`Default: true`). With this flag enabled, admission-injected tokens are extended up to 1 year during token generation to facilitate a safe transition from legacy tokens to the bound service account token feature, ignoring the value of `service-account-max-token-expiration`.
+
+        **For further investigation:**
+        Log into the server with label `instance={{ $labels.instance }}` and inspect the audit log using the following command:
+
+        ```bash
+        jq 'select(.annotations["authentication.k8s.io/stale-token"]) | {auditID, stageTimestamp, requestURI, verb, user: .user.username, stale_token: .annotations["authentication.k8s.io/stale-token"]}' /var/log/kube-audit/audit.log
+        ```
+      summary: |
+        Stale service account tokens detected.
+      severity: "8"
       markupFormat: markdown
     - name: D8KubernetesVersionIsDeprecated
       sourceFile: modules/040-control-plane-manager/monitoring/prometheus-rules/control-plane-manager.yaml

@@ -88,9 +88,9 @@ apiVersions:
                   К примеру, теги позволяют применять к инстансам правила firewall. Подробно про network tags можно прочитать в [официальной документации](https://cloud.google.com/vpc/docs/add-remove-network-tags).
               additionalLabels:
                 description: |
-                  Список дополнительных label'ов.
+                  Список дополнительных лейблов.
 
-                  Подробно про label'ы можно прочитать в [официальной документации](https://cloud.google.com/resource-manager/docs/creating-managing-labels).                  
+                  Подробно про лейблы можно прочитать в [официальной документации](https://cloud.google.com/resource-manager/docs/creating-managing-labels).                  
           zones: &NodeGroupZones_ru
             description: |
                 Список зон, в которых допустимо создавать узлы.

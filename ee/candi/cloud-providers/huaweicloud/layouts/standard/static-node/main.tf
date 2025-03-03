@@ -32,6 +32,7 @@ module "node" {
   volume_zone           = module.volume_zone.zone
   server_group          = local.server_group
   node_group_name       = var.nodeGroupName
+  subnet                = local.prefix
 }
 
 module "security_groups" {
