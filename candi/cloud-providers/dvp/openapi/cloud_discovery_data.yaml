@@ -1,0 +1,26 @@
+kind: DVPCloudDiscoveryData
+apiVersions:
+- apiVersion: deckhouse.io/v1
+  openAPISpec:
+    type: object
+    x-examples:
+    - apiVersion: deckhouse.io/v1
+      kind: DVPCloudDiscoveryData
+      zones: [ "zone-a", "zone-b" ]
+    additionalProperties: false
+    required: [apiVersion, kind, zones]
+    properties:
+      apiVersion:
+        type: string
+        enum: [deckhouse.io/v1]
+      kind:
+        type: string
+        enum: [DVPCloudDiscoveryData]
+      zones:
+        type: array
+        items:
+          type: string
+          minLength: 1
+        minItems: 1
+        uniqueItems: true
+
