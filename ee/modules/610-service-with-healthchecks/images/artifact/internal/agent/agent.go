@@ -599,6 +599,11 @@ func (r *ServiceWithHealthchecksReconciler) syncResultsMapWithPodList(hc network
 
 	// add new pods IPs to targets slice
 	for _, pod := range podList.Items {
+		if pod.Status.PodIP == "" {
+			// pod has no IP address (for example, it's in pending state), skipping
+			r.logger.V(1).Info("pod has no IP address, skipping", "podName", pod.GetName(), "swhName", hc.Name, "namespace", hc.Namespace)
+			continue
+		}
 		targetNotFound := true
 		var oldIndex int
 		for i, target := range r.healthecksResultsByServiceWithHealthchecks[serviceWithHCKey] {
