@@ -1,6 +1,4 @@
 {{- $ciliumProxyRev := "958bef243c6c66fcfd73ca319f2eb49fff1eb2ae" }}
-#{{- $ciliumProxyCacheRev := "v1.31.5-1737535524-fe8efeb16a7d233bffd05af9ea53599340d3f18e-alt-p11-llvm17-gcc11-v2" }}
-#{{- $ciliumProxyDepsRev := "v1.31.5-1737535524-fe8efeb16a7d233bffd05af9ea53599340d3f18e-alt-p11-llvm17-gcc11-v1" }}
 {{- $ciliumProxyCacheRev := "v1.31.5-1739264036-958bef243c6c66fcfd73ca319f2eb49fff1eb2ae-alt-p11-llvm17-gcc11-v1" }}
 {{- $ciliumProxyDepsRev := "v1.31.5-1739264036-958bef243c6c66fcfd73ca319f2eb49fff1eb2ae-alt-p11-llvm17-gcc11-v1" }}
 {{- $bazelVersions := "6.5.0" }}
@@ -68,7 +66,7 @@ shell:
   - ln -f -s llvm-17.0 "/usr/lib/llvm-17"
   #
   - mkdir -p /tmp/bazel-cache
-  #- git clone --depth 1 --branch {{ $ciliumProxyCacheRev }} {{ $.SOURCE_REPO }}/cilium/proxy-build-cache.git /tmp/bazel-cache && rm -rf /tmp/bazel-cache/.git
+  - git clone --depth 1 --branch {{ $ciliumProxyCacheRev }} {{ $.SOURCE_REPO }}/cilium/proxy-build-cache.git /tmp/bazel-cache && rm -rf /tmp/bazel-cache/.git
   - chown -R 1337:1337 /tmp/bazel-cache
   - mkdir -p /tmp/bazel-deps
   - git clone --depth 1 --branch {{ $ciliumProxyDepsRev }} {{ $.SOURCE_REPO }}/cilium/proxy-build-deps.git /tmp/bazel-deps && rm -rf /tmp/bazel-deps/.git
