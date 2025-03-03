@@ -106,7 +106,7 @@ func (m *Manager) Handle(ctx context.Context, project *v1alpha2.Project) (ctrl.R
 			m.logger.Error(updateErr, "failed to update project status", "project", project.Name, "template", project.Spec.ProjectTemplateName)
 			return ctrl.Result{}, updateErr
 		}
-		return ctrl.Result{}, nil
+		return ctrl.Result{}, err
 	}
 
 	// check if the project template exists
