@@ -17,11 +17,10 @@ package gossh
 import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
-	"golang.org/x/crypto/ssh"
 )
 
 type NodeInterfaceWrapper struct {
-	sshClient *ssh.Client
+	sshClient *Client
 }
 
 func NewNodeInterfaceWrapper(sshClient *Client) *NodeInterfaceWrapper {
@@ -30,26 +29,26 @@ func NewNodeInterfaceWrapper(sshClient *Client) *NodeInterfaceWrapper {
 	}
 
 	return &NodeInterfaceWrapper{
-		sshClient: sshClient.sshClient,
+		sshClient: sshClient,
 	}
 }
 
 func (n *NodeInterfaceWrapper) Command(name string, args ...string) node.Command {
 	log.DebugLn("Starting NodeInterfaceWrapper.command")
 	defer log.DebugLn("Stop NodeInterfaceWrapper.command")
-	return NewSSHCommand(n.sshClient, name, args...)
+	return NewSSHCommand(n.sshClient.sshClient, name, args...)
 }
 
 func (n *NodeInterfaceWrapper) File() node.File {
-	return NewSSHFile(n.sshClient)
+	return NewSSHFile(n.sshClient.sshClient)
 }
 
 func (n *NodeInterfaceWrapper) UploadScript(scriptPath string, args ...string) node.Script {
 	log.DebugLn("Starting NodeInterfaceWrapper.UploadScript")
 	defer log.DebugLn("Stop NodeInterfaceWrapper.UploadScript")
-	return NewSSHUploadScript(n.sshClient, scriptPath, args...)
+	return NewSSHUploadScript(n.sshClient.sshClient, scriptPath, args...)
 }
 
-func (n *NodeInterfaceWrapper) Client() *ssh.Client {
+func (n *NodeInterfaceWrapper) Client() *Client {
 	return n.sshClient
 }

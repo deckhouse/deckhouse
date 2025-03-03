@@ -258,7 +258,8 @@ func (c *SSHCommand) Cmd() {}
 func (c *SSHCommand) Output() ([]byte, []byte, error) {
 	defer c.Session.Close()
 
-	output, err := c.Session.Output(c.cmd)
+	command := c.cmd + " " + strings.Join(c.Args, " ")
+	output, err := c.Session.Output(command)
 	if err != nil {
 		return output, nil, fmt.Errorf("execute command '%s': %w", c.Name, err)
 	}
@@ -268,7 +269,8 @@ func (c *SSHCommand) Output() ([]byte, []byte, error) {
 func (c *SSHCommand) CombinedOutput() ([]byte, error) {
 	defer c.Session.Close()
 
-	output, err := c.Session.CombinedOutput(c.cmd)
+	command := c.cmd + " " + strings.Join(c.Args, " ")
+	output, err := c.Session.CombinedOutput(command)
 	if err != nil {
 		return output, fmt.Errorf("execute command '%s': %w", c.Name, err)
 	}
