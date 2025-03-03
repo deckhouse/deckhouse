@@ -293,7 +293,7 @@ function wait_allerts_resolve() {
   for i in $(seq 1 $iterations); do
 
     response=$(get_cluster_status)
-    mapfile -t alerts < <(jq -r '.cluster_agent_data[] | select(.source == "overview") | .data.warnings.firing_alerts.[].alert' <<< "$response")
+    mapfile -t alerts < <(jq -r '.cluster_agent_data[] | select(.source == "overview") | .data.warnings.firing_alerts[].alert' <<< "$response")
       alerts_is_ok=true
       for alert in "${alerts[@]}"; do
         # Check if the alert is in the allow list
