@@ -125,6 +125,10 @@ func (in *DeckhouseRelease) GetForce() bool {
 	return ok && v == "true"
 }
 
+func (*DeckhouseRelease) GetReinstall() bool {
+	return false
+}
+
 func (in *DeckhouseRelease) GetApplyNow() bool {
 	v, ok := in.Annotations[DeckhouseReleaseAnnotationApplyNow]
 	return ok && v == "true"
