@@ -58,6 +58,7 @@ shell:
   - export GO_VERSION=${GOLANG_VERSION} GOPROXY={{ $.GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64
   - cd /src
   - go mod download
+  - go mod vendor
   - make build
   - cp bin/csi-node-driver-registrar /csi-node-driver-registrar
   - chown 64535:64535 /csi-node-driver-registrar
