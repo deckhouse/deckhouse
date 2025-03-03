@@ -81,7 +81,7 @@ func NewSSHCommand(client *ssh.Client, name string, arg ...string) *SSHCommand {
 			!strings.HasSuffix(args[i], `"`) &&
 			strings.Contains(args[i], " ") {
 			args[i] = strconv.Quote(args[i])
-			cmd = cmd + args[i] + " "
+			// cmd = cmd + args[i] + " "
 		}
 	}
 	session, _ := client.NewSession()
@@ -107,20 +107,24 @@ func (c *SSHCommand) OnCommandStart(fn func()) {
 
 func (c *SSHCommand) Start() error {
 	// setup stream handlers
-	log.DebugF("executor: start '%s'\n", c.cmd)
+	command := c.cmd + " " + strings.Join(c.Args, " ")
+	log.DebugF("executor: start '%s'\n", command)
 	err := c.SetupStreamHandlers()
 	if err != nil {
 		return err
 	}
 
-	err = c.Session.Start(c.cmd)
+	err = c.Session.Start(command)
 	if err != nil {
 		return err
 	}
 
-	c.ProcessWait()
+	err = c.Session.Wait()
+	if err != nil {
+		return err
+	}
 
-	log.DebugF("Register stoppable: '%s'\n", c.cmd)
+	log.DebugF("Register stoppable: '%s'\n", command)
 
 	return nil
 }
@@ -154,7 +158,7 @@ func (c *SSHCommand) Run() error {
 		return err
 	}
 
-	<-c.waitCh
+	// <-c.waitCh
 
 	c.closePipes()
 
