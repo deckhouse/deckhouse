@@ -21,6 +21,7 @@ import (
 	"fmt"
 
 	"github.com/deckhouse/virtualization/api/core/v1alpha2"
+	storagev1 "k8s.io/api/storage/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -161,6 +162,18 @@ func (d *DiskService) ResizeDisk(ctx context.Context, diskName string, newSize s
 		return err
 	}
 	return nil
+}
+
+func (d *DiskService) GetStorageClassList(ctx context.Context) (*storagev1.StorageClassList, error) {
+	var storageClassList storagev1.StorageClassList
+
+	if err := d.client.List(ctx, &storageClassList); err != nil {
+		if k8serrors.IsNotFound(err) {
+			return nil, cloudprovider.DiskNotFound
+		}
+		return nil, err
+	}
+	return &storageClassList, nil
 }
 
 func (d *DiskService) WaitDiskCreation(ctx context.Context, vmdName string) error {
