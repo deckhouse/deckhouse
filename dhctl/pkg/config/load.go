@@ -31,6 +31,7 @@ import (
 	"github.com/hashicorp/go-multierror"
 	"sigs.k8s.io/yaml"
 
+	transformer "github.com/deckhouse/deckhouse/dhctl/pkg/config/schema"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
 
@@ -147,6 +148,12 @@ func newSchemaStore(schemasDir []string) *SchemaStore {
 			if err != nil {
 				return err
 			}
+
+			schema = transformer.TransformSchema(
+				schema,
+				&transformer.AdditionalPropertiesTransformer{},
+			)
+
 			st.moduleConfigsCache[moduleName] = schema
 		} else if errors.Is(err, os.ErrNotExist) {
 			log.DebugF("Openapi spec not found for module %s\n", moduleName)
@@ -343,6 +350,11 @@ func (s *SchemaStore) upload(fileContent []byte) error {
 		if err != nil {
 			return fmt.Errorf("expand the schema: %v", err)
 		}
+
+		schema = transformer.TransformSchema(
+			schema,
+			&transformer.AdditionalPropertiesTransformer{},
+		)
 
 		s.cache[SchemaIndex{Kind: openAPISchema.Kind, Version: parsedSchema.Version}] = schema
 	}
