@@ -82,15 +82,11 @@ spec:
   {{- end }}
 {{- end }}
 
-{{- /* Usage: {{ include "helm_lib_prometheus_target_scrape_timeout_seconds" (list . <timeout>) }} */ -}}
+{{- /* Usage: {{ include "helm_lib_prometheus_target_scrape_timeout_seconds" (list .) }} */ -}}
 {{- /* returns adjust timeout value to scrape interval / */ -}}
 {{- define "helm_lib_prometheus_target_scrape_timeout_seconds" -}}
   {{- $context := index . 0 }}  {{- /* Template context with .Values, .Chart, etc */ -}}
-  {{- $timeout := index . 1 }}  {{- /* Target timeout in seconds */ -}}
   {{- $scrape_interval := (int $context.Values.global.discovery.prometheusScrapeInterval | default 30) }}
-  {{- if gt $timeout $scrape_interval -}}
-{{ $scrape_interval }}s
-  {{- else -}}
-{{ $timeout }}s
-  {{- end }}
+  {{- $timeout := mul $scrape_interval 0.8 | int }}
+  {{ $timeout }}s
 {{- end }}

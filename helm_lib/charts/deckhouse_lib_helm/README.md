@@ -835,17 +835,16 @@ list:
 
 ### helm_lib_prometheus_target_scrape_timeout_seconds
 
- returns adjust timeout value to scrape interval / 
+ returns adjust timeout value to scrape interval which is 80 percent of the prometheus_scrape_interval / 
 
 #### Usage
 
-`{{ include "helm_lib_prometheus_target_scrape_timeout_seconds" (list . <timeout>) }} `
+`{{ include "helm_lib_prometheus_target_scrape_timeout_seconds" (list .) }} `
 
 #### Arguments
 
 list:
 -  Template context with .Values, .Chart, etc 
--  Target timeout in seconds 
 
 ## Node Affinity
 
