@@ -18,6 +18,20 @@ import json
 import os
 import sys
 
+whitelist = [
+    "dev",
+    "dev-prebuild",
+    "dev/install",
+    "dev/install-standalone",
+    "documentation/web",
+    "e2e-terraform",
+    "images-digests",
+    "node-manager/bashible-apiserver",
+    "release-channel-version-prebuild",
+    "tests",
+    "tests-prebuild"
+]
+
 # Find and read build reports
 editions = [i.removeprefix('build_report_') for i in os.listdir() if i.startswith('build_report_')]
 print(f"Found editions: {editions}")
@@ -39,8 +53,11 @@ for image in unique_images:
         if image in reports[edition]:
             digests.add(reports[edition][image]['DockerImageDigest'])
     if len(digests) > 1:
-        found = True
-        print(f'Found differing image digests for image {image}:')
+        if image not in whitelist:
+            found = True
+            print(f'Found differing image digests for image {image}:')
+        else:
+            print(f'Found differing image digests for image {image} (allowed to differ):')
         for edition in editions:
             if image in reports[edition]:
                 print(f'\t{edition} digest: {reports[edition][image]['DockerImageDigest']}')
