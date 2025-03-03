@@ -50,7 +50,8 @@ func NewHookForDestroyPipeline(getter kubernetes.KubeClientProvider, nodeToDestr
 }
 
 func (h *HookForDestroyPipeline) BeforeAction(runner terraform.RunnerInterface) (bool, error) {
-	outputs, err := terraform.GetMasterNodeResult(runner)
+	// TODO(feat/dhctl-for-commander-bootstrap-context): pass ctx
+	outputs, err := terraform.GetMasterNodeResult(context.Background(), runner)
 	if err != nil {
 		log.ErrorF("Get master node pipeline outputs: %v", err)
 	}

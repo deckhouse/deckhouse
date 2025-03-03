@@ -18,6 +18,7 @@
 package bootstrap
 
 import (
+	"context"
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/tls"
@@ -686,7 +687,14 @@ func InstallDeckhouse(kubeCl *client.KubernetesClient, config *config.DeckhouseI
 	return res, nil
 }
 
-func BootstrapTerraNodes(kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig, terraNodeGroups []config.TerraNodeGroupSpec, terraformContext *terraform.TerraformContext) error {
+// TODO(feat/dhctl-for-commander-bootstrap-context): pass ctx
+func BootstrapTerraNodes(
+	ctx context.Context,
+	kubeCl *client.KubernetesClient,
+	metaConfig *config.MetaConfig,
+	terraNodeGroups []config.TerraNodeGroupSpec,
+	terraformContext *terraform.TerraformContext,
+) error {
 	return log.Process("bootstrap", "Create CloudPermanent NG", func() error {
 		return operations.ParallelCreateNodeGroup(kubeCl, metaConfig, terraNodeGroups, terraformContext)
 	})
@@ -738,7 +746,14 @@ func GetBastionHostFromCache() (string, error) {
 	return string(host), nil
 }
 
-func BootstrapAdditionalMasterNodes(kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig, addressTracker map[string]string, terraformContext *terraform.TerraformContext) error {
+// TODO(feat/dhctl-for-commander-bootstrap-context): pass ctx
+func BootstrapAdditionalMasterNodes(
+	ctx context.Context,
+	kubeCl *client.KubernetesClient,
+	metaConfig *config.MetaConfig,
+	addressTracker map[string]string,
+	terraformContext *terraform.TerraformContext,
+) error {
 	if metaConfig.MasterNodeGroupSpec.Replicas == 1 {
 		log.DebugF("Skip bootstrap additional master nodes because replicas == 1")
 		return nil

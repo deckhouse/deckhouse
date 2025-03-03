@@ -126,7 +126,7 @@ func (s *KubeClientSwitcher) replaceKubeClient(convergeState *State, state map[s
 			return fmt.Errorf("failed to write terraform state: %w", err)
 		}
 
-		ipAddress, err := terraform.GetMasterIPAddressForSSH(statePath)
+		ipAddress, err := terraform.GetMasterIPAddressForSSH(s.ctx.ctx, statePath)
 		if err != nil {
 			log.WarnF("failed to get master IP address: %s", err)
 			continue

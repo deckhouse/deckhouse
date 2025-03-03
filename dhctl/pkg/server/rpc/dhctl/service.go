@@ -153,36 +153,54 @@ type fsmPhaseSwitcher[T proto.Message, OperationPhaseDataT any] struct {
 	next   chan error
 }
 
-func (b *fsmPhaseSwitcher[T, OperationPhaseDataT]) switchPhase(
+func (b *fsmPhaseSwitcher[T, OperationPhaseDataT]) switchPhase(ctx context.Context) func(
 	completedPhase phases.OperationPhase,
 	completedPhaseState phases.DhctlState,
 	phaseData OperationPhaseDataT,
 	nextPhase phases.OperationPhase,
 	nextPhaseCritical bool,
 ) error {
-	err := b.f.Event("wait")
-	if err != nil {
-		return fmt.Errorf("changing state to waiting: %w", err)
-	}
+	return func(
+		completedPhase phases.OperationPhase,
+		completedPhaseState phases.DhctlState,
+		phaseData OperationPhaseDataT,
+		nextPhase phases.OperationPhase,
+		nextPhaseCritical bool,
+	) error {
+		err := b.f.Event("wait")
+		if err != nil {
+			return fmt.Errorf("changing state to waiting: %w", err)
+		}
 
-	data, err := b.dataFunc(
-		completedPhase,
-		completedPhaseState,
-		phaseData,
-		nextPhase,
-		nextPhaseCritical,
-	)
-	if err != nil {
-		return fmt.Errorf("switch phase data func error: %w", err)
-	}
+		data, err := b.dataFunc(
+			completedPhase,
+			completedPhaseState,
+			phaseData,
+			nextPhase,
+			nextPhaseCritical,
+		)
+		if err != nil {
+			return fmt.Errorf("switch phase data func error: %w", err)
+		}
 
-	b.sendCh <- data
+		b.sendCh <- data
 
-	switchErr, ok := <-b.next
-	if !ok {
-		return fmt.Errorf("server stopped, cancel task")
+		var (
+			switchErr error
+			ok        bool
+		)
+
+		select {
+		case switchErr, ok = <-b.next:
+			if !ok {
+				return fmt.Errorf("server stopped, cancel task")
+			}
+		case <-ctx.Done():
+			switchErr = fmt.Errorf("%w: %w", phases.StopOperationCondition, ctx.Err())
+		}
+
+		return switchErr
 	}
-	return switchErr
 }
 
 func onCheckResult(checkRes *check.CheckResult) error {

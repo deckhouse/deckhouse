@@ -15,6 +15,7 @@
 package terraform
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -27,6 +28,9 @@ import (
 )
 
 func TestGetMasterNodeResult(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
 	state, err := os.ReadFile("./mocks/pipeline/empty_state.json")
 	require.NoError(t, err)
 
@@ -77,7 +81,7 @@ func TestGetMasterNodeResult(t *testing.T) {
 				WithStatePath("./mocks/pipeline/empty_state.json").
 				withTerraformExecutor(executor)
 
-			res, err := GetMasterNodeResult(runner)
+			res, err := GetMasterNodeResult(ctx, runner)
 			if tc.expectedErr != nil {
 				require.EqualError(t, err, tc.expectedErr.Error())
 			} else {
@@ -90,6 +94,9 @@ func TestGetMasterNodeResult(t *testing.T) {
 }
 
 func TestCheckBaseInfrastructurePipeline(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
 	app.TmpDirName = "/tmp"
 
 	okPlan, err := os.ReadFile("./mocks/pipeline/base_infra_ok_plan.json")
@@ -146,7 +153,7 @@ func TestCheckBaseInfrastructurePipeline(t *testing.T) {
 				WithStatePath("./mocks/pipeline/empty_state.json").
 				withTerraformExecutor(executor)
 
-			res, plan, _, err := CheckBaseInfrastructurePipeline(runner, "test")
+			res, plan, _, err := CheckBaseInfrastructurePipeline(ctx, runner, "test")
 			if tc.expectedErr != nil {
 				require.EqualError(t, err, tc.expectedErr.Error())
 			} else {
@@ -163,6 +170,9 @@ func TestCheckBaseInfrastructurePipeline(t *testing.T) {
 }
 
 func TestDestroyPipeline(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
 	tests := []struct {
 		name        string
 		stateFile   string
@@ -209,7 +219,7 @@ func TestDestroyPipeline(t *testing.T) {
 				WithStatePath(tc.stateFile).
 				withTerraformExecutor(executor)
 
-			err := DestroyPipeline(runner, "test")
+			err := DestroyPipeline(ctx, runner, "test")
 			if tc.expectedErr != nil {
 				require.Contains(t, err.Error(), tc.expectedErr.Error())
 			} else {

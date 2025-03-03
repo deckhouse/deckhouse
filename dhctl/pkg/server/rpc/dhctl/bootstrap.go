@@ -92,7 +92,7 @@ connectionProcessor:
 					continue connectionProcessor
 				}
 				go func() {
-					result := s.bootstrapSafe(ctx, message.Start, phaseSwitcher.switchPhase, logWriter)
+					result := s.bootstrapSafe(ctx, message.Start, phaseSwitcher.switchPhase(ctx), logWriter)
 					sendCh <- &pb.BootstrapResponse{Message: &pb.BootstrapResponse_Result{Result: result}}
 				}()
 

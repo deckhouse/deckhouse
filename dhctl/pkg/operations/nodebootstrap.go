@@ -17,6 +17,7 @@ package operations
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"fmt"
 	"os"
 	"sync"
@@ -72,7 +73,8 @@ func BootstrapAdditionalNode(kubeCl *client.KubernetesClient, cfg *config.MetaCo
 		RunnerLogger: log.GetDefaultLogger(),
 	})
 
-	outputs, err := terraform.ApplyPipeline(runner, nodeName, terraform.OnlyState)
+	// TODO(feat/dhctl-for-commander-bootstrap-context): pass ctx
+	outputs, err := terraform.ApplyPipeline(context.Background(), runner, nodeName, terraform.OnlyState)
 	if err != nil {
 		return err
 	}
@@ -134,7 +136,8 @@ func BootstrapAdditionalNodeForParallelRun(kubeCl *client.KubernetesClient, cfg 
 		RunnerLogger: runnerLogger,
 	})
 
-	outputs, err := terraform.ApplyPipeline(runner, nodeName, terraform.OnlyState)
+	// TODO(feat/dhctl-for-commander-bootstrap-context): pass ctx
+	outputs, err := terraform.ApplyPipeline(context.Background(), runner, nodeName, terraform.OnlyState)
 	if err != nil {
 		return err
 	}
@@ -369,7 +372,8 @@ func BootstrapAdditionalMasterNode(kubeCl *client.KubernetesClient, cfg *config.
 		RunnerLogger: log.GetDefaultLogger(),
 	})
 
-	outputs, err := terraform.ApplyPipeline(runner, nodeName, terraform.GetMasterNodeResult)
+	// TODO(feat/dhctl-for-commander-bootstrap-context): pass ctx
+	outputs, err := terraform.ApplyPipeline(context.Background(), runner, nodeName, terraform.GetMasterNodeResult)
 	if err != nil {
 		return nil, err
 	}

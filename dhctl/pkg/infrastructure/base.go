@@ -15,6 +15,8 @@
 package infrastructure
 
 import (
+	"context"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
@@ -43,5 +45,6 @@ func (r *BaseInfraTerraformController) Destroy(clusterState []byte, autoApprove 
 		AutoApprove: autoApprove,
 	})
 
-	return terraform.DestroyPipeline(baseRunner, "Kubernetes cluster")
+	// TODO(feat/dhctl-for-commander-bootstrap-context): pass ctx
+	return terraform.DestroyPipeline(context.Background(), baseRunner, "Kubernetes cluster")
 }

@@ -93,7 +93,7 @@ connectionProcessor:
 					continue connectionProcessor
 				}
 				go func() {
-					result := s.convergeSafe(ctx, message.Start, phaseSwitcher.switchPhase, logWriter)
+					result := s.convergeSafe(ctx, message.Start, phaseSwitcher.switchPhase(ctx), logWriter)
 					sendCh <- &pb.ConvergeResponse{Message: &pb.ConvergeResponse_Result{Result: result}}
 				}()
 

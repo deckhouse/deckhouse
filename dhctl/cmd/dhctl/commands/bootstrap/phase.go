@@ -15,6 +15,7 @@
 package bootstrap
 
 import (
+	"context"
 	"fmt"
 
 	kingpin "gopkg.in/alecthomas/kingpin.v2"
@@ -125,7 +126,7 @@ func DefineBaseInfrastructureCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause 
 		bootstraper := bootstrap.NewClusterBootstrapper(&bootstrap.Params{
 			TerraformContext: terraform.NewTerraformContext(),
 		})
-		return bootstraper.BaseInfrastructure()
+		return bootstraper.BaseInfrastructure(context.Background())
 	})
 
 	return cmd
