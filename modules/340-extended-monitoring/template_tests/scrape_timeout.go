@@ -56,7 +56,7 @@ var _ = Describe("Module :: extendedMonitoring :: helm template :: scrape timeou
 		BeforeEach(func() {
 			hec.HelmRender()
 		})
-		It("Should be ~25% greater than timeout", func() {
+		It("Should be ~25% lower than timeout", func() {
 			podMonitor := hec.KubernetesResource("PodMonitor", "d8-monitoring", "extended-monitoring-exporter")
 			Expect(podMonitor.Exists()).To(BeTrue())
 
