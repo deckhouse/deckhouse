@@ -10,6 +10,12 @@ import:
     add: /usr/bin/ps
     to: /usr/bin/ps
     before: setup
+  - image: {{ .ModuleName }}/{{ .ImageName }}-binaries-artifact
+    add: /usr/lib64
+    to: /usr/lib64
+    before: setup
+    includePaths:
+    - 'libproc2.so.0*'
 imageSpec:
   config:
     entrypoint: [ "/usr/local/bin/node-collector" ]
