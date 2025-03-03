@@ -17,7 +17,7 @@ spec:
     tlsConfig:
       insecureSkipVerify: true
     relabelings:
-    - regex: endpoint|container|namespace
+    - regex: endpoint|container
       action: labeldrop
     - targetLabel: tier
       replacement: cluster
