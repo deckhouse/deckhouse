@@ -169,7 +169,7 @@ func (d *ComputeService) DetachDiskFromVM(ctx context.Context, diskName string, 
 }
 
 func (d *ComputeService) getVMBDA(ctx context.Context, diskName, computeName string) (*v1alpha2.VirtualMachineBlockDeviceAttachment, error) {
-	selector, err := labels.Parse(fmt.Sprintf("%s=%s,%s=%s", attachmentDiskNameLabel, computeName, attachmentMachineNameLabel, diskName))
+	selector, err := labels.Parse(fmt.Sprintf("%s=%s,%s=%s", attachmentDiskNameLabel, diskName, attachmentMachineNameLabel, computeName))
 	if err != nil {
 		return nil, err
 	}
