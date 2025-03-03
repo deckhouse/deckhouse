@@ -88,5 +88,5 @@ spec:
   {{- $context := index . 0 }}  {{- /* Template context with .Values, .Chart, etc */ -}}
   {{- $scrape_interval := (int $context.Values.global.discovery.prometheusScrapeInterval | default 30) }}
   {{- $timeout := mul $scrape_interval 0.8 | int }}
-  {{ $timeout }}s
+  {{- print $timeout "s" -}}
 {{- end }}
