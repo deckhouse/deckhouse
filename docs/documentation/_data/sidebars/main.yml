@@ -1603,6 +1603,38 @@ entries:
         en: Storage
         ru: Хранилище
       folders:
+      - title:
+          en: SDS
+          ru: Программно определяемые
+        folders:
+          - title:
+              en: Local storage based on LVM
+              ru: Локальные на основе LVM
+            url: /storage/admin/sds/lvm-local.html
+          - title:
+              en: Replicated storage based on LVM
+              ru: Реплицируемые на основе LVM
+            url: /storage/admin/sds/lvm-replicated.html
+      - title:
+          en: External
+          ru: Внешние
+        folders:
+          - title:
+              en: Yadro
+              ru: Yadro
+            url: /storage/admin/external/yadro.html
+          - title:
+              en: NFS storage
+              ru: NFS-хранилище
+            url: /storage/admin/external/nfs.html
+          - title:
+              en: CEPH storage
+              ru: CEPH-хранилище
+            url: /storage/admin/external/ceph.html
+      - title:
+          en: Modules
+          ru: Модули
+        folders:
         - title:
             en: ceph-csi
             ru: ceph-csi
@@ -1618,17 +1650,9 @@ entries:
                 ru: Примеры
               url: /modules/ceph-csi/examples.html
             - title:
-                en: Reference
-                ru: Справка
-              folders:
-                - title:
-                    en: Configuration
-                    ru: Настройки
-                  url: /modules/ceph-csi/configuration.html
-                - title:
-                    en: Custom Resources
-                    ru: Custom Resources
-                  url: /modules/ceph-csi/cr.html
+                en: Configuration
+                ru: Настройки
+              url: /modules/ceph-csi/configuration.html
             - title:
                 en: FAQ
                 ru: FAQ
@@ -1649,19 +1673,27 @@ entries:
             - title:
                 en: Reference
                 ru: Справка
-              folders:
-                - title:
-                    en: Configuration
-                    ru: Настройки
-                  url: /modules/local-path-provisioner/configuration.html
-                - title:
-                    en: Custom Resources
-                    ru: Custom Resources
-                  url: /modules/local-path-provisioner/cr.html
+            - title:
+                en: Configuration
+                ru: Настройки
+              url: /modules/local-path-provisioner/configuration.html
             - title:
                 en: FAQ
                 ru: FAQ
               url: /modules/local-path-provisioner/faq.html
+        - title:
+            en: sds-node-configurator
+            ru: sds-node-configurator
+          moduleName: sds-node-configurator
+          folders:
+            - title:
+                en: Description
+                ru: Описание
+              url: /modules/sds-node-configurator/
+            - title:
+                en: Configuration
+                ru: Настройки
+              url: /modules/sds-node-configurator/configuration.html
         - title:
             en: snapshot-controller
             ru: snapshot-controller
@@ -1679,6 +1711,18 @@ entries:
                 en: Configuration
                 ru: Настройки
               url: /modules/snapshot-controller/configuration.html
+      - title:
+         en: Custom Resources
+         ru: Custom Resources
+        folders:
+          - title:
+              en: CephCSIDriver
+              ru: CephCSIDriver
+            url: /modules/ceph-csi/cr.html
+          - title:
+              en: LocalPathProvisioner
+              ru: LocalPathProvisioner
+            url: /modules/local-path-provisioner/cr.html
     - title:
         en: Little things
         ru: Приятные мелочи
