@@ -1,6 +1,6 @@
 ---
-{{- $istioVersion := "1.24.3" }}
-{{- $istioImageVersion := (printf "v%s" (replace "." "x" $istioVersion)) }} {{- /* 1.24.3 -> v1x24x3 */}}
+{{- $istioVersion := "1.24.2" }}
+{{- $istioImageVersion := (printf "v%s" (replace "." "x" $istioVersion)) }} {{- /* 1.24.2 -> v1x24x2 */}}
 {{- $kialiVersion := "v2.1.1" }}
 ---
 # Based on https://github.com/kiali/kiali/blob/v2.1.1/deploy/docker/Dockerfile-distroless
