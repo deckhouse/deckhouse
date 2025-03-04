@@ -75,4 +75,4 @@ https://github.com/deckhouse/deckhouse/issues/9933
 
 ### cve
 
-Fix cve vulnerabilities  
+Fix cve vulnerabilities.
