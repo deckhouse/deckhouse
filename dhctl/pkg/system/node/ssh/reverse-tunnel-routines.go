@@ -53,3 +53,9 @@ func (s *RunScriptReverseTunnelKiller) KillTunnel() (string, error) {
 	out, err := script.Execute()
 	return string(out), err
 }
+
+type EmptyReverseTunnelKiller struct{}
+
+func (k EmptyReverseTunnelKiller) KillTunnel() (string, error) {
+	return "", nil
+}

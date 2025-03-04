@@ -19,7 +19,6 @@ import (
 	"math/rand/v2"
 	"os"
 	"os/exec"
-	"reflect"
 	"sync"
 	"time"
 
@@ -206,22 +205,6 @@ func (t *ReverseTunnel) StartHealthMonitor(checker node.ReverseTunnelChecker, ki
 }
 
 func (t *ReverseTunnel) Stop() {
-	t.stop(-1, true)
-}
-
-func (t *ReverseTunnel) StopWithoutMonitor(killer node.ReverseTunnelKiller) {
-	if !t.isStarted() {
-		log.DebugF("Reverse tunnel already stopped\n")
-		return
-	}
-
-	if killer != nil && !reflect.ValueOf(killer).IsNil() {
-		if out, err := killer.KillTunnel(); err != nil {
-			log.DebugF("Kill tunnel was finished with error: %v; stdout: '%s'\n", err, out)
-			return
-		}
-	}
-
 	t.stop(-1, true)
 }
 

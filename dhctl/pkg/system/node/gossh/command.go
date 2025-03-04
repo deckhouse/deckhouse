@@ -87,7 +87,10 @@ func NewSSHCommand(client *ssh.Client, name string, arg ...string) *SSHCommand {
 			// cmd = cmd + args[i] + " "
 		}
 	}
-	session, _ := client.NewSession()
+	session, err := client.NewSession()
+	if err != nil {
+		panic(err)
+	}
 
 	return &SSHCommand{
 		// Executor: process.NewDefaultExecutor(sess.Run(cmd)),

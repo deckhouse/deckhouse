@@ -88,8 +88,6 @@ type ReverseTunnel interface {
 
 	Stop()
 
-	StopWithoutMonitor(killer ReverseTunnelKiller)
-
 	String() string
 }
 

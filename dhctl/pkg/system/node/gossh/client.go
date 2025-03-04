@@ -218,7 +218,7 @@ func (s *Client) File() node.File {
 
 // UploadScript is used to upload script and execute it on remote server
 func (s *Client) UploadScript(scriptPath string, args ...string) node.Script {
-	return nil
+	return NewSSHUploadScript(s.sshClient, scriptPath, args...)
 }
 
 // UploadScript is used to upload script and execute it on remote server

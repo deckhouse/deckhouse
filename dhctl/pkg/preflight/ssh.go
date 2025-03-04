@@ -24,7 +24,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/template"
 )
 
 const (
@@ -58,20 +57,14 @@ func (pc *Checker) CheckSSHTunnel() error {
 	remote := net.JoinHostPort(localhost, strconv.Itoa(DefaultTunnelRemotePort))
 	addr := strings.Join([]string{local, remote}, ":")
 
-	killScript, err := template.RenderAndSaveKillReverseTunnelScript(
-		localhost, strconv.Itoa(DefaultTunnelRemotePort))
-	if err != nil {
-		return fmt.Errorf("Cannot render kill reverse tunnel script: %v", err)
-	}
-
 	tun := wrapper.Client().ReverseTunnel(addr)
-	err = tun.Up()
+	err := tun.Up()
 	if err != nil {
 		return fmt.Errorf(`Cannot setup tunnel to control-plane host: %w.
 Please check connectivity to control-plane host and that the sshd config parameter 'AllowTcpForwarding' set to 'yes' on control-plane node.`, err)
 	}
 
-	tun.StopWithoutMonitor(ssh.NewRunScriptReverseTunnelKiller(wrapper.Client(), killScript))
+	tun.Stop()
 	return nil
 }
 

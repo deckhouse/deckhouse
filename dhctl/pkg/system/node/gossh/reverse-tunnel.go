@@ -19,18 +19,17 @@ import (
 	"io"
 	"math/rand/v2"
 	"net"
-	"reflect"
 	"strings"
 	"sync"
 	"time"
-
-	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 
 	"github.com/pkg/errors"
 	"golang.org/x/crypto/ssh"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
+	dhctlssh "github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
 
 type tunnelWaitResult struct {
@@ -185,10 +184,15 @@ func (t *ReverseTunnel) tryToRestart(id int, killer node.ReverseTunnelKiller) (i
 	return t.upNewTunnel(id)
 }
 
-func (t *ReverseTunnel) StartHealthMonitor(checker node.ReverseTunnelChecker, killer node.ReverseTunnelKiller) {
+func (t *ReverseTunnel) StartHealthMonitor(checker node.ReverseTunnelChecker, _ node.ReverseTunnelKiller) {
 	t.tunMutex.Lock()
 	t.stopCh = make(chan struct{})
 	t.tunMutex.Unlock()
+
+	// in go ssh implementation we do not need separate script for kill tunnel from server-side
+	// because listener.Close() close tunnel in the server side
+	// but we need to backward compatibility with cli ssh
+	killer := dhctlssh.EmptyReverseTunnelKiller{}
 
 	checkReverseTunnel := func(id int) bool {
 		log.DebugF("[%d] Start Check reverse tunnel\n", id)
@@ -264,22 +268,6 @@ func (t *ReverseTunnel) StartHealthMonitor(checker node.ReverseTunnelChecker, ki
 			}
 		}
 	}()
-}
-
-func (t *ReverseTunnel) StopWithoutMonitor(killer node.ReverseTunnelKiller) {
-	if !t.isStarted() {
-		log.DebugF("Reverse tunnel already stopped\n")
-		return
-	}
-
-	if killer != nil && !reflect.ValueOf(killer).IsNil() {
-		if out, err := killer.KillTunnel(); err != nil {
-			log.DebugF("Kill tunnel was finished with error: %v; stdout: '%s'\n", err, out)
-			return
-		}
-	}
-
-	t.stop(-1, true)
 }
 
 func (t *ReverseTunnel) Stop() {
