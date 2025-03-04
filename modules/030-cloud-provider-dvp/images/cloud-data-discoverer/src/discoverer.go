@@ -37,7 +37,7 @@ func newCloudConfig() (*CloudConfig, error) {
 	return &CloudConfig{CloudConfig: cloudConfig}, nil
 }
 
-// Client Creates a zvirt client
+// Client Creates a dvp client
 func (c *CloudConfig) client() (*api.DVPCloudAPI, error) {
 	cloudAPI, err := api.NewDVPCloudAPI(c.CloudConfig)
 	if err != nil {
@@ -62,7 +62,7 @@ func (d *Discoverer) DiscoveryData(
 	ctx context.Context,
 	cloudProviderDiscoveryData []byte,
 ) ([]byte, error) {
-	discoveryData := &cloudDataV1.ZvirtCloudProviderDiscoveryData{}
+	discoveryData := &cloudDataV1.DVPCloudProviderDiscoveryData{}
 	if len(cloudProviderDiscoveryData) > 0 {
 		err := json.Unmarshal(cloudProviderDiscoveryData, &discoveryData)
 		if err != nil {
@@ -72,15 +72,15 @@ func (d *Discoverer) DiscoveryData(
 
 	dvpClient, err := d.config.client()
 	if err != nil {
-		return nil, fmt.Errorf("failed to create zvirt client: %v", err)
+		return nil, fmt.Errorf("failed to create dvp client: %v", err)
 	}
 
-	sd, err := d.getStorageDomains(ctx, dvpClient)
+	sd, err := d.getDVPStorageClass(ctx, dvpClient)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get DVP storage class: %v", err)
 	}
 
-	discoveryData.StorageDomains = mergeStorageDomains(discoveryData.StorageDomains, sd)
+	discoveryData.StorageClassList = mergeStorageDomains(discoveryData.StorageClassList, sd)
 
 	discoveryDataJson, err := json.Marshal(discoveryData)
 	if err != nil {
@@ -91,7 +91,7 @@ func (d *Discoverer) DiscoveryData(
 	return discoveryDataJson, nil
 }
 
-func (d *Discoverer) getStorageDomains(
+func (d *Discoverer) getDVPStorageClass(
 	ctx context.Context,
 	dvpClient *api.DVPCloudAPI,
 ) ([]storagev1.StorageClass, error) {

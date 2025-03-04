@@ -106,7 +106,6 @@ github.com/google/pprof v0.0.0-20241029153458-d1b30febd7db h1:097atOisP2aRj7vFgY
 github.com/google/pprof v0.0.0-20241029153458-d1b30febd7db/go.mod h1:vavhavw2zAxS5dIdcRluK6cSGGPlZynqzFM8NdvU144=
 github.com/google/uuid v1.0.0/go.mod h1:TIyPZe4MgqvfeYDBFedMoGGpEw/LqOeaOT+nhxU+yHo=
 github.com/google/uuid v1.1.2/go.mod h1:TIyPZe4MgqvfeYDBFedMoGGpEw/LqOeaOT+nhxU+yHo=
-github.com/google/uuid v1.3.0/go.mod h1:TIyPZe4MgqvfeYDBFedMoGGpEw/LqOeaOT+nhxU+yHo=
 github.com/google/uuid v1.6.0 h1:NIvaJDMOsjHA8n1jAhLSgzrAzy1Hgr+hNrb57e+94F0=
 github.com/google/uuid v1.6.0/go.mod h1:TIyPZe4MgqvfeYDBFedMoGGpEw/LqOeaOT+nhxU+yHo=
 github.com/googleapis/gnostic v0.5.1/go.mod h1:6U4PtQXGIEt/Z3h5MAT7FNofLnw9vXk2cUuW7uA/OeU=
@@ -170,12 +169,6 @@ github.com/openshift/api v0.0.0-20230503133300-8bbcb7ca7183 h1:t/CahSnpqY46sQR01
 github.com/openshift/api v0.0.0-20230503133300-8bbcb7ca7183/go.mod h1:4VWG+W22wrB4HfBL88P40DxLEpSOaiBVxUnfalfJo9k=
 github.com/openshift/custom-resource-status v1.1.2 h1:C3DL44LEbvlbItfd8mT5jWrqPfHnSOQoQf/sypqA6A4=
 github.com/openshift/custom-resource-status v1.1.2/go.mod h1:DB/Mf2oTeiAmVVX1gN+NEqweonAPY0TKUwADizj8+ZA=
-github.com/ovirt/go-ovirt v0.0.0-20220427092237-114c47f2835c h1:jXRFpl7+W0YZj/fghoYuE4vJWW/KeQGvdrhnRwRGtAY=
-github.com/ovirt/go-ovirt v0.0.0-20220427092237-114c47f2835c/go.mod h1:Zkdj9/rW6eyuw0uOeEns6O3pP5G2ak+bI/tgkQ/tEZI=
-github.com/ovirt/go-ovirt-client-log/v3 v3.0.0 h1:uvACVHYhYPMkNJrrgWiABcfELB6qoFfsDDUTbpb4Jv4=
-github.com/ovirt/go-ovirt-client-log/v3 v3.0.0/go.mod h1:chKKxCv4lRjxezrTG+EIhkWXGhDAWByglPVXh/iYdnQ=
-github.com/ovirt/go-ovirt-client/v3 v3.2.0 h1:gDQhxtubwzdlDIm2lh4XiOwkte2nR3JX1Q0O8iLGY84=
-github.com/ovirt/go-ovirt-client/v3 v3.2.0/go.mod h1:2QkYFK7OTrtM/kOQCmX5V/RRBGVt4Ro4tsxoU68my+0=
 github.com/pborman/uuid v1.2.1 h1:+ZZIw58t/ozdjRaXh/3awHfmWRbzYxJoAdNJxe/3pvw=
 github.com/pborman/uuid v1.2.1/go.mod h1:X/NO0urCmaxf9VXbdlT7C2Yzkj2IKimNn4k+gtPdI/k=
 github.com/pkg/errors v0.9.1 h1:FEBLx1zS214owpjy7qsBeixbURkuhQAwrK5UwLGTwt4=

@@ -12,8 +12,8 @@ require (
 	dvp-common v0.0.0-00010101000000-000000000000
 	github.com/alecthomas/kingpin v2.2.6+incompatible
 	github.com/deckhouse/deckhouse/go_lib/cloud-data v0.0.0-00010101000000-000000000000
-	github.com/ovirt/go-ovirt-client/v3 v3.2.0
 	github.com/sirupsen/logrus v1.9.3
+	k8s.io/api v0.32.1
 )
 
 require (
@@ -44,8 +44,6 @@ require (
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
 	github.com/openshift/api v0.0.0-20230503133300-8bbcb7ca7183 // indirect
 	github.com/openshift/custom-resource-status v1.1.2 // indirect
-	github.com/ovirt/go-ovirt v0.0.0-20220427092237-114c47f2835c // indirect
-	github.com/ovirt/go-ovirt-client-log/v3 v3.0.0 // indirect
 	github.com/pborman/uuid v1.2.1 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/prometheus/client_golang v1.19.1 // indirect
@@ -65,7 +63,6 @@ require (
 	gopkg.in/evanphx/json-patch.v4 v4.12.0 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
-	k8s.io/api v0.32.1 // indirect
 	k8s.io/apiextensions-apiserver v0.32.0 // indirect
 	k8s.io/apimachinery v0.32.1 // indirect
 	k8s.io/client-go v0.32.1 // indirect
