@@ -7,7 +7,7 @@
 {{- $d8Edition := "" }}
 {{- $moduleStatus := "" }}
 
-{{- range sort $channelsInfo "stability" "desc" }}
+{{- rage sort $channelsInfo "stability" "desc" }}
   {{- if eq .code "rock-solid" }}{{ continue }}{{ end }}
   {{- with $.GetPage ( printf "modules/%s/%s/README.md" $currentModuleName .code  ) }}
     {{- if and .Params.d8Edition ( not $d8Edition ) }}{{ $d8Edition = .Params.d8Edition }}{{ end }}
