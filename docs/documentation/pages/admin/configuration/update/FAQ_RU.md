@@ -1,6 +1,7 @@
 ---
 title: FAQ
-permalink: ru/admin/configuration/update/FAQ.html
+permalink: ru/admin/configuration/update/faq.html
+lang: ru
 ---
 
 ## Как применить обновление минуя окна обновлений, canary-release и ручной режим обновлений?

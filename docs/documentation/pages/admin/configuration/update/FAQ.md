@@ -1,4 +1,4 @@
 ---
 title: FAQ
-permalink: en/admin/configuration/update/FAQ.html
+permalink: en/admin/configuration/update/faq.html
 ---

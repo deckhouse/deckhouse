@@ -1,6 +1,7 @@
 ---
 title: Обновление Control Plane
 permalink: ru/admin/configuration/update/control-plane-update.html
+lang: ru
 ---
 
 # Обновление Control Plane Kubernetes
