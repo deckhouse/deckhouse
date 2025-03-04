@@ -411,7 +411,7 @@ apiVersions:
             description: |
               If specified, an additional network interface will be added to the node (the node will use it as a default route).
             type: string
-          familyID:
+          natInstanceFamilyID:
             description: |
               Family ID of the NAT instance image.
             type: string
