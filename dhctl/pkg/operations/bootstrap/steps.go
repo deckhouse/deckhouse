@@ -56,7 +56,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/clissh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/clissh/frontend"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/session"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/template"
@@ -274,8 +273,8 @@ func SetupSSHTunnelToRegistryPackagesProxy(sshCl node.SSHClient) (node.ReverseTu
 		return nil, fmt.Errorf("Cannot render kill reverse tunnel script: %v", err)
 	}
 
-	checker := clissh.NewRunScriptReverseTunnelChecker(sshCl, checkingScript)
-	killer := clissh.NewRunScriptReverseTunnelKiller(sshCl, killScript)
+	checker := ssh.NewRunScriptReverseTunnelChecker(sshCl, checkingScript)
+	killer := ssh.NewRunScriptReverseTunnelKiller(sshCl, killScript)
 
 	tun := sshCl.ReverseTunnel(fmt.Sprintf("%s:%s:%s:%s", listenAddress, port, listenAddress, port))
 	err = tun.Up()

@@ -12,24 +12,25 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package frontend
+package gossh
 
 import (
 	"fmt"
+	"io"
 	"math/rand/v2"
-	"os"
-	"os/exec"
+	"net"
 	"reflect"
+	"strings"
 	"sync"
 	"time"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
-
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 
+	"github.com/pkg/errors"
+	"golang.org/x/crypto/ssh"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/clissh/cmd"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/session"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
 )
 
 type tunnelWaitResult struct {
@@ -38,22 +39,23 @@ type tunnelWaitResult struct {
 }
 
 type ReverseTunnel struct {
-	Session *session.Session
-	Address string
+	sshClient *ssh.Client
+	address   string
 
 	tunMutex sync.Mutex
-	sshCmd   *exec.Cmd
-	started  bool
-	stopCh   chan struct{}
+
+	started        bool
+	stopCh         chan struct{}
+	remoteListener net.Listener
 
 	errorCh chan tunnelWaitResult
 }
 
-func NewReverseTunnel(sess *session.Session, address string) *ReverseTunnel {
+func NewReverseTunnel(sshClient *ssh.Client, address string) *ReverseTunnel {
 	return &ReverseTunnel{
-		Session: sess,
-		Address: address,
-		errorCh: make(chan tunnelWaitResult),
+		sshClient: sshClient,
+		address:   address,
+		errorCh:   make(chan tunnelWaitResult),
 	}
 }
 
@@ -73,38 +75,97 @@ func (t *ReverseTunnel) upNewTunnel(oldId int) (int, error) {
 
 	id := rand.Int()
 
-	log.DebugF("[%d] Start reverse tunnel\n", id)
-
-	t.sshCmd = cmd.NewSSH(t.Session).
-		WithArgs(
-			"-N", // no command
-			"-n", // no stdin
-			"-R", t.Address,
-		).
-		WithExitWhenTunnelFailure(true).
-		Cmd()
-
-	err := t.sshCmd.Start()
-	if err != nil {
-		return id, fmt.Errorf("[%d] Cannot start tunnel ssh command: %w", id, err)
+	parts := strings.Split(t.address, ":")
+	if len(parts) != 4 {
+		return -1, fmt.Errorf("invalid address must be 'remote_bind:remote_port:local_bind:local_port': %s", t.address)
 	}
 
-	go func() {
-		log.DebugF("[%d] Reverse tunnel started. Wait stop tunnel...\n", id)
+	remoteBind, remotePort, localBind, localPort := parts[0], parts[1], parts[2], parts[3]
 
-		err := t.sshCmd.Wait()
+	log.DebugF("[%d] Remote bind: %s remote port: %s local bind: %s local port: %s\n", id, remoteBind, remotePort, localBind, localPort)
 
-		t.errorCh <- tunnelWaitResult{
-			id:  id,
-			err: err,
-		}
+	log.DebugF("[%d] Start reverse tunnel\n", id)
 
-		log.DebugF("[%d] Reverse tunnel was stopped and handled\n", id)
-	}()
+	remoteAddress := net.JoinHostPort(remoteBind, remotePort)
+	localAddress := net.JoinHostPort(localBind, localPort)
 
+	// reverse listen on remote server port
+	listener, err := t.sshClient.Listen("tcp", remoteAddress)
+	if err != nil {
+		return -1, errors.Wrap(err, fmt.Sprintf("failed to listen remote on %s", remoteAddress))
+	}
+
+	log.DebugF("[%d] Listen remote %s successful\n", id, remoteAddress)
+
+	go t.acceptTunnelConnection(id, localAddress, listener)
+
+	t.remoteListener = listener
 	t.started = true
 
 	return id, nil
+}
+
+func (t *ReverseTunnel) acceptTunnelConnection(id int, localAddress string, listener net.Listener) {
+	for {
+		client, err := listener.Accept()
+		if err != nil {
+			e := fmt.Errorf("Accept(): %s", err.Error())
+			t.errorCh <- tunnelWaitResult{
+				id:  id,
+				err: e,
+			}
+			return
+		}
+
+		log.DebugF("[%d] connection accepted. Try to connect to local %s\n", id, localAddress)
+
+		local, err := net.Dial("tcp", localAddress)
+		if err != nil {
+			e := fmt.Errorf("Cannot dial to %s: %s", localAddress, err.Error())
+			t.errorCh <- tunnelWaitResult{
+				id:  id,
+				err: e,
+			}
+			return
+		}
+
+		log.DebugF("[%d] Connected to local %s\n", id, localAddress)
+
+		// handle the connection in another goroutine, so we can support multiple concurrent
+		// connections on the same port
+		go t.handleClient(id, client, local)
+	}
+}
+
+func (t *ReverseTunnel) handleClient(id int, client net.Conn, remote net.Conn) {
+	defer func() {
+		err := client.Close()
+		if err != nil {
+			log.DebugF("[%d] Cannot close connection: %s\n", id, err)
+		}
+	}()
+
+	chDone := make(chan struct{}, 2)
+
+	// Start remote -> local data transfer
+	go func() {
+		_, err := io.Copy(client, remote)
+		if err != nil {
+			log.WarnF(fmt.Sprintf("[%d] Error while copy remote->local: %s\n", id, err))
+		}
+		chDone <- struct{}{}
+	}()
+
+	// Start local -> remote data transfer
+	go func() {
+		_, err := io.Copy(remote, client)
+		if err != nil {
+			log.WarnF(fmt.Sprintf("[%d] Error while copy local->remote: %s\n", id, err))
+		}
+		chDone <- struct{}{}
+	}()
+
+	<-chDone
 }
 
 func (t *ReverseTunnel) isStarted() bool {
@@ -205,10 +266,6 @@ func (t *ReverseTunnel) StartHealthMonitor(checker node.ReverseTunnelChecker, ki
 	}()
 }
 
-func (t *ReverseTunnel) Stop() {
-	t.stop(-1, true)
-}
-
 func (t *ReverseTunnel) StopWithoutMonitor(killer node.ReverseTunnelKiller) {
 	if !t.isStarted() {
 		log.DebugF("Reverse tunnel already stopped\n")
@@ -222,6 +279,10 @@ func (t *ReverseTunnel) StopWithoutMonitor(killer node.ReverseTunnelKiller) {
 		}
 	}
 
+	t.stop(-1, true)
+}
+
+func (t *ReverseTunnel) Stop() {
 	t.stop(-1, true)
 }
 
@@ -242,22 +303,15 @@ func (t *ReverseTunnel) stop(id int, full bool) {
 		t.stopCh <- struct{}{}
 	}
 
-	log.DebugF("[%d] Try to find tunnel process %d\n", id, t.sshCmd.Process.Pid)
-	_, err := os.FindProcess(t.sshCmd.Process.Pid)
-	if err == nil {
-		log.DebugF("[%d] Process found %d. Kill it\n", id, t.sshCmd.Process.Pid)
-		err := t.sshCmd.Process.Kill()
-		if err != nil {
-			log.DebugF("[%d] Cannot kill process %d: %v\n", id, t.sshCmd.Process.Pid, err)
-		}
-	} else {
-		log.DebugF("[%d] Stopping tunnel. Process %d already finished\n", id, t.sshCmd.Process.Pid)
+	err := t.remoteListener.Close()
+	if err != nil {
+		log.WarnF("[%d] Cannot close remote listener: %s\n", id, err.Error())
 	}
 
-	t.sshCmd = nil
+	t.remoteListener = nil
 	t.started = false
 }
 
 func (t *ReverseTunnel) String() string {
-	return fmt.Sprintf("%s:%s", "R", t.Address)
+	return fmt.Sprintf("%s:%s", "R", t.address)
 }

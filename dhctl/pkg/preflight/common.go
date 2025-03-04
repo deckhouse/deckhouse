@@ -50,7 +50,7 @@ func setupSSHTunnelToProxyAddr(sshCl node.SSHClient, proxyUrl *url.URL) (node.Tu
 	}
 	tunnel := strings.Join([]string{ProxyTunnelPort, proxyUrl.Hostname(), port}, ":")
 	log.DebugF("tunnel string: %s", tunnel)
-	tun := sshCl.Tunnel("L", tunnel)
+	tun := sshCl.Tunnel(tunnel)
 	err := tun.Up()
 	if err != nil {
 		return nil, err

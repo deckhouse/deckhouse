@@ -192,13 +192,13 @@ func (s *Client) Start() error {
 }
 
 // Tunnel is used to open local (L) and remote (R) tunnels
-func (s *Client) Tunnel(ttype, address string) node.Tunnel {
+func (s *Client) Tunnel(address string) node.Tunnel {
 	return nil
 }
 
 // ReverseTunnel is used to open remote (R) tunnel
 func (s *Client) ReverseTunnel(address string) node.ReverseTunnel {
-	return nil
+	return NewReverseTunnel(s.sshClient, address)
 }
 
 // Command is used to run commands on remote server

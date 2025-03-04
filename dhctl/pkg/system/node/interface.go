@@ -88,6 +88,8 @@ type ReverseTunnel interface {
 
 	Stop()
 
+	StopWithoutMonitor(killer ReverseTunnelKiller)
+
 	String() string
 }
 
@@ -117,7 +119,7 @@ type SSHClient interface {
 	Start() error
 
 	// Tunnel is used to open local (L) and remote (R) tunnels
-	Tunnel(ttype, address string) Tunnel
+	Tunnel(address string) Tunnel
 
 	// ReverseTunnel is used to open remote (R) tunnel
 	ReverseTunnel(address string) ReverseTunnel

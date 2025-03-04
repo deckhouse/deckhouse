@@ -113,8 +113,8 @@ func (s *Client) Start() error {
 // Easy access to frontends
 
 // Tunnel is used to open local (L) and remote (R) tunnels
-func (s *Client) Tunnel(ttype, address string) node.Tunnel {
-	return frontend.NewTunnel(s.Settings, ttype, address)
+func (s *Client) Tunnel(address string) node.Tunnel {
+	return frontend.NewTunnel(s.Settings, "L", address)
 }
 
 // ReverseTunnel is used to open remote (R) tunnel
