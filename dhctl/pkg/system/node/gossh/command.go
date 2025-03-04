@@ -393,7 +393,7 @@ func (c *SSHCommand) SetupStreamHandlers() (err error) {
 			return
 		}
 		c.ConsumeLines(stdoutHandlerReadPipe, c.stdoutHandler)
-		log.DebugF("stop line consumer for '%s'\n", c.Args[0])
+		log.DebugF("stop line consumer for '%s'\n", c.cmd)
 	}()
 
 	// Start reading from stderr of a command.
@@ -519,7 +519,7 @@ func (c *SSHCommand) ConsumeLines(r io.Reader, fn func(l string)) {
 		}
 
 		if text != "" {
-			log.DebugF("%s: %s\n", c.Args[0], text)
+			log.DebugF("%s: %s\n", c.cmd, text)
 		}
 	}
 }
