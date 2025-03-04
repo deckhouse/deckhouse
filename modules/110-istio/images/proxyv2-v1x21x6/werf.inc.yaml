@@ -128,14 +128,12 @@ mount:
   to: /root/.cache/bazel
 - from: tmp_dir
   to: /tmp/bazel-cache
+- from: tmp_dir
+  to: /tmp/bazel-deps
 shell:
   install:
-  - mkdir -p /tmp/bazel-cache
   - git clone --depth 1 --branch {{ $istioProxyCacheRev }} {{ $.SOURCE_REPO }}/istio/envoy-build-cache.git /tmp/bazel-cache
-  - rm -rf /tmp/bazel-cache/.git
-  - mkdir -p /tmp/bazel-deps
   - git clone --depth 1 --branch {{ $istioProxyDepsRev }} {{ .SOURCE_REPO }}/istio/envoy-build-deps.git /tmp/bazel-deps
-  - rm -rf /tmp/bazel-deps/.git
   #
   - export GO_VERSION=${GOLANG_VERSION} GOPROXY={{ $.GOPROXY }}
   - export GOOS=linux GOARCH=amd64 CGO_ENABLED=0
