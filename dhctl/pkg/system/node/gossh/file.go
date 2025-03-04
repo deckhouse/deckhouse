@@ -62,7 +62,7 @@ func (f *SSHFile) Upload(srcPath, remotePath string) error {
 			remotePath = remotePath + "/" + filepath.Base(srcPath)
 		}
 
-		if err := scpClient.CopyFile(context.Background(), localFile, remotePath, "0655"); err != nil {
+		if err := scpClient.CopyFile(context.Background(), localFile, remotePath, "0755"); err != nil {
 			return fmt.Errorf("failed to copy file to remote host: %w", err)
 		}
 	} else {

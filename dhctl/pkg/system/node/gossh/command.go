@@ -61,6 +61,9 @@ type SSHCommand struct {
 	out *bytes.Buffer
 	err *bytes.Buffer
 
+	OutBytes bytes.Buffer
+	ErrBytes bytes.Buffer
+
 	stop   bool
 	waitCh chan struct{}
 	stopCh chan struct{}
@@ -172,11 +175,11 @@ func (c *SSHCommand) WaitError() error {
 }
 
 func (c *SSHCommand) StderrBytes() []byte {
-	return c.err.Bytes()
+	return c.ErrBytes.Bytes()
 }
 
 func (c *SSHCommand) StdoutBytes() []byte {
-	return c.out.Bytes()
+	return c.OutBytes.Bytes()
 }
 
 func (c *SSHCommand) WithMatchers(matchers ...*process.ByteSequenceMatcher) *SSHCommand {
@@ -318,6 +321,8 @@ func (c *SSHCommand) SetupStreamHandlers() (err error) {
 	// setup stdout stream handlers
 	if c.Session != nil && c.out == nil && c.stdoutHandler == nil && len(c.Matchers) == 0 {
 		c.Session.Stdout = os.Stdout
+		c.Session.Stdout = &c.OutBytes
+		c.Session.Stderr = &c.ErrBytes
 		return
 	}
 
