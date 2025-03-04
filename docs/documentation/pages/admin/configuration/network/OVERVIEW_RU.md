@@ -10,5 +10,4 @@ lang: ru
 * Доступа к сервисам извне и балансировки входящего трафика. Подробнее — в разделе [Балансировка входящего трафика](../network/incoming-traffic-balancing-overview.html).
 * Egress-трафика. Подробнее — в разделе [Балансировка исходящего трафика](../network/outgoing-traffic-balancing.html).
 * Межкластерного взаимодействия между суверенными и созависимыми кластерами. Подробнее — в разделе [Межкластерное взаимодействие](../network/inter-cluster-cooperation-overview.html).
-* Подхода (паттерна) Service Mesh. Подробнее — в разделе [Service Mesh](../network/service-mesh-overview.html).
 * Сетевых политик. Подробнее — в разделе [Сетевые политики](../network/network-policies-overview.html).
