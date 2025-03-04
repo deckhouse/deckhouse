@@ -1,5 +1,5 @@
 diff --git i/server/handlers.go w/server/handlers.go
-index a00b290b..29fad037 100644
+index a00b290b..f628342a 100644
 --- i/server/handlers.go
 +++ w/server/handlers.go
 @@ -21,7 +21,10 @@ import (
@@ -13,50 +13,6 @@ index a00b290b..29fad037 100644
  	"github.com/dexidp/dex/server/internal"
  	"github.com/dexidp/dex/storage"
  )
-@@ -387,7 +390,7 @@ func (s *Server) handlePasswordLogin(w http.ResponseWriter, r *http.Request) {
- 		redirectURL, canSkipApproval, err := s.finalizeLogin(r.Context(), identity, authReq, conn.Connector)
- 		if err != nil {
- 			s.logger.ErrorContext(r.Context(), "failed to finalize login", "err", err)
--			s.renderError(r, w, http.StatusInternalServerError, "Login error.")
-+			s.renderError(r, w, http.StatusUnauthorized, fmt.Sprintf("Failed to authenticate: %v", err))
- 			return
- 		}
- 
-@@ -395,7 +398,7 @@ func (s *Server) handlePasswordLogin(w http.ResponseWriter, r *http.Request) {
- 			authReq, err = s.storage.GetAuthRequest(ctx, authReq.ID)
- 			if err != nil {
- 				s.logger.ErrorContext(r.Context(), "failed to get finalized auth request", "err", err)
--				s.renderError(r, w, http.StatusInternalServerError, "Login error.")
-+				s.renderError(r, w, http.StatusUnauthorized, fmt.Sprintf("Failed to authenticate: %v", err))
- 				return
- 			}
- 			s.sendCodeResponse(w, r, authReq)
-@@ -480,14 +483,14 @@ func (s *Server) handleConnectorCallback(w http.ResponseWriter, r *http.Request)
- 
- 	if err != nil {
- 		s.logger.ErrorContext(r.Context(), "failed to authenticate", "err", err)
--		s.renderError(r, w, http.StatusInternalServerError, fmt.Sprintf("Failed to authenticate: %v", err))
-+		s.renderError(r, w, http.StatusUnauthorized, fmt.Sprintf("Failed to authenticate: %v", err))
- 		return
- 	}
- 
- 	redirectURL, canSkipApproval, err := s.finalizeLogin(ctx, identity, authReq, conn.Connector)
- 	if err != nil {
- 		s.logger.ErrorContext(r.Context(), "failed to finalize login", "err", err)
--		s.renderError(r, w, http.StatusInternalServerError, "Login error.")
-+		s.renderError(r, w, http.StatusUnauthorized, fmt.Sprintf("Failed to authenticate: %v", err))
- 		return
- 	}
- 
-@@ -495,7 +498,7 @@ func (s *Server) handleConnectorCallback(w http.ResponseWriter, r *http.Request)
- 		authReq, err = s.storage.GetAuthRequest(ctx, authReq.ID)
- 		if err != nil {
- 			s.logger.ErrorContext(r.Context(), "failed to get finalized auth request", "err", err)
--			s.renderError(r, w, http.StatusInternalServerError, "Login error.")
-+			s.renderError(r, w, http.StatusUnauthorized, fmt.Sprintf("Failed to authenticate: %v", err))
- 			return
- 		}
- 		s.sendCodeResponse(w, r, authReq)
 @@ -517,6 +520,25 @@ func (s *Server) finalizeLogin(ctx context.Context, identity connector.Identity,
  		Groups:            identity.Groups,
  	}
