@@ -168,3 +168,6 @@ apiVersions:
                 > **Внимание!** При использовании `apiToken` необходимо оставить `username` и `password` пустыми.
             insecure:
               description:  Устанавливается в `true`, VCD имеет self-signed-сертификат.
+        legacyMode:
+          description: |
+            Если задано значение `true`, будет использоваться версия API ниже `37.2`.
