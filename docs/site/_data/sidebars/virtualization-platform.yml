@@ -171,20 +171,23 @@ entries:
                 - title:
                     en: Supported storages
                     ru: Поддерживаемые хранилища
-                  url: /virtualization-platform/documentation/admin/platform-management/storage/supported-storage.html
-              folders:
-                - title:
-                    en: SDS
-                    ru: Программно определяемые
                   folders:
                     - title:
-                        en: Local storage based on LVM
-                        ru: Локальные на основе LVM
-                      url: /virtualization-platform/documentation/admin/platform-management/storage/sds/lvm-local.html
+                         en: Supported storages
+                         ru: Поддерживаемые хранилища
+                      url: /virtualization-platform/documentation/admin/platform-management/storage/supported-storage.html
                     - title:
-                        en: Replicated storage based on LVM
-                        ru: Реплицируемые на основе LVM
-                      url: /virtualization-platform/documentation/admin/platform-management/storage/sds/lvm-replicated.html
+                        en: SDS
+                        ru: Программно определяемые
+                      folders:
+                        - title:
+                            en: Local storage based on LVM
+                            ru: Локальные на основе LVM
+                          url: /virtualization-platform/documentation/admin/platform-management/storage/sds/lvm-local.html
+                        - title:
+                            en: Replicated storage based on LVM
+                            ru: Реплицируемые на основе LVM
+                          url: /virtualization-platform/documentation/admin/platform-management/storage/sds/lvm-replicated.html
                 - title:
                     en: External
                     ru: Внешние
