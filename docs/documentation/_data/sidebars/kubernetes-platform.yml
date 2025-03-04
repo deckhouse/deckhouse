@@ -151,10 +151,6 @@ entries:
                         ru: Настройка внутренней сети
                       url: /admin/network/configuration.html
                     - title:
-                        en: Operation modes of bpfLB for external traffic processing
-                        ru: Режимы работы bpfLB для обработки внешнего трафика
-                      url: /admin/network/bpflb-external-traffic.html
-                    - title:
                         en: Encrypting traffic between nodes
                         ru: Шифрование трафика между узлами
                       url: /admin/network/encrypting-traffic-nodes.html

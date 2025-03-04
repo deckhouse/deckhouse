@@ -43,7 +43,6 @@ spec:
     operator: Equal
     value: frontend
 ```
-<<<<<<< HEAD
 
 ## Пример создания сервиса с типом ClusterIP
 
@@ -61,5 +60,3 @@ spec:
     app: lab-4-backend
   type: ClusterIP
 ```
-=======
->>>>>>> d47fdce070 (docs: add new sections and fix remarks)
