@@ -56,7 +56,9 @@ func (f *SSHFile) Upload(srcPath, remotePath string) error {
 
 		rType, err := getRemoteFileStat(f.sshClient, remotePath)
 		if err != nil {
-			return err
+			if !strings.ContainsAny(err.Error(), "No such file or directory") {
+				return err
+			}
 		}
 		if rType == "directory" {
 			remotePath = remotePath + "/" + filepath.Base(srcPath)
