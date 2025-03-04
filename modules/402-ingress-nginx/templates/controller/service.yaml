@@ -17,26 +17,35 @@
       {{ $sourceRanges = $crd.spec.loadBalancerWithSSLPassthrough.sourceRanges  }}
       {{ $loadBalancerClass = $crd.spec.loadBalancerWithSSLPassthrough.loadBalancerClass }}
     {{- end }}
+
+    {{- define "service.name" -}}
+      {{- if $loadBalancerClass -}}
+        {{ $crd.name }}-load-balancer-{{ sha1sum $loadBalancerClass | trunc 8 }}
+      {{- else -}}
+        {{ $crd.name }}-load-balancer
+      {{- end -}}
+    {{- end }}
+
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ $crd.name }}-load-balancer
+  name: {{ include "service.name" . }}
   namespace: d8-ingress-nginx
   {{- include "helm_lib_module_labels" (list $context (dict "app" "controller" "name" $crd.name "deckhouse-service-type" "provider-managed" )) | nindent 2 }}
-    {{- if $annotations }}
+  {{- if $annotations }}
   annotations:
-      {{- range $key, $value := $annotations }}
+    {{- range $key, $value := $annotations }}
     {{ $key }}: {{ $value | quote }}
-      {{- end }}
     {{- end }}
+  {{- end }}
 spec:
   type: LoadBalancer
   externalTrafficPolicy: Local
-    {{- if $sourceRanges }}
+  {{- if $sourceRanges }}
   loadBalancerSourceRanges:
     {{- $sourceRanges | toYaml | nindent 4 }}
-    {{- end }}
+  {{- end }}
   ports:
   - name: http
     port: 80
@@ -46,9 +55,9 @@ spec:
     port: 443
     targetPort: 443
     protocol: TCP
-    {{- if $loadBalancerClass }}
+  {{- if $loadBalancerClass }}
   loadBalancerClass: {{ $loadBalancerClass }}
-    {{- end }}
+  {{- end }}
   selector:
     app: controller
     name: {{ $crd.name }}
