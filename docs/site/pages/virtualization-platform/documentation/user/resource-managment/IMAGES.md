@@ -18,9 +18,10 @@ There are different types of images:
 
 Examples of resources for obtaining virtual machine images:
 
-- [Ubuntu](https://cloud-images.ubuntu.com).
-- [Alt Linux](https://ftp.altlinux.ru/pub/distributions/ALTLinux/platform/images/cloud/x86_64).
-- [Astra Linux](https://download.astralinux.ru/ui/native/mg-generic/alse/cloudinit).
+- [Ubuntu](https://cloud-images.ubuntu.com)
+- [Debian](https://cdimage.debian.org/images/cloud/)
+- [RockyLinux](https://download.rockylinux.org/pub/rocky/9.5/images/x86_64/)
+- [CentOS](https://cloud.centos.org/centos/7/images/)
 
 After creating the resource, the type and size of the image are automatically determined, and this information is reflected in the resource's status.
 

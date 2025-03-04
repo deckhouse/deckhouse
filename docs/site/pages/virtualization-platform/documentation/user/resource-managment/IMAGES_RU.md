@@ -19,8 +19,11 @@ lang: ru
 
 Примеры ресурсов для получения образов виртуальной машины:
 
-- [Ubuntu](https://cloud-images.ubuntu.com);
-- [Alt Linux](https://ftp.altlinux.ru/pub/distributions/ALTLinux/platform/images/cloud/x86_64);
+- [Ubuntu](https://cloud-images.ubuntu.com),
+- [Debian](https://cdimage.debian.org/images/cloud/),
+- [RockyLinux](https://download.rockylinux.org/pub/rocky/9.5/images/x86_64/),
+- [CentOS](https://cloud.centos.org/centos/7/images/),
+- [Alt Linux](https://ftp.altlinux.ru/pub/distributions/ALTLinux/platform/images/cloud/x86_64),
 - [Astra Linux](https://download.astralinux.ru/ui/native/mg-generic/alse/cloudinit).
 
 После создания ресурса, тип и размер образа определяются автоматически, и эта информация отражается в статусе ресурса.
