@@ -245,11 +245,6 @@ func (c *SSHCommand) Sudo() {
 		}
 		return ""
 	})
-
-	// Wait for the command to finish
-	if err := c.Session.Wait(); err != nil {
-		os.Exit(1)
-	}
 }
 
 func (c *SSHCommand) WithStdoutHandler(handler func(string)) {
