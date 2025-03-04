@@ -34,7 +34,7 @@ func (pc *Checker) CheckSudoIsAllowedForUser() error {
 		return callSudo(pc.nodeInterface, app.BecomePass)
 	}
 
-	return callSudo(pc.nodeInterface, "")
+	return callSudo(pc.nodeInterface, app.BecomePass)
 
 }
 
