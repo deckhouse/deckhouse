@@ -439,4 +439,5 @@ properties:
           type: object
           properties:
             dvpStorageClass:
-              type: string
+              name: string
+              dvpStorageClass: string
