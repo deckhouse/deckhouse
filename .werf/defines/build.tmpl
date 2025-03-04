@@ -1,0 +1,58 @@
+
+# src-artifact image renderer
+#   The presence of patches and src paths is automatically recognized with the addition of the right parts of the yaml
+#
+# . is dict have keys:
+#   . is context
+#   git - dict
+#       path    - Path piece after SOURCE_REPO
+#       version - tag name
+{{- define "src-artifact" }}
+{{- $context := . -}}
+{{- $patches := (printf "/%smodules/%s-%s/images/%s" $context.ModulePath $context.ModulePriority $context.ModuleName $context.ImageName) }}
+{{- $src := false }}
+{{- $patch := false }}
+{{- range $path, $_ := $context.Files.Glob (printf "%s/*" $patches) }}
+{{-   if contains "/patches/" $path }}
+{{-     $patch = true }}
+{{-   end }}
+{{-   if contains "/src/" $path }}
+{{-     $src = true }}
+{{-   end }}
+{{- end }}
+image: {{ $context.ModuleName }}/{{ $context.ImageName }}-src-artifact
+final: false
+fromImage: common/src-artifact
+{{- if or $src $patch }}
+git:
+{{-   if $src }}
+- add: {{ $patches }}/src
+  to: /src
+  stageDependencies:
+    install:
+    - '**/*'
+{{-   end }}
+{{-   if $patch }}
+- add: {{ $patches }}/patches
+  to: /patches
+  includePaths:
+  - '**/*.patch'
+  stageDependencies:
+    install:
+    - '**/*.patch'
+{{-   end }}
+{{- end }}
+shell:
+  install:
+  - cd /src
+{{- if $context.git }}
+  - git clone --depth 1 --branch {{ $context.git.version }} {{ $context.SOURCE_REPO }}/{{ $context.git.path }} .
+  - git describe --tags > VERSION
+  - git rev-parse HEAD > REVISION
+  - git describe --dirty --long --always > COMMIT
+{{- end }}
+{{- if $patch }}
+  - git apply /patches/*.patch --verbose
+{{- end }}
+  - rm -rf .git vendor {{ if $context.git }}{{ $context.git.rm }}{{ end }}
+{{- end }}
