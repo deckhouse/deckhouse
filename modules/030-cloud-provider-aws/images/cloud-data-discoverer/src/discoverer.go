@@ -32,6 +32,8 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/cloud-data/apis/v1alpha1"
 )
 
+const AwsEbsDriverTagKey = "ebs.csi.aws.com/cluster"
+
 type Discoverer struct {
 	logger *log.Entry
 	region string
@@ -135,7 +137,7 @@ func (d *Discoverer) DisksMeta(ctx context.Context) ([]v1alpha1.DiskMeta, error)
 	input := &ec2.DescribeVolumesInput{
 		Filters: []*ec2.Filter{
 			{
-				Name:   aws.String("tag: ebs.csi.aws.com/cluster"),
+				Name:   aws.String("tag:" + AwsEbsDriverTagKey),
 				Values: []*string{aws.String("true")},
 			},
 		},
