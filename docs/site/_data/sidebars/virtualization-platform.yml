@@ -188,21 +188,21 @@ entries:
                             en: Replicated storage based on LVM
                             ru: Реплицируемые на основе LVM
                           url: /virtualization-platform/documentation/admin/platform-management/storage/sds/lvm-replicated.html
-                - title:
-                    en: External
-                    ru: Внешние
-                  folders:
                     - title:
-                        en: Yadro
-                        ru: Yadro
-                      url: /virtualization-platform/documentation/admin/platform-management/storage/external/yadro.html
-                    - title:
-                        en: NFS storage
-                        ru: NFS-хранилище
-                      url: /virtualization-platform/documentation/admin/platform-management/storage/external/nfs.html
-                    - title:
-                        en: CEPH storage
-                        ru: CEPH-хранилище
+                        en: External
+                        ru: Внешние
+                      folders:
+                        - title:
+                            en: Yadro
+                            ru: Yadro
+                          url: /virtualization-platform/documentation/admin/platform-management/storage/external/yadro.html
+                        - title:
+                            en: NFS storage
+                            ru: NFS-хранилище
+                          url: /virtualization-platform/documentation/admin/platform-management/storage/external/nfs.html
+                        - title:
+                            en: CEPH storage
+                            ru: CEPH-хранилище
                       url: /virtualization-platform/documentation/admin/platform-management/storage/external/ceph.html
             - title:
                 en: Virtualization
