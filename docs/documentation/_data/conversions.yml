@@ -10,6 +10,9 @@ descheduler:
         ru: Удалите `settings`.
 extended-monitoring:
     - version: 2
+      description:
+        ru: Если поле `.imageAvailability.skipRegistryCertVerification` установлено в `true`, установите поле `.imageAvailability.registry.tlsConfig.insecureSkipVerify=true`. После этого удалите поле `.imageAvailability.skipRegistryCertVerification` из объекта. Если объект `.imageAvailability` пуст, удалите его целиком.
+        en: If the `skipRegistryCertVerification` field is set to `true`, manually add `insecureSkipVerify=true` in the registry's TLS configuration. Afterward, delete the `skipRegistryCertVerification` field. If the `imageAvailability` object becomes empty, delete the entire object.
 istio:
     - version: 2
 metallb:
@@ -24,8 +27,8 @@ openvpn:
 prometheus:
     - version: 2
       description:
-        en: todo en
-        ru: todo ru
+        ru: Удалите `.auth.password` и `.auth`, если он пуст.
+        en: Remove `.auth.password` and `.auth` if it's empty.
 upmeter:
     - version: 2
     - version: 3

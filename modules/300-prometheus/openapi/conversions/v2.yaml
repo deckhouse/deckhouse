@@ -2,5 +2,5 @@ version: 2
 conversions:
   - del(.auth.password) | if .auth == {} then del(.auth) end
 description:
-  ru: "todo ru"
-  en: "todo en"
+  ru: "Удалите поле `.auth.password`. Если обект `.auth` пуст, удалите его целиком."
+  en: "Remove `.auth.password` field. If the `.auth` object is empty, remove the entrie object."
