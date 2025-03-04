@@ -263,14 +263,21 @@ function get_cluster_status() {
   echo "${response}"
 }
 
-function prepare_ssh() {
+# function generates temp ssh parameters file
+function set_common_ssh_parameters() {
+  cat <<EOF >/tmp/cloud-test-ssh-config
+BatchMode yes
+UserKnownHostsFile /dev/null
+StrictHostKeyChecking no
+ServerAliveInterval 5
+ServerAliveCountMax 5
+ConnectTimeout 10
+LogLevel quiet
+EOF
   echo ${SSH_KEY} | base64 -d > id_rsa
   chmod 400 id_rsa
-}
-
-function ssh_command_to_cluster() {
-  local command "$*"
-  ssh -o StrictHostKeyChecking=no -i id_rsa ${master_user}@${master_ip} sudo "${command}"
+  # ssh command with common args.
+  ssh_command="ssh -F /tmp/cloud-test-ssh-config -i id_rsa "
 }
 
 function wait_allerts_resolve() {
@@ -465,10 +472,16 @@ function run-test() {
 
   wait_allerts_resolve
 
-  prepare_ssh
+  set_common_ssh_parameters
 
-#  wait_pause_remove
+  testScript=$(cat "$(pwd)/deckhouse/testing/cloud_layouts/script.d/wait_cluster_ready/test_script.sh")
 
+  if $ssh_command $ssh_bastion "$ssh_user@$master_ip" sudo su -c /bin/bash <<<"${testScript}"; then
+    echo "Ingress and Istio test passed"
+  else
+    echo "Ingress and Istio test failure"
+    return 1
+  fi
 }
 
 function cleanup() {
