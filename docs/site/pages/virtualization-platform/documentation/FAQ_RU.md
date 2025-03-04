@@ -97,7 +97,7 @@ lang: ru
    d8 v vnc -n default win-vm
    ```
 
-## Предоставление файла ответов Windows(Sysprep)
+## Предоставление файла ответов Windows (Sysprep)
 
 Чтобы выполнить автоматическую установку Windows, создайте файл ответов (обычно именуются unattend.xml или autounattend.xml).
 Для примера возьмем файл, позволяющий:
