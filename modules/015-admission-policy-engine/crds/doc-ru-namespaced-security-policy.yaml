@@ -4,9 +4,9 @@ spec:
       schema:
         openAPIV3Schema:
           description: |
-            Описывает политику безопасности для кластера.
+            Описывает политику безопасности для пространства имен (namespace).
 
-            Каждый custom resource `SecurityPolicy` задает правила для объектов в кластере.
+            Каждый custom resource `NamespacedSecurityPolicy` задает правила для объектов в пространстве имен (namespace).
           properties:
             spec:
               properties:
@@ -205,26 +205,6 @@ spec:
                 match:
                   description: Условия фильтрации контейнеров. С помощью условий можно выбрать группу подов или контейнеров, к которой будут применены политики.
                   properties:
-                    namespaceSelector:
-                      description: |
-                        Указывает селектор пространства имен для фильтрации объектов.
-
-                        Если селектор пространства имен не определен, политика применяется ко объектам всех пространств имен.
-                      properties:
-                        matchNames:
-                          description: Выбирает пространства имен, соответствующие списку. Допускается использование шаблонов (glob patterns).
-                        excludeNames:
-                          description: Выбирает все пространства имен, которых нет в списке. Допускается использование шаблонов (glob patterns).
-                        labelSelector:
-                          description: |
-                            Указывает селектор меток для фильтрации пространств имен.
-
-                            Подробнее в [документации Kubernetes](https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/).
-                          properties:
-                            matchLabels:
-                              description: Список лейблов, которые должно иметь пространство имен.
-                            matchExpressions:
-                              description: Список [условий](https://kubernetes.io/ru/docs/concepts/overview/working-with-objects/labels/#ресурсы-поддерживающие-условия-набора) лейблов для пространств имен.
                     labelSelector:
                       description: |
                         Указывает селектор лейблов для фильтрации подов.

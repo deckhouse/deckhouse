@@ -1,0 +1,13 @@
+diff --git a/pkg/controller/constraint/constraint_controller.go b/pkg/controller/constraint/constraint_controller.go
+index f9fad1671..d8e53cb4a 100644
+--- a/pkg/controller/constraint/constraint_controller.go
++++ b/pkg/controller/constraint/constraint_controller.go
+@@ -373,7 +373,7 @@ func (r *ReconcileConstraint) Reconcile(ctx context.Context, request reconcile.R
+ 			vapBindingName := getVAPBindingName(instance.GetName())
+ 			currentVapBinding.SetName(vapBindingName)
+ 			if err := r.writer.Delete(ctx, currentVapBinding); err != nil {
+-				if !apierrors.IsNotFound(err) {
++				if !apierrors.IsNotFound(err) && !apierrors.IsForbidden(err) {
+ 					return reconcile.Result{}, err
+ 				}
+ 			}
