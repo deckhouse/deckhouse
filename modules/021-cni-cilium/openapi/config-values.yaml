@@ -63,6 +63,11 @@ properties:
     default: false
     description: |
       Do not enforce any Network Policy. Just log allowed/disallowed connections.
+  cniExclusive:
+    type: boolean
+    default: true
+    description: |
+      Whether or not to remove other CNI configuration files.
   bpfLBMode:
     type: string
     default: "Hybrid"
