@@ -48,7 +48,7 @@ properties:
       Отключает влияние сетевых политик на трафик. Сетевые запросы, попавшие под запрет политик, просто логируются.
   cniExclusive:
     description: |
-      Удалять или нет другие файлы конфигурации CNI.
+      Удалять или нет другие файлы конфигурации CNI компонента kubelet на узлах. Если [настройка модуля Istio `dataPlane.trafficRedirectionSetupMode`](../istio/configuration.html#parameters-dataplane-trafficredirectionsetupmode) установлена в `CNIPlugin`, то данная опция будет принудительно отключена.
   bpfLBMode:
     description: |
       Режим работы балансировщика eBPF:

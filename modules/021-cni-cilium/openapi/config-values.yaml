@@ -67,7 +67,7 @@ properties:
     type: boolean
     default: true
     description: |
-      Whether or not to remove other CNI configuration files.
+      Whether or not to remove other CNI configuration files for kubelet on nodes. If the istio module's [`dataPlane.trafficRedirectionSetupMode` setting](../istio/configuration.html#parameters-dataplane-trafficredirectionsetupmode) is configured as `CNIPlugin`, the option will be forced to `false`.
   bpfLBMode:
     type: string
     default: "Hybrid"
