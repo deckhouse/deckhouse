@@ -46,6 +46,9 @@ properties:
   policyAuditMode:
     description: |
       Отключает влияние сетевых политик на трафик. Сетевые запросы, попавшие под запрет политик, просто логируются.
+  cniExclusive:
+    description: |
+      Удалять или нет другие файлы конфигурации CNI.
   bpfLBMode:
     description: |
       Режим работы балансировщика eBPF:
