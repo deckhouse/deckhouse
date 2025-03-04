@@ -62,10 +62,7 @@ import:
   to: /src
   before: install
 mount:
-- fromPath: ~/go-pkg-cache
-  to: /go/pkg
-- from: tmp_dir
-  to: /root/.cache/go-build
+{{ include "mount points for golang builds" . }}
 shell:
   beforeInstall:
   {{- include "alpine packages proxy" . | nindent 2 }}
@@ -87,12 +84,7 @@ import:
   to: /src
   before: install
 mount:
-- fromPath: ~/go-pkg-cache
-  to: /go/pkg
-- fromPath: ~/go-pkg-cache
-  to: /root/go/pkg
-- from: tmp_dir
-  to: /root/.cache/go-build
+{{ include "mount points for golang builds" . }}
 - from: tmp_dir
   to: /src/falco/build
 shell:
