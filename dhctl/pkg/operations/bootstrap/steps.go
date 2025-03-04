@@ -141,7 +141,6 @@ func checkBashibleAlreadyRun(nodeInterface node.Interface) (bool, error) {
 	isReady := false
 	err := log.Process("bootstrap", "Checking bashible is ready", func() error {
 		cmd := nodeInterface.Command("cat", DHCTLEndBootstrapBashiblePipeline)
-		cmd.Sudo()
 		cmd.WithTimeout(10 * time.Second)
 		if err := cmd.Run(); err != nil {
 			isReady = false
