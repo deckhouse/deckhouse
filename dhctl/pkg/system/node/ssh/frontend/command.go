@@ -15,6 +15,7 @@
 package frontend
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/exec"
@@ -175,6 +176,10 @@ func (c *Command) CombinedOutput() ([]byte, error) {
 
 func (c *Command) WithTimeout(timeout time.Duration) {
 	c.Executor = c.Executor.WithTimeout(timeout)
+}
+
+func (c *Command) WithContext(ctx context.Context) {
+	c.Executor = c.Executor.WithContext(ctx)
 }
 
 func (c *Command) WithEnv(env map[string]string) {

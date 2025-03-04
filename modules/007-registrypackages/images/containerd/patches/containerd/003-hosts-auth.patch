@@ -1,0 +1,204 @@
+diff --git a/cmd/ctr/commands/resolver.go b/cmd/ctr/commands/resolver.go
+index 28bc4d43b..4802fa253 100644
+--- a/cmd/ctr/commands/resolver.go
++++ b/cmd/ctr/commands/resolver.go
+@@ -85,10 +85,12 @@ func GetResolver(ctx gocontext.Context, clicontext *cli.Context) (remotes.Resolv
+ 	}
+ 
+ 	hostOptions := config.HostOptions{}
+-	hostOptions.Credentials = func(host string) (string, string, error) {
+-		// If host doesn't match...
+-		// Only one host
+-		return username, secret, nil
++	if username != "" && secret != "" {
++		hostOptions.Credentials = func(host string) (string, string, error) {
++			// If host doesn't match...
++			// Only one host
++			return username, secret, nil
++		}
+ 	}
+ 	if clicontext.Bool("plain-http") {
+ 		hostOptions.DefaultScheme = "http"
+diff --git a/pkg/cri/sbserver/image_pull.go b/pkg/cri/sbserver/image_pull.go
+index e8dead03f..cb1301295 100644
+--- a/pkg/cri/sbserver/image_pull.go
++++ b/pkg/cri/sbserver/image_pull.go
+@@ -425,15 +425,11 @@ func (c *criService) registryHosts(ctx context.Context, auth *runtime.AuthConfig
+ 		hostOptions := config.HostOptions{
+ 			UpdateClient: updateClientFn,
+ 		}
+-		hostOptions.Credentials = func(host string) (string, string, error) {
+-			hostauth := auth
+-			if hostauth == nil {
+-				config := c.config.Registry.Configs[host]
+-				if config.Auth != nil {
+-					hostauth = toRuntimeAuthConfig(*config.Auth)
+-				}
++
++		if auth != nil {
++			hostOptions.Credentials = func(host string) (string, string, error) {
++				return ParseAuth(auth, host)
+ 			}
+-			return ParseAuth(hostauth, host)
+ 		}
+ 		hostOptions.HostDir = hostDirFromRoots(paths)
+ 
+diff --git a/pkg/cri/server/image_pull.go b/pkg/cri/server/image_pull.go
+index 6b321515b..e76d09bc1 100644
+--- a/pkg/cri/server/image_pull.go
++++ b/pkg/cri/server/image_pull.go
+@@ -427,15 +427,10 @@ func (c *criService) registryHosts(ctx context.Context, auth *runtime.AuthConfig
+ 		hostOptions := config.HostOptions{
+ 			UpdateClient: updateClientFn,
+ 		}
+-		hostOptions.Credentials = func(host string) (string, string, error) {
+-			hostauth := auth
+-			if hostauth == nil {
+-				config := c.config.Registry.Configs[host]
+-				if config.Auth != nil {
+-					hostauth = toRuntimeAuthConfig(*config.Auth)
+-				}
++		if auth != nil {
++			hostOptions.Credentials = func(host string) (string, string, error) {
++				return ParseAuth(auth, host)
+ 			}
+-			return ParseAuth(hostauth, host)
+ 		}
+ 		hostOptions.HostDir = hostDirFromRoots(paths)
+ 
+diff --git a/remotes/docker/config/hosts.go b/remotes/docker/config/hosts.go
+index ce655a587..31df545c5 100644
+--- a/remotes/docker/config/hosts.go
++++ b/remotes/docker/config/hosts.go
+@@ -20,6 +20,7 @@ package config
+ import (
+ 	"context"
+ 	"crypto/tls"
++	"encoding/base64"
+ 	"errors"
+ 	"fmt"
+ 	"net"
+@@ -58,9 +59,18 @@ type hostConfig struct {
+ 
+ 	rewrites []hostPathRewrite
+ 
++	auth authConfig
++
+ 	// TODO: Add credential configuration (domain alias, username)
+ }
+ 
++type authConfig struct {
++	userName      string
++	password      string
++	auth          string
++	identityToken string
++}
++
+ type hostPathRewrite struct {
+ 	regexp      *regexp.Regexp
+ 	replacement string
+@@ -176,18 +186,22 @@ func ConfigureHosts(ctx context.Context, options HostOptions) docker.RegistryHos
+ 			}
+ 		}
+ 
+-		authOpts := []docker.AuthorizerOpt{docker.WithAuthClient(client)}
+-		if options.Credentials != nil {
+-			authOpts = append(authOpts, docker.WithAuthCreds(options.Credentials))
+-		}
+-		authOpts = append(authOpts, options.AuthorizerOpts...)
+-		authorizer := docker.NewDockerAuthorizer(authOpts...)
+-
+ 		rhosts := make([]docker.RegistryHost, len(hosts))
+ 		for i, host := range hosts {
+ 			// Allow setting for each host as well
+ 			explicitTLS := tlsConfigured
+ 
++			authOpts := []docker.AuthorizerOpt{docker.WithAuthClient(client)}
++			if options.Credentials != nil {
++				authOpts = append(authOpts, docker.WithAuthCreds(options.Credentials))
++			} else {
++				hostAuth := host.auth // copy to local variable from loop variable
++				authOpts = append(authOpts, docker.WithAuthCreds(func(s string) (string, string, error) {
++					return parseAuth(&hostAuth)
++				}))
++			}
++			authOpts = append(authOpts, options.AuthorizerOpts...)
++
+ 			if host.caCerts != nil || host.clientPairs != nil || host.skipVerify != nil {
+ 				explicitTLS = true
+ 				tr := defaultTransport.Clone()
+@@ -251,7 +265,7 @@ func ConfigureHosts(ctx context.Context, options HostOptions) docker.RegistryHos
+ 				rhosts[i].Authorizer = docker.NewDockerAuthorizer(append(authOpts, docker.WithAuthClient(&c))...)
+ 			} else {
+ 				rhosts[i].Client = client
+-				rhosts[i].Authorizer = authorizer
++				rhosts[i].Authorizer = docker.NewDockerAuthorizer(authOpts...)
+ 			}
+ 
+ 			// When TLS has been configured for the operation or host and
+@@ -378,6 +392,19 @@ type hostFileConfig struct {
+ 		Replacement string `toml:"replace"`
+ 	} `toml:"rewrite"`
+ 
++	Auth struct {
++		// Username is the username to login the registry.
++		Username string `toml:"username" json:"username"`
++		// Password is the password to login the registry.
++		Password string `toml:"password" json:"password"`
++		// Auth is a base64 encoded string from the concatenation of the username,
++		// a colon, and the password.
++		Auth string `toml:"auth" json:"auth"`
++		// IdentityToken is used to authenticate the user and get
++		// an access token for the registry.
++		IdentityToken string `toml:"identitytoken" json:"identitytoken"`
++	} `toml:"auth"`
++
+ 	// TODO: Credentials: helper? name? username? alternate domain? token?
+ }
+ 
+@@ -564,6 +591,13 @@ func parseHostConfig(server string, baseDir string, config hostFileConfig) (host
+ 		}
+ 	}
+ 
++	result.auth = authConfig{
++		userName:      config.Auth.Username,
++		password:      config.Auth.Password,
++		auth:          config.Auth.Auth,
++		identityToken: config.Auth.IdentityToken,
++	}
++
+ 	return result, nil
+ }
+ 
+@@ -651,3 +685,31 @@ func loadCertFiles(ctx context.Context, certsDir string) ([]hostConfig, error) {
+ 	}
+ 	return hosts, nil
+ }
++
++// parseAuth parses AuthConfig and returns username and password/secret required by containerd.
++func parseAuth(auth *authConfig) (string, string, error) {
++	if auth == nil {
++		return "", "", nil
++	}
++	if auth.userName != "" {
++		return auth.userName, auth.password, nil
++	}
++	if auth.identityToken != "" {
++		return "", auth.identityToken, nil
++	}
++	if auth.auth != "" {
++		decLen := base64.StdEncoding.DecodedLen(len(auth.auth))
++		decoded := make([]byte, decLen)
++		_, err := base64.StdEncoding.Decode(decoded, []byte(auth.auth))
++		if err != nil {
++			return "", "", err
++		}
++		user, passwd, ok := strings.Cut(string(decoded), ":")
++		if !ok {
++			return "", "", fmt.Errorf("invalid decoded auth: %q", decoded)
++		}
++		return user, strings.Trim(passwd, "\x00"), nil
++	}
++
++	return "", "", nil
++}

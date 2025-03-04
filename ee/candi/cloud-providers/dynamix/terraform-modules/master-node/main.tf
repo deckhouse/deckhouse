@@ -32,6 +32,10 @@ locals {
   rg_id               = data.decort_rg_list.resource_group.items[0].rg_id
   extnet_id           = data.decort_extnet_list.extnets.items[0].net_id
   storage_endpoint_id = data.decort_cb_sep_list.storage_endpoints.items[0].sep_id
+  extra_disks = concat(
+    [decort_disk.kubernetes_data_disk.id],
+    var.registryDataDeviceEnable ? [decort_disk.system_registry_data_disk[0].id] : []
+  )
 }
 
 resource "decort_disk" "kubernetes_data_disk" {
@@ -50,6 +54,17 @@ resource "decort_disk" "kubernetes_data_disk" {
   }
 }
 
+resource "decort_disk" "system_registry_data_disk" {
+  count       = var.registryDataDeviceEnable ? 1 : 0
+  disk_name  = local.system_registry_data_disk_name
+  account_id = local.account_id
+  gid        = local.gid
+  size_max   = local.master_system_registry_disk_size
+  type       = "D" # disk type, always use "D" for extra disks
+  sep_id     = local.storage_endpoint_id
+  pool       = local.pool
+}
+
 resource "decort_kvmvm" "master_vm" {
   name           = local.master_node_name
   driver         = local.driver
@@ -59,7 +74,7 @@ resource "decort_kvmvm" "master_vm" {
   boot_disk_size = local.master_root_disk_size
   image_id       = local.image_id
   pool           = local.pool
-  extra_disks    = [decort_disk.kubernetes_data_disk.id]
+  extra_disks    = local.extra_disks
   cloud_init     = local.master_cloud_init_script
 
   dynamic "network" {
@@ -86,4 +101,9 @@ resource "decort_kvmvm" "master_vm" {
     delete = var.resourceManagementTimeout
     update = var.resourceManagementTimeout
   }
+
+  depends_on = [
+    decort_disk.kubernetes_data_disk,
+    decort_disk.system_registry_data_disk
+  ]
 }

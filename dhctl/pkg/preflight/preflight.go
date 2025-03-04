@@ -52,6 +52,11 @@ type checkStep struct {
 	fun            func() error
 }
 
+type requiredCheckStep struct {
+	successMessage string
+	fun            func() error
+}
+
 func NewChecker(
 	nodeInterface node.Interface,
 	config *config.DeckhouseInstaller,
@@ -144,6 +149,18 @@ func (pc *Checker) Static() error {
 }
 
 func (pc *Checker) Cloud() error {
+	// Necessary verification
+	// It is impossible to focus on the previous saved status
+	err := pc.doRequired("Cloud deployment required preflight checks", []requiredCheckStep{
+		{
+			fun:            pc.CheckSystemRegistryModuleSupport,
+			successMessage: "the system registry module is supported",
+		},
+	})
+
+	if err != nil {
+		return err
+	}
 
 	ready, err := pc.bootstrapState.CloudPreflightchecksWasRan()
 
@@ -253,6 +270,8 @@ func (pc *Checker) do(title string, checks []checkStep) error {
 			}
 			knownSkipFlags[check.skipFlag] = struct{}{}
 
+			// The Loop is used for formatting logs for user readability.
+			// It utilizes Succeeded and Failed logs.
 			loop := retry.NewLoop(
 				fmt.Sprintf("Checking %s", check.successMessage),
 				1,
@@ -264,6 +283,24 @@ func (pc *Checker) do(title string, checks []checkStep) error {
 			}
 		}
 
+		return nil
+	})
+}
+
+func (pc *Checker) doRequired(title string, checks []requiredCheckStep) error {
+	return log.Process("common", title, func() error {
+		for _, check := range checks {
+			// The Loop is used for formatting logs for user readability.
+			// It utilizes Succeeded and Failed logs.
+			loop := retry.NewLoop(
+				fmt.Sprintf("Checking %s", check.successMessage),
+				1,
+				10*time.Second,
+			)
+			if err := loop.Run(check.fun); err != nil {
+				return fmt.Errorf("Installation aborted: %w", err)
+			}
+		}
 		return nil
 	})
 }
