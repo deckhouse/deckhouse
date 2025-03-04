@@ -51,6 +51,7 @@ import (
 const (
 	DefaultStaticInstanceBootstrapTimeout = 20 * time.Minute
 	DefaultStaticInstanceCleanupTimeout   = 10 * time.Minute
+	DefaultStaticInstanceAdoptTimeout     = 20 * time.Minute
 	RequeueForStaticInstancePending       = 10 * time.Second
 	RequeueForStaticInstanceCleaning      = 30 * time.Second
 	RequeueForStaticMachineDeleting       = 5 * time.Second
@@ -210,12 +211,22 @@ func (r *StaticMachineReconciler) reconcileNormal(
 		r.Recorder.SendNormalEvent(instanceScope.Instance, machineScope.StaticMachine.Labels["node-group"], "StaticInstanceAttachSucceeded", fmt.Sprintf("Attached to StaticMachine %s", machineScope.StaticMachine.Name))
 		r.Recorder.SendNormalEvent(machineScope.StaticMachine, machineScope.StaticMachine.Labels["node-group"], "StaticInstanceAttachSucceeded", fmt.Sprintf("Attached StaticInstance %s", instanceScope.Instance.Name))
 
-		result, err := r.HostClient.Bootstrap(ctx, instanceScope)
-		if err != nil {
-			instanceScope.Logger.Error(err, "failed to bootstrap StaticInstance")
-		}
+		_, shouldSkipBootstrap := instanceScope.Instance.Annotations[client.SkipBootstrapPhaseAnnotation]
+		if shouldSkipBootstrap {
+			result, err := r.HostClient.AdoptStaticInstance(ctx, instanceScope)
+			if err != nil {
+				instanceScope.Logger.Error(err, "failed to adopt StaticInstance")
+			}
 
-		return result, nil
+			return result, nil
+		} else {
+			result, err := r.HostClient.Bootstrap(ctx, instanceScope)
+			if err != nil {
+				instanceScope.Logger.Error(err, "failed to bootstrap StaticInstance")
+			}
+
+			return result, nil
+		}
 	}
 
 	return r.reconcileStaticInstancePhase(ctx, instanceScope)
@@ -341,6 +352,40 @@ func (r *StaticMachineReconciler) reconcileStaticInstancePhase(
 	instanceScope *scope.InstanceScope,
 ) (ctrl.Result, error) {
 	switch instanceScope.GetPhase() {
+	case deckhousev1.StaticInstanceStatusCurrentStatusPhasePending:
+		_, shouldSkipBootstrap := instanceScope.Instance.Annotations[client.SkipBootstrapPhaseAnnotation]
+		if shouldSkipBootstrap {
+			instanceScope.MachineScope.SetNotReady()
+
+			instanceScope.Logger.Info("StaticInstance is adopting")
+
+			estimated := DefaultStaticInstanceAdoptTimeout -
+				time.Now().Sub(instanceScope.Instance.Status.CurrentStatus.LastUpdateTime.Time)
+
+			if estimated < (10 * time.Second) {
+				instanceScope.MachineScope.Fail(capierrors.UpdateMachineError,
+					errors.New("timed out waiting for StaticInstance to adopt"))
+
+				r.Recorder.SendWarningEvent(instanceScope.Instance,
+					instanceScope.MachineScope.StaticMachine.Labels["node-group"],
+					"StaticInstanceAdoptTimeoutReached",
+					"Timed out waiting for StaticInstance to adopt")
+
+				err := instanceScope.MachineScope.Patch(ctx)
+				if err != nil {
+					return ctrl.Result{}, errors.Wrap(err, "failed to set StaticMachine error status")
+				}
+
+				return ctrl.Result{}, errors.New("timed out waiting to adopt StaticInstance")
+			}
+
+			result, err := r.HostClient.AdoptStaticInstance(ctx, instanceScope)
+			if err != nil {
+				instanceScope.Logger.Error(err, "failed to adopt StaticInstance")
+			}
+
+			return result, nil
+		}
 	case deckhousev1.StaticInstanceStatusCurrentStatusPhaseBootstrapping:
 		instanceScope.MachineScope.SetNotReady()
 
