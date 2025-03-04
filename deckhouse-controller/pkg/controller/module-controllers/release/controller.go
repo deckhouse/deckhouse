@@ -615,6 +615,11 @@ func (r *reconciler) handlePendingRelease(ctx context.Context, release *v1alpha1
 		return res, fmt.Errorf("apply predicted release: %w", err)
 	}
 
+	// no deckhouse restart if dryrun
+	if release.GetDryRun() {
+		return ctrl.Result{}, nil
+	}
+
 	modulesChangedReason = "a new module release deployed"
 
 	return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
@@ -774,7 +779,7 @@ func (r *reconciler) runReleaseDeploy(ctx context.Context, release *v1alpha1.Mod
 	}
 
 	err = ctrlutils.UpdateStatusWithRetry(ctx, r.client, release, func() error {
-		release.Status.Phase = v1alpha1.DeckhouseReleasePhaseDeployed
+		release.Status.Phase = v1alpha1.ModuleReleasePhaseDeployed
 
 		release.Status.Size = downloadStatistic.Size
 		release.Status.PullDuration = metav1.Duration{Duration: downloadStatistic.PullDuration}
@@ -788,7 +793,63 @@ func (r *reconciler) runReleaseDeploy(ctx context.Context, release *v1alpha1.Mod
 	return nil
 }
 
+func (r *reconciler) runDryRunDeploy(mr *v1alpha1.ModuleRelease) {
+	r.log.Debug("dryrun start soon...")
+
+	time.Sleep(3 * time.Second)
+
+	r.log.Debug("dryrun started")
+
+	// because we do not know how long is parent context and how long will be update
+	// 1 minute - magic constant
+	ctxwt, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
+	defer cancel()
+
+	releases := new(v1alpha1.ModuleReleaseList)
+	err := r.client.List(ctxwt, releases, client.MatchingLabels{v1alpha1.ModuleReleaseLabelModule: mr.GetModuleName()})
+	if err != nil {
+		r.log.Error("dryrun list module releases", slog.String("module_name", mr.GetModuleName()), log.Err(err))
+
+		return
+	}
+
+	for _, release := range releases.Items {
+		release := &release
+
+		if release.GetName() == mr.GetName() {
+			continue
+		}
+
+		if release.Status.Phase != v1alpha1.ModuleReleasePhasePending {
+			continue
+		}
+
+		// update releases to trigger their requeue
+		err := ctrlutils.UpdateWithRetry(ctxwt, r.client, release, func() error {
+			if len(release.Annotations) == 0 {
+				release.Annotations = make(map[string]string, 1)
+			}
+
+			release.Annotations[v1alpha1.ModuleReleaseAnnotationTriggeredByDryrun] = mr.GetName()
+
+			return nil
+		})
+		if err != nil {
+			r.log.Error("dryrun update release to requeue", log.Err(err))
+		}
+
+		r.log.Debug("dryrun release successfully updated", slog.String("release", release.Name))
+	}
+}
+
 func (r *reconciler) loadModule(ctx context.Context, release *v1alpha1.ModuleRelease) (*downloader.DownloadStatistic, error) {
+	// dryrun for testing purpose
+	if release.GetDryRun() {
+		go r.runDryRunDeploy(release)
+
+		return &downloader.DownloadStatistic{}, nil
+	}
+
 	// download desired module version
 	source := new(v1alpha1.ModuleSource)
 	if err := r.client.Get(ctx, client.ObjectKey{Name: release.GetModuleSource()}, source); err != nil {
