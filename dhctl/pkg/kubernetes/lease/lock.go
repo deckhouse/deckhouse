@@ -250,6 +250,15 @@ func (l *LeaseLock) tryRenew(lease *coordinationv1.Lease, force bool) (*coordina
 		var err error
 		lease.Spec.RenewTime = now()
 		newLease, err = l.getter.KubeClient().CoordinationV1().Leases(l.config.Namespace).Update(context.TODO(), lease, metav1.UpdateOptions{})
+		if err != nil && strings.Contains(err.Error(), "the object has been modified; please apply your changes to the latest version and try again") {
+			leaseTemp, err := l.getter.KubeClient().CoordinationV1().Leases(l.config.Namespace).Get(context.TODO(), l.config.Name, metav1.GetOptions{})
+			if err != nil {
+				return err
+			}
+			leaseTemp.Spec.RenewTime = now()
+			newLease, err = l.getter.KubeClient().CoordinationV1().Leases(l.config.Namespace).Update(context.TODO(), leaseTemp, metav1.UpdateOptions{})
+			return err
+		}
 		return err
 	})
 

@@ -591,7 +591,7 @@ func (m *MetaConfig) ConfigForKubeadmTemplates(nodeIP string) (map[string]interf
 	return result, nil
 }
 
-func (m *MetaConfig) ConfigForBashibleBundleTemplate(bundle, nodeIP string) (map[string]interface{}, error) {
+func (m *MetaConfig) ConfigForBashibleBundleTemplate(nodeIP string) (map[string]interface{}, error) {
 	data := make(map[string]interface{}, len(m.ClusterConfig))
 
 	for key, value := range m.ClusterConfig {
@@ -647,7 +647,6 @@ func (m *MetaConfig) ConfigForBashibleBundleTemplate(bundle, nodeIP string) (map
 		configForBashibleBundleTemplate["provider"] = m.ProviderName
 	}
 
-	configForBashibleBundleTemplate["bundle"] = bundle
 	configForBashibleBundleTemplate["cri"] = data["defaultCRI"]
 	configForBashibleBundleTemplate["kubernetesVersion"] = data["kubernetesVersion"]
 	configForBashibleBundleTemplate["nodeGroup"] = nodeGroup

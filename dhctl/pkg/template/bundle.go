@@ -28,7 +28,6 @@ import (
 var (
 	candiDir         = "/deckhouse/candi"
 	candiBashibleDir = candiDir + "/bashible"
-	detectBundlePath = candiBashibleDir + "/detect_bundle.sh"
 )
 
 const (
@@ -60,20 +59,20 @@ func logTemplatesData(name string, data map[string]interface{}) {
 	log.DebugF("Data %s\n%s", name, string(formattedData))
 }
 
-func PrepareBundle(templateController *Controller, nodeIP, bundleName string, dataDevices terraform.DataDevices, metaConfig *config.MetaConfig) error {
+func PrepareBundle(templateController *Controller, nodeIP string, dataDevices terraform.DataDevices, metaConfig *config.MetaConfig) error {
 	kubeadmData, err := metaConfig.ConfigForKubeadmTemplates("")
 	if err != nil {
 		return err
 	}
 	logTemplatesData("kubeadm", kubeadmData)
 
-	bashibleData, err := metaConfig.ConfigForBashibleBundleTemplate(bundleName, nodeIP)
+	bashibleData, err := metaConfig.ConfigForBashibleBundleTemplate(nodeIP)
 	if err != nil {
 		return err
 	}
 	logTemplatesData("bashible", bashibleData)
 
-	if err := PrepareBashibleBundle(templateController, bashibleData, metaConfig.ProviderName, bundleName, dataDevices); err != nil {
+	if err := PrepareBashibleBundle(templateController, bashibleData, metaConfig.ProviderName, dataDevices); err != nil {
 		return err
 	}
 
@@ -86,7 +85,7 @@ func PrepareBundle(templateController *Controller, nodeIP, bundleName string, da
 	return templateController.RenderBashBooster(bashboosterDir, bashibleDir, bashibleData)
 }
 
-func PrepareBashibleBundle(templateController *Controller, templateData map[string]interface{}, provider string, bundle string, dataDevices terraform.DataDevices) error {
+func PrepareBashibleBundle(templateController *Controller, templateData map[string]interface{}, provider string, dataDevices terraform.DataDevices) error {
 
 	saveInfo := []saveFromTo{
 		{
@@ -171,17 +170,12 @@ func withoutNodeGroup(data map[string]interface{}) map[string]interface{} {
 	return filteredData
 }
 
-func RenderAndSaveDetectBundle(data map[string]interface{}) (string, error) {
-	log.DebugLn("Start render detect bundle script")
-
-	return RenderAndSaveTemplate("detect_bundle.sh", detectBundlePath, data)
-}
-
 func InitGlobalVars(pwd string) {
 	candiDir = pwd + "/deckhouse/candi"
 	candiBashibleDir = candiDir + "/bashible"
-	detectBundlePath = candiBashibleDir + "/detect_bundle.sh"
 	checkPortsScriptPath = candiBashibleDir + "/preflight/check_ports.sh.tpl"
 	checkLocalhostScriptPath = candiBashibleDir + "/preflight/check_localhost.sh.tpl"
 	preflightScriptDirPath = candiBashibleDir + "/preflight/"
+	killReverseTunnelPath = candiBashibleDir + "/preflight/kill_reverse_tunnel.sh.tpl"
+	checkProxyRevTunnelOpenScriptPath = candiBashibleDir + "/preflight/check_reverse_tunnel_open.sh.tpl"
 }

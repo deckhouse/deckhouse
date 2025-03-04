@@ -3,8 +3,13 @@ cpu: 25m
 memory: 50Mi
 {{- end }}
 
-{{- $kubernetesSemVer := semver .Values.global.discovery.kubernetesVersion }}
-{{- $ccmImageName := join "" (list "cloudControllerManager" $kubernetesSemVer.Major $kubernetesSemVer.Minor ) }}
+{{- $ccmImageName := ""}}
+{{- if semverCompare ">=37.2" .Values.cloudProviderVcd.internal.discoveryData.vcdAPIVersion -}}
+  {{- $ccmImageName = "cloudControllerManager" }}
+{{- else -}}
+  {{- $ccmImageName = "cloudControllerManagerLegacy" }}
+{{- end }}
+
 {{- $ccmImage := include "helm_lib_module_image_no_fail" (list . $ccmImageName) }}
 {{- if $ccmImage }}
   {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
@@ -14,7 +19,7 @@ kind: VerticalPodAutoscaler
 metadata:
   name: cloud-controller-manager
   namespace: d8-cloud-provider-vcd
-  {{- include "helm_lib_module_labels" (list . (dict "app" "cloud-controller-manager" "workload-resource-policy.deckhouse.io" "master")) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "cloud-controller-manager")) | nindent 2 }}
 spec:
   targetRef:
     apiVersion: "apps/v1"

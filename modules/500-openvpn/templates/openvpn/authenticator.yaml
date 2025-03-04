@@ -12,6 +12,10 @@ spec:
   applicationIngressCertificateSecretName: {{ include "helm_lib_module_https_secret_name" (list . "ingress-tls") }}
   {{- end }}
   applicationIngressClassName: {{ include "helm_lib_module_ingress_class" . | quote }}
+  {{- with .Values.openvpn.auth.allowedUserEmails }}
+  allowedEmails:
+  {{- . | toYaml | nindent 2 }}
+  {{- end }}
   {{- with .Values.openvpn.auth.allowedUserGroups }}
   allowedGroups:
   {{- . | toYaml | nindent 2 }}

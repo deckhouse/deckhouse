@@ -16,7 +16,6 @@ package types
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/flant/addon-operator/pkg/module_manager/models/modules"
 	"github.com/flant/addon-operator/pkg/utils"
@@ -25,38 +24,19 @@ import (
 )
 
 type Module struct {
+	def   *Definition
 	basic *modules.BasicModule
-
-	description string
-	stage       string
-	labels      map[string]string
-
-	needConfirmDisable        bool
-	needConfirmDisableMessage string
 }
 
 func NewModule(def *Definition, staticValues utils.Values, configBytes, valuesBytes []byte, logger *log.Logger) (*Module, error) {
 	basic, err := modules.NewBasicModule(def.Name, def.Path, def.Weight, staticValues, configBytes, valuesBytes, modules.WithLogger(logger))
 	if err != nil {
-		return nil, fmt.Errorf("failed to build the '%s' basic module: %w", def.Name, err)
-	}
-
-	labels := make(map[string]string, len(def.Tags))
-	for _, tag := range def.Tags {
-		labels["module.deckhouse.io/"+tag] = ""
-	}
-
-	if len(def.Tags) == 0 {
-		labels = calculateLabels(def.Name)
+		return nil, fmt.Errorf("build the '%s' basic module: %w", def.Name, err)
 	}
 
 	return &Module{
-		basic:                     basic,
-		labels:                    labels,
-		description:               def.Description,
-		stage:                     def.Stage,
-		needConfirmDisable:        def.DisableOptions.Confirmation,
-		needConfirmDisableMessage: def.DisableOptions.Message,
+		def:   def,
+		basic: basic,
 	}, nil
 }
 
@@ -65,24 +45,8 @@ func (m *Module) GetBasicModule() *modules.BasicModule {
 }
 
 func (m *Module) GetConfirmationDisableReason() (string, bool) {
-	return m.needConfirmDisableMessage, m.needConfirmDisable
-}
-
-func calculateLabels(name string) map[string]string {
-	// could be removed when we will ready properties from the module.yaml file
-	labels := make(map[string]string, 0)
-
-	if strings.HasPrefix(name, "cni-") {
-		labels["module.deckhouse.io/cni"] = ""
+	if m.def != nil && m.def.DisableOptions != nil {
+		return m.def.DisableOptions.Message, m.def.DisableOptions.Confirmation
 	}
-
-	if strings.HasPrefix(name, "cloud-provider-") {
-		labels["module.deckhouse.io/cloud-provider"] = ""
-	}
-
-	if strings.HasSuffix(name, "-crd") {
-		labels["module.deckhouse.io/crd"] = ""
-	}
-
-	return labels
+	return "", false
 }

@@ -726,6 +726,11 @@
   stageDependencies:
     setup:
         - '**/*.go'
+- add: /ee/modules/110-istio/templates/validations.yaml
+  to: /deckhouse/modules/110-istio/templates/validations.yaml
+  stageDependencies:
+    setup:
+        - '**/*'
 - add: /ee/modules/110-istio/hooks/ee
   to: /deckhouse/modules/110-istio/hooks/ee
   excludePaths:

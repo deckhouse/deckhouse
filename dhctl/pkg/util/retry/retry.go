@@ -18,6 +18,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math/rand"
 	"time"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
@@ -54,6 +55,7 @@ type Loop struct {
 	logger           log.Logger
 	interruptable    bool
 	showError        bool
+	prefix           string
 	ctx              context.Context
 }
 
@@ -83,6 +85,7 @@ func NewSilentLoop(name string, attemptsQuantity int, wait time.Duration) *Loop 
 		// - this loop is not interruptable by the signal watcher in tomb package.
 		interruptable: false,
 		showError:     true,
+		prefix:        fmt.Sprintf("[%s][%d] ", name, rand.Int()),
 	}
 }
 
@@ -126,21 +129,21 @@ func (l *Loop) Run(task func() error) error {
 			// Run task and return if everything is ok.
 			err = task()
 			if err == nil {
-				l.logger.LogSuccess("Succeeded!\n")
+				l.logger.LogSuccess(l.prefix + "Succeeded!\n")
 				return nil
 			}
 
 			if l.breakPredicate != nil && l.breakPredicate(err) {
-				l.logger.LogDebugF("Client break loop with %v\n", err)
+				l.logger.LogDebugF(l.prefix+"Client break loop with %v\n", err)
 				return err
 			}
 
-			l.logger.LogFailRetry(fmt.Sprintf(attemptMessage, i, l.attemptsQuantity, l.name, l.waitTime))
+			l.logger.LogFailRetry(fmt.Sprintf(l.prefix+attemptMessage, i, l.attemptsQuantity, l.name, l.waitTime))
 			errorMsg := "\t%v\n\n"
 			if l.showError {
 				errorMsg = "\tError: %v\n\n"
 			}
-			l.logger.LogInfoF(errorMsg, err)
+			l.logger.LogInfoF(l.prefix+errorMsg, err)
 
 			// Do not waitTime after the last iteration.
 			if i < l.attemptsQuantity {

@@ -27,7 +27,7 @@ function discover_device_path() {
     >&2 echo "Failed to discover device: $device_path not found"
     exit 1
   fi
-  
+
   # Resolve the symbolic link to the real path
   device_path=$(readlink -f "$device_path")
 
@@ -36,7 +36,7 @@ function discover_device_path() {
     >&2 echo "Failed to resolve device path for: $cloud_disk_name"
     exit 1
   fi
-  
+
   # Return the real device path
   echo "$device_path"
 }

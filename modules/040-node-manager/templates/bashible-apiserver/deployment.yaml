@@ -10,7 +10,7 @@ kind: VerticalPodAutoscaler
 metadata:
   name: bashible-apiserver
   namespace: d8-cloud-instance-manager
-  {{- include "helm_lib_module_labels" (list . (dict "app" "bashible-apiserver" "workload-resource-policy.deckhouse.io" "master")) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "bashible-apiserver")) | nindent 2 }}
 spec:
   targetRef:
     apiVersion: "apps/v1"
@@ -45,7 +45,7 @@ kind: Deployment
 metadata:
   name: "bashible-apiserver"
   namespace: d8-cloud-instance-manager
-  {{- include "helm_lib_module_labels" (list . (dict "app" "bashible-apiserver" "workload-resource-policy.deckhouse.io" "master")) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "bashible-apiserver")) | nindent 2 }}
 spec:
   {{- include "helm_lib_deployment_on_master_strategy_and_replicas_for_ha" . | nindent 2 }}
   revisionHistoryLimit: 2

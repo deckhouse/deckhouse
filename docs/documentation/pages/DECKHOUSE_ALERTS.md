@@ -18,8 +18,4 @@ Alert descriptions contain the Severity (S) parameter, which indicates the level
 * `S3` — medium level, potentially serious problem (verification required);
 * `S4`-`S9` — low level. There is a problem, but overall performance is not impaired.
 
-The criticality level is formed as follows:
-
-{% include severity_levels_table.liquid %}
-
 {% include deckhouse-alerts.liquid %}

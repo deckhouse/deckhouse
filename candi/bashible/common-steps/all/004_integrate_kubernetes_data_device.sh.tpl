@@ -19,7 +19,7 @@
 function find_all_unmounted_data_devices() {
   lsblk -o path,type,mountpoint,fstype --tree --json | jq -r '
     [
-      .blockdevices[] 
+      .blockdevices[]
       | select(.path | contains("zram") | not)  # Exclude zram devices
       | select(.path | contains("fd") | not)   # Exclude floppy devices (fd)
       | select(.type == "disk" and .mountpoint == null and .children == null)  # Filter disks with no mountpoint or children
@@ -29,10 +29,10 @@ function find_all_unmounted_data_devices() {
 
 function find_path_by_data_device_label() {
   local device_label="$1"
-  
+
   local device_path=$(lsblk -o path,type,mountpoint,fstype,label --tree --json | jq -r "
     [
-      .blockdevices[] 
+      .blockdevices[]
       | select(.label == \"$device_label\")  # Match the specific device label
     ] | first | .path
   ")

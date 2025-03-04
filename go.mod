@@ -42,9 +42,9 @@ require (
 	gopkg.in/yaml.v3 v3.0.1
 	helm.sh/helm/v3 v3.14.2
 	k8s.io/api v0.29.10
-	k8s.io/apiextensions-apiserver v0.29.3
+	k8s.io/apiextensions-apiserver v0.29.8
 	k8s.io/apimachinery v0.29.10
-	k8s.io/apiserver v0.29.3
+	k8s.io/apiserver v0.29.8
 	k8s.io/client-go v0.29.10
 	k8s.io/utils v0.0.0-20240711033017-18e509b52bc8
 	sigs.k8s.io/yaml v1.4.0
@@ -55,10 +55,10 @@ require (
 	github.com/deckhouse/deckhouse/egress-gateway-agent v0.0.0-00010101000000-000000000000
 	github.com/deckhouse/deckhouse/go_lib/cloud-data v0.0.0
 	github.com/deckhouse/deckhouse/go_lib/dependency/k8s/drain v0.0.0-00010101000000-000000000000
-	github.com/deckhouse/deckhouse/pkg/log v0.0.0-20241219045931-ca7514dfb873
-	github.com/deckhouse/module-sdk v0.1.1-0.20250123063508-23477139b92f
+	github.com/deckhouse/deckhouse/pkg/log v0.0.0
+	github.com/deckhouse/module-sdk v0.1.1-0.20250228151438-19b628dfff9d
 	github.com/ettle/strcase v0.2.0
-	github.com/evanphx/json-patch v5.8.0+incompatible
+	github.com/evanphx/json-patch v5.9.0+incompatible
 	github.com/fsnotify/fsnotify v1.7.0
 	github.com/go-logr/logr v1.4.2
 	github.com/go-openapi/errors v0.22.0
@@ -71,7 +71,7 @@ require (
 	golang.org/x/mod v0.22.0
 	golang.org/x/text v0.21.0
 	k8s.io/cli-runtime v0.29.10
-	k8s.io/code-generator v0.29.3
+	k8s.io/code-generator v0.29.8
 	k8s.io/klog/v2 v2.130.1
 	k8s.io/kube-openapi v0.0.0-20240228011516-70dd3763d340
 	k8s.io/kubectl v0.29.10

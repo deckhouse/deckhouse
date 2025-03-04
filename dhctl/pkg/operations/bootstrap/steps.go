@@ -117,9 +117,9 @@ func BootstrapMaster(nodeInterface node.Interface, controller *template.Controll
 	})
 }
 
-func PrepareBashibleBundle(bundleName, nodeIP string, dataDevices terraform.DataDevices, metaConfig *config.MetaConfig, controller *template.Controller) error {
-	return log.Process("bootstrap", "Prepare Bashible Bundle", func() error {
-		return template.PrepareBundle(controller, nodeIP, bundleName, dataDevices, metaConfig)
+func PrepareBashibleBundle(nodeIP string, dataDevices terraform.DataDevices, metaConfig *config.MetaConfig, controller *template.Controller) error {
+	return log.Process("bootstrap", "Prepare Bashible", func() error {
+		return template.PrepareBundle(controller, nodeIP, dataDevices, metaConfig)
 	})
 }
 
@@ -649,16 +649,11 @@ func RunBashiblePipeline(nodeInterface node.Interface, cfg *config.MetaConfig, n
 		return err
 	}
 
-	bundleName, err := DetermineBundleName(nodeInterface)
-	if err != nil {
-		return err
-	}
-
 	templateController := template.NewTemplateController("")
 	log.DebugF("Rendered templates directory %s\n", templateController.TmpDir)
 
 	err = log.Process("bootstrap", "Preparing bootstrap", func() error {
-		if err := template.PrepareBootstrap(templateController, nodeIP, bundleName, cfg); err != nil {
+		if err := template.PrepareBootstrap(templateController, nodeIP, cfg); err != nil {
 			return fmt.Errorf("prepare bootstrap: %v", err)
 		}
 
@@ -711,7 +706,7 @@ func RunBashiblePipeline(nodeInterface node.Interface, cfg *config.MetaConfig, n
 		defer cleanUpTunnel()
 	}
 
-	if err = PrepareBashibleBundle(bundleName, nodeIP, dataDevices, cfg, templateController); err != nil {
+	if err = PrepareBashibleBundle(nodeIP, dataDevices, cfg, templateController); err != nil {
 		return err
 	}
 
@@ -955,38 +950,6 @@ func CheckDHCTLDependencies(nodeInteface node.Interface) error {
 		log.InfoLn("OK!")
 		return nil
 	})
-}
-
-func DetermineBundleName(nodeInterface node.Interface) (string, error) {
-	var bundleName string
-	err := log.Process("bootstrap", "Detect Bashible Bundle", func() error {
-		file, err := template.RenderAndSaveDetectBundle(make(map[string]interface{}))
-		if err != nil {
-			return err
-		}
-
-		return retry.NewSilentLoop("Get bundle", 30, 10*time.Second).Run(func() error {
-			// run detect bundle type
-			detectCmd := nodeInterface.UploadScript(file)
-			stdout, err := detectCmd.Execute()
-			if err != nil {
-				var ee *exec.ExitError
-				if errors.As(err, &ee) {
-					return fmt.Errorf("detect_bundle.sh: %v, %s", err, string(ee.Stderr))
-				}
-				return fmt.Errorf("detect_bundle.sh: %v", err)
-			}
-
-			bundleName = strings.Trim(string(stdout), "\n ")
-			if bundleName == "" {
-				return fmt.Errorf("detect_bundle.sh: empty bundle was detected")
-			}
-
-			log.InfoF("Detected bundle: %s\n", bundleName)
-			return nil
-		})
-	})
-	return bundleName, err
 }
 
 func WaitForSSHConnectionOnMaster(sshClient *ssh.Client) error {

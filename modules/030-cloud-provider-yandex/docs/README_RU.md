@@ -4,13 +4,14 @@ title: "Cloud provider — Yandex Cloud"
 
 Взаимодействие с облачными ресурсами провайдера [Yandex Cloud](https://cloud.yandex.ru/) осуществляется с помощью модуля `cloud-provider-yandex`. Он предоставляет возможность модулю [управления узлами](../../modules/node-manager/) использовать ресурсы Yandex Cloud при заказе узлов для описанной [группы узлов](../../modules/node-manager/cr.html#nodegroup).
 
-Функционал модуля `cloud-provider-yandex`:
-- Управляет ресурсами Yandex Cloud с помощью модуля `cloud-controller-manager`:
-  * Создает сетевые маршруты для сети `PodNetwork` на стороне Yandex Cloud.
-  * Актуализирует метаданные Yandex Cloud Instances и Kubernetes Nodes. Удаляет из Kubernetes узлы, которых уже нет в Yandex Cloud.
-- Заказывает диски в Yandex Cloud с помощью компонента `CSI storage`.
-- Регистрируется в модуле [node-manager](../../modules/node-manager/), чтобы [YandexInstanceClass'ы](cr.html#yandexinstanceclass) можно было использовать при описании [NodeGroup](../../modules/node-manager/cr.html#nodegroup).
-- Включает необходимый CNI (использует [simple bridge](../../modules/cni-simple-bridge/)).
+Функции модуля `cloud-provider-yandex`:
+
+- Управление ресурсами Yandex Cloud с помощью модуля `cloud-controller-manager`:
+  - Создание сетевых маршрутов для сети `PodNetwork` на стороне Yandex Cloud.
+  - Актуализация метаданных Yandex Cloud Instances и Kubernetes Nodes. Удаление из Kubernetes узлов, которых уже нет в Yandex Cloud.
+- Заказ дисков в Yandex Cloud с помощью компонента `CSI storage`.
+- Регистрация в модуле [node-manager](../../modules/node-manager/) для использования [YandexInstanceClass'ы](cr.html#yandexinstanceclass) можно было использовать при описании [NodeGroup](../../modules/node-manager/cr.html#nodegroup).
+- Включение необходимого CNI (который использует [simple bridge](../../modules/cni-simple-bridge/)).
 
 ## Интеграция с Yandex Cloud
 
@@ -22,7 +23,7 @@ title: "Cloud provider — Yandex Cloud"
 Не удаляйте правила по умолчанию, разрешающие любой трафик, до того как закончите настройку правил группы безопасности. Это может нарушить работоспособность кластера.
 {% endalert %}
 
-Здесь приведены общие рекомендации по настройке группы безопасности. Некорректная настройка групп безопасности может сказаться на работоспособности кластера. Пожалуйста ознакомьтесь с [особенностями работы групп безопасности](https://cloud.yandex.ru/ru/docs/vpc/concepts/security-groups#security-groups-notes) в Yandex Cloud перед использованием в продуктивных средах.
+Ниже приведены общие рекомендации по настройке группы безопасности. Некорректная настройка групп безопасности может сказаться на работоспособности кластера. Пожалуйста ознакомьтесь с [особенностями работы групп безопасности](https://cloud.yandex.ru/ru/docs/vpc/concepts/security-groups#security-groups-notes) в Yandex Cloud перед использованием в продуктивных средах.
 
 1. Определите облачную сеть, в которой работает кластер Deckhouse Kubernetes Platform.
 
@@ -35,11 +36,11 @@ title: "Cloud provider — Yandex Cloud"
 
 1. В консоли Yandex Cloud выберите сервис Virtual Private Cloud и перейдите в раздел *Группы безопасности*. У вас должна отображаться одна группа безопасности с пометкой `Default`.
 
-    ![Группа безопасности по умолчанию](../../images/cloud-provider-yandex/sg-ru-default.png)
+   ![Группа безопасности по умолчанию](../../images/cloud-provider-yandex/sg-ru-default.png)
 
 1. Создайте правила согласно [инструкции Yandex Cloud](https://cloud.yandex.ru/ru/docs/managed-kubernetes/operations/connect/security-groups#rules-internal).
 
-    ![Правила для группы безопасности](../../images/cloud-provider-yandex/sg-ru-rules.png)
+   ![Правила для группы безопасности](../../images/cloud-provider-yandex/sg-ru-rules.png)
 
 1. Удалите правило, разрешающее любой **входящий** трафик (на скриншоте выше оно уже удалено), и сохраните изменения.
 
@@ -99,6 +100,7 @@ title: "Cloud provider — Yandex Cloud"
    ```
 
    Где:
+
    - `authorized-key.json` — название файла с авторизованным ключом из шага 2.
 
 1. Создайте хранилище секретов [SecretStore](https://external-secrets.io/latest/api/secretstore/), содержащее секрет `sa-creds`:
@@ -119,6 +121,7 @@ title: "Cloud provider — Yandex Cloud"
    ```
 
    Где:
+
    - `sa-creds` — название `Secret`, содержащий авторизованный ключ. Этот секрет должен появиться после установки Helm-чарта.
    - `key` — название ключа в поле `.data` секрета выше.
 
@@ -140,9 +143,9 @@ title: "Cloud provider — Yandex Cloud"
 
 1. [Создайте секрет](https://cloud.yandex.ru/ru/docs/lockbox/operations/secret-create) Yandex Lockbox со следующими параметрами:
 
-    - **Имя** — `lockbox-secret`.
-    - **Ключ** — введите неконфиденциальный идентификатор `password`.
-    - **Значение** — введите конфиденциальные данные для хранения `p@$$w0rd`.
+   - **Имя** — `lockbox-secret`.
+   - **Ключ** — введите неконфиденциальный идентификатор `password`.
+   - **Значение** — введите конфиденциальные данные для хранения `p@$$w0rd`.
 
 1. Создайте объект [ExternalSecret](https://external-secrets.io/latest/api/externalsecret/), указывающий на секрет `lockbox-secret` в хранилище `secret-store`:
 

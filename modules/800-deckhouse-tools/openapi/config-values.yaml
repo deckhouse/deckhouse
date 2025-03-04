@@ -36,6 +36,14 @@ properties:
               The URL to redirect the user for authentication (if the authentication service returned a non-200 HTTP response).
             x-examples:
               - https://$host/dex-authenticator/sign_in
+      allowedUserEmails:
+        type: array
+        items:
+          type: string
+        description: |
+          An array of emails of users that can access module's public web interfaces.
+
+          This parameter is used if the `user-authn` module is enabled or the `externalAuthentication` parameter is set.
       allowedUserGroups:
         type: array
         items:

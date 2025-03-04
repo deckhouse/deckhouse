@@ -96,7 +96,7 @@ function get_secret() {
     while true; do
       for server in {{ .normal.apiserverEndpoints | join " " }}; do
         url="https://$server/api/v1/namespaces/d8-cloud-instance-manager/secrets/$secret"
-        if d8-curl -sS -f -x "" -X GET "$url" --header "Authorization: Bearer $token" --cacert "$BOOTSTRAP_DIR/ca.crt"
+        if d8-curl -sS -f -x "" --connect-timeout 10 -X GET "$url" --header "Authorization: Bearer $token" --cacert "$BOOTSTRAP_DIR/ca.crt"
         then
           return 0
         else
@@ -133,7 +133,7 @@ function get_bundle() {
     while true; do
       for server in {{ .normal.apiserverEndpoints | join " " }}; do
         url="https://$server/apis/bashible.deckhouse.io/v1alpha1/${resource}s/${name}"
-        if d8-curl -sS -f -x "" -X GET "$url" --header "Authorization: Bearer $token" --cacert "$BOOTSTRAP_DIR/ca.crt"
+        if d8-curl -sS -f -x "" --connect-timeout 10 -X GET "$url" --header "Authorization: Bearer $token" --cacert "$BOOTSTRAP_DIR/ca.crt"
         then
          return 0
         else
@@ -157,7 +157,6 @@ function main() {
   export PATH="/opt/deckhouse/bin:/usr/local/bin:$PATH"
   export BOOTSTRAP_DIR="/var/lib/bashible"
   export BUNDLE_STEPS_DIR="$BOOTSTRAP_DIR/bundle_steps"
-  export BUNDLE="{{ .bundle }}"
   export CONFIGURATION_CHECKSUM_FILE="$BOOTSTRAP_DIR/configuration_checksum"
   export UPTIME_FILE="$BOOTSTRAP_DIR/uptime"
   export CONFIGURATION_CHECKSUM="{{ .configurationChecksum | default "" }}"
@@ -209,7 +208,7 @@ unset HTTP_PROXY http_proxy HTTPS_PROXY https_proxy NO_PROXY no_proxy
 
   # update bashible.sh itself
   if [ -z "${BASHIBLE_SKIP_UPDATE-}" ] && [ -z "${is_local-}" ]; then
-    get_bundle bashible "${BUNDLE}.${NODE_GROUP}" | jq -r '.data."bashible.sh"' > $BOOTSTRAP_DIR/bashible-new.sh
+    get_bundle bashible "${NODE_GROUP}" | jq -r '.data."bashible.sh"' > $BOOTSTRAP_DIR/bashible-new.sh
     if [ ! -s $BOOTSTRAP_DIR/bashible-new.sh ] ; then
       >&2 echo "ERROR: Got empty $BOOTSTRAP_DIR/bashible-new.sh."
       exit 1
@@ -247,7 +246,7 @@ unset HTTP_PROXY http_proxy HTTPS_PROXY https_proxy NO_PROXY no_proxy
 
     rm -rf "$BUNDLE_STEPS_DIR"/*
 
-    ng_steps_collection="$(get_bundle nodegroupbundle "${BUNDLE}.${NODE_GROUP}" | jq -rc '.data')"
+    ng_steps_collection="$(get_bundle nodegroupbundle "${NODE_GROUP}" | jq -rc '.data')"
 
     for step in $(jq -r 'to_entries[] | .key' <<< "$ng_steps_collection"); do
       jq -r --arg step "$step" '.[$step] // ""' <<< "$ng_steps_collection" > "$BUNDLE_STEPS_DIR/$step"

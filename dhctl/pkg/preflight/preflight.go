@@ -134,6 +134,11 @@ func (pc *Checker) Static() error {
 			successMessage: "sudo is allowed for user",
 			skipFlag:       app.SudoAllowedCheckArgName,
 		},
+		{
+			fun:            pc.CheckCidrIntersectionStatic,
+			successMessage: "CIDRs are not intersects",
+			skipFlag:       app.CIDRIntersection,
+		},
 	})
 
 	if err != nil {
@@ -235,6 +240,11 @@ func (pc *Checker) Global() error {
 			fun:            pc.CheckRegistryCredentials,
 			successMessage: "registry credentials are correct",
 			skipFlag:       app.RegistryCredentialsCheckArgName,
+		},
+		{
+			fun:            pc.CheckCidrIntersection,
+			successMessage: "CIDRs are not intersects",
+			skipFlag:       app.CIDRIntersection,
 		},
 	})
 

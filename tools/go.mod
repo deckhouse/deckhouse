@@ -181,7 +181,7 @@ require (
 	helm.sh/helm/v3 v3.14.2 // indirect
 	honnef.co/go/tools v0.1.4 // indirect
 	k8s.io/api v0.29.10 // indirect
-	k8s.io/apiextensions-apiserver v0.29.3 // indirect
+	k8s.io/apiextensions-apiserver v0.29.8 // indirect
 	k8s.io/apimachinery v0.29.10 // indirect
 	k8s.io/client-go v0.29.10 // indirect
 	k8s.io/klog/v2 v2.130.1 // indirect
