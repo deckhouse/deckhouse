@@ -45,6 +45,8 @@ type Client struct {
 	SSHConn       *ssh.Conn
 	NetConn       *net.Conn
 	BastionClient *ssh.Client
+
+	stopChan chan struct{}
 }
 
 func (s *Client) Start() error {
@@ -161,6 +163,31 @@ func (s *Client) Start() error {
 	s.NetConn = &targetConn
 	s.SSHConn = &clientConn
 
+	if s.stopChan == nil {
+		go func() {
+			for {
+				select {
+				case <-s.stopChan:
+					log.DebugLn("Stopping keep-alive goroutine.")
+					return
+				default:
+					time.Sleep(30 * time.Second)
+					session, err := client.NewSession()
+					if err != nil {
+						log.DebugF("Keep-alive failed: %v", err)
+						s.Start()
+						return
+					}
+					if _, err := session.SendRequest("keepalive", false, nil); err != nil {
+						log.DebugF("Keep-alive failed: %v", err)
+						s.Start()
+						return
+					}
+				}
+			}
+		}()
+	}
+
 	return nil
 }
 
@@ -203,6 +230,19 @@ func (s *Client) Check() node.Check {
 
 // Stop the client
 func (s *Client) Stop() {
+	close(s.stopChan)
+	s.sshClient.Close()
+	if s.SSHConn != nil {
+		sshconn := *s.SSHConn
+		sshconn.Close()
+	}
+	if s.NetConn != nil {
+		netconn := *s.NetConn
+		netconn.Close()
+	}
+	if s.BastionClient != nil {
+		s.BastionClient.Close()
+	}
 }
 
 func (s *Client) Session() *session.Session {
