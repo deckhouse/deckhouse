@@ -152,3 +152,4 @@ index 94dc12412..93b7d2efc 100644
          }
  
          # this is required to avoid error if nginx is being monitored
+ 
