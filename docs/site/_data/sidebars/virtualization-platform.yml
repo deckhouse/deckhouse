@@ -350,7 +350,7 @@ entries:
           folders:
             #- title:
             #    en: dhctl
-            #    ru: dhctlа
+            #    ru: dhctl
             #  url: /virtualization-platform/documentation/reference/console-utilities/dhctl.html
             - title:
                 en: d8 (Deckhouse CLI)
