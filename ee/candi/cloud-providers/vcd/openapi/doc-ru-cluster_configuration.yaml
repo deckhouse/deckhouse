@@ -170,4 +170,4 @@ apiVersions:
               description:  Устанавливается в `true`, VCD имеет self-signed-сертификат.
         legacyMode:
           description: |
-            Если `true`, используется версия API ниже `37.2`.
+            Если задано значение `true`, будет использоваться версия API ниже `37.2`.
