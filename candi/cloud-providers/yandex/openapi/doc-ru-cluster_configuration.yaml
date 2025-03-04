@@ -209,6 +209,9 @@ apiVersions:
           externalSubnetID:
             description: |
               Подключаемый к узлу дополнительный сетевой интерфейс, в который будет идти маршрут по умолчанию.
+          familyID:
+            description: |
+              Family ID образа NAT-инстанса.
           natInstanceResources:
             description: |
               Вычислительные ресурсы, выделяемые для NAT-инстанса. Если параметр не указан, будут использоваться значения по умолчанию.
