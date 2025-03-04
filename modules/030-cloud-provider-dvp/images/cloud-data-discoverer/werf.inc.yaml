@@ -24,18 +24,27 @@ git:
     - go.mod
     - go.sum
     - "**/*.go"
+- add: /{{ $.ModulePath }}modules/030-{{ $.ModuleName }}/images/{{ $.ImageName }}/src
+  to:  /src/cloud-data-discoverer/src
+  stageDependencies:
+    install:
+      - go.mod
+      - go.sum
+      - "**/*.go"
+- add: /{{ $.ModulePath }}modules/030-{{ $.ModuleName }}/images/dvp-common
+  to:  /src/dvp-common
+  stageDependencies:
+    install:
+      - go.mod
+      - go.sum
+      - "**/*.go"
 shell:
   install:
-  - export VERSION="v0.2.0"
-  - export VERSION_COMMON="v0.4.0"
-  - git clone --depth 1 --branch ${VERSION} {{ $.CLOUD_PROVIDERS_SOURCE_REPO }}/huaweicloud/cloud-data-discoverer.git /src
-  - git clone --depth 1 --branch ${VERSION_COMMON} {{ $.CLOUD_PROVIDERS_SOURCE_REPO }}/huaweicloud/huaweicloud-common.git /src/huaweicloud-common
   - mv /go_lib /src
-  - cd /src
+  - cd /src/cloud-data-discoverer/src
   - rm -rf .git vendor
-  - sed -i -e 's# ../huaweicloud-common# /src/huaweicloud-common#g' go.mod
-  - sed -i -e 's# /deckhouse/go_lib/cloud-data# /src/go_lib/cloud-data#g' go.mod
-  - cd /src/huaweicloud-common
+  - sed -i -e 's# ../../../../../go_lib/cloud-data/# /src/go_lib/cloud-data#g' go.mod
+  - cd /src/dvp-common
   - rm -rf .git vendor
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
@@ -51,11 +60,11 @@ mount:
   to: /go/pkg
 shell:
   install:
-  - cd /src
+  - cd /src/cloud-data-discoverer/src
   - export GOPROXY={{ $.GOPROXY }}
   - go mod download
   setup:
-  - cd /src
+  - cd /src/cloud-data-discoverer/src
   - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o /discoverer
   - chown 64535:64535 /discoverer
   - chmod 0755 /discoverer
