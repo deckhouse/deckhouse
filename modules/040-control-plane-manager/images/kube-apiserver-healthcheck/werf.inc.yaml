@@ -32,13 +32,4 @@ shell:
   - chown 64535:64535 kube-apiserver-healthcheck
   - chmod 0700 kube-apiserver-healthcheck
 ---
-image: {{ .ModuleName }}/{{ $.ImageName }}-src-artifact
-fromImage: common/src-artifact
-final: false
-git:
-- add: /{{ $.ModulePath }}modules/040-{{ $.ModuleName }}/images/{{ $.ImageName }}/
-  to: /src
-  includePaths:
-  - go.mod
-  - go.sum
-  - main.go
+{{ include "src-artifact" . }}

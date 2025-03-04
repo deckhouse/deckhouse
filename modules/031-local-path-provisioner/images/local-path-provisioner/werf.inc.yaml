@@ -1,4 +1,7 @@
-{{- $localPathProvisionerVersion := "0.0.26"}}
+---
+{{- $context := . }}
+{{- $_ := set $context "git" (dict "version" "v0.0.26" "path" "rancher/local-path-provisioner.git") }}
+{{ include "src-artifact" $context }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: common/distroless
@@ -10,24 +13,6 @@ import:
 imageSpec:
   config:
     entrypoint: ["/usr/bin/local-path-provisioner"]
----
-image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
-final: false
-fromImage: common/src-artifact
-git:
-- add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/patches
-  to: /patches
-  includePaths:
-  - '**/*.patch'
-  stageDependencies:
-    install:
-    - '**/*.patch'
-shell:
-  install:
-  - git clone --depth 1 --branch v{{$localPathProvisionerVersion}} {{ $.SOURCE_REPO }}/rancher/local-path-provisioner.git /src
-  - cd /src
-  - git apply /patches/*.patch --verbose
-  - rm -rf .git vendor
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
 final: false
@@ -43,6 +28,6 @@ mount:
 shell:
   install:
   - cd /src
-  - GOPROXY={{ $.GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags "-X main.VERSION={{$localPathProvisionerVersion}} -extldflags -static -s -w" -o /local-path-provisioner
+  - GOPROXY={{ $.GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags "-X main.VERSION=`cat VERSION` -extldflags -static -s -w" -o /local-path-provisioner
   - chown -R 64535:64535 /local-path-provisioner
   - chmod 0700 /local-path-provisioner

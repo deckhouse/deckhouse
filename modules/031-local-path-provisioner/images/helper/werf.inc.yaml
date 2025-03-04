@@ -21,21 +21,4 @@ import:
    to: /manager
    after: install
 ---
-image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
-final: false
-fromImage: common/src-artifact
-git:
-- add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/src
-  to: /src
-  includePaths:
-  - '**/*.go'
-  - '**/*.mod'
-  - '**/*.sum'
-  stageDependencies:
-    install:
-    - '**/*.go'
-    - 'go.mod'
-    - 'go.sum'
-shell:
-  install:
-  - cd /src
+{{ include "src-artifact" . }}
