@@ -125,8 +125,7 @@ properties:
         type: string
         pattern: '^[0-9]+(s|m|h)?$'
         description: |
-          Interval for splitting large Loki queries.
-          Helps improve performance by breaking queries into smaller chunks.
+          Interval for splitting large Loki queries. This splitting helps improve performance.
           The value can be provided as a string, with the number first, followed by the unit of measurement (second, minute, hour).
         default: "0s"
       paralleliseShardableQueries:
