@@ -36,7 +36,7 @@ resources:
   requests:
     memory:
       _default: 32M
-      web-production: 64M
+      web-production: 150M
 
 vrouter:
   defaultGroup: "v1"
