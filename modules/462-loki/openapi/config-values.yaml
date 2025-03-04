@@ -127,7 +127,7 @@ properties:
         description: |
           Interval for splitting large Loki queries.
           Helps improve performance by breaking queries into smaller chunks.
-          Can be string with number firstly and unit second, minute, hour.
+          The value can be provided as a string, with the number first, followed by the unit of measurement (second, minute, hour).
         default: "0s"
       paralleliseShardableQueries:
         type: boolean
