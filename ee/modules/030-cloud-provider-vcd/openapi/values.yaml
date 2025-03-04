@@ -296,7 +296,7 @@ properties:
           legacyMode:
             type: boolean
             description: |
-              If `true`, an API version below `37.2` is used.
+              If set to `true`, an API version below `37.2` will be used.
             x-doc-default: false
       capcdControllerManagerWebhookCert:
         type: object
