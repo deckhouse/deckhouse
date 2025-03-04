@@ -17,22 +17,23 @@ package app
 import "gopkg.in/alecthomas/kingpin.v2"
 
 var (
-	PreflightSkipAll                       = false
-	PreflightSkipSSHForward                = false
-	PreflightSkipAvailabilityPorts         = false
-	PreflightSkipResolvingLocalhost        = false
-	PreflightSkipDeckhouseVersionCheck     = false
-	PreflightSkipRegistryThroughProxy      = false
-	PreflightSkipPublicDomainTemplateCheck = false
-	PreflightSkipSSHCredentialsCheck       = false
-	PreflightSkipRegistryCredentials       = false
-	PreflightSkipContainerdExistCheck      = false
-	PreflightSkipPythonChecks              = false
-	PreflightSkipSudoIsAllowedForUserCheck = false
-	PreflightSkipSystemRequirementsCheck   = false
-	PreflightSkipOneSSHHost                = false
-	PreflightSkipCloudAPIAccessibility     = false
-	PreflightSkipCIDRIntersection          = false
+	PreflightSkipAll                        = false
+	PreflightSkipSSHForward                 = false
+	PreflightSkipAvailabilityPorts          = false
+	PreflightSkipResolvingLocalhost         = false
+	PreflightSkipDeckhouseVersionCheck      = false
+	PreflightSkipRegistryThroughProxy       = false
+	PreflightSkipPublicDomainTemplateCheck  = false
+	PreflightSkipSSHCredentialsCheck        = false
+	PreflightSkipRegistryCredentials        = false
+	PreflightSkipContainerdExistCheck       = false
+	PreflightSkipPythonChecks               = false
+	PreflightSkipSudoIsAllowedForUserCheck  = false
+	PreflightSkipSystemRequirementsCheck    = false
+	PreflightSkipOneSSHHost                 = false
+	PreflightSkipCloudAPIAccessibility      = false
+	PreflightSkipCIDRIntersection           = false
+	PreflightSkipYandexWithNatInstanceCheck = false
 )
 
 const (
@@ -51,6 +52,7 @@ const (
 	CloudAPIAccessibilityArgName     = "preflight-cloud-api-accesibility-check"
 	OneSSHHostCheckArgName           = "preflight-skip-one-ssh-host"
 	CIDRIntersection                 = "preflight-skip-cidr-intersection"
+	YandexWithNatInstance            = "preflight-skip-yandex-with-nat-instance-check"
 )
 
 var (
@@ -70,6 +72,7 @@ var (
 		SystemRequirementsArgName:        &PreflightSkipSystemRequirementsCheck,
 		OneSSHHostCheckArgName:           &PreflightSkipOneSSHHost,
 		CIDRIntersection:                 &PreflightSkipCIDRIntersection,
+		YandexWithNatInstance:            &PreflightSkipYandexWithNatInstanceCheck,
 	}
 )
 
@@ -130,4 +133,7 @@ func DefinePreflight(cmd *kingpin.CmdClause) {
 	cmd.Flag(CIDRIntersection, "Skip verifying CIDRs intersection").
 		Envar(configEnvName("PREFLIGHT_SKIP_CIDR_INTERSECTION")).
 		BoolVar(PreflightSkipOptionsMap[CIDRIntersection])
+	cmd.Flag(YandexWithNatInstance, "Skip verifying Yandex Cloud WithNatInstance configuration").
+		Envar(configEnvName("PREFLIGHT_SKIP_YANDEX_WITH_NAT_INSTANCE_CHECK")).
+		BoolVar(PreflightSkipOptionsMap[YandexWithNatInstance])
 }

@@ -157,13 +157,11 @@ dhcpOptions:
 
 В данной схеме размещения создается NAT-инстанс, а в таблицу маршрутизации добавляется правило на 0.0.0.0/0 с NAT-инстанса nexthop'ом.
 
-Если задан `withNATInstance.externalSubnetID` — NAT-инстанс будет создан в зоне этого subnet.
+Если задан `withNATInstance.internalSubnetID` — NAT-инстанс будет создан в зоне этого subnet.
 
-Если `withNATInstance.externalSubnetID` не задан, а `withNATInstance.internalSubnetID` задан — NAT-инстанс будет создан в зоне этого subnet.
+Если `withNATInstance.internalSubnetID` не задан, а `withNATInstance.internalSubnetCIDR` требуется — тогда будет создана новая внутренняя подсеть. NAT-инстанс будет создан в этой подсети. Эта отдельная подсеть необходима для избежания петли маршрутизации.
 
-Если ни `withNATInstance.externalSubnetID`, ни `withNATInstance.internalSubnetID` не заданы — NAT-инстанс создастся в зоне `ru-central1-a`.
-
-Если IP-адрес NAT-инстанса не имеет значения, можно передать пустой объект `withNATInstance: {}`, тогда необходимые сети и динамический IP-адрес будут созданы автоматически.
+Если `withNATInstance.externalSubnetID` указан в дополнение к предыдущим, NAT-инстанс будет подключен к нему через вторичный интерфейс.
 
 ![Схема размещения WithNATInstance в Yandex Cloud](../../images/cloud-provider-yandex/layout-withnatinstance.png)
 <!--- Исходник: https://docs.google.com/drawings/d/1oVpZ_ldcuNxPnGCkx0dRtcAdL7BSEEvmsvbG8Aif1pE/edit --->
