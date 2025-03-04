@@ -165,15 +165,14 @@ func (d *DiskService) ResizeDisk(ctx context.Context, diskName string, newSize s
 }
 
 func (d *DiskService) GetStorageClassList(ctx context.Context) (*storagev1.StorageClassList, error) {
-	var storageClassList storagev1.StorageClassList
-
-	if err := d.client.List(ctx, &storageClassList); err != nil {
+	storageClassList, err := d.clientset.StorageV1().StorageClasses().List(ctx, metav1.ListOptions{})
+	if err != nil {
 		if k8serrors.IsNotFound(err) {
 			return nil, cloudprovider.DiskNotFound
 		}
 		return nil, err
 	}
-	return &storageClassList, nil
+	return storageClassList, nil
 }
 
 func (d *DiskService) WaitDiskCreation(ctx context.Context, vmdName string) error {
