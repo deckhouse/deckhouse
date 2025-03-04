@@ -95,21 +95,17 @@ entries:
                         ru: Настройка внутренней сети
                       url: /admin/network/configuration.html
                     - title:
-                        en: Operation modes of bpfLB for external traffic processing
-                        ru: Режимы работы bpfLB для обработки внешнего трафика
-                      url: /admin/network/bpflb-external-traffic.html
-                    - title:
                         en: Encrypting traffic between nodes
                         ru: Шифрование трафика между узлами
-                      url: /admin/network/encrypting-traffic.html
+                      url: /admin/network/encrypting-traffic-nodes.html
+                    - title:
+                        en: Encrypting traffic between pods
+                        ru: Шифрование трафика между подами
+                      url: /admin/network/encrypting-traffic-pods.html
                     - title:
                         en: Configuring Cluster Network Stack Visualization
                         ru: Настройка визуализации сетевого стека кластера
                       url: /admin/network/network-stack-visualization-cilium-hubble.html
-                    - title:
-                        en: Kube-proxy configuration
-                        ru: Настройка kube-proxy
-                      url: /admin/network/kube-proxy-configuration.html
                     - title:
                         en: Switching from CNI flannel to cilium
                         ru: Переключение с CNI flannel на cilium
@@ -123,20 +119,20 @@ entries:
                         ru: Балансировка входящего трафика
                       url: /admin/network/incoming-traffic-balancing-overview.html
                     - title:
-                        en: TCP/UDP balancing
-                        ru: Балансировка TCP/UDP
+                        en: NLB
+                        ru: NLB
                       folders:
                         - title:
                             en: Overview
                             ru: Введение
-                          url: /admin/network/tcp-udp-balancing-overview.html
+                          url: /admin/network/nlb-balancing-overview.html
                         - title:
-                            en: Balancing in Bare metal clusters
-                            ru: Балансировка в Bare metal кластерах
-                          url: /admin/network/bare-metal-balancing.html
+                            en: Balancing by MetalLB means
+                            ru: Балансировка средствами MetalLB
+                          url: /admin/network/metallb-balancing.html
                         - title:
-                            en: Balancing in clusters on cloud platforms
-                            ru: Балансировка в кластерах на облачных платформах
+                            en: External balancer
+                            ru: Внешний балансировщик
                           url: /admin/network/cloud-balancing.html
                     - title:
                         en: ALB
@@ -174,30 +170,6 @@ entries:
                         en: Istio
                         ru: Istio
                       url: /admin/network/istio-outgoing-balancing.html
-                - title:
-                    en: Service Mesh
-                    ru: Service Mesh
-                  folders:
-                    - title:
-                        en: Overview
-                        ru: Введение
-                      url: /admin/network/service-mesh-overview.html
-                    - title:
-                        en: mTLS
-                        ru: mTLS
-                      url: /admin/network/mtls.html
-                    - title:
-                        en: Circuit Breaker
-                        ru: Circuit Breaker
-                      url: /admin/network/circuit-breaker.html
-                    - title:
-                        en: Canary deployment
-                        ru: Canary deployment
-                      url: /admin/network/canary-deployment.html
-                    - title:
-                        en: gRPC balancing
-                        ru: Балансировка gRPC
-                      url: /admin/network/grpc-balancing.html
                 - title:
                     en: Inter-cluster cooperation (alliance)
                     ru: Межкластерное взаимодействие (альянс)
@@ -246,6 +218,10 @@ entries:
                         en: Building a network gateway from Kubernetes nodes
                         ru: Постройка сетевого шлюза из Kubernetes-узлов
                       url: /admin/network/building-network-gateway-from-nodes.html
+                    - title:
+                        en: Operation modes of bpfLB for external traffic processing
+                        ru: Режимы работы bpfLB для обработки внешнего трафика
+                      url: /admin/network/bpflb-external-traffic.html
             - title:
                 en: Storage
                 ru: Хранение
@@ -320,9 +296,29 @@ entries:
             ru: Сеть
           folders:
             - title:
-                en: ServiceWithHealthchecks
-                ru: ServiceWithHealthchecks
-              url: /user/service-with-healthchecks.html
+                en: Incoming traffic processing
+                ru: Обработка входящего трафика
+              folders:
+                - title:
+                    en: NLB
+                    ru: NLB
+                  url: /user/incoming-traffic-processing-nlb.html
+                - title:
+                    en: ALB
+                    ru: ALB
+                  url: /user/incoming-traffic-processing-alb.html
+            - title:
+                en: Intra-cluster interaction
+                ru: Внутрикластерное взаимодействие
+              url: /user/intra-cluster-interaction-using.html
+            - title:
+                en: Circuit Breaker
+                ru: Circuit Breaker
+              url: /user/circuit-breaker.html
+            - title:
+                en: Canary deployment
+                ru: Canary deployment
+              url: /user/canary-deployment.html
         - title:
             en: Interfaces
             ru: Интерфейсы

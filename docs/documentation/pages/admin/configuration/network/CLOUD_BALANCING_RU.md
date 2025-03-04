@@ -21,8 +21,6 @@ lang: ru
 Для него необходимо указать параметры LoadBalancer, который автоматически будет заказан у вашего облачного провайдера.
 При создании LoadBalancer создается Service, на который будет направляться трафик с заказанного у провайдера LoadBalancer.
 
-Пример (через UI и yaml)
-
 ## Пример создания Ingres-контроллера для провайдера OpenStack
 
 ```yaml
@@ -44,4 +42,21 @@ spec:
     key: dedicated.deckhouse.io
     operator: Equal
     value: frontend
+```
+
+## Пример создания сервиса с типом ClusterIP
+
+```yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend-resolver-cluster-ip
+spec:
+  ports:
+  - name: http
+    port: 8000
+    protocol: TCP
+  selector:
+    app: lab-4-backend
+  type: ClusterIP
 ```

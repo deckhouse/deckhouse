@@ -75,3 +75,11 @@ spec:
         detectionStrategy: Name
         name: ens7 # На всех узлах интерфейс для публичных IP называется "ens7", воспользуемся этим.
 ```
+
+## Как вручную переключить keepalived
+
+<!-- перенесено из https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/keepalived/ -->
+
+1. Зайдите в нужный под: `kubectl -n d8-keepalived exec -it keepalived-<name> -- sh`.
+2. Отредактируйте файл `vi /etc/keepalived/keepalived.conf`, где в строке с параметром `priority` замените значение на число подов keepalived + 1.
+3. Отправьте сигнал на перечитывание конфигурации: `kill -HUP 1`.

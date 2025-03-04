@@ -1,6 +1,6 @@
 ---
 title: "Circuit Breaker"
-permalink: ru/admin/network/circuit-breaker.html
+permalink: ru/user/circuit-breaker.html
 lang: ru
 ---
 
