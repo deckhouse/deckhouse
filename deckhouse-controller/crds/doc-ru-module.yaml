@@ -15,7 +15,7 @@ spec:
                 availableSources:
                   description: Доступные источники для скачивания модуля.
                 source:
-                  description: Источник из которого скачан модуль (иначе пусто).
+                  description: Источник, из которого скачан модуль (иначе пусто).
                 namespace:
                   type: string
                   description: Пространство имен в котором работает модуль.
