@@ -121,5 +121,37 @@ func (d *Discoverer) DiscoveryData(ctx context.Context, cloudProviderDiscoveryDa
 
 // NotImplemented
 func (d *Discoverer) DisksMeta(ctx context.Context) ([]v1alpha1.DiskMeta, error) {
-	return []v1alpha1.DiskMeta{}, nil
+	sess, err := session.NewSessionWithOptions(session.Options{
+		Config: aws.Config{
+			Region: aws.String(d.region),
+		},
+	})
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to initialize new session: %v", err)
+	}
+
+	ec2Client := ec2.New(sess)
+	input := &ec2.DescribeVolumesInput{
+		Filters: []*ec2.Filter{
+			{
+				Name:   aws.String("tag: ebs.csi.aws.com/cluster"),
+				Values: []*string{aws.String("true")},
+			},
+		},
+	}
+	result, err := ec2Client.DescribeVolumes(input)
+	if err != nil {
+		return nil, fmt.Errorf("failed to desribe volumes: %v", err)
+	}
+	disksMeta := make([]v1alpha1.DiskMeta, 0, len(result.Volumes))
+
+	for _, volume := range result.Volumes {
+		for _, tag := range volume.Tags {
+			if aws.StringValue(tag.Key) == "CSIVolumeName" {
+				disksMeta = append(disksMeta, v1alpha1.DiskMeta{ID: *volume.VolumeId, Name: aws.StringValue(tag.Value)})
+			}
+		}
+	}
+	return disksMeta, nil
 }
