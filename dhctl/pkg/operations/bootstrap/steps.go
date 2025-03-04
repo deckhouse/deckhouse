@@ -54,9 +54,9 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh/frontend"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh/session"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/clissh"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/clissh/frontend"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/session"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/template"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
@@ -256,7 +256,7 @@ func cleanupPreviousBashibleRunIfNeed(nodeInterface node.Interface) error {
 	})
 }
 
-func SetupSSHTunnelToRegistryPackagesProxy(sshCl *ssh.Client) (*frontend.ReverseTunnel, error) {
+func SetupSSHTunnelToRegistryPackagesProxy(sshCl node.SSHClient) (node.ReverseTunnel, error) {
 	port := "5444"
 	listenAddress := "127.0.0.1"
 
@@ -272,8 +272,8 @@ func SetupSSHTunnelToRegistryPackagesProxy(sshCl *ssh.Client) (*frontend.Reverse
 		return nil, fmt.Errorf("Cannot render kill reverse tunnel script: %v", err)
 	}
 
-	checker := ssh.NewRunScriptReverseTunnelChecker(sshCl, checkingScript)
-	killer := ssh.NewRunScriptReverseTunnelKiller(sshCl, killScript)
+	checker := clissh.NewRunScriptReverseTunnelChecker(sshCl, checkingScript)
+	killer := clissh.NewRunScriptReverseTunnelKiller(sshCl, killScript)
 
 	tun := sshCl.ReverseTunnel(fmt.Sprintf("%s:%s:%s:%s", listenAddress, port, listenAddress, port))
 	err = tun.Up()
@@ -471,7 +471,7 @@ func RunBashiblePipeline(nodeInterface node.Interface, cfg *config.MetaConfig, n
 		})
 	})
 
-	if wrapper, ok := nodeInterface.(*ssh.NodeInterfaceWrapper); ok {
+	if wrapper, ok := nodeInterface.(*clissh.NodeInterfaceWrapper); ok {
 		cleanUpTunnel, err := setupRPPTunnel(wrapper.Client())
 		if err != nil {
 			return err
@@ -519,8 +519,8 @@ func RunBashiblePipeline(nodeInterface node.Interface, cfg *config.MetaConfig, n
 		})
 }
 
-func setupRPPTunnel(sshClient *ssh.Client) (func(), error) {
-	var tun *frontend.ReverseTunnel
+func setupRPPTunnel(sshClient node.SSHClient) (func(), error) {
+	var tun node.ReverseTunnel
 	log.DebugLn("Starting reverse tunnel routine")
 	tun, err := SetupSSHTunnelToRegistryPackagesProxy(sshClient)
 	if err != nil {
@@ -634,7 +634,7 @@ func CheckDHCTLDependencies(nodeInteface node.Interface) error {
 	})
 }
 
-func WaitForSSHConnectionOnMaster(sshClient *ssh.Client) error {
+func WaitForSSHConnectionOnMaster(sshClient node.SSHClient) error {
 	return log.Process("bootstrap", "Wait for SSH on Master become Ready", func() error {
 		availabilityCheck := sshClient.Check()
 		_ = log.Process("default", "Connection string", func() error {

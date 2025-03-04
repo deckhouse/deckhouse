@@ -23,11 +23,11 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/bootstrap"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/util"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/util/callback"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh/session"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/session"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/clissh"
 )
 
-func CreateSSHClient(config *config.ConnectionConfig) (*ssh.Client, func() error, error) {
+func CreateSSHClient(config *config.ConnectionConfig) (*clissh.Client, func() error, error) {
 	cleanuper := callback.NewCallback()
 
 	keysPaths := make([]string, 0, len(config.SSHConfig.SSHAgentPrivateKeys))
@@ -83,7 +83,8 @@ func CreateSSHClient(config *config.ConnectionConfig) (*ssh.Client, func() error
 	app.SSHPort = util.PortToString(config.SSHConfig.SSHPort)
 	app.SSHExtraArgs = config.SSHConfig.SSHExtraArgs
 
-	sshClient, err := ssh.NewClient(sess, keys).Start()
+	sshClient := clissh.NewClient(sess, keys)
+	err = sshClient.Start()
 	if err != nil {
 		return nil, cleanuper.AsFunc(), err
 	}
