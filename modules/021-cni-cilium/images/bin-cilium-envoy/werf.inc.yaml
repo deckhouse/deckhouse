@@ -29,18 +29,6 @@ shell:
   - git apply --verbose /patches/*.patch
   - rm -rf /src/proxy/.git
 ---
-image: {{ .ModuleName }}/{{ .ImageName }}-basel-artifact
-fromImage: common/src-artifact
-final: false
-shell:
-  install:
-  - mkdir -p /tmp/bazel-cache
-  - git clone --depth 1 --branch {{ $ciliumProxyCacheRev }} {{ $.SOURCE_REPO }}/cilium/proxy-build-cache.git /tmp/bazel-cache && rm -rf /tmp/bazel-cache/.git
-  - chown -R 1337:1337 /tmp/bazel-cache
-  - mkdir -p /tmp/bazel-deps
-  - git clone --depth 1 --branch {{ $ciliumProxyDepsRev }} {{ .SOURCE_REPO }}/cilium/proxy-build-deps.git /tmp/bazel-deps && rm -rf /tmp/bazel-deps/.git
-  - chown -R 1337:1337 /tmp/bazel-deps
----
 image: {{ .ModuleName }}/cilium-envoy-artifact
 fromImage: {{ .ModuleName }}/base-cilium-dev
 final: false
@@ -49,16 +37,16 @@ import:
   add: /src
   to: /src
   before: install
-- image: {{ .ModuleName }}/{{ .ImageName }}-basel-artifact
-  add: /tmp/bazel-cache
-  to: /tmp/bazel-cache
-  before: install
-- image: {{ .ModuleName }}/{{ .ImageName }}-basel-artifact
-  add: /tmp/bazel-deps
-  to: /tmp/bazel-deps
-  before: install
 mount:
 {{ include "mount points for golang builds" . }}
+- from: tmp_dir
+  to: /root/.cache/bazel
+- from: tmp_dir
+  to: /home/cilium/.cache/bazel
+- from: tmp_dir
+  to: /home/cilium/.cache/go-build
+- from: tmp_dir
+  to: /tmp/bazel-cache
 shell:
   beforeInstall:
   - |
@@ -80,6 +68,11 @@ shell:
   - chmod -R a+w /tmp
   - chown -R 1337:1337 /cilium/proxy
   setup:
+  # cache
+  - git clone --depth 1 --branch {{ $ciliumProxyCacheRev }} {{ .SOURCE_REPO }}/cilium/proxy-build-cache.git /tmp/bazel-cache 
+  - git clone --depth 1 --branch {{ $ciliumProxyDepsRev }} {{ .SOURCE_REPO }}/cilium/proxy-build-deps.git /tmp/bazel-deps
+  - chown -R cilium:cilium /tmp/bazel-cache /tmp/bazel-deps
+
   - export GO_VERSION=${GOLANG_VERSION} GOPROXY={{ $.GOPROXY }}
   - export GOOS=linux GOARCH=amd64 CGO_ENABLED=0
   - cd /cilium/proxy
@@ -105,7 +98,6 @@ shell:
   - export BAZEL_OUTPUT_BASE=$(sudo -u cilium PATH=${PATH} bazel info output_base)
   - sudo -u cilium PATH=${PATH} mkdir -p ${BAZEL_OUTPUT_BASE}/external
   - sudo -u cilium PATH=${PATH} tar -zxf /tmp/bazel-deps/external.tar.gz -C ${BAZEL_OUTPUT_BASE}/external
-  - rm -rf /tmp/bazel-deps
   #
   - sudo -u cilium PATH=${PATH} make bazel-bin/cilium-envoy-starter bazel-bin/cilium-envoy
   - sudo -u cilium PATH=${PATH} ./bazel/get_workspace_status

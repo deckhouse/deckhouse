@@ -149,7 +149,6 @@ shell:
   - export BAZEL_OUTPUT_BASE=$(bazel info output_base)
   - mkdir -p ${BAZEL_OUTPUT_BASE}/external
   - tar -zxf /tmp/bazel-deps/external.tar.gz -C ${BAZEL_OUTPUT_BASE}/external
-  - rm -rf /tmp/bazel-deps
   #
   - bazel build --disk_cache=/tmp/bazel-cache --nofetch --stamp --config=release //:envoy
   - mkdir /src/proxy/bin
