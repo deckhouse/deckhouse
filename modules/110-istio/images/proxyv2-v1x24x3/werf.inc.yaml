@@ -6,7 +6,7 @@
 {{- $llvmRev := "llvmorg-14.0.6" }}
 {{- $goVersion := "1.23.1" }}
 {{- $protocVersion := "22.3" }}
-{{- $bazelVersions := "8.1.1" }}
+{{- $bazelVersions := "6.3.2" }}
 {{- $iptables_version := "1.8.9" }}
 {{- $iptables_image_version := $iptables_version | replace "." "-" }}
 {{- $source := "https://github.com" }}
