@@ -28,6 +28,11 @@ request-callback:
     en:
       title: "Request callback"
       text: "Fill out this form, and we will contact you soon."
+  сommunication-method:
+    ru: 
+      title: "Удобный способ связи"
+    en: 
+      title: "Select your preferred communication means"
   success-message:
     ru:
       title: "Заявка отправлена"
