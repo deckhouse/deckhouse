@@ -119,7 +119,7 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	}
 
 	// ensure namespace
-	r.logger.Info("ensure the namespace", "namespace", namespace.Name)
+	r.logger.Info("ensure the project for the namespace", "namespace", namespace.Name)
 	return r.manager.Handle(ctx, namespace)
 }
 
@@ -135,11 +135,8 @@ func (p customPredicate[T]) Create(e event.TypedCreateEvent[T]) bool {
 	}
 
 	// skip namespace that does not require to be adopted
-	if _, ok := e.Object.GetAnnotations()[v1alpha2.NamespaceAnnotationAdopt]; ok {
-		return true
-	}
-
-	return false
+	_, ok := e.Object.GetAnnotations()[v1alpha2.NamespaceAnnotationAdopt]
+	return ok
 }
 
 func (p customPredicate[T]) Update(e event.TypedUpdateEvent[T]) bool {
@@ -153,11 +150,8 @@ func (p customPredicate[T]) Update(e event.TypedUpdateEvent[T]) bool {
 	}
 
 	// skip namespace that does not require to be adopted
-	if _, ok := e.ObjectNew.GetAnnotations()[v1alpha2.NamespaceAnnotationAdopt]; ok {
-		return true
-	}
-
-	return e.ObjectNew.GetGeneration() != e.ObjectOld.GetGeneration()
+	_, ok := e.ObjectNew.GetAnnotations()[v1alpha2.NamespaceAnnotationAdopt]
+	return ok
 }
 
 func isNil(arg any) bool {
