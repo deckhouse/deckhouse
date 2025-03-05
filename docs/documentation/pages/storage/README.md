@@ -1,6 +1,6 @@
 ---
 title: "Description"
-permalink: en/storage/admin/
+permalink: en/storage/admin/readme.html
 ---
 
 **Storage Configuration** is a critical step in deploying and managing a Kubernetes cluster, ensuring reliable data storage and availability for applications. In this chapter, you will explore the key approaches and tools provided by the Deckhouse Kubernetes Platform for configuring and managing storage.
