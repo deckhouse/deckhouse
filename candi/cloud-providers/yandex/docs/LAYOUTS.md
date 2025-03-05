@@ -155,11 +155,14 @@ dhcpOptions:
 
 ## WithNATInstance
 
-In this placement strategy, Deckhouse creates a NAT instance and adds a rule to a route table containing a route to 0.0.0.0/0 with a NAT instance as the next hop.
+In this placement strategy, Deckhouse creates a NAT instance inside new separate subnet and adds a rule to a route table containing a route to 0.0.0.0/0 with a NAT instance as the next hop.
+This separate subnet is needed to avoid routing loop.
 
 If the `withNATInstance.internalSubnetID` parameter is set, the NAT instance will be created in this subnet.
 
-If the `withNATInstance.internalSubnetID` parameter is not set, `withNATInstance.internalSubnetCIDR` is required, then a new internal subnet will be created. The NAT instance will be created in this subnet. This separate subnet is needed to avoid routing loop.
+If the `withNATInstance.internalSubnetCIDR` parameter is set, then a new internal subnet will be created. The NAT instance will be created in this subnet. 
+
+Either `withNATInstance.internalSubnetID` or `withNATInstance.internalSubnetCIDR` parameter is required. 
 
 If the `withNATInstance.externalSubnetID` is provided in addition to previous ones, the NAT instance will be attached to it via secondary interface.
 
