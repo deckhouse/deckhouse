@@ -27,6 +27,11 @@ data "yandex_vpc_subnet" "external_subnet" {
   subnet_id = var.nat_instance_external_subnet_id
 }
 
+data "yandex_compute_instance" "nat_instance" {
+  count = local.is_with_nat_instance ? (var.nat_instance_internal_subnet_cidr == null ? 1 : 0) : 0
+  name = join("-", [var.prefix, "nat"])
+}
+
 locals {
   user_internal_subnet_zone = var.nat_instance_internal_subnet_id == null ? null : data.yandex_vpc_subnet.user_internal_subnet[0].zone
   external_subnet_zone = var.nat_instance_external_subnet_id == null ? null : join("", data.yandex_vpc_subnet.external_subnet.*.zone) # https://github.com/hashicorp/terraform/issues/23222#issuecomment-547462883
@@ -35,9 +40,9 @@ locals {
   # if user set internal subnet id for nat instance get cidr from its subnet
   user_internal_subnet_cidr = var.nat_instance_internal_subnet_id == null ? null : data.yandex_vpc_subnet.user_internal_subnet[0].v4_cidr_blocks[0]
 
-  nat_instance_internal_cidr = var.nat_instance_internal_subnet_cidr != null ? var.nat_instance_internal_subnet_cidr : (local.user_internal_subnet_cidr != null ? local.user_internal_subnet_cidr : null)
+  nat_instance_internal_cidr = var.nat_instance_internal_subnet_cidr != null ? var.nat_instance_internal_subnet_cidr : local.user_internal_subnet_cidr
 
-  # but if user pass nat instance internal address directly (it for backward compatibility) use passed address,
+  # if user pass nat instance internal address directly (it for backward compatibility) use passed address,
   # else get 10 host address from cidr which got in previous step
   nat_instance_internal_address_calculated = local.is_with_nat_instance ? (var.nat_instance_internal_address != null ? var.nat_instance_internal_address : (local.nat_instance_internal_cidr != null ? cidrhost(local.nat_instance_internal_cidr, 10): null)) : null
 
@@ -84,7 +89,7 @@ locals {
 resource "yandex_vpc_subnet" "nat_instance" {
   count = local.is_with_nat_instance ? (var.nat_instance_internal_subnet_cidr != null ? 1 : 0) : 0
 
-  name           = join("-", [var.prefix, "nat_instance"])
+  name           = join("-", [var.prefix, "nat"])
   zone           = local.internal_subnet_zone
   network_id     = var.network_id
   v4_cidr_blocks = [local.nat_instance_internal_cidr]
@@ -124,8 +129,8 @@ resource "yandex_compute_instance" "nat_instance" {
   }
 
   network_interface {
-    subnet_id      = var.nat_instance_internal_subnet_id == null ? try(yandex_vpc_subnet.nat_instance[0].id, "") : var.nat_instance_internal_subnet_id
-    ip_address     = local.nat_instance_internal_address_calculated
+    subnet_id      = var.nat_instance_internal_subnet_cidr != null ? yandex_vpc_subnet.nat_instance[0].id: (var.nat_instance_internal_subnet_id != null ? var.nat_instance_internal_subnet_id: data.yandex_compute_instance.nat_instance[0].network_interface.0.subnet_id)
+    ip_address     = local.nat_instance_internal_address_calculated != null ? local.nat_instance_internal_address_calculated : data.yandex_compute_instance.nat_instance[0].network_interface.0.ip_address
     nat            = local.assign_external_ip_address
     nat_ip_address = local.assign_external_ip_address ? var.nat_instance_external_address : null
   }
@@ -137,8 +142,6 @@ resource "yandex_compute_instance" "nat_instance" {
       boot_disk[0].initialize_params[0].image_id,
       boot_disk[0].initialize_params[0].size,
       network_acceleration_type,
-      network_interface["subnet_id"],
-      network_interface["ip_address"],
     ]
   }
 
