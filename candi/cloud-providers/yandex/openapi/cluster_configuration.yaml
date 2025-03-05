@@ -433,17 +433,6 @@ apiVersions:
                   Processor platform type on the NAT instance.
                 type: string
                 default: "standard-v2"
-        oneOf:
-          - required: [internalSubnetCIDR]
-            properties:
-              layout:
-                enum: [WithNATInstance]
-                type: string
-          - required: [internalSubnetID]
-            properties:
-              layout:
-                enum: [WithNATInstance]
-                type: string
       provider:
         type: object
         description: |
