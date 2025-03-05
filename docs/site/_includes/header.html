@@ -184,9 +184,12 @@
         </ul>
       </div>
       <div class="header__right-box">
-        {%- unless site.mode == "module" %}
+          {%- unless site.mode == "module" %}
            {%- if page.lang == "ru" %}
-             <a href="/products/kubernetes-platform/documentation/v1/deckhouse-overview.html" class="button button--outline">Документация</a>
+           <div class="header__buttons">
+            <a href="/products/kubernetes-platform/documentation/v1/deckhouse-overview.html" class="button button--outline">Документация</a>
+            <a data-open-modal="request_callback" href="#" class="button button--contact">Свяжитесь с нами</a>
+          </div>
            {%- endif %}
         {%- endunless %}
         {%- if page.lang == "ru" %}
