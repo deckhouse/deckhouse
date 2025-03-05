@@ -1,4 +1,4 @@
-# Copyright 2021 Flant JSC
+# Copyright 2025 Flant JSC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,7 +13,7 @@
 # limitations under the License.
 
 {{- $wrapperPkgName := "systemctl-power-commands-wrapper"
-{{- $wrapperImageIndex := "systemctlPowerCommandsWrapper"
+{{- $wrapperIndex := "systemctlPowerCommandsWrapper"
 {{- $wrapperVersion := "0.0.1" | replace "." "" }}
 
-bb-package-install "{{ $wrapperPkgName }}:{{ index .images.registrypackages (printf "%s%s" $wrapperPkgName $wrapperVersion) | toString }}"
+bb-package-install "{{ $wrapperPkgName }}:{{ index .images.registrypackages (printf "%s%s" $wrapperIndex $wrapperVersion) | toString }}"
