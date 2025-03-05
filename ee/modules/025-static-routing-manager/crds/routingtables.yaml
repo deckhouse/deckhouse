@@ -102,8 +102,7 @@ spec:
                   type: string
                   pattern: "^[a-zA-Z0-9][a-zA-Z0-9-_.]*[a-zA-Z0-9]$|^[a-zA-Z0-9]$|^$"
                   description: |
-                    The value must be a valid label value: it can contain letters (a-z, A-Z), numbers (0-9), dashes (-), underscores (_), and dots (.),
-                    must start and end with an alphanumeric character (a-z, A-Z, 0-9), and must not contain '*'.
+                    The value must be a valid label value: it can contain letters (a-z, A-Z), numbers (0-9), dashes (-), underscores (_), and dots (.), must start and end with an alphanumeric character (a-z, A-Z, 0-9), and must not contain '*'.
                     An empty string is allowed to match nodes with the label present regardless of its value.
           status:
             type: object
