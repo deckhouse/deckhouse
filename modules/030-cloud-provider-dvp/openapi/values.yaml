@@ -457,5 +457,4 @@ properties:
             name:
               type: string
             dvpStorageClass:
-              name: string
-              dvpStorageClass: string
+              type: string
