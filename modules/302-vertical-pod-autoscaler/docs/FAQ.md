@@ -11,6 +11,7 @@ kubectl describe vpa my-app-vpa
 ```
 
 The `status` will have the following parameters:
+
 - `Target` — the optimal amount of resources for the Pod (within the resourcePolicy).
 - `Lower Bound` — the minimum recommended amount of resources for the regular operation of the application.
 - `Upper Bound` — the maximum recommended amount of resources. Most likely, the resources above this upper bound will never be used by the application.
@@ -20,7 +21,7 @@ The `status` will have the following parameters:
 
 ### Example No. 1
 
-Suppose we have a VPA object:
+The following example shows a VPA object:
 
 ```yaml
 ---
@@ -37,7 +38,7 @@ spec:
     updateMode: "Initial"
 ```
 
-Also, there is a Pod with the following resource configuration:
+The VPA object contains a Pod with the following resources:
 
 ```yaml
 resources:
@@ -47,8 +48,8 @@ resources:
     cpu: 1
 ```
 
-If the container consumes, say, 1 CPU and VPA recommendation for this container is 1.168 CPU, the module will calculate the ration between requests and limits. In our case, the ratio equals 100%.
-Thus, VPA will modify the Pod's resource configuration when the Pod is recreated:
+If a container uses all the CPU, and VPA recommends 1.168 CPU for that container, then the ratio between requests and limits will be 100%.
+In this case, when recreating the Pod, VPA will modify it and set the following resources:
 
 ```yaml
 resources:
@@ -60,7 +61,7 @@ resources:
 
 ### Example No. 2
 
-Suppose we have a VPA object:
+The following example shows a VPA object:
 
 ```yaml
 ---
@@ -77,7 +78,7 @@ spec:
     updateMode: "Initial"
 ```
 
-Also, there is a Pod with the following resource configuration:
+The VPA object contains a pod with resources:
 
 ```yaml
 resources:
@@ -87,7 +88,7 @@ resources:
     cpu: 750m
 ```
 
-In our case, the ratio of requests and limits is 25%, and the resource configuration of the container will be as follows (given that VPA recommends 1.168 CPU):
+If the request-to-limit ratio is 25% and VPA recommends 1.168 CPU for the container, VPA will change the container resources as follows:
 
 ```yaml
 resources:
@@ -97,4 +98,4 @@ resources:
     cpu: 1168m
 ```
 
-To limit the maximum amount of resources, set the `maxAllowed` parameter in the object specification or use the [Limit Range](https://kubernetes.io/docs/tasks/administer-cluster/manage-resources/memory-default-namespace/) Kubernetes object.
+If you need to limit the maximum number of resources that can be allocated to container constraints, you should use `maxAllowed` in the VPA object specification or use the [Limit Range](https://kubernetes.io/docs/tasks/administer-cluster/manage-resources/memory-default-namespace/) of the Kubernetes object.

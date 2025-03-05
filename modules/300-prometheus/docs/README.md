@@ -18,27 +18,31 @@ Both pulling and pushing of metrics are supported.
 ## Monitoring hardware resources
 
 Prometheus tracks hardware resources and displays the corresponding utilization graphs for:
-- CPU,
-- memory,
-- disk drive,
-- network.
+
+- CPU
+- Memory
+- Disk drive
+- Network
 
 The graphs can be grouped by:
-- Pods,
-- controllers,
-- namespaces,
-- nodes.
+
+- Pods
+- Controllers
+- Namespaces
+- Nodes
 
 ## Kubernetes monitoring
 
-Deckhouse enables monitoring of a large set of "health" parameters of Kubernetes and its components out-of-the-box, including:
-- overall cluster utilization;;
-- connectivity of Kubernetes nodes (by measuring RTT between nodes);
-- availability and operability of control plane components:
-  - `etcd`
-  - `coredns` and `kube-dns`
-  - `kube-apiserver`, etc.
-- time synchronization on nodes, etc.
+Deckhouse configures monitoring of Kubernetes "health" parameters and its components such as:
+
+- General cluster utilization.
+- Connectivity of Kubernetes nodes to each other (RTT between all nodes is measured).
+- Availability and operability of control plane components:
+  - `etcd`.
+  - `coredns`.
+  - `kube-dns`.
+  - `kube-apiserver` and others.
+- Time synchronization on nodes and other parameters.
 
 ## Ingress monitoring
 
@@ -50,24 +54,27 @@ Deckhouse also provides [the advanced monitoring mode](../extended-monitoring/) 
 
 ### Alerting in advanced monitoring mode
 
-Deckhouse allows you to flexibly configure alerting for each namespace and assign criticality depending on the threshold value. You can set thresholds in various namespaces for parameters such as: - empty space and inodes on a disk;
-- CPU usage for a node and a container;
-- percent of 5xx errors on `nginx-ingress`;
-- number of unavailable Pods in a `Deployment`, `StatefulSet`, `DaemonSet`.
+Deckhouse allows you to flexibly configure alerts for each namespace and specify different levels of severity based on the threshold. You can set thresholds in various namespaces for the following parameters:
+
+- Empty space and inodes on a disk.
+- CPU usage for a node and a container.
+- Percent of `5xx` errors on `nginx-ingress`.
+- Number of unavailable Pods in a `Deployment`, `StatefulSet`, `DaemonSet`.
 
 ## Alerts
 
-The Deckhouse monitoring also implements event notifications. The standard edition includes a large set of necessary alerts for monitoring the state of the cluster and its components. At the same time, you can add custom alerts.
+The Deckhouse monitoring includes event notifications. The standard edition includes a set of basic alerts covering the health of the cluster and its components. Also, you can add custom alerts.
 
 ### Sending alerts to external systems
 
 Deckhouse supports sending alerts using `Alertmanager`:
-- via the SMTP protocol;
-- to PagerDuty;
-- to Slack;
-- to Telegram;
-- via the Webhook mechanism;
-- by any other means supported in Alertmanager.
+
+- Via the SMTP protocol
+- To PagerDuty
+- To Slack
+- To Telegram
+- Via the Webhook mechanism
+- By any other means supported in Alertmanager
 
 ## Included modules
 

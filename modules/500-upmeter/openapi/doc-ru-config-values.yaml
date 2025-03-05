@@ -32,6 +32,11 @@ properties:
               authSignInURL:
                 description: |
                   URL, куда будет перенаправлен пользователь для прохождения аутентификации (если сервис аутентификации вернул код ответа HTTP, отличный от 200).
+          allowedUserEmails:
+            description: |
+              Массив адресов электронной почты, пользователям которых разрешен доступ к веб-интерфейсу.
+
+              Используется, если включен модуль [user-authn](../../../platform/modules/150-user-authn/) или задан параметр `externalAuthentication`.
           allowedUserGroups:
             description: |
               Группы доступа к просмотру интерфейса приложения.
@@ -57,6 +62,11 @@ properties:
               authSignInURL:
                 description: |
                   URL, куда будет перенаправлен пользователь для прохождения аутентификации (если сервис аутентификации вернул код ответа HTTP, отличный от 200).
+          allowedUserEmails:
+            description: |
+              Массив адресов электронной почты, пользователям которых разрешен доступ к веб-интерфейсу.
+
+              Используется, если включен модуль [user-authn](../../../platform/modules/150-user-authn/) или задан параметр `externalAuthentication`.
           allowedUserGroups:
             description: |
               Группы доступа к просмотру интерфейса приложения.

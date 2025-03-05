@@ -57,10 +57,13 @@ spec:
                       type: object
                       description: |
                         Requires containers to have defined resources set.
+                      anyOf:
+                        - required: [ limits, requests ]
+                        - required: [ limits ]
+                        - required: [ requests ]
                       properties:
                         limits:
                           type: array
-                          default: ["memory"]
                           description: "A list of limits that should be enforced (CPU, memory, or both)."
                           items:
                             type: string
@@ -69,7 +72,6 @@ spec:
                               - memory
                         requests:
                           type: array
-                          default: ["cpu", "memory"]
                           description: "A list of requests that should be enforced (CPU, memory, or both)."
                           items:
                             type: string
@@ -144,7 +146,7 @@ spec:
                             x-doc-examples: ["apps/Deployment", "/Pod", "networking.k8s.io/Ingress"]
                     requiredProbes:
                       type: array
-                      x-doc-examples: 
+                      x-doc-examples:
                         - - readinessProbe
                           - livenessProbe
                       description: "The list of probes that are required (e.g. `readinessProbe` and `livenessProbe`)"
@@ -196,10 +198,12 @@ spec:
                           type: integer
                 match:
                   type: object
-                  required: ["namespaceSelector"]
+                  anyOf:
+                  - required: [namespaceSelector]
+                  - required: [labelSelector]
                   properties:
                     namespaceSelector:
-                      oneOf:
+                      anyOf:
                         - required: [matchNames]
                         - required: [excludeNames]
                         - required: [labelSelector]

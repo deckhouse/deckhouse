@@ -1,3 +1,4 @@
+require_relative "utils"
 
 module Jekyll
   module CustomFilters
@@ -18,17 +19,7 @@ module Jekyll
     STRIP_HTML_TAGS = /<.*?>/m
 
     def true_relative_url(path)
-        if !path.instance_of? String
-            return "unexpected argument #{path}"
-            raise "true_relative_url filter failed: unexpected argument #{path}"
-        end
-
-        # remove first slash if exist
-        page_path_relative = @context.registers[:page]["url"].gsub(%r!^/!, "")
-        page_depth = page_path_relative.scan(%r!/!).count - 1
-        prefix = ""
-        page_depth.times{ prefix = prefix + "../" }
-        prefix + path.sub(%r!^/!, "./")
+        getTrueRelativeUrl(path)
     end
 
     def endswith(text, query)
@@ -84,6 +75,7 @@ module Jekyll
               gsub(/{{\s*\$labels\.ingress\s*\}\}/m,'INGRESS').
               gsub(/{{\s*\$labels\.instance\s*\}\}/m,'INSTANCE_NAME').
               gsub(/{{\s*\$labels\.istio_version\s*\}\}/m,'VERSION_NUMBER').
+              gsub(/{{\s*\$labels\.job\s*\}\}/m,'JOB_NAME').
               gsub(/{{\s*\$labels\.job_name\s*\}\}/m,'JOB_NAME').
               gsub(/{{\s*\$labels\.k8s_version\s*\}\}/m,'VERSION_NUMBER').
               gsub(/{{\s*\$labels\.kubelet_version\s*\}\}/m,'VERSION_NUMBER').
@@ -102,6 +94,7 @@ module Jekyll
               gsub(/{{\s*\$labels\.name\s*\}\}/m,'NAME').
               gsub(/{{\s*\$labels\.node\s*\}\}/m,'NODE_NAME').
               gsub(/{{\s*\$labels\.node_group\s*\}\}/m,'NODE_GROUP_NAME').
+              gsub(/{{\s*\$labels\.node_group_name\s*\}\}/m,'NODE_GROUP_NAME').
               gsub(/{{\s*\$labels\.owner_name\s*\}\}/m,'CRONJOB').
               gsub(/{{\s*\$labels\.path\s*\}\}/m,'PATH').
               gsub(/{{\s*\$labels\.peer\s*\}\}/m,'PEER').
@@ -122,6 +115,7 @@ module Jekyll
               gsub(/{{\s*\$labels\.status\s*\}\}/m,'STATUS_REFERENCE').
               gsub(/{{\s*\$labels\.storageclass\s*\}\}/m,'STORAGECLASS_NAME').
               gsub(/{{\s*\$labels\.type\s*\}\}/m,'ERROR_TYPE').
+              gsub(/{{\s*\$labels\.updatePolicy\s*\}\}/m,'UPDATE_POLICY_NAME').
               gsub(/{{\s*\$labels\.vhost\s*\}\}/m,'VHOST/').
               gsub(/{{\s*\$labels\.version\s*\}\}/m,'VERSION_NUMBER').
               gsub(/{{\s*\$result\.Labels\.pod\s*\}\}/m,'POD_NAME').
