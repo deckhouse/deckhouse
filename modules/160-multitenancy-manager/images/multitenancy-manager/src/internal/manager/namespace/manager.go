@@ -73,26 +73,6 @@ func (m *Manager) Init(ctx context.Context, checker healthz.Checker, init *sync.
 }
 
 func (m *Manager) Handle(ctx context.Context, namespace *corev1.Namespace) (ctrl.Result, error) {
-	project := &v1alpha2.Project{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: v1alpha2.SchemeGroupVersion.String(),
-			Kind:       v1alpha2.ProjectKind,
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name: namespace.Name,
-		},
-		Spec: v1alpha2.ProjectSpec{
-			ProjectTemplateName: projectEmpty,
-		},
-	}
-
-	m.logger.Info("ensuring the project", "project", project.Name)
-	if err := m.client.Create(ctx, project); err != nil || apierrors.IsAlreadyExists(err) {
-		return ctrl.Result{}, fmt.Errorf("create the '%s' project: %w", project.Name, err)
-	}
-
-	m.logger.Info("the project ensured", "project", project.Name)
-
 	// set adopt label
 	labels := namespace.GetLabels()
 	if len(labels) == 0 {
@@ -106,13 +86,33 @@ func (m *Manager) Handle(ctx context.Context, namespace *corev1.Namespace) (ctrl
 	annotations[helm.ResourceAnnotationReleaseName] = namespace.GetName()
 	annotations[helm.ResourceAnnotationReleaseNamespace] = ""
 
-	// clear adopt annotation
-	delete(annotations, v1alpha2.NamespaceAnnotationAdopt)
 	namespace.SetAnnotations(annotations)
 
 	if err := m.client.Update(ctx, namespace); err != nil {
-		return ctrl.Result{}, err
+		m.logger.Error(err, "failed to update the namespace", "namespace", namespace.GetName())
+		return ctrl.Result{}, fmt.Errorf("failed to update the '%s' namespace: %w", namespace.GetName(), err)
 	}
+
+	project := &v1alpha2.Project{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: v1alpha2.SchemeGroupVersion.String(),
+			Kind:       v1alpha2.ProjectKind,
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name: namespace.Name,
+		},
+		Spec: v1alpha2.ProjectSpec{
+			ProjectTemplateName: projectEmpty,
+		},
+	}
+
+	m.logger.Info("ensure the project", "project", project.Name)
+	if err := m.client.Create(ctx, project); err != nil || apierrors.IsAlreadyExists(err) {
+		m.logger.Error(err, "failed to ensure the project", "project", project.Name)
+		return ctrl.Result{}, fmt.Errorf("create the '%s' project: %w", project.Name, err)
+	}
+
+	m.logger.Info("the project ensured", "project", project.Name)
 
 	return ctrl.Result{}, nil
 }
