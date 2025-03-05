@@ -51,12 +51,10 @@ func (c *Cloud) InstanceID(ctx context.Context, nodeName types.NodeName) (string
 	if err != nil {
 		return "", err
 	}
-	instanceID, ok := vm.Labels[api.DVPVMHostnameLabel]
-	if !ok {
-		return "", cloudprovider.InstanceNotFound
-	}
-	if instanceID == "" {
-		return "", cloudprovider.InstanceNotFound
+
+	instanceID, err := c.dvpService.ComputeService.GetVMHostname(vm)
+	if err != nil {
+		return "", err
 	}
 
 	return instanceID, nil
