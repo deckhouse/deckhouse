@@ -61,7 +61,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			LabelSelector: &meta.LabelSelector{
 				MatchLabels: map[string]string{
 					"heritage": "deckhouse",
-					"module":   "cloud-provider-huaweicloud",
+					"module":   "cloud-provider-dvp",
 				},
 			},
 		},
@@ -93,7 +93,7 @@ func handleCloudProviderDiscoveryDataSecret(input *go_hook.HookInput) error {
 		input.Logger.Warn("failed to find secret 'd8-cloud-provider-discovery-data' in namespace 'kube-system'")
 
 		if len(input.Snapshots["storage_classes"]) == 0 {
-			input.Logger.Warn("failed to find storage classes for huaweicloud provisioner")
+			input.Logger.Warn("failed to find storage classes for dvp provisioner")
 
 			return nil
 		}
@@ -132,7 +132,7 @@ func handleCloudProviderDiscoveryDataSecret(input *go_hook.HookInput) error {
 		return fmt.Errorf("failed to unmarshal 'discovery-data.json' from 'd8-cloud-provider-discovery-data' secret: %v", err)
 	}
 
-	input.Values.Set("cloudProviderHuaweicloud.internal.providerDiscoveryData", discoveryData)
+	input.Values.Set("cloudProviderDvp.internal.providerDiscoveryData", discoveryData)
 
 	handleDiscoveryDataVolumeTypes(input, discoveryData.StorageClassList)
 
@@ -184,7 +184,7 @@ func handleDiscoveryDataVolumeTypes(
 		return storageClasses[i].Name < storageClasses[j].Name
 	})
 
-	input.Logger.Info("Found huaweicloud storage classes using StorageClass snapshots, StorageDomain discovery data: %v", storageClasses)
+	input.Logger.Info("Found DVP storage classes using StorageClass snapshots, StorageClasses from discovery data: %v", storageClasses)
 
 	setStorageClassesValues(input, storageClasses)
 }
