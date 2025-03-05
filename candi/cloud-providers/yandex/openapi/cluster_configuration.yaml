@@ -415,7 +415,7 @@ apiVersions:
             description: |
               Family ID of the NAT instance image.
             type: string
-            default: "nat-instance-ubuntu"
+            default: "nat-instance-ubuntu-2204"
           natInstanceResources:
             description: |
               Computing resources that are allocated to the NAT instance. If not specified, the default values will be used.
