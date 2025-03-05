@@ -77,7 +77,7 @@ func (r *postRenderer) Run(renderedManifests *bytes.Buffer) (modifiedManifests *
 
 		annotations := object.GetAnnotations()
 		if len(annotations) == 0 {
-			annotations = map[string]string{}
+			annotations = make(map[string]string)
 		}
 
 		// inject project annotations
