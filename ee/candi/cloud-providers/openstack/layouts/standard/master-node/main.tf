@@ -2,16 +2,16 @@
 # Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https://github.com/deckhouse/deckhouse/blob/main/ee/LICENSE
 
 locals {
-  security_group_names = local.network_security ? concat([local.prefix], lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass, "additionalSecurityGroups", [])) : []
-  volume_type_map      = var.providerClusterConfiguration.masterNodeGroup.volumeTypeMap
-  actual_zones         = lookup(var.providerClusterConfiguration, "zones", null) != null ? tolist(setintersection(data.openstack_compute_availability_zones_v2.zones.names, var.providerClusterConfiguration.zones)) : data.openstack_compute_availability_zones_v2.zones.names
-  zone                 = element(tolist(setintersection(keys(local.volume_type_map), local.actual_zones)), var.nodeIndex)
-  volume_type          = local.volume_type_map[local.zone]
-  flavor_name          = var.providerClusterConfiguration.masterNodeGroup.instanceClass.flavorName
-  root_disk_size       = lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass, "rootDiskSize", "") # Openstack can have disks predefined within vm flavours, so we do not set any defaults here
-  etcd_volume_size     = var.providerClusterConfiguration.masterNodeGroup.instanceClass.etcdDiskSizeGb
+  security_group_names        = local.network_security ? concat([local.prefix], lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass, "additionalSecurityGroups", [])) : []
+  volume_type_map             = var.providerClusterConfiguration.masterNodeGroup.volumeTypeMap
+  actual_zones                = lookup(var.providerClusterConfiguration, "zones", null) != null ? tolist(setintersection(data.openstack_compute_availability_zones_v2.zones.names, var.providerClusterConfiguration.zones)) : data.openstack_compute_availability_zones_v2.zones.names
+  zone                        = element(tolist(setintersection(keys(local.volume_type_map), local.actual_zones)), var.nodeIndex)
+  volume_type                 = local.volume_type_map[local.zone]
+  flavor_name                 = var.providerClusterConfiguration.masterNodeGroup.instanceClass.flavorName
+  root_disk_size              = lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass, "rootDiskSize", "") # Openstack can have disks predefined within vm flavours, so we do not set any defaults here
+  etcd_volume_size            = var.providerClusterConfiguration.masterNodeGroup.instanceClass.etcdDiskSizeGb
   system_registry_volume_size = var.providerClusterConfiguration.masterNodeGroup.instanceClass.systemRegistryDiskSizeGb
-  additional_tags      = lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass, "additionalTags", {})
+  additional_tags             = lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass, "additionalTags", {})
 }
 
 module "network_security_info" {
@@ -58,8 +58,8 @@ module "kubernetes_data" {
 }
 
 module "system_registry_data" {
-  count = var.registryDataDeviceEnable ? 1 : 0
-  source = "../../../terraform-modules/system-registry-data"
+  count       = var.registryDataDeviceEnable ? 1 : 0
+  source      = "../../../terraform-modules/system-registry-data"
   prefix      = local.prefix
   node_index  = var.nodeIndex
   master_id   = module.master.id

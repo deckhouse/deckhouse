@@ -48,6 +48,12 @@ resource "google_compute_disk" "system_registry_data" {
   type   = "pd-ssd"
   size   = local.system_registry_disk_size_gb
   labels = local.additional_labels
+
+  timeouts {
+    create = var.resourceManagementTimeout
+    delete = var.resourceManagementTimeout
+    update = var.resourceManagementTimeout
+  }
 }
 
 resource "google_compute_instance" "master" {

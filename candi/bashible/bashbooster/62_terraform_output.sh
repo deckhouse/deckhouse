@@ -102,6 +102,7 @@ __bb-fetch-data-from-secret() {
         # Check HTTP status without outputting error details
         http_status=$(bb-rp-curl -s -w "%{http_code}" -o /dev/null \
           -X GET "https://$server/api/v1/namespaces/$namespace/secrets/$secret_name" \
+          --connect-timeout 10 \
           --header "Authorization: Bearer $(<"$BOOTSTRAP_DIR/bootstrap-token")" \
           --cacert "$BOOTSTRAP_DIR/ca.crt" 2>/dev/null)
 
@@ -113,6 +114,7 @@ __bb-fetch-data-from-secret() {
         # Try to retrieve the secret; if successful, output the result
         if output=$(bb-rp-curl -s -f \
               -X GET "https://$server/api/v1/namespaces/$namespace/secrets/$secret_name" \
+              --connect-timeout 10 \
               --header "Authorization: Bearer $(<"$BOOTSTRAP_DIR/bootstrap-token")" \
               --cacert "$BOOTSTRAP_DIR/ca.crt" 2>/dev/null); then
           echo "$output"
@@ -130,7 +132,7 @@ __bb-fetch-data-from-secret() {
     fi
   else
     # Use kubectl to retrieve the secret
-    if output=$(bb-kubectl --request-timeout=60s --kubeconfig=/etc/kubernetes/kubelet.conf get secret "$secret_name" -n "$namespace" --ignore-not-found=true -o json 2>/dev/null); then
+    if output=$(bb-kubectl --request-timeout=10s --kubeconfig=/etc/kubernetes/kubelet.conf get secret "$secret_name" -n "$namespace" --ignore-not-found=true -o json 2>/dev/null); then
       echo "$output"
       return 0
     fi

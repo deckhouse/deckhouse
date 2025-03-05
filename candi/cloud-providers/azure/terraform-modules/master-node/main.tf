@@ -134,6 +134,12 @@ resource "azurerm_managed_disk" "system_registry_data" {
   create_option        = "Empty"
   disk_size_gb         = local.system_registry_disk_size_gb
   tags                 = local.additional_tags
+
+  timeouts {
+    create = var.resourceManagementTimeout
+    delete = var.resourceManagementTimeout
+    update = var.resourceManagementTimeout
+  }
 }
 
 resource "azurerm_virtual_machine_data_disk_attachment" "kubernetes_data" {

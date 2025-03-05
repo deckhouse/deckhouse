@@ -59,6 +59,12 @@ resource "aws_ebs_volume" "system_registry_data" {
     Name = "${var.prefix}-system-registry-data-${var.node_index}"
   })
   availability_zone = local.zone
+
+  timeouts {
+    create = var.resourceManagementTimeout
+    delete = var.resourceManagementTimeout
+    update = var.resourceManagementTimeout
+  }
 }
 
 resource "aws_volume_attachment" "kubernetes_data" {
