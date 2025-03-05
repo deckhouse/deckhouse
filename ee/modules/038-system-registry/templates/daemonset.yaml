@@ -9,9 +9,9 @@ memory: 10Mi
 {{- end }}
 
 {{- $images := dict }}
-{{- $_ := set $images "dockerAuth" $.Values.global.modulesImages.digests.systemRegistry.dockerAuth }}
-{{- $_ := set $images "dockerDistribution" $.Values.global.modulesImages.digests.systemRegistry.dockerDistribution }}
-{{- $_ := set $images "mirrorer" $.Values.global.modulesImages.digests.systemRegistry.mirrorer }}
+{{- $_ := set $images "dockerAuth" (include "helm_lib_module_image" (list . "dockerAuth")) }}
+{{- $_ := set $images "dockerDistribution" (include "helm_lib_module_image" (list . "dockerDistribution")) }}
+{{- $_ := set $images "mirrorer" (include "helm_lib_module_image" (list . "mirrorer")) }}
 
 {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
 ---
@@ -36,7 +36,7 @@ spec:
       maxAllowed:
         cpu: 50m
         memory: 80Mi
-    {{- range $name, $imageDigest := $images }}
+    {{- range $name, $imageRef := $images }}
     - containerName: image-holder-{{ $name | kebabcase }}
       minAllowed:
         {{- include "image_holder_resources" $ | nindent 8 }}
@@ -122,10 +122,10 @@ spec:
           {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
             {{- include "system_registry_manager_resources" . | nindent 12 }}
           {{- end }}
-{{- range $name, $imageDigest := $images }}
+{{- range $name, $imageRef := $images }}
       - name: image-holder-{{ $name | kebabcase }}
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
-        image: "{{ $.Values.global.modulesImages.registry.base }}@{{ $imageDigest }}"
+        image: "{{ $imageRef }}"
         command:
         - /pause
         resources:
