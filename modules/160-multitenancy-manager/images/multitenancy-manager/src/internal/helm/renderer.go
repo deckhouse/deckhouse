@@ -85,9 +85,6 @@ func (r *postRenderer) Run(renderedManifests *bytes.Buffer) (modifiedManifests *
 			annotations[k] = v
 		}
 
-		// delete the adopt annotation from namespace
-		delete(annotations, v1alpha2.NamespaceAnnotationAdopt)
-
 		object.SetAnnotations(annotations)
 
 		labels := object.GetLabels()

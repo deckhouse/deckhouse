@@ -23,7 +23,6 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
-
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -37,7 +36,11 @@ import (
 	"controller/internal/helm"
 )
 
-const ProjectNameEmpty = "empty"
+const (
+	projectEmpty = "empty"
+
+	managedByHelm = "Helm"
+)
 
 type Manager struct {
 	client client.Client
@@ -75,7 +78,7 @@ func (m *Manager) Handle(ctx context.Context, namespace *corev1.Namespace) (ctrl
 	if len(labels) == 0 {
 		labels = make(map[string]string)
 	}
-	labels[helm.ResourceLabelManagedBy] = "Helm"
+	labels[helm.ResourceLabelManagedBy] = managedByHelm
 	namespace.SetLabels(labels)
 
 	// set adopt annotations
@@ -83,6 +86,9 @@ func (m *Manager) Handle(ctx context.Context, namespace *corev1.Namespace) (ctrl
 	annotations[helm.ResourceAnnotationReleaseName] = namespace.GetName()
 	annotations[helm.ResourceAnnotationReleaseNamespace] = ""
 	namespace.SetAnnotations(annotations)
+
+	// clear adopt annotation
+	delete(annotations, v1alpha2.NamespaceAnnotationAdopt)
 
 	if err := m.client.Update(ctx, namespace); err != nil {
 		return ctrl.Result{}, err
@@ -97,7 +103,7 @@ func (m *Manager) Handle(ctx context.Context, namespace *corev1.Namespace) (ctrl
 			Name: namespace.Name,
 		},
 		Spec: v1alpha2.ProjectSpec{
-			ProjectTemplateName: ProjectNameEmpty,
+			ProjectTemplateName: projectEmpty,
 		},
 	}
 
