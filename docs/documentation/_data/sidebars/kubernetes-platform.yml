@@ -107,9 +107,9 @@ entries:
                     ru: Перераспределение нагрузки и вытеснение подов
                   folders:
                     - title:
-                        en: Descheduler
+                        en: Scheduler
                         ru: Планировщик
-                      url: /admin/configuration/app-scaling/pod-eviction/descheduler.html  
+                      url: /admin/configuration/app-scaling/pod-eviction/scheduler.html  
                     - title:
                         en: Priority classes
                         ru: Приоритеты подов
