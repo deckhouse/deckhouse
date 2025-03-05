@@ -2,3 +2,12 @@ version: 2
 conversions:
   - del(.auth.status.password) | if .auth.status == {} then del(.auth.status) end | if .auth == {} then del(.auth) end
   - del(.auth.webui.password) | if .auth.webui == {} then del(.auth.webui) end | if .auth == {} then del(.auth) end
+description:
+  ru: |
+    Удалите `.auth.status.password` и целиком `.auth.status`, если его значение пустое.
+    Удалите `.auth.webui.password` и целиком `.auth.webui`, если его значение пустое.
+    Удалите `.auth`, если его значение пустое.
+  en: |
+    Remove `.auth.status.password` and `.auth.status` if empty.
+    Remove `.auth.webui.password` and `.auth.webui` if empty.
+    Remove `.auth` if empty.

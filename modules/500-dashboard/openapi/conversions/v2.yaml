@@ -1,3 +1,6 @@
 version: 2
 conversions:
   - del(.auth.password) | if .auth == {} then del(.auth) end
+description:
+  ru: "Удалите `.auth.password` и целиком `.auth`, если его значение пустое."
+  en: "Remove `.auth.password`, then `auth` if empty."
