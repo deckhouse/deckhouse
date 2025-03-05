@@ -5,8 +5,6 @@ permalink: en/storage/admin/sds/lvm-local.html
 
 Using local storage helps avoid network latencies, which improves performance compared to remote storage that requires network connectivity. This approach is ideal for test environments and EDGE clusters.
 
-To create local block StorageClass objects, you can use the `sds-local-volume` module.
-
 ## Enabling the module
 
 Configuring local block storage is based on the Logical Volume Manager (LVM).  
