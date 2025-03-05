@@ -1604,6 +1604,10 @@ entries:
         ru: Хранилище
       folders:
       - title:
+          en: Description
+          ru: Описание
+        url: /storage/admin/readme.html
+      - title:
           en: SDS
           ru: Программно определяемые
         folders:
