@@ -48,7 +48,8 @@ spec:
             properties:
               mode:
                 type: string
-                description: Registry mode
+                description: |
+                  Registry mode
                 enum:
                 - Direct
                 - Proxy
@@ -59,42 +60,86 @@ spec:
                 properties:
                   imagesRepo:
                     type: string
-                    pattern: "^nexus\\.company\\.my/deckhouse/(ee|ce/cse|[^/]+)$"
-                  login:
+                    pattern: '^[0-9a-zA-Z\.\-]+(\:[0-9]{1,5})?(\/[0-9a-zA-Z\.\-\_\/]+)?$'
+                    minLength: 1
+                    description: |
+                      Address of a upstream container registry.
+                    x-example: registry.deckhouse.io/deckhouse/ee
+                  username:
                     type: string
+                    description: Username for accessing upstream container registry.
+                    x-example:
+                      - license-token
+                      - user
                   password:
                     type: string
+                    description: Password for accessing upstream container registry.
+                    x-example:
+                      - my-token-value
+                      - password
                   insecure:
                     type: boolean
                   ca:
                     type: string
-                    format: byte
+                    description: |
+                      Root CA certificate to validate the container registry’s HTTPS certificate (if self-signed certificates are used).
                   scheme:
                     type: string
-                    enum: ["HTTPS"]
-                    default: "HTTPS"
+                    description: Registry access scheme (HTTP or HTTPS).
+                    enum: [HTTP, HTTPS]
+                    default: HTTPS
+                    x-example:
+                      - HTTPS
+                      - HTTP
               proxy:
+                description: Proxy mode properties.
                 type: object
                 properties:
                   imagesRepo:
                     type: string
-                    pattern: "^nexus\\.company\\.my/deckhouse/(ee|ce/cse|[^/]+)$"
-                  login:
+                    pattern: '^[0-9a-zA-Z\.\-]+(\:[0-9]{1,5})?(\/[0-9a-zA-Z\.\-\_\/]+)?$'
+                    minLength: 1
+                    description: |
+                      Address of a upstream container registry.
+                    x-example: registry.deckhouse.io/deckhouse/ee
+                  username:
                     type: string
+                    description: Username for accessing upstream container registry.
+                    x-example:
+                      - license-token
+                      - user
                   password:
                     type: string
+                    description: Password for accessing upstream container registry.
+                    x-example:
+                      - my-token-value
+                      - password
                   insecure:
                     type: boolean
                   ca:
                     type: string
-                    format: byte
+                    description: |
+                      Root CA certificate to validate the container registry’s HTTPS certificate (if self-signed certificates are used).
                   scheme:
                     type: string
-                    enum: ["HTTPS"]
-                    default: "HTTPS"
+                    description: Registry access scheme (HTTP or HTTPS).
+                    enum: [HTTP, HTTPS]
+                    default: HTTPS
+                    x-example:
+                      - HTTPS
+                      - HTTP
                   ttl:
                     type: string
-                    pattern: "^[0-9]+[smhd]$"  # Matches durations like 12h, 30m
+                    pattern: '(^(?:(\d+)h)?(?:(\d+)m)?(?:(\d+)s)?(?:(\d+)ms)?(?:(\d+)(µs|us))?(?:(\d+)ns)?$)|(^(0)$)'
+                    description: |
+                      TTL specifies the expiration time for cached content, after which it will be automatically cleaned up.
+                      Default: If not set, the TTL defaults to 7 days (168 hours).
+                      Persistent Cache: If set to 0, the cache will never expire.
+                    x-example:
+                      - "168h"
+                      - "168h10m"
+                      - "168h10m5s"
+                    default: 168h
             oneOf:
               - required: [mode]
                 properties:
