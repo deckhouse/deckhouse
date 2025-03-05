@@ -25,12 +25,14 @@ properties:
           Registry manager img full path
         x-example:
           - dev-registry.deckhouse.io/registryManager:latest
+        x-dmt-default: ""
       mirrorer:
         type: string
         description: |
           Mirrorer img full path
         x-example:
           - dev-registry.deckhouse.io/mirrorer:latest
+        x-dmt-default: ""
   mode:
     type: string
     description: |
