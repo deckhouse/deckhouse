@@ -58,7 +58,7 @@ require (
 	github.com/deckhouse/module-sdk v0.1.1-0.20250228151438-19b628dfff9d
 	github.com/ettle/strcase v0.2.0
 	github.com/evanphx/json-patch v5.9.0+incompatible
-	github.com/flant/addon-operator v1.5.4-0.20250305220914-d890fcd238ba
+	github.com/flant/addon-operator v1.5.4-0.20250305222513-71dbd9ad3113
 	github.com/fsnotify/fsnotify v1.7.0
 	github.com/go-logr/logr v1.4.2
 	github.com/go-openapi/errors v0.19.7
