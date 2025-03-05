@@ -19,14 +19,15 @@ package project
 import (
 	"context"
 	"fmt"
+	corev1 "k8s.io/api/core/v1"
 	"reflect"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/go-logr/logr"
 
-	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -36,7 +37,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/event"
-	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -50,10 +50,10 @@ const controllerName = "d8-project-controller"
 
 func Register(runtimeManager manager.Manager, helmClient *helm.Client, logger logr.Logger) error {
 	r := &reconciler{
-		init:           new(sync.WaitGroup),
-		logger:         logger.WithName(controllerName),
-		client:         runtimeManager.GetClient(),
-		projectManager: projectmanager.New(runtimeManager.GetClient(), helmClient, logger),
+		init:    new(sync.WaitGroup),
+		logger:  logger.WithName(controllerName),
+		client:  runtimeManager.GetClient(),
+		manager: projectmanager.New(runtimeManager.GetClient(), helmClient, logger),
 	}
 
 	r.init.Add(1)
@@ -72,7 +72,7 @@ func Register(runtimeManager manager.Manager, helmClient *helm.Client, logger lo
 				return true
 			},
 			func() error {
-				return r.projectManager.Init(ctx, runtimeManager.GetWebhookServer().StartedChecker(), r.init)
+				return r.manager.Init(ctx, runtimeManager.GetWebhookServer().StartedChecker(), r.init)
 			},
 		)
 	})); err != nil {
@@ -95,6 +95,9 @@ func Register(runtimeManager manager.Manager, helmClient *helm.Client, logger lo
 			if _, ok := object.GetLabels()[v1alpha2.ResourceLabelTemplate]; ok {
 				return nil
 			}
+			if _, ok := object.GetAnnotations()[v1alpha2.NamespaceAnnotationAdopt]; ok {
+				return nil
+			}
 			if strings.HasPrefix(object.GetName(), projectmanager.KubernetesNamespacePrefix) || strings.HasPrefix(object.GetName(), projectmanager.DeckhouseNamespacePrefix) {
 				return []reconcile.Request{{NamespacedName: client.ObjectKey{Name: projectmanager.DeckhouseProjectName}}}
 			}
@@ -106,10 +109,10 @@ func Register(runtimeManager manager.Manager, helmClient *helm.Client, logger lo
 var _ reconcile.Reconciler = &reconciler{}
 
 type reconciler struct {
-	init           *sync.WaitGroup
-	projectManager *projectmanager.Manager
-	client         client.Client
-	logger         logr.Logger
+	init    *sync.WaitGroup
+	manager *projectmanager.Manager
+	client  client.Client
+	logger  logr.Logger
 }
 
 func (r *reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reconcile.Result, error) {
@@ -130,18 +133,18 @@ func (r *reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 	// handle virtual projects
 	if project.Spec.ProjectTemplateName == projectmanager.VirtualTemplate {
 		r.logger.Info("handle the virtual project", "project", req.Name)
-		return r.projectManager.HandleVirtual(ctx, project)
+		return r.manager.HandleVirtual(ctx, project)
 	}
 
 	// handle the project deletion
 	if !project.DeletionTimestamp.IsZero() {
 		r.logger.Info("delete the project", "project", project.Name)
-		return r.projectManager.Delete(ctx, project)
+		return r.manager.Delete(ctx, project)
 	}
 
 	// ensure the project
 	r.logger.Info("ensure the project", "project", project.Name)
-	return r.projectManager.Handle(ctx, project)
+	return r.manager.Handle(ctx, project)
 }
 
 type customPredicate[T metav1.Object] struct {

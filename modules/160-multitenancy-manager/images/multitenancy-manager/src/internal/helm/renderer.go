@@ -75,17 +75,20 @@ func (r *postRenderer) Run(renderedManifests *bytes.Buffer) (modifiedManifests *
 			}
 		}
 
-		// inject project annotations
-		if len(r.project.Spec.ResourceAnnotations) != 0 {
-			annotations := object.GetAnnotations()
-			if len(annotations) == 0 {
-				annotations = map[string]string{}
-			}
-			for k, v := range r.project.Spec.ResourceAnnotations {
-				annotations[k] = v
-			}
-			object.SetAnnotations(annotations)
+		annotations := object.GetAnnotations()
+		if len(annotations) == 0 {
+			annotations = map[string]string{}
 		}
+
+		// inject project annotations
+		for k, v := range r.project.Spec.ResourceAnnotations {
+			annotations[k] = v
+		}
+
+		// delete the adopt annotation from namespace
+		delete(annotations, v1alpha2.NamespaceAnnotationAdopt)
+
+		object.SetAnnotations(annotations)
 
 		labels := object.GetLabels()
 		if len(labels) == 0 {

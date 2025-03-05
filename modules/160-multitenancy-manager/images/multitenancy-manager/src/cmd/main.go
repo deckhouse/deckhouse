@@ -39,6 +39,7 @@ import (
 
 	"controller/apis/deckhouse.io/v1alpha1"
 	"controller/apis/deckhouse.io/v1alpha2"
+	namespacecontroller "controller/internal/controller/namespace"
 	projectcontroller "controller/internal/controller/project"
 	templatecontroller "controller/internal/controller/template"
 	"controller/internal/helm"
@@ -95,6 +96,11 @@ func main() {
 
 	// register template controller
 	if err = templatecontroller.Register(runtimeManager, templatesPath, logger); err != nil {
+		panic(err)
+	}
+
+	// register namespace controller
+	if err = namespacecontroller.Register(runtimeManager, logger); err != nil {
 		panic(err)
 	}
 
