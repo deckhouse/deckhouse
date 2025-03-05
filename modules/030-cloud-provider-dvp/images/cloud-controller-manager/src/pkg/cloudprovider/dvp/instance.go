@@ -51,8 +51,15 @@ func (c *Cloud) InstanceID(ctx context.Context, nodeName types.NodeName) (string
 	if err != nil {
 		return "", err
 	}
+	instanceID, ok := vm.Labels[api.DVPVMHostnameLabel]
+	if !ok {
+		return "", cloudprovider.InstanceNotFound
+	}
+	if instanceID == "" {
+		return "", cloudprovider.InstanceNotFound
+	}
 
-	return vm.Name, nil
+	return instanceID, nil
 }
 
 func (c *Cloud) InstanceType(_ context.Context, _ types.NodeName) (string, error) {
