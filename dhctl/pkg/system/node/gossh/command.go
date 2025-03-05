@@ -58,6 +58,8 @@ type SSHCommand struct {
 	stderrHandler  func(string)
 	stdoutHandler  func(string)
 
+	WaitHandler func(err error)
+
 	out *bytes.Buffer
 	err *bytes.Buffer
 
@@ -70,6 +72,7 @@ type SSHCommand struct {
 
 	lockWaitError sync.RWMutex
 	waitError     error
+	killError     error
 
 	cmd     string
 	timeout time.Duration
@@ -130,6 +133,8 @@ func (c *SSHCommand) Start() error {
 		return err
 	}
 
+	// c.ProcessWait()
+
 	log.DebugF("Register stoppable: '%s'\n", command)
 
 	return nil
@@ -150,6 +155,42 @@ func (c *SSHCommand) ProcessWait() {
 			time.Sleep(c.timeout)
 			if c.stopCh != nil {
 				c.stopCh <- struct{}{}
+			}
+		}
+	}()
+
+	// watch for wait or stop
+	go func() {
+		defer func() {
+			close(c.waitCh)
+			close(waitErrCh)
+		}()
+		// Wait until Stop() is called or/and Wait() is returning.
+		for {
+			select {
+			case err := <-waitErrCh:
+				if c.stop {
+					// Ignore error if Stop() was called.
+					// close(e.waitCh)
+					return
+				}
+				c.setWaitError(err)
+				if c.WaitHandler != nil {
+					c.WaitHandler(c.waitError)
+				}
+				// close(e.waitCh)
+				return
+			case <-c.stopCh:
+				c.stop = true
+				// Prevent next readings from the closed channel.
+				c.stopCh = nil
+				// The usual e.cmd.Process.Kill() is not working for the process
+				// started with the new process group (Setpgid: true).
+				// Negative pid number is used to send a signal to all processes in the group.
+				err := c.Session.Close()
+				if err != nil {
+					c.killError = err
+				}
 			}
 		}
 	}()
@@ -188,6 +229,11 @@ func (c *SSHCommand) StdoutBytes() []byte {
 func (c *SSHCommand) WithMatchers(matchers ...*process.ByteSequenceMatcher) *SSHCommand {
 	c.Matchers = make([]*process.ByteSequenceMatcher, 0)
 	c.Matchers = append(c.Matchers, matchers...)
+	return c
+}
+
+func (c *SSHCommand) WithWaitHandler(waitHandler func(error)) *SSHCommand {
+	c.WaitHandler = waitHandler
 	return c
 }
 
@@ -573,4 +619,10 @@ func (c *SSHCommand) Stop() {
 	<-c.waitCh
 	log.DebugF("Stopped '%s' \n", c.cmd)
 	c.closePipes()
+}
+
+func (c *SSHCommand) setWaitError(err error) {
+	defer c.lockWaitError.Unlock()
+	c.lockWaitError.Lock()
+	c.waitError = err
 }

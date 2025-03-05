@@ -193,7 +193,7 @@ func (s *Client) Start() error {
 
 // Tunnel is used to open local (L) and remote (R) tunnels
 func (s *Client) Tunnel(address string) node.Tunnel {
-	return nil
+	return NewTunnel(s.sshClient, address)
 }
 
 // ReverseTunnel is used to open remote (R) tunnel
@@ -208,7 +208,7 @@ func (s *Client) Command(name string, arg ...string) node.Command {
 
 // KubeProxy is used to start kubectl proxy and create a tunnel from local port to proxy port
 func (s *Client) KubeProxy() node.KubeProxy {
-	return nil
+	return NewKubeProxy(s.sshClient, s.Settings)
 }
 
 // File is used to upload and download files and directories

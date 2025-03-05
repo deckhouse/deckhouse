@@ -24,6 +24,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/clissh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
 )
 
