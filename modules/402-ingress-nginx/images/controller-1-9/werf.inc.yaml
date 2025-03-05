@@ -1,10 +1,9 @@
 {{- $controllerBranch := "controller-v1.9.5" }}
 
 ---
-# art src an patch
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 fromImage: common/src-artifact
-fromCacheVersion: "2025-03-041"
+fromCacheVersion: "2025-03-05"
 final: false
 git:
 - add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
@@ -42,9 +41,9 @@ shell:
   - git clone --branch v1.2.5 --depth 1 {{ $.SOURCE_REPO }}/yelp/dumb-init.git
   - git clone --branch 0.4.1 {{ $.SOURCE_REPO }}/starwing/lua-protobuf
   - git clone --branch 7-3 {{ $.SOURCE_REPO }}/luarocks-sorces/lua-iconv
-  - git clone --branch {{ $controllerBranch }} --depth 1 {{ $.SOURCE_REPO }}/kubernetes/ingress-nginx-jaegertracing-deps.git /root/.hunter
   - git clone --branch 8.45 --depth 1 {{ $.SOURCE_REPO }}/pcre/pcre.git /pcre
   - git clone --branch {{ $controllerBranch }} --depth 1 {{ $.SOURCE_REPO }}/kubernetes/ingress-nginx.git
+  - git clone --branch {{ $controllerBranch }} --depth 1 {{ $.SOURCE_REPO }}/kubernetes/ingress-nginx-jaegertracing-deps.git /root/.hunter
   # Cannot git apply, return error
   - cd /src/ingress-nginx
   - patch -p1 < /patches/ingress-nginx/001-lua-info.patch
@@ -67,7 +66,7 @@ shell:
 # dumb-init
 image: {{ $.ModuleName }}/{{ $.ImageName }}-dumb-init-artifact
 fromImage: common/alt-p11-artifact
-fromCacheVersion: "2025-03-041"
+fromCacheVersion: "2025-03-05"
 final: false
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
@@ -85,7 +84,7 @@ shell:
 # luarocks
 image: {{ $.ModuleName }}/{{ $.ImageName }}-lua-rocks-artifact
 fromImage: common/alt-p11-artifact
-fromCacheVersion: "2025-03-041"
+fromCacheVersion: "2025-03-05"
 final: false
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
@@ -110,7 +109,7 @@ shell:
 # opentelemetry
 image: {{ $.ModuleName }}/{{ $.ImageName }}-opentelemetry-artifact
 from: {{ $.Images.BASE_ALT_DEV }}
-fromCacheVersion: "2025-03-041"
+fromCacheVersion: "2025-03-05"
 final: false
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
@@ -134,18 +133,22 @@ shell:
 # Controller artifact
 image: {{ $.ModuleName }}/{{ $.ImageName }}-controller-artifact
 from: {{ .Images.BASE_GOLANG_23_ALPINE }}
-fromCacheVersion: "2025-03-041"
+fromCacheVersion: "2025-03-05"
 final: false
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
   add: /src/ingress-nginx
   to: /src
   before: install
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+  add: /root/.hunter
+  to: /root/.hunter
+  before: install
 mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
 shell:
-  install:
+  beforeInstall:
   {{- include "alpine packages proxy" . | nindent 2 }}
   # git needs for getting tag and commit sha for build purposes
   - apk --no-cache add make bash git
@@ -158,7 +161,7 @@ shell:
 # NGINX PCRE
 image: {{ $.ModuleName }}/{{ $.ImageName }}-nginx-artifact
 from: {{ $.Images.BASE_ALT_DEV }}
-fromCacheVersion: "2025-03-041"
+fromCacheVersion: "2025-03-05"
 final: false
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
@@ -172,10 +175,6 @@ import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
   add: /pcre
   to: /pcre
-  before: install
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
-  add: /root/.hunter
-  to: /root/.hunter
   before: install
 shell:
   install:
@@ -196,7 +195,7 @@ shell:
 ---
 # chroot
 image: {{ $.ModuleName }}/{{ $.ImageName }}-chroot-artifact
-fromCacheVersion: "2025-03-042"
+fromCacheVersion: "2025-03-06"
 from: {{ $.Images.BASE_ALT_DEV }}
 final: false
 import:
@@ -347,7 +346,7 @@ shell:
 # Final image
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: common/alt-p11
-fromCacheVersion: "2025-03-041"
+fromCacheVersion: "2025-03-07"
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-chroot-artifact
   add: /chroot
@@ -432,6 +431,10 @@ shell:
   - ldconfig -r /chroot
   - cp -R /src/rootfs/etc/* /chroot/etc/
   - rm -rf /src/rootfs/etc
+  # replace pcre with version with jit support
+  - echo "jit support"
+  - ln -sf libpcre.so.1.2.13 /chroot/lib64/libpcre.so.3
+  - ls -l /chroot/lib64/libpcre.so.3
 imageSpec:
   config:
     workingDir: /
