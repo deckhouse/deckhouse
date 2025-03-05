@@ -46,7 +46,14 @@ import (
 	"k8s.io/client-go/rest"
 )
 
-const helmDriver = "secret"
+const (
+	helmDriver = "secret"
+
+	ResourceAnnotationReleaseName      = "meta.helm.sh/release-name"
+	ResourceAnnotationReleaseNamespace = "meta.helm.sh/release-namespace"
+
+	ResourceLabelManagedBy = "app.kubernetes.io/managed-by"
+)
 
 type Client struct {
 	conf      *action.Configuration

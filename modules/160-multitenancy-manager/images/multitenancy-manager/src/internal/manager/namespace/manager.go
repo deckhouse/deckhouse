@@ -34,6 +34,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 
 	"controller/apis/deckhouse.io/v1alpha2"
+	"controller/internal/helm"
 )
 
 const ProjectNameEmpty = "empty"
@@ -69,6 +70,24 @@ func (m *Manager) Init(ctx context.Context, checker healthz.Checker, init *sync.
 }
 
 func (m *Manager) Handle(ctx context.Context, namespace *corev1.Namespace) (ctrl.Result, error) {
+	// set adopt label
+	labels := namespace.GetLabels()
+	if len(labels) == 0 {
+		labels = make(map[string]string)
+	}
+	labels[helm.ResourceLabelManagedBy] = "Helm"
+	namespace.SetLabels(labels)
+
+	// set adopt annotations
+	annotations := namespace.GetAnnotations()
+	annotations[helm.ResourceAnnotationReleaseName] = namespace.GetName()
+	annotations[helm.ResourceAnnotationReleaseNamespace] = ""
+	namespace.SetAnnotations(annotations)
+
+	if err := m.client.Update(ctx, namespace); err != nil {
+		return ctrl.Result{}, err
+	}
+
 	project := &v1alpha2.Project{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: v1alpha2.SchemeGroupVersion.String(),
@@ -82,20 +101,12 @@ func (m *Manager) Handle(ctx context.Context, namespace *corev1.Namespace) (ctrl
 		},
 	}
 
-	if err := m.ensureProject(ctx, project); err != nil {
-		m.logger.Error(err, "failed to ensure project", "project", project)
-		return ctrl.Result{}, err
-	}
-
-	return ctrl.Result{}, nil
-}
-
-func (m *Manager) ensureProject(ctx context.Context, project *v1alpha2.Project) error {
 	m.logger.Info("ensuring the project", "project", project.Name)
 	if err := m.client.Create(ctx, project); err != nil || apierrors.IsAlreadyExists(err) {
-		return fmt.Errorf("create the '%s' project: %w", project.Name, err)
+		return ctrl.Result{}, fmt.Errorf("create the '%s' project: %w", project.Name, err)
 	}
 
 	m.logger.Info("the project ensured", "project", project.Name)
-	return nil
+
+	return ctrl.Result{}, nil
 }
