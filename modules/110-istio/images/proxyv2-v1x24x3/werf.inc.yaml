@@ -6,7 +6,7 @@
 {{- $llvmRev := "llvmorg-14.0.6" }}
 {{- $goVersion := "1.23.1" }}
 {{- $protocVersion := "22.3" }}
-{{- $bazelVersions := "6.3.2" }}
+{{- $bazelVersions := "6.5.0" }}
 {{- $iptables_version := "1.8.9" }}
 {{- $iptables_image_version := $iptables_version | replace "." "-" }}
 {{- $source := "https://github.com" }}
@@ -137,7 +137,7 @@ shell:
   #
   - export GO_VERSION=${GOLANG_VERSION} GOPROXY={{ $.GOPROXY }}
   - export GOOS=linux GOARCH=amd64 CGO_ENABLED=0
-  - export BAZEL_VERSION="6.3.2" USE_BAZEL_VERSION="6.3.2"
+  - export BAZEL_VERSION="6.5.0" USE_BAZEL_VERSION="6.5.0"
   - cd /src/proxy
   - go mod download
   - sed -i '/^build --enable_platform_specific_config/a build --linkopt=-L/opt/libcxx/lib'          envoy.bazelrc
