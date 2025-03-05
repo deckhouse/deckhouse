@@ -42,7 +42,7 @@ import:
 shell:
   beforeInstall:
   {{- include "alpine packages proxy" . | nindent 2 }}
-  - apk add --no-cache make gcc
+  - apk add --no-cache make gcc musl-dev
   setup:
     - cd /src/wrapper
     - make
