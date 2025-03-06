@@ -6,25 +6,189 @@ lang: ru
 
 ## Масштабирование по метрикам
 
-Масштабирование по метрикам — это процесс автоматического или ручного изменения ресурсов (например, количества реплик подов, выделенных CPU/памяти) на основе определенных метрик. Эти метрики могут быть как стандартными (например, использование CPU или памяти), так и кастомными (например, количество запросов в секунду или размер очереди сообщений).
+Масштабирование по метрикам — это процесс автоматического или ручного изменения ресурсов (например, количества реплик подов, выделенных CPU/памяти) на основе определённых метрик. Метрики могут быть как стандартными (использование CPU или памяти), так и кастомными (например, количество запросов в секунду или размер очереди сообщений).
 
-DKP предоставляет возможность масштабирования приложений с использованием HPA- и VPA-автоскейлеров на основе различных метрик. Для этого в кластер устанавливаются следующие интерфейсы API:
+Deckhouse Kubernetes Platform (DKP) предоставляет возможность масштабирования приложений с использованием HPA (Horizontal Pod Autoscaler) и VPA (Vertical Pod Autoscaler) на основе различных метрик. Для этого в кластер устанавливаются следующие интерфейсы API:
 
-- Kubernetes resource metrics API;
-- Custom metrics API;
-- External metrics API.
+- Kubernetes resource metrics API — предоставляет стандартные метрики использования CPU и памяти подов (kubectl top);
+- Custom metrics API — позволяет регистрировать кастомные метрики, привязанные к ресурсам Kubernetes (Pods, Deployments, Ingress и т. д.). Работает **только** с объектами;
+- External metrics API — используется для внешних метрик, например, данных от облачных провайдеров или SaaS-сервисов. Работает с любыми источниками данных, например, облачными сервисами или внешними API.
 
-Эти интерфейсы получают данные из Prometheus, что позволяет использовать `kubectl top` для получения метрик, применять ресурс `autoscaling/v2` для масштабирования приложений и получать данные через Kubernetes API для других функций, таких как Vertical Pod Autoscaler.
+Эти API реализованы через `k8s-prometheus-adapter`, который действует как внешний сервис для Kubernetes API (трансформирует Prometheus-метрики в формат Kubernetes API). Когда компонент Kubernetes (например, HPA или VPA) запрашивает информацию о ресурсах, Kubernetes API перенаправляет запрос в адаптер. Адаптер определяет способ расчета метрики на основе конфигурации и делает запрос в Prometheus.
 
 ### Доступные метрики для масштабирования
 
 Масштабирование выполняется на основе следующих параметров:
 
+Стандартные (поддерживаются по умолчанию):
+
 - CPU (пода) — текущее использование процессора.
 - Память (пода) — текущее использование оперативной памяти.
+
+Кастомные (дополнительные метрики) — требуют регистрации через `prometheus-metrics-adapter`:
+
 - RPS (Ingress) — количество запросов в секунду за 1, 5, 15 минут (rps_1m, rps_5m, rps_15m).
 - Среднее потребление CPU (пода) — за 1, 5, 15 минут (cpu_1m, cpu_5m, cpu_15m).
 - Среднее потребление памяти (пода) — за 1, 5, 15 минут (memory_1m, memory_5m, memory_15m).
-- Любые Prometheus-метрики — возможность использовать любые метрики и запросы на их основе.
+- Любые Prometheus-метрики — возможность использовать любые метрики и запросы на основе PromQL-запросов.
 
-DKP использует `k8s-prometheus-adapter` в качестве external API-сервиса, который расширяет возможности Kubernetes API. Когда компонент Kubernetes (например, HPA или VPA) запрашивает информацию о ресурсах, Kubernetes API перенаправляет запрос в адаптер. Адаптер определяет способ расчета метрики на основе конфигурации и делает запрос в Prometheus.
+### Регистрация кастомных метрик в Kubernetes API
+
+Чтобы использовать кастомные метрики, они должны быть зарегистрированы в API `/apis/custom.metrics.k8s.io/`. Для этого используется модуль `prometheus-metrics-adapter`, который позволяет создавать кастомные ресурсы, описывающие, как извлекать метрику из Prometheus.
+
+Доступные кастомные метрики:
+
+- Namespaced (локальные для пространства имен):
+
+  - ServiceMetric — метрики для сервисов;
+  - IngressMetric — метрики для Ingress;
+  - PodMetric — метрики для подов;
+  - DeploymentMetric — метрики для Deployment;
+  - StatefulSetMetric — метрики для StatefulSet;
+  - NamespaceMetric — метрики, привязанные к пространству имён.
+
+- Cluster-wide (глобальные для всего кластера):
+
+  - ClusterServiceMetric;
+  - ClusterIngressMetric;
+  - ClusterPodMetric;
+  - ClusterDeploymentMetric;
+  - ClusterStatefulSetMetric.
+
+Пример регистрации кастомной метрики для количества запросов к Ingress:
+
+```yaml
+apiVersion: deckhouse.io/v1beta1
+kind: IngressMetric
+metadata:
+  name: mymetric
+  namespace: mynamespace
+spec:
+  query: sum(rate(ingress_nginx_detail_requests_total{<<.LabelMatchers>>}[2m])) by (<<.GroupBy>>) OR on() vector(0)
+---
+kind: HorizontalPodAutoscaler
+apiVersion: autoscaling/v2
+metadata:
+  name: myhpa
+  namespace: mynamespace
+spec:
+  # Указывается контроллер, который нужно масштабировать (ссылка на deployment или statefulset).
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: myapp
+  minReplicas: 1
+  maxReplicas: 2
+  # Метрики, используемые для масштабирования.
+  # Пример использования кастомных метрик.
+  metrics:
+  - type: Object
+    object:
+      # Объект, который обладает метриками в Prometheus.
+      describedObject:
+        apiVersion: networking.k8s.io/v1
+        kind: Ingress
+        name: myingress
+      metric:
+        # Метрика, зарегистрированная с помощью custom resource IngressMetric или ClusterIngressMetric.
+        # Можно использовать rps_1m, rps_5m или rps_15m которые поставляются с модулем prometheus-metrics-adapter.
+        name: mymetric
+      target:
+        # Для метрик типа Object можно использовать `Value` или `AverageValue`.
+        type: AverageValue
+        # Масштабирование происходит, если среднее значение кастомной метрики для всех подов в Deployment сильно отличается от 10.
+        averageValue: 10
+```
+
+### Как включить prometheus-metrics-adapter
+
+Включить `prometheus-metrics-adapter` можно двумя способами:
+
+1. Через ресурс ModuleConfig (например, ModuleConfig/prometheus-metrics-adapter). Установите параметр `spec.enabled` в значение `true` или `false`:
+
+   ```yaml
+   apiVersion: deckhouse.io/v1alpha1
+   kind: ModuleConfig
+   metadata:
+     name: prometheus-metrics-adapter
+   spec:
+     enabled: true
+   ```
+
+1. Через команду deckhouse-controller (в поде `d8-system/deckhouse`):
+
+   ```console
+   kubectl -ti -n d8-system exec svc/deckhouse-leader -c deckhouse -- deckhouse-controller module enable prometheus-metrics-adapter
+   ```
+
+### Работа с внешними метриками
+
+Внешние метрики (External metrics API) используются, когда источник метрики находится за пределами кластера — например, это могут быть метрики облачного провайдера (Amazon SQS, Google Cloud Pub/Sub и т. д.).
+
+Пример регистрации внешней метрики (Amazon SQS):
+
+```yaml
+apiVersion: deckhouse.io/v1
+kind: CustomPrometheusRules
+metadata:
+  # Рекомендованный шаблон для названия ваших CustomPrometheusRules.
+  name: prometheus-metrics-adapter-mymetric
+spec:
+  groups:
+  # Рекомендованный шаблон.
+  - name: prometheus-metrics-adapter.mymetric
+    rules:
+    # Название вашей новой метрики.
+    # Важно! Префикс 'kube_adapter_metric_' обязателен.
+    - record: kube_adapter_metric_mymetric
+      # Запрос, результаты которого попадут в итоговую метрику, нет смысла тащить в нее лишние лейблы.
+      expr: sum(ingress_nginx_detail_sent_bytes_sum) by (namespace,ingress)
+```
+
+После регистрации можно использовать эту метрику в масштабировании. CustomPrometheusRules позволяет регистрировать метрики без необходимости модификации `prometheus-metrics-adapter`, используя PromQL-запросы. Это полезно при интеграции с существующими метриками или внешними источниками данных.
+
+> Все метрики с префиксом `kube_adapter_metric_` автоматически регистрируются в Kubernetes API без необходимости создания CustomPrometheusRules. Это позволяет использовать уже существующие Prometheus-метрики для масштабирования без дополнительных конфигураций.
+
+### Оптимизация работы с нестабильными метриками
+
+При работе с нестабильными метриками (например, если метрика колеблется и вызывает избыточное масштабирование) рекомендуется:
+
+- Использовать агрегирующие функции PromQL. Например, `avg_over_time()` усредняет значение метрики за заданный промежуток времени, что помогает избежать резких скачков:
+
+  ```yaml
+  apiVersion: deckhouse.io/v1beta1
+  kind: ServiceMetric
+  metadata:
+    name: rmq-queue-forum-messages
+    namespace: mynamespace
+  spec:
+    query: sum (avg_over_time(rabbitmq_queue_messages{<<.LabelMatchers>>,queue=~"send_forum_message",vhost="/"}[5m])) by (<<.GroupBy>>)
+  ```
+
+- Настроить стабилизацию в поведении автоскейлера. Время стабилизации масштабирования можно увеличить, чтобы решения о добавлении или удалении реплик принимались на основе более устойчивых данных.
+
+### Получение значений метрик
+
+Для получения списка кастомных метрик используйте команду:
+
+```console
+kubectl get --raw /apis/custom.metrics.k8s.io/v1beta1/
+```
+
+Для получения значений метрик, привязанных к объектам используйте команду:
+
+```console
+kubectl get --raw /apis/custom.metrics.k8s.io/v1beta1/namespaces/my-namespace/services/*/my-service-metric
+```
+
+Для получения значений метрик, созданных через `NamespaceMetric` используйте команду:
+
+```console
+kubectl get --raw /apis/custom.metrics.k8s.io/v1beta1/namespaces/my-namespace/metrics/my-ns-metric
+```
+
+Для получения внешних (external) метрик используйте команду:
+
+```console
+kubectl get --raw /apis/external.metrics.k8s.io/v1beta1
+```

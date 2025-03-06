@@ -104,7 +104,7 @@ entries:
                   url: /admin/configuration/app-scaling/vpa.html  
                 - title:
                     en: Load redistribution and pod eviction
-                    ru: Перераспределение нагрузки и вытеснение подов
+                    ru: Распределение нагрузки и вытеснение подов
                   folders:
                     - title:
                         en: Scheduler
