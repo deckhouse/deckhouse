@@ -20,12 +20,12 @@ image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
 from: {{ $.Images.BASE_SCRATCH }}
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
-  add: /
+  add: /src/amazon-ec2-utils/ebsnvme-id
+  to: /ebsnvme-id
+  before: setup
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+  add: /src/scripts
   to: /
-  includePaths:
-  - ebsnvme-id
-  - install
-  - uninstall
   before: setup
 imageSpec:
   config:
