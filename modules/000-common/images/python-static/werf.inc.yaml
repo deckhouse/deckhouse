@@ -59,8 +59,8 @@ shell:
   - make LDFLAGS="-static" LINKFORSHARED=" " -j ${BUILD_THREADS}
   - make install -j 4
   - chown -R 64535:64535 /opt/python-static
-  - chmod 0700 /opt/python-static/bin/python3
-  - chmod 0700 /opt/python-static/bin/pip3
+  - chmod 0755 /opt/python-static/bin/python3
+  - chmod 0755 /opt/python-static/bin/pip3
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
