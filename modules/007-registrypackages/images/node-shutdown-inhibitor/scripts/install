@@ -1,3 +1,4 @@
+#!/bin/bash
 # Copyright 2025 Flant JSC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,8 +13,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-{{- $wrapperPkgName := "systemctl-power-commands-wrapper" }}
-{{- $wrapperIndex := "systemctlPowerCommandsWrapper" }}
-{{- $wrapperVersion := "0.1" | replace "." "" }}
+set -Eeo pipefail
 
-bb-package-install "{{ $wrapperPkgName }}:{{ index .images.registrypackages (printf "%s%s" $wrapperIndex $wrapperVersion) | toString }}"
+# Copy binary.
+mkdir -p /opt/deckhouse/bin
+cp -f node-shutdown-inhibitor /opt/deckhouse/bin
+
+# Install systemd unit.
+cp -f node-shutdown-inhibitor.service /lib/systemd/system
+chmod 600 /lib/systemd/system/node-shutdown-inhibitor.service
+systemctl daemon-reload
+systemctl enable node-shutdown-inhibitor.service
