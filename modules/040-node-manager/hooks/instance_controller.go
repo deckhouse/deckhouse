@@ -230,7 +230,7 @@ func instanceController(input *go_hook.HookInput) error {
 			}
 		} else {
 			newIc := newInstance(machine, ng)
-			input.PatchCollector.Create(newIc, object_patch.IgnoreIfExists())
+			input.PatchCollector.CreateIfNotExists(newIc)
 		}
 	}
 
@@ -259,7 +259,7 @@ func instanceController(input *go_hook.HookInput) error {
 			}
 		} else {
 			newIc := newInstance(machine, ng)
-			input.PatchCollector.Create(newIc, object_patch.IgnoreIfExists())
+			input.PatchCollector.CreateIfNotExists(newIc)
 		}
 	}
 
