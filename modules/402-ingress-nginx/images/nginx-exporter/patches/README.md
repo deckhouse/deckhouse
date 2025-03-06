@@ -1,6 +1,6 @@
 ## Patches
 
-### Go mod
+### 001-gomod.patch
 
 To create this patch run commands:
 

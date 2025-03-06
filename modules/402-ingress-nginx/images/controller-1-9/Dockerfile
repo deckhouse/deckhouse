@@ -57,29 +57,29 @@ ARG GOPROXY
 ENV SOURCE_REPO=${SOURCE_REPO} \
     GOPROXY=${GOPROXY}
 WORKDIR /src/
-COPY patches/lua-info.patch /
-COPY patches/makefile.patch /
-COPY patches/healthcheck.patch /
-COPY patches/metrics-SetSSLExpireTime.patch /
-COPY patches/util.patch /
-COPY patches/fix-cleanup.patch /
-COPY patches/geoip.patch /
-COPY patches/new-metrics.patch /
-COPY patches/default-backend-fix.patch /
+COPY patches/003-lua-info.patch /
+COPY patches/004-makefile.patch /
+COPY patches/001-healthcheck.patch /
+COPY patches/005-metrics-SetSSLExpireTime.patch /
+COPY patches/007-util.patch /
+COPY patches/008-fix-cleanup.patch /
+COPY patches/010-geoip.patch /
+COPY patches/011-new-metrics.patch /
+COPY patches/012-default-backend-fix.patch /
 ENV GOARCH=amd64
 RUN mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
 RUN --mount=type=ssh git clone --branch $CONTROLLER_BRANCH --depth 1 ${SOURCE_REPO}/kubernetes/ingress-nginx.git /src && \
     # jaegertracing hunter deps
     git clone --branch $CONTROLLER_BRANCH --depth 1 ${SOURCE_REPO}/kubernetes/ingress-nginx-jaegertracing-deps.git /root/.hunter
-RUN patch -p1 < /lua-info.patch && \
-    patch -p1 < /makefile.patch && \
-    patch -p1 < /healthcheck.patch && \
-    patch -p1 < /metrics-SetSSLExpireTime.patch && \
-    patch -p1 < /util.patch && \
-    patch -p1 < /fix-cleanup.patch && \
-    patch -p1 < /geoip.patch && \
-    patch -p1 < /new-metrics.patch && \
-    patch -p1 < /default-backend-fix.patch
+RUN patch -p1 < /003-lua-info.patch && \
+    patch -p1 < /004-makefile.patch && \
+    patch -p1 < /001-healthcheck.patch && \
+    patch -p1 < /005-metrics-SetSSLExpireTime.patch && \
+    patch -p1 < /007-util.patch && \
+    patch -p1 < /008-fix-cleanup.patch && \
+    patch -p1 < /010-geoip.patch && \
+    patch -p1 < /011-new-metrics.patch && \
+    patch -p1 < /012-default-backend-fix.patch
 RUN make GO111MODULE=on USE_DOCKER=false build
 
 # Build nginx for ingress controller
@@ -90,7 +90,7 @@ ARG SOURCE_REPO
 ENV SOURCE_REPO=${SOURCE_REPO}
 COPY --from=controller-builder /src/images/nginx/rootfs/ /
 COPY rootfs/etc /etc/
-COPY patches/nginx-build.patch /
+COPY patches/009-nginx-build.patch /
 RUN mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
 RUN --mount=type=ssh git clone --branch 8.45 --depth 1 ${SOURCE_REPO}/pcre/pcre.git
     # build pcre library with jit support due to lack of jit support in standard alt pcre library
@@ -99,7 +99,7 @@ RUN cd pcre && \
     make && \
     make install
 RUN cd / && \
-    patch build.sh < nginx-build.patch
+    patch build.sh < 009-nginx-build.patch
 RUN --mount=type=ssh /build.sh
 
 # This intermediary image will be used only to copy all the required files to the chroot
@@ -124,9 +124,9 @@ COPY --from=luarocks-builder /usr/lib64/lua/5.1/iconv.so /usr/local/lib/lua/5.1/
 COPY --from=luarocks-builder /usr/lib64/lua/5.1/pb.so /usr/local/lib/lua/5.1/
 COPY --from=luarocks-builder /usr/share/lua/5.1/protoc.lua /usr/local/share/lua/5.1/
 
-COPY patches/balancer-lua.patch /
-COPY patches/nginx-tmpl.patch /
-COPY patches/auth-cookie-always.patch /
+COPY patches/013-balancer-lua.patch /
+COPY patches/002-nginx-tmpl.patch /
+COPY patches/006-auth-cookie-always.patch /
 
 # copy complete set of libs
 COPY --from=base-alt /usr/lib64 /chroot/usr/lib64
@@ -226,9 +226,9 @@ RUN ln -s /etc/nginx/geoip /chroot/etc/ingress-controller/geoip \
   # fix simlink to proper pcre jit version
   && ln -s libpcre.so.1.2.13 /chroot/lib64/libpcre.so.3 \
   && cd / \
-  && patch -p1 < /balancer-lua.patch \
-  && patch -p1 < /nginx-tmpl.patch \
-  && patch -p1 < /auth-cookie-always.patch
+  && patch -p1 < /013-balancer-lua.patch \
+  && patch -p1 < /002-nginx-tmpl.patch \
+  && patch -p1 < /006-auth-cookie-always.patch
 
 # Final image
 # Based on tag "controller-v1.9.5":

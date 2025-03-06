@@ -1,9 +1,10 @@
 ## Patches
 
-### remove_routes_on_deletion
+### 002-remove_routes_on_deletion.patch
+
 https://github.com/flant/terraform-provider-google/compare/v3.48.0...v3.48.0-flant.1
 
-### Go mod
+### 001-go_mod.patch
 
 To create this patch run commands:
 
