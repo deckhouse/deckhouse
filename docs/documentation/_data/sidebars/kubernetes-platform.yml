@@ -300,6 +300,10 @@ entries:
                 ru: Обработка входящего трафика
               folders:
                 - title:
+                    en: General information about NLB and ALB
+                    ru: Общая информация про NLB и ALB
+                  url: /user/alb-nlb-overview.html
+                - title:
                     en: NLB
                     ru: NLB
                   url: /user/incoming-traffic-processing-nlb.html
