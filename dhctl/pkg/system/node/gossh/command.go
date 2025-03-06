@@ -128,12 +128,14 @@ func (c *SSHCommand) Start() error {
 		return err
 	}
 
-	err = c.Session.Wait()
-	if err != nil {
-		return err
+	if c.WaitHandler != nil {
+		c.ProcessWait()
+	} else {
+		err = c.Session.Wait()
+		if err != nil {
+			return err
+		}
 	}
-
-	// c.ProcessWait()
 
 	log.DebugF("Register stoppable: '%s'\n", command)
 

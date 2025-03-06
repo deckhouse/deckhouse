@@ -87,6 +87,7 @@ func (u *SSHUploadScript) Execute() (stdout []byte, err error) {
 	if u.sudo {
 		remotePath = filepath.Join(app.DeckhouseNodeTmpPath, scriptName)
 	}
+	log.DebugF("Uploading script %s to %s\n", u.ScriptPath, remotePath)
 	err = NewSSHFile(u.sshClient).Upload(u.ScriptPath, remotePath)
 	if err != nil {
 		return nil, fmt.Errorf("upload: %v", err)

@@ -275,7 +275,7 @@ func (k *KubeProxy) upTunnel(
 		if v := os.Getenv("KUBE_PROXY_BIND_ADDR"); v != "" {
 			tunnelAddress = fmt.Sprintf("%s:%d:localhost:%s", v, localPort, kubeProxyPort)
 		} else {
-			tunnelAddress = fmt.Sprintf("%d:localhost:%s", localPort, kubeProxyPort)
+			tunnelAddress = fmt.Sprintf("localhost:%d:%s:%s", localPort, k.Session.Host(), kubeProxyPort)
 		}
 
 		log.DebugF("[%d] Try up tunnel on %v\n", startID, tunnelAddress)

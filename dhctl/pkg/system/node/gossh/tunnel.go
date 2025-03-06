@@ -76,7 +76,7 @@ func (t *Tunnel) upNewTunnel(oldId int) (int, error) {
 
 	log.DebugF("[%d] Remote bind: %s remote port: %s local bind: %s local port: %s\n", id, remoteBind, remotePort, localBind, localPort)
 
-	log.DebugF("[%d] Start reverse tunnel\n", id)
+	log.DebugF("[%d] Start tunnel\n", id)
 
 	remoteAddress := net.JoinHostPort(remoteBind, remotePort)
 	localAddress := net.JoinHostPort(localBind, localPort)
