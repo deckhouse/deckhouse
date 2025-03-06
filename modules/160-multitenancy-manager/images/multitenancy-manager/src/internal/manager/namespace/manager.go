@@ -27,7 +27,6 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
-
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
@@ -82,11 +81,8 @@ func (m *Manager) Handle(ctx context.Context, namespace *corev1.Namespace) (ctrl
 	namespace.SetLabels(labels)
 
 	// set adopt annotations
-	annotations := namespace.GetAnnotations()
-	annotations[helm.ResourceAnnotationReleaseName] = namespace.GetName()
-	annotations[helm.ResourceAnnotationReleaseNamespace] = ""
-
-	namespace.SetAnnotations(annotations)
+	namespace.Annotations[helm.ResourceAnnotationReleaseName] = namespace.GetName()
+	namespace.Annotations[helm.ResourceAnnotationReleaseNamespace] = ""
 
 	if err := m.client.Update(ctx, namespace); err != nil {
 		m.logger.Error(err, "failed to update the namespace", "namespace", namespace.GetName())
@@ -107,7 +103,17 @@ func (m *Manager) Handle(ctx context.Context, namespace *corev1.Namespace) (ctrl
 	}
 
 	m.logger.Info("ensure the project", "project", project.Name)
-	if err := m.client.Create(ctx, project); err != nil || apierrors.IsAlreadyExists(err) {
+	if err := m.client.Create(ctx, project); err != nil {
+		if apierrors.IsAlreadyExists(err) {
+			m.logger.Info("project already exists", "project", project.Name)
+			delete(namespace.Annotations, v1alpha2.NamespaceAnnotationAdopt)
+			if err = m.client.Update(ctx, namespace); err != nil {
+				m.logger.Error(err, "failed to update the namespace", "namespace", project.Name)
+				return ctrl.Result{}, fmt.Errorf("failed to update the '%s' namespace: %w", namespace.GetName(), err)
+			}
+			return ctrl.Result{}, nil
+		}
+
 		m.logger.Error(err, "failed to ensure the project", "project", project.Name)
 		return ctrl.Result{}, fmt.Errorf("create the '%s' project: %w", project.Name, err)
 	}

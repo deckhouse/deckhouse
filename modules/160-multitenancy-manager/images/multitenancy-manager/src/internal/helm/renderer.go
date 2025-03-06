@@ -85,9 +85,6 @@ func (r *postRenderer) Run(renderedManifests *bytes.Buffer) (*bytes.Buffer, erro
 			annotations[k] = v
 		}
 
-		// clear adopt annotation
-		delete(annotations, v1alpha2.NamespaceAnnotationAdopt)
-
 		object.SetAnnotations(annotations)
 
 		labels := object.GetLabels()
