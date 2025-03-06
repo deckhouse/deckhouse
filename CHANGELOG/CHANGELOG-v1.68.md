@@ -9,6 +9,7 @@
 ## Features
 
 
+ - **[candi]** Add a new layout for HuaweiCloud provider with support for VPC peering connections. [#12224](https://github.com/deckhouse/deckhouse/pull/12224)
  - **[candi]** Added a way to manage node labels from local files. [#10905](https://github.com/deckhouse/deckhouse/pull/10905)
  - **[cloud-provider-aws]** Bumped the `aws-node-termination-handler` version to `1.22.1`. [#10861](https://github.com/deckhouse/deckhouse/pull/10861)
  - **[cloud-provider-aws]** Added an option to specify your IAM role. [#10439](https://github.com/deckhouse/deckhouse/pull/10439)
@@ -36,6 +37,8 @@
 
 
  - **[admission-policy-engine]** Fix the trivy provider hook to support anonymous registry cred secret. [#12109](https://github.com/deckhouse/deckhouse/pull/12109)
+ - **[candi]** Reduce `request-timeout` in kubernetes-api to 60s. [#12191](https://github.com/deckhouse/deckhouse/pull/12191)
+    kubernetes-api will be restarted.
  - **[candi]** Fix bashible step that disable firewalld. [#12126](https://github.com/deckhouse/deckhouse/pull/12126)
  - **[candi]** Escaped character `%` in systemd for work proxy in containerd configuration. [#11483](https://github.com/deckhouse/deckhouse/pull/11483)
  - **[candi]** Fixed security context settings for static pods and iptables containers. [#11309](https://github.com/deckhouse/deckhouse/pull/11309)
@@ -49,6 +52,7 @@
  - **[cloud-provider-gcp]** Fix CVE, bump go, use images, src-artifact. [#11632](https://github.com/deckhouse/deckhouse/pull/11632)
  - **[cloud-provider-huaweicloud]** CVE fix, bump go to 1.23, use images, src-artifact. [#11631](https://github.com/deckhouse/deckhouse/pull/11631)
  - **[cloud-provider-openstack]** Bumped Go module dependencies to resolve known security issues. [#11634](https://github.com/deckhouse/deckhouse/pull/11634)
+ - **[cloud-provider-vcd]** fix CVE, bump ccm, use go 1.23, use werf images and src-artifact [#11629](https://github.com/deckhouse/deckhouse/pull/11629)
  - **[cloud-provider-vcd]** Added `vAppTemplate` search by `vAppTemplate` identifier for Cluster API Provider Cloud Director. [#10902](https://github.com/deckhouse/deckhouse/pull/10902)
  - **[cloud-provider-vcd]** Backported a fix to `vcd-csi-plugin-legacy`. [#10776](https://github.com/deckhouse/deckhouse/pull/10776)
  - **[cloud-provider-vsphere]** CVE fix cloud-provider-vsphere. [#12125](https://github.com/deckhouse/deckhouse/pull/12125)
@@ -58,9 +62,11 @@
  - **[cni-cilium]** L2 neigh discovery (arp flood) disabled. [#12078](https://github.com/deckhouse/deckhouse/pull/12078)
  - **[common]** Fixed a security vulnerability in `task`. [#11572](https://github.com/deckhouse/deckhouse/pull/11572)
  - **[control-plane-manager]** Fixed a security vulnerability. [#11536](https://github.com/deckhouse/deckhouse/pull/11536)
- - **[deckhouse]** Trigger the module config when a module created. [#12039](https://github.com/deckhouse/deckhouse/pull/12039)
+ - **[deckhouse]** Fix module.yaml ignored when weight == 0. [#12254](https://github.com/deckhouse/deckhouse/pull/12254)
+ - **[deckhouse]** Trigger the ModuleConfig handling when a module created. [#12039](https://github.com/deckhouse/deckhouse/pull/12039)
  - **[deckhouse]** Return `helm_lib_envs_for_proxy` template to deckhouse deployment. [#11921](https://github.com/deckhouse/deckhouse/pull/11921)
  - **[deckhouse-controller]** Fixed a bug in the `kubectl` wrapper script. [#11494](https://github.com/deckhouse/deckhouse/pull/11494)
+ - **[deckhouse-tools]** Fix tools links pointing to wrong path [#12346](https://github.com/deckhouse/deckhouse/pull/12346)
  - **[dhctl]** Fix broken connection-config in CLI and support sudoPassword in SSHConfig. [#12036](https://github.com/deckhouse/deckhouse/pull/12036)
  - **[dhctl]** Fixed a bug that prevented PersistentVolumes from being properly deleted by the `dhctl destroy` command in Stronghold. [#11878](https://github.com/deckhouse/deckhouse/pull/11878)
  - **[dhctl]** Fixed the behavior of static cluster destruction. [#11059](https://github.com/deckhouse/deckhouse/pull/11059)
@@ -79,19 +85,25 @@
  - **[local-path-provisioner]** Fixed security context settings for `helper-pod`. [#11322](https://github.com/deckhouse/deckhouse/pull/11322)
  - **[loki]** Fixed minor security vulnerabilities. [#11530](https://github.com/deckhouse/deckhouse/pull/11530)
  - **[loki]** Fixed the build parameters. [#11399](https://github.com/deckhouse/deckhouse/pull/11399)
- - **[metallb]** Fixed race condition in migration hook. [#12210](https://github.com/deckhouse/deckhouse/pull/12210)
  - **[metallb]** Bumped Go module dependencies to fix security vulnerabilities. [#11650](https://github.com/deckhouse/deckhouse/pull/11650)
+ - **[monitoring-applications]** Fix module dependencies. The `monitoring-applications` module was affected and disabled by the enabled script. [#12428](https://github.com/deckhouse/deckhouse/pull/12428)
  - **[monitoring-kubernetes]** Fixed security vulnerabilities. [#11591](https://github.com/deckhouse/deckhouse/pull/11591)
  - **[multitenancy-manager]** Set each Falco rule to work for a specific namespace only. [#11498](https://github.com/deckhouse/deckhouse/pull/11498)
  - **[network-gateway]** Fixed security context settings for static pods and iptables containers. [#11309](https://github.com/deckhouse/deckhouse/pull/11309)
+ - **[node-local-dns]** Fix module dependencies. The `monitoring-applications` module was affected and disabled by the enabled script. [#12428](https://github.com/deckhouse/deckhouse/pull/12428)
  - **[node-local-dns]** Fixed security context settings for static pods and iptables containers. [#11309](https://github.com/deckhouse/deckhouse/pull/11309)
+ - **[node-manager]** fix autoscaler RBAC for zvirt and dynamix [#11236](https://github.com/deckhouse/deckhouse/pull/11236)
  - **[node-manager]** Fixed CVE in images cluster-autoscaler and machine-controller-manager. [#12024](https://github.com/deckhouse/deckhouse/pull/12024)
  - **[node-manager]** Deleted `cert-manager.io/inject-ca-from` annotation from CAPI `ValidatingWebhookConfiguration`. [#11666](https://github.com/deckhouse/deckhouse/pull/11666)
  - **[node-manager]** Changes to `nodeGroup.spec.staticInstances.labelSelector` are now blocked to prevent unexpected behavior. [#11111](https://github.com/deckhouse/deckhouse/pull/11111)
+ - **[okmeter]** drop service account fields from the okmeter daemonset manifest [#12303](https://github.com/deckhouse/deckhouse/pull/12303)
+    okmeter daemonset pods will be rollout restarted
  - **[okmeter]** Removed RBAC from the `okmeter` module since the Kubernetes service account is currently unused and non-functional. [#10323](https://github.com/deckhouse/deckhouse/pull/10323)
     Okmeter agents are no longer able to access the Kubernetes API.
  - **[operator-trivy]** Added an init container to the `trivy-server` to set the correct user:group ownership for its volume. [#11671](https://github.com/deckhouse/deckhouse/pull/11671)
  - **[operator-trivy]** Fixed security vulnerabilities and updated the `report-updater` build. [#11597](https://github.com/deckhouse/deckhouse/pull/11597)
+ - **[prometheus]** Changes the links in alert's template about alerts from url to relative links [#12028](https://github.com/deckhouse/deckhouse/pull/12028)
+    The links in the alerts will be correct when the documentation module is enabled.
  - **[prometheus]** Fixed an issue in the Grafana datasource. [#11788](https://github.com/deckhouse/deckhouse/pull/11788)
     All data sources created with the GrafanaAdditionalDatasource custom resource will have their UIDs changed.
  - **[prometheus]** Improved Prometheus rolling updates. [#11694](https://github.com/deckhouse/deckhouse/pull/11694)
@@ -112,6 +124,7 @@
  - **[registrypackages]** Bumped the `docker_auth` version in in `docker-registry`. [#11600](https://github.com/deckhouse/deckhouse/pull/11600)
  - **[registrypackages]** Fixed security vulnerabilities in `crictl`. [#11523](https://github.com/deckhouse/deckhouse/pull/11523)
  - **[runtime-audit-engine]** Fixed security vulnerabilities in `k8s-metacollector` and `rules-loader`. [#11581](https://github.com/deckhouse/deckhouse/pull/11581)
+ - **[service-with-healthchecks]** Fixed several issues. [#12272](https://github.com/deckhouse/deckhouse/pull/12272)
  - **[terraform-manager]** CVE fix dynamix cloud provider and bump go version. [#12111](https://github.com/deckhouse/deckhouse/pull/12111)
  - **[terraform-manager]** CVE fix terraform-manager-gcp and bump go version. [#12068](https://github.com/deckhouse/deckhouse/pull/12068)
  - **[terraform-manager]** CVE fix terraform-manager-aws and bump go version. [#12065](https://github.com/deckhouse/deckhouse/pull/12065)
@@ -124,12 +137,14 @@
  - **[terraform-manager]** Bumped the Go version to fix security invulnerabilities in `terraform-manager-vsphere`. [#11903](https://github.com/deckhouse/deckhouse/pull/11903)
  - **[terraform-manager]** Fixed the sizing policy change procedure in the `vcd_vapp_vm` resource. [#11202](https://github.com/deckhouse/deckhouse/pull/11202)
  - **[terraform-manager]** Removed the patch with `vcd_catalog_vapp_template` data source fixes for `terraform-provider-vcd`. [#10902](https://github.com/deckhouse/deckhouse/pull/10902)
+ - **[upmeter]** Fixed metallb module probe. [#12231](https://github.com/deckhouse/deckhouse/pull/12231)
  - **[user-authn]** Fixed security vulnerabilities and updated the build. [#11588](https://github.com/deckhouse/deckhouse/pull/11588)
  - **[user-authn]** Bumped dependencies to fix security vulnerabilities. [#11332](https://github.com/deckhouse/deckhouse/pull/11332)
 
 ## Chore
 
 
+ - **[admission-policy-engine]** Fixes policies schemas. Allow to exclude namespaces or use only object labels. [#12292](https://github.com/deckhouse/deckhouse/pull/12292)
  - **[admission-policy-engine]** Fixed security vulnerabilities and updated the `trivy` build. [#11568](https://github.com/deckhouse/deckhouse/pull/11568)
  - **[admission-policy-engine]** Bumped `gatekeeper` and refactored the build. [#11356](https://github.com/deckhouse/deckhouse/pull/11356)
  - **[candi]** update d8-cli [#12104](https://github.com/deckhouse/deckhouse/pull/12104)
@@ -143,6 +158,9 @@
  - **[cert-manager]** Bumped to version `1.16.2` and updated build parameters. [#11198](https://github.com/deckhouse/deckhouse/pull/11198)
  - **[chrony]** Updated the `chrony` version to `4.6.1`. [#11403](https://github.com/deckhouse/deckhouse/pull/11403)
  - **[chrony]** Added `chrony-exporter` templates. [#10976](https://github.com/deckhouse/deckhouse/pull/10976)
+ - **[cilium-hubble]** Newly discovered CVEs have been addressed. [#12053](https://github.com/deckhouse/deckhouse/pull/12053)
+ - **[cloud-provider-aws]** bump go, use images, src-artifact [#12155](https://github.com/deckhouse/deckhouse/pull/12155)
+ - **[cloud-provider-aws]** bump go, use images, src-artifact [#11633](https://github.com/deckhouse/deckhouse/pull/11633)
  - **[cloud-provider-aws]** Reverted CNI configuration to the approach used in Deckhouse 1.67, using the `d8-cni-configuration` secret. [#11935](https://github.com/deckhouse/deckhouse/pull/11935)
  - **[cloud-provider-aws]** (Reverted) Prepared to migrate from using the `d8-cni-configuration` secret to ModuleConfigs for CNI configuration. [#10517](https://github.com/deckhouse/deckhouse/pull/10517)
  - **[cloud-provider-azure]** Reverted CNI configuration to the approach used in Deckhouse 1.67, using the `d8-cni-configuration` secret. [#11935](https://github.com/deckhouse/deckhouse/pull/11935)
@@ -166,6 +184,7 @@
  - **[cloud-provider-zvirt]** Fixed the zVirt CSI build. [#11809](https://github.com/deckhouse/deckhouse/pull/11809)
  - **[cloud-provider-zvirt]** Bumped Go module dependencies to resolve known security issues. [#11510](https://github.com/deckhouse/deckhouse/pull/11510)
  - **[cloud-provider-zvirt]** (Reverted) Prepared to migrate from using the `d8-cni-configuration` secret to ModuleConfigs for CNI configuration. [#10517](https://github.com/deckhouse/deckhouse/pull/10517)
+ - **[cni-cilium]** Newly discovered CVEs have been addressed. [#12053](https://github.com/deckhouse/deckhouse/pull/12053)
  - **[cni-cilium]** A new parameter, `activeL2NeighborDiscoveryEnabled`, has been added to ModuleConfig of `cni-cilium. [#12203](https://github.com/deckhouse/deckhouse/pull/12203)
  - **[cni-cilium]** Improved the stability of the cilium-operator. [#12091](https://github.com/deckhouse/deckhouse/pull/12091)
  - **[cni-cilium]** Reverted CNI configuration to the approach used in Deckhouse 1.67, using the `d8-cni-configuration` secret. [#11935](https://github.com/deckhouse/deckhouse/pull/11935)
@@ -197,6 +216,7 @@
  - **[ingress-nginx]** Disabled the VPA for the Istio sidecar. [#11084](https://github.com/deckhouse/deckhouse/pull/11084)
  - **[ingress-nginx]** Added a release requirement check for the `defaultControllerVersion` parameter. [#10941](https://github.com/deckhouse/deckhouse/pull/10941)
  - **[ingress-nginx]** Implemented filtering for `vhost` with multiple Ingress controllers in Grafana. [#10847](https://github.com/deckhouse/deckhouse/pull/10847)
+ - **[istio]** Migrate Kiali images to werf and build from source [#12149](https://github.com/deckhouse/deckhouse/pull/12149)
  - **[istio]** Fix new CVE in Istio version 1.19.7. [#12037](https://github.com/deckhouse/deckhouse/pull/12037)
  - **[log-shipper]** Updated `vector` to version `0.44`. [#11595](https://github.com/deckhouse/deckhouse/pull/11595)
  - **[log-shipper]** Updated the `log-shipper` version to `0.43.1`. [#11108](https://github.com/deckhouse/deckhouse/pull/11108)
@@ -209,6 +229,8 @@
  - **[openvpn]** Replaced Logrus to implement Slog. [#10909](https://github.com/deckhouse/deckhouse/pull/10909)
     Components need to be restarted.
  - **[operator-trivy]** Fixed security vulnerabilities and updated the build. [#11568](https://github.com/deckhouse/deckhouse/pull/11568)
+ - **[prometheus]** update Grafana version to 10.4.15 [#11977](https://github.com/deckhouse/deckhouse/pull/11977)
+    grafana deployment will be rollout restarted
  - **[prometheus]** Bumped FE Prometheus version to `2.55.1`. [#11651](https://github.com/deckhouse/deckhouse/pull/11651)
  - **[prometheus]** Implemented a static Python binary for the Grafana dashboard provisioner. [#11534](https://github.com/deckhouse/deckhouse/pull/11534)
     The Grafana deployment will undergo a rollout restart.

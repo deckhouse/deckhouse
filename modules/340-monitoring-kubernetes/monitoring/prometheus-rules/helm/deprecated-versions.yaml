@@ -9,13 +9,17 @@
     annotations:
       plk_markup_format: markdown
       plk_protocol_version: "1"
-      summary: At least one HELM release contains resources with deprecated apiVersion, which will be removed in Kubernetes v{{ $labels.k8s_version }}.
+      summary: At least one Helm release contains resources with deprecated `apiVersion`, which will be removed in Kubernetes version {{ $labels.k8s_version }}.
       description: |
-        To observe all resources use the expr `max by (helm_release_namespace, helm_release_name, helm_version, resource_namespace, resource_name, api_version, kind, k8s_version) (resource_versions_compatibility) == 1` in Prometheus.
+        To list all affected resources, run the following Prometheus query:
+        
+        ```promql
+        max by (helm_release_namespace, helm_release_name, helm_version, resource_namespace, resource_name, api_version, kind, k8s_version) (resource_versions_compatibility) == 1
+        ```
 
-        You can find more details for migration in the deprecation guide: https://kubernetes.io/docs/reference/using-api/deprecation-guide/#v{{ $labels.k8s_version | reReplaceAll "\\." "-" }}.
+        For more details on upgrading deprecated resources, refer to the Kubernetes deprecation guide available at `https://kubernetes.io/docs/reference/using-api/deprecation-guide/#v{{ $labels.k8s_version | reReplaceAll "\\." "-" }}`.
 
-        Attention: The check runs once per hour, so this alert should go out within an hour after deprecated resources migration.
+        Note that the check runs once per hour, so this alert should resolve within an hour after migrating deprecated resources.
 
   - alert: HelmReleasesHasResourcesWithUnsupportedVersions
     expr: |
@@ -27,10 +31,14 @@
       plk_markup_format: markdown
       plk_protocol_version: "1"
       summary:
-        At least one HELM release contains resources with unsupported apiVersion for Kubernetes v{{ $labels.k8s_version }}.
+        At least one Helm release contains resources with unsupported `apiVersion` for Kubernetes version {{ $labels.k8s_version }}.
       description: |
-        To observe all resources use the expr `max by (helm_release_namespace, helm_release_name, helm_version, resource_namespace, resource_name, api_version, kind, k8s_version) (resource_versions_compatibility) == 2` in Prometheus.
+        To list all affected resources, run the following Prometheus query:
+        
+        ```promql
+        max by (helm_release_namespace, helm_release_name, helm_version, resource_namespace, resource_name, api_version, kind, k8s_version) (resource_versions_compatibility) == 2
+        ```
 
-        You can find more details for migration in the deprecation guide: https://kubernetes.io/docs/reference/using-api/deprecation-guide/#v{{ $labels.k8s_version | reReplaceAll "\\." "-" }}.
+        For more details on migrating deprecated resources, refer to the Kubernetes deprecation guide available at `https://kubernetes.io/docs/reference/using-api/deprecation-guide/#v{{ $labels.k8s_version | reReplaceAll "\\." "-" }}`.
 
-        Attention: The check runs once per hour, so this alert should go out within an hour after deprecated resources migration.
+        Note that the check runs once per hour, so this alert should resolve within an hour after migrating deprecated resources.

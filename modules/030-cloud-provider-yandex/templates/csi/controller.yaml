@@ -24,9 +24,7 @@
 {{- end }}
 
 
-{{- $kubernetesSemVer := semver .Values.global.discovery.kubernetesVersion }}
-{{- $csiImageName := join "" (list "yandexCsiPlugin" $kubernetesSemVer.Major $kubernetesSemVer.Minor ) }}
-{{- $csiControllerImage := include "helm_lib_module_image_no_fail" (list . $csiImageName) }}
+{{- $csiControllerImage := include "helm_lib_module_image_no_fail" (list . "yandexCsiPlugin") }}
 {{- if $csiControllerImage }}
 
   {{- $csiControllerConfig := dict }}

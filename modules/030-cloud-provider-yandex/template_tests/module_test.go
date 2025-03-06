@@ -325,22 +325,6 @@ storageclass.kubernetes.io/is-default-class: "true"
 			Expect(ccmDeploy.Exists()).To(BeTrue())
 			Expect(ccmSecret.Exists()).To(BeTrue())
 		})
-
-		Context("Unsupported Kubernetes version", func() {
-			BeforeEach(func() {
-				f.ValuesSetFromYaml("global", globalValues)
-				f.ValuesSet("global.modulesImages", GetModulesImages())
-				f.ValuesSetFromYaml("cloudProviderYandex", moduleValues)
-				f.ValuesSet("global.discovery.kubernetesVersion", "1.17.8")
-				f.HelmRender()
-			})
-
-			It("CCM and CSI controller should not be present on unsupported Kubernetes versions", func() {
-				Expect(f.RenderError).ShouldNot(HaveOccurred())
-				Expect(f.KubernetesResource("Deployment", "d8-cloud-provider-yandex", "cloud-controller-manager").Exists()).To(BeFalse())
-				Expect(f.KubernetesResource("Deployment", "d8-cloud-provider-yandex", "csi-controller").Exists()).To(BeFalse())
-			})
-		})
 	})
 
 	Context("Yandex with discovered default StorageClass (without `global.defaultClusterStorageClass`)", func() {

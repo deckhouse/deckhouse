@@ -18,12 +18,25 @@
         background: $color-alt;
         border: 2px solid $color-alt;
     }
+
+    &-callback {
+        margin-top: 37px;
+        width: 100%;
+        font-weight: 500;
+        text-transform: uppercase;
+
+        &:hover {
+            border: 2px solid #002cca;
+            background: #002cca;
+        }
+    }
+
     &_inverse {
         color: $color-alt !important;
         background: $color-inverse;
         border: 2px solid $color-inverse;
     }
-    &:not(.button_disabled):not(.button_card):not(.button--primary):not(.gdpr__button):not(.button--outline):hover {
+    &:not(.button_disabled):not(.button_card):not(.button--primary):not(.gdpr__button):not(.button--outline):not(.button--contact):not(.button-callback):hover {
         color: $color-inverse !important;
         background: $color-main;
         border: 2px solid $color-main;
@@ -112,6 +125,10 @@
         text-transform: uppercase;
         text-decoration: none;
         transition: .2s;
+
+        &:hover {
+            background-color: $primary-900;
+        }
     }
 
   &_card {

@@ -2,8 +2,8 @@
 apiVersion: deckhouse.io/v1alpha1
 kind: DeckhouseRelease
 metadata:
-  name: v1.25.0
+  name: v1.16.0
 spec:
-  version: "v1.25.0"
+  version: "v1.16.0"
 status:
   phase: Pending

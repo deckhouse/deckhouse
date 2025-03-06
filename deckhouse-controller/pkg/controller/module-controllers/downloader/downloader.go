@@ -98,9 +98,7 @@ func (md *ModuleDownloader) DownloadDevImageTag(moduleName, imageTag, checksum s
 		return "", nil, err
 	}
 
-	def := md.fetchModuleDefinitionFromFS(moduleName, moduleStorePath)
-
-	return digest.String(), def, nil
+	return digest.String(), md.fetchModuleDefinitionFromFS(moduleName, moduleStorePath), nil
 }
 
 func (md *ModuleDownloader) DownloadByModuleVersion(moduleName, moduleVersion string) (*DownloadStatistic, error) {
@@ -327,26 +325,26 @@ func (md *ModuleDownloader) fetchModuleReleaseMetadataFromReleaseChannel(moduleN
 	return "v" + moduleMetadata.Version.String(), digest.String(), moduleMetadata.Changelog, nil
 }
 
-func (md *ModuleDownloader) fetchModuleDefinitionFromFS(moduleName, moduleVersionPath string) *moduletypes.Definition {
+func (md *ModuleDownloader) fetchModuleDefinitionFromFS(name, path string) *moduletypes.Definition {
 	def := &moduletypes.Definition{
-		Name:   moduleName,
+		Name:   name,
 		Weight: defaultModuleWeight,
-		Path:   moduleVersionPath,
+		Path:   path,
 	}
 
-	moduleDefFile := path.Join(moduleVersionPath, moduletypes.DefinitionFile)
+	defPath := filepath.Join(path, moduletypes.DefinitionFile)
 
-	if _, err := os.Stat(moduleDefFile); err != nil {
+	if _, err := os.Stat(defPath); err != nil {
 		return def
 	}
 
-	f, err := os.Open(moduleDefFile)
+	f, err := os.Open(defPath)
 	if err != nil {
 		return def
 	}
 	defer f.Close()
 
-	if err = yaml.NewDecoder(f).Decode(&def); err != nil {
+	if err = yaml.NewDecoder(f).Decode(def); err != nil {
 		return def
 	}
 
@@ -375,7 +373,7 @@ func (md *ModuleDownloader) fetchModuleDefinitionFromImage(moduleName string, im
 		return def, nil
 	}
 
-	if err = yaml.NewDecoder(buf).Decode(&def); err != nil {
+	if err = yaml.NewDecoder(buf).Decode(def); err != nil {
 		return def, err
 	}
 
@@ -466,5 +464,5 @@ func isRel(candidate, target string) bool {
 type ModuleReleaseMetadata struct {
 	Version *semver.Version `json:"version"`
 
-	Changelog map[string]any
+	Changelog map[string]any `json:"-"`
 }
