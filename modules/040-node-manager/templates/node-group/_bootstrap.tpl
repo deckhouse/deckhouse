@@ -66,13 +66,6 @@ while True:
     print("cannot import urllib3/urllib2/urllib");
     sys.exit(-1);
 
-def ssl_request(a_args):
-    ssl.match_hostname = lambda cert, hostname: True
-    request = Request(a_args['url'], headers=a_args['headers'])
-    response = urlopen(request, cafile=a_args['cafile'])
-    data = json.loads(response.read())
-    return data
-
 def ssl_request_urllib_3(a_args):
     CA_CERTS = (a_args['cafile'])
     timeout  = urllib3.Timeout(connect=10.0, read=10.0)
