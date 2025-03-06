@@ -146,7 +146,7 @@ shell:
   beforeInstall:
   {{- include "alpine packages proxy" . | nindent 2 }}
   # git needs for getting tag and commit sha for build purposes
-  - apk --no-cache add make bash git
+  - apk --no-cache add make bash git openssh
   setup:
   - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
   - git clone --branch {{ $controllerBranch }} --depth 1 {{ $.SOURCE_REPO }}/kubernetes/ingress-nginx-jaegertracing-deps.git /root/.hunter
