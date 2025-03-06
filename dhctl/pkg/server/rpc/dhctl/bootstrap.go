@@ -132,10 +132,18 @@ func (s *Service) bootstrapSafe(
 	switchPhase phases.DefaultOnPhaseFunc,
 	logWriter io.Writer,
 ) (result *pb.BootstrapResult) {
+	logger.L(ctx).Info("feat/dhctl-for-commander-bootstrap-context started")
+
 	defer func() {
 		if r := recover(); r != nil {
 			result = &pb.BootstrapResult{Err: panicMessage(ctx, r)}
 		}
+
+		logger.L(ctx).Info(
+			"feat/dhctl-for-commander-bootstrap-context finished",
+			slog.String("error", result.Err),
+			slog.Int("state_len", len(result.State)),
+		)
 	}()
 
 	return s.bootstrap(ctx, request, switchPhase, logWriter)
