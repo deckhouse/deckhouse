@@ -140,7 +140,7 @@ func (s *Service) bootstrapSafe(
 		}
 
 		logger.L(ctx).Info(
-			"feat/dhctl-for-commander-bootstrap-context finished",
+			"feat/dhctl-for-commander-bootstrap-context stopped",
 			slog.String("error", result.Err),
 			slog.Int("state_len", len(result.State)),
 		)
@@ -282,7 +282,9 @@ func (s *Service) bootstrap(
 		KubernetesInitParams:       nil,
 	})
 
+	logger.L(ctx).Info("feat/dhctl-for-commander-bootstrap-context bootstrap-started")
 	bootstrapErr := bootstrapper.Bootstrap(ctx)
+	logger.L(ctx).Info("feat/dhctl-for-commander-bootstrap-context bootstrap-stopped")
 	state := bootstrapper.GetLastState()
 	stateData, marshalErr := json.Marshal(state)
 	err = errors.Join(bootstrapErr, marshalErr)
