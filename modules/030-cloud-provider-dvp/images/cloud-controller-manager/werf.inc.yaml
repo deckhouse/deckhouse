@@ -14,7 +14,7 @@ final: false
 fromImage: common/src-artifact
 git:
 - add: /{{ $.ModulePath }}modules/030-{{ $.ModuleName }}/images/{{ $.ImageName }}/src
-  to:  /src/src
+  to:  /src
   stageDependencies:
     install:
       - go.mod
