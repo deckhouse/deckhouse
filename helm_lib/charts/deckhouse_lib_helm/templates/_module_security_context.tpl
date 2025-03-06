@@ -59,8 +59,8 @@ securityContext:
 securityContext:
   allowPrivilegeEscalation: false
   capabilities:
-  drop:
-  - all
+    drop:
+    - all
   runAsGroup: 64535
   runAsNonRoot: true
   runAsUser: 64535
