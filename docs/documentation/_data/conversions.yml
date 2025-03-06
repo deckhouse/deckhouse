@@ -5,6 +5,9 @@ dashboard:
     - version: 3
 descheduler:
     - version: 2
+      description:
+        en: Delete `settings`.
+        ru: Удалите `settings`.
 extended-monitoring:
     - version: 2
 istio:
@@ -15,6 +18,9 @@ monitoring-kubernetes:
     - version: 2
 node-manager:
     - version: 2
+      description:
+        en: Delete `allowedKubernetesVersions` and `allowedBundles`.
+        ru: Удалите `allowedKubernetesVersions` и `allowedBundles`.
 openvpn:
     - version: 2
 prometheus:

@@ -7,7 +7,7 @@ require (
 	github.com/Masterminds/sprig/v3 v3.2.3
 	github.com/benjamintf1/unmarshalledmatchers v0.0.0-20190408201839-bb1c1f34eaea
 	github.com/clarketm/json v1.15.7
-	github.com/cloudflare/cfssl v1.5.0
+	github.com/cloudflare/cfssl v1.6.5
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc
 	github.com/fatih/color v1.13.0 // indirect
 	github.com/flant/addon-operator v1.5.4-0.20250131130350-a14efc5804d9
@@ -21,7 +21,7 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/iancoleman/strcase v0.0.0-20191112232945-16388991a334
-	github.com/imdario/mergo v0.3.15
+	github.com/imdario/mergo v0.3.16
 	github.com/mitchellh/mapstructure v1.5.0 // indirect
 	github.com/onsi/ginkgo v1.16.5
 	github.com/onsi/gomega v1.36.2
@@ -42,9 +42,9 @@ require (
 	gopkg.in/yaml.v3 v3.0.1
 	helm.sh/helm/v3 v3.14.2
 	k8s.io/api v0.29.10
-	k8s.io/apiextensions-apiserver v0.29.0
+	k8s.io/apiextensions-apiserver v0.29.8
 	k8s.io/apimachinery v0.29.10
-	k8s.io/apiserver v0.29.0
+	k8s.io/apiserver v0.29.8
 	k8s.io/client-go v0.29.10
 	k8s.io/utils v0.0.0-20240711033017-18e509b52bc8
 	sigs.k8s.io/yaml v1.4.0
@@ -55,10 +55,10 @@ require (
 	github.com/deckhouse/deckhouse/egress-gateway-agent v0.0.0-00010101000000-000000000000
 	github.com/deckhouse/deckhouse/go_lib/cloud-data v0.0.0
 	github.com/deckhouse/deckhouse/go_lib/dependency/k8s/drain v0.0.0-00010101000000-000000000000
-	github.com/deckhouse/deckhouse/pkg/log v0.0.0-20241219045931-ca7514dfb873
-	github.com/deckhouse/module-sdk v0.1.1-0.20250123063508-23477139b92f
+	github.com/deckhouse/deckhouse/pkg/log v0.0.0
+	github.com/deckhouse/module-sdk v0.1.1-0.20250228151438-19b628dfff9d
 	github.com/ettle/strcase v0.2.0
-	github.com/evanphx/json-patch v5.7.0+incompatible
+	github.com/evanphx/json-patch v5.9.0+incompatible
 	github.com/fsnotify/fsnotify v1.7.0
 	github.com/go-logr/logr v1.4.2
 	github.com/go-openapi/errors v0.19.7
@@ -71,7 +71,7 @@ require (
 	golang.org/x/mod v0.22.0
 	golang.org/x/text v0.21.0
 	k8s.io/cli-runtime v0.29.10
-	k8s.io/code-generator v0.29.0
+	k8s.io/code-generator v0.29.8
 	k8s.io/klog/v2 v2.130.1
 	k8s.io/kube-openapi v0.0.0-20240228011516-70dd3763d340
 	k8s.io/kubectl v0.29.10
@@ -98,6 +98,7 @@ require (
 	github.com/avelino/slugify v0.0.0-20180501145920-855f152bd774 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/blang/semver/v4 v4.0.0 // indirect
+	github.com/caarlos0/env/v11 v11.2.2 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/chai2010/gettext-go v1.0.2 // indirect
 	github.com/containerd/containerd v1.7.20 // indirect
@@ -140,9 +141,9 @@ require (
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang/freetype v0.0.0-20170609003504-e2365dfdc4a0 // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
-	github.com/google/btree v1.0.1 // indirect
+	github.com/google/btree v1.1.2 // indirect
 	github.com/google/cel-go v0.17.7 // indirect
-	github.com/google/certificate-transparency-go v1.0.21 // indirect
+	github.com/google/certificate-transparency-go v1.1.7 // indirect
 	github.com/google/gnostic-models v0.6.8 // indirect
 	github.com/google/gofuzz v1.2.0 // indirect
 	github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510 // indirect
@@ -185,6 +186,7 @@ require (
 	github.com/nxadm/tail v1.4.8 // indirect
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/opencontainers/image-spec v1.1.0 // indirect
+	github.com/pelletier/go-toml v1.9.5 // indirect
 	github.com/peterbourgon/diskv v2.0.1+incompatible // indirect
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
 	github.com/prometheus/client_golang v1.20.5 // indirect
@@ -202,15 +204,15 @@ require (
 	github.com/tidwall/match v1.1.1 // indirect
 	github.com/tidwall/pretty v1.2.0 // indirect
 	github.com/vbatts/tar-split v0.11.3 // indirect
-	github.com/weppos/publicsuffix-go v0.13.0 // indirect
+	github.com/weppos/publicsuffix-go v0.30.0 // indirect
 	github.com/werf/logboek v0.5.5 // indirect
 	github.com/xeipuuv/gojsonpointer v0.0.0-20190905194746-02993c407bfb // indirect
 	github.com/xeipuuv/gojsonreference v0.0.0-20180127040603-bd5ef7bd5415 // indirect
 	github.com/xeipuuv/gojsonschema v1.2.0 // indirect
 	github.com/xlab/treeprint v1.2.0 // indirect
 	github.com/xo/terminfo v0.0.0-20210125001918-ca9a967f8778 // indirect
-	github.com/zmap/zcrypto v0.0.0-20200911161511-43ff0ea04f21 // indirect
-	github.com/zmap/zlint/v2 v2.2.1 // indirect
+	github.com/zmap/zcrypto v0.0.0-20230310154051-c8b263fd8300 // indirect
+	github.com/zmap/zlint/v3 v3.5.0 // indirect
 	go.etcd.io/etcd/client/pkg/v3 v3.5.10 // indirect
 	go.mongodb.org/mongo-driver v1.5.4 // indirect
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.53.0 // indirect

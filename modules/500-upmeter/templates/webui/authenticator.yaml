@@ -12,6 +12,10 @@ spec:
   applicationIngressCertificateSecretName: {{ include "helm_lib_module_https_secret_name" (list . "ingress-tls-webui") }}
   {{- end }}
   applicationIngressClassName: {{ include "helm_lib_module_ingress_class" . | quote }}
+  {{- with .Values.upmeter.auth.webui.allowedUserEmails }}
+  allowedEmails:
+  {{- . | toYaml | nindent 2 }}
+  {{- end }}
   {{- with .Values.upmeter.auth.webui.allowedUserGroups }}
   allowedGroups:
   {{- . | toYaml | nindent 2 }}

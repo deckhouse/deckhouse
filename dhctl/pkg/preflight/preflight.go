@@ -100,6 +100,11 @@ func (pc *Checker) Static() error {
 			skipFlag:       app.SSHForwardArgName,
 		},
 		{
+			fun:            pc.CheckDeckhouseUser,
+			successMessage: "deckhouse user and group aren't present on node",
+			skipFlag:       app.DeckhouseUserCheckName,
+		},
+		{
 			fun:            pc.CheckStaticNodeSystemRequirements,
 			successMessage: "that node meets system requirements",
 			skipFlag:       app.SystemRequirementsArgName,
@@ -128,6 +133,11 @@ func (pc *Checker) Static() error {
 			fun:            pc.CheckSudoIsAllowedForUser,
 			successMessage: "sudo is allowed for user",
 			skipFlag:       app.SudoAllowedCheckArgName,
+		},
+		{
+			fun:            pc.CheckCidrIntersectionStatic,
+			successMessage: "CIDRs are not intersects",
+			skipFlag:       app.CIDRIntersection,
 		},
 	})
 
@@ -218,6 +228,11 @@ func (pc *Checker) Global() error {
 			fun:            pc.CheckRegistryCredentials,
 			successMessage: "registry credentials are correct",
 			skipFlag:       app.RegistryCredentialsCheckArgName,
+		},
+		{
+			fun:            pc.CheckCidrIntersection,
+			successMessage: "CIDRs are not intersects",
+			skipFlag:       app.CIDRIntersection,
 		},
 	})
 

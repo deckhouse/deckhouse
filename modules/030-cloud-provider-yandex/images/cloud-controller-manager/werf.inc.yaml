@@ -1,11 +1,9 @@
-{{- range $key, $value := .CandiVersionMap.k8s }}
-  {{- $image_version := toString $key | replace "." "-" }}
-  {{- if $value.ccm.yandex }}
+{{- $version := "v0.31.0" }}
 ---
-image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
+image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: common/distroless
 import:
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
   add: /src/yandex-cloud-controller-manager
   to: /usr/local/bin/cloud-controller-manager
   before: setup
@@ -13,20 +11,20 @@ imageSpec:
   config:
     entrypoint: ["/usr/local/bin/cloud-controller-manager"]
 ---
-image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
+image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 final: false
 fromImage: common/src-artifact
 shell:
   install:
-    - git clone --depth 1 --branch {{ $value.ccm.yandex }} {{ $.SOURCE_REPO }}/deckhouse/yandex-cloud-controller-manager.git /src
+    - git clone --depth 1 --branch {{ $version }} {{ $.SOURCE_REPO }}/deckhouse/yandex-cloud-controller-manager.git /src
     - cd /src
     - rm -rf .git
 ---
-image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
+image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
 final: false
 from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
 import:
-  - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
+  - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
     add: /src
     to: /src
     before: install
@@ -43,5 +41,3 @@ shell:
     - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -o yandex-cloud-controller-manager cmd/yandex-cloud-controller-manager/main.go
     - chown 64535:64535 /src/yandex-cloud-controller-manager
     - chmod 0755 /src/yandex-cloud-controller-manager
-  {{- end }}
-{{- end }}

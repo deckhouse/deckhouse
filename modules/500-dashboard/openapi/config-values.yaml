@@ -36,6 +36,14 @@ properties:
             x-doc-default: false
             description: |
               The dashboard must use the user ID to work with the Kubernetes API (the authentication service must return the Authorization HTTP header that contains the bearer-token – the dashboard will use this token to make requests to the Kubernetes API server).
+      allowedUserEmails:
+        type: array
+        items:
+          type: string
+        description: |
+          An array of emails of users that can access module's public web interfaces.
+
+          This parameter is used if the `user-authn` module is enabled or the `externalAuthentication` parameter is set.
       allowedUserGroups:
         type: array
         items:

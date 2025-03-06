@@ -16,6 +16,7 @@ package docs
 
 import (
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"strings"
@@ -79,7 +80,7 @@ func (svc *Service) buildHugo() error {
 				return fmt.Errorf("remove module from channel mapping: %w", err)
 			}
 
-			svc.logger.Warnf("removed broken module %q", modulePath)
+			svc.logger.Warn("removed broken module", slog.String("module_path", modulePath))
 			continue
 		}
 
@@ -89,7 +90,7 @@ func (svc *Service) buildHugo() error {
 
 func (svc *Service) removeModuleFromChannelMapping(moduleName, channel string) error {
 	return svc.channelMappingEditor.edit(func(m channelMapping) {
-		delete(m[moduleName]["channels"], channel)
+		delete(m[moduleName][channelMappingChannels], channel)
 	})
 }
 

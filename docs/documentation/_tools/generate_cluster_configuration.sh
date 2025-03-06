@@ -33,7 +33,6 @@ for schema_path in $(find $MODULES_DIR -regex '^.*/openapi/cluster_configuration
   grep -q '<!-- SCHEMA -->' ${module_path}/docs/CLUSTER_CONFIGURATION.md
   if [ $? -eq 0 ]; then
     # Apply schema
-    echo "   ...${module_name}"
     sed -i "/<!-- SCHEMA -->/i\{\{ site.data.schemas.${module_name}.cluster_configuration \| format_cluster_configuration: \"${module_name}\" \}\}" ${module_path}/docs/CLUSTER_CONFIGURATION.md
   else
     echo "WARN: Found schema for ${module_name} module, but there is no '<!-- SCHEMA -->' placeholder in the CLUSTER_CONFIGURATION.md file."

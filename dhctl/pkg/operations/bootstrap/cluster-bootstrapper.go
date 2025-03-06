@@ -87,7 +87,6 @@ type Params struct {
 	TerraformContext           *terraform.TerraformContext
 
 	ConfigPaths             []string
-	ResourcesPath           string
 	ResourcesTimeout        time.Duration
 	DeckhouseTimeout        time.Duration
 	PostBootstrapScriptPath string
@@ -129,9 +128,6 @@ func (b *ClusterBootstrapper) applyParams() (func(), error) {
 
 	if len(b.ConfigPaths) > 0 {
 		restoreFuncs = append(restoreFuncs, setWithRestore(&app.ConfigPaths, b.ConfigPaths))
-	}
-	if b.ResourcesPath != "" {
-		restoreFuncs = append(restoreFuncs, setWithRestore(&app.ResourcesPath, b.ResourcesPath))
 	}
 	if b.ResourcesTimeout != 0 {
 		restoreFuncs = append(restoreFuncs, setWithRestore(&app.ResourcesTimeout, b.ResourcesTimeout))

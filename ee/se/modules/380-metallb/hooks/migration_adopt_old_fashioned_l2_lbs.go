@@ -50,6 +50,7 @@ func discoveryServicesForMigrate(input *go_hook.HookInput, dc dependency.Contain
 	}
 	if moduleConfig.Spec.Version >= 2 {
 		input.Values.Set("metallb.internal.migrationOfOldFashionedLBsAdoptionComplete", true)
+		input.Logger.Info("processing skipped", "ModuleConfig version", moduleConfig.Spec.Version)
 		return nil
 	}
 	for _, pool := range moduleConfig.Spec.Settings.AddressPools {
@@ -143,6 +144,7 @@ func discoveryServicesForMigrate(input *go_hook.HookInput, dc dependency.Contain
 		if err != nil {
 			return fmt.Errorf("error to apply patch to Service %s: %w", service.Name, err)
 		}
+		input.Logger.Info("annotations added", "Service", service.Name)
 	}
 	input.Values.Set("metallb.internal.migrationOfOldFashionedLBsAdoptionComplete", true)
 	return nil

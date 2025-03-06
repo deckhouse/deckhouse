@@ -51,6 +51,14 @@ properties:
                 type: string
                 description: |
                   URL to redirect the user for authentication (if the authentication service returned a non-200 HTTP response code).
+          allowedUserEmails:
+            type: array
+            items:
+              type: string
+            description: |
+              An array of emails of users that can access module's public web interfaces.
+
+              This parameter is used if the `user-authn` module is enabled or the `externalAuthentication` parameter is set.
           allowedUserGroups:
             type: array
             items:
@@ -93,6 +101,14 @@ properties:
               Password for http authorization of the `admin` user. It is generated automatically, but you can change it.
 
               This parameter is used if the `externalAuthentication` is not enabled.
+          allowedUserEmails:
+            type: array
+            items:
+              type: string
+            description: |
+              An array of emails of users that can access module's public web interfaces.
+
+              This parameter is used if the `user-authn` module is enabled or the `externalAuthentication` parameter is set.
           allowedUserGroups:
             type: array
             items:
