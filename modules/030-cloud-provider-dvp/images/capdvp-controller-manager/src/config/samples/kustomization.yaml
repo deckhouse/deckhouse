@@ -2,4 +2,5 @@
 resources:
 - infrastructure_v1alpha1_deckhousecluster.yaml
 - infrastructure_v1alpha1_deckhousemachine.yaml
+- infrastructure_v1alpha1_deckhousemachinetemplate.yaml
 # +kubebuilder:scaffold:manifestskustomizesamples
