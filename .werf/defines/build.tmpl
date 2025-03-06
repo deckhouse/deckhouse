@@ -63,7 +63,6 @@ shell:
 {{- if .git }}
   - rm -rf .git vendor {{ if .git.rm }}{{ .git.rm }}{{ end }}
 {{- end }}
-
 {{- end }}
 
 # build-golang image renderer
