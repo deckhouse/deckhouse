@@ -2,7 +2,17 @@ cilium-hubble:
     - version: 2
 dashboard:
     - version: 2
+      description:
+        en: Remove `.auth.password`, then `auth` if empty.
+        ru: Удалите `.auth.password` и целиком `.auth`, если его значение пустое.
     - version: 3
+      description:
+        en: |
+            Remove `.accessLevel`.
+            Remove `.auth.allowScale`, then `.auth` if empty.
+        ru: |
+            Удалите `.accessLevel`.
+            Удалите `.auth.allowScale` и целиком `.auth`, если его значение пустое.
 descheduler:
     - version: 2
       description:
@@ -28,7 +38,19 @@ prometheus:
         ru: todo ru
 upmeter:
     - version: 2
+      description:
+        en: |
+            Remove `.auth.status.password` and `.auth.status` if empty.
+            Remove `.auth.webui.password` and `.auth.webui` if empty.
+            Remove `.auth` if empty.
+        ru: |
+            Удалите `.auth.status.password` и целиком `.auth.status`, если его значение пустое.
+            Удалите `.auth.webui.password` и целиком `.auth.webui`, если его значение пустое.
+            Удалите `.auth`, если его значение пустое.
     - version: 3
+      description:
+        en: Remove `.smokeMini.ingressClass`, and `.smokeMini` if empty.
+        ru: Удалите `.smokeMini.ingressClass` и целиком `.smokeMini`, если его значение пустое.
 user-authn:
     - version: 2
       description:
