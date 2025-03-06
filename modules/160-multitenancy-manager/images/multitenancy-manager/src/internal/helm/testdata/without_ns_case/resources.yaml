@@ -3,9 +3,12 @@
 apiVersion: v1
 kind: Namespace
 metadata:
+  annotations:
+    my: key
   creationTimestamp: null
   labels:
     heritage: multitenancy-manager
+    my: key
     projects.deckhouse.io/project: test
     projects.deckhouse.io/project-template: without_ns
   name: test
@@ -16,8 +19,11 @@ status: {}
 apiVersion: deckhouse.io/v1alpha1
 kind: AuthorizationRule
 metadata:
+  annotations:
+    my: key
   labels:
     heritage: multitenancy-manager
+    my: key
     projects.deckhouse.io/project: test
     projects.deckhouse.io/project-template: without_ns
   name: user-gmail.com
@@ -32,8 +38,11 @@ spec:
 apiVersion: v1
 kind: ResourceQuota
 metadata:
+  annotations:
+    my: key
   labels:
     heritage: multitenancy-manager
+    my: key
     projects.deckhouse.io/project: test
     projects.deckhouse.io/project-template: without_ns
   name: all-pods
@@ -47,8 +56,11 @@ spec:
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
+  annotations:
+    my: key
   labels:
     heritage: multitenancy-manager
+    my: key
     projects.deckhouse.io/project: test
     projects.deckhouse.io/project-template: without_ns
   name: isolated
@@ -74,15 +86,15 @@ spec:
     - namespaceSelector:
         matchLabels:
           kubernetes.io/metadata.name: d8-monitoring
-        podSelector:
-          matchLabels:
-            app.kubernetes.io/name: prometheus
+      podSelector:
+        matchLabels:
+          app.kubernetes.io/name: prometheus
     - namespaceSelector:
         matchLabels:
           kubernetes.io/metadata.name: d8-ingress-nginx
-        podSelector:
-          matchLabels:
-            app: controller
+      podSelector:
+        matchLabels:
+          app: controller
   podSelector:
     matchLabels: {}
   policyTypes:
@@ -93,8 +105,11 @@ spec:
 apiVersion: deckhouse.io/v1alpha1
 kind: OperationPolicy
 metadata:
+  annotations:
+    my: key
   labels:
     heritage: multitenancy-manager
+    my: key
     projects.deckhouse.io/project: test
     projects.deckhouse.io/project-template: without_ns
   name: required-requests-9f86d081

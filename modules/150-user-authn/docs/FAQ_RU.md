@@ -7,6 +7,7 @@ title: "Модуль user-authn: FAQ"
 ## Как защитить мое приложение?
 
 Чтобы включить аутентификацию через Dex для приложения, выполните следующие шаги:
+
 1. Создайте custom resource [DexAuthenticator](cr.html#dexauthenticator).
 
    Создание `DexAuthenticator` в кластере приводит к созданию экземпляра [oauth2-proxy](https://github.com/oauth2-proxy/oauth2-proxy), подключенного к Dex. После появления custom resource `DexAuthenticator` в указанном namespace появятся необходимые объекты Deployment, Service, Ingress, Secret.
@@ -91,11 +92,12 @@ title: "Модуль user-authn: FAQ"
 3. DexAuthenticator выставляет HTTP-заголовок `Authorization`, равный значению ID token из Redis. Это необязательно для сервисов по типу [Upmeter](../upmeter/), потому что права доступа к Upmeter не такие проработанные.
 С другой стороны, для [Kubernetes Dashboard](../dashboard/) это критичный функционал, потому что она отправляет ID token дальше для доступа к Kubernetes API.
 
-## Как я могу сгенерировать kubeconfig для доступа к Kubernetes API?
+## Как сгенерировать kubeconfig для доступа к Kubernetes API?
 
 Сгенерировать `kubeconfig` для удаленного доступа к кластеру через `kubectl` можно через веб-интерфейс `kubeconfigurator`.
 
 Настройте параметр [publishAPI](configuration.html#parameters-publishapi):
+
 - Откройте настройки модуля `user-authn` (создайте ресурс moduleConfig `user-authn`, если его нет):
 
   ```shell
@@ -114,7 +116,7 @@ title: "Модуль user-authn: FAQ"
 
 ### Настройка kube-apiserver
 
-С помощью функционала модуля [control-plane-manager](../../modules/control-plane-manager/) Deckhouse автоматически настраивает kube-apiserver, выставляя следующие флаги так, чтобы модули `dashboard` и `kubeconfig-generator` могли работать в кластере.
+С помощью функций модуля [control-plane-manager](../../modules/control-plane-manager/) Deckhouse автоматически настраивает kube-apiserver, выставляя следующие флаги так, чтобы модули `dashboard` и `kubeconfig-generator` могли работать в кластере.
 
 {% offtopic title="Аргументы kube-apiserver, которые будут настроены" %}
 

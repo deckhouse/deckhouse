@@ -66,9 +66,11 @@ sysctl -w kernel.numa_balancing=0 # disable the overly smart NUMA node balancer 
 sysctl -w fs.inotify.max_user_watches=524288 # Increase inotify (https://github.com/guard/listen/wiki/Increasing-the-amount-of-inotify-watchers#the-technical-details)
 sysctl -w fs.inotify.max_user_instances=5120
 sysctl -w kernel.pid_max=2000000
-{{- if eq .bundle "centos" }}
-sysctl -w fs.may_detach_mounts=1 # For Centos to avoid problems with unmount when container stops # https://bugzilla.redhat.com/show_bug.cgi?id=1441737
-{{- end }}
+
+if [[ "$(sysctl -n fs.may_detach_mounts 2> /dev/null)"  ]]; then
+    # For Centos to avoid problems with unmount when container stops # https://bugzilla.redhat.com/show_bug.cgi?id=1441737
+    sysctl -w fs.may_detach_mounts=1
+fi
 
 # kubelet parameters
 sysctl -w vm.overcommit_memory=1
@@ -83,7 +85,7 @@ sysctl -w kernel.panic_on_oops=1
 sysctl -w kernel.panic={{ $fencingTime }}
 
 # we use tee for work with globs
-echo 256 | tee /sys/block/*/queue/nr_requests >/dev/null # put more in the request queue, increase throughput
+echo 256 | tee /sys/block/*/queue/nr_requests >/dev/null 2>&1 # put more in the request queue, increase throughput
 echo 256 | tee /sys/block/*/queue/read_ahead_kb >/dev/null # the most controversial thing, Netflix recommends increasing a little, but you need to test on different setups, this number looks safe
 transparent_hugepage_current=$(grep -o '\[.*\]' /sys/kernel/mm/transparent_hugepage/enabled | tr -d '[]')
 if [ "$transparent_hugepage_current" != "never" ]; then

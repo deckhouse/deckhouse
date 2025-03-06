@@ -38,14 +38,17 @@ import (
 	"sync"
 	"time"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/operations"
+
 	"github.com/deckhouse/deckhouse/go_lib/registry-packages-proxy/proxy"
 	"github.com/deckhouse/deckhouse/go_lib/registry-packages-proxy/registry"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/converge"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/deckhouse"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/entity"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
@@ -104,9 +107,9 @@ func BootstrapMaster(nodeInterface node.Interface, controller *template.Controll
 	})
 }
 
-func PrepareBashibleBundle(bundleName, nodeIP, devicePath string, metaConfig *config.MetaConfig, controller *template.Controller) error {
-	return log.Process("bootstrap", "Prepare Bashible Bundle", func() error {
-		return template.PrepareBundle(controller, nodeIP, bundleName, devicePath, metaConfig)
+func PrepareBashibleBundle(nodeIP, devicePath string, metaConfig *config.MetaConfig, controller *template.Controller) error {
+	return log.Process("bootstrap", "Prepare Bashible", func() error {
+		return template.PrepareBundle(controller, nodeIP, devicePath, metaConfig)
 	})
 }
 
@@ -424,16 +427,11 @@ func RunBashiblePipeline(nodeInterface node.Interface, cfg *config.MetaConfig, n
 		return err
 	}
 
-	bundleName, err := DetermineBundleName(nodeInterface)
-	if err != nil {
-		return err
-	}
-
 	templateController := template.NewTemplateController("")
 	log.DebugF("Rendered templates directory %s\n", templateController.TmpDir)
 
 	err = log.Process("bootstrap", "Preparing bootstrap", func() error {
-		if err := template.PrepareBootstrap(templateController, nodeIP, bundleName, cfg); err != nil {
+		if err := template.PrepareBootstrap(templateController, nodeIP, cfg); err != nil {
 			return fmt.Errorf("prepare bootstrap: %v", err)
 		}
 
@@ -482,7 +480,7 @@ func RunBashiblePipeline(nodeInterface node.Interface, cfg *config.MetaConfig, n
 		defer cleanUpTunnel()
 	}
 
-	if err = PrepareBashibleBundle(bundleName, nodeIP, devicePath, cfg, templateController); err != nil {
+	if err = PrepareBashibleBundle(nodeIP, devicePath, cfg, templateController); err != nil {
 		return err
 	}
 	tomb.RegisterOnShutdown("Delete templates temporary directory", func() {
@@ -636,38 +634,6 @@ func CheckDHCTLDependencies(nodeInteface node.Interface) error {
 	})
 }
 
-func DetermineBundleName(nodeInterface node.Interface) (string, error) {
-	var bundleName string
-	err := log.Process("bootstrap", "Detect Bashible Bundle", func() error {
-		file, err := template.RenderAndSaveDetectBundle(make(map[string]interface{}))
-		if err != nil {
-			return err
-		}
-
-		return retry.NewSilentLoop("Get bundle", 30, 10*time.Second).Run(func() error {
-			// run detect bundle type
-			detectCmd := nodeInterface.UploadScript(file)
-			stdout, err := detectCmd.Execute()
-			if err != nil {
-				var ee *exec.ExitError
-				if errors.As(err, &ee) {
-					return fmt.Errorf("detect_bundle.sh: %v, %s", err, string(ee.Stderr))
-				}
-				return fmt.Errorf("detect_bundle.sh: %v", err)
-			}
-
-			bundleName = strings.Trim(string(stdout), "\n ")
-			if bundleName == "" {
-				return fmt.Errorf("detect_bundle.sh: empty bundle was detected")
-			}
-
-			log.InfoF("Detected bundle: %s\n", bundleName)
-			return nil
-		})
-	})
-	return bundleName, err
-}
-
 func WaitForSSHConnectionOnMaster(sshClient *ssh.Client) error {
 	return log.Process("bootstrap", "Wait for SSH on Master become Ready", func() error {
 		availabilityCheck := sshClient.Check()
@@ -722,7 +688,7 @@ func InstallDeckhouse(kubeCl *client.KubernetesClient, config *config.DeckhouseI
 
 func BootstrapTerraNodes(kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig, terraNodeGroups []config.TerraNodeGroupSpec, terraformContext *terraform.TerraformContext) error {
 	return log.Process("bootstrap", "Create CloudPermanent NG", func() error {
-		return converge.ParallelCreateNodeGroup(kubeCl, metaConfig, terraNodeGroups, terraformContext)
+		return operations.ParallelCreateNodeGroup(kubeCl, metaConfig, terraNodeGroups, terraformContext)
 	})
 }
 
@@ -779,13 +745,13 @@ func BootstrapAdditionalMasterNodes(kubeCl *client.KubernetesClient, metaConfig 
 	}
 
 	return log.Process("bootstrap", "Bootstrap additional master nodes", func() error {
-		masterCloudConfig, err := converge.GetCloudConfig(kubeCl, converge.MasterNodeGroupName, converge.ShowDeckhouseLogs, log.GetDefaultLogger())
+		masterCloudConfig, err := entity.GetCloudConfig(kubeCl, global.MasterNodeGroupName, global.ShowDeckhouseLogs, log.GetDefaultLogger())
 		if err != nil {
 			return err
 		}
 
 		for i := 1; i < metaConfig.MasterNodeGroupSpec.Replicas; i++ {
-			outputs, err := converge.BootstrapAdditionalMasterNode(kubeCl, metaConfig, i, masterCloudConfig, false, terraformContext)
+			outputs, err := operations.BootstrapAdditionalMasterNode(kubeCl, metaConfig, i, masterCloudConfig, false, terraformContext)
 			if err != nil {
 				return err
 			}

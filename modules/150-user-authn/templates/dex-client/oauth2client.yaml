@@ -22,6 +22,12 @@ redirectURIs:
   - {{ $uri }}
 {{- end }}
   {{- end }}
+  {{ if $crd.spec.allowedEmails }}
+allowedEmails:
+{{- range $email := $crd.spec.allowedEmails }}
+- {{ $email }}
+{{- end }}
+  {{- end }}
   {{ if $crd.spec.allowedGroups }}
 allowedGroups:
 {{- range $group := $crd.spec.allowedGroups }}
@@ -51,6 +57,12 @@ trustedPeers:
 redirectURIs:
 {{- range $uri := $crd.spec.redirectURIs }}
   - {{ $uri }}
+{{- end }}
+  {{- end }}
+  {{ if $crd.spec.allowedEmails }}
+allowedEmails:
+{{- range $email := $crd.spec.allowedEmails }}
+  - {{ $email }}
 {{- end }}
   {{- end }}
   {{ if $crd.spec.allowedGroups }}

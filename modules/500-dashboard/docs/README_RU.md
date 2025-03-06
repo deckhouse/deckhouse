@@ -17,5 +17,6 @@ Kubernetes Dashboard предоставляет следующие возмож�
 {% endalert %}
 
 Для работы модуля необходимо:
-- включить модуль [user-authz](../user-authz/);
-- либо включить модуль [user-authn](../user-authn/), либо подключить внешнюю аутентификацию (секция параметров [externalAuthentication](configuration.html#parameters-auth-externalauthentication) модуля).
+
+1. Включить модуль [user-authz](../user-authz/);
+1. Включить модуль [user-authn](../user-authn/), либо подключить внешнюю аутентификацию (секция параметров [externalAuthentication](configuration.html#parameters-auth-externalauthentication) модуля).

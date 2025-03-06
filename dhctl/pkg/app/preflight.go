@@ -32,6 +32,8 @@ var (
 	PreflightSkipSystemRequirementsCheck   = false
 	PreflightSkipOneSSHHost                = false
 	PreflightSkipCloudAPIAccessibility     = false
+	PreflightSkipCIDRIntersection          = false
+	PreflightSkipDeckhouseUserCheck        = false
 )
 
 const (
@@ -49,6 +51,8 @@ const (
 	SystemRequirementsArgName        = "preflight-skip-system-requirements-check"
 	CloudAPIAccessibilityArgName     = "preflight-cloud-api-accesibility-check"
 	OneSSHHostCheckArgName           = "preflight-skip-one-ssh-host"
+	CIDRIntersection                 = "preflight-skip-cidr-intersection"
+	DeckhouseUserCheckName           = "preflight-skip-deckhouse-user-check"
 )
 
 var (
@@ -67,6 +71,8 @@ var (
 		SudoAllowedCheckArgName:          &PreflightSkipSudoIsAllowedForUserCheck,
 		SystemRequirementsArgName:        &PreflightSkipSystemRequirementsCheck,
 		OneSSHHostCheckArgName:           &PreflightSkipOneSSHHost,
+		CIDRIntersection:                 &PreflightSkipCIDRIntersection,
+		DeckhouseUserCheckName:           &PreflightSkipDeckhouseUserCheck,
 	}
 )
 
@@ -124,4 +130,10 @@ func DefinePreflight(cmd *kingpin.CmdClause) {
 	cmd.Flag(OneSSHHostCheckArgName, "Skip verifying one ssh-host parametr").
 		Envar(configEnvName("PREFLIGHT_SKIP_ONE_SSH_HOST")).
 		BoolVar(PreflightSkipOptionsMap[OneSSHHostCheckArgName])
+	cmd.Flag(CIDRIntersection, "Skip verifying CIDRs intersection").
+		Envar(configEnvName("PREFLIGHT_SKIP_CIDR_INTERSECTION")).
+		BoolVar(PreflightSkipOptionsMap[CIDRIntersection])
+	cmd.Flag(DeckhouseUserCheckName, "Skip verifying deckhouse user existence").
+		Envar(configEnvName("PREFLIGHT_SKIP_DECKHOUSE_USER")).
+		BoolVar(PreflightSkipOptionsMap[DeckhouseUserCheckName])
 }

@@ -6,7 +6,7 @@ title: "The ingress-nginx module: examples"
 
 ## An example for AWS (Network Load Balancer)
 
-When creating a balancer, all zones available in the cluster will be used.
+When creating a balancer, all zones available in the cluster are used.
 
 In each zone, the balancer receives a public IP. If there is an instance with an Ingress controller in the zone, an A-record with the balancer's IP address from this zone is automatically added to the balancer's domain name.
 
@@ -121,9 +121,9 @@ spec:
 
 In the case of using MetalLB, its speaker Pods must be run on the same Nodes as the Ingress controller Pods.
 
-The controller must receive real IP addresses of clients — therefore its Service is created with the parameter `externalTrafficPolicy: Local` (disabling cross–node SNAT), and to satisfy this parameter the MetalLB speaker announce this Service only from those Nodes where the target Pods are running.
+The controller must receive real IP addresses of clients — therefore its Service is created with the parameter `externalTrafficPolicy: Local` (disabling cross–node SNAT), and to accept this parameter the MetalLB speaker announce this Service only from those Nodes where the target Pods are running.
 
-So for the current example [metallb module configuration](../metallb/configuration.html) should be like this:
+For this example [metallb module configuration](../metallb/configuration.html) should be like this:
 
 ```yaml
 metallb:

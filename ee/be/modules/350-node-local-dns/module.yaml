@@ -3,3 +3,8 @@ weight: 350
 subsystems:
   - networking
 namespace: kube-system
+
+requirements:
+  bootstrapped: true
+  modules:
+    kube-dns: '>= 0.0.0'

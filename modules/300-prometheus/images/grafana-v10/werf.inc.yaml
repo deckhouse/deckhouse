@@ -72,7 +72,7 @@ shell:
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-grafana-distr
 final: false
-from: {{ $.Images.BASE_UBUNTU_DEV }}
+fromImage: common/alt-p11-artifact
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-go-builder
   add: /usr/src/app/bin/linux-amd64/grafana

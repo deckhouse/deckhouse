@@ -46,14 +46,14 @@ const (
 )
 
 type NodeSettings struct {
-	Name        string
-	NodeType    ngv1.NodeType
-	NodeGroup   string
-	Annotations map[string]string
-	Labels      map[string]string
-	Taints      []v1.Taint
+	Name        string            `json:"name"`
+	NodeType    ngv1.NodeType     `json:"nodeType"`
+	NodeGroup   string            `json:"-"`
+	Annotations map[string]string `json:"annotations"`
+	Labels      map[string]string `json:"labels"`
+	Taints      []v1.Taint        `json:"taints"`
 
-	IsClusterAPINode bool
+	IsClusterAPINode bool `json:"-"`
 }
 
 // Hook will be executed when NodeType or NodeTemplate are changed.

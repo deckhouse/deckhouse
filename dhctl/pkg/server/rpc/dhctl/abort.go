@@ -40,7 +40,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/util/callback"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 )
 
 func (s *Service) Abort(server pb.DHCTL_AbortServer) error {
@@ -146,7 +145,7 @@ func (s *Service) abort(
 	var err error
 
 	cleanuper := callback.NewCallback()
-	defer cleanuper.Call()
+	defer func() { _ = cleanuper.Call() }()
 
 	log.InitLoggerWithOptions("pretty", log.LoggerOptions{
 		OutStream: logWriter,
@@ -160,30 +159,28 @@ func (s *Service) abort(
 	app.ApplyPreflightSkips(request.Options.CommonOptions.SkipPreflightChecks)
 
 	log.InfoF("Task is running by DHCTL Server pod/%s\n", s.podName)
-	defer func() {
-		log.InfoF("Task done by DHCTL Server pod/%s\n", s.podName)
-	}()
+	defer func() { log.InfoF("Task done by DHCTL Server pod/%s\n", s.podName) }()
 
 	var (
-		configPath    string
-		resourcesPath string
-		cleanup       func() error
+		configPaths []string
+		configPath  string
+		cleanup     func() error
 	)
 	err = log.Process("default", "Preparing configuration", func() error {
-		configPath, cleanup, err = util.WriteDefaultTempFile([]byte(input.CombineYAMLs(
-			request.ClusterConfig, request.InitConfig, request.ProviderSpecificClusterConfig,
-		)))
-		cleanuper.Add(cleanup)
-		if err != nil {
-			return fmt.Errorf("failed to write init configuration: %w", err)
-		}
+		for _, cfg := range []string{
+			request.ClusterConfig,
+			request.InitConfig,
+			request.ProviderSpecificClusterConfig,
+			request.InitResources,
+			request.Resources,
+		} {
+			configPath, cleanup, err = util.WriteDefaultTempFile([]byte(cfg))
+			cleanuper.Add(cleanup)
+			if err != nil {
+				return fmt.Errorf("failed to write configuration: %w", err)
+			}
 
-		resourcesPath, cleanup, err = util.WriteDefaultTempFile([]byte(input.CombineYAMLs(
-			request.InitResources, request.Resources,
-		)))
-		cleanuper.Add(cleanup)
-		if err != nil {
-			return fmt.Errorf("failed to write resources: %w", err)
+			configPaths = append(configPaths, configPath)
 		}
 
 		return nil
@@ -239,8 +236,7 @@ func (s *Service) abort(
 	}
 
 	bootstrapper := bootstrap.NewClusterBootstrapper(&bootstrap.Params{
-		ConfigPaths:      []string{configPath},
-		ResourcesPath:    resourcesPath,
+		ConfigPaths:      configPaths,
 		InitialState:     initialState,
 		NodeInterface:    ssh.NewNodeInterfaceWrapper(sshClient),
 		UseTfCache:       ptr.To(true),

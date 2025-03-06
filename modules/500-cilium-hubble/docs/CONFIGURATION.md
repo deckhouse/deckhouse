@@ -6,25 +6,27 @@ title: "The cilium-hubble module: configuration"
 
 {% include module-bundle.liquid %}
 
-The module will be left disabled unless `cni-cilium` is used regardless of `ciliumHubbleEnabled:` parameter.
+If the `cni-cilium` module is disabled, the `ciliumHubbleEnabled:` parameter will not affect the enabling of the `cilium-hubble` module.
 
 {% include module-settings.liquid %}
 
 ## Authentication
 
-[user-authn](/products/kubernetes-platform/documentation/v1/modules/user-authn/) module provides authentication by default. Also, externalAuthentication can be configured (see below).
+[user-authn](/products/kubernetes-platform/documentation/v1/modules/user-authn/) module provides authentication by default. Also, externalAuthentication can be configured.
 If these options are disabled, the module will use basic auth with the auto-generated password.
 
-Use kubectl to see password:
+To view the generated password, run the command:
 
 ```shell
 kubectl -n d8-system exec svc/deckhouse-leader -c deckhouse -- deckhouse-controller module values cilium-hubble -o json | jq '.ciliumHubble.internal.auth.password'
 ```
 
-Delete the Secret to re-generate password:
+To generate a new password, delete the Secret:
 
 ```shell
 kubectl -n d8-cni-cilium delete secret/hubble-basic-auth
 ```
 
-> **Note!** The `auth.password` parameter is deprecated.
+{% alert level="info" %}
+The `auth.password` parameter is deprecated.
+{% endalert %}

@@ -40,7 +40,7 @@ type callback struct {
 
 type teardownCallbacks struct {
 	mutex    sync.RWMutex
-	data     []callback
+	data     []*callback
 	exitCode int
 
 	exhausted        bool
@@ -54,8 +54,23 @@ func (c *teardownCallbacks) registerOnShutdown(name string, cb func()) {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 
-	c.data = append(c.data, callback{Name: name, Do: cb})
+	c.data = append(c.data, &callback{Name: name, Do: cb})
 	log.DebugF("teardown callback '%s' added, callbacks in queue: %d\n", name, len(c.data))
+}
+
+func (c *teardownCallbacks) replaceOnShutdown(name string, cb func()) {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+
+	for _, clb := range c.data {
+		if clb.Name == name {
+			clb.Do = cb
+			log.DebugF("teardown callback '%s' replaced, callbacks in queue: %d\n", name, len(c.data))
+			return
+		}
+	}
+
+	log.DebugF("teardown callback '%s' not found, do nothing, callbacks in queue: %d\n", name, len(c.data))
 }
 
 func (c *teardownCallbacks) shutdown(exitCode int) {
@@ -76,7 +91,7 @@ func (c *teardownCallbacks) shutdown(exitCode int) {
 		cb := c.data[i]
 		log.DebugF("teardown callback %d: '%s' started\n", i, cb.Name)
 		cb.Do()
-		c.data[i] = callback{Name: "Stub", Do: func() {}}
+		c.data[i] = &callback{Name: "Stub", Do: func() {}}
 		log.DebugF("teardown callback %d: '%s' done\n", i, cb.Name)
 	}
 
@@ -91,6 +106,10 @@ func (c *teardownCallbacks) wait() {
 
 func RegisterOnShutdown(process string, cb func()) {
 	callbacks.registerOnShutdown(process, cb)
+}
+
+func ReplaceOnShutdown(process string, cb func()) {
+	callbacks.replaceOnShutdown(process, cb)
 }
 
 func Shutdown(code int) {
@@ -159,7 +178,7 @@ func graceShutdownForSignal(interruptCh <-chan os.Signal, exitCode int, s os.Sig
 	close(callbacks.interruptedCh)
 
 	// Run all registered teardown callbacks and print an explanation at the end.
-	callbacks.data = append([]callback{{
+	callbacks.data = append([]*callback{{
 		Name: "Shutdown message",
 		Do: func() {
 			log.WarnLn(fmt.Sprintf("Graceful shutdown by %q signal ...", s.String()))

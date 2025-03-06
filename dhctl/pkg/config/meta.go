@@ -28,6 +28,7 @@ import (
 	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
 
@@ -366,7 +367,7 @@ func (m *MetaConfig) ConfigForKubeadmTemplates(nodeIP string) (map[string]interf
 	return result, nil
 }
 
-func (m *MetaConfig) ConfigForBashibleBundleTemplate(bundle, nodeIP string) (map[string]interface{}, error) {
+func (m *MetaConfig) ConfigForBashibleBundleTemplate(nodeIP string) (map[string]interface{}, error) {
 	data := make(map[string]interface{}, len(m.ClusterConfig))
 
 	for key, value := range m.ClusterConfig {
@@ -422,7 +423,6 @@ func (m *MetaConfig) ConfigForBashibleBundleTemplate(bundle, nodeIP string) (map
 		configForBashibleBundleTemplate["provider"] = m.ProviderName
 	}
 
-	configForBashibleBundleTemplate["bundle"] = bundle
 	configForBashibleBundleTemplate["cri"] = data["defaultCRI"]
 	configForBashibleBundleTemplate["kubernetesVersion"] = data["kubernetesVersion"]
 	configForBashibleBundleTemplate["nodeGroup"] = nodeGroup
@@ -655,6 +655,20 @@ func (m *MetaConfig) LoadInstallerVersion() error {
 	m.InstallerVersion = strings.TrimSpace(string(rawFile))
 
 	return nil
+}
+
+func (m *MetaConfig) GetReplicasByNodeGroupName(nodeGroupName string) int {
+	if nodeGroupName == global.MasterNodeGroupName {
+		return m.MasterNodeGroupSpec.Replicas
+	}
+
+	for _, group := range m.GetTerraNodeGroups() {
+		if group.Name == nodeGroupName {
+			return group.Replicas
+		}
+	}
+
+	return 0
 }
 
 func (r *RegistryData) ConvertToMap() map[string]interface{} {

@@ -43,6 +43,7 @@ module "master" {
   volume_type           = local.volume_type
   volume_zone           = module.volume_zone.zone
   server_group          = local.server_group
+  subnet                = local.prefix
 }
 
 module "kubernetes_data" {

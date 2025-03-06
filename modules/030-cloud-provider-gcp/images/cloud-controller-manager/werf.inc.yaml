@@ -2,10 +2,11 @@
   {{- $version := toString $key }}
   {{- $image_version := toString $key | replace "." "-" }}
   {{- if $value.ccm.gcp }}
+    {{- $src_version := toString $value.ccm.gcp | replace "/" "-"}}
     {{- $patches := (printf "/%smodules/%s-%s/images/%s" $.ModulePath $.ModulePriority $.ModuleName $.ImageName) }}
     {{- $patch := false }}
     {{- range $path, $_ := $.Files.Glob (printf "%s/*" $patches) }}
-      {{- if contains $version $path }}
+      {{- if contains $src_version $path }}
         {{- $patch = true }}
       {{- end }}
     {{- end }}
@@ -26,7 +27,7 @@ final: false
 fromImage: common/src-artifact
 {{- if $patch }}
 git:
-  - add: {{ $patches }}/patches/{{ $version }}
+  - add: {{ $patches }}/patches/{{ $src_version }}
     to: /patches
     stageDependencies:
       install:

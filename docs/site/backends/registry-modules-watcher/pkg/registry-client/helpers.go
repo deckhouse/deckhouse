@@ -16,6 +16,7 @@ package registryclient
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/url"
 	"strings"
@@ -26,23 +27,21 @@ import (
 func readAuthConfig(repo, dockerCfg string) (authn.AuthConfig, error) {
 	r, err := parse(repo)
 	if err != nil {
-		return authn.AuthConfig{}, err
+		return authn.AuthConfig{}, fmt.Errorf("parse: %w", err)
 	}
 
 	var auths dockercfgAuths
 	err = json.Unmarshal([]byte(dockerCfg), &auths)
 	if err != nil {
-		return authn.AuthConfig{}, err
+		return authn.AuthConfig{}, fmt.Errorf("json unmarshal: %w", err)
 	}
 
 	// The config should have at least one .auths.* entry
-	for repoName, repoAuth := range auths.Auths {
-		if repoName == r.Host {
-			return repoAuth, nil
-		}
+	if repoAuth, ok := auths.Auths[r.Host]; ok {
+		return repoAuth, nil
 	}
 
-	return authn.AuthConfig{}, fmt.Errorf("no auth data")
+	return authn.AuthConfig{}, errors.New("no authentication data found for the repository")
 }
 
 type dockercfgAuths struct {
@@ -50,10 +49,11 @@ type dockercfgAuths struct {
 }
 
 // parse parses url without scheme://
-// if we pass url without scheme ve've got url back with two leading slashes
+// if we pass url without scheme we've got url back with two leading slashes
 func parse(rawURL string) (*url.URL, error) {
 	if strings.HasPrefix(rawURL, "http://") || strings.HasPrefix(rawURL, "https://") {
 		return url.ParseRequestURI(rawURL)
 	}
+
 	return url.Parse("//" + rawURL)
 }

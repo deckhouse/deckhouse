@@ -1,0 +1,26 @@
+linters-settings:
+  container:
+    exclude-rules:
+      read-only-root-filesystem:
+        - kind: Deployment
+          name: documentation
+          container: web
+        - kind: Deployment
+          name: documentation
+          container: builder
+      liveness-probe:
+        - kind: Deployment
+          name: documentation
+          container: web
+      readiness-probe:
+        - kind: Deployment
+          name: documentation
+          container: web
+  module:
+    oss:
+      disable: true
+  no-cyrillic:
+    exclude-rules:
+      files:
+        - images/web/site/_data/topnav.yml
+        - images/docs-builder/modules-docs/hugo.yaml
