@@ -27,8 +27,8 @@ openvpn:
 prometheus:
     - version: 2
       description:
-        ru: Удалите поле `.auth.password`. Если в результате объект `.auth` становится пуст, удалите его.
         en: Remove the `.auth.password` field. If the `.auth` object becomes empty after this change, delete it.
+        ru: Удалите поле `.auth.password`. Если в результате объект `.auth` становится пуст, удалите его.
 upmeter:
     - version: 2
     - version: 3
