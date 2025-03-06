@@ -116,6 +116,11 @@ func (c *ComputeService) GetVMHostname(vm *v1alpha2.VirtualMachine) (string, err
 }
 
 func (d *ComputeService) AttachDiskToVM(ctx context.Context, diskName string, computeName string) error {
+	vm, err := d.GetVMByName(ctx, computeName)
+	if err != nil {
+		return err
+	}
+
 	vmbda, err := d.getVMBDA(ctx, diskName, computeName)
 	if vmbda != nil && err == nil {
 		return nil
@@ -139,7 +144,7 @@ func (d *ComputeService) AttachDiskToVM(ctx context.Context, diskName string, co
 			},
 		},
 		Spec: v1alpha2.VirtualMachineBlockDeviceAttachmentSpec{
-			VirtualMachineName: computeName,
+			VirtualMachineName: vm.Name,
 			BlockDeviceRef: v1alpha2.VMBDAObjectRef{
 				Kind: v1alpha2.VMBDAObjectRefKindVirtualDisk,
 				Name: diskName,
