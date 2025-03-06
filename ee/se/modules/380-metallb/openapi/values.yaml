@@ -54,6 +54,7 @@ properties:
               additionalProperties:
                 type: string
               type: object
+              nullable: true
             externalTrafficPolicy:
               type: string
             internalTrafficPolicy:
