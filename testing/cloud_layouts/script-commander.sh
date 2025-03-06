@@ -119,7 +119,6 @@ function prepare_environment() {
       >&2 echo 'DECKHOUSE_IMAGE_TAG environment variable is required.'
       return 1
     fi
-    DEV_BRANCH="${DECKHOUSE_IMAGE_TAG}"
 
     if [[ -z "$PREFIX" ]]; then
       # shellcheck disable=SC2016
@@ -145,6 +144,8 @@ function prepare_environment() {
       DEV_BRANCH="${INITIAL_IMAGE_TAG}"
       SWITCH_TO_IMAGE_TAG="${DECKHOUSE_IMAGE_TAG}"
       echo "Will install '${DEV_BRANCH}' first and then switch to '${SWITCH_TO_IMAGE_TAG}'"
+    else
+      DEV_BRANCH="${DECKHOUSE_IMAGE_TAG}"
     fi
 
   case "$PROVIDER" in
@@ -338,7 +339,7 @@ function wait_upmeter_green() {
     if [[ -n $upmeter_data_exists ]]; then
       statuses=$(jq -r '.cluster_agent_data[] | select(.source == "upmeter") | .data.rows[] | .probes[] | "\(.probe):\(.availability)"' <<< "$response")
     else
-      echo "Upmeter don't ready"
+      echo "  Upmeter don't ready"
       sleep "$sleep_interval"
       continue
     fi
@@ -357,7 +358,7 @@ function wait_upmeter_green() {
       echo "All components are available"
       break
     else
-      echo "Cluster components are not ready. Attempt $i/$iterations failed. Sleep for $sleep_interval seconds..."
+      echo "  Cluster components are not ready. Attempt $i/$iterations failed. Sleep for $sleep_interval seconds..."
       if [[ "$i" -eq "$iterations" ]]; then
         echo "Maximum iterations reached. Cluster components are not ready."
         exit 1
@@ -494,7 +495,7 @@ function run-test() {
     cluster_status=$(jq -r '.status' <<< "$response")
     if [ "in_sync" = "$cluster_status" ]; then
       echo "  Cluster status: $cluster_status"
-      echo "  Bootstrap completed, starting to deploy additional components"
+      echo "Bootstrap completed, starting to deploy additional components"
       break
     elif [ "creation_failed" = "$cluster_status" ]; then
       echo "  Cluster status: $cluster_status"
@@ -525,6 +526,7 @@ function run-test() {
   fi
 
   if [[ -n ${SWITCH_TO_IMAGE_TAG} ]]; then
+    echo "Starting switch deckhouse image"
     change_deckhouse_image "${SWITCH_TO_IMAGE_TAG}" || return $?
     wait_deckhouse_ready || return $?
     wait_upmeter_green || return $?
