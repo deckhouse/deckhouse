@@ -187,7 +187,7 @@ func (c *ControllerService) ControllerPublishVolume(
 
 	diskName := req.VolumeId
 
-	vm, err := c.dvpCloudAPI.ComputeService.GetVMByName(ctx, req.NodeId)
+	vm, err := c.dvpCloudAPI.ComputeService.GetVMByHostname(ctx, req.NodeId)
 	if err != nil {
 		return nil, fmt.Errorf("failed finding VM: %v, error: %w", req.NodeId, err)
 	}
@@ -240,12 +240,12 @@ func (c *ControllerService) ControllerUnpublishVolume(
 
 	diskName := req.VolumeId
 
-	vm, err := c.dvpCloudAPI.ComputeService.GetVMByName(ctx, req.NodeId)
+	vm, err := c.dvpCloudAPI.ComputeService.GetVMByHostname(ctx, req.NodeId)
 	if err != nil {
 		return nil, fmt.Errorf("failed finding VM: %v, error: %w", req.NodeId, err)
 	}
 
-	vmName := vm.Name
+	vmHostname := req.NodeId
 
 	attached, err := c.hasDiskAttachedToVM(diskName, vm)
 	if err != nil {
@@ -254,13 +254,13 @@ func (c *ControllerService) ControllerUnpublishVolume(
 	}
 
 	if !attached {
-		klog.Infof("Disk attachment %v for VM %v already detached, returning OK", diskName, vmName)
+		klog.Infof("Disk attachment %v for VM %v already detached, returning OK", diskName, vmHostname)
 		return &csi.ControllerUnpublishVolumeResponse{}, nil
 	}
 
-	err = c.dvpCloudAPI.ComputeService.DetachDiskFromVM(ctx, diskName, vmName)
+	err = c.dvpCloudAPI.ComputeService.DetachDiskFromVM(ctx, diskName, vmHostname)
 	if err != nil {
-		msg := fmt.Errorf("failed removing disk %v from VM %v, error: %w", diskName, vmName, err)
+		msg := fmt.Errorf("failed removing disk %v from VM %v, error: %w", diskName, vmHostname, err)
 		klog.Error(msg.Error())
 		return nil, msg
 	}
