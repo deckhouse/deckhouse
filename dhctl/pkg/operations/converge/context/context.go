@@ -101,7 +101,6 @@ func (c *Context) CommanderMode() bool {
 }
 
 func (c *Context) Ctx() context.Context {
-	// TODO(feat/dhctl-for-commander-bootstrap-context): check if cancellable
 	return c.ctx
 }
 
