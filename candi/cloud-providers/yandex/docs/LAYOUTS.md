@@ -86,7 +86,7 @@ dhcpOptions:
 
 In this layout, NAT (of any kind) is not used, and each node is assigned a public IP.
 
-> **Caution!** Currently, the cloud-provider-yandex module does not support Security Groups; thus, is why all cluster nodes connect directly to the Internet.
+> **Caution!** The cloud-provider-yandex module does not support Security Groups, so all cluster nodes will be available without connection restrictions.
 
 ![Yandex Cloud WithoutNAT Layout scheme](../../images/cloud-provider-yandex/layout-withoutnat.png)
 <!--- Source: https://docs.google.com/drawings/d/1I7M9DquzLNu-aTjqLx1_6ZexPckL__-501Mt393W1fw/edit --->
@@ -155,7 +155,7 @@ dhcpOptions:
 
 ## WithNATInstance
 
-In this placement strategy, Deckhouse creates a NAT instance inside new separate subnet and adds a rule to a route table containing a route to 0.0.0.0/0 with a NAT instance as the next hop.
+In this placement strategy, Deckhouse creates a NAT instance inside new separate subnet and adds a rule to a route table containing a route to `0.0.0.0/0` with a NAT instance as the next hop.
 This separate subnet is needed to avoid routing loop.
 
 If the `withNATInstance.internalSubnetID` parameter is set, the NAT instance will be created in this subnet.
