@@ -192,7 +192,11 @@ func (c *ControllerService) ControllerPublishVolume(
 		return nil, fmt.Errorf("failed finding VM: %v, error: %w", req.NodeId, err)
 	}
 
-	computeName := vm.Name
+	computeName, err := c.dvpCloudAPI.ComputeService.GetVMHostname(vm)
+	if err != nil {
+		klog.Error(err.Error())
+		return nil, err
+	}
 
 	attached, err := c.hasDiskAttachedToVM(ctx, diskName, computeName)
 	if err != nil {
