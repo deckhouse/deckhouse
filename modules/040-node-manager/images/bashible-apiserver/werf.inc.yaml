@@ -1,4 +1,4 @@
-{{- include "build-golang" . }}
+{{- include "artifact-golang" . }}
 {{- include "src-artifact" . }}
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}

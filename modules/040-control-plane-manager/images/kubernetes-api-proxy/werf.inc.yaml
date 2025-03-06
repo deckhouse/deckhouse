@@ -12,7 +12,7 @@ imageSpec:
 ---
 {{- $context := . }}
 {{- $_ := set $context "build" (dict "file" "cmd/main.go") }}
-{{- include "build-golang" $context }}
+{{- include "artifact-golang" $context }}
 ---
 image: {{ .ModuleName }}/{{ $.ImageName }}-src-artifact
 fromImage: common/src-artifact

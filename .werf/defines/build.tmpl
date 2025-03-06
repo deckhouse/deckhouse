@@ -7,6 +7,7 @@
 #   git - dict
 #       path    - Path piece after SOURCE_REPO
 #       version - tag name
+#       rm      - delete directory
 {{- define "src-artifact" }}
 {{- $patches := (printf "/%smodules/%s-%s/images/%s" .ModulePath .ModulePriority .ModuleName .ImageName) }}
 {{- $src := false }}
@@ -65,16 +66,16 @@ shell:
 {{- end }}
 {{- end }}
 
-# build-golang image renderer
+# artifact-golang image renderer
 #
 # . is dict have keys:
 #   . is context
 #   build - dict
 #       file    - A file containing the main function
 #       ldflags - additional fields for assembly
-{{- define "build-golang" }}
+{{- define "artifact-golang" }}
 ---
-# build-golang image renderer
+# artifact-golang image renderer
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
 from: {{ .Images.BASE_GOLANG_23_ALPINE }}
 final: false
@@ -126,5 +127,5 @@ imageSpec:
 # image-all renderer
 {{- include "image-distroless" . }}
 {{- include "src-artifact" . }}
-{{- include "build-golang" . }}
+{{- include "artifact-golang" . }}
 {{- end }}
