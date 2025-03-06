@@ -1,33 +1,4 @@
----
 {{- $context := . }}
 {{- $_ := set $context "git" (dict "version" "v0.0.26" "path" "rancher/local-path-provisioner.git") }}
-{{ include "src-artifact" $context }}
----
-image: {{ $.ModuleName }}/{{ $.ImageName }}
-fromImage: common/distroless
-import:
-  - image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
-    add: /local-path-provisioner
-    to: /usr/bin/local-path-provisioner
-    after: install
-imageSpec:
-  config:
-    entrypoint: ["/usr/bin/local-path-provisioner"]
----
-image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
-final: false
-from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
-import:
-- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
-  add: /src
-  to: /src
-  before: install
-mount:
-- fromPath: ~/go-pkg-cache
-  to: /go/pkg
-shell:
-  install:
-  - cd /src
-  - GOPROXY={{ $.GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags "-X main.VERSION=`cat VERSION` -extldflags -static -s -w" -o /local-path-provisioner
-  - chown -R 64535:64535 /local-path-provisioner
-  - chmod 0700 /local-path-provisioner
+{{- $_ := set $context "build" (dict "ldflags" "-X main.VERSION=`cat VERSION`") }}
+{{ include "image-all" $context }}

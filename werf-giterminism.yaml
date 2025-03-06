@@ -19,3 +19,7 @@ config:
      allowBuildDir: true
      allowFromPaths:
      - ~/go-pkg-cache
+  secrets:
+    allowEnvVariables:
+    - SOURCE_REPO
+    - GOPROXY

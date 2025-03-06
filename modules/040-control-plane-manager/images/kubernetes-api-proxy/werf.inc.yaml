@@ -3,30 +3,16 @@ image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: common/nginx-static
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
-  add: /src/kubernetes-api-proxy-reloader
+  add: /kubernetes-api-proxy
   to: /kubernetes-api-proxy-reloader
   before: install
 imageSpec:
   config:
     entrypoint: ["/opt/nginx-static/sbin/nginx", "-g", "daemon off;"]
 ---
-image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
-from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
-final: false
-import:
-  - image: {{ .ModuleName }}/{{ $.ImageName }}-src-artifact
-    add: /src
-    to: /src
-    before: install
-mount:
-  - fromPath: ~/go-pkg-cache
-    to: /go/pkg
-shell:
-  install:
-    - cd /src
-    - GOPROXY={{ $.GOPROXY }} GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o kubernetes-api-proxy-reloader cmd/main.go
-    - chown 64535:64535 kubernetes-api-proxy-reloader
-    - chmod 0700 kubernetes-api-proxy-reloader
+{{- $context := . }}
+{{- $_ := set $context "build" (dict "file" "cmd/main.go") }}
+{{- include "build-golang" $context }}
 ---
 image: {{ .ModuleName }}/{{ $.ImageName }}-src-artifact
 fromImage: common/src-artifact
@@ -37,3 +23,6 @@ git:
     stageDependencies:
       install:
         - '**/*'
+shell:
+  install:
+  - cd /src

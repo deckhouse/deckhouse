@@ -1,46 +1,11 @@
----
-image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
-fromImage: common/src-artifact
-final: false
-git:
-- add: /{{ $.ModulePath }}modules/040-{{ $.ModuleName }}/images/{{ $.ImageName }}/src
-  to: /src
-  excludePaths:
-  - "**/*.md"
-  - "**/*.yaml"
-  - hack
-  stageDependencies:
-    install:
-    - go.mod
-    - go.sum
-    - "**/*.go"
----
-image: {{ .ModuleName }}/{{ .ImageName }}-artifact
-from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
-final: false
-import:
-- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
-  add: /src
-  to: /src
-  before: install
-mount:
-- fromPath: ~/go-pkg-cache
-  to: /go/pkg
-shell:
-  install:
-  - export GOPROXY={{ $.GOPROXY }}
-  - cd /src
-  - go mod download -x
-  - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o bashible-apiserver .
-  - chown 64535:64535 bashible-apiserver
-  - chmod 0700 bashible-apiserver
+{{- include "build-golang" . }}
+{{- include "src-artifact" . }}
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-artifact
-  add: /src/bashible-apiserver
-  to: /bashible-apiserver
+  add: /bashible-apiserver
   before: setup
 git:
 {{ .Files.Get (printf "tools/build_includes/candi-%s.yaml" .Env) }}
