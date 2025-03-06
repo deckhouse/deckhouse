@@ -4019,23 +4019,6 @@ alerts:
         Soft eviction of nodefs on node {{$labels.node}} at mountpoint {{$labels.mountpoint}} is in progress.
       severity: "9"
       markupFormat: markdown
-    - name: KubernetesAPFRejectRequests
-      sourceFile: modules/011-flow-schema/monitoring/prometheus-rules/flow-schema.yaml
-      moduleUrl: 011-flow-schema
-      module: flow-schema
-      edition: ce
-      description: |
-        > This alert is experimental.
-
-        To display the APF schema queue requests, use the following expression:
-
-        ```promql
-        apiserver_flowcontrol_current_inqueue_requests{flow_schema="d8-serviceaccounts"}
-        ```
-      summary: |
-        APF flow schema d8-serviceaccounts has rejected API requests.
-      severity: "9"
-      markupFormat: markdown
     - name: KubernetesCoreDNSHasCriticalErrors
       sourceFile: modules/042-kube-dns/monitoring/prometheus-rules/kubernetes/dns.yaml
       moduleUrl: 042-kube-dns
@@ -5678,7 +5661,6 @@ modules-having-alerts:
     - control-plane-manager
     - documentation
     - extended-monitoring
-    - flow-schema
     - ingress-nginx
     - istio
     - kube-dns
