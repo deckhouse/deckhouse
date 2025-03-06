@@ -7,4 +7,4 @@
   includePaths:
     - ssh` }}
 {{- $_ := set $context "build" (dict "file" "cmd/main.go") }}
-{{ include "image-all" $context }}
+{{- include "image-all" $context }}

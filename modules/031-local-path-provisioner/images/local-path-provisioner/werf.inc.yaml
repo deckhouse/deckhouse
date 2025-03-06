@@ -1,4 +1,4 @@
 {{- $context := . }}
 {{- $_ := set $context "git" (dict "version" "v0.0.26" "path" "rancher/local-path-provisioner.git") }}
 {{- $_ := set $context "build" (dict "ldflags" "-X main.VERSION=`cat VERSION`") }}
-{{ include "image-all" $context }}
+{{- include "image-all" $context }}
