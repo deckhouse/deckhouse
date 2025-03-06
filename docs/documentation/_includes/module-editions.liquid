@@ -9,7 +9,7 @@
   <svg class="alert__icon icon--info">
     <use xlink:href="/images/sprite.svg#info-icon"></use>
   </svg>
-  <div>
+  <div markdown="0">
 {%- if editionsWithRestrictions %}
 <p>
 {%- if editionsWithRestrictionsComments['all'] -%}
@@ -40,33 +40,36 @@
 {%- endfor %}
 </strong>
 </p>
-<p>
-{{- site.data.i18n.common['module_available_without_limitations_prefix'][page.lang] }}: 
-<strong>
-{%- for edition in editionsWithoutRestrictions %}
-       {%- if site.data.editions[edition]['name_version'] %}{{ site.data.editions[edition]['name_version'] }}{% else %}{{ site.data.editions[edition]['name'] }}{% endif -%}
-{%- unless forloop.last %}, {% endunless %}
-{%- endfor %}
-</strong>
-</p>
-{%- else %}
-{%- for edition in editions %}
-  {%- if edition == "fe" %}{%  continue %}{% endif -%}
-  {%- if site.data.editions[edition]['languages'] %}
-    {%- unless site.data.editions[edition]['languages'] contains page.lang %}{% continue %}{% endunless -%}
-  {%- endif %}
-  {%- if editionsWithoutRestrictions contains edition %}{% continue %}{%- endif -%}
-  {%- assign editionsWithoutRestrictions = editionsWithoutRestrictions | push: edition %}
-{%- endfor %}
-
-<p>{{ site.data.i18n.common['module_available_editions_prefix'][page.lang] }}: 
-<strong>
-  {%- for edition in editionsWithoutRestrictions %}
-    {%- if site.data.editions[edition]['name_version'] %}{{ site.data.editions[edition]['name_version'] }}{% else %}{{ site.data.editions[edition]['name'] }}{% endif %}
+  {% if editionsWithoutRestrictions.size > 0 %}
+  <p>
+    {{- site.data.i18n.common['module_available_without_limitations_prefix'][page.lang] }}: 
+    <strong>
+    {%- for edition in editionsWithoutRestrictions %}
+           {%- if site.data.editions[edition]['name_version'] %}{{ site.data.editions[edition]['name_version'] }}{% else %}{{ site.data.editions[edition]['name'] }}{% endif -%}
     {%- unless forloop.last %}, {% endunless %}
+    {%- endfor %}
+    </strong>
+  </p>
+  {% endif %}
+{%- else %}
+  {%- for edition in editions %}
+    {%- if edition == "fe" %}{%  continue %}{% endif -%}
+    {%- if site.data.editions[edition]['languages'] %}
+      {%- unless site.data.editions[edition]['languages'] contains page.lang %}{% continue %}{% endunless -%}
+    {%- endif %}
+    {%- if editionsWithoutRestrictions contains edition %}{% continue %}{%- endif -%}
+    {%- assign editionsWithoutRestrictions = editionsWithoutRestrictions | push: edition %}
   {%- endfor %}
-</strong>
-</p>
-{%- endif %}
+  {% if editionsWithoutRestrictions.size > 0 %}
+    <p>{{ site.data.i18n.common['module_available_editions_prefix'][page.lang] }}: 
+    <strong>
+      {%- for edition in editionsWithoutRestrictions %}
+        {%- if site.data.editions[edition]['name_version'] %}{{ site.data.editions[edition]['name_version'] }}{% else %}{{ site.data.editions[edition]['name'] }}{% endif %}
+        {%- unless forloop.last %}, {% endunless %}
+      {%- endfor %}
+    </strong>
+    </p>
+    {%- endif %}
+  {%- endif %}
 </div>
 </div>

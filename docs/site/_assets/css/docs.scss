@@ -358,7 +358,7 @@
 .sidebar__wrapper-inner {
   position: -webkit-sticky;
   position: sticky;
-  top: 162px;
+  top: 135.5px;
   //width: 260px;
   height: calc(100vh - 105px);
   overflow-x: hidden;
@@ -497,6 +497,11 @@ a.comparison-table__module::after {
 }
 
 // The version used after DKP ~1.68
+
+.sidebar__badge--container {
+  display: inline-block;
+}
+
 .sidebar__badge_v2 {
   display: inline-flex;
   margin-right: 4px;
