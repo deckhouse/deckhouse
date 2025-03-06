@@ -15,6 +15,7 @@
 package retry
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"math/rand"
@@ -55,6 +56,7 @@ type Loop struct {
 	interruptable    bool
 	showError        bool
 	prefix           string
+	ctx              context.Context
 }
 
 // NewLoop create Loop with features:
@@ -94,6 +96,11 @@ func (l *Loop) BreakIf(pred BreakPredicate) *Loop {
 
 func (l *Loop) WithInterruptable(flag bool) *Loop {
 	l.interruptable = flag
+	return l
+}
+
+func (l *Loop) WithContext(ctx context.Context) *Loop {
+	l.ctx = ctx
 	return l
 }
 
@@ -140,7 +147,15 @@ func (l *Loop) Run(task func() error) error {
 
 			// Do not waitTime after the last iteration.
 			if i < l.attemptsQuantity {
-				time.Sleep(l.waitTime)
+				if l.ctx != nil {
+					select {
+					case <-l.ctx.Done():
+						return fmt.Errorf("timeout while %q: last error: %v", l.name, l.ctx.Err())
+					case <-time.After(l.waitTime):
+					}
+				} else {
+					time.Sleep(l.waitTime)
+				}
 			}
 		}
 

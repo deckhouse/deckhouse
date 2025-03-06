@@ -51,11 +51,37 @@ resource "aws_ebs_volume" "kubernetes_data" {
   }
 }
 
+resource "aws_ebs_volume" "system_registry_data" {
+  count = var.registryDataDeviceEnable ? 1 : 0
+  size  = var.node_group.instanceClass.systemRegistryDisk.sizeGb
+  type  = var.node_group.instanceClass.systemRegistryDisk.type
+  tags = merge(var.tags, {
+    Name = "${var.prefix}-system-registry-data-${var.node_index}"
+  })
+  availability_zone = local.zone
+
+  timeouts {
+    create = var.resourceManagementTimeout
+    delete = var.resourceManagementTimeout
+    update = var.resourceManagementTimeout
+  }
+}
+
 resource "aws_volume_attachment" "kubernetes_data" {
-  device_name = "/dev/xvdf"
+  device_name  = "/dev/xvdf"
   skip_destroy = true
-  volume_id   = aws_ebs_volume.kubernetes_data.id
-  instance_id = aws_instance.master.id
+  volume_id    = aws_ebs_volume.kubernetes_data.id
+  instance_id  = aws_instance.master.id
+}
+
+resource "aws_volume_attachment" "system_registry_data" {
+  count        = var.registryDataDeviceEnable ? 1 : 0
+  device_name  = "/dev/xvdg"
+  skip_destroy = false
+  volume_id    = aws_ebs_volume.system_registry_data[0].id
+  instance_id  = aws_instance.master.id
+
+  depends_on = [ aws_volume_attachment.kubernetes_data ]
 }
 
 data "aws_security_group" "ssh-accessible" {

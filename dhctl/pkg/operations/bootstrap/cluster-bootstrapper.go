@@ -219,6 +219,11 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 		log.DebugLn("Cache was dropped")
 	}
 
+	// Post initialization of metaconfig (global cache is used)
+	if err := metaConfig.PrepareAfterGlobalCacheInit(); err != nil {
+		return err
+	}
+
 	if err := b.PhasedExecutionContext.InitPipeline(stateCache); err != nil {
 		return err
 	}
@@ -273,7 +278,7 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 	}
 
 	var nodeIP string
-	var devicePath string
+	var dataDevices terraform.DataDevices
 	var resourcesTemplateData map[string]interface{}
 
 	if metaConfig.ClusterType == config.CloudClusterType {
@@ -332,10 +337,17 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 			}
 
 			nodeIP = masterOutputs.NodeInternalIP
-			devicePath = masterOutputs.KubeDataDevicePath
+			dataDevices = masterOutputs.GetDataDevices()
 
 			deckhouseInstallConfig.NodesTerraformState = make(map[string][]byte)
 			deckhouseInstallConfig.NodesTerraformState[masterNodeName] = masterOutputs.TerraformState
+
+			deckhouseInstallConfig.NodesDataDevices = make(map[string]config.NodeDataDevices)
+			dataDevices := masterOutputs.GetDataDevices()
+			deckhouseInstallConfig.NodesDataDevices[masterNodeName] = config.NodeDataDevices{
+				SystemRegistryDataDevicePath: dataDevices.SystemRegistryDataDevicePath,
+				KubeDataDevicePath:           dataDevices.KubeDataDevicePath,
+			}
 
 			masterAddressesForSSH[masterNodeName] = masterOutputs.MasterIPForSSH
 			SaveMasterHostsToCache(masterAddressesForSSH)
@@ -405,7 +417,7 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 		return nil
 	}
 
-	if err := RunBashiblePipeline(b.NodeInterface, metaConfig, nodeIP, devicePath); err != nil {
+	if err := RunBashiblePipeline(b.NodeInterface, metaConfig, nodeIP, dataDevices); err != nil {
 		return err
 	}
 

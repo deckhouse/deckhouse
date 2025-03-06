@@ -15,6 +15,7 @@
 package preflight
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -22,13 +23,15 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
 
 const (
-	minimumRequiredCPUCores       = 4
-	minimumRequiredMemoryMB       = 8192 - reservedMemoryThresholdMB
-	minimumRequiredRootDiskSizeGB = 50
+	minimumRequiredCPUCores           = 4
+	minimumRequiredMemoryMB           = 8192 - reservedMemoryThresholdMB
+	minimumRequiredRootDiskSizeGB     = 50
+	minimumRequiredRegistryDiskSizeGB = 100
 
 	reservedMemoryThresholdMB = 512
 )
@@ -45,21 +48,29 @@ func (pc *Checker) CheckCloudMasterNodeSystemRequirements() error {
 		return fmt.Errorf("unmarshal provider cluster configuration: %v", err)
 	}
 
-	var coreCountPropertyPath, ramAmountPropertyPath, rootDiskPropertyPath []string
+	var coreCountPropertyPath, ramAmountPropertyPath, rootDiskPropertyPath, registryDiskPropertyPath []string
 	switch configKind {
-	case "AWSClusterConfiguration", "GCPClusterConfiguration":
+	case "AWSClusterConfiguration":
 		rootDiskPropertyPath = []string{"masterNodeGroup", "instanceClass", "diskSizeGb"}
+		registryDiskPropertyPath = []string{"masterNodeGroup", "instanceClass", "systemRegistryDisk", "sizeGb"}
+
+	case "GCPClusterConfiguration":
+		rootDiskPropertyPath = []string{"masterNodeGroup", "instanceClass", "diskSizeGb"}
+		registryDiskPropertyPath = []string{"masterNodeGroup", "instanceClass", "systemRegistryDiskSizeGb"}
 
 	case "AzureClusterConfiguration":
 		rootDiskPropertyPath = []string{"masterNodeGroup", "instanceClass", "diskSizeGb"}
+		registryDiskPropertyPath = []string{"masterNodeGroup", "instanceClass", "systemRegistryDiskSizeGb"}
 
 	case "YandexClusterConfiguration":
 		coreCountPropertyPath = []string{"masterNodeGroup", "instanceClass", "cores"}
 		ramAmountPropertyPath = []string{"masterNodeGroup", "instanceClass", "memory"}
 		rootDiskPropertyPath = []string{"masterNodeGroup", "instanceClass", "diskSizeGB"}
+		registryDiskPropertyPath = []string{"masterNodeGroup", "instanceClass", "systemRegistryDiskSizeGb"}
 
 	case "OpenStackClusterConfiguration":
 		rootDiskPropertyPath = []string{"masterNodeGroup", "instanceClass", "rootDiskSize"}
+		registryDiskPropertyPath = []string{"masterNodeGroup", "instanceClass", "systemRegistryDiskSizeGb"}
 
 	case "VsphereClusterConfiguration":
 		coreCountPropertyPath = []string{"masterNodeGroup", "instanceClass", "numCPUs"}
@@ -68,20 +79,25 @@ func (pc *Checker) CheckCloudMasterNodeSystemRequirements() error {
 
 	case "VCDClusterConfiguration":
 		rootDiskPropertyPath = []string{"masterNodeGroup", "instanceClass", "rootDiskSizeGb"}
+		registryDiskPropertyPath = []string{"masterNodeGroup", "instanceClass", "systemRegistryDiskSizeGb"}
 
 	case "ZvirtClusterConfiguration":
 		coreCountPropertyPath = []string{"masterNodeGroup", "instanceClass", "numCPUs"}
 		ramAmountPropertyPath = []string{"masterNodeGroup", "instanceClass", "memory"}
 		rootDiskPropertyPath = []string{"masterNodeGroup", "instanceClass", "rootDiskSizeGb"}
+		registryDiskPropertyPath = []string{"masterNodeGroup", "instanceClass", "systemRegistryDiskSizeGb"}
 		// externalDiskSizeDefault = 30
+
 	case "DynamixClusterConfiguration":
 		coreCountPropertyPath = []string{"masterNodeGroup", "instanceClass", "numCPUs"}
 		ramAmountPropertyPath = []string{"masterNodeGroup", "instanceClass", "memory"}
 		rootDiskPropertyPath = []string{"masterNodeGroup", "instanceClass", "rootDiskSizeGb"}
+		registryDiskPropertyPath = []string{"masterNodeGroup", "instanceClass", "systemRegistryDiskSizeGb"}
 		// externalDiskSizeDefault = 30
 
 	case "HuaweiCloudClusterConfiguration":
 		rootDiskPropertyPath = []string{"masterNodeGroup", "instanceClass", "rootDiskSize"}
+		registryDiskPropertyPath = []string{"masterNodeGroup", "instanceClass", "systemRegistryDiskSizeGb"}
 
 	default:
 		return fmt.Errorf("unknown provider cluster configuration kind: %s", configKind)
@@ -96,7 +112,28 @@ func (pc *Checker) CheckCloudMasterNodeSystemRequirements() error {
 	if err = validateIntegerPropertyAtPath(configObject, coreCountPropertyPath, minimumRequiredCPUCores, false); err != nil {
 		return fmt.Errorf("CPU cores count: %v", err)
 	}
+	if !pc.installConfig.Registry.IsDirect() {
+		if err = validateIntegerPropertyAtPath(configObject, registryDiskPropertyPath, minimumRequiredRegistryDiskSizeGB, false); err != nil {
+			return fmt.Errorf("Registry disk capacity: %v", err)
+		}
+	}
 
+	return nil
+}
+
+func (pc *Checker) CheckSystemRegistryModuleSupport() error {
+	var cloud config.ClusterConfigCloudSpec
+	if err := json.Unmarshal(pc.metaConfig.ClusterConfig["cloud"], &cloud); err != nil {
+		return fmt.Errorf("unable to unmarshal cloud section from provider cluster configuration: %v", err)
+	}
+
+	if err := pc.metaConfig.ProviderSecondaryDevicesConfig.ValidateRegistryDataDevice(cloud.Provider); err != nil {
+		return fmt.Errorf(
+			"the module 'system-registry' is not supported with the cloud provider '%s': %v",
+			cloud.Provider,
+			err,
+		)
+	}
 	return nil
 }
 
