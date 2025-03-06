@@ -2,6 +2,22 @@
 {{- $iptables_version := "1.8.9" }}
 {{- $context := . }}
 {{- $_ := set $context "iptables_image_version" ($iptables_version | replace "." "-") }}
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+final: false
+fromImage: common/relocate-artifact
+shell:
+  beforeInstall:
+  - apt-get install -y ipset conntrack-tools
+  install:
+  - /binary_replace.sh -i "{{ $binaries }}" -o /relocate
+  - |
+    for cmd in iptables iptables-save iptables-restore ip6tables ip6tables-save ip6tables-restore ip6tables-nft ip6tables-nft-restore ip6tables-nft-save iptables-nft iptables-nft-restore iptables-nft-save; do
+      ln -f -s /iptables-wrapper "/relocate/sbin/${cmd}"
+    done
+    # broken symlinks are not imported from the artifact
+    touch /iptables-wrapper
+---
 {{- $_ := set $context "import" `
 - image: {{ .ModuleName }}/{{ .ImageName }}-binaries-artifact
   add: /relocate
@@ -23,18 +39,3 @@
   "ldflags" "-X github.com/cloudnativelabs/kube-router/v2/pkg/version.Version=`cat VERSION` -X github.com/cloudnativelabs/kube-router/v2/pkg/version.BuildDate=`date +%Y-%m-%dT%H:%M:%S%z`"
   "file" "cmd/kube-router/kube-router.go") }}
 {{- include "image-all" $context }}
----
-image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
-final: false
-fromImage: common/relocate-artifact
-shell:
-  beforeInstall:
-  - apt-get install -y ipset conntrack-tools
-  install:
-  - /binary_replace.sh -i "{{ $binaries }}" -o /relocate
-  - |
-    for cmd in iptables iptables-save iptables-restore ip6tables ip6tables-save ip6tables-restore ip6tables-nft ip6tables-nft-restore ip6tables-nft-save iptables-nft iptables-nft-restore iptables-nft-save; do
-      ln -f -s /iptables-wrapper "/relocate/sbin/${cmd}"
-    done
-    # broken symlinks are not imported from the artifact
-    touch /iptables-wrapper
