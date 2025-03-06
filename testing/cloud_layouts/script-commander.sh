@@ -119,7 +119,7 @@ function prepare_environment() {
       >&2 echo 'DECKHOUSE_IMAGE_TAG environment variable is required.'
       return 1
     fi
-    BRANCH="${DECKHOUSE_IMAGE_TAG}"
+    DEV_BRANCH="${DECKHOUSE_IMAGE_TAG}"
 
     if [[ -z "$PREFIX" ]]; then
       # shellcheck disable=SC2016
@@ -368,6 +368,49 @@ function wait_upmeter_green() {
 
 }
 
+function change_deckhouse_image() {
+  new_image_tag="${1}"
+  >&2 echo "Change Deckhouse image to ${new_image_tag}."
+  if ! $ssh_command $ssh_bastion "$ssh_user@$master_ip" sudo su -c /bin/bash <<ENDSSH; then
+export PATH="/opt/deckhouse/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+export LANG=C
+set -Eeuo pipefail
+kubectl -n d8-system set image deployment/deckhouse deckhouse=dev-registry.deckhouse.io/sys/deckhouse-oss:${new_image_tag}
+ENDSSH
+    >&2 echo "Cannot change deckhouse image to ${new_image_tag}."
+    return 1
+  fi
+}
+
+# wait_deckhouse_ready check if deckhouse Pod become ready.
+function wait_deckhouse_ready() {
+  testScript=$(cat <<"END_SCRIPT"
+export PATH="/opt/deckhouse/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+export LANG=C
+set -Eeuo pipefail
+kubectl -n d8-system get pods -l app=deckhouse
+[[ "$(kubectl -n d8-system get pods -l app=deckhouse -o 'jsonpath={..status.conditions[?(@.type=="Ready")].status}{..status.phase}')" ==  "TrueRunning" ]]
+END_SCRIPT
+)
+
+  testRunAttempts=60
+  for ((i=1; i<=$testRunAttempts; i++)); do
+    >&2 echo "Check Deckhouse Pod readiness..."
+    if $ssh_command -i "$ssh_private_key_path" $ssh_bastion "$ssh_user@$master_ip" sudo su -c /bin/bash <<<"${testScript}"; then
+      return 0
+    fi
+
+    if [[ $i < $testRunAttempts ]]; then
+      >&2 echo -n "  Deckhouse Pod not ready. Attempt $i/$testRunAttempts failed. Sleep for 30 seconds..."
+      sleep 30
+    else
+      >&2 echo -n "  Deckhouse Pod not ready. Attempt $i/$testRunAttempts failed."
+    fi
+  done
+
+  return 1
+}
+
 function run-test() {
   local payload
   local response
@@ -383,7 +426,7 @@ function run-test() {
     \"name\": \"${PREFIX}\",
     \"cluster_template_version_id\": \"${cluster_template_version_id}\",
     \"values\": {
-        \"branch\": \"${BRANCH}\",
+        \"branch\": \"${DEV_BRANCH}\",
         \"prefix\": \"a${PREFIX}\",
         \"kubernetesVersion\": \"${KUBERNETES_VERSION}\",
         \"defaultCRI\": \"${CRI}\",
@@ -469,9 +512,7 @@ function run-test() {
   done
 
   wait_upmeter_green
-
   wait_allerts_resolve
-
   set_common_ssh_parameters
 
   testScript=$(cat "$(pwd)/testing/cloud_layouts/script.d/wait_cluster_ready/test_script.sh")
@@ -481,6 +522,19 @@ function run-test() {
   else
     echo "Ingress and Istio test failure"
     return 1
+  fi
+
+  if [[ -n ${SWITCH_TO_IMAGE_TAG} ]]; then
+    change_deckhouse_image "${SWITCH_TO_IMAGE_TAG}" || return $?
+    wait_deckhouse_ready || return $?
+    wait_upmeter_green || return $?
+    wait_allerts_resolve || return $?
+    if $ssh_command $ssh_bastion "$ssh_user@$master_ip" sudo su -c /bin/bash <<<"${testScript}"; then
+      echo "Ingress and Istio test passed"
+    else
+      echo "Ingress and Istio test failure"
+      return 1
+    fi
   fi
 }
 
