@@ -141,7 +141,7 @@ function prepare_environment() {
 
     if [[ -n "$INITIAL_IMAGE_TAG" && "${INITIAL_IMAGE_TAG}" != "${DECKHOUSE_IMAGE_TAG}" ]]; then
       # Use initial image tag as devBranch setting in InitConfiguration.
-      # Then switch deploment to DECKHOUSE_IMAGE_TAG.
+      # Then switch deployment to DECKHOUSE_IMAGE_TAG.
       DEV_BRANCH="${INITIAL_IMAGE_TAG}"
       SWITCH_TO_IMAGE_TAG="${DECKHOUSE_IMAGE_TAG}"
       echo "Will install '${DEV_BRANCH}' first and then switch to '${SWITCH_TO_IMAGE_TAG}'"
