@@ -57,7 +57,7 @@ func (s *Service) Bootstrap(server pb.DHCTL_BootstrapServer) error {
 	receiveCh := make(chan *pb.BootstrapRequest)
 	sendCh := make(chan *pb.BootstrapResponse)
 	phaseSwitcher := &fsmPhaseSwitcher[*pb.BootstrapResponse, any]{
-		f: f, dataFunc: s.bootstrapSwitchPhaseData, sendCh: sendCh, next: make(chan error, 2),
+		ctx: ctx, f: f, dataFunc: s.bootstrapSwitchPhaseData, sendCh: sendCh, next: make(chan error),
 	}
 	logWriter := logger.NewLogWriter(logger.L(ctx).With(logTypeDHCTL), sendCh,
 		func(lines []string) *pb.BootstrapResponse {
@@ -116,7 +116,6 @@ connectionProcessor:
 				}
 			case *pb.BootstrapRequest_Cancel:
 				cancel()
-				phaseSwitcher.next <- phases.StopOperationCondition
 
 			default:
 				logger.L(ctx).Error("got unprocessable message",

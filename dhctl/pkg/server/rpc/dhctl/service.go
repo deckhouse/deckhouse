@@ -141,6 +141,7 @@ func startSender[Request, Response proto.Message](
 }
 
 type fsmPhaseSwitcher[T proto.Message, OperationPhaseDataT any] struct {
+	ctx      context.Context
 	f        *fsm.FiniteStateMachine
 	dataFunc func(
 		completedPhase phases.OperationPhase,
@@ -160,6 +161,11 @@ func (b *fsmPhaseSwitcher[T, OperationPhaseDataT]) switchPhase(
 	nextPhase phases.OperationPhase,
 	nextPhaseCritical bool,
 ) error {
+	// TODO(feat/dhctl-for-commander-bootstrap-context): make ctx required
+	if b.ctx == nil {
+		b.ctx = context.Background()
+	}
+
 	err := b.f.Event("wait")
 	if err != nil {
 		return fmt.Errorf("changing state to waiting: %w", err)
@@ -178,10 +184,20 @@ func (b *fsmPhaseSwitcher[T, OperationPhaseDataT]) switchPhase(
 
 	b.sendCh <- data
 
-	switchErr, ok := <-b.next
-	if !ok {
-		return fmt.Errorf("server stopped, cancel task")
+	var (
+		switchErr error
+		ok        bool
+	)
+
+	select {
+	case switchErr, ok = <-b.next:
+		if !ok {
+			return fmt.Errorf("server stopped, cancel task")
+		}
+	case <-b.ctx.Done():
+		switchErr = fmt.Errorf("%w: %w", phases.StopOperationCondition, b.ctx.Err())
 	}
+
 	return switchErr
 }
 
