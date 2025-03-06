@@ -339,7 +339,6 @@ shell:
 # Final image
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: common/alt-p11
-fromCacheVersion: "2025-03-08"
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-chroot-artifact
   add: /chroot
@@ -427,7 +426,6 @@ shell:
   # replace pcre with version with jit support
   - echo "jit support"
   - ln -sf libpcre.so.1.2.13 /chroot/lib64/libpcre.so.3
-  - ls -l /chroot/lib64/libpcre.so.3
   # cve bash scripts
   - rm -rf /chroot/etc/nginx/owasp-modsecurity-crs/util
 imageSpec:
