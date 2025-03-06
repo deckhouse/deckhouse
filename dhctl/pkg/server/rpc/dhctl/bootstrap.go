@@ -57,7 +57,7 @@ func (s *Service) Bootstrap(server pb.DHCTL_BootstrapServer) error {
 	receiveCh := make(chan *pb.BootstrapRequest)
 	sendCh := make(chan *pb.BootstrapResponse)
 	phaseSwitcher := &fsmPhaseSwitcher[*pb.BootstrapResponse, any]{
-		ctx: ctx, f: f, dataFunc: s.bootstrapSwitchPhaseData, sendCh: sendCh, next: make(chan error),
+		f: f, dataFunc: s.bootstrapSwitchPhaseData, sendCh: sendCh, next: make(chan error),
 	}
 	logWriter := logger.NewLogWriter(logger.L(ctx).With(logTypeDHCTL), sendCh,
 		func(lines []string) *pb.BootstrapResponse {
@@ -93,7 +93,7 @@ connectionProcessor:
 					continue connectionProcessor
 				}
 				go func() {
-					result := s.bootstrapSafe(ctx, message.Start, phaseSwitcher.switchPhase, logWriter)
+					result := s.bootstrapSafe(ctx, message.Start, phaseSwitcher.switchPhase(ctx), logWriter)
 					sendCh <- &pb.BootstrapResponse{Message: &pb.BootstrapResponse_Result{Result: result}}
 				}()
 
@@ -132,18 +132,10 @@ func (s *Service) bootstrapSafe(
 	switchPhase phases.DefaultOnPhaseFunc,
 	logWriter io.Writer,
 ) (result *pb.BootstrapResult) {
-	logger.L(ctx).Info("feat/dhctl-for-commander-bootstrap-context started")
-
 	defer func() {
 		if r := recover(); r != nil {
 			result = &pb.BootstrapResult{Err: panicMessage(ctx, r)}
 		}
-
-		logger.L(ctx).Info(
-			"feat/dhctl-for-commander-bootstrap-context stopped",
-			slog.String("error", result.Err),
-			slog.Int("state_len", len(result.State)),
-		)
 	}()
 
 	return s.bootstrap(ctx, request, switchPhase, logWriter)
@@ -282,9 +274,7 @@ func (s *Service) bootstrap(
 		KubernetesInitParams:       nil,
 	})
 
-	logger.L(ctx).Info("feat/dhctl-for-commander-bootstrap-context bootstrap-started")
 	bootstrapErr := bootstrapper.Bootstrap(ctx)
-	logger.L(ctx).Info("feat/dhctl-for-commander-bootstrap-context bootstrap-stopped")
 	state := bootstrapper.GetLastState()
 	stateData, marshalErr := json.Marshal(state)
 	err = errors.Join(bootstrapErr, marshalErr)

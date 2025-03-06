@@ -93,7 +93,7 @@ connectionProcessor:
 					continue connectionProcessor
 				}
 				go func() {
-					result := s.destroySafe(ctx, message.Start, phaseSwitcher.switchPhase, logWriter)
+					result := s.destroySafe(ctx, message.Start, phaseSwitcher.switchPhase(ctx), logWriter)
 					sendCh <- &pb.DestroyResponse{Message: &pb.DestroyResponse_Result{Result: result}}
 				}()
 

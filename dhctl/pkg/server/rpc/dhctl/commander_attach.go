@@ -90,7 +90,7 @@ connectionProcessor:
 					continue connectionProcessor
 				}
 				go func() {
-					result := s.commanderAttachSafe(ctx, message.Start, phaseSwitcher.switchPhase, logWriter)
+					result := s.commanderAttachSafe(ctx, message.Start, phaseSwitcher.switchPhase(ctx), logWriter)
 					sendCh <- &pb.CommanderAttachResponse{Message: &pb.CommanderAttachResponse_Result{Result: result}}
 				}()
 
