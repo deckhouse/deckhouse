@@ -19,8 +19,13 @@ shell:
   - cd /usr/src/app
   - git clone --depth 1 --branch v{{ $grafanaVersion }} {{ $.SOURCE_REPO }}/grafana/grafana.git .
   - git clone --depth 1 --branch v{{ $grafanaVersion }} {{ $.SOURCE_REPO }}/grafana/grafana-deps.git /grafana-public
-  - git clone --depth 1 {{ $.SOURCE_REPO }}/grafana/grafana-plugins.git /grafana-plugins
   - find /patches -name '*.patch' -exec git apply {} \;
+  - mkdir -p /grafana-plugins
+  - cd /grafana-plugins
+  - git init
+  - git remote add origin {{ $.SOURCE_REPO }}/grafana/grafana-plugins.git
+  - git fetch origin 2184f7ebebe08585f0a1fd9ff7b2bca3bedcc5a6
+  - git reset --hard FETCH_HEAD
   - rm -rf /usr/src/app/.git /grafana-public/.git /grafana-plugins/.git /src/wire/.git
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-go-builder
