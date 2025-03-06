@@ -1,0 +1,15 @@
+[Unit]
+Description=Shutdown inhibitor to allow manual Pod eviction
+Documentation=https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/node-manager/
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Environment="PATH=/opt/deckhouse/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin"
+ExecStart=/opt/deckhouse/bin/node-shutdown-inhibitor
+Restart=always
+StartLimitInterval=0
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

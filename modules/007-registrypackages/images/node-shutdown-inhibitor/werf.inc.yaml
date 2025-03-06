@@ -5,13 +5,13 @@ image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
 final: false
 fromImage: common/src-artifact
 git:
-- add: /{{ $.ModulePath }}/modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
+- add: /{{ $.ModulePath }}modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
   to: /src/scripts
   stageDependencies:
     setup:
     - '**/*'
-- add: /{{ $.ModulePath }}/modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/src
-  to: /src/wrapper
+- add: /{{ $.ModulePath }}modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/src
+  to: /src/inhibitor
   stageDependencies:
     setup:
     - '**/*'
@@ -23,29 +23,25 @@ import:
   add: /
   to: /
   includePaths:
-  - systemctl-power-commands-wrapper
+  - node-shutdown-inhibitor
+  - node-shutdown-inhibitor.service
   - install
   - uninstall
   before: setup
 imageSpec:
   config:
-    labels: {"distro": "all", "version": "all", "systemctl-power-commands-wrapper": "{{ $version }}" }
+    labels: {"distro": "all", "version": "all", "node-shutdown-inhibitor": "{{ $version }}" }
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
 final: false
-from: {{ $.Images.BASE_ALPINE }}
+from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
   add: /src
   to: /src
   before: install
 shell:
-  beforeInstall:
-  {{- include "alpine packages proxy" . | nindent 2 }}
-  - apk add --no-cache make gcc musl-dev
   setup:
-    - cd /src/wrapper
-    - make
-    - mv ./systemctl-power-commands-wrapper /
-    - mv /src/scripts/* /
-    - chmod +x /systemctl-power-commands-wrapper /install /uninstall
+  - cd /src/inhibitor
+  - GOPROXY={{ .GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-w -s" -o /node-shutdown-inhibitor ./cmd/node-shutdown-inhibitor
+  - mv /src/scripts/* /
