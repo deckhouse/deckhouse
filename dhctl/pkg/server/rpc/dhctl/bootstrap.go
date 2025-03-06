@@ -116,6 +116,7 @@ connectionProcessor:
 				}
 			case *pb.BootstrapRequest_Cancel:
 				cancel()
+				phaseSwitcher.next <- phases.StopOperationCondition
 
 			default:
 				logger.L(ctx).Error("got unprocessable message",
