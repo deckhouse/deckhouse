@@ -98,65 +98,33 @@ func (t *Tunnel) upNewTunnel(oldId int) (int, error) {
 
 func (t *Tunnel) acceptTunnelConnection(id int, remoteAddress string, listener net.Listener) {
 	for {
-		client, err := listener.Accept()
+		localConn, err := listener.Accept()
 		if err != nil {
 			e := fmt.Errorf("Accept(): %s", err.Error())
 			t.errorCh <- tunnelWaitResult{
 				id:  id,
 				err: e,
 			}
-			return
+			continue
 		}
 
-		log.DebugF("[%d] connection accepted. Try to connect to local %s\n", id, remoteAddress)
-
-		remote, err := net.Dial("tcp", remoteAddress)
+		remoteConn, err := t.sshClient.Dial("tcp", remoteAddress)
 		if err != nil {
 			e := fmt.Errorf("Cannot dial to %s: %s", remoteAddress, err.Error())
 			t.errorCh <- tunnelWaitResult{
 				id:  id,
 				err: e,
 			}
-			return
+			continue
 		}
 
-		log.DebugF("[%d] Connected to remote %s\n", id, remoteAddress)
-
-		// handle the connection in another goroutine, so we can support multiple concurrent
-		// connections on the same port
-		go t.handleClient(id, remote, client)
+		go func() {
+			defer localConn.Close()
+			defer remoteConn.Close()
+			go io.Copy(remoteConn, localConn)
+			io.Copy(localConn, remoteConn)
+		}()
 	}
-}
-
-func (t *Tunnel) handleClient(id int, client net.Conn, remote net.Conn) {
-	defer func() {
-		err := client.Close()
-		if err != nil {
-			log.DebugF("[%d] Cannot close connection: %s\n", id, err)
-		}
-	}()
-
-	chDone := make(chan struct{}, 2)
-
-	// Start remote -> local data transfer
-	go func() {
-		_, err := io.Copy(client, remote)
-		if err != nil {
-			log.WarnF(fmt.Sprintf("[%d] Error while copy remote->local: %s\n", id, err))
-		}
-		chDone <- struct{}{}
-	}()
-
-	// Start local -> remote data transfer
-	go func() {
-		_, err := io.Copy(remote, client)
-		if err != nil {
-			log.WarnF(fmt.Sprintf("[%d] Error while copy local->remote: %s\n", id, err))
-		}
-		chDone <- struct{}{}
-	}()
-
-	<-chDone
 }
 
 func (t *Tunnel) HealthMonitor(errorOutCh chan<- error) {
