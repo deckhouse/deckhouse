@@ -3,7 +3,7 @@
 {{- $istioImageVersion := (printf "v%s" (replace "." "x" $istioVersion)) }} {{- /* 1.24.3 -> v1x24x3 */}}
 {{- $istioProxyCacheRev := "v1.21.6-5c3dc559371181d5baa4a7533c36f2370fc97581-alt-v1" }}
 {{- $istioProxyDepsRev := "v1.21.6-5c3dc559371181d5baa4a7533c36f2370fc97581-alt-v1" }}
-{{- $llvmRev := "llvmorg-17.0.6" }}
+{{- $llvmRev := "llvmorg-14.0.6" }}
 {{- $goVersion := "1.23.1" }}
 {{- $protocVersion := "22.3" }}
 {{- $bazelVersions := "6.5.0" }}
