@@ -124,10 +124,10 @@ index 36bd367da..ae2c6fe82 100644
 +dynamicforward:dynamicforward
 diff --git a/plugin/dynamicforward/dynamicforward.go b/plugin/dynamicforward/dynamicforward.go
 new file mode 100644
-index 000000000..2d92e8b3b
+index 000000000..6eac767f9
 --- /dev/null
 +++ b/plugin/dynamicforward/dynamicforward.go
-@@ -0,0 +1,70 @@
+@@ -0,0 +1,71 @@
 +package dynamicforward
 +
 +import (
@@ -149,7 +149,7 @@ index 000000000..2d92e8b3b
 +	forwardTo   []string
 +	mu          sync.RWMutex
 +	forwarder   *forward.Forward
-+	options     *forward.Options
++	options     proxy.Options
 +	cond        *sync.Cond
 +}
 +
@@ -177,6 +177,7 @@ index 000000000..2d92e8b3b
 +		proxyInstance.SetExpire(config.Expire)
 +		proxyInstance.SetReadTimeout(config.HealthCheck)
 +		newForwarder.SetProxy(proxyInstance)
++		newForwarder.SetProxyOptions(df.options)
 +	}
 +
 +	oldForwarder := df.forwarder
@@ -200,10 +201,10 @@ index 000000000..2d92e8b3b
 +func (df *DynamicForward) Name() string { return "dynamicforward" }
 diff --git a/plugin/dynamicforward/setup.go b/plugin/dynamicforward/setup.go
 new file mode 100644
-index 000000000..f3ba7c411
+index 000000000..c8f3e3298
 --- /dev/null
 +++ b/plugin/dynamicforward/setup.go
-@@ -0,0 +1,76 @@
+@@ -0,0 +1,67 @@
 +package dynamicforward
 +
 +import (
@@ -211,7 +212,6 @@ index 000000000..f3ba7c411
 +	"github.com/coredns/caddy"
 +	"github.com/coredns/coredns/core/dnsserver"
 +	"github.com/coredns/coredns/plugin"
-+	"github.com/coredns/coredns/plugin/forward"
 +	"log"
 +	"sync"
 +)
@@ -220,17 +220,9 @@ index 000000000..f3ba7c411
 +
 +func setup(c *caddy.Controller) error {
 +
-+	version := "0.3.2"
++	version := "0.3.3"
 +
 +	log.Printf("\033[34m[dynamicforward] version: %s\033[0m\n", version)
-+
-+	// While unused, need add func SetOptions in plugin forward.
-+	options := forward.Options{
-+		ForceTCP:           false,
-+		PreferUDP:          true,
-+		HCRecursionDesired: false,
-+		HCDomain:           "",
-+	}
 +
 +	// parse config
 +	config, err := ParseConfig(c)
@@ -242,7 +234,7 @@ index 000000000..f3ba7c411
 +		Namespace:   config.Namespace,
 +		ServiceName: config.ServiceName, //kubernetes.io/service-name=d8-kube-dns
 +		forwarder:   nil,
-+		options:     &options,
++		options:     config.opts,
 +		cond:        sync.NewCond(&sync.Mutex{}),
 +	}
 +
@@ -282,15 +274,17 @@ index 000000000..f3ba7c411
 +}
 diff --git a/plugin/dynamicforward/utils.go b/plugin/dynamicforward/utils.go
 new file mode 100644
-index 000000000..d2cb6f40e
+index 000000000..68ed10021
 --- /dev/null
 +++ b/plugin/dynamicforward/utils.go
-@@ -0,0 +1,73 @@
+@@ -0,0 +1,100 @@
 +package dynamicforward
 +
 +import (
 +	"fmt"
 +	"github.com/coredns/caddy"
++	"github.com/coredns/coredns/plugin/pkg/proxy"
++	"strconv"
 +	"time"
 +)
 +
@@ -300,6 +294,7 @@ index 000000000..d2cb6f40e
 +	PortName    string
 +	Expire      time.Duration
 +	HealthCheck time.Duration
++	opts        proxy.Options
 +}
 +
 +// ParseConfig parse conf CoreFile
@@ -307,6 +302,12 @@ index 000000000..d2cb6f40e
 +	config := &DynamicForwardConfig{
 +		Expire:      30 * time.Minute, // Default value
 +		HealthCheck: 10 * time.Second, // Default value
++		opts: proxy.Options{
++			ForceTCP:           false,
++			PreferUDP:          false,
++			HCRecursionDesired: true,
++			HCDomain:           ".",
++		},
 +	}
 +
 +	c.RemainingArgs()
@@ -346,6 +347,24 @@ index 000000000..d2cb6f40e
 +				return nil, fmt.Errorf("invalid health_check duration: %v", err)
 +			}
 +			config.HealthCheck = duration
++		case "force_tcp":
++			if !c.NextArg() {
++				return nil, c.ArgErr()
++			}
++			forceTCP, err := strconv.ParseBool(c.Val())
++			if err != nil {
++				return nil, fmt.Errorf("invalid force_tcp: %v", err)
++			}
++			config.opts.ForceTCP = forceTCP
++		case "prefer_udp":
++			if !c.NextArg() {
++				return nil, c.ArgErr()
++			}
++			preferUDP, err := strconv.ParseBool(c.Val())
++			if err != nil {
++				return nil, fmt.Errorf("invalid prefer_udp: %v", err)
++			}
++			config.opts.PreferUDP = preferUDP
 +
 +		default:
 +			return nil, c.Errf("unknown parameter: %s", c.Val())
@@ -650,3 +669,19 @@ index 000000000..470de4459
 +	// callback onUpdate
 +	onUpdate(serverList)
 +}
+diff --git a/plugin/forward/forward.go b/plugin/forward/forward.go
+index cb22391e2..2cef4952c 100644
+--- a/plugin/forward/forward.go
++++ b/plugin/forward/forward.go
+@@ -68,6 +68,11 @@ func New() *Forward {
+ 	return f
+ }
+
++// SetProxyOptions setup proxy options
++func (f *Forward) SetProxyOptions(opts proxy.Options) {
++	f.opts = opts
++}
++
+ // SetProxy appends p to the proxy list and starts healthchecking.
+ func (f *Forward) SetProxy(p *proxy.Proxy) {
+ 	f.proxies = append(f.proxies, p)
