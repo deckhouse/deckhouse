@@ -78,7 +78,6 @@ EOF
 
 
 set -Eeo pipefail
-#shopt -s inherit_errexit
 shopt -s failglob
 
 function prepare_environment() {
@@ -301,29 +300,32 @@ function wait_allerts_resolve() {
   for i in $(seq 1 $iterations); do
 
     response=$(get_cluster_status)
-    mapfile -t alerts < <(jq -r '.cluster_agent_data[] | select(.source == "overview") | .data.warnings.firing_alerts[].alert' <<< "$response")
-      alerts_is_ok=true
-      for alert in "${alerts[@]}"; do
-        # Check if the alert is in the allow list
-        if ! [[ "${allow_alerts[*]}" =~ ${alert} ]]; then
-          echo "Error: Unexpected alert: '$alert'"
-          alerts_is_ok=false
-        else
-          echo "Alert '$alert' ignored"
-        fi
-      done
-
-      if $alerts_is_ok; then
-        echo "All alerts are in the allow list."
-        break
+    alerts=()
+    while IFS= read -r alert; do
+      alerts+=("$alert")
+    done < <(jq -r '.cluster_agent_data[] | select(.source == "overview") | .data.warnings.firing_alerts[].alert' <<< "$response")
+    alerts_is_ok=true
+    for alert in "${alerts[@]}"; do
+      # Check if the alert is in the allow list
+      if ! [[ "${allow_alerts[*]}" =~ ${alert} ]]; then
+        echo "Error: Unexpected alert: '$alert'"
+        alerts_is_ok=false
       else
-        echo "Cluster components are not ready. Attempt $i/$iterations failed. Sleep for $sleep_interval seconds..."
-        if [[ "$i" -eq "$iterations" ]]; then
-          echo "Maximum iterations reached. Cluster components are not ready."
-          exit 1
-        fi
+        echo "Alert '$alert' ignored"
       fi
-      sleep "$sleep_interval"
+    done
+
+    if $alerts_is_ok; then
+      echo "All alerts are in the allow list."
+      break
+    else
+      echo "Cluster components are not ready. Attempt $i/$iterations failed. Sleep for $sleep_interval seconds..."
+      if [[ "$i" -eq "$iterations" ]]; then
+        echo "Maximum iterations reached. Cluster components are not ready."
+        exit 1
+      fi
+    fi
+    sleep "$sleep_interval"
 
   done
 }
@@ -395,13 +397,13 @@ END_SCRIPT
 )
 
   testRunAttempts=60
-  for ((i=1; i<=$testRunAttempts; i++)); do
+  for ((i=1; i<=testRunAttempts; i++)); do
     >&2 echo "Check Deckhouse Pod readiness..."
-    if $ssh_command -i "$ssh_private_key_path" $ssh_bastion "$ssh_user@$master_ip" sudo su -c /bin/bash <<<"${testScript}"; then
+    if $ssh_command $ssh_bastion "$ssh_user@$master_ip" sudo su -c /bin/bash <<<"${testScript}"; then
       return 0
     fi
 
-    if [[ $i < $testRunAttempts ]]; then
+    if [[ $i -lt $testRunAttempts ]]; then
       >&2 echo -n "  Deckhouse Pod not ready. Attempt $i/$testRunAttempts failed. Sleep for 30 seconds..."
       sleep 30
     else
@@ -452,7 +454,7 @@ function run-test() {
     -w "\n%{http_code}")
 
   http_code=$(echo "$response" | tail -n 1)
-  response=$(echo "$response" | head -n -1)
+  response=$(echo "$response" | sed '$d')
 
   # Check for HTTP errors
   if [[ ${http_code} -ge 400 ]]; then
@@ -531,6 +533,8 @@ function run-test() {
     wait_deckhouse_ready || return $?
     wait_upmeter_green || return $?
     wait_allerts_resolve || return $?
+
+    testScript=$(cat "$(pwd)/testing/cloud_layouts/script.d/wait_cluster_ready/test_script.sh")
     if $ssh_command $ssh_bastion "$ssh_user@$master_ip" sudo su -c /bin/bash <<<"${testScript}"; then
       echo "Ingress and Istio test passed"
     else
@@ -562,7 +566,7 @@ function cleanup() {
     -w "\n%{http_code}")
 
   http_code=$(echo "$response" | tail -n 1)
-  response=$(echo "$response" | head -n -1)
+  response=$(echo "$response" | sed '$d')
 
   # Check for HTTP errors
   if [[ ${http_code} -ge 400 ]]; then
