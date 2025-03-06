@@ -23,7 +23,7 @@ lang: ru
 
 ### Требования
 
-- Наличие развернутой и настроенной СХД с подключением через SCSI.
+- Наличие развернутой и настроенной СХД с подключением через iSCSI/FC.
 - Уникальные iqn в /etc/iscsi/initiatorname.iscsi на каждой из Kubernetes Nodes
 
 ## Быстрый старт
@@ -56,7 +56,7 @@ kubectl get module csi-scsi-generic -w
 
 ### Создание SCSITarget
 
-Для создания SCSITarget необходимо использовать ресурс [SCSITarget](./cr.html#scsitarget). Пример команд для создания такого ресурса:
+Для создания SCSITarget необходимо использовать ресурс `SCSITarget`. Пример команд для создания такого ресурса:
 
 ```yaml
 kubectl apply -f -<<EOF
@@ -98,6 +98,32 @@ EOF
 
 ```
 
+
+Пример команд для FC ресурса:
+
+```shell
+kubectl apply -f -<<EOF
+apiVersion: storage.deckhouse.io/v1alpha1
+kind: SCSITarget
+metadata:
+  name: scsi-target-2
+spec:
+  fibreChannel:
+    WWNs:
+      - 00:00:00:00:00:00:00:00
+      - 00:00:00:00:00:00:00:01
+  deviceTemplate:
+    metadata:
+      labels:
+        some-label-key: some-label-value1
+EOF
+
+```
+
+
+
+
+
 Обратите внимание, что в примере выше используются два SCSITarget. Таким образом можно создать несколько SCSITarget как для одного, так и для разных СХД. Это позволяет использовать multipath для повышения отказоустойчивости и производительности.
 
 - Проверить создание объекта можно командой (Phase должен быть `Created`):
@@ -108,7 +134,7 @@ kubectl get scsitargets.storage.deckhouse.io <имя scsitarget>
 
 ### Создание StorageClass
 
-Для создания StorageClass необходимо использовать ресурс [SCSIStorageClass](./cr.html#scsistorageclass). Пример команд для создания такого ресурса:
+Для создания StorageClass необходимо использовать ресурс `SCSIStorageClass`. Пример команд для создания такого ресурса:
 
 ```yaml
 kubectl apply -f -<<EOF
@@ -125,7 +151,6 @@ EOF
 ```
 
 Обратите внимание на `scsiDeviceSelector`. Этот параметр позволяет выбрать SCSITarget для создания PV по меткам. В примере выше выбираются все SCSITarget с меткой `my-key: some-label-value`. Эта метка будет выставлена на все девайсы, которые будут обнаружены в указанных SCSITarget.
-
 - Проверить создание объекта можно командой (Phase должен быть `Created`):
 
 ```shell

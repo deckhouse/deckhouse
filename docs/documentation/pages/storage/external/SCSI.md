@@ -22,7 +22,7 @@ Not supported:
 
 ### Requirements
 
-- A deployed and configured storage system with SCSI connections.
+- A deployed and configured storage system with iSCSI/FC connections.
 - Unique iqn values in /etc/iscsi/initiatorname.iscsi on each Kubernetes Node.
 
 ## Quick Start
@@ -95,6 +95,26 @@ spec:
     - 192.168.1.2
 EOF
 
+```
+
+An example of commands to create a resource with FC connection:
+
+```shell
+kubectl apply -f -<<EOF
+apiVersion: storage.deckhouse.io/v1alpha1
+kind: SCSITarget
+metadata:
+  name: scsi-target-2
+spec:
+  fibreChannel:
+    WWNs:
+      - 00:00:00:00:00:00:00:00
+      - 00:00:00:00:00:00:00:01
+  deviceTemplate:
+    metadata:
+      labels:
+        some-label-key: some-label-value1
+EOF
 ```
 
 Note that the example above uses two SCSITargets. You can create multiple SCSITargets for either the same or different storage systems. This allows for the use of multipath to improve failover and performance.
