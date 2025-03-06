@@ -52,12 +52,7 @@ func (c *Cloud) InstanceID(ctx context.Context, nodeName types.NodeName) (string
 		return "", err
 	}
 
-	instanceID, err := c.dvpService.ComputeService.GetVMHostname(vm)
-	if err != nil {
-		return "", err
-	}
-
-	return instanceID, nil
+	return vm.Name, nil
 }
 
 func (c *Cloud) InstanceType(_ context.Context, _ types.NodeName) (string, error) {
@@ -99,9 +94,9 @@ func (c *Cloud) InstanceShutdownByProviderID(ctx context.Context, providerID str
 }
 
 func (c *Cloud) getVMByNodeName(ctx context.Context, nodeName types.NodeName) (*v1alpha2.VirtualMachine, error) {
-	vmName := MapNodeNameToVMName(nodeName)
+	vmHostname := MapNodeNameToVMName(nodeName)
 
-	vm, err := c.dvpService.ComputeService.GetVMByName(ctx, vmName)
+	vm, err := c.dvpService.ComputeService.GetVMByHostname(ctx, vmHostname)
 	if err != nil && errors.Is(err, api.ErrNotFound) {
 		return nil, cloudprovider.InstanceNotFound
 	} else if err != nil {
