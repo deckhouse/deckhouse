@@ -100,7 +100,6 @@ shell:
   - sudo -u cilium sed -i "/\$(SUDO) apt install -y clang-17 llvm-17-dev lld-17 clang-format-17/d" Makefile
   #
   - sudo -u cilium sed -i '\#"/usr/include"#a \        "/usr/lib/llvm-17.0/lib64/clang/17/include",' bazel/toolchains/BUILD
-  - sudo -u cilium sed -i '\#"/usr/include"#a \        "/usr/bin/../lib64/gcc/x86_64-alt-linux/11",' bazel/toolchains/BUILD
   - sudo -u cilium sed -i '134i \        "--gcc-install-dir=/usr/bin/../lib64/gcc/x86_64-alt-linux/11",' bazel/toolchains/BUILD
   #
   #- sudo -u cilium PATH=${PATH} bazel fetch //:cilium-envoy-starter //:cilium-envoy
