@@ -57,7 +57,7 @@ func (s *Service) Bootstrap(server pb.DHCTL_BootstrapServer) error {
 	receiveCh := make(chan *pb.BootstrapRequest)
 	sendCh := make(chan *pb.BootstrapResponse)
 	phaseSwitcher := &fsmPhaseSwitcher[*pb.BootstrapResponse, any]{
-		f: f, dataFunc: s.bootstrapSwitchPhaseData, sendCh: sendCh, next: make(chan error),
+		f: f, dataFunc: s.bootstrapSwitchPhaseData, sendCh: sendCh, next: make(chan error, 2),
 	}
 	logWriter := logger.NewLogWriter(logger.L(ctx).With(logTypeDHCTL), sendCh,
 		func(lines []string) *pb.BootstrapResponse {
