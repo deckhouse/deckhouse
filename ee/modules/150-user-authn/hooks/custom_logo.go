@@ -65,7 +65,7 @@ func customLogoHandler(input *go_hook.HookInput) error {
 
 	md5Sum := md5.Sum([]byte(sum))
 
-	input.PatchCollector.Create(cm, object_patch.UpdateIfExists())
+	input.PatchCollector.CreateOrUpdate(cm)
 	input.Values.Set("userAuthn.internal.customLogo.enabled", true)
 	input.Values.Set("userAuthn.internal.customLogo.checksum", fmt.Sprintf("%x", md5Sum))
 

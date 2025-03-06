@@ -152,7 +152,7 @@ func createMetalLoadBalancerClass(input *go_hook.HookInput, mlbcInfo *MetalLoadB
 	if err != nil {
 		return
 	}
-	input.PatchCollector.Create(mlbcUnstructured, object_patch.UpdateIfExists())
+	input.PatchCollector.CreateOrUpdate(mlbcUnstructured)
 	input.Logger.Info("MetalLoadBalancerClass created", "name", mlbcInfo.Name)
 }
 

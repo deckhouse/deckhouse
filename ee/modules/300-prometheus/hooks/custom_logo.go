@@ -63,7 +63,7 @@ func customLogoHandler(input *go_hook.HookInput) error {
 
 	md5Sum := md5.Sum([]byte(logoData))
 
-	input.PatchCollector.Create(cm, object_patch.UpdateIfExists())
+	input.PatchCollector.CreateOrUpdate(cm)
 	input.Values.Set("prometheus.internal.grafana.customLogo.enabled", true)
 	input.Values.Set("prometheus.internal.grafana.customLogo.checksum", fmt.Sprintf("%x", md5Sum))
 

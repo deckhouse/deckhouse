@@ -19,7 +19,6 @@ import (
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
-	"github.com/flant/shell-operator/pkg/kube/object_patch"
 	"github.com/pkg/errors"
 	certificatesv1 "k8s.io/api/certificates/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -122,7 +121,7 @@ func generateStaticKubeconfigSecret(input *go_hook.HookInput, dc dependency.Cont
 		return errors.Wrap(err, "failed to convert secret to unstructured")
 	}
 
-	input.PatchCollector.Create(secretUnstructured, object_patch.UpdateIfExists())
+	input.PatchCollector.CreateOrUpdate(secretUnstructured)
 
 	return nil
 }

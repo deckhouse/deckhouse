@@ -354,7 +354,7 @@ func generateConfig(input *go_hook.HookInput) error {
 		},
 		Data: map[string][]byte{"vector.json": configContent},
 	}
-	input.PatchCollector.Create(secret, object_patch.UpdateIfExists())
+	input.PatchCollector.CreateOrUpdate(secret)
 
 	event := &eventsv1.Event{
 		TypeMeta: metav1.TypeMeta{
