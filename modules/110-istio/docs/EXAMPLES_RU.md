@@ -4,7 +4,7 @@ title: "Модуль istio: примеры"
 
 ## Circuit Breaker
 
-Для выявления проблемных эндпоинтов используются настройки `outlierDetection` в custom resource [DestinationRule](istio-cr.html#destinationrule).
+Для выявления проблемных эндпоинтов используются настройки `outlierDetection` в кастомном ресурсе [DestinationRule](istio-cr.html#destinationrule).
 Более подробно алгоритм Outlier Detection описан в [документации Envoy](https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/upstream/outlier).
 
 Пример:
@@ -115,9 +115,9 @@ spec:
 
 **Важно!** Istio отвечает лишь за гибкую маршрутизацию запросов, которая опирается на спецзаголовки запросов (например, cookie) или просто на случайность. За настройку этой маршрутизации и «переключение» между канареечными версиями отвечает CI/CD-система.
 
-Подразумевается, что в одном namespace выкачено два Deployment с разными версиями приложения. У подов разных версий разные лейблы (`version: v1` и `version: v2`).
+Подразумевается, что в одном пространстве имён развёрнуты два Deployment с разными версиями приложения. У подов разных версий разные лейблы (`version: v1` и `version: v2`).
 
-Требуется настроить два custom resource:
+Требуется настроить два кастомных ресурса:
 * [DestinationRule](istio-cr.html#destinationrule) с описанием, как идентифицировать разные версии вашего приложения (subset'ы);
 * [VirtualService](istio-cr.html#virtualservice) с описанием, как распределять трафик между разными версиями приложения.
 
@@ -223,7 +223,7 @@ apiVersion: v1
 kind: Secret
 metadata:
   name: app-tls-secert
-  namespace: d8-ingress-istio # Обратите внимание, что namespace не является app-ns.
+  namespace: d8-ingress-istio # Обратите внимание, пространство имён не является app-ns.
 type: kubernetes.io/tls
 data:
   tls.crt: |
@@ -257,8 +257,8 @@ spec:
         protocol: HTTPS
       tls:
         mode: SIMPLE
-        # Secret с сертификатом и ключем, который должен быть создан в d8-ingress-istio namespace.
-        # Поддерживаемые форматы Secret'ов можно посмотреть по ссылке https://istio.io/latest/docs/tasks/traffic-management/ingress/secure-ingress/#key-formats.
+        # Ресурс Secret с сертификатом и ключом, который должен быть создан в пространстве имён d8-ingress-istio.
+        # Поддерживаемые форматы ресурсов Secret можно посмотреть по ссылке https://istio.io/latest/docs/tasks/traffic-management/ingress/secure-ingress/#key-formats.
         credentialName: app-tls-secrets
       hosts:
         - app.example.com
@@ -284,7 +284,7 @@ spec:
 ### NGINX Ingress
 
 Для работы с NGINX Ingress требуется подготовить:
-* Ingress-контроллер, добавив к нему sidecar от Istio. В нашем случае включить параметр `enableIstioSidecar` у custom resource [IngressNginxController](../../modules/ingress-nginx/cr.html#ingressnginxcontroller) модуля [ingress-nginx](../../modules/ingress-nginx/).
+* Ingress-контроллер, добавив к нему sidecar от Istio. В нашем случае включить параметр `enableIstioSidecar` в кастомном ресурсе [IngressNginxController](../../modules/ingress-nginx/cr.html#ingressnginxcontroller) модуля [ingress-nginx](../../modules/ingress-nginx/).
 * Ingress-ресурс, который ссылается на Service. Обязательные аннотации для Ingress-ресурса:
   * `nginx.ingress.kubernetes.io/service-upstream: "true"` — с этой аннотацией Ingress-контроллер будет отправлять запросы на ClusterIP сервиса (из диапазона Service CIDR) вместо того, чтобы слать их напрямую в поды приложения. Sidecar-контейнер `istio-proxy` перехватывает трафик только в сторону диапазона Service CIDR, остальные запросы отправляются напрямую;
   * `nginx.ingress.kubernetes.io/upstream-vhost: myservice.myns.svc` — с данной аннотацией sidecar сможет идентифицировать прикладной сервис, для которого предназначен запрос.
@@ -345,7 +345,7 @@ spec:
 
 Иными словами, если вы явно что-то запретили, работает только ваш запрет. Если же вы что-то явно разрешили, теперь разрешены только явно одобренные запросы (запреты никуда не исчезают и имеют приоритет).
 
-**Важно!** Для работы политик, основанных на высокоуровневых параметрах, таких как namespace или principal, необходимо, чтобы все вовлеченные сервисы работали под управлением Istio. Также между приложениями должен быть организован Mutual TLS.
+**Важно!** Для работы политик, основанных на высокоуровневых параметрах, таких как пространства имён или principal, необходимо, чтобы все вовлеченные сервисы работали под управлением Istio. Также между приложениями должен быть организован Mutual TLS.
 
 Примеры:
 * Запретим POST-запросы для приложения myapp. Отныне, так как для приложения появилась политика, согласно алгоритму выше будут запрещены только POST-запросы к приложению.
@@ -418,7 +418,7 @@ spec:
     - {}
   ```
 
-### Запретить вообще все в рамках namespace foo
+### Запретить все действия в рамках пространства имён foo
 
 Два способа:
 
@@ -447,7 +447,7 @@ spec:
   spec: {}
   ```
 
-### Запретить доступ только из namespace foo
+### Запретить доступ только из пространства имён foo
 
 ```yaml
 apiVersion: security.istio.io/v1beta1
@@ -463,7 +463,7 @@ spec:
        namespaces: ["foo"]
 ```
 
-### Разрешить запросы только в рамках нашего namespace foo
+### Разрешить запросы только в рамках нашего пространства имён foo
 
 ```yaml
 apiVersion: security.istio.io/v1beta1
@@ -511,7 +511,7 @@ spec:
        principals: ["foo.local/*", "bar.local/*"]
 ```
 
-### Разрешить любые запросы только кластеров foo или bar, при этом из namespace baz
+### Разрешить любые запросы только кластеров foo или bar, при этом из nространства имён baz
 
 ```yaml
 apiVersion: security.istio.io/v1beta1
@@ -561,7 +561,7 @@ spec:
  rules: [{}]
 ```
 
-## Устройство федерации из двух кластеров с помощью custom resource IstioFederation
+## Устройство федерации из двух кластеров с помощью кастомного ресурса IstioFederation
 
 > Доступно только в редакции Enterprise Edition.
 
@@ -642,24 +642,24 @@ annotations:
 ## Обновление control plane Istio
 
 * Deckhouse позволяет инсталлировать несколько версий control plane одновременно:
-  * Одна глобальная, обслуживает namespace'ы или поды без явного указания версии (label у namespace `istio-injection: enabled`). Настраивается параметром [globalVersion](configuration.html#parameters-globalversion).
-  * Остальные — дополнительные, обслуживают namespace'ы или поды с явным указанием версии (label у namespace или пода `istio.io/rev: v1x21`). Настраиваются параметром [additionalVersions](configuration.html#parameters-additionalversions).
+  * Одна глобальная, обслуживает пространства имён или поды без явного указания версии (лейбл у пространства имён `istio-injection: enabled`). Настраивается параметром [globalVersion](configuration.html#parameters-globalversion).
+  * Остальные — дополнительные, обслуживают пространства имён или поды с явным указанием версии (лейбл у пространства имён или пода `istio.io/rev: v1x21`). Настраиваются параметром [additionalVersions](configuration.html#parameters-additionalversions).
 * Istio заявляет обратную совместимость между data plane и control plane в диапазоне двух минорных версий:
 ![Istio data-plane and control-plane compatibility](https://istio.io/latest/blog/2021/extended-support/extended_support.png)
-* Алгоритм обновления (для примера, на версию `1.21`):
+* Алгоритм обновления (для примера, с версии `1.19` на версию `1.21`):
   * Добавить желаемую версию в параметр модуля [additionalVersions](configuration.html#parameters-additionalversions) (`additionalVersions: ["1.21"]`).
-  * Дождаться появления соответствующего пода `istiod-v1x21-xxx-yyy` в namespace `d8-istio`.
-  * Для каждого прикладного namespace, где включен istio:
-    * поменять label `istio-injection: enabled` на `istio.io/rev: v1x21`;
-    * по очереди пересоздать поды в namespace, параллельно контролируя работоспособность приложения.
+  * Дождаться появления соответствующего пода `istiod-v1x21-xxx-yyy` в пространства имён `d8-istio`.
+  * Для каждого прикладного пространства имён, где включен istio:
+    * поменять лейбл `istio-injection: enabled` на `istio.io/rev: v1x21`;
+    * по очереди пересоздать поды в пространстве имён, параллельно контролируя работоспособность приложения.
   * Поменять настройку `globalVersion` на `1.21` и удалить `additionalVersions`.
   * Убедиться, что старый под `istiod` удалился.
-  * Поменять лейблы прикладных namespace на `istio-injection: enabled`.
+  * Поменять лейблы прикладных пространств имён на `istio-injection: enabled`.
 
-Чтобы найти все поды под управлением старой ревизии Istio, выполните:
+Чтобы найти все поды под управлением старой ревизии Istio (в примере — версия 19), выполните команду:
 
 ```shell
-kubectl get pods -A -o json | jq --arg revision "v1x21" \
+kubectl get pods -A -o json | jq --arg revision "v1x19" \
   '.items[] | select(.metadata.annotations."sidecar.istio.io/status" // "{}" | fromjson |
    .revision == $revision) | .metadata.namespace + "/" + .metadata.name'
 ```

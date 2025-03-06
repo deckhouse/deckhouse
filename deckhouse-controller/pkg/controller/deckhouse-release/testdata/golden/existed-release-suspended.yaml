@@ -4,6 +4,7 @@ approved: true
 kind: DeckhouseRelease
 metadata:
   annotations:
+    release.deckhouse.io/change-cause: check release (restore release)
     release.deckhouse.io/current-restored: "true"
     release.deckhouse.io/isUpdating: "false"
     release.deckhouse.io/notified: "false"
@@ -26,10 +27,10 @@ metadata:
   annotations:
     release.deckhouse.io/suspended: "true"
   creationTimestamp: null
-  name: v1.25.0
+  name: v1.16.0
   resourceVersion: "1001"
 spec:
-  version: v1.25.0
+  version: v1.16.0
 status:
   approved: false
   message: ""

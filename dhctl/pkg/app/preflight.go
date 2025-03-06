@@ -33,6 +33,8 @@ var (
 	PreflightSkipOneSSHHost                = false
 	PreflightSkipCloudAPIAccessibility     = false
 	PreflightSkipTimeDrift                 = false
+	PreflightSkipCIDRIntersection          = false
+	PreflightSkipDeckhouseUserCheck        = false
 )
 
 const (
@@ -51,6 +53,8 @@ const (
 	CloudAPIAccessibilityArgName     = "preflight-cloud-api-accesibility-check"
 	TimeDriftArgName                 = "preflight-time-drift-check"
 	OneSSHHostCheckArgName           = "preflight-skip-one-ssh-host"
+	CIDRIntersection                 = "preflight-skip-cidr-intersection"
+	DeckhouseUserCheckName           = "preflight-skip-deckhouse-user-check"
 )
 
 var PreflightSkipOptionsMap = map[string]*bool{
@@ -63,12 +67,14 @@ var PreflightSkipOptionsMap = map[string]*bool{
 	SSHCredentialsCheckArgName:       &PreflightSkipSSHCredentialsCheck,
 	RegistryCredentialsCheckArgName:  &PreflightSkipRegistryCredentials,
 	CloudAPIAccessibilityArgName:     &PreflightSkipCloudAPIAccessibility,
-	TimeDriftArgName:                 &PreflightSkipTimeDrift,
 	ContainerdExistCheckArgName:      &PreflightSkipContainerdExistCheck,
 	PythonChecksArgName:              &PreflightSkipPythonChecks,
 	SudoAllowedCheckArgName:          &PreflightSkipSudoIsAllowedForUserCheck,
 	SystemRequirementsArgName:        &PreflightSkipSystemRequirementsCheck,
 	OneSSHHostCheckArgName:           &PreflightSkipOneSSHHost,
+	CIDRIntersection:                 &PreflightSkipCIDRIntersection,
+	DeckhouseUserCheckName:           &PreflightSkipDeckhouseUserCheck,
+	TimeDriftArgName:                 &PreflightSkipTimeDrift,
 }
 
 func ApplyPreflightSkips(skips []string) {
@@ -128,4 +134,10 @@ func DefinePreflight(cmd *kingpin.CmdClause) {
 	cmd.Flag(OneSSHHostCheckArgName, "Skip verifying one ssh-host parametr").
 		Envar(configEnvName("PREFLIGHT_SKIP_ONE_SSH_HOST")).
 		BoolVar(PreflightSkipOptionsMap[OneSSHHostCheckArgName])
+	cmd.Flag(CIDRIntersection, "Skip verifying CIDRs intersection").
+		Envar(configEnvName("PREFLIGHT_SKIP_CIDR_INTERSECTION")).
+		BoolVar(PreflightSkipOptionsMap[CIDRIntersection])
+	cmd.Flag(DeckhouseUserCheckName, "Skip verifying deckhouse user existence").
+		Envar(configEnvName("PREFLIGHT_SKIP_DECKHOUSE_USER")).
+		BoolVar(PreflightSkipOptionsMap[DeckhouseUserCheckName])
 }

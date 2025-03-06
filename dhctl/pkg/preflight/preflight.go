@@ -98,6 +98,11 @@ func (pc *Checker) Static() error {
 			skipFlag:       app.SSHForwardArgName,
 		},
 		{
+			fun:            pc.CheckDeckhouseUser,
+			successMessage: "deckhouse user and group aren't present on node",
+			skipFlag:       app.DeckhouseUserCheckName,
+		},
+		{
 			fun:            pc.CheckStaticNodeSystemRequirements,
 			successMessage: "that node meets system requirements",
 			skipFlag:       app.SystemRequirementsArgName,
@@ -131,6 +136,11 @@ func (pc *Checker) Static() error {
 			fun:            pc.CheckTimeDrift,
 			successMessage: "server time drift has a acceptable value",
 			skipFlag:       app.TimeDriftArgName,
+		},
+		{
+			fun:            pc.CheckCidrIntersectionStatic,
+			successMessage: "CIDRs are not intersects",
+			skipFlag:       app.CIDRIntersection,
 		},
 	})
 	if err != nil {
@@ -211,6 +221,11 @@ func (pc *Checker) Global() error {
 			fun:            pc.CheckRegistryCredentials,
 			successMessage: "registry credentials are correct",
 			skipFlag:       app.RegistryCredentialsCheckArgName,
+		},
+		{
+			fun:            pc.CheckCidrIntersection,
+			successMessage: "CIDRs are not intersects",
+			skipFlag:       app.CIDRIntersection,
 		},
 	})
 	if err != nil {

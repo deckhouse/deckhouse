@@ -1,0 +1,5 @@
+name: cloud-provider-huaweicloud
+weight: 30
+subsystems:
+  - infrastructure
+namespace: d8-cloud-provider-huaweicloud

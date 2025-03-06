@@ -395,7 +395,7 @@ spec:
     disktype: ssd
 ```
 
-![nodeSelector](/../../../../images/virtualization-platform/placement-node-affinity.png)
+![nodeSelector](/../../../../images/virtualization-platform/placement-nodeselector.png)
 
 In this example, the virtual machine will be placed only on nodes that have the label `disktype` with the value `ssd`.
 
@@ -689,19 +689,6 @@ ip-10-66-10-14   {"name":"linux-vm-7prpx","namespace":"default"}     Bound    12
 
 The [VirtualMachineIPAddress](../../../reference/cr/virtualmachineipaddress.html) (`vmip`) resource is a project or namespace resource responsible for reserving allocated IP addresses and binding them to virtual machines. IP addresses can be assigned automatically or upon request.
 
-To view the list of `vmip`, use the following command:
-
-```shell
-d8 k get vmipl
-```
-
-Example output:
-
-```console
-NAME             VIRTUALMACHINEIPADDRESS                             STATUS   AGE
-ip-10-66-10-14   {"name":"linux-vm-7prpx","namespace":"default"}     Bound    12h
-```
-
 To check the assigned IP address, you can use the following command:
 
 ```shell
@@ -724,7 +711,7 @@ The algorithm for automatically assigning an IP address to a virtual machine wor
 
 By default, the IP address for the virtual machine is automatically assigned from the subnets defined in the module and is bound to it until the virtual machine is deleted. After the virtual machine is deleted, the `vmip` resource is also removed, but the IP address temporarily remains bound to the project/namespace and can be requested again.
 
-## How to request a specific IP address?
+## Requesting the required IP address
 
 Create the `vmip` resource:
 
@@ -747,7 +734,7 @@ spec:
   virtualMachineIPAddressName: linux-vm-custom-ip
 ```
 
-## How to retain the assigned IP address for a virtual machine?
+## Retaining the IP address assigned to a virtual machine
 
 To prevent the automatically assigned IP address of a virtual machine from being deleted along with the virtual machine itself, follow these steps.
 
@@ -788,222 +775,4 @@ spec:
   staticIP: 10.66.20.77
   type: Static
 EOF
-```
-
-## How to install an OS in a virtual machine from an ISO image?
-
-Let's look at an example of installing an OS from an ISO image of Windows OS. To do this, download and publish it on any HTTP service accessible from the cluster.
-
-1. Create an empty disk for OS installation:
-
-    ```yaml
-    apiVersion: virtualization.deckhouse.io/v1alpha2
-    kind: VirtualDisk
-    metadata:
-    name: win-disk
-    namespace: default
-    spec:
-    persistentVolumeClaim:
-    size: 100Gi
-    storageClassName: local-path
-    ```
-
-1. Create resources with Windows OS ISO images and virtio drivers:
-
-    ```yaml
-    apiVersion: virtualization.deckhouse.io/v1alpha2
-    kind: ClusterVirtualImage
-    metadata:
-    name: win-11-iso
-    spec:
-    dataSource:
-    type: HTTP
-    http:
-    url: "http://example.com/win11.iso"
-    ```
-
-    ```yaml
-    apiVersion: virtualization.deckhouse.io/v1alpha2
-    kind: ClusterVirtualImage 
-    metadata:
-     name: win-virtio-iso
-     spec:
-     dataSource:
-     type: HTTP
-     http:
-     url: "https://fedorapeople.org/groups/virt/virtio-win/direct-downloads/stable-virtio/virtio-win.iso"
-     ```
-
-1. Create a virtual machine:
-
-    ```yaml
-    apiVersion: virtualization.deckhouse.io/v1alpha2
-    kind: VirtualMachine
-    metadata:
-    name: win-vm
-    namespace: default
-    labels:
-    vm: win
-    spec:
-    virtualMachineClassName: generic
-    runPolicy: Manual
-    osType: Windows
-    bootloader:EFI
-    CPU:
-    cores: 6
-    coreFraction: 50%
-    memory:
-    size: 8Gi
-    enableParavirtualization: true
-    blockDeviceRefs:
-    - kind: ClusterVirtualImage
-    name: win-11-iso
-    - kind: ClusterVirtualImage
-    name: win-virtio-iso
-    - kind: VirtualDisk
-    name: win-disk
-    ```
-
-1. After creating the resource, the virtual machine will be launched. You need to connect to it and install the OS and `virtio` drivers using the graphical installer.
-
-    Command to connect:
-
-    ```bash
-    d8 v vnc -n default win-vm
-    ```
-
-1. After the installation is complete, shut down the virtual machine.
-
-1. Modify the `VirtualMachine` resource and apply the changes:
-
-    ```yaml
-    spec:
-    # ...
-    runPolicy: AlwaysOn
-    # ...
-    blockDeviceRefs:
-    # Remove all ClusterVirtualImage resources with ISO disks from the block.
-    - kind: VirtualDisk
-    name: win-disk
-    ```
-
-1. After the changes have been made, the virtual machine will start. To continue working with it, use the command:
-
-    ```bash
-    d8 v vnc -n default win-vm
-    ```
-
-## How to provide a Windows answer file (Sysprep)?
-
-To provide a Windows VM with an answer file, you must specify provisioning with the SysprepRef type.
-
-First, you need to create a secret:
-
-```yaml
-apiVersion: v1
-kind: Secret
-metadata:
-name: sysprep-config
-data:
-unattend.xml: XXXx # base64 of the answer file
-type: "provisioning.virtualization.deckhouse.io/sysprep"
-```
-
-Then you can create a VM that will use the answer file during installation.
-Add the answer file (usually named unattend.xml or autounattend.xml) to the secret to perform an unattended Windows installation.
-You can also specify here other base64 files (customize.ps1, id_rsa.pub,...) required for successful execution of scripts inside the response file.
-
-```yaml
-apiVersion: virtualization.deckhouse.io/v1alpha2
-kind: VirtualMachine
-metadata:
- name: win-vm
- namespace: default
- labels:
- vm: win
-spec:
- virtualMachineClassName: generic
- provisioning:
- type: SysprepRef
- sysprepRef:
- kind: Secret
- name: sysprep-config
- runPolicy: AlwaysOn
- osType: Windows
- bootloader:EFI
- CPU:
- cores: 6
- coreFraction: 50%
- memory:
- size: 8Gi
- enableParavirtualization: true
- blockDeviceRefs:
- - kind: ClusterVirtualImage
- name: win-11-iso
- - kind: ClusterVirtualImage
- name: win-virtio-iso
- - kind: VirtualDisk
- name: win-disk
-```
-
-## How redirect traffic to a virtual machine?
-
-The virtual machine runs in a Kubernetes cluster, so directing network traffic is similar to directing traffic to pods:
-
-1. Create a service with the required settings.
-
-    As an example, here is a virtual machine with an HTTP service published on port 80 and the following set of labels:
-
-    ```yaml
-    apiVersion: virtualization.deckhouse.io/v1alpha2
-    kind: VirtualMachine
-    metadata:
-    name: web
-    labels:
-    vm: web
-    spec: ...
-    ```
-
-1. To forward network traffic to port 80 of the virtual machine, create a service:
-
-    ```yaml
-    apiVersion: v1
-    kind: Service
-    metadata:
-    name: svc-1
-    spec:
-    ports:
-    - name: http
-    port: 8080
-    protocol: TCP
-    targetPort: 80
-    selector:
-    app: old
-    ```
-
-You can change the labels of a virtual machine without having to restart it, which allows you to configure real-time redirection of network traffic between different services.
-
-Let's assume that a new service has been created and you want to redirect traffic to the virtual machine from this service:
-
-```yaml
-apiVersion: v1
-kind: Service
-metadata:
-name: svc-2
-spec:
-ports:
-- name: http
-port: 8080
-protocol: TCP
-targetPort: 80
-selector:
-app: new
-```
-
-When you change the label on a virtual machine, traffic from the `svc-2` service will be redirected to the virtual machine:
-
-```yaml
-metadata:
-labels:
-app: old
 ```

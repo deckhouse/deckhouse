@@ -43,7 +43,7 @@ func New(kClient *kubernetes.Clientset, namespace string, logger *log.Logger) *w
 	}
 }
 
-func (w *watcher) Watch(ctx context.Context, addHandler, deleteHandler func(backend string)) {
+func (w *watcher) Watch(ctx context.Context, addHandler, deleteHandler func(ctx context.Context, backend string)) {
 	tweakListOptions := func(options *metav1.ListOptions) {
 		options.LabelSelector = leaseLabel
 	}
@@ -67,7 +67,7 @@ func (w *watcher) Watch(ctx context.Context, addHandler, deleteHandler func(back
 			if lease != nil {
 				holderIdentity := lease.Spec.HolderIdentity
 				if holderIdentity != nil {
-					addHandler(*holderIdentity)
+					addHandler(ctx, *holderIdentity)
 					return
 				}
 			}
@@ -84,7 +84,7 @@ func (w *watcher) Watch(ctx context.Context, addHandler, deleteHandler func(back
 			if lease != nil {
 				holderIdentity := lease.Spec.HolderIdentity
 				if holderIdentity != nil {
-					deleteHandler(*holderIdentity)
+					deleteHandler(ctx, *holderIdentity)
 					return
 				}
 			}

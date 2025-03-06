@@ -48,7 +48,7 @@ except ImportError as e:
 ssl.match_hostname = lambda cert, hostname: True
 request = Request(sys.argv[1], headers={'Authorization': 'Bearer ' + sys.argv[2]})
 try:
-    response = urlopen(request, cafile='/var/lib/bashible/ca.crt')
+    response = urlopen(request, cafile='/var/lib/bashible/ca.crt', timeout=10)
 except HTTPError as e:
     if e.getcode() == 401:
         sys.stderr.write("Bootstrap-token compiled in this bootstrap.sh script is expired. Looks like more than 4 hours passed from the time it's been issued.\n")
