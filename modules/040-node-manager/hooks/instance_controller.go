@@ -219,18 +219,18 @@ func instanceController(input *go_hook.HookInput) error {
 				patch := map[string]interface{}{
 					"status": statusPatch,
 				}
-				input.PatchCollector.MergePatch(patch, "deckhouse.io/v1alpha1", "Instance", "", ic.Name, object_patch.WithSubresource("/status"))
+				input.PatchCollector.MergePatch(patch, "deckhouse.io/v1alpha1", "Instance", "", ic.Name, object_patch.PatchWithSubresource("/status"))
 			}
 
 			if ic.DeletionTimestamp != nil && !ic.DeletionTimestamp.IsZero() {
 				if machine.DeletionTimestamp == nil || machine.DeletionTimestamp.IsZero() {
 					// delete in background, because machine has finalizer
-					input.PatchCollector.Delete("machine.sapcloud.io/v1alpha1", "Machine", "d8-cloud-instance-manager", machine.Name, object_patch.InBackground())
+					input.PatchCollector.DeleteInBackground("machine.sapcloud.io/v1alpha1", "Machine", "d8-cloud-instance-manager", machine.Name)
 				}
 			}
 		} else {
 			newIc := newInstance(machine, ng)
-			input.PatchCollector.Create(newIc, object_patch.IgnoreIfExists())
+			input.PatchCollector.CreateIfNotExists(newIc)
 		}
 	}
 
@@ -248,18 +248,18 @@ func instanceController(input *go_hook.HookInput) error {
 				patch := map[string]interface{}{
 					"status": statusPatch,
 				}
-				input.PatchCollector.MergePatch(patch, "deckhouse.io/v1alpha1", "Instance", "", ic.Name, object_patch.WithSubresource("/status"))
+				input.PatchCollector.MergePatch(patch, "deckhouse.io/v1alpha1", "Instance", "", ic.Name, object_patch.PatchWithSubresource("/status"))
 			}
 
 			if ic.DeletionTimestamp != nil && !ic.DeletionTimestamp.IsZero() {
 				if machine.DeletionTimestamp == nil || machine.DeletionTimestamp.IsZero() {
 					// delete in background, because machine has finalizer
-					input.PatchCollector.Delete("cluster.x-k8s.io/v1beta1", "Machine", "d8-cloud-instance-manager", machine.Name, object_patch.InBackground())
+					input.PatchCollector.DeleteInBackground("cluster.x-k8s.io/v1beta1", "Machine", "d8-cloud-instance-manager", machine.Name)
 				}
 			}
 		} else {
 			newIc := newInstance(machine, ng)
-			input.PatchCollector.Create(newIc, object_patch.IgnoreIfExists())
+			input.PatchCollector.CreateIfNotExists(newIc)
 		}
 	}
 

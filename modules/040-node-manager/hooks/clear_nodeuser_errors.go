@@ -164,7 +164,7 @@ func clearNodeUserIncorrectErrors(
 		"NodeUser",
 		"",
 		nodeUserName,
-		object_patch.WithSubresource("/status"),
+		object_patch.PatchWithSubresource("/status"),
 	)
 	return nil
 }

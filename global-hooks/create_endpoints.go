@@ -21,7 +21,6 @@ import (
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
-	"github.com/flant/shell-operator/pkg/kube/object_patch"
 	v1 "k8s.io/api/core/v1"
 	discv1 "k8s.io/api/discovery/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -164,8 +163,8 @@ func generateDeckhouseEndpoints(input *go_hook.HookInput) error {
 		},
 	}
 
-	input.PatchCollector.Create(ep, object_patch.UpdateIfExists())
-	input.PatchCollector.Create(es, object_patch.UpdateIfExists())
+	input.PatchCollector.CreateOrUpdate(ep)
+	input.PatchCollector.CreateOrUpdate(es)
 
 	return nil
 }

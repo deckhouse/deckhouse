@@ -20,7 +20,6 @@ import (
 	"github.com/Masterminds/semver/v3"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
-	"github.com/flant/shell-operator/pkg/kube/object_patch"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -144,7 +143,7 @@ func migrateDiskGBHandler(input *go_hook.HookInput) error {
 
 	backupSecret.Name += `-bkp-disk-gb`
 	backupSecret.ResourceVersion = ""
-	input.PatchCollector.Create(backupSecret, object_patch.IgnoreIfExists())
+	input.PatchCollector.CreateIfNotExists(backupSecret)
 
 	data, err := yaml.Marshal(rawConfig)
 	if err != nil {

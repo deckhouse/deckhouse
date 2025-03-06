@@ -351,7 +351,7 @@ func handleEgressGateways(input *go_hook.HookInput) error {
 			"EgressGateway",
 			"",
 			egName,
-			object_patch.WithSubresource("/status"))
+			object_patch.PatchWithSubresource("/status"))
 
 		EgressGatewayStates[egName] = egState
 	}
@@ -382,7 +382,7 @@ func handleEgressGateways(input *go_hook.HookInput) error {
 			"SDNInternalEgressGatewayInstance",
 			"",
 			egi.Name,
-			object_patch.IgnoreMissingObject(),
+			object_patch.PatchWithIgnoreMissingObject(true),
 		)
 	}
 

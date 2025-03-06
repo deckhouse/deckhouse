@@ -23,7 +23,6 @@ import (
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
-	"github.com/flant/shell-operator/pkg/kube/object_patch"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -99,7 +98,7 @@ func deschedulerConfigMigration(input *go_hook.HookInput, dc dependency.Containe
 		Data: map[string]string{"config": string(deschedulerConfigJSON)},
 	}
 
-	input.PatchCollector.Create(cm, object_patch.UpdateIfExists())
+	input.PatchCollector.CreateOrUpdate(cm)
 
 	return nil
 }

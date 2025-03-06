@@ -58,7 +58,7 @@ func (i *IstioMulticlusterDiscoveryCrdInfo) PatchMetadataCache(pc go_hook.PatchC
 		},
 	}
 
-	pc.MergePatch(patch, "deckhouse.io/v1alpha1", "IstioMulticluster", "", i.Name, object_patch.WithSubresource("/status"))
+	pc.MergePatch(patch, "deckhouse.io/v1alpha1", "IstioMulticluster", "", i.Name, object_patch.PatchWithSubresource("/status"))
 	return nil
 }
 

@@ -21,7 +21,6 @@ import (
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
-	"github.com/flant/shell-operator/pkg/kube/object_patch"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -126,7 +125,7 @@ func getCert(input *go_hook.HookInput, secretKey string) string {
 			cert = string(caCertificates[name])
 			continue
 		}
-		input.PatchCollector.Delete("v1", "Secret", "d8-user-authn", name, object_patch.InBackground())
+		input.PatchCollector.DeleteInBackground("v1", "Secret", "d8-user-authn", name)
 	}
 	return cert
 }

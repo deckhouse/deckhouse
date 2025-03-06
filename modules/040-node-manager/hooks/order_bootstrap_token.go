@@ -23,7 +23,6 @@ import (
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
-	"github.com/flant/shell-operator/pkg/kube/object_patch"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -161,7 +160,7 @@ func handleOrderBootstrapToken(input *go_hook.HookInput) error {
 
 	// Remove all expired tokens
 	for _, token := range expiredTokens {
-		input.PatchCollector.Delete("v1", "Secret", "kube-system", token.Name, object_patch.InBackground())
+		input.PatchCollector.DeleteInBackground("v1", "Secret", "kube-system", token.Name)
 	}
 
 	// we don't want to keep tokens for deleted NodeGroups
