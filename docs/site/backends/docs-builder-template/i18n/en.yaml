@@ -30,10 +30,14 @@ module_available_editions_prefix: Available in
 module_available_with_limitations_prefix: Available with limitations in
 module_available_without_limitations_prefix: Available without limitations in
 module_has_restions_short: with limitations
-module_alert_experimental: Experimental version. The functionality may undergo significant changes. Compatibility with future versions is not guaranteed.
-module_alert_preview: Preliminary version. The functionality may change, but the basic features will be preserved. Compatibility with future versions is ensured, but may require additional migration actions.
-module_alert_general_availability: Generally available version. Ready to be used in production environments.
-module_alert_deprecated: Deprecated version. Development and support have been terminated.
+module_alert_experimental: Experimental
+module_alert_preview: Preview
+module_alert_general_availability: Generally available version
+module_alert_deprecated: Deprecated
+module_alert_experimental_long: Experimental version. The functionality may undergo significant changes. Compatibility with future versions is not guaranteed.
+module_alert_preview_long: Preliminary version. The functionality may change, but the basic features will be preserved. Compatibility with future versions is ensured, but may require additional migration actions.
+module_alert_general_availability_long: Generally available version. Ready to be used in production environments.
+module_alert_deprecated_long: Deprecated version. Development and support have been terminated.
 deprecated_parameter: Deprecated
 deprecated_parameter_hint: Support for the parameter might be removed in a later release.
 element_of_array: element of the array

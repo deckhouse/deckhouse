@@ -45,6 +45,10 @@ const (
 	ModuleReleaseFinalizerExistOnFs              = "modules.deckhouse.io/exist-on-fs"
 	ModuleReleaseAnnotationNotificationTimeShift = "modules.deckhouse.io/notification-time-shift"
 	ModuleReleaseAnnotationForce                 = "modules.deckhouse.io/force"
+	ModuleReleaseAnnotationReinstall             = "modules.deckhouse.io/reinstall"
+
+	ModuleReleaseAnnotationDryrun            = "dryrun"
+	ModuleReleaseAnnotationTriggeredByDryrun = "triggered_by_dryrun"
 
 	ModuleReleaseLabelStatus          = "status"
 	ModuleReleaseLabelSource          = "source"
@@ -158,6 +162,10 @@ func (mr *ModuleRelease) GetForce() bool {
 	return false
 }
 
+func (mr *ModuleRelease) GetReinstall() bool {
+	return mr.Annotations[ModuleReleaseAnnotationReinstall] == "true"
+}
+
 func (mr *ModuleRelease) GetApplyNow() bool {
 	return mr.Annotations[ModuleReleaseAnnotationApplyNow] == "true"
 }
@@ -194,6 +202,16 @@ func (mr *ModuleRelease) GetApprovedStatus() bool {
 
 func (mr *ModuleRelease) GetMessage() string {
 	return mr.Status.Message
+}
+
+func (mr *ModuleRelease) GetDryRun() bool {
+	v, ok := mr.Annotations[ModuleReleaseAnnotationDryrun]
+	return ok && v == "true"
+}
+
+func (mr *ModuleRelease) GetTriggeredByDryRun() bool {
+	v, ok := mr.Annotations[ModuleReleaseAnnotationTriggeredByDryrun]
+	return ok && v == "true"
 }
 
 // GetModuleSource returns module source for this release

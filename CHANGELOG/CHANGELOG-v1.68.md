@@ -66,6 +66,7 @@
  - **[deckhouse]** Trigger the ModuleConfig handling when a module created. [#12039](https://github.com/deckhouse/deckhouse/pull/12039)
  - **[deckhouse]** Return `helm_lib_envs_for_proxy` template to deckhouse deployment. [#11921](https://github.com/deckhouse/deckhouse/pull/11921)
  - **[deckhouse-controller]** Fixed a bug in the `kubectl` wrapper script. [#11494](https://github.com/deckhouse/deckhouse/pull/11494)
+ - **[deckhouse-tools]** Fix tools links pointing to wrong path [#12346](https://github.com/deckhouse/deckhouse/pull/12346)
  - **[dhctl]** Fix broken connection-config in CLI and support sudoPassword in SSHConfig. [#12036](https://github.com/deckhouse/deckhouse/pull/12036)
  - **[dhctl]** Fixed a bug that prevented PersistentVolumes from being properly deleted by the `dhctl destroy` command in Stronghold. [#11878](https://github.com/deckhouse/deckhouse/pull/11878)
  - **[dhctl]** Fixed the behavior of static cluster destruction. [#11059](https://github.com/deckhouse/deckhouse/pull/11059)
@@ -85,9 +86,11 @@
  - **[loki]** Fixed minor security vulnerabilities. [#11530](https://github.com/deckhouse/deckhouse/pull/11530)
  - **[loki]** Fixed the build parameters. [#11399](https://github.com/deckhouse/deckhouse/pull/11399)
  - **[metallb]** Bumped Go module dependencies to fix security vulnerabilities. [#11650](https://github.com/deckhouse/deckhouse/pull/11650)
+ - **[monitoring-applications]** Fix module dependencies. The `monitoring-applications` module was affected and disabled by the enabled script. [#12428](https://github.com/deckhouse/deckhouse/pull/12428)
  - **[monitoring-kubernetes]** Fixed security vulnerabilities. [#11591](https://github.com/deckhouse/deckhouse/pull/11591)
  - **[multitenancy-manager]** Set each Falco rule to work for a specific namespace only. [#11498](https://github.com/deckhouse/deckhouse/pull/11498)
  - **[network-gateway]** Fixed security context settings for static pods and iptables containers. [#11309](https://github.com/deckhouse/deckhouse/pull/11309)
+ - **[node-local-dns]** Fix module dependencies. The `monitoring-applications` module was affected and disabled by the enabled script. [#12428](https://github.com/deckhouse/deckhouse/pull/12428)
  - **[node-local-dns]** Fixed security context settings for static pods and iptables containers. [#11309](https://github.com/deckhouse/deckhouse/pull/11309)
  - **[node-manager]** fix autoscaler RBAC for zvirt and dynamix [#11236](https://github.com/deckhouse/deckhouse/pull/11236)
  - **[node-manager]** Fixed CVE in images cluster-autoscaler and machine-controller-manager. [#12024](https://github.com/deckhouse/deckhouse/pull/12024)
@@ -99,6 +102,8 @@
     Okmeter agents are no longer able to access the Kubernetes API.
  - **[operator-trivy]** Added an init container to the `trivy-server` to set the correct user:group ownership for its volume. [#11671](https://github.com/deckhouse/deckhouse/pull/11671)
  - **[operator-trivy]** Fixed security vulnerabilities and updated the `report-updater` build. [#11597](https://github.com/deckhouse/deckhouse/pull/11597)
+ - **[prometheus]** Changes the links in alert's template about alerts from url to relative links [#12028](https://github.com/deckhouse/deckhouse/pull/12028)
+    The links in the alerts will be correct when the documentation module is enabled.
  - **[prometheus]** Fixed an issue in the Grafana datasource. [#11788](https://github.com/deckhouse/deckhouse/pull/11788)
     All data sources created with the GrafanaAdditionalDatasource custom resource will have their UIDs changed.
  - **[prometheus]** Improved Prometheus rolling updates. [#11694](https://github.com/deckhouse/deckhouse/pull/11694)
@@ -119,6 +124,7 @@
  - **[registrypackages]** Bumped the `docker_auth` version in in `docker-registry`. [#11600](https://github.com/deckhouse/deckhouse/pull/11600)
  - **[registrypackages]** Fixed security vulnerabilities in `crictl`. [#11523](https://github.com/deckhouse/deckhouse/pull/11523)
  - **[runtime-audit-engine]** Fixed security vulnerabilities in `k8s-metacollector` and `rules-loader`. [#11581](https://github.com/deckhouse/deckhouse/pull/11581)
+ - **[service-with-healthchecks]** Fixed several issues. [#12272](https://github.com/deckhouse/deckhouse/pull/12272)
  - **[terraform-manager]** CVE fix dynamix cloud provider and bump go version. [#12111](https://github.com/deckhouse/deckhouse/pull/12111)
  - **[terraform-manager]** CVE fix terraform-manager-gcp and bump go version. [#12068](https://github.com/deckhouse/deckhouse/pull/12068)
  - **[terraform-manager]** CVE fix terraform-manager-aws and bump go version. [#12065](https://github.com/deckhouse/deckhouse/pull/12065)
@@ -131,12 +137,14 @@
  - **[terraform-manager]** Bumped the Go version to fix security invulnerabilities in `terraform-manager-vsphere`. [#11903](https://github.com/deckhouse/deckhouse/pull/11903)
  - **[terraform-manager]** Fixed the sizing policy change procedure in the `vcd_vapp_vm` resource. [#11202](https://github.com/deckhouse/deckhouse/pull/11202)
  - **[terraform-manager]** Removed the patch with `vcd_catalog_vapp_template` data source fixes for `terraform-provider-vcd`. [#10902](https://github.com/deckhouse/deckhouse/pull/10902)
+ - **[upmeter]** Fixed metallb module probe. [#12231](https://github.com/deckhouse/deckhouse/pull/12231)
  - **[user-authn]** Fixed security vulnerabilities and updated the build. [#11588](https://github.com/deckhouse/deckhouse/pull/11588)
  - **[user-authn]** Bumped dependencies to fix security vulnerabilities. [#11332](https://github.com/deckhouse/deckhouse/pull/11332)
 
 ## Chore
 
 
+ - **[admission-policy-engine]** Fixes policies schemas. Allow to exclude namespaces or use only object labels. [#12292](https://github.com/deckhouse/deckhouse/pull/12292)
  - **[admission-policy-engine]** Fixed security vulnerabilities and updated the `trivy` build. [#11568](https://github.com/deckhouse/deckhouse/pull/11568)
  - **[admission-policy-engine]** Bumped `gatekeeper` and refactored the build. [#11356](https://github.com/deckhouse/deckhouse/pull/11356)
  - **[candi]** update d8-cli [#12104](https://github.com/deckhouse/deckhouse/pull/12104)
