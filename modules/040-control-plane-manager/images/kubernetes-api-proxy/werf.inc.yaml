@@ -3,7 +3,7 @@ image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: common/nginx-static
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
-  add: /kubernetes-api-proxy
+  add: /{{ .ImageName }}
   to: /kubernetes-api-proxy-reloader
   before: install
 imageSpec:
