@@ -360,7 +360,7 @@ func routingTablesHandler(input *go_hook.HookInput) error {
 			v1alpha1.RTKind,
 			"",
 			rtName,
-			object_patch.WithSubresource("/status"),
+			object_patch.PatchWithSubresource("/status"),
 		)
 	}
 

@@ -72,7 +72,7 @@ func updateControlPlane(input *go_hook.HookInput) error {
 	for _, snapshot := range input.Snapshots["control_plane"] {
 		controlPlane := snapshot.(controlPlane)
 		// patch status
-		input.PatchCollector.MergePatch(statusPatch, controlPlane.APIVersion, controlPlane.Kind, controlPlane.Namespace, controlPlane.Name, object_patch.IgnoreMissingObject(), object_patch.PatchWithSubresource("/status"))
+		input.PatchCollector.MergePatch(statusPatch, controlPlane.APIVersion, controlPlane.Kind, controlPlane.Namespace, controlPlane.Name, object_patch.PatchWithIgnoreMissingObject(true), object_patch.PatchWithSubresource("/status"))
 	}
 
 	return nil

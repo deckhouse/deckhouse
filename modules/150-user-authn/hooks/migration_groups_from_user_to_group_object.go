@@ -24,7 +24,6 @@ import (
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
-	"github.com/flant/shell-operator/pkg/kube/object_patch"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -109,7 +108,7 @@ func migrationGroups(input *go_hook.HookInput) error {
 		input.PatchCollector.CreateIfNotExists(dexGroup)
 	}
 
-	input.PatchCollector.Create(&corev1.ConfigMap{
+	input.PatchCollector.CreateIfNotExists(&corev1.ConfigMap{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "v1",
 			Kind:       "ConfigMap",
@@ -118,7 +117,7 @@ func migrationGroups(input *go_hook.HookInput) error {
 			Name:      "user-authn-groups-migrated",
 			Namespace: "d8-system",
 		},
-	}, object_patch.IgnoreIfExists())
+	})
 
 	return nil
 }

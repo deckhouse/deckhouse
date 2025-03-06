@@ -89,7 +89,7 @@ func handleL2LBServices(input *go_hook.HookInput) error {
 			"Service",
 			namespacedName.Namespace,
 			namespacedName.Name,
-			object_patch.WithSubresource("/status"))
+			object_patch.PatchWithSubresource("/status"))
 		input.Logger.Info("Service status updated",
 			"name", namespacedName.Name,
 			"Namespace", namespacedName.Name,
