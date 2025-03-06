@@ -4,6 +4,7 @@
 resources:
 - bases/infrastructure.cluster.x-k8s.io_deckhouseclusters.yaml
 - bases/infrastructure.cluster.x-k8s.io_deckhousemachines.yaml
+- bases/infrastructure.cluster.x-k8s.io_deckhousemachinetemplates.yaml
 # +kubebuilder:scaffold:crdkustomizeresource
 
 patches:
