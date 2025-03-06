@@ -19,7 +19,9 @@
   to: /iptables-wrapper
   before: setup` }}
 {{- $_ := set $context "git" (dict "version" "v2.0.1" "path" "cloudnativelabs/kube-router.git") }}
-{{- $_ := set $context "build" (dict "ldflags" "-X github.com/cloudnativelabs/kube-router/v2/pkg/version.Version=`cat VERSION` -X github.com/cloudnativelabs/kube-router/v2/pkg/version.BuildDate=`date +%Y-%m-%dT%H:%M:%S%z`" "file" "cmd/kube-router/kube-router.go") }}
+{{- $_ := set $context "build" (dict 
+  "ldflags" "-X github.com/cloudnativelabs/kube-router/v2/pkg/version.Version=`cat VERSION` -X github.com/cloudnativelabs/kube-router/v2/pkg/version.BuildDate=`date +%Y-%m-%dT%H:%M:%S%z`"
+  "file" "cmd/kube-router/kube-router.go") }}
 {{- include "image-all" $context }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
