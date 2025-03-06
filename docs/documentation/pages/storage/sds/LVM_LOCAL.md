@@ -24,8 +24,8 @@ spec:
 EOF
 ```
 
-Wait for the `sds-node-configurator` module to reach the `Ready` status.
-To check the status, run the following command:
+Wait until the `sds-node-configurator` module transitions to the `Ready` state.
+To check its status, execute the following command:
 
 ```shell
 d8 k get modules sds-node-configurator -w
@@ -59,7 +59,7 @@ To check the module status, run the following command:
 d8 k get modules sds-local-volume -w
 ```
 
-In the output, you should see information about the `sds-local-volume` module:
+In the output, you should see information about the state of the `sds-local-volume` module:
 
 ```console
 NAME               WEIGHT   STATE     SOURCE     STAGE   STATUS

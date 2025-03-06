@@ -3,13 +3,13 @@ title: "Replicated storage (LVM)"
 permalink: en/storage/admin/sds/lvm-replicated.html
 ---
 
-Replication of data across multiple nodes ensures fault tolerance and data availability even in the event of hardware or software failures on one of the nodes. This guarantees that data remains preserved on other nodes, maintaining continuous access. Such a model is essential for critical data and distributed infrastructures requiring high availability and minimizing data loss during failures.
+Data replication across multiple nodes ensures fault tolerance and data availability, even if a hardware or software failure occurs on one of the nodes. This guarantees data preservation on other nodes, maintaining continuous access. Such a model is essential for critical data and distributed infrastructures requiring high availability and minimizing data loss during failures.
 
 To create replicated block objects in StorageClass based on the distributed replicated block device (DRBD), you can enable the `sds-replicated-volume` module, which uses [LINSTOR](https://linbit.com/linstor/) as its backend.
 
 ## Enabling the module
 
-### Detecting LVM components
+### Discovery of LVM components
 
 Before creating StorageClass objects based on Logical Volume Manager (LVM), it is necessary to detect the block devices and volume groups available on the nodes and obtain current information about their state.
 
@@ -80,7 +80,7 @@ d8 k -n d8-sds-replicated-volume get pod -w
 d8 k -n d8-sds-node-configurator get pod -w
 ```
 
-It is recommended to avoid directly configuring the LINSTOR backend by the user, as this may lead to errors.
+Direct user configuration of the LINSTOR backend should be avoided, as this can lead to configuration issues or errors.
 
 ## Node pre-configuration
 
@@ -255,7 +255,7 @@ EOF
 
 Details about the configuration options of the ReplicatedStoragePool resource are described in the [reference](../../../../../reference/cr/replicatedstoragepool.html) section.
 
-Wait for the created `ReplicatedStoragePool` resource to reach the `Completed` phase.
+Wait for the created `ReplicatedStoragePool` resource transitions to the `Completed` phase.
 To check the resource phase, run the following command:
 
 ```shell
