@@ -26,7 +26,6 @@ import (
 	"golang.org/x/crypto/ssh"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
 )
 
 type Tunnel struct {
@@ -97,7 +96,7 @@ func (t *Tunnel) upNewTunnel(oldId int) (int, error) {
 	return id, nil
 }
 
-func (t *Tunnel) acceptTunnelConnection(id int, localAddress string, listener net.Listener) {
+func (t *Tunnel) acceptTunnelConnection(id int, remoteAddress string, listener net.Listener) {
 	for {
 		client, err := listener.Accept()
 		if err != nil {
@@ -109,11 +108,11 @@ func (t *Tunnel) acceptTunnelConnection(id int, localAddress string, listener ne
 			return
 		}
 
-		log.DebugF("[%d] connection accepted. Try to connect to local %s\n", id, localAddress)
+		log.DebugF("[%d] connection accepted. Try to connect to local %s\n", id, remoteAddress)
 
-		local, err := net.Dial("tcp", localAddress)
+		remote, err := net.Dial("tcp", remoteAddress)
 		if err != nil {
-			e := fmt.Errorf("Cannot dial to %s: %s", localAddress, err.Error())
+			e := fmt.Errorf("Cannot dial to %s: %s", remoteAddress, err.Error())
 			t.errorCh <- tunnelWaitResult{
 				id:  id,
 				err: e,
@@ -121,11 +120,11 @@ func (t *Tunnel) acceptTunnelConnection(id int, localAddress string, listener ne
 			return
 		}
 
-		log.DebugF("[%d] Connected to local %s\n", id, localAddress)
+		log.DebugF("[%d] Connected to remote %s\n", id, remoteAddress)
 
 		// handle the connection in another goroutine, so we can support multiple concurrent
 		// connections on the same port
-		go t.handleClient(id, local, client)
+		go t.handleClient(id, remote, client)
 	}
 }
 
@@ -158,23 +157,6 @@ func (t *Tunnel) handleClient(id int, client net.Conn, remote net.Conn) {
 	}()
 
 	<-chDone
-}
-
-func (t *Tunnel) isStarted() bool {
-	t.tunMutex.Lock()
-	defer t.tunMutex.Unlock()
-	r := t.started
-	return r
-}
-
-func (t *Tunnel) tryToRestart(id int, killer node.ReverseTunnelKiller) (int, error) {
-	t.stop(id, false)
-	log.DebugF("[%d] Kill tunnel\n", id)
-	if out, err := killer.KillTunnel(); err != nil {
-		log.DebugF("[%d] Kill tunnel was finished with error: %v; stdout: '%s'\n", id, err, out)
-		return id, err
-	}
-	return t.upNewTunnel(id)
 }
 
 func (t *Tunnel) HealthMonitor(errorOutCh chan<- error) {
