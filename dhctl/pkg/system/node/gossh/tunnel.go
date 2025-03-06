@@ -81,7 +81,7 @@ func (t *Tunnel) upNewTunnel(oldId int) (int, error) {
 	localAddress := net.JoinHostPort(localBind, localPort)
 
 	// reverse listen on remote server port
-	listener, err := t.sshClient.Listen("tcp", localAddress)
+	listener, err := net.Listen("tcp", localAddress)
 	if err != nil {
 		return -1, errors.Wrap(err, fmt.Sprintf("failed to listen remote on %s", localAddress))
 	}
