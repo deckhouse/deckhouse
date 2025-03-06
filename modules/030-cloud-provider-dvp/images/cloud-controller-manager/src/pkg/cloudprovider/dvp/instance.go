@@ -52,12 +52,7 @@ func (c *Cloud) InstanceID(ctx context.Context, nodeName types.NodeName) (string
 		return "", err
 	}
 
-	instanceID, err := c.dvpService.ComputeService.GetVMHostname(vm)
-	if err != nil {
-		return "", err
-	}
-
-	return instanceID, nil
+	return vm.Name, nil
 }
 
 func (c *Cloud) InstanceType(_ context.Context, _ types.NodeName) (string, error) {
