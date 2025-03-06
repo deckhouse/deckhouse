@@ -44,6 +44,9 @@ shell:
   - git clone --branch {{ $controllerBranch }} --depth 1 {{ $.SOURCE_REPO }}/kubernetes/ingress-nginx.git
   # Cannot git apply, return error
   - cd /src/ingress-nginx
+  - echo "export COMMIT_SHA=git-$(git rev-parse --short HEAD)" > .env_pass
+  - echo "export REPO_INFO=$(git config --get remote.origin.url)" >> .env_pass
+  - echo "export TAG=$(git describe --tags --always)" >> .env_pass
   - patch -p1 < /patches/ingress-nginx/001-lua-info.patch
   - patch -p1 < /patches/ingress-nginx/002-makefile.patch
   - patch -p1 < /patches/ingress-nginx/003-healthcheck.patch
@@ -154,7 +157,10 @@ shell:
   - export GOPROXY={{ $.GOPROXY }}
   - export GOARCH=amd64
   - cd /src/
-  - make GO111MODULE=on USE_DOCKER=false build
+  - |
+    source /src/.env_pass && \
+    echo "Loaded: COMMIT_SHA=$COMMIT_SHA, REPO_INFO=$REPO_INFO, ARCH=$GOARCH, PKG=$PKG TAG=$TAG" && \
+    make GO111MODULE=on USE_DOCKER=false build
 ---
 # NGINX PCRE
 image: {{ $.ModuleName }}/{{ $.ImageName }}-nginx-artifact
