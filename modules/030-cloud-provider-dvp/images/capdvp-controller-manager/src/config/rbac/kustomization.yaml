@@ -22,6 +22,9 @@ resources:
 # default, aiding admins in cluster management. Those roles are
 # not used by the {{ .ProjectName }} itself. You can comment the following lines
 # if you do not want those helpers be installed with your Project.
+- deckhousemachinetemplate_admin_role.yaml
+- deckhousemachinetemplate_editor_role.yaml
+- deckhousemachinetemplate_viewer_role.yaml
 - deckhousemachine_admin_role.yaml
 - deckhousemachine_editor_role.yaml
 - deckhousemachine_viewer_role.yaml
