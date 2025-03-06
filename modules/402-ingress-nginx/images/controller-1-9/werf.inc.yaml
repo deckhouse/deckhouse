@@ -40,9 +40,8 @@ shell:
   - git clone --branch v1.2.5 --depth 1 {{ $.SOURCE_REPO }}/yelp/dumb-init.git
   - git clone --branch 0.4.1 {{ $.SOURCE_REPO }}/starwing/lua-protobuf
   - git clone --branch 7-3 {{ $.SOURCE_REPO }}/luarocks-sorces/lua-iconv
-  - git clone --branch 8.45 --depth 1 {{ $.SOURCE_REPO }}/pcre/pcre.git /pcre
+  - git clone --branch 8.45 --depth 1 {{ $.SOURCE_REPO }}/pcre/pcre.git
   - git clone --branch {{ $controllerBranch }} --depth 1 {{ $.SOURCE_REPO }}/kubernetes/ingress-nginx.git
-  - git clone --branch {{ $controllerBranch }} --depth 1 {{ $.SOURCE_REPO }}/kubernetes/ingress-nginx-jaegertracing-deps.git /root/.hunter
   # Cannot git apply, return error
   - cd /src/ingress-nginx
   - patch -p1 < /patches/ingress-nginx/001-lua-info.patch
@@ -60,6 +59,11 @@ shell:
   - patch -p1 < /patches/rootfs/001-balancer-lua.patch
   - patch -p1 < /patches/rootfs/002-nginx-tmpl.patch
   - patch -p1 < /patches/rootfs/003-auth-cookie-always.patch
+  - rm -r /src/dumb-init/.git
+  - rm -r /src/lua-protobuf/.git
+  - rm -r /src/lua-iconv/.git
+  - rm -r /src/pcre/.git
+  - rm -r /src/ingress-nginx/.git
 
 ---
 # dumb-init
@@ -135,10 +139,6 @@ import:
   add: /src/ingress-nginx
   to: /src
   before: install
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
-  add: /root/.hunter
-  to: /root/.hunter
-  before: install
 mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
@@ -148,6 +148,9 @@ shell:
   # git needs for getting tag and commit sha for build purposes
   - apk --no-cache add make bash git
   setup:
+  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
+  - git clone --branch {{ $controllerBranch }} --depth 1 {{ $.SOURCE_REPO }}/kubernetes/ingress-nginx-jaegertracing-deps.git /root/.hunter
+  - rm -r /root/.hunter/.git
   - export GOPROXY={{ $.GOPROXY }}
   - export GOARCH=amd64
   - cd /src/
@@ -167,7 +170,7 @@ import:
   to: /src/etc
   before: install
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
-  add: /pcre
+  add: /src/pcre
   to: /pcre
   before: install
 shell:
@@ -231,6 +234,12 @@ import:
   add: /usr/local/pcre/lib
   to: /chroot/lib64
   before: install
+  includePaths:
+  - libpcre.so.1.2.13
+  - libpcre16.so.0.2.13
+  - libpcre32.so.0.0.13
+  - libpcrecpp.so.0.0.2
+  - libpcreposix.so.0.0.7
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-opentelemetry-artifact
   add: /etc/nginx/modules
   to: /chroot/modules_mount/etc/nginx/modules/otel
