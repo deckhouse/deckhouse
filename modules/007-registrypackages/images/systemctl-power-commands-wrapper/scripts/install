@@ -22,7 +22,7 @@ cp -f "${WRAPPER}" /opt/deckhouse/bin
 
 # Create symlinks for power commands.
 cd /usr/local/sbin
-ln -s /opt/deckhouse/bin/"${WRAPPER}" reboot
-ln -s /opt/deckhouse/bin/"${WRAPPER}" poweroff
-ln -s /opt/deckhouse/bin/"${WRAPPER}" shutdown
-ln -s /opt/deckhouse/bin/"${WRAPPER}" halt
+ln -f -s /opt/deckhouse/bin/"${WRAPPER}" reboot
+ln -f -s /opt/deckhouse/bin/"${WRAPPER}" poweroff
+ln -f -s /opt/deckhouse/bin/"${WRAPPER}" shutdown
+ln -f -s /opt/deckhouse/bin/"${WRAPPER}" halt
