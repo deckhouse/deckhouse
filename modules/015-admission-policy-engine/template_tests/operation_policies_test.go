@@ -24,13 +24,53 @@ import (
 )
 
 const (
-	testPolicyName = "genpolicy"
+	testPolicyName           = "genpolicy"
+	testNamespacedPolicyName = "default-genpolicy"
 )
 
 var _ = Describe("Module :: admissionPolicyEngine :: helm template :: operation policies", func() {
 	f := SetupHelmConfig(`{global: {discovery: {kubernetesVersion: "1.27.3"}},admissionPolicyEngine: {denyVulnerableImages: {}, podSecurityStandards: {}, internal: {"bootstrapped": true, "ratify": {"webhook": {"key": "YjY0ZW5jX3N0cmluZwo=", "crt": "YjY0ZW5jX3N0cmluZwo=" , "ca": "YjY0ZW5jX3N0cmluZwo="}}, "podSecurityStandards": {"enforcementActions": ["deny"]}, "operationPolicies": [
 {
-	"metadata":{"name":"genpolicy"},
+	"metadata":{
+		"name": "genpolicy",
+		"namespace": ""},
+	"spec":{
+		"policies":{
+			"allowedRepos":["foo"],
+			"requiredResources":{"limits":["memory"],"requests":["cpu","memory"]},
+			"disallowedImageTags":["latest"],
+			"requiredLabels": {
+				"labels": [
+					{ "key": "foo" },
+					{ "key": "bar", "allowedRegex": "^[a-zA-Z]+.agilebank.demo$" }
+				],
+				"watchKinds": ["/Pod", "networking.k8s.io/Ingress"]
+			},
+            "requiredAnnotations": {
+				"annotations": [
+					{ "key": "foo" },
+					{ "key": "bar", "allowedRegex": "^[a-zA-Z]+.myapp.demo$" }
+				],
+				"watchKinds": ["/Namespace"]
+			},
+			"requiredProbes":["livenessProbe","readinessProbe"],
+			"maxRevisionHistoryLimit":3,
+			"imagePullPolicy":"Always",
+			"priorityClassNames":["foo","bar"],
+			"ingressClassNames": ["ing1", "ing2"],
+			"storageClassNames": ["st1", "st2"],
+			"checkHostNetworkDNSPolicy":true,
+			"checkContainerDuplicates":true,
+			"replicaLimits":{
+					"minReplicas":1,
+					"maxReplicas":10
+			}
+		},
+		"match":{"namespaceSelector":{"matchNames":["default"]}}}},
+{
+	"metadata":{
+		"name": "genpolicy",
+		"namespace": "default"},
 	"spec":{
 		"policies":{
 			"allowedRepos":["foo"],
@@ -93,6 +133,20 @@ var _ = Describe("Module :: admissionPolicyEngine :: helm template :: operation 
 			Expect(f.KubernetesGlobalResource("D8ContainerDuplicates", testPolicyName).Exists()).To(BeTrue())
 			Expect(f.KubernetesGlobalResource("D8ReplicaLimits", testPolicyName).Exists()).To(BeTrue())
 
+			Expect(f.KubernetesGlobalResource("D8AllowedRepos", testNamespacedPolicyName).Exists()).To(BeTrue())
+			Expect(f.KubernetesGlobalResource("D8RequiredResources", testNamespacedPolicyName).Exists()).To(BeTrue())
+			Expect(f.KubernetesGlobalResource("D8DisallowedTags", testNamespacedPolicyName).Exists()).To(BeTrue())
+			Expect(f.KubernetesGlobalResource("D8RequiredProbes", testNamespacedPolicyName).Exists()).To(BeTrue())
+			Expect(f.KubernetesGlobalResource("D8RevisionHistoryLimit", testNamespacedPolicyName).Exists()).To(BeTrue())
+			Expect(f.KubernetesGlobalResource("D8ImagePullPolicy", testNamespacedPolicyName).Exists()).To(BeTrue())
+			Expect(f.KubernetesGlobalResource("D8PriorityClass", testNamespacedPolicyName).Exists()).To(BeTrue())
+			Expect(f.KubernetesGlobalResource("D8IngressClass", testNamespacedPolicyName).Exists()).To(BeTrue())
+			Expect(f.KubernetesGlobalResource("D8StorageClass", testNamespacedPolicyName).Exists()).To(BeTrue())
+			Expect(f.KubernetesGlobalResource("D8DNSPolicy", testNamespacedPolicyName).Exists()).To(BeTrue())
+			Expect(f.KubernetesGlobalResource("D8RequiredLabels", testNamespacedPolicyName).Exists()).To(BeTrue())
+			Expect(f.KubernetesGlobalResource("D8RequiredAnnotations", testNamespacedPolicyName).Exists()).To(BeTrue())
+			Expect(f.KubernetesGlobalResource("D8ContainerDuplicates", testNamespacedPolicyName).Exists()).To(BeTrue())
+			Expect(f.KubernetesGlobalResource("D8ReplicaLimits", testNamespacedPolicyName).Exists()).To(BeTrue())
 		})
 	})
 })

@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"slices"
 	"strings"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -74,7 +75,7 @@ func handleActions(input *go_hook.HookInput) error {
 
 	for _, label := range labels {
 		lbl := strings.ToLower(label.(string))
-		if !hasItem(actions, lbl) {
+		if !slices.Contains(actions, lbl) {
 			actions = append(actions, lbl)
 			// all possible actions were found, it doesn't make sense to proceed
 			if len(actions) == 3 {
