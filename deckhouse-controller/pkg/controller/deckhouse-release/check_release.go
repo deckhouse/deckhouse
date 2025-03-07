@@ -913,7 +913,7 @@ func (f *DeckhouseReleaseFetcher) getNewVersions(ctx context.Context, actual, ta
 
 func (f *DeckhouseReleaseFetcher) parseAndFilterVersions(tags []string) []*semver.Version {
 	versionMatcher := regexp.MustCompile(`^v(([0-9]+).([0-9]+).([0-9]+))$`)
-	var versions []*semver.Version
+	versions := make([]*semver.Version, 0)
 
 	for _, tag := range tags {
 		if !versionMatcher.MatchString(tag) {
