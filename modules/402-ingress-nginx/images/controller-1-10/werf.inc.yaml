@@ -334,7 +334,7 @@ shell:
 # ruby install with grpc-plugins packet it needs for building nginx
   - rm -rf /chroot/usr/lib64/ruby
 # remove owasp-modsecurity-crs/util bash scripts cve
-  - rm -rf /chroot/etc/nginx/owasp-modsecurity-crs/util
+  - rm -rf /chroot/etc/nginx/owasp-modsecurity-crs
 imageSpec:
   config:
     workingDir: /
