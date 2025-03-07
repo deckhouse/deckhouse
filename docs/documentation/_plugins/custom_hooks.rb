@@ -116,7 +116,7 @@ Jekyll::Hooks.register :site, :pre_render do |site|
   # - module-kebab-name: module name in kebab case
   # - module-snake-name: module name in snake case
   site.pages.each do |page|
-    if page.url.match?(%r{/modules/([0-9]+-)?[^/]+/$}) || pageSuffixes.any? { |suffix| page.name.end_with?(suffix) }
+    if page.url.match?(%r{/modules/([0-9]+-)?[^/]+/$}) || (page.name && pageSuffixes.any? { |suffix| page.name.end_with?(suffix) })
     then
       moduleKebabCase = page.url.sub(%r{(.*)?/modules/([0-9]+-)?([^/]+)/.*$},'\3')
       moduleSnakeCase = moduleKebabCase.gsub(/-[a-z]/,&:upcase).gsub(/-/,'')
@@ -138,7 +138,7 @@ Jekyll::Hooks.register :site, :pre_render do |site|
       insert_module_edition_block(page)
     end
 
-    next if ! ( page.name.end_with?('CR.md') or page.name.end_with?('CR_RU.md') or page.name.end_with?('CONFIGURATION.md') or page.name.end_with?('CONFIGURATION_RU.md') )
+    next if page.name && ! ( page.name.end_with?('CR.md') or page.name.end_with?('CR_RU.md') or page.name.end_with?('CONFIGURATION.md') or page.name.end_with?('CONFIGURATION_RU.md') )
     next if page['force_searchable'] == true
     page.data['searchable'] = false
   end
